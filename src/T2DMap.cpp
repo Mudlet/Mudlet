@@ -104,6 +104,7 @@
 #include <cmath>
 
 #include <algorithm>
+#include <utility>
 #include <vector>
 
 #include "mapInfoContributorManager.h"
@@ -1383,12 +1384,19 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     }
 }
 
+void T2DMap::startPendingSpeedWalk()
+{
+    if (const auto pendingSpeedWalk = std::exchange(mPendingSpeedWalk, std::nullopt)) {
+        initiateSpeedWalk(pendingSpeedWalk->first, pendingSpeedWalk->second);
+    }
+}
+
 // This has been refactored to a separate function out of the paintEven() code
 // because we need to use it in two places - one for every room that is not the
 // player's room and then, AFTER all those have been drawn, once for the
 // player's room if it is visible. This is so it is drawn LAST (and any effects,
 // or extra markings for it do not get overwritten by the drawing of the other
-// rooms)...
+// rooms)... only the other rooms' highlights, which reach over every room, go over its body.
 void T2DMap::drawRoom(QPainter& painter,
                       QFont& roomVNumFont,
                       QFont& mapNameFont,
@@ -1400,7 +1408,8 @@ void T2DMap::drawRoom(QPainter& painter,
                       const int speedWalkStartRoomId,
                       const float rx,
                       const float ry,
-                      const bool showRoomCollision)
+                      const bool showRoomCollision,
+                      const RoomDrawPass pass)
 {
     const int currentRoomId = pRoom->getId();
     if (pRoom->isHidden()) {
@@ -1449,91 +1458,115 @@ void T2DMap::drawRoom(QPainter& painter,
 
     const QColor roomColor = environmentColor(pRoom->environment);
 
-    const bool isRoomSelected = (mPick && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
+    if (pass == RoomDrawPass::Whole || pass == RoomDrawPass::Body) {
+        const bool isRoomSelected = (mPick && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
 
-    QPen roomPen(Qt::transparent);
-    roomPen.setJoinStyle(Qt::MiterJoin);
-    painter.setBrush(roomColor);
+        QPen roomPen(Qt::transparent);
+        roomPen.setJoinStyle(Qt::MiterJoin);
+        painter.setBrush(roomColor);
 
-    // Determine if we're actually drawing a border
-    bool isDrawingBorder = false;
-    qreal borderInset = 0.0;
+        // Determine if we're actually drawing a border
+        bool isDrawingBorder = false;
+        qreal borderInset = 0.0;
 
-    if (showRoomCollision) {
-        roomPen.setColor(mpHost->mRoomCollisionBorderColor);
-        roomPen.setWidth(borderWidth);
-        borderInset = borderWidth / 2.0;
-        isDrawingBorder = true;
-    } else if (shouldDrawBorder) {
-        roomPen.setWidth(borderWidth);
-        borderInset = borderWidth / 2.0;
-        isDrawingBorder = true;
-        QColor borderColor = pRoom->mBorderColor.isValid() ? pRoom->mBorderColor : mpHost->mRoomBorderColor;
-        if (mRoomWidth >= 12) {
-            roomPen.setColor(borderColor);
-        } else {
-            auto fadingColor = QColor(borderColor);
-            fadingColor.setAlpha(255 * (mRoomWidth / 12));
-            roomPen.setColor(fadingColor);
+        if (showRoomCollision) {
+            roomPen.setColor(mpHost->mRoomCollisionBorderColor);
+            roomPen.setWidth(borderWidth);
+            borderInset = borderWidth / 2.0;
+            isDrawingBorder = true;
+        } else if (shouldDrawBorder) {
+            roomPen.setWidth(borderWidth);
+            borderInset = borderWidth / 2.0;
+            isDrawingBorder = true;
+            QColor borderColor = pRoom->mBorderColor.isValid() ? pRoom->mBorderColor : mpHost->mRoomBorderColor;
+            if (mRoomWidth >= 12) {
+                roomPen.setColor(borderColor);
+            } else {
+                auto fadingColor = QColor(borderColor);
+                fadingColor.setAlpha(255 * (mRoomWidth / 12));
+                roomPen.setColor(fadingColor);
+            }
         }
-    }
 
-    // Expand the drawing rectangle outward by half the border width so that
-    // after the stroke is drawn (centered on the edge), the visible fill area
-    // matches the original room size and the border grows purely outward
-    const QRectF roomDrawRectangle = roomRectangle.adjusted(-borderInset, -borderInset, borderInset, borderInset);
+        // Expand the drawing rectangle outward by half the border width so that
+        // after the stroke is drawn (centered on the edge), the visible fill area
+        // matches the original room size and the border grows purely outward
+        const QRectF roomDrawRectangle = roomRectangle.adjusted(-borderInset, -borderInset, borderInset, borderInset);
 
-    if (isRoomSelected) {
-        QLinearGradient selectionBg(roomDrawRectangle.topLeft(), roomDrawRectangle.bottomRight());
-        selectionBg.setColorAt(0.2, roomColor);
-        selectionBg.setColorAt(1, Qt::blue);
-        if (!showRoomCollision && isDrawingBorder) {
-            roomPen.setColor(QColor(255, 50, 50));
+        if (isRoomSelected) {
+            QLinearGradient selectionBg(roomDrawRectangle.topLeft(), roomDrawRectangle.bottomRight());
+            selectionBg.setColorAt(0.2, roomColor);
+            selectionBg.setColorAt(1, Qt::blue);
+            if (!showRoomCollision && isDrawingBorder) {
+                roomPen.setColor(QColor(255, 50, 50));
+            }
+            painter.setBrush(selectionBg);
         }
-        painter.setBrush(selectionBg);
-    }
 
-    painter.setPen(roomPen);
+        painter.setPen(roomPen);
 
-    if (mBubbleMode) {
-        // Expand radius by half border width so visible fill stays at original size
-        const float roomRadius = (0.5 * rSize * mRoomWidth) + borderInset;
-        const QPointF roomCenter = QPointF(rx, ry);
-        QPainterPath diameterPath;
-        diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
-        painter.drawPath(diameterPath);
-    } else {
-        painter.drawRect(roomDrawRectangle);
-    }
-
-    if (isRoomSelected) {
-        mPick = false;
-        if (mStartSpeedWalk) {
-            mStartSpeedWalk = false;
-            // This draws a red circle around the room that was chosen as
-            // the target for the speedwalk, but it is only shown for one
-            // paintEvent call and it is not obvious that it is useful, note
-            // that this is the code for a room being clicked on that is
-            // within the area - there is a separate block of code further down
-            // in this method that handles clicking on the out of area exit so
-            // that a speed walk is done to the room in the OTHER area:
-            const float roomRadius = 0.4 * mRoomWidth;
+        if (mBubbleMode) {
+            // Expand radius by half border width so visible fill stays at original size
+            const float roomRadius = (0.5 * rSize * mRoomWidth) + borderInset;
             const QPointF roomCenter = QPointF(rx, ry);
-            QRadialGradient gradient(roomCenter, roomRadius);
-            gradient.setColorAt(0.95, QColor(255, 0, 0, 150));
-            gradient.setColorAt(0.80, QColor(150, 100, 100, 150));
-            gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
-            gradient.setColorAt(0.7, QColor(255, 0, 0, 200));
-            gradient.setColorAt(0, Qt::white);
-            const QPen transparentPen(Qt::transparent);
             QPainterPath diameterPath;
-            painter.setBrush(gradient);
-            painter.setPen(transparentPen);
             diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
             painter.drawPath(diameterPath);
-
-            initiateSpeedWalk(speedWalkStartRoomId, currentRoomId);
+        } else {
+            painter.drawRect(roomDrawRectangle);
         }
+
+        if (isRoomSelected) {
+            mPick = false;
+            if (mStartSpeedWalk) {
+                mStartSpeedWalk = false;
+                // This draws a red circle around the room that was chosen as
+                // the target for the speedwalk, but it is only shown for one
+                // paintEvent call and it is not obvious that it is useful, note
+                // that this is the code for a room being clicked on that is
+                // within the area - there is a separate block of code further down
+                // in this method that handles clicking on the out of area exit so
+                // that a speed walk is done to the room in the OTHER area:
+                const float roomRadius = 0.4 * mRoomWidth;
+                const QPointF roomCenter = QPointF(rx, ry);
+                QRadialGradient gradient(roomCenter, roomRadius);
+                gradient.setColorAt(0.95, QColor(255, 0, 0, 150));
+                gradient.setColorAt(0.80, QColor(150, 100, 100, 150));
+                gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
+                gradient.setColorAt(0.7, QColor(255, 0, 0, 200));
+                gradient.setColorAt(0, Qt::white);
+                const QPen transparentPen(Qt::transparent);
+                QPainterPath diameterPath;
+                painter.setBrush(gradient);
+                painter.setPen(transparentPen);
+                diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
+                painter.drawPath(diameterPath);
+
+                mPendingSpeedWalk = {speedWalkStartRoomId, currentRoomId};
+            }
+        }
+    }
+
+    if (pass == RoomDrawPass::Body) {
+        return;
+    }
+
+    // Do we need to draw the custom (user specified) highlight
+    if (pRoom->highlight && pass != RoomDrawPass::Labels) {
+        const float roomRadius = (pRoom->highlightRadius * mRoomWidth) / 2.0;
+        const QPointF roomCenter = QPointF(rx, ry);
+        QRadialGradient gradient(roomCenter, roomRadius);
+        gradient.setStops(RoomAppearance::highlightStops(pRoom->highlightColor, pRoom->highlightColor2));
+        const QPen transparentPen(Qt::transparent);
+        QPainterPath diameterPath;
+        painter.setBrush(gradient);
+        painter.setPen(transparentPen);
+        diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
+        painter.drawPath(diameterPath);
+    }
+
+    if (pass == RoomDrawPass::Highlight) {
+        return;
     }
 
     // Do we need to draw the room symbol:
@@ -1579,20 +1612,6 @@ void T2DMap::drawRoom(QPainter& painter,
         painter.restore();
     }
 
-    // Do we need to draw the custom (user specified) highlight
-    if (pRoom->highlight) {
-        const float roomRadius = (pRoom->highlightRadius * mRoomWidth) / 2.0;
-        const QPointF roomCenter = QPointF(rx, ry);
-        QRadialGradient gradient(roomCenter, roomRadius);
-        gradient.setStops(RoomAppearance::highlightStops(pRoom->highlightColor, pRoom->highlightColor2));
-        const QPen transparentPen(Qt::transparent);
-        QPainterPath diameterPath;
-        painter.setBrush(gradient);
-        painter.setPen(transparentPen);
-        diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
-        painter.drawPath(diameterPath);
-    }
-
     // Do we need to draw the room Id number:
     if (mShowRoomID && areRoomIdsLegible) {
         painter.save();
@@ -1621,6 +1640,83 @@ void T2DMap::drawRoom(QPainter& painter,
     }
 
     ExitAppearance::paintExitMarkers(painter, pen, *pRoom, rx, ry, mRoomWidth * rSize, mRoomHeight * rSize, roomColor, mMapperUseAntiAlias);
+}
+
+void T2DMap::drawRoomHighlightsAndLabels(QPainter& painter,
+                                         QFont& roomVNumFont,
+                                         QFont& mapNameFont,
+                                         QPen& pen,
+                                         const QList<QPair<TRoom*, QPointF>>& rooms,
+                                         const bool isGridMode,
+                                         const bool areRoomIdsLegible,
+                                         const bool showRoomNames,
+                                         const int speedWalkStartRoomId)
+{
+    for (const auto& [room, roomCenter] : rooms) {
+        if (room->highlight) {
+            drawRoom(painter,
+                     roomVNumFont,
+                     mapNameFont,
+                     pen,
+                     room,
+                     isGridMode,
+                     areRoomIdsLegible,
+                     showRoomNames,
+                     speedWalkStartRoomId,
+                     static_cast<float>(roomCenter.x()),
+                     static_cast<float>(roomCenter.y()),
+                     false,
+                     RoomDrawPass::Highlight);
+        }
+    }
+    for (const auto& [room, roomCenter] : rooms) {
+        drawRoom(painter,
+                 roomVNumFont,
+                 mapNameFont,
+                 pen,
+                 room,
+                 isGridMode,
+                 areRoomIdsLegible,
+                 showRoomNames,
+                 speedWalkStartRoomId,
+                 static_cast<float>(roomCenter.x()),
+                 static_cast<float>(roomCenter.y()),
+                 false,
+                 RoomDrawPass::Labels);
+    }
+}
+
+void T2DMap::drawPlayerRoomBody(QPainter& painter, TRoom* pPlayerRoom, const QPointF& roomCenter, const bool isGridMode, const bool showRoomCollision)
+{
+    // The body pass reads none of the fonts or the exit pen
+    QFont unusedFont = painter.font();
+    QPen unusedPen = painter.pen();
+    // The grid and reduced-detail loops resolve a double-click themselves, after this
+    const bool pick = std::exchange(mPick, false);
+    const bool startSpeedWalk = std::exchange(mStartSpeedWalk, false);
+    drawRoom(painter,
+             unusedFont,
+             unusedFont,
+             unusedPen,
+             pPlayerRoom,
+             isGridMode,
+             false,
+             false,
+             pPlayerRoom->getId(),
+             static_cast<float>(roomCenter.x()),
+             static_cast<float>(roomCenter.y()),
+             showRoomCollision,
+             RoomDrawPass::Body);
+    mPick = pick;
+    mStartSpeedWalk = startSpeedWalk;
+}
+
+bool T2DMap::anyRoomHighlighted(const QList<int>& roomIds) const
+{
+    return std::any_of(roomIds.cbegin(), roomIds.cend(), [this](const int roomId) {
+        const TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
+        return pRoom && pRoom->highlight && !pRoom->isHidden();
+    });
 }
 
 // Markers are gathered from every drawn room, so hit-test once after the room passes rather than
@@ -1728,6 +1824,7 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
                                QFont& roomVNumFont,
                                bool& isPlayerRoomVisible,
                                QPointF& playerRoomOnWidgetCoordinates,
+                               bool& isPlayerRoomBodyDrawn,
                                bool areRoomIdsLegible,
                                QString* profileOutput)
 {
@@ -1953,6 +2050,8 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
     QList<QPair<TRoom*, QRectF>> selectedRooms;
     QList<QPair<TRoom*, QRectF>> highlightedRooms;
     QList<QPair<TRoom*, QPointF>> verticalExitRooms;
+    TRoom* pPlayerRoom = nullptr;
+    bool playerRoomCollision = false;
 
     const bool showVnums = mShowRoomID && areRoomIdsLegible && mMaxRoomIdDigits > 0;
 
@@ -1976,6 +2075,8 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
         if (playerRoomId == roomId) {
             isPlayerRoomVisible = true;
             playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
+            pPlayerRoom = room;
+            playerRoomCollision = roomCollision;
             continue;
         }
 
@@ -2063,6 +2164,11 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
         } else {
             painter.drawRect(roomRect);
         }
+    }
+
+    if (pPlayerRoom && !highlightedRooms.isEmpty()) {
+        drawPlayerRoomBody(painter, pPlayerRoom, playerRoomOnWidgetCoordinates, true, playerRoomCollision);
+        isPlayerRoomBodyDrawn = true;
     }
 
     // Draw custom per-room radial highlights (pRoom->highlight flag).
@@ -2253,6 +2359,7 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
                                      const float widgetHeight,
                                      bool& isPlayerRoomVisible,
                                      QPointF& playerRoomOnWidgetCoordinates,
+                                     bool& isPlayerRoomBodyDrawn,
                                      QString* profileOutput)
 {
     QElapsedTimer timer;
@@ -2274,6 +2381,7 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
     QHash<int, QRgb> envColorCache;
     QList<QPair<TRoom*, QPointF>> highlightedRooms;
     QList<QRect> selectedRoomRects;
+    TRoom* pPlayerRoom = nullptr;
 
     int roomCount = 0;
 
@@ -2313,6 +2421,7 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
             // Drawn in full at the end of the phase, as it is at any zoom.
             isPlayerRoomVisible = true;
             playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
+            pPlayerRoom = room;
             continue;
         }
 
@@ -2369,6 +2478,12 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
             painter.fillRect(selectedRect, selectionTint);
         }
         painter.restore();
+    }
+
+    if (pPlayerRoom && !highlightedRooms.isEmpty()) {
+        const bool playerRoomCollision = pDrawnArea->getGridIndex().roomsAt(zLevel, pPlayerRoom->x(), pPlayerRoom->y()).size() > 1;
+        drawPlayerRoomBody(painter, pPlayerRoom, playerRoomOnWidgetCoordinates, false, playerRoomCollision);
+        isPlayerRoomBodyDrawn = true;
     }
 
     for (const auto& [room, roomCenter] : std::as_const(highlightedRooms)) {
@@ -2861,6 +2976,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
     QString roomLoopProfileOutput;
     QElapsedTimer phase6Sub;
     phase6Sub.start();
+    // Only the full-detail loop layers its rooms, and only with a highlight in view
+    bool layerRooms = false;
+    // Gathered before drawing so each room is looked up once
+    QList<QPair<TRoom*, QPointF>> drawnRooms;
+    bool isPlayerRoomBodyDrawn = false;
     painter.save(); // prevent room-drawing state from leaking into labels/info box
     if (pDrawnArea->gridMode) {
         // Grid mode: use spatial grid index for O(visible cells) rendering
@@ -2877,12 +2997,15 @@ void T2DMap::paintEvent(QPaintEvent* e)
                           roomVNumFont,
                           isPlayerRoomVisible,
                           playerRoomOnWidgetCoordinates,
+                          isPlayerRoomBodyDrawn,
                           isFontBigEnoughToShowRoomVnum,
                           &roomLoopProfileOutput);
     } else if (mRoomWidth < cLodPixelThreshold) {
-        drawNonGridModeRoomsLod(painter, pDrawnArea, zLevel, playerRoomId, viewportRooms, widgetWidth, widgetHeight, isPlayerRoomVisible, playerRoomOnWidgetCoordinates, &roomLoopProfileOutput);
+        drawNonGridModeRoomsLod(
+                painter, pDrawnArea, zLevel, playerRoomId, viewportRooms, widgetWidth, widgetHeight, isPlayerRoomVisible, playerRoomOnWidgetCoordinates, isPlayerRoomBodyDrawn, &roomLoopProfileOutput);
     } else {
         // Non-grid mode: use full-featured per-room rendering
+        drawnRooms.reserve(viewportRooms.size());
         for (const int currentAreaRoom : viewportRooms) {
             TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
             if (!room) {
@@ -2895,22 +3018,37 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 continue;
             }
 
+            layerRooms = layerRooms || (room->highlight && !room->isHidden());
             if (playerRoomId == currentAreaRoom) {
                 // We defer drawing THIS (the player's room) until the end
                 isPlayerRoomVisible = true;
                 playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
             } else {
-                // Not the player's room
-                const QPair<int, int> roomPos{room->x(), room->y()};
-                const bool roomCollision = usedRoomPositions.contains(roomPos);
-                usedRoomPositions.insert(roomPos);
-                drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, roomCollision);
+                drawnRooms.append({room, QPointF(rx, ry)});
             }
+        }
+        for (const auto& [room, roomCenter] : std::as_const(drawnRooms)) {
+            const QPair<int, int> roomPos{room->x(), room->y()};
+            const bool roomCollision = usedRoomPositions.contains(roomPos);
+            usedRoomPositions.insert(roomPos);
+            drawRoom(painter,
+                     roomVNumFont,
+                     mapNameFont,
+                     pen,
+                     room,
+                     pDrawnArea->gridMode,
+                     isFontBigEnoughToShowRoomVnum,
+                     showRoomNames,
+                     playerRoomId,
+                     static_cast<float>(roomCenter.x()),
+                     static_cast<float>(roomCenter.y()),
+                     roomCollision,
+                     layerRooms ? RoomDrawPass::Body : RoomDrawPass::Whole);
         }
     }
     painter.restore(); // end of room-drawing save
 
-    const qreal timePhase6RoomsDraw = phase6Sub.nsecsElapsed() / 1000000.0;
+    qreal timePhase6RoomsDraw = phase6Sub.nsecsElapsed() / 1000000.0;
     phase6Sub.restart();
 
     qreal timePhase6DrawRoom = 0.0;
@@ -2920,21 +3058,35 @@ void T2DMap::paintEvent(QPaintEvent* e)
         // Only the full-detail non-grid loop fills usedRoomPositions. The index also counts off-screen and hidden rooms.
         const bool roomCollision = (pDrawnArea->gridMode || mRoomWidth < cLodPixelThreshold) ? pDrawnArea->getGridIndex().roomsAt(zLevel, pPlayerRoom->x(), pPlayerRoom->y()).size() > 1
                                                                                              : usedRoomPositions.contains({pPlayerRoom->x(), pPlayerRoom->y()});
-        drawRoom(painter,
-                 roomVNumFont,
-                 mapNameFont,
-                 pen,
-                 pPlayerRoom,
-                 pDrawnArea->gridMode,
-                 isFontBigEnoughToShowRoomVnum,
-                 showRoomNames,
-                 playerRoomId,
-                 static_cast<float>(playerRoomOnWidgetCoordinates.x()),
-                 static_cast<float>(playerRoomOnWidgetCoordinates.y()),
-                 roomCollision);
+        const QList<RoomDrawPass> playerRoomPasses =
+                isPlayerRoomBodyDrawn ? QList<RoomDrawPass>{RoomDrawPass::Highlight, RoomDrawPass::Labels} : QList<RoomDrawPass>{layerRooms ? RoomDrawPass::Body : RoomDrawPass::Whole};
+        for (const RoomDrawPass pass : playerRoomPasses) {
+            drawRoom(painter,
+                     roomVNumFont,
+                     mapNameFont,
+                     pen,
+                     pPlayerRoom,
+                     pDrawnArea->gridMode,
+                     isFontBigEnoughToShowRoomVnum,
+                     showRoomNames,
+                     playerRoomId,
+                     static_cast<float>(playerRoomOnWidgetCoordinates.x()),
+                     static_cast<float>(playerRoomOnWidgetCoordinates.y()),
+                     roomCollision,
+                     pass);
+        }
+        if (layerRooms) {
+            drawnRooms.append({pPlayerRoom, playerRoomOnWidgetCoordinates});
+        }
         timePhase6DrawRoom = phase6Sub.nsecsElapsed() / 1000000.0;
         phase6Sub.restart();
-
+    }
+    if (layerRooms) {
+        drawRoomHighlightsAndLabels(painter, roomVNumFont, mapNameFont, pen, drawnRooms, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId);
+        timePhase6RoomsDraw += phase6Sub.nsecsElapsed() / 1000000.0;
+        phase6Sub.restart();
+    }
+    if (isPlayerRoomVisible) {
         painter.save();
         const QPen transparentPen(Qt::transparent);
         QPainterPath myPath;
@@ -2973,6 +3125,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     }
     painter.restore(); // end of player-room save
 
+    startPendingSpeedWalk();
     resolveAreaExitClick(painter, areaExitsMap, playerRoomId);
 
     phase6Time = phaseTimer.nsecsElapsed() / 1000000.0;
@@ -7228,7 +7381,10 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     }
 
     // Fourth pass: draw main rooms on current level using existing drawRoom method
-    for (const int roomId : pArea->getRoomsForZ(exportZLevel)) {
+    const QList<int> roomsOnLevel = pArea->getRoomsForZ(exportZLevel).values();
+    const bool layerRooms = anyRoomHighlighted(roomsOnLevel);
+    QList<QPair<TRoom*, QPointF>> layeredRooms;
+    for (const int roomId : roomsOnLevel) {
         TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
         if (!pRoom) {
             roomsSkipped++;
@@ -7248,10 +7404,29 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         }
 
         // Use the existing drawRoom method!
-        drawRoom(painter, roomVNumFont, mapNameFont, pen, pRoom, pArea->gridMode, areRoomIdsLegible, false /* showRoomNames */, -1 /* speedWalkStartRoomId */, rx, ry, false /* showRoomCollision */);
+        drawRoom(painter,
+                 roomVNumFont,
+                 mapNameFont,
+                 pen,
+                 pRoom,
+                 pArea->gridMode,
+                 areRoomIdsLegible,
+                 false /* showRoomNames */,
+                 -1 /* speedWalkStartRoomId */,
+                 rx,
+                 ry,
+                 false /* showRoomCollision */,
+                 layerRooms ? RoomDrawPass::Body : RoomDrawPass::Whole);
+        if (layerRooms) {
+            layeredRooms.append({pRoom, QPointF(rx, ry)});
+        }
 
         roomsDrawn++;
     }
+    if (layerRooms) {
+        drawRoomHighlightsAndLabels(painter, roomVNumFont, mapNameFont, pen, layeredRooms, pArea->gridMode, areRoomIdsLegible, false /* showRoomNames */, -1 /* speedWalkStartRoomId */);
+    }
+    startPendingSpeedWalk();
 
 
     // Draw the ("foreground") labels that are on the top of the map - same as paintEvent
