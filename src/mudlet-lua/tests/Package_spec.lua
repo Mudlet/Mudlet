@@ -7515,6 +7515,137 @@ describe("Tests the MedBootstrap package", function()
   end)
 end)
 
+-- These loaders are installed only for their own game, so each is installed
+-- here from the copy compiled into Mudlet
+describe("Tests the game loader packages", function()
+  local loaders = {
+    {
+      name = "CF_Loader",
+      archive = ":/packages/CF-loader/CF-loader.mpackage",
+      download = "CFGUI.zip",
+      url = "https://mudlet-cdn.carrionfields.net/cfgui/latest/CFGUI.zip",
+      globals = { "downloadPkg", "installReady", "downloadFailed" },
+      downloadFailed = "Your Carrion Fields client could not be downloaded:",
+      installFailed = "Installing your Carrion Fields client failed:",
+    },
+    {
+      name = "mg-loader",
+      archive = ":/packages/mg-loader/mg-loader.mpackage",
+      download = "MorgenGrauen.mpackage",
+      url = "https://github.com/MorgenGrauen/mg-mudlet/releases/latest/download/MorgenGrauen.mpackage",
+      globals = { "downloadPackage", "installReady", "downloadFailed" },
+      downloadFailed = "Das Mudlet-Paket fürs MorgenGrauen konnte nicht heruntergeladen werden:",
+      installFailed = "Das Mudlet-Paket fürs MorgenGrauen konnte nicht installiert werden:",
+      handInstall = [[cecho("<gold>Paket installiert!\n")]],
+    },
+    {
+      name = "icesus-loader",
+      archive = ":/packages/icesus-loader/icesus-loader.mpackage",
+      download = "Icesus.mpackage",
+      url = "https://github.com/Icesus-mud/mudlet-package/releases/latest/download/Icesus.mpackage",
+      globals = { "downloadPackage", "installReady", "downloadFailed" },
+      downloadFailed = "The Icesus Mudlet package could not be downloaded:",
+      installFailed = "The Icesus Mudlet package could not be installed:",
+      handInstall = [[cecho("<gold>Package installed!\n")]],
+    },
+  }
+
+  local function override(globalName, value)
+    local original = _G[globalName]
+    defer(function() _G[globalName] = original end)
+    _G[globalName] = value
+  end
+
+  -- Installs the loader with downloadFile() stubbed out, and answers the list
+  -- the downloads it starts land in. The loaders register their handlers by
+  -- function name and never keep the ids, so the ids are caught here to kill.
+  local function install(loader)
+    for _, globalName in ipairs(loader.globals) do
+      override(globalName, nil)
+    end
+    override("installRequested", nil)
+    local downloads = {}
+    override("downloadFile", function(path, url)
+      downloads[#downloads + 1] = { path, url }
+      return true
+    end)
+    local path = getMudletHomeDir() .. "/" .. loader.download
+    defer(function() os.remove(path) end)
+    defer(function() removeFixturePackage(loader.name) end)
+
+    local handlerIds = {}
+    defer(function()
+      for _, id in ipairs(handlerIds) do
+        killAnonymousEventHandler(id)
+      end
+    end)
+    local realRegister = _G.registerAnonymousEventHandler
+    _G.registerAnonymousEventHandler = function(...)
+      local id = realRegister(...)
+      handlerIds[#handlerIds + 1] = id
+      return id
+    end
+    local ok, err = pcall(installAndConfirm, installPackage, loader.archive,
+                          function() return packageInstalled(loader.name) end, loader.name)
+    _G.registerAnonymousEventHandler = realRegister
+    assert(ok, err)
+    assert.is_true(#handlerIds > 0, "the loader registered no event handlers")
+
+    raiseEvent("sysConnectionEvent")
+    assert.are.same({ { path, loader.url } }, downloads, "connecting did not start the download")
+    -- the loader uninstalls itself, which is refused while a profile save runs
+    assert.is_true(waitForProfileSaveToPass(), "a profile save never finished")
+    return downloads, path
+  end
+
+  for _, loader in ipairs(loaders) do
+    it(loader.name .. " tells the player how to fetch the package by hand when the download fails", function()
+      local _, path = install(loader)
+
+      local mark = getLastLineNumber("main")
+      raiseEvent("sysDownloadError", "mudlet-spec-unrelated-error", getMudletHomeDir() .. "/mudlet-spec-other.zip")
+      raiseEvent("sysDownloadError", "mudlet-spec-host-not-found", path)
+      local shown = textFrom(mark)
+
+      assert.is_false(contains(shown, "mudlet-spec-unrelated-error"), "the loader reported another download's failure")
+      assert.is_true(containsWrapped(shown, loader.downloadFailed .. " mudlet-spec-host-not-found"), shown)
+      assert.is_true(containsWrapped(shown, loader.url), "the failure gave no way to fetch the package by hand: " .. shown)
+      if loader.handInstall then
+        assert.is_true(containsWrapped(shown, loader.handInstall), "the command to paste is not the one to run: " .. shown)
+      end
+      assert.is_true(packageInstalled(loader.name), "the loader removed itself without installing anything")
+    end)
+
+    it(loader.name .. " does not download again on a reconnect once its package is installed", function()
+      local downloads, path = install(loader)
+      defer(function() removeFixturePackage(minimalPackage) end)
+      copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", path)
+
+      raiseEvent("sysDownloadDone", path)
+      assert.is_true(waitUntil(function() return packageInstalled(minimalPackage) end, 10000),
+                     "the downloaded package was never installed")
+      assert.is_true(waitUntil(function() return not packageInstalled(loader.name) end, 5000),
+                     "the loader did not uninstall itself")
+
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(1, #downloads, "a reconnect downloaded the installed package again")
+    end)
+
+    it(loader.name .. " reports a download that will not install, and tries again on the next connection", function()
+      local downloads, path = install(loader)
+      copyFile(fixtureDirectory .. "/mudlet-spec-notazip.mpackage", path)
+
+      local mark = getLastLineNumber("main")
+      raiseEvent("sysDownloadDone", path)
+      assert.is_true(waitUntil(function() return containsWrapped(textFrom(mark), loader.installFailed) end, 10000),
+                     "the failed install was not reported: " .. textFrom(mark))
+
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(2, #downloads, "the next connection did not try the download again")
+    end)
+  end
+end)
+
 describe("The package specs clean up after themselves", function()
   it("leaves no fixture package, module or folder behind", function()
     for _, name in ipairs(getPackages()) do
