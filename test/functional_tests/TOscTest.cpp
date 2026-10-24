@@ -697,6 +697,64 @@ private slots:
     QCOMPARE(console->buffer.getLinkTooltip(linkId), expectedTooltip);
   }
 
+  // Items without send: or prompt: that are not web links go to the game
+  // verbatim, since games may use bare commands that parse as URIs.
+  void test_Osc8MenuItemCommand_data() {
+    QTest::addColumn<QString>("item");
+    QTest::addColumn<QString>("expectedCommand");
+
+    const auto opens = [](const QString &url) {
+      return qsl("openUrl(%1)").arg(LuaLiteral::quote(url));
+    };
+    const auto sends = [](const QString &command) {
+      return qsl("send(%1, false)").arg(LuaLiteral::quote(command));
+    };
+
+    QTest::newRow("https") << qsl("https://wiki.mudlet.org/w/Main_Page")
+                           << opens(qsl("https://wiki.mudlet.org/w/Main_Page"));
+    QTest::newRow("http") << qsl("http://example.com/")
+                          << opens(qsl("http://example.com/"));
+    QTest::newRow("ftp") << qsl("ftp://files.example.com/pub/")
+                         << opens(qsl("ftp://files.example.com/pub/"));
+    QTest::newRow("scheme in capitals")
+        << qsl("HTTPS://example.com/") << opens(qsl("HTTPS://example.com/"));
+    QTest::newRow("query kept as sent")
+        << qsl("https://example.com/search?q=dragons")
+        << opens(qsl("https://example.com/search?q=dragons"));
+    QTest::newRow("send") << qsl("send:look") << sends(qsl("look"));
+    QTest::newRow("bare command") << qsl("flee") << sends(qsl("flee"));
+    QTest::newRow("file is not opened")
+        << qsl("file:///etc/passwd") << sends(qsl("file:///etc/passwd"));
+    QTest::newRow("other scheme sent verbatim")
+        << qsl("mailto:someone@example.com")
+        << sends(qsl("mailto:someone@example.com"));
+  }
+
+  void test_Osc8MenuItemCommand() {
+    QFETCH(QString, item);
+    QFETCH(QString, expectedCommand);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Item\":\"") + item +
+               qsl("\"}]}\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    const QStringList commands = console->getLinkStore().getLinksConst(linkId);
+    QCOMPARE(commands.size(), 1);
+    QCOMPARE(commands.first(), expectedCommand);
+    // the menu reads its labels after the tooltip, so a missing one shifts
+    // every label onto the wrong command
+    const QStringList hints = console->getLinkStore().getHintsConst(linkId);
+    QCOMPARE(hints.size(), 2);
+    QCOMPARE(hints.last(), qsl("Item"));
+  }
+
   // A "config" parameter carrying something that is not an object is not a
   // config, so it must not displace a valid one earlier in the same query.
   void test_Osc8ValuelessConfigDoesNotDisplaceAValidOne_data() {
