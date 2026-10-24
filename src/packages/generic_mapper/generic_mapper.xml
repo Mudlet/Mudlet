@@ -1580,9 +1580,10 @@ map.help.load = [[
     &lt;cyan&gt;Map Load&lt;reset&gt;
         syntax: &lt;yellow&gt;map load &lt;optional download address&gt;&lt;reset&gt;
 
-        This command replaces the current map with the map stored as map.dat in
-        the profile folder. Alternatively, if a download address is provided, a
-        map is downloaded from that location and loaded to replace the current
+        This command replaces the current map with the map that map save stored
+        as map.dat in the profile folder, or with the last downloaded map if
+        there is no such file. Alternatively, if a download address is provided,
+        a map is downloaded from that location and loaded to replace the current
         map. If no filename is given with the download address, the script tries
         to download map.dat. If a filename is given it MUST end with .dat.
 ]]
@@ -3308,10 +3309,17 @@ end
 function map.load_map(address)
     local path = profilePath .. "/map downloads/map.dat"
     if not address then
-        if loadMap(path) then
-            forget_position()
+        local backup = profilePath .. "/map.dat"
+        if not io.exists(backup) and io.exists(path) then
+            -- the map a download left behind still loads for those who never used map save
+            backup = path
         end
-        map.echo("Map reloaded from local copy.")
+        if loadMap(backup) then
+            forget_position()
+            map.echo("Map reloaded from local copy.")
+        else
+            map.echo("Error. Map NOT loaded from " .. backup .. ".", false, true)
+        end
     else
         if not string.match(address,"/[%a_]+%.dat$") then
             address = address .. "/map.dat"
@@ -4559,11 +4567,13 @@ function map.eventHandler(event, ...)
     elseif event == "sysDownloadDone" and downloading then
         local file = arg1
         if string.ends(file,"/map.dat") then
+            downloading = false
             if loadMap(file) then
                 forget_position()
+                map.echo("Map File Loaded.")
+            else
+                map.echo("Error. Map NOT loaded from " .. file .. ".", false, true)
             end
-            downloading = false
-            map.echo("Map File Loaded.")
         elseif string.ends(file,"/versions.lua") then
             check_version()
         elseif string.ends(file,"/generic_mapper.xml") then
