@@ -4132,8 +4132,8 @@ describe("Tests route weights and extreme coordinates on a scratch area", functi
     assert.are.same({"s"}, speedWalkDir)
   end)
 
-  -- INT_MIN - INT_MAX overflows an int, so the distance between these rooms
-  -- reaches past what an int holds.
+  -- INT_MIN - INT_MAX overflows an int, so measuring the distance between these
+  -- rooms in ints is undefined; only a UBSan build reports that.
   it("routes by weight between rooms an int's whole range apart", function()
     local start, a, b, goal = room(1, 0), room(0, 2147483647), room(0, 0), room(0, -2147483648)
     setExit(start, a, "north")
@@ -4200,6 +4200,81 @@ describe("Tests route weights and extreme coordinates on a scratch area", functi
     local ok, weight = getPath(start, goal)
     assert.are.same({true, 10}, {ok, weight})
     assert.are.equal(10, #speedWalkDir)
+
+    -- a rebuild has to take the new coordinates and the scale they imply together
+    assert.is_true(setRoomWeight(start, 2))
+    ok, weight = getPath(start, goal)
+    assert.are.same({true, 10}, {ok, weight})
+    assert.are.equal(10, #speedWalkDir)
+  end)
+
+  -- The portal crosses most of the map for the cost of one step, so the
+  -- heuristic must allow for it from the room before it, not just from the start.
+  it("takes a cheap exit across the map partway along the shortest route", function()
+    local start, beforePortal, goal = room(0, 0), room(1, 0), room(21, 0)
+    setExit(start, beforePortal, "east")
+    assert.is_true(addSpecialExit(beforePortal, goal, "portal"))
+    local previous = room(21, 0)
+    assert.is_true(addSpecialExit(start, previous, "dig"))
+    for _ = 1, 3 do
+      local nextRoom = room(21, 0)
+      setExit(previous, nextRoom, "up")
+      previous = nextRoom
+    end
+    setExit(previous, goal, "east")
+
+    local ok, weight = getPath(start, goal)
+    assert.are.same({true, 2, {"e", "portal"}}, {ok, weight, speedWalkDir})
+  end)
+
+  -- Another area's coordinates have nothing to do with this one's, but an exit
+  -- into it is still an edge the heuristic has to allow for.
+  it("takes a cheap exit into another area partway along the shortest route", function()
+    local farAreaName = "MapperSpecScratchFar"
+    local farArea, err = addAreaName(farAreaName)
+    assert.is_number(farArea, err)
+    finally(function()
+      deleteArea(farAreaName)
+    end)
+    local function farRoom()
+      local id = room(21, 0)
+      assert.is_true(setRoomArea(id, farArea))
+      return id
+    end
+    local start, beforeStairs, goal = room(0, 0), room(1, 0), farRoom()
+    setExit(start, beforeStairs, "east")
+    setExit(beforeStairs, goal, "up")
+    local previous = farRoom()
+    setExit(start, previous, "in")
+    for _ = 1, 3 do
+      local nextRoom = farRoom()
+      setExit(previous, nextRoom, "north")
+      previous = nextRoom
+    end
+    setExit(previous, goal, "east")
+
+    local ok, weight = getPath(start, goal)
+    assert.are.same({true, 2, {"e", "up"}}, {ok, weight, speedWalkDir})
+  end)
+
+  -- The portal is cheap only by its exit weight, which the heuristic has to go
+  -- by rather than the weight of the room it leads to.
+  it("allows for an exit made cheap by its weight across the map", function()
+    local start, beforePortal, goal = room(0, 0), room(1, 0), room(101, 0)
+    local detour = room(101, 0)
+    assert.is_true(setRoomWeight(beforePortal, 3))
+    assert.is_true(setRoomWeight(goal, 100))
+    assert.is_true(setRoomWeight(detour, 50))
+    setExit(start, beforePortal, "east")
+    assert.is_true(addSpecialExit(beforePortal, goal, "portal"))
+    assert.is_true(setExitWeight(beforePortal, "portal", 1))
+    assert.is_true(addSpecialExit(start, detour, "dig"))
+    assert.is_true(setExitWeight(start, "dig", 5))
+    setExit(detour, goal, "east")
+    assert.is_true(setExitWeight(detour, "east", 1))
+
+    local ok, weight = getPath(start, goal)
+    assert.are.same({true, 4, {"e", "portal"}}, {ok, weight, speedWalkDir})
   end)
 end)
 
@@ -5435,9 +5510,9 @@ describe("Tests saveMap and loadMap", function()
 
   -- A real IRE map at full size - 22,854 rooms over 379 areas. Routing is the
   -- one part of the mapper whose behaviour a small map cannot describe: the
-  -- distance heuristic is held to the map's longest cheap exit, a one-way exit
-  -- only matters when there is a second way round, and an exit weight only
-  -- reroutes when there is something to reroute onto. See
+  -- distance heuristic is scaled by whichever exit spans the most map per unit
+  -- of weight, a one-way exit only matters when there is a second way round,
+  -- and an exit weight only reroutes when there is something to reroute onto. See
   -- fixtures/maps/README.md for the map's provenance and shape.
   describe("Tests pathfinding over a full-sized IRE map", function()
     local archivePath = specDirectory .. "/fixtures/maps/achaea-map.zip"
@@ -5452,7 +5527,7 @@ describe("Tests saveMap and loadMap", function()
     local cliffTop, cliffFoot = 1201, 9326              -- "down" is one-way
     local hillside, nimick = 1432, 20646                -- joined by a hidden exit
     local nimickDetour = 43                             -- steps round it when it is shut
-    local overshotFrom, overshotTo = 747, 42            -- routed a step long by an overestimate
+    local overshotFrom, overshotTo = 747, 42            -- an overestimate routes these a step long
 
     -- speedWalkDir spells a direction short and getRoomExits spells it long,
     -- so walking one against the other needs the two put side by side

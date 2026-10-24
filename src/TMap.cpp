@@ -1054,7 +1054,8 @@ void TMap::initGraph()
     mMapGraphNeedsUpdate = false;
     ++mPathGraphRevision;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
-             << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
+             << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6
+             << "ms, heuristic scale (Chebyshev, euclidean):" << mHeuristicScale.chebyshev << mHeuristicScale.euclidean;
 }
 
 // Refill rather than only resize, or stale values below the old room count survive a shrink.
@@ -1129,8 +1130,8 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
             }
             mSearchDistance[neighbour] = throughCurrent;
             mSearchPredecessor[neighbour] = current;
-            // Never an expanded room unless a cost is negative: the heuristic is then consistent, so one is
-            // expanded at its least cost and the check above turns away later routes (rounding is far below 1).
+            // Never an expanded room: costs are whole numbers of at least 1 and the heuristic is consistent,
+            // so a room is expanded at its least cost, and its rounding is far below 1.
             mSearchState[neighbour] = stateFrontier;
             frontier.push({throughCurrent + heuristic(neighbour), -throughCurrent, neighbour});
         }
