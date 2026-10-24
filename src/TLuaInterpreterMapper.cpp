@@ -3183,8 +3183,7 @@ int TLuaInterpreter::removeMapMenu(lua_State* L)
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
     // addMapMenu() and addMapEvent() take a parent that was never added, so sweep its children regardless
-    const bool menuExisted = host.mpMap->mUserMenus.remove(uniqueName);
-    bool removed = menuExisted;
+    bool removed = host.mpMap->mUserMenus.remove(uniqueName);
     //remove all entries with this as parent
     QStringList removeList;
     removeList.append(uniqueName);
@@ -3206,10 +3205,6 @@ int TLuaInterpreter::removeMapMenu(lua_State* L)
                 }
             }
         }
-    }
-    // Every name after the first was a menu that is now gone; the first may only ever have been a parent named in advance
-    for (const QString& menuName : removeList.mid(menuExisted ? 0 : 1)) {
-        host.mpMap->mUserMenuOrder.remove(menuName);
     }
     QMapIterator<QString, QStringList> it2(host.mpMap->mUserActions);
     while (it2.hasNext()) {
