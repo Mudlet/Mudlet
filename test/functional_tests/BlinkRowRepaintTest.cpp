@@ -116,46 +116,12 @@ private slots:
 
     void test_blinkTickRedrawsOnlyTheBlinkingRowsAndMatchesAFullRepaint()
     {
-        mpServer->setWelcomeMessage(blinkingWelcome());
-        auto host = TestProfile::create(mpHostname, mpLocalhost, mpPort);
-        QVERIFY2(host, "No active host available for the test.");
-        QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(2s), "Could not connect with the host.");
-
-        QPointer<TMainConsole> console = host->mainConsoleView();
-        QVERIFY(console);
-        QVERIFY2(QTest::qWaitFor(
-                         [&]() {
-                             for (int i = console->buffer.getLastLineNumber(); i >= 0; --i) {
-                                 if (console->buffer.line(i).startsWith(qsl("This one blinks"))) {
-                                     return true;
-                                 }
-                             }
-                             return false;
-                         },
-                         5000),
-                 "the blinking line never reached the buffer");
-
-        host->setEnableBlinkText(true);
-        mudlet::self()->resize(1200, 800);
-        QTest::qWait(100ms);
-
-        TTextEdit* pane = console->mUpperPane;
-        QVERIFY(pane);
-        const int screenRows = pane->getScreenHeight();
-        QVERIFY2(screenRows > 12, qPrintable(qsl("the pane draws only %1 rows, too few to tell a blinking row from the rest").arg(screenRows)));
-        QVERIFY2(pane->imageTopLine() > 0, "the screen is not full, so no paint can reuse the cached screen");
-
-        pane->repaint();
-        QVERIFY2(pane->mIsBlinkClientRegistered, "a paint showing blinking text did not start the blink timer");
-
+        TTextEdit* pane = nullptr;
         int blinkingRow = -1;
-        for (int row = 0; row < screenRows; ++row) {
-            if (console->buffer.line(pane->imageTopLine() + row).startsWith(qsl("This one blinks"))) {
-                blinkingRow = row;
-            }
+        openPaneShowingBlinkingText(pane, blinkingRow);
+        if (QTest::currentTestFailed()) {
+            return;
         }
-        QVERIFY2(blinkingRow > 2, qPrintable(qsl("the blinking line is on row %1, not clear of the top of the screen").arg(blinkingRow)));
         const int rowHeight = pane->mFontHeight;
         const QRect blinkingRowRect(0, blinkingRow * rowHeight, pane->width(), rowHeight);
         const QRect topRowRect(0, 0, pane->width(), rowHeight);
@@ -191,7 +157,87 @@ private slots:
         QVERIFY2(afterTick == afterFullRepaint, "the rows a blink tick redrew left the cached screen different from a whole-pane repaint");
     }
 
+    // Fewer new lines than a screenful scroll the pane through its cached-screen
+    // shortcut, which keeps the timer running in case blinking text survived the
+    // scroll. Once none is left on screen, the next tick has to stop it.
+    void test_blinkTimerStopsOnceTheBlinkingLineScrollsAway()
+    {
+        TTextEdit* pane = nullptr;
+        int blinkingRow = -1;
+        openPaneShowingBlinkingText(pane, blinkingRow);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const int linesToScroll = blinkingRow + 2;
+        QVERIFY2(linesToScroll < pane->getScreenHeight(), "scrolling the blinking line away takes a whole screenful, which repaints the pane in full anyway");
+
+        TBuffer& buffer = *pane->mpBuffer;
+        const int lastLineBefore = buffer.getLastLineNumber();
+        QByteArray more;
+        for (int i = 0; i < linesToScroll; ++i) {
+            more.append(QByteArray(100, 'Y'));
+            more.append("\r\n");
+        }
+        mpServer->sendRaw(more);
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return buffer.getLastLineNumber() >= lastLineBefore + linesToScroll;
+                         },
+                         5000),
+                 "the extra lines never reached the buffer");
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return !pane->mIsBlinkClientRegistered;
+                         },
+                         2000),
+                 "the blink timer kept running after the blinking line left the screen");
+    }
+
 private:
+    void openPaneShowingBlinkingText(TTextEdit*& pane, int& blinkingRow)
+    {
+        mpServer->setWelcomeMessage(blinkingWelcome());
+        auto host = TestProfile::create(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(host, "No active host available for the test.");
+        QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
+        QVERIFY2(connected.wait(2s), "Could not connect with the host.");
+
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY(console);
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             for (int i = console->buffer.getLastLineNumber(); i >= 0; --i) {
+                                 if (console->buffer.line(i).startsWith(qsl("This one blinks"))) {
+                                     return true;
+                                 }
+                             }
+                             return false;
+                         },
+                         5000),
+                 "the blinking line never reached the buffer");
+
+        host->setEnableBlinkText(true);
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100ms);
+
+        pane = console->mUpperPane;
+        QVERIFY(pane);
+        const int screenRows = pane->getScreenHeight();
+        QVERIFY2(screenRows > 12, qPrintable(qsl("the pane draws only %1 rows, too few to tell a blinking row from the rest").arg(screenRows)));
+        QVERIFY2(pane->imageTopLine() > 0, "the screen is not full, so no paint can reuse the cached screen");
+
+        pane->repaint();
+        QVERIFY2(pane->mIsBlinkClientRegistered, "a paint showing blinking text did not start the blink timer");
+
+        for (int row = 0; row < screenRows; ++row) {
+            if (console->buffer.line(pane->imageTopLine() + row).startsWith(qsl("This one blinks"))) {
+                blinkingRow = row;
+            }
+        }
+        QVERIFY2(blinkingRow > 2, qPrintable(qsl("the blinking line is on row %1, not clear of the top of the screen").arg(blinkingRow)));
+    }
+
     void deleteProfileDirectory(const QString& profileName)
     {
         QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
