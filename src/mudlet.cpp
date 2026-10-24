@@ -3241,7 +3241,7 @@ void mudlet::updateWindowMenu()
         if (!mainWindowProfiles.isEmpty()) {
             // Add main window section
             for (const QString& profileName : mainWindowProfiles) {
-                QString actionText = tr("%1 (Main Window)").arg(profileName);
+                QString actionText = tr("%1 (Main Window)").arg(addonLabel(profileName));
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
                 profileAction->setChecked(isActiveWindow() && mpCurrentActiveHost && mpCurrentActiveHost->getName() == profileName);
@@ -3268,7 +3268,7 @@ void mudlet::updateWindowMenu()
             QStringList profilesInWindow = detachedWindow->getProfileNames();
 
             for (const QString& windowProfileName : std::as_const(profilesInWindow)) {
-                QString actionText = tr("%1 (Detached)").arg(windowProfileName);
+                QString actionText = tr("%1 (Detached)").arg(addonLabel(windowProfileName));
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
                 profileAction->setChecked(detachedWindow->isActiveWindow() && detachedWindow->getCurrentProfileName() == windowProfileName);

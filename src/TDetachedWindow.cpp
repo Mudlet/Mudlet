@@ -69,6 +69,14 @@
 
 using namespace std::chrono_literals;
 
+namespace {
+// Qt reads a "&" in a menu item's text as a mnemonic, and a profile name may hold one
+QString menuItemSafe(const QString& profileName)
+{
+    return QString(profileName).replace(QLatin1Char('&'), QLatin1String("&&"));
+}
+} // namespace
+
 // Deliberately parentless: a QWidget parent on a top-level window gives it a
 // QWindow transient parent, and Windows implements that as native window
 // ownership - an owned window is pinned above its owner forever, so clicking the
@@ -749,7 +757,7 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
 
     auto reattachAction = contextMenu.addAction(QIcon(qsl(":/icons/view-restore.png")),
                                                 //: This is an item in the context menu when clicked on a detached tab, and %1 is the name of the profile.
-                                                tr("Reattach '%1' to Main Window").arg(profileName));
+                                                tr("Reattach '%1' to Main Window").arg(menuItemSafe(profileName)));
     connect(reattachAction, &QAction::triggered, [this, profileName] {
         // Switch to this profile first, then reattach
         switchToProfile(profileName);
@@ -760,7 +768,7 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
 
     auto closeTabAction = contextMenu.addAction(QIcon(qsl(":/icons/profile-close.png")),
                                                 //: This is an item in the context menu when clicked on a detached tab, and %1 is the name of the profile.
-                                                tr("Close Profile '%1'").arg(profileName));
+                                                tr("Close Profile '%1'").arg(menuItemSafe(profileName)));
     connect(closeTabAction, &QAction::triggered, [this, tabIndex] {
         closeProfileByIndex(tabIndex);
     });
@@ -1825,8 +1833,7 @@ void TDetachedWindow::updateWindowMenu()
         if (!mainWindowProfiles.isEmpty()) {
             for (const QString& profileName : mainWindowProfiles) {
                 //: This is an item in list of profiles in the "Window" menu of a detached Mudlet window. %1 is the name of the profile, and it is located not in the detached window, but in Mudlet's main window.
-                // "&&", or a "&" in the name is swallowed into a mnemonic that can clash with the items above
-                QString actionText = tr("%1 (Main Window)").arg(QString(profileName).replace(QLatin1Char('&'), qsl("&&")));
+                QString actionText = tr("%1 (Main Window)").arg(menuItemSafe(profileName));
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
                 profileAction->setChecked(pMudlet->isActiveWindow() && pMudlet->getActiveHost() && pMudlet->getActiveHost()->getName() == profileName);
@@ -1854,7 +1861,7 @@ void TDetachedWindow::updateWindowMenu()
 
             for (const QString& windowProfileName : std::as_const(profilesInWindow)) {
                 //: This is an item in list of profiles in the "Window" menu of a detached Mudlet window. %1 is the name of the profile, and it is located not in Mudlet's main window, but in the detached window.
-                QString actionText = tr("%1 (Detached)").arg(QString(windowProfileName).replace(QLatin1Char('&'), qsl("&&")));
+                QString actionText = tr("%1 (Detached)").arg(menuItemSafe(windowProfileName));
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
                 profileAction->setChecked(detachedWindow == this && detachedWindow->getCurrentProfileName() == windowProfileName);
@@ -3382,7 +3389,7 @@ void TDetachedWindow::slot_updateShowMapActionText()
         //: Toolbox menu entry of a detached window while the map is on screen - activating it hides the map. Its "&" letter must differ from the other items in that menu, "Module manager" among them.
         mpMenuShowMapAction->setText(tr("Hide &map"));
     } else {
-        //: Toolbox menu entry of a detached window while no map is on screen - activating it shows the map, creating it if need be
+        //: Toolbox menu entry of a detached window while no map is on screen - activating it shows the map, creating it if need be. Its "&" letter must differ from the other items in that menu, "Module manager" among them.
         mpMenuShowMapAction->setText(tr("Show &map"));
     }
 }

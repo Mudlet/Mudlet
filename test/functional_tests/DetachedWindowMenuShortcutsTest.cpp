@@ -37,6 +37,7 @@
 #include <QPointer>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QtTest/QtTest>
 #include <chrono>
 
@@ -46,6 +47,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
 #include "TDetachedWindow.h"
+#include "TTabBar.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "mudlet.h"
@@ -82,9 +84,10 @@ private:
     QPointer<TDetachedWindow> mpDetachedWindow;
     QString mPort;
     const QString mLocalhost = qsl("localhost");
-    // The "&" would clash with "&Fullscreen" if the detached Window menu took it as a mnemonic
+    // Each "&" makes a clash if a menu takes it as a mnemonic: the first's with
+    // "&Fullscreen", the second's between the two items of its tab's menu
     const QString mFirstHostname = qsl("DetachedWindowMenuShortcuts-&First");
-    const QString mSecondHostname = qsl("DetachedWindowMenuShortcuts-Second");
+    const QString mSecondHostname = qsl("DetachedWindowMenuShortcuts-&Second");
 
     // setupConfig() consults portable.txt before the XDG logic
     static bool portableMarkerPresent()
@@ -225,35 +228,61 @@ private slots:
         QVERIFY2(!menus.isEmpty(), "the detached window has no menus to check");
 
         QStringList clashes;
-        int mnemonicCount = 0;
         for (int i = 0; i < menus.size(); ++i) {
             QMenu* pMenu = menus.at(i);
             // What the Window menu lists and what the map item says are only filled in as it opens
             emit pMenu->aboutToShow();
-
-            QHash<QChar, QStringList> itemsByLetter;
             const auto actions = pMenu->actions();
             for (const QAction* pAction : actions) {
-                if (pAction->isSeparator() || !pAction->isVisible()) {
-                    continue;
-                }
                 if (pAction->menu()) {
                     menus << pAction->menu();
                 }
-                const QChar letter = mnemonicLetter(pAction->text());
-                if (!letter.isNull()) {
-                    itemsByLetter[letter] << qsl("\"%1\"").arg(pAction->text());
-                    ++mnemonicCount;
+            }
+            clashes << mnemonicClashes(pMenu);
+        }
+        QVERIFY2(clashes.isEmpty(), qPrintable(qsl("menu items of a detached window share a mnemonic: %1").arg(clashes.join(qsl("; ")))));
+    }
+
+    void test_aProfileNameInAMenuCarriesNoMnemonic()
+    {
+        QVERIFY(mpDetachedWindow);
+        auto* pTabBar = mpDetachedWindow->findChild<TTabBar*>();
+        QVERIFY(pTabBar && pTabBar->count() > 0);
+
+        // exec() does not return until the menu closes, so it is read and closed from inside its event loop
+        bool tabMenuSeen = false;
+        QStringList tabMenuOffenders;
+        QTimer popupReader;
+        popupReader.setInterval(0);
+        connect(&popupReader, &QTimer::timeout, this, [&]() {
+            auto* pMenu = qobject_cast<QMenu*>(QApplication::activePopupWidget());
+            if (!pMenu) {
+                return;
+            }
+            tabMenuSeen = true;
+            const auto actions = pMenu->actions();
+            for (const QAction* pAction : actions) {
+                if (carriesMnemonic(pAction->text())) {
+                    tabMenuOffenders << qsl("\"%1\"").arg(pAction->text());
                 }
             }
-            for (auto it = itemsByLetter.cbegin(); it != itemsByLetter.cend(); ++it) {
-                if (it.value().size() > 1) {
-                    clashes << qsl("%1 in \"%2\": %3").arg(it.key(), pMenu->title(), it.value().join(qsl(", ")));
-                }
+            pMenu->close();
+        });
+        popupReader.start();
+        emit pTabBar->customContextMenuRequested(pTabBar->tabRect(0).center());
+        popupReader.stop();
+        QVERIFY2(tabMenuSeen, "right-clicking the detached tab opened no menu");
+        QVERIFY2(tabMenuOffenders.isEmpty(), qPrintable(qsl("a detached tab's menu turns the profile name's \"&\" into a mnemonic: %1").arg(tabMenuOffenders.join(qsl(", ")))));
+
+        QMenu* pDetachedWindowMenu = nullptr;
+        const auto menuBarActions = mpDetachedWindow->menuBar()->actions();
+        for (const QAction* pMenuAction : menuBarActions) {
+            if (pMenuAction->menu() && pMenuAction->text() == TDetachedWindow::tr("Window")) {
+                pDetachedWindowMenu = pMenuAction->menu();
             }
         }
-        QVERIFY2(mnemonicCount > 0, "no menu item carries a mnemonic, so nothing here could find a clash");
-        QVERIFY2(clashes.isEmpty(), qPrintable(qsl("menu items of a detached window share a mnemonic: %1").arg(clashes.join(qsl("; ")))));
+        verifyProfileItemsCarryNoMnemonic(pDetachedWindowMenu, qsl("the detached window's Window menu"));
+        verifyProfileItemsCarryNoMnemonic(mudlet::self()->menuWindow, qsl("the main window's Window menu"));
     }
 
     // The reported symptom, driven the way the user hit it. Last, since it leaves
@@ -338,6 +367,51 @@ private:
     }
 
     static bool carriesMnemonic(const QString& title) { return !mnemonicLetter(title).isNull(); }
+
+    // Each profile in a Window menu is an item whose data is the profile's name
+    void verifyProfileItemsCarryNoMnemonic(QMenu* pMenu, const QString& where)
+    {
+        QVERIFY2(pMenu, qPrintable(qsl("%1 was not found").arg(where)));
+        emit pMenu->aboutToShow();
+        int profileItemCount = 0;
+        QStringList offenders;
+        const auto actions = pMenu->actions();
+        for (const QAction* pAction : actions) {
+            if (pAction->data().toString().isEmpty()) {
+                continue;
+            }
+            ++profileItemCount;
+            if (carriesMnemonic(pAction->text())) {
+                offenders << qsl("\"%1\"").arg(pAction->text());
+            }
+        }
+        QVERIFY2(profileItemCount == 2, qPrintable(qsl("%1 lists %2 profiles, not both").arg(where).arg(profileItemCount)));
+        QVERIFY2(offenders.isEmpty(), qPrintable(qsl("%1 turns a profile name's \"&\" into a mnemonic: %2").arg(where, offenders.join(qsl(", ")))));
+    }
+
+    static QStringList mnemonicClashes(const QMenu* pMenu)
+    {
+        QHash<QChar, QStringList> itemsByLetter;
+        const auto actions = pMenu->actions();
+        for (const QAction* pAction : actions) {
+            // Qt leaves hidden items out when it matches a pressed letter, and disabled
+            // ones too, but those count here: the same items are enabled again later
+            if (pAction->isSeparator() || !pAction->isVisible()) {
+                continue;
+            }
+            const QChar letter = mnemonicLetter(pAction->text());
+            if (!letter.isNull()) {
+                itemsByLetter[letter] << qsl("\"%1\"").arg(pAction->text());
+            }
+        }
+        QStringList clashes;
+        for (auto it = itemsByLetter.cbegin(); it != itemsByLetter.cend(); ++it) {
+            if (it.value().size() > 1) {
+                clashes << qsl("%1 in \"%2\": %3").arg(it.key(), pMenu->title(), it.value().join(qsl(", ")));
+            }
+        }
+        return clashes;
+    }
 
     TDetachedWindow* detachSecondProfile()
     {
