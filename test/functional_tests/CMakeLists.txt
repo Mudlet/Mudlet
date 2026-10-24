@@ -36,6 +36,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     AccessibleToolTipTest.cpp
     AddonControlsTest.cpp
     AsciiLineBreakTest.cpp
+    BlinkRowRepaintTest.cpp
     ConsoleModelExtractionTest.cpp
     ConsoleTextStyleTest.cpp
     CopyAsImageTest.cpp

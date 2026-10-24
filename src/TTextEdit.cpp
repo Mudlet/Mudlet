@@ -3996,9 +3996,34 @@ void TTextEdit::slot_changeEnableBlinkText(const bool enable)
 
 void TTextEdit::slot_blinkStateChanged()
 {
-    if (mIsBlinkClientRegistered) {
-        forceUpdate();
+    if (!mIsBlinkClientRegistered) {
+        return;
     }
+    // A tick changes only the blinking glyphs' opacity, so only the rows holding
+    // them need drawing again.
+    const int lineOffset = imageTopLine();
+    const int endLine = std::min(lineOffset + mScreenHeight, static_cast<int>(mpBuffer->buffer.size()));
+    int firstBlinkingLine = -1;
+    int lastBlinkingLine = -1;
+    for (int line = lineOffset; line < endLine; ++line) {
+        const std::vector<TChar>& chars = mpBuffer->buffer[line];
+        const bool blinks = std::any_of(chars.cbegin(), chars.cend(), [](const TChar& c) {
+            const TChar::AttributeFlags attributes = c.hasSplitFormat() ? (c.allDisplayAttributes() | c.rightHalf().allDisplayAttributes()) : c.allDisplayAttributes();
+            return attributes & (TChar::Blink | TChar::FastBlink);
+        });
+        if (blinks) {
+            if (firstBlinkingLine < 0) {
+                firstBlinkingLine = line;
+            }
+            lastBlinkingLine = line;
+        }
+    }
+    if (firstBlinkingLine < 0) {
+        // Only a whole repaint lets drawForeground() find nothing blinking and stop the timer
+        forceUpdate();
+        return;
+    }
+    markLinesDirty(firstBlinkingLine, lastBlinkingLine);
 }
 
 void TTextEdit::slot_scrollStoppedTimeout()
