@@ -7599,7 +7599,7 @@ describe("Tests the game loader packages", function()
   end
 
   -- Raises sysDownloadDone for the file, and answers a check for whether the
-  -- installs the loader deferred from it have run
+  -- installs the loader deferred from it have run, and how many it deferred
   local function downloadDone(path)
     local pending = 0
     local realTempTimer = _G.tempTimer
@@ -7614,7 +7614,18 @@ describe("Tests the game loader packages", function()
     local ok, err = pcall(raiseEvent, "sysDownloadDone", path)
     _G.tempTimer = realTempTimer
     assert(ok, err)
-    return function() return pending == 0 end
+    return function() return pending == 0 end, pending
+  end
+
+  -- Runs the command the loader shows when its download fails, as the player would
+  local function pasteTheCommand(path)
+    local shown = echoedBy(function()
+      raiseEvent("sysDownloadError", "mudlet-spec-host-not-found", path)
+    end)
+    local command = shown:match("\nlua ([^\n]+)")
+    assert.is_string(command, "no command to paste was shown: " .. shown)
+    override("d", nil)
+    killingHandlersItRegisters(function() assert(loadstring(command))() end)
   end
 
   -- Installs the loader with downloadFile() stubbed out, and answers the list
@@ -7707,15 +7718,8 @@ describe("Tests the game loader packages", function()
 
     it(loader.name .. " installs once when the player runs the command it gave after a failed download", function()
       local downloads, path = install(loader)
-      local shown = echoedBy(function()
-        raiseEvent("sysDownloadError", "mudlet-spec-host-not-found", path)
-      end)
-      local command = shown:match("\nlua ([^\n]+)")
-      assert.is_string(command, "no command to paste was shown: " .. shown)
-
-      override("d", nil)
       defer(function() removeFixturePackage(minimalPackage) end)
-      killingHandlersItRegisters(function() assert(loadstring(command))() end)
+      pasteTheCommand(path)
       assert.are.equal(2, #downloads, "the pasted command did not start the download")
       copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", path)
 
@@ -7737,11 +7741,11 @@ describe("Tests the game loader packages", function()
       copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", path)
 
       local mark = getLastLineNumber("main")
-      local firstInstalled = downloadDone(path)
-      local secondInstalled = downloadDone(path)
+      local installed = downloadDone(path)
+      local _, deferredAgain = downloadDone(path)
+      assert.are.equal(0, deferredAgain, "the second download was installed again")
       raiseEvent("sysDownloadError", "mudlet-spec-host-not-found", path)
-      assert.is_true(waitUntil(function() return firstInstalled() and secondInstalled() end, 10000),
-                     "the deferred install never ran")
+      assert.is_true(waitUntil(installed, 10000), "the deferred install never ran")
       assert.is_true(packageInstalled(minimalPackage), "the downloaded package was never installed")
       local shown = textFrom(mark)
       assert.is_false(containsWrapped(shown, loader.installFailed), shown)
@@ -7749,6 +7753,30 @@ describe("Tests the game loader packages", function()
 
       raiseEvent("sysConnectionEvent")
       assert.are.equal(started, #downloads, "a reconnect downloaded the installed package again")
+    end)
+
+    it(loader.name .. " tries again on the next connection when the command it gave fails to install", function()
+      local downloads, path = install(loader)
+      pasteTheCommand(path)
+      copyFile(fixtureDirectory .. "/mudlet-spec-notazip.mpackage", path)
+
+      assert.is_true(waitUntil(downloadDone(path), 10000), "the deferred install never ran")
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(3, #downloads, "the next connection did not try the download again")
+    end)
+
+    it(loader.name .. " stays quiet about a download that is already installed", function()
+      local downloads, path = install(loader)
+      withFixturePackage(minimalPackage)
+      copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", path)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save never finished")
+
+      local mark = getLastLineNumber("main")
+      assert.is_true(waitUntil(downloadDone(path), 10000), "the deferred install never ran")
+      assert.is_false(containsWrapped(textFrom(mark), loader.installFailed), textFrom(mark))
+
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(1, #downloads, "a reconnect downloaded the installed package again")
     end)
 
     it(loader.name .. " reports a download that will not install, and tries again on the next connection", function()

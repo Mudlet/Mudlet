@@ -35,11 +35,14 @@ function installReady(event, file)
   decho("&lt;0,160,0&gt;[  OK  ]  - &lt;190,100,50&gt;Dein Mudlet-Paket fürs MorgenGrauen wurde erfolgreich heruntergeladen.\n")
   decho("&lt;0,150,190&gt;[ INFO ]  - &lt;0,160,0&gt;Installiere... (dies dauert einige Sekunden.)\n")
   installRequested = true
+  local installedBefore = getPackages()
   tempTimer(1, function()
+    local ok, err = true, nil
     -- the command a failed download tells the player to paste installs and removes it itself
-    if not io.exists(getMudletHomeDir().."/MorgenGrauen.mpackage") then return end
-    local installedBefore = getPackages()
-    local ok, err = installPackage(getMudletHomeDir().."/MorgenGrauen.mpackage")
+    if io.exists(getMudletHomeDir().."/MorgenGrauen.mpackage") then
+      ok, err = installPackage(getMudletHomeDir().."/MorgenGrauen.mpackage")
+    end
+    if not ok and tostring(err):find("is already installed", 1, true) then return end
     if not ok then
       installRequested = false
       decho("&lt;190,0,0&gt;[ FAIL ]  - &lt;0,160,0&gt;Das Mudlet-Paket fürs MorgenGrauen konnte nicht installiert werden: &lt;190,190,190&gt;"..tostring(err).."\n")

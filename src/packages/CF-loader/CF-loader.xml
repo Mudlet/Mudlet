@@ -43,11 +43,14 @@ function installReady(event, file)
 ]])
   cecho("\r\n&lt;maroon&gt;*&lt;gold&gt; Installing... &lt;gray&gt;(this will take a few seconds.)\r\n")
   installRequested = true
+  local installedBefore = getPackages()
   tempTimer(2, function()
+    local ok, err = true, nil
     -- the command a failed download tells the player to paste installs and removes it itself
-    if not io.exists(getMudletHomeDir().."/CFGUI.zip") then return end
-    local installedBefore = getPackages()
-    local ok, err = installPackage(getMudletHomeDir().."/CFGUI.zip")
+    if io.exists(getMudletHomeDir().."/CFGUI.zip") then
+      ok, err = installPackage(getMudletHomeDir().."/CFGUI.zip")
+    end
+    if not ok and tostring(err):find("is already installed", 1, true) then return end
     if not ok then
       installRequested = false
       cecho("\r\n&lt;maroon&gt;*&lt;gold&gt; Installing your Carrion Fields client failed: &lt;gray&gt;"..tostring(err).."\r\n")
