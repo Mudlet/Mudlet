@@ -280,6 +280,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     PackageFontsOnRefusedArchiveTest.cpp
     PackageManagerHeadingTest.cpp
     PackageManagerRemovalTest.cpp
+    PackageManagerRepositoryLinksTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     PackageRepositoryDownloadTest.cpp
     PackageSelfRemovalTest.cpp
