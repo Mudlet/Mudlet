@@ -1182,16 +1182,15 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#updateSounds
-int TLuaInterpreter::updateSounds(lua_State* L)
+// Private
+int TLuaInterpreter::updateMediaAsTableArgument(lua_State* L, const char* func, const TMediaData::MediaType mediaType)
 {
     if (!lua_istable(L, 1)) {
-        lua_pushfstring(L, "%s: needs to be a table", __func__);
+        lua_pushfstring(L, "%s: needs to be a table", func);
         return lua_error(L);
     }
 
     const Host& host = getHostFromLua(L);
-    const char* func = __func__;
 
     bool errorPushed = false;
     {
@@ -1251,7 +1250,7 @@ int TLuaInterpreter::updateSounds(lua_State* L)
                 } else {
                     glideMilliseconds = value;
                 }
-            } else if (key == QLatin1String("pan")) {
+            } else if (mediaType == TMediaData::MediaTypeSound && key == QLatin1String("pan")) {
                 if (!checkNumberArg(L, func, -1, "value for pan")) {
                     errorPushed = true;
                     break;
@@ -1264,7 +1263,7 @@ int TLuaInterpreter::updateSounds(lua_State* L)
                 }
 
                 pan = value;
-            } else if (key == QLatin1String("direction")) {
+            } else if (mediaType == TMediaData::MediaTypeSound && key == QLatin1String("direction")) {
                 if (!mediaDirectionArg(L, func, direction)) {
                     errorPushed = true;
                     break;
@@ -1277,11 +1276,16 @@ int TLuaInterpreter::updateSounds(lua_State* L)
 
         if (!errorPushed) {
             if (mediaData.mediaFileName().isEmpty() && mediaData.mediaKey().isEmpty() && mediaData.mediaTag().isEmpty()) {
-                return warnArgumentValue(L, __func__, "no key, name or tag to choose the sounds to update by");
+                return warnArgumentValue(L, func, qsl("no key, name or tag to choose the %1 to update by").arg(mediaType == TMediaData::MediaTypeSound ? qsl("sounds") : qsl("music")));
+            }
+
+            // Music takes no pan or direction, so a call copied from updateSounds would otherwise change nothing and say nothing
+            if (!volume && !pan && direction.isEmpty()) {
+                return warnArgumentValue(L, func, mediaType == TMediaData::MediaTypeSound ? qsl("nothing to change (give a volume, pan or direction)") : qsl("nothing to change (give a volume)"));
             }
 
             mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-            mediaData.setMediaType(TMediaData::MediaTypeSound);
+            mediaData.setMediaType(mediaType);
 
             host.mpMedia->updateMedia(mediaData, volume, pan, direction, glideMilliseconds);
         }
@@ -1293,6 +1297,18 @@ int TLuaInterpreter::updateSounds(lua_State* L)
 
     lua_pushboolean(L, true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#updateSounds
+int TLuaInterpreter::updateSounds(lua_State* L)
+{
+    return updateMediaAsTableArgument(L, __func__, TMediaData::MediaTypeSound);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#updateMusic
+int TLuaInterpreter::updateMusic(lua_State* L)
+{
+    return updateMediaAsTableArgument(L, __func__, TMediaData::MediaTypeMusic);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMediaListener
@@ -1952,6 +1968,21 @@ int TLuaInterpreter::getPausedSoundsAsTableArgument(lua_State* L, const char* fu
                 } else if (key == QLatin1String("tag") && !value.isEmpty()) {
                     mediaData.setMediaTag(value);
                 }
+            } else if (key == QLatin1String("priority")) {
+                if (!checkIntArg(L, func, -1, "value for priority")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                int value = static_cast<int>(lua_tointeger(L, -1));
+
+                if (value > TMediaData::MediaPriorityMax) {
+                    value = TMediaData::MediaPriorityMax;
+                } else if (value < TMediaData::MediaPriorityMin) {
+                    value = TMediaData::MediaPriorityMin;
+                }
+
+                mediaData.setMediaPriority(value);
             }
 
             // removes value, but keeps key for next iteration
