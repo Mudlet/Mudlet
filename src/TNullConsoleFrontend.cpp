@@ -530,6 +530,12 @@ QSize labelSizeHint(const QFont& font, const QString& text, const bool textLabel
     return wrappedSum(QSize(qCeil(size.width()) + indent, qCeil(size.height())), frameSize);
 }
 
+// The sheet TCommandLine's constructor gives every command line but the main one
+QString commandLineSheet(const QColor& background)
+{
+    return qsl("QPlainTextEdit{background-color: rgb(%1, %2, %3);}").arg(background.red()).arg(background.green()).arg(background.blue());
+}
+
 } // namespace
 
 void TConsoleModelSink::printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore)
@@ -1358,6 +1364,7 @@ std::pair<bool, QString> TNullConsoleFrontend::createCommandLine(const QString& 
     commandLine.writer = makeHistoryWriter(holderFor(commandLine.userWindow, commandLine.box.get()), name, savesHistory);
     registry.registerCommandLine(name);
     registry.setCommandLineSavesHistory(name, savesHistory);
+    registry.setCommandLineStyleSheet(name, commandLineSheet(mpHost->mCommandLineBgColor));
     // TMainConsole::plainWindowWidget() takes a scroll box of the same name first
     if (!mScrollBoxes.contains(name)) {
         registry.setPlainWindowGeometry(name, commandLine.geometry);
@@ -1544,6 +1551,22 @@ bool TNullConsoleFrontend::setCommandLineSavesHistory(const QString& name, const
     return true;
 }
 
+std::pair<bool, QString> TNullConsoleFrontend::setCmdLineStyleSheet(const QString& name, const QString& styleSheet)
+{
+    // The main command line is a view's
+    if (name.isEmpty() || name == QLatin1String("main")) {
+        return noView();
+    }
+    const auto it = mCommandLines.find(name);
+    if (it == mCommandLines.end()) {
+        return {false, qsl("command-line name '%1' not found").arg(name)};
+    }
+    it->second.styleSheet = styleSheet;
+    mpHost->windowRegistry().setCommandLineStyleSheet(name, styleSheet);
+    restylePlainWindow(name, it->second, true);
+    return {true, QString()};
+}
+
 // TConsole::setCmdVisible() makes a console's own command line the first time it is shown, and
 // TMainConsole::registerSubCommandLine() puts it in place of any other command line of the name
 bool TNullConsoleFrontend::setWindowCommandLineVisible(const QString& name, const bool visible)
@@ -1579,6 +1602,7 @@ bool TNullConsoleFrontend::setWindowCommandLineVisible(const QString& name, cons
     TWindowRegistry& registry = mpHost->windowRegistry();
     registry.registerCommandLine(name);
     registry.setCommandLineSavesHistory(name, savesHistory);
+    registry.setCommandLineStyleSheet(name, commandLineSheet(mpHost->mCommandLineBgColor));
     return true;
 }
 
@@ -1680,23 +1704,25 @@ bool TNullConsoleFrontend::setTextBoxStyleSheet(const QString& name, const QStri
         return false;
     }
     it->second.styleSheet = styleSheet;
-    restyleTextBox(name, it->second);
+    restylePlainWindow(name, it->second, false);
     return true;
 }
 
 // Only the sheet's size limits, which QStyleSheetStyle::setGeometry() sets for the enabled state and
-// whether the text edit is read-only
-void TNullConsoleFrontend::restyleTextBox(const QString& name, PlainWindow& textBox)
+// whether a text edit is read-only, which a command line never is
+void TNullConsoleFrontend::restylePlainWindow(const QString& name, PlainWindow& window, const bool commandLine)
 {
-    static const QStringList classNames{qsl("TTextBox"), qsl("QPlainTextEdit"), qsl("QAbstractScrollArea"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")};
+    static const QStringList textBoxClasses{qsl("TTextBox"), qsl("QPlainTextEdit"), qsl("QAbstractScrollArea"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")};
+    static const QStringList commandLineClasses{qsl("TCommandLine"), qsl("QPlainTextEdit"), qsl("QAbstractScrollArea"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")};
+    const QString objectName = (commandLine ? qsl("commandLine_%1_%2") : qsl("textEdit_%1_%2")).arg(mpHost->getName(), name);
     const QString declarations =
-            sheetDeclarations(textBox.styleSheet, classNames, qsl("textEdit_%1_%2").arg(mpHost->getName(), name), {qsl("enabled"), textBox.readOnly ? qsl("read-only") : qsl("editable")});
+            sheetDeclarations(window.styleSheet, commandLine ? commandLineClasses : textBoxClasses, objectName, {qsl("enabled"), window.readOnly ? qsl("read-only") : qsl("editable")});
     // QFusionStyle's PM_DefaultFrameWidth, which a native border takes
     const SheetGeometry geometry = sheetGeometry(declarations, sheetLengthFont(declarations), 1);
-    textBox.limits = {geometry.minimum, geometry.maximum};
-    textBox.geometry.setSize(textBox.limits.bounded(textBox.geometry.size()));
-    if (!mScrollBoxes.contains(name) && plainWindow(name) == &textBox) {
-        mpHost->windowRegistry().setPlainWindowGeometry(name, textBox.geometry);
+    window.limits = {geometry.minimum, geometry.maximum};
+    window.geometry.setSize(window.limits.bounded(window.geometry.size()));
+    if (!mScrollBoxes.contains(name) && plainWindow(name) == &window) {
+        mpHost->windowRegistry().setPlainWindowGeometry(name, window.geometry);
     }
 }
 
@@ -2089,7 +2115,7 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
             }
             // QWidget::setParent() restyles a text edit it moves, in its read-only state now
             if (const auto textBox = mTextBoxes.find(name); moved && textBox != mTextBoxes.end() && &textBox->second == window) {
-                restyleTextBox(name, textBox->second);
+                restylePlainWindow(name, textBox->second, false);
             }
             movePlainWindow(name, x, y);
             reportWindowVisibility(name);
