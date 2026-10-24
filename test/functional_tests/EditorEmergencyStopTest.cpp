@@ -17,12 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-/*
- * The emergency stop switches every trigger, alias, timer and key off at run
- * time but leaves what the player switched on alone, and ending the stop
- * resumes all of that. The editor has to keep showing what the player switched
- * on, and saving an item must not switch it back on before the stop ends.
- */
+// An emergency stop switches items off only at run time: the editor must keep showing
+// what the player switched on, and saving must not switch an item back on before it ends
 
 #include <QDragEnterEvent>
 #include <QMimeData>
