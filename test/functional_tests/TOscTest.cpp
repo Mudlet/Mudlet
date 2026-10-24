@@ -1718,6 +1718,81 @@ private slots:
     mpHost->setCaretEnabled(false);
   }
 
+  // An OSC 8 sequence that opens a link replaces one still open, as the OSC 8
+  // spec has it, even when Mudlet then rejects the new one: the text after it
+  // must not join the open link, nor take on the rejected link's config.
+  void test_ARejectedLinkEndsTheOpenOne_data() {
+    QTest::addColumn<QString>("rejectedLink");
+
+    QTest::newRow("unsupported scheme")
+        << qsl("\x1b]8;;gmcp:Foo\x1b\\");
+    QTest::newRow("unsupported scheme with a spoiler")
+        << qsl("\x1b]8;;gmcp:Foo?config={\"spoiler\":true}\x1b\\");
+    QTest::newRow("unsupported scheme with a selection")
+        << qsl("\x1b]8;;gmcp:Foo?config={\"selection\":{\"group\":\"g\",\"value\":\"v\",\"selected\":true}}\x1b\\");
+  }
+
+  void test_ARejectedLinkEndsTheOpenOne() {
+    QFETCH(QString, rejectedLink);
+
+    injectData(qsl("REJECTED \x1b]8;;send:look\x1b\\Look ") + rejectedLink +
+               qsl("more\x1b]8;;\x1b\\ after\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("REJECTED"));
+    QVERIFY(line >= 0);
+    QCOMPARE(console->buffer.line(line), qsl("REJECTED Look more after"));
+
+    const int lookLink = console->buffer.getLinkIndexAt(line, 9);
+    QVERIFY2(lookLink > 0, "the link that was open is no longer a link");
+    QCOMPARE(console->getLinkStore().getLinksConst(lookLink),
+             QStringList(qsl("send(%1, false)").arg(LuaLiteral::quote(qsl("look")))));
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 14), 0);
+    QVERIFY(!console->buffer.isLinkSelected(lookLink));
+  }
+
+  // The link that is ended gets its own config, whichever link replaced it
+  void test_AReplacedLinkKeepsItsOwnConfig_data() {
+    QTest::addColumn<QString>("nextLink");
+    QTest::addColumn<bool>("nextIsALink");
+
+    QTest::newRow("rejected") << qsl("\x1b]8;;gmcp:Foo\x1b\\") << false;
+    QTest::newRow("accepted") << qsl("\x1b]8;;send:b\x1b\\") << true;
+  }
+
+  void test_AReplacedLinkKeepsItsOwnConfig() {
+    QFETCH(QString, nextLink);
+    QFETCH(bool, nextIsALink);
+
+    injectData(qsl("SPOIL \x1b]8;;send:a?config={\"spoiler\":true}\x1b\\A ") +
+               nextLink + qsl("more\x1b]8;;\x1b\\\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("SPOIL"));
+    QVERIFY(line >= 0);
+    QCOMPARE(console->buffer.line(line), qsl("SPOIL   more"));
+
+    const int spoiler = console->buffer.getLinkIndexAt(line, 6);
+    QVERIFY(spoiler > 0);
+    const int next = console->buffer.getLinkIndexAt(line, 8);
+    QCOMPARE(next > 0, nextIsALink);
+    QVERIFY(next != spoiler);
+  }
+
+  // A preset definition registers a style and opens no link, so the open
+  // link carries on through it
+  void test_APresetDefinitionLeavesTheOpenLink() {
+    injectData(qsl("PRESETMID \x1b]8;;send:a\x1b\\A \x1b]8;;preset:mid?config={\"s\":{\"c\":\"red\"}}\x1b\\B\x1b]8;;\x1b\\\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("PRESETMID"));
+    QVERIFY(line >= 0);
+    const int link = console->buffer.getLinkIndexAt(line, 10);
+    QVERIFY(link > 0);
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 12), link);
+  }
+
+
   // An OSC 8 link the game never closes used to stay open for the rest of the
   // session: every later line carried its id, so a click anywhere ran a command
   // the server chose, on text that looks exactly like ordinary output. The link
