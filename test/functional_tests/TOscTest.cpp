@@ -697,6 +697,50 @@ private slots:
     QCOMPARE(console->buffer.getLinkTooltip(linkId), expectedTooltip);
   }
 
+  // A | belongs to the label or command it is in; the menu must not be split on it
+  void test_Osc8MenuKeepsPipesInItsItems() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"A|B\":\"send:one\"},\"-\",{\"Two\":\"send:two|x\"}]}\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    const auto sends = [](const QString &command) {
+      return qsl("send(%1, false)").arg(LuaLiteral::quote(command));
+    };
+    QCOMPARE(console->getLinkStore().getLinksConst(linkId),
+             QStringList({sends(qsl("one")), QString(), sends(qsl("two|x"))}));
+    // hint 0 is the hover tooltip; the menu labels follow it
+    QCOMPARE(console->getLinkStore().getHintsConst(linkId).mid(1),
+             QStringList({qsl("A|B"), QString(), qsl("Two")}));
+  }
+
+  // An empty label keeps its item, and an item with no command is left out,
+  // without moving any other item onto the wrong command
+  void test_Osc8MenuKeepsEmptyLabelsAndDropsEmptyCommands() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"\":\"send:a\"},{\"Nothing\":\"\"},{\"B\":\"send:b\"}]}\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    const auto sends = [](const QString &command) {
+      return qsl("send(%1, false)").arg(LuaLiteral::quote(command));
+    };
+    QCOMPARE(console->getLinkStore().getLinksConst(linkId),
+             QStringList({sends(qsl("a")), sends(qsl("b"))}));
+    QCOMPARE(console->getLinkStore().getHintsConst(linkId).mid(1),
+             QStringList({QString(), qsl("B")}));
+  }
+
   // A "config" parameter carrying something that is not an object is not a
   // config, so it must not displace a valid one earlier in the same query.
   void test_Osc8ValuelessConfigDoesNotDisplaceAValidOne_data() {
