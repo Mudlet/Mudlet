@@ -358,15 +358,15 @@ void TDetachedWindow::createMenus()
     connect(replayAction, &QAction::triggered, this, &TDetachedWindow::slot_showReplayDialog);
     toolboxMenu->addAction(replayAction);
 
-    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
-    mpMenuModuleManagerAction = new QAction(tr("&Module manager"), this);
+    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Show map" among them.
+    mpMenuModuleManagerAction = new QAction(tr("M&odule manager"), this);
     //: This explains the "Module manager" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuModuleManagerAction->setStatusTip(tr("Install and remove (share- & sync-able) collections of Mudlet lua items (modules)."));
     connect(mpMenuModuleManagerAction, &QAction::triggered, this, &TDetachedWindow::slot_showModuleManagerDialog);
     toolboxMenu->addAction(mpMenuModuleManagerAction);
 
-    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
-    auto packageExporterAction = new QAction(tr("Package &exporter"), this);
+    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Show errors" among them.
+    auto packageExporterAction = new QAction(tr("Package e&xporter"), this);
     //: This explains the "Package exporter" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     packageExporterAction->setStatusTip(tr("Gather and bundle up collections of Mudlet Lua items and other reasources into a module."));
     connect(packageExporterAction, &QAction::triggered, this, &TDetachedWindow::slot_showPackageExporterDialog);
@@ -480,8 +480,8 @@ void TDetachedWindow::createMenus()
     connect(alwaysOnTopAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleAlwaysOnTop);
     mpWindowMenu->addAction(alwaysOnTopAction);
 
-    //: This is an item in the "Window" menu in the menubar of a detached Mudlet window.
-    auto minimizeAction = new QAction(tr("&Minimize"), this);
+    //: This is an item in the "Window" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Multiview" among them.
+    auto minimizeAction = new QAction(tr("Mi&nimize"), this);
     //: This explains the "Minimize" item in the "Window" menu in the menubar of a detached Mudlet window.
     minimizeAction->setStatusTip(tr("Minimize this window"));
     connect(minimizeAction, &QAction::triggered, this, &QWidget::showMinimized);
@@ -545,8 +545,8 @@ void TDetachedWindow::createMenus()
     aboutMenu->addAction(aboutAction);
 
 #if defined(INCLUDE_UPDATER)
-    //: This is an item in the "About" menu in the menubar of a detached Mudlet window.
-    auto updateAction = new QAction(tr("&Check for updates..."), this);
+    //: This is an item in the "About" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Show changelog" among them.
+    auto updateAction = new QAction(tr("Check for &updates..."), this);
     //: This explains the "Check for updates..." item in the "About" menu in the menubar of a detached Mudlet window.
     updateAction->setStatusTip(tr("Check for newer versions of Mudlet"));
     connect(updateAction, &QAction::triggered, pMudlet, &mudlet::slot_manualUpdateCheck);

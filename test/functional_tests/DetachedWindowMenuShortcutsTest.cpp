@@ -31,6 +31,7 @@
  */
 
 #include <QFileInfo>
+#include <QHash>
 #include <QMenu>
 #include <QMenuBar>
 #include <QPointer>
@@ -205,6 +206,55 @@ private slots:
                                     .arg(offenders.join(qsl("; ")))));
     }
 
+    // Two items with one letter in a menu leave that letter cycling between them
+    // rather than choosing either
+    void test_noTwoItemsInAMenuShareAMnemonic()
+    {
+        QVERIFY(mpDetachedWindow);
+        QMenuBar* pMenuBar = mpDetachedWindow->menuBar();
+        QVERIFY(pMenuBar);
+
+        QList<QMenu*> menus;
+        const auto menuBarActions = pMenuBar->actions();
+        for (const QAction* pMenuAction : menuBarActions) {
+            if (pMenuAction->menu()) {
+                menus << pMenuAction->menu();
+            }
+        }
+        QVERIFY2(!menus.isEmpty(), "the detached window has no menus to check");
+
+        QStringList clashes;
+        int mnemonicCount = 0;
+        for (int i = 0; i < menus.size(); ++i) {
+            QMenu* pMenu = menus.at(i);
+            // What the Window menu lists and what the map item says are only filled in as it opens
+            emit pMenu->aboutToShow();
+
+            QHash<QChar, QStringList> itemsByLetter;
+            const auto actions = pMenu->actions();
+            for (const QAction* pAction : actions) {
+                if (pAction->isSeparator() || !pAction->isVisible()) {
+                    continue;
+                }
+                if (pAction->menu()) {
+                    menus << pAction->menu();
+                }
+                const QChar letter = mnemonicLetter(pAction->text());
+                if (!letter.isNull()) {
+                    itemsByLetter[letter] << qsl("\"%1\"").arg(pAction->text());
+                    ++mnemonicCount;
+                }
+            }
+            for (auto it = itemsByLetter.cbegin(); it != itemsByLetter.cend(); ++it) {
+                if (it.value().size() > 1) {
+                    clashes << qsl("%1 in \"%2\": %3").arg(it.key(), pMenu->title(), it.value().join(qsl(", ")));
+                }
+            }
+        }
+        QVERIFY2(mnemonicCount > 0, "no menu item carries a mnemonic, so nothing here could find a clash");
+        QVERIFY2(clashes.isEmpty(), qPrintable(qsl("menu items of a detached window share a mnemonic: %1").arg(clashes.join(qsl("; ")))));
+    }
+
     // The reported symptom, driven the way the user hit it. Last, since it leaves
     // the profile closed
     void test_theCloseProfileShortcutClosesTheProfile()
@@ -271,20 +321,22 @@ private:
     // QKeySequence::mnemonic() cannot answer this: macOS compiles mnemonics out,
     // so it returns an empty sequence for a title that carries one. "&&" is an
     // escaped ampersand rather than a mnemonic
-    static bool carriesMnemonic(const QString& title)
+    static QChar mnemonicLetter(const QString& text)
     {
-        for (int i = 0; i < title.size() - 1; ++i) {
-            if (title.at(i) != QLatin1Char('&')) {
+        for (int i = 0; i < text.size() - 1; ++i) {
+            if (text.at(i) != QLatin1Char('&')) {
                 continue;
             }
-            if (title.at(i + 1) == QLatin1Char('&')) {
+            if (text.at(i + 1) == QLatin1Char('&')) {
                 ++i;
                 continue;
             }
-            return true;
+            return text.at(i + 1).toLower();
         }
-        return false;
+        return {};
     }
+
+    static bool carriesMnemonic(const QString& title) { return !mnemonicLetter(title).isNull(); }
 
     TDetachedWindow* detachSecondProfile()
     {
