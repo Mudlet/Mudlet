@@ -34,7 +34,8 @@
 #include <QDebug>
 #include <QString>
 
-#include <math.h> // for sqrt
+#include <algorithm>
+#include <cmath>
 
 class TRoom;
 
@@ -44,12 +45,26 @@ using namespace boost;
 // auxiliary types
 struct location
 {
-    int id;    // Typically 4 bytes
-    TRoom* pR; // 4 or 8 bytes? - so may have reduced size from 20 to 8 or 12 plus padding...?
+    int id;
+    // Copied rather than read through pR: TMap::initGraph() scales the heuristic to these, and a
+    // room moved after it would otherwise let the heuristic overestimate.
+    int x;
+    int y;
+    int z;
+    TRoom* pR;
 };
 
 // double, not float: weights go up to INT_MAX and a route sums several of them, all exactly.
 typedef double cost;
+
+// The least an edge costs per coordinate unit it spans, in each distance, taken over every edge
+// in the graph. Distance times that can't exceed the cost of any route, which is what keeps A*
+// to the shortest one. Zero when some edge crosses distance for free.
+struct heuristicScale
+{
+    cost chebyshev = 0;
+    cost euclidean = 0;
+};
 
 // Used to record edge details and to deduplicate parallel ones:
 struct route
@@ -59,39 +74,41 @@ struct route
     QString specialExitName; // If direction is DIR_OTHER then this is needed
 };
 
-// euclidean distance heuristic
+// Admissible and consistent: each distance is scaled by its heuristicScale, and the larger kept.
+// Chebyshev is exact on a grid with diagonal exits, euclidean on one without.
 template <class Graph, class CostType, class LocMap>
 class distance_heuristic : public boost::astar_heuristic<Graph, CostType>
 {
 public:
     typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
-    // Held by reference: a per-search copy (35MB on a 2.3M-room map) costs more than the search.
+    // Held by reference: a per-search copy (55MB on a 2.3M-room map) costs more than the search.
     // Callers pass TMap::locations, which initGraph() only clear()s: it can't dangle, but goes stale
     // across initGraph() (rooms renumbered), so never store a heuristic.
-    distance_heuristic(const LocMap& l, Vertex goal)
+    distance_heuristic(const LocMap& l, Vertex goal, const heuristicScale& scale)
     : m_location(l)
     , m_goal(goal)
+    , m_scale(scale)
     {}
 
     // A temporary would leave m_location dangling.
-    distance_heuristic(const LocMap&&, Vertex) = delete;
+    distance_heuristic(const LocMap&&, Vertex, const heuristicScale&) = delete;
 
     CostType operator()(Vertex u)
     {
-        if (m_location[m_goal].pR->getArea() != m_location[u].pR->getArea()) {
-            return 1;
-        }
+        const location& from = m_location[u];
+        const location& to = m_location[m_goal];
         // Subtracted as CostType: two coordinates anywhere in the int range can differ by more than an int holds.
-        const CostType dx = static_cast<CostType>(m_location[m_goal].pR->x()) - m_location[u].pR->x();
-        const CostType dy = static_cast<CostType>(m_location[m_goal].pR->y()) - m_location[u].pR->y();
-        const CostType dz = static_cast<CostType>(m_location[m_goal].pR->z()) - m_location[u].pR->z();
+        const CostType dx = std::abs(static_cast<CostType>(to.x) - from.x);
+        const CostType dy = std::abs(static_cast<CostType>(to.y) - from.y);
+        const CostType dz = std::abs(static_cast<CostType>(to.z) - from.z);
 
-        return std::sqrt(dx * dx + dy * dy + dz * dz);
+        return std::max(std::max({dx, dy, dz}) * m_scale.chebyshev, std::sqrt(dx * dx + dy * dy + dz * dz) * m_scale.euclidean);
     }
 
 private:
     const LocMap& m_location;
     Vertex m_goal;
+    heuristicScale m_scale;
 };
 
 

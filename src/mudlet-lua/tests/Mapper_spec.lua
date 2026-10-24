@@ -4147,6 +4147,60 @@ describe("Tests route weights and extreme coordinates on a scratch area", functi
     local ok, weight = getPath(start, goal)
     assert.are.same({true, 2, {"w", "s"}}, {ok, weight, speedWalkDir})
   end)
+
+  -- A northeast step moves sqrt(2) on the map for a cost of 1, and the east
+  -- rooms are drawn on top of the goal, as stacked interiors are: a heuristic
+  -- read straight off the coordinates rates the longer route the closer one.
+  it("finds the shortest route when a longer one runs through rooms drawn on the goal", function()
+    local start, goal = room(0, 0), room(10, 10)
+    local previous = start
+    for i = 1, 9 do
+      local nextRoom = room(i, i)
+      setExit(previous, nextRoom, "northeast")
+      previous = nextRoom
+    end
+    setExit(previous, goal, "northeast")
+    previous = start
+    for _ = 1, 11 do
+      local nextRoom = room(10, 10)
+      setExit(previous, nextRoom, "east")
+      previous = nextRoom
+    end
+    setExit(previous, goal, "east")
+
+    local ok, weight = getPath(start, goal)
+    assert.are.same({true, 10}, {ok, weight})
+    assert.are.same({"ne", "ne", "ne", "ne", "ne", "ne", "ne", "ne", "ne", "ne"}, speedWalkDir)
+  end)
+
+  -- Moving a room does not rebuild the route graph, so a heuristic scaled to the
+  -- graph has to keep to the coordinates the graph was built from.
+  it("keeps to the shortest route after rooms move without the route graph being rebuilt", function()
+    local start, goal = room(0, 0), room(10, 10)
+    local diagonal = {}
+    local previous = start
+    for i = 1, 9 do
+      diagonal[i] = room(i, i)
+      setExit(previous, diagonal[i], "northeast")
+      previous = diagonal[i]
+    end
+    setExit(previous, goal, "northeast")
+    previous = start
+    for i = 1, 11 do
+      local nextRoom = room(math.min(i, 10), math.min(i, 10))
+      setExit(previous, nextRoom, "east")
+      previous = nextRoom
+    end
+    setExit(previous, goal, "east")
+    assert.are.same({true, 10}, {getPath(start, goal)})
+
+    for i = 1, 9 do
+      assert.is_true(setRoomCoordinates(diagonal[i], 1000, 1000, 0))
+    end
+    local ok, weight = getPath(start, goal)
+    assert.are.same({true, 10}, {ok, weight})
+    assert.are.equal(10, #speedWalkDir)
+  end)
 end)
 
 -- closeMapWidget() has to leave the profile in a state that is distinguishable
@@ -5577,18 +5631,17 @@ describe("Tests saveMap and loadMap", function()
       assert.are.equal(100, weight)
     end)
 
-    -- distance_heuristic (src/TAstar.h) returns the euclidean distance between
-    -- two rooms' coordinates, but a diagonal exit costs 1 while moving a room
-    -- north-east moves sqrt(2) in coordinate space. The heuristic therefore
-    -- overestimates, which is what A* is not allowed to do, and the search can
-    -- settle for a route a step longer than the shortest one: room 747 to room
-    -- 42 comes back 93 steps where 92 exist. Flattening the target area's
-    -- coordinates - which makes the heuristic 0 wherever it is consulted -
-    -- returns 92, which is how the cause was pinned down. Left unpinned here
-    -- because it is a defect to fix rather than behaviour to hold still - every
-    -- route this block does pin is the true optimum, checked against a
-    -- breadth-first search, so a fix leaves them green.
-    pending("routes can come back a step longer than the shortest one - issue #10180")
+    -- A heuristic that overestimates comes back a step longer on both. The
+    -- lengths are a breadth-first search's over the same imported graph.
+    it("walks the shortest route where a coordinate heuristic overestimates", function()
+      for _, case in ipairs({{from = 747, to = 42, steps = 92}, {from = 107, to = 42, steps = 84}}) do
+        local ok, weight = getPath(case.from, case.to)
+        assert.is_true(ok)
+        assert.are.equal(case.steps, weight, ("%d to %d"):format(case.from, case.to))
+        assert.are.equal(case.steps, #speedWalkDir)
+        assert.is_true(routeIsWalkable(case.from))
+      end
+    end)
   end)
 end)
 
