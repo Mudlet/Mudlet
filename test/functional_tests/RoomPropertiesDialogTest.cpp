@@ -38,10 +38,14 @@
 #include <QDialog>
 #include <QElapsedTimer>
 #include <QFileInfo>
+#include <QFontMetrics>
+#include <QImage>
+#include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMenu>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QSpinBox>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -61,6 +65,7 @@
 #include "GroupedTest.h"
 
 #include <algorithm>
+#include <cstdlib>
 
 // What the dialog shows in place of a value the selection does not agree on.
 // dlgRoomProperties keeps it as a private tr() string, and no translator is
@@ -293,6 +298,25 @@ private:
         selectorDriver->stop();
         delete selectorDriver;
         delete menuAnswerer;
+    }
+
+    // The part of the preview's contents that is not its background: the
+    // symbol as drawn, empty when nothing of it was
+    static QRect symbolInk(QLabel* preview)
+    {
+        const QImage shown = preview->grab().toImage();
+        const QRect contents = preview->contentsRect();
+        const QColor background = shown.pixelColor(contents.topLeft());
+        QRect ink;
+        for (int y = contents.top(); y <= contents.bottom(); ++y) {
+            for (int x = contents.left(); x <= contents.right(); ++x) {
+                const QColor pixel = shown.pixelColor(x, y);
+                if (std::abs(pixel.red() - background.red()) + std::abs(pixel.green() - background.green()) + std::abs(pixel.blue() - background.blue()) > 48) {
+                    ink |= QRect(x, y, 1, 1);
+                }
+            }
+        }
+        return ink;
     }
 
 private slots:
@@ -779,6 +803,57 @@ private slots:
         QCOMPARE(mColorSelectorOutcome.colorsLeftInList, 1);
         QVERIFY(map()->mCustomEnvColors.contains(257));
         QVERIFY2(!map()->mCustomEnvColors.contains(258), "the right-clicked color was not deleted");
+    }
+
+    // The preview is a sample of the room as the map draws it, where a symbol
+    // of several characters is shrunk to fit the room rather than cut off
+    void aSymbolOfSeveralCharactersFitsInsideThePreview()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->lineEdit_roomSymbol->setText(qsl("ABCDE"));
+
+        const QRect contents = pDlg->label_preview->contentsRect();
+        const QRect ink = symbolInk(pDlg->label_preview);
+        QVERIFY2(ink.isValid(), "nothing of the symbol was drawn");
+        QVERIFY2(ink.left() > contents.left() && ink.right() < contents.right(),
+                 qPrintable(qsl("the symbol, drawn across x %1 to %2, is cut off by the preview's edges at %3 and %4").arg(ink.left()).arg(ink.right()).arg(contents.left()).arg(contents.right())));
+    }
+
+    // A single character fills the room on the map, so it has to here too
+    void aSingleCharacterSymbolIsDrawnAsLargeAsItFits()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->lineEdit_roomSymbol->setText(qsl("W"));
+
+        const QRect contents = pDlg->label_preview->contentsRect();
+        const QRect ink = symbolInk(pDlg->label_preview);
+        QVERIFY2(ink.isValid(), "nothing of the symbol was drawn");
+        QVERIFY2(ink.height() * 2 > contents.height(), qPrintable(qsl("the symbol is %1 pixels tall in a preview %2 tall").arg(ink.height()).arg(contents.height())));
+    }
+
+    // With only the symbol font allowed, the map draws a character that font
+    // cannot show as the replacement character, and the preview has to too
+    void aCharacterTheFontLacksIsPreviewedAsTheReplacementCharacter()
+    {
+        buildMap();
+        map()->setOnlySymbolFontUsed(true);
+        auto restoreFontMerging = qScopeGuard([this]() {
+            map()->setOnlySymbolFontUsed(false);
+        });
+        // Unassigned in Unicode, so the symbol font has no glyph for it
+        const QChar unassigned(0x0378);
+        QVERIFY(!QFontMetrics(map()->mMapSymbolFont).inFontUcs4(unassigned.unicode()));
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->lineEdit_roomSymbol->setText(QString(QChar::ReplacementCharacter));
+        const QImage replacement = pDlg->label_preview->grab().toImage();
+        pDlg->lineEdit_roomSymbol->setText(QString(unassigned));
+        const QImage missing = pDlg->label_preview->grab().toImage();
+
+        QVERIFY2(symbolInk(pDlg->label_preview).isValid(), "nothing was drawn for the missing character");
+        QVERIFY2(missing == replacement, "the missing character was not previewed as the replacement character");
     }
 };
 
