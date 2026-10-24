@@ -18,10 +18,8 @@
  ***************************************************************************/
 
 /*
- * An editor view whose tree has items, but only its root or nothing current,
- * shows its help text rather than a form, since a form tied to no item can be
- * typed into but never saved - and showing the help must not write the emptied
- * form over the item that was on screen before.
+ * An editor view with items but only its root or nothing current shows its help, not a
+ * form, and showing the help leaves the item that was on screen before as it was.
  *
  * Run with: ctest -R EditorEmptySelectionTest -V
  */
@@ -187,6 +185,7 @@ private slots:
             editor()->slot_saveEdits();
         }
         QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaEmptySelectionVariable = 1")));
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("permRegexTrigger(\"qaEmptySelectionTrigger\", \"\", {\"^qaEmptySelectionTrigger$\"}, \"\")")));
     }
 
     void cleanupTestCase()
