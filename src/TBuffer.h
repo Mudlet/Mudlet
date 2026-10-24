@@ -566,7 +566,7 @@ private:
     void noteRemovedLinks(const std::vector<TChar>& line, qint64 lineNumber, int from = 0, int to = -1);
     THyperlinkVisibilityManager* hyperlinkVisibilityManagerOrNull();
     TChar currentFormat() const;
-    inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
+    inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, bool startsIndented, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
     void spliceInsertIntoPreTriggerPassLine(int y, int x, int count, const TChar& format);
     void spliceEraseFromPreTriggerPassLine(int y, int x, int xEnd);
