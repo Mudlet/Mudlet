@@ -11018,13 +11018,18 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     }
 }
 
+// A form shown for no item can be typed into but never saved, so the help stands in for it
+static bool hasItemToShow(const QTreeWidget* pTree)
+{
+    const QTreeWidgetItem* pRoot = pTree->topLevelItem(0);
+    const QTreeWidgetItem* pCurrent = pTree->currentItem();
+    return pRoot && pRoot->childCount() && pCurrent && pCurrent != pRoot;
+}
+
 void dlgTriggerEditor::slot_showTimers()
 {
     changeView(EditorViewType::cmTimerView);
-    QTreeWidgetItem* pI = treeWidget_timers->topLevelItem(0);
-    if (!pI || pI == treeWidget_timers->currentItem() || !pI->childCount()) {
-        // There is no root item, we are on the root item or there are no other
-        // items - so show the help message:
+    if (!hasItemToShow(treeWidget_timers)) {
         clearTimerForm();
     } else {
         mpTimersMainArea->show();
@@ -11048,10 +11053,7 @@ void dlgTriggerEditor::showCurrentTriggerItem()
     }
 
     changeView(EditorViewType::cmTriggerView);
-    QTreeWidgetItem* pI = treeWidget_triggers->topLevelItem(0);
-    if (!pI || pI == treeWidget_triggers->currentItem() || !pI->childCount()) {
-        // There is no root item, we are on the root item or there are no other
-        // items - so show the help message:
+    if (!hasItemToShow(treeWidget_triggers)) {
         clearTriggerForm();
     } else {
         mpTriggersMainArea->show();
@@ -11063,10 +11065,7 @@ void dlgTriggerEditor::showCurrentTriggerItem()
 void dlgTriggerEditor::slot_showTriggers()
 {
     changeView(EditorViewType::cmTriggerView);
-    QTreeWidgetItem* pI = treeWidget_triggers->topLevelItem(0);
-    if (!pI || pI == treeWidget_triggers->currentItem() || !pI->childCount()) {
-        // There is no root item, we are on the root item or there are no other
-        // items - so show the help message:
+    if (!hasItemToShow(treeWidget_triggers)) {
         clearTriggerForm();
     } else {
         mpTriggersMainArea->show();
@@ -11086,10 +11085,7 @@ void dlgTriggerEditor::slot_showTriggers()
 void dlgTriggerEditor::slot_showScripts()
 {
     changeView(EditorViewType::cmScriptView);
-    QTreeWidgetItem* pI = treeWidget_scripts->topLevelItem(0);
-    if (!pI || pI == treeWidget_scripts->currentItem() || !pI->childCount()) {
-        // There is no root item, we are on the root item or there are no other
-        // items - so show the help message:
+    if (!hasItemToShow(treeWidget_scripts)) {
         clearScriptForm();
     } else {
         mpScriptsMainArea->show();
@@ -11109,10 +11105,7 @@ void dlgTriggerEditor::slot_showScripts()
 void dlgTriggerEditor::slot_showKeys()
 {
     changeView(EditorViewType::cmKeysView);
-    QTreeWidgetItem* pI = treeWidget_keys->topLevelItem(0);
-    if (!pI || pI == treeWidget_keys->currentItem() || !pI->childCount()) {
-        // There is no root item, we are on the root item or there are no other
-        // items - so show the help message:
+    if (!hasItemToShow(treeWidget_keys)) {
         clearKeyForm();
     } else {
         mpKeysMainArea->show();
@@ -11136,10 +11129,7 @@ void dlgTriggerEditor::slot_showVariables()
     mpCurrentVarItem = nullptr;
     checkBox_displayAllVariables->show();
     checkBox_displayAllVariables->setChecked(showHiddenVars);
-    QTreeWidgetItem* pI = treeWidget_variables->topLevelItem(0);
-    if (!pI || pI == treeWidget_variables->currentItem() || !pI->childCount()) {
-        // There is no root item, we are on the root item or there are no other
-        // items - so show the help message:
+    if (!hasItemToShow(treeWidget_variables)) {
         clearVarForm();
     } else {
         mpVarsMainArea->show();
@@ -11180,10 +11170,7 @@ void dlgTriggerEditor::show_vars()
 void dlgTriggerEditor::slot_showAliases()
 {
     changeView(EditorViewType::cmAliasView);
-    QTreeWidgetItem* pI = treeWidget_aliases->topLevelItem(0);
-    if (!pI || pI == treeWidget_aliases->currentItem() || !pI->childCount()) {
-        // There is no root item, we are on the root item or there are no other
-        // items - so show the help message:
+    if (!hasItemToShow(treeWidget_aliases)) {
         clearAliasForm();
     } else {
         mpAliasMainArea->show();
@@ -11396,10 +11383,7 @@ QString dlgTriggerEditor::profileSettingsPrefix() const
 void dlgTriggerEditor::slot_showActions()
 {
     changeView(EditorViewType::cmActionView);
-    QTreeWidgetItem* pI = treeWidget_actions->topLevelItem(0);
-    if (!pI || pI == treeWidget_actions->currentItem() || !pI->childCount()) {
-        // There is no root item, we are on the root item or there are no other
-        // items - so show the help message:
+    if (!hasItemToShow(treeWidget_actions)) {
         clearActionForm();
     } else {
         mpActionsMainArea->show();
@@ -14644,6 +14628,8 @@ void dlgTriggerEditor::clearTriggerForm()
     clearDocument(mpSourceEditorEdbee);
     mpTriggersMainArea->lineEdit_trigger_command->clear();
 
+    // The emptied form must not be saved over the trigger it last showed
+    mpCurrentTriggerItem = nullptr;
     mpTriggersMainArea->hide();
     mpSourceEditorArea->hide();
     if (mCurrentView != EditorViewType::cmUnknownView) {
@@ -14654,7 +14640,7 @@ void dlgTriggerEditor::clearTriggerForm()
 void dlgTriggerEditor::clearTimerForm()
 {
     mpTimersMainArea->hide();
-    mpTimersMainArea->hide();
+    mpSourceEditorArea->hide();
     if (mCurrentView != EditorViewType::cmUnknownView) {
         showIntro();
     }

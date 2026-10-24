@@ -114,6 +114,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class EditorAddItemTest;
     friend class EditorBannerViewSwitchTest;
     friend class EditorClipboardXmlTest;
+    friend class EditorEmptySelectionTest;
     friend class EditorFolderViewTest;
     friend class EditorSearchTest;
     friend class HostWidgetDecouplingTest;
