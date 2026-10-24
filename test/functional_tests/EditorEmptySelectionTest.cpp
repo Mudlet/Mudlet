@@ -226,8 +226,8 @@ private slots:
             QTest::addRow("%s, root current", name) << static_cast<int>(view) << true;
             QTest::addRow("%s, nothing current", name) << static_cast<int>(view) << false;
         }
-        // Showing the variables refills their tree, which leaves nothing current
-        QTest::addRow("variable") << static_cast<int>(EditorViewType::cmVarsView) << false;
+        // Showing the variables refills their tree and makes its root current
+        QTest::addRow("variable, root current") << static_cast<int>(EditorViewType::cmVarsView) << true;
     }
 
     void test_showingAViewWithNoItemSelectedShowsItsHelp()
