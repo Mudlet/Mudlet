@@ -55,7 +55,6 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QPainter>
-#include <QStringEncoder>
 #include <QTemporaryDir>
 #include <QTextStream>
 #include <QtTest/QtTest>
@@ -88,6 +87,7 @@
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "TEncodingHelper.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
@@ -905,10 +905,11 @@ private slots:
         QFETCH(QString, metric);
         QFETCH(QStringList, phrases);
 
-        QStringEncoder encoder(encoding.constData());
-        if (!encoder.isValid()) {
+        // TEncodingHelper falls back to Qt5Compat when Qt has no ICU, the decoder fallback this also times
+        if (!TEncodingHelper::isEncodingAvailable(encoding)) {
             QSKIP(qPrintable(qsl("this Qt cannot encode %1 to build the corpus").arg(QString::fromLatin1(encoding))));
         }
+        QVERIFY2(TEncodingHelper::canEncode(phrases.join(qsl("，")) + qsl("。[HP 0123456789/1000]"), encoding), "a corpus phrase is not representable in this encoding");
         std::mt19937 rng(0xC0FFEEu);
         auto pick = [&rng](int n) {
             return static_cast<int>(rng() % static_cast<unsigned>(n));
@@ -925,10 +926,9 @@ private slots:
             corpus += "\x1b[3";
             corpus += QByteArray::number(pick(7) + 1);
             corpus += 'm';
-            corpus += encoder.encode(lastLine);
+            corpus += TEncodingHelper::encode(lastLine, encoding);
             corpus += "\x1b[0m\r\n";
         }
-        QVERIFY2(!encoder.hasError(), "a corpus phrase is not representable in this encoding");
 
         Host* host = startProfile();
         QVERIFY(host);
