@@ -150,6 +150,7 @@ public:
     friend class OpaqueConsolePaintTest;
     friend class ScrollLostOnPartialRepaintTest;
     friend class TTextEditBlinkTest;
+    friend class BlinkRowRepaintTest;
     friend class PipelineBenchmark;
     static bool shouldRegisterBlinkClient(bool enableBlinkText, bool hasBlinkingContentInRedrawnRegion, bool isBlinkClientRegistered, bool reusedCachedScreenContent);
     static QSize smallestEnclosingSurfaceSize(int screenWidth, int fontWidth, int pixmapHeight, qreal devicePixelRatio);
@@ -238,6 +239,8 @@ private:
     int accessibleSelectionLength() const;
     std::pair<int, int> accessibleSelection() const;
     bool hasBufferLine(int lineNumber) const;
+    bool lineShowsBlinkingText(int lineNumber) const;
+    static bool hasStackedMarks(const QString&);
     static int overflowRowsUsed(const QImage& image, const int fromRow, const QColor& background);
     TChar timeStampCharStyle() const;
 
