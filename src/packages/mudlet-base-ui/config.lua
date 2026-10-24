@@ -45,5 +45,5 @@ stay solid.
 When a game installs an interface of its own, this one quietly stands
 aside - `baseui show` brings it back if you prefer it.
 ]]
-version = [[1.9.0]]
+version = [[1.9.1]]
 created = "2026-07-25T12:00:00+00:00"
