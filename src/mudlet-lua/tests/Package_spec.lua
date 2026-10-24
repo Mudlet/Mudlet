@@ -7529,6 +7529,7 @@ describe("Tests the game loader packages", function()
       downloadFailed = "Your Carrion Fields client could not be downloaded:",
       installFailed = "Installing your Carrion Fields client failed:",
       handInstall = [[cecho("<lime_green>Package installed!\n")]],
+      handInstalled = "Package installed!",
     },
     {
       name = "mg-loader",
@@ -7540,6 +7541,7 @@ describe("Tests the game loader packages", function()
       downloadFailed = "Das Mudlet-Paket fürs MorgenGrauen konnte nicht heruntergeladen werden:",
       installFailed = "Das Mudlet-Paket fürs MorgenGrauen konnte nicht installiert werden:",
       handInstall = [[cecho("<gold>Paket installiert!\n")]],
+      handInstalled = "Paket installiert!",
     },
     {
       name = "icesus-loader",
@@ -7551,6 +7553,7 @@ describe("Tests the game loader packages", function()
       downloadFailed = "The Icesus Mudlet package could not be downloaded:",
       installFailed = "The Icesus Mudlet package could not be installed:",
       handInstall = [[cecho("<gold>Package installed!\n")]],
+      handInstalled = "Package installed!",
     },
   }
 
@@ -7755,12 +7758,20 @@ describe("Tests the game loader packages", function()
       local _, path = install(loader)
       pasteTheCommand(path)
       -- a profile's home is named after it, and the game's package downloads its own files there
-      local other = getMudletHomeDir() .. "/mudlet-spec-" .. loader.profile .. "-map.dat"
+      local stem = loader.download:match("^(.-)%.[^.]+$")
+      local other = getMudletHomeDir() .. "/mudlet-spec-" .. stem .. "-" .. loader.profile .. "-map.dat"
       io.open(other, "w"):close()
       defer(function() os.remove(other) end)
 
+      local tried = {}
+      local realInstall = installPackage
+      override("installPackage", function(file, ...)
+        tried[#tried + 1] = file
+        return realInstall(file, ...)
+      end)
       raiseEvent("sysDownloadDone", other)
-      assert.is_true(io.exists(other), "the pasted command took another download for its package")
+      assert.are.same({}, tried, "the pasted command took another download for its package")
+      assert.is_true(io.exists(other), "the pasted command removed another download")
     end)
 
     it(loader.name .. " installs once when more connections come before the download finishes", function()
@@ -7791,7 +7802,11 @@ describe("Tests the game loader packages", function()
       pasteTheCommand(path)
       copyFile(fixtureDirectory .. "/mudlet-spec-notazip.mpackage", path)
 
+      local mark = getLastLineNumber("main")
       assert.is_true(waitUntil(downloadDone(path), 10000), "the deferred install never ran")
+      local shown = textFrom(mark)
+      assert.is_false(contains(shown, loader.handInstalled), "the command it gave claimed a failed install worked: " .. shown)
+      assert.is_true(containsWrapped(shown, loader.installFailed), "the failed install was not reported: " .. shown)
       raiseEvent("sysConnectionEvent")
       assert.are.equal(3, #downloads, "the next connection did not try the download again")
     end)

@@ -25,7 +25,7 @@ function downloadFailed(event, message, file)
   decho("&lt;190,0,0&gt;[ FAIL ]  - &lt;0,160,0&gt;Das Mudlet-Paket fürs MorgenGrauen konnte nicht heruntergeladen werden: &lt;190,190,190&gt;"..tostring(message).."\n")
   decho([[&lt;0,150,190&gt;[ INFO ]  - &lt;0,160,0&gt;Um das Mudlet-Paket fürs MorgenGrauen zu laden, kopiere bitte folgenden Text (ohne Zeilenumbrüche) in die Eingabezeile und sende ihn ab:
 
-lua function d(a,b)if not b:find("MorgenGrauen.mpackage",1,true)then return end installPackage(b)os.remove(b)cecho("&lt;gold&gt;Paket installiert!\n")end registerAnonymousEventHandler("sysDownloadDone","d")downloadFile(getMudletHomeDir().."/MorgenGrauen.mpackage","https://github.com/MorgenGrauen/mg-mudlet/releases/latest/download/MorgenGrauen.mpackage")
+lua function d(a,b)if not b:find("MorgenGrauen.mpackage",1,true)then return end if installPackage(b)then os.remove(b)cecho("&lt;gold&gt;Paket installiert!\n")end end registerAnonymousEventHandler("sysDownloadDone","d")downloadFile(getMudletHomeDir().."/MorgenGrauen.mpackage","https://github.com/MorgenGrauen/mg-mudlet/releases/latest/download/MorgenGrauen.mpackage")
 
 ]])
 end
@@ -40,7 +40,7 @@ function installReady(event, file)
   local installedBefore = packagesBeforeDownload or getPackages()
   tempTimer(1, function()
     local ok, err = true, nil
-    -- the command a failed download tells the player to paste installs and removes it itself
+    -- the command a failed download tells the player to paste removes the file once it has installed it
     if io.exists(getMudletHomeDir().."/MorgenGrauen.mpackage") then
       ok, err = installPackage(getMudletHomeDir().."/MorgenGrauen.mpackage")
     end
