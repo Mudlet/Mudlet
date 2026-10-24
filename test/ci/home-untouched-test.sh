@@ -21,7 +21,8 @@
 # no binary and no run of its own, so it covers the grouped sources too, and it is
 # the sweep that means something on macOS.
 #
-# Sweep 2 - each candidate that ctest builds as its own binary, run with a home
+# Sweep 2 - each candidate at the top of test/, run on its own - through the
+# shared unit_tests binary when it links Mudlet - with a home
 # directory of its own and without the XDG_CONFIG_HOME that ctest hands it (see
 # test/CMakeLists.txt): the point is what happens to somebody running the binary
 # by hand. What that proves differs by platform, because the platforms do not
@@ -89,11 +90,17 @@ for source in ${candidates[@]+"${candidates[@]}"}; do
 
   # ---- sweep 2: a run of its own -------------------------------------------
   binary="${BINARY_DIR}/${name}"
+  args=()
+  if [[ ! -x "${binary}" && "$(dirname "${source}")" == "${SOURCE_DIR}" ]]; then
+    # A name unit_tests does not hold makes it exit non-zero, which fails below
+    binary="${BINARY_DIR}/unit_tests"
+    args=("${name}")
+  fi
   if [[ ! -x "${binary}" ]]; then
     if [[ "$(dirname "${source}")" == "${SOURCE_DIR}" ]]; then
-      # Not a skip: every source at the top of test/ is a binary of its own, so a
-      # candidate without one is a check that silently stopped covering it. Build
-      # the test tree before running this.
+      # Not a skip: every source at the top of test/ is a binary of its own or a
+      # case in unit_tests, so a candidate without one is a check that silently
+      # stopped covering it. Build the test tree before running this.
       echo "FAIL: ${name} reaches the credential store but ${binary} is not built" >&2
       FAILURES=$((FAILURES + 1))
     fi
@@ -114,7 +121,7 @@ for source in ${candidates[@]+"${candidates[@]}"}; do
       HOME="${home}" CFFIXED_USER_HOME="${home}" \
       QT_QPA_PLATFORM=offscreen MUDLET_TEST_MODE=1 \
       DBUS_SESSION_BUS_ADDRESS='disabled:' ASAN_OPTIONS=detect_leaks=0 \
-      "${binary}" > "${WORK_DIR}/${name}.log" 2>&1
+      "${binary}" ${args[@]+"${args[@]}"} > "${WORK_DIR}/${name}.log" 2>&1
   status=$?
 
   written="$(find "${home}" -mindepth 1 | sed "s|${home}/||" | sort)"

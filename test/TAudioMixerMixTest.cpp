@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include "TAudioMixer.h"
 #include "TMedia.h"
 #include "TMediaVoice.h"
@@ -395,5 +396,5 @@ private slots:
     }
 };
 
-QTEST_MAIN(TAudioMixerMixTest)
+MUDLET_GROUPED_TEST_MAIN(TAudioMixerMixTest)
 #include "TAudioMixerMixTest.moc"

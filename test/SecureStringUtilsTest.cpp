@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <CredentialManager.h>
 #include <MudletApp.h>
 #include <SecureStringUtils.h>
@@ -740,4 +741,4 @@ void SecureStringUtilsTest::testTheDerivedKeyNeverChanges()
 }
 
 #include "SecureStringUtilsTest.moc"
-QTEST_MAIN(SecureStringUtilsTest)
+MUDLET_GROUPED_TEST_MAIN(SecureStringUtilsTest)
