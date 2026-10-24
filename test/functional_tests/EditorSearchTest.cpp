@@ -488,6 +488,46 @@ private slots:
         QCOMPARE(marked->rangeCount(), size_t{2});
     }
 
+    // Temporary items are never put in the editor's trees, so a result for one
+    // could not be shown when chosen (#5257)
+    void test_temporaryItemsAreNotFound()
+    {
+        const QString token = qsl("qaTempOnlyToken");
+        auto* pLua = mpHost->getLuaInterpreter();
+        QVERIFY(pLua->compileAndExecuteScript(qsl("qaTempIds = {"
+                                                  "tempTrigger('%1 trigger', [[-- %1]]),"
+                                                  "tempRegexTrigger('^%1 regex$', [[-- %1]]),"
+                                                  "tempTimer(600, [[-- %1]]),"
+                                                  "tempAlias('^%1 alias$', [[-- %1]]),"
+                                                  "tempKey(%2, [[-- %1]])}")
+                                                      .arg(token)
+                                                      .arg(static_cast<int>(Qt::Key_F35))));
+        auto* pTempAction = new TAction(qsl("qaTempButton"), mpHost);
+        pTempAction->setTemporary(true);
+        pTempAction->setCommandButtonDown(qsl("%1 down").arg(token));
+        mpHost->getActionUnit()->registerAction(pTempAction);
+
+        auto* pPermanent = new TTrigger(nullptr, mpHost);
+        pPermanent->setName(qsl("qaPermanentTokenTrigger"));
+        pPermanent->setRegexCodeList({qsl("%1 permanent").arg(token)}, {REGEX_SUBSTRING});
+        QVERIFY(pPermanent->registerTrigger());
+
+        auto restore = qScopeGuard([pLua, pTempAction, pPermanent]() {
+            pLua->compileAndExecuteScript(qsl("killTrigger(qaTempIds[1]) killTrigger(qaTempIds[2]) killTimer(qaTempIds[3]) killAlias(qaTempIds[4]) killKey(qaTempIds[5]) qaTempIds = nil"));
+            delete pTempAction;
+            delete pPermanent;
+        });
+
+        search(token);
+
+        auto* results = mpEditor->treeWidget_searchResults;
+        QStringList found;
+        for (int i = 0, total = results->topLevelItemCount(); i < total; ++i) {
+            found << qsl("%1 %2").arg(results->topLevelItem(i)->text(0), results->topLevelItem(i)->text(1));
+        }
+        QCOMPARE(found, QStringList({qsl("Trigger qaPermanentTokenTrigger")}));
+    }
+
     void test_anEmptyOrUnknownTermProducesNoResults()
     {
         search(qsl("qaNothingMatchesThis"));
