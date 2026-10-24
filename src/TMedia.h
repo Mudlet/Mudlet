@@ -436,6 +436,9 @@ public:
     // Where, relative to mediaRoot, a file an API call names by absolute path is played from: its copy,
     // or the file itself when it is already under mediaRoot. Static so it can be unit-tested without a Host.
     static QString mediaCacheFileName(const QString& profileHome, const QString& mediaRoot, const QString& absolutePath);
+    // A path with its symlinks resolved, as mediaCacheFileName() files copies by; one to a file that has gone is
+    // resolved through the folders that remain. Static so it can be unit-tested without a Host.
+    static QString resolvedMediaPath(const QString& path);
     // Whether a name sits in a folder mediaCacheFileName() keeps for its copies, where a game must not reach
     static bool mediaFileNameReservedForCopies(const QString& mediaFileName);
 

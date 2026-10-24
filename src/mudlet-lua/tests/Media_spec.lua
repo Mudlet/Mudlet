@@ -2291,6 +2291,88 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_nil(lfs.attributes(mediaDirectory .. "/_profile/busted-media-no-such-folder"), "a missing file had folders made for its copy")
   end)
 
+  it("a file played by its full path and then deleted still plays the copy made of it", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local outsideName = "busted-media-gone.wav"
+    local outside = writeOutsideFile(outsideName)
+    onCleanup(function() stopSounds() end)
+
+    assert.is_true(playSoundFile({name = outside, key = "busted-gone"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(stopSounds())
+    pumpEvents(250)
+    assert.is_true(os.remove(outside))
+
+    -- a path ending in a separator names no file, so it has no copy either; tried once the file has gone,
+    -- as Windows drops a trailing "." and would open the file itself
+    assert.is_true(playSoundFile({name = outside .. "/", key = "busted-gone-separator"}))
+    assert.is_true(playSoundFile({name = outside .. "/.", key = "busted-gone-separator"}))
+    pumpEvents(250)
+    assert.equals(0, #getPlayingSounds({key = "busted-gone-separator"}))
+
+    assert.is_true(playSoundFile({name = outside, key = "busted-gone"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), "the copy of a deleted file did not play")
+    assert.equals("_profile/" .. outsideName, getPlayingSounds({key = "busted-gone"})[1].name)
+  end)
+
+  it("a file played through a symlinked folder and then deleted still plays the copy made of it", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    if not lfs.link then
+      pending("this lfs has no link()")
+      return
+    end
+    local real = writeOutsideFile("busted-media-linked-gone.wav", "busted-media-real-gone")
+    local linkDirectory = getMudletHomeDir() .. "/busted-media-link-gone"
+    local function removeLink()
+      os.remove(linkDirectory)
+      lfs.rmdir(linkDirectory)
+    end
+    removeLink()
+    if not lfs.link(getMudletHomeDir() .. "/busted-media-real-gone", linkDirectory, true) then
+      pending("this system would not make a symbolic link here")
+      return
+    end
+    onCleanup(removeLink)
+    onCleanup(function() stopSounds() end)
+    local throughLink = linkDirectory .. "/busted-media-linked-gone.wav"
+
+    assert.is_true(playSoundFile({name = throughLink, key = "busted-linked-gone-copy"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(stopSounds())
+    pumpEvents(250)
+    -- the copy is filed under the real folder; with the file gone, the link still leads there
+    assert.is_true(os.remove(real))
+
+    assert.is_true(playSoundFile({name = throughLink, key = "busted-linked-gone-copy"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), "the copy of a deleted file played through a symlink did not play")
+    assert.equals("_profile/busted-media-real-gone/busted-media-linked-gone.wav", getPlayingSounds({key = "busted-linked-gone-copy"})[1].name)
+  end)
+
+  it("a full path whose file has gone plays the copy an older Mudlet kept under its bare name", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- before copies kept their folders, a file played by its full path was copied to the media folder's root
+    local bareName = "busted-media-old-copy.wav"
+    writeMediaFile(bareName, 10000)
+    onCleanup(function() os.remove(mediaDirectory .. "/" .. bareName) end)
+    onCleanup(function() stopSounds() end)
+    local gone = getMudletHomeDir() .. "/busted-media-moved-away/" .. bareName
+
+    assert.is_true(playSoundFile({name = gone, key = "busted-old-copy"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), "the old copy of a file that has gone did not play")
+    assert.equals(bareName, getPlayingSounds({key = "busted-old-copy"})[1].name)
+    assert.is_nil(lfs.attributes(mediaDirectory .. "/_profile/busted-media-moved-away"), "a file that has gone had folders made for a copy")
+    -- the path it was played by still names it
+    assert.is_true(stopSounds({name = gone}))
+    pumpEvents(250)
+    assert.equals(0, #getPlayingSounds({key = "busted-old-copy"}))
+  end)
+
   it("an absolute path that ends in a separator names no file and matches none", function()
     if mediaPlaybackUnavailable() then
       return
