@@ -4,7 +4,8 @@
 describe("Tests room symbols from a font's Private Use Area", function()
   local mapDirectory = getMudletHomeDir() .. "/map"
   local backupPath = mapDirectory .. "/private_use_symbol_spec_backup.dat"
-  local imagePath = getMudletHomeDir() .. "/private_use_symbol_spec.png"
+  local exportCount = 0
+  local exportedPaths = {}
   -- the Ubuntu logo, in the Ubuntu Mono font Mudlet bundles
   local ubuntuLogo = utf8.char(0xE0FF)
 
@@ -19,13 +20,21 @@ describe("Tests room symbols from a font's Private Use Area", function()
     -- after this file are entitled to an open, right-docked widget
     openMapWidget("r")
     os.remove(backupPath)
-    os.remove(imagePath)
+    for _, path in ipairs(exportedPaths) do
+      os.remove(path)
+    end
   end)
 
-  -- The save runs on a pool thread, so wait for the IEND chunk it writes last,
-  -- then a little longer for the export to report back before the next starts
+  -- Each export gets a file of its own, so a delete or save that fails (as
+  -- Windows can when something holds the file) cannot hand back an earlier
+  -- image. The save runs on a pool thread, so wait for the IEND chunk it writes
+  -- last, then a little longer for the export to report back before the next
   local function exportedImage(areaId)
+    exportCount = exportCount + 1
+    local imagePath = string.format("%s/private_use_symbol_spec_%d.png", getMudletHomeDir(), exportCount)
+    exportedPaths[#exportedPaths + 1] = imagePath
     os.remove(imagePath)
+    assert.is_false(io.exists(imagePath), "a stale " .. imagePath .. " could not be removed")
     assert.is_true(exportAreaImage(areaId, imagePath))
     local contents
     for _ = 1, 100 do
@@ -35,6 +44,7 @@ describe("Tests room symbols from a font's Private Use Area", function()
         file:close()
         if contents:sub(-8) == "IEND\174B`\130" then
           pumpEvents(100)
+          os.remove(imagePath)
           return contents
         end
       end
