@@ -284,14 +284,18 @@ describe("Tests that the scroll bar and scrolling functions find their console b
       finally(function() scrollTo("main") end)
       for _, case in ipairs({{"up", scrollUp}, {"down", scrollDown}}) do
         scrollTo("main")
-        local lastSeen
+        local lastSeen, results
         local id = tempRegexTrigger("^specScrollByName packet end$", function()
           lastSeen = getLastLineNumber("main")
-          case[2]("main", 1)
+          -- A trigger's errors only reach the error console, which would leave the down case green
+          results = (function(...) return {n = select("#", ...), ...} end)(pcall(case[2], "main", 1))
         end)
         feedTriggers(("specScrollByName packet line\n"):rep(20) .. "specScrollByName packet end\n")
         killTrigger(id)
 
+        assert.is_truthy(results, "the trigger did not fire")
+        assert.is_true(results[1], tostring(results[2]))
+        assert.are.equal(1, results.n, case[1] .. " returned values")
         if case[1] == "up" then
           assert.are.equal(lastSeen - 1, getScroll("main"), "scrollUp from a trigger")
         else

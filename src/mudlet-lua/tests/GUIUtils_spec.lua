@@ -3656,6 +3656,34 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.equals(lastLine + 1, getScroll(windowName), "the console should follow new text again")
     end)
 
+    it("Should take the line count alone for the main console", function()
+      finally(function() scrollTo("main") end)
+      for i = 1, 30 do
+        echo("main", "guiUtils main scroll line " .. i .. "\n")
+      end
+      local start = getLastLineNumber("main") - 20
+      scrollTo("main", start)
+      scrollUp(3)
+      assert.equals(start - 3, getScroll("main"), "scrollUp(3)")
+      scrollDown(2)
+      assert.equals(start - 1, getScroll("main"), "scrollDown(2)")
+    end)
+
+    it("Should move a single line for a count that is not a number", function()
+      scrollUp(windowName, "x")
+      assert.equals(149, getScroll(windowName))
+      scrollDown(windowName, {})
+      assert.equals(150, getScroll(windowName))
+    end)
+
+    it("Should return nothing when it scrolls", function()
+      finally(function() scrollTo("main") end)
+      assert.equals(0, select("#", scrollUp(windowName, 1)))
+      assert.equals(0, select("#", scrollDown(windowName, 1)))
+      assert.equals(0, select("#", scrollUp(1)))
+      assert.equals(0, select("#", scrollDown(1)))
+    end)
+
     it("Should report an unknown window rather than raising", function()
       local ok, err = scrollUp("guiUtilsNoSuchWindow", 1)
       assert.is_nil(ok)
