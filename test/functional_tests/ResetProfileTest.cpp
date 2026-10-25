@@ -905,6 +905,26 @@ private slots:
                                       QCryptographicHash::Sha1));
   }
 
+  void test_damagedBytecodeIsRecompiled() {
+    if (!bytecodeCachePathFileName().startsWith(mCacheDir.path())) {
+      QSKIP("the cache location cannot be redirected on this platform");
+    }
+    auto entries = readBytecodeCache();
+    QVERIFY(entries.contains("StringUtils.lua"));
+    QVERIFY(entries.contains("TableUtils.lua"));
+    // StringUtils.lua's source and bytecode hashes, over bytecode that no
+    // longer matches the second of them
+    const QByteArray damaged = entries.value("StringUtils.lua").left(40) +
+                               entries.value("TableUtils.lua").mid(40);
+    entries.insert("StringUtils.lua", damaged);
+    writeBytecodeCache(entries);
+
+    performReset();
+
+    QCOMPARE(luaGlobalFunctionOrigins(), qsl("ok"));
+    QVERIFY(readBytecodeCache().value("StringUtils.lua") != damaged);
+  }
+
   void test_unreadableBytecodeCacheIsReplaced() {
     if (!bytecodeCachePathFileName().startsWith(mCacheDir.path())) {
       QSKIP("the cache location cannot be redirected on this platform");

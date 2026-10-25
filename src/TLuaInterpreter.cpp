@@ -143,7 +143,8 @@ constexpr qsizetype csmLuaChunkHeaderSize = 12;
 constexpr char csmLua51Version = 0x51;
 const QByteArray csmLuaBytecodeCacheMagic = QByteArrayLiteral("Mudlet Lua bytecode 1");
 
-// LuaGlobal.lua's files by name: each one's source SHA-1 followed by its bytecode without the chunk name
+// LuaGlobal.lua's files by name: the SHA-1 of the source, then of the bytecode, then the bytecode
+// without its chunk name. Lua 5.1 runs damaged bytecode as readily as it runs the real thing.
 struct LuaBytecodeCache
 {
     QHash<QByteArray, QByteArray> entries;
@@ -195,9 +196,8 @@ int appendToByteArray(lua_State*, const void* data, size_t size, void* byteArray
     return 0;
 }
 
-// A dump starts with the main function's chunk name, which nested functions inherit.
-// Cutting it out lets one cache entry serve every install path, such as an AppImage's
-// mount point, which changes on every launch.
+// A dump starts with the chunk name, which nested functions inherit. Without it one entry serves
+// every install path, such as the AppImage mount point that changes on every launch.
 QByteArray withoutChunkName(const QByteArray& dump)
 {
     constexpr qsizetype nameStart = csmLuaChunkHeaderSize + sizeof(size_t);
@@ -228,13 +228,17 @@ QByteArray withChunkName(const QByteArray& bytecode, const QByteArray& chunkName
 bool loadThroughBytecodeCache(lua_State* L, LuaBytecodeCache& cache, const QByteArray& source, const QByteArray& chunkName, const QByteArray& cacheKey)
 {
     const QByteArray sourceHash = QCryptographicHash::hash(source, QCryptographicHash::Sha1);
+    const qsizetype bytecodeStart = 2 * sourceHash.size();
     const auto cached = cache.entries.constFind(cacheKey);
-    if (cached != cache.entries.cend() && cached->size() >= sourceHash.size() + csmLuaChunkHeaderSize && cached->startsWith(sourceHash)) {
-        const QByteArray bytecode = withChunkName(cached->mid(sourceHash.size()), chunkName);
-        if (!luaL_loadbuffer(L, bytecode.constData(), bytecode.size(), chunkName.constData())) {
-            return true;
+    if (cached != cache.entries.cend() && cached->size() >= bytecodeStart + csmLuaChunkHeaderSize && cached->startsWith(sourceHash)) {
+        const QByteArray bytecode = cached->mid(bytecodeStart);
+        if (QCryptographicHash::hash(bytecode, QCryptographicHash::Sha1) == cached->mid(sourceHash.size(), sourceHash.size())) {
+            const QByteArray chunk = withChunkName(bytecode, chunkName);
+            if (!luaL_loadbuffer(L, chunk.constData(), chunk.size(), chunkName.constData())) {
+                return true;
+            }
+            lua_pop(L, 1);
         }
-        lua_pop(L, 1);
     }
 
     if (luaL_loadbuffer(L, source.constData(), source.size(), chunkName.constData())) {
@@ -244,10 +248,28 @@ bool loadThroughBytecodeCache(lua_State* L, LuaBytecodeCache& cache, const QByte
     lua_dump(L, appendToByteArray, &dump);
     const QByteArray bytecode = withoutChunkName(dump);
     if (!bytecode.isEmpty()) {
-        cache.entries.insert(cacheKey, sourceHash + bytecode);
+        cache.entries.insert(cacheKey, sourceHash + QCryptographicHash::hash(bytecode, QCryptographicHash::Sha1) + bytecode);
         cache.changed = true;
     }
     return true;
+}
+
+enum class LuaGlobalFileLoad { Loaded, Failed, LeftToDofile };
+
+// Pushes the compiled file, or the error message, or nothing for dofile() to handle it.
+// Kept apart from lua_call() and lua_error(), which longjmp past C++ destructors.
+LuaGlobalFileLoad loadLuaGlobalFile(lua_State* L, LuaBytecodeCache* cache, const char* path, const char* cacheKey)
+{
+    QFile file(QString::fromUtf8(path));
+    if (!cache || !file.open(QIODevice::ReadOnly)) {
+        return LuaGlobalFileLoad::LeftToDofile;
+    }
+    const QByteArray source = file.readAll();
+    // dofile() skips a "#" first line and runs a precompiled file
+    if (source.isEmpty() || source.startsWith('#') || source.startsWith(LUA_SIGNATURE[0])) {
+        return LuaGlobalFileLoad::LeftToDofile;
+    }
+    return loadThroughBytecodeCache(L, *cache, source, QByteArray("@") + path, cacheKey) ? LuaGlobalFileLoad::Loaded : LuaGlobalFileLoad::Failed;
 }
 
 // dofile() for the files LuaGlobal.lua loads, compiling each only when its content changes.
@@ -256,26 +278,22 @@ int dofileThroughBytecodeCache(lua_State* L)
 {
     const int base = lua_gettop(L);
     const char* path = luaL_checkstring(L, 1);
-    const QByteArray cacheKey{luaL_optstring(L, 2, path)};
+    const char* cacheKey = luaL_optstring(L, 2, path);
     auto* cache = static_cast<LuaBytecodeCache*>(lua_touserdata(L, lua_upvalueindex(1)));
 
-    QByteArray source;
-    QFile file(QString::fromUtf8(path));
-    if (cache && file.open(QIODevice::ReadOnly)) {
-        source = file.readAll();
-    }
-    // dofile() skips a "#" first line and runs a precompiled file, so leave those, and any file that cannot be read, to it
-    if (source.isEmpty() || source.startsWith('#') || source.startsWith(LUA_SIGNATURE[0])) {
+    int argumentCount = 0;
+    switch (loadLuaGlobalFile(L, cache, path, cacheKey)) {
+    case LuaGlobalFileLoad::Loaded:
+        break;
+    case LuaGlobalFileLoad::Failed:
+        return lua_error(L);
+    case LuaGlobalFileLoad::LeftToDofile:
         lua_getglobal(L, "dofile");
         lua_pushvalue(L, 1);
-        lua_call(L, 1, LUA_MULTRET);
-        return lua_gettop(L) - base;
+        argumentCount = 1;
+        break;
     }
-
-    if (!loadThroughBytecodeCache(L, *cache, source, QByteArray("@") + path, cacheKey)) {
-        return lua_error(L);
-    }
-    lua_call(L, 0, LUA_MULTRET);
+    lua_call(L, argumentCount, LUA_MULTRET);
     return lua_gettop(L) - base;
 }
 
@@ -8096,11 +8114,12 @@ void TLuaInterpreter::loadGlobal()
             lua_pushcclosure(pGlobalLua, dofileThroughBytecodeCache, 1);
             lua_pushvalue(pGlobalLua, -1);
             lua_insert(pGlobalLua, -3);
+            const int loaderIndex = lua_gettop(pGlobalLua) - 2;
             error = lua_pcall(pGlobalLua, 1, 0, 0);
             // Leaves the loader nothing to point at once bytecodeCache goes out of scope
             lua_pushnil(pGlobalLua);
-            lua_setupvalue(pGlobalLua, error ? -3 : -2, 1);
-            lua_remove(pGlobalLua, error ? -2 : -1);
+            lua_setupvalue(pGlobalLua, loaderIndex, 1);
+            lua_remove(pGlobalLua, loaderIndex);
             writeLuaBytecodeCache(bytecodeCachePathFileName, bytecodeCache);
             bytecodeCache.changed = false;
         }
