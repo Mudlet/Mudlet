@@ -41,9 +41,9 @@ public:
     static bool canEncode(const QString& str, const QByteArray& encoding);
     static bool isEncodingAvailable(const QByteArray& encoding);
     static QList<QByteArray> aliases(const QByteArray& encoding);
+    static bool isCustomEncoding(const QByteArray& encoding);
 
 private:
-    static bool isCustomEncoding(const QByteArray& encoding);
     static bool isQtEncodingAvailable(const QByteArray& encoding);
     static QTextCodec* legacyCodec(const QByteArray& encoding);
     static bool hasLookupTable(const QByteArray& encoding);
