@@ -20,8 +20,8 @@
 /*
  * The 2D mapper paints rooms over the exit lines, stubs included, so a stub
  * only shows where it reaches past its room and the border around it. Those
- * grow with the room size setting; each case here checks that the dot on the
- * end of a stub still shows in full outside them.
+ * grow with the room size setting; each case here checks that at least as
+ * much of the stub as its end dot covers still shows outside them.
  *
  * Why not a spec: the only evidence is pixels, and the area image export a
  * script can ask for draws no stubs.
@@ -35,6 +35,7 @@
 #include <QtTest/QtTest>
 
 #include <cmath>
+#include <numbers>
 
 #include "Host.h"
 #include "MudletApp.h"
@@ -259,7 +260,7 @@ private slots:
 
         // The dot on the stub's end is a fifth of a room across
         const double dotRadius = 0.1 * cell;
-        const int wholeDot = static_cast<int>(0.9 * M_PI * dotRadius * dotRadius);
+        const int wholeDot = static_cast<int>(0.9 * std::numbers::pi * dotRadius * dotRadius);
         if (stubPixelsPastRoom < wholeDot) {
             QFAIL(qPrintable(qsl("only %1 pixels of the stub show past the room, short of the %2 its end dot covers - the frame is at %3")
                                      .arg(QString::number(stubPixelsPastRoom), QString::number(wholeDot), saveFrame(frame, QString::fromLatin1(QTest::currentDataTag())))));
