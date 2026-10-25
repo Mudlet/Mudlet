@@ -1973,7 +1973,8 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         }
     }
 
-    if (mDragStart.y() < cursorLocation.y() || (mDragStart.y() == cursorLocation.y() && mDragStart.x() < cursorLocation.x())) {
+    const bool anchorFirst = mDragStart.y() < cursorLocation.y() || (mDragStart.y() == cursorLocation.y() && mDragStart.x() < cursorLocation.x());
+    if (anchorFirst) {
         mPA = mDragStart;
         mPB = cursorLocation;
     } else {
@@ -1982,6 +1983,14 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     }
     if (mMouseTrackLevel == 2) {
         expandSelectionToWords();
+        // Anchored on a separator, the selection starts at the nearest word, past any separators beside it
+        QPoint& anchoredEnd = anchorFirst ? mPA : mPB;
+        const QString& anchoredLine = mpBuffer->lineBuffer.at(anchoredEnd.y());
+        const int step = anchorFirst ? 1 : -1;
+        while (anchoredEnd.x() >= 0 && anchoredEnd.x() < static_cast<int>(anchoredLine.size())
+               && (anchoredLine.at(anchoredEnd.x()) == QChar::Space || mpHost->mDoubleClickIgnore.contains(anchoredLine.at(anchoredEnd.x())))) {
+            anchoredEnd.rx() += step;
+        }
     }
     if (mCtrlSelecting || mMouseTrackLevel == 3) {
         mPA.setX(0);
@@ -2591,7 +2600,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
 bool TTextEdit::hasSelectedText() const
 {
     // A double-click on a word separator highlights nothing, yet leaves a
-    // region behind and mPA one cell past mPB
+    // region behind and mPA past mPB
     const bool endpointsCrossed = mPA.y() > mPB.y() || (mPA.y() == mPB.y() && mPA.x() > mPB.x());
     return !mpBuffer->lineBuffer.isEmpty() && !mSelectedRegion.isEmpty() && !endpointsCrossed;
 }

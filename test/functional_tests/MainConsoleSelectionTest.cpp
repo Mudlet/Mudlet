@@ -666,20 +666,57 @@ private slots:
         QCOMPARE(copiedText(pane), expected.constLast());
     }
 
-    // A word selection that stops with the pointer partway into a word
-    // highlights all of it, and a click elsewhere has to clear all of it.
+    // A word drag across lines keeps the double-clicked word on its own line
+    // while the pointer moves within a word on another.
+    void test_doubleClickDraggedAcrossLinesKeepsTheClickedWord()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+
+        const QPointF pressPos = cellInMiddleRow(pane, 33);
+        const QPointF lineUp(0, -pane->mFontHeight);
+        const QPointF lineDown(0, pane->mFontHeight);
+        const QString clickedLine = lineUnder(pane, pressPos);
+        const QString lineAbove = lineUnder(pane, pressPos + lineUp);
+        const QString lineBelow = lineUnder(pane, pressPos + lineDown);
+        QCOMPARE(lineAbove.mid(18, 8), qsl("distance"));
+        QCOMPARE(lineBelow.mid(3, 3), qsl("way"));
+
+        pressLeftButton(pane, pressPos, 2);
+        QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
+
+        // columns 18-25 "distance" on the line above, 31-37 "faintly" on the clicked one
+        const QString upwards = lineAbove.mid(18) + QChar::LineFeed + clickedLine.left(38);
+        for (const int column : {20, 21}) {
+            sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, cellInMiddleRow(pane, column) + lineUp);
+            QVERIFY2(highlightedText() == upwards, qPrintable(qsl("with the pointer at column %1 of the line above \"%2\" is highlighted").arg(QString::number(column), highlightedText())));
+        }
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, cellInMiddleRow(pane, 28));
+        QCOMPARE(highlightedText(), qsl("you faintly"));
+
+        // columns 3-5 "way" on the line below
+        const QString downwards = clickedLine.mid(31) + QChar::LineFeed + lineBelow.left(6);
+        moveAndReleaseLeftButton(pane, cellInMiddleRow(pane, 4) + lineDown);
+        QCOMPARE(highlightedText(), downwards);
+        QCOMPARE(copiedText(pane), downwards);
+    }
+
+    // A word drag that stops with the pointer partway into a word on the next
+    // line highlights all of it, and a click elsewhere has to clear all of it.
     void test_clickAfterAWordDragStoppingMidWordClearsTheWholeHighlight()
     {
         TTextEdit* pane = paneShowingProse();
         QVERIFY2(pane, "the prose never reached the upper pane");
 
         const QPointF pressPos = cellInMiddleRow(pane, 33);
+        const QPointF lineDown(0, pane->mFontHeight);
+        // partway into "grandfather" (columns 46-56) on the line below
+        const QString expected = lineUnder(pane, pressPos).mid(31) + QChar::LineFeed + lineUnder(pane, pressPos + lineDown).left(57);
         pressLeftButton(pane, pressPos, 2);
         QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
-        // partway into "grandfather"
-        moveAndReleaseLeftButton(pane, cellInMiddleRow(pane, 47));
-        QCOMPARE(highlightedText(), qsl("faintly hear a grandfather"));
-        QCOMPARE(copiedText(pane), qsl("faintly hear a grandfather"));
+        moveAndReleaseLeftButton(pane, cellInMiddleRow(pane, 47) + lineDown);
+        QCOMPARE(highlightedText(), expected);
+        QCOMPARE(copiedText(pane), expected);
 
         // the next click must not join the double-click into a triple
         QTest::qWait(400ms);
@@ -689,6 +726,91 @@ private slots:
 
         QCOMPARE(highlightedText(), QString());
         QCOMPARE(copiedText(pane), mNothingCopied);
+    }
+
+    // Dragged from a separator that sits next to another one, the selection
+    // starts or ends at the nearest word, not on the second separator; a
+    // pointer on separators keeps those it has passed over.
+    void test_doubleClickOnASeparatorRunDragsFromTheNearestWord_data()
+    {
+        QTest::addColumn<int>("clickedColumn");
+        QTest::addColumn<QString>("clickedWord");
+        QTest::addColumn<int>("releaseColumn");
+        QTest::addColumn<QString>("expected");
+        // columns 0-3 "end.", 4-5 two spaces, 6-9 "Next", 11-13 "say", 15 and 21 quotes, 22 a space, 23-27 "there"
+        QTest::newRow("closing quote rightwards") << 21 << QString() << 25 << qsl("there");
+        QTest::newRow("opening quote leftwards") << 15 << QString() << 12 << qsl("say");
+        QTest::newRow("first of two spaces rightwards") << 4 << QString() << 8 << qsl("Next");
+        QTest::newRow("second of two spaces leftwards") << 5 << QString() << 1 << qsl("end.");
+        QTest::newRow("word rightwards onto the space after a quote") << 12 << qsl("say") << 22 << qsl("say \"hello\"");
+        QTest::newRow("word leftwards onto the space before a quote") << 25 << qsl("there") << 14 << qsl("\"hello\" there");
+    }
+
+    void test_doubleClickOnASeparatorRunDragsFromTheNearestWord()
+    {
+        QFETCH(int, clickedColumn);
+        QFETCH(QString, clickedWord);
+        QFETCH(int, releaseColumn);
+        QFETCH(QString, expected);
+
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+
+        const QString text = qsl("end.  Next say \"hello\" there");
+        const int line = printedLineNumber(text);
+        QVERIFY2(line >= 0, "the line to select was not printed");
+        // keeps the line clear of the bottom edge, where a drag scrolls the pane
+        mudlet::self()->getActiveHost()->mainConsoleView()->print(qsl("\n\n\n"));
+        const int y = (line - pane->imageTopLine()) * pane->mFontHeight + pane->mFontHeight / 2;
+        QVERIFY2(y > 10 && y < pane->height() - 10, "the line to select is not on screen");
+        auto cell = [pane, y](int column) {
+            return QPointF(column * pane->mFontWidth + pane->mFontWidth / 2.0, y);
+        };
+
+        pressLeftButton(pane, cell(clickedColumn), 2);
+        QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
+        QCOMPARE(highlightedText(), clickedWord);
+        moveAndReleaseLeftButton(pane, cell(releaseColumn));
+
+        QCOMPARE(highlightedText(), expected);
+        QCOMPARE(copiedText(pane), expected);
+    }
+
+    // "Analyse characters" is offered for a double-clicked word, but not after
+    // a double-click on a space, which selects nothing.
+    void test_analyseCharactersFollowsADoubleClick_data()
+    {
+        QTest::addColumn<int>("clickedColumn");
+        QTest::addColumn<bool>("offered");
+        QTest::newRow("on a word") << 33 << true;
+        QTest::newRow("on a space") << 30 << false;
+    }
+
+    void test_analyseCharactersFollowsADoubleClick()
+    {
+        QFETCH(int, clickedColumn);
+        QFETCH(bool, offered);
+
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+        mudlet::self()->getActiveHost()->mEnableTextAnalyzer = true;
+
+        const QPointF pos = cellInMiddleRow(pane, clickedColumn);
+        pressLeftButton(pane, pos, 2);
+        QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, pos);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, pos);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, pos);
+
+        QPointer<QMenu> menu = pane->findChildren<QMenu*>().value(0);
+        QVERIFY2(menu, "the right click put up no menu");
+        bool found = false;
+        for (const QAction* action : menu->actions()) {
+            found = found || action->text() == pane->tr("Analyse characters");
+        }
+        menu->close();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QCOMPARE(found, offered);
     }
 
     // A double-click on a space has no word to highlight, and leaves the
