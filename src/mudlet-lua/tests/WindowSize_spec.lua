@@ -132,6 +132,23 @@ describe("window sizes", function()
       pumpEvents(100)
     end)
 
+    -- Late in the full suite one pass of the event loop can take a few hundred
+    -- ms, and the text area is resized a pass after the bars, so a fixed pump
+    -- can read the rows of the layout before last
+    local function settledRowCount()
+      local deadline = getEpoch() + 5
+      local last, stableSince
+      repeat
+        pumpEvents(50)
+        local _, height = getMainWindowSize()
+        local now = ("%d/%d"):format(getRowCount(), height)
+        if now ~= last then
+          last, stableSince = now, getEpoch()
+        end
+      until getEpoch() - stableSince >= 0.5 or getEpoch() > deadline
+      return getRowCount()
+    end
+
     -- Unlike showToolBar(), neither a new bar nor a restyled button has the
     -- console refreshed afterwards
     it("gives up the rows a button bar made along the top takes", function()
@@ -141,16 +158,14 @@ describe("window sizes", function()
         hideToolBar(toolbar)
         pumpEvents(100)
       end)
-      pumpEvents(100)
-      local rows = getRowCount()
+      local rows = settledRowCount()
 
       assert.is_true(tempButtonToolbar(toolbar, 0, 0) > 0)
       assert.is_true(tempButton(toolbar, button, 0) > 0)
       -- Taller than any bar other specs leave along the top
       assert.is_true(setButtonStyleSheet(button, "QPushButton { min-height: 300px; }"))
-      pumpEvents(100)
 
-      local shownRows = getRowCount()
+      local shownRows = settledRowCount()
       assert.is_true(shownRows <= rows - 5, ("%d rows before a 300px high bar along the top, %d with it"):format(rows, shownRows))
     end)
   end)
