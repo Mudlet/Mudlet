@@ -10786,9 +10786,8 @@ void dlgTriggerEditor::showEvent(QShowEvent* event)
     mHasBeenShown = true;
     widgetutils::keepDialogOnAScreen(this, mpHost->mainConsoleView());
 
-    // A Lua toggle that arrived while this editor was hidden stays queued
-    // rather than being dropped (see flushPendingTriggerIconRefresh()) -
-    // flush it now instead of waiting for the next toggle to trigger it.
+    // Lua toggles that arrived while this editor was hidden are queued, but
+    // nothing flushes them until now.
     flushPendingTriggerIconRefresh();
     flushPendingAliasIconRefresh();
     flushPendingTimerIconRefresh();
