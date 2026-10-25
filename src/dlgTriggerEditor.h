@@ -611,6 +611,7 @@ private:
     bool containsSearchMatch(const QString& haystack, const QString& needle) const;
     void clearEditorNotification();
     void runScheduledCleanReset();
+    void buildDeferredTrees(const bool asAtLoad);
     void autoSave();
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
     void createPatternItem(int index);
@@ -798,6 +799,8 @@ private:
 
     // keeps track of the dialog reset being queued
     bool mCleanResetQueued = false;
+    // A reset that arrived before the editor was ever shown, run on first show unless a view switch populated the trees first
+    bool mCleanResetDeferred = false;
     // Trigger IDs whose tree icon is stale; painted in one tree walk on the
     // next event-loop turn rather than one O(tree) lookup per Lua toggle.
     QSet<int> mPendingTriggerIconRefresh;

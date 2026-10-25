@@ -1129,6 +1129,8 @@ nullViewActionKept = next(nullViewActions) ~= nil
         QVERIFY2(host, "No active host available for the test.");
         auto* editor = HostDialogs::of(host).mpEditorDialog.data();
         QVERIFY2(editor, "The profile came up without its editor dialog.");
+        // One nobody has opened puts the rebuild off until it is
+        editor->show();
         QVERIFY2(editor->mpTriggerBaseItem, "The editor has no trigger tree root.");
         const int shown = editor->mpTriggerBaseItem->childCount();
 

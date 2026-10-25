@@ -27,16 +27,20 @@
  */
 
 #include <QAction>
+#include <QLabel>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTreeWidget>
 #include <QtTest/QtTest>
 
+#include "AliasUnit.h"
 #include "Host.h"
 #include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "TAlias.h"
 #include "TConsole.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -102,6 +106,42 @@ private slots:
             QDir(path).removeRecursively();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
+
+    // Runs first, as it needs an editor nothing has shown: its trees stay empty until an entry point opens it,
+    // which then has to find them filled and stay on its own view rather than the triggers one
+    void test_anUnopenedEditorFillsItsTreesWhenFirstOpened()
+    {
+        dlgTriggerEditor* pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+        QVERIFY2(pEditor, "the profile has no editor to show");
+        QVERIFY2(!pEditor->isVisible(), "setup: the editor has to start out never opened");
+        auto* pTriggers = pEditor->findChild<QTreeWidget*>(qsl("treeWidget_triggers"));
+        auto* pAliases = pEditor->findChild<QTreeWidget*>(qsl("treeWidget_aliases"));
+        QVERIFY(pTriggers && pAliases);
+
+        // Made the way a profile load makes it: a script's permAlias() would flag the trees stale itself
+        auto* pAlias = new TAlias(nullptr, mpHost);
+        mpHost->getAliasUnit()->registerAlias(pAlias);
+        pAlias->setName(qsl("qaUnopenedAlias"));
+        pEditor->doCleanReset();
+        QTest::qWait(50ms);
+        QCOMPARE(pTriggers->topLevelItemCount(), 0);
+        QCOMPARE(pAliases->topLevelItemCount(), 0);
+
+        mudlet::self()->slot_showAliasDialog();
+        QVERIFY2(pEditor->isVisible(), "the alias entry point did not open the editor");
+        QTest::qWait(50ms);
+        QCOMPARE(pTriggers->topLevelItemCount(), 1);
+        const auto found = pAliases->findItems(qsl("qaUnopenedAlias"), Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive, 0);
+        QVERIFY2(!found.isEmpty(), "the alias made before the editor was opened is missing from its tree");
+        QVERIFY2(pAliases->isVisible(), "the editor opened on some other view than the aliases one asked for");
+        QVERIFY2(!pTriggers->isVisible(), "the editor opened on the triggers view as well as the aliases one");
+        // With no notice waiting, the aliases view's own introduction is what the message area shows
+        auto* pMessageArea = pEditor->findChild<QWidget*>(qsl("mpSystemMessageArea"));
+        auto* pMessage = pMessageArea ? pMessageArea->findChild<QLabel*>(qsl("notificationAreaMessageBox")) : nullptr;
+        QVERIFY(pMessage);
+        QVERIFY2(pMessageArea->isVisible(), "the editor opened with its message area hidden");
+        QVERIFY2(pMessage->text().contains(dlgTriggerEditor::tr("Alias react on user input.")), qPrintable(pMessage->text()));
     }
 
     // PR #9303: every editor show path called showNormal(), which forces a
