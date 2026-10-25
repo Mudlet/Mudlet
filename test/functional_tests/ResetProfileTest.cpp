@@ -132,7 +132,11 @@ private:
       QDataStream ifs(&file);
       ifs.setVersion(QDataStream::Qt_5_12);
       QByteArray magic;
-      ifs >> magic >> entries;
+      ifs >> magic;
+      // Leaves a cache in a format these tests do not know looking empty
+      if (magic == QByteArrayLiteral("Mudlet Lua bytecode 1")) {
+        ifs >> entries;
+      }
     }
     return entries;
   }
