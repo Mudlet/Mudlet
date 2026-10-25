@@ -731,8 +731,8 @@ private slots:
     }
 
     // Dragged from a separator that sits next to another one, the selection
-    // starts or ends at the nearest word, not on the second separator; a
-    // pointer on separators keeps those it has passed over.
+    // starts or ends at the nearest word, leaving out the clicked separator and
+    // those beside it; a pointer on separators keeps those it has passed over.
     void test_doubleClickOnASeparatorRunDragsFromTheNearestWord_data()
     {
         QTest::addColumn<int>("clickedColumn");
@@ -742,6 +742,8 @@ private slots:
         // columns 0-3 "end.", 4-5 two spaces, 6-9 "Next", 11-13 "say", 15 and 21 quotes, 22 a space, 23-27 "there"
         QTest::newRow("closing quote rightwards") << 21 << QString() << 25 << qsl("there");
         QTest::newRow("opening quote leftwards") << 15 << QString() << 12 << qsl("say");
+        QTest::newRow("closing quote leftwards") << 21 << QString() << 12 << qsl("say \"hello");
+        QTest::newRow("space after a quote leftwards") << 22 << QString() << 12 << qsl("say \"hello");
         QTest::newRow("first of two spaces rightwards") << 4 << QString() << 8 << qsl("Next");
         QTest::newRow("second of two spaces leftwards") << 5 << QString() << 1 << qsl("end.");
         QTest::newRow("word rightwards onto the space after a quote") << 12 << qsl("say") << 22 << qsl("say \"hello\"");
