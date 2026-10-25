@@ -49,7 +49,10 @@
 #include "mapInfoContributorManager.h"
 
 #include <algorithm>
+#include <array>
+#include <bit>
 #include <cmath>
+#include <cstring>
 #include <limits>
 #include <math.h>
 
@@ -57,6 +60,7 @@
 #include <QCoreApplication>
 #include <QFileInfo>
 #include <QMovie>
+#include <QStringEncoder>
 #include <QStringMatcher>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
@@ -1624,16 +1628,16 @@ int TLuaInterpreter::getAreaRooms(lua_State* L)
         lua_pushnil(L);
         return 1;
     }
-    lua_newtable(L);
-    QSetIterator<int> itAreaRoom(pA->getAreaRooms());
+    const QSet<int>& areaRooms = pA->getAreaRooms();
+    const int roomCount = static_cast<int>(areaRooms.size());
+    lua_createtable(L, std::max(roomCount - 1, 0), roomCount > 0 ? 1 : 0);
+    // We should have started at 1 but past code had incorrectly started
+    // with a zero index and we must maintain compatibility with code written
+    // for that
     int i = -1;
-    while (itAreaRoom.hasNext()) {
-        lua_pushnumber(L, ++i);
-        // We should have started at 1 but past code had incorrectly started
-        // with a zero index and we must maintain compatibility with code written
-        // for that
-        lua_pushnumber(L, itAreaRoom.next());
-        lua_settable(L, -3);
+    for (const int room : areaRooms) {
+        lua_pushnumber(L, room);
+        lua_rawseti(L, -2, ++i);
     }
     return 1;
 }
@@ -2499,17 +2503,62 @@ int TLuaInterpreter::getRoomName(lua_State* L)
     return 1;
 }
 
+// The array/hash split Lua 5.1's own rehash (computesizes() in ltable.c) settles on for
+// these keys: `#` on a table with holes depends on it, so presizing differently would
+// change what `#getRooms()` returns on a map without room 1.
+static std::pair<int, int> luaArrayPartFor(const QHash<int, TRoom*>& rooms)
+{
+    constexpr int maxBits = 26;
+    std::array<int, maxBits + 1> keysPerSlice{};
+    int candidates = 0;
+    for (auto it = rooms.keyBegin(), end = rooms.keyEnd(); it != end; ++it) {
+        const int key = *it;
+        if (key >= 1 && key <= (1 << maxBits)) {
+            ++keysPerSlice[std::bit_width(static_cast<unsigned int>(key - 1))];
+            ++candidates;
+        }
+    }
+    int arraySize = 0;
+    int keysInArray = 0;
+    int keysBelow = 0;
+    for (int i = 0, twoToI = 1; i <= maxBits && twoToI / 2 < candidates; ++i, twoToI *= 2) {
+        keysBelow += keysPerSlice[i];
+        if (keysPerSlice[i] > 0 && keysBelow > twoToI / 2) {
+            arraySize = twoToI;
+            keysInArray = keysBelow;
+        }
+        if (keysBelow == candidates) {
+            break;
+        }
+    }
+    return {arraySize, keysInArray};
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRooms
 int TLuaInterpreter::getRooms(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    lua_newtable(L);
-    QHashIterator<int, TRoom*> it(host.mpMap->mpRoomDB->getRoomMap());
-    while (it.hasNext()) {
-        it.next();
-        lua_pushnumber(L, it.key());
-        lua_pushstring(L, it.value()->name.toUtf8().constData());
-        lua_settable(L, -3);
+    const QHash<int, TRoom*>& rooms = host.mpMap->mpRoomDB->getRoomMap();
+    const auto [arraySize, keysInArray] = luaArrayPartFor(rooms);
+    lua_createtable(L, arraySize, static_cast<int>(rooms.size()) - keysInArray);
+    QStringEncoder toUtf8(QStringEncoder::Utf8, QStringConverter::Flag::Stateless);
+    QByteArray buffer;
+    for (auto it = rooms.cbegin(), end = rooms.cend(); it != end; ++it) {
+        const QString& name = it.value()->name;
+        if (const qsizetype needed = toUtf8.requiredSpace(name.size()); buffer.size() < needed) {
+            buffer.resize(needed);
+        }
+        const qsizetype written = toUtf8.appendToBuffer(buffer.data(), name) - buffer.constData();
+        if (toUtf8.hasError()) {
+            // QString::toUtf8() drops an unpaired surrogate where the encoder writes U+FFFD
+            toUtf8.resetState();
+            lua_pushstring(L, name.toUtf8().constData());
+        } else {
+            // lua_pushstring() always stopped at the first zero byte
+            const void* zero = std::memchr(buffer.constData(), 0, written);
+            lua_pushlstring(L, buffer.constData(), zero ? static_cast<const char*>(zero) - buffer.constData() : written);
+        }
+        lua_rawseti(L, -2, it.key());
     }
     return 1;
 }
