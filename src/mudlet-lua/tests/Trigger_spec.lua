@@ -4913,6 +4913,27 @@ describe("Trigger processing", function()
                 end)
             end)
 
+            -- the parent's capture keeps the "\n" its pattern took after the line,
+            -- so a child's capture can end in it too
+            it("lets a child highlight a capture that runs to the end of the line", function()
+                withTrigger("filter line end", function()
+                    feedTriggers("tkfle hello ok\n")
+                    local fired = _G.TriggerKindsSpec.filterLineEnd
+                    assert.is_table(fired, "the child should have fired")
+                    assert.are.equal("ok\n", fired.capture)
+                    moveCursor(0, fired.line)
+                    assert.is_true(selectString("ok", 1) >= 0)
+                    local child = {getFgColor()}
+                    deselect()
+                    assert.is_true(selectString("hello", 1) >= 0)
+                    local rest = {getFgColor()}
+                    deselect()
+                    moveCursorEnd()
+                    assert.are.same(color_table.red, child)
+                    assert.are.same({192, 192, 192}, rest)
+                end)
+            end)
+
             it("passes every coloured run on as its own capture", function()
                 withTrigger("filter colour", function()
                     feedTriggers("plain \27[32mfirst run\27[0m plain \27[32msecond\27[0m end\n")
