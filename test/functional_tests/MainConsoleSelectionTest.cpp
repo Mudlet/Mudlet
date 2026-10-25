@@ -690,6 +690,8 @@ private slots:
         for (const int column : {20, 21}) {
             sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, cellInMiddleRow(pane, column) + lineUp);
             QVERIFY2(highlightedText() == upwards, qPrintable(qsl("with the pointer at column %1 of the line above \"%2\" is highlighted").arg(QString::number(column), highlightedText())));
+            // a highlight left over from the previous move can hide a wrong end, which the copy shows
+            QVERIFY2(copiedText(pane) == upwards, qPrintable(qsl("with the pointer at column %1 of the line above \"%2\" is copied").arg(QString::number(column), copiedText(pane))));
         }
         sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, cellInMiddleRow(pane, 28));
         QCOMPARE(highlightedText(), qsl("you faintly"));
