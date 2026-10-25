@@ -51,8 +51,10 @@ using namespace std::chrono_literals;
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lauxlib.h>
 #include <lua5.1/lua.h>
 #else
+#include <lauxlib.h>
 #include <lua.h>
 #endif
 }
@@ -240,6 +242,82 @@ private slots:
                 "killAnonymousEventHandler(LazyCacheIds.read) killTrigger(LazyCacheIds.trigger) killAlias(LazyCacheIds.alias)\n"
                 "killAnonymousEventHandler(LazyCacheIds.event)\n"
                 "LazyCacheFiller = nil\n"
+                "LazyCacheLine = nil"));
+
+        QCOMPARE(seenLine, qsl("LazyCacheTarget word"));
+    }
+
+    // The collection step lua_pushlstring() takes before it copies even a
+    // string Lua already holds can run a finaliser and allocate nothing at all.
+    // Steering the collector one step at a time puts it in the finalise phase
+    // with the stripping finaliser next, and a step already due, before the
+    // idle line; Mudlet then hands "command" the text it already holds.
+    void finaliserThatAllocatesNothing()
+    {
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        run(qsl("LazyCacheStripped, LazyCacheMarker, command = 0, 0, 'look'\n"
+                "LazyCacheOriginal = getmetatable(_G)\n"
+                "LazyCacheCopy = {__index = LazyCacheOriginal.__index, __newindex = LazyCacheOriginal.__newindex}\n"
+                "setmetatable(_G, LazyCacheCopy)\n"
+                "assert(rearmLazyGlobals(), 'the deferral did not come back on')\n"
+                "LazyCacheRead = registerAnonymousEventHandler('LazyCacheRead', function() LazyCacheLine = line end)\n"
+                "LazyCacheStripper = newproxy(true)\n"
+                "getmetatable(LazyCacheStripper).__gc = function() LazyCacheCopy.__index = nil LazyCacheStripped = 1 end\n"
+                "LazyCacheFirst = newproxy(true)\n"
+                "getmetatable(LazyCacheFirst).__gc = function() LazyCacheMarker = 1 end"));
+
+        lua_pushliteral(L, "LazyCacheMarker");
+        const int markerRef = luaL_ref(L, LUA_REGISTRYINDEX);
+        lua_pushliteral(L, "LazyCacheStripped");
+        const int strippedRef = luaL_ref(L, LUA_REGISTRYINDEX);
+        // Neither read takes a collection step
+        auto rawNumber = [L](const int keyRef) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, keyRef);
+            lua_rawget(L, LUA_GLOBALSINDEX);
+            const auto value = static_cast<int>(lua_tonumber(L, -1));
+            lua_pop(L, 1);
+            return value;
+        };
+
+        lua_gc(L, LUA_GCCOLLECT, 0);
+        for (const char* name : {"LazyCacheStripper", "LazyCacheFirst"}) {
+            lua_pushstring(L, name);
+            lua_pushnil(L);
+            lua_rawset(L, LUA_GLOBALSINDEX);
+        }
+        // One finaliser per step; the newer proxy is finalised first
+        const int stepMultiplier = lua_gc(L, LUA_GCSETSTEPMUL, 1);
+        for (int i = 0; i < 50000000 && rawNumber(markerRef) == 0; ++i) {
+            lua_gc(L, LUA_GCSTEP, 0);
+        }
+        lua_gc(L, LUA_GCSETSTEPMUL, stepMultiplier);
+        QCOMPARE(rawNumber(markerRef), 1);
+        QCOMPARE(rawNumber(strippedRef), 0);
+        // Past the next step's threshold without a step: lua_getfield() interns
+        // its key with no collection step
+        for (int i = 0; i < 200; ++i) {
+            lua_getfield(L, LUA_REGISTRYINDEX, QByteArray("LazyCacheUnusedRegistryKey").append(QByteArray::number(i)).constData());
+            lua_pop(L, 1);
+        }
+
+        feed(qsl("LazyCacheIdle\n"));
+        QVERIFY2(mpHost->getLuaInterpreter()->mGlobalsHandlersVerified, "a script ran on the idle line, so nothing here exercises the remembered check");
+        QVERIFY2(rawNumber(strippedRef) == 0, "the finaliser ran before the idle line was checked");
+
+        mpHost->getLuaInterpreter()->set_lua_string(qsl("command"), qsl("look"));
+        QVERIFY2(rawNumber(strippedRef) == 1, "setting \"command\" took no collection step, so this did not reproduce");
+
+        feed(qsl("LazyCacheTarget word\n"));
+        TEvent read{};
+        read.mArgumentList.append(qsl("LazyCacheRead"));
+        read.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(read);
+        const QString seenLine = rawGlobalString("LazyCacheLine");
+
+        luaL_unref(L, LUA_REGISTRYINDEX, markerRef);
+        luaL_unref(L, LUA_REGISTRYINDEX, strippedRef);
+        run(qsl("setmetatable(_G, LazyCacheOriginal)\n"
+                "killAnonymousEventHandler(LazyCacheRead)\n"
                 "LazyCacheLine = nil"));
 
         QCOMPARE(seenLine, qsl("LazyCacheTarget word"));

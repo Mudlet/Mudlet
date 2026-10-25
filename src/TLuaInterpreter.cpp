@@ -4889,7 +4889,8 @@ bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L)
         materialisePendingGlobals(L);
         return false;
     }
-    if (mGlobalsHandlersVerified && heapBytes(L) == mHeapBytesAtCheck) {
+    if (mGlobalsHandlersVerified) {
+        mGlobalsHandlersTrusted = true;
         return true;
     }
     if (!globalsHandlersInPlace(L)) {
@@ -4906,14 +4907,7 @@ bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L)
     }
     // A script still running can change the metatable between two lines it feeds
     mGlobalsHandlersVerified = mScriptCallDepth == 0;
-    mHeapBytesAtCheck = heapBytes(L);
     return true;
-}
-
-// No documentation available in wiki - internal function
-std::size_t TLuaInterpreter::heapBytes(lua_State* L)
-{
-    return (static_cast<std::size_t>(lua_gc(L, LUA_GCCOUNT, 0)) << 10) + static_cast<std::size_t>(lua_gc(L, LUA_GCCOUNTB, 0));
 }
 
 // No documentation available in wiki - internal function
@@ -4954,6 +4948,7 @@ void TLuaInterpreter::stripGlobalsHandlers(lua_State* L)
 {
     mGlobalsHandlersLinger = false;
     mGlobalsHandlersVerified = false;
+    mGlobalsHandlersTrusted = false;
     const int callerStackTop = lua_gettop(L);
     lua_rawgeti(L, LUA_REGISTRYINDEX, mGlobalsTableRef);
     if (!lua_getmetatable(L, -1)) {
@@ -5367,6 +5362,7 @@ void TLuaInterpreter::installLazyGlobals()
             mGlobalsMetatableTouched = false;
             mGlobalsHandlersLinger = false;
             mGlobalsHandlersVerified = false;
+            mGlobalsHandlersTrusted = false;
             mLazyGlobalsInstalled = installGlobalsMetatableGuard(L, nullptr, "getmetatable", 0) && installGlobalsMetatableGuard(L, nullptr, "setmetatable", 1)
                                     && installGlobalsMetatableGuard(L, "debug", "getmetatable", 2) && installGlobalsMetatableGuard(L, "debug", "setmetatable", 3)
                                     && installGlobalsMetatableGuard(L, nullptr, "rawget", 4);
@@ -5417,6 +5413,7 @@ void TLuaInterpreter::forgetLazyGlobals()
     mGlobalsMetatableTouched = false;
     mGlobalsHandlersLinger = false;
     mGlobalsHandlersVerified = false;
+    mGlobalsHandlersTrusted = false;
     mIndexHandlerRef = LUA_NOREF;
     mNewindexHandlerRef = LUA_NOREF;
     mCaptureScopeOpen = false;
