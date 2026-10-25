@@ -1410,12 +1410,7 @@ void T2DMap::drawRoom(QPainter& painter,
     QRectF roomRectangle;
     QRectF roomNameRectangle;
     double realHeight;
-    int borderWidth;
-    if (pRoom->mBorderThickness > 0) {
-        borderWidth = qMax(1, static_cast<int>(pRoom->mBorderThickness / mBSize * mRoomWidth * rSize));
-    } else {
-        borderWidth = qMax(1, static_cast<int>(1 / mBSize * mRoomWidth * rSize));
-    }
+    const int borderWidth = roomBorderWidth(*pRoom);
     const bool shouldDrawBorder = (mpHost->mMapperShowRoomBorders || pRoom->mBorderColor.isValid() || pRoom->mBorderThickness > 0) && !isGridMode;
     bool showThisRoomName = showRoomName;
     if (isGridMode) {
@@ -1621,6 +1616,12 @@ void T2DMap::drawRoom(QPainter& painter,
     }
 
     ExitAppearance::paintExitMarkers(painter, pen, *pRoom, rx, ry, mRoomWidth * rSize, mRoomHeight * rSize, roomColor, mMapperUseAntiAlias);
+}
+
+int T2DMap::roomBorderWidth(const TRoom& room) const
+{
+    const double thickness = room.mBorderThickness > 0 ? room.mBorderThickness : 1.0;
+    return qMax(1, static_cast<int>(thickness / mBSize * mRoomWidth * rSize));
 }
 
 // Markers are gathered from every drawn room, so hit-test once after the room passes rather than
@@ -3606,8 +3607,14 @@ void T2DMap::paintRoomExits(QPainter& painter,
             if (direction >= DIR_NORTH && direction <= DIR_SOUTHWEST) {
                 // Stubs on non-XY plane exits are handled differently and we
                 // do not support special exit stubs (yet?)
+                // The room and its border are painted over the stub later, so its tip must reach past
+                // them; the reduced tier paints rooms as blobs without a border.
+                const int borderWidth = lodTier ? 0 : roomBorderWidth(*room);
+                const auto stubReach = [&](const float cellSize) {
+                    return qMax(0.5 * cellSize, (rSize / 2.0 + 0.2) * cellSize + borderWidth);
+                };
                 const QVector3D uDirection = mpMap->scmUnitVectors.value(direction);
-                const QLineF stubLine(rx, ry, rx + uDirection.x() * 0.5 * mRoomWidth, ry + uDirection.y() * 0.5 * mRoomHeight);
+                const QLineF stubLine(rx, ry, rx + uDirection.x() * stubReach(mRoomWidth), ry + uDirection.y() * stubReach(mRoomHeight));
                 const QString doorKey{TRoom::dirCodeToShortString(direction)};
                 // Draw the door lines before we draw the stub or the filled
                 // circle on the end - so that the latter overlays the doors

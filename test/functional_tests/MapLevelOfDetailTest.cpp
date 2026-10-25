@@ -1274,7 +1274,7 @@ private slots:
         }
     }
 
-    // An exit stub is drawn at every zoom - it is half a room long however
+    // An exit stub is drawn at every zoom - it is at least half a room long however
     // small that is, and it is all that records an unmapped exit - so a room
     // whose only feature is a stub has to be handed over by the index, and a
     // stub added after a frame has to reopen the question like an exit does.

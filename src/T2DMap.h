@@ -476,6 +476,8 @@ private:
                                  QString* profileOutput = nullptr);
     QColor environmentColor(int environmentId) const;
     QSize lodRoomBlobSize() const;
+    // Width in pixels of the border drawRoom() strokes around a room's fill
+    int roomBorderWidth(const TRoom&) const;
     // Carries the room to save the drawing pass a second room-database probe per exit.
     // Valid only within the paintRoomExits() room iteration that gathered it.
     struct ExitToPaint
