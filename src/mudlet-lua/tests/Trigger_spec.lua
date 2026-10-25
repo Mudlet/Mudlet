@@ -3017,16 +3017,16 @@ describe("Trigger processing", function()
             -- busted keeps only the last finally() a test registers, so a test with
             -- cleanup of its own hands it over
             local function highlightFor(pattern, incoming, matchAll, ownCleanup)
-                _G.TrigHighlight = {}
-                tempComplexRegexTrigger("SpecHighlightLineEnd", pattern,
-                    [==[_G.TrigHighlight.line = getLineNumber() _G.TrigHighlight.matches = {unpack(matches)}]==],
-                    0, 0, 0, 0, matchAll and 1 or 0, "red", "blue", 0, 0, 0)
                 finally(function()
                     killTrigger("SpecHighlightLineEnd")
                     if ownCleanup then
                         ownCleanup()
                     end
                 end)
+                _G.TrigHighlight = {}
+                tempComplexRegexTrigger("SpecHighlightLineEnd", pattern,
+                    [==[_G.TrigHighlight.line = getLineNumber() _G.TrigHighlight.matches = {unpack(matches)}]==],
+                    0, 0, 0, 0, matchAll and 1 or 0, "red", "blue", 0, 0, 0)
                 feedTriggers(incoming .. "\n")
                 assert.is_number(_G.TrigHighlight.line, "the highlight trigger should have fired on '" .. incoming .. "'")
                 return highlightedOn(_G.TrigHighlight.line), _G.TrigHighlight.matches
@@ -3065,7 +3065,7 @@ describe("Trigger processing", function()
                 assert.are.same({"aa ", "aa ", "bb ", "bb ", "cc\n", "cc\n"}, captures)
             end)
 
-            it("highlights nothing for a capture of just the newline, and the rest as before", function()
+            it("highlights the other groups, and nothing for a group that captured only the newline", function()
                 local highlighted, captures = highlightFor([[^(tail) end(\s)]], "tail end")
                 assert.are.equal("tail|", highlighted)
                 assert.are.same({"tail end\n", "tail", "\n"}, captures)
