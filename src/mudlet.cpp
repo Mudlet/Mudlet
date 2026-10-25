@@ -6723,6 +6723,13 @@ void mudlet::connectFromGameLink(const QString& uri)
     if (!uriData) {
         return;
     }
+#if defined(QT_NO_SSL)
+    // Without TLS this would dial in plain text, and a saved profile would send its login over it
+    if (uriData->useTls) {
+        qWarning() << "mudlet::connectFromGameLink() - Mudlet is not configured for secure connections, ignoring:" << uri;
+        return;
+    }
+#endif
     mGameLinkQuestionOpen = true;
     const auto questionDone = qScopeGuard([this] {
         mGameLinkQuestionOpen = false;
@@ -6763,12 +6770,13 @@ void mudlet::connectFromGameLink(const QString& uri)
     if (Host* pHost = mHostManager.getHost(profileName)) {
         if (pHost->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState) {
             pHost->mUseTlsThisSession = uriData->useTls;
-            pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
+            // The address asked about: connectToServer() can save one the open profile is not using
+            pHost->mTelnet.connectIt(uriData->host, uriData->port);
         }
     } else {
         doAutoLogin(profileName, false, uriData->useTls);
     }
-    setActiveProfileTab(profileName);
+    restoreProfileFocus(profileName);
 }
 
 void mudlet::processEventLoopHack()

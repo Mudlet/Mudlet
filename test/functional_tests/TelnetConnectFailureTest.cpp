@@ -353,7 +353,29 @@ private slots:
         QVERIFY2(!bufferContains(host, qsl("Unable to connect")), "a failed handshake was reported as a failure to connect as well");
         QCOMPARE(recordedEventCount(host, qsl("sysDisconnectionEvent")), 1);
     }
+#endif
 
+    // connectToServer() can save an address the open profile is not using, which is the one a game's
+    // link is matched to and asked about, so that is the one dialled
+    void test_aGameLinkDialsTheAddressItAskedAbout()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        host->setUrl(qsl("unreachable.invalid"));
+
+        mudlet::self()->mConfirmGameLink = [](const QString&) {
+            return true;
+        };
+        const auto unhook = qScopeGuard([] {
+            mudlet::self()->mConfirmGameLink = nullptr;
+        });
+        QSignalSpy connected(&host->mTelnet, &cTelnet::signal_connected);
+        mudlet::self()->connectFromGameLink(qsl("telnet://%1:%2").arg(mLocalhost).arg(mPort));
+        QVERIFY2(connected.wait(3s), "the link dialled the open profile's address, not the one it asked about");
+    }
+
+#if !defined(QT_NO_SSL)
     // A game's telnets:// link to a saved profile connects it with TLS, which this plain game fails,
     // without saving TLS to the profile; a telnet:// link afterwards connects it without
     void test_aGameLinkToASavedProfileUsesTlsOnlyWhenItSaysSo()

@@ -746,6 +746,16 @@ private slots:
     QTRY_COMPARE(asked, qsl("Connect to games.example:4000?"));
   }
 
+  // Typed at the game, an address it could never connect to would be sent as a
+  // command, so the item has nothing to run and shows greyed out
+  void test_Osc8TelnetMenuItemWithoutAHostDoesNothing() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Look\":\"send:look\"},{\"Visit\":\"telnet://:4000\"}]}\x1b\\Menu\x1b]8;;\x1b\\"));
+
+    const QStringList commands = findFirstLinkCommands();
+    QCOMPARE(commands.size(), 2);
+    QCOMPARE(commands.at(1), QString());
+  }
+
   // One that could never connect would otherwise say "Connect to" and then do
   // nothing when clicked
   void test_Osc8TelnetLinkWithoutAHostIsNotMade() {

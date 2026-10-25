@@ -4518,8 +4518,9 @@ void TBuffer::decodeOSC(const QString& sequence)
                         // Special case: "-" creates a menu separator
                         menuCommands.append(QString());
                         menuHints.append(QString());
-                    } else if (const QString menuScheme = QUrl(menuCommand).scheme().toLower(); (menuScheme == qsl("telnet") || menuScheme == qsl("telnets")) && parseTelnetUri(menuCommand)) {
-                        menuCommands.append(qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(menuCommand)));
+                    } else if (const QString menuScheme = QUrl(menuCommand).scheme().toLower(); menuScheme == qsl("telnet") || menuScheme == qsl("telnets")) {
+                        // One Mudlet could not connect to stays in the menu with nothing to run, so it shows greyed out
+                        menuCommands.append(parseTelnetUri(menuCommand) ? qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(menuCommand)) : QString());
                         menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     } else {
                         // Treat as direct command
