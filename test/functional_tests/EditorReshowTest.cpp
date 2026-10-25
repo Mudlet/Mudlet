@@ -63,8 +63,54 @@ private:
     Host* mpHost = nullptr;
     const QString mProfileName = qsl("EditorReshow-Test-Profile");
     const QString mSecondProfileName = qsl("EditorReshow-Test-Profile-2");
+    const QString mThirdProfileName = qsl("EditorReshow-Test-Profile-3");
+    const QString mFourthProfileName = qsl("EditorReshow-Test-Profile-4");
     QString mPort;
     const QString mLocalhost = qsl("localhost");
+
+    // The two entry points build the deferred trees by different routes: showEvent() for the Script Editor
+    // button, a view switch for the aliases one
+    void checkNoticePostedAfterTheDeferredResetSurvivesFirstOpen(const QString& profileName, const bool viaAliases)
+    {
+        Host* pHost = TestProfile::create(profileName, mLocalhost, mPort);
+        QVERIFY2(pHost, "no host for the profile");
+        QSignalSpy connected(&(pHost->mTelnet), &cTelnet::signal_connected);
+        QVERIFY2(connected.wait(2s), "could not connect the profile to the stub server");
+        dlgTriggerEditor* pEditor = HostDialogs::of(pHost).mpEditorDialog;
+        QVERIFY2(pEditor && !pEditor->isVisible(), "setup: the profile needs an editor nothing has opened");
+
+        // Hidden, or the view's introduction would replace the notice anyway
+        pEditor->setBannerPermanentlyHidden(EditorViewType::cmTriggerView, qsl("intro"), true);
+        pEditor->setBannerPermanentlyHidden(EditorViewType::cmAliasView, qsl("intro"), true);
+        pEditor->doCleanReset();
+        QTest::qWait(50ms);
+        QVERIFY2(pEditor->mCleanResetDeferred, "setup: the reset was not put off");
+        pEditor->showWarning(qsl("qaNoticeAfterTheDeferredReset"), false);
+
+        QCOMPARE(mudlet::self()->getActiveHost(), pHost);
+        if (viaAliases) {
+            mudlet::self()->slot_showAliasDialog();
+        } else {
+            mudlet::self()->slot_showEditorDialog();
+        }
+        QTest::qWait(50ms);
+
+        QVERIFY2(pEditor->isVisible(), "the entry point did not open the editor");
+        QVERIFY2(!pEditor->mCleanResetDeferred, "opening the editor did not build its trees");
+        auto* pArea = pEditor->mpSystemMessageArea;
+        QVERIFY2(!pArea->isHidden(), "the notice posted after the reset was put off is gone");
+        QCOMPARE(pArea->notificationAreaMessageBox->text(), qsl("qaNoticeAfterTheDeferredReset"));
+        QVERIFY2(!pArea->notificationAreaIconLabelWarning->isHidden(), "the notice lost its warning icon");
+        QVERIFY(pArea->notificationAreaIconLabelInformation->isHidden());
+        QVERIFY(pArea->notificationAreaIconLabelError->isHidden());
+        QVERIFY(pEditor->mCurrentBannerKey.isEmpty());
+        pArea->messageAreaCloseButton->click();
+        QVERIFY2(pArea->isHidden(), "the close button no longer dismisses the notice");
+
+        pHost->forceClose();
+        QVERIFY2(pHost->requestClose(), "Closing the profile was refused");
+        HostManager::self()->deleteHost(profileName);
+    }
 
 private slots:
     void initTestCase()
@@ -91,6 +137,8 @@ private slots:
 
         QDir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName)).removeRecursively();
         QDir(MudletApp::getMudletPath(enums::profileHomePath, mSecondProfileName)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mThirdProfileName)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mFourthProfileName)).removeRecursively();
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY2(mpHost, "no active host after creating the profile");
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
@@ -106,9 +154,13 @@ private slots:
         if (mudlet::self()) {
             const QString path = MudletApp::getMudletPath(enums::profileHomePath, mProfileName);
             const QString secondPath = MudletApp::getMudletPath(enums::profileHomePath, mSecondProfileName);
+            const QString thirdPath = MudletApp::getMudletPath(enums::profileHomePath, mThirdProfileName);
+            const QString fourthPath = MudletApp::getMudletPath(enums::profileHomePath, mFourthProfileName);
             delete mudlet::self();
             QDir(path).removeRecursively();
             QDir(secondPath).removeRecursively();
+            QDir(thirdPath).removeRecursively();
+            QDir(fourthPath).removeRecursively();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
@@ -220,6 +272,10 @@ private slots:
         QVERIFY2(pSecondHost->requestClose(), "Closing the second profile was refused");
         HostManager::self()->deleteHost(mSecondProfileName);
     }
+
+    void test_aNoticePostedAfterTheDeferredResetSurvivesTheScriptEditorButton() { checkNoticePostedAfterTheDeferredResetSurvivesFirstOpen(mThirdProfileName, false); }
+
+    void test_aNoticePostedAfterTheDeferredResetSurvivesTheAliasesButton() { checkNoticePostedAfterTheDeferredResetSurvivesFirstOpen(mFourthProfileName, true); }
 };
 
 #include "EditorReshowTest.moc"
