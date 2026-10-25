@@ -21,8 +21,9 @@
  * The 2D mapper paints rooms over the exit lines, stubs included, so a stub
  * only shows where it reaches past its room and the border around it. Those
  * grow with the room size setting, and a room next door covers whatever of
- * the stub reaches it. Each case here checks that at least as much of the
- * stub as its end dot covers still shows.
+ * the stub reaches it. Each case here checks that the rooms were painted,
+ * that at least as much of the stub as its end dot covers still shows, and
+ * that it shows along the stub's direction, at least half a cell out.
  *
  * Why not a spec: the only evidence is pixels, and the area image export a
  * script can ask for draws no stubs.
@@ -35,6 +36,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <cmath>
 #include <numbers>
 
 #include "Host.h"
@@ -80,14 +82,16 @@ private:
     static constexpr int kPlayerRoomY = 1000;
     // Ids above 255 take their colour from mCustomEnvColors
     static constexpr int kEnvRoom = 501;
+    static constexpr int kEnvNeighbour = 502;
 
     static QColor exitColour() { return QColor(0, 255, 128); }
+    static QColor roomColour() { return QColor(255, 128, 0); }
+    static QColor neighbourColour() { return QColor(64, 64, 255); }
 
-    // Antialiasing is off, so the stub is painted in its own colour
-    static bool exitColoured(const QColor& pixel)
+    // Antialiasing is off, so everything is painted in its own colour
+    static bool coloured(const QColor& pixel, const QColor& colour)
     {
-        const QColor exit = exitColour();
-        return qAbs(pixel.red() - exit.red()) <= 8 && qAbs(pixel.green() - exit.green()) <= 8 && qAbs(pixel.blue() - exit.blue()) <= 8;
+        return qAbs(pixel.red() - colour.red()) <= 8 && qAbs(pixel.green() - colour.green()) <= 8 && qAbs(pixel.blue() - colour.blue()) <= 8;
     }
 
     void deleteProfileDirectory() const
@@ -100,12 +104,12 @@ private:
 
     TMap* map() const { return mpHost->mpMap.data(); }
 
-    bool addRoomAt(const int id, const int areaId, const int x, const int y) const
+    bool addRoomAt(const int id, const int areaId, const int x, const int y, const int environment = kEnvRoom) const
     {
         if (!map()->addRoom(id) || !map()->setRoomArea(id, areaId) || !map()->setRoomCoordinates(id, x, y, 0)) {
             return false;
         }
-        map()->mpRoomDB->getRoom(id)->environment = kEnvRoom;
+        map()->mpRoomDB->getRoom(id)->environment = environment;
         return true;
     }
 
@@ -165,25 +169,33 @@ private slots:
         QTest::addColumn<int>("direction");
         QTest::addColumn<bool>("bordersShown");
         QTest::addColumn<int>("roomBorderThickness");
+        QTest::addColumn<bool>("roomBorderColour");
         QTest::addColumn<bool>("round");
         // A room in the next cell along the stub, which is painted over whatever of the stub reaches it
         QTest::addColumn<bool>("neighbour");
+        // Small rooms leave the stub at its half cell
+        QTest::addColumn<bool>("halfCellLong");
 
-        QTest::newRow("default size, east") << 0.5 << int(DIR_EAST) << true << 0 << false << false;
-        QTest::newRow("size 8, east") << 0.8 << int(DIR_EAST) << true << 0 << false << false;
-        QTest::newRow("size 9, north") << 0.9 << int(DIR_NORTH) << true << 0 << false << false;
-        QTest::newRow("size 10, west") << 1.0 << int(DIR_WEST) << true << 0 << false << false;
-        QTest::newRow("size 11, south") << 1.1 << int(DIR_SOUTH) << true << 0 << false << false;
-        QTest::newRow("size 9, northeast") << 0.9 << int(DIR_NORTHEAST) << true << 0 << false << false;
-        QTest::newRow("size 10, southwest") << 1.0 << int(DIR_SOUTHWEST) << true << 0 << false << false;
-        QTest::newRow("size 10, borders off") << 1.0 << int(DIR_EAST) << false << 0 << false << false;
-        QTest::newRow("size 8, thick room border") << 0.8 << int(DIR_EAST) << true << 4 << false << false;
-        QTest::newRow("size 10, round rooms") << 1.0 << int(DIR_EAST) << true << 0 << true << false;
-        QTest::newRow("size 11, round rooms, northwest") << 1.1 << int(DIR_NORTHWEST) << true << 0 << true << false;
+        QTest::newRow("size 3, east") << 0.3 << int(DIR_EAST) << true << 0 << false << false << false << true;
+        QTest::newRow("default size, east") << 0.5 << int(DIR_EAST) << true << 0 << false << false << false << true;
+        QTest::newRow("size 8, east") << 0.8 << int(DIR_EAST) << true << 0 << false << false << false << false;
+        QTest::newRow("size 9, north") << 0.9 << int(DIR_NORTH) << true << 0 << false << false << false << false;
+        QTest::newRow("size 10, west") << 1.0 << int(DIR_WEST) << true << 0 << false << false << false << false;
+        QTest::newRow("size 11, south") << 1.1 << int(DIR_SOUTH) << true << 0 << false << false << false << false;
+        QTest::newRow("size 9, northeast") << 0.9 << int(DIR_NORTHEAST) << true << 0 << false << false << false << false;
+        QTest::newRow("size 10, southwest") << 1.0 << int(DIR_SOUTHWEST) << true << 0 << false << false << false << false;
+        QTest::newRow("size 10, borders off") << 1.0 << int(DIR_EAST) << false << 0 << false << false << false << false;
+        QTest::newRow("size 8, thick room border") << 0.8 << int(DIR_EAST) << true << 4 << false << false << false << false;
+        // A room's own border is drawn even with borders turned off
+        QTest::newRow("size 8, borders off, thick room border") << 0.8 << int(DIR_SOUTH) << false << 4 << false << false << false << false;
+        QTest::newRow("size 10, borders off, room border colour") << 1.0 << int(DIR_NORTH) << false << 0 << true << false << false << false;
+        QTest::newRow("size 10, round rooms") << 1.0 << int(DIR_EAST) << true << 0 << false << true << false << false;
+        QTest::newRow("size 11, round rooms, northwest") << 1.1 << int(DIR_NORTHWEST) << true << 0 << false << true << false << false;
+        QTest::newRow("size 9, round rooms, thick room border, northeast") << 0.9 << int(DIR_NORTHEAST) << true << 4 << false << true << false << false;
         // The gap between the two rooms only just holds the dot
-        QTest::newRow("size 7, room next door") << 0.7 << int(DIR_EAST) << true << 0 << false << true;
-        QTest::newRow("size 8, borders off, room next door") << 0.8 << int(DIR_EAST) << false << 0 << false << true;
-        QTest::newRow("size 10, round rooms, room next door northeast") << 1.0 << int(DIR_NORTHEAST) << true << 0 << true << true;
+        QTest::newRow("size 7, room next door") << 0.7 << int(DIR_EAST) << true << 0 << false << false << true << false;
+        QTest::newRow("size 8, borders off, room next door") << 0.8 << int(DIR_EAST) << false << 0 << false << false << true << false;
+        QTest::newRow("size 10, round rooms, room next door northeast") << 1.0 << int(DIR_NORTHEAST) << true << 0 << false << true << true << false;
     }
 
     void test_aStubsDotShowsPastItsRoom()
@@ -192,12 +204,15 @@ private slots:
         QFETCH(int, direction);
         QFETCH(bool, bordersShown);
         QFETCH(int, roomBorderThickness);
+        QFETCH(bool, roomBorderColour);
         QFETCH(bool, round);
         QFETCH(bool, neighbour);
+        QFETCH(bool, halfCellLong);
 
         TMap* pMap = map();
         pMap->mapClear();
-        pMap->mCustomEnvColors[kEnvRoom] = QColor(255, 128, 0);
+        pMap->mCustomEnvColors[kEnvRoom] = roomColour();
+        pMap->mCustomEnvColors[kEnvNeighbour] = neighbourColour();
         const int areaId = pMap->mpRoomDB->addArea(qsl("Stub Area"));
         QVERIFY(areaId > 0);
         QVERIFY(addRoomAt(kPlayerRoomId, areaId, 0, kPlayerRoomY));
@@ -205,12 +220,13 @@ private slots:
         if (neighbour) {
             const QVector3D step = TMap::scmUnitVectors.value(direction);
             // scmUnitVectors points north at -y, the drawing direction, but room coordinates have north at +y
-            QVERIFY(addRoomAt(kNeighbourRoomId, areaId, qRound(step.x()), -qRound(step.y())));
+            QVERIFY(addRoomAt(kNeighbourRoomId, areaId, qRound(step.x()), -qRound(step.y()), kEnvNeighbour));
         }
         TRoom* pRoom = pMap->mpRoomDB->getRoom(kStubRoomId);
         pRoom->setExitStub(direction, true);
         QVERIFY(pRoom->exitStubs.contains(direction));
         pRoom->mBorderThickness = roomBorderThickness;
+        pRoom->mBorderColor = roomBorderColour ? QColor(Qt::white) : QColor();
         pMap->mRoomIdHash[pMap->mProfileName] = kPlayerRoomId;
         pMap->mNewMove = false;
         pMap->setDefaultAreaShown(false);
@@ -260,12 +276,32 @@ private slots:
 
         // Rooms are painted over the stub, so every pixel left in its colour is a pixel of it that shows
         int stubPixelsShown = 0;
+        QPointF stubSum;
+        int roomPixels = 0;
+        QPointF roomSum;
+        int neighbourPixels = 0;
         for (int y = 0; y < frame.height(); ++y) {
             for (int x = 0; x < frame.width(); ++x) {
-                if (exitColoured(frame.pixelColor(x, y))) {
+                const QColor pixel = frame.pixelColor(x, y);
+                if (coloured(pixel, exitColour())) {
                     ++stubPixelsShown;
+                    stubSum += QPointF(x, y);
+                } else if (coloured(pixel, roomColour())) {
+                    ++roomPixels;
+                    roomSum += QPointF(x, y);
+                } else if (coloured(pixel, neighbourColour())) {
+                    ++neighbourPixels;
                 }
             }
+        }
+        const QString frameTag = QString::fromLatin1(QTest::currentDataTag());
+
+        // Otherwise the whole stub would show however long it was
+        const double fill = roomSize * cell;
+        const int wholeRoom = static_cast<int>(0.9 * (round ? std::numbers::pi * fill * fill / 4.0 : fill * fill));
+        if (roomPixels < wholeRoom || (neighbour && neighbourPixels < wholeRoom)) {
+            QFAIL(qPrintable(qsl("the rooms were not painted: %1 and %2 pixels of them show, short of %3 each - the frame is at %4")
+                                     .arg(QString::number(roomPixels), QString::number(neighbourPixels), QString::number(wholeRoom), saveFrame(frame, frameTag))));
         }
 
         // The dot on the stub's end is a fifth of a room across
@@ -273,7 +309,20 @@ private slots:
         const int wholeDot = static_cast<int>(0.9 * std::numbers::pi * dotRadius * dotRadius);
         if (stubPixelsShown < wholeDot) {
             QFAIL(qPrintable(qsl("only %1 pixels of the stub show, short of the %2 its end dot covers - the frame is at %3")
-                                     .arg(QString::number(stubPixelsShown), QString::number(wholeDot), saveFrame(frame, QString::fromLatin1(QTest::currentDataTag())))));
+                                     .arg(QString::number(stubPixelsShown), QString::number(wholeDot), saveFrame(frame, frameTag))));
+        }
+
+        // Nearly all of what shows is the dot, so where it shows is where the dot is
+        const QPointF dot = stubSum / stubPixelsShown - roomSum / roomPixels;
+        const QVector3D step = TMap::scmUnitVectors.value(direction);
+        const double stepLength = std::hypot(step.x(), step.y());
+        const double reach = (dot.x() * step.x() + dot.y() * step.y()) / stepLength;
+        const double offAxis = std::abs(dot.x() * step.y() - dot.y() * step.x()) / stepLength;
+        const double halfCell = 0.5 * cell * stepLength;
+        constexpr double tolerance = 3.0;
+        if (offAxis > tolerance || reach < halfCell - tolerance || (halfCellLong && reach > halfCell + tolerance)) {
+            QFAIL(qPrintable(qsl("the stub's dot shows %1 pixels out and %2 off its direction, where half a cell is %3 - the frame is at %4")
+                                     .arg(QString::number(reach, 'f', 1), QString::number(offAxis, 'f', 1), QString::number(halfCell, 'f', 1), saveFrame(frame, frameTag))));
         }
     }
 };
