@@ -3625,6 +3625,37 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.equals(149, getScroll(windowName))
     end)
 
+    it("Should move up by exactly the lines given when starting from the end", function()
+      scrollTo(windowName)
+      local lastLine = getLastLineNumber(windowName)
+      assert.equals(lastLine, getScroll(windowName))
+      scrollUp(windowName, 5)
+      assert.equals(lastLine - 5, getScroll(windowName))
+      if os.getenv("MUDLET_TEST_MODE") then
+        pumpEvents(50)
+        assert.equals(lastLine - 5, getScroll(windowName), "the split screen moved the line once it appeared")
+      end
+    end)
+
+    it("Should stay at the end when scrolling down from it", function()
+      scrollTo(windowName)
+      scrollDown(windowName, 1)
+      assert.equals(getLastLineNumber(windowName), getScroll(windowName))
+    end)
+
+    it("Should count a negative scrollTo line back from the end", function()
+      scrollTo(windowName, -10)
+      assert.equals(getLastLineNumber(windowName) - 10, getScroll(windowName))
+    end)
+
+    it("Should go to the end for a scrollTo line past it", function()
+      scrollTo(windowName, 1000)
+      local lastLine = getLastLineNumber(windowName)
+      assert.equals(lastLine, getScroll(windowName))
+      echo(windowName, "one more\n")
+      assert.equals(lastLine + 1, getScroll(windowName), "the console should follow new text again")
+    end)
+
     it("Should report an unknown window rather than raising", function()
       local ok, err = scrollUp("guiUtilsNoSuchWindow", 1)
       assert.is_nil(ok)

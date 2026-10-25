@@ -33,13 +33,6 @@ describe("Tests that the scroll bar and scrolling functions find their console b
     end
   end
 
-  -- lets the split screen's lower pane appear and the panes repaint; needs
-  -- MUDLET_TEST_MODE, as waitForEvent only pumps the event loop in test mode
-  local function pumpEventLoop()
-    tempTimer(0, function() raiseEvent("specScrollByNamePump") end)
-    waitForEvent("specScrollByNamePump", 2000)
-  end
-
   it("refuses a name that is no window at all", function()
     assertRefusesAll(unknown)
   end)
@@ -164,6 +157,10 @@ describe("Tests that the scroll bar and scrolling functions find their console b
             end
             scrollTo(window, 1)
             assert.are.equal(getLastLineNumber(window), getScroll(window))
+            if os.getenv("MUDLET_TEST_MODE") then
+              pumpEvents(50)
+              assert.are.equal(getLastLineNumber(window), getScroll(window), "scrolled back once the event loop ran")
+            end
             echo(window, "one more\n")
             assert.are.equal(getLastLineNumber(window), getScroll(window))
           end)
@@ -183,6 +180,7 @@ describe("Tests that the scroll bar and scrolling functions find their console b
           end)
 
           it("lands scrollTo on the line it is given, from the end and back to back", function()
+            assert.is_true(getRowCount(window) > 0, kind[1] .. " came up with no visible rows")
             clearWindow(window)
             for i = 1, 300 do
               echo(window, "scroll line " .. i .. "\n")
@@ -196,9 +194,35 @@ describe("Tests that the scroll bar and scrolling functions find their console b
             assert.are.equal(50, getScroll(window))
 
             if os.getenv("MUDLET_TEST_MODE") then
-              pumpEventLoop()
+              pumpEvents(50)
               assert.are.equal(50, getScroll(window), "the split screen moved the line once it appeared")
             end
+          end)
+
+          it("keeps scrolling from the line it shows after the buffer trims lines away above it", function()
+            assert.is_true(getRowCount(window) > 0, kind[1] .. " came up with no visible rows")
+            local lines, batch = getConsoleBufferSize(window)
+            setConsoleBufferSize(window, 200, 50)
+            finally(function()
+              scrollTo(window)
+              setConsoleBufferSize(window, lines, batch)
+            end)
+            clearWindow(window)
+            for i = 1, 190 do
+              echo(window, "scroll line " .. i .. "\n")
+            end
+            scrollTo(window, 100)
+            assert.are.equal(100, getScroll(window))
+            local lastBefore = getLastLineNumber(window)
+            for i = 1, 30 do
+              echo(window, "more line " .. i .. "\n")
+            end
+            local trimmed = lastBefore + 30 - getLastLineNumber(window)
+            assert.is_true(trimmed > 0, "the buffer did not trim")
+
+            assert.are.equal(100 - trimmed, getScroll(window))
+            scrollUp(window, 1)
+            assert.are.equal(99 - trimmed, getScroll(window))
           end)
         end
       end)
@@ -251,7 +275,7 @@ describe("Tests that the scroll bar and scrolling functions find their console b
       assert.are.equal(50, getScroll("main"))
 
       if os.getenv("MUDLET_TEST_MODE") then
-        pumpEventLoop()
+        pumpEvents(50)
         assert.are.equal(50, getScroll("main"), "the split screen moved the line once it appeared")
       end
     end)
