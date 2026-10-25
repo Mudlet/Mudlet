@@ -49,8 +49,6 @@
 #include "mapInfoContributorManager.h"
 
 #include <algorithm>
-#include <array>
-#include <bit>
 #include <cmath>
 #include <cstring>
 #include <limits>
@@ -2503,44 +2501,13 @@ int TLuaInterpreter::getRoomName(lua_State* L)
     return 1;
 }
 
-// The array/hash split Lua 5.1's own rehash (computesizes() in ltable.c) settles on for
-// these keys: `#` on a table with holes depends on it, so presizing differently would
-// change what `#getRooms()` returns on a map without room 1.
-static std::pair<int, int> luaArrayPartFor(const QHash<int, TRoom*>& rooms)
-{
-    constexpr int maxBits = 26;
-    std::array<int, maxBits + 1> keysPerSlice{};
-    int candidates = 0;
-    for (auto it = rooms.keyBegin(), end = rooms.keyEnd(); it != end; ++it) {
-        const int key = *it;
-        if (key >= 1 && key <= (1 << maxBits)) {
-            ++keysPerSlice[std::bit_width(static_cast<unsigned int>(key - 1))];
-            ++candidates;
-        }
-    }
-    int arraySize = 0;
-    int keysInArray = 0;
-    int keysBelow = 0;
-    for (int i = 0, twoToI = 1; i <= maxBits && twoToI / 2 < candidates; ++i, twoToI *= 2) {
-        keysBelow += keysPerSlice[i];
-        if (keysPerSlice[i] > 0 && keysBelow > twoToI / 2) {
-            arraySize = twoToI;
-            keysInArray = keysBelow;
-        }
-        if (keysBelow == candidates) {
-            break;
-        }
-    }
-    return {arraySize, keysInArray};
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRooms
 int TLuaInterpreter::getRooms(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     const QHash<int, TRoom*>& rooms = host.mpMap->mpRoomDB->getRoomMap();
-    const auto [arraySize, keysInArray] = luaArrayPartFor(rooms);
-    lua_createtable(L, arraySize, static_cast<int>(rooms.size()) - keysInArray);
+    // Not presized: `#` on a table with holes depends on the rehashes its inserts happened to trigger
+    lua_newtable(L);
     QStringEncoder toUtf8(QStringEncoder::Utf8, QStringConverter::Flag::Stateless);
     QByteArray buffer;
     for (auto it = rooms.cbegin(), end = rooms.cend(); it != end; ++it) {

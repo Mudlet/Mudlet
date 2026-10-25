@@ -1,6 +1,6 @@
--- getRooms() and getAreaRooms() size their tables up front and write room names
--- through a reused buffer, which is only safe while what a script reads out of
--- them stays the same: every key and name, and what `#` makes of the result.
+-- getRooms() writes room names through a reused buffer and getAreaRooms() sizes
+-- its table up front, which is only safe while what a script reads out of them
+-- stays the same: every key and name, and what `#` makes of the result.
 -- Every test starts from a wiped map, so the map is saved first and put back after.
 
 describe("Tests the tables getRooms and getAreaRooms hand back", function()
