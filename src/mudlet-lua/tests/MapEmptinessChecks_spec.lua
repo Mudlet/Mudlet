@@ -4,6 +4,15 @@
 -- Every test starts from a wiped map, so the map is saved first and put back after.
 
 describe("Tests how the bundled packages tell an empty map from one with rooms", function()
+  local hasBaseUI = type(BaseUI) == "table" and type(BaseUI.mapHasData) == "function"
+  local hasMapper = type(map) == "table" and type(map.checkVersion) == "function"
+  if not hasBaseUI and not hasMapper then
+    it("needs the starter UI or the generic mapper installed", function()
+      pending("neither the starter UI nor the generic mapper is installed in this profile")
+    end)
+    return
+  end
+
   local backupPath = getMudletHomeDir() .. "/map/mapemptinesschecks_spec_backup.dat"
 
   local function newRoom(id)
@@ -28,6 +37,13 @@ describe("Tests how the bundled packages tell an empty map from one with rooms",
   end)
 
   describe("BaseUI.mapHasData", function()
+    if not hasBaseUI then
+      it("needs the starter UI installed", function()
+        pending("the starter UI is not installed in this profile")
+      end)
+      return
+    end
+
     it("is false for a map without rooms", function()
       assert.is_false(BaseUI.mapHasData())
     end)
@@ -48,6 +64,13 @@ describe("Tests how the bundled packages tell an empty map from one with rooms",
   end)
 
   describe("map.checkVersion", function()
+    if not hasMapper then
+      it("needs the generic mapper installed", function()
+        pending("the generic mapper is not installed in this profile")
+      end)
+      return
+    end
+
     local savedSilent, savedPath, savedWaiting, savedTimer
 
     before_each(function()
