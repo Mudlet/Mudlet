@@ -303,6 +303,7 @@ private slots:
         QVERIFY2(startId > 0, "no room found near the middle of the chosen Z level");
         emitMetric("bench_start_room", static_cast<qint64>(startId));
 
+        int measured = 0;
         for (const Scenario& scenario : kScenarios) {
             const int offsetX = std::min(scenario.offset, maxX - centreX);
             const int offsetY = std::min(scenario.offset, maxY - centreY);
@@ -343,7 +344,9 @@ private slots:
             if (offsetX != scenario.offset || offsetY != scenario.offset) {
                 emitMetric(qsl("%1_clamped").arg(prefix), static_cast<qint64>(1));
             }
+            ++measured;
         }
+        QVERIFY2(measured > 0, "every scenario's target was the start room, so the chosen Z level has nothing to walk to");
 
         // Where the fixed toll used to go. findPath() allocated two vertex-sized
         // vectors of its own and handed them to astar_search(), which writes four
