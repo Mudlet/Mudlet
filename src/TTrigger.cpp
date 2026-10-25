@@ -1343,8 +1343,7 @@ void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captur
 
 // Text patterns match the line as it arrived, so a match is found where earlier
 // triggers' edits have moved it, unless a colour filter above has done that already.
-// They also match the "\n" Host::processLine() puts after the line, which the stored
-// line does not have, so a capture that took it would select past the line's end.
+// A capture can end in the "\n" Host::processLine() matches after the line, which is not in it.
 bool TTrigger::selectTextMatch(const int lineNumber, int from, const std::string& capture) const
 {
     int length = QString::fromStdString(capture).size();

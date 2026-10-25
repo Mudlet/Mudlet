@@ -2989,7 +2989,7 @@ describe("Trigger processing", function()
         end)
 
         -- Patterns match the line with a "\n" after it, which a capture ending in a
-        -- class such as \s or [^(] takes too: matches keeps it, the highlight must not need it
+        -- class such as \s or [^(] takes too: matches keeps it, the highlight leaves it out
         describe("with a match that runs to the end of the line", function()
 
             -- the highlighted characters, with "|" wherever a highlighted run ends
@@ -3000,7 +3000,7 @@ describe("Trigger processing", function()
                     -- a four byte UTF-8 character is two UTF-16 units, the columns selectSection() counts
                     local units = (#character == 4) and 2 or 1
                     selectSection(column, units)
-                    local red = select(1, getFgColor()) == color_table.red[1]
+                    local red = table.concat({getFgColor()}, ",") == table.concat(color_table.red, ",")
                     if red then
                         runs[#runs + 1] = character
                     elseif inRun then
@@ -3034,12 +3034,12 @@ describe("Trigger processing", function()
 
             local lookbehind = [[(?<=: )([\w\s\']+)]]
             local cases = {
-                -- #4070, and the two lines from its thread that already worked
+                -- a lookbehind and a class with \s, and two lines where the capture stops short
                 {lookbehind, "Town Center: Fox Plaza", "Fox Plaza", "Fox Plaza\n"},
                 {lookbehind, "Town Center: Fox Plaza.", "Fox Plaza|", "Fox Plaza"},
                 {lookbehind, "Town Center: Fox Plaza (here)", "Fox Plaza |", "Fox Plaza "},
                 {[[: ([\w\s\']+)]], "Town Center: Fox Plaza", "Fox Plaza", "Fox Plaza\n"},
-                -- #3117, with and without the character it negates
+                -- a negated class, with and without the character it negates
                 {[[^([^(]+)]], "hello ok", "hello ok", "hello ok\n"},
                 {[[^([^(]+)]], "hello ok (x)", "hello ok |", "hello ok "},
                 -- no capture groups, so the whole match is the highlight
@@ -3075,6 +3075,15 @@ describe("Trigger processing", function()
                 local echoer = tempRegexTrigger("^Town Square: Fox Plaza$", function() echo(" [seen]") end)
                 local highlighted = highlightFor(lookbehind, "Town Square: Fox Plaza", false, function() killTrigger(echoer) end)
                 assert.are.equal("Fox Plaza|", highlighted)
+            end)
+
+            it("highlights all of the capture after an earlier trigger shortened the line in front of it", function()
+                local editor = tempRegexTrigger("^Town Market: Fox Plaza$", function()
+                    if selectString("Town Market", 1) > -1 then replace("TM") end
+                    deselect()
+                end)
+                local highlighted = highlightFor(lookbehind, "Town Market: Fox Plaza", false, function() killTrigger(editor) end)
+                assert.are.equal("Fox Plaza", highlighted)
             end)
         end)
 
