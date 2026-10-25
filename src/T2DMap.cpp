@@ -1478,9 +1478,9 @@ void T2DMap::drawRoom(QPainter& painter,
         }
     }
 
-    // Expand the drawing rectangle outward by half the border width so that
-    // after the stroke is drawn (centered on the edge), the visible fill area
-    // matches the original room size and the border grows purely outward
+    // Expand the drawing rectangle outward by half the border width so that,
+    // with the border centered on its edge, the visible fill area matches the
+    // original room size and the border grows purely outward
     const QRectF roomDrawRectangle = roomRectangle.adjusted(-borderInset, -borderInset, borderInset, borderInset);
 
     if (isRoomSelected) {
@@ -1502,6 +1502,32 @@ void T2DMap::drawRoom(QPainter& painter,
         QPainterPath diameterPath;
         diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
         painter.drawPath(diameterPath);
+    } else if (isDrawingBorder) {
+        // The border is filled rather than stroked, as Qt's raster engine strokes a rect several times slower than it fills one
+        painter.setPen(Qt::NoPen);
+        painter.drawRect(roomDrawRectangle);
+        const QRectF outer = roomRectangle.adjusted(-borderWidth, -borderWidth, borderWidth, borderWidth);
+        // In device pixels, which HiDPI screens and exportAreaToImage() scale the border to
+        if (borderWidth * painter.deviceTransform().m11() > 1.0 && painter.testRenderHint(QPainter::Antialiasing)) {
+            // Antialiased strips leave a visible seam across a wider border where they meet at each corner
+            QPainterPath ring;
+            ring.setFillRule(Qt::OddEvenFill);
+            ring.addRect(outer);
+            ring.addRect(roomRectangle);
+            painter.fillPath(ring, roomPen.color());
+        } else {
+            // Strips, as a ring is no faster than the stroke for a border one device pixel wide
+            const QRectF borderStrips[] = {QRectF(outer.left(), outer.top(), outer.width(), borderWidth),
+                                           QRectF(outer.left(), roomRectangle.bottom(), outer.width(), borderWidth),
+                                           QRectF(outer.left(), roomRectangle.top(), borderWidth, roomRectangle.height()),
+                                           QRectF(roomRectangle.right(), roomRectangle.top(), borderWidth, roomRectangle.height())};
+            const QBrush roomBrush = painter.brush();
+            painter.setBrush(roomPen.color());
+            painter.drawRects(borderStrips, 4);
+            painter.setBrush(roomBrush);
+        }
+        // ExitAppearance::paintExitMarkers() derives its pens from the painter's current one
+        painter.setPen(roomPen);
     } else {
         painter.drawRect(roomDrawRectangle);
     }
