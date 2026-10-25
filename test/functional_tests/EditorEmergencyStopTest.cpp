@@ -152,10 +152,119 @@ private:
 
     static Look lookOf(QTreeWidgetItem* pItem) { return {pItem->data(0, Qt::AccessibleDescriptionRole).toString(), pItem->icon(0).cacheKey()}; }
 
-    // Folder, a child left on and a child the player switched off, as the tree shows them
+    static QString newKeyName() { return dlgTriggerEditor::tr("New key"); }
+
+    static QStringList suffixes(const QString& prefix)
+    {
+        QStringList result{qsl("Folder"), qsl("On"), qsl("Off"), qsl("OffFolder"), qsl("OffFolderChild"), qsl("BadFolder"), qsl("BadFolderChild")};
+        if (prefix == qsl("qaStopTrigger")) {
+            result << qsl("Chain") << qsl("ChainChild");
+        } else if (prefix == qsl("qaStopTimer")) {
+            result << qsl("Offset");
+        }
+        return result;
+    }
+
+    static QStringList namesOf(const QString& prefix)
+    {
+        QStringList names;
+        for (const QString& suffix : suffixes(prefix)) {
+            names << prefix + suffix;
+        }
+        return names;
+    }
+
+    // As the tree shows them, in the order expectedLooks() describes
     QList<QTreeWidgetItem*> itemsOf(QTreeWidget* pTree, const QString& prefix)
     {
-        return {itemNamed(pTree, prefix + qsl("Folder")), itemNamed(pTree, prefix + qsl("On")), itemNamed(pTree, prefix + qsl("Off"))};
+        QList<QTreeWidgetItem*> items;
+        for (const QString& name : namesOf(prefix)) {
+            items << itemNamed(pTree, name);
+        }
+        return items;
+    }
+
+    // Outside a stop, so that no test can pass by comparing two stopped looks
+    QStringList expectedLooks(const QString& prefix) const
+    {
+        const QString underOffFolder = mpEditor->descInactiveParent.arg(mpEditor->descActive);
+        QStringList looks{mpEditor->descActiveFolder, mpEditor->descActive, mpEditor->descInactive, mpEditor->descInactiveFolder, underOffFolder, mpEditor->descError, underOffFolder};
+        if (prefix == qsl("qaStopTrigger")) {
+            looks << mpEditor->descActiveFilterChain << mpEditor->descActive;
+        } else if (prefix == qsl("qaStopTimer")) {
+            looks << mpEditor->descActiveOffsetTimer;
+        }
+        return looks;
+    }
+
+    QString unexpectedLook(const QString& prefix, const QList<QTreeWidgetItem*>& items) const
+    {
+        const QStringList names = namesOf(prefix);
+        for (int i = 0; i < items.count(); ++i) {
+            if (!items.at(i)) {
+                return qsl("\"%1\" is not in the tree once").arg(names.at(i));
+            }
+        }
+        const QStringList looks = expectedLooks(prefix);
+        for (int i = 0; i < items.count(); ++i) {
+            if (lookOf(items.at(i)).description != looks.at(i)) {
+                return qsl("\"%1\" reads \"%2\", not \"%3\"").arg(items.at(i)->text(0), lookOf(items.at(i)).description, looks.at(i));
+            }
+        }
+        return {};
+    }
+
+    QString changedLook(const QList<QTreeWidgetItem*>& items, const QList<Look>& before) const
+    {
+        for (int i = 0; i < items.count(); ++i) {
+            const Look now = lookOf(items.at(i));
+            if (now.description != before.at(i).description || now.iconKey != before.at(i).iconKey) {
+                return qsl("\"%1\" changed from \"%2\" to \"%3\"").arg(items.at(i)->text(0), before.at(i).description, now.description);
+            }
+        }
+        return {};
+    }
+
+    static QList<Look> looksOf(const QList<QTreeWidgetItem*>& items)
+    {
+        QList<Look> looks;
+        for (auto* pItem : items) {
+            looks << lookOf(pItem);
+        }
+        return looks;
+    }
+
+    void toggle(const QString& kind)
+    {
+        if (kind == qsl("trigger")) {
+            mpEditor->activeToggle_trigger();
+        } else if (kind == qsl("alias")) {
+            mpEditor->activeToggle_alias();
+        } else if (kind == qsl("timer")) {
+            mpEditor->activeToggle_timer();
+        } else {
+            mpEditor->activeToggle_key();
+        }
+    }
+
+    bool breakScript(const QString& kind, const QString& name)
+    {
+        QTreeWidgetItem* pItem = itemNamed(showView(kind), name);
+        if (!pItem) {
+            return false;
+        }
+        const int id = pItem->data(0, Qt::UserRole).toInt();
+        const QString script = qsl("qaBroken = (");
+        if (kind == qsl("trigger")) {
+            return !mpHost->getTriggerUnit()->getTrigger(id)->setScript(script);
+        }
+        if (kind == qsl("alias")) {
+            return !mpHost->getAliasUnit()->getAlias(id)->setScript(script);
+        }
+        if (kind == qsl("timer")) {
+            return !mpHost->getTimerUnit()->getTimer(id)->setScript(script);
+        }
+        return !mpHost->getKeyUnit()->getKey(id)->setScript(script);
     }
 
     void addKinds()
@@ -203,11 +312,23 @@ private slots:
             disableTrigger("qaStopTriggerOff")
             permSubstringTrigger("qaStopTriggerBroken", "qaStopTriggerFolder", {"qaStopTriggerBroken"}, "")
             permSubstringTrigger("qaStopTriggerMoving", "", {"qaStopTriggerMoving"}, "")
+            permSubstringTrigger("qaStopTriggerOffFolder", "", {}, "")
+            permSubstringTrigger("qaStopTriggerOffFolderChild", "qaStopTriggerOffFolder", {"qaStopTriggerOffFolderChild"}, "")
+            disableTrigger("qaStopTriggerOffFolder")
+            permSubstringTrigger("qaStopTriggerBadFolder", "", {}, "")
+            permSubstringTrigger("qaStopTriggerBadFolderChild", "qaStopTriggerBadFolder", {"qaStopTriggerBadFolderChild"}, "")
+            permSubstringTrigger("qaStopTriggerChain", "qaStopTriggerFolder", {"qaStopTriggerChain"}, "")
+            permSubstringTrigger("qaStopTriggerChainChild", "qaStopTriggerChain", {"qaStopTriggerChainChild"}, "")
             permAlias("qaStopAliasFolder", "", "", "")
             permAlias("qaStopAliasOn", "qaStopAliasFolder", "^qaStopAliasOn$", "")
             permAlias("qaStopAliasOff", "qaStopAliasFolder", "^qaStopAliasOff$", "")
             disableAlias("qaStopAliasOff")
             permAlias("qaStopAliasBroken", "qaStopAliasFolder", "^qaStopAliasBroken$", "")
+            permAlias("qaStopAliasOffFolder", "", "", "")
+            permAlias("qaStopAliasOffFolderChild", "qaStopAliasOffFolder", "^qaStopAliasOffFolderChild$", "")
+            disableAlias("qaStopAliasOffFolder")
+            permAlias("qaStopAliasBadFolder", "", "", "")
+            permAlias("qaStopAliasBadFolderChild", "qaStopAliasBadFolder", "^qaStopAliasBadFolderChild$", "")
             permTimer("qaStopTimerFolder", "", 0, "")
             permTimer("qaStopTimerOn", "qaStopTimerFolder", 3600, "")
             permTimer("qaStopTimerOff", "qaStopTimerFolder", 3600, "")
@@ -218,6 +339,18 @@ private slots:
             enableTimer("qaStopTimerBroken")
             permTimer("qaStopTimerMoving", "", 3600, "")
             enableTimer("qaStopTimerMoving")
+            permTimer("qaStopTimerMovingFolder", "", 0, "")
+            enableTimer("qaStopTimerMovingFolder")
+            permTimer("qaStopTimerOffFolder", "", 0, "")
+            permTimer("qaStopTimerOffFolderChild", "qaStopTimerOffFolder", 3600, "")
+            enableTimer("qaStopTimerOffFolderChild")
+            disableTimer("qaStopTimerOffFolder")
+            permTimer("qaStopTimerBadFolder", "", 0, "")
+            permTimer("qaStopTimerBadFolderChild", "qaStopTimerBadFolder", 3600, "")
+            enableTimer("qaStopTimerBadFolder")
+            enableTimer("qaStopTimerBadFolderChild")
+            permTimer("qaStopTimerOffset", "qaStopTimerOn", 10, "")
+            enableTimer("qaStopTimerOffset")
             permKey("qaStopKeyFolder", "", -1, "")
             permKey("qaStopKeyOn", "qaStopKeyFolder", 16777268, "")
             permKey("qaStopKeyOff", "qaStopKeyFolder", 16777269, "")
@@ -226,13 +359,32 @@ private slots:
             disableKey("qaStopKeyOff")
             permKey("qaStopKeyBroken", "qaStopKeyFolder", 16777270, "")
             enableKey("qaStopKeyBroken")
+            permKey("qaStopKeyOffFolder", "", -1, "")
+            permKey("qaStopKeyOffFolderChild", "qaStopKeyOffFolder", 16777271, "")
+            enableKey("qaStopKeyOffFolderChild")
+            disableKey("qaStopKeyOffFolder")
+            permKey("qaStopKeyBadFolder", "", -1, "")
+            permKey("qaStopKeyBadFolderChild", "qaStopKeyBadFolder", 16777272, "")
+            enableKey("qaStopKeyBadFolder")
+            enableKey("qaStopKeyBadFolderChild")
         )")));
+        // saveKey() switches a key on only while it still has the name a new one is given
+        QVERIFY(runLua(qsl(R"(permKey("%1", "qaStopKeyFolder", 16777273, "") enableKey("%1"))").arg(newKeyName())));
 
         mudlet::self()->slot_showScriptDialog();
         QTest::qWait(100ms);
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor, "the editor dialog was not created");
+        for (const QString& kind : {qsl("trigger"), qsl("alias"), qsl("timer"), qsl("key")}) {
+            mpEditor->rebuildStaleTrees();
+            const QString prefix = qsl("qaStop%1%2").arg(kind.at(0).toUpper(), kind.mid(1));
+            QVERIFY2(breakScript(kind, prefix + qsl("BadFolder")), qPrintable(qsl("could not break the script of %1BadFolder").arg(prefix)));
+        }
         mpEditor->rebuildStaleTrees();
+        // A trigger's first save draws even a filter chain as a plain trigger, stop or not
+        QTreeWidgetItem* pChain = itemNamed(showView(qsl("trigger")), qsl("qaStopTriggerChain"));
+        QVERIFY(pChain);
+        mpHost->getTriggerUnit()->getTrigger(pChain->data(0, Qt::UserRole).toInt())->unmarkAsNew();
     }
 
     void cleanup()
@@ -268,31 +420,38 @@ private slots:
         QFETCH(QString, kind);
         QFETCH(QString, prefix);
         QTreeWidget* pTree = showView(kind);
-        const QList<QTreeWidgetItem*> items = itemsOf(pTree, prefix);
-        QVERIFY2(!items.contains(nullptr), "the items made for this test are not each in the tree once");
-        QCOMPARE(lookOf(items.at(0)).description, mpEditor->descActiveFolder);
-        QCOMPARE(lookOf(items.at(1)).description, mpEditor->descActive);
-        QCOMPARE(lookOf(items.at(2)).description, mpEditor->descInactive);
-        QList<Look> before;
-        for (auto* pItem : items) {
-            before << lookOf(pItem);
+        QList<QTreeWidgetItem*> items = itemsOf(pTree, prefix);
+        const QString unexpected = unexpectedLook(prefix, items);
+        QVERIFY2(unexpected.isEmpty(), qPrintable(unexpected));
+        // Saving renames it after its binding, so only this test can find it
+        QTreeWidgetItem* pNewKey = kind == qsl("key") ? itemNamed(pTree, newKeyName()) : nullptr;
+        if (kind == qsl("key")) {
+            QVERIFY2(pNewKey, "the new key is not in the tree once");
+            QCOMPARE(lookOf(pNewKey).description, mpEditor->descActive);
+            items << pNewKey;
         }
+        const QList<Look> before = looksOf(items);
 
         mpHost->stopAllTriggers();
-        for (auto* pItem : items) {
-            select(kind, pTree, pItem);
-        }
-        select(kind, pTree, items.at(0));
-
-        for (int i = 0; i < items.count(); ++i) {
-            QCOMPARE(lookOf(items.at(i)).description, before.at(i).description);
-            QVERIFY2(lookOf(items.at(i)).iconKey == before.at(i).iconKey, qPrintable(qsl("\"%1\" changed its icon on being left").arg(items.at(i)->text(0))));
+        // Twice, as only an item's first save takes the branch for new items
+        for (int pass = 0; pass < 2; ++pass) {
+            for (auto* pItem : items) {
+                // Saving its broken script would switch a trigger off for good
+                if (!pItem->text(0).endsWith(qsl("BadFolder"))) {
+                    select(kind, pTree, pItem);
+                }
+            }
+            select(kind, pTree, items.at(0));
+            const QString changed = changedLook(items, before);
+            QVERIFY2(changed.isEmpty(), qPrintable(qsl("on leaving it (pass %1): %2").arg(pass + 1).arg(changed)));
         }
         // saving an item it leaves must not let the item run before the stop ends
         QVERIFY2(!running(kind, items.at(1)), "leaving an item switched it back on during the emergency stop");
+        QVERIFY2(!pNewKey || !running(kind, pNewKey), "leaving a new key switched it on during the emergency stop");
 
         mpHost->reenableAllTriggers();
         QVERIFY2(running(kind, items.at(1)), "ending the emergency stop did not switch the item back on");
+        QVERIFY2(!pNewKey || running(kind, pNewKey), "ending the emergency stop did not switch the new key on");
         QVERIFY(!running(kind, items.at(2)));
     }
 
@@ -304,46 +463,67 @@ private slots:
         QFETCH(QString, prefix);
         mpEditor->rebuildStaleTrees();
         QTreeWidget* pTree = showView(kind);
-        QList<Look> before;
-        for (auto* pItem : itemsOf(pTree, prefix)) {
-            QVERIFY2(pItem, "the items made for this test are not each in the tree once");
-            before << lookOf(pItem);
-        }
-        QCOMPARE(before.at(0).description, mpEditor->descActiveFolder);
-        QCOMPARE(before.at(1).description, mpEditor->descActive);
-        QCOMPARE(before.at(2).description, mpEditor->descInactive);
+        const QList<QTreeWidgetItem*> itemsBefore = itemsOf(pTree, prefix);
+        const QString unexpected = unexpectedLook(prefix, itemsBefore);
+        QVERIFY2(unexpected.isEmpty(), qPrintable(unexpected));
+        const QList<Look> before = looksOf(itemsBefore);
 
         mpHost->stopAllTriggers();
         mpEditor->rebuildStaleTrees();
         pTree = showView(kind);
 
         const QList<QTreeWidgetItem*> items = itemsOf(pTree, prefix);
-        QVERIFY2(!items.contains(nullptr), "the rebuilt tree does not hold each of the items once");
-        for (int i = 0; i < items.count(); ++i) {
-            QCOMPARE(lookOf(items.at(i)).description, before.at(i).description);
-            QVERIFY2(lookOf(items.at(i)).iconKey == before.at(i).iconKey, qPrintable(qsl("\"%1\" has another icon in the rebuilt tree").arg(items.at(i)->text(0))));
-        }
+        QVERIFY2(!items.contains(nullptr), qPrintable(qsl("in the rebuilt tree: %1").arg(unexpectedLook(prefix, items))));
+        const QString changed = changedLook(items, before);
+        QVERIFY2(changed.isEmpty(), qPrintable(qsl("in the rebuilt tree: %1").arg(changed)));
+    }
+
+    void test_folderToggledDuringAStopKeepsItsChildrensLook_data() { addKinds(); }
+
+    void test_folderToggledDuringAStopKeepsItsChildrensLook()
+    {
+        QFETCH(QString, kind);
+        QFETCH(QString, prefix);
+        mpEditor->rebuildStaleTrees();
+        QTreeWidget* pTree = showView(kind);
+        const QList<QTreeWidgetItem*> items = itemsOf(pTree, prefix);
+        const QString unexpected = unexpectedLook(prefix, items);
+        QVERIFY2(unexpected.isEmpty(), qPrintable(unexpected));
+        const QList<Look> before = looksOf(items);
+
+        mpHost->stopAllTriggers();
+        select(kind, pTree, items.at(0));
+        toggle(kind);
+        toggle(kind);
+
+        const QString changed = changedLook(items, before);
+        QVERIFY2(changed.isEmpty(), qPrintable(qsl("after switching their folder off and on: %1").arg(changed)));
     }
 
     void test_itemsMovedDuringAStopKeepTheirLook_data()
     {
         QTest::addColumn<QString>("kind");
         QTest::addColumn<QString>("prefix");
-        QTest::newRow("trigger") << qsl("trigger") << qsl("qaStopTrigger");
-        QTest::newRow("timer") << qsl("timer") << qsl("qaStopTimer");
+        QTest::addColumn<QString>("moving");
+        QTest::addColumn<QString>("look");
+        QTest::newRow("trigger") << qsl("trigger") << qsl("qaStopTrigger") << qsl("qaStopTriggerMoving") << qsl("active");
+        QTest::newRow("timer") << qsl("timer") << qsl("qaStopTimer") << qsl("qaStopTimerMoving") << qsl("active");
+        QTest::newRow("timer folder") << qsl("timer") << qsl("qaStopTimer") << qsl("qaStopTimerMovingFolder") << qsl("activeFolder");
     }
 
     void test_itemsMovedDuringAStopKeepTheirLook()
     {
         QFETCH(QString, kind);
         QFETCH(QString, prefix);
+        QFETCH(QString, moving);
+        QFETCH(QString, look);
         mpEditor->rebuildStaleTrees();
         auto* pTree = static_cast<TTreeWidget*>(showView(kind));
         QTreeWidgetItem* pFolder = itemNamed(pTree, prefix + qsl("Folder"));
-        QTreeWidgetItem* pMoving = itemNamed(pTree, prefix + qsl("Moving"));
+        QTreeWidgetItem* pMoving = itemNamed(pTree, moving);
         QVERIFY2(pFolder && pMoving, "the items made for this test are not each in the tree once");
         QCOMPARE(lookOf(pFolder).description, mpEditor->descActiveFolder);
-        QCOMPARE(lookOf(pMoving).description, mpEditor->descActive);
+        QCOMPARE(lookOf(pMoving).description, look == qsl("active") ? mpEditor->descActive : mpEditor->descActiveFolder);
         // At the top level its look is that of a switched-on item in a switched-on folder
         const QImage folderBefore = imageOf(pFolder);
         const QImage movingBefore = imageOf(pMoving);
@@ -353,7 +533,10 @@ private slots:
         moveOntoFolder(pTree, pMoving, pFolder);
 
         QCOMPARE(pMoving->parent(), pFolder);
-        QVERIFY2(imageOf(pFolder) == folderBefore, "the folder moved into has another icon");
+        // Only a trigger's move repaints the folder it lands in
+        if (kind == qsl("trigger")) {
+            QVERIFY2(imageOf(pFolder) == folderBefore, "the folder moved into has another icon");
+        }
         QVERIFY2(imageOf(pMoving) == movingBefore, "the moved item has another icon");
     }
 
@@ -372,7 +555,15 @@ private slots:
         select(kind, pTree, pBroken);
         mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("qaBroken = ("));
         select(kind, pTree, pOther);
+        const qint64 errorIcon = mpEditor->cachedIcon(qsl(":/icons/tools-report-bug.png")).cacheKey();
         QCOMPARE(lookOf(pBroken).description, mpEditor->descError);
+        QCOMPARE(lookOf(pBroken).iconKey, errorIcon);
+
+        mpEditor->rebuildStaleTrees();
+        pBroken = itemNamed(showView(kind), prefix + qsl("Broken"));
+        QVERIFY2(pBroken, "the rebuilt tree does not hold the item once");
+        QCOMPARE(lookOf(pBroken).description, mpEditor->descError);
+        QCOMPARE(lookOf(pBroken).iconKey, errorIcon);
     }
 };
 
