@@ -294,17 +294,19 @@ private slots:
         }
         emitMetric("bench_span_x", static_cast<qint64>(maxX - minX));
         emitMetric("bench_span_y", static_cast<qint64>(maxY - minY));
+        // Every room on the level lies within this Chebyshev distance of any point inside its bounds.
+        const int searchRadius = std::max(maxX - minX, maxY - minY);
 
         const int centreX = (minX + maxX) / 2;
         const int centreY = (minY + maxY) / 2;
-        const int startId = nearestTo(byCoordinate, centreX, centreY, maxX - minX);
+        const int startId = nearestTo(byCoordinate, centreX, centreY, searchRadius);
         QVERIFY2(startId > 0, "no room found near the middle of the chosen Z level");
         emitMetric("bench_start_room", static_cast<qint64>(startId));
 
         for (const Scenario& scenario : kScenarios) {
             const int offsetX = std::min(scenario.offset, maxX - centreX);
             const int offsetY = std::min(scenario.offset, maxY - centreY);
-            const int targetId = (scenario.offset == 0) ? nearestTo(byCoordinate, maxX, maxY, maxX - minX) : nearestTo(byCoordinate, centreX + offsetX, centreY + offsetY, maxX - minX);
+            const int targetId = (scenario.offset == 0) ? nearestTo(byCoordinate, maxX, maxY, searchRadius) : nearestTo(byCoordinate, centreX + offsetX, centreY + offsetY, searchRadius);
             QVERIFY2(targetId > 0, qPrintable(qsl("scenario \"%1\" found no target room").arg(QString::fromUtf8(scenario.name))));
             if (targetId == startId) {
                 continue;
@@ -337,6 +339,10 @@ private slots:
             // length through different rooms would pass this.
             emitMetric(qsl("%1_steps").arg(prefix), static_cast<qint64>(steps));
             emitMetric(qsl("%1_target_room").arg(prefix), static_cast<qint64>(targetId));
+            // A capped target sits on the level's edge, so it may be the same room another scenario measured.
+            if (offsetX != scenario.offset || offsetY != scenario.offset) {
+                emitMetric(qsl("%1_clamped").arg(prefix), static_cast<qint64>(1));
+            }
         }
 
         // Where the fixed toll used to go. findPath() allocated two vertex-sized
@@ -353,7 +359,7 @@ private slots:
         // the end-to-end figure compare path_adjacent_ms against a build made
         // without this change.
         {
-            const int targetId = nearestTo(byCoordinate, centreX + 1, centreY, maxX - minX);
+            const int targetId = nearestTo(byCoordinate, centreX + 1, centreY, searchRadius);
             const auto vertexCount = static_cast<std::size_t>(boost::num_vertices(pMap->g));
             const TMap::vertex start = pMap->roomidToIndex.value(startId);
             const TMap::vertex goal = pMap->roomidToIndex.value(targetId);
