@@ -107,6 +107,7 @@ public:
         mMaxHRange = 0;
     }
     int getScreenHeight() const { return mScreenHeight; }
+    QSize drawableSize() const;
     void searchSelectionOnline();
     int getColumnCount() const;
     int getRowCount() const;
