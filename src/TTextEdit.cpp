@@ -1860,7 +1860,6 @@ void TTextEdit::expandSelectionToWords()
             }
         }
     }
-    mDragStart.setX(xind + 1);
     mPA.setX(xind + 1);
 
     yind = mPB.y();
@@ -1875,7 +1874,6 @@ void TTextEdit::expandSelectionToWords()
             }
         }
     }
-    mDragSelectionEnd.setX(xind - 1);
     mPB.setX(xind - 1);
 }
 
@@ -2403,6 +2401,11 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             normaliseSelection();
             if (mMouseTrackLevel == 2) {
                 expandSelectionToWords();
+                // On a separator the bounds cross, and the drag stays anchored to the clicked cell
+                if (mPA.x() <= mPB.x()) {
+                    mDragStart = mPA;
+                    mDragSelectionEnd = mPB;
+                }
             } else {
                 mPA.setX(0);
                 mPB.setX(mpBuffer->buffer.at(mPB.y()).size());
