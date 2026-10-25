@@ -318,6 +318,7 @@ private slots:
         mudlet::self()->resize(1100, 800);
         settle(1500ms);
         const int bareRows = pane->getScreenHeight();
+        const int bareColumns = pane->mScreenWidth;
         const QSize bareReported = screenSize(mpHost);
         const auto bareUpdates = mpServer->nawsUpdates();
         QVERIFY2(!bareUpdates.isEmpty(), describe(bareUpdates).constData());
@@ -336,30 +337,72 @@ private slots:
         mudlet::self()->resize(1100, 800);
         settle(1500ms);
         const auto coveredUpdates = mpServer->nawsUpdates();
+        const QRect seen = pane->visibleRegion().boundingRect();
+        const int coveredRows = pane->getScreenHeight();
+        const int coveredColumns = pane->mScreenWidth;
         runLua(mpHost, qsl("deleteCommandLine('nawsProbeAcross') deleteCommandLine('nawsProbeDown')"));
 
-        QCOMPARE(pane->getScreenHeight(), bareRows);
+        QVERIFY2(seen.top() > 0 && seen.left() > 0, "the overlays no longer hide the pane's top left corner, so this case tests nothing");
+        QCOMPARE(coveredRows, bareRows);
+        QCOMPARE(coveredColumns, bareColumns);
         QCOMPARE(screenSize(mpHost), bareReported);
         QVERIFY2(!coveredUpdates.isEmpty(), describe(coveredUpdates).constData());
         QCOMPARE(coveredUpdates.constLast(), bareUpdates.constLast());
     }
 
-    // One along the bottom edge does cut the rows short, so the newest line stays in sight above it.
-    void anOverlayAlongTheBottomKeepsTheNewestLineAboveIt()
+    // Ones along the bottom and right edges do cut the grid short, so the newest line stays in sight beside them.
+    void overlaysAlongTheBottomAndRightKeepTheNewestLineInSight()
     {
         TTextEdit* pane = mpHost->mainConsoleView()->mUpperPane;
         const int fontHeight = QFontMetrics(pane->font()).height();
         const int overlap = 3 * fontHeight;
-        runLua(mpHost, qsl("assert(createCommandLine('nawsProbeBelow', 0, %1, getMainWindowSize() + 50, %2))").arg(pane->height() - overlap).arg(2 * overlap));
+        const int overlapWidth = 10 * pane->mFontWidth;
+        mudlet::self()->resize(1100, 800);
+        settle(1500ms);
+        const QSize target = pane->size();
+        mudlet::self()->resize(1200, 800);
+        settle(1500ms);
+        runLua(mpHost,
+               qsl("local width, height = getMainWindowSize()\n"
+                   "assert(createCommandLine('nawsProbeBelow', 0, %1, width + 50, %2))\n"
+                   "assert(createCommandLine('nawsProbeBeside', %3, 0, %4, height + 50))")
+                       .arg(target.height() - overlap)
+                       .arg(2 * overlap)
+                       .arg(target.width() - overlapWidth)
+                       .arg(2 * overlapWidth));
         mudlet::self()->resize(1100, 800);
         settle(1500ms);
         const int rows = pane->getScreenHeight();
+        const int columns = pane->mScreenWidth;
         const int reportedRows = mpHost->mScreenHeight;
-        const int expected = (pane->height() - overlap) / fontHeight;
-        runLua(mpHost, qsl("deleteCommandLine('nawsProbeBelow')"));
+        const QSize covered = pane->size();
+        const int expectedRows = (target.height() - overlap) / fontHeight;
+        const int expectedColumns = (target.width() - overlapWidth) / pane->mFontWidth;
+        runLua(mpHost, qsl("deleteCommandLine('nawsProbeBelow') deleteCommandLine('nawsProbeBeside')"));
 
+        QCOMPARE(covered, target);
+        QCOMPARE(rows, expectedRows);
+        QCOMPARE(reportedRows, expectedRows);
+        QCOMPARE(columns, expectedColumns);
+    }
+
+    // Lines are drawn down from the top of the pane, so one whose top its parent cuts off
+    // has to keep the rows it cannot show, or its newest line lands out of sight.
+    void aMiniconsoleCutOffAtTheTopKeepsItsNewestLineAtTheBottom()
+    {
+        runLua(mpHost, qsl("assert(createMiniConsole('nawsProbeMini', 0, 0, 400, 400))"));
+        TConsole* mini = mpHost->mainConsoleView()->subConsoleWidget(qsl("nawsProbeMini"));
+        QVERIFY(mini);
+        TTextEdit* pane = mini->mUpperPane;
+        runLua(mpHost, qsl("moveWindow('nawsProbeMini', 0, -200) resizeWindow('nawsProbeMini', 400, 401)"));
+        settle(300ms);
+        const QRect seen = pane->visibleRegion().boundingRect();
+        const int rows = pane->getScreenHeight();
+        const int expected = pane->height() / pane->mFontHeight;
+        runLua(mpHost, qsl("deleteMiniConsole('nawsProbeMini')"));
+
+        QVERIFY2(seen.top() > 0, "the main window no longer cuts off the top of the miniconsole, so this case tests nothing");
         QCOMPARE(rows, expected);
-        QCOMPARE(reportedRows, expected);
     }
 
     // A profile in a background tab has its own borders and its own font, so

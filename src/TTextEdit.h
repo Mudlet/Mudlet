@@ -152,6 +152,7 @@ public:
     friend class ScrollLostOnPartialRepaintTest;
     friend class TTextEditBlinkTest;
     friend class PipelineBenchmark;
+    friend class NawsWidthReportTest;
     static bool shouldRegisterBlinkClient(bool enableBlinkText, bool hasBlinkingContentInRedrawnRegion, bool isBlinkClientRegistered, bool reusedCachedScreenContent);
     static QSize smallestEnclosingSurfaceSize(int screenWidth, int fontWidth, int pixmapHeight, qreal devicePixelRatio);
 
