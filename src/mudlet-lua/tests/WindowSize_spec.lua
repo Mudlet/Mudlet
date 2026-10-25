@@ -113,6 +113,48 @@ describe("window sizes", function()
     end)
   end)
 
+  -- The text area is sized by hand, not by a layout, so a bar that appears or grows
+  -- without the window changing size has to resize it as well as move it
+  describe("getRowCount", function()
+    local restoreWidth, restoreHeight
+
+    setup(function()
+      local width, height = getMainWindowSize()
+      setMainWindowSize(1000, 1400)
+      pumpEvents(100)
+      local innerWidth, innerHeight = getMainWindowSize()
+      restoreWidth, restoreHeight = width + 1000 - innerWidth, height + 1400 - innerHeight
+      assert.is_true(innerHeight > 400, "could not make the main window tall enough")
+    end)
+
+    teardown(function()
+      setMainWindowSize(restoreWidth, restoreHeight)
+      pumpEvents(100)
+    end)
+
+    -- Unlike showToolBar(), neither a new bar nor a restyled button has the
+    -- console refreshed afterwards
+    it("gives up the rows a button bar made along the top takes", function()
+      local toolbar = uniqueName("wsRowsToolbar")
+      local button = uniqueName("wsRowsButton")
+      finally(function()
+        hideToolBar(toolbar)
+        pumpEvents(100)
+      end)
+      pumpEvents(100)
+      local rows = getRowCount()
+
+      assert.is_true(tempButtonToolbar(toolbar, 0, 0) > 0)
+      assert.is_true(tempButton(toolbar, button, 0) > 0)
+      -- Taller than any bar other specs leave along the top
+      assert.is_true(setButtonStyleSheet(button, "QPushButton { min-height: 300px; }"))
+      pumpEvents(100)
+
+      local shownRows = getRowCount()
+      assert.is_true(shownRows <= rows - 5, ("%d rows before a 300px high bar along the top, %d with it"):format(rows, shownRows))
+    end)
+  end)
+
   describe("getUserWindowSize", function()
     -- Geyser reads the size back from inside the resize event
     it("follows a floating user window as it is resized", function()
