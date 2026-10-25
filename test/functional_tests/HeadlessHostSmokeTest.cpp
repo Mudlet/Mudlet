@@ -3078,7 +3078,6 @@ end
         Host* host = HostManager::self()->getHost(hostname);
         QVERIFY2(host, "The profile is not in the pool.");
         QVERIFY(!host->hasConsoleView());
-        // For scrollUp() and scrollDown(), which GUIUtils.lua builds on getScroll() and scrollTo()
         host->getLuaInterpreter()->loadGlobal();
 
         const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(

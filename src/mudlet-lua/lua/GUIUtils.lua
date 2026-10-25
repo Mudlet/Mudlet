@@ -3108,32 +3108,6 @@ function closestColor(r,g,b)
 end
 local builtinClosestColor = closestColor
 
---- Scrolls the given window up a specified number of lines
---- @param windowName Optional name of the window to use the function on
---- @param lines Number of lines to scroll
-function scrollUp(window, lines)
-  if type(window) ~= "string" then window, lines = "main", window end
-  lines = tonumber(lines) or 1
-  -- getScroll() is what actually answers nil for an unknown window;
-  -- getLastLineNumber() answers -1, so guarding on it never fires
-  local curScroll = getScroll(window)
-  if not curScroll then return nil, "window does not exist" end
-  scrollTo(window, math.max(curScroll - lines, 0))
-end
-
---- Scrolls the given window down a specified number of lines
---- @param windowName Optional name of the window to use the function on
---- @param lines Number of lines to scroll
-function scrollDown(window, lines)
-  if type(window) ~= "string" then window, lines = "main", window end
-  lines = tonumber(lines) or 1
-  -- see scrollUp() on why the guard is on getScroll() rather than on the line count
-  local curScroll = getScroll(window)
-  if not curScroll then return nil, "window does not exist" end
-  -- getScroll() having answered means the window exists, so this cannot fail
-  scrollTo(window, math.min(curScroll + lines, getLastLineNumber(window)))
-end
-
 --[[
 The following functions are to allow easily and efficiently converting from
 one color echo type to another. So from cecho to decho. decho to hecho.

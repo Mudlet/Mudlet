@@ -2145,6 +2145,12 @@ bool TNullConsoleFrontend::scrollWindowTo(const QString& name, const int line, c
     return true;
 }
 
+bool TNullConsoleFrontend::windowFollowsNewLines(const QString& name)
+{
+    const TConsoleModel* pModel = mpHost->consoleModelNamed(name);
+    return pModel && !pModel->mScrolledBackTo;
+}
+
 // As TTextEdit::getColumnCount() and getRowCount() count it
 void TNullConsoleFrontend::reportGridSize(const QString& name)
 {

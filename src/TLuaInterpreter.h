@@ -868,6 +868,8 @@ public:
     static int getLabelSizeHint(lua_State*);
     static int announce(lua_State*);
     static int scrollTo(lua_State*);
+    static int scrollUp(lua_State*);
+    static int scrollDown(lua_State*);
     static int getScroll(lua_State*);
     static int getConfig(lua_State*);
     static int getSaveCommandHistory(lua_State*);

@@ -185,6 +185,8 @@ public:
     // A negative line counts back from the end. One at or past the end, or toEnd, puts the console back
     // to following new lines.
     virtual bool scrollWindowTo(const QString& name, int line, bool toEnd) = 0;
+    // False for a name that is no console
+    virtual bool windowFollowsNewLines(const QString& name) = 0;
 
     // These name a console as the scroll bar ones do; for a name that is none of those, setWindowFontSize()
     // fails and the others have no value. This console's font is the profile's display font, which Host

@@ -280,6 +280,28 @@ describe("Tests that the scroll bar and scrolling functions find their console b
       end
     end)
 
+    it("scrolls up and down from the end of the text a trigger fires on", function()
+      finally(function() scrollTo("main") end)
+      for _, case in ipairs({{"up", scrollUp}, {"down", scrollDown}}) do
+        scrollTo("main")
+        local lastSeen
+        local id = tempRegexTrigger("^specScrollByName packet end$", function()
+          lastSeen = getLastLineNumber("main")
+          case[2]("main", 1)
+        end)
+        feedTriggers(("specScrollByName packet line\n"):rep(20) .. "specScrollByName packet end\n")
+        killTrigger(id)
+
+        if case[1] == "up" then
+          assert.are.equal(lastSeen - 1, getScroll("main"), "scrollUp from a trigger")
+        else
+          assert.are.equal(getLastLineNumber("main"), getScroll("main"), "scrollDown from a trigger left the end")
+          echo("main", "one more\n")
+          assert.are.equal(getLastLineNumber("main"), getScroll("main"), "scrollDown from a trigger stopped following")
+        end
+      end
+    end)
+
     it("takes no name for the main console", function()
       disableScrollBar("main")
       assert.is_false(getScrollBarVisible())
