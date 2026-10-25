@@ -1951,6 +1951,43 @@ private slots:
     QVERIFY(console->getHyperlinkVisibilityManager().trackedLinkIds().contains(linkId));
   }
 
+  // Every link with visibility settings that closes while text is held keeps
+  // them, including one ended by the link that replaced it.
+  void test_EveryLinkClosedBehindHeldTextKeepsItsVisibility_data() {
+    QTest::addColumn<QString>("prefix");
+    QTest::addColumn<int>("rowOffset");
+    QTest::addColumn<int>("firstColumn");
+
+    // joined onto the held text, after the space the join puts back
+    QTest::newRow("joined") << QString() << 0 << 71;
+    // a list entry is never the continuation of the line above
+    QTest::newRow("committed alone") << qsl("- ") << 1 << 2;
+  }
+
+  void test_EveryLinkClosedBehindHeldTextKeepsItsVisibility() {
+    QFETCH(QString, prefix);
+    QFETCH(int, rowOffset);
+    QFETCH(int, firstColumn);
+
+    undoServerWrap();
+    const QString heldText = QString(64, QLatin1Char('y')) + qsl(" alpha");
+    feedFromServer(heldText + qsl("\n"));
+    const QString reveal = qsl("?config={\"visibility\":{\"action\":\"reveal\",\"delay\":20000}}");
+    feedFromServer(prefix + qsl("\x1b]8;;send:a") + reveal + qsl("\x1b\\beta \x1b]8;;send:b") + reveal +
+                   qsl("\x1b\\gamma\x1b]8;;\x1b\\ tail.\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int heldLine = lineStartingWith(heldText);
+    QVERIFY2(heldLine >= 0, qPrintable(qsl("the held text never reached the buffer: '%1'").arg(allBufferText())));
+    const int line = heldLine + rowOffset;
+    const int first = console->buffer.getLinkIndexAt(line, firstColumn);
+    const int second = console->buffer.getLinkIndexAt(line, firstColumn + 5);
+    QVERIFY2(first > 0 && second > 0 && first != second, "the two links are not where they were written");
+    const auto tracked = console->getHyperlinkVisibilityManager().trackedLinkIds();
+    QVERIFY2(tracked.contains(first), "the replaced link lost its visibility settings");
+    QVERIFY2(tracked.contains(second), "the link that replaced it lost its visibility settings");
+  }
+
   // Held text the next line does not continue is committed on its own, and a
   // link closed on that next line is then a single-line link at exactly the
   // columns it recorded - so it keeps its visibility, as it did before held
