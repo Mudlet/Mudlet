@@ -142,6 +142,8 @@ private:
         const char* name;
         // Added to BOTH the x and y of the start room, so the target of
         // {"near", 10} is 10 map units away on each axis, not 10 in total.
+        // Each axis is capped at the level's edge, so on a small level a long
+        // scenario walks to the edge instead of finding no room.
         int offset;
     };
 
@@ -300,7 +302,9 @@ private slots:
         emitMetric("bench_start_room", static_cast<qint64>(startId));
 
         for (const Scenario& scenario : kScenarios) {
-            const int targetId = (scenario.offset == 0) ? nearestTo(byCoordinate, maxX, maxY, maxX - minX) : nearestTo(byCoordinate, centreX + scenario.offset, centreY + scenario.offset, maxX - minX);
+            const int offsetX = std::min(scenario.offset, maxX - centreX);
+            const int offsetY = std::min(scenario.offset, maxY - centreY);
+            const int targetId = (scenario.offset == 0) ? nearestTo(byCoordinate, maxX, maxY, maxX - minX) : nearestTo(byCoordinate, centreX + offsetX, centreY + offsetY, maxX - minX);
             QVERIFY2(targetId > 0, qPrintable(qsl("scenario \"%1\" found no target room").arg(QString::fromUtf8(scenario.name))));
             if (targetId == startId) {
                 continue;
