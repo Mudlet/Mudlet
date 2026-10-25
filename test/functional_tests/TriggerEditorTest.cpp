@@ -40,6 +40,8 @@
 #include "ProfileTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
+#include "TTrigger.h"
+#include "TriggerUnit.h"
 #include "TConsole.h"
 #include "TMap.h"
 #include "dlgTriggerEditor.h"
@@ -671,6 +673,18 @@ private slots:
       return pRebuiltAlias != nullptr;
     }));
     QCOMPARE(description(pRebuiltAlias), inactive);
+
+    // The trees leave out only top-level temporary items, so one nested in a
+    // permanent folder, as a package's XML can mark it, must still repaint.
+    QTreeWidgetItem *pNestedItem = findItem("treeWidget_triggers", "qaClosedLeaf");
+    QVERIFY(pNestedItem);
+    TTrigger *pNested = mpHost->getTriggerUnit()->getTrigger(pNestedItem->data(0, Qt::UserRole).toInt());
+    QVERIFY(pNested && pNested->getParent());
+    pNested->setTemporary(true);
+    auto restorePermanent = qScopeGuard([pNested]() { pNested->setTemporary(false); });
+    QVERIFY(pLua->compileAndExecuteScript(qsl("disableTrigger(\"qaClosedLeaf\")")));
+    QTRY_COMPARE(description(pNestedItem), inactive);
+
     QVERIFY(pLua->compileAndExecuteScript(
         qsl("disableTimer(\"qaClosedTimer\")\ndisableKey(\"qaClosedKey\")")));
   }

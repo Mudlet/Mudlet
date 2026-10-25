@@ -436,7 +436,7 @@ bool TimerUnit::enableTimer(const QString& name)
         }
 
         found = true;
-        if (!pT->isTemporary()) {
+        if (!pT->isTemporary() || pT->getParent()) {
             emit mpHost->signal_timerToggled(pT->getID());
         }
     }
@@ -459,7 +459,7 @@ bool TimerUnit::disableTimer(const QString& name)
 
         pT->disableTimer();
         found = true;
-        if (!pT->isTemporary()) {
+        if (!pT->isTemporary() || pT->getParent()) {
             emit mpHost->signal_timerToggled(pT->getID());
         }
     }

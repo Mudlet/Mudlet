@@ -941,7 +941,7 @@ bool TriggerUnit::enableTrigger(const QString& name)
         }
         it.value()->setIsActive(true);
         found = true;
-        if (!it.value()->isTemporary()) {
+        if (!it.value()->isTemporary() || it.value()->getParent()) {
             emit mpHost->signal_triggerToggled(it.value()->getID());
         }
     }
@@ -957,7 +957,7 @@ bool TriggerUnit::disableTrigger(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
-        if (!it.value()->isTemporary()) {
+        if (!it.value()->isTemporary() || it.value()->getParent()) {
             emit mpHost->signal_triggerToggled(it.value()->getID());
         }
     }

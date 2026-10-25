@@ -10070,7 +10070,7 @@ void dlgTriggerEditor::computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& it
 void dlgTriggerEditor::refreshTriggerIcon(int triggerID)
 {
     // One tree walk per turn, not a findItemByID() per call; showEvent() flushes what
-    // arrives while closed. The units skip temporary items, which have no tree item.
+    // arrives while closed. The units skip top-level temporary items, which the trees leave out.
     mPendingTriggerIconRefresh.insert(triggerID);
     if (isVisible() && !mTriggerIconRefreshQueued) {
         mTriggerIconRefreshQueued = true;

@@ -273,7 +273,7 @@ bool KeyUnit::enableKey(const QString& name)
         // whole subtrees, so a corpse never sits under a parent this loop keeps.
         pT->enableKey(name);
         found = true;
-        if (!pT->isTemporary()) {
+        if (!pT->isTemporary() || pT->getParent()) {
             emit mpHost->signal_keyToggled(pT->getID());
         }
     }
@@ -291,7 +291,7 @@ bool KeyUnit::disableKey(const QString& name)
         // Walks pT's children for the same name as well - see enableKey()
         pT->disableKey(name);
         found = true;
-        if (!pT->isTemporary()) {
+        if (!pT->isTemporary() || pT->getParent()) {
             emit mpHost->signal_keyToggled(pT->getID());
         }
     }
