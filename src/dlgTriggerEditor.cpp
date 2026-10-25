@@ -9230,6 +9230,12 @@ void dlgTriggerEditor::fillout_form()
     mpCurrentVarItem = nullptr;
 
     mNeedUpdateData = false;
+    // The trees are painted afresh below, which covers every toggle still queued
+    mPendingTriggerIconRefresh.clear();
+    mPendingAliasIconRefresh.clear();
+    mPendingTimerIconRefresh.clear();
+    mPendingScriptIconRefresh.clear();
+    mPendingKeyIconRefresh.clear();
     mpTriggerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Triggers")));
     mpTriggerBaseItem->setIcon(0, QPixmap(qsl(":/icons/tools-wizard.png")));
     treeWidget_triggers->insertTopLevelItem(0, mpTriggerBaseItem);
@@ -10063,10 +10069,8 @@ void dlgTriggerEditor::computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& it
 // diagnostic the user is actually looking at in a different view.
 void dlgTriggerEditor::refreshTriggerIcon(int triggerID)
 {
-    // Coalesced into one tree walk per turn rather than a findItemByID() scan
-    // per Lua call. While the editor is closed (hidden, never deleted) the ID
-    // only waits for showEvent() to flush it. The units don't signal toggles of
-    // temporary items, which have no tree item, so the set stays bounded.
+    // One tree walk per turn, not a findItemByID() per call; showEvent() flushes what
+    // arrives while closed. The units skip temporary items, which have no tree item.
     mPendingTriggerIconRefresh.insert(triggerID);
     if (isVisible() && !mTriggerIconRefreshQueued) {
         mTriggerIconRefreshQueued = true;
@@ -10081,9 +10085,8 @@ void dlgTriggerEditor::flushPendingTriggerIconRefresh()
         return;
     }
     if (!mpTriggerBaseItem || !isVisible()) {
-        // Editor closed before this flush ran - leave the IDs queued rather
-        // than silently dropping the update. showEvent() flushes them when
-        // the editor becomes visible again, and the next toggle would too.
+        // Editor closed before this flush ran - leave the IDs queued for
+        // showEvent() rather than silently dropping the update.
         return;
     }
     int remaining = mPendingTriggerIconRefresh.size();

@@ -629,24 +629,50 @@ private slots:
 
     // Temporary items have no tree item, so toggling them while the editor
     // is closed must not pile their IDs up for the reopen.
-    QVERIFY(pEditor->mPendingTriggerIconRefresh.isEmpty());
-    QVERIFY(pEditor->mPendingTimerIconRefresh.isEmpty());
+    auto nothingQueued = [pEditor]() {
+      return pEditor->mPendingTriggerIconRefresh.isEmpty() && pEditor->mPendingAliasIconRefresh.isEmpty()
+             && pEditor->mPendingTimerIconRefresh.isEmpty() && pEditor->mPendingScriptIconRefresh.isEmpty()
+             && pEditor->mPendingKeyIconRefresh.isEmpty();
+    };
+    QVERIFY(nothingQueued());
     pEditor->hide();
     QCoreApplication::processEvents();
     QVERIFY(pLua->compileAndExecuteScript(
         qsl("local trigger = tempTrigger(\"qa closed temp\", \"\")\n"
+            "local alias = tempAlias(\"^qa closed temp$\", \"\")\n"
             "local timer = tempTimer(3600, \"\")\n"
+            "local key = tempKey(mudlet.key.F9, \"\")\n"
             "for i = 1, 3 do\n"
             "  disableTrigger(tostring(trigger))\n"
             "  enableTrigger(tostring(trigger))\n"
+            "  disableAlias(tostring(alias))\n"
+            "  enableAlias(tostring(alias))\n"
             "  disableTimer(tostring(timer))\n"
             "  enableTimer(tostring(timer))\n"
+            "  disableKey(tostring(key))\n"
+            "  enableKey(tostring(key))\n"
             "end\n"
             "killTrigger(trigger)\n"
-            "killTimer(timer)")));
-    QVERIFY(pEditor->mPendingTriggerIconRefresh.isEmpty());
-    QVERIFY(pEditor->mPendingTimerIconRefresh.isEmpty());
+            "killAlias(alias)\n"
+            "killTimer(timer)\n"
+            "killKey(key)")));
+    QVERIFY(nothingQueued());
+
+    // A tree rebuild paints every item from its current state, so it must
+    // leave nothing queued for the reopen to repaint again.
+    QVERIFY(pLua->compileAndExecuteScript(qsl("disableAlias(\"qaClosedAlias\")")));
+    QVERIFY(!nothingQueued());
+    pEditor->doCleanReset();
+    QTRY_VERIFY(nothingQueued());
     pEditor->show();
+    QTreeWidgetItem *pRebuiltAlias = nullptr;
+    QVERIFY(QTest::qWaitFor([&]() {
+      pRebuiltAlias = findItem("treeWidget_aliases", "qaClosedAlias");
+      return pRebuiltAlias != nullptr;
+    }));
+    QCOMPARE(description(pRebuiltAlias), inactive);
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("disableTimer(\"qaClosedTimer\")\ndisableKey(\"qaClosedKey\")")));
   }
 
   // paintAliasItem()/paintTimerItem()/paintScriptItem()/paintKeyItem() (and
