@@ -70,10 +70,10 @@
 using namespace std::chrono_literals;
 
 namespace {
-// Qt reads a "&" in a menu item's text as a mnemonic, and a profile name may hold one
-QString menuItemSafe(const QString& profileName)
+// Qt reads a "&" in a menu item's text as a mnemonic, and a profile name or window title may hold one
+QString menuItemSafe(const QString& text)
 {
-    return QString(profileName).replace(QLatin1Char('&'), QLatin1String("&&"));
+    return QString(text).replace(QLatin1Char('&'), QLatin1String("&&"));
 }
 } // namespace
 
@@ -587,6 +587,32 @@ void TDetachedWindow::createMenus()
 
     // Connect the Window menu's aboutToShow signal to update the window list
     connect(mpWindowMenu, &QMenu::aboutToShow, this, &TDetachedWindow::updateWindowMenu);
+}
+
+// Qt names each dock and toolbar in this menu by its title, which stays unescaped
+// because it is also the caption of the floating window. Escaped from the title
+// rather than the action's text, which keeps what the last popup set
+QMenu* TDetachedWindow::createPopupMenu()
+{
+    QMenu* pMenu = QMainWindow::createPopupMenu();
+    if (!pMenu) {
+        return nullptr;
+    }
+    const auto listed = pMenu->actions();
+    const auto escape = [&listed](QAction* pToggle, const QString& title) {
+        if (listed.contains(pToggle)) {
+            pToggle->setText(menuItemSafe(title));
+        }
+    };
+    const auto docks = findChildren<QDockWidget*>();
+    for (QDockWidget* pDock : docks) {
+        escape(pDock->toggleViewAction(), pDock->windowTitle());
+    }
+    const auto toolBars = findChildren<QToolBar*>();
+    for (QToolBar* pToolBar : toolBars) {
+        escape(pToolBar->toggleViewAction(), pToolBar->windowTitle());
+    }
+    return pMenu;
 }
 
 void TDetachedWindow::closeEvent(QCloseEvent* event)

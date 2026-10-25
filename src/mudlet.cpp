@@ -7084,8 +7084,8 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
     if (tabIndex >= 0 && mpTabBar->count() > 1) {
         const QString profileName = mpTabBar->tabData(tabIndex).toString();
 
-        // Add "Detach Tab" option
-        QAction* detachTabAction = new QAction(tr("Detach Tab \"%1\"").arg(profileName), &contextMenu);
+        //: This is an item in the context menu shown when right-clicking a tab in Mudlet's main window. %1 is the name of the profile.
+        QAction* detachTabAction = new QAction(tr("Detach Tab \"%1\"").arg(addonLabel(profileName)), &contextMenu);
         detachTabAction->setIcon(QIcon(":/icons/window-new.png"));
         connect(detachTabAction, &QAction::triggered, this, [this, tabIndex]() {
             detachTab(tabIndex, QPoint()); // Position doesn't matter for manual detach

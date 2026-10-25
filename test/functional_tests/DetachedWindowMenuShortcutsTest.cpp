@@ -30,6 +30,7 @@
  * Run with: ctest -R DetachedWindowMenuShortcutsTest -V
  */
 
+#include <QDockWidget>
 #include <QFileInfo>
 #include <QHash>
 #include <QMenu>
@@ -40,6 +41,8 @@
 #include <QTimer>
 #include <QtTest/QtTest>
 #include <chrono>
+#include <functional>
+#include <memory>
 
 #include "MudletApp.h"
 #include "ProfileTestHelper.h"
@@ -249,35 +252,13 @@ private slots:
         auto* pTabBar = mpDetachedWindow->findChild<TTabBar*>();
         QVERIFY(pTabBar && pTabBar->count() > 0);
 
-        // exec() does not return until the menu closes, so it is read and closed from inside its event loop
-        bool tabMenuSeen = false;
-        QStringList tabMenuOffenders;
-        int tabMenuItemsNamingTheProfile = 0;
-        QTimer popupReader;
-        popupReader.setInterval(0);
-        connect(&popupReader, &QTimer::timeout, this, [&]() {
-            auto* pMenu = qobject_cast<QMenu*>(QApplication::activePopupWidget());
-            if (!pMenu) {
-                return;
-            }
-            tabMenuSeen = true;
-            const auto actions = pMenu->actions();
-            for (const QAction* pAction : actions) {
-                if (carriesMnemonic(pAction->text())) {
-                    tabMenuOffenders << qsl("\"%1\"").arg(pAction->text());
-                }
-                if (shownText(pAction->text()).contains(mSecondHostname)) {
-                    ++tabMenuItemsNamingTheProfile;
-                }
-            }
-            pMenu->close();
+        const QStringList tabMenuItems = popupItemTexts([pTabBar]() {
+            emit pTabBar->customContextMenuRequested(pTabBar->tabRect(0).center());
         });
-        popupReader.start();
-        emit pTabBar->customContextMenuRequested(pTabBar->tabRect(0).center());
-        popupReader.stop();
-        QVERIFY2(tabMenuSeen, "right-clicking the detached tab opened no menu");
-        QVERIFY2(tabMenuItemsNamingTheProfile == 2, qPrintable(qsl("%1 items of a detached tab's menu show \"%2\" as it is named, not 2").arg(tabMenuItemsNamingTheProfile).arg(mSecondHostname)));
-        QVERIFY2(tabMenuOffenders.isEmpty(), qPrintable(qsl("a detached tab's menu turns the profile name's \"&\" into a mnemonic: %1").arg(tabMenuOffenders.join(qsl(", ")))));
+        verifyMenuNamesProfile(tabMenuItems, mSecondHostname, 2, qsl("a detached tab's menu"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
 
         QMenu* pDetachedWindowMenu = nullptr;
         const auto menuBarActions = mpDetachedWindow->menuBar()->actions();
@@ -291,6 +272,51 @@ private slots:
             return;
         }
         verifyProfileItemsCarryNoMnemonic(mudlet::self()->menuWindow, qsl("the main window's Window menu"));
+    }
+
+    // The menu QMainWindow opens on a right-click of the menu bar or a dock's title bar
+    void test_theDockMenuNamesAMapWithItsAmpersand()
+    {
+        QVERIFY(mpDetachedWindow);
+        QAction* pMapAction = nullptr;
+        const auto toolBarActions = mpDetachedWindow->toolBar()->actions();
+        for (QAction* pAction : toolBarActions) {
+            if (pAction->text() == TDetachedWindow::tr("Map")) {
+                pMapAction = pAction;
+            }
+        }
+        QVERIFY2(pMapAction, "the detached window's toolbar has no Map button");
+        pMapAction->trigger();
+        QVERIFY2(mpDetachedWindow->findChild<QDockWidget*>(), "the Map button made no map dock in the detached window");
+
+        // Twice, as each popup rewrites the same toggle actions
+        for (int round = 0; round < 2; ++round) {
+            std::unique_ptr<QMenu> pPopup(mpDetachedWindow->createPopupMenu());
+            QVERIFY(pPopup);
+            QStringList texts;
+            const auto actions = pPopup->actions();
+            for (const QAction* pAction : actions) {
+                texts << pAction->text();
+            }
+            verifyMenuNamesProfile(texts, mSecondHostname, 1, qsl("the detached window's dock menu"));
+            if (QTest::currentTestFailed()) {
+                return;
+            }
+        }
+    }
+
+    void test_theMainWindowTabMenuNamesAProfileWithItsAmpersand()
+    {
+        // Detaching is only offered while the main window holds more than one tab
+        mudlet::self()->slot_tabReattachRequested(mSecondHostname);
+        TTabBar* pTabBar = mudlet::self()->mpTabBar;
+        const int tabIndex = pTabBar->tabIndex(mSecondHostname);
+        QVERIFY2(tabIndex >= 0, "the reattached profile has no tab in the main window");
+
+        const QStringList items = popupItemTexts([pTabBar, tabIndex]() {
+            emit pTabBar->customContextMenuRequested(pTabBar->tabRect(tabIndex).center());
+        });
+        verifyMenuNamesProfile(items, mSecondHostname, 1, qsl("a main window tab's menu"));
     }
 
     // The reported symptom, driven the way the user hit it. Last, since it leaves
@@ -387,6 +413,52 @@ private:
             shown += text.at(i);
         }
         return shown;
+    }
+
+    // exec() does not return until the menu closes, so it is read and closed from inside its event loop
+    QStringList popupItemTexts(const std::function<void()>& openMenu)
+    {
+        bool seen = false;
+        QStringList texts;
+        QTimer popupReader;
+        popupReader.setInterval(0);
+        connect(&popupReader, &QTimer::timeout, this, [&]() {
+            auto* pMenu = qobject_cast<QMenu*>(QApplication::activePopupWidget());
+            if (!pMenu) {
+                return;
+            }
+            seen = true;
+            const auto actions = pMenu->actions();
+            for (const QAction* pAction : actions) {
+                texts << pAction->text();
+            }
+            pMenu->close();
+        });
+        popupReader.start();
+        openMenu();
+        popupReader.stop();
+        if (!seen) {
+            QTest::qFail("no menu opened", __FILE__, __LINE__);
+        }
+        return texts;
+    }
+
+    // None of these menus has a mnemonic of its own, so any one came from the name
+    void verifyMenuNamesProfile(const QStringList& texts, const QString& profileName, const int expectedCount, const QString& where)
+    {
+        int namingItems = 0;
+        QStringList offenders;
+        for (const QString& text : texts) {
+            if (shownText(text).contains(profileName)) {
+                ++namingItems;
+            }
+            if (carriesMnemonic(text)) {
+                offenders << qsl("\"%1\"").arg(text);
+            }
+        }
+        QVERIFY2(namingItems == expectedCount,
+                 qPrintable(qsl("%1 items of %2 show \"%3\" as it is named, not %4: %5").arg(namingItems).arg(where, profileName).arg(expectedCount).arg(texts.join(qsl(", ")))));
+        QVERIFY2(offenders.isEmpty(), qPrintable(qsl("%1 turns the \"&\" of \"%2\" into a mnemonic: %3").arg(where, profileName, offenders.join(qsl(", ")))));
     }
 
     // Each profile in a Window menu is an item whose data is the profile's name
