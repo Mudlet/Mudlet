@@ -7011,6 +7011,28 @@ describe("Trigger processing", function()
                 assert.are.equal("LazyKeptMetatable word", seen.line)
             end)
 
+            -- Nothing fires on either line, so nothing but the line itself looks
+            -- for the handlers. Read through a chunk of its own, as busted reads
+            -- a spec's globals through rawget(), which builds a name left out.
+            it("keeps answering when the script takes Mudlet's __index off between two lines it feeds", function()
+                local original = getmetatable(_G)
+                local copy = {__index = original.__index, __newindex = original.__newindex}
+                local readLine = loadstring("return line")
+
+                setmetatable(_G, copy)
+                rearmLazyGlobals()
+                local ok, seen = pcall(function()
+                    feedTriggers("\nLazyStripBetweenIdle\n")
+                    copy.__index = nil
+                    feedTriggers("LazyStripBetween word\n")
+                    return readLine()
+                end)
+                setmetatable(_G, original)
+
+                assert.is_true(ok, tostring(seen))
+                assert.are.equal("LazyStripBetween word", seen, "line read as nil - it was left out with no handler to build it")
+            end)
+
             it("hands a script its captures after the metatable gets a strict __index", function()
                 local original = getmetatable(_G)
                 local copy = {__index = original.__index, __newindex = original.__newindex}

@@ -86,6 +86,8 @@ class TLuaInterpreter : public QThread
     friend class LuaInterface;
     // reads the parked capture vectors' capacity, which nothing else exposes
     friend class CaptureGroupParkingTest;
+    // checks a line really skipped looking for the handlers before it tests what follows
+    friend class LazyGlobalsCacheTest;
 
 public:
     Q_DISABLE_COPY(TLuaInterpreter)
@@ -164,7 +166,8 @@ public:
     void setExpandedCommand(const QString&);
     void settleCommandAfterAliasPass();
     // expandAlias() gives "command" back only to an alias script, so every way into
-    // a script says whether it is one
+    // a script says whether it is one. Every way into Lua goes through one, as
+    // lazyGlobalsUsable() relies on hearing of each script that runs.
     class ScriptCallerScope
     {
     public:
@@ -172,8 +175,14 @@ public:
         : mLua(lua)
         , mWasAliasScript(std::exchange(lua.mRunningAliasScript, aliasScript))
         {
+            ++lua.mScriptCallDepth;
+            lua.mGlobalsHandlersVerified = false;
         }
-        ~ScriptCallerScope() { mLua.mRunningAliasScript = mWasAliasScript; }
+        ~ScriptCallerScope()
+        {
+            mLua.mRunningAliasScript = mWasAliasScript;
+            --mLua.mScriptCallDepth;
+        }
         ScriptCallerScope(const ScriptCallerScope&) = delete;
         ScriptCallerScope& operator=(const ScriptCallerScope&) = delete;
 
@@ -1134,6 +1143,10 @@ private:
     // is rawget(), which puts a name still left out in place before reading.
     lua_CFunction mStockMetatableFunctions[5] = {};
     bool mGlobalsMetatableTouched = false;
+    // Only a script can take a handler off, so once both are seen in place with
+    // no script running they are not looked for again until one has run
+    bool mGlobalsHandlersVerified = false;
+    int mScriptCallDepth = 0;
     // Once nothing is left out the handlers only cost every read of a global
     // that is not there a C call, so the next line takes them off. Not in the
     // guard itself, so that a getter hands the script the metatable as it was
