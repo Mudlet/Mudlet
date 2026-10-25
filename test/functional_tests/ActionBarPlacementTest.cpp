@@ -31,8 +31,10 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TAction.h"
+#include "TCommandLine.h"
 #include "TEasyButtonBar.h"
 #include "TMainConsole.h"
+#include "TTextEdit.h"
 #include "TToolBar.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -547,6 +549,78 @@ private slots:
 
         console->setActionToolBarVisible(floating, true);
         QVERIFY(!toolBar->isHidden());
+    }
+
+    // The output area is sized by hand, not by a layout, so a bar coming or going
+    // has to resize it as well as move it. Toggled the way the editor's activate
+    // button does, which has nothing else to resize it afterwards.
+    void test_showingOrHidingABarResizesTheOutputArea()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mainConsoleView();
+        QVERIFY(console);
+        auto* lua = host->getLuaInterpreter();
+
+        auto overhang = [console]() {
+            const QWidget* display = console->mpMainDisplay;
+            return display->mapTo(console, QPoint(0, display->height())).y() - console->mpCommandLine->mapTo(console, QPoint(0, 0)).y();
+        };
+        auto shortfall = [console]() {
+            const QWidget* display = console->mpMainDisplay;
+            return console->mpRightToolBar->mapTo(console, QPoint(0, 0)).x() - display->mapTo(console, QPoint(display->width(), 0)).x();
+        };
+        // The rows and columns the pane counts, which are what the game is told
+        auto rowsUncounted = [console]() {
+            const TTextEdit* pane = console->mUpperPane;
+            return pane->height() / QFontMetrics(pane->font()).height() - pane->getScreenHeight();
+        };
+        auto columnsUncounted = [host, console]() {
+            const TTextEdit* pane = console->mUpperPane;
+            return pane->width() / QFontMetrics(pane->font()).averageCharWidth() - host->mScreenWidth;
+        };
+        auto toggle = [host](const QString& bar, const bool show) {
+            auto* action = host->getActionUnit()->findAction(bar);
+            if (!action) {
+                return false;
+            }
+            action->setIsActive(show);
+            host->getActionUnit()->updateAllToolbars();
+            return true;
+        };
+
+        QTRY_COMPARE(overhang(), 0);
+        QTRY_COMPARE(shortfall(), 0);
+        QTRY_COMPARE(rowsUncounted(), 0);
+        QTRY_COMPARE(columnsUncounted(), 0);
+
+        QVERIFY(lua->compileAndExecuteScript(qsl("tempButtonToolbar('placementTopToggle', 0, 0) tempButton('placementTopToggle', 'top', 0)")));
+        QVERIFY(lua->compileAndExecuteScript(qsl("tempButtonToolbar('placementLeftToggle', 1, 0) tempButton('placementLeftToggle', 'left', 0)")));
+        QVERIFY(lua->compileAndExecuteScript(qsl("tempButtonToolbar('placementRightToggle', 2, 0) tempButton('placementRightToggle', 'right', 0)")));
+        QTRY_VERIFY2(console->mpTopToolBar->height() > 0 && console->mpLeftToolBar->width() > 0 && console->mpRightToolBar->width() > 0,
+                     "the bars have to take up room, or hiding them proves nothing");
+        QTRY_COMPARE(overhang(), 0);
+        QTRY_COMPARE(shortfall(), 0);
+        QTRY_COMPARE(rowsUncounted(), 0);
+        QTRY_COMPARE(columnsUncounted(), 0);
+
+        for (const bool show : {false, true}) {
+            QVERIFY(toggle(qsl("placementTopToggle"), show));
+            QTRY_COMPARE(console->mpTopToolBar->height() > 0, show);
+            QTRY_COMPARE(overhang(), 0);
+            QTRY_COMPARE(rowsUncounted(), 0);
+
+            QVERIFY(toggle(qsl("placementLeftToggle"), show));
+            QTRY_COMPARE(console->mpLeftToolBar->width() > 0, show);
+            QTRY_COMPARE(shortfall(), 0);
+            QTRY_COMPARE(columnsUncounted(), 0);
+
+            QVERIFY(toggle(qsl("placementRightToggle"), show));
+            QTRY_COMPARE(console->mpRightToolBar->width() > 0, show);
+            QTRY_COMPARE(shortfall(), 0);
+            QTRY_COMPARE(columnsUncounted(), 0);
+        }
     }
 
     // The console keeps an action's bars by the action's address, which a later

@@ -312,6 +312,8 @@ signals:
     void resized(QResizeEvent* event);
 
 protected:
+    // For a console with a command line, which the output area is laid out above
+    void layoutMainDisplay();
     void dragEnterEvent(QDragEnterEvent*) override;
     void dragMoveEvent(QDragMoveEvent*) override;
     void dropEvent(QDropEvent*) override;
