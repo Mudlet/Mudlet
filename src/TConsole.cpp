@@ -1434,7 +1434,10 @@ void TConsole::scrollTo(int line)
         return;
     }
 
+    // The split-screen tutorial prints here, and in a full buffer that trims lines from above the target
+    const qint64 linesRemovedBefore = buffer.linesRemovedTotal();
     showLowerPane();
+    line = static_cast<int>(std::max<qint64>(0, line - (buffer.linesRemovedTotal() - linesRemovedBefore)));
     mUpperPane->scrollTo(line);
     mUpperPane->updateScrollBar(buffer.mCursorY);
     slot_adjustAccessibleNames();
@@ -2099,10 +2102,10 @@ void TConsole::slot_searchBufferUp()
         } while (searchX > -1);
 
         if (found) {
-            // Scroll to show the match
+            // Set first, so that a trim as the scroll opens the split screen moves it with the match
+            mCurrentSearchResult = searchY;
             scrollTo(std::min(searchY + 3, buffer.getLastLineNumber()));
             mUpperPane->forceUpdate();
-            mCurrentSearchResult = searchY;
             return;
         }
     }
@@ -2142,10 +2145,10 @@ void TConsole::slot_searchBufferDown()
         } while (searchX > -1);
 
         if (found) {
-            // Scroll to show the match
+            // Set first, so that a trim as the scroll opens the split screen moves it with the match
+            mCurrentSearchResult = searchY;
             scrollTo(std::min(searchY + 3, buffer.getLastLineNumber()));
             mUpperPane->forceUpdate();
-            mCurrentSearchResult = searchY;
             return;
         }
     }

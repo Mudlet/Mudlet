@@ -110,6 +110,7 @@ class mudlet : public QMainWindow, public Ui::main_window, public TAppFrontend
 {
     Q_OBJECT
     friend class ConnectionDialogOfflineProfileTest;
+    friend class ConsoleSearchBarTest;
 
 public:
     Q_DISABLE_COPY(mudlet)
