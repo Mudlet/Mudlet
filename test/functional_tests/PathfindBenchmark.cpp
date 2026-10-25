@@ -494,39 +494,25 @@ private:
         return bestZ;
     }
 
-    // The room at (x, y) if the level holds one, else one found by an outward
-    // ring search, so a level with holes in it still yields a pair. The rings
-    // are square, so this is nearest by Chebyshev distance, and ties within a
-    // ring go to the lowest room id.
+    // The room nearest (x, y) by Chebyshev distance, no further than maxRadius,
+    // so a level with holes in it still yields a pair; ties go to the lowest
+    // room id. A scan of the rooms rather than an outward search of the grid,
+    // which costs the cube of the gap on a sparse level.
     static int nearestTo(const QHash<QPair<int, int>, int>& byCoordinate, int x, int y, int maxRadius)
     {
-        if (const auto it = byCoordinate.constFind({x, y}); it != byCoordinate.constEnd()) {
-            return it.value();
-        }
-        for (int radius = 1; radius <= maxRadius; ++radius) {
-            int best = 0;
-            for (int dx = -radius; dx <= radius; ++dx) {
-                for (int dy = -radius; dy <= radius; ++dy) {
-                    if (std::max(std::abs(dx), std::abs(dy)) != radius) {
-                        continue;
-                    }
-                    const auto it = byCoordinate.constFind({x + dx, y + dy});
-                    if (it != byCoordinate.constEnd() && (best == 0 || it.value() < best)) {
-                        best = it.value();
-                    }
-                }
-            }
-            if (best > 0) {
-                return best;
+        int best = 0;
+        int bestDistance = maxRadius + 1;
+        for (const auto& [coordinate, roomId] : byCoordinate.asKeyValueRange()) {
+            const int distance = std::max(std::abs(coordinate.first - x), std::abs(coordinate.second - y));
+            if (distance < bestDistance || (distance == bestDistance && roomId < best)) {
+                best = roomId;
+                bestDistance = distance;
             }
         }
-        return 0;
+        return best;
     }
 
-    void deleteProfileDirectory()
-    {
-        TestProfile::removeProfileDirectory(mHostname);
-    }
+    void deleteProfileDirectory() { TestProfile::removeProfileDirectory(mHostname); }
 };
 
 static void initializeQRCResources()
