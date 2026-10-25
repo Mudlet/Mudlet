@@ -452,10 +452,10 @@ private:
                 return false;
             }
             for (const char expected : utf8) {
-                if ((*mpAt | 0x20) != static_cast<uchar>(expected)) {
+                const uchar c = *mpAt++;
+                if ((c >= 'A' && c <= 'Z' ? c | 0x20 : c) != static_cast<uchar>(expected)) {
                     return false;
                 }
-                ++mpAt;
             }
             ++mpAt;
             skipSpace();
@@ -524,40 +524,60 @@ QString streamError(const char* message)
 
 } // namespace
 
+XmlImportReader::Attributes::Attributes(const XmlImportReader* reader)
+: mpReader(reader)
+{
+    if (reader->mpStream) {
+        mStreamAttributes = reader->mpStream->attributes();
+    } else if (reader->mToken == QXmlStreamReader::StartElement) {
+        mpElement = reader->mpNode;
+    }
+}
+
+pugi::xml_attribute_struct* XmlImportReader::Attributes::find(QAnyStringView name) const
+{
+    for (const pugi::xml_attribute attribute : pugi::xml_node(mpElement).attributes()) {
+        if (QAnyStringView::equal(QLatin1StringView(attribute.name()), name)) {
+            return attribute.internal_object();
+        }
+    }
+    return nullptr;
+}
+
 bool XmlImportReader::Attributes::hasAttribute(QAnyStringView name) const
 {
     if (mpReader->mpStream) {
-        return mpReader->mpStream->attributes().hasAttribute(name);
+        return mStreamAttributes.hasAttribute(name);
     }
-    return mpReader->findAttribute(name) != nullptr;
+    return find(name) != nullptr;
 }
 
 QStringView XmlImportReader::Attributes::value(QAnyStringView name) const
 {
     if (mpReader->mpStream) {
-        return mpReader->mpStream->attributes().value(name);
+        return mStreamAttributes.value(name);
     }
-    const pugi::xml_attribute attribute(mpReader->findAttribute(name));
+    const pugi::xml_attribute attribute(find(name));
     return attribute ? mpReader->keep(attribute.value()) : QStringView();
 }
 
 bool XmlImportReader::Attributes::isEmpty() const
 {
     if (mpReader->mpStream) {
-        return mpReader->mpStream->attributes().isEmpty();
+        return mStreamAttributes.isEmpty();
     }
-    return mpReader->mToken != QXmlStreamReader::StartElement || !pugi::xml_node(mpReader->mpNode).first_attribute();
+    return !pugi::xml_node(mpElement).first_attribute();
 }
 
 QList<std::pair<QString, QString>> XmlImportReader::Attributes::all() const
 {
     QList<std::pair<QString, QString>> result;
     if (mpReader->mpStream) {
-        for (const auto& attribute : mpReader->mpStream->attributes()) {
+        for (const auto& attribute : mStreamAttributes) {
             result.append({attribute.qualifiedName().toString(), attribute.value().toString()});
         }
-    } else if (mpReader->mToken == QXmlStreamReader::StartElement) {
-        for (const pugi::xml_attribute attribute : pugi::xml_node(mpReader->mpNode).attributes()) {
+    } else {
+        for (const pugi::xml_attribute attribute : pugi::xml_node(mpElement).attributes()) {
             result.append({QString::fromUtf8(attribute.name()), fromUtf8(attribute.value())});
         }
     }
@@ -687,7 +707,16 @@ QXmlStreamReader::TokenType XmlImportReader::readNext()
     if (mpStream) {
         return mpStream->readNext();
     }
-    mKept.clear();
+    advance();
+    // Not within readElementText(), so a value held over an element's text stays good
+    if (mToken == QXmlStreamReader::StartElement) {
+        mKept.clear();
+    }
+    return mToken;
+}
+
+void XmlImportReader::advance()
+{
     const pugi::xml_node node(mpNode);
     switch (mToken) {
     case QXmlStreamReader::NoToken:
@@ -714,7 +743,6 @@ QXmlStreamReader::TokenType XmlImportReader::readNext()
             moveTo(parent.internal_object(), parent.type() == pugi::node_document ? QXmlStreamReader::EndDocument : QXmlStreamReader::EndElement);
         }
     }
-    return mToken;
 }
 
 void XmlImportReader::raiseTreeError(QXmlStreamReader::Error error, const QString& message, pugi::xml_node_struct* at)
@@ -777,19 +805,6 @@ QStringView XmlImportReader::text() const
     return {};
 }
 
-pugi::xml_attribute_struct* XmlImportReader::findAttribute(QAnyStringView name) const
-{
-    if (mToken != QXmlStreamReader::StartElement) {
-        return nullptr;
-    }
-    for (const pugi::xml_attribute attribute : pugi::xml_node(mpNode).attributes()) {
-        if (QAnyStringView::equal(QLatin1StringView(attribute.name()), name)) {
-            return attribute.internal_object();
-        }
-    }
-    return nullptr;
-}
-
 XmlImportReader::Attributes XmlImportReader::attributes() const
 {
     return Attributes(this);
@@ -808,7 +823,6 @@ QString XmlImportReader::readElementText(QXmlStreamReader::ReadElementTextBehavi
     }
     const pugi::xml_node first = pugi::xml_node(mpNode).first_child();
     if (!first || (!first.next_sibling() && (first.type() == pugi::node_pcdata || first.type() == pugi::node_cdata))) {
-        mKept.clear();
         mToken = QXmlStreamReader::EndElement;
         const char* value = first ? first.value() : "";
         return *value ? fromUtf8(value) : QString();
@@ -816,7 +830,8 @@ QString XmlImportReader::readElementText(QXmlStreamReader::ReadElementTextBehavi
     // Step by step, as QXmlStreamReader does, for what it does with a child element
     QString result;
     for (;;) {
-        switch (readNext()) {
+        advance();
+        switch (mToken) {
         case QXmlStreamReader::Characters:
             if (const char* value = pugi::xml_node(mpNode).value(); *value) {
                 result.append(fromUtf8(value));
@@ -858,7 +873,6 @@ void XmlImportReader::skipCurrentElement()
         return;
     }
     if (mToken == QXmlStreamReader::StartElement) {
-        mKept.clear();
         mToken = QXmlStreamReader::EndElement;
     }
 }

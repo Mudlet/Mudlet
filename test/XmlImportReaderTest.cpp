@@ -30,6 +30,8 @@
 #include <QRandomGenerator>
 #include <QtTest/QtTest>
 
+#include <optional>
+
 namespace {
 
 const QStringList scmContainers{qsl("MudletPackage"),
@@ -164,20 +166,39 @@ QStringList walk(const QByteArray& xml, bool throughStreamReader, quint32 salt, 
     QStringList transcript;
     int depth = 0;
     const qsizetype stepLimit = 2 * xml.size() + 100;
+    // Kept from the last start element, as a QXmlStreamAttributes copy can be
+    std::optional<XmlImportReader::Attributes> stored;
+    QString storedName;
     for (qsizetype step = 0; step < stepLimit && !reader.atEnd(); ++step) {
         reader.readNext();
         transcript << describe(reader);
+        if (stored) {
+            transcript << qsl("  stored %1=[%2]").arg(storedName, visible(stored->value(storedName)));
+            stored.reset();
+        }
         if (reader.isEndElement()) {
             --depth;
         } else if (reader.isStartElement()) {
+            stored.emplace(reader.attributes());
+            const auto all = stored->all();
+            storedName = all.isEmpty() ? qsl("isActive") : all.constFirst().first;
             switch (stepFor(reader.name().toString(), depth, salt)) {
             case Step::Descend:
                 ++depth;
                 break;
-            case Step::Text:
+            case Step::Text: {
+                // Held over the text, as XMLimport::readProfileShortcut() holds its key
+                const QStringView held = reader.attributes().value(storedName);
+                const QString before = held.toString();
                 transcript << textResult(reader.readElementText());
+                // QXmlStreamReader's own view can already be gone, so the tree is held to what it said before
+                // Compared here rather than in Qt, so a sanitizer sees a read of freed memory
+                if (!throughStreamReader && !std::equal(held.begin(), held.end(), before.begin(), before.end())) {
+                    transcript << qsl("  held %1 went from [%2] to [%3]").arg(storedName, visible(before), visible(held));
+                }
                 transcript << describe(reader);
                 break;
+            }
             case Step::SkipChildren:
                 transcript << textResult(reader.readElementText(QXmlStreamReader::SkipChildElements));
                 transcript << describe(reader);
@@ -271,7 +292,7 @@ const QList<QByteArray> scmSnippets{"&amp;",
                                     "\x7F",
                                     "\xFF"};
 
-const QByteArray scmBytes("<>&\"']-/=; \t\r\n\x01\x7f\x80\xc3\xff#x:?!");
+const QByteArray scmBytes("<>&\"']-/=; \t\r\n\x01\x18\x7f\x80\xc3\xe0\xf0\xf4\xff#x:?!");
 
 // One change somewhere in the document, described well enough to make it again
 QByteArray mutate(const QByteArray& original, QRandomGenerator& random, QString& description)
@@ -401,6 +422,17 @@ private slots:
         QTest::newRow("plain text") << QByteArray("hello") << false;
         QTest::newRow("c1 control") << QByteArray("<a>\xC2\x85</a>") << false;
         QTest::newRow("noncharacter") << QByteArray("<a>\xEF\xBF\xBE</a>") << false;
+        QTest::newRow("overlong three bytes") << QByteArray("<a>\xE0\x80\xBC</a>") << false;
+        QTest::newRow("overlong four bytes") << QByteArray("<a>\xF0\x80\x80\xBC</a>") << false;
+        QTest::newRow("past U+10FFFF") << QByteArray("<a>\xF4\x90\x80\x80</a>") << false;
+        QTest::newRow("cut-off sequence") << QByteArray("<a>\xC3 </a>") << false;
+        QTest::newRow("largest character") << QByteArray("<a>\xF4\x8F\xBF\xBD</a>") << true;
+        QTest::newRow("encoding with a carriage return") << QByteArray("<?xml version=\"1.0\" encoding=\"utf\r8\"?><a/>") << false;
+        QTest::newRow("encoding with 0x18") << QByteArray("<?xml version=\"1.0\" encoding=\"utf-\x18\"?><a/>") << false;
+        QTest::newRow("encoding in capitals") << QByteArray("<?xml version=\"1.0\" encoding=\"UTF-8\"?><a/>") << true;
+        QTest::newRow("attribute held over text") << QByteArray(
+                "<a><profileShortcut key=\"Notepad\">Ctrl+N</profileShortcut><name x=\"\xC3\xA9t\xC3\xA9\">\xC3\xA9t\xC3\xA9 long enough to reuse a block</name></a>")
+                                                  << true;
     }
 
     void test_edgeCasesReadTheSame()

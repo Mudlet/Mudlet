@@ -198,6 +198,25 @@ private slots:
         qInfo().nospace() << imports << " imports, " << fromTree << " of them read from the tree";
         QVERIFY2(fromTree * 4 > imports * 3, "most of the corpus was not read from the tree, so this compared QXmlStreamReader with itself");
     }
+
+    // The key is read before the shortcut's text, and has to outlive it
+    void test_aSavedProfileShortcutIsRestored()
+    {
+        freshProfiles();
+        QVERIFY(mpTreeHost && mpStreamHost);
+        const auto notepad = mpTreeHost->profileShortcuts.find(qsl("Notepad"));
+        QVERIFY2(notepad != mpTreeHost->profileShortcuts.end(), "the profile has no Notepad shortcut to restore");
+        const QByteArray xml("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version=\"1.001\">\n<HostPackage>\n"
+                             "<Host><profileShortcut key=\"Notepad\">Ctrl+Alt+Q</profileShortcut></Host>\n</HostPackage>\n</MudletPackage>\n");
+        const Outcome tree = import(mpTreeHost, xml, QString(), 0, false);
+        const Outcome stream = import(mpStreamHost, xml, QString(), 0, true);
+        QVERIFY(tree.readFromTree);
+        QVERIFY2(tree.success, qPrintable(tree.message));
+        QCOMPARE(stream.success, tree.success);
+        QCOMPARE(notepad->second->toString(), qsl("Ctrl+Alt+Q"));
+        QCOMPARE(mpStreamHost->profileShortcuts.at(qsl("Notepad"))->toString(), qsl("Ctrl+Alt+Q"));
+        QCOMPARE(state(mpTreeHost, mTreeName), state(mpStreamHost, mStreamName));
+    }
 };
 
 MUDLET_GROUPED_TEST_MAIN(XmlImportStateTest)

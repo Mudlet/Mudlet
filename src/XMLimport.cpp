@@ -2269,9 +2269,10 @@ void XMLimport::readLegacyMapInfoContributors()
 
 void XMLimport::readProfileShortcut()
 {
-    auto key = attributes().value(qsl("key"));
+    // Copied, as reading the text moves the reader on from the attribute
+    const QString key = attributes().value(qsl("key")).toString();
     auto sequenceString = readElementText();
-    if (auto it = mpHost->profileShortcuts.find(key.toString()); it != mpHost->profileShortcuts.end()) {
+    if (auto it = mpHost->profileShortcuts.find(key); it != mpHost->profileShortcuts.end()) {
         QKeySequence sequence = !sequenceString.isEmpty() ? QKeySequence(sequenceString) : QKeySequence();
         it->second->swap(sequence);
     }

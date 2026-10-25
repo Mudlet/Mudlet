@@ -51,18 +51,20 @@ public:
     {
     public:
         bool hasAttribute(QAnyStringView name) const;
-        // Valid until the next readNext(), as QXmlStreamReader's are
+        // Valid until the reader reaches the next start element
         QStringView value(QAnyStringView name) const;
         bool isEmpty() const;
         QList<std::pair<QString, QString>> all() const;
 
     private:
         friend class XmlImportReader;
-        explicit Attributes(const XmlImportReader* reader)
-        : mpReader(reader)
-        {
-        }
+        // Those of the current element, kept as a QXmlStreamAttributes copy keeps them
+        explicit Attributes(const XmlImportReader*);
+        pugi::xml_attribute_struct* find(QAnyStringView name) const;
+
         const XmlImportReader* mpReader;
+        pugi::xml_node_struct* mpElement = nullptr;
+        QXmlStreamAttributes mStreamAttributes;
     };
 
     XmlImportReader();
@@ -108,12 +110,12 @@ private:
     };
 
     void load();
+    void advance();
     bool parseTree();
     void moveTo(pugi::xml_node_struct*, QXmlStreamReader::TokenType);
     void advanceFrom(pugi::xml_node_struct*);
     void raiseTreeError(QXmlStreamReader::Error, const QString& message, pugi::xml_node_struct* at);
     QStringView keep(const char* utf8) const;
-    pugi::xml_attribute_struct* findAttribute(QAnyStringView name) const;
     const Position& positionAfterStartTag(pugi::xml_node_struct*) const;
 
     QIODevice* mpDevice = nullptr;
