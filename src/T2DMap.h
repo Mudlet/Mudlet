@@ -476,6 +476,8 @@ private:
                                  QString* profileOutput = nullptr);
     QColor environmentColor(int environmentId) const;
     QSize lodRoomBlobSize() const;
+    // Whether drawRoom() strokes a border around the room's fill outside grid mode, bar a collision's
+    bool roomBorderShown(const TRoom&) const;
     // Width in pixels of the border drawRoom() strokes around a room's fill
     int roomBorderWidth(const TRoom&) const;
     // Carries the room to save the drawing pass a second room-database probe per exit.

@@ -102,6 +102,7 @@
 
 #include <climits>
 #include <cmath>
+#include <numbers>
 
 #include <algorithm>
 #include <vector>
@@ -1411,7 +1412,7 @@ void T2DMap::drawRoom(QPainter& painter,
     QRectF roomNameRectangle;
     double realHeight;
     const int borderWidth = roomBorderWidth(*pRoom);
-    const bool shouldDrawBorder = (mpHost->mMapperShowRoomBorders || pRoom->mBorderColor.isValid() || pRoom->mBorderThickness > 0) && !isGridMode;
+    const bool shouldDrawBorder = roomBorderShown(*pRoom) && !isGridMode;
     bool showThisRoomName = showRoomName;
     if (isGridMode) {
         realHeight = mRoomHeight;
@@ -1618,6 +1619,11 @@ void T2DMap::drawRoom(QPainter& painter,
     ExitAppearance::paintExitMarkers(painter, pen, *pRoom, rx, ry, mRoomWidth * rSize, mRoomHeight * rSize, roomColor, mMapperUseAntiAlias);
 }
 
+bool T2DMap::roomBorderShown(const TRoom& room) const
+{
+    return mpHost->mMapperShowRoomBorders || room.mBorderColor.isValid() || room.mBorderThickness > 0;
+}
+
 int T2DMap::roomBorderWidth(const TRoom& room) const
 {
     const double thickness = room.mBorderThickness > 0 ? room.mBorderThickness : 1.0;
@@ -1683,6 +1689,8 @@ QColor T2DMap::environmentColor(int env) const
 // symbol, name and vertical-exit markers: still visible, but far too costly there (see the note on
 // QPainterPath::addRect() in drawGridModeRooms()).
 static constexpr float cLodPixelThreshold = 4.0f;
+// Of the dot on the end of an exit stub, as a fraction of a room's spacing
+static constexpr qreal cStubDotRadius = 0.1;
 
 // Also decides which exits that tier drops: rooms are painted over exits, so one whose ends are within
 // a blob on both axes is hidden (bar its door tick, so this simplifies rather than matches).
@@ -3607,13 +3615,22 @@ void T2DMap::paintRoomExits(QPainter& painter,
             if (direction >= DIR_NORTH && direction <= DIR_SOUTHWEST) {
                 // Stubs on non-XY plane exits are handled differently and we
                 // do not support special exit stubs (yet?)
-                // The room and its border are painted over the stub later, so its tip must reach past
-                // them; the reduced tier paints rooms as blobs without a border.
-                const int borderWidth = lodTier ? 0 : roomBorderWidth(*room);
-                const auto stubReach = [&](const float cellSize) {
-                    return qMax(0.5 * cellSize, (rSize / 2.0 + 0.2) * cellSize + borderWidth);
-                };
                 const QVector3D uDirection = mpMap->scmUnitVectors.value(direction);
+                const bool diagonal = uDirection.x() != 0.0f && uDirection.y() != 0.0f;
+                const int borderWidth = !lodTier && roomBorderShown(*room) ? roomBorderWidth(*room) : 0;
+                // The room and its border are painted over the stub later, so where they reach past its half
+                // cell it is made just long enough for the dot to clear them: any longer would push the dot
+                // under a neighbouring room. A diagonal stub's offset applies on both axes, and the reduced
+                // tier draws no borders.
+                const auto stubReach = [&](const qreal cellSize) {
+                    const qreal roomEdge = rSize * cellSize / 2.0 + borderWidth;
+                    const qreal dotRadius = cStubDotRadius * cellSize;
+                    qreal clearance = roomEdge + dotRadius;
+                    if (diagonal) {
+                        clearance = mBubbleMode ? clearance / std::numbers::sqrt2 : roomEdge + dotRadius / std::numbers::sqrt2;
+                    }
+                    return qMax(0.5 * cellSize, clearance);
+                };
                 const QLineF stubLine(rx, ry, rx + uDirection.x() * stubReach(mRoomWidth), ry + uDirection.y() * stubReach(mRoomHeight));
                 const QString doorKey{TRoom::dirCodeToShortString(direction)};
                 // Draw the door lines before we draw the stub or the filled
@@ -3629,7 +3646,8 @@ void T2DMap::paintRoomExits(QPainter& painter,
                 // And turn off drawing the border (outline):
                 painter.setPen(Qt::NoPen);
                 QPainterPath stubMarkingCirclePath;
-                const QRectF surroundingRectF(stubLine.p2().x() - 0.1 * mRoomWidth, stubLine.p2().y() - 0.1 * mRoomHeight, 0.2 * mRoomWidth, 0.2 * mRoomHeight);
+                const QRectF surroundingRectF(
+                        stubLine.p2().x() - cStubDotRadius * mRoomWidth, stubLine.p2().y() - cStubDotRadius * mRoomHeight, 2.0 * cStubDotRadius * mRoomWidth, 2.0 * cStubDotRadius * mRoomHeight);
                 stubMarkingCirclePath.arcTo(surroundingRectF, 0.0, 360.0);
                 // So this should draw a solid filled circle whose diameter
                 // is fixed and not dependent on the exit line thickness:
