@@ -478,12 +478,27 @@ private slots:
         QVERIFY2(changed.isEmpty(), qPrintable(qsl("in the rebuilt tree: %1").arg(changed)));
     }
 
-    void test_folderToggledDuringAStopKeepsItsChildrensLook_data() { addKinds(); }
+    void test_itemsToggledDuringAStopKeepTheirLook_data()
+    {
+        QTest::addColumn<QString>("kind");
+        QTest::addColumn<QString>("prefix");
+        QTest::addColumn<QString>("toggled");
+        // A top-level folder reads the same either way once toggled, so each kind also toggles an item in a stopped folder
+        QTest::newRow("trigger folder") << qsl("trigger") << qsl("qaStopTrigger") << qsl("Folder");
+        QTest::newRow("trigger chain") << qsl("trigger") << qsl("qaStopTrigger") << qsl("Chain");
+        QTest::newRow("alias folder") << qsl("alias") << qsl("qaStopAlias") << qsl("Folder");
+        QTest::newRow("alias") << qsl("alias") << qsl("qaStopAlias") << qsl("On");
+        QTest::newRow("timer folder") << qsl("timer") << qsl("qaStopTimer") << qsl("Folder");
+        QTest::newRow("timer with an offset timer") << qsl("timer") << qsl("qaStopTimer") << qsl("On");
+        QTest::newRow("key folder") << qsl("key") << qsl("qaStopKey") << qsl("Folder");
+        QTest::newRow("key") << qsl("key") << qsl("qaStopKey") << qsl("On");
+    }
 
-    void test_folderToggledDuringAStopKeepsItsChildrensLook()
+    void test_itemsToggledDuringAStopKeepTheirLook()
     {
         QFETCH(QString, kind);
         QFETCH(QString, prefix);
+        QFETCH(QString, toggled);
         mpEditor->rebuildStaleTrees();
         QTreeWidget* pTree = showView(kind);
         const QList<QTreeWidgetItem*> items = itemsOf(pTree, prefix);
@@ -492,12 +507,12 @@ private slots:
         const QList<Look> before = looksOf(items);
 
         mpHost->stopAllTriggers();
-        select(kind, pTree, items.at(0));
+        select(kind, pTree, itemNamed(pTree, prefix + toggled));
         toggle(kind);
         toggle(kind);
 
         const QString changed = changedLook(items, before);
-        QVERIFY2(changed.isEmpty(), qPrintable(qsl("after switching their folder off and on: %1").arg(changed)));
+        QVERIFY2(changed.isEmpty(), qPrintable(qsl("after switching %1%2 off and on: %3").arg(prefix, toggled, changed)));
     }
 
     void test_itemsMovedDuringAStopKeepTheirLook_data()
