@@ -5339,13 +5339,24 @@ describe("Tests exporting the profile to a file with saveProfile", function()
     }, "\n"))
     installAndConfirm(installPackage, bulkXml, function() return packageInstalled(bulk) end, "the bulky package")
     assert.is_true(waitForTheBulkySave(), "a profile save was still running")
-    local mark = getLastLineNumber("main")
+    local mark, movedAway, whyNot
+    -- The write can still finish before the move, for example when the main thread is held up
+    -- after the call. That shows nothing about the console, so put the folder back and race again.
+    for attempt = 1, 5 do
+      if attempt > 1 then
+        assert(os.remove(moved .. "/mudlet-spec-raced.xml"))
+        assert(os.rename(moved, folder))
+      end
+      mark = getLastLineNumber("main")
+      local ok = saveProfile(folder, "mudlet-spec-raced")
+      movedAway, whyNot = os.rename(folder, moved)
 
-    local ok = saveProfile(folder, "mudlet-spec-raced")
-    local movedAway, whyNot = os.rename(folder, moved)
-
-    assert.is_true(ok)
-    assert.is_true(waitForTheBulkySave(), "the profile save never finished")
+      assert.is_true(ok)
+      assert.is_true(waitForTheBulkySave(), "the profile save never finished")
+      if not movedAway or not fileExists(moved .. "/mudlet-spec-raced.xml") then
+        break
+      end
+    end
     if not movedAway and getOS() == "windows" then
       -- Windows will not move a folder while a file in it is open
       pending("the folder could not be moved away while it was being written to: " .. tostring(whyNot))
