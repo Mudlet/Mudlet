@@ -543,12 +543,17 @@ private slots:
     QVERIFY(pLua->compileAndExecuteScript(
         qsl("permGroup(\"qaClosedFolder\", \"trigger\")\n"
             "permRegexTrigger(\"qaClosedLeaf\", \"qaClosedFolder\", {\"^qa closed leaf$\"}, \"\")\n"
+            "permRegexTrigger(\"qaClosedDoomed\", \"qaClosedFolder\", {\"^qa closed doomed$\"}, \"\")\n"
             "permRegexTrigger(\"qaClosedTrigger\", \"\", {\"^qa closed trigger$\"}, \"\")\n"
             "permAlias(\"qaClosedAlias\", \"\", \"^qa closed alias$\", \"\")\n"
             "permTimer(\"qaClosedTimer\", \"\", 3600, \"\")\n"
+            "permGroup(\"qaClosedTimerFolder\", \"timer\")\n"
+            "permTimer(\"qaClosedNestedTimer\", \"qaClosedTimerFolder\", 3600, \"\")\n"
             "permScript(\"qaClosedScript\", \"\", \"-- deliberately does nothing\")\n"
             "permKey(\"qaClosedKey\", \"\", mudlet.key.F8, \"\")\n"
             "enableTimer(\"qaClosedTimer\")\n"
+            "enableTimer(\"qaClosedTimerFolder\")\n"
+            "enableTimer(\"qaClosedNestedTimer\")\n"
             "enableScript(\"qaClosedScript\")")));
     pEditor->doCleanReset();
 
@@ -566,6 +571,8 @@ private slots:
         {"treeWidget_scripts", "qaClosedScript", "enableScript", "disableScript"},
         {"treeWidget_keys", "qaClosedKey", "enableKey", "disableKey"},
     };
+    Target leaf{"treeWidget_triggers", "qaClosedLeaf", "enableTrigger", "disableTrigger"};
+    Target nestedTimer{"treeWidget_timers", "qaClosedNestedTimer", "enableTimer", "disableTimer"};
     auto findItem = [pEditor](const char *treeName, const char *itemName) -> QTreeWidgetItem * {
       auto *pTree = pEditor->findChild<QTreeWidget *>(QString::fromLatin1(treeName));
       if (!pTree) {
@@ -574,17 +581,16 @@ private slots:
       const auto found = pTree->findItems(QString::fromLatin1(itemName), Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive, 0);
       return found.isEmpty() ? nullptr : found.first();
     };
-    QTreeWidgetItem *pLeaf = nullptr;
     // doCleanReset() rebuilds later, so take every pointer from one poll
-    QVERIFY2(QTest::qWaitFor([&]() {
+    auto findAll = [&]() {
       bool all = true;
-      for (auto &target : targets) {
-        target.pItem = findItem(target.treeName, target.itemName);
-        all = all && target.pItem;
+      for (auto *pTarget : {&targets[0], &targets[1], &targets[2], &targets[3], &targets[4], &leaf, &nestedTimer}) {
+        pTarget->pItem = findItem(pTarget->treeName, pTarget->itemName);
+        all = all && pTarget->pItem;
       }
-      pLeaf = findItem("treeWidget_triggers", "qaClosedLeaf");
-      return all && pLeaf;
-    }), "the editor never rebuilt its trees around the planted items");
+      return all;
+    };
+    QVERIFY2(QTest::qWaitFor(findAll), "the editor never rebuilt its trees around the planted items");
 
     auto description = [](QTreeWidgetItem *pItem) {
       return pItem->data(0, Qt::AccessibleDescriptionRole).toString();
@@ -592,42 +598,69 @@ private slots:
     const QString active = dlgTriggerEditor::tr("activated");
     const QString inactive = dlgTriggerEditor::tr("deactivated");
     const QString inactiveParent = dlgTriggerEditor::tr("%1 in a deactivated group").arg(active);
-    for (const auto &target : targets) {
-      QCOMPARE(description(target.pItem), active);
-    }
-    QCOMPARE(description(pLeaf), active);
+    // Names every row that is wrong rather than stopping at the first, and
+    // compares the row itself first: a rebuild would both repaint the row and
+    // free the pointer taken before the editor was closed.
+    auto staleRow = [&](const Target &target, const QString &expected, QStringList &stale) {
+      if (findItem(target.treeName, target.itemName) != target.pItem) {
+        stale << qsl("%1 (row rebuilt)").arg(QString::fromLatin1(target.itemName));
+      } else if (description(target.pItem) != expected) {
+        stale << QString::fromLatin1(target.itemName);
+      }
+    };
+    auto staleRows = [&](const QString &expected, const QString &expectedLeaf) {
+      QStringList stale;
+      for (const auto &target : targets) {
+        staleRow(target, expected, stale);
+      }
+      staleRow(leaf, expectedLeaf, stale);
+      return stale;
+    };
+    QCOMPARE(staleRows(active, active), QStringList());
+    QCOMPARE(description(nestedTimer.pItem), active);
 
-    auto toggleAllWhileClosed = [&](bool enable) {
+    auto runWhileClosed = [&](const QString &script) {
       pEditor->hide();
       QCoreApplication::processEvents();
       QVERIFY(!pEditor->isVisible());
+      QVERIFY(pLua->compileAndExecuteScript(script));
+      QTest::qWait(50ms);
+    };
+    auto toggleAllScript = [&](bool enable) {
       QString script;
       for (const auto &target : targets) {
         script += qsl("%1(\"%2\")\n").arg(QString::fromLatin1(enable ? target.enableFn : target.disableFn), QString::fromLatin1(target.itemName));
       }
-      script += enable ? qsl("enableTrigger(\"qaClosedFolder\")") : qsl("disableTrigger(\"qaClosedFolder\")");
-      QVERIFY(pLua->compileAndExecuteScript(script));
-      QTest::qWait(50ms);
-      pEditor->show();
+      return script + (enable ? qsl("enableTrigger(\"qaClosedFolder\")") : qsl("disableTrigger(\"qaClosedFolder\")"));
     };
 
-    toggleAllWhileClosed(false);
+    runWhileClosed(toggleAllScript(false));
     if (QTest::currentTestFailed()) {
       return;
     }
-    for (const auto &target : targets) {
-      QTRY_COMPARE(description(target.pItem), inactive);
-    }
-    QCOMPARE(description(pLeaf), inactiveParent);
+    pEditor->show();
+    QTRY_COMPARE(staleRows(inactive, inactiveParent), QStringList());
 
-    toggleAllWhileClosed(true);
+    // The accessible description is set on every paint but the icon only when
+    // it changes, so check the icon the reopen painted matches a fresh build.
+    QHash<QString, qint64> repaintedIcons;
+    for (const auto &target : targets) {
+      repaintedIcons.insert(QString::fromLatin1(target.itemName), target.pItem->icon(0).cacheKey());
+    }
+    pEditor->doCleanReset();
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+    QVERIFY2(QTest::qWaitFor(findAll), "the editor never rebuilt its trees after the reset");
+    for (const auto &target : targets) {
+      QCOMPARE(repaintedIcons.value(QString::fromLatin1(target.itemName)), target.pItem->icon(0).cacheKey());
+    }
+
+    // Reopen the way the main window's toolbar does.
+    runWhileClosed(toggleAllScript(true));
     if (QTest::currentTestFailed()) {
       return;
     }
-    for (const auto &target : targets) {
-      QTRY_COMPARE(description(target.pItem), active);
-    }
-    QCOMPARE(description(pLeaf), active);
+    mudlet::self()->slot_showTriggerDialog();
+    QTRY_COMPARE(staleRows(active, active), QStringList());
 
     // Temporary items have no tree item, so toggling them while the editor
     // is closed must not pile their IDs up for the reopen.
@@ -637,27 +670,21 @@ private slots:
              && pEditor->mPendingKeyIconRefresh.isEmpty();
     };
     QVERIFY(nothingQueued());
-    pEditor->hide();
-    QCoreApplication::processEvents();
-    QVERIFY(pLua->compileAndExecuteScript(
+    runWhileClosed(
         qsl("local trigger = tempTrigger(\"qa closed temp\", \"\")\n"
             "local alias = tempAlias(\"^qa closed temp$\", \"\")\n"
             "local timer = tempTimer(3600, \"\")\n"
             "local key = tempKey(mudlet.key.F9, \"\")\n"
             "for i = 1, 3 do\n"
-            "  disableTrigger(tostring(trigger))\n"
-            "  enableTrigger(tostring(trigger))\n"
-            "  disableAlias(tostring(alias))\n"
-            "  enableAlias(tostring(alias))\n"
-            "  disableTimer(tostring(timer))\n"
-            "  enableTimer(tostring(timer))\n"
-            "  disableKey(tostring(key))\n"
-            "  enableKey(tostring(key))\n"
+            "  assert(disableTrigger(tostring(trigger)) and enableTrigger(tostring(trigger)))\n"
+            "  assert(disableAlias(tostring(alias)) and enableAlias(tostring(alias)))\n"
+            "  assert(disableTimer(tostring(timer)) and enableTimer(tostring(timer)))\n"
+            "  assert(disableKey(tostring(key)) and enableKey(tostring(key)))\n"
             "end\n"
             "killTrigger(trigger)\n"
             "killAlias(alias)\n"
             "killTimer(timer)\n"
-            "killKey(key)")));
+            "killKey(key)"));
     QVERIFY(nothingQueued());
 
     // A tree rebuild paints every item from its current state, so it must
@@ -667,26 +694,75 @@ private slots:
     pEditor->doCleanReset();
     QTRY_VERIFY(nothingQueued());
     pEditor->show();
-    QTreeWidgetItem *pRebuiltAlias = nullptr;
-    QVERIFY(QTest::qWaitFor([&]() {
-      pRebuiltAlias = findItem("treeWidget_aliases", "qaClosedAlias");
-      return pRebuiltAlias != nullptr;
-    }));
-    QCOMPARE(description(pRebuiltAlias), inactive);
+    QVERIFY2(QTest::qWaitFor(findAll), "the editor never rebuilt its trees after the reset");
+    QCOMPARE(description(targets[1].pItem), inactive);
 
-    // The trees leave out only top-level temporary items, so one nested in a
-    // permanent folder, as a package's XML can mark it, must still repaint.
-    QTreeWidgetItem *pNestedItem = findItem("treeWidget_triggers", "qaClosedLeaf");
-    QVERIFY(pNestedItem);
-    TTrigger *pNested = mpHost->getTriggerUnit()->getTrigger(pNestedItem->data(0, Qt::UserRole).toInt());
-    QVERIFY(pNested && pNested->getParent());
-    pNested->setTemporary(true);
-    auto restorePermanent = qScopeGuard([pNested]() { pNested->setTemporary(false); });
-    QVERIFY(pLua->compileAndExecuteScript(qsl("disableTrigger(\"qaClosedLeaf\")")));
-    QTRY_COMPARE(description(pNestedItem), inactive);
+    // A script that both adds an item and toggles one while the editor is
+    // closed leaves the trees stale, so the reopen rebuilds them first.
+    runWhileClosed(
+        qsl("permAlias(\"qaClosedAddedAlias\", \"\", \"^qa closed added$\", \"\")\n"
+            "enableAlias(\"qaClosedAlias\")\n"
+            "disableTrigger(\"qaClosedTrigger\")"));
+    if (QTest::currentTestFailed()) {
+      return;
+    }
+    mudlet::self()->slot_showTriggerDialog();
+    QVERIFY2(QTest::qWaitFor([&]() { return findAll() && findItem("treeWidget_aliases", "qaClosedAddedAlias"); }),
+             "the reopened editor does not show the alias added while it was closed");
+    QCOMPARE(description(targets[0].pItem), inactive);
+    QCOMPARE(description(targets[1].pItem), active);
+    QVERIFY(nothingQueued());
+
+    // The trees leave out only top-level temporary items, so ones nested in a
+    // permanent folder, as a package's XML can mark them, must still repaint.
+    TTrigger *pNestedTrigger = mpHost->getTriggerUnit()->getTrigger(leaf.pItem->data(0, Qt::UserRole).toInt());
+    TTimer *pNestedTimer = mpHost->getTimerUnit()->getTimer(nestedTimer.pItem->data(0, Qt::UserRole).toInt());
+    QTreeWidgetItem *pDoomedItem = findItem("treeWidget_triggers", "qaClosedDoomed");
+    QVERIFY(pDoomedItem);
+    TTrigger *pDoomed = mpHost->getTriggerUnit()->getTrigger(pDoomedItem->data(0, Qt::UserRole).toInt());
+    QVERIFY(pNestedTrigger && pNestedTrigger->getParent());
+    QVERIFY(pNestedTimer && pNestedTimer->getParent());
+    QVERIFY(pDoomed && pDoomed->getParent());
+    pNestedTrigger->setTemporary(true);
+    pNestedTimer->setTemporary(true);
+    pDoomed->setTemporary(true);
+    auto restorePermanent = qScopeGuard([pNestedTrigger, pNestedTimer]() {
+      pNestedTrigger->setTemporary(false);
+      pNestedTimer->setTemporary(false);
+    });
+    auto staleNested = [&](const QString &expected) {
+      QStringList stale;
+      staleRow(leaf, expected, stale);
+      staleRow(nestedTimer, expected, stale);
+      return stale;
+    };
+    // The doomed trigger is queued and then freed while closed, leaving its
+    // row behind for the reopen's walk to skip.
+    runWhileClosed(
+        qsl("assert(disableTrigger(\"qaClosedLeaf\"))\n"
+            "assert(disableTimer(\"qaClosedNestedTimer\"))\n"
+            "assert(disableTrigger(\"qaClosedDoomed\"))\n"
+            "assert(killTrigger(\"qaClosedDoomed\"))"));
+    if (QTest::currentTestFailed()) {
+      return;
+    }
+    mpHost->getTriggerUnit()->doCleanup();
+    QVERIFY(!mpHost->getTriggerUnit()->getTrigger(pDoomedItem->data(0, Qt::UserRole).toInt()));
+    pEditor->show();
+    QTRY_COMPARE(staleNested(inactive), QStringList());
+    QVERIFY(nothingQueued());
+
+    runWhileClosed(
+        qsl("assert(enableTrigger(\"qaClosedLeaf\"))\n"
+            "assert(enableTimer(\"qaClosedNestedTimer\"))"));
+    if (QTest::currentTestFailed()) {
+      return;
+    }
+    pEditor->show();
+    QTRY_COMPARE(staleNested(active), QStringList());
 
     QVERIFY(pLua->compileAndExecuteScript(
-        qsl("disableTimer(\"qaClosedTimer\")\ndisableKey(\"qaClosedKey\")")));
+        qsl("disableTimer(\"qaClosedTimer\")\ndisableTimer(\"qaClosedTimerFolder\")\ndisableKey(\"qaClosedKey\")")));
   }
 
   // paintAliasItem()/paintTimerItem()/paintScriptItem()/paintKeyItem() (and
