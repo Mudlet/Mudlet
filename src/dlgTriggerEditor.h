@@ -114,6 +114,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class EditorAddItemTest;
     friend class EditorBannerViewSwitchTest;
     friend class EditorClipboardXmlTest;
+    friend class EditorReshowTest;
     friend class EditorFolderViewTest;
     friend class EditorSearchTest;
     friend class HostWidgetDecouplingTest;
@@ -611,6 +612,7 @@ private:
     bool containsSearchMatch(const QString& haystack, const QString& needle) const;
     void clearEditorNotification();
     void runScheduledCleanReset();
+    void resetTrees();
     void buildDeferredTrees(const bool asAtLoad);
     void autoSave();
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);

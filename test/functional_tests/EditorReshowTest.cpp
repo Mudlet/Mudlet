@@ -36,6 +36,7 @@
 #include "AliasUnit.h"
 #include "Host.h"
 #include "HostDialogs.h"
+#include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -61,6 +62,7 @@ private:
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     const QString mProfileName = qsl("EditorReshow-Test-Profile");
+    const QString mSecondProfileName = qsl("EditorReshow-Test-Profile-2");
     QString mPort;
     const QString mLocalhost = qsl("localhost");
 
@@ -88,6 +90,7 @@ private slots:
         mudlet::self()->setStorePasswordsSecurely(false);
 
         QDir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mSecondProfileName)).removeRecursively();
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY2(mpHost, "no active host after creating the profile");
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
@@ -102,8 +105,10 @@ private slots:
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             const QString path = MudletApp::getMudletPath(enums::profileHomePath, mProfileName);
+            const QString secondPath = MudletApp::getMudletPath(enums::profileHomePath, mSecondProfileName);
             delete mudlet::self();
             QDir(path).removeRecursively();
+            QDir(secondPath).removeRecursively();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
@@ -181,6 +186,39 @@ private slots:
         QVERIFY2(!HostDialogs::of(mpHost).mpEditorDialog.isNull(), "the Errors menu item left the profile with no editor to show the errors in");
         QVERIFY(HostDialogs::of(mpHost).mpEditorDialog->mpErrorConsole);
         QVERIFY2(HostDialogs::of(mpHost).mpEditorDialog->mpErrorConsole->isVisible(), "the rebuilt editor did not open on the error console");
+    }
+
+    // The Script Editor button opens an unopened editor on the triggers view its first build sets up, and a
+    // notice posted before that build was put off is gone, as when the build ran at load
+    void test_theScriptEditorButtonOpensAnUnopenedEditorOnItsTriggers()
+    {
+        Host* pSecondHost = TestProfile::create(mSecondProfileName, mLocalhost, mPort);
+        QVERIFY2(pSecondHost, "no host for the second profile");
+        QSignalSpy connected(&(pSecondHost->mTelnet), &cTelnet::signal_connected);
+        QVERIFY2(connected.wait(2s), "could not connect the second profile to the stub server");
+        dlgTriggerEditor* pEditor = HostDialogs::of(pSecondHost).mpEditorDialog;
+        QVERIFY2(pEditor && !pEditor->isVisible(), "setup: the second profile needs an editor nothing has opened");
+
+        // Hidden, or the triggers introduction would replace the notice anyway
+        pEditor->setBannerPermanentlyHidden(EditorViewType::cmTriggerView, qsl("intro"), true);
+        pEditor->showWarning(qsl("qaNoticeBeforeTheBuild"), false);
+        // Filled in by the triggers view's own setup, which a bare switch to the view skips
+        pEditor->mTriggerEditorSplitterState.clear();
+        pEditor->doCleanReset();
+        QTest::qWait(50ms);
+        QCOMPARE(mudlet::self()->getActiveHost(), pSecondHost);
+        mudlet::self()->slot_showEditorDialog();
+        QTest::qWait(50ms);
+
+        QVERIFY2(pEditor->isVisible(), "the Script Editor button did not open the editor");
+        QVERIFY2(pEditor->mCurrentView == EditorViewType::cmTriggerView, "the editor did not open on the triggers view");
+        QVERIFY2(!pEditor->mTriggerEditorSplitterState.isEmpty(), "the triggers view was switched to without its layout being set up");
+        QVERIFY2(pEditor->mpSystemMessageArea->isHidden() || !pEditor->mpSystemMessageArea->notificationAreaMessageBox->text().contains(qsl("qaNoticeBeforeTheBuild")),
+                 "a notice the build would have cleared at load is still showing");
+
+        pSecondHost->forceClose();
+        QVERIFY2(pSecondHost->requestClose(), "Closing the second profile was refused");
+        HostManager::self()->deleteHost(mSecondProfileName);
     }
 };
 

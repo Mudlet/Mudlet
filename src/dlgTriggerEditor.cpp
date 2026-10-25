@@ -11052,6 +11052,11 @@ void dlgTriggerEditor::slot_showTimers()
 
 void dlgTriggerEditor::showCurrentTriggerItem()
 {
+    // The full reset leaves the editor on the triggers view, so there is nothing more to show
+    if (mCleanResetDeferred) {
+        buildDeferredTrees(true);
+        return;
+    }
     if (mCurrentView != EditorViewType::cmUnknownView) {
         return;
     }
@@ -13459,9 +13464,16 @@ void dlgTriggerEditor::runScheduledCleanReset()
     if (!mHasBeenShown) {
         mCleanResetDeferred = true;
         mNeedUpdateData = true;
+        // What the build would have done to notices posted so far
+        clearEditorNotification();
         return;
     }
 
+    resetTrees();
+}
+
+void dlgTriggerEditor::resetTrees()
+{
     // Clear all current item pointers BEFORE attempting to save or clear tree widgets
     // to prevent heap-use-after-free when the tree widgets are cleared
     mpCurrentTriggerItem = nullptr;
@@ -13509,8 +13521,8 @@ void dlgTriggerEditor::runScheduledCleanReset()
     slot_showTriggers();
 }
 
-// A notice posted to an editor not opened yet came after the build it used to get at load, so it has to
-// outlive this build too: populating a tree clears the message area for every item it adds
+// A notice posted since the build was put off has to outlive it, as populating a tree clears the message
+// area for every item it adds
 void dlgTriggerEditor::buildDeferredTrees(const bool asAtLoad)
 {
     const bool keepNotice = !mpSystemMessageArea->isHidden();
@@ -13521,7 +13533,7 @@ void dlgTriggerEditor::buildDeferredTrees(const bool asAtLoad)
     const QString bannerKey = mCurrentBannerKey;
 
     if (asAtLoad) {
-        runScheduledCleanReset();
+        resetTrees();
     } else {
         fillout_form();
     }
