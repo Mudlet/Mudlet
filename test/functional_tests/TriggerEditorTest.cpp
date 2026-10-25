@@ -530,6 +530,125 @@ private slots:
     QTRY_COMPARE(description(pItem), inactive);
   }
 
+  // The editor is hidden, never deleted, when closed, so an item toggled from
+  // Lua while it is closed must show its new state once it is reopened.
+  void test_luaToggleWhileEditorClosedShowsOnReopen() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permGroup(\"qaClosedFolder\", \"trigger\")\n"
+            "permRegexTrigger(\"qaClosedLeaf\", \"qaClosedFolder\", {\"^qa closed leaf$\"}, \"\")\n"
+            "permRegexTrigger(\"qaClosedTrigger\", \"\", {\"^qa closed trigger$\"}, \"\")\n"
+            "permAlias(\"qaClosedAlias\", \"\", \"^qa closed alias$\", \"\")\n"
+            "permTimer(\"qaClosedTimer\", \"\", 3600, \"\")\n"
+            "permScript(\"qaClosedScript\", \"\", \"-- deliberately does nothing\")\n"
+            "permKey(\"qaClosedKey\", \"\", mudlet.key.F8, \"\")\n"
+            "enableTimer(\"qaClosedTimer\")\n"
+            "enableScript(\"qaClosedScript\")")));
+    pEditor->doCleanReset();
+
+    struct Target {
+      const char *treeName;
+      const char *itemName;
+      const char *enableFn;
+      const char *disableFn;
+      QTreeWidgetItem *pItem = nullptr;
+    };
+    Target targets[] = {
+        {"treeWidget_triggers", "qaClosedTrigger", "enableTrigger", "disableTrigger"},
+        {"treeWidget_aliases", "qaClosedAlias", "enableAlias", "disableAlias"},
+        {"treeWidget_timers", "qaClosedTimer", "enableTimer", "disableTimer"},
+        {"treeWidget_scripts", "qaClosedScript", "enableScript", "disableScript"},
+        {"treeWidget_keys", "qaClosedKey", "enableKey", "disableKey"},
+    };
+    auto findItem = [pEditor](const char *treeName, const char *itemName) -> QTreeWidgetItem * {
+      auto *pTree = pEditor->findChild<QTreeWidget *>(QString::fromLatin1(treeName));
+      if (!pTree) {
+        return nullptr;
+      }
+      const auto found = pTree->findItems(QString::fromLatin1(itemName), Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive, 0);
+      return found.isEmpty() ? nullptr : found.first();
+    };
+    QTreeWidgetItem *pLeaf = nullptr;
+    // doCleanReset() rebuilds later, so take every pointer from one poll
+    QVERIFY2(QTest::qWaitFor([&]() {
+      bool all = true;
+      for (auto &target : targets) {
+        target.pItem = findItem(target.treeName, target.itemName);
+        all = all && target.pItem;
+      }
+      pLeaf = findItem("treeWidget_triggers", "qaClosedLeaf");
+      return all && pLeaf;
+    }), "the editor never rebuilt its trees around the planted items");
+
+    auto description = [](QTreeWidgetItem *pItem) {
+      return pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+    };
+    const QString active = dlgTriggerEditor::tr("activated");
+    const QString inactive = dlgTriggerEditor::tr("deactivated");
+    const QString inactiveParent = dlgTriggerEditor::tr("%1 in a deactivated group").arg(active);
+    for (const auto &target : targets) {
+      QCOMPARE(description(target.pItem), active);
+    }
+    QCOMPARE(description(pLeaf), active);
+
+    auto toggleAllWhileClosed = [&](bool enable) {
+      pEditor->hide();
+      QCoreApplication::processEvents();
+      QVERIFY(!pEditor->isVisible());
+      QString script;
+      for (const auto &target : targets) {
+        script += qsl("%1(\"%2\")\n").arg(QString::fromLatin1(enable ? target.enableFn : target.disableFn), QString::fromLatin1(target.itemName));
+      }
+      script += enable ? qsl("enableTrigger(\"qaClosedFolder\")") : qsl("disableTrigger(\"qaClosedFolder\")");
+      QVERIFY(pLua->compileAndExecuteScript(script));
+      QTest::qWait(50ms);
+      pEditor->show();
+    };
+
+    toggleAllWhileClosed(false);
+    if (QTest::currentTestFailed()) {
+      return;
+    }
+    for (const auto &target : targets) {
+      QTRY_COMPARE(description(target.pItem), inactive);
+    }
+    QCOMPARE(description(pLeaf), inactiveParent);
+
+    toggleAllWhileClosed(true);
+    if (QTest::currentTestFailed()) {
+      return;
+    }
+    for (const auto &target : targets) {
+      QTRY_COMPARE(description(target.pItem), active);
+    }
+    QCOMPARE(description(pLeaf), active);
+
+    // Temporary items have no tree item, so toggling them while the editor
+    // is closed must not pile their IDs up for the reopen.
+    QVERIFY(pEditor->mPendingTriggerIconRefresh.isEmpty());
+    QVERIFY(pEditor->mPendingTimerIconRefresh.isEmpty());
+    pEditor->hide();
+    QCoreApplication::processEvents();
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("local trigger = tempTrigger(\"qa closed temp\", \"\")\n"
+            "local timer = tempTimer(3600, \"\")\n"
+            "for i = 1, 3 do\n"
+            "  disableTrigger(tostring(trigger))\n"
+            "  enableTrigger(tostring(trigger))\n"
+            "  disableTimer(tostring(timer))\n"
+            "  enableTimer(tostring(timer))\n"
+            "end\n"
+            "killTrigger(trigger)\n"
+            "killTimer(timer)")));
+    QVERIFY(pEditor->mPendingTriggerIconRefresh.isEmpty());
+    QVERIFY(pEditor->mPendingTimerIconRefresh.isEmpty());
+    pEditor->show();
+  }
+
   // paintAliasItem()/paintTimerItem()/paintScriptItem()/paintKeyItem() (and
   // paintTriggerItem() from #10605) used to recompute touchNotification for
   // every item they painted, including descendants only swept in because an

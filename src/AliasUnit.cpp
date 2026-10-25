@@ -440,7 +440,9 @@ bool AliasUnit::enableAlias(const QString& name)
         }
         pT->setIsActive(true);
         found = true;
-        emit mpHost->signal_aliasToggled(pT->getID());
+        if (!pT->isTemporary()) {
+            emit mpHost->signal_aliasToggled(pT->getID());
+        }
     }
     return found;
 }
@@ -454,7 +456,9 @@ bool AliasUnit::disableAlias(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
-        emit mpHost->signal_aliasToggled(it.value()->getID());
+        if (!it.value()->isTemporary()) {
+            emit mpHost->signal_aliasToggled(it.value()->getID());
+        }
     }
     return found;
 }
