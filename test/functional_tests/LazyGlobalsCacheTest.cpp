@@ -32,12 +32,17 @@
 #include <QtTest/QtTest>
 
 #include "Host.h"
+#include "LuaInterface.h"
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TEvent.h"
 #include "TLuaInterpreter.h"
+#if defined(INCLUDE_MCPSERVER)
+#include "TMCPLuaBridge.h"
+#endif
+#include "TVar.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "mudlet.h"
@@ -138,6 +143,12 @@ private slots:
         QTest::newRow("alias") << qsl("alias");
         QTest::newRow("timer") << qsl("timer");
         QTest::newRow("event") << qsl("event");
+        QTest::newRow("finaliser") << qsl("finaliser");
+        QTest::newRow("variables view") << qsl("variables view");
+        QTest::newRow("getLuaString") << qsl("getLuaString");
+#if defined(INCLUDE_MCPSERVER)
+        QTest::newRow("mcp") << qsl("mcp");
+#endif
     }
 
     void handlerTakenOffBetweenLines()
@@ -153,17 +164,18 @@ private slots:
                 "setmetatable(_G, LazyCacheCopy)\n"
                 "assert(rearmLazyGlobals(), 'the deferral did not come back on')\n"
                 "LazyCacheIds = {\n"
-                "  target = tempRegexTrigger('^LazyCacheTarget (\\\\w+)$', function()\n"
-                "    LazyCacheLine = line\n"
-                "    LazyCacheCapture = matches and matches[2]\n"
-                "  end),\n"
+                "  read = registerAnonymousEventHandler('LazyCacheRead', function() LazyCacheLine = line end),\n"
                 "  trigger = tempRegexTrigger('^LazyCacheStrip$', %1),\n"
                 "  alias = tempAlias('^lazycachestrip$', %1),\n"
                 "  event = registerAnonymousEventHandler('LazyCacheStripEvent', %1),\n"
-                "}")
+                "}\n"
+                "LazyCacheStripNow = %1\n"
+                "LazyCacheVars = setmetatable({}, {__index = %1})")
                     .arg(strip));
         if (entry == qsl("timer")) {
             run(qsl("tempTimer(0, %1)").arg(strip));
+        } else if (entry == qsl("finaliser")) {
+            run(qsl("LazyCacheProxy = newproxy(true) getmetatable(LazyCacheProxy).__gc = %1").arg(strip));
         }
 
         feed(qsl("LazyCacheIdle\n"));
@@ -182,6 +194,30 @@ private slots:
                         return rawGlobalString("LazyCacheStripped") == qsl("<boolean>");
                     },
                     2s));
+        } else if (entry == qsl("finaliser")) {
+            // Dropped without running anything; the collection comes from
+            // allocations Mudlet makes outside any script
+            lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+            lua_pushstring(L, "LazyCacheProxy");
+            lua_pushnil(L);
+            lua_rawset(L, LUA_GLOBALSINDEX);
+            QVERIFY(lua_gettop(L) == 0);
+            for (int i = 0; i < 1000000 && rawGlobalString("LazyCacheStripped") != qsl("<boolean>"); ++i) {
+                mpHost->getLuaInterpreter()->set_lua_string(qsl("LazyCacheFiller"), qsl("filler %1").arg(i));
+            }
+        } else if (entry == qsl("variables view")) {
+            auto* pTable = new TVar(nullptr, qsl("LazyCacheVars"), LUA_TSTRING, QString(), LUA_TTABLE);
+            auto* pMissing = new TVar(pTable, qsl("missing"), LUA_TSTRING, QString(), LUA_TSTRING);
+            pTable->addChild(pMissing);
+            mpHost->getLuaInterface()->getValue(pMissing);
+            delete pTable;
+        } else if (entry == qsl("getLuaString")) {
+            mpHost->getLuaInterpreter()->getLuaString(qsl("LazyCacheStripNow()"));
+#if defined(INCLUDE_MCPSERVER)
+        } else if (entry == qsl("mcp")) {
+            TMCPLuaBridge bridge;
+            QVERIFY(bridge.callTool(qsl("lua"), QJsonObject{{ qsl("code"), qsl("LazyCacheStripNow()") }}).success);
+#endif
         } else if (entry == qsl("event")) {
             TEvent event{};
             event.mArgumentList.append(qsl("LazyCacheStripEvent"));
@@ -191,17 +227,22 @@ private slots:
         // Read raw, as running a script to ask would itself forget the check
         QCOMPARE(rawGlobalString("LazyCacheStripped"), qsl("<boolean>"));
 
+        // Read by an event handler rather than a trigger, as a trigger with
+        // captures looks for the handlers again itself
         feed(qsl("LazyCacheTarget word\n"));
+        TEvent read{};
+        read.mArgumentList.append(qsl("LazyCacheRead"));
+        read.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(read);
         const QString seenLine = rawGlobalString("LazyCacheLine");
-        const QString seenCapture = rawGlobalString("LazyCacheCapture");
 
         run(qsl("setmetatable(_G, LazyCacheOriginal)\n"
-                "killTrigger(LazyCacheIds.target) killTrigger(LazyCacheIds.trigger) killAlias(LazyCacheIds.alias)\n"
+                "killAnonymousEventHandler(LazyCacheIds.read) killTrigger(LazyCacheIds.trigger) killAlias(LazyCacheIds.alias)\n"
                 "killAnonymousEventHandler(LazyCacheIds.event)\n"
-                "LazyCacheLine, LazyCacheCapture = nil, nil"));
+                "LazyCacheFiller = nil\n"
+                "LazyCacheLine = nil"));
 
         QCOMPARE(seenLine, qsl("LazyCacheTarget word"));
-        QCOMPARE(seenCapture, qsl("word"));
     }
 };
 

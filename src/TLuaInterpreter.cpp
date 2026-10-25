@@ -4889,7 +4889,7 @@ bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L)
         materialisePendingGlobals(L);
         return false;
     }
-    if (mGlobalsHandlersVerified) {
+    if (mGlobalsHandlersVerified && heapBytes(L) == mHeapBytesAtCheck) {
         return true;
     }
     if (!globalsHandlersInPlace(L)) {
@@ -4906,7 +4906,14 @@ bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L)
     }
     // A script still running can change the metatable between two lines it feeds
     mGlobalsHandlersVerified = mScriptCallDepth == 0;
+    mHeapBytesAtCheck = heapBytes(L);
     return true;
+}
+
+// No documentation available in wiki - internal function
+std::size_t TLuaInterpreter::heapBytes(lua_State* L)
+{
+    return (static_cast<std::size_t>(lua_gc(L, LUA_GCCOUNT, 0)) << 10) + static_cast<std::size_t>(lua_gc(L, LUA_GCCOUNTB, 0));
 }
 
 // No documentation available in wiki - internal function
