@@ -1209,8 +1209,7 @@ END: {
             }
             const int begin = *iti;
             const std::string& s = *its;
-            const int length = QString::fromStdString(s).size();
-            selectTextMatch(lineNumber, begin, length);
+            selectTextMatch(lineNumber, begin, s);
             if (mBgColor != QColorConstants::Transparent) {
                 mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
@@ -1280,8 +1279,7 @@ void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumb
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
             const int begin = *iti;
             const std::string& s = *its;
-            const int length = QString::fromStdString(s).size();
-            selectTextMatch(lineNumber, begin, length);
+            selectTextMatch(lineNumber, begin, s);
             if (mBgColor != QColorConstants::Transparent) {
                 mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
@@ -1344,9 +1342,15 @@ void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captur
 }
 
 // Text patterns match the line as it arrived, so a match is found where earlier
-// triggers' edits have moved it, unless a colour filter above has done that already
-bool TTrigger::selectTextMatch(const int lineNumber, int from, int length) const
+// triggers' edits have moved it, unless a colour filter above has done that already.
+// They also match the "\n" Host::processLine() puts after the line, which the stored
+// line does not have, so a capture that took it would select past the line's end.
+bool TTrigger::selectTextMatch(const int lineNumber, int from, const std::string& capture) const
 {
+    int length = QString::fromStdString(capture).size();
+    if (!capture.empty() && capture.back() == '\n') {
+        --length;
+    }
     TConsoleModel& model = mpHost->mainConsoleModel();
     if (!mPositionsInCurrentColumns) {
         std::tie(from, length) = model.buffer.triggerPassSpanNow(lineNumber, from, length);
@@ -1425,8 +1429,7 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
             const int begin = *iti;
             const std::string& s = *its;
-            const int length = QString::fromStdString(s).size();
-            selectTextMatch(lineNumber, begin, length);
+            selectTextMatch(lineNumber, begin, s);
             if (mBgColor != QColorConstants::Transparent) {
                 mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
@@ -1713,8 +1716,7 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
             const int begin = *iti;
             const std::string& s = *its;
-            const int length = QString::fromStdString(s).size();
-            selectTextMatch(lineNumber, begin, length);
+            selectTextMatch(lineNumber, begin, s);
             if (mBgColor != QColorConstants::Transparent) {
                 mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }

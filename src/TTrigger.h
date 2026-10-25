@@ -502,7 +502,7 @@ private:
 
     inline void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
     inline void filter(std::string&, int&, int lineNumber, bool positionsInCurrentColumns);
-    bool selectTextMatch(int lineNumber, int from, int length) const;
+    bool selectTextMatch(int lineNumber, int from, const std::string& capture) const;
     void processExactMatch(int patternNumber, int posOffset, int lineNumber);
     void processRegexMatch(const char* haystackC,
                            const QString& haystack,
