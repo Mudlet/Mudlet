@@ -116,6 +116,7 @@ set(UNIT_TESTS
     TMediaPathTraversalTest
     TAudioMixerMixTest
     ProfileNameValidationTest
+    XmlImportReaderTest
 )
 
 # The MCP server only lands in the Mudlet library when configured with USE_MCPSERVER, so
@@ -257,6 +258,8 @@ set_tests_properties(CrashReportUploadTest PROPERTIES
 
 # DiscordTest checks the Lua API permission gating contract by scanning the source
 set_property(SOURCE DiscordTest.cpp APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
+# XmlImportReaderTest reads every package, profile and map XML in the source tree
+set_property(SOURCE XmlImportReaderTest.cpp APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 
 # Build-file consistency check. Independent of the Mudlet library: it only reads
 # src/CMakeLists.txt and the src/ directory, so it does not link LIB_MUDLET_TARGET.

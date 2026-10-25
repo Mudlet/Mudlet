@@ -135,6 +135,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     SpellDictionaryFailureTest.cpp
     TestProfileFirstRunTourTest.cpp
     XMLexportVariablesTest.cpp
+    XmlImportStateTest.cpp
 )
 
 # Telnet and the other network protocols Mudlet speaks, the escape sequences
@@ -356,6 +357,9 @@ set(FUNCTIONAL_TEST_UTILS
 )
 
 mudlet_add_test_pch_provider(mudlet_functional_test_pch)
+
+# XmlImportStateTest imports every package, profile and map XML in the source tree
+set_property(SOURCE XmlImportStateTest.cpp APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 
 # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
 macro(add_functional_test_binary target)
