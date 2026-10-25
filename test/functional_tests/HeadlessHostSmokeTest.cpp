@@ -3070,7 +3070,7 @@ end
     }
 
     // What a profile with no view answers the scroll calls, taken from the same Lua run in the GUI self-test
-    // profile, which lets each real pane repaint before it is read and re-issues each scroll until it holds.
+    // profile, which lets each real pane repaint before it is read.
     void test_headlessScrollContract()
     {
         const QString hostname = qsl("Test-Headless-Host-Scroll");

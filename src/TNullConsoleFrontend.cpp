@@ -2126,8 +2126,6 @@ bool TNullConsoleFrontend::setWindowScrolling(const QString& name, const bool en
     return true;
 }
 
-// Lands on the line itself, where TMainConsole::scrollWindowTo() lands its first scroll short by the rows of
-// the split screen pane it opens
 bool TNullConsoleFrontend::scrollWindowTo(const QString& name, const int line, const bool toEnd)
 {
     TConsoleModel* pModel = mpHost->consoleModelNamed(name);

@@ -1828,30 +1828,17 @@ describe("Trigger processing", function()
                 assert.is_false(scrolledMidPass, "the feed inside the trigger scrolled the console before the game data that fired it was handled")
             end)
 
-            if not os.getenv("MUDLET_TEST_MODE") then
-                -- Scrolling back up waits a turn of the event loop, which
-                -- waitForEvent only pumps in test mode
-                pending("unless it has been scrolled back up - needs MUDLET_TEST_MODE for waitForEvent")
-            else
-                it("unless it has been scrolled back up", function()
-                    for i = 1, 200 do
-                        echo("main", "feed_scroll filler " .. i .. "\n")
-                    end
-                    local parked = getLastLineNumber("main") - 100
-                    for _ = 1, 20 do
-                        scrollTo(parked)
-                        if getScroll() == parked then
-                            break
-                        end
-                        tempTimer(0, function() raiseEvent("specFeedScrollPump") end)
-                        waitForEvent("specFeedScrollPump", 2000)
-                    end
-                    assert.are.equal(parked, getScroll(), "could not scroll the main console back up")
+            it("unless it has been scrolled back up", function()
+                for i = 1, 200 do
+                    echo("main", "feed_scroll filler " .. i .. "\n")
+                end
+                local parked = getLastLineNumber("main") - 100
+                scrollTo(parked)
+                assert.are.equal(parked, getScroll(), "could not scroll the main console back up")
 
-                    assertFed("a feed", 2, "feed_scroll parked one\nfeed_scroll parked two\n")
-                    assert.are.equal(parked, getScroll(), "a feed pulled a console scrolled back up down to its end")
-                end)
-            end
+                assertFed("a feed", 2, "feed_scroll parked one\nfeed_scroll parked two\n")
+                assert.are.equal(parked, getScroll(), "a feed pulled a console scrolled back up down to its end")
+            end)
         end)
 
     end)

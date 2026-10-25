@@ -307,6 +307,32 @@ private slots:
         QCOMPARE(console->mCurrentSearchResult, laterLine);
     }
 
+    // The first search back from the end opens the split screen, and the lower
+    // pane that opens must not push the match out of the upper one.
+    void test_theSearchThatOpensTheSplitScreenStopsJustBelowTheMatch()
+    {
+        auto* console = startSearchableProfile();
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
+
+        const int earlierLine = lineHolding(console, qsl("gorbash sleeps"));
+        mpServer->sendRaw(QByteArray("filler line\r\n").repeated(100));
+        QVERIFY(QTest::qWaitFor(
+                [console, earlierLine]() {
+                    return console->buffer.getLastLineNumber() > earlierLine + 100;
+                },
+                5000));
+        QVERIFY(console->mLowerPane->isHidden());
+
+        console->mpBufferSearchBox->setText(qsl("sleeps by"));
+        console->slot_searchBufferUp();
+        QCOMPARE(console->mCurrentSearchResult, earlierLine);
+        QTest::qWait(100);
+
+        QVERIFY(!console->mLowerPane->isHidden());
+        QVERIFY(console->mLowerPane->getRowCount() > 0);
+        QCOMPARE(console->buffer.mCursorY, earlierLine + 3);
+    }
+
     // A search that has not moved off the end of the buffer yet has nothing
     // below it, and saying so would be worse than staying quiet.
     void test_searchingDownWithNothingBelowTheCurrentLineDoesNothing()

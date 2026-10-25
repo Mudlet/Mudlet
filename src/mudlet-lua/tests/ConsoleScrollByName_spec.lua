@@ -33,27 +33,11 @@ describe("Tests that the scroll bar and scrolling functions find their console b
     end
   end
 
-  -- getScroll() is copied out of the buffer as the pane repaints, and the first
-  -- scroll of a console waits a turn for its lower pane to appear, so a new
-  -- position needs the event loop to run before it can be read back
+  -- lets the split screen's lower pane appear and the panes repaint; needs
+  -- MUDLET_TEST_MODE, as waitForEvent only pumps the event loop in test mode
   local function pumpEventLoop()
     tempTimer(0, function() raiseEvent("specScrollByNamePump") end)
     waitForEvent("specScrollByNamePump", 2000)
-  end
-
-  -- scrollTo() scrolls by the distance from where the pane last painted, so it
-  -- can land short until the pane catches up; repeating it settles it
-  local function parkAt(window, line)
-    for _ = 1, 10 do
-      scrollTo(window, line)
-      for _ = 1, 20 do
-        if getScroll(window) == line then
-          return line
-        end
-        pumpEventLoop()
-      end
-    end
-    return getScroll(window)
   end
 
   it("refuses a name that is no window at all", function()
@@ -173,10 +157,16 @@ describe("Tests that the scroll bar and scrolling functions find their console b
             assert.are.equal(0, select("#", scrollTo(window, 1)))
             assert.are.equal(0, select("#", scrollTo(window)))
           end)
-        elseif not os.getenv("MUDLET_TEST_MODE") then
-          -- parkAt() waits on waitForEvent, which only pumps the event loop in
-          -- test mode, so this cannot run when the suite is started with runTests
-          pending("reports and moves that console's scroll position - needs MUDLET_TEST_MODE for waitForEvent")
+
+          it("stays at the end of that console when told to scroll back", function()
+            for i = 1, 20 do
+              echo(window, "scroll line " .. i .. "\n")
+            end
+            scrollTo(window, 1)
+            assert.are.equal(getLastLineNumber(window), getScroll(window))
+            echo(window, "one more\n")
+            assert.are.equal(getLastLineNumber(window), getScroll(window))
+          end)
         else
           it("reports and moves that console's scroll position", function()
             assert.is_true(getRowCount(window) > 0, kind[1] .. " came up with no visible rows")
@@ -186,9 +176,29 @@ describe("Tests that the scroll bar and scrolling functions find their console b
             end
             assert.are.equal(getLastLineNumber(window), getScroll(window))
 
-            assert.are.equal(150, parkAt(window, 150))
+            assert.are.equal(0, select("#", scrollTo(window, 150)))
+            assert.are.equal(150, getScroll(window))
             assert.are.equal(0, select("#", scrollTo(window)))
             assert.are.equal(getLastLineNumber(window), getScroll(window))
+          end)
+
+          it("lands scrollTo on the line it is given, from the end and back to back", function()
+            clearWindow(window)
+            for i = 1, 300 do
+              echo(window, "scroll line " .. i .. "\n")
+            end
+            finally(function() scrollTo(window) end)
+
+            scrollTo(window, 150)
+            assert.are.equal(150, getScroll(window))
+            scrollTo(window, 100)
+            scrollTo(window, 50)
+            assert.are.equal(50, getScroll(window))
+
+            if os.getenv("MUDLET_TEST_MODE") then
+              pumpEventLoop()
+              assert.are.equal(50, getScroll(window), "the split screen moved the line once it appeared")
+            end
           end)
         end
       end)
@@ -226,6 +236,25 @@ describe("Tests that the scroll bar and scrolling functions find their console b
         assert.are.equal(getScroll(other), getScroll(name))
       end)
     end
+
+    it("lands scrollTo on the line it is given, from the end and back to back", function()
+      for i = 1, 300 do
+        echo("main", "scroll line " .. i .. "\n")
+      end
+      finally(function() scrollTo("main") end)
+      scrollTo("main")
+
+      scrollTo("main", 150)
+      assert.are.equal(150, getScroll("main"))
+      scrollTo("main", 100)
+      scrollTo("main", 50)
+      assert.are.equal(50, getScroll("main"))
+
+      if os.getenv("MUDLET_TEST_MODE") then
+        pumpEventLoop()
+        assert.are.equal(50, getScroll("main"), "the split screen moved the line once it appeared")
+      end
+    end)
 
     it("takes no name for the main console", function()
       disableScrollBar("main")

@@ -2370,7 +2370,7 @@ bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
     }
 
     if (!toEnd) {
-        pC->scrollUp(pC->mUpperPane->mCursorY - line);
+        pC->scrollTo(line);
         return true;
     }
     if (!pC->mUpperPane->mIsTailMode) {

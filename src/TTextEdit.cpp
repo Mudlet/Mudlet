@@ -496,6 +496,8 @@ void TTextEdit::scrollTo(int line)
             forceUpdate();
         }
         mpBuffer->mCursorY = line;
+        // Otherwise getScroll() reads the old position until the next paint
+        mCursorY = line;
 
         mScrollVector = 0;
         update();

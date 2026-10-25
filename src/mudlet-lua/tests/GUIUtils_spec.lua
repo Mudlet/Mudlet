@@ -3581,44 +3581,6 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
   describe("Tests the functionality of scrollUp and scrollDown", function()
     local windowName = "guiUtilsScrollConsole"
 
-    -- The scroll position getScroll reports is copied out of the buffer while
-    -- the pane repaints, and the very first scroll of a console is deferred to
-    -- the next event loop turn so its split screen lower pane can appear. Both
-    -- need one turn of the event loop before the new position can be read.
-    local function pumpEventLoop()
-      tempTimer(0, function() raiseEvent("guiUtilsScrollPump") end)
-      waitForEvent("guiUtilsScrollPump", 2000)
-    end
-
-    -- the repaint that publishes the new position is only posted, so poll for
-    -- it rather than trusting a single turn of the event loop
-    local function scrollSettlesAt(expected)
-      for _ = 1, 20 do
-        if getScroll(windowName) == expected then
-          return getScroll(windowName)
-        end
-        pumpEventLoop()
-      end
-      return getScroll(windowName)
-    end
-
-    -- BUG: scrollTo does not move to the line it is given, it subtracts a
-    -- delta from the cursor the pane last copied out of the buffer while
-    -- painting, and the first scroll out of tail mode is deferred a turn and
-    -- padded by the lower pane's row count. So the first scrollTo of a console
-    -- lands short by a font-metric-dependent amount, and a second one issued
-    -- before the pane has repainted lands short again. Re-issue it until it
-    -- sticks: once the pane's copy has caught up the delta is exact.
-    local function parkAt(line)
-      for _ = 1, 10 do
-        scrollTo(windowName, line)
-        if scrollSettlesAt(line) == line then
-          return line
-        end
-      end
-      return getScroll(windowName)
-    end
-
     setup(function()
       createMiniConsole(windowName, 0, 0, 200, 100)
       enableScrolling(windowName)
@@ -3633,33 +3595,34 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       for i = 1, 200 do
         echo(windowName, "scroll line " .. i .. "\n")
       end
-      assert.equals(150, parkAt(150), "the console should be parked mid buffer before each scroll test")
+      scrollTo(windowName, 150)
+      assert.equals(150, getScroll(windowName), "the console should be parked mid buffer before each scroll test")
     end)
 
     it("Should move the view up by the number of lines given", function()
       scrollUp(windowName, 5)
-      assert.equals(145, scrollSettlesAt(145))
+      assert.equals(145, getScroll(windowName))
     end)
 
     it("Should move the view back down again", function()
       scrollDown(windowName, 4)
-      assert.equals(154, scrollSettlesAt(154))
+      assert.equals(154, getScroll(windowName))
     end)
 
     it("Should never scroll above the first line", function()
       scrollUp(windowName, 10000)
-      assert.equals(0, scrollSettlesAt(0))
+      assert.equals(0, getScroll(windowName))
     end)
 
     it("Should never scroll past the last line", function()
       scrollDown(windowName, 10000)
       local lastLine = getLastLineNumber(windowName)
-      assert.equals(lastLine, scrollSettlesAt(lastLine))
+      assert.equals(lastLine, getScroll(windowName))
     end)
 
     it("Should default to a single line when no count is given", function()
       scrollUp(windowName)
-      assert.equals(149, scrollSettlesAt(149))
+      assert.equals(149, getScroll(windowName))
     end)
 
     it("Should report an unknown window rather than raising", function()
