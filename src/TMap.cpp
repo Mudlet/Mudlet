@@ -2171,6 +2171,12 @@ bool TMap::restore(QString location)
             TArea::dropFileOnlyUserData(pA->mUserData);
         }
 
+        qsizetype roomsInAreas = 0;
+        for (const auto* pA : pNewRoomDB->getAreaMap()) {
+            roomsInAreas += pA->rooms.size();
+        }
+        pNewRoomDB->reserveEntrances(roomsInAreas);
+
         // A corrupt stream carries on reading, out of step with the records,
         // so stop at the first sign of one rather than make rooms of the rest
         while (!ifs.atEnd() && ifs.status() == QDataStream::Ok) {
