@@ -3618,18 +3618,18 @@ void T2DMap::paintRoomExits(QPainter& painter,
                 const QVector3D uDirection = mpMap->scmUnitVectors.value(direction);
                 const bool diagonal = uDirection.x() != 0.0f && uDirection.y() != 0.0f;
                 const int borderWidth = !lodTier && roomBorderShown(*room) ? roomBorderWidth(*room) : 0;
-                // The room and its border are painted over the stub later, so where they reach past its half
-                // cell it is made just long enough for the dot to clear them: any longer would push the dot
-                // under a neighbouring room. A diagonal stub's offset applies on both axes, and the reduced
-                // tier draws no borders.
+                // The room and its border are painted over the stub later, so past its half cell it reaches
+                // only far enough for the dot to clear them: any further puts the dot under a room next door
                 const auto stubReach = [&](const qreal cellSize) {
                     const qreal roomEdge = rSize * cellSize / 2.0 + borderWidth;
                     const qreal dotRadius = cStubDotRadius * cellSize;
-                    qreal clearance = roomEdge + dotRadius;
-                    if (diagonal) {
-                        clearance = mBubbleMode ? clearance / std::numbers::sqrt2 : roomEdge + dotRadius / std::numbers::sqrt2;
+                    if (!diagonal) {
+                        return qMax(0.5 * cellSize, roomEdge + dotRadius);
                     }
-                    return qMax(0.5 * cellSize, clearance);
+                    if (mBubbleMode) {
+                        return qMax(0.5 * cellSize, (roomEdge + dotRadius) / std::numbers::sqrt2);
+                    }
+                    return qMax(0.5 * cellSize, roomEdge + dotRadius / std::numbers::sqrt2);
                 };
                 const QLineF stubLine(rx, ry, rx + uDirection.x() * stubReach(mRoomWidth), ry + uDirection.y() * stubReach(mRoomHeight));
                 const QString doorKey{TRoom::dirCodeToShortString(direction)};

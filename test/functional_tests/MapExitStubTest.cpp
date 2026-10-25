@@ -217,7 +217,8 @@ private slots:
 
         mpHost->mRoomSize = roomSize;
         mpHost->mRoomBorderSize = 10.0;
-        mpHost->mLineSize = 10.0;
+        // A hairline stub, so the pixels counted are the dot's rather than the line's
+        mpHost->mLineSize = 100.0;
         mpHost->mMapperUseAntiAlias = false;
         mpHost->mMapperShowGrid = false;
         mpHost->mMapperShowRoomBorders = bordersShown;
