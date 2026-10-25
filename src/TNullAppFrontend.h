@@ -36,6 +36,7 @@ public:
     void showOptionsDialog(const QString&, Host*) override {}
     void showConnectionDialog() override {}
     void handleTelnetUri(const QString&) override {}
+    void connectFromGameLink(const QString&) override {}
     void setCompactInputLineChecked(Host*, bool) override {}
     void armForceClose() override {}
     void writeSettings() override {}

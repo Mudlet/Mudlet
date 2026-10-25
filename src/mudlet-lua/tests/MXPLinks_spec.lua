@@ -163,6 +163,11 @@ describe("Tests the Lua an MXP link runs", function()
         local href = "https://example/" .. payload
         assertRunsOnly(actionsAfter(("<A>%s</A>"):format(href)), "openUrl", href)
       end)
+
+      it("connects to an A telnet href as it was given", function()
+        local href = "telnet://games.example:4000/" .. payload
+        assertRunsOnly(actionsAfter(("<A %s>go</A>"):format(attribute("href", href))), "connectFromGameLink", href)
+      end)
     end)
   end
 
@@ -201,7 +206,14 @@ describe("Tests the Lua an MXP link runs", function()
       end)
     end
 
-    for _, href in ipairs({"file:///etc/hosts", "steam://run/1", "javascript:alert(1)", "www.example.com"}) do
+    -- Mudlet connects to these itself, asking the player first
+    for _, href in ipairs({"telnet://games.example:4000", "TELNETS://games.example:4000"}) do
+      it(("connects to %s"):format(href), function()
+        assertRunsOnly(actionsAfter(("<A href=\"%s\">go</A>"):format(href)), "connectFromGameLink", href)
+      end)
+    end
+
+    for _, href in ipairs({"file:///etc/hosts", "steam://run/1", "javascript:alert(1)", "www.example.com", "telnet://:4000"}) do
       it(("does not open %s"):format(href), function()
         local actions = actionsAfter(("<A href=\"%s\">go</A>"):format(href))
         assert.is_table(actions)

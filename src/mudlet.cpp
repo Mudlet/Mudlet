@@ -61,6 +61,8 @@
 #include "TSpellChecker.h"
 #include "TTabBar.h"
 #include "TUiTour.h"
+#include "TelnetUri.h"
+#include "UntrustedText.h"
 
 #include "dlgAboutDialog.h"
 #include "dlgComposer.h"
@@ -6540,7 +6542,7 @@ void mudlet::attachDebugArea(const QString& hostname)
     smpDebugArea->hide();
 }
 
-void mudlet::doAutoLogin(const QString& profile_name, const bool offline)
+void mudlet::doAutoLogin(const QString& profile_name, const bool offline, const bool useTlsThisSession)
 {
     if (profile_name.isEmpty()) {
         return;
@@ -6555,49 +6557,14 @@ void mudlet::doAutoLogin(const QString& profile_name, const bool offline)
     const auto loadScope = qScopeGuard([this] {
         endProfileLoad();
     });
-    loadProfile(profile_name, !offline);
+    Host* pHost = loadProfile(profile_name, !offline);
+    // Set before slot_connectionDialogueFinished() dials
+    if (pHost && useTlsThisSession) {
+        pHost->mUseTlsThisSession = true;
+    }
 
     slot_connectionDialogueFinished(profile_name, !offline);
     enableToolbarButtons();
-}
-
-// Parse a telnet:// (RFC 4248) or telnets:// (TLS variant) URI
-std::optional<mudlet::TelnetUriData> mudlet::parseTelnetUri(const QString& uri)
-{
-    QUrl url(uri);
-
-    if (!url.isValid()) {
-        qWarning() << "mudlet::parseTelnetUri() - Malformed URI";
-        return std::nullopt;
-    }
-
-    const QString scheme = url.scheme();
-    const bool isTelnets = scheme.compare(qsl("telnets"), Qt::CaseInsensitive) == 0;
-    if (scheme.compare(qsl("telnet"), Qt::CaseInsensitive) != 0 && !isTelnets) {
-        qWarning() << "mudlet::parseTelnetUri() - Invalid URI scheme:" << scheme;
-        return std::nullopt;
-    }
-
-    TelnetUriData data;
-    data.useTls = isTelnets;
-    data.host = url.host();
-    if (data.host.isEmpty()) {
-        qWarning() << "mudlet::parseTelnetUri() - URI missing host";
-        return std::nullopt;
-    }
-
-    data.port = url.port(data.useTls ? 992 : 23);
-    if (data.port < 1 || data.port > 65535) {
-        qWarning() << "mudlet::parseTelnetUri() - Port out of range:" << data.port;
-        return std::nullopt;
-    }
-
-    if (!url.userName().isEmpty()) {
-        data.username = url.userName();
-    }
-
-    qDebug() << "mudlet::parseTelnetUri() - Parsed URI:" << url.toDisplayString(QUrl::RemoveUserInfo);
-    return data;
 }
 
 // Find existing profile matching host and port
@@ -6744,6 +6711,65 @@ void mudlet::handleTelnetUri(const QString& uri)
     mProcessingTelnetUri = false;
 }
 
+// A game's link to a telnet:// or telnets:// address always asks first, as a saved profile for it logs in with its
+// saved details. telnets:// uses TLS until the profile closes and never changes a saved profile's own setting.
+void mudlet::connectFromGameLink(const QString& uri)
+{
+    // The question's event loop runs further clicks on game links
+    if (mGameLinkQuestionOpen) {
+        return;
+    }
+    const auto uriData = parseTelnetUri(uri);
+    if (!uriData) {
+        return;
+    }
+    mGameLinkQuestionOpen = true;
+    const auto questionDone = qScopeGuard([this] {
+        mGameLinkQuestionOpen = false;
+    });
+
+    const QString address = UntrustedText::forTarget(qsl("%1:%2").arg(uriData->host).arg(uriData->port));
+    QString profileName = findMatchingProfile(uriData->host, uriData->port);
+    QString question;
+    if (profileName.isEmpty()) {
+        //: Asked when the player clicks a link from the game to a game's address, which may be the game being played; %1 is its host and port
+        question = tr("Connect to %1?").arg(address);
+    } else {
+        //: Asked when the player clicks a link from the game to an address one of their profiles is for; %1 is its host and port, %2 the profile's name
+        question = tr("Connect to %1 with your profile %2? It will log in with your saved details.").arg(address, profileName);
+    }
+
+    bool confirmed = false;
+    if (mConfirmGameLink) {
+        confirmed = mConfirmGameLink(question);
+    } else {
+        //: Title of the question asked when the player clicks a link from the game to a game's address
+        QMessageBox box(QMessageBox::Question, tr("Connect to a game"), question, QMessageBox::Yes | QMessageBox::Cancel, this);
+        box.setTextFormat(Qt::PlainText);
+        box.setDefaultButton(QMessageBox::Cancel);
+        confirmed = box.exec() == QMessageBox::Yes;
+    }
+    if (!confirmed) {
+        return;
+    }
+
+    if (profileName.isEmpty()) {
+        profileName = createProfileForUri(*uriData);
+        if (profileName.isEmpty()) {
+            return;
+        }
+    }
+
+    if (Host* pHost = mHostManager.getHost(profileName)) {
+        if (pHost->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState) {
+            pHost->mUseTlsThisSession = uriData->useTls;
+            pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
+        }
+    } else {
+        doAutoLogin(profileName, false, uriData->useTls);
+    }
+    setActiveProfileTab(profileName);
+}
 
 void mudlet::processEventLoopHack()
 {

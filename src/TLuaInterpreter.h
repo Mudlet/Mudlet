@@ -351,6 +351,7 @@ public:
     static int setRoomIDbyHash(lua_State*);
     static int sendSocket(lua_State*);
     static int openUrl(lua_State*);
+    static int connectFromGameLink(lua_State*);
     static int getRoomsByPosition(lua_State*);
     static int getRoomsByPosition1(lua_State*);
     static int getRoomEnv(lua_State*);

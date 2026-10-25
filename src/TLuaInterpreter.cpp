@@ -7136,6 +7136,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "removeCmdLineBlacklist", TLuaInterpreter::removeCmdLineBlacklist);
     lua_register(pGlobalLua, "clearCmdLineBlacklist", TLuaInterpreter::clearCmdLineBlacklist);
     lua_register(pGlobalLua, "openUrl", TLuaInterpreter::openUrl);
+    lua_register(pGlobalLua, "connectFromGameLink", TLuaInterpreter::connectFromGameLink);
     lua_register(pGlobalLua, "sendSocket", TLuaInterpreter::sendSocket);
     lua_register(pGlobalLua, "setRoomIDbyHash", TLuaInterpreter::setRoomIDbyHash);
     lua_register(pGlobalLua, "getRoomIDbyHash", TLuaInterpreter::getRoomIDbyHash);
@@ -8541,6 +8542,18 @@ int TLuaInterpreter::duplicateLuaRegistryIndex(int index)
 {
     lua_rawgeti(pGlobalLua, LUA_REGISTRYINDEX, index);
     return luaL_ref(pGlobalLua, LUA_REGISTRYINDEX);
+}
+
+// No documentation available in wiki - internal function
+// The action of a game's link to a telnet:// or telnets:// address
+int TLuaInterpreter::connectFromGameLink(lua_State* L)
+{
+    const QString uri = getVerifiedString(L, __func__, 1, "address");
+    // Deferred: the question's nested event loop must not spin inside this Lua call
+    QTimer::singleShot(0, qApp, [uri] {
+        TAppFrontend::instance()->connectFromGameLink(uri);
+    });
+    return 0;
 }
 
 // No documentation available in wiki - internal function

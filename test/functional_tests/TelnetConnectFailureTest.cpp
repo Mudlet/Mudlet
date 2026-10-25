@@ -353,6 +353,45 @@ private slots:
         QVERIFY2(!bufferContains(host, qsl("Unable to connect")), "a failed handshake was reported as a failure to connect as well");
         QCOMPARE(recordedEventCount(host, qsl("sysDisconnectionEvent")), 1);
     }
+
+    // A game's telnets:// link to a saved profile connects it with TLS, which this plain game fails,
+    // without saving TLS to the profile; a telnet:// link afterwards connects it without
+    void test_aGameLinkToASavedProfileUsesTlsOnlyWhenItSaysSo()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        const QString savedTls = MudletApp::readProfileData(mHostname, qsl("ssl_tsl"));
+        const int disconnectsBefore = countLines(host, qsl("Socket got disconnected"));
+        mpServer->setGreeting(QByteArray("Welcome to the game.\r\n"));
+
+        QString asked;
+        mudlet::self()->mConfirmGameLink = [&asked](const QString& question) {
+            asked = question;
+            return true;
+        };
+        const auto unhook = qScopeGuard([] {
+            mudlet::self()->mConfirmGameLink = nullptr;
+        });
+        mudlet::self()->connectFromGameLink(qsl("telnets://%1:%2").arg(mLocalhost).arg(mPort));
+        QCOMPARE(asked, qsl("Connect to %1:%2 with your profile %3? It will log in with your saved details.").arg(mLocalhost).arg(mPort).arg(mHostname));
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
+                         },
+                         20s),
+                 "the telnets:// link did not connect with TLS");
+        QVERIFY(!host->mSslTsl);
+        QCOMPARE(MudletApp::readProfileData(mHostname, qsl("ssl_tsl")), savedTls);
+
+        const int disconnectsAfterTls = countLines(host, qsl("Socket got disconnected"));
+        QSignalSpy connected(&host->mTelnet, &cTelnet::signal_connected);
+        mudlet::self()->connectFromGameLink(qsl("telnet://%1:%2").arg(mLocalhost).arg(mPort));
+        QVERIFY2(connected.wait(3s), "the telnet:// link did not connect");
+        QTest::qWait(1s);
+        QCOMPARE(countLines(host, qsl("Socket got disconnected")), disconnectsAfterTls);
+        QVERIFY(!host->mUseTlsThisSession);
+    }
 #endif
 
 private:

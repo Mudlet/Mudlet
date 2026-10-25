@@ -21,6 +21,7 @@
 #include "TMxpLinkTagHandler.h"
 #include "LuaLiteral.h"
 #include "TMxpClient.h"
+#include "TelnetUri.h"
 #include "UntrustedText.h"
 
 #include <QCoreApplication>
@@ -33,6 +34,19 @@ QString refusedHint(const QString& href)
 {
     //: Tooltip on a link from the game whose address Mudlet will not open, such as a file or a program's own scheme; %1 is that address
     return QCoreApplication::translate("TMxpLinkTagHandler", "Mudlet does not open this kind of address: %1").arg(UntrustedText::forTarget(href));
+}
+
+// Mudlet connects to these itself, after asking, rather than handing them to the system
+bool connectsToGame(const QString& href)
+{
+    const QString scheme = QUrl(href).scheme().toLower();
+    return scheme == qsl("telnet") || scheme == qsl("telnets");
+}
+
+QString connectHint(const QString& href)
+{
+    //: Start of the tooltip on a link from the game to a game's address, which may be the game being played, followed by a colon and that address
+    return qsl("%1: %2").arg(QCoreApplication::translate("TMxpLinkTagHandler", "Connect to"), UntrustedText::forTarget(href));
 }
 } // namespace
 
@@ -65,6 +79,8 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     const QString action = mIsHrefInContent ? QString() : actionFor(mHref);
     if (!mIsHrefInContent && action.isEmpty()) {
         hint = refusedHint(mHref);
+    } else if (!mIsHrefInContent && mHintIsHref && connectsToGame(mHref)) {
+        hint = connectHint(mHref);
     }
 
     // Use the version of setLink that supports expire names
@@ -96,7 +112,7 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
             if (links->first().isEmpty()) {
                 hints->first() = refusedHint(href);
             } else if (mHintIsHref) {
-                hints->first() = UntrustedText::forTarget(href);
+                hints->first() = connectsToGame(href) ? connectHint(href) : UntrustedText::forTarget(href);
             }
         }
     }
@@ -109,6 +125,9 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
 
 QString TMxpLinkTagHandler::actionFor(const QString& href)
 {
+    if (connectsToGame(href)) {
+        return parseTelnetUri(href) ? qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(href)) : QString();
+    }
     // Game servers choose MXP link addresses, so only these schemes may reach the system's URL handler
     const QString scheme = QUrl(href).scheme().toLower();
     if (scheme != qsl("http") && scheme != qsl("https") && scheme != qsl("ftp") && scheme != qsl("mailto")) {

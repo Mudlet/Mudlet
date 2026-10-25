@@ -930,6 +930,8 @@ public:
     bool mFORCE_SAVE_ON_EXIT = true;
 
     bool mSslTsl = false;
+    // A game's telnets:// link asks for TLS until the profile closes; unlike mSslTsl it is never saved
+    bool mUseTlsThisSession = false;
     bool mSslIgnoreExpired = false;
     bool mSslIgnoreSelfSigned = false;
     bool mSslIgnoreAll = false;
