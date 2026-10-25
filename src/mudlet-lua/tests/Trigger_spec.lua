@@ -2992,11 +2992,12 @@ describe("Trigger processing", function()
         -- class such as \s or [^(] takes too: matches keeps it, the highlight leaves it out
         describe("with a match that runs to the end of the line", function()
 
-            -- the highlighted characters, with "|" wherever a highlighted run ends
+            -- the highlighted characters, with "|" wherever a highlighted run ends, and the line's text
             local function highlightedOn(lineNumber)
                 moveCursor(0, lineNumber)
+                local text = getCurrentLine()
                 local runs, column, inRun = {}, 0, false
-                for character in getCurrentLine():gmatch("[%z\1-\127\194-\244][\128-\191]*") do
+                for character in text:gmatch("[%z\1-\127\194-\244][\128-\191]*") do
                     -- a four byte UTF-8 character is two UTF-16 units, the columns selectSection() counts
                     local units = (#character == 4) and 2 or 1
                     selectSection(column, units)
@@ -3011,7 +3012,7 @@ describe("Trigger processing", function()
                 end
                 deselect()
                 moveCursorEnd()
-                return table.concat(runs)
+                return table.concat(runs), text
             end
 
             -- busted keeps only the last finally() a test registers, so a test with
@@ -3025,11 +3026,13 @@ describe("Trigger processing", function()
                 end)
                 _G.TrigHighlight = {}
                 tempComplexRegexTrigger("SpecHighlightLineEnd", pattern,
-                    [==[_G.TrigHighlight.line = getLineNumber() _G.TrigHighlight.matches = {unpack(matches)}]==],
+                    [==[_G.TrigHighlight.matches = {unpack(matches)}]==],
                     0, 0, 0, 0, matchAll and 1 or 0, "red", "blue", 0, 0, 0)
                 feedTriggers(incoming .. "\n")
-                assert.is_number(_G.TrigHighlight.line, "the highlight trigger should have fired on '" .. incoming .. "'")
-                return highlightedOn(_G.TrigHighlight.line), _G.TrigHighlight.matches
+                assert.is_table(_G.TrigHighlight.matches, "the highlight trigger should have fired on '" .. incoming .. "'")
+                -- a line number taken in the trigger is stale if the pass trimmed the buffer
+                local highlighted, text = highlightedOn(getLastLineNumber("main") - 1)
+                return highlighted, _G.TrigHighlight.matches, text
             end
 
             local lookbehind = [[(?<=: )([\w\s\']+)]]
@@ -3039,6 +3042,8 @@ describe("Trigger processing", function()
                 {lookbehind, "Town Center: Fox Plaza.", "Fox Plaza|", "Fox Plaza"},
                 {lookbehind, "Town Center: Fox Plaza (here)", "Fox Plaza |", "Fox Plaza "},
                 {[[: ([\w\s\']+)]], "Town Center: Fox Plaza", "Fox Plaza", "Fox Plaza\n"},
+                -- $ also matches before the newline at the end, so it does not stop the capture taking it
+                {lookbehind .. "$", "Town Center: Fox Plaza", "Fox Plaza", "Fox Plaza\n"},
                 -- a negated class, with and without the character it negates
                 {[[^([^(]+)]], "hello ok", "hello ok", "hello ok\n"},
                 {[[^([^(]+)]], "hello ok (x)", "hello ok |", "hello ok "},
@@ -3073,7 +3078,8 @@ describe("Trigger processing", function()
 
             it("leaves text an earlier trigger echoed onto the end of the line alone", function()
                 local echoer = tempRegexTrigger("^Town Square: Fox Plaza$", function() echo(" [seen]") end)
-                local highlighted = highlightFor(lookbehind, "Town Square: Fox Plaza", false, function() killTrigger(echoer) end)
+                local highlighted, _, text = highlightFor(lookbehind, "Town Square: Fox Plaza", false, function() killTrigger(echoer) end)
+                assert.are.equal("Town Square: Fox Plaza [seen]", text, "the earlier trigger should have echoed")
                 assert.are.equal("Fox Plaza|", highlighted)
             end)
 
@@ -3082,7 +3088,8 @@ describe("Trigger processing", function()
                     if selectString("Town Market", 1) > -1 then replace("TM") end
                     deselect()
                 end)
-                local highlighted = highlightFor(lookbehind, "Town Market: Fox Plaza", false, function() killTrigger(editor) end)
+                local highlighted, _, text = highlightFor(lookbehind, "Town Market: Fox Plaza", false, function() killTrigger(editor) end)
+                assert.are.equal("TM: Fox Plaza", text, "the earlier trigger should have shortened the line")
                 assert.are.equal("Fox Plaza", highlighted)
             end)
         end)
@@ -4916,12 +4923,13 @@ describe("Trigger processing", function()
             -- the parent's capture keeps the "\n" its pattern took after the line,
             -- so a child's capture can end in it too
             it("lets a child highlight a capture that runs to the end of the line", function()
-                withTrigger("filter line end", function()
+                withTrigger("filter line end", function(setCleanup)
+                    setCleanup(moveCursorEnd)
                     feedTriggers("tkfle hello ok\n")
                     local fired = _G.TriggerKindsSpec.filterLineEnd
                     assert.is_table(fired, "the child should have fired")
                     assert.are.equal("ok\n", fired.capture)
-                    moveCursor(0, fired.line)
+                    moveCursor(0, getLastLineNumber("main") - 1)
                     assert.is_true(selectString("ok", 1) >= 0)
                     local child = {getFgColor()}
                     deselect()

@@ -374,7 +374,7 @@ _G.TriggerKindsSpec.namedChain = {rows = #multimatches, first = row(1).first, sp
 			</regexCodePropertyList>
 			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="yes" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>mudlet-spec-triggerkinds filter line end child</name>
-				<script>_G.TriggerKindsSpec.filterLineEnd = {line = getLineNumber(), capture = matches[2]}</script>
+				<script>_G.TriggerKindsSpec.filterLineEnd = {capture = matches[2]}</script>
 				<triggerType>0</triggerType>
 				<conditonLineDelta>0</conditonLineDelta>
 				<mStayOpen>0</mStayOpen>
