@@ -201,7 +201,7 @@ int appendToByteArray(lua_State*, const void* data, size_t size, void* byteArray
 QByteArray withoutChunkName(const QByteArray& dump)
 {
     constexpr qsizetype nameStart = csmLuaChunkHeaderSize + sizeof(size_t);
-    if (dump.size() < nameStart || !dump.startsWith(LUA_SIGNATURE) || dump.at(4) != csmLua51Version || dump.at(8) != char(sizeof(size_t))) {
+    if (dump.size() < nameStart || !dump.startsWith(LUA_SIGNATURE) || dump.at(4) != csmLua51Version || dump.at(8) != static_cast<char>(sizeof(size_t))) {
         return {};
     }
     size_t nameSize;

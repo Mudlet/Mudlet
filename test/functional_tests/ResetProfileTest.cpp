@@ -211,7 +211,8 @@ private slots:
     mSavedXdg = qgetenv("XDG_CONFIG_HOME");
     qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
     // Where the platform honours it, keeps the bytecode cache this test
-    // tampers with away from the developer's own
+    // tampers with away from the developer's own. Elsewhere the tests use the
+    // real one, which every reset leaves holding freshly compiled entries.
     QVERIFY(mCacheDir.isValid());
     mSavedXdgCache = qgetenv("XDG_CACHE_HOME");
     qputenv("XDG_CACHE_HOME", mCacheDir.path().toUtf8());
@@ -868,9 +869,6 @@ private slots:
   }
 
   void test_resetLoadsLuaGlobalFilesFromBytecodeCache() {
-    if (!bytecodeCachePathFileName().startsWith(mCacheDir.path())) {
-      QSKIP("the cache location cannot be redirected on this platform");
-    }
     QVERIFY2(readBytecodeCache().contains("StringUtils.lua"),
              "opening the profile should have cached LuaGlobal.lua's files");
     const QDateTime written =
@@ -883,9 +881,6 @@ private slots:
   }
 
   void test_editedLuaGlobalFileIsRecompiled() {
-    if (!bytecodeCachePathFileName().startsWith(mCacheDir.path())) {
-      QSKIP("the cache location cannot be redirected on this platform");
-    }
     auto entries = readBytecodeCache();
     QVERIFY(entries.contains("StringUtils.lua"));
     QVERIFY(entries.contains("TableUtils.lua"));
@@ -910,9 +905,6 @@ private slots:
   }
 
   void test_damagedBytecodeIsRecompiled() {
-    if (!bytecodeCachePathFileName().startsWith(mCacheDir.path())) {
-      QSKIP("the cache location cannot be redirected on this platform");
-    }
     auto entries = readBytecodeCache();
     QVERIFY(entries.contains("StringUtils.lua"));
     QVERIFY(entries.contains("TableUtils.lua"));
@@ -930,9 +922,6 @@ private slots:
   }
 
   void test_unreadableBytecodeCacheIsReplaced() {
-    if (!bytecodeCachePathFileName().startsWith(mCacheDir.path())) {
-      QSKIP("the cache location cannot be redirected on this platform");
-    }
     QFile file(bytecodeCachePathFileName());
     QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
     file.write("not a bytecode cache");
