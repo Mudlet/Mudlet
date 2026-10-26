@@ -658,8 +658,8 @@ void TriggerUnit::refreshRootNodeSnapshot()
     mRootNodeSnapshotStale = false;
 }
 
-// Bit i is clear when the copied filter of root first + i already rules the line out. Roots of
-// the other kinds are left for the loop to ask.
+// Bit i is clear when root first + i's copied Text filter rules the line out; Visit and Color roots
+// stay set for the loop to ask.
 static quint64
 screenRoots(const std::vector<TRootTriggerFilter>& filters, const int first, const int end, const TBigramFilter::Bits* lineBits, const char16_t lineFirst, const int exactLength, int& textRoots)
 {
@@ -813,8 +813,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         QRgb lineBackground = 0;
         const int rootCount = static_cast<int>(pinnedNodeList.size());
         size_t nextCandidate = 0;
-        // Without the prescan the copied filters are screened 64 roots at a time, in one pass over
-        // them, rather than one per trip round the loop
+        // The prescan's candidate list stands in for the screen, so the summary stays lazy then
         const TBigramFilter::Bits* const lineBits = prescanActive ? nullptr : lineBigrams.lineBits();
         const char16_t lineFirst = data.front().unicode();
         const int exactLength = static_cast<int>(data.size()) - (data.endsWith(u'\n') ? 1 : 0);

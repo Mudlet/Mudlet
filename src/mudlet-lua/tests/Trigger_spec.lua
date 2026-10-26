@@ -2083,16 +2083,15 @@ describe("Trigger processing", function()
             }, hits)
         end)
 
-        -- Regex triggers, as only plain text ones are filed by content: this many of those would take
-        -- the line down another path. Roots are screened 64 at a time, and with one in three ruled out,
-        -- some batch starts with a hit just after a root that was ruled out, wherever the run starts.
+        -- Regex, as this many plain text triggers would switch the prescan on, which skips the screen.
+        -- 64 is not a multiple of 3, so some batch starts on a hit right after a ruled-out root.
         it("offers a line to every matching trigger however many come before it", function()
             local order = {}
             local ids = installBallast()
             local expected = {}
             for i = 1, 260 do
                 if i % 93 == 0 then
-                    -- no text every match has to hold, so nothing can rule it out but pcre2
+                    -- an inline option leaves no required literal, so no copied filter can screen it out
                     expected[#expected + 1] = i
                     ids[#ids + 1] = tempRegexTrigger("(?i)SPECSCREEN_HIT", function() order[#order + 1] = i end)
                 elseif i % 3 ~= 1 then
@@ -2104,7 +2103,7 @@ describe("Trigger processing", function()
             end
 
             feedTriggers("\nwarming the line summary\n")
-            -- twice, so that one of them is summarised even if summaries came every other line
+            -- twice, so the check does not rest on one line's decision to summarise
             feedTriggers("\na specscreen_hit line\n")
             feedTriggers("\na specscreen_hit line\n")
 
@@ -2131,7 +2130,7 @@ describe("Trigger processing", function()
             finally(function() setConfig("specialForceMXPProcessorOn", false) end)
 
             feedTriggers("\nwarming the line summary\n")
-            -- twice, so that one of them is summarised even if summaries came every other line
+            -- twice, so the check does not rest on one line's decision to summarise
             feedTriggers("\nzqab&#xD800;cd\n")
             feedTriggers("\nzqab&#xD800;cd\n")
 
