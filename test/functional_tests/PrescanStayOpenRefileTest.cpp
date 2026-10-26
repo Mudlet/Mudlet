@@ -28,6 +28,7 @@
  * worth of maintenance. Nothing observable separates that from a rebuild - both
  * leave the same index behind and match identically - so the count of rebuilds
  * is the only thing that can tell them apart, and it is what this watches.
+ * The last cases check firings instead, for the child walk built on that filing.
  *
  * Run with: ctest -R PrescanStayOpenRefileTest -V
  */

@@ -25,7 +25,8 @@
  * whole T, not left to ~Tree(), by which point the parent's T part has been
  * destroyed (#11059). Neither ASan nor valgrind sees that, because the storage
  * has not been freed yet, so each case plants a child that records its
- * parent's dynamic type at the start of its own teardown.
+ * parent's dynamic type at the start of its own teardown. The two that redo a
+ * trigger deletion instead check that it takes the trigger out of its group's child walk.
  *
  * Run with: ctest -R TreeChildTeardownTest -V
  */
@@ -245,7 +246,7 @@ private slots:
     // line; deleting it has to take it out of that walk all the same
     void test_redoingTheDeletionOfAnUnfiledTrigger()
     {
-        // Entering the freed trigger reads it without crashing, but match() warns about it
+        // Without ASan, entering the freed trigger usually reads it without crashing, and match() then warns
         QTest::failOnWarning(QRegularExpression(qsl("called on destroyed trigger")));
         TriggerUnit* unit = mpHost->getTriggerUnit();
         QVERIFY(runLua(qsl(R"(
