@@ -2971,9 +2971,10 @@ describe("Tests game text the ingest worker parses ahead", function()
     triggers[#triggers + 1] = tempTrigger("IngestHostColour 20 ", function()
       setBackgroundColor("main", 10, 20, 30)
     end)
+    -- Each line ends in the background the trigger sets, so only the profile colour tells the parses apart
     local lines = {}
     for i = 1, 700 do
-      lines[i] = "\27[0mIngestHostColour " .. i .. " "
+      lines[i] = "\27[0mIngestHostColour " .. i .. " \27[48;2;10;20;30m"
     end
     local apart = pass(lines, false, true)
     setBackgroundColor("main", r, g, b)
@@ -2987,9 +2988,10 @@ describe("Tests game text the ingest worker parses ahead", function()
   end)
 
   it("marks a prompt in a read as a prompt", function()
+    -- A prompt ends the read it is in, so the worker only sees one after enough lines to take the read
     local lines = {}
-    for i = 1, 40 do
-      lines[i] = i % 10 == 0 and ("IngestPrompt " .. i .. "> <T_IAC><T_GA>") or ("IngestPromptText " .. i)
+    for i = 1, 60 do
+      lines[i] = i % 20 == 0 and ("IngestPrompt " .. i .. "> <T_IAC><T_GA>") or ("IngestPromptText " .. i)
     end
     local before = parsedAhead()
     local together = sameEitherWay(lines, true)
