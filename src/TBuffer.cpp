@@ -1506,6 +1506,47 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     parseChunk(localBuffer, isFromServer, encodingLookupTable, decodable, speculation);
 }
 
+// Forced inline: parseChunk() is past the size where the compiler inlines into it on its own
+Q_ALWAYS_INLINE bool TBuffer::mxpProcessorEnabled() const
+{
+    return !mpParseConfig && mpHost->mMxpProcessor.isEnabled();
+}
+
+Q_ALWAYS_INLINE bool TBuffer::mxpClientBold() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->mxpBold : mpHost->mMxpClient.bold();
+}
+
+Q_ALWAYS_INLINE bool TBuffer::mxpClientItalic() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->mxpItalic : mpHost->mMxpClient.italic();
+}
+
+Q_ALWAYS_INLINE bool TBuffer::mxpClientUnderline() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->mxpUnderline : mpHost->mMxpClient.underline();
+}
+
+Q_ALWAYS_INLINE bool TBuffer::mxpClientStrikeOut() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->mxpStrikeOut : mpHost->mMxpClient.strikeOut();
+}
+
+Q_ALWAYS_INLINE bool TBuffer::hostHaveColorSpaceId() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->haveColorSpaceId : mpHost->getHaveColorSpaceId();
+}
+
+Q_ALWAYS_INLINE const QColor& TBuffer::hostForeground() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->hostForeground : mpHost->mFgColor;
+}
+
+Q_ALWAYS_INLINE const QColor& TBuffer::hostBackground() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->hostBackground : mpHost->mBgColor;
+}
+
 void TBuffer::parseChunk(
         std::string& localBuffer, const bool isFromServer, const QVector<QChar>& encodingLookupTable, size_t localBufferDecodableLength, TIngestJob* speculation, const size_t startPosition)
 {
@@ -2285,46 +2326,6 @@ void TBuffer::parseChunk(
         }
         ++localBufferPosition;
     }
-}
-
-bool TBuffer::mxpProcessorEnabled() const
-{
-    return !mpParseConfig && mpHost->mMxpProcessor.isEnabled();
-}
-
-bool TBuffer::mxpClientBold() const
-{
-    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->mxpBold : mpHost->mMxpClient.bold();
-}
-
-bool TBuffer::mxpClientItalic() const
-{
-    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->mxpItalic : mpHost->mMxpClient.italic();
-}
-
-bool TBuffer::mxpClientUnderline() const
-{
-    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->mxpUnderline : mpHost->mMxpClient.underline();
-}
-
-bool TBuffer::mxpClientStrikeOut() const
-{
-    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->mxpStrikeOut : mpHost->mMxpClient.strikeOut();
-}
-
-bool TBuffer::hostHaveColorSpaceId() const
-{
-    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->haveColorSpaceId : mpHost->getHaveColorSpaceId();
-}
-
-const QColor& TBuffer::hostForeground() const
-{
-    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->hostForeground : mpHost->mFgColor;
-}
-
-const QColor& TBuffer::hostBackground() const
-{
-    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->hostBackground : mpHost->mBgColor;
 }
 
 TBuffer::ParseState TBuffer::parseState() const
