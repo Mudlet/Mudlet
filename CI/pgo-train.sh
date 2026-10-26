@@ -85,7 +85,9 @@ find "${PROFILE_DIR}" -type f \( -name '*.gcda' -o -name '*.profraw' -o -name '*
 train PipelineBenchmark text_best_pass_ms trigger_best_pass_ms defaults_text_best_pass_ms display_paint_ms
 
 # The benchmarks convert the XML to the binary format themselves, so TMap::restore() is trained too.
-# The routes are Mapper_spec.lua's two longest, both ways: 96 steps between areas, and the 186-step diagonal.
+# PathfindBenchmark builds the pathfinding graph but walks no routes: trained on them, GCC 12 turned
+# the conditional moves in TMap::searchGraph() into branches and took 1.15 times as long per search,
+# on the trained map too.
 # Under the profile directory rather than mktemp's, as the benchmarks need a path Windows can open.
 MAP_DIR="${PROFILE_DIR}/training-map"
 rm -rf "${MAP_DIR}"
@@ -95,7 +97,7 @@ MAP_ARCHIVE="$(cd "$(dirname "$0")/.." && pwd)/src/mudlet-lua/tests/fixtures/map
 (cd "${MAP_DIR}" && cmake -E tar xf "${MAP_ARCHIVE}")
 export MUDLET_BENCH_MAP="${MAP_DIR}/achaea-map.xml"
 train MapRenderBenchmark map_restore_seconds render_fit_ms
-MUDLET_BENCH_ROUTES="107:1192,1192:107,6595:18690,18690:6595" train PathfindBenchmark init_graph_ms path_route_18690_6595_ms
+MUDLET_BENCH_ROUTES=none train PathfindBenchmark init_graph_ms
 
 if [[ "${COMPILER}" == *Clang* ]]; then
   # The merged profile has to be in the format of the compiler that reads it, so

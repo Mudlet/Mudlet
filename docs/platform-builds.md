@@ -164,12 +164,13 @@ function whose code changed loses its profile, which GCC refuses as an error and
 
 The training is PipelineBenchmark - text decoding, the trigger engine, the default packages and
 console painting - then MapRenderBenchmark and PathfindBenchmark on the Achaea map in
-`src/mudlet-lua/tests/fixtures/maps`, which load, audit and draw it and walk two long routes across it.
-Functions the training never enters are compiled as if there were no profile under GCC, thanks to
-`-fprofile-partial-training`, and treated as cold under Clang. With PipelineBenchmark as the only
-training, measured as time taken relative to a plain Release build of the same compiler at `-O3` -
-below 1 is faster - interleaved and paired per round, with svof (an Achaea combat system of 3,086
-triggers), the 2D mapper and the pathfinder held out:
+`src/mudlet-lua/tests/fixtures/maps`, which load, audit and draw it and build its pathfinding graph.
+They walk no routes across it: trained on A* searches, GCC 12 took about 1.15 times as long per
+search, on the trained map too. Functions the training never enters are compiled as if there were
+no profile under GCC, thanks to `-fprofile-partial-training`, and treated as cold under Clang. With
+PipelineBenchmark as the only training, measured as time taken relative to a plain Release build of
+the same compiler at `-O3` - below 1 is faster - interleaved and paired per round, with svof (an
+Achaea combat system of 3,086 triggers), the 2D mapper and the pathfinder held out:
 
 | | GCC 13 | Clang 18 |
 | --- | --- | --- |
@@ -184,27 +185,29 @@ So through the benchmark's own slots it pays mostly for Clang builds, and a big 
 like svof gained little from a profile of the benchmark's triggers. Held-out code can move either
 way: on the 2.3-million-room Aetherspace map, GCC 12 with that profile took 1.12 of the time to load
 the map, 1.09 to audit it and 1.04 to build the pathfinding graph, which is why the training covers
-the mapper too - with it, those came out at @RESTORE@, @AUDIT@ and @GRAPH@. Hand-placed `Q_LIKELY`/`Q_UNLIKELY` hints are not a substitute - removing all of
-Mudlet's, or adding more to the hottest branches, measured as noise.
+the mapper too - with it, those came out at 0.97, 0.99 and 0.97. Hand-placed `Q_LIKELY`/`Q_UNLIKELY`
+hints are not a substitute - removing all of Mudlet's, or adding more to the hottest branches,
+measured as noise.
 
 CI builds all three releases this way: macOS and Windows with Clang, Linux with the GCC 12 it
 already uses. Switching Linux to Clang would trade one for the other: with PipelineBenchmark as the
 only training, profile-guided Clang beat plain GCC on the trained paths (triggers 0.90, text 0.86)
 but not on svof (0.98, noise), and was slower at 2D map rendering (1.08 to 1.24), plain Clang being
 slower than GCC there to begin with. Measured end to end on the Linux release configuration
-rather than through PipelineBenchmark's slots, GCC 12 with the profile took @46@ of the time on a
-replayed session with 46 triggers, @ZERO@ on the same session with none and @SVOF@ on svof, and
-@MAP@ at drawing and pathfinding the Aetherspace map.
+rather than through PipelineBenchmark's slots, GCC 12 with the profile took 0.89 of the time on a
+replayed session with 46 triggers, 0.89 on the same session with none and 0.94 on svof, drew the
+Aetherspace map within noise, and took 1.00 to 1.05 of the time to search for paths on four maps.
 
 The first pass builds only the instrumented benchmarks - building `mudlet` would send the
 instrumented binary's debug files to Sentry - and the second builds everything against the profile,
 so the tests that follow run on what ships. Tagged releases and the nightly macOS and Windows PTBs
 build this way, so a broken profile-guided build shows up the morning after it lands rather than on
-release day; Linux PTBs are AddressSanitizer builds and are not profile-guided. macOS PTBs keep their
-own build type, which is unoptimised, so there the nightly run proves the steps work but not that
-the optimised compile does - before tagging a release, run the *Build Mudlet* workflow by hand with
-its `pgo` input set to `true`, which builds macOS and Linux as Release, without AddressSanitizer, the
-way a tag does (*Build Mudlet (windows)* takes the same input, though its PTBs are Release already).
+release day; Linux PTBs are AddressSanitizer builds and are not profile-guided. macOS PTBs keep
+their own build type, which is unoptimised, so there the nightly run proves the steps work but not
+that the optimised compile does - before tagging a release, run the *Build Mudlet* workflow by hand
+with its `pgo` input set to `true`, which builds macOS and Linux as Release, without
+AddressSanitizer, the way a tag does (*Build Mudlet (windows)* takes the same input, though its PTBs
+are Release already).
 Pull requests never build profile-guided, and no profile-guided run saves its objects to the
 shared ccache.
 
