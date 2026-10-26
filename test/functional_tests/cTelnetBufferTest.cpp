@@ -748,6 +748,40 @@ private slots:
         QCOMPARE(linesContaining(qsl("mccp replay")), live);
     }
 
+    // A trigger can end the connection while its read is still being parsed,
+    // which saves the recording there and then, so that read must already be in
+    // it. Leaves this profile disconnected, hence its place near the end.
+    void readWhosePromptDisconnectsIsInTheReplay()
+    {
+        cTelnet& telnet = mpHost->mTelnet;
+        QVERIFY(telnet.getConnectionState() == QAbstractSocket::ConnectedState);
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("hangUpTrigger = tempTrigger('recorded hang up', function() disconnect() end)")));
+        const auto cleanUp = qScopeGuard([this, &telnet] {
+            mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("killTrigger(hangUpTrigger)"));
+            if (telnet.mRecordReplay) {
+                telnet.stopReplayRecording();
+            }
+            telnet.stopReplay();
+        });
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString fileName = dir.filePath(qsl("recording.dat"));
+        QVERIFY(telnet.startReplayRecording(fileName));
+        QByteArray read = QByteArrayLiteral("recorded line before the prompt\r\nrecorded hang up prompt");
+        read.append(TN_IAC).append(TN_GA);
+        QByteArray backing = read;
+        backing.append(scmTerminatorSlot);
+        telnet.processSocketData(backing.data(), static_cast<int>(read.size()), false);
+        QVERIFY2(!telnet.mRecordReplay, "the disconnect did not save the recording while the read was being parsed, so this test cannot tell the two states apart");
+
+        mpHost->mainConsoleView()->buffer.clear();
+        QVERIFY(MudletReplay::self()->load(mpHost, fileName));
+        QTRY_VERIFY(!telnet.isReplaying());
+        QCOMPARE(linesContaining(qsl("recorded line before the prompt")).size(), 1);
+        QCOMPARE(linesContaining(qsl("recorded hang up prompt")).size(), 1);
+    }
+
     // Declared last on purpose: on the unfixed code this trips AddressSanitizer,
     // which aborts the process, so anything after it would never report. The
     // sentinels give it teeth on Windows too, where CI builds without ASan.

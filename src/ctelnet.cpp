@@ -6204,30 +6204,48 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     // A compressed read can inflate to nothing. Older Mudlets refuse a replay
     // holding an empty chunk, so its wait carries over to the next chunk.
     const bool recordingThisRead = !loopbackTesting && mRecordReplay && datalen > 0;
-    // QElapsedTimer::elapsed() returns a qint64, it replaces a
-    // previous QTime::elapsed() which returns a int (effectively a
-    // qint32):
-    qint32 recordingChunkInterval = recordingThisRead ? static_cast<qint32>(mRecordingChunkTimer.elapsed()) - mRecordLastChunkMSecTimeOffset : 0;
-    const auto recordChunk = [this](const char* data, const qint32 length, const qint32 interval) {
+    // Written before any trigger on this read runs: one can end the connection,
+    // and that saves and closes the recording.
+    qint64 recordedChunkStart = -1;
+    qint64 recordedChunkEnd = -1;
+    if (recordingThisRead) {
+        recordedChunkStart = mpReplayFile->pos();
         ++mRecordingChunkCount;
+        // QElapsedTimer::elapsed() returns a qint64, it replaces a
+        // previous QTime::elapsed() which returns a int (effectively a
+        // qint32):
+        qint32 recordingChunkInterval = static_cast<qint32>(mRecordingChunkTimer.elapsed()) - mRecordLastChunkMSecTimeOffset;
         QDataStream replayStream(mpReplayFile.get());
         replayStream.setVersion(QDataStream::Qt_5_12);
-        replayStream << interval; // 4 bytes
-        replayStream << length;   // 4 bytes
-        replayStream.writeRawData(data, length);
+        replayStream << recordingChunkInterval; // 4 bytes
+        replayStream << datalen;                // 4 bytes
+        replayStream.writeRawData(buffer, datalen);
+        recordedChunkEnd = mpReplayFile->pos();
 #if defined(DEBUG_RECORDING)
-        qDebug().noquote().nospace() << "cTelnet::processSocketData(...) INFO - recording chunk: " << mRecordingChunkCount << " is " << length << " bytes and has an interval of: " << interval
-                                     << " mSecond since the previous chunk.";
+        qDebug().noquote().nospace() << "cTelnet::processSocketData(...) INFO - recording chunk: " << mRecordingChunkCount << " is " << datalen
+                                     << " bytes and has an interval of: " << recordingChunkInterval << " mSecond since the previous chunk.";
 #endif
-    };
-    // Replay never decompresses, so the pass is written once it is known whether
-    // it switches to a compressed stream part-way through: if it does, as the
-    // bytes up to the switch and then what the rest inflated to.
-    const auto recordUpToCompressedStream = [&](const int length) {
-        if (recordingThisRead) {
-            recordChunk(buffer, length, recordingChunkInterval);
-            // the rest arrived in the same read
-            recordingChunkInterval = 0;
+    }
+    // Replay never decompresses, so when compression starts part-way through
+    // the read its chunk is cut back to the bytes before the start, and what
+    // the rest inflated to follows with no wait of its own. Skipped if a
+    // trigger on the text before the start has closed the recording already.
+    const auto recordInflatedRest = [&](const int bytesBeforeCompression) {
+        if (!mRecordReplay || recordedChunkEnd < 0 || mpReplayFile->pos() != recordedChunkEnd) {
+            return;
+        }
+        QDataStream replayStream(mpReplayFile.get());
+        replayStream.setVersion(QDataStream::Qt_5_12);
+        mpReplayFile->seek(recordedChunkStart + 4); // past the interval, to the length
+        replayStream << static_cast<qint32>(bytesBeforeCompression);
+        const qint64 cutChunkEnd = recordedChunkStart + 8 + bytesBeforeCompression;
+        mpReplayFile->seek(cutChunkEnd);
+        mpReplayFile->resize(cutChunkEnd);
+        if (datalen > 0) {
+            ++mRecordingChunkCount;
+            replayStream << qint32{0};
+            replayStream << datalen;
+            replayStream.writeRawData(buffer, datalen);
         }
     };
 
@@ -6338,7 +6356,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                             gotRest(cleandata);
                             cleandata = "";
                             initStreamDecompressor();
-                            recordUpToCompressedStream(i + 3);
                             buffer += i + 3; //bugfix: BenH
                             int restLength = datalen - i - 3;
 
@@ -6352,6 +6369,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                                     remainingAmount = restLength;
                                 }
                                 buffer = out_buffer.get();
+                                recordInflatedRest(i + 3);
                                 i = -1; // start processing buffer from the beginning.
                             } else {
                                 datalen = 0;
@@ -6408,7 +6426,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                     if (mMCCP_version_4 && mNeedDecompression && buffer == in_buffer) {
                         gotRest(cleandata);
                         cleandata = "";
-                        recordUpToCompressedStream(i + 1);
                         buffer += i + 1;
                         int restLength = datalen - i - 1;
                         if (restLength > 0) {
@@ -6418,6 +6435,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                                 remainingAmount = restLength;
                             }
                             buffer = out_buffer.get();
+                            recordInflatedRest(i + 1);
                         } else {
                             datalen = 0;
                         }
@@ -6490,10 +6508,6 @@ Some data loss is likely - please mention this problem to the game admins.)",
             }
         }
     } //for
-
-    if (recordingThisRead && datalen > 0) {
-        recordChunk(buffer, datalen, recordingChunkInterval);
-    }
 
     if (!cleandata.empty()) {
         gotRest(cleandata);
