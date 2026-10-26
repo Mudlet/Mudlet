@@ -783,7 +783,7 @@ private:
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
     void translateToPlainTextInner(std::string& incoming, bool isFromServer);
-    void parseChunk(std::string& localBuffer, bool isFromServer, const QVector<QChar>& encodingLookupTable, size_t localBufferDecodableLength, TIngestJob* speculation);
+    void parseChunk(std::string& localBuffer, bool isFromServer, const QVector<QChar>& encodingLookupTable, size_t localBufferDecodableLength, TIngestJob* speculation, size_t startPosition = 0);
     bool speculationEligible() const;
     ParseState parseState() const;
     bool parseStateIs(const ParseState&) const;

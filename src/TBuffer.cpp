@@ -1505,7 +1505,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     parseChunk(localBuffer, isFromServer, encodingLookupTable, decodable, speculation);
 }
 
-void TBuffer::parseChunk(std::string& localBuffer, const bool isFromServer, const QVector<QChar>& encodingLookupTable, size_t localBufferDecodableLength, TIngestJob* speculation)
+void TBuffer::parseChunk(
+        std::string& localBuffer, const bool isFromServer, const QVector<QChar>& encodingLookupTable, size_t localBufferDecodableLength, TIngestJob* speculation, const size_t startPosition)
 {
     // The complete two byte escape sequences (DECSC, DECRC, RIS and a stray
     // ST) that games do send and that Mudlet has to swallow. Only these: any
@@ -1514,7 +1515,7 @@ void TBuffer::parseChunk(std::string& localBuffer, const bool isFromServer, cons
     const QByteArray cShortEscape = QByteArrayLiteral("78c\\");
 
     size_t localBufferLength = localBuffer.length();
-    size_t localBufferPosition = 0;
+    size_t localBufferPosition = startPosition;
     if (Q_UNLIKELY(speculation)) {
         replaySpeculatedLines(*speculation, localBufferPosition, isFromServer);
     }
@@ -1975,7 +1976,7 @@ void TBuffer::parseChunk(std::string& localBuffer, const bool isFromServer, cons
         }
 
         if (localBufferPosition >= endOfLiteralEntity && mxpProcessorEnabled()) {
-            // MXP rewrites the unit in place, which the worker may still be reading
+            // MXP rewrites the unit in place, so the worker's offsets stop matching it
             if (Q_UNLIKELY(speculation)) {
                 mpIngestPipeline->end(*speculation);
                 speculation = nullptr;
@@ -2432,7 +2433,16 @@ bool TBuffer::recordSpeculatedLine(const char ch, size_t& localBufferPosition, c
 {
     TIngestJob& job = *mpSpeculationSink;
     const int index = job.mReady.load(std::memory_order_relaxed);
-    if (static_cast<size_t>(index) >= job.mLines.size() || job.mCancel.load(std::memory_order_relaxed)) {
+    const size_t textLength = static_cast<size_t>(mMudLine.size());
+    const bool uniform = mMudBuffer.uniform() || mMudBuffer.empty();
+    const size_t formatLength = mMudBuffer.size();
+    if (job.mCancel.load(std::memory_order_relaxed)) {
+        mSpeculationStopped = true;
+        ++localBufferPosition;
+        return true;
+    }
+    if (static_cast<size_t>(index) >= job.mLines.size() || job.mTextUsed + textLength > job.mText.size() || (!uniform && job.mFormatUsed + formatLength > job.mFormats.size())) {
+        job.mResumeFrom = mSpeculatedLineStart;
         mSpeculationStopped = true;
         ++localBufferPosition;
         return true;
@@ -2442,22 +2452,48 @@ bool TBuffer::recordSpeculatedLine(const char ch, size_t& localBufferPosition, c
     line.end = localBufferPosition;
     line.commitChar = ch;
     line.forcedLineBreak = forcedLineBreak;
-    line.text = mMudLine.isEmpty() ? QString() : QString(mMudLine.constData(), mMudLine.size());
+    line.textOffset = static_cast<quint32>(job.mTextUsed);
+    line.textLength = static_cast<quint32>(textLength);
+    std::copy_n(mMudLine.constData(), textLength, job.mText.data() + job.mTextUsed);
+    job.mTextUsed += textLength;
+    line.uniform = uniform;
+    line.formatLength = static_cast<quint32>(formatLength);
+    if (uniform) {
+        if (formatLength) {
+            line.uniformFormat = mMudBuffer.front();
+        }
+    } else {
+        line.formatOffset = static_cast<quint32>(job.mFormatUsed);
+        std::copy(mMudBuffer.begin(), mMudBuffer.end(), job.mFormats.begin() + static_cast<std::ptrdiff_t>(job.mFormatUsed));
+        job.mFormatUsed += formatLength;
+    }
     mMudLine.resize(0);
-    line.format = TLineFormat(mMudBuffer);
     mMudBuffer.clear();
-    if (static_cast<size_t>(mMudLine.capacity()) > csmMaxRetainedLineCapacity) {
-        QString().swap(mMudLine);
-    }
-    if (mMudBuffer.capacity() > csmMaxRetainedLineCapacity) {
-        TLineFormat().swap(mMudBuffer);
-    }
     line.stateAtCommit = parseState();
     job.mReady.store(index + 1, std::memory_order_release);
     ++localBufferPosition;
     mSpeculatedLineStart = localBufferPosition;
     return true;
 }
+
+namespace {
+TLineFormat speculatedLineFormat(const TIngestJob& job, const TSpeculatedLine& line)
+{
+    TLineFormat format;
+    if (line.uniform) {
+        format.append(line.formatLength, line.uniformFormat);
+    } else {
+        const auto first = job.mFormats.cbegin() + line.formatOffset;
+        format.expand().assign(first, first + line.formatLength);
+    }
+    return format;
+}
+
+QStringView speculatedLineText(const TIngestJob& job, const TSpeculatedLine& line)
+{
+    return QStringView(job.mText.data() + line.textOffset, static_cast<qsizetype>(line.textLength));
+}
+} // namespace
 
 // Commits the lines the worker has parsed ahead from here on, for as long as each starts where this
 // buffer is, from the state this buffer is in, under the settings it was parsed with
@@ -2469,12 +2505,12 @@ void TBuffer::replaySpeculatedLines(TIngestJob& job, size_t& localBufferPosition
             ++job.mNext;
         }
         if (job.mNext >= ready) {
-            if (!job.mCancel.load(std::memory_order_relaxed)) {
+            if (!mpIngestPipeline->resume(*this, job, localBufferPosition)) {
                 ++mpIngestPipeline->mStatNotReady;
             }
             return;
         }
-        TSpeculatedLine& line = job.mLines[static_cast<size_t>(job.mNext)];
+        const TSpeculatedLine& line = job.mLines[static_cast<size_t>(job.mNext)];
         const ParseState& stateBefore = job.mNext ? job.mLines[static_cast<size_t>(job.mNext - 1)].stateAtCommit : job.mStartState;
         if (line.start != localBufferPosition || !mMudLine.isEmpty() || !mMudBuffer.empty() || !parseStateIs(stateBefore) || !parseConfigIs(job.mConfig)) {
             ++mpIngestPipeline->mStatMismatch;
@@ -2490,15 +2526,15 @@ void TBuffer::replaySpeculatedLines(TIngestJob& job, size_t& localBufferPosition
         size_t commitPosition = line.end;
         Host* pHost = mpHost;
         if (mServerWrapPendingLine.isEmpty() && !mHyperlinkActive && !pHost->mMxpFrameManager.hasActiveDestination()
-            && !(pHost->mUndoServerWrap && isFromServer && line.commitChar == '\n' && !line.forcedLineBreak && !line.text.isEmpty())) {
+            && !(pHost->mUndoServerWrap && isFromServer && line.commitChar == '\n' && !line.forcedLineBreak && line.textLength)) {
             // What commitLine() reduces to here, without copying the line through the accumulators
             ++mpIngestPipeline->mStatReplayedFast;
-            commitLineData(std::move(line.text), std::move(line.format), line.commitChar);
+            commitLineData(line.textLength ? speculatedLineText(job, line).toString() : QString(), speculatedLineFormat(job, line), line.commitChar);
             ++commitPosition;
         } else {
             ++mpIngestPipeline->mStatReplayedSlow;
-            mMudLine.append(line.text);
-            mMudBuffer = std::move(line.format);
+            mMudLine.append(speculatedLineText(job, line));
+            mMudBuffer = speculatedLineFormat(job, line);
             commitLine(line.commitChar, commitPosition, isFromServer, line.forcedLineBreak);
         }
         localBufferPosition = commitPosition;
@@ -2556,10 +2592,12 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
     }
     if (Q_UNLIKELY(mpVerifiedLine)) {
         const TSpeculatedLine& line = *std::exchange(mpVerifiedLine, nullptr);
-        bool same = line.end == localBufferPosition && line.commitChar == ch && line.forcedLineBreak == forcedLineBreak && line.text == mMudLine && line.format.size() == mMudBuffer.size()
-                    && line.format.uniform() == mMudBuffer.uniform() && parseStateIs(line.stateAtCommit);
+        const TIngestJob& job = *mpActiveSpeculation;
+        const TLineFormat format = speculatedLineFormat(job, line);
+        bool same = line.end == localBufferPosition && line.commitChar == ch && line.forcedLineBreak == forcedLineBreak && speculatedLineText(job, line) == mMudLine
+                    && format.size() == mMudBuffer.size() && format.uniform() == mMudBuffer.uniform() && parseStateIs(line.stateAtCommit);
         for (size_t i = 0; same && i < mMudBuffer.size(); ++i) {
-            same = line.format[i] == mMudBuffer[i];
+            same = format[i] == mMudBuffer[i];
         }
         mpIngestPipeline->noteVerified(same, mMudLine);
     }
