@@ -2408,6 +2408,7 @@ TBuffer::ParseConfig TBuffer::parseConfig() const
     config.mxpItalic = pHost->mMxpClient.italic();
     config.mxpUnderline = pHost->mMxpClient.underline();
     config.mxpStrikeOut = pHost->mMxpClient.strikeOut();
+    config.mxpColourOrLink = pHost->mMxpClient.isInLinkMode() || pHost->mMxpClient.hasFgColor() || pHost->mMxpClient.hasBgColor();
     return config;
 }
 
@@ -2416,7 +2417,8 @@ bool TBuffer::parseConfigIs(const ParseConfig& config) const
     Host* pHost = mpHost;
     return config.colourGeneration == mColourGeneration && !pHost->mMxpProcessor.isEnabled() && config.haveColorSpaceId == pHost->getHaveColorSpaceId() && config.mxpBold == pHost->mMxpClient.bold()
            && config.mxpItalic == pHost->mMxpClient.italic() && config.mxpUnderline == pHost->mMxpClient.underline() && config.mxpStrikeOut == pHost->mMxpClient.strikeOut()
-           && config.hostForeground == pHost->mFgColor && config.hostBackground == pHost->mBgColor;
+           && config.hostForeground == pHost->mFgColor && config.hostBackground == pHost->mBgColor
+           && config.mxpColourOrLink == (pHost->mMxpClient.isInLinkMode() || pHost->mMxpClient.hasFgColor() || pHost->mMxpClient.hasBgColor());
 }
 
 quint64 TBuffer::linesParsedAhead() const
@@ -2432,7 +2434,8 @@ bool TBuffer::speculationEligible() const
     if (mDecoder != Decoder::Utf8 && mDecoder != Decoder::Latin1 && mDecoder != Decoder::Ascii) {
         return false;
     }
-    return !mGotOSC && !mHyperlinkActive && !mpHost->mMxpProcessor.isEnabled();
+    const TMxpMudlet& mxpClient = mpHost->mMxpClient;
+    return !mGotOSC && !mHyperlinkActive && !mpHost->mMxpProcessor.isEnabled() && !mxpClient.isInLinkMode() && !mxpClient.hasFgColor() && !mxpClient.hasBgColor();
 }
 
 // The worker's commitLine(): hands the line over as commitLine() would have copied it out
@@ -2513,7 +2516,7 @@ void TBuffer::verifySpeculatedLine(const TSpeculatedLine& line, const char ch, c
         same = format[i] == mMudBuffer[i];
     }
     if (!same) {
-        qWarning().noquote() << "TBuffer ingest worker MISMATCH on line:" << mMudLine;
+        qWarning().noquote() << "TBuffer ingest worker MISMATCH on line:" << mMudLine << "- the worker's:" << speculatedLineText(job, line);
     }
 }
 
@@ -9089,6 +9092,11 @@ void TBuffer::styleForCurrentLink(TChar& c)
 
         // Only apply underline if explicitly set in styling (respects OSC 8 default of no underline)
         // Note: This differs from other Mudlet hyperlinks which default to underlined
+    }
+
+    // The worker's buffer only parses while MXP has no link or colour open, see speculationEligible()
+    if (Q_UNLIKELY(mpParseConfig)) {
+        return;
     }
 
     if (mpHost->mMxpClient.isInLinkMode()) {

@@ -47,7 +47,8 @@ bool TIngestPipeline::enabled()
 {
     static const bool on = [] {
         if (qEnvironmentVariableIsSet("MUDLET_INGEST_THREAD")) {
-            return qgetenv("MUDLET_INGEST_THREAD") != "0";
+            const QByteArray value = qgetenv("MUDLET_INGEST_THREAD").toLower();
+            return value != "0" && value != "false" && value != "off";
         }
         if (QThread::idealThreadCount() < 2) {
             return false;
@@ -104,14 +105,13 @@ TIngestJob* TIngestPipeline::begin(const TBuffer& source, const std::string& uni
     job.mUnit.assign(unit);
     job.mDecodableLength = decodableLength;
     job.mLookupTable = lookupTable;
-    job.mEncoding = source.mEncoding;
     queue(source, job, 0);
     return &job;
 }
 
 bool TIngestPipeline::resume(const TBuffer& source, TIngestJob& job, const size_t position)
 {
-    if (job.mState.load(std::memory_order_acquire) != TIngestJob::Done || job.mResumeFrom > position || position + csmMinimumResumeBytes > job.mDecodableLength) {
+    if (job.mState.load(std::memory_order_acquire) != TIngestJob::Done || job.mResumeFrom > position || position + csmMinimumResumeBytes > job.mDecodableLength || !source.speculationEligible()) {
         return false;
     }
     queue(source, job, position);
@@ -124,6 +124,7 @@ bool TIngestPipeline::awaitLines(const TIngestJob& job, const int ready) const
         return false;
     }
     for (;;) {
+        // State first: once it reads Done, the mReady read after it is final
         const int state = job.mState.load(std::memory_order_acquire);
         if (job.mReady.load(std::memory_order_acquire) > ready) {
             return true;
@@ -161,7 +162,6 @@ void TIngestPipeline::queue(const TBuffer& source, TIngestJob& job, const size_t
     job.mNext = 0;
     // Release: the worker can claim the job from a stale epoch, and must still see all of the above
     job.mState.store(TIngestJob::Queued, std::memory_order_release);
-    // seq_cst: cannot pass the library's read of the waiter count
     mEpoch.fetch_add(1);
     mEpoch.notify_one();
 }
@@ -231,7 +231,6 @@ void TIngestPipeline::parse(TIngestJob& job)
     twin.mLightMagenta = job.mColours[13];
     twin.mWhite = job.mColours[14];
     twin.mLightWhite = job.mColours[15];
-    twin.mEncoding = job.mEncoding;
     twin.mMudLine.resize(0);
     twin.mMudBuffer.clear();
     twin.mSpeculatedLineStart = job.mStartPosition;
@@ -240,7 +239,7 @@ void TIngestPipeline::parse(TIngestJob& job)
     job.mTextUsed = 0;
     job.mFormatUsed = 0;
     job.mResumeFrom = TIngestJob::csmNoResume;
-    // Read only: the speculating subset has no path that writes into the unit
+    // Must stay read only: the lines' offsets index main's copy of the unit, and resume() parses this copy again
     twin.parseChunk(job.mUnit, true, job.mLookupTable, job.mDecodableLength, nullptr, job.mStartPosition);
     if (twin.mSpeculationStopped && job.mResumeFrom == TIngestJob::csmNoResume && !job.mCancel.load(std::memory_order_relaxed) && job.mReady.load(std::memory_order_relaxed) >= csmMinimumLines) {
         // Main parses the line that stopped it, then may hand the rest back
