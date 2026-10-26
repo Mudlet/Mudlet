@@ -4892,6 +4892,11 @@ headlessDiscord = ok and 'ok' or tostring(err)
             SpeechRecognizerFactory::setFactoryOverride(nullptr);
         });
         QVERIFY2(installHeadlessStandInEngine(), "The stand-in engine was not installed.");
+        // With only the built-in macOS engine available, B's call asks for that one and would replace the
+        // stand-in mid-load, unhooking its fault; a real built-in engine is kept, and so is the stand-in now
+        SpeechRecognizerFactory::setFactoryOverride([](QObject*) -> SpeechRecognizer* {
+            return nullptr;
+        });
         const QStringList hostnames{qsl("Test-Headless-Host-Speech-Fault-A"), qsl("Test-Headless-Host-Speech-Fault-B")};
         const auto closeProfiles = qScopeGuard([&hostnames]() {
             for (const QString& hostname : hostnames) {
