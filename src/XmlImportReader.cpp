@@ -79,10 +79,17 @@ constexpr bool plainCharacter(char32_t c)
 // QXmlStreamReader keeps it as the character it is
 QString fromUtf8(const char* utf8)
 {
-    if (std::strncmp(utf8, "\xEF\xBB\xBF", 3) != 0) {
+    qsizetype marks = 0;
+    while (std::strncmp(utf8, "\xEF\xBB\xBF", 3) == 0) {
+        utf8 += 3;
+        ++marks;
+    }
+    if (!marks) {
         return QString::fromUtf8(utf8);
     }
-    return QChar(0xFEFF) + fromUtf8(utf8 + 3);
+    QString result(marks, QChar(0xFEFF));
+    result.append(QString::fromUtf8(utf8));
+    return result;
 }
 
 // Accepts only a plain subset of XML 1.0: UTF-8, an optional declaration of version 1.0 in

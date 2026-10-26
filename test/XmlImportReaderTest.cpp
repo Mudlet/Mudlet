@@ -34,44 +34,46 @@
 
 namespace {
 
-const QStringList scmContainers{qsl("MudletPackage"),
-                                qsl("HostPackage"),
-                                qsl("Host"),
-                                qsl("TriggerPackage"),
-                                qsl("TimerPackage"),
-                                qsl("AliasPackage"),
-                                qsl("ActionPackage"),
-                                qsl("ScriptPackage"),
-                                qsl("KeyPackage"),
-                                qsl("VariablePackage"),
-                                qsl("HelpPackage"),
-                                qsl("TriggerGroup"),
-                                qsl("Trigger"),
-                                qsl("TimerGroup"),
-                                qsl("Timer"),
-                                qsl("AliasGroup"),
-                                qsl("Alias"),
-                                qsl("ActionGroup"),
-                                qsl("Action"),
-                                qsl("ScriptGroup"),
-                                qsl("Script"),
-                                qsl("KeyGroup"),
-                                qsl("Key"),
-                                qsl("regexCodeList"),
-                                qsl("regexCodePropertyList"),
-                                qsl("eventHandlerList"),
-                                qsl("mInstalledPackages"),
-                                qsl("HiddenVariables"),
-                                qsl("Variable"),
-                                qsl("VariableGroup"),
-                                qsl("mInstalledModules"),
-                                qsl("stopwatches"),
-                                qsl("map"),
-                                qsl("areas"),
-                                qsl("rooms"),
-                                qsl("room"),
-                                qsl("environments"),
-                                qsl("features")};
+const QStringList scmContainers{
+        qsl("MudletPackage"),
+        qsl("HostPackage"),
+        qsl("Host"),
+        qsl("TriggerPackage"),
+        qsl("TimerPackage"),
+        qsl("AliasPackage"),
+        qsl("ActionPackage"),
+        qsl("ScriptPackage"),
+        qsl("KeyPackage"),
+        qsl("VariablePackage"),
+        qsl("HelpPackage"),
+        qsl("TriggerGroup"),
+        qsl("Trigger"),
+        qsl("TimerGroup"),
+        qsl("Timer"),
+        qsl("AliasGroup"),
+        qsl("Alias"),
+        qsl("ActionGroup"),
+        qsl("Action"),
+        qsl("ScriptGroup"),
+        qsl("Script"),
+        qsl("KeyGroup"),
+        qsl("Key"),
+        qsl("regexCodeList"),
+        qsl("regexCodePropertyList"),
+        qsl("eventHandlerList"),
+        qsl("mInstalledPackages"),
+        qsl("HiddenVariables"),
+        qsl("Variable"),
+        qsl("VariableGroup"),
+        qsl("mInstalledModules"),
+        qsl("stopwatches"),
+        qsl("map"),
+        qsl("areas"),
+        qsl("rooms"),
+        qsl("room"),
+        qsl("environments"),
+        qsl("features"),
+};
 
 enum class Step { Descend, Text, SkipChildren, IncludeChildren, SkipElement };
 
@@ -245,52 +247,54 @@ QString firstDifference(const QStringList& tree, const QStringList& stream)
     return {};
 }
 
-const QList<QByteArray> scmSnippets{"&amp;",
-                                    "&foo;",
-                                    "&#0;",
-                                    "&#x41;",
-                                    "&#X41;",
-                                    "&#13;",
-                                    "&#xD800;",
-                                    "&#xFFFE;",
-                                    "&#128;",
-                                    "&#x1F600;",
-                                    "]]>",
-                                    "<![CDATA[x]]>",
-                                    "<![CDATA[]]>",
-                                    "<!--c-->",
-                                    "<!--a--b-->",
-                                    "<!---->",
-                                    "<?pi x?>",
-                                    "<a/>",
-                                    "</a>",
-                                    "<b x=\"1\" x=\"2\"/>",
-                                    "<b x=\"1\"y=\"2\"/>",
-                                    "<b x='1'/>",
-                                    "<p:b/>",
-                                    " xmlns=\"u\"",
-                                    "<b>t<c/>u</b>",
-                                    "\xEF\xBB\xBF",
-                                    "\r\n",
-                                    "\r",
-                                    "\t",
-                                    "\xC2\x85",
-                                    "\xEF\xBF\xBE",
-                                    "\xF0\x9F\x8E\x89",
-                                    "\xED\xA0\x80",
-                                    "\xC3\xA9",
-                                    "<!DOCTYPE x>",
-                                    "<?xml version=\"1.0\"?>",
-                                    "<name>q</name>",
-                                    "<name/>",
-                                    "<script> </script>",
-                                    "a < b",
-                                    "a > b",
-                                    "x=\"y\"",
-                                    " ",
-                                    "\x01",
-                                    "\x7F",
-                                    "\xFF"};
+const QList<QByteArray> scmSnippets{
+        "&amp;",
+        "&foo;",
+        "&#0;",
+        "&#x41;",
+        "&#X41;",
+        "&#13;",
+        "&#xD800;",
+        "&#xFFFE;",
+        "&#128;",
+        "&#x1F600;",
+        "]]>",
+        "<![CDATA[x]]>",
+        "<![CDATA[]]>",
+        "<!--c-->",
+        "<!--a--b-->",
+        "<!---->",
+        "<?pi x?>",
+        "<a/>",
+        "</a>",
+        "<b x=\"1\" x=\"2\"/>",
+        "<b x=\"1\"y=\"2\"/>",
+        "<b x='1'/>",
+        "<p:b/>",
+        " xmlns=\"u\"",
+        "<b>t<c/>u</b>",
+        "\xEF\xBB\xBF",
+        "\r\n",
+        "\r",
+        "\t",
+        "\xC2\x85",
+        "\xEF\xBF\xBE",
+        "\xF0\x9F\x8E\x89",
+        "\xED\xA0\x80",
+        "\xC3\xA9",
+        "<!DOCTYPE x>",
+        "<?xml version=\"1.0\"?>",
+        "<name>q</name>",
+        "<name/>",
+        "<script> </script>",
+        "a < b",
+        "a > b",
+        "x=\"y\"",
+        " ",
+        "\x01",
+        "\x7F",
+        "\xFF",
+};
 
 const QByteArray scmBytes("<>&\"']-/=; \t\r\n\x01\x18\x7f\x80\xc3\xe0\xf0\xf4\xff#x:?!");
 
@@ -359,14 +363,17 @@ private slots:
         QVERIFY2(mCorpus.size() > 40, qPrintable(qsl("only %1 corpus files were found under %2").arg(mCorpus.size()).arg(qsl(MUDLET_SRC_DIR))));
     }
 
-    // Every file in the tree reads the same - and every well-formed one is read from pugixml's
-    // tree, so the comparison is not of QXmlStreamReader with itself
+    // Every file reads the same - and every well-formed one in the source tree is read from
+    // pugixml's tree, so the comparison is not of QXmlStreamReader with itself
     void test_theCorpusReadsTheSameFromTheTree()
     {
         for (const auto& entry : std::as_const(mCorpus)) {
             compareBothWays(entry.bytes, entry.name);
             if (QTest::currentTestFailed()) {
                 return;
+            }
+            if (entry.extra) {
+                continue;
             }
             QXmlStreamReader plain(entry.bytes);
             while (!plain.atEnd()) {
@@ -443,6 +450,34 @@ private slots:
         bool readFromTree = false;
         walk(xml, false, 0, &readFromTree);
         QCOMPARE(readFromTree, fromTree);
+    }
+
+    void test_aLongRunOfFEFFReadsTheSame()
+    {
+        const QByteArray run = QByteArray("\xEF\xBB\xBF").repeated(1 << 20);
+        const QByteArray xml = "<Script name=\"" + run + "a\"><script>" + run + "b</script></Script>";
+
+        QXmlStreamReader plain(xml);
+        plain.readNext();
+        plain.readNext();
+        const QString expectedName = plain.attributes().value(QLatin1StringView("name")).toString();
+        plain.readNext();
+        const QString expectedScript = plain.readElementText();
+        QCOMPARE(expectedScript.size(), run.size() / 3 + 1);
+
+        QBuffer buffer;
+        buffer.setData(xml);
+        buffer.open(QIODevice::ReadOnly);
+        XmlImportReader reader;
+        reader.setDevice(&buffer);
+        reader.readNext();
+        QCOMPARE(reader.readNext(), QXmlStreamReader::StartElement);
+        QVERIFY(reader.readingParsedTree());
+        const QString name = reader.attributes().value(QLatin1StringView("name")).toString();
+        QCOMPARE(reader.readNext(), QXmlStreamReader::StartElement);
+        const QString script = reader.readElementText();
+        QVERIFY2(name == expectedName, qPrintable(qsl("name has %1 characters, not %2").arg(name.size()).arg(expectedName.size())));
+        QVERIFY2(script == expectedScript, qPrintable(qsl("script has %1 characters, not %2").arg(script.size()).arg(expectedScript.size())));
     }
 
     // What breaks a file the way a crash or a hand edit does: cut off, a byte changed, a

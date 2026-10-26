@@ -37,6 +37,8 @@ struct Entry
 {
     QString name;
     QByteArray bytes;
+    // From MUDLET_XML_IMPORT_CORPUS, so not known to keep to the subset the tree reads
+    bool extra = false;
 };
 
 inline QStringList filesUnder(const QString& directory, const QStringList& patterns)
@@ -62,34 +64,36 @@ inline QList<Entry> load(const QString& sourceDir, const QTemporaryDir& unpackDi
     archives << filesUnder(qsl("%1/packages").arg(fixtures), {qsl("*.mpackage")});
     archives << filesUnder(qsl("%1/maps").arg(fixtures), {qsl("*.zip")});
     archives << qsl("%1/../test/GUIConsoleTests.mpackage").arg(sourceDir);
-    // More to compare, such as a checkout of the Mudlet package repository
-    if (const QString extra = qEnvironmentVariable("MUDLET_XML_IMPORT_CORPUS"); !extra.isEmpty()) {
-        xmlFiles << filesUnder(extra, {qsl("*.xml")});
-        archives << filesUnder(extra, {qsl("*.mpackage"), qsl("*.zip")});
-    }
-    int unpacked = 0;
-    for (const QString& archive : std::as_const(archives)) {
-        const QString destination = qsl("%1/%2/").arg(unpackDir.path()).arg(unpacked++);
-        if (QDir().mkpath(destination) && utils::unzip(archive, destination, QDir(unpackDir.path()))) {
-            xmlFiles << filesUnder(destination, {qsl("*.xml")});
-        }
-    }
 
     QList<Entry> corpus;
     QSet<QByteArray> seen;
-    for (const QString& path : std::as_const(xmlFiles)) {
-        QFile file(path);
-        if (!file.open(QIODevice::ReadOnly)) {
-            continue;
+    int unpacked = 0;
+    const auto add = [&](QStringList files, const QStringList& zips, bool extra) {
+        for (const QString& archive : zips) {
+            const QString destination = qsl("%1/%2/").arg(unpackDir.path()).arg(unpacked++);
+            if (QDir().mkpath(destination) && utils::unzip(archive, destination, QDir(unpackDir.path()))) {
+                files << filesUnder(destination, {qsl("*.xml")});
+            }
         }
-        QByteArray bytes = file.readAll();
-        if (seen.contains(QCryptographicHash::hash(bytes, QCryptographicHash::Sha1))) {
-            continue;
+        for (const QString& path : std::as_const(files)) {
+            QFile file(path);
+            if (!file.open(QIODevice::ReadOnly)) {
+                continue;
+            }
+            QByteArray bytes = file.readAll();
+            if (seen.contains(QCryptographicHash::hash(bytes, QCryptographicHash::Sha1))) {
+                continue;
+            }
+            seen.insert(QCryptographicHash::hash(bytes, QCryptographicHash::Sha1));
+            QString name = path;
+            name.remove(unpackDir.path()).remove(sourceDir);
+            corpus.append({name, bytes, extra});
         }
-        seen.insert(QCryptographicHash::hash(bytes, QCryptographicHash::Sha1));
-        QString name = path;
-        name.remove(unpackDir.path()).remove(sourceDir);
-        corpus.append({name, bytes});
+    };
+    add(xmlFiles, archives, false);
+    // More to compare, such as a checkout of the Mudlet package repository
+    if (const QString directory = qEnvironmentVariable("MUDLET_XML_IMPORT_CORPUS"); !directory.isEmpty()) {
+        add(filesUnder(directory, {qsl("*.xml")}), filesUnder(directory, {qsl("*.mpackage"), qsl("*.zip")}), true);
     }
     return corpus;
 }
