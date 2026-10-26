@@ -53,7 +53,7 @@ struct TSpeculatedLine
 
 // Up to csmMaxLines lines of one game unit, parsed ahead from mStartPosition. Main fills it in while
 // it is neither Queued nor Running; the worker publishes lines through mReady, and main takes them in
-// order. The worker allocates nothing: lines go into fixed arenas, and when those are full it stops
+// order. The job never grows: lines go into fixed arenas, and when those are full the worker stops
 // and main queues the job again from where it has got to.
 struct TIngestJob
 {
@@ -70,14 +70,13 @@ struct TIngestJob
     size_t mDecodableLength = 0;
     size_t mStartPosition = 0;
     QVector<QChar> mLookupTable;
-    QByteArray mEncoding;
     TBuffer::ParseState mStartState;
     TBuffer::ParseConfig mConfig;
     std::array<QColor, 16> mColours;
     std::vector<TSpeculatedLine> mLines;
     std::vector<QChar> mText;
     std::vector<TChar> mFormats;
-    // Worker only while it runs, then read by main once it is Done
+    // Worker only
     size_t mTextUsed = 0;
     size_t mFormatUsed = 0;
     // Where main may queue the job again for the rest of the unit, once the worker is Done
@@ -90,9 +89,9 @@ struct TIngestJob
     alignas(64) int mNext = 0;
 };
 
-// Parses game text one unit ahead of the main thread with a second TBuffer, so the main thread commits
-// lines instead of decoding them. Everything with an effect stays on the main thread, in order: the
-// worker's buffer stops at the first sequence whose handling has one, and main parses the rest itself.
+// Parses a game unit on a worker thread, lines ahead of the main thread, which commits them instead of
+// decoding them. The worker stops before a sequence whose handling has an effect; main parses that line
+// and may hand it the rest back.
 class TIngestPipeline
 {
 public:

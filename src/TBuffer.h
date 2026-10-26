@@ -531,7 +531,7 @@ class TBuffer
     // buffer while the write-out is queued:
     friend class MxpWatchdogBufferLifetimeTest;
 
-    // Runs a second buffer's parser over a unit ahead of this one, see TIngestPipeline:
+    // Drives a second buffer's parser on the ingest worker, see TIngestPipeline:
     friend class TIngestPipeline;
 
     static inline const TEncodingTable& csmEncodingTable = TEncodingTable::csmDefaultInstance;
@@ -588,6 +588,7 @@ public:
         bool mxpItalic = false;
         bool mxpUnderline = false;
         bool mxpStrikeOut = false;
+        bool mxpColourOrLink = false;
     };
 
     // As per QDateTime::toString(). Translatable, so overwritten once at startup and fixed thereafter:
@@ -1156,6 +1157,7 @@ private:
     TIngestJob* mpActiveSpeculation = nullptr;
     // Set only in the ingest worker's buffer, for the unit it is parsing ahead
     TIngestJob* mpSpeculationSink = nullptr;
+    // Worker's buffer only: Host is main-thread state, so everything parseChunk() reaches reads it through this snapshot
     const ParseConfig* mpParseConfig = nullptr;
     // MUDLET_INGEST_THREAD=verify: the worker's line that main is parsing again, compared at its commit
     const TSpeculatedLine* mpVerifiedLine = nullptr;

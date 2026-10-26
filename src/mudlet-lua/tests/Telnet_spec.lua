@@ -2708,10 +2708,8 @@ describe("MXP re-initialisation of a forced processor", function()
 end)
 
 describe("Tests game text the ingest worker parses ahead", function()
-  -- A read of 16 lines or more is parsed a second time on a worker thread, ahead of the main thread,
-  -- which commits the worker's lines instead of parsing them - but only while each starts in the state
-  -- the main thread is in, under the settings it was parsed with. These feed the same lines one read
-  -- per line, which the worker never sees, and as one read, and require the same buffer from both.
+  -- These feed the same lines one read per line, which the worker never sees, and as one read, and
+  -- require the same buffer from both.
 
   local function feed(data)
     local ok, msg = feedTelnet(data)
@@ -2720,6 +2718,15 @@ describe("Tests game text the ingest worker parses ahead", function()
 
   local function parsedAhead()
     return getProfileStats().linesParsedAhead
+  end
+
+  -- a test whose reads the worker did not parse compared the main thread with itself
+  local function requireWorker(before)
+    if not before then
+      pending("telling whether the worker parsed the read needs MUDLET_TEST_MODE")
+    elseif parsedAhead() == before then
+      pending("the ingest worker is off, so this compared the main thread with itself")
+    end
   end
 
   -- each line's text, then the format getTextFormat() reports for each of its characters, or only the first
@@ -2747,14 +2754,20 @@ describe("Tests game text the ingest worker parses ahead", function()
 
   local passes = 0
 
-  -- feeds the lines one read each, or all in one read, and returns what they left in the buffer
-  local function pass(lines, oneRead, firstOnly)
+  -- feeds the lines one read each, or all in one read (or two, cut after byte cut), and returns what they left in the buffer
+  local function pass(lines, oneRead, firstOnly, cut)
     passes = passes + 1
     local opening, closing = "IngestPassOpens" .. passes, "IngestPassCloses" .. passes
     local mark = getLastLineNumber("main")
     feed("\27[0m" .. opening .. "\r\n")
     if oneRead then
-      feed(table.concat(lines, "\r\n") .. "\r\n")
+      local joined = table.concat(lines, "\r\n") .. "\r\n"
+      if cut then
+        feed(joined:sub(1, cut))
+        feed(joined:sub(cut + 1))
+      else
+        feed(joined)
+      end
     else
       for _, line in ipairs(lines) do
         feed(line .. "\r\n")
@@ -2774,13 +2787,17 @@ describe("Tests game text the ingest worker parses ahead", function()
     return snapshot(from, to, firstOnly)
   end
 
-  local function sameEitherWay(lines, firstOnly)
-    local apart = pass(lines, false, firstOnly)
-    local together = pass(lines, true, firstOnly)
+  local function sameLines(apart, together)
     assert.are.equal(#apart, #together, "a different number of lines came out of one read")
     for i = 1, #apart do
       assert.are.equal(apart[i], together[i], "line " .. i .. " came out differently from one read")
     end
+  end
+
+  local function sameEitherWay(lines, firstOnly)
+    local apart = pass(lines, false, firstOnly)
+    local together = pass(lines, true, firstOnly)
+    sameLines(apart, together)
     return together
   end
 
@@ -2827,11 +2844,70 @@ describe("Tests game text the ingest worker parses ahead", function()
   it("commits the same text and formats from one read as from a read per line", function()
     local before = parsedAhead()
     sameEitherWay(corpus())
-    if not before then
-      pending("telling whether the worker parsed the read needs MUDLET_TEST_MODE")
-    elseif parsedAhead() == before then
-      pending("the ingest worker is off, so this compared the main thread with itself")
+    requireWorker(before)
+  end)
+
+  it("commits the same from a read that a line was cut across", function()
+    local lines = corpus()
+    local joined = table.concat(lines, "\r\n") .. "\r\n"
+    local apart = pass(lines, false)
+    local cuts = {
+      -- part way through the text, an SGR sequence, a UTF-8 character, and a line ending
+      ["text"] = #"\27[31mIngestRed 1 bri",
+      ["SGR"] = joined:find("\27[1;32m", 1, true) + 4,
+      ["UTF-8"] = joined:find("\226\148\140", 1, true),
+      ["CR LF"] = joined:find("\r\n", 1, true),
+    }
+    local before = parsedAhead()
+    for name, cut in pairs(cuts) do
+      local together = pass(lines, true, false, cut)
+      assert.are.equal(#apart, #together, "a different number of lines came out of a read cut in " .. name)
+      for i = 1, #apart do
+        assert.are.equal(apart[i], together[i], "line " .. i .. " came out differently from a read cut in " .. name)
+      end
     end
+    requireWorker(before)
+  end)
+
+  it("leaves a line too long for the worker to the main thread", function()
+    local long = "\27[31m" .. ("r"):rep(5000) .. "\27[32m" .. ("g"):rep(4000) .. "\27[0m IngestLong"
+    local before = parsedAhead()
+    for _, at in ipairs({1, 20}) do
+      local lines = corpus(60)
+      lines[at] = long
+      sameEitherWay(lines, true)
+    end
+    requireWorker(before)
+  end)
+
+  it("puts a hyperlink still open at the end of a line on the next line", function()
+    local lines = {}
+    for i = 1, 60 do
+      lines[i] = "IngestLink " .. i .. " and enough text after it to leave the worker a long rest of the read"
+    end
+    -- nothing after it, so the link stays open past the end of the line
+    lines[20] = "IngestLinkOpens 20 \27]8;;send:x?config={\"style\":{\"color\":\"#00ff00\"}}\27\\"
+    lines[30] = "IngestLinkCloses 30\27]8;;\27\\ after it"
+    local before = parsedAhead()
+    local together = sameEitherWay(lines, true)
+    assert.truthy(together[21]:find("foreground=0,255,0", 1, true), "the link's colour did not reach the next line")
+    requireWorker(before)
+  end)
+
+  it("decodes a single byte code page through its table from one read", function()
+    local original = getServerEncoding()
+    finally(function()
+      setServerEncoding(original)
+    end)
+    setServerEncoding("CP437")
+    local lines = {}
+    for i = 1, 40 do
+      lines[i] = "IngestCp437 " .. i .. " \196\179\218\191"
+    end
+    local before = parsedAhead()
+    local together = sameEitherWay(lines, true)
+    assert.truthy(together[20]:find("^IngestCp437 20 ─│┌┐|"), "the read was not decoded as CP437")
+    requireWorker(before)
   end)
 
   it("picks up the rest of a read where the worker stopped short of it", function()
@@ -2840,10 +2916,9 @@ describe("Tests game text the ingest worker parses ahead", function()
     lines[40] = "\27[5nIngestUnhandled 40"
     local before = parsedAhead()
     assert.are.equal(700, #sameEitherWay(lines, true))
-    if before and parsedAhead() > before then
-      -- 39 lines before it stopped, and a job holds 512 at most: more than both means it was handed the rest twice
-      assert.is_true(parsedAhead() - before > 39 + 512, "the worker was not handed the rest of the read")
-    end
+    requireWorker(before)
+    -- the first job stops after 39 lines and a job holds at most 512, so more than 39 + 512 takes at least two resumes
+    assert.is_true(parsedAhead() - before > 39 + 512, "the worker was not handed the rest of the read")
   end)
 
   it("carries a colour a trigger feeds part way through a read on to the lines after it", function()
@@ -2851,8 +2926,49 @@ describe("Tests game text the ingest worker parses ahead", function()
     triggers[#triggers + 1] = tempTrigger("IngestFont 7 back", function()
       feedTriggers("\27[35m")
     end)
+    local before = parsedAhead()
     local together = sameEitherWay(corpus())
     assert.are_not.equal(control[8], together[8], "the trigger's colour did not reach the next line")
+    requireWorker(before)
+  end)
+
+  it("takes up the read again after a burst a trigger feeds part way through it", function()
+    local burst = {}
+    for i = 1, 20 do
+      burst[i] = "IngestNested " .. i
+    end
+    triggers[#triggers + 1] = tempTrigger("IngestFont 7 back", function()
+      feedTelnet(table.concat(burst, "\r\n") .. "\r\n\27[36m")
+    end)
+    local before = parsedAhead()
+    sameEitherWay(corpus())
+    requireWorker(before)
+  end)
+
+  it("joins the lines a game wrapped itself the same from one read", function()
+    local wrap, width = getConfig("undoServerWrap"), getConfig("undoServerWrapWidth")
+    finally(function()
+      setConfig("undoServerWrap", wrap)
+      setConfig("undoServerWrapWidth", width)
+    end)
+    setConfig("undoServerWrap", true)
+    setConfig("undoServerWrapWidth", 40)
+    local vocabulary = {"the", "quick", "brown", "fox", "jumps", "over", "lazy", "dogs", "while", "ingest", "runs"}
+    local lines, line = {}, ""
+    for i = 1, 400 do
+      local word = vocabulary[i % #vocabulary + 1]
+      if #line + 1 + #word > 40 then
+        lines[#lines + 1] = line
+        line = word
+      else
+        line = line == "" and word or line .. " " .. word
+      end
+    end
+    lines[#lines + 1] = line .. "."
+    local before = parsedAhead()
+    local together = sameEitherWay(lines, true)
+    assert.is_true(#together < #lines, "no wrapped lines were joined")
+    requireWorker(before)
   end)
 
   it("follows a trigger that edits the line it fired on", function()
@@ -2862,8 +2978,10 @@ describe("Tests game text the ingest worker parses ahead", function()
       deselect()
       echo(" IngestEchoed")
     end)
+    local before = parsedAhead()
     local together = sameEitherWay(corpus())
     assert.truthy(together[9]:find("IngestEchoed", 1, true))
+    requireWorker(before)
   end)
 
   it("decodes a whole read in the encoding it arrived in, even when a trigger switches it part way", function()
@@ -2880,11 +2998,55 @@ describe("Tests game text the ingest worker parses ahead", function()
       lines[i] = "IngestEncoding " .. i .. " caf\233"
     end
     lines[5] = "IngestEncodingSwitch"
+    local before = parsedAhead()
     local together = pass(lines, true, true)
     -- in UTF-8 a lone \233 is no character
     assert.truthy(together[20]:find("^IngestEncoding 20 caf\239\191\189|"), "the switch reached the rest of the read it was made in")
     local after = pass({"IngestEncoding after caf\233"}, true, true)
     assert.truthy(after[1]:find("^IngestEncoding after café|"), "the switch did not reach the next read")
+    requireWorker(before)
+  end)
+
+  it("decodes the rest of a read in the encoding a trigger's own feed switched it to", function()
+    local original = getServerEncoding()
+    finally(function()
+      setServerEncoding(original)
+    end)
+    triggers[#triggers + 1] = tempTrigger("IngestGbkSwitch", function()
+      setServerEncoding("GBK")
+      -- a feed of its own applies the encoding at once, to the rest of this read as well
+      feedTriggers("IngestGbkFed\n")
+    end)
+    local lines = {}
+    for i = 1, 700 do
+      lines[i] = "IngestGbk " .. i .. " \196\227\186\195"
+    end
+    lines[5] = "IngestGbkSwitch"
+    setServerEncoding("UTF-8")
+    local apart = pass(lines, false, true)
+    setServerEncoding("UTF-8")
+    local before = parsedAhead()
+    local together = pass(lines, true, true)
+    sameLines(apart, together)
+    assert.truthy(together[#together]:find("^IngestGbk 700 你好|"), "the rest of the read was not decoded as GBK")
+    requireWorker(before)
+  end)
+
+  it("styles a read with the MXP colour left open when MXP was turned off", function()
+    -- separate reads: a read's telnet commands are handled before its text, and an MXP mode sequence turns MXP on
+    finally(function()
+      feed("<T_IAC><T_DO><O_MXP>\27[5z\27[3z\r\n")
+      feed("<T_IAC><T_DONT><O_MXP>")
+    end)
+    feed("<T_IAC><T_DO><O_MXP>\27[6z<COLOR red>IngestMxpLeftOpen\r\n")
+    feed("<T_IAC><T_DONT><O_MXP>")
+    local lines = {}
+    for i = 1, 40 do
+      lines[i] = "<B>IngestMxpColour " .. i .. "</B>"
+    end
+    local together = sameEitherWay(lines, true)
+    assert.truthy(together[20]:find("^<B>IngestMxpColour 20</B>|"), "MXP was still on")
+    assert.truthy(together[20]:find("foreground=255,0,0", 1, true), "the MXP colour did not reach the read")
   end)
 
   it("hands the rest of a read to MXP once a trigger turns it on", function()
@@ -2901,10 +3063,12 @@ describe("Tests game text the ingest worker parses ahead", function()
     end)
     local apart = pass(lines, false)
     feed("<T_IAC><T_DONT><O_MXP>")
+    local before = parsedAhead()
     local together = pass(lines, true)
     assert.are.same(apart, together)
     assert.truthy(together[3]:find("^<B>IngestMxp3</B>|"), "a tag before the switch was acted on")
     assert.truthy(together[20]:find("^IngestMxp20|"), "a tag after the switch was not acted on")
+    requireWorker(before)
   end)
 
   it("runs a read's triggers after the GMCP that arrived with it", function()
@@ -2922,11 +3086,13 @@ describe("Tests game text the ingest worker parses ahead", function()
         parts[#parts + 1] = "<T_IAC><T_SB><O_GMCP>IngestSpec.Order {\"n\": " .. i .. "}<T_IAC><T_SE>"
       end
     end
+    local before = parsedAhead()
     feed(table.concat(parts))
     assert.are.equal(60, #seen)
     for i = 1, 60 do
       assert.are.equal("60", seen[i], "line " .. i .. " ran its triggers before the read's GMCP was handled")
     end
+    requireWorker(before)
   end)
 
   it("goes on with the rest of a read after a trigger disconnects", function()
@@ -2941,7 +3107,9 @@ describe("Tests game text the ingest worker parses ahead", function()
     for i = 1, 40 do
       lines[i] = "IngestDisconnect " .. i
     end
+    local before = parsedAhead()
     feed(table.concat(lines, "\r\n") .. "\r\n")
     assert.are.equal(40, count)
+    requireWorker(before)
   end)
 end)
