@@ -10,8 +10,8 @@
 # a busy game hammers. Functions it never enters are optimised as if there were
 # no profile under GCC, but Clang treats them as cold. MapRenderBenchmark and
 # PathfindBenchmark then train the mapper on the Achaea map the Lua specs use:
-# without them, loading and pathfinding a big map measured slower than with no
-# profile at all.
+# without them, GCC 12 loaded, audited and built the pathfinding graph of a big
+# map slower than with no profile at all.
 
 set -euo pipefail
 
@@ -52,9 +52,9 @@ find_benchmark() {
   return 1
 }
 
-# Runs one benchmark, then fails unless it printed every metric named after it:
-# a skipped slot exits 0 and still writes a profile - one of startup alone, if
-# initTestCase() skips - which would leave that slot's code cold.
+# Runs one benchmark, then fails unless it printed every metric listed after its
+# name: a skipped slot exits 0 and still writes a profile - one of startup alone,
+# if initTestCase() skips - which would leave that slot's code untrained.
 train() {
   local benchmark log metric
   benchmark="$(find_benchmark "$1")"
@@ -85,13 +85,14 @@ find "${PROFILE_DIR}" -type f \( -name '*.gcda' -o -name '*.profraw' -o -name '*
 train PipelineBenchmark text_best_pass_ms trigger_best_pass_ms defaults_text_best_pass_ms display_paint_ms
 
 # The benchmarks convert the XML to the binary format themselves, so TMap::restore() is trained too.
-# The routes are Mapper_spec.lua's longest: 96 steps across 7 areas, and the map's diagonal.
+# The routes are Mapper_spec.lua's two longest, both ways: 96 steps between areas, and the 186-step diagonal.
 # Under the profile directory rather than mktemp's, as the benchmarks need a path Windows can open.
 MAP_DIR="${PROFILE_DIR}/training-map"
 rm -rf "${MAP_DIR}"
 mkdir -p "${MAP_DIR}"
 trap 'rm -rf "${MAP_DIR}"' EXIT
-cmake -E chdir "${MAP_DIR}" cmake -E tar xf "$(cd "$(dirname "$0")/.." && pwd)/src/mudlet-lua/tests/fixtures/maps/achaea-map.zip"
+MAP_ARCHIVE="$(cd "$(dirname "$0")/.." && pwd)/src/mudlet-lua/tests/fixtures/maps/achaea-map.zip"
+(cd "${MAP_DIR}" && cmake -E tar xf "${MAP_ARCHIVE}")
 export MUDLET_BENCH_MAP="${MAP_DIR}/achaea-map.xml"
 train MapRenderBenchmark map_restore_seconds render_fit_ms
 MUDLET_BENCH_ROUTES="107:1192,1192:107,6595:18690,18690:6595" train PathfindBenchmark init_graph_ms path_route_18690_6595_ms

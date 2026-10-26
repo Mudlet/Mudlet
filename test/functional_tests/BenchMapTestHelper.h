@@ -21,21 +21,28 @@
  ***************************************************************************/
 
 #include "Host.h"
+#include "TMap.h"
+#include "utils.h"
 
 #include <QString>
 
-// The map benchmarks time TMap::restore(), which reads only the binary format,
-// so an XML map - the Achaea fixture CI/pgo-train.sh trains on - is imported and
-// saved in that format under dir first. Empty if either step fails.
-inline QString binaryBenchMap(Host* host, const QString& mapPath, const QString& dir)
+// TMap::restore() reads only the binary format, so an XML map is imported, saved
+// as one under dir and cleared - restore() adds to the map rather than replacing
+// it, which is why Host::loadMapFile() clears first. Empty on failure, with errMsg set.
+inline QString binaryBenchMap(Host* host, const QString& mapPath, const QString& dir, QString& errMsg)
 {
-    if (!mapPath.endsWith(QLatin1String(".xml"), Qt::CaseInsensitive)) {
+    if (!mapPath.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
         return mapPath;
     }
-    const QString binaryPath = dir + QLatin1String("/bench-map.dat");
-    if (!host->importMapFile(mapPath) || !host->saveMapFile(binaryPath)) {
+    if (!host->importMapFile(mapPath, &errMsg)) {
         return {};
     }
+    const QString binaryPath = qsl("%1/bench-map.dat").arg(dir);
+    if (!host->saveMapFile(binaryPath)) {
+        errMsg = qsl("could not save it as %1").arg(binaryPath);
+        return {};
+    }
+    host->mpMap->mapClear();
     return binaryPath;
 }
 

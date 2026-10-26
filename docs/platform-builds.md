@@ -164,7 +164,7 @@ function whose code changed loses its profile, which GCC refuses as an error and
 
 The training is PipelineBenchmark - text decoding, the trigger engine, the default packages and
 console painting - then MapRenderBenchmark and PathfindBenchmark on the Achaea map in
-`src/mudlet-lua/tests/fixtures/maps`, which load, audit and draw it and walk its longest routes.
+`src/mudlet-lua/tests/fixtures/maps`, which load, audit and draw it and walk two long routes across it.
 Functions the training never enters are compiled as if there were no profile under GCC, thanks to
 `-fprofile-partial-training`, and treated as cold under Clang. With PipelineBenchmark as the only
 training, measured as time taken relative to a plain Release build of the same compiler at `-O3` -
@@ -188,9 +188,10 @@ the mapper too - with it, those came out at @RESTORE@, @AUDIT@ and @GRAPH@. Hand
 Mudlet's, or adding more to the hottest branches, measured as noise.
 
 CI builds all three releases this way: macOS and Windows with Clang, Linux with the GCC 12 it
-already uses. Switching Linux to Clang is no better - against plain GCC, a profile-guided Clang build
-was faster on the trained paths (triggers 0.90, text 0.86) but no faster on svof (0.98, noise) and
-slower at 2D map rendering (1.08 to 1.24). Measured end to end on the Linux release configuration
+already uses. Switching Linux to Clang would trade one for the other: with PipelineBenchmark as the
+only training, profile-guided Clang beat plain GCC on the trained paths (triggers 0.90, text 0.86)
+but not on svof (0.98, noise), and was slower at 2D map rendering (1.08 to 1.24), plain Clang being
+slower than GCC there to begin with. Measured end to end on the Linux release configuration
 rather than through PipelineBenchmark's slots, GCC 12 with the profile took @46@ of the time on a
 replayed session with 46 triggers, @ZERO@ on the same session with none and @SVOF@ on svof, and
 @MAP@ at drawing and pathfinding the Aetherspace map.

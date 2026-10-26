@@ -244,8 +244,9 @@ private slots:
         QVERIFY(host->mpMap);
         TMap* pMap = host->mpMap.data();
 
-        const QString mapToRestore = binaryBenchMap(host, mMapPath, mConfigDir.path());
-        QVERIFY2(!mapToRestore.isEmpty(), qPrintable(qsl("could not convert the XML map at \"%1\"").arg(mMapPath)));
+        QString conversionError;
+        const QString mapToRestore = binaryBenchMap(host, mMapPath, mConfigDir.path(), conversionError);
+        QVERIFY2(!mapToRestore.isEmpty(), qPrintable(qsl("could not convert the XML map at \"%1\": %2").arg(mMapPath, conversionError)));
         QElapsedTimer timer;
         timer.start();
         QVERIFY2(pMap->restore(mapToRestore), qPrintable(qsl("could not restore the map at \"%1\"").arg(mMapPath)));
@@ -320,6 +321,7 @@ private slots:
                 QVERIFY2(from > 0 && to > 0, qPrintable(qsl("MUDLET_BENCH_ROUTES entry \"%1\" is not <room id>:<room id>").arg(route)));
                 walks.append({qsl("route_%1_%2").arg(from).arg(to), from, to});
             }
+            QVERIFY2(!walks.isEmpty(), "MUDLET_BENCH_ROUTES names no routes");
         } else {
             for (const Scenario& scenario : kScenarios) {
                 const int targetId =

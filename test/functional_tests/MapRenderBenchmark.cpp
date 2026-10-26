@@ -286,8 +286,9 @@ private slots:
         QVERIFY(host->mpMap->mapper());
         TMap* pMap = host->mpMap.data();
 
-        const QString mapToRestore = binaryBenchMap(host, mMapPath, mConfigDir.path());
-        QVERIFY2(!mapToRestore.isEmpty(), qPrintable(qsl("could not convert the XML map at \"%1\"").arg(mMapPath)));
+        QString conversionError;
+        const QString mapToRestore = binaryBenchMap(host, mMapPath, mConfigDir.path(), conversionError);
+        QVERIFY2(!mapToRestore.isEmpty(), qPrintable(qsl("could not convert the XML map at \"%1\": %2").arg(mMapPath, conversionError)));
         QElapsedTimer loadTimer;
         loadTimer.start();
         QVERIFY2(pMap->restore(mapToRestore), qPrintable(qsl("could not restore the map at \"%1\"").arg(mMapPath)));

@@ -39,7 +39,8 @@ jobs:
       CCACHE_COMPRESSLEVEL: ${{ (github.ref_name == 'development' && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true') && '19' || '1' }}
       # macOS and Linux releases are built profile-guided - see cmake/ProfileGuidedOptimization.cmake -
       # and so are macOS PTBs, at their own build type, so a broken profile-guided build shows up the
-      # next morning rather than on release day. Linux PTBs are AddressSanitizer builds instead.
+      # next morning rather than on release day. Linux PTBs are AddressSanitizer builds instead, so
+      # only a tag or a manual pgo run builds Linux profile-guided.
       MUDLET_PGO_BUILD: ${{ matrix.pgo == 'true' && (startsWith(github.ref, 'refs/tags/Mudlet-') || github.event.inputs.pgo == 'true' || (matrix.enable_asan != 'true' && (github.event_name == 'schedule' || github.event.inputs.scheduled == 'true'))) }}
     strategy:
       fail-fast: false
@@ -62,7 +63,7 @@ jobs:
             deploy: 'deploy'
             run_tests: 'true'
             # Enable AddressSanitizer for PTB and testing builds, but not release
-            # builds (tagged Mudlet-*) - ASAN adds significant runtime overhead
+            # builds (tagged Mudlet-*) or a manual pgo run - ASAN adds significant runtime overhead
             enable_asan: 'true'
             pgo: 'true'
           - os: ubuntu-22.04
@@ -434,7 +435,7 @@ jobs:
         ccache --show-compression
         echo "CCACHE_BUILD_START=$(date +%s)" >> "$GITHUB_ENV"
 
-    # A profile-guided build (releases and PTBs) builds only the instrumented benchmarks
+    # A profile-guided build (releases, macOS PTBs and manual pgo runs) builds only the instrumented benchmarks
     # CI/pgo-train.sh trains on here - it needs the test tree even where the job ships
     # without one. Building mudlet in this pass would send the instrumented
     # binary's debug files to Sentry.
