@@ -1230,14 +1230,26 @@ private slots:
 
         const auto [installed, message] = host->installPackage(packagePath, enums::PackageModuleType::Package, true);
         QVERIFY2(installed, qPrintable(message));
+        // sysInstall and sysInstallPackage are queued for a later turn of the event loop, and the
+        // package's handlers for them may make triggers of their own; zero timers run in queue order
+        bool installEventsRaised = false;
+        QTimer::singleShot(0ms, host, [&installEventsRaised] {
+            installEventsRaised = true;
+        });
+        QTRY_VERIFY(installEventsRaised);
+        // The install also queues a profile save, which would otherwise write through the timed passes
+        host->waitForProfileSave();
         const auto [report, total, patterns, temporary, active, activePatterns] = host->getTriggerUnit()->assembleReport();
         Q_UNUSED(report)
         QVERIFY2(temporary > 0, "the package made no temporary triggers - its scripts did not run, so only half of it would be timed");
         QVERIFY2(activePatterns > 0, "none of the package's triggers is active, so nothing would be matched");
 
         const double triggerSeconds = feedBestPass(kFeedPasses);
-        const int bufferedLines = host->mainConsoleView()->buffer.getLastLineNumber();
-        QVERIFY2(bufferedLines > corpusLines, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
+        TBuffer& buffer = host->mainConsoleView()->buffer;
+        const int bufferedLines = buffer.getLastLineNumber();
+        // A full scrollback drops a batch of its oldest lines, so a longer capture cannot all stay in it
+        const int expectedLines = std::min(corpusLines, buffer.mLinesLimit - buffer.mBatchDeleteSize);
+        QVERIFY2(bufferedLines >= expectedLines, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
 
         emitMetric("pkg_corpus_lines", static_cast<qint64>(corpusLines));
         emitMetric("pkg_corpus_packets", static_cast<qint64>(packets.size()));
