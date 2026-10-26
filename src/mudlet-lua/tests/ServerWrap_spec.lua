@@ -157,6 +157,57 @@ describe("Tests undoing the game's own line wrapping", function()
     assert.is_true(bufferHasLine(segment1 .. " " .. segment2), "wrapped segment and its continuation were not joined into one logical line")
   end)
 
+  describe("keeps the colours of the segments it joins", function()
+    local function joinedLineColours()
+      local joined = segment1 .. " " .. segment2
+      local last = getLastLineNumber("main")
+      for offset, line in ipairs(getLines("main", mark, last + 1)) do
+        if line == joined then
+          moveCursor("main", 0, mark + offset - 1)
+          local colours = {}
+          for column = 0, #joined - 1 do
+            selectSection("main", column, 1)
+            colours[#colours + 1] = table.concat({getFgColor("main")}, ",")
+          end
+          deselect("main")
+          moveCursorEnd("main")
+          return colours
+        end
+      end
+      error("wrapped segment and its continuation were not joined into one logical line")
+    end
+
+    local function expectedColours(runs)
+      local colours = {}
+      for _, run in ipairs(runs) do
+        for _ = 1, run[1] do
+          colours[#colours + 1] = run[2]
+        end
+      end
+      return colours
+    end
+
+    local red, green, blue = "200,10,10", "10,200,10", "10,10,200"
+
+    it("when they differ", function()
+      feedAndSettle("\27[38;2;200;10;10m" .. segment1 .. "\r\n\27[38;2;10;200;10m" .. segment2 .. "\27[0m\r\n")
+
+      assert.are.same(expectedColours({{#segment1 + 1, red}, {#segment2, green}}), joinedLineColours())
+    end)
+
+    it("when they match", function()
+      feedAndSettle("\27[38;2;200;10;10m" .. segment1 .. "\r\n" .. segment2 .. "\27[0m\r\n")
+
+      assert.are.same(expectedColours({{#segment1 + 1 + #segment2, red}}), joinedLineColours())
+    end)
+
+    it("when the held segment has more than one", function()
+      feedAndSettle("\27[38;2;10;10;200m" .. segment1:sub(1, 10) .. "\27[38;2;200;10;10m" .. segment1:sub(11) .. "\r\n\27[38;2;10;200;10m" .. segment2 .. "\27[0m\r\n")
+
+      assert.are.same(expectedColours({{10, blue}, {#segment1 - 10 + 1, red}, {#segment2, green}}), joinedLineColours())
+    end)
+  end)
+
   it("does not swallow a prompt into the full-width line above it", function()
     -- the prompt is terminated by IAC GA rather than a newline
     feedAndSettle(segment1 .. "\r\nHP:100> <T_IAC><T_GA>")

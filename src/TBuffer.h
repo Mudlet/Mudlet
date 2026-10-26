@@ -363,7 +363,7 @@ static_assert(sizeof(TChar) == 16, "TChar has grown - every character of every b
 
 // The formatting of one buffered line, read like a const std::vector<TChar>. Most game lines arrive
 // in one rendition, so those are kept as a single TChar and a count, which saves a heap block per
-// line; expand() turns a line into one TChar per character before anything writes to it.
+// line; expand() turns a line into one TChar per character before a caller writes to its characters.
 class TLineFormat
 {
 public:
@@ -435,13 +435,11 @@ public:
     using size_type = std::size_t;
     using difference_type = std::ptrdiff_t;
     using const_reference = const TChar&;
-    using iterator = const_iterator;
 
     TLineFormat() = default;
-    // Not explicit, so a finished std::vector<TChar> still moves straight into the buffer
+    // Not explicit, so a finished std::vector<TChar> is stored as a line without ceremony
     TLineFormat(std::vector<TChar>&& chars);
     explicit TLineFormat(const std::vector<TChar>& chars);
-    TLineFormat(size_type count, const TChar& format);
     TLineFormat(const TLineFormat&) = default;
     TLineFormat& operator=(const TLineFormat&) = default;
     // Leaves the source empty, as a moved-from std::vector is in practice
@@ -473,10 +471,12 @@ public:
     const_iterator cend() const { return end(); }
     // Stored as one shared TChar; a line held per character may still look uniform
     bool uniform() const { return mUniformCount; }
-    // The per-character storage's heap block, null while the line is uniform
+    // The per-character storage's heap block, null when none is held
     const TChar* heapData() const { return mChars.data(); }
     size_type capacity() const { return mChars.capacity(); }
 
+    // Invalidates every reference and iterator into the line, and the vector returned stays valid only until
+    // the next non-const call
     std::vector<TChar>& expand();
     std::vector<TChar> toVector() const;
     // As std::vector::insert() would, so format is stored deselected
@@ -486,7 +486,7 @@ public:
     void erase(size_type from, size_type to)
     {
         if (mUniformCount) {
-            mUniformCount -= static_cast<quint32>(to - from);
+            mUniformCount -= to - from;
         } else {
             mChars.erase(mChars.begin() + static_cast<difference_type>(from), mChars.begin() + static_cast<difference_type>(to));
         }
@@ -507,7 +507,7 @@ private:
     // Empty while mUniformCount is not
     std::vector<TChar> mChars;
     TChar mUniform;
-    quint32 mUniformCount = 0;
+    size_type mUniformCount = 0;
 };
 static_assert(std::is_nothrow_move_constructible_v<TLineFormat>);
 
@@ -872,7 +872,7 @@ private:
     quint8 mAltFont = 0;
 
     QString mMudLine;
-    std::vector<TChar> mMudBuffer;
+    TLineFormat mMudBuffer;
     TLineFormat mPreTriggerPassLine;
     // Parked between lines so the trigger-pass snapshot reuses its allocation:
     TLineFormat mSpareTriggerPassLine;
@@ -909,7 +909,7 @@ private:
     // is held here instead of being committed, so its continuation can be
     // joined back on and triggers run once over the whole logical line:
     QString mServerWrapPendingLine;
-    std::vector<TChar> mServerWrapPendingBuffer;
+    TLineFormat mServerWrapPendingBuffer;
     // Length of the last game line joined into the above. Once a paragraph
     // has been joined even once the held text is longer than the wrap column,
     // so the column the game actually broke at is only recoverable from this:

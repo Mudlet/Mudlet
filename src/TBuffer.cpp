@@ -528,9 +528,10 @@ TChar::TChar(const QColor& foreground, const QColor& background, const TChar::At
 {
 }
 
+// Every empty line holds one of these, so the colors are not converted through QColor
 TChar::TChar()
-: mFgColor(QColorConstants::White.rgba())
-, mBgColor(QColorConstants::Black.rgba())
+: mFgColor(qRgb(255, 255, 255))
+, mBgColor(qRgb(0, 0, 0))
 {
 }
 
@@ -559,7 +560,7 @@ TLineFormat::TLineFormat(std::vector<TChar>&& chars)
 {
     if (storableAsOne(chars)) {
         mUniform = chars.front();
-        mUniformCount = static_cast<quint32>(chars.size());
+        mUniformCount = chars.size();
     } else {
         mChars = std::move(chars);
     }
@@ -569,19 +570,9 @@ TLineFormat::TLineFormat(const std::vector<TChar>& chars)
 {
     if (storableAsOne(chars)) {
         mUniform = chars.front();
-        mUniformCount = static_cast<quint32>(chars.size());
+        mUniformCount = chars.size();
     } else {
         mChars = chars;
-    }
-}
-
-TLineFormat::TLineFormat(const size_type count, const TChar& format)
-{
-    if (count && !format.isSelected()) {
-        mUniform = format;
-        mUniformCount = static_cast<quint32>(count);
-    } else {
-        mChars.assign(count, format);
     }
 }
 
@@ -603,7 +594,7 @@ void TLineFormat::insert(const size_type index, const size_type count, const TCh
         if (!mUniformCount) {
             mUniform = copy;
         }
-        mUniformCount += static_cast<quint32>(count);
+        mUniformCount += count;
         return;
     }
     std::vector<TChar>& chars = expand();
@@ -726,7 +717,7 @@ quint8 TChar::alternateFont() const
 }
 
 #ifndef QT_NO_DEBUG
-static quint64 colorFingerprint(const std::vector<TChar>& line)
+static quint64 colorFingerprint(const TLineFormat& line)
 {
     quint64 hash = 14695981039346656037ULL;
     for (const TChar& character : line) {
@@ -1545,7 +1536,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                     const QString literalText = mpHost->mMxpProcessor.abortCurrentTag();
                     mMudLine.append(literalText);
                     for (int i = 0; i < literalText.length(); ++i) {
-                        mMudBuffer.push_back(c);
+                        mMudBuffer.append(1, c);
                     }
 
                     mTagWatchdog->stop();
@@ -1757,7 +1748,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         const TChar c(mBackGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
                         for (int spaceCount = 0; spaceCount < spacesNeeded; ++spaceCount) {
                             mMudLine.append(QChar::Space);
-                            mMudBuffer.push_back(c);
+                            mMudBuffer.append(1, c);
                         }
                         // For debugging:
                         //                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - CUF (cursor forward) sequence of form CSI" << temp << "C received, converting into " << spacesNeeded << " spaces.";
@@ -2006,7 +1997,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
                         // We also need to set the color attributes for the special character
                         while (valueLength--) {
-                            mMudBuffer.push_back(c);
+                            mMudBuffer.append(1, c);
                         }
                         // We already handled the input, go to the next character
                         localBufferPosition++;
@@ -2025,7 +2016,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
                         mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
                         while (valueLength--) {
-                            mMudBuffer.push_back(c);
+                            mMudBuffer.append(1, c);
                         }
                         // Do NOT increment position - the current character needs to be reprocessed
                         continue;
@@ -2052,7 +2043,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
                         mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
                         while (valueLength--) {
-                            mMudBuffer.push_back(c);
+                            mMudBuffer.append(1, c);
                         }
                         localBufferPosition++;
                         continue;
@@ -2065,7 +2056,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
                         mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
                         while (valueLength--) {
-                            mMudBuffer.push_back(c);
+                            mMudBuffer.append(1, c);
                         }
                         continue;
                     }
@@ -2166,8 +2157,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 
         if (isTwoTCharsNeeded) {
             // CHECK: Do we need to duplicate stuff for mMXP_LINK_MODE - yes I think we do:
-            mMudBuffer.push_back(c);
-            mMudBuffer.push_back(c);
+            mMudBuffer.append(1, c);
+            mMudBuffer.append(1, c);
             if (mHyperlinkActive) {
                 // Capture the column position when the first character of the hyperlink is added
                 if (mCurrentHyperlinkText.isEmpty()) {
@@ -2177,7 +2168,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 mCurrentHyperlinkText += QString(QChar(ch));
             }
         } else {
-            mMudBuffer.push_back(c);
+            mMudBuffer.append(1, c);
             if (mHyperlinkActive) {
                 // Capture the column position when the first character of the hyperlink is added
                 if (mCurrentHyperlinkText.isEmpty()) {
@@ -2214,7 +2205,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                             mxp.processRawInput(QByteArrayView(bytes + localBufferPosition + 1, static_cast<qsizetype>(runLength)));
                         }
                         mMudLine.append(QLatin1StringView(bytes + localBufferPosition + 1, static_cast<qsizetype>(runLength)));
-                        mMudBuffer.insert(mMudBuffer.cend(), runLength, c);
+                        mMudBuffer.append(runLength, c);
                         localBufferPosition = runEnd - 1;
                     }
                 }
@@ -2233,7 +2224,7 @@ void TBuffer::flushPendingDestinationContent()
 
     if (mpHost->mMxpFrameManager.hasActiveDestination()) {
         if (TPrintSink* destSink = mpHost->mMxpFrameManager.currentDestinationSink()) {
-            destSink->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+            destSink->printFormatted(mMudLine, mMudBuffer.expand(), mLinkStore);
             mMudLine.clear();
             mMudBuffer.clear();
         }
@@ -2293,7 +2284,7 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
                 }
             }
             if (!mMudLine.isEmpty()) {
-                destSink->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+                destSink->printFormatted(mMudLine, mMudBuffer.expand(), mLinkStore);
             }
             mMudLine.clear();
             mMudBuffer.clear();
@@ -2383,7 +2374,7 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         QString().swap(mMudLine);
     }
     if (mMudBuffer.capacity() > csmMaxRetainedLineCapacity) {
-        std::vector<TChar>().swap(mMudBuffer);
+        TLineFormat().swap(mMudBuffer);
     }
     commitLineData(std::move(line), std::move(chars), ch);
     ++localBufferPosition;
@@ -2781,7 +2772,7 @@ void TBuffer::joinPendingServerWrapOntoCurrent()
     // The game's wrapper swallowed the space it broke the line at:
     if (!mServerWrapPendingLine.endsWith(QChar::Space) && !mMudLine.startsWith(QChar::Space)) {
         mServerWrapPendingLine.append(QChar::Space);
-        mServerWrapPendingBuffer.push_back(mServerWrapPendingBuffer.empty() ? TChar(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags()) : mServerWrapPendingBuffer.back());
+        mServerWrapPendingBuffer.append(1, mServerWrapPendingBuffer.empty() ? TChar(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags()) : mServerWrapPendingBuffer.back());
     }
     const int heldLength = static_cast<int>(mServerWrapPendingLine.size());
     if (mHyperlinkActive && mCurrentHyperlinkStartsAfterHeldText) {
@@ -2789,7 +2780,12 @@ void TBuffer::joinPendingServerWrapOntoCurrent()
         mCurrentHyperlinkStartsAfterHeldText = false;
     }
     mMudLine.prepend(mServerWrapPendingLine);
-    mMudBuffer.insert(mMudBuffer.begin(), mServerWrapPendingBuffer.begin(), mServerWrapPendingBuffer.end());
+    if (mServerWrapPendingBuffer.uniform()) {
+        mMudBuffer.insert(0, mServerWrapPendingBuffer.size(), mServerWrapPendingBuffer.front());
+    } else if (!mServerWrapPendingBuffer.empty()) {
+        std::vector<TChar>& chars = mMudBuffer.expand();
+        chars.insert(chars.begin(), mServerWrapPendingBuffer.cbegin(), mServerWrapPendingBuffer.cend());
+    }
     if (mHeldSpoilerLinkId) {
         maskSpoilerText(mHeldSpoilerLinkId, mMudLine, mHeldSpoilerStartColumn, heldLength - mHeldSpoilerStartColumn + mHeldSpoilerContinuationLength);
         mHeldSpoilerLinkId = 0;
@@ -2833,7 +2829,7 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
             finaliseActiveHyperlink();
             mServerWrapPendingLine.swap(mMudLine);
             mMudLine.swap(rest);
-            for (auto& c : mMudBuffer) {
+            for (auto& c : mMudBuffer.expand()) {
                 if (c.mLinkIndex == linkId) {
                     c.mLinkIndex = 0;
                 }
@@ -2843,7 +2839,7 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
         }
     }
     QString line;
-    std::vector<TChar> chars;
+    TLineFormat chars;
     line.swap(mServerWrapPendingLine);
     chars.swap(mServerWrapPendingBuffer);
     commitLineData(std::move(line), std::move(chars), '\n');
@@ -3081,7 +3077,7 @@ void TBuffer::processMxpWatchdogCallback()
 
                 mMudLine.append(lastEntityValue);
                 for (qsizetype i = 0; i < lastEntityValue.size(); ++i) {
-                    mMudBuffer.push_back(style);
+                    mMudBuffer.append(1, style);
                 }
                 // In trigger context, as for every other line the game sends
                 const bool wasInTriggerEngineMode = mpModel->mTriggerEngineMode;
@@ -6655,8 +6651,8 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
     if (x1 < 0 || x2 < 0) {
         return false;
     }
-    // the erase() below is undefined behaviour when the start is past the end:
-    // it moves a range of negative length, writing beyond the allocation
+    // the erase() below corrupts the line when the start is past the end:
+    // a range of negative length
     if (y1 > y2 || (y1 == y2 && x1 > x2)) {
         return false;
     }
@@ -6674,7 +6670,7 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
         // multi-line one can still start past its own end: an empty line has
         // an x_end of -1, and a first line selected from its very last column
         // leaves x at buffer[y].size(). Either way there is nothing on the line
-        // to remove, and erase() over that range is the same reversed move.
+        // to remove, and erase() over that range is the same reversed range.
         if (x > x_end) {
             continue;
         }
@@ -8743,7 +8739,7 @@ void TBuffer::appendReplacementCharacter(TChar c)
 {
     mMudLine.append(QChar::ReplacementCharacter);
     styleForCurrentLink(c);
-    mMudBuffer.push_back(c);
+    mMudBuffer.append(1, c);
     if (mHyperlinkActive) {
         if (mCurrentHyperlinkText.isEmpty()) {
             mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 1;
@@ -8868,6 +8864,7 @@ void TBuffer::clearSearchHighlights()
     const int lastLine = std::min(mLastFoundLine, static_cast<int>(buffer.size()) - 1);
     for (int y = mFirstFoundLine; y <= lastLine; ++y) {
         TLineFormat& line = buffer[y];
+        // Checked first so a line with nothing to clear stays stored as one TChar
         if (std::none_of(line.cbegin(), line.cend(), [](const TChar& character) {
                 return character.isFound();
             })) {
@@ -9786,6 +9783,7 @@ void TBuffer::updateLinkCharacters(int linkIndex, int fromLine)
     // Iterate through all lines in the buffer
     for (auto lineNumber = static_cast<size_t>(std::max(0, fromLine)); lineNumber < buffer.size(); ++lineNumber) {
         TLineFormat& lineFormat = buffer[lineNumber];
+        // Checked first so a line without the link stays stored as one TChar
         if (std::none_of(lineFormat.cbegin(), lineFormat.cend(), [linkIndex](const TChar& character) {
                 return character.linkIndex() == linkIndex;
             })) {
