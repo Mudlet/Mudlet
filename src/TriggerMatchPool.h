@@ -143,7 +143,7 @@ private:
 
     void publish(int chunkCount);
     static Settings readSettings(bool withEnvironment);
-    int nextSampleGap() const;
+    qint64 nextSampleGap() const;
     void startHelpers(int wanted);
     void stopHelpers();
     void workerLoop(int slot, uint32_t seen);
@@ -196,7 +196,7 @@ private:
     static constexpr quint64 scmWarmUpLines = 8;
     std::array<qint64, scmWarmUpLines> mPooledWarmUp{};
     std::array<qint64, scmWarmUpLines> mSampledWarmUp{};
-    int mLinesUntilSample = 0;
+    qint64 mLinesUntilSample = 0;
     bool mShutDown = false;
     bool mSettingsApplied = false;
     int mRegexSearchesInLastBatch = 0;

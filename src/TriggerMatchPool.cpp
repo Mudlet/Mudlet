@@ -276,9 +276,9 @@ qint64 TriggerMatchPool::Report::savedNanoseconds() const
 
 // Between 1 and twice the period, averaging the period: output that repeats on a fixed cycle would
 // otherwise put the same kind of line in every sample
-int TriggerMatchPool::nextSampleGap() const
+qint64 TriggerMatchPool::nextSampleGap() const
 {
-    return mSettings.sampleEvery ? static_cast<int>(QRandomGenerator::global()->bounded(1, 2 * mSettings.sampleEvery)) : 0;
+    return mSettings.sampleEvery ? QRandomGenerator::global()->bounded(qint64{1}, 2 * qint64{mSettings.sampleEvery}) : 0;
 }
 
 bool TriggerMatchPool::takeSample()

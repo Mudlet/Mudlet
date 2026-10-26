@@ -235,6 +235,21 @@ private slots:
         pool.configure(original);
     }
 
+    void theLongestSamplingPeriodSamplesRarely()
+    {
+        TriggerMatchPool& pool = TriggerMatchPool::instance();
+        const TriggerMatchPool::Settings original = pool.settings();
+        TriggerMatchPool::Settings rare = original;
+        rare.sampleEvery = std::numeric_limits<int>::max();
+        pool.configure(rare);
+        int samples = 0;
+        for (int line = 0; line < 1000; ++line) {
+            samples += pool.takeSample() ? 1 : 0;
+        }
+        pool.configure(original);
+        QCOMPARE(samples, 0);
+    }
+
     // The settings dialog switches the pool on and off while Mudlet runs
     void configureStopsAndRestartsTheHelpers()
     {
