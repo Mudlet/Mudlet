@@ -6824,6 +6824,53 @@ describe("Trigger processing", function()
                 assert.is_nil(table.concat(seen.reads, ","):find("one"), "a finaliser was handed the second fire's multimatches")
             end)
 
+            -- A trigger whose code never compiled has no function to look up,
+            -- so freeing it once the pass is over calls __index
+            it("hands a finaliser that freeing a killed trigger runs none of the last fire's captures", function()
+                local seen = {runs = 0, reads = {}}
+                local broken = tempTrigger("LazyFinaliserNeverSeen", "echo(")
+                trigger(tempRegexTrigger("^LazyFinaliserCleanup (\\w+)$", function()
+                    killTrigger(broken)
+                    local _ = matches[2]
+                    finaliser.watching = true
+                end))
+                finaliser.onRun = function()
+                    seen.runs = seen.runs + 1
+                    if seen.runs > 1 then
+                        local read = _G.matches
+                        seen.reads[#seen.reads + 1] = tostring(type(read) == "table" and read[2])
+                    end
+                end
+
+                withFinaliserAtEveryAllocation(function()
+                    feedTriggers("\nLazyFinaliserCleanup word\n")
+                end)
+
+                assert.is_true(seen.runs > 1, "no finaliser ran after the fire")
+                assert.is_nil(table.concat(seen.reads, ","):find("word"), "a finaliser was handed the fire's captures after it")
+            end)
+
+            it("hands the line back to a finaliser that feeds text after a fire", function()
+                local seen = {runs = 0}
+                trigger(tempRegexTrigger("^LazyFinaliserFeed (\\w+)$", function()
+                    local _ = multimatches
+                    finaliser.watching = true
+                end))
+                finaliser.onRun = function()
+                    seen.runs = seen.runs + 1
+                    if seen.runs == 2 then
+                        feedTriggers("LazyFinaliserFed text\n")
+                    end
+                end
+
+                withFinaliserAtEveryAllocation(function()
+                    feedTriggers("\nLazyFinaliserFeed word\n")
+                end)
+
+                assert.is_true(seen.runs > 1, "no finaliser ran after the fire")
+                assert.are.equal("LazyFinaliserFeed word", line)
+            end)
+
             it("finds every name there once an alias pass under a multiline fire is over", function()
                 local nils = {}
                 alias(tempAlias("^lazyfinaliserinner$", function()

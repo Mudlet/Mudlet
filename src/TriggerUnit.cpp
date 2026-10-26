@@ -738,6 +738,9 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     const auto prescanGuard = qScopeGuard([previousPrescanPassId] {
         TTrigger::setPrescanPassId(previousPrescanPassId);
     });
+    // Declared after the guards above, so a fire's end still owed settles inside the
+    // pass, before doCleanup() frees anything a finaliser could still look up
+    const TLuaInterpreter::DispatchEndDeferral dispatchEndDeferral(*mpHost->getLuaInterpreter());
     // Only while behind, i.e. a chunk carries many lines: a wake-up is repaid only when the next line is
     // already waiting, so at normal game speed it would spend CPU to save nothing perceptible.
     TriggerMatchPool& pool = TriggerMatchPool::instance();

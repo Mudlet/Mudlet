@@ -3067,10 +3067,7 @@ void Host::runTriggers(int line)
 
 void Host::incomingStreamProcessor(const QString& data, int line)
 {
-    {
-        const TLuaInterpreter::DispatchEndDeferral dispatchEndDeferral(mLuaInterpreter);
-        mTriggerUnit.processDataStream(data, line);
-    }
+    mTriggerUnit.processDataStream(data, line);
 
     // Every unit's doCleanup() starts by asking this, and on nearly every line
     // all six answer no; asking here keeps the six calls off the per-line path.
