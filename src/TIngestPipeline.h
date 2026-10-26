@@ -26,6 +26,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -33,42 +34,64 @@
 class Host;
 class QThread;
 
-// A line the worker parsed ahead, as commitLine() would have been handed it
+// A line the worker parsed ahead, as commitLine() would have been handed it; its text and, unless the
+// whole line is in one format, its formats are in the job's arenas
 struct TSpeculatedLine
 {
-    QString text;
-    TLineFormat format;
     TBuffer::ParseState stateAtCommit;
+    TChar uniformFormat;
     // Offsets into the unit: where the line's first byte is, and its commit character
     size_t start = 0;
     size_t end = 0;
+    quint32 textOffset = 0;
+    quint32 textLength = 0;
+    quint32 formatOffset = 0;
+    quint32 formatLength = 0;
     char commitChar = 0;
     bool forcedLineBreak = false;
+    bool uniform = true;
 };
 
-// One game unit being parsed ahead. Main fills it in and owns it except between begin() and end(); the
-// worker publishes lines through mReady, and main takes them in order.
+// Up to csmMaxLines lines of one game unit, parsed ahead from mStartPosition. Main fills it in while
+// it is neither Queued nor Running; the worker publishes lines through mReady, and main takes them in
+// order. The worker allocates nothing: lines go into fixed arenas, and when those are full it stops
+// and main queues the job again from where it has got to.
 struct TIngestJob
 {
     enum State : int { Idle, Queued, Running, Done };
+    static constexpr size_t csmMaxLines = 512;
+    static constexpr size_t csmMaxTextChars = 32768;
+    static constexpr size_t csmMaxFormatChars = 8192;
+    static constexpr size_t csmNoResume = std::numeric_limits<size_t>::max();
 
-    const std::string* mpUnit = nullptr;
+    TIngestJob();
+
+    // A copy, so main never waits for the worker to let go of its own
+    std::string mUnit;
     size_t mDecodableLength = 0;
+    size_t mStartPosition = 0;
     QVector<QChar> mLookupTable;
     QByteArray mEncoding;
     TBuffer::ParseState mStartState;
     TBuffer::ParseConfig mConfig;
     std::array<QColor, 16> mColours;
-    // Never resized while the worker holds the job
     std::vector<TSpeculatedLine> mLines;
-    std::atomic<int> mReady{0};
-    std::atomic<bool> mCancel{false};
-    std::atomic<int> mState{Idle};
-    // Main's own: the next line it has not used or passed
-    int mNext = 0;
+    std::vector<QChar> mText;
+    std::vector<TChar> mFormats;
+    // Worker only while it runs, then read by main once it is Done
+    size_t mTextUsed = 0;
+    size_t mFormatUsed = 0;
+    // Where main may queue the job again for the rest of the unit, once the worker is Done
+    size_t mResumeFrom = csmNoResume;
     std::chrono::steady_clock::time_point mQueuedAt;
     std::chrono::steady_clock::time_point mWorkerStart;
     std::chrono::steady_clock::time_point mWorkerEnd;
+
+    alignas(64) std::atomic<int> mReady{0};
+    std::atomic<bool> mCancel{false};
+    std::atomic<int> mState{Idle};
+    // Main's own: the next line it has not used or passed
+    alignas(64) int mNext = 0;
 };
 
 // Parses game text one unit ahead of the main thread with a second TBuffer, so the main thread commits
@@ -78,6 +101,7 @@ class TIngestPipeline
 {
 public:
     static constexpr int csmMinimumLines = 16;
+    static constexpr size_t csmMinimumResumeBytes = 512;
 
     explicit TIngestPipeline(Host*);
     ~TIngestPipeline();
@@ -88,6 +112,8 @@ public:
     static bool verifying();
     void noteVerified(bool same, const QString& text);
     TIngestJob* begin(const TBuffer& source, const std::string& unit, size_t decodableLength, const QVector<QChar>& lookupTable);
+    // Queues the job again from position, if the worker has finished with it and stopped short of the unit's end
+    bool resume(const TBuffer& source, TIngestJob&, size_t position);
     // Returns once the worker no longer reads the unit; harmless on a job already ended
     void end(TIngestJob&);
 
@@ -100,12 +126,15 @@ public:
     quint64 mStatVerified = 0;
     quint64 mStatVerifyFailed = 0;
     quint64 mStatNotReady = 0;
+    quint64 mStatResumed = 0;
+    quint64 mStatBusy = 0;
+    quint64 mStatCancelled = 0;
     quint64 mStatNeverStarted = 0;
     double mStatLatencyUs = 0;
     double mStatWorkerUs = 0;
-    double mStatMainUs = 0;
 
 private:
+    void queue(const TBuffer& source, TIngestJob&, size_t position);
     void workerLoop();
     void parse(TIngestJob&);
     void printStats() const;
