@@ -2913,6 +2913,39 @@ describe("Trigger processing", function()
                 assert.are.equal("orc", _G.TrigHighlight.selected)
             end)
 
+            -- "ñandú" is 5 characters but 7 bytes
+            it("highlights, selects and replaces a later trigger's non-ASCII capture where it now is", function()
+                _G.TrigHighlight = {}
+                local editTrigger = tempRegexTrigger("^edit_mb ñandú tail$", function()
+                    if selectString("edit_mb", 1) > -1 then replace("e") end
+                    deselect()
+                end)
+                tempComplexRegexTrigger("SpecHighlightAfterEditMb", "(ñandú) tail$", "", 0, 0, 0, 0, 0, "red", "blue", 0, 0, 0)
+                local pick = tempRegexTrigger("(ñandú) tail$", function()
+                    if selectCaptureGroup(2) > -1 then
+                        _G.TrigHighlight.selected = getSelection()
+                        replace("X")
+                    end
+                    deselect()
+                    _G.TrigHighlight.line = getLineNumber()
+                end)
+                finally(function()
+                    killTrigger(editTrigger)
+                    killTrigger("SpecHighlightAfterEditMb")
+                    killTrigger(pick)
+                end)
+
+                feedTriggers("edit_mb ñandú tail\n")
+
+                local line = _G.TrigHighlight.line
+                assert.is_number(line, "the later trigger should have fired")
+                moveCursor(0, line)
+                assert.are.equal("e X tail", getCurrentLine())
+                assert.are.equal("ñandú", _G.TrigHighlight.selected)
+                assert.are.same(defaultForeground, coloursOf(line, "tail").foreground,
+                                "nothing past the capture should have been highlighted")
+            end)
+
             local insideEdits = {
                 {"lengthened", "tag red orc", "t very red orc", "very red orc", function()
                     if selectString("tag", 1) > -1 then replace("t") end

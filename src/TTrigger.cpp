@@ -421,7 +421,7 @@ public:
         if (smSpare.size() >= scmMaxSpare) {
             return;
         }
-        // Else one match-all fire over a long line would keep its storage for the session
+        // Trimmed, or one match-all fire over a long line would keep its storage for the session
         mCaptures.clearAndTrim();
         mPositions.clear();
         if (mPositions.capacity() > TCaptureGroups::scmMaxKeptCaptures) {
@@ -465,12 +465,11 @@ private:
         TCaptureGroups mCaptures;
         std::vector<int> mPositions;
     };
-    // One per level of nesting a fire's script can reach, which is a handful
+    // One per level a fire can nest - filter children, scripts feeding text back - a handful in practice
     static constexpr std::size_t scmMaxSpare = 8;
     inline static std::vector<Spare> smSpare;
 };
 
-// What QString::fromStdString() made of a capture held as a std::string
 QString captureText(const std::string_view capture)
 {
     return QString::fromUtf8(capture.data(), static_cast<qsizetype>(capture.size()));

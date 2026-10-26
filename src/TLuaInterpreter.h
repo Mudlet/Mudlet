@@ -84,7 +84,7 @@ class TLuaInterpreter : public QThread
 
     friend class TForkedProcess;
     friend class LuaInterface;
-    // reads the parked capture vectors' capacity, which nothing else exposes
+    // reads the kept capture storage's capacity, which nothing else exposes
     friend class CaptureGroupParkingTest;
 
 public:

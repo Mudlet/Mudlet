@@ -4786,9 +4786,8 @@ void TLuaInterpreter::pushMatchesTable(lua_State* L)
     // empty capture groups stay defined keys i.e. matches[emptyCapGroupNumber] = "" rather than nil
     for (std::size_t i = 0; i < mCaptureGroups.size(); ++i) {
         const std::string_view capture = mCaptureGroups[i];
-        // Up to the first NUL, as Lua has always been handed a capture
+        // Cut at the first NUL, as scripts expect
         lua_pushlstring(L, capture.data(), qstrnlen(capture.data(), capture.size()));
-        // Lua indexes start with 1 as a general convention
         lua_rawseti(L, -2, static_cast<int>(i) + 1);
     }
     for (const auto& [name, capture] : mCapturedNameGroups) {

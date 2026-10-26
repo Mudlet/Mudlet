@@ -23,8 +23,8 @@
  * the biggest fire's high water mark for the rest of the session, and that grows
  * with the longest line a trigger ever matched.
  *
- * A match-all trigger reaches those counts without a hostile line: its /g loop
- * accumulates every match on the line into one capture list, so its capture
+ * A match-all trigger grows it without a hostile line: its /g loop
+ * accumulates every match on the line into one fire, so its capture
  * count scales with matches per line rather than with the pattern's group count.
  *
  * The capacity is private state with no Lua reader, which is what keeps this out
@@ -157,8 +157,8 @@ private slots:
                    "for i = 1, 3000 do words[i] = 'word' .. i end\n"
                    "feedTriggers(table.concat(words, ' ') .. '\\n')\n"));
 
-        // Overshooting the bound rather than merely the cap is what makes the
-        // checks below bite, whatever the bound is tuned to
+        // Overshooting both bounds is what makes the checks below bite, whatever
+        // they are tuned to
         const int capturesSeen = luaInt(qsl("capturesSeen"));
         QVERIFY2(static_cast<std::size_t>(capturesSeen) > TCaptureGroups::scmMaxKeptCaptures,
                  qPrintable(

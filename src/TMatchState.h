@@ -62,7 +62,7 @@ public:
 
     // Encoded exactly as QString::toUtf8() would, so an unpaired surrogate
     // cannot shift the byte offset the capture reports, and cut at the first
-    // NUL, as a std::string built from toUtf8().constData() is
+    // NUL, matching what pushMatchesTable() hands Lua
     void append(const QStringView capture)
     {
         const std::size_t begin = mBytes.size();
@@ -88,7 +88,7 @@ public:
         mEnds.clear();
     }
 
-    // Well past what an ordinary fire needs, so a trigger slightly over it doesn't reallocate per fire
+    // Well past what an ordinary fire needs, so a busier trigger keeps its storage instead of reallocating every fire
     static constexpr std::size_t scmMaxKeptCaptures = 2048;
     static constexpr std::size_t scmMaxKeptBytes = 32 * 1024;
 
@@ -176,8 +176,8 @@ public:
 private:
     static size_t roomFor(const size_t held) { return (held >= scmMaxPooledNodes) ? 0 : (scmMaxPooledNodes - held); }
 
-    // Caps the high-water mark one match-all pattern over a hostile line would otherwise set for the
-    // session; enough for any ordinary fire, including nested filter fires and open multiline states.
+    // Caps the high-water mark a match-all condition over a hostile line would otherwise set for the
+    // session; enough for the open multiline states of any ordinary profile.
     static constexpr size_t scmMaxPooledNodes = 512;
     static constexpr std::string::size_type scmMaxPooledCapture = 1024;
     // Destroyed at static teardown, after every Host; a TMatchState outliving them (e.g. a
