@@ -1136,6 +1136,9 @@ void CredentialManagerKeychainTest::testAWriteTheKeychainHasAnsweredIsNotOrphane
     // closing the dialog that started the write drops it along with the manager. QtKeychain will not
     // delete the job either - Job::emitFinished() read autoDelete() as the job answered - so nothing
     // is left to, and it still carries the password it was given.
+#if defined(Q_OS_MACOS)
+    QSKIP("the write has to reach the store, and on macOS that offers to reset the keychain; see initTestCase()");
+#endif
     auto manager = std::make_unique<CredentialManager>();
     QPointer<QKeychain::Job> writeJob;
     bool handlerRan = false;
@@ -1156,6 +1159,7 @@ void CredentialManagerKeychainTest::testAWriteTheKeychainHasAnsweredIsNotOrphane
                     closeTheDialog.post();
                 },
                 Qt::DirectConnection);
+        return true;
     };
 
     QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("abandoned the keychain write for profile \"%1\"").arg(QRegularExpression::escape(mProfile))));
