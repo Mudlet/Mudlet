@@ -132,6 +132,11 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     mpPaintPacer = new QTimer(this);
     mpPaintPacer->setSingleShot(true);
     connect(mpPaintPacer, &QTimer::timeout, this, [this]() {
+        // The frame was held back before the flood that followed it began.
+        if (!mPendingPaintRegion.isEmpty() && mSincePaint.isValid() && mSincePaint.elapsed() < csmFloodPaintPaceMs && paintPaceMs() == csmFloodPaintPaceMs) {
+            mpPaintPacer->start(csmFloodPaintPaceMs - static_cast<int>(mSincePaint.elapsed()));
+            return;
+        }
         applyPendingScrollBarUpdate();
         if (!mPendingPaintRegion.isEmpty()) {
             update(mPendingPaintRegion);
@@ -176,10 +181,11 @@ void TTextEdit::scheduleUpdate(const QRect& rect)
     }
     const QRect area = rect.isValid() ? rect : QWidget::rect();
     mPendingPaintRegion += area;
+    const int pace = paintPaceMs();
 
     // Nothing painted recently, so this frame's window is open: Qt still merges
     // whatever else arrives before the event loop gets around to painting.
-    if (!mSincePaint.isValid() || mSincePaint.elapsed() >= csmPaintPaceMs) {
+    if (!mSincePaint.isValid() || mSincePaint.elapsed() >= pace) {
         applyPendingScrollBarUpdate();
         update(mPendingPaintRegion);
         mWholePaneRequested = area.contains(QWidget::rect());
@@ -188,8 +194,15 @@ void TTextEdit::scheduleUpdate(const QRect& rect)
     }
 
     if (!mpPaintPacer->isActive()) {
-        mpPaintPacer->start(csmPaintPaceMs - static_cast<int>(mSincePaint.elapsed()));
+        mpPaintPacer->start(pace - static_cast<int>(mSincePaint.elapsed()));
     }
+}
+
+// Nobody reads lines that scroll past between two frames, and a frame costs as much as
+// taking in several thousand of them, so a flood gets fewer frames and finishes sooner.
+int TTextEdit::paintPaceMs()
+{
+    return mpBuffer->size() - mBufferSizeAtPaint > mScreenHeight ? csmFloodPaintPaceMs : csmPaintPaceMs;
 }
 
 void TTextEdit::markLinesDirty(const int firstLine, const int lastLine)
@@ -1683,6 +1696,7 @@ void TTextEdit::paintNothing(const QRect& r)
 void TTextEdit::paintEvent(QPaintEvent* e)
 {
     mSincePaint.restart();
+    mBufferSizeAtPaint = mpBuffer->size();
     mWholePaneRequested = false;
     if (!mPendingPaintRegion.isEmpty()) {
         // Whatever this paint covers is current now, so a deferred repaint of it

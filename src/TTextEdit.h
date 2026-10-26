@@ -355,10 +355,14 @@ private:
     QPointer<QTimer> mpScrollStoppedTimer;
     // Maximum of one repaint per csmPaintPaceMs is allowed via scheduleUpdate().
     static constexpr int csmPaintPaceMs = 16; // ~60 fps cap
+    // The cap instead while more than a screen of lines arrives between frames.
+    static constexpr int csmFloodPaintPaceMs = 33;
+    int paintPaceMs();
     QTimer* mpPaintPacer = nullptr;
     // Restarted by each paintEvent(), so scheduleUpdate() can tell how much of
     // the current frame's window is left.
     QElapsedTimer mSincePaint;
+    int mBufferSizeAtPaint = 0;
     // What the deferred repaint has to cover once the pacer fires.
     QRegion mPendingPaintRegion;
     // The whole pane went to update() since the last paint, so asking again only costs time.

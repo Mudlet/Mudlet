@@ -280,6 +280,71 @@ private slots:
                                     .arg(pane->height())));
     }
 
+    // A flood starts as a trickle, so its first line arms the pacer at the normal pace;
+    // the screen of lines that follows has to stretch that frame, not paint on time.
+    void test_aFloodBetweenFramesStretchesTheFrameItsFirstLineArmed()
+    {
+        mpServer->setWelcomeMessage(qsl("hello\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("hello")), "welcome text never reached the buffer");
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(200ms);
+
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY(console);
+        TTextEdit* pane = console->mUpperPane;
+        QVERIFY(pane);
+
+        mpWatchedPane = pane;
+        pane->installEventFilter(this);
+        pane->repaint();
+        QVERIFY(pane->mScreenHeight > 0);
+
+        pane->mSincePaint.restart();
+        console->print(qsl("first line of a flood\n"));
+        QVERIFY2(pane->mpPaintPacer->isActive(), "the first line did not hold a frame back");
+        QVERIFY2(pane->mpPaintPacer->remainingTime() <= TTextEdit::csmPaintPaceMs,
+                 qPrintable(qsl("one line armed a frame %1ms away, past the %2ms of the normal pace").arg(pane->mpPaintPacer->remainingTime()).arg(TTextEdit::csmPaintPaceMs)));
+
+        for (int i = 0; i <= pane->mScreenHeight; ++i) {
+            console->print(qsl("flood line %1\n").arg(i));
+        }
+
+        qint64 firstFireMs = -1;
+        bool heldBack = false;
+        QObject listener;
+        connect(pane->mpPaintPacer, &QTimer::timeout, &listener, [&]() {
+            if (firstFireMs < 0) {
+                firstFireMs = pane->mSincePaint.elapsed();
+                heldBack = pane->mpPaintPacer->isActive() && !pane->mPendingPaintRegion.isEmpty();
+            }
+        });
+        mPaintCount = 0;
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return firstFireMs >= 0;
+                         },
+                         2s),
+                 "the pacer never fired");
+        if (firstFireMs >= TTextEdit::csmFloodPaintPaceMs) {
+            QSKIP(qPrintable(qsl("the pacer fired %1ms after the last frame, past the %2ms flood pace itself - the runner stalled, so the stretch was not exercised")
+                                     .arg(firstFireMs)
+                                     .arg(TTextEdit::csmFloodPaintPaceMs)));
+        }
+        QVERIFY2(heldBack,
+                 qPrintable(qsl("the pacer painted %1ms after the last frame although more than a screen of lines had arrived since, so a flood is drawn at the normal pace").arg(firstFireMs)));
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mPaintCount > 0 && pane->mPendingPaintRegion.isEmpty();
+                         },
+                         2s),
+                 "the stretched frame was never painted");
+    }
+
 private:
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
