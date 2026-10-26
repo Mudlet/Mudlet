@@ -371,6 +371,33 @@ QString requiredLiteral(const QString& pattern)
     return best.front();
 }
 
+// How often a code unit turns up in game text, from 0 for never to 255 for a space: a rough English
+// letter order, with anything outside ASCII taken as rare
+int commonness(const char16_t unit)
+{
+    static constexpr char scmLettersByUse[] = "etaoinshrdlucmwfgypbvkjxqz";
+    if (unit == u' ') {
+        return 255;
+    }
+    if (unit >= u'a' && unit <= u'z') {
+        for (int rank = 0; scmLettersByUse[rank]; ++rank) {
+            if (scmLettersByUse[rank] == unit) {
+                return 240 - rank * 8;
+            }
+        }
+    }
+    if (unit == u'.' || unit == u',' || unit == u'\'') {
+        return 110;
+    }
+    if (unit >= u'0' && unit <= u'9') {
+        return 70;
+    }
+    if (unit >= u'A' && unit <= u'Z') {
+        return 60;
+    }
+    return unit < 128 ? 30 : 20;
+}
+
 // The /g loop's later searches: the remainders are short and mostly hit, where a QStringMatcher
 // measured slower than scanning for the first code unit. Searches the QString, not the UTF-8, which
 // the caller has cut short at any NUL.
@@ -489,6 +516,56 @@ bool selectOnTriggerPassLine(Host* pHost, const int lineNumber, const int from, 
     return model.selectSectionOnLine(model.buffer.triggerPassLineNow(lineNumber), from, length);
 }
 } // namespace
+
+TNeedle::TNeedle(const QString& text)
+: mText(text)
+{
+    const qsizetype length = mText.size();
+    if (length < 2) {
+        return;
+    }
+    const char16_t* const units = reinterpret_cast<const char16_t*>(mText.constData());
+    qsizetype rarest = 0;
+    for (qsizetype at = 1; at < length; ++at) {
+        if (commonness(units[at]) < commonness(units[rarest])) {
+            rarest = at;
+        }
+    }
+    qsizetype nextRarest = rarest ? 0 : 1;
+    for (qsizetype at = 0; at < length; ++at) {
+        if (at != rarest && commonness(units[at]) < commonness(units[nextRarest])) {
+            nextRarest = at;
+        }
+    }
+    mRarest = rarest;
+    mNextRarest = nextRarest;
+}
+
+qsizetype TNeedle::indexIn(const QStringView haystack) const
+{
+    const qsizetype length = mText.size();
+    if (length < 2) {
+        return haystack.indexOf(QStringView(mText));
+    }
+    const qsizetype lastStart = haystack.size() - length;
+    const char16_t* const line = haystack.utf16();
+    const char16_t* const text = reinterpret_cast<const char16_t*>(mText.constData());
+    const QChar rarest(text[mRarest]);
+    const char16_t nextRarest = text[mNextRarest];
+    const size_t bytes = static_cast<size_t>(length) * sizeof(char16_t);
+    for (qsizetype start = 0; start <= lastStart; ++start) {
+        // Qt's vectorised search; a loop written here to vectorise measured slower at -O3 than at -O2
+        const qsizetype found = QStringView(line + mRarest + start, lastStart + 1 - start).indexOf(rarest);
+        if (found < 0) {
+            return -1;
+        }
+        start += found;
+        if (line[start + mNextRarest] == nextRarest && !std::memcmp(line + start, text, bytes)) {
+            return start;
+        }
+    }
+    return -1;
+}
 
 // Some extraordinary numbers outside of the range (0-255) used for ANSI colors:
 // Changing them WILL modify the Lua API of TLuaInterpreter::tempColorTrigger
@@ -648,7 +725,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
 
             if (patternKinds.at(i) == REGEX_SUBSTRING) {
                 // Spelt out because bitsFor() is case-sensitive too: change one and the other must follow
-                mSubstringPatterns.emplace_back(TSubstringPattern{std::make_unique<QStringMatcher>(patterns.at(i), Qt::CaseSensitive), TBigramFilter::bitsFor(patterns.at(i))});
+                mSubstringPatterns.emplace_back(TSubstringPattern{std::make_unique<TNeedle>(patterns.at(i)), TBigramFilter::bitsFor(patterns.at(i))});
             } else {
                 mSubstringPatterns.emplace_back();
             }
@@ -658,7 +735,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                 const QString text = requiredLiteral(patterns.at(i));
                 // Under two characters it sets no filter bits
                 if (text.size() >= 2) {
-                    literal.matcher = std::make_unique<QStringMatcher>(text, Qt::CaseSensitive);
+                    literal.matcher = std::make_unique<TNeedle>(text);
                     literal.bigrams = TBigramFilter::bitsFor(text);
                 }
             }
@@ -949,6 +1026,18 @@ bool TTrigger::uniformLineColors(Host* pHost, int line, QRgb& foreground, QRgb& 
     foreground = pColors->foregroundRgba();
     background = pColors->backgroundRgba();
     return true;
+}
+
+bool TUtf8Subject::holdsUnpairedSurrogate(const QString& line)
+{
+    // Written to vectorise: most lines hold no surrogate at all, and only those need their pairs checked
+    const char16_t* const data = reinterpret_cast<const char16_t*>(line.constData());
+    const qsizetype size = line.size();
+    unsigned surrogates = 0;
+    for (qsizetype i = 0; i < size; ++i) {
+        surrogates |= (data[i] & 0xF800u) == 0xD800u;
+    }
+    return surrogates && !line.isValidUtf16();
 }
 
 void TUtf8Subject::encode() const
@@ -1775,7 +1864,7 @@ bool TTrigger::prescanMayFire(
             }
             // unique_ptr's operator-> yields a non-const matcher even here; the const reference keeps the
             // compiler checking that this helper-thread path stays read-only.
-            const QStringMatcher& matcher = *pattern.matcher;
+            const TNeedle& matcher = *pattern.matcher;
             if (matcher.indexIn(haystack) != -1) {
                 return true;
             }
@@ -1805,7 +1894,7 @@ bool TTrigger::prescanMayFire(
                     }
                     // As in the substring branch above, a const reference keeps
                     // the compiler checking that this path stays read-only
-                    const QStringMatcher& matcher = *literal.matcher;
+                    const TNeedle& matcher = *literal.matcher;
                     if (matcher.indexIn(haystack) == -1) {
                         break;
                     }
