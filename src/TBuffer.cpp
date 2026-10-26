@@ -1327,21 +1327,25 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     mProcessingLocalFeed = false;
 }
 
-// A block of at most 255 bytes at a time, so its tally fits a byte and the compiler counts a whole vector
-// register of bytes per instruction; std::count's 64-bit tally runs about ten times slower.
+// Blocks of a fixed 192 bytes: few enough that a block's tally fits a byte, and a multiple of 16, 32 and 64
+// byte vectors, so even -O2 counts a register of bytes per instruction. std::count keeps a 64-bit tally,
+// which takes several times as long.
 static int countLineFeeds(const std::string& text)
 {
+    constexpr size_t blockSize = 192;
     const char* const data = text.data();
     const size_t size = text.size();
     size_t count = 0;
     size_t i = 0;
-    while (i < size) {
-        const size_t blockEnd = std::min(size, i + 255);
+    for (; i + blockSize <= size; i += blockSize) {
         unsigned char blockCount = 0;
-        for (; i < blockEnd; ++i) {
-            blockCount += data[i] == '\n';
+        for (size_t j = 0; j < blockSize; ++j) {
+            blockCount += data[i + j] == '\n';
         }
         count += blockCount;
+    }
+    for (; i < size; ++i) {
+        count += data[i] == '\n';
     }
     return static_cast<int>(count);
 }
