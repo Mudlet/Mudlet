@@ -314,7 +314,7 @@ private slots:
         };
         QList<Walk> walks;
         if (const QString routes = qEnvironmentVariable("MUDLET_BENCH_ROUTES"); routes == qsl("none")) {
-            // findPath() is never called: CI/pgo-train.sh trains the graph build without it.
+            // findPath() is never called: CI/pgo-train.sh trains GCC builds on the graph build without it.
         } else if (!routes.isEmpty()) {
             for (const QString& route : routes.split(QLatin1Char(','), Qt::SkipEmptyParts)) {
                 const QStringList ends = route.split(QLatin1Char(':'));

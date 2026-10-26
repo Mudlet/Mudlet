@@ -7,11 +7,11 @@
 #
 # The workload is PipelineBenchmark - text decoding, the trigger engine, the
 # default packages and painting the console - because that is the per-line path
-# a busy game hammers. Functions it never enters are optimised as if there were
-# no profile under GCC, but Clang treats them as cold. MapRenderBenchmark and
-# PathfindBenchmark then train the mapper on the Achaea map the Lua specs use:
-# without them, GCC 12 loaded, audited and built the pathfinding graph of a big
-# map slower than with no profile at all.
+# a busy game hammers. Functions the training never enters are optimised as if
+# there were no profile under GCC, but Clang treats them as cold.
+# MapRenderBenchmark and PathfindBenchmark then train the mapper on the Achaea
+# map the Lua specs use: without them, GCC 12 loaded, audited and built the
+# pathfinding graph of a big map slower than with no profile at all.
 
 set -euo pipefail
 
@@ -85,9 +85,10 @@ find "${PROFILE_DIR}" -type f \( -name '*.gcda' -o -name '*.profraw' -o -name '*
 train PipelineBenchmark text_best_pass_ms trigger_best_pass_ms defaults_text_best_pass_ms display_paint_ms
 
 # The benchmarks convert the XML to the binary format themselves, so TMap::restore() is trained too.
-# PathfindBenchmark builds the pathfinding graph but walks no routes: trained on them, GCC 12 turned
-# the conditional moves in TMap::searchGraph() into branches and took 1.15 times as long per search,
-# on the trained map too.
+# PathfindBenchmark searches four routes only under Clang, which compiles untrained code as cold:
+# without them, Clang 21 took 1.11 to 1.14 times as long per search as with no profile, with them
+# 0.87 to 0.90, on maps it never saw too. Trained on them, GCC 12 turned the conditional moves in
+# TMap::searchGraph() into branches and took 1.15 times as long per search, on the trained map too.
 # Under the profile directory rather than mktemp's, as the benchmarks need a path Windows can open.
 MAP_DIR="${PROFILE_DIR}/training-map"
 rm -rf "${MAP_DIR}"
@@ -97,7 +98,11 @@ MAP_ARCHIVE="$(cd "$(dirname "$0")/.." && pwd)/src/mudlet-lua/tests/fixtures/map
 (cd "${MAP_DIR}" && cmake -E tar xf "${MAP_ARCHIVE}")
 export MUDLET_BENCH_MAP="${MAP_DIR}/achaea-map.xml"
 train MapRenderBenchmark map_restore_seconds render_fit_ms
-MUDLET_BENCH_ROUTES=none train PathfindBenchmark init_graph_ms
+if [[ "${COMPILER}" == *Clang* ]]; then
+  MUDLET_BENCH_ROUTES="107:1192,1192:107,6595:18690,18690:6595" train PathfindBenchmark init_graph_ms path_route_18690_6595_ms
+else
+  MUDLET_BENCH_ROUTES=none train PathfindBenchmark init_graph_ms
+fi
 
 if [[ "${COMPILER}" == *Clang* ]]; then
   # The merged profile has to be in the format of the compiler that reads it, so
