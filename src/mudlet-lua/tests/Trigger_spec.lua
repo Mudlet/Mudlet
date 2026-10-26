@@ -1978,7 +1978,8 @@ describe("Trigger processing", function()
 
         -- Whether to summarise a line is judged from the line before it, so the
         -- line is fed twice and only the second pass counted.
-        local function hitsFor(needles)
+        local function hitsFor(needles, text)
+            text = text or line
             local hits = {}
             local ids = installBallast()
             for _, needle in ipairs(needles) do
@@ -1988,11 +1989,11 @@ describe("Trigger processing", function()
                 end)
             end
 
-            feedTriggers("\n" .. line .. "\n")
+            feedTriggers("\n" .. text .. "\n")
             for _, needle in ipairs(needles) do
                 hits[needle] = 0
             end
-            feedTriggers("\n" .. line .. "\n")
+            feedTriggers("\n" .. text .. "\n")
 
             killAll(ids)
             return hits
@@ -2014,6 +2015,13 @@ describe("Trigger processing", function()
             for _, needle in ipairs(needles) do
                 assert.are.equal(0, hits[needle], "'" .. needle .. "' does not occur in the line and should not have matched")
             end
+        end)
+
+        it("does not match a character that shares only its high surrogate with the pattern's", function()
+            -- 🐉 and 🐲 share a high surrogate, and the line holds every pair of code units "🐉🐲" does
+            local hits = hitsFor({"🐉🐲", "🐲 🐉"}, "🐲 🐉🐉")
+            assert.are.equal(0, hits["🐉🐲"], "'🐉🐲' does not occur in the line and should not have matched")
+            assert.are.equal(1, hits["🐲 🐉"], "'🐲 🐉' occurs in the line and should have matched")
         end)
 
         it("fires regex, start of line and exact match triggers only where they match", function()
