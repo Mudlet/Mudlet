@@ -315,14 +315,15 @@ describe("trigger matching through the whole-tree index", function()
         -- made before the folder, so that its line is fed before the walk reaches the folder
         assert(permSubstringTrigger("treeindex feeder", packageName, {"treeindex_feeder_bait"}, [[
             TreeIndexSpecNote("feeder")
-            feedTriggers("treeindex_fed_two_bait\n")
+            feedTriggers("zqxjk\n")
         ]]))
         assert(permGroup("treeindex fed folder", "trigger", packageName))
-        assert(permSubstringTrigger("treeindex fed one", "treeindex fed folder", {"treeindex_fed_one_bait"}, 'TreeIndexSpecNote("fedOne")'))
-        assert(permSubstringTrigger("treeindex fed two", "treeindex fed folder", {"treeindex_fed_two_bait"}, 'TreeIndexSpecNote("fedTwo")'))
+        -- of rare letters only, so that neither is filed under text the other's line holds
+        assert(permSubstringTrigger("treeindex fed one", "treeindex fed folder", {"qzjxv"}, 'TreeIndexSpecNote("fedOne")'))
+        assert(permSubstringTrigger("treeindex fed two", "treeindex fed folder", {"zqxjk"}, 'TreeIndexSpecNote("fedTwo")'))
         feed("treeindex warm-up line")
 
-        feed("treeindex_feeder_bait treeindex_fed_one_bait")
+        feed("treeindex_feeder_bait qzjxv")
 
         assert.are.same({feeder = 1, fedOne = 1, fedTwo = 1}, fired, "the fed line must not take away what the line feeding it holds")
     end)
@@ -366,7 +367,8 @@ describe("trigger matching through the whole-tree index", function()
         ]]))
         assert(permGroup("treeindex made outer", "trigger", packageName))
         assert(permGroup("treeindex made inner", "trigger", "treeindex made outer"))
-        assert(permSubstringTrigger("treeindex made sibling", "treeindex made inner", {"treeindex_made_sibling_bait"}, ""))
+        -- of rare letters only, so that the line does not hold what it is filed under
+        assert(permSubstringTrigger("treeindex made sibling", "treeindex made inner", {"vzqjx"}, ""))
         feed("treeindex warm-up line")
 
         feed("treeindex_maker_bait treeindex_made_bait")

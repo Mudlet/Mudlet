@@ -42,6 +42,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "TLuaInterpreter.h"
+#include "TTrigger.h"
 #include "TriggerUnit.h"
 #include "mudlet.h"
 
@@ -257,7 +258,7 @@ private slots:
     void openRootMovedBelowAGroupStillFires()
     {
         QVERIFY2(runLua(qsl(R"(
-            movedGroupId = permGroup("movedGroup", "trigger")
+            permGroup("movedGroup", "trigger")
             for index = 1, 48 do
                 permSubstringTrigger("movedPadding" .. index, "movedGroup", {"qqmovedpadding" .. index .. "zz"}, "")
             end
@@ -269,15 +270,17 @@ private slots:
                  "the triggers did not compile");
         auto* triggerUnit = mpHost->getTriggerUnit();
         QVERIFY2(triggerUnit->treeIndexFiledCount() >= 48, "the tree index has not engaged, so it cannot pass the moved trigger over");
-        const int groupId = luaInteger("movedGroupId");
-        triggerUnit->reParentTrigger(luaInteger("movedId"), 0, groupId);
+        TTrigger* group = triggerUnit->findTrigger(qsl("movedGroup"));
+        QVERIFY(group);
+        triggerUnit->reParentTrigger(luaInteger("movedId"), 0, group->getID());
+        QCOMPARE(triggerUnit->getTrigger(luaInteger("movedId"))->getParent(), group);
 
         for (int line = 0; line < 4; ++line) {
             runLua(qsl("feedTriggers('movedquietline\\n')"));
         }
 
         QCOMPARE(luaInteger("movedFires"), 3);
-        delete triggerUnit->getTrigger(groupId);
+        delete group;
     }
 };
 

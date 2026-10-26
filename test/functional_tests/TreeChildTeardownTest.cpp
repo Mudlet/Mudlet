@@ -216,7 +216,7 @@ private slots:
         TriggerUnit* unit = mpHost->getTriggerUnit();
         // Enough filed triggers below the group for the tree index to engage
         QVERIFY(runLua(qsl(R"(
-            tctOpenGroupId = permGroup("tct open group", "trigger")
+            permGroup("tct open group", "trigger")
             for index = 1, 48 do
                 permSubstringTrigger("tct open padding " .. index, "tct open group", {"tct_open_padding_" .. index .. "_bait"}, "")
             end
@@ -225,19 +225,20 @@ private slots:
             setTriggerStayOpen("tct open child", 2)
         )")));
         QVERIFY2(unit->treeIndexFiledCount() >= 48, "the tree index has not engaged, so nothing holds the open trigger");
-        const int groupID = luaInteger("tctOpenGroupId");
+        TTrigger* group = unit->findTrigger(qsl("tct open group"));
+        QVERIFY(group);
         const int childID = luaInteger("tctOpenChildId");
         TTrigger* child = unit->getTrigger(childID);
         QVERIFY(child);
 
         QList<EditorDeleteItemCommand::DeletedItemInfo> items;
-        items.append({childID, groupID, 0, QString(), child->getName()});
+        items.append({childID, group->getID(), 0, QString(), child->getName()});
         EditorDeleteItemCommand command(EditorViewType::cmTriggerView, items, mpHost);
         command.redo();
         QVERIFY(!unit->getTrigger(childID));
 
         QVERIFY(runLua(qsl(R"(feedTriggers("tct line after the deletion\n"))")));
-        delete unit->getTrigger(groupID);
+        delete group;
     }
 
     void test_deletingAnAliasGroup()
