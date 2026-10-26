@@ -501,7 +501,8 @@ private:
     static int nearestTo(const QHash<QPair<int, int>, int>& byCoordinate, int x, int y, int maxRadius)
     {
         int best = 0;
-        int bestDistance = maxRadius + 1;
+        // 64-bit because maxRadius is INT_MAX on a level whose span is the whole int range.
+        qint64 bestDistance = static_cast<qint64>(maxRadius) + 1;
         for (const auto& [coordinate, roomId] : byCoordinate.asKeyValueRange()) {
             const int distance = std::max(std::abs(coordinate.first - x), std::abs(coordinate.second - y));
             if (distance < bestDistance || (distance == bestDistance && roomId < best)) {
