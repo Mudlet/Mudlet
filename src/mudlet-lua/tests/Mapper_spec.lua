@@ -7522,11 +7522,17 @@ describe("Tests setMapMenuOrder", function()
   after_each(function()
     setMapMenuOrder("")
     setMapMenuOrder("specOrderMenu")
+    setMapMenuOrder(4874)
   end)
 
   it("should take a list of unique names, including ones not added yet", function()
     assert.is_true(setMapMenuOrder("", {"specOrderNeverAdded", "specOrderMenu"}))
     assert.is_true(setMapMenuOrder("specOrderMenu", {"specOrderChild"}))
+  end)
+
+  it("should take numbers as unique names, like addMapMenu and addMapEvent do", function()
+    assert.is_true(setMapMenuOrder("", {4874, "specOrderMenu"}))
+    assert.is_true(setMapMenuOrder(4874, {48741}))
   end)
 
   it("should clear a list when given nil, nothing or an empty table", function()
