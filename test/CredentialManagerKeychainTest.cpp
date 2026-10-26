@@ -1151,14 +1151,7 @@ void CredentialManagerKeychainTest::testAWriteTheKeychainHasAnsweredIsNotOrphane
         writeJob = job;
         // Queued behind the result handler's own posted call but ahead of it, so the manager goes away
         // once the keychain has really answered and QtKeychain is done with the job
-        QObject::connect(
-                job,
-                &QKeychain::Job::finished,
-                job,
-                [&closeTheDialog]() {
-                    closeTheDialog.post();
-                },
-                Qt::DirectConnection);
+        QObject::connect(job, &QKeychain::Job::finished, &closeTheDialog, &HighPriorityCall::post, Qt::DirectConnection);
         return true;
     };
 
