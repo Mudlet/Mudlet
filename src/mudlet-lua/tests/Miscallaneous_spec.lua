@@ -214,10 +214,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       it("gives a line that arrived with another the time it was stored, after the other's trigger ran", function()
-        -- a stored line's time is only ever reused once the TSC rate has been measured, over 10 ms
+        -- a stored line's time is only ever reused once the TSC rate has been measured, over 100 ms
         echo("\n")
         local calibrationStart = getEpoch()
-        repeat until getEpoch() - calibrationStart >= 0.02
+        repeat until getEpoch() - calibrationStart >= 0.12
         echo("\n")
         local first = getLastLineNumber("main")
         local triggerId = tempExactMatchTrigger("getTimestamp slow trigger line", function()

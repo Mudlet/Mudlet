@@ -1347,7 +1347,7 @@ const bool scInvariantTsc = [] {
     asm("cpuid" : "+a"(eax), "=b"(ebx), "+c"(ecx), "=d"(edx));
     return (edx & (1U << 8)) != 0;
 }();
-// A quarter of a millisecond in TSC ticks, measured over the first 10 ms: rates run from hundreds of MHz to
+// A quarter of a millisecond in TSC ticks, measured over at least 100 ms: rates run from hundreds of MHz to
 // several GHz, and an emulator picks its own. Zero, so no reuse, until then.
 quint64 sArrivalClockReuseTicks = 0;
 quint64 sCalibrationTicks = 0;
@@ -1359,13 +1359,13 @@ void calibrateArrivalClock(const quint64 ticks, const qint64 wallNow)
     const auto now = std::chrono::steady_clock::now();
     const auto micros = std::chrono::duration_cast<std::chrono::microseconds>(now - sCalibrationStart).count();
     if (sCalibrationTicks && ticks > sCalibrationTicks) {
-        if (micros < 10'000) {
+        if (micros < 100'000) {
             return;
         }
         const quint64 ticksPerMicrosecond = (ticks - sCalibrationTicks) / static_cast<quint64>(micros);
-        // A TSC can run on through a suspend that steady_clock leaves out and the wall clock counts, and
-        // cores whose TSCs disagree can claim any rate: either way, measure again
-        const bool noSuspend = qAbs((wallNow - sCalibrationWallStart) * 1000 - micros) < 2'000;
+        // The wall clock, which moves in 16 ms steps on Windows, counts a suspend that a TSC may run through and
+        // steady_clock leaves out; cores whose TSCs disagree can claim any rate. Either way, measure again.
+        const bool noSuspend = qAbs((wallNow - sCalibrationWallStart) * 1000 - micros) < 20'000;
         if (noSuspend && ticksPerMicrosecond < 10'000) {
             sArrivalClockReuseTicks = ticksPerMicrosecond * 250;
             return;
