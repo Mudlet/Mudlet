@@ -2720,13 +2720,16 @@ describe("Tests where a run of text in a read ends", function()
     return table.concat(getLines("main", mark, getLastLineNumber("main")), "|")
   end
 
-  -- runs of every length to past two sixteen byte steps of the scan, so each byte it stops at falls at every offset
+  -- each stop at every offset of the scan's sixteen byte steps, with text enough after it that a step reaches
+  -- it; the run after it starts part way into a step and ends inside a whole one
   it("ends a run at a carriage return, a NUL or a telnet command wherever it falls", function()
+    local tail = string.rep("z", 20)
+    local after = tail .. "\r\n" .. tail .. "\r\n"
     for length = 1, 40 do
       local run = string.rep("x", length)
-      assert.equals(run, displayed(run .. "\r\n"), "carriage return after " .. length .. " bytes")
-      assert.equals(run .. "y", displayed(run .. "\0y\r\n"), "NUL after " .. length .. " bytes")
-      assert.equals(run .. "y", displayed(run .. "<T_IAC><T_NOP>y\r\n"), "IAC NOP after " .. length .. " bytes")
+      assert.equals(run .. "|" .. tail .. "|" .. tail, displayed(run .. "\r\n" .. after), "carriage return after " .. length .. " bytes")
+      assert.equals(run .. tail .. "|" .. tail, displayed(run .. "\0" .. after), "NUL after " .. length .. " bytes")
+      assert.equals(run .. tail .. "|" .. tail, displayed(run .. "<T_IAC><T_NOP>" .. after), "IAC NOP after " .. length .. " bytes")
     end
   end)
 end)
