@@ -794,8 +794,6 @@ private:
     // (e.g. an MXP <HR> inside locally fed text) does not swap the state again:
     bool mProcessingLocalFeed = false;
     int mPendingChunkLines = 0;
-    bool mDecodingChunk = false;
-    bool mArrivalClockValid = false;
     quint64 mArrivalClockTicks = 0;
     qint64 mArrivalClockTime = 0;
 

@@ -56,6 +56,7 @@
 #include <QScopeGuard>
 
 #if defined(Q_PROCESSOR_X86_64) && (defined(Q_CC_GNU) || defined(Q_CC_CLANG))
+#include <cpuid.h>
 #include <x86intrin.h>
 #define MUDLET_REUSE_ARRIVAL_CLOCK
 #endif
@@ -1332,19 +1333,49 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     mProcessingLocalFeed = false;
 }
 
-// The system clock read waits for every earlier instruction to complete, which in a flood costs more than
-// the rest of storing a line; a bare TSC read does not. 2^17 ticks is under 0.15 ms at any TSC rate a
-// 64-bit x86 runs at, so a reused reading is at most a millisecond behind.
+#if defined(MUDLET_REUSE_ARRIVAL_CLOCK)
+namespace {
+// A TSC that halts in sleep states, as older CPUs' do, would miss the time a script blocks the thread for
+const bool scInvariantTsc = [] {
+    unsigned int eax = 0, ebx = 0, ecx = 0, edx = 0;
+    return __get_cpuid(0x80000007, &eax, &ebx, &ecx, &edx) && (edx & (1U << 8));
+}();
+// A quarter of a millisecond in TSC ticks, measured over the first 10 ms: rates run from hundreds of MHz to
+// several GHz, and an emulator picks its own. Zero, so no reuse, until then.
+quint64 sArrivalClockReuseTicks = 0;
+quint64 sCalibrationTicks = 0;
+std::chrono::steady_clock::time_point sCalibrationStart;
+
+void calibrateArrivalClock(const quint64 ticks)
+{
+    const auto now = std::chrono::steady_clock::now();
+    if (!sCalibrationTicks || ticks <= sCalibrationTicks) {
+        sCalibrationStart = now;
+        // After the clock here, before it at the far end: a preemption in between can only shrink the rate
+        sCalibrationTicks = __rdtsc();
+        return;
+    }
+    const auto micros = std::chrono::duration_cast<std::chrono::microseconds>(now - sCalibrationStart).count();
+    if (micros >= 10'000) {
+        sArrivalClockReuseTicks = (ticks - sCalibrationTicks) / static_cast<quint64>(micros) * 250;
+    }
+}
+} // namespace
+#endif
+
+// A system clock read serialises the pipeline, which shows in a flood of lines; a bare TSC read does not
 qint64 TBuffer::lineArrivalTime()
 {
 #if defined(MUDLET_REUSE_ARRIVAL_CLOCK)
-    if (mDecodingChunk) {
+    if (scInvariantTsc) {
         const quint64 ticks = __rdtsc();
-        if (mArrivalClockValid && ticks - mArrivalClockTicks < (quint64{1} << 17)) {
+        if (ticks - mArrivalClockTicks < sArrivalClockReuseTicks) {
             return mArrivalClockTime;
         }
+        if (!sArrivalClockReuseTicks) {
+            calibrateArrivalClock(ticks);
+        }
         mArrivalClockTicks = ticks;
-        mArrivalClockValid = true;
         mArrivalClockTime = QDateTime::currentMSecsSinceEpoch();
         return mArrivalClockTime;
     }
@@ -1360,17 +1391,6 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     mPendingChunkLines = static_cast<int>(std::count(incoming.cbegin(), incoming.cend(), '\n'));
     const auto pendingLinesGuard = qScopeGuard([this, previousPendingLines] {
         mPendingChunkLines = previousPendingLines;
-    });
-    // lineArrivalTime() reuses a reading only while a chunk is decoded: the thread never idles in
-    // between, so a TSC that stops in deep sleep states, as some old CPUs' do, has not stopped.
-    const bool outermostChunk = !std::exchange(mDecodingChunk, true);
-    if (outermostChunk) {
-        mArrivalClockValid = false;
-    }
-    const auto decodingGuard = qScopeGuard([this, outermostChunk] {
-        if (outermostChunk) {
-            mDecodingChunk = false;
-        }
     });
 
     // The complete two byte escape sequences (DECSC, DECRC, RIS and a stray
