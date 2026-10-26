@@ -2866,28 +2866,25 @@ describe("Tests game text the ingest worker parses ahead", function()
     assert.truthy(together[9]:find("IngestEchoed", 1, true))
   end)
 
-  it("decodes the rest of a read in the encoding a trigger switches to", function()
+  it("decodes a whole read in the encoding it arrived in, even when a trigger switches it part way", function()
     local original = getServerEncoding()
     finally(function()
       setServerEncoding(original)
     end)
-    local lines = {}
-    for i = 1, 40 do
-      lines[i] = "IngestEncoding " .. i .. " caf\195\169"
-    end
-    lines[5] = "IngestEncodingSwitch"
-    for i = 6, 40 do
-      lines[i] = "IngestEncoding " .. i .. " caf\233"
-    end
     triggers[#triggers + 1] = tempTrigger("IngestEncodingSwitch", function()
       setServerEncoding("ISO 8859-1")
     end)
     setServerEncoding("UTF-8")
-    local apart = pass(lines, false)
-    setServerEncoding("UTF-8")
-    local together = pass(lines, true)
-    assert.are.same(apart, together)
-    assert.truthy(together[20]:find("^IngestEncoding 20 café|"), "the switch did not reach the rest of the read")
+    local lines = {}
+    for i = 1, 40 do
+      lines[i] = "IngestEncoding " .. i .. " caf\233"
+    end
+    lines[5] = "IngestEncodingSwitch"
+    local together = pass(lines, true, true)
+    -- in UTF-8 a lone \233 is no character
+    assert.truthy(together[20]:find("^IngestEncoding 20 caf\239\191\189|"), "the switch reached the rest of the read it was made in")
+    local after = pass({"IngestEncoding after caf\233"}, true, true)
+    assert.truthy(after[1]:find("^IngestEncoding after café|"), "the switch did not reach the next read")
   end)
 
   it("hands the rest of a read to MXP once a trigger turns it on", function()
