@@ -75,4 +75,27 @@ describe("matches for capture groups that did not participate", function()
             end)
         end)
     end
+
+    local function viaMatchAllTrigger(pattern, line)
+        local seen, length
+        local id = tempComplexRegexTrigger("matchesUnsetGroupsMatchAll", pattern, function()
+            seen, length = copyOf(matches)
+        end, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0)
+        feedTriggers("\n" .. line .. "\n")
+        killTrigger(id)
+        assert.is_table(seen, "the trigger should have matched at all")
+        return seen, length
+    end
+
+    for _, case in ipairs({ { "in a match-all trigger", viaMatchAllTrigger }, { "in an alias", viaAlias } }) do
+        local where, capture = case[1], case[2]
+
+        it(where .. ", lets a later match fill the index an unset trailing group left out", function()
+            local seen, length = capture([[(q)(z)?]], "qq")
+
+            assert.are.equal("q", seen[3])
+            assert.are.same({ "q", "q", "q", "q" }, seen)
+            assert.are.equal(4, length)
+        end)
+    end
 end)
