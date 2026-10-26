@@ -372,6 +372,55 @@ private slots:
         QVERIFY2(handedOver, "the stretched frame was never handed to update(), so the end of the flood stays unpainted");
     }
 
+    // A busy main thread can leave the pacer overdue, and stretching that late fire by the
+    // whole difference between the paces would hold the frame past the flood pace.
+    void test_aLateFireIsStretchedOnlyToTheFloodPace()
+    {
+        TTextEdit* pane = nullptr;
+        QPointer<TMainConsole> console;
+        openPane(console, pane);
+        QVERIFY(pane);
+
+        QVERIFY(pacerWentIdle(pane));
+        pane->repaint();
+        QVERIFY(pane->mScreenHeight > 0);
+
+        pane->mSincePaint.restart();
+        console->print(qsl("first line of a flood\n"));
+        QVERIFY2(pane->mpPaintPacer->isActive(), "the first line did not hold a frame back");
+        printLines(console, pane->mScreenHeight + 1);
+        const qint64 printMs = pane->mSincePaint.elapsed();
+        while (pane->mSincePaint.elapsed() < TTextEdit::csmPaintPaceMs + 6) {
+        }
+
+        bool fired = false;
+        bool stretched = false;
+        qint64 firedAt = 0;
+        qint64 dueAt = 0;
+        QObject listener;
+        connect(pane->mpPaintPacer, &QTimer::timeout, &listener, [&]() {
+            if (fired) {
+                return;
+            }
+            fired = true;
+            firedAt = pane->mSincePaint.elapsed();
+            stretched = pane->mpPaintPacer->isActive();
+            dueAt = firedAt + pane->mpPaintPacer->remainingTime();
+        });
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return fired;
+                         },
+                         2s),
+                 "the overdue pacer never fired");
+        if (printMs >= TTextEdit::csmPaintPaceMs || firedAt >= TTextEdit::csmFloodPaintPaceMs) {
+            QSKIP(qPrintable(qsl("the prints took %1ms and the pacer fired %2ms after the paint, so the runner stalled past a pace").arg(printMs).arg(firedAt)));
+        }
+        QVERIFY2(stretched, "a flood's frame armed at the normal pace was not stretched");
+        QVERIFY2(dueAt <= TTextEdit::csmFloodPaintPaceMs + 1,
+                 qPrintable(qsl("a pacer that fired %1ms after the paint was stretched to %2ms, past the %3ms flood pace").arg(firedAt).arg(dueAt).arg(TTextEdit::csmFloodPaintPaceMs)));
+    }
+
     // A label over the pane repaints the strip of text beneath it, and those small paints
     // must not push back a frame that a flood has already made wait the flood pace.
     void test_partialPaintsDuringAFloodDoNotPushTheFrameBack()

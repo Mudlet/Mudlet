@@ -133,11 +133,11 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     mpPaintPacer->setSingleShot(true);
     connect(mpPaintPacer, &QTimer::timeout, this, [this]() {
         // Armed at the normal pace by the line that began a flood, so stretched to the flood pace -
-        // by a fixed amount and once only, as a partial paint under an overlay restarts mSincePaint.
+        // once and by no more than the paces differ, as a paint under an overlay restarts mSincePaint.
         const qint64 sincePaint = mSincePaint.isValid() ? mSincePaint.elapsed() : csmFloodPaintPaceMs;
         if (!mPaintPacerStretched && !mPendingPaintRegion.isEmpty() && sincePaint < csmFloodPaintPaceMs && paintPaceMs() == csmFloodPaintPaceMs) {
             mPaintPacerStretched = true;
-            mpPaintPacer->start(csmFloodPaintPaceMs - csmPaintPaceMs);
+            mpPaintPacer->start(std::min(csmFloodPaintPaceMs - csmPaintPaceMs, csmFloodPaintPaceMs - static_cast<int>(sincePaint)));
             return;
         }
         applyPendingScrollBarUpdate();
