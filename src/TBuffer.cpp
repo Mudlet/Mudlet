@@ -1351,22 +1351,30 @@ const bool scInvariantTsc = [] {
 // several GHz, and an emulator picks its own. Zero, so no reuse, until then.
 quint64 sArrivalClockReuseTicks = 0;
 quint64 sCalibrationTicks = 0;
+qint64 sCalibrationWallStart = 0;
 std::chrono::steady_clock::time_point sCalibrationStart;
 
-void calibrateArrivalClock(const quint64 ticks)
+void calibrateArrivalClock(const quint64 ticks, const qint64 wallNow)
 {
     const auto now = std::chrono::steady_clock::now();
     const auto micros = std::chrono::duration_cast<std::chrono::microseconds>(now - sCalibrationStart).count();
-    // Past 100 ms the machine may have slept in between, which steady_clock leaves out and the TSC does not
-    if (!sCalibrationTicks || ticks <= sCalibrationTicks || micros > 100'000) {
-        sCalibrationStart = now;
-        // After the clock here, before it at the far end: a preemption in between can only shrink the rate
-        sCalibrationTicks = __rdtsc();
-        return;
+    if (sCalibrationTicks && ticks > sCalibrationTicks) {
+        if (micros < 10'000) {
+            return;
+        }
+        const quint64 ticksPerMicrosecond = (ticks - sCalibrationTicks) / static_cast<quint64>(micros);
+        // A TSC can run on through a suspend that steady_clock leaves out and the wall clock counts, and
+        // cores whose TSCs disagree can claim any rate: either way, measure again
+        const bool noSuspend = qAbs((wallNow - sCalibrationWallStart) * 1000 - micros) < 2'000;
+        if (noSuspend && ticksPerMicrosecond < 10'000) {
+            sArrivalClockReuseTicks = ticksPerMicrosecond * 250;
+            return;
+        }
     }
-    if (micros >= 10'000) {
-        sArrivalClockReuseTicks = (ticks - sCalibrationTicks) / static_cast<quint64>(micros) * 250;
-    }
+    sCalibrationStart = now;
+    sCalibrationWallStart = wallNow;
+    // After the clocks here, before them at the far end: a preemption in between can only shrink the rate
+    sCalibrationTicks = __rdtsc();
 }
 } // namespace
 #endif
@@ -1380,11 +1388,11 @@ qint64 TBuffer::lineArrivalTime()
         if (ticks - mArrivalClockTicks < sArrivalClockReuseTicks) {
             return mArrivalClockTime;
         }
-        if (!sArrivalClockReuseTicks) {
-            calibrateArrivalClock(ticks);
-        }
         mArrivalClockTicks = ticks;
         mArrivalClockTime = QDateTime::currentMSecsSinceEpoch();
+        if (!sArrivalClockReuseTicks) {
+            calibrateArrivalClock(ticks, mArrivalClockTime);
+        }
         return mArrivalClockTime;
     }
 #endif
