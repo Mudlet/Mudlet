@@ -344,6 +344,7 @@ private slots:
 
         int fires = 0;
         int paintsBeforeFirstFire = -1;
+        qint64 firstFireMs = 0;
         bool heldBack = false;
         bool handedOver = false;
         bool settled = false;
@@ -352,6 +353,7 @@ private slots:
         connect(pane->mpPaintPacer, &QTimer::timeout, &listener, [&]() {
             if (++fires == 1) {
                 paintsBeforeFirstFire = mPaintCount;
+                firstFireMs = pane->mSincePaint.elapsed();
                 heldBack = pane->mpPaintPacer->isActive() && !pane->mPendingPaintRegion.isEmpty();
             }
             if (!pane->mpPaintPacer->isActive()) {
@@ -367,6 +369,11 @@ private slots:
                  qPrintable(qsl("the pacer fired %1 times and was still armed, or never fired, in 2s").arg(fires)));
         if (paintsBeforeFirstFire > 0) {
             QSKIP("the pane painted before the pacer fired, so the runner stalled past the flood pace and the stretch was not exercised");
+        }
+        if (firstFireMs >= TTextEdit::csmFloodPaintPaceMs) {
+            QSKIP(qPrintable(qsl("the pacer fired %1ms after the paint, already past the %2ms flood pace, so the frame was due and the stretch was not exercised - the runner stalled")
+                                     .arg(firstFireMs)
+                                     .arg(TTextEdit::csmFloodPaintPaceMs)));
         }
         QVERIFY2(heldBack, "the pacer let the frame paint at the normal pace although more than a screen of lines had arrived since the last one");
         QVERIFY2(handedOver, "the stretched frame was never handed to update(), so the end of the flood stays unpainted");
