@@ -1005,7 +1005,7 @@ private slots:
             console->buffer.append(text, 0, text.size(), QColorConstants::White, background, TChar::None, 0);
             const int y = console->buffer.getLastLineNumber() - 1;
             QCOMPARE(console->buffer.line(y), qsl("system"));
-            for (auto& character : console->buffer.buffer[y]) {
+            for (auto& character : console->buffer.buffer[y].expand()) {
                 character.select();
             }
 

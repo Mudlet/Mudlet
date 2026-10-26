@@ -1786,7 +1786,7 @@ void TTextEdit::highlightSelection()
              x < endX;
              ++x) {
 
-            mpBuffer->buffer.at(y).at(x).select();
+            mpBuffer->buffer.at(y).expand().at(x).select();
         }
     }
     // clang-format on
@@ -1819,7 +1819,7 @@ void TTextEdit::unHighlight()
         auto& bufferLine = mpBuffer->buffer.at(yIndex);
         for (int xIndex = 0; xIndex < static_cast<int>(bufferLine.size()); ++xIndex) {
             if (bufferLine.at(xIndex).isSelected()) {
-                bufferLine[xIndex].deselect();
+                bufferLine.expand()[xIndex].deselect();
             }
         }
     }
@@ -1970,7 +1970,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         auto& bufferLine = mpBuffer->buffer.at(yIndex);
         for (int xIndex = 0; xIndex < static_cast<int>(bufferLine.size()); ++xIndex) {
             if (bufferLine.at(xIndex).isSelected()) {
-                bufferLine[xIndex].deselect();
+                bufferLine.expand()[xIndex].deselect();
             }
         }
     }
