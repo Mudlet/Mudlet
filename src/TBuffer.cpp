@@ -1327,12 +1327,24 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     mProcessingLocalFeed = false;
 }
 
+// std::count tallies each byte into a 64-bit counter, several times slower on game text than memchr's
+// vector scan, which skips a whole line per call.
+static int countLineFeeds(const std::string& text)
+{
+    int count = 0;
+    const char* const end = text.data() + text.size();
+    for (const char* p = text.data(); (p = static_cast<const char*>(std::memchr(p, '\n', end - p))); ++p) {
+        ++count;
+    }
+    return count;
+}
+
 void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFromServer)
 {
     // Lets the trigger engine tell a flood from a trickle (TriggerUnit::processDataStream()). Restored,
     // not cleared, on exit: a nested feed re-enters here while the outer chunk is still being decoded.
     const int previousPendingLines = mPendingChunkLines;
-    mPendingChunkLines = static_cast<int>(std::count(incoming.cbegin(), incoming.cend(), '\n'));
+    mPendingChunkLines = countLineFeeds(incoming);
     const auto pendingLinesGuard = qScopeGuard([this, previousPendingLines] {
         mPendingChunkLines = previousPendingLines;
     });
