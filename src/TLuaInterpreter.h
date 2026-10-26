@@ -164,8 +164,8 @@ public:
     void setExpandedCommand(const QString&);
     void settleCommandAfterAliasPass();
     // expandAlias() gives "command" back only to an alias script, so every way into
-    // a script says whether it is one. A way in that calls setMatches() before any
-    // Lua runs says so too, as that is where the end a fire still owes is folded in.
+    // a script says whether it is one. A way in whose setMatches() can fold in the
+    // end a fire still owes says so too; every other way in settles it here.
     class ScriptCallerScope
     {
     public:
@@ -192,7 +192,7 @@ public:
         bool mWasDeferringDispatchEnd;
     };
     // While a trigger pass walks a line, a fire's end is left for the next fire's
-    // start to fold into its own, and whatever is still owed goes in at the end
+    // start to fold into its own; the destructor settles whatever is still owed
     class DispatchEndDeferral
     {
     public:
@@ -1122,15 +1122,14 @@ private:
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
     int mCaptureBuildDepth = 0;
     // Most scripts never read "matches" or "multimatches", so lazyGlobalsIndex()
-    // builds them on first read. "matches" is left out only while a capture
-    // scope is open, as clearCaptureGroups() puts it back; "multimatches" is
-    // left out between dispatches too - see mSpareMultimatchesRef - or leaves
-    // that owed, see mDispatchEndOwed.
+    // builds them on first read. "matches" is left out while a capture scope is
+    // open and until clearCaptureGroups() puts it back, which a trigger pass can
+    // leave owed - see mDispatchEndOwed; "multimatches" is left out between
+    // dispatches too - see mSpareMultimatchesRef.
     bool mCaptureScopeOpen = false;
-    // clearCaptureGroups() found the handlers in place after a trigger fire and
-    // left putting "matches" back, and the spare "multimatches" out, to
-    // settleDispatchEnd(). Anything but setMatches() that runs Lua, or reads
-    // either name, settles it first.
+    // A trigger fire's end that clearCaptureGroups() left to settleDispatchEnd().
+    // Whatever runs Lua or reads either name settles it first; only the next
+    // fire's setMatches() may fold it in.
     bool mDispatchEndOwed = false;
     // A trigger pass is walking a line, outside any script it set off
     bool mDeferringDispatchEnd = false;

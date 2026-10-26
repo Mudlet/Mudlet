@@ -3831,8 +3831,8 @@ void TLuaInterpreter::clearCaptureGroups(const bool triggerFire)
 
     mCaptureScopeOpen = false;
     if (lazy) {
-        // An alias pass a trigger's command sets off runs outside any script too,
-        // inside a send() that goes on to use Lua
+        // mDeferringDispatchEnd is still set in the alias pass a trigger's command
+        // sets off, inside a send() that goes on to use Lua
         if (triggerFire && mDeferringDispatchEnd) {
             mDispatchEndOwed = true;
         } else {
@@ -5461,9 +5461,9 @@ void TLuaInterpreter::setMatches(lua_State* L, const MultimatchesSource source)
     // trigger's, which is handed "multimatches" instead
     const bool setsMatches = source == MultimatchesSource::Untouched && !mCaptureGroupList.empty();
     if (mDispatchEndOwed) {
-        // Nothing has run since clearCaptureGroups() found the handlers in place,
-        // so that end and this start leave the names out as one. A new spare
-        // allocates, which can run a finaliser, so that end goes in first.
+        // Nothing has run since that end, so a start that leaves "matches" out
+        // again and needs no new spare stands in for it; otherwise the end goes in
+        // first, as allocating can run a finaliser.
         if (mCaptureScopeOpen && setsMatches && !mSpareMultimatchesSeen) {
             mDispatchEndOwed = false;
             installBetweenDispatchMultimatches(L);
