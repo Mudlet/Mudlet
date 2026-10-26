@@ -2721,7 +2721,7 @@ describe("Tests where a run of text in a read ends", function()
   end
 
   -- each stop at every offset of the scan's sixteen byte steps, with text enough after it that a step reaches
-  -- it; the run after it starts part way into a step and ends inside a whole one
+  -- it; the run after it starts at an unaligned address and is found by a whole step too
   it("ends a run at a carriage return, a NUL or a telnet command wherever it falls", function()
     local tail = string.rep("z", 20)
     local after = tail .. "\r\n" .. tail .. "\r\n"
