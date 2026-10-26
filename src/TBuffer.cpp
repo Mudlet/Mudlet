@@ -32,6 +32,7 @@
 #include "THyperlinkCompactManager.h"
 #include "THyperlinkVisibilityManager.h"
 #include "THyperlinkSelectionManager.h"
+#include "TIngestPipeline.h"
 #include "TPrintSink.h"
 #include "TStringUtils.h"
 #include "UntrustedText.h"
@@ -926,6 +927,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mGotOSC = other.mGotOSC;
         mGotString = other.mGotString;
         mIsDefaultColor = other.mIsDefaultColor;
+        ++mColourGeneration;
         mBlack = other.mBlack;
         mLightBlack = other.mLightBlack;
         mRed = other.mRed;
@@ -1087,6 +1089,7 @@ void TBuffer::updateColors()
         return;
     }
 
+    ++mColourGeneration;
     mBlack = pH->mBlack;
     mLightBlack = pH->mLightBlack;
     mRed = pH->mRed;
@@ -1424,12 +1427,6 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         mPendingChunkLines = previousPendingLines;
     });
 
-    // The complete two byte escape sequences (DECSC, DECRC, RIS and a stray
-    // ST) that games do send and that Mudlet has to swallow. Only these: any
-    // other byte after an ESC is text, and printing it is no worse than what
-    // Mudlet has always done, whereas eating it loses real output:
-    const QByteArray cShortEscape = QByteArrayLiteral("78c\\");
-
     // Parsed in place, and written to in three places: the bytes held over
     // from a sequence the last packet cut in half are prepended to the front
     // before the scan starts, an MXP entity expansion rewrites the head of the
@@ -1504,13 +1501,42 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     // repeated switch(...) and branch to one of a series of decoding methods
     // each with another up to 128 value switch()
 
-    size_t localBufferLength = localBuffer.length();
-    size_t localBufferPosition = 0;
-    if (!localBufferLength) {
+    if (localBuffer.empty()) {
         return;
     }
-    // Kept in step with localBufferLength - see decodableLength():
-    size_t localBufferDecodableLength = decodableLength(localBuffer, localBufferLength, isFromServer);
+    const size_t decodable = decodableLength(localBuffer, localBuffer.length(), isFromServer);
+
+    TIngestJob* speculation = nullptr;
+    if (isFromServer && !mpActiveSpeculation && decodable == localBuffer.length() && mPendingChunkLines >= TIngestPipeline::csmMinimumLines && speculationEligible()) {
+        if (!mpIngestPipeline) {
+            mpIngestPipeline = std::make_unique<TIngestPipeline>(pHost);
+        }
+        speculation = mpIngestPipeline->begin(*this, localBuffer, decodable, encodingLookupTable);
+        mpActiveSpeculation = speculation;
+    }
+    const auto speculationGuard = qScopeGuard([this, speculation] {
+        if (speculation) {
+            mpIngestPipeline->end(*speculation);
+            mpActiveSpeculation = nullptr;
+        }
+    });
+
+    parseChunk(localBuffer, isFromServer, encodingLookupTable, decodable, speculation);
+}
+
+void TBuffer::parseChunk(std::string& localBuffer, const bool isFromServer, const QVector<QChar>& encodingLookupTable, size_t localBufferDecodableLength, TIngestJob* speculation)
+{
+    // The complete two byte escape sequences (DECSC, DECRC, RIS and a stray
+    // ST) that games do send and that Mudlet has to swallow. Only these: any
+    // other byte after an ESC is text, and printing it is no worse than what
+    // Mudlet has always done, whereas eating it loses real output:
+    const QByteArray cShortEscape = QByteArrayLiteral("78c\\");
+
+    size_t localBufferLength = localBuffer.length();
+    size_t localBufferPosition = 0;
+    if (Q_UNLIKELY(speculation)) {
+        replaySpeculatedLines(*speculation, localBufferPosition, isFromServer);
+    }
 
     // If we are resolving/interpolating an MXP entity, the interpolated text
     // ends at localBuffer[endOfMXPEntity - 1]. This variable used to avoid an
@@ -1547,7 +1573,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 // If MXP is building a tag when we see ESC, the tag is invalid
                 // because ANSI escape sequences cannot be part of MXP tags.
                 // Output the partial tag as literal text before processing ESC.
-                if (mpHost->mMxpProcessor.isEnabled() && mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
+                if (mxpProcessorEnabled() && mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
                     TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
                     attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
                     TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
@@ -1646,6 +1672,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 // that is what stopped the scan, instead of buffering it without
                 // bound while waiting for a final byte that a hostile server may
                 // never send.
+                if (speculationStops()) {
+                    return;
+                }
                 qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - CSI sequence reached " << MAX_CSI_SEQUENCE_LENGTH << " bytes, discarding it to recover.";
                 localBufferPosition += spanEnd - spanStart + (spanEnd < localBufferLength && csiFinalByte(localBuffer[spanEnd]) ? 1 : 0);
                 mGotCSI = false;
@@ -1708,6 +1737,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 // We do not handle any sequences with intermediate bytes, so
                 // report it and skip it along with its final byte - which the
                 // general step at the end of this block does
+                if (speculationStops()) {
+                    return;
+                }
                 qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[parametersEnd]
                                              << "') and a 'final' byte ('" << localBuffer[spanEnd] << "') which Mudlet cannot interpret.";
             } else if (hasFinalByte) {
@@ -1727,10 +1759,16 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         sgrChars[i - spanStart] = static_cast<unsigned char>(localBuffer[i]);
                     }
                     decodeSGR(QStringView(sgrChars));
+                    if (Q_UNLIKELY(mSpeculationStopped)) {
+                        return;
+                    }
                 } break;
 
                 case static_cast<quint8>('z'):
                     // We have a control sequence for MXP
+                    if (speculationStops()) {
+                        return;
+                    }
 #if defined(DEBUG_MXP_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the MXP control sequence: \"" << localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str() << "\"";
 #endif
@@ -1772,6 +1810,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         // For debugging:
                         //                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - CUF (cursor forward) sequence of form CSI" << temp << "C received, converting into " << spacesNeeded << " spaces.";
                     } else {
+                        if (speculationStops()) {
+                            return;
+                        }
                         qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled sequence of form CSI..." << temp
                                                      << "C received, that is supposed to be a CUF (cursor forward) sequence but doesn't make sense, Mudlet will ignore it.";
                     }
@@ -1779,6 +1820,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 } break;
 
                 case static_cast<quint8>('J'): {
+                    if (speculationStops()) {
+                        return;
+                    }
                     /*
                      * Also seen in output from mud.durismud.com see 'C' case above:
                      * Is ED 'Erase Display' command and has three variants:
@@ -1810,10 +1854,16 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 } break;
 
                 default: // Unhandled other (valid) CSI final byte sequences will end up here
+                    if (speculationStops()) {
+                        return;
+                    }
                     qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled sequence of form CSI..." << localBuffer[spanEnd] << " received, Mudlet will ignore it.";
 
                 } // End of switch(modeChar) {}
             } else {
+                if (speculationStops()) {
+                    return;
+                }
                 qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected an invalid CSI sequence beginning with \"CSI"
                                              << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << " which Mudlet will ignore.";
             } // End of the isAValidFinalByte test
@@ -1826,6 +1876,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         } // End of if (mGotCSI)
 
         if (mGotOSC) {
+            if (speculationStops()) {
+                return;
+            }
             // Also reached - with mGotString set - whenever the payload is to
             // be consumed but not decoded: a DCS, SOS, PM or APC sequence, or
             // an OSC already truncated by the length cap below.
@@ -1940,7 +1993,12 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             flushPendingLead();
         }
 
-        if (localBufferPosition >= endOfLiteralEntity && mpHost->mMxpProcessor.isEnabled()) {
+        if (localBufferPosition >= endOfLiteralEntity && mxpProcessorEnabled()) {
+            // MXP rewrites the unit in place, which the worker may still be reading
+            if (Q_UNLIKELY(speculation)) {
+                mpIngestPipeline->end(*speculation);
+                speculation = nullptr;
+            }
             if (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()) {
                 if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
                     // The comparison signals to the processor, if custom entities may be resolved
@@ -2099,6 +2157,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 
     COMMIT_LINE:
         if (commitLine(ch, localBufferPosition, isFromServer, forcedLineBreak)) {
+            if (Q_UNLIKELY(speculation)) {
+                replaySpeculatedLines(*speculation, localBufferPosition, isFromServer);
+            } else if (Q_UNLIKELY(mSpeculationStopped)) {
+                return;
+            }
             continue;
         }
         // PLACEMARKER: Incoming text decoding
@@ -2199,7 +2262,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 // append and one fill. Not hyperlink text, built per character. MXP must see every byte,
                 // but between tags and entities it only hands them on as content, which it takes a run at once.
                 TMxpProcessor& mxp = mpHost->mMxpProcessor;
-                const bool mxpSeesText = mxp.isEnabled() && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn());
+                const bool mxpSeesText = mxpProcessorEnabled() && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn());
                 if (!mxpSeesText || (localBufferPosition + 1 >= endOfLiteralEntity && mxp.mode() != MXP_MODE_LOCKED && mxp.readingText())) {
                     size_t runEnd = localBufferPosition + 1;
                     const char* const bytes = localBuffer.data();
@@ -2232,6 +2295,232 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         }
 
         ++localBufferPosition;
+    }
+}
+
+bool TBuffer::mxpProcessorEnabled() const
+{
+    return !mpParseConfig && mpHost->mMxpProcessor.isEnabled();
+}
+
+bool TBuffer::mxpClientBold() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->mxpBold : mpHost->mMxpClient.bold();
+}
+
+bool TBuffer::mxpClientItalic() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->mxpItalic : mpHost->mMxpClient.italic();
+}
+
+bool TBuffer::mxpClientUnderline() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->mxpUnderline : mpHost->mMxpClient.underline();
+}
+
+bool TBuffer::mxpClientStrikeOut() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->mxpStrikeOut : mpHost->mMxpClient.strikeOut();
+}
+
+bool TBuffer::hostHaveColorSpaceId() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->haveColorSpaceId : mpHost->getHaveColorSpaceId();
+}
+
+const QColor& TBuffer::hostForeground() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->hostForeground : mpHost->mFgColor;
+}
+
+const QColor& TBuffer::hostBackground() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->hostBackground : mpHost->mBgColor;
+}
+
+TBuffer::ParseState TBuffer::parseState() const
+{
+    ParseState state;
+    state.foreground = mForeGroundColor;
+    state.foregroundLight = mForeGroundColorLight;
+    state.background = mBackGroundColor;
+    state.pendingLeadFormat = mPendingLeadFormat;
+    state.incompleteSequenceBytes = mIncompleteSequenceBytes;
+    state.decoder = mDecoder;
+    state.pendingLead = mPendingLead;
+    state.altFont = mAltFont;
+    state.gotEsc = mGotESC;
+    state.gotEscCharset = mGotEscCharset;
+    state.gotCsi = mGotCSI;
+    state.gotOsc = mGotOSC;
+    state.gotString = mGotString;
+    state.isDefaultColor = mIsDefaultColor;
+    state.bold = mBold;
+    state.italics = mItalics;
+    state.overline = mOverline;
+    state.reverse = mReverse;
+    state.strikeOut = mStrikeOut;
+    state.underline = mUnderline;
+    state.underlineWavy = mUnderlineWavy;
+    state.underlineDotted = mUnderlineDotted;
+    state.underlineDashed = mUnderlineDashed;
+    state.blink = mBlink;
+    state.fastBlink = mFastBlink;
+    state.concealed = mConcealed;
+    state.hyperlinkActive = mHyperlinkActive;
+    return state;
+}
+
+bool TBuffer::parseStateIs(const ParseState& state) const
+{
+    return mGotESC == state.gotEsc && mGotEscCharset == state.gotEscCharset && mGotCSI == state.gotCsi && mGotOSC == state.gotOsc && mGotString == state.gotString
+           && mIsDefaultColor == state.isDefaultColor && mBold == state.bold && mItalics == state.italics && mOverline == state.overline && mReverse == state.reverse && mStrikeOut == state.strikeOut
+           && mUnderline == state.underline && mUnderlineWavy == state.underlineWavy && mUnderlineDotted == state.underlineDotted && mUnderlineDashed == state.underlineDashed && mBlink == state.blink
+           && mFastBlink == state.fastBlink && mConcealed == state.concealed && mHyperlinkActive == state.hyperlinkActive && mAltFont == state.altFont && mPendingLead == state.pendingLead
+           && mDecoder == state.decoder && mIncompleteSequenceBytes == state.incompleteSequenceBytes && mForeGroundColor == state.foreground && mForeGroundColorLight == state.foregroundLight
+           && mBackGroundColor == state.background && mPendingLeadFormat == state.pendingLeadFormat;
+}
+
+void TBuffer::setParseState(const ParseState& state)
+{
+    mForeGroundColor = state.foreground;
+    mForeGroundColorLight = state.foregroundLight;
+    mBackGroundColor = state.background;
+    mPendingLeadFormat = state.pendingLeadFormat;
+    mIncompleteSequenceBytes = state.incompleteSequenceBytes;
+    mDecoder = state.decoder;
+    mPendingLead = state.pendingLead;
+    mAltFont = state.altFont;
+    mGotESC = state.gotEsc;
+    mGotEscCharset = state.gotEscCharset;
+    mGotCSI = state.gotCsi;
+    mGotOSC = state.gotOsc;
+    mGotString = state.gotString;
+    mIsDefaultColor = state.isDefaultColor;
+    mBold = state.bold;
+    mItalics = state.italics;
+    mOverline = state.overline;
+    mReverse = state.reverse;
+    mStrikeOut = state.strikeOut;
+    mUnderline = state.underline;
+    mUnderlineWavy = state.underlineWavy;
+    mUnderlineDotted = state.underlineDotted;
+    mUnderlineDashed = state.underlineDashed;
+    mBlink = state.blink;
+    mFastBlink = state.fastBlink;
+    mConcealed = state.concealed;
+    mHyperlinkActive = state.hyperlinkActive;
+}
+
+TBuffer::ParseConfig TBuffer::parseConfig() const
+{
+    Host* pHost = mpHost;
+    ParseConfig config;
+    config.hostForeground = pHost->mFgColor;
+    config.hostBackground = pHost->mBgColor;
+    config.colourGeneration = mColourGeneration;
+    config.haveColorSpaceId = pHost->getHaveColorSpaceId();
+    config.mxpBold = pHost->mMxpClient.bold();
+    config.mxpItalic = pHost->mMxpClient.italic();
+    config.mxpUnderline = pHost->mMxpClient.underline();
+    config.mxpStrikeOut = pHost->mMxpClient.strikeOut();
+    return config;
+}
+
+bool TBuffer::parseConfigIs(const ParseConfig& config) const
+{
+    Host* pHost = mpHost;
+    return config.colourGeneration == mColourGeneration && !pHost->mMxpProcessor.isEnabled() && config.haveColorSpaceId == pHost->getHaveColorSpaceId() && config.mxpBold == pHost->mMxpClient.bold()
+           && config.mxpItalic == pHost->mMxpClient.italic() && config.mxpUnderline == pHost->mMxpClient.underline() && config.mxpStrikeOut == pHost->mMxpClient.strikeOut()
+           && config.hostForeground == pHost->mFgColor && config.hostBackground == pHost->mBgColor;
+}
+
+bool TBuffer::speculationEligible() const
+{
+    if (!TIngestPipeline::enabled() || mpParseConfig || mpSpeculationSink || !mpModel) {
+        return false;
+    }
+    if (mDecoder != Decoder::Utf8 && mDecoder != Decoder::Latin1 && mDecoder != Decoder::Ascii) {
+        return false;
+    }
+    return !mGotOSC && !mHyperlinkActive && !mpHost->mMxpProcessor.isEnabled();
+}
+
+// The worker's commitLine(): hands the line over as commitLine() would have copied it out
+bool TBuffer::recordSpeculatedLine(const char ch, size_t& localBufferPosition, const bool forcedLineBreak)
+{
+    TIngestJob& job = *mpSpeculationSink;
+    const int index = job.mReady.load(std::memory_order_relaxed);
+    if (static_cast<size_t>(index) >= job.mLines.size() || job.mCancel.load(std::memory_order_relaxed)) {
+        mSpeculationStopped = true;
+        ++localBufferPosition;
+        return true;
+    }
+    TSpeculatedLine& line = job.mLines[static_cast<size_t>(index)];
+    line.start = mSpeculatedLineStart;
+    line.end = localBufferPosition;
+    line.commitChar = ch;
+    line.forcedLineBreak = forcedLineBreak;
+    line.text = mMudLine.isEmpty() ? QString() : QString(mMudLine.constData(), mMudLine.size());
+    mMudLine.resize(0);
+    line.format = TLineFormat(mMudBuffer);
+    mMudBuffer.clear();
+    if (static_cast<size_t>(mMudLine.capacity()) > csmMaxRetainedLineCapacity) {
+        QString().swap(mMudLine);
+    }
+    if (mMudBuffer.capacity() > csmMaxRetainedLineCapacity) {
+        TLineFormat().swap(mMudBuffer);
+    }
+    line.stateAtCommit = parseState();
+    job.mReady.store(index + 1, std::memory_order_release);
+    ++localBufferPosition;
+    mSpeculatedLineStart = localBufferPosition;
+    return true;
+}
+
+// Commits the lines the worker has parsed ahead from here on, for as long as each starts where this
+// buffer is, from the state this buffer is in, under the settings it was parsed with
+void TBuffer::replaySpeculatedLines(TIngestJob& job, size_t& localBufferPosition, const bool isFromServer)
+{
+    for (;;) {
+        const int ready = job.mReady.load(std::memory_order_acquire);
+        while (job.mNext < ready && job.mLines[static_cast<size_t>(job.mNext)].start < localBufferPosition) {
+            ++job.mNext;
+        }
+        if (job.mNext >= ready) {
+            if (!job.mCancel.load(std::memory_order_relaxed)) {
+                ++mpIngestPipeline->mStatNotReady;
+            }
+            return;
+        }
+        TSpeculatedLine& line = job.mLines[static_cast<size_t>(job.mNext)];
+        const ParseState& stateBefore = job.mNext ? job.mLines[static_cast<size_t>(job.mNext - 1)].stateAtCommit : job.mStartState;
+        if (line.start != localBufferPosition || !mMudLine.isEmpty() || !mMudBuffer.empty() || !parseStateIs(stateBefore) || !parseConfigIs(job.mConfig)) {
+            ++mpIngestPipeline->mStatMismatch;
+            return;
+        }
+        ++job.mNext;
+        if (Q_UNLIKELY(TIngestPipeline::verifying())) {
+            // Parse it here as well; commitLine() compares
+            mpVerifiedLine = &line;
+            return;
+        }
+        setParseState(line.stateAtCommit);
+        size_t commitPosition = line.end;
+        Host* pHost = mpHost;
+        if (mServerWrapPendingLine.isEmpty() && !mHyperlinkActive && !pHost->mMxpFrameManager.hasActiveDestination()
+            && !(pHost->mUndoServerWrap && isFromServer && line.commitChar == '\n' && !line.forcedLineBreak && !line.text.isEmpty())) {
+            // What commitLine() reduces to here, without copying the line through the accumulators
+            ++mpIngestPipeline->mStatReplayedFast;
+            commitLineData(std::move(line.text), std::move(line.format), line.commitChar);
+            ++commitPosition;
+        } else {
+            ++mpIngestPipeline->mStatReplayedSlow;
+            mMudLine.append(line.text);
+            mMudBuffer = std::move(line.format);
+            commitLine(line.commitChar, commitPosition, isFromServer, line.forcedLineBreak);
+        }
+        localBufferPosition = commitPosition;
     }
 }
 
@@ -2280,6 +2569,18 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
 {
     if (!CHAR_IS_COMMIT_CHAR(ch)) {
         return false;
+    }
+    if (Q_UNLIKELY(mpSpeculationSink)) {
+        return recordSpeculatedLine(ch, localBufferPosition, forcedLineBreak);
+    }
+    if (Q_UNLIKELY(mpVerifiedLine)) {
+        const TSpeculatedLine& line = *std::exchange(mpVerifiedLine, nullptr);
+        bool same = line.end == localBufferPosition && line.commitChar == ch && line.forcedLineBreak == forcedLineBreak && line.text == mMudLine && line.format.size() == mMudBuffer.size()
+                    && line.format.uniform() == mMudBuffer.uniform() && parseStateIs(line.stateAtCommit);
+        for (size_t i = 0; same && i < mMudBuffer.size(); ++i) {
+            same = line.format[i] == mMudBuffer[i];
+        }
+        mpIngestPipeline->noteVerified(same, mMudLine);
     }
 
     // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
@@ -3114,11 +3415,11 @@ void TBuffer::processMxpWatchdogCallback()
 
 TChar::AttributeFlags TBuffer::computeCurrentAttributeFlags() const
 {
-    return ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None) | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
-           | (mOverline ? TChar::Overline : TChar::None) | (mReverse ? TChar::Reverse : TChar::None) | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
-           | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None) | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None)
-           | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None) | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None)
-           | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink : TChar::None)) | (TChar::alternateFontFlag(mAltFont)) | (mConcealed ? TChar::Concealed : TChar::None);
+    return ((mIsDefaultColor ? mBold || mxpClientBold() : false) ? TChar::Bold : TChar::None) | (mItalics || mxpClientItalic() ? TChar::Italic : TChar::None)
+           | (mOverline ? TChar::Overline : TChar::None) | (mReverse ? TChar::Reverse : TChar::None) | (mStrikeOut || mxpClientStrikeOut() ? TChar::StrikeOut : TChar::None)
+           | (mUnderline || mxpClientUnderline() ? TChar::Underline : TChar::None) | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None) | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None)
+           | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None) | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink : TChar::None)) | (TChar::alternateFontFlag(mAltFont))
+           | (mConcealed ? TChar::Concealed : TChar::None);
 }
 
 void TBuffer::decodeSGR38(const SgrParameters& parameters, bool isColonSeparated)
@@ -3244,6 +3545,9 @@ void TBuffer::decodeSGR38(const SgrParameters& parameters, bool isColonSeparated
         }
 
         if (parameters.count() >= 3 && !parameters.at(2).isEmpty()) {
+            if (speculationStops()) {
+                return;
+            }
             if (!isColonSeparated) {
 #if !defined(DEBUG_SGR_PROCESSING)
                 qDebug() << "Unhandled color space identifier in a SGR...;38;2;" << parameters.at(2)
@@ -3410,6 +3714,9 @@ void TBuffer::decodeSGR48(const SgrParameters& parameters, bool isColonSeparated
         }
 
         if (parameters.count() >= 3 && !parameters.at(2).isEmpty()) {
+            if (speculationStops()) {
+                return;
+            }
             if (!isColonSeparated) {
 #if !defined(DEBUG_SGR_PROCESSING)
                 qDebug() << "Unhandled color space identifier in a SGR...;48;2;" << parameters.at(2)
@@ -3453,7 +3760,7 @@ void TBuffer::decodeSGR(const QStringView sequence)
         return;
     }
 
-    const bool haveColorSpaceId = pHost->getHaveColorSpaceId();
+    const bool haveColorSpaceId = hostHaveColorSpaceId();
 
     SgrParameters parameterStrings;
     for (const QStringView parameter : sequence.tokenize(u';')) {
@@ -3668,6 +3975,9 @@ void TBuffer::decodeSGR(const QStringView sequence)
                 const int value = parameterElements.at(1).toInt(&isOk);
                 if (!isOk) {
                     // missing value
+                    if (speculationStops()) {
+                        return;
+                    }
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
                                                  << "\") ERROR - failed to detect underline parameter element (the second part) in a SGR...;4:?;..m sequence assuming it is a zero!";
                 }
@@ -3713,6 +4023,9 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     mUnderlineDashed = true;
                     break;
                 default: // Something unexpected
+                    if (speculationStops()) {
+                        return;
+                    }
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
                                                  << "\") ERROR - unexpected underline parameter element (the second part) in a SGR...;4:" << parameterElements.at(1)
                                                  << ";../m sequence treating it as a zero!";
@@ -3728,6 +4041,9 @@ void TBuffer::decodeSGR(const QStringView sequence)
                 const int value = parameterElements.at(1).toInt(&isOk);
                 if (!isOk) {
                     // missing value
+                    if (speculationStops()) {
+                        return;
+                    }
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
                                                  << "\") ERROR - failed to detect italic parameter element (the second part) in a SGR...;3:?;../m sequence assuming it is a zero!";
                 }
@@ -3739,18 +4055,27 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     mItalics = true;
                     break;
                 case 2: // Slant on - not supported, treat as italics
+                    if (speculationStops()) {
+                        return;
+                    }
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
                                                  << "\") ERROR - unsupported italic parameter element (the second part) in a SGR...;3:" << parameterElements.at(1)
                                                  << ";../m sequence treating it as a one!";
                     mItalics = true;
                     break;
                 default: // Something unexpected
+                    if (speculationStops()) {
+                        return;
+                    }
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unexpected italic parameter element (the second part) in a SGR...;3:" << parameterElements.at(1)
                                                  << ";../m sequence treating it as a zero!";
                     mItalics = false;
                     break;
                 }
             } else {
+                if (speculationStops()) {
+                    return;
+                }
                 qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - parameter string with an unexpected initial parameter element in a SGR...;"
                                              << parameterElements.at(0) << ":" << parameterElements.at(1) << "...;.../m sequence, ignoring it!";
             }
@@ -3774,8 +4099,8 @@ void TBuffer::decodeSGR(const QStringView sequence)
                 switch (tag) {
                 case 0:
                     mIsDefaultColor = true;
-                    mForeGroundColor = pHost->mFgColor;
-                    mBackGroundColor = pHost->mBgColor;
+                    mForeGroundColor = hostForeground();
+                    mBackGroundColor = hostBackground();
                     mBold = false;
                     mItalics = false;
                     mOverline = false;
@@ -4030,8 +4355,8 @@ void TBuffer::decodeSGR(const QStringView sequence)
                 } break;
                 case 39: //default foreground color
                     mIsDefaultColor = true;
-                    mForeGroundColor = pHost->mFgColor;
-                    mForeGroundColorLight = pHost->mFgColor;
+                    mForeGroundColor = hostForeground();
+                    mForeGroundColorLight = hostForeground();
                     break;
                 case 40:
                     mBackGroundColor = mBlack;
@@ -4147,7 +4472,7 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     }
                 } break;
                 case 49: // default background color
-                    mBackGroundColor = pHost->mBgColor;
+                    mBackGroundColor = hostBackground();
                     break;
                 // case 51: // Framed
                 //    break;
@@ -4239,6 +4564,9 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     mBackGroundColor = mLightWhite;
                     break;
                 default:
+                    if (speculationStops()) {
+                        return;
+                    }
                     qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled single SGR code sequence CSI " << tag << " m received, Mudlet will ignore it.";
                 }
             }
