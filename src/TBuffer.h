@@ -438,7 +438,7 @@ public:
 
     TLineFormat() = default;
     // Not explicit, so a finished std::vector<TChar> is stored as a line without ceremony
-    TLineFormat(std::vector<TChar>&& chars);
+    TLineFormat(std::vector<TChar>&& chars); // NOLINT(runtime/explicit)
     explicit TLineFormat(const std::vector<TChar>& chars);
     TLineFormat(const TLineFormat&) = default;
     TLineFormat& operator=(const TLineFormat&) = default;
