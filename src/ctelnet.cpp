@@ -6204,22 +6204,32 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     // A compressed read can inflate to nothing. Older Mudlets refuse a replay
     // holding an empty chunk, so its wait carries over to the next chunk.
     const bool recordingThisRead = !loopbackTesting && mRecordReplay && datalen > 0;
-    if (recordingThisRead) {
+    // QElapsedTimer::elapsed() returns a qint64, it replaces a
+    // previous QTime::elapsed() which returns a int (effectively a
+    // qint32):
+    qint32 recordingChunkInterval = recordingThisRead ? static_cast<qint32>(mRecordingChunkTimer.elapsed()) - mRecordLastChunkMSecTimeOffset : 0;
+    const auto recordChunk = [this](const char* data, const qint32 length, const qint32 interval) {
         ++mRecordingChunkCount;
-        // QElapsedTimer::elapsed() returns a qint64, it replaces a
-        // previous QTime::elapsed() which returns a int (effectively a
-        // qint32):
-        qint32 recordingChunkInterval = static_cast<qint32>(mRecordingChunkTimer.elapsed()) - mRecordLastChunkMSecTimeOffset;
         QDataStream replayStream(mpReplayFile.get());
         replayStream.setVersion(QDataStream::Qt_5_12);
-        replayStream << recordingChunkInterval; // 4 bytes
-        replayStream << datalen;                // 4 bytes
-        replayStream.writeRawData(buffer, datalen);
+        replayStream << interval; // 4 bytes
+        replayStream << length;   // 4 bytes
+        replayStream.writeRawData(data, length);
 #if defined(DEBUG_RECORDING)
-        qDebug().noquote().nospace() << "cTelnet::processSocketData(...) INFO - recording chunk: " << mRecordingChunkCount << " is " << datalen
-                                     << " bytes and has an interval of: " << recordingChunkInterval << " mSecond since the previous chunk.";
+        qDebug().noquote().nospace() << "cTelnet::processSocketData(...) INFO - recording chunk: " << mRecordingChunkCount << " is " << length << " bytes and has an interval of: " << interval
+                                     << " mSecond since the previous chunk.";
 #endif
-    }
+    };
+    // Replay never decompresses, so the pass is written once it is known whether
+    // it switches to a compressed stream part-way through: if it does, as the
+    // bytes up to the switch and then what the rest inflated to.
+    const auto recordUpToCompressedStream = [&](const int length) {
+        if (recordingThisRead) {
+            recordChunk(buffer, length, recordingChunkInterval);
+            // the rest arrived in the same read
+            recordingChunkInterval = 0;
+        }
+    };
 
     recvdGA = false;
 
@@ -6328,6 +6338,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                             gotRest(cleandata);
                             cleandata = "";
                             initStreamDecompressor();
+                            recordUpToCompressedStream(i + 3);
                             buffer += i + 3; //bugfix: BenH
                             int restLength = datalen - i - 3;
 
@@ -6397,6 +6408,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                     if (mMCCP_version_4 && mNeedDecompression && buffer == in_buffer) {
                         gotRest(cleandata);
                         cleandata = "";
+                        recordUpToCompressedStream(i + 1);
                         buffer += i + 1;
                         int restLength = datalen - i - 1;
                         if (restLength > 0) {
@@ -6478,6 +6490,10 @@ Some data loss is likely - please mention this problem to the game admins.)",
             }
         }
     } //for
+
+    if (recordingThisRead && datalen > 0) {
+        recordChunk(buffer, datalen, recordingChunkInterval);
+    }
 
     if (!cleandata.empty()) {
         gotRest(cleandata);

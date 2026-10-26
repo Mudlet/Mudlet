@@ -52,6 +52,8 @@
 #include <cstring>
 #include <memory>
 
+#include <zstd.h>
+
 #if defined(Q_OS_LINUX)
 #include <sys/resource.h>
 #endif
@@ -60,6 +62,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletReplay.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -163,6 +166,17 @@ private:
         loadBuffer[chunk.size()] = scmReplayCanary;
         loadedBytes = static_cast<int>(chunk.size());
         mpHost->mTelnet.slot_processReplayChunk();
+    }
+
+    static QByteArray zstdCompress(const QByteArray& plain)
+    {
+        QByteArray out(static_cast<qsizetype>(ZSTD_compressBound(static_cast<size_t>(plain.size()))), '\0');
+        const size_t written = ZSTD_compress(out.data(), static_cast<size_t>(out.size()), plain.constData(), static_cast<size_t>(plain.size()), 3);
+        if (ZSTD_isError(written)) {
+            return {};
+        }
+        out.resize(static_cast<qsizetype>(written));
+        return out;
     }
 
     struct RecordedChunk
@@ -668,6 +682,70 @@ private slots:
         QCOMPARE(chunks.first().bytes, text);
         QCOMPARE(chunks.last().bytes, after);
         QVERIFY2(chunks.last().delay >= pauseMs / 2, qPrintable(qsl("the plain text waited %1 ms, so the pause before its read was lost").arg(chunks.last().delay)));
+    }
+
+    // Replay never decompresses, so a read that turns compression on part-way
+    // through has to be recorded as what the rest of it inflated to.
+    void compressionStartedPartWayThroughAReadReplaysAsText_data()
+    {
+        QTest::addColumn<int>("option");
+        QTest::addColumn<QByteArray>("encoding");
+        QTest::newRow("mccp2") << static_cast<int>(OPT_COMPRESS2) << QByteArray();
+        QTest::newRow("mccp4 zstd") << static_cast<int>(OPT_COMPRESS4) << QByteArrayLiteral("zstd");
+        QTest::newRow("mccp4 deflate") << static_cast<int>(OPT_COMPRESS4) << QByteArrayLiteral("deflate");
+    }
+
+    void compressionStartedPartWayThroughAReadReplaysAsText()
+    {
+        QFETCH(int, option);
+        QFETCH(QByteArray, encoding);
+        cTelnet& telnet = mpHost->mTelnet;
+        // Un-negotiated before the replay too: otherwise the replayed
+        // BEGIN_ENCODING would switch this connection's decoder on.
+        const auto unnegotiate = [&telnet] {
+            telnet.cleanupMCCP4();
+            telnet.mMCCP_version_2 = false;
+            telnet.hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
+        };
+        const auto cleanUp = qScopeGuard([&telnet, &unnegotiate] {
+            if (telnet.mRecordReplay) {
+                telnet.stopReplayRecording();
+            }
+            telnet.stopReplay();
+            unnegotiate();
+        });
+
+        QByteArray will;
+        will.append(TN_IAC).append(TN_WILL).append(static_cast<char>(option));
+        telnet.loopbackTest(will);
+
+        const QByteArray compressedText = QByteArrayLiteral("mccp replay after the switch\r\n");
+        QByteArray read = QByteArrayLiteral("mccp replay before the switch\r\n");
+        read.append(TN_IAC).append(TN_SB).append(static_cast<char>(option));
+        if (option == OPT_COMPRESS4) {
+            read.append(MCCP4_BEGIN_ENCODING).append(encoding);
+        }
+        read.append(TN_IAC).append(TN_SE);
+        // qCompress() prefixes the zlib stream with the source length
+        read.append(encoding == "zstd" ? zstdCompress(compressedText) : qCompress(compressedText, 9).mid(4));
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString fileName = dir.filePath(qsl("recording.dat"));
+        QVERIFY(telnet.startReplayRecording(fileName));
+        QByteArray backing = read;
+        backing.append(scmTerminatorSlot);
+        telnet.processSocketData(backing.data(), static_cast<int>(read.size()), false);
+        QVERIFY(telnet.stopReplayRecording());
+
+        const QStringList live = linesContaining(qsl("mccp replay"));
+        QCOMPARE(live, (QStringList{qsl("mccp replay before the switch"), qsl("mccp replay after the switch")}));
+
+        unnegotiate();
+        mpHost->mainConsoleView()->buffer.clear();
+        QVERIFY(MudletReplay::self()->load(mpHost, fileName));
+        QTRY_VERIFY(!telnet.isReplaying());
+        QCOMPARE(linesContaining(qsl("mccp replay")), live);
     }
 
     // Declared last on purpose: on the unfixed code this trips AddressSanitizer,
