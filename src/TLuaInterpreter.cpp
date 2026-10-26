@@ -3831,9 +3831,9 @@ void TLuaInterpreter::clearCaptureGroups(const bool triggerFire)
 
     mCaptureScopeOpen = false;
     if (lazy) {
-        // An alias pass a trigger's command sets off runs at the same depth, inside
-        // a send() that goes on to use Lua
-        if (triggerFire && mScriptCallDepth == mDispatchEndDeferralDepth) {
+        // An alias pass a trigger's command sets off runs outside any script too,
+        // inside a send() that goes on to use Lua
+        if (triggerFire && mDeferringDispatchEnd) {
             mDispatchEndOwed = true;
         } else {
             settleDispatchEnd(L);
@@ -5227,7 +5227,7 @@ int TLuaInterpreter::lazyGlobalsNewindex(lua_State* L)
     lua_settop(L, 3);
     auto* self = static_cast<TLuaInterpreter*>(lua_touserdata(L, lua_upvalueindex(1)));
     const char* key = lua_type(L, 2) == LUA_TSTRING && lua_topointer(L, 1) == self->mGlobalsTable ? lua_tostring(L, 2) : nullptr;
-    // What the script assigns has to land on top of what the last fire put back
+    // Settle first, or the owed end would later overwrite what is assigned here
     if (key == self->mMatchesKey || key == self->mMultimatchesKey) {
         self->settleOwedDispatchEnd();
     }
@@ -5820,7 +5820,7 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 {
-    const ScriptCallerScope callerScope(*this, false, true);
+    const ScriptCallerScope callerScope(*this, false);
     QElapsedTimer executionTimer;
 
     if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -5834,7 +5834,6 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
         setMatches(L, MultimatchesSource::Captures);
     }
 
-    settleOwedDispatchEnd();
     lua_getglobal(L, function.toUtf8().constData());
     const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error) {
@@ -5862,7 +5861,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 // No documentation available in wiki - internal function
 std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& function, const QString& mName)
 {
-    const ScriptCallerScope callerScope(*this, false, true);
+    const ScriptCallerScope callerScope(*this, false);
     QElapsedTimer executionTimer;
 
     if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -5878,7 +5877,6 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
         setMatches(L, MultimatchesSource::Captures);
     }
 
-    settleOwedDispatchEnd();
     lua_getglobal(L, function.toUtf8().constData());
     const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error) {

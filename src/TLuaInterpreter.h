@@ -171,16 +171,16 @@ public:
     public:
         ScriptCallerScope(TLuaInterpreter& lua, const bool aliasScript, const bool setsMatchesFirst = false)
         : mLua(lua)
-        , mWasAliasScript(std::exchange(lua.mRunningAliasScript, aliasScript))
         {
             if (!setsMatchesFirst) {
                 lua.settleOwedDispatchEnd();
             }
-            ++lua.mScriptCallDepth;
+            mWasAliasScript = std::exchange(lua.mRunningAliasScript, aliasScript);
+            mWasDeferringDispatchEnd = std::exchange(lua.mDeferringDispatchEnd, false);
         }
         ~ScriptCallerScope()
         {
-            --mLua.mScriptCallDepth;
+            mLua.mDeferringDispatchEnd = mWasDeferringDispatchEnd;
             mLua.mRunningAliasScript = mWasAliasScript;
         }
         ScriptCallerScope(const ScriptCallerScope&) = delete;
@@ -188,7 +188,8 @@ public:
 
     private:
         TLuaInterpreter& mLua;
-        const bool mWasAliasScript;
+        bool mWasAliasScript;
+        bool mWasDeferringDispatchEnd;
     };
     // While a trigger pass walks a line, a fire's end is left for the next fire's
     // start to fold into its own, and whatever is still owed goes in at the end
@@ -197,20 +198,20 @@ public:
     public:
         explicit DispatchEndDeferral(TLuaInterpreter& lua)
         : mLua(lua)
-        , mOuterDepth(std::exchange(lua.mDispatchEndDeferralDepth, lua.mScriptCallDepth))
+        , mWasDeferring(std::exchange(lua.mDeferringDispatchEnd, true))
         {
         }
         ~DispatchEndDeferral()
         {
             mLua.settleOwedDispatchEnd();
-            mLua.mDispatchEndDeferralDepth = mOuterDepth;
+            mLua.mDeferringDispatchEnd = mWasDeferring;
         }
         DispatchEndDeferral(const DispatchEndDeferral&) = delete;
         DispatchEndDeferral& operator=(const DispatchEndDeferral&) = delete;
 
     private:
         TLuaInterpreter& mLua;
-        const int mOuterDepth;
+        const bool mWasDeferring;
     };
     void settleOwedDispatchEnd()
     {
@@ -1123,15 +1124,16 @@ private:
     // Most scripts never read "matches" or "multimatches", so lazyGlobalsIndex()
     // builds them on first read. "matches" is left out only while a capture
     // scope is open, as clearCaptureGroups() puts it back; "multimatches" is
-    // left out between dispatches too - see mSpareMultimatchesRef.
+    // left out between dispatches too - see mSpareMultimatchesRef - or leaves
+    // that owed, see mDispatchEndOwed.
     bool mCaptureScopeOpen = false;
     // clearCaptureGroups() found the handlers in place after a trigger fire and
     // left putting "matches" back, and the spare "multimatches" out, to
-    // settleDispatchEnd(). Only while the pass runs at the script depth it started
-    // at, and nothing but setMatches() may run Lua or read either name until then.
+    // settleDispatchEnd(). Anything but setMatches() that runs Lua, or reads
+    // either name, settles it first.
     bool mDispatchEndOwed = false;
-    int mDispatchEndDeferralDepth = -1;
-    int mScriptCallDepth = 0;
+    // A trigger pass is walking a line, outside any script it set off
+    bool mDeferringDispatchEnd = false;
     bool mMatchesPending = false;
     enum class PendingMultimatches { None, Spare, Captures };
     PendingMultimatches mMultimatchesPending = PendingMultimatches::None;

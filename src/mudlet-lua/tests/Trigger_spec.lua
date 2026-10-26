@@ -4679,7 +4679,7 @@ describe("Trigger processing", function()
                 enableTrigger(packageName .. " matchall one")
                 cleanup(function()
                     disableTrigger(packageName .. " matchall one")
-                    -- Handing the metatable out turns the deferral off again,
+                    -- Handing the metatable out stops Mudlet leaving the capture globals out,
                     -- as the specs after this one expect
                     getmetatable(_G)
                 end)
@@ -5981,6 +5981,43 @@ describe("Trigger processing", function()
             local inPlace = rawPresent(_G, "matches")
             assert.are.equal("table", type(inPlace))
             assert.is_nil(next(inPlace), "what a script rawset() outlived the line")
+        end)
+
+        it("hands a multiline trigger its own globals on a line an earlier trigger fired on", function()
+            _G.LazyGlobalsSpec = {}
+            trigger(tempRegexTrigger("^lazysame two (\\w+)$", function()
+                _G.LazyGlobalsSpec.single = matches[2]
+            end))
+            multiline("SpecLazySame", {[[^lazysame one (\w+)$]], [[^lazysame two (\w+)$]]}, [==[
+                local spec = _G.LazyGlobalsSpec
+                spec.rows = multimatches[1] and (multimatches[1][2] .. "," .. multimatches[2][2])
+                spec.matches = matches[2]
+            ]==])
+
+            feedTriggers("lazysame one aaa\n")
+            feedTriggers("lazysame two bbb\n")
+
+            local spec = _G.LazyGlobalsSpec
+            assert.are.equal("bbb", spec.single)
+            assert.are.equal("aaa,bbb", spec.rows, "the multiline fire lost its multimatches")
+            assert.is_nil(spec.matches, "the multiline fire was handed the earlier fire's matches")
+        end)
+
+        it("hands a line trigger an empty matches after a capture fire on its line", function()
+            local seen = {}
+            trigger(tempRegexTrigger("^LazyNoCaps (\\w+)$", function()
+                seen.capture = matches[2]
+            end))
+            trigger(tempLineTrigger(0, 5, function()
+                if seen.capture and seen.empty == nil then
+                    seen.empty = type(matches) == "table" and next(matches) == nil
+                end
+            end))
+
+            feedTriggers("\nLazyNoCaps word\n")
+
+            assert.are.equal("word", seen.capture)
+            assert.is_true(seen.empty, "a line trigger was handed the capture fire's matches")
         end)
 
         -- busted gives a spec file an environment of its own, so a function
