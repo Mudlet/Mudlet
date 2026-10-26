@@ -241,6 +241,39 @@ private slots:
         delete group;
     }
 
+    // The index files nothing for a pattern without plain text, so its group's walk enters it on every
+    // line; deleting it has to take it out of that walk all the same
+    void test_redoingTheDeletionOfAnUnfiledTrigger()
+    {
+        // Entering the freed trigger reads it without crashing, but match() warns about it
+        QTest::failOnWarning(QRegularExpression(qsl("called on destroyed trigger")));
+        TriggerUnit* unit = mpHost->getTriggerUnit();
+        QVERIFY(runLua(qsl(R"(
+            permGroup("tct unfiled group", "trigger")
+            for index = 1, 48 do
+                permSubstringTrigger("tct unfiled padding " .. index, "tct unfiled group", {"tct_unfiled_padding_" .. index .. "_bait"}, "")
+            end
+            tctUnfiledChildId = permRegexTrigger("tct unfiled child", "tct unfiled group", {[[^\d{6}$]]}, "")
+            feedTriggers("tct warm-up line\n")
+        )")));
+        QVERIFY2(unit->treeIndexFiledCount() >= 48, "the tree index has not engaged, so no walk holds the unfiled trigger");
+        TTrigger* group = unit->findTrigger(qsl("tct unfiled group"));
+        QVERIFY(group);
+        const int childID = luaInteger("tctUnfiledChildId");
+        TTrigger* child = unit->getTrigger(childID);
+        QVERIFY(child);
+        QCOMPARE(child->getParent(), group);
+
+        QList<EditorDeleteItemCommand::DeletedItemInfo> items;
+        items.append({childID, group->getID(), 0, QString(), child->getName()});
+        EditorDeleteItemCommand command(EditorViewType::cmTriggerView, items, mpHost);
+        command.redo();
+        QVERIFY(!unit->getTrigger(childID));
+
+        QVERIFY(runLua(qsl(R"(feedTriggers("123456\n"))")));
+        delete group;
+    }
+
     void test_deletingAnAliasGroup()
     {
         AliasUnit* unit = mpHost->getAliasUnit();

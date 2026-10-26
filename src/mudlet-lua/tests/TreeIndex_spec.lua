@@ -376,6 +376,29 @@ describe("trigger matching through the whole-tree index", function()
         assert.are.same({maker = 1, made = 1}, fired, "the line stamped before the trigger existed, so every folder above it has to be walked down its list")
     end)
 
+    itIndexed("passes lines holding nothing filed to the children of a trigger its match holds open", function()
+        assert(permRegexTrigger("treeindex gated digits", packageName .. " gate", {[[^\d{4}$]]}, 'TreeIndexSpecNote("gatedDigits")'))
+        feed("treeindex warm-up line")
+
+        feed("treeindex_gate_open", "1234", "1234", "1234")
+
+        assert.are.same({gate = 1, gatedDigits = 2}, fired, "no child's text is on the held lines, so only the gate being open can have it entered")
+    end)
+
+    itIndexed("enters each trigger held open below a folder after another of them shuts", function()
+        assert(permGroup("treeindex shut folder", "trigger", packageName))
+        -- of rare letters only, so that no line here holds what they are filed under
+        assert(permSubstringTrigger("treeindex shuts first", "treeindex shut folder", {"jqzvx"}, 'TreeIndexSpecNote("shutsFirst")'))
+        assert(permSubstringTrigger("treeindex shuts last", "treeindex shut folder", {"xjvqz"}, 'TreeIndexSpecNote("shutsLast")'))
+        feed("treeindex warm-up line")
+
+        setTriggerStayOpen("treeindex shuts first", 1)
+        setTriggerStayOpen("treeindex shuts last", 3)
+        feed("quiet", "quiet", "quiet")
+
+        assert.are.same({shutsFirst = 1, shutsLast = 3}, fired)
+    end)
+
     -- Last, as it takes the fixture away: a script's uninstall takes filed
     -- triggers away at the end of the line, which the index's next filing has
     -- to survive - the sanitiser builds are what would catch it not doing so

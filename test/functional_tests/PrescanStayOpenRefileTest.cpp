@@ -253,6 +253,28 @@ private slots:
                                     .arg(budget)));
     }
 
+    // Below the size the tree index engages at nothing is stamped, so a group's walk would pass over every
+    // filed child; with the index idle the group has to enter its children down the list
+    void filedChildFiresWhileTheTreeIndexIsIdle()
+    {
+        QVERIFY2(runLua(qsl(R"(
+            permGroup("idleGroup", "trigger")
+            idleFires = 0
+            permSubstringTrigger("idleChild", "idleGroup", {"qqidlebaitzz"}, "idleFires = idleFires + 1")
+            feedTriggers("idlewarmupline\n")
+        )")),
+                 "the triggers did not compile");
+        auto* triggerUnit = mpHost->getTriggerUnit();
+        TTrigger* group = triggerUnit->findTrigger(qsl("idleGroup"));
+        QVERIFY(group);
+        QCOMPARE(triggerUnit->treeIndexFiledCount(), 0);
+
+        runLua(qsl("feedTriggers('qqidlebaitzz\\n')"));
+
+        QCOMPARE(luaInteger("idleFires"), 1);
+        delete group;
+    }
+
     // A root is entered by the root loop whatever the tree index says, so one held open is not tracked
     // as open; moved below a group by the editor, it has to be entered all the same while it stays open
     void openRootMovedBelowAGroupStillFires()
