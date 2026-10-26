@@ -102,6 +102,9 @@ TIngestJob* TIngestPipeline::begin(const TBuffer& source, const std::string& uni
     if (job.mState.load(std::memory_order_acquire) == TIngestJob::Running) {
         return nullptr;
     }
+    if (job.mUnit.capacity() > csmMaxRetainedUnitBytes) {
+        std::string().swap(job.mUnit);
+    }
     job.mUnit.assign(unit);
     job.mDecodableLength = decodableLength;
     job.mLookupTable = lookupTable;
@@ -111,6 +114,7 @@ TIngestJob* TIngestPipeline::begin(const TBuffer& source, const std::string& uni
 
 bool TIngestPipeline::resume(const TBuffer& source, TIngestJob& job, const size_t position)
 {
+    // State first: mResumeFrom is the worker's until it reads Done
     if (job.mState.load(std::memory_order_acquire) != TIngestJob::Done || job.mResumeFrom > position || position + csmMinimumResumeBytes > job.mDecodableLength || !source.speculationEligible()) {
         return false;
     }
@@ -247,4 +251,10 @@ void TIngestPipeline::parse(TIngestJob& job)
     }
     twin.mpSpeculationSink = nullptr;
     twin.mpParseConfig = nullptr;
+    if (static_cast<size_t>(twin.mMudLine.capacity()) > TBuffer::csmMaxRetainedLineCapacity) {
+        QString().swap(twin.mMudLine);
+    }
+    if (twin.mMudBuffer.capacity() > TBuffer::csmMaxRetainedLineCapacity) {
+        TLineFormat().swap(twin.mMudBuffer);
+    }
 }

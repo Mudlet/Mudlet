@@ -786,6 +786,7 @@ private:
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
     void translateToPlainTextInner(std::string& incoming, bool isFromServer);
+    // Also runs on the ingest worker: read Host only through the mpParseConfig accessors, and call speculationStops() before any effect, logging included
     void parseChunk(std::string& localBuffer, bool isFromServer, const QVector<QChar>& encodingLookupTable, size_t localBufferDecodableLength, TIngestJob* speculation, size_t startPosition = 0);
     bool speculationEligible() const;
     ParseState parseState() const;
@@ -795,6 +796,7 @@ private:
     bool parseConfigIs(const ParseConfig&) const;
     void replaySpeculatedLines(TIngestJob&, size_t& localBufferPosition, bool isFromServer);
     bool recordSpeculatedLine(char ch, size_t& localBufferPosition, bool forcedLineBreak);
+    bool speculatedLineTooLong(size_t moreChars);
     void verifySpeculatedLine(const TSpeculatedLine&, char ch, size_t localBufferPosition, bool forcedLineBreak) const;
     // In the worker's buffer: marks the unit as not parsed ahead from here, before a side effect
     bool speculationStops()
