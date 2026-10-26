@@ -575,7 +575,8 @@ private slots:
         };
         // A pattern of its own per case, so a line can only ever be painted by
         // the trigger it is meant for. Each holds a character that takes two bytes
-        // in UTF-8, so painting a byte count spills past the match.
+        // in UTF-8, so painting a byte count spills past the match, or past the
+        // line, which the selection refuses.
         const QList<ColorizerCase> colorizerCases{
                 {qsl("substring"), REGEX_SUBSTRING, qsl("paint ålpha"), qsl("before paint ålpha after"), 7},
                 {qsl("perl"), REGEX_PERL, qsl("paint bëta"), qsl("before paint bëta after"), 7},
