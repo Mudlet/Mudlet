@@ -149,7 +149,7 @@ public:
     void takeBackMultiCaptureGroups(std::list<std::list<std::string>>& captureList, std::list<std::list<int>>& posList);
     void adjustCaptureGroups(int x, int a);
     void adjustCaptureGroupsForReplace(int x, int replacedLength, const QString& replacement);
-    void clearCaptureGroups();
+    void clearCaptureGroups(const bool triggerFire = false);
     bool buildingCaptureTables();
     int pushNestedDispatchState(const bool parkCommand);
     void popNestedDispatchState(const int depth);
@@ -164,16 +164,25 @@ public:
     void setExpandedCommand(const QString&);
     void settleCommandAfterAliasPass();
     // expandAlias() gives "command" back only to an alias script, so every way into
-    // a script says whether it is one
+    // a script says whether it is one. A way in that calls setMatches() before any
+    // Lua runs says so too, as that is where the end a fire still owes is folded in.
     class ScriptCallerScope
     {
     public:
-        ScriptCallerScope(TLuaInterpreter& lua, const bool aliasScript)
+        ScriptCallerScope(TLuaInterpreter& lua, const bool aliasScript, const bool setsMatchesFirst = false)
         : mLua(lua)
         , mWasAliasScript(std::exchange(lua.mRunningAliasScript, aliasScript))
         {
+            if (!setsMatchesFirst) {
+                lua.settleOwedDispatchEnd();
+            }
+            ++lua.mScriptCallDepth;
         }
-        ~ScriptCallerScope() { mLua.mRunningAliasScript = mWasAliasScript; }
+        ~ScriptCallerScope()
+        {
+            --mLua.mScriptCallDepth;
+            mLua.mRunningAliasScript = mWasAliasScript;
+        }
         ScriptCallerScope(const ScriptCallerScope&) = delete;
         ScriptCallerScope& operator=(const ScriptCallerScope&) = delete;
 
@@ -181,6 +190,34 @@ public:
         TLuaInterpreter& mLua;
         const bool mWasAliasScript;
     };
+    // While a trigger pass walks a line, a fire's end is left for the next fire's
+    // start to fold into its own, and whatever is still owed goes in at the end
+    class DispatchEndDeferral
+    {
+    public:
+        explicit DispatchEndDeferral(TLuaInterpreter& lua)
+        : mLua(lua)
+        , mOuterDepth(std::exchange(lua.mDispatchEndDeferralDepth, lua.mScriptCallDepth))
+        {
+        }
+        ~DispatchEndDeferral()
+        {
+            mLua.settleOwedDispatchEnd();
+            mLua.mDispatchEndDeferralDepth = mOuterDepth;
+        }
+        DispatchEndDeferral(const DispatchEndDeferral&) = delete;
+        DispatchEndDeferral& operator=(const DispatchEndDeferral&) = delete;
+
+    private:
+        TLuaInterpreter& mLua;
+        const int mOuterDepth;
+    };
+    void settleOwedDispatchEnd()
+    {
+        if (mDispatchEndOwed) {
+            settleDispatchEnd(pGlobalLua);
+        }
+    }
     bool callEventHandler(const QString& function, const TEvent& pE);
     bool callCmdLineAction(const int func, QString);
     bool callAnonymousFunction(const int func, QString name);
@@ -1030,6 +1067,7 @@ private:
     void materialisePendingCaptures(lua_State*);
     void materialisePendingGlobals(lua_State*);
     void installBetweenDispatchMultimatches(lua_State*);
+    void settleDispatchEnd(lua_State*);
     void installLazyGlobals();
     bool installGlobalsMetatableGuard(lua_State*, const char* library, const char* function, const int slot);
     bool globalsMetatableHandedOut(lua_State*, const int index);
@@ -1087,6 +1125,13 @@ private:
     // scope is open, as clearCaptureGroups() puts it back; "multimatches" is
     // left out between dispatches too - see mSpareMultimatchesRef.
     bool mCaptureScopeOpen = false;
+    // clearCaptureGroups() found the handlers in place after a trigger fire and
+    // left putting "matches" back, and the spare "multimatches" out, to
+    // settleDispatchEnd(). Only while the pass runs at the script depth it started
+    // at, and nothing but setMatches() may run Lua or read either name until then.
+    bool mDispatchEndOwed = false;
+    int mDispatchEndDeferralDepth = -1;
+    int mScriptCallDepth = 0;
     bool mMatchesPending = false;
     enum class PendingMultimatches { None, Spare, Captures };
     PendingMultimatches mMultimatchesPending = PendingMultimatches::None;

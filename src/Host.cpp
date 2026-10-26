@@ -3067,7 +3067,10 @@ void Host::runTriggers(int line)
 
 void Host::incomingStreamProcessor(const QString& data, int line)
 {
-    mTriggerUnit.processDataStream(data, line);
+    {
+        const TLuaInterpreter::DispatchEndDeferral dispatchEndDeferral(mLuaInterpreter);
+        mTriggerUnit.processDataStream(data, line);
+    }
 
     // Every unit's doCleanup() starts by asking this, and on nearly every line
     // all six answer no; asking here keeps the six calls off the per-line path.
@@ -3182,6 +3185,10 @@ void Host::raiseEvent(const TEvent& pE)
     if (pE.mArgumentList.isEmpty()) {
         return;
     }
+
+    // A trigger's sound can raise an event mid-pass, and not every step below
+    // runs inside a handler's own call
+    mLuaInterpreter.settleOwedDispatchEnd();
 
     static const QString star = qsl("*");
 

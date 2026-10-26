@@ -3772,7 +3772,23 @@ void TLuaInterpreter::installBetweenDispatchMultimatches(lua_State* L)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::clearCaptureGroups()
+// What clearCaptureGroups() does to the globals once the handlers are known to
+// be in place
+void TLuaInterpreter::settleDispatchEnd(lua_State* L)
+{
+    mDispatchEndOwed = false;
+    const int callerStackTop = lua_gettop(L);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mMatchesKeyRef);
+    pushEmptyMatchesTable(L);
+    // Only now, as allocating the table can run a finaliser that reads it
+    mMatchesPending = false;
+    lua_rawset(L, LUA_GLOBALSINDEX);
+    installBetweenDispatchMultimatches(L);
+    lua_settop(L, callerStackTop);
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::clearCaptureGroups(const bool triggerFire)
 {
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
@@ -3815,13 +3831,15 @@ void TLuaInterpreter::clearCaptureGroups()
 
     mCaptureScopeOpen = false;
     if (lazy) {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, mMatchesKeyRef);
-        pushEmptyMatchesTable(L);
-        // Only now, as allocating the table can run a finaliser that reads it
-        mMatchesPending = false;
-        lua_rawset(L, LUA_GLOBALSINDEX);
-        installBetweenDispatchMultimatches(L);
+        // An alias pass a trigger's command sets off runs at the same depth, inside
+        // a send() that goes on to use Lua
+        if (triggerFire && mScriptCallDepth == mDispatchEndDeferralDepth) {
+            mDispatchEndOwed = true;
+        } else {
+            settleDispatchEnd(L);
+        }
     } else {
+        settleOwedDispatchEnd();
         pushEmptyMatchesTable(L);
         lua_setglobal(L, "matches");
         lua_newtable(L);
@@ -5065,6 +5083,7 @@ void TLuaInterpreter::pushPendingMultimatches(lua_State* L)
 // any __newindex
 void TLuaInterpreter::materialisePendingCaptures(lua_State* L)
 {
+    settleOwedDispatchEnd();
     if (!mMatchesPending && mMultimatchesPending == PendingMultimatches::None) {
         return;
     }
@@ -5145,6 +5164,14 @@ int TLuaInterpreter::lazyGlobalsIndex(lua_State* L)
     if (lua_topointer(L, 1) != self->mGlobalsTable) {
         return 0;
     }
+    if (!wantsLine && self->mDispatchEndOwed) {
+        self->settleOwedDispatchEnd();
+        if (wantsMatches) {
+            lua_pushvalue(L, 2);
+            lua_rawget(L, 1);
+            return 1;
+        }
+    }
 
     if (wantsMatches) {
         if (!self->mMatchesPending) {
@@ -5200,6 +5227,10 @@ int TLuaInterpreter::lazyGlobalsNewindex(lua_State* L)
     lua_settop(L, 3);
     auto* self = static_cast<TLuaInterpreter*>(lua_touserdata(L, lua_upvalueindex(1)));
     const char* key = lua_type(L, 2) == LUA_TSTRING && lua_topointer(L, 1) == self->mGlobalsTable ? lua_tostring(L, 2) : nullptr;
+    // What the script assigns has to land on top of what the last fire put back
+    if (key == self->mMatchesKey || key == self->mMultimatchesKey) {
+        self->settleOwedDispatchEnd();
+    }
     lua_rawset(L, 1);
     if (!key) {
         return 0;
@@ -5405,6 +5436,7 @@ void TLuaInterpreter::forgetLazyGlobals()
     mIndexHandlerRef = LUA_NOREF;
     mNewindexHandlerRef = LUA_NOREF;
     mCaptureScopeOpen = false;
+    mDispatchEndOwed = false;
     mMatchesPending = false;
     mMultimatchesPending = PendingMultimatches::None;
     mLinePending = false;
@@ -5428,6 +5460,18 @@ void TLuaInterpreter::setMatches(lua_State* L, const MultimatchesSource source)
     // "matches" changes only for a fire with captures, and never for a multiline
     // trigger's, which is handed "multimatches" instead
     const bool setsMatches = source == MultimatchesSource::Untouched && !mCaptureGroupList.empty();
+    if (mDispatchEndOwed) {
+        // Nothing has run since clearCaptureGroups() found the handlers in place,
+        // so that end and this start leave the names out as one. A new spare
+        // allocates, which can run a finaliser, so that end goes in first.
+        if (mCaptureScopeOpen && setsMatches && !mSpareMultimatchesSeen) {
+            mDispatchEndOwed = false;
+            installBetweenDispatchMultimatches(L);
+            deferDispatchGlobals(L, source, setsMatches);
+            return;
+        }
+        settleDispatchEnd(L);
+    }
     if (mCaptureScopeOpen && lazyGlobalsUsable(L)) {
         deferDispatchGlobals(L, source, setsMatches);
         return;
@@ -5448,7 +5492,7 @@ void TLuaInterpreter::setMatches(lua_State* L, const MultimatchesSource source)
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::call_luafunction(void* pT, const QString& itemName, const bool aliasScript)
 {
-    const ScriptCallerScope callerScope(*this, aliasScript);
+    const ScriptCallerScope callerScope(*this, aliasScript, true);
     QElapsedTimer executionTimer;
 
     if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -5528,7 +5572,7 @@ void TLuaInterpreter::delete_luafunction(const QString& name)
 // as well as the boolean return value from the function
 std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT, const QString& itemName)
 {
-    const ScriptCallerScope callerScope(*this, false);
+    const ScriptCallerScope callerScope(*this, false, true);
     QElapsedTimer executionTimer;
 
     if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -5591,7 +5635,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT, const
 // to cut down on spammy output if things are okay.
 bool TLuaInterpreter::call(const QString& function, const QString& mName, const bool muteDebugOutput, const bool aliasScript)
 {
-    const ScriptCallerScope callerScope(*this, aliasScript);
+    const ScriptCallerScope callerScope(*this, aliasScript, true);
     QElapsedTimer executionTimer;
 
     if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -5630,7 +5674,7 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
 // No documentation available in wiki - internal function
 std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, const QString& mName)
 {
-    const ScriptCallerScope callerScope(*this, false);
+    const ScriptCallerScope callerScope(*this, false, true);
     QElapsedTimer executionTimer;
 
     if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -5776,7 +5820,7 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 {
-    const ScriptCallerScope callerScope(*this, false);
+    const ScriptCallerScope callerScope(*this, false, true);
     QElapsedTimer executionTimer;
 
     if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -5790,6 +5834,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
         setMatches(L, MultimatchesSource::Captures);
     }
 
+    settleOwedDispatchEnd();
     lua_getglobal(L, function.toUtf8().constData());
     const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error) {
@@ -5817,7 +5862,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 // No documentation available in wiki - internal function
 std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& function, const QString& mName)
 {
-    const ScriptCallerScope callerScope(*this, false);
+    const ScriptCallerScope callerScope(*this, false, true);
     QElapsedTimer executionTimer;
 
     if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -5833,6 +5878,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
         setMatches(L, MultimatchesSource::Captures);
     }
 
+    settleOwedDispatchEnd();
     lua_getglobal(L, function.toUtf8().constData());
     const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error) {

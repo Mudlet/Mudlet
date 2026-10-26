@@ -4672,6 +4672,42 @@ describe("Trigger processing", function()
             end)
         end)
 
+        -- A condition is evaluated between the fires of a line, and has to find
+        -- the fire before it put away as a script would
+        it("evaluates a lua code condition with the globals as they are between fires", function()
+            withTrigger("lua condition", function(cleanup)
+                enableTrigger(packageName .. " matchall one")
+                cleanup(function()
+                    disableTrigger(packageName .. " matchall one")
+                    -- Handing the metatable out turns the deferral off again,
+                    -- as the specs after this one expect
+                    getmetatable(_G)
+                end)
+                -- busted hands the globals metatable out around every file,
+                -- which turns leaving the capture globals out off
+                rearmLazyGlobals()
+                local seen = {}
+                _G.TriggerKindsSpec = setmetatable({}, {__index = function(_, key)
+                    if key == "allow" then
+                        -- next() rather than a read, which would put matches back
+                        for name, value in next, _G do
+                            if name == "matches" then
+                                seen.matches = value
+                            end
+                        end
+                        seen.asked = true
+                    end
+                end})
+
+                feedTriggers("tkcondition w\n")
+
+                assert.are.equal(1, rawget(_G.TriggerKindsSpec, "matchAllOne"), "the trigger before the condition did not fire")
+                assert.is_true(seen.asked, "the condition was not evaluated")
+                assert.are.equal("table", type(seen.matches), "the condition ran with matches left out")
+                assert.is_nil(next(seen.matches), "the condition ran with the fire before it still in matches")
+            end)
+        end)
+
         it("completes a multiline trigger through a line spacer", function()
             withTrigger("line spacer", function()
                 feedTriggers("tkspacer start\n")
@@ -5906,6 +5942,45 @@ describe("Trigger processing", function()
                 assert.is_nil(next(_G[name]), name .. " should be empty outside a dispatch")
             end
             assert.are.equal("table", type(rawPresent(_G, "matches")), "matches should be in the globals table outside a dispatch")
+        end)
+
+        it("has matches back in the globals table once a line is through", function()
+            local fires = 0
+            trigger(tempRegexTrigger("^LazyLineEnd (\\w+)$", function()
+                fires = fires + 1
+            end))
+            trigger(tempRegexTrigger("^LazyLineEnd (\\w+)$", function()
+                fires = fires + 1
+            end))
+
+            feedTriggers("\nLazyLineEnd word\n")
+
+            -- Walked before anything reads it, as a read puts it back by itself
+            local inPlace = rawPresent(_G, "matches")
+            assert.are.equal(2, fires)
+            assert.are.equal("table", type(inPlace), "matches was still left out after the line")
+            assert.is_nil(next(inPlace), "matches should be empty outside a dispatch")
+        end)
+
+        it("hands the next fire on a line its own captures over what a script rawset() there", function()
+            _G.LazyGlobalsSpec = {}
+            trigger(tempRegexTrigger("^LazyRawsetSame (\\w+)$", [==[
+                rawset(_G, "matches", {"mine"})
+                rawset(_G, "multimatches", "also mine")
+            ]==]))
+            trigger(tempRegexTrigger("^LazyRawsetSame (\\w+)$", [==[
+                _G.LazyGlobalsSpec.matches = matches[2]
+                _G.LazyGlobalsSpec.multimatches = type(multimatches)
+            ]==]))
+
+            feedTriggers("\nLazyRawsetSame word\n")
+
+            local seen = _G.LazyGlobalsSpec
+            assert.are.equal("word", seen.matches, "the second trigger read the first one's matches")
+            assert.are.equal("table", seen.multimatches, "the second trigger read the first one's multimatches")
+            local inPlace = rawPresent(_G, "matches")
+            assert.are.equal("table", type(inPlace))
+            assert.is_nil(next(inPlace), "what a script rawset() outlived the line")
         end)
 
         -- busted gives a spec file an environment of its own, so a function

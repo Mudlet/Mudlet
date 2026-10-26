@@ -1986,14 +1986,14 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
                     // A filter reads the captures again once the script has run
                     pL->setMultiCaptureGroups(matchState->multiCaptureList, matchState->multiCapturePosList, matchState->nameCaptures);
                     execute();
-                    pL->clearCaptureGroups();
+                    pL->clearCaptureGroups(true);
                 } else {
                     pL->setMultiCaptureGroups(std::move(matchState->multiCaptureList), std::move(matchState->multiCapturePosList), std::move(matchState->nameCaptures));
                     execute();
                     // Back into the state, whose destructor parks the nodes for
                     // the next fire to reuse
                     pL->takeBackMultiCaptureGroups(matchState->multiCaptureList, matchState->multiCapturePosList);
-                    pL->clearCaptureGroups();
+                    pL->clearCaptureGroups(true);
                 }
                 if (mFilterTrigger) {
                     const std::list<std::list<std::string>>& multiCaptureList = matchState->multiCaptureList;
@@ -2377,7 +2377,7 @@ void TTrigger::executeWithCaptures(
         }
     }
     execute();
-    pL->clearCaptureGroups();
+    pL->clearCaptureGroups(true);
 }
 
 void TTrigger::execute()
@@ -2410,6 +2410,7 @@ void TTrigger::execute()
         mpHost->mpMedia->playMedia(mediaData);
     }
     if (!mCommand.isEmpty()) {
+        mpLua->settleOwedDispatchEnd();
         // Sending runs a whole alias pass, and any alias it matches empties the
         // captures before this trigger's script has read them; "command" is left
         // as that pass sets it. Only the script reads them back, so a trigger
