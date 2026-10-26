@@ -77,17 +77,6 @@ static const char* speechSensitivityName(const SpeechRecognizer::Sensitivity sen
     return "default";
 }
 
-// For a call whose engine can raise an event with nobody holding the microphone: with
-// no profile in front, as with no main window, the calling profile hears it instead
-static TSpeechBridge* speechBridgeCalledFrom(lua_State* L)
-{
-    auto* pBridge = TSpeechBridge::instance();
-    if (pBridge) {
-        pBridge->setLastCaller(findHostFromLua(L));
-    }
-    return pBridge;
-}
-
 // docs/stt-api.md's "refusals speak": a consumer driving the bridge from events
 // has to hear a refusal too, and with no engine installed there is no recognizer
 // to emit errorOccurred through - so this raises the event through the bridge itself.
@@ -432,7 +421,8 @@ int TLuaInterpreter::sttInit(lua_State* L)
         }
     }
 
-    auto* pBridge = speechBridgeCalledFrom(L);
+    const TSpeechBridge::CallerScope callerScope(findHostFromLua(L));
+    auto* pBridge = TSpeechBridge::instance();
     if (!pBridge) {
         return warnArgumentValue(L, funcName, "mudlet instance not available");
     }
@@ -1045,7 +1035,8 @@ int TLuaInterpreter::sttClose(lua_State* L)
 {
     const char* funcName = "stt.close";
 
-    auto* pBridge = speechBridgeCalledFrom(L);
+    const TSpeechBridge::CallerScope callerScope(findHostFromLua(L));
+    auto* pBridge = TSpeechBridge::instance();
     if (pBridge) {
         auto* pRecognizer = pBridge->speechRecognizer();
         if (pRecognizer) {
@@ -1151,7 +1142,8 @@ int TLuaInterpreter::sttSetSensitivity(lua_State* L)
         return warnArgumentChoice(L, "stt.setSensitivity", qsl("sensitivity"), {qsl("short"), qsl("default"), qsl("long")}, mode);
     }
 
-    auto* pBridge = speechBridgeCalledFrom(L);
+    const TSpeechBridge::CallerScope callerScope(findHostFromLua(L));
+    auto* pBridge = TSpeechBridge::instance();
     if (!pBridge) {
         return warnArgumentValue(L, "stt.setSensitivity", "mudlet instance not available");
     }
@@ -1228,7 +1220,8 @@ int TLuaInterpreter::sttSetVocabulary(lua_State* L)
         lua_pop(L, 1);
     }
 
-    auto* pBridge = speechBridgeCalledFrom(L);
+    const TSpeechBridge::CallerScope callerScope(findHostFromLua(L));
+    auto* pBridge = TSpeechBridge::instance();
     if (!pBridge) {
         return warnArgumentValue(L, "stt.setVocabulary", "mudlet instance not available");
     }

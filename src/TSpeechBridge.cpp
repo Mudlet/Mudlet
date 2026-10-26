@@ -59,6 +59,23 @@ TSpeechBridge::~TSpeechBridge()
     }
 }
 
+TSpeechBridge::CallerScope::CallerScope(Host* pCaller)
+: mpBridge(TSpeechBridge::instance())
+{
+    if (mpBridge) {
+        mpOuterCaller = mpBridge->mpLastCaller;
+        mpBridge->mpLastCaller = pCaller;
+        ++mpBridge->mCallerScopes;
+    }
+}
+
+TSpeechBridge::CallerScope::~CallerScope()
+{
+    if (mpBridge && --mpBridge->mCallerScopes > 0) {
+        mpBridge->mpLastCaller = mpOuterCaller;
+    }
+}
+
 SpeechRecognizer* TSpeechBridge::speechRecognizer() const
 {
     return mpSpeechRecognizer;

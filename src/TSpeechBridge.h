@@ -53,13 +53,26 @@ public:
     void initSpeechRecognition(SpeechRecognizerFactory::Backend backend = SpeechRecognizerFactory::Backend::Auto);
     SpeechRecognizer* speechRecognizer() const;
     // Raise one sysSTT* event on the profile holding the microphone, else the one
-    // whose session just ended, else the active one, else pCaller, else
-    // setLastCaller()'s; profileClosing() silences the owner it is ending. Public
+    // whose session just ended, else the active one, else pCaller, else the last
+    // CallerScope's; profileClosing() silences the owner it is ending. Public
     // because the stt.* bindings refuse before a recognizer exists - with no engine
     // installed there is no object to emit through, and "refusals speak" has to
     // hold there too or a consumer cannot tell "no engine" from "nothing said yet".
     void raiseSpeechEvent(const QString& name, const QString& value, Host* pCaller = nullptr);
-    void setLastCaller(Host* pHost) { mpLastCaller = pHost; }
+    // Names the profile whose stt.* call is running, for what its engine raises with nobody holding the
+    // microphone and no profile in front, as with no main window. A call another profile's handler
+    // makes inside it hands the name back as it returns; the outermost keeps it, for what comes later.
+    class CallerScope
+    {
+    public:
+        explicit CallerScope(Host* pCaller);
+        ~CallerScope();
+        Q_DISABLE_COPY_MOVE(CallerScope)
+
+    private:
+        QPointer<TSpeechBridge> mpBridge;
+        QPointer<Host> mpOuterCaller;
+    };
     // Take the microphone for this profile, stopping whoever held it. There is
     // one recognizer for the whole application, so a second profile asking to
     // listen is a handover rather than a second session - and the profile that
@@ -123,6 +136,7 @@ private:
     // happens to be in front. See raiseSpeechEvent().
     QPointer<Host> mpMicrophoneOwnerEnding;
     QPointer<Host> mpLastCaller;
+    int mCallerScopes = 0;
     // See profileClosing()
     Host* mpSilencedProfile = nullptr;
     // How deep the delivery of a recognised phrase is - see the finalResult

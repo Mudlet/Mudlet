@@ -76,10 +76,20 @@ public:
 
     bool initialize(const QString& modelPath) override
     {
+        if (mFailNextLoad) {
+            mFailNextLoad = false;
+            // As a model that turns out unusable once read: what it can do is announced before it fails
+            mCapabilities.wordResults = !mCapabilities.wordResults;
+            emit capabilitiesChanged(mCapabilities);
+            setState(State::Error);
+            emit errorOccurred(qsl("the stand-in could not load its model"));
+            return false;
+        }
         mModelPath = modelPath;
         setState(State::Ready);
         return true;
     }
+    void failNextLoad() { mFailNextLoad = true; }
     QString currentLanguage() const override { return qsl("en"); }
     bool setLanguage(const QString&) override { return true; }
     QString backendName() const override { return qsl("HeadlessStandIn"); }
@@ -103,6 +113,7 @@ protected:
 
 private:
     QString mModelPath;
+    bool mFailNextLoad = false;
     // Biasing with no vocabulary of its own, so stt.setVocabulary() makes the base class report a fault
     Capabilities mCapabilities{.biasing = true, .sensitivityTuning = true};
 };
@@ -4871,6 +4882,50 @@ headlessDiscord = ok and 'ok' or tostring(err)
         QCOMPARE(luaGlobalString(hosts.at(0), "headlessSttErrors"), qsl("1"));
         QCOMPARE(luaGlobalString(hosts.at(1), "headlessSttErrors"), qsl("0"));
         QCOMPARE(luaGlobalString(hosts.at(1), "headlessSttNested"), qsl("1"));
+    }
+
+    // The same past a nested call, for what the engine raises itself rather than a refusal naming its caller
+    void test_anEngineFaultReachesItsCallerPastANestedCallWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        const auto restoreFactory = qScopeGuard([]() {
+            SpeechRecognizerFactory::setFactoryOverride(nullptr);
+        });
+        QVERIFY2(installHeadlessStandInEngine(), "The stand-in engine was not installed.");
+        const QStringList hostnames{qsl("Test-Headless-Host-Speech-Fault-A"), qsl("Test-Headless-Host-Speech-Fault-B")};
+        const auto closeProfiles = qScopeGuard([&hostnames]() {
+            for (const QString& hostname : hostnames) {
+                if (HostManager::self()->hostLoaded(hostname)) {
+                    HostManager::self()->deleteHost(hostname);
+                }
+            }
+        });
+        static QStringList sEvents;
+        sEvents.clear();
+        QList<Host*> hosts;
+        for (const QString& hostname : hostnames) {
+            QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+            Host* host = HostManager::self()->getHost(hostname);
+            QVERIFY2(host, "The profile is not in the pool.");
+            lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "recordSttEvent", [](lua_State* L) -> int {
+                sEvents << qsl("%1:%2:%3").arg(getHostFromLua(L).getName(), QString::fromUtf8(lua_tostring(L, 1)), QString::fromUtf8(lua_tostring(L, 2)));
+                return 0;
+            });
+            host->registerAnonymousEventHandler(qsl("sysSTTStateChanged"), qsl("recordSttEvent"));
+            host->registerAnonymousEventHandler(qsl("sysSTTError"), qsl("recordSttEvent"));
+            hosts << host;
+        }
+        // B reacts to the capability change A's load announces with a call that raises nothing
+        hosts.at(1)->registerAnonymousEventHandler(qsl("sysSTTCapabilitiesChanged"), qsl("onHeadlessSttCapabilities"));
+        QVERIFY(hosts.at(1)->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("headlessSttNested = 0 function onHeadlessSttCapabilities() headlessSttNested = headlessSttNested + 1 stt.setVocabulary({'north'}) end")));
+        standInEngine()->setBiasing(false);
+        standInEngine()->failNextLoad();
+
+        QVERIFY(hosts.at(0)->getLuaInterpreter()->compileAndExecuteScript(qsl("local ok, why = stt.init([[%1]]) headlessSttLoad = why or 'loaded'").arg(mConfigDir.path())));
+        QCOMPARE(luaGlobalString(hosts.at(0), "headlessSttLoad"), qsl("failed to initialize model from: %1").arg(mConfigDir.path()));
+        QCOMPARE(luaGlobalString(hosts.at(1), "headlessSttNested"), qsl("1"));
+        QCOMPARE(sEvents, QStringList({qsl("%1:sysSTTStateChanged:error").arg(hostnames.at(0)), qsl("%1:sysSTTError:the stand-in could not load its model").arg(hostnames.at(0))}));
     }
 
     // As loading a model, then closing a tab and the last profile, do in SpeechAcrossProfilesTest
