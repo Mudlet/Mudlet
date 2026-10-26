@@ -398,8 +398,8 @@ public:
     }
     static void leavePass() { --smPassDepth; }
     // What a line can dismiss this trigger by without calling into it - the cases cannotMatch() and
-    // match_color_pattern() decide, copied only for a single-pattern trigger that never fires on a
-    // line it does not match.
+    // match_color_pattern() decide, and a start of line or exact pattern's first character and length -
+    // copied only for a single-pattern trigger that never fires on a line it does not match.
     TRootTriggerFilter rootFilter() const;
     // The one color pair a root trigger's color pattern would find across the whole line, as
     // match_color_pattern() reads it; false when the line has more than one, or cannot be answered for.
