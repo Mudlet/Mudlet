@@ -47,6 +47,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <QCoreApplication>
 
@@ -500,8 +501,8 @@ public:
 private:
     TTrigger() = default;
 
-    inline void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
-    inline void filter(std::string&, int&, int lineNumber, bool positionsInCurrentColumns);
+    inline void updateMultistates(int regexNumber, const TCaptureGroups& captureList, const std::vector<int>& posList, const NameGroupMatches* nameMatches = nullptr);
+    inline void filter(std::string_view capture, int posOffset, int lineNumber, bool positionsInCurrentColumns);
     bool selectTextMatch(int lineNumber, int from, int length) const;
     void processExactMatch(int patternNumber, int posOffset, int lineNumber);
     void processRegexMatch(const char* haystackC,
@@ -515,12 +516,12 @@ private:
                            int lineNumber);
     void processBeginOfLine(int patternNumber, int posOffset, int lineNumber);
     void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where, int lineNumber);
-    void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList, int lineNumber);
+    void processColorPattern(int patternNumber, const TCaptureGroups& captureList, const std::vector<int>& posList, int lineNumber);
     void processPromptMatch(int patternNumber);
     bool fireReachesLua() const;
     bool playsSound() const;
-    void executeWithCaptures(const std::list<std::string>& captureList,
-                             const std::list<int>& posList,
+    void executeWithCaptures(const TCaptureGroups& captureList,
+                             const std::vector<int>& posList,
                              int lineNumber,
                              const NameGroupMatches* nameGroups = nullptr,
                              const QMap<QString, QPair<int, int>>* namePositions = nullptr);

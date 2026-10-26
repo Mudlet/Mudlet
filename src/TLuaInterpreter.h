@@ -140,6 +140,7 @@ public:
     bool lazyCaptureGlobals() const { return mLazyCaptureGlobals; }
     void set_lua_table(const QString& tableName, QStringList& variableList);
     void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
+    void setCaptureGroups(const TCaptureGroups&, const std::vector<int>&);
     // After setCaptureGroups(), for captures whose text on screen is no longer as long as what matched
     void setCaptureGroupLengths(std::vector<int>&& lengths) { mCaptureGroupLengthList = std::move(lengths); }
     int captureGroupLength(std::size_t index) const;
@@ -1059,18 +1060,12 @@ private:
 
 
     const int LUA_FUNCTION_MAX_ARGS = 50;
-    std::vector<std::string> mCaptureGroupList;
+    // Kept across fires for their capacity, which clearCaptureGroups() bounds
+    TCaptureGroups mCaptureGroups;
     std::vector<int> mCaptureGroupPosList;
     // Each capture's width on screen once replace() or an earlier trigger's edit changed it,
     // -1 where untouched; the capture text stays what the game sent, as "matches" may first be built after it
     std::vector<int> mCaptureGroupLengthList;
-    // clearCaptureGroups() parks emptied storage here so the next fire reuses the strings' buffers
-    std::vector<std::string> mSpareCaptureGroupList;
-    std::vector<int> mSpareCaptureGroupPosList;
-    static constexpr std::size_t scmMaxParkedCaptures = 512;
-    static constexpr std::string::size_type scmMaxParkedCaptureBytes = 1024;
-    // Well past the cap, so a trigger slightly over it doesn't reallocate each way per fire
-    static constexpr std::size_t scmMaxParkedCaptureSlack = 4 * scmMaxParkedCaptures;
     QString mLastGlobalName;
     QByteArray mLastGlobalNameUtf8;
     // set_lua_string()'s encode buffer, kept for its capacity; dropped past a length no game line reaches
@@ -1146,7 +1141,7 @@ private:
     // restored when the pass returns - "command" only for an alias script's expandAlias().
     struct NestedDispatchState
     {
-        std::vector<std::string> captureGroupList;
+        TCaptureGroups captureGroups;
         std::vector<int> captureGroupPosList;
         std::vector<int> captureGroupLengthList;
         std::list<std::list<std::string>> multiCaptureGroupList;

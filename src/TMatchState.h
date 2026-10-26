@@ -27,14 +27,95 @@
 #include <iterator>
 #include <list>
 #include <string>
+#include <string_view>
+#include <vector>
 
 #include <QString>
 #include <QPair>
 #include <QVector>
 
+// One fire's capture groups as UTF-8, back to back in a single buffer, so a fire
+// shaped like the last allocates nothing and no capture is a string of its own
+class TCaptureGroups
+{
+public:
+    std::size_t size() const { return mEnds.size(); }
+    bool empty() const { return mEnds.empty(); }
 
-// Recycles capture list nodes between trigger fires: splice() moves nodes without the allocator and
-// assigning into a recycled string reuses its buffer, so a fire shaped like the last allocates nothing.
+    std::string_view operator[](const std::size_t index) const
+    {
+        const std::size_t begin = index ? mEnds[index - 1] : 0;
+        return {mBytes.data() + begin, mEnds[index] - begin};
+    }
+
+    std::string_view back() const { return (*this)[mEnds.size() - 1]; }
+
+    void append(const char* bytes, const std::size_t length)
+    {
+        mBytes.append(bytes, length);
+        mEnds.push_back(mBytes.size());
+    }
+
+    void append(const std::string_view capture) { append(capture.data(), capture.size()); }
+
+    void appendEmpty() { mEnds.push_back(mBytes.size()); }
+
+    // Encoded exactly as QString::toUtf8() would, so an unpaired surrogate
+    // cannot shift the byte offset the capture reports, and cut at the first
+    // NUL, as a std::string built from toUtf8().constData() is
+    void append(const QStringView capture)
+    {
+        const std::size_t begin = mBytes.size();
+        for (const QChar character : capture) {
+            const char16_t unit = character.unicode();
+            if (unit >= 0x80) {
+                mBytes.resize(begin);
+                const QByteArray utf8 = capture.toUtf8();
+                mBytes.append(utf8.constData(), qstrnlen(utf8.constData(), static_cast<std::size_t>(utf8.size())));
+                break;
+            }
+            if (unit == u'\0') {
+                break;
+            }
+            mBytes.push_back(static_cast<char>(unit));
+        }
+        mEnds.push_back(mBytes.size());
+    }
+
+    void clear()
+    {
+        mBytes.clear();
+        mEnds.clear();
+    }
+
+    // Well past what an ordinary fire needs, so a trigger slightly over it doesn't reallocate per fire
+    static constexpr std::size_t scmMaxKeptCaptures = 2048;
+    static constexpr std::size_t scmMaxKeptBytes = 32 * 1024;
+
+    // Empties it, and gives back whatever a fire past the bounds grew it to,
+    // which would otherwise stay for the session
+    void clearAndTrim()
+    {
+        clear();
+        if (mBytes.capacity() > scmMaxKeptBytes) {
+            std::string().swap(mBytes);
+        }
+        if (mEnds.capacity() > scmMaxKeptCaptures) {
+            std::vector<std::size_t>().swap(mEnds);
+        }
+    }
+
+    std::size_t bytesCapacity() const { return mBytes.capacity(); }
+    std::size_t capturesCapacity() const { return mEnds.capacity(); }
+
+private:
+    std::string mBytes;
+    // Where each capture ends in mBytes; it starts where the one before ends
+    std::vector<std::size_t> mEnds;
+};
+
+// Recycles the capture list nodes open multiline states hold: splice() moves nodes without the allocator
+// and assigning into a recycled string reuses its buffer, so a condition shaped like the last allocates nothing.
 //
 // No lock: triggers and the Lua engine run on the main thread, and nothing else may reach this pool.
 class TCaptureNodePool
@@ -132,11 +213,12 @@ public:
     }
 
     // Recycled nodes: copying the lists would allocate per capture on every condition an open trigger matches
-    void addCaptures(const std::list<std::string>& captures, const std::list<int>& positions)
+    void addCaptures(const TCaptureGroups& captures, const std::vector<int>& positions)
     {
         auto& targetCaptures = multiCaptureList.emplace_back();
-        for (const auto& capture : captures) {
-            TCaptureNodePool::takeCapture(targetCaptures).assign(capture);
+        for (std::size_t i = 0; i < captures.size(); ++i) {
+            const std::string_view capture = captures[i];
+            TCaptureNodePool::takeCapture(targetCaptures).assign(capture.data(), capture.size());
         }
         auto& targetPositions = multiCapturePosList.emplace_back();
         for (const int position : positions) {

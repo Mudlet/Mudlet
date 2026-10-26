@@ -3688,15 +3688,21 @@ void TLuaInterpreter::takeBackMultiCaptureGroups(std::list<std::list<std::string
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList, const std::list<int>& posList)
 {
-    // Take back the storage clearCaptureGroups() parked, unless a nested pass is
-    // still holding it - assigning over the recycled std::strings reuses their
-    // buffers, which is worth having on a path that runs per trigger fire
-    if (mCaptureGroupList.empty()) {
-        mCaptureGroupList.swap(mSpareCaptureGroupList);
-        mCaptureGroupPosList.swap(mSpareCaptureGroupPosList);
+    mCaptureGroups.clear();
+    for (const auto& capture : captureList) {
+        mCaptureGroups.append(capture);
     }
-    mCaptureGroupList.assign(captureList.begin(), captureList.end());
     mCaptureGroupPosList.assign(posList.begin(), posList.end());
+    mCaptureGroupLengthList.clear();
+    mCaptureScopeOpen = true;
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::setCaptureGroups(const TCaptureGroups& captures, const std::vector<int>& positions)
+{
+    // Assigned over, so storage an earlier fire grew is reused
+    mCaptureGroups = captures;
+    mCaptureGroupPosList = positions;
     mCaptureGroupLengthList.clear();
     mCaptureScopeOpen = true;
 }
@@ -3780,32 +3786,15 @@ void TLuaInterpreter::clearCaptureGroups()
     // what they hold
     const bool lazy = lazyGlobalsUsable(L);
 
-    if (mSpareCaptureGroupList.empty()) {
-        mSpareCaptureGroupList.swap(mCaptureGroupList);
-        mSpareCaptureGroupPosList.swap(mCaptureGroupPosList);
-        // A match-all trigger's /g loop accumulates every match on the line into
-        // one capture list, so what it parks scales with matches per line rather
-        // than with the pattern's group count. Past the cap the cost is the
-        // allocation this parking exists to save, never unbounded memory.
-        if (mSpareCaptureGroupList.size() > scmMaxParkedCaptures) {
-            mSpareCaptureGroupList.resize(scmMaxParkedCaptures);
-            mSpareCaptureGroupPosList.resize(scmMaxParkedCaptures);
-        }
-        // resize() down destroys the elements past the cap but keeps capacity()
-        if (mSpareCaptureGroupList.capacity() > scmMaxParkedCaptureSlack) {
-            mSpareCaptureGroupList.shrink_to_fit();
-        }
-        if (mSpareCaptureGroupPosList.capacity() > scmMaxParkedCaptureSlack) {
-            mSpareCaptureGroupPosList.shrink_to_fit();
-        }
-        for (auto& capture : mSpareCaptureGroupList) {
-            if (capture.capacity() > scmMaxParkedCaptureBytes) {
-                std::string().swap(capture);
-            }
-        }
-    }
-    mCaptureGroupList.clear();
+    // A match-all trigger's /g loop accumulates every match on the line into one
+    // fire, so what that leaves behind scales with matches per line rather than
+    // with the pattern's group count. Past the bound the cost is an allocation
+    // per such fire, never memory held for the rest of the session.
+    mCaptureGroups.clearAndTrim();
     mCaptureGroupPosList.clear();
+    if (mCaptureGroupPosList.capacity() > TCaptureGroups::scmMaxKeptCaptures) {
+        std::vector<int>().swap(mCaptureGroupPosList);
+    }
     mCaptureGroupLengthList.clear();
     mMultiCaptureGroupList.clear();
     mMultiCaptureGroupPosList.clear();
@@ -3872,9 +3861,9 @@ int TLuaInterpreter::pushNestedDispatchState(const bool parkCommand)
     saved.captureScopeOpen = mCaptureScopeOpen;
     // Copies rather than moves: a script the dispatch runs before any pattern has
     // matched - a sysDataSendRequest handler, say - still reads these through
-    // selectCaptureGroup(), and setCaptureGroups() assigns over the vector left
-    // here, reusing its buffers exactly as it would have without the parking
-    saved.captureGroupList = mCaptureGroupList;
+    // selectCaptureGroup(), and setCaptureGroups() assigns over the storage left
+    // here, reusing its buffers
+    saved.captureGroups = mCaptureGroups;
     saved.captureGroupPosList = mCaptureGroupPosList;
     saved.captureGroupLengthList = mCaptureGroupLengthList;
     saved.multiCaptureGroupList = mMultiCaptureGroupList;
@@ -3924,7 +3913,7 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
     NestedDispatchState saved = std::move(mNestedDispatchStates.back());
     mNestedDispatchStates.pop_back();
 
-    mCaptureGroupList = std::move(saved.captureGroupList);
+    mCaptureGroups = std::move(saved.captureGroups);
     mCaptureGroupPosList = std::move(saved.captureGroupPosList);
     mCaptureGroupLengthList = std::move(saved.captureGroupLengthList);
     mMultiCaptureGroupList = std::move(saved.multiCaptureGroupList);
@@ -4030,29 +4019,25 @@ static void shiftCapturePositions(std::vector<int>& posList, NamedMatchesRanges&
     }
 }
 
-static int captureLength(const std::vector<std::string>& captureList, const std::vector<int>& replacedLengths, const std::size_t index)
+static int captureLength(const TCaptureGroups& captures, const std::vector<int>& replacedLengths, const std::size_t index)
 {
     if (index < replacedLengths.size() && replacedLengths[index] >= 0) {
         return replacedLengths[index];
     }
-    return QString::fromStdString(captureList[index]).size();
+    const std::string_view capture = captures[index];
+    return QString::fromUtf8(capture.data(), static_cast<qsizetype>(capture.size())).size();
 }
 
 int TLuaInterpreter::captureGroupLength(const std::size_t index) const
 {
-    return captureLength(mCaptureGroupList, mCaptureGroupLengthList, index);
+    return captureLength(mCaptureGroups, mCaptureGroupLengthList, index);
 }
 
 // The capture that was exactly the replaced text keeps its start and takes on the
 // replacement's length; shiftCapturePositions() would move its start instead, as
 // though the text had been inserted in front of it
-static void shiftCapturePositionsForReplace(const std::vector<std::string>& captureList,
-                                            std::vector<int>& posList,
-                                            std::vector<int>& lengthList,
-                                            NamedMatchesRanges& namedPosList,
-                                            const int x,
-                                            const int replacedLength,
-                                            const QString& replacement)
+static void shiftCapturePositionsForReplace(
+        const TCaptureGroups& captureList, std::vector<int>& posList, std::vector<int>& lengthList, NamedMatchesRanges& namedPosList, const int x, const int replacedLength, const QString& replacement)
 {
     const int delta = replacement.size() - replacedLength;
     const std::size_t count = std::min(posList.size(), captureList.size());
@@ -4089,9 +4074,9 @@ void TLuaInterpreter::adjustCaptureGroups(int x, int a)
 
 void TLuaInterpreter::adjustCaptureGroupsForReplace(int x, int replacedLength, const QString& replacement)
 {
-    shiftCapturePositionsForReplace(mCaptureGroupList, mCaptureGroupPosList, mCaptureGroupLengthList, mCapturedNameGroupsPosList, x, replacedLength, replacement);
+    shiftCapturePositionsForReplace(mCaptureGroups, mCaptureGroupPosList, mCaptureGroupLengthList, mCapturedNameGroupsPosList, x, replacedLength, replacement);
     for (auto& parked : mNestedDispatchStates) {
-        shiftCapturePositionsForReplace(parked.captureGroupList, parked.captureGroupPosList, parked.captureGroupLengthList, parked.capturedNameGroupsPosList, x, replacedLength, replacement);
+        shiftCapturePositionsForReplace(parked.captureGroups, parked.captureGroupPosList, parked.captureGroupLengthList, parked.capturedNameGroupsPosList, x, replacedLength, replacement);
     }
 }
 
@@ -4796,13 +4781,15 @@ void TLuaInterpreter::pushMatchesTable(lua_State* L)
     // are refused until it ends
     ++mCaptureBuildDepth;
     // presized, so filling it in does not rehash the table on the way up
-    lua_createtable(L, static_cast<int>(mCaptureGroupList.size()), static_cast<int>(mCapturedNameGroups.size()));
+    lua_createtable(L, static_cast<int>(mCaptureGroups.size()), static_cast<int>(mCapturedNameGroups.size()));
 
     // empty capture groups stay defined keys i.e. matches[emptyCapGroupNumber] = "" rather than nil
-    int i = 1; // Lua indexes start with 1 as a general convention
-    for (const auto& capture : mCaptureGroupList) {
-        lua_pushstring(L, capture.c_str());
-        lua_rawseti(L, -2, i++);
+    for (std::size_t i = 0; i < mCaptureGroups.size(); ++i) {
+        const std::string_view capture = mCaptureGroups[i];
+        // Up to the first NUL, as Lua has always been handed a capture
+        lua_pushlstring(L, capture.data(), qstrnlen(capture.data(), capture.size()));
+        // Lua indexes start with 1 as a general convention
+        lua_rawseti(L, -2, static_cast<int>(i) + 1);
     }
     for (const auto& [name, capture] : mCapturedNameGroups) {
         lua_pushstring(L, name.toUtf8().constData());
@@ -5427,7 +5414,7 @@ void TLuaInterpreter::setMatches(lua_State* L, const MultimatchesSource source)
 {
     // "matches" changes only for a fire with captures, and never for a multiline
     // trigger's, which is handed "multimatches" instead
-    const bool setsMatches = source == MultimatchesSource::Untouched && !mCaptureGroupList.empty();
+    const bool setsMatches = source == MultimatchesSource::Untouched && !mCaptureGroups.empty();
     if (mCaptureScopeOpen && lazyGlobalsUsable(L)) {
         deferDispatchGlobals(L, source, setsMatches);
         return;

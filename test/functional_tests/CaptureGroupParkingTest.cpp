@@ -18,12 +18,10 @@
  ***************************************************************************/
 
 /*
- * clearCaptureGroups() parks the emptied capture vectors for the next fire and
- * clamps how many entries it keeps with resize(). resize() downwards destroys
- * the elements but never lowers capacity(), so the two vector blocks stayed at
- * the biggest fire's high water mark for the rest of the session: the line fed
- * below parked capacity for 6000 entries, 187KB of std::string slots plus 23KB
- * of positions, and that grows with the longest line a trigger ever matched.
+ * clearCaptureGroups() keeps the emptied capture storage for the next fire.
+ * clear() never lowers capacity(), so without a bound the storage would stay at
+ * the biggest fire's high water mark for the rest of the session, and that grows
+ * with the longest line a trigger ever matched.
  *
  * A match-all trigger reaches those counts without a hostile line: its /g loop
  * accumulates every match on the line into one capture list, so its capture
@@ -97,21 +95,13 @@ private:
     void checkParkedCapacity(const char* when)
     {
         const TLuaInterpreter& interpreter = mpHost->mLuaInterpreter;
-        const std::size_t bound = TLuaInterpreter::scmMaxParkedCaptureSlack;
-        QVERIFY2(interpreter.mSpareCaptureGroupList.size() <= TLuaInterpreter::scmMaxParkedCaptures,
-                 qPrintable(qsl("%1: parked capture count %2 is past the cap of %3").arg(when).arg(interpreter.mSpareCaptureGroupList.size()).arg(TLuaInterpreter::scmMaxParkedCaptures)));
-        QVERIFY2(interpreter.mSpareCaptureGroupList.capacity() <= bound,
-                 qPrintable(qsl("%1: parked capture vector still holds capacity for %2 entries (%3 KB), bound is %4")
-                                    .arg(when)
-                                    .arg(interpreter.mSpareCaptureGroupList.capacity())
-                                    .arg(interpreter.mSpareCaptureGroupList.capacity() * sizeof(std::string) / 1024)
-                                    .arg(bound)));
-        QVERIFY2(interpreter.mSpareCaptureGroupPosList.capacity() <= bound,
-                 qPrintable(qsl("%1: parked position vector still holds capacity for %2 entries (%3 KB), bound is %4")
-                                    .arg(when)
-                                    .arg(interpreter.mSpareCaptureGroupPosList.capacity())
-                                    .arg(interpreter.mSpareCaptureGroupPosList.capacity() * sizeof(int) / 1024)
-                                    .arg(bound)));
+        const std::size_t bound = TCaptureGroups::scmMaxKeptCaptures;
+        QVERIFY2(interpreter.mCaptureGroups.capturesCapacity() <= bound,
+                 qPrintable(qsl("%1: kept capture storage still holds capacity for %2 captures, bound is %3").arg(when).arg(interpreter.mCaptureGroups.capturesCapacity()).arg(bound)));
+        QVERIFY2(interpreter.mCaptureGroups.bytesCapacity() <= TCaptureGroups::scmMaxKeptBytes,
+                 qPrintable(qsl("%1: kept capture storage still holds %2 bytes, bound is %3").arg(when).arg(interpreter.mCaptureGroups.bytesCapacity()).arg(TCaptureGroups::scmMaxKeptBytes)));
+        QVERIFY2(interpreter.mCaptureGroupPosList.capacity() <= bound,
+                 qPrintable(qsl("%1: kept position vector still holds capacity for %2 entries, bound is %3").arg(when).arg(interpreter.mCaptureGroupPosList.capacity()).arg(bound)));
     }
 
 private slots:
@@ -161,7 +151,8 @@ private slots:
         // Argument 8 is the match-all flag, so this trigger's captures scale
         // with the number of words on the line
         runLua(qsl("capturesSeen = 0\n"
-                   "tempComplexRegexTrigger('GCAP', [[(\\w+)]], [[capturesSeen = #matches]], 0, 0, 0, 0, 1, 0, 0, 0, 0, 0)\n"
+                   "captureBytes = 0\n"
+                   "tempComplexRegexTrigger('GCAP', [[(\\w+)]], [[capturesSeen = #matches; captureBytes = #table.concat(matches)]], 0, 0, 0, 0, 1, 0, 0, 0, 0, 0)\n"
                    "local words = {}\n"
                    "for i = 1, 3000 do words[i] = 'word' .. i end\n"
                    "feedTriggers(table.concat(words, ' ') .. '\\n')\n"));
@@ -169,17 +160,19 @@ private slots:
         // Overshooting the bound rather than merely the cap is what makes the
         // checks below bite, whatever the bound is tuned to
         const int capturesSeen = luaInt(qsl("capturesSeen"));
-        QVERIFY2(static_cast<std::size_t>(capturesSeen) > TLuaInterpreter::scmMaxParkedCaptureSlack,
-                 qPrintable(qsl("the match-all fire has to overshoot the bound of %1 for this test to mean anything, it produced %2 captures")
-                                    .arg(TLuaInterpreter::scmMaxParkedCaptureSlack)
-                                    .arg(capturesSeen)));
+        QVERIFY2(static_cast<std::size_t>(capturesSeen) > TCaptureGroups::scmMaxKeptCaptures,
+                 qPrintable(
+                         qsl("the match-all fire has to overshoot the bound of %1 for this test to mean anything, it produced %2 captures").arg(TCaptureGroups::scmMaxKeptCaptures).arg(capturesSeen)));
+        const int captureBytes = luaInt(qsl("captureBytes"));
+        QVERIFY2(static_cast<std::size_t>(captureBytes) > TCaptureGroups::scmMaxKeptBytes,
+                 qPrintable(qsl("the match-all fire has to overshoot the bound of %1 bytes for this test to mean anything, it produced %2").arg(TCaptureGroups::scmMaxKeptBytes).arg(captureBytes)));
 
         checkParkedCapacity("after the match-all fire");
         // QVERIFY2 inside the helper only returns from the helper
         QVERIFY(!QTest::currentTestFailed());
 
-        // The parked vectors are handed back out on the next fire and parked
-        // again, so a later ordinary fire must not carry the old block along
+        // The kept storage is reused by the next fire and kept again, so a later
+        // ordinary fire must not carry the old block along
         runLua(qsl("tempRegexTrigger('^plain (\\\\w+)$', [[plainCaptures = #matches]])\n"
                    "feedTriggers('plain line\\n')\n"));
         QCOMPARE(luaInt(qsl("plainCaptures")), 2);
@@ -187,8 +180,8 @@ private slots:
         checkParkedCapacity("after a following ordinary fire");
         QVERIFY(!QTest::currentTestFailed());
 
-        // A trigger that overshoots the cap by less than the slack keeps its
-        // block between fires instead of reallocating it each way every fire
+        // A trigger under the bound keeps its block between fires instead of
+        // reallocating it every fire
         runLua(qsl("local words = {}\n"
                    "for i = 1, 350 do words[i] = 'word' .. i end\n"
                    "local line = table.concat(words, ' ') .. '\\n'\n"
@@ -196,15 +189,12 @@ private slots:
                    "feedTriggers(line)\n"));
 
         const auto moderateCaptures = static_cast<std::size_t>(luaInt(qsl("capturesSeen")));
-        QVERIFY2(moderateCaptures > TLuaInterpreter::scmMaxParkedCaptures && moderateCaptures <= TLuaInterpreter::scmMaxParkedCaptureSlack,
-                 qPrintable(qsl("this fire has to land between the cap of %1 and the bound of %2, it produced %3 captures")
-                                    .arg(TLuaInterpreter::scmMaxParkedCaptures)
-                                    .arg(TLuaInterpreter::scmMaxParkedCaptureSlack)
-                                    .arg(moderateCaptures)));
-        QVERIFY2(mpHost->mLuaInterpreter.mSpareCaptureGroupList.capacity() >= moderateCaptures,
-                 qPrintable(
-                         qsl("a %1 capture fire under the bound should keep its block, the parked one holds %2").arg(moderateCaptures).arg(mpHost->mLuaInterpreter.mSpareCaptureGroupList.capacity())));
-        checkParkedCapacity("after a moderate overshoot");
+        QVERIFY2(moderateCaptures > TCaptureGroups::scmMaxKeptCaptures / 4 && moderateCaptures <= TCaptureGroups::scmMaxKeptCaptures,
+                 qPrintable(qsl("this fire has to land under the bound of %1, but not far, it produced %2 captures").arg(TCaptureGroups::scmMaxKeptCaptures).arg(moderateCaptures)));
+        QVERIFY2(
+                mpHost->mLuaInterpreter.mCaptureGroups.capturesCapacity() >= moderateCaptures,
+                qPrintable(qsl("a %1 capture fire under the bound should keep its block, the kept one holds %2").arg(moderateCaptures).arg(mpHost->mLuaInterpreter.mCaptureGroups.capturesCapacity())));
+        checkParkedCapacity("after a fire under the bound");
     }
 
     void startProfile(const QString& hostname, const QString& address, const QString& port)
