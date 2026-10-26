@@ -265,6 +265,45 @@ describe("trigger matching through the whole-tree index", function()
         assert.are.equal(filedBefore + 2, filedCount())
     end)
 
+    itIndexed("enters a trigger a script holds open below a folder below a folder", function()
+        assert(permGroup("treeindex open folder", "trigger", packageName))
+        assert(permSubstringTrigger("treeindex open", "treeindex open folder", {"treeindex_open_bait"}, 'TreeIndexSpecNote("open")'))
+        feed("treeindex warm-up line")
+
+        setTriggerStayOpen("treeindex open", 2)
+        feed("quiet", "quiet", "quiet")
+
+        assert.are.same({open = 2}, fired, "held open for two lines, so it fires on both without its bait")
+    end)
+
+    itIndexed("enters a trigger below a folder on the line a script earlier in the walk opened it", function()
+        -- made before the folder, so that the walk reaches the folder after the opener's script has run
+        assert(permSubstringTrigger("treeindex opener", packageName, {"treeindex_opener_bait"}, [[
+            TreeIndexSpecNote("opener")
+            setTriggerStayOpen("treeindex held", 1)
+        ]]))
+        assert(permGroup("treeindex held folder", "trigger", packageName))
+        assert(permSubstringTrigger("treeindex held", "treeindex held folder", {"treeindex_held_bait"}, 'TreeIndexSpecNote("held")'))
+        feed("treeindex warm-up line")
+
+        feed("treeindex_opener_bait")
+        assert.are.same({opener = 1, held = 1}, fired, "opened for one line, the line the opener matched")
+
+        feed("quiet")
+        assert.are.same({opener = 1, held = 1}, fired, "the one line it was opened for is over")
+    end)
+
+    itIndexed("visits a trigger the index cannot file below a folder below a folder on every line", function()
+        assert(permGroup("treeindex outer folder", "trigger", packageName))
+        assert(permGroup("treeindex inner folder", "trigger", "treeindex outer folder"))
+        assert(permRegexTrigger("treeindex nested regex", "treeindex inner folder", {[[^\d{6}$]]}, 'TreeIndexSpecNote("nestedRegex")'))
+        feed("treeindex warm-up line")
+
+        feed("654321", "quiet", "123456")
+
+        assert.are.same({nestedRegex = 2}, fired, "nothing else on these lines is filed in either folder, so only the regex itself can have them entered")
+    end)
+
     -- Last, as it takes the fixture away: a script's uninstall takes filed
     -- triggers away at the end of the line, which the index's next filing has
     -- to survive - the sanitiser builds are what would catch it not doing so

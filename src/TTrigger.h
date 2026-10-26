@@ -261,6 +261,26 @@ private:
     mutable int mLength = 0;
 };
 
+class TTrigger;
+
+// A parent's children in walk order, with the ones a pass along the line has to enter, so it need not
+// touch the rest. Built by TriggerUnit's tree index rebuild; see TriggerUnit::markTreeNode().
+struct TChildWalk
+{
+    // Position of the next child to enter at or after position, or past the end when none is
+    int nextToEnter(int position, quint32 lineStamp) const;
+
+    std::vector<TTrigger*> mChildren;
+    // Entered on every line: a child the index did not file, or a folder something below which has to be
+    std::vector<quint64> mAlways;
+    // Entered on the line stamped mMarkedStamp only: a child the index hit or that acts without
+    // matching, or a folder above one
+    std::vector<quint64> mMarked;
+    quint32 mMarkedStamp = 0;
+    // Cleared by any change to the children or to how one is filed; the walk then goes down the list
+    bool mValid = false;
+};
+
 class TTrigger : public Tree<TTrigger>
 {
     Q_DECLARE_TR_FUNCTIONS(TTrigger) // Needed so we can use tr() even though TTrigger is NOT derived from QObject
@@ -373,6 +393,8 @@ public:
     // match. One-sided like the index: false leaves match() to decide. A trigger changed or created
     // mid-line is unfiled until the next rebuild; mKeepFiring and the multiline states are read live.
     bool skippableForLine() const { return mTreeIndexPosition >= 0 && mLineStamp != smLineStamp && mKeepFiring <= 0 && mConditionMap.empty(); }
+    // Fires on lines it does not match: staying open, or partway through a multiline match
+    bool actsWithoutMatching() const { return mKeepFiring > 0 || !mConditionMap.empty(); }
     // MUDLET_TREE_INDEX=verify: runs a trigger skippableForLine() would skip and reports it if it acted
     bool verifySkippable(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams);
     // Stamp of the outermost pass in flight anywhere, which nested passes (a script feeding text back,
@@ -467,6 +489,10 @@ public:
     // Written by TriggerUnit's tree index - see skippableForLine(); the position is -1 while unfiled
     quint32 mLineStamp = 0;
     int mTreeIndexPosition = -1;
+    // Only TriggerUnit's tree index may set these
+    std::unique_ptr<TChildWalk> mpChildWalk;
+    int mChildWalkPosition = -1;
+    bool mInOpenTreeNodes = false;
     QPointer<Host> mpHost;
     QString mName;
     QStringList mPatterns;
@@ -501,6 +527,8 @@ private:
     TTrigger() = default;
 
     inline void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
+    void enterChildren(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams, bool haystackIsCapture, bool& conditionMet);
+    void noteOpen();
     inline void filter(std::string&, int&, int lineNumber, bool positionsInCurrentColumns);
     bool selectTextMatch(int lineNumber, int from, int length) const;
     void processExactMatch(int patternNumber, int posOffset, int lineNumber);
