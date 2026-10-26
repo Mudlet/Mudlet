@@ -755,6 +755,83 @@ private slots:
         QCOMPARE(dlg->character_password_entry->text(), qsl("renamed-secret"));
     }
 
+    // So does a rename landing after the other read has answered, before the load it queued has run
+    void test_aRenameAfterTheOtherReadAnswersKeepsTheDeferredLoad()
+    {
+        const QString profile = qsl("ConnDialogRenamedQueued-Test");
+        const QString renamed = qsl("ConnDialogRenamedQueued2-Test");
+        seedProfilePassword(profile, qsl("renamed-queued-secret"));
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        const QPointer<dlgConnectionProfiles> guard = dlg;
+        auto cleanup = qScopeGuard([&guard]() {
+            delete guard.data();
+        });
+        addProfiles(dlg, {profile}, profile);
+        {
+            const QSignalBlocker blocker(dlg->profile_name_entry);
+            dlg->profile_name_entry->setText(profile);
+        }
+        dlg->mKeychainOperationProfile = qsl("profile-being-read");
+        dlg->schedulePasswordLoad(profile);
+        QTest::qWait(50ms);
+
+        dlg->passwordRetrieved(qsl("profile-being-read"), false, QString(), qsl("No stored credentials found"));
+        QCOMPARE(queuedLoads(dlg), QStringList{profile});
+        dlg->profile_name_entry->setText(renamed);
+        dlg->slot_saveName();
+        QCOMPARE(dlg->listWidget_profiles->currentItem()->data(dlgConnectionProfiles::csmNameRole).toString(), renamed);
+
+        QVERIFY2(QTest::qWaitFor(
+                         [dlg]() {
+                             return !dlg->character_password_entry->text().isEmpty();
+                         },
+                         2s),
+                 "the renamed profile's deferred load never filled its password");
+        QCOMPARE(dlg->character_password_entry->text(), qsl("renamed-queued-secret"));
+        QVERIFY2(!dlg->hasPendingKeychainOperation(renamed), "a Connect on the renamed profile would wait for a load that never comes");
+    }
+
+    // and a Connect pressed before that load runs goes ahead once it has
+    void test_connectAfterARenameAsTheOtherReadAnswersGoesAhead()
+    {
+        const QString profile = qsl("ConnDialogRenamedConnect-Test");
+        const QString renamed = qsl("ConnDialogRenamedConnect2-Test");
+        seedProfilePassword(profile, qsl("renamed-connect-secret"));
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        const QPointer<dlgConnectionProfiles> guard = dlg;
+        auto cleanup = qScopeGuard([&guard]() {
+            delete guard.data();
+        });
+        addProfiles(dlg, {profile}, profile);
+        {
+            const QSignalBlocker blocker(dlg->profile_name_entry);
+            dlg->profile_name_entry->setText(profile);
+        }
+        dlg->mKeychainOperationProfile = qsl("profile-being-read");
+        dlg->schedulePasswordLoad(profile);
+        QTest::qWait(50ms);
+        QString passwordAtConnect;
+        bool connected = false;
+        connect(dlg, &QDialog::accepted, dlg, [&]() {
+            connected = true;
+            passwordAtConnect = dlg->character_password_entry->text();
+        });
+
+        dlg->passwordRetrieved(qsl("profile-being-read"), false, QString(), qsl("No stored credentials found"));
+        dlg->profile_name_entry->setText(renamed);
+        dlg->slot_saveName();
+        // checked first, as a Connect that does not wait loads the profile for real
+        QVERIFY2(dlg->hasPendingKeychainOperation(renamed), "a Connect on the renamed profile would not wait for its load");
+        QVERIFY(loadQueuesBehindThePasswordLoad(dlg, renamed));
+        QVERIFY2(QTest::qWaitFor(
+                         [&connected]() {
+                             return connected;
+                         },
+                         2s),
+                 "the queued Connect waits for a load that never comes");
+        QCOMPARE(passwordAtConnect, qsl("renamed-connect-secret"));
+    }
+
     // Deferral only happens with passwords stored securely, where the deferred load is a read of its
     // own, and the answer to that read is what has to complete the queued Connect
     void test_aDeferredSecureLoadCompletesTheQueuedConnect()

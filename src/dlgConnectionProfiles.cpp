@@ -975,6 +975,12 @@ void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QS
     if (mDeferredPasswordLoadProfile == currentProfileEditName) {
         mDeferredPasswordLoadProfile = newProfileName;
     }
+    // A load still queued under the old name would find that name no longer selected and drop itself
+    for (auto* timer : findChildren<QTimer*>(Qt::FindDirectChildrenOnly)) {
+        if (timer->property("profileName").toString() == currentProfileEditName) {
+            timer->setProperty("profileName", newProfileName);
+        }
+    }
 
     const QDir currentPath(MudletApp::getMudletPath(enums::profileHomePath, currentProfileEditName));
     const QDir dir;
