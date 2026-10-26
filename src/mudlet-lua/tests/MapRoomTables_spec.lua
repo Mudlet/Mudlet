@@ -55,6 +55,44 @@ describe("Tests the tables getRooms and getAreaRooms hand back", function()
     return n
   end
 
+  local function sparseMaps()
+    local maps = {
+      {1, 2, 3, 6, 8, 100001, 100002, 100003, 100004, 100005},
+      {6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 22, 23, 6295},
+    }
+    local seed = 20261026
+    local function random(n)
+      seed = (seed * 16807) % 2147483647
+      return seed % n + 1
+    end
+    for _ = 1, 60 do
+      local ids, seen = {}, {}
+      local count = random(60) + 1
+      local span = random(4) == 1 and 1000000 or count + random(3 * count)
+      while #ids < count do
+        local id = random(8) == 1 and random(100000) or random(span)
+        if not seen[id] then
+          seen[id] = true
+          ids[#ids + 1] = id
+        end
+      end
+      maps[#maps + 1] = ids
+    end
+    return maps
+  end
+
+  -- every room hidden, so getHiddenRooms() lists the room hash in the order getRooms() walks it
+  local function buildHiddenMap(ids)
+    deleteMap()
+    local area = newArea("MapRoomTablesSpecSparse")
+    for _, id in ipairs(ids) do
+      newRoom(area, id, "Room " .. id)
+      assert.is_true(setRoomHidden(id, true))
+    end
+    assert.are.equal(#ids, #getHiddenRooms())
+    return area
+  end
+
   setup(function()
     os.remove(backupPath)
     os.remove(plantedPath)
@@ -139,6 +177,21 @@ describe("Tests the tables getRooms and getAreaRooms hand back", function()
       newRoom(area, 1)
       assert.are.equal(40, #getRooms())
     end)
+
+    it("matches assigning its rooms one at a time, length included, on sparse maps", function()
+      for _, ids in ipairs(sparseMaps()) do
+        buildHiddenMap(ids)
+        local expected = {}
+        for _, id in ipairs(getHiddenRooms()) do
+          expected[id] = getRoomName(id)
+        end
+
+        local rooms = getRooms()
+
+        assert.are.same(expected, rooms)
+        assert.are.equal(#expected, #rooms, "length differs for rooms " .. table.concat(ids, ", "))
+      end
+    end)
   end)
 
   describe("getAreaRooms", function()
@@ -174,6 +227,21 @@ describe("Tests the tables getRooms and getAreaRooms hand back", function()
       newRoom(area, 7)
       assert.are.same({[0] = 7}, getAreaRooms(area))
       assert.are.equal(0, #getAreaRooms(area))
+    end)
+
+    it("matches getAreaRooms1 shifted down to index zero, length included, on sparse maps", function()
+      for _, ids in ipairs(sparseMaps()) do
+        local area = buildHiddenMap(ids)
+        local expected = {}
+        for index, id in ipairs(getAreaRooms1(area)) do
+          expected[index - 1] = id
+        end
+
+        local rooms = getAreaRooms(area)
+
+        assert.are.same(expected, rooms)
+        assert.are.equal(#expected, #rooms)
+      end
     end)
   end)
 end)
