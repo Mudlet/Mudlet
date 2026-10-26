@@ -280,69 +280,96 @@ private slots:
                                     .arg(pane->height())));
     }
 
-    // A flood starts as a trickle, so its first line arms the pacer at the normal pace;
-    // the screen of lines that follows has to stretch that frame, not paint on time.
+    // A read's worth of lines reaches the pane in one go. The buffer here is full and
+    // trims as they arrive, which must not hide that more than a screen went by.
+    void test_aScreenOfLinesInOneGoArmsTheFloodPace()
+    {
+        TTextEdit* pane = nullptr;
+        QPointer<TMainConsole> console;
+        openPane(console, pane);
+        QVERIFY(pane);
+
+        console->buffer.setBufferSize(100, 10);
+        printLines(console, 150);
+        QVERIFY(pacerWentIdle(pane));
+        pane->repaint();
+        QVERIFY(pane->mScreenHeight > 0);
+
+        // Scrollback longer than the screen does not count, only what came after the paint.
+        pane->mSincePaint.restart();
+        console->print(qsl("one line\n"));
+        QVERIFY2(pane->mpPaintPacer->isActive(), "one line did not hold a frame back");
+        QVERIFY2(pane->mpPaintPacer->remainingTime() <= TTextEdit::csmPaintPaceMs,
+                 qPrintable(qsl("one line armed a frame %1ms away, past the %2ms normal pace").arg(pane->mpPaintPacer->remainingTime()).arg(TTextEdit::csmPaintPaceMs)));
+
+        QVERIFY(pacerWentIdle(pane));
+        pane->repaint();
+        pane->mSincePaint.restart();
+        QString screenful;
+        for (int i = 0; i <= pane->mScreenHeight; ++i) {
+            screenful += qsl("flood line %1\n").arg(i);
+        }
+        console->print(screenful);
+        const qint64 printMs = pane->mSincePaint.elapsed();
+        if (printMs >= TTextEdit::csmFloodPaintPaceMs - TTextEdit::csmPaintPaceMs) {
+            QSKIP(qPrintable(qsl("the print itself took %1ms, so even the flood pace had no more than the normal pace left to arm - the runner stalled").arg(printMs)));
+        }
+        QVERIFY2(pane->mpPaintPacer->isActive(), "a screen of lines did not hold a frame back");
+        QVERIFY2(pane->mpPaintPacer->remainingTime() > TTextEdit::csmPaintPaceMs,
+                 qPrintable(qsl("a screen of lines armed a frame %1ms away, no later than the %2ms normal pace").arg(pane->mpPaintPacer->remainingTime()).arg(TTextEdit::csmPaintPaceMs)));
+    }
+
+    // A flood can start as a trickle, so its first line arms the pacer at the normal pace;
+    // the screen of lines that follows has to stretch that frame, then paint it.
     void test_aFloodBetweenFramesStretchesTheFrameItsFirstLineArmed()
     {
-        mpServer->setWelcomeMessage(qsl("hello\r\n"));
-        startProfile(mpHostname, mpLocalhost, mpPort);
-        QVERIFY2(waitForTextInBuffer(qsl("hello")), "welcome text never reached the buffer");
-
-        mudlet::self()->resize(1200, 800);
-        QTest::qWait(200ms);
-
-        auto host = mudlet::self()->getActiveHost();
-        QVERIFY(host);
-        QPointer<TMainConsole> console = host->mainConsoleView();
-        QVERIFY(console);
-        TTextEdit* pane = console->mUpperPane;
+        TTextEdit* pane = nullptr;
+        QPointer<TMainConsole> console;
+        openPane(console, pane);
         QVERIFY(pane);
 
         mpWatchedPane = pane;
         pane->installEventFilter(this);
+        QVERIFY(pacerWentIdle(pane));
         pane->repaint();
         QVERIFY(pane->mScreenHeight > 0);
 
+        mPaintCount = 0;
         pane->mSincePaint.restart();
         console->print(qsl("first line of a flood\n"));
         QVERIFY2(pane->mpPaintPacer->isActive(), "the first line did not hold a frame back");
-        QVERIFY2(pane->mpPaintPacer->remainingTime() <= TTextEdit::csmPaintPaceMs,
-                 qPrintable(qsl("one line armed a frame %1ms away, past the %2ms of the normal pace").arg(pane->mpPaintPacer->remainingTime()).arg(TTextEdit::csmPaintPaceMs)));
+        printLines(console, pane->mScreenHeight + 1);
+        // As though the frame had only just been painted, so the stretch is exercised however long the prints took.
+        pane->mSincePaint.restart();
 
-        for (int i = 0; i <= pane->mScreenHeight; ++i) {
-            console->print(qsl("flood line %1\n").arg(i));
-        }
-
-        qint64 firstFireMs = -1;
+        int fires = 0;
+        int paintsBeforeFirstFire = -1;
         bool heldBack = false;
+        bool handedOver = false;
+        bool settled = false;
         QObject listener;
+        // Connected after the pane's own handler, so this sees what that handler left.
         connect(pane->mpPaintPacer, &QTimer::timeout, &listener, [&]() {
-            if (firstFireMs < 0) {
-                firstFireMs = pane->mSincePaint.elapsed();
+            if (++fires == 1) {
+                paintsBeforeFirstFire = mPaintCount;
                 heldBack = pane->mpPaintPacer->isActive() && !pane->mPendingPaintRegion.isEmpty();
             }
+            if (!pane->mpPaintPacer->isActive()) {
+                handedOver = pane->mPendingPaintRegion.isEmpty();
+                settled = true;
+            }
         });
-        mPaintCount = 0;
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
-                             return firstFireMs >= 0;
+                             return settled;
                          },
                          2s),
-                 "the pacer never fired");
-        if (firstFireMs >= TTextEdit::csmFloodPaintPaceMs) {
-            QSKIP(qPrintable(qsl("the pacer fired %1ms after the last frame, past the %2ms flood pace itself - the runner stalled, so the stretch was not exercised")
-                                     .arg(firstFireMs)
-                                     .arg(TTextEdit::csmFloodPaintPaceMs)));
+                 qPrintable(qsl("the pacer fired %1 times and was still armed, or never fired, in 2s").arg(fires)));
+        if (paintsBeforeFirstFire > 0) {
+            QSKIP("the pane painted before the pacer fired, so the runner stalled past the flood pace and the stretch was not exercised");
         }
-        QVERIFY2(heldBack,
-                 qPrintable(qsl("the pacer painted %1ms after the last frame although more than a screen of lines had arrived since, so a flood is drawn at the normal pace").arg(firstFireMs)));
-
-        QVERIFY2(QTest::qWaitFor(
-                         [&]() {
-                             return mPaintCount > 0 && pane->mPendingPaintRegion.isEmpty();
-                         },
-                         2s),
-                 "the stretched frame was never painted");
+        QVERIFY2(heldBack, "the pacer let the frame paint at the normal pace although more than a screen of lines had arrived since the last one");
+        QVERIFY2(handedOver, "the stretched frame was never handed to update(), so the end of the flood stays unpainted");
     }
 
 private:
@@ -356,6 +383,40 @@ private:
         QSignalSpy spy(&(host->mTelnet), &cTelnet::signal_connected);
         if (!spy.wait(2s)) {
             QFAIL("Could not connect with the host.");
+        }
+    }
+
+    void openPane(QPointer<TMainConsole>& console, TTextEdit*& pane)
+    {
+        mpServer->setWelcomeMessage(qsl("hello\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("hello")), "welcome text never reached the buffer");
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(200ms);
+
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        console = host->mainConsoleView();
+        QVERIFY(console);
+        pane = console->mUpperPane;
+    }
+
+    // A frame held back from earlier output survives repaint() while the scroll bar still
+    // owes an update, and would fire in the middle of what a test arms next.
+    static bool pacerWentIdle(TTextEdit* pane)
+    {
+        return QTest::qWaitFor(
+                [pane]() {
+                    return !pane->mpPaintPacer->isActive();
+                },
+                2s);
+    }
+
+    static void printLines(TMainConsole* console, const int count)
+    {
+        for (int i = 0; i < count; ++i) {
+            console->print(qsl("line %1\n").arg(i));
         }
     }
 

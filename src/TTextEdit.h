@@ -221,7 +221,7 @@ private:
     void paintNothing(const QRect&);
     // Coalescing replacement for update() on the paths that new output drives.
     // Those paints run inside the receive loop, so one per network packet
-    // delays the next packet; capping them at one per csmPaintPaceMs lets a
+    // delays the next packet; capping them at one per paintPaceMs() lets a
     // flood put several packets' worth of text into a single frame. An
     // invalid rect means the whole widget.
     void scheduleUpdate(const QRect& rect = QRect());
@@ -353,7 +353,7 @@ private:
     mutable bool mHasBlinkingContent = false;
     mutable bool mIsBlinkClientRegistered = false;
     QPointer<QTimer> mpScrollStoppedTimer;
-    // Maximum of one repaint per csmPaintPaceMs is allowed via scheduleUpdate().
+    // Maximum of one repaint per paintPaceMs() is allowed via scheduleUpdate().
     static constexpr int csmPaintPaceMs = 16; // ~60 fps cap
     // The cap instead while more than a screen of lines arrives between frames.
     static constexpr int csmFloodPaintPaceMs = 33;
@@ -362,7 +362,7 @@ private:
     // Restarted by each paintEvent(), so scheduleUpdate() can tell how much of
     // the current frame's window is left.
     QElapsedTimer mSincePaint;
-    int mBufferSizeAtPaint = 0;
+    qint64 mLinesAddedAtPaint = 0;
     // What the deferred repaint has to cover once the pacer fires.
     QRegion mPendingPaintRegion;
     // The whole pane went to update() since the last paint, so asking again only costs time.

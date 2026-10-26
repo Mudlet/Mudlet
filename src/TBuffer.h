@@ -414,6 +414,8 @@ public:
     int addLinkToStore(const QStringList& links, const QStringList& hints, const QVector<int>& luaReference = QVector<int>(), const QString& expireName = QString(), int line = -1);
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0, int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
+    // Counts trimmed lines as well, so it keeps rising while a full buffer drops its oldest.
+    qint64 linesAddedTotal() const { return mLinesRemovedTotal + static_cast<qint64>(buffer.size()); }
     // Whether word wrapping split this line off the end of the one before it
     bool wrapsFromPreviousLine(int lineNumber) const;
     int wrapGapBefore(int lineNumber) const;
