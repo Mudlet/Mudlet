@@ -405,6 +405,14 @@ private slots:
         QVERIFY(session.host()->mSslTsl);
         QCOMPARE(MudletApp::readProfileData(qsl("StickMUD"), qsl("ssl_tsl")), QString::number(Qt::Checked));
         QVERIFY(session.shutdown(true));
+        // A box given with no port is kept for the next run, as the dialog stores the port it shows with it
+        QCOMPARE(session.start({.profile = qsl("StickMUD"), .connect = false, .tls = false}), THeadlessSession::StartResult::started);
+        QVERIFY(!session.host()->mSslTsl);
+        QVERIFY(session.shutdown(true));
+        QCOMPARE(session.start({.profile = qsl("StickMUD"), .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(!session.host()->mSslTsl);
+        QCOMPARE(session.host()->getPort(), TGameDetails::findGame(qsl("StickMUD"))->port);
+        QVERIFY(session.shutdown(true));
         // Given only a port, too, as the dialog's box stands for the game while the port is changed
         QVERIFY(TGameDetails::findGame(qsl("Icesus"))->tlsEnabled);
         QCOMPARE(session.start({.profile = qsl("icesus"), .connect = false, .port = 4000}), THeadlessSession::StartResult::started);

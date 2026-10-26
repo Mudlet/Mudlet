@@ -393,6 +393,11 @@ bool THeadlessSession::storeConnectionDetails(const Options& options, const std:
     }
     if (options.port > 0) {
         items.append({qsl("port"), QString::number(options.port)});
+    } else if (options.tls.has_value() && MudletApp::readProfileData(mProfileName, qsl("port")).trimmed().isEmpty()) {
+        // As the dialog stores the port it shows: with none stored, a game's TLS box goes back to the game's own
+        if (const auto game = TGameDetails::findGame(mProfileName); game != TGameDetails::scmDefaultGames.constEnd()) {
+            items.append({qsl("port"), QString::number(game->port)});
+        }
     }
     if (tls.has_value()) {
         items.append({qsl("ssl_tsl"), QString::number(*tls ? Qt::Checked : Qt::Unchecked)});
