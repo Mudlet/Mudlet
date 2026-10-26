@@ -530,7 +530,6 @@ TTrigger::~TTrigger()
 
     if (mpHost) {
         mpHost->getTriggerUnit()->unregisterTrigger(this);
-        mpHost->getTriggerUnit()->forgetOpenTreeNode(this);
 
         if (isTemporary()) {
             if (mScript.isEmpty()) {
@@ -1927,7 +1926,7 @@ void TTrigger::enterChildren(
             TTrigger* const trigger = walk->mChildren[position];
             enter(trigger);
             if (!walk->mValid) {
-                // The children changed under the walk: go on down the list from here, as it would have
+                // The children changed under the walk: finish down the live list from this child, as the unindexed loop does
                 const auto& children = *mpMyChildrenList;
                 auto it = std::find(children.begin(), children.end(), trigger);
                 if (it != children.end()) {

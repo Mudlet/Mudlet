@@ -292,6 +292,8 @@ void TriggerUnit::unregisterTrigger(TTrigger* pT)
     // of the end-of-pass reset, so drop its lineage here instead.
     std::replace(mRootNodesAddedWhileProcessing.begin(), mRootNodesAddedWhileProcessing.end(), pT, static_cast<TTrigger*>(nullptr));
     pT->setSameLineChain(0, 0);
+    // Here rather than in ~TTrigger(): the editor deletes a trigger with its mpHost nulled
+    forgetOpenTreeNode(pT);
     if (pT->mTreeIndexPosition >= 0) {
         unfileTreeNode(pT);
     }
@@ -500,6 +502,11 @@ bool TriggerUnit::fileTreeNodes(TTrigger* pT, std::vector<quint64>& grams)
         const int position = static_cast<int>(walk.mChildren.size());
         child->mChildWalkPosition = position;
         walk.mChildren.push_back(child);
+        // A root is not noted when it opens, so one the editor moved below another trigger is noted here
+        if (child->actsWithoutMatching() && !child->mInOpenTreeNodes) {
+            child->mInOpenTreeNodes = true;
+            mOpenTreeNodes.push_back(child);
+        }
         const bool filed = child->treeIndexGrams(grams);
         if (filed) {
             child->mTreeIndexPosition = static_cast<int>(mTreeNodes.size());
@@ -507,7 +514,7 @@ bool TriggerUnit::fileTreeNodes(TTrigger* pT, std::vector<quint64>& grams)
             mTreeIndex.appendSlot(grams);
         }
         const bool childrenQuiet = fileTreeNodes(child, grams);
-        // Entering a folder does nothing but walk its children
+        // Entering a folder only walks its children; one held open is marked through mOpenTreeNodes
         const bool folder = child->mPatterns.isEmpty() && !child->isLineTrigger() && !child->isMultiline();
         if (!filed && !(folder && childrenQuiet)) {
             walk.mAlways[position / 64] |= quint64(1) << (position % 64);
@@ -568,7 +575,7 @@ void TriggerUnit::noteOpenTreeNode(TTrigger* pT)
         pT->mInOpenTreeNodes = true;
         mOpenTreeNodes.push_back(pT);
     }
-    // A pass in flight may yet reach it, as it would have reached any trigger reading itself open
+    // Mark the line in flight too: its walk may not have reached pT yet, and pT now acts on it
     markTreeNode(pT, TTrigger::lineStamp());
 }
 

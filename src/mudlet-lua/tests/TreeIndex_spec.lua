@@ -18,8 +18,9 @@ describe("trigger matching through the whole-tree index", function()
 
     -- the fixture's folder holds eleven triggers, of which the lua one cannot be filed
     local fixtureFiled = 10
-    -- Enough filed triggers below one root to make the index engage
-    local paddingTriggers = 40
+    -- Enough filed triggers below one root to make the index engage, and to take its children past
+    -- the 64 a word of TChildWalk holds
+    local paddingTriggers = 70
 
     local fired
     local firedBeforePadding, filedBeforePadding
@@ -302,6 +303,75 @@ describe("trigger matching through the whole-tree index", function()
         feed("654321", "quiet", "123456")
 
         assert.are.same({nestedRegex = 2}, fired, "nothing else on these lines is filed in either folder, so only the regex itself can have them entered")
+    end)
+
+    itIndexed("enters a filed trigger past a folder's first 64 children", function()
+        feed("treeindex_padding_64_bait", "treeindex_padding_70_bait")
+
+        assert.are.same({padding = 2}, fired)
+    end)
+
+    itIndexed("enters what the line holds below a folder after a script fed a line of its own", function()
+        -- made before the folder, so that its line is fed before the walk reaches the folder
+        assert(permSubstringTrigger("treeindex feeder", packageName, {"treeindex_feeder_bait"}, [[
+            TreeIndexSpecNote("feeder")
+            feedTriggers("treeindex_fed_two_bait\n")
+        ]]))
+        assert(permGroup("treeindex fed folder", "trigger", packageName))
+        assert(permSubstringTrigger("treeindex fed one", "treeindex fed folder", {"treeindex_fed_one_bait"}, 'TreeIndexSpecNote("fedOne")'))
+        assert(permSubstringTrigger("treeindex fed two", "treeindex fed folder", {"treeindex_fed_two_bait"}, 'TreeIndexSpecNote("fedTwo")'))
+        feed("treeindex warm-up line")
+
+        feed("treeindex_feeder_bait treeindex_fed_one_bait")
+
+        assert.are.same({feeder = 1, fedOne = 1, fedTwo = 1}, fired, "the fed line must not take away what the line feeding it holds")
+    end)
+
+    itIndexed("enters a trigger held open below a folder across a refiling of the tree", function()
+        assert(permGroup("treeindex refiled folder", "trigger", packageName))
+        assert(permSubstringTrigger("treeindex refiled open", "treeindex refiled folder", {"treeindex_refiled_bait"}, 'TreeIndexSpecNote("refiledOpen")'))
+        feed("treeindex warm-up line")
+
+        setTriggerStayOpen("treeindex refiled open", 2)
+        -- a new trigger has the tree refiled on the next line
+        assert(permSubstringTrigger("treeindex refiler", packageName, {"treeindex_refiler_bait"}, ""))
+        feed("quiet", "quiet", "quiet")
+        assert.are.same({refiledOpen = 2}, fired)
+
+        feed("treeindex_ml_open")
+        assert(permSubstringTrigger("treeindex second refiler", packageName, {"treeindex_second_refiler_bait"}, ""))
+        feed("the curtain falls")
+        assert.are.same({refiledOpen = 2, multiline = 1}, fired, "a multiline trigger part-way through must be entered after the refiling too")
+    end)
+
+    itIndexed("enters a trigger below a folder on a line an unpaired surrogate splits its text on", function()
+        assert(permGroup("treeindex split folder", "trigger", packageName))
+        assert(permRegexTrigger("treeindex split", "treeindex split folder", {"qzxjv"}, 'TreeIndexSpecNote("split")'))
+        feed("treeindex warm-up line")
+        setConfig("specialForceMXPProcessorOn", true)
+        finally(function()
+            setConfig("specialForceMXPProcessorOn", false)
+        end)
+
+        feedTriggers("\nzz qz&#xD800;xjv\n")
+
+        assert.are.same({split = 1}, fired, "pcre2 reads the line without the surrogate, which the index cannot see")
+    end)
+
+    itIndexed("walks a trigger a script creates mid-line below a folder below a folder", function()
+        -- made before the folders, so that the walk reaches them after its script has run
+        assert(permSubstringTrigger("treeindex maker", packageName, {"treeindex_maker_bait"}, [[
+            TreeIndexSpecNote("maker")
+            assert(permSubstringTrigger("treeindex made", "treeindex made inner", {"treeindex_made_bait"}, 'TreeIndexSpecNote("made")'))
+        ]]))
+        assert(permGroup("treeindex made outer", "trigger", packageName))
+        assert(permGroup("treeindex made inner", "trigger", "treeindex made outer"))
+        assert(permSubstringTrigger("treeindex made sibling", "treeindex made inner", {"treeindex_made_sibling_bait"}, ""))
+        feed("treeindex warm-up line")
+
+        feed("treeindex_maker_bait treeindex_made_bait")
+
+        assert.are.same({maker = 1, made = 1}, fired, "the line stamped before the trigger existed, so every folder above it has to be walked down its list")
     end)
 
     -- Last, as it takes the fixture away: a script's uninstall takes filed

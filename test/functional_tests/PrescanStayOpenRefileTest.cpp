@@ -251,6 +251,34 @@ private slots:
                                     .arg(rebuilds)
                                     .arg(budget)));
     }
+
+    // A root is entered by the root loop whatever the tree index says, so one held open is not tracked
+    // as open; moved below a group by the editor, it has to be entered all the same while it stays open
+    void openRootMovedBelowAGroupStillFires()
+    {
+        QVERIFY2(runLua(qsl(R"(
+            movedGroupId = permGroup("movedGroup", "trigger")
+            for index = 1, 48 do
+                permSubstringTrigger("movedPadding" .. index, "movedGroup", {"qqmovedpadding" .. index .. "zz"}, "")
+            end
+            movedFires = 0
+            movedId = permSubstringTrigger("movedOpen", "", {"qqmovedbaitzz"}, "movedFires = movedFires + 1")
+            feedTriggers("movedwarmupline\n")
+            setTriggerStayOpen("movedOpen", 3)
+        )")),
+                 "the triggers did not compile");
+        auto* triggerUnit = mpHost->getTriggerUnit();
+        QVERIFY2(triggerUnit->treeIndexFiledCount() >= 48, "the tree index has not engaged, so it cannot pass the moved trigger over");
+        const int groupId = luaInteger("movedGroupId");
+        triggerUnit->reParentTrigger(luaInteger("movedId"), 0, groupId);
+
+        for (int line = 0; line < 4; ++line) {
+            runLua(qsl("feedTriggers('movedquietline\\n')"));
+        }
+
+        QCOMPARE(luaInteger("movedFires"), 3);
+        delete triggerUnit->getTrigger(groupId);
+    }
 };
 
 #include "PrescanStayOpenRefileTest.moc"

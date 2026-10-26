@@ -47,6 +47,7 @@
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
+#include "TLuaInterpreter.h"
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
@@ -207,6 +208,38 @@ private slots:
         QVERIFY(!unit->getTrigger(childID));
     }
 
+    // The editor's redo of a deletion nulls mpHost before deleting, so the trigger's own teardown cannot
+    // reach its unit. One held open below a group must still be gone from what the next line reads of
+    // the open ones; ASan sees it left behind, as does MALLOC_PERTURB_ without it.
+    void test_redoingTheDeletionOfATriggerHeldOpen()
+    {
+        TriggerUnit* unit = mpHost->getTriggerUnit();
+        // Enough filed triggers below the group for the tree index to engage
+        QVERIFY(runLua(qsl(R"(
+            tctOpenGroupId = permGroup("tct open group", "trigger")
+            for index = 1, 48 do
+                permSubstringTrigger("tct open padding " .. index, "tct open group", {"tct_open_padding_" .. index .. "_bait"}, "")
+            end
+            tctOpenChildId = permSubstringTrigger("tct open child", "tct open group", {"tct_open_child_bait"}, "")
+            feedTriggers("tct warm-up line\n")
+            setTriggerStayOpen("tct open child", 2)
+        )")));
+        QVERIFY2(unit->treeIndexFiledCount() >= 48, "the tree index has not engaged, so nothing holds the open trigger");
+        const int groupID = luaInteger("tctOpenGroupId");
+        const int childID = luaInteger("tctOpenChildId");
+        TTrigger* child = unit->getTrigger(childID);
+        QVERIFY(child);
+
+        QList<EditorDeleteItemCommand::DeletedItemInfo> items;
+        items.append({childID, groupID, 0, QString(), child->getName()});
+        EditorDeleteItemCommand command(EditorViewType::cmTriggerView, items, mpHost);
+        command.redo();
+        QVERIFY(!unit->getTrigger(childID));
+
+        QVERIFY(runLua(qsl(R"(feedTriggers("tct line after the deletion\n"))")));
+        delete unit->getTrigger(groupID);
+    }
+
     void test_deletingAnAliasGroup()
     {
         AliasUnit* unit = mpHost->getAliasUnit();
@@ -276,6 +309,17 @@ private slots:
     }
 
 private:
+    bool runLua(const QString& script) { return mpHost->mLuaInterpreter.compileAndExecuteScript(script); }
+
+    int luaInteger(const char* name)
+    {
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, name);
+        const int value = static_cast<int>(lua_tointeger(L, -1));
+        lua_pop(L, 1);
+        return value;
+    }
+
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
         auto host = TestProfile::create(hostname, address, port);

@@ -112,7 +112,6 @@ public:
     // A trigger below a root started acting on lines it does not match, so every pass has to enter it
     // while it does
     void noteOpenTreeNode(TTrigger* pT);
-    void forgetOpenTreeNode(TTrigger* pT);
     // Triggers the last rebuild filed, so a spec can tell the index is armed before it relies on it
     int treeIndexFiledCount() const { return static_cast<int>(mTreeNodes.size()); }
     void doCleanup();
@@ -187,6 +186,7 @@ private:
     bool fileTreeNodes(TTrigger* pT, std::vector<quint64>& grams);
     void dropChildWalks(TTrigger* pT);
     void markTreeNode(TTrigger* pT, quint32 stamp);
+    void forgetOpenTreeNode(TTrigger* pT);
     void clearTreeNodes();
     void rebuildTreeIndex();
     void stampTreeCandidates(const QString& line);

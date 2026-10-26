@@ -271,13 +271,15 @@ struct TChildWalk
     int nextToEnter(int position, quint32 lineStamp) const;
 
     std::vector<TTrigger*> mChildren;
-    // Entered on every line: a child the index did not file, or a folder something below which has to be
+    // One bit per position in mChildren. Entered on every line: an unfiled child, other than a folder
+    // with nothing below it to enter every line
     std::vector<quint64> mAlways;
     // Entered on the line stamped mMarkedStamp only: a child the index hit or that acts without
-    // matching, or a folder above one
+    // matching, or a child above one
     std::vector<quint64> mMarked;
     quint32 mMarkedStamp = 0;
-    // Cleared by any change to the children or to how one is filed; the walk then goes down the list
+    // Cleared by any change to the children or to how one is filed: mChildren may then name freed
+    // triggers, so the walk goes down the live list. Only an outermost pass's rebuild frees or replaces it.
     bool mValid = false;
 };
 
@@ -393,9 +395,10 @@ public:
     // match. One-sided like the index: false leaves match() to decide. A trigger changed or created
     // mid-line is unfiled until the next rebuild; mKeepFiring and the multiline states are read live.
     bool skippableForLine() const { return mTreeIndexPosition >= 0 && mLineStamp != smLineStamp && mKeepFiring <= 0 && mConditionMap.empty(); }
-    // Fires on lines it does not match: staying open, or partway through a multiline match
+    // Has to be entered on lines it does not match: held open, or partway through a multiline match
     bool actsWithoutMatching() const { return mKeepFiring > 0 || !mConditionMap.empty(); }
-    // MUDLET_TREE_INDEX=verify: runs a trigger skippableForLine() would skip and reports it if it acted
+    // MUDLET_TREE_INDEX=verify: runs a trigger the index would skip (skippableForLine(), or passed over by
+    // its parent's TChildWalk) and reports it if it acted
     bool verifySkippable(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams);
     // Stamp of the outermost pass in flight anywhere, which nested passes (a script feeding text back,
     // from any profile) share: a nested line only adds stamps, so nothing the outer line stamped is lost.
@@ -489,7 +492,8 @@ public:
     // Written by TriggerUnit's tree index - see skippableForLine(); the position is -1 while unfiled
     quint32 mLineStamp = 0;
     int mTreeIndexPosition = -1;
-    // Only TriggerUnit's tree index may set these
+    // Only TriggerUnit's tree index may set these. The position in the parent's walk is never reset, so
+    // it holds only while the parent's mChildren still has this trigger there
     std::unique_ptr<TChildWalk> mpChildWalk;
     int mChildWalkPosition = -1;
     bool mInOpenTreeNodes = false;
