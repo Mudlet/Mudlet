@@ -64,8 +64,13 @@
 #include <QtGlobal>
 
 #include <array>
+#include <bit>
 #include <memory>
 #include <utility>
+
+#if defined(__SSE2__)
+#include <emmintrin.h>
+#endif
 
 using namespace std::chrono_literals;
 
@@ -143,6 +148,20 @@ constexpr size_t BUFFER_SIZE = 100000L;
 static int textRunEnd(const char* buffer, const int from, const int to)
 {
     int i = from;
+#if defined(__SSE2__)
+    // Sixteen bytes per compare, where the loop below pays a compare and branch for every byte of text
+    const __m128i iac = _mm_set1_epi8(TN_IAC);
+    const __m128i carriageReturn = _mm_set1_epi8('\r');
+    const __m128i nul = _mm_setzero_si128();
+    const __m128i bell = _mm_set1_epi8(TN_BELL);
+    for (; i + 16 <= to; i += 16) {
+        const __m128i bytes = _mm_loadu_si128(reinterpret_cast<const __m128i*>(buffer + i));
+        const __m128i stops = _mm_or_si128(_mm_or_si128(_mm_cmpeq_epi8(bytes, iac), _mm_cmpeq_epi8(bytes, carriageReturn)), _mm_or_si128(_mm_cmpeq_epi8(bytes, nul), _mm_cmpeq_epi8(bytes, bell)));
+        if (const int mask = _mm_movemask_epi8(stops)) {
+            return i + std::countr_zero(static_cast<unsigned int>(mask));
+        }
+    }
+#endif
     while (i < to) {
         const char ch = buffer[i];
         if (ch == TN_IAC || ch == '\r' || ch == '\0' || ch == TN_BELL) {

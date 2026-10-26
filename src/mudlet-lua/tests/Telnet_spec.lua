@@ -2706,3 +2706,27 @@ describe("MXP re-initialisation of a forced processor", function()
     assert.equals(stillOpen, displayed(stillOpen .. "\r\n"))
   end)
 end)
+
+describe("Tests where a run of text in a read ends", function()
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  local function displayed(data)
+    local mark = getLastLineNumber("main")
+    feed(data)
+    return table.concat(getLines("main", mark, getLastLineNumber("main")), "|")
+  end
+
+  -- runs of every length to past two sixteen byte steps of the scan, so each byte it stops at falls at every offset
+  it("ends a run at a carriage return, a NUL or a telnet command wherever it falls", function()
+    for length = 1, 40 do
+      local run = string.rep("x", length)
+      assert.equals(run, displayed(run .. "\r\n"), "carriage return after " .. length .. " bytes")
+      assert.equals(run .. "y", displayed(run .. "\0y\r\n"), "NUL after " .. length .. " bytes")
+      assert.equals(run .. "y", displayed(run .. "<T_IAC><T_NOP>y\r\n"), "IAC NOP after " .. length .. " bytes")
+    end
+  end)
+end)
