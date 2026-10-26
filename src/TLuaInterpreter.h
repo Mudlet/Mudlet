@@ -192,7 +192,7 @@ public:
         bool mWasDeferringDispatchEnd;
     };
     // While a trigger pass walks a line, a fire's end is left for the next fire's
-    // start to fold into its own; the destructor settles whatever is still owed
+    // start to fold into its own
     class DispatchEndDeferral
     {
     public:
@@ -1127,9 +1127,10 @@ private:
     // leave owed - see mDispatchEndOwed; "multimatches" is left out between
     // dispatches too - see mSpareMultimatchesRef.
     bool mCaptureScopeOpen = false;
-    // A trigger fire's end that clearCaptureGroups() left to settleDispatchEnd().
-    // Whatever runs Lua or reads either name settles it first; only the next
-    // fire's setMatches() may fold it in.
+    // A trigger fire's end that clearCaptureGroups() left to settleDispatchEnd(), only
+    // ever one that allocates nothing; until then "matches" can still hold that fire's
+    // captures. A finaliser does not settle it, so every way into Lua, and a miss on
+    // either name, settles it first; only the next fire's setMatches() may fold it in.
     bool mDispatchEndOwed = false;
     // A trigger pass is walking a line, outside any script it set off
     bool mDeferringDispatchEnd = false;
@@ -1209,7 +1210,6 @@ private:
     bool mRunningAliasScript = false;
     PassCommandState mPassCommand;
     void releaseNestedDispatchState(NestedDispatchState&);
-    void swapCaptureState(NestedDispatchState&);
     // Registry references to how callEventHandler() finds each handler, by
     // handler name: the name itself, read raw from the globals, or else the
     // compiled "return <name>" chunk. They belong to pGlobalLua, so are

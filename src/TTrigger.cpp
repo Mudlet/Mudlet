@@ -2410,8 +2410,8 @@ void TTrigger::execute()
         mpHost->mpMedia->playMedia(mediaData);
     }
     if (!mCommand.isEmpty()) {
-        // send() allocates from C++, and any finaliser that runs then has to find
-        // the globals as they are between fires
+        // send() reaches Lua's allocator outside any script, so a finaliser there
+        // has to find the globals as they are between fires
         mpLua->settleOwedDispatchEnd();
         // Sending runs a whole alias pass, and any alias it matches empties the
         // captures before this trigger's script has read them; "command" is left

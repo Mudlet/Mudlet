@@ -6766,8 +6766,8 @@ describe("Trigger processing", function()
 
             -- Reading "multimatches" takes the spare, so the second fire cannot
             -- fold the first one's end into its start. The first finaliser runs
-            -- as the first script returns and reads nothing, which leaves the
-            -- names out for the ones after it.
+            -- as the first script returns and reads nothing, which leaves
+            -- "matches" out for the ones after it.
             it("hands a finaliser between two fires none of the second one's captures", function()
                 local seen = {runs = 0, reads = {}}
                 trigger(tempRegexTrigger("^LazyFinaliserNext (\\w+) \\w+$", function()
@@ -6823,6 +6823,39 @@ describe("Trigger processing", function()
                 assert.is_true(seen.runs > 1, "no finaliser ran between the fires")
                 assert.is_nil(table.concat(seen.reads, ","):find("one"), "a finaliser was handed the second fire's multimatches")
             end)
+
+            -- An end that has to allocate, for a new spare or in place of an
+            -- empty "matches" a script filled, can run a finaliser, which has to
+            -- run before the next trigger on the line is even looked at
+            for _, case in ipairs({
+                {name = "a fire that read multimatches", before = function() end, read = function() local _ = multimatches end},
+                {name = "a filled empty matches", before = function() matches.dirty = true end, read = function() end},
+            }) do
+                it("lets a finaliser at the end of " .. case.name .. " stop the next trigger on the line", function()
+                    local seen = {fired = false}
+                    trigger(tempRegexTrigger("^LazyFinaliserStop (\\w+)$", function()
+                        case.read()
+                        finaliser.watching = true
+                    end))
+                    local nextTrigger = tempRegexTrigger("^LazyFinaliserStop (\\w+)$", function()
+                        seen.fired = true
+                    end)
+                    trigger(nextTrigger)
+                    finaliser.onRun = function()
+                        if finaliser.runs == 2 then
+                            disableTrigger(tostring(nextTrigger))
+                        end
+                    end
+                    case.before()
+
+                    withFinaliserAtEveryAllocation(function()
+                        feedTriggers("\nLazyFinaliserStop word\n")
+                    end)
+
+                    assert.is_true(finaliser.runs > 1, "no finaliser ran after the first fire")
+                    assert.is_false(seen.fired, "the next trigger ran after a finaliser at the first one's end stopped it")
+                end)
+            end
 
             -- A trigger whose code never compiled has no function to look up,
             -- so freeing it once the pass is over calls __index

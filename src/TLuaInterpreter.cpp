@@ -3717,25 +3717,36 @@ static bool globalPresent(lua_State* L, const int index, const int keyRef)
     return present;
 }
 
-// Pushes the table at ref while it is still empty and has no metatable, and
-// otherwise a new one that takes its place there: a table a script has filled
-// or given a metatable is that script's
+// Whether the table at ref is still empty and has no metatable: a table a
+// script has filled or given a metatable is that script's
+static bool unusedTableAt(lua_State* L, const int ref)
+{
+    if (ref == LUA_NOREF) {
+        return false;
+    }
+    lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
+    bool unused = false;
+    if (lua_istable(L, -1)) {
+        lua_pushnil(L);
+        if (lua_next(L, -2)) {
+            lua_pop(L, 2);
+        } else if (lua_getmetatable(L, -1)) {
+            lua_pop(L, 1);
+        } else {
+            unused = true;
+        }
+    }
+    lua_pop(L, 1);
+    return unused;
+}
+
+// Pushes the table at ref while it is unused, and otherwise a new one that
+// takes its place there
 static void pushUnusedTable(lua_State* L, int& ref)
 {
-    if (ref != LUA_NOREF) {
+    if (unusedTableAt(L, ref)) {
         lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
-        if (lua_istable(L, -1)) {
-            lua_pushnil(L);
-            if (!lua_next(L, -2)) {
-                if (!lua_getmetatable(L, -1)) {
-                    return;
-                }
-                lua_pop(L, 1);
-            } else {
-                lua_pop(L, 2);
-            }
-        }
-        lua_pop(L, 1);
+        return;
     }
     lua_newtable(L);
     lua_pushvalue(L, -1);
@@ -3777,12 +3788,6 @@ void TLuaInterpreter::installBetweenDispatchMultimatches(lua_State* L)
 void TLuaInterpreter::settleDispatchEnd(lua_State* L)
 {
     mDispatchEndOwed = false;
-    // Settled late, the next fire's captures are in already, but a finaliser the
-    // allocations below run has to find none, as it would have at that end
-    std::optional<NestedDispatchState> aside;
-    if (mCaptureScopeOpen || !mCaptureGroupList.empty() || !mMultiCaptureGroupList.empty()) {
-        swapCaptureState(aside.emplace());
-    }
     const int callerStackTop = lua_gettop(L);
     lua_rawgeti(L, LUA_REGISTRYINDEX, mMatchesKeyRef);
     pushEmptyMatchesTable(L);
@@ -3791,23 +3796,6 @@ void TLuaInterpreter::settleDispatchEnd(lua_State* L)
     lua_rawset(L, LUA_GLOBALSINDEX);
     installBetweenDispatchMultimatches(L);
     lua_settop(L, callerStackTop);
-    if (aside) {
-        swapCaptureState(*aside);
-    }
-}
-
-// No documentation available in wiki - internal function
-void TLuaInterpreter::swapCaptureState(NestedDispatchState& state)
-{
-    mCaptureGroupList.swap(state.captureGroupList);
-    mCaptureGroupPosList.swap(state.captureGroupPosList);
-    mCaptureGroupLengthList.swap(state.captureGroupLengthList);
-    mMultiCaptureGroupList.swap(state.multiCaptureGroupList);
-    mMultiCaptureGroupPosList.swap(state.multiCaptureGroupPosList);
-    mCapturedNameGroups.swap(state.capturedNameGroups);
-    mCapturedNameGroupsPosList.swap(state.capturedNameGroupsPosList);
-    mMultiCaptureNameGroups.swap(state.multiCaptureNameGroups);
-    std::swap(mCaptureScopeOpen, state.captureScopeOpen);
 }
 
 // No documentation available in wiki - internal function
@@ -3854,9 +3842,10 @@ void TLuaInterpreter::clearCaptureGroups(const bool triggerFire)
 
     mCaptureScopeOpen = false;
     if (lazy) {
-        // mDeferringDispatchEnd is still set in the alias pass a trigger's command
-        // sets off, inside a send() that goes on to use Lua
-        if (triggerFire && mDeferringDispatchEnd) {
+        // Only a trigger fire defers: mDeferringDispatchEnd is still set in the alias
+        // pass a trigger's command runs, and send() runs more Lua after it. An end
+        // that allocates goes in now, as a finaliser that runs has to run here.
+        if (triggerFire && mDeferringDispatchEnd && !mSpareMultimatchesSeen && unusedTableAt(L, mEmptyMatchesRef)) {
             mDispatchEndOwed = true;
         } else {
             settleDispatchEnd(L);
@@ -5485,9 +5474,8 @@ void TLuaInterpreter::setMatches(lua_State* L, const MultimatchesSource source)
     const bool setsMatches = source == MultimatchesSource::Untouched && !mCaptureGroupList.empty();
     if (mDispatchEndOwed) {
         // Nothing has run since that end, so a start that leaves "matches" out
-        // again and needs no new spare stands in for it; otherwise the end goes in
-        // first, as allocating can run a finaliser.
-        if (mCaptureScopeOpen && setsMatches && !mSpareMultimatchesSeen) {
+        // again stands in for it; otherwise the end goes in first
+        if (mCaptureScopeOpen && setsMatches) {
             mDispatchEndOwed = false;
             installBetweenDispatchMultimatches(L);
             deferDispatchGlobals(L, source, setsMatches);
