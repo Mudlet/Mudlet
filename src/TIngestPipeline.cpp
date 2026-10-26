@@ -19,12 +19,14 @@
 
 #include "TIngestPipeline.h"
 
+#include "MudletApp.h"
 #include "utils.h"
 
+#include <QSettings>
 #include <QThread>
 
 #include <chrono>
-#include <cstdio>
+#include <thread>
 
 namespace {
 inline void cpuRelax()
@@ -43,28 +45,35 @@ constexpr std::chrono::microseconds kIdleSpin{300};
 
 bool TIngestPipeline::enabled()
 {
-    static const bool on = qEnvironmentVariableIntValue("MUDLET_INGEST_THREAD") == 1;
+    static const bool on = [] {
+        if (qEnvironmentVariableIsSet("MUDLET_INGEST_THREAD")) {
+            return qgetenv("MUDLET_INGEST_THREAD") != "0";
+        }
+        if (QThread::idealThreadCount() < 2) {
+            return false;
+        }
+        QSettings* settings = MudletApp::getQSettings();
+        return !settings || settings->value(qsl("ingestThread"), true).toBool();
+    }();
     return on;
 }
 
 bool TIngestPipeline::verifying()
 {
-    static const bool on = qEnvironmentVariableIntValue("MUDLET_INGEST_THREAD_VERIFY") == 1;
+    static const bool on = qgetenv("MUDLET_INGEST_THREAD") == "verify";
     return on;
 }
 
-void TIngestPipeline::noteVerified(const bool same, const QString& text)
+TIngestJob::TIngestJob()
+: mLines(csmMaxLines)
+, mText(csmMaxTextChars)
+, mFormats(csmMaxFormatChars)
 {
-    ++mStatVerified;
-    if (!same) {
-        if (++mStatVerifyFailed <= 20) {
-            std::fprintf(stderr, "ingest-thread: VERIFY MISMATCH on line \"%s\"\n", text.toUtf8().constData());
-        }
-    }
 }
 
 TIngestPipeline::TIngestPipeline(Host* pHost)
 : mpTwin(std::make_unique<TBuffer>(pHost))
+, mWaitForWorker(qEnvironmentVariableIsSet("MUDLET_TEST_MODE"))
 {
     mpThread.reset(QThread::create([this] {
         workerLoop();
@@ -80,14 +89,6 @@ TIngestPipeline::~TIngestPipeline()
     mEpoch.fetch_add(1);
     mEpoch.notify_one();
     mpThread->wait();
-    printStats();
-}
-
-TIngestJob::TIngestJob()
-: mLines(csmMaxLines)
-, mText(csmMaxTextChars)
-, mFormats(csmMaxFormatChars)
-{
 }
 
 TIngestJob* TIngestPipeline::begin(const TBuffer& source, const std::string& unit, const size_t decodableLength, const QVector<QChar>& lookupTable)
@@ -98,7 +99,6 @@ TIngestJob* TIngestPipeline::begin(const TBuffer& source, const std::string& uni
     TIngestJob& job = mJob;
     // Still busy with a unit main has finished with: main parses this one alone rather than wait
     if (job.mState.load(std::memory_order_acquire) == TIngestJob::Running) {
-        ++mStatBusy;
         return nullptr;
     }
     job.mUnit.assign(unit);
@@ -106,12 +106,6 @@ TIngestJob* TIngestPipeline::begin(const TBuffer& source, const std::string& uni
     job.mLookupTable = lookupTable;
     job.mEncoding = source.mEncoding;
     queue(source, job, 0);
-
-    ++mStatJobs;
-    mStatLines += static_cast<quint64>(source.mPendingChunkLines);
-    if ((mStatJobs & 63) == 0) {
-        printStats();
-    }
     return &job;
 }
 
@@ -121,8 +115,24 @@ bool TIngestPipeline::resume(const TBuffer& source, TIngestJob& job, const size_
         return false;
     }
     queue(source, job, position);
-    ++mStatResumed;
     return true;
+}
+
+bool TIngestPipeline::awaitLines(const TIngestJob& job, const int ready) const
+{
+    if (!mWaitForWorker) {
+        return false;
+    }
+    for (;;) {
+        const int state = job.mState.load(std::memory_order_acquire);
+        if (job.mReady.load(std::memory_order_acquire) > ready) {
+            return true;
+        }
+        if (state != TIngestJob::Queued && state != TIngestJob::Running) {
+            return false;
+        }
+        std::this_thread::yield();
+    }
 }
 
 void TIngestPipeline::queue(const TBuffer& source, TIngestJob& job, const size_t position)
@@ -149,9 +159,9 @@ void TIngestPipeline::queue(const TBuffer& source, TIngestJob& job, const size_t
     job.mReady.store(0, std::memory_order_relaxed);
     job.mCancel.store(false, std::memory_order_relaxed);
     job.mNext = 0;
-    job.mState.store(TIngestJob::Queued, std::memory_order_relaxed);
-    job.mQueuedAt = std::chrono::steady_clock::now();
-    // seq_cst: publishes the job, and cannot pass the library's read of the waiter count
+    // Release: the worker can claim the job from a stale epoch, and must still see all of the above
+    job.mState.store(TIngestJob::Queued, std::memory_order_release);
+    // seq_cst: cannot pass the library's read of the waiter count
     mEpoch.fetch_add(1);
     mEpoch.notify_one();
 }
@@ -160,18 +170,10 @@ void TIngestPipeline::end(TIngestJob& job)
 {
     int state = TIngestJob::Queued;
     if (job.mState.compare_exchange_strong(state, TIngestJob::Idle, std::memory_order_acq_rel)) {
-        ++mStatNeverStarted;
         return;
     }
     if (state == TIngestJob::Running) {
-        // It works on its own copy of the unit, so it is left to notice and finish on its own
         job.mCancel.store(true, std::memory_order_relaxed);
-        ++mStatCancelled;
-        return;
-    }
-    if (state == TIngestJob::Done) {
-        mStatLatencyUs += std::chrono::duration<double, std::micro>(job.mWorkerStart - job.mQueuedAt).count();
-        mStatWorkerUs += std::chrono::duration<double, std::micro>(job.mWorkerEnd - job.mWorkerStart).count();
     }
 }
 
@@ -189,9 +191,7 @@ void TIngestPipeline::workerLoop()
             seen = epoch;
             int state = TIngestJob::Queued;
             if (mJob.mState.compare_exchange_strong(state, TIngestJob::Running, std::memory_order_acq_rel)) {
-                mJob.mWorkerStart = std::chrono::steady_clock::now();
                 parse(mJob);
-                mJob.mWorkerEnd = std::chrono::steady_clock::now();
                 mJob.mState.store(TIngestJob::Done, std::memory_order_release);
             }
             idleSince = std::chrono::steady_clock::now();
@@ -242,42 +242,10 @@ void TIngestPipeline::parse(TIngestJob& job)
     job.mResumeFrom = TIngestJob::csmNoResume;
     // Read only: the speculating subset has no path that writes into the unit
     twin.parseChunk(job.mUnit, true, job.mLookupTable, job.mDecodableLength, nullptr, job.mStartPosition);
-    if (twin.mSpeculationStopped && job.mResumeFrom == TIngestJob::csmNoResume && !job.mCancel.load(std::memory_order_relaxed)) {
+    if (twin.mSpeculationStopped && job.mResumeFrom == TIngestJob::csmNoResume && !job.mCancel.load(std::memory_order_relaxed) && job.mReady.load(std::memory_order_relaxed) >= csmMinimumLines) {
         // Main parses the line that stopped it, then may hand the rest back
-        mStatStopped.fetch_add(1, std::memory_order_relaxed);
-        if (job.mReady.load(std::memory_order_relaxed) >= csmMinimumLines) {
-            job.mResumeFrom = twin.mSpeculatedLineStart + 1;
-        }
+        job.mResumeFrom = twin.mSpeculatedLineStart + 1;
     }
     twin.mpSpeculationSink = nullptr;
     twin.mpParseConfig = nullptr;
-}
-
-void TIngestPipeline::printStats() const
-{
-    static const bool wanted = qEnvironmentVariableIntValue("MUDLET_INGEST_THREAD_STATS") == 1;
-    if (!wanted) {
-        return;
-    }
-    const auto count = [](const quint64 value) {
-        return static_cast<unsigned long long>(value);
-    };
-    std::fprintf(stderr,
-                 "ingest-thread: jobs %llu lines %llu busy %llu cancelled %llu resumed %llu fast %llu slow %llu mismatch %llu notready %llu stopped %llu verified %llu failed %llu "
-                 "neverstarted %llu latency_us %.0f worker_us %.0f\n",
-                 count(mStatJobs),
-                 count(mStatLines),
-                 count(mStatBusy),
-                 count(mStatCancelled),
-                 count(mStatResumed),
-                 count(mStatReplayedFast),
-                 count(mStatReplayedSlow),
-                 count(mStatMismatch),
-                 count(mStatNotReady),
-                 count(mStatStopped.load(std::memory_order_relaxed)),
-                 count(mStatVerified),
-                 count(mStatVerifyFailed),
-                 count(mStatNeverStarted),
-                 mStatLatencyUs,
-                 mStatWorkerUs);
 }
