@@ -2735,7 +2735,7 @@ describe("Tests game text the ingest worker parses ahead", function()
     for line = from, to do
       assert.is_true(moveCursor("main", 0, line))
       local text = getCurrentLine("main")
-      local cells = {text}
+      local cells = {text, "prompt=" .. tostring(isPrompt())}
       local count = firstOnly and math.min(1, utf8.len(text)) or utf8.len(text)
       for offset = 0, count - 1 do
         selectSection("main", offset, 1)
@@ -2848,15 +2848,19 @@ describe("Tests game text the ingest worker parses ahead", function()
   end)
 
   it("commits the same from a read that a line was cut across", function()
+    -- without a GA from the game, the telnet layer holds an unfinished line back and the buffer never sees a cut
+    feed("<T_IAC><T_GA>")
     local lines = corpus()
     local joined = table.concat(lines, "\r\n") .. "\r\n"
     local apart = pass(lines, false)
     local cuts = {
-      -- part way through the text, an SGR sequence, a UTF-8 character, and a line ending
-      ["text"] = #"\27[31mIngestRed 1 bri",
-      ["SGR"] = joined:find("\27[1;32m", 1, true) + 4,
-      ["UTF-8"] = joined:find("\226\148\140", 1, true),
-      ["CR LF"] = joined:find("\r\n", 1, true),
+      ["text"] = joined:find("bright", 1, true) + 2,
+      ["an SGR sequence"] = joined:find("\27[1;32m", 1, true) + 4,
+      ["a UTF-8 character"] = joined:find("\226\148\140", 1, true),
+      ["a line ending"] = joined:find("\r\n", 1, true),
+      ["text later on"] = joined:find("IngestPlain line 24", 1, true) + 8,
+      ["an SGR sequence later on"] = joined:find("\27[38;5;208mIngest256 27", 1, true) + 5,
+      ["a UTF-8 character later on"] = joined:find("IngestUnicode 29 \226", 1, true) + #"IngestUnicode 29 ",
     }
     local before = parsedAhead()
     for name, cut in pairs(cuts) do
@@ -2921,14 +2925,81 @@ describe("Tests game text the ingest worker parses ahead", function()
     assert.is_true(parsedAhead() - before > 39 + 512, "the worker was not handed the rest of the read")
   end)
 
-  it("carries a colour a trigger feeds part way through a read on to the lines after it", function()
-    local control = pass(corpus(), true)
-    triggers[#triggers + 1] = tempTrigger("IngestFont 7 back", function()
-      feedTriggers("\27[35m")
-    end)
+  it("carries an attribute a trigger feeds part way through a read on to the lines after it", function()
+    local control = pass(corpus(), true, true)
+    local first = parsedAhead()
+    local replayed = {}
+    for _, sgr in ipairs({"\27[35m", "\27[45m", "\27[1m", "\27[3m", "\27[4:3m", "\27[6m", "\27[7m", "\27[8m", "\27[9m", "\27[53m", "\27[11m"}) do
+      local id = tempTrigger("IngestFont 7 back", function()
+        feedTriggers(sgr)
+      end)
+      local before = parsedAhead()
+      local together = sameEitherWay(corpus(), true)
+      killTrigger(id)
+      assert.are_not.equal(control[8], together[8], "the trigger's " .. sgr:sub(2) .. " did not reach the next line")
+      replayed[sgr:sub(2)] = before and parsedAhead() - before
+    end
+    requireWorker(first)
+    for sgr, count in pairs(replayed) do
+      -- lines 1-7, then 10-48 once the reset at the end of line 9 brings both parses back in step
+      assert.is_true(count >= 40, "after " .. sgr .. " only " .. count .. " lines were parsed ahead")
+    end
+  end)
+
+  it("colours every palette entry the same from one read", function()
+    local lines = {}
+    for n = 0, 7 do
+      lines[#lines + 1] = "\27[3" .. n .. "mIngestPalette fg " .. n .. "\27[0m"
+      lines[#lines + 1] = "\27[9" .. n .. "mIngestPalette bright fg " .. n .. "\27[0m"
+      lines[#lines + 1] = "\27[4" .. n .. "mIngestPalette bg " .. n .. "\27[0m"
+      lines[#lines + 1] = "\27[10" .. n .. "mIngestPalette bright bg " .. n .. "\27[0m"
+      lines[#lines + 1] = "\27[1;3" .. n .. "mIngestPalette bold fg " .. n .. "\27[0m"
+    end
+    for n = 0, 15 do
+      lines[#lines + 1] = "\27[38;5;" .. n .. "mIngestPalette 256 " .. n .. "\27[0m"
+    end
     local before = parsedAhead()
-    local together = sameEitherWay(corpus())
-    assert.are_not.equal(control[8], together[8], "the trigger's colour did not reach the next line")
+    sameEitherWay(lines, true)
+    requireWorker(before)
+  end)
+
+  it("uses the profile background a trigger sets part way through a read", function()
+    local r, g, b = getBackgroundColor("main")
+    finally(function()
+      setBackgroundColor("main", r, g, b)
+    end)
+    triggers[#triggers + 1] = tempTrigger("IngestHostColour 20 ", function()
+      setBackgroundColor("main", 10, 20, 30)
+    end)
+    local lines = {}
+    for i = 1, 700 do
+      lines[i] = "\27[0mIngestHostColour " .. i .. " "
+    end
+    local apart = pass(lines, false, true)
+    setBackgroundColor("main", r, g, b)
+    local before = parsedAhead()
+    local together = pass(lines, true, true)
+    sameLines(apart, together)
+    assert.truthy(together[600]:find("background=10,20,30", 1, true), "the new background did not reach the rest of the read")
+    requireWorker(before)
+    -- 20 lines before the change; a job of at most 512 resumed under the new background parses the rest
+    assert.is_true(parsedAhead() - before > 20 + 100, "the worker was not handed the rest of the read")
+  end)
+
+  it("marks a prompt in a read as a prompt", function()
+    local lines = {}
+    for i = 1, 40 do
+      lines[i] = i % 10 == 0 and ("IngestPrompt " .. i .. "> <T_IAC><T_GA>") or ("IngestPromptText " .. i)
+    end
+    local before = parsedAhead()
+    local together = sameEitherWay(lines, true)
+    local marked = {}
+    for _, line in ipairs(together) do
+      local text, prompt = line:match("^([^|]*)|prompt=(%a+)")
+      marked[text] = prompt
+    end
+    assert.are.equal("true", marked["IngestPrompt 20> "], "the prompt was not marked")
+    assert.are.equal("false", marked["IngestPromptText 19"], "the line before the prompt was marked")
     requireWorker(before)
   end)
 
@@ -2943,6 +3014,8 @@ describe("Tests game text the ingest worker parses ahead", function()
     local before = parsedAhead()
     sameEitherWay(corpus())
     requireWorker(before)
+    -- lines 1-7, then 10-48 once the reset at the end of line 9 brings both parses back in step
+    assert.is_true(parsedAhead() - before >= 40, "only " .. parsedAhead() - before .. " lines were parsed ahead")
   end)
 
   it("joins the lines a game wrapped itself the same from one read", function()
@@ -3047,6 +3120,25 @@ describe("Tests game text the ingest worker parses ahead", function()
     local together = sameEitherWay(lines, true)
     assert.truthy(together[20]:find("^<B>IngestMxpColour 20</B>|"), "MXP was still on")
     assert.truthy(together[20]:find("foreground=255,0,0", 1, true), "the MXP colour did not reach the read")
+  end)
+
+  it("styles a read with the MXP bold, italic, underline and strikeout left open when MXP was turned off", function()
+    finally(function()
+      feed("<T_IAC><T_DO><O_MXP>\27[5z\27[3z\r\n")
+      feed("<T_IAC><T_DONT><O_MXP>")
+    end)
+    feed("<T_IAC><T_DO><O_MXP>\27[6z<B><I><U><S>IngestMxpLeftOpen\r\n")
+    feed("<T_IAC><T_DONT><O_MXP>")
+    local lines = {}
+    for i = 1, 40 do
+      lines[i] = "IngestMxpStyle " .. i
+    end
+    local before = parsedAhead()
+    local together = sameEitherWay(lines, true)
+    for _, field in ipairs({"bold=true", "italic=true", "strikeout=true", "underline=true"}) do
+      assert.truthy(together[20]:find(field, 1, true), "the MXP style did not reach the read: " .. field)
+    end
+    requireWorker(before)
   end)
 
   it("hands the rest of a read to MXP once a trigger turns it on", function()

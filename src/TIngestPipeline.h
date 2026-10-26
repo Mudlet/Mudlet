@@ -97,6 +97,8 @@ class TIngestPipeline
 public:
     static constexpr int csmMinimumLines = 16;
     static constexpr size_t csmMinimumResumeBytes = 512;
+    // Past this the copy of a unit is released rather than kept for the next; socket reads stay well under it
+    static constexpr size_t csmMaxRetainedUnitBytes = 256 * 1024;
 
     explicit TIngestPipeline(Host*);
     ~TIngestPipeline();

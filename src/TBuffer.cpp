@@ -2264,9 +2264,8 @@ void TBuffer::parseChunk(
                 // Plain text bytes decode to themselves with the format just computed, so a run takes one
                 // append and one fill. Not hyperlink text, built per character. MXP must see every byte,
                 // but between tags and entities it only hands them on as content, which it takes a run at once.
-                TMxpProcessor& mxp = mpHost->mMxpProcessor;
                 const bool mxpSeesText = mxpProcessorEnabled() && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn());
-                if (!mxpSeesText || (localBufferPosition + 1 >= endOfLiteralEntity && mxp.mode() != MXP_MODE_LOCKED && mxp.readingText())) {
+                if (!mxpSeesText || (localBufferPosition + 1 >= endOfLiteralEntity && mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED && mpHost->mMxpProcessor.readingText())) {
                     size_t runEnd = localBufferPosition + 1;
                     const char* const bytes = localBuffer.data();
                     if (mxpSeesText) {
@@ -2286,8 +2285,11 @@ void TBuffer::parseChunk(
                     }
                     const size_t runLength = runEnd - (localBufferPosition + 1);
                     if (runLength) {
+                        if (Q_UNLIKELY(mpSpeculationSink) && speculatedLineTooLong(runLength)) {
+                            return;
+                        }
                         if (mxpSeesText) {
-                            mxp.processRawInput(QByteArrayView(bytes + localBufferPosition + 1, static_cast<qsizetype>(runLength)));
+                            mpHost->mMxpProcessor.processRawInput(QByteArrayView(bytes + localBufferPosition + 1, static_cast<qsizetype>(runLength)));
                         }
                         mMudLine.append(QLatin1StringView(bytes + localBufferPosition + 1, static_cast<qsizetype>(runLength)));
                         mMudBuffer.append(runLength, c);
@@ -2297,6 +2299,9 @@ void TBuffer::parseChunk(
             }
         }
 
+        if (Q_UNLIKELY(mpSpeculationSink) && speculatedLineTooLong(0)) {
+            return;
+        }
         ++localBufferPosition;
     }
 }
@@ -2457,7 +2462,17 @@ bool TBuffer::speculationEligible() const
     return !mGotOSC && !mHyperlinkActive && !mpHost->mMxpProcessor.isEnabled() && !mxpClient.isInLinkMode() && !mxpClient.hasFgColor() && !mxpClient.hasBgColor();
 }
 
-// The worker's commitLine(): hands the line over as commitLine() would have copied it out
+// No arena could take the line, so stop before it grows further: what the worker frees, its thread's heap keeps
+bool TBuffer::speculatedLineTooLong(const size_t moreChars)
+{
+    if (static_cast<size_t>(mMudLine.size()) + moreChars <= TIngestJob::csmMaxTextChars && (mMudBuffer.uniform() || mMudBuffer.size() + moreChars <= TIngestJob::csmMaxFormatChars)) {
+        return false;
+    }
+    mpSpeculationSink->mResumeFrom = mSpeculatedLineStart + 1;
+    mSpeculationStopped = true;
+    return true;
+}
+
 bool TBuffer::recordSpeculatedLine(const char ch, size_t& localBufferPosition, const bool forcedLineBreak)
 {
     TIngestJob& job = *mpSpeculationSink;
@@ -2539,8 +2554,6 @@ void TBuffer::verifySpeculatedLine(const TSpeculatedLine& line, const char ch, c
     }
 }
 
-// Commits the lines the worker has parsed ahead from here on, for as long as each starts where this
-// buffer is, from the state this buffer is in, under the settings it was parsed with
 void TBuffer::replaySpeculatedLines(TIngestJob& job, size_t& localBufferPosition, const bool isFromServer)
 {
     for (;;) {
@@ -3806,8 +3819,7 @@ void TBuffer::decodeSGR48(const SgrParameters& parameters, bool isColonSeparated
 
 void TBuffer::decodeSGR(const QStringView sequence)
 {
-    Host* pHost = mpHost;
-    if (!pHost) {
+    if (!mpParseConfig && !mpHost) {
         qWarning() << "TBuffer::decodeSGR(...) ERROR - Called when mpHost pointer is nullptr";
         return;
     }
