@@ -56,7 +56,6 @@
 #include <QScopeGuard>
 
 #if defined(Q_PROCESSOR_X86_64) && (defined(Q_CC_GNU) || defined(Q_CC_CLANG))
-#include <cpuid.h>
 #include <x86intrin.h>
 #define MUDLET_REUSE_ARRIVAL_CLOCK
 #endif
@@ -1335,10 +1334,18 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
 #if defined(MUDLET_REUSE_ARRIVAL_CLOCK)
 namespace {
-// A TSC that halts in sleep states, as older CPUs' do, would miss the time a script blocks the thread for
+// A TSC that halts in sleep states, as older CPUs' do, would miss the time a script blocks the thread for.
+// cpuid directly: <cpuid.h>'s __cpuid macro collides with the function of that name MinGW's <intrin.h> declares.
 const bool scInvariantTsc = [] {
-    unsigned int eax = 0, ebx = 0, ecx = 0, edx = 0;
-    return __get_cpuid(0x80000007, &eax, &ebx, &ecx, &edx) && (edx & (1U << 8));
+    unsigned int eax = 0x80000000, ebx = 0, ecx = 0, edx = 0;
+    asm("cpuid" : "+a"(eax), "=b"(ebx), "+c"(ecx), "=d"(edx));
+    if (eax < 0x80000007) {
+        return false;
+    }
+    eax = 0x80000007;
+    ecx = 0;
+    asm("cpuid" : "+a"(eax), "=b"(ebx), "+c"(ecx), "=d"(edx));
+    return (edx & (1U << 8)) != 0;
 }();
 // A quarter of a millisecond in TSC ticks, measured over the first 10 ms: rates run from hundreds of MHz to
 // several GHz, and an emulator picks its own. Zero, so no reuse, until then.
@@ -1349,13 +1356,14 @@ std::chrono::steady_clock::time_point sCalibrationStart;
 void calibrateArrivalClock(const quint64 ticks)
 {
     const auto now = std::chrono::steady_clock::now();
-    if (!sCalibrationTicks || ticks <= sCalibrationTicks) {
+    const auto micros = std::chrono::duration_cast<std::chrono::microseconds>(now - sCalibrationStart).count();
+    // Past 100 ms the machine may have slept in between, which steady_clock leaves out and the TSC does not
+    if (!sCalibrationTicks || ticks <= sCalibrationTicks || micros > 100'000) {
         sCalibrationStart = now;
         // After the clock here, before it at the far end: a preemption in between can only shrink the rate
         sCalibrationTicks = __rdtsc();
         return;
     }
-    const auto micros = std::chrono::duration_cast<std::chrono::microseconds>(now - sCalibrationStart).count();
     if (micros >= 10'000) {
         sArrivalClockReuseTicks = (ticks - sCalibrationTicks) / static_cast<quint64>(micros) * 250;
     }

@@ -178,9 +178,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       it("gives a line the local time it arrived at, as hh:mm:ss.zzz and a space", function()
+        -- before the echo: the line may keep the time the echo read, a fraction of a millisecond earlier
+        local before = os.date("%H:%M:%S")
         echo("\n")
         local line = getLastLineNumber("main")
-        local before = os.date("%H:%M:%S")
         feedTriggers("getTimestamp arrival line\n")
         local after = os.time()
         local timestamp = getTimestamp(line)
