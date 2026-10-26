@@ -1327,9 +1327,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     mProcessingLocalFeed = false;
 }
 
-// Blocks of a fixed 192 bytes: few enough that a block's tally fits a byte, and a multiple of 16, 32 and 64
-// byte vectors, so even -O2 counts a register of bytes per instruction. std::count keeps a 64-bit tally,
-// which takes several times as long.
+// Fixed 192-byte blocks: a block's tally fits a byte and its trip count is a multiple of 16, 32 and 64 byte
+// vectors, so even -O2 vectorises it; std::count's 64-bit tally takes several times as long.
 static int countLineFeeds(const std::string& text)
 {
     constexpr size_t blockSize = 192;
