@@ -18,8 +18,10 @@ describe("matches for capture groups that did not participate", function()
         local id = tempRegexTrigger(pattern, function()
             seen, length = copyOf(matches)
         end)
+        finally(function()
+            killTrigger(id)
+        end)
         feedTriggers("\n" .. line .. "\n")
-        killTrigger(id)
         assert.is_table(seen, "the trigger should have matched at all")
         return seen, length
     end
@@ -29,8 +31,10 @@ describe("matches for capture groups that did not participate", function()
         local id = tempAlias(pattern, function()
             seen, length = copyOf(matches)
         end)
+        finally(function()
+            killAlias(id)
+        end)
         expandAlias(command, false)
-        killAlias(id)
         assert.is_table(seen, "the alias should have matched at all")
         return seen, length
     end
@@ -78,11 +82,15 @@ describe("matches for capture groups that did not participate", function()
 
     local function viaMatchAllTrigger(pattern, line)
         local seen, length
-        local id = tempComplexRegexTrigger("matchesUnsetGroupsMatchAll", pattern, function()
+        -- killed by name: tempComplexRegexTrigger names the trigger after its first argument, not its id
+        local name = "matchesUnsetGroupsMatchAll"
+        tempComplexRegexTrigger(name, pattern, function()
             seen, length = copyOf(matches)
         end, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0)
+        finally(function()
+            killTrigger(name)
+        end)
         feedTriggers("\n" .. line .. "\n")
-        killTrigger(id)
         assert.is_table(seen, "the trigger should have matched at all")
         return seen, length
     end
