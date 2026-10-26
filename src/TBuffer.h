@@ -59,6 +59,9 @@ class QRegularExpression;
 class QTimer;
 struct TConsoleModel;
 class THyperlinkVisibilityManager;
+class TIngestPipeline;
+struct TIngestJob;
+struct TSpeculatedLine;
 
 class WrapInfo
 {
@@ -526,6 +529,9 @@ class TBuffer
     // buffer while the write-out is queued:
     friend class MxpWatchdogBufferLifetimeTest;
 
+    // Runs a second buffer's parser over a unit ahead of this one, see TIngestPipeline:
+    friend class TIngestPipeline;
+
     static inline const TEncodingTable& csmEncodingTable = TEncodingTable::csmDefaultInstance;
 
     static inline const int TCHAR_IN_BYTES = sizeof(TChar);
@@ -533,6 +539,54 @@ class TBuffer
 public:
     // limit on how many characters a single echo can accept for performance reasons
     static inline const int MAX_CHARACTERS_PER_ECHO = 1000000;
+
+    // Resolved from the encoding name when it changes, not in the per-byte loop:
+    enum class Decoder : quint8 { Ascii, Latin1, Gbk, Gb18030, EucKr, Big5, ShiftJis, EucJp, Utf8 };
+
+    // What the parser carries from one byte to the next. A line parsed ahead on the ingest worker is
+    // used only where this buffer's state is the one the worker parsed it from.
+    struct ParseState
+    {
+        QColor foreground;
+        QColor foregroundLight;
+        QColor background;
+        TChar pendingLeadFormat;
+        std::string incompleteSequenceBytes;
+        Decoder decoder = Decoder::Ascii;
+        char pendingLead = 0;
+        quint8 altFont = 0;
+        bool gotEsc = false;
+        bool gotEscCharset = false;
+        bool gotCsi = false;
+        bool gotOsc = false;
+        bool gotString = false;
+        bool isDefaultColor = true;
+        bool bold = false;
+        bool italics = false;
+        bool overline = false;
+        bool reverse = false;
+        bool strikeOut = false;
+        bool underline = false;
+        bool underlineWavy = false;
+        bool underlineDotted = false;
+        bool underlineDashed = false;
+        bool blink = false;
+        bool fastBlink = false;
+        bool concealed = false;
+        bool hyperlinkActive = false;
+    };
+    // What the parser reads from Host, as of when a unit was handed to the ingest worker
+    struct ParseConfig
+    {
+        QColor hostForeground;
+        QColor hostBackground;
+        quint64 colourGeneration = 0;
+        bool haveColorSpaceId = false;
+        bool mxpBold = false;
+        bool mxpItalic = false;
+        bool mxpUnderline = false;
+        bool mxpStrikeOut = false;
+    };
 
     // As per QDateTime::toString(). Translatable, so overwritten once at startup and fixed thereafter:
     static inline QString smTimeStampFormat = qsl("hh:mm:ss.zzz ");
@@ -672,8 +726,6 @@ public:
     // OSC 8 hyperlink documentation examples - triggered by secret phrase
     void injectOSC8DocumentationExamples();
 
-    // Resolved from the encoding name when it changes, not in the per-byte loop:
-    enum class Decoder : quint8 { Ascii, Latin1, Gbk, Gb18030, EucKr, Big5, ShiftJis, EucJp, Utf8 };
     static Decoder decoderFor(const QByteArray&);
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
@@ -731,6 +783,32 @@ private:
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
     void translateToPlainTextInner(std::string& incoming, bool isFromServer);
+    void parseChunk(std::string& localBuffer, bool isFromServer, const QVector<QChar>& encodingLookupTable, size_t localBufferDecodableLength, TIngestJob* speculation);
+    bool speculationEligible() const;
+    ParseState parseState() const;
+    bool parseStateIs(const ParseState&) const;
+    void setParseState(const ParseState&);
+    ParseConfig parseConfig() const;
+    bool parseConfigIs(const ParseConfig&) const;
+    void replaySpeculatedLines(TIngestJob&, size_t& localBufferPosition, bool isFromServer);
+    bool recordSpeculatedLine(char ch, size_t& localBufferPosition, bool forcedLineBreak);
+    // In the worker's buffer: marks the unit as not parsed ahead from here, before a side effect
+    bool speculationStops()
+    {
+        if (Q_UNLIKELY(mpSpeculationSink)) {
+            mSpeculationStopped = true;
+            return true;
+        }
+        return false;
+    }
+    bool mxpProcessorEnabled() const;
+    bool mxpClientBold() const;
+    bool mxpClientItalic() const;
+    bool mxpClientUnderline() const;
+    bool mxpClientStrikeOut() const;
+    bool hostHaveColorSpaceId() const;
+    const QColor& hostForeground() const;
+    const QColor& hostBackground() const;
     void swapParserSequenceState();
     void warnAboutDiscardedStringSequence(const QString& what, const std::string& localBuffer, const size_t spanStart, const size_t spanEnd);
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
@@ -1058,6 +1136,19 @@ private:
     // Past this a per-line accumulator's allocation is released, or one very long line (a help file dump,
     // a pasted log) would park its capacity all session, and a TChar is far bigger than a QChar:
     static constexpr size_t csmMaxRetainedLineCapacity = 8192;
+
+    std::unique_ptr<TIngestPipeline> mpIngestPipeline;
+    // The outermost game unit's job while this buffer parses it; nested feeds leave it alone
+    TIngestJob* mpActiveSpeculation = nullptr;
+    // Set only in the ingest worker's buffer, for the unit it is parsing ahead
+    TIngestJob* mpSpeculationSink = nullptr;
+    const ParseConfig* mpParseConfig = nullptr;
+    // Prototype check: a line parsed ahead that main parses again, compared at its commit
+    const TSpeculatedLine* mpVerifiedLine = nullptr;
+    size_t mSpeculatedLineStart = 0;
+    bool mSpeculationStopped = false;
+    // Moves whenever mBlack..mLightWhite change, so a line parsed ahead with older colours is not used
+    quint64 mColourGeneration = 0;
 
     // Timestamp to prevent duplicate OSC 8 documentation injection
     qint64 mLastOSC8DocsInjectionTime = 0;
