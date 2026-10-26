@@ -3777,6 +3777,12 @@ void TLuaInterpreter::installBetweenDispatchMultimatches(lua_State* L)
 void TLuaInterpreter::settleDispatchEnd(lua_State* L)
 {
     mDispatchEndOwed = false;
+    // Settled late, the next fire's captures are in already, but a finaliser the
+    // allocations below run has to find none, as it would have at that end
+    std::optional<NestedDispatchState> aside;
+    if (mCaptureScopeOpen || !mCaptureGroupList.empty() || !mMultiCaptureGroupList.empty()) {
+        swapCaptureState(aside.emplace());
+    }
     const int callerStackTop = lua_gettop(L);
     lua_rawgeti(L, LUA_REGISTRYINDEX, mMatchesKeyRef);
     pushEmptyMatchesTable(L);
@@ -3785,6 +3791,23 @@ void TLuaInterpreter::settleDispatchEnd(lua_State* L)
     lua_rawset(L, LUA_GLOBALSINDEX);
     installBetweenDispatchMultimatches(L);
     lua_settop(L, callerStackTop);
+    if (aside) {
+        swapCaptureState(*aside);
+    }
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::swapCaptureState(NestedDispatchState& state)
+{
+    mCaptureGroupList.swap(state.captureGroupList);
+    mCaptureGroupPosList.swap(state.captureGroupPosList);
+    mCaptureGroupLengthList.swap(state.captureGroupLengthList);
+    mMultiCaptureGroupList.swap(state.multiCaptureGroupList);
+    mMultiCaptureGroupPosList.swap(state.multiCaptureGroupPosList);
+    mCapturedNameGroups.swap(state.capturedNameGroups);
+    mCapturedNameGroupsPosList.swap(state.capturedNameGroupsPosList);
+    mMultiCaptureNameGroups.swap(state.multiCaptureNameGroups);
+    std::swap(mCaptureScopeOpen, state.captureScopeOpen);
 }
 
 // No documentation available in wiki - internal function

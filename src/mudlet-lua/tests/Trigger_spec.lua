@@ -6764,6 +6764,66 @@ describe("Trigger processing", function()
                 assert.are.same({}, nils)
             end)
 
+            -- Reading "multimatches" takes the spare, so the second fire cannot
+            -- fold the first one's end into its start. The first finaliser runs
+            -- as the first script returns and reads nothing, which leaves the
+            -- names out for the ones after it.
+            it("hands a finaliser between two fires none of the second one's captures", function()
+                local seen = {runs = 0, reads = {}}
+                trigger(tempRegexTrigger("^LazyFinaliserNext (\\w+) \\w+$", function()
+                    local _ = multimatches
+                    finaliser.watching = true
+                end))
+                trigger(tempRegexTrigger("^LazyFinaliserNext \\w+ (\\w+)$", function()
+                    finaliser.watching = false
+                end))
+                finaliser.onRun = function()
+                    seen.runs = seen.runs + 1
+                    if seen.runs > 1 then
+                        local read = _G.matches
+                        seen.reads[#seen.reads + 1] = tostring(type(read) == "table" and read[2])
+                    end
+                end
+                matches.dirty = true
+
+                withFinaliserAtEveryAllocation(function()
+                    feedTriggers("\nLazyFinaliserNext aaa bbb\n")
+                end)
+
+                assert.is_true(seen.runs > 1, "no finaliser ran between the fires")
+                assert.is_nil(table.concat(seen.reads, ","):find("bbb"), "a finaliser was handed the second fire's captures")
+            end)
+
+            it("hands a finaliser between two multiline fires none of the second one's multimatches", function()
+                local seen = {runs = 0, reads = {}}
+                _G.LazyGlobalsSpec = {
+                    arm = function() finaliser.watching = true end,
+                    disarm = function() finaliser.watching = false end,
+                }
+                multiline("LazyFinaliserMultiA", {[[^lazyfinalisermulti one (\w+)$]], [[^lazyfinalisermulti two (\w+)$]]}, [==[
+                    LazyGlobalsSpec.arm()
+                ]==])
+                multiline("LazyFinaliserMultiB", {[[^lazyfinalisermulti (one) \w+$]], [[^lazyfinalisermulti (two) \w+$]]}, [==[
+                    LazyGlobalsSpec.disarm()
+                ]==])
+                finaliser.onRun = function()
+                    seen.runs = seen.runs + 1
+                    if seen.runs > 1 then
+                        local read = _G.multimatches
+                        seen.reads[#seen.reads + 1] = tostring(type(read) == "table" and read[1] and read[1][2])
+                    end
+                end
+                matches.dirty = true
+
+                feedTriggers("lazyfinalisermulti one aaa\n")
+                withFinaliserAtEveryAllocation(function()
+                    feedTriggers("lazyfinalisermulti two bbb\n")
+                end)
+
+                assert.is_true(seen.runs > 1, "no finaliser ran between the fires")
+                assert.is_nil(table.concat(seen.reads, ","):find("one"), "a finaliser was handed the second fire's multimatches")
+            end)
+
             it("finds every name there once an alias pass under a multiline fire is over", function()
                 local nils = {}
                 alias(tempAlias("^lazyfinaliserinner$", function()

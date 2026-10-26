@@ -1209,6 +1209,7 @@ private:
     bool mRunningAliasScript = false;
     PassCommandState mPassCommand;
     void releaseNestedDispatchState(NestedDispatchState&);
+    void swapCaptureState(NestedDispatchState&);
     // Registry references to how callEventHandler() finds each handler, by
     // handler name: the name itself, read raw from the globals, or else the
     // compiled "return <name>" chunk. They belong to pGlobalLua, so are
