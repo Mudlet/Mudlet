@@ -614,6 +614,30 @@ private slots:
         QTRY_VERIFY2(pDock->width() > pDock->minimumSizeHint().width(), qPrintable(qsl("the map is only %1 pixels wide, its minimum").arg(pDock->width())));
     }
 
+    // Moved and then hidden before the move was laid out, the dock waits to be shown again, which a closing profile never does
+    void test_aClosedProfileLeavesNoMapDockGrowthRetryBehind()
+    {
+        startThirdProfile();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        Host* pHost = HostManager::self()->getHost(mThirdHostname);
+        QVERIFY(pHost);
+        QVERIFY(pHost->openMapWidget(qsl("right"), -1, -1, -1, -1).first);
+        QTest::qWait(50ms);
+        QPointer<QDockWidget> pDock = mudlet::self()->findChild<QDockWidget*>(qsl("dockMap_%1").arg(mThirdHostname));
+        QVERIFY(pDock);
+        QVERIFY(pHost->openMapWidget(qsl("left"), -1, -1, -1, -1).first);
+        QVERIFY(pHost->closeMapWidget().first);
+        QTest::qWait(50ms);
+        QPointer<QObject> pRetry = pDock->findChild<QObject*>(qsl("dockGrowthRetry"), Qt::FindDirectChildrenOnly);
+        QVERIFY2(pRetry, "the hidden map dock holds no retry of its own to grow once shown");
+
+        closeThirdProfile();
+        QTRY_VERIFY(!pDock);
+        QVERIFY(!pRetry);
+    }
+
 private:
     // init() detached the second profile, so this puts it back to open its map in the main window
     QDockWidget* showSecondProfilesMapDock()
