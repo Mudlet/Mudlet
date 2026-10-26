@@ -1549,10 +1549,10 @@ int TLuaInterpreter::getColumnNumber(lua_State* L)
 int TLuaInterpreter::getCurrentLine(lua_State* L)
 {
     // A leading boolean is the flag with the window left out, as resetBackgroundImage() takes it
-    QString windowName;
+    const char* name = "";
     int flagPos = 1;
     if (lua_type(L, 1) != LUA_TBOOLEAN) {
-        windowName = WINDOW_NAME(L, 1);
+        name = WINDOW_NAME(L, 1);
         flagPos = 2;
     }
     bool fullErrorReporting = false;
@@ -1560,6 +1560,8 @@ int TLuaInterpreter::getCurrentLine(lua_State* L)
     if (lua_gettop(L) >= flagPos && !lua_isnil(L, flagPos)) {
         fullErrorReporting = getVerifiedBool(L, __func__, flagPos, "enableFullErrorReporting {default = false}", true);
     }
+    // Built after the last check that can raise: lua_error() longjmps past its destructor
+    const QString windowName{name};
     auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
     if (!pModel) {
         if (fullErrorReporting) {
