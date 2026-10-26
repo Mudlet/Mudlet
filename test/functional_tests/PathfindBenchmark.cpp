@@ -249,7 +249,7 @@ private slots:
         QVERIFY2(!mapToRestore.isEmpty(), qPrintable(qsl("could not convert the XML map at \"%1\": %2").arg(mMapPath, conversionError)));
         QElapsedTimer timer;
         timer.start();
-        QVERIFY2(pMap->restore(mapToRestore), qPrintable(qsl("could not restore the map at \"%1\"").arg(mMapPath)));
+        QVERIFY2(pMap->restore(mapToRestore), qPrintable(qsl("could not restore the map at \"%1\"").arg(mapToRestore)));
         emitMetric("map_restore_seconds", timer.nsecsElapsed() / 1.0e9);
 
         emitMetric("map_rooms", static_cast<qint64>(pMap->mpRoomDB->size()));

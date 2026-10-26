@@ -393,14 +393,15 @@ jobs:
          echo "CMAKE_DISABLE_PRECOMPILE_HEADERS=ON" >> $GITHUB_ENV
 
     # Saves are keyed per commit, so the primary key deliberately matches no entry
-    # and every restore prefix-matches the newest. On a tagged release the
-    # leak-detection leg compiles without ASan, so it wants the plain leg's cache.
+    # and every restore prefix-matches the newest. A profile-guided build skips it:
+    # the profile flags are on every object it compiles, so nothing in the cache matches.
     - name: Restore ccache
+      if: env.MUDLET_PGO_BUILD != 'true'
       uses: actions/cache/restore@v6
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{ matrix.enable_asan == 'true' && startsWith(github.ref, 'refs/tags/Mudlet-') && 'ubuntu-gcc' || matrix.ccache_id }}-sha-
-        restore-keys: ccache-${{ matrix.enable_asan == 'true' && startsWith(github.ref, 'refs/tags/Mudlet-') && 'ubuntu-gcc' || matrix.ccache_id }}-sha-
+        key: ccache-${{ matrix.ccache_id }}-sha-
+        restore-keys: ccache-${{ matrix.ccache_id }}-sha-
 
     - name: (Linux) Set build info
       if: runner.os == 'Linux'
