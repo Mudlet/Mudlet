@@ -1327,16 +1327,23 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     mProcessingLocalFeed = false;
 }
 
-// std::count tallies each byte into a 64-bit counter, several times slower on game text than memchr's
-// vector scan, which skips a whole line per call.
+// A block of at most 255 bytes at a time, so its tally fits a byte and the compiler counts a whole vector
+// register of bytes per instruction; std::count's 64-bit tally runs about ten times slower.
 static int countLineFeeds(const std::string& text)
 {
-    int count = 0;
-    const char* const end = text.data() + text.size();
-    for (const char* p = text.data(); (p = static_cast<const char*>(std::memchr(p, '\n', end - p))); ++p) {
-        ++count;
+    const char* const data = text.data();
+    const size_t size = text.size();
+    size_t count = 0;
+    size_t i = 0;
+    while (i < size) {
+        const size_t blockEnd = std::min(size, i + 255);
+        unsigned char blockCount = 0;
+        for (; i < blockEnd; ++i) {
+            blockCount += data[i] == '\n';
+        }
+        count += blockCount;
     }
-    return count;
+    return static_cast<int>(count);
 }
 
 void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFromServer)
