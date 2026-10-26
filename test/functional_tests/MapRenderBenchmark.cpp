@@ -31,7 +31,8 @@
  *
  *   MUDLET_BENCH_MAP=/path/to/map.dat QT_QPA_PLATFORM=offscreen ./MapRenderBenchmark
  *
- * Without that variable the whole benchmark skips. The reference map is
+ * Without that variable the whole benchmark skips. An .xml map is converted to
+ * the binary format before the timed restore. The reference map is
  * Ssaliss' 2.2-million-room Aetherspace map from Lusternia, the one the mapper
  * has been stress-tested against since 2015:
  * https://bugs.launchpad.net/mudlet/+bug/1500927 (attachment 4578177, 7z).
@@ -70,6 +71,7 @@
 #include <cstdio>
 #include <limits>
 
+#include "BenchMapTestHelper.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -284,9 +286,11 @@ private slots:
         QVERIFY(host->mpMap->mapper());
         TMap* pMap = host->mpMap.data();
 
+        const QString mapToRestore = binaryBenchMap(host, mMapPath, mConfigDir.path());
+        QVERIFY2(!mapToRestore.isEmpty(), qPrintable(qsl("could not convert the XML map at \"%1\"").arg(mMapPath)));
         QElapsedTimer loadTimer;
         loadTimer.start();
-        QVERIFY2(pMap->restore(mMapPath), qPrintable(qsl("could not restore the map at \"%1\"").arg(mMapPath)));
+        QVERIFY2(pMap->restore(mapToRestore), qPrintable(qsl("could not restore the map at \"%1\"").arg(mMapPath)));
         const double restoreSeconds = loadTimer.nsecsElapsed() / 1.0e9;
         loadTimer.restart();
         pMap->audit();
