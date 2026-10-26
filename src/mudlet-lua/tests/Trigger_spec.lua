@@ -2044,9 +2044,11 @@ describe("Trigger processing", function()
             }, hits)
         end)
 
+        -- No ballast: these tests need no summary of the line, and plain text ballast would bring the
+        -- prescan, which skips the screen, within reach of what earlier specs leave behind
         it("rules out start of line and exact match patterns whose every pair the line holds", function()
             local hits = {}
-            local ids = installBallast()
+            local ids = {}
             local function counter(name)
                 hits[name] = 0
                 return function() hits[name] = hits[name] + 1 end
