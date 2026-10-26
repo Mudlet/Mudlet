@@ -28,6 +28,7 @@
  * Run with: ctest -R MapRoomNameVisibilityTest -V
  */
 
+#include <QFontMetricsF>
 #include <QPixmap>
 #include <QScopeGuard>
 #include <QSignalSpy>
@@ -141,6 +142,16 @@ private:
         return target.toImage();
     }
 
+    // In the font T2DMap::paintEvent() sizes for room names, which needs a frame drawn at this zoom first
+    qreal nameLineHeight(const T2DMap* p2dMap) const
+    {
+        QFont font = map()->getSymbolFont();
+        font.setBold(true);
+        font.setPointSizeF(p2dMap->mRoomWidth * mpHost->mRoomSize / 2.0);
+        // Not a QPixmap's metrics: those stay at 96 DPI under QT_FONT_DPI, which the widget draws at
+        return QFontMetricsF(font, p2dMap).height();
+    }
+
     // Where the name's pixels are: antialiased magenta on black keeps red and blue level and green well below them
     static QRect nameArea(const QImage& image, const int fromX, const int toX)
     {
@@ -225,7 +236,7 @@ private slots:
         pMap->mCustomEnvColors[kEnvRoom] = QColor(0, 160, 0);
         const int areaId = pMap->mpRoomDB->addArea(qsl("Names"));
         QVERIFY(areaId > 0);
-        TRoom* pWestRoom = addRoomAt(kWestRoomId, areaId, -3, 0, qsl("West Hall\nUpper Floor"));
+        TRoom* pWestRoom = addRoomAt(kWestRoomId, areaId, -3, 0, qsl("West Hall"));
         QVERIFY(pWestRoom);
         QVERIFY(addRoomAt(kEastRoomId, areaId, 3, 0, qsl("East Hall")));
         QVERIFY(addRoomAt(kPlayerRoomId, areaId, 0, 1000, QString()));
@@ -242,6 +253,12 @@ private slots:
 
         T2DMap* p2dMap = prepareWidget(areaId);
         QVERIFY(p2dMap);
+        renderFrame(p2dMap);
+        // Enough lines to be taller than the one-room-tall box under the room, whatever the font and DPI
+        const int nameBoxHeight = qRound(p2dMap->mRoomHeight * mpHost->mRoomSize);
+        const qreal lineHeight = nameLineHeight(p2dMap);
+        const int lineCount = static_cast<int>(nameBoxHeight / lineHeight) + 2;
+        pWestRoom->name = QStringList(lineCount, qsl("West Hall")).join(QChar::LineFeed);
         const QImage frame = renderFrame(p2dMap);
         const QRect westName = nameArea(frame, 0, kWidgetWidth / 2);
         const QRect eastName = nameArea(frame, kWidgetWidth / 2, kWidgetWidth);
@@ -252,13 +269,14 @@ private slots:
         if (westShown && westName.width() <= 20) {
             QFAIL(qPrintable(qsl("the west room's name is not drawn. %1").arg(savedFor(frame, qsl("west-shown")))));
         }
-        // A name taller than the one-room-tall box under the room is drawn in full, not cut to the box
-        const int nameBoxHeight = qRound(p2dMap->mRoomHeight * mpHost->mRoomSize);
-        if (westShown && westName.height() <= nameBoxHeight) {
-            QFAIL(qPrintable(qsl("a name on two lines is drawn %1 pixels tall, no taller than the %2 pixel box under its room. %3")
+        // Drawn whole, the name reaches from its first line down past the top of its last; cut to the box it cannot
+        if (westShown && westName.height() <= (lineCount - 1) * lineHeight) {
+            QFAIL(qPrintable(qsl("a name on %1 lines of %2 pixels is drawn %3 pixels tall, cut to the %4 pixel box under its room. %5")
+                                     .arg(lineCount)
+                                     .arg(lineHeight)
                                      .arg(westName.height())
                                      .arg(nameBoxHeight)
-                                     .arg(savedFor(frame, qsl("two-lines")))));
+                                     .arg(savedFor(frame, qsl("multi-line")))));
         }
         if (!westShown && !westName.isNull()) {
             QFAIL(qPrintable(qsl("the west room's name is drawn though it is turned off. %1").arg(savedFor(frame, qsl("west-hidden")))));
