@@ -836,6 +836,13 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_settable(L, -3);
     lua_settable(L, -3);
 
+    // No documentation available in wiki - test-only, so a spec can confirm a burst was parsed ahead on the ingest worker
+    if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
+        lua_pushstring(L, "linesParsedAhead");
+        lua_pushnumber(L, static_cast<double>(host.mainConsoleModel().buffer.linesParsedAhead()));
+        lua_settable(L, -3);
+    }
+
     return 1;
 }
 

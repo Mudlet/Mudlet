@@ -1499,6 +1499,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         if (speculation) {
             mpIngestPipeline->end(*speculation);
             mpActiveSpeculation = nullptr;
+            mpVerifiedLine = nullptr;
         }
     });
 
@@ -1980,6 +1981,7 @@ void TBuffer::parseChunk(
             if (Q_UNLIKELY(speculation)) {
                 mpIngestPipeline->end(*speculation);
                 speculation = nullptr;
+                mpVerifiedLine = nullptr;
             }
             if (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()) {
                 if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
@@ -2417,6 +2419,11 @@ bool TBuffer::parseConfigIs(const ParseConfig& config) const
            && config.hostForeground == pHost->mFgColor && config.hostBackground == pHost->mBgColor;
 }
 
+quint64 TBuffer::linesParsedAhead() const
+{
+    return mpIngestPipeline ? mpIngestPipeline->replayedLines() : 0;
+}
+
 bool TBuffer::speculationEligible() const
 {
     if (!TIngestPipeline::enabled() || mpParseConfig || mpSpeculationSink || !mpModel) {
@@ -2442,7 +2449,8 @@ bool TBuffer::recordSpeculatedLine(const char ch, size_t& localBufferPosition, c
         return true;
     }
     if (static_cast<size_t>(index) >= job.mLines.size() || job.mTextUsed + textLength > job.mText.size() || (!uniform && job.mFormatUsed + formatLength > job.mFormats.size())) {
-        job.mResumeFrom = mSpeculatedLineStart;
+        // A line too long for the arenas on its own is left to main, or the job would be queued for it again and again
+        job.mResumeFrom = index ? mSpeculatedLineStart : mSpeculatedLineStart + 1;
         mSpeculationStopped = true;
         ++localBufferPosition;
         return true;
@@ -2495,6 +2503,20 @@ QStringView speculatedLineText(const TIngestJob& job, const TSpeculatedLine& lin
 }
 } // namespace
 
+void TBuffer::verifySpeculatedLine(const TSpeculatedLine& line, const char ch, const size_t localBufferPosition, const bool forcedLineBreak) const
+{
+    const TIngestJob& job = *mpActiveSpeculation;
+    const TLineFormat format = speculatedLineFormat(job, line);
+    bool same = line.end == localBufferPosition && line.commitChar == ch && line.forcedLineBreak == forcedLineBreak && speculatedLineText(job, line) == mMudLine && format.size() == mMudBuffer.size()
+                && parseStateIs(line.stateAtCommit);
+    for (size_t i = 0; same && i < mMudBuffer.size(); ++i) {
+        same = format[i] == mMudBuffer[i];
+    }
+    if (!same) {
+        qWarning().noquote() << "TBuffer ingest worker MISMATCH on line:" << mMudLine;
+    }
+}
+
 // Commits the lines the worker has parsed ahead from here on, for as long as each starts where this
 // buffer is, from the state this buffer is in, under the settings it was parsed with
 void TBuffer::replaySpeculatedLines(TIngestJob& job, size_t& localBufferPosition, const bool isFromServer)
@@ -2505,34 +2527,31 @@ void TBuffer::replaySpeculatedLines(TIngestJob& job, size_t& localBufferPosition
             ++job.mNext;
         }
         if (job.mNext >= ready) {
-            if (!mpIngestPipeline->resume(*this, job, localBufferPosition)) {
-                ++mpIngestPipeline->mStatNotReady;
+            if (mpIngestPipeline->resume(*this, job, localBufferPosition) || mpIngestPipeline->awaitLines(job, ready)) {
+                continue;
             }
             return;
         }
         const TSpeculatedLine& line = job.mLines[static_cast<size_t>(job.mNext)];
         const ParseState& stateBefore = job.mNext ? job.mLines[static_cast<size_t>(job.mNext - 1)].stateAtCommit : job.mStartState;
         if (line.start != localBufferPosition || !mMudLine.isEmpty() || !mMudBuffer.empty() || !parseStateIs(stateBefore) || !parseConfigIs(job.mConfig)) {
-            ++mpIngestPipeline->mStatMismatch;
             return;
         }
         ++job.mNext;
         if (Q_UNLIKELY(TIngestPipeline::verifying())) {
-            // Parse it here as well; commitLine() compares
             mpVerifiedLine = &line;
             return;
         }
+        mpIngestPipeline->noteReplayed();
         setParseState(line.stateAtCommit);
         size_t commitPosition = line.end;
         Host* pHost = mpHost;
         if (mServerWrapPendingLine.isEmpty() && !mHyperlinkActive && !pHost->mMxpFrameManager.hasActiveDestination()
             && !(pHost->mUndoServerWrap && isFromServer && line.commitChar == '\n' && !line.forcedLineBreak && line.textLength)) {
             // What commitLine() reduces to here, without copying the line through the accumulators
-            ++mpIngestPipeline->mStatReplayedFast;
             commitLineData(line.textLength ? speculatedLineText(job, line).toString() : QString(), speculatedLineFormat(job, line), line.commitChar);
             ++commitPosition;
         } else {
-            ++mpIngestPipeline->mStatReplayedSlow;
             mMudLine.append(speculatedLineText(job, line));
             mMudBuffer = speculatedLineFormat(job, line);
             commitLine(line.commitChar, commitPosition, isFromServer, line.forcedLineBreak);
@@ -2591,15 +2610,7 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         return recordSpeculatedLine(ch, localBufferPosition, forcedLineBreak);
     }
     if (Q_UNLIKELY(mpVerifiedLine)) {
-        const TSpeculatedLine& line = *std::exchange(mpVerifiedLine, nullptr);
-        const TIngestJob& job = *mpActiveSpeculation;
-        const TLineFormat format = speculatedLineFormat(job, line);
-        bool same = line.end == localBufferPosition && line.commitChar == ch && line.forcedLineBreak == forcedLineBreak && speculatedLineText(job, line) == mMudLine
-                    && format.size() == mMudBuffer.size() && format.uniform() == mMudBuffer.uniform() && parseStateIs(line.stateAtCommit);
-        for (size_t i = 0; same && i < mMudBuffer.size(); ++i) {
-            same = format[i] == mMudBuffer[i];
-        }
-        mpIngestPipeline->noteVerified(same, mMudLine);
+        verifySpeculatedLine(*std::exchange(mpVerifiedLine, nullptr), ch, localBufferPosition, forcedLineBreak);
     }
 
     // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben

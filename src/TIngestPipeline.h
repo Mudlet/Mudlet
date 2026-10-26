@@ -24,7 +24,6 @@
 
 #include <array>
 #include <atomic>
-#include <chrono>
 #include <cstdint>
 #include <limits>
 #include <memory>
@@ -83,9 +82,6 @@ struct TIngestJob
     size_t mFormatUsed = 0;
     // Where main may queue the job again for the rest of the unit, once the worker is Done
     size_t mResumeFrom = csmNoResume;
-    std::chrono::steady_clock::time_point mQueuedAt;
-    std::chrono::steady_clock::time_point mWorkerStart;
-    std::chrono::steady_clock::time_point mWorkerEnd;
 
     alignas(64) std::atomic<int> mReady{0};
     std::atomic<bool> mCancel{false};
@@ -109,42 +105,31 @@ public:
     TIngestPipeline& operator=(const TIngestPipeline&) = delete;
 
     static bool enabled();
+    // MUDLET_INGEST_THREAD=verify: main parses every line as well, and warns where the worker's differs
     static bool verifying();
-    void noteVerified(bool same, const QString& text);
     TIngestJob* begin(const TBuffer& source, const std::string& unit, size_t decodableLength, const QVector<QChar>& lookupTable);
     // Queues the job again from position, if the worker has finished with it and stopped short of the unit's end
     bool resume(const TBuffer& source, TIngestJob&, size_t position);
-    // Returns once the worker no longer reads the unit; harmless on a job already ended
+    // Under MUDLET_TEST_MODE main waits for the worker rather than parse a line itself, so that a spec's
+    // burst is parsed ahead however the threads are scheduled. False once the job has no more lines.
+    bool awaitLines(const TIngestJob&, int ready) const;
+    // The worker is left to notice a cancelled job and finish on its own
     void end(TIngestJob&);
-
-    // Prototype statistics, main thread only
-    quint64 mStatJobs = 0;
-    quint64 mStatLines = 0;
-    quint64 mStatReplayedFast = 0;
-    quint64 mStatReplayedSlow = 0;
-    quint64 mStatMismatch = 0;
-    quint64 mStatVerified = 0;
-    quint64 mStatVerifyFailed = 0;
-    quint64 mStatNotReady = 0;
-    quint64 mStatResumed = 0;
-    quint64 mStatBusy = 0;
-    quint64 mStatCancelled = 0;
-    quint64 mStatNeverStarted = 0;
-    double mStatLatencyUs = 0;
-    double mStatWorkerUs = 0;
+    void noteReplayed() { ++mReplayedLines; }
+    quint64 replayedLines() const { return mReplayedLines; }
 
 private:
     void queue(const TBuffer& source, TIngestJob&, size_t position);
     void workerLoop();
     void parse(TIngestJob&);
-    void printStats() const;
 
     std::unique_ptr<TBuffer> mpTwin;
     std::unique_ptr<QThread> mpThread;
     TIngestJob mJob;
     std::atomic<uint32_t> mEpoch{0};
     std::atomic<bool> mStop{false};
-    std::atomic<quint64> mStatStopped{0};
+    const bool mWaitForWorker;
+    quint64 mReplayedLines = 0;
 };
 
 #endif // MUDLET_TINGESTPIPELINE_H

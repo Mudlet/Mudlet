@@ -212,3 +212,13 @@ triggerMatchThreads=0
 Independent of the pool, `TriggerUnit` files every trigger below a root trigger by the n-grams its patterns need, and a line stamps the ones it can reach before the tree is walked, so `TTrigger::match()` skips the rest of each folder - see `TTrigger::skippableForLine()`. It needs no tuning, but `MUDLET_TREE_INDEX` has two settings for checking it: `0` turns it off, and `verify` walks the triggers it would have skipped and warns `TTrigger tree index MISS` for any that fired or opened a multiline state. `src/mudlet-lua/tests/TreeIndex_spec.lua` covers it, and reports as pending when it is off.
 
 Setting the threshold and flood lines to `1` puts every line through the pool, which is the way to run `src/mudlet-lua/tests/TriggerFlood_spec.lua` and the rest of the trigger specs against both paths; `MUDLET_MATCH_SPIN_US=0` on top makes every one of those lines a cold start. No checked-in CI job does this yet, so it is a local run, and the pool has to be on for it to mean anything - `MUDLET_MATCH_THREADS=2` on a small machine. `PipelineBenchmark` reads `MUDLET_BENCH_TRIGGERS` and `MUDLET_BENCH_CHUNK_LINES` to sweep trigger counts and chunk sizes against these thresholds - see the comment at the top of `test/functional_tests/PipelineBenchmark.cpp`.
+
+## Runtime tuning: the ingest worker
+
+When a chunk from the game carries 16 lines or more, `TIngestPipeline` (`src/TIngestPipeline.h`) parses it a second time on a worker thread, ahead of the main thread - ANSI and UTF-8 decoding and line building - and the main thread commits the lines it made instead of parsing them itself. Triggers, MXP, GMCP and everything else with an effect stay on the main thread, in order; a line is used only if the main thread reaches it in the parser state and with the settings the worker parsed it under, and the worker stops at any sequence whose handling has an effect, leaving the rest of the chunk to the main thread. It is on by default on machines with two or more cores.
+
+| `Mudlet.ini` key | Environment variable | Default | Meaning |
+| --- | --- | --- | --- |
+| `ingestThread` | `MUDLET_INGEST_THREAD` | `true` | `false` (or `0` in the environment) turns the worker off, and the main thread parses everything as it did before it existed. |
+
+`MUDLET_INGEST_THREAD=verify` has the main thread parse every line as well and warn `TBuffer ingest worker MISMATCH` for any line the worker made differently. Under `MUDLET_TEST_MODE` the main thread waits for the worker rather than parse a line itself, so that a spec's burst is parsed ahead whatever the scheduling; the ingest worker specs in `src/mudlet-lua/tests/Telnet_spec.lua` feed the same lines one per chunk and all in one chunk and requires the same buffer from both.

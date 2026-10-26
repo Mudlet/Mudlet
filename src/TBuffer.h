@@ -725,6 +725,8 @@ public:
 
     // OSC 8 hyperlink documentation examples - triggered by secret phrase
     void injectOSC8DocumentationExamples();
+    // For specs: how many lines the ingest worker parsed that this buffer committed without parsing them again
+    quint64 linesParsedAhead() const;
 
     static Decoder decoderFor(const QByteArray&);
     // It would have been nice to do this with Qt's signals and slots but that
@@ -792,6 +794,7 @@ private:
     bool parseConfigIs(const ParseConfig&) const;
     void replaySpeculatedLines(TIngestJob&, size_t& localBufferPosition, bool isFromServer);
     bool recordSpeculatedLine(char ch, size_t& localBufferPosition, bool forcedLineBreak);
+    void verifySpeculatedLine(const TSpeculatedLine&, char ch, size_t localBufferPosition, bool forcedLineBreak) const;
     // In the worker's buffer: marks the unit as not parsed ahead from here, before a side effect
     bool speculationStops()
     {
@@ -1143,7 +1146,7 @@ private:
     // Set only in the ingest worker's buffer, for the unit it is parsing ahead
     TIngestJob* mpSpeculationSink = nullptr;
     const ParseConfig* mpParseConfig = nullptr;
-    // Prototype check: a line parsed ahead that main parses again, compared at its commit
+    // MUDLET_INGEST_THREAD=verify: the worker's line that main is parsing again, compared at its commit
     const TSpeculatedLine* mpVerifiedLine = nullptr;
     size_t mSpeculatedLineStart = 0;
     bool mSpeculationStopped = false;
