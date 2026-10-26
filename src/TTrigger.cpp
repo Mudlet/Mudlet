@@ -371,8 +371,8 @@ QString requiredLiteral(const QString& pattern)
     return best.front();
 }
 
-// How often a code unit turns up in game text, from 0 for never to 255 for a space: a rough English
-// letter order, with anything outside ASCII taken as rare
+// How often a code unit turns up in game text, from 20 to 255 for a space: a rough English letter
+// order, with anything outside ASCII taken as rarest
 int commonness(const char16_t unit)
 {
     static constexpr char scmLettersByUse[] = "etaoinshrdlucmwfgypbvkjxqz";
@@ -531,14 +531,15 @@ TNeedle::TNeedle(const QString& text)
             rarest = at;
         }
     }
-    qsizetype nextRarest = rarest ? 0 : 1;
+    // A unit equal to the rarest would pass at every start along a run of it, such as a line of dashes
+    qsizetype nextRarest = -1;
     for (qsizetype at = 0; at < length; ++at) {
-        if (at != rarest && commonness(units[at]) < commonness(units[nextRarest])) {
+        if (units[at] != units[rarest] && (nextRarest < 0 || commonness(units[at]) < commonness(units[nextRarest]))) {
             nextRarest = at;
         }
     }
     mRarest = rarest;
-    mNextRarest = nextRarest;
+    mNextRarest = nextRarest < 0 ? (rarest ? 0 : 1) : nextRarest;
 }
 
 qsizetype TNeedle::indexIn(const QStringView haystack) const
@@ -550,16 +551,19 @@ qsizetype TNeedle::indexIn(const QStringView haystack) const
     const qsizetype lastStart = haystack.size() - length;
     const char16_t* const line = haystack.utf16();
     const char16_t* const text = reinterpret_cast<const char16_t*>(mText.constData());
-    const QChar rarest(text[mRarest]);
+    const char16_t rarest = text[mRarest];
     const char16_t nextRarest = text[mNextRarest];
     const size_t bytes = static_cast<size_t>(length) * sizeof(char16_t);
     for (qsizetype start = 0; start <= lastStart; ++start) {
-        // Qt's vectorised search; a loop written here to vectorise measured slower at -O3 than at -O2
-        const qsizetype found = QStringView(line + mRarest + start, lastStart + 1 - start).indexOf(rarest);
-        if (found < 0) {
-            return -1;
+        // Peeked first: along a run of the rarest unit a search call per start costs more than it skips
+        if (line[start + mRarest] != rarest) {
+            // Qt's vectorised search; a loop written here to vectorise measured slower at -O3 than at -O2
+            const qsizetype found = QStringView(line + mRarest + start, lastStart + 1 - start).indexOf(QChar(rarest));
+            if (found < 0) {
+                return -1;
+            }
+            start += found;
         }
-        start += found;
         if (line[start + mNextRarest] == nextRarest && !std::memcmp(line + start, text, bytes)) {
             return start;
         }
@@ -724,7 +728,6 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
             mRegexJitCompiled.push_back(false);
 
             if (patternKinds.at(i) == REGEX_SUBSTRING) {
-                // Spelt out because bitsFor() is case-sensitive too: change one and the other must follow
                 mSubstringPatterns.emplace_back(TSubstringPattern{std::make_unique<TNeedle>(patterns.at(i)), TBigramFilter::bitsFor(patterns.at(i))});
             } else {
                 mSubstringPatterns.emplace_back();

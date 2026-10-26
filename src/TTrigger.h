@@ -79,7 +79,8 @@ struct TColorTable
 };
 
 // A case-sensitive search for one fixed text. It scans for the text's code unit that is rarest in game
-// output and tests the next rarest before comparing the rest, so few starts get compared at all.
+// output and tests the rarest unit unlike it before comparing the rest, so few starts get compared at
+// all. Case-sensitive as TBigramFilter::bitsFor() is: change one and the other must follow.
 class TNeedle
 {
 public:
