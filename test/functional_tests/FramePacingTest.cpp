@@ -372,6 +372,49 @@ private slots:
         QVERIFY2(handedOver, "the stretched frame was never handed to update(), so the end of the flood stays unpainted");
     }
 
+    // A label over the pane repaints the strip of text beneath it, and those small paints
+    // must not keep pushing back the frame for the rest of a flooding pane.
+    void test_partialPaintsDuringAFloodStillLetTheFrameThrough()
+    {
+        TTextEdit* pane = nullptr;
+        QPointer<TMainConsole> console;
+        openPane(console, pane);
+        QVERIFY(pane);
+
+        mpWatchedPane = pane;
+        pane->installEventFilter(this);
+        QVERIFY(pacerWentIdle(pane));
+        pane->repaint();
+        QVERIFY(pane->mScreenHeight > 0);
+
+        bool handedOver = false;
+        QObject listener;
+        connect(pane->mpPaintPacer, &QTimer::timeout, &listener, [&]() {
+            if (!pane->mpPaintPacer->isActive() && pane->mPendingPaintRegion.isEmpty()) {
+                handedOver = true;
+            }
+        });
+        QElapsedTimer flood;
+        flood.start();
+        QElapsedTimer sinceStrip;
+        qint64 longestGap = 0;
+        while (!handedOver && flood.elapsed() < 500) {
+            if (sinceStrip.isValid()) {
+                longestGap = std::max(longestGap, sinceStrip.elapsed());
+            }
+            mPaintCount = 0;
+            pane->repaint(QRect(0, 0, 1, 1));
+            sinceStrip.start();
+            QVERIFY2(mPaintCount > 0, "repaint() of a strip delivered no paint event, so nothing here restarted the pane's frame window");
+            printLines(console, pane->mScreenHeight + 1);
+            QTest::qWait(5ms);
+        }
+        if (longestGap >= TTextEdit::csmFloodPaintPaceMs) {
+            QSKIP(qPrintable(qsl("%1ms passed between two strip paints, past the flood pace, so the runner stalled and the frame could go through without the fix").arg(longestGap)));
+        }
+        QVERIFY2(handedOver, "a strip painted every few ms held the rest of the pane's frame back for the whole 500ms flood");
+    }
+
 private:
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {

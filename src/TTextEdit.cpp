@@ -132,9 +132,11 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     mpPaintPacer = new QTimer(this);
     mpPaintPacer->setSingleShot(true);
     connect(mpPaintPacer, &QTimer::timeout, this, [this]() {
-        // Armed at the normal pace by the line that began a flood, so stretched to the flood pace.
+        // Armed at the normal pace by the line that began a flood, so stretched to the flood pace -
+        // once only, as a partial paint underneath an overlay restarts mSincePaint.
         const qint64 sincePaint = mSincePaint.isValid() ? mSincePaint.elapsed() : csmFloodPaintPaceMs;
-        if (!mPendingPaintRegion.isEmpty() && sincePaint < csmFloodPaintPaceMs && paintPaceMs() == csmFloodPaintPaceMs) {
+        if (!mPaintPacerStretched && !mPendingPaintRegion.isEmpty() && sincePaint < csmFloodPaintPaceMs && paintPaceMs() == csmFloodPaintPaceMs) {
+            mPaintPacerStretched = true;
             mpPaintPacer->start(csmFloodPaintPaceMs - static_cast<int>(sincePaint));
             return;
         }
@@ -196,13 +198,14 @@ void TTextEdit::scheduleUpdate(const QRect& rect)
     }
 
     if (!mpPaintPacer->isActive()) {
+        mPaintPacerStretched = false;
         mpPaintPacer->start(pace - static_cast<int>(sincePaint));
     }
 }
 
 // Nobody reads lines that scroll past between two frames, and a frame costs as much as
 // taking in hundreds of them, so a flood gets fewer frames and finishes sooner.
-int TTextEdit::paintPaceMs()
+int TTextEdit::paintPaceMs() const
 {
     return mpBuffer->linesAddedTotal() - mLinesAddedAtPaint > mScreenHeight ? csmFloodPaintPaceMs : csmPaintPaceMs;
 }
