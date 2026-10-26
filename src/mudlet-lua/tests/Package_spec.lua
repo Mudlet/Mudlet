@@ -7793,6 +7793,33 @@ describe("Tests the game loader packages", function()
       assert.is_true(io.exists(other), "the pasted command removed another download")
     end)
 
+    it(loader.name .. " gave a command that leaves a download in a folder named after its package's file", function()
+      local _, path = install(loader)
+      pasteTheCommand(path)
+      local outer = getMudletHomeDir() .. "/mudlet-spec-downloads"
+      local folder = outer .. "/" .. loader.download
+      local other = folder .. "/" .. minimalPackage .. ".mpackage"
+      lfs.mkdir(outer)
+      lfs.mkdir(folder)
+      copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", other)
+      defer(function()
+        os.remove(other)
+        lfs.rmdir(folder)
+        lfs.rmdir(outer)
+      end)
+      defer(function() removeFixturePackage(minimalPackage) end)
+
+      local tried = {}
+      local realInstall = installPackage
+      override("installPackage", function(file, ...)
+        tried[#tried + 1] = file
+        return realInstall(file, ...)
+      end)
+      raiseEvent("sysDownloadDone", other)
+      assert.are.same({}, tried, "the pasted command took another download for its package")
+      assert.is_true(io.exists(other), "the pasted command removed another download")
+    end)
+
     it(loader.name .. " reports a download a module's name blocks, and tries again on the next connection", function()
       local downloads, path = install(loader)
       withFixtureModule(minimalPackage)
