@@ -55,6 +55,11 @@
 
 #include <QScopeGuard>
 
+#if defined(Q_PROCESSOR_X86_64) && (defined(Q_CC_GNU) || defined(Q_CC_CLANG))
+#include <x86intrin.h>
+#define MUDLET_REUSE_ARRIVAL_CLOCK
+#endif
+
 #include <algorithm>
 #include <cstring>
 #include <span>
@@ -1327,6 +1332,26 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     mProcessingLocalFeed = false;
 }
 
+// The system clock read waits for every earlier instruction to complete, which in a flood costs more than
+// the rest of storing a line; a bare TSC read does not. 2^17 ticks is under 0.15 ms at any TSC rate a
+// 64-bit x86 runs at, so a reused reading is at most a millisecond behind.
+qint64 TBuffer::lineArrivalTime()
+{
+#if defined(MUDLET_REUSE_ARRIVAL_CLOCK)
+    if (mDecodingChunk) {
+        const quint64 ticks = __rdtsc();
+        if (mArrivalClockValid && ticks - mArrivalClockTicks < (quint64{1} << 17)) {
+            return mArrivalClockTime;
+        }
+        mArrivalClockTicks = ticks;
+        mArrivalClockValid = true;
+        mArrivalClockTime = QDateTime::currentMSecsSinceEpoch();
+        return mArrivalClockTime;
+    }
+#endif
+    return QDateTime::currentMSecsSinceEpoch();
+}
+
 void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFromServer)
 {
     // Lets the trigger engine tell a flood from a trickle (TriggerUnit::processDataStream()). Restored,
@@ -1335,6 +1360,17 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     mPendingChunkLines = static_cast<int>(std::count(incoming.cbegin(), incoming.cend(), '\n'));
     const auto pendingLinesGuard = qScopeGuard([this, previousPendingLines] {
         mPendingChunkLines = previousPendingLines;
+    });
+    // lineArrivalTime() reuses a reading only while a chunk is decoded: the thread never idles in
+    // between, so a TSC that stops in deep sleep states, as some old CPUs' do, has not stopped.
+    const bool outermostChunk = !std::exchange(mDecodingChunk, true);
+    if (outermostChunk) {
+        mArrivalClockValid = false;
+    }
+    const auto decodingGuard = qScopeGuard([this, outermostChunk] {
+        if (outermostChunk) {
+            mDecodingChunk = false;
+        }
     });
 
     // The complete two byte escape sequences (DECSC, DECRC, RIS and a stray
@@ -2348,7 +2384,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             lineBuffer << QString();
         }
         buffer.push_back(std::move(chars));
-        timeBuffer << QDateTime::currentMSecsSinceEpoch();
+        timeBuffer << lineArrivalTime();
         if (ch == '\xff') {
             promptBuffer.append(true);
         } else {
@@ -2366,7 +2402,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         // the one the enclosing pass is still running over:
         materialisePreTriggerPassLine(static_cast<int>(buffer.size()) - 1);
         buffer.back() = std::move(chars);
-        timeBuffer.back() = QDateTime::currentMSecsSinceEpoch();
+        timeBuffer.back() = lineArrivalTime();
         if (ch == '\xff') {
             promptBuffer.back() = true;
         } else {
@@ -5657,7 +5693,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
             if (firstChar) {
                 // an empty wrapped line is the rest of the line above it
                 if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
-                    timeBuffer.back() = QDateTime::currentMSecsSinceEpoch();
+                    timeBuffer.back() = lineArrivalTime();
                 }
                 firstChar = false;
             }
@@ -5796,7 +5832,7 @@ void TBuffer::appendLine(
             // Replayed held-back content supplies its arrival time, and an
             // empty wrapped line is the rest of the line above it:
             if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
-                timeBuffer.back() = timeStampOverride == csmNoTimeStamp ? QDateTime::currentMSecsSinceEpoch() : timeStampOverride;
+                timeBuffer.back() = timeStampOverride == csmNoTimeStamp ? lineArrivalTime() : timeStampOverride;
             }
             firstChar = false;
         }
@@ -5807,7 +5843,7 @@ void TBuffer::appendEmptyLine()
 {
     buffer.emplace_back();
     lineBuffer.push_back(QString());
-    timeBuffer << QDateTime::currentMSecsSinceEpoch();
+    timeBuffer << lineArrivalTime();
     promptBuffer << false;
     wrapGapBuffer.append(0);
 }
@@ -6387,7 +6423,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             if (w.isNewline && previousSegmentEnd >= 0 && time == TBuffer::csmWrappedLineTimeStamp) {
                 // A line feed inserted into a wrapped line starts a line of its
                 // own, which csmWrappedLineTimeStamp would join back onto the last
-                timeList.append(QDateTime::currentMSecsSinceEpoch());
+                timeList.append(lineArrivalTime());
             } else if (w.isNewline) {
                 timeList.append(time);
             } else {

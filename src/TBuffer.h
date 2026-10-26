@@ -609,6 +609,7 @@ private:
     void resetColors();
     bool commitLine(char ch, size_t& localBufferPosition, bool isFromServer = false, bool forcedLineBreak = false);
     void commitLineData(QString line, std::vector<TChar> chars, char ch);
+    qint64 lineArrivalTime();
     bool dropSpaceAtWrap(QChar);
     bool endsAtServerWrapColumn() const;
     bool looksLikeWrappedProse(const QString& line) const;
@@ -793,6 +794,10 @@ private:
     // (e.g. an MXP <HR> inside locally fed text) does not swap the state again:
     bool mProcessingLocalFeed = false;
     int mPendingChunkLines = 0;
+    bool mDecodingChunk = false;
+    bool mArrivalClockValid = false;
+    quint64 mArrivalClockTicks = 0;
+    qint64 mArrivalClockTime = 0;
 
     // keeps track of the previously logged buffer lines to ensure no log duplication
     // happens when you enter a command
