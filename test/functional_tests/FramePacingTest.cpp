@@ -373,8 +373,8 @@ private slots:
     }
 
     // A label over the pane repaints the strip of text beneath it, and those small paints
-    // must not keep pushing back the frame for the rest of a flooding pane.
-    void test_partialPaintsDuringAFloodStillLetTheFrameThrough()
+    // must not push back a frame that a flood has already made wait the flood pace.
+    void test_partialPaintsDuringAFloodDoNotPushTheFrameBack()
     {
         TTextEdit* pane = nullptr;
         QPointer<TMainConsole> console;
@@ -386,33 +386,42 @@ private slots:
         QVERIFY(pacerWentIdle(pane));
         pane->repaint();
         QVERIFY(pane->mScreenHeight > 0);
+        QString screenful;
+        for (int i = 0; i <= pane->mScreenHeight; ++i) {
+            screenful += qsl("flood line %1\n").arg(i);
+        }
 
-        bool handedOver = false;
+        QElapsedTimer sinceStrip;
+        int fires = 0;
+        int firesToHandOver = 0;
+        qint64 handOverGap = -1;
         QObject listener;
         connect(pane->mpPaintPacer, &QTimer::timeout, &listener, [&]() {
-            if (!pane->mpPaintPacer->isActive() && pane->mPendingPaintRegion.isEmpty()) {
-                handedOver = true;
+            ++fires;
+            if (!firesToHandOver && !pane->mpPaintPacer->isActive() && pane->mPendingPaintRegion.isEmpty()) {
+                firesToHandOver = fires;
+                handOverGap = sinceStrip.elapsed();
             }
         });
         QElapsedTimer flood;
         flood.start();
-        QElapsedTimer sinceStrip;
-        qint64 longestGap = 0;
-        while (!handedOver && flood.elapsed() < 500) {
-            if (sinceStrip.isValid()) {
-                longestGap = std::max(longestGap, sinceStrip.elapsed());
-            }
+        qint64 longestPrint = 0;
+        while (!firesToHandOver && flood.elapsed() < 500) {
             mPaintCount = 0;
             pane->repaint(QRect(0, 0, 1, 1));
             sinceStrip.start();
             QVERIFY2(mPaintCount > 0, "repaint() of a strip delivered no paint event, so nothing here restarted the pane's frame window");
-            printLines(console, pane->mScreenHeight + 1);
+            console->print(screenful);
+            longestPrint = std::max(longestPrint, sinceStrip.elapsed());
             QTest::qWait(5ms);
         }
-        if (longestGap >= TTextEdit::csmFloodPaintPaceMs) {
-            QSKIP(qPrintable(qsl("%1ms passed between two strip paints, past the flood pace, so the runner stalled and the frame could go through without the fix").arg(longestGap)));
+        if (longestPrint >= TTextEdit::csmPaintPaceMs || handOverGap >= TTextEdit::csmFloodPaintPaceMs) {
+            QSKIP(qPrintable(qsl("a print took %1ms and the frame went %2ms after a strip paint, so the runner stalled past a pace and the frame could go through without being held")
+                                     .arg(longestPrint)
+                                     .arg(handOverGap)));
         }
-        QVERIFY2(handedOver, "a strip painted every few ms held the rest of the pane's frame back for the whole 500ms flood");
+        QVERIFY2(firesToHandOver, "a strip painted every few ms held the rest of the pane's frame back for the whole 500ms flood");
+        QVERIFY2(firesToHandOver == 1, qPrintable(qsl("a frame armed at the flood pace was pushed back %1 more times by strip paints").arg(firesToHandOver - 1)));
     }
 
 private:
