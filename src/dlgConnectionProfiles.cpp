@@ -64,6 +64,7 @@
 #include <QTime>
 #include <algorithm>
 #include <chrono>
+#include <functional>
 #include <sstream>
 
 using namespace std::chrono_literals;
@@ -2235,6 +2236,29 @@ void dlgConnectionProfiles::slot_importProfiles()
     }
 }
 
+namespace {
+
+// One removal at a time, as a CredentialManager runs only one operation
+void removeStoredPasswords(QPointer<CredentialManager> manager, QList<std::pair<QString, QString>> pending, std::function<void()> then)
+{
+    if (!manager || pending.isEmpty()) {
+        if (manager) {
+            manager->deleteLater();
+        }
+        then();
+        return;
+    }
+    const auto next = pending.takeFirst();
+    manager->removePassword(next.first, next.second, [manager, pending, then, next](bool success, const QString& errorMessage) {
+        if (!success) {
+            qWarning() << "dlgConnectionProfiles: Failed to clear the" << next.second << "password left under the imported profile's name" << next.first << ":" << errorMessage;
+        }
+        removeStoredPasswords(manager, pending, then);
+    });
+}
+
+} // namespace
+
 void dlgConnectionProfiles::importProfilesFrom(const QString& archivePathFileName)
 {
     if (mImportingProfiles) {
@@ -2251,55 +2275,74 @@ void dlgConnectionProfiles::importProfilesFrom(const QString& archivePathFileNam
     connect(watcher, &QFutureWatcher<MudletWebImport::Result>::finished, this, [this, watcher]() {
         const MudletWebImport::Result result = watcher->result();
         watcher->deleteLater();
-        mImportingProfiles = false;
-        import_profile_button->setEnabled(true);
-        //: Text of the button that adds profiles from a .zip file
-        import_profile_button->setText(tr("Import"));
-
-        if (!result.error.isEmpty()) {
-            //: Title of the message shown when importing profiles fails
-            QMessageBox::warning(this, tr("Import profiles"), result.error);
+        if (result.error.isEmpty() && MudletApp::storingPasswordsSecurely()) {
+            // A profile folder deleted outside Mudlet leaves its passwords stored under its name, which an import may take
+            QList<std::pair<QString, QString>> stale;
+            for (const auto& name : result.profiles) {
+                stale.append({name, qsl("character")});
+                stale.append({name, qsl("proxy")});
+            }
+            removeStoredPasswords(new CredentialManager(nullptr), stale, [dialog = QPointer<dlgConnectionProfiles>(this), result]() {
+                if (dialog) {
+                    dialog->finishImport(result);
+                }
+            });
             return;
         }
-
-        // They are the player's own now, and easier found there than in the whole catalog
-        if (mpTabBar->isVisible() && mpTabBar->currentIndex() != scmMyGamesTab) {
-            mpTabBar->setCurrentIndex(scmMyGamesTab);
-        } else {
-            fillout_form();
-        }
-        const auto imported = findData(*listWidget_profiles, result.profiles.constFirst(), csmNameRole);
-        if (!imported.isEmpty()) {
-            if (listWidget_profiles->currentItem() == imported.constFirst()) {
-                slot_itemClicked(imported.constFirst());
-            } else {
-                listWidget_profiles->setCurrentItem(imported.constFirst());
-            }
-        }
-
-        QStringList names;
-        for (const auto& name : result.profiles) {
-            names.append(qsl("<li>%1</li>").arg(name.toHtmlEscaped()));
-        }
-        //: Shown after importing profiles; %1 lists the profiles that were added. Connect is the button that starts playing.
-        QString message = tr("<p>Added to your profiles:</p><ul>%1</ul><p>Pick one and click <b>Connect</b> to play.</p>").arg(names.join(QString()));
-        if (!result.warnings.isEmpty()) {
-            QStringList warnings;
-            for (const auto& warning : result.warnings) {
-                warnings.append(qsl("<li>%1</li>").arg(warning.toHtmlEscaped()));
-            }
-            //: Shown after importing profiles, below the list of what was added; %1 lists what could not be brought over.
-            message += tr("<p>Please note:</p><ul>%1</ul>").arg(warnings.join(QString()));
-        }
-        //: Title of the message shown after importing profiles
-        const QString title = tr("Profiles imported");
-        if (result.warnings.isEmpty()) {
-            QMessageBox::information(this, title, message);
-        } else {
-            QMessageBox::warning(this, title, message);
-        }
+        finishImport(result);
     });
-    watcher->setFuture(QtConcurrent::run(&MudletWebImport::importArchive, archivePathFileName, MudletApp::getMudletPath(enums::profilesPath)));
+    watcher->setFuture(QtConcurrent::run(&MudletWebImport::importArchive, archivePathFileName, MudletApp::getMudletPath(enums::profilesPath), qint64{-1}));
+}
+
+void dlgConnectionProfiles::finishImport(const MudletWebImport::Result& result)
+{
+    mImportingProfiles = false;
+    import_profile_button->setEnabled(true);
+    //: Text of the button that adds profiles from a .zip file
+    import_profile_button->setText(tr("Import"));
+
+    if (!result.error.isEmpty()) {
+        //: Title of the message shown when importing profiles fails
+        QMessageBox::warning(this, tr("Import profiles"), result.error);
+        return;
+    }
+
+    // They are the player's own now, and easier found there than in the whole catalog
+    if (mpTabBar->isVisible() && mpTabBar->currentIndex() != scmMyGamesTab) {
+        mpTabBar->setCurrentIndex(scmMyGamesTab);
+    } else {
+        fillout_form();
+    }
+    const auto imported = findData(*listWidget_profiles, result.profiles.constFirst(), csmNameRole);
+    if (!imported.isEmpty()) {
+        if (listWidget_profiles->currentItem() == imported.constFirst()) {
+            slot_itemClicked(imported.constFirst());
+        } else {
+            listWidget_profiles->setCurrentItem(imported.constFirst());
+        }
+    }
+
+    QStringList names;
+    for (const auto& name : result.profiles) {
+        names.append(qsl("<li>%1</li>").arg(name.toHtmlEscaped()));
+    }
+    //: Shown after importing profiles; %1 lists the profiles that were added. Connect is the button that starts playing.
+    QString message = tr("<p>Added to your profiles:</p><ul>%1</ul><p>Pick one and click <b>Connect</b> to play.</p>").arg(names.join(QString()));
+    if (!result.warnings.isEmpty()) {
+        QStringList warnings;
+        for (const auto& warning : result.warnings) {
+            warnings.append(qsl("<li>%1</li>").arg(warning.toHtmlEscaped()));
+        }
+        //: Shown after importing profiles, below the list of what was added; %1 lists what could not be brought over.
+        message += tr("<p>Please note:</p><ul>%1</ul>").arg(warnings.join(QString()));
+    }
+    //: Title of the message shown after importing profiles
+    const QString title = tr("Profiles imported");
+    if (result.warnings.isEmpty()) {
+        QMessageBox::information(this, title, message);
+    } else {
+        QMessageBox::warning(this, title, message);
+    }
 }
 
 void dlgConnectionProfiles::dragEnterEvent(QDragEnterEvent* event)

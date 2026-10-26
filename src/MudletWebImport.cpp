@@ -29,12 +29,15 @@
 #include <QHash>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLocale>
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QScopeGuard>
+#include <QStorageInfo>
 #include <QTemporaryDir>
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <zip.h>
 
@@ -92,9 +95,10 @@ bool extractEntry(zip* archive, const Entry& entry, const QString& destination)
     bool ok = file.open(QIODevice::WriteOnly | QIODevice::Truncate);
     zip_uint64_t written = 0;
     char buffer[65536];
-    // Read to the end rather than to the size: libzip checks the data's CRC only there
+    // Read to the end rather than to the size: libzip checks the data's CRC only there.
+    // Never past the size though: libzip inflates whatever follows, whatever the headers say.
     for (zip_int64_t length = 0; ok && (length = zip_fread(source, buffer, sizeof(buffer))) != 0;) {
-        ok = length > 0 && file.write(buffer, length) == length;
+        ok = length > 0 && static_cast<zip_uint64_t>(length) <= entry.size - written && file.write(buffer, length) == length;
         written += ok ? static_cast<zip_uint64_t>(length) : 0;
     }
     // Data that falls short of its stated size ends early rather than failing
@@ -222,7 +226,7 @@ QString freeName(const QString& wanted, const QStringList& takenLowerCase)
 
 } // namespace
 
-MudletWebImport::Result MudletWebImport::importArchive(const QString& archivePathFileName, const QString& profilesPath)
+MudletWebImport::Result MudletWebImport::importArchive(const QString& archivePathFileName, const QString& profilesPath, const qint64 spaceAvailable)
 {
     Result result;
     int zipError = 0;
@@ -240,6 +244,7 @@ MudletWebImport::Result MudletWebImport::importArchive(const QString& archivePat
     });
 
     QList<Entry> entries;
+    zip_uint64_t unpackedSize = 0;
     bool unsafeEntries = false;
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
         zip_stat_t stat;
@@ -257,6 +262,7 @@ MudletWebImport::Result MudletWebImport::importArchive(const QString& archivePat
         }
         const QDateTime modified = (stat.valid & ZIP_STAT_MTIME) ? QDateTime::fromSecsSinceEpoch(stat.mtime) : QDateTime();
         entries.append({static_cast<zip_uint64_t>(i), stat.size, path, modified});
+        unpackedSize = stat.size > std::numeric_limits<zip_uint64_t>::max() - unpackedSize ? std::numeric_limits<zip_uint64_t>::max() : unpackedSize + stat.size;
     }
 
     // A profile is a folder with a save in current/: one per folder at the top,
@@ -309,12 +315,21 @@ MudletWebImport::Result MudletWebImport::importArchive(const QString& archivePat
         result.error = tr("Could not make room to unpack the profiles: %1").arg(staging->errorString());
         return result;
     }
+    const qint64 room = spaceAvailable >= 0 ? spaceAvailable : QStorageInfo(staging->path()).bytesAvailable();
+    if (room >= 0 && unpackedSize > static_cast<zip_uint64_t>(room)) {
+        const qint64 needed = static_cast<qint64>(std::min<zip_uint64_t>(unpackedSize, std::numeric_limits<qint64>::max()));
+        //: Shown when importing profiles fails. %1 is the file chosen, %2 how much its profiles take unpacked, %3 the free space on the disk that holds the profiles.
+        result.error = tr("\"%1\" unpacks to %2, more than the %3 free on the disk that holds your profiles.")
+                               .arg(QFileInfo(archivePathFileName).fileName(), QLocale().formattedDataSize(needed), QLocale().formattedDataSize(room));
+        return result;
+    }
 
     QStringList taken;
     for (const auto& existing : QDir(profilesPath).entryList(QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden)) {
         taken.append(existing.toLower());
     }
 
+    int staged = 0;
     for (const auto& root : std::as_const(roots)) {
         QString wanted = usableProfileName(root.isEmpty() ? QFileInfo(archivePathFileName).completeBaseName() : root);
         if (wanted.isEmpty()) {
@@ -322,7 +337,8 @@ MudletWebImport::Result MudletWebImport::importArchive(const QString& archivePat
             wanted = tr("Mudlet Web profile");
         }
         const QString name = freeName(wanted, taken);
-        const QString home = qsl("%1/%2").arg(staging->path(), name);
+        // Its own folder: two roots can take one name in turn when the first fails
+        const QString home = qsl("%1/%2").arg(staging->path(), QString::number(staged++));
         const QString prefix = root.isEmpty() ? QString() : root + QLatin1Char('/');
 
         QByteArray sidecar;

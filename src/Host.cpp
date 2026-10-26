@@ -732,6 +732,11 @@ QString Host::locateModuleFile(const QString& profileHome, const QString& module
         candidates.append(qsl("%1/%2").arg(profileHome, portable));
     }
     candidates.append(qsl("%1/%2/%3").arg(profileHome, module, portable.section(QLatin1Char('/'), -1)));
+    // A module kept inside the profile travels at its place there, which is some tail of the old path
+    const QStringList segments = portable.split(QLatin1Char('/'), Qt::SkipEmptyParts);
+    for (qsizetype i = 1; i < segments.size(); ++i) {
+        candidates.append(qsl("%1/%2").arg(profileHome, segments.mid(i).join(QLatin1Char('/'))));
+    }
     for (const auto& candidate : std::as_const(candidates)) {
         if (QFileInfo(candidate).isFile()) {
             return QDir::cleanPath(candidate);

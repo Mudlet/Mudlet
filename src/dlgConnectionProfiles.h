@@ -23,6 +23,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "MudletWebImport.h"
 #include "ui_connection_profiles.h"
 #include <optional>
 #include <QRegularExpression>
@@ -119,6 +120,7 @@ private:
     QString getDescription(const QString& profile_name) const;
     bool validateConnect();
     bool validateProfile();
+    void finishImport(const MudletWebImport::Result&);
     void loadProfile(bool alsoConnect);
     void copyProfileSettingsOnly(const QString& oldname, const QString& newname);
     bool extractSettingsFromProfile(pugi::xml_document& newProfile, const QString& copySettingsFrom);

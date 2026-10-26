@@ -40,8 +40,9 @@ public:
         QString error;
     };
 
-    // Blocks, and touches nothing but the file system, so it can run off the main thread
-    static Result importArchive(const QString& archivePathFileName, const QString& profilesPath);
+    // Blocks, and touches nothing but the file system, so it can run off the main thread.
+    // Refuses an archive whose files take more than spaceAvailable bytes; -1 means the free space where the profiles are.
+    static Result importArchive(const QString& archivePathFileName, const QString& profilesPath, qint64 spaceAvailable = -1);
 };
 
 #endif // MUDLET_MUDLETWEBIMPORT_H
