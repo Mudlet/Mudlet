@@ -284,7 +284,8 @@ public:
     // a keychain read the user only answered by then. Sends it only while the game is provably
     // still waiting at that prompt, see the definition.
     void sendOutstandingAutoLoginPassword();
-    void terminateConnection();
+    // The wait blocks, so is only for a profile with no window to freeze
+    void terminateConnection(bool waitForTheGameToClose);
     bool currentlySecure() const
     {
 #if defined(QT_NO_SSL)

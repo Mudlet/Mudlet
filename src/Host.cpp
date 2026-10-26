@@ -890,7 +890,7 @@ void Host::closeChildren()
     // does not commit it while closing either:
     mServerWrapFlushTimer.stop();
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-    mTelnet.terminateConnection();
+    mTelnet.terminateConnection(mClosingWithNoView);
 
     stopAllTriggers();
 
