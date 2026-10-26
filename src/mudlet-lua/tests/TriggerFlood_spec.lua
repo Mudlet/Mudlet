@@ -145,17 +145,25 @@ describe("trigger matching under a flood", function()
     end)
 
     itFlood("counts every line of a chunk towards the flood threshold, and no more", function()
-        local threshold = tonumber(os.getenv("MUDLET_MATCH_FLOOD_LINES") or "") or 8
+        local threshold = getProfileStats().triggers.prescanFloodLines
         if threshold < 2 then
             pending("a threshold of one line leaves no chunk below it")
+        end
+        -- long enough that a chunk runs to several hundred bytes, which the count takes in pieces
+        local function longLines(count)
+            local lines = filler(count)
+            for index, line in ipairs(lines) do
+                lines[index] = line .. string.rep(" padding", 10)
+            end
+            return lines
         end
         -- the line every first line of a chunk below is judged by
         feedTriggers("flood quiet filler 0\n")
         local before = getProfileStats().triggers.prescans
-        feedTriggers(table.concat(filler(threshold - 1), "\n") .. "\n")
+        feedTriggers(table.concat(longLines(threshold - 1), "\n") .. "\n")
         assert.are.equal(before, getProfileStats().triggers.prescans,
                          "a chunk one line short of the flood threshold reached the parallel prescan")
-        feedAsBurst(filler(threshold))
+        feedAsBurst(longLines(threshold))
     end)
 
     itFlood("fires a filter chain's child on a capture the line itself does not match", function()
