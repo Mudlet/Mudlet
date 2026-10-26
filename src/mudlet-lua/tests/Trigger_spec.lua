@@ -2044,6 +2044,94 @@ describe("Trigger processing", function()
             }, hits)
         end)
 
+        it("rules out start of line and exact match patterns whose every pair the line holds", function()
+            local hits = {}
+            local ids = installBallast()
+            local function counter(name)
+                hits[name] = 0
+                return function() hits[name] = hits[name] + 1 end
+            end
+            ids[#ids + 1] = tempBeginOfLineTrigger("abab", counter("start"))
+            ids[#ids + 1] = tempBeginOfLineTrigger("bab", counter("start, other first character"))
+            ids[#ids + 1] = tempBeginOfLineTrigger("a", counter("start, one character"))
+            ids[#ids + 1] = tempBeginOfLineTrigger("b", counter("start, one other character"))
+            ids[#ids + 1] = tempExactMatchTrigger("abab abab", counter("exact"))
+            ids[#ids + 1] = tempExactMatchTrigger("abab", counter("exact, shorter"))
+            ids[#ids + 1] = tempExactMatchTrigger("abab abab abab", counter("exact, longer"))
+            ids[#ids + 1] = tempExactMatchTrigger("baba baba", counter("exact, other first character"))
+
+            feedTriggers("\nabab abab\n")
+            for name in pairs(hits) do
+                hits[name] = 0
+            end
+            feedTriggers("\nabab abab\n")
+
+            killAll(ids)
+            assert.are.same({
+                ["start"] = 1, ["start, other first character"] = 0, ["start, one character"] = 1, ["start, one other character"] = 0,
+                ["exact"] = 1, ["exact, shorter"] = 0, ["exact, longer"] = 0, ["exact, other first character"] = 0
+            }, hits)
+        end)
+
+        -- Regex triggers, as only plain text ones are filed by content: this many of those would take
+        -- the line down another path
+        it("offers a line to every matching trigger however many come before it", function()
+            local order = {}
+            local ids = installBallast()
+            local expected = {}
+            for i = 1, 150 do
+                if i % 7 == 0 then
+                    expected[#expected + 1] = i
+                    ids[#ids + 1] = tempRegexTrigger("specscreen_hit", function() order[#order + 1] = i end)
+                elseif i % 31 == 0 then
+                    -- no text every match has to hold, so nothing can rule it out but pcre2
+                    expected[#expected + 1] = i
+                    ids[#ids + 1] = tempRegexTrigger("(?i)SPECSCREEN_HIT", function() order[#order + 1] = i end)
+                else
+                    ids[#ids + 1] = tempRegexTrigger("specscreen_pad" .. i .. "_zq", function() order[#order + 1] = -i end)
+                end
+            end
+
+            feedTriggers("\nwarming the line summary\n")
+            feedTriggers("\na specscreen_hit line\n")
+
+            killAll(ids)
+            assert.are.same(expected, order)
+        end)
+
+        -- pcre2 reads UTF-8 that leaves an unpaired surrogate out, which puts the text on either side
+        -- of it together, so the line as Qt holds it cannot rule out a pattern
+        it("offers a line with an unpaired surrogate to a pattern only its UTF-8 holds", function()
+            local fired = 0
+            local ids = installBallast()
+            ids[#ids + 1] = tempRegexTrigger("abcd", function() fired = fired + 1 end)
+            setConfig("specialForceMXPProcessorOn", true)
+            finally(function() setConfig("specialForceMXPProcessorOn", false) end)
+
+            feedTriggers("\nwarming the line summary\n")
+            feedTriggers("\nzqab&#xD800;cd\n")
+
+            killAll(ids)
+            assert.are.equal(1, fired)
+        end)
+
+        it("fires a trigger an earlier one holds open on the same line", function()
+            local fired = 0
+            local ids = installBallast()
+            local opened
+            ids[#ids + 1] = tempTrigger("specscreen_opener", function()
+                setTriggerStayOpen(tostring(opened), 1)
+            end)
+            opened = tempTrigger("specscreen_never_on_this_line", function() fired = fired + 1 end)
+            ids[#ids + 1] = opened
+
+            feedTriggers("\nwarming the line summary\n")
+            feedTriggers("\nspecscreen_opener here\n")
+
+            killAll(ids)
+            assert.are.equal(1, fired)
+        end)
+
         it("matches a capture the filtering parent carried over from an earlier line", function()
             _G.TrigBigramCarried = 0
             local code = [==[ ]==]

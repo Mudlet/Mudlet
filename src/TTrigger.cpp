@@ -907,6 +907,14 @@ TRootTriggerFilter TTrigger::rootFilter() const
     if (mPatternBigrams.size() == 1) {
         filter.mKind = TRootTriggerFilter::Kind::Text;
         filter.mText = mPatternBigrams.front();
+        const int kind = mPatternKinds.front();
+        const QString& pattern = mPatterns.front();
+        if ((kind == REGEX_BEGIN_OF_LINE_SUBSTRING || kind == REGEX_EXACT_MATCH) && !pattern.isEmpty()) {
+            filter.mFirst = pattern.front().unicode();
+            if (kind == REGEX_EXACT_MATCH) {
+                filter.mExactLength = static_cast<int>(pattern.size());
+            }
+        }
         return filter;
     }
     if (mPatternKinds.size() != 1 || mPatternKinds.front() != REGEX_COLOR_PATTERN || mColorPatternList.size() != 1 || !mColorPatternList.front()) {

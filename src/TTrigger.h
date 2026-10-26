@@ -112,15 +112,12 @@ public:
         Q_ASSERT(haystack.constData() == mLine.constData());
         Q_UNUSED(haystack)
         ++mQuestionsAsked;
-        if (!mSummarise) {
+        const Bits* const lineBits = this->lineBits();
+        if (!lineBits) {
             return true;
         }
-        if (!mBuilt) {
-            mLineBits = bitsFor(mLine);
-            mBuilt = true;
-        }
         for (int i = 0; i < Bits::scmWords; ++i) {
-            if (pattern.words[i] & ~mLineBits.words[i]) {
+            if (pattern.words[i] & ~lineBits->words[i]) {
                 return false;
             }
         }
@@ -129,13 +126,7 @@ public:
 
     // Call on the main thread before couldContainShared() is asked from other threads, so nothing is
     // left to build lazily.
-    void prepareForSharing() const
-    {
-        if (mSummarise && !mBuilt) {
-            mLineBits = bitsFor(mLine);
-            mBuilt = true;
-        }
-    }
+    void prepareForSharing() const { lineBits(); }
 
     // couldContain() for other threads: read-only, so it neither builds the summary nor counts the
     // question. The main thread still asks about every pattern the prescan does not rule out, so few
@@ -157,6 +148,20 @@ public:
     }
 
     int questionsAsked() const { return mQuestionsAsked; }
+    // Questions a caller answered from lineBits() itself, which count towards summarising the next line
+    void countQuestions(const int questions) const { mQuestionsAsked += questions; }
+    // nullptr on a line not worth summarising, which every pattern could be in
+    const Bits* lineBits() const
+    {
+        if (!mSummarise) {
+            return nullptr;
+        }
+        if (!mBuilt) {
+            mLineBits = bitsFor(mLine);
+            mBuilt = true;
+        }
+        return &mLineBits;
+    }
 
 private:
     const QString& mLine;
@@ -189,6 +194,10 @@ struct TRootTriggerFilter
     bool lacksColors(const QRgb foreground, const QRgb background) const { return (mForegroundWanted && foreground != mForeground) || (mBackgroundWanted && background != mBackground); }
 
     TBigramFilter::Bits mText;
+    // What a start of line or exact match pattern also needs of a line: to start with this character
+    // (0 for no such test) and, for an exact match, to be this long without its line feed
+    char16_t mFirst = 0;
+    int mExactLength = -1;
     QRgb mForeground = 0;
     QRgb mBackground = 0;
     bool mForegroundWanted = false;

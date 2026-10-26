@@ -32,6 +32,7 @@
 #include <QScopeGuard>
 
 #include <algorithm>
+#include <bit>
 #include <functional>
 #include <limits>
 #include <vector>
@@ -657,6 +658,30 @@ void TriggerUnit::refreshRootNodeSnapshot()
     mRootNodeSnapshotStale = false;
 }
 
+// Bit i is clear when the copied filter of root first + i already rules the line out. Roots of
+// the other kinds are left for the loop to ask.
+static quint64
+screenRoots(const std::vector<TRootTriggerFilter>& filters, const int first, const int end, const TBigramFilter::Bits* lineBits, const char16_t lineFirst, const int exactLength, int& textRoots)
+{
+    quint64 kept = 0;
+    for (int position = first; position < end; ++position) {
+        const TRootTriggerFilter& filter = filters[position];
+        bool keep = true;
+        if (filter.mKind == TRootTriggerFilter::Kind::Text) {
+            ++textRoots;
+            quint64 missing = 0;
+            if (lineBits) {
+                for (int i = 0; i < TBigramFilter::Bits::scmWords; ++i) {
+                    missing |= filter.mText.words[i] & ~lineBits->words[i];
+                }
+            }
+            keep = !missing && (!filter.mFirst || filter.mFirst == lineFirst) && (filter.mExactLength < 0 || filter.mExactLength == exactLength);
+        }
+        kept |= quint64(keep) << (position - first);
+    }
+    return kept;
+}
+
 void TriggerUnit::processDataStream(const QString& data, int line)
 {
     if (data.isEmpty()) {
@@ -788,12 +813,48 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         QRgb lineBackground = 0;
         const int rootCount = static_cast<int>(pinnedNodeList.size());
         size_t nextCandidate = 0;
+        // Without the prescan the copied filters are screened 64 roots at a time, in one pass over
+        // them, rather than one per trip round the loop
+        const TBigramFilter::Bits* const lineBits = prescanActive ? nullptr : lineBigrams.lineBits();
+        const char16_t lineFirst = data.front().unicode();
+        const int exactLength = static_cast<int>(data.size()) - (data.endsWith(u'\n') ? 1 : 0);
+        int screenFirst = 0;
+        int screenEnd = 0;
+        quint64 screen = 0;
+        int screenedTextRoots = 0;
         for (int position = 0; position < rootCount; ++position) {
-            if (prescanActive && mUnfilterableEpoch == unfilterableEpochAtStart) {
-                if (nextCandidate >= candidates.size()) {
+            bool screened = false;
+            if (prescanActive) {
+                if (mUnfilterableEpoch == unfilterableEpochAtStart) {
+                    if (nextCandidate >= candidates.size()) {
+                        break;
+                    }
+                    position = candidates[nextCandidate++];
+                }
+            } else if (mRootFilterEpoch == filterEpochAtStart) {
+                quint64 ahead = 0;
+                while (position < rootCount) {
+                    if (position >= screenEnd) {
+                        screenFirst = position;
+                        screenEnd = std::min(position + 64, rootCount);
+                        const int textRootsBefore = screenedTextRoots;
+                        screen = screenRoots(pinnedFilters, screenFirst, screenEnd, lineBits, lineFirst, exactLength, screenedTextRoots);
+                        const quint64 all = std::numeric_limits<quint64>::max() >> (64 - (screenEnd - screenFirst));
+                        if (screen != all && screenedTextRoots != textRootsBefore && subject.dropsText()) {
+                            screen = all;
+                        }
+                    }
+                    ahead = screen >> (position - screenFirst);
+                    if (ahead) {
+                        break;
+                    }
+                    position = screenEnd;
+                }
+                if (!ahead) {
                     break;
                 }
-                position = candidates[nextCandidate++];
+                position += std::countr_zero(ahead);
+                screened = true;
             }
             // Read before the trigger is, as most lines are over for most
             // triggers right here and the trigger's own memory is never touched
@@ -801,7 +862,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             if (mRootFilterEpoch == filterEpochAtStart) {
                 const TRootTriggerFilter& filter = pinnedFilters[position];
                 if (filter.mKind == TRootTriggerFilter::Kind::Text) {
-                    if (!lineBigrams.couldContain(data, filter.mText) && !subject.dropsText()) {
+                    if (!screened && !lineBigrams.couldContain(data, filter.mText) && !subject.dropsText()) {
                         continue;
                     }
                     textDecided = true;
@@ -824,6 +885,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             trigger->match(subject, data, line, 0, &lineBigrams);
             lineColorsKnown = false;
         }
+        lineBigrams.countQuestions(screenedTextRoots);
     }
     // A match here can register more triggers, which also get a shot at the
     // current line - so the list grows in front of the loop, and a trigger that
