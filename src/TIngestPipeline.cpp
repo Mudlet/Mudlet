@@ -27,6 +27,9 @@
 
 #include <chrono>
 #include <thread>
+#if defined(__GLIBC__)
+#include <malloc.h>
+#endif
 
 namespace {
 inline void cpuRelax()
@@ -41,6 +44,17 @@ inline void cpuRelax()
 constexpr int kPausesPerClockCheck = 64;
 // Units of a flood arrive back to back; sleeping between them would cost a wake-up at the start of each
 constexpr std::chrono::microseconds kIdleSpin{300};
+
+// Lines built here are kept and freed on main, so what main frees itself no longer gets filled by new lines
+// and stays resident in its heap: hand those pages back, at most this often while floods run
+constexpr std::chrono::milliseconds kTrimInterval{25};
+
+void releaseFreedPages()
+{
+#if defined(__GLIBC__)
+    malloc_trim(0);
+#endif
+}
 } // namespace
 
 bool TIngestPipeline::enabled()
@@ -185,6 +199,7 @@ void TIngestPipeline::workerLoop()
 {
     uint32_t seen = 0;
     auto idleSince = std::chrono::steady_clock::now();
+    auto lastTrim = idleSince;
     int pauses = 0;
     for (;;) {
         const uint32_t epoch = mEpoch.load(std::memory_order_acquire);
@@ -197,6 +212,10 @@ void TIngestPipeline::workerLoop()
             if (mJob.mState.compare_exchange_strong(state, TIngestJob::Running, std::memory_order_acq_rel)) {
                 parse(mJob);
                 mJob.mState.store(TIngestJob::Done, std::memory_order_release);
+                if (const auto now = std::chrono::steady_clock::now(); now - lastTrim >= kTrimInterval) {
+                    releaseFreedPages();
+                    lastTrim = now;
+                }
             }
             idleSince = std::chrono::steady_clock::now();
             pauses = 0;
