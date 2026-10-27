@@ -7345,6 +7345,90 @@ describe("Trigger processing", function()
             end)
         end)
 
+        -- The table matches holds between dispatches is used again for as long
+        -- as it stays empty and has no metatable, so every way a script can
+        -- change a table has to count as using it
+        describe("the empty matches a script changed between dispatches", function()
+            local function changedBetweenFires(change)
+                trigger(tempRegexTrigger("^LazySpare (\\w+)$", function() end))
+                feedTriggers("\nLazySpare one\n")
+                local spare = matches
+                assert.is_nil(next(spare), "matches was not empty between dispatches to begin with")
+                change(spare)
+                feedTriggers("\nLazySpare two\n")
+                assert.is_false(rawequal(matches, spare), "the changed table was put back as matches")
+                assert.is_nil(next(matches), "matches read as filled between dispatches")
+                assert.is_nil(getmetatable(matches), "matches had a metatable between dispatches")
+                return spare
+            end
+
+            it("is not put back after an assignment into it", function()
+                local spare = changedBetweenFires(function(t) t[1] = "mine" end)
+                assert.are.equal("mine", spare[1])
+            end)
+
+            it("is not put back after a rawset() into it", function()
+                local spare = changedBetweenFires(function(t) rawset(t, "key", "mine") end)
+                assert.are.equal("mine", spare.key)
+            end)
+
+            it("is not put back after a table.insert() into it", function()
+                local spare = changedBetweenFires(function(t) table.insert(t, "mine") end)
+                assert.are.equal("mine", spare[1])
+            end)
+
+            -- OP_SETLIST only ever stores into the table its constructor just
+            -- made, unless the bytecode is edited to point it at another
+            it("is not put back after a table constructor's bytecode stored into it", function()
+                local spare = changedBetweenFires(function(t)
+                    local code = string.dump(function(target) local made = {"mine"} end)
+                    -- NEWTABLE 1 1 0, which becomes MOVE 1 0
+                    local at = code:find("\74\0\128\0", 1, true)
+                    assert.is_not_nil(at, "no NEWTABLE where one was expected in the bytecode")
+                    loadstring(code:sub(1, at - 1) .. "\64\0\0\0" .. code:sub(at + 4))(t)
+                end)
+                assert.are.equal("mine", spare[1])
+            end)
+
+            it("is not put back after setmetatable() on it", function()
+                local spare = changedBetweenFires(function(t) setmetatable(t, {}) end)
+                assert.is_not_nil(getmetatable(spare))
+            end)
+
+            it("is not put back after debug.setmetatable() on it", function()
+                local spare = changedBetweenFires(function(t) debug.setmetatable(t, {}) end)
+                assert.is_not_nil(getmetatable(spare))
+            end)
+
+            it("is not put back after a C module stored into it", function()
+                local spare = changedBetweenFires(function(t) require("lfs").attributes(".", t) end)
+                assert.are.equal("directory", spare.mode)
+            end)
+
+            it("is not put back after a script swapped it in the registry for a filled one", function()
+                local swapped
+                changedBetweenFires(function(t)
+                    local registry = debug.getregistry()
+                    for key, value in pairs(registry) do
+                        if rawequal(value, t) then
+                            swapped = {"mine"}
+                            registry[key] = swapped
+                        end
+                    end
+                end)
+                assert.is_not_nil(swapped, "the registry did not hold the table")
+                assert.is_false(rawequal(matches, swapped), "the filled table was put in place as matches")
+            end)
+        end)
+
+        it("hands a script the next line after it rawset() one between lines", function()
+            feedTriggers("\nLazyLineRawsetOne\n")
+            rawset(_G, "line", "mine")
+            feedTriggers("\nLazyLineRawsetTwo\n")
+
+            assert.are.equal("LazyLineRawsetTwo", line)
+        end)
+
     end)
 
     -- Once a profile holds enough plain-text triggers, the engine files them by
