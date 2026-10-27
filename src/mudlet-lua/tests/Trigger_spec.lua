@@ -7515,21 +7515,22 @@ describe("Trigger processing", function()
 
         -- Reading line makes a store of Mudlet's own straight after the
         -- script's, which must not vouch for what the script's store changed.
-        -- Nothing is stored under a capture name, which would move the barrier.
+        -- No store under a capture name follows it, as that would move the
+        -- barrier on its own.
         it("does not put back the empty matches a script filled before reading line", function()
-            _G.LazyKeepFactsSpec = {}
+            _G.LazyGlobalsSpec = {}
             trigger(tempRegexTrigger("^LazyKeepFacts (\\w+)$", function() end))
             trigger(tempLineTrigger(2, 1, [[
                 local spare = matches
                 spare[1] = "mine"
-                _G.LazyKeepFactsSpec.spare = spare
-                _G.LazyKeepFactsSpec.lineRead = line
+                _G.LazyGlobalsSpec.spare = spare
+                _G.LazyGlobalsSpec.lineRead = line
             ]]))
-            trigger(tempLineTrigger(4, 1, [[_G.LazyKeepFactsSpec.after = matches]]))
+            trigger(tempLineTrigger(4, 1, [[_G.LazyGlobalsSpec.after = matches]]))
 
             feedTriggers("LazyKeepFacts one\nLazyKeepFacts two\nLazyKeepFacts three\nLazyKeepFacts four\nLazyKeepFacts five more\n")
 
-            local spec = _G.LazyKeepFactsSpec
+            local spec = _G.LazyGlobalsSpec
             assert.are.equal("LazyKeepFacts three", spec.lineRead)
             assert.are.equal("mine", spec.spare[1])
             assert.is_false(rawequal(spec.after, spec.spare), "the filled table was put back as matches")
