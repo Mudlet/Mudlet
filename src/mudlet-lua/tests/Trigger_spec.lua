@@ -6249,6 +6249,40 @@ describe("Trigger processing", function()
             assert.is_nil(next(multimatches), "multimatches should be empty again outside the dispatch")
         end)
 
+        -- Neither script stores anything under a capture name, which would move
+        -- the barrier on its own
+        it("hands the next fire an empty multimatches after a script assigned it", function()
+            _G.LazyGlobalsSpec = {seen = {}}
+            multiline("SpecLazyMultiAssigned", {[[^lazyassign one (\w+)$]], [[^lazyassign two (\w+)$]]}, [[multimatches = "assigned"]])
+            trigger(tempRegexTrigger("^LazyMultiAfterAssigned$", [[table.insert(_G.LazyGlobalsSpec.seen, multimatches)]]))
+
+            -- Only the second round reaches the script with the barrier's facts settled
+            for _ = 1, 2 do
+                feedTriggers("lazyassign one aaa\n")
+                feedTriggers("lazyassign two bbb\nLazyMultiAfterAssigned\n")
+            end
+
+            local seen = _G.LazyGlobalsSpec.seen
+            assert.are.equal(2, #seen)
+            for _, multimatches in ipairs(seen) do
+                assert.are.equal("table", type(multimatches))
+                assert.is_nil(next(multimatches))
+            end
+        end)
+
+        it("empties multimatches after a multiline fire that read it", function()
+            _G.LazyGlobalsSpec = {}
+            multiline("SpecLazyMultiRead", {[[^lazyread one (\w+)$]], [[^lazyread two (\w+)$]]}, [==[
+                _G.LazyGlobalsSpec.first = multimatches[1][2]
+            ]==])
+
+            feedTriggers("lazyread one aaa\n")
+            feedTriggers("lazyread two bbb\n")
+
+            assert.are.equal("aaa", _G.LazyGlobalsSpec.first)
+            assert.is_nil(next(multimatches), "multimatches should be empty again outside the dispatch")
+        end)
+
         it("leaves a multiline trigger's multimatches alone when the script never reads it", function()
             _G.LazyGlobalsSpec = {fires = 0}
             multiline("SpecLazyMultiQuiet", {[[^quiet one (\w+)$]], [[^quiet two (\w+)$]]}, [==[
@@ -7393,6 +7427,7 @@ describe("Trigger processing", function()
                 pending("built against a Lua without the write barrier")
                 return
             end
+            assert.are.equal("vouching", barrier)
             trigger(tempRegexTrigger("^LazyWeakRegistry (\\w+)$", function() end))
             trigger(tempRegexTrigger("^LazyWeakRegistry (\\w+)$", function()
                 collectgarbage()
@@ -7418,7 +7453,7 @@ describe("Trigger processing", function()
             local between = type(rawPresent(_G, "matches"))
             local _, barrierWhileWeak = rearmLazyGlobals()
             setmetatable(debug.getregistry(), nil)
-            local _, barrierAfter = rearmLazyGlobals()
+            local _, barrierAfter = rearmLazyGlobals(true)
 
             assert.is_true(ok, tostring(message))
             assert.are.equal("table", between, "the globals table was handed an empty matches the collector had cleared")

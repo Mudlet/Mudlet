@@ -5009,9 +5009,10 @@ void TLuaInterpreter::pushMultimatchesTable(lua_State* L)
 // globals metatable was handed out, which nothing a script does can - busted
 // hands it out around every spec file, so the specs covering the deferral need
 // it back. Puts the handlers on whatever metatable the globals table carries if
-// both slots are empty there. Returns whether the deferral is on and, once
-// installed, the write barrier's state: "vouching", "off" once barrierIntact()
-// failed, or "absent" with a Lua that has none.
+// both slots are empty there. Given true, also turns the write barrier back on
+// if barrierIntact() turned it off and holds again. Returns whether the deferral
+// is on and, once installed, the barrier's state: "vouching", "off", or
+// "absent" with a Lua that has none.
 int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
 {
     if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
@@ -5026,8 +5027,13 @@ int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
     }
 #if defined(MUDLET_LUA_WATCH)
     // For the specs after one that turned the barrier off
-    if (!self->mLuaWriteEpoch && self->barrierIntact(L)) {
+    if (lua_toboolean(L, 1) && !self->mLuaWriteEpoch && self->barrierIntact(L)) {
         self->mLuaWriteEpoch = lua_watch(L, LUA_REGISTRYINDEX, 1);
+        for (const int keyRef : {self->mMatchesKeyRef, self->mMultimatchesKeyRef, self->mLineKeyRef}) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, keyRef);
+            lua_watch(L, -1, 1);
+            lua_pop(L, 1);
+        }
         self->mFacts = 0;
     }
 #endif
