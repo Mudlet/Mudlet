@@ -3094,7 +3094,7 @@ describe("Tests game text the ingest worker parses ahead", function()
         if math.floor(i / 5) % 2 == 0 then
           lines[i] = "IngestAmbiguous " .. i .. " " .. ("─±°"):rep(25)
         else
-          lines[i] = "IngestAmbiguousLong " .. i .. " " .. ("─± "):rep(40)
+          lines[i] = "IngestAmbiguousLong " .. i .. " " .. ("─± "):rep(70)
         end
       else
         lines[i] = oddLongLine(i)
