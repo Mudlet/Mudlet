@@ -194,6 +194,10 @@ LUA_API void  (lua_rawseti) (lua_State *L, int idx, int n);
 LUA_API int   (lua_setmetatable) (lua_State *L, int objindex);
 LUA_API int   (lua_setfenv) (lua_State *L, int idx);
 
+/* MUDLET: write barrier, see ../README.md */
+#define MUDLET_LUA_WATCH
+LUA_API const size_t *(lua_watch) (lua_State *L, int idx, int watch);
+
 
 /*
 ** `load' and `call' functions (load and run Lua code)

@@ -21,6 +21,8 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+#include "lstate.h"  /* MUDLET: for ll_hascore() */
+
 
 /* prefix for open functions in C libraries */
 #define LUA_POF		"luaopen_"
@@ -78,6 +80,15 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
   return f;
 }
 
+
+/* MUDLET: whether `lib', or a library it brought in, has a Lua core of its own */
+static int ll_hascore (void *lib) {
+  void (*f) (lua_State *L, int idx);
+  *(void **)(&f) = dlsym(lib, "lua_rawset");
+  if (f == NULL) (void)dlerror();  /* leaves no error behind */
+  return f != NULL && f != lua_rawset;
+}
+
 /* }====================================================== */
 
 
@@ -90,6 +101,7 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 */
 
 #include <windows.h>
+#include <psapi.h>  /* MUDLET: for ll_hascore() */
 
 
 #undef setprogdir
@@ -135,6 +147,26 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
   lua_CFunction f = (lua_CFunction)GetProcAddress((HINSTANCE)lib, sym);
   if (f == NULL) pusherror(L);
   return f;
+}
+
+
+/*
+** MUDLET: whether any library in the process has a Lua core of its own, as a
+** library imports its Lua from whichever DLL it was linked against by name
+*/
+static int ll_hascore (void *lib) {
+  HMODULE mods[1024];
+  DWORD bytes, i;
+  (void)lib;
+  if (!EnumProcessModules(GetCurrentProcess(), mods, sizeof(mods), &bytes) ||
+      bytes > sizeof(mods))
+    return 1;
+  for (i = 0; i < bytes / sizeof(HMODULE); i++) {
+    FARPROC f = GetProcAddress(mods[i], "lua_rawset");
+    if (f != NULL && f != (FARPROC)lua_rawset)
+      return 1;
+  }
+  return 0;
 }
 
 /* }====================================================== */
@@ -257,6 +289,10 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 /* }====================================================== */
 #endif
 
+#if !defined(LUA_DL_DLOPEN) && !defined(LUA_DL_DLL)
+#define ll_hascore(lib)	0  /* MUDLET: no loader Mudlet builds */
+#endif
+
 
 
 static void **ll_register (lua_State *L, const char *path) {
@@ -293,7 +329,13 @@ static int gctm (lua_State *L) {
 
 static int ll_loadfunc (lua_State *L, const char *path, const char *sym) {
   void **reg = ll_register(L, path);
-  if (*reg == NULL) *reg = ll_load(L, path);
+  if (*reg == NULL) {
+    *reg = ll_load(L, path);
+    if (*reg != NULL && ll_hascore(*reg)) {  /* MUDLET: see lua_watch() */
+      G(L)->watchblind = 1;
+      G(L)->watchepoch++;
+    }
+  }
   if (*reg == NULL)
     return ERRLIB;  /* unable to load library */
   else {
