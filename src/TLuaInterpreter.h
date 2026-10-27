@@ -1148,9 +1148,9 @@ private:
     bool mGlobalsHandlersLinger = false;
     int mIndexHandlerRef = LUA_NOREF;
     int mNewindexHandlerRef = LUA_NOREF;
-    // What the bundled Lua's write barrier lets the trigger path take as still
-    // so rather than look again - see 3rdparty/lua51/README.md. They hold for
-    // as long as *mLuaWriteEpoch stays at mFactsEpoch.
+    // Facts the write barrier (3rdparty/lua51/README.md) lets the trigger path
+    // skip re-checking; a bit set in mFacts holds while *mLuaWriteEpoch equals
+    // mFactsEpoch
     static constexpr quint8 scmHandlersInPlace = 0x01;
     static constexpr quint8 scmMatchesAbsent = 0x02;
     static constexpr quint8 scmMultimatchesAbsent = 0x04;
@@ -1165,8 +1165,8 @@ private:
     bool knows(const quint8 fact) const { return factsCurrent() && (mFacts & fact); }
     void forget(const quint8 fact) { mFacts &= static_cast<quint8>(~fact); }
     // After a raw store of Mudlet's own, which runs no Lua: if the facts were
-    // current, that store alone moved the epoch, so they stay - less any the
-    // caller forget()s for what it stored
+    // current, only that store can have moved the epoch, so they stay - less
+    // any the caller forget()s for what it stored
     void keepFacts(const bool wereCurrent)
     {
         if (wereCurrent) {

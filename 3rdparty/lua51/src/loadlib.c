@@ -290,7 +290,7 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 #endif
 
 #if !defined(LUA_DL_DLOPEN) && !defined(LUA_DL_DLL)
-#define ll_hascore(lib)	0  /* MUDLET: no loader Mudlet builds */
+#define ll_hascore(lib)	0  /* MUDLET: dyld or no loader, neither built for Mudlet */
 #endif
 
 

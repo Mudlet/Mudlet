@@ -7372,8 +7372,8 @@ describe("Trigger processing", function()
             end)
         end)
 
-        -- Every case below passes without the barrier too, so this is what says
-        -- they tested it
+        -- Every case below also passes without the barrier, so this one shows
+        -- they ran with it
         it("leaves the checks to the write barrier of Mudlet's own Lua", function()
             local armed, barrier = rearmLazyGlobals()
             if barrier == "absent" then
@@ -7382,6 +7382,48 @@ describe("Trigger processing", function()
             end
             assert.is_true(armed)
             assert.are.equal("vouching", barrier)
+        end)
+
+        -- The collector clears a weak table without a store the barrier counts.
+        -- Everything else the registry holds is kept alive, so the empty table
+        -- "matches" holds between dispatches is all the second fire collects.
+        it("hands a script the empty matches after the collector cleared it from a weak registry", function()
+            local _, barrier = rearmLazyGlobals()
+            if barrier == "absent" then
+                pending("built against a Lua without the write barrier")
+                return
+            end
+            trigger(tempRegexTrigger("^LazyWeakRegistry (\\w+)$", function() end))
+            trigger(tempRegexTrigger("^LazyWeakRegistry (\\w+)$", function()
+                collectgarbage()
+                collectgarbage()
+            end))
+            collectgarbage()
+            collectgarbage()
+            local keep = {}
+            -- In a function of its own, as a register of this one would keep it alive
+            local function weakenRegistryAroundEmptyMatches()
+                local registry = debug.getregistry()
+                local empty = rawPresent(_G, "matches")
+                for key, value in next, registry do
+                    if not rawequal(value, empty) then
+                        keep[key] = value
+                    end
+                end
+                setmetatable(registry, {__mode = "v"})
+            end
+
+            weakenRegistryAroundEmptyMatches()
+            local ok, message = pcall(feedTriggers, "\nLazyWeakRegistry word\n")
+            local between = type(rawPresent(_G, "matches"))
+            local _, barrierWhileWeak = rearmLazyGlobals()
+            setmetatable(debug.getregistry(), nil)
+            local _, barrierAfter = rearmLazyGlobals()
+
+            assert.is_true(ok, tostring(message))
+            assert.are.equal("table", between, "the globals table was handed an empty matches the collector had cleared")
+            assert.are.equal("off", barrierWhileWeak)
+            assert.are.equal("vouching", barrierAfter)
         end)
 
         -- The table matches holds between dispatches is used again for as long

@@ -5009,9 +5009,9 @@ void TLuaInterpreter::pushMultimatchesTable(lua_State* L)
 // globals metatable was handed out, which nothing a script does can - busted
 // hands it out around every spec file, so the specs covering the deferral need
 // it back. Puts the handlers on whatever metatable the globals table carries if
-// both slots are empty there. Returns whether the deferral is on, and whether
-// the write barrier vouches for it: "vouching", "off", or "absent" with a Lua
-// that has none.
+// both slots are empty there. Returns whether the deferral is on and, once
+// installed, the write barrier's state: "vouching", "off" once barrierIntact()
+// failed, or "absent" with a Lua that has none.
 int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
 {
     if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
@@ -5024,6 +5024,13 @@ int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
         lua_pushboolean(L, false);
         return 1;
     }
+#if defined(MUDLET_LUA_WATCH)
+    // For the specs after one that turned the barrier off
+    if (!self->mLuaWriteEpoch && self->barrierIntact(L)) {
+        self->mLuaWriteEpoch = lua_watch(L, LUA_REGISTRYINDEX, 1);
+        self->mFacts = 0;
+    }
+#endif
     lua_rawgeti(L, LUA_REGISTRYINDEX, self->mGlobalsTableRef);
     if (lua_getmetatable(L, -1)) {
         self->restoreGlobalsHandlers(L, lua_gettop(L));
@@ -5034,7 +5041,7 @@ int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
     self->mGlobalsHandlersLinger = !armed;
     lua_pushboolean(L, armed);
 #if defined(MUDLET_LUA_WATCH)
-    lua_pushstring(L, self->mLuaWriteEpoch ? "vouching" : "off");
+    lua_pushstring(L, self->mLuaWriteEpoch && self->barrierIntact(L) ? "vouching" : "off");
 #else
     lua_pushstring(L, "absent");
 #endif
@@ -5228,8 +5235,8 @@ void TLuaInterpreter::clearGlobal(lua_State* L, const int keyRef, const quint8 a
 }
 
 // No documentation available in wiki - internal function
-// Only called just after the fact was checked, or made so by a store that ran
-// no Lua since
+// Call only right after checking the fact, or after a store that made it so,
+// with no Lua run since
 void TLuaInterpreter::learn(lua_State* L, const quint8 fact)
 {
     if (!mLuaWriteEpoch) {
