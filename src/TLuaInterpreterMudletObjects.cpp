@@ -2316,7 +2316,8 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        trigger->mLuaFunctionRef = pLuaInterpreter->ref_luafunction(L, codeIndex);
+        lua_pushvalue(L, codeIndex);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, triggerID);
@@ -2357,7 +2358,8 @@ int TLuaInterpreter::tempAlias(lua_State* L)
             return 1;
         }
         alias->mRegisteredAnonymousLuaFunction = true;
-        alias->mLuaFunctionRef = pLuaInterpreter->ref_luafunction(L, 2);
+        lua_pushvalue(L, 2);
+        alias->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
         lua_pushnumber(L, result);
         return 1;
     }
@@ -2410,7 +2412,8 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        trigger->mLuaFunctionRef = pLuaInterpreter->ref_luafunction(L, 2);
+        lua_pushvalue(L, 2);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, triggerID);
@@ -2624,7 +2627,8 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        trigger->mLuaFunctionRef = pLuaInterpreter->ref_luafunction(L, 3);
+        lua_pushvalue(L, 3);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     } else {
         lua_pushfstring(L, "tempColorTrigger: bad argument #3 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
@@ -2787,7 +2791,8 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         pT->setScript(QString());
 
         pT->mRegisteredAnonymousLuaFunction = true;
-        pT->mLuaFunctionRef = host.getLuaInterpreter()->ref_luafunction(L, 3);
+        lua_pushvalue(L, 3);
+        pT->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, pT->getID());
@@ -2836,7 +2841,8 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        trigger->mLuaFunctionRef = pLuaInterpreter->ref_luafunction(L, 2);
+        lua_pushvalue(L, 2);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, triggerID);
@@ -2874,7 +2880,8 @@ int TLuaInterpreter::tempKey(lua_State* L)
             return 1;
         }
         key->mRegisteredAnonymousLuaFunction = true;
-        key->mLuaFunctionRef = pLuaInterpreter->ref_luafunction(L, argIndex);
+        lua_pushvalue(L, argIndex);
+        key->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
         lua_pushnumber(L, result);
         return 1;
     }
@@ -2915,7 +2922,8 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        trigger->mLuaFunctionRef = pLuaInterpreter->ref_luafunction(L, 3);
+        lua_pushvalue(L, 3);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     } else {
         lua_pushfstring(L, "tempLineTrigger: bad argument #3 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
@@ -2959,7 +2967,8 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        trigger->mLuaFunctionRef = pLuaInterpreter->ref_luafunction(L, 1);
+        lua_pushvalue(L, 1);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     } else {
         lua_pushfstring(L, "tempPromptTrigger: bad argument #1 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
@@ -3014,7 +3023,8 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        trigger->mLuaFunctionRef = pLuaInterpreter->ref_luafunction(L, 2);
+        lua_pushvalue(L, 2);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, triggerID);
@@ -3054,7 +3064,8 @@ int TLuaInterpreter::tempTimer(lua_State* L)
             return 1;
         }
         timer->mRegisteredAnonymousLuaFunction = true;
-        timer->mLuaFunctionRef = pLuaInterpreter->ref_luafunction(L, 2);
+        lua_pushvalue(L, 2);
+        timer->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
         lua_pushnumber(L, result.first);
         return 1;
     }
@@ -3118,7 +3129,8 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        trigger->mLuaFunctionRef = pLuaInterpreter->ref_luafunction(L, 2);
+        lua_pushvalue(L, 2);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, triggerID);
