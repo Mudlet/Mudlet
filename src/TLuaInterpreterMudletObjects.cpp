@@ -841,6 +841,9 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
         lua_pushstring(L, "linesParsedAhead");
         lua_pushnumber(L, static_cast<double>(host.mainConsoleModel().buffer.linesParsedAhead()));
         lua_settable(L, -3);
+        lua_pushstring(L, "wrapHintsUsed");
+        lua_pushnumber(L, static_cast<double>(host.mainConsoleModel().buffer.wrapHintsUsed()));
+        lua_settable(L, -3);
     }
 
     return 1;

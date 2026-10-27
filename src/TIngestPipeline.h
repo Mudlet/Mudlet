@@ -34,14 +34,13 @@ class Host;
 class QThread;
 
 // A line the worker parsed ahead, as commitLine() would have handed it to commitLineData(): main moves
-// text and format into the buffer
+// its text and format out when it takes it
 struct TSpeculatedLine
 {
     TBuffer::ParseState stateAtCommit;
     QString text;
     TLineFormat format;
-    // For a line the quick fit test in commitLineData() does not pass: getWrapInfo() for it as a new line
-    // at the job's wrap settings
+    // TBuffer::newLineWrapBreaks() at the job's wrap settings, when wrapKnown
     QList<WrapInfo> wrapBreaks;
     // Offsets into the unit: where the line's first byte is, and its commit character
     size_t start = 0;
@@ -55,9 +54,8 @@ struct TSpeculatedLine
 
 // Up to csmMaxLines lines of one game unit, parsed ahead from mStartPosition. Main fills it in while
 // it is neither Queued nor Running; the worker publishes lines through mReady, and main takes them in
-// order. A job holds at most csmMaxTextChars of text and csmMaxFormatChars of per-character formats
-// that main has not taken yet: past that the worker stops, and main queues the job again from where it
-// has got to.
+// order. Each run of the worker records at most csmMaxTextChars of text and csmMaxFormatChars of
+// per-character formats: past that it stops, and main queues the job again from where it has got to.
 struct TIngestJob
 {
     enum State : int { Idle, Queued, Running, Done };
@@ -76,15 +74,13 @@ struct TIngestJob
     TBuffer::ParseState mStartState;
     TBuffer::ParseConfig mConfig;
     std::array<QColor, 16> mColours;
-    // The main buffer's, for wrapBreaks
-    int mWrapAt = 0;
-    int mWrapIndent = 0;
-    int mWrapHangingIndent = 0;
-    bool mWideAmbiguousGlyphs = false;
+    TBuffer::WrapSettings mWrap;
     std::vector<TSpeculatedLine> mLines;
     // Worker only
     size_t mTextUsed = 0;
     size_t mFormatUsed = 0;
+    // Lines from earlier runs that may still hold text past this run's mReady
+    int mLinesHeld = 0;
     // Where main may queue the job again for the rest of the unit, once the worker is Done
     size_t mResumeFrom = csmNoResume;
 

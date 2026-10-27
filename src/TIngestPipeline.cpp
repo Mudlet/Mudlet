@@ -19,7 +19,6 @@
 
 #include "TIngestPipeline.h"
 
-#include "Host.h"
 #include "MudletApp.h"
 #include "utils.h"
 
@@ -160,10 +159,7 @@ void TIngestPipeline::queue(const TBuffer& source, TIngestJob& job, const size_t
                     source.mLightMagenta,
                     source.mWhite,
                     source.mLightWhite};
-    job.mWrapAt = source.mWrapAt;
-    job.mWrapIndent = source.mWrapIndent;
-    job.mWrapHangingIndent = source.mWrapHangingIndent;
-    job.mWideAmbiguousGlyphs = source.mpHost && source.mpHost->wideAmbiguousEAsianGlyphs();
+    job.mWrap = source.wrapSettings();
     job.mReady.store(0, std::memory_order_relaxed);
     job.mCancel.store(false, std::memory_order_relaxed);
     job.mNext = 0;
@@ -255,6 +251,16 @@ void TIngestPipeline::parse(TIngestJob& job)
     }
     twin.mpSpeculationSink = nullptr;
     twin.mpParseConfig = nullptr;
+    // Main reads no line past mReady, and what it did not take of an earlier run's would otherwise stay
+    // allocated until a run as long overwrote it
+    const int ready = job.mReady.load(std::memory_order_relaxed);
+    for (int i = ready; i < job.mLinesHeld; ++i) {
+        TSpeculatedLine& line = job.mLines[static_cast<size_t>(i)];
+        line.text = QString();
+        line.format = TLineFormat();
+        line.wrapBreaks = QList<WrapInfo>();
+    }
+    job.mLinesHeld = ready;
     if (static_cast<size_t>(twin.mMudLine.capacity()) > TBuffer::csmMaxRetainedLineCapacity) {
         QString().swap(twin.mMudLine);
     }

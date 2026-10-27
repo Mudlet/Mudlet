@@ -2456,7 +2456,7 @@ bool TBuffer::speculatedLineTooLong(const size_t moreChars)
 }
 
 namespace {
-// graphemeInfo::getBaseCharacter() logs a grapheme that starts with a low surrogate, and the worker must not
+// graphemeInfo::getBaseCharacter() logs a grapheme that opens with a low surrogate, and the worker must not
 bool hasStrayLowSurrogate(const QString& text)
 {
     const qsizetype size = text.size();
@@ -2467,14 +2467,24 @@ bool hasStrayLowSurrogate(const QString& text)
     }
     return false;
 }
-
-bool sameBreaks(const QList<WrapInfo>& a, const QList<WrapInfo>& b)
-{
-    return std::equal(a.cbegin(), a.cend(), b.cbegin(), b.cend(), [](const WrapInfo& x, const WrapInfo& y) {
-        return x.isNewline == y.isNewline && x.needsIndent == y.needsIndent && x.firstChar == y.firstChar && x.lastChar == y.lastChar;
-    });
-}
 } // namespace
+
+TBuffer::WrapSettings TBuffer::wrapSettings() const
+{
+    return {mWrapAt, clampedWrapIndent(mWrapIndent, mWrapAt), clampedWrapIndent(mWrapHangingIndent, mWrapAt), mpHost && mpHost->wideAmbiguousEAsianGlyphs()};
+}
+
+// The breaks commitLineData() wraps a new line at. False, leaving breaks empty, where its quick fit test
+// spares it the scan, or for a line main must wrap itself.
+bool TBuffer::newLineWrapBreaks(const QString& lineText, const WrapSettings& wrap, QList<WrapInfo>& breaks)
+{
+    if (lineText.isEmpty() || fitsUnwrapped(lineText, wrap.maxWidth - wrap.indent) || hasStrayLowSurrogate(lineText)) {
+        breaks.clear();
+        return false;
+    }
+    breaks = wrapBreaks(lineText, true, wrap.maxWidth, wrap.indent, wrap.hangingIndent, wrap.maxWidth, wrap.wideAmbiguousGlyphs);
+    return true;
+}
 
 bool TBuffer::recordSpeculatedLine(const char ch, size_t& localBufferPosition, const bool forcedLineBreak)
 {
@@ -2507,13 +2517,7 @@ bool TBuffer::recordSpeculatedLine(const char ch, size_t& localBufferPosition, c
     if (!uniform) {
         job.mFormatUsed += formatLength;
     }
-    const int indent = clampedWrapIndent(job.mWrapIndent, job.mWrapAt);
-    line.wrapKnown = textLength && !fitsUnwrapped(line.text, job.mWrapAt - indent) && !hasStrayLowSurrogate(line.text);
-    if (line.wrapKnown) {
-        line.wrapBreaks = wrapBreaks(line.text, true, job.mWrapAt, indent, clampedWrapIndent(job.mWrapHangingIndent, job.mWrapAt), job.mWrapAt, job.mWideAmbiguousGlyphs);
-    } else {
-        line.wrapBreaks.clear();
-    }
+    line.wrapKnown = newLineWrapBreaks(line.text, job.mWrap, line.wrapBreaks);
     mMudLine.resize(0);
     mMudBuffer.clear();
     line.stateAtCommit = parseState();
@@ -2531,23 +2535,10 @@ void TBuffer::verifySpeculatedLine(const TSpeculatedLine& line, const char ch, c
     for (size_t i = 0; same && i < mMudBuffer.size(); ++i) {
         same = line.format[i] == mMudBuffer[i];
     }
-    if (same && !mMudLine.isEmpty() && mpHost) {
-        const bool wrapKnown = !fitsUnwrapped(mMudLine, mWrapAt - clampedWrapIndent(mWrapIndent, mWrapAt)) && !hasStrayLowSurrogate(mMudLine);
-        const TIngestJob& job = *mpActiveSpeculation;
-        const bool sameSettings =
-                job.mWrapAt == mWrapAt && job.mWrapIndent == mWrapIndent && job.mWrapHangingIndent == mWrapHangingIndent && job.mWideAmbiguousGlyphs == mpHost->wideAmbiguousEAsianGlyphs();
-        if (sameSettings) {
-            same = line.wrapKnown == wrapKnown
-                   && (!wrapKnown
-                       || sameBreaks(line.wrapBreaks,
-                                     wrapBreaks(mMudLine,
-                                                true,
-                                                mWrapAt,
-                                                clampedWrapIndent(mWrapIndent, mWrapAt),
-                                                clampedWrapIndent(mWrapHangingIndent, mWrapAt),
-                                                mWrapAt,
-                                                mpHost->wideAmbiguousEAsianGlyphs())));
-        }
+    // At other settings the breaks are not used, so there is nothing to compare them with
+    if (same && mpActiveSpeculation->mWrap == wrapSettings()) {
+        QList<WrapInfo> breaks;
+        same = newLineWrapBreaks(mMudLine, mpActiveSpeculation->mWrap, breaks) == line.wrapKnown && breaks == line.wrapBreaks;
     }
     if (!same) {
         qWarning().noquote() << "TBuffer ingest worker MISMATCH on line:" << mMudLine << "- the worker's:" << line.text;
@@ -2592,8 +2583,7 @@ void TBuffer::replaySpeculatedLines(TIngestJob& job, size_t& localBufferPosition
             && !(pHost->mUndoServerWrap && isFromServer && line.commitChar == '\n' && !line.forcedLineBreak && !line.text.isEmpty())) {
             // What commitLine() reduces to here, without copying the line through the accumulators
             if (line.wrapKnown) {
-                const int indent = clampedWrapIndent(job.mWrapIndent, job.mWrapAt);
-                const WrapHint hint{line.text, std::move(line.wrapBreaks), job.mWrapAt, indent, clampedWrapIndent(job.mWrapHangingIndent, job.mWrapAt), job.mWrapAt, job.mWideAmbiguousGlyphs};
+                const WrapHint hint{line.text, std::move(line.wrapBreaks), job.mWrap};
                 commitLineData(std::move(line.text), std::move(line.format), line.commitChar, &hint);
             } else {
                 commitLineData(std::move(line.text), std::move(line.format), line.commitChar);
@@ -2925,7 +2915,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch, con
     const int lastValidLine = static_cast<int>(lineBuffer.size()) - 1;
     const int wrapStartLine = (lastValidLine >= 0) ? std::min(passLineAfterTriggers, lastValidLine) : 0;
     // Spares wrapLine()'s setup for the usual last line that fits; one with no text or no TChars still goes
-    // through, as wrapLine() rebuilds it. The width must stay getWrapInfo()'s widthAvailable for mWrapAt.
+    // through, as wrapLine() rebuilds it. The width must stay wrapBreaks()'s widthAvailable for mWrapAt.
     const bool fitsAsIs = wrapStartLine == lastValidLine && !lineBuffer.at(wrapStartLine).isEmpty() && !buffer[wrapStartLine].empty()
                           && fitsUnwrapped(lineBuffer.at(wrapStartLine), wrapsFromPreviousLine(wrapStartLine) ? mWrapAt : mWrapAt - clampedWrapIndent(mWrapIndent, mWrapAt));
     const int addedLines = fitsAsIs ? 0 : wrapLineWith(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent, wrapHint);
@@ -6767,6 +6757,7 @@ int TBuffer::wrapLineWith(int startLine, int maxWidth, int indentSize, int hangi
         }
         if (startLineHint && firstRewrappedLine == startLine && wrapHintApplies(*startLineHint, startLine, maxWidth, indent, hangingIndent)) {
             lineBreaks = startLineHint->breaks;
+            ++mWrapHintsUsed;
         } else {
             lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), timeBuffer.at(firstRewrappedLine) != TBuffer::csmWrappedLineTimeStamp, maxWidth, indent, hangingIndent);
         }
@@ -6991,10 +6982,9 @@ bool TBuffer::dropSpaceAtWrap(const QChar c)
 
 bool TBuffer::wrapHintApplies(const WrapHint& hint, const int line, const int maxWidth, const int indent, const int hangingIndent) const
 {
-    // hint.text holds a reference, so any edit to the line detached it from hint.text
     const QString& text = lineBuffer.at(line);
-    return text.constData() == hint.text.constData() && text.size() == hint.text.size() && timeBuffer.at(line) != csmWrappedLineTimeStamp && maxWidth == hint.maxWidth && indent == hint.indent
-           && hangingIndent == hint.hangingIndent && mWrapAt == hint.wrapAt && mpHost && mpHost->wideAmbiguousEAsianGlyphs() == hint.wideAmbiguousGlyphs;
+    return text.constData() == hint.text.constData() && text.size() == hint.text.size() && timeBuffer.at(line) != csmWrappedLineTimeStamp && mWrapAt == maxWidth && mpHost
+           && hint.settings == WrapSettings{maxWidth, indent, hangingIndent, mpHost->wideAmbiguousEAsianGlyphs()};
 }
 
 bool TBuffer::wrapsFromPreviousLine(const int lineNumber) const

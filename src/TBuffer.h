@@ -79,6 +79,7 @@ public:
     , lastChar(lastChar)
     {
     }
+    bool operator==(const WrapInfo&) const = default;
 };
 
 class TChar
@@ -588,6 +589,15 @@ public:
         bool mxpStrikeOut = false;
         bool mxpColourOrLink = false;
     };
+    // The width and clamped indents new lines are wrapped at, with Host's East Asian ambiguous width
+    struct WrapSettings
+    {
+        int maxWidth = 0;
+        int indent = 0;
+        int hangingIndent = 0;
+        bool wideAmbiguousGlyphs = false;
+        bool operator==(const WrapSettings&) const = default;
+    };
 
     // As per QDateTime::toString(). Translatable, so overwritten once at startup and fixed thereafter:
     static inline QString smTimeStampFormat = qsl("hh:mm:ss.zzz ");
@@ -728,6 +738,8 @@ public:
     void injectOSC8DocumentationExamples();
     // For specs: how many lines the ingest worker parsed that this buffer committed without parsing them again
     quint64 linesParsedAhead() const;
+    // For specs: how many of those were wrapped at the breaks the worker found for them
+    quint64 wrapHintsUsed() const { return mWrapHintsUsed; }
 
     static Decoder decoderFor(const QByteArray&);
     // It would have been nice to do this with Qt's signals and slots but that
@@ -774,19 +786,17 @@ private:
     THyperlinkVisibilityManager* hyperlinkVisibilityManagerOrNull();
     TChar currentFormat() const;
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
-    // getWrapInfo() for a non-empty line once Host is read; touches nothing else, so the ingest worker runs it too
+    // getWrapInfo() with the buffer's and Host's settings passed in, so the ingest worker can run it
     static QList<WrapInfo> wrapBreaks(const QString& lineText, bool isNewline, int maxWidth, int indent, int hangingIndent, int wrapAt, bool wideAmbiguousGlyphs);
-    // wrapBreaks() for a line the ingest worker parsed, as a new line. text shares the committed line's
-    // text, so an edit to the line detaches it from text.
+    static bool newLineWrapBreaks(const QString& lineText, const WrapSettings&, QList<WrapInfo>& breaks);
+    WrapSettings wrapSettings() const;
+    // newLineWrapBreaks() for a line the ingest worker parsed. text shares the committed line's text, so an
+    // edit to the line detaches it from text.
     struct WrapHint
     {
         QString text;
         QList<WrapInfo> breaks;
-        int maxWidth = 0;
-        int indent = 0;
-        int hangingIndent = 0;
-        int wrapAt = 0;
-        bool wideAmbiguousGlyphs = false;
+        WrapSettings settings;
     };
     int wrapLineWith(int startLine, int maxWidth, int indentSize, int hangingIndentSize, const WrapHint* startLineHint);
     bool wrapHintApplies(const WrapHint&, int line, int maxWidth, int indent, int hangingIndent) const;
@@ -1172,6 +1182,7 @@ private:
     bool mSpeculationStopped = false;
     // Moves whenever mBlack..mLightWhite change, so a line parsed ahead with older colours is not used
     quint64 mColourGeneration = 0;
+    quint64 mWrapHintsUsed = 0;
 
     // Timestamp to prevent duplicate OSC 8 documentation injection
     qint64 mLastOSC8DocsInjectionTime = 0;

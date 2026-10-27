@@ -3059,7 +3059,25 @@ describe("Tests game text the ingest worker parses ahead", function()
     requireWorker(before)
   end)
 
-  -- lines past the main window's width of 100, in ASCII and in characters wider than one column
+  -- every fourth of the rest of a long line's kinds, then a short one
+  local function oddLongLine(i)
+    local kind = math.floor(i / 5) % 6
+    if kind == 1 then
+      -- a family emoji joined by ZWJs, two columns, and an e with a combining acute accent
+      return "IngestEmoji " .. i .. " " .. ("\240\159\145\168\226\128\141\240\159\145\169\226\128\141\240\159\145\167 e\204\129 "):rep(25)
+    elseif kind == 2 or kind == 3 then
+      local prefix = (kind == 2 and "IngestExact " or "IngestOver ") .. i .. " ─"
+      return prefix .. ("x"):rep((kind == 2 and 100 or 101) - utf8.len(prefix))
+    elseif kind == 4 then
+      return "IngestSpaces " .. i .. " " .. ("spaced   "):rep(15)
+    elseif kind == 5 then
+      return "IngestTab " .. i .. "\t" .. ("tabbed\tword "):rep(12)
+    end
+    return "IngestShort " .. i
+  end
+
+  -- ASCII and CJK lines past the main window's width of 100, ambiguous-width ones past it only when those
+  -- are wide, lines of exactly 100 and 101 columns, and short ones
   local function longLines(count)
     local lines = {}
     for i = 1, count or 60 do
@@ -3074,7 +3092,7 @@ describe("Tests game text the ingest worker parses ahead", function()
         -- East Asian ambiguous width: one column each, unless the profile makes them two
         lines[i] = "IngestAmbiguous " .. i .. " " .. ("─±°"):rep(25)
       else
-        lines[i] = "IngestShort " .. i
+        lines[i] = oddLongLine(i)
       end
     end
     return lines
@@ -3089,11 +3107,16 @@ describe("Tests game text the ingest worker parses ahead", function()
     end
   end
 
+  local function wrapHintsUsed()
+    return getProfileStats().wrapHintsUsed
+  end
+
   it("wraps long lines the same from one read", function()
-    local before = parsedAhead()
+    local before, hints = parsedAhead(), wrapHintsUsed()
     local together = sameEitherWay(longLines(), true)
     assert.is_true(#together > 60, "no line was wrapped")
     requireWorker(before)
+    assert.is_true(wrapHintsUsed() > hints, "no line was wrapped at the breaks the worker found")
   end)
 
   it("wraps long lines with a wrap and a hanging indent the same from one read", function()
@@ -3103,10 +3126,11 @@ describe("Tests game text the ingest worker parses ahead", function()
     end)
     setWindowWrapIndent("main", 4)
     setWindowWrapHangingIndent("main", 2)
-    local before = parsedAhead()
+    local before, hints = parsedAhead(), wrapHintsUsed()
     local together = sameEitherWay(longLines(), true)
     assert.truthy(firstFragment(together, "    IngestLong 10 "), "the wrap indent was not applied")
     requireWorker(before)
+    assert.is_true(wrapHintsUsed() > hints, "no line was wrapped at the breaks the worker found")
   end)
 
   local wrapSettings = {
@@ -3168,12 +3192,44 @@ describe("Tests game text the ingest worker parses ahead", function()
     triggers[#triggers + 1] = tempRegexTrigger("^IngestAmbiguous 33 ", function()
       echo(" IngestEchoed " .. ("echo "):rep(10))
     end)
+    triggers[#triggers + 1] = tempRegexTrigger("^IngestWide 12 ", function()
+      echo("\nIngestSplit " .. ("split "):rep(30))
+    end)
+    triggers[#triggers + 1] = tempRegexTrigger("^IngestLong 40 ", function()
+      feedTriggers("IngestNestedLong " .. ("nested "):rep(30) .. "\n")
+    end)
     local before = parsedAhead()
     local together = sameEitherWay(longLines(), true)
     assert.truthy(firstFragment(together, "IngestShortened 20"), "the line was not shortened")
     assert.falsy(firstFragment(together, "IngestLong 30 "), "the line was not deleted")
+    assert.truthy(firstFragment(together, "IngestSplit "), "the echo did not start a line")
+    assert.truthy(firstFragment(together, "IngestNestedLong "), "the fed line did not arrive")
     requireWorker(before)
   end)
+
+  for _, behaviour in ipairs({"hide", "replacewithspace"}) do
+    it("commits blank lines after a background colour the same from one read when they are set to " .. behaviour, function()
+      local original = getConfig("blankLinesBehaviour")
+      finally(function()
+        setConfig("blankLinesBehaviour", original)
+      end)
+      setConfig("blankLinesBehaviour", behaviour)
+      local lines = {}
+      for i = 1, 60 do
+        local kind = i % 3
+        if kind == 1 then
+          lines[i] = "IngestBackground " .. i .. " \27[4" .. (i % 7 + 1) .. "mon colour"
+        elseif kind == 2 then
+          lines[i] = ""
+        else
+          lines[i] = "\27[0mIngestAfterBlank " .. i
+        end
+      end
+      local before = parsedAhead()
+      assert.are.equal(behaviour == "hide" and 40 or 60, #sameEitherWay(lines))
+      requireWorker(before)
+    end)
+  end
 
   it("decodes a whole read in the encoding it arrived in, even when a trigger switches it part way", function()
     local original = getServerEncoding()
