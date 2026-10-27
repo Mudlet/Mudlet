@@ -55,10 +55,15 @@ else()
 endif()
 
 set_target_properties(lua51 PROPERTIES C_STANDARD 99 C_EXTENSIONS ON)
-# The VM measures faster at -O2 than at the -O3 a Release build gives C, but
-# slower once a profile guides the build (MUDLET_PGO)
-if(NOT MSVC AND NOT MUDLET_PGO)
-  target_compile_options(lua51 PRIVATE $<$<CONFIG:Release>:-O2>)
+# The VM measures faster at -O2 than at the -O3 a Release build gives C, though
+# not once a profile guides that build (MUDLET_PGO). Builds of every other type,
+# CI's untyped ones among them, get -O2 like the system Lua this replaces.
+if(NOT MSVC)
+  if(MUDLET_PGO)
+    target_compile_options(lua51 PRIVATE $<$<NOT:$<CONFIG:Release>>:-O2>)
+  else()
+    target_compile_options(lua51 PRIVATE -O2)
+  endif()
 endif()
 target_include_directories(lua51 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_library(LUA51::LUA51 ALIAS lua51)

@@ -17,7 +17,8 @@ set(QT_SKIP_DEFAULT_TESTCASE_DIRS ON)
 # stderr has a console attached, which an MSYS2 shell or a CI runner does not give
 # it, so a failing test reports an exit code and nothing else (#9747). Deferred so
 # that tests registered further down the file are covered too; TESTS does not
-# descend into subdirectories, hence the second call in functional_tests.
+# descend into subdirectories, hence the second call in functional_tests. It also
+# puts the bundled lua51.dll's directory first on PATH.
 function(restore_windows_test_output)
     get_property(registeredTests DIRECTORY PROPERTY TESTS)
     foreach(testName ${registeredTests})
