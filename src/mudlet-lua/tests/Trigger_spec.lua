@@ -6249,8 +6249,8 @@ describe("Trigger processing", function()
             assert.is_nil(next(multimatches), "multimatches should be empty again outside the dispatch")
         end)
 
-        -- Neither script stores anything under a capture name, which would move
-        -- the barrier on its own
+        -- Neither script stores under a capture name beyond the store under
+        -- test: any other would move the barrier and hide a missing forget()
         it("hands the next fire an empty multimatches after a script assigned it", function()
             _G.LazyGlobalsSpec = {seen = {}}
             multiline("SpecLazyMultiAssigned", {[[^lazyassign one (\w+)$]], [[^lazyassign two (\w+)$]]}, [[multimatches = "assigned"]])
