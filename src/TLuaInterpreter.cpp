@@ -5420,14 +5420,19 @@ int TLuaInterpreter::lazyGlobalsIndex(lua_State* L)
     }
     lua_pushvalue(L, 2);
     lua_pushvalue(L, -2);
+    const bool factsWereCurrent = self->factsCurrent();
     lua_rawset(L, 1);
+    self->keepFacts(factsWereCurrent);
     // Only now: building the value can raise, and the next read has to find it
     // still owed
     if (wantsMatches) {
         self->mMatchesPending = false;
+        self->forget(scmMatchesAbsent);
     } else if (wantsLine) {
         self->mLinePending = false;
+        self->forget(scmLineAbsent);
     } else {
+        self->forget(scmMultimatchesAbsent);
         if (self->mMultimatchesPending == PendingMultimatches::Spare) {
             self->mSpareMultimatchesSeen = true;
         }
@@ -5447,16 +5452,21 @@ int TLuaInterpreter::lazyGlobalsNewindex(lua_State* L)
     lua_settop(L, 3);
     auto* self = static_cast<TLuaInterpreter*>(lua_touserdata(L, lua_upvalueindex(1)));
     const char* key = lua_type(L, 2) == LUA_TSTRING && lua_topointer(L, 1) == self->mGlobalsTable ? lua_tostring(L, 2) : nullptr;
+    const bool factsWereCurrent = self->factsCurrent();
     lua_rawset(L, 1);
     if (!key) {
         return 0;
     }
+    self->keepFacts(factsWereCurrent);
     if (key == self->mMatchesKey) {
         self->mMatchesPending = false;
+        self->forget(scmMatchesAbsent);
     } else if (key == self->mLineKey) {
         self->mLinePending = false;
+        self->forget(scmLineAbsent);
     } else if (key == self->mMultimatchesKey) {
         self->mMultimatchesPending = PendingMultimatches::None;
+        self->forget(scmMultimatchesAbsent);
     }
     return 0;
 }
