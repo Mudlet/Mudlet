@@ -3908,7 +3908,13 @@ static void pushUnusedTable(lua_State* L, int& ref)
 // The table "matches" holds between dispatches
 void TLuaInterpreter::pushEmptyMatchesTable(lua_State* L)
 {
+    if (knows(scmEmptyMatchesUnused)) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mEmptyMatchesRef);
+        return;
+    }
     pushUnusedTable(L, mEmptyMatchesRef);
+    watch(L, -1);
+    learn(L, scmEmptyMatchesUnused);
 }
 
 // No documentation available in wiki - internal function
@@ -3921,10 +3927,8 @@ void TLuaInterpreter::installBetweenDispatchMultimatches(lua_State* L)
         lua_rawseti(L, LUA_REGISTRYINDEX, mSpareMultimatchesRef);
         mSpareMultimatchesSeen = false;
     }
-    if (globalPresent(L, LUA_GLOBALSINDEX, mMultimatchesKeyRef)) {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, mMultimatchesKeyRef);
-        lua_pushnil(L);
-        lua_rawset(L, LUA_GLOBALSINDEX);
+    if (globalHeld(L, mMultimatchesKeyRef, scmMultimatchesAbsent)) {
+        clearGlobal(L, mMultimatchesKeyRef, scmMultimatchesAbsent);
     }
     mMultimatchesPending = PendingMultimatches::Spare;
 }
@@ -3977,7 +3981,10 @@ void TLuaInterpreter::clearCaptureGroups()
         pushEmptyMatchesTable(L);
         // Only now, as allocating the table can run a finaliser that reads it
         mMatchesPending = false;
+        const bool factsWereCurrent = factsCurrent();
         lua_rawset(L, LUA_GLOBALSINDEX);
+        keepFacts(factsWereCurrent);
+        forget(scmMatchesAbsent);
         installBetweenDispatchMultimatches(L);
     } else {
         pushEmptyMatchesTable(L);
@@ -5040,6 +5047,9 @@ bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L)
         }
         return false;
     }
+    if (knows(scmHandlersInPlace)) {
+        return true;
+    }
     if (lua_topointer(L, LUA_GLOBALSINDEX) != mGlobalsTable) {
         // setfenv(0, ...) gave the thread another globals table, which Mudlet
         // writes to from now on. Code compiled before still reads the original,
@@ -5059,6 +5069,7 @@ bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L)
         stripGlobalsHandlers(L);
         return false;
     }
+    learn(L, scmHandlersInPlace);
     return true;
 }
 
@@ -5174,8 +5185,90 @@ bool TLuaInterpreter::globalsHandlersInPlace(lua_State* L)
     lua_rawgeti(L, LUA_REGISTRYINDEX, mNewindexKeyRef);
     lua_rawget(L, metatable);
     const bool inPlace = lua_tocfunction(L, -2) == &TLuaInterpreter::lazyGlobalsIndex && lua_tocfunction(L, -1) == &TLuaInterpreter::lazyGlobalsNewindex;
+    if (inPlace) {
+        // A metatable put on the globals table past the guard is not one the
+        // barrier was told about
+        watch(L, metatable);
+    }
     lua_pop(L, 3);
     return inPlace;
+}
+
+// No documentation available in wiki - internal function
+// Whether the global under the name at keyRef is there, which is not looked up
+// while the barrier vouches that it is still absent
+bool TLuaInterpreter::globalHeld(lua_State* L, const int keyRef, const quint8 absentFact)
+{
+    if (knows(absentFact)) {
+        return false;
+    }
+    const bool held = globalPresent(L, LUA_GLOBALSINDEX, keyRef);
+    if (!held) {
+        learn(L, absentFact);
+    }
+    return held;
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::clearGlobal(lua_State* L, const int keyRef, const quint8 absentFact)
+{
+    lua_rawgeti(L, LUA_REGISTRYINDEX, keyRef);
+    lua_pushnil(L);
+    const bool factsWereCurrent = factsCurrent();
+    lua_rawset(L, LUA_GLOBALSINDEX);
+    keepFacts(factsWereCurrent);
+    learn(L, absentFact);
+}
+
+// No documentation available in wiki - internal function
+// Only called just after the fact was checked, or made so by a store that ran
+// no Lua since
+void TLuaInterpreter::learn(lua_State* L, const quint8 fact)
+{
+    if (!mLuaWriteEpoch) {
+        return;
+    }
+    if (*mLuaWriteEpoch != mFactsEpoch) {
+        if (!barrierIntact(L)) {
+            mLuaWriteEpoch = nullptr;
+            return;
+        }
+        mFactsEpoch = *mLuaWriteEpoch;
+        mFacts = 0;
+    }
+    mFacts |= fact;
+}
+
+// No documentation available in wiki - internal function
+// debug.getregistry() hands a script the slots Mudlet keeps the three names in,
+// and a name swapped in there is one the barrier does not watch
+bool TLuaInterpreter::barrierIntact(lua_State* L)
+{
+#if defined(MUDLET_LUA_WATCH)
+    if (!lua_watch(L, LUA_REGISTRYINDEX, 1)) {
+        return false;
+    }
+#endif
+    bool intact = true;
+    for (const auto& [keyRef, key] : {std::pair{mMatchesKeyRef, mMatchesKey}, std::pair{mMultimatchesKeyRef, mMultimatchesKey}, std::pair{mLineKeyRef, mLineKey}}) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, keyRef);
+        intact = intact && lua_type(L, -1) == LUA_TSTRING && lua_tostring(L, -1) == key;
+        lua_pop(L, 1);
+    }
+    return intact;
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::watch(lua_State* L, const int index)
+{
+#if defined(MUDLET_LUA_WATCH)
+    if (mLuaWriteEpoch) {
+        lua_watch(L, index, 1);
+    }
+#else
+    Q_UNUSED(L)
+    Q_UNUSED(index)
+#endif
 }
 
 // No documentation available in wiki - internal function
@@ -5184,20 +5277,16 @@ bool TLuaInterpreter::globalsHandlersInPlace(lua_State* L)
 void TLuaInterpreter::deferDispatchGlobals(lua_State* L, const MultimatchesSource source, const bool setsMatches)
 {
     // A name already left out can still hold what a script rawset() there
-    if (setsMatches && (!mMatchesPending || globalPresent(L, LUA_GLOBALSINDEX, mMatchesKeyRef))) {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, mMatchesKeyRef);
-        lua_pushnil(L);
-        lua_rawset(L, LUA_GLOBALSINDEX);
+    if (setsMatches && (!mMatchesPending || globalHeld(L, mMatchesKeyRef, scmMatchesAbsent))) {
+        clearGlobal(L, mMatchesKeyRef, scmMatchesAbsent);
         mMatchesPending = true;
     }
 
     if (source == MultimatchesSource::Untouched) {
         return;
     }
-    if (mMultimatchesPending == PendingMultimatches::None || globalPresent(L, LUA_GLOBALSINDEX, mMultimatchesKeyRef)) {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, mMultimatchesKeyRef);
-        lua_pushnil(L);
-        lua_rawset(L, LUA_GLOBALSINDEX);
+    if (mMultimatchesPending == PendingMultimatches::None || globalHeld(L, mMultimatchesKeyRef, scmMultimatchesAbsent)) {
+        clearGlobal(L, mMultimatchesKeyRef, scmMultimatchesAbsent);
     }
     mMultimatchesPending = PendingMultimatches::Captures;
 }
@@ -5477,13 +5566,21 @@ void TLuaInterpreter::installLazyGlobals()
         const bool vacant = lua_isnil(L, -1) && lua_isnil(L, -2);
         lua_pop(L, 2);
         if (vacant) {
+#if defined(MUDLET_LUA_WATCH)
+            mLuaWriteEpoch = lua_watch(L, LUA_REGISTRYINDEX, 1);
+            lua_watch(L, -1, 1);
+            mFacts = 0;
+#endif
             lua_pushliteral(L, "matches");
+            watch(L, -1);
             mMatchesKey = lua_tostring(L, -1);
             mMatchesKeyRef = luaL_ref(L, LUA_REGISTRYINDEX);
             lua_pushliteral(L, "multimatches");
+            watch(L, -1);
             mMultimatchesKey = lua_tostring(L, -1);
             mMultimatchesKeyRef = luaL_ref(L, LUA_REGISTRYINDEX);
             lua_pushliteral(L, "line");
+            watch(L, -1);
             mLineKey = lua_tostring(L, -1);
             mLineKeyRef = luaL_ref(L, LUA_REGISTRYINDEX);
             lua_pushliteral(L, "__index");
@@ -5556,6 +5653,8 @@ bool TLuaInterpreter::installGlobalsMetatableGuard(lua_State* L, const char* lib
 void TLuaInterpreter::forgetLazyGlobals()
 {
     mLazyGlobalsInstalled = false;
+    mLuaWriteEpoch = nullptr;
+    mFacts = 0;
     mGlobalsTable = nullptr;
     mGlobalsTableRef = LUA_NOREF;
     mGlobalsMetatableTouched = false;
@@ -6751,10 +6850,8 @@ void TLuaInterpreter::setLineGlobal(const QString& line)
     // Tested for first: nothing can see the name once it holds nil either way,
     // but rawsetting one that is not there still has Lua make a node for it,
     // and on a globals table with no node to spare that is a rehash of all of it
-    if (globalPresent(L, LUA_GLOBALSINDEX, mLineKeyRef)) {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, mLineKeyRef);
-        lua_pushnil(L);
-        lua_rawset(L, LUA_GLOBALSINDEX);
+    if (globalHeld(L, mLineKeyRef, scmLineAbsent)) {
+        clearGlobal(L, mLineKeyRef, scmLineAbsent);
     }
     mPendingLine = line;
     mLinePending = true;

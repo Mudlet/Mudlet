@@ -1020,6 +1020,11 @@ private:
     void deferDispatchGlobals(lua_State*, const MultimatchesSource source, const bool setsMatches);
     bool lazyGlobalsUsable(lua_State*);
     bool globalsHandlersInPlace(lua_State*);
+    bool globalHeld(lua_State*, const int keyRef, const quint8 absentFact);
+    void clearGlobal(lua_State*, const int keyRef, const quint8 absentFact);
+    void learn(lua_State*, const quint8 fact);
+    bool barrierIntact(lua_State*);
+    void watch(lua_State*, const int index);
     void standDownDeferral(lua_State*);
     void stripGlobalsHandlers(lua_State*);
     bool restoreGlobalsHandlers(lua_State*, const int metatable);
@@ -1143,6 +1148,29 @@ private:
     bool mGlobalsHandlersLinger = false;
     int mIndexHandlerRef = LUA_NOREF;
     int mNewindexHandlerRef = LUA_NOREF;
+    // What the bundled Lua's write barrier lets the trigger path take as still
+    // so rather than look again - see 3rdparty/lua51/README.md. They hold for
+    // as long as *mLuaWriteEpoch stays at mFactsEpoch.
+    static constexpr quint8 scmHandlersInPlace = 0x01;
+    static constexpr quint8 scmMatchesAbsent = 0x02;
+    static constexpr quint8 scmMultimatchesAbsent = 0x04;
+    static constexpr quint8 scmLineAbsent = 0x08;
+    static constexpr quint8 scmEmptyMatchesUnused = 0x10;
+    // Null with a Lua that has no barrier, which leaves every check to be made
+    const size_t* mLuaWriteEpoch = nullptr;
+    size_t mFactsEpoch = 0;
+    quint8 mFacts = 0;
+    bool factsCurrent() const { return mLuaWriteEpoch && *mLuaWriteEpoch == mFactsEpoch; }
+    bool knows(const quint8 fact) const { return factsCurrent() && (mFacts & fact); }
+    void forget(const quint8 fact) { mFacts &= static_cast<quint8>(~fact); }
+    // After a raw store of Mudlet's own, which runs no Lua and so is the only
+    // thing that moved the epoch if it had not moved before
+    void keepFacts(const bool wereCurrent)
+    {
+        if (wereCurrent) {
+            mFactsEpoch = *mLuaWriteEpoch;
+        }
+    }
     // A nested alias pass - from expandAlias(), feedTriggers(), or an alias's or trigger's command field - overwrites
     // "command" and the captures; the caller's are saved here (one entry per nesting level) and
     // restored when the pass returns - "command" only for an alias script's expandAlias().
