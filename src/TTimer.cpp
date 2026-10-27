@@ -75,7 +75,7 @@ TTimer::~TTimer()
 
         if (isTemporary()) {
             if (mScript.isEmpty()) {
-                mpHost->mLuaInterpreter.delete_luafunction(this);
+                mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
             } else {
                 mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
             }
@@ -187,7 +187,7 @@ bool TTimer::setScript(const QString& script)
     // and the destructor's mScript-based branch would otherwise leak the registry entry.
     if (mRegisteredAnonymousLuaFunction) {
         if (mpHost) {
-            mpHost->mLuaInterpreter.delete_luafunction(this);
+            mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
         }
         mRegisteredAnonymousLuaFunction = false;
     }
@@ -254,7 +254,7 @@ void TTimer::execute()
 
     if (isTemporary()) {
         if (mRegisteredAnonymousLuaFunction) {
-            mpHost->mLuaInterpreter.call_luafunction(this, mName);
+            mpHost->mLuaInterpreter.call_luafunction(mLuaFunctionRef, mName);
         } else if (!mScript.isEmpty()) {
             mpHost->mLuaInterpreter.compileAndExecuteScript(mScript);
         }

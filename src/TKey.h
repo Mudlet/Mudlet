@@ -81,6 +81,8 @@ public:
     bool exportItem = true;
     bool mModuleMasterFolder = false;
     bool mRegisteredAnonymousLuaFunction = false;
+    // Its registry reference while that is set; luaL_ref() never hands out 0
+    int mLuaFunctionRef = 0;
     QPointer<Host> mpHost;
 
 private:

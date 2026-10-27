@@ -527,7 +527,7 @@ TTrigger::~TTrigger()
 
         if (isTemporary()) {
             if (mScript.isEmpty()) {
-                mpHost->mLuaInterpreter.delete_luafunction(this);
+                mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
             } else {
                 mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
             }
@@ -1307,9 +1307,16 @@ void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captur
 {
     if (regexNumber == 0) {
         // automatically set to #1
-        auto pCondition = std::make_unique<TMatchState>(mPatterns.size(), mConditionLineDelta);
-        auto* pConditionRaw = pCondition.get();
-        mConditionMap[pConditionRaw] = std::move(pCondition);
+        TMatchState* pConditionRaw = nullptr;
+        if (mSpareCondition) {
+            pConditionRaw = mSpareCondition.mapped().get();
+            pConditionRaw->reset(mPatterns.size(), mConditionLineDelta);
+            mConditionMap.insert(std::move(mSpareCondition));
+        } else {
+            auto pCondition = std::make_unique<TMatchState>(mPatterns.size(), mConditionLineDelta);
+            pConditionRaw = pCondition.get();
+            mConditionMap[pConditionRaw] = std::move(pCondition);
+        }
         pConditionRaw->addCaptures(captureList, posList);
         if (nameMatches) {
             pConditionRaw->nameCaptures.push_back(*nameMatches);
@@ -1958,21 +1965,26 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
             // re-enters this function on the same trigger. Completed states are
             // taken out of mConditionMap before any script runs, so a nested pass
             // can neither fire one again nor destroy one still being read here.
-            std::vector<std::unique_ptr<TMatchState>> completedStates;
+            std::vector<decltype(mSpareCondition)> completedStates;
             for (auto it = mConditionMap.begin(); it != mConditionMap.end();) {
-                if (it->second->isComplete()) {
-                    completedStates.push_back(std::move(it->second));
-                } else if (it->second->newLine()) {
+                const bool complete = it->second->isComplete();
+                if (!complete && it->second->newLine()) {
                     ++it;
                     continue;
                 }
                 if (TDebug::wants(TDebug::Category::TriggerDetail)) {
                     TDebug(Qt::darkBlue, Qt::black, TDebug::Category::TriggerDetail, mName) << "removing condition from condition table.\n" >> mpHost;
                 }
-                it = mConditionMap.erase(it);
+                auto condition = mConditionMap.extract(it++);
+                if (complete) {
+                    completedStates.push_back(std::move(condition));
+                } else if (!mSpareCondition) {
+                    mSpareCondition = std::move(condition);
+                }
             }
 
-            for (auto& matchState : completedStates) {
+            for (auto& completedState : completedStates) {
+                auto& matchState = completedState.mapped();
                 mKeepFiring = mStayOpen;
                 if (TDebug::wants(TDebug::Category::TriggerMatch)) {
                     TDebug(Qt::yellow, Qt::darkMagenta, TDebug::Category::TriggerMatch, mName) << "multiline trigger name=" << mName << " *FIRES* all conditions are fulfilled. Executing script.\n"
@@ -1990,8 +2002,7 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
                 } else {
                     pL->setMultiCaptureGroups(std::move(matchState->multiCaptureList), std::move(matchState->multiCapturePosList), std::move(matchState->nameCaptures));
                     execute();
-                    // Back into the state, whose destructor parks the nodes for
-                    // the next fire to reuse
+                    // Back into the state, which parks the nodes for the next fire to reuse
                     pL->takeBackMultiCaptureGroups(matchState->multiCaptureList, matchState->multiCapturePosList);
                     pL->clearCaptureGroups();
                 }
@@ -2014,6 +2025,9 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
                             }
                         }
                     }
+                }
+                if (!mSpareCondition) {
+                    mSpareCondition = std::move(completedState);
                 }
             }
         }
@@ -2258,7 +2272,7 @@ bool TTrigger::setScript(const QString& script)
     // destructor would take its mScript-based branch and delete the compiled function.
     if (mRegisteredAnonymousLuaFunction) {
         if (mpHost) {
-            mpHost->mLuaInterpreter.delete_luafunction(this);
+            mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
         }
         mRegisteredAnonymousLuaFunction = false;
     }
@@ -2429,11 +2443,11 @@ void TTrigger::execute()
 
     if (mRegisteredAnonymousLuaFunction) {
         if (Q_LIKELY(mExpiryCount <= 0)) {
-            mpLua->call_luafunction(this, mName);
+            mpLua->call_luafunction(mLuaFunctionRef, mName);
         } else {
             // if the trigger is a temporary expiring one,
             // don't expire if it returned true
-            auto result = mpLua->callLuaFunctionReturnBool(this, mName);
+            auto result = mpLua->callLuaFunctionReturnBool(mLuaFunctionRef, mName);
             // if the function ran okay and returned true, it wants to extend the expiry count
             if (result.first && result.second) {
                 mExpiryCount++;

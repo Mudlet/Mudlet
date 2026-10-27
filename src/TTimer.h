@@ -108,6 +108,8 @@ public:
     // specifies whenever the payload is Lua code as a string
     // or a function
     bool mRegisteredAnonymousLuaFunction = false;
+    // Its registry reference while that is set; luaL_ref() never hands out 0
+    int mLuaFunctionRef = 0;
     bool exportItem = true;
     bool mModuleMasterFolder = false;
 

@@ -134,14 +134,45 @@ public:
     // Recycled nodes: copying the lists would allocate per capture on every condition an open trigger matches
     void addCaptures(const std::list<std::string>& captures, const std::list<int>& positions)
     {
-        auto& targetCaptures = multiCaptureList.emplace_back();
+        if (mSpareCaptureLists.empty()) {
+            multiCaptureList.emplace_back();
+        } else {
+            multiCaptureList.splice(multiCaptureList.end(), mSpareCaptureLists, mSpareCaptureLists.begin());
+        }
+        auto& targetCaptures = multiCaptureList.back();
         for (const auto& capture : captures) {
             TCaptureNodePool::takeCapture(targetCaptures).assign(capture);
         }
-        auto& targetPositions = multiCapturePosList.emplace_back();
+        if (mSparePositionLists.empty()) {
+            multiCapturePosList.emplace_back();
+        } else {
+            multiCapturePosList.splice(multiCapturePosList.end(), mSparePositionLists, mSparePositionLists.begin());
+        }
+        auto& targetPositions = multiCapturePosList.back();
         for (const int position : positions) {
             TCaptureNodePool::takePosition(targetPositions) = position;
         }
+    }
+
+    // Leaves a finished state as a new one would be, keeping its list nodes and storage for the next
+    void reset(const int numberOfConditions, const int delta)
+    {
+        for (auto& captures : multiCaptureList) {
+            TCaptureNodePool::park(captures);
+            captures.clear();
+        }
+        for (auto& positions : multiCapturePosList) {
+            TCaptureNodePool::park(positions);
+            positions.clear();
+        }
+        mSpareCaptureLists.splice(mSpareCaptureLists.end(), multiCaptureList);
+        mSparePositionLists.splice(mSparePositionLists.end(), multiCapturePosList);
+        nameCaptures.clear();
+        mNumberOfConditions = numberOfConditions;
+        mNextCondition = 1;
+        mLineCount = 1;
+        mDelta = delta;
+        mSpacer = 0;
     }
 
     int nextCondition() { return mNextCondition; }
@@ -169,6 +200,10 @@ public:
     int mLineCount = 1;
     int mDelta = 0;
     int mSpacer = 0;
+
+private:
+    std::list<std::list<std::string>> mSpareCaptureLists;
+    std::list<std::list<int>> mSparePositionLists;
 };
 
 #endif // MUDLET_TMATCHSTATE_H
