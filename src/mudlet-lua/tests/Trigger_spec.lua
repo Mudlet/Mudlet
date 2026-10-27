@@ -1950,6 +1950,55 @@ describe("Trigger processing", function()
             assert.has_error(function() tempLineTrigger("start", 2, [[]]) end)
         end)
 
+        -- The functions killed triggers held are freed for new ones to take
+        it("runs each trigger's own function once others were killed and replaced", function()
+            local seen = {}
+            local ids = {}
+            finally(function()
+                for _, id in pairs(ids) do
+                    killTrigger(id)
+                end
+            end)
+            for i = 1, 4 do
+                ids[i] = tempTrigger("SpecFunctionSlots", function() seen[#seen + 1] = "old" .. i end)
+            end
+            killTrigger(ids[2])
+            killTrigger(ids[3])
+            feedTriggers("\nSpecFunctionSlots cleanup\n")
+            seen = {}
+            ids[5] = tempTrigger("SpecFunctionSlots", function() seen[#seen + 1] = "new5" end)
+            ids[6] = tempRegexTrigger("SpecFunctionSlots", function() seen[#seen + 1] = "new6" end)
+
+            feedTriggers("\nSpecFunctionSlots\n")
+
+            table.sort(seen)
+            assert.are.same({"new5", "new6", "old1", "old4"}, seen)
+        end)
+
+        it("runs the function of a trigger made by one that killed itself", function()
+            local seen = {}
+            local first, replacement
+            finally(function()
+                killTrigger(first)
+                if replacement then
+                    killTrigger(replacement)
+                end
+            end)
+            first = tempTrigger("SpecFunctionSelfKill", function()
+                seen[#seen + 1] = "first"
+                killTrigger(first)
+                replacement = tempTrigger("SpecFunctionSelfKill", function() seen[#seen + 1] = "replacement" end)
+            end)
+
+            feedTriggers("\nSpecFunctionSelfKill\n")
+            local afterFirstLine = #seen
+            feedTriggers("\nSpecFunctionSelfKill\n")
+
+            assert.are.equal("first", seen[1])
+            assert.are.equal(afterFirstLine + 1, #seen, "the second line should fire the replacement alone")
+            assert.are.equal("replacement", seen[#seen])
+        end)
+
     end)
 
     describe("substring pattern matching", function()
@@ -4364,6 +4413,81 @@ describe("Trigger processing", function()
 
             assert.are.equal(2, seen.multiline, "the multiline state should have completed with both lines")
             assert.are.equal(0, seen.later, "a later single-line trigger saw the multiline trigger's multimatches")
+        end)
+
+        -- A state that completed or ran out of lines is reused for the next one
+        it("starts every state with only its own lines, after one completed and one ran out", function()
+            _G.MLFresh = {}
+            local code = [==[
+                _G.MLFresh[#_G.MLFresh + 1] = #multimatches .. ":" .. multimatches[1][2] .. "," .. multimatches[2][2]
+                    .. ":" .. tostring(multimatches[1].first) .. "," .. tostring(multimatches[2].second)
+            ]==]
+            finally(function()
+                killTrigger("SpecMLFresh")
+                _G.MLFresh = nil
+            end)
+            tempComplexRegexTrigger("SpecMLFresh", [[^fresh one (?<first>\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2)
+            tempComplexRegexTrigger("SpecMLFresh", [[^fresh two (?<second>\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2)
+
+            feedTriggers("fresh one aaa\n")
+            feedTriggers("fresh two bbb\n")
+            feedTriggers("fresh one ccc\n")
+            feedTriggers("padding\n")
+            feedTriggers("padding\n")
+            feedTriggers("fresh one ddd\n")
+            feedTriggers("fresh two eee\n")
+            feedTriggers("fresh one fff\n")
+            feedTriggers("padding\n")
+            feedTriggers("fresh two ggg\n")
+
+            assert.are.same({"2:aaa,bbb:aaa,bbb", "2:ddd,eee:ddd,eee", "2:fff,ggg:fff,ggg"}, _G.MLFresh)
+        end)
+
+        it("gives each of two states completing on one line its own captures, every time", function()
+            local seen = {}
+            finally(function()
+                killTrigger("SpecMLPairs")
+            end)
+            local body = function()
+                seen[#seen + 1] = #multimatches .. ":" .. multimatches[1][2] .. "," .. multimatches[2][2]
+            end
+            tempComplexRegexTrigger("SpecMLPairs", [[^pairs one (\w+)$]], body, 1, 0, 0, 0, 0, 0, 0, 0, 0, 5)
+            tempComplexRegexTrigger("SpecMLPairs", [[^pairs two (\w+)$]], body, 1, 0, 0, 0, 0, 0, 0, 0, 0, 5)
+
+            for round = 1, 3 do
+                feedTriggers("pairs one a" .. round .. "\n")
+                feedTriggers("pairs one b" .. round .. "\n")
+                feedTriggers("pairs two c" .. round .. "\n")
+            end
+
+            table.sort(seen)
+            assert.are.same({"2:a1,c1", "2:a2,c2", "2:a3,c3", "2:b1,c1", "2:b2,c2", "2:b3,c3"}, seen)
+        end)
+
+        it("lets a state's script open and complete another state of the same trigger", function()
+            _G.MLReenter = {}
+            local code = [==[
+                local mine = multimatches[1][2] .. "," .. multimatches[2][2]
+                _G.MLReenter[#_G.MLReenter + 1] = mine
+                if multimatches[1][2] == "outer" then
+                    feedTriggers("reenter one inner\n")
+                    feedTriggers("reenter two deep\n")
+                    _G.MLReenter[#_G.MLReenter + 1] = "after " .. multimatches[1][2] .. "," .. multimatches[2][2]
+                end
+            ]==]
+            finally(function()
+                killTrigger("SpecMLReenter")
+                _G.MLReenter = nil
+            end)
+            tempComplexRegexTrigger("SpecMLReenter", [[^reenter one (\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("SpecMLReenter", [[^reenter two (\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+
+            feedTriggers("reenter one outer\n")
+            feedTriggers("reenter two shell\n")
+            feedTriggers("reenter one again\n")
+            feedTriggers("reenter two done\n")
+
+            assert.are.same({"outer,shell", "inner,deep", "after outer,shell", "again,done"}, _G.MLReenter)
         end)
 
     end)
