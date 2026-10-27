@@ -5009,8 +5009,9 @@ void TLuaInterpreter::pushMultimatchesTable(lua_State* L)
 // globals metatable was handed out, which nothing a script does can - busted
 // hands it out around every spec file, so the specs covering the deferral need
 // it back. Puts the handlers on whatever metatable the globals table carries if
-// both slots are empty there. Given true, also turns the write barrier back on
-// if barrierIntact() turned it off and holds again. Returns whether the deferral
+// both slots are empty there. Given true, also remakes a handler the collector
+// took, and turns the write barrier back on if barrierIntact() turned it off and
+// holds again. Returns whether the deferral
 // is on and, once installed, the barrier's state: "vouching", "off", or
 // "absent" with a Lua that has none.
 int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
@@ -5025,9 +5026,23 @@ int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
         lua_pushboolean(L, false);
         return 1;
     }
+    const bool rearm = lua_toboolean(L, 1);
+    // For the specs after one that let the collector take a handler
+    if (rearm) {
+        for (const auto& [handlerRef, handler] : {std::pair{self->mIndexHandlerRef, &TLuaInterpreter::lazyGlobalsIndex}, std::pair{self->mNewindexHandlerRef, &TLuaInterpreter::lazyGlobalsNewindex}}) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, handlerRef);
+            const bool collected = lua_tocfunction(L, -1) != handler;
+            lua_pop(L, 1);
+            if (collected) {
+                lua_pushlightuserdata(L, self);
+                lua_pushcclosure(L, handler, 1);
+                lua_rawseti(L, LUA_REGISTRYINDEX, handlerRef);
+            }
+        }
+    }
 #if defined(MUDLET_LUA_WATCH)
     // For the specs after one that turned the barrier off
-    if (lua_toboolean(L, 1) && !self->mLuaWriteEpoch && self->barrierIntact(L)) {
+    if (rearm && !self->mLuaWriteEpoch && self->barrierIntact(L)) {
         self->mLuaWriteEpoch = lua_watch(L, LUA_REGISTRYINDEX, 1);
         for (const int keyRef : {self->mMatchesKeyRef, self->mMultimatchesKeyRef, self->mLineKeyRef}) {
             lua_rawgeti(L, LUA_REGISTRYINDEX, keyRef);
@@ -5035,6 +5050,9 @@ int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
             lua_pop(L, 1);
         }
         self->mFacts = 0;
+        if (self->mLuaWriteEpoch) {
+            self->mFactsEpoch = *self->mLuaWriteEpoch;
+        }
     }
 #endif
     lua_rawgeti(L, LUA_REGISTRYINDEX, self->mGlobalsTableRef);
@@ -5261,9 +5279,9 @@ void TLuaInterpreter::learn(lua_State* L, const quint8 fact)
 
 // No documentation available in wiki - internal function
 // debug.getregistry() hands a script the slots Mudlet keeps the three names in,
-// and a name swapped in there is one the barrier does not watch. It also lets a
-// script make the registry weak, and the collector clears a weak table without
-// any store the barrier counts.
+// and a name swapped in there is one the barrier does not watch. A script can
+// also make the registry or the globals metatable weak, and the collector clears
+// a weak table - a handler included - without any store the barrier counts.
 bool TLuaInterpreter::barrierIntact(lua_State* L)
 {
 #if defined(MUDLET_LUA_WATCH)
@@ -5274,6 +5292,13 @@ bool TLuaInterpreter::barrierIntact(lua_State* L)
     if (lua_getmetatable(L, LUA_REGISTRYINDEX)) {
         lua_pop(L, 1);
         return false;
+    }
+    if (lua_getmetatable(L, LUA_GLOBALSINDEX)) {
+        const bool weakable = lua_getmetatable(L, -1);
+        lua_pop(L, weakable ? 2 : 1);
+        if (weakable) {
+            return false;
+        }
     }
     bool intact = true;
     for (const auto& [keyRef, key] : {std::pair{mMatchesKeyRef, mMatchesKey}, std::pair{mMultimatchesKeyRef, mMultimatchesKey}, std::pair{mLineKeyRef, mLineKey}}) {
@@ -5640,6 +5665,15 @@ void TLuaInterpreter::installLazyGlobals()
             if (mLazyCaptureGlobals) {
                 restoreGlobalsHandlers(L, lua_gettop(L));
             }
+#if defined(MUDLET_LUA_WATCH)
+            // mFactsEpoch is still the last Lua state's, which this one's
+            // counter could equal without barrierIntact() having been asked
+            if (mLuaWriteEpoch && barrierIntact(L)) {
+                mFactsEpoch = *mLuaWriteEpoch;
+            } else {
+                mLuaWriteEpoch = nullptr;
+            }
+#endif
 
             mGlobalsTable = lua_topointer(L, LUA_GLOBALSINDEX);
             mGlobalsMetatableTouched = false;

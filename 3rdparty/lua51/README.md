@@ -47,9 +47,12 @@ C modules make their stores through these functions too. A library with a Lua
 core of its own does not, so once `package.loadlib()` or `require()` loads one -
 on Windows, once either loads any library while one is in the process -
 `lua_watch()` returns NULL for that state from then on, and the counter moves
-once so that whoever holds it looks again. The collector clearing a weak table
-makes no store either, so Mudlet stops trusting the counter once the registry
-has a metatable.
+once so that whoever holds it looks again. A core whose symbols the library
+hides, or that it loads only after its `luaopen_` function returns, is not seen;
+Lua 5.1 does not support two cores sharing a state anyway, as each compares
+tables against its own empty node. The collector clearing a weak table makes no
+store either, so Mudlet stops trusting the counter once the registry or the
+globals metatable has a metatable.
 
 A watched string is also fixed, so it is never collected and recreated
 unwatched. Mudlet watches the registry, the globals metatable, the empty

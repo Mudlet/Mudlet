@@ -6250,8 +6250,9 @@ describe("Trigger processing", function()
             assert.is_nil(next(multimatches), "multimatches should be empty again outside the dispatch")
         end)
 
-        -- Neither script stores under a capture name beyond the store under
-        -- test: any other would move the barrier and hide a missing forget()
+        -- Neither script stores under a watched name (matches, multimatches,
+        -- line) beyond the store under test: any other would move the barrier
+        -- and hide a missing forget()
         it("hands the next fire an empty multimatches after a script assigned it", function()
             _G.LazyGlobalsSpec = {seen = {}}
             multiline("SpecLazyMultiAssigned", {[[^lazyassign one (\w+)$]], [[^lazyassign two (\w+)$]]}, [[multimatches = "assigned"]])
@@ -6852,6 +6853,36 @@ describe("Trigger processing", function()
                 assert.is_true(seen.same, "the finaliser and the script were handed different tables")
             end)
 
+            -- The fill lands while Mudlet builds matches, after it last looked
+            -- at the empty table and before it stores what it built
+            it("does not put back the empty matches a finaliser filled while matches was built", function()
+                local spec = {}
+                trigger(tempRegexTrigger("^LazyFinaliserFill (\\w+)$", function() end))
+                _G.LazyGlobalsSpec = spec
+                trigger(tempLineTrigger(2, 1, [[_G.LazyGlobalsSpec.spare = matches]]))
+                trigger(tempRegexTrigger("^LazyFinaliserFill four$", function()
+                    spec.armed = true
+                    local _ = matches
+                    spec.armed = false
+                end))
+                trigger(tempLineTrigger(4, 1, [[_G.LazyGlobalsSpec.after = matches]]))
+                finaliser.onRun = function()
+                    if spec.armed and spec.spare then
+                        spec.armed = false
+                        spec.spare[1] = "mine"
+                    end
+                end
+
+                withFinaliserAtEveryAllocation(function()
+                    finaliser.watching = true
+                    feedTriggers("LazyFinaliserFill one\nLazyFinaliserFill two\nLazyFinaliserFill three\nLazyFinaliserFill four\nLazyFinaliserFill five more\n")
+                end)
+
+                assert.are.equal("mine", spec.spare[1], "no finaliser ran while matches was built")
+                assert.is_false(rawequal(spec.after, spec.spare), "the filled table was put back as matches")
+                assert.is_nil(next(spec.after), "matches read as filled between dispatches")
+            end)
+
             it("keeps the line a finaliser assigned while it was being built", function()
                 local seen = {}
                 trigger(tempRegexTrigger("^LazyFinaliserLine (\\w+)$", function()
@@ -7407,8 +7438,8 @@ describe("Trigger processing", function()
             end)
         end)
 
-        -- Every case below also passes without the barrier, so this one shows
-        -- they ran with it
+        -- Every case below but the weak-table ones also passes without the
+        -- barrier, so this one shows they ran with it
         it("leaves the checks to the write barrier of Mudlet's own Lua", function()
             local armed, barrier = rearmLazyGlobals()
             if barrier == "absent" then
@@ -7516,8 +7547,8 @@ describe("Trigger processing", function()
 
         -- Reading line makes a store of Mudlet's own straight after the
         -- script's, which must not vouch for what the script's store changed.
-        -- No store under a capture name follows it, as that would move the
-        -- barrier on its own.
+        -- No store under a watched name (matches, multimatches, line) follows
+        -- it, as that would move the barrier on its own.
         it("does not put back the empty matches a script filled before reading line", function()
             _G.LazyGlobalsSpec = {}
             trigger(tempRegexTrigger("^LazyKeepFacts (\\w+)$", function() end))
@@ -7533,6 +7564,23 @@ describe("Trigger processing", function()
 
             local spec = _G.LazyGlobalsSpec
             assert.are.equal("LazyKeepFacts three", spec.lineRead)
+            assert.are.equal("mine", spec.spare[1])
+            assert.is_false(rawequal(spec.after, spec.spare), "the filled table was put back as matches")
+            assert.is_nil(next(spec.after), "matches read as filled between dispatches")
+        end)
+
+        it("does not put back the empty matches a script filled before assigning line", function()
+            _G.LazyGlobalsSpec = {}
+            trigger(tempRegexTrigger("^LazyKeepFactsSet (\\w+)$", function() end))
+            trigger(tempLineTrigger(2, 1, [[
+                local spare = matches
+                spare[1] = "mine"
+                _G.LazyGlobalsSpec.spare = spare
+                line = "assigned"
+            ]]))
+            trigger(tempLineTrigger(4, 1, [[_G.LazyGlobalsSpec.after = matches]]))
+            feedTriggers("LazyKeepFactsSet one\nLazyKeepFactsSet two\nLazyKeepFactsSet three\nLazyKeepFactsSet four\nLazyKeepFactsSet five more\n")
+            local spec = _G.LazyGlobalsSpec
             assert.are.equal("mine", spec.spare[1])
             assert.is_false(rawequal(spec.after, spec.spare), "the filled table was put back as matches")
             assert.is_nil(next(spec.after), "matches read as filled between dispatches")
@@ -7579,6 +7627,41 @@ describe("Trigger processing", function()
             assert.is_true(ok, tostring(message))
             assert.are.equal("table", between, "the globals table was handed an empty matches the collector had cleared")
             assert.are.equal("off", barrierWhileWeak)
+            assert.are.equal("vouching", barrierAfter)
+        end)
+
+        -- Last for the same reason
+        it("hands a script its captures after the collector cleared __index from a weak globals metatable", function()
+            local _, barrier = rearmLazyGlobals()
+            if barrier == "absent" then
+                pending("built against a Lua without the write barrier")
+                return
+            end
+            _G.LazyGlobalsSpec = {seen = {}}
+            trigger(tempRegexTrigger("^LazyWeakMeta (\\w+)$", [[table.insert(_G.LazyGlobalsSpec.seen, type(matches) .. "/" .. type(line))]]))
+            trigger(tempRegexTrigger("^LazyWeakMetaCollect$", [[collectgarbage() collectgarbage()]]))
+            -- In a function of its own, as a register of this one would keep __index alive
+            local function weakenGlobalsMetatable()
+                local metatable = getmetatable(_G)
+                local index = rawget(metatable, "__index")
+                local registry = debug.getregistry()
+                for key, value in next, registry do
+                    if rawequal(value, index) then
+                        -- Not nil, which would let a new reference take the slot
+                        registry[key] = false
+                    end
+                end
+                setmetatable(metatable, {__mode = "v"})
+            end
+
+            weakenGlobalsMetatable()
+            -- Handing the metatable out above turned the deferral off
+            rearmLazyGlobals()
+            feedTriggers("\nLazyWeakMeta one\nLazyWeakMeta two\nLazyWeakMetaCollect\nLazyWeakMeta three\n")
+            setmetatable(getmetatable(_G), nil)
+            local _, barrierAfter = rearmLazyGlobals(true)
+
+            assert.are.same({"table/string", "table/string", "table/string"}, _G.LazyGlobalsSpec.seen)
             assert.are.equal("vouching", barrierAfter)
         end)
     end)

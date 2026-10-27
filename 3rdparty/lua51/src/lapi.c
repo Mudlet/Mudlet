@@ -739,14 +739,9 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
 
 
 /*
-** MUDLET: marks the table or string at `idx' as watched (or no longer, with
-** `watch' 0) and returns the counter every store into a watched table, every
-** store under a watched string key, every metatable change of a watched table
-** or of a table whose metatable is watched, and every replacement of a
-** thread's globals table or of the registry increments. A watched string is
-** never collected. Returns NULL once a library with a Lua core of its own has
-** been loaded, as stores made through that core are not counted; the counter
-** moves once then, so whoever holds it looks again.
+** MUDLET: marks the table or string at `idx' watched (unwatched with `watch'
+** 0; a string stays fixed) and returns the counter ../README.md describes, or
+** NULL once a library with a Lua core of its own has been loaded.
 */
 LUA_API const size_t *lua_watch (lua_State *L, int idx, int watch) {
   TValue *o;

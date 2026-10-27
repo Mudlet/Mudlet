@@ -160,7 +160,7 @@ static int ll_hascore (void *lib) {
   (void)lib;
   if (!EnumProcessModules(GetCurrentProcess(), mods, sizeof(mods), &bytes) ||
       bytes > sizeof(mods))
-    return 1;
+    return 1;  /* cannot tell, so assume one */
   for (i = 0; i < bytes / sizeof(HMODULE); i++) {
     FARPROC f = GetProcAddress(mods[i], "lua_rawset");
     if (f != NULL && f != (FARPROC)lua_rawset)
