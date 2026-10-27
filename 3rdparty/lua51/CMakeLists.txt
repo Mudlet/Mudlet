@@ -55,8 +55,9 @@ else()
 endif()
 
 set_target_properties(lua51 PROPERTIES C_STANDARD 99 C_EXTENSIONS ON)
-# The VM measures faster at -O2 than at the -O3 a Release build gives C
-if(NOT MSVC)
+# The VM measures faster at -O2 than at the -O3 a Release build gives C, but
+# slower once a profile guides the build (MUDLET_PGO)
+if(NOT MSVC AND NOT MUDLET_PGO)
   target_compile_options(lua51 PRIVATE $<$<CONFIG:Release>:-O2>)
 endif()
 target_include_directories(lua51 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
