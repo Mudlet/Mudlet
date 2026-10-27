@@ -33,9 +33,9 @@
 class Host;
 class QThread;
 
-// A line the worker parsed ahead, as commitLine() would have handed it to commitLineData(). Once it is
-// published main may move text, format and wrapBreaks out, but not stateAtCommit: the worker reads the
-// last published line's.
+// A line the worker parsed ahead, as the accumulators held it when commitLine() ran. Once it is published
+// main may move text, format and wrapBreaks out, but not stateAtCommit: the worker reads the last
+// published line's.
 struct TSpeculatedLine
 {
     TBuffer::ParseState stateAtCommit;

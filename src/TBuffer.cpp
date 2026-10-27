@@ -2914,7 +2914,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch, con
     // still wrapped correctly.
     const int lastValidLine = static_cast<int>(lineBuffer.size()) - 1;
     const int wrapStartLine = (lastValidLine >= 0) ? std::min(passLineAfterTriggers, lastValidLine) : 0;
-    // Spares wrapLine()'s setup for the usual last line that fits; one with no text or no TChars still goes
+    // Spares wrapLineWith()'s setup for the usual last line that fits; one with no text or no TChars still goes
     // through, as wrapLine() rebuilds it. The width must stay wrapBreaks()'s widthAvailable for mWrapAt.
     const bool fitsAsIs = wrapStartLine == lastValidLine && !lineBuffer.at(wrapStartLine).isEmpty() && !buffer[wrapStartLine].empty()
                           && fitsUnwrapped(lineBuffer.at(wrapStartLine), wrapsFromPreviousLine(wrapStartLine) ? mWrapAt : mWrapAt - clampedWrapIndent(mWrapIndent, mWrapAt));
