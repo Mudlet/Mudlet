@@ -33,8 +33,9 @@
 class Host;
 class QThread;
 
-// A line the worker parsed ahead, as commitLine() would have handed it to commitLineData(): main moves
-// its text and format out when it takes it
+// A line the worker parsed ahead, as commitLine() would have handed it to commitLineData(). Once it is
+// published main may move text, format and wrapBreaks out, but not stateAtCommit: the worker reads the
+// last published line's.
 struct TSpeculatedLine
 {
     TBuffer::ParseState stateAtCommit;
@@ -79,7 +80,7 @@ struct TIngestJob
     // Worker only
     size_t mTextUsed = 0;
     size_t mFormatUsed = 0;
-    // Lines from earlier runs that may still hold text past this run's mReady
+    // How many leading lines the last run filled; parse() frees those past its own mReady
     int mLinesHeld = 0;
     // Where main may queue the job again for the rest of the unit, once the worker is Done
     size_t mResumeFrom = csmNoResume;
@@ -87,7 +88,8 @@ struct TIngestJob
     alignas(64) std::atomic<int> mReady{0};
     std::atomic<bool> mCancel{false};
     std::atomic<int> mState{Idle};
-    // Main's own: the next line it has not used or passed, and mReady as main last read it
+    // Main's own: the next line it has not used or passed, mReady as main last read it, and how many
+    // lines it committed without parsing them
     alignas(64) int mNext = 0;
     int mSeenReady = 0;
     quint64 mReplayed = 0;

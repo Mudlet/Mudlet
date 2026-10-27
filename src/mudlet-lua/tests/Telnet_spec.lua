@@ -3059,7 +3059,7 @@ describe("Tests game text the ingest worker parses ahead", function()
     requireWorker(before)
   end)
 
-  -- every fourth of the rest of a long line's kinds, then a short one
+  -- every fifth line: a short one, then each rarer kind of long line in turn
   local function oddLongLine(i)
     local kind = math.floor(i / 5) % 6
     if kind == 1 then
@@ -3077,7 +3077,7 @@ describe("Tests game text the ingest worker parses ahead", function()
   end
 
   -- ASCII and CJK lines past the main window's width of 100, ambiguous-width ones past it only when those
-  -- are wide, lines of exactly 100 and 101 columns, and short ones
+  -- are wide, lines of exactly 100 and 101 columns at narrow ambiguous width, and short ones
   local function longLines(count)
     local lines = {}
     for i = 1, count or 60 do
@@ -3140,6 +3140,9 @@ describe("Tests game text the ingest worker parses ahead", function()
     {"wrap indent", function()
       setWindowWrapIndent("main", 6)
     end},
+    {"wrap indent past half the width", function()
+      setWindowWrapIndent("main", 70)
+    end},
     {"hanging indent", function()
       setWindowWrapHangingIndent("main", 5)
     end},
@@ -3165,11 +3168,13 @@ describe("Tests game text the ingest worker parses ahead", function()
       local apart = pass(lines, false, true)
       restore()
       setConfig("ambiguousEAsianWidthCharacters", "narrow")
-      local before = parsedAhead()
+      local before, hints = parsedAhead(), wrapHintsUsed()
       local together = pass(lines, true, true)
       sameLines(apart, together)
       assert.are_not.same(control, together, "the " .. name .. " made no difference")
       requireWorker(before)
+      -- the job queued again after the change wraps at it
+      assert.is_true(wrapHintsUsed() - hints > 100, "the worker's breaks were not used after the change")
     end)
   end
 
@@ -3205,6 +3210,27 @@ describe("Tests game text the ingest worker parses ahead", function()
     assert.truthy(firstFragment(together, "IngestSplit "), "the echo did not start a line")
     assert.truthy(firstFragment(together, "IngestNestedLong "), "the fed line did not arrive")
     requireWorker(before)
+  end)
+
+  it("wraps a long line a trigger recolours at the breaks the worker found", function()
+    triggers[#triggers + 1] = tempRegexTrigger("^IngestLong 10 ", function()
+      selectString("word", 3)
+      fg("red")
+      bg("blue")
+      setUnderline(true)
+      deselect()
+    end)
+    local before, hints = parsedAhead(), wrapHintsUsed()
+    local together = sameEitherWay(longLines(20), false)
+    requireWorker(before)
+    assert.is_true(wrapHintsUsed() > hints, "no line was wrapped at the breaks the worker found")
+    local recoloured
+    for _, line in ipairs(together) do
+      if line:sub(1, #"IngestLong 10 ") == "IngestLong 10 " and line:find("foreground=255,0,0", 1, true) then
+        recoloured = true
+      end
+    end
+    assert.is_true(recoloured, "the trigger's colour did not reach the line")
   end)
 
   for _, behaviour in ipairs({"hide", "replacewithspace"}) do

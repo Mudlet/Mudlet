@@ -575,6 +575,7 @@ public:
         bool fastBlink = false;
         bool concealed = false;
         bool hyperlinkActive = false;
+        bool operator==(const ParseState&) const = default;
     };
     // What the parser reads from Host, as of when a unit was handed to the ingest worker
     struct ParseConfig
@@ -738,7 +739,7 @@ public:
     void injectOSC8DocumentationExamples();
     // For specs: how many lines the ingest worker parsed that this buffer committed without parsing them again
     quint64 linesParsedAhead() const;
-    // For specs: how many of those were wrapped at the breaks the worker found for them
+    // For specs: how many of those were split at the breaks the worker found for them
     quint64 wrapHintsUsed() const { return mWrapHintsUsed; }
 
     static Decoder decoderFor(const QByteArray&);
@@ -790,8 +791,8 @@ private:
     static QList<WrapInfo> wrapBreaks(const QString& lineText, bool isNewline, int maxWidth, int indent, int hangingIndent, int wrapAt, bool wideAmbiguousGlyphs);
     static bool newLineWrapBreaks(const QString& lineText, const WrapSettings&, QList<WrapInfo>& breaks);
     WrapSettings wrapSettings() const;
-    // newLineWrapBreaks() for a line the ingest worker parsed. text shares the committed line's text, so an
-    // edit to the line detaches it from text.
+    // newLineWrapBreaks() for a line the ingest worker parsed. text shares the committed line's text, so
+    // wrapHintApplies() compares the two by value only once a trigger's edit has detached them.
     struct WrapHint
     {
         QString text;

@@ -2444,7 +2444,7 @@ bool TBuffer::speculationEligible() const
     return !mGotOSC && !mHyperlinkActive && !mpHost->mMxpProcessor.isEnabled() && !mxpClient.isInLinkMode() && !mxpClient.hasFgColor() && !mxpClient.hasBgColor();
 }
 
-// No job could take the line, so stop before it grows further: what the worker frees, its thread's heap keeps
+// No run could take the line, so stop before it grows further: what the worker frees, its thread's heap keeps
 bool TBuffer::speculatedLineTooLong(const size_t moreChars)
 {
     if (static_cast<size_t>(mMudLine.size()) + moreChars <= TIngestJob::csmMaxTextChars && (mMudBuffer.uniform() || mMudBuffer.size() + moreChars <= TIngestJob::csmMaxFormatChars)) {
@@ -2456,7 +2456,7 @@ bool TBuffer::speculatedLineTooLong(const size_t moreChars)
 }
 
 namespace {
-// graphemeInfo::getBaseCharacter() logs a grapheme that opens with a low surrogate, and the worker must not
+// graphemeInfo::getBaseCharacter() logs a grapheme of a low surrogate then a high one, and the worker must not
 bool hasStrayLowSurrogate(const QString& text)
 {
     const qsizetype size = text.size();
@@ -2499,7 +2499,7 @@ bool TBuffer::recordSpeculatedLine(const char ch, size_t& localBufferPosition, c
         return true;
     }
     if (static_cast<size_t>(index) >= job.mLines.size() || job.mTextUsed + textLength > TIngestJob::csmMaxTextChars || (!uniform && job.mFormatUsed + formatLength > TIngestJob::csmMaxFormatChars)) {
-        // A line too long for the job on its own is left to main, or the job would be queued for it again and again
+        // A line too long for one run on its own is left to main, or the job would be queued for it again and again
         job.mResumeFrom = index ? mSpeculatedLineStart : mSpeculatedLineStart + 1;
         mSpeculationStopped = true;
         ++localBufferPosition;
@@ -2521,7 +2521,7 @@ bool TBuffer::recordSpeculatedLine(const char ch, size_t& localBufferPosition, c
     mMudLine.resize(0);
     mMudBuffer.clear();
     line.stateAtCommit = parseState();
-    line.stateChanged = !parseStateIs(index ? job.mLines[static_cast<size_t>(index - 1)].stateAtCommit : job.mStartState);
+    line.stateChanged = line.stateAtCommit != (index ? job.mLines[static_cast<size_t>(index - 1)].stateAtCommit : job.mStartState);
     job.mReady.store(index + 1, std::memory_order_release);
     ++localBufferPosition;
     mSpeculatedLineStart = localBufferPosition;
@@ -2535,7 +2535,7 @@ void TBuffer::verifySpeculatedLine(const TSpeculatedLine& line, const char ch, c
     for (size_t i = 0; same && i < mMudBuffer.size(); ++i) {
         same = line.format[i] == mMudBuffer[i];
     }
-    // At other settings the breaks are not used, so there is nothing to compare them with
+    // Breaks for settings changed since the job was queued fail wrapHintApplies(), so a difference in them could not show
     if (same && mpActiveSpeculation->mWrap == wrapSettings()) {
         QList<WrapInfo> breaks;
         same = newLineWrapBreaks(mMudLine, mpActiveSpeculation->mWrap, breaks) == line.wrapKnown && breaks == line.wrapBreaks;
@@ -2552,7 +2552,7 @@ void TBuffer::replaySpeculatedLines(TIngestJob& job, size_t& localBufferPosition
             ++job.mNext;
         }
         if (job.mNext >= job.mSeenReady) {
-            // Read once per batch rather than per line: the worker writes mReady as it publishes each one
+            // Once per batch rather than per line: each load misses on the cache line the worker writes per line
             const int ready = job.mReady.load(std::memory_order_acquire);
             if (ready > job.mSeenReady) {
                 job.mSeenReady = ready;
@@ -6757,7 +6757,9 @@ int TBuffer::wrapLineWith(int startLine, int maxWidth, int indentSize, int hangi
         }
         if (startLineHint && firstRewrappedLine == startLine && wrapHintApplies(*startLineHint, startLine, maxWidth, indent, hangingIndent)) {
             lineBreaks = startLineHint->breaks;
-            ++mWrapHintsUsed;
+            if (!lineBreaks.isEmpty()) {
+                ++mWrapHintsUsed;
+            }
         } else {
             lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), timeBuffer.at(firstRewrappedLine) != TBuffer::csmWrappedLineTimeStamp, maxWidth, indent, hangingIndent);
         }
@@ -6983,7 +6985,7 @@ bool TBuffer::dropSpaceAtWrap(const QChar c)
 bool TBuffer::wrapHintApplies(const WrapHint& hint, const int line, const int maxWidth, const int indent, const int hangingIndent) const
 {
     const QString& text = lineBuffer.at(line);
-    return text.constData() == hint.text.constData() && text.size() == hint.text.size() && timeBuffer.at(line) != csmWrappedLineTimeStamp && mWrapAt == maxWidth && mpHost
+    return text.size() == hint.text.size() && (text.constData() == hint.text.constData() || text == hint.text) && timeBuffer.at(line) != csmWrappedLineTimeStamp && mWrapAt == maxWidth && mpHost
            && hint.settings == WrapSettings{maxWidth, indent, hangingIndent, mpHost->wideAmbiguousEAsianGlyphs()};
 }
 
