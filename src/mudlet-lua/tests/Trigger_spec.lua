@@ -7157,23 +7157,31 @@ describe("Trigger processing", function()
                 assert.is_nil(asked.matches, "the package's metatable was asked for a name Mudlet sets")
             end)
 
-            it("hands the next line its globals after a fire takes Mudlet's __index off it", function()
+            -- The first lines settle into the state a busy session runs in,
+            -- where nothing Mudlet stores between two fires on a line makes it
+            -- look at the metatable again
+            it("hands a fire its globals after the fire before it took Mudlet's __index off", function()
                 local original = getmetatable(_G)
                 local copy = {__index = original.__index, __newindex = original.__newindex}
+                local fires = 0
                 local seen = {}
-                trigger(tempRegexTrigger("^LazyKeptFirst (\\w+)$", function()
-                    copy.__index = nil
+                trigger(tempRegexTrigger("^LazyKeptInPlace (\\w+)$", function()
+                    fires = fires + 1
+                    if fires == 3 then
+                        copy.__index = nil
+                    end
                 end))
-                trigger(tempRegexTrigger("^LazyKeptSecond (\\w+)$", readEverythingIn(seen)))
+                trigger(tempRegexTrigger("^LazyKeptInPlace (\\w+)$", readEverythingIn(seen)))
 
                 setmetatable(_G, copy)
                 rearmLazyGlobals()
-                local ok, message = pcall(feedTriggers, "\nLazyKeptWarm\nLazyKeptFirst word\nLazyKeptSecond word\n")
+                local ok, message = pcall(feedTriggers, "\nLazyKeptInPlace one\nLazyKeptInPlace two\nLazyKeptInPlace three\n")
                 setmetatable(_G, original)
 
                 assert.is_true(ok, tostring(message))
+                assert.are.equal(3, fires)
                 assert.is_not_nil(seen.matches, "matches read as nil - a name was left out with no handler to build it")
-                assert.are.equal("LazyKeptSecond word", seen.line)
+                assert.are.equal("LazyKeptInPlace three", seen.line)
             end)
 
             -- The control: the same shape with the handlers left alone, so a
