@@ -5908,6 +5908,7 @@ describe("Trigger processing", function()
                     return value
                 end
             end
+            return nil
         end
 
         -- "multimatches" is nil in a profile until the first dispatch is over.
