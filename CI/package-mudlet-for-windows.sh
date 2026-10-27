@@ -226,6 +226,12 @@ for LIB in ${NEEDED_LIBS[@]}; do
 done
 echo "    ... done copying identified libraries."
 
+# Over the MSYS2 lua51.dll the rocks brought in above, as mudlet.exe needs the
+# one it was built with
+if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/lua51.dll" ]; then
+  cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/lua51.dll" .
+fi
+
 echo ""
 echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 # Using the '/./' notation provides the point at which rsync reproduces the

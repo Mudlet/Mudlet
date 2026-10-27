@@ -22,6 +22,11 @@ function(restore_windows_test_output)
     get_property(registeredTests DIRECTORY PROPERTY TESTS)
     foreach(testName ${registeredTests})
         set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "QT_ASSUME_STDERR_HAS_CONSOLE=1")
+        # Unless built beside the bundled lua51.dll, a test would load the MSYS2
+        # one from PATH instead
+        if(WIN32 AND TARGET lua51)
+            set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:lua51>")
+        endif()
     endforeach()
 endfunction()
 cmake_language(DEFER CALL restore_windows_test_output)
