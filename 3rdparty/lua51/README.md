@@ -11,8 +11,8 @@ Every change from upstream is listed here, and is marked `MUDLET` in the source.
 
 ## Changes
 
-- `ldo.c`: Debian's fix for a stack overflow in vararg functions
-  (`debian/patches/0004`), which every Linux build of Mudlet already ran with.
-- `luaconf.h`: the default `package.path` and `package.cpath` of the Lua each
-  platform's Mudlet linked before - Debian's on Linux (`LUA_MULTIARCH`, set by
-  CMake), MSYS2's on Windows, upstream's on macOS.
+- `ldo.c`: the fix for CVE-2014-5461, a stack overflow in vararg functions
+  (Debian's `debian/patches/0004`).
+- `luaconf.h`: the default `package.path` and `package.cpath` of the system Lua
+  each platform's Mudlet links with `USE_BUNDLED_LUA` off - Debian's on Linux
+  (`LUA_MULTIARCH`, set by CMake), MSYS2's on Windows, upstream's on macOS.

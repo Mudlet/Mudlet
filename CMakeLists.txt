@@ -199,8 +199,8 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_MEMORY_TRACKING
                         OPTION_VARIABLE USE_MEMORY_TRACKING
                         READABLE_NAME "memory tracking"
                         DEFAULT OFF)
-# Off for a distribution's package, which links the distribution's Lua 5.1, and
-# by default on a Linux whose Lua modules live where 3rdparty/lua51 does not look
+# Off by default on a Linux without Debian's multiarch layout, whose Lua modules
+# live where 3rdparty/lua51 does not look
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT CMAKE_LIBRARY_ARCHITECTURE)
   set(BUNDLED_LUA_DEFAULT OFF)
 else()
