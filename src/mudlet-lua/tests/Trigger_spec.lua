@@ -1950,7 +1950,8 @@ describe("Trigger processing", function()
             assert.has_error(function() tempLineTrigger("start", 2, [[]]) end)
         end)
 
-        -- The functions killed triggers held are freed for new ones to take
+        -- Killed triggers free their functions at doCleanup(), which the next fed line runs,
+        -- and the new ones then take those registry slots
         it("runs each trigger's own function once others were killed and replaced", function()
             local seen = {}
             local ids = {}
@@ -4818,6 +4819,20 @@ describe("Trigger processing", function()
                     feedTriggers("spacer settle " .. i .. "\n")
                 end
                 assert.are.equal(1, _G.TriggerKindsSpec.spacerFired, "no second state should be left waiting behind it")
+            end)
+        end)
+
+        -- Its delta runs out before its spacer has counted the lines, so it can never fire;
+        -- a state that took over the spacer count of the one that ran out would
+        it("counts a line spacer from the start in a state opened after one ran out", function()
+            withTrigger("short spacer", function()
+                feedTriggers("tkshort start\n")
+                for i = 1, 3 do
+                    feedTriggers("short spacer pad " .. i .. "\n")
+                end
+                feedTriggers("tkshort start\n")
+                feedTriggers("tkshort end\n")
+                assert.is_nil(_G.TriggerKindsSpec.shortSpacerFired)
             end)
         end)
 

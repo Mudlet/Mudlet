@@ -19,8 +19,8 @@
 
 /*
  * A temp trigger/timer/alias/key created with a function argument stores that
- * function as an anonymous callback in the Lua registry (keyed by the item
- * pointer) and flags mRegisteredAnonymousLuaFunction. Replacing its script via
+ * function as an anonymous callback in the Lua registry (under the reference in
+ * mLuaFunctionRef) and flags mRegisteredAnonymousLuaFunction. Replacing its script via
  * setScript() must leave that callback mode: it has to release the old function
  * from the registry (otherwise the entry leaks, as the destructor's mScript-based
  * branch then deletes the compiled function rather than the callback) and clear
@@ -101,14 +101,12 @@ private:
         return value;
     }
 
-    // The anonymous callback is stored in the Lua registry keyed by the item
-    // pointer; a released callback leaves a nil entry there.
-    bool registryEntryIsNil(void* item)
+    // A released reference's registry slot joins the free list, which leaves a number in it
+    bool functionReleased(const int ref)
     {
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
-        lua_pushlightuserdata(L, item);
-        lua_rawget(L, LUA_REGISTRYINDEX);
-        const bool result = lua_isnil(L, -1);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
+        const bool result = !lua_isfunction(L, -1);
         lua_pop(L, 1);
         return result;
     }
@@ -177,10 +175,13 @@ private slots:
         runLua(qsl("feedTriggers('setscript_trig\\n')"));
         QCOMPARE(luaInt(qsl("trigOld")), 1);
 
+        const int ref = pTrigger->mLuaFunctionRef;
+        QVERIFY(ref > 0);
         QVERIFY(pTrigger->setScript(qsl("trigNew = trigNew + 1")));
 
         QVERIFY2(!pTrigger->mRegisteredAnonymousLuaFunction, "setScript() must leave registered-function mode");
-        QVERIFY2(registryEntryIsNil(pTrigger), "setScript() must release the old function from the Lua registry (no leak)");
+        QCOMPARE(pTrigger->mLuaFunctionRef, 0);
+        QVERIFY2(functionReleased(ref), "setScript() must release the old function from the Lua registry (no leak)");
 
         // Firing now runs the new script; the stale function must not fire again.
         runLua(qsl("feedTriggers('setscript_trig\\n')"));
@@ -204,10 +205,13 @@ private slots:
         pAlias->execute();
         QCOMPARE(luaInt(qsl("aliasOld")), 1);
 
+        const int ref = pAlias->mLuaFunctionRef;
+        QVERIFY(ref > 0);
         QVERIFY(pAlias->setScript(qsl("aliasNew = aliasNew + 1")));
 
         QVERIFY2(!pAlias->mRegisteredAnonymousLuaFunction, "setScript() must leave registered-function mode");
-        QVERIFY2(registryEntryIsNil(pAlias), "setScript() must release the old function from the Lua registry (no leak)");
+        QCOMPARE(pAlias->mLuaFunctionRef, 0);
+        QVERIFY2(functionReleased(ref), "setScript() must release the old function from the Lua registry (no leak)");
 
         pAlias->execute();
         QCOMPARE(luaInt(qsl("aliasNew")), 1);
@@ -229,10 +233,13 @@ private slots:
         pKey->execute();
         QCOMPARE(luaInt(qsl("keyOld")), 1);
 
+        const int ref = pKey->mLuaFunctionRef;
+        QVERIFY(ref > 0);
         QVERIFY(pKey->setScript(qsl("keyNew = keyNew + 1")));
 
         QVERIFY2(!pKey->mRegisteredAnonymousLuaFunction, "setScript() must leave registered-function mode");
-        QVERIFY2(registryEntryIsNil(pKey), "setScript() must release the old function from the Lua registry (no leak)");
+        QCOMPARE(pKey->mLuaFunctionRef, 0);
+        QVERIFY2(functionReleased(ref), "setScript() must release the old function from the Lua registry (no leak)");
 
         pKey->execute();
         QCOMPARE(luaInt(qsl("keyNew")), 1);
@@ -252,10 +259,13 @@ private slots:
         QVERIFY(pTimer);
         QVERIFY2(pTimer->mRegisteredAnonymousLuaFunction, "callback timer should start in registered-function mode");
 
+        const int ref = pTimer->mLuaFunctionRef;
+        QVERIFY(ref > 0);
         QVERIFY(pTimer->setScript(qsl("noop = 1")));
 
         QVERIFY2(!pTimer->mRegisteredAnonymousLuaFunction, "setScript() must leave registered-function mode");
-        QVERIFY2(registryEntryIsNil(pTimer), "setScript() must release the old function from the Lua registry (no leak)");
+        QCOMPARE(pTimer->mLuaFunctionRef, 0);
+        QVERIFY2(functionReleased(ref), "setScript() must release the old function from the Lua registry (no leak)");
     }
 
     // Clearing a callback item's script with setScript("") must also release the
@@ -274,10 +284,13 @@ private slots:
         runLua(qsl("feedTriggers('setscript_clear\\n')"));
         QCOMPARE(luaInt(qsl("clearOld")), 1);
 
+        const int ref = pTrigger->mLuaFunctionRef;
+        QVERIFY(ref > 0);
         QVERIFY(pTrigger->setScript(QString()));
 
         QVERIFY2(!pTrigger->mRegisteredAnonymousLuaFunction, "setScript(\"\") must leave registered-function mode");
-        QVERIFY2(registryEntryIsNil(pTrigger), "setScript(\"\") must release the old function from the Lua registry (no leak)");
+        QCOMPARE(pTrigger->mLuaFunctionRef, 0);
+        QVERIFY2(functionReleased(ref), "setScript(\"\") must release the old function from the Lua registry (no leak)");
 
         // With no script and no callback, firing must do nothing - the stale function
         // must not run.
