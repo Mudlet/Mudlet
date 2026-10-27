@@ -7643,14 +7643,22 @@ describe("Trigger processing", function()
             -- In a function of its own, as a register of this one would keep __index alive
             local function weakenGlobalsMetatable()
                 local metatable = getmetatable(_G)
-                local index = rawget(metatable, "__index")
                 local registry = debug.getregistry()
-                for key, value in next, registry do
-                    if rawequal(value, index) then
-                        -- Not nil, which would let a new reference take the slot
-                        registry[key] = false
+                local function release(handler)
+                    for key, value in next, registry do
+                        if rawequal(value, handler) then
+                            -- Not nil, which would let a new reference take the slot
+                            registry[key] = false
+                        end
                     end
                 end
+                -- A fresh __index, as an earlier spec can still hold the one Mudlet made
+                release(rawget(metatable, "__index"))
+                release(rawget(metatable, "__newindex"))
+                rawset(metatable, "__index", nil)
+                rawset(metatable, "__newindex", nil)
+                rearmLazyGlobals(true)
+                release(rawget(metatable, "__index"))
                 setmetatable(metatable, {__mode = "v"})
             end
 
@@ -7658,9 +7666,14 @@ describe("Trigger processing", function()
             -- Handing the metatable out above turned the deferral off
             rearmLazyGlobals()
             feedTriggers("\nLazyWeakMeta one\nLazyWeakMeta two\nLazyWeakMetaCollect\nLazyWeakMeta three\n")
-            setmetatable(getmetatable(_G), nil)
+            local metatable = getmetatable(_G)
+            local collected = rawget(metatable, "__index") == nil
+            setmetatable(metatable, nil)
+            rawset(metatable, "__index", nil)
+            rawset(metatable, "__newindex", nil)
             local _, barrierAfter = rearmLazyGlobals(true)
 
+            assert.is_true(collected, "the collector left __index on the weak metatable")
             assert.are.same({"table/string", "table/string", "table/string"}, _G.LazyGlobalsSpec.seen)
             assert.are.equal("vouching", barrierAfter)
         end)
