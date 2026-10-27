@@ -477,7 +477,7 @@ public:
     // specifies whenever the payload is Lua code as a string
     // or a function
     bool mRegisteredAnonymousLuaFunction = false;
-    // Its registry reference while that is set; luaL_ref() never hands out 0
+    // 0 when no function is held; luaL_ref() never returns 0
     int mLuaFunctionRef = 0;
     bool mIsNew = true;
 
@@ -574,9 +574,8 @@ private:
     bool mIsMultiline = false;
     int mConditionLineDelta = 0;
     QString mCommand;
-    // Key is the raw address of the owned TMatchState — stable once inserted and
-    // used for O(1) lookup during the deferred-removal pass in match(). The map
-    // is the sole owner; the raw pointer is never passed out as an observer.
+    // Keyed by each state's own address, which it keeps through extract() and reinsertion;
+    // the raw pointer is never passed out as an observer.
     std::map<TMatchState*, std::unique_ptr<TMatchState>> mConditionMap;
     // A finished state with its map node, reused for the next one this trigger opens
     std::map<TMatchState*, std::unique_ptr<TMatchState>>::node_type mSpareCondition;

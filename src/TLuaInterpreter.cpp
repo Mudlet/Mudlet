@@ -5446,6 +5446,18 @@ void TLuaInterpreter::setMatches(lua_State* L, const MultimatchesSource source)
 }
 
 // No documentation available in wiki - internal function
+int TLuaInterpreter::ref_luafunction(lua_State* L, const int index)
+{
+    // A __gc finaliser that lua_close() runs can make an item, and a ref into the closing state
+    // would index the next one's registry. 0 is never a function's slot, so it is reported as not found.
+    if (mClosingGlobalLua) {
+        return 0;
+    }
+    lua_pushvalue(L, index);
+    return luaL_ref(L, LUA_REGISTRYINDEX);
+}
+
+// No documentation available in wiki - internal function
 bool TLuaInterpreter::call_luafunction(const int functionRef, const QString& itemName, const bool aliasScript)
 {
     const ScriptCallerScope callerScope(*this, aliasScript);
@@ -5501,7 +5513,7 @@ bool TLuaInterpreter::call_luafunction(const int functionRef, const QString& ite
 // No documentation available in wiki - internal function
 void TLuaInterpreter::delete_luafunction(int& functionRef)
 {
-    // luaL_unref() of 0 would corrupt the registry's free list
+    // luaL_unref() of 0 would empty the registry's free list
     if (functionRef > 0) {
         luaL_unref(pGlobalLua, LUA_REGISTRYINDEX, functionRef);
     }

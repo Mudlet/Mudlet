@@ -1310,7 +1310,7 @@ void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captur
         TMatchState* pConditionRaw = nullptr;
         if (mSpareCondition) {
             pConditionRaw = mSpareCondition.mapped().get();
-            pConditionRaw->reset(mPatterns.size(), mConditionLineDelta);
+            pConditionRaw->reopen(mPatterns.size(), mConditionLineDelta);
             mConditionMap.insert(std::move(mSpareCondition));
         } else {
             auto pCondition = std::make_unique<TMatchState>(mPatterns.size(), mConditionLineDelta);
@@ -1627,10 +1627,7 @@ bool TTrigger::match_line_spacer(int patternNumber)
                                 >> mpHost;
                     }
                     matchStatePair.second->conditionMatched();
-                    std::list<std::string> const captureList;
-                    std::list<int> const posList;
-                    matchStatePair.second->multiCaptureList.push_back(captureList);
-                    matchStatePair.second->multiCapturePosList.push_back(posList);
+                    matchStatePair.second->addCaptures({}, {});
                     matchStatePair.second->nameCaptures.push_back(QVector<QPair<QString, QString>>());
                 }
             }
@@ -1979,6 +1976,7 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
                 if (complete) {
                     completedStates.push_back(std::move(condition));
                 } else if (!mSpareCondition) {
+                    condition.mapped()->recycle();
                     mSpareCondition = std::move(condition);
                 }
             }
@@ -2002,7 +2000,7 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
                 } else {
                     pL->setMultiCaptureGroups(std::move(matchState->multiCaptureList), std::move(matchState->multiCapturePosList), std::move(matchState->nameCaptures));
                     execute();
-                    // Back into the state, which parks the nodes for the next fire to reuse
+                    // Back into the state, whose recycle() or destructor parks the nodes
                     pL->takeBackMultiCaptureGroups(matchState->multiCaptureList, matchState->multiCapturePosList);
                     pL->clearCaptureGroups();
                 }
@@ -2026,7 +2024,9 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
                         }
                     }
                 }
+                // Not before its script ran: a nested pass from that could reopen the spare
                 if (!mSpareCondition) {
+                    matchState->recycle();
                     mSpareCondition = std::move(completedState);
                 }
             }

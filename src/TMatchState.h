@@ -119,8 +119,8 @@ public:
     TMatchState(const TMatchState&) = delete;
     TMatchState& operator=(const TMatchState&) = delete;
 
-    // Destroyed only once nothing reads its captures: TTrigger removes a completed or expired
-    // state from its condition map before running any script.
+    // Destroyed or recycle()d only once nothing reads its captures: TTrigger takes a completed or
+    // expired state out of its condition map before running any script, and recycles it only after.
     ~TMatchState()
     {
         for (auto& captures : multiCaptureList) {
@@ -154,8 +154,8 @@ public:
         }
     }
 
-    // Leaves a finished state as a new one would be, keeping its list nodes and storage for the next
-    void reset(const int numberOfConditions, const int delta)
+    // Parks its captures, keeping the emptied per-condition lists for addCaptures() to reuse
+    void recycle()
     {
         for (auto& captures : multiCaptureList) {
             TCaptureNodePool::park(captures);
@@ -168,6 +168,11 @@ public:
         mSpareCaptureLists.splice(mSpareCaptureLists.end(), multiCaptureList);
         mSparePositionLists.splice(mSparePositionLists.end(), multiCapturePosList);
         nameCaptures.clear();
+    }
+
+    // As new, once recycle() has emptied it
+    void reopen(const int numberOfConditions, const int delta)
+    {
         mNumberOfConditions = numberOfConditions;
         mNextCondition = 1;
         mLineCount = 1;

@@ -106,6 +106,7 @@ public:
     bool callMulti(const QString& function, const QString& mName);
     std::pair<bool, bool> callMultiReturnBool(const QString& function, const QString& mName);
     bool callConditionFunction(std::string& function, const QString& mName);
+    int ref_luafunction(lua_State* L, int index);
     bool call_luafunction(int functionRef, const QString& itemName = QString(), const bool aliasScript = false);
     void delete_luafunction(int& functionRef);
     void delete_luafunction(const QString& name);
