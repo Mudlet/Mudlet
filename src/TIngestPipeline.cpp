@@ -19,6 +19,7 @@
 
 #include "TIngestPipeline.h"
 
+#include "Host.h"
 #include "MudletApp.h"
 #include "utils.h"
 
@@ -67,8 +68,6 @@ bool TIngestPipeline::verifying()
 
 TIngestJob::TIngestJob()
 : mLines(csmMaxLines)
-, mText(csmMaxTextChars)
-, mFormats(csmMaxFormatChars)
 {
 }
 
@@ -161,9 +160,14 @@ void TIngestPipeline::queue(const TBuffer& source, TIngestJob& job, const size_t
                     source.mLightMagenta,
                     source.mWhite,
                     source.mLightWhite};
+    job.mWrapAt = source.mWrapAt;
+    job.mWrapIndent = source.mWrapIndent;
+    job.mWrapHangingIndent = source.mWrapHangingIndent;
+    job.mWideAmbiguousGlyphs = source.mpHost && source.mpHost->wideAmbiguousEAsianGlyphs();
     job.mReady.store(0, std::memory_order_relaxed);
     job.mCancel.store(false, std::memory_order_relaxed);
     job.mNext = 0;
+    job.mSeenReady = 0;
     // Release: the worker can claim the job from a stale epoch, and must still see all of the above
     job.mState.store(TIngestJob::Queued, std::memory_order_release);
     mEpoch.fetch_add(1);

@@ -2444,7 +2444,7 @@ bool TBuffer::speculationEligible() const
     return !mGotOSC && !mHyperlinkActive && !mpHost->mMxpProcessor.isEnabled() && !mxpClient.isInLinkMode() && !mxpClient.hasFgColor() && !mxpClient.hasBgColor();
 }
 
-// No arena could take the line, so stop before it grows further: what the worker frees, its thread's heap keeps
+// No job could take the line, so stop before it grows further: what the worker frees, its thread's heap keeps
 bool TBuffer::speculatedLineTooLong(const size_t moreChars)
 {
     if (static_cast<size_t>(mMudLine.size()) + moreChars <= TIngestJob::csmMaxTextChars && (mMudBuffer.uniform() || mMudBuffer.size() + moreChars <= TIngestJob::csmMaxFormatChars)) {
@@ -2454,6 +2454,27 @@ bool TBuffer::speculatedLineTooLong(const size_t moreChars)
     mSpeculationStopped = true;
     return true;
 }
+
+namespace {
+// graphemeInfo::getBaseCharacter() logs a grapheme that starts with a low surrogate, and the worker must not
+bool hasStrayLowSurrogate(const QString& text)
+{
+    const qsizetype size = text.size();
+    for (qsizetype i = 0; i < size; ++i) {
+        if (text.at(i).isLowSurrogate() && (i == 0 || !text.at(i - 1).isHighSurrogate())) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool sameBreaks(const QList<WrapInfo>& a, const QList<WrapInfo>& b)
+{
+    return std::equal(a.cbegin(), a.cend(), b.cbegin(), b.cend(), [](const WrapInfo& x, const WrapInfo& y) {
+        return x.isNewline == y.isNewline && x.needsIndent == y.needsIndent && x.firstChar == y.firstChar && x.lastChar == y.lastChar;
+    });
+}
+} // namespace
 
 bool TBuffer::recordSpeculatedLine(const char ch, size_t& localBufferPosition, const bool forcedLineBreak)
 {
@@ -2467,8 +2488,8 @@ bool TBuffer::recordSpeculatedLine(const char ch, size_t& localBufferPosition, c
         ++localBufferPosition;
         return true;
     }
-    if (static_cast<size_t>(index) >= job.mLines.size() || job.mTextUsed + textLength > job.mText.size() || (!uniform && job.mFormatUsed + formatLength > job.mFormats.size())) {
-        // A line too long for the arenas on its own is left to main, or the job would be queued for it again and again
+    if (static_cast<size_t>(index) >= job.mLines.size() || job.mTextUsed + textLength > TIngestJob::csmMaxTextChars || (!uniform && job.mFormatUsed + formatLength > TIngestJob::csmMaxFormatChars)) {
+        // A line too long for the job on its own is left to main, or the job would be queued for it again and again
         job.mResumeFrom = index ? mSpeculatedLineStart : mSpeculatedLineStart + 1;
         mSpeculationStopped = true;
         ++localBufferPosition;
@@ -2479,77 +2500,79 @@ bool TBuffer::recordSpeculatedLine(const char ch, size_t& localBufferPosition, c
     line.end = localBufferPosition;
     line.commitChar = ch;
     line.forcedLineBreak = forcedLineBreak;
-    line.textOffset = static_cast<quint32>(job.mTextUsed);
-    line.textLength = static_cast<quint32>(textLength);
-    std::copy_n(mMudLine.constData(), textLength, job.mText.data() + job.mTextUsed);
+    // Exact size, not mMudLine itself: the buffer keeps the line, and mMudLine keeps its capacity for the next
+    line.text = textLength ? QString(mMudLine.constData(), mMudLine.size()) : QString();
     job.mTextUsed += textLength;
-    line.uniform = uniform;
-    line.formatLength = static_cast<quint32>(formatLength);
-    if (uniform) {
-        if (formatLength) {
-            line.uniformFormat = mMudBuffer.front();
-        }
-    } else {
-        line.formatOffset = static_cast<quint32>(job.mFormatUsed);
-        std::copy(mMudBuffer.begin(), mMudBuffer.end(), job.mFormats.begin() + static_cast<std::ptrdiff_t>(job.mFormatUsed));
+    line.format = TLineFormat(mMudBuffer);
+    if (!uniform) {
         job.mFormatUsed += formatLength;
+    }
+    const int indent = clampedWrapIndent(job.mWrapIndent, job.mWrapAt);
+    line.wrapKnown = textLength && !fitsUnwrapped(line.text, job.mWrapAt - indent) && !hasStrayLowSurrogate(line.text);
+    if (line.wrapKnown) {
+        line.wrapBreaks = wrapBreaks(line.text, true, job.mWrapAt, indent, clampedWrapIndent(job.mWrapHangingIndent, job.mWrapAt), job.mWrapAt, job.mWideAmbiguousGlyphs);
+    } else {
+        line.wrapBreaks.clear();
     }
     mMudLine.resize(0);
     mMudBuffer.clear();
     line.stateAtCommit = parseState();
+    line.stateChanged = !parseStateIs(index ? job.mLines[static_cast<size_t>(index - 1)].stateAtCommit : job.mStartState);
     job.mReady.store(index + 1, std::memory_order_release);
     ++localBufferPosition;
     mSpeculatedLineStart = localBufferPosition;
     return true;
 }
 
-namespace {
-TLineFormat speculatedLineFormat(const TIngestJob& job, const TSpeculatedLine& line)
-{
-    TLineFormat format;
-    if (line.uniform) {
-        format.append(line.formatLength, line.uniformFormat);
-    } else {
-        const auto first = job.mFormats.cbegin() + line.formatOffset;
-        format.expand().assign(first, first + line.formatLength);
-    }
-    return format;
-}
-
-QStringView speculatedLineText(const TIngestJob& job, const TSpeculatedLine& line)
-{
-    return QStringView(job.mText.data() + line.textOffset, static_cast<qsizetype>(line.textLength));
-}
-} // namespace
-
 void TBuffer::verifySpeculatedLine(const TSpeculatedLine& line, const char ch, const size_t localBufferPosition, const bool forcedLineBreak) const
 {
-    const TIngestJob& job = *mpActiveSpeculation;
-    const TLineFormat format = speculatedLineFormat(job, line);
-    bool same = line.end == localBufferPosition && line.commitChar == ch && line.forcedLineBreak == forcedLineBreak && speculatedLineText(job, line) == mMudLine && format.size() == mMudBuffer.size()
+    bool same = line.end == localBufferPosition && line.commitChar == ch && line.forcedLineBreak == forcedLineBreak && line.text == mMudLine && line.format.size() == mMudBuffer.size()
                 && parseStateIs(line.stateAtCommit);
     for (size_t i = 0; same && i < mMudBuffer.size(); ++i) {
-        same = format[i] == mMudBuffer[i];
+        same = line.format[i] == mMudBuffer[i];
+    }
+    if (same && !mMudLine.isEmpty() && mpHost) {
+        const bool wrapKnown = !fitsUnwrapped(mMudLine, mWrapAt - clampedWrapIndent(mWrapIndent, mWrapAt)) && !hasStrayLowSurrogate(mMudLine);
+        const TIngestJob& job = *mpActiveSpeculation;
+        const bool sameSettings =
+                job.mWrapAt == mWrapAt && job.mWrapIndent == mWrapIndent && job.mWrapHangingIndent == mWrapHangingIndent && job.mWideAmbiguousGlyphs == mpHost->wideAmbiguousEAsianGlyphs();
+        if (sameSettings) {
+            same = line.wrapKnown == wrapKnown
+                   && (!wrapKnown
+                       || sameBreaks(line.wrapBreaks,
+                                     wrapBreaks(mMudLine,
+                                                true,
+                                                mWrapAt,
+                                                clampedWrapIndent(mWrapIndent, mWrapAt),
+                                                clampedWrapIndent(mWrapHangingIndent, mWrapAt),
+                                                mWrapAt,
+                                                mpHost->wideAmbiguousEAsianGlyphs())));
+        }
     }
     if (!same) {
-        qWarning().noquote() << "TBuffer ingest worker MISMATCH on line:" << mMudLine << "- the worker's:" << speculatedLineText(job, line);
+        qWarning().noquote() << "TBuffer ingest worker MISMATCH on line:" << mMudLine << "- the worker's:" << line.text;
     }
 }
 
 void TBuffer::replaySpeculatedLines(TIngestJob& job, size_t& localBufferPosition, const bool isFromServer)
 {
     for (;;) {
-        const int ready = job.mReady.load(std::memory_order_acquire);
-        while (job.mNext < ready && job.mLines[static_cast<size_t>(job.mNext)].start < localBufferPosition) {
+        while (job.mNext < job.mSeenReady && job.mLines[static_cast<size_t>(job.mNext)].start < localBufferPosition) {
             ++job.mNext;
         }
-        if (job.mNext >= ready) {
+        if (job.mNext >= job.mSeenReady) {
+            // Read once per batch rather than per line: the worker writes mReady as it publishes each one
+            const int ready = job.mReady.load(std::memory_order_acquire);
+            if (ready > job.mSeenReady) {
+                job.mSeenReady = ready;
+                continue;
+            }
             if (mpIngestPipeline->resume(*this, job, localBufferPosition) || mpIngestPipeline->awaitLines(job, ready)) {
                 continue;
             }
             return;
         }
-        const TSpeculatedLine& line = job.mLines[static_cast<size_t>(job.mNext)];
+        TSpeculatedLine& line = job.mLines[static_cast<size_t>(job.mNext)];
         const ParseState& stateBefore = job.mNext ? job.mLines[static_cast<size_t>(job.mNext - 1)].stateAtCommit : job.mStartState;
         if (line.start != localBufferPosition || !mMudLine.isEmpty() || !mMudBuffer.empty() || !parseStateIs(stateBefore) || !parseConfigIs(job.mConfig)) {
             return;
@@ -2559,18 +2582,26 @@ void TBuffer::replaySpeculatedLines(TIngestJob& job, size_t& localBufferPosition
             mpVerifiedLine = &line;
             return;
         }
-        mpIngestPipeline->noteReplayed();
-        setParseState(line.stateAtCommit);
+        ++job.mReplayed;
+        if (line.stateChanged) {
+            setParseState(line.stateAtCommit);
+        }
         size_t commitPosition = line.end;
         Host* pHost = mpHost;
         if (mServerWrapPendingLine.isEmpty() && !mHyperlinkActive && !pHost->mMxpFrameManager.hasActiveDestination()
-            && !(pHost->mUndoServerWrap && isFromServer && line.commitChar == '\n' && !line.forcedLineBreak && line.textLength)) {
+            && !(pHost->mUndoServerWrap && isFromServer && line.commitChar == '\n' && !line.forcedLineBreak && !line.text.isEmpty())) {
             // What commitLine() reduces to here, without copying the line through the accumulators
-            commitLineData(line.textLength ? speculatedLineText(job, line).toString() : QString(), speculatedLineFormat(job, line), line.commitChar);
+            if (line.wrapKnown) {
+                const int indent = clampedWrapIndent(job.mWrapIndent, job.mWrapAt);
+                const WrapHint hint{line.text, std::move(line.wrapBreaks), job.mWrapAt, indent, clampedWrapIndent(job.mWrapHangingIndent, job.mWrapAt), job.mWrapAt, job.mWideAmbiguousGlyphs};
+                commitLineData(std::move(line.text), std::move(line.format), line.commitChar, &hint);
+            } else {
+                commitLineData(std::move(line.text), std::move(line.format), line.commitChar);
+            }
             ++commitPosition;
         } else {
-            mMudLine.append(speculatedLineText(job, line));
-            mMudBuffer = speculatedLineFormat(job, line);
+            mMudLine.append(line.text);
+            mMudBuffer = std::move(line.format);
             commitLine(line.commitChar, commitPosition, isFromServer, line.forcedLineBreak);
         }
         localBufferPosition = commitPosition;
@@ -2748,7 +2779,7 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
     return true;
 }
 
-void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
+void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch, const WrapHint* wrapHint)
 {
     // An empty '\r' commit, such as the posting timer's flush, ends no line of text: drop it before the
     // blank-line setting below can turn it into a line of one space
@@ -2897,7 +2928,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
     // through, as wrapLine() rebuilds it. The width must stay getWrapInfo()'s widthAvailable for mWrapAt.
     const bool fitsAsIs = wrapStartLine == lastValidLine && !lineBuffer.at(wrapStartLine).isEmpty() && !buffer[wrapStartLine].empty()
                           && fitsUnwrapped(lineBuffer.at(wrapStartLine), wrapsFromPreviousLine(wrapStartLine) ? mWrapAt : mWrapAt - clampedWrapIndent(mWrapIndent, mWrapAt));
-    const int addedLines = fitsAsIs ? 0 : wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
+    const int addedLines = fitsAsIs ? 0 : wrapLineWith(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent, wrapHint);
     // The line feed ended this line, so an empty wrapped line left by the
     // spaces it ended on is where the next line starts, not more of this one
     if (!lineBuffer.isEmpty() && lineBuffer.back().isEmpty() && timeBuffer.back() == csmWrappedLineTimeStamp) {
@@ -6441,19 +6472,22 @@ int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
 // find lindbreaks and indents (if not necessary, return empty list)
 inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent)
 {
-    QList<WrapInfo> output;
     if (lineText.isEmpty()) {
-        return output;
+        return {};
     }
 
     // Safety check: during destruction, mpHost might be null
     if (!mpHost) {
         // Return a simple wrap info without character width calculations
-        output.append(WrapInfo(isNewline, false, 0, lineText.length()));
-        return output;
+        return {WrapInfo(isNewline, false, 0, lineText.length())};
     }
+    return wrapBreaks(lineText, isNewline, maxWidth, indent, hangingIndent, mWrapAt, mpHost->wideAmbiguousEAsianGlyphs());
+}
 
-    const qsizetype widthAvailable = std::min<qsizetype>(isNewline ? maxWidth - indent : maxWidth, mWrapAt);
+QList<WrapInfo> TBuffer::wrapBreaks(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent, const int wrapAt, const bool wideAmbiguousGlyphs)
+{
+    QList<WrapInfo> output;
+    const qsizetype widthAvailable = std::min<qsizetype>(isNewline ? maxWidth - indent : maxWidth, wrapAt);
     if (fitsUnwrapped(lineText, widthAvailable)) {
         return output;
     }
@@ -6531,8 +6565,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         if (!plainAscii) {
             nextBoundary = graphemeFinder->toNextBoundary();
             const uint unicode = graphemeInfo::getBaseCharacter(QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar));
-            // Safety check: during destruction, mpHost might be null
-            charWidth = graphemeInfo::getWidth(unicode, mpHost ? mpHost->wideAmbiguousEAsianGlyphs() : false);
+            charWidth = graphemeInfo::getWidth(unicode, wideAmbiguousGlyphs);
         }
         const int indentationHere = isNewline ? indent : hangingIndent;
         if (xPos + charWidth > maxWidth - (needsIndent ? indentationHere : 0)) {
@@ -6573,7 +6606,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         indexOfChar = nextBoundary;
     }
     // it's possible that no wrapping is needed
-    if (totalWidth <= mWrapAt && !hasNewline) {
+    if (totalWidth <= wrapAt && !hasNewline) {
         output.clear();
         return output;
     }
@@ -6693,7 +6726,7 @@ void TBuffer::appendLog(const QString& text)
 // several lines its length less one whether any of them were split or not.
 // TConsoleModel::insertLink() and TConsole::printCommand() add it to startLine to
 // place the cursor and the repaint range.
-int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize)
+int TBuffer::wrapLineWith(int startLine, int maxWidth, int indentSize, int hangingIndentSize, const WrapHint* startLineHint)
 {
     if (static_cast<int>(buffer.size()) < startLine || startLine < 0) {
         return 0;
@@ -6732,7 +6765,11 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         if (buffer[firstRewrappedLine].empty() || lineBuffer.at(firstRewrappedLine).isEmpty()) {
             break;
         }
-        lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), timeBuffer.at(firstRewrappedLine) != TBuffer::csmWrappedLineTimeStamp, maxWidth, indent, hangingIndent);
+        if (startLineHint && firstRewrappedLine == startLine && wrapHintApplies(*startLineHint, startLine, maxWidth, indent, hangingIndent)) {
+            lineBreaks = startLineHint->breaks;
+        } else {
+            lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), timeBuffer.at(firstRewrappedLine) != TBuffer::csmWrappedLineTimeStamp, maxWidth, indent, hangingIndent);
+        }
         if (!lineBreaks.isEmpty()) {
             break;
         }
@@ -6950,6 +6987,14 @@ bool TBuffer::dropSpaceAtWrap(const QChar c)
         ++wrapGapBuffer.back();
     }
     return true;
+}
+
+bool TBuffer::wrapHintApplies(const WrapHint& hint, const int line, const int maxWidth, const int indent, const int hangingIndent) const
+{
+    // hint.text holds a reference, so any edit to the line detached it from hint.text
+    const QString& text = lineBuffer.at(line);
+    return text.constData() == hint.text.constData() && text.size() == hint.text.size() && timeBuffer.at(line) != csmWrappedLineTimeStamp && maxWidth == hint.maxWidth && indent == hint.indent
+           && hangingIndent == hint.hangingIndent && mWrapAt == hint.wrapAt && mpHost && mpHost->wideAmbiguousEAsianGlyphs() == hint.wideAmbiguousGlyphs;
 }
 
 bool TBuffer::wrapsFromPreviousLine(const int lineNumber) const

@@ -33,28 +33,31 @@
 class Host;
 class QThread;
 
-// A line the worker parsed ahead, as commitLine() would have been handed it; its text and, unless the
-// whole line is in one format, its formats are in the job's arenas
+// A line the worker parsed ahead, as commitLine() would have handed it to commitLineData(): main moves
+// text and format into the buffer
 struct TSpeculatedLine
 {
     TBuffer::ParseState stateAtCommit;
-    TChar uniformFormat;
+    QString text;
+    TLineFormat format;
+    // For a line the quick fit test in commitLineData() does not pass: getWrapInfo() for it as a new line
+    // at the job's wrap settings
+    QList<WrapInfo> wrapBreaks;
     // Offsets into the unit: where the line's first byte is, and its commit character
     size_t start = 0;
     size_t end = 0;
-    quint32 textOffset = 0;
-    quint32 textLength = 0;
-    quint32 formatOffset = 0;
-    quint32 formatLength = 0;
     char commitChar = 0;
     bool forcedLineBreak = false;
-    bool uniform = true;
+    // False when stateAtCommit is the state the line started in
+    bool stateChanged = true;
+    bool wrapKnown = false;
 };
 
 // Up to csmMaxLines lines of one game unit, parsed ahead from mStartPosition. Main fills it in while
 // it is neither Queued nor Running; the worker publishes lines through mReady, and main takes them in
-// order. The job never grows: lines go into fixed arenas, and when those are full the worker stops
-// and main queues the job again from where it has got to.
+// order. A job holds at most csmMaxTextChars of text and csmMaxFormatChars of per-character formats
+// that main has not taken yet: past that the worker stops, and main queues the job again from where it
+// has got to.
 struct TIngestJob
 {
     enum State : int { Idle, Queued, Running, Done };
@@ -73,9 +76,12 @@ struct TIngestJob
     TBuffer::ParseState mStartState;
     TBuffer::ParseConfig mConfig;
     std::array<QColor, 16> mColours;
+    // The main buffer's, for wrapBreaks
+    int mWrapAt = 0;
+    int mWrapIndent = 0;
+    int mWrapHangingIndent = 0;
+    bool mWideAmbiguousGlyphs = false;
     std::vector<TSpeculatedLine> mLines;
-    std::vector<QChar> mText;
-    std::vector<TChar> mFormats;
     // Worker only
     size_t mTextUsed = 0;
     size_t mFormatUsed = 0;
@@ -85,8 +91,10 @@ struct TIngestJob
     alignas(64) std::atomic<int> mReady{0};
     std::atomic<bool> mCancel{false};
     std::atomic<int> mState{Idle};
-    // Main's own: the next line it has not used or passed
+    // Main's own: the next line it has not used or passed, and mReady as main last read it
     alignas(64) int mNext = 0;
+    int mSeenReady = 0;
+    quint64 mReplayed = 0;
 };
 
 // Parses a game unit on a worker thread, lines ahead of the main thread, which commits them instead of
@@ -116,8 +124,7 @@ public:
     bool awaitLines(const TIngestJob&, int ready) const;
     // The worker is left to notice a cancelled job and finish on its own
     void end(TIngestJob&);
-    void noteReplayed() { ++mReplayedLines; }
-    quint64 replayedLines() const { return mReplayedLines; }
+    quint64 replayedLines() const { return mJob.mReplayed; }
 
 private:
     void queue(const TBuffer& source, TIngestJob&, size_t position);
@@ -130,7 +137,6 @@ private:
     std::atomic<uint32_t> mEpoch{0};
     std::atomic<bool> mStop{false};
     const bool mWaitForWorker;
-    quint64 mReplayedLines = 0;
 };
 
 #endif // MUDLET_TINGESTPIPELINE_H

@@ -610,7 +610,7 @@ public:
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
-    int wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize);
+    int wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize) { return wrapLineWith(startLine, maxWidth, indentSize, hangingIndentSize, nullptr); }
     // At the width and indents text is appended with
     int wrapLine(int startLine) { return wrapLine(startLine, mWrapAt, mWrapIndent, mWrapHangingIndent); }
     void log(int, int);
@@ -774,6 +774,22 @@ private:
     THyperlinkVisibilityManager* hyperlinkVisibilityManagerOrNull();
     TChar currentFormat() const;
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
+    // getWrapInfo() for a non-empty line once Host is read; touches nothing else, so the ingest worker runs it too
+    static QList<WrapInfo> wrapBreaks(const QString& lineText, bool isNewline, int maxWidth, int indent, int hangingIndent, int wrapAt, bool wideAmbiguousGlyphs);
+    // wrapBreaks() for a line the ingest worker parsed, as a new line. text shares the committed line's
+    // text, so an edit to the line detaches it from text.
+    struct WrapHint
+    {
+        QString text;
+        QList<WrapInfo> breaks;
+        int maxWidth = 0;
+        int indent = 0;
+        int hangingIndent = 0;
+        int wrapAt = 0;
+        bool wideAmbiguousGlyphs = false;
+    };
+    int wrapLineWith(int startLine, int maxWidth, int indentSize, int hangingIndentSize, const WrapHint* startLineHint);
+    bool wrapHintApplies(const WrapHint&, int line, int maxWidth, int indent, int hangingIndent) const;
     void shrinkBuffer();
     void spliceInsertIntoPreTriggerPassLine(int y, int x, int count, const TChar& format);
     void spliceEraseFromPreTriggerPassLine(int y, int x, int xEnd);
@@ -844,7 +860,7 @@ private:
     void maskSpoilerText(const int linkId, QString& line, const int column, const int length);
     void resetColors();
     bool commitLine(char ch, size_t& localBufferPosition, bool isFromServer = false, bool forcedLineBreak = false);
-    void commitLineData(QString line, TLineFormat chars, char ch);
+    void commitLineData(QString line, TLineFormat chars, char ch, const WrapHint* wrapHint = nullptr);
     bool dropSpaceAtWrap(QChar);
     bool endsAtServerWrapColumn() const;
     bool looksLikeWrappedProse(const QString& line) const;

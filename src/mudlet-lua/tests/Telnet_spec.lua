@@ -3059,6 +3059,122 @@ describe("Tests game text the ingest worker parses ahead", function()
     requireWorker(before)
   end)
 
+  -- lines past the main window's width of 100, in ASCII and in characters wider than one column
+  local function longLines(count)
+    local lines = {}
+    for i = 1, count or 60 do
+      local kind = i % 5
+      if kind == 0 then
+        lines[i] = "IngestLong " .. i .. " " .. ("word "):rep(40)
+      elseif kind == 1 then
+        lines[i] = "\27[32mIngestLongGreen " .. i .. " \27[1m" .. ("several words in bold "):rep(8) .. "\27[0m"
+      elseif kind == 2 then
+        lines[i] = "IngestWide " .. i .. " " .. ("你好世界"):rep(16)
+      elseif kind == 3 then
+        -- East Asian ambiguous width: one column each, unless the profile makes them two
+        lines[i] = "IngestAmbiguous " .. i .. " " .. ("─±°"):rep(25)
+      else
+        lines[i] = "IngestShort " .. i
+      end
+    end
+    return lines
+  end
+
+  local function firstFragment(lines, prefix)
+    for _, line in ipairs(lines) do
+      local text = line:match("^([^|]*)")
+      if text:sub(1, #prefix) == prefix then
+        return text
+      end
+    end
+  end
+
+  it("wraps long lines the same from one read", function()
+    local before = parsedAhead()
+    local together = sameEitherWay(longLines(), true)
+    assert.is_true(#together > 60, "no line was wrapped")
+    requireWorker(before)
+  end)
+
+  it("wraps long lines with a wrap and a hanging indent the same from one read", function()
+    finally(function()
+      setWindowWrapIndent("main", 0)
+      setWindowWrapHangingIndent("main", 0)
+    end)
+    setWindowWrapIndent("main", 4)
+    setWindowWrapHangingIndent("main", 2)
+    local before = parsedAhead()
+    local together = sameEitherWay(longLines(), true)
+    assert.truthy(firstFragment(together, "    IngestLong 10 "), "the wrap indent was not applied")
+    requireWorker(before)
+  end)
+
+  local wrapSettings = {
+    {"wrap width", function()
+      setWindowWrap("main", 60)
+    end},
+    {"wrap indent", function()
+      setWindowWrapIndent("main", 6)
+    end},
+    {"hanging indent", function()
+      setWindowWrapHangingIndent("main", 5)
+    end},
+    {"East Asian ambiguous width", function()
+      setConfig("ambiguousEAsianWidthCharacters", "wide")
+    end},
+  }
+  for _, setting in ipairs(wrapSettings) do
+    local name, change = setting[1], setting[2]
+    it("wraps the rest of a read at the " .. name .. " a trigger sets part way through it", function()
+      local wrapAt, ambiguous = getWindowWrap("main"), getConfig("ambiguousEAsianWidthCharacters")
+      local function restore()
+        setWindowWrap("main", wrapAt)
+        setWindowWrapIndent("main", 0)
+        setWindowWrapHangingIndent("main", 0)
+        setConfig("ambiguousEAsianWidthCharacters", ambiguous)
+      end
+      finally(restore)
+      setConfig("ambiguousEAsianWidthCharacters", "narrow")
+      local lines = longLines(700)
+      local control = pass(lines, true, true)
+      triggers[#triggers + 1] = tempRegexTrigger("^IngestShort 4$", change)
+      local apart = pass(lines, false, true)
+      restore()
+      setConfig("ambiguousEAsianWidthCharacters", "narrow")
+      local before = parsedAhead()
+      local together = pass(lines, true, true)
+      sameLines(apart, together)
+      assert.are_not.same(control, together, "the " .. name .. " made no difference")
+      requireWorker(before)
+    end)
+  end
+
+  it("wraps a long line a trigger edits as it now stands", function()
+    triggers[#triggers + 1] = tempRegexTrigger("^IngestLong 10 ", function()
+      selectString("word word", 1)
+      replace(("a much longer replacement "):rep(6))
+    end)
+    triggers[#triggers + 1] = tempRegexTrigger("^IngestLong 20 ", function()
+      selectString(line, 1)
+      replace("IngestShortened 20")
+    end)
+    triggers[#triggers + 1] = tempRegexTrigger("^IngestWide 22 ", function()
+      moveCursor(4, getLineNumber())
+      insertText(("inserted "):rep(5))
+    end)
+    triggers[#triggers + 1] = tempRegexTrigger("^IngestLong 30 ", function()
+      deleteLine()
+    end)
+    triggers[#triggers + 1] = tempRegexTrigger("^IngestAmbiguous 33 ", function()
+      echo(" IngestEchoed " .. ("echo "):rep(10))
+    end)
+    local before = parsedAhead()
+    local together = sameEitherWay(longLines(), true)
+    assert.truthy(firstFragment(together, "IngestShortened 20"), "the line was not shortened")
+    assert.falsy(firstFragment(together, "IngestLong 30 "), "the line was not deleted")
+    requireWorker(before)
+  end)
+
   it("decodes a whole read in the encoding it arrived in, even when a trigger switches it part way", function()
     local original = getServerEncoding()
     finally(function()
