@@ -228,9 +228,9 @@ echo "    ... done copying identified libraries."
 
 # Over the MSYS2 lua51.dll the rocks brought in above, as mudlet.exe needs the
 # one it was built with
-if grep -q "^USE_BUNDLED_LUA:BOOL=ON" "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/CMakeCache.txt"; then
+if grep -qiE "^USE_BUNDLED_LUA:BOOL=(ON|TRUE|YES|Y|1)[[:space:]]*$" "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/CMakeCache.txt"; then
   if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/lua51.dll" ]; then
-    echo "=== ERROR: Mudlet was built with its own Lua, but its lua51.dll is missing, so it would start with MSYS2's ==="
+    echo "=== ERROR: Mudlet was built with its own Lua, but its lua51.dll is missing, so the package would carry MSYS2's ==="
     exit 1
   fi
   cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/lua51.dll" .
