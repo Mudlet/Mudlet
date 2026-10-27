@@ -2444,7 +2444,7 @@ bool TBuffer::speculationEligible() const
     return !mGotOSC && !mHyperlinkActive && !mpHost->mMxpProcessor.isEnabled() && !mxpClient.isInLinkMode() && !mxpClient.hasFgColor() && !mxpClient.hasBgColor();
 }
 
-// No run could take the line, so stop before it grows further: what the worker frees, its thread's heap keeps
+// No run could take the line, so stop before the worker grows it further
 bool TBuffer::speculatedLineTooLong(const size_t moreChars)
 {
     if (static_cast<size_t>(mMudLine.size()) + moreChars <= TIngestJob::csmMaxTextChars && (mMudBuffer.uniform() || mMudBuffer.size() + moreChars <= TIngestJob::csmMaxFormatChars)) {
@@ -2456,7 +2456,7 @@ bool TBuffer::speculatedLineTooLong(const size_t moreChars)
 }
 
 namespace {
-// graphemeInfo::getBaseCharacter() logs a grapheme of a low surrogate then a high one, and the worker must not
+// graphemeInfo::getBaseCharacter() logs a grapheme of a low surrogate then a high one, so main wraps such lines
 bool hasStrayLowSurrogate(const QString& text)
 {
     const qsizetype size = text.size();
@@ -2474,8 +2474,8 @@ TBuffer::WrapSettings TBuffer::wrapSettings() const
     return {mWrapAt, clampedWrapIndent(mWrapIndent, mWrapAt), clampedWrapIndent(mWrapHangingIndent, mWrapAt), mpHost && mpHost->wideAmbiguousEAsianGlyphs()};
 }
 
-// The breaks commitLineData() wraps a new line at. False, leaving breaks empty, where its quick fit test
-// spares it the scan, or for a line main must wrap itself.
+// The breaks commitLineData() wraps a new line at. False, leaving breaks empty, for a line it settles without a
+// scan or one main must wrap itself.
 bool TBuffer::newLineWrapBreaks(const QString& lineText, const WrapSettings& wrap, QList<WrapInfo>& breaks)
 {
     if (lineText.isEmpty() || fitsUnwrapped(lineText, wrap.maxWidth - wrap.indent) || hasStrayLowSurrogate(lineText)) {
@@ -2510,7 +2510,7 @@ bool TBuffer::recordSpeculatedLine(const char ch, size_t& localBufferPosition, c
     line.end = localBufferPosition;
     line.commitChar = ch;
     line.forcedLineBreak = forcedLineBreak;
-    // Exact size, not mMudLine itself: the buffer keeps the line, and mMudLine keeps its capacity for the next
+    // Copied at its exact size, not shared with mMudLine: scrollback keeps the line, mMudLine keeps its capacity
     line.text = textLength ? QString(mMudLine.constData(), mMudLine.size()) : QString();
     job.mTextUsed += textLength;
     line.format = TLineFormat(mMudBuffer);
@@ -2915,7 +2915,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch, con
     const int lastValidLine = static_cast<int>(lineBuffer.size()) - 1;
     const int wrapStartLine = (lastValidLine >= 0) ? std::min(passLineAfterTriggers, lastValidLine) : 0;
     // Spares wrapLineWith()'s setup for the usual last line that fits; one with no text or no TChars still goes
-    // through, as wrapLine() rebuilds it. The width must stay wrapBreaks()'s widthAvailable for mWrapAt.
+    // through, as wrapLineWith() rebuilds it. The width must stay wrapBreaks()'s widthAvailable for mWrapAt.
     const bool fitsAsIs = wrapStartLine == lastValidLine && !lineBuffer.at(wrapStartLine).isEmpty() && !buffer[wrapStartLine].empty()
                           && fitsUnwrapped(lineBuffer.at(wrapStartLine), wrapsFromPreviousLine(wrapStartLine) ? mWrapAt : mWrapAt - clampedWrapIndent(mWrapIndent, mWrapAt));
     const int addedLines = fitsAsIs ? 0 : wrapLineWith(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent, wrapHint);

@@ -45,8 +45,8 @@ constexpr int kPausesPerClockCheck = 64;
 // Units of a flood arrive back to back; sleeping between them would cost a wake-up at the start of each
 constexpr std::chrono::microseconds kIdleSpin{300};
 
-// glibc gives each thread its own heap and lines are allocated in this one, so the holes main's own frees
-// leave in its heap are no longer refilled by lines and stay resident. Hand them back, at most this often.
+// Lines come from this thread's glibc arena, so holes main's own frees leave in its arena have no lines to
+// refill them and stay resident; malloc_trim() hands back free pages in every arena
 constexpr std::chrono::milliseconds kTrimInterval{25};
 
 void releaseFreedPages()

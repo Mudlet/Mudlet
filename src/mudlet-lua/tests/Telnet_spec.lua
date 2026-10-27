@@ -3077,7 +3077,8 @@ describe("Tests game text the ingest worker parses ahead", function()
   end
 
   -- ASCII and CJK lines past the main window's width of 100, ambiguous-width ones past it only when those
-  -- are wide, lines of exactly 100 and 101 columns at narrow ambiguous width, and short ones
+  -- are wide or at either width but with different breaks, lines of exactly 100 and 101 columns at narrow
+  -- ambiguous width, and short ones
   local function longLines(count)
     local lines = {}
     for i = 1, count or 60 do
@@ -3090,7 +3091,11 @@ describe("Tests game text the ingest worker parses ahead", function()
         lines[i] = "IngestWide " .. i .. " " .. ("你好世界"):rep(16)
       elseif kind == 3 then
         -- East Asian ambiguous width: one column each, unless the profile makes them two
-        lines[i] = "IngestAmbiguous " .. i .. " " .. ("─±°"):rep(25)
+        if math.floor(i / 5) % 2 == 0 then
+          lines[i] = "IngestAmbiguous " .. i .. " " .. ("─±°"):rep(25)
+        else
+          lines[i] = "IngestAmbiguousLong " .. i .. " " .. ("─± "):rep(40)
+        end
       else
         lines[i] = oddLongLine(i)
       end
@@ -3150,32 +3155,35 @@ describe("Tests game text the ingest worker parses ahead", function()
       setConfig("ambiguousEAsianWidthCharacters", "wide")
     end},
   }
-  for _, setting in ipairs(wrapSettings) do
-    local name, change = setting[1], setting[2]
-    it("wraps the rest of a read at the " .. name .. " a trigger sets part way through it", function()
-      local wrapAt, ambiguous = getWindowWrap("main"), getConfig("ambiguousEAsianWidthCharacters")
-      local function restore()
-        setWindowWrap("main", wrapAt)
-        setWindowWrapIndent("main", 0)
-        setWindowWrapHangingIndent("main", 0)
-        setConfig("ambiguousEAsianWidthCharacters", ambiguous)
-      end
-      finally(restore)
-      setConfig("ambiguousEAsianWidthCharacters", "narrow")
-      local lines = longLines(700)
-      local control = pass(lines, true, true)
-      triggers[#triggers + 1] = tempRegexTrigger("^IngestShort 4$", change)
-      local apart = pass(lines, false, true)
-      restore()
-      setConfig("ambiguousEAsianWidthCharacters", "narrow")
-      local before, hints = parsedAhead(), wrapHintsUsed()
-      local together = pass(lines, true, true)
-      sameLines(apart, together)
-      assert.are_not.same(control, together, "the " .. name .. " made no difference")
-      requireWorker(before)
-      -- the job queued again after the change wraps at it
-      assert.is_true(wrapHintsUsed() - hints > 100, "the worker's breaks were not used after the change")
-    end)
+  -- a short line, then a long one the worker found breaks for at the old setting
+  for _, on in ipairs({{"", "^IngestShort 4$"}, {" on a line it wraps", "^IngestAmbiguousLong 8 "}}) do
+    for _, setting in ipairs(wrapSettings) do
+      local name, change = setting[1], setting[2]
+      it("wraps the rest of a read at the " .. name .. " a trigger" .. on[1] .. " sets part way through it", function()
+        local wrapAt, ambiguous = getWindowWrap("main"), getConfig("ambiguousEAsianWidthCharacters")
+        local function restore()
+          setWindowWrap("main", wrapAt)
+          setWindowWrapIndent("main", 0)
+          setWindowWrapHangingIndent("main", 0)
+          setConfig("ambiguousEAsianWidthCharacters", ambiguous)
+        end
+        finally(restore)
+        setConfig("ambiguousEAsianWidthCharacters", "narrow")
+        local lines = longLines(700)
+        local control = pass(lines, true, true)
+        triggers[#triggers + 1] = tempRegexTrigger(on[2], change)
+        local apart = pass(lines, false, true)
+        restore()
+        setConfig("ambiguousEAsianWidthCharacters", "narrow")
+        local before, hints = parsedAhead(), wrapHintsUsed()
+        local together = pass(lines, true, true)
+        sameLines(apart, together)
+        assert.are_not.same(control, together, "the " .. name .. " made no difference")
+        requireWorker(before)
+        -- jobs queued after the change carry the new settings, so their breaks still apply
+        assert.is_true(wrapHintsUsed() - hints > 100, "the worker's breaks were not used after the change")
+      end)
+    end
   end
 
   it("wraps a long line a trigger edits as it now stands", function()
@@ -3209,6 +3217,24 @@ describe("Tests game text the ingest worker parses ahead", function()
     assert.falsy(firstFragment(together, "IngestLong 30 "), "the line was not deleted")
     assert.truthy(firstFragment(together, "IngestSplit "), "the echo did not start a line")
     assert.truthy(firstFragment(together, "IngestNestedLong "), "the fed line did not arrive")
+    requireWorker(before)
+  end)
+
+  it("wraps a long line a trigger edits to text of the same length as it now stands", function()
+    triggers[#triggers + 1] = tempRegexTrigger("^IngestLong 10 ", function()
+      selectString(line, 1)
+      replace((line:gsub(" ", "_")))
+    end)
+    triggers[#triggers + 1] = tempRegexTrigger("^IngestLong 20 ", function()
+      for _ = 1, 8 do
+        selectString("word", 1)
+        replace("字字字字")
+      end
+    end)
+    local before = parsedAhead()
+    local together = sameEitherWay(longLines(), true)
+    assert.truthy(firstFragment(together, "IngestLong_10_word_"), "the line was not edited")
+    assert.truthy(firstFragment(together, "IngestLong 20 字字字字"), "the line was not edited")
     requireWorker(before)
   end)
 
