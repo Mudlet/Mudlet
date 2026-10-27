@@ -7418,49 +7418,6 @@ describe("Trigger processing", function()
             assert.are.equal("vouching", barrier)
         end)
 
-        -- The collector clears a weak table without a store the barrier counts.
-        -- Everything else the registry holds is kept alive, so the empty table
-        -- "matches" holds between dispatches is all the second fire collects.
-        it("hands a script the empty matches after the collector cleared it from a weak registry", function()
-            local _, barrier = rearmLazyGlobals()
-            if barrier == "absent" then
-                pending("built against a Lua without the write barrier")
-                return
-            end
-            assert.are.equal("vouching", barrier)
-            trigger(tempRegexTrigger("^LazyWeakRegistry (\\w+)$", function() end))
-            trigger(tempRegexTrigger("^LazyWeakRegistry (\\w+)$", function()
-                collectgarbage()
-                collectgarbage()
-            end))
-            collectgarbage()
-            collectgarbage()
-            local keep = {}
-            -- In a function of its own, as a register of this one would keep it alive
-            local function weakenRegistryAroundEmptyMatches()
-                local registry = debug.getregistry()
-                local empty = rawPresent(_G, "matches")
-                for key, value in next, registry do
-                    if not rawequal(value, empty) then
-                        keep[key] = value
-                    end
-                end
-                setmetatable(registry, {__mode = "v"})
-            end
-
-            weakenRegistryAroundEmptyMatches()
-            local ok, message = pcall(feedTriggers, "\nLazyWeakRegistry word\n")
-            local between = type(rawPresent(_G, "matches"))
-            local _, barrierWhileWeak = rearmLazyGlobals()
-            setmetatable(debug.getregistry(), nil)
-            local _, barrierAfter = rearmLazyGlobals(true)
-
-            assert.is_true(ok, tostring(message))
-            assert.are.equal("table", between, "the globals table was handed an empty matches the collector had cleared")
-            assert.are.equal("off", barrierWhileWeak)
-            assert.are.equal("vouching", barrierAfter)
-        end)
-
         -- The table matches holds between dispatches is used again for as long
         -- as it stays empty and has no metatable, so every way a script can
         -- change a table has to count as using it
@@ -7556,6 +7513,72 @@ describe("Trigger processing", function()
             assert.are.equal("LazyLineRawsetTwo", line)
         end)
 
+        -- Reading line makes a store of Mudlet's own straight after the
+        -- script's, which must not vouch for what the script's store changed.
+        -- Nothing is stored under a capture name, which would move the barrier.
+        it("does not put back the empty matches a script filled before reading line", function()
+            _G.LazyKeepFactsSpec = {}
+            trigger(tempRegexTrigger("^LazyKeepFacts (\\w+)$", function() end))
+            trigger(tempLineTrigger(2, 1, [[
+                local spare = matches
+                spare[1] = "mine"
+                _G.LazyKeepFactsSpec.spare = spare
+                _G.LazyKeepFactsSpec.lineRead = line
+            ]]))
+            trigger(tempLineTrigger(4, 1, [[_G.LazyKeepFactsSpec.after = matches]]))
+
+            feedTriggers("LazyKeepFacts one\nLazyKeepFacts two\nLazyKeepFacts three\nLazyKeepFacts four\nLazyKeepFacts five more\n")
+
+            local spec = _G.LazyKeepFactsSpec
+            assert.are.equal("LazyKeepFacts three", spec.lineRead)
+            assert.are.equal("mine", spec.spare[1])
+            assert.is_false(rawequal(spec.after, spec.spare), "the filled table was put back as matches")
+            assert.is_nil(next(spec.after), "matches read as filled between dispatches")
+        end)
+
+        -- The collector clears a weak table without a store the barrier counts.
+        -- Everything else the registry holds is kept alive, so the empty table
+        -- "matches" holds between dispatches is all the second fire collects.
+        -- Last here, as turning the barrier back on watches everything afresh.
+        it("hands a script the empty matches after the collector cleared it from a weak registry", function()
+            local _, barrier = rearmLazyGlobals()
+            if barrier == "absent" then
+                pending("built against a Lua without the write barrier")
+                return
+            end
+            assert.are.equal("vouching", barrier)
+            trigger(tempRegexTrigger("^LazyWeakRegistry (\\w+)$", function() end))
+            trigger(tempRegexTrigger("^LazyWeakRegistry (\\w+)$", function()
+                collectgarbage()
+                collectgarbage()
+            end))
+            collectgarbage()
+            collectgarbage()
+            local keep = {}
+            -- In a function of its own, as a register of this one would keep it alive
+            local function weakenRegistryAroundEmptyMatches()
+                local registry = debug.getregistry()
+                local empty = rawPresent(_G, "matches")
+                for key, value in next, registry do
+                    if not rawequal(value, empty) then
+                        keep[key] = value
+                    end
+                end
+                setmetatable(registry, {__mode = "v"})
+            end
+
+            weakenRegistryAroundEmptyMatches()
+            local ok, message = pcall(feedTriggers, "\nLazyWeakRegistry word\n")
+            local between = type(rawPresent(_G, "matches"))
+            local _, barrierWhileWeak = rearmLazyGlobals()
+            setmetatable(debug.getregistry(), nil)
+            local _, barrierAfter = rearmLazyGlobals(true)
+
+            assert.is_true(ok, tostring(message))
+            assert.are.equal("table", between, "the globals table was handed an empty matches the collector had cleared")
+            assert.are.equal("off", barrierWhileWeak)
+            assert.are.equal("vouching", barrierAfter)
+        end)
     end)
 
     -- Once a profile holds enough plain-text triggers, the engine files them by
