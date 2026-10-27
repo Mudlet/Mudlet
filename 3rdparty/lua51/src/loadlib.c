@@ -21,7 +21,7 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
-#include "lstate.h"  /* MUDLET: for ll_hascore() */
+#include "lstate.h"  /* MUDLET: for G(L) in ll_loadfunc() */
 
 
 /* prefix for open functions in C libraries */

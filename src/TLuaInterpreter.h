@@ -1156,15 +1156,17 @@ private:
     static constexpr quint8 scmMultimatchesAbsent = 0x04;
     static constexpr quint8 scmLineAbsent = 0x08;
     static constexpr quint8 scmEmptyMatchesUnused = 0x10;
-    // Null with a Lua that has no barrier, which leaves every check to be made
+    // Null with a Lua that has no barrier, and once the barrier can no longer
+    // vouch (see barrierIntact()), which leaves every check to be made
     const size_t* mLuaWriteEpoch = nullptr;
     size_t mFactsEpoch = 0;
     quint8 mFacts = 0;
     bool factsCurrent() const { return mLuaWriteEpoch && *mLuaWriteEpoch == mFactsEpoch; }
     bool knows(const quint8 fact) const { return factsCurrent() && (mFacts & fact); }
     void forget(const quint8 fact) { mFacts &= static_cast<quint8>(~fact); }
-    // After a raw store of Mudlet's own, which runs no Lua and so is the only
-    // thing that moved the epoch if it had not moved before
+    // After a raw store of Mudlet's own, which runs no Lua: if the facts were
+    // current, that store alone moved the epoch, so they stay - less any the
+    // caller forget()s for what it stored
     void keepFacts(const bool wereCurrent)
     {
         if (wereCurrent) {

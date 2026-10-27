@@ -7157,6 +7157,25 @@ describe("Trigger processing", function()
                 assert.is_nil(asked.matches, "the package's metatable was asked for a name Mudlet sets")
             end)
 
+            it("hands the next line its globals after a fire takes Mudlet's __index off it", function()
+                local original = getmetatable(_G)
+                local copy = {__index = original.__index, __newindex = original.__newindex}
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyKeptFirst (\\w+)$", function()
+                    copy.__index = nil
+                end))
+                trigger(tempRegexTrigger("^LazyKeptSecond (\\w+)$", readEverythingIn(seen)))
+
+                setmetatable(_G, copy)
+                rearmLazyGlobals()
+                local ok, message = pcall(feedTriggers, "\nLazyKeptWarm\nLazyKeptFirst word\nLazyKeptSecond word\n")
+                setmetatable(_G, original)
+
+                assert.is_true(ok, tostring(message))
+                assert.is_not_nil(seen.matches, "matches read as nil - a name was left out with no handler to build it")
+                assert.are.equal("LazyKeptSecond word", seen.line)
+            end)
+
             -- The control: the same shape with the handlers left alone, so a
             -- case that stops reaching any of this cannot pass quietly
             it("still leaves them out when the metatable is only copied", function()
@@ -7345,6 +7364,18 @@ describe("Trigger processing", function()
             end)
         end)
 
+        -- Every case below passes without the barrier too, so this is what says
+        -- they tested it
+        it("leaves the checks to the write barrier of Mudlet's own Lua", function()
+            local armed, barrier = rearmLazyGlobals()
+            if barrier == "absent" then
+                pending("built against a Lua without the write barrier")
+                return
+            end
+            assert.is_true(armed)
+            assert.are.equal("vouching", barrier)
+        end)
+
         -- The table matches holds between dispatches is used again for as long
         -- as it stays empty and has no metatable, so every way a script can
         -- change a table has to count as using it
@@ -7403,6 +7434,17 @@ describe("Trigger processing", function()
             it("is not put back after a C module stored into it", function()
                 local spare = changedBetweenFires(function(t) require("lfs").attributes(".", t) end)
                 assert.are.equal("directory", spare.mode)
+            end)
+
+            it("is not put back after a database cursor fetched a row into it", function()
+                local env = luasql.sqlite3()
+                local connection = env:connect(":memory:")
+                local cursor = connection:execute("SELECT 'mine' AS k")
+                local spare = changedBetweenFires(function(t) cursor:fetch(t, "a") end)
+                cursor:close()
+                connection:close()
+                env:close()
+                assert.are.equal("mine", spare.k)
             end)
 
             it("is not put back after a script swapped it in the registry for a filled one", function()

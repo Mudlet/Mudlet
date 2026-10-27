@@ -5009,7 +5009,9 @@ void TLuaInterpreter::pushMultimatchesTable(lua_State* L)
 // globals metatable was handed out, which nothing a script does can - busted
 // hands it out around every spec file, so the specs covering the deferral need
 // it back. Puts the handlers on whatever metatable the globals table carries if
-// both slots are empty there. Returns whether the deferral is on.
+// both slots are empty there. Returns whether the deferral is on, and whether
+// the write barrier vouches for it: "vouching", "off", or "absent" with a Lua
+// that has none.
 int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
 {
     if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
@@ -5031,7 +5033,12 @@ int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
     self->mGlobalsMetatableTouched = !armed;
     self->mGlobalsHandlersLinger = !armed;
     lua_pushboolean(L, armed);
-    return 1;
+#if defined(MUDLET_LUA_WATCH)
+    lua_pushstring(L, self->mLuaWriteEpoch ? "vouching" : "off");
+#else
+    lua_pushstring(L, "absent");
+#endif
+    return 2;
 }
 
 // No documentation available in wiki - internal function
@@ -5241,7 +5248,9 @@ void TLuaInterpreter::learn(lua_State* L, const quint8 fact)
 
 // No documentation available in wiki - internal function
 // debug.getregistry() hands a script the slots Mudlet keeps the three names in,
-// and a name swapped in there is one the barrier does not watch
+// and a name swapped in there is one the barrier does not watch. It also lets a
+// script make the registry weak, and the collector clears a weak table without
+// any store the barrier counts.
 bool TLuaInterpreter::barrierIntact(lua_State* L)
 {
 #if defined(MUDLET_LUA_WATCH)
@@ -5249,6 +5258,10 @@ bool TLuaInterpreter::barrierIntact(lua_State* L)
         return false;
     }
 #endif
+    if (lua_getmetatable(L, LUA_REGISTRYINDEX)) {
+        lua_pop(L, 1);
+        return false;
+    }
     bool intact = true;
     for (const auto& [keyRef, key] : {std::pair{mMatchesKeyRef, mMatchesKey}, std::pair{mMultimatchesKeyRef, mMultimatchesKey}, std::pair{mLineKeyRef, mLineKey}}) {
         lua_rawgeti(L, LUA_REGISTRYINDEX, keyRef);
