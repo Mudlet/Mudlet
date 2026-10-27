@@ -101,7 +101,7 @@ private:
         return value;
     }
 
-    // A released reference's registry slot joins the free list, which leaves a number in it
+    // A released reference's slot is relinked into the free list, so it no longer holds the function
     bool functionReleased(const int ref)
     {
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();

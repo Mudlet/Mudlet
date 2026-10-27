@@ -577,7 +577,7 @@ private:
     // Keyed by each state's own address, which it keeps through extract() and reinsertion;
     // the raw pointer is never passed out as an observer.
     std::map<TMatchState*, std::unique_ptr<TMatchState>> mConditionMap;
-    // A finished state with its map node, reused for the next one this trigger opens
+    // A completed or expired state, recycle()d in its map node, for the next state this trigger opens
     std::map<TMatchState*, std::unique_ptr<TMatchState>>::node_type mSpareCondition;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;

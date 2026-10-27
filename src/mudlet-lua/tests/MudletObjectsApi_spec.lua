@@ -253,7 +253,7 @@ describe("Mudlet object API edges", function()
       return next(weak) ~= nil
     end
 
-    -- Released functions' registry slots form a list headed at index 0; a slot
+    -- luaL_unref()'d registry slots form a list headed at index 0; a slot
     -- released twice is linked in again, so two later functions would share it
     local function assertFreeListWhole()
       local registry = debug.getregistry()
@@ -266,7 +266,7 @@ describe("Mudlet object API edges", function()
       end
     end
 
-    -- not tempTimer: a killed timer is not destroyed while a spec runs
+    -- not tempTimer: specs run inside a timer, and killed timers are freed only once no timer script runs
     it("let go of their function once killed", function()
       local makers = {
         tempTrigger = function(fn) killTrigger(tempTrigger("objSpecNeverSeen", fn)) end,

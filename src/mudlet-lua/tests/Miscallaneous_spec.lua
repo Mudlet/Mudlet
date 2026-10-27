@@ -3571,7 +3571,7 @@ end]], rerunCode or "", code)
         assert.is_true(loaded(target))
       end)
 
-      -- lua_close() runs finalisers, and a timer one makes outlives the state it was made in
+      -- lua_close() runs __gc finalisers; a timer one of them makes outlives that state
       it("never runs another function for a timer made while its state closed", function()
         if needsTestMode() then
           return

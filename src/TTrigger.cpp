@@ -2024,7 +2024,7 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
                         }
                     }
                 }
-                // Not before its script ran: a nested pass from that could reopen the spare
+                // Only once its script and filter are done: a nested pass the script starts could reopen the spare
                 if (!mSpareCondition) {
                     matchState->recycle();
                     mSpareCondition = std::move(completedState);

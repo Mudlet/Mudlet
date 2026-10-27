@@ -120,7 +120,8 @@ public:
     TMatchState& operator=(const TMatchState&) = delete;
 
     // Destroyed or recycle()d only once nothing reads its captures: TTrigger takes a completed or
-    // expired state out of its condition map before running any script, and recycles it only after.
+    // expired state out of its condition map before running any script, and recycles a completed
+    // one only after its script.
     ~TMatchState()
     {
         for (auto& captures : multiCaptureList) {
@@ -170,7 +171,7 @@ public:
         nameCaptures.clear();
     }
 
-    // As new, once recycle() has emptied it
+    // Resets what the constructor sets; recycle() must already have emptied the lists
     void reopen(const int numberOfConditions, const int delta)
     {
         mNumberOfConditions = numberOfConditions;
