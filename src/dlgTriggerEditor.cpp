@@ -6719,13 +6719,9 @@ void dlgTriggerEditor::applyAliasState(QTreeWidgetItem* pItem, TAlias* pT, bool 
 // user is actually looking at in a different view.
 void dlgTriggerEditor::refreshAliasIcon(int aliasID)
 {
-    // See refreshTriggerIcon() - coalesced into one tree walk per turn rather
-    // than a findItemByID() scan per Lua call.
-    if (!isVisible()) {
-        return;
-    }
+    // See refreshTriggerIcon().
     mPendingAliasIconRefresh.insert(aliasID);
-    if (!mAliasIconRefreshQueued) {
+    if (isVisible() && !mAliasIconRefreshQueued) {
         mAliasIconRefreshQueued = true;
         QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingAliasIconRefresh);
     }
@@ -9239,6 +9235,12 @@ void dlgTriggerEditor::fillout_form()
     mpCurrentVarItem = nullptr;
 
     mNeedUpdateData = false;
+    // The trees are painted afresh below, which covers every toggle still queued
+    mPendingTriggerIconRefresh.clear();
+    mPendingAliasIconRefresh.clear();
+    mPendingTimerIconRefresh.clear();
+    mPendingScriptIconRefresh.clear();
+    mPendingKeyIconRefresh.clear();
     mpTriggerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Triggers")));
     mpTriggerBaseItem->setIcon(0, QPixmap(qsl(":/icons/tools-wizard.png")));
     treeWidget_triggers->insertTopLevelItem(0, mpTriggerBaseItem);
@@ -9384,13 +9386,9 @@ void dlgTriggerEditor::computeKeyIcon(TKey* pT, QIcon& icon, QString& itemDescri
 // background state change could clobber a diagnostic in a different view.
 void dlgTriggerEditor::refreshKeyIcon(int keyID)
 {
-    // See refreshTriggerIcon() - coalesced into one tree walk per turn rather
-    // than a findItemByID() scan per Lua call.
-    if (!isVisible()) {
-        return;
-    }
+    // See refreshTriggerIcon().
     mPendingKeyIconRefresh.insert(keyID);
-    if (!mKeyIconRefreshQueued) {
+    if (isVisible() && !mKeyIconRefreshQueued) {
         mKeyIconRefreshQueued = true;
         QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingKeyIconRefresh);
     }
@@ -9714,13 +9712,9 @@ void dlgTriggerEditor::computeScriptIcon(TScript* pT, QIcon& icon, QString& item
 // different view.
 void dlgTriggerEditor::refreshScriptIcon(int scriptID)
 {
-    // See refreshTriggerIcon() - coalesced into one tree walk per turn rather
-    // than a findItemByID() scan per Lua call.
-    if (!isVisible()) {
-        return;
-    }
+    // See refreshTriggerIcon().
     mPendingScriptIconRefresh.insert(scriptID);
-    if (!mScriptIconRefreshQueued) {
+    if (isVisible() && !mScriptIconRefreshQueued) {
         mScriptIconRefreshQueued = true;
         QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingScriptIconRefresh);
     }
@@ -9898,13 +9892,9 @@ void dlgTriggerEditor::computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDe
 // different view.
 void dlgTriggerEditor::refreshTimerIcon(int timerID)
 {
-    // See refreshTriggerIcon() - coalesced into one tree walk per turn rather
-    // than a findItemByID() scan per Lua call.
-    if (!isVisible()) {
-        return;
-    }
+    // See refreshTriggerIcon().
     mPendingTimerIconRefresh.insert(timerID);
-    if (!mTimerIconRefreshQueued) {
+    if (isVisible() && !mTimerIconRefreshQueued) {
         mTimerIconRefreshQueued = true;
         QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingTimerIconRefresh);
     }
@@ -10084,12 +10074,10 @@ void dlgTriggerEditor::computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& it
 // diagnostic the user is actually looking at in a different view.
 void dlgTriggerEditor::refreshTriggerIcon(int triggerID)
 {
-    // See refreshAliasIcon() - the dialog outlives its own visibility.
-    if (!isVisible()) {
-        return;
-    }
+    // One tree walk per turn, not a findItemByID() per call; showEvent() flushes what
+    // arrives while closed. The units skip top-level temporary items, which the trees leave out.
     mPendingTriggerIconRefresh.insert(triggerID);
-    if (!mTriggerIconRefreshQueued) {
+    if (isVisible() && !mTriggerIconRefreshQueued) {
         mTriggerIconRefreshQueued = true;
         QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingTriggerIconRefresh);
     }
@@ -10102,9 +10090,8 @@ void dlgTriggerEditor::flushPendingTriggerIconRefresh()
         return;
     }
     if (!mpTriggerBaseItem || !isVisible()) {
-        // Editor closed before this flush ran - leave the IDs queued rather
-        // than silently dropping the update. showEvent() flushes them when
-        // the editor becomes visible again, and the next toggle would too.
+        // Editor closed before this flush ran - leave the IDs queued for
+        // showEvent() rather than silently dropping the update.
         return;
     }
     int remaining = mPendingTriggerIconRefresh.size();
@@ -10804,9 +10791,8 @@ void dlgTriggerEditor::showEvent(QShowEvent* event)
     mHasBeenShown = true;
     widgetutils::keepDialogOnAScreen(this, mpHost->mainConsoleView());
 
-    // A Lua toggle that arrived while this editor was hidden stays queued
-    // rather than being dropped (see flushPendingTriggerIconRefresh()) -
-    // flush it now instead of waiting for the next toggle to trigger it.
+    // Lua toggles that arrived while this editor was hidden are queued, but
+    // nothing flushes them until now.
     flushPendingTriggerIconRefresh();
     flushPendingAliasIconRefresh();
     flushPendingTimerIconRefresh();
