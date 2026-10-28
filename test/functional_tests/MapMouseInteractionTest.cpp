@@ -719,20 +719,20 @@ private:
         return pMenu ? itemTextsStartingWith(pMenu->menu(), qsl("Order ")) : QStringList();
     }
 
-    // Five menus, then thirty events, each by unique name, with the listed ones first
-    static QStringList bigMenuTexts(const QStringList& listed)
+    // Five menus, then thirty events, each by unique name, with the given ones moved to the ends
+    static QStringList bigMenuTexts(const QStringList& first, const QStringList& last = {})
     {
-        QStringList texts = listed;
+        QStringList texts = first;
         for (int i = 1; i <= 5; ++i) {
             texts << qsl("Order big menu %1").arg(i);
         }
         for (int i = 0; i < 30; ++i) {
-            const QString text = qsl("Order big %1").arg(i, 2, 10, QLatin1Char('0'));
-            if (!listed.contains(text)) {
-                texts << text;
-            }
+            texts << qsl("Order big %1").arg(i, 2, 10, QLatin1Char('0'));
         }
-        return texts;
+        for (const QString& text : first + last) {
+            texts.removeAll(text);
+        }
+        return first + texts + last;
     }
 
     // Script entries are the tail of the menu, straight after the mode switch
@@ -882,7 +882,7 @@ private slots:
         mp2dMap->slot_setSnapCustomLinePointsToGrid(false);
         map()->mUserMenus.clear();
         map()->mUserActions.clear();
-        map()->mUserMenuOrder.clear();
+        map()->mUserMenuPriorities.clear();
         map()->mHiddenMenuItems.clear();
         map()->setMmpMapLocation(QString());
         mudlet::self()->setInvertMapZoom(false);
@@ -2444,7 +2444,7 @@ private slots:
         QCOMPARE(userSubmenuTexts(qsl("Order Zulu")), QStringList({qsl("Order Bravo"), qsl("Order Yankee"), qsl("Order Charlie"), qsl("Order X-ray")}));
     }
 
-    void test_aMenuOrderListPutsItsEntriesFirstInListOrder()
+    void test_negativeAndPositivePrioritiesMoveScriptEntries()
     {
         buildMap();
         showMapper(false);
@@ -2456,77 +2456,105 @@ private slots:
                            "addMapMenu('orderZuluSubYankee', 'orderZulu', 'Order Yankee')\n"
                            "addMapEvent('orderZuluEventC', 'orderEvent', 'orderZulu', 'Order Charlie')\n"
                            "addMapMenu('orderZuluSubBravo', 'orderZulu', 'Order Bravo')\n"
-                           "assert(setMapMenuOrder('', {'orderTopWhiskey', 'orderNeverAdded', 'orderZulu', 'orderTopDelta'}))\n"
-                           "assert(setMapMenuOrder('orderZulu', {'orderZuluEventX', 'orderZuluSubYankee'}))")));
+                           "assert(setMapMenuPriority('orderTopWhiskey', -1))\n"
+                           "assert(setMapMenuPriority('orderAlpha', 1))\n"
+                           "assert(setMapMenuPriority('orderZuluEventX', -10))\n"
+                           "assert(setMapMenuPriority('orderZuluSubBravo', 5))")));
         rightClickAt(pointUnitsFromCentre(1, 0));
 
         QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), QStringList({qsl("Order Whiskey"), qsl("Order Zulu"), qsl("Order Delta"), qsl("Order Alpha")}));
-        QCOMPARE(userSubmenuTexts(qsl("Order Zulu")), QStringList({qsl("Order X-ray"), qsl("Order Yankee"), qsl("Order Bravo"), qsl("Order Charlie")}));
+        QCOMPARE(userSubmenuTexts(qsl("Order Zulu")), QStringList({qsl("Order X-ray"), qsl("Order Yankee"), qsl("Order Charlie"), qsl("Order Bravo")}));
     }
 
-    void test_aListedEntryAddedLaterOrAddedAgainTakesItsListedPlace()
+    void test_menusAndEventsInterleaveByPriority()
     {
         buildMap();
         showMapper(false);
-        QVERIFY(runLua(qsl("assert(setMapMenuOrder('', {'orderWalk', 'orderWalkPause', 'orderWalkStop', 'orderCenter'}))\n"
-                           "addMapEvent('orderAaa', 'orderEvent', '', 'Order Aaa')\n"
-                           "addMapEvent('orderCenter', 'orderEvent', '', 'Order Center')\n"
-                           "addMapEvent('orderWalk', 'orderEvent', '', 'Order Walk')\n"
-                           "addMapEvent('orderWalkStop', 'orderEvent', '', 'Order Stop walking')\n"
-                           "addMapEvent('orderWalkPause', 'orderEvent', '', 'Order Pause walking')\n"
-                           "removeMapEvent('orderWalkPause')\n"
-                           "addMapEvent('orderWalkPause', 'orderEvent', '', 'Order Resume walking')")));
+        QVERIFY(runLua(qsl("addMapMenu('orderMenuA', '', 'Order menu A')\n"
+                           "addMapMenu('orderMenuB', '', 'Order menu B')\n"
+                           "addMapEvent('orderEventC', 'orderEvent', '', 'Order event C')\n"
+                           "addMapEvent('orderEventD', 'orderEvent', '', 'Order event D')\n"
+                           "addMapEvent('orderEventE', 'orderEvent', '', 'Order event E')\n"
+                           "setMapMenuPriority('orderEventC', 1)\n"
+                           "setMapMenuPriority('orderMenuA', 2)\n"
+                           "setMapMenuPriority('orderEventD', 3)\n"
+                           "setMapMenuPriority('orderMenuB', 4)\n"
+                           "setMapMenuPriority('orderEventE', 5)")));
         rightClickAt(pointUnitsFromCentre(1, 0));
 
         QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")),
-                 QStringList({qsl("Order Walk"), qsl("Order Resume walking"), qsl("Order Stop walking"), qsl("Order Center"), qsl("Order Aaa")}));
+                 QStringList({qsl("Order event C"), qsl("Order menu A"), qsl("Order event D"), qsl("Order menu B"), qsl("Order event E")}));
     }
 
-    void test_aListedChildAddedBeforeItsParentMenuKeepsItsListedPlace()
+    void test_aMenuAndAnEventSharingAUniqueNameShareOnePriority()
     {
         buildMap();
         showMapper(false);
-        QVERIFY(runLua(qsl("assert(setMapMenuOrder('orderParent', {'orderEarlyEvent', 'orderEarlyMenu'}))\n"
-                           "addMapEvent('orderEarlyEvent', 'orderEvent', 'orderParent', 'Order Early event')\n"
-                           "addMapMenu('orderEarlyMenu', 'orderParent', 'Order Early menu')\n"
-                           "addMapMenu('orderParent', '', 'Order Parent')")));
+        QVERIFY(runLua(qsl("addMapMenu('orderSame', '', 'Order same menu')\n"
+                           "addMapEvent('orderSame', 'orderEvent', '', 'Order same event')\n"
+                           "addMapEvent('orderA', 'orderEvent', '', 'Order A')\n"
+                           "assert(setMapMenuPriority('orderSame', 1))")));
         rightClickAt(pointUnitsFromCentre(1, 0));
 
-        QCOMPARE(userSubmenuTexts(qsl("Order Parent")), QStringList({qsl("Order Early event"), qsl("Order Early menu")}));
+        QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), QStringList({qsl("Order A"), qsl("Order same menu"), qsl("Order same event")}));
     }
 
-    void test_aListSurvivesRemovingItsMenuWhetherOrNotTheMenuWasAdded()
+    void test_tiedPrioritiesKeepTheDefaultOrder()
     {
         buildMap();
         showMapper(false);
-        QVERIFY(runLua(qsl("assert(setMapMenuOrder('orderP', {'orderPz', 'orderC', 'orderPa'}))\n"
-                           "assert(setMapMenuOrder('orderC', {'orderCz', 'orderCa'}))\n"
-                           "assert(setMapMenuOrder('orderQ', {'orderQz', 'orderQa'}))\n"
-                           "addMapMenu('orderP', '', 'Order P')\n"
-                           "addMapMenu('orderC', 'orderP', 'Order C')\n"
-                           "removeMapMenu('orderP')\n"
-                           "removeMapMenu('orderQ')\n"
+        QVERIFY(runLua(qsl("addMapEvent('orderTopWhiskey', 'orderEvent', '', 'Order Whiskey')\n"
+                           "addMapMenu('orderZulu', '', 'Order Zulu')\n"
+                           "addMapEvent('orderTopDelta', 'orderEvent', '', 'Order Delta')\n"
+                           "addMapMenu('orderAlpha', '', 'Order Alpha')\n"
+                           "addMapEvent('orderTopEcho', 'orderEvent', '', 'Order Echo')\n"
+                           "for _, name in ipairs({'orderTopWhiskey', 'orderZulu', 'orderTopDelta', 'orderAlpha'}) do assert(setMapMenuPriority(name, 7)) end")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), QStringList({qsl("Order Echo"), qsl("Order Alpha"), qsl("Order Zulu"), qsl("Order Delta"), qsl("Order Whiskey")}));
+    }
+
+    void test_settingAPriorityBackToZeroPutsTheDefaultBack()
+    {
+        buildMap();
+        showMapper(false);
+        QVERIFY(runLua(qsl("addMapEvent('orderTopB', 'orderEvent', '', 'Order B')\n"
+                           "addMapEvent('orderTopA', 'orderEvent', '', 'Order A')\n"
+                           "assert(setMapMenuPriority('orderTopB', -1))")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), QStringList({qsl("Order B"), qsl("Order A")}));
+        closeContextMenu();
+
+        QVERIFY(runLua(qsl("assert(setMapMenuPriority('orderTopB', 0))")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), QStringList({qsl("Order A"), qsl("Order B")}));
+    }
+
+    void test_aPriorityOutlivesRemovingAndReAddingItsEntry()
+    {
+        buildMap();
+        showMapper(false);
+        QVERIFY(runLua(qsl("addMapEvent('orderAaa', 'orderEvent', '', 'Order Aaa')\n"
+                           "addMapEvent('orderWalkPause', 'orderEvent', '', 'Order Pause walking')\n"
                            "addMapMenu('orderP', '', 'Order P')\n"
                            "addMapMenu('orderC', 'orderP', 'Order C')\n"
                            "addMapEvent('orderPa', 'orderEvent', 'orderP', 'Order Pa')\n"
-                           "addMapEvent('orderPz', 'orderEvent', 'orderP', 'Order Pz')\n"
-                           "addMapEvent('orderCa', 'orderEvent', 'orderC', 'Order Ca')\n"
-                           "addMapEvent('orderCz', 'orderEvent', 'orderC', 'Order Cz')\n"
-                           "addMapMenu('orderQ', '', 'Order Q')\n"
-                           "addMapEvent('orderQa', 'orderEvent', 'orderQ', 'Order Qa')\n"
-                           "addMapEvent('orderQz', 'orderEvent', 'orderQ', 'Order Qz')")));
+                           "assert(setMapMenuPriority('orderWalkPause', -1))\n"
+                           "assert(setMapMenuPriority('orderP', 2))\n"
+                           "assert(setMapMenuPriority('orderC', 1))\n"
+                           "removeMapEvent('orderWalkPause')\n"
+                           "removeMapMenu('orderP')\n"
+                           "addMapEvent('orderWalkPause', 'orderEvent', '', 'Order Resume walking')\n"
+                           "addMapMenu('orderP', '', 'Order P')\n"
+                           "addMapMenu('orderC', 'orderP', 'Order C')\n"
+                           "addMapEvent('orderPa', 'orderEvent', 'orderP', 'Order Pa')")));
         rightClickAt(pointUnitsFromCentre(1, 0));
 
-        QCOMPARE(userSubmenuTexts(qsl("Order P")), QStringList({qsl("Order Pz"), qsl("Order C"), qsl("Order Pa")}));
-        QAction* pP = contextMenuItem(qsl("Order P"));
-        QVERIFY(pP && pP->menu());
-        QAction* pC = pP->menu()->actions().value(1);
-        QVERIFY(pC && pC->menu());
-        QCOMPARE(itemTextsStartingWith(pC->menu(), qsl("Order ")), QStringList({qsl("Order Cz"), qsl("Order Ca")}));
-        QCOMPARE(userSubmenuTexts(qsl("Order Q")), QStringList({qsl("Order Qz"), qsl("Order Qa")}));
+        QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), QStringList({qsl("Order Resume walking"), qsl("Order Aaa"), qsl("Order P")}));
+        QCOMPARE(userSubmenuTexts(qsl("Order P")), QStringList({qsl("Order Pa"), qsl("Order C")}));
     }
 
-    void test_aListedMenuToggledBetweenRightClicksKeepsItsPlaceAndItsList()
+    void test_aPrioritisedMenuToggledBetweenRightClicksKeepsItsPlace()
     {
         buildMap();
         showMapper(false);
@@ -2534,10 +2562,10 @@ private slots:
                                        "addMapEvent('orderMa', 'orderEvent', 'orderM', 'Order Ma')\n"
                                        "addMapEvent('orderMz', 'orderEvent', 'orderM', 'Order Mz')\n"
                                        "addMapEvent('orderE', 'orderEvent', '', 'Order E')\n");
-        QVERIFY(runLua(qsl("assert(setMapMenuOrder('', {'orderE', 'orderM'}))\n"
-                           "assert(setMapMenuOrder('orderM', {'orderMz', 'orderMa'}))\n"
-                           "addMapEvent('orderA', 'orderEvent', '', 'Order A')\n")
-                       + addWalking));
+        QVERIFY(runLua(qsl("addMapEvent('orderA', 'orderEvent', '', 'Order A')\n") + addWalking
+                       + qsl("assert(setMapMenuPriority('orderE', -2))\n"
+                             "assert(setMapMenuPriority('orderM', -1))\n"
+                             "assert(setMapMenuPriority('orderMz', -1))\n")));
         const QStringList expectedTop{qsl("Order E"), qsl("Order M"), qsl("Order A")};
         const QStringList expectedM{qsl("Order Mz"), qsl("Order Ma")};
         rightClickAt(pointUnitsFromCentre(1, 0));
@@ -2556,37 +2584,6 @@ private slots:
         QCOMPARE(userSubmenuTexts(qsl("Order M")), expectedM);
     }
 
-    void test_aSecondListForAParentReplacesTheFirst()
-    {
-        buildMap();
-        showMapper(false);
-        QVERIFY(runLua(qsl("assert(setMapMenuOrder('', {'orderB', 'orderA'}))\n"
-                           "assert(setMapMenuOrder('', {'orderC'}))\n"
-                           "addMapEvent('orderA', 'orderEvent', '', 'Order A')\n"
-                           "addMapEvent('orderB', 'orderEvent', '', 'Order B')\n"
-                           "addMapEvent('orderC', 'orderEvent', '', 'Order C')")));
-        rightClickAt(pointUnitsFromCentre(1, 0));
-
-        QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), QStringList({qsl("Order C"), qsl("Order A"), qsl("Order B")}));
-    }
-
-    void test_aListOnlyOrdersEntriesOfItsOwnParent()
-    {
-        buildMap();
-        showMapper(false);
-        QVERIFY(runLua(qsl("addMapMenu('orderZulu', '', 'Order Zulu')\n"
-                           "addMapEvent('orderZuluEventC', 'orderEvent', 'orderZulu', 'Order Charlie')\n"
-                           "addMapEvent('orderZuluEventX', 'orderEvent', 'orderZulu', 'Order X-ray')\n"
-                           "addMapEvent('orderTopDelta', 'orderEvent', '', 'Order Delta')\n"
-                           "addMapEvent('orderTopWhiskey', 'orderEvent', '', 'Order Whiskey')\n"
-                           "assert(setMapMenuOrder('', {'orderZuluEventX', 'orderTopWhiskey'}))\n"
-                           "assert(setMapMenuOrder('orderElsewhere', {'orderTopDelta'}))")));
-        rightClickAt(pointUnitsFromCentre(1, 0));
-
-        QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), QStringList({qsl("Order Whiskey"), qsl("Order Zulu"), qsl("Order Delta")}));
-        QCOMPARE(userSubmenuTexts(qsl("Order Zulu")), QStringList({qsl("Order Charlie"), qsl("Order X-ray")}));
-    }
-
     void test_manyScriptEntriesKeepTheDefaultOrder()
     {
         buildMap();
@@ -2598,16 +2595,18 @@ private slots:
         QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), bigMenuTexts({}));
     }
 
-    void test_manyScriptEntriesKeepTheDefaultOrderAroundAListedOne()
+    void test_manyScriptEntriesKeepTheDefaultOrderAroundPrioritisedOnes()
     {
         buildMap();
         showMapper(false);
         QVERIFY(runLua(qsl("for i = 29, 0, -1 do addMapEvent(string.format('orderBig%02d', i), 'orderEvent', '', string.format('Order big %02d', i)) end\n"
                            "for i = 5, 1, -1 do addMapMenu('orderBigMenu' .. i, '', 'Order big menu ' .. i) end\n"
-                           "assert(setMapMenuOrder('', {'orderBig17'}))")));
+                           "assert(setMapMenuPriority('orderBig17', -1))\n"
+                           "assert(setMapMenuPriority('orderBig05', 1))\n"
+                           "assert(setMapMenuPriority('orderBigMenu3', 1))")));
         rightClickAt(pointUnitsFromCentre(1, 0));
 
-        QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), bigMenuTexts({qsl("Order big 17")}));
+        QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), bigMenuTexts({qsl("Order big 17")}, {qsl("Order big menu 3"), qsl("Order big 05")}));
     }
 
     void test_scriptEntriesFollowTheBuiltInItems()
@@ -2622,35 +2621,16 @@ private slots:
         QVERIFY(scriptEntriesFollowTheModeSwitch());
     }
 
-    void test_listedScriptEntriesStillFollowTheBuiltInItems()
+    void test_prioritisedScriptEntriesStillFollowTheBuiltInItems()
     {
         buildMap();
         showMapper(false);
         QVERIFY(runLua(qsl("addMapEvent('orderB', 'orderEvent', '', 'Order B')\n"
                            "addMapMenu('orderA', '', 'Order A')\n"
-                           "assert(setMapMenuOrder('', {'orderB'}))")));
+                           "assert(setMapMenuPriority('orderB', -100))")));
         rightClickAt(pointUnitsFromCentre(1, 0));
         QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), QStringList({qsl("Order B"), qsl("Order A")}));
         QVERIFY(scriptEntriesFollowTheModeSwitch());
-    }
-
-    void test_clearingAMenuOrderListPutsTheDefaultBack()
-    {
-        buildMap();
-        showMapper(false);
-        QVERIFY(runLua(qsl("assert(setMapMenuOrder('', {'orderTopB', 'orderTopA'}))\n"
-                           "assert(setMapMenuOrder('orderM', {'orderMz', 'orderMa'}))\n"
-                           "assert(setMapMenuOrder(''))\n"
-                           "assert(setMapMenuOrder('orderM', {}))\n"
-                           "addMapEvent('orderTopB', 'orderEvent', '', 'Order B')\n"
-                           "addMapEvent('orderTopA', 'orderEvent', '', 'Order A')\n"
-                           "addMapMenu('orderM', '', 'Order M')\n"
-                           "addMapEvent('orderMz', 'orderEvent', 'orderM', 'Order Mz')\n"
-                           "addMapEvent('orderMa', 'orderEvent', 'orderM', 'Order Ma')")));
-        rightClickAt(pointUnitsFromCentre(1, 0));
-
-        QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), QStringList({qsl("Order M"), qsl("Order A"), qsl("Order B")}));
-        QCOMPARE(userSubmenuTexts(qsl("Order M")), QStringList({qsl("Order Ma"), qsl("Order Mz")}));
     }
 
     void test_aScriptCanHideTheViewingItemsAndKeepItsOwn()

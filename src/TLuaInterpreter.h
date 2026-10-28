@@ -734,7 +734,8 @@ public:
     static int addMapMenu(lua_State*);
     static int removeMapMenu(lua_State*);
     static int getMapMenus(lua_State*);
-    static int setMapMenuOrder(lua_State*);
+    static int getMapMenuPriority(lua_State*);
+    static int setMapMenuPriority(lua_State*);
     static int hideMapMenuItem(lua_State*);
     static int showMapMenuItem(lua_State*);
     static int getHiddenMapMenuItems(lua_State*);

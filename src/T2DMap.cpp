@@ -104,7 +104,6 @@
 #include <cmath>
 
 #include <algorithm>
-#include <limits>
 #include <vector>
 
 #include "mapInfoContributorManager.h"
@@ -4658,27 +4657,23 @@ void T2DMap::populateUserContextMenus(QMenu& menu)
     }
     struct UserEntry
     {
-        qsizetype listedAt;
+        int priority;
         bool menu;
         QString uniqueName;
         QString parent;
-    };
-    const auto listedAt = [this](const QString& parent, const QString& uniqueName) {
-        const qsizetype index = mpMap->mUserMenuOrder.value(parent).indexOf(uniqueName);
-        return index < 0 ? std::numeric_limits<qsizetype>::max() : index;
     };
     QMap<QString, QMenu*> userMenus;
     QList<UserEntry> entries;
     for (const auto& [uniqueName, menuInfo] : std::as_const(mpMap->mUserMenus).asKeyValueRange()) {
         userMenus.insert(uniqueName, new QMenu(menuInfo.value(1), &menu));
-        entries.append({listedAt(menuInfo.value(0), uniqueName), true, uniqueName, menuInfo.value(0)});
+        entries.append({mpMap->mUserMenuPriorities.value(uniqueName), true, uniqueName, menuInfo.value(0)});
     }
     for (const auto& [uniqueName, actionInfo] : std::as_const(mpMap->mUserActions).asKeyValueRange()) {
-        entries.append({listedAt(actionInfo.value(1), uniqueName), false, uniqueName, actionInfo.value(1)});
+        entries.append({mpMap->mUserMenuPriorities.value(uniqueName), false, uniqueName, actionInfo.value(1)});
     }
-    // Stable: unlisted entries keep the default order of menus, then events, each by unique name
+    // Stable: ties keep the default order of menus, then events, each by unique name
     std::stable_sort(entries.begin(), entries.end(), [](const UserEntry& a, const UserEntry& b) {
-        return a.listedAt < b.listedAt;
+        return a.priority < b.priority;
     });
 
     for (const UserEntry& entry : std::as_const(entries)) {
