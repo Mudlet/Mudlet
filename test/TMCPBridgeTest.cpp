@@ -1275,12 +1275,20 @@ void TMCPBridgeTest::bridgeAnswersRequestsStillInFlightWhenStdinCloses()
     QCOMPARE(bridge.process.state(), QProcess::NotRunning);
     QCOMPARE(bridge.process.exitCode(), 0);
 
-    QSet<int> answered;
+    QList<QJsonObject> replies;
+    QMap<int, QJsonObject> answered;
     while (bridge.process.canReadLine()) {
         const QJsonObject reply = QJsonDocument::fromJson(bridge.process.readLine()).object();
-        answered.insert(reply.value(qsl("id")).toInt());
+        replies.append(reply);
+        answered.insert(reply.value(qsl("id")).toInt(), reply);
     }
-    QCOMPARE(answered, (QSet<int>{1, 2, 3}));
+    QCOMPARE(replies.size(), 3);
+    QCOMPARE(answered.keys(), (QList<int>{1, 2, 3}));
+    // Answers only the server can give, so a bridge that never forwarded (and so had
+    // nothing in flight) cannot pass on errors of its own made under the same ids.
+    QVERIFY(!answered.value(1).value(qsl("result")).toObject().value(qsl("tools")).toArray().isEmpty());
+    QVERIFY(!answered.value(2).value(qsl("result")).toObject().value(qsl("tools")).toArray().isEmpty());
+    QVERIFY2(answered.value(3).value(qsl("error")).toObject().value(qsl("message")).toString().contains(qsl("Unknown tool")), qPrintable(QString::fromUtf8(QJsonDocument(answered.value(3)).toJson())));
 }
 
 void TMCPBridgeTest::bridgeReportsMudletGone()
