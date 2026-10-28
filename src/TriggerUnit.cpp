@@ -188,6 +188,7 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
     if (pNewParent) {
         pNewParent->addChild(pChild, parentPosition, childPosition);
         pChild->setParent(pNewParent);
+        invalidateChildWalks(pNewParent);
     } else {
         pChild->Tree<TTrigger>::setParent(nullptr);
         addTriggerRootNode(pChild, parentPosition, childPosition, true);
@@ -291,10 +292,13 @@ void TriggerUnit::unregisterTrigger(TTrigger* pT)
     // of the end-of-pass reset, so drop its lineage here instead.
     std::replace(mRootNodesAddedWhileProcessing.begin(), mRootNodesAddedWhileProcessing.end(), pT, static_cast<TTrigger*>(nullptr));
     pT->setSameLineChain(0, 0);
+    // Here rather than in ~TTrigger(): the editor deletes a trigger with its mpHost nulled
+    forgetOpenTreeNode(pT);
     if (pT->mTreeIndexPosition >= 0) {
         unfileTreeNode(pT);
     }
     if (pT->getParent()) {
+        invalidateChildWalks(pT->getParent());
         removeTrigger(pT);
         return;
     }
@@ -475,16 +479,111 @@ TriggerUnit::TreeIndexMode TriggerUnit::readTreeIndexMode()
     return TreeIndexMode::On;
 }
 
-void TriggerUnit::fileTreeNodes(TTrigger* pT, std::vector<quint64>& grams)
+// True when none of pT's children has to be entered on every line
+bool TriggerUnit::fileTreeNodes(TTrigger* pT, std::vector<quint64>& grams)
 {
-    for (auto* childNode : *pT->mpMyChildrenList) {
+    const auto& children = *pT->mpMyChildrenList;
+    if (children.empty()) {
+        pT->mpChildWalk.reset();
+        return true;
+    }
+    if (!pT->mpChildWalk) {
+        pT->mpChildWalk = std::make_unique<TChildWalk>();
+    }
+    TChildWalk& walk = *pT->mpChildWalk;
+    const size_t words = (children.size() + 63) / 64;
+    walk.mChildren.clear();
+    walk.mAlways.assign(words, 0);
+    walk.mMarked.assign(words, 0);
+    walk.mMarkedStamp = 0;
+    bool quiet = true;
+    for (auto* childNode : children) {
         auto* child = static_cast<TTrigger*>(childNode);
-        if (child->treeIndexGrams(grams)) {
+        const int position = static_cast<int>(walk.mChildren.size());
+        child->mChildWalkPosition = position;
+        walk.mChildren.push_back(child);
+        // A root is not noted when it opens, so one the editor moved below another trigger is noted here
+        if (child->actsWithoutMatching() && !child->mInOpenTreeNodes) {
+            child->mInOpenTreeNodes = true;
+            mOpenTreeNodes.push_back(child);
+        }
+        const bool filed = child->treeIndexGrams(grams);
+        if (filed) {
             child->mTreeIndexPosition = static_cast<int>(mTreeNodes.size());
             mTreeNodes.push_back(child);
             mTreeIndex.appendSlot(grams);
         }
-        fileTreeNodes(child, grams);
+        const bool childrenQuiet = fileTreeNodes(child, grams);
+        // Entering a folder only walks its children; one held open is marked through mOpenTreeNodes
+        const bool folder = child->mPatterns.isEmpty() && !child->isLineTrigger() && !child->isMultiline();
+        if (!filed && !(folder && childrenQuiet)) {
+            walk.mAlways[position / 64] |= quint64(1) << (position % 64);
+            quiet = false;
+        }
+    }
+    walk.mValid = true;
+    return quiet;
+}
+
+void TriggerUnit::dropChildWalks(TTrigger* pT)
+{
+    pT->mpChildWalk.reset();
+    for (auto* child : *pT->mpMyChildrenList) {
+        dropChildWalks(static_cast<TTrigger*>(child));
+    }
+}
+
+void TriggerUnit::invalidateChildWalks(TTrigger* pFrom)
+{
+    for (TTrigger* node = pFrom; node; node = node->getParent()) {
+        if (node->mpChildWalk) {
+            node->mpChildWalk->mValid = false;
+        }
+    }
+    mTreeIndexStale = true;
+}
+
+// Marks pT for its parent's walk on this line, and each trigger above it for its own parent's
+void TriggerUnit::markTreeNode(TTrigger* pT, const quint32 stamp)
+{
+    for (TTrigger* parent = pT->getParent(); parent; pT = parent, parent = parent->getParent()) {
+        TChildWalk* walk = parent->mpChildWalk.get();
+        const int position = pT->mChildWalkPosition;
+        if (!walk || position < 0 || position >= static_cast<int>(walk->mChildren.size()) || walk->mChildren[position] != pT) {
+            continue;
+        }
+        if (walk->mMarkedStamp != stamp) {
+            std::fill(walk->mMarked.begin(), walk->mMarked.end(), 0);
+            walk->mMarkedStamp = stamp;
+        }
+        quint64& word = walk->mMarked[position / 64];
+        const quint64 bit = quint64(1) << (position % 64);
+        if (word & bit) {
+            // Every marking goes all the way up, so the rest of the way is marked already
+            return;
+        }
+        word |= bit;
+    }
+}
+
+void TriggerUnit::noteOpenTreeNode(TTrigger* pT)
+{
+    if (!pT->getParent()) {
+        return;
+    }
+    if (!pT->mInOpenTreeNodes) {
+        pT->mInOpenTreeNodes = true;
+        mOpenTreeNodes.push_back(pT);
+    }
+    // Mark the line in flight too: its walk may not have reached pT yet, and pT now acts on it
+    markTreeNode(pT, TTrigger::lineStamp());
+}
+
+void TriggerUnit::forgetOpenTreeNode(TTrigger* pT)
+{
+    if (pT->mInOpenTreeNodes) {
+        pT->mInOpenTreeNodes = false;
+        std::erase(mOpenTreeNodes, pT);
     }
 }
 
@@ -509,6 +608,9 @@ void TriggerUnit::rebuildTreeIndex()
     if (!mTreeIndex.active()) {
         // Nothing stamps, so nothing may be skipped
         clearTreeNodes();
+        for (auto* root : mTriggerRootNodeList) {
+            dropChildWalks(root);
+        }
     }
     mTreeIndexStale = false;
 }
@@ -520,6 +622,7 @@ void TriggerUnit::unfileTreeNode(TTrigger* pT)
         mTreeNodes[position] = nullptr;
     }
     pT->mTreeIndexPosition = -1;
+    invalidateChildWalks(pT->getParent());
     mTreeIndexStale = true;
 }
 
@@ -539,7 +642,19 @@ void TriggerUnit::stampTreeCandidates(const QString& line)
     for (const int position : mTreeHits) {
         if (TTrigger* node = mTreeNodes[position]) {
             node->mLineStamp = stamp;
+            markTreeNode(node, stamp);
         }
+    }
+    for (size_t i = 0; i < mOpenTreeNodes.size();) {
+        TTrigger* node = mOpenTreeNodes[i];
+        if (node->actsWithoutMatching()) {
+            markTreeNode(node, stamp);
+            ++i;
+            continue;
+        }
+        node->mInOpenTreeNodes = false;
+        mOpenTreeNodes[i] = mOpenTreeNodes.back();
+        mOpenTreeNodes.pop_back();
     }
 }
 
@@ -981,6 +1096,7 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
             continue;
         }
         if (nowOpen) {
+            noteOpenTreeNode(pT);
             // It now fires without matching, so can't be filtered out of any line, this one included
             markPrescanStaleForLineInFlight(pT);
         } else {

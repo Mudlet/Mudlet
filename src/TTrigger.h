@@ -261,6 +261,28 @@ private:
     mutable int mLength = 0;
 };
 
+class TTrigger;
+
+// A parent's children in walk order, with the ones a pass along the line has to enter, so it need not
+// touch the rest. Built by TriggerUnit's tree index rebuild; see TriggerUnit::markTreeNode().
+struct TChildWalk
+{
+    // Position of the next child to enter at or after position, or past the end when none is
+    int nextToEnter(int position, quint32 lineStamp) const;
+
+    std::vector<TTrigger*> mChildren;
+    // One bit per position in mChildren. Entered on every line: an unfiled child, other than a folder
+    // with nothing below it to enter every line
+    std::vector<quint64> mAlways;
+    // Entered on the line stamped mMarkedStamp only: a child the index hit or that acts without
+    // matching, or a child above one
+    std::vector<quint64> mMarked;
+    quint32 mMarkedStamp = 0;
+    // Cleared by any change to the children or to how one is filed: mChildren may then name freed
+    // triggers, so the walk goes down the live list. Only an outermost pass's rebuild frees or replaces it.
+    bool mValid = false;
+};
+
 class TTrigger : public Tree<TTrigger>
 {
     Q_DECLARE_TR_FUNCTIONS(TTrigger) // Needed so we can use tr() even though TTrigger is NOT derived from QObject
@@ -373,7 +395,10 @@ public:
     // match. One-sided like the index: false leaves match() to decide. A trigger changed or created
     // mid-line is unfiled until the next rebuild; mKeepFiring and the multiline states are read live.
     bool skippableForLine() const { return mTreeIndexPosition >= 0 && mLineStamp != smLineStamp && mKeepFiring <= 0 && mConditionMap.empty(); }
-    // MUDLET_TREE_INDEX=verify: runs a trigger skippableForLine() would skip and reports it if it acted
+    // Has to be entered on lines it does not match: held open, or partway through a multiline match
+    bool actsWithoutMatching() const { return mKeepFiring > 0 || !mConditionMap.empty(); }
+    // MUDLET_TREE_INDEX=verify: runs a trigger the index would skip (skippableForLine(), or passed over by
+    // its parent's TChildWalk) and reports it if it acted
     bool verifySkippable(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams);
     // Stamp of the outermost pass in flight anywhere, which nested passes (a script feeding text back,
     // from any profile) share: a nested line only adds stamps, so nothing the outer line stamped is lost.
@@ -467,6 +492,11 @@ public:
     // Written by TriggerUnit's tree index - see skippableForLine(); the position is -1 while unfiled
     quint32 mLineStamp = 0;
     int mTreeIndexPosition = -1;
+    // Only TriggerUnit's tree index may set these. The position in the parent's walk is never reset, so
+    // it holds only while the parent's mChildren still has this trigger there
+    std::unique_ptr<TChildWalk> mpChildWalk;
+    int mChildWalkPosition = -1;
+    bool mInOpenTreeNodes = false;
     QPointer<Host> mpHost;
     QString mName;
     QStringList mPatterns;
@@ -501,6 +531,8 @@ private:
     TTrigger() = default;
 
     inline void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
+    void enterChildren(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams, bool haystackIsCapture, bool& conditionMet);
+    void noteOpen();
     inline void filter(std::string&, int&, int lineNumber, bool positionsInCurrentColumns);
     bool selectTextMatch(int lineNumber, int from, const std::string& capture) const;
     void processExactMatch(int patternNumber, int posOffset, int lineNumber);

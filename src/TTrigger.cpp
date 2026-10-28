@@ -51,9 +51,12 @@
 #include <QStringView>
 #include <QVector>
 
+#include <algorithm>
+#include <bit>
 #include <cstdint>
 #include <cstring>
 #include <deque>
+#include <limits>
 #include <list>
 #include <new>
 #include <sstream>
@@ -502,6 +505,9 @@ TTrigger::TTrigger(TTrigger* parent, Host* pHost)
 , mpLua(mpHost->getLuaInterpreter())
 {
     ++smStructureGeneration;
+    if (parent) {
+        mpHost->getTriggerUnit()->invalidateChildWalks(parent);
+    }
 }
 
 TTrigger::TTrigger(const QString& name, const QStringList& patterns, const QList<int>& patternKinds, bool isMultiline, Host* pHost)
@@ -1308,6 +1314,7 @@ void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captur
         auto pCondition = std::make_unique<TMatchState>(mPatterns.size(), mConditionLineDelta);
         auto* pConditionRaw = pCondition.get();
         mConditionMap[pConditionRaw] = std::move(pCondition);
+        noteOpen();
         pConditionRaw->addCaptures(captureList, posList);
         if (nameMatches) {
             pConditionRaw->nameCaptures.push_back(*nameMatches);
@@ -1847,6 +1854,97 @@ bool TTrigger::prescanMayFire(
     return false;
 }
 
+int TChildWalk::nextToEnter(const int position, const quint32 lineStamp) const
+{
+    const int words = static_cast<int>(mAlways.size());
+    int word = position / 64;
+    if (word >= words) {
+        return std::numeric_limits<int>::max();
+    }
+    const bool marked = mMarkedStamp == lineStamp;
+    quint64 bits = (mAlways[word] | (marked ? mMarked[word] : 0)) & (~quint64(0) << (position % 64));
+    while (!bits) {
+        if (++word >= words) {
+            return std::numeric_limits<int>::max();
+        }
+        bits = mAlways[word] | (marked ? mMarked[word] : 0);
+    }
+    return word * 64 + std::countr_zero(bits);
+}
+
+void TTrigger::noteOpen()
+{
+    if (mpHost && getParent()) {
+        mpHost->getTriggerUnit()->noteOpenTreeNode(this);
+    }
+}
+
+void TTrigger::enterChildren(
+        const TUtf8Subject& subject, const QString& haystack, const int line, const int posOffset, const TBigramFilter* pLineBigrams, const bool haystackIsCapture, bool& conditionMet)
+{
+    auto enter = [&](TTrigger* trigger) {
+        // Only against the line itself: a filter chain's children see its captures, and
+        // the index was built from the text a dropping subject does not carry
+        if (pLineBigrams && !haystackIsCapture && trigger->skippableForLine() && !subject.dropsText()) {
+            if (Q_UNLIKELY(TriggerUnit::treeIndexVerifying()) && trigger->verifySkippable(subject, haystack, line, posOffset, pLineBigrams)) {
+                conditionMet = true;
+            }
+            return;
+        }
+        if (pLineBigrams && trigger->cannotMatch(*pLineBigrams, haystack) && !subject.dropsText()) {
+            return;
+        }
+        const bool childWas = std::exchange(trigger->mPositionsInCurrentColumns, mPositionsInCurrentColumns);
+        const bool fired = trigger->match(subject, haystack, line, posOffset, pLineBigrams, haystackIsCapture);
+        trigger->mPositionsInCurrentColumns = childWas;
+        if (fired) {
+            conditionMet = true;
+        }
+    };
+
+    TChildWalk* const walk = mpChildWalk.get();
+    if (walk && walk->mValid && pLineBigrams && !haystackIsCapture && !subject.dropsText()) {
+        const quint32 stamp = smLineStamp;
+        const int count = static_cast<int>(walk->mChildren.size());
+        if (Q_UNLIKELY(TriggerUnit::treeIndexVerifying())) {
+            // Enters every child, and reports any the walk would have passed over that acted
+            int position = 0;
+            for (auto* triggerNode : *mpMyChildrenList) {
+                auto* trigger = static_cast<TTrigger*>(triggerNode);
+                const bool passedOver = walk->mValid && position < count && walk->mChildren[position] == trigger && walk->nextToEnter(position, stamp) != position;
+                if (passedOver && !trigger->skippableForLine()) {
+                    if (trigger->verifySkippable(subject, haystack, line, posOffset, pLineBigrams)) {
+                        conditionMet = true;
+                    }
+                } else {
+                    enter(trigger);
+                }
+                ++position;
+            }
+            return;
+        }
+        for (int position = walk->nextToEnter(0, stamp); position < count; position = walk->nextToEnter(position + 1, stamp)) {
+            TTrigger* const trigger = walk->mChildren[position];
+            enter(trigger);
+            if (!walk->mValid) {
+                // The children changed under the walk: finish down the live list from this child, as the unindexed loop does
+                const auto& children = *mpMyChildrenList;
+                auto it = std::find(children.begin(), children.end(), trigger);
+                if (it != children.end()) {
+                    for (++it; it != children.end(); ++it) {
+                        enter(static_cast<TTrigger*>(*it));
+                    }
+                }
+                return;
+            }
+        }
+        return;
+    }
+    for (auto* triggerNode : *mpMyChildrenList) {
+        enter(static_cast<TTrigger*>(triggerNode));
+    }
+}
+
 bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams, bool haystackIsCapture)
 {
     // Guard against re-entrancy: cleanup may have deleted this trigger while
@@ -1938,6 +2036,9 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
                     conditionMet = true;
                     const bool wasFilterable = !mKeepFiring;
                     mKeepFiring = mStayOpen;
+                    if (mKeepFiring > 0) {
+                        noteOpen();
+                    }
                     if (wasFilterable != !mKeepFiring) {
                         // It now does or no longer fires without matching, which changes its filterability
                         invalidatePrescan();
@@ -1975,6 +2076,9 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
 
             for (auto& matchState : completedStates) {
                 mKeepFiring = mStayOpen;
+                if (mKeepFiring > 0) {
+                    noteOpen();
+                }
                 if (TDebug::wants(TDebug::Category::TriggerMatch)) {
                     TDebug(Qt::yellow, Qt::darkMagenta, TDebug::Category::TriggerMatch, mName) << "multiline trigger name=" << mName << " *FIRES* all conditions are fulfilled. Executing script.\n"
                             >> mpHost;
@@ -2028,26 +2132,7 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
         // if at least one regex is defined a folder is considered a trigger chain otherwise a structural element
         if (!mFilterTrigger) {
             if (conditionMet || (mPatterns.empty())) {
-                for (auto* triggerNode : *mpMyChildrenList) {
-                    auto* trigger = static_cast<TTrigger*>(triggerNode);
-                    // Only against the line itself: a filter chain's children see its captures, and
-                    // the index was built from the text a dropping subject does not carry
-                    if (pLineBigrams && !haystackIsCapture && trigger->skippableForLine() && !subject.dropsText()) {
-                        if (Q_UNLIKELY(TriggerUnit::treeIndexVerifying()) && trigger->verifySkippable(subject, haystack, line, posOffset, pLineBigrams)) {
-                            conditionMet = true;
-                        }
-                        continue;
-                    }
-                    if (pLineBigrams && trigger->cannotMatch(*pLineBigrams, haystack) && !subject.dropsText()) {
-                        continue;
-                    }
-                    const bool childWas = std::exchange(trigger->mPositionsInCurrentColumns, mPositionsInCurrentColumns);
-                    ret = trigger->match(subject, haystack, line, posOffset, pLineBigrams, haystackIsCapture);
-                    trigger->mPositionsInCurrentColumns = childWas;
-                    if (ret) {
-                        conditionMet = true;
-                    }
-                }
+                enterChildren(subject, haystack, line, posOffset, pLineBigrams, haystackIsCapture, conditionMet);
             }
         }
 
