@@ -2717,8 +2717,7 @@ void TBuffer::joinPendingServerWrapOntoCurrent()
         maskSpoilerText(mHeldSpoilerLinkId, mMudLine, mHeldSpoilerStartColumn, heldLength - mHeldSpoilerStartColumn + mHeldSpoilerContinuationLength);
         mHeldSpoilerLinkId = 0;
     }
-    if (mHeldVisibility.linkId) {
-        const HeldVisibility held = std::exchange(mHeldVisibility, HeldVisibility{});
+    for (const HeldVisibility& held : std::exchange(mHeldVisibilities, {})) {
         if (held.startsAfterHeldText) {
             registerLinkVisibility(held.linkId, held.startColumn + heldLength, held.continuationLength - held.startColumn, held.styling);
         } else {
@@ -2741,7 +2740,7 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
     }
     // A link closed after the held text sits whole on the line after it, at the columns it recorded;
     // one that began in the held text now spans two lines, which visibility does not cover.
-    const HeldVisibility heldVisibility = std::exchange(mHeldVisibility, HeldVisibility{});
+    const QList<HeldVisibility> heldVisibilities = std::exchange(mHeldVisibilities, {});
     const bool linkStartsAfterHeldText = mHyperlinkActive && mCurrentHyperlinkStartsAfterHeldText;
     if (mHyperlinkActive && !linkStartsAfterHeldText) {
         if (endsHyperlink) {
@@ -2774,8 +2773,10 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
         mCurrentHyperlinkStartLine = static_cast<int>(lineBuffer.size()) - 1;
         mCurrentHyperlinkStartsAfterHeldText = false;
     }
-    if (heldVisibility.linkId && heldVisibility.startsAfterHeldText) {
-        registerLinkVisibility(heldVisibility.linkId, heldVisibility.startColumn, heldVisibility.continuationLength - heldVisibility.startColumn, heldVisibility.styling);
+    for (const HeldVisibility& held : heldVisibilities) {
+        if (held.startsAfterHeldText) {
+            registerLinkVisibility(held.linkId, held.startColumn, held.continuationLength - held.startColumn, held.styling);
+        }
     }
 }
 
@@ -4321,6 +4322,13 @@ void TBuffer::decodeOSC(const QString& sequence)
         }
 
         if (!rawUrl.isEmpty()) {
+            // Per the OSC 8 spec a new link ends the open one, even if rejected below: else the text after
+            // it joins the open link, which then closes with the rejected link's config. preset: only
+            // registers a style and opens no link, so it leaves the open link alone.
+            if (mHyperlinkActive && !rawUrl.startsWith(qsl("preset:"))) {
+                finaliseActiveHyperlink();
+            }
+
             if (rawUrl.length() > static_cast<int>(MAX_OSC_SEQUENCE_LENGTH)) {
                 qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << rawUrl;
                 return;
@@ -6672,7 +6680,7 @@ void TBuffer::finaliseActiveHyperlink()
         if (!mServerWrapPendingLine.isEmpty()) {
             // Held text may yet be joined on in front, shifting the columns, or be committed on its
             // own, leaving them as they are - so registered once that is known.
-            mHeldVisibility = {mCurrentHyperlinkLinkId, mCurrentHyperlinkStartColumn, static_cast<int>(mMudLine.length()), mCurrentHyperlinkStartsAfterHeldText, mCurrentHyperlinkStyling};
+            mHeldVisibilities.append({mCurrentHyperlinkLinkId, mCurrentHyperlinkStartColumn, static_cast<int>(mMudLine.length()), mCurrentHyperlinkStartsAfterHeldText, mCurrentHyperlinkStyling});
         } else if (mCurrentHyperlinkStartLine == static_cast<int>(lineBuffer.size()) - 1) {
             registerLinkVisibility(mCurrentHyperlinkLinkId, mCurrentHyperlinkStartColumn, mMudLine.length() - mCurrentHyperlinkStartColumn, mCurrentHyperlinkStyling);
         } else {
