@@ -2222,8 +2222,9 @@ function BaseUI.serverGuiRemoved(_, packageName)
   end)
 end
 
+-- getRooms() copies out every room name, so most maps get answered by room 1
 function BaseUI.mapHasData()
-  return next(getRooms()) ~= nil
+  return roomExists(1) or next(getRooms()) ~= nil
 end
 
 function BaseUI.createMapper()
