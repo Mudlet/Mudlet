@@ -176,7 +176,8 @@ set(mudlet_SRCS
     VarUnit.cpp
     VoskRecognizer.cpp
     XMLexport.cpp
-    XMLimport.cpp)
+    XMLimport.cpp
+    XmlImportReader.cpp)
 
 # Every .cpp source file that needs Qt Widgets goes here instead, in mudlet_app, kept
 # in alphabetical order (case-insensitive).
@@ -491,7 +492,8 @@ set(mudlet_HDRS
     VoskRecognizer.h
     widechar_width.h
     XMLexport.h
-    XMLimport.h)
+    XMLimport.h
+    XmlImportReader.h)
 
 # Every .h header file that needs Qt Widgets goes here instead, in mudlet_app, kept
 # in alphabetical order (case-insensitive).
