@@ -454,6 +454,7 @@ public:
     void appendBuffer(const TBuffer& chunk);
     bool moveCursor(QPoint& where);
     int getLastLineNumber();
+    qint64 linesRemovedTotal() const { return mLinesRemovedTotal; }
     QStringList getEndLines(int);
     void clear();
     void clearLinkState(const QSet<int>& stillLiveLinkIds = {});

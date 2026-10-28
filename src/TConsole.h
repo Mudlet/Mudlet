@@ -131,6 +131,8 @@ public:
     void changeColors();
     void scrollDown(int lines);
     void scrollUp(int lines);
+    // To an absolute buffer position, as the scroll bar does, splitting the screen if it is not split yet
+    void scrollTo(int line);
     void print(const QString& msg);
     void print(const char*);
     // timeStampOverride keeps the arrival time for held-back content being replayed; csmNoTimeStamp stamps it now.
@@ -340,6 +342,8 @@ private:
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();
     void updateScrollBarStyle();
+    // Returns whether the lower pane was hidden
+    bool showLowerPane();
 
     ConsoleType mType = UnknownType;
     // the size the last resize reported to Lua

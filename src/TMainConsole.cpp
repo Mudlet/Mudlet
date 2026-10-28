@@ -2387,7 +2387,7 @@ bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
     }
 
     if (!toEnd) {
-        pC->scrollUp(pC->mUpperPane->mCursorY - line);
+        pC->scrollTo(line);
         return true;
     }
     if (!pC->mUpperPane->mIsTailMode) {
@@ -2401,6 +2401,12 @@ bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
         pC->mUpperPane->forceUpdate();
     }
     return true;
+}
+
+bool TMainConsole::windowFollowsNewLines(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    return pC && pC->mUpperPane->mIsTailMode;
 }
 
 std::optional<std::pair<bool, QString>> TMainConsole::setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight)

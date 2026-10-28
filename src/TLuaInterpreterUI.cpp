@@ -4865,6 +4865,46 @@ int TLuaInterpreter::scrollTo(lua_State* L)
     return 0;
 }
 
+// Through scrollTo(), for its range check on the line
+static int scrollConsoleBy(lua_State* L, const bool up)
+{
+    QString windowName = qsl("main");
+    int linesArgument = 1;
+    if (lua_type(L, 1) == LUA_TSTRING) {
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
+        linesArgument = 2;
+    }
+    const lua_Number lines = lua_isnumber(L, linesArgument) ? lua_tonumber(L, linesArgument) : 1;
+
+    Host& host = getHostFromLua(L);
+    const auto scroll = host.windowScroll(windowName);
+    if (!scroll) {
+        lua_pushnil(L);
+        lua_pushstring(L, "window does not exist");
+        return 2;
+    }
+    const lua_Number lastLine = host.consoleModelNamed(windowName)->buffer.getLastLineNumber();
+    // getScroll() is still at the end as it was before this packet while the triggers on it run
+    const lua_Number from = host.consoleFrontend()->windowFollowsNewLines(windowName) ? lastLine : *scroll;
+    lua_getglobal(L, "scrollTo");
+    lua_pushstring(L, windowName.toUtf8().constData());
+    lua_pushnumber(L, up ? std::max(from - lines, lua_Number{0}) : std::min(from + lines, lastLine));
+    lua_call(L, 2, 0);
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollUp
+int TLuaInterpreter::scrollUp(lua_State* L)
+{
+    return scrollConsoleBy(L, true);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollDown
+int TLuaInterpreter::scrollDown(lua_State* L)
+{
+    return scrollConsoleBy(L, false);
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#windowType
 int TLuaInterpreter::windowType(lua_State* L)
 {

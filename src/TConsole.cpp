@@ -1426,29 +1426,50 @@ void TConsole::scrollUp(int lines)
         return;
     }
 
+    if (showLowerPane()) {
+        QTimer::singleShot(0ms, this, [this, lines]() {
+            mUpperPane->scrollUp(mLowerPane->getRowCount() + lines);
+        });
+    } else {
+        mUpperPane->scrollUp(lines);
+    }
+    slot_adjustAccessibleNames();
+}
+
+void TConsole::scrollTo(int line)
+{
+    // A buffer is never drawn, so it never shows itself scrolled back - as TNullConsoleFrontend has it
+    if (mType == Buffer || ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled)) {
+        return;
+    }
+
+    // The split-screen tutorial prints here, and in a full buffer that trims lines from above the target
+    const qint64 linesRemovedBefore = buffer.linesRemovedTotal();
+    showLowerPane();
+    line = static_cast<int>(std::max<qint64>(0, line - (buffer.linesRemovedTotal() - linesRemovedBefore)));
+    mUpperPane->scrollTo(line);
+    mUpperPane->updateScrollBar(buffer.mCursorY);
+    slot_adjustAccessibleNames();
+}
+
+bool TConsole::showLowerPane()
+{
     const bool lowerAppears = mLowerPane->isHidden();
     mLowerPane->mCursorY = buffer.size();
     mLowerPane->show();
     mLowerPane->updateScreenView();
     mLowerPane->forceUpdate();
 
-    if (lowerAppears) {
-        QTimer::singleShot(0ms, this, [this, lines]() {
-            mUpperPane->scrollUp(mLowerPane->getRowCount() + lines);
-        });
-        if (mudlet::self()->showSplitscreenTutorial()) {
+    if (lowerAppears && mudlet::self()->showSplitscreenTutorial()) {
 #if defined(Q_OS_MACOS)
-            const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
+        const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
 #else
-            const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <CTRL>+<ENTER> to cancel.");
+        const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <CTRL>+<ENTER> to cancel.");
 #endif
-            mpHost->postMessage(infoMsg);
-            mudlet::self()->showedSplitscreenTutorial();
-        }
-    } else {
-        mUpperPane->scrollUp(lines);
+        mpHost->postMessage(infoMsg);
+        mudlet::self()->showedSplitscreenTutorial();
     }
-    slot_adjustAccessibleNames();
+    return lowerAppears;
 }
 
 void TConsole::showEvent(QShowEvent* event)
@@ -2090,10 +2111,10 @@ void TConsole::slot_searchBufferUp()
         } while (searchX > -1);
 
         if (found) {
-            // Scroll to show the match
-            scrollUp(buffer.mCursorY - searchY - 3);
-            mUpperPane->forceUpdate();
+            // Set first, so that a trim as the scroll opens the split screen moves it with the match
             mCurrentSearchResult = searchY;
+            scrollTo(std::min(searchY + 3, buffer.getLastLineNumber()));
+            mUpperPane->forceUpdate();
             return;
         }
     }
@@ -2133,10 +2154,10 @@ void TConsole::slot_searchBufferDown()
         } while (searchX > -1);
 
         if (found) {
-            // Scroll to show the match
-            scrollUp(buffer.mCursorY - searchY - 3);
-            mUpperPane->forceUpdate();
+            // Set first, so that a trim as the scroll opens the split screen moves it with the match
             mCurrentSearchResult = searchY;
+            scrollTo(std::min(searchY + 3, buffer.getLastLineNumber()));
+            mUpperPane->forceUpdate();
             return;
         }
     }
