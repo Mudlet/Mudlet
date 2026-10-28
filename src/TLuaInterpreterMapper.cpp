@@ -50,6 +50,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <limits>
 #include <math.h>
 
@@ -57,6 +58,7 @@
 #include <QCoreApplication>
 #include <QFileInfo>
 #include <QMovie>
+#include <QStringEncoder>
 #include <QStringMatcher>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
@@ -1644,16 +1646,16 @@ int TLuaInterpreter::getAreaRooms(lua_State* L)
         lua_pushnil(L);
         return 1;
     }
-    lua_newtable(L);
-    QSetIterator<int> itAreaRoom(pA->getAreaRooms());
+    const QSet<int>& areaRooms = pA->getAreaRooms();
+    const int roomCount = static_cast<int>(areaRooms.size());
+    lua_createtable(L, std::max(roomCount - 1, 0), roomCount > 0 ? 1 : 0);
+    // We should have started at 1 but past code had incorrectly started
+    // with a zero index and we must maintain compatibility with code written
+    // for that
     int i = -1;
-    while (itAreaRoom.hasNext()) {
-        lua_pushnumber(L, ++i);
-        // We should have started at 1 but past code had incorrectly started
-        // with a zero index and we must maintain compatibility with code written
-        // for that
-        lua_pushnumber(L, itAreaRoom.next());
-        lua_settable(L, -3);
+    for (const int room : areaRooms) {
+        lua_pushnumber(L, room);
+        lua_rawseti(L, -2, ++i);
     }
     return 1;
 }
@@ -2523,13 +2525,27 @@ int TLuaInterpreter::getRoomName(lua_State* L)
 int TLuaInterpreter::getRooms(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
+    const QHash<int, TRoom*>& rooms = host.mpMap->mpRoomDB->getRoomMap();
+    // Not presized: `#` on a table with holes depends on the rehashes its inserts happened to trigger
     lua_newtable(L);
-    QHashIterator<int, TRoom*> it(host.mpMap->mpRoomDB->getRoomMap());
-    while (it.hasNext()) {
-        it.next();
-        lua_pushnumber(L, it.key());
-        lua_pushstring(L, it.value()->name.toUtf8().constData());
-        lua_settable(L, -3);
+    QStringEncoder toUtf8(QStringEncoder::Utf8, QStringConverter::Flag::Stateless);
+    QByteArray buffer;
+    for (auto it = rooms.cbegin(), end = rooms.cend(); it != end; ++it) {
+        const QString& name = it.value()->name;
+        if (const qsizetype needed = toUtf8.requiredSpace(name.size()); buffer.size() < needed) {
+            buffer.resize(needed);
+        }
+        const qsizetype written = toUtf8.appendToBuffer(buffer.data(), name) - buffer.constData();
+        if (toUtf8.hasError()) {
+            // QString::toUtf8() drops an unpaired surrogate where the encoder writes U+FFFD
+            toUtf8.resetState();
+            lua_pushstring(L, name.toUtf8().constData());
+        } else {
+            // lua_pushstring() always stopped at the first zero byte
+            const void* zero = std::memchr(buffer.constData(), 0, written);
+            lua_pushlstring(L, buffer.constData(), zero ? static_cast<const char*>(zero) - buffer.constData() : written);
+        }
+        lua_rawseti(L, -2, it.key());
     }
     return 1;
 }
