@@ -270,6 +270,17 @@ set_property(SOURCE DiscordTest.cpp APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_S
 # XmlImportReaderTest reads every package, profile and map XML in the source tree
 set_property(SOURCE XmlImportReaderTest.cpp APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 
+# Which stores move the bundled Lua's write barrier, through the C API and the
+# sites no spec reaches. Links that Lua and nothing of Mudlet's.
+if(TARGET lua51)
+    add_executable(LuaWriteBarrierTest LuaWriteBarrierTest.cpp)
+    target_link_libraries(LuaWriteBarrierTest PRIVATE Qt6::Test lua51)
+    add_test(NAME LuaWriteBarrierTest COMMAND $<TARGET_FILE:LuaWriteBarrierTest>)
+    set_tests_properties(LuaWriteBarrierTest PROPERTIES
+        ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+    )
+endif()
+
 # Build-file consistency check. Independent of the Mudlet library: it only reads
 # src/CMakeLists.txt and the src/ directory, so it does not link LIB_MUDLET_TARGET.
 add_executable(CMakeListsConsistencyTest CMakeListsConsistencyTest.cpp)

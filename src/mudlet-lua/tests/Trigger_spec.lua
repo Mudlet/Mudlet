@@ -5908,6 +5908,7 @@ describe("Trigger processing", function()
                     return value
                 end
             end
+            return nil
         end
 
         -- "multimatches" is nil in a profile until the first dispatch is over.
@@ -6246,6 +6247,41 @@ describe("Trigger processing", function()
             assert.is_true(not rawequal(spec.kept[1], spec.kept[2]), "two fires were handed one multimatches table")
             assert.are.equal("aaa", spec.kept[1][1][2], "the first fire's multimatches was overwritten by the second")
             assert.are.equal("bbb", spec.kept[1][2][2], "the first fire's multimatches was overwritten by the second")
+            assert.is_nil(next(multimatches), "multimatches should be empty again outside the dispatch")
+        end)
+
+        -- Neither script stores under a watched name (matches, multimatches,
+        -- line) beyond the store under test: any other would move the barrier
+        -- and hide a missing forget()
+        it("hands the next fire an empty multimatches after a script assigned it", function()
+            _G.LazyGlobalsSpec = {seen = {}}
+            multiline("SpecLazyMultiAssigned", {[[^lazyassign one (\w+)$]], [[^lazyassign two (\w+)$]]}, [[multimatches = "assigned"]])
+            trigger(tempRegexTrigger("^LazyMultiAfterAssigned$", [[table.insert(_G.LazyGlobalsSpec.seen, multimatches)]]))
+
+            -- Only the second round reaches the script with the barrier's facts settled
+            for _ = 1, 2 do
+                feedTriggers("lazyassign one aaa\n")
+                feedTriggers("lazyassign two bbb\nLazyMultiAfterAssigned\n")
+            end
+
+            local seen = _G.LazyGlobalsSpec.seen
+            assert.are.equal(2, #seen)
+            for _, multimatches in ipairs(seen) do
+                assert.are.equal("table", type(multimatches))
+                assert.is_nil(next(multimatches))
+            end
+        end)
+
+        it("empties multimatches after a multiline fire that read it", function()
+            _G.LazyGlobalsSpec = {}
+            multiline("SpecLazyMultiRead", {[[^lazyread one (\w+)$]], [[^lazyread two (\w+)$]]}, [==[
+                _G.LazyGlobalsSpec.first = multimatches[1][2]
+            ]==])
+
+            feedTriggers("lazyread one aaa\n")
+            feedTriggers("lazyread two bbb\n")
+
+            assert.are.equal("aaa", _G.LazyGlobalsSpec.first)
             assert.is_nil(next(multimatches), "multimatches should be empty again outside the dispatch")
         end)
 
@@ -6817,6 +6853,36 @@ describe("Trigger processing", function()
                 assert.is_true(seen.same, "the finaliser and the script were handed different tables")
             end)
 
+            -- The fill lands while Mudlet builds matches, after it last looked
+            -- at the empty table and before it stores what it built
+            it("does not put back the empty matches a finaliser filled while matches was built", function()
+                local spec = {}
+                trigger(tempRegexTrigger("^LazyFinaliserFill (\\w+)$", function() end))
+                _G.LazyGlobalsSpec = spec
+                trigger(tempLineTrigger(2, 1, [[_G.LazyGlobalsSpec.spare = matches]]))
+                trigger(tempRegexTrigger("^LazyFinaliserFill four$", function()
+                    spec.armed = true
+                    local _ = matches
+                    spec.armed = false
+                end))
+                trigger(tempLineTrigger(4, 1, [[_G.LazyGlobalsSpec.after = matches]]))
+                finaliser.onRun = function()
+                    if spec.armed and spec.spare then
+                        spec.armed = false
+                        spec.spare[1] = "mine"
+                    end
+                end
+
+                withFinaliserAtEveryAllocation(function()
+                    finaliser.watching = true
+                    feedTriggers("LazyFinaliserFill one\nLazyFinaliserFill two\nLazyFinaliserFill three\nLazyFinaliserFill four\nLazyFinaliserFill five more\n")
+                end)
+
+                assert.are.equal("mine", spec.spare[1], "no finaliser ran while matches was built")
+                assert.is_false(rawequal(spec.after, spec.spare), "the filled table was put back as matches")
+                assert.is_nil(next(spec.after), "matches read as filled between dispatches")
+            end)
+
             it("keeps the line a finaliser assigned while it was being built", function()
                 local seen = {}
                 trigger(tempRegexTrigger("^LazyFinaliserLine (\\w+)$", function()
@@ -7157,6 +7223,33 @@ describe("Trigger processing", function()
                 assert.is_nil(asked.matches, "the package's metatable was asked for a name Mudlet sets")
             end)
 
+            -- The first lines settle into the state a busy session runs in,
+            -- where nothing Mudlet stores between two fires on a line makes it
+            -- look at the metatable again
+            it("hands a fire its globals after the fire before it took Mudlet's __index off", function()
+                local original = getmetatable(_G)
+                local copy = {__index = original.__index, __newindex = original.__newindex}
+                local fires = 0
+                local seen = {}
+                trigger(tempRegexTrigger("^LazyKeptInPlace (\\w+)$", function()
+                    fires = fires + 1
+                    if fires == 3 then
+                        copy.__index = nil
+                    end
+                end))
+                trigger(tempRegexTrigger("^LazyKeptInPlace (\\w+)$", readEverythingIn(seen)))
+
+                setmetatable(_G, copy)
+                rearmLazyGlobals()
+                local ok, message = pcall(feedTriggers, "\nLazyKeptInPlace one\nLazyKeptInPlace two\nLazyKeptInPlace three\n")
+                setmetatable(_G, original)
+
+                assert.is_true(ok, tostring(message))
+                assert.are.equal(3, fires)
+                assert.is_not_nil(seen.matches, "matches read as nil - a name was left out with no handler to build it")
+                assert.are.equal("LazyKeptInPlace three", seen.line)
+            end)
+
             -- The control: the same shape with the handlers left alone, so a
             -- case that stops reaching any of this cannot pass quietly
             it("still leaves them out when the metatable is only copied", function()
@@ -7345,6 +7438,245 @@ describe("Trigger processing", function()
             end)
         end)
 
+        -- Every case below but the weak-table ones also passes without the
+        -- barrier, so this one shows they ran with it
+        it("leaves the checks to the write barrier of Mudlet's own Lua", function()
+            local armed, barrier = rearmLazyGlobals()
+            if barrier == "absent" then
+                pending("built against a Lua without the write barrier")
+                return
+            end
+            assert.is_true(armed)
+            assert.are.equal("vouching", barrier)
+        end)
+
+        -- The table matches holds between dispatches is used again for as long
+        -- as it stays empty and has no metatable, so every way a script can
+        -- change a table has to count as using it
+        describe("the empty matches a script changed between dispatches", function()
+            local function changedBetweenFires(change)
+                trigger(tempRegexTrigger("^LazySpare (\\w+)$", function() end))
+                feedTriggers("\nLazySpare one\n")
+                local spare = matches
+                assert.is_nil(next(spare), "matches was not empty between dispatches to begin with")
+                change(spare)
+                feedTriggers("\nLazySpare two\n")
+                assert.is_false(rawequal(matches, spare), "the changed table was put back as matches")
+                assert.is_nil(next(matches), "matches read as filled between dispatches")
+                assert.is_nil(getmetatable(matches), "matches had a metatable between dispatches")
+                return spare
+            end
+
+            it("is not put back after an assignment into it", function()
+                local spare = changedBetweenFires(function(t) t[1] = "mine" end)
+                assert.are.equal("mine", spare[1])
+            end)
+
+            it("is not put back after a rawset() into it", function()
+                local spare = changedBetweenFires(function(t) rawset(t, "key", "mine") end)
+                assert.are.equal("mine", spare.key)
+            end)
+
+            it("is not put back after a table.insert() into it", function()
+                local spare = changedBetweenFires(function(t) table.insert(t, "mine") end)
+                assert.are.equal("mine", spare[1])
+            end)
+
+            -- OP_SETLIST only ever stores into the table its constructor just
+            -- made, unless the bytecode is edited to point it at another
+            it("is not put back after a table constructor's bytecode stored into it", function()
+                local spare = changedBetweenFires(function(t)
+                    local code = string.dump(function(target) local made = {"mine"} end)
+                    -- NEWTABLE 1 1 0, which becomes MOVE 1 0
+                    local at = code:find("\74\0\128\0", 1, true)
+                    assert.is_not_nil(at, "no NEWTABLE where one was expected in the bytecode")
+                    loadstring(code:sub(1, at - 1) .. "\64\0\0\0" .. code:sub(at + 4))(t)
+                end)
+                assert.are.equal("mine", spare[1])
+            end)
+
+            it("is not put back after setmetatable() on it", function()
+                local spare = changedBetweenFires(function(t) setmetatable(t, {}) end)
+                assert.is_not_nil(getmetatable(spare))
+            end)
+
+            it("is not put back after debug.setmetatable() on it", function()
+                local spare = changedBetweenFires(function(t) debug.setmetatable(t, {}) end)
+                assert.is_not_nil(getmetatable(spare))
+            end)
+
+            it("is not put back after a C module stored into it", function()
+                local spare = changedBetweenFires(function(t) require("lfs").attributes(".", t) end)
+                assert.are.equal("directory", spare.mode)
+            end)
+
+            it("is not put back after a database cursor fetched a row into it", function()
+                local env = luasql.sqlite3()
+                local connection = env:connect(":memory:")
+                local cursor = connection:execute("SELECT 'mine' AS k")
+                local spare = changedBetweenFires(function(t) cursor:fetch(t, "a") end)
+                cursor:close()
+                connection:close()
+                env:close()
+                assert.are.equal("mine", spare.k)
+            end)
+
+            it("is not put back after a script swapped it in the registry for a filled one", function()
+                local swapped
+                changedBetweenFires(function(t)
+                    local registry = debug.getregistry()
+                    for key, value in pairs(registry) do
+                        if rawequal(value, t) then
+                            swapped = {"mine"}
+                            registry[key] = swapped
+                        end
+                    end
+                end)
+                assert.is_not_nil(swapped, "the registry did not hold the table")
+                assert.is_false(rawequal(matches, swapped), "the filled table was put in place as matches")
+            end)
+        end)
+
+        it("hands a script the next line after it rawset() one between lines", function()
+            feedTriggers("\nLazyLineRawsetOne\n")
+            rawset(_G, "line", "mine")
+            feedTriggers("\nLazyLineRawsetTwo\n")
+
+            assert.are.equal("LazyLineRawsetTwo", line)
+        end)
+
+        -- Reading line makes a store of Mudlet's own straight after the
+        -- script's, which must not vouch for what the script's store changed.
+        -- No store under a watched name (matches, multimatches, line) follows
+        -- it, as that would move the barrier on its own.
+        it("does not put back the empty matches a script filled before reading line", function()
+            _G.LazyGlobalsSpec = {}
+            trigger(tempRegexTrigger("^LazyKeepFacts (\\w+)$", function() end))
+            trigger(tempLineTrigger(2, 1, [[
+                local spare = matches
+                spare[1] = "mine"
+                _G.LazyGlobalsSpec.spare = spare
+                _G.LazyGlobalsSpec.lineRead = line
+            ]]))
+            trigger(tempLineTrigger(4, 1, [[_G.LazyGlobalsSpec.after = matches]]))
+
+            feedTriggers("LazyKeepFacts one\nLazyKeepFacts two\nLazyKeepFacts three\nLazyKeepFacts four\nLazyKeepFacts five more\n")
+
+            local spec = _G.LazyGlobalsSpec
+            assert.are.equal("LazyKeepFacts three", spec.lineRead)
+            assert.are.equal("mine", spec.spare[1])
+            assert.is_false(rawequal(spec.after, spec.spare), "the filled table was put back as matches")
+            assert.is_nil(next(spec.after), "matches read as filled between dispatches")
+        end)
+
+        it("does not put back the empty matches a script filled before assigning line", function()
+            _G.LazyGlobalsSpec = {}
+            trigger(tempRegexTrigger("^LazyKeepFactsSet (\\w+)$", function() end))
+            trigger(tempLineTrigger(2, 1, [[
+                local spare = matches
+                spare[1] = "mine"
+                _G.LazyGlobalsSpec.spare = spare
+                line = "assigned"
+            ]]))
+            trigger(tempLineTrigger(4, 1, [[_G.LazyGlobalsSpec.after = matches]]))
+            feedTriggers("LazyKeepFactsSet one\nLazyKeepFactsSet two\nLazyKeepFactsSet three\nLazyKeepFactsSet four\nLazyKeepFactsSet five more\n")
+            local spec = _G.LazyGlobalsSpec
+            assert.are.equal("mine", spec.spare[1])
+            assert.is_false(rawequal(spec.after, spec.spare), "the filled table was put back as matches")
+            assert.is_nil(next(spec.after), "matches read as filled between dispatches")
+        end)
+
+        -- The collector clears a weak table without a store the barrier counts.
+        -- Everything else the registry holds is kept alive, so the empty table
+        -- "matches" holds between dispatches is all the second fire collects.
+        -- Last here, as turning the barrier back on watches everything afresh.
+        it("hands a script the empty matches after the collector cleared it from a weak registry", function()
+            local _, barrier = rearmLazyGlobals()
+            if barrier == "absent" then
+                pending("built against a Lua without the write barrier")
+                return
+            end
+            assert.are.equal("vouching", barrier)
+            trigger(tempRegexTrigger("^LazyWeakRegistry (\\w+)$", function() end))
+            trigger(tempRegexTrigger("^LazyWeakRegistry (\\w+)$", function()
+                collectgarbage()
+                collectgarbage()
+            end))
+            collectgarbage()
+            collectgarbage()
+            local keep = {}
+            -- In a function of its own, as a register of this one would keep it alive
+            local function weakenRegistryAroundEmptyMatches()
+                local registry = debug.getregistry()
+                local empty = rawPresent(_G, "matches")
+                for key, value in next, registry do
+                    if not rawequal(value, empty) then
+                        keep[key] = value
+                    end
+                end
+                setmetatable(registry, {__mode = "v"})
+            end
+
+            weakenRegistryAroundEmptyMatches()
+            local ok, message = pcall(feedTriggers, "\nLazyWeakRegistry word\n")
+            local between = type(rawPresent(_G, "matches"))
+            local _, barrierWhileWeak = rearmLazyGlobals()
+            setmetatable(debug.getregistry(), nil)
+            local _, barrierAfter = rearmLazyGlobals(true)
+
+            assert.is_true(ok, tostring(message))
+            assert.are.equal("table", between, "the globals table was handed an empty matches the collector had cleared")
+            assert.are.equal("off", barrierWhileWeak)
+            assert.are.equal("vouching", barrierAfter)
+        end)
+
+        -- Last for the same reason
+        it("hands a script its captures after the collector cleared __index from a weak globals metatable", function()
+            local _, barrier = rearmLazyGlobals()
+            if barrier == "absent" then
+                pending("built against a Lua without the write barrier")
+                return
+            end
+            _G.LazyGlobalsSpec = {seen = {}}
+            trigger(tempRegexTrigger("^LazyWeakMeta (\\w+)$", [[table.insert(_G.LazyGlobalsSpec.seen, type(matches) .. "/" .. type(line))]]))
+            trigger(tempRegexTrigger("^LazyWeakMetaCollect$", [[collectgarbage() collectgarbage()]]))
+            -- In a function of its own, as a register of this one would keep __index alive
+            local function weakenGlobalsMetatable()
+                local metatable = getmetatable(_G)
+                local registry = debug.getregistry()
+                local function release(handler)
+                    for key, value in next, registry do
+                        if rawequal(value, handler) then
+                            -- Not nil, which would let a new reference take the slot
+                            registry[key] = false
+                        end
+                    end
+                end
+                -- A fresh __index, as an earlier spec can still hold the one Mudlet made
+                release(rawget(metatable, "__index"))
+                release(rawget(metatable, "__newindex"))
+                rawset(metatable, "__index", nil)
+                rawset(metatable, "__newindex", nil)
+                rearmLazyGlobals(true)
+                release(rawget(metatable, "__index"))
+                setmetatable(metatable, {__mode = "v"})
+            end
+
+            weakenGlobalsMetatable()
+            -- Handing the metatable out above turned the deferral off
+            rearmLazyGlobals()
+            feedTriggers("\nLazyWeakMeta one\nLazyWeakMeta two\nLazyWeakMetaCollect\nLazyWeakMeta three\n")
+            local metatable = getmetatable(_G)
+            local collected = rawget(metatable, "__index") == nil
+            setmetatable(metatable, nil)
+            rawset(metatable, "__index", nil)
+            rawset(metatable, "__newindex", nil)
+            local _, barrierAfter = rearmLazyGlobals(true)
+
+            assert.is_true(collected, "the collector left __index on the weak metatable")
+            assert.are.same({"table/string", "table/string", "table/string"}, _G.LazyGlobalsSpec.seen)
+            assert.are.equal("vouching", barrierAfter)
+        end)
     end)
 
     -- Once a profile holds enough plain-text triggers, the engine files them by

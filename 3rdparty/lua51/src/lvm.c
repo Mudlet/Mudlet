@@ -141,6 +141,7 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
       TValue *oldval = luaH_set(L, h, key); /* do a primitive set */
       if (!ttisnil(oldval) ||  /* result is no nil? */
           (tm = fasttm(L, h->metatable, TM_NEWINDEX)) == NULL) { /* or no TM? */
+        luaC_watchstore(L, h, key);
         setobj2t(L, oldval, val);
         h->flags = 0;
         luaC_barriert(L, h, val);
@@ -706,6 +707,7 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         if (c == 0) c = cast_int(*pc++);
         runtime_check(L, ttistable(ra));
         h = hvalue(ra);
+        luaC_watchtable(L, h);
         last = ((c-1)*LFIELDS_PER_FLUSH) + n;
         if (last > h->sizearray)  /* needs more space? */
           luaH_resizearray(L, h, last);  /* pre-alloc it at once */
