@@ -245,6 +245,7 @@ public:
     bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible) override;
     bool setWindowScrolling(const QString& name, bool enabled) override;
     bool scrollWindowTo(const QString& name, int line, bool toEnd) override;
+    bool windowFollowsNewLines(const QString& name) override;
     std::optional<std::pair<bool, QString>> setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight) override;
     bool setWindowFontSize(const QString& name, int size) override;
     bool setWindowCommandLineVisible(const QString& name, bool visible) override;
@@ -390,6 +391,7 @@ private:
     TPasswordEntry* passwordEntry() const;
     dlgMapper* dockedMapper() const;
     void dockMapWidget(Qt::DockWidgetArea area);
+    void redockMapWidget(Qt::DockWidgetArea area);
     TDockWidget* createUserWindow(const QString& name);
     TToolBar* createToolBar(TAction* pAction, const QString& name);
     TEasyButtonBar* createEasyButtonBar(TAction* pRootAction, const QString& name);
@@ -470,6 +472,7 @@ private:
     QString mPasswordEntryTypedAhead;
 
     bool mEnableClose = false;
+    bool mMainDisplayLayoutPending = false;
     std::unique_ptr<TMxpFrameWidgets> mpMxpFrameWidgets;
 };
 

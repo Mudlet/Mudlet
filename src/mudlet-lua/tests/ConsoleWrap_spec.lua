@@ -167,6 +167,81 @@ describe("Tests how a console wraps the lines it is given", function()
       assert.are.same({"aaaa bbbb ", "cccc dddd ", "eeee"}, lines())
     end)
 
+    -- the first line exactly fills the width, indent included, so measuring it
+    -- as though the indent were still to come would break it again
+    local alphabetWrapped = {"  abcdefghij", "    klmnopqr", "    stuvwxyz"}
+
+    it("leaves an indented line alone when wrapLine() rewraps it at the same width", function()
+      assert.are.same(alphabetWrapped, wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4))
+      wrapLine(win, 0)
+      assert.are.same(alphabetWrapped, lines())
+      wrapLine(win, 0)
+      assert.are.same(alphabetWrapped, lines())
+    end)
+
+    it("leaves an indented line that is not plain ASCII alone when wrapLine() rewraps it at the same width", function()
+      local accented = {"  abcdéfghij", "    klmnopqr", "    stuvwxyz"}
+      assert.are.same(accented, wrapped(12, "abcdéfghijklmnopqrstuvwxyz", 2, 4))
+      wrapLine(win, 0)
+      assert.are.same(accented, lines())
+    end)
+
+    it("indents an already indented line once when wrapLine() rewraps it narrower", function()
+      wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4)
+      setWindowWrap(win, 8)
+      wrapLine(win, 0)
+      assert.are.same({"  abcdef", "    ghij", "    klmn", "    opqr", "    stuv", "    wxyz"}, lines())
+    end)
+
+    it("indents an already indented line once when a newline is inserted into it", function()
+      wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4)
+      moveCursor(win, 5, 0)
+      insertText(win, "\n")
+      assert.are.same({"  abc", "defghij", "    klmnopqr", "    stuvwxyz"}, lines())
+    end)
+
+    it("indents the line a newline inserted into a wrapped line starts when wrapLine() breaks it", function()
+      wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4)
+      moveCursor(win, 5, 0)
+      insertText(win, "\n")
+      setWindowWrap(win, 5)
+      wrapLine(win, 1)
+      assert.are.equal("  def", lines()[2])
+    end)
+
+    it("indents the line a newline inserted into a wrapped line starts when that line begins with spaces", function()
+      wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4)
+      moveCursor(win, 5, 0)
+      insertText(win, "\n  ")
+      setWindowWrap(win, 8)
+      wrapLine(win, 1)
+      local result = lines()
+      -- the spaces are text, so it wraps as that text echoed as a paragraph of its own does
+      local fresh = wrapped(8, "  defghij", 2, 4)
+      assert.are.same(fresh, {select(2, unpack(result, 1, #fresh + 1))})
+    end)
+
+    it("indents an already indented line once when wrapLine() rewraps it narrower after its continuation lines were deleted", function()
+      wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4)
+      moveCursor(win, 0, 1)
+      deleteLine(win)
+      moveCursor(win, 0, 1)
+      deleteLine(win)
+      setWindowWrap(win, 8)
+      wrapLine(win, 0)
+      assert.are.same({"  abcdef", "    ghij"}, lines())
+    end)
+
+    it("leaves the indented lines below alone when a newline is inserted above them", function()
+      wrapAt(12, 2, 4)
+      echo(win, "one\n")
+      echo(win, "abcdefghijklmnopqrstuvwxyz\n")
+      moveCursor(win, 3, 0)
+      insertText(win, "\ntwo")
+      local result = lines()
+      assert.are.same(alphabetWrapped, {select(3, unpack(result))})
+    end)
+
     -- Wider than the main console's own width, so a rewrap at that width shows
     local longRun = string.rep("y", 300)
 

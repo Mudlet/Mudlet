@@ -2459,7 +2459,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     const int lastValidLine = static_cast<int>(lineBuffer.size()) - 1;
     const int wrapStartLine = (lastValidLine >= 0) ? std::min(passLineAfterTriggers, lastValidLine) : 0;
     // Spares wrapLine()'s setup for the usual last line that fits; one with no text or no TChars still goes
-    // through, as wrapLine() rebuilds it. The width must stay getWrapInfo()'s widthAvailable for mWrapAt.
+    // through, as wrapLine() rebuilds it. The width must not exceed getWrapInfo()'s widthAvailable for mWrapAt.
     const bool fitsAsIs = wrapStartLine == lastValidLine && !lineBuffer.at(wrapStartLine).isEmpty() && !buffer[wrapStartLine].empty()
                           && fitsUnwrapped(lineBuffer.at(wrapStartLine), wrapsFromPreviousLine(wrapStartLine) ? mWrapAt : mWrapAt - clampedWrapIndent(mWrapIndent, mWrapAt));
     const int addedLines = fitsAsIs ? 0 : wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
@@ -5965,7 +5965,8 @@ int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
 }
 
 // find lindbreaks and indents (if not necessary, return empty list)
-inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent)
+// startsIndented: the line already carries the wrap indent, from an earlier wrap; only read when isNewline
+inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline, bool startsIndented, const int maxWidth, const int indent, const int hangingIndent)
 {
     QList<WrapInfo> output;
     if (lineText.isEmpty()) {
@@ -5979,7 +5980,8 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         return output;
     }
 
-    const qsizetype widthAvailable = std::min<qsizetype>(isNewline ? maxWidth - indent : maxWidth, mWrapAt);
+    const bool indentToCome = isNewline && !startsIndented;
+    const qsizetype widthAvailable = std::min<qsizetype>(indentToCome ? maxWidth - indent : maxWidth, mWrapAt);
     if (fitsUnwrapped(lineText, widthAvailable)) {
         return output;
     }
@@ -6027,7 +6029,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
     int xPos = 0;
     int totalWidth = 0;
     int firstChar = 0;
-    bool needsIndent = isNewline;
+    bool needsIndent = indentToCome;
     bool hasNewline = false;
 
     // find all the appropriate wrap points assuming (hanging-)indentation prepended to each line
@@ -6048,6 +6050,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             setGraphemePosition(indexOfChar);
             firstChar = indexOfChar;
             isNewline = true;
+            startsIndented = false;
             needsIndent = false;
             xPos = 0;
             continue;
@@ -6062,7 +6065,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         }
         const int indentationHere = isNewline ? indent : hangingIndent;
         if (xPos + charWidth > maxWidth - (needsIndent ? indentationHere : 0)) {
-            if (isNewline) {
+            if (isNewline && !startsIndented) {
                 needsIndent = true;
             }
             // we check c == QChar::Space since we are happy to break at -any- space,
@@ -6246,6 +6249,12 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         }
     }
 
+    // Leading spaces alone can't tell padding from text, so this needs the record an earlier wrap left, and the
+    // spaces too in case an edit has since removed them. Safe mid-loop: the old lines stay in the buffer until it is done.
+    const auto carriesIndent = [this, indent](const int lineNumber) {
+        return indent > 0 && wrapGapBuffer.at(lineNumber) >= indent && wrapIndentWidth(lineNumber) >= indent;
+    };
+
     // Leading lines that getWrapInfo() finds no break points in stay where they
     // are. The loop below reproduces such a line unchanged, but only after
     // moving it out of the buffer into a queue and back again and standing up
@@ -6258,7 +6267,8 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         if (buffer[firstRewrappedLine].empty() || lineBuffer.at(firstRewrappedLine).isEmpty()) {
             break;
         }
-        lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), timeBuffer.at(firstRewrappedLine) != TBuffer::csmWrappedLineTimeStamp, maxWidth, indent, hangingIndent);
+        const bool isNewline = timeBuffer.at(firstRewrappedLine) != TBuffer::csmWrappedLineTimeStamp;
+        lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), isNewline, isNewline && carriesIndent(firstRewrappedLine), maxWidth, indent, hangingIndent);
         if (!lineBreaks.isEmpty()) {
             break;
         }
@@ -6332,7 +6342,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         if (i >= wrapUpTo) {
             lineBreaks.clear();
         } else if (i != firstRewrappedLine) {
-            lineBreaks = getWrapInfo(lineText, isNewline, maxWidth, indent, hangingIndent);
+            lineBreaks = getWrapInfo(lineText, isNewline, isNewline && carriesIndent(i), maxWidth, indent, hangingIndent);
         }
         if (lineBreaks.isEmpty()) {
             tempList.append(lineText);
@@ -6362,7 +6372,8 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             if (newBufferCharPosition < w.firstChar) {
                 newBufferCharPosition = std::min(w.firstChar, sourceSize);
             }
-            if (w.needsIndent && newBufferCharPosition < sourceSize) {
+            const bool addsIndent = w.needsIndent && newBufferCharPosition < sourceSize;
+            if (addsIndent) {
                 // indentation takes the styling of the character it precedes, so
                 // that it reads as part of the same run of text
                 const TChar& indentSpace = sourceChars[newBufferCharPosition];
@@ -6397,9 +6408,14 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             promptList.append(isPrompt);
             // getWrapInfo() only ever skips spaces between the segments of a
             // line, and the first segment carries over the source line's own gap
+            // (or, starting a paragraph, its own indent)
             int wrapGap = 0;
             if (!w.isNewline) {
                 wrapGap = (previousSegmentEnd < 0) ? wrapGapBuffer.at(i) : w.firstChar - previousSegmentEnd;
+            } else if (addsIndent) {
+                wrapGap = indent;
+            } else if (previousSegmentEnd < 0) {
+                wrapGap = wrapGapBuffer.at(i);
             }
             wrapGapList.append(static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())));
             previousSegmentEnd = w.lastChar;
