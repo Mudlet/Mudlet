@@ -53,7 +53,8 @@ class TMCPBridge : public QObject
     Q_OBJECT
 
 public:
-    // Runs the bridge until stdin closes. Needs a QCoreApplication to already exist.
+    // Runs the bridge until stdin closes and every forwarded request has been answered.
+    // Needs a QCoreApplication to already exist.
     static int exec(const QString& configDir);
 
     static QString discoveryFilePath(const QString& configDir);

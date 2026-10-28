@@ -153,7 +153,7 @@ void TMCPBridge::stdinClosed()
 
 void TMCPBridge::quitOnceAnswered()
 {
-    // Every forwarded request ends within its transfer timeout, so this cannot wait forever.
+    // A stalled request is aborted by its transfer timeout, so this cannot wait forever.
     if (mStdinClosed && mRepliesInFlight == 0) {
         QCoreApplication::quit();
     }
