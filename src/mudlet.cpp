@@ -3882,8 +3882,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
     HostDialogs::of(pH).mpEditorDialog = pEditor;
     connect(pH, &Host::profileSaveStarted, pEditor, &dlgTriggerEditor::slot_profileSaveStarted);
     connect(pH, &Host::profileSaveFinished, pEditor, &dlgTriggerEditor::slot_profileSaveFinished);
-    // Item trees are deliberately not populated here: ScriptUnit::compileAll() queues a full rebuild once
-    // the profile's scripts have run, so populating now would double the cost of the load.
+    // Item trees are deliberately not populated here: the rebuild ScriptUnit::compileAll() queues is put off
+    // until the editor is first opened (see dlgTriggerEditor::runScheduledCleanReset()).
 
     pH->getActionUnit()->updateAllToolbars();
 

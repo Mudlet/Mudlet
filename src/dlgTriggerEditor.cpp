@@ -9235,6 +9235,7 @@ void dlgTriggerEditor::fillout_form()
     mpCurrentVarItem = nullptr;
 
     mNeedUpdateData = false;
+    mCleanResetDeferred = false;
     // The trees are painted afresh below, which covers every toggle still queued
     mPendingTriggerIconRefresh.clear();
     mPendingAliasIconRefresh.clear();
@@ -10722,7 +10723,11 @@ void dlgTriggerEditor::rebuildStaleTrees()
     treeWidget_actions->clear();
     treeWidget_keys->clear();
     treeWidget_variables->clear();
-    fillout_form();
+    if (mCleanResetDeferred) {
+        buildDeferredTrees(false);
+    } else {
+        fillout_form();
+    }
     mNeedUpdateData = false;
     if (folderViewType != EditorViewType::cmUnknownView) {
         mCurrentView = folderViewType;
@@ -10790,6 +10795,10 @@ void dlgTriggerEditor::showEvent(QShowEvent* event)
 
     mHasBeenShown = true;
     widgetutils::keepDialogOnAScreen(this, mpHost->mainConsoleView());
+
+    if (mCleanResetDeferred) {
+        buildDeferredTrees(true);
+    }
 
     // Lua toggles that arrived while this editor was hidden are queued, but
     // nothing flushes them until now.
@@ -11039,6 +11048,11 @@ void dlgTriggerEditor::slot_showTimers()
 
 void dlgTriggerEditor::showCurrentTriggerItem()
 {
+    // The full reset leaves the editor on the triggers view, so there is nothing more to show
+    if (mCleanResetDeferred) {
+        buildDeferredTrees(true);
+        return;
+    }
     if (mCurrentView != EditorViewType::cmUnknownView) {
         return;
     }
@@ -13420,6 +13434,21 @@ void dlgTriggerEditor::runScheduledCleanReset()
         return;
     }
 
+    // Every profile builds an editor on load that may never be opened, and populating it costs as much as
+    // the profile has items; changeView(), focus and enter events rebuild on mNeedUpdateData, showEvent() on the flag
+    if (!mHasBeenShown) {
+        mCleanResetDeferred = true;
+        mNeedUpdateData = true;
+        // What the build would have done to notices posted so far
+        clearEditorNotification();
+        return;
+    }
+
+    resetTrees();
+}
+
+void dlgTriggerEditor::resetTrees()
+{
     // Clear all current item pointers BEFORE attempting to save or clear tree widgets
     // to prevent heap-use-after-free when the tree widgets are cleared
     mpCurrentTriggerItem = nullptr;
@@ -13465,6 +13494,41 @@ void dlgTriggerEditor::runScheduledCleanReset()
     treeWidget_scripts->clear();
     fillout_form();
     slot_showTriggers();
+}
+
+// A notice posted since the build was put off has to outlive it, as populating a tree clears the message
+// area for every item it adds
+void dlgTriggerEditor::buildDeferredTrees(const bool asAtLoad)
+{
+    const bool keepNotice = !mpSystemMessageArea->isHidden();
+    const bool info = !mpSystemMessageArea->notificationAreaIconLabelInformation->isHidden();
+    const bool error = !mpSystemMessageArea->notificationAreaIconLabelError->isHidden();
+    const bool warning = !mpSystemMessageArea->notificationAreaIconLabelWarning->isHidden();
+    const QString text = mpSystemMessageArea->notificationAreaMessageBox->text();
+    const QString bannerKey = mCurrentBannerKey;
+
+    if (asAtLoad) {
+        resetTrees();
+    } else {
+        fillout_form();
+    }
+
+    if (!keepNotice) {
+        return;
+    }
+    mpSystemMessageArea->notificationAreaIconLabelInformation->setVisible(info);
+    mpSystemMessageArea->notificationAreaIconLabelError->setVisible(error);
+    mpSystemMessageArea->notificationAreaIconLabelWarning->setVisible(warning);
+    mpSystemMessageArea->notificationAreaMessageBox->setText(text);
+    mpSystemMessageArea->show();
+    mCurrentBannerKey = bannerKey;
+    if (bannerKey.isEmpty()) {
+        disconnect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_bannerDismissClicked);
+        connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea, Qt::UniqueConnection);
+    } else {
+        disconnect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
+        connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_bannerDismissClicked, Qt::UniqueConnection);
+    }
 }
 
 void dlgTriggerEditor::slot_profileSaveAction()

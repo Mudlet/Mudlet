@@ -216,6 +216,8 @@ LUA_API void lua_replace (lua_State *L, int idx) {
     luaC_barrier(L, func, L->top - 1);
   }
   else {
+    if (idx == LUA_GLOBALSINDEX || idx == LUA_REGISTRYINDEX)
+      G(L)->watchepoch++;  /* MUDLET: see lua_watch() */
     setobj(L, o, L->top - 1);
     if (idx < LUA_GLOBALSINDEX)  /* function upvalue? */
       luaC_barrier(L, curr_func(L), L->top - 1);
@@ -674,6 +676,7 @@ LUA_API void lua_rawset (lua_State *L, int idx) {
   api_checknelems(L, 2);
   t = index2adr(L, idx);
   api_check(L, ttistable(t));
+  luaC_watchstore(L, hvalue(t), L->top-2);
   setobj2t(L, luaH_set(L, hvalue(t), L->top-2), L->top-1);
   luaC_barriert(L, hvalue(t), L->top-1);
   L->top -= 2;
@@ -687,6 +690,7 @@ LUA_API void lua_rawseti (lua_State *L, int idx, int n) {
   api_checknelems(L, 1);
   o = index2adr(L, idx);
   api_check(L, ttistable(o));
+  luaC_watchtable(L, hvalue(o));
   setobj2t(L, luaH_setnum(L, hvalue(o), n), L->top-1);
   luaC_barriert(L, hvalue(o), L->top-1);
   L->top--;
@@ -709,6 +713,9 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
   }
   switch (ttype(obj)) {
     case LUA_TTABLE: {
+      luaC_watchtable(L, hvalue(obj));
+      if (hvalue(obj)->metatable)
+        luaC_watchtable(L, hvalue(obj)->metatable);
       hvalue(obj)->metatable = mt;
       if (mt)
         luaC_objbarriert(L, hvalue(obj), mt);
@@ -731,6 +738,29 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
 }
 
 
+/*
+** MUDLET: marks the table or string at `idx' watched (unwatched with `watch'
+** 0; a string stays fixed) and returns the counter ../README.md describes, or
+** NULL once a library with a Lua core of its own has been loaded.
+*/
+LUA_API const size_t *lua_watch (lua_State *L, int idx, int watch) {
+  TValue *o;
+  lua_lock(L);
+  o = index2adr(L, idx);
+  if (ttistable(o) || ttisstring(o)) {
+    if (watch) {
+      l_setbit(gcvalue(o)->gch.marked, WATCHBIT);
+      if (ttisstring(o))
+        luaS_fix(rawtsvalue(o));
+    }
+    else
+      resetbit(gcvalue(o)->gch.marked, WATCHBIT);
+  }
+  lua_unlock(L);
+  return G(L)->watchblind ? NULL : &G(L)->watchepoch;
+}
+
+
 LUA_API int lua_setfenv (lua_State *L, int idx) {
   StkId o;
   int res = 1;
@@ -747,6 +777,7 @@ LUA_API int lua_setfenv (lua_State *L, int idx) {
       uvalue(o)->env = hvalue(L->top - 1);
       break;
     case LUA_TTHREAD:
+      G(L)->watchepoch++;  /* MUDLET: a thread's globals table */
       sethvalue(L, gt(thvalue(o)), hvalue(L->top - 1));
       break;
     default:
