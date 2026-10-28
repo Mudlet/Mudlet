@@ -125,6 +125,7 @@ private:
 
     static inline const QVector3D kLabelPosition{2, 0, 0};
     static inline const QSizeF kLabelClickSize{40, 20};
+    static inline const QVector3D kMapImagePosition{-2, 2, 0};
     static constexpr int kSouthRoomId = 8;
     static constexpr int kOtherAreaRoomId = 20;
 
@@ -232,6 +233,51 @@ private:
         const int id = area()->mMapLabels.isEmpty() ? 0 : area()->mMapLabels.lastKey() + 1;
         area()->mMapLabels.insert(id, label);
         return id;
+    }
+
+    // Covers the whole block of rooms and some empty map besides, as createMapImageLabel() would.
+    int addMapImage(const bool onTop) const
+    {
+        TMapLabel label;
+        label.pos = kMapImagePosition;
+        label.size = QSizeF(5, 5);
+        label.clickSize = label.size * kPixelsPerMapUnit;
+        label.pix = QPixmap(10, 10);
+        label.pix.fill(Qt::darkGreen);
+        label.showOnTop = onTop;
+        const int id = area()->mMapLabels.isEmpty() ? 0 : area()->mMapLabels.lastKey() + 1;
+        area()->mMapLabels.insert(id, label);
+        renderFrame();
+        return id;
+    }
+
+    // Lies exactly over the block of rooms, edge to edge with their grid cells.
+    int addMapImageOverTheRooms() const
+    {
+        TMapLabel label;
+        label.pos = QVector3D(-1.5, 1.5, 0);
+        label.size = QSizeF(3, 3);
+        label.clickSize = label.size * kPixelsPerMapUnit;
+        label.pix = QPixmap(10, 10);
+        label.pix.fill(Qt::darkGreen);
+        const int id = area()->mMapLabels.isEmpty() ? 0 : area()->mMapLabels.lastKey() + 1;
+        area()->mMapLabels.insert(id, label);
+        renderFrame();
+        return id;
+    }
+
+    // Inside the picture but clear of every room.
+    QPoint pointOnMapImageAwayFromRooms() const { return pointUnitsFromCentre(2.5, -2.5); }
+
+    // Leaves the image picked up with the mouse inside both it and the east room.
+    void carryMapImageOverEastRoom(const int labelId) const
+    {
+        pressAt(pointOnMapImageAwayFromRooms());
+        QVERIFY(area()->mMapLabels.value(labelId).highlight);
+        const QPoint overEastRoom = pointUnitsFromCentre(1, 0) - QPoint(2, 2);
+        moveTo(overEastRoom);
+        releaseAt(overEastRoom);
+        QVERIFY2(area()->mMapLabels.value(labelId).pos != kMapImagePosition, "the picked up image did not follow the mouse");
     }
 
     // A label clear of the rooms on the level being shown.
@@ -398,6 +444,21 @@ private:
             return nullptr;
         }
         for (QAction* pAction : mp2dMap->mActiveContextMenu->actions()) {
+            if (pAction->text() == text) {
+                return pAction;
+            }
+        }
+        return nullptr;
+    }
+
+    // An item in the submenu with this title on the menu the last right click put up.
+    QAction* contextSubmenuItem(const QString& title, const QString& text) const
+    {
+        QAction* pSubmenuAction = contextMenuItem(title);
+        if (!pSubmenuAction || !pSubmenuAction->menu()) {
+            return nullptr;
+        }
+        for (QAction* pAction : pSubmenuAction->menu()->actions()) {
             if (pAction->text() == text) {
                 return pAction;
             }
@@ -1480,6 +1541,262 @@ private slots:
         const QVector3D moved = area()->mMapLabels.value(labelId).pos;
         QCOMPARE(static_cast<double>(moved.x()), 3.0);
         QCOMPARE(static_cast<double>(moved.y()), 1.0);
+    }
+
+    // A picture drawn behind the rooms is their backdrop, so a click on a room
+    // over it must not pick the picture up and drag it out of place.
+    void test_clickingARoomOverABackgroundImageSelectsTheRoomNotTheImage()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(false);
+        const QPoint onEastRoom = pointUnitsFromCentre(1, 0);
+
+        for (const Qt::KeyboardModifiers modifiers : {Qt::KeyboardModifiers(), Qt::KeyboardModifiers(Qt::ShiftModifier), Qt::KeyboardModifiers(Qt::ControlModifier)}) {
+            mp2dMap->mMultiSelectionSet.clear();
+            pressAt(onEastRoom, modifiers);
+            QVERIFY2(!area()->mMapLabels.value(labelId).highlight, qPrintable(qsl("a click on a room over a background image picked the image up (modifiers %1)").arg(modifiers.toInt())));
+            QVERIFY(!mp2dMap->mLabelHighlighted);
+            QVERIFY2(mp2dMap->mMultiSelectionSet.contains(kEastRoomId), qPrintable(qsl("a click on a room over a background image did not select it (modifiers %1)").arg(modifiers.toInt())));
+            // Without a modifier the press picks the room up to move it instead
+            if (modifiers != Qt::NoModifier) {
+                moveTo(onEastRoom, modifiers);
+                moveTo(pointUnitsFromCentre(1, 2), modifiers);
+            }
+            releaseAt(onEastRoom, modifiers);
+            QCOMPARE(area()->mMapLabels.value(labelId).pos, kMapImagePosition);
+        }
+    }
+
+    void test_rightClickingARoomOverABackgroundImageOffersTheRoomMenu()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(false);
+
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY2(contextMenuItem(qsl("Set exits...")), "a right click on a room over a background image did not offer the room menu");
+        QVERIFY(!area()->mMapLabels.value(labelId).highlight);
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kEastRoomId});
+    }
+
+    // Where no room is in the way a background image can still be picked up and moved.
+    void test_aBackgroundImageClickedAwayFromTheRoomsCanBeMoved()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(false);
+
+        pressAt(pointOnMapImageAwayFromRooms());
+        QVERIFY2(area()->mMapLabels.value(labelId).highlight, "a background image clicked where there is no room was not picked up");
+        moveTo(pointUnitsFromCentre(3, -2));
+
+        QCOMPARE(area()->mMapLabels.value(labelId).pos, QVector3D(3, -2, 0));
+    }
+
+    // A picked-up image the next click lands on is put down, even where a room
+    // is under the click too, or it would be left marked as picked up.
+    void test_aCarriedBackgroundImageIsPutDownByAClickOverARoom()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(false);
+        const QPoint onEastRoom = pointUnitsFromCentre(1, 0);
+        carryMapImageOverEastRoom(labelId);
+        const QVector3D carriedTo = area()->mMapLabels.value(labelId).pos;
+
+        pressAt(onEastRoom, Qt::ShiftModifier);
+
+        QVERIFY2(!area()->mMapLabels.value(labelId).highlight, "a click over a room did not put down the image being carried");
+        QVERIFY(!mp2dMap->mLabelHighlighted);
+        releaseAt(onEastRoom, Qt::ShiftModifier);
+        QCOMPARE(area()->mMapLabels.value(labelId).pos, carriedTo);
+    }
+
+    // An image meant to lie under the rooms is likely to be over one when the click that ends Move comes.
+    void test_aBackgroundImageMovedFromItsMenuCanBePutDownOverARoom()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(false);
+        const QPoint onEastRoom = pointUnitsFromCentre(1, 0);
+
+        rightClickAt(pointOnMapImageAwayFromRooms());
+        QVERIFY(pickContextMenuItem(qsl("Move")));
+        QVERIFY(mp2dMap->mMoveLabel);
+        hoverTo(onEastRoom - QPoint(2, 2));
+        const QVector3D putDownAt = area()->mMapLabels.value(labelId).pos;
+        QVERIFY2(putDownAt != kMapImagePosition, "the image being moved did not follow the mouse");
+        pressAt(onEastRoom);
+
+        QVERIFY2(!mp2dMap->mMoveLabel, "a click over a room did not finish moving the image");
+        QVERIFY2(!mp2dMap->mRoomBeingMoved, "the click that finished moving the image picked up the room under it");
+        const QPoint dragTo = pointUnitsFromCentre(1, 2);
+        moveTo(onEastRoom);
+        moveTo(dragTo);
+        releaseAt(dragTo);
+        QVERIFY(!area()->mMapLabels.value(labelId).highlight);
+        QCOMPARE(area()->mMapLabels.value(labelId).pos, putDownAt);
+        TRoom* pEastRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pEastRoom);
+        QCOMPARE(pEastRoom->x(), 1);
+        QCOMPARE(pEastRoom->y(), 0);
+    }
+
+    void test_rightClickingABackgroundImageBeingMovedOverARoomOffersTheLabelMenu()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(false);
+        const QPoint onEastRoom = pointUnitsFromCentre(1, 0);
+
+        rightClickAt(pointOnMapImageAwayFromRooms());
+        QVERIFY(pickContextMenuItem(qsl("Move")));
+        hoverTo(onEastRoom - QPoint(2, 2));
+        QVERIFY2(area()->mMapLabels.value(labelId).pos != kMapImagePosition, "the image being moved did not follow the mouse");
+        rightClickAt(onEastRoom);
+
+        QVERIFY2(!contextMenuItem(qsl("Set exits...")), "a right click on an image being moved offered the room menu instead of its own");
+        QVERIFY(area()->mMapLabels.value(labelId).highlight);
+    }
+
+    // Closing a label's menu leaves the label marked as picked up, which must not stop a room drag.
+    void test_aRoomCanBeDraggedAfterALabelMenuIsClosed()
+    {
+        buildMap();
+        showMapper(false);
+        addTestLabel();
+
+        rightClickAt(pointOnTestLabel());
+        QVERIFY(contextMenuItem(qsl("Move")));
+        closeContextMenu();
+        dragFromTo(pointUnitsFromCentre(1, 0), pointUnitsFromCentre(1, 2));
+
+        TRoom* pEastRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pEastRoom);
+        QCOMPARE(pEastRoom->y(), 2);
+    }
+
+    void test_rightClickingARoomOverABackgroundImageAfterItsMenuIsClosedOffersTheRoomMenu()
+    {
+        buildMap();
+        showMapper(false);
+        addMapImage(false);
+
+        rightClickAt(pointOnMapImageAwayFromRooms());
+        QVERIFY(contextMenuItem(qsl("Move")));
+        closeContextMenu();
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY2(contextMenuItem(qsl("Set exits...")), "a right click on a room over a background image whose menu was just closed did not offer the room menu");
+    }
+
+    // Over a room on a background image, Alt and a drag moves the map, not the image.
+    void test_holdingAltAndDraggingOverABackgroundImagePansTheMap()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(false);
+
+        dragFromTo(pointUnitsFromCentre(1, 0), pointUnitsFromCentre(1, -1), Qt::AltModifier);
+
+        QCOMPARE(mp2dMap->mMapCenterY, -1.0);
+        QVERIFY(!area()->mMapLabels.value(labelId).highlight);
+        QCOMPARE(area()->mMapLabels.value(labelId).pos, kMapImagePosition);
+    }
+
+    void test_rightClickingABackgroundImageAwayFromTheRoomsOffersTheLabelMenu()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(false);
+
+        rightClickAt(pointOnMapImageAwayFromRooms());
+
+        QVERIFY2(contextMenuItem(qsl("Move")) && !contextMenuItem(qsl("Set exits...")), "a right click on a background image where there is no room did not offer the label menu");
+        QVERIFY(area()->mMapLabels.value(labelId).highlight);
+    }
+
+    // In grid mode every cell of a block of rooms takes the click, so an image lined up with the block has no spot of its own.
+    void test_aBackgroundImageWhollyUnderRoomsCanBeMovedFromTheRoomMenu()
+    {
+        buildMap(true);
+        showMapper(false);
+        const int labelId = addMapImageOverTheRooms();
+
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QVERIFY2(contextMenuItem(qsl("Set exits...")), "a right click on a room over a background image did not offer the room menu");
+        QVERIFY2(pickContextMenuItem(qsl("Move label")), "the room menu did not offer to move the image under the room");
+        QVERIFY(mp2dMap->mMoveLabel);
+        QVERIFY(area()->mMapLabels.value(labelId).highlight);
+        hoverTo(pointUnitsFromCentre(2, 2));
+        pressAt(pointUnitsFromCentre(2, 2));
+        releaseAt(pointUnitsFromCentre(2, 2));
+
+        QVERIFY(!mp2dMap->mMoveLabel);
+        QVERIFY(!area()->mMapLabels.value(labelId).highlight);
+        QCOMPARE(area()->mMapLabels.value(labelId).pos, QVector3D(2, 2, 0));
+    }
+
+    void test_aBackgroundImageWhollyUnderRoomsCanBeDeletedFromTheRoomMenu()
+    {
+        buildMap(true);
+        showMapper(false);
+        const int labelId = addMapImageOverTheRooms();
+        const int otherLabelId = addTestLabel();
+
+        rightClickAt(pointUnitsFromCentre(-1, 1));
+        QVERIFY2(pickContextMenuItem(qsl("Delete label")), "the room menu did not offer to delete the image under the room");
+
+        QVERIFY2(!area()->mMapLabels.contains(labelId), "the image under the room was not deleted");
+        QVERIFY2(area()->mMapLabels.contains(otherLabelId), "deleting the image under the room deleted another label too");
+        QVERIFY(!mp2dMap->mLabelHighlighted);
+    }
+
+    // A small label laid on a room over a background image is drawn on top of the image, and must not be shadowed by it.
+    void test_eachLabelUnderARoomCanBeReachedFromTheRoomMenu()
+    {
+        buildMap();
+        showMapper(false);
+        const int imageId = addMapImage(false);
+        const int iconId = addLabel(QVector3D(0.9F, 0.1F, 0), QSizeF(4, 4));
+
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QVERIFY(contextMenuItem(qsl("Set exits...")));
+        QVERIFY2(!contextMenuItem(qsl("Delete label")), "the room menu offered to delete just one of the two labels under the room");
+        QVERIFY2(contextSubmenuItem(qsl("Image label %1").arg(imageId), qsl("Delete")), "the room menu did not offer the background image under the room");
+        QAction* pDeleteIcon = contextSubmenuItem(qsl("Label: a label"), qsl("Delete"));
+        QVERIFY2(pDeleteIcon, "the room menu did not offer the small label lying on the room");
+        pDeleteIcon->trigger();
+        closeContextMenu();
+
+        QVERIFY2(!area()->mMapLabels.contains(iconId), "the small label under the room was not deleted");
+        QVERIFY2(area()->mMapLabels.contains(imageId), "deleting the small label deleted the background image too");
+    }
+
+    void test_theRoomMenuOffersNoLabelActionsWithoutALabelUnderTheRoom()
+    {
+        buildMap();
+        showMapper(false);
+        addTestLabel();
+
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(contextMenuItem(qsl("Set exits...")));
+        QVERIFY2(!contextMenuItem(qsl("Move label")) && !contextMenuItem(qsl("Delete label")), "the room menu offered label actions with no label under the room");
+    }
+
+    // A picture drawn over the rooms hides them, so it is what a click there lands on.
+    void test_clickingARoomUnderAnImageOnTopPicksTheImageUp()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(true);
+
+        pressAt(pointUnitsFromCentre(1, 0), Qt::ShiftModifier);
+
+        QVERIFY2(area()->mMapLabels.value(labelId).highlight, "a click on an image drawn over the rooms did not pick it up");
     }
 
     // A room the map is locked for viewing cannot be dragged out of place by a

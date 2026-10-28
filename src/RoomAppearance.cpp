@@ -365,6 +365,11 @@ QPointF nameOffset(const QString& positionData)
     return offset;
 }
 
+bool nameShown(const TRoom& room)
+{
+    return !room.name.isEmpty() && getUserDataBool(room.userData, ROOM_UI_SHOWNAME, true);
+}
+
 QColor nameColor(const QString& colorData, const QColor& background)
 {
     if (!colorData.isEmpty()) {

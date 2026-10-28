@@ -364,7 +364,7 @@ private slots:
                 try {
                     boost::astar_search(pMap->g,
                                         start,
-                                        distance_heuristic<TMap::mygraph_t, cost, std::vector<location>>(pMap->locations, goal),
+                                        distance_heuristic<TMap::mygraph_t, cost, std::vector<location>>(pMap->locations, goal, pMap->mHeuristicScale),
                                         boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(astar_goal_visitor<TMap::vertex>(goal)));
                 } catch (const found_goal&) {
                 }
@@ -388,7 +388,7 @@ private slots:
                 try {
                     boost::astar_search(pMap->g,
                                         start,
-                                        distance_heuristic<TMap::mygraph_t, cost, std::vector<location>>(pMap->locations, goal),
+                                        distance_heuristic<TMap::mygraph_t, cost, std::vector<location>>(pMap->locations, goal, pMap->mHeuristicScale),
                                         boost::predecessor_map(&predecessor[0]).distance_map(&distance[0]).rank_map(&rank[0]).color_map(&colour[0]).visitor(astar_goal_visitor<TMap::vertex>(goal)));
                 } catch (const found_goal&) {
                 }
@@ -422,12 +422,12 @@ private slots:
                 }
                 touched.clear();
                 put(distanceMap, start, cost(0));
-                put(rankMap, start, distance_heuristic<TMap::mygraph_t, cost, std::vector<location>>(pMap->locations, goal)(start));
+                put(rankMap, start, distance_heuristic<TMap::mygraph_t, cost, std::vector<location>>(pMap->locations, goal, pMap->mHeuristicScale)(start));
                 try {
                     boost::astar_search_no_init(
                             pMap->g,
                             start,
-                            distance_heuristic<TMap::mygraph_t, cost, std::vector<location>>(pMap->locations, goal),
+                            distance_heuristic<TMap::mygraph_t, cost, std::vector<location>>(pMap->locations, goal, pMap->mHeuristicScale),
                             boost::predecessor_map(predecessorMap).distance_map(distanceMap).rank_map(rankMap).color_map(colourMap).visitor(astar_goal_visitor<TMap::vertex>(goal)));
                 } catch (const found_goal&) {
                 }
