@@ -54,10 +54,12 @@
 #include <QSizeF>
 #include <QtEndian>
 #include <QXmlStreamReader>
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <limits>
 #include <queue>
+#include <tuple>
 
 #ifndef Q_MOC_RUN
 #include <boost/range/iterator_range.hpp>
@@ -84,6 +86,13 @@ qreal usableSymbolFontFudgeFactor(const qreal fromFile)
         return 1.0;
     }
     return qBound(TMap::scmMinimumSymbolFontFudgeFactor, fromFile, TMap::scmMaximumSymbolFontFudgeFactor);
+}
+
+// Not QFont::PreferNoShaping: Qt's unshaped text path treats Private Use Area
+// code points as unprintable, which blanks every symbol from an icon font.
+QFont::StyleStrategy symbolFontStyleStrategy(const bool onlySymbolFontUsed)
+{
+    return static_cast<QFont::StyleStrategy>((onlySymbolFontUsed ? QFont::NoFontMerging : 0) | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality);
 }
 
 enum class MapFileCheckResult { ValidMap, NotAMap, ParseError };
@@ -878,33 +887,18 @@ void TMap::addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& best
         return;
     }
 
-    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
-    TLuaInterpreter::ExitWeightFilterResult filterResult;
-    TLuaInterpreter::ExitWeightFilterResult* filterResultPtr = nullptr;
-    if (interpreter && interpreter->hasExitWeightFilter()) {
-        filterResult = interpreter->applyExitWeightFilter(static_cast<int>(source), exitKey);
-        if (filterResult.blocked) {
-            return;
-        }
-        filterResultPtr = &filterResult;
-    }
-
-    const bool filterOverridesBlocks = filterResultPtr && filterResultPtr->weightOverride.has_value();
-
-    if (pSourceR->isLocked && !filterOverridesBlocks) {
+    if (pSourceR->isLocked) {
         return;
     }
 
     const bool isSpecialExit = direction == DIR_OTHER;
 
-    if (!filterOverridesBlocks) {
-        if (isSpecialExit) {
-            if (pSourceR->hasSpecialExitLock(exitKey)) {
-                return;
-            }
-        } else if (pSourceR->hasExitLock(direction)) {
+    if (isSpecialExit) {
+        if (pSourceR->hasSpecialExitLock(exitKey)) {
             return;
         }
+    } else if (pSourceR->hasExitLock(direction)) {
+        return;
     }
 
     TRoom* pTargetR = mpRoomDB->getRoom(target);
@@ -912,19 +906,24 @@ void TMap::addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& best
         return;
     }
 
-    if (!filterOverridesBlocks && (pTargetR->isLocked || unUsableRoomSet.contains(target))) {
+    if (pTargetR->isLocked || unUsableRoomSet.contains(target)) {
         return;
+    }
+
+    int cost = exitWeights.value(exitKey, pTargetR->getWeight());
+    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
+    if (interpreter && interpreter->hasExitWeightFilter()) {
+        const TLuaInterpreter::ExitWeightFilterResult filterResult = interpreter->applyExitWeightFilter(static_cast<int>(source), exitKey);
+        if (filterResult.blocked) {
+            return;
+        }
+        cost = filterResult.weightOverride.value_or(cost);
     }
 
     route r;
     r.direction = direction;
     if (isSpecialExit) {
         r.specialExitName = exitKey;
-    }
-
-    int cost = exitWeights.value(exitKey, pTargetR->getWeight());
-    if (filterOverridesBlocks) {
-        cost = filterResultPtr->weightOverride.value();
     }
     r.cost = cost;
 
@@ -954,8 +953,6 @@ void TMap::initGraph()
     unsigned int roomCount = 0;
     unsigned int edgeCount = 0;
     QSet<unsigned int> unUsableRoomSet;
-    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
-    const bool exitWeightFilterActive = interpreter && interpreter->hasExitWeightFilter();
     // Keep track of the unusable rather than the usable ones because that is
     // hopefully a MUCH smaller set in normal situations!
     QHashIterator<int, TRoom*> itRoom = mpRoomDB->getRoomMap();
@@ -969,14 +966,15 @@ void TMap::initGraph()
 
         if (pR->isLocked) {
             unUsableRoomSet.insert(itRoom.key());
-            if (!exitWeightFilterActive) {
-                continue;
-            }
+            continue;
         }
 
         location l;
         l.pR = pR;
         l.id = itRoom.key();
+        l.x = pR->x();
+        l.y = pR->y();
+        l.z = pR->z();
         // locations is std::vector<location> and (locations.at(k)).id will give room ID value
         locations.push_back(l);
         // This command maps usable TRooms (key) to index of entry in locations (for route finding).
@@ -996,6 +994,9 @@ void TMap::initGraph()
     // Now identify the routes between rooms, and pick out the best edges of parallel ones.
     // A room has a handful of exits, so a reused list beats a hash table built per room.
     std::vector<std::pair<unsigned int, route>> bestRoutes;
+    cost mostChebyshevPerCost = 0;
+    cost mostEuclideanPerCost = 0;
+    bool freeDistance = false;
     for (const location& l : locations) {
         unsigned const int source = l.id;
         TRoom* pSourceR = l.pR;
@@ -1031,18 +1032,37 @@ void TMap::initGraph()
                            // we had tried to insert a parallel edge into a graph
                            // that does not support them - but we've just been
                            // and disposed of those already!
-            tie(e, inserted) = add_edge(sourceIndex, roomidToIndex.value(target), bestRoute.cost, g);
+            const int targetIndex = roomidToIndex.value(target);
+            tie(e, inserted) = add_edge(sourceIndex, targetIndex, bestRoute.cost, g);
+            const coordinateSpan edgeSpan = spanBetween(l, locations[targetIndex]);
+            if (bestRoute.cost > 0) {
+                mostChebyshevPerCost = std::max(mostChebyshevPerCost, edgeSpan.chebyshev / bestRoute.cost);
+                mostEuclideanPerCost = std::max(mostEuclideanPerCost, edgeSpan.euclidean / bestRoute.cost);
+            } else if (edgeSpan.chebyshev > 0) {
+                freeDistance = true;
+            }
             edgeHash.insert(qMakePair(source, target), bestRoute);
             // The key is made from the QPair<edgeSourceRoomId, edgeTargetRoomId>...
             edgeCount++;
         }
     } // End of foreach(location l, locations)
 
+    mHeuristicScale = heuristicScale();
+    if (!freeDistance) {
+        if (mostChebyshevPerCost > 0) {
+            mHeuristicScale.chebyshev = 1 / mostChebyshevPerCost;
+        }
+        if (mostEuclideanPerCost > 0) {
+            mHeuristicScale.euclidean = 1 / mostEuclideanPerCost;
+        }
+    }
+
     mGraphBuildInProgress = false;
     mMapGraphNeedsUpdate = false;
     ++mPathGraphRevision;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
-             << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
+             << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6
+             << "ms, heuristic scale (Chebyshev, euclidean):" << mHeuristicScale.chebyshev << mHeuristicScale.euclidean;
 }
 
 // Refill rather than only resize, or stale values below the old room count survive a shrink.
@@ -1062,7 +1082,7 @@ void TMap::resetSearchState(const std::size_t roomCount)
 // searches and only the rooms the last one wrote are reset.
 bool TMap::searchGraph(const vertex start, const vertex goal)
 {
-    // 0 is unreached; a re-opened room drops back to stateFrontier. Only 0 and stateExpanded are tested:
+    // 0 is unreached. Only 0 and stateExpanded are tested:
     // writing stateFrontier stops a room being listed in mSearchTouched twice.
     static constexpr quint8 stateFrontier = 1;
     static constexpr quint8 stateExpanded = 2;
@@ -1082,18 +1102,20 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
     }
 
     const WeightMap weights = boost::get(boost::edge_weight, g);
-    distance_heuristic<mygraph_t, cost, std::vector<location>> heuristic(locations, goal);
+    distance_heuristic<mygraph_t, cost, std::vector<location>> heuristic(locations, goal, mHeuristicScale);
 
-    typedef std::pair<cost, vertex> frontierEntry;
+    // Estimate, then the negated cost so far, so that ties go to the room furthest along: on a grid
+    // every room in the band of equally short routes ties, and expanding them all swamps the search.
+    typedef std::tuple<cost, cost, vertex> frontierEntry;
     std::priority_queue<frontierEntry, std::vector<frontierEntry>, std::greater<frontierEntry>> frontier;
 
     mSearchDistance[start] = 0;
     mSearchState[start] = stateFrontier;
     mSearchTouched.push_back(start);
-    frontier.push({heuristic(start), start});
+    frontier.push({heuristic(start), 0, start});
 
     while (!frontier.empty()) {
-        const vertex current = frontier.top().second;
+        const vertex current = std::get<2>(frontier.top());
         frontier.pop();
         if (mSearchState[current] == stateExpanded) {
             // Stale duplicate: a cheaper route was queued later.
@@ -1115,10 +1137,10 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
             }
             mSearchDistance[neighbour] = throughCurrent;
             mSearchPredecessor[neighbour] = current;
-            // Re-open: the heuristic uses map coordinates but costs are room weights, so they can
-            // disagree and a better route to an expanded room can appear (boost does the same).
+            // Never an expanded room: costs are whole numbers of at least 1 and the heuristic is consistent,
+            // so a room is expanded at its least cost, and its rounding is far below 1.
             mSearchState[neighbour] = stateFrontier;
-            frontier.push({throughCurrent + heuristic(neighbour), neighbour});
+            frontier.push({throughCurrent + heuristic(neighbour), -throughCurrent, neighbour});
         }
     }
 
@@ -2021,8 +2043,7 @@ bool TMap::restore(QString location)
             }
         }
 
-        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0) | QFont::PreferOutline | QFont::PreferAntialias
-                                                                          | QFont::PreferQuality | QFont::PreferNoShaping));
+        mMapSymbolFont.setStyleStrategy(symbolFontStyleStrategy(mIsOnlyMapSymbolFontToBeUsed));
         mMapSymbolFontFudgeFactor = usableSymbolFontFudgeFactor(mMapSymbolFontFudgeFactor);
         if (mVersion >= 14) {
             int areaSize = 0;
@@ -3942,8 +3963,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     mIsOnlyMapSymbolFontToBeUsed = isOnlyMapSymbolFontToBeUsed;
     QFont mapSymbolFont;
     mapSymbolFont.fromString(mapSymbolFontText);
-    mapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((isOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0) | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
-                                                                     | QFont::PreferNoShaping));
+    mapSymbolFont.setStyleStrategy(symbolFontStyleStrategy(isOnlyMapSymbolFontToBeUsed));
 
     mMapSymbolFont.swap(mapSymbolFont);
     mMapSymbolFontFudgeFactor = mapSymbolFontFudgeFactor;

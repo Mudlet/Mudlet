@@ -377,11 +377,12 @@ void TTextEdit::updateScreenView()
     }
     const int oldScreenWidth = mScreenWidth;
     const int oldScreenHeight = mScreenHeight;
-    mScreenHeight = visibleRegion().boundingRect().height() / mFontHeight;
+    const QSize drawable = drawableSize();
+    mScreenHeight = drawable.height() / mFontHeight;
     if (!mIsLowerPane) {
         updateScrollBar(mpBuffer->mCursorY);
     }
-    int currentScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
+    int currentScreenWidth = drawable.width() / mFontWidth;
     if (mpConsole->getType() == TConsole::MainConsole) {
         // This is the MAIN console - we do not want it to ever disappear!
         mScreenWidth = qMax(40, currentScreenWidth);
@@ -407,6 +408,14 @@ void TTextEdit::updateScreenView()
         forceUpdate();
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
+}
+
+// Rows and columns start at the top left corner, so whatever covers that edge
+// hides some of them; only the far edges of what is seen bound how many there are.
+QSize TTextEdit::drawableSize() const
+{
+    const QRect seen = visibleRegion().boundingRect();
+    return seen.isEmpty() ? QSize(0, 0) : QSize(seen.right() + 1, seen.bottom() + 1);
 }
 
 void TTextEdit::showNewLines()
@@ -1860,7 +1869,6 @@ void TTextEdit::expandSelectionToWords()
             }
         }
     }
-    mDragStart.setX(xind + 1);
     mPA.setX(xind + 1);
 
     yind = mPB.y();
@@ -1875,7 +1883,6 @@ void TTextEdit::expandSelectionToWords()
             }
         }
     }
-    mDragSelectionEnd.setX(xind - 1);
     mPB.setX(xind - 1);
 }
 
@@ -1975,7 +1982,8 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         }
     }
 
-    if (mDragStart.y() < cursorLocation.y() || (mDragStart.y() == cursorLocation.y() && mDragStart.x() < cursorLocation.x())) {
+    const bool anchorFirst = mDragStart.y() < cursorLocation.y() || (mDragStart.y() == cursorLocation.y() && mDragStart.x() < cursorLocation.x());
+    if (anchorFirst) {
         mPA = mDragStart;
         mPB = cursorLocation;
     } else {
@@ -1984,6 +1992,14 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     }
     if (mMouseTrackLevel == 2) {
         expandSelectionToWords();
+        // Anchored on a separator, the selection starts at the nearest word, past any separators beside it
+        QPoint& anchoredEnd = anchorFirst ? mPA : mPB;
+        const QString& anchoredLine = mpBuffer->lineBuffer.at(anchoredEnd.y());
+        const int step = anchorFirst ? 1 : -1;
+        while (anchoredEnd.x() >= 0 && anchoredEnd.x() < static_cast<int>(anchoredLine.size())
+               && (anchoredLine.at(anchoredEnd.x()) == QChar::Space || mpHost->mDoubleClickIgnore.contains(anchoredLine.at(anchoredEnd.x())))) {
+            anchoredEnd.rx() += step;
+        }
     }
     if (mCtrlSelecting || mMouseTrackLevel == 3) {
         mPA.setX(0);
@@ -2403,6 +2419,11 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             normaliseSelection();
             if (mMouseTrackLevel == 2) {
                 expandSelectionToWords();
+                // On a separator the bounds cross, and the drag stays anchored to the clicked cell
+                if (mPA.x() <= mPB.x()) {
+                    mDragStart = mPA;
+                    mDragSelectionEnd = mPB;
+                }
             } else {
                 mPA.setX(0);
                 mPB.setX(mpBuffer->buffer.at(mPB.y()).size());
@@ -2588,7 +2609,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
 bool TTextEdit::hasSelectedText() const
 {
     // A double-click on a word separator highlights nothing, yet leaves a
-    // region behind and mPA one cell past mPB
+    // region behind and mPA past mPB
     const bool endpointsCrossed = mPA.y() > mPB.y() || (mPA.y() == mPB.y() && mPA.x() > mPB.x());
     return !mpBuffer->lineBuffer.isEmpty() && !mSelectedRegion.isEmpty() && !endpointsCrossed;
 }
@@ -4087,6 +4108,24 @@ void TTextEdit::reportCodepointErrors()
 }
 #endif
 
+void TTextEdit::moveCaretToLink(bool first)
+{
+    int line = 0;
+    int column = 0;
+    if (!mpBuffer || !mpBuffer->findNextLink(0, -1, line, column)) {
+        return;
+    }
+    // Walked forward rather than searched back from the end, which would skip a link the end sits on
+    int nextLine = line;
+    int nextColumn = column;
+    bool wrapped = false;
+    while (!first && mpBuffer->findNextLink(line, column, nextLine, nextColumn, &wrapped) && !wrapped) {
+        line = nextLine;
+        column = nextColumn;
+    }
+    setCaretPosition(line, column);
+}
+
 void TTextEdit::setCaretPosition(int line, int column)
 {
     mCaretLine = line;
@@ -4487,16 +4526,22 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         }
     };
 
-    auto navigateToLink = [&](bool forward) {
+    // True when it handed the focus on to the script buttons, which the key press then belongs to
+    auto navigateToLink = [&](bool forward) -> bool {
         if (!mpBuffer) {
-            return;
+            return false;
         }
         int outLine = 0;
         int outCol = 0;
         bool wrapped = false;
         const bool found = forward ? mpBuffer->findNextLink(mCaretLine, mCaretColumn, outLine, outCol, &wrapped) : mpBuffer->findPreviousLink(mCaretLine, mCaretColumn, outLine, outCol, &wrapped);
+        // Past either end of the links, or with none, the focus goes on to the script buttons instead of wrapping,
+        // as a web page's controls follow its links
+        if ((!found || wrapped) && mpHost->mainConsoleView() && mpHost->mainConsoleView()->focusKeyboardButton(forward)) {
+            return true;
+        }
         if (!found) {
-            return;
+            return false;
         }
         newCaretLine = outLine;
         newCaretColumn = outCol;
@@ -4513,6 +4558,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 pMudlet->announce(message, QString(), true);
             }
         }
+        return false;
     };
 
     auto updateSelection = [&](bool useNewColumn) {
@@ -4753,25 +4799,37 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         }
 
         if (!(event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier))) {
-            navigateToLink(true);
+            if (navigateToLink(true)) {
+                event->accept();
+                return;
+            }
         }
         break;
     }
     case Qt::Key_Backtab: {
-        navigateToLink(false);
+        if (navigateToLink(false)) {
+            event->accept();
+            return;
+        }
         break;
     }
     // Alternate forward/backward link navigation for cases where Tab or
     // Shift+Tab is consumed by the caret-mode toggle or reassigned by the user.
     case Qt::Key_BracketRight: {
         if (event->modifiers().testFlag(Qt::ControlModifier)) {
-            navigateToLink(true);
+            if (navigateToLink(true)) {
+                event->accept();
+                return;
+            }
         }
         break;
     }
     case Qt::Key_BracketLeft: {
         if (event->modifiers().testFlag(Qt::ControlModifier)) {
-            navigateToLink(false);
+            if (navigateToLink(false)) {
+                event->accept();
+                return;
+            }
         }
         break;
     }

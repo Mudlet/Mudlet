@@ -598,36 +598,70 @@ private slots:
         QCOMPARE(luaL_dostring(L, "innerSavedTable, holderSavedTable = nil"), 0);
     }
 
-    // Design pin. Two members of one saved table that are the same Lua table
-    // are not both exported: the profile XML has no way to say "these two names
-    // are one table", so the export would have to write the subtree once per
-    // name. On a profile whose saved table holds a UI object that multiplies
-    // out - measured at 5.5x the file, and big enough for the 10,000-item limit
-    // to then drop whole branches - so the walk keeps one copy per saved name
-    // and no more. Members the user ticks individually are exported in full.
-    void test_twoMembersOfASavedTableSharingATableExportOnce()
+    // Two members of one saved table that are the same plain table both export,
+    // as the profile XML can only hold a second name as a second copy (#10721).
+    // Shared objects (tables with a metatable) export once: a save cannot bring
+    // an object back anyway, and the UI objects packages keep in saved tables
+    // share so many that copying them multiplied the file 5.5x (#9762).
+    void test_twoMembersOfASavedTableSharingATableBothExport()
     {
         LuaInterface* lI = mpHost->getLuaInterface();
         VarUnit* vu = lI->getVarUnit();
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
-        QCOMPARE(luaL_dostring(L, "memberShareTable = {} memberShareTable.first = {member = 'member share value'} memberShareTable.second = memberShareTable.first"), 0);
+        QCOMPARE(luaL_dostring(L,
+                               "memberShareTable = {} memberShareTable.first = {member = 'member share value'} memberShareTable.second = memberShareTable.first "
+                               "memberShareTable.objA = setmetatable({member = 'object share value'}, {}) memberShareTable.objB = memberShareTable.objA"),
+                 0);
         vu->savedVars.insert(qsl("memberShareTable"));
 
-        QString xml = exportProfileXml();
+        const QString xml = exportProfileXml();
         QVERIFY(!xml.isEmpty());
-        QCOMPARE(xml.count(qsl("member share value")), 1);
-
-        // ticking a member in the Variables view (which is what savedVars holds)
-        // is what asks for it to be written under its own name as well
-        vu->savedVars.insert(qsl("memberShareTable.first"));
-        vu->savedVars.insert(qsl("memberShareTable.second"));
-        xml = exportProfileXml();
         QCOMPARE(xml.count(qsl("member share value")), 2);
+        QCOMPARE(xml.count(qsl("object share value")), 1);
 
-        for (const auto& name : {qsl("memberShareTable"), qsl("memberShareTable.first"), qsl("memberShareTable.second")}) {
-            vu->savedVars.remove(name);
-        }
+        vu->savedVars.remove(qsl("memberShareTable"));
         QCOMPARE(luaL_dostring(L, "memberShareTable = nil"), 0);
+    }
+
+    // Plain tables shared at every level double with each level when each name
+    // is written as a copy, so the copying has to stop somewhere short of that.
+    void test_savedTableSharingTablesAtEveryLevelExportsInBoundedSize()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "local t = {leaf = 'shared leaf value'} for i = 1, 40 do t = {a = t, b = t} end aliasDoublingTable = t"), 0);
+        vu->savedVars.insert(qsl("aliasDoublingTable"));
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.count(qsl("<name>a</name>")) < 50000, "copies of shared tables must not grow without bound");
+
+        vu->savedVars.remove(qsl("aliasDoublingTable"));
+        QCOMPARE(luaL_dostring(L, "aliasDoublingTable = nil"), 0);
+    }
+
+    // The 10,000-item limit on a table inside a saved one counts each table
+    // once, so copies of a second name cannot push a branch that fitted
+    // before over it and drop the branch whole.
+    void test_aliasCopiesDoNotPushABranchOverTheItemLimit()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L,
+                               "local s = {marker = 'alias limit value'} for i = 1, 6000 do s[i] = i end "
+                               "aliasLimitTable = {holder = {tag = 'alias limit holder', a = s, b = s}}"),
+                 0);
+        vu->savedVars.insert(qsl("aliasLimitTable"));
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QCOMPARE(xml.count(qsl("alias limit holder")), 1);
+        QCOMPARE(xml.count(qsl("alias limit value")), 2);
+
+        vu->savedVars.remove(qsl("aliasLimitTable"));
+        QCOMPARE(luaL_dostring(L, "aliasLimitTable = nil"), 0);
     }
 
     // A table that holds itself must not send the walk round for ever.
@@ -1072,6 +1106,43 @@ private slots:
             vu->savedVars.remove(name);
         }
         QCOMPARE(luaL_dostring(L, "reloadSavedTable = nil"), 0);
+    }
+
+    // Two names inside one saved table for the same table both come back from a
+    // save, and the names that lead back up the walk do not stop it (#10721).
+    void test_aliasedMembersOfASavedTableSurviveAReload()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L,
+                               "aliasReloadTable = {profiles = {default = {colour = 'alias reload value'}}} "
+                               "aliasReloadTable.current = aliasReloadTable.profiles.default "
+                               "local cyc = {tag = 'cyc reload value'} cyc.self = cyc aliasReloadTable.cyc = cyc "
+                               "aliasReloadTable.rootRef = aliasReloadTable"),
+                 0);
+        vu->savedVars.insert(qsl("aliasReloadTable"));
+
+        const QString xmlPath = MudletApp::getMudletPath(enums::profileHomePath, mHostname) + qsl("/alias-reload-test.xml");
+        auto writer = std::make_shared<XMLexport>(mpHost);
+        QVERIFY2(writer->exportPackage(xmlPath, true, false), "the profile could not be exported");
+
+        QCOMPARE(luaL_dostring(L, "aliasReloadTable = nil"), 0);
+
+        QFile file(xmlPath);
+        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
+        XMLimport importer(mpHost);
+        auto [imported, importError] = importer.importPackage(&file);
+        file.close();
+        QFile::remove(xmlPath);
+        QVERIFY2(imported, qPrintable(importError));
+
+        QVERIFY2(luaL_dostring(L, "assert(aliasReloadTable.profiles.default.colour == 'alias reload value')") == 0, "the first name for a shared table did not come back");
+        QVERIFY2(luaL_dostring(L, "assert(aliasReloadTable.current.colour == 'alias reload value')") == 0, "the second name for a shared table did not come back");
+        QVERIFY2(luaL_dostring(L, "assert(aliasReloadTable.cyc.tag == 'cyc reload value')") == 0, "a table holding itself did not come back with its other members");
+
+        vu->savedVars.remove(qsl("aliasReloadTable"));
+        QCOMPARE(luaL_dostring(L, "aliasReloadTable = nil"), 0);
     }
 
     // The session after the one test_savedTableReachedByAnotherGlobalSurvivesAReload

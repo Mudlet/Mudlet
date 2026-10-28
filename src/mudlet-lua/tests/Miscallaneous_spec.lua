@@ -2740,95 +2740,137 @@ describe("Tests C++ functions in the Miscallaneous category", function()
     end)
 
     describe("Tests the functionality of denyCurrentSend", function()
-      it("returns nothing", function()
-        finally(function()
-          -- the flag is consumed by the next send, so hand it one rather than
-          -- leaving the following specs' sends blocked
-          send("", false)
-        end)
+      -- Offline, an allowed send shows only as the once-per-encoding warning for a command it cannot encode
+      local unencodable = "\228\184\128" -- U+4E00, in no ISO 8859 encoding
+      local restore, originalMode
 
-        assert.equals(0, select('#', denyCurrentSend()))
+      local function clearWarning()
+        assert.is_true(setServerEncoding(getServerEncoding() == "ISO 8859-1" and "ISO 8859-2" or "ISO 8859-1"))
+      end
+
+      local function sentSince(mark, command)
+        return containsWrapped(textFrom(mark), "Tried to send '" .. command)
+      end
+
+      -- for every spec that expects a command to be stopped: without it a silent
+      -- deny would pass even if the warning had stopped being posted at all
+      local function assertProbeWorks()
+        clearWarning()
+        local mark = getLastLineNumber("main")
+        send("mudletSpecProbe" .. unencodable, false)
+        assert.is_true(sentSince(mark, "mudletSpecProbe"), "an allowed send was not reported, so this spec cannot tell the two apart")
+      end
+
+      before_each(function()
+        restore = restoreServerEncoding()
+        originalMode = getConfig("showSentText", true)
+        assert.is_true(setConfig("showSentText", "script"))
+        clearWarning()
       end)
 
-      it("stops the command that follows it from being sent", function()
-        -- Nothing goes on the wire offline, so what makes a send observable is
-        -- the warning Mudlet posts when a command cannot be encoded for the
-        -- game: it is only reached once the send has been allowed. Switching
-        -- the encoding first clears the once-per-encoding warning flag.
-        local probeEncoding = (getServerEncoding() == "ISO 8859-1") and "ISO 8859-2" or "ISO 8859-1"
-        finally(restoreServerEncoding())
-        assert.is_true(setServerEncoding(probeEncoding))
-        -- U+4E00, which no ISO 8859 encoding can represent
-        local unencodable = "\228\184\128"
+      after_each(function()
+        setConfig("showSentText", originalMode)
+        restore()
+      end)
 
-        denyCurrentSend()
+      it("returns nil and a message outside a send request handler", function()
+        local ok, err = denyCurrentSend()
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "sysDataSendRequest"), tostring(err))
+      end)
+
+      it("stops the command its send request handler is processing, and only that one", function()
+        local returned
+        local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
+          if sending:find("^mudletSpecDenied") then
+            returned = select('#', denyCurrentSend())
+          end
+        end)
+        finally(function() killAnonymousEventHandler(handler) end)
+
         local mark = getLastLineNumber("main")
         send("mudletSpecDenied" .. unencodable, false)
-        local afterDeny = textFrom(mark)
-
-        mark = getLastLineNumber("main")
-        send("mudletSpecAllowed" .. unencodable, false)
-        local afterAllow = textFrom(mark)
-
-        -- checked first: without it a silent deny spec would pass even if the
-        -- warning had stopped being posted at all
-        assert.is_true(contains(afterAllow, "mudletSpecAllowed"), "the allowed send was not reported, so this spec cannot tell the two apart")
-        assert.is_false(contains(afterDeny, "mudletSpecDenied"), "the denied command was sent anyway")
+        local deniedSent = sentSince(mark, "mudletSpecDenied")
+        assertProbeWorks()
+        assert.equals(0, returned)
+        assert.is_false(deniedSent, "the denied command was sent anyway")
       end)
 
-      describe("when raised by an alias", function()
-        -- as above, but matching the warning's text: the echo of a blocked command
-        -- must not pass for a sent one
-        local unencodable = "\228\184\128"
-        local restore, originalMode
+      it("lets a one-shot handler named by string deny one command and go", function()
+        local handler = registerAnonymousEventHandler("sysDataSendRequest", "denyCurrentSend", true)
+        finally(function() killAnonymousEventHandler(handler) end)
 
-        local function clearWarning()
-          assert.is_true(setServerEncoding(getServerEncoding() == "ISO 8859-1" and "ISO 8859-2" or "ISO 8859-1"))
-        end
+        local mark = getLastLineNumber("main")
+        send("mudletSpecOneShotDenied" .. unencodable, false)
+        local deniedSent = sentSince(mark, "mudletSpecOneShotDenied")
+        assertProbeWorks()
+        assert.is_false(deniedSent, "the one-shot handler did not deny the command")
+      end)
 
-        local function sentSince(mark, command)
-          return containsWrapped(textFrom(mark), "Tried to send '" .. command)
-        end
-
-        before_each(function()
-          restore = restoreServerEncoding()
-          originalMode = getConfig("showSentText", true)
-          assert.is_true(setConfig("showSentText", "script"))
-          clearWarning()
-        end)
-
-        after_each(function()
-          -- a deny left over by a failure here would block the following specs' sends
-          send("", false)
-          setConfig("showSentText", originalMode)
-          restore()
-        end)
-
-        it("is spent by the alias pass it was raised in", function()
-          local denyOnly = tempAlias("^mudletSpecDenyNoSend$", function() denyCurrentSend() end)
-          local denyAndSend = tempAlias("^mudletSpecDenyAndSend$", function()
+      it("keeps the deny of a send made by a handler to that send", function()
+        local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
+          if sending:find("^mudletSpecNestedDenied") then
             denyCurrentSend()
-            send("mudletSpecDeniedInAlias" .. unencodable, false)
-          end)
-          finally(function()
-            killAlias(denyOnly)
-            killAlias(denyAndSend)
-          end)
+          elseif sending:find("^mudletSpecOuterAllowed") then
+            send("mudletSpecNestedDenied" .. unencodable, false)
+          end
+        end)
+        finally(function() killAnonymousEventHandler(handler) end)
+
+        local mark = getLastLineNumber("main")
+        send("mudletSpecOuterAllowed" .. unencodable, false)
+        assert.is_false(sentSince(mark, "mudletSpecNestedDenied"), "the nested send was sent although its handler denied it")
+        assert.is_true(sentSince(mark, "mudletSpecOuterAllowed"), "the nested send's deny stopped the command being handled")
+      end)
+
+      describe("outside a send request handler", function()
+        it("does not stop the next command", function()
+          denyCurrentSend()
+          local mark = getLastLineNumber("main")
+          send("mudletSpecAfterBareDeny" .. unencodable, false)
+          assert.is_true(sentSince(mark, "mudletSpecAfterBareDeny"), "a deny made outside a handler swallowed the next command")
+        end)
+
+        it("does not stop the first command of a sendAll", function()
+          denyCurrentSend()
+          local mark = getLastLineNumber("main")
+          sendAll("mudletSpecFirstOfAll" .. unencodable, "mudletSpecSecondOfAll", false)
+          assert.is_true(sentSince(mark, "mudletSpecFirstOfAll"), "a deny made outside a handler swallowed the first command of a sendAll")
+        end)
+
+        it("does not stop the command after a trigger that sent nothing", function()
+          local trigger = tempTrigger("mudletSpecDenyTrigger", function() denyCurrentSend() end)
+          finally(function() killTrigger(trigger) end)
+
+          feedTriggers("mudletSpecDenyTrigger\n")
+          local mark = getLastLineNumber("main")
+          send("mudletSpecAfterTrigger" .. unencodable, false)
+          assert.is_true(sentSince(mark, "mudletSpecAfterTrigger"), "a trigger's deny swallowed the next command")
+        end)
+
+        it("does not stop the command after an alias that sent nothing", function()
+          local denyOnly = tempAlias("^mudletSpecDenyNoSend$", function() denyCurrentSend() end)
+          finally(function() killAlias(denyOnly) end)
 
           expandAlias("mudletSpecDenyNoSend", false)
           local mark = getLastLineNumber("main")
           send("mudletSpecAfterDenyOnly" .. unencodable, false)
           assert.is_true(sentSince(mark, "mudletSpecAfterDenyOnly"), "an alias that denied and sent nothing swallowed the next command")
-
-          clearWarning()
-          mark = getLastLineNumber("main")
-          expandAlias("mudletSpecDenyAndSend", false)
-          assert.is_false(sentSince(mark, "mudletSpecDeniedInAlias"), "the alias's own send was not denied")
-          send("mudletSpecAfterDenyAndSend" .. unencodable, false)
-          assert.is_true(sentSince(mark, "mudletSpecAfterDenyAndSend"), "the command after the alias was swallowed")
         end)
 
-        it("is spent by each command of a line split by the command separator", function()
+        it("does not stop a send from the alias that raised it", function()
+          local denyAndSend = tempAlias("^mudletSpecDenyAndSend$", function()
+            denyCurrentSend()
+            send("mudletSpecSentByDenyingAlias" .. unencodable, false)
+          end)
+          finally(function() killAlias(denyAndSend) end)
+
+          local mark = getLastLineNumber("main")
+          expandAlias("mudletSpecDenyAndSend", false)
+          assert.is_true(sentSince(mark, "mudletSpecSentByDenyingAlias"), "the alias's own send was denied")
+        end)
+
+        it("does not stop the command after the command separator", function()
           local separator = getCommandSeparator()
           assert.is_true(separator ~= "", "the profile has no command separator, so nothing gets split")
           local denyOnly = tempAlias("^mudletSpecDenyNoSend$", function() denyCurrentSend() end)
@@ -2839,21 +2881,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(sentSince(mark, "mudletSpecAfterSeparator"), "the command after the separator was swallowed")
         end)
 
-        it("is spent even when an earlier deny was spent in the same pass", function()
-          local sendThenDeny = tempAlias("^mudletSpecSendThenDeny$", function()
-            send("mudletSpecInner", false)
-            denyCurrentSend()
-          end)
-          finally(function() killAlias(sendThenDeny) end)
-
-          denyCurrentSend()
-          expandAlias("mudletSpecSendThenDeny", false)
-          local mark = getLastLineNumber("main")
-          send("mudletSpecAfterReDeny" .. unencodable, false)
-          assert.is_true(sentSince(mark, "mudletSpecAfterReDeny"), "the deny raised after the alias's send swallowed the next command")
-        end)
-
-        it("is spent by a nested alias pass, not left for the outer alias's next send", function()
+        it("does not stop the send of an outer alias that expanded the denying one", function()
           local inner = tempAlias("^mudletSpecDenyInner$", function() denyCurrentSend() end)
           local outer = tempAlias("^mudletSpecOuter$", function()
             expandAlias("mudletSpecDenyInner", false)
@@ -2868,10 +2896,51 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           expandAlias("mudletSpecOuter", false)
           assert.is_true(sentSince(mark, "mudletSpecAfterNested"), "the inner alias's deny blocked the outer alias's send")
         end)
+      end)
 
-        -- a sysDataSendRequest handler can deny a command and expand an alias in
-        -- its place: that alias's pass must not spend the deny meant for the command
-        it("still stops a command whose send request handler expands an alias that sends nothing", function()
+      describe("in a send request handler that expands an alias", function()
+        -- the alias re-arms the warning for the original to show if it slips through;
+        -- an assert there would only reach the error console
+        local warningCleared
+        local function replacingAlias(denyFirst)
+          warningCleared = false
+          local replacement = tempAlias("^mudletSpecReplacement$", function()
+            send("mudletSpecReplacementSent" .. unencodable, false)
+            warningCleared = setServerEncoding(getServerEncoding() == "ISO 8859-1" and "ISO 8859-2" or "ISO 8859-1")
+          end)
+          local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
+            if sending:find("^mudletSpecOriginal") then
+              if denyFirst then
+                denyCurrentSend()
+              end
+              expandAlias("mudletSpecReplacement", false)
+              if not denyFirst then
+                denyCurrentSend()
+              end
+            end
+          end)
+          return function()
+            killAlias(replacement)
+            killAnonymousEventHandler(handler)
+          end
+        end
+
+        for _, denyFirst in ipairs({true, false}) do
+          it("sends the alias's replacement and stops the original, denying " .. (denyFirst and "first" or "last"), function()
+            finally(replacingAlias(denyFirst))
+
+            local mark = getLastLineNumber("main")
+            send("mudletSpecOriginal" .. unencodable, false)
+            local replacementSent = sentSince(mark, "mudletSpecReplacementSent")
+            local originalSent = sentSince(mark, "mudletSpecOriginal")
+            assertProbeWorks()
+            assert.is_true(warningCleared, "the alias could not clear the warning, so the original's send would go unseen")
+            assert.is_true(replacementSent, "the replacement the alias sent was blocked")
+            assert.is_false(originalSent, "the denied command was sent anyway")
+          end)
+        end
+
+        it("still stops the command when the alias sends nothing", function()
           local silent = tempAlias("^mudletSpecSilentReplacement$", function() end)
           local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
             if sending:find("mudletSpecReplaced", 1, true) then
@@ -2887,15 +2956,11 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           local mark = getLastLineNumber("main")
           send("mudletSpecReplaced" .. unencodable, false)
           local deniedSent = sentSince(mark, "mudletSpecReplaced")
-
-          clearWarning()
-          mark = getLastLineNumber("main")
-          send("mudletSpecAllowedAfterReplace" .. unencodable, false)
-          assert.is_true(sentSince(mark, "mudletSpecAllowedAfterReplace"), "the allowed send was not reported, so this spec cannot tell the two apart")
+          assertProbeWorks()
           assert.is_false(deniedSent, "the denied command was sent anyway")
         end)
 
-        it("stops a command whose send request handler expands an alias that denies it", function()
+        it("stops the command when the alias denies it", function()
           local guard = tempAlias("^mudletSpecGuard (.*)$", function()
             if matches[2]:find("mudletSpecGuarded", 1, true) then
               denyCurrentSend()
@@ -2918,16 +2983,12 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           mark = getLastLineNumber("main")
           expandAlias("mudletSpecGuardedTyped" .. unencodable, false)
           local typedSent = sentSince(mark, "mudletSpecGuardedTyped")
-
-          clearWarning()
-          mark = getLastLineNumber("main")
-          send("mudletSpecAllowedAfterGuard" .. unencodable, false)
-          assert.is_true(sentSince(mark, "mudletSpecAllowedAfterGuard"), "the allowed send was not reported, so this spec cannot tell the two apart")
+          assertProbeWorks()
           assert.is_false(scriptSendSent, "the command the guard alias denied was sent anyway")
           assert.is_false(typedSent, "the typed command the guard alias denied was sent anyway")
         end)
 
-        it("stops a command whose send request handler expands an alias that leaves the deny to a nested alias", function()
+        it("stops the command when the alias leaves the deny to a nested alias", function()
           local rule = tempAlias("^mudletSpecRule (.*)$", function()
             if matches[2]:find("mudletSpecDelegated", 1, true) then
               denyCurrentSend()
@@ -2950,11 +3011,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           local mark = getLastLineNumber("main")
           send("mudletSpecDelegated" .. unencodable, false)
           local delegatedSent = sentSince(mark, "mudletSpecDelegated")
-
-          clearWarning()
-          mark = getLastLineNumber("main")
-          send("mudletSpecAllowedAfterDelegated" .. unencodable, false)
-          assert.is_true(sentSince(mark, "mudletSpecAllowedAfterDelegated"), "the allowed send was not reported, so this spec cannot tell the two apart")
+          assertProbeWorks()
           assert.is_false(delegatedSent, "the command the nested alias denied was sent anyway")
         end)
       end)

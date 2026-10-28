@@ -1273,6 +1273,9 @@ void cTelnet::finishDisconnection()
         }
     }
 
+    if (mpHost && mpHost->mpMedia) {
+        mpHost->mpMedia->resetListenerFacing();
+    }
     emit signal_disconnected(mpHost);
 
     // Double-check Host is still valid before raising event
@@ -1831,18 +1834,22 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
 {
     data.remove(QChar::LineFeed);
 
+    bool allowed = true;
     if (Q_LIKELY(permitDataSendRequestEvent)) {
         TEvent event{};
         event.mArgumentList.append(qsl("sysDataSendRequest"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(data);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        // A deny binds to the command being dispatched: a handler's own send gets a fresh one and must not spend this one
+        const bool outerAllowed = std::exchange(mpHost->mAllowToSendCommand, true);
         ++mSendRequestDispatchDepth;
         mpHost->raiseEvent(event);
         --mSendRequestDispatchDepth;
+        allowed = std::exchange(mpHost->mAllowToSendCommand, outerAllowed);
     }
 
-    if (mpHost->mAllowToSendCommand) {
+    if (allowed) {
         std::string outData;
         // The event is withheld only for passwords
         const auto encodingWarning = [&]() {
@@ -1938,7 +1945,6 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
 
         return sent;
     }
-    mpHost->mAllowToSendCommand = true;
     return false;
 }
 
@@ -3564,7 +3570,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && Discord::self()->libraryLoaded()) {
                     supportsList += R"(, "External.Discord 1")";
                 }
-                supportsList += R"(, "Client.Media 1", "Char.Login 2"])";
+                supportsList += R"(, "Client.Media 2", "Char.Login 2"])";
                 output += supportsList;
             }
             output += TN_IAC;

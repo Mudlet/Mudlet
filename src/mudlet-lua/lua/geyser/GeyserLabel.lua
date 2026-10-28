@@ -13,17 +13,46 @@ Geyser.Label = Geyser.Window:new({
   fillBg = 1, })
 Geyser.Label.scrollV = {}
 Geyser.Label.scrollH = {}
+
+-- every span the converters write sets font-weight, font-style and text-decoration,
+-- which overrides a <b>, <i>, <u> or <s> wrapped around them
+local function addLabelTextStyle(resetFormat, ft)
+  resetFormat.bold = resetFormat.bold or ft.bold
+  resetFormat.italic = resetFormat.italic or ft.italics
+  resetFormat.underline = resetFormat.underline or ft.underline
+  resetFormat.strikeout = resetFormat.strikeout or ft.strikethrough
+end
 --- Prints a message to the window.  All parameters are optional and if not
--- specified will use the last set value.
+-- specified will use the last set value. Left out, the message is shown again
+-- the way it was last put up, so one set by decho, hecho or cecho keeps its colours.
 -- @param message The message to print. Can contain html formatting.
 -- @param color The color to use. Accepts color names like "red", decho codes like "<255,0,0>", and hex codes like "#ff0000". If no color formatting is needed it is possible to use 'nocolor' which allows color formatting by using :setStyleSheet
 -- @param format A format list to use. 'c' - center, 'l' - left, 'r' - right,  'b' - bold, 'i' - italics, 'u' - underline, 's' - strikethrough,  '##' - font size.  For example, "cb18" specifies center bold 18pt font be used.  Order doesn't matter.
 function Geyser.Label:echo(message, color, format)
-  message = message or self.message
-  self.message = message
+  -- the setters re-render through here, so a message put up by decho, hecho or
+  -- cecho is shown again through that function rather than as raw markup
+  local replay = not message and self.echoType and self.message == self.echoMessage
+  if not replay then
+    -- false, not nil, so a flavour inherited from a prototype label is shadowed
+    self.echoType = false
+    message = message or self.message
+    self.message = message
+  end
   color = color or self.fgColor
   self.fgColor = color
   if format then self:processFormatString(format) end
+  if replay then
+    -- a colour the plain path would raise on raises here too, before the flavour
+    -- function has a chance to drop the flavour
+    if color ~= "nocolor" then
+      Geyser.Color.hex(color)
+    end
+    local ok, err = Geyser.Label[self.echoType](self)
+    if ok == nil and err ~= nil then
+      debugc(string.format("Geyser.Label:echo(): could not show '%s' again through %s: %s", self.name, self.echoType, tostring(err)))
+    end
+    return
+  end
 
   local ft = self.formatTable
   local fs = ft.fontSize or tostring(self.fontSize)
@@ -33,9 +62,9 @@ function Geyser.Label:echo(message, color, format)
   local wrap = self.echoWrap
   if not (wrap and wrap.alignment == ft.alignment and wrap.bold == ft.bold and wrap.italics == ft.italics
       and wrap.underline == ft.underline and wrap.strikethrough == ft.strikethrough
-      and wrap.font == self.font and wrap.fontSize == fs and wrap.hex == hex) then
+      and wrap.font == self.font and wrap.fontSize == fs) then
     wrap = {alignment = ft.alignment, bold = ft.bold, italics = ft.italics, underline = ft.underline,
-            strikethrough = ft.strikethrough, font = self.font, fontSize = fs, hex = hex}
+            strikethrough = ft.strikethrough, font = self.font, fontSize = fs}
     local open, close = "", ""
     if ft.bold then
       open, close = "<b>", "</b>"
@@ -56,10 +85,18 @@ function Geyser.Label:echo(message, color, format)
     if alignment ~= "" then
       alignment = string.format([[align="%s" ]], alignment)
     end
-    local style = hex and [[ style="color: ]] .. hex .. [[; ]] or [[ style=" ]]
-    wrap.open = [[<div ]] .. alignment .. style .. "font-size: " .. fs .. [[pt; ">]] .. open
+    local sized = "font-size: " .. fs .. [[pt; ">]] .. open
+    wrap.colored = [[<div ]] .. alignment .. [[ style="color: ]]
+    wrap.sized = "; " .. sized
+    wrap.uncolored = [[<div ]] .. alignment .. [[ style=" ]] .. sized
     wrap.close = close .. [[</div>]]
     self.echoWrap = wrap
+  end
+  -- the colour is spliced in on its own, as a script cycling through colours
+  -- changes it on every echo
+  if wrap.open == nil or wrap.hex ~= hex then
+    wrap.open = hex and wrap.colored .. hex .. wrap.sized or wrap.uncolored
+    wrap.hex = hex
   end
   echo(self.name, wrap.open .. message .. wrap.close)
   self:autoAdjustSize()
@@ -84,13 +121,19 @@ function Geyser.Label:decho(message)
     return nil, err
   end
   self.message = message
+  -- the flavour is only set once the message has converted, so a message that
+  -- raises is shown plain by the next setter rather than replayed
+  self.echoType = false
   -- Override foreground with label's fgColor property if set
-  if self.fgColor and self.fgColor ~= "" then
+  if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
   end
+  addLabelTextStyle(resetFormat, self.formatTable)
 
   -- Convert decho formatted text to HTML, preserving label's colors
   local htmlContent = decho2html(message, resetFormat)
+  self.echoType = "decho"
+  self.echoMessage = message
 
   -- Apply label's formatting settings
   local ft = self.formatTable
@@ -137,13 +180,19 @@ function Geyser.Label:hecho(message)
     return nil, err
   end
   self.message = message
+  -- the flavour is only set once the message has converted, so a message that
+  -- raises is shown plain by the next setter rather than replayed
+  self.echoType = false
   -- Override foreground with label's fgColor property if set
-  if self.fgColor and self.fgColor ~= "" then
+  if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
   end
+  addLabelTextStyle(resetFormat, self.formatTable)
 
   -- Convert hecho formatted text to HTML, preserving label's colors
   local htmlContent = hecho2html(message, resetFormat)
+  self.echoType = "hecho"
+  self.echoMessage = message
 
   -- Apply label's formatting settings
   local ft = self.formatTable
@@ -190,13 +239,19 @@ function Geyser.Label:cecho(message)
     return nil, err
   end
   self.message = message
+  -- the flavour is only set once the message has converted, so a message that
+  -- raises is shown plain by the next setter rather than replayed
+  self.echoType = false
   -- Override foreground with label's fgColor property if set
-  if self.fgColor and self.fgColor ~= "" then
+  if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
   end
+  addLabelTextStyle(resetFormat, self.formatTable)
 
   -- Convert cecho formatted text to HTML, preserving label's colors
   local htmlContent = cecho2html(message, resetFormat)
+  self.echoType = "cecho"
+  self.echoMessage = message
 
   -- Apply label's formatting settings
   local ft = self.formatTable
@@ -525,6 +580,8 @@ end
 -- call, and leaves the label's text where it is. It also takes the stylesheet's
 -- background-image declarations that are not inside a {...} rule out, see
 -- Geyser.Label:resetBackgroundImage.
+-- An empty imageFileName takes off the SVG layer, a raster image, a movie and any
+-- text, and leaves the stylesheet alone.
 -- Returns true, or nil and an error message when the file cannot be read.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setBackgroundImage (imageFileName)
@@ -886,6 +943,19 @@ function Geyser.Label:setAccessibleRole(role)
   if ok then
     self.accessibleRole = role
     settleMenuLabelRole(self)
+  end
+  return ok, err
+end
+
+--- Sets whether a screen reader announces the label's new text when it changes, for a label
+-- showing something the player should hear about, such as a status or an alert. Only heard
+-- with the profile's accessibleLabels setting on; text that hasn't changed is not repeated.
+-- @param mode "polite" waits for the screen reader to finish, "assertive" interrupts it, "off" stops announcing
+-- @return true, or nil and why the label refused it
+function Geyser.Label:setLiveRegion(mode)
+  local ok, err = setLabelLiveRegion(self.name, mode)
+  if ok then
+    self.liveRegion = mode
   end
   return ok, err
 end
@@ -1407,8 +1477,8 @@ function Geyser.Label:new (cons, container)
 
   -- The constraints were copied onto the label already, so each is cleared before its setter
   -- applies it, or a value the label refused would stay on the object
-  local accessibleName, accessibleRole = me.accessibleName, me.accessibleRole
-  me.accessibleName, me.accessibleRole = nil, nil
+  local accessibleName, accessibleRole, liveRegion = me.accessibleName, me.accessibleRole, me.liveRegion
+  me.accessibleName, me.accessibleRole, me.liveRegion = nil, nil, nil
   if accessibleName then
     local ok, err = me:setAccessibleName(accessibleName)
     if not ok then
@@ -1420,6 +1490,19 @@ function Geyser.Label:new (cons, container)
     local ok, err = me:setAccessibleRole(accessibleRole)
     if not ok then
       debugc(string.format("Geyser.Label:new(): accessibleRole refused for '%s': %s", me.name, tostring(err)))
+    end
+  end
+
+  if liveRegion then
+    -- setLabelLiveRegion raises on a non-string, which would leave this label half built
+    local ok, err
+    if type(liveRegion) == "string" then
+      ok, err = me:setLiveRegion(liveRegion)
+    else
+      err = string.format("liveRegion must be a string, got %s", type(liveRegion))
+    end
+    if not ok then
+      debugc(string.format("Geyser.Label:new(): liveRegion refused for '%s': %s", me.name, tostring(err)))
     end
   end
 

@@ -126,7 +126,6 @@ private:
             serverSaysEcho(TN_WONT);
         }
         mpHost->setRemoteEchoingActive(false);
-        mpHost->mAllowToSendCommand = true;
         mpServer->forgetReceived();
     }
 

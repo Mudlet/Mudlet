@@ -273,6 +273,17 @@ describe("Tests what feedTriggers will and will not carry", function()
     return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "")
   end
 
+  -- textFrom() joins the lines, so it cannot tell one line from two
+  local function linesFrom(mark)
+    local shown = {}
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line ~= "" then
+        shown[#shown + 1] = line
+      end
+    end
+    return shown
+  end
+
   it("refuses text the game's encoding cannot carry instead of mangling it", function()
     assert.is_true(setServerEncoding("ASCII"))
     local mark = getLastLineNumber("main")
@@ -310,6 +321,48 @@ describe("Tests what feedTriggers will and will not carry", function()
 
     assert.is_true(feedTriggers("FeedEncUtf8 \195\169 \226\130\172\n"))
     assert.is_true(contains(textFrom(mark), "FeedEncUtf8 \195\169 \226\130\172"), "the UTF-8 text did not arrive unchanged")
+  end)
+
+  -- Each feed is whole, so an escape sequence it leaves unfinished is never
+  -- going to be finished, and must not eat the start of the next feed
+  it("does not finish one feed's unfinished escape sequence with the next feed", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    local mark = getLastLineNumber("main")
+
+    -- had the open sequence carried over, the "C" would have ended it as its
+    -- final byte and been lost
+    assert.is_true(feedTriggers("FeedHalfEscape \27[5"))
+    assert.is_true(feedTriggers("Cont\n"))
+    assert.same({"FeedHalfEscape Cont"}, linesFrom(mark))
+  end)
+
+  -- a trigger feeding text runs while the feed that fired it is still being
+  -- read, and that text is whole too
+  it("does not finish a nested feed's unfinished escape sequence with the text after it", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    local trigger = tempExactMatchTrigger("FeedNestOuter", function()
+      feedTriggers("FeedNestFirst \27[5")
+      feedTriggers("Cont sibling\n")
+      feedTriggers("FeedNestLast \27[5")
+    end)
+    finally(function() killTrigger(trigger) end)
+    local mark = getLastLineNumber("main")
+
+    assert.is_true(feedTriggers("FeedNestOuter\nCont outer\n"))
+    assert.same({"FeedNestOuter", "FeedNestFirst Cont sibling", "FeedNestLast Cont outer"}, linesFrom(mark))
+  end)
+
+  it("does not pair one feed's unfinished double byte character with the next feed", function()
+    local original = getServerEncoding()
+    finally(function() setServerEncoding(original) end)
+    assert.is_true(setServerEncoding("BIG5"))
+    local mark = getLastLineNumber("main")
+
+    -- In Big5 0xA4 0x5A is one character. A colour code after the lead byte
+    -- has it held for the trail byte, which a whole feed has no more of.
+    assert.is_true(feedTriggers("FeedHalfBig5 " .. string.char(0xA4) .. "\27[0m", false))
+    assert.is_true(feedTriggers("Z\n", false))
+    assert.same({"FeedHalfBig5 \239\191\189Z"}, linesFrom(mark))
   end)
 
   -- A Lua string can hold a NUL and the text after it is still the caller's;
@@ -611,6 +664,10 @@ describe("Tests the functionality of alert", function()
     assertArgError(function() return alert(-0.001) end, "is optional but if given must be zero or greater")
   end)
 
+  it("refuses a NaN duration such as 0/0", function()
+    assertArgError(function() return alert(0/0) end, "is optional but if given must be zero or greater")
+  end)
+
   it("takes no duration at all", function()
     assert.is_true(pcall(alert))
   end)
@@ -833,6 +890,8 @@ describe("Tests that the window functions refuse a window that does not exist", 
     {"setHexFgColor", function() return setHexFgColor(unknown, "FF0000") end},
     {"setHexBgColor", function() return setHexBgColor(unknown, "FF0000") end},
     {"clearUserWindow", function() return clearUserWindow(unknown) end},
+    {"closeUserWindow", function() return closeUserWindow(unknown) end},
+    {"cut", function() return cut(unknown) end},
   }
 
   for _, entry in ipairs(calls) do
@@ -860,6 +919,57 @@ describe("Tests that the window functions refuse a window that does not exist", 
     assert.are.same({nil, refusal}, {hideWindow("main")})
     assert.are.same({nil, refusal}, {moveWindow("main", 1, 1)})
     assert.are.same({nil, refusal}, {resizeWindow("main", 800, 600)})
+  end)
+end)
+
+describe("Tests that cut works on the window it is given", function()
+  it("cuts the selection in that window and leaves the main console alone", function()
+    local window = ("specContractsCut-%d-%d"):format(os.time(), math.random(100000))
+    assert.is_true(createMiniConsole(window, 0, 0, 200, 100))
+    finally(function()
+      deleteMiniConsole(window)
+      deselect("main")
+      echo("main", "\n")
+    end)
+    echo(window, "keep cutme keep")
+    echo("main", "\nspecContracts line cut must not touch")
+    moveCursorEnd("main")
+    selectCurrentLine("main")
+    local line = getCurrentLine("main")
+    assert.is_true(selectString(window, "cutme", 1) > -1)
+
+    assert.are.same({true}, {cut(window)})
+
+    assert.are.same({"keep  keep"}, getLines(window, 0, 1))
+    assert.are.equal(line, getCurrentLine("main"))
+  end)
+
+  it("still cuts from the main console when given something other than a window name", function()
+    finally(function() echo("main", "\n") end)
+    deselect("main")
+    assert.are.same({true}, {cut(nil)})
+    echo("main", "\nspecContracts cutFromMain line")
+    moveCursorEnd("main")
+    assert.is_true(selectString("main", "cutFromMain ", 1) > -1)
+    assert.are.same({true}, {cut(5)})
+    assert.are.equal("specContracts line", getCurrentLine("main"))
+  end)
+end)
+
+describe("Tests that closeUserWindow answers what it did", function()
+  it("answers true for a window it closes", function()
+    local window = ("specContractsClose-%d-%d"):format(os.time(), math.random(100000))
+    assert.is_true(createMiniConsole(window, 0, 0, 200, 100))
+    finally(function() deleteMiniConsole(window) end)
+    assert.are.same({true}, {closeUserWindow(window)})
+  end)
+
+  it("names a label as a window it cannot close", function()
+    local label = ("specContractsCloseLabel-%d-%d"):format(os.time(), math.random(100000))
+    assert.is_true(createLabel(label, 0, 0, 10, 10, 1))
+    finally(function() deleteLabel(label) end)
+    local refusal = ('window "%s" is of type "label", which this function cannot use'):format(label)
+    assert.are.same({nil, refusal}, {closeUserWindow(label)})
   end)
 end)
 

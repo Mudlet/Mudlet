@@ -158,6 +158,17 @@ public:
     bool scaleLabelMovie(const QString& name, bool followLabelSize) override;
     // Not the open map, so map changes stay in this class, in step with the window registry.
     TLabel* labelWidget(const QString& name) const { return mLabelMap.value(name); }
+    // The enabled labels in this window Tab stops on - buttons, and labels with links - top to bottom then left to right
+    QList<TLabel*> keyboardButtons() const;
+    // From the main window's links: focuses the first, or going backwards the last, button; false when there are none
+    bool focusKeyboardButton(bool forward);
+    // Moves the focus from a label, focused or losing its focus as it goes, to the next or previous button by its
+    // place on screen, else out of the buttons
+    void focusButtonAfter(const TLabel* pLabel, bool next);
+    // To the first or last link when the player came from caret mode, else to the command line
+    void leaveKeyboardButtons(bool next);
+    // So that leaving the buttons later goes to the command line, not back to caret mode
+    void forgetCaretOrigin() { mKeyboardButtonsFromCaret = false; }
     // Copies a named window's current pos() and size() into Host's window registry (a label's into
     // its model), where Host::windowGeometry() reads them. Every view op that moves or resizes a
     // widget calls it, as a hidden widget gets no events to report its own.
@@ -234,6 +245,7 @@ public:
     bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible) override;
     bool setWindowScrolling(const QString& name, bool enabled) override;
     bool scrollWindowTo(const QString& name, int line, bool toEnd) override;
+    bool windowFollowsNewLines(const QString& name) override;
     std::optional<std::pair<bool, QString>> setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight) override;
     bool setWindowFontSize(const QString& name, int size) override;
     bool setWindowCommandLineVisible(const QString& name, bool visible) override;
@@ -380,6 +392,7 @@ private:
     TPasswordEntry* passwordEntry() const;
     dlgMapper* dockedMapper() const;
     void dockMapWidget(Qt::DockWidgetArea area);
+    void redockMapWidget(Qt::DockWidgetArea area);
     TDockWidget* createUserWindow(const QString& name);
     TToolBar* createToolBar(TAction* pAction, const QString& name);
     TEasyButtonBar* createEasyButtonBar(TAction* pRootAction, const QString& name);
@@ -435,6 +448,8 @@ private:
     void registerTextBox(const QString& name, TTextBox* pTextBox);
     void deregisterTextBox(TTextBox* pTextBox);
 
+    // Leaving the main window for the buttons turns caret mode off, so this remembers to turn it back on
+    bool mKeyboardButtonsFromCaret = false;
     // Private so Host's window registry stays in step with them; use the *Widget() accessors.
     QMap<QString, TLabel*> mLabelMap;
     // QPointer: a miniconsole in a user window dies with that dock unannounced, and a null entry
@@ -458,6 +473,7 @@ private:
     QString mPasswordEntryTypedAhead;
 
     bool mEnableClose = false;
+    bool mMainDisplayLayoutPending = false;
     std::unique_ptr<TMxpFrameWidgets> mpMxpFrameWidgets;
 };
 

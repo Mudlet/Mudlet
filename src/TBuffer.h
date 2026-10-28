@@ -431,6 +431,11 @@ public:
     // its oldest; csmDetachedTriggerPassLine once the line itself has been deleted.
     // Any other line number is handed back as it is.
     int triggerPassLineNow(int lineNumber) const;
+    // Where a span {start, length} of the line a trigger pass was handed is now, after
+    // scripts earlier in the pass inserted, removed or replaced text in it; text patterns
+    // match the line as it arrived, so their captures need this before they are used
+    std::pair<int, int> triggerPassSpanNow(int lineNumber, int from, int length) const;
+    bool triggerPassLineEdited(int lineNumber) const { return lineNumber >= 0 && lineNumber == mTriggerPassLineAsCommitted && !mTriggerPassLineEdits.empty(); }
     // What color matching reads for a pass line that has been deleted: its colors as
     // they arrived and its text as it was when it went
     const std::vector<TChar>& detachedTriggerPassLine() const { return mPreTriggerPassLine; }
@@ -449,6 +454,7 @@ public:
     void appendBuffer(const TBuffer& chunk);
     bool moveCursor(QPoint& where);
     int getLastLineNumber();
+    qint64 linesRemovedTotal() const { return mLinesRemovedTotal; }
     QStringList getEndLines(int);
     void clear();
     void clearLinkState(const QSet<int>& stillLiveLinkIds = {});
@@ -536,7 +542,8 @@ public:
     // stores a boolean whenever the line is a prompt one
     QList<bool> promptBuffer;
     // stores, for a line that word wrapping split off the one before it, how
-    // many spaces the break dropped between the two - a copy puts them back
+    // many spaces the break dropped between the two - a copy puts them back;
+    // for the first line of a paragraph, how many columns of wrap indent it carries
     QList<quint16> wrapGapBuffer;
     TLinkStore mLinkStore;
     int mLinesLimit = 10000;
@@ -561,13 +568,14 @@ private:
     void noteRemovedLinks(const std::vector<TChar>& line, qint64 lineNumber, int from = 0, int to = -1);
     THyperlinkVisibilityManager* hyperlinkVisibilityManagerOrNull();
     TChar currentFormat() const;
-    inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
+    inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, bool startsIndented, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
     void spliceInsertIntoPreTriggerPassLine(int y, int x, int count, const TChar& format);
     void spliceEraseFromPreTriggerPassLine(int y, int x, int xEnd);
     void wrapPreTriggerPassLine(const WrapInfo& firstSegment, int indentWidth);
     void noteFoundLines(int first, int last);
     void materialisePreTriggerPassLine(int y);
+    void noteTriggerPassLineEdit(int y, int x, int removed, int inserted);
     void triggerPassLinesRemoved(int from, int to);
     int remapLinkId(const TLinkStore& sourceLinkStore, int sourceLinkId, QHash<int, int>& remappedLinkIds, int line = -1);
     int calculateWrapPosition(int lineNumber, int begin, int end);
@@ -585,6 +593,8 @@ private:
     static bool doubleByteTrail(Decoder, quint8);
     void styleForCurrentLink(TChar&);
     void flushPendingLead();
+    void clearSequenceLatches();
+    void endLocalFeedSequences();
     void appendReplacementCharacter(TChar);
     static QStringDecoder multibyteDecoderFor(Decoder, const QByteArray&);
     bool decodeMultibyteSequence(QByteArrayView, QString&);
@@ -720,10 +730,20 @@ private:
     // The index the current trigger pass was handed, which mPreTriggerPassLineNumber moves on from
     int mTriggerPassLineAsCommitted = -1;
     QString mDetachedTriggerPassLineText;
+    struct TriggerPassLineEdit
+    {
+        int x = 0;
+        int removed = 0;
+        int inserted = 0;
+    };
+    // In the order made, each in the columns the line had at the time
+    std::vector<TriggerPassLineEdit> mTriggerPassLineEdits;
+    static void appendTriggerPassLineEdit(std::vector<TriggerPassLineEdit>& edits, int x, int removed, int inserted);
     struct EnclosingTriggerPass
     {
         int lineNumber = -1;
         QString detachedText;
+        std::vector<TriggerPassLineEdit> edits;
     };
     // The passes a trigger calling feedTriggers() has paused. A member, not saved in
     // commitLineData()'s frame, as their lines move with deleted, rewrapped and
@@ -749,8 +769,8 @@ private:
     QString mServerWrapPendingSegmentStart;
     // Used to hold the unprocessed bytes that could be left at the end of a
     // packet if we detect that there should be more - will be prepended to the
-    // next chunk of data on the same channel. On the local one that is whatever
-    // local source feeds next (a script, MMCP, MXP), as they all share it:
+    // next chunk of data from the Game Server. A local feed arrives whole, so
+    // it never carries any over (endLocalFeedSequences()):
     std::string mIncompleteSequenceBytes;
     // The lead byte of a double-byte character that the game restyled before
     // sending its trail byte, with the rendition that paints its left half;
@@ -758,12 +778,11 @@ private:
     char mPendingLead = 0;
     TChar mPendingLeadFormat;
 
-    // The parser sequence state (the mGot... latches and
-    // mIncompleteSequenceBytes) for whichever of the two data channels - Game
-    // Server stream or locally generated text - is not currently being
-    // processed; translateToPlainText() swaps it in around a local feed so
-    // that such text cannot consume or clear a latch belonging to a sequence
-    // split across Game Server packets (and vice versa):
+    // The Game Server stream's parser sequence state (the mGot... latches,
+    // mIncompleteSequenceBytes and the pending lead byte), parked here while
+    // translateToPlainText() runs a locally generated feed, which starts clean
+    // and ends whatever it left open, so that such text cannot consume or clear
+    // a latch belonging to a sequence split across Game Server packets:
     bool mLocalGotESC = false;
     bool mLocalGotEscCharset = false;
     bool mLocalGotCSI = false;
@@ -812,10 +831,10 @@ private:
     int mHeldSpoilerLinkId = 0;
     int mHeldSpoilerStartColumn = 0;
     int mHeldSpoilerContinuationLength = 0;
-    // A link with visibility settings closed while text is held back for joining. Where its text ends
-    // up is known only once that is resolved - joined, or committed as a line of its own - so it is
-    // registered then: from startColumn in the text it began in, through continuationLength
-    // characters of the text after the held text. linkId 0 is none.
+    // Links with visibility settings closed while text is held back for joining. Where their text
+    // ends up is known only once that is resolved - joined, or committed as a line of its own - so
+    // each is registered then: from startColumn in the text it began in, through continuationLength
+    // characters of the text after the held text.
     struct HeldVisibility
     {
         int linkId = 0;
@@ -824,7 +843,7 @@ private:
         bool startsAfterHeldText = false;
         Mudlet::HyperlinkStyling styling;
     };
-    HeldVisibility mHeldVisibility;
+    QList<HeldVisibility> mHeldVisibilities;
     QString mCurrentHyperlinkText;
 
     enum class WatchdogPhase { Phase1_Snapshot, Phase2_Unfreeze, None };

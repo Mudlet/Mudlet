@@ -2280,10 +2280,6 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 
         if (!mAliasUnit.processDataStream(command)) {
             mTelnet.sendData(command, true, true);
-        } else if (!mTelnet.dispatchingSendRequest()) {
-            // A deny left by an alias that sent nothing would swallow the next command. Under a sysDataSendRequest
-            // handler every pass, nested or not, keeps it for the next send: the handled command, unless the handler sends first
-            mAllowToSendCommand = true;
         }
     }
 }
@@ -2775,10 +2771,15 @@ bool Host::copyToClipboard(const QString& name)
     return true;
 }
 
-void Host::cutMainConsoleToClipboard()
+bool Host::cutToClipboard(const QString& name)
 {
-    mpMainConsoleModel->buffer.cutInto(mpMainConsoleModel->P_begin, mpMainConsoleModel->P_end, *mpClipboard);
-    markSelectionDirty(*mpMainConsoleModel);
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    pModel->buffer.cutInto(pModel->P_begin, pModel->P_end, *mpClipboard);
+    markSelectionDirty(*pModel);
+    return true;
 }
 
 namespace {
@@ -6060,6 +6061,18 @@ void Host::setEnableClosedCaption(const bool state)
     changeSetting(mEnableClosedCaption, state, qsl("enableClosedCaption"));
 }
 
+void Host::setAccessibleLabels(const bool state)
+{
+    if (mAccessibleLabels == state) {
+        return;
+    }
+    mAccessibleLabels = state;
+    for (const TLabelModel* pModel : mWindowRegistry.labelModels()) {
+        pModel->accessibilityChanged(TLabelModel::AccessibilityChange::KeyboardAccess);
+    }
+    raiseSettingChangedEvent(qsl("accessibleLabels"), state);
+}
+
 void Host::setAdvertiseScreenReader(const bool state)
 {
     if (mAdvertiseScreenReader == state) {
@@ -6607,6 +6620,20 @@ bool Host::setLabelClickCallback(const QString& name, const int func)
     return false;
 }
 
+bool Host::setLabelLiveRegion(const QString& name, TLabelLiveRegion liveRegion)
+{
+    if (!hasConsoleView()) {
+        return false;
+    }
+
+    auto* pModel = mWindowRegistry.labelModel(name);
+    if (pModel) {
+        pModel->setLiveRegion(liveRegion);
+        return true;
+    }
+    return false;
+}
+
 bool Host::setLabelAccessibleName(const QString& name, const QString& accessibleName)
 {
     if (!hasConsoleView()) {
@@ -7103,6 +7130,17 @@ std::optional<QString> Host::labelAccessibleName(const QString& name) const
     return {};
 }
 
+std::optional<TLabelLiveRegion> Host::labelLiveRegion(const QString& name) const
+{
+    if (!hasConsoleView()) {
+        return {};
+    }
+    if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
+        return pLabel->mLiveRegion;
+    }
+    return {};
+}
+
 std::optional<QString> Host::labelAccessibleRole(const QString& name) const
 {
     if (!hasConsoleView()) {
@@ -7220,7 +7258,9 @@ std::optional<int> Host::windowScroll(const QString& name) const
         return {};
     }
     const int lastLine = pModel->buffer.getLastLineNumber();
-    const int line = hasConsoleView() ? pModel->mUpperPaneCursorY : pModel->mScrolledBackTo.value_or(lastLine);
+    // Not mUpperPaneCursorY: that is only a copy taken at the last paint, and a pane
+    // scrolled back may not paint again before a trim moves the line under it
+    const int line = hasConsoleView() ? pModel->buffer.mCursorY : pModel->mScrolledBackTo.value_or(lastLine);
     return {std::max(std::min(line, lastLine), 0)};
 }
 
@@ -7592,9 +7632,6 @@ bool Host::sendPasswordEntry(QString&& text)
     QString line = std::move(text);
     // For the GMCP sign-in path, as send() does
     mUserSentInputThisConnection = true;
-    // A denyCurrentSend() made outside a handler leaves a stale refusal that
-    // would drop the password without a word
-    mAllowToSendCommand = true;
     // A game command, so it arms character-at-a-time detection and the mask
     // safety timeout as a command line's line does
     const bool sent = mTelnet.sendData(line, false, true);

@@ -77,6 +77,8 @@
 #include <QResizeEvent>
 #include <QVideoWidget>
 
+#include <algorithm>
+#include <utility>
 #include <chrono>
 #include <utility>
 
@@ -318,6 +320,8 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
     new MainWindowSizeReporter(this, {mpLeftToolBar, mpRightToolBar, mpTopToolBar, mpCommandLine.data()});
     reportMainWindowSize();
+
+    mpMainFrame->installEventFilter(this);
 }
 
 TMainConsole::~TMainConsole()
@@ -1424,6 +1428,10 @@ void TMainConsole::deleteLabel(const QString& name)
 {
     auto pL = mLabelMap.value(name);
     if (pL) {
+        // Destroyed later, and a destroyed widget leaves the focus with nobody
+        if (pL->hasFocus() && pL->window() == window()) {
+            focusButtonAfter(pL, true);
+        }
         mpHost->windowRegistry().deregisterLabel(name, &pL->model());
         deregisterLabelWidget(pL);
         if (pL->mpMovie) {
@@ -1559,6 +1567,79 @@ std::pair<bool, QString> TMainConsole::deleteScrollBox(const QString& name)
 
     // Message is of the form needed for a Lua API function call run-time error
     return {false, qsl("scrollbox name '%1' not found").arg(name)};
+}
+
+namespace {
+bool readsBefore(const QWidget* a, const QWidget* b)
+{
+    const QPoint first = a->mapToGlobal(QPoint());
+    const QPoint second = b->mapToGlobal(QPoint());
+    return first.y() != second.y() ? first.y() < second.y() : first.x() < second.x();
+}
+} // namespace
+
+QList<TLabel*> TMainConsole::keyboardButtons() const
+{
+    QList<TLabel*> labels;
+    for (TLabel* pLabel : mLabelMap) {
+        // A floating user window is a window of its own, out of reach of Tab here
+        if (pLabel && pLabel->isVisible() && pLabel->isEnabled() && pLabel->window() == window() && pLabel->keyboardReachable()) {
+            labels.append(pLabel);
+        }
+    }
+    std::stable_sort(labels.begin(), labels.end(), readsBefore);
+    return labels;
+}
+
+bool TMainConsole::focusKeyboardButton(bool forward)
+{
+    const QList<TLabel*> buttons = keyboardButtons();
+    if (buttons.isEmpty()) {
+        return false;
+    }
+    mKeyboardButtonsFromCaret = mpHost->caretEnabled();
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+    // Caret mode holds the keyboard and only lets go of it on a timer, which a key pressed straight away would beat
+    mUpperPane->releaseKeyboard();
+#endif
+    (forward ? buttons.first() : buttons.last())->setFocus(forward ? Qt::TabFocusReason : Qt::BacktabFocusReason);
+    return true;
+}
+
+void TMainConsole::focusButtonAfter(const TLabel* pLabel, bool next)
+{
+    const QList<TLabel*> buttons = keyboardButtons();
+    TLabel* pTarget = nullptr;
+    // Labels at the same corner read neither before nor after each other, so one still in the list goes by its place there
+    if (const auto it = std::find(buttons.cbegin(), buttons.cend(), pLabel); it != buttons.cend()) {
+        const qsizetype target = std::distance(buttons.cbegin(), it) + (next ? 1 : -1);
+        pTarget = target >= 0 && target < buttons.size() ? buttons.at(target) : nullptr;
+    } else if (next) {
+        const auto after = std::find_if(buttons.cbegin(), buttons.cend(), [pLabel](const TLabel* pButton) {
+            return !readsBefore(pButton, pLabel);
+        });
+        pTarget = after == buttons.cend() ? nullptr : *after;
+    } else {
+        const auto before = std::find_if(buttons.crbegin(), buttons.crend(), [pLabel](const TLabel* pButton) {
+            return readsBefore(pButton, pLabel);
+        });
+        pTarget = before == buttons.crend() ? nullptr : *before;
+    }
+    if (pTarget) {
+        pTarget->setFocus(next ? Qt::TabFocusReason : Qt::BacktabFocusReason);
+        return;
+    }
+    leaveKeyboardButtons(next);
+}
+
+void TMainConsole::leaveKeyboardButtons(bool next)
+{
+    if (std::exchange(mKeyboardButtonsFromCaret, false)) {
+        mpHost->setCaretEnabled(true);
+        mUpperPane->moveCaretToLink(next);
+    } else if (mpCommandLine) {
+        mpCommandLine->setFocus(next ? Qt::TabFocusReason : Qt::BacktabFocusReason);
+    }
 }
 
 std::pair<bool, QString> TMainConsole::setLabelToolTip(const QString& name, const QString& text, double duration)
@@ -1964,6 +2045,21 @@ void TMainConsole::closePasswordEntry()
 
 bool TMainConsole::eventFilter(QObject* watched, QEvent* event)
 {
+    // A bar shown or hidden has the layout resize this frame but not the console, so no
+    // resizeEvent() sizes the display in it. Not sized mid-layout, while the frame's
+    // ancestors are still at their old size: the panes would count rows that are clipped.
+    if (watched == mpMainFrame && event->type() == QEvent::Resize && !mMainDisplayLayoutPending) {
+        mMainDisplayLayoutPending = true;
+        using namespace std::chrono_literals;
+        QTimer::singleShot(0ms, this, [this]() {
+            mMainDisplayLayoutPending = false;
+            // a console a tab switch has made zero wide is left alone, as resizeEvent() leaves it
+            if (width() && mpHost && mpCommandLine && !mpCommandLine->isHidden()) {
+                mBorders = mpHost->borders();
+                layoutMainDisplay();
+            }
+        });
+    }
     if (mpPasswordEntry && watched == mpCommandLine && (event->type() == QEvent::Resize || event->type() == QEvent::Move)) {
         mpPasswordEntry->setGeometry(mpCommandLine->geometry());
     }
@@ -2292,7 +2388,7 @@ bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
     }
 
     if (!toEnd) {
-        pC->scrollUp(pC->mUpperPane->mCursorY - line);
+        pC->scrollTo(line);
         return true;
     }
     if (!pC->mUpperPane->mIsTailMode) {
@@ -2306,6 +2402,12 @@ bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
         pC->mUpperPane->forceUpdate();
     }
     return true;
+}
+
+bool TMainConsole::windowFollowsNewLines(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    return pC && pC->mUpperPane->mIsTailMode;
 }
 
 std::optional<std::pair<bool, QString>> TMainConsole::setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight)
@@ -2460,7 +2562,7 @@ bool TMainConsole::setTextBoxTabMovesFocus(const QString& name, bool tabMovesFoc
 
 QPoint TMainConsole::mousePosition() const
 {
-    return mapFromGlobal(QCursor::pos());
+    return mpMainFrame->mapFromGlobal(QCursor::pos());
 }
 
 bool TMainConsole::hasKeyboardFocus() const
@@ -3583,6 +3685,7 @@ void TMainConsole::createMapperDock(const QString& title, const QString& objectN
     mpHost->mpMap->setMapper(new dlgMapper(mpDockableMapWidget, mpHost, mpHost->mpMap.data()));
     mpHost->mpMap->mapper()->setStyleSheet(mpHost->mProfileStyleSheet);
     mpDockableMapWidget->setWidget(mpHost->mpMap->mapper());
+    mudlet::self()->growDockToSizeHintWhenShown(mpDockableMapWidget);
 }
 
 QDockWidget* TMainConsole::mapWidget() const
@@ -3830,6 +3933,16 @@ void TMainConsole::dockMapWidget(Qt::DockWidgetArea area)
     mudlet::self()->addDockWidget(area, mpDockableMapWidget);
 }
 
+void TMainConsole::redockMapWidget(Qt::DockWidgetArea area)
+{
+    const bool moving = mpDockableMapWidget->isFloating() || mudlet::self()->dockWidgetArea(mpDockableMapWidget) != area;
+    mpDockableMapWidget->setFloating(false);
+    dockMapWidget(area);
+    if (moving) {
+        mudlet::self()->growDockToSizeHint(mpDockableMapWidget, false);
+    }
+}
+
 std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x, int y, int width, int height)
 {
     auto pM = mpDockableMapWidget;
@@ -3857,26 +3970,22 @@ std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x
     }
 
     if (area == QLatin1String("r") || area == QLatin1String("right")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::RightDockWidgetArea);
+        redockMapWidget(Qt::RightDockWidgetArea);
         return {true, QString()};
     }
 
     if (area == QLatin1String("l") || area == QLatin1String("left")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::LeftDockWidgetArea);
+        redockMapWidget(Qt::LeftDockWidgetArea);
         return {true, QString()};
     }
 
     if (area == QLatin1String("t") || area == QLatin1String("top")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::TopDockWidgetArea);
+        redockMapWidget(Qt::TopDockWidgetArea);
         return {true, QString()};
     }
 
     if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::BottomDockWidgetArea);
+        redockMapWidget(Qt::BottomDockWidgetArea);
         return {true, QString()};
     }
 

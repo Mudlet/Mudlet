@@ -1734,18 +1734,103 @@ AliasCommandNestsSpec.match = matches[2]</script>
             assert.are.equal("", _G.AliasSpec.digits, "a group that matched nothing is still a capture")
         end)
 
-        it("does not fire an alias whose pattern failed to compile", function()
+        it("refuses a pattern that fails to compile", function()
+            local before = getProfileStats().aliases.total
+            local badId, message = tempAlias([[^bad_alias_pattern($]], [==[]==])
+            assert.is_nil(badId, "an uncompilable pattern should not make an alias")
+            assert.are.equal([[regex pattern "^bad_alias_pattern($" failed to compile at offset 20: missing closing parenthesis]], message)
+            badId, message = tempAlias([[(unclosed]], function() end)
+            assert.is_nil(badId, "nor should it when the alias would run a function")
+            assert.is_string(message)
+            assert.are.equal(before, getProfileStats().aliases.total, "nothing should have been created")
+        end)
+
+        it("accepts a pattern that needs UTF-8 mode", function()
+            _G.AliasSpec = {fires = 0}
+            local id, message = tempAlias([[^\x{263A}_utf_alias$]], [==[_G.AliasSpec.fires = _G.AliasSpec.fires + 1]==])
+            finally(function()
+                if id then
+                    killAlias(id)
+                end
+                _G.AliasSpec = nil
+            end)
+            assert.is_number(id, "got: " .. tostring(message))
+            expandAlias("\226\152\186_utf_alias", false)
+            assert.are.equal(1, _G.AliasSpec.fires)
+        end)
+
+        it("refuses a pattern that fails to compile from permAlias", function()
+            local name = "SpecBadPatternPermAlias"
+            -- a permanent alias cannot be killed, so one made by a regression is at least kept quiet
+            finally(function() disableAlias(name) end)
+            local before = exists(name, "alias")
+            local badId, message = permAlias(name, "", [[^bad_alias_perm($]], [==[]==])
+            assert.is_nil(badId)
+            assert.is_truthy(tostring(message):find("bad_alias_perm", 1, true), "the refusal should name the pattern, got: " .. tostring(message))
+            assert.are.equal(before, exists(name, "alias"), "nothing should have been created")
+        end)
+
+        -- installing a package does not go through the creators' check
+        it("does not fire an alias from a package whose pattern failed to compile", function()
+            if not os.getenv("MUDLET_TEST_MODE") then
+                pending("uninstalling the fixture needs pumpEvents(), which does nothing outside MUDLET_TEST_MODE")
+                return
+            end
             _G.AliasSpec = {good = 0, bad = 0}
-            local goodId = tempAlias([[^bad_alias_pattern$]], [==[_G.AliasSpec.good = _G.AliasSpec.good + 1]==])
-            local badId = tempAlias([[^bad_alias_pattern($]], [==[_G.AliasSpec.bad = _G.AliasSpec.bad + 1]==])
-            -- busted keeps only the last finally(), so this undoes everything at once
+            local goodId = tempAlias([[^bad_alias_package$]], [==[_G.AliasSpec.good = _G.AliasSpec.good + 1]==])
+            local path = getMudletHomeDir() .. "/alias-bad-pattern.xml"
             finally(function()
                 killAlias(goodId)
-                killAlias(badId)
+                -- uninstallPackage() refuses while the profile save the install
+                -- started is still running
+                local removed = false
+                for _ = 1, 100 do
+                    if uninstallPackage("alias-bad-pattern") == true then
+                        removed = true
+                        break
+                    end
+                    pumpEvents(50)
+                end
+                os.remove(path)
+                pumpEvents(200)
+                assert.is_true(removed, "could not uninstall the alias-bad-pattern package")
             end)
-            assert.is_true(badId > 0, "an uncompilable pattern still makes an alias, so that it can be seen and repaired")
-
-            expandAlias("bad_alias_pattern", false)
+            local file = assert(io.open(path, "w"))
+            file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>bad_pattern_package_alias</name>
+			<script>_G.AliasSpec.bad = _G.AliasSpec.bad + 1</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^bad_alias_package($</regex>
+		</Alias>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage />
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>
+]])
+            file:close()
+            assert.is_true(installPackage(path))
+            -- an install made while a profile save runs waits for it to finish
+            local installed = false
+            for _ = 1, 100 do
+                installed = exists("bad_pattern_package_alias", "alias") > 0
+                if installed then
+                    break
+                end
+                pumpEvents(50)
+            end
+            assert.is_true(installed, "the package should have brought the alias in")
+            expandAlias("bad_alias_package", false)
 
             assert.are.equal(1, _G.AliasSpec.good, "the control alias shows the command does reach the alias engine")
             assert.are.equal(0, _G.AliasSpec.bad, "an alias whose regex did not compile must not fire")

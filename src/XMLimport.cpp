@@ -793,6 +793,11 @@ void XMLimport::readHost(Host* pHost)
 
     setBoolAttributeWithDefault(qsl("announceIncomingText"), pHost->mAnnounceIncomingText, true);
     setBoolAttributeWithDefault(qsl("advertiseScreenReader"), pHost->mAdvertiseScreenReader, false);
+    // Through the setter: a package carrying a host section is read into a profile whose labels already exist.
+    // Only when it is there, as a package from before the setting would otherwise turn the player's off.
+    if (attributes().hasAttribute(qsl("accessibleLabels"))) {
+        pHost->setAccessibleLabels(attributes().value(qsl("accessibleLabels")) == YES);
+    }
     setBoolAttributeWithDefault(qsl("enableOSC8Hyperlinks"), pHost->mEnableOSC8Hyperlinks, true);
     setBoolAttributeWithDefault(qsl("enableClosedCaption"), pHost->mEnableClosedCaption, false);
     setBoolAttributeWithDefault(qsl("mEnableMTTS"), pHost->mEnableMTTS, true);
@@ -905,7 +910,11 @@ void XMLimport::readHost(Host* pHost)
         }
     } else if (useSecureStorage) {
         // Modern application: load from secure storage if available
-        pHost->mProxyPassword = CredentialManager::retrieveCredential(pHost->getName(), "proxy");
+        CredentialManager::ReadOutcome outcome = CredentialManager::ReadOutcome::NothingStored;
+        pHost->mProxyPassword = CredentialManager::retrieveCredential(pHost->getName(), "proxy", &outcome);
+        if (pHost->mProxyPassword.isEmpty() && outcome == CredentialManager::ReadOutcome::Unreadable) {
+            qWarning().nospace().noquote() << "XMLimport::readHost(...) WARNING - the saved proxy password for profile \"" << pHost->getName() << "\" could not be read.";
+        }
     }
 
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value(qsl("USE_IRE_DRIVER_BUGFIX")) == YES);
@@ -2057,8 +2066,9 @@ QString XMLimport::readScriptElement()
     }
 
     // From format 1.001, control characters are stored as U+FFFC then the matching Control Picture.
-    // Few scripts hold a U+FFFC, so one contains() spares most scripts the 29 replace() scans below:
+    // Few scripts hold a U+FFFC, so one contains() spares most scripts the 30 replace() scans below:
     if ((mVersionMajor > 1 || (mVersionMajor == 1 && mVersionMinor > 0)) && localScript.contains(QChar(0xFFFC))) {
+        localScript.replace(qsl("\xFFFC\x2400"), QChar(u'\0'));  // NUL
         localScript.replace(qsl("\xFFFC\x2401"), QChar('\x01')); // SOH
         localScript.replace(qsl("\xFFFC\x2402"), QChar('\x02')); // STX
         localScript.replace(qsl("\xFFFC\x2403"), QChar('\x03')); // ETX

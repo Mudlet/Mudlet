@@ -35,6 +35,9 @@
 class Host;
 class QSvgRenderer;
 
+// How a change of a label's text is announced to a screen reader, as ARIA's aria-live
+enum class TLabelLiveRegion : int { Off, Polite, Assertive };
+
 // A label's widget-free state, so the Widgets-free core can hold a named label without a QLabel.
 // Owned by its TLabel, whose same-named reference members alias it; TWindowRegistry indexes
 // these by name but does NOT own them.
@@ -51,6 +54,8 @@ struct TLabelModel
 
     // The name a screen reader hears: the one a script gave it, else its text, else its tooltip
     QString effectiveAccessibleName() const;
+    // The label's text as a screen reader would say it
+    QString spokenText() const;
     bool namedByToolTip() const;
     // Whether a screen reader is told it is a button: as a script said, else when it has a click or release
     // callback - never when the mouse passes through it
@@ -61,12 +66,15 @@ struct TLabelModel
     void setAccessibleName(const QString& name);
     void setAccessibleButton(std::optional<bool> button);
     void setClickThrough(bool clickThrough);
+    // Nothing to tell the view: a live region is heard only when the text next changes
+    void setLiveRegion(TLabelLiveRegion liveRegion) { mLiveRegion = liveRegion; }
     // The view's copies of what the label shows, which name it unless a script named it
     void setText(const QString& text);
     void setToolTip(const QString& toolTip);
 
-    enum class AccessibilityChange { Name, Role };
-    // Set by the widget, if there is one, to tell assistive technology of a change made with or without it
+    // KeyboardAccess: the profile's accessibleLabels setting changed
+    enum class AccessibilityChange { Name, Role, KeyboardAccess };
+    // Set by the widget, if there is one, to update its focus policy and tell assistive technology of a change
     std::function<void(AccessibilityChange)> mAccessibilityChanged;
     void accessibilityChanged(AccessibilityChange change) const;
 
@@ -134,6 +142,7 @@ struct TLabelModel
     QString mAccessibleName;
     // Set by a script whose label's callbacks are not a button's, such as a drag handle; empty means automatic
     std::optional<bool> mAccessibleButton;
+    TLabelLiveRegion mLiveRegion = TLabelLiveRegion::Off;
     bool mClickThrough = false;
     QFont mFont;
     // QLabel::text(), which a pixmap or movie empties, written by the view after each change.

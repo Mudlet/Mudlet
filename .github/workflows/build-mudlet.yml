@@ -44,7 +44,7 @@ jobs:
             buildname: 'ubuntu / gcc / lua tests + leak detection'
             compiler: gcc_64
             gcc_compiler_version: 12
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: ubuntu-gcc-asan
             # 22.04's ccache 4.5 cleans each sixteenth of the cache on its own, and at
             # 500M that is smaller than the 35-50MB precompiled header - which GCC does
@@ -60,27 +60,27 @@ jobs:
             buildname: 'ubuntu (x86_64)'
             compiler: gcc_64
             gcc_compiler_version: 12
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: ubuntu-gcc
             ccache_maxsize: 2G
           - os: ubuntu-26.04
             buildname: 'ubuntu / clang'
             compiler: clang_64
             gcc_compiler_version: 14
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: ubuntu-clang
           # No tests: none branch on host architecture, so the arm64 job covers them on a faster pool.
           - os: macos-15-intel
             buildname: 'macos (x86_64)'
             compiler: clang_64
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: macos-x64
             deploy: 'deploy'
             build_tests: 'false'
           - os: macos-15
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: macos-arm64
             deploy: 'deploy'
             run_tests: 'true'

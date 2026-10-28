@@ -54,13 +54,26 @@ describe("Tests UI functions", function()
       assert.are.equal(testdecho, copy2decho("testconsole"))
     end)
 
-    -- TODO: https://github.com/Mudlet/Mudlet/issues/5590
-    -- it("Should copy text with background transparency", function()
-    --   local testdecho = "<50,50,0:0,255,0,100>semi-transparent"
-    --   decho("testconsole", testdecho)
+    it("Should copy text with background transparency", function()
+      local testdecho = "<50,50,0:0,255,0,100>semi-transparent<r><50,50,0:0,255,0>opaque<r>"
+      decho("testconsole", testdecho)
 
-    --   assert.are.equal(testdecho, copy2decho("testconsole", true))
-    -- end)
+      assert.are.equal(testdecho, copy2decho("testconsole"))
+    end)
+
+    it("Should copy the alpha of a console's own translucent background", function()
+      local window = "uiSpecCopy2dechoTranslucent"
+      finally(function() deleteMiniConsole(window) end)
+      createMiniConsole(window, 0, 0, 400, 50)
+      setBackgroundColor(window, 10, 20, 30, 0)
+      resetFormat(window)
+      echo(window, "plain")
+      selectSection(window, 0, 1)
+      local fg = getTextFormat(window).foreground
+
+      assert.are.equal(string.format("<%d,%d,%d:10,20,30,0>plain<r>", fg[1], fg[2], fg[3]), copy2decho(window))
+      assert.are.equal(string.format("<span style='color: rgb(%d,%d,%d);background: rgb(10,20,30);'>plain</span>", fg[1], fg[2], fg[3]), copy2html(window))
+    end)
 
     it("Should copy colored Chinese text", function()
       local testdecho = "<50,50,0:0,255,0>测试<r><192,192,192:0,0,0> <r><255,0,0:0,0,0>红色<r><0,255,0:0,0,0>绿色<r><0,0,255:0,0,0>蓝色<r>"
@@ -95,13 +108,65 @@ describe("Tests UI functions", function()
       assert.are.equal("", copy2decho("testconsole", "dup dup dup dup"))
     end)
 
-    -- TODO: https://github.com/Mudlet/Mudlet/issues/5589
-    -- it("Should copy2decho text with italics, bold, and underline", function()
-    --   local testdecho = "separate: <i>italic</i>, <b>bold</b>, <u>underline</u>. all together: <i>italic<b>bold<u>underline<r>"
-    --   decho("testconsole", testdecho)
+    it("Should copy2decho text with italics, bold, and underline", function()
+      local testdecho = "separate: <i>italic</i>, <b>bold</b>, <u>underline</u>. all together: <i>italic<b>bold<u>underline<r>"
+      decho("testconsole", testdecho)
 
-    --   assert.are.equal(testdecho, copy2decho("testconsole"))
-    -- end)
+      selectSection("testconsole", 0, 1)
+      local format = getTextFormat("testconsole")
+      local fg, bg = format.foreground, format.background
+      local colour = string.format("<%d,%d,%d:%d,%d,%d>", fg[1], fg[2], fg[3], bg[1], bg[2], bg[3])
+      assert.are.equal(colour .. testdecho, copy2decho("testconsole"))
+    end)
+
+    it("Should copy strikeout and overline, and restate formatting after a colour change resets it", function()
+      local testdecho = "<255,0,0:0,0,0><s>struck</s><o>over<r><0,255,0:0,0,0><o>still over</o> plain<r>"
+      decho("testconsole", testdecho)
+
+      assert.are.equal(testdecho, copy2decho("testconsole"))
+      assert.are.equal("<span style='color: rgb(255,0,0);background: rgb(0,0,0);'>struckover</span><span style='color: rgb(0,255,0);background: rgb(0,0,0);'>still over plain</span>", copy2html("testconsole"))
+    end)
+
+    it("Should open the formatting a copied part of the line starts in", function()
+      decho("testconsole", "<255,0,0:0,0,0>plain <b>bold <i>both</b> italic<r>")
+
+      assert.are.equal("<255,0,0:0,0,0><b><i>both</b> ita<r>", copy2decho("testconsole", "both ita"))
+    end)
+
+    describe("when the copy is echoed back with decho", function()
+      local copyWindow = "uiSpecCopy2dechoRoundTrip"
+
+      setup(function()
+        createBuffer(copyWindow)
+      end)
+
+      teardown(function()
+        deleteMiniConsole(copyWindow)
+      end)
+
+      local function formats(window)
+        local result = {}
+        for i = 0, utf8.len(getCurrentLine(window)) - 1 do
+          selectSection(window, i, 1)
+          result[#result + 1] = getTextFormat(window)
+        end
+        deselect(window)
+        return result
+      end
+
+      it("Should reproduce every character's colours, alpha and formatting", function()
+        clearWindow(copyWindow)
+        moveCursorEnd(copyWindow)
+        decho("testconsole", "plain <i>it<255,0,0>al<b>ic bo</i>ld<:0,0,255,80>see<u>through<0,255,0:10,20,30>green</b> u<r><s>s<o>o</s></o>ff")
+        local original = formats("testconsole")
+        assert.are.equal(80, original[#"plain italic bold" + 1].backgroundAlpha)
+
+        decho(copyWindow, copy2decho("testconsole"))
+
+        assert.are.equal(getCurrentLine("testconsole"), getCurrentLine(copyWindow))
+        assert.are.same(original, formats(copyWindow))
+      end)
+    end)
   end)
 
   describe("Test the functionality of copy2html", function()
@@ -1294,7 +1359,7 @@ describe("Tests UI functions", function()
       local expectedFields = {
         bold = true, italic = true, overline = true, reverse = true,
         strikeout = true, underline = true, underlineStyle = true, concealed = true,
-        blinking = true, alternateFont = true, foreground = true, background = true
+        blinking = true, alternateFont = true, foreground = true, background = true, backgroundAlpha = true
       }
       
       print("Checking for unexpected fields:")
@@ -2329,6 +2394,339 @@ describe("Tests UI functions", function()
     end)
   end)
 
+  describe("Test the starter UI's enemy from fight sentences", function()
+    if not (type(BaseUI) == "table" and type(BaseUI.readCondition) == "function") then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.readCondition is unavailable in this profile")
+      end)
+      return
+    end
+
+    local saved, renders
+
+    before_each(function()
+      saved = {
+        renderVitals = BaseUI.renderVitals,
+        dormant = BaseUI.dormant,
+        conditionSightings = BaseUI.conditionSightings,
+      }
+      BaseUI.renderVitals = function()
+        renders = renders + 1
+      end
+      BaseUI.dormant = function() return false end
+      BaseUI.forgetTextEnemy()
+      BaseUI.conditionSightings = {}
+      renders = 0
+    end)
+
+    after_each(function()
+      BaseUI.forgetTextEnemy()
+      BaseUI.renderVitals = saved.renderVitals
+      BaseUI.dormant = saved.dormant
+      BaseUI.conditionSightings = saved.conditionSightings
+    end)
+
+    -- stubs globals for one spec, restoring them all in its single finally
+    local function stubGlobals(stubs)
+      local originals = {}
+      for name, stub in pairs(stubs) do
+        originals[name] = _G[name]
+        _G[name] = stub
+      end
+      return function()
+        for name, original in pairs(originals) do
+          _G[name] = original
+        end
+      end
+    end
+
+    local function see(text)
+      local subject, phrase = rex.match(text, BaseUI.conditionPattern)
+      if subject then
+        BaseUI.readCondition(subject, phrase)
+      end
+      return subject, phrase
+    end
+
+    it("should read SvenskMUD's seven-step scale from its second sentence on", function()
+      see("Kaninen är i toppform.")
+      assert.is_nil(BaseUI.textEnemy)
+      assert.are.equal(0, renders)
+      see("Kaninen är i toppform.")
+      assert.are.same({ name = "Kaninen", percent = 100, label = "Kaninen är i toppform" }, BaseUI.textEnemy)
+      see("Kaninen är tagen.")
+      assert.are.equal(4 / 7 * 100, BaseUI.textEnemy.percent)
+      assert.are.equal("Kaninen är tagen", BaseUI.textEnemy.label)
+      see("Kaninen är nästan DÖD.")
+      assert.are.equal(1 / 7 * 100, BaseUI.textEnemy.percent)
+      assert.is_not_nil(BaseUI.textEnemyTimer)
+    end)
+
+    it("should read the CircleMUD and ROM diagnose sentences", function()
+      see("The cityguard has a few scratches.")
+      see("The cityguard looks pretty hurt.")
+      assert.are.same({ name = "The cityguard", percent = 2 / 7 * 100, label = "The cityguard looks pretty hurt" },
+        BaseUI.textEnemy)
+    end)
+
+    it("should drop the enemy when the game reports it dead", function()
+      see("Älgen är sliten.")
+      see("Älgen är tagen.")
+      assert.is_not_nil(BaseUI.textEnemy)
+      see("Kaninen dog.")
+      assert.is_not_nil(BaseUI.textEnemy)
+      see("Älgen dog.")
+      assert.is_nil(BaseUI.textEnemy)
+      assert.is_nil(BaseUI.textEnemyTimer)
+    end)
+
+    it("should drop the enemy on the CircleMUD and ROM death messages", function()
+      for _, death in ipairs({ "The orc is dead!  R.I.P.", "The orc is DEAD!!" }) do
+        see("The orc looks pretty hurt.")
+        see("The orc is in awful condition.")
+        assert.is_not_nil(BaseUI.textEnemy, death)
+        see(death)
+        assert.is_nil(BaseUI.textEnemy, death)
+      end
+    end)
+
+    it("should show a foe below the bottom step as empty", function()
+      see("The orc is in awful condition.")
+      see("The orc is bleeding to death.")
+      assert.are.equal(0, BaseUI.textEnemy.percent)
+    end)
+
+    it("should promote two foes reported in turn", function()
+      see("Vargen är sliten.")
+      see("Kaninen är sliten.")
+      see("Vargen är tagen.")
+      assert.are.equal("Vargen", BaseUI.textEnemy.name)
+      see("Kaninen är tagen.")
+      assert.are.equal("Kaninen", BaseUI.textEnemy.name)
+    end)
+
+    it("should only promote a second sentence within the timeout", function()
+      local now = 1000
+      finally(stubGlobals({ getEpoch = function() return now end }))
+      see("Kaninen är sliten.")
+      now = 1016
+      see("Kaninen är sliten.")
+      assert.is_nil(BaseUI.textEnemy)
+      now = 1020
+      see("Kaninen är tagen.")
+      assert.are.equal("Kaninen", BaseUI.textEnemy.name)
+    end)
+
+    it("should re-arm its timeout on every sentence and drop the enemy when it fires", function()
+      local armed, killed = {}, {}
+      finally(stubGlobals({
+        tempTimer = function(_, callback)
+          armed[#armed + 1] = callback
+          return #armed
+        end,
+        killTimer = function(id)
+          killed[#killed + 1] = id
+        end,
+      }))
+      see("Kaninen är sliten.")
+      see("Kaninen är tagen.")
+      see("Kaninen är illa tilltygad.")
+      assert.are.equal(2, #armed)
+      assert.are.same({ 1 }, killed)
+      armed[2]()
+      assert.is_nil(BaseUI.textEnemy)
+      assert.is_nil(BaseUI.textEnemyTimer)
+    end)
+
+    it("should forget the enemy and its sightings on disconnect", function()
+      see("Kaninen är sliten.")
+      see("Kaninen är tagen.")
+      see("Vargen är sliten.")
+      BaseUI.handleDisconnect()
+      assert.is_nil(BaseUI.textEnemy)
+      see("Vargen är sliten.")
+      assert.is_nil(BaseUI.textEnemy)
+    end)
+
+    it("should drop the read enemy when a protocol stops reporting its own", function()
+      local lock = BaseUI.vitalsLock
+      local vitalsData = BaseUI.vitalsData
+      finally(function()
+        BaseUI.vitalsLock = lock
+        BaseUI.vitalsData = vitalsData
+      end)
+      BaseUI.vitalsLock = 3
+      BaseUI.vitalsData = { enemy = { percent = 40 } }
+      see("Kaninen är sliten.")
+      see("Kaninen är tagen.")
+      BaseUI.applyVitals("gmcp", { enemy = { percent = 30 } }, true)
+      assert.is_not_nil(BaseUI.textEnemy)
+      BaseUI.applyVitals("gmcp", {}, true)
+      assert.is_nil(BaseUI.textEnemy)
+    end)
+
+    it("should keep the enemy through a single sentence about someone else", function()
+      see("Svartalfen är sliten.")
+      see("Svartalfen är tagen.")
+      see("Odöd är i toppform.")
+      assert.are.equal("Svartalfen", BaseUI.textEnemy.name)
+    end)
+
+    it("should never take the player's own condition for an enemy", function()
+      see("Du är sliten.")
+      see("Du är sliten.")
+      assert.is_nil(BaseUI.textEnemy)
+    end)
+
+    it("should leave chat, markup and longer sentences alone", function()
+      for _, text in ipairs({
+        "Bob says, 'The orc is in awful condition.'",
+        "[vind]: Istel är tagen.",
+        "<b>Orc</b> is in awful condition.",
+        "The orc has a few scratches and limps away.",
+        "Kaninen är tagen av vargen.",
+      }) do
+        assert.is_nil(see(text), text)
+      end
+    end)
+
+    it("should be what a fed line reaches through the trigger", function()
+      local created = not BaseUI.conditionTriggerId
+      BaseUI.createConditionTrigger()
+      BaseUI.createConditionTrigger()
+      finally(function()
+        if created then
+          BaseUI.killConditionTrigger()
+        end
+      end)
+      -- a second trigger would promote this on its own
+      feedTriggers("Kaninen är tagen.\n")
+      assert.is_nil(BaseUI.textEnemy)
+      feedTriggers("Kaninen är illa tilltygad.\n")
+      assert.are.equal("Kaninen är illa tilltygad", BaseUI.textEnemy and BaseUI.textEnemy.label)
+    end)
+
+    it("should give a hidden enemy bar's slot to a stat that has none", function()
+      if BaseUI.gauges.xp then
+        pending("the profile already has an xp bar, which this spec would replace")
+        return
+      end
+      local before = {
+        gauges = BaseUI.gauges,
+        usedGaugeSlots = BaseUI.usedGaugeSlots,
+        layoutGauges = BaseUI.layoutGauges,
+      }
+      local vitalsSection = BaseUI.sections.vitals
+      local panel = Geyser.Container:new({ name = "BaseUISpecVitals", x = 0, y = 0, width = 10, height = 10 })
+      panel:hide()
+      local deleted = 0
+      local enemy = { hidden = false, delete = function() deleted = deleted + 1 end }
+      BaseUI.gauges = { hp = {}, mp = {}, mv = {}, enemy = enemy }
+      BaseUI.usedGaugeSlots = 4
+      BaseUI.sections.vitals = panel
+      BaseUI.layoutGauges = function() end
+      finally(function()
+        if BaseUI.gauges.xp then
+          BaseUI.gauges.xp:delete()
+        end
+        panel:delete()
+        BaseUI.sections.vitals = vitalsSection
+        for key, value in pairs(before) do
+          BaseUI[key] = value
+        end
+      end)
+      assert.is_nil(BaseUI.ensureGauge("xp"))
+      assert.are.equal(0, deleted)
+      enemy.hidden = true
+      assert.is_not_nil(BaseUI.ensureGauge("xp"))
+      assert.are.equal(1, deleted)
+      assert.is_nil(BaseUI.gauges.enemy)
+      assert.are.equal(4, BaseUI.usedGaugeSlots)
+    end)
+
+    it("should paint xp in the slot of an enemy bar the same repaint hides", function()
+      if BaseUI.gauges.xp then
+        pending("the profile already has an xp bar, which this spec would replace")
+        return
+      end
+      local before = {
+        gauges = BaseUI.gauges,
+        usedGaugeSlots = BaseUI.usedGaugeSlots,
+        layoutGauges = BaseUI.layoutGauges,
+        layoutDock = BaseUI.layoutDock,
+        build = BaseUI.build,
+        checkMapData = BaseUI.checkMapData,
+        vitalsData = BaseUI.vitalsData,
+      }
+      local vitalsSection = BaseUI.sections.vitals
+      local panel = Geyser.Container:new({ name = "BaseUISpecVitals", x = 0, y = 0, width = 10, height = 10 })
+      panel:hide()
+      local enemy = { hidden = false, hide = function(self) self.hidden = true end, delete = function() end }
+      BaseUI.gauges = { hp = {}, mp = {}, mv = {}, enemy = enemy }
+      BaseUI.usedGaugeSlots = 4
+      BaseUI.sections.vitals = panel
+      BaseUI.vitalsData = { xp = { current = 10, max = 100 } }
+      for _, name in ipairs({ "layoutGauges", "layoutDock", "build", "checkMapData" }) do
+        BaseUI[name] = function() end
+      end
+      finally(function()
+        if BaseUI.gauges.xp then
+          BaseUI.gauges.xp:delete()
+        end
+        panel:delete()
+        BaseUI.sections.vitals = vitalsSection
+        for key, value in pairs(before) do
+          BaseUI[key] = value
+        end
+      end)
+      saved.renderVitals()
+      assert.is_not_nil(BaseUI.gauges.xp)
+      assert.is_nil(BaseUI.gauges.enemy)
+    end)
+
+    describe("painted", function()
+      local painted, paintSaved
+
+      before_each(function()
+        paintSaved = {
+          build = BaseUI.build,
+          checkMapData = BaseUI.checkMapData,
+          layoutDock = BaseUI.layoutDock,
+          ensureGauge = BaseUI.ensureGauge,
+          vitalsData = BaseUI.vitalsData,
+          gauges = BaseUI.gauges,
+        }
+        BaseUI.renderVitals = saved.renderVitals
+        BaseUI.build = function() end
+        BaseUI.checkMapData = function() end
+        BaseUI.layoutDock = function() end
+        BaseUI.vitalsData, BaseUI.gauges, painted = {}, {}, {}
+        BaseUI.ensureGauge = function(key)
+          return { setValue = function(_, value, max, text)
+            painted[key] = { value, max, text }
+          end }
+        end
+      end)
+
+      after_each(function()
+        -- the outer teardown would otherwise repaint the real dock
+        BaseUI.textEnemy = nil
+        for key, value in pairs(paintSaved) do
+          BaseUI[key] = value
+        end
+      end)
+
+      it("should label the enemy bar with the game's sentence until a protocol reports one", function()
+        BaseUI.textEnemy = { name = "Kaninen", percent = 4 / 7 * 100, label = "Kaninen är tagen" }
+        BaseUI.renderVitals()
+        assert.are.same({ 4 / 7 * 100, 100, "Kaninen är tagen" }, painted.enemy)
+        BaseUI.vitalsData.enemy = { percent = 30 }
+        BaseUI.renderVitals()
+        assert.are.same({ 30, 100, "Enemy 30%" }, painted.enemy)
+      end)
+    end)
+  end)
+
   -- raised rather than called, so the handler registration is tested as well
   describe("Test BaseUI.updateVitals", function()
     if not (type(BaseUI) == "table" and type(BaseUI.updateVitals) == "function") then
@@ -2446,6 +2844,7 @@ describe("Tests UI functions", function()
       BaseUI.saveSettings()
       BaseUI.armChatTriggers()
       BaseUI.createVitalsTriggers()
+      BaseUI.createConditionTrigger()
       -- BaseUI.show() docks the chat window on the right border and it stays there,
       -- leaving the main console narrower for every later spec; BaseUI.hide() is
       -- how the base UI itself gives that border back
@@ -2465,10 +2864,13 @@ describe("Tests UI functions", function()
       BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
       assert.is_false(BaseUI.chatTriggersArmed())
       assert.is_nil(next(BaseUI.vitalsTriggerIds))
+      assert.is_nil(BaseUI.conditionTriggerId)
       BaseUI.armChatTriggers()
       BaseUI.createVitalsTriggers()
+      BaseUI.createConditionTrigger()
       assert.is_false(BaseUI.chatTriggersArmed())
       assert.is_nil(next(BaseUI.vitalsTriggerIds))
+      assert.is_nil(BaseUI.conditionTriggerId)
     end)
 
     it("should come back when the player asks for it", function()
@@ -2476,6 +2878,7 @@ describe("Tests UI functions", function()
       BaseUI.show()
       assert.is_nil(BaseUI.settings.standingAside)
       assert.is_false(BaseUI.dormant())
+      assert.is_not_nil(BaseUI.conditionTriggerId)
     end)
 
     it("should ignore uninstalls of unrelated packages", function()
@@ -2645,6 +3048,234 @@ describe("Tests UI functions", function()
         return
       end
       assert.are.same(originalBorders, getBorderSizes())
+    end)
+  end)
+
+  describe("Test the starter UI's background picture", function()
+    if not (type(BaseUI) == "table" and type(BaseUI.setBackground) == "function") then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.setBackground is unavailable in this profile")
+      end)
+      return
+    end
+
+    local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
+    local image = specDirectory .. "/fixtures/images/solid-magenta-4x4.png"
+    local savedSettings, savedTheme, savedMain, savedMap, dockWasShowing, originalBorders
+
+    local function alpha(window)
+      return select(4, getBackgroundColor(window))
+    end
+
+    local function dockCss()
+      return getLabelStyleSheet(BaseUI.container.adjLabel.name)
+    end
+
+    before_each(function()
+      savedSettings = table.deepcopy(BaseUI.settings)
+      savedTheme = BaseUI.themeName
+      savedMain = { getBackgroundColor("main") }
+      savedMap = { getMapBackgroundColor() }
+      dockWasShowing = BaseUI.container ~= nil and not BaseUI.container.hidden
+      originalBorders = getBorderSizes()
+      BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
+      BaseUI.build()
+      BaseUI.setTheme("midnight", true)
+    end)
+
+    after_each(function()
+      BaseUI.setBackground(nil)
+      setBackgroundColor("main", unpack(savedMain))
+      setMapBackgroundColor(unpack(savedMap))
+      BaseUI.settings = savedSettings
+      BaseUI.setTheme(savedTheme or "midnight", true)
+      BaseUI.saveSettings()
+      if not dockWasShowing and BaseUI.container and not BaseUI.container.hidden then
+        BaseUI.container:hide()
+        BaseUI.container:adjustBorder()
+        BaseUI.layoutDock()
+      end
+      assert.are.same(originalBorders, getBorderSizes())
+    end)
+
+    it("should let the picture through the console, the chat panes, the docked map and the dock", function()
+      local plainDock = dockCss()
+      assert.is_true(BaseUI.setBackground(image))
+      assert.is_true(BaseUI.backgroundShown)
+      assert.are.equal(0, alpha("main"))
+      assert.are.equal(0, alpha("BaseUI_chat_all"))
+      assert.are.equal(26, select(4, getMapBackgroundColor()))
+      assert.are_not.equal(plainDock, dockCss())
+      assert.truthy(dockCss():find("10%)", 1, true), dockCss())
+      assert.truthy(getLabelStyleSheet("BaseUI_tab_all"):find("10%)", 1, true))
+    end)
+
+    it("should stay see-through across every look", function()
+      BaseUI.setBackground(image)
+      for _ = 1, 3 do
+        BaseUI.cycleTheme()
+        assert.are.equal(0, alpha("main"), BaseUI.themeName)
+        assert.are.equal(0, alpha("BaseUI_chat_all"), BaseUI.themeName)
+        assert.truthy(dockCss():find("10%)", 1, true), BaseUI.themeName)
+      end
+    end)
+
+    it("should give the picture and the colours back while hidden", function()
+      BaseUI.setBackground(image)
+      BaseUI.hide()
+      assert.is_false(BaseUI.backgroundShown)
+      assert.are.equal(255, alpha("main"))
+      assert.are.equal(255, select(4, getMapBackgroundColor()))
+      BaseUI.show()
+      assert.is_true(BaseUI.backgroundShown)
+      assert.are.equal(0, alpha("main"))
+    end)
+
+    it("should put everything back as it was when turned off", function()
+      local before = { main = { getBackgroundColor("main") }, map = { getMapBackgroundColor() },
+                       chat = { getBackgroundColor("BaseUI_chat_all") }, dock = dockCss() }
+      BaseUI.setBackground(image)
+      BaseUI.setBackground(nil)
+      assert.is_false(BaseUI.backgroundShown)
+      assert.are.same(before.main, { getBackgroundColor("main") })
+      assert.are.same(before.map, { getMapBackgroundColor() })
+      assert.are.same(before.chat, { getBackgroundColor("BaseUI_chat_all") })
+      assert.are.equal(before.dock, dockCss())
+    end)
+
+    it("should keep a player's own colour and only borrow its alpha", function()
+      setBackgroundColor("main", 30, 40, 60, 255)
+      BaseUI.setBackground(image)
+      BaseUI.cycleTheme()
+      assert.are.same({ 30, 40, 60, 0 }, { getBackgroundColor("main") })
+      BaseUI.setBackground(nil)
+      assert.are.same({ 30, 40, 60, 255 }, { getBackgroundColor("main") })
+    end)
+
+    it("should refuse a picture it cannot show and keep the one before", function()
+      BaseUI.setBackground(image)
+      assert.is_false(BaseUI.setBackground(specDirectory .. "/fixtures/images/no-such-picture.png"))
+      assert.are.equal(image, BaseUI.settings.background)
+      assert.is_true(BaseUI.backgroundShown)
+    end)
+
+    it("should bring a map cleared by an earlier version to its current see-through", function()
+      BaseUI.setBackground(image)
+      local held = BaseUI.settings.mapBackground
+      setMapBackgroundColor(held.set[1], held.set[2], held.set[3], 0)
+      held.set[4] = 0
+      BaseUI.setTheme("midnight", true)
+      assert.are.equal(math.min(held.before[4], 26), select(4, getMapBackgroundColor()))
+    end)
+
+    it("should refuse a file that is not a picture", function()
+      assert.is_false(BaseUI.setBackground(debug.getinfo(1, "S").source:sub(2)))
+      assert.is_nil(BaseUI.settings.background)
+      assert.is_false(BaseUI.backgroundShown == true)
+    end)
+
+    it("should refuse a picture it cannot show while hidden", function()
+      BaseUI.hide()
+      assert.is_false(BaseUI.setBackground(specDirectory .. "/fixtures/images/no-such-picture.png"))
+      assert.is_nil(BaseUI.settings.background)
+      BaseUI.show()
+    end)
+
+    it("should show a saved picture that went missing once it is chosen again", function()
+      local path = getMudletHomeDir() .. "/baseui-spec-picture.png"
+      os.remove(path)
+      finally(function() os.remove(path) end)
+      -- a reload with the saved file gone
+      BaseUI.settings.background = path
+      BaseUI.setTheme("midnight", true)
+      assert.is_false(BaseUI.backgroundShown)
+      local input = io.open(image, "rb")
+      local output = io.open(path, "wb")
+      output:write(input:read("*a"))
+      input:close()
+      output:close()
+      assert.is_true(BaseUI.setBackground(path))
+      assert.is_true(BaseUI.backgroundShown)
+    end)
+
+    local function countingResets()
+      local real = _G.resetBackgroundImage
+      local resets = { count = 0 }
+      -- through _G: busted gives each spec file globals of its own
+      _G.resetBackgroundImage = function(...)
+        resets.count = resets.count + 1
+        return real(...)
+      end
+      finally(function() _G.resetBackgroundImage = real end)
+      return resets
+    end
+
+    local function returnFromAside()
+      BaseUI.settings.standingAside = nil
+      BaseUI.armChatTriggers()
+      BaseUI.createVitalsTriggers()
+      BaseUI.createConditionTrigger()
+    end
+
+    it("should take its picture down and leave a game interface's own console alone", function()
+      BaseUI.setBackground(image)
+      local resets = countingResets()
+      setBackgroundColor("main", 10, 20, 30, 0)
+      BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+      assert.are.same({ 10, 20, 30, 0 }, { getBackgroundColor("main") })
+      assert.is_false(BaseUI.backgroundShown)
+      assert.are.equal(1, resets.count)
+      returnFromAside()
+    end)
+
+    it("should take its picture down for a game that declines it without an interface", function()
+      BaseUI.setBackground(image)
+      local resets = countingResets()
+      BaseUI.standAside("sysServerGuiInstalled")
+      assert.is_false(BaseUI.backgroundShown)
+      assert.are.equal(1, resets.count)
+      returnFromAside()
+    end)
+
+    it("should keep the picture before when a new one passes the check but cannot be shown", function()
+      BaseUI.setBackground(image)
+      local other = getMudletHomeDir() .. "/baseui-spec-other-picture.png"
+      local input = io.open(image, "rb")
+      local output = io.open(other, "wb")
+      output:write(input:read("*a"))
+      input:close()
+      output:close()
+      local real = _G.setBackgroundImage
+      _G.setBackgroundImage = function(window, path, ...)
+        if path == other then
+          return nil, "no plugin"
+        end
+        return real(window, path, ...)
+      end
+      -- one finally per spec: a second would replace this one
+      finally(function()
+        _G.setBackgroundImage = real
+        os.remove(other)
+      end)
+      local shown, problem = BaseUI.setBackground(other)
+      assert.is_false(shown)
+      assert.are.equal("no plugin", problem)
+      assert.are.equal(image, BaseUI.settings.background)
+      assert.is_true(BaseUI.backgroundShown)
+    end)
+
+    it("should only take what follows the background command", function()
+      local real = BaseUI.alias
+      local calls = {}
+      BaseUI.alias = function(command, argument)
+        calls[#calls + 1] = { command, argument }
+      end
+      finally(function() BaseUI.alias = real end)
+      expandAlias("baseui hide now", false)
+      expandAlias("baseui background /some where/picture.png", false)
+      expandAlias("baseui Background off", false)
+      expandAlias("baseui dock", false)
+      assert.are.same({ { "background", "/some where/picture.png" }, { "Background", "off" }, { "dock" } }, calls)
     end)
   end)
 
@@ -6338,6 +6969,45 @@ describe("Widget state getters", function()
     end)
   end)
 
+  describe("setLabelLiveRegion/getLabelLiveRegion", function()
+    after_each(function()
+      setLabelLiveRegion(label, "off")
+    end)
+
+    it("is off until it is set, and holds what it is set to", function()
+      assert.are.equal("off", getLabelLiveRegion(label))
+      assert.is_true(setLabelLiveRegion(label, "polite"))
+      assert.are.equal("polite", getLabelLiveRegion(label))
+      assert.is_true(setLabelLiveRegion(label, "assertive"))
+      assert.are.equal("assertive", getLabelLiveRegion(label))
+      assert.is_true(setLabelLiveRegion(label, "off"))
+      assert.are.equal("off", getLabelLiveRegion(label))
+    end)
+
+    it("returns nil and a message for an empty label name", function()
+      local ok, err = setLabelLiveRegion("", "polite")
+      assert.is_nil(ok)
+      assert.are.equal("a label cannot have an empty string as its name", err)
+    end)
+
+    it("returns nil and a message for a mode it does not know", function()
+      local ok, err = setLabelLiveRegion(label, "loud")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("'loud' is not a valid live region", 1, true))
+      assert.are.equal("off", getLabelLiveRegion(label))
+    end)
+
+    it("returns nil and a message naming an unknown label", function()
+      local unknown = name("wdgNoSuchLabel")
+      local ok, err = getLabelLiveRegion(unknown)
+      assert.is_nil(ok)
+      assert.are.equal(("label name '%s' not found"):format(unknown), err)
+      ok, err = setLabelLiveRegion(unknown, "polite")
+      assert.is_nil(ok)
+      assert.are.equal(("label name '%s' not found"):format(unknown), err)
+    end)
+  end)
+
   describe("getScrollBarVisible", function()
     local originalMainScrollBar
     local freshConsole = name("wdgFreshConsole")
@@ -7231,6 +7901,9 @@ describe("Main window size and saved layout", function()
   end
 
   setup(function()
+    -- A docked map squeezed short of the width it wants takes a growing window's width before the console
+    -- does, which would read here as a display that cannot resize
+    closeMapWidget()
     local firstWidth, firstHeight = getMainWindowSize()
     measurable = testMode and firstWidth > 0 and firstHeight > 0
     if not measurable then
@@ -7241,11 +7914,11 @@ describe("Main window size and saved layout", function()
     local width, height = getMainWindowSize()
     resizable = width > firstWidth and height > firstHeight
 
-    -- A dock another spec file left open - the map widget is the one that does
-    -- this - only takes its width out of the console at the next re-layout,
-    -- which is the resize just above. So the size to put the window back to is
-    -- read after asking for the first one again rather than before: a size the
-    -- window has actually been is a size it can be put back to.
+    -- A dock opened or closed just before this, as the map is above, only
+    -- changes the console's width at the next re-layout, which is the resize
+    -- just above. So the size to put the window back to is read after asking
+    -- for the first one again rather than before: a size the window has
+    -- actually been is a size it can be put back to.
     setMainWindowSize(firstWidth, firstHeight)
     pumpEvents(200)
     originalWidth, originalHeight = getMainWindowSize()

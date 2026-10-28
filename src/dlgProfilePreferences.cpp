@@ -1456,6 +1456,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({disable_password_masking_checkbox, tr("password, masking, hidden characters")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for telling the game that a screen reader is in use.
     synonyms.append({checkBox_advertiseScreenReader, tr("screen reader, NVDA, JAWS, VoiceOver, Orca, accessibility")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for reaching buttons in scripts and packages with the keyboard.
+    synonyms.append({checkBox_accessibleLabels, tr("keyboard, tab, focus, buttons, labels, screen reader, accessibility")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for reading incoming text out loud.
     synonyms.append({checkBox_announceIncomingText, tr("text to speech, TTS, speech, spoken, screen reader")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for whether pressing Alt on its own moves focus to the menu bar.
@@ -2603,6 +2605,13 @@ bool dlgProfilePreferences::event(QEvent* pEvent)
     if (pEvent->type() == QEvent::WindowActivate) {
         refreshFromSettings();
     }
+    // Sent when this dialog's stylesheet or the application's is replaced
+    if (pEvent->type() == QEvent::StyleChange && mpWidget_shell) {
+        bool themeSurface = false;
+        if (shellPalette(themeSurface) != mShellPalette) {
+            applyShellStyle();
+        }
+    }
     return handled;
 }
 
@@ -3314,6 +3323,35 @@ void dlgProfilePreferences::restyleSidebarIcons(const QColor& normal, const QCol
     }
 }
 
+// The application's palette, not the dialog's: a stylesheet freezes its widget's palette, and the dialog's is
+// still stale when signal_appearanceChanged() arrives. A stylesheet painting plain widgets paints the controls
+// on the cards, so it decides; read off an unparented probe, which starts from qApp's palette.
+QPalette dlgProfilePreferences::shellPalette(bool& themeSurface) const
+{
+    themeSurface = false;
+    if (qApp->styleSheet().isEmpty() && styleSheet().isEmpty()) {
+        return QApplication::palette();
+    }
+    QWidget probe;
+    probe.setStyleSheet(styleSheet());
+    probe.ensurePolished();
+    QPalette palette = probe.palette();
+    const QBrush window = palette.brush(QPalette::Active, QPalette::Window);
+    if (palette.isBrushSet(QPalette::Active, QPalette::Window) && window.style() == Qt::SolidPattern && window.color().alpha() == 255) {
+        palette.setColor(QPalette::Base, window.color());
+        themeSurface = true;
+        return palette;
+    }
+    // A gradient or translucent background is no colour to draw a surface in, and Qt copies it into Base too
+    const QPalette appPalette = QApplication::palette();
+    for (const auto group : {QPalette::Active, QPalette::Inactive, QPalette::Disabled}) {
+        for (const auto role : {QPalette::Window, QPalette::Base}) {
+            palette.setBrush(group, role, appPalette.brush(group, role));
+        }
+    }
+    return palette;
+}
+
 // On the shell widget, not the dialog, whose stylesheet mudlet::showOptionsDialog() replaces with the
 // profile's Lua one on every show. Selectors are scoped by objectName or the card property, so a profile
 // stylesheet still reaches the controls inside the pages.
@@ -3322,11 +3360,9 @@ void dlgProfilePreferences::applyShellStyle()
     if (!mpWidget_shell) {
         return;
     }
-    // The application's palette, not the dialog's: a stylesheet freezes its widget's palette, so a profile
-    // stylesheet pins the dialog to the theme it was shown in, and even without one the palette change is
-    // still undelivered when signal_appearanceChanged() arrives. mudlet::setAppearance() swaps qApp's
-    // palette synchronously.
-    const QPalette themePalette = QApplication::palette();
+    bool themeSurface = false;
+    const QPalette themePalette = shellPalette(themeSurface);
+    mShellPalette = themePalette;
     const QColor cardColor = themePalette.color(QPalette::Base);
     const QColor textColor = themePalette.color(QPalette::WindowText);
     const QColor accentColor = themePalette.color(QPalette::Highlight);
@@ -3334,11 +3370,14 @@ void dlgProfilePreferences::applyShellStyle()
     const bool darkPage = cardColor.lightness() < 128;
 
     // Mixed from card and text, the one pair a usable palette keeps apart: Mudlet's light appearance has
-    // window, base and mid within three levels, so a border mixed from those is invisible
-    const QColor pageColor = blend(cardColor, QColor(Qt::black), darkPage ? 0.35 : 0.04);
+    // window, base and mid within three levels, so a border mixed from those is invisible.
+    // A theme paints every label and control on the page as well, so a darker page would box each of them.
+    const QColor pageColor = themeSurface ? cardColor : blend(cardColor, QColor(Qt::black), darkPage ? 0.35 : 0.04);
     const QColor borderColor = blend(cardColor, textColor, darkPage ? 0.28 : 0.16);
     const QString hoverSoft = rgba(textColor, 0.07);
     const QString accentSoft = rgba(accentColor, 0.14);
+    // The theme paints the labels on a banner too, so a tint would leave each of them in a box
+    const QString bannerFill = themeSurface ? cardColor.name() : accentSoft;
     // A saturated highlight colour rarely holds its own against both pages
     const QColor accentText = darkPage ? blend(accentColor, QColor(Qt::white), 0.45) : blend(accentColor, QColor(Qt::black), 0.2);
     const QColor mutedText = blend(cardColor, textColor, 0.7);
@@ -3424,9 +3463,9 @@ void dlgProfilePreferences::applyShellStyle()
                                       // A .ui group box nested in a card would draw a second frame; a heading alone divides them
                                       "QGroupBox[settingsCard=\"true\"] QGroupBox { border: none; background: transparent; margin-top: 20px; padding: 0px 0px 0px 8px; font-weight: bold; }"
                                       "QGroupBox[settingsCard=\"true\"] QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; left: 0px; padding: 0px; }"
-                                      "#settingsMigrationBanner { background-color: %4; border: 1px solid %7; border-radius: 8px; }"
+                                      "#settingsMigrationBanner { background-color: %17; border: 1px solid %7; border-radius: 8px; }"
                                       "#settingsMigrationBannerTitle { font-weight: bold; }"
-                                      "#settingsNoProfileNotice { background-color: %4; border: 1px solid %7; border-radius: 8px; padding: 12px 16px; }"
+                                      "#settingsNoProfileNotice { background-color: %17; border: 1px solid %7; border-radius: 8px; padding: 12px 16px; }"
                                       "#settingsNoProfileNotice:focus { border: 1px solid %5; }"
                                       "#settingsSearchHeader { font-weight: bold; font-size: 110%; color: %2; }"
                                       "#settingsSearchEmpty { padding: 32px; color: %9; }"
@@ -3448,12 +3487,12 @@ void dlgProfilePreferences::applyShellStyle()
                                       "QAbstractButton[settingsChevronRow=\"true\"]:hover { background-color: %3; }"
                                       "QAbstractButton[settingsChevronRow=\"true\"]:focus { border: 1px solid %5; }"
                                       // Carries no setting, so tinted rather than framed like a card
-                                      "QGroupBox[settingsHero=\"true\"] { background-color: %4; border: 1px solid %5; }"
+                                      "QGroupBox[settingsHero=\"true\"] { background-color: %17; border: 1px solid %5; }"
                                       "#settingsHeroHeadline { font-weight: bold; font-size: 115%; }"
                                       "#settingsHeroDetail { color: %9; }")
                                           .arg(pageColor.name(), textColor.name(), hoverSoft, accentSoft, accentColor.name(), accentText.name(), borderColor.name(), cardColor.name(), mutedText.name())
                                           .arg(markerSoft, QString::number(accentBarStop, 'f', 5), QString::number(accentBarStop + 0.0001, 'f', 5), scrollHandle.name(), scrollHandleHover.name())
-                                          .arg(QString::number(railAccentBarStop, 'f', 5), QString::number(railAccentBarStop + 0.0001, 'f', 5))
+                                          .arg(QString::number(railAccentBarStop, 'f', 5), QString::number(railAccentBarStop + 0.0001, 'f', 5), bannerFill)
                                   + cardIndicatorRules + cardTitleRule);
 
     // Fusion draws every control outline, indicators included, as palette(window) darkened 40%, within 1.1:1
@@ -3923,6 +3962,7 @@ void dlgProfilePreferences::disableHostDetails()
     label_caretModeKey->setEnabled(false);
     checkBox_announceIncomingText->setEnabled(false);
     checkBox_advertiseScreenReader->setEnabled(false);
+    checkBox_accessibleLabels->setEnabled(false);
     checkBox_enableClosedCaption->setEnabled(false);
     checkBox_enableBlinkText->setEnabled(false);
     checkBox_f3SearchEnabled->setEnabled(false);
@@ -4048,6 +4088,7 @@ void dlgProfilePreferences::enableHostDetails()
     label_caretModeKey->setEnabled(true);
     checkBox_announceIncomingText->setEnabled(true);
     checkBox_advertiseScreenReader->setEnabled(true);
+    checkBox_accessibleLabels->setEnabled(true);
     checkBox_enableClosedCaption->setEnabled(true);
     checkBox_enableBlinkText->setEnabled(true);
     checkBox_f3SearchEnabled->setEnabled(true);
@@ -4328,6 +4369,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_announceIncomingText->setChecked(pHost->mAnnounceIncomingText);
     checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
     connect(checkBox_advertiseScreenReader, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAdvertiseScreenReader, Qt::UniqueConnection);
+    checkBox_accessibleLabels->setChecked(pHost->mAccessibleLabels);
+    connect(checkBox_accessibleLabels, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAccessibleLabels, Qt::UniqueConnection);
     checkBox_enableOSC8Hyperlinks->setChecked(pHost->mEnableOSC8Hyperlinks);
     connect(checkBox_enableOSC8Hyperlinks, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks, Qt::UniqueConnection);
 
@@ -5393,6 +5436,7 @@ void dlgProfilePreferences::clearHostDetails()
     }
     checkBox_announceIncomingText->setChecked(false);
     checkBox_advertiseScreenReader->setChecked(false);
+    checkBox_accessibleLabels->setChecked(false);
     checkBox_enableClosedCaption->setChecked(false);
     checkBox_enableBlinkText->setChecked(false);
     comboBox_blankLinesBehaviour->setCurrentIndex(0);
@@ -7353,6 +7397,9 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(checkBox_advertiseScreenReader)) {
             pHost->setAdvertiseScreenReader(checkBox_advertiseScreenReader->isChecked());
         }
+        if (mSnapshot.dirty(checkBox_accessibleLabels)) {
+            pHost->setAccessibleLabels(checkBox_accessibleLabels->isChecked());
+        }
         if (mSnapshot.dirty(checkBox_enableClosedCaption)) {
             pHost->setEnableClosedCaption(checkBox_enableClosedCaption->isChecked());
         }
@@ -9248,6 +9295,13 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
 {
     if (mpHost) {
         mpHost->setAdvertiseScreenReader(state);
+    }
+}
+
+void dlgProfilePreferences::slot_toggleAccessibleLabels(const bool state)
+{
+    if (mpHost) {
+        mpHost->setAccessibleLabels(state);
     }
 }
 

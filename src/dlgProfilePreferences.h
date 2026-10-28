@@ -227,6 +227,7 @@ private slots:
     void slot_setPostingTimeout(const double);
     void slot_changeControlCharacterHandling();
     void slot_toggleAdvertiseScreenReader(const bool);
+    void slot_toggleAccessibleLabels(const bool);
     void slot_toggleEnableOSC8Hyperlinks(const bool);
     void slot_changeWrapAt();
     void slot_toggleUseMaxBufferSize(bool checked);
@@ -403,6 +404,7 @@ private:
     void showCategory(const QString& key, QWidget* pSpotlightTarget = nullptr);
     void spotlight(QWidget* pTarget);
     void applyShellStyle();
+    QPalette shellPalette(bool& themeSurface) const;
     void restyleSidebarIcons(const QColor& normal, const QColor& selected);
     // Search indexes the real widget tree and lends matching cards to the results page while the query stands
     void buildSearchResultsPage();
@@ -463,6 +465,8 @@ private:
     };
 
     QWidget* mpWidget_shell = nullptr;
+    // What applyShellStyle() last drew from, so a StyleChange that alters nothing does not restyle the shell
+    QPalette mShellPalette;
     QWidget* mpWidget_sidebar = nullptr;
     QWidget* mpWidget_titleRow = nullptr;
     QLabel* mpLabel_wordmark = nullptr;

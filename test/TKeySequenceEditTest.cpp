@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include "TKeySequenceEdit.h"
 #include "utils.h"
 
@@ -282,4 +283,4 @@ private slots:
 };
 
 #include "TKeySequenceEditTest.moc"
-QTEST_MAIN(TKeySequenceEditTest)
+MUDLET_GROUPED_TEST_MAIN(TKeySequenceEditTest)

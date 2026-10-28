@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include "TMxpEntityTagHandler.h"
 #include "TMxpStubClient.h"
 #include <QTest>
@@ -253,4 +254,4 @@ private slots:
 };
 
 #include "TMxpEntityTagHandlerTest.moc"
-QTEST_MAIN(TMxpEntityTagHandlerTest)
+MUDLET_GROUPED_TEST_MAIN(TMxpEntityTagHandlerTest)

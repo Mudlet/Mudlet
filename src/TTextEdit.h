@@ -107,6 +107,7 @@ public:
         mMaxHRange = 0;
     }
     int getScreenHeight() const { return mScreenHeight; }
+    QSize drawableSize() const;
     void searchSelectionOnline();
     int getColumnCount() const;
     int getRowCount() const;
@@ -120,6 +121,8 @@ public:
 
     void initializeCaret();
     void setCaretPosition(int line, int column);
+    // Onto the first or the last link, where Tab leaving the script buttons lands; nowhere new with no links
+    void moveCaretToLink(bool first);
     void updateCaret();
     void showLinkContextMenu();
     void announceLinkFocus(int linkIndex);
@@ -149,6 +152,7 @@ public:
     friend class ScrollLostOnPartialRepaintTest;
     friend class TTextEditBlinkTest;
     friend class PipelineBenchmark;
+    friend class NawsWidthReportTest;
     static bool shouldRegisterBlinkClient(bool enableBlinkText, bool hasBlinkingContentInRedrawnRegion, bool isBlinkClientRegistered, bool reusedCachedScreenContent);
     static QSize smallestEnclosingSurfaceSize(int screenWidth, int fontWidth, int pixmapHeight, qreal devicePixelRatio);
 

@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <CredentialManager.h>
 #include <MudletApp.h>
 #include <SecureStringUtils.h>
@@ -42,6 +43,7 @@ private slots:
     void testNonDeterministicEncryption();
     void testSpecialCharacters();
     void testSecureMemoryClearing();
+    void testTheDerivedKeyNeverChanges();
     void testProfileKeyPersistence();
     void testPortableModeFileStorage();
     void testInvalidInputHandling();
@@ -730,5 +732,13 @@ void SecureStringUtilsTest::cleanupTestCase()
 {
 }
 
+// Saved credentials were encrypted with keys derived this way, so generateKey() must keep producing this value
+void SecureStringUtilsTest::testTheDerivedKeyNeverChanges()
+{
+    const QByteArray salt = QByteArray::fromHex("000102030405060708090a0b0c0d0e0f");
+    QCOMPARE(SecureStringUtils::generateKey(QByteArrayLiteral("a profile's key"), salt, SecureStringUtils::PBKDF2_ITERATIONS).toHex(),
+             QByteArrayLiteral("41a61c18713aa2ea5fa8218d19f71d8dd25772c304cf197471c68d08ef75d4bf"));
+}
+
 #include "SecureStringUtilsTest.moc"
-QTEST_MAIN(SecureStringUtilsTest)
+MUDLET_GROUPED_TEST_MAIN(SecureStringUtilsTest)

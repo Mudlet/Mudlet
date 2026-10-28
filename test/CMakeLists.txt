@@ -76,6 +76,12 @@ function(sandbox_test_config_dirs)
 endfunction()
 cmake_language(DEFER CALL sandbox_test_config_dirs)
 
+# Every test here that links the Mudlet library shares one executable, the way
+# the functional tests share one per subsystem: each link costs a build tree
+# ~340MB and a link step, and none of that is per-test. A new test goes in this
+# list and writes MUDLET_GROUPED_TEST_MAIN() (or MUDLET_GROUPED_TEST_GUILESS_MAIN())
+# rather than QTEST_MAIN(), with a class named after its file - see
+# functional_tests/GroupedTest.h. Each still runs as its own ctest case and process.
 set(UNIT_TESTS
     TEntityResolverTest
     TEntityHandlerTest
@@ -84,6 +90,7 @@ set(UNIT_TESTS
     TLinkStoreTest
     TMxpTagParserTest
     TMxpSendTagHandlerTest
+    TMxpLinkTagHandlerTest
     TMxpEntityTagHandlerTest
     TMxpFrameDestTagHandlerTest
     TMxpVersionTagTest
@@ -108,6 +115,7 @@ set(UNIT_TESTS
     TEncodingHelperTest
     PasswordMigrationTest
     TMediaPathTraversalTest
+    TAudioMixerMixTest
     ProfileNameValidationTest
 )
 
@@ -120,13 +128,16 @@ endif()
 
 mudlet_add_test_pch_provider(mudlet_unit_test_pch)
 
+list(TRANSFORM UNIT_TESTS APPEND .cpp OUTPUT_VARIABLE unitTestSources)
+add_executable(unit_tests ${CMAKE_CURRENT_SOURCE_DIR}/functional_tests/GroupedTestMain.cpp ${unitTestSources})
+target_include_directories(unit_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/functional_tests)
+mudlet_reuse_test_pch(unit_tests mudlet_unit_test_pch)
+add_dependencies(unit_tests ${LIB_MUDLET_APP_TARGET})
+# mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
+target_link_libraries(unit_tests PRIVATE Qt6::Test ${LIB_MUDLET_APP_TARGET} mudlet_lsan_hooks)
+
 foreach(test_name ${UNIT_TESTS})
-    add_executable(${test_name} ${test_name}.cpp)
-    mudlet_reuse_test_pch(${test_name} mudlet_unit_test_pch)
-    add_dependencies(${test_name} ${LIB_MUDLET_APP_TARGET})
-    # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
-    target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_APP_TARGET} mudlet_lsan_hooks)
-    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
+    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:unit_tests> ${test_name})
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
     )
@@ -141,8 +152,11 @@ set_tests_properties(EventLoopPumpTest TAreaGridIndexTest PROPERTIES TIMEOUT 60)
 if(USE_MCPSERVER)
     # The end-to-end cases pipe JSON-RPC through a real `mudlet --mcp-bridge` process,
     # so the test needs the application binary itself, not just the library.
-    target_compile_definitions(TMCPBridgeTest PRIVATE MUDLET_BINARY_PATH="$<TARGET_FILE:mudlet_executable>")
-    add_dependencies(TMCPBridgeTest mudlet_executable)
+    # On the one file that reads it, so the rest of the binary's objects stay
+    # free of build-tree paths and ccache can share them between worktrees.
+    set_property(SOURCE TMCPBridgeTest.cpp
+        APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_BINARY_PATH="$<TARGET_FILE:mudlet_executable>")
+    add_dependencies(unit_tests mudlet_executable)
 endif()
 
 # TKeySequenceEditTest's focus traversal cases need an active window, which an X
@@ -243,7 +257,7 @@ set_tests_properties(CrashReportUploadTest PROPERTIES
 )
 
 # DiscordTest checks the Lua API permission gating contract by scanning the source
-target_compile_definitions(DiscordTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
+set_property(SOURCE DiscordTest.cpp APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 
 # Build-file consistency check. Independent of the Mudlet library: it only reads
 # src/CMakeLists.txt and the src/ directory, so it does not link LIB_MUDLET_TARGET.
