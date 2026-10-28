@@ -471,6 +471,7 @@ private:
     QString mPasswordEntryTypedAhead;
 
     bool mEnableClose = false;
+    bool mMainDisplayLayoutPending = false;
     std::unique_ptr<TMxpFrameWidgets> mpMxpFrameWidgets;
 };
 

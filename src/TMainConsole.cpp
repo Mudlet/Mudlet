@@ -319,6 +319,8 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
     new MainWindowSizeReporter(this, {mpLeftToolBar, mpRightToolBar, mpTopToolBar, mpCommandLine.data()});
     reportMainWindowSize();
+
+    mpMainFrame->installEventFilter(this);
 }
 
 TMainConsole::~TMainConsole()
@@ -2042,6 +2044,21 @@ void TMainConsole::closePasswordEntry()
 
 bool TMainConsole::eventFilter(QObject* watched, QEvent* event)
 {
+    // A bar shown or hidden has the layout resize this frame but not the console, so no
+    // resizeEvent() sizes the display in it. Not sized mid-layout, while the frame's
+    // ancestors are still at their old size: the panes would count rows that are clipped.
+    if (watched == mpMainFrame && event->type() == QEvent::Resize && !mMainDisplayLayoutPending) {
+        mMainDisplayLayoutPending = true;
+        using namespace std::chrono_literals;
+        QTimer::singleShot(0ms, this, [this]() {
+            mMainDisplayLayoutPending = false;
+            // a console a tab switch has made zero wide is left alone, as resizeEvent() leaves it
+            if (width() && mpHost && mpCommandLine && !mpCommandLine->isHidden()) {
+                mBorders = mpHost->borders();
+                layoutMainDisplay();
+            }
+        });
+    }
     if (mpPasswordEntry && watched == mpCommandLine && (event->type() == QEvent::Resize || event->type() == QEvent::Move)) {
         mpPasswordEntry->setGeometry(mpCommandLine->geometry());
     }

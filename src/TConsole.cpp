@@ -903,19 +903,15 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layoutLayer2->activate();
     }
 
-    // Move before resizing: resizing first could leave the display overrunning
-    // its parent frame, clipping it and making TTextEdit::updateScreenView()
-    // undercount the visible rows:
-    mpMainDisplay->move(mBorders.left(), mBorders.top());
     if (mType & (MainConsole | SubConsole | UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
         mpBaseHFrame->resize(x, y);
         x -= (mpLeftToolBar->width() + mpRightToolBar->width());
         y -= mpTopToolBar->height();
-        // The mBorders components will be all zeros for all but the MainConsole:
-        mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
+        layoutMainDisplay();
     } else {
+        mpMainDisplay->move(mBorders.left(), mBorders.top());
         mpMainFrame->resize(x, y);
         // Sized before this frame's layout has run, while the bar still has Qt's 100x30 default
         // geometry, so use its size hint - exact, as its vertical policy is Fixed in a QVBoxLayout.
@@ -1018,6 +1014,18 @@ void TConsole::resizeEvent(QResizeEvent* event)
     }
 }
 
+void TConsole::layoutMainDisplay()
+{
+    const int x = width() - mpLeftToolBar->width() - mpRightToolBar->width();
+    const int y = height() - mpTopToolBar->height() - mpCommandLine->height();
+    // Move before resizing: resizing first could leave the display overrunning
+    // its parent frame, clipping it and making TTextEdit::updateScreenView()
+    // undercount the visible rows:
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
+    // The mBorders components will be all zeros for all but the MainConsole:
+    mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom());
+}
+
 void TConsole::refresh()
 {
     if (mType == MainConsole) {
@@ -1043,7 +1051,7 @@ void TConsole::refresh()
         y -= mpTopToolBar->height();
     }
 
-    // Move before resizing, see comment in resizeEvent():
+    // Move before resizing, see comment in layoutMainDisplay():
     mpMainDisplay->move(mBorders.left(), mBorders.top());
     mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
 
