@@ -2786,8 +2786,8 @@ local function copy2color(name,win,str,inst)
   -- the selection's length is in the same UTF-16 units as start, and is what Qt made
   -- of str, so it also holds for a number or for bytes that are not valid UTF-8
   local _, _, len = getSelection(win)
-  local style, endspan, r, g, b, rb, gb, bb, cr, cg, cb, crb, cgb, cbb, char
-  local selectSection, getFgColor, getBgColor = selectSection, getFgColor, getBgColor
+  local style, endspan, r, g, b, rb, gb, bb, ab, cr, cg, cb, crb, cgb, cbb, cab, char, format
+  local selectSection, getFgColor, getBgColor, getTextFormat = selectSection, getFgColor, getBgColor, getTextFormat
   local conversions = {
     ["¦"] = "&brvbar;",
     ["×"] = "&times;",
@@ -2799,13 +2799,18 @@ local function copy2color(name,win,str,inst)
     ["'"] = "&#39;",
     ["&"] = "&amp;"
   }
-  if name == "copy2html" then
-    style = "%s<span style=\'color: rgb(%d,%d,%d);background: rgb(%d,%d,%d);'>%s"
+  local html = name == "copy2html"
+  if html then
+    style = "%s<span style=\'color: rgb(%d,%d,%d);background: rgb(%d,%d,%d);'>"
     endspan = "</span>"
-  elseif name == "copy2decho" then
-    style = "%s<%d,%d,%d:%d,%d,%d>%s"
+  else
+    style = "%s<%d,%d,%d:%d,%d,%d%s>"
     endspan = "<r>"
   end
+  -- getTextFormat() keys and the decho tags for them, in the order tags are written;
+  -- decho has no tag for the other attributes
+  local dechoFlags = { { "bold", "b" }, { "italic", "i" }, { "underline", "u" }, { "strikeout", "s" }, { "overline", "o" } }
+  local flags, currentFlags = {}, {}
   -- walk the line once, tracking the UTF-16 offset: utf8.sub() would index by
   -- character instead, and rescans the line from its start on every call
   local pieces = {}
@@ -2817,25 +2822,56 @@ local function copy2color(name,win,str,inst)
     if offset >= start then
       if win ~= "main" then
         selectSection(win, offset, 1)
-        r,g,b = getFgColor(win)
-        rb,gb,bb = getBgColor(win)
       else
         selectSection(offset, 1)
-        r,g,b = getFgColor()
-        rb,gb,bb = getBgColor()
       end
 
       char = lineChar
-      if name == "copy2html" then
+      if html then
         char = conversions[char] or char
+        if win ~= "main" then
+          r,g,b = getFgColor(win)
+          rb,gb,bb = getBgColor(win)
+        else
+          r,g,b = getFgColor()
+          rb,gb,bb = getBgColor()
+        end
+      else
+        if win ~= "main" then
+          format = getTextFormat(win)
+        else
+          format = getTextFormat()
+        end
+        r,g,b = format.foreground[1], format.foreground[2], format.foreground[3]
+        rb,gb,bb,ab = format.background[1], format.background[2], format.background[3], format.backgroundAlpha
+        for i, flag in ipairs(dechoFlags) do
+          flags[i] = format[flag[1]]
+        end
       end
 
-      if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
-        cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
-        pieces[#pieces + 1] = string.format(style, #pieces > 0 and endspan or "", r, g, b, rb, gb, bb, char)
-      else
-        pieces[#pieces + 1] = char
+      if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb or ab ~= cab then
+        cr,cg,cb,crb,cgb,cbb,cab = r,g,b,rb,gb,bb,ab
+        if html then
+          pieces[#pieces + 1] = string.format(style, #pieces > 0 and endspan or "", r, g, b, rb, gb, bb)
+        else
+          pieces[#pieces + 1] = string.format(style, #pieces > 0 and endspan or "", r, g, b, rb, gb, bb, (ab and ab ~= 255) and "," .. ab or "")
+          -- every colour but the first comes after an <r>, which ends formatting, so restate what is on
+          for i, flag in ipairs(dechoFlags) do
+            if flags[i] then
+              pieces[#pieces + 1] = "<" .. flag[2] .. ">"
+            end
+            currentFlags[i] = flags[i]
+          end
+        end
+      elseif not html then
+        for i, flag in ipairs(dechoFlags) do
+          if flags[i] ~= currentFlags[i] then
+            pieces[#pieces + 1] = flags[i] and "<" .. flag[2] .. ">" or "</" .. flag[2] .. ">"
+            currentFlags[i] = flags[i]
+          end
+        end
       end
+      pieces[#pieces + 1] = char
     end
     offset = offset + utf16Units(lineChar)
   end
@@ -2843,7 +2879,8 @@ local function copy2color(name,win,str,inst)
   return table.concat(pieces)
 end
 
---- copies text with color information in decho format
+--- copies text with color information in decho format, keeping bold, italic, underline,
+--- strikeout and overline as decho tags and a translucent background's alpha
 --- @param win optional, the window to copy from. Defaults to the main window
 --- @param str optional, the string to copy. Defaults to copying the entire line
 --- @param inst optional, the instance of the string to copy. Defaults to the first instance.
