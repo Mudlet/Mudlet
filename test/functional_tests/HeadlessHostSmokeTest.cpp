@@ -3070,7 +3070,7 @@ end
     }
 
     // What a profile with no view answers the scroll calls, taken from the same Lua run in the GUI self-test
-    // profile, which lets each real pane repaint before it is read and re-issues each scroll until it holds.
+    // profile, which lets each real pane repaint before it is read.
     void test_headlessScrollContract()
     {
         const QString hostname = qsl("Test-Headless-Host-Scroll");
@@ -3078,7 +3078,6 @@ end
         Host* host = HostManager::self()->getHost(hostname);
         QVERIFY2(host, "The profile is not in the pool.");
         QVERIFY(!host->hasConsoleView());
-        // For scrollUp() and scrollDown(), which GUIUtils.lua builds on getScroll() and scrollTo()
         host->getLuaInterpreter()->loadGlobal();
 
         const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
