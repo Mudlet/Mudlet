@@ -59,6 +59,8 @@ function(sandbox_test_config_dirs)
     foreach(testName ${registeredTests})
         set(testConfigDir "${CMAKE_CURRENT_BINARY_DIR}/xdg-config/${testName}")
         set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "XDG_CONFIG_HOME=${testConfigDir}")
+        # TLuaInterpreter::loadGlobal() writes its bytecode cache under CacheLocation
+        set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "XDG_CACHE_HOME=${CMAKE_CURRENT_BINARY_DIR}/xdg-cache/${testName}")
         if(APPLE)
             # CoreFoundation is handed a home directory rather than a config root,
             # and one that has to exist - Qt creates a config root on the way to
