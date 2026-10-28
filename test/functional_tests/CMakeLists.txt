@@ -214,6 +214,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorSearchTest.cpp
     TreeWidgetItemMoveTest.cpp
     TriggerEditorDisclosureTest.cpp
+    TimerEditorCountdownTest.cpp
     TriggerEditorTest.cpp
     TriggerPatternListLayoutTest.cpp
     VariableEditorWriteBackTest.cpp
