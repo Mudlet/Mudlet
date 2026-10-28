@@ -831,10 +831,10 @@ private:
     int mHeldSpoilerLinkId = 0;
     int mHeldSpoilerStartColumn = 0;
     int mHeldSpoilerContinuationLength = 0;
-    // A link with visibility settings closed while text is held back for joining. Where its text ends
-    // up is known only once that is resolved - joined, or committed as a line of its own - so it is
-    // registered then: from startColumn in the text it began in, through continuationLength
-    // characters of the text after the held text. linkId 0 is none.
+    // Links with visibility settings closed while text is held back for joining. Where their text
+    // ends up is known only once that is resolved - joined, or committed as a line of its own - so
+    // each is registered then: from startColumn in the text it began in, through continuationLength
+    // characters of the text after the held text.
     struct HeldVisibility
     {
         int linkId = 0;
@@ -843,7 +843,7 @@ private:
         bool startsAfterHeldText = false;
         Mudlet::HyperlinkStyling styling;
     };
-    HeldVisibility mHeldVisibility;
+    QList<HeldVisibility> mHeldVisibilities;
     QString mCurrentHyperlinkText;
 
     enum class WatchdogPhase { Phase1_Snapshot, Phase2_Unfreeze, None };
