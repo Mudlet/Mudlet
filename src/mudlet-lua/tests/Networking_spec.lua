@@ -1298,6 +1298,12 @@ describe("MMCP effects against a scripted chat peer", function()
     return seen
   end
 
+  -- Waits for `count` events, then a little longer so that one too many still shows
+  local function settleOn(seen, count)
+    waitUntil(function() return #seen >= count end, 2000)
+    pump(100)
+  end
+
   -- Every spec below leaves the peer's flags as it found them, so this does
   -- nothing on a passing run. It matters when one does fail: an assertion that
   -- stops a spec halfway through a toggle would otherwise leave the peer
@@ -1525,9 +1531,9 @@ describe("MMCP effects against a scripted chat peer", function()
       -- Hand Mudlet's own bytes straight back: sender and parser have to agree
       -- about where the 15 character group field ends, or a Mudlet peer would
       -- render another Mudlet's group chat wrongly.
-      local received = collectEvents("sysMMCPChatMessage", function()
+      local received = collectEvents("sysMMCPChatMessage", function(seen)
         peerSendsRaw(string.char(6) .. sent.text .. string.char(255))
-        pump(500)
+        settleOn(seen, 1)
       end)
       assert.equals(1, #received)
       assert.equals(PEER_NAME, received[1][1])
@@ -1673,10 +1679,10 @@ describe("MMCP effects against a scripted chat peer", function()
       ensurePeer()
       -- The parser walks the buffer command by command, so a write carrying
       -- two of them has to produce two messages rather than one or none.
-      local received = collectEvents("sysMMCPChatMessage", function()
+      local received = collectEvents("sysMMCPChatMessage", function(seen)
         peerSendsRaw(string.char(7) .. "<CHAT> first of two" .. string.char(255)
                      .. string.char(7) .. "<CHAT> second of two" .. string.char(255))
-        pump(500)
+        settleOn(seen, 2)
       end)
       assert.equals(2, #received)
       assert.is_true(contains(received[1][2], "first of two"), tostring(received[1][2]))
@@ -1688,16 +1694,16 @@ describe("MMCP effects against a scripted chat peer", function()
       ensurePeer()
       -- The complete command must not wait for the next one to finish, and the
       -- start of the next one must be kept for when the rest of it arrives.
-      local received = collectEvents("sysMMCPChatMessage", function()
+      local received = collectEvents("sysMMCPChatMessage", function(seen)
         peerSendsRaw(string.char(7) .. "<CHAT> whole one" .. string.char(255)
                      .. string.char(7) .. "<CHAT> started ")
-        pump(500)
+        settleOn(seen, 1)
       end)
       assert.equals(1, #received)
       assert.is_true(contains(received[1][2], "whole one"), tostring(received[1][2]))
-      received = collectEvents("sysMMCPChatMessage", function()
+      received = collectEvents("sysMMCPChatMessage", function(seen)
         peerSendsRaw("and finished" .. string.char(255))
-        pump(500)
+        settleOn(seen, 1)
       end)
       assert.equals(1, #received)
       assert.is_true(contains(received[1][2], "started and finished"), tostring(received[1][2]))
@@ -1708,10 +1714,10 @@ describe("MMCP effects against a scripted chat peer", function()
       ensurePeer()
       -- An unknown command byte must be skipped up to its terminator; consuming
       -- the wrong number of bytes would swallow whatever followed it.
-      local received = collectEvents("sysMMCPChatMessage", function()
+      local received = collectEvents("sysMMCPChatMessage", function(seen)
         peerSendsRaw(string.char(99) .. "nonsense" .. string.char(255)
                      .. string.char(7) .. "<CHAT> after the unknown" .. string.char(255))
-        pump(500)
+        settleOn(seen, 1)
       end)
       assert.equals(1, #received)
       assert.is_true(contains(received[1][2], "after the unknown"), tostring(received[1][2]))
