@@ -169,6 +169,7 @@ distributions package the two separately, so install both:
 | Fedora | `qt6-qthttpserver-devel` `qt6-qtwebsockets-devel` |
 | MSYS2 (CLANG64) | `${MINGW_PACKAGE_PREFIX}-qt6-httpserver` `${MINGW_PACKAGE_PREFIX}-qt6-websockets` — `CI/setup-windows-sdk.sh` installs both |
 | macOS (Homebrew) | included in the `qt` formula, nothing extra to install |
+| Flatpak (KDE runtime) | the runtime has Qt WebSockets; `CI/org.mudlet.mudlet.yml` builds Qt HttpServer from source |
 | aqtinstall (what CI uses) | `-m qthttpserver qtwebsockets` alongside the existing modules |
 
 To build without it, and so without either package, turn it off:

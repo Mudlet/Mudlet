@@ -15,8 +15,8 @@ RUN apt-get update \
     libpugixml-dev libsqlite3-dev libyajl-dev libzip-dev libzzip-dev \
     mesa-common-dev zlib1g-dev \
     libqt6core5compat6-dev libqt6opengl6-dev qt6-base-dev qt6-l10n-tools \
-    qt6-multimedia-dev qt6-speech-dev qt6-svg-dev qt6-tools-dev \
-    qt6-tools-dev-tools qtkeychain-qt6-dev \
+    qt6-httpserver-dev qt6-multimedia-dev qt6-speech-dev qt6-svg-dev qt6-tools-dev \
+    qt6-tools-dev-tools qt6-websockets-dev qtkeychain-qt6-dev \
  && rm -rf /var/lib/apt/lists/*
 
 # uid 2000 because Ubuntu images already give 1000 to "ubuntu"; the ccache mount
@@ -36,8 +36,6 @@ ENV WITH_VARIABLE_SPLASH_SCREEN=NO
 ENV MUDLET_VERSION_BUILD=""
 # apt and dnf update the package, so the built-in updater must not
 ENV WITH_UPDATER=NO
-# The MCP server needs Qt HttpServer, which the package does not depend on
-ENV WITH_MCPSERVER=NO
 RUN --mount=type=cache,target=/ccache,uid=2000,gid=2000 \
     cmake -S Mudlet -B Mudlet/build -G Ninja \
       -DCMAKE_BUILD_TYPE=Release \
