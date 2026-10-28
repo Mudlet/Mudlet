@@ -660,9 +660,10 @@ quint8 TChar::alternateFont() const
 static quint64 colorFingerprint(const std::vector<TChar>& line)
 {
     quint64 hash = 14695981039346656037ULL;
-    for (const TChar& character : line) {
-        hash = (hash ^ character.foreground().rgba()) * 1099511628211ULL;
-        hash = (hash ^ character.background().rgba()) * 1099511628211ULL;
+    // Runs twice per line in every debug build, where a range-for's iterator calls are not inlined
+    for (const TChar *character = line.data(), *end = character + line.size(); character != end; ++character) {
+        hash = (hash ^ character->foregroundRgba()) * 1099511628211ULL;
+        hash = (hash ^ character->backgroundRgba()) * 1099511628211ULL;
     }
     return hash;
 }
