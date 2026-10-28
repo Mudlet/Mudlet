@@ -4920,19 +4920,23 @@ noViewWindowReport = table.concat(noViewWindowProblems, '; ')
 #endif
     }
 
-    void test_getMousePositionIsRelativeToTheMainConsole()
+    // Labels are placed below a top button bar and right of a left one, so a
+    // label made at the reported position has to land under the pointer
+    void test_getMousePositionIsRelativeToWhereLabelsArePlaced()
     {
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+        TMainConsole* console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
         // Anywhere else this would move the real pointer (X11), or not move it at all (Wayland)
         if (QGuiApplication::platformName() != qsl("offscreen")) {
             QSKIP("Needs the offscreen platform, which ctest sets, to place the pointer.");
         }
 
+        // With no bar shown, scripts rely on the reading being relative to the whole console
         const QPoint local(13, 7);
-        const QPoint global = host->mainConsoleView()->mapToGlobal(local);
+        const QPoint global = console->mapToGlobal(local);
         QVERIFY2(global != local, "The main console sits at the screen origin, so this cannot tell its coordinates from the screen's.");
         QCursor::setPos(global);
         QCOMPARE(QCursor::pos(), global);
@@ -4940,6 +4944,36 @@ noViewWindowReport = table.concat(noViewWindowProblems, '; ')
         runLua(host, qsl("mouseX, mouseY = getMousePosition()\n"));
         QCOMPARE(luaGlobalNumber(host, "mouseX"), local.x());
         QCOMPARE(luaGlobalNumber(host, "mouseY"), local.y());
+
+        runLua(host,
+               qsl("tempButtonToolbar('mouseTopBar', 0, 0)\ntempButton('mouseTopBar', 'top', 0)\n"
+                   "tempButtonToolbar('mouseLeftBar', 1, 1)\ntempButton('mouseLeftBar', 'left', 1)\n"
+                   "tempButtonToolbar('mouseRightBar', 2, 1)\ntempButton('mouseRightBar', 'right', 1)\n"));
+        QVERIFY2(QTest::qWaitFor(
+                         [console]() {
+                             const QPoint frameOrigin = console->mpMainFrame->mapTo(console, QPoint(0, 0));
+                             return frameOrigin.x() > 0 && frameOrigin.y() > 0 && console->mpRightToolBar->width() > 0;
+                         },
+                         5s),
+                 "Showing button bars along the top and down both sides did not lay them out around the frame labels are placed in.");
+
+        QCursor::setPos(console->mpTopToolBar->mapToGlobal(QPoint(5, 2)));
+        runLua(host, qsl("mouseX, mouseY = getMousePosition()\n"));
+        QVERIFY2(luaGlobalNumber(host, "mouseY") < 0, "A pointer over the top button bar did not read as above the frame labels are placed in.");
+        QCursor::setPos(console->mpLeftToolBar->mapToGlobal(QPoint(2, 5)));
+        runLua(host, qsl("mouseX, mouseY = getMousePosition()\n"));
+        QVERIFY2(luaGlobalNumber(host, "mouseX") < 0, "A pointer over the left button bar did not read as left of the frame labels are placed in.");
+
+        const QPoint pastBars = console->mpMainFrame->mapToGlobal(local);
+        QCursor::setPos(pastBars);
+        QCOMPARE(QCursor::pos(), pastBars);
+
+        runLua(host, qsl("mouseX, mouseY = getMousePosition()\ncreateLabel('atPointer', mouseX, mouseY, 10, 10, 1)\n"));
+        QCOMPARE(luaGlobalNumber(host, "mouseX"), local.x());
+        QCOMPARE(luaGlobalNumber(host, "mouseY"), local.y());
+        TLabel* label = console->labelWidget(qsl("atPointer"));
+        QVERIFY2(label, "createLabel() made no widget.");
+        QCOMPARE(label->mapToGlobal(QPoint(0, 0)), pastBars);
     }
 
     // A script can read back neither the speed of a label's movie nor the size

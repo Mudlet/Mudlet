@@ -17,11 +17,17 @@ set(QT_SKIP_DEFAULT_TESTCASE_DIRS ON)
 # stderr has a console attached, which an MSYS2 shell or a CI runner does not give
 # it, so a failing test reports an exit code and nothing else (#9747). Deferred so
 # that tests registered further down the file are covered too; TESTS does not
-# descend into subdirectories, hence the second call in functional_tests.
+# descend into subdirectories, hence the second call in functional_tests. It also
+# puts the bundled lua51.dll's directory first on PATH.
 function(restore_windows_test_output)
     get_property(registeredTests DIRECTORY PROPERTY TESTS)
     foreach(testName ${registeredTests})
         set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "QT_ASSUME_STDERR_HAS_CONSOLE=1")
+        # Unless built beside the bundled lua51.dll, a test would load the MSYS2
+        # one from PATH instead
+        if(WIN32 AND TARGET lua51)
+            set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:lua51>")
+        endif()
     endforeach()
 endfunction()
 cmake_language(DEFER CALL restore_windows_test_output)
@@ -59,6 +65,8 @@ function(sandbox_test_config_dirs)
     foreach(testName ${registeredTests})
         set(testConfigDir "${CMAKE_CURRENT_BINARY_DIR}/xdg-config/${testName}")
         set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "XDG_CONFIG_HOME=${testConfigDir}")
+        # TLuaInterpreter::loadGlobal() writes its bytecode cache under CacheLocation
+        set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "XDG_CACHE_HOME=${CMAKE_CURRENT_BINARY_DIR}/xdg-cache/${testName}")
         if(APPLE)
             # CoreFoundation is handed a home directory rather than a config root,
             # and one that has to exist - Qt creates a config root on the way to
@@ -90,6 +98,7 @@ set(UNIT_TESTS
     TLinkStoreTest
     TMxpTagParserTest
     TMxpSendTagHandlerTest
+    TMxpLinkTagHandlerTest
     TMxpEntityTagHandlerTest
     TMxpFrameDestTagHandlerTest
     TMxpVersionTagTest
@@ -116,6 +125,7 @@ set(UNIT_TESTS
     TMediaPathTraversalTest
     TAudioMixerMixTest
     ProfileNameValidationTest
+    XmlImportReaderTest
 )
 
 # The MCP server only lands in the Mudlet library when configured with USE_MCPSERVER, so
@@ -257,6 +267,8 @@ set_tests_properties(CrashReportUploadTest PROPERTIES
 
 # DiscordTest checks the Lua API permission gating contract by scanning the source
 set_property(SOURCE DiscordTest.cpp APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
+# XmlImportReaderTest reads every package, profile and map XML in the source tree
+set_property(SOURCE XmlImportReaderTest.cpp APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 
 # Build-file consistency check. Independent of the Mudlet library: it only reads
 # src/CMakeLists.txt and the src/ directory, so it does not link LIB_MUDLET_TARGET.

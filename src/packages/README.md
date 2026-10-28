@@ -28,8 +28,9 @@ up - the same check enforces this.
 
 Two packages here are maintained elsewhere and synced in by
 `.github/workflows/update-3rdparty.yml`: `mpkg` (from the package repository)
-and the IRE mapper, which upstream publishes as a bare `src/mudlet-mapper.xml`
-rather than a package.
+and the [IRE mapper](https://github.com/IRE-Mudlet-Mapping/ire-mapping-script),
+which upstream publishes as a bare `src/mudlet-mapper.xml` rather than a
+package. Change them upstream: the next sync PR reverts any edit made only here.
 
 Which games get which package is decided in `mudlet::setupPreInstallPackages()`,
 and every archive needs an entry in `src/mudlet.qrc` to be compiled into Mudlet.

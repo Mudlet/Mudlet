@@ -7258,7 +7258,9 @@ std::optional<int> Host::windowScroll(const QString& name) const
         return {};
     }
     const int lastLine = pModel->buffer.getLastLineNumber();
-    const int line = hasConsoleView() ? pModel->mUpperPaneCursorY : pModel->mScrolledBackTo.value_or(lastLine);
+    // Not mUpperPaneCursorY: that is only a copy taken at the last paint, and a pane
+    // scrolled back may not paint again before a trim moves the line under it
+    const int line = hasConsoleView() ? pModel->buffer.mCursorY : pModel->mScrolledBackTo.value_or(lastLine);
     return {std::max(std::min(line, lastLine), 0)};
 }
 

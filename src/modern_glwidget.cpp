@@ -2110,7 +2110,8 @@ void ModernGLWidget::renderRooms()
 
         auto rx = static_cast<float>(pR->x());
         auto ry = static_cast<float>(pR->y());
-        const QPointF nameOffset = showRoomNames && !pR->name.isEmpty() ? RoomAppearance::nameOffset(pR->userData.value(ROOM_UI_NAMEPOS)) : QPointF();
+        const bool showThisRoomName = showRoomNames && RoomAppearance::nameShown(*pR);
+        const QPointF nameOffset = showThisRoomName ? RoomAppearance::nameOffset(pR->userData.value(ROOM_UI_NAMEPOS)) : QPointF();
         const float highlightReach = pR->highlight ? pR->highlightRadius * style.highlightScale / 2.0f : 0.0f;
         if (!keptRooms && outOfView(QVector3D(rx, ry, static_cast<float>(pR->z())), qMax(static_cast<float>(std::hypot(nameOffset.x(), nameOffset.y())), highlightReach))) {
             continue;
@@ -2436,7 +2437,7 @@ void ModernGLWidget::renderRooms()
         }
 
         // Only the viewed level's, as only the 2D map's are
-        if (detailed && showRoomNames && look.onViewedLevel() && !pR->name.isEmpty()) {
+        if (detailed && showThisRoomName && look.onViewedLevel()) {
             // One room's size below the room on screen, or standing up just under its front edge, then moved by its
             // offset along the map, in rooms' spacing, y downward
             const QVector3D shift(static_cast<float>(nameOffset.x()), -static_cast<float>(nameOffset.y()), 0.0f);

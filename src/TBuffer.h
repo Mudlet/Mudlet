@@ -44,6 +44,7 @@
 #include <QVarLengthArray>
 #include <QVector>
 
+#include <array>
 #include <deque>
 #include <memory>
 #include <string>
@@ -54,6 +55,7 @@ class Host;
 class QJsonArray;
 class QJsonObject;
 class QRegularExpression;
+class QTextCodec;
 class QTimer;
 struct TConsoleModel;
 class THyperlinkVisibilityManager;
@@ -414,6 +416,8 @@ public:
     int addLinkToStore(const QStringList& links, const QStringList& hints, const QVector<int>& luaReference = QVector<int>(), const QString& expireName = QString(), int line = -1);
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0, int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
+    // Counts trimmed lines as well, so it keeps rising while a full buffer drops its oldest.
+    qint64 linesAddedTotal() const { return mLinesRemovedTotal + static_cast<qint64>(buffer.size()); }
     // Whether word wrapping split this line off the end of the one before it
     bool wrapsFromPreviousLine(int lineNumber) const;
     int wrapGapBefore(int lineNumber) const;
@@ -454,6 +458,7 @@ public:
     void appendBuffer(const TBuffer& chunk);
     bool moveCursor(QPoint& where);
     int getLastLineNumber();
+    qint64 linesRemovedTotal() const { return mLinesRemovedTotal; }
     QStringList getEndLines(int);
     void clear();
     void clearLinkState(const QSet<int>& stillLiveLinkIds = {});
@@ -541,7 +546,8 @@ public:
     // stores a boolean whenever the line is a prompt one
     QList<bool> promptBuffer;
     // stores, for a line that word wrapping split off the one before it, how
-    // many spaces the break dropped between the two - a copy puts them back
+    // many spaces the break dropped between the two - a copy puts them back;
+    // for the first line of a paragraph, how many columns of wrap indent it carries
     QList<quint16> wrapGapBuffer;
     TLinkStore mLinkStore;
     int mLinesLimit = 10000;
@@ -566,7 +572,7 @@ private:
     void noteRemovedLinks(const std::vector<TChar>& line, qint64 lineNumber, int from = 0, int to = -1);
     THyperlinkVisibilityManager* hyperlinkVisibilityManagerOrNull();
     TChar currentFormat() const;
-    inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
+    inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, bool startsIndented, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
     void spliceInsertIntoPreTriggerPassLine(int y, int x, int count, const TChar& format);
     void spliceEraseFromPreTriggerPassLine(int y, int x, int xEnd);
@@ -595,7 +601,7 @@ private:
     void endLocalFeedSequences();
     void appendReplacementCharacter(TChar);
     static QStringDecoder multibyteDecoderFor(Decoder, const QByteArray&);
-    bool decodeMultibyteSequence(QByteArrayView, QString&);
+    bool decodeMultibyteSequence(QByteArrayView, QStringView&);
     // Views into the string decodeSGR() was handed, so none may outlive that call.
     using SgrParameters = QVarLengthArray<QStringView, 12>;
     void decodeSGR(QStringView);
@@ -810,6 +816,11 @@ private:
     // Opening an ICU converter costs far more than decoding the one character
     // each processGBSequence() etc. call needs, so one is kept per encoding
     QStringDecoder mMultibyteDecoder;
+    // Qt builds without ICU have no such converter, only a Qt5Compat codec
+    QTextCodec* mLegacyMultibyteCodec = nullptr;
+    // decodeMultibyteSequence() points its caller here, so each result lasts until the next call
+    std::array<QChar, 8> mMultibyteDecoded;
+    QString mMultibyteDecodedString;
 
     // OSC 8 hyperlink tracking
     QStringList mCurrentHyperlinkCommand;
@@ -829,10 +840,10 @@ private:
     int mHeldSpoilerLinkId = 0;
     int mHeldSpoilerStartColumn = 0;
     int mHeldSpoilerContinuationLength = 0;
-    // A link with visibility settings closed while text is held back for joining. Where its text ends
-    // up is known only once that is resolved - joined, or committed as a line of its own - so it is
-    // registered then: from startColumn in the text it began in, through continuationLength
-    // characters of the text after the held text. linkId 0 is none.
+    // Links with visibility settings closed while text is held back for joining. Where their text
+    // ends up is known only once that is resolved - joined, or committed as a line of its own - so
+    // each is registered then: from startColumn in the text it began in, through continuationLength
+    // characters of the text after the held text.
     struct HeldVisibility
     {
         int linkId = 0;
@@ -841,7 +852,7 @@ private:
         bool startsAfterHeldText = false;
         Mudlet::HyperlinkStyling styling;
     };
-    HeldVisibility mHeldVisibility;
+    QList<HeldVisibility> mHeldVisibilities;
     QString mCurrentHyperlinkText;
 
     enum class WatchdogPhase { Phase1_Snapshot, Phase2_Unfreeze, None };

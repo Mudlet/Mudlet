@@ -226,7 +226,11 @@ void TLabel::updateKeyboardAccess()
             QWidget::focusNextPrevChild(true);
         }
     }
-    update();
+    // Only a focused label draws the outline, and losing the focus repaints it. A translucent label's
+    // repaint redraws whatever lies under it as well, and a gauge's text label is set on every prompt.
+    if (hasFocus()) {
+        update();
+    }
 }
 
 bool TLabel::announcesTextChanges() const
