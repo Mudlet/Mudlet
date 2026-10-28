@@ -4892,18 +4892,22 @@ int TLuaInterpreter::wrapLine(lua_State* L)
     const QString windowName = hasWindowName ? QString{lua_tostring(L, 1)} : qsl("main");
 
     Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView() && isMain(windowName)) {
-        // The main buffer is the model's and keeps the view's wrap settings.
-        TBuffer& buffer = host.mainConsoleModel().buffer;
-        buffer.wrapLine(lineNumber, buffer.mWrapAt, buffer.mWrapIndent, buffer.mWrapHangingIndent);
-        lua_pushboolean(L, true);
-        return 1;
-    }
+    const bool viewlessMain = !host.hasConsoleView() && isMain(windowName);
     auto pModel = host.consoleModelNamed(windowName);
     if (!pModel) {
         return windowNotFound(L, windowName);
     }
-    pModel->wrapLine(lineNumber);
+    // One past the last line is where deleteLine() leaves a trigger's getLineNumber(), so the
+    // documented deleteLine(), echo(), wrapLine(getLineNumber()) sequence must not be refused
+    if (lineNumber < 0 || lineNumber > pModel->buffer.size()) {
+        return warnArgumentValue(L, __func__, qsl("line %1 does not exist in window \"%2\"").arg(QString::number(lineNumber), isMain(windowName) ? qsl("main") : windowName));
+    }
+    if (viewlessMain) {
+        // The main buffer is the model's and keeps the view's wrap settings.
+        pModel->buffer.wrapLine(lineNumber);
+    } else {
+        pModel->wrapLine(lineNumber);
+    }
     lua_pushboolean(L, true);
     return 1;
 }
