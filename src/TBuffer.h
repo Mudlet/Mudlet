@@ -454,6 +454,7 @@ public:
     void appendBuffer(const TBuffer& chunk);
     bool moveCursor(QPoint& where);
     int getLastLineNumber();
+    qint64 linesRemovedTotal() const { return mLinesRemovedTotal; }
     QStringList getEndLines(int);
     void clear();
     void clearLinkState(const QSet<int>& stillLiveLinkIds = {});
@@ -541,7 +542,8 @@ public:
     // stores a boolean whenever the line is a prompt one
     QList<bool> promptBuffer;
     // stores, for a line that word wrapping split off the one before it, how
-    // many spaces the break dropped between the two - a copy puts them back
+    // many spaces the break dropped between the two - a copy puts them back;
+    // for the first line of a paragraph, how many columns of wrap indent it carries
     QList<quint16> wrapGapBuffer;
     TLinkStore mLinkStore;
     int mLinesLimit = 10000;
@@ -566,7 +568,7 @@ private:
     void noteRemovedLinks(const std::vector<TChar>& line, qint64 lineNumber, int from = 0, int to = -1);
     THyperlinkVisibilityManager* hyperlinkVisibilityManagerOrNull();
     TChar currentFormat() const;
-    inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
+    inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, bool startsIndented, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
     void spliceInsertIntoPreTriggerPassLine(int y, int x, int count, const TChar& format);
     void spliceEraseFromPreTriggerPassLine(int y, int x, int xEnd);

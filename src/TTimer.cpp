@@ -145,6 +145,14 @@ bool TTimer::setIsActive(bool b)
     return condition1 && condition2;
 }
 
+bool TTimer::stayActive()
+{
+    if (mpQTimer->isActive() && activate() && canBeUnlocked()) {
+        return true;
+    }
+    return setIsActive(true);
+}
+
 
 void TTimer::start()
 {

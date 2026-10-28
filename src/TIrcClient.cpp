@@ -106,9 +106,7 @@ static QString messageTarget(IrcMessage* msg, const QString& bufferName)
         break;
     }
     default:
-        // Other message types are not expected - I hope - SlySven
-        qWarning().noquote().nospace() << "TIrcClient messageTarget(..., \"" << bufferName << "\") WARNING - message of type: " << msg->type()
-                                       << " not explicitly handled, this needs fixing by Mudlet Makers...";
+        break;
     }
     return target;
 }
