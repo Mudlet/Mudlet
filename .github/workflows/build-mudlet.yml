@@ -573,9 +573,12 @@ jobs:
       if: env.RELEASE_ASSET_PATH
       with:
         name: release-asset-${{ runner.os }}-${{ runner.arch }}
+        # The speech engine paths are unset when that asset was skipped, and blank lines are ignored
         path: |
           ${{ env.RELEASE_ASSET_PATH }}
           ${{ env.RELEASE_ASSET_SHA256_PATH }}
+          ${{ env.SPEECH_ENGINES_ASSET_PATH }}
+          ${{ env.SPEECH_ENGINES_ASSET_SHA256_PATH }}
         retention-days: 3
 
     - name: Export release metadata
