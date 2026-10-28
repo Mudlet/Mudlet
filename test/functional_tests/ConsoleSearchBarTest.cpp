@@ -19,6 +19,7 @@
 
 #include <QDir>
 #include <QLineEdit>
+#include <QScrollBar>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -100,6 +101,19 @@ private:
             }
         }
         return count;
+    }
+
+    // Deep enough that the scroll bar is off its minimum, with the buffer one line short of a trim
+    static void fillToTheBrimAround(TConsole* console, const QString& text)
+    {
+        console->buffer.setBufferSize(100, 20);
+        while (console->buffer.size() < 70) {
+            console->print(qsl("filler line\n"));
+        }
+        console->print(text + qsl("\n"));
+        while (console->buffer.size() < 100) {
+            console->print(qsl("filler line\n"));
+        }
     }
 
     static bool runLua(TConsole* console, const QString& script) { return console->mpHost->getLuaInterpreter()->compileAndExecuteScript(script); }
@@ -263,12 +277,15 @@ private slots:
         const int earlierLine = lineHolding(console, qsl("gorbash sleeps"));
         QVERIFY(laterLine > earlierLine && earlierLine > -1);
 
+        // Taken first, as the split-screen tutorial the search opens adds a line after it
+        const int lastLine = console->buffer.getLastLineNumber();
         console->mpBufferSearchBox->setText(qsl("gorbash"));
         console->slot_searchBufferUp();
 
         QCOMPARE(console->mCurrentSearchResult, laterLine);
         QCOMPARE(markedCharactersOn(console, laterLine), 14);
         QCOMPARE(markedCharactersOn(console, earlierLine), 0);
+        QCOMPARE(console->buffer.mCursorY, std::min(laterLine + 3, lastLine));
     }
 
     // Searching for the same thing again is how the earlier times it was said
@@ -288,6 +305,7 @@ private slots:
         QCOMPARE(console->mCurrentSearchResult, earlierLine);
         QCOMPARE(markedCharactersOn(console, earlierLine), 7);
         QCOMPARE(markedCharactersOn(console, laterLine), 14);
+        QCOMPARE(console->buffer.mCursorY, std::min(earlierLine + 3, console->buffer.getLastLineNumber()));
     }
 
     void test_searchingDownComesBackTowardsTheEndOfTheBuffer()
@@ -305,6 +323,88 @@ private slots:
 
         console->slot_searchBufferDown();
         QCOMPARE(console->mCurrentSearchResult, laterLine);
+        QCOMPARE(console->buffer.mCursorY, std::min(laterLine + 3, console->buffer.getLastLineNumber()));
+    }
+
+    // The first search back from the end opens the split screen, and the lower
+    // pane that opens must not push the match out of the upper one.
+    void test_theSearchThatOpensTheSplitScreenStopsJustBelowTheMatch()
+    {
+        auto* console = startSearchableProfile();
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
+
+        // Deep enough in the buffer that the scroll bar is not held at its minimum
+        mpServer->sendRaw(QByteArray("filler line\r\n").repeated(200) + "the marked line\r\n" + QByteArray("filler line\r\n").repeated(100));
+        int markedLine = -1;
+        QVERIFY(QTest::qWaitFor(
+                [console, &markedLine]() {
+                    markedLine = lineHolding(console, qsl("the marked line"));
+                    return markedLine > -1 && console->buffer.getLastLineNumber() > markedLine + 99;
+                },
+                5000));
+        QVERIFY(console->mLowerPane->isHidden());
+
+        console->mpBufferSearchBox->setText(qsl("marked line"));
+        console->slot_searchBufferUp();
+        QCOMPARE(console->mCurrentSearchResult, markedLine);
+        QCOMPARE(console->mpScrollBar->value(), markedLine + 3);
+        QTest::qWait(100);
+
+        QVERIFY(!console->mLowerPane->isHidden());
+        // More rows than the split-screen tutorial prints, or the old padded scroll would land here too
+        QVERIFY(console->mLowerPane->getRowCount() > 1);
+        QCOMPARE(console->buffer.mCursorY, markedLine + 3);
+        QVERIFY(markedLine + 3 > console->mpScrollBar->minimum());
+        QCOMPARE(console->mpScrollBar->value(), markedLine + 3);
+    }
+
+    // The split-screen tutorial prints into this buffer, and in a full one that
+    // trims the top, so it must not move the line the search is scrolling to.
+    void test_theSplitScreenTutorialInAFullBufferDoesNotMoveTheSearchOffItsMatch()
+    {
+        auto* console = startSearchableProfile();
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
+        mudlet::self()->mScrollbackTutorialsShown = 0;
+        QVERIFY2(mudlet::self()->showSplitscreenTutorial(), "the tutorial is off, so nothing here would trim the buffer");
+
+        QVERIFY2(console->buffer.size() < 70, "the buffer is too full to fill to its limit around the marked line");
+        fillToTheBrimAround(console, qsl("the marked line"));
+        QCOMPARE(console->buffer.size(), 100);
+        const int markedLine = lineHolding(console, qsl("the marked line"));
+        QVERIFY(console->mLowerPane->isHidden());
+
+        console->mpBufferSearchBox->setText(qsl("marked line"));
+        console->slot_searchBufferUp();
+        QTest::qWait(100);
+
+        QVERIFY2(lineHolding(console, qsl("Split-screen scrollback activated")) > -1, "the tutorial was not printed");
+        const int movedTo = lineHolding(console, qsl("the marked line"));
+        QVERIFY2(movedTo >= 0 && movedTo < markedLine, "the tutorial did not trim the buffer, so nothing here was exercised");
+        QCOMPARE(console->buffer.mCursorY, movedTo + 3);
+        QCOMPARE(console->mpScrollBar->value(), movedTo + 3);
+        QCOMPARE(console->mCurrentSearchResult, movedTo);
+    }
+
+    // As above, for a script's scrollTo(): the line it names is the line it lands on.
+    void test_theSplitScreenTutorialInAFullBufferDoesNotMoveAScrollToOffItsLine()
+    {
+        auto* console = startSearchableProfile();
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
+        mudlet::self()->mScrollbackTutorialsShown = 0;
+        QVERIFY2(mudlet::self()->showSplitscreenTutorial(), "the tutorial is off, so nothing here would trim the buffer");
+
+        QVERIFY2(console->buffer.size() < 70, "the buffer is too full to fill to its limit around the marked line");
+        fillToTheBrimAround(console, qsl("the marked line"));
+        QCOMPARE(console->buffer.size(), 100);
+        const int markedLine = lineHolding(console, qsl("the marked line"));
+
+        QVERIFY(runLua(console, qsl("scrollTo('main', %1)").arg(markedLine)));
+        QTest::qWait(100);
+
+        QVERIFY2(lineHolding(console, qsl("Split-screen scrollback activated")) > -1, "the tutorial was not printed");
+        const int movedTo = lineHolding(console, qsl("the marked line"));
+        QVERIFY2(movedTo >= 0 && movedTo < markedLine, "the tutorial did not trim the buffer, so nothing here was exercised");
+        QCOMPARE(console->buffer.mCursorY, movedTo);
     }
 
     // A search that has not moved off the end of the buffer yet has nothing

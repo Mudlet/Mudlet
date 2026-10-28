@@ -184,6 +184,8 @@ modules:
     buildsystem: cmake-ninja
     config-opts:
       - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      # The rocks are in /app, where only the Lua built above looks
+      - -DUSE_BUNDLED_LUA=OFF
     sources:
       - type: dir
         path: ../

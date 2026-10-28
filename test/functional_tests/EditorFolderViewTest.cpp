@@ -506,7 +506,7 @@ private slots:
             // As a click on the root would have left it, without showing its intro over the merged folder
             const QSignalBlocker blocker(mpEditor->treeWidget_triggers);
             mpEditor->treeWidget_triggers->setCurrentItem(mpEditor->treeWidget_triggers->topLevelItem(0));
-            mpEditor->mpCurrentTriggerItem = mpEditor->treeWidget_triggers->topLevelItem(0);
+            mpEditor->mpCurrentTriggerItem = nullptr;
         }
         for (QTreeWidget* pTree : {static_cast<QTreeWidget*>(mpEditor->treeWidget_triggers), static_cast<QTreeWidget*>(mpEditor->treeWidget_aliases)}) {
             QTreeWidgetItem* pRoot = pTree->topLevelItem(0);

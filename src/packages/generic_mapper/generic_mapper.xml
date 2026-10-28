@@ -2408,7 +2408,7 @@ map.save.move_methods = map.save.move_methods or {}
 map.silentUpdate = map.silentUpdate or true
 
 local oldstring = string
-local string = utf8
+local string = setmetatable({}, {__index = utf8})
 string.format = oldstring.format
 string.trim = oldstring.trim
 string.starts = oldstring.starts
