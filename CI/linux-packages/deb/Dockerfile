@@ -36,6 +36,8 @@ ENV WITH_VARIABLE_SPLASH_SCREEN=NO
 ENV MUDLET_VERSION_BUILD=""
 # apt and dnf update the package, so the built-in updater must not
 ENV WITH_UPDATER=NO
+# The MCP server needs Qt HttpServer, which the package does not depend on
+ENV WITH_MCPSERVER=NO
 RUN --mount=type=cache,target=/ccache,uid=2000,gid=2000 \
     cmake -S Mudlet -B Mudlet/build -G Ninja \
       -DCMAKE_BUILD_TYPE=Release \
