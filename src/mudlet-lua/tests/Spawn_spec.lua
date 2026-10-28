@@ -217,8 +217,9 @@ describe("spawn", function()
   -- once its profile closed, the next line it wrote was read off the freed
   -- interpreter, and after a reset it called whatever the new state held at the
   -- old callback reference. Each child below writes a line after a second and
-  -- then touches a file, so a two second wait is twice what a survivor needs. The suite's own profile
-  -- cannot be torn down from inside it, so each test loads a second one.
+  -- then touches a file, so a two second wait is twice what a survivor needs.
+  -- The suite's own profile cannot be torn down from inside it, so each test
+  -- loads a second one.
   describe("a profile torn down while its process runs", function()
     -- Writes a profile whose script is `script` with its %s replaced by the
     -- spawn() call, and returns the file the child touches if it survives

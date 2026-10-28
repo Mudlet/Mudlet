@@ -8219,8 +8219,8 @@ describe("Application and profile style sheets", function()
     end)
 
     it("raises the event with an empty tag when none is given", function()
-      -- Replacing one sheet with another repolishes every widget alive, seconds
-      -- late in a suite run; from no sheet Qt installs a fresh style instead
+      -- Swapping one sheet for another repolishes every live widget, seconds once the
+      -- suite has built many; from no sheet Qt installs a fresh style instead
       setAppStyleSheet("")
       local events = collectStyleSheetEvents()
       assert.is_true(setAppStyleSheet("QLabel { color: rgb(4,5,6); }"))

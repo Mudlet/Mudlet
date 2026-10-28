@@ -56,7 +56,7 @@ describe("Tests the sound and music MSP asks for", function()
     return fixture(stem, 10000)
   end
 
-  -- a fifth of a second, for the spec that waits for a loop to play out
+  -- 150ms, for the spec that waits for a loop to play out
   local function brief(stem)
     return fixture(stem, 150)
   end
@@ -83,9 +83,8 @@ describe("Tests the sound and music MSP asks for", function()
 
   -- Naming the file "Off" is how MSP asks for a stop, and it is the only way to
   -- stop what MSP started: stopSounds() and stopMusic() act on the players the
-  -- Lua API keeps and leave a game's alone. The stop announces its
-  -- sysMediaFinished synchronously, so only the deferred source release is left
-  -- to run.
+  -- Lua API keeps and leave a game's alone. The source release after a stop is
+  -- a zero-timer, so a short pump lets it run.
   local function stopEverything()
     feed('<SOUND FName="Off">')
     feed('<MUSIC FName="Off">')
@@ -251,7 +250,7 @@ describe("Tests the sound and music MSP asks for", function()
     feed(('<MUSIC FName="%s" L=2>'):format(file))
 
     waitForCount("sysMediaStarted", started, 2)
-    -- a third pass would follow the 150ms second one, so give it twice that and more
+    -- a third pass would start ~150ms after the second; two rounds leave a slow runner room
     pump(2)
     assert.equals(2, #started, names(started))
     assert.equals(file, started[2].file)

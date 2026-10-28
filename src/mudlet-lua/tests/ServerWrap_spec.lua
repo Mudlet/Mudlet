@@ -28,8 +28,8 @@ describe("Tests undoing the game's own line wrapping", function()
 
   -- a line held back for a continuation is committed by a flush timer
   -- csmServerWrapFlushDelayMs (300ms) after the game goes quiet, so pump until
-  -- that has fallen due and the buffer has stopped growing rather than for a
-  -- fixed time a loaded machine could outrun
+  -- that has fallen due and the buffer has stopped growing, or until `done` says
+  -- nothing is left held, rather than for a fixed time a loaded machine could outrun
   local function settle(done)
     local previous, waited = -1, 0
     while waited < 3000 do

@@ -446,10 +446,8 @@ describe("Media playback effects with a generated sound file", function()
   local otherLongSoundFile = "busted-media-hold-other.wav"
   local mediaDirectory = getMudletHomeDir() .. "/media"
   local playbackObserved
-  -- How long a spec waits to see that a playback did not start, or that a
-  -- failed load did not report itself. Both land within a few milliseconds of
-  -- the request once the backend is warm, as does the next pass of a 150ms
-  -- loop, so this is many times over what any of them takes.
+  -- Long enough to show something did not happen: a start or a failed load lands
+  -- within a few ms of the request once the backend is warm, a 150ms loop's next pass within 150ms.
   local quietMilliseconds = 500
 
   local function littleEndian(value, byteCount)
@@ -2849,7 +2847,7 @@ describe("Media playback effects with a generated sound file", function()
     -- The bogus event arrives when the backend gives up on what it was handed,
     -- which is asynchronous, so its absence only means something after a wait
     -- long enough to have seen it.
-    waitForEvent("sysMediaFinished", quietMilliseconds)
+    waitForEvent("sysMediaFinished", 2 * quietMilliseconds)
     assert.equals(0, #finished, "a request with no usable name raised sysMediaFinished for media that never played")
     assert.equals(0, #started, "a request with no usable name started a playback")
 
@@ -2927,7 +2925,7 @@ describe("Media playback effects with a generated sound file", function()
     feedGmcp('Client.Media.Play {"name": ".", "key": "busted-gmcp-dot"}')
     feedGmcp('Client.Media.Play {"name": "./", "key": "busted-gmcp-dot-slash"}')
     feedGmcp('Client.Media.Play {"name": "busted-media-sub/.", "key": "busted-gmcp-sub-dot"}')
-    waitForEvent("sysMediaFinished", quietMilliseconds)
+    waitForEvent("sysMediaFinished", 2 * quietMilliseconds)
     assert.equals(0, #finished, "a name resolving to a directory raised sysMediaFinished for media that never played")
     assert.equals(0, #started, "a name resolving to a directory started a playback")
 

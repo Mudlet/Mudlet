@@ -233,7 +233,7 @@ local function waitForProfileSaveToPass()
 end
 
 -- The save an uninstall queues starts from a zero-timer, so a moment's pumping
--- starts it and the wait above then sees it through.
+-- starts it and waitForProfileSaveToPass() then sees it through.
 local function runTheQueuedProfileSave()
   pumpEvents(10)
   return waitForProfileSaveToPass()
@@ -7624,8 +7624,8 @@ describe("Tests the game loader packages", function()
 
   -- Raises sysDownloadDone for the file, and answers a check for whether the
   -- installs the loader deferred from it have run, and how many it deferred.
-  -- The loaders put their install off by a second or two, which is only ever a
-  -- matter of when, so it is shortened to a tenth of a second here.
+  -- The loaders defer their install by a second or two; these specs care that it
+  -- is deferred, not for how long, so it is cut to 0.1s here.
   local function downloadDone(path)
     local pending = 0
     local realTempTimer = _G.tempTimer

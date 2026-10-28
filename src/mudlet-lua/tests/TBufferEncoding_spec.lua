@@ -873,9 +873,8 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     unavailable = restorePostingTimer()
   end)
 
-  -- A case that ends on a whole line leaves the posting timer running, which
-  -- the next case's first held feed absorbs as its own flush; the last one's
-  -- must not reach the spec files after this one.
+  -- A feed ending in a newline leaves the posting timer running: the next case's
+  -- held feed is flushed by it, but the last case's would fire into the next file.
   teardown(function()
     if not unavailable then
       beQuiet()
@@ -905,7 +904,7 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     return nil
   end
 
-  -- Hands the pieces over with a quiet gap longer than the timeout between each,
+  -- Hands the pieces over with a posting-timer flush between each,
   -- so the flush marker lands between them, and answers what reached the buffer:
   -- the text after the mark, and how many buffer lines it took. The marker ends
   -- a line, so a feed the timer really did interrupt spans more than one - every

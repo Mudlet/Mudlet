@@ -651,7 +651,7 @@ describe("Tests TBuffer OSC sequence handling", function()
   -- to. Paths that do not reach appendLine() print the phrase as ordinary text:
   -- anything the game sends, and an echo from inside a trigger. The injection
   -- is debounced to a second of wall clock and the timestamp it keeps lives on
-  -- the main buffer, so each spec here waits that window out before it starts.
+  -- the main buffer, so a spec that can follow another's injection waits it out.
   -- The phrase is built rather than written out below, and kept out of the
   -- describe and it names, so busted's own report cannot set it off.
   describe("Tests the OSC 8 documentation helper phrase", function()
@@ -707,7 +707,7 @@ describe("Tests TBuffer OSC sequence handling", function()
       echo("OSCDOCSMARKA\n")
       echo("OSCDOCS1 " .. phrase .. " OSCDOCS2")
       local injected = mainSinceMarker("OSCDOCSMARKA")
-      if injected and #injected == 0 then
+      if injected and not someLineHolds(injected, "OSC 8 Hyperlink Examples") then
         -- an earlier spec's injection is still inside the debounce window
         pumpEvents(1100)
         echo("OSCDOCSMARKA\n")
@@ -775,7 +775,6 @@ describe("Tests TBuffer OSC sequence handling", function()
       return nil
     end
 
-    -- the reveal lands on the first 100ms poll past the delay
     local function waitForLine(lineNumber, expected)
       for _ = 1, 60 do
         if getLines("main", lineNumber, lineNumber + 1)[1] == expected then
