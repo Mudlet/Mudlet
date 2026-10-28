@@ -75,6 +75,25 @@ static bool isMain(const QString& name)
     return false;
 }
 
+// The views draw only the room.ui_ keys of a room's user data; a change to any other key is left out of the map's
+// revisions, as bumping them rebuilds the whole 3D scene for script bookkeeping such as a "visited" mark
+static bool roomUserDataKeyDrawn(const QString& key)
+{
+    return key.startsWith(QLatin1String("room.ui_"));
+}
+
+static void roomUserDataChanged(TMap& map, const TRoom& room, const bool drawn, const char* fromWhere)
+{
+    if (drawn) {
+        map.setUnsaved(fromWhere);
+        map.updateArea(room.getArea());
+        return;
+    }
+    map.setUnsavedKeepingRevisions(fromWhere);
+    // Still repainted, as a map info contributor may show the key and is asked again on every paint
+    map.updatePlayerArea(room.getArea());
+}
+
 static const char* const csmMapInUseByCallback = "rooms and areas cannot be deleted, nor the map replaced, from inside an exit weight filter or map info callback";
 static const char* const csmPathfindingInExitWeightFilter = "a path cannot be found from inside an exit weight filter";
 
@@ -900,13 +919,14 @@ int TLuaInterpreter::clearRoomUserData(lua_State* L)
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
     }
     if (!pR->userData.isEmpty()) {
+        const bool drawn = std::any_of(pR->userData.keyBegin(), pR->userData.keyEnd(), roomUserDataKeyDrawn);
         pR->userData.clear();
-        host.mpMap->setUnsaved(__func__);
+        roomUserDataChanged(*host.mpMap, *pR, drawn, __func__);
         lua_pushboolean(L, true);
     } else {
+        host.mpMap->updatePlayerArea(pR->getArea());
         lua_pushboolean(L, false);
     }
-    host.mpMap->updateArea(pR->getArea());
     return 1;
 }
 
@@ -932,12 +952,12 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
     //        }
     /*      else */ if (pR->userData.contains(key)) {
         pR->userData.remove(key);
-        host.mpMap->setUnsaved(__func__);
+        roomUserDataChanged(*host.mpMap, *pR, roomUserDataKeyDrawn(key), __func__);
         lua_pushboolean(L, true);
     } else {
+        host.mpMap->updatePlayerArea(pR->getArea());
         lua_pushboolean(L, false);
     }
-    host.mpMap->updateArea(pR->getArea());
     return 1;
 }
 
@@ -4532,8 +4552,7 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("key '%1' is reserved for the room's border, use setRoomBorderColor() or setRoomBorderThickness()").arg(key));
     }
     pR->userData[key] = value;
-    host.mpMap->setUnsaved(__func__);
-    host.mpMap->updateArea(pR->getArea());
+    roomUserDataChanged(*host.mpMap, *pR, roomUserDataKeyDrawn(key), __func__);
     lua_pushboolean(L, true);
     return 1;
 }

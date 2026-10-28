@@ -4354,6 +4354,13 @@ void TMap::restore16ColorSet()
 
 void TMap::setUnsaved(const char* fromWhere)
 {
+    setUnsavedKeepingRevisions(fromWhere);
+    ++mMapRevision;
+    ++mRevision;
+}
+
+void TMap::setUnsavedKeepingRevisions(const char* fromWhere)
+{
 #if !defined(DEBUG_MAPAUTOSAVE)
     Q_UNUSED(fromWhere)
 #else
@@ -4361,8 +4368,6 @@ void TMap::setUnsaved(const char* fromWhere)
     qDebug().nospace().noquote() << "TMap::setUnsaved(...) INFO - called at: " << nowString << " from: " << fromWhere << ".";
 #endif
     mUnsavedMap = true;
-    ++mMapRevision;
-    ++mRevision;
 }
 
 void TMap::setSaveError(bool state)
