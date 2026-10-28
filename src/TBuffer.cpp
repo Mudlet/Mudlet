@@ -5786,42 +5786,39 @@ void TBuffer::appendLine(
         return;
     }
 
-    bool firstChar = (lineBuffer.back().isEmpty());
+    bool firstChar = lineBuffer.back().isEmpty();
     const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
-    int lineEndPos = sub_end;
-
-    if (lineEndPos >= length) {
-        lineEndPos = length - 1;
-    }
-
-    for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
-        const QChar thisChar = text.at(i);
-
-        if (thisChar == QChar::LineFeed) {
-            firstChar = true;
-            appendEmptyLine();
-            continue;
+    const qsizetype end = std::min(static_cast<qsizetype>(sub_start) + std::min(sub_end, length - 1) + 1, text.size());
+    const QStringView chunk = QStringView(text).first(end);
+    const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
+    qsizetype runStart = sub_start;
+    while (true) {
+        qsizetype runEnd = chunk.indexOf(QChar::LineFeed, runStart);
+        if (runEnd < 0) {
+            runEnd = end;
         }
-        if (firstChar && dropSpaceAtWrap(thisChar)) {
-            continue;
+        while (firstChar && runStart < runEnd && dropSpaceAtWrap(chunk.at(runStart))) {
+            ++runStart;
         }
-
-        lineBuffer.back().append(thisChar);
-        const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
-        buffer.back().push_back(styling);
-
-        // Note: Original character storage for ANSI-styled OSC 8 links happens in
-        // translateToPlainText() where the TChar is created with ANSI formatting
-        // before JSON styling is applied
-
-        if (firstChar) {
-            // Replayed held-back content supplies its arrival time, and an
-            // empty wrapped line is the rest of the line above it:
-            if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
-                timeBuffer.back() = timeStampOverride == csmNoTimeStamp ? QDateTime::currentMSecsSinceEpoch() : timeStampOverride;
+        if (const qsizetype runLength = runEnd - runStart; runLength > 0) {
+            lineBuffer.back().append(chunk.sliced(runStart, runLength));
+            std::vector<TChar>& chars = buffer.back();
+            chars.insert(chars.end(), runLength, styling);
+            if (firstChar) {
+                // Replayed held-back content supplies its arrival time, and an
+                // empty wrapped line is the rest of the line above it:
+                if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
+                    timeBuffer.back() = timeStampOverride == csmNoTimeStamp ? QDateTime::currentMSecsSinceEpoch() : timeStampOverride;
+                }
+                firstChar = false;
             }
-            firstChar = false;
         }
+        if (runEnd >= end) {
+            break;
+        }
+        firstChar = true;
+        appendEmptyLine();
+        runStart = runEnd + 1;
     }
 }
 
