@@ -940,8 +940,9 @@ void TConsole::resizeEvent(QResizeEvent* event)
     }
 
     // Sync Host dimensions on resize so wraps and NAWS reflect the current pane width.
-    if ((mType & MainConsole) && !mpHost.isNull() && mUpperPane && !mUpperPane->visibleRegion().isEmpty()) {
-        syncHostScreenDimensions(mUpperPane->visibleRegion().boundingRect().width(), -1);
+    const QSize upperPane = (mType & MainConsole) && mUpperPane ? mUpperPane->drawableSize() : QSize();
+    if (!mpHost.isNull() && !upperPane.isEmpty()) {
+        syncHostScreenDimensions(upperPane.width(), -1);
 
         // Background-tab consoles share this container but get no resize event, so size them from here.
         // A detached profile has its own window.

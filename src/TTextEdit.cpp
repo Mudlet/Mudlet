@@ -377,11 +377,12 @@ void TTextEdit::updateScreenView()
     }
     const int oldScreenWidth = mScreenWidth;
     const int oldScreenHeight = mScreenHeight;
-    mScreenHeight = visibleRegion().boundingRect().height() / mFontHeight;
+    const QSize drawable = drawableSize();
+    mScreenHeight = drawable.height() / mFontHeight;
     if (!mIsLowerPane) {
         updateScrollBar(mpBuffer->mCursorY);
     }
-    int currentScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
+    int currentScreenWidth = drawable.width() / mFontWidth;
     if (mpConsole->getType() == TConsole::MainConsole) {
         // This is the MAIN console - we do not want it to ever disappear!
         mScreenWidth = qMax(40, currentScreenWidth);
@@ -407,6 +408,14 @@ void TTextEdit::updateScreenView()
         forceUpdate();
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
+}
+
+// Rows and columns start at the top left corner, so whatever covers that edge
+// hides some of them; only the far edges of what is seen bound how many there are.
+QSize TTextEdit::drawableSize() const
+{
+    const QRect seen = visibleRegion().boundingRect();
+    return seen.isEmpty() ? QSize(0, 0) : QSize(seen.right() + 1, seen.bottom() + 1);
 }
 
 void TTextEdit::showNewLines()
