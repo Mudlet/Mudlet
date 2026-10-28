@@ -518,6 +518,13 @@ QList<RawQueryParameter> splitOscQueryParameters(const QString& query)
     return parameters;
 }
 
+// Game servers choose OSC 8 link and menu URLs, so only these schemes may reach the system's URL handler
+bool systemMayOpenUrl(const QUrl& url)
+{
+    const QString scheme = url.scheme().toLower();
+    return scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp");
+}
+
 } // anonymous namespace
 
 TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
@@ -4473,7 +4480,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                 QUrl qurl(baseUrl);
                 QString scheme = qurl.scheme().toLower();
 
-                if (scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp")) {
+                if (systemMayOpenUrl(qurl)) {
                     mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionOpenUrl;
                     mCurrentHyperlinkStyling.baseCommand = baseUrl;
                     command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
@@ -4521,6 +4528,9 @@ void TBuffer::decodeOSC(const QString& sequence)
                         // Special case: "-" creates a menu separator
                         menuCommands.append(QString());
                         menuHints.append(QString());
+                    } else if (systemMayOpenUrl(QUrl(menuCommand))) {
+                        menuCommands.append(qsl("openUrl(%1)").arg(LuaLiteral::quote(menuCommand)));
+                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     } else {
                         // Treat as direct command
                         menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(menuCommand)));
