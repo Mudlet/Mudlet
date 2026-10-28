@@ -2988,6 +2988,112 @@ describe("Trigger processing", function()
             assert.are.equal("^^^^^^.^^^^^^.^^.^^^^^^^^.^", table.concat(painted))
         end)
 
+        -- Patterns match the line with a "\n" after it, which a capture ending in a
+        -- class such as \s or [^(] takes too: matches keeps it, the highlight leaves it out
+        describe("with a match that runs to the end of the line", function()
+
+            -- the highlighted characters, with "|" wherever a highlighted run ends, and the line's text
+            local function highlightedOn(lineNumber)
+                moveCursor(0, lineNumber)
+                local text = getCurrentLine()
+                local runs, column, inRun = {}, 0, false
+                for character in text:gmatch("[%z\1-\127\194-\244][\128-\191]*") do
+                    -- a four byte UTF-8 character is two UTF-16 units, the columns selectSection() counts
+                    local units = (#character == 4) and 2 or 1
+                    selectSection(column, units)
+                    local red = table.concat({getFgColor()}, ",") == table.concat(color_table.red, ",")
+                    if red then
+                        runs[#runs + 1] = character
+                    elseif inRun then
+                        runs[#runs + 1] = "|"
+                    end
+                    inRun = red
+                    column = column + units
+                end
+                deselect()
+                moveCursorEnd()
+                return table.concat(runs), text
+            end
+
+            -- busted keeps only the last finally() a test registers, so a test with
+            -- cleanup of its own hands it over
+            local function highlightFor(pattern, incoming, matchAll, ownCleanup)
+                finally(function()
+                    killTrigger("SpecHighlightLineEnd")
+                    if ownCleanup then
+                        ownCleanup()
+                    end
+                end)
+                _G.TrigHighlight = {}
+                tempComplexRegexTrigger("SpecHighlightLineEnd", pattern,
+                    [==[_G.TrigHighlight.matches = {unpack(matches)}]==],
+                    0, 0, 0, 0, matchAll and 1 or 0, "red", "blue", 0, 0, 0)
+                feedTriggers(incoming .. "\n")
+                assert.is_table(_G.TrigHighlight.matches, "the highlight trigger should have fired on '" .. incoming .. "'")
+                -- a line number taken in the trigger is stale if the pass trimmed the buffer
+                local highlighted, text = highlightedOn(getLastLineNumber("main") - 1)
+                return highlighted, _G.TrigHighlight.matches, text
+            end
+
+            local lookbehind = [[(?<=: )([\w\s\']+)]]
+            local cases = {
+                -- a lookbehind and a class with \s, and two lines where the capture stops short
+                {lookbehind, "Town Center: Fox Plaza", "Fox Plaza", "Fox Plaza\n"},
+                {lookbehind, "Town Center: Fox Plaza.", "Fox Plaza|", "Fox Plaza"},
+                {lookbehind, "Town Center: Fox Plaza (here)", "Fox Plaza |", "Fox Plaza "},
+                {[[: ([\w\s\']+)]], "Town Center: Fox Plaza", "Fox Plaza", "Fox Plaza\n"},
+                -- $ also matches before the newline at the end, so it does not stop the capture taking it
+                {lookbehind .. "$", "Town Center: Fox Plaza", "Fox Plaza", "Fox Plaza\n"},
+                -- a negated class, with and without the character it negates
+                {[[^([^(]+)]], "hello ok", "hello ok", "hello ok\n"},
+                {[[^([^(]+)]], "hello ok (x)", "hello ok |", "hello ok "},
+                -- no capture groups, so the whole match is the highlight
+                {[[: [^(]+]], "Exits: north", ": north", ": north\n"},
+                -- a capture that stops short of the newline
+                {[[(Fox Plaza)$]], "Town Center: Fox Plaza", "Fox Plaza", "Fox Plaza"},
+                {[[: ([^(]+)]], "Caf\195\169 \226\152\186: Fox \226\152\186 Pl\195\164za", "Fox \226\152\186 Pl\195\164za", "Fox \226\152\186 Pl\195\164za\n"},
+                {[[: ([^(]+)]], "Rue \240\159\152\128: Fox \240\159\152\128 Plaza", "Fox \240\159\152\128 Plaza", "Fox \240\159\152\128 Plaza\n"},
+            }
+
+            for _, case in ipairs(cases) do
+                local pattern, incoming, wanted, captured = unpack(case)
+                it("highlights '" .. wanted .. "' of '" .. incoming .. "' for " .. pattern, function()
+                    local highlighted, captures = highlightFor(pattern, incoming)
+                    assert.are.equal(wanted, highlighted)
+                    assert.are.equal(captured, captures[#captures], "matches has to keep what the pattern captured")
+                end)
+            end
+
+            it("highlights every match of a match all pattern, the last one ending the line", function()
+                local highlighted, captures = highlightFor([[(\w+\s)]], "aa bb cc", true)
+                assert.are.equal("aa bb cc", highlighted)
+                assert.are.same({"aa ", "aa ", "bb ", "bb ", "cc\n", "cc\n"}, captures)
+            end)
+
+            it("highlights the other groups, and nothing for a group that captured only the newline", function()
+                local highlighted, captures = highlightFor([[^(tail) end(\s)]], "tail end")
+                assert.are.equal("tail|", highlighted)
+                assert.are.same({"tail end\n", "tail", "\n"}, captures)
+            end)
+
+            it("leaves text an earlier trigger echoed onto the end of the line alone", function()
+                local echoer = tempRegexTrigger("^Town Square: Fox Plaza$", function() echo(" [seen]") end)
+                local highlighted, _, text = highlightFor(lookbehind, "Town Square: Fox Plaza", false, function() killTrigger(echoer) end)
+                assert.are.equal("Town Square: Fox Plaza [seen]", text, "the earlier trigger should have echoed")
+                assert.are.equal("Fox Plaza|", highlighted)
+            end)
+
+            it("highlights all of the capture after an earlier trigger shortened the line in front of it", function()
+                local editor = tempRegexTrigger("^Town Market: Fox Plaza$", function()
+                    if selectString("Town Market", 1) > -1 then replace("TM") end
+                    deselect()
+                end)
+                local highlighted, _, text = highlightFor(lookbehind, "Town Market: Fox Plaza", false, function() killTrigger(editor) end)
+                assert.are.equal("TM: Fox Plaza", text, "the earlier trigger should have shortened the line")
+                assert.are.equal("Fox Plaza", highlighted)
+            end)
+        end)
+
     end)
 
     describe("match-all filter triggers", function()
@@ -4811,6 +4917,28 @@ describe("Trigger processing", function()
                 withTrigger("filter substring", function()
                     feedTriggers("somewhere tkfsub in here\n")
                     assert.are.same({"tkfsub"}, _G.TriggerKindsSpec.filterSubstringSeen)
+                end)
+            end)
+
+            -- the parent's capture keeps the "\n" its pattern took after the line,
+            -- so a child's capture can end in it too
+            it("lets a child highlight a capture that runs to the end of the line", function()
+                withTrigger("filter line end", function(setCleanup)
+                    setCleanup(moveCursorEnd)
+                    feedTriggers("tkfle hello ok\n")
+                    local fired = _G.TriggerKindsSpec.filterLineEnd
+                    assert.is_table(fired, "the child should have fired")
+                    assert.are.equal("ok\n", fired.capture)
+                    moveCursor(0, getLastLineNumber("main") - 1)
+                    assert.is_true(selectString("ok", 1) >= 0)
+                    local child = {getFgColor()}
+                    deselect()
+                    assert.is_true(selectString("hello", 1) >= 0)
+                    local rest = {getFgColor()}
+                    deselect()
+                    moveCursorEnd()
+                    assert.are.same(color_table.red, child)
+                    assert.are.same({192, 192, 192}, rest)
                 end)
             end)
 
