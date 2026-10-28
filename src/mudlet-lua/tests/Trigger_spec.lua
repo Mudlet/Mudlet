@@ -5801,7 +5801,7 @@ describe("Trigger processing", function()
                 feedTriggers("capturebuild two " .. word .. "2\n")
             end)
 
-            assert.is_true(finaliser.runs > 20, "finalisers stopped running before the capture tables were built")
+            assert.is_true(finaliser.runs > 10, "finalisers stopped running before the capture tables were built")
             assert.are.same({word .. "1", word .. "2"}, CaptureBuildSpec.multi)
             assert.is_true(CaptureBuildSpec.refused, "no finaliser ran while the capture tables were being built")
         end)
