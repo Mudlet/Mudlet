@@ -6119,6 +6119,16 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         xPos += charWidth;
         totalWidth += charWidth;
         indexOfChar = nextBoundary;
+        if (plainAscii) {
+            // Plain ASCII has no line feeds and skips spaces only at a segment's first column, so every
+            // character until the segment is full takes one column with nothing else to check
+            const int run = std::min(maxWidth - (needsIndent ? indentationHere : 0) - xPos, total - indexOfChar);
+            if (run > 0) {
+                xPos += run;
+                totalWidth += run;
+                indexOfChar += run;
+            }
+        }
     }
     // it's possible that no wrapping is needed
     if (totalWidth <= mWrapAt && !hasNewline) {
