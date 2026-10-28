@@ -4506,6 +4506,8 @@ void dlgTriggerEditor::activeToggle_timer()
             // state of offset timers is managed by the trigger engine
             if (pT->shouldBeActive()) {
                 pT->enableTimer(pT->getID());
+                // Its parent firing arms it, so it must not count down from being switched on
+                pT->stop();
                 itemDescription = descActiveOffsetTimer;
                 if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/offsettimer-on.png"));
@@ -6347,7 +6349,10 @@ void dlgTriggerEditor::saveTimer()
         const int secs = mpTimersMainArea->timeEdit_timer_seconds->time().second();
         const int msecs = mpTimersMainArea->timeEdit_timer_msecs->time().msec();
         const QTime time(hours, minutes, secs, msecs);
-        pT->setTime(time);
+        // setTime() stops the QTimer, so even an unchanged time would end the countdown
+        if (pT->getTime() != time) {
+            pT->setTime(time);
+        }
         pT->setCommand(command);
         pT->setName(name);
         pT->setScript(script);
@@ -6416,7 +6421,7 @@ void dlgTriggerEditor::saveTimer()
                 }
                 // The emergency stop's resume starts it; doing so here would let it run during the stop
                 if (!mpHost->mEmergencyStop) {
-                    pT->setIsActive(true);
+                    pT->stayActive();
                 }
             } else {
                 itemDescription = descInactive;
@@ -6719,13 +6724,9 @@ void dlgTriggerEditor::applyAliasState(QTreeWidgetItem* pItem, TAlias* pT, bool 
 // user is actually looking at in a different view.
 void dlgTriggerEditor::refreshAliasIcon(int aliasID)
 {
-    // See refreshTriggerIcon() - coalesced into one tree walk per turn rather
-    // than a findItemByID() scan per Lua call.
-    if (!isVisible()) {
-        return;
-    }
+    // See refreshTriggerIcon().
     mPendingAliasIconRefresh.insert(aliasID);
-    if (!mAliasIconRefreshQueued) {
+    if (isVisible() && !mAliasIconRefreshQueued) {
         mAliasIconRefreshQueued = true;
         QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingAliasIconRefresh);
     }
@@ -9240,6 +9241,12 @@ void dlgTriggerEditor::fillout_form()
     mpCurrentVarItem = nullptr;
 
     mNeedUpdateData = false;
+    // The trees are painted afresh below, which covers every toggle still queued
+    mPendingTriggerIconRefresh.clear();
+    mPendingAliasIconRefresh.clear();
+    mPendingTimerIconRefresh.clear();
+    mPendingScriptIconRefresh.clear();
+    mPendingKeyIconRefresh.clear();
     mpTriggerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Triggers")));
     mpTriggerBaseItem->setIcon(0, QPixmap(qsl(":/icons/tools-wizard.png")));
     treeWidget_triggers->insertTopLevelItem(0, mpTriggerBaseItem);
@@ -9385,13 +9392,9 @@ void dlgTriggerEditor::computeKeyIcon(TKey* pT, QIcon& icon, QString& itemDescri
 // background state change could clobber a diagnostic in a different view.
 void dlgTriggerEditor::refreshKeyIcon(int keyID)
 {
-    // See refreshTriggerIcon() - coalesced into one tree walk per turn rather
-    // than a findItemByID() scan per Lua call.
-    if (!isVisible()) {
-        return;
-    }
+    // See refreshTriggerIcon().
     mPendingKeyIconRefresh.insert(keyID);
-    if (!mKeyIconRefreshQueued) {
+    if (isVisible() && !mKeyIconRefreshQueued) {
         mKeyIconRefreshQueued = true;
         QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingKeyIconRefresh);
     }
@@ -9715,13 +9718,9 @@ void dlgTriggerEditor::computeScriptIcon(TScript* pT, QIcon& icon, QString& item
 // different view.
 void dlgTriggerEditor::refreshScriptIcon(int scriptID)
 {
-    // See refreshTriggerIcon() - coalesced into one tree walk per turn rather
-    // than a findItemByID() scan per Lua call.
-    if (!isVisible()) {
-        return;
-    }
+    // See refreshTriggerIcon().
     mPendingScriptIconRefresh.insert(scriptID);
-    if (!mScriptIconRefreshQueued) {
+    if (isVisible() && !mScriptIconRefreshQueued) {
         mScriptIconRefreshQueued = true;
         QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingScriptIconRefresh);
     }
@@ -9899,13 +9898,9 @@ void dlgTriggerEditor::computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDe
 // different view.
 void dlgTriggerEditor::refreshTimerIcon(int timerID)
 {
-    // See refreshTriggerIcon() - coalesced into one tree walk per turn rather
-    // than a findItemByID() scan per Lua call.
-    if (!isVisible()) {
-        return;
-    }
+    // See refreshTriggerIcon().
     mPendingTimerIconRefresh.insert(timerID);
-    if (!mTimerIconRefreshQueued) {
+    if (isVisible() && !mTimerIconRefreshQueued) {
         mTimerIconRefreshQueued = true;
         QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingTimerIconRefresh);
     }
@@ -10085,12 +10080,10 @@ void dlgTriggerEditor::computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& it
 // diagnostic the user is actually looking at in a different view.
 void dlgTriggerEditor::refreshTriggerIcon(int triggerID)
 {
-    // See refreshAliasIcon() - the dialog outlives its own visibility.
-    if (!isVisible()) {
-        return;
-    }
+    // One tree walk per turn, not a findItemByID() per call; showEvent() flushes what
+    // arrives while closed. The units skip top-level temporary items, which the trees leave out.
     mPendingTriggerIconRefresh.insert(triggerID);
-    if (!mTriggerIconRefreshQueued) {
+    if (isVisible() && !mTriggerIconRefreshQueued) {
         mTriggerIconRefreshQueued = true;
         QTimer::singleShot(0ms, this, &dlgTriggerEditor::flushPendingTriggerIconRefresh);
     }
@@ -10103,9 +10096,8 @@ void dlgTriggerEditor::flushPendingTriggerIconRefresh()
         return;
     }
     if (!mpTriggerBaseItem || !isVisible()) {
-        // Editor closed before this flush ran - leave the IDs queued rather
-        // than silently dropping the update. showEvent() flushes them when
-        // the editor becomes visible again, and the next toggle would too.
+        // Editor closed before this flush ran - leave the IDs queued for
+        // showEvent() rather than silently dropping the update.
         return;
     }
     int remaining = mPendingTriggerIconRefresh.size();
@@ -10805,9 +10797,8 @@ void dlgTriggerEditor::showEvent(QShowEvent* event)
     mHasBeenShown = true;
     widgetutils::keepDialogOnAScreen(this, mpHost->mainConsoleView());
 
-    // A Lua toggle that arrived while this editor was hidden stays queued
-    // rather than being dropped (see flushPendingTriggerIconRefresh()) -
-    // flush it now instead of waiting for the next toggle to trigger it.
+    // Lua toggles that arrived while this editor was hidden are queued, but
+    // nothing flushes them until now.
     flushPendingTriggerIconRefresh();
     flushPendingAliasIconRefresh();
     flushPendingTimerIconRefresh();
@@ -11024,13 +11015,18 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     }
 }
 
+// A form shown for no item can be typed into but never saved, so the help stands in for it
+static bool hasItemToShow(const QTreeWidget* pTree)
+{
+    const QTreeWidgetItem* pRoot = pTree->topLevelItem(0);
+    const QTreeWidgetItem* pCurrent = pTree->currentItem();
+    return pRoot && pRoot->childCount() && pCurrent && pCurrent != pRoot;
+}
+
 void dlgTriggerEditor::slot_showTimers()
 {
     changeView(EditorViewType::cmTimerView);
-    QTreeWidgetItem* pI = treeWidget_timers->topLevelItem(0);
-    if (!pI || pI == treeWidget_timers->currentItem() || !pI->childCount()) {
-        // There is no root item, we are on the root item or there are no other
-        // items - so show the help message:
+    if (!hasItemToShow(treeWidget_timers)) {
         clearTimerForm();
     } else {
         mpTimersMainArea->show();
@@ -11054,10 +11050,7 @@ void dlgTriggerEditor::showCurrentTriggerItem()
     }
 
     changeView(EditorViewType::cmTriggerView);
-    QTreeWidgetItem* pI = treeWidget_triggers->topLevelItem(0);
-    if (!pI || pI == treeWidget_triggers->currentItem() || !pI->childCount()) {
-        // There is no root item, we are on the root item or there are no other
-        // items - so show the help message:
+    if (!hasItemToShow(treeWidget_triggers)) {
         clearTriggerForm();
     } else {
         mpTriggersMainArea->show();
@@ -11069,10 +11062,7 @@ void dlgTriggerEditor::showCurrentTriggerItem()
 void dlgTriggerEditor::slot_showTriggers()
 {
     changeView(EditorViewType::cmTriggerView);
-    QTreeWidgetItem* pI = treeWidget_triggers->topLevelItem(0);
-    if (!pI || pI == treeWidget_triggers->currentItem() || !pI->childCount()) {
-        // There is no root item, we are on the root item or there are no other
-        // items - so show the help message:
+    if (!hasItemToShow(treeWidget_triggers)) {
         clearTriggerForm();
     } else {
         mpTriggersMainArea->show();
@@ -11092,10 +11082,7 @@ void dlgTriggerEditor::slot_showTriggers()
 void dlgTriggerEditor::slot_showScripts()
 {
     changeView(EditorViewType::cmScriptView);
-    QTreeWidgetItem* pI = treeWidget_scripts->topLevelItem(0);
-    if (!pI || pI == treeWidget_scripts->currentItem() || !pI->childCount()) {
-        // There is no root item, we are on the root item or there are no other
-        // items - so show the help message:
+    if (!hasItemToShow(treeWidget_scripts)) {
         clearScriptForm();
     } else {
         mpScriptsMainArea->show();
@@ -11115,10 +11102,7 @@ void dlgTriggerEditor::slot_showScripts()
 void dlgTriggerEditor::slot_showKeys()
 {
     changeView(EditorViewType::cmKeysView);
-    QTreeWidgetItem* pI = treeWidget_keys->topLevelItem(0);
-    if (!pI || pI == treeWidget_keys->currentItem() || !pI->childCount()) {
-        // There is no root item, we are on the root item or there are no other
-        // items - so show the help message:
+    if (!hasItemToShow(treeWidget_keys)) {
         clearKeyForm();
     } else {
         mpKeysMainArea->show();
@@ -11142,10 +11126,7 @@ void dlgTriggerEditor::slot_showVariables()
     mpCurrentVarItem = nullptr;
     checkBox_displayAllVariables->show();
     checkBox_displayAllVariables->setChecked(showHiddenVars);
-    QTreeWidgetItem* pI = treeWidget_variables->topLevelItem(0);
-    if (!pI || pI == treeWidget_variables->currentItem() || !pI->childCount()) {
-        // There is no root item, we are on the root item or there are no other
-        // items - so show the help message:
+    if (!hasItemToShow(treeWidget_variables)) {
         clearVarForm();
     } else {
         mpVarsMainArea->show();
@@ -11186,10 +11167,7 @@ void dlgTriggerEditor::show_vars()
 void dlgTriggerEditor::slot_showAliases()
 {
     changeView(EditorViewType::cmAliasView);
-    QTreeWidgetItem* pI = treeWidget_aliases->topLevelItem(0);
-    if (!pI || pI == treeWidget_aliases->currentItem() || !pI->childCount()) {
-        // There is no root item, we are on the root item or there are no other
-        // items - so show the help message:
+    if (!hasItemToShow(treeWidget_aliases)) {
         clearAliasForm();
     } else {
         mpAliasMainArea->show();
@@ -11402,10 +11380,7 @@ QString dlgTriggerEditor::profileSettingsPrefix() const
 void dlgTriggerEditor::slot_showActions()
 {
     changeView(EditorViewType::cmActionView);
-    QTreeWidgetItem* pI = treeWidget_actions->topLevelItem(0);
-    if (!pI || pI == treeWidget_actions->currentItem() || !pI->childCount()) {
-        // There is no root item, we are on the root item or there are no other
-        // items - so show the help message:
+    if (!hasItemToShow(treeWidget_actions)) {
         clearActionForm();
     } else {
         mpActionsMainArea->show();
@@ -14630,6 +14605,9 @@ void dlgTriggerEditor::slot_restoreEditorItemsToolbar()
 
 void dlgTriggerEditor::clearTriggerForm()
 {
+    // Forgotten first, so neither the clearing below nor a later save is taken as an edit to that trigger
+    mpCurrentTriggerItem = nullptr;
+
     // Clear pattern fields
     for (auto* patternEdit : std::as_const(mTriggerPatternEdit)) {
         patternEdit->singleLineTextEdit_pattern->clear();
@@ -14660,7 +14638,7 @@ void dlgTriggerEditor::clearTriggerForm()
 void dlgTriggerEditor::clearTimerForm()
 {
     mpTimersMainArea->hide();
-    mpTimersMainArea->hide();
+    mpSourceEditorArea->hide();
     if (mCurrentView != EditorViewType::cmUnknownView) {
         showIntro();
     }

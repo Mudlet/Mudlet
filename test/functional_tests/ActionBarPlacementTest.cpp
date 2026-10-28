@@ -31,8 +31,10 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TAction.h"
+#include "TCommandLine.h"
 #include "TEasyButtonBar.h"
 #include "TMainConsole.h"
+#include "TTextEdit.h"
 #include "TToolBar.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -236,6 +238,101 @@ private:
             styled = styled || candidate->styleSheet() == css;
         }
         QVERIFY2(styled, "the menu should have taken the stylesheet typed in the editor");
+    }
+
+    static void addBarLocations()
+    {
+        QTest::addColumn<int>("location");
+        QTest::newRow("top") << 0;
+        QTest::newRow("left") << 1;
+        QTest::newRow("right") << 2;
+    }
+
+    static void addBarLocationsAndToggles()
+    {
+        QTest::addColumn<int>("location");
+        QTest::addColumn<bool>("show");
+        for (const auto& [location, name] : {std::pair{0, "top"}, std::pair{1, "left"}, std::pair{2, "right"}}) {
+            QTest::newRow(qPrintable(qsl("hide %1").arg(QLatin1String(name)))) << location << false;
+            QTest::newRow(qPrintable(qsl("show %1").arg(QLatin1String(name)))) << location << true;
+        }
+    }
+
+    // Borders on all four sides, as a Geyser UI has, in a window wide enough that the
+    // console is not held at the 40 columns it never goes under
+    Host* startBorderedProfileWithABar(const int location)
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        if (!host) {
+            return nullptr;
+        }
+        mudlet::self()->resize(1000, 700);
+        auto* lua = host->getLuaInterpreter();
+        if (!lua->compileAndExecuteScript(qsl("setBorderTop(20) setBorderRight(25) setBorderBottom(10) setBorderLeft(15)"))
+            || !lua->compileAndExecuteScript(qsl("tempButtonToolbar('placementSized', %1, 0) tempButton('placementSized', 'sized', 0)").arg(location))) {
+            return nullptr;
+        }
+        return host;
+    }
+
+    // Its location as tempButtonToolbar() takes it
+    static QWidget* stripAt(const TMainConsole* console, const int location) { return location == 0 ? console->mpTopToolBar : location == 1 ? console->mpLeftToolBar : console->mpRightToolBar; }
+
+    static bool takesRoom(const QWidget* strip, const int location) { return location == 0 ? strip->height() > 0 : strip->width() > 0; }
+
+    // How the output area misses the room the bars, the command line and the
+    // borders leave it, and the rows and columns the game is told miss what it
+    // holds; empty when it all fits
+    static QString misfit(const Host* host)
+    {
+        const TMainConsole* console = host->mainConsoleView();
+        const QWidget* display = console->mpMainDisplay;
+        const QMargins borders = host->borders();
+        QStringList misses;
+        if (display->pos() != QPoint(borders.left(), borders.top())) {
+            misses << qsl("placed at %1,%2").arg(display->x()).arg(display->y());
+        }
+        const int overhang = display->mapTo(console, QPoint(0, display->height() + borders.bottom())).y() - console->mpCommandLine->mapTo(console, QPoint(0, 0)).y();
+        if (overhang) {
+            misses << qsl("%1px over the command line").arg(overhang);
+        }
+        const int shortfall = console->mpRightToolBar->mapTo(console, QPoint(0, 0)).x() - display->mapTo(console, QPoint(display->width() + borders.right(), 0)).x();
+        if (shortfall) {
+            misses << qsl("%1px short of the right-hand bars").arg(shortfall);
+        }
+        const TTextEdit* pane = console->mUpperPane;
+        const int rows = pane->height() / QFontMetrics(pane->font()).height();
+        if (rows != host->mScreenHeight) {
+            misses << qsl("%1 rows told for %2").arg(host->mScreenHeight).arg(rows);
+        }
+        const int columns = pane->width() / QFontMetrics(pane->font()).averageCharWidth();
+        if (columns != host->mScreenWidth) {
+            misses << qsl("%1 columns told for %2").arg(host->mScreenWidth).arg(columns);
+        }
+        return misses.join(qsl(", "));
+    }
+
+    // processEventLoopHack() ends showToolBar() and the editor's save, and its
+    // refresh() sized the output area right even before bars resized it
+    static void fitTheOldWay(const Host* host)
+    {
+        mudlet::self()->processEventLoopHack();
+        // Neither that refresh() nor the window's resize may still be pending
+        // when the bar is toggled, or they would fit the area for it
+        QTest::qWait(300ms);
+        QCOMPARE(misfit(host), QString());
+    }
+
+    // Nothing that comes later, such as that refresh(), may tell the game another size
+    static void fitsForGood(const Host* host)
+    {
+        const QSize told(host->mScreenWidth, host->mScreenHeight);
+        QVERIFY2(told.width() > 40, "the window is too narrow for the column count to show anything");
+        mudlet::self()->processEventLoopHack();
+        QTest::qWait(200ms);
+        QCOMPARE(misfit(host), QString());
+        QCOMPARE(QSize(host->mScreenWidth, host->mScreenHeight), told);
     }
 
 private slots:
@@ -547,6 +644,59 @@ private slots:
 
         console->setActionToolBarVisible(floating, true);
         QVERIFY(!toolBar->isHidden());
+    }
+
+    // The output area is sized by hand, not by a layout, so a bar coming or going
+    // has to resize it as well as move it. Toggled the way the editor's activate
+    // button does, which has nothing else to resize it afterwards.
+    void test_aBarShownOrHiddenResizesTheOutputArea_data() { addBarLocationsAndToggles(); }
+    void test_aBarShownOrHiddenResizesTheOutputArea()
+    {
+        QFETCH(int, location);
+        QFETCH(bool, show);
+        auto* host = startBorderedProfileWithABar(location);
+        QVERIFY(host);
+        const QWidget* strip = stripAt(host->mainConsoleView(), location);
+        QTRY_VERIFY2(takesRoom(strip, location), "the bar has to take up room, or hiding it proves nothing");
+        auto toggle = [host](const bool active) {
+            host->getActionUnit()->findAction(qsl("placementSized"))->setIsActive(active);
+            host->getActionUnit()->updateAllToolbars();
+        };
+        if (show) {
+            toggle(false);
+            QTRY_VERIFY(!takesRoom(strip, location));
+        }
+        fitTheOldWay(host);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        toggle(show);
+
+        QTRY_COMPARE(takesRoom(strip, location), show);
+        QTRY_COMPARE(misfit(host), QString());
+        fitsForGood(host);
+    }
+
+    // Removed from the editor; no Lua function removes a bar
+    void test_aBarRemovedResizesTheOutputArea_data() { addBarLocations(); }
+    void test_aBarRemovedResizesTheOutputArea()
+    {
+        QFETCH(int, location);
+        auto* host = startBorderedProfileWithABar(location);
+        QVERIFY(host);
+        const QWidget* strip = stripAt(host->mainConsoleView(), location);
+        QTRY_VERIFY2(takesRoom(strip, location), "the bar has to take up room, or removing it proves nothing");
+        fitTheOldWay(host);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        delete host->getActionUnit()->findAction(qsl("placementSized"));
+
+        QTRY_VERIFY(!takesRoom(strip, location));
+        QTRY_COMPARE(misfit(host), QString());
+        fitsForGood(host);
     }
 
     // The console keeps an action's bars by the action's address, which a later
