@@ -6278,10 +6278,9 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
 
     // Leading lines that getWrapInfo() finds no break points in stay where they
     // are. The loop below reproduces such a line unchanged, but only after
-    // moving it out of the buffer into a queue and back again and standing up
-    // four temporary containers to do it. A line with no TChars or no text is
-    // not left alone: the loop turns that one into appendEmptyLine(), which
-    // drops its TChars, restamps it and clears its prompt flag.
+    // moving it out of the buffer and back again. A line with no TChars or no
+    // text is not left alone: the loop turns that one into appendEmptyLine(),
+    // which drops its TChars, restamps it and clears its prompt flag.
     int firstRewrappedLine = startLine;
     QList<WrapInfo> lineBreaks;
     while (firstRewrappedLine < wrapUpTo) {
@@ -6324,17 +6323,22 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         }
     }
 
-    std::queue<std::vector<TChar>> queue;
-    QStringList tempList;
-    QList<qint64> timeList;
-    QList<bool> promptList;
-    QList<quint16> wrapGapList;
+    struct RewrappedLine
+    {
+        std::vector<TChar> chars;
+        QString text;
+        qint64 time;
+        quint16 wrapGap;
+        bool prompt;
+    };
+    // Most calls rewrap a single incoming line into a few, which fit in this array's own inline storage
+    QVarLengthArray<RewrappedLine, 8> rewrapped;
     int lineCount = 0;
     for (int i = firstRewrappedLine; i < total; ++i) {
         lineCount++;
         for (const MovingPassLine& passLine : std::as_const(passLines)) {
             if (passLine.from == i) {
-                *passLine.pLineNumber = firstRewrappedLine + static_cast<int>(tempList.size());
+                *passLine.pLineNumber = firstRewrappedLine + static_cast<int>(rewrapped.size());
             }
         }
         std::vector<TChar> newBufferLine;
@@ -6342,11 +6346,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         const qint64 time = timeBuffer[i];
         // trivial case
         if (buffer[i].empty()) {
-            tempList.append(newLineText);
-            queue.push(std::move(newBufferLine));
-            timeList.append(time);
-            promptList.append(false);
-            wrapGapList.append(wrapGapBuffer.at(i));
+            rewrapped.append({std::move(newBufferLine), newLineText, time, wrapGapBuffer.at(i), false});
             continue;
         }
 
@@ -6366,11 +6366,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             lineBreaks = getWrapInfo(lineText, isNewline, isNewline && carriesIndent(i), maxWidth, indent, hangingIndent);
         }
         if (lineBreaks.isEmpty()) {
-            tempList.append(lineText);
-            queue.push(std::move(buffer[i]));
-            timeList.append(time);
-            promptList.append(isPrompt);
-            wrapGapList.append(wrapGapBuffer.at(i));
+            rewrapped.append({std::move(buffer[i]), lineText, time, wrapGapBuffer.at(i), isPrompt});
             continue;
         }
         if (i == mPreTriggerPassLineNumber) {
@@ -6378,8 +6374,6 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             materialisePreTriggerPassLine(i);
             wrapPreTriggerPassLine(lineBreaks.first(), lineBreaks.first().isNewline ? indent : hangingIndent);
         }
-        const QString qIndent(indent, QChar::Space);
-        const QString qHangingIndent(hangingIndent, QChar::Space);
         // The source line is read through a cursor rather than consumed from
         // its front, which a vector cannot do without shuffling every
         // remaining TChar down one place per character. It is therefore left
@@ -6398,14 +6392,9 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
                 // indentation takes the styling of the character it precedes, so
                 // that it reads as part of the same run of text
                 const TChar& indentSpace = sourceChars[newBufferCharPosition];
-                // add indentation to TChar buffer and newLineText
-                if (w.isNewline) {
-                    newBufferLine.insert(newBufferLine.end(), indent, indentSpace);
-                    newLineText.append(qIndent);
-                } else {
-                    newBufferLine.insert(newBufferLine.end(), hangingIndent, indentSpace);
-                    newLineText.append(qHangingIndent);
-                }
+                const int indentWidth = w.isNewline ? indent : hangingIndent;
+                newBufferLine.insert(newBufferLine.end(), indentWidth, indentSpace);
+                newLineText.resize(newLineText.size() + indentWidth, QChar::Space);
             }
             // append TChars of the wrapped lineText to TChar buffer
             const int copyEnd = std::min(w.lastChar, sourceSize);
@@ -6414,19 +6403,15 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
                 newBufferCharPosition = copyEnd;
             }
             // everything else
-            newLineText.append(lineText.mid(w.firstChar, w.lastChar - w.firstChar));
-            tempList.append(newLineText);
+            newLineText.append(QStringView(lineText).mid(w.firstChar, w.lastChar - w.firstChar));
+            qint64 segmentTime = TBuffer::csmWrappedLineTimeStamp;
             if (w.isNewline && previousSegmentEnd >= 0 && time == TBuffer::csmWrappedLineTimeStamp) {
                 // A line feed inserted into a wrapped line starts a line of its
                 // own, which csmWrappedLineTimeStamp would join back onto the last
-                timeList.append(QDateTime::currentMSecsSinceEpoch());
+                segmentTime = QDateTime::currentMSecsSinceEpoch();
             } else if (w.isNewline) {
-                timeList.append(time);
-            } else {
-                timeList.append(TBuffer::csmWrappedLineTimeStamp);
+                segmentTime = time;
             }
-            queue.push(std::move(newBufferLine));
-            promptList.append(isPrompt);
             // getWrapInfo() only ever skips spaces between the segments of a
             // line, and the first segment carries over the source line's own gap
             // (or, starting a paragraph, its own indent)
@@ -6438,7 +6423,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             } else if (previousSegmentEnd < 0) {
                 wrapGap = wrapGapBuffer.at(i);
             }
-            wrapGapList.append(static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())));
+            rewrapped.append({std::move(newBufferLine), std::move(newLineText), segmentTime, static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())), isPrompt});
             previousSegmentEnd = w.lastChar;
             newBufferLine.clear();
             newLineText = QString();
@@ -6452,24 +6437,22 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         wrapGapBuffer.pop_back();
     }
 
-    const int rewrappedLines = static_cast<int>(queue.size());
-    for (int i = 0; i < rewrappedLines; ++i) {
-        if (tempList[i].isEmpty()) {
-            queue.pop();
+    const int rewrappedLines = static_cast<int>(rewrapped.size());
+    for (RewrappedLine& line : rewrapped) {
+        if (line.text.isEmpty()) {
             appendEmptyLine();
             // A break that leaves only dropped spaces for the last line keeps
             // it wrapped, for whatever is echoed next to carry on from them
-            if (timeList[i] == TBuffer::csmWrappedLineTimeStamp) {
+            if (line.time == TBuffer::csmWrappedLineTimeStamp) {
                 timeBuffer.back() = TBuffer::csmWrappedLineTimeStamp;
-                wrapGapBuffer.back() = wrapGapList[i];
+                wrapGapBuffer.back() = line.wrapGap;
             }
         } else {
-            buffer.push_back(std::move(queue.front()));
-            queue.pop();
-            lineBuffer.append(tempList[i]);
-            timeBuffer.append(timeList[i]);
-            promptBuffer.push_back(promptList[i]);
-            wrapGapBuffer.append(wrapGapList[i]);
+            buffer.push_back(std::move(line.chars));
+            lineBuffer.append(std::move(line.text));
+            timeBuffer.append(line.time);
+            promptBuffer.push_back(line.prompt);
+            wrapGapBuffer.append(line.wrapGap);
         }
     }
 
