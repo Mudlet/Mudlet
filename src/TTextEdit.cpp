@@ -132,6 +132,14 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     mpPaintPacer = new QTimer(this);
     mpPaintPacer->setSingleShot(true);
     connect(mpPaintPacer, &QTimer::timeout, this, [this]() {
+        // Armed at the normal pace by the line that began a flood, so stretched to the flood pace -
+        // once and by no more than the paces differ, as a paint under an overlay restarts mSincePaint.
+        const qint64 sincePaint = mSincePaint.isValid() ? mSincePaint.elapsed() : csmFloodPaintPaceMs;
+        if (!mPaintPacerStretched && !mPendingPaintRegion.isEmpty() && sincePaint < csmFloodPaintPaceMs && paintPaceMs() == csmFloodPaintPaceMs) {
+            mPaintPacerStretched = true;
+            mpPaintPacer->start(std::min(csmFloodPaintPaceMs - csmPaintPaceMs, csmFloodPaintPaceMs - static_cast<int>(sincePaint)));
+            return;
+        }
         applyPendingScrollBarUpdate();
         if (!mPendingPaintRegion.isEmpty()) {
             update(mPendingPaintRegion);
@@ -176,10 +184,12 @@ void TTextEdit::scheduleUpdate(const QRect& rect)
     }
     const QRect area = rect.isValid() ? rect : QWidget::rect();
     mPendingPaintRegion += area;
+    const int pace = paintPaceMs();
+    const qint64 sincePaint = mSincePaint.isValid() ? mSincePaint.elapsed() : pace;
 
     // Nothing painted recently, so this frame's window is open: Qt still merges
     // whatever else arrives before the event loop gets around to painting.
-    if (!mSincePaint.isValid() || mSincePaint.elapsed() >= csmPaintPaceMs) {
+    if (sincePaint >= pace) {
         applyPendingScrollBarUpdate();
         update(mPendingPaintRegion);
         mWholePaneRequested = area.contains(QWidget::rect());
@@ -188,8 +198,16 @@ void TTextEdit::scheduleUpdate(const QRect& rect)
     }
 
     if (!mpPaintPacer->isActive()) {
-        mpPaintPacer->start(csmPaintPaceMs - static_cast<int>(mSincePaint.elapsed()));
+        mPaintPacerStretched = pace == csmFloodPaintPaceMs;
+        mpPaintPacer->start(pace - static_cast<int>(sincePaint));
     }
+}
+
+// Nobody reads lines that scroll past between two frames, and a frame costs as much as
+// taking in hundreds of them, so a flood gets fewer frames and finishes sooner.
+int TTextEdit::paintPaceMs() const
+{
+    return mpBuffer->linesAddedTotal() - mLinesAddedAtPaint > mScreenHeight ? csmFloodPaintPaceMs : csmPaintPaceMs;
 }
 
 void TTextEdit::markLinesDirty(const int firstLine, const int lastLine)
@@ -1705,6 +1723,7 @@ void TTextEdit::paintNothing(const QRect& r)
 void TTextEdit::paintEvent(QPaintEvent* e)
 {
     mSincePaint.restart();
+    mLinesAddedAtPaint = mpBuffer->linesAddedTotal();
     mWholePaneRequested = false;
     if (!mPendingPaintRegion.isEmpty()) {
         // Whatever this paint covers is current now, so a deferred repaint of it
