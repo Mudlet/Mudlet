@@ -181,6 +181,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     CompileErrorLabelTest.cpp
     CorruptTriggerPatternsTest.cpp
     EmergencyStopResumeTest.cpp
+    GetLuaStringTest.cpp
     MultilineTriggerReentrancyTest.cpp
     PrescanStayOpenRefileTest.cpp
     SetScriptCallbackTest.cpp

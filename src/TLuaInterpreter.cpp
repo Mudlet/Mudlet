@@ -6616,13 +6616,20 @@ void TLuaInterpreter::set_lua_integer(const QString& varName, int varValue)
 // No documentation available in wiki - internal function
 QString TLuaInterpreter::getLuaString(const QString& stringName)
 {
-    lua_State* L = pGlobalLua;
-
-    const int error = luaL_dostring(L, qsl("return %1").arg(stringName).toUtf8().constData());
-    if (!error) {
-        return lua_tostring(L, 1);
+    if (!pGlobalLua) {
+        return QString();
     }
-    return QString();
+    lua_State* L = pGlobalLua;
+    const int top = lua_gettop(L);
+
+    QString value;
+    if (!luaL_dostring(L, qsl("return %1").arg(stringName).toUtf8().constData())) {
+        // The chunk's first result by absolute index, which reads as none rather
+        // than as the slot below when an empty name makes the chunk return nothing
+        value = QString::fromUtf8(lua_tostring(L, top + 1));
+    }
+    lua_settop(L, top);
+    return value;
 }
 
 // check for <whitespace><no_valid_representation> as output
