@@ -200,6 +200,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorAutoCompleteFocusTest.cpp
     EditorClipboardXmlTest.cpp
     EditorBannerViewSwitchTest.cpp
+    EditorEmptySelectionTest.cpp
     EditorItemXMLHelpersTest.cpp
     ColorTriggerDialogTest.cpp
     EditorReshowTest.cpp
