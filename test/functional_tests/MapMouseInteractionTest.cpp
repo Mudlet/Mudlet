@@ -2633,6 +2633,70 @@ private slots:
         QVERIFY(scriptEntriesFollowTheModeSwitch());
     }
 
+    void test_tiesFollowUniqueNamesNotDisplayTexts()
+    {
+        buildMap();
+        showMapper(false);
+        QVERIFY(runLua(qsl("addMapEvent('order1', 'orderEvent', '', 'Order Zebra')\n"
+                           "addMapEvent('order2', 'orderEvent', '', 'Order Apple')\n"
+                           "addMapMenu('order3', '', 'Order Yak')\n"
+                           "addMapMenu('order4', '', 'Order Bee')")));
+        const QStringList expected{qsl("Order Yak"), qsl("Order Bee"), qsl("Order Zebra"), qsl("Order Apple")};
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), expected);
+        closeContextMenu();
+
+        QVERIFY(runLua(qsl("for i = 1, 4 do assert(setMapMenuPriority('order' .. i, 3)) end")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), expected);
+    }
+
+    void test_eachMovedScriptEntryFiresItsOwnEvent()
+    {
+        buildMap();
+        showMapper(false);
+        QVERIFY(runLua(qsl("addMapEvent('orderA', 'orderEvent', '', 'Order A')\n"
+                           "addMapEvent('orderB', 'orderEvent', '', 'Order B')\n"
+                           "addMapMenu('orderSub', '', 'Order Sub')\n"
+                           "addMapMenu('orderSubMenu', 'orderSub', 'Order Sub menu')\n"
+                           "addMapEvent('orderSubX', 'orderEvent', 'orderSub', 'Order Sub X')\n"
+                           "addMapEvent('orderSubY', 'orderEvent', 'orderSub', 'Order Sub Y')\n"
+                           "assert(setMapMenuPriority('orderB', -1))\n"
+                           "assert(setMapMenuPriority('orderSubY', -1))\n"
+                           "registerAnonymousEventHandler('orderEvent', function(_, uniqueName) orderFired = uniqueName end)")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), QStringList({qsl("Order B"), qsl("Order Sub"), qsl("Order A")}));
+        QCOMPARE(userSubmenuTexts(qsl("Order Sub")), QStringList({qsl("Order Sub Y"), qsl("Order Sub menu"), qsl("Order Sub X")}));
+
+        const QList<std::pair<QAction*, QString>> picks{{contextMenuItem(qsl("Order B")), qsl("orderB")},
+                                                        {contextMenuItem(qsl("Order A")), qsl("orderA")},
+                                                        {userMenuItem(qsl("Order Sub"), qsl("Order Sub Y")), qsl("orderSubY")},
+                                                        {userMenuItem(qsl("Order Sub"), qsl("Order Sub X")), qsl("orderSubX")}};
+        for (const auto& [pAction, uniqueName] : picks) {
+            QVERIFY(pAction);
+            QVERIFY(runLua(qsl("orderFired = nil")));
+            pAction->trigger();
+            QVERIFY2(runLua(qsl("assert(orderFired == '%1', tostring(orderFired))").arg(uniqueName)), qPrintable(uniqueName));
+        }
+    }
+
+    void test_scriptEntriesWhoseParentMenuIsMissingStayHidden()
+    {
+        buildMap();
+        showMapper(false);
+        QVERIFY(runLua(qsl("addMapEvent('orderOrphanEvent', 'orderEvent', 'orderNeverAdded', 'Order orphan event')\n"
+                           "addMapMenu('orderOrphanMenu', 'orderNeverAdded', 'Order orphan menu')\n"
+                           "addMapEvent('orderKept', 'orderEvent', '', 'Order kept')")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), QStringList({qsl("Order kept")}));
+        closeContextMenu();
+
+        QVERIFY(runLua(qsl("assert(setMapMenuPriority('orderOrphanEvent', -5))\n"
+                           "assert(setMapMenuPriority('orderOrphanMenu', -5))")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QCOMPARE(itemTextsStartingWith(mp2dMap->mActiveContextMenu, qsl("Order ")), QStringList({qsl("Order kept")}));
+    }
+
     void test_aScriptCanHideTheViewingItemsAndKeepItsOwn()
     {
         buildMap();
