@@ -7035,6 +7035,7 @@ void dlgProfilePreferences::applyAll()
         }
         // Ahead of the switch: a family or size picked straight after unticking it is the font the editor
         // leaves the display font for, and switching first would put the Host's own back into the controls
+        bool ownFontStored = false;
         if (!checkBox_editorFontFollowsDisplay->isChecked() && mSnapshot.anyDirty({fontComboBox_editorFont, spinBox_editorFontSize})) {
             const QFont base = pHost->editorFontBase();
             const QString family = mSnapshot.dirty(fontComboBox_editorFont) ? fontComboBox_editorFont->currentFont().family() : base.family();
@@ -7042,10 +7043,13 @@ void dlgProfilePreferences::applyAll()
             const QFont font = pHost->createFontWithSettings(family, size);
             if (QFontMetrics(font).averageCharWidth() > 0) {
                 pHost->setEditorFont(font);
+                ownFontStored = true;
             }
         }
         if (mSnapshot.dirty(checkBox_editorFontFollowsDisplay)) {
-            pHost->setEditorFontFollowsDisplay(checkBox_editorFontFollowsDisplay->isChecked());
+            // A pick stored above sits on top of the font on show, so the earlier choice keeps it; a refused
+            // pick stored nothing, and the font on show is what the player leaves from
+            pHost->setEditorFontFollowsDisplay(checkBox_editorFontFollowsDisplay->isChecked(), ownFontStored ? Host::EditorFontStart::EarlierChoice : Host::EditorFontStart::FontOnShow);
         }
         // Re-theming an open script editor fully reconfigures edbee, so only when one of these changed
         auto* pDialogs = HostDialogs::find(pHost);

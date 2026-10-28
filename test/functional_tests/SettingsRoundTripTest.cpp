@@ -1150,6 +1150,21 @@ private slots:
         QVERIFY2(!pFamily->isEnabled() && !pSize->isEnabled(), "ticking the box again left the editor font open to picking");
         QCOMPARE(pFamily->currentFont().family(), display.family());
         QCOMPARE(pSize->value(), display.pointSize());
+
+        // Unticking it again keeps what the greyed-out controls showed, not the editor's earlier own font
+        applySpy.clear();
+        pFollow->click();
+        QVERIFY2(applyAndWait(applySpy), "unticking the box again never wrote the settings back");
+        QVERIFY(!mpHost->editorFontFollowsDisplay());
+        const QFont left = mpHost->getEditorFont();
+        QVERIFY2(left.family() == display.family() && left.pointSize() == display.pointSize(),
+                 qPrintable(qsl("the editor went back to its earlier own font, %1 %2pt, instead of the font on show, %3 %4pt")
+                                    .arg(left.family())
+                                    .arg(left.pointSize())
+                                    .arg(display.family())
+                                    .arg(display.pointSize())));
+        QCOMPARE(pFamily->currentFont().family(), display.family());
+        QCOMPARE(pSize->value(), display.pointSize());
 #endif
     }
 
