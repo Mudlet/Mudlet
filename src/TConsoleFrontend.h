@@ -344,7 +344,8 @@ public:
     // Caret navigation of the text: on moves keyboard focus to it, grabbing the keyboard on Windows and Linux;
     // off releases that and makes the command line its focus proxy again.
     virtual void setCaretMode(bool enabled) = 0;
-    // The mouse pointer's position relative to this console's top-left corner, so it can lie outside it.
+    // The mouse pointer's position relative to the frame labels are placed in, below and right of any button
+    // bars; it can lie outside that frame.
     virtual QPoint mousePosition() const = 0;
     // True while keyboard focus is on this console's focus proxy, normally its own command line, so false
     // while it is on the text, as in caret navigation, or in another window.
