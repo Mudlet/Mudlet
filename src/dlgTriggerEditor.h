@@ -114,6 +114,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class EditorAddItemTest;
     friend class EditorBannerViewSwitchTest;
     friend class EditorClipboardXmlTest;
+    friend class EditorEmptySelectionTest;
     friend class EditorFolderViewTest;
     friend class EditorSearchTest;
     friend class HostWidgetDecouplingTest;
@@ -799,7 +800,8 @@ private:
     // keeps track of the dialog reset being queued
     bool mCleanResetQueued = false;
     // Trigger IDs whose tree icon is stale; painted in one tree walk on the
-    // next event-loop turn rather than one O(tree) lookup per Lua toggle.
+    // next event-loop turn, or when the editor is next shown, rather than one
+    // O(tree) lookup per Lua toggle.
     QSet<int> mPendingTriggerIconRefresh;
     bool mTriggerIconRefreshQueued = false;
     void flushPendingTriggerIconRefresh();

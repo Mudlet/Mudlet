@@ -664,6 +664,10 @@ describe("Tests the functionality of alert", function()
     assertArgError(function() return alert(-0.001) end, "is optional but if given must be zero or greater")
   end)
 
+  it("refuses a NaN duration such as 0/0", function()
+    assertArgError(function() return alert(0/0) end, "is optional but if given must be zero or greater")
+  end)
+
   it("takes no duration at all", function()
     assert.is_true(pcall(alert))
   end)

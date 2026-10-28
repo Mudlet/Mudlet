@@ -202,6 +202,7 @@ void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int
         return;
     }
 
+    const bool armedOffsetTimer = pChild->isOffsetTimer() && pChild->mpQTimer->isActive();
     pChild->disableTimer(childID);
 
     if (pOldParent) {
@@ -221,7 +222,10 @@ void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int
     // enableTimer() skips a timer that is switched off, and whether a zero time
     // is allowed depends on the parent
     pChild->validateTime();
-    pChild->enableTimer(childID);
+    // An offset timer is armed by its parent firing, not by being moved under it
+    if (!pChild->isOffsetTimer() || pChild->isFolder() || armedOffsetTimer) {
+        pChild->enableTimer(childID);
+    }
 }
 
 void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
@@ -436,7 +440,9 @@ bool TimerUnit::enableTimer(const QString& name)
         }
 
         found = true;
-        emit mpHost->signal_timerToggled(pT->getID());
+        if (!pT->isTemporary() || pT->getParent()) {
+            emit mpHost->signal_timerToggled(pT->getID());
+        }
     }
     return found;
 }
@@ -457,7 +463,9 @@ bool TimerUnit::disableTimer(const QString& name)
 
         pT->disableTimer();
         found = true;
-        emit mpHost->signal_timerToggled(pT->getID());
+        if (!pT->isTemporary() || pT->getParent()) {
+            emit mpHost->signal_timerToggled(pT->getID());
+        }
     }
     return found;
 }
