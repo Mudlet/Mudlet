@@ -132,6 +132,14 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     mpPaintPacer = new QTimer(this);
     mpPaintPacer->setSingleShot(true);
     connect(mpPaintPacer, &QTimer::timeout, this, [this]() {
+        // Armed at the normal pace by the line that began a flood, so stretched to the flood pace -
+        // once and by no more than the paces differ, as a paint under an overlay restarts mSincePaint.
+        const qint64 sincePaint = mSincePaint.isValid() ? mSincePaint.elapsed() : csmFloodPaintPaceMs;
+        if (!mPaintPacerStretched && !mPendingPaintRegion.isEmpty() && sincePaint < csmFloodPaintPaceMs && paintPaceMs() == csmFloodPaintPaceMs) {
+            mPaintPacerStretched = true;
+            mpPaintPacer->start(std::min(csmFloodPaintPaceMs - csmPaintPaceMs, csmFloodPaintPaceMs - static_cast<int>(sincePaint)));
+            return;
+        }
         applyPendingScrollBarUpdate();
         if (!mPendingPaintRegion.isEmpty()) {
             update(mPendingPaintRegion);
@@ -176,10 +184,12 @@ void TTextEdit::scheduleUpdate(const QRect& rect)
     }
     const QRect area = rect.isValid() ? rect : QWidget::rect();
     mPendingPaintRegion += area;
+    const int pace = paintPaceMs();
+    const qint64 sincePaint = mSincePaint.isValid() ? mSincePaint.elapsed() : pace;
 
     // Nothing painted recently, so this frame's window is open: Qt still merges
     // whatever else arrives before the event loop gets around to painting.
-    if (!mSincePaint.isValid() || mSincePaint.elapsed() >= csmPaintPaceMs) {
+    if (sincePaint >= pace) {
         applyPendingScrollBarUpdate();
         update(mPendingPaintRegion);
         mWholePaneRequested = area.contains(QWidget::rect());
@@ -188,8 +198,16 @@ void TTextEdit::scheduleUpdate(const QRect& rect)
     }
 
     if (!mpPaintPacer->isActive()) {
-        mpPaintPacer->start(csmPaintPaceMs - static_cast<int>(mSincePaint.elapsed()));
+        mPaintPacerStretched = pace == csmFloodPaintPaceMs;
+        mpPaintPacer->start(pace - static_cast<int>(sincePaint));
     }
+}
+
+// Nobody reads lines that scroll past between two frames, and a frame costs as much as
+// taking in hundreds of them, so a flood gets fewer frames and finishes sooner.
+int TTextEdit::paintPaceMs() const
+{
+    return mpBuffer->linesAddedTotal() - mLinesAddedAtPaint > mScreenHeight ? csmFloodPaintPaceMs : csmPaintPaceMs;
 }
 
 void TTextEdit::markLinesDirty(const int firstLine, const int lastLine)
@@ -377,11 +395,12 @@ void TTextEdit::updateScreenView()
     }
     const int oldScreenWidth = mScreenWidth;
     const int oldScreenHeight = mScreenHeight;
-    mScreenHeight = visibleRegion().boundingRect().height() / mFontHeight;
+    const QSize drawable = drawableSize();
+    mScreenHeight = drawable.height() / mFontHeight;
     if (!mIsLowerPane) {
         updateScrollBar(mpBuffer->mCursorY);
     }
-    int currentScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
+    int currentScreenWidth = drawable.width() / mFontWidth;
     if (mpConsole->getType() == TConsole::MainConsole) {
         // This is the MAIN console - we do not want it to ever disappear!
         mScreenWidth = qMax(40, currentScreenWidth);
@@ -407,6 +426,14 @@ void TTextEdit::updateScreenView()
         forceUpdate();
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
+}
+
+// Rows and columns start at the top left corner, so whatever covers that edge
+// hides some of them; only the far edges of what is seen bound how many there are.
+QSize TTextEdit::drawableSize() const
+{
+    const QRect seen = visibleRegion().boundingRect();
+    return seen.isEmpty() ? QSize(0, 0) : QSize(seen.right() + 1, seen.bottom() + 1);
 }
 
 void TTextEdit::showNewLines()
@@ -1558,6 +1585,12 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         layoutLine(drawFrom - 1 + lineOffset, drawFrom - 1, timeStampStyle, mOverflowLineLayout);
     }
 
+    // A top line drawn only as the neighbour of dirty ones has not changed, and
+    // the cached rows above already hold its ink: drawing that again thickens it.
+    const bool topLineUnchanged = !scrollShift && !mMouseTracking && mDirtyFirstLine >= 0 && drawFrom + lineOffset < mDirtyFirstLine;
+    if (topLineUnchanged && drawFrom > 0) {
+        p.setClipRect(QRect(0, deleteRect.top(), mScreenWidth * mFontWidth, pixmapHeight - deleteRect.top()));
+    }
     // Each line's backgrounds go down before the previous line's glyphs, so that
     // no background fill can wipe out ink which overflowed out of its cell.
     mPreviousLineLayout.clear();
@@ -1587,6 +1620,13 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     // overflow, so clip it away rather than compositing the same ink twice.
     const QRect bandRect(0, drawFrom * mFontHeight, mScreenWidth * mFontWidth, (drawTo + 1 - drawFrom) * mFontHeight);
     paintForegrounds(p, *mpGlyphCache, mPreviousLineLayout, bottomRowIsRepainted ? QRect() : bandRect);
+    p.setClipping(false);
+    // Likewise the line below the band loses whatever ink it reached up into it,
+    // in the row past the dirty ones that only the cached screen keeps
+    if (reusedCachedScreenContent && !noCopy && !bottomRowIsRepainted && hasBufferLine(drawTo + 1 + lineOffset)) {
+        layoutLine(drawTo + 1 + lineOffset, drawTo + 1, timeStampStyle, mOverflowLineLayout);
+        paintForegrounds(p, *mpGlyphCache, mOverflowLineLayout, bandRect);
+    }
 
     if (!spareRowRect.isNull() && hasBufferLine(lastRow + lineOffset)) {
         layoutLine(lastRow + lineOffset, lastRow, timeStampStyle, mOverflowLineLayout);
@@ -1683,6 +1723,7 @@ void TTextEdit::paintNothing(const QRect& r)
 void TTextEdit::paintEvent(QPaintEvent* e)
 {
     mSincePaint.restart();
+    mLinesAddedAtPaint = mpBuffer->linesAddedTotal();
     mWholePaneRequested = false;
     if (!mPendingPaintRegion.isEmpty()) {
         // Whatever this paint covers is current now, so a deferred repaint of it
@@ -1860,7 +1901,6 @@ void TTextEdit::expandSelectionToWords()
             }
         }
     }
-    mDragStart.setX(xind + 1);
     mPA.setX(xind + 1);
 
     yind = mPB.y();
@@ -1875,7 +1915,6 @@ void TTextEdit::expandSelectionToWords()
             }
         }
     }
-    mDragSelectionEnd.setX(xind - 1);
     mPB.setX(xind - 1);
 }
 
@@ -1975,7 +2014,8 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         }
     }
 
-    if (mDragStart.y() < cursorLocation.y() || (mDragStart.y() == cursorLocation.y() && mDragStart.x() < cursorLocation.x())) {
+    const bool anchorFirst = mDragStart.y() < cursorLocation.y() || (mDragStart.y() == cursorLocation.y() && mDragStart.x() < cursorLocation.x());
+    if (anchorFirst) {
         mPA = mDragStart;
         mPB = cursorLocation;
     } else {
@@ -1984,6 +2024,14 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     }
     if (mMouseTrackLevel == 2) {
         expandSelectionToWords();
+        // Anchored on a separator, the selection starts at the nearest word, past any separators beside it
+        QPoint& anchoredEnd = anchorFirst ? mPA : mPB;
+        const QString& anchoredLine = mpBuffer->lineBuffer.at(anchoredEnd.y());
+        const int step = anchorFirst ? 1 : -1;
+        while (anchoredEnd.x() >= 0 && anchoredEnd.x() < static_cast<int>(anchoredLine.size())
+               && (anchoredLine.at(anchoredEnd.x()) == QChar::Space || mpHost->mDoubleClickIgnore.contains(anchoredLine.at(anchoredEnd.x())))) {
+            anchoredEnd.rx() += step;
+        }
     }
     if (mCtrlSelecting || mMouseTrackLevel == 3) {
         mPA.setX(0);
@@ -2403,6 +2451,11 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             normaliseSelection();
             if (mMouseTrackLevel == 2) {
                 expandSelectionToWords();
+                // On a separator the bounds cross, and the drag stays anchored to the clicked cell
+                if (mPA.x() <= mPB.x()) {
+                    mDragStart = mPA;
+                    mDragSelectionEnd = mPB;
+                }
             } else {
                 mPA.setX(0);
                 mPB.setX(mpBuffer->buffer.at(mPB.y()).size());
@@ -2588,7 +2641,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
 bool TTextEdit::hasSelectedText() const
 {
     // A double-click on a word separator highlights nothing, yet leaves a
-    // region behind and mPA one cell past mPB
+    // region behind and mPA past mPB
     const bool endpointsCrossed = mPA.y() > mPB.y() || (mPA.y() == mPB.y() && mPA.x() > mPB.x());
     return !mpBuffer->lineBuffer.isEmpty() && !mSelectedRegion.isEmpty() && !endpointsCrossed;
 }
@@ -3994,11 +4047,91 @@ void TTextEdit::slot_changeEnableBlinkText(const bool enable)
     }
 }
 
+// Up to six marks on one base stayed within the row above in every font tried,
+// so three leaves room to spare.
+bool TTextEdit::hasStackedMarks(const QString& text)
+{
+    if (lineBreakInfo::printableAscii(text)) {
+        return false;
+    }
+    int marksInARow = 0;
+    for (qsizetype i = 0, total = text.size(); i < total; ++i) {
+        char32_t codePoint = text.at(i).unicode();
+        if (QChar::isHighSurrogate(codePoint) && i + 1 < total && text.at(i + 1).isLowSurrogate()) {
+            codePoint = QChar::surrogateToUcs4(text.at(i), text.at(i + 1));
+            ++i;
+        }
+        // Spacing marks (Mc) sit beside their base rather than on it
+        const QChar::Category category = QChar::category(codePoint);
+        marksInARow = (category == QChar::Mark_NonSpacing || category == QChar::Mark_Enclosing) ? marksInARow + 1 : 0;
+        if (marksInARow >= 3) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool TTextEdit::lineShowsBlinkingText(const int lineNumber) const
+{
+    static constexpr TChar::AttributeFlags blinkFlags = TChar::Blink | TChar::FastBlink;
+    const TLineFormat& chars = mpBuffer->buffer.at(lineNumber);
+    const bool anyBlinkFlag = std::any_of(chars.cbegin(), chars.cend(), [](const TChar& c) {
+        return (c.allDisplayAttributes() & blinkFlags) || (c.hasSplitFormat() && (c.rightHalf().allDisplayAttributes() & blinkFlags));
+    });
+    if (!anyBlinkFlag) {
+        return false;
+    }
+    // A flag only blinks if a glyph is drawn with it: a grapheme takes the style
+    // of its first character, and a split format shows only on a wide one.
+    const size_t timeStampsBefore = mLaidOutTimeStamps.size();
+    // Outlives the layout, whose timestamp runs point at it
+    const TChar timeStampStyle = timeStampCharStyle();
+    LineLayout layout;
+    layoutLine(lineNumber, 0, timeStampStyle, layout);
+    const bool blinks = std::any_of(layout.cbegin(), layout.cend(), [](const GraphemeRun& run) {
+        return run.style && ((run.rightHalf ? run.style->rightHalf() : *run.style).allDisplayAttributes() & blinkFlags);
+    });
+    mLaidOutTimeStamps.resize(timeStampsBefore);
+    return blinks;
+}
+
 void TTextEdit::slot_blinkStateChanged()
 {
-    if (mIsBlinkClientRegistered) {
-        forceUpdate();
+    // A hidden pane is redrawn in full when it is shown again
+    if (!mIsBlinkClientRegistered || !isVisible()) {
+        return;
     }
+    // A tick changes only the blinking glyphs' opacity, so only the rows holding
+    // them need drawing again.
+    const int lineOffset = imageTopLine();
+    const int endLine = std::min({lineOffset + mScreenHeight, static_cast<int>(mpBuffer->buffer.size()), static_cast<int>(mpBuffer->lineBuffer.size())});
+    int firstBlinkingLine = -1;
+    int lastBlinkingLine = -1;
+    for (int line = lineOffset; line < endLine; ++line) {
+        if (hasStackedMarks(mpBuffer->lineBuffer.at(line))) {
+            // Their ink can reach rows past a neighbour, which only a whole repaint redraws exactly
+            forceUpdate();
+            return;
+        }
+        if (lineShowsBlinkingText(line)) {
+            if (firstBlinkingLine < 0) {
+                firstBlinkingLine = line;
+            }
+            lastBlinkingLine = line;
+        }
+    }
+    if (firstBlinkingLine < 0) {
+        // Only a whole repaint lets drawForeground() find nothing blinking and stop the timer
+        forceUpdate();
+        return;
+    }
+    markLinesDirty(firstBlinkingLine, lastBlinkingLine);
+    // The rows either side show the ink the blinking glyphs spill into them
+    const int topRow = std::max(0, firstBlinkingLine - 1 - lineOffset);
+    const int bottomRow = std::min(mScreenHeight - 1, lastBlinkingLine + 1 - lineOffset);
+    // The bottom row's overflow shows in the part-row below it, down to the edge
+    const int bandBottom = bottomRow == mScreenHeight - 1 ? height() : (bottomRow + 1) * mFontHeight;
+    scheduleUpdate(QRect(0, topRow * mFontHeight, width(), bandBottom - topRow * mFontHeight));
 }
 
 void TTextEdit::slot_scrollStoppedTimeout()

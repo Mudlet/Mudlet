@@ -180,6 +180,61 @@ private slots:
         QCOMPARE(map()->revision(), before);
     }
 
+    void test_roomUserDataTheViewsDrawCountsTheRevisionsUp_data()
+    {
+        QTest::addColumn<QString>("setup");
+        QTest::addColumn<QString>("code");
+        QTest::newRow("setRoomUserData") << QString() << qsl("setRoomUserData(2, 'room.ui_nameColor', '#ff0000')");
+        QTest::newRow("clearRoomUserDataItem") << qsl("setRoomUserData(2, 'room.ui_showName', 'true')") << qsl("clearRoomUserDataItem(2, 'room.ui_showName')");
+        QTest::newRow("clearRoomUserData") << qsl("setRoomUserData(2, 'visited', '1') setRoomUserData(2, 'room.ui_nameOffset', '0 1')") << qsl("clearRoomUserData(2)");
+    }
+
+    void test_roomUserDataTheViewsDrawCountsTheRevisionsUp()
+    {
+        QFETCH(QString, setup);
+        QFETCH(QString, code);
+        QVERIFY(buildMap() > 0);
+        QVERIFY(setup.isEmpty() || runLua(setup));
+        map()->resetUnsaved();
+        const quint64 revision = map()->revision();
+        const quint64 appearanceRevision = map()->appearanceRevision();
+        QVERIFY(runLua(qsl("assert(%1)").arg(code)));
+        QVERIFY2(map()->isUnsaved(), "the change would not be saved");
+        QVERIFY2(map()->revision() > revision, qPrintable(code));
+        QVERIFY2(map()->appearanceRevision() > appearanceRevision, qPrintable(code));
+    }
+
+    void test_roomUserDataNotDrawnLeavesTheRevisionsAsTheyWere_data()
+    {
+        QTest::addColumn<QString>("setup");
+        QTest::addColumn<QString>("code");
+        QTest::newRow("setRoomUserData") << QString() << qsl("setRoomUserData(2, 'visited', '1')");
+        QTest::newRow("clearRoomUserDataItem") << qsl("setRoomUserData(2, 'visited', '1')") << qsl("clearRoomUserDataItem(2, 'visited')");
+        QTest::newRow("clearRoomUserData") << qsl("setRoomUserData(2, 'visited', '1') setRoomUserData(2, 'notes', 'x')") << qsl("clearRoomUserData(2)");
+    }
+
+    void test_roomUserDataNotDrawnLeavesTheRevisionsAsTheyWere()
+    {
+        QFETCH(QString, setup);
+        QFETCH(QString, code);
+        QVERIFY(buildMap() > 0);
+        QVERIFY(setup.isEmpty() || runLua(setup));
+        map()->resetUnsaved();
+        // Lets the announcement queued by setting the map up go out before counting
+        QTest::qWait(10);
+        const QSignalSpy repaints(map(), &TMap::signal_areaChanged);
+        const quint64 revision = map()->revision();
+        const quint64 mapRevision = map()->mapRevision();
+        const quint64 appearanceRevision = map()->appearanceRevision();
+        QVERIFY(runLua(qsl("assert(%1)").arg(code)));
+        QVERIFY2(map()->isUnsaved(), "the change would not be saved");
+        QCOMPARE(map()->revision(), revision);
+        QCOMPARE(map()->mapRevision(), mapRevision);
+        QCOMPARE(map()->appearanceRevision(), appearanceRevision);
+        // A map info contributor may show the key, so the views still have to paint again
+        QTRY_COMPARE(repaints.count(), 1);
+    }
+
     void test_theAtcpRoomNumberLeavesTheRevisionAsItWas()
     {
         QVERIFY(buildMap() > 0);

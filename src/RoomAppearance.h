@@ -113,6 +113,9 @@ qreal playerRoomRadius(quint8 outerDiameterPercentage, qreal roomVisualSize);
 // the room's ROOM_UI_NAMEPOS: "x y", or just "y"
 QPointF nameOffset(const QString& positionData);
 
+// Whether the room has a name to draw where the map shows room names, which its own ROOM_UI_SHOWNAME can turn off
+bool nameShown(const TRoom& room);
+
 // From the room's ROOM_UI_NAMECOLOR, else whichever of black or white stands out on background
 QColor nameColor(const QString& colorData, const QColor& background);
 
