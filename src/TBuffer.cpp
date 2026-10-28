@@ -729,7 +729,15 @@ static quint64 colorFingerprint(const TLineFormat& line)
 {
     quint64 hash = 14695981039346656037ULL;
     // Runs twice per line in every debug build, where a range-for's iterator calls are not inlined
-    for (const TChar *character = line.data(), *end = character + line.size(); character != end; ++character) {
+    if (line.uniform()) {
+        const TChar& character = line.front();
+        for (std::size_t i = 0, total = line.size(); i < total; ++i) {
+            hash = (hash ^ character.foregroundRgba()) * 1099511628211ULL;
+            hash = (hash ^ character.backgroundRgba()) * 1099511628211ULL;
+        }
+        return hash;
+    }
+    for (const TChar *character = line.heapData(), *end = character + line.size(); character != end; ++character) {
         hash = (hash ^ character->foregroundRgba()) * 1099511628211ULL;
         hash = (hash ^ character->backgroundRgba()) * 1099511628211ULL;
     }
