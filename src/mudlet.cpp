@@ -3241,7 +3241,8 @@ void mudlet::updateWindowMenu()
         if (!mainWindowProfiles.isEmpty()) {
             // Add main window section
             for (const QString& profileName : mainWindowProfiles) {
-                QString actionText = tr("%1 (Main Window)").arg(profileName);
+                //: This is an item in list of profiles in the "Window" menu of Mudlet's main window. %1 is the name of the profile, and it is located in the main window.
+                QString actionText = tr("%1 (Main Window)").arg(addonLabel(profileName));
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
                 profileAction->setChecked(isActiveWindow() && mpCurrentActiveHost && mpCurrentActiveHost->getName() == profileName);
@@ -3268,7 +3269,8 @@ void mudlet::updateWindowMenu()
             QStringList profilesInWindow = detachedWindow->getProfileNames();
 
             for (const QString& windowProfileName : std::as_const(profilesInWindow)) {
-                QString actionText = tr("%1 (Detached)").arg(windowProfileName);
+                //: This is an item in list of profiles in the "Window" menu of Mudlet's main window. %1 is the name of the profile, and it is located not in the main window, but in a detached window.
+                QString actionText = tr("%1 (Detached)").arg(addonLabel(windowProfileName));
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
                 profileAction->setChecked(detachedWindow->isActiveWindow() && detachedWindow->getCurrentProfileName() == windowProfileName);
@@ -7133,8 +7135,8 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
     if (tabIndex >= 0 && mpTabBar->count() > 1) {
         const QString profileName = mpTabBar->tabData(tabIndex).toString();
 
-        // Add "Detach Tab" option
-        QAction* detachTabAction = new QAction(tr("Detach Tab \"%1\"").arg(profileName), &contextMenu);
+        //: This is an item in the context menu shown when right-clicking a tab in Mudlet's main window. %1 is the name of the profile.
+        QAction* detachTabAction = new QAction(tr("Detach Tab \"%1\"").arg(addonLabel(profileName)), &contextMenu);
         detachTabAction->setIcon(QIcon(":/icons/window-new.png"));
         connect(detachTabAction, &QAction::triggered, this, [this, tabIndex]() {
             detachTab(tabIndex, QPoint()); // Position doesn't matter for manual detach
