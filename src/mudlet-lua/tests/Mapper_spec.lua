@@ -4119,6 +4119,31 @@ describe("Tests route weights and extreme coordinates on a scratch area", functi
     assert.are.same({6442450941, "2147483647,2147483647,2147483647"}, weigh(ids[1], ids[4]))
   end)
 
+  it("names each step by the exit the latest route graph took", function()
+    local start, middle, goal = room(0, 0), room(1, 0), room(2, 0)
+    setExit(start, middle, "east")
+    assert.is_true(addSpecialExit(start, middle, "portal"))
+    assert.is_true(setExitWeight(start, "portal", 5))
+    setExit(middle, goal, "east")
+    local function walk()
+      local ok, weight = getPath(start, goal)
+      return {ok, weight, table.concat(speedWalkDir, ","), table.concat(speedWalkPath, ",")}
+    end
+    local path = middle .. "," .. goal
+
+    assert.are.same({true, 2, "e,e", path}, walk())
+    assert.is_true(setExitWeight(start, "east", 9))
+    assert.are.same({true, 6, "portal,e", path}, walk())
+    setExit(start, -1, "east")
+    assert.is_true(setExitWeight(start, "portal", 1))
+    assert.are.same({true, 2, "portal,e", path}, walk())
+    assert.is_true(removeSpecialExit(start, "portal"))
+    setExit(start, goal, "north")
+    assert.are.same({true, 1, "n", tostring(goal)}, walk())
+    assert.is_true(deleteRoom(middle))
+    assert.are.same({true, 1, "n", tostring(goal)}, walk())
+  end)
+
   -- Negating y for the area's span index overflows here; only a UBSan build
   -- reports that, so MapCoordinateLimitTest checks where the index files the room.
   it("moves and routes to a room at the most negative coordinate an int holds", function()

@@ -49,6 +49,7 @@
 #include <QJsonValue>
 #include <QRegularExpression>
 #include <QTextBoundaryFinder>
+#include <QTextCodec>
 #include <QTime>
 #include <QTimer>
 #include <QUrlQuery>
@@ -659,9 +660,10 @@ quint8 TChar::alternateFont() const
 static quint64 colorFingerprint(const std::vector<TChar>& line)
 {
     quint64 hash = 14695981039346656037ULL;
-    for (const TChar& character : line) {
-        hash = (hash ^ character.foreground().rgba()) * 1099511628211ULL;
-        hash = (hash ^ character.background().rgba()) * 1099511628211ULL;
+    // Runs twice per line in every debug build, where a range-for's iterator calls are not inlined
+    for (const TChar *character = line.data(), *end = character + line.size(); character != end; ++character) {
+        hash = (hash ^ character->foregroundRgba()) * 1099511628211ULL;
+        hash = (hash ^ character->backgroundRgba()) * 1099511628211ULL;
     }
     return hash;
 }
@@ -797,6 +799,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mEncoding(other.mEncoding)
 , mDecoder(other.mDecoder)
 , mMultibyteDecoder(multibyteDecoderFor(other.mDecoder, other.mEncoding))
+, mLegacyMultibyteCodec(other.mLegacyMultibyteCodec)
 , mCurrentHyperlinkCommand(other.mCurrentHyperlinkCommand)
 , mCurrentHyperlinkHint(other.mCurrentHyperlinkHint)
 , mCurrentHyperlinkLinkId(other.mCurrentHyperlinkLinkId)
@@ -904,6 +907,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mEncoding = other.mEncoding;
         mDecoder = other.mDecoder;
         mMultibyteDecoder = multibyteDecoderFor(mDecoder, mEncoding);
+        mLegacyMultibyteCodec = other.mLegacyMultibyteCodec;
         mCurrentHyperlinkCommand = other.mCurrentHyperlinkCommand;
         mCurrentHyperlinkHint = other.mCurrentHyperlinkHint;
         mCurrentHyperlinkLinkId = other.mCurrentHyperlinkLinkId;
@@ -5782,42 +5786,39 @@ void TBuffer::appendLine(
         return;
     }
 
-    bool firstChar = (lineBuffer.back().isEmpty());
+    bool firstChar = lineBuffer.back().isEmpty();
     const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
-    int lineEndPos = sub_end;
-
-    if (lineEndPos >= length) {
-        lineEndPos = length - 1;
-    }
-
-    for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
-        const QChar thisChar = text.at(i);
-
-        if (thisChar == QChar::LineFeed) {
-            firstChar = true;
-            appendEmptyLine();
-            continue;
+    const qsizetype end = std::min(static_cast<qsizetype>(sub_start) + std::min(sub_end, length - 1) + 1, text.size());
+    const QStringView chunk = QStringView(text).first(end);
+    const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
+    qsizetype runStart = sub_start;
+    while (true) {
+        qsizetype runEnd = chunk.indexOf(QChar::LineFeed, runStart);
+        if (runEnd < 0) {
+            runEnd = end;
         }
-        if (firstChar && dropSpaceAtWrap(thisChar)) {
-            continue;
+        while (firstChar && runStart < runEnd && dropSpaceAtWrap(chunk.at(runStart))) {
+            ++runStart;
         }
-
-        lineBuffer.back().append(thisChar);
-        const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
-        buffer.back().push_back(styling);
-
-        // Note: Original character storage for ANSI-styled OSC 8 links happens in
-        // translateToPlainText() where the TChar is created with ANSI formatting
-        // before JSON styling is applied
-
-        if (firstChar) {
-            // Replayed held-back content supplies its arrival time, and an
-            // empty wrapped line is the rest of the line above it:
-            if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
-                timeBuffer.back() = timeStampOverride == csmNoTimeStamp ? QDateTime::currentMSecsSinceEpoch() : timeStampOverride;
+        if (const qsizetype runLength = runEnd - runStart; runLength > 0) {
+            lineBuffer.back().append(chunk.sliced(runStart, runLength));
+            std::vector<TChar>& chars = buffer.back();
+            chars.insert(chars.end(), runLength, styling);
+            if (firstChar) {
+                // Replayed held-back content supplies its arrival time, and an
+                // empty wrapped line is the rest of the line above it:
+                if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
+                    timeBuffer.back() = timeStampOverride == csmNoTimeStamp ? QDateTime::currentMSecsSinceEpoch() : timeStampOverride;
+                }
+                firstChar = false;
             }
-            firstChar = false;
         }
+        if (runEnd >= end) {
+            break;
+        }
+        firstChar = true;
+        appendEmptyLine();
+        runStart = runEnd + 1;
     }
 }
 
@@ -6118,6 +6119,16 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         xPos += charWidth;
         totalWidth += charWidth;
         indexOfChar = nextBoundary;
+        if (plainAscii) {
+            // Plain ASCII has no line feeds and skips spaces only at a segment's first column, so every
+            // character until the segment is full takes one column with nothing else to check
+            const int run = std::min(maxWidth - (needsIndent ? indentationHere : 0) - xPos, total - indexOfChar);
+            if (run > 0) {
+                xPos += run;
+                totalWidth += run;
+                indexOfChar += run;
+            }
+        }
     }
     // it's possible that no wrapping is needed
     if (totalWidth <= mWrapAt && !hasNewline) {
@@ -6275,10 +6286,9 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
 
     // Leading lines that getWrapInfo() finds no break points in stay where they
     // are. The loop below reproduces such a line unchanged, but only after
-    // moving it out of the buffer into a queue and back again and standing up
-    // four temporary containers to do it. A line with no TChars or no text is
-    // not left alone: the loop turns that one into appendEmptyLine(), which
-    // drops its TChars, restamps it and clears its prompt flag.
+    // moving it out of the buffer and back again. A line with no TChars or no
+    // text is not left alone: the loop turns that one into appendEmptyLine(),
+    // which drops its TChars, restamps it and clears its prompt flag.
     int firstRewrappedLine = startLine;
     QList<WrapInfo> lineBreaks;
     while (firstRewrappedLine < wrapUpTo) {
@@ -6321,17 +6331,22 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         }
     }
 
-    std::queue<std::vector<TChar>> queue;
-    QStringList tempList;
-    QList<qint64> timeList;
-    QList<bool> promptList;
-    QList<quint16> wrapGapList;
+    struct RewrappedLine
+    {
+        std::vector<TChar> chars;
+        QString text;
+        qint64 time;
+        quint16 wrapGap;
+        bool prompt;
+    };
+    // Most calls rewrap a single incoming line into a few, which fit in this array's own inline storage
+    QVarLengthArray<RewrappedLine, 8> rewrapped;
     int lineCount = 0;
     for (int i = firstRewrappedLine; i < total; ++i) {
         lineCount++;
         for (const MovingPassLine& passLine : std::as_const(passLines)) {
             if (passLine.from == i) {
-                *passLine.pLineNumber = firstRewrappedLine + static_cast<int>(tempList.size());
+                *passLine.pLineNumber = firstRewrappedLine + static_cast<int>(rewrapped.size());
             }
         }
         std::vector<TChar> newBufferLine;
@@ -6339,11 +6354,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         const qint64 time = timeBuffer[i];
         // trivial case
         if (buffer[i].empty()) {
-            tempList.append(newLineText);
-            queue.push(std::move(newBufferLine));
-            timeList.append(time);
-            promptList.append(false);
-            wrapGapList.append(wrapGapBuffer.at(i));
+            rewrapped.append({std::move(newBufferLine), newLineText, time, wrapGapBuffer.at(i), false});
             continue;
         }
 
@@ -6363,11 +6374,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             lineBreaks = getWrapInfo(lineText, isNewline, isNewline && carriesIndent(i), maxWidth, indent, hangingIndent);
         }
         if (lineBreaks.isEmpty()) {
-            tempList.append(lineText);
-            queue.push(std::move(buffer[i]));
-            timeList.append(time);
-            promptList.append(isPrompt);
-            wrapGapList.append(wrapGapBuffer.at(i));
+            rewrapped.append({std::move(buffer[i]), lineText, time, wrapGapBuffer.at(i), isPrompt});
             continue;
         }
         if (i == mPreTriggerPassLineNumber) {
@@ -6375,8 +6382,6 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             materialisePreTriggerPassLine(i);
             wrapPreTriggerPassLine(lineBreaks.first(), lineBreaks.first().isNewline ? indent : hangingIndent);
         }
-        const QString qIndent(indent, QChar::Space);
-        const QString qHangingIndent(hangingIndent, QChar::Space);
         // The source line is read through a cursor rather than consumed from
         // its front, which a vector cannot do without shuffling every
         // remaining TChar down one place per character. It is therefore left
@@ -6395,14 +6400,9 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
                 // indentation takes the styling of the character it precedes, so
                 // that it reads as part of the same run of text
                 const TChar& indentSpace = sourceChars[newBufferCharPosition];
-                // add indentation to TChar buffer and newLineText
-                if (w.isNewline) {
-                    newBufferLine.insert(newBufferLine.end(), indent, indentSpace);
-                    newLineText.append(qIndent);
-                } else {
-                    newBufferLine.insert(newBufferLine.end(), hangingIndent, indentSpace);
-                    newLineText.append(qHangingIndent);
-                }
+                const int indentWidth = w.isNewline ? indent : hangingIndent;
+                newBufferLine.insert(newBufferLine.end(), indentWidth, indentSpace);
+                newLineText.resize(newLineText.size() + indentWidth, QChar::Space);
             }
             // append TChars of the wrapped lineText to TChar buffer
             const int copyEnd = std::min(w.lastChar, sourceSize);
@@ -6411,19 +6411,15 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
                 newBufferCharPosition = copyEnd;
             }
             // everything else
-            newLineText.append(lineText.mid(w.firstChar, w.lastChar - w.firstChar));
-            tempList.append(newLineText);
+            newLineText.append(QStringView(lineText).mid(w.firstChar, w.lastChar - w.firstChar));
+            qint64 segmentTime = TBuffer::csmWrappedLineTimeStamp;
             if (w.isNewline && previousSegmentEnd >= 0 && time == TBuffer::csmWrappedLineTimeStamp) {
                 // A line feed inserted into a wrapped line starts a line of its
                 // own, which csmWrappedLineTimeStamp would join back onto the last
-                timeList.append(QDateTime::currentMSecsSinceEpoch());
+                segmentTime = QDateTime::currentMSecsSinceEpoch();
             } else if (w.isNewline) {
-                timeList.append(time);
-            } else {
-                timeList.append(TBuffer::csmWrappedLineTimeStamp);
+                segmentTime = time;
             }
-            queue.push(std::move(newBufferLine));
-            promptList.append(isPrompt);
             // getWrapInfo() only ever skips spaces between the segments of a
             // line, and the first segment carries over the source line's own gap
             // (or, starting a paragraph, its own indent)
@@ -6435,7 +6431,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             } else if (previousSegmentEnd < 0) {
                 wrapGap = wrapGapBuffer.at(i);
             }
-            wrapGapList.append(static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())));
+            rewrapped.append({std::move(newBufferLine), std::move(newLineText), segmentTime, static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())), isPrompt});
             previousSegmentEnd = w.lastChar;
             newBufferLine.clear();
             newLineText = QString();
@@ -6449,24 +6445,22 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         wrapGapBuffer.pop_back();
     }
 
-    const int rewrappedLines = static_cast<int>(queue.size());
-    for (int i = 0; i < rewrappedLines; ++i) {
-        if (tempList[i].isEmpty()) {
-            queue.pop();
+    const int rewrappedLines = static_cast<int>(rewrapped.size());
+    for (RewrappedLine& line : rewrapped) {
+        if (line.text.isEmpty()) {
             appendEmptyLine();
             // A break that leaves only dropped spaces for the last line keeps
             // it wrapped, for whatever is echoed next to carry on from them
-            if (timeList[i] == TBuffer::csmWrappedLineTimeStamp) {
+            if (line.time == TBuffer::csmWrappedLineTimeStamp) {
                 timeBuffer.back() = TBuffer::csmWrappedLineTimeStamp;
-                wrapGapBuffer.back() = wrapGapList[i];
+                wrapGapBuffer.back() = line.wrapGap;
             }
         } else {
-            buffer.push_back(std::move(queue.front()));
-            queue.pop();
-            lineBuffer.append(tempList[i]);
-            timeBuffer.append(timeList[i]);
-            promptBuffer.push_back(promptList[i]);
-            wrapGapBuffer.append(wrapGapList[i]);
+            buffer.push_back(std::move(line.chars));
+            lineBuffer.append(std::move(line.text));
+            timeBuffer.append(line.time);
+            promptBuffer.push_back(line.prompt);
+            wrapGapBuffer.append(line.wrapGap);
         }
     }
 
@@ -8132,7 +8126,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         // Try and convert two or four byte sequence to Unicode using Qts own
         // decoder - and check number of codepoints returned
 
-        QString codePoint;
+        QStringView codePoint;
         if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, gbSequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
@@ -8254,7 +8248,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
         // Try and convert two byte sequence to Unicode using Qts own
         // decoder - and check number of codepoints returned
 
-        QString codePoint;
+        QStringView codePoint;
         if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, big5SequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
@@ -8381,7 +8375,7 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
         // Try and convert two byte sequence to Unicode using Qts own
         // decoder - and check number of codepoints returned
 
-        QString codePoint;
+        QStringView codePoint;
         if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, eucSequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
@@ -8544,7 +8538,7 @@ bool TBuffer::processJapaneseSequence(const std::string& data, const bool isFrom
             return true;
         }
     }
-    QString decoded;
+    QStringView decoded;
     decodeMultibyteSequence(QByteArrayView(data.data() + position, count), decoded);
     if (decoded.isEmpty() || decoded.contains(QChar::ReplacementCharacter)) {
         mMudLine.append(QChar::ReplacementCharacter);
@@ -8745,18 +8739,26 @@ QStringDecoder TBuffer::multibyteDecoderFor(const Decoder decoder, const QByteAr
     }
 }
 
-// Falls back to TEncodingHelper (lookup tables, Qt5Compat codecs) for Qt builds without ICU
-bool TBuffer::decodeMultibyteSequence(QByteArrayView bytes, QString& decoded)
+// Falls back to a Qt5Compat codec for Qt builds without ICU
+bool TBuffer::decodeMultibyteSequence(QByteArrayView bytes, QStringView& decoded)
 {
     if (mMultibyteDecoder.isValid()) {
         mMultibyteDecoder.resetState();
-        decoded = mMultibyteDecoder.decode(bytes);
+        // Spares a QString allocation per character; callers pass at most four bytes
+        if (Q_LIKELY(mMultibyteDecoder.requiredSpace(bytes.size()) <= static_cast<qsizetype>(mMultibyteDecoded.size()))) {
+            const QChar* end = mMultibyteDecoder.appendToBuffer(mMultibyteDecoded.data(), bytes);
+            decoded = QStringView(mMultibyteDecoded.data(), end);
+        } else {
+            mMultibyteDecodedString = mMultibyteDecoder.decode(bytes);
+            decoded = mMultibyteDecodedString;
+        }
         return true;
     }
-    if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
+    if (!mLegacyMultibyteCodec) {
         return false;
     }
-    decoded = TEncodingHelper::decode(bytes.toByteArray(), mEncoding);
+    mMultibyteDecodedString = mLegacyMultibyteCodec->toUnicode(bytes.data(), static_cast<int>(bytes.size()));
+    decoded = mMultibyteDecodedString;
     return true;
 }
 
@@ -8766,7 +8768,11 @@ void TBuffer::encodingChanged(const QByteArray& newEncoding)
         mEncoding = newEncoding;
         mDecoder = decoderFor(mEncoding);
         mMultibyteDecoder = multibyteDecoderFor(mDecoder, mEncoding);
+        mLegacyMultibyteCodec = nullptr;
         if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR" || mEncoding == "SHIFT_JIS" || mEncoding == "EUC-JP") {
+            if (!mMultibyteDecoder.isValid()) {
+                mLegacyMultibyteCodec = TEncodingHelper::legacyCodec(mEncoding);
+            }
             if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";
             } else {

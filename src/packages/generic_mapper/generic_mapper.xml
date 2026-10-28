@@ -16,7 +16,7 @@
 			<colorTriggerFgColor>#000000</colorTriggerFgColor>
 			<colorTriggerBgColor>#000000</colorTriggerBgColor>
 			<regexCodeList>
-				<string>raiseEvent("onNewLine")</string>
+				<string>map.eventHandler("onNewLine")</string>
 			</regexCodeList>
 			<regexCodePropertyList>
 				<integer>4</integer>
@@ -4511,7 +4511,8 @@ function map.sanitizeRoomName(roomtitle)
 end
 
 function map.eventHandler(event, ...)
-    -- onNewLine arrives for every line, so it is answered first; and naming ... rather
+    -- the onNewLine Trigger calls this for every line rather than raising an event, which
+    -- would run every "*" handler too, so it is answered first; and naming ... rather
     -- than reading arg spares Lua 5.1 building an arg table on every call
     if event == "onNewLine" then
         grab_line()

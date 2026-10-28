@@ -28,6 +28,7 @@
  * worth of maintenance. Nothing observable separates that from a rebuild - both
  * leave the same index behind and match identically - so the count of rebuilds
  * is the only thing that can tell them apart, and it is what this watches.
+ * The last cases check firings instead, for the child walk built on that filing.
  *
  * Run with: ctest -R PrescanStayOpenRefileTest -V
  */
@@ -42,6 +43,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "TLuaInterpreter.h"
+#include "TTrigger.h"
 #include "TriggerUnit.h"
 #include "mudlet.h"
 
@@ -250,6 +252,58 @@ private slots:
                                     .arg(lines)
                                     .arg(rebuilds)
                                     .arg(budget)));
+    }
+
+    // Below the size the tree index engages at nothing is stamped, so a group's walk would pass over every
+    // filed child; with the index idle the group has to enter its children down the list
+    void filedChildFiresWhileTheTreeIndexIsIdle()
+    {
+        QVERIFY2(runLua(qsl(R"(
+            permGroup("idleGroup", "trigger")
+            idleFires = 0
+            permSubstringTrigger("idleChild", "idleGroup", {"qqidlebaitzz"}, "idleFires = idleFires + 1")
+            feedTriggers("idlewarmupline\n")
+        )")),
+                 "the triggers did not compile");
+        auto* triggerUnit = mpHost->getTriggerUnit();
+        TTrigger* group = triggerUnit->findTrigger(qsl("idleGroup"));
+        QVERIFY(group);
+        QCOMPARE(triggerUnit->treeIndexFiledCount(), 0);
+
+        runLua(qsl("feedTriggers('qqidlebaitzz\\n')"));
+
+        QCOMPARE(luaInteger("idleFires"), 1);
+        delete group;
+    }
+
+    // A root is entered by the root loop whatever the tree index says, so one held open is not tracked
+    // as open; moved below a group by the editor, it has to be entered all the same while it stays open
+    void openRootMovedBelowAGroupStillFires()
+    {
+        QVERIFY2(runLua(qsl(R"(
+            permGroup("movedGroup", "trigger")
+            for index = 1, 48 do
+                permSubstringTrigger("movedPadding" .. index, "movedGroup", {"qqmovedpadding" .. index .. "zz"}, "")
+            end
+            movedFires = 0
+            movedId = permSubstringTrigger("movedOpen", "", {"qqmovedbaitzz"}, "movedFires = movedFires + 1")
+            feedTriggers("movedwarmupline\n")
+            setTriggerStayOpen("movedOpen", 3)
+        )")),
+                 "the triggers did not compile");
+        auto* triggerUnit = mpHost->getTriggerUnit();
+        QVERIFY2(triggerUnit->treeIndexFiledCount() >= 48, "the tree index has not engaged, so it cannot pass the moved trigger over");
+        TTrigger* group = triggerUnit->findTrigger(qsl("movedGroup"));
+        QVERIFY(group);
+        triggerUnit->reParentTrigger(luaInteger("movedId"), 0, group->getID());
+        QCOMPARE(triggerUnit->getTrigger(luaInteger("movedId"))->getParent(), group);
+
+        for (int line = 0; line < 4; ++line) {
+            runLua(qsl("feedTriggers('movedquietline\\n')"));
+        }
+
+        QCOMPARE(luaInteger("movedFires"), 3);
+        delete group;
     }
 };
 

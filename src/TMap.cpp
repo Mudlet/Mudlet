@@ -948,8 +948,6 @@ void TMap::initGraph()
     locations.reserve(mpRoomDB->getRoomMap().size());
     roomidToIndex.clear();
     roomidToIndex.reserve(mpRoomDB->getRoomMap().size());
-    g.clear();
-    g = mygraph_t();
     unsigned int roomCount = 0;
     unsigned int edgeCount = 0;
     QSet<unsigned int> unUsableRoomSet;
@@ -982,7 +980,16 @@ void TMap::initGraph()
         roomidToIndex.insert(itRoom.key(), roomCount++);
     }
 
-    for (unsigned int i = 0; i < roomCount; ++i) {
+    // Emptied rather than rebuilt, so each room keeps its edge list's storage: freeing it all and allocating
+    // it again cost about a fifth of a rebuild.
+    for (std::size_t i = 0, previousRoomCount = boost::num_vertices(g); i < previousRoomCount; ++i) {
+        boost::clear_out_edges(i, g);
+    }
+    // Only ever the last vertex, which boost removes without renumbering the rest.
+    while (boost::num_vertices(g) > roomCount) {
+        boost::remove_vertex(boost::num_vertices(g) - 1, g);
+    }
+    while (boost::num_vertices(g) < roomCount) {
         boost::add_vertex(g);
     }
 
@@ -990,6 +997,10 @@ void TMap::initGraph()
     // only place search state goes stale. A surviving mSearchTouched entry past a shrunken roomCount
     // would make the next search write out of bounds.
     resetSearchState(roomCount);
+
+    // Sized up front, as each growth rehashes every edge so far. Not cleared: overwriting the last build's
+    // entries costs less than freeing and reallocating them, and edges that are gone are never looked up.
+    edgeHash.reserve(static_cast<qsizetype>(roomCount) * 4);
 
     // Now identify the routes between rooms, and pick out the best edges of parallel ones.
     // A room has a handful of exits, so a reused list beats a hash table built per room.
@@ -1026,6 +1037,8 @@ void TMap::initGraph()
         // Now we have eliminated possible duplicate and useless edges we can create and
         // insert the remainder into the BGL graph:
         const int sourceIndex = roomidToIndex.value(source);
+        // Not part of boost's documented interface, but one allocation per room instead of a regrowth per exit.
+        g.out_edge_list(sourceIndex).reserve(bestRoutes.size());
         for (const auto& [target, bestRoute] : bestRoutes) {
             edge_descriptor e;
             bool inserted; // This is always going to be false as it gets set if
@@ -2205,6 +2218,12 @@ bool TMap::restore(QString location)
         for (auto* pA : pNewRoomDB->getAreaMap()) {
             TArea::dropFileOnlyUserData(pA->mUserData);
         }
+
+        qsizetype roomsInAreas = 0;
+        for (const auto* pA : pNewRoomDB->getAreaMap()) {
+            roomsInAreas += pA->rooms.size();
+        }
+        pNewRoomDB->reserveEntrances(roomsInAreas);
 
         // A corrupt stream carries on reading, out of step with the records,
         // so stop at the first sign of one rather than make rooms of the rest
@@ -4354,6 +4373,13 @@ void TMap::restore16ColorSet()
 
 void TMap::setUnsaved(const char* fromWhere)
 {
+    setUnsavedKeepingRevisions(fromWhere);
+    ++mMapRevision;
+    ++mRevision;
+}
+
+void TMap::setUnsavedKeepingRevisions(const char* fromWhere)
+{
 #if !defined(DEBUG_MAPAUTOSAVE)
     Q_UNUSED(fromWhere)
 #else
@@ -4361,8 +4387,6 @@ void TMap::setUnsaved(const char* fromWhere)
     qDebug().nospace().noquote() << "TMap::setUnsaved(...) INFO - called at: " << nowString << " from: " << fromWhere << ".";
 #endif
     mUnsavedMap = true;
-    ++mMapRevision;
-    ++mRevision;
 }
 
 void TMap::setSaveError(bool state)

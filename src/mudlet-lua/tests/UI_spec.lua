@@ -2774,16 +2774,47 @@ describe("Tests UI functions", function()
       assert.are.same({ current = 30, max = 60 }, applied[1].mv)
     end)
 
-    -- GMCP package and message names are case-insensitive
+    -- fed rather than raised: an unknown spelling is picked up from the namespace event
     it("should read a vitals node sent in any casing", function()
       for _, spelling in ipairs({ { "char", "MaxStats" }, { "Char", "maxStats" }, { "CHAR", "MAXSTATS" }, { "Char", "vitals" } }) do
         applied = {}
         local namespace, message = spelling[1], spelling[2]
-        _G.gmcp = { [namespace] = { [message] = { hp = 50, maxhp = 100 } } }
-        raiseEvent("gmcp." .. namespace .. "." .. message)
+        _G.gmcp = {}
+        feedTelnet("<T_IAC><T_SB><O_GMCP>" .. namespace .. "." .. message .. ' {"hp":50,"maxhp":100}<T_IAC><T_SE>')
         assert.are.equal(1, #applied, namespace .. "." .. message)
         assert.are.same({ current = 50, max = 100 }, applied[1].hp, namespace .. "." .. message)
+        raiseEvent("gmcp." .. namespace .. "." .. message)
+        assert.are.equal(2, #applied, namespace .. "." .. message .. " raised again")
       end
+    end)
+
+    it("should update after a handler registered earlier for a spelling no game is known to send", function()
+      _G.gmcp = {}
+      local seen
+      local id = registerAnonymousEventHandler("gmcp.cHaR.vItAlS", function()
+        seen = #applied
+      end)
+      feedTelnet('<T_IAC><T_SB><O_GMCP>cHaR.vItAlS {"hp":50,"maxhp":100}<T_IAC><T_SE>')
+      killAnonymousEventHandler(id)
+      assert.are.equal(0, seen)
+      assert.are.equal(1, #applied)
+    end)
+
+    it("should not be called for events that cannot announce vitals", function()
+      local routed, route = 0, BaseUI.routeGmcpVitals
+      BaseUI.routeGmcpVitals = function(...)
+        routed = routed + 1
+        return route(...)
+      end
+      finally(function() BaseUI.routeGmcpVitals = route end)
+      _G.gmcp = { Room = { Info = { num = 1 } } }
+      raiseEvent("sysUIspecUnrelatedEvent")
+      raiseEvent("gmcp.Room", "gmcp.Room.Info")
+      raiseEvent("gmcp.Room.Info", "gmcp.Room.Info")
+      assert.are.equal(0, routed)
+      raiseEvent("gmcp.Char", "gmcp.Char.Items.List")
+      assert.are.equal(1, routed)
+      assert.are.equal(0, #applied)
     end)
 
     it("should read the capitalised spelling first when a node is present in two casings", function()
@@ -2808,6 +2839,7 @@ describe("Tests UI functions", function()
     it("should only update for a vitals message", function()
       _G.gmcp = { Char = { Vitals = { hp = 50, maxhp = 100 }, Items = { List = {} } } }
       raiseEvent("gmcp.Char")
+      raiseEvent("gmcp.CHAR", "gmcp.CHAR.Items.List")
       raiseEvent("gmcp.Char.Items.List")
       raiseEvent("Char.Vitals")
       assert.are.equal(0, #applied)

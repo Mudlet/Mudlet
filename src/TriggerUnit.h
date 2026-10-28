@@ -106,6 +106,12 @@ public:
     // Call on any change to a trigger's place below a root or to what its treeIndexGrams() answers:
     // the trigger is visited until the next rebuild files it again
     void unfileTreeNode(TTrigger* pT);
+    // Call on any change to which children pFrom has, or to how one of them is filed: it and every
+    // trigger above it walk their children down the list until the next rebuild
+    void invalidateChildWalks(TTrigger* pFrom);
+    // A trigger below a root started acting on lines it does not match, so every pass has to enter it
+    // while it does
+    void noteOpenTreeNode(TTrigger* pT);
     // Triggers the last rebuild filed, so a spec can tell the index is armed before it relies on it
     int treeIndexFiledCount() const { return static_cast<int>(mTreeNodes.size()); }
     void doCleanup();
@@ -178,7 +184,10 @@ private:
     void rebuildPrescanTasksIfStale();
     bool prescanPays() const;
     static TreeIndexMode readTreeIndexMode();
-    void fileTreeNodes(TTrigger* pT, std::vector<quint64>& grams);
+    bool fileTreeNodes(TTrigger* pT, std::vector<quint64>& grams);
+    void dropChildWalks(TTrigger* pT);
+    void markTreeNode(TTrigger* pT, quint32 stamp);
+    void forgetOpenTreeNode(TTrigger* pT);
     void clearTreeNodes();
     void rebuildTreeIndex();
     void stampTreeCandidates(const QString& line);
@@ -240,6 +249,8 @@ private:
     // the next rebuild and any nested pass still read this list
     std::vector<TTrigger*> mTreeNodes;
     std::vector<int> mTreeHits;
+    // Triggers below a root that noteOpenTreeNode() was told of, until a line finds them shut again
+    std::vector<TTrigger*> mOpenTreeNodes;
     TTriggerPrescan mTreeIndex;
     bool mTreeIndexStale = true;
     quint32 mUnfilterableEpoch = 0;
