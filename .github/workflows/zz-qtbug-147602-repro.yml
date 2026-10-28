@@ -1,0 +1,61 @@
+# Temporary: reproduce QTBUG-147602 on macOS runners, Qt 6.11.1 against 6.11.3
+name: QTBUG-147602 repro
+on:
+  push:
+    branches:
+      - claude/macos-27-2-crashes-xibrrj
+    paths:
+      - '.github/qtbug-147602-repro/**'
+      - '.github/workflows/zz-qtbug-147602-repro.yml'
+  workflow_dispatch:
+
+jobs:
+  repro:
+    name: ${{ matrix.os }} / Qt ${{ matrix.qt }}
+    runs-on: ${{ matrix.os }}
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26, xcode-27]
+        qt: ['6.11.1', '6.11.3']
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        sparse-checkout: .github/qtbug-147602-repro
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: ${{ matrix.qt }}
+        dir: ${{ runner.workspace }}
+        cache: false
+
+    - name: Build
+      working-directory: .github/qtbug-147602-repro
+      run: |
+        sw_vers
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        cmake --build build
+
+    - name: Run
+      working-directory: .github/qtbug-147602-repro
+      run: |
+        set +e
+        run() {
+          local label="$1"; shift
+          for attempt in 1 2 3; do
+            echo "::group::$label (attempt $attempt)"
+            env "$@"
+            local code=$?
+            echo "::endgroup::"
+            echo "RESULT|$label|attempt $attempt|exit $code"
+          done
+        }
+        for mode in image cursor; do
+          run "$mode plain" ./build/repro "$mode" spincursor.png
+          run "$mode MallocScribble" MallocScribble=1 ./build/repro "$mode" spincursor.png
+          run "$mode GuardMalloc" DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib ./build/repro "$mode" spincursor.png
+        done 2>&1 | tee run.log
+        echo "## $(sw_vers -productVersion) ($(sw_vers -buildVersion)) / Qt ${{ matrix.qt }}" >> "$GITHUB_STEP_SUMMARY"
+        grep '^RESULT|' run.log | sed 's/^RESULT|/- /' >> "$GITHUB_STEP_SUMMARY"

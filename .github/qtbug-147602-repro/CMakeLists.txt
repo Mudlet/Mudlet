@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.22)
+project(qtbug147602repro LANGUAGES CXX OBJCXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_OBJCXX_STANDARD 20)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+add_executable(repro repro.mm)
+target_link_libraries(repro PRIVATE Qt6::Widgets "-framework CoreGraphics")
