@@ -78,6 +78,7 @@ public:
     Q_DISABLE_COPY(T2DMap)
     explicit T2DMap(QWidget* parent = nullptr);
     ~T2DMap() override;
+    QSize sizeHint() const override;
     std::pair<bool, QString> setMapZoom(const qreal zoom, const int areaId = 0);
     void init();
     // Public so MapRenderBenchmark need not copy the arithmetic.

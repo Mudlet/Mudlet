@@ -4358,6 +4358,284 @@ describe("Tests the open and closed states of the map widget", function()
     end
   end)
 
+  -- With the panel hidden the dock's own controls are only about 50 pixels across, which is all Qt gives
+  -- a dock it has no size for
+  describe("docks the map at a usable size", function()
+    local windows = {"mapperSpecDock1", "mapperSpecDock2", "mapperSpecDock3"}
+    local resizeRequired = os.getenv("MUDLET_TEST_REQUIRE_WINDOW_RESIZE") ~= nil
+    local panelShown, consoleWidth, consoleHeight
+    local roomy = false
+
+    -- setMainWindowSize() sizes the whole window and getMainWindowSize() reads the console, so the
+    -- request is corrected by however much came back short
+    local function setConsoleSize(width, height)
+      local requestedWidth, requestedHeight = width, height
+      for _ = 1, 4 do
+        setMainWindowSize(requestedWidth, requestedHeight)
+        pumpEvents(100)
+        local gotWidth, gotHeight = getMainWindowSize()
+        if gotWidth == width and gotHeight == height then
+          return
+        end
+        requestedWidth, requestedHeight = requestedWidth + width - gotWidth, requestedHeight + height - gotHeight
+      end
+    end
+
+    -- Measured with the map closed, so the console has the whole width
+    before_each(function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        return
+      end
+      panelShown = getConfig("mapperPanelVisible")
+      assert.is_true(setConfig("mapperPanelVisible", false))
+      assert.is_true(closeMapWidget())
+      pumpEvents(100)
+      consoleWidth, consoleHeight = getMainWindowSize()
+      -- Qt keeps about 700 by 450 pixels for the console and gives the dock only what is left
+      setMainWindowSize(1280, 900)
+      pumpEvents(200)
+      local width, height = getMainWindowSize()
+      roomy = width >= 1100 and height >= 800
+    end)
+
+    after_each(function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        return
+      end
+      for _, windowName in ipairs(windows) do
+        deleteMiniConsole(windowName)
+      end
+      closeMapWidget()
+      setConsoleSize(consoleWidth, consoleHeight)
+      setConfig("mapperPanelVisible", panelShown)
+    end)
+
+    local function ready()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("the dock is only laid out once pumpEvents() runs")
+        return false
+      end
+      if not roomy then
+        assert.is_false(resizeRequired, "MUDLET_TEST_REQUIRE_WINDOW_RESIZE is set, but the main window did not grow")
+        pending("the main window could not be made big enough to show the map's size")
+        return false
+      end
+      return true
+    end
+
+    local function mapWidth()
+      local _, _, width = getMapWidgetGeometry()
+      return width
+    end
+
+    local function assertDocksUsably(position)
+      assert.is_true(openMapWidget(position))
+      assert.is_true(pumpEvents(200))
+      local _, _, width, height = getMapWidgetGeometry()
+      if position == "t" or position == "b" then
+        assert.is_true(height > 150, "map docked at " .. position .. " is only " .. height .. " pixels tall")
+      else
+        assert.is_true(width > 150, "map docked at " .. position .. " is only " .. width .. " pixels wide")
+      end
+    end
+
+    -- Docks that shared an area and left it leave Qt nothing but its minimum to give the next one
+    local function useAndLeave(area)
+      for _, windowName in ipairs(windows) do
+        assert.is_true(openUserWindow(windowName, false, false, area))
+      end
+      assert.is_true(pumpEvents(200))
+      for _, windowName in ipairs(windows) do
+        assert.is_true(deleteMiniConsole(windowName))
+      end
+      assert.is_true(pumpEvents(200))
+    end
+
+    -- A squeeze that misses would leave the spec passing without testing anything, so CI must not skip it
+    local function cannotSqueeze(message)
+      assert.is_false(resizeRequired, message)
+      pending(message)
+    end
+
+    -- the console's minimum width is all that holds the map narrower than its size hint
+    local function squeezeMap(windowWidth, atMost, atLeast)
+      setMainWindowSize(windowWidth, 900)
+      pumpEvents(200)
+      local width = mapWidth()
+      if width > atMost then
+        cannotSqueeze("the console left the map " .. width .. " pixels in a narrow window, so it cannot be squeezed")
+        return nil
+      end
+      -- at its minimum, showing it again grows the map whatever the spec is testing
+      if atLeast and width < atLeast then
+        cannotSqueeze("the console left the map only " .. width .. " pixels in a narrow window, its minimum")
+        return nil
+      end
+      return width
+    end
+
+    it("in each docking area", function()
+      if not ready() then
+        return
+      end
+      for _, position in ipairs({"l", "t", "b", "r"}) do
+        assertDocksUsably(position)
+      end
+    end)
+
+    it("where other docks were", function()
+      if not ready() then
+        return
+      end
+      assert.is_true(openMapWidget("l"))
+      useAndLeave("right")
+      assertDocksUsably("r")
+    end)
+
+    -- Qt gives the map back the depth it last had in an area
+    it("along the top where it was squeezed before", function()
+      if not ready() then
+        return
+      end
+      assert.is_true(openMapWidget("t"))
+      assert.is_true(pumpEvents(200))
+      setMainWindowSize(1280, 200)
+      assert.is_true(pumpEvents(200))
+      local _, _, _, squeezed = getMapWidgetGeometry()
+      if squeezed >= 150 then
+        cannotSqueeze("the main window kept the map " .. squeezed .. " pixels tall, so it cannot be squeezed")
+        return
+      end
+      assert.is_true(openMapWidget("r"))
+      assert.is_true(pumpEvents(200))
+      setMainWindowSize(1280, 900)
+      assert.is_true(pumpEvents(200))
+      assertDocksUsably("t")
+    end)
+
+    -- A move is acted on once the layout has run, by when a script may have hidden the map again
+    it("when moved and hidden before it was laid out", function()
+      if not ready() then
+        return
+      end
+      assert.is_true(openMapWidget("l"))
+      assert.is_true(pumpEvents(200))
+      local squeezed = squeezeMap(860, 300, 100)
+      if not squeezed then
+        return
+      end
+      assert.is_true(openMapWidget("r"))
+      assert.is_true(pumpEvents(200))
+      setMainWindowSize(1280, 900)
+      assert.is_true(pumpEvents(200))
+      assert.is_true(openMapWidget("l"))
+      assert.is_true(closeMapWidget())
+      assert.is_true(pumpEvents(200))
+      assert.is_true(openMapWidget())
+      assert.is_true(pumpEvents(200))
+      assert.is_true(mapWidth() > squeezed, "the map came back " .. mapWidth() .. " pixels wide, as the left area last was")
+    end)
+
+    describe("with a saved window layout", function()
+      local configurationDirectory = getMudletHomeDir():match("^(.*)/profiles/[^/]*$")
+      local layoutFiles = {
+        configurationDirectory .. "/windowLayout.dat",
+        configurationDirectory .. "/windowLayoutGeometry.dat",
+      }
+      local contentsBefore = {}
+
+      setup(function()
+        for _, path in ipairs(layoutFiles) do
+          local handle = io.open(path, "rb")
+          if handle then
+            contentsBefore[path] = handle:read("*a")
+            handle:close()
+          end
+        end
+      end)
+
+      -- the shared files the next Mudlet start reads its layout from
+      teardown(function()
+        for _, path in ipairs(layoutFiles) do
+          if contentsBefore[path] then
+            local handle = assert(io.open(path, "wb"))
+            handle:write(contentsBefore[path])
+            handle:close()
+          else
+            os.remove(path)
+          end
+        end
+      end)
+
+      -- A hidden user window keeps the area in the saved layout, which restores it empty
+      it("when shown in an area the layout left empty", function()
+        if not ready() then
+          return
+        end
+        assert.is_true(openMapWidget("r"))
+        assert.is_true(pumpEvents(200))
+        assert.is_true(closeMapWidget())
+        assert.is_true(openUserWindow(windows[1], false, false, "right"))
+        assert.is_true(pumpEvents(200))
+        assert.is_true(hideWindow(windows[1]))
+        assert.is_true(pumpEvents(200))
+        assert.is_true(saveWindowLayout())
+        assert.is_true(loadWindowLayout())
+        assert.is_true(pumpEvents(200))
+        assert.is_true(openMapWidget())
+        assert.is_true(pumpEvents(200))
+        assert.is_true(mapWidth() > 150, "the map shown after the layout loaded is only " .. mapWidth() .. " pixels wide")
+      end)
+
+      it("when the layout shows it at its minimum", function()
+        if not ready() then
+          return
+        end
+        assert.is_true(openMapWidget("r"))
+        assert.is_true(pumpEvents(200))
+        if not squeezeMap(700, 100) then
+          return
+        end
+        assert.is_true(saveWindowLayout())
+        setMainWindowSize(1280, 900)
+        assert.is_true(pumpEvents(200))
+        assert.is_true(closeMapWidget())
+        assert.is_true(pumpEvents(200))
+        assert.is_true(loadWindowLayout())
+        assert.is_true(pumpEvents(200))
+        assert.is_true(openMapWidget())
+        assert.is_true(pumpEvents(200))
+        assert.is_true(mapWidth() > 150, "the map the layout showed is only " .. mapWidth() .. " pixels wide")
+      end)
+
+      it("but keeps the width the layout gave it", function()
+        if not ready() then
+          return
+        end
+        assert.is_true(openMapWidget("r"))
+        assert.is_true(pumpEvents(200))
+        local saved = squeezeMap(860, 300, 100)
+        if not saved then
+          return
+        end
+        assert.is_true(saveWindowLayout())
+        setMainWindowSize(1280, 900)
+        assert.is_true(pumpEvents(200))
+        assert.is_true(loadWindowLayout())
+        assert.is_true(pumpEvents(200))
+        assert.are.equal(saved, mapWidth(), "loading the layout resized the map")
+
+        assert.is_true(closeMapWidget())
+        assert.is_true(openMapWidget())
+        assert.is_true(pumpEvents(200))
+        assert.are.equal(saved, mapWidth(), "showing the map again resized it")
+        assert.is_true(openMapWidget("r"))
+        assert.is_true(pumpEvents(200))
+        assert.are.equal(saved, mapWidth(), "docking the map where it already was resized it")
+      end)
+    end)
+  end)
+
   -- moveMapWidget/resizeMapWidget are openMapWidget in disguise, so they reopen
   -- a closed widget rather than failing the way the getters do. Pinned because
   -- it is the one place where the map functions do not agree about the state.
