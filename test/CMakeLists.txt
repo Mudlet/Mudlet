@@ -17,11 +17,17 @@ set(QT_SKIP_DEFAULT_TESTCASE_DIRS ON)
 # stderr has a console attached, which an MSYS2 shell or a CI runner does not give
 # it, so a failing test reports an exit code and nothing else (#9747). Deferred so
 # that tests registered further down the file are covered too; TESTS does not
-# descend into subdirectories, hence the second call in functional_tests.
+# descend into subdirectories, hence the second call in functional_tests. It also
+# puts the bundled lua51.dll's directory first on PATH.
 function(restore_windows_test_output)
     get_property(registeredTests DIRECTORY PROPERTY TESTS)
     foreach(testName ${registeredTests})
         set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "QT_ASSUME_STDERR_HAS_CONSOLE=1")
+        # Unless built beside the bundled lua51.dll, a test would load the MSYS2
+        # one from PATH instead
+        if(WIN32 AND TARGET lua51)
+            set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:lua51>")
+        endif()
     endforeach()
 endfunction()
 cmake_language(DEFER CALL restore_windows_test_output)

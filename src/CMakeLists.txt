@@ -711,7 +711,9 @@ endif()
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
 find_package(ZIP REQUIRED)
-find_package(Lua51 REQUIRED)
+if(NOT USE_BUNDLED_LUA)
+  find_package(Lua51 REQUIRED)
+endif()
 find_package(ZLIB REQUIRED)
 # 10.36 is the floor for PCRE2_MATCH_INVALID_UTF: it arrived in 10.34, and 10.36
 # fixed it mis-optimising the start of a match in 8-bit mode with PCRE2_CASELESS
