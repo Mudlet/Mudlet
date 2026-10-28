@@ -118,12 +118,10 @@ void TMCPBridge::startStdinReader()
     _setmode(_fileno(stdin), _O_BINARY);
     _setmode(_fileno(stdout), _O_BINARY);
 #endif
-    // Detached because there is no portable way to interrupt a blocking getline. Once
-    // the loop ends the thread touches only the application object, to post quit; the
-    // bridge outlives every post to itself because exec() cannot return before that
-    // quit runs, and queued calls tied to `this` as their context are dropped by Qt if
-    // any are still in flight at destruction. Nothing else may call quit(), or the
-    // application object could be gone while the reader still posts to it.
+    // Detached because there is no portable way to interrupt a blocking getline. Its
+    // last act is posting stdinClosed(), queued behind every line it read, and only
+    // that may lead to quit(): exec() cannot return before then, so the bridge and the
+    // application object outlive every post the reader makes.
     std::thread([this]() {
         std::string line;
         while (std::getline(std::cin, line)) {
@@ -138,8 +136,27 @@ void TMCPBridge::startStdinReader()
         if (std::cin.bad()) {
             noteOnStderr(qsl("mudlet --mcp-bridge: stdin failed with a read error; shutting down"));
         }
-        QMetaObject::invokeMethod(QCoreApplication::instance(), &QCoreApplication::quit, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(
+                this,
+                [this]() {
+                    stdinClosed();
+                },
+                Qt::QueuedConnection);
     }).detach();
+}
+
+void TMCPBridge::stdinClosed()
+{
+    mStdinClosed = true;
+    quitOnceAnswered();
+}
+
+void TMCPBridge::quitOnceAnswered()
+{
+    // Every forwarded request ends within its transfer timeout, so this cannot wait forever.
+    if (mStdinClosed && mRepliesInFlight == 0) {
+        QCoreApplication::quit();
+    }
 }
 
 void TMCPBridge::handleLine(const QByteArray& line)
@@ -308,6 +325,7 @@ void TMCPBridge::forward(const QJsonObject& message)
     request.setTransferTimeout(30000);
 
     QNetworkReply* reply = mpNetworkManager->post(request, QJsonDocument(forwardEnvelope(message, mClientCapabilities)).toJson(QJsonDocument::Compact));
+    ++mRepliesInFlight;
     connect(reply, &QNetworkReply::finished, this, [reply, id]() {
         reply->deleteLater();
         const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
@@ -331,6 +349,11 @@ void TMCPBridge::forward(const QJsonObject& message)
         }
         noteOnStderr(qsl("mudlet --mcp-bridge: Mudlet answered HTTP %1 with a body that is not JSON").arg(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt()));
         writeMessage(bridgeError(id, qsl("Mudlet returned an unreadable response (HTTP %1)").arg(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt())));
+    });
+    // Connected second so that it runs after the reply above has been written.
+    connect(reply, &QNetworkReply::finished, this, [this]() {
+        --mRepliesInFlight;
+        quitOnceAnswered();
     });
 }
 

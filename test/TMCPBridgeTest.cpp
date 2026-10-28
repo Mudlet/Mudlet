@@ -127,6 +127,7 @@ private slots:
     void codexRemoveUndoesConnect();
 
     void bridgeAnswersOverPipes();
+    void bridgeAnswersRequestsStillInFlightWhenStdinCloses();
     void bridgeReportsMudletGone();
     void wrongTokenSurfacesAsError();
 };
@@ -1244,6 +1245,42 @@ void TMCPBridgeTest::bridgeAnswersOverPipes()
     QVERIFY(bridge.process.waitForFinished(10000));
     QCOMPARE(bridge.process.exitStatus(), QProcess::NormalExit);
     QCOMPARE(bridge.process.exitCode(), 0);
+}
+
+void TMCPBridgeTest::bridgeAnswersRequestsStillInFlightWhenStdinCloses()
+{
+    TMCPServer server;
+    const MCPStartResult start = server.startServer(0);
+    QVERIFY2(start.started, qPrintable(start.error));
+
+    BridgeProcess bridge;
+    QVERIFY(bridge.start());
+    QVERIFY(TMCPBridge::writeDiscoveryFile(bridge.configDir(), server.getPort(), server.authToken()));
+
+    // A one-shot client: every request written, then stdin closed before any answer.
+    bridge.process.write(R"({"jsonrpc":"2.0","id":1,"method":"tools/list"})"
+                         "\n"
+                         R"({"jsonrpc":"2.0","id":2,"method":"tools/list"})"
+                         "\n"
+                         R"({"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"no_such_tool","arguments":{}}})"
+                         "\n");
+    bridge.process.closeWriteChannel();
+
+    // Not waitForFinished: the in-process server needs this event loop to answer.
+    QElapsedTimer timer;
+    timer.start();
+    while (bridge.process.state() != QProcess::NotRunning && timer.elapsed() < 15000) {
+        QTest::qWait(25ms);
+    }
+    QCOMPARE(bridge.process.state(), QProcess::NotRunning);
+    QCOMPARE(bridge.process.exitCode(), 0);
+
+    QSet<int> answered;
+    while (bridge.process.canReadLine()) {
+        const QJsonObject reply = QJsonDocument::fromJson(bridge.process.readLine()).object();
+        answered.insert(reply.value(qsl("id")).toInt());
+    }
+    QCOMPARE(answered, (QSet<int>{1, 2, 3}));
 }
 
 void TMCPBridgeTest::bridgeReportsMudletGone()

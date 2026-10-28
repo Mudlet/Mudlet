@@ -131,6 +131,8 @@ private:
     void startStdinReader();
     void handleLine(const QByteArray& line);
     void forward(const QJsonObject& message);
+    void stdinClosed();
+    void quitOnceAnswered();
     static QJsonObject jsonRpcError(const QJsonValue& id, int code, const QString& message);
     static QJsonObject bridgeError(const QJsonValue& id, const QString& message);
     static void writeMessage(const QJsonObject& message);
@@ -140,6 +142,10 @@ private:
     // What the client said in initialize; the 2026-07-28 revision wants it repeated in
     // every request's _meta.
     QJsonObject mClientCapabilities;
+    // A client that writes its requests and closes stdin is still owed every reply, so
+    // the bridge quits only once stdin has closed and nothing is left in flight.
+    int mRepliesInFlight = 0;
+    bool mStdinClosed = false;
 };
 
 #endif // MUDLET_TMCPBRIDGE_H
