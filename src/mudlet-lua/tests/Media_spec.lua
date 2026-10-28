@@ -1858,6 +1858,31 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals("busted-priority-ceiling", finished[1].key)
   end)
 
+  it("a stop takes a sound at its own priority, while a prioritised play leaves a copy at its priority playing", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started, finished = {}, {}
+    collect("sysMediaStarted", started)
+    collect("sysMediaFinished", finished)
+    writeSoundFiles()
+
+    -- making room for a prioritised play takes only what is below it, so a second copy at the same
+    -- priority starts alongside the first
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-same-priority-1", priority = 60}))
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-same-priority-2", priority = 60}))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #getPlayingSounds())
+
+    -- a stop takes its priority and below, as Client.Media.Stop's does
+    assert.is_true(stopSounds({priority = 59}))
+    pumpEvents(250)
+    assert.equals(2, #getPlayingSounds(), "a stop below the sounds' priority took them")
+    assert.is_true(stopSounds({priority = 60}))
+    waitForCount("sysMediaFinished", finished, 2)
+    assert.equals(0, #getPlayingSounds(), "a stop at the sounds' own priority left them playing")
+  end)
+
   it("a sound played under the key of one already playing replaces it", function()
     if mediaPlaybackUnavailable() then
       return
@@ -1880,6 +1905,30 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(1, #finished)
     assert.equals(longSoundFile, finished[1].file)
     local playing = getPlayingSounds({key = "busted-key-swap"})
+    assert.equals(1, #playing)
+    assert.equals(otherLongSoundFile, playing[1].name)
+  end)
+
+  it("a sound with a priority is replaced by another played under its key", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    -- the sound is stopped by its own details, priority and all, so it is under that stop
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-key-swap-priority", priority = 60}))
+    waitForCount("sysMediaStarted", started, 1)
+
+    assert.is_true(playSoundFile({name = otherLongSoundFile, key = "busted-key-swap-priority"}))
+    waitForCount("sysMediaStarted", started, 2)
+    waitForCount("sysMediaFinished", finished, 1)
+
+    assert.equals(1, #finished, "a sound with a priority kept playing once another took its key")
+    assert.equals(longSoundFile, finished[1].file)
+    local playing = getPlayingSounds({key = "busted-key-swap-priority"})
     assert.equals(1, #playing)
     assert.equals(otherLongSoundFile, playing[1].name)
   end)
@@ -2240,6 +2289,88 @@ describe("Media playback effects with a generated sound file", function()
     pumpEvents(250)
     assert.equals(0, #getPlayingSounds({key = "busted-missing"}))
     assert.is_nil(lfs.attributes(mediaDirectory .. "/_profile/busted-media-no-such-folder"), "a missing file had folders made for its copy")
+  end)
+
+  it("a file played by its full path and then deleted still plays the copy made of it", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local outsideName = "busted-media-gone.wav"
+    local outside = writeOutsideFile(outsideName)
+    onCleanup(function() stopSounds() end)
+
+    assert.is_true(playSoundFile({name = outside, key = "busted-gone"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(stopSounds())
+    pumpEvents(250)
+    assert.is_true(os.remove(outside))
+
+    -- a path ending in a separator names no file, so it has no copy either; tried once the file has gone,
+    -- as Windows drops a trailing "." and would open the file itself
+    assert.is_true(playSoundFile({name = outside .. "/", key = "busted-gone-separator"}))
+    assert.is_true(playSoundFile({name = outside .. "/.", key = "busted-gone-separator"}))
+    pumpEvents(250)
+    assert.equals(0, #getPlayingSounds({key = "busted-gone-separator"}))
+
+    assert.is_true(playSoundFile({name = outside, key = "busted-gone"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), "the copy of a deleted file did not play")
+    assert.equals("_profile/" .. outsideName, getPlayingSounds({key = "busted-gone"})[1].name)
+  end)
+
+  it("a file played through a symlinked folder and then deleted still plays the copy made of it", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    if not lfs.link then
+      pending("this lfs has no link()")
+      return
+    end
+    local real = writeOutsideFile("busted-media-linked-gone.wav", "busted-media-real-gone")
+    local linkDirectory = getMudletHomeDir() .. "/busted-media-link-gone"
+    local function removeLink()
+      os.remove(linkDirectory)
+      lfs.rmdir(linkDirectory)
+    end
+    removeLink()
+    if not lfs.link(getMudletHomeDir() .. "/busted-media-real-gone", linkDirectory, true) then
+      pending("this system would not make a symbolic link here")
+      return
+    end
+    onCleanup(removeLink)
+    onCleanup(function() stopSounds() end)
+    local throughLink = linkDirectory .. "/busted-media-linked-gone.wav"
+
+    assert.is_true(playSoundFile({name = throughLink, key = "busted-linked-gone-copy"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(stopSounds())
+    pumpEvents(250)
+    -- the copy is filed under the real folder; with the file gone, the link still leads there
+    assert.is_true(os.remove(real))
+
+    assert.is_true(playSoundFile({name = throughLink, key = "busted-linked-gone-copy"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), "the copy of a deleted file played through a symlink did not play")
+    assert.equals("_profile/busted-media-real-gone/busted-media-linked-gone.wav", getPlayingSounds({key = "busted-linked-gone-copy"})[1].name)
+  end)
+
+  it("a full path whose file has gone plays the copy an older Mudlet kept under its bare name", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- before copies kept their folders, a file played by its full path was copied to the media folder's root
+    local bareName = "busted-media-old-copy.wav"
+    writeMediaFile(bareName, 10000)
+    onCleanup(function() os.remove(mediaDirectory .. "/" .. bareName) end)
+    onCleanup(function() stopSounds() end)
+    local gone = getMudletHomeDir() .. "/busted-media-moved-away/" .. bareName
+
+    assert.is_true(playSoundFile({name = gone, key = "busted-old-copy"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), "the old copy of a file that has gone did not play")
+    assert.equals(bareName, getPlayingSounds({key = "busted-old-copy"})[1].name)
+    assert.is_nil(lfs.attributes(mediaDirectory .. "/_profile/busted-media-moved-away"), "a file that has gone had folders made for a copy")
+    -- the path it was played by still names it
+    assert.is_true(stopSounds({name = gone}))
+    pumpEvents(250)
+    assert.equals(0, #getPlayingSounds({key = "busted-old-copy"}))
   end)
 
   it("an absolute path that ends in a separator names no file and matches none", function()
@@ -3102,16 +3233,16 @@ describe("Media playback effects with a generated sound file", function()
     waitForCount("sysMediaStarted", started, 1)
     assert.equals(1, #started, gmcpRefused)
 
-    -- a stop reaches only what is playing below the priority it names, so this
+    -- a stop reaches what is playing at or below the priority it names, so this
     -- one leaves the playback alone - a priority that was not read is no
     -- priority at all, and would be stopped here
     feedGmcp('Client.Media.Stop {"priority": 40}')
     pumpEvents(500)
     assert.equals(0, #finished, "a stop of a lower priority than the playback stopped it anyway")
 
-    -- and a stop from above it does end the playback, so it is the priority the
-    -- string spelled that decided both
-    feedGmcp('Client.Media.Stop {"priority": 60}')
+    -- and a stop at its own priority does end the playback, so it is the priority
+    -- the string spelled that decided both
+    feedGmcp('Client.Media.Stop {"priority": 50}')
     waitForCount("sysMediaFinished", finished, 1)
     assert.equals(1, #finished)
   end)
@@ -4051,6 +4182,35 @@ describe("Tests the text-to-speech Lua API", function()
         assert.has_error(function() ttsSetRate("fast") end)
         assert.has_error(function() ttsSetPitch({}) end)
         assert.has_error(function() ttsSetVolume(false) end)
+      end)
+
+      -- NaN compares false against both clamp bounds. Not gated on the mock
+      -- engine, as the refusal never asks the engine to change anything
+      it("the rate, pitch and volume setters refuse NaN and keep the current setting", function()
+        if ttsUnsupported() then
+          return
+        end
+        local changes = {}
+        collect("ttsRateChanged", changes)
+        collect("ttsPitchChanged", changes)
+        collect("ttsVolumeChanged", changes)
+        local setters = {
+          {name = "rate", set = ttsSetRate, get = ttsGetRate},
+          {name = "pitch", set = ttsSetPitch, get = ttsGetPitch},
+          {name = "volume", set = ttsSetVolume, get = ttsGetVolume},
+        }
+        for _, setter in ipairs(setters) do
+          local before = setter.get()
+          local ok, err = setter.set(0/0)
+          assert.is_nil(ok, setter.name .. " accepted NaN")
+          assert.is_truthy(tostring(err):find(setter.name .. " as a number from", 1, true), tostring(err))
+          assert.equals(before, setter.get())
+        end
+        assert.same({}, changes)
+        -- success has to be told apart from that refusal by its first value
+        for _, setter in ipairs(setters) do
+          assert.is_true(setter.set(setter.get()), setter.name)
+        end
       end)
 
       it("ttsGetQueue returns a table and false for out-of-range indexes", function()

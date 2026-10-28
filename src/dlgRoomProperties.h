@@ -73,7 +73,6 @@ private:
     QString getNewSymbol();
     void initSymbolInstructions();
     QStringList getComboBoxSymbolItems();
-    QFont getFontForPreview(QString);
 
     int getNewWeight();
     void initWeightInstructions();

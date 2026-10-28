@@ -23,6 +23,7 @@
 
 #include "dlgRoomProperties.h"
 #include "Host.h"
+#include "RoomAppearance.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -504,31 +505,30 @@ void dlgRoomProperties::slot_updatePreview()
         pushButton_setSymbolColor->setStyleSheet(
                 qsl("background-color: %1; color: %2; border: 1px solid; border-radius: 1px;").arg(realSymbolColor.name(), backgroundBasedColor(realSymbolColor).name()));
     }
-    label_preview->setFont(getFontForPreview(newSymbol));
-    label_preview->setText(newSymbol);
-    label_preview->setStyleSheet(qsl("color: %1; background-color: %2; border: %3;")
-                                         .arg(realSymbolColor.name(), mRoomColor.name(), mpHost->mMapperShowRoomBorders ? qsl("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : qsl("none")));
-}
-
-
-QFont dlgRoomProperties::getFontForPreview(QString symbolString)
-{
-    auto font = mpHost->mpMap->mMapSymbolFont;
-    font.setPointSize(font.pointSize() * 0.9);
-    if (!symbolString.isEmpty()) {
-        const QFontMetrics mapSymbolFontMetrics = QFontMetrics(font);
-        const QVector<quint32> codePoints = symbolString.toUcs4();
-        QVector<bool> isUsable;
-        for (const auto point : codePoints) {
-            isUsable.append(mapSymbolFontMetrics.inFontUcs4(point));
-        }
-        const bool needToFallback = isUsable.contains(false);
-        if (needToFallback) {
-            symbolString = QString(QChar::ReplacementCharacter);
-            font.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpHost->mpMap->mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
-        }
+    const bool roundRoom = mpHost->mBubbleMode;
+    label_preview->setStyleSheet(qsl("background-color: %1; border: %2; border-radius: %3px;")
+                                         .arg(mRoomColor.name(),
+                                              mpHost->mMapperShowRoomBorders ? qsl("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : qsl("none"),
+                                              QString::number(roundRoom ? label_preview->width() / 2 : 0)));
+    label_preview->setAccessibleName(newSymbol);
+    if (newSymbol.isEmpty()) {
+        label_preview->clear();
+        return;
     }
-    return font;
+    // Drawn as the map draws it, which shrinks a symbol to fit the room, and
+    // a round room's to fit the square inside its circle
+    const QSize size = label_preview->contentsRect().size();
+    QRect symbolRect(QPoint(), roundRoom ? size * 0.707 : size);
+    symbolRect.moveCenter(QRect(QPoint(), size).center());
+    const qreal ratio = label_preview->devicePixelRatioF();
+    QPixmap pixmap(size * ratio);
+    pixmap.setDevicePixelRatio(ratio);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    ushort fontSize = 1;
+    RoomAppearance::paintSymbol(painter, symbolRect, newSymbol, realSymbolColor, mpHost->mpMap->mMapSymbolFont, mpHost->mpMap->mMapSymbolFontFudgeFactor, fontSize);
+    painter.end();
+    label_preview->setPixmap(pixmap);
 }
 
 

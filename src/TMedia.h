@@ -378,7 +378,10 @@ public:
     QList<TMediaData> playingMedia(TMediaData& mediaData);
     QList<TMediaData> pausedMedia(TMediaData& mediaData);
     void pauseMedia(TMediaData& mediaData);
-    void stopMedia(TMediaData& mediaData);
+    // A stop's priority takes media at that priority and below, as the protocol says; making room for a
+    // prioritised play takes only what is below it, so another copy at its priority plays on
+    enum class PriorityStop { AtOrBelow, Below };
+    void stopMedia(TMediaData& mediaData, PriorityStop priorityStop = PriorityStop::AtOrBelow);
     void parseGMCP(QString& packageMessage, QString& gmcp);
     std::pair<bool, QString> purgeMediaCache();
     void refreshAudioDevices();
@@ -433,6 +436,9 @@ public:
     // Where, relative to mediaRoot, a file an API call names by absolute path is played from: its copy,
     // or the file itself when it is already under mediaRoot. Static so it can be unit-tested without a Host.
     static QString mediaCacheFileName(const QString& profileHome, const QString& mediaRoot, const QString& absolutePath);
+    // A path with its symlinks resolved, as mediaCacheFileName() files copies by; one to a file that has gone is
+    // resolved through the folders that remain. Static so it can be unit-tested without a Host.
+    static QString resolvedMediaPath(const QString& path);
     // Whether a name sits in a folder mediaCacheFileName() keeps for its copies, where a game must not reach
     static bool mediaFileNameReservedForCopies(const QString& mediaFileName);
 
