@@ -5339,13 +5339,24 @@ describe("Tests exporting the profile to a file with saveProfile", function()
     }, "\n"))
     installAndConfirm(installPackage, bulkXml, function() return packageInstalled(bulk) end, "the bulky package")
     assert.is_true(waitForTheBulkySave(), "a profile save was still running")
-    local mark = getLastLineNumber("main")
+    local mark, movedAway, whyNot
+    -- The write can still finish before the move, for example when the main thread is held up
+    -- after the call. That shows nothing about the console, so put the folder back and race again.
+    for attempt = 1, 5 do
+      if attempt > 1 then
+        assert(os.remove(moved .. "/mudlet-spec-raced.xml"))
+        assert(os.rename(moved, folder))
+      end
+      mark = getLastLineNumber("main")
+      local ok = saveProfile(folder, "mudlet-spec-raced")
+      movedAway, whyNot = os.rename(folder, moved)
 
-    local ok = saveProfile(folder, "mudlet-spec-raced")
-    local movedAway, whyNot = os.rename(folder, moved)
-
-    assert.is_true(ok)
-    assert.is_true(waitForTheBulkySave(), "the profile save never finished")
+      assert.is_true(ok)
+      assert.is_true(waitForTheBulkySave(), "the profile save never finished")
+      if not movedAway or not fileExists(moved .. "/mudlet-spec-raced.xml") then
+        break
+      end
+    end
     if not movedAway and getOS() == "windows" then
       -- Windows will not move a folder while a file in it is open
       pending("the folder could not be moved away while it was being written to: " .. tostring(whyNot))
@@ -7513,6 +7524,392 @@ describe("Tests the MedBootstrap package", function()
     assert.are.same({}, mpkg.upgrades)
     assert.are.same({}, looks.errors)
   end)
+end)
+
+-- These loaders are installed only for their own game, so each is installed
+-- here from the copy compiled into Mudlet
+describe("Tests the game loader packages", function()
+  local loaders = {
+    {
+      name = "CF_Loader",
+      archive = ":/packages/CF-loader/CF-loader.mpackage",
+      download = "CFGUI.zip",
+      profile = "Carrion Fields",
+      url = "https://mudlet-cdn.carrionfields.net/cfgui/latest/CFGUI.zip",
+      globals = { "downloadPkg", "installReady", "downloadFailed" },
+      downloadFailed = "Your Carrion Fields client could not be downloaded:",
+      installFailed = "Installing your Carrion Fields client failed:",
+      handInstall = [[cecho("<lime_green>Package installed!\n")]],
+      handInstalled = "Package installed!",
+    },
+    {
+      name = "mg-loader",
+      archive = ":/packages/mg-loader/mg-loader.mpackage",
+      download = "MorgenGrauen.mpackage",
+      profile = "MorgenGrauen",
+      url = "https://github.com/MorgenGrauen/mg-mudlet/releases/latest/download/MorgenGrauen.mpackage",
+      globals = { "downloadPackage", "installReady", "downloadFailed" },
+      downloadFailed = "Das Mudlet-Paket fürs MorgenGrauen konnte nicht heruntergeladen werden:",
+      installFailed = "Das Mudlet-Paket fürs MorgenGrauen konnte nicht installiert werden:",
+      handInstall = [[cecho("<gold>Paket installiert!\n")]],
+      handInstalled = "Paket installiert!",
+    },
+    {
+      name = "icesus-loader",
+      archive = ":/packages/icesus-loader/icesus-loader.mpackage",
+      download = "Icesus.mpackage",
+      profile = "Icesus",
+      url = "https://github.com/Icesus-mud/mudlet-package/releases/latest/download/Icesus.mpackage",
+      globals = { "downloadPackage", "installReady", "downloadFailed" },
+      downloadFailed = "The Icesus Mudlet package could not be downloaded:",
+      installFailed = "The Icesus Mudlet package could not be installed:",
+      handInstall = [[cecho("<gold>Package installed!\n")]],
+      handInstalled = "Package installed!",
+    },
+  }
+
+  local function override(globalName, value)
+    local original = _G[globalName]
+    defer(function() _G[globalName] = original end)
+    _G[globalName] = value
+  end
+
+  -- The loaders, and the command they give the player to paste, register their
+  -- handlers by function name and never keep the ids, so they are caught here to kill.
+  local function killingHandlersItRegisters(fn)
+    local handlerIds = {}
+    defer(function()
+      for _, id in ipairs(handlerIds) do
+        killAnonymousEventHandler(id)
+      end
+    end)
+    local realRegister = _G.registerAnonymousEventHandler
+    _G.registerAnonymousEventHandler = function(...)
+      local id = realRegister(...)
+      handlerIds[#handlerIds + 1] = id
+      return id
+    end
+    local ok, err = pcall(fn)
+    _G.registerAnonymousEventHandler = realRegister
+    assert(ok, err)
+    return #handlerIds
+  end
+
+  -- What fn had the loader echo, before cecho()/decho() made anything of the colour tags
+  local function echoedBy(fn)
+    local said = {}
+    local real = { echo = _G.echo, cecho = _G.cecho, decho = _G.decho }
+    for name, echo in pairs(real) do
+      _G[name] = function(...)
+        for _, argument in ipairs({...}) do
+          said[#said + 1] = tostring(argument)
+        end
+        return echo(...)
+      end
+    end
+    local ok, err = pcall(fn)
+    for name, echo in pairs(real) do
+      _G[name] = echo
+    end
+    assert(ok, err)
+    return table.concat(said, "\n")
+  end
+
+  -- Raises sysDownloadDone for the file, and answers a check for whether the
+  -- installs the loader deferred from it have run, and how many it deferred
+  local function downloadDone(path)
+    local pending = 0
+    local realTempTimer = _G.tempTimer
+    _G.tempTimer = function(delay, code, ...)
+      pending = pending + 1
+      return realTempTimer(delay, function()
+        local ok, err = pcall(type(code) == "string" and assert(loadstring(code)) or code)
+        pending = pending - 1
+        assert(ok, err)
+      end, ...)
+    end
+    local ok, err = pcall(raiseEvent, "sysDownloadDone", path)
+    _G.tempTimer = realTempTimer
+    assert(ok, err)
+    return function() return pending == 0 end, pending
+  end
+
+  -- Runs the command the loader shows when its download fails, as the player would
+  local function pasteTheCommand(path)
+    local shown = echoedBy(function()
+      raiseEvent("sysDownloadError", "mudlet-spec-host-not-found", path)
+    end)
+    local command = shown:match("\nlua ([^\n]+)")
+    assert.is_string(command, "no command to paste was shown: " .. shown)
+    override("d", nil)
+    killingHandlersItRegisters(function() assert(loadstring(command))() end)
+  end
+
+  -- Installs the loader with downloadFile() stubbed out, and answers the list
+  -- the downloads it starts land in.
+  local function install(loader)
+    for _, globalName in ipairs(loader.globals) do
+      override(globalName, nil)
+    end
+    override("installRequested", nil)
+    override("packagesBeforeDownload", nil)
+    local downloads = {}
+    local path = getMudletHomeDir() .. "/" .. loader.download
+    override("downloadFile", function(file, url)
+      if file == path then
+        downloads[#downloads + 1] = { file, url }
+      end
+      return true
+    end)
+    defer(function() os.remove(path) end)
+    defer(function() removeFixturePackage(loader.name) end)
+
+    local registered = killingHandlersItRegisters(function()
+      installAndConfirm(installPackage, loader.archive, function() return packageInstalled(loader.name) end, loader.name)
+    end)
+    assert.is_true(registered > 0, "the loader registered no event handlers")
+
+    raiseEvent("sysConnectionEvent")
+    assert.are.same({ { path, loader.url } }, downloads, "connecting did not start the download")
+    -- the loader uninstalls itself, which is refused while a profile save runs
+    assert.is_true(waitForProfileSaveToPass(), "a profile save never finished")
+    return downloads, path
+  end
+
+  for _, loader in ipairs(loaders) do
+    it(loader.name .. " tells the player how to fetch the package by hand when the download fails", function()
+      local _, path = install(loader)
+
+      local mark = getLastLineNumber("main")
+      raiseEvent("sysDownloadError", "mudlet-spec-unrelated-error", getMudletHomeDir() .. "/mudlet-spec-other.zip")
+      raiseEvent("sysDownloadError", "mudlet-spec-host-not-found", path)
+      local shown = textFrom(mark)
+
+      assert.is_false(contains(shown, "mudlet-spec-unrelated-error"), "the loader reported another download's failure")
+      assert.is_true(containsWrapped(shown, loader.downloadFailed .. " mudlet-spec-host-not-found"), shown)
+      assert.is_true(containsWrapped(shown, loader.url), "the failure gave no way to fetch the package by hand: " .. shown)
+      if loader.handInstall then
+        assert.is_true(containsWrapped(shown, loader.handInstall), "the command to paste is not the one to run: " .. shown)
+      end
+      assert.is_true(packageInstalled(loader.name), "the loader removed itself without installing anything")
+    end)
+
+    it(loader.name .. " does not download again on a reconnect once its package is installed", function()
+      local downloads, path = install(loader)
+      defer(function() removeFixturePackage(minimalPackage) end)
+      copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", path)
+
+      assert.is_true(waitUntil(downloadDone(path), 10000), "the deferred install never ran")
+      assert.is_true(packageInstalled(minimalPackage), "the downloaded package was never installed")
+      assert.is_true(waitUntil(function() return not packageInstalled(loader.name) end, 5000),
+                     "the loader did not uninstall itself")
+
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(1, #downloads, "a reconnect downloaded the installed package again")
+
+      -- a player who removes the package and installs the loader again wants it back
+      removeFixturePackage(minimalPackage)
+      killingHandlersItRegisters(function()
+        installAndConfirm(installPackage, loader.archive, function() return packageInstalled(loader.name) end, loader.name)
+      end)
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(2, #downloads, "the loader installed again did not download the package")
+    end)
+
+    -- as the MorgenGrauen and Icesus packages do with generic_mapper
+    it(loader.name .. " does not download again once installed a package that removes another", function()
+      local downloads, path = install(loader)
+      local removeOther = "mudlet-spec-removeother"
+      override("mudletSpecRemoveOtherResult", nil)
+      withFixturePackage(minimalPackage)
+      defer(function() removeFixturePackage(removeOther) end)
+      copyFile(fixtureDirectory .. "/" .. removeOther .. ".mpackage", path)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save never finished")
+
+      assert.is_true(waitUntil(downloadDone(path), 10000), "the deferred install never ran")
+      assert.is_true(packageInstalled(removeOther), "the downloaded package was never installed")
+      assert.is_false(packageInstalled(minimalPackage), "the downloaded package did not remove the other one")
+
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(1, #downloads, "a reconnect downloaded the installed package again")
+    end)
+
+    it(loader.name .. " installs once when the player runs the command it gave after a failed download", function()
+      local downloads, path = install(loader)
+      defer(function() removeFixturePackage(minimalPackage) end)
+      pasteTheCommand(path)
+      assert.are.equal(2, #downloads, "the pasted command did not start the download")
+      copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", path)
+
+      local mark = getLastLineNumber("main")
+      assert.is_true(waitUntil(downloadDone(path), 10000), "the deferred install never ran")
+      assert.is_true(packageInstalled(minimalPackage), "the downloaded package was never installed")
+      assert.is_false(containsWrapped(textFrom(mark), loader.installFailed), textFrom(mark))
+
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(2, #downloads, "a reconnect downloaded the installed package again")
+    end)
+
+    it(loader.name .. " installs once when the command it gave sees the download before the loader does", function()
+      local downloads, path = install(loader)
+      defer(function() removeFixturePackage(minimalPackage) end)
+      pasteTheCommand(path)
+      copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", path)
+
+      -- anonymous handlers run in no set order
+      d("sysDownloadDone", path)
+      assert.is_true(packageInstalled(minimalPackage), "the pasted command did not install the package")
+      assert.is_true(waitUntil(downloadDone(path), 10000), "the deferred install never ran")
+
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(2, #downloads, "a reconnect downloaded the installed package again")
+    end)
+
+    it(loader.name .. " gave a command that leaves the profile's other downloads alone", function()
+      local _, path = install(loader)
+      pasteTheCommand(path)
+      -- a profile's home is named after it, and the game's package downloads its own files there
+      local stem = loader.download:match("^(.-)%.[^.]+$")
+      local other = getMudletHomeDir() .. "/mudlet-spec-" .. stem .. "-" .. loader.profile .. "-map.dat"
+      io.open(other, "w"):close()
+      defer(function() os.remove(other) end)
+
+      local tried = {}
+      local realInstall = installPackage
+      override("installPackage", function(file, ...)
+        tried[#tried + 1] = file
+        return realInstall(file, ...)
+      end)
+      raiseEvent("sysDownloadDone", other)
+      assert.are.same({}, tried, "the pasted command took another download for its package")
+      assert.is_true(io.exists(other), "the pasted command removed another download")
+    end)
+
+    it(loader.name .. " gave a command that leaves a download whose file name only ends in its package's", function()
+      local _, path = install(loader)
+      pasteTheCommand(path)
+      local other = getMudletHomeDir() .. "/mudlet-spec-old" .. loader.download
+      copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", other)
+      defer(function() os.remove(other) end)
+      defer(function() removeFixturePackage(minimalPackage) end)
+
+      local tried = {}
+      local realInstall = installPackage
+      override("installPackage", function(file, ...)
+        tried[#tried + 1] = file
+        return realInstall(file, ...)
+      end)
+      raiseEvent("sysDownloadDone", other)
+      assert.are.same({}, tried, "the pasted command took another download for its package")
+      assert.is_true(io.exists(other), "the pasted command removed another download")
+    end)
+
+    it(loader.name .. " gave a command that leaves a download in a folder named after its package's file", function()
+      local _, path = install(loader)
+      pasteTheCommand(path)
+      local outer = getMudletHomeDir() .. "/mudlet-spec-downloads"
+      local folder = outer .. "/" .. loader.download
+      local other = folder .. "/" .. minimalPackage .. ".mpackage"
+      lfs.mkdir(outer)
+      lfs.mkdir(folder)
+      copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", other)
+      defer(function()
+        os.remove(other)
+        lfs.rmdir(folder)
+        lfs.rmdir(outer)
+      end)
+      defer(function() removeFixturePackage(minimalPackage) end)
+
+      local tried = {}
+      local realInstall = installPackage
+      override("installPackage", function(file, ...)
+        tried[#tried + 1] = file
+        return realInstall(file, ...)
+      end)
+      raiseEvent("sysDownloadDone", other)
+      assert.are.same({}, tried, "the pasted command took another download for its package")
+      assert.is_true(io.exists(other), "the pasted command removed another download")
+    end)
+
+    it(loader.name .. " reports a download a module's name blocks, and tries again on the next connection", function()
+      local downloads, path = install(loader)
+      withFixtureModule(minimalPackage)
+      copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", path)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save never finished")
+
+      local mark = getLastLineNumber("main")
+      assert.is_true(waitUntil(downloadDone(path), 10000), "the deferred install never ran")
+      assert.is_false(packageInstalled(minimalPackage), "the download was installed over the module")
+      assert.is_true(containsWrapped(textFrom(mark), loader.installFailed), "the refused install was not reported: " .. textFrom(mark))
+
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(2, #downloads, "the next connection did not try the download again")
+    end)
+
+    it(loader.name .. " installs once when more connections come before the download finishes", function()
+      local downloads, path = install(loader)
+      raiseEvent("sysConnectionEvent")
+      raiseEvent("sysConnectionEvent")
+      local started = #downloads
+      defer(function() removeFixturePackage(minimalPackage) end)
+      copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", path)
+
+      local mark = getLastLineNumber("main")
+      local installed = downloadDone(path)
+      local _, deferredAgain = downloadDone(path)
+      assert.are.equal(0, deferredAgain, "the second download was installed again")
+      raiseEvent("sysDownloadError", "mudlet-spec-host-not-found", path)
+      assert.is_true(waitUntil(installed, 10000), "the deferred install never ran")
+      assert.is_true(packageInstalled(minimalPackage), "the downloaded package was never installed")
+      local shown = textFrom(mark)
+      assert.is_false(containsWrapped(shown, loader.installFailed), shown)
+      assert.is_false(containsWrapped(shown, loader.downloadFailed), shown)
+
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(started, #downloads, "a reconnect downloaded the installed package again")
+    end)
+
+    it(loader.name .. " tries again on the next connection when the command it gave fails to install", function()
+      local downloads, path = install(loader)
+      pasteTheCommand(path)
+      copyFile(fixtureDirectory .. "/mudlet-spec-notazip.mpackage", path)
+
+      local mark = getLastLineNumber("main")
+      assert.is_true(waitUntil(downloadDone(path), 10000), "the deferred install never ran")
+      local shown = textFrom(mark)
+      assert.is_false(contains(shown, loader.handInstalled), "the command it gave claimed a failed install worked: " .. shown)
+      assert.is_true(containsWrapped(shown, loader.installFailed), "the failed install was not reported: " .. shown)
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(3, #downloads, "the next connection did not try the download again")
+    end)
+
+    it(loader.name .. " stays quiet about a download that is already installed", function()
+      local downloads, path = install(loader)
+      withFixturePackage(minimalPackage)
+      copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", path)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save never finished")
+
+      local mark = getLastLineNumber("main")
+      assert.is_true(waitUntil(downloadDone(path), 10000), "the deferred install never ran")
+      assert.is_false(containsWrapped(textFrom(mark), loader.installFailed), textFrom(mark))
+
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(1, #downloads, "a reconnect downloaded the installed package again")
+    end)
+
+    it(loader.name .. " reports a download that will not install, and tries again on the next connection", function()
+      local downloads, path = install(loader)
+      copyFile(fixtureDirectory .. "/mudlet-spec-notazip.mpackage", path)
+
+      local mark = getLastLineNumber("main")
+      raiseEvent("sysDownloadDone", path)
+      assert.is_true(waitUntil(function() return containsWrapped(textFrom(mark), loader.installFailed) end, 10000),
+                     "the failed install was not reported: " .. textFrom(mark))
+
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(2, #downloads, "the next connection did not try the download again")
+    end)
+  end
 end)
 
 describe("The package specs clean up after themselves", function()

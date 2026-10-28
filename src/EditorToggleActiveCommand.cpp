@@ -96,6 +96,10 @@ void EditorToggleActiveCommand::setItemActiveState(int itemID, bool active)
         TTimer* pT = mpHost->getTimerUnit()->getTimer(itemID);
         if (pT) {
             pT->setIsActive(active);
+            // As in dlgTriggerEditor::activeToggle_timer(): its parent firing arms an offset timer
+            if (pT->isOffsetTimer()) {
+                pT->stop();
+            }
         } else {
             qWarning() << "EditorToggleActiveCommand::setItemActiveState() - Timer" << itemID << "not found";
         }
