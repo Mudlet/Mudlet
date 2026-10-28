@@ -687,20 +687,10 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
   end)
 
-  -- The first scroll of a console opens its split view, and that one is
-  -- applied on the next turn of the event loop rather than on the call, so
-  -- every reading here is taken after pumping. Opening the split also shortens
-  -- the upper pane, and that first scroll compensates for it by the height of
-  -- the pane that appeared, so only the first scroll of a console lands above
-  -- the line it asked for - hence openSplit() below. Later scrolls go through
-  -- the pane that is already there, synchronously and to the exact line.
+  -- each reading is taken after pumping, so the split view the first scroll
+  -- opens has appeared and resized the panes
   describe("Geyser.MiniConsole scrolling", function()
     local console
-
-    local function openSplit()
-      console:scrollTo(50)
-      pumpEvents(50)
-    end
 
     before_each(function()
       console = track(Geyser.MiniConsole:new({name = "gmcScroll", x = 0, y = 0, width = 400, height = 200}))
@@ -723,22 +713,13 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       assert.are.equal(console:getLastLineNumber(), console:getScroll())
     end)
 
-    -- how far above the asked for line the first scroll lands is the height of
-    -- the split pane that just appeared, which no Lua getter reports, so what
-    -- is pinned is that the console scrolled back and did not overshoot past
-    -- the line it was given
-    it("scrolls back on the first scroll, which is what opens the split", function()
-      local atTheEnd = console:getScroll()
+    it("scrolls to the line it is given on the first scroll, which is what opens the split", function()
       console:scrollTo(50)
       pumpEvents(50)
-      local scrolled = console:getScroll()
-      assert.is_true(scrolled < atTheEnd, "the console did not scroll back at all")
-      assert.is_true(scrolled > 0 and scrolled <= 50,
-                     "the first scroll landed at " .. scrolled .. ", which is not at or above line 50")
+      assert.are.equal(50, console:getScroll())
     end)
 
-    it("scrolls to the line it is given once the split is open", function()
-      openSplit()
+    it("scrolls to each line it is given in turn", function()
       console:scrollTo(20)
       pumpEvents(50)
       assert.are.equal(20, console:getScroll())
@@ -748,7 +729,6 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("scrollUp and scrollDown walk from where it already is", function()
-      openSplit()
       console:scrollTo(30)
       pumpEvents(50)
       console:scrollUp(5)
@@ -760,7 +740,6 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("scrollUp and scrollDown move one line when given no count", function()
-      openSplit()
       console:scrollTo(30)
       pumpEvents(50)
       console:scrollUp()
@@ -772,7 +751,6 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("scrollUp will not walk back past the top of the buffer", function()
-      openSplit()
       console:scrollTo(3)
       pumpEvents(50)
       console:scrollUp(500)
@@ -781,7 +759,6 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     it("scrollTo with no line goes back to the end", function()
-      openSplit()
       console:scrollTo(20)
       pumpEvents(50)
       assert.are.equal(20, console:getScroll())

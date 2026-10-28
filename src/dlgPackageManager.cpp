@@ -241,7 +241,7 @@ void dlgPackageManager::populatePackagesWithUpdates()
     mPackagesWithUpdates.clear();
 
     for (const QString& packageName : std::as_const(mpHost->mInstalledPackages)) {
-        if (!packageLookup.contains(packageName)) {
+        if (!matchesRepositoryPackage(packageName)) {
             continue;
         }
 
@@ -592,7 +592,7 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
             return;
         }
 
-        if (packageLookup.contains(packageName)) {
+        if (matchesRepositoryPackage(packageName)) {
             pushButton_website->show();
             pushButton_report->show();
         }
@@ -696,12 +696,25 @@ void dlgPackageManager::slot_openBugWebsite()
     mudlet::self()->openWebPage(qsl("https://github.com/Mudlet/mudlet-package-repository/issues/new?template=package-bug-or-issue.md&title=[Package%20Bug]%20") + currentItem->text());
 }
 
+// The index is keyed by name alone and anyone can make a package of the same name. The author is
+// copied into the index from the package's config.lua and rarely changes between versions
+bool dlgPackageManager::matchesRepositoryPackage(const QString& packageName) const
+{
+    const auto repositoryPackage = packageLookup.constFind(packageName);
+    if (repositoryPackage == packageLookup.cend() || !mpHost->mPackageInfo.contains(packageName)) {
+        return false;
+    }
+    return mpHost->mPackageInfo.value(packageName).value(qsl("author")) == repositoryPackage->value(qsl("author")).toString();
+}
+
 QString dlgPackageManager::packageHelpUrl(const QString& packageName) const
 {
     // a help URL set by the package's author takes precedence over the generic repository website
-    const QString url = mpHost->mPackageInfo.value(packageName).value(qsl("helpURL"));
-    if (!url.isEmpty()) {
-        return url;
+    if (matchesRepositoryPackage(packageName)) {
+        const QString url = mpHost->mPackageInfo.value(packageName).value(qsl("helpURL"));
+        if (!url.isEmpty()) {
+            return url;
+        }
     }
     return packageLookup.value(packageName).value(qsl("helpURL")).toString();
 }

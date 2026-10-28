@@ -25,6 +25,7 @@
 class TMxpLinkTagHandler : public TMxpSingleTagHandler
 {
     bool mIsHrefInContent;
+    bool mHintIsHref = false;
     QString mCurrentTagContent;
     QString mHref;
     int mLinkId;

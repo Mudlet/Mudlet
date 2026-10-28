@@ -319,6 +319,8 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
     new MainWindowSizeReporter(this, {mpLeftToolBar, mpRightToolBar, mpTopToolBar, mpCommandLine.data()});
     reportMainWindowSize();
+
+    mpMainFrame->installEventFilter(this);
 }
 
 TMainConsole::~TMainConsole()
@@ -2042,6 +2044,21 @@ void TMainConsole::closePasswordEntry()
 
 bool TMainConsole::eventFilter(QObject* watched, QEvent* event)
 {
+    // A bar shown or hidden has the layout resize this frame but not the console, so no
+    // resizeEvent() sizes the display in it. Not sized mid-layout, while the frame's
+    // ancestors are still at their old size: the panes would count rows that are clipped.
+    if (watched == mpMainFrame && event->type() == QEvent::Resize && !mMainDisplayLayoutPending) {
+        mMainDisplayLayoutPending = true;
+        using namespace std::chrono_literals;
+        QTimer::singleShot(0ms, this, [this]() {
+            mMainDisplayLayoutPending = false;
+            // a console a tab switch has made zero wide is left alone, as resizeEvent() leaves it
+            if (width() && mpHost && mpCommandLine && !mpCommandLine->isHidden()) {
+                mBorders = mpHost->borders();
+                layoutMainDisplay();
+            }
+        });
+    }
     if (mpPasswordEntry && watched == mpCommandLine && (event->type() == QEvent::Resize || event->type() == QEvent::Move)) {
         mpPasswordEntry->setGeometry(mpCommandLine->geometry());
     }
@@ -2370,7 +2387,7 @@ bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
     }
 
     if (!toEnd) {
-        pC->scrollUp(pC->mUpperPane->mCursorY - line);
+        pC->scrollTo(line);
         return true;
     }
     if (!pC->mUpperPane->mIsTailMode) {
@@ -2384,6 +2401,12 @@ bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
         pC->mUpperPane->forceUpdate();
     }
     return true;
+}
+
+bool TMainConsole::windowFollowsNewLines(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    return pC && pC->mUpperPane->mIsTailMode;
 }
 
 std::optional<std::pair<bool, QString>> TMainConsole::setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight)
@@ -2538,7 +2561,7 @@ bool TMainConsole::setTextBoxTabMovesFocus(const QString& name, bool tabMovesFoc
 
 QPoint TMainConsole::mousePosition() const
 {
-    return mapFromGlobal(QCursor::pos());
+    return mpMainFrame->mapFromGlobal(QCursor::pos());
 }
 
 bool TMainConsole::hasKeyboardFocus() const
@@ -3661,6 +3684,7 @@ void TMainConsole::createMapperDock(const QString& title, const QString& objectN
     mpHost->mpMap->setMapper(new dlgMapper(mpDockableMapWidget, mpHost, mpHost->mpMap.data()));
     mpHost->mpMap->mapper()->setStyleSheet(mpHost->mProfileStyleSheet);
     mpDockableMapWidget->setWidget(mpHost->mpMap->mapper());
+    mudlet::self()->growDockToSizeHintWhenShown(mpDockableMapWidget);
 }
 
 QDockWidget* TMainConsole::mapWidget() const
@@ -3908,6 +3932,16 @@ void TMainConsole::dockMapWidget(Qt::DockWidgetArea area)
     mudlet::self()->addDockWidget(area, mpDockableMapWidget);
 }
 
+void TMainConsole::redockMapWidget(Qt::DockWidgetArea area)
+{
+    const bool moving = mpDockableMapWidget->isFloating() || mudlet::self()->dockWidgetArea(mpDockableMapWidget) != area;
+    mpDockableMapWidget->setFloating(false);
+    dockMapWidget(area);
+    if (moving) {
+        mudlet::self()->growDockToSizeHint(mpDockableMapWidget, false);
+    }
+}
+
 std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x, int y, int width, int height)
 {
     auto pM = mpDockableMapWidget;
@@ -3935,26 +3969,22 @@ std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x
     }
 
     if (area == QLatin1String("r") || area == QLatin1String("right")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::RightDockWidgetArea);
+        redockMapWidget(Qt::RightDockWidgetArea);
         return {true, QString()};
     }
 
     if (area == QLatin1String("l") || area == QLatin1String("left")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::LeftDockWidgetArea);
+        redockMapWidget(Qt::LeftDockWidgetArea);
         return {true, QString()};
     }
 
     if (area == QLatin1String("t") || area == QLatin1String("top")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::TopDockWidgetArea);
+        redockMapWidget(Qt::TopDockWidgetArea);
         return {true, QString()};
     }
 
     if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::BottomDockWidgetArea);
+        redockMapWidget(Qt::BottomDockWidgetArea);
         return {true, QString()};
     }
 
