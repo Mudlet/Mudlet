@@ -1220,26 +1220,52 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const
     }
 }
 
-void T2DMap::addTextLabelToCache(const QString& key, const TMapLabel& label, const QSize& targetSize)
+bool T2DMap::labelPixmapIsCurrent(const LabelPixmap& cached, const TMapLabel& label)
 {
-    auto pixmap = std::make_unique<QPixmap>(targetSize);
-    pixmap->fill(label.bgColor);
+    return cached.sourcePixmapKey == label.pix.cacheKey() && cached.fgColor == label.fgColor.rgba() && cached.bgColor == label.bgColor.rgba() && cached.outlineColor == label.outlineColor.rgba()
+           && cached.text == label.text && cached.font == label.font;
+}
 
-    QPainter painter(pixmap.get());
-    painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing, mMapperUseAntiAlias);
+const T2DMap::LabelPixmap* T2DMap::addTextLabelToCache(const LabelPixmapKey& key, const TMapLabel& label)
+{
+    const QSize& targetSize = key.size;
+    auto entry = std::make_unique<LabelPixmap>();
+    entry->text = label.text;
+    entry->font = label.font;
+    entry->fgColor = label.fgColor.rgba();
+    entry->bgColor = label.bgColor.rgba();
+    entry->outlineColor = label.outlineColor.rgba();
+    entry->sourcePixmapKey = label.pix.cacheKey();
+    auto insert = [this, &key](std::unique_ptr<LabelPixmap> made) -> const LabelPixmap* {
+        made->costKiB = std::max<qint64>(1, qint64(made->pixmap.width()) * made->pixmap.height() * 4 / 1024);
+        // Room for what the last frame and this one drew, so a label coming into
+        // view never evicts one still on screen
+        if (const qsizetype needed = std::min(mTextLabelPixmapLastFrameKiB + mTextLabelPixmapFrameKiB + made->costKiB, scmTextLabelPixmapCeilingKiB); needed > mTextLabelPixmapCache.maxCost()) {
+            mTextLabelPixmapCache.setMaxCost(needed);
+        }
+        const qsizetype costKiB = made->costKiB;
+        const LabelPixmap* cached = made.get();
+        if (!mTextLabelPixmapCache.insert(key, made.release(), costKiB)) {
+            qWarning("T2DMap::addTextLabelToCache() ALERT: Text Label Pixmap cache is full for label %d in area %d", key.labelId, key.areaId);
+            return nullptr;
+        }
+        return cached;
+    };
 
     QFont scaledFont = label.font;
     QRectF targetRect(0, 0, targetSize.width(), targetSize.height());
-    if (!sizeFontToFitTextInRect(scaledFont, targetRect, label.text, 5, 4.0)) {
-        // Font too small to be legible - fall back to smooth-scaled original pixmap
-        painter.end();
-        pixmap = std::make_unique<QPixmap>(label.pix.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-        if (!mTextLabelPixmapCache.insert(key, pixmap.release())) {
-            qWarning("T2DMap::addTextLabelToCache() ALERT: Text Label Pixmap cache is full for key: %s", qUtf8Printable(key));
-        }
-        return;
+    if (label.text.isEmpty() || label.font.family().isEmpty() || !sizeFontToFitTextInRect(scaledFont, targetRect, label.text, 5, 4.0)) {
+        // An image label, a text label with no font, or a font too small to be
+        // legible - smooth-scaled original pixmap
+        entry->pixmap = label.pix.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        return insert(std::move(entry));
     }
 
+    entry->pixmap = QPixmap(targetSize);
+    entry->pixmap.fill(label.bgColor);
+
+    QPainter painter(&entry->pixmap);
+    painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing, mMapperUseAntiAlias);
     painter.setFont(scaledFont);
 
     const int labelWidth = targetSize.width();
@@ -1260,11 +1286,8 @@ void T2DMap::addTextLabelToCache(const QString& key, const TMapLabel& label, con
     painter.setPen(label.fgColor);
     painter.drawText(QRect(0, 0, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignVCenter, label.text);
 
-    // End the painter before releasing the pixmap to avoid accessing released memory
     painter.end();
-    if (!mTextLabelPixmapCache.insert(key, pixmap.release())) {
-        qWarning("T2DMap::addTextLabelToCache() ALERT: Text Label Pixmap cache is full for key: %s", qUtf8Printable(key));
-    }
+    return insert(std::move(entry));
 }
 
 // A label rendered whole at its zoomed size needs gigabytes once a big one is
@@ -1290,23 +1313,27 @@ static void drawPixmapScaledTo(QPainter& painter, const QRectF& target, const QP
     painter.restore();
 }
 
+void T2DMap::startTextLabelFrame()
+{
+    mTextLabelPixmapLastFrameKiB = mTextLabelPixmapFrameKiB;
+    mTextLabelPixmapFrameKiB = 0;
+    // Shrinks back once fewer labels are on screen, e.g. after switching area
+    mTextLabelPixmapCache.setMaxCost(std::max(mTextLabelPixmapBudgetKiB, std::min(mTextLabelPixmapLastFrameKiB, scmTextLabelPixmapCeilingKiB)));
+}
+
 void T2DMap::drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect)
 {
     const QSize targetSize = paintRect.size().toSize();
-    if (!label.text.isEmpty() && !label.font.family().isEmpty() && fitsScaledLabelLimit(targetSize)) {
-        // Include the label's visual content in the cache key so that editing
-        // a label's text, font or colours (e.g. live-previewing from the
-        // create label dialog) invalidates the previously cached rendering:
-        const auto contentHash = qHash(
-                qsl("%1|%2|%3|%4|%5").arg(label.text, label.font.toString(), QString::number(label.fgColor.rgba()), QString::number(label.bgColor.rgba()), QString::number(label.outlineColor.rgba())));
-        const QString cacheKey = qsl("%1_%2_%3x%4_%5").arg(mAreaID).arg(labelKey).arg(targetSize.width()).arg(targetSize.height()).arg(contentHash);
-        if (!mTextLabelPixmapCache.contains(cacheKey)) {
-            addTextLabelToCache(cacheKey, label, targetSize);
+    if (fitsScaledLabelLimit(targetSize)) {
+        const LabelPixmapKey key{mAreaID, labelKey, targetSize};
+        const LabelPixmap* cached = mTextLabelPixmapCache.object(key);
+        if (!cached || !labelPixmapIsCurrent(*cached, label)) {
+            cached = addTextLabelToCache(key, label);
         }
-        if (auto* pix = mTextLabelPixmapCache.object(cacheKey)) {
-            painter.drawPixmap(position, *pix);
+        if (cached) {
+            mTextLabelPixmapFrameKiB += cached->costKiB;
+            painter.drawPixmap(position, cached->pixmap);
         } else {
-            qWarning("T2DMap::drawScaledLabel() ALERT: Cache lookup failed for label %d in area %d, using fallback", labelKey, mAreaID);
             drawPixmapScaledTo(painter, QRectF(position, QSizeF(targetSize)), label.pix);
         }
     } else {
@@ -2910,10 +2937,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
     }
 
     // Draw the ("background") labels that are on the bottom of the map:
+    startTextLabelFrame();
     QMutableMapIterator<int, TMapLabel> itMapLabel(pDrawnArea->mMapLabels);
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
-        auto mapLabel = itMapLabel.value();
+        TMapLabel& mapLabel = itMapLabel.value();
         if (mapLabel.pos.z() != mMapCenterZ) {
             continue;
         }
@@ -2940,7 +2968,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 painter.drawPixmap(labelPosition, mapLabel.pix);
                 mapLabel.clickSize = QSizeF(mapLabel.pix.width(), mapLabel.pix.height());
             }
-            pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
 
         if (mapLabel.highlight) {
@@ -3131,7 +3158,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     itMapLabel.toFront();
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
-        auto mapLabel = itMapLabel.value();
+        TMapLabel& mapLabel = itMapLabel.value();
 
         if (mapLabel.pos.z() != mMapCenterZ) {
             continue;
@@ -3159,7 +3186,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 painter.drawPixmap(labelPosition, mapLabel.pix);
                 mapLabel.clickSize = QSizeF(mapLabel.pix.width(), mapLabel.pix.height());
             }
-            pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
         if (mapLabel.highlight) {
             paintLabelHighlight(painter, labelPaintRectangle, mapLabel.clickSize);
