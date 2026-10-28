@@ -41,6 +41,7 @@
 #include <QList>
 #include <memory>
 #include <optional>
+#include <utility>
 
 class Host;
 class TArea;
@@ -446,8 +447,37 @@ private:
     QPointF snapPointToGrid(const QPointF& point) const;
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
-    inline void drawRoom(
-            QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const bool showRoomCollision);
+    // A highlight reaches over the rooms around it but stays under their symbols, ids, names and exit markers, so
+    // with one in view every room's body is drawn first, then the highlights, then everything else.
+    enum class RoomDrawPass { Whole, Body, Highlight, Labels };
+    inline void drawRoom(QPainter&,
+                         QFont&,
+                         QFont&,
+                         QPen&,
+                         TRoom*,
+                         const bool isGridMode,
+                         const bool areRoomIdsLegible,
+                         const bool showRoomNames,
+                         const int,
+                         const float,
+                         const float,
+                         const bool showRoomCollision,
+                         const RoomDrawPass pass = RoomDrawPass::Whole);
+    void drawRoomHighlightsAndLabels(QPainter&,
+                                     QFont& roomVNumFont,
+                                     QFont& mapNameFont,
+                                     QPen&,
+                                     const QList<QPair<TRoom*, QPointF>>& rooms,
+                                     const bool isGridMode,
+                                     const bool areRoomIdsLegible,
+                                     const bool showRoomNames,
+                                     const int speedWalkStartRoomId);
+    bool anyRoomHighlighted(const QList<int>& roomIds) const;
+    // A double-clicked room's speedwalk runs Lua, which may delete rooms, so it waits until no room is held for drawing
+    std::optional<std::pair<int, int>> mPendingSpeedWalk;
+    void startPendingSpeedWalk();
+    // The grid and reduced-detail loops draw their highlights before the player's room is drawn, so they put its body under them first
+    void drawPlayerRoomBody(QPainter&, TRoom* pPlayerRoom, const QPointF& roomCenter, const bool isGridMode, const bool showRoomCollision);
     // Batch rendering for large grid mode areas - draws rooms grouped by color
     void drawGridModeRooms(QPainter&,
                            const TArea* pDrawnArea,
@@ -462,6 +492,7 @@ private:
                            QFont& roomVNumFont,
                            bool& isPlayerRoomVisible,
                            QPointF& playerRoomOnWidgetCoordinates,
+                           bool& isPlayerRoomBodyDrawn,
                            bool areRoomIdsLegible,
                            QString* profileOutput = nullptr);
     // The non-grid room loop for zooms where a room is a few pixels across.
@@ -474,6 +505,7 @@ private:
                                  float widgetHeight,
                                  bool& isPlayerRoomVisible,
                                  QPointF& playerRoomOnWidgetCoordinates,
+                                 bool& isPlayerRoomBodyDrawn,
                                  QString* profileOutput = nullptr);
     QColor environmentColor(int environmentId) const;
     QSize lodRoomBlobSize() const;
