@@ -88,6 +88,13 @@ qreal usableSymbolFontFudgeFactor(const qreal fromFile)
     return qBound(TMap::scmMinimumSymbolFontFudgeFactor, fromFile, TMap::scmMaximumSymbolFontFudgeFactor);
 }
 
+// Not QFont::PreferNoShaping: Qt's unshaped text path treats Private Use Area
+// code points as unprintable, which blanks every symbol from an icon font.
+QFont::StyleStrategy symbolFontStyleStrategy(const bool onlySymbolFontUsed)
+{
+    return static_cast<QFont::StyleStrategy>((onlySymbolFontUsed ? QFont::NoFontMerging : 0) | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality);
+}
+
 enum class MapFileCheckResult { ValidMap, NotAMap, ParseError };
 
 struct MapFileCheck
@@ -2036,8 +2043,7 @@ bool TMap::restore(QString location)
             }
         }
 
-        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0) | QFont::PreferOutline | QFont::PreferAntialias
-                                                                          | QFont::PreferQuality | QFont::PreferNoShaping));
+        mMapSymbolFont.setStyleStrategy(symbolFontStyleStrategy(mIsOnlyMapSymbolFontToBeUsed));
         mMapSymbolFontFudgeFactor = usableSymbolFontFudgeFactor(mMapSymbolFontFudgeFactor);
         if (mVersion >= 14) {
             int areaSize = 0;
@@ -3957,8 +3963,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     mIsOnlyMapSymbolFontToBeUsed = isOnlyMapSymbolFontToBeUsed;
     QFont mapSymbolFont;
     mapSymbolFont.fromString(mapSymbolFontText);
-    mapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((isOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0) | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
-                                                                     | QFont::PreferNoShaping));
+    mapSymbolFont.setStyleStrategy(symbolFontStyleStrategy(isOnlyMapSymbolFontToBeUsed));
 
     mMapSymbolFont.swap(mapSymbolFont);
     mMapSymbolFontFudgeFactor = mapSymbolFontFudgeFactor;
