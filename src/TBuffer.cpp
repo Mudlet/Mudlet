@@ -49,6 +49,7 @@
 #include <QJsonValue>
 #include <QRegularExpression>
 #include <QTextBoundaryFinder>
+#include <QTextCodec>
 #include <QTime>
 #include <QTimer>
 #include <QUrlQuery>
@@ -797,6 +798,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mEncoding(other.mEncoding)
 , mDecoder(other.mDecoder)
 , mMultibyteDecoder(multibyteDecoderFor(other.mDecoder, other.mEncoding))
+, mLegacyMultibyteCodec(other.mLegacyMultibyteCodec)
 , mCurrentHyperlinkCommand(other.mCurrentHyperlinkCommand)
 , mCurrentHyperlinkHint(other.mCurrentHyperlinkHint)
 , mCurrentHyperlinkLinkId(other.mCurrentHyperlinkLinkId)
@@ -904,6 +906,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mEncoding = other.mEncoding;
         mDecoder = other.mDecoder;
         mMultibyteDecoder = multibyteDecoderFor(mDecoder, mEncoding);
+        mLegacyMultibyteCodec = other.mLegacyMultibyteCodec;
         mCurrentHyperlinkCommand = other.mCurrentHyperlinkCommand;
         mCurrentHyperlinkHint = other.mCurrentHyperlinkHint;
         mCurrentHyperlinkLinkId = other.mCurrentHyperlinkLinkId;
@@ -8132,7 +8135,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         // Try and convert two or four byte sequence to Unicode using Qts own
         // decoder - and check number of codepoints returned
 
-        QString codePoint;
+        QStringView codePoint;
         if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, gbSequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
@@ -8254,7 +8257,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
         // Try and convert two byte sequence to Unicode using Qts own
         // decoder - and check number of codepoints returned
 
-        QString codePoint;
+        QStringView codePoint;
         if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, big5SequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
@@ -8381,7 +8384,7 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
         // Try and convert two byte sequence to Unicode using Qts own
         // decoder - and check number of codepoints returned
 
-        QString codePoint;
+        QStringView codePoint;
         if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, eucSequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
@@ -8544,7 +8547,7 @@ bool TBuffer::processJapaneseSequence(const std::string& data, const bool isFrom
             return true;
         }
     }
-    QString decoded;
+    QStringView decoded;
     decodeMultibyteSequence(QByteArrayView(data.data() + position, count), decoded);
     if (decoded.isEmpty() || decoded.contains(QChar::ReplacementCharacter)) {
         mMudLine.append(QChar::ReplacementCharacter);
@@ -8745,18 +8748,26 @@ QStringDecoder TBuffer::multibyteDecoderFor(const Decoder decoder, const QByteAr
     }
 }
 
-// Falls back to TEncodingHelper (lookup tables, Qt5Compat codecs) for Qt builds without ICU
-bool TBuffer::decodeMultibyteSequence(QByteArrayView bytes, QString& decoded)
+// Falls back to a Qt5Compat codec for Qt builds without ICU
+bool TBuffer::decodeMultibyteSequence(QByteArrayView bytes, QStringView& decoded)
 {
     if (mMultibyteDecoder.isValid()) {
         mMultibyteDecoder.resetState();
-        decoded = mMultibyteDecoder.decode(bytes);
+        // Spares a QString allocation per character; callers pass at most four bytes
+        if (Q_LIKELY(mMultibyteDecoder.requiredSpace(bytes.size()) <= static_cast<qsizetype>(mMultibyteDecoded.size()))) {
+            const QChar* end = mMultibyteDecoder.appendToBuffer(mMultibyteDecoded.data(), bytes);
+            decoded = QStringView(mMultibyteDecoded.data(), end);
+        } else {
+            mMultibyteDecodedString = mMultibyteDecoder.decode(bytes);
+            decoded = mMultibyteDecodedString;
+        }
         return true;
     }
-    if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
+    if (!mLegacyMultibyteCodec) {
         return false;
     }
-    decoded = TEncodingHelper::decode(bytes.toByteArray(), mEncoding);
+    mMultibyteDecodedString = mLegacyMultibyteCodec->toUnicode(bytes.data(), static_cast<int>(bytes.size()));
+    decoded = mMultibyteDecodedString;
     return true;
 }
 
@@ -8766,7 +8777,11 @@ void TBuffer::encodingChanged(const QByteArray& newEncoding)
         mEncoding = newEncoding;
         mDecoder = decoderFor(mEncoding);
         mMultibyteDecoder = multibyteDecoderFor(mDecoder, mEncoding);
+        mLegacyMultibyteCodec = nullptr;
         if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR" || mEncoding == "SHIFT_JIS" || mEncoding == "EUC-JP") {
+            if (!mMultibyteDecoder.isValid()) {
+                mLegacyMultibyteCodec = TEncodingHelper::legacyCodec(mEncoding);
+            }
             if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";
             } else {

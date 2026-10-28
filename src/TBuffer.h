@@ -44,6 +44,7 @@
 #include <QVarLengthArray>
 #include <QVector>
 
+#include <array>
 #include <deque>
 #include <memory>
 #include <string>
@@ -54,6 +55,7 @@ class Host;
 class QJsonArray;
 class QJsonObject;
 class QRegularExpression;
+class QTextCodec;
 class QTimer;
 struct TConsoleModel;
 class THyperlinkVisibilityManager;
@@ -597,7 +599,7 @@ private:
     void endLocalFeedSequences();
     void appendReplacementCharacter(TChar);
     static QStringDecoder multibyteDecoderFor(Decoder, const QByteArray&);
-    bool decodeMultibyteSequence(QByteArrayView, QString&);
+    bool decodeMultibyteSequence(QByteArrayView, QStringView&);
     // Views into the string decodeSGR() was handed, so none may outlive that call.
     using SgrParameters = QVarLengthArray<QStringView, 12>;
     void decodeSGR(QStringView);
@@ -812,6 +814,11 @@ private:
     // Opening an ICU converter costs far more than decoding the one character
     // each processGBSequence() etc. call needs, so one is kept per encoding
     QStringDecoder mMultibyteDecoder;
+    // Qt builds without ICU have no such converter, only a Qt5Compat codec
+    QTextCodec* mLegacyMultibyteCodec = nullptr;
+    // decodeMultibyteSequence() points its caller here, so each result lasts until the next call
+    std::array<QChar, 8> mMultibyteDecoded;
+    QString mMultibyteDecodedString;
 
     // OSC 8 hyperlink tracking
     QStringList mCurrentHyperlinkCommand;
