@@ -37,7 +37,6 @@
 #include <QSharedPointer>
 #include <QString>
 #include <QStringList>
-#include <QStringMatcher>
 #include <QtGlobal>
 
 #define PCRE2_CODE_UNIT_WIDTH 8
@@ -77,6 +76,25 @@ struct TColorTable
     QRgb mBgRgba = 0;
     bool mFgValid = false;
     bool mBgValid = false;
+};
+
+// A case-sensitive search for one fixed text. It scans for the text's code unit that is rarest in game
+// output and tests the rarest unit unlike it before comparing the rest, so few starts get compared at
+// all. Case-sensitive as TBigramFilter::bitsFor() is: change one and the other must follow.
+class TNeedle
+{
+public:
+    explicit TNeedle(const QString& text);
+
+    const QString& pattern() const { return mText; }
+    // Where text first starts in haystack, or -1, as QStringMatcher answers. Read-only, so other
+    // threads may search with it.
+    qsizetype indexIn(QStringView haystack) const;
+
+private:
+    QString mText;
+    qsizetype mRarest = 0;
+    qsizetype mNextRarest = 1;
 };
 
 // A 256-bit Bloom filter over a line's adjacent character pairs: a substring pattern missing any of
@@ -245,12 +263,13 @@ public:
     bool dropsText() const
     {
         if (mDropsText < 0) {
-            mDropsText = mpLine && !mpLine->isValidUtf16();
+            mDropsText = mpLine && holdsUnpairedSurrogate(*mpLine);
         }
         return mDropsText;
     }
 
 private:
+    static bool holdsUnpairedSurrogate(const QString& line);
     void encode() const;
 
     const QString* const mpLine = nullptr;
@@ -566,7 +585,7 @@ private:
     // matcher is null for non-substring patterns; kept beside its bits so the two can't fall out of step
     struct TSubstringPattern
     {
-        std::unique_ptr<QStringMatcher> matcher;
+        std::unique_ptr<TNeedle> matcher;
         TBigramFilter::Bits bigrams;
     };
     // Indexed, not keyed, by pattern number: every line reaches these for every pattern of every trigger,
@@ -578,7 +597,7 @@ private:
     // that guarantees no text of two characters or more
     struct TRegexLiteral
     {
-        std::unique_ptr<QStringMatcher> matcher;
+        std::unique_ptr<TNeedle> matcher;
         TBigramFilter::Bits bigrams;
     };
     std::vector<TRegexLiteral> mRegexLiterals;
