@@ -48,16 +48,22 @@ every few lines. Without GA prompts svof's `getLines()` scans turn the replay qu
 keeps what svof reacts to and nothing else:
 
 - for every line it works out which of svof's patterns match: all of its triggers' patterns of every kind,
-  children where their parent lets them run, children of filter triggers on their captures, and the
-  triggers svof makes at runtime (its defences' messages, and strings it passes to temp triggers). Lua
-  patterns that read only the line are run; those that read svof's state are taken to match, and are
-  listed in the build's output;
+  children where their parent lets them run, children of filter triggers on their captures, the
+  triggers svof makes at runtime (its defences' messages, and strings it passes to temp triggers), and the
+  text its scripts search the lines since the prompt for. Lua patterns that read only the line are run;
+  those that read svof's state are taken to match, and are listed in the build's output;
 - a line becomes filler unless that changes which patterns match it: every letter is replaced with a
   letter of the same case, every digit with a digit, and spaces, punctuation, symbols, ANSI and telnet
-  bytes stay, so the trigger engine does the same shape of work. Most lines go this way;
-- in a line svof does match, a word stays only if filler in its place changes what matches. Real names
-  get a stand-in of the same length and case shape, the same one everywhere, other capitalised words a
-  stand-in of their own, and the rest is filler;
+  bytes stay, so the trigger engine does the same shape of work. The timings and illusion marks svof
+  appended when the log was recorded stay too. Most lines go this way;
+- in a line svof does match, svof's scripts read what its patterns match and capture, such as the herb in
+  an eating message, so there a number stays, and a word stays when it is in the vocabulary: the words of
+  svof's own package, and game words that are mostly lower case and appear in at least three different
+  svof-matched messages, which no name or one-off does. Elsewhere in the line a word stays only if filler
+  in its place changes what matches. Real names, and words outside the vocabulary that svof's patterns
+  capture, get a stand-in of the same length and case shape, the same one everywhere, so svof sees the
+  same names agree and differ as before; other capitalised words get a stand-in of their own, and the rest
+  is filler;
 - real names come from svof's name database (`--namedb`, by default `Database_namedb.db` beside the `svo`
   folder), the who-lists in the log (`qw`, `cwho` and svof's own), the player's name in GMCP and
   `--names`, one per line;
@@ -68,14 +74,25 @@ keeps what svof reacts to and nothing else:
 
 The build then audits its output and stops unless every line matches exactly the svof patterns it did
 before, no listed name is left in the corpus or the config in any case, and no run of four words from a
-line that became filler is left anywhere, other than svof's own text. It prints how many lines were kept
-and which svof triggers kept them; `--report <file>` writes every one with an example line, for a person
-to read through.
+line that became filler is left anywhere, other than in a line svof matches that needs every one of those
+words, to match or in the vocabulary in what it reads. It prints how many lines were kept, the size of the
+vocabulary, and which svof triggers kept them; `--report <file>` writes every one with an example line,
+for a person to read through.
 
-Filler changes some of what svof does as well as what it sees, because its scripts read text its patterns
-capture, such as the herb in an eating message. A run of a scrubbed package writes about 2,000 more lock
-warnings than its raw log's and fewer illusion marks, and in eight interleaved pairs it was up to 10% faster,
-4% at the median, so compare builds on the same package.
+A scrubbed package makes svof do what its raw log does. `fidelity.lua` checks this on one machine,
+from `run.sh` runs of both packages: it counts the lines svof adds, by kind, and its lock warnings, reading
+the scrub's stand-ins back to the words they replace, and fails any kind whose scrubbed median is further
+from the raw median than the raw runs' own spread. List the raw runs first:
+
+```bash
+lua5.1 fidelity.lua raw.mpackage SvofBench.mpackage raw1/result.txt raw2/result.txt ... -- scrubbed1/result.txt ...
+```
+
+Over 16 interleaved pairs, each run started while the rest of the machine was idle, every kind was within
+the raw spread: 2,322 added lines against a spread of 8, and 5,303 lock warnings against a spread of 86.
+The scrubbed runs took 1.004 times as long at the median and were faster in 7 of the 16 pairs; two batches
+of raw runs differ by as much (1.006). A scrub that fills in what svof's patterns capture fails it: one
+such package wrote 2,192 more lock warnings than its raw log.
 
 A package is held to the counts of a reference run in each mode, within its slack (see below). Build it,
 run it once in each mode you will use (the gate fails for want of a reference), then build again with the
@@ -131,10 +148,13 @@ The report ends with `gate pass`, or `gate FAIL:` and the reasons, and `run.sh` 
   manifest's;
 - `lines`, `game_lines` or `added_lines` is further from the package's reference run in that mode than
   the manifest's `slack`, or the package has no reference. `game_lines` counts the corpus's lines that came
-  through, once the timings and illusion marks svof appends are taken off; `added_lines` counts every other
-  line svof wrote, other than its lock warnings, which it repeats at every prompt while it thinks it is
-  locked, so their number swings by hundreds between runs. The slack, 42 lines, 12 game lines and 32
-  added lines in about 141,850, is twice the widest spread measured on one machine.
+  through, each as often as the corpus has it, once the timings and illusion marks svof appends are taken
+  off both. The log was recorded with svof, so it holds svof's own lines too, and these count only as often
+  as the log has them. `added_lines` counts every other line svof wrote, other than its lock warnings,
+  which it repeats at every prompt while it thinks it is locked, so their number swings by hundreds
+  between runs; `lock_lines` counts those. The slack, 36 lines, 18 game lines and 32 added lines in
+  about 141,840, is twice the widest spread measured on one machine. A heavily loaded machine can exceed
+  it: svof's timers fire late, and it tags more lines.
 
 ## Checking both builds did the same work
 
