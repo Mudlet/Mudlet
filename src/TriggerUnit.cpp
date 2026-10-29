@@ -757,17 +757,20 @@ void TriggerUnit::refreshRootNodeSnapshot()
             std::sort(mRootNodesRefiled.begin(), mRootNodesRefiled.end());
             mRootNodesRefiled.erase(std::unique(mRootNodesRefiled.begin(), mRootNodesRefiled.end()), mRootNodesRefiled.end());
         }
+        std::vector<quint64> grams;
         for (const int position : mRootNodesRefiled) {
             if (TTrigger* pT = snapshot.mNodes[position]) {
                 snapshot.mFilters[position] = pT->rootFilter();
-                snapshot.mPrescan.refileSlot(position, pT->prescanGrams());
+                pT->prescanGrams(grams);
+                snapshot.mPrescan.refileSlot(position, grams);
             }
         }
         for (TTrigger* pT : mRootNodesAppended) {
             pT->setRootSnapshotPosition(static_cast<int>(snapshot.mNodes.size()));
             snapshot.mNodes.push_back(pT);
             snapshot.mFilters.push_back(pT->rootFilter());
-            snapshot.mPrescan.appendSlot(pT->prescanGrams());
+            pT->prescanGrams(grams);
+            snapshot.mPrescan.appendSlot(grams);
         }
     } else {
         // Replace only a snapshot an outer pass has pinned; refilling an unpinned one avoids allocating
@@ -916,7 +919,9 @@ void TriggerUnit::processDataStream(const QString& data, int line)
 
     {
         const std::vector<TRootTriggerFilter>& pinnedFilters = pinnedSnapshot->mFilters;
-        const bool prescanActive = pinnedSnapshot->mPrescan.active();
+        // A perl pattern is filed under text it needs, which pcre2 looks for in the UTF-8: on a line that
+        // drops an unpaired surrogate, the UTF-8 holds text the line does not
+        const bool prescanActive = pinnedSnapshot->mPrescan.active() && !subject.dropsText();
         // Borrowed from the unit so that only a longer line than any before it
         // allocates, and moved out so a nested pass grows its own.
         std::vector<int> scratch;

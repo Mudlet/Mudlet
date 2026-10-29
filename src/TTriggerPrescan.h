@@ -32,9 +32,9 @@ class TTrigger;
 // Answers "which triggers could match this line?" without touching the triggers, so thousands of
 // plain-text patterns cost the line's length rather than the trigger count.
 //
-// A containment pattern (substring, start of line, exact) can only match a line holding all of its
-// n-grams, so each is filed under one of them and offered only to lines that have it. The test is
-// one-sided: it never hides a trigger that would match, and match() still decides every candidate.
+// A pattern can only match a line holding all the n-grams of the text its matches contain (see
+// TPatternLiteral), so each is filed under one of them and offered only to lines that have it. The test
+// is one-sided: it never hides a trigger that would match, and match() still decides every candidate.
 class TTriggerPrescan
 {
 public:
