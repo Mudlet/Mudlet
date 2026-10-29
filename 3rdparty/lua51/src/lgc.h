@@ -59,6 +59,7 @@
 #define VALUEWEAKBIT	4
 #define FIXEDBIT	5
 #define SFIXEDBIT	6
+#define WATCHBIT	7  /* MUDLET: see lua_watch() */
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
 
 
@@ -95,6 +96,17 @@
 
 #define luaC_objbarriert(L,t,o)  \
    { if (iswhite(obj2gco(o)) && isblack(obj2gco(t))) luaC_barrierback(L,t); }
+
+/* MUDLET: whether a store into table `h' under key `k' moves lua_watch()'s epoch */
+#define luaC_watchedstore(h,k) \
+  (testbit((h)->marked, WATCHBIT) || \
+   (ttisstring(k) && testbit(rawtsvalue(k)->tsv.marked, WATCHBIT)))
+
+#define luaC_watchstore(L,h,k) \
+  { if (luaC_watchedstore(h,k)) G(L)->watchepoch++; }
+
+#define luaC_watchtable(L,h) \
+  { if (testbit((h)->marked, WATCHBIT)) G(L)->watchepoch++; }
 
 LUAI_FUNC size_t luaC_separateudata (lua_State *L, int all);
 LUAI_FUNC void luaC_callGCTM (lua_State *L);

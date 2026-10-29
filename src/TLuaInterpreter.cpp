@@ -3846,15 +3846,21 @@ void TLuaInterpreter::takeBackMultiCaptureGroups(std::list<std::list<std::string
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList, const std::list<int>& posList)
 {
-    // Take back the storage clearCaptureGroups() parked, unless a nested pass is
-    // still holding it - assigning over the recycled std::strings reuses their
-    // buffers, which is worth having on a path that runs per trigger fire
-    if (mCaptureGroupList.empty()) {
-        mCaptureGroupList.swap(mSpareCaptureGroupList);
-        mCaptureGroupPosList.swap(mSpareCaptureGroupPosList);
+    mCaptureGroups.clear();
+    for (const auto& capture : captureList) {
+        mCaptureGroups.append(capture);
     }
-    mCaptureGroupList.assign(captureList.begin(), captureList.end());
     mCaptureGroupPosList.assign(posList.begin(), posList.end());
+    mCaptureGroupLengthList.clear();
+    mCaptureScopeOpen = true;
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::setCaptureGroups(const TCaptureGroups& captures, const std::vector<int>& positions)
+{
+    // Assigned over, so storage an earlier fire grew is reused
+    mCaptureGroups = captures;
+    mCaptureGroupPosList = positions;
     mCaptureGroupLengthList.clear();
     mCaptureScopeOpen = true;
 }
@@ -3908,7 +3914,13 @@ static void pushUnusedTable(lua_State* L, int& ref)
 // The table "matches" holds between dispatches
 void TLuaInterpreter::pushEmptyMatchesTable(lua_State* L)
 {
+    if (knows(scmEmptyMatchesUnused)) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mEmptyMatchesRef);
+        return;
+    }
     pushUnusedTable(L, mEmptyMatchesRef);
+    watch(L, -1);
+    learn(L, scmEmptyMatchesUnused);
 }
 
 // No documentation available in wiki - internal function
@@ -3921,10 +3933,8 @@ void TLuaInterpreter::installBetweenDispatchMultimatches(lua_State* L)
         lua_rawseti(L, LUA_REGISTRYINDEX, mSpareMultimatchesRef);
         mSpareMultimatchesSeen = false;
     }
-    if (globalPresent(L, LUA_GLOBALSINDEX, mMultimatchesKeyRef)) {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, mMultimatchesKeyRef);
-        lua_pushnil(L);
-        lua_rawset(L, LUA_GLOBALSINDEX);
+    if (globalHeld(L, mMultimatchesKeyRef, scmMultimatchesAbsent)) {
+        clearGlobal(L, mMultimatchesKeyRef, scmMultimatchesAbsent);
     }
     mMultimatchesPending = PendingMultimatches::Spare;
 }
@@ -3938,32 +3948,15 @@ void TLuaInterpreter::clearCaptureGroups()
     // what they hold
     const bool lazy = lazyGlobalsUsable(L);
 
-    if (mSpareCaptureGroupList.empty()) {
-        mSpareCaptureGroupList.swap(mCaptureGroupList);
-        mSpareCaptureGroupPosList.swap(mCaptureGroupPosList);
-        // A match-all trigger's /g loop accumulates every match on the line into
-        // one capture list, so what it parks scales with matches per line rather
-        // than with the pattern's group count. Past the cap the cost is the
-        // allocation this parking exists to save, never unbounded memory.
-        if (mSpareCaptureGroupList.size() > scmMaxParkedCaptures) {
-            mSpareCaptureGroupList.resize(scmMaxParkedCaptures);
-            mSpareCaptureGroupPosList.resize(scmMaxParkedCaptures);
-        }
-        // resize() down destroys the elements past the cap but keeps capacity()
-        if (mSpareCaptureGroupList.capacity() > scmMaxParkedCaptureSlack) {
-            mSpareCaptureGroupList.shrink_to_fit();
-        }
-        if (mSpareCaptureGroupPosList.capacity() > scmMaxParkedCaptureSlack) {
-            mSpareCaptureGroupPosList.shrink_to_fit();
-        }
-        for (auto& capture : mSpareCaptureGroupList) {
-            if (capture.capacity() > scmMaxParkedCaptureBytes) {
-                std::string().swap(capture);
-            }
-        }
-    }
-    mCaptureGroupList.clear();
+    // A match-all trigger's /g loop accumulates every match on the line into one
+    // fire, so what that leaves behind scales with matches per line rather than
+    // with the pattern's group count. Past the bound the cost is an allocation
+    // per such fire, never memory held for the rest of the session.
+    mCaptureGroups.clearAndTrim();
     mCaptureGroupPosList.clear();
+    if (mCaptureGroupPosList.capacity() > TCaptureGroups::scmMaxKeptCaptures) {
+        std::vector<int>().swap(mCaptureGroupPosList);
+    }
     mCaptureGroupLengthList.clear();
     mMultiCaptureGroupList.clear();
     mMultiCaptureGroupPosList.clear();
@@ -3977,7 +3970,10 @@ void TLuaInterpreter::clearCaptureGroups()
         pushEmptyMatchesTable(L);
         // Only now, as allocating the table can run a finaliser that reads it
         mMatchesPending = false;
+        const bool factsWereCurrent = factsCurrent();
         lua_rawset(L, LUA_GLOBALSINDEX);
+        keepFacts(factsWereCurrent);
+        forget(scmMatchesAbsent);
         installBetweenDispatchMultimatches(L);
     } else {
         pushEmptyMatchesTable(L);
@@ -4030,9 +4026,9 @@ int TLuaInterpreter::pushNestedDispatchState(const bool parkCommand)
     saved.captureScopeOpen = mCaptureScopeOpen;
     // Copies rather than moves: a script the dispatch runs before any pattern has
     // matched - a sysDataSendRequest handler, say - still reads these through
-    // selectCaptureGroup(), and setCaptureGroups() assigns over the vector left
-    // here, reusing its buffers exactly as it would have without the parking
-    saved.captureGroupList = mCaptureGroupList;
+    // selectCaptureGroup(), and setCaptureGroups() assigns over the storage left
+    // here, reusing its buffers
+    saved.captureGroups = mCaptureGroups;
     saved.captureGroupPosList = mCaptureGroupPosList;
     saved.captureGroupLengthList = mCaptureGroupLengthList;
     saved.multiCaptureGroupList = mMultiCaptureGroupList;
@@ -4082,7 +4078,7 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
     NestedDispatchState saved = std::move(mNestedDispatchStates.back());
     mNestedDispatchStates.pop_back();
 
-    mCaptureGroupList = std::move(saved.captureGroupList);
+    mCaptureGroups = std::move(saved.captureGroups);
     mCaptureGroupPosList = std::move(saved.captureGroupPosList);
     mCaptureGroupLengthList = std::move(saved.captureGroupLengthList);
     mMultiCaptureGroupList = std::move(saved.multiCaptureGroupList);
@@ -4188,29 +4184,25 @@ static void shiftCapturePositions(std::vector<int>& posList, NamedMatchesRanges&
     }
 }
 
-static int captureLength(const std::vector<std::string>& captureList, const std::vector<int>& replacedLengths, const std::size_t index)
+static int captureLength(const TCaptureGroups& captures, const std::vector<int>& replacedLengths, const std::size_t index)
 {
     if (index < replacedLengths.size() && replacedLengths[index] >= 0) {
         return replacedLengths[index];
     }
-    return QString::fromStdString(captureList[index]).size();
+    const std::string_view capture = captures[index];
+    return QString::fromUtf8(capture.data(), static_cast<qsizetype>(capture.size())).size();
 }
 
 int TLuaInterpreter::captureGroupLength(const std::size_t index) const
 {
-    return captureLength(mCaptureGroupList, mCaptureGroupLengthList, index);
+    return captureLength(mCaptureGroups, mCaptureGroupLengthList, index);
 }
 
 // The capture that was exactly the replaced text keeps its start and takes on the
 // replacement's length; shiftCapturePositions() would move its start instead, as
 // though the text had been inserted in front of it
-static void shiftCapturePositionsForReplace(const std::vector<std::string>& captureList,
-                                            std::vector<int>& posList,
-                                            std::vector<int>& lengthList,
-                                            NamedMatchesRanges& namedPosList,
-                                            const int x,
-                                            const int replacedLength,
-                                            const QString& replacement)
+static void shiftCapturePositionsForReplace(
+        const TCaptureGroups& captureList, std::vector<int>& posList, std::vector<int>& lengthList, NamedMatchesRanges& namedPosList, const int x, const int replacedLength, const QString& replacement)
 {
     const int delta = replacement.size() - replacedLength;
     const std::size_t count = std::min(posList.size(), captureList.size());
@@ -4247,9 +4239,9 @@ void TLuaInterpreter::adjustCaptureGroups(int x, int a)
 
 void TLuaInterpreter::adjustCaptureGroupsForReplace(int x, int replacedLength, const QString& replacement)
 {
-    shiftCapturePositionsForReplace(mCaptureGroupList, mCaptureGroupPosList, mCaptureGroupLengthList, mCapturedNameGroupsPosList, x, replacedLength, replacement);
+    shiftCapturePositionsForReplace(mCaptureGroups, mCaptureGroupPosList, mCaptureGroupLengthList, mCapturedNameGroupsPosList, x, replacedLength, replacement);
     for (auto& parked : mNestedDispatchStates) {
-        shiftCapturePositionsForReplace(parked.captureGroupList, parked.captureGroupPosList, parked.captureGroupLengthList, parked.capturedNameGroupsPosList, x, replacedLength, replacement);
+        shiftCapturePositionsForReplace(parked.captureGroups, parked.captureGroupPosList, parked.captureGroupLengthList, parked.capturedNameGroupsPosList, x, replacedLength, replacement);
     }
 }
 
@@ -4379,6 +4371,11 @@ void TLuaInterpreter::signalMXPEvent(const QString& type, const QMap<QString, QS
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setGMCPTable(QString& key, const QString& string_data)
 {
+    setGMCPTable(key, string_data.toUtf8());
+}
+
+void TLuaInterpreter::setGMCPTable(QString& key, const QByteArray& utf8Data)
+{
     lua_State* L = pGlobalLua;
     lua_getglobal(L, "gmcp"); //defined in Lua init
     if (!lua_istable(L, -1)) {
@@ -4392,7 +4389,7 @@ void TLuaInterpreter::setGMCPTable(QString& key, const QString& string_data)
             return;
         }
     }
-    parseJSON(key, string_data, QLatin1String("gmcp"));
+    parseJSON(key, utf8Data, QLatin1String("gmcp"));
 }
 
 // No documentation available in wiki - internal function
@@ -4431,11 +4428,11 @@ void TLuaInterpreter::setMSDPTable(QString& key, const QString& string_data)
         }
     }
 
-    parseJSON(key, string_data, QLatin1String("msdp"));
+    parseJSON(key, string_data.toUtf8(), QLatin1String("msdp"));
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const QString& protocol)
+void TLuaInterpreter::parseJSON(QString& key, const QByteArray& utf8Data, const QString& protocol)
 {
     // key is in format of Blah.Blah or Blah.Blah.Bleh - we want to push & pre-create the tables as appropriate
     const ScriptCallerScope callerScope(*this, false);
@@ -4487,8 +4484,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         qDebug() << "CRITICAL ERROR: json_to_value not defined";
         return;
     }
-    auto dataInUtf8 = string_data.toUtf8();
-    lua_pushlstring(L, dataInUtf8.constData(), dataInUtf8.length());
+    lua_pushlstring(L, utf8Data.constData(), utf8Data.length());
     const int error = lua_pcall(L, 1, 1, 0);
     if (!error) {
         // Top of stack should now contain the lua representation of json.
@@ -4561,23 +4557,23 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             // gmcp.Char.Vitals - all carrying the same frame, so only the event
             // the data actually arrived for prints it:
             const bool isDeepestToken = (k == total - 1);
-            TDebug(Qt::white, Qt::darkBlue, TDebug::Category::Protocol) << protocolEventLine(protocol, token, isDeepestToken ? string_data : QString()) >> &host;
+            TDebug(Qt::white, Qt::darkBlue, TDebug::Category::Protocol) << protocolEventLine(protocol, token, isDeepestToken ? QString::fromUtf8(utf8Data) : QString()) >> &host;
         }
         host.raiseEvent(event);
     }
     // auto-detect IRE composer
     if (tokenList.size() == 3 && tokenList.at(0).toLower() == "ire" && tokenList.at(1).toLower() == "composer" && tokenList.at(2).toLower() == "edit") {
-        handleIreComposerEdit(string_data);
+        handleIreComposerEdit(utf8Data);
     }
     lua_settop(L, callerStackTop);
 }
 
-void TLuaInterpreter::handleIreComposerEdit(const QString& jsonData)
+void TLuaInterpreter::handleIreComposerEdit(const QByteArray& jsonData)
 {
     Host& host = getHostFromLua(pGlobalLua);
 
     QJsonParseError parseError;
-    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData.toUtf8(), &parseError);
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData, &parseError);
 
     if (parseError.error != QJsonParseError::NoError) {
         qDebug() << "IRE Composer: JSON parse error:" << parseError.errorString();
@@ -4954,13 +4950,14 @@ void TLuaInterpreter::pushMatchesTable(lua_State* L)
     // are refused until it ends
     ++mCaptureBuildDepth;
     // presized, so filling it in does not rehash the table on the way up
-    lua_createtable(L, static_cast<int>(mCaptureGroupList.size()), static_cast<int>(mCapturedNameGroups.size()));
+    lua_createtable(L, static_cast<int>(mCaptureGroups.size()), static_cast<int>(mCapturedNameGroups.size()));
 
     // empty capture groups stay defined keys i.e. matches[emptyCapGroupNumber] = "" rather than nil
-    int i = 1; // Lua indexes start with 1 as a general convention
-    for (const auto& capture : mCaptureGroupList) {
-        lua_pushstring(L, capture.c_str());
-        lua_rawseti(L, -2, i++);
+    for (std::size_t i = 0; i < mCaptureGroups.size(); ++i) {
+        const std::string_view capture = mCaptureGroups[i];
+        // Cut at the first NUL, as scripts expect
+        lua_pushlstring(L, capture.data(), qstrnlen(capture.data(), capture.size()));
+        lua_rawseti(L, -2, static_cast<int>(i) + 1);
     }
     for (const auto& [name, capture] : mCapturedNameGroups) {
         lua_pushstring(L, name.toUtf8().constData());
@@ -5002,7 +4999,11 @@ void TLuaInterpreter::pushMultimatchesTable(lua_State* L)
 // globals metatable was handed out, which nothing a script does can - busted
 // hands it out around every spec file, so the specs covering the deferral need
 // it back. Puts the handlers on whatever metatable the globals table carries if
-// both slots are empty there. Returns whether the deferral is on.
+// both slots are empty there. Given true, also remakes a handler the collector
+// took, and turns the write barrier back on if barrierIntact() turned it off and
+// holds again. Returns whether the deferral
+// is on and, once installed, the barrier's state: "vouching", "off", or
+// "absent" with a Lua that has none.
 int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
 {
     if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
@@ -5015,6 +5016,35 @@ int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
         lua_pushboolean(L, false);
         return 1;
     }
+    const bool rearm = lua_toboolean(L, 1);
+    // For the specs after one that let the collector take a handler
+    if (rearm) {
+        for (const auto& [handlerRef, handler] : {std::pair{self->mIndexHandlerRef, &TLuaInterpreter::lazyGlobalsIndex}, std::pair{self->mNewindexHandlerRef, &TLuaInterpreter::lazyGlobalsNewindex}}) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, handlerRef);
+            const bool collected = lua_tocfunction(L, -1) != handler;
+            lua_pop(L, 1);
+            if (collected) {
+                lua_pushlightuserdata(L, self);
+                lua_pushcclosure(L, handler, 1);
+                lua_rawseti(L, LUA_REGISTRYINDEX, handlerRef);
+            }
+        }
+    }
+#if defined(MUDLET_LUA_WATCH)
+    // For the specs after one that turned the barrier off
+    if (rearm && !self->mLuaWriteEpoch && self->barrierIntact(L)) {
+        self->mLuaWriteEpoch = lua_watch(L, LUA_REGISTRYINDEX, 1);
+        for (const int keyRef : {self->mMatchesKeyRef, self->mMultimatchesKeyRef, self->mLineKeyRef}) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, keyRef);
+            lua_watch(L, -1, 1);
+            lua_pop(L, 1);
+        }
+        self->mFacts = 0;
+        if (self->mLuaWriteEpoch) {
+            self->mFactsEpoch = *self->mLuaWriteEpoch;
+        }
+    }
+#endif
     lua_rawgeti(L, LUA_REGISTRYINDEX, self->mGlobalsTableRef);
     if (lua_getmetatable(L, -1)) {
         self->restoreGlobalsHandlers(L, lua_gettop(L));
@@ -5024,7 +5054,12 @@ int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
     self->mGlobalsMetatableTouched = !armed;
     self->mGlobalsHandlersLinger = !armed;
     lua_pushboolean(L, armed);
-    return 1;
+#if defined(MUDLET_LUA_WATCH)
+    lua_pushstring(L, self->mLuaWriteEpoch && self->barrierIntact(L) ? "vouching" : "off");
+#else
+    lua_pushstring(L, "absent");
+#endif
+    return 2;
 }
 
 // No documentation available in wiki - internal function
@@ -5040,12 +5075,19 @@ bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L)
         }
         return false;
     }
+    if (knows(scmHandlersInPlace)) {
+        return true;
+    }
     if (lua_topointer(L, LUA_GLOBALSINDEX) != mGlobalsTable) {
         // setfenv(0, ...) gave the thread another globals table, which Mudlet
         // writes to from now on. Code compiled before still reads the original,
         // so whatever it is owed goes in there first.
         materialisePendingGlobals(L);
         return false;
+    }
+    if (mGlobalsHandlersVerified) {
+        mGlobalsHandlersTrusted = true;
+        return true;
     }
     if (!globalsHandlersInPlace(L)) {
         // The guard turns the deferral off for good once the metatable is
@@ -5059,6 +5101,9 @@ bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L)
         stripGlobalsHandlers(L);
         return false;
     }
+    // A script still running can change the metatable between two lines it feeds
+    mGlobalsHandlersVerified = mScriptCallDepth == 0;
+    learn(L, scmHandlersInPlace);
     return true;
 }
 
@@ -5099,6 +5144,8 @@ void TLuaInterpreter::standDownDeferral(lua_State* L)
 void TLuaInterpreter::stripGlobalsHandlers(lua_State* L)
 {
     mGlobalsHandlersLinger = false;
+    mGlobalsHandlersVerified = false;
+    mGlobalsHandlersTrusted = false;
     const int callerStackTop = lua_gettop(L);
     lua_rawgeti(L, LUA_REGISTRYINDEX, mGlobalsTableRef);
     if (!lua_getmetatable(L, -1)) {
@@ -5174,8 +5221,103 @@ bool TLuaInterpreter::globalsHandlersInPlace(lua_State* L)
     lua_rawgeti(L, LUA_REGISTRYINDEX, mNewindexKeyRef);
     lua_rawget(L, metatable);
     const bool inPlace = lua_tocfunction(L, -2) == &TLuaInterpreter::lazyGlobalsIndex && lua_tocfunction(L, -1) == &TLuaInterpreter::lazyGlobalsNewindex;
+    if (inPlace) {
+        // A metatable put on the globals table past the guard is not one the
+        // barrier was told about
+        watch(L, metatable);
+    }
     lua_pop(L, 3);
     return inPlace;
+}
+
+// No documentation available in wiki - internal function
+// Whether the global under the name at keyRef is there, which is not looked up
+// while the barrier vouches that it is still absent
+bool TLuaInterpreter::globalHeld(lua_State* L, const int keyRef, const quint8 absentFact)
+{
+    if (knows(absentFact)) {
+        return false;
+    }
+    const bool held = globalPresent(L, LUA_GLOBALSINDEX, keyRef);
+    if (!held) {
+        learn(L, absentFact);
+    }
+    return held;
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::clearGlobal(lua_State* L, const int keyRef, const quint8 absentFact)
+{
+    lua_rawgeti(L, LUA_REGISTRYINDEX, keyRef);
+    lua_pushnil(L);
+    const bool factsWereCurrent = factsCurrent();
+    lua_rawset(L, LUA_GLOBALSINDEX);
+    keepFacts(factsWereCurrent);
+    learn(L, absentFact);
+}
+
+// No documentation available in wiki - internal function
+// Call only right after checking the fact, or after a store that made it so,
+// with no Lua run since
+void TLuaInterpreter::learn(lua_State* L, const quint8 fact)
+{
+    if (!mLuaWriteEpoch) {
+        return;
+    }
+    if (*mLuaWriteEpoch != mFactsEpoch) {
+        if (!barrierIntact(L)) {
+            mLuaWriteEpoch = nullptr;
+            return;
+        }
+        mFactsEpoch = *mLuaWriteEpoch;
+        mFacts = 0;
+    }
+    mFacts |= fact;
+}
+
+// No documentation available in wiki - internal function
+// debug.getregistry() hands a script the slots Mudlet keeps the three names in,
+// and a name swapped in there is one the barrier does not watch. A script can
+// also make the registry or the globals metatable weak, and the collector clears
+// a weak table - a handler included - without any store the barrier counts.
+bool TLuaInterpreter::barrierIntact(lua_State* L)
+{
+#if defined(MUDLET_LUA_WATCH)
+    if (!lua_watch(L, LUA_REGISTRYINDEX, 1)) {
+        return false;
+    }
+#endif
+    if (lua_getmetatable(L, LUA_REGISTRYINDEX)) {
+        lua_pop(L, 1);
+        return false;
+    }
+    if (lua_getmetatable(L, LUA_GLOBALSINDEX)) {
+        const bool weakable = lua_getmetatable(L, -1);
+        lua_pop(L, weakable ? 2 : 1);
+        if (weakable) {
+            return false;
+        }
+    }
+    bool intact = true;
+    for (const auto& [keyRef, key] : {std::pair{mMatchesKeyRef, mMatchesKey}, std::pair{mMultimatchesKeyRef, mMultimatchesKey}, std::pair{mLineKeyRef, mLineKey}}) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, keyRef);
+        intact = intact && lua_type(L, -1) == LUA_TSTRING && lua_tostring(L, -1) == key;
+        lua_pop(L, 1);
+    }
+    return intact;
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::watch(lua_State* L, const int index)
+{
+#if defined(MUDLET_LUA_WATCH)
+    if (mLuaWriteEpoch) {
+        lua_watch(L, index, 1);
+    }
+#else
+    Q_UNUSED(L)
+    Q_UNUSED(index)
+#endif
 }
 
 // No documentation available in wiki - internal function
@@ -5184,20 +5326,16 @@ bool TLuaInterpreter::globalsHandlersInPlace(lua_State* L)
 void TLuaInterpreter::deferDispatchGlobals(lua_State* L, const MultimatchesSource source, const bool setsMatches)
 {
     // A name already left out can still hold what a script rawset() there
-    if (setsMatches && (!mMatchesPending || globalPresent(L, LUA_GLOBALSINDEX, mMatchesKeyRef))) {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, mMatchesKeyRef);
-        lua_pushnil(L);
-        lua_rawset(L, LUA_GLOBALSINDEX);
+    if (setsMatches && (!mMatchesPending || globalHeld(L, mMatchesKeyRef, scmMatchesAbsent))) {
+        clearGlobal(L, mMatchesKeyRef, scmMatchesAbsent);
         mMatchesPending = true;
     }
 
     if (source == MultimatchesSource::Untouched) {
         return;
     }
-    if (mMultimatchesPending == PendingMultimatches::None || globalPresent(L, LUA_GLOBALSINDEX, mMultimatchesKeyRef)) {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, mMultimatchesKeyRef);
-        lua_pushnil(L);
-        lua_rawset(L, LUA_GLOBALSINDEX);
+    if (mMultimatchesPending == PendingMultimatches::None || globalHeld(L, mMultimatchesKeyRef, scmMultimatchesAbsent)) {
+        clearGlobal(L, mMultimatchesKeyRef, scmMultimatchesAbsent);
     }
     mMultimatchesPending = PendingMultimatches::Captures;
 }
@@ -5331,14 +5469,19 @@ int TLuaInterpreter::lazyGlobalsIndex(lua_State* L)
     }
     lua_pushvalue(L, 2);
     lua_pushvalue(L, -2);
+    const bool factsWereCurrent = self->factsCurrent();
     lua_rawset(L, 1);
+    self->keepFacts(factsWereCurrent);
     // Only now: building the value can raise, and the next read has to find it
     // still owed
     if (wantsMatches) {
         self->mMatchesPending = false;
+        self->forget(scmMatchesAbsent);
     } else if (wantsLine) {
         self->mLinePending = false;
+        self->forget(scmLineAbsent);
     } else {
+        self->forget(scmMultimatchesAbsent);
         if (self->mMultimatchesPending == PendingMultimatches::Spare) {
             self->mSpareMultimatchesSeen = true;
         }
@@ -5358,16 +5501,21 @@ int TLuaInterpreter::lazyGlobalsNewindex(lua_State* L)
     lua_settop(L, 3);
     auto* self = static_cast<TLuaInterpreter*>(lua_touserdata(L, lua_upvalueindex(1)));
     const char* key = lua_type(L, 2) == LUA_TSTRING && lua_topointer(L, 1) == self->mGlobalsTable ? lua_tostring(L, 2) : nullptr;
+    const bool factsWereCurrent = self->factsCurrent();
     lua_rawset(L, 1);
     if (!key) {
         return 0;
     }
+    self->keepFacts(factsWereCurrent);
     if (key == self->mMatchesKey) {
         self->mMatchesPending = false;
+        self->forget(scmMatchesAbsent);
     } else if (key == self->mLineKey) {
         self->mLinePending = false;
+        self->forget(scmLineAbsent);
     } else if (key == self->mMultimatchesKey) {
         self->mMultimatchesPending = PendingMultimatches::None;
+        self->forget(scmMultimatchesAbsent);
     }
     return 0;
 }
@@ -5477,13 +5625,21 @@ void TLuaInterpreter::installLazyGlobals()
         const bool vacant = lua_isnil(L, -1) && lua_isnil(L, -2);
         lua_pop(L, 2);
         if (vacant) {
+#if defined(MUDLET_LUA_WATCH)
+            mLuaWriteEpoch = lua_watch(L, LUA_REGISTRYINDEX, 1);
+            lua_watch(L, -1, 1);
+            mFacts = 0;
+#endif
             lua_pushliteral(L, "matches");
+            watch(L, -1);
             mMatchesKey = lua_tostring(L, -1);
             mMatchesKeyRef = luaL_ref(L, LUA_REGISTRYINDEX);
             lua_pushliteral(L, "multimatches");
+            watch(L, -1);
             mMultimatchesKey = lua_tostring(L, -1);
             mMultimatchesKeyRef = luaL_ref(L, LUA_REGISTRYINDEX);
             lua_pushliteral(L, "line");
+            watch(L, -1);
             mLineKey = lua_tostring(L, -1);
             mLineKeyRef = luaL_ref(L, LUA_REGISTRYINDEX);
             lua_pushliteral(L, "__index");
@@ -5507,10 +5663,21 @@ void TLuaInterpreter::installLazyGlobals()
             if (mLazyCaptureGlobals) {
                 restoreGlobalsHandlers(L, lua_gettop(L));
             }
+#if defined(MUDLET_LUA_WATCH)
+            // mFactsEpoch is still the last Lua state's, which this one's
+            // counter could equal without barrierIntact() having been asked
+            if (mLuaWriteEpoch && barrierIntact(L)) {
+                mFactsEpoch = *mLuaWriteEpoch;
+            } else {
+                mLuaWriteEpoch = nullptr;
+            }
+#endif
 
             mGlobalsTable = lua_topointer(L, LUA_GLOBALSINDEX);
             mGlobalsMetatableTouched = false;
             mGlobalsHandlersLinger = false;
+            mGlobalsHandlersVerified = false;
+            mGlobalsHandlersTrusted = false;
             mLazyGlobalsInstalled = installGlobalsMetatableGuard(L, nullptr, "getmetatable", 0) && installGlobalsMetatableGuard(L, nullptr, "setmetatable", 1)
                                     && installGlobalsMetatableGuard(L, "debug", "getmetatable", 2) && installGlobalsMetatableGuard(L, "debug", "setmetatable", 3)
                                     && installGlobalsMetatableGuard(L, nullptr, "rawget", 4);
@@ -5556,10 +5723,14 @@ bool TLuaInterpreter::installGlobalsMetatableGuard(lua_State* L, const char* lib
 void TLuaInterpreter::forgetLazyGlobals()
 {
     mLazyGlobalsInstalled = false;
+    mLuaWriteEpoch = nullptr;
+    mFacts = 0;
     mGlobalsTable = nullptr;
     mGlobalsTableRef = LUA_NOREF;
     mGlobalsMetatableTouched = false;
     mGlobalsHandlersLinger = false;
+    mGlobalsHandlersVerified = false;
+    mGlobalsHandlersTrusted = false;
     mIndexHandlerRef = LUA_NOREF;
     mNewindexHandlerRef = LUA_NOREF;
     mCaptureScopeOpen = false;
@@ -5585,7 +5756,7 @@ void TLuaInterpreter::setMatches(lua_State* L, const MultimatchesSource source)
 {
     // "matches" changes only for a fire with captures, and never for a multiline
     // trigger's, which is handed "multimatches" instead
-    const bool setsMatches = source == MultimatchesSource::Untouched && !mCaptureGroupList.empty();
+    const bool setsMatches = source == MultimatchesSource::Untouched && !mCaptureGroups.empty();
     if (mCaptureScopeOpen && lazyGlobalsUsable(L)) {
         deferDispatchGlobals(L, source, setsMatches);
         return;
@@ -5604,7 +5775,7 @@ void TLuaInterpreter::setMatches(lua_State* L, const MultimatchesSource source)
 }
 
 // No documentation available in wiki - internal function
-bool TLuaInterpreter::call_luafunction(void* pT, const QString& itemName, const bool aliasScript)
+bool TLuaInterpreter::call_luafunction(const int functionRef, const QString& itemName, const bool aliasScript)
 {
     const ScriptCallerScope callerScope(*this, aliasScript);
     QElapsedTimer executionTimer;
@@ -5615,8 +5786,7 @@ bool TLuaInterpreter::call_luafunction(void* pT, const QString& itemName, const 
 
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
-    lua_pushlightuserdata(L, pT);
-    lua_gettable(L, LUA_REGISTRYINDEX);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, functionRef);
     if (lua_isfunction(L, -1)) {
         setMatches(L);
         // A multiline trigger's Lua function gets multimatches just as its script would
@@ -5658,12 +5828,13 @@ bool TLuaInterpreter::call_luafunction(void* pT, const QString& itemName, const 
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::delete_luafunction(void* pT)
+void TLuaInterpreter::delete_luafunction(int& functionRef)
 {
-    lua_State* L = pGlobalLua;
-    lua_pushlightuserdata(L, pT);
-    lua_pushnil(L);
-    lua_rawset(L, LUA_REGISTRYINDEX);
+    // luaL_unref() of 0 would empty the registry's free list
+    if (functionRef > 0) {
+        luaL_unref(pGlobalLua, LUA_REGISTRYINDEX, functionRef);
+    }
+    functionRef = 0;
 }
 
 // No documentation available in wiki - internal function
@@ -5684,7 +5855,7 @@ void TLuaInterpreter::delete_luafunction(const QString& name)
 // No documentation available in wiki - internal function
 // returns true if function ran without errors
 // as well as the boolean return value from the function
-std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT, const QString& itemName)
+std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(const int functionRef, const QString& itemName)
 {
     const ScriptCallerScope callerScope(*this, false);
     QElapsedTimer executionTimer;
@@ -5696,8 +5867,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT, const
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
 
-    lua_pushlightuserdata(L, pT);
-    lua_gettable(L, LUA_REGISTRYINDEX);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, functionRef);
     bool returnValue = false;
 
     if (lua_isfunction(L, -1)) {
@@ -6751,10 +6921,8 @@ void TLuaInterpreter::setLineGlobal(const QString& line)
     // Tested for first: nothing can see the name once it holds nil either way,
     // but rawsetting one that is not there still has Lua make a node for it,
     // and on a globals table with no node to spare that is a rehash of all of it
-    if (globalPresent(L, LUA_GLOBALSINDEX, mLineKeyRef)) {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, mLineKeyRef);
-        lua_pushnil(L);
-        lua_rawset(L, LUA_GLOBALSINDEX);
+    if (globalHeld(L, mLineKeyRef, scmLineAbsent)) {
+        clearGlobal(L, mLineKeyRef, scmLineAbsent);
     }
     mPendingLine = line;
     mLinePending = true;
@@ -6777,6 +6945,7 @@ QString TLuaInterpreter::getLuaString(const QString& stringName)
     if (!pGlobalLua) {
         return QString();
     }
+    const ScriptCallerScope callerScope(*this, false);
     lua_State* L = pGlobalLua;
     const int top = lua_gettop(L);
 
@@ -6929,6 +7098,9 @@ void TLuaInterpreter::initLuaGlobals()
         lua_close(pGlobalLua);
         mClosingGlobalLua = false;
         forgetLazyGlobals();
+        // Only now: Lua run after the reset removed the temp items, and __gc finalisers the close ran,
+        // can have made new ones
+        mpHost->forgetLuaFunctionRefs();
     }
 
     pGlobalLua = newstate();

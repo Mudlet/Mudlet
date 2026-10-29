@@ -109,6 +109,7 @@ set(mudlet_SRCS
     THyperlinkSelectionManager.cpp
     THyperlinkVisibilityManager.cpp
     TimerUnit.cpp
+    TIngestPipeline.cpp
     TIrcClient.cpp
     TKey.cpp
     TLabelModel.cpp
@@ -420,6 +421,7 @@ set(mudlet_HDRS
     THyperlinkStyling.h
     THyperlinkVisibilityManager.h
     TimerUnit.h
+    TIngestPipeline.h
     TIrcClient.h
     TKey.h
     TLabelModel.h

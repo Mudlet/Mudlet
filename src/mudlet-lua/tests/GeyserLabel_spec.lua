@@ -1,3 +1,24 @@
+-- deleteLabel() leaves the widget to a deferred delete that cannot run until the
+-- whole suite is over, so its callbacks, and the labels they hold, are let go here.
+-- The setters are taken before any spec spies on them.
+local realDeleteLabel
+setup(function()
+  local globals = package.loaded._G
+  realDeleteLabel = globals.deleteLabel
+  local clearers = {globals.setLabelClickCallback, globals.setLabelDoubleClickCallback, globals.setLabelReleaseCallback,
+                    globals.setLabelMoveCallback, globals.setLabelWheelCallback, globals.setLabelOnEnter, globals.setLabelOnLeave}
+  globals.deleteLabel = function(name, ...)
+    for _, clear in ipairs(clearers) do
+      pcall(clear, name, nil)
+    end
+    return realDeleteLabel(name, ...)
+  end
+end)
+
+teardown(function()
+  package.loaded._G.deleteLabel = realDeleteLabel
+end)
+
 describe("Tests functionality of Geyser.Label", function()
   describe('Tests that decho/hecho/cecho preserve font size', function()
     local label
@@ -22,6 +43,12 @@ describe("Tests functionality of Geyser.Label", function()
       _G.echo:revert()
       if label then
         label:hide()
+      end
+    end)
+
+    teardown(function()
+      if label then
+        label:delete()
       end
     end)
 
@@ -357,7 +384,7 @@ describe("Tests functionality of Geyser.Label", function()
       end)
 
       teardown(function()
-        label:hide()
+        label:delete()
       end)
 
       -- Geyser.Label:new always echoes an empty rich-text div, so the hint has to
@@ -3260,7 +3287,12 @@ end)
 describe("Tests a Geyser.Label right click menu in a user window deleted behind Geyser's back", function()
   it("does not ask getUserWindowSize about the window that is gone", function()
     local userWindow = Geyser.UserWindow:new({name = "glGoneUW", x = 10, y = 20, width = 200, height = 150})
+    local sizeSpy
+    -- one finally() only: a second one replaces the first
     finally(function()
+      if sizeSpy then
+        sizeSpy:revert()
+      end
       if Geyser.Label.closeAllTimer then
         killTimer(Geyser.Label.closeAllTimer)
         Geyser.Label.closeAllTimer = nil
@@ -3270,8 +3302,7 @@ describe("Tests a Geyser.Label right click menu in a user window deleted behind 
     local label = Geyser.Label:new({name = "glGoneUWLabel", x = 0, y = 0, width = 50, height = 20}, userWindow)
     label:createRightClickMenu({MenuItems = {"First"}})
     deleteMiniConsole("glGoneUW")
-    local sizeSpy = spy.on(_G, "getUserWindowSize")
-    finally(function() sizeSpy:revert() end)
+    sizeSpy = spy.on(_G, "getUserWindowSize")
     label:onRightClick({button = "RightButton", buttons = {"RightButton"}, x = 1, y = 1, globalX = 1, globalY = 1})
     assert.spy(sizeSpy).was_not_called()
   end)

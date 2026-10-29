@@ -46,6 +46,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <QCoreApplication>
 
@@ -350,26 +351,50 @@ public:
     bool compileScript();
     bool match(const TUtf8Subject& subject, const QString&, int line, int posOffset = 0, const TBigramFilter* pLineBigrams = nullptr, bool haystackIsCapture = false);
     // Runs only the patterns that are a pure function of the line, just far enough for yes or no.
-    // Called from helper threads, so it writes nothing shared: PCRE2 match data and the regexSearches
-    // tally are the caller's own. Answers yes to anything it cannot decide, so false is a promise and
-    // true only a maybe. The main thread must have called lineBigrams.prepareForSharing().
+    // Called from helper threads, so it writes only this trigger's own prescan fields and regex match data,
+    // which no other thread touches until the batch is joined, plus the caller's scratch and tallies. A
+    // regex that matches leaves its result for match_perl() to take instead of searching again. Answers
+    // yes to anything it cannot decide, so false is a promise and true only a maybe. The main thread must
+    // have called lineBigrams.prepareForSharing().
     // lineDropsText is the line's TUtf8Subject::dropsText(), asked on the main thread as it is cached
     // lazily; it gates match_perl()'s literal pre-check, which only holds while the UTF-8 and the
     // QString carry the same text.
-    bool prescanMayFire(const char* haystackC, int haystackCLength, const QString& haystack, const TBigramFilter& lineBigrams, bool lineDropsText, pcre2_match_data* scratch, int& regexSearches) const;
+    bool prescanMayFire(const char* haystackC,
+                        int haystackCLength,
+                        const QString& haystack,
+                        const TBigramFilter& lineBigrams,
+                        bool lineDropsText,
+                        pcre2_match_data* scratch,
+                        int& regexSearches,
+                        int& regexMatches);
+    // Main thread, before a prescan: a helper copies a match into mMatchData for match_perl() to reuse, and
+    // cannot allocate it there itself.
+    void createPrescanMatchData();
     // Regex searches match() has run on the main thread across all profiles, counting only those a
     // prescan could have run instead (not a multiline trigger's). Read before and after a pass to cost it.
     static quint64 regexSearches() { return smRegexSearches; }
+    // Of those, the ones that found a match
+    static quint64 regexMatches() { return smRegexMatches; }
+    // Regex matches match_perl() took from a prescan instead of searching for again
+    static quint64 prescanMatchesReused() { return smPrescanMatchesReused; }
     // Written from a worker thread, and only for a trigger no other worker is holding.
     void setPrescanVerdict(const quint32 passId, const bool mayFire)
     {
         mPrescanPassId = passId;
         mPrescanMayFire = mayFire;
     }
-    // Which pass's verdicts match() believes. Zero while no prescan is in force, which is also an
-    // untouched trigger's id, so a trigger the prescan never visited is never mistaken for one it cleared.
+    // Which pass's verdicts match() believes, and the UTF-8 subject whose matches match_perl() may reuse.
+    // Zero and null while no prescan is in force; zero is also an untouched trigger's id, so a trigger the
+    // prescan never visited is never mistaken for one it cleared.
     static quint32 prescanPassId() { return smPrescanPassId; }
-    static void setPrescanPassId(const quint32 id) { smPrescanPassId = id; }
+    static const char* prescanSubject() { return smPrescanSubject; }
+    static int prescanSubjectLength() { return smPrescanSubjectLength; }
+    static void setPrescanPass(const quint32 id, const char* subject, const int subjectLength)
+    {
+        smPrescanPassId = id;
+        smPrescanSubject = subject;
+        smPrescanSubjectLength = subjectLength;
+    }
     // Zero is skipped on wrap so it keeps meaning "no prescan in force".
     static quint32 nextPrescanPassId()
     {
@@ -526,6 +551,8 @@ public:
     // specifies whenever the payload is Lua code as a string
     // or a function
     bool mRegisteredAnonymousLuaFunction = false;
+    // 0 when no function is held; luaL_ref() never returns 0
+    int mLuaFunctionRef = 0;
     bool mIsNew = true;
 
     int getExpiryCount() const;
@@ -547,13 +574,15 @@ public:
 
 
 private:
+    pcre2_match_data* matchDataFor(int patternNumber);
+    int search(int patternNumber, const char* subject, int subjectLength, pcre2_match_data* matchData) const;
     TTrigger() = default;
 
-    inline void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
+    inline void updateMultistates(int regexNumber, const TCaptureGroups& captureList, const std::vector<int>& posList, const NameGroupMatches* nameMatches = nullptr);
     void enterChildren(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams, bool haystackIsCapture, bool& conditionMet);
     void noteOpen();
-    inline void filter(std::string&, int&, int lineNumber, bool positionsInCurrentColumns);
-    bool selectTextMatch(int lineNumber, int from, const std::string& capture) const;
+    inline void filter(std::string_view capture, int posOffset, int lineNumber, bool positionsInCurrentColumns);
+    bool selectTextMatch(int lineNumber, int from, std::string_view capture) const;
     void processExactMatch(int patternNumber, int posOffset, int lineNumber);
     void processRegexMatch(const char* haystackC,
                            const QString& haystack,
@@ -566,12 +595,12 @@ private:
                            int lineNumber);
     void processBeginOfLine(int patternNumber, int posOffset, int lineNumber);
     void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where, int lineNumber);
-    void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList, int lineNumber);
+    void processColorPattern(int patternNumber, const TCaptureGroups& captureList, const std::vector<int>& posList, int lineNumber);
     void processPromptMatch(int patternNumber);
     bool fireReachesLua() const;
     bool playsSound() const;
-    void executeWithCaptures(const std::list<std::string>& captureList,
-                             const std::list<int>& posList,
+    void executeWithCaptures(const TCaptureGroups& captureList,
+                             const std::vector<int>& posList,
                              int lineNumber,
                              const NameGroupMatches* nameGroups = nullptr,
                              const QMap<QString, QPair<int, int>>* namePositions = nullptr);
@@ -623,10 +652,11 @@ private:
     bool mIsMultiline = false;
     int mConditionLineDelta = 0;
     QString mCommand;
-    // Key is the raw address of the owned TMatchState — stable once inserted and
-    // used for O(1) lookup during the deferred-removal pass in match(). The map
-    // is the sole owner; the raw pointer is never passed out as an observer.
+    // Keyed by each state's own address, which it keeps through extract() and reinsertion;
+    // the raw pointer is never passed out as an observer.
     std::map<TMatchState*, std::unique_ptr<TMatchState>> mConditionMap;
+    // A completed or expired state, recycle()d in its map node, for the next state this trigger opens
+    std::map<TMatchState*, std::unique_ptr<TMatchState>>::node_type mSpareCondition;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;
     TLuaInterpreter* mpLua;
@@ -643,12 +673,21 @@ private:
     int mSameLineGeneration = 0;
     static quint64 smStructureGeneration;
     static quint64 smRegexSearches;
+    static quint64 smRegexMatches;
+    static quint64 smPrescanMatchesReused;
     static quint32 smPrescanPassId;
     static quint32 smPrescanPassIdCounter;
+    // A match the prescan left behind is only good for the bytes it was found in
+    static const char* smPrescanSubject;
+    static int smPrescanSubjectLength;
     static quint32 smLineStamp;
     static int smPassDepth;
     quint32 mPrescanPassId = 0;
     bool mPrescanMayFire = true;
+    // The regex pattern the prescan found a match for under mPrescanPassId, -1 for none or once taken, and
+    // pcre2's return for it; the match itself is in mMatchData
+    int mPrescanMatchedPattern = -1;
+    int mPrescanMatchRc = 0;
 };
 
 #ifndef QT_NO_DEBUG_STREAM

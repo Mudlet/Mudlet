@@ -61,6 +61,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "ExitAppearance.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
@@ -296,15 +297,15 @@ private:
         return areaId;
     }
 
-    // Antialiasing is off so that a pen thinner than a pixel lands as a solid
+    // Antialiasing is off by default so that a pen thinner than a pixel lands as a solid
     // hairline of its own colour rather than a few per cent of it, which no
     // channel-order test could tell from the background.
-    T2DMap* prepareWidget(const int areaId, const double zoom, const double roomSize, const double borderSize, const double lineSize = 10.0)
+    T2DMap* prepareWidget(const int areaId, const double zoom, const double roomSize, const double borderSize, const double lineSize = 10.0, const bool antialias = false)
     {
         mpHost->mRoomSize = roomSize;
         mpHost->mRoomBorderSize = borderSize;
         mpHost->mLineSize = lineSize;
-        mpHost->mMapperUseAntiAlias = false;
+        mpHost->mMapperUseAntiAlias = antialias;
         mpHost->mMapperShowGrid = false;
         mpHost->mMapperShowRoomBorders = false;
         mpHost->mMapperCenterSmallAreas = false;
@@ -364,9 +365,10 @@ private:
         return false;
     }
 
-    static QImage renderFrame(T2DMap* p2dMap)
+    static QImage renderFrame(T2DMap* p2dMap, const qreal devicePixelRatio = 1.0)
     {
-        QPixmap target(kWidgetWidth, kWidgetHeight);
+        QPixmap target(qRound(kWidgetWidth * devicePixelRatio), qRound(kWidgetHeight * devicePixelRatio));
+        target.setDevicePixelRatio(devicePixelRatio);
         target.fill(Qt::black);
         p2dMap->render(&target, QPoint(), QRegion(), QWidget::DrawWindowBackground);
         return target.toImage();
@@ -1555,6 +1557,125 @@ private slots:
         if (borderPixelsInsideTier != 0) {
             QFAIL(qPrintable(qsl("a room drawn inside the reduced tier still had its border, so the tier was never entered - %1 pixels of the border colour, frame at %2")
                                      .arg(QString::number(borderPixelsInsideTier), saveFrame(insideTier, qsl("inside-tier")))));
+        }
+    }
+
+    // Exit markers take their outline pen from the painter as the room left
+    // it, so a room drawn with a border has to hand its pen back afterwards.
+    void test_aBorderedRoomKeepsTheOutlineOfItsExitMarker()
+    {
+        const int areaId = freshArea(qsl("Bordered Marker Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(1, areaId, 0, 0, kEnvRoom));
+        TRoom* pRoom = map()->mpRoomDB->getRoom(1);
+        QVERIFY(pRoom);
+        pRoom->mBorderColor = borderColour();
+        pRoom->setExitStub(DIR_UP, true);
+
+        T2DMap* p2dMap = prepareWidget(areaId, kZoomFortyPixelRooms, 1.0, 10.0);
+        QVERIFY(p2dMap);
+        const QImage frame = renderFrame(p2dMap);
+
+        QRect room;
+        for (int y = 0; y < frame.height(); ++y) {
+            for (int x = 0; x < frame.width(); ++x) {
+                if (frame.pixel(x, y) == roomColour().rgb()) {
+                    room |= QRect(x, y, 1, 1);
+                }
+            }
+        }
+        QVERIFY2(room.width() > 20, qPrintable(qsl("the room was not drawn at full detail, frame saved at %1").arg(saveFrame(frame, qsl("bordered-marker")))));
+
+        // A stub is filled with a cross-hatch, which never runs more than a
+        // couple of pixels along a row; the outline of its base runs across
+        // most of the marker.
+        const QRgb markerColour = ExitAppearance::contrastColor(roomColour()).rgb();
+        int longestRun = 0;
+        for (int y = room.top(); y <= room.bottom(); ++y) {
+            int run = 0;
+            for (int x = room.left(); x <= room.right(); ++x) {
+                run = (frame.pixel(x, y) == markerColour) ? run + 1 : 0;
+                longestRun = qMax(longestRun, run);
+            }
+        }
+        if (longestRun < room.width() / 3) {
+            QFAIL(qPrintable(qsl("the up marker lost its outline - its longest run along a row is %1 pixels in a room %2 across, frame saved at %3")
+                                     .arg(QString::number(longestRun), QString::number(room.width()), saveFrame(frame, qsl("bordered-marker")))));
+        }
+    }
+
+    void test_aRoomBorderRunsUnbrokenRoundTheRoom_data()
+    {
+        QTest::addColumn<bool>("antialias");
+        QTest::addColumn<double>("borderSize");
+        QTest::addColumn<qreal>("devicePixelRatio");
+
+        // A room 21.2 pixels across, so its edges fall between pixels
+        QTest::newRow("one pixel, antialiased") << true << 40.0 << 1.0;
+        QTest::newRow("four pixels, antialiased") << true << 5.0 << 1.0;
+        QTest::newRow("one pixel, aliased") << false << 40.0 << 1.0;
+        QTest::newRow("four pixels, aliased") << false << 5.0 << 1.0;
+        // One logical pixel, but two on the device, as on a HiDPI screen
+        QTest::newRow("one pixel, antialiased, double density") << true << 40.0 << 2.0;
+    }
+
+    void test_aRoomBorderRunsUnbrokenRoundTheRoom()
+    {
+        QFETCH(bool, antialias);
+        QFETCH(double, borderSize);
+        QFETCH(qreal, devicePixelRatio);
+        const int areaId = freshArea(qsl("Bordered Room Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(1, areaId, 0, 0, kEnvRoom));
+        TRoom* pRoom = map()->mpRoomDB->getRoom(1);
+        QVERIFY(pRoom);
+        pRoom->mBorderColor = borderColour();
+
+        T2DMap* p2dMap = prepareWidget(areaId, kZoomFortyPixelRooms, 0.53, borderSize, 10.0, antialias);
+        QVERIFY(p2dMap);
+        const QImage frame = renderFrame(p2dMap, devicePixelRatio);
+
+        QRect room;
+        for (int y = 0; y < frame.height(); ++y) {
+            for (int x = 0; x < frame.width(); ++x) {
+                if (frame.pixel(x, y) == roomColour().rgb()) {
+                    room |= QRect(x, y, 1, 1);
+                }
+            }
+        }
+        QVERIFY2(room.width() > 15, qPrintable(qsl("the room was not drawn at full detail, frame saved at %1").arg(saveFrame(frame, qsl("bordered-room")))));
+
+        const auto borderPixels = [&frame](const QRect& band) {
+            int count = 0;
+            for (int y = band.top(); y <= band.bottom(); ++y) {
+                for (int x = band.left(); x <= band.right(); ++x) {
+                    count += isScaledFrom(frame.pixelColor(x, y), borderColour()) ? 1 : 0;
+                }
+            }
+            return count;
+        };
+        const QRect sides[] = {QRect(room.left(), room.top() - 6, room.width(), 6),
+                               QRect(room.left(), room.bottom() + 1, room.width(), 6),
+                               QRect(room.left() - 6, room.top(), 6, room.height()),
+                               QRect(room.right() + 1, room.top(), 6, room.height())};
+        for (const QRect& side : sides) {
+            if (borderPixels(side) < room.width() - 2) {
+                QFAIL(qPrintable(qsl("a side of the border is missing - %1 border pixels beside a room %2 across, frame saved at %3")
+                                         .arg(QString::number(borderPixels(side)), QString::number(room.width()), saveFrame(frame, qsl("bordered-room")))));
+            }
+        }
+
+        if (borderSize < 10.0 || devicePixelRatio > 1.0) {
+            // Two columns in from the room, every pixel down the side is wholly
+            // border, the corners included: a fill split into pieces that meet
+            // between pixels lets the background through where they join.
+            const int x = room.left() - 2;
+            for (int y = room.top() - 2; y <= room.bottom() + 2; ++y) {
+                if (frame.pixel(x, y) != borderColour().rgb()) {
+                    QFAIL(qPrintable(qsl("the border is broken at %1,%2 by %3, frame saved at %4")
+                                             .arg(QString::number(x), QString::number(y), frame.pixelColor(x, y).name(), saveFrame(frame, qsl("bordered-room")))));
+                }
+            }
         }
     }
 

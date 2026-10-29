@@ -2828,7 +2828,7 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
         }
         // We want capture groups to start with 1 instead of 0 so predecrement
         // luaNumOfMatch :
-        if (--captureGroup < static_cast<int>(pL->mCaptureGroupList.size())) {
+        if (--captureGroup < static_cast<int>(pL->mCaptureGroups.size())) {
             const auto offset = static_cast<std::size_t>(captureGroup);
             begin = pL->mCaptureGroupPosList[offset];
             length = pL->captureGroupLength(offset);

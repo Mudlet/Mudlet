@@ -91,6 +91,8 @@ typedef struct global_State {
   UpVal uvhead;  /* head of double-linked list of all open upvalues */
   struct Table *mt[NUM_TAGS];  /* metatables for basic types */
   TString *tmname[TM_N];  /* array with tag-method names */
+  lu_mem watchepoch;  /* MUDLET: see lua_watch() */
+  lu_byte watchblind;  /* MUDLET: see lua_watch() */
 } global_State;
 
 

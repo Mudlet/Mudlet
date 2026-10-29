@@ -61,9 +61,11 @@
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QSslError>
+#include <QStringDecoder>
 #include <QtGlobal>
 
 #include <array>
+#include <cstring>
 #include <memory>
 #include <utility>
 
@@ -1861,7 +1863,29 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
             return tr("[ WARN ]  - Tried to send hidden input to the game, but it is unlikely to understand it.");
         };
         if (!mEncoding.isEmpty()) {
-            if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
+            if (mSendConvertersEncoding != mEncoding) {
+                openSendConverters();
+            }
+            if (mSendEncodingAvailable && mSendEncoder.isValid()) {
+                mSendEncoder.resetState();
+                const QByteArray encoded = mSendEncoder.encode(data);
+                bool encodable = !mSendEncoder.hasError();
+                // The round trip catches what the ICU codecs silently replace with '?', as TEncodingHelper::canEncode() does
+                if (encodable && !mEncodingWarningIssued) {
+                    mSendRoundTripDecoder.resetState();
+                    encodable = mSendRoundTripDecoder.isValid() && mSendRoundTripDecoder.decode(encoded) == data;
+                }
+                if (!encodable && !mEncodingWarningIssued) {
+                    postMessage(encodingWarning());
+                    mEncodingWarningIssued = true;
+                }
+                if (mSendEncoder.hasError()) {
+                    // resetState() leaves an ICU converter's error count standing
+                    mSendEncoder = QStringEncoder(mSendConvertersEncoding.constData());
+                }
+                // Even if there are bad characters - try to send it anyway...
+                outData = encoded.toStdString();
+            } else if (mSendEncodingAvailable) {
                 if ((!mEncodingWarningIssued) && (!TEncodingHelper::canEncode(data, mEncoding))) {
                     postMessage(encodingWarning());
                     mEncodingWarningIssued = true;
@@ -1946,6 +1970,21 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         return sent;
     }
     return false;
+}
+
+// Mirrors the order TEncodingHelper::encode() tries things in: Mudlet's own
+// codecs come before Qt's, which may know some of the same names
+void cTelnet::openSendConverters()
+{
+    mSendConvertersEncoding = mEncoding;
+    mSendEncodingAvailable = TEncodingHelper::isEncodingAvailable(mEncoding);
+    if (TEncodingHelper::isCustomEncoding(mEncoding)) {
+        mSendEncoder = QStringEncoder();
+        mSendRoundTripDecoder = QStringDecoder();
+        return;
+    }
+    mSendEncoder = QStringEncoder(mEncoding.constData());
+    mSendRoundTripDecoder = QStringDecoder(mEncoding.constData());
 }
 
 // Data is *expected* to be in the required MUD Server encoding on entry,
@@ -4386,17 +4425,13 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         // GMCP
         if (option == OPT_GMCP) {
-            QByteArray payload = telnetCommand.c_str();
+            // Measured from c_str(): a NUL ends the message
+            const QByteArrayView payload(telnetCommand.c_str());
             if (payload.size() < 6) {
                 return;
             }
-            // payload is in the Mud Server's encoding, trim off the Telnet suboption
-            // bytes from beginning (3) and end (2):
-            payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
-
-            // strip first 3 characters to get rid of <IAC><SB><201>
-            // and strip the last 2 characters to get rid of <IAC><TN_SE>
-            setGMCPVariables(payload);
+            // strip <IAC><SB><201> from the front and <IAC><TN_SE> from the end
+            setGMCPVariables(payload.sliced(3, payload.size() - 5));
             return;
         }
 
@@ -4801,41 +4836,63 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
     }
 }
 
-void cTelnet::setGMCPVariables(const QByteArray& msg)
+// Decodes as QString::fromUtf8() does, except that a leading BOM is kept as the
+// character a QString it was cut from would have held there
+static QString fromUtf8KeepingBom(QByteArrayView utf8)
 {
-    // JSON (and thus the GMCP data) is always utf8
-    QString transcodedMsg(msg);
+    QStringDecoder decoder(QStringDecoder::Utf8, QStringDecoder::Flag::Stateless | QStringDecoder::Flag::ConvertInitialBom);
+    return decoder.decode(utf8);
+}
 
-    QString packageMessage;
-    QString data;
+static bool onlyWhitespace(QByteArrayView utf8)
+{
+    for (const char ch : utf8) {
+        if (ch == ' ' || (ch >= '\t' && ch <= '\r')) {
+            continue;
+        }
+        if (static_cast<unsigned char>(ch) < 0x80) {
+            return false;
+        }
+        // Unicode has spaces of its own, which QString::trimmed() knows
+        return fromUtf8KeepingBom(utf8).trimmed().isEmpty();
+    }
+    return true;
+}
 
-    int firstNewline = transcodedMsg.indexOf(QChar::LineFeed);
-    int firstSpace = transcodedMsg.indexOf(QChar::Space);
+void cTelnet::setGMCPVariables(QByteArrayView msg)
+{
+    // JSON (and thus the GMCP data) is always utf8. Lua must get the bytes
+    // QString::fromUtf8() would leave: invalid sequences replaced, a leading BOM dropped
+    QByteArray normalisedMsg;
+    if (!msg.isValidUtf8() || msg.startsWith("\xEF\xBB\xBF")) {
+        normalisedMsg = QString::fromUtf8(msg).toUtf8();
+        msg = normalisedMsg;
+    }
+
+    const qsizetype firstNewline = msg.indexOf('\n');
+    const qsizetype firstSpace = msg.indexOf(' ');
 
     // if we see a space before a newline, or no newlines at all,
     // then that's the separator for message and data
-    if (Q_LIKELY((firstSpace != -1 && firstSpace < firstNewline) || firstNewline == -1)) {
-        packageMessage = transcodedMsg.section(QChar::Space, 0, 0);
-        data = transcodedMsg.section(QChar::Space, 1);
-    } else {
-        packageMessage = transcodedMsg.section(QChar::LineFeed, 0, 0);
-        data = transcodedMsg.section(QChar::LineFeed, 1);
-    }
+    const qsizetype separator = Q_LIKELY((firstSpace != -1 && firstSpace < firstNewline) || firstNewline == -1) ? firstSpace : firstNewline;
+    QString packageMessage = fromUtf8KeepingBom(separator == -1 ? msg : msg.first(separator));
+    QByteArray data = separator == -1 ? QByteArray() : msg.sliced(separator + 1).toByteArray();
 
-    if (data.trimmed().isEmpty()) { // Example: Core.Ping
-        data = qsl("{}");
+    if (onlyWhitespace(data)) { // Example: Core.Ping
+        QString emptyObject = qsl("{}");
         // A bare Client.Media.Stop or Pause means all of the game's media, so TMedia gets the empty object too
         const bool allMedia = !packageMessage.compare(qsl("Client.Media.Stop"), Qt::CaseInsensitive) || !packageMessage.compare(qsl("Client.Media.Pause"), Qt::CaseInsensitive);
         if (mpHost->mAcceptServerMedia && allMedia) {
-            mpHost->mpMedia->parseGMCP(packageMessage, data);
+            mpHost->mpMedia->parseGMCP(packageMessage, emptyObject);
         }
         // Pass empty table/object to Lua
-        mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
+        mpHost->mLuaInterpreter.setGMCPTable(packageMessage, QByteArrayLiteral("{}"));
         return;
     }
 
+    // The package name holds neither separator, so these match it exactly when they would the whole message
     bool serverDeclinedBaseUi = false;
-    if (transcodedMsg.startsWith(qsl("Client.GUI"), Qt::CaseInsensitive)) {
+    if (packageMessage.startsWith(qsl("Client.GUI"), Qt::CaseInsensitive)) {
         if (!mpHost->mAcceptServerGUI) {
             return;
         }
@@ -4848,12 +4905,12 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         //
         // If the data does not parse as JSON, we'll try Raw telnet.
 
-        auto document = QJsonDocument::fromJson(data.toUtf8());
+        auto document = QJsonDocument::fromJson(data);
         bool rawTelnet = false;
 
         if (!document.isObject()) {
             // Raw Telnet fallback
-            QStringList lines = transcodedMsg.split(QChar::LineFeed);
+            QStringList lines = fromUtf8KeepingBom(msg).split(QChar::LineFeed);
             if (lines.size() < 2) {
                 return;
             }
@@ -4880,26 +4937,31 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         if (rawTelnet) {
             return; // Do not add to the GMCP table
         }
-    } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"), Qt::CaseInsensitive)) {
-        mpHost->setMmpMapLocation(data);
+    } else if (packageMessage.startsWith(QLatin1String("Client.Map"), Qt::CaseInsensitive)) {
+        mpHost->setMmpMapLocation(fromUtf8KeepingBom(data));
     }
-    data.remove(QChar::LineFeed);
+    // remove newlines and \r's from the data, as yajl doesn't like them
+    data.removeIf([](const char ch) {
+        return ch == '\n' || ch == '\r';
+    });
     // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
-    // trying a different way of specifying the escape character
-    data.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
-    // remove \r's from the data, as yajl doesn't like it
-    data.remove(QChar::CarriageReturn);
+    data.replace('\x1B', QByteArrayView("\\u001B"));
 
-    if (packageMessage.startsWith(QLatin1String("External.Discord.Status"), Qt::CaseInsensitive) || packageMessage.startsWith(QLatin1String("External.Discord.Info"), Qt::CaseInsensitive)) {
-        mpHost->processDiscordGMCP(packageMessage, data);
-    }
-
-    if (mpHost->mAcceptServerMedia && packageMessage.startsWith(qsl("Client.Media"), Qt::CaseInsensitive)) {
-        mpHost->mpMedia->parseGMCP(packageMessage, data);
-    }
-
-    if (packageMessage.startsWith(qsl("Char.Login"), Qt::CaseInsensitive)) {
-        mpHost->mpAuth->handleAuthGMCP(packageMessage, data);
+    const bool forDiscord =
+            packageMessage.startsWith(QLatin1String("External.Discord.Status"), Qt::CaseInsensitive) || packageMessage.startsWith(QLatin1String("External.Discord.Info"), Qt::CaseInsensitive);
+    const bool forMedia = mpHost->mAcceptServerMedia && packageMessage.startsWith(qsl("Client.Media"), Qt::CaseInsensitive);
+    const bool forLogin = packageMessage.startsWith(qsl("Char.Login"), Qt::CaseInsensitive);
+    if (forDiscord || forMedia || forLogin) {
+        QString dataText = fromUtf8KeepingBom(data);
+        if (forDiscord) {
+            mpHost->processDiscordGMCP(packageMessage, dataText);
+        }
+        if (forMedia) {
+            mpHost->mpMedia->parseGMCP(packageMessage, dataText);
+        }
+        if (forLogin) {
+            mpHost->mpAuth->handleAuthGMCP(packageMessage, dataText);
+        }
     }
 
     mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
@@ -6334,7 +6396,17 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                 }
 
                 //7. inside IAC SB
-                command += ch;
+                int runEnd = i + 1;
+                // A payload byte brings the rest of its run up to the next IAC along with it,
+                // unless an MCCP start could still follow, which the check above looks for a
+                // byte at a time; the run stops at the cap so that trips on the same byte
+                if (!iac && ch != TN_IAC && !((mMCCP_version_1 || mMCCP_version_2) && !mNeedDecompression)) {
+                    const auto* nextIac = static_cast<const char*>(std::memchr(buffer + runEnd, TN_IAC, datalen - runEnd));
+                    runEnd = nextIac ? static_cast<int>(nextIac - buffer) : datalen;
+                    runEnd = static_cast<int>(std::min<size_t>(runEnd, i + 1 + MAX_TELNET_SUBNEGOTIATION_LENGTH - command.size()));
+                }
+                command.append(buffer + i, runEnd - i);
+                i = runEnd - 1;
 
                 if (command.size() > MAX_TELNET_SUBNEGOTIATION_LENGTH) {
                     // The server opened an IAC SB but is flooding its payload

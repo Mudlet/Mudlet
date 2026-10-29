@@ -1827,7 +1827,7 @@ void TTextEdit::highlightSelection()
              x < endX;
              ++x) {
 
-            mpBuffer->buffer.at(y).at(x).select();
+            mpBuffer->buffer.at(y).expand().at(x).select();
         }
     }
     // clang-format on
@@ -1860,7 +1860,7 @@ void TTextEdit::unHighlight()
         auto& bufferLine = mpBuffer->buffer.at(yIndex);
         for (int xIndex = 0; xIndex < static_cast<int>(bufferLine.size()); ++xIndex) {
             if (bufferLine.at(xIndex).isSelected()) {
-                bufferLine[xIndex].deselect();
+                bufferLine.expand()[xIndex].deselect();
             }
         }
     }
@@ -2009,7 +2009,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         auto& bufferLine = mpBuffer->buffer.at(yIndex);
         for (int xIndex = 0; xIndex < static_cast<int>(bufferLine.size()); ++xIndex) {
             if (bufferLine.at(xIndex).isSelected()) {
-                bufferLine[xIndex].deselect();
+                bufferLine.expand()[xIndex].deselect();
             }
         }
     }
@@ -4074,7 +4074,7 @@ bool TTextEdit::hasStackedMarks(const QString& text)
 bool TTextEdit::lineShowsBlinkingText(const int lineNumber) const
 {
     static constexpr TChar::AttributeFlags blinkFlags = TChar::Blink | TChar::FastBlink;
-    const std::vector<TChar>& chars = mpBuffer->buffer.at(lineNumber);
+    const TLineFormat& chars = mpBuffer->buffer.at(lineNumber);
     const bool anyBlinkFlag = std::any_of(chars.cbegin(), chars.cend(), [](const TChar& c) {
         return (c.allDisplayAttributes() & blinkFlags) || (c.hasSplitFormat() && (c.rightHalf().allDisplayAttributes() & blinkFlags));
     });

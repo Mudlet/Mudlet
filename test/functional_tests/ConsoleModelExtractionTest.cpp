@@ -574,12 +574,14 @@ private slots:
             int matchStart;
         };
         // A pattern of its own per case, so a line can only ever be painted by
-        // the trigger it is meant for.
+        // the trigger it is meant for. Each holds a character that takes two bytes
+        // in UTF-8, so painting a byte count spills past the match, or past the
+        // line, which the selection refuses.
         const QList<ColorizerCase> colorizerCases{
-                {qsl("substring"), REGEX_SUBSTRING, qsl("paint alpha"), qsl("before paint alpha after"), 7},
-                {qsl("perl"), REGEX_PERL, qsl("paint beta"), qsl("before paint beta after"), 7},
-                {qsl("beginOfLine"), REGEX_BEGIN_OF_LINE_SUBSTRING, qsl("paint gamma"), qsl("paint gamma and the rest"), 0},
-                {qsl("exact"), REGEX_EXACT_MATCH, qsl("paint delta"), qsl("paint delta"), 0},
+                {qsl("substring"), REGEX_SUBSTRING, qsl("paint ålpha"), qsl("before paint ålpha after"), 7},
+                {qsl("perl"), REGEX_PERL, qsl("paint bëta"), qsl("before paint bëta after"), 7},
+                {qsl("beginOfLine"), REGEX_BEGIN_OF_LINE_SUBSTRING, qsl("paint gämma"), qsl("paint gämma and the rest"), 0},
+                {qsl("exact"), REGEX_EXACT_MATCH, qsl("paint délta"), qsl("paint délta"), 0},
         };
 
         // Built while the view is still up: setScript() compiles against the
