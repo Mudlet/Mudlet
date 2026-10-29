@@ -1,6 +1,7 @@
 -- Gives a plain Achaea log the protocol shape svof needs: a GMCP Char.Vitals before every prompt
 -- and IAC GA after it. Logs captured with prompts gagged get a synthetic prompt after every N lines,
--- at a sentence end. The stream opens with IAC WILL GMCP and a Char.Status so svof learns its class.
+-- at a sentence end. The stream opens with IAC WILL GMCP and a Char.Status naming the class svof is to
+-- play, which need not be the recording character's.
 -- usage: lua5.1 promptify.lua <plain-log> <out> <character-name> [every=5] [class=Infernal]
 local src, dst, name = arg[1], arg[2], arg[3]
 local every = tonumber(arg[4] or "5")

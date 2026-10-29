@@ -45,15 +45,29 @@ do
   os.remove(tmp)
 end
 do
+  -- A stand-in can change a word's length, so the k-th word of a line stands for the k-th; a CWHO row has others
+  local function cwhoRow(l)
+    return l:match("^%u.-%s%s+%d+%s+O[nf]f?%s")
+  end
+  local function shape(l)
+    return (l:gsub("%a+", "a"):gsub("%d", "0"))
+  end
   local fwd, rev, ri = {}, {}, rawCorpus:gmatch("([^\n]*)\n")
   for s in scrCorpus:gmatch("([^\n]*)\n") do
     local r = ri()
-    if not r or #r ~= #s then die(scrPkg .. "'s corpus is not a scrub of " .. rawPkg .. "'s") end
-    for pos, w in s:gmatch("()(%a+)") do
-      local rw = r:sub(pos, pos + #w - 1)
-      inScr[w], inRaw[rw] = true, true
-      if rev[w] == nil then rev[w] = rw elseif rev[w] ~= rw then rev[w] = false end
-      if fwd[rw] == nil then fwd[rw] = w elseif fwd[rw] ~= w then fwd[rw] = false end
+    local rebuilt = r and cwhoRow(r) and cwhoRow(s)
+    if not r or not rebuilt and shape(r) ~= shape(s) then die(scrPkg .. "'s corpus is not a scrub of " .. rawPkg .. "'s") end
+    if rebuilt then
+      for w in s:gmatch("%a+") do inScr[w] = true end
+      for w in r:gmatch("%a+") do inRaw[w] = true end
+    else
+      local rws = r:gmatch("%a+")
+      for w in s:gmatch("%a+") do
+        local rw = rws()
+        inScr[w], inRaw[rw] = true, true
+        if rev[w] == nil then rev[w] = rw elseif rev[w] ~= rw then rev[w] = false end
+        if fwd[rw] == nil then fwd[rw] = w elseif fwd[rw] ~= w then fwd[rw] = false end
+      end
     end
   end
   for w, rw in pairs(rev) do
@@ -75,9 +89,39 @@ local function kind(l, scrubbed)
   end))
 end
 
+-- A read that ends just before a line break joins two lines, and where reads end moves with stand-in lengths
+local function unjoined(lines, order, plain)
+  local after = {}
+  for i = 1, #order - 1 do
+    after[order[i]] = after[order[i]] or {}
+    after[order[i]][order[i + 1]] = true
+  end
+  local kept, joins, wraps = {}, 0, false
+  for _, raw in ipairs(lines) do
+    local l, joined = gate.normal(raw), wraps
+    local from, to = l:find("%w"), l:match(".*()%w")
+    wraps = false
+    for cut = from or 1, (joined or plain[l] or not from) and 0 or to - 1 do
+      local rest = l:sub(cut + 1)
+      for b in pairs(after[l:sub(1, cut)] or {}) do
+        if b:sub(1, #rest) == rest then
+          joined, wraps, joins = true, #rest < #b, joins + 1
+          break
+        end
+      end
+      if joined then break end
+    end
+    if not joined then kept[#kept + 1] = raw end
+  end
+  return kept, joins
+end
+
+-- svof pads some echoes by a line's length, which a stand-in can change, so spacing is no part of a kind
+local shown = {}
 local function count(pkg, list)
   local manifest = loadstring(unzipped(pkg, "manifest.lua"))()
-  local plain = gate.plainLines(pkg == rawPkg and rawCorpus or scrCorpus)
+  local corpus = pkg == rawPkg and rawCorpus or scrCorpus
+  local plain, order = gate.plainLines(corpus), gate.lines(corpus)
   local translate = pkg == scrPkg
   local runs = {}
   for _, path in ipairs(list) do
@@ -91,14 +135,17 @@ local function count(pkg, list)
     if res.corpus_md5 ~= manifest.md5 then die(path .. " is not a run of " .. pkg) end
     local lines = {}
     for l in io.lines(path .. ".buffer") do lines[#lines + 1] = l end
-    local _, added, locks = gate.split(lines, plain)
+    local kept, joins = unjoined(lines, order, plain)
+    local _, added, locks = gate.split(kept, plain)
     local kinds = {["all added lines"] = #added, ["all lock warnings"] = #locks}
     for _, l in ipairs(added) do
       local k = kind(l, translate)
-      kinds[k] = (kinds[k] or 0) + 1
+      local key = k:gsub("%s+", "")
+      shown[key] = shown[key] or k
+      kinds[key] = (kinds[key] or 0) + 1
     end
     for _, l in ipairs(locks) do kinds[l] = (kinds[l] or 0) + 1 end
-    runs[#runs + 1] = {kinds = kinds, elapsed = tonumber(res.elapsed_s)}
+    runs[#runs + 1] = {kinds = kinds, elapsed = tonumber(res.elapsed_s), joins = joins}
   end
   return runs
 end
@@ -139,12 +186,13 @@ print(string.format("%d raw runs, %d scrubbed runs; a kind of line passes when t
 print("   raw  spread  scrubbed-raw  kind")
 for _, r in ipairs(rows) do
   if r.total or not r.ok then
-    print(string.format("%6g  %6d  %12g  %s%s", r.raw, r.spread, r.delta, r.k:sub(1, 100), r.ok and "" or "  FAIL"))
+    print(string.format("%6g  %6d  %12g  %s%s", r.raw, r.spread, r.delta, (shown[r.k] or r.k):sub(1, 100), r.ok and "" or "  FAIL"))
   end
 end
-local re, se = {}, {}
-for i, r in ipairs(raw) do re[i] = r.elapsed end
-for i, r in ipairs(scr) do se[i] = r.elapsed end
+local re, se, rj, sj = {}, {}, {}, {}
+for i, r in ipairs(raw) do re[i], rj[i] = r.elapsed, r.joins end
+for i, r in ipairs(scr) do se[i], sj[i] = r.elapsed, r.joins end
+print(string.format("lines joined at a read boundary, not judged: median raw %g, scrubbed %g", median(rj), median(sj)))
 local line = string.format("elapsed_s median raw %.3f, scrubbed %.3f, ratio %.3f", median(re), median(se), median(se) / median(re))
 if #re == #se then
   local faster = 0

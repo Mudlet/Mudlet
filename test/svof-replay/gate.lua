@@ -11,14 +11,23 @@ local function normal(l)
   return (l:gsub("%(svof%): Winnar!", "(svof): You won!"):gsub(" %(!?i%)", ""))
 end
 
--- How often each of the corpus's lines occurs, as Mudlet shows it, without its telnet sequences. The log
--- was recorded with svof, so it holds svof's own lines too, and one of those only accounts for one in a run
-function gate.plainLines(corpus)
-  local count = {}
+gate.normal = normal
+
+-- The corpus's lines in order, as Mudlet shows them, without telnet sequences
+function gate.lines(corpus)
+  local out = {}
   for l in corpus:gmatch("([^\n]*)\n?") do
     l = normal(l:gsub("\255\250.-\255\240", ""):gsub("\255[\251-\254].", ""):gsub("\255.", ""))
-    if l ~= "" then count[l] = (count[l] or 0) + 1 end
+    if l ~= "" then out[#out + 1] = l end
   end
+  return out
+end
+
+-- How often each of the corpus's lines occurs. The log was recorded with svof, so it holds svof's own
+-- lines too, and one of those only accounts for one in a run
+function gate.plainLines(corpus)
+  local count = {}
+  for _, l in ipairs(gate.lines(corpus)) do count[l] = (count[l] or 0) + 1 end
   return count
 end
 

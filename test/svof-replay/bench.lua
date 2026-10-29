@@ -127,7 +127,9 @@ local function finish(why)
   if why ~= "end_marker" then problems[#problems + 1] = "stopped by " .. why end
   if s.systemloaded ~= true then problems[#problems + 1] = "svof did not load" end
   if not s.conf or s.conf.paused ~= false then problems[#problems + 1] = "svof is paused" end
-  if (s.me and s.me.class) ~= manifest.class then problems[#problems + 1] = "svof's class is not " .. manifest.class end
+  -- Older packages name it class
+  local svofClass = manifest.svof_class or manifest.class
+  if (s.me and s.me.class) ~= svofClass then problems[#problems + 1] = "svof's class is not " .. tostring(svofClass) end
   if s.promptcount ~= manifest.prompts then
     problems[#problems + 1] = string.format("svof saw %s of %d prompts", tostring(s.promptcount), manifest.prompts)
   end

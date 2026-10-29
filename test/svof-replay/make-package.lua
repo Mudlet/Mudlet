@@ -131,7 +131,7 @@ end
 
 -- Each line's text as svof's triggers see it, whether it is a prompt, and the player's name from GMCP by then
 local texts, prompt, me = {}, {}, {}
-local class
+local svofClass
 do
   local name
   for i, l in ipairs(lines) do
@@ -143,7 +143,7 @@ do
         prompt[i] = true
       elseif s.proto:sub(1, 3) == "\255\250\201" and s.proto:match("^...Char%.Status ") then
         name = s.proto:match('"name": "([^"]*)"') or name
-        class = class or s.proto:match('"class": "([^"]+)"')
+        svofClass = svofClass or s.proto:match('"class": "([^"]+)"')
       end
     end
     texts[i] = table.concat(t)
@@ -153,7 +153,7 @@ end
 local _, prompts = corpus:gsub("\255\249", "")
 local _, newlines = corpus:gsub("\n", "")
 if prompts == 0 then die("the corpus has no IAC GA prompts; build it with promptify.lua") end
-if not class then die("the corpus has no GMCP Char.Status with a class; build it with promptify.lua") end
+if not svofClass then die("the corpus has no GMCP Char.Status with a class; build it with promptify.lua") end
 
 local function unxml(s)
   return (s:gsub("&lt;", "<"):gsub("&gt;", ">"):gsub("&quot;", '"'):gsub("&apos;", "'"):gsub("&amp;", "&"))
@@ -190,6 +190,8 @@ do
       local node = stack[#stack]
       if tag == "name" and not node.name then
         node.name = unxml(xml:match("^(.-)</name>", pos) or "")
+      elseif tag == "script" and not node.script then
+        node.script = unxml(xml:match("^(.-)</script>", pos) or "")
       elseif tag == "mStayOpen" then
         node.stay = tonumber(xml:match("^%s*(%d+)", pos)) or 0
       elseif tag == "regexCodeList" then
@@ -742,7 +744,34 @@ local function scramble(s, roll, pool)
   end))
 end
 local function caseLike(model, s)
+  if #s ~= #model then
+    if #model > 1 and not model:find("%l") then return s:upper() end
+    return model:find("^%u") and s:sub(1, 1):upper() .. s:sub(2) or s
+  end
   return (s:gsub("()(%a)", function(c, ch) return model:sub(c, c):match("%u") and ch:upper() or nil end))
+end
+-- A stand-in can change a word's length, so the k-th run of letters in a scrubbed line stands for the k-th raw one
+local function letterRuns(s)
+  local runs = {}
+  for a, w in s:gmatch("()(%a+)") do runs[#runs + 1] = {s = a, e = a + #w - 1, w = w} end
+  return runs
+end
+local function shape(s)
+  return (s:gsub("%a+", "a"):gsub("%d", "0"))
+end
+-- Where the raw line's first n characters end in its scrubbed line
+local function shifted(raw, scr)
+  if #raw == #scr then return function(n) return n end end
+  local rr, sr = letterRuns(raw), letterRuns(scr)
+  return function(n)
+    local d = 0
+    for k, r in ipairs(rr) do
+      if r.s > n then break end
+      if r.e > n then return sr[k].s - 1 + math.min(n - r.s + 1, #sr[k].w) end
+      d = sr[k].e - r.e
+    end
+    return n + d
+  end
 end
 
 -- Without the log's timestamp, or the ">" a line after a prompt can start with
@@ -752,15 +781,15 @@ end
 
 local stats = {listed = {}, filled = 0, kept = 0, pinned = 0, renamed = 0, rerolls = 0, trimmed = 0, captured = 0,
   pseudo = 0, capitalised = 0, pseudoWords = 0, svofVocab = 0, gameVocab = 0, redrawn = 0, rare = 0, unplaced = 0,
-  standinKeeps = 0, standinRedraws = 0, rounds = 0, categories = {}}
+  standinKeeps = 0, standinRedraws = 0, standinLengths = 0, standinWrap = 0, rounds = 0, categories = {}}
 local listed, standins, taken = {}, {}, {}
 -- The letters a stand-in keeps are ones svof's patterns match in the word, the rest are drawn
 local function drawStandIn(l)
   local s = standins[l]
   for tries = 1, 1000 do
-    local f = scramble(l, s.roll):gsub("()%a", function(pos) return s.keep[pos] end)
+    local f = scramble(("a"):rep(s.len), s.roll):gsub("()%a", function(pos) return s.keep[pos] end)
     -- One- and two-letter words run out of unused stand-ins; a common one is no clue to a name
-    if f ~= l and not listed[f] and (not taken[f] or (#l <= 2 and tries > 20 and not listed[l])) then
+    if f ~= l and not listed[f] and (not taken[f] or (s.len <= 2 and tries > 20 and not listed[l])) then
       taken[f] = true
       s.value = f
       return
@@ -768,10 +797,15 @@ local function drawStandIn(l)
   end
   die("no free stand-in for a " .. #l .. "-letter word")
 end
+-- Drawn apart from the word's length, which narrows down whose name it is, unless svof's patterns notice
+local STANDIN_LENGTH = {min = 4, max = 10}
+-- Mudlet wraps a line at 100 columns once svof has appended to it, so in a longer line a stand-in keeps the length
+local WRAP_SAFE = 80
 local function fakeOf(w)
   local l = w:lower()
   if not standins[l] then
-    standins[l] = {roll = keyed("stand-in:" .. l), keep = {}}
+    local len = keyed("stand-in length:" .. l)(STANDIN_LENGTH.max - STANDIN_LENGTH.min + 1) + STANDIN_LENGTH.min - 1
+    standins[l] = {roll = keyed("stand-in:" .. l), keep = {}, conflicts = 0, len = len}
     drawStandIn(l)
   end
   return caseLike(w, standins[l].value)
@@ -814,6 +848,15 @@ end
 
 local out, stexts = {}, {}
 local entryCaps, inSpans, vocab
+-- CWHO rows, each to where its name column ends, and the svof patterns whose captures its scripts never read
+local cwho, unread = {}, {}
+local function readEntries(entries)
+  local r = {}
+  for _, e in ipairs(entries) do
+    if not unread[pats[tonumber(e:match("(%d+)$"))]] then r[#r + 1] = e end
+  end
+  return r
+end
 -- The player's name as svof knows it from GMCP, which is its stand-in once scrubbed
 local function meFake(i)
   return me[i] and fakeOf(me[i])
@@ -828,7 +871,7 @@ if scrub then
   -- who-lists in the corpus, --names and GMCP
   local function list(w, source)
     local l = w:lower()
-    if l == class:lower() then return end
+    if l == svofClass:lower() then return end
     if not listed[l] then
       listed[l] = source
       stats.listed[source] = (stats.listed[source] or 0) + 1
@@ -893,6 +936,7 @@ if scrub then
       while j <= #texts do
         local col = bare(texts[j]):match("^(%u.-)%s%s+%d+%s+O[nf]f?%s")
         if not col then break end
+        cwho[j] = #texts[j] - #bare(texts[j]) + #col
         for w in col:gmatch("%u%l+") do
           if not svofWords[w:lower()] then list(w, "who") end
         end
@@ -914,6 +958,20 @@ if scrub then
     else
       i = i + 1
     end
+  end
+  -- Get name (cwho) reads a row only through ANSI colour, which a plain log lacks, so its captures go unread
+  if next(cwho) then
+    local reader
+    for _, node in ipairs(nodes) do
+      if node.name == "Get name (cwho)" then reader = node end
+    end
+    local before = reader and reader.script and reader.script:match("^(.-)if match then")
+    if not before or not before:find("getColorWildcard", 1, true) or before:find("matches", 1, true)
+      or before:find("%f[%w_]line%f[^%w_]") then
+      die("svof's Get name (cwho) reads CWHO rows by more than their colour now; check what it reads before scrubbing them")
+    end
+    if corpus:find("\27", 1, true) then die("the corpus has ANSI colour, by which svof reads CWHO rows; scrub a plain log") end
+    for _, pat in ipairs(reader.pats) do unread[pat] = true end
   end
   local sortedListed = {}
   for l in pairs(listed) do sortedListed[#sortedListed + 1] = l end
@@ -1077,7 +1135,7 @@ if scrub then
   local capSpans, pseudo = {}, {}
   for _, i2 in ipairs(kept) do
     local t, spans = texts[i2], {}
-    for _, e in ipairs(lostOf[i2]) do
+    for _, e in ipairs(readEntries(lostOf[i2])) do
       for _, c in ipairs(entryCaps(t, e)) do spans[#spans + 1] = c end
     end
     capSpans[i2] = spans
@@ -1107,13 +1165,15 @@ if scrub then
   local REDRAWS = 6
   -- Stand-ins are shared by every line: one that loses a match keeps those letters, one that adds is redrawn
   local function scrubLine(i2)
-    local t, p, fake, w, lost = texts[i2], prompt[i2] or false, meFake(i2), want[i2], lostOf[i2]
+    local t, p, fake, w, lost = texts[i2], prompt[i2] or false, meFake(i2), want[i2], readEntries(lostOf[i2])
     local toks, st = tokens(t), {renamed = 0, pseudo = 0, capitalised = 0, captured = 0, pinned = 0, trimmed = 0,
       redrawn = 0, rare = 0, unplaced = 0}
     local stand, fixed, repl, markSpans = {}, {}, {}, marks(t)
+    -- A name svof reads nowhere in the line needs no stand-in: filler cannot tie it to the other lines
+    local named = not (cwho[i2] and #capSpans[i2] == 0)
     for k, tok in ipairs(toks) do
       local l = tok.w:lower()
-      if tok.alpha and (listed[l] or pseudo[l] or (tok.w:match("^%u") and not vocab[l])) then
+      if tok.alpha and named and (listed[l] or pseudo[l] or (tok.w:match("^%u") and not vocab[l])) then
         stand[k] = l
         repl[k] = fakeOf(tok.w)
       elseif inSpans(markSpans, tok.s, tok.e) then
@@ -1197,13 +1257,13 @@ if scrub then
     for k, v in pairs(repl) do r[k] = v end
     for _, k in ipairs(cand) do r[k] = draw(k, 1) end
     local result, pinned = splice(t, toks, r), {}
-    -- One by one: a filler that only adds matches is drawn again, and a word is kept after two that lose
+    -- One by one: a filler that only adds matches is drawn again, and a word after two that lose, a number after more
     if judge(result) ~= "ok" then
       r = {}
       for k, v in pairs(repl) do r[k] = v end
       for _, k in ipairs(cand) do
         local placed, losses = false, 0
-        for n = 1, REDRAWS do
+        for n = 1, toks[k].alpha and REDRAWS or 4 * REDRAWS do
           r[k] = draw(k, n)
           local v = judge(splice(t, toks, r))
           if v == "ok" then
@@ -1211,7 +1271,7 @@ if scrub then
             break
           elseif v == "loses" then
             losses = losses + 1
-            if losses == 2 then break end
+            if losses == 2 and toks[k].alpha then break end
           else
             st.redrawn = st.redrawn + 1
           end
@@ -1244,6 +1304,10 @@ if scrub then
           for k2, v in pairs(r) do probe[k2] = v end
           probe[k] = draw(k, 1)
           local spans = lostSpans(result, w, signature(splice(t, toks, probe), p, fake))
+          -- Those are places in the result, where the stand-ins before this word may have moved it
+          local d = 0
+          for k2 = 1, k - 1 do d = d + (r[k2] and #r[k2] - #toks[k2].w or 0) end
+          for _, sp in ipairs(spans or {}) do sp[1], sp[2] = sp[1] - d, sp[2] - d end
           if spans and #spans > 0 then
             local one = {[k] = probe[k]}
             keepSpans(t, toks, one, spans)
@@ -1278,6 +1342,19 @@ if scrub then
           y.redraw = true
         end
       end
+      local raw, now = #texts[i2], res and #res.text
+      if now and raw ~= now and math.max(raw, now) > WRAP_SAFE then
+        for w in texts[i2]:gmatch("%a+") do
+          local l = w:lower()
+          local s = standins[l]
+          if s and s.len ~= #l then
+            s.len = #l
+            stats.standinWrap = stats.standinWrap + 1
+            conflicts[l] = conflicts[l] or {keep = {}}
+            conflicts[l].redraw = true
+          end
+        end
+      end
     end
     if not next(conflicts) then break end
     if round == 20 then die("stand-ins still change which svof patterns match after 20 rounds") end
@@ -1285,13 +1362,22 @@ if scrub then
     for l in pairs(conflicts) do words[#words + 1] = l end
     table.sort(words)
     for _, l in ipairs(words) do
-      local s, c, n = standins[l], conflicts[l], 0
-      for pos, ch in pairs(c.keep) do
-        if not s.keep[pos] then stats.standinKeeps = stats.standinKeeps + 1 end
-        s.keep[pos] = ch
+      local s, c, all, n, far = standins[l], conflicts[l], {}, 0, 0
+      s.conflicts = s.conflicts + 1
+      for pos, ch in pairs(s.keep) do all[pos] = ch end
+      for pos, ch in pairs(c.keep) do all[pos] = ch end
+      for pos in pairs(all) do n, far = n + 1, math.max(far, pos) end
+      -- Letters lost to a stand-in of another length may be svof noticing the length, so that is tried first
+      if s.len ~= #l and (s.conflicts > 2 or n >= #l or far > s.len) then
+        s.len, c.redraw = #l, true
+        stats.standinLengths = stats.standinLengths + 1
+      else
+        for pos, ch in pairs(c.keep) do
+          if not s.keep[pos] then stats.standinKeeps = stats.standinKeeps + 1 end
+          s.keep[pos] = ch
+        end
+        if n >= #l then die("svof's patterns need every letter of a " .. #l .. "-letter word that gets a stand-in") end
       end
-      for _ in pairs(s.keep) do n = n + 1 end
-      if n >= #l then die("svof's patterns need every letter of a " .. #l .. "-letter word that gets a stand-in") end
       local f = s.value:gsub("()%a", function(pos) return s.keep[pos] end)
       if c.redraw or listed[f] or (taken[f] and f ~= s.value) then
         stats.standinRedraws = stats.standinRedraws + 1
@@ -1306,12 +1392,59 @@ if scrub then
     table.sort(todo)
   end
 
+  -- Filler keeps word lengths and punctuation that match a public title and class, so a CWHO row is rebuilt
+  local CWHO_WORD = {min = 3, max = 10}
+  local COLUMNS = "^(%u.-)(%s%s+%d+%s+O[nf]f?%s+)(.-)(%s*)$"
+  for i2 in pairs(cwho) do
+    local t, s = texts[i2], done[i2] and done[i2].text or stexts[i2]
+    local p, b = prompt[i2] or false, bare(s)
+    local w = signature(t, p, me[i2])
+    local name, mid, class, trail = b:match(COLUMNS)
+    if not name then die("line " .. i2 .. " is no longer a CWHO row once scrubbed") end
+    local rawWords, roll = {}, keyed("cwho:" .. i2)
+    for x in t:gmatch("%a+") do rawWords[x:lower()] = true end
+    local function word(min, max)
+      for _ = 1, 100 do
+        local x = scramble("A" .. ("a"):rep(roll(max - min + 1) + min - 2), roll)
+        if not rawWords[x:lower()] and not listed[x:lower()] then return x end
+      end
+      die("no filler for a CWHO row")
+    end
+    -- A pattern can need the first letters of the row, such as a leading "A", which the scrub kept
+    local rw, sw, common = bare(t):match("^%a+"), name:match("^%a+"), 0
+    while common < math.min(#rw, #sw, 2) and rw:sub(common + 1, common + 1) == sw:sub(common + 1, common + 1) do
+      common = common + 1
+    end
+    local groups = {}
+    for g in class:gmatch("%(%a+%)") do
+      if t:find(g, 1, true) then groups[#groups + 1] = " " .. g end
+    end
+    local pad, after = mid:match("^(%s+)(.*)$")
+    local rebuilt
+    for attempt = 1, 60 do
+      local keep, ws = math.min(common, math.floor((attempt - 1) / 20)), {}
+      for k = 1, roll(2) do ws[k] = word(CWHO_WORD.min, CWHO_WORD.max) end
+      ws[1] = sw:sub(1, keep) .. ws[1]:sub(keep + 1)
+      local n = table.concat(ws, " ")
+      local f = s:sub(1, #s - #b) .. n .. (" "):rep(math.max(2, #name + #pad - #n)) .. after
+        .. word(CWHO_WORD.min + 1, CWHO_WORD.max) .. table.concat(groups) .. trail
+      if signature(f, p, meFake(i2)) == w then
+        rebuilt = f
+        break
+      end
+    end
+    if not rebuilt then die("no rebuilt CWHO row matches what line " .. i2 .. " matched") end
+    stexts[i2] = rebuilt
+    if done[i2] then done[i2].text = rebuilt end
+  end
+
   stats.by = {listed = 0, pseudo = 0, other = 0}
-  stats.keeping = 0
+  stats.keeping, stats.ownLength = 0, 0
   for l, s in pairs(standins) do
     local by = listed[l] and "listed" or pseudo[l] and "pseudo" or "other"
     stats.by[by] = stats.by[by] + 1
     if next(s.keep) then stats.keeping = stats.keeping + 1 end
+    if s.len == #l then stats.ownLength = stats.ownLength + 1 end
   end
   local reportLines = {}
   for _, i2 in ipairs(kept) do
@@ -1368,16 +1501,21 @@ end
 for i, l in ipairs(lines) do
   if not scrub then
     out[i] = l
+  elseif cwho[i] then
+    -- A rebuilt row has other words than its raw one, so no telnet byte could be put back where it was
+    if l:find(IAC, 1, true) then die("CWHO row " .. i .. " carries telnet bytes") end
+    out[i] = stexts[i]
   else
-    local t, pos, parts, roll = stexts[i], 1, {}, nil
+    local t, at, raw, used, parts, roll = stexts[i], shifted(texts[i], stexts[i]), 0, 0, {}, nil
     local function lineRoll()
       roll = roll or keyed("gmcp:" .. i)
       return roll
     end
     for _, s in ipairs(segments(l)) do
       if s.text then
-        parts[#parts + 1] = t:sub(pos, pos + #s.text - 1)
-        pos = pos + #s.text
+        raw = raw + #s.text
+        parts[#parts + 1] = t:sub(used + 1, at(raw))
+        used = at(raw)
       elseif s.proto:sub(2, 2) == "\250" then
         parts[#parts + 1] = scrubGmcp(s.proto, lineRoll)
       else
@@ -1385,11 +1523,13 @@ for i, l in ipairs(lines) do
       end
     end
     out[i] = table.concat(parts)
-    if #out[i] ~= #l then die("line " .. i .. " changed length") end
+    if used ~= #t or shape(out[i]) ~= shape(l) then die("line " .. i .. " changed more than its letters") end
   end
 end
 local scrubbed = table.concat(out, "\n")
-if #scrubbed ~= #corpus or select(2, scrubbed:gsub("\255\249", "")) ~= prompts then die("the scrub changed the corpus's shape") end
+if select(2, scrubbed:gsub("\n", "")) ~= newlines or select(2, scrubbed:gsub("\255\249", "")) ~= prompts then
+  die("the scrub changed the corpus's shape")
+end
 
 local stage = opts.out .. ".stage"
 run("rm -rf " .. q(stage) .. " && mkdir -p " .. q(stage .. "/svo"))
@@ -1409,7 +1549,7 @@ if #config == 0 then die("no svof config in " .. opts.config) end
 for _, f in ipairs(config) do
   local data = slurp(opts.config .. "/" .. f)
   if f == "config/my_class" then
-    data = data:gsub("(%[%[class%]%] *%] *= *)%[%[[^%]]*%]%]", "%1[[" .. class .. "]]")
+    data = data:gsub("(%[%[class%]%] *%] *= *)%[%[[^%]]*%]%]", "%1[[" .. svofClass .. "]]")
   elseif f == "config/conf" then
     -- A saved config is usually paused; a player unpauses it at the start of a session
     data = data:gsub("(%[%[paused%]%] *%] *= *)true", "%1false")
@@ -1424,7 +1564,7 @@ for _, f in ipairs(config) do
 end
 
 -- The audit reads the result, not the scrub's bookkeeping
-local audit = {names = 0, runs = 0, shared = 0, capitals = 0, standins = 0}
+local audit = {names = 0, runs = 0, shared = 0, capitals = 0, standins = 0, cwho = 0}
 if scrub then
   -- Every line matches the same svof patterns as before
   for i, t in ipairs(stexts) do
@@ -1451,15 +1591,17 @@ if scrub then
   for _, k in ipairs(stats.reportLines) do keptSet[k] = true end
   local survived, seenAs, capitals, mixed = {}, {}, {}, 0
   for i, t in ipairs(texts) do
-    local s = stexts[i]
-    for pos, w in t:gmatch("()(%a+)") do
-      local l, now = w:lower(), s:sub(pos, pos + #w - 1)
+    local sr = letterRuns(stexts[i])
+    for k, r in ipairs(letterRuns(t)) do
+      -- A rebuilt CWHO row has other words than its raw one; the CWHO audit below checks those
+      local w, now = r.w, not cwho[i] and sr[k].w
+      local l = w:lower()
       local capital = w:match("^%u") and not vocab[l]
       if capital then
         capitals[l] = true
         if now == w then survived[#survived + 1] = string.format("line %d: a %d-letter word", i, #w) end
       end
-      if keptSet[i] and (capital or listed[l]) then
+      if keptSet[i] and not cwho[i] and (capital or listed[l]) then
         local as = now:lower()
         if seenAs[l] == nil then
           seenAs[l] = as
@@ -1489,42 +1631,65 @@ if scrub then
   end
   -- Filler and stand-ins come from the salt, so only a word a line kept can carry another line's text
   local function words(s, raw)
-    local ws = {}
-    for pos, w in unmarked(s):gmatch("()(%a+)") do
-      w = w:lower()
-      ws[#ws + 1] = (not raw or raw:sub(pos, pos + #w - 1):lower() == w) and w or "#"
+    local ws, rr = {}, raw and letterRuns(unmarked(raw))
+    for k, r in ipairs(letterRuns(unmarked(s))) do
+      local w = r.w:lower()
+      ws[#ws + 1] = (not raw or (rr[k] and rr[k].w:lower() == w)) and w or "#"
     end
     return ws
   end
   local function each(ws, f)
     for s = 1, #ws - W + 1 do f(table.concat(ws, " ", s, s + W - 1), s) end
   end
+  -- Whether filler in place of the word w at pos in t loses one of the matches t has
+  local function loses(t, p, fake, want, pos, w, roll)
+    for _ = 1, 4 do
+      local f = scramble(w, roll)
+      if f:lower() ~= w:lower() and diff(want, signature(t:sub(1, pos - 1) .. f .. t:sub(pos + #w), p, fake)) == "loses" then
+        return true
+      end
+    end
+    return false
+  end
   local function needed(i, t, from)
     local p, fake = prompt[i] or false, meFake(i)
     local want, n, roll = signature(t, p, fake), 0, keyed("audit:" .. i)
-    local have, spans = {}, {}
+    local have, lost, spans = {}, {}, {}
     for e in signature(filler(t, roll), p, fake):gmatch("%S+") do have[e] = true end
     for e in want:gmatch("%S+") do
-      if not have[e] then
-        for _, c in ipairs(entryCaps(t, e)) do spans[#spans + 1] = c end
-      end
+      if not have[e] then lost[#lost + 1] = e end
+    end
+    for _, e in ipairs(readEntries(lost)) do
+      for _, c in ipairs(entryCaps(t, e)) do spans[#spans + 1] = c end
     end
     for pos, w in unmarked(t):gmatch("()(%a+)") do
       n = n + 1
       if n >= from and n < from + W then
         local changed = vocab[w:lower()] and inSpans(spans, pos, pos + #w - 1)
-        for _ = 1, changed and 0 or 4 do
-          local f = scramble(w, roll)
-          local u = t:sub(1, pos - 1) .. f .. t:sub(pos + #w)
-          if f:lower() ~= w:lower() and diff(want, signature(u, p, fake)) == "loses" then
-            changed = true
-            break
-          end
-        end
-        if not changed then return false end
+        if not changed and not loses(t, p, fake, want, pos, w, roll) then return false end
       end
     end
     return true
+  end
+
+  -- No raw word of a CWHO row is left in its name column, and elsewhere only where filler loses a match
+  local cwhoLeft = {}
+  for i in pairs(cwho) do
+    local t, p, fake, raw = stexts[i], prompt[i] or false, meFake(i), {}
+    local want, roll = signature(t, p, fake), keyed("audit cwho:" .. i)
+    for w in texts[i]:gmatch("%a+") do raw[w:lower()] = true end
+    local name = bare(t):match("^(%u.-)%s%s+%d+%s+O[nf]f?%s")
+    local nameEnd = name and #t - #bare(t) + #name or #t
+    for pos, w in t:gmatch("()(%a+)") do
+      if raw[w:lower()] and (pos <= nameEnd or not loses(t, p, fake, want, pos, w, roll)) then
+        cwhoLeft[#cwhoLeft + 1] = string.format("line %d: a %d-letter word", i, #w)
+      end
+    end
+    audit.cwho = audit.cwho + 1
+  end
+  table.sort(cwhoLeft)
+  if #cwhoLeft > 0 then
+    die("audit: " .. #cwhoLeft .. " words of CWHO rows survive:\n  " .. table.concat(cwhoLeft, "\n  ", 1, math.min(#cwhoLeft, 20)))
   end
   local runs = {}
   for i, t in ipairs(texts) do
@@ -1586,7 +1751,7 @@ local cfgList = {}
 for _, f in ipairs(config) do cfgList[#cfgList + 1] = string.format("%q", f) end
 spit(stage .. "/manifest.lua", string.format([[return {
   bundle = %d,
-  class = %q,
+  svof_class = %q, -- the class svof plays in the replay, not necessarily the recording character's
   prompts = %d,
   lines = %d,
   bytes = %d,
@@ -1597,7 +1762,7 @@ spit(stage .. "/manifest.lua", string.format([[return {
   expect = {%s},
   slack = {lines = %d, game_lines = %d, added_lines = %d},
 }
-]], version, class, prompts, newlines, #scrubbed, md5, tostring(scrub), table.concat(cfgList, ", "),
+]], version, svofClass, prompts, newlines, #scrubbed, md5, tostring(scrub), table.concat(cfgList, ", "),
   table.concat(expectList, ", "), SLACK.lines, SLACK.game_lines, SLACK.added_lines))
 
 spit(stage .. "/config.lua", string.format([[mpackage = [==[SvofBench]==]
@@ -1634,7 +1799,7 @@ run("cd " .. q(stage) .. " && export TZ=UTC && find . -exec touch -h -d '2026-01
   .. q(outPath) .. " " .. table.concat(quoted, " "))
 run("rm -rf " .. q(stage))
 
-print(string.format("%s: class %s, %d lines, %d prompts, corpus md5 %s", opts.out, class, newlines, prompts, md5))
+print(string.format("%s: svof plays %s, %d lines, %d prompts, corpus md5 %s", opts.out, svofClass, newlines, prompts, md5))
 if #expectList > 0 then print("reference counts: " .. table.concat(expectList, ", ")) end
 if scrub then
   local l = stats.listed
@@ -1647,13 +1812,16 @@ if scrub then
     stats.filled, stats.kept, stats.pinned, stats.trimmed, stats.rerolls))
   print(string.format("what svof matches and captures: %d words and numbers kept, %d words outside the vocabulary given stand-ins (%d distinct); vocabulary: %d words of svof's text and %d game words in at least %d svof-matched messages",
     stats.captured, stats.pseudo, stats.pseudoWords, stats.svofVocab, stats.gameVocab, stats.gameContexts))
-  print(string.format("stand-ins: %d words (%d listed names, %d words svof captures, %d other capitalised words) for %d names, %d captured and %d capitalised words in kept lines; %d keep %d letters svof's patterns match in them, %d drawn again for matching more than the word, in %d rounds",
+  print(string.format("stand-ins: %d words (%d listed names, %d words svof captures, %d other capitalised words) for %d names, %d captured and %d capitalised words in kept lines; %d keep %d letters svof's patterns match in them, %d drawn again for matching more than the word, in %d rounds; %d to %d letters long, %d with their word's length (%d in lines over %d columns, %d because svof's patterns noticed another), changing the corpus by %+d bytes",
     stats.by.listed + stats.by.pseudo + stats.by.other, stats.by.listed, stats.by.pseudo, stats.by.other, stats.renamed,
-    stats.pseudo, stats.capitalised, stats.keeping, stats.standinKeeps, stats.standinRedraws, stats.rounds))
+    stats.pseudo, stats.capitalised, stats.keeping, stats.standinKeeps, stats.standinRedraws, stats.rounds,
+    STANDIN_LENGTH.min, STANDIN_LENGTH.max, stats.ownLength, stats.standinWrap, WRAP_SAFE, stats.standinLengths,
+    #scrubbed - #corpus))
+  print(string.format("CWHO rows: %d, rebuilt of filler words of drawn lengths around what svof's patterns need, as svof reads none of their words", audit.cwho))
   print(string.format("filler in kept lines: %d draws matched more than the word and were drawn again, %d words took rare letters instead, %d kept because every filler matched more",
     stats.redrawn, stats.rare, stats.unplaced))
-  print(string.format("audit: every line matches the same svof patterns, with svof's marks as they were; 0 of %d listed names left in any case; none of %d capitalised words outside the vocabulary left as it was, and %d names and capitalised words with one stand-in each in the lines svof matches; of %d four-word runs from filler lines, none left except %d in lines that lose a match without every one of those words",
-    audit.names, audit.capitals, audit.standins, audit.runs, audit.shared))
+  print(string.format("audit: every line matches the same svof patterns, with svof's marks as they were; 0 of %d listed names left in any case; none of %d capitalised words outside the vocabulary left as it was, and %d names and capitalised words with one stand-in each in the lines svof matches; of %d four-word runs from filler lines, none left except %d in lines that lose a match without every one of those words; in %d CWHO rows, no title, name or surname left, nor any other word filler can replace",
+    audit.names, audit.capitals, audit.standins, audit.runs, audit.shared, audit.cwho))
   if #unevaluated > 0 then
     local u = {}
     for _, pat in ipairs(unevaluated) do u[#u + 1] = describe(tostring(pat.id)) end
