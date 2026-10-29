@@ -1861,7 +1861,29 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
             return tr("[ WARN ]  - Tried to send hidden input to the game, but it is unlikely to understand it.");
         };
         if (!mEncoding.isEmpty()) {
-            if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
+            if (mSendConvertersEncoding != mEncoding) {
+                openSendConverters();
+            }
+            if (mSendEncodingAvailable && mSendEncoder.isValid()) {
+                mSendEncoder.resetState();
+                const QByteArray encoded = mSendEncoder.encode(data);
+                bool encodable = !mSendEncoder.hasError();
+                // The round trip catches what the ICU codecs silently replace with '?', as TEncodingHelper::canEncode() does
+                if (encodable && !mEncodingWarningIssued) {
+                    mSendRoundTripDecoder.resetState();
+                    encodable = mSendRoundTripDecoder.isValid() && mSendRoundTripDecoder.decode(encoded) == data;
+                }
+                if (!encodable && !mEncodingWarningIssued) {
+                    postMessage(encodingWarning());
+                    mEncodingWarningIssued = true;
+                }
+                if (mSendEncoder.hasError()) {
+                    // resetState() leaves an ICU converter's error count standing
+                    mSendEncoder = QStringEncoder(mSendConvertersEncoding.constData());
+                }
+                // Even if there are bad characters - try to send it anyway...
+                outData = encoded.toStdString();
+            } else if (mSendEncodingAvailable) {
                 if ((!mEncodingWarningIssued) && (!TEncodingHelper::canEncode(data, mEncoding))) {
                     postMessage(encodingWarning());
                     mEncodingWarningIssued = true;
@@ -1946,6 +1968,21 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         return sent;
     }
     return false;
+}
+
+// Mirrors the order TEncodingHelper::encode() tries things in: Mudlet's own
+// codecs come before Qt's, which may know some of the same names
+void cTelnet::openSendConverters()
+{
+    mSendConvertersEncoding = mEncoding;
+    mSendEncodingAvailable = TEncodingHelper::isEncodingAvailable(mEncoding);
+    if (TEncodingHelper::isCustomEncoding(mEncoding)) {
+        mSendEncoder = QStringEncoder();
+        mSendRoundTripDecoder = QStringDecoder();
+        return;
+    }
+    mSendEncoder = QStringEncoder(mEncoding.constData());
+    mSendRoundTripDecoder = QStringDecoder(mEncoding.constData());
 }
 
 // Data is *expected* to be in the required MUD Server encoding on entry,

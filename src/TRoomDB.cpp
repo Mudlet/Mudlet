@@ -30,6 +30,7 @@
 #include <QDataStream>
 #include <QElapsedTimer>
 #include <QRegularExpression>
+#include <QVarLengthArray>
 
 const QString ROOM_UI_SHOWNAME = qsl("room.ui_showName");
 const QString ROOM_UI_NAMEPOS = qsl("room.ui_nameOffset");
@@ -144,6 +145,13 @@ void TRoomDB::deleteValuesFromEntranceMap(QSet<int>& valueSet)
     }
 }
 
+// QMultiHash::reserve() counts keys, and each map holds about one per room
+void TRoomDB::reserveEntrances(const qsizetype roomCount)
+{
+    entranceMap.reserve(roomCount);
+    entranceMapBySource.reserve(roomCount);
+}
+
 void TRoomDB::updateEntranceMap(int id)
 {
     TRoom* pR = getRoom(id);
@@ -174,16 +182,17 @@ void TRoomDB::updateEntranceMap(TRoom* pR, bool isMapLoading)
         if (!isMapLoading) {
             deleteValuesFromEntranceMap(id); // When LOADING a map, will never need to do this
         }
-        // A load can record a room's entrances twice, and a room can have more
-        // than one exit to the same room. Asked of the mirror, which walks this
-        // room's exits rather than every entrance into toExit:
+        // This room has no entries left at this point, so only its own exits can
+        // repeat one - a room can have more than one exit to the same room:
+        QVarLengthArray<int, 16> filedTargets;
         const auto addEntrance = [&](const int toExit) {
             if (showDebug) {
                 values.append(qsl("%1,").arg(toExit));
             }
-            if (entranceMapBySource.contains(id, toExit)) {
+            if (std::find(filedTargets.cbegin(), filedTargets.cend(), toExit) != filedTargets.cend()) {
                 return;
             }
+            filedTargets.append(toExit);
             entranceMap.insert(toExit, id);
             entranceMapBySource.insert(id, toExit);
         };
@@ -700,13 +709,11 @@ QList<int> TRoomDB::getAreaIDList()
  */
 void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRemapping)
 {
-    QSet<int> validUsedRoomIds; // Used good ids (>= 1)
-    QSet<int> validUsedAreaIds; // As rooms
+    QSet<int> validUsedAreaIds; // Used good ids (>= 1)
 
     // START OF TASK 1 & 2:
     // Scan through all rooms and record their idea of which area they
     // should be in.  Note invalid room Ids those will be fixed up later...
-    QHash<int, int> roomAreaHash;           // Key: room Id, Value: area it believes it should be in
     QMultiHash<int, int> areaRoomMultiHash; // Key: areaId, ValueS: rooms that believe they belong there
 
     { // Block this code to limit scope of iterator
@@ -733,17 +740,13 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                 itRoom.remove();
                 continue;
             }
-            if (itRoom.key() >= 1) {
-                validUsedRoomIds.insert(itRoom.key());
-            } else {
+            if (itRoom.key() < 1) {
                 roomRemapping.insert(itRoom.key(), itRoom.key());
                 //Store them for now, will assign new values when we have the
                 // set of good ones already used
             }
 
-            const int areaId = pR->getArea();
-            areaRoomMultiHash.insert(areaId, itRoom.key());
-            roomAreaHash.insert(itRoom.key(), areaId);
+            areaRoomMultiHash.insert(pR->getArea(), itRoom.key());
         }
     }
 
@@ -958,16 +961,18 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         if (TMap::smShowMapAuditErrors) {
             infoMsg = qsl("%1\n").arg(tr("[ INFO ]  - The renumbered rooms will be:"));
         }
+        // The rooms are not renumbered until all the new ids are chosen
+        QSet<int> newRoomIds;
         QMutableHashIterator<int, int> itRenumberedRoomId(roomRemapping);
         while (itRenumberedRoomId.hasNext()) {
             itRenumberedRoomId.next();
-            unsigned int newRoomId = 0;
+            int newRoomId = 0;
             do {
                 ; // No-op - needed increment is done in test condition!
-            } while (validUsedRoomIds.contains(++newRoomId));
+            } while (rooms.contains(++newRoomId) || newRoomIds.contains(newRoomId));
 
             itRenumberedRoomId.setValue(newRoomId); // Update the QHash
-            validUsedRoomIds.insert(newRoomId);
+            newRoomIds.insert(newRoomId);
             if (TMap::smShowMapAuditErrors) {
                 infoMsg.append(qsl("%1 ==> %2").arg(QString::number(itRenumberedRoomId.key()), QString::number(itRenumberedRoomId.value())));
             }
@@ -1209,6 +1214,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
     if (!roomRemapping.isEmpty()) {
         entranceMap.clear();
         entranceMapBySource.clear();
+        reserveEntrances(rooms.size());
         for (TRoom* pR : std::as_const(rooms)) {
             updateEntranceMap(pR, true);
         }

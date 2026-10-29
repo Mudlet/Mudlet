@@ -3239,6 +3239,77 @@ describe("sending protocol data to a game server that has not negotiated", funct
     end, 2000), "the bytes after the NUL never reached the wire, saw: " .. tostring(wireHex()))
   end)
 
+  local function hex(text)
+    return (text:gsub(".", function(c) return string.format("%02x", c:byte()) end))
+  end
+
+  -- sendData() keeps its converters from one command to the next, so a change
+  -- of encoding part way through a session must still reach the wire
+  it("encodes each command sent in the server encoding in force at the time", function()
+    if serverUnavailable() then return end
+    local original = getServerEncoding()
+    finally(function() setServerEncoding(original) end)
+    local before = connectionCount()
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local privet = "\208\191\209\128\208\184\208\178\208\181\209\130"
+    local expected = {
+      {"UTF-8", "SendEncUtf8 ", privet},
+      {"WINDOWS-1251", "SendEnc1251 ", "\239\240\232\226\229\242"},
+      {"KOI8-R", "SendEncKoi8 ", "\208\210\201\215\197\212"},
+      -- Mudlet's own CP437 codec, which marks what it cannot carry with '?' where ICU's uses a control byte
+      {"CP437", "SendEnc437 ", "??????"},
+      {"ASCII", "SendEncAscii ", privet},
+      {"WINDOWS-1251", "SendEnc1251Again ", "\239\240\232\226\229\242"},
+      {"UTF-8", "SendEncUtf8Again ", privet},
+    }
+    for _, case in ipairs(expected) do
+      assert.is_true(setServerEncoding(case[1]))
+      send(case[2] .. privet, false)
+    end
+    for _, case in ipairs(expected) do
+      local wanted = hex(case[2] .. case[3])
+      assert.is_true(waitUntil(function()
+        local seen = capture()
+        return seen ~= nil and seen.connections > before and contains(seen.received, wanted)
+      end, 2000), case[1] .. " did not put " .. wanted .. " on the wire, saw: " .. tostring(wireHex()))
+    end
+  end)
+
+  it("warns once about a command the encoding cannot carry, and again once the encoding is chosen anew", function()
+    local original = getServerEncoding()
+    finally(function() setServerEncoding(original) end)
+    local hangul = "\237\149\156\234\181\173\236\150\180"
+    local function warningsSince(mark)
+      local count = 0
+      for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+        if line:find("unlikely to understand it", 1, true) then
+          count = count + 1
+        end
+      end
+      return count
+    end
+
+    assert.is_true(setServerEncoding("UTF-8"))
+    assert.is_true(setServerEncoding("WINDOWS-1251"))
+    local mark = getLastLineNumber("main")
+    send("SendWarnFirst " .. hangul, false)
+    assert.equals(1, warningsSince(mark), "Hangul cannot be sent in WINDOWS-1251")
+    send("SendWarnRepeat " .. hangul, false)
+    send("n", false)
+    assert.equals(1, warningsSince(mark), "the warning is only given once per encoding")
+
+    -- coming back from ASCII is choosing the encoding anew, which re-arms the warning
+    assert.is_true(setServerEncoding("ASCII"))
+    assert.is_true(setServerEncoding("WINDOWS-1251"))
+    mark = getLastLineNumber("main")
+    send("n", false)
+    assert.equals(0, warningsSince(mark), "a command WINDOWS-1251 can carry was warned about")
+    send("SendWarnAgain " .. hangul, false)
+    assert.equals(1, warningsSince(mark), "the re-armed warning was not given")
+  end)
+
   -- The profile is written before the connection is started, so it can be read
   -- back straight away. after_each closes the connection.
   --

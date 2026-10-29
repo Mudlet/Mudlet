@@ -66,13 +66,12 @@
 #include <QFutureWatcher>
 #include <QGuiApplication>
 #include <QSettings>
-#if defined(Q_OS_MACOS)
-// Only used for this OS:
 #include <QStandardPaths>
-#endif
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
+#include <QCryptographicHash>
+#include <QDataStream>
 #include <QSaveFile>
 #include <QStringConverter>
 #include <QTemporaryDir>
@@ -137,6 +136,165 @@ void guardSelfMethod(lua_State* L, const char* metatableName, const char* method
     lua_pushcclosure(L, checkedSelfMethod, 3);
     lua_setfield(L, -2, methodName);
     lua_pop(L, 2);
+}
+
+// The signature, version, format, endianness, four type sizes and the integral flag
+constexpr qsizetype csmLuaChunkHeaderSize = 12;
+constexpr char csmLua51Version = 0x51;
+const QByteArray csmLuaBytecodeCacheMagic = QByteArrayLiteral("Mudlet Lua bytecode 1");
+
+// LuaGlobal.lua's files by name: the SHA-1 of the source, then of the bytecode, then the bytecode
+// without its chunk name. Lua 5.1 runs damaged bytecode as readily as it runs the real thing.
+struct LuaBytecodeCache
+{
+    QHash<QByteArray, QByteArray> entries;
+    bool changed = false;
+};
+
+LuaBytecodeCache readLuaBytecodeCache(const QString& pathFileName)
+{
+    LuaBytecodeCache cache;
+    QFile file(pathFileName);
+    if (pathFileName.isEmpty() || !file.open(QIODevice::ReadOnly)) {
+        return cache;
+    }
+    QDataStream ifs(&file);
+    ifs.setVersion(QDataStream::Qt_5_12);
+    QByteArray magic;
+    ifs >> magic;
+    if (magic != csmLuaBytecodeCacheMagic) {
+        return cache;
+    }
+    QHash<QByteArray, QByteArray> entries;
+    ifs >> entries;
+    if (ifs.status() == QDataStream::Ok) {
+        cache.entries = std::move(entries);
+    }
+    return cache;
+}
+
+void writeLuaBytecodeCache(const QString& pathFileName, const LuaBytecodeCache& cache)
+{
+    if (!cache.changed || pathFileName.isEmpty() || !QDir().mkpath(QFileInfo(pathFileName).absolutePath())) {
+        return;
+    }
+    QSaveFile file(pathFileName);
+    if (!file.open(QIODevice::WriteOnly)) {
+        return;
+    }
+    QDataStream ofs(&file);
+    ofs.setVersion(QDataStream::Qt_5_12);
+    ofs << csmLuaBytecodeCacheMagic << cache.entries;
+    if (ofs.status() == QDataStream::Ok) {
+        file.commit();
+    }
+}
+
+int appendToByteArray(lua_State*, const void* data, size_t size, void* byteArray)
+{
+    static_cast<QByteArray*>(byteArray)->append(static_cast<const char*>(data), static_cast<qsizetype>(size));
+    return 0;
+}
+
+// A dump starts with the chunk name, which nested functions inherit. Without it one entry serves
+// every install path, such as the AppImage mount point that changes on every launch.
+QByteArray withoutChunkName(const QByteArray& dump)
+{
+    constexpr qsizetype nameStart = csmLuaChunkHeaderSize + sizeof(size_t);
+    if (dump.size() < nameStart || !dump.startsWith(LUA_SIGNATURE) || dump.at(4) != csmLua51Version || dump.at(8) != static_cast<char>(sizeof(size_t))) {
+        return {};
+    }
+    size_t nameSize;
+    memcpy(&nameSize, dump.constData() + csmLuaChunkHeaderSize, sizeof(size_t));
+    if (nameSize > size_t(dump.size() - nameStart)) {
+        return {};
+    }
+    return dump.left(csmLuaChunkHeaderSize) + dump.mid(nameStart + qsizetype(nameSize));
+}
+
+QByteArray withChunkName(const QByteArray& bytecode, const QByteArray& chunkName)
+{
+    const size_t nameSize = chunkName.size() + 1;
+    QByteArray result;
+    result.reserve(bytecode.size() + sizeof(size_t) + nameSize);
+    result.append(bytecode.constData(), csmLuaChunkHeaderSize);
+    result.append(reinterpret_cast<const char*>(&nameSize), sizeof(size_t));
+    result.append(chunkName.constData(), nameSize);
+    result.append(bytecode.constData() + csmLuaChunkHeaderSize, bytecode.size() - csmLuaChunkHeaderSize);
+    return result;
+}
+
+// Pushes the compiled chunk, or the error message and returns false, as luaL_loadbuffer() does
+bool loadThroughBytecodeCache(lua_State* L, LuaBytecodeCache& cache, const QByteArray& source, const QByteArray& chunkName, const QByteArray& cacheKey)
+{
+    const QByteArray sourceHash = QCryptographicHash::hash(source, QCryptographicHash::Sha1);
+    const qsizetype bytecodeStart = 2 * sourceHash.size();
+    const auto cached = cache.entries.constFind(cacheKey);
+    if (cached != cache.entries.cend() && cached->size() >= bytecodeStart + csmLuaChunkHeaderSize && cached->startsWith(sourceHash)) {
+        const QByteArray bytecode = cached->mid(bytecodeStart);
+        if (QCryptographicHash::hash(bytecode, QCryptographicHash::Sha1) == cached->mid(sourceHash.size(), sourceHash.size())) {
+            const QByteArray chunk = withChunkName(bytecode, chunkName);
+            if (!luaL_loadbuffer(L, chunk.constData(), chunk.size(), chunkName.constData())) {
+                return true;
+            }
+            lua_pop(L, 1);
+        }
+    }
+
+    if (luaL_loadbuffer(L, source.constData(), source.size(), chunkName.constData())) {
+        return false;
+    }
+    QByteArray dump;
+    lua_dump(L, appendToByteArray, &dump);
+    const QByteArray bytecode = withoutChunkName(dump);
+    if (!bytecode.isEmpty()) {
+        cache.entries.insert(cacheKey, sourceHash + QCryptographicHash::hash(bytecode, QCryptographicHash::Sha1) + bytecode);
+        cache.changed = true;
+    }
+    return true;
+}
+
+enum class LuaGlobalFileLoad { Loaded, Failed, LeftToDofile };
+
+// Pushes the compiled file, or the error message, or nothing for dofile() to handle it.
+// Kept apart from lua_call() and lua_error(), which longjmp past C++ destructors.
+LuaGlobalFileLoad loadLuaGlobalFile(lua_State* L, LuaBytecodeCache* cache, const char* path, const char* cacheKey)
+{
+    QFile file(QString::fromUtf8(path));
+    if (!cache || !file.open(QIODevice::ReadOnly)) {
+        return LuaGlobalFileLoad::LeftToDofile;
+    }
+    const QByteArray source = file.readAll();
+    // dofile() skips a "#" first line and runs a precompiled file
+    if (source.isEmpty() || source.startsWith('#') || source.startsWith(LUA_SIGNATURE[0])) {
+        return LuaGlobalFileLoad::LeftToDofile;
+    }
+    return loadThroughBytecodeCache(L, *cache, source, QByteArray("@") + path, cacheKey) ? LuaGlobalFileLoad::Loaded : LuaGlobalFileLoad::Failed;
+}
+
+// dofile() for the files LuaGlobal.lua loads, compiling each only when its content changes.
+// Arguments: the file, and the name of its cache entry. Upvalue: the LuaBytecodeCache, or nil.
+int dofileThroughBytecodeCache(lua_State* L)
+{
+    const int base = lua_gettop(L);
+    const char* path = luaL_checkstring(L, 1);
+    const char* cacheKey = luaL_optstring(L, 2, path);
+    auto* cache = static_cast<LuaBytecodeCache*>(lua_touserdata(L, lua_upvalueindex(1)));
+
+    int argumentCount = 0;
+    switch (loadLuaGlobalFile(L, cache, path, cacheKey)) {
+    case LuaGlobalFileLoad::Loaded:
+        break;
+    case LuaGlobalFileLoad::Failed:
+        return lua_error(L);
+    case LuaGlobalFileLoad::LeftToDofile:
+        lua_getglobal(L, "dofile");
+        lua_pushvalue(L, 1);
+        argumentCount = 1;
+        break;
+    }
+    lua_call(L, argumentCount, LUA_MULTRET);
+    return lua_gettop(L) - base;
 }
 
 } // namespace
@@ -3750,7 +3908,13 @@ static void pushUnusedTable(lua_State* L, int& ref)
 // The table "matches" holds between dispatches
 void TLuaInterpreter::pushEmptyMatchesTable(lua_State* L)
 {
+    if (knows(scmEmptyMatchesUnused)) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mEmptyMatchesRef);
+        return;
+    }
     pushUnusedTable(L, mEmptyMatchesRef);
+    watch(L, -1);
+    learn(L, scmEmptyMatchesUnused);
 }
 
 // No documentation available in wiki - internal function
@@ -3763,10 +3927,8 @@ void TLuaInterpreter::installBetweenDispatchMultimatches(lua_State* L)
         lua_rawseti(L, LUA_REGISTRYINDEX, mSpareMultimatchesRef);
         mSpareMultimatchesSeen = false;
     }
-    if (globalPresent(L, LUA_GLOBALSINDEX, mMultimatchesKeyRef)) {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, mMultimatchesKeyRef);
-        lua_pushnil(L);
-        lua_rawset(L, LUA_GLOBALSINDEX);
+    if (globalHeld(L, mMultimatchesKeyRef, scmMultimatchesAbsent)) {
+        clearGlobal(L, mMultimatchesKeyRef, scmMultimatchesAbsent);
     }
     mMultimatchesPending = PendingMultimatches::Spare;
 }
@@ -3819,7 +3981,10 @@ void TLuaInterpreter::clearCaptureGroups()
         pushEmptyMatchesTable(L);
         // Only now, as allocating the table can run a finaliser that reads it
         mMatchesPending = false;
+        const bool factsWereCurrent = factsCurrent();
         lua_rawset(L, LUA_GLOBALSINDEX);
+        keepFacts(factsWereCurrent);
+        forget(scmMatchesAbsent);
         installBetweenDispatchMultimatches(L);
     } else {
         pushEmptyMatchesTable(L);
@@ -4844,7 +5009,11 @@ void TLuaInterpreter::pushMultimatchesTable(lua_State* L)
 // globals metatable was handed out, which nothing a script does can - busted
 // hands it out around every spec file, so the specs covering the deferral need
 // it back. Puts the handlers on whatever metatable the globals table carries if
-// both slots are empty there. Returns whether the deferral is on.
+// both slots are empty there. Given true, also remakes a handler the collector
+// took, and turns the write barrier back on if barrierIntact() turned it off and
+// holds again. Returns whether the deferral
+// is on and, once installed, the barrier's state: "vouching", "off", or
+// "absent" with a Lua that has none.
 int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
 {
     if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
@@ -4857,6 +5026,35 @@ int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
         lua_pushboolean(L, false);
         return 1;
     }
+    const bool rearm = lua_toboolean(L, 1);
+    // For the specs after one that let the collector take a handler
+    if (rearm) {
+        for (const auto& [handlerRef, handler] : {std::pair{self->mIndexHandlerRef, &TLuaInterpreter::lazyGlobalsIndex}, std::pair{self->mNewindexHandlerRef, &TLuaInterpreter::lazyGlobalsNewindex}}) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, handlerRef);
+            const bool collected = lua_tocfunction(L, -1) != handler;
+            lua_pop(L, 1);
+            if (collected) {
+                lua_pushlightuserdata(L, self);
+                lua_pushcclosure(L, handler, 1);
+                lua_rawseti(L, LUA_REGISTRYINDEX, handlerRef);
+            }
+        }
+    }
+#if defined(MUDLET_LUA_WATCH)
+    // For the specs after one that turned the barrier off
+    if (rearm && !self->mLuaWriteEpoch && self->barrierIntact(L)) {
+        self->mLuaWriteEpoch = lua_watch(L, LUA_REGISTRYINDEX, 1);
+        for (const int keyRef : {self->mMatchesKeyRef, self->mMultimatchesKeyRef, self->mLineKeyRef}) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, keyRef);
+            lua_watch(L, -1, 1);
+            lua_pop(L, 1);
+        }
+        self->mFacts = 0;
+        if (self->mLuaWriteEpoch) {
+            self->mFactsEpoch = *self->mLuaWriteEpoch;
+        }
+    }
+#endif
     lua_rawgeti(L, LUA_REGISTRYINDEX, self->mGlobalsTableRef);
     if (lua_getmetatable(L, -1)) {
         self->restoreGlobalsHandlers(L, lua_gettop(L));
@@ -4866,7 +5064,12 @@ int TLuaInterpreter::rearmLazyGlobals(lua_State* L)
     self->mGlobalsMetatableTouched = !armed;
     self->mGlobalsHandlersLinger = !armed;
     lua_pushboolean(L, armed);
-    return 1;
+#if defined(MUDLET_LUA_WATCH)
+    lua_pushstring(L, self->mLuaWriteEpoch && self->barrierIntact(L) ? "vouching" : "off");
+#else
+    lua_pushstring(L, "absent");
+#endif
+    return 2;
 }
 
 // No documentation available in wiki - internal function
@@ -4882,12 +5085,19 @@ bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L)
         }
         return false;
     }
+    if (knows(scmHandlersInPlace)) {
+        return true;
+    }
     if (lua_topointer(L, LUA_GLOBALSINDEX) != mGlobalsTable) {
         // setfenv(0, ...) gave the thread another globals table, which Mudlet
         // writes to from now on. Code compiled before still reads the original,
         // so whatever it is owed goes in there first.
         materialisePendingGlobals(L);
         return false;
+    }
+    if (mGlobalsHandlersVerified) {
+        mGlobalsHandlersTrusted = true;
+        return true;
     }
     if (!globalsHandlersInPlace(L)) {
         // The guard turns the deferral off for good once the metatable is
@@ -4901,6 +5111,9 @@ bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L)
         stripGlobalsHandlers(L);
         return false;
     }
+    // A script still running can change the metatable between two lines it feeds
+    mGlobalsHandlersVerified = mScriptCallDepth == 0;
+    learn(L, scmHandlersInPlace);
     return true;
 }
 
@@ -4941,6 +5154,8 @@ void TLuaInterpreter::standDownDeferral(lua_State* L)
 void TLuaInterpreter::stripGlobalsHandlers(lua_State* L)
 {
     mGlobalsHandlersLinger = false;
+    mGlobalsHandlersVerified = false;
+    mGlobalsHandlersTrusted = false;
     const int callerStackTop = lua_gettop(L);
     lua_rawgeti(L, LUA_REGISTRYINDEX, mGlobalsTableRef);
     if (!lua_getmetatable(L, -1)) {
@@ -5016,8 +5231,103 @@ bool TLuaInterpreter::globalsHandlersInPlace(lua_State* L)
     lua_rawgeti(L, LUA_REGISTRYINDEX, mNewindexKeyRef);
     lua_rawget(L, metatable);
     const bool inPlace = lua_tocfunction(L, -2) == &TLuaInterpreter::lazyGlobalsIndex && lua_tocfunction(L, -1) == &TLuaInterpreter::lazyGlobalsNewindex;
+    if (inPlace) {
+        // A metatable put on the globals table past the guard is not one the
+        // barrier was told about
+        watch(L, metatable);
+    }
     lua_pop(L, 3);
     return inPlace;
+}
+
+// No documentation available in wiki - internal function
+// Whether the global under the name at keyRef is there, which is not looked up
+// while the barrier vouches that it is still absent
+bool TLuaInterpreter::globalHeld(lua_State* L, const int keyRef, const quint8 absentFact)
+{
+    if (knows(absentFact)) {
+        return false;
+    }
+    const bool held = globalPresent(L, LUA_GLOBALSINDEX, keyRef);
+    if (!held) {
+        learn(L, absentFact);
+    }
+    return held;
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::clearGlobal(lua_State* L, const int keyRef, const quint8 absentFact)
+{
+    lua_rawgeti(L, LUA_REGISTRYINDEX, keyRef);
+    lua_pushnil(L);
+    const bool factsWereCurrent = factsCurrent();
+    lua_rawset(L, LUA_GLOBALSINDEX);
+    keepFacts(factsWereCurrent);
+    learn(L, absentFact);
+}
+
+// No documentation available in wiki - internal function
+// Call only right after checking the fact, or after a store that made it so,
+// with no Lua run since
+void TLuaInterpreter::learn(lua_State* L, const quint8 fact)
+{
+    if (!mLuaWriteEpoch) {
+        return;
+    }
+    if (*mLuaWriteEpoch != mFactsEpoch) {
+        if (!barrierIntact(L)) {
+            mLuaWriteEpoch = nullptr;
+            return;
+        }
+        mFactsEpoch = *mLuaWriteEpoch;
+        mFacts = 0;
+    }
+    mFacts |= fact;
+}
+
+// No documentation available in wiki - internal function
+// debug.getregistry() hands a script the slots Mudlet keeps the three names in,
+// and a name swapped in there is one the barrier does not watch. A script can
+// also make the registry or the globals metatable weak, and the collector clears
+// a weak table - a handler included - without any store the barrier counts.
+bool TLuaInterpreter::barrierIntact(lua_State* L)
+{
+#if defined(MUDLET_LUA_WATCH)
+    if (!lua_watch(L, LUA_REGISTRYINDEX, 1)) {
+        return false;
+    }
+#endif
+    if (lua_getmetatable(L, LUA_REGISTRYINDEX)) {
+        lua_pop(L, 1);
+        return false;
+    }
+    if (lua_getmetatable(L, LUA_GLOBALSINDEX)) {
+        const bool weakable = lua_getmetatable(L, -1);
+        lua_pop(L, weakable ? 2 : 1);
+        if (weakable) {
+            return false;
+        }
+    }
+    bool intact = true;
+    for (const auto& [keyRef, key] : {std::pair{mMatchesKeyRef, mMatchesKey}, std::pair{mMultimatchesKeyRef, mMultimatchesKey}, std::pair{mLineKeyRef, mLineKey}}) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, keyRef);
+        intact = intact && lua_type(L, -1) == LUA_TSTRING && lua_tostring(L, -1) == key;
+        lua_pop(L, 1);
+    }
+    return intact;
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::watch(lua_State* L, const int index)
+{
+#if defined(MUDLET_LUA_WATCH)
+    if (mLuaWriteEpoch) {
+        lua_watch(L, index, 1);
+    }
+#else
+    Q_UNUSED(L)
+    Q_UNUSED(index)
+#endif
 }
 
 // No documentation available in wiki - internal function
@@ -5026,20 +5336,16 @@ bool TLuaInterpreter::globalsHandlersInPlace(lua_State* L)
 void TLuaInterpreter::deferDispatchGlobals(lua_State* L, const MultimatchesSource source, const bool setsMatches)
 {
     // A name already left out can still hold what a script rawset() there
-    if (setsMatches && (!mMatchesPending || globalPresent(L, LUA_GLOBALSINDEX, mMatchesKeyRef))) {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, mMatchesKeyRef);
-        lua_pushnil(L);
-        lua_rawset(L, LUA_GLOBALSINDEX);
+    if (setsMatches && (!mMatchesPending || globalHeld(L, mMatchesKeyRef, scmMatchesAbsent))) {
+        clearGlobal(L, mMatchesKeyRef, scmMatchesAbsent);
         mMatchesPending = true;
     }
 
     if (source == MultimatchesSource::Untouched) {
         return;
     }
-    if (mMultimatchesPending == PendingMultimatches::None || globalPresent(L, LUA_GLOBALSINDEX, mMultimatchesKeyRef)) {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, mMultimatchesKeyRef);
-        lua_pushnil(L);
-        lua_rawset(L, LUA_GLOBALSINDEX);
+    if (mMultimatchesPending == PendingMultimatches::None || globalHeld(L, mMultimatchesKeyRef, scmMultimatchesAbsent)) {
+        clearGlobal(L, mMultimatchesKeyRef, scmMultimatchesAbsent);
     }
     mMultimatchesPending = PendingMultimatches::Captures;
 }
@@ -5173,14 +5479,19 @@ int TLuaInterpreter::lazyGlobalsIndex(lua_State* L)
     }
     lua_pushvalue(L, 2);
     lua_pushvalue(L, -2);
+    const bool factsWereCurrent = self->factsCurrent();
     lua_rawset(L, 1);
+    self->keepFacts(factsWereCurrent);
     // Only now: building the value can raise, and the next read has to find it
     // still owed
     if (wantsMatches) {
         self->mMatchesPending = false;
+        self->forget(scmMatchesAbsent);
     } else if (wantsLine) {
         self->mLinePending = false;
+        self->forget(scmLineAbsent);
     } else {
+        self->forget(scmMultimatchesAbsent);
         if (self->mMultimatchesPending == PendingMultimatches::Spare) {
             self->mSpareMultimatchesSeen = true;
         }
@@ -5200,16 +5511,21 @@ int TLuaInterpreter::lazyGlobalsNewindex(lua_State* L)
     lua_settop(L, 3);
     auto* self = static_cast<TLuaInterpreter*>(lua_touserdata(L, lua_upvalueindex(1)));
     const char* key = lua_type(L, 2) == LUA_TSTRING && lua_topointer(L, 1) == self->mGlobalsTable ? lua_tostring(L, 2) : nullptr;
+    const bool factsWereCurrent = self->factsCurrent();
     lua_rawset(L, 1);
     if (!key) {
         return 0;
     }
+    self->keepFacts(factsWereCurrent);
     if (key == self->mMatchesKey) {
         self->mMatchesPending = false;
+        self->forget(scmMatchesAbsent);
     } else if (key == self->mLineKey) {
         self->mLinePending = false;
+        self->forget(scmLineAbsent);
     } else if (key == self->mMultimatchesKey) {
         self->mMultimatchesPending = PendingMultimatches::None;
+        self->forget(scmMultimatchesAbsent);
     }
     return 0;
 }
@@ -5319,13 +5635,21 @@ void TLuaInterpreter::installLazyGlobals()
         const bool vacant = lua_isnil(L, -1) && lua_isnil(L, -2);
         lua_pop(L, 2);
         if (vacant) {
+#if defined(MUDLET_LUA_WATCH)
+            mLuaWriteEpoch = lua_watch(L, LUA_REGISTRYINDEX, 1);
+            lua_watch(L, -1, 1);
+            mFacts = 0;
+#endif
             lua_pushliteral(L, "matches");
+            watch(L, -1);
             mMatchesKey = lua_tostring(L, -1);
             mMatchesKeyRef = luaL_ref(L, LUA_REGISTRYINDEX);
             lua_pushliteral(L, "multimatches");
+            watch(L, -1);
             mMultimatchesKey = lua_tostring(L, -1);
             mMultimatchesKeyRef = luaL_ref(L, LUA_REGISTRYINDEX);
             lua_pushliteral(L, "line");
+            watch(L, -1);
             mLineKey = lua_tostring(L, -1);
             mLineKeyRef = luaL_ref(L, LUA_REGISTRYINDEX);
             lua_pushliteral(L, "__index");
@@ -5349,10 +5673,21 @@ void TLuaInterpreter::installLazyGlobals()
             if (mLazyCaptureGlobals) {
                 restoreGlobalsHandlers(L, lua_gettop(L));
             }
+#if defined(MUDLET_LUA_WATCH)
+            // mFactsEpoch is still the last Lua state's, which this one's
+            // counter could equal without barrierIntact() having been asked
+            if (mLuaWriteEpoch && barrierIntact(L)) {
+                mFactsEpoch = *mLuaWriteEpoch;
+            } else {
+                mLuaWriteEpoch = nullptr;
+            }
+#endif
 
             mGlobalsTable = lua_topointer(L, LUA_GLOBALSINDEX);
             mGlobalsMetatableTouched = false;
             mGlobalsHandlersLinger = false;
+            mGlobalsHandlersVerified = false;
+            mGlobalsHandlersTrusted = false;
             mLazyGlobalsInstalled = installGlobalsMetatableGuard(L, nullptr, "getmetatable", 0) && installGlobalsMetatableGuard(L, nullptr, "setmetatable", 1)
                                     && installGlobalsMetatableGuard(L, "debug", "getmetatable", 2) && installGlobalsMetatableGuard(L, "debug", "setmetatable", 3)
                                     && installGlobalsMetatableGuard(L, nullptr, "rawget", 4);
@@ -5398,10 +5733,14 @@ bool TLuaInterpreter::installGlobalsMetatableGuard(lua_State* L, const char* lib
 void TLuaInterpreter::forgetLazyGlobals()
 {
     mLazyGlobalsInstalled = false;
+    mLuaWriteEpoch = nullptr;
+    mFacts = 0;
     mGlobalsTable = nullptr;
     mGlobalsTableRef = LUA_NOREF;
     mGlobalsMetatableTouched = false;
     mGlobalsHandlersLinger = false;
+    mGlobalsHandlersVerified = false;
+    mGlobalsHandlersTrusted = false;
     mIndexHandlerRef = LUA_NOREF;
     mNewindexHandlerRef = LUA_NOREF;
     mCaptureScopeOpen = false;
@@ -6593,10 +6932,8 @@ void TLuaInterpreter::setLineGlobal(const QString& line)
     // Tested for first: nothing can see the name once it holds nil either way,
     // but rawsetting one that is not there still has Lua make a node for it,
     // and on a globals table with no node to spare that is a rehash of all of it
-    if (globalPresent(L, LUA_GLOBALSINDEX, mLineKeyRef)) {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, mLineKeyRef);
-        lua_pushnil(L);
-        lua_rawset(L, LUA_GLOBALSINDEX);
+    if (globalHeld(L, mLineKeyRef, scmLineAbsent)) {
+        clearGlobal(L, mLineKeyRef, scmLineAbsent);
     }
     mPendingLine = line;
     mLinePending = true;
@@ -6616,13 +6953,21 @@ void TLuaInterpreter::set_lua_integer(const QString& varName, int varValue)
 // No documentation available in wiki - internal function
 QString TLuaInterpreter::getLuaString(const QString& stringName)
 {
-    lua_State* L = pGlobalLua;
-
-    const int error = luaL_dostring(L, qsl("return %1").arg(stringName).toUtf8().constData());
-    if (!error) {
-        return lua_tostring(L, 1);
+    if (!pGlobalLua) {
+        return QString();
     }
-    return QString();
+    const ScriptCallerScope callerScope(*this, false);
+    lua_State* L = pGlobalLua;
+    const int top = lua_gettop(L);
+
+    QString value;
+    if (!luaL_dostring(L, qsl("return %1").arg(stringName).toUtf8().constData())) {
+        // The chunk's first result by absolute index, which reads as none rather
+        // than as the slot below when an empty name makes the chunk return nothing
+        value = QString::fromUtf8(lua_tostring(L, top + 1));
+    }
+    lua_settop(L, top);
+    return value;
 }
 
 // check for <whitespace><no_valid_representation> as output
@@ -7372,6 +7717,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
     lua_register(pGlobalLua, "announce", TLuaInterpreter::announce);
     lua_register(pGlobalLua, "scrollTo", TLuaInterpreter::scrollTo);
+    lua_register(pGlobalLua, "scrollUp", TLuaInterpreter::scrollUp);
+    lua_register(pGlobalLua, "scrollDown", TLuaInterpreter::scrollDown);
     lua_register(pGlobalLua, "getScroll", TLuaInterpreter::getScroll);
     lua_register(pGlobalLua, "getConfig", TLuaInterpreter::getConfig);
     lua_register(pGlobalLua, "setSaveCommandHistory", TLuaInterpreter::setSaveCommandHistory);
@@ -7887,6 +8234,9 @@ void TLuaInterpreter::loadGlobal()
         }
     }
     QStringList failedMessages{};
+    const QString cacheLocation = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    const QString bytecodeCachePathFileName = cacheLocation.isEmpty() ? QString() : qsl("%1/lua-bytecode.dat").arg(cacheLocation);
+    LuaBytecodeCache bytecodeCache = readLuaBytecodeCache(bytecodeCachePathFileName);
 
     // uncomment the following to enable some debugging texts in the LuaGlobal.lua script:
     // luaL_dostring(pGlobalLua, qsl("debugLoading = true").toUtf8().constData());
@@ -7946,7 +8296,22 @@ void TLuaInterpreter::loadGlobal()
             continue;
         }
 
-        error = luaL_dostring(pGlobalLua, luaGlobal.toUtf8().constData());
+        const QByteArray luaGlobalSource = luaGlobal.toUtf8();
+        error = luaL_loadstring(pGlobalLua, luaGlobalSource.constData());
+        if (!error) {
+            lua_pushlightuserdata(pGlobalLua, &bytecodeCache);
+            lua_pushcclosure(pGlobalLua, dofileThroughBytecodeCache, 1);
+            lua_pushvalue(pGlobalLua, -1);
+            lua_insert(pGlobalLua, -3);
+            const int loaderIndex = lua_gettop(pGlobalLua) - 2;
+            error = lua_pcall(pGlobalLua, 1, 0, 0);
+            // Leaves the loader nothing to point at once bytecodeCache goes out of scope
+            lua_pushnil(pGlobalLua);
+            lua_setupvalue(pGlobalLua, loaderIndex, 1);
+            lua_remove(pGlobalLua, loaderIndex);
+            writeLuaBytecodeCache(bytecodeCachePathFileName, bytecodeCache);
+            bytecodeCache.changed = false;
+        }
         if (!error) {
             // Last, as the globals table gets its metatable from Other.lua, which
             // LuaGlobal.lua loads
