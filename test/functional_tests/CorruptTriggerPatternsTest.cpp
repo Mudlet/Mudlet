@@ -390,8 +390,9 @@ private:
 
     // match_substring() indexes mPatternLiterals by pattern number and
     // dereferences the entry's matcher without a bounds or null check, so it
-    // relies on one entry per pattern, holding a matcher for every substring
-    // kind; only a perl pattern's required text is searched for besides.
+    // relies on one entry per pattern, holding a matcher for every
+    // REGEX_SUBSTRING pattern; only a perl pattern's required text is searched
+    // for besides.
     // Answers rather than asserting: a QVERIFY here would return from this
     // helper and let the slot run on, burying the failure.
     static QString matcherInvariantViolation(TTrigger* pTrigger)
@@ -399,11 +400,11 @@ private:
         const QStringList patterns = pTrigger->getPatternsList();
         const QList<int> kinds = pTrigger->getRegexCodePropertyList();
         if (static_cast<int>(pTrigger->mPatternLiterals.size()) != patterns.size()) {
-            return qsl("trigger '%1' holds %2 pattern(s) but %3 matcher slot(s)").arg(pTrigger->getName(), QString::number(patterns.size()), QString::number(pTrigger->mPatternLiterals.size()));
+            return qsl("trigger '%1' holds %2 pattern(s) but %3 literal slot(s)").arg(pTrigger->getName(), QString::number(patterns.size()), QString::number(pTrigger->mPatternLiterals.size()));
         }
         for (int i = 0; i < patterns.size(); ++i) {
             const bool haveMatcher = pTrigger->mPatternLiterals[i].matcher != nullptr;
-            const bool wantMatcher = kinds.at(i) == REGEX_SUBSTRING || (kinds.at(i) == REGEX_PERL && haveMatcher);
+            const bool wantMatcher = kinds.at(i) == REGEX_SUBSTRING || (kinds.at(i) == REGEX_PERL && pTrigger->mPatternLiterals[i].gram != 0);
             if (haveMatcher != wantMatcher) {
                 return qsl("trigger '%1' pattern %2 is kind %3 but %4 a matcher").arg(pTrigger->getName(), QString::number(i), QString::number(kinds.at(i)), haveMatcher ? qsl("has") : qsl("lacks"));
             }

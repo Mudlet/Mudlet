@@ -7993,15 +7993,6 @@ describe("Trigger processing", function()
             assert.are.equal(7, _G.TrigSpec.count, "a regex trigger stopped firing among many substring ones")
         end)
 
-        it("fires a regex trigger on a line an unpaired surrogate splits its text on", function()
-            -- the surrogate has no UTF-8, so pcre2 reads "qzxjv" from a line that does not hold it
-            track(tempRegexTrigger("qzxjv", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
-            setConfig("specialForceMXPProcessorOn", true)
-            finally(function() setConfig("specialForceMXPProcessorOn", false) end)
-            feedTriggers("\nzz qz&#xD800;xjv\n")
-            assert.are.equal(1, _G.TrigSpec.count, "a regex trigger was filed out of a line whose UTF-8 holds its text")
-        end)
-
         it("still fires a line trigger on lines that match nothing", function()
             local id = tempLineTrigger(0, 10, function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end)
             feedTriggers("\nnothing here at all\n")
@@ -8396,6 +8387,19 @@ describe("Trigger processing", function()
             feedTriggers(warmUpLine)
             feedTriggers("\nownopenfeeder_fires now\n")
             assert.is_true(candidatesEpoch() > before, "a trigger opened by a fed line went unannounced to the line that fed it")
+        end)
+
+        it("opens a multiline trigger on a line an unpaired surrogate splits its first pattern's text on", function()
+            local code = [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]
+            tempComplexRegexTrigger(track("SpecRuledOutSplitMultiline"), "qzxjv", code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2)
+            tempComplexRegexTrigger("SpecRuledOutSplitMultiline", "^mlsplit close$", code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2)
+            setConfig("specialForceMXPProcessorOn", true)
+            finally(function() setConfig("specialForceMXPProcessorOn", false) end)
+            feedTriggers(warmUpLine)
+            -- the surrogate has no UTF-8, so pcre2 reads "qzxjv" from a line that does not hold it
+            feedTriggers("zz qz&#xD800;xjv\n")
+            feedTriggers("mlsplit close\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a multiline trigger was ruled out of a line whose UTF-8 holds its first pattern's text")
         end)
 
         it("fires a regex whose brace is the brace itself and not a quantifier", function()

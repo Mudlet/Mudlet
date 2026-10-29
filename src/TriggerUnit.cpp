@@ -919,9 +919,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
 
     {
         const std::vector<TRootTriggerFilter>& pinnedFilters = pinnedSnapshot->mFilters;
-        // A perl pattern is filed under text it needs, which pcre2 looks for in the UTF-8: on a line that
-        // drops an unpaired surrogate, the UTF-8 holds text the line does not
-        const bool prescanActive = pinnedSnapshot->mPrescan.active() && !subject.dropsText();
+        const bool prescanActive = pinnedSnapshot->mPrescan.active();
         // Borrowed from the unit so that only a longer line than any before it
         // allocates, and moved out so a nested pass grows its own.
         std::vector<int> scratch;

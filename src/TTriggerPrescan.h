@@ -34,7 +34,8 @@ class TTrigger;
 //
 // A pattern can only match a line holding all the n-grams of the text its matches contain (see
 // TPatternLiteral), so each is filed under one of them and offered only to lines that have it. The test
-// is one-sided: it never hides a trigger that would match, and match() still decides every candidate.
+// is one-sided - it never hides a trigger that would match, and match() still decides every candidate -
+// on a line whose UTF-8 holds the same text (see TUtf8Subject::dropsText()).
 class TTriggerPrescan
 {
 public:

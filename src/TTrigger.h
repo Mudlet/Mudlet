@@ -186,8 +186,7 @@ private:
 };
 
 // The text every match of one pattern has to contain, so a line without it rules the pattern out
-// unrun. Every prefilter reads it from here: the line's bigram summary, the search ahead of pcre2 and
-// TriggerUnit's n-gram indexes.
+// unrun. Every text prefilter reads it from here.
 struct TPatternLiteral
 {
     TBigramFilter::Bits bigrams;
@@ -195,7 +194,7 @@ struct TPatternLiteral
     // of two characters or more to be ruled out by
     quint64 gram = 0;
     // How a substring pattern matches, and how a perl pattern's text is searched for before pcre2 is
-    // asked; null for every other pattern
+    // asked; null for every other pattern, and for a perl pattern without such text
     std::unique_ptr<TNeedle> matcher;
 };
 
@@ -204,7 +203,8 @@ struct TPatternLiteral
 enum class TriggerRefile : quint8 {
     // Its patterns were recompiled, or it stopped being a line or multiline trigger
     Patterns,
-    // It became a line or multiline trigger, so acts on lines it does not match, the one in flight included
+    // It became a line or multiline trigger, which acts on lines its pinned copies would rule out, the one
+    // in flight included
     SeesEveryLine,
     // setTriggerStayOpen() held it open, so it fires without matching, on the line in flight too if the
     // pass has yet to reach it
@@ -472,7 +472,8 @@ public:
     bool treeIndexGrams(std::vector<quint64>& grams) const;
     // The same for the root list's index, whose candidate list is settled before a line runs and reads no
     // trigger after: one held open is offered every line until refile() files it again, and a multiline
-    // one always, as nothing refiles it when it opens or closes a state.
+    // one always, as nothing refiles it when it opens or closes a state. A perl one is left to the bigram
+    // filters: filed, a profile's regex triggers switch the index on where walking those is cheaper.
     bool prescanGrams(std::vector<quint64>& grams) const;
     // Whether match() would do nothing on this line, so need not be entered: the tree index filed this
     // trigger and the line held none of its grams, and nothing makes it act on a line it does not

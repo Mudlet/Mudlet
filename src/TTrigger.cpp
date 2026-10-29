@@ -391,7 +391,7 @@ TPatternLiteral literalOf(const int kind, const QString& pattern)
         break;
     case REGEX_PERL:
         text = requiredLiteral(pattern);
-        // Shorter, it would rule nothing out before pcre2
+        // Nearly every line holds a single character, so searching for one first only adds to pcre2's cost
         if (text.size() >= 2) {
             literal.matcher = std::make_unique<TNeedle>(text);
         }
@@ -719,6 +719,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     patterns.replaceInStrings("\n", "");
     mPatterns.clear();
     mPatternLiterals.clear();
+    mEveryPatternHasText = false;
     mRegexes.clear();
     mMatchData.clear();
     mRegexJitCompiled.clear();
@@ -881,6 +882,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
 
 void TTrigger::patternLiteralsChanged()
 {
+    Q_ASSERT(mPatternLiterals.size() == static_cast<size_t>(mPatternKinds.size()));
     mEveryPatternHasText = !mPatternLiterals.empty() && std::all_of(mPatternLiterals.cbegin(), mPatternLiterals.cend(), [](const TPatternLiteral& literal) {
         return literal.gram != 0;
     });
@@ -919,7 +921,7 @@ bool TTrigger::treeIndexGrams(std::vector<quint64>& grams) const
 
 bool TTrigger::prescanGrams(std::vector<quint64>& grams) const
 {
-    if (mIsMultiline || mKeepFiring > 0) {
+    if (mIsMultiline || mKeepFiring > 0 || mPatternKinds.contains(REGEX_PERL)) {
         grams.clear();
         return false;
     }
