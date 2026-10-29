@@ -385,6 +385,7 @@ signals:
 
 
 private:
+    QString assembleTriggerMatchPoolReport() const;
     bool eventFilter(QObject* watched, QEvent* event) override;
     void openPasswordEntry();
     void closePasswordEntry();
