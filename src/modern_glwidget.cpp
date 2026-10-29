@@ -6652,7 +6652,7 @@ void ModernGLWidget::paintScannerOverlay(QPainter& painter, const int top)
     bracket.setAlphaF(0.45f);
     constexpr int margin = 12;
     constexpr int leg = 18;
-    // Outside the map info box, drawn 10px in, so the top corners do not cross its text
+    // The top legs fall in the map info box's 10px top padding, above its text
     constexpr int bracketInset = 4;
     painter.save();
     painter.setRenderHint(QPainter::Antialiasing);
