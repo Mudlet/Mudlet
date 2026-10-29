@@ -2,18 +2,34 @@
 
 set -e
 
+notarize () {
+
+  local file="$1" output
+  shift
+  for i in {1..3}; do
+    echo "Trying to notarize $(basename "${file}") (attempt ${i})"
+    if output=$(xcrun notarytool submit "${file}" --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait "$@" 2>&1); then
+      echo "${output}"
+      # A completed submission that Apple rejected can still exit 0
+      if grep -q '^ *status: Invalid' <<< "${output}"; then
+        echo "::warning::Apple rejected $(basename "${file}") - run notarytool log with the id above for the reasons"
+        return 1
+      fi
+      echo "Successfully notarized $(basename "${file}")"
+      return 0
+    fi
+    echo "${output}"
+  done
+  return 1
+}
+
 sign_and_notarize () {
 
   local appBundle="$1"
   codesign --deep -o runtime -s "$IDENTITY" "${appBundle}"
   echo "Signed final .dmg"
 
-  for i in {1..3}; do
-    echo "Trying to notarize (attempt ${i})"
-    if xcrun notarytool submit "${appBundle}" --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait; then
-      break
-    fi
-  done
+  notarize "${appBundle}" || echo "::warning::could not notarize ${appBundle}"
 }
 
 sign_app_bundle () {
@@ -37,14 +53,9 @@ sign_app_bundle () {
   local notarizeZip="${appBundle}.notarize.zip"
   ditto -c -k --keepParent "${appBundle}" "${notarizeZip}"
   local notarized="false"
-  for i in {1..3}; do
-    echo "Trying to notarize app bundle (attempt ${i})"
-    if xcrun notarytool submit "${notarizeZip}" --apple-id "$APPLE_USERNAME" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait; then
-      echo "Successfully notarized app bundle"
-      notarized="true"
-      break
-    fi
-  done
+  if notarize "${notarizeZip}"; then
+    notarized="true"
+  fi
   rm -f "${notarizeZip}"
 
   if [ "${notarized}" = "true" ]; then
@@ -53,6 +64,114 @@ sign_app_bundle () {
   else
     echo "::warning::could not notarize ${appBundle}; shipping a signed but un-notarized portable app bundle"
   fi
+}
+
+# Mudlet's signature will vouch for these files, so they must be exactly the ones pinned here.
+fetch_pinned () {
+
+  local url="$1" expected="$2" dest="$3" actual
+  if ! curl -fsSL --retry 3 -o "${dest}" "${url}"; then
+    echo "::warning::could not download ${url}"
+    return 1
+  fi
+  actual=$(shasum -a 256 "${dest}" | awk '{print $1}')
+  if [ "${actual}" != "${expected}" ]; then
+    echo "::error::${url} has sha256 ${actual}, expected ${expected} - refusing to sign it"
+    return 1
+  fi
+}
+
+# The signed app's library validation refuses the engines' own ad-hoc signed builds,
+# so publish copies signed by Mudlet. Called from a condition, so set -e is off here.
+build_speech_engines_asset () {
+
+  local outDir="$1" assetBase="$2"
+  local sherpaVersion="1.13.5" onnxruntimeVersion="1.27.1" voskVersion="0.3.42"
+  local sherpaArch sherpaSha256
+  case "${ARCH}" in
+    arm64)
+      sherpaArch="arm64"
+      sherpaSha256="bd0e13f42eb1e2aa7174a2816198f2cff3b586fa09a7140f5504d8c1ab1cb19e"
+      ;;
+    x86_64)
+      sherpaArch="x64"
+      sherpaSha256="c1a65c52458a59ac0fc861733a42bd2c870940e6b23a77eb528aa3c3e6f0b85f"
+      ;;
+    *)
+      echo "::warning::no speech engine builds are pinned for ${ARCH}"
+      return 1
+      ;;
+  esac
+  local sherpaName="sherpa-onnx-v${sherpaVersion}-osx-${sherpaArch}-shared-no-tts-lib"
+  local downloads="${outDir}/downloads"
+  local stage="${outDir}/${assetBase}"
+  local zip="${outDir}/${assetBase}.zip"
+
+  echo "=== Building ${assetBase}.zip ==="
+  rm -rf "${outDir}"
+  mkdir -p "${downloads}" "${stage}/sherpa-onnx" "${stage}/vosk" || return 1
+
+  fetch_pinned "https://github.com/k2-fsa/sherpa-onnx/releases/download/v${sherpaVersion}/${sherpaName}.tar.bz2" \
+    "${sherpaSha256}" "${downloads}/sherpa-onnx.tar.bz2" || return 1
+  fetch_pinned "https://github.com/alphacep/vosk-api/releases/download/v${voskVersion}/vosk-osx-${voskVersion}.zip" \
+    "65395f196c9d0583d79949142b25560acaf9c295f36284e18433097f3adb0ea1" "${downloads}/vosk.zip" || return 1
+  # Neither archive carries the license texts that redistributing it requires
+  fetch_pinned "https://raw.githubusercontent.com/k2-fsa/sherpa-onnx/v${sherpaVersion}/LICENSE" \
+    "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30" "${stage}/sherpa-onnx/LICENSE" || return 1
+  fetch_pinned "https://raw.githubusercontent.com/microsoft/onnxruntime/v${onnxruntimeVersion}/LICENSE" \
+    "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c" "${stage}/sherpa-onnx/LICENSE-onnxruntime" || return 1
+  fetch_pinned "https://raw.githubusercontent.com/microsoft/onnxruntime/v${onnxruntimeVersion}/ThirdPartyNotices.txt" \
+    "0e07b95f3a8d6230037707c5c4a2b554d12c4cb67369669ac255635528ffcee2" "${stage}/sherpa-onnx/ThirdPartyNotices-onnxruntime.txt" || return 1
+  fetch_pinned "https://raw.githubusercontent.com/alphacep/vosk-api/v${voskVersion}/COPYING" \
+    "bb618af833c817ab01c1564bd3ec75ba4b4f9cf30910a4a2168e30a674ee8cc6" "${stage}/vosk/LICENSE" || return 1
+
+  # The c-api finds onnxruntime through its @loader_path rpath, so the two must share a folder
+  tar -xjf "${downloads}/sherpa-onnx.tar.bz2" -C "${stage}/sherpa-onnx" --strip-components 2 \
+    "${sherpaName}/lib/libsherpa-onnx-c-api.dylib" "${sherpaName}/lib/libonnxruntime.dylib" || return 1
+  unzip -q -j "${downloads}/vosk.zip" "vosk-osx-${voskVersion}/libvosk.dylib" -d "${stage}/vosk" || return 1
+
+  # The keychain locks after an hour idle, and the DMG's notarization can take most of that
+  security unlock-keychain -p travis "${KEYCHAIN}" || return 1
+  local lib
+  for lib in "${stage}/sherpa-onnx/libsherpa-onnx-c-api.dylib" "${stage}/sherpa-onnx/libonnxruntime.dylib" "${stage}/vosk/libvosk.dylib"; do
+    if ! codesign --force --timestamp -o runtime -s "$IDENTITY" "${lib}" || ! codesign --verify --strict "${lib}"; then
+      echo "::warning::failed to sign ${lib}"
+      return 1
+    fi
+  done
+
+  cat > "${stage}/README.txt" <<EOF || return 1
+Speech engines for Mudlet on macOS (${ARCH})
+
+sherpa-onnx ${sherpaVersion} (with onnxruntime ${onnxruntimeVersion}) and Vosk ${voskVersion}, unmodified
+from their authors' releases but signed by Mudlet. Mudlet's releases and PTBs
+only load engine libraries signed by Mudlet, so use these rather than the
+downloads from the engines' own pages.
+
+Install either engine or both, then restart Mudlet:
+
+  sherpa-onnx: copy the two .dylib files from sherpa-onnx/ into
+               ~/.config/mudlet/sherpa-onnx-lib/
+  Vosk:        copy libvosk.dylib from vosk/ into
+               ~/.config/mudlet/vosk-lib/
+
+Create the folder if it does not exist. Those are the default locations:
+"lua stt.getLibraryPath()" prints the folder in use for the engine Mudlet
+would pick, which is sherpa-onnx once it is installed and Vosk otherwise.
+
+sherpa-onnx and Vosk are licensed under the Apache License 2.0 and onnxruntime
+under the MIT License; the license texts are in each engine's folder.
+EOF
+
+  ditto -c -k --keepParent "${stage}" "${zip}" || return 1
+  # Bare dylibs cannot be stapled: Gatekeeper fetches the ticket online when a quarantined copy loads
+  notarize "${zip}" --timeout 15m || return 1
+  (cd "${outDir}" && shasum -a 256 "$(basename "${zip}")") > "${zip}.sha256" || return 1
+
+  {
+    echo "SPEECH_ENGINES_ASSET_PATH=${zip}"
+    echo "SPEECH_ENGINES_ASSET_SHA256_PATH=${zip}.sha256"
+  } >> "$GITHUB_ENV"
 }
 
 BUILD_DIR="${BUILD_FOLDER}"
@@ -366,6 +485,13 @@ if [ "${DEPLOY}" = "deploy" ]; then
       # Non-fatal: dblsqd is legacy (GitHub releases are the primary distribution now),
       # and the dblsqd release may not be pre-created. Do not let it block the build.
       dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:${ARCH_DBLSQD} "${DEPLOY_URL}" || echo "::warning::dblsqd push failed for mac:${ARCH_DBLSQD} - continuing (GitHub release is the primary distribution)"
+    fi
+
+    # Last, so a slow notarization here holds up only the GitHub release, not mudlet.org or dblsqd
+    if [ -n "$MACOS_SIGNING_PASS" ]; then
+      if ! build_speech_engines_asset "${BUILD_DIR}/speech-engines" "${RELEASE_ARTIFACT_BASENAME%-"${ARCH}".dmg}-speech-engines-${ARCH}"; then
+        echo "::warning::skipping the signed speech engines asset for ${ARCH} - the .dmg is unaffected"
+      fi
     fi
   fi
 
