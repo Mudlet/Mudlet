@@ -139,7 +139,8 @@ jobs:
         LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)
         export LUA_CPATH
 
-        ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure -j $(nproc)
+        # Twice the cores: most of these tests wait on timers and sockets (#12196: 339s at -j4, 233s at -j8)
+        ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure -j $(( 2 * $(nproc) ))
 
     - name: (Windows) Run Lua tests
       # 270-315s measured here, and a slow runner has taken 354s - kept in step
