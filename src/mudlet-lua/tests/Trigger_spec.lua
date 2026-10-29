@@ -2927,6 +2927,39 @@ describe("Trigger processing", function()
                 assert.are.equal("orc", _G.TrigHighlight.selected)
             end)
 
+            -- "ñandú" is 5 characters but 7 bytes
+            it("highlights, selects and replaces a later trigger's non-ASCII capture where it now is", function()
+                _G.TrigHighlight = {}
+                local editTrigger = tempRegexTrigger("^edit_mb ñandú tail$", function()
+                    if selectString("edit_mb", 1) > -1 then replace("e") end
+                    deselect()
+                end)
+                tempComplexRegexTrigger("SpecHighlightAfterEditMb", "(ñandú) tail$", "", 0, 0, 0, 0, 0, "red", "blue", 0, 0, 0)
+                local pick = tempRegexTrigger("(ñandú) tail$", function()
+                    if selectCaptureGroup(2) > -1 then
+                        _G.TrigHighlight.selected = getSelection()
+                        replace("X")
+                    end
+                    deselect()
+                    _G.TrigHighlight.line = getLineNumber()
+                end)
+                finally(function()
+                    killTrigger(editTrigger)
+                    killTrigger("SpecHighlightAfterEditMb")
+                    killTrigger(pick)
+                end)
+
+                feedTriggers("edit_mb ñandú tail\n")
+
+                local line = _G.TrigHighlight.line
+                assert.is_number(line, "the later trigger should have fired")
+                moveCursor(0, line)
+                assert.are.equal("e X tail", getCurrentLine())
+                assert.are.equal("ñandú", _G.TrigHighlight.selected)
+                assert.are.same(defaultForeground, coloursOf(line, "tail").foreground,
+                                "nothing past the capture should have been highlighted")
+            end)
+
             local insideEdits = {
                 {"lengthened", "tag red orc", "t very red orc", "very red orc", function()
                     if selectString("tag", 1) > -1 then replace("t") end
@@ -8252,6 +8285,162 @@ describe("Trigger processing", function()
 
             feedTriggers("\n\27[32mgreengreen\27[0m\n")
             assert.are.same({"EDITED"}, _G.TrigSpec.seen, "a color trigger was judged by the colors the line had before an earlier trigger edited it")
+        end)
+    end)
+
+    describe("the captures a fire hands its script", function()
+        local ids, names = {}, {}
+
+        local function track(id)
+            ids[#ids + 1] = id
+            return id
+        end
+
+        local function complex(name, ...)
+            names[#names + 1] = name
+            return tempComplexRegexTrigger(name, ...)
+        end
+
+        local function selectedGroup(group)
+            selectCaptureGroup(group)
+            local text = getSelection()
+            deselect()
+            return text
+        end
+
+        local function lastLineReading(text)
+            for lineNumber = getLineCount(), 0, -1 do
+                moveCursor(0, lineNumber)
+                if getCurrentLine() == text then
+                    moveCursorEnd()
+                    return lineNumber
+                end
+            end
+            moveCursorEnd()
+        end
+
+        local function foregroundAt(lineNumber, column)
+            moveCursor(0, lineNumber)
+            selectSection(column, 1)
+            local r, g, b = getFgColor()
+            deselect()
+            moveCursorEnd()
+            return {r, g, b}
+        end
+
+        after_each(function()
+            for _, id in ipairs(ids) do
+                killTrigger(id)
+            end
+            for _, name in ipairs(names) do
+                killTrigger(name)
+            end
+            ids, names = {}, {}
+            _G.TrigCaptures = nil
+        end)
+
+        -- "matches" is built when the script starts, or only when it is read
+        for _, lazy in ipairs({false, true}) do
+            local mode = lazy and " (read on demand)" or " (built up front)"
+
+            local function arm()
+                if lazy then
+                    assert.is_true(rearmLazyGlobals(), "the deferral has to be on for this case")
+                else
+                    -- handing the metatable out turns the deferral off
+                    getmetatable(_G)
+                end
+            end
+
+            it("keeps a regex fire's groups in order, unset and empty ones as empty strings" .. mode, function()
+                arm()
+                track(tempRegexTrigger([[^capgroups (\w+)( x)?:(\d*):(\S+) (\w+)$]], function()
+                    _G.TrigCaptures = {matches = {unpack(matches)}, fifth = selectedGroup(5), sixth = selectedGroup(6)}
+                end))
+                feedTriggers("\ncapgroups alpha::日本語 tail\n")
+                assert.are.same({matches = {"capgroups alpha::日本語 tail", "alpha", "", "", "日本語", "tail"}, fifth = "日本語", sixth = "tail"}, _G.TrigCaptures)
+            end)
+
+            it("keeps every match of a match-all regex in order" .. mode, function()
+                arm()
+                complex("SpecCapturesMatchAll", [[(\w)(\d)]],
+                        [==[_G.TrigCaptures = {matches = {unpack(matches)}}; selectCaptureGroup(9); _G.TrigCaptures.last = getSelection(); deselect()]==],
+                        0, 0, 0, 0, 1, 0, 0, 0, 0, 0)
+                feedTriggers("\ncapall ñ a1 b2 c3\n")
+                assert.are.same({matches = {"a1", "a", "1", "b2", "b", "2", "c3", "c", "3"}, last = "3"}, _G.TrigCaptures)
+            end)
+
+            it("hands a substring, start-of-line or exact-match fire its pattern" .. mode, function()
+                arm()
+                _G.TrigCaptures = {}
+                local function record(kind)
+                    return function()
+                        _G.TrigCaptures[kind] = {#matches, matches[1], selectedGroup(1)}
+                    end
+                end
+                track(tempTrigger("café", record("substring")))
+                track(tempBeginOfLineTrigger("ñandú", record("start")))
+                track(tempExactMatchTrigger("ñandú en el café", record("exact")))
+                feedTriggers("\nñandú en el café\n")
+                assert.are.same({
+                    substring = {1, "café", "café"},
+                    start = {1, "ñandú", "ñandú"},
+                    exact = {1, "ñandú en el café", "ñandú en el café"},
+                }, _G.TrigCaptures)
+            end)
+
+            it("hands a colour fire the text of the run" .. mode, function()
+                arm()
+                track(tempAnsiColorTrigger(2, -1, function()
+                    _G.TrigCaptures = {#matches, matches[1], selectedGroup(1)}
+                end))
+                feedTriggers("\nplaín \27[32mgrün\27[0m plain\n")
+                assert.are.same({1, "grün", "grün"}, _G.TrigCaptures)
+            end)
+
+            it("hands a filter child the capture of its parent" .. mode, function()
+                arm()
+                complex("SpecCapturesParent", [[^capfilter (\S+) end$]], "", 0, 0, 0, 1, 0, 0, 0, 0, 0, 0)
+                names[#names + 1] = "SpecCapturesChild"
+                permRegexTrigger("SpecCapturesChild", "SpecCapturesParent", {[[^(\S)(\S+)$]]},
+                                 [==[_G.TrigCaptures = {matches = {unpack(matches)}}; selectCaptureGroup(3); _G.TrigCaptures.rest = getSelection(); deselect()]==])
+                feedTriggers("\ncapfilter ñandú end\n")
+                assert.are.same({matches = {"ñandú", "ñ", "andú"}, rest = "andú"}, _G.TrigCaptures)
+            end)
+
+            it("hands a multiline fire the groups of each line" .. mode, function()
+                arm()
+                local code = [==[_G.TrigCaptures = {first = {unpack(multimatches[1])}, second = {unpack(multimatches[2])}}]==]
+                complex("SpecCapturesMulti", [[^capmulti one (\S+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+                complex("SpecCapturesMulti", [[^capmulti two( x)? (\S+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+                feedTriggers("\ncapmulti one ñandú\n")
+                feedTriggers("capmulti two café\n")
+                assert.are.same({first = {"capmulti one ñandú", "ñandú"}, second = {"capmulti two café", "", "café"}}, _G.TrigCaptures)
+            end)
+
+            it("keeps its own captures across a nested pass in its script" .. mode, function()
+                arm()
+                track(tempRegexTrigger([[^capouter (\S+) (\S+)$]], function()
+                    feedTriggers("\ncapinner zebra wombat\n")
+                    _G.TrigCaptures = {unpack(matches)}
+                end))
+                track(tempRegexTrigger([[^capinner (\w+) (\w+)$]], function()
+                    local _ = matches[3]
+                end))
+                feedTriggers("\ncapouter ñandú café\n")
+                assert.are.same({"capouter ñandú café", "ñandú", "café"}, _G.TrigCaptures)
+            end)
+        end
+
+        it("highlights exactly the characters of a multibyte capture", function()
+            complex("SpecCapturesHighlight", [[^caphl (ñ\S+) tail$]], [[]], 0, 0, 0, 0, 0, "blue", "transparent", 0, 0, 0)
+            feedTriggers("\ncaphl ñandú tail\n")
+            local lineNumber = lastLineReading("caphl ñandú tail")
+            assert.is_truthy(lineNumber, "the line should be in the buffer")
+            assert.are_not.same({0, 0, 255}, foregroundAt(lineNumber, 5), "the space before the capture is not part of it")
+            assert.are.same({0, 0, 255}, foregroundAt(lineNumber, 6), "the capture's first character")
+            assert.are.same({0, 0, 255}, foregroundAt(lineNumber, 10), "the capture's last character")
+            assert.are_not.same({0, 0, 255}, foregroundAt(lineNumber, 11), "the space after the capture is not part of it")
         end)
     end)
 end)
