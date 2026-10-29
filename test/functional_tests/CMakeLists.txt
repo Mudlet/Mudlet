@@ -36,6 +36,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     AccessibleToolTipTest.cpp
     AddonControlsTest.cpp
     AsciiLineBreakTest.cpp
+    BlinkRowRepaintTest.cpp
     ConsoleModelExtractionTest.cpp
     ConsoleTextStyleTest.cpp
     CopyAsImageTest.cpp
@@ -135,6 +136,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     SpellDictionaryFailureTest.cpp
     TestProfileFirstRunTourTest.cpp
     XMLexportVariablesTest.cpp
+    XmlImportStateTest.cpp
 )
 
 # Telnet and the other network protocols Mudlet speaks, the escape sequences
@@ -181,6 +183,8 @@ set(TRIGGER_GROUP_TEST_SOURCES
     CompileErrorLabelTest.cpp
     CorruptTriggerPatternsTest.cpp
     EmergencyStopResumeTest.cpp
+    GetLuaStringTest.cpp
+    LazyGlobalsCacheTest.cpp
     MultilineTriggerReentrancyTest.cpp
     PrescanStayOpenRefileTest.cpp
     SetScriptCallbackTest.cpp
@@ -200,6 +204,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorAutoCompleteFocusTest.cpp
     EditorClipboardXmlTest.cpp
     EditorBannerViewSwitchTest.cpp
+    EditorEmptySelectionTest.cpp
     EditorItemXMLHelpersTest.cpp
     ColorTriggerDialogTest.cpp
     EditorReshowTest.cpp
@@ -213,6 +218,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorSearchTest.cpp
     TreeWidgetItemMoveTest.cpp
     TriggerEditorDisclosureTest.cpp
+    TimerEditorCountdownTest.cpp
     TriggerEditorTest.cpp
     TriggerPatternListLayoutTest.cpp
     VariableEditorWriteBackTest.cpp
@@ -233,6 +239,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapLevelOfDetailTest.cpp
     MapMouseInteractionTest.cpp
     MapOffscreenCustomLineTest.cpp
+    MapRoomNameVisibilityTest.cpp
     MapFileStatsTest.cpp
     MapTextLabelCacheTest.cpp
     MapViewAreaListTest.cpp
@@ -280,6 +287,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     PackageFontsOnRefusedArchiveTest.cpp
     PackageManagerHeadingTest.cpp
     PackageManagerRemovalTest.cpp
+    PackageManagerRepositoryLinksTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     PackageRepositoryDownloadTest.cpp
     PackageSelfRemovalTest.cpp
@@ -356,6 +364,9 @@ set(FUNCTIONAL_TEST_UTILS
 )
 
 mudlet_add_test_pch_provider(mudlet_functional_test_pch)
+
+# XmlImportStateTest imports every package, profile and map XML in the source tree
+set_property(SOURCE XmlImportStateTest.cpp APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 
 # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
 macro(add_functional_test_binary target)

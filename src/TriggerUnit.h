@@ -106,6 +106,12 @@ public:
     // Call on any change to a trigger's place below a root or to what its treeIndexGrams() answers:
     // the trigger is visited until the next rebuild files it again
     void unfileTreeNode(TTrigger* pT);
+    // Call on any change to which children pFrom has, or to how one of them is filed: it and every
+    // trigger above it walk their children down the list until the next rebuild
+    void invalidateChildWalks(TTrigger* pFrom);
+    // A trigger below a root started acting on lines it does not match, so every pass has to enter it
+    // while it does
+    void noteOpenTreeNode(TTrigger* pT);
     // Triggers the last rebuild filed, so a spec can tell the index is armed before it relies on it
     int treeIndexFiledCount() const { return static_cast<int>(mTreeNodes.size()); }
     void doCleanup();
@@ -176,8 +182,12 @@ private:
     void startOrExtendSameLineChain(TTrigger* pT);
     void collectPrescanTasks(TTrigger* pT);
     void rebuildPrescanTasksIfStale();
+    bool prescanPays() const;
     static TreeIndexMode readTreeIndexMode();
-    void fileTreeNodes(TTrigger* pT, std::vector<quint64>& grams);
+    bool fileTreeNodes(TTrigger* pT, std::vector<quint64>& grams);
+    void dropChildWalks(TTrigger* pT);
+    void markTreeNode(TTrigger* pT, quint32 stamp);
+    void forgetOpenTreeNode(TTrigger* pT);
     void clearTreeNodes();
     void rebuildTreeIndex();
     void stampTreeCandidates(const QString& line);
@@ -200,9 +210,11 @@ private:
     // Handed to the match pool as one list per line; see collectPrescanTasks()
     std::vector<TTrigger*> mPrescanTasks;
     quint64 mPrescanTasksGeneration = std::numeric_limits<quint64>::max();
-    // Estimates the work the pool could share out on this line. Not the count of regex triggers: most
-    // may be disabled or settled before their regex is reached.
+    // Estimate the work the pool could share out on this line, and how much of it would be a match the
+    // pool cannot save. Not the count of regex triggers: most may be disabled or settled before their
+    // regex is reached.
     int mRegexSearchesOnTheLastLine = 0;
+    int mRegexMatchesOnTheLastLine = 0;
     QMap<int, TTrigger*> mTriggerMap;
     std::list<TTrigger*> mTriggerRootNodeList;
     // Where each root node sits in mTriggerRootNodeList: std::list::remove() walks the whole list,
@@ -237,6 +249,8 @@ private:
     // the next rebuild and any nested pass still read this list
     std::vector<TTrigger*> mTreeNodes;
     std::vector<int> mTreeHits;
+    // Triggers below a root that noteOpenTreeNode() was told of, until a line finds them shut again
+    std::vector<TTrigger*> mOpenTreeNodes;
     TTriggerPrescan mTreeIndex;
     bool mTreeIndexStale = true;
     quint32 mUnfilterableEpoch = 0;
@@ -252,6 +266,8 @@ private:
     int statsPatternsActive = 0;
     // Counter for nested processing; cleanup deferred until 0
     int mProcessingDepth = 0;
+    // Set while a top-level line is matched without the pool as a sample, so the lines it feeds are too
+    bool mSamplingLine = false;
     bool mRunawayFeedStopped = false;
     // Decides whether summarising the next line is worth it; see TBigramFilter
     int mSubstringQuestionsOnTheLastLine = 0;

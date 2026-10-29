@@ -446,6 +446,9 @@ describe("Media playback effects with a generated sound file", function()
   local otherLongSoundFile = "busted-media-hold-other.wav"
   local mediaDirectory = getMudletHomeDir() .. "/media"
   local playbackObserved
+  -- Long enough to show something did not happen: a start or a failed load lands
+  -- within a few ms of the request once the backend is warm, a 150ms loop's next pass within 150ms.
+  local quietMilliseconds = 500
 
   local function littleEndian(value, byteCount)
     local bytes = {}
@@ -911,7 +914,7 @@ describe("Media playback effects with a generated sound file", function()
     collect("sysMediaStarted", started)
 
     local secondFile = "busted-media-second.wav"
-    writeMediaFile(secondFile, 1000)
+    writeMediaFile(secondFile, 500)
     onCleanup(function() os.remove(mediaDirectory .. "/" .. secondFile) end)
     assert.is_true(playMusicFile({name = secondFile, key = "busted-requeued", loops = 3}))
     waitForCount("sysMediaStarted", started, 1)
@@ -919,7 +922,7 @@ describe("Media playback effects with a generated sound file", function()
     -- continue keeps the pass that is playing and counts it as one of the two
     assert.is_true(playMusicFile({name = secondFile, key = "busted-requeued", loops = 2}))
     waitForCount("sysMediaFinished", finished, 2)
-    waitForEvent("sysMediaStarted", 1500)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
     assert.equals(2, #started)
     assert.equals(2, #finished)
     assert.equals(0, #getPlayingMusic())
@@ -1099,7 +1102,7 @@ describe("Media playback effects with a generated sound file", function()
     -- playing leaves it alone. A silent restart reuses the same player and
     -- raises no sysMediaFinished, so wait out the start that must not arrive.
     assert.is_true(playMusicFile({name = longSoundFile, key = "busted-continue"}))
-    waitForEvent("sysMediaStarted", 1000)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
     assert.equals(1, #started)
     assert.equals(1, #getPlayingMusic())
     assert.equals(0, #finished)
@@ -1259,7 +1262,7 @@ describe("Media playback effects with a generated sound file", function()
     -- the playback this must not start would begin after the event above, and a
     -- preloaded one raises no sysMediaStarted to wait for, so give the player
     -- the turns it would need to reach the playing state
-    pumpEvents(1000)
+    pumpEvents(quietMilliseconds)
     assert.equals(0, #getPlayingSounds())
     assert.equals(0, #getPlayingMusic())
     assert.equals(0, #getPlayingVideos())
@@ -1682,10 +1685,10 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingVideos())
 
     -- Long enough to outlast a deferred turn that ran and did nothing - it is a
-    -- singleShot(0), so a second of event loop is many turns. VideoOutputHideTest
+    -- singleShot(0), so this much event loop is many turns. VideoOutputHideTest
     -- pins the same case against the release actually having happened, which is
     -- not observable from here.
-    pumpEvents(1000)
+    pumpEvents(quietMilliseconds)
     assert.is_true(windowVisible(videoLabel), "a video that never asked to close still took its label off screen when it stopped")
   end)
 
@@ -2844,7 +2847,7 @@ describe("Media playback effects with a generated sound file", function()
     -- The bogus event arrives when the backend gives up on what it was handed,
     -- which is asynchronous, so its absence only means something after a wait
     -- long enough to have seen it.
-    waitForEvent("sysMediaFinished", 2000)
+    waitForEvent("sysMediaFinished", 2 * quietMilliseconds)
     assert.equals(0, #finished, "a request with no usable name raised sysMediaFinished for media that never played")
     assert.equals(0, #started, "a request with no usable name started a playback")
 
@@ -2874,7 +2877,7 @@ describe("Media playback effects with a generated sound file", function()
     feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "type": "musci", "key": "busted-gmcp-unknown-type"}')
     -- a type that is not a string names nothing Mudlet knows either
     feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "type": 42, "key": "busted-gmcp-numeric-type"}')
-    waitForEvent("sysMediaStarted", 2000)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
     assert.equals(0, #started, "a request naming an unknown media type was played anyway")
 
     -- Neither of the two ways of naming no type at all is an unknown one: both
@@ -2922,7 +2925,7 @@ describe("Media playback effects with a generated sound file", function()
     feedGmcp('Client.Media.Play {"name": ".", "key": "busted-gmcp-dot"}')
     feedGmcp('Client.Media.Play {"name": "./", "key": "busted-gmcp-dot-slash"}')
     feedGmcp('Client.Media.Play {"name": "busted-media-sub/.", "key": "busted-gmcp-sub-dot"}')
-    waitForEvent("sysMediaFinished", 2000)
+    waitForEvent("sysMediaFinished", 2 * quietMilliseconds)
     assert.equals(0, #finished, "a name resolving to a directory raised sysMediaFinished for media that never played")
     assert.equals(0, #started, "a name resolving to a directory started a playback")
 
@@ -2991,7 +2994,7 @@ describe("Media playback effects with a generated sound file", function()
   local resumeSoundFile = "busted-media-resume.wav"
 
   local function resumesWhatItPaused(playFields, matchFields)
-    writeMediaFile(resumeSoundFile, 2000)
+    writeMediaFile(resumeSoundFile, 1000)
     onCleanup(function() os.remove(mediaDirectory .. "/" .. resumeSoundFile) end)
     stopGmcpMediaAfterwards()
 
@@ -3008,7 +3011,7 @@ describe("Media playback effects with a generated sound file", function()
     waitForCount("sysMediaPaused", paused, 1)
     assert.equals(1, #paused, "the server's own pause did not reach the playback it named")
 
-    pumpEvents(2500)
+    pumpEvents(2000)
     assert.equals(0, #finished, "the paused playback ran on and ended by itself, so finishing proves nothing")
 
     feedGmcp('Client.Media.Play {' .. matchFields .. '}')
@@ -3135,7 +3138,7 @@ describe("Media playback effects with a generated sound file", function()
 
     -- a playback would begin after the download event, and a preload raises no
     -- sysMediaStarted to wait for, so give the player the turns it would need
-    pumpEvents(1000)
+    pumpEvents(quietMilliseconds)
     assert.equals(0, #started, "a Client.Media.Load played the file it had just fetched")
   end)
 
@@ -3287,7 +3290,7 @@ describe("Media playback effects with a generated sound file", function()
     -- volume 0 is the media protocol's way of asking for a file to be readied
     -- without being heard
     feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-preload", "volume": "0"}')
-    pumpEvents(1000)
+    pumpEvents(quietMilliseconds)
     assert.equals(0, #started, "a request made at volume 0 was played")
 
     -- the same message with any other volume does play, so it is the volume and
@@ -3311,7 +3314,7 @@ describe("Media playback effects with a generated sound file", function()
     collect("sysMediaStarted", started)
 
     feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-preload-number", "volume": 0}')
-    pumpEvents(1000)
+    pumpEvents(quietMilliseconds)
     assert.equals(0, #started, "a request made at a numeric volume of 0 was played")
 
     feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-preload-number", "volume": 60}')
@@ -3387,7 +3390,7 @@ describe("Media playback effects with a generated sound file", function()
       collect("sysMediaStarted", started)
       feedGmcp('Client.Media.Play {"name": "' .. soundFile .. '", "key": "busted-gmcp-negative-fractional-loops", "loops": ' .. loops .. '}')
       waitForCount("sysMediaStarted", started, 1)
-      pumpEvents(1500)
+      pumpEvents(quietMilliseconds)
       assert.equals(1, #started, "a request made with " .. loops .. " loops was not played exactly once")
       feedGmcp("Client.Media.Stop {}")
     end
@@ -3434,15 +3437,17 @@ describe("Media playback effects with a generated sound file", function()
       feedTelnet('<T_IAC><T_SB><O_GMCP>Client.Media.Default {"url": "' .. startingLocation .. '"}<T_IAC><T_SE>')
     end)
 
-    local done = {}
+    local done, errors = {}, {}
     collect("sysDownloadDone", done)
+    collect("sysDownloadError", errors)
 
     -- The location just set is the fixture server's /media, which answers only
     -- for a .wav: nothing there serves the text fixture, and that is what makes
     -- the fetch below evidence of the default this sets rather than of the one
     -- already in force.
     feedGmcp('Client.Media.Load {"name": "' .. fixtureFile .. '"}')
-    pumpEvents(1000)
+    waitForCount("sysDownloadError", errors, 1)
+    assert.equals(1, #errors, "the fetch from the location in force never finished")
     assert.equals(0, #done, "the location in force already served the file, so the default below proves nothing")
 
     -- the default is set to the fixture server's root, where the text fixture
@@ -3753,7 +3758,7 @@ describe("Media playback effects with a generated sound file", function()
     -- continue defaults to true, as the string "true" asks for too: the track
     -- goes on as it was
     feedGmcp(play:format(', "continue": "true"'))
-    waitForEvent("sysMediaStarted", 1000)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
     assert.equals(1, #started)
     assert.equals(0, #finished)
 
@@ -3792,7 +3797,7 @@ describe("Media playback effects with a generated sound file", function()
     feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-fadeaway"}')
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
     feedGmcp('Client.Media.Stop {"key": "busted-gmcp-fadeaway", "fadeaway": "true"}')
-    pumpEvents(1000)
+    pumpEvents(quietMilliseconds)
     assert.equals(1, #finished, "a stop with fadeaway \"true\" ended the playback outright instead of fading it out")
   end)
 
@@ -4182,6 +4187,35 @@ describe("Tests the text-to-speech Lua API", function()
         assert.has_error(function() ttsSetRate("fast") end)
         assert.has_error(function() ttsSetPitch({}) end)
         assert.has_error(function() ttsSetVolume(false) end)
+      end)
+
+      -- NaN compares false against both clamp bounds. Not gated on the mock
+      -- engine, as the refusal never asks the engine to change anything
+      it("the rate, pitch and volume setters refuse NaN and keep the current setting", function()
+        if ttsUnsupported() then
+          return
+        end
+        local changes = {}
+        collect("ttsRateChanged", changes)
+        collect("ttsPitchChanged", changes)
+        collect("ttsVolumeChanged", changes)
+        local setters = {
+          {name = "rate", set = ttsSetRate, get = ttsGetRate},
+          {name = "pitch", set = ttsSetPitch, get = ttsGetPitch},
+          {name = "volume", set = ttsSetVolume, get = ttsGetVolume},
+        }
+        for _, setter in ipairs(setters) do
+          local before = setter.get()
+          local ok, err = setter.set(0/0)
+          assert.is_nil(ok, setter.name .. " accepted NaN")
+          assert.is_truthy(tostring(err):find(setter.name .. " as a number from", 1, true), tostring(err))
+          assert.equals(before, setter.get())
+        end
+        assert.same({}, changes)
+        -- success has to be told apart from that refusal by its first value
+        for _, setter in ipairs(setters) do
+          assert.is_true(setter.set(setter.get()), setter.name)
+        end
       end)
 
       it("ttsGetQueue returns a table and false for out-of-range indexes", function()

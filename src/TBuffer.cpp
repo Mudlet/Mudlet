@@ -32,6 +32,7 @@
 #include "THyperlinkCompactManager.h"
 #include "THyperlinkVisibilityManager.h"
 #include "THyperlinkSelectionManager.h"
+#include "TIngestPipeline.h"
 #include "TPrintSink.h"
 #include "TStringUtils.h"
 #include "UntrustedText.h"
@@ -49,11 +50,17 @@
 #include <QJsonValue>
 #include <QRegularExpression>
 #include <QTextBoundaryFinder>
+#include <QTextCodec>
 #include <QTime>
 #include <QTimer>
 #include <QUrlQuery>
 
 #include <QScopeGuard>
+
+#if defined(Q_PROCESSOR_X86_64) && (defined(Q_CC_GNU) || defined(Q_CC_CLANG))
+#include <x86intrin.h>
+#define MUDLET_REUSE_ARRIVAL_CLOCK
+#endif
 
 #include <algorithm>
 #include <cstring>
@@ -518,6 +525,13 @@ QList<RawQueryParameter> splitOscQueryParameters(const QString& query)
     return parameters;
 }
 
+// Game servers choose OSC 8 link and menu URLs, so only these schemes may reach the system's URL handler
+bool systemMayOpenUrl(const QUrl& url)
+{
+    const QString scheme = url.scheme().toLower();
+    return scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp");
+}
+
 } // anonymous namespace
 
 TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
@@ -528,9 +542,10 @@ TChar::TChar(const QColor& foreground, const QColor& background, const TChar::At
 {
 }
 
+// Every empty line holds one of these, so the colors are not converted through QColor
 TChar::TChar()
-: mFgColor(QColorConstants::White.rgba())
-, mBgColor(QColorConstants::Black.rgba())
+: mFgColor(qRgb(255, 255, 255))
+, mBgColor(qRgb(0, 0, 0))
 {
 }
 
@@ -539,6 +554,73 @@ TChar::TChar()
 bool TChar::operator==(const TChar& other) const
 {
     return mLinkIndex == other.mLinkIndex && mFgColor == other.mFgColor && mBgColor == other.mBgColor && mFlags == other.mFlags && mRightHalf == other.mRightHalf;
+}
+
+namespace {
+// A selected run stays per character, as copying the shared TChar back out would deselect it
+bool storableAsOne(const std::vector<TChar>& chars)
+{
+    if (chars.empty() || chars.front().isSelected()) {
+        return false;
+    }
+    const TChar& first = chars.front();
+    return std::all_of(chars.cbegin() + 1, chars.cend(), [&first](const TChar& character) {
+        return character == first;
+    });
+}
+} // namespace
+
+TLineFormat::TLineFormat(std::vector<TChar>&& chars)
+{
+    if (storableAsOne(chars)) {
+        mUniform = chars.front();
+        mUniformCount = chars.size();
+    } else {
+        mChars = std::move(chars);
+    }
+}
+
+TLineFormat::TLineFormat(const std::vector<TChar>& chars)
+{
+    if (storableAsOne(chars)) {
+        mUniform = chars.front();
+        mUniformCount = chars.size();
+    } else {
+        mChars = chars;
+    }
+}
+
+std::vector<TChar>& TLineFormat::expand()
+{
+    if (mUniformCount) {
+        mChars.assign(std::exchange(mUniformCount, 0), mUniform);
+    }
+    return mChars;
+}
+
+void TLineFormat::insert(const size_type index, const size_type count, const TChar& format)
+{
+    if (!count) {
+        return;
+    }
+    const TChar copy(format);
+    if (mChars.empty() && (!mUniformCount || copy == mUniform)) {
+        if (!mUniformCount) {
+            mUniform = copy;
+        }
+        mUniformCount += count;
+        return;
+    }
+    std::vector<TChar>& chars = expand();
+    chars.insert(chars.begin() + static_cast<difference_type>(index), count, copy);
+}
+
+std::vector<TChar> TLineFormat::toVector() const
+{
+    if (mUniformCount) {
+        return std::vector<TChar>(mUniformCount, mUniform);
+    }
+    return mChars;
 }
 
 namespace {
@@ -649,12 +731,21 @@ quint8 TChar::alternateFont() const
 }
 
 #ifndef QT_NO_DEBUG
-static quint64 colorFingerprint(const std::vector<TChar>& line)
+static quint64 colorFingerprint(const TLineFormat& line)
 {
     quint64 hash = 14695981039346656037ULL;
-    for (const TChar& character : line) {
-        hash = (hash ^ character.foreground().rgba()) * 1099511628211ULL;
-        hash = (hash ^ character.background().rgba()) * 1099511628211ULL;
+    // Runs twice per line in every debug build, where a range-for's iterator calls are not inlined
+    if (line.uniform()) {
+        const TChar& character = line.front();
+        for (std::size_t i = 0, total = line.size(); i < total; ++i) {
+            hash = (hash ^ character.foregroundRgba()) * 1099511628211ULL;
+            hash = (hash ^ character.backgroundRgba()) * 1099511628211ULL;
+        }
+        return hash;
+    }
+    for (const TChar *character = line.heapData(), *end = character + line.size(); character != end; ++character) {
+        hash = (hash ^ character->foregroundRgba()) * 1099511628211ULL;
+        hash = (hash ^ character->backgroundRgba()) * 1099511628211ULL;
     }
     return hash;
 }
@@ -790,6 +881,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mEncoding(other.mEncoding)
 , mDecoder(other.mDecoder)
 , mMultibyteDecoder(multibyteDecoderFor(other.mDecoder, other.mEncoding))
+, mLegacyMultibyteCodec(other.mLegacyMultibyteCodec)
 , mCurrentHyperlinkCommand(other.mCurrentHyperlinkCommand)
 , mCurrentHyperlinkHint(other.mCurrentHyperlinkHint)
 , mCurrentHyperlinkLinkId(other.mCurrentHyperlinkLinkId)
@@ -840,6 +932,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mGotOSC = other.mGotOSC;
         mGotString = other.mGotString;
         mIsDefaultColor = other.mIsDefaultColor;
+        ++mColourGeneration;
         mBlack = other.mBlack;
         mLightBlack = other.mLightBlack;
         mRed = other.mRed;
@@ -897,6 +990,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mEncoding = other.mEncoding;
         mDecoder = other.mDecoder;
         mMultibyteDecoder = multibyteDecoderFor(mDecoder, mEncoding);
+        mLegacyMultibyteCodec = other.mLegacyMultibyteCodec;
         mCurrentHyperlinkCommand = other.mCurrentHyperlinkCommand;
         mCurrentHyperlinkHint = other.mCurrentHyperlinkHint;
         mCurrentHyperlinkLinkId = other.mCurrentHyperlinkLinkId;
@@ -1000,6 +1094,7 @@ void TBuffer::updateColors()
         return;
     }
 
+    ++mColourGeneration;
     mBlack = pH->mBlack;
     mLightBlack = pH->mLightBlack;
     mRed = pH->mRed;
@@ -1119,7 +1214,7 @@ void TBuffer::noteRemovedLinkId(const int id, const qint64 lastLine)
 }
 
 // to < 0 runs to the end of the line
-void TBuffer::noteRemovedLinks(const std::vector<TChar>& line, const qint64 lineNumber, const int from, const int to)
+void TBuffer::noteRemovedLinks(const TLineFormat& line, const qint64 lineNumber, const int from, const int to)
 {
     if (mLinkStore.pristine()) {
         return;
@@ -1327,6 +1422,73 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     mProcessingLocalFeed = false;
 }
 
+#if defined(MUDLET_REUSE_ARRIVAL_CLOCK)
+namespace {
+// A TSC that halts in sleep states, as older CPUs' do, would miss the time a script blocks the thread for.
+// cpuid directly: <cpuid.h>'s __cpuid macro collides with the function of that name MinGW's <intrin.h> declares.
+const bool scInvariantTsc = [] {
+    unsigned int eax = 0x80000000, ebx = 0, ecx = 0, edx = 0;
+    asm("cpuid" : "+a"(eax), "=b"(ebx), "+c"(ecx), "=d"(edx));
+    if (eax < 0x80000007) {
+        return false;
+    }
+    eax = 0x80000007;
+    ecx = 0;
+    asm("cpuid" : "+a"(eax), "=b"(ebx), "+c"(ecx), "=d"(edx));
+    return (edx & (1U << 8)) != 0;
+}();
+// A quarter of a millisecond in TSC ticks, measured over at least 100 ms: rates run from hundreds of MHz to
+// several GHz, and an emulator picks its own. Zero, so no reuse, until then.
+quint64 sArrivalClockReuseTicks = 0;
+quint64 sCalibrationTicks = 0;
+qint64 sCalibrationWallStart = 0;
+std::chrono::steady_clock::time_point sCalibrationStart;
+
+void calibrateArrivalClock(const quint64 ticks, const qint64 wallNow)
+{
+    const auto now = std::chrono::steady_clock::now();
+    const auto micros = std::chrono::duration_cast<std::chrono::microseconds>(now - sCalibrationStart).count();
+    if (sCalibrationTicks && ticks > sCalibrationTicks) {
+        if (micros < 100'000) {
+            return;
+        }
+        const quint64 ticksPerMicrosecond = (ticks - sCalibrationTicks) / static_cast<quint64>(micros);
+        // The wall clock, which moves in 16 ms steps on Windows, counts a suspend that a TSC may run through and
+        // steady_clock leaves out; cores whose TSCs disagree can claim any rate. Either way, measure again.
+        const bool noSuspend = qAbs((wallNow - sCalibrationWallStart) * 1000 - micros) < 20'000;
+        if (noSuspend && ticksPerMicrosecond < 10'000) {
+            sArrivalClockReuseTicks = ticksPerMicrosecond * 250;
+            return;
+        }
+    }
+    sCalibrationStart = now;
+    sCalibrationWallStart = wallNow;
+    // After the clocks here, before them at the far end: a preemption in between can only shrink the rate
+    sCalibrationTicks = __rdtsc();
+}
+} // namespace
+#endif
+
+// A system clock read serialises the pipeline, which shows in a flood of lines; a bare TSC read does not
+qint64 TBuffer::lineArrivalTime()
+{
+#if defined(MUDLET_REUSE_ARRIVAL_CLOCK)
+    if (scInvariantTsc) {
+        const quint64 ticks = __rdtsc();
+        if (ticks - mArrivalClockTicks < sArrivalClockReuseTicks) {
+            return mArrivalClockTime;
+        }
+        mArrivalClockTicks = ticks;
+        mArrivalClockTime = QDateTime::currentMSecsSinceEpoch();
+        if (!sArrivalClockReuseTicks) {
+            calibrateArrivalClock(ticks, mArrivalClockTime);
+        }
+        return mArrivalClockTime;
+    }
+#endif
+    return QDateTime::currentMSecsSinceEpoch();
+}
+
 void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFromServer)
 {
     // Lets the trigger engine tell a flood from a trickle (TriggerUnit::processDataStream()). Restored,
@@ -1336,12 +1498,6 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     const auto pendingLinesGuard = qScopeGuard([this, previousPendingLines] {
         mPendingChunkLines = previousPendingLines;
     });
-
-    // The complete two byte escape sequences (DECSC, DECRC, RIS and a stray
-    // ST) that games do send and that Mudlet has to swallow. Only these: any
-    // other byte after an ESC is text, and printing it is no worse than what
-    // Mudlet has always done, whereas eating it loses real output:
-    const QByteArray cShortEscape = QByteArrayLiteral("78c\\");
 
     // Parsed in place, and written to in three places: the bytes held over
     // from a sequence the last packet cut in half are prepended to the front
@@ -1417,13 +1573,85 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     // repeated switch(...) and branch to one of a series of decoding methods
     // each with another up to 128 value switch()
 
-    size_t localBufferLength = localBuffer.length();
-    size_t localBufferPosition = 0;
-    if (!localBufferLength) {
+    if (localBuffer.empty()) {
         return;
     }
-    // Kept in step with localBufferLength - see decodableLength():
-    size_t localBufferDecodableLength = decodableLength(localBuffer, localBufferLength, isFromServer);
+    const size_t decodable = decodableLength(localBuffer, localBuffer.length(), isFromServer);
+
+    TIngestJob* speculation = nullptr;
+    if (isFromServer && !mpActiveSpeculation && decodable == localBuffer.length() && mPendingChunkLines >= TIngestPipeline::csmMinimumLines && speculationEligible()) {
+        if (!mpIngestPipeline) {
+            mpIngestPipeline = std::make_unique<TIngestPipeline>(pHost);
+        }
+        speculation = mpIngestPipeline->begin(*this, localBuffer, decodable, encodingLookupTable);
+        mpActiveSpeculation = speculation;
+    }
+    const auto speculationGuard = qScopeGuard([this, speculation] {
+        if (speculation) {
+            mpIngestPipeline->end(*speculation);
+            mpActiveSpeculation = nullptr;
+            mpVerifiedLine = nullptr;
+        }
+    });
+
+    parseChunk(localBuffer, isFromServer, encodingLookupTable, decodable, speculation);
+}
+
+// Forced inline: parseChunk() is past the size where the compiler inlines into it on its own
+Q_ALWAYS_INLINE bool TBuffer::mxpProcessorEnabled() const
+{
+    return !mpParseConfig && mpHost->mMxpProcessor.isEnabled();
+}
+
+Q_ALWAYS_INLINE bool TBuffer::mxpClientBold() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->mxpBold : mpHost->mMxpClient.bold();
+}
+
+Q_ALWAYS_INLINE bool TBuffer::mxpClientItalic() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->mxpItalic : mpHost->mMxpClient.italic();
+}
+
+Q_ALWAYS_INLINE bool TBuffer::mxpClientUnderline() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->mxpUnderline : mpHost->mMxpClient.underline();
+}
+
+Q_ALWAYS_INLINE bool TBuffer::mxpClientStrikeOut() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->mxpStrikeOut : mpHost->mMxpClient.strikeOut();
+}
+
+Q_ALWAYS_INLINE bool TBuffer::hostHaveColorSpaceId() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->haveColorSpaceId : mpHost->getHaveColorSpaceId();
+}
+
+Q_ALWAYS_INLINE const QColor& TBuffer::hostForeground() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->hostForeground : mpHost->mFgColor;
+}
+
+Q_ALWAYS_INLINE const QColor& TBuffer::hostBackground() const
+{
+    return Q_UNLIKELY(mpParseConfig) ? mpParseConfig->hostBackground : mpHost->mBgColor;
+}
+
+void TBuffer::parseChunk(
+        std::string& localBuffer, const bool isFromServer, const QVector<QChar>& encodingLookupTable, size_t localBufferDecodableLength, TIngestJob* speculation, const size_t startPosition)
+{
+    // The complete two byte escape sequences (DECSC, DECRC, RIS and a stray
+    // ST) that games do send and that Mudlet has to swallow. Only these: any
+    // other byte after an ESC is text, and printing it is no worse than what
+    // Mudlet has always done, whereas eating it loses real output:
+    const QByteArray cShortEscape = QByteArrayLiteral("78c\\");
+
+    size_t localBufferLength = localBuffer.length();
+    size_t localBufferPosition = startPosition;
+    if (Q_UNLIKELY(speculation)) {
+        replaySpeculatedLines(*speculation, localBufferPosition, isFromServer);
+    }
 
     // If we are resolving/interpolating an MXP entity, the interpolated text
     // ends at localBuffer[endOfMXPEntity - 1]. This variable used to avoid an
@@ -1460,7 +1688,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 // If MXP is building a tag when we see ESC, the tag is invalid
                 // because ANSI escape sequences cannot be part of MXP tags.
                 // Output the partial tag as literal text before processing ESC.
-                if (mpHost->mMxpProcessor.isEnabled() && mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
+                if (mxpProcessorEnabled() && mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
                     TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
                     attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
                     TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
@@ -1468,7 +1696,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                     const QString literalText = mpHost->mMxpProcessor.abortCurrentTag();
                     mMudLine.append(literalText);
                     for (int i = 0; i < literalText.length(); ++i) {
-                        mMudBuffer.push_back(c);
+                        mMudBuffer.append(1, c);
                     }
 
                     mTagWatchdog->stop();
@@ -1559,6 +1787,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 // that is what stopped the scan, instead of buffering it without
                 // bound while waiting for a final byte that a hostile server may
                 // never send.
+                if (speculationStops()) {
+                    return;
+                }
                 qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - CSI sequence reached " << MAX_CSI_SEQUENCE_LENGTH << " bytes, discarding it to recover.";
                 localBufferPosition += spanEnd - spanStart + (spanEnd < localBufferLength && csiFinalByte(localBuffer[spanEnd]) ? 1 : 0);
                 mGotCSI = false;
@@ -1621,6 +1852,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 // We do not handle any sequences with intermediate bytes, so
                 // report it and skip it along with its final byte - which the
                 // general step at the end of this block does
+                if (speculationStops()) {
+                    return;
+                }
                 qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[parametersEnd]
                                              << "') and a 'final' byte ('" << localBuffer[spanEnd] << "') which Mudlet cannot interpret.";
             } else if (hasFinalByte) {
@@ -1640,10 +1874,16 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         sgrChars[i - spanStart] = static_cast<unsigned char>(localBuffer[i]);
                     }
                     decodeSGR(QStringView(sgrChars));
+                    if (Q_UNLIKELY(mSpeculationStopped)) {
+                        return;
+                    }
                 } break;
 
                 case static_cast<quint8>('z'):
                     // We have a control sequence for MXP
+                    if (speculationStops()) {
+                        return;
+                    }
 #if defined(DEBUG_MXP_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the MXP control sequence: \"" << localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str() << "\"";
 #endif
@@ -1680,11 +1920,14 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         const TChar c(mBackGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
                         for (int spaceCount = 0; spaceCount < spacesNeeded; ++spaceCount) {
                             mMudLine.append(QChar::Space);
-                            mMudBuffer.push_back(c);
+                            mMudBuffer.append(1, c);
                         }
                         // For debugging:
                         //                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - CUF (cursor forward) sequence of form CSI" << temp << "C received, converting into " << spacesNeeded << " spaces.";
                     } else {
+                        if (speculationStops()) {
+                            return;
+                        }
                         qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled sequence of form CSI..." << temp
                                                      << "C received, that is supposed to be a CUF (cursor forward) sequence but doesn't make sense, Mudlet will ignore it.";
                     }
@@ -1692,6 +1935,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 } break;
 
                 case static_cast<quint8>('J'): {
+                    if (speculationStops()) {
+                        return;
+                    }
                     /*
                      * Also seen in output from mud.durismud.com see 'C' case above:
                      * Is ED 'Erase Display' command and has three variants:
@@ -1723,10 +1969,16 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 } break;
 
                 default: // Unhandled other (valid) CSI final byte sequences will end up here
+                    if (speculationStops()) {
+                        return;
+                    }
                     qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled sequence of form CSI..." << localBuffer[spanEnd] << " received, Mudlet will ignore it.";
 
                 } // End of switch(modeChar) {}
             } else {
+                if (speculationStops()) {
+                    return;
+                }
                 qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected an invalid CSI sequence beginning with \"CSI"
                                              << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << " which Mudlet will ignore.";
             } // End of the isAValidFinalByte test
@@ -1739,6 +1991,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         } // End of if (mGotCSI)
 
         if (mGotOSC) {
+            if (speculationStops()) {
+                return;
+            }
             // Also reached - with mGotString set - whenever the payload is to
             // be consumed but not decoded: a DCS, SOS, PM or APC sequence, or
             // an OSC already truncated by the length cap below.
@@ -1853,7 +2108,13 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             flushPendingLead();
         }
 
-        if (localBufferPosition >= endOfLiteralEntity && mpHost->mMxpProcessor.isEnabled()) {
+        if (localBufferPosition >= endOfLiteralEntity && mxpProcessorEnabled()) {
+            // MXP rewrites the unit in place, so the worker's offsets stop matching it
+            if (Q_UNLIKELY(speculation)) {
+                mpIngestPipeline->end(*speculation);
+                speculation = nullptr;
+                mpVerifiedLine = nullptr;
+            }
             if (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()) {
                 if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
                     // The comparison signals to the processor, if custom entities may be resolved
@@ -1929,7 +2190,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
                         // We also need to set the color attributes for the special character
                         while (valueLength--) {
-                            mMudBuffer.push_back(c);
+                            mMudBuffer.append(1, c);
                         }
                         // We already handled the input, go to the next character
                         localBufferPosition++;
@@ -1948,7 +2209,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
                         mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
                         while (valueLength--) {
-                            mMudBuffer.push_back(c);
+                            mMudBuffer.append(1, c);
                         }
                         // Do NOT increment position - the current character needs to be reprocessed
                         continue;
@@ -1975,7 +2236,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
                         mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
                         while (valueLength--) {
-                            mMudBuffer.push_back(c);
+                            mMudBuffer.append(1, c);
                         }
                         localBufferPosition++;
                         continue;
@@ -1988,7 +2249,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
                         mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
                         while (valueLength--) {
-                            mMudBuffer.push_back(c);
+                            mMudBuffer.append(1, c);
                         }
                         continue;
                     }
@@ -2012,6 +2273,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 
     COMMIT_LINE:
         if (commitLine(ch, localBufferPosition, isFromServer, forcedLineBreak)) {
+            if (Q_UNLIKELY(speculation)) {
+                replaySpeculatedLines(*speculation, localBufferPosition, isFromServer);
+            } else if (Q_UNLIKELY(mSpeculationStopped)) {
+                return;
+            }
             continue;
         }
         // PLACEMARKER: Incoming text decoding
@@ -2089,8 +2355,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 
         if (isTwoTCharsNeeded) {
             // CHECK: Do we need to duplicate stuff for mMXP_LINK_MODE - yes I think we do:
-            mMudBuffer.push_back(c);
-            mMudBuffer.push_back(c);
+            mMudBuffer.append(1, c);
+            mMudBuffer.append(1, c);
             if (mHyperlinkActive) {
                 // Capture the column position when the first character of the hyperlink is added
                 if (mCurrentHyperlinkText.isEmpty()) {
@@ -2100,7 +2366,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 mCurrentHyperlinkText += QString(QChar(ch));
             }
         } else {
-            mMudBuffer.push_back(c);
+            mMudBuffer.append(1, c);
             if (mHyperlinkActive) {
                 // Capture the column position when the first character of the hyperlink is added
                 if (mCurrentHyperlinkText.isEmpty()) {
@@ -2111,9 +2377,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 // Plain text bytes decode to themselves with the format just computed, so a run takes one
                 // append and one fill. Not hyperlink text, built per character. MXP must see every byte,
                 // but between tags and entities it only hands them on as content, which it takes a run at once.
-                TMxpProcessor& mxp = mpHost->mMxpProcessor;
-                const bool mxpSeesText = mxp.isEnabled() && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn());
-                if (!mxpSeesText || (localBufferPosition + 1 >= endOfLiteralEntity && mxp.mode() != MXP_MODE_LOCKED && mxp.readingText())) {
+                const bool mxpSeesText = mxpProcessorEnabled() && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn());
+                if (!mxpSeesText || (localBufferPosition + 1 >= endOfLiteralEntity && mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED && mpHost->mMxpProcessor.readingText())) {
                     size_t runEnd = localBufferPosition + 1;
                     const char* const bytes = localBuffer.data();
                     if (mxpSeesText) {
@@ -2133,18 +2398,273 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                     }
                     const size_t runLength = runEnd - (localBufferPosition + 1);
                     if (runLength) {
+                        if (Q_UNLIKELY(mpSpeculationSink) && speculatedLineTooLong(runLength)) {
+                            return;
+                        }
                         if (mxpSeesText) {
-                            mxp.processRawInput(QByteArrayView(bytes + localBufferPosition + 1, static_cast<qsizetype>(runLength)));
+                            mpHost->mMxpProcessor.processRawInput(QByteArrayView(bytes + localBufferPosition + 1, static_cast<qsizetype>(runLength)));
                         }
                         mMudLine.append(QLatin1StringView(bytes + localBufferPosition + 1, static_cast<qsizetype>(runLength)));
-                        mMudBuffer.insert(mMudBuffer.cend(), runLength, c);
+                        mMudBuffer.append(runLength, c);
                         localBufferPosition = runEnd - 1;
                     }
                 }
             }
         }
 
+        if (Q_UNLIKELY(mpSpeculationSink) && speculatedLineTooLong(0)) {
+            return;
+        }
         ++localBufferPosition;
+    }
+}
+
+TBuffer::ParseState TBuffer::parseState() const
+{
+    ParseState state;
+    state.foreground = mForeGroundColor;
+    state.foregroundLight = mForeGroundColorLight;
+    state.background = mBackGroundColor;
+    state.pendingLeadFormat = mPendingLeadFormat;
+    state.incompleteSequenceBytes = mIncompleteSequenceBytes;
+    state.decoder = mDecoder;
+    state.pendingLead = mPendingLead;
+    state.altFont = mAltFont;
+    state.gotEsc = mGotESC;
+    state.gotEscCharset = mGotEscCharset;
+    state.gotCsi = mGotCSI;
+    state.gotOsc = mGotOSC;
+    state.gotString = mGotString;
+    state.isDefaultColor = mIsDefaultColor;
+    state.bold = mBold;
+    state.italics = mItalics;
+    state.overline = mOverline;
+    state.reverse = mReverse;
+    state.strikeOut = mStrikeOut;
+    state.underline = mUnderline;
+    state.underlineWavy = mUnderlineWavy;
+    state.underlineDotted = mUnderlineDotted;
+    state.underlineDashed = mUnderlineDashed;
+    state.blink = mBlink;
+    state.fastBlink = mFastBlink;
+    state.concealed = mConcealed;
+    state.hyperlinkActive = mHyperlinkActive;
+    return state;
+}
+
+bool TBuffer::parseStateIs(const ParseState& state) const
+{
+    return mGotESC == state.gotEsc && mGotEscCharset == state.gotEscCharset && mGotCSI == state.gotCsi && mGotOSC == state.gotOsc && mGotString == state.gotString
+           && mIsDefaultColor == state.isDefaultColor && mBold == state.bold && mItalics == state.italics && mOverline == state.overline && mReverse == state.reverse && mStrikeOut == state.strikeOut
+           && mUnderline == state.underline && mUnderlineWavy == state.underlineWavy && mUnderlineDotted == state.underlineDotted && mUnderlineDashed == state.underlineDashed && mBlink == state.blink
+           && mFastBlink == state.fastBlink && mConcealed == state.concealed && mHyperlinkActive == state.hyperlinkActive && mAltFont == state.altFont && mPendingLead == state.pendingLead
+           && mDecoder == state.decoder && mIncompleteSequenceBytes == state.incompleteSequenceBytes && mForeGroundColor == state.foreground && mForeGroundColorLight == state.foregroundLight
+           && mBackGroundColor == state.background && mPendingLeadFormat == state.pendingLeadFormat;
+}
+
+void TBuffer::setParseState(const ParseState& state)
+{
+    mForeGroundColor = state.foreground;
+    mForeGroundColorLight = state.foregroundLight;
+    mBackGroundColor = state.background;
+    mPendingLeadFormat = state.pendingLeadFormat;
+    mIncompleteSequenceBytes = state.incompleteSequenceBytes;
+    mDecoder = state.decoder;
+    mPendingLead = state.pendingLead;
+    mAltFont = state.altFont;
+    mGotESC = state.gotEsc;
+    mGotEscCharset = state.gotEscCharset;
+    mGotCSI = state.gotCsi;
+    mGotOSC = state.gotOsc;
+    mGotString = state.gotString;
+    mIsDefaultColor = state.isDefaultColor;
+    mBold = state.bold;
+    mItalics = state.italics;
+    mOverline = state.overline;
+    mReverse = state.reverse;
+    mStrikeOut = state.strikeOut;
+    mUnderline = state.underline;
+    mUnderlineWavy = state.underlineWavy;
+    mUnderlineDotted = state.underlineDotted;
+    mUnderlineDashed = state.underlineDashed;
+    mBlink = state.blink;
+    mFastBlink = state.fastBlink;
+    mConcealed = state.concealed;
+    mHyperlinkActive = state.hyperlinkActive;
+}
+
+TBuffer::ParseConfig TBuffer::parseConfig() const
+{
+    Host* pHost = mpHost;
+    ParseConfig config;
+    config.hostForeground = pHost->mFgColor;
+    config.hostBackground = pHost->mBgColor;
+    config.colourGeneration = mColourGeneration;
+    config.haveColorSpaceId = pHost->getHaveColorSpaceId();
+    config.mxpBold = pHost->mMxpClient.bold();
+    config.mxpItalic = pHost->mMxpClient.italic();
+    config.mxpUnderline = pHost->mMxpClient.underline();
+    config.mxpStrikeOut = pHost->mMxpClient.strikeOut();
+    config.mxpColourOrLink = pHost->mMxpClient.isInLinkMode() || pHost->mMxpClient.hasFgColor() || pHost->mMxpClient.hasBgColor();
+    return config;
+}
+
+bool TBuffer::parseConfigIs(const ParseConfig& config) const
+{
+    Host* pHost = mpHost;
+    return config.colourGeneration == mColourGeneration && !pHost->mMxpProcessor.isEnabled() && config.haveColorSpaceId == pHost->getHaveColorSpaceId() && config.mxpBold == pHost->mMxpClient.bold()
+           && config.mxpItalic == pHost->mMxpClient.italic() && config.mxpUnderline == pHost->mMxpClient.underline() && config.mxpStrikeOut == pHost->mMxpClient.strikeOut()
+           && config.hostForeground == pHost->mFgColor && config.hostBackground == pHost->mBgColor
+           && config.mxpColourOrLink == (pHost->mMxpClient.isInLinkMode() || pHost->mMxpClient.hasFgColor() || pHost->mMxpClient.hasBgColor());
+}
+
+quint64 TBuffer::linesParsedAhead() const
+{
+    return mpIngestPipeline ? mpIngestPipeline->replayedLines() : 0;
+}
+
+bool TBuffer::speculationEligible() const
+{
+    if (!TIngestPipeline::enabled() || mpParseConfig || mpSpeculationSink || !mpModel) {
+        return false;
+    }
+    if (mDecoder != Decoder::Utf8 && mDecoder != Decoder::Latin1 && mDecoder != Decoder::Ascii) {
+        return false;
+    }
+    const TMxpMudlet& mxpClient = mpHost->mMxpClient;
+    return !mGotOSC && !mHyperlinkActive && !mpHost->mMxpProcessor.isEnabled() && !mxpClient.isInLinkMode() && !mxpClient.hasFgColor() && !mxpClient.hasBgColor();
+}
+
+// No arena could take the line, so stop before it grows further: what the worker frees, its thread's heap keeps
+bool TBuffer::speculatedLineTooLong(const size_t moreChars)
+{
+    if (static_cast<size_t>(mMudLine.size()) + moreChars <= TIngestJob::csmMaxTextChars && (mMudBuffer.uniform() || mMudBuffer.size() + moreChars <= TIngestJob::csmMaxFormatChars)) {
+        return false;
+    }
+    mpSpeculationSink->mResumeFrom = mSpeculatedLineStart + 1;
+    mSpeculationStopped = true;
+    return true;
+}
+
+bool TBuffer::recordSpeculatedLine(const char ch, size_t& localBufferPosition, const bool forcedLineBreak)
+{
+    TIngestJob& job = *mpSpeculationSink;
+    const int index = job.mReady.load(std::memory_order_relaxed);
+    const size_t textLength = static_cast<size_t>(mMudLine.size());
+    const bool uniform = mMudBuffer.uniform() || mMudBuffer.empty();
+    const size_t formatLength = mMudBuffer.size();
+    if (job.mCancel.load(std::memory_order_relaxed)) {
+        mSpeculationStopped = true;
+        ++localBufferPosition;
+        return true;
+    }
+    if (static_cast<size_t>(index) >= job.mLines.size() || job.mTextUsed + textLength > job.mText.size() || (!uniform && job.mFormatUsed + formatLength > job.mFormats.size())) {
+        // A line too long for the arenas on its own is left to main, or the job would be queued for it again and again
+        job.mResumeFrom = index ? mSpeculatedLineStart : mSpeculatedLineStart + 1;
+        mSpeculationStopped = true;
+        ++localBufferPosition;
+        return true;
+    }
+    TSpeculatedLine& line = job.mLines[static_cast<size_t>(index)];
+    line.start = mSpeculatedLineStart;
+    line.end = localBufferPosition;
+    line.commitChar = ch;
+    line.forcedLineBreak = forcedLineBreak;
+    line.textOffset = static_cast<quint32>(job.mTextUsed);
+    line.textLength = static_cast<quint32>(textLength);
+    std::copy_n(mMudLine.constData(), textLength, job.mText.data() + job.mTextUsed);
+    job.mTextUsed += textLength;
+    line.uniform = uniform;
+    line.formatLength = static_cast<quint32>(formatLength);
+    if (uniform) {
+        if (formatLength) {
+            line.uniformFormat = mMudBuffer.front();
+        }
+    } else {
+        line.formatOffset = static_cast<quint32>(job.mFormatUsed);
+        std::copy(mMudBuffer.begin(), mMudBuffer.end(), job.mFormats.begin() + static_cast<std::ptrdiff_t>(job.mFormatUsed));
+        job.mFormatUsed += formatLength;
+    }
+    mMudLine.resize(0);
+    mMudBuffer.clear();
+    line.stateAtCommit = parseState();
+    job.mReady.store(index + 1, std::memory_order_release);
+    ++localBufferPosition;
+    mSpeculatedLineStart = localBufferPosition;
+    return true;
+}
+
+namespace {
+TLineFormat speculatedLineFormat(const TIngestJob& job, const TSpeculatedLine& line)
+{
+    TLineFormat format;
+    if (line.uniform) {
+        format.append(line.formatLength, line.uniformFormat);
+    } else {
+        const auto first = job.mFormats.cbegin() + line.formatOffset;
+        format.expand().assign(first, first + line.formatLength);
+    }
+    return format;
+}
+
+QStringView speculatedLineText(const TIngestJob& job, const TSpeculatedLine& line)
+{
+    return QStringView(job.mText.data() + line.textOffset, static_cast<qsizetype>(line.textLength));
+}
+} // namespace
+
+void TBuffer::verifySpeculatedLine(const TSpeculatedLine& line, const char ch, const size_t localBufferPosition, const bool forcedLineBreak) const
+{
+    const TIngestJob& job = *mpActiveSpeculation;
+    const TLineFormat format = speculatedLineFormat(job, line);
+    bool same = line.end == localBufferPosition && line.commitChar == ch && line.forcedLineBreak == forcedLineBreak && speculatedLineText(job, line) == mMudLine && format.size() == mMudBuffer.size()
+                && parseStateIs(line.stateAtCommit);
+    for (size_t i = 0; same && i < mMudBuffer.size(); ++i) {
+        same = format[i] == mMudBuffer[i];
+    }
+    if (!same) {
+        qWarning().noquote() << "TBuffer ingest worker MISMATCH on line:" << mMudLine << "- the worker's:" << speculatedLineText(job, line);
+    }
+}
+
+void TBuffer::replaySpeculatedLines(TIngestJob& job, size_t& localBufferPosition, const bool isFromServer)
+{
+    for (;;) {
+        const int ready = job.mReady.load(std::memory_order_acquire);
+        while (job.mNext < ready && job.mLines[static_cast<size_t>(job.mNext)].start < localBufferPosition) {
+            ++job.mNext;
+        }
+        if (job.mNext >= ready) {
+            if (mpIngestPipeline->resume(*this, job, localBufferPosition) || mpIngestPipeline->awaitLines(job, ready)) {
+                continue;
+            }
+            return;
+        }
+        const TSpeculatedLine& line = job.mLines[static_cast<size_t>(job.mNext)];
+        const ParseState& stateBefore = job.mNext ? job.mLines[static_cast<size_t>(job.mNext - 1)].stateAtCommit : job.mStartState;
+        if (line.start != localBufferPosition || !mMudLine.isEmpty() || !mMudBuffer.empty() || !parseStateIs(stateBefore) || !parseConfigIs(job.mConfig)) {
+            return;
+        }
+        ++job.mNext;
+        if (Q_UNLIKELY(TIngestPipeline::verifying())) {
+            mpVerifiedLine = &line;
+            return;
+        }
+        mpIngestPipeline->noteReplayed();
+        setParseState(line.stateAtCommit);
+        size_t commitPosition = line.end;
+        Host* pHost = mpHost;
+        if (mServerWrapPendingLine.isEmpty() && !mHyperlinkActive && !pHost->mMxpFrameManager.hasActiveDestination()
+            && !(pHost->mUndoServerWrap && isFromServer && line.commitChar == '\n' && !line.forcedLineBreak && line.textLength)) {
+            // What commitLine() reduces to here, without copying the line through the accumulators
+            commitLineData(line.textLength ? speculatedLineText(job, line).toString() : QString(), speculatedLineFormat(job, line), line.commitChar);
+            ++commitPosition;
+        } else {
+            mMudLine.append(speculatedLineText(job, line));
+            mMudBuffer = speculatedLineFormat(job, line);
+            commitLine(line.commitChar, commitPosition, isFromServer, line.forcedLineBreak);
+        }
+        localBufferPosition = commitPosition;
     }
 }
 
@@ -2156,7 +2676,7 @@ void TBuffer::flushPendingDestinationContent()
 
     if (mpHost->mMxpFrameManager.hasActiveDestination()) {
         if (TPrintSink* destSink = mpHost->mMxpFrameManager.currentDestinationSink()) {
-            destSink->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+            destSink->printFormatted(mMudLine, mMudBuffer.expand(), mLinkStore);
             mMudLine.clear();
             mMudBuffer.clear();
         }
@@ -2194,6 +2714,12 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
     if (!CHAR_IS_COMMIT_CHAR(ch)) {
         return false;
     }
+    if (Q_UNLIKELY(mpSpeculationSink)) {
+        return recordSpeculatedLine(ch, localBufferPosition, forcedLineBreak);
+    }
+    if (Q_UNLIKELY(mpVerifiedLine)) {
+        verifySpeculatedLine(*std::exchange(mpVerifiedLine, nullptr), ch, localBufferPosition, forcedLineBreak);
+    }
 
     // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
     // EN: MUD lines are always written at the beginning of the line
@@ -2216,7 +2742,7 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
                 }
             }
             if (!mMudLine.isEmpty()) {
-                destSink->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+                destSink->printFormatted(mMudLine, mMudBuffer.expand(), mLinkStore);
             }
             mMudLine.clear();
             mMudBuffer.clear();
@@ -2294,26 +2820,26 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
     // Copy out and clear rather than swap: the accumulators keep their allocation (regrowing costs more than
     // the copy) and stored lines are exactly sized, not worst-case; past csmMaxRetainedLineCapacity the
     // accumulator is released instead. Emptied before the commit so nested passes from commitLineData() can
-    // use them. Characters are moved: none can be selected, so the copy constructor's flag clearing is wasted.
+    // use them.
     QString line;
     if (!mMudLine.isEmpty()) {
         line = QString(mMudLine.constData(), mMudLine.size());
         mMudLine.resize(0);
     }
-    std::vector<TChar> chars(std::make_move_iterator(mMudBuffer.begin()), std::make_move_iterator(mMudBuffer.end()));
+    TLineFormat chars(mMudBuffer);
     mMudBuffer.clear();
     if (static_cast<size_t>(mMudLine.capacity()) > csmMaxRetainedLineCapacity) {
         QString().swap(mMudLine);
     }
     if (mMudBuffer.capacity() > csmMaxRetainedLineCapacity) {
-        std::vector<TChar>().swap(mMudBuffer);
+        TLineFormat().swap(mMudBuffer);
     }
     commitLineData(std::move(line), std::move(chars), ch);
     ++localBufferPosition;
     return true;
 }
 
-void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char ch)
+void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
 {
     // An empty '\r' commit, such as the posting timer's flush, ends no line of text: drop it before the
     // blank-line setting below can turn it into a line of one space
@@ -2330,7 +2856,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             // foreground color as well so that we are transparent:
             const TChar c(mBackGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
             line.append(QChar::Space);
-            chars.push_back(c);
+            chars.append(1, c);
         }
     }
 
@@ -2348,7 +2874,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             lineBuffer << QString();
         }
         buffer.push_back(std::move(chars));
-        timeBuffer << QDateTime::currentMSecsSinceEpoch();
+        timeBuffer << lineArrivalTime();
         if (ch == '\xff') {
             promptBuffer.append(true);
         } else {
@@ -2366,7 +2892,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         // the one the enclosing pass is still running over:
         materialisePreTriggerPassLine(static_cast<int>(buffer.size()) - 1);
         buffer.back() = std::move(chars);
-        timeBuffer.back() = QDateTime::currentMSecsSinceEpoch();
+        timeBuffer.back() = lineArrivalTime();
         if (ch == '\xff') {
             promptBuffer.back() = true;
         } else {
@@ -2410,7 +2936,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         // from inside this pass would aim at this line instead:
         materialisePreTriggerPassLine(mPreTriggerPassLineNumber);
         // Save/restore gives each nested pass its own snapshot; the spare member recycles its allocation:
-        std::vector<TChar> savedPassLine;
+        TLineFormat savedPassLine;
         savedPassLine.swap(mPreTriggerPassLine);
         mEnclosingTriggerPasses.append({mPreTriggerPassLineNumber, std::exchange(mDetachedTriggerPassLineText, QString()), std::exchange(mTriggerPassLineEdits, {})});
         const int savedPassLineAsCommitted = mTriggerPassLineAsCommitted;
@@ -2438,7 +2964,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         passLineAfterTriggers = (mPreTriggerPassLineNumber >= 0) ? mPreTriggerPassLineNumber : lineIndex;
         mSpareTriggerPassLine.swap(mPreTriggerPassLine);
         if (mSpareTriggerPassLine.capacity() > csmMaxRetainedLineCapacity) {
-            std::vector<TChar>().swap(mSpareTriggerPassLine);
+            TLineFormat().swap(mSpareTriggerPassLine);
         }
         mPreTriggerPassLine.swap(savedPassLine);
         EnclosingTriggerPass enclosing = mEnclosingTriggerPasses.takeLast();
@@ -2459,7 +2985,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     const int lastValidLine = static_cast<int>(lineBuffer.size()) - 1;
     const int wrapStartLine = (lastValidLine >= 0) ? std::min(passLineAfterTriggers, lastValidLine) : 0;
     // Spares wrapLine()'s setup for the usual last line that fits; one with no text or no TChars still goes
-    // through, as wrapLine() rebuilds it. The width must stay getWrapInfo()'s widthAvailable for mWrapAt.
+    // through, as wrapLine() rebuilds it. The width must not exceed getWrapInfo()'s widthAvailable for mWrapAt.
     const bool fitsAsIs = wrapStartLine == lastValidLine && !lineBuffer.at(wrapStartLine).isEmpty() && !buffer[wrapStartLine].empty()
                           && fitsUnwrapped(lineBuffer.at(wrapStartLine), wrapsFromPreviousLine(wrapStartLine) ? mWrapAt : mWrapAt - clampedWrapIndent(mWrapIndent, mWrapAt));
     const int addedLines = fitsAsIs ? 0 : wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
@@ -2704,7 +3230,7 @@ void TBuffer::joinPendingServerWrapOntoCurrent()
     // The game's wrapper swallowed the space it broke the line at:
     if (!mServerWrapPendingLine.endsWith(QChar::Space) && !mMudLine.startsWith(QChar::Space)) {
         mServerWrapPendingLine.append(QChar::Space);
-        mServerWrapPendingBuffer.push_back(mServerWrapPendingBuffer.empty() ? TChar(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags()) : mServerWrapPendingBuffer.back());
+        mServerWrapPendingBuffer.append(1, mServerWrapPendingBuffer.empty() ? TChar(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags()) : mServerWrapPendingBuffer.back());
     }
     const int heldLength = static_cast<int>(mServerWrapPendingLine.size());
     if (mHyperlinkActive && mCurrentHyperlinkStartsAfterHeldText) {
@@ -2712,13 +3238,17 @@ void TBuffer::joinPendingServerWrapOntoCurrent()
         mCurrentHyperlinkStartsAfterHeldText = false;
     }
     mMudLine.prepend(mServerWrapPendingLine);
-    mMudBuffer.insert(mMudBuffer.begin(), mServerWrapPendingBuffer.begin(), mServerWrapPendingBuffer.end());
+    if (mServerWrapPendingBuffer.uniform()) {
+        mMudBuffer.insert(0, mServerWrapPendingBuffer.size(), mServerWrapPendingBuffer.front());
+    } else if (!mServerWrapPendingBuffer.empty()) {
+        std::vector<TChar>& chars = mMudBuffer.expand();
+        chars.insert(chars.begin(), mServerWrapPendingBuffer.cbegin(), mServerWrapPendingBuffer.cend());
+    }
     if (mHeldSpoilerLinkId) {
         maskSpoilerText(mHeldSpoilerLinkId, mMudLine, mHeldSpoilerStartColumn, heldLength - mHeldSpoilerStartColumn + mHeldSpoilerContinuationLength);
         mHeldSpoilerLinkId = 0;
     }
-    if (mHeldVisibility.linkId) {
-        const HeldVisibility held = std::exchange(mHeldVisibility, HeldVisibility{});
+    for (const HeldVisibility& held : std::exchange(mHeldVisibilities, {})) {
         if (held.startsAfterHeldText) {
             registerLinkVisibility(held.linkId, held.startColumn + heldLength, held.continuationLength - held.startColumn, held.styling);
         } else {
@@ -2741,7 +3271,7 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
     }
     // A link closed after the held text sits whole on the line after it, at the columns it recorded;
     // one that began in the held text now spans two lines, which visibility does not cover.
-    const HeldVisibility heldVisibility = std::exchange(mHeldVisibility, HeldVisibility{});
+    const QList<HeldVisibility> heldVisibilities = std::exchange(mHeldVisibilities, {});
     const bool linkStartsAfterHeldText = mHyperlinkActive && mCurrentHyperlinkStartsAfterHeldText;
     if (mHyperlinkActive && !linkStartsAfterHeldText) {
         if (endsHyperlink) {
@@ -2756,7 +3286,7 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
             finaliseActiveHyperlink();
             mServerWrapPendingLine.swap(mMudLine);
             mMudLine.swap(rest);
-            for (auto& c : mMudBuffer) {
+            for (auto& c : mMudBuffer.expand()) {
                 if (c.mLinkIndex == linkId) {
                     c.mLinkIndex = 0;
                 }
@@ -2766,7 +3296,7 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
         }
     }
     QString line;
-    std::vector<TChar> chars;
+    TLineFormat chars;
     line.swap(mServerWrapPendingLine);
     chars.swap(mServerWrapPendingBuffer);
     commitLineData(std::move(line), std::move(chars), '\n');
@@ -2774,8 +3304,10 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
         mCurrentHyperlinkStartLine = static_cast<int>(lineBuffer.size()) - 1;
         mCurrentHyperlinkStartsAfterHeldText = false;
     }
-    if (heldVisibility.linkId && heldVisibility.startsAfterHeldText) {
-        registerLinkVisibility(heldVisibility.linkId, heldVisibility.startColumn, heldVisibility.continuationLength - heldVisibility.startColumn, heldVisibility.styling);
+    for (const HeldVisibility& held : heldVisibilities) {
+        if (held.startsAfterHeldText) {
+            registerLinkVisibility(held.linkId, held.startColumn, held.continuationLength - held.startColumn, held.styling);
+        }
     }
 }
 
@@ -2788,11 +3320,13 @@ void TBuffer::triggerPassLinesRemoved(const int from, const int to)
         mPreTriggerPassLineNumber -= delta;
     } else if (mPreTriggerPassLineNumber >= from) {
         // The snapshot, where taken, holds the colors as they arrived for as much of the line as it covers
-        std::vector<TChar> detached = std::move(buffer[mPreTriggerPassLineNumber]);
         if (mPreTriggerPassSnapshotTaken) {
+            std::vector<TChar> detached = std::move(buffer[mPreTriggerPassLineNumber].expand());
             std::copy_n(mPreTriggerPassLine.cbegin(), std::min(mPreTriggerPassLine.size(), detached.size()), detached.begin());
+            mPreTriggerPassLine = std::move(detached);
+        } else {
+            mPreTriggerPassLine = std::move(buffer[mPreTriggerPassLineNumber]);
         }
-        mPreTriggerPassLine = std::move(detached);
         mPreTriggerPassSnapshotTaken = true;
         mDetachedTriggerPassLineText = lineBuffer.at(mPreTriggerPassLineNumber);
         mPreTriggerPassLineNumber = csmDetachedTriggerPassLine;
@@ -2864,7 +3398,7 @@ void TBuffer::noteTriggerPassLineEdit(const int y, const int x, const int remove
     }
 }
 
-const std::vector<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
+const TLineFormat* TBuffer::preTriggerPassLine(int lineNumber) const
 {
     if (lineNumber >= 0 && lineNumber == mPreTriggerPassLineNumber && mPreTriggerPassSnapshotTaken) {
         return &mPreTriggerPassLine;
@@ -2879,13 +3413,14 @@ void TBuffer::spliceInsertIntoPreTriggerPassLine(int y, int x, int count, const 
     if (!mPreTriggerPassSnapshotTaken || y < 0 || y != mPreTriggerPassLineNumber || y >= static_cast<int>(buffer.size())) {
         return;
     }
-    const int known = static_cast<int>(mPreTriggerPassLine.size());
+    std::vector<TChar>& passLine = mPreTriggerPassLine.expand();
+    const int known = static_cast<int>(passLine.size());
     const int padEnd = std::min(x, static_cast<int>(buffer[y].size()));
     if (padEnd > known) {
-        mPreTriggerPassLine.insert(mPreTriggerPassLine.end(), buffer[y].cbegin() + known, buffer[y].cbegin() + padEnd);
+        passLine.insert(passLine.end(), buffer[y].cbegin() + known, buffer[y].cbegin() + padEnd);
     }
-    const int at = std::min(x, static_cast<int>(mPreTriggerPassLine.size()));
-    mPreTriggerPassLine.insert(mPreTriggerPassLine.begin() + at, static_cast<std::size_t>(count), format);
+    const int at = std::min(x, static_cast<int>(passLine.size()));
+    passLine.insert(passLine.begin() + at, static_cast<std::size_t>(count), format);
     mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
 }
 
@@ -2898,7 +3433,8 @@ void TBuffer::spliceEraseFromPreTriggerPassLine(int y, int x, int xEnd)
     const int from = std::min(x, size);
     const int to = std::min(xEnd, size);
     if (from < to) {
-        mPreTriggerPassLine.erase(mPreTriggerPassLine.begin() + from, mPreTriggerPassLine.begin() + to);
+        std::vector<TChar>& passLine = mPreTriggerPassLine.expand();
+        passLine.erase(passLine.begin() + from, passLine.begin() + to);
         mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
     }
 }
@@ -2911,11 +3447,12 @@ void TBuffer::wrapPreTriggerPassLine(const WrapInfo& firstSegment, int indentWid
     const int from = std::min(firstSegment.firstChar, known);
     const int to = std::min(firstSegment.lastChar, known);
     if (from < to) {
-        const TChar indentColors = mPreTriggerPassLine[from];
-        mPreTriggerPassLine.erase(mPreTriggerPassLine.begin() + to, mPreTriggerPassLine.end());
-        mPreTriggerPassLine.erase(mPreTriggerPassLine.begin(), mPreTriggerPassLine.begin() + from);
+        std::vector<TChar>& passLine = mPreTriggerPassLine.expand();
+        const TChar indentColors = passLine[from];
+        passLine.erase(passLine.begin() + to, passLine.end());
+        passLine.erase(passLine.begin(), passLine.begin() + from);
         if (firstSegment.needsIndent) {
-            mPreTriggerPassLine.insert(mPreTriggerPassLine.begin(), static_cast<std::size_t>(indentWidth), indentColors);
+            passLine.insert(passLine.begin(), static_cast<std::size_t>(indentWidth), indentColors);
         }
     } else {
         mPreTriggerPassLine.clear();
@@ -2926,7 +3463,7 @@ void TBuffer::wrapPreTriggerPassLine(const WrapInfo& firstSegment, int indentWid
 void TBuffer::materialisePreTriggerPassLine(int y)
 {
     if (!mPreTriggerPassSnapshotTaken && y >= 0 && y == mPreTriggerPassLineNumber && y < static_cast<int>(buffer.size())) {
-        mPreTriggerPassLine.assign(buffer[y].cbegin(), buffer[y].cend());
+        mPreTriggerPassLine = buffer[y];
         mPreTriggerPassSnapshotTaken = true;
     }
 }
@@ -2937,11 +3474,14 @@ const TChar* TBuffer::preTriggerPassLineUniformColors(int lineNumber)
         return nullptr;
     }
     // Until a write materialises the snapshot, the line still holds the game's colors - most lines do:
-    const std::vector<TChar>& passLine = mPreTriggerPassSnapshotTaken ? mPreTriggerPassLine : buffer[lineNumber];
+    const TLineFormat& passLine = mPreTriggerPassSnapshotTaken ? mPreTriggerPassLine : buffer[lineNumber];
     if (passLine.empty()) {
         return nullptr;
     }
     const TChar& first = passLine.front();
+    if (passLine.uniform()) {
+        return &first;
+    }
     if (mPreTriggerPassLineUniformity == PassLineUniformity::Unknown) {
         // The first character stands for the rest only while this compares colors as the trigger does.
         const bool uniform = std::all_of(passLine.cbegin() + 1, passLine.cend(), [&first](const TChar& character) {
@@ -2996,7 +3536,7 @@ void TBuffer::processMxpWatchdogCallback()
 
                 mMudLine.append(lastEntityValue);
                 for (qsizetype i = 0; i < lastEntityValue.size(); ++i) {
-                    mMudBuffer.push_back(style);
+                    mMudBuffer.append(1, style);
                 }
                 // In trigger context, as for every other line the game sends
                 const bool wasInTriggerEngineMode = mpModel->mTriggerEngineMode;
@@ -3013,11 +3553,11 @@ void TBuffer::processMxpWatchdogCallback()
 
 TChar::AttributeFlags TBuffer::computeCurrentAttributeFlags() const
 {
-    return ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None) | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
-           | (mOverline ? TChar::Overline : TChar::None) | (mReverse ? TChar::Reverse : TChar::None) | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
-           | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None) | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None)
-           | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None) | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None)
-           | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink : TChar::None)) | (TChar::alternateFontFlag(mAltFont)) | (mConcealed ? TChar::Concealed : TChar::None);
+    return ((mIsDefaultColor ? mBold || mxpClientBold() : false) ? TChar::Bold : TChar::None) | (mItalics || mxpClientItalic() ? TChar::Italic : TChar::None)
+           | (mOverline ? TChar::Overline : TChar::None) | (mReverse ? TChar::Reverse : TChar::None) | (mStrikeOut || mxpClientStrikeOut() ? TChar::StrikeOut : TChar::None)
+           | (mUnderline || mxpClientUnderline() ? TChar::Underline : TChar::None) | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None) | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None)
+           | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None) | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink : TChar::None)) | (TChar::alternateFontFlag(mAltFont))
+           | (mConcealed ? TChar::Concealed : TChar::None);
 }
 
 void TBuffer::decodeSGR38(const SgrParameters& parameters, bool isColonSeparated)
@@ -3143,6 +3683,9 @@ void TBuffer::decodeSGR38(const SgrParameters& parameters, bool isColonSeparated
         }
 
         if (parameters.count() >= 3 && !parameters.at(2).isEmpty()) {
+            if (speculationStops()) {
+                return;
+            }
             if (!isColonSeparated) {
 #if !defined(DEBUG_SGR_PROCESSING)
                 qDebug() << "Unhandled color space identifier in a SGR...;38;2;" << parameters.at(2)
@@ -3309,6 +3852,9 @@ void TBuffer::decodeSGR48(const SgrParameters& parameters, bool isColonSeparated
         }
 
         if (parameters.count() >= 3 && !parameters.at(2).isEmpty()) {
+            if (speculationStops()) {
+                return;
+            }
             if (!isColonSeparated) {
 #if !defined(DEBUG_SGR_PROCESSING)
                 qDebug() << "Unhandled color space identifier in a SGR...;48;2;" << parameters.at(2)
@@ -3346,13 +3892,12 @@ void TBuffer::decodeSGR48(const SgrParameters& parameters, bool isColonSeparated
 
 void TBuffer::decodeSGR(const QStringView sequence)
 {
-    Host* pHost = mpHost;
-    if (!pHost) {
+    if (!mpParseConfig && !mpHost) {
         qWarning() << "TBuffer::decodeSGR(...) ERROR - Called when mpHost pointer is nullptr";
         return;
     }
 
-    const bool haveColorSpaceId = pHost->getHaveColorSpaceId();
+    const bool haveColorSpaceId = hostHaveColorSpaceId();
 
     SgrParameters parameterStrings;
     for (const QStringView parameter : sequence.tokenize(u';')) {
@@ -3567,6 +4112,9 @@ void TBuffer::decodeSGR(const QStringView sequence)
                 const int value = parameterElements.at(1).toInt(&isOk);
                 if (!isOk) {
                     // missing value
+                    if (speculationStops()) {
+                        return;
+                    }
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
                                                  << "\") ERROR - failed to detect underline parameter element (the second part) in a SGR...;4:?;..m sequence assuming it is a zero!";
                 }
@@ -3612,6 +4160,9 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     mUnderlineDashed = true;
                     break;
                 default: // Something unexpected
+                    if (speculationStops()) {
+                        return;
+                    }
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
                                                  << "\") ERROR - unexpected underline parameter element (the second part) in a SGR...;4:" << parameterElements.at(1)
                                                  << ";../m sequence treating it as a zero!";
@@ -3627,6 +4178,9 @@ void TBuffer::decodeSGR(const QStringView sequence)
                 const int value = parameterElements.at(1).toInt(&isOk);
                 if (!isOk) {
                     // missing value
+                    if (speculationStops()) {
+                        return;
+                    }
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
                                                  << "\") ERROR - failed to detect italic parameter element (the second part) in a SGR...;3:?;../m sequence assuming it is a zero!";
                 }
@@ -3638,18 +4192,27 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     mItalics = true;
                     break;
                 case 2: // Slant on - not supported, treat as italics
+                    if (speculationStops()) {
+                        return;
+                    }
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence
                                                  << "\") ERROR - unsupported italic parameter element (the second part) in a SGR...;3:" << parameterElements.at(1)
                                                  << ";../m sequence treating it as a one!";
                     mItalics = true;
                     break;
                 default: // Something unexpected
+                    if (speculationStops()) {
+                        return;
+                    }
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unexpected italic parameter element (the second part) in a SGR...;3:" << parameterElements.at(1)
                                                  << ";../m sequence treating it as a zero!";
                     mItalics = false;
                     break;
                 }
             } else {
+                if (speculationStops()) {
+                    return;
+                }
                 qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - parameter string with an unexpected initial parameter element in a SGR...;"
                                              << parameterElements.at(0) << ":" << parameterElements.at(1) << "...;.../m sequence, ignoring it!";
             }
@@ -3673,8 +4236,8 @@ void TBuffer::decodeSGR(const QStringView sequence)
                 switch (tag) {
                 case 0:
                     mIsDefaultColor = true;
-                    mForeGroundColor = pHost->mFgColor;
-                    mBackGroundColor = pHost->mBgColor;
+                    mForeGroundColor = hostForeground();
+                    mBackGroundColor = hostBackground();
                     mBold = false;
                     mItalics = false;
                     mOverline = false;
@@ -3929,8 +4492,8 @@ void TBuffer::decodeSGR(const QStringView sequence)
                 } break;
                 case 39: //default foreground color
                     mIsDefaultColor = true;
-                    mForeGroundColor = pHost->mFgColor;
-                    mForeGroundColorLight = pHost->mFgColor;
+                    mForeGroundColor = hostForeground();
+                    mForeGroundColorLight = hostForeground();
                     break;
                 case 40:
                     mBackGroundColor = mBlack;
@@ -4046,7 +4609,7 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     }
                 } break;
                 case 49: // default background color
-                    mBackGroundColor = pHost->mBgColor;
+                    mBackGroundColor = hostBackground();
                     break;
                 // case 51: // Framed
                 //    break;
@@ -4138,6 +4701,9 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     mBackGroundColor = mLightWhite;
                     break;
                 default:
+                    if (speculationStops()) {
+                        return;
+                    }
                     qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled single SGR code sequence CSI " << tag << " m received, Mudlet will ignore it.";
                 }
             }
@@ -4321,6 +4887,13 @@ void TBuffer::decodeOSC(const QString& sequence)
         }
 
         if (!rawUrl.isEmpty()) {
+            // Per the OSC 8 spec a new link ends the open one, even if rejected below: else the text after
+            // it joins the open link, which then closes with the rejected link's config. preset: only
+            // registers a style and opens no link, so it leaves the open link alone.
+            if (mHyperlinkActive && !rawUrl.startsWith(qsl("preset:"))) {
+                finaliseActiveHyperlink();
+            }
+
             if (rawUrl.length() > static_cast<int>(MAX_OSC_SEQUENCE_LENGTH)) {
                 qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << rawUrl;
                 return;
@@ -4465,7 +5038,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                 QUrl qurl(baseUrl);
                 QString scheme = qurl.scheme().toLower();
 
-                if (scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp")) {
+                if (systemMayOpenUrl(qurl)) {
                     mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionOpenUrl;
                     mCurrentHyperlinkStyling.baseCommand = baseUrl;
                     command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
@@ -4513,6 +5086,9 @@ void TBuffer::decodeOSC(const QString& sequence)
                         // Special case: "-" creates a menu separator
                         menuCommands.append(QString());
                         menuHints.append(QString());
+                    } else if (systemMayOpenUrl(QUrl(menuCommand))) {
+                        menuCommands.append(qsl("openUrl(%1)").arg(LuaLiteral::quote(menuCommand)));
+                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     } else {
                         // Treat as direct command
                         menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(menuCommand)));
@@ -5292,7 +5868,7 @@ void TBuffer::clearLinkIndices(int lineNumber, int startColumn, int length)
     }
 
     materialisePreTriggerPassLine(lineNumber);
-    std::vector<TChar>& line = buffer[lineNumber];
+    std::vector<TChar>& line = buffer[lineNumber].expand();
 
     // Extra safety: ensure we don't go out of bounds
     if (line.empty()) {
@@ -5339,7 +5915,7 @@ void TBuffer::restoreLinkIndices(int lineNumber, int startColumn, int length, in
     }
 
     materialisePreTriggerPassLine(lineNumber);
-    std::vector<TChar>& line = buffer[lineNumber];
+    std::vector<TChar>& line = buffer[lineNumber].expand();
 
     // Extra safety: ensure we don't go out of bounds
     if (line.empty()) {
@@ -5624,7 +6200,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
     // being added to would regrow it on every call rather than geometrically
     if (firstChar) {
         lineBuffer.back().reserve(text.size());
-        buffer.back().reserve(text.size());
+        buffer.back().expand().reserve(text.size());
     }
     QHash<int, int> remappedLinkIds;
     const qsizetype formatted = std::min(text.size(), static_cast<qsizetype>(formatting.size()));
@@ -5642,7 +6218,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
         }
         if (const qsizetype runLength = runEnd - runStart; runLength > 0) {
             lineBuffer.back().append(QStringView(text).sliced(runStart, runLength));
-            std::vector<TChar>& chars = buffer.back();
+            std::vector<TChar>& chars = buffer.back().expand();
             const size_t first = chars.size();
             if (const qsizetype copied = std::clamp<qsizetype>(formatted - runStart, 0, runLength); copied > 0) {
                 const auto from = formatting.begin() + runStart;
@@ -5657,7 +6233,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
             if (firstChar) {
                 // an empty wrapped line is the rest of the line above it
                 if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
-                    timeBuffer.back() = QDateTime::currentMSecsSinceEpoch();
+                    timeBuffer.back() = lineArrivalTime();
                 }
                 firstChar = false;
             }
@@ -5757,49 +6333,45 @@ void TBuffer::appendLine(
         lastLine = 0;
         // The ternary operator is used here to set/reset only the TChar::Echo bit in the flags:
         const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | (flags & TChar::TestMask)) : (flags & TChar::TestMask)));
-        buffer.back().push_back(styling);
+        buffer.back().append(1, styling);
     }
 
     if (text.isEmpty()) {
         return;
     }
 
-    bool firstChar = (lineBuffer.back().isEmpty());
+    bool firstChar = lineBuffer.back().isEmpty();
     const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
-    int lineEndPos = sub_end;
-
-    if (lineEndPos >= length) {
-        lineEndPos = length - 1;
-    }
-
-    for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
-        const QChar thisChar = text.at(i);
-
-        if (thisChar == QChar::LineFeed) {
-            firstChar = true;
-            appendEmptyLine();
-            continue;
+    const qsizetype end = std::min(static_cast<qsizetype>(sub_start) + std::min(sub_end, length - 1) + 1, text.size());
+    const QStringView chunk = QStringView(text).first(end);
+    const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
+    qsizetype runStart = sub_start;
+    while (true) {
+        qsizetype runEnd = chunk.indexOf(QChar::LineFeed, runStart);
+        if (runEnd < 0) {
+            runEnd = end;
         }
-        if (firstChar && dropSpaceAtWrap(thisChar)) {
-            continue;
+        while (firstChar && runStart < runEnd && dropSpaceAtWrap(chunk.at(runStart))) {
+            ++runStart;
         }
-
-        lineBuffer.back().append(thisChar);
-        const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
-        buffer.back().push_back(styling);
-
-        // Note: Original character storage for ANSI-styled OSC 8 links happens in
-        // translateToPlainText() where the TChar is created with ANSI formatting
-        // before JSON styling is applied
-
-        if (firstChar) {
-            // Replayed held-back content supplies its arrival time, and an
-            // empty wrapped line is the rest of the line above it:
-            if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
-                timeBuffer.back() = timeStampOverride == csmNoTimeStamp ? QDateTime::currentMSecsSinceEpoch() : timeStampOverride;
+        if (const qsizetype runLength = runEnd - runStart; runLength > 0) {
+            lineBuffer.back().append(chunk.sliced(runStart, runLength));
+            buffer.back().append(static_cast<std::size_t>(runLength), styling);
+            if (firstChar) {
+                // Replayed held-back content supplies its arrival time, and an
+                // empty wrapped line is the rest of the line above it:
+                if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
+                    timeBuffer.back() = timeStampOverride == csmNoTimeStamp ? lineArrivalTime() : timeStampOverride;
+                }
+                firstChar = false;
             }
-            firstChar = false;
         }
+        if (runEnd >= end) {
+            break;
+        }
+        firstChar = true;
+        appendEmptyLine();
+        runStart = runEnd + 1;
     }
 }
 
@@ -5807,7 +6379,7 @@ void TBuffer::appendEmptyLine()
 {
     buffer.emplace_back();
     lineBuffer.push_back(QString());
-    timeBuffer << QDateTime::currentMSecsSinceEpoch();
+    timeBuffer << lineArrivalTime();
     promptBuffer << false;
     wrapGapBuffer.append(0);
 }
@@ -5838,7 +6410,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
         // time into the middle of the QString/std::vector is O(n) per character,
         // which is quadratic for large inserts.
         lineBuffer[y].insert(x, insertedText);
-        buffer[y].insert(buffer[y].begin() + x, static_cast<std::size_t>(insertedText.size()), format);
+        buffer[y].insert(x, static_cast<std::size_t>(insertedText.size()), format);
         spliceInsertIntoPreTriggerPassLine(y, x, static_cast<int>(insertedText.size()), format);
         noteTriggerPassLineEdit(y, x, 0, static_cast<int>(insertedText.size()));
     } else {
@@ -5922,7 +6494,7 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
         append(QString(QChar::LineFeed), 0, 1, Qt::black, Qt::black, TChar::None);
         return;
     }
-    appendFormatted(chunk.lineBuffer.at(0), chunk.buffer.at(0), chunk.mLinkStore);
+    appendFormatted(chunk.lineBuffer.at(0), chunk.buffer.at(0).toVector(), chunk.mLinkStore);
 }
 
 int TBuffer::calculateWrapPosition(int lineNumber, int begin, int end)
@@ -5965,7 +6537,8 @@ int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
 }
 
 // find lindbreaks and indents (if not necessary, return empty list)
-inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent)
+// startsIndented: the line already carries the wrap indent, from an earlier wrap; only read when isNewline
+inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline, bool startsIndented, const int maxWidth, const int indent, const int hangingIndent)
 {
     QList<WrapInfo> output;
     if (lineText.isEmpty()) {
@@ -5979,7 +6552,8 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         return output;
     }
 
-    const qsizetype widthAvailable = std::min<qsizetype>(isNewline ? maxWidth - indent : maxWidth, mWrapAt);
+    const bool indentToCome = isNewline && !startsIndented;
+    const qsizetype widthAvailable = std::min<qsizetype>(indentToCome ? maxWidth - indent : maxWidth, mWrapAt);
     if (fitsUnwrapped(lineText, widthAvailable)) {
         return output;
     }
@@ -6027,7 +6601,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
     int xPos = 0;
     int totalWidth = 0;
     int firstChar = 0;
-    bool needsIndent = isNewline;
+    bool needsIndent = indentToCome;
     bool hasNewline = false;
 
     // find all the appropriate wrap points assuming (hanging-)indentation prepended to each line
@@ -6048,6 +6622,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             setGraphemePosition(indexOfChar);
             firstChar = indexOfChar;
             isNewline = true;
+            startsIndented = false;
             needsIndent = false;
             xPos = 0;
             continue;
@@ -6062,7 +6637,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         }
         const int indentationHere = isNewline ? indent : hangingIndent;
         if (xPos + charWidth > maxWidth - (needsIndent ? indentationHere : 0)) {
-            if (isNewline) {
+            if (isNewline && !startsIndented) {
                 needsIndent = true;
             }
             // we check c == QChar::Space since we are happy to break at -any- space,
@@ -6097,6 +6672,16 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         xPos += charWidth;
         totalWidth += charWidth;
         indexOfChar = nextBoundary;
+        if (plainAscii) {
+            // Plain ASCII has no line feeds and skips spaces only at a segment's first column, so every
+            // character until the segment is full takes one column with nothing else to check
+            const int run = std::min(maxWidth - (needsIndent ? indentationHere : 0) - xPos, total - indexOfChar);
+            if (run > 0) {
+                xPos += run;
+                totalWidth += run;
+                indexOfChar += run;
+            }
+        }
     }
     // it's possible that no wrapping is needed
     if (totalWidth <= mWrapAt && !hasNewline) {
@@ -6246,19 +6831,25 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         }
     }
 
+    // Leading spaces alone can't tell padding from text, so this needs the record an earlier wrap left, and the
+    // spaces too in case an edit has since removed them. Safe mid-loop: the old lines stay in the buffer until it is done.
+    const auto carriesIndent = [this, indent](const int lineNumber) {
+        return indent > 0 && wrapGapBuffer.at(lineNumber) >= indent && wrapIndentWidth(lineNumber) >= indent;
+    };
+
     // Leading lines that getWrapInfo() finds no break points in stay where they
     // are. The loop below reproduces such a line unchanged, but only after
-    // moving it out of the buffer into a queue and back again and standing up
-    // four temporary containers to do it. A line with no TChars or no text is
-    // not left alone: the loop turns that one into appendEmptyLine(), which
-    // drops its TChars, restamps it and clears its prompt flag.
+    // moving it out of the buffer and back again. A line with no TChars or no
+    // text is not left alone: the loop turns that one into appendEmptyLine(),
+    // which drops its TChars, restamps it and clears its prompt flag.
     int firstRewrappedLine = startLine;
     QList<WrapInfo> lineBreaks;
     while (firstRewrappedLine < wrapUpTo) {
         if (buffer[firstRewrappedLine].empty() || lineBuffer.at(firstRewrappedLine).isEmpty()) {
             break;
         }
-        lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), timeBuffer.at(firstRewrappedLine) != TBuffer::csmWrappedLineTimeStamp, maxWidth, indent, hangingIndent);
+        const bool isNewline = timeBuffer.at(firstRewrappedLine) != TBuffer::csmWrappedLineTimeStamp;
+        lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), isNewline, isNewline && carriesIndent(firstRewrappedLine), maxWidth, indent, hangingIndent);
         if (!lineBreaks.isEmpty()) {
             break;
         }
@@ -6293,17 +6884,22 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         }
     }
 
-    std::queue<std::vector<TChar>> queue;
-    QStringList tempList;
-    QList<qint64> timeList;
-    QList<bool> promptList;
-    QList<quint16> wrapGapList;
+    struct RewrappedLine
+    {
+        TLineFormat chars;
+        QString text;
+        qint64 time;
+        quint16 wrapGap;
+        bool prompt;
+    };
+    // Most calls rewrap a single incoming line into a few, which fit in this array's own inline storage
+    QVarLengthArray<RewrappedLine, 8> rewrapped;
     int lineCount = 0;
     for (int i = firstRewrappedLine; i < total; ++i) {
         lineCount++;
         for (const MovingPassLine& passLine : std::as_const(passLines)) {
             if (passLine.from == i) {
-                *passLine.pLineNumber = firstRewrappedLine + static_cast<int>(tempList.size());
+                *passLine.pLineNumber = firstRewrappedLine + static_cast<int>(rewrapped.size());
             }
         }
         std::vector<TChar> newBufferLine;
@@ -6311,11 +6907,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         const qint64 time = timeBuffer[i];
         // trivial case
         if (buffer[i].empty()) {
-            tempList.append(newLineText);
-            queue.push(std::move(newBufferLine));
-            timeList.append(time);
-            promptList.append(false);
-            wrapGapList.append(wrapGapBuffer.at(i));
+            rewrapped.append({std::move(newBufferLine), newLineText, time, wrapGapBuffer.at(i), false});
             continue;
         }
 
@@ -6332,14 +6924,10 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         if (i >= wrapUpTo) {
             lineBreaks.clear();
         } else if (i != firstRewrappedLine) {
-            lineBreaks = getWrapInfo(lineText, isNewline, maxWidth, indent, hangingIndent);
+            lineBreaks = getWrapInfo(lineText, isNewline, isNewline && carriesIndent(i), maxWidth, indent, hangingIndent);
         }
         if (lineBreaks.isEmpty()) {
-            tempList.append(lineText);
-            queue.push(std::move(buffer[i]));
-            timeList.append(time);
-            promptList.append(isPrompt);
-            wrapGapList.append(wrapGapBuffer.at(i));
+            rewrapped.append({std::move(buffer[i]), lineText, time, wrapGapBuffer.at(i), isPrompt});
             continue;
         }
         if (i == mPreTriggerPassLineNumber) {
@@ -6347,14 +6935,12 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             materialisePreTriggerPassLine(i);
             wrapPreTriggerPassLine(lineBreaks.first(), lineBreaks.first().isNewline ? indent : hangingIndent);
         }
-        const QString qIndent(indent, QChar::Space);
-        const QString qHangingIndent(hangingIndent, QChar::Space);
         // The source line is read through a cursor rather than consumed from
         // its front, which a vector cannot do without shuffling every
         // remaining TChar down one place per character. It is therefore left
         // fully populated here; the loop below this one pops the whole range
         // off the back of the buffer, which is what discards it.
-        const std::vector<TChar>& sourceChars = buffer[i];
+        const TLineFormat& sourceChars = buffer[i];
         const int sourceSize = static_cast<int>(sourceChars.size());
         int previousSegmentEnd = -1;
         for (const WrapInfo w : std::as_const(lineBreaks)) {
@@ -6362,18 +6948,14 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             if (newBufferCharPosition < w.firstChar) {
                 newBufferCharPosition = std::min(w.firstChar, sourceSize);
             }
-            if (w.needsIndent && newBufferCharPosition < sourceSize) {
+            const bool addsIndent = w.needsIndent && newBufferCharPosition < sourceSize;
+            if (addsIndent) {
                 // indentation takes the styling of the character it precedes, so
                 // that it reads as part of the same run of text
                 const TChar& indentSpace = sourceChars[newBufferCharPosition];
-                // add indentation to TChar buffer and newLineText
-                if (w.isNewline) {
-                    newBufferLine.insert(newBufferLine.end(), indent, indentSpace);
-                    newLineText.append(qIndent);
-                } else {
-                    newBufferLine.insert(newBufferLine.end(), hangingIndent, indentSpace);
-                    newLineText.append(qHangingIndent);
-                }
+                const int indentWidth = w.isNewline ? indent : hangingIndent;
+                newBufferLine.insert(newBufferLine.end(), indentWidth, indentSpace);
+                newLineText.resize(newLineText.size() + indentWidth, QChar::Space);
             }
             // append TChars of the wrapped lineText to TChar buffer
             const int copyEnd = std::min(w.lastChar, sourceSize);
@@ -6382,26 +6964,27 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
                 newBufferCharPosition = copyEnd;
             }
             // everything else
-            newLineText.append(lineText.mid(w.firstChar, w.lastChar - w.firstChar));
-            tempList.append(newLineText);
+            newLineText.append(QStringView(lineText).mid(w.firstChar, w.lastChar - w.firstChar));
+            qint64 segmentTime = TBuffer::csmWrappedLineTimeStamp;
             if (w.isNewline && previousSegmentEnd >= 0 && time == TBuffer::csmWrappedLineTimeStamp) {
                 // A line feed inserted into a wrapped line starts a line of its
                 // own, which csmWrappedLineTimeStamp would join back onto the last
-                timeList.append(QDateTime::currentMSecsSinceEpoch());
+                segmentTime = lineArrivalTime();
             } else if (w.isNewline) {
-                timeList.append(time);
-            } else {
-                timeList.append(TBuffer::csmWrappedLineTimeStamp);
+                segmentTime = time;
             }
-            queue.push(std::move(newBufferLine));
-            promptList.append(isPrompt);
             // getWrapInfo() only ever skips spaces between the segments of a
             // line, and the first segment carries over the source line's own gap
+            // (or, starting a paragraph, its own indent)
             int wrapGap = 0;
             if (!w.isNewline) {
                 wrapGap = (previousSegmentEnd < 0) ? wrapGapBuffer.at(i) : w.firstChar - previousSegmentEnd;
+            } else if (addsIndent) {
+                wrapGap = indent;
+            } else if (previousSegmentEnd < 0) {
+                wrapGap = wrapGapBuffer.at(i);
             }
-            wrapGapList.append(static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())));
+            rewrapped.append({std::move(newBufferLine), std::move(newLineText), segmentTime, static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())), isPrompt});
             previousSegmentEnd = w.lastChar;
             newBufferLine.clear();
             newLineText = QString();
@@ -6415,24 +6998,22 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         wrapGapBuffer.pop_back();
     }
 
-    const int rewrappedLines = static_cast<int>(queue.size());
-    for (int i = 0; i < rewrappedLines; ++i) {
-        if (tempList[i].isEmpty()) {
-            queue.pop();
+    const int rewrappedLines = static_cast<int>(rewrapped.size());
+    for (RewrappedLine& line : rewrapped) {
+        if (line.text.isEmpty()) {
             appendEmptyLine();
             // A break that leaves only dropped spaces for the last line keeps
             // it wrapped, for whatever is echoed next to carry on from them
-            if (timeList[i] == TBuffer::csmWrappedLineTimeStamp) {
+            if (line.time == TBuffer::csmWrappedLineTimeStamp) {
                 timeBuffer.back() = TBuffer::csmWrappedLineTimeStamp;
-                wrapGapBuffer.back() = wrapGapList[i];
+                wrapGapBuffer.back() = line.wrapGap;
             }
         } else {
-            buffer.push_back(std::move(queue.front()));
-            queue.pop();
-            lineBuffer.append(tempList[i]);
-            timeBuffer.append(timeList[i]);
-            promptBuffer.push_back(promptList[i]);
-            wrapGapBuffer.append(wrapGapList[i]);
+            buffer.push_back(std::move(line.chars));
+            lineBuffer.append(std::move(line.text));
+            timeBuffer.append(line.time);
+            promptBuffer.push_back(line.prompt);
+            wrapGapBuffer.append(line.wrapGap);
         }
     }
 
@@ -6550,7 +7131,7 @@ void TBuffer::expandLine(int y, int count, TChar& pC)
     materialisePreTriggerPassLine(y);
     const int size = buffer[y].size() - 1;
     for (int i = size, total = size + count; i < total; ++i) {
-        buffer[y].push_back(pC);
+        buffer[y].append(1, pC);
         lineBuffer[y].append(QChar::Space);
     }
 }
@@ -6570,8 +7151,8 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
     if (x1 < 0 || x2 < 0) {
         return false;
     }
-    // the erase() below is undefined behaviour when the start is past the end:
-    // it moves a range of negative length, writing beyond the allocation
+    // the erase() below corrupts the line when the start is past the end:
+    // a range of negative length
     if (y1 > y2 || (y1 == y2 && x1 > x2)) {
         return false;
     }
@@ -6589,16 +7170,14 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
         // multi-line one can still start past its own end: an empty line has
         // an x_end of -1, and a first line selected from its very last column
         // leaves x at buffer[y].size(). Either way there is nothing on the line
-        // to remove, and erase() over that range is the same reversed move.
+        // to remove, and erase() over that range is the same reversed range.
         if (x > x_end) {
             continue;
         }
         noteRemovedLinks(buffer[y], mLinesRemovedTotal + y, x, x_end);
         materialisePreTriggerPassLine(y);
         lineBuffer[y].remove(x, x_end - x);
-        auto it1 = buffer[y].begin() + x;
-        auto it2 = buffer[y].begin() + x_end;
-        buffer[y].erase(it1, it2);
+        buffer[y].erase(x, x_end);
         spliceEraseFromPreTriggerPassLine(y, x, x_end);
         noteTriggerPassLineEdit(y, x, x_end - x, 0);
     }
@@ -6656,7 +7235,7 @@ void TBuffer::finaliseActiveHyperlink()
         if (!mServerWrapPendingLine.isEmpty()) {
             // Held text may yet be joined on in front, shifting the columns, or be committed on its
             // own, leaving them as they are - so registered once that is known.
-            mHeldVisibility = {mCurrentHyperlinkLinkId, mCurrentHyperlinkStartColumn, static_cast<int>(mMudLine.length()), mCurrentHyperlinkStartsAfterHeldText, mCurrentHyperlinkStyling};
+            mHeldVisibilities.append({mCurrentHyperlinkLinkId, mCurrentHyperlinkStartColumn, static_cast<int>(mMudLine.length()), mCurrentHyperlinkStartsAfterHeldText, mCurrentHyperlinkStyling});
         } else if (mCurrentHyperlinkStartLine == static_cast<int>(lineBuffer.size()) - 1) {
             registerLinkVisibility(mCurrentHyperlinkLinkId, mCurrentHyperlinkStartColumn, mMudLine.length() - mCurrentHyperlinkStartColumn, mCurrentHyperlinkStyling);
         } else {
@@ -6958,7 +7537,9 @@ void TBuffer::shrinkBuffer()
         constexpr int prefetchDistance = 8;
         if (prefetchDistance < lineBuffer.size() && static_cast<size_t>(prefetchDistance) < buffer.size()) {
             prefetchAllocatorHeader(lineBuffer.at(prefetchDistance).constData(), sizeof(QArrayData));
-            prefetchAllocatorHeader(buffer[prefetchDistance].data(), 0);
+            if (const TChar* chars = buffer[prefetchDistance].heapData()) {
+                prefetchAllocatorHeader(chars, 0);
+            }
         }
         lineBuffer.pop_front();
         promptBuffer.pop_front();
@@ -7165,7 +7746,7 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
                 if (linkID == 0) {
                     linkID = addLinkToStore(linkFunction, linkHint, luaReference, QString(), y1);
                 }
-                TChar& c = buffer.at(y).at(x++);
+                TChar& c = buffer.at(y).expand().at(x++);
                 if (c.mLinkIndex && c.mLinkIndex != linkID) {
                     noteRemovedLinkId(c.mLinkIndex, mLinesRemovedTotal + y);
                 }
@@ -7217,7 +7798,7 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
                         return true;
                     }
                 }
-                buffer.at(y).at(x).setAttributes(attributes, state);
+                buffer.at(y).expand().at(x).setAttributes(attributes, state);
                 ++x;
             }
         }
@@ -7260,7 +7841,7 @@ bool TBuffer::applyFgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
                     return true;
                 }
 
-                buffer.at(y).at(x++).setForeground(newColor);
+                buffer.at(y).expand().at(x++).setForeground(newColor);
             }
         }
         return true;
@@ -7302,7 +7883,7 @@ bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
                     return true;
                 }
 
-                buffer.at(y).at(x++).setBackground(newColor);
+                buffer.at(y).expand().at(x++).setBackground(newColor);
             }
         }
         return true;
@@ -7401,7 +7982,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
         s.append(qsl("<span>%1").arg(QString(spacePadding, QChar::Space)));
     }
 
-    const std::vector<TChar>& lineChars = buffer.at(cookedRow);
+    const TLineFormat& lineChars = buffer.at(cookedRow);
     const QString& lineText = lineBuffer.at(row);
     // Text is read in runs straight from the QString, so never past its end
     lastPos = std::min(lastPos, static_cast<int>(lineText.size()));
@@ -8098,7 +8679,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         // Try and convert two or four byte sequence to Unicode using Qts own
         // decoder - and check number of codepoints returned
 
-        QString codePoint;
+        QStringView codePoint;
         if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, gbSequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
@@ -8220,7 +8801,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
         // Try and convert two byte sequence to Unicode using Qts own
         // decoder - and check number of codepoints returned
 
-        QString codePoint;
+        QStringView codePoint;
         if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, big5SequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
@@ -8347,7 +8928,7 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
         // Try and convert two byte sequence to Unicode using Qts own
         // decoder - and check number of codepoints returned
 
-        QString codePoint;
+        QStringView codePoint;
         if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, eucSequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
@@ -8510,7 +9091,7 @@ bool TBuffer::processJapaneseSequence(const std::string& data, const bool isFrom
             return true;
         }
     }
-    QString decoded;
+    QStringView decoded;
     decodeMultibyteSequence(QByteArrayView(data.data() + position, count), decoded);
     if (decoded.isEmpty() || decoded.contains(QChar::ReplacementCharacter)) {
         mMudLine.append(QChar::ReplacementCharacter);
@@ -8633,6 +9214,11 @@ void TBuffer::styleForCurrentLink(TChar& c)
         // Note: This differs from other Mudlet hyperlinks which default to underlined
     }
 
+    // The worker's buffer only parses while MXP has no link or colour open, see speculationEligible()
+    if (Q_UNLIKELY(mpParseConfig)) {
+        return;
+    }
+
     if (mpHost->mMxpClient.isInLinkMode()) {
         c.mLinkIndex = mLinkStore.getCurrentLinkID();
         c.setAttributes(TChar::Underline, true);
@@ -8658,7 +9244,7 @@ void TBuffer::appendReplacementCharacter(TChar c)
 {
     mMudLine.append(QChar::ReplacementCharacter);
     styleForCurrentLink(c);
-    mMudBuffer.push_back(c);
+    mMudBuffer.append(1, c);
     if (mHyperlinkActive) {
         if (mCurrentHyperlinkText.isEmpty()) {
             mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 1;
@@ -8711,18 +9297,26 @@ QStringDecoder TBuffer::multibyteDecoderFor(const Decoder decoder, const QByteAr
     }
 }
 
-// Falls back to TEncodingHelper (lookup tables, Qt5Compat codecs) for Qt builds without ICU
-bool TBuffer::decodeMultibyteSequence(QByteArrayView bytes, QString& decoded)
+// Falls back to a Qt5Compat codec for Qt builds without ICU
+bool TBuffer::decodeMultibyteSequence(QByteArrayView bytes, QStringView& decoded)
 {
     if (mMultibyteDecoder.isValid()) {
         mMultibyteDecoder.resetState();
-        decoded = mMultibyteDecoder.decode(bytes);
+        // Spares a QString allocation per character; callers pass at most four bytes
+        if (Q_LIKELY(mMultibyteDecoder.requiredSpace(bytes.size()) <= static_cast<qsizetype>(mMultibyteDecoded.size()))) {
+            const QChar* end = mMultibyteDecoder.appendToBuffer(mMultibyteDecoded.data(), bytes);
+            decoded = QStringView(mMultibyteDecoded.data(), end);
+        } else {
+            mMultibyteDecodedString = mMultibyteDecoder.decode(bytes);
+            decoded = mMultibyteDecodedString;
+        }
         return true;
     }
-    if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
+    if (!mLegacyMultibyteCodec) {
         return false;
     }
-    decoded = TEncodingHelper::decode(bytes.toByteArray(), mEncoding);
+    mMultibyteDecodedString = mLegacyMultibyteCodec->toUnicode(bytes.data(), static_cast<int>(bytes.size()));
+    decoded = mMultibyteDecodedString;
     return true;
 }
 
@@ -8732,7 +9326,11 @@ void TBuffer::encodingChanged(const QByteArray& newEncoding)
         mEncoding = newEncoding;
         mDecoder = decoderFor(mEncoding);
         mMultibyteDecoder = multibyteDecoderFor(mDecoder, mEncoding);
+        mLegacyMultibyteCodec = nullptr;
         if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR" || mEncoding == "SHIFT_JIS" || mEncoding == "EUC-JP") {
+            if (!mMultibyteDecoder.isValid()) {
+                mLegacyMultibyteCodec = TEncodingHelper::legacyCodec(mEncoding);
+            }
             if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";
             } else {
@@ -8782,7 +9380,14 @@ void TBuffer::clearSearchHighlights()
     }
     const int lastLine = std::min(mLastFoundLine, static_cast<int>(buffer.size()) - 1);
     for (int y = mFirstFoundLine; y <= lastLine; ++y) {
-        for (auto& character : buffer[y]) {
+        TLineFormat& line = buffer[y];
+        // Checked first so a line with nothing to clear stays stored as one TChar
+        if (std::none_of(line.cbegin(), line.cend(), [](const TChar& character) {
+                return character.isFound();
+            })) {
+            continue;
+        }
+        for (auto& character : line.expand()) {
             character.mFlags &= ~TChar::AttributeFlag::Found;
         }
     }
@@ -9694,9 +10299,18 @@ void TBuffer::updateLinkCharacters(int linkIndex, int fromLine)
 
     // Iterate through all lines in the buffer
     for (auto lineNumber = static_cast<size_t>(std::max(0, fromLine)); lineNumber < buffer.size(); ++lineNumber) {
-        auto& line = buffer[lineNumber];
+        TLineFormat& lineFormat = buffer[lineNumber];
+        // Checked first so a line without the link stays stored as one TChar
+        if (std::none_of(lineFormat.cbegin(), lineFormat.cend(), [linkIndex](const TChar& character) {
+                return character.linkIndex() == linkIndex;
+            })) {
+#if defined(DEBUG_OSC_PROCESSING)
+            totalCharacters += static_cast<int>(lineFormat.size());
+#endif
+            continue;
+        }
         // Iterate through all characters in the line
-        for (auto& tchar : line) {
+        for (auto& tchar : lineFormat.expand()) {
 #if defined(DEBUG_OSC_PROCESSING)
             totalCharacters++;
 #endif
