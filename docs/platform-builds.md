@@ -158,7 +158,7 @@ the compiler-rt profile runtime (`libclang-rt-<version>-dev` on Ubuntu). The pro
 `MUDLET_PGO_DIR`, `<build>/pgo-profile` unless set. The training script clears it before each run,
 as Clang names each raw profile after the binary that wrote it and would otherwise merge an older
 build's in. It also fails when a slot the training is for did not run, since a skipped slot still
-leaves a profile - one that marks its code cold. Keep the sources the same between the two builds: a
+leaves a profile - one that leaves its code untrained. Keep the sources the same between the two builds: a
 function whose code changed loses its profile, which GCC refuses as an error and Clang reports as a
 `hash mismatch` warning.
 

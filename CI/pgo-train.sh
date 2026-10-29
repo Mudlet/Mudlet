@@ -71,7 +71,7 @@ train() {
   fi
   for metric in "$@"; do
     if ! grep -q "^METRIC ${metric} " "${log}"; then
-      echo "=== ERROR: the training run reported no ${metric}, so that slot did not run and the profile would leave its code cold ===" >&2
+      echo "=== ERROR: the training run reported no ${metric}, so that slot did not run and its code would go untrained ===" >&2
       exit 1
     fi
   done
