@@ -11,6 +11,10 @@ db = {}
 db.__autocommit = {}
 db.__schema = {}
 db.__conn = {}
+db.__path = {}
+-- Files this code creates carry this id. A 4.18 file does not, which is how a
+-- digit-stripped file made for its own name stays distinct from a 4.18 fallback.
+db._new_naming_id = 0x4D444C54
 
 db.debug_sql = false
 
@@ -216,16 +220,59 @@ function db:_legacy_safe_name(safe_name)
 end
 
 
+function db:_application_id(path)
+  local file = io.open(path, "rb")
+  if not file then
+    return nil
+  end
+  file:seek("set", 68)
+  local bytes = file:read(4)
+  file:close()
+  if not bytes or #bytes < 4 then
+    return nil
+  end
+  local b1, b2, b3, b4 = bytes:byte(1, 4)
+  return b1 * 16777216 + b2 * 65536 + b3 * 256 + b4
+end
+
+
+function db:_has_new_naming_mark(path)
+  return db:_application_id(path) == db._new_naming_id
+end
+
+
+function db:_clear_new_naming_mark(path)
+  local file = io.open(path, "r+b")
+  if not file then
+    return false
+  end
+  file:seek("set", 68)
+  file:write(string.char(0, 0, 0, 0))
+  file:close()
+  return true
+end
+
+
+function db:_mark_new_naming(conn)
+  local cur = conn:execute("PRAGMA application_id = " .. db._new_naming_id)
+  if type(cur) == "userdata" or (type(cur) == "table" and cur.close) then
+    cur:close()
+  end
+end
+
+
 function db:_resolve_database_path(safe_name)
   local current = db:_database_path(safe_name)
   local legacy_name = db:_legacy_safe_name(safe_name)
-  -- 4.18.2 wrote the digit-stripped file. 4.18.0 and 4.18.1 wrote the file
-  -- that keeps the digits. When both are present the stripped file is the
-  -- later one, so it wins. A name that is only digits strips to Database_.db,
-  -- and an empty legacy name is that file, not "no file".
+  -- 4.18.2 wrote the digit-stripped file and did not set this id. 4.18.0 and
+  -- 4.18.1 wrote the file that keeps the digits. An unmarked stripped file is
+  -- that later copy, so it wins. A stripped file this code created for a
+  -- digit-free name has the id, and a digit-named database must not open it.
+  -- A name that is only digits strips to Database_.db, and an empty legacy
+  -- name is that file, not "no file".
   if legacy_name ~= safe_name then
     local legacy = db:_database_path(legacy_name)
-    if io.exists(legacy) then
+    if io.exists(legacy) and not db:_has_new_naming_mark(legacy) then
       return legacy
     end
   end
@@ -236,6 +283,8 @@ end
 
 -- lk1 and lk2 both fall back to Database_lk.db. A second SQLite connection to
 -- that file drops the other name's writes and then reports the file locked.
+-- Compare the path the other connection opened. Resolving again would follow
+-- a digit-free file created later and hand back the wrong connection.
 function db:_shared_connection(db_name)
   local path = db:_resolve_database_path(db_name)
   for other_name, other_conn in pairs(db.__conn) do
@@ -244,7 +293,7 @@ function db:_shared_connection(db_name)
     -- instead of creating the file again.
     if other_name ~= db_name
         and other_conn and other_conn ~= "SQLite3 connection (closed)"
-        and db:_resolve_database_path(other_name) == path then
+        and db.__path[other_name] == path then
       return other_conn
     end
   end
@@ -267,10 +316,12 @@ end
 function db:_isActiveDBName(db_name)
   db_name = db:safe_name(db_name)
 
+  local path = db.__path[db_name] or db:_resolve_database_path(db_name)
+
   return (
     db.__conn[db_name]
     and db.__conn[db_name] ~= 'SQLite3 connection (closed)'
-    and io.exists(db:_resolve_database_path(db_name))
+    and io.exists(path)
   )
 end
 
@@ -821,17 +872,24 @@ function db:create(db_name, sheets, force)
     -- the driver answers nil plus a reason for a file it can not open, which a
     -- read-only profile directory or a full disk both produce: without this the
     -- setautocommit below is the nil index instead
+    local path = db:_resolve_database_path(db_name)
     local conn = db:_shared_connection(db_name)
     local err
     if not conn then
-      conn, err = db.__env:connect(db:_resolve_database_path(db_name))
+      conn, err = db.__env:connect(path)
       if not conn then
         error("db:create could not open the database file for "..db_name..": "..tostring(err), 2)
+      end
+      -- Autocommit is still on, so the header write lands before the first
+      -- transaction. A legacy file we only fell back to keeps its old id.
+      if path == db:_database_path(db_name) then
+        db:_mark_new_naming(conn)
       end
       conn:setautocommit(false)
     end
 
     db.__conn[db_name] = conn
+    db.__path[db_name] = path
     db.__autocommit[db_name] = true
   end
 
@@ -2547,6 +2605,7 @@ function db:_closeAll()
   end
 
   db.__conn = {}
+  db.__path = {}
   db.__env:close()
   db.__env = nil
 
@@ -2587,6 +2646,7 @@ function db:close(db_name)
   end
 
   db.__conn[db_name] = nil
+  db.__path[db_name] = nil
   -- Drop the connection only. _begin on a closed database must not change
   -- __autocommit, and the spec reads the flag create stored. The name is
   -- already out of __conn, so it no longer holds a shared transaction.
