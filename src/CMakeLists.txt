@@ -109,6 +109,7 @@ set(mudlet_SRCS
     THyperlinkSelectionManager.cpp
     THyperlinkVisibilityManager.cpp
     TimerUnit.cpp
+    TIngestPipeline.cpp
     TIrcClient.cpp
     TKey.cpp
     TLabelModel.cpp
@@ -176,7 +177,8 @@ set(mudlet_SRCS
     VarUnit.cpp
     VoskRecognizer.cpp
     XMLexport.cpp
-    XMLimport.cpp)
+    XMLimport.cpp
+    XmlImportReader.cpp)
 
 # Every .cpp source file that needs Qt Widgets goes here instead, in mudlet_app, kept
 # in alphabetical order (case-insensitive).
@@ -419,6 +421,7 @@ set(mudlet_HDRS
     THyperlinkStyling.h
     THyperlinkVisibilityManager.h
     TimerUnit.h
+    TIngestPipeline.h
     TIrcClient.h
     TKey.h
     TLabelModel.h
@@ -491,7 +494,8 @@ set(mudlet_HDRS
     VoskRecognizer.h
     widechar_width.h
     XMLexport.h
-    XMLimport.h)
+    XMLimport.h
+    XmlImportReader.h)
 
 # Every .h header file that needs Qt Widgets goes here instead, in mudlet_app, kept
 # in alphabetical order (case-insensitive).
@@ -709,7 +713,9 @@ endif()
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
 find_package(ZIP REQUIRED)
-find_package(Lua51 REQUIRED)
+if(NOT USE_BUNDLED_LUA)
+  find_package(Lua51 REQUIRED)
+endif()
 find_package(ZLIB REQUIRED)
 # 10.36 is the floor for PCRE2_MATCH_INVALID_UTF: it arrived in 10.34, and 10.36
 # fixed it mis-optimising the start of a match in 8-bit mode with PCRE2_CASELESS

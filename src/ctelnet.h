@@ -36,6 +36,7 @@
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
+#include <QStringConverter>
 #include <QStringList>
 #if defined(QT_NO_SSL)
 #include <QTcpSocket>
@@ -192,7 +193,7 @@ public:
     void sendInfoNewEnvironValues(const QStringList&);
     void sendInfoNewEnvironOSCHyperlinks();
     void setATCPVariables(const QByteArray&);
-    void setGMCPVariables(const QByteArray&);
+    void setGMCPVariables(QByteArrayView);
     void setMSSPVariables(const QByteArray&);
     void setMSPVariables(const QByteArray&);
     bool isIPAddress(const QString&);
@@ -453,6 +454,7 @@ private:
     void postHeldDataBeforeEncodingChange();
     void processSubnegotiation(const std::string& subnegotiation, std::string& textAhead);
     void encodingChanged(const QByteArray&);
+    void openSendConverters();
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void beginNetworkLatencyMeasurement();
     void finishNetworkLatencyMeasurement();
@@ -593,6 +595,11 @@ private:
 
     QString termType;
     QByteArray mEncoding;
+    // Opened once per encoding, as each ICU converter takes most of a microsecond to open
+    QByteArray mSendConvertersEncoding;
+    bool mSendEncodingAvailable = false;
+    QStringEncoder mSendEncoder;
+    QStringDecoder mSendRoundTripDecoder;
     QTimer* mpPostingTimer = nullptr;
     // We do not directly adjust the interval for the above because doing so
     // while it is active changes the timerId which might have unforeseen

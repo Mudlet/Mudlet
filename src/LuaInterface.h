@@ -52,7 +52,7 @@ public:
     // do not get saved
     static constexpr int scmMaxTableDepth = 99;
 
-    explicit LuaInterface(lua_State*);
+    explicit LuaInterface(lua_State*, TLuaInterpreter* = nullptr);
     ~LuaInterface();
     void iterateTable(lua_State*, int, TVar*, bool);
     void getVars(bool);
@@ -106,6 +106,8 @@ private:
 
     int depth = 0;
     lua_State* mL;
+    // Reading or writing a variable can run a script's metamethod
+    TLuaInterpreter* mpInterpreter = nullptr;
     QSet<TVar> hiddenVars;
     QScopedPointer<VarUnit> varUnit;
     QList<int> lrefs;

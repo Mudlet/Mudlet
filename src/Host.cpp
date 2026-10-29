@@ -310,7 +310,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     TDebug::addHost(this, mHostName);
     setDisplayFont(QFont(scmDefaultFontFamily, 14, QFont::Normal));
 
-    mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
+    mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState(), getLuaInterpreter()));
 
     // Copy across the details needed for the "color_table":
     mLuaInterpreter.updateAnsi16ColorsInTable();
@@ -1446,7 +1446,7 @@ void Host::resetProfile_phase2()
     // of the user's saved variables from the profile:
     const QSet<QString> savedVars = mLuaInterface->getVarUnit()->savedVars;
     const QSet<QString> hiddenByUserVars = mLuaInterface->getVarUnit()->hiddenByUser;
-    mLuaInterface.reset(new LuaInterface(mLuaInterpreter.getLuaGlobalState()));
+    mLuaInterface.reset(new LuaInterface(mLuaInterpreter.getLuaGlobalState(), &mLuaInterpreter));
     mLuaInterface->getVarUnit()->savedVars = savedVars;
     mLuaInterface->getVarUnit()->hiddenByUser = hiddenByUserVars;
     mLuaInterpreter.loadGlobal();
@@ -5795,6 +5795,24 @@ void Host::setName(const QString& name)
     }
 
     consoleFrontend()->setProfileName(name);
+}
+
+// The items keep their function flag: 0 is never a function's registry slot, so they report it
+// as not found, as they would looking it up in a state that never had it
+void Host::forgetLuaFunctionRefs()
+{
+    for (auto* pTrigger : mTriggerUnit.getTriggerRootNodeList()) {
+        pTrigger->mLuaFunctionRef = 0;
+    }
+    for (auto* pAlias : mAliasUnit.getAliasRootNodeList()) {
+        pAlias->mLuaFunctionRef = 0;
+    }
+    for (auto* pTimer : mTimerUnit.getTimerRootNodeList()) {
+        pTimer->mLuaFunctionRef = 0;
+    }
+    for (auto* pKey : mKeyUnit.getKeyRootNodeList()) {
+        pKey->mLuaFunctionRef = 0;
+    }
 }
 
 void Host::removeAllNonPersistentStopWatches()

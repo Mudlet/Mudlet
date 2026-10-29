@@ -726,20 +726,14 @@ void XMLimport::readUnknownElement(const QString& what)
     if (!atEnd()) {
         qDebug().nospace().noquote() << "XMLimport::readUnknownElement(\"" << what << "\") ERROR - UNKNOWN Package Element name: \"" << name().toString() << "\".";
         qDebug().nospace().noquote() << "    This is at byte offset: " << characterOffset() << ", which is (line:column): " << lineNumber() << ":" << columnNumber() << ".";
-#if !defined(QT_STRICT_ITERATORS)
         if (attributes().isEmpty()) {
             qDebug().nospace().noquote() << "    It has no attributes.";
         } else {
-            // This can fail if QT_STRICT_ITERATORS is defined.
-            // See https://bugreports.qt.io/browse/QTBUG-45368
-            QVectorIterator<QXmlStreamAttribute> itAttribute(attributes());
             qDebug().nospace().noquote() << "    It has the following attributes:";
-            while (itAttribute.hasNext()) {
-                const auto attribute = itAttribute.next();
-                qDebug().nospace().noquote() << "        name: \"" << attribute.name() << "\", value: \"" << attribute.value() << "\".";
+            for (const auto& [attributeName, attributeValue] : attributes().all()) {
+                qDebug().nospace().noquote() << "        name: \"" << attributeName << "\", value: \"" << attributeValue << "\".";
             }
         }
-#endif
         // The argument to readElementText(...) is required otherwise it stops
         // if a child element is encountered, the third alternative
         // "IncludeChildElements" is not so helpful as it might seem as it only
@@ -1314,7 +1308,7 @@ void XMLimport::readHost(Host* pHost)
     }
 }
 
-bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
+bool XMLimport::readHostColorElement(Host* pHost, QAnyStringView elementName)
 {
     // Simple colors (no alpha channel)
     static const QHash<QString, QColor Host::*> simpleColors = {
@@ -1387,7 +1381,7 @@ bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
     return false;
 }
 
-bool XMLimport::readHostBorderElement(QMargins& borders, QStringView elementName)
+bool XMLimport::readHostBorderElement(QMargins& borders, QAnyStringView elementName)
 {
     if (elementName == qsl("borderTopHeight")) {
         borders.setTop(readElementText().toInt());
@@ -2061,9 +2055,6 @@ void XMLimport::getVersionString(QString& versionString)
 QString XMLimport::readScriptElement()
 {
     QString localScript = readElementText();
-    if (Error() != NoError) {
-        qDebug() << "XMLimport::readScriptElement() ERROR:" << errorString();
-    }
 
     // From format 1.001, control characters are stored as U+FFFC then the matching Control Picture.
     // Few scripts hold a U+FFFC, so one contains() spares most scripts the 30 replace() scans below:
@@ -2278,9 +2269,10 @@ void XMLimport::readLegacyMapInfoContributors()
 
 void XMLimport::readProfileShortcut()
 {
-    auto key = attributes().value(qsl("key"));
+    // Copied, as reading the text moves the reader on from the attribute
+    const QString key = attributes().value(qsl("key")).toString();
     auto sequenceString = readElementText();
-    if (auto it = mpHost->profileShortcuts.find(key.toString()); it != mpHost->profileShortcuts.end()) {
+    if (auto it = mpHost->profileShortcuts.find(key); it != mpHost->profileShortcuts.end()) {
         QKeySequence sequence = !sequenceString.isEmpty() ? QKeySequence(sequenceString) : QKeySequence();
         it->second->swap(sequence);
     }

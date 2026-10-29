@@ -127,6 +127,12 @@ and the script refuses two experimental runs whose line count or read size
 differ, so such runs compare only with a like-for-like run. A knob that is set
 to anything but a positive whole number fails the run rather than being ignored.
 
+`MUDLET_BENCH_WRAP_AT=<n>` wraps the main console at `n` columns instead of the
+profile's 100 in every slot, display ones included, so that most corpus lines go
+through `TBuffer::wrapLine()`. The corpus is unchanged, so it keeps its
+`corpus_version`; the width is reported as `bench_wrap_at`, which the compare
+script requires to match on both sides.
+
 Results are printed one per line as `METRIC <name> <value>`, so runs can be
 diffed mechanically (the values below are illustrative, not a target):
 
