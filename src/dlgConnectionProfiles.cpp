@@ -1512,9 +1512,13 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     slot_togglePasswordVisibility(false);
 
-    welcome_message->hide();
-    tabWidget_connectionInfo->show();
-    informationArea->show();
+    // The dialog re-picking a game for itself (e.g. after the startup password migration) must leave the
+    // first-launch tutorial invitation up: it hides the games list, so the player could not get back to it
+    if (!mProgrammaticProfileSelection || !widget_topLeft->isHidden()) {
+        welcome_message->hide();
+        tabWidget_connectionInfo->show();
+        informationArea->show();
+    }
 
     profile_name_entry->setText(profile_name);
 
