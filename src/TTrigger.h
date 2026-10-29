@@ -185,12 +185,26 @@ private:
     mutable int mQuestionsAsked = 0;
 };
 
+// What changed about a trigger that TriggerUnit::refile() is told of, which decides what of the skip
+// indexes it has to redo and whether the line in flight hears of it
+enum class TriggerRefile : quint8 {
+    // Its patterns were recompiled, or it stopped being a line or multiline trigger
+    Patterns,
+    // It became a line or multiline trigger, so acts on lines it does not match, the one in flight included
+    SeesEveryLine,
+    // setTriggerStayOpen() held it open, so it fires on the rest of the line in flight without matching
+    OpenedByScript,
+    // Its own match held it open, which the pass it matched in is past, but not a pass it was fed from
+    OpenedByMatch,
+    // Its stay-open window closed; the line in flight was already offered it
+    Shut,
+};
+
 // What TriggerUnit copies out of a root trigger, so that a line can dismiss it
 // without reading the trigger at all - see TTrigger::rootFilter(). A copy goes
 // stale the moment the trigger changes, so whatever changes one of the things
-// rootFilter() reads has to go through TTrigger::invalidatePrescan(), and
-// whatever makes a trigger fire without matching through
-// TriggerUnit::markPrescanStaleForLineInFlight(), which bumps mRootFilterEpoch.
+// rootFilter() reads has to go through TriggerUnit::refile(), which bumps
+// mRootFilterEpoch.
 struct TRootTriggerFilter
 {
     enum class Kind : quint8 {
@@ -411,9 +425,6 @@ public:
     // Empty when the trigger cannot be decided from the line's text alone, in
     // which case TTriggerPrescan offers it every line.
     const std::vector<quint64>& prescanGrams() const;
-    void invalidatePrescan(bool nowFiresWithoutMatching = false);
-    // Call on anything that changes what treeIndexGrams() answers
-    void invalidateTreeIndex();
     // Whether the line's bigram summary already rules this trigger out, so match() need not be entered.
     // One-sided like the summary: false leaves match() to decide. Only a trigger whose every pattern
     // matches by containing text, and that never fires on a line it does not match - the cases
@@ -481,8 +492,7 @@ public:
     void setIsLineTrigger(bool b)
     {
         mIsLineTrigger = b;
-        invalidatePrescan(b);
-        invalidateTreeIndex();
+        refile(b ? TriggerRefile::SeesEveryLine : TriggerRefile::Patterns);
     }
     void setStartOfLineDelta(int b) { mStartOfLineDelta = b; }
     void setLineDelta(int b) { mLineDelta = b; }
@@ -490,8 +500,7 @@ public:
     void setIsMultiline(bool b)
     {
         mIsMultiline = b;
-        invalidatePrescan(b);
-        invalidateTreeIndex();
+        refile(b ? TriggerRefile::SeesEveryLine : TriggerRefile::Patterns);
     }
     void enableTrigger(const QString&);
     void disableTrigger(const QString&);
@@ -581,6 +590,7 @@ private:
     inline void updateMultistates(int regexNumber, const TCaptureGroups& captureList, const std::vector<int>& posList, const NameGroupMatches* nameMatches = nullptr);
     void enterChildren(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams, bool haystackIsCapture, bool& conditionMet);
     void noteOpen();
+    void refile(TriggerRefile change);
     inline void filter(std::string_view capture, int posOffset, int lineNumber, bool positionsInCurrentColumns);
     bool selectTextMatch(int lineNumber, int from, std::string_view capture) const;
     void processExactMatch(int patternNumber, int posOffset, int lineNumber);

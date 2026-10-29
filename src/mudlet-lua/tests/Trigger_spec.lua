@@ -8330,10 +8330,10 @@ describe("Trigger processing", function()
             -- A pass pins a copy of every root trigger's pattern summary and
             -- stops trusting those copies the moment one of the triggers they
             -- were taken from changes. A trigger a script creates from inside a
-            -- trigger - a one-shot, a prompt capture, a combat follow-up - is in
-            -- none of those copies, because no snapshot has ever filed it, so
-            -- announcing it would cost every root trigger left on the line its
-            -- copy for nothing. This reads the announcement counter rather than
+            -- trigger - a one-shot, a prompt capture, a combat follow-up, a line
+            -- trigger - is in none of those copies, because no snapshot has ever
+            -- filed it, so announcing it would cost every root trigger left on
+            -- the line its copy for nothing. This reads the announcement counter rather than
             -- a firing, as the filters only decide how a line is walked and
             -- never which triggers fire on it.
             if not os.getenv("MUDLET_TEST_MODE") then
@@ -8343,8 +8343,9 @@ describe("Trigger processing", function()
                 return getProfileStats().triggers.rootFilterEpoch
             end
 
-            track(tempTrigger("ruledoutmaker_fires", function()
+            local makerId = track(tempTrigger("ruledoutmaker_fires", function()
                 track(tempTrigger("ruledoutmade_qzv_never_sent", function() end))
+                track(tempLineTrigger(1, 1, function() end))
             end))
             -- files the maker itself, so the line below changes nothing else
             feedTriggers(warmUpLine)
@@ -8355,12 +8356,10 @@ describe("Trigger processing", function()
                              "creating a trigger mid-line staled filter copies that could not have been of it")
 
             -- A control, so the assertion above cannot pass on a counter that
-            -- never moves: a line trigger fires on its position rather than on
-            -- text, which every pinned copy has to hear about at once.
-            local lineId = tempLineTrigger(0, 1, function() end)
+            -- never moves: holding open a trigger a snapshot has filed makes it
+            -- fire on lines it does not match, which its pinned copy has to hear about.
+            setTriggerStayOpen(tostring(makerId), 1)
             assert.is_true(epoch() > before, "a change every pinned copy has to hear about went unannounced")
-            disableTrigger(lineId)
-            killTrigger(lineId)
         end)
 
         it("fires a regex whose brace is the brace itself and not a quantifier", function()

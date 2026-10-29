@@ -660,33 +660,33 @@ void TriggerUnit::stampTreeCandidates(const QString& line)
     }
 }
 
-void TriggerUnit::markPrescanStale(TTrigger* pT)
+void TriggerUnit::refile(TTrigger* pT, const TriggerRefile change)
 {
-    mRootNodeSnapshotStale = true;
-    // A null stands for a trigger there is nothing left to tell by, so it takes
-    // the reading that announces rather than the one that stays quiet.
-    const int position = pT ? pT->rootSnapshotPosition() : TTrigger::scmSnapshotPositionDropped;
-    // The epoch is what stops the rest of the line trusting the filter copies a
-    // pass pinned, so it only has to move for a trigger one of those copies
-    // could be of. A trigger no snapshot has ever filed is in none of them:
-    // rootFilter() reads nothing but the trigger's own patterns and flags, so
-    // not even its parent's copy can be of it. That is the common case of a
-    // script creating a trigger from inside a trigger - a one-shot, a prompt
-    // capture, a combat follow-up - which used to disable the pinned filters
-    // for every root trigger left on the line. Anything else, a position or a
-    // trigger that has since left the root list, still has to be announced:
-    // -1 alone could not tell those apart, and the filter check runs ahead of
-    // isActive(), so a removed trigger's stale copy would be trusted.
-    if (position != TTrigger::scmNeverSnapshotted) {
-        ++mRootFilterEpoch;
+    // A root is never filed in the tree index, so the temporary triggers scripts arm every line cost it no rebuild
+    if ((change == TriggerRefile::Patterns || change == TriggerRefile::SeesEveryLine) && (pT->mTreeIndexPosition >= 0 || pT->getParent())) {
+        unfileTreeNode(pT);
     }
-    if (mRootNodeSnapshotNeedsRebuild || !pT) {
+    // The epochs are what stop the rest of a line trusting what a pass pinned, so they only have to move
+    // for a trigger a pinned snapshot could hold. One no snapshot has ever filed is in none: rootFilter()
+    // and prescanGrams() read nothing but the trigger's own state, so not even its parent's copy can be
+    // of it. That is a child, or a trigger a script creates from inside a trigger - a one-shot, a prompt
+    // capture, a combat follow-up. One that has since left the root list may still be pinned, and the
+    // filter check runs ahead of isActive(), so a removed trigger's stale copy would be trusted.
+    const int position = pT->rootSnapshotPosition();
+    if (position == TTrigger::scmNeverSnapshotted) {
         return;
     }
-    // No position: a child, which the index never files, or a root queued for appending, which will be
-    // filed from its current state anyway
+    ++mRootFilterEpoch;
+    // The line's candidate list was settled before any script ran, so the rest of it goes unfiltered
+    if (change == TriggerRefile::SeesEveryLine || change == TriggerRefile::OpenedByScript || (change == TriggerRefile::OpenedByMatch && mProcessingDepth > 1)) {
+        ++mUnfilterableEpoch;
+    }
+    // A dropped trigger is out of the next snapshot, so has nothing to be filed in
     if (position >= 0) {
-        mRootNodesRefiled.push_back(position);
+        mRootNodeSnapshotStale = true;
+        if (!mRootNodeSnapshotNeedsRebuild) {
+            mRootNodesRefiled.push_back(position);
+        }
     }
 }
 
@@ -704,7 +704,7 @@ void TriggerUnit::markRootNodeRemoved(TTrigger* pT)
     const int position = pT->rootSnapshotPosition();
     // Even when rebuilding: a stale position on a trigger registered again later would make its next
     // removal empty another trigger's slot. The dropped sentinel, not the never-filed one, is how
-    // markPrescanStale() tells a pinned copy of it from no copy at all.
+    // refile() tells a pinned copy of it from no copy at all.
     pT->setRootSnapshotPosition(TTrigger::scmSnapshotPositionDropped);
     if (mRootNodeSnapshotNeedsRebuild) {
         return;
@@ -1136,11 +1136,9 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
         }
         if (nowOpen) {
             noteOpenTreeNode(pT);
-            // It now fires without matching, so can't be filtered out of any line, this one included
-            markPrescanStaleForLineInFlight(pT);
+            refile(pT, TriggerRefile::OpenedByScript);
         } else {
-            // Filterable again; the line in flight can ignore that, as it was already offered the trigger
-            markPrescanStale(pT);
+            refile(pT, TriggerRefile::Shut);
         }
     }
 }
