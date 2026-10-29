@@ -733,19 +733,21 @@ private slots:
     // timeouts and written out as the literal text it was.
     void test_aStalledMxpTagIsWrittenOutWithAView()
     {
+        // A line ending that arrives while the tag is open writes it out too,
+        // and cTelnet's posting timer supplies one shortly after any game output,
+        // so the stub sends no welcome
+        mpServer->setSendsWelcome(false);
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        // A line ending that arrives while the tag is open writes it out too,
-        // and cTelnet's posting timer supplies one shortly after any game
-        // output - so let the connection's own traffic finish first.
-        QTest::qWait(1000ms);
         TBuffer& buffer = host->mainConsoleModel().buffer;
-        QElapsedTimer sinceFeed;
-        sinceFeed.start();
         feedStalledMxpTag(host, buffer, "WDOGVIEW <send");
+        runTagWatchdogEarly(buffer, qsl("WDOGVIEW"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
 
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
@@ -753,9 +755,6 @@ private slots:
                          },
                          8s),
                  "The stalled tag was never written out as text.");
-        // Both watchdog phases have to have run, or something other than the
-        // watchdog wrote it out.
-        QVERIFY2(sinceFeed.elapsed() >= 2 * TBuffer::MAX_TAG_TIMEOUT_MS - 100, qPrintable(qsl("The tag was written out after %1ms, before the watchdog could have.").arg(sinceFeed.elapsed())));
     }
 
     // The line the watchdog writes out came from the game, so its triggers have
@@ -763,6 +762,7 @@ private slots:
     // one of the things that depends on it.
     void test_aStalledMxpTagLineRunsItsTriggersInTriggerContext()
     {
+        mpServer->setSendsWelcome(false);
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
@@ -777,11 +777,13 @@ private slots:
                    "  wdogCapture = getSelection()\n"
                    "  deselect()\n"
                    "end)"));
-        QTest::qWait(1000ms);
         TBuffer& buffer = host->mainConsoleModel().buffer;
-        QElapsedTimer sinceFeed;
-        sinceFeed.start();
         feedStalledMxpTag(host, buffer, "WDOGCTX <send");
+        // Anything else writing the line out would already be in trigger context
+        runTagWatchdogEarly(buffer, qsl("WDOGC"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
 
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
@@ -789,8 +791,6 @@ private slots:
                          },
                          8s),
                  "The trigger never ran on the line the watchdog wrote out.");
-        // Anything else writing the line out would already be in trigger context
-        QVERIFY2(sinceFeed.elapsed() >= 2 * TBuffer::MAX_TAG_TIMEOUT_MS - 100, qPrintable(qsl("The tag was written out after %1ms, before the watchdog could have.").arg(sinceFeed.elapsed())));
         runLua(host, qsl("killTrigger(wdogTriggerId)"));
         QCOMPARE(luaGlobalString(host, "wdogCapture"), qsl("<send"));
     }
@@ -836,6 +836,7 @@ private slots:
     // reach for one.
     void test_aStalledMxpTagIsLeftAloneWithNoView()
     {
+        mpServer->setSendsWelcome(false);
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
@@ -844,10 +845,13 @@ private slots:
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
         feedStalledMxpTag(host, model->buffer, "WDOGNOVIEW <send");
+        runTagWatchdogEarly(model->buffer, qsl("WDOGNOVIEW"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
 
-        // Both watchdog phases and then some; there is nothing to poll for,
-        // since what is being checked is that nothing happens.
-        QTest::qWait(2 * TBuffer::MAX_TAG_TIMEOUT_MS + 1000);
+        // Room for a continuation the second phase queued to run
+        QTest::qWait(200ms);
         QVERIFY2(lastLineHolding(model->buffer, qsl("WDOGNOVIEW")) < 0, "The stalled tag was written out with no view.");
         QCOMPARE(QString::fromStdString(host->mMxpProcessor.getMxpTagBuilder().getRawTagContent()), qsl("send"));
     }
@@ -857,6 +861,9 @@ private slots:
     // for any other the text and the repaint would land on different consoles.
     void test_aStalledMxpTagInAnotherBufferIsLeftAlone()
     {
+        // The MXP tag builder is the profile's, so no game text may reach it
+        // while a tag is held open in it.
+        mpServer->setSendsWelcome(false);
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
@@ -865,12 +872,14 @@ private slots:
         runLua(host, qsl("createMiniConsole('wdogsub', 0, 0, 300, 100)"));
         TConsoleModel* subModel = host->windowRegistry().subConsoleModel(qsl("wdogsub"));
         QVERIFY2(subModel, "The mini console has no model.");
-        // The MXP tag builder is the profile's, so let the connection's own
-        // traffic finish before holding a tag open in it.
-        QTest::qWait(1000ms);
         feedStalledMxpTag(host, subModel->buffer, "WDOGSUB <send");
+        runTagWatchdogEarly(subModel->buffer, qsl("WDOGSUB"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
 
-        QTest::qWait(2 * TBuffer::MAX_TAG_TIMEOUT_MS + 1000);
+        // Room for a continuation the second phase queued to run
+        QTest::qWait(200ms);
         QVERIFY2(lastLineHolding(subModel->buffer, qsl("WDOGSUB")) < 0, "The stalled tag was written out into a buffer that is not the main console's.");
     }
 
@@ -1312,7 +1321,13 @@ private slots:
         model->buffer.translateToPlainText(data, true);
         QCOMPARE(model->buffer.mServerWrapPendingLine, lateLine);
         QVERIFY2(host->mServerWrapFlushTimer.isActive(), "Holding a line back after the close did not start the flush timer, so the assertion below cannot fail.");
-        QTest::qWait(TBuffer::csmServerWrapFlushDelayMs * 3);
+        QVERIFY2(QTest::qWaitFor(
+                         [host]() {
+                             return !host->mServerWrapFlushTimer.isActive();
+                         },
+                         5s),
+                 "The flush timer never fired.");
+        QTest::qWait(100ms);
         QVERIFY2(lastLineHolding(model->buffer, lateLine) < 0, "A line held after the close was committed on a closed profile.");
     }
 
@@ -5302,6 +5317,27 @@ private:
         host->mMxpProcessor.setLastEntityValue(QString());
         buffer.translateToPlainText(text, true);
         QVERIFY2(host->mMxpProcessor.getMxpTagBuilder().isInsideTag(), "The feed left no tag open, so no watchdog was armed.");
+    }
+
+    // Utility function running both phases of the tag watchdog the feed armed
+    // without waiting MAX_TAG_TIMEOUT_MS out for each, once the buffer is seen
+    // to have armed each phase for that long. Nothing holding text may have
+    // been written out before the second phase runs.
+    void runTagWatchdogEarly(TBuffer& buffer, const QString& text)
+    {
+        for (const auto phase : {TBuffer::WatchdogPhase::Phase1_Snapshot, TBuffer::WatchdogPhase::Phase2_Unfreeze}) {
+            QVERIFY2(buffer.mTagWatchdog->isActive(), "The tag watchdog was not armed.");
+            QVERIFY(buffer.mWatchdogPhase == phase);
+            QCOMPARE(buffer.mTagWatchdog->interval(), TBuffer::MAX_TAG_TIMEOUT_MS);
+            QVERIFY2(lastLineHolding(buffer, text) < 0, "The stalled tag was written out before the watchdog's second phase.");
+            buffer.mTagWatchdog->start(0);
+            QVERIFY2(QTest::qWaitFor(
+                             [&buffer, phase]() {
+                                 return buffer.mWatchdogPhase != phase;
+                             },
+                             5s),
+                     "The tag watchdog did not run its phase.");
+        }
     }
 
     static int lastLineHolding(TBuffer& buffer, const QString& text)

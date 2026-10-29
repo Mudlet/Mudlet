@@ -43,9 +43,9 @@
 // dialog's test interface, documented in docs/settings-redesign.md.
 namespace TestSettings {
 
-// Comfortably past the 400ms debounce even on a loaded sanitiser build, and
-// what a case waits out to say that no apply happened at all
-inline constexpr int scmQuietWindow = 1500;
+// What a case waits out to say that no apply happened at all: the 400ms
+// debounce plus a margin for a loaded sanitiser build
+inline constexpr int scmQuietWindow = 900;
 inline constexpr int scmApplyTimeout = 10000;
 
 inline void deleteProfileDirectory(const QString& profileName)
