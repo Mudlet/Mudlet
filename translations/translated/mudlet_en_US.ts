@@ -35,6 +35,15 @@
             <numerusform>You have a map loaded (%n rooms), but Mudlet does not know where you are at the moment.</numerusform>
         </translation>
     </message>
+    <message numerus="yes">
+        <location filename="../../src/modern_glwidget.cpp" line="6683"/>
+        <source>Z %1   LEVELS %2 … %3   %n ROOM(S)</source>
+        <extracomment>The 3D map&apos;s readout in the Hologram style, below the area&apos;s name: the level being viewed (%1), the area&apos;s lowest and highest levels (%2 and %3, as -1 and +3) and how many rooms it has</extracomment>
+        <translation>
+            <numerusform>Z %1   LEVELS %2 … %3   %n ROOM</numerusform>
+            <numerusform>Z %1   LEVELS %2 … %3   %n ROOMS</numerusform>
+        </translation>
+    </message>
 </context>
 <context>
     <name>T2DMap</name>

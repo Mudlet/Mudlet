@@ -4286,6 +4286,10 @@ bool ModernGLWidget::followingPlayer() const
     if (!mShiftMode || !mpMap) {
         return true;
     }
+    // The area it was taken to was deleted, and paintGL() would only re-present that area's last frame
+    if (mpMap->mpRoomDB && !mpMap->mpRoomDB->getArea(mAID)) {
+        return true;
+    }
     // Not while rooms are dragged, as they follow the pointer across the map and would go along with the view
     return !mMovingRooms && (mRID != mpMap->mRoomIdHash.value(mpMap->mProfileName) || mpMap->mNewMove);
 }
@@ -6648,10 +6652,12 @@ void ModernGLWidget::paintScannerOverlay(QPainter& painter, const int top)
     bracket.setAlphaF(0.45f);
     constexpr int margin = 12;
     constexpr int leg = 18;
+    // Outside the map info box, drawn 10px in, so the top corners do not cross its text
+    constexpr int bracketInset = 4;
     painter.save();
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setPen(QPen(bracket, 1.5));
-    const QRectF frame = QRectF(rect()).adjusted(margin, margin, -margin, -margin);
+    const QRectF frame = QRectF(rect()).adjusted(bracketInset, bracketInset, -bracketInset, -bracketInset);
     for (const QPointF& corner : {frame.topLeft(), frame.topRight(), frame.bottomLeft(), frame.bottomRight()}) {
         // Each leg runs from the corner toward the middle
         const qreal across = corner.x() < frame.center().x() ? leg : -leg;
@@ -6674,7 +6680,7 @@ void ModernGLWidget::paintScannerOverlay(QPainter& painter, const int top)
     const QString scan = metrics.elidedText(tr("SCAN // %1").arg(areaName.toUpper()), Qt::ElideRight, textWidth);
     //: The 3D map's readout in the Hologram style, below the area's name: the level being viewed (%1), the area's lowest and highest levels (%2 and %3, as -1 and +3) and how many rooms it has
     const QString levels = metrics.elidedText(
-            tr("Z %1   LEVELS %2 … %3   %n ROOMS", nullptr, static_cast<int>(pArea->getAreaRooms().size())).arg(signedLevel(mMapCenterZ), signedLevel(pArea->min_z), signedLevel(pArea->max_z)),
+            tr("Z %1   LEVELS %2 … %3   %n ROOM(S)", nullptr, static_cast<int>(pArea->getAreaRooms().size())).arg(signedLevel(mMapCenterZ), signedLevel(pArea->min_z), signedLevel(pArea->max_z)),
             Qt::ElideRight,
             textWidth);
     // So that it reads over a crowded map
