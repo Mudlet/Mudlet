@@ -963,6 +963,25 @@ describe("Trigger processing", function()
             assert.are.same({"DeletedPassLineMarker red"}, fired)
         end)
 
+        it("should match the colours a line arrived in after an earlier trigger recolours and deletes it", function()
+            local fired = {}
+            local editor = tempTrigger("RecolouredDeletedMarker", function()
+                selectString("alpha", 1)
+                setFgColor(255, 0, 0)
+                resetFormat()
+                deleteLine()
+            end)
+            local colorTrigger = tempAnsiColorTrigger(2, -1, function() fired[#fired + 1] = matches[1] end)
+            finally(function()
+                killTrigger(editor)
+                killTrigger(colorTrigger)
+            end)
+
+            feedTriggers("\27[32mRecolouredDeletedMarker alpha beta\27[0m\n")
+
+            assert.are.same({"RecolouredDeletedMarker alpha beta"}, fired)
+        end)
+
         it("should still match the line being processed after an earlier trigger clears the window", function()
             local fired = {}
             local countBefore, countAfter

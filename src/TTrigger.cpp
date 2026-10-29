@@ -503,7 +503,7 @@ private:
 // dismisses a root color trigger before match() and what match_color_pattern()
 // reads have to be this one answer, or the first would dismiss a line the
 // second fires on.
-const TChar* uniformWindowColors(TBuffer& buffer, const std::vector<TChar>* pPassLine, const int line, const int start, const int end)
+const TChar* uniformWindowColors(TBuffer& buffer, const TLineFormat* pPassLine, const int line, const int start, const int end)
 {
     if (end <= start || (pPassLine && static_cast<int>(pPassLine->size()) < end)) {
         return nullptr;
@@ -1567,12 +1567,12 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
     if (!detached && (lineNow < 0 || lineNow >= static_cast<int>(consoleModel.buffer.buffer.size()))) {
         return false;
     }
-    const std::vector<TChar>& bufferLine = detached ? consoleModel.buffer.detachedTriggerPassLine() : consoleModel.buffer.buffer[lineNow];
+    const TLineFormat& bufferLine = detached ? consoleModel.buffer.detachedTriggerPassLine() : consoleModel.buffer.buffer[lineNow];
     const QString& lineBuffer = detached ? consoleModel.buffer.detachedTriggerPassLineText() : consoleModel.buffer.lineBuffer[lineNow];
     // Match against the colors as they arrived from the game, not as already
     // recolored by other triggers or scripts earlier in this trigger pass; with
     // no snapshot taken, or past its end, the line itself still holds them:
-    const std::vector<TChar>* pPassLine = consoleModel.buffer.preTriggerPassLine(lineNow);
+    const TLineFormat* pPassLine = consoleModel.buffer.preTriggerPassLine(lineNow);
     if (haystackIsCapture && !mPositionsInCurrentColumns) {
         // A text parent's capture is in the columns the line arrived with
         std::tie(posOffset, length) = consoleModel.buffer.triggerPassSpanNow(line, posOffset, length);
