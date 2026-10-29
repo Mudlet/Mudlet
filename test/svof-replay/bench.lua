@@ -7,6 +7,10 @@ local BUNDLE, RESULT = CFG.bundle, CFG.result
 local manifest = dofile(BUNDLE .. "/manifest.lua")
 -- run.sh loads this file from the checkout, the package from its own folder: gate.lua sits beside it
 local gate = dofile(debug.getinfo(1, "S").source:match("^@(.*)/[^/]*$") .. "/gate.lua")
+-- A profile reopened after a run would otherwise leave that run's report for whoever reads it next
+os.remove(RESULT)
+os.remove(RESULT .. ".dbg")
+os.remove(RESULT .. ".buffer")
 
 local function dbg(msg)
   local h = io.open(RESULT .. ".dbg", "a")
@@ -127,12 +131,23 @@ local function finish(why)
   if s.promptcount ~= manifest.prompts then
     problems[#problems + 1] = string.format("svof saw %s of %d prompts", tostring(s.promptcount), manifest.prompts)
   end
-  if checked.game_lines == 0 then problems[#problems + 1] = "no game line came through unchanged" end
+  local ref = manifest.expect and manifest.expect[CFG.mode]
+  if not ref then
+    problems[#problems + 1] = "no reference line counts for " .. CFG.mode .. " runs"
+  else
+    local got = {lines = lines, game_lines = checked.game_lines}
+    for _, k in ipairs({"lines", "game_lines"}) do
+      local slack = math.ceil(ref[k] * manifest.tolerance)
+      if math.abs(got[k] - ref[k]) > slack then
+        problems[#problems + 1] = string.format("%s %d is more than %d from the reference %d", k, got[k], slack, ref[k])
+      end
+    end
+  end
 
   local g = stats(hbGaps)
   local out = {}
   local function add(fmt, ...) out[#out + 1] = string.format(fmt, ...) end
-  add("label %s\nmode %s\nbundle %d\nstop_reason %s\n", CFG.label, CFG.mode, manifest.bundle, why)
+  add("label %s\nmode %s\nbundle %d\ncorpus_md5 %s\nstop_reason %s\n", CFG.label, CFG.mode, manifest.bundle, manifest.md5, why)
   add("elapsed_s %.3f\nlines %d\nrate_lines_per_s %.1f\n", elapsed, lines, rate)
   add("cpu_s %.3f\n", (_G.benchCpu1 or 0) - (_G.benchCpu0 or 0))
   add("%s\n", svoStatus())
@@ -216,9 +231,11 @@ local function copyConfig()
     local from = io.open(BUNDLE .. "/svo/" .. file, "rb")
     local to = io.open(home .. "/svo/" .. file, "wb")
     if not from or not to then return false, "cannot copy svo/" .. file end
-    to:write(from:read("*a"))
+    local data = from:read("*a")
     from:close()
-    to:close()
+    local wrote, err = to:write(data)
+    local closed, cerr = to:close()
+    if not wrote or not closed then return false, "cannot write svo/" .. file .. ": " .. tostring(err or cerr) end
   end
   return true
 end
@@ -226,8 +243,7 @@ end
 local function setup()
   -- svof keeps state across sessions, so a second pass in one profile does different work
   if svofInstalled() then
-    echo("\nSvofBench: svof is already installed here, so this profile has run the benchmark; use a fresh one\n")
-    return
+    return fail("svof is already installed here, so this profile has run the benchmark; use a fresh one")
   end
   if CFG.mode == "feed" and not feedTelnet("") then
     return fail("feedTelnet refuses while connected; open the profile with --offline")
