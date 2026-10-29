@@ -415,9 +415,13 @@ private slots:
 
         QVERIFY(provisionProfileOnDisk(mSecondProfile));
         QVERIFY2(runLua(mpFirstHost, qsl("loadProfile('%1', true)").arg(mSecondProfile)).isNull(), "the second profile could not be loaded");
-        QTest::qWait(500ms);
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return hostFor(mSecondProfile) != nullptr;
+                         },
+                         5s),
+                 "the second profile did not open");
         mpSecondHost = hostFor(mSecondProfile);
-        QVERIFY2(mpSecondHost, "the second profile did not open");
     }
 
     void cleanupTestCase()
@@ -1024,9 +1028,13 @@ private slots:
         const QString doomedProfile = qsl("AddonControls-Doomed");
         QVERIFY(provisionProfileOnDisk(doomedProfile));
         QVERIFY2(runLua(mpFirstHost, qsl("loadProfile('%1', true)").arg(doomedProfile)).isNull(), "the third profile could not be loaded");
-        QTest::qWait(500ms);
+        QVERIFY2(QTest::qWaitFor(
+                         [this, &doomedProfile]() {
+                             return hostFor(doomedProfile) != nullptr;
+                         },
+                         5s),
+                 "the third profile did not open");
         Host* pDoomedHost = hostFor(doomedProfile);
-        QVERIFY2(pDoomedHost, "the third profile did not open");
 
         const int doomedId = addCommand(pDoomedHost, qsl("name = 'GoesWithTheProfile', menuPath = 'Doomed'"));
         QVERIFY2(doomedId > 0, "the third profile's command was not placed");
@@ -1035,10 +1043,12 @@ private slots:
 
         // the public path a player takes, which posts closeHost() itself
         mudlet::self()->slot_closeProfileByName(doomedProfile);
-        QTest::qWait(1000ms);
-        QCoreApplication::processEvents();
-
-        QVERIFY2(!toolbarButtonNamed(qsl("GoesWithTheProfile")), "the closed profile's button is still on the toolbar");
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !toolbarButtonNamed(qsl("GoesWithTheProfile"));
+                         },
+                         5s),
+                 "the closed profile's button is still on the toolbar");
         QVERIFY2(!menuActionNamed(qsl("GoesWithTheProfile")), "the closed profile's menu entry is still in the menu");
         // and its id names nothing now, rather than another profile's command
         QVERIFY2(callRefused(mpFirstHost, qsl("removeCommand(%1)").arg(doomedId)), "the closed profile's id still addresses something");
@@ -1054,10 +1064,12 @@ private slots:
         QVERIFY(toolbarButtonNamed(qsl("GoesWithTheReset")));
 
         QVERIFY2(runLua(mpSecondHost, qsl("resetProfile()")).isNull(), "resetProfile() did not run");
-        QTest::qWait(1500ms);
-        QCoreApplication::processEvents();
-
-        QVERIFY2(!toolbarButtonNamed(qsl("GoesWithTheReset")), "the reset left the profile's button on the toolbar");
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !toolbarButtonNamed(qsl("GoesWithTheReset"));
+                         },
+                         5s),
+                 "the reset left the profile's button on the toolbar");
         QVERIFY2(!menuActionNamed(qsl("GoesWithTheReset")), "the reset left the profile's menu entry in the menu");
     }
 
