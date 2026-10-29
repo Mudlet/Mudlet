@@ -69,7 +69,7 @@ fi
 # initTestCase() skips - so require a metric from each slot the training is for.
 for METRIC in text_best_pass_ms trigger_best_pass_ms defaults_text_best_pass_ms display_paint_ms; do
   if ! grep -q "^METRIC ${METRIC} " "${TRAINING_LOG}"; then
-    echo "=== ERROR: the training run reported no ${METRIC}, so that slot did not run and the profile would leave its code cold ===" >&2
+    echo "=== ERROR: the training run reported no ${METRIC}, so that slot did not run and its code would go untrained ===" >&2
     exit 1
   fi
 done
