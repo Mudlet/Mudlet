@@ -2740,3 +2740,504 @@ describe("MXP re-initialisation of a forced processor", function()
     assert.equals(stillOpen, displayed(stillOpen .. "\r\n"))
   end)
 end)
+
+describe("Tests game text the ingest worker parses ahead", function()
+  -- These feed the same lines one read per line, which the worker never sees, and as one read, and
+  -- require the same buffer from both.
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  local function parsedAhead()
+    return getProfileStats().linesParsedAhead
+  end
+
+  -- a test whose reads the worker did not parse compared the main thread with itself
+  local function requireWorker(before)
+    if not before then
+      pending("telling whether the worker parsed the read needs MUDLET_TEST_MODE")
+    elseif parsedAhead() == before then
+      pending("the ingest worker is off, so this compared the main thread with itself")
+    end
+  end
+
+  -- each line's text, then the format getTextFormat() reports for each of its characters, or only the first
+  local function snapshot(from, to, firstOnly)
+    local result = {}
+    for line = from, to do
+      assert.is_true(moveCursor("main", 0, line))
+      local text = getCurrentLine("main")
+      local cells = {text, "prompt=" .. tostring(isPrompt())}
+      local count = firstOnly and math.min(1, utf8.len(text)) or utf8.len(text)
+      for offset = 0, count - 1 do
+        selectSection("main", offset, 1)
+        local fields = {}
+        for key, value in pairs(getTextFormat("main")) do
+          fields[#fields + 1] = key .. "=" .. (type(value) == "table" and table.concat(value, ",") or tostring(value))
+        end
+        table.sort(fields)
+        cells[#cells + 1] = table.concat(fields, " ")
+      end
+      result[#result + 1] = table.concat(cells, "|")
+    end
+    deselect("main")
+    return result
+  end
+
+  local passes = 0
+
+  -- feeds the lines one read each, or all in one read (or two, cut after byte cut), and returns what they left in the buffer
+  local function pass(lines, oneRead, firstOnly, cut)
+    passes = passes + 1
+    local opening, closing = "IngestPassOpens" .. passes, "IngestPassCloses" .. passes
+    local mark = getLastLineNumber("main")
+    feed("\27[0m" .. opening .. "\r\n")
+    if oneRead then
+      local joined = table.concat(lines, "\r\n") .. "\r\n"
+      if cut then
+        feed(joined:sub(1, cut))
+        feed(joined:sub(cut + 1))
+      else
+        feed(joined)
+      end
+    else
+      for _, line in ipairs(lines) do
+        feed(line .. "\r\n")
+      end
+    end
+    feed("\27[0m" .. closing .. "\r\n")
+    local found = getLines("main", mark, getLastLineNumber("main") + 1)
+    local from, to
+    for i, text in ipairs(found) do
+      if text == opening then
+        from = mark + i
+      elseif text == closing then
+        to = mark + i - 2
+      end
+    end
+    assert.is_truthy(from and to, "the pass markers did not both reach the buffer")
+    return snapshot(from, to, firstOnly)
+  end
+
+  local function sameLines(apart, together)
+    assert.are.equal(#apart, #together, "a different number of lines came out of one read")
+    for i = 1, #apart do
+      assert.are.equal(apart[i], together[i], "line " .. i .. " came out differently from one read")
+    end
+  end
+
+  local function sameEitherWay(lines, firstOnly)
+    local apart = pass(lines, false, firstOnly)
+    local together = pass(lines, true, firstOnly)
+    sameLines(apart, together)
+    return together
+  end
+
+  local function corpus(count)
+    local lines = {}
+    for i = 1, count or 48 do
+      local kind = i % 8
+      if kind == 0 then
+        lines[i] = "IngestPlain line " .. i .. " with nothing but text in it"
+      elseif kind == 1 then
+        lines[i] = "\27[31mIngestRed " .. i .. " \27[1;32mbright green\27[39m default \27[0mreset"
+      elseif kind == 2 then
+        -- left open, so the next line starts in it
+        lines[i] = "IngestCarry " .. i .. " \27[33;44m yellow on blue to the end"
+      elseif kind == 3 then
+        lines[i] = "\27[38;5;208mIngest256 " .. i .. "\27[48;5;17m on navy \27[38;2;10;200;30mtruecolour\27[0m"
+      elseif kind == 4 then
+        lines[i] = "\27[3mIngestItalic\27[23m \27[4munder\27[24m \27[9mstruck\27[29m \27[7mrev\27[27m \27[53mover\27[55m \27[5mblink\27[25m " .. i
+      elseif kind == 5 then
+        lines[i] = "IngestUnicode " .. i .. " ┌─┐ café ✓ 😀 │ naïve"
+      elseif kind == 6 then
+        lines[i] = ""
+      else
+        lines[i] = "\27[12mIngestFont " .. i .. "\27[10m back\tand a tab"
+      end
+    end
+    return lines
+  end
+
+  local triggers
+
+  before_each(function()
+    triggers = {}
+  end)
+
+  after_each(function()
+    for _, id in ipairs(triggers) do
+      killTrigger(id)
+    end
+    deselect("main")
+    feed("\27[0m\r\n")
+  end)
+
+  it("commits the same text and formats from one read as from a read per line", function()
+    local before = parsedAhead()
+    sameEitherWay(corpus())
+    requireWorker(before)
+  end)
+
+  it("commits the same from a read that a line was cut across", function()
+    -- without a GA from the game, the telnet layer holds an unfinished line back and the buffer never sees a cut
+    feed("<T_IAC><T_GA>")
+    local lines = corpus()
+    local joined = table.concat(lines, "\r\n") .. "\r\n"
+    local apart = pass(lines, false)
+    local cuts = {
+      ["text"] = joined:find("bright", 1, true) + 2,
+      ["an SGR sequence"] = joined:find("\27[1;32m", 1, true) + 4,
+      ["a UTF-8 character"] = joined:find("\226\148\140", 1, true),
+      ["a line ending"] = joined:find("\r\n", 1, true),
+      ["text later on"] = joined:find("IngestPlain line 24", 1, true) + 8,
+      ["an SGR sequence later on"] = joined:find("\27[38;5;208mIngest256 27", 1, true) + 5,
+      ["a UTF-8 character later on"] = joined:find("IngestUnicode 29 \226", 1, true) + #"IngestUnicode 29 ",
+    }
+    local before = parsedAhead()
+    for name, cut in pairs(cuts) do
+      local together = pass(lines, true, false, cut)
+      assert.are.equal(#apart, #together, "a different number of lines came out of a read cut in " .. name)
+      for i = 1, #apart do
+        assert.are.equal(apart[i], together[i], "line " .. i .. " came out differently from a read cut in " .. name)
+      end
+    end
+    requireWorker(before)
+  end)
+
+  it("leaves a line too long for the worker to the main thread", function()
+    local long = "\27[31m" .. ("r"):rep(5000) .. "\27[32m" .. ("g"):rep(4000) .. "\27[0m IngestLong"
+    local before = parsedAhead()
+    for _, at in ipairs({1, 20}) do
+      local lines = corpus(60)
+      lines[at] = long
+      sameEitherWay(lines, true)
+    end
+    requireWorker(before)
+  end)
+
+  it("puts a hyperlink still open at the end of a line on the next line", function()
+    local lines = {}
+    for i = 1, 60 do
+      lines[i] = "IngestLink " .. i .. " and enough text after it to leave the worker a long rest of the read"
+    end
+    -- nothing after it, so the link stays open past the end of the line
+    lines[20] = "IngestLinkOpens 20 \27]8;;send:x?config={\"style\":{\"color\":\"#00ff00\"}}\27\\"
+    lines[30] = "IngestLinkCloses 30\27]8;;\27\\ after it"
+    local before = parsedAhead()
+    local together = sameEitherWay(lines, true)
+    assert.truthy(together[21]:find("foreground=0,255,0", 1, true), "the link's colour did not reach the next line")
+    requireWorker(before)
+  end)
+
+  it("decodes a single byte code page through its table from one read", function()
+    local original = getServerEncoding()
+    finally(function()
+      setServerEncoding(original)
+    end)
+    setServerEncoding("CP437")
+    local lines = {}
+    for i = 1, 40 do
+      lines[i] = "IngestCp437 " .. i .. " \196\179\218\191"
+    end
+    local before = parsedAhead()
+    local together = sameEitherWay(lines, true)
+    assert.truthy(together[20]:find("^IngestCp437 20 ─│┌┐|"), "the read was not decoded as CP437")
+    requireWorker(before)
+  end)
+
+  it("picks up the rest of a read where the worker stopped short of it", function()
+    local lines = corpus(700)
+    -- an unhandled sequence the worker leaves to the main thread, part way through
+    lines[40] = "\27[5nIngestUnhandled 40"
+    local before = parsedAhead()
+    assert.are.equal(700, #sameEitherWay(lines, true))
+    requireWorker(before)
+    -- the first job stops after 39 lines and a job holds at most 512, so more than 39 + 512 takes at least two resumes
+    assert.is_true(parsedAhead() - before > 39 + 512, "the worker was not handed the rest of the read")
+  end)
+
+  it("carries an attribute a trigger feeds part way through a read on to the lines after it", function()
+    local control = pass(corpus(), true, true)
+    local first = parsedAhead()
+    local replayed = {}
+    for _, sgr in ipairs({"\27[35m", "\27[45m", "\27[1m", "\27[3m", "\27[4:3m", "\27[6m", "\27[7m", "\27[8m", "\27[9m", "\27[53m", "\27[11m"}) do
+      local id = tempTrigger("IngestFont 7 back", function()
+        feedTriggers(sgr)
+      end)
+      local before = parsedAhead()
+      local together = sameEitherWay(corpus(), true)
+      killTrigger(id)
+      assert.are_not.equal(control[8], together[8], "the trigger's " .. sgr:sub(2) .. " did not reach the next line")
+      replayed[sgr:sub(2)] = before and parsedAhead() - before
+    end
+    requireWorker(first)
+    for sgr, count in pairs(replayed) do
+      -- lines 1-7, then 10-48 once the reset at the end of line 9 brings both parses back in step
+      assert.is_true(count >= 40, "after " .. sgr .. " only " .. count .. " lines were parsed ahead")
+    end
+  end)
+
+  it("colours every palette entry the same from one read", function()
+    local lines = {}
+    for n = 0, 7 do
+      lines[#lines + 1] = "\27[3" .. n .. "mIngestPalette fg " .. n .. "\27[0m"
+      lines[#lines + 1] = "\27[9" .. n .. "mIngestPalette bright fg " .. n .. "\27[0m"
+      lines[#lines + 1] = "\27[4" .. n .. "mIngestPalette bg " .. n .. "\27[0m"
+      lines[#lines + 1] = "\27[10" .. n .. "mIngestPalette bright bg " .. n .. "\27[0m"
+      lines[#lines + 1] = "\27[1;3" .. n .. "mIngestPalette bold fg " .. n .. "\27[0m"
+    end
+    for n = 0, 15 do
+      lines[#lines + 1] = "\27[38;5;" .. n .. "mIngestPalette 256 " .. n .. "\27[0m"
+    end
+    local before = parsedAhead()
+    sameEitherWay(lines, true)
+    requireWorker(before)
+  end)
+
+  it("uses the profile background a trigger sets part way through a read", function()
+    local r, g, b = getBackgroundColor("main")
+    finally(function()
+      setBackgroundColor("main", r, g, b)
+    end)
+    triggers[#triggers + 1] = tempTrigger("IngestHostColour 20 ", function()
+      setBackgroundColor("main", 10, 20, 30)
+    end)
+    -- Each line ends in the background the trigger sets, so only the profile colour tells the parses apart
+    local lines = {}
+    for i = 1, 700 do
+      lines[i] = "\27[0mIngestHostColour " .. i .. " \27[48;2;10;20;30m"
+    end
+    local apart = pass(lines, false, true)
+    setBackgroundColor("main", r, g, b)
+    local before = parsedAhead()
+    local together = pass(lines, true, true)
+    sameLines(apart, together)
+    assert.truthy(together[600]:find("background=10,20,30", 1, true), "the new background did not reach the rest of the read")
+    requireWorker(before)
+    -- 20 lines before the change; a job of at most 512 resumed under the new background parses the rest
+    assert.is_true(parsedAhead() - before > 20 + 100, "the worker was not handed the rest of the read")
+  end)
+
+  it("marks a prompt in a read as a prompt", function()
+    -- A prompt ends the read it is in, so the worker only sees one after enough lines to take the read
+    local lines = {}
+    for i = 1, 60 do
+      lines[i] = i % 20 == 0 and ("IngestPrompt " .. i .. "> <T_IAC><T_GA>") or ("IngestPromptText " .. i)
+    end
+    local before = parsedAhead()
+    local together = sameEitherWay(lines, true)
+    local marked = {}
+    for _, line in ipairs(together) do
+      local text, prompt = line:match("^([^|]*)|prompt=(%a+)")
+      marked[text] = prompt
+    end
+    assert.are.equal("true", marked["IngestPrompt 20> "], "the prompt was not marked")
+    assert.are.equal("false", marked["IngestPromptText 19"], "the line before the prompt was marked")
+    requireWorker(before)
+  end)
+
+  it("takes up the read again after a burst a trigger feeds part way through it", function()
+    local burst = {}
+    for i = 1, 20 do
+      burst[i] = "IngestNested " .. i
+    end
+    triggers[#triggers + 1] = tempTrigger("IngestFont 7 back", function()
+      feedTelnet(table.concat(burst, "\r\n") .. "\r\n\27[36m")
+    end)
+    local before = parsedAhead()
+    sameEitherWay(corpus())
+    requireWorker(before)
+    -- lines 1-7, then 10-48 once the reset at the end of line 9 brings both parses back in step
+    assert.is_true(parsedAhead() - before >= 40, "only " .. parsedAhead() - before .. " lines were parsed ahead")
+  end)
+
+  it("joins the lines a game wrapped itself the same from one read", function()
+    local wrap, width = getConfig("undoServerWrap"), getConfig("undoServerWrapWidth")
+    finally(function()
+      setConfig("undoServerWrap", wrap)
+      setConfig("undoServerWrapWidth", width)
+    end)
+    setConfig("undoServerWrap", true)
+    setConfig("undoServerWrapWidth", 40)
+    local vocabulary = {"the", "quick", "brown", "fox", "jumps", "over", "lazy", "dogs", "while", "ingest", "runs"}
+    local lines, line = {}, ""
+    for i = 1, 400 do
+      local word = vocabulary[i % #vocabulary + 1]
+      if #line + 1 + #word > 40 then
+        lines[#lines + 1] = line
+        line = word
+      else
+        line = line == "" and word or line .. " " .. word
+      end
+    end
+    lines[#lines + 1] = line .. "."
+    local before = parsedAhead()
+    local together = sameEitherWay(lines, true)
+    assert.is_true(#together < #lines, "no wrapped lines were joined")
+    requireWorker(before)
+  end)
+
+  it("follows a trigger that edits the line it fired on", function()
+    triggers[#triggers + 1] = tempTrigger("IngestRed 9 ", function()
+      selectString("bright green", 1)
+      fg("magenta")
+      deselect()
+      echo(" IngestEchoed")
+    end)
+    local before = parsedAhead()
+    local together = sameEitherWay(corpus())
+    assert.truthy(together[9]:find("IngestEchoed", 1, true))
+    requireWorker(before)
+  end)
+
+  it("decodes a whole read in the encoding it arrived in, even when a trigger switches it part way", function()
+    local original = getServerEncoding()
+    finally(function()
+      setServerEncoding(original)
+    end)
+    triggers[#triggers + 1] = tempTrigger("IngestEncodingSwitch", function()
+      setServerEncoding("ISO 8859-1")
+    end)
+    setServerEncoding("UTF-8")
+    local lines = {}
+    for i = 1, 40 do
+      lines[i] = "IngestEncoding " .. i .. " caf\233"
+    end
+    lines[5] = "IngestEncodingSwitch"
+    local before = parsedAhead()
+    local together = pass(lines, true, true)
+    -- in UTF-8 a lone \233 is no character
+    assert.truthy(together[20]:find("^IngestEncoding 20 caf\239\191\189|"), "the switch reached the rest of the read it was made in")
+    local after = pass({"IngestEncoding after caf\233"}, true, true)
+    assert.truthy(after[1]:find("^IngestEncoding after café|"), "the switch did not reach the next read")
+    requireWorker(before)
+  end)
+
+  it("decodes the rest of a read in the encoding a trigger's own feed switched it to", function()
+    local original = getServerEncoding()
+    finally(function()
+      setServerEncoding(original)
+    end)
+    triggers[#triggers + 1] = tempTrigger("IngestGbkSwitch", function()
+      setServerEncoding("GBK")
+      -- a feed of its own applies the encoding at once, to the rest of this read as well
+      feedTriggers("IngestGbkFed\n")
+    end)
+    local lines = {}
+    for i = 1, 700 do
+      lines[i] = "IngestGbk " .. i .. " \196\227\186\195"
+    end
+    lines[5] = "IngestGbkSwitch"
+    setServerEncoding("UTF-8")
+    local apart = pass(lines, false, true)
+    setServerEncoding("UTF-8")
+    local before = parsedAhead()
+    local together = pass(lines, true, true)
+    sameLines(apart, together)
+    assert.truthy(together[#together]:find("^IngestGbk 700 你好|"), "the rest of the read was not decoded as GBK")
+    requireWorker(before)
+  end)
+
+  it("styles a read with the MXP colour left open when MXP was turned off", function()
+    -- separate reads: a read's telnet commands are handled before its text, and an MXP mode sequence turns MXP on
+    finally(function()
+      feed("<T_IAC><T_DO><O_MXP>\27[5z\27[3z\r\n")
+      feed("<T_IAC><T_DONT><O_MXP>")
+    end)
+    feed("<T_IAC><T_DO><O_MXP>\27[6z<COLOR red>IngestMxpLeftOpen\r\n")
+    feed("<T_IAC><T_DONT><O_MXP>")
+    local lines = {}
+    for i = 1, 40 do
+      lines[i] = "<B>IngestMxpColour " .. i .. "</B>"
+    end
+    local together = sameEitherWay(lines, true)
+    assert.truthy(together[20]:find("^<B>IngestMxpColour 20</B>|"), "MXP was still on")
+    assert.truthy(together[20]:find("foreground=255,0,0", 1, true), "the MXP colour did not reach the read")
+  end)
+
+  it("styles a read with the MXP bold, italic, underline and strikeout left open when MXP was turned off", function()
+    finally(function()
+      feed("<T_IAC><T_DO><O_MXP>\27[5z\27[3z\r\n")
+      feed("<T_IAC><T_DONT><O_MXP>")
+    end)
+    feed("<T_IAC><T_DO><O_MXP>\27[6z<B><I><U><S>IngestMxpLeftOpen\r\n")
+    feed("<T_IAC><T_DONT><O_MXP>")
+    local lines = {}
+    for i = 1, 40 do
+      lines[i] = "IngestMxpStyle " .. i
+    end
+    local before = parsedAhead()
+    local together = sameEitherWay(lines, true)
+    for _, field in ipairs({"bold=true", "italic=true", "strikeout=true", "underline=true"}) do
+      assert.truthy(together[20]:find(field, 1, true), "the MXP style did not reach the read: " .. field)
+    end
+    requireWorker(before)
+  end)
+
+  it("hands the rest of a read to MXP once a trigger turns it on", function()
+    finally(function()
+      feed("<T_IAC><T_DONT><O_MXP>")
+    end)
+    local lines = {}
+    for i = 1, 40 do
+      lines[i] = "<B>IngestMxp" .. i .. "</B>"
+    end
+    lines[5] = "IngestMxpSwitch"
+    triggers[#triggers + 1] = tempTrigger("IngestMxpSwitch", function()
+      feedTelnet("<T_IAC><T_DO><O_MXP>")
+    end)
+    local apart = pass(lines, false)
+    feed("<T_IAC><T_DONT><O_MXP>")
+    local before = parsedAhead()
+    local together = pass(lines, true)
+    assert.are.same(apart, together)
+    assert.truthy(together[3]:find("^<B>IngestMxp3</B>|"), "a tag before the switch was acted on")
+    assert.truthy(together[20]:find("^IngestMxp20|"), "a tag after the switch was not acted on")
+    requireWorker(before)
+  end)
+
+  it("runs a read's triggers after the GMCP that arrived with it", function()
+    finally(function()
+      gmcp.IngestSpec = nil
+    end)
+    local seen = {}
+    triggers[#triggers + 1] = tempRegexTrigger("^IngestGmcpLine (\\d+)$", function()
+      seen[#seen + 1] = tostring(gmcp.IngestSpec and gmcp.IngestSpec.Order and gmcp.IngestSpec.Order.n)
+    end)
+    local parts = {}
+    for i = 1, 60 do
+      parts[#parts + 1] = "IngestGmcpLine " .. i .. "\r\n"
+      if i % 20 == 0 then
+        parts[#parts + 1] = "<T_IAC><T_SB><O_GMCP>IngestSpec.Order {\"n\": " .. i .. "}<T_IAC><T_SE>"
+      end
+    end
+    local before = parsedAhead()
+    feed(table.concat(parts))
+    assert.are.equal(60, #seen)
+    for i = 1, 60 do
+      assert.are.equal("60", seen[i], "line " .. i .. " ran its triggers before the read's GMCP was handled")
+    end
+    requireWorker(before)
+  end)
+
+  it("goes on with the rest of a read after a trigger disconnects", function()
+    local count = 0
+    triggers[#triggers + 1] = tempRegexTrigger("^IngestDisconnect \\d+$", function()
+      count = count + 1
+      if count == 10 then
+        disconnect()
+      end
+    end)
+    local lines = {}
+    for i = 1, 40 do
+      lines[i] = "IngestDisconnect " .. i
+    end
+    local before = parsedAhead()
+    feed(table.concat(lines, "\r\n") .. "\r\n")
+    assert.are.equal(40, count)
+    requireWorker(before)
+  end)
+end)
