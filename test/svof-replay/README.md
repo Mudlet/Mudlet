@@ -7,7 +7,15 @@ with a large system feels. Linux only.
 
 ## Inputs
 
-Everything a run needs is in one file, `SvofBench.mpackage`, which is not in the repository:
+Everything a run needs is in one file, `SvofBench.mpackage`, which is not in the repository. Download it from
+[Mudlet/bench-data](https://github.com/Mudlet/bench-data/releases/tag/svof-1) and check it:
+
+```sh
+curl -LO https://github.com/Mudlet/bench-data/releases/download/svof-1/SvofBench.mpackage
+echo "1659af70b73c0e74ea5bb0a3cd53b7f5d6f2392f5acc6b1a0ba41c2fab16c980  SvofBench.mpackage" | sha256sum -c
+```
+
+It holds:
 
 - `svof.mpackage`, built for any class;
 - svof's saved settings (the `config`, `defup+keepup`, `namedb`, `pipes`, `prios` and `rift+inv` folders of
