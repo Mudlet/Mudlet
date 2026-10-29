@@ -50,6 +50,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <limits>
 #include <math.h>
 
@@ -57,6 +58,7 @@
 #include <QCoreApplication>
 #include <QFileInfo>
 #include <QMovie>
+#include <QStringEncoder>
 #include <QStringMatcher>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
@@ -73,6 +75,25 @@ static bool isMain(const QString& name)
         return true;
     }
     return false;
+}
+
+// The views draw only the room.ui_ keys of a room's user data; a change to any other key is left out of the map's
+// revisions, as bumping them rebuilds the whole 3D scene for script bookkeeping such as a "visited" mark
+static bool roomUserDataKeyDrawn(const QString& key)
+{
+    return key.startsWith(QLatin1String("room.ui_"));
+}
+
+static void roomUserDataChanged(TMap& map, const TRoom& room, const bool drawn, const char* fromWhere)
+{
+    if (drawn) {
+        map.setUnsaved(fromWhere);
+        map.updateArea(room.getArea());
+        return;
+    }
+    map.setUnsavedKeepingRevisions(fromWhere);
+    // Still repainted, as a map info contributor may show the key and is asked again on every paint
+    map.updatePlayerArea(room.getArea());
 }
 
 static const char* const csmMapInUseByCallback = "rooms and areas cannot be deleted, nor the map replaced, from inside an exit weight filter or map info callback";
@@ -232,8 +253,15 @@ int TLuaInterpreter::getCustomLines1(lua_State* L)
 int TLuaInterpreter::getExitWeights(lua_State* L)
 {
     int roomID = getVerifiedInt(L, __func__, 1, "roomID");
+    bool fullErrorReporting = false;
+    if (lua_gettop(L) > 1) {
+        fullErrorReporting = getVerifiedBool(L, __func__, 2, "enableFullErrorReporting {default = false}", true);
+    }
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
+    if (!pR && fullErrorReporting) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomID));
+    }
     lua_newtable(L);
     if (pR) {
         QStringList keys = pR->getExitWeights().keys();
@@ -893,13 +921,14 @@ int TLuaInterpreter::clearRoomUserData(lua_State* L)
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
     }
     if (!pR->userData.isEmpty()) {
+        const bool drawn = std::any_of(pR->userData.keyBegin(), pR->userData.keyEnd(), roomUserDataKeyDrawn);
         pR->userData.clear();
-        host.mpMap->setUnsaved(__func__);
+        roomUserDataChanged(*host.mpMap, *pR, drawn, __func__);
         lua_pushboolean(L, true);
     } else {
+        host.mpMap->updatePlayerArea(pR->getArea());
         lua_pushboolean(L, false);
     }
-    host.mpMap->updateArea(pR->getArea());
     return 1;
 }
 
@@ -925,12 +954,12 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
     //        }
     /*      else */ if (pR->userData.contains(key)) {
         pR->userData.remove(key);
-        host.mpMap->setUnsaved(__func__);
+        roomUserDataChanged(*host.mpMap, *pR, roomUserDataKeyDrawn(key), __func__);
         lua_pushboolean(L, true);
     } else {
+        host.mpMap->updatePlayerArea(pR->getArea());
         lua_pushboolean(L, false);
     }
-    host.mpMap->updateArea(pR->getArea());
     return 1;
 }
 
@@ -1617,16 +1646,16 @@ int TLuaInterpreter::getAreaRooms(lua_State* L)
         lua_pushnil(L);
         return 1;
     }
-    lua_newtable(L);
-    QSetIterator<int> itAreaRoom(pA->getAreaRooms());
+    const QSet<int>& areaRooms = pA->getAreaRooms();
+    const int roomCount = static_cast<int>(areaRooms.size());
+    lua_createtable(L, std::max(roomCount - 1, 0), roomCount > 0 ? 1 : 0);
+    // We should have started at 1 but past code had incorrectly started
+    // with a zero index and we must maintain compatibility with code written
+    // for that
     int i = -1;
-    while (itAreaRoom.hasNext()) {
-        lua_pushnumber(L, ++i);
-        // We should have started at 1 but past code had incorrectly started
-        // with a zero index and we must maintain compatibility with code written
-        // for that
-        lua_pushnumber(L, itAreaRoom.next());
-        lua_settable(L, -3);
+    for (const int room : areaRooms) {
+        lua_pushnumber(L, room);
+        lua_rawseti(L, -2, ++i);
     }
     return 1;
 }
@@ -1995,9 +2024,16 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
 int TLuaInterpreter::getMapLabels(lua_State* L)
 {
     const int area = getVerifiedInt(L, __func__, 1, "areaID");
+    bool fullErrorReporting = false;
+    if (lua_gettop(L) > 1) {
+        fullErrorReporting = getVerifiedBool(L, __func__, 2, "enableFullErrorReporting {default = false}", true);
+    }
     const Host& host = getHostFromLua(L);
-    lua_newtable(L);
     auto pA = host.mpMap->mpRoomDB->getArea(area);
+    if (!pA && fullErrorReporting) {
+        return warnArgumentValue(L, __func__, qsl("areaID %1 does not exist").arg(area));
+    }
+    lua_newtable(L);
     if (pA && !pA->mMapLabels.isEmpty()) {
         QMapIterator<int, TMapLabel> it(pA->mMapLabels);
         while (it.hasNext()) {
@@ -2489,13 +2525,27 @@ int TLuaInterpreter::getRoomName(lua_State* L)
 int TLuaInterpreter::getRooms(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
+    const QHash<int, TRoom*>& rooms = host.mpMap->mpRoomDB->getRoomMap();
+    // Not presized: `#` on a table with holes depends on the rehashes its inserts happened to trigger
     lua_newtable(L);
-    QHashIterator<int, TRoom*> it(host.mpMap->mpRoomDB->getRoomMap());
-    while (it.hasNext()) {
-        it.next();
-        lua_pushnumber(L, it.key());
-        lua_pushstring(L, it.value()->name.toUtf8().constData());
-        lua_settable(L, -3);
+    QStringEncoder toUtf8(QStringEncoder::Utf8, QStringConverter::Flag::Stateless);
+    QByteArray buffer;
+    for (auto it = rooms.cbegin(), end = rooms.cend(); it != end; ++it) {
+        const QString& name = it.value()->name;
+        if (const qsizetype needed = toUtf8.requiredSpace(name.size()); buffer.size() < needed) {
+            buffer.resize(needed);
+        }
+        const qsizetype written = toUtf8.appendToBuffer(buffer.data(), name) - buffer.constData();
+        if (toUtf8.hasError()) {
+            // QString::toUtf8() drops an unpaired surrogate where the encoder writes U+FFFD
+            toUtf8.resetState();
+            lua_pushstring(L, name.toUtf8().constData());
+        } else {
+            // lua_pushstring() always stopped at the first zero byte
+            const void* zero = std::memchr(buffer.constData(), 0, written);
+            lua_pushlstring(L, buffer.constData(), zero ? static_cast<const char*>(zero) - buffer.constData() : written);
+        }
+        lua_rawseti(L, -2, it.key());
     }
     return 1;
 }
@@ -4518,8 +4568,7 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("key '%1' is reserved for the room's border, use setRoomBorderColor() or setRoomBorderThickness()").arg(key));
     }
     pR->userData[key] = value;
-    host.mpMap->setUnsaved(__func__);
-    host.mpMap->updateArea(pR->getArea());
+    roomUserDataChanged(*host.mpMap, *pR, roomUserDataKeyDrawn(key), __func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -4529,11 +4578,18 @@ int TLuaInterpreter::setRoomWeight(lua_State* L)
 {
     const int id = getVerifiedInt(L, __func__, 1, "roomID");
     const int w = getVerifiedInt(L, __func__, 2, "weight");
+    bool fullErrorReporting = false;
+    if (lua_gettop(L) > 2) {
+        fullErrorReporting = getVerifiedBool(L, __func__, 3, "enableFullErrorReporting {default = false}", true);
+    }
 
     const Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+    if (fullErrorReporting && w < 1) {
+        return warnArgumentValue(L, __func__, qsl("weight %1 is outside of the usable range of 1 to %2").arg(QString::number(w), QString::number(std::numeric_limits<int>::max())));
     }
 
     pR->setWeight(w);

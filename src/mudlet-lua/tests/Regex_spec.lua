@@ -485,6 +485,44 @@ describe("PCRE regex cases with tempRegexTrigger", function()
             assert.are.equal(1, result.selected)
             assert.are.equal("beta", result.selection)
         end)
+
+        -- scripts blank a capture and rebuild it from matches, which they may
+        -- read for the first time only after the replace(); busted hands out
+        -- the globals metatable, which builds matches up front until rearmed
+        it("keeps what the game sent in matches when first read after replace()", function()
+            rearmLazyGlobals()
+            local captured
+            local id = tempRegexTrigger("^cgReplace (\\w+) (\\w+)$", function()
+                selectCaptureGroup(2)
+                replace("")
+                captured = matches[2]
+            end, 1)
+            finally(function() killTrigger(id) end)
+            feedTriggers("\ncgReplace alpha beta\n")
+            assert.are.equal("alpha", captured)
+        end)
+
+        it("selects the latest replacement after replacing a group twice", function()
+            rearmLazyGlobals()
+            local result = {}
+            local id = tempRegexTrigger("^cgReplace (\\w+) (\\w+)$", function()
+                selectCaptureGroup(2)
+                replace("x")
+                selectCaptureGroup(2)
+                replace("yyy")
+                result.selected = selectCaptureGroup(2)
+                result.selection = getSelection()
+                deselect()
+                result.line = getCurrentLine()
+                result.captured = matches[2]
+            end, 1)
+            finally(function() killTrigger(id) end)
+            feedTriggers("\ncgReplace alpha beta\n")
+            assert.are.equal("cgReplace yyy beta", result.line)
+            assert.are.equal(1, result.selected)
+            assert.are.equal("yyy", result.selection)
+            assert.are.equal("alpha", result.captured)
+        end)
     end)
 
     -- selecting a later group must leave the stored full match untouched

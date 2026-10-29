@@ -1,4 +1,5 @@
 
+#include "GroupedTest.h"
 #include "TMxpSendTagHandler.h"
 #include "TMxpStubClient.h"
 #include <QTest>
@@ -410,4 +411,4 @@ private slots:
 };
 
 #include "TMxpSendTagHandlerTest.moc"
-QTEST_MAIN(TMxpSendTagHandlerTest)
+MUDLET_GROUPED_TEST_MAIN(TMxpSendTagHandlerTest)

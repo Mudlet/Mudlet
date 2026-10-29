@@ -94,6 +94,9 @@ const QString scmHostileScript = qsl("-- 特殊 characters: <tag> & \"double\" '
                                      "end\n");
 
 const QString scmHostileCommand = qsl("say <hi> & \"there\" 'pal' ]]>");
+
+// A NUL inside a Lua string still compiles, but pugixml ends the text it stores at one (issue #10385)
+const QString scmNulScript = qsl("local nul = \"before") + QChar(u'\0') + qsl("after\"\n-- twin ]]> script\n");
 } // namespace
 
 // Compares one field of the pair of tree nodes held in the local variables
@@ -298,7 +301,7 @@ private:
         // Scripts, with event handler registrations:
         auto scGroup = addScript(nullptr, qsl("脚本组"), true, true, {}, QString());
         addScript(scGroup, qsl("dup script"), false, true, {qsl("sysDataEvent"), qsl("custom<>&\"'Event"), qsl("日本語イベント")}, scmHostileScript);
-        addScript(scGroup, qsl("dup script"), false, false, {}, qsl("-- twin ]]> script\n"));
+        addScript(scGroup, qsl("dup script"), false, false, {}, scmNulScript);
         auto scInner = addScript(scGroup, qsl("scripts <sub> & 'group'"), true, true, {}, QString());
         addScript(scInner, qsl("émoji🎉 script"), false, true, {qsl("emojiEvent🎉")}, qsl("-- emoji script\n"));
         addScript(nullptr, qsl("lone script"), false, false, {}, QString());

@@ -158,6 +158,8 @@ private:
     QPixmap mSvgPixmapCache;
     // set when the link styling replaces the palette the stylesheet gave the label
     bool mPaletteSetSinceStyled = false;
+    // set once a stylesheet has been applied over an earlier one, see restyle()
+    bool mRepolished = false;
 
 private slots:
     void slot_linkActivated(const QString& link);

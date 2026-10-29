@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <TMCPLuaBridge.h>
 #include <TMCPServer.h>
 #include <utils.h>
@@ -1119,5 +1120,5 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
     }
 };
 
-QTEST_MAIN(TMCPServerTest) // NOLINT(misc-use-anonymous-namespace)
+MUDLET_GROUPED_TEST_MAIN(TMCPServerTest) // NOLINT(misc-use-anonymous-namespace)
 #include "TMCPServerTest.moc"

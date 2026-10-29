@@ -66,8 +66,9 @@ static QString numberToText(const lua_Number number)
     return text;
 }
 
-LuaInterface::LuaInterface(lua_State* L)
+LuaInterface::LuaInterface(lua_State* L, TLuaInterpreter* pInterpreter)
 : mL(L)
+, mpInterpreter(pInterpreter)
 {
     varUnit.reset(new VarUnit());
     //set our panic function
@@ -165,6 +166,7 @@ bool LuaInterface::loadKey(lua_State* L, TVar* var)
 
 bool LuaInterface::loadValue(lua_State* L, TVar* var, int index)
 {
+    const TLuaInterpreter::ScriptCallerScope callerScope(mpInterpreter, false);
     // Pushes the value on success and leaves the stack alone on every failure
     // path. Every caller hands over the profile's live state, where a slot left
     // behind stays for the rest of the session (#9885).
@@ -444,6 +446,7 @@ bool LuaInterface::pushOwningTable(const QList<TVar*>& vars)
 // the long-bracket literal it was written into.
 bool LuaInterface::setValue(TVar* var)
 {
+    const TLuaInterpreter::ScriptCallerScope callerScope(mpInterpreter, false);
     const QList<TVar*> vars = varOrder(var);
     if (vars.isEmpty()) {
         // a variable named _G - varOrder() gives it no path
@@ -510,6 +513,7 @@ bool LuaInterface::setValue(TVar* var)
 // and left the member itself where it was, to reappear in the Variables view.
 void LuaInterface::deleteVar(TVar* var)
 {
+    const TLuaInterpreter::ScriptCallerScope callerScope(mpInterpreter, false);
     const QList<TVar*> vars = varOrder(var);
     if (vars.isEmpty()) {
         // a variable named _G - varOrder() gives it no path
@@ -538,6 +542,7 @@ void LuaInterface::deleteVar(TVar* var)
 // a word - the write is refused instead.
 bool LuaInterface::newNameIsFree(TVar* var)
 {
+    const TLuaInterpreter::ScriptCallerScope callerScope(mpInterpreter, false);
     if (var->isReference() || (var->getNewName() == var->getName() && var->getNewKeyType() == var->getKeyType())) {
         // a member reached by a reference key is renamed onto the very key it
         // already has, and so is one whose name has not in fact changed
@@ -575,6 +580,7 @@ bool LuaInterface::newNameIsFree(TVar* var)
 // all, and a key that closed the subscript ran the rest of itself as Lua.
 bool LuaInterface::renameVar(TVar* var)
 {
+    const TLuaInterpreter::ScriptCallerScope callerScope(mpInterpreter, false);
     //this assumes anything like reparenting has been done
 
     const QList<TVar*> vars = varOrder(var);
@@ -661,6 +667,7 @@ bool LuaInterface::renameVar(TVar* var)
 // its values off the tree the walk built, see exportedValue() in XMLexport.cpp.
 QString LuaInterface::getValue(TVar* var)
 {
+    const TLuaInterpreter::ScriptCallerScope callerScope(mpInterpreter, false);
     // A save calls this once per exported variable, on the profile's live stack,
     // so every exit has to put that stack back where it found it: what one left
     // behind used to be charged to the state for the rest of the session (#9885).
@@ -733,6 +740,29 @@ static bool serializableValueType(const int valueType)
     return valueType == LUA_TTABLE || valueType == LUA_TSTRING || valueType == LUA_TNUMBER || valueType == LUA_TBOOLEAN;
 }
 
+// Whether a saved-variables walk should write out a table it has already
+// written once in this saved global, under the name it has just reached it by.
+// The table at -1 is the one in question. Not when the name leads back to a
+// table the walk is inside, which would never end; nor for an object (a table
+// with a metatable), which no save brings back as one and whose copies the UI
+// objects packages keep in saved tables multiply out of all proportion (#9762);
+// nor once this global's copies run past scmMaxAliasCopyNodes, as tables shared
+// at every level double with each level.
+bool LuaInterface::savedWalkCanCopyAlias(lua_State* L, const void* pKey, const void* pValue, const int valueType)
+{
+    if (valueType != LUA_TTABLE || varUnit->pointerSeen(pKey) || mSavedWalkPath.contains(pValue)) {
+        return false;
+    }
+    if (mAliasCopyNodes >= scmMaxAliasCopyNodes) {
+        return false;
+    }
+    if (lua_getmetatable(L, -1)) {
+        lua_pop(L, 1);
+        return false;
+    }
+    return true;
+}
+
 void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
 {
     if (index == LUA_GLOBALSINDEX) {
@@ -783,6 +813,7 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
                 // each saved global is walked in its own dedup scope, so two of them
                 // that reference the same table both get a complete subtree
                 varUnit->clearPointers();
+                mAliasCopyNodes = 0;
                 mCurrentSavedRootName = keyName;
             } else if (!serializableValueType(vType)) {
                 // the whole global, not just the table this value sits in: a
@@ -808,11 +839,24 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
         // Mudlet's own API - but a saved variable reached second would be left
         // with no node to export from, so it is exempt (#9755). _G reaches
         // itself, hence the name test.
-        if (keyName == qsl("_G") || (varUnit->varExists(var) && !varUnit->isSaved(var))) {
+        bool skip = keyName == qsl("_G") || (varUnit->varExists(var) && !varUnit->isSaved(var));
+        bool aliasCopy = false;
+        if (skip && mSavedVarsOnly && keyName != qsl("_G") && savedWalkCanCopyAlias(L, pKey, pValue, vType)) {
+            // the XML can only hold a second name for a plain table as a second
+            // copy, and leaving it out loses it from the save (#10721)
+            skip = false;
+            aliasCopy = true;
+        }
+        if (skip) {
             lua_pop(L, 1);
             tVar->removeChild(var);
             delete var;
             continue;
+        }
+        var->aliasCopy = aliasCopy && mAliasCopyDepth == 0;
+        if (mSavedVarsOnly && (aliasCopy || mAliasCopyDepth > 0) && ++mAliasCopyNodes == scmMaxAliasCopyNodes) {
+            qWarning().noquote().nospace() << "LuaInterface::iterateTable() WARNING - the saved variable \"" << mCurrentSavedRootName
+                                           << "\" names the same tables so many times that only the first name for each of the rest is saved.";
         }
         varUnit->addVariable(var);
 
@@ -831,8 +875,16 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
             if (!tooDeep && lua_checkstack(L, 3)) {
                 //put the table on top
                 lua_pushnil(L);
+                if (mSavedVarsOnly) {
+                    mSavedWalkPath.append(pValue);
+                    mAliasCopyDepth += aliasCopy ? 1 : 0;
+                }
                 iterateTable(L, -2, var, hide);
                 depth--;
+                if (mSavedVarsOnly) {
+                    mSavedWalkPath.removeLast();
+                    mAliasCopyDepth -= aliasCopy ? 1 : 0;
+                }
             } else {
                 const QString variableName = varUnit->shortVarPath(var);
                 qWarning().noquote().nospace() << "LuaInterface::iterateTable() WARNING - not reading the contents of the table \"" << variableName
@@ -991,6 +1043,9 @@ bool LuaInterface::readSavedVars()
     mTruncatedSavedTables.clear();
     mSavedRootsHoldingUnsaveableValues.clear();
     mCurrentSavedRootName.clear();
+    // a panic jumps out of the walk without unwinding these
+    mSavedWalkPath.clear();
+    mAliasCopyDepth = 0;
     resetVariableTree();
     lua_pushnil(mL);
     iterateTable(mL, LUA_GLOBALSINDEX, varUnit->getBase(), false);

@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include "dlgConnectionProfiles.h"
 #include "utils.h"
 
@@ -183,5 +184,5 @@ private slots:
     }
 };
 
-QTEST_GUILESS_MAIN(ProfileNameValidationTest)
+MUDLET_GROUPED_TEST_GUILESS_MAIN(ProfileNameValidationTest)
 #include "ProfileNameValidationTest.moc"

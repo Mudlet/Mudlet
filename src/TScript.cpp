@@ -124,6 +124,8 @@ bool TScript::setScript(const QString& script)
     mNeedsToBeCompiled = true;
     if (!mpHost->blockScripts()) {
         mOK_code = compileScript();
+        // Even on failure: a body that stopped part way must not be run again by compileAll()
+        mNeedsToBeCompiled = false;
     }
     return mOK_code;
 }

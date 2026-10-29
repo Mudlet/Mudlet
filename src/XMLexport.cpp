@@ -862,7 +862,7 @@ void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
     // "it is empty, so rebuild it" guard packages carry needs to see (#9857).
     // The same fence goes up around a global the walk died inside, which was
     // not read to the end either. A member dropped for its size, for being a
-    // second name for a table already written, or for being hidden still rides
+    // second name for an object or a cycle, or for being hidden still rides
     // along with its siblings, because those are limits on how much of a table
     // to write rather than on what a table can hold, and fencing the whole
     // variable on one of them would lose more than it saved.
@@ -1466,6 +1466,14 @@ void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent, bool withChildren)
 
 void XMLexport::writeScriptElement(const QString& script, pugi::xml_node xmlElement)
 {
+    // pugixml ends the text it stores at a NUL, and XML 1.0 cannot carry one anyway, so it gets
+    // the U+FFFC + Control Picture stand-in that sanitizeForQxml() gives the other control characters
+    if (script.contains(QChar(u'\0'))) {
+        QString encoded = script;
+        encoded.replace(QChar(u'\0'), qsl("\xFFFC\x2400"));
+        xmlElement.append_child("script").text().set(encoded.toUtf8().constData());
+        return;
+    }
     xmlElement.append_child("script").text().set(script.toUtf8().constData());
 }
 

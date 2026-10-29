@@ -178,9 +178,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       it("gives a line the local time it arrived at, as hh:mm:ss.zzz and a space", function()
+        -- before the echo: the line may keep the time the echo read, a fraction of a millisecond earlier
+        local before = os.date("%H:%M:%S")
         echo("\n")
         local line = getLastLineNumber("main")
-        local before = os.date("%H:%M:%S")
         feedTriggers("getTimestamp arrival line\n")
         local after = os.time()
         local timestamp = getTimestamp(line)
@@ -210,6 +211,23 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         local a, b = getTimestamp(first), getTimestamp(first + 1)
         assert.are_not.equal(a, b)
         assert.are.equal(a, getTimestamp(first))
+      end)
+
+      it("gives a line that arrived with another the time it was stored, after the other's trigger ran", function()
+        -- a stored line's time is only ever reused once the TSC rate has been measured, over 100 ms
+        echo("\n")
+        local calibrationStart = getEpoch()
+        repeat until getEpoch() - calibrationStart >= 0.12
+        echo("\n")
+        local first = getLastLineNumber("main")
+        local triggerId = tempExactMatchTrigger("getTimestamp slow trigger line", function()
+          local start = getEpoch()
+          repeat until getEpoch() - start >= 0.005
+        end)
+        finally(function() killTrigger(triggerId) end)
+        feedTriggers("getTimestamp slow trigger line\ngetTimestamp line after it\n")
+        assert.are.equal("getTimestamp line after it", getLines(first + 1, first + 2)[1])
+        assert.are_not.equal(getTimestamp(first), getTimestamp(first + 1))
       end)
 
       it("should return nil+msg for a negative line number", function()
@@ -2219,6 +2237,20 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         return false
       end
 
+      -- Whether a replay is running is application-wide, so each spec lets its
+      -- own run out before the next asks for one. loadReplay() refuses while one
+      -- runs before it looks at the file, so a missing file tells which it is.
+      local function replayEnded()
+        for _ = 1, 40 do
+          local _, err = loadReplay(getMudletHomeDir() .. "/mudlet-spec-no-such-replay.dat")
+          if not contains(err, "in progress") then
+            return true
+          end
+          pumpEvents(50)
+        end
+        return false
+      end
+
       it("raises a Lua error when called with no arguments", function()
         assertArgError(function() loadReplay() end, "loadReplay: bad argument #1 type")
       end)
@@ -2278,9 +2310,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(loadReplay(replay))
 
         assert.is_true(playedBack(mark, "mudlet-spec-replayed-line"), "the replay did not reach the console")
-        -- whether a replay is running is application-wide, so let this one run
-        -- out before the next spec asks for one
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end)
 
       it("plays back a replay written with the eight byte delay", function()
@@ -2296,7 +2326,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(loadReplay(replay))
 
         assert.is_true(playedBack(mark, "mudlet-spec-wide-replay-line"), "the replay did not reach the console")
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end)
 
       -- older Mudlets recorded an empty chunk when a compressed read
@@ -2314,7 +2344,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(loadReplay(replay))
 
         assert.is_true(playedBack(mark, "mudlet-spec-after-empty-line"), "the replay did not reach the console")
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end)
 
       -- a first delay of zero makes the wider shape start with eight zero
@@ -2333,7 +2363,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
         assert.is_true(playedBack(mark, "mudlet-spec-wide-after-empty-line"), "the replay did not reach the console")
         assert.is_true(contains(textFrom(mark), "mudlet-spec-wide-before-empty-line"), "the line before the empty chunk did not reach the console")
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end)
 
       -- read with four byte delays, this file runs out part way through a
@@ -2351,7 +2381,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(loadReplay(replay))
 
         assert.is_true(playedBack(mark, "Zq"), "the replay did not reach the console")
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end)
 
       it("loads a replay after refusing a file too short to be one", function()
@@ -2375,7 +2405,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         local mark = getLastLineNumber("main")
         assert.is_true(loadReplay(replay))
         assert.is_true(playedBack(mark, "mudlet-spec-after-short-line"), "the replay did not reach the console")
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end)
 
       it("acts on telnet negotiation that was recorded with the text", function()
@@ -2402,7 +2432,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(playedBack(mark, "mudlet-spec-gmcp-replay-line"), "the replay did not reach the console")
         assert.is_truthy(gmcp.Replay and gmcp.Replay.Marker, "the subnegotiation recorded in the replay was played back as text instead of acted on")
         assert.equals("seen", gmcp.Replay.Marker.note)
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end)
 
       it("refuses a second replay while one is still running", function()
@@ -2430,7 +2460,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(playedBack(mark, "mudlet-spec-first-replay-line"), "the replay that was accepted did not reach the console")
         assert.is_true(playedBack(mark, "mudlet-spec-first-replay-tail"), "refusing the second replay cut the first one short")
         assert.is_false(contains(textFrom(mark), "mudlet-spec-second-replay-line"), "the replay that was refused played anyway")
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end)
 
       -- The file is only vetted when it is loaded, so this rewrites the second
@@ -2460,7 +2490,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         writeFile(after, chunk(0, "mudlet-spec-after-rewritten-line\r\n"))
         assert.is_true(loadReplay(after), "the aborted replay was still counted as running")
         assert.is_true(playedBack(mark, "mudlet-spec-after-rewritten-line"), "the replay after the aborted one did not reach the console")
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end
 
       it("ends a replay at a chunk whose length turned negative after loading", function()
@@ -2740,95 +2770,137 @@ describe("Tests C++ functions in the Miscallaneous category", function()
     end)
 
     describe("Tests the functionality of denyCurrentSend", function()
-      it("returns nothing", function()
-        finally(function()
-          -- the flag is consumed by the next send, so hand it one rather than
-          -- leaving the following specs' sends blocked
-          send("", false)
-        end)
+      -- Offline, an allowed send shows only as the once-per-encoding warning for a command it cannot encode
+      local unencodable = "\228\184\128" -- U+4E00, in no ISO 8859 encoding
+      local restore, originalMode
 
-        assert.equals(0, select('#', denyCurrentSend()))
+      local function clearWarning()
+        assert.is_true(setServerEncoding(getServerEncoding() == "ISO 8859-1" and "ISO 8859-2" or "ISO 8859-1"))
+      end
+
+      local function sentSince(mark, command)
+        return containsWrapped(textFrom(mark), "Tried to send '" .. command)
+      end
+
+      -- for every spec that expects a command to be stopped: without it a silent
+      -- deny would pass even if the warning had stopped being posted at all
+      local function assertProbeWorks()
+        clearWarning()
+        local mark = getLastLineNumber("main")
+        send("mudletSpecProbe" .. unencodable, false)
+        assert.is_true(sentSince(mark, "mudletSpecProbe"), "an allowed send was not reported, so this spec cannot tell the two apart")
+      end
+
+      before_each(function()
+        restore = restoreServerEncoding()
+        originalMode = getConfig("showSentText", true)
+        assert.is_true(setConfig("showSentText", "script"))
+        clearWarning()
       end)
 
-      it("stops the command that follows it from being sent", function()
-        -- Nothing goes on the wire offline, so what makes a send observable is
-        -- the warning Mudlet posts when a command cannot be encoded for the
-        -- game: it is only reached once the send has been allowed. Switching
-        -- the encoding first clears the once-per-encoding warning flag.
-        local probeEncoding = (getServerEncoding() == "ISO 8859-1") and "ISO 8859-2" or "ISO 8859-1"
-        finally(restoreServerEncoding())
-        assert.is_true(setServerEncoding(probeEncoding))
-        -- U+4E00, which no ISO 8859 encoding can represent
-        local unencodable = "\228\184\128"
+      after_each(function()
+        setConfig("showSentText", originalMode)
+        restore()
+      end)
 
-        denyCurrentSend()
+      it("returns nil and a message outside a send request handler", function()
+        local ok, err = denyCurrentSend()
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "sysDataSendRequest"), tostring(err))
+      end)
+
+      it("stops the command its send request handler is processing, and only that one", function()
+        local returned
+        local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
+          if sending:find("^mudletSpecDenied") then
+            returned = select('#', denyCurrentSend())
+          end
+        end)
+        finally(function() killAnonymousEventHandler(handler) end)
+
         local mark = getLastLineNumber("main")
         send("mudletSpecDenied" .. unencodable, false)
-        local afterDeny = textFrom(mark)
-
-        mark = getLastLineNumber("main")
-        send("mudletSpecAllowed" .. unencodable, false)
-        local afterAllow = textFrom(mark)
-
-        -- checked first: without it a silent deny spec would pass even if the
-        -- warning had stopped being posted at all
-        assert.is_true(contains(afterAllow, "mudletSpecAllowed"), "the allowed send was not reported, so this spec cannot tell the two apart")
-        assert.is_false(contains(afterDeny, "mudletSpecDenied"), "the denied command was sent anyway")
+        local deniedSent = sentSince(mark, "mudletSpecDenied")
+        assertProbeWorks()
+        assert.equals(0, returned)
+        assert.is_false(deniedSent, "the denied command was sent anyway")
       end)
 
-      describe("when raised by an alias", function()
-        -- as above, but matching the warning's text: the echo of a blocked command
-        -- must not pass for a sent one
-        local unencodable = "\228\184\128"
-        local restore, originalMode
+      it("lets a one-shot handler named by string deny one command and go", function()
+        local handler = registerAnonymousEventHandler("sysDataSendRequest", "denyCurrentSend", true)
+        finally(function() killAnonymousEventHandler(handler) end)
 
-        local function clearWarning()
-          assert.is_true(setServerEncoding(getServerEncoding() == "ISO 8859-1" and "ISO 8859-2" or "ISO 8859-1"))
-        end
+        local mark = getLastLineNumber("main")
+        send("mudletSpecOneShotDenied" .. unencodable, false)
+        local deniedSent = sentSince(mark, "mudletSpecOneShotDenied")
+        assertProbeWorks()
+        assert.is_false(deniedSent, "the one-shot handler did not deny the command")
+      end)
 
-        local function sentSince(mark, command)
-          return containsWrapped(textFrom(mark), "Tried to send '" .. command)
-        end
-
-        before_each(function()
-          restore = restoreServerEncoding()
-          originalMode = getConfig("showSentText", true)
-          assert.is_true(setConfig("showSentText", "script"))
-          clearWarning()
-        end)
-
-        after_each(function()
-          -- a deny left over by a failure here would block the following specs' sends
-          send("", false)
-          setConfig("showSentText", originalMode)
-          restore()
-        end)
-
-        it("is spent by the alias pass it was raised in", function()
-          local denyOnly = tempAlias("^mudletSpecDenyNoSend$", function() denyCurrentSend() end)
-          local denyAndSend = tempAlias("^mudletSpecDenyAndSend$", function()
+      it("keeps the deny of a send made by a handler to that send", function()
+        local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
+          if sending:find("^mudletSpecNestedDenied") then
             denyCurrentSend()
-            send("mudletSpecDeniedInAlias" .. unencodable, false)
-          end)
-          finally(function()
-            killAlias(denyOnly)
-            killAlias(denyAndSend)
-          end)
+          elseif sending:find("^mudletSpecOuterAllowed") then
+            send("mudletSpecNestedDenied" .. unencodable, false)
+          end
+        end)
+        finally(function() killAnonymousEventHandler(handler) end)
+
+        local mark = getLastLineNumber("main")
+        send("mudletSpecOuterAllowed" .. unencodable, false)
+        assert.is_false(sentSince(mark, "mudletSpecNestedDenied"), "the nested send was sent although its handler denied it")
+        assert.is_true(sentSince(mark, "mudletSpecOuterAllowed"), "the nested send's deny stopped the command being handled")
+      end)
+
+      describe("outside a send request handler", function()
+        it("does not stop the next command", function()
+          denyCurrentSend()
+          local mark = getLastLineNumber("main")
+          send("mudletSpecAfterBareDeny" .. unencodable, false)
+          assert.is_true(sentSince(mark, "mudletSpecAfterBareDeny"), "a deny made outside a handler swallowed the next command")
+        end)
+
+        it("does not stop the first command of a sendAll", function()
+          denyCurrentSend()
+          local mark = getLastLineNumber("main")
+          sendAll("mudletSpecFirstOfAll" .. unencodable, "mudletSpecSecondOfAll", false)
+          assert.is_true(sentSince(mark, "mudletSpecFirstOfAll"), "a deny made outside a handler swallowed the first command of a sendAll")
+        end)
+
+        it("does not stop the command after a trigger that sent nothing", function()
+          local trigger = tempTrigger("mudletSpecDenyTrigger", function() denyCurrentSend() end)
+          finally(function() killTrigger(trigger) end)
+
+          feedTriggers("mudletSpecDenyTrigger\n")
+          local mark = getLastLineNumber("main")
+          send("mudletSpecAfterTrigger" .. unencodable, false)
+          assert.is_true(sentSince(mark, "mudletSpecAfterTrigger"), "a trigger's deny swallowed the next command")
+        end)
+
+        it("does not stop the command after an alias that sent nothing", function()
+          local denyOnly = tempAlias("^mudletSpecDenyNoSend$", function() denyCurrentSend() end)
+          finally(function() killAlias(denyOnly) end)
 
           expandAlias("mudletSpecDenyNoSend", false)
           local mark = getLastLineNumber("main")
           send("mudletSpecAfterDenyOnly" .. unencodable, false)
           assert.is_true(sentSince(mark, "mudletSpecAfterDenyOnly"), "an alias that denied and sent nothing swallowed the next command")
-
-          clearWarning()
-          mark = getLastLineNumber("main")
-          expandAlias("mudletSpecDenyAndSend", false)
-          assert.is_false(sentSince(mark, "mudletSpecDeniedInAlias"), "the alias's own send was not denied")
-          send("mudletSpecAfterDenyAndSend" .. unencodable, false)
-          assert.is_true(sentSince(mark, "mudletSpecAfterDenyAndSend"), "the command after the alias was swallowed")
         end)
 
-        it("is spent by each command of a line split by the command separator", function()
+        it("does not stop a send from the alias that raised it", function()
+          local denyAndSend = tempAlias("^mudletSpecDenyAndSend$", function()
+            denyCurrentSend()
+            send("mudletSpecSentByDenyingAlias" .. unencodable, false)
+          end)
+          finally(function() killAlias(denyAndSend) end)
+
+          local mark = getLastLineNumber("main")
+          expandAlias("mudletSpecDenyAndSend", false)
+          assert.is_true(sentSince(mark, "mudletSpecSentByDenyingAlias"), "the alias's own send was denied")
+        end)
+
+        it("does not stop the command after the command separator", function()
           local separator = getCommandSeparator()
           assert.is_true(separator ~= "", "the profile has no command separator, so nothing gets split")
           local denyOnly = tempAlias("^mudletSpecDenyNoSend$", function() denyCurrentSend() end)
@@ -2839,21 +2911,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(sentSince(mark, "mudletSpecAfterSeparator"), "the command after the separator was swallowed")
         end)
 
-        it("is spent even when an earlier deny was spent in the same pass", function()
-          local sendThenDeny = tempAlias("^mudletSpecSendThenDeny$", function()
-            send("mudletSpecInner", false)
-            denyCurrentSend()
-          end)
-          finally(function() killAlias(sendThenDeny) end)
-
-          denyCurrentSend()
-          expandAlias("mudletSpecSendThenDeny", false)
-          local mark = getLastLineNumber("main")
-          send("mudletSpecAfterReDeny" .. unencodable, false)
-          assert.is_true(sentSince(mark, "mudletSpecAfterReDeny"), "the deny raised after the alias's send swallowed the next command")
-        end)
-
-        it("is spent by a nested alias pass, not left for the outer alias's next send", function()
+        it("does not stop the send of an outer alias that expanded the denying one", function()
           local inner = tempAlias("^mudletSpecDenyInner$", function() denyCurrentSend() end)
           local outer = tempAlias("^mudletSpecOuter$", function()
             expandAlias("mudletSpecDenyInner", false)
@@ -2868,10 +2926,51 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           expandAlias("mudletSpecOuter", false)
           assert.is_true(sentSince(mark, "mudletSpecAfterNested"), "the inner alias's deny blocked the outer alias's send")
         end)
+      end)
 
-        -- a sysDataSendRequest handler can deny a command and expand an alias in
-        -- its place: that alias's pass must not spend the deny meant for the command
-        it("still stops a command whose send request handler expands an alias that sends nothing", function()
+      describe("in a send request handler that expands an alias", function()
+        -- the alias re-arms the warning for the original to show if it slips through;
+        -- an assert there would only reach the error console
+        local warningCleared
+        local function replacingAlias(denyFirst)
+          warningCleared = false
+          local replacement = tempAlias("^mudletSpecReplacement$", function()
+            send("mudletSpecReplacementSent" .. unencodable, false)
+            warningCleared = setServerEncoding(getServerEncoding() == "ISO 8859-1" and "ISO 8859-2" or "ISO 8859-1")
+          end)
+          local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
+            if sending:find("^mudletSpecOriginal") then
+              if denyFirst then
+                denyCurrentSend()
+              end
+              expandAlias("mudletSpecReplacement", false)
+              if not denyFirst then
+                denyCurrentSend()
+              end
+            end
+          end)
+          return function()
+            killAlias(replacement)
+            killAnonymousEventHandler(handler)
+          end
+        end
+
+        for _, denyFirst in ipairs({true, false}) do
+          it("sends the alias's replacement and stops the original, denying " .. (denyFirst and "first" or "last"), function()
+            finally(replacingAlias(denyFirst))
+
+            local mark = getLastLineNumber("main")
+            send("mudletSpecOriginal" .. unencodable, false)
+            local replacementSent = sentSince(mark, "mudletSpecReplacementSent")
+            local originalSent = sentSince(mark, "mudletSpecOriginal")
+            assertProbeWorks()
+            assert.is_true(warningCleared, "the alias could not clear the warning, so the original's send would go unseen")
+            assert.is_true(replacementSent, "the replacement the alias sent was blocked")
+            assert.is_false(originalSent, "the denied command was sent anyway")
+          end)
+        end
+
+        it("still stops the command when the alias sends nothing", function()
           local silent = tempAlias("^mudletSpecSilentReplacement$", function() end)
           local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
             if sending:find("mudletSpecReplaced", 1, true) then
@@ -2887,15 +2986,11 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           local mark = getLastLineNumber("main")
           send("mudletSpecReplaced" .. unencodable, false)
           local deniedSent = sentSince(mark, "mudletSpecReplaced")
-
-          clearWarning()
-          mark = getLastLineNumber("main")
-          send("mudletSpecAllowedAfterReplace" .. unencodable, false)
-          assert.is_true(sentSince(mark, "mudletSpecAllowedAfterReplace"), "the allowed send was not reported, so this spec cannot tell the two apart")
+          assertProbeWorks()
           assert.is_false(deniedSent, "the denied command was sent anyway")
         end)
 
-        it("stops a command whose send request handler expands an alias that denies it", function()
+        it("stops the command when the alias denies it", function()
           local guard = tempAlias("^mudletSpecGuard (.*)$", function()
             if matches[2]:find("mudletSpecGuarded", 1, true) then
               denyCurrentSend()
@@ -2918,16 +3013,12 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           mark = getLastLineNumber("main")
           expandAlias("mudletSpecGuardedTyped" .. unencodable, false)
           local typedSent = sentSince(mark, "mudletSpecGuardedTyped")
-
-          clearWarning()
-          mark = getLastLineNumber("main")
-          send("mudletSpecAllowedAfterGuard" .. unencodable, false)
-          assert.is_true(sentSince(mark, "mudletSpecAllowedAfterGuard"), "the allowed send was not reported, so this spec cannot tell the two apart")
+          assertProbeWorks()
           assert.is_false(scriptSendSent, "the command the guard alias denied was sent anyway")
           assert.is_false(typedSent, "the typed command the guard alias denied was sent anyway")
         end)
 
-        it("stops a command whose send request handler expands an alias that leaves the deny to a nested alias", function()
+        it("stops the command when the alias leaves the deny to a nested alias", function()
           local rule = tempAlias("^mudletSpecRule (.*)$", function()
             if matches[2]:find("mudletSpecDelegated", 1, true) then
               denyCurrentSend()
@@ -2950,11 +3041,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           local mark = getLastLineNumber("main")
           send("mudletSpecDelegated" .. unencodable, false)
           local delegatedSent = sentSince(mark, "mudletSpecDelegated")
-
-          clearWarning()
-          mark = getLastLineNumber("main")
-          send("mudletSpecAllowedAfterDelegated" .. unencodable, false)
-          assert.is_true(sentSince(mark, "mudletSpecAllowedAfterDelegated"), "the allowed send was not reported, so this spec cannot tell the two apart")
+          assertProbeWorks()
           assert.is_false(delegatedSent, "the command the nested alias denied was sent anyway")
         end)
       end)
@@ -3414,9 +3501,9 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
       -- Loads a profile whose script runs code once, from a timer; the code
       -- answers through report(), which raises mudletSpecTornDownResult. The
-      -- marker file turns a reset's re-run of the script into the global event
-      -- mudletSpecTornDownRerun instead of starting it all over again.
-      local function runInProfileBeingTornDown(code)
+      -- marker file turns a reset's re-run of the script into rerunCode and the
+      -- global event mudletSpecTornDownRerun instead of starting it all over again.
+      local function runInProfileBeingTornDown(code, rerunCode)
         for _, name in ipairs({closing, target}) do
           local path = profilesDirectory .. "/" .. name
           assert.is_true(lfs.attributes(path) == nil or ownedByUs(name),
@@ -3449,13 +3536,14 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 local function report(...) raiseGlobalEvent("mudletSpecTornDownResult", ...) end
 local marker = getMudletHomeDir() .. "/mudlet-spec-ran"
 if io.exists(marker) then
+  %s
   raiseGlobalEvent("mudletSpecTornDownRerun")
 else
   io.open(marker, "w"):close()
   tempTimer(0, function()
     %s
   end)
-end]], code)
+end]], rerunCode or "", code)
         script = script:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
 
         -- left behind by a run that crashed or was killed
@@ -3511,6 +3599,31 @@ end]], code)
         assert.equals("true", run.result[1])
         assert.is_true(waitUntil(function() return run.reset end), "the profile was not reset")
         assert.is_true(loaded(target))
+      end)
+
+      -- lua_close() runs __gc finalisers; a timer one of them makes outlives that state
+      it("never runs another function for a timer made while its state closed", function()
+        if needsTestMode() then
+          return
+        end
+        local wrong = {}
+        local handler = registerAnonymousEventHandler("mudletSpecTornDownWrong", function(_, which)
+          wrong[#wrong + 1] = which
+        end)
+        finally(function() killAnonymousEventHandler(handler) end)
+        local run = runInProfileBeingTornDown([[
+local keep = newproxy(true)
+getmetatable(keep).__gc = function() tempTimer(0.2, function() end) end
+mudletSpecKeep = keep
+resetProfile()
+report("reset")]], [[
+for i = 1, 2000 do
+  tempTimer(60, function() raiseGlobalEvent("mudletSpecTornDownWrong", i) end)
+end]])
+        assert.equals("reset", run.result[1])
+        assert.is_true(waitUntil(function() return run.reset end), "the profile was not reset")
+        pumpEvents(600)
+        assert.are.same({}, wrong, "functions made after the reset ran early")
       end)
 
       it("closes another profile after closeProfile(), then closes", function()

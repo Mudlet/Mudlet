@@ -290,6 +290,15 @@ inline Breaks asciiLineBreaks(const QStringView text)
     AsciiClass lcls = SOT;
     AsciiClass cls = SOT;
     for (qsizetype i = 0; i != len; ++i) {
+        if (cls == AL && lcls == AL && nelast == lb25::XX && neactlast == lb25::None) {
+            // A letter after a letter, outside a number, leaves every bit of state as it was
+            while (i != len && static_cast<unsigned>((text[i].unicode() | 0x20) - u'a') < 26U) {
+                ++i;
+            }
+            if (i == len) {
+                break;
+            }
+        }
         AsciiClass ncls = classOf(text[i].unicode());
         if (ncls == HY && (lcls == SP || lcls == SOT)) {
             // LB20a: no break after a word-initial hyphen

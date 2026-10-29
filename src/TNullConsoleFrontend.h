@@ -207,6 +207,7 @@ public:
     bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible) override;
     bool setWindowScrolling(const QString& name, bool enabled) override;
     bool scrollWindowTo(const QString& name, int line, bool toEnd) override;
+    bool windowFollowsNewLines(const QString& name) override;
     std::optional<std::pair<bool, QString>> setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight) override;
     bool setWindowFontSize(const QString& name, int size) override;
     std::optional<QSize> consoleFontSize(const QString& name) const override;
@@ -352,6 +353,8 @@ private:
         bool styled = false;
         // TLabel::mPaletteSetSinceStyled
         bool restyleDue = false;
+        // TLabel::mRepolished
+        bool repolished = false;
         // QLabel only measures its text once it has been given some, and caches the answer
         bool textLabel = false;
         mutable std::optional<QSize> sizeHint;

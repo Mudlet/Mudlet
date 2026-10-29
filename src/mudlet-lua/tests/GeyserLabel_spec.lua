@@ -1,3 +1,24 @@
+-- deleteLabel() leaves the widget to a deferred delete that cannot run until the
+-- whole suite is over, so its callbacks, and the labels they hold, are let go here.
+-- The setters are taken before any spec spies on them.
+local realDeleteLabel
+setup(function()
+  local globals = package.loaded._G
+  realDeleteLabel = globals.deleteLabel
+  local clearers = {globals.setLabelClickCallback, globals.setLabelDoubleClickCallback, globals.setLabelReleaseCallback,
+                    globals.setLabelMoveCallback, globals.setLabelWheelCallback, globals.setLabelOnEnter, globals.setLabelOnLeave}
+  globals.deleteLabel = function(name, ...)
+    for _, clear in ipairs(clearers) do
+      pcall(clear, name, nil)
+    end
+    return realDeleteLabel(name, ...)
+  end
+end)
+
+teardown(function()
+  package.loaded._G.deleteLabel = realDeleteLabel
+end)
+
 describe("Tests functionality of Geyser.Label", function()
   describe('Tests that decho/hecho/cecho preserve font size', function()
     local label
@@ -22,6 +43,12 @@ describe("Tests functionality of Geyser.Label", function()
       _G.echo:revert()
       if label then
         label:hide()
+      end
+    end)
+
+    teardown(function()
+      if label then
+        label:delete()
       end
     end)
 
@@ -136,6 +163,9 @@ describe("Tests functionality of Geyser.Label", function()
       label:setFont("")
       assertEchoes('<div align="right"  style="color: #405060; font-size: 12pt; "><s><u><i>MP</i></u></s></div>')
       assertEchoes('<div align="right"  style=" font-size: 12pt; "><s><u><i>MP</i></u></s></div>', "MP", "nocolor")
+      label:setFontSize(14)
+      assertEchoes('<div align="right"  style=" font-size: 14pt; "><s><u><i>MP</i></u></s></div>')
+      assertEchoes('<div align="right"  style="color: #405060; font-size: 14pt; "><s><u><i>MP</i></u></s></div>', "MP", "#405060")
     end)
   end)
 
@@ -354,7 +384,7 @@ describe("Tests functionality of Geyser.Label", function()
       end)
 
       teardown(function()
-        label:hide()
+        label:delete()
       end)
 
       -- Geyser.Label:new always echoes an empty rich-text div, so the hint has to
@@ -674,6 +704,248 @@ describe("Tests functionality of Geyser.Label widget state", function()
       assert.is_false(ok)
       assert.is_truthy(tostring(message):find("format as string expected, got number", 1, true))
     end)
+  end)
+
+  describe("Geyser.Label format setters on a decho, hecho or cecho message", function()
+    local label
+    local flavours = {
+      { name = "decho", message = "<255,0,0>red<r> plain" },
+      { name = "hecho", message = "#ff0000red#r plain" },
+      { name = "cecho", message = "<red>red<reset> plain" },
+    }
+    local setters = {
+      { name = "setFontSize", args = { 20 }, shows = "font%-size: 20pt" },
+      { name = "setBold", args = { true }, shows = "font%-weight: bold", hides = "font%-weight: normal" },
+      { name = "setItalics", args = { true }, shows = "font%-style: italic", hides = "font%-style: normal" },
+      { name = "setUnderline", args = { true }, shows = "text%-decoration: underline", hides = "text%-decoration: none" },
+      { name = "setStrikethrough", args = { true }, shows = "text%-decoration: line%-through", hides = "text%-decoration: none" },
+      { name = "setAlignment", args = { "center" }, shows = 'align="center"' },
+      { name = "setFormat", args = { "b18" }, shows = "font%-size: 18pt" },
+      { name = "setFont", args = { "Bitstream Vera Sans Mono" }, shows = "<font face=" },
+      { name = "setFgColor", args = { "blue" }, shows = "color: #0000ff" },
+    }
+
+    before_each(function()
+      label = track(Geyser.Label:new({name = "glsFlavour", x = 0, y = 0, width = 300, height = 50}))
+    end)
+
+    for _, flavour in ipairs(flavours) do
+      for _, setter in ipairs(setters) do
+        it(string.format("%s keeps the colours of a %s message", setter.name, flavour.name), function()
+          assert.is_true(label[flavour.name](label, flavour.message))
+          label[setter.name](label, unpack(setter.args))
+          local text = getLabelText("glsFlavour")
+          assert.is_truthy(text:find(setter.shows), text)
+          if setter.hides then
+            assert.is_nil(text:find(setter.hides), text)
+          end
+          assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+          assert.is_nil(text:find("#ff0000red", 1, true), text)
+          assert.is_nil(text:find("<255,0,0>", 1, true), text)
+          assert.is_nil(text:find("<red>", 1, true), text)
+          assert.are.equal(flavour.message, label.message)
+        end)
+      end
+    end
+
+    for _, flavour in ipairs(flavours) do
+      it(string.format("draws a %s message bold when setBold comes before or after it", flavour.name), function()
+        local text = "WWWWWWWWWWWWWWWWWWWW"
+        label:echo(text)
+        local plainWidth = getLabelSizeHint("glsFlavour")
+        label:setBold(true)
+        local boldWidth = getLabelSizeHint("glsFlavour")
+        if boldWidth <= plainWidth then
+          -- seen on the Windows CI runner, where the label font measures bold no wider
+          pending("this platform's label font draws plain bold text no wider")
+          return
+        end
+        label:setBold(false)
+        label[flavour.name](label, (flavour.message:gsub("red", text, 1)))
+        local colouredWidth = getLabelSizeHint("glsFlavour")
+        label:setBold(true)
+        local after = getLabelSizeHint("glsFlavour")
+        assert.is_true(after > colouredWidth)
+        label[flavour.name](label, (flavour.message:gsub("red", text, 1)))
+        assert.are.equal(after, getLabelSizeHint("glsFlavour"))
+      end)
+    end
+
+    it("shows a plain echo after hecho as it was given", function()
+      label:hecho("#ff0000red")
+      label:echo("#ff0000 is a colour code")
+      label:setFontSize(20)
+      local text = getLabelText("glsFlavour")
+      assert.is_truthy(text:find("#ff0000 is a colour code", 1, true), text)
+      assert.is_truthy(text:find("font%-size: 20pt"), text)
+    end)
+
+    it("echo with no message shows a hecho message again with its colours", function()
+      label:hecho("#ff0000red")
+      label:echo(nil, nil, "c")
+      local text = getLabelText("glsFlavour")
+      assert.is_truthy(text:find('align="center"', 1, true), text)
+      assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+      assert.is_nil(text:find("#ff0000red", 1, true), text)
+    end)
+
+    it("shows a plain echo on a label made from a hecho'd prototype as it was given", function()
+      label:hecho("#ff0000red")
+      local child = track(label:new({name = "glsFlavourChild", x = 0, y = 60, width = 300, height = 50}))
+      assert.is_truthy(getLabelText("glsFlavourChild"):find("color: rgb(255, 0, 0)", 1, true))
+      child:echo("#00ff00 stays text")
+      child:setFontSize(20)
+      assert.is_truthy(getLabelText("glsFlavourChild"):find("#00ff00 stays text", 1, true))
+    end)
+
+    it("gives a label made from a cecho'd prototype its own message as plain text", function()
+      label:cecho("<red>hp")
+      track(label:new({name = "glsFlavourOwn", x = 0, y = 60, width = 300, height = 50, message = "<red> stays text"}))
+      assert.is_truthy(getLabelText("glsFlavourOwn"):find("<red> stays text", 1, true))
+    end)
+
+    it("replays a cecho message put up after a plain echo", function()
+      label:echo("Offline")
+      label:cecho("<red>HP 10")
+      label:setFontSize(14)
+      local text = getLabelText("glsFlavour")
+      assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+      assert.is_nil(text:find("<red>", 1, true), text)
+    end)
+
+    it("replays through the flavour that put the message up last", function()
+      label:decho("<255,0,0>a")
+      label:hecho("#00ff00b")
+      label:setBold(true)
+      local text = getLabelText("glsFlavour")
+      assert.is_truthy(text:find("color: rgb(0, 255, 0)", 1, true), text)
+      assert.is_nil(text:find("#00ff00", 1, true), text)
+    end)
+
+    it("stays empty when a setter follows clear", function()
+      label:hecho("#ff0000HP")
+      label:clear()
+      label:setFontSize(14)
+      local text = getLabelText("glsFlavour")
+      assert.is_nil(text:find("HP", 1, true), text)
+      assert.is_nil(text:find("rgb(255, 0, 0)", 1, true), text)
+    end)
+
+    it("shows the same string given to echo explicitly as plain text", function()
+      label:hecho("#ff0000red")
+      label:echo(label.message, "blue")
+      assert.is_truthy(getLabelText("glsFlavour"):find("#ff0000red", 1, true))
+      label:setFontSize(14)
+      local text = getLabelText("glsFlavour")
+      assert.is_truthy(text:find("#ff0000red", 1, true), text)
+      assert.is_truthy(text:find("font%-size: 14pt"), text)
+    end)
+
+    it("reports through debugc when a setter cannot show a hecho message again", function()
+      label:hecho("#ff0000HP")
+      deleteLabel("glsFlavour")
+      local debugcSpy = spy.on(_G, "debugc")
+      local ok, err = pcall(label.setFontSize, label, 14)
+      _G.debugc:revert()
+      assert.is_true(ok, err)
+      assert.spy(debugcSpy).was.called()
+      local reported = debugcSpy.calls[#debugcSpy.calls].vals[1]
+      assert.is_truthy(reported:find("label 'glsFlavour' does not exist", 1, true), reported)
+    end)
+
+    it("does not replay the flavour before a call that raised on the same string", function()
+      label:cecho("<red>HP")
+      label.fgColor = "notacolour"
+      assert.is_false((pcall(label.decho, label, "<red>HP")))
+      label:setFgColor("white")
+      local text = getLabelText("glsFlavour")
+      assert.is_nil(text:find("rgb(255, 0, 0)", 1, true), text)
+      assert.is_truthy(text:find("<red>HP", 1, true), text)
+    end)
+
+    it("records the message echo was given when its format raises", function()
+      label:hecho("#ff0000red")
+      assert.is_false((pcall(label.echo, label, "new text", nil, 5)))
+      assert.are.equal("new text", label.message)
+    end)
+
+    it("shows a message a script put on the label itself as it was given", function()
+      label:cecho("<red>HP")
+      label.message = "<b>Status</b>"
+      label:setFontSize(14)
+      assert.is_truthy(getLabelText("glsFlavour"):find("<b>Status</b>", 1, true))
+    end)
+
+    it("echo given false after hecho shows the hecho message with its colours", function()
+      label:hecho("#ff0000red")
+      label:echo(false, "blue")
+      local text = getLabelText("glsFlavour")
+      assert.is_nil(text:find("#ff0000red", 1, true), text)
+      assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+    end)
+
+    for _, flavour in ipairs(flavours) do
+      it(string.format("takes nocolor after %s without an error", flavour.name), function()
+        assert.is_true(label[flavour.name](label, flavour.message))
+        label:setFgColor("nocolor")
+        local text = getLabelText("glsFlavour")
+        assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+        assert.are.equal("nocolor", label.fgColor)
+      end)
+
+      it(string.format("keeps the setters working after %s refuses a message that is not a string", flavour.name), function()
+        assert.is_true(label[flavour.name](label, flavour.message))
+        assert.is_false((pcall(label[flavour.name], label, 42)))
+        assert.are.equal(42, label.message)
+        assert.is_true((pcall(label.setFontSize, label, 12)))
+        local text = getLabelText("glsFlavour")
+        assert.is_truthy(text:find("font%-size: 12pt"), text)
+        assert.is_truthy(text:find(">42</div>", 1, true), text)
+      end)
+
+      it(string.format("records the message %s was given when the label's colour raises", flavour.name), function()
+        label.fgColor = "notacolour"
+        assert.is_false((pcall(label[flavour.name], label, flavour.message)))
+        assert.are.equal(flavour.message, label.message)
+        label:setFgColor("white")
+        assert.is_truthy(getLabelText("glsFlavour"):find(flavour.message, 1, true))
+      end)
+
+      it(string.format("does not recurse when an overridden %s calls a setter", flavour.name), function()
+        label[flavour.name] = function(self, message)
+          Geyser.Label[flavour.name](self, message)
+          self:setAlignment("center")
+        end
+        assert.is_true((pcall(label[flavour.name], label, flavour.message)))
+        assert.is_truthy(getLabelText("glsFlavour"):find('align="center"', 1, true))
+      end)
+
+      it(string.format("keeps the %s flavour after a setter is given a colour it cannot use", flavour.name), function()
+        assert.is_true(label[flavour.name](label, flavour.message))
+        assert.is_false((pcall(label.setFgColor, label, "notacolour")))
+        label:setFgColor("white")
+        local text = getLabelText("glsFlavour")
+        assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+        assert.is_nil(text:find(flavour.message, 1, true), text)
+      end)
+
+      it(string.format("raises at the setter for an empty colour on a %s message, as plain echo does", flavour.name), function()
+        assert.is_true(label[flavour.name](label, flavour.message))
+        assert.is_false((pcall(label.setFgColor, label, "")))
+      end)
+
+      it(string.format("does not raise when a replaced Geyser.Label.%s returns nothing", flavour.name), function()
+        local original = Geyser.Label[flavour.name]
+        Geyser.Label[flavour.name] = function(self, message)
+          original(self, message)
+        end
+        label[flavour.name](label, flavour.message)
+        local ok, err = pcall(label.setFontSize, label, 14)
+        Geyser.Label[flavour.name] = original
+        assert.is_true(ok, err)
+        assert.is_truthy(getLabelText("glsFlavour"):find("font%-size: 14pt"))
+      end)
+    end
   end)
 
   describe("Geyser.Label:getSizeHint and Geyser.Label auto-size adjustSize/adjustHeight/adjustWidth/autoAdjustSize/enableAutoAdjustSize/disableAutoAdjustSize", function()
@@ -1067,6 +1339,56 @@ describe("Tests functionality of Geyser.Label widget state", function()
       label:setBackgroundImage(":/icons/mudlet.png")
       assert.spy(background).was.called_with("glsBackground", ":/icons/mudlet.png")
       assert.are.equal("border: 1px solid red;", getLabelStyleSheet("glsBackground"))
+    end)
+
+    -- packages such as the-two-towers-exits-window clear their images this way
+    it("an empty path takes the image away", function()
+      local label = track(Geyser.Label:new({name = "glsEmptyPath", x = 0, y = 0, width = 40, height = 20}))
+      -- what a label with nothing on it measures depends on its font, which moves to the
+      -- application's on the first re-polish, so settle both labels before reading the twin
+      createLabel("glsEmptyTwin", 0, 0, 40, 20, 1)
+      for _, name in ipairs({"glsEmptyPath", "glsEmptyTwin"}) do
+        setLabelStyleSheet(name, getLabelStyleSheet(name))
+        setLabelStyleSheet(name, getLabelStyleSheet(name))
+      end
+      local blank = {getLabelSizeHint("glsEmptyTwin")}
+      deleteLabel("glsEmptyTwin")
+      local hint = function() return {getLabelSizeHint("glsEmptyPath")} end
+
+      assert.is_true(setBackgroundImage("glsEmptyPath", ":/icons/mudlet.png"))
+      assert.are.same({getImageSize(":/icons/mudlet.png")}, hint())
+      assert.is_true(setBackgroundImage("glsEmptyPath", ""))
+      assert.are.same(blank, hint())
+
+      assert.is_true(label:setBackgroundImage(":/icons/mudlet.png"))
+      assert.is_true(label:setBackgroundImage(""))
+      assert.are.same(blank, hint())
+
+      -- as setPixmap() did in 5.0.1, the text goes along with the image
+      label:echo("words")
+      assert.is_true(setBackgroundImage("glsEmptyPath", ""))
+      assert.are.equal("", getLabelText("glsEmptyPath"))
+      assert.are.same(blank, hint())
+
+      local svgPath = getMudletHomeDir() .. "/empty_path_spec.svg"
+      local file = io.open(svgPath, "w")
+      file:write([[<svg xmlns="http://www.w3.org/2000/svg" width="30" height="12"><rect width="30" height="12" fill="red"/></svg>]])
+      file:close()
+      finally(function() os.remove(svgPath) end)
+      assert.is_true(setBackgroundImage("glsEmptyPath", svgPath))
+      assert.are.same({30, 12}, hint())
+      assert.is_true(setBackgroundImage("glsEmptyPath", ""))
+      assert.are.same(blank, hint())
+    end)
+
+    it("a path that cannot be loaded leaves the image in place", function()
+      track(Geyser.Label:new({name = "glsBadPath", x = 0, y = 0, width = 40, height = 20}))
+      local imageWidth, imageHeight = getImageSize(":/icons/mudlet.png")
+      assert.is_true(setBackgroundImage("glsBadPath", ":/icons/mudlet.png"))
+      local ok, err = setBackgroundImage("glsBadPath", getMudletHomeDir() .. "/no-such-image.png")
+      assert.is_nil(ok)
+      assert.is_string(err)
+      assert.are.same({imageWidth, imageHeight}, {getLabelSizeHint("glsBadPath")})
     end)
 
     it("setTiledBackgroundImage goes through the stylesheet instead", function()
@@ -2965,7 +3287,12 @@ end)
 describe("Tests a Geyser.Label right click menu in a user window deleted behind Geyser's back", function()
   it("does not ask getUserWindowSize about the window that is gone", function()
     local userWindow = Geyser.UserWindow:new({name = "glGoneUW", x = 10, y = 20, width = 200, height = 150})
+    local sizeSpy
+    -- one finally() only: a second one replaces the first
     finally(function()
+      if sizeSpy then
+        sizeSpy:revert()
+      end
       if Geyser.Label.closeAllTimer then
         killTimer(Geyser.Label.closeAllTimer)
         Geyser.Label.closeAllTimer = nil
@@ -2975,9 +3302,38 @@ describe("Tests a Geyser.Label right click menu in a user window deleted behind 
     local label = Geyser.Label:new({name = "glGoneUWLabel", x = 0, y = 0, width = 50, height = 20}, userWindow)
     label:createRightClickMenu({MenuItems = {"First"}})
     deleteMiniConsole("glGoneUW")
-    local sizeSpy = spy.on(_G, "getUserWindowSize")
-    finally(function() sizeSpy:revert() end)
+    sizeSpy = spy.on(_G, "getUserWindowSize")
     label:onRightClick({button = "RightButton", buttons = {"RightButton"}, x = 1, y = 1, globalX = 1, globalY = 1})
     assert.spy(sizeSpy).was_not_called()
+  end)
+end)
+
+describe("Tests the typeface a label's colour leaves it with", function()
+  local geyserLabel
+
+  after_each(function()
+    if geyserLabel then
+      geyserLabel:delete()
+      geyserLabel = nil
+    end
+    deleteLabel("gltfDefault")
+    deleteLabel("gltfOther")
+  end)
+
+  local function otherColourFont()
+    createLabel("gltfOther", 0, 140, 300, 50, 1)
+    setBackgroundColor("gltfOther", 0, 0, 0, 255)
+    return getFont("gltfOther")
+  end
+
+  it("is the same for a Geyser.Label with no colour of its own as for one with a colour", function()
+    geyserLabel = Geyser.Label:new({name = "gltfOwn", x = 0, y = 0, width = 300, height = 50})
+    assert.are.equal(otherColourFont(), getFont("gltfOwn"))
+  end)
+
+  it("is the same for a label set to the default colour as for one set to another", function()
+    createLabel("gltfDefault", 0, 70, 300, 50, 1)
+    setBackgroundColor("gltfDefault", 32, 32, 32, 255)
+    assert.are.equal(otherColourFont(), getFont("gltfDefault"))
   end)
 end)

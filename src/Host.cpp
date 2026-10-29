@@ -310,7 +310,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     TDebug::addHost(this, mHostName);
     setDisplayFont(QFont(scmDefaultFontFamily, 14, QFont::Normal));
 
-    mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
+    mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState(), getLuaInterpreter()));
 
     // Copy across the details needed for the "color_table":
     mLuaInterpreter.updateAnsi16ColorsInTable();
@@ -1446,7 +1446,7 @@ void Host::resetProfile_phase2()
     // of the user's saved variables from the profile:
     const QSet<QString> savedVars = mLuaInterface->getVarUnit()->savedVars;
     const QSet<QString> hiddenByUserVars = mLuaInterface->getVarUnit()->hiddenByUser;
-    mLuaInterface.reset(new LuaInterface(mLuaInterpreter.getLuaGlobalState()));
+    mLuaInterface.reset(new LuaInterface(mLuaInterpreter.getLuaGlobalState(), &mLuaInterpreter));
     mLuaInterface->getVarUnit()->savedVars = savedVars;
     mLuaInterface->getVarUnit()->hiddenByUser = hiddenByUserVars;
     mLuaInterpreter.loadGlobal();
@@ -2312,10 +2312,6 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 
         if (!mAliasUnit.processDataStream(command)) {
             mTelnet.sendData(command, true, true);
-        } else if (!mTelnet.dispatchingSendRequest()) {
-            // A deny left by an alias that sent nothing would swallow the next command. Under a sysDataSendRequest
-            // handler every pass, nested or not, keeps it for the next send: the handled command, unless the handler sends first
-            mAllowToSendCommand = true;
         }
     }
 }
@@ -2807,10 +2803,15 @@ bool Host::copyToClipboard(const QString& name)
     return true;
 }
 
-void Host::cutMainConsoleToClipboard()
+bool Host::cutToClipboard(const QString& name)
 {
-    mpMainConsoleModel->buffer.cutInto(mpMainConsoleModel->P_begin, mpMainConsoleModel->P_end, *mpClipboard);
-    markSelectionDirty(*mpMainConsoleModel);
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    pModel->buffer.cutInto(pModel->P_begin, pModel->P_end, *mpClipboard);
+    markSelectionDirty(*pModel);
+    return true;
 }
 
 namespace {
@@ -5847,6 +5848,24 @@ void Host::setName(const QString& name)
     consoleFrontend()->setProfileName(name);
 }
 
+// The items keep their function flag: 0 is never a function's registry slot, so they report it
+// as not found, as they would looking it up in a state that never had it
+void Host::forgetLuaFunctionRefs()
+{
+    for (auto* pTrigger : mTriggerUnit.getTriggerRootNodeList()) {
+        pTrigger->mLuaFunctionRef = 0;
+    }
+    for (auto* pAlias : mAliasUnit.getAliasRootNodeList()) {
+        pAlias->mLuaFunctionRef = 0;
+    }
+    for (auto* pTimer : mTimerUnit.getTimerRootNodeList()) {
+        pTimer->mLuaFunctionRef = 0;
+    }
+    for (auto* pKey : mKeyUnit.getKeyRootNodeList()) {
+        pKey->mLuaFunctionRef = 0;
+    }
+}
+
 void Host::removeAllNonPersistentStopWatches()
 {
     auto it = mStopWatchMap.begin();
@@ -7308,7 +7327,9 @@ std::optional<int> Host::windowScroll(const QString& name) const
         return {};
     }
     const int lastLine = pModel->buffer.getLastLineNumber();
-    const int line = hasConsoleView() ? pModel->mUpperPaneCursorY : pModel->mScrolledBackTo.value_or(lastLine);
+    // Not mUpperPaneCursorY: that is only a copy taken at the last paint, and a pane
+    // scrolled back may not paint again before a trim moves the line under it
+    const int line = hasConsoleView() ? pModel->buffer.mCursorY : pModel->mScrolledBackTo.value_or(lastLine);
     return {std::max(std::min(line, lastLine), 0)};
 }
 
@@ -7680,9 +7701,6 @@ bool Host::sendPasswordEntry(QString&& text)
     QString line = std::move(text);
     // For the GMCP sign-in path, as send() does
     mUserSentInputThisConnection = true;
-    // A denyCurrentSend() made outside a handler leaves a stale refusal that
-    // would drop the password without a word
-    mAllowToSendCommand = true;
     // A game command, so it arms character-at-a-time detection and the mask
     // safety timeout as a command line's line does
     const bool sent = mTelnet.sendData(line, false, true);
