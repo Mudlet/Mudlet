@@ -1941,8 +1941,8 @@ describe("Media playback effects with a generated sound file", function()
       return
     end
     -- Only the API may name a file outside the media directory. TMedia copies
-    -- it in under _profile/ and the folders it came from, plays the copy, and
-    -- answers every later request for it under the name the copy has.
+    -- it in under _profile/ and the folders it came from and plays the copy,
+    -- but lists it under the file's own name, as Mudlet 5.0 and the events do.
     local outsideName = "busted-media-outside.wav"
     local outside = getMudletHomeDir() .. "/" .. outsideName
     local handle = io.open(outside, "wb")
@@ -1966,7 +1966,7 @@ describe("Media playback effects with a generated sound file", function()
 
     local playing = getPlayingSounds({name = outside})
     assert.equals(1, #playing)
-    assert.equals("_profile/" .. outsideName, playing[1].name)
+    assert.equals(outsideName, playing[1].name)
   end)
 
   -- An absolute path plays from the copy made of it in the media directory,
@@ -2012,7 +2012,7 @@ describe("Media playback effects with a generated sound file", function()
     local paused = getPausedSounds({key = "busted-absolute-pause"})
     assert.equals(1, #paused, "pausing by the absolute path left the copy playing")
     assert.equals(1, #getPausedSounds({name = outside}), "the paused copy was not found by the absolute path")
-    assert.equals("_profile/" .. outsideName, paused[1].name)
+    assert.equals(outsideName, paused[1].name)
   end)
 
   it("updateSounds moves a sound named by the absolute path it was played from, or by its bare name", function()
@@ -2276,11 +2276,59 @@ describe("Media playback effects with a generated sound file", function()
     local _, _, path = waitForEvent("sysMediaStarted", 5000)
     assert.equals(inMedia, eventPath(path))
     assert.is_nil(lfs.attributes(mediaDirectory .. "/busted-media-in-media.wav"), "a file already in the media directory was copied")
-    assert.equals("busted-media-in-media/busted-media-in-media.wav", getPlayingSounds({name = inMedia})[1].name)
+    assert.equals("busted-media-in-media.wav", getPlayingSounds({name = inMedia})[1].name)
 
     assert.is_true(stopSounds({name = "busted-media-in-media/busted-media-in-media.wav"}))
     waitForCount("sysMediaFinished", finished, 1)
     assert.equals(1, #finished, "the relative name did not stop the file played by its absolute path")
+  end)
+
+  -- Copies of files outside the profile go under _absolute/ and the whole path they came from, which
+  -- getPlayingSounds() and the like would otherwise hand scripts that compare names with "rain.wav"
+  it("a sound or music played from outside the profile is listed by its file name, as its events name it", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local fileName = "busted-media-elsewhere.wav"
+    local directory = getMudletHomeDir():match("^(.*)/[^/]+/[^/]+$") .. "/busted-media-elsewhere"
+    lfs.mkdir(directory)
+    onCleanup(function() lfs.rmdir(directory) end)
+    local outside = directory .. "/" .. fileName
+    local handle = io.open(outside, "wb")
+    assert.is_not_nil(handle, "could not write the media fixture " .. outside)
+    handle:write(silentWav(10000))
+    handle:close()
+    onCleanup(function() os.remove(outside) end)
+    local function removeTree(path)
+      if lfs.attributes(path, "mode") == "directory" then
+        for entry in lfs.dir(path) do
+          if entry ~= "." and entry ~= ".." then
+            removeTree(path .. "/" .. entry)
+          end
+        end
+        lfs.rmdir(path)
+      else
+        os.remove(path)
+      end
+    end
+    onCleanup(function() removeTree(mediaDirectory .. "/_absolute") end)
+    onCleanup(function() stopSounds() stopMusic() end)
+
+    assert.is_true(playSoundFile({name = outside, key = "busted-elsewhere-sound"}))
+    local _, file = waitForEvent("sysMediaStarted", 5000)
+    assert.equals(fileName, file)
+    local playing = getPlayingSounds({key = "busted-elsewhere-sound"})
+    assert.equals(1, #playing)
+    assert.equals(fileName, playing[1].name)
+    assert.equals(1, #getPlayingSounds({name = playing[1].name}), "the listed name did not find the sound again")
+    assert.is_true(pauseSounds({key = "busted-elsewhere-sound"}))
+    assert.equals(fileName, getPausedSounds({key = "busted-elsewhere-sound"})[1].name)
+
+    assert.is_true(playMusicFile({name = outside, key = "busted-elsewhere-music"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    local music = getPlayingMusic({key = "busted-elsewhere-music"})
+    assert.equals(1, #music)
+    assert.equals(fileName, music[1].name)
   end)
 
   it("a missing absolute path plays nothing and leaves no folders behind", function()
@@ -2299,7 +2347,7 @@ describe("Media playback effects with a generated sound file", function()
       return
     end
     local outsideName = "busted-media-gone.wav"
-    local outside = writeOutsideFile(outsideName)
+    local outside, copied = writeOutsideFile(outsideName)
     onCleanup(function() stopSounds() end)
 
     assert.is_true(playSoundFile({name = outside, key = "busted-gone"}))
@@ -2316,8 +2364,10 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingSounds({key = "busted-gone-separator"}))
 
     assert.is_true(playSoundFile({name = outside, key = "busted-gone"}))
-    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), "the copy of a deleted file did not play")
-    assert.equals("_profile/" .. outsideName, getPlayingSounds({key = "busted-gone"})[1].name)
+    local event, _, path = waitForEvent("sysMediaStarted", 5000)
+    assert.equals("sysMediaStarted", event, "the copy of a deleted file did not play")
+    assert.equals(copied, eventPath(path))
+    assert.equals(outsideName, getPlayingSounds({key = "busted-gone"})[1].name)
   end)
 
   it("a file played through a symlinked folder and then deleted still plays the copy made of it", function()
@@ -2328,7 +2378,7 @@ describe("Media playback effects with a generated sound file", function()
       pending("this lfs has no link()")
       return
     end
-    local real = writeOutsideFile("busted-media-linked-gone.wav", "busted-media-real-gone")
+    local real, copied = writeOutsideFile("busted-media-linked-gone.wav", "busted-media-real-gone")
     local linkDirectory = getMudletHomeDir() .. "/busted-media-link-gone"
     local function removeLink()
       os.remove(linkDirectory)
@@ -2351,8 +2401,10 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(os.remove(real))
 
     assert.is_true(playSoundFile({name = throughLink, key = "busted-linked-gone-copy"}))
-    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), "the copy of a deleted file played through a symlink did not play")
-    assert.equals("_profile/busted-media-real-gone/busted-media-linked-gone.wav", getPlayingSounds({key = "busted-linked-gone-copy"})[1].name)
+    local event, _, path = waitForEvent("sysMediaStarted", 5000)
+    assert.equals("sysMediaStarted", event, "the copy of a deleted file played through a symlink did not play")
+    assert.equals(copied, eventPath(path))
+    assert.equals("busted-media-linked-gone.wav", getPlayingSounds({key = "busted-linked-gone-copy"})[1].name)
   end)
 
   it("a full path whose file has gone plays the copy an older Mudlet kept under its bare name", function()

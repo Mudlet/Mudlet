@@ -34,6 +34,7 @@
 #include "TMedia.h"
 
 #include <QDir>
+#include <QFileInfo>
 
 #include <algorithm>
 #include <cmath>
@@ -62,6 +63,13 @@ bool mediaDirectionArg(lua_State* L, const char* func, QString& direction)
     }
 
     return true;
+}
+
+// A file played by its full path is listed by its own name, as the events and captions name it, not by
+// its copy's folders in the media directory, which scripts never saw before 5.1
+QString listedMediaName(const TMediaData& mediaData)
+{
+    return mediaData.mediaSourcePath().isEmpty() ? mediaData.mediaFileName() : QFileInfo(mediaData.mediaSourcePath()).fileName();
 }
 
 // Degrees go back as a number and a named way as its word, as a script can give either.
@@ -1399,7 +1407,7 @@ void TLuaInterpreter::processPlayingMediaTable(lua_State* L, TMediaData& mediaDa
 
         if (!matchedMediaData.mediaFileName().isEmpty()) {
             lua_pushstring(L, "name");
-            lua_pushstring(L, matchedMediaData.mediaFileName().toUtf8().constData());
+            lua_pushstring(L, listedMediaName(matchedMediaData).toUtf8().constData());
             lua_settable(L, -3);
         }
 
@@ -1868,7 +1876,7 @@ void TLuaInterpreter::processPausedMediaTable(lua_State* L, TMediaData& mediaDat
 
         if (!matchedMediaData.mediaFileName().isEmpty()) {
             lua_pushstring(L, "name");
-            lua_pushstring(L, matchedMediaData.mediaFileName().toUtf8().constData());
+            lua_pushstring(L, listedMediaName(matchedMediaData).toUtf8().constData());
             lua_settable(L, -3);
         }
 
