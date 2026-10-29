@@ -194,7 +194,8 @@ enum class TriggerRefile : quint8 {
     SeesEveryLine,
     // setTriggerStayOpen() held it open, so it fires on the rest of the line in flight without matching
     OpenedByScript,
-    // Its own match held it open, which the pass it matched in is past, but not a pass it was fed from
+    // Its own match held it open: the pass that matched it is past it, but an outer pass that fed that
+    // line by feedTriggers() may not be
     OpenedByMatch,
     // Its stay-open window closed; the line in flight was already offered it
     Shut,

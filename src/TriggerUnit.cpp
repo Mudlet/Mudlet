@@ -666,12 +666,10 @@ void TriggerUnit::refile(TTrigger* pT, const TriggerRefile change)
     if ((change == TriggerRefile::Patterns || change == TriggerRefile::SeesEveryLine) && (pT->mTreeIndexPosition >= 0 || pT->getParent())) {
         unfileTreeNode(pT);
     }
-    // The epochs are what stop the rest of a line trusting what a pass pinned, so they only have to move
-    // for a trigger a pinned snapshot could hold. One no snapshot has ever filed is in none: rootFilter()
-    // and prescanGrams() read nothing but the trigger's own state, so not even its parent's copy can be
-    // of it. That is a child, or a trigger a script creates from inside a trigger - a one-shot, a prompt
-    // capture, a combat follow-up. One that has since left the root list may still be pinned, and the
-    // filter check runs ahead of isActive(), so a removed trigger's stale copy would be trusted.
+    // The epochs stop the rest of a line trusting what a pass pinned, so only a trigger a pinned snapshot
+    // could hold moves them. rootFilter() and prescanGrams() read only the trigger's own state, so one no
+    // snapshot has filed - a child, or one a script creates mid-line - is in none. One that has left the
+    // root list may still be pinned, and the filter check runs ahead of isActive().
     const int position = pT->rootSnapshotPosition();
     if (position == TTrigger::scmNeverSnapshotted) {
         return;
