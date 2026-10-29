@@ -860,7 +860,7 @@ if scrub then
   for payload in corpus:gmatch("\255\250\201(.-)\255\240") do
     for w in payload:gmatch('"name": "(%a+)"') do list(w, "gmcp") end
   end
-  -- QW lists ("Abysal, Aedesynne, ..., and Zriek." then "(81 total)"), svof's QW by city, and CWHO rows
+  -- QW lists ("Anna, Bert, ..., and Zed." then "(81 total)"), svof's QW by city, and CWHO rows
   local function listNames(t)
     t = bare(t):gsub("^%s*%a+%s*%(%d+%):", "")
     local names = {}
