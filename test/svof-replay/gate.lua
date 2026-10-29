@@ -9,7 +9,11 @@ if not bufferPath or not corpusPath then
 end
 
 local function eachLine(path)
-  local f = assert(io.open(path, "rb"))
+  local f = io.open(path, "rb")
+  if not f then
+    io.stderr:write("gate: FAIL, cannot read " .. path .. "\n")
+    os.exit(1)
+  end
   local data = f:read("*a")
   f:close()
   return data:gmatch("([^\n]*)\n?")
@@ -50,3 +54,7 @@ local shapes = {}
 for i, l in ipairs(added) do shapes[i] = l:gsub("%d+", "N") end
 table.sort(shapes)
 md5("added_md5", table.concat(shapes, "\n"))
+if #game == 0 then
+  io.stderr:write("gate: FAIL, no game line came through unchanged\n")
+  os.exit(1)
+end

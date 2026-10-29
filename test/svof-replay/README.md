@@ -51,10 +51,21 @@ Key output: `elapsed_s` is BEGIN to END marker as Mudlet saw it, `hb_max_ms` the
 `maxrss_kb` peak memory. Compare builds by interleaving runs and taking medians: on one machine, single
 runs can differ by several percent.
 
+## Checking a run
+
+`run.sh` prints the result, then exits non-zero when:
+
+- `stop_reason` is not `end_marker`: the replay stalled or hit the sample limit;
+- `svo_loaded` is not `true`, `svo_paused` not `false`, or `svo_class` not `SVOF_CLASS`: the package did not
+  install, or `SVOF_CONFIG` holds a class or pause setting `run.sh` could not rewrite;
+- with `SVOF_PLAIN` set, `gate.lua` cannot read the buffer or the plain log, or `game_lines` is 0.
+
 ## Checking both builds did the same work
 
-There is no exact identity hash: svof's wall-clock timers write into the buffer. Check instead that:
+One run has nothing to compare to, so this part is yours. There is no exact identity hash: svof's
+wall-clock timers write into the buffer. Check instead that:
 
 - `svo_prompts` is identical, and equals the corpus's prompt count;
+- `client_sends` is 0;
 - with `SVOF_PLAIN` set, `game_lines` (game lines that came through unchanged) agrees within 1%, and
   `added_lines` (svof's own output) is close.

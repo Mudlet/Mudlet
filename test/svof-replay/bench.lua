@@ -61,8 +61,9 @@ local function dumpBuffer(endLine)
   local f = io.open(RESULT .. ".buffer", "w")
   if not f then return 0 end
   local n = 0
-  for from = beginLine, endLine, 5000 do
-    for _, l in ipairs(getLines(from, math.min(from + 4999, endLine))) do f:write(l, "\n"); n = n + 1 end
+  -- getLines' end is exclusive; beginLine is the BEGIN marker, which "lines" does not count either
+  for from = beginLine + 1, endLine, 5000 do
+    for _, l in ipairs(getLines(from, math.min(from + 5000, endLine + 1))) do f:write(l, "\n"); n = n + 1 end
   end
   f:close()
   return n
@@ -104,7 +105,7 @@ local function finish(why)
   end
   f:close()
   dbg(string.format("FINISHED %s elapsed=%.3f lines=%d rate=%.0f/s dumped=%d", why, elapsed, lines, rate, dumped))
-  tempTimer(1.5, function() quit() end)
+  tempTimer(1.5, function() closeMudlet() end)
 end
 
 -- Fallback stop if the END marker never arrives: 10 s without a new line

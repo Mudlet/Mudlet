@@ -73,22 +73,34 @@ dofile([==[$P/bench.lua]==])</script>
 </MudletPackage>
 EOF
 
+mpid= srv= xpid=
+trap 'kill $mpid $srv $xpid 2>/dev/null' EXIT
+trap 'exit 1' INT TERM
+# Give a process up to $2 half-seconds to exit by itself, then kill it
+stop() {
+    for ((i = 0; i < $2; i++)); do
+        kill -0 "$1" 2>/dev/null || break
+        sleep 0.5
+    done
+    kill "$1" 2>/dev/null
+    wait "$1" 2>/dev/null
+}
+
 t0=$(date +%s.%N)
-xpid=
 if [ "${SVOF_QPA:-xcb}" = offscreen ]; then
     qpa=(QT_QPA_PLATFORM=offscreen)
 else
-    Xvfb ":$disp" -screen 0 1600x1000x24 -nolisten tcp > "$run/xvfb.log" 2>&1 &
+    Xvfb ":$disp" -screen 0 1600x1000x24 -nolisten tcp > "$run/xvfb.log" 2>&1 9>&- &
     xpid=$!
     qpa=(QT_QPA_PLATFORM=xcb DISPLAY=":$disp")
 fi
-lua5.1 "$P/logserver.lua" "$corpus" "$port" "$repeats" "$run/logserver.log" &
+lua5.1 "$P/logserver.lua" "$corpus" "$port" "$repeats" "$run/logserver.log" 9>&- &
 srv=$!
 sleep 0.7
 # Keep Mudlet off the desktop's Wayland session, where it does not paint and the run looks faster
 env -u WAYLAND_DISPLAY HOME="$run/home" XDG_CONFIG_HOME="$run/home/.config" XDG_DATA_HOME="$run/home/.local/share" \
     XDG_CACHE_HOME="$run/home/.cache" "${qpa[@]}" LD_PRELOAD="${MUDLET_PRELOAD:-}" \
-    "$exe" --profile=SvofBench > "$run/mudlet.out" 2>&1 &
+    "$exe" --profile=SvofBench > "$run/mudlet.out" 2>&1 9>&- &
 mpid=$!
 
 for ((i = 0; i < timeout * 2; i++)); do
@@ -97,29 +109,34 @@ for ((i = 0; i < timeout * 2; i++)); do
     sleep 0.5
 done
 hwm=$(awk '/^VmHWM/{print $2}' /proc/$mpid/status 2>/dev/null)
-for ((i = 0; i < 10; i++)); do
-    kill -0 $mpid 2>/dev/null || break
-    sleep 0.5
-done
-kill $mpid 2>/dev/null
-wait $mpid 2>/dev/null
-kill $srv 2>/dev/null
-wait $srv 2>/dev/null
-[ -n "$xpid" ] && { kill $xpid 2>/dev/null; wait $xpid 2>/dev/null; }
+stop "$mpid" 10
+mpid=
+# The log server writes CLIENT_LINES once it sees Mudlet's connection close
+stop "$srv" 6
+srv=
+[ -n "$xpid" ] && stop "$xpid" 0
+xpid=
 t1=$(date +%s.%N)
 
-if [ -f "$result" ]; then
-    cat "$result"
-    if [ -f "$result.buffer" ]; then
-        echo "buffer_lines $(wc -l < "$result.buffer")"
-        [ -n "${SVOF_PLAIN:-}" ] && lua5.1 "$P/gate.lua" "$result.buffer" "$SVOF_PLAIN"
-    fi
-    echo "client_sends $(awk '/CLIENT_LINES/{print $3}' "$run/logserver.log")"
-    echo "maxrss_kb ${hwm:-unknown}"
-    echo "wall_s $(echo "$t1 - $t0" | bc -l | cut -c1-6)"
-else
+if [ ! -f "$result" ]; then
     echo "NO RESULT after ${timeout}s"
     tail -5 "$run/mudlet.out"
     cat "$result.dbg" 2>/dev/null
+    exit 1
+fi
+cat "$result"
+fail=
+[ -f "$result.buffer" ] && echo "buffer_lines $(wc -l < "$result.buffer")"
+if [ -n "${SVOF_PLAIN:-}" ]; then
+    lua5.1 "$P/gate.lua" "$result.buffer" "$SVOF_PLAIN" || fail=1
+fi
+echo "client_sends $(awk '/CLIENT_LINES/{print $3}' "$run/logserver.log")"
+echo "maxrss_kb ${hwm:-unknown}"
+echo "wall_s $(echo "$t1 - $t0" | bc -l | cut -c1-6)"
+for want in "stop_reason end_marker" "svo_loaded true" "svo_paused false" "svo_class ${SVOF_CLASS:-Infernal}"; do
+    grep -qxF "$want" "$result" || { echo "run.sh: FAIL, result.txt lacks '$want'" >&2; fail=1; }
+done
+if [ -n "$fail" ]; then
+    cat "$result.dbg" >&2 2>/dev/null
     exit 1
 fi
