@@ -56,6 +56,11 @@
 
 #include <QScopeGuard>
 
+#if defined(Q_PROCESSOR_X86_64) && (defined(Q_CC_GNU) || defined(Q_CC_CLANG))
+#include <x86intrin.h>
+#define MUDLET_REUSE_ARRIVAL_CLOCK
+#endif
+
 #include <algorithm>
 #include <cstring>
 #include <span>
@@ -1414,6 +1419,73 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     mProcessingLocalFeed = false;
 }
 
+#if defined(MUDLET_REUSE_ARRIVAL_CLOCK)
+namespace {
+// A TSC that halts in sleep states, as older CPUs' do, would miss the time a script blocks the thread for.
+// cpuid directly: <cpuid.h>'s __cpuid macro collides with the function of that name MinGW's <intrin.h> declares.
+const bool scInvariantTsc = [] {
+    unsigned int eax = 0x80000000, ebx = 0, ecx = 0, edx = 0;
+    asm("cpuid" : "+a"(eax), "=b"(ebx), "+c"(ecx), "=d"(edx));
+    if (eax < 0x80000007) {
+        return false;
+    }
+    eax = 0x80000007;
+    ecx = 0;
+    asm("cpuid" : "+a"(eax), "=b"(ebx), "+c"(ecx), "=d"(edx));
+    return (edx & (1U << 8)) != 0;
+}();
+// A quarter of a millisecond in TSC ticks, measured over at least 100 ms: rates run from hundreds of MHz to
+// several GHz, and an emulator picks its own. Zero, so no reuse, until then.
+quint64 sArrivalClockReuseTicks = 0;
+quint64 sCalibrationTicks = 0;
+qint64 sCalibrationWallStart = 0;
+std::chrono::steady_clock::time_point sCalibrationStart;
+
+void calibrateArrivalClock(const quint64 ticks, const qint64 wallNow)
+{
+    const auto now = std::chrono::steady_clock::now();
+    const auto micros = std::chrono::duration_cast<std::chrono::microseconds>(now - sCalibrationStart).count();
+    if (sCalibrationTicks && ticks > sCalibrationTicks) {
+        if (micros < 100'000) {
+            return;
+        }
+        const quint64 ticksPerMicrosecond = (ticks - sCalibrationTicks) / static_cast<quint64>(micros);
+        // The wall clock, which moves in 16 ms steps on Windows, counts a suspend that a TSC may run through and
+        // steady_clock leaves out; cores whose TSCs disagree can claim any rate. Either way, measure again.
+        const bool noSuspend = qAbs((wallNow - sCalibrationWallStart) * 1000 - micros) < 20'000;
+        if (noSuspend && ticksPerMicrosecond < 10'000) {
+            sArrivalClockReuseTicks = ticksPerMicrosecond * 250;
+            return;
+        }
+    }
+    sCalibrationStart = now;
+    sCalibrationWallStart = wallNow;
+    // After the clocks here, before them at the far end: a preemption in between can only shrink the rate
+    sCalibrationTicks = __rdtsc();
+}
+} // namespace
+#endif
+
+// A system clock read serialises the pipeline, which shows in a flood of lines; a bare TSC read does not
+qint64 TBuffer::lineArrivalTime()
+{
+#if defined(MUDLET_REUSE_ARRIVAL_CLOCK)
+    if (scInvariantTsc) {
+        const quint64 ticks = __rdtsc();
+        if (ticks - mArrivalClockTicks < sArrivalClockReuseTicks) {
+            return mArrivalClockTime;
+        }
+        mArrivalClockTicks = ticks;
+        mArrivalClockTime = QDateTime::currentMSecsSinceEpoch();
+        if (!sArrivalClockReuseTicks) {
+            calibrateArrivalClock(ticks, mArrivalClockTime);
+        }
+        return mArrivalClockTime;
+    }
+#endif
+    return QDateTime::currentMSecsSinceEpoch();
+}
+
 void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFromServer)
 {
     // Lets the trigger engine tell a flood from a trickle (TriggerUnit::processDataStream()). Restored,
@@ -2435,7 +2507,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
             lineBuffer << QString();
         }
         buffer.push_back(std::move(chars));
-        timeBuffer << QDateTime::currentMSecsSinceEpoch();
+        timeBuffer << lineArrivalTime();
         if (ch == '\xff') {
             promptBuffer.append(true);
         } else {
@@ -2453,7 +2525,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         // the one the enclosing pass is still running over:
         materialisePreTriggerPassLine(static_cast<int>(buffer.size()) - 1);
         buffer.back() = std::move(chars);
-        timeBuffer.back() = QDateTime::currentMSecsSinceEpoch();
+        timeBuffer.back() = lineArrivalTime();
         if (ch == '\xff') {
             promptBuffer.back() = true;
         } else {
@@ -5768,7 +5840,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
             if (firstChar) {
                 // an empty wrapped line is the rest of the line above it
                 if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
-                    timeBuffer.back() = QDateTime::currentMSecsSinceEpoch();
+                    timeBuffer.back() = lineArrivalTime();
                 }
                 firstChar = false;
             }
@@ -5896,7 +5968,7 @@ void TBuffer::appendLine(
                 // Replayed held-back content supplies its arrival time, and an
                 // empty wrapped line is the rest of the line above it:
                 if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
-                    timeBuffer.back() = timeStampOverride == csmNoTimeStamp ? QDateTime::currentMSecsSinceEpoch() : timeStampOverride;
+                    timeBuffer.back() = timeStampOverride == csmNoTimeStamp ? lineArrivalTime() : timeStampOverride;
                 }
                 firstChar = false;
             }
@@ -5914,7 +5986,7 @@ void TBuffer::appendEmptyLine()
 {
     buffer.emplace_back();
     lineBuffer.push_back(QString());
-    timeBuffer << QDateTime::currentMSecsSinceEpoch();
+    timeBuffer << lineArrivalTime();
     promptBuffer << false;
     wrapGapBuffer.append(0);
 }
@@ -6504,7 +6576,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             if (w.isNewline && previousSegmentEnd >= 0 && time == TBuffer::csmWrappedLineTimeStamp) {
                 // A line feed inserted into a wrapped line starts a line of its
                 // own, which csmWrappedLineTimeStamp would join back onto the last
-                segmentTime = QDateTime::currentMSecsSinceEpoch();
+                segmentTime = lineArrivalTime();
             } else if (w.isNewline) {
                 segmentTime = time;
             }

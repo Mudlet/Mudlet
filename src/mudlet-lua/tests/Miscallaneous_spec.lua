@@ -178,9 +178,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       it("gives a line the local time it arrived at, as hh:mm:ss.zzz and a space", function()
+        -- before the echo: the line may keep the time the echo read, a fraction of a millisecond earlier
+        local before = os.date("%H:%M:%S")
         echo("\n")
         local line = getLastLineNumber("main")
-        local before = os.date("%H:%M:%S")
         feedTriggers("getTimestamp arrival line\n")
         local after = os.time()
         local timestamp = getTimestamp(line)
@@ -210,6 +211,23 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         local a, b = getTimestamp(first), getTimestamp(first + 1)
         assert.are_not.equal(a, b)
         assert.are.equal(a, getTimestamp(first))
+      end)
+
+      it("gives a line that arrived with another the time it was stored, after the other's trigger ran", function()
+        -- a stored line's time is only ever reused once the TSC rate has been measured, over 100 ms
+        echo("\n")
+        local calibrationStart = getEpoch()
+        repeat until getEpoch() - calibrationStart >= 0.12
+        echo("\n")
+        local first = getLastLineNumber("main")
+        local triggerId = tempExactMatchTrigger("getTimestamp slow trigger line", function()
+          local start = getEpoch()
+          repeat until getEpoch() - start >= 0.005
+        end)
+        finally(function() killTrigger(triggerId) end)
+        feedTriggers("getTimestamp slow trigger line\ngetTimestamp line after it\n")
+        assert.are.equal("getTimestamp line after it", getLines(first + 1, first + 2)[1])
+        assert.are_not.equal(getTimestamp(first), getTimestamp(first + 1))
       end)
 
       it("should return nil+msg for a negative line number", function()
