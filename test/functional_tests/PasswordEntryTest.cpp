@@ -516,7 +516,7 @@ private slots:
         QVERIFY2(box(), "the game's answer did not bring the box back");
         QPointer<TPasswordEntry> pSecond = box();
         QVERIFY(pSecond != pFirst);
-        QVERIFY2(pSecond->placeholderText().contains(qsl("Esc again")), "the box that came back does not say a second Esc lasts until the game says otherwise");
+        QVERIFY2(pSecond->toolTip().contains(qsl("until the game says otherwise")), "the box that came back does not say a second Esc lasts until the game says otherwise");
         QTRY_COMPARE(focusWidget(), pSecond.data());
 
         pressInWindow(Qt::Key_Escape);
@@ -531,7 +531,7 @@ private slots:
         serverSaysEcho(TN_WONT);
         serverSaysEcho(TN_WILL);
         QVERIFY2(box(), "the next hold got no box");
-        QVERIFY2(!box()->placeholderText().contains(qsl("Esc again")), "the next hold's box thinks it follows an Esc");
+        QVERIFY2(!box()->toolTip().contains(qsl("until the game says otherwise")), "the next hold's box thinks it follows an Esc");
     }
 
     void test_afterAnEscTheGamesAnswerDecidesAndTypedAheadTextSurvives()
@@ -894,7 +894,7 @@ private slots:
         serverSends(QByteArrayLiteral("You look around.\r\n"));
         QVERIFY(box());
         QPointer<TPasswordEntry> pSecond = box();
-        QVERIFY(pSecond->placeholderText().contains(qsl("Esc again")));
+        QVERIFY(pSecond->toolTip().contains(qsl("until the game says otherwise")));
         QTRY_COMPARE(focusWidget(), pSecond.data());
         pressInWindow(Qt::Key_Escape);
         runDeferredDeletes();
@@ -909,7 +909,7 @@ private slots:
         serverSaysEcho(TN_WONT);
         serverSaysEcho(TN_WILL);
         QVERIFY(box());
-        QVERIFY(!box()->placeholderText().contains(qsl("Esc again")));
+        QVERIFY(!box()->toolTip().contains(qsl("until the game says otherwise")));
     }
 
     // A game that sends its text and its WONT in separate reads would
@@ -938,7 +938,7 @@ private slots:
         QVERIFY2(box(), "the game rejecting the stored password under the held ECHO got no box for the retry");
         QCOMPARE(box()->text(), QString());
         QCOMPARE(commandLine()->toPlainText(), qsl("look"));
-        QVERIFY2(!box()->placeholderText().contains(qsl("Esc again")), "the retry's box is worded as if the player had pressed Esc");
+        QVERIFY2(!box()->toolTip().contains(qsl("until the game says otherwise")), "the retry's box is worded as if the player had pressed Esc");
         QTRY_COMPARE(focusWidget(), box());
         typeIntoWindow(qsl("hunter3"));
         pressInWindow(Qt::Key_Return);
@@ -976,7 +976,7 @@ private slots:
         QVERIFY(waitForServerToReceive(asSent({qsl("morquin")})));
         serverSends(QByteArrayLiteral("Password: "));
         QVERIFY2(box(), "the auto-login's name did not bring the box back for the password prompt");
-        QVERIFY(box()->placeholderText().contains(qsl("Esc again")));
+        QVERIFY(box()->toolTip().contains(qsl("until the game says otherwise")));
     }
 
     void test_theFirstEditInTheBoxCancelsTheAutoLogin()
