@@ -42,7 +42,6 @@
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 
-#include <list>
 #include <map>
 #include <memory>
 #include <string>
@@ -306,6 +305,7 @@ struct TChildWalk
 class TTrigger : public Tree<TTrigger>
 {
     Q_DECLARE_TR_FUNCTIONS(TTrigger) // Needed so we can use tr() even though TTrigger is NOT derived from QObject
+    friend class CaptureGroupParkingTest;
     friend class CorruptTriggerPatternsTest;
     friend class XMLexport;
     friend class XMLimport;
@@ -578,7 +578,7 @@ private:
     int search(int patternNumber, const char* subject, int subjectLength, pcre2_match_data* matchData) const;
     TTrigger() = default;
 
-    inline void updateMultistates(int regexNumber, const TCaptureGroups& captureList, const std::vector<int>& posList, const NameGroupMatches* nameMatches = nullptr);
+    inline void updateMultistates(int regexNumber, const TCaptureGroups& captureList, const NameGroupMatches* nameMatches = nullptr);
     void enterChildren(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams, bool haystackIsCapture, bool& conditionMet);
     void noteOpen();
     inline void filter(std::string_view capture, int posOffset, int lineNumber, bool positionsInCurrentColumns);
@@ -657,8 +657,6 @@ private:
     std::map<TMatchState*, std::unique_ptr<TMatchState>> mConditionMap;
     // A completed or expired state, recycle()d in its map node, for the next state this trigger opens
     std::map<TMatchState*, std::unique_ptr<TMatchState>>::node_type mSpareCondition;
-    std::list<std::list<std::string>> mMultiCaptureGroupList;
-    std::list<std::list<int>> mMultiCaptureGroupPosList;
     TLuaInterpreter* mpLua;
     std::map<int, std::string> mLuaConditionMap;
     QString mFuncName;
