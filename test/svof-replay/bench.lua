@@ -160,8 +160,8 @@ local function finish(why)
   else
     add("hb_samples 0\n")
   end
-  add("buffer_lines %d\ngame_lines %d\ngame_hash %s\nadded_lines %d\nadded_hash %s\n",
-    #buffer, checked.game_lines, checked.game_hash, checked.added_lines, checked.added_hash)
+  add("buffer_lines %d\ngame_lines %d\ngame_hash %s\nadded_lines %d\nadded_hash %s\nlock_lines %d\n",
+    #buffer, checked.game_lines, checked.game_hash, checked.added_lines, checked.added_hash, checked.lock_lines)
   add(#problems == 0 and "gate pass\n" or "gate FAIL: %s\n", table.concat(problems, "; "))
   dbg(string.format("FINISHED %s elapsed=%.3f lines=%d rate=%.0f/s", why, elapsed, lines, rate))
   report(table.concat(out))
