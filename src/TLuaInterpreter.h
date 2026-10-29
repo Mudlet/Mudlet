@@ -94,9 +94,9 @@ public:
     TLuaInterpreter(Host* pH, const QString& hostName, const int id);
     ~TLuaInterpreter();
     void setMSDPTable(QString& key, const QString& string_data);
-    void parseJSON(QString& key, const QString& string_data, const QString& protocol);
+    void parseJSON(QString& key, const QByteArray& utf8Data, const QString& protocol);
     void parseMSSP(const QString& string_data);
-    void handleIreComposerEdit(const QString& jsonData);
+    void handleIreComposerEdit(const QByteArray& jsonData);
     void msdp2Lua(const char*);
     void initLuaGlobals();
     void abortAllDownloads();
@@ -118,6 +118,7 @@ public:
     void setAtcpTable(const QString&, const QString&);
     void signalMXPEvent(const QString& type, const QMap<QString, QString>& attrs, const QStringList& actions, const QString& caption = QString());
     void setGMCPTable(QString&, const QString&);
+    void setGMCPTable(QString& key, const QByteArray& utf8Data);
     void setMSSPTable(const QString&);
     void setChannel102Table(int& var, int& arg);
     bool compileAndExecuteScript(const QString&);

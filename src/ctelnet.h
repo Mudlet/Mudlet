@@ -193,7 +193,7 @@ public:
     void sendInfoNewEnvironValues(const QStringList&);
     void sendInfoNewEnvironOSCHyperlinks();
     void setATCPVariables(const QByteArray&);
-    void setGMCPVariables(const QByteArray&);
+    void setGMCPVariables(QByteArrayView);
     void setMSSPVariables(const QByteArray&);
     void setMSPVariables(const QByteArray&);
     bool isIPAddress(const QString&);
