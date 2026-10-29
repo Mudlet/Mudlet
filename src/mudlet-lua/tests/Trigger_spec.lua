@@ -8431,6 +8431,16 @@ describe("Trigger processing", function()
             assert.are.equal(3, _G.TrigSpec.count, "and it has to close again once they have passed")
         end)
 
+        it("keeps a trigger firing through its window when a script had set a negative stay-open count", function()
+            -- a negative count is shut, the same as 0, so the match that opens it has to be announced
+            tempComplexRegexTrigger(track("SpecRuledOutNegative"), "pqwmzn_window_text", [[_G.TrigSpec.count = _G.TrigSpec.count + 1]], 0, 0, 0, 0, 0, 0, 0, 0, 2, 0)
+            setTriggerStayOpen("SpecRuledOutNegative", -1)
+            feedTriggers(warmUpLine)
+            feedTriggers("\npqwmzn_window_text arrives\n")
+            feedTriggers(warmUpLine)
+            assert.are.equal(3, _G.TrigSpec.count, "a trigger opened from a negative count was ruled out of the lines its match held it open for")
+        end)
+
         it("judges a color trigger afresh once an earlier trigger has edited the line", function()
             -- whatever the profile's palette makes of ANSI 91
             local r, g, b
