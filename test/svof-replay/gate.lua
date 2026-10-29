@@ -1,60 +1,52 @@
--- Identity gate for a replay buffer: the game's own lines must come through identically, and
--- svof's added output is counted. Its timing annotations vary with wall-clock and TCP chunking,
--- so those are normalised away before hashing.
--- usage: lua5.1 gate.lua <buffer> <plain-log>
-local bufferPath, corpusPath = arg[1], arg[2]
-if not bufferPath or not corpusPath then
-  io.stderr:write("usage: lua5.1 gate.lua <buffer> <plain-log>\n")
-  os.exit(2)
-end
+-- Identity gate for a replay, loaded by bench.lua: the game's own lines must come through unchanged, and
+-- svof's added output is counted. Its timing annotations vary with wall-clock and read chunking, so those
+-- are normalised away before hashing.
+local gate = {}
 
-local function eachLine(path)
-  local f = io.open(path, "rb")
-  if not f then
-    io.stderr:write("gate: FAIL, cannot read " .. path .. "\n")
-    os.exit(1)
+-- The corpus's lines as Mudlet shows them, without their telnet sequences
+function gate.plainLines(corpus)
+  local set = {}
+  for l in corpus:gmatch("([^\n]*)\n?") do
+    l = l:gsub("\255\250.-\255\240", ""):gsub("\255[\251-\254].", ""):gsub("\255.", ""):gsub("\r$", "")
+    set[l] = true
   end
-  local data = f:read("*a")
-  f:close()
-  return data:gmatch("([^\n]*)\n?")
+  return set
 end
 
-local corpus = {}
-for l in eachLine(corpusPath) do corpus[(l:gsub("\r$", ""))] = true end
+-- Lua 5.1 has no hash function; this one only has to tell two runs apart
+local function hash(list)
+  local h = 0
+  for _, l in ipairs(list) do
+    for i = 1, #l, 64 do
+      local bytes = {l:byte(i, i + 63)}
+      for k = 1, #bytes do h = (h * 31 + bytes[k]) % 4294967296 end
+    end
+    h = (h * 31 + 10) % 4294967296
+  end
+  return string.format("%08x", h)
+end
 
-local game, added = {}, {}
-for l in eachLine(bufferPath) do
-  l = l:gsub("\r$", "")
-  if l ~= "" then
-    if corpus[l] then
-      game[#game + 1] = l
-    else
-      l = l:gsub(" %(%d+%.%d+s%)", ""):gsub(" %(%d+s%)", ""):gsub(" %(%?s%)", "")
-      l = l:gsub("%(%d+%.%d+%)$", "")
-      l = l:match("^(%*%*%*%*%*%*%*%*%*%*+) %([%d%.]+s%)$") or l
-      if l:match("^%(%d+%.%d+s%)$") then l = "" end
-      l = l:gsub("%(svof%): Winnar!", "(svof): You won!")
-      if l ~= "" then added[#added + 1] = l end
+function gate.check(lines, plain)
+  local game, added = {}, {}
+  for _, l in ipairs(lines) do
+    l = l:gsub("\r$", "")
+    if l ~= "" then
+      if plain[l] then
+        game[#game + 1] = l
+      else
+        l = l:gsub(" %(%d+%.%d+s%)", ""):gsub(" %(%d+s%)", ""):gsub(" %(%?s%)", "")
+        l = l:gsub("%(%d+%.%d+%)$", "")
+        l = l:match("^(%*%*%*%*%*%*%*%*%*%*+) %([%d%.]+s%)$") or l
+        if l:match("^%(%d+%.%d+s%)$") then l = "" end
+        l = l:gsub("%(svof%): Winnar!", "(svof): You won!")
+        if l ~= "" then added[#added + 1] = l end
+      end
     end
   end
+  local shapes = {}
+  for i, l in ipairs(added) do shapes[i] = l:gsub("%d+", "N") end
+  table.sort(shapes)
+  return {game_lines = #game, game_hash = hash(game), added_lines = #added, added_hash = hash(shapes)}
 end
 
--- Lua 5.1 has no hash function, so md5sum does it
-local function md5(label, text)
-  io.stdout:flush()
-  local p = assert(io.popen("printf '" .. label .. " '; md5sum | cut -c1-8", "w"))
-  p:write(text)
-  p:close()
-end
-
-md5("game_md5", table.concat(game, "\n"))
-print("game_lines " .. #game)
-print("added_lines " .. #added)
-local shapes = {}
-for i, l in ipairs(added) do shapes[i] = l:gsub("%d+", "N") end
-table.sort(shapes)
-md5("added_md5", table.concat(shapes, "\n"))
-if #game == 0 then
-  io.stderr:write("gate: FAIL, no game line came through unchanged\n")
-  os.exit(1)
-end
+return gate

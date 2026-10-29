@@ -1,24 +1,28 @@
--- Installs svof into this profile, lets it start, then connects to the log server and times the
--- replay from the BEGIN to the END marker. svof is the whole workload; the only triggers added here
--- are the two markers.
+-- Copies svof's config into this profile, installs svof, lets it start, then times the replay from the
+-- BEGIN to the END marker. svof is the whole workload; the only triggers added here are the two markers.
+-- Mode "socket" connects to run.sh's log server; mode "feed" plays the session in-process with
+-- feedTelnet(), in a profile opened with --offline.
 local CFG = _G.BENCH_CFG
-local RESULT = CFG.result
+local BUNDLE, RESULT = CFG.bundle, CFG.result
+local manifest = dofile(BUNDLE .. "/manifest.lua")
+-- run.sh loads this file from the checkout, the package from its own folder: gate.lua sits beside it
+local gate = dofile(debug.getinfo(1, "S").source:match("^@(.*)/[^/]*$") .. "/gate.lua")
 
 local function dbg(msg)
   local h = io.open(RESULT .. ".dbg", "a")
   if h then h:write(os.date("%H:%M:%S ") .. msg .. "\n"); h:close() end
 end
 
--- Nothing trimmed during a pass, so the whole output can be dumped for the gate
+-- Nothing trimmed during a pass, so the whole output can be gated
 setConsoleBufferSize("main", 400000, 400000)
 -- As a real Achaea profile: swallow the newline the game sends after a GA prompt
 setConfig("fixUnnecessaryLinebreaks", true)
 
-local have = false
-for _, name in ipairs(getPackages() or {}) do if name == "svof" then have = true end end
-if not have then
-  local ok, err = installPackage(CFG.package)
-  dbg("installPackage " .. CFG.package .. " -> " .. tostring(ok) .. " " .. tostring(err))
+local function svofInstalled()
+  for _, name in ipairs(getPackages() or {}) do
+    if name == "svof" then return true end
+  end
+  return false
 end
 
 local function svoStatus()
@@ -31,6 +35,25 @@ local function svoStatus()
     tostring(s.lastpromptnumber), tostring(s.conf and s.conf.paused), tostring(hp))
 end
 
+local function report(text)
+  local f = io.open(RESULT, "w")
+  if f then
+    f:write(text)
+    f:close()
+  end
+  if CFG.mode == "feed" then
+    echo("\n" .. text)
+    if CFG.quit then tempTimer(1.5, function() closeMudlet() end) end
+  else
+    tempTimer(1.5, function() closeMudlet() end)
+  end
+end
+
+local function fail(why)
+  dbg("FAIL " .. why)
+  report(string.format("label %s\nmode %s\nstop_reason setup\ngate FAIL: %s\n", CFG.label, CFG.mode, why))
+end
+
 -- A 16 ms timer chain: gaps above that are time the event loop could not run, painting included
 local hbGaps, hbLast, hbOn = {}, nil, false
 local function heartbeat()
@@ -39,7 +62,6 @@ local function heartbeat()
   hbLast = t
   tempTimer(0.016, heartbeat)
 end
-tempTimer(0.016, heartbeat)
 
 local samples = {}
 local running, finished = false, false
@@ -57,16 +79,21 @@ local function stats(t)
   return {n = #s, mean = sum / #s, p50 = p(0.5), p90 = p(0.9), p99 = p(0.99), max = s[#s]}
 end
 
-local function dumpBuffer(endLine)
-  local f = io.open(RESULT .. ".buffer", "w")
-  if not f then return 0 end
-  local n = 0
+-- The replay's output; the socket mode also keeps it on disk for comparing builds
+local function readBuffer(endLine)
+  local out = {}
   -- getLines' end is exclusive; beginLine is the BEGIN marker, which "lines" does not count either
   for from = beginLine + 1, endLine, 5000 do
-    for _, l in ipairs(getLines(from, math.min(from + 5000, endLine + 1))) do f:write(l, "\n"); n = n + 1 end
+    for _, l in ipairs(getLines(from, math.min(from + 5000, endLine + 1))) do out[#out + 1] = l end
   end
-  f:close()
-  return n
+  if CFG.mode == "socket" then
+    local f = io.open(RESULT .. ".buffer", "w")
+    if f then
+      for _, l in ipairs(out) do f:write(l, "\n") end
+      f:close()
+    end
+  end
+  return out
 end
 
 local function finish(why)
@@ -86,30 +113,48 @@ local function finish(why)
   local lines = last.lines - first.lines
   local rate = elapsed > 0 and lines / elapsed or 0
 
-  local dumped = dumpBuffer(last.lines)
+  local buffer = readBuffer(last.lines)
+  local corpus = io.open(BUNDLE .. "/" .. manifest.corpus, "rb")
+  local checked = gate.check(buffer, gate.plainLines(corpus:read("*a")))
+  corpus:close()
+
+  local problems = {}
+  local s = type(_G.svo) == "table" and _G.svo or {}
+  if why ~= "end_marker" then problems[#problems + 1] = "stopped by " .. why end
+  if s.systemloaded ~= true then problems[#problems + 1] = "svof did not load" end
+  if not s.conf or s.conf.paused ~= false then problems[#problems + 1] = "svof is paused" end
+  if (s.me and s.me.class) ~= manifest.class then problems[#problems + 1] = "svof's class is not " .. manifest.class end
+  if s.promptcount ~= manifest.prompts then
+    problems[#problems + 1] = string.format("svof saw %s of %d prompts", tostring(s.promptcount), manifest.prompts)
+  end
+  if checked.game_lines == 0 then problems[#problems + 1] = "no game line came through unchanged" end
+
   local g = stats(hbGaps)
-  local f = io.open(RESULT, "w")
-  f:write(string.format("label %s\nstop_reason %s\n", CFG.label, why))
-  f:write(string.format("elapsed_s %.3f\nlines %d\nrate_lines_per_s %.1f\n", elapsed, lines, rate))
-  f:write(string.format("cpu_s %.3f\n", (_G.benchCpu1 or 0) - (_G.benchCpu0 or 0)))
-  f:write(string.format("dumped_lines %d\n", dumped))
-  f:write(svoStatus() .. "\n")
+  local out = {}
+  local function add(fmt, ...) out[#out + 1] = string.format(fmt, ...) end
+  add("label %s\nmode %s\nbundle %d\nstop_reason %s\n", CFG.label, CFG.mode, manifest.bundle, why)
+  add("elapsed_s %.3f\nlines %d\nrate_lines_per_s %.1f\n", elapsed, lines, rate)
+  add("cpu_s %.3f\n", (_G.benchCpu1 or 0) - (_G.benchCpu0 or 0))
+  add("%s\n", svoStatus())
   if g then
-    f:write(string.format("hb_samples %d\nhb_mean_ms %.1f\nhb_p50_ms %.1f\nhb_p90_ms %.1f\nhb_p99_ms %.1f\nhb_max_ms %.1f\n",
-      g.n, g.mean * 1000, g.p50 * 1000, g.p90 * 1000, g.p99 * 1000, g.max * 1000))
     local blocked = 0
     for _, v in ipairs(hbGaps) do if v > 0.020 then blocked = blocked + (v - 0.016) end end
-    f:write(string.format("hb_blocked_s %.3f\nhb_blocked_pct %.1f\n", blocked, elapsed > 0 and blocked / elapsed * 100 or 0))
+    add("hb_samples %d\nhb_mean_ms %.1f\nhb_p50_ms %.1f\nhb_p90_ms %.1f\nhb_p99_ms %.1f\nhb_max_ms %.1f\n",
+      g.n, g.mean * 1000, g.p50 * 1000, g.p90 * 1000, g.p99 * 1000, g.max * 1000)
+    add("hb_blocked_s %.3f\nhb_blocked_pct %.1f\n", blocked, elapsed > 0 and blocked / elapsed * 100 or 0)
   else
-    f:write("hb_samples 0\n")
+    add("hb_samples 0\n")
   end
-  f:close()
-  dbg(string.format("FINISHED %s elapsed=%.3f lines=%d rate=%.0f/s dumped=%d", why, elapsed, lines, rate, dumped))
-  tempTimer(1.5, function() closeMudlet() end)
+  add("buffer_lines %d\ngame_lines %d\ngame_hash %s\nadded_lines %d\nadded_hash %s\n",
+    #buffer, checked.game_lines, checked.game_hash, checked.added_lines, checked.added_hash)
+  add(#problems == 0 and "gate pass\n" or "gate FAIL: %s\n", table.concat(problems, "; "))
+  dbg(string.format("FINISHED %s elapsed=%.3f lines=%d rate=%.0f/s", why, elapsed, lines, rate))
+  report(table.concat(out))
 end
 
 -- Fallback stop if the END marker never arrives: 10 s without a new line
 local function sample()
+  if finished then return end
   if running then
     local n = getLastLineNumber() or 0
     samples[#samples + 1] = {t = getEpoch(), lines = n}
@@ -124,25 +169,93 @@ local function sample()
   end
   tempTimer(0.25, sample)
 end
-tempTimer(0.25, sample)
 
-tempExactMatchTrigger("--- BEGIN MEASURING ---", function()
-  dbg("BEGIN")
-  hbGaps, hbLast, hbOn = {}, getEpoch(), true
-  beginLine = getLastLineNumber() or 0
-  samples = {{t = getEpoch(), lines = beginLine}}
-  running, stallTicks = true, 0
-  _G.benchCpu0 = os.clock()
-end)
+local function feed()
+  local f = io.open(BUNDLE .. "/" .. manifest.corpus, "rb")
+  if not f then return fail("cannot read " .. manifest.corpus) end
+  local data = f:read("*a")
+  f:close()
+  -- feedTelnet() reads <XX> as a byte and << or >> as one bracket, so the game's own brackets are doubled
+  -- A read ending after a GA prompt leaves a blank line, so chunks are the 100,000 bytes a socket read takes
+  local chunks = {"--- BEGIN MEASURING ---\r\n"}
+  for pos = 1, #data, CFG.chunk do
+    chunks[#chunks + 1] = (data:sub(pos, pos + CFG.chunk - 1):gsub("[<>]", "%0%0"))
+  end
+  chunks[#chunks + 1] = "--- END MEASURING ---\r\n"
+  local n = 0
+  local function nextChunk()
+    if finished then return end
+    n = n + 1
+    local ok, err = feedTelnet(chunks[n])
+    if not ok then return fail("feedTelnet: " .. tostring(err)) end
+    -- One chunk per event-loop turn, as a socket's reads are taken, so timers and painting still run
+    if n < #chunks then tempTimer(0, nextChunk) end
+  end
+  nextChunk()
+end
 
-tempTrigger("END MEASURING", function()
-  dbg("END marker seen")
-  _G.benchCpu1 = os.clock()
-  samples[#samples + 1] = {t = getEpoch(), lines = getLastLineNumber() or 0}
-  finish("end_marker")
-end)
+local function go()
+  dbg("status before replay: " .. svoStatus():gsub("\n", " "))
+  if CFG.mode == "socket" then
+    connectToServer("127.0.0.1", CFG.port)
+  else
+    feed()
+  end
+end
 
-tempTimer(CFG.settle, function()
-  dbg("status before connect: " .. svoStatus():gsub("\n", " "))
-  connectToServer("127.0.0.1", CFG.port)
-end)
+-- svof reads its config from the profile when it loads
+local function copyConfig()
+  local home = getMudletHomeDir()
+  for _, file in ipairs(manifest.config) do
+    local dir = home .. "/svo"
+    lfs.mkdir(dir)
+    for part in file:gmatch("([^/]+)/") do
+      dir = dir .. "/" .. part
+      lfs.mkdir(dir)
+    end
+    local from = io.open(BUNDLE .. "/svo/" .. file, "rb")
+    local to = io.open(home .. "/svo/" .. file, "wb")
+    if not from or not to then return false, "cannot copy svo/" .. file end
+    to:write(from:read("*a"))
+    from:close()
+    to:close()
+  end
+  return true
+end
+
+local function setup()
+  -- svof keeps state across sessions, so a second pass in one profile does different work
+  if svofInstalled() then
+    echo("\nSvofBench: svof is already installed here, so this profile has run the benchmark; use a fresh one\n")
+    return
+  end
+  if CFG.mode == "feed" and not feedTelnet("") then
+    return fail("feedTelnet refuses while connected; open the profile with --offline")
+  end
+  local ok, err = copyConfig()
+  if not ok then return fail(err) end
+  ok, err = installPackage(BUNDLE .. "/svof.mpackage")
+  dbg("installPackage svof -> " .. tostring(ok) .. " " .. tostring(err))
+  if not svofInstalled() then return fail("installing svof failed: " .. tostring(err)) end
+
+  tempTimer(0.016, heartbeat)
+  tempTimer(0.25, sample)
+  tempExactMatchTrigger("--- BEGIN MEASURING ---", function()
+    dbg("BEGIN")
+    hbGaps, hbLast, hbOn = {}, getEpoch(), true
+    beginLine = getLastLineNumber() or 0
+    samples = {{t = getEpoch(), lines = beginLine}}
+    running, stallTicks = true, 0
+    _G.benchCpu0 = os.clock()
+  end)
+  tempTrigger("END MEASURING", function()
+    dbg("END marker seen")
+    _G.benchCpu1 = os.clock()
+    samples[#samples + 1] = {t = getEpoch(), lines = getLastLineNumber() or 0}
+    finish("end_marker")
+  end)
+  tempTimer(CFG.settle, go)
+end
+
+-- Not from inside the import of the package that loaded this
+tempTimer(0, setup)

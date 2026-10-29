@@ -1,19 +1,18 @@
 #!/bin/bash
 # One run of the svof replay benchmark: a private HOME with svof installed into a fresh profile, a
-# log server replaying an Achaea session over loopback, Mudlet on a private Xvfb. See README.md.
-# usage: run.sh <label> <mudlet-exe> [timeout-s=400]
+# log server replaying an Achaea session over loopback, Mudlet on a private Xvfb. Its inputs all come
+# from SVOF_BENCH, a SvofBench.mpackage built by make-package.lua. See README.md.
+# usage: SVOF_BENCH=<SvofBench.mpackage> run.sh <label> <mudlet-exe> [timeout-s=400]
 set -u
 P="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ $# -lt 2 ] || [[ "$1" == */* ]] || [ -z "$1" ]; then
-    echo "usage: run.sh <label> <mudlet-exe> [timeout-s=400]" >&2
+    echo "usage: SVOF_BENCH=<SvofBench.mpackage> run.sh <label> <mudlet-exe> [timeout-s=400]" >&2
     exit 2
 fi
-for v in SVOF_CORPUS SVOF_PACKAGE SVOF_CONFIG; do
-    if [ ! -e "${!v:-}" ]; then
-        echo "run.sh: set $v (see README.md)" >&2
-        exit 2
-    fi
-done
+if [ ! -f "${SVOF_BENCH:-}" ]; then
+    echo "run.sh: set SVOF_BENCH to a SvofBench.mpackage (see README.md)" >&2
+    exit 2
+fi
 
 # One benchmark at a time on this machine, whoever started it
 lock=${PERF_BENCH_LOCK:-$HOME/.cache/perf-bench.lock}
@@ -30,18 +29,32 @@ fi
 label=$1
 exe=$(readlink -f "$2")
 timeout=${3:-400}
-corpus=$(readlink -f "$SVOF_CORPUS")
-pkg=$(readlink -f "$SVOF_PACKAGE")
+
+# Unpacked once per package, by its checksum
+bench=$(readlink -f "$SVOF_BENCH")
+cache=${SVOF_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/svof-replay}/$(md5sum < "$bench" | cut -c1-32)
+if [ ! -f "$cache/manifest.lua" ]; then
+    rm -rf "$cache.tmp"
+    mkdir -p "$cache.tmp"
+    if ! unzip -q "$bench" -d "$cache.tmp"; then
+        echo "run.sh: cannot unpack $bench" >&2
+        exit 2
+    fi
+    rm -rf "$cache"
+    mv "$cache.tmp" "$cache"
+fi
+read -r corpus want < <(lua5.1 -e "local m = dofile([==[$cache/manifest.lua]==]) print(m.corpus, m.md5)")
+corpus="$cache/$corpus"
+if [ "$(md5sum < "$corpus" | cut -c1-32)" != "$want" ]; then
+    echo "run.sh: $corpus does not match the package's manifest" >&2
+    exit 2
+fi
+
 runs=${SVOF_RUNS:-${TMPDIR:-/tmp}/svof-replay}
 run="$runs/$label"
 rm -rf "$run"
 prof="$run/home/.config/mudlet/profiles/SvofBench"
 mkdir -p "$prof/current"
-cp -r "$SVOF_CONFIG" "$prof/svo"
-[ -n "${SVOF_NAMEDB:-}" ] && cp "$SVOF_NAMEDB" "$prof/Database_namedb.db"
-sed -i "s/\[\[None\]\]/[[${SVOF_CLASS:-Infernal}]]/" "$prof/svo/config/my_class"
-# A saved config is usually paused; a player unpauses it at the start of a session
-sed -i 's/\(\[\[paused\]\] *\] *= *\)true/\1false/' "$prof/svo/config/conf"
 
 for _ in 1 2 3 4 5 6 7 8 9 10; do
     port=$((5500 + RANDOM % 100))
@@ -64,7 +77,7 @@ cat > "$prof/current/2030-01-01#00-00-00.xml" <<EOF
 		<Script isActive="yes" isFolder="no">
 			<name>bench</name>
 			<packageName></packageName>
-			<script>_G.BENCH_CFG = { result = [==[$result]==], label = [==[$label]==], port = $port, package = [==[$pkg]==], settle = ${SVOF_SETTLE:-4.0} }
+			<script>_G.BENCH_CFG = { mode = "socket", bundle = [==[$cache]==], result = [==[$result]==], label = [==[$label]==], port = $port, settle = ${SVOF_SETTLE:-4.0} }
 dofile([==[$P/bench.lua]==])</script>
 			<eventHandlerList />
 		</Script>
@@ -124,18 +137,11 @@ if [ ! -f "$result" ]; then
     exit 1
 fi
 cat "$result"
-fail=
-[ -f "$result.buffer" ] && echo "buffer_lines $(wc -l < "$result.buffer")"
-if [ -n "${SVOF_PLAIN:-}" ]; then
-    lua5.1 "$P/gate.lua" "$result.buffer" "$SVOF_PLAIN" || fail=1
-fi
 echo "client_sends $(awk '/CLIENT_LINES/{print $3}' "$run/logserver.log")"
 echo "maxrss_kb ${hwm:-unknown}"
 echo "wall_s $(echo "$t1 - $t0" | bc -l | cut -c1-6)"
-for want in "stop_reason end_marker" "svo_loaded true" "svo_paused false" "svo_class ${SVOF_CLASS:-Infernal}"; do
-    grep -qxF "$want" "$result" || { echo "run.sh: FAIL, result.txt lacks '$want'" >&2; fail=1; }
-done
-if [ -n "$fail" ]; then
+if ! grep -qx "gate pass" "$result"; then
+    echo "run.sh: FAIL, $(grep '^gate ' "$result")" >&2
     cat "$result.dbg" >&2 2>/dev/null
     exit 1
 fi
