@@ -28,11 +28,14 @@ describe("Tests undoing the game's own line wrapping", function()
 
   -- a line held back for a continuation is committed by a flush timer
   -- csmServerWrapFlushDelayMs (300ms) after the game goes quiet, so pump until
-  -- that has fallen due and the buffer has stopped growing rather than for a
-  -- fixed time a loaded machine could outrun
-  local function settle()
+  -- that has fallen due and the buffer has stopped growing, or until `done` says
+  -- nothing is left held, rather than for a fixed time a loaded machine could outrun
+  local function settle(done)
     local previous, waited = -1, 0
     while waited < 3000 do
+      if done and done() then
+        return
+      end
       assert.is_true(pumpEvents(100), "pumpEvents needs MUDLET_TEST_MODE set, see the tests README")
       waited = waited + 100
       local lastLine = getLastLineNumber("main")
@@ -43,9 +46,31 @@ describe("Tests undoing the game's own line wrapping", function()
     end
   end
 
+  -- Only one line is ever held, and always the newest, so once the last line fed
+  -- has reached the buffer there is nothing left for the flush timer to commit.
+  local function lastLineFedIsCommitted(data, lastLineBefore)
+    local lastLine = getLastLineNumber("main")
+    if lastLine <= lastLineBefore then
+      return false
+    end
+    local fed = data:gsub("<T_%u+>", ""):gsub("[\r\n]+$", "")
+    fed = (fed:match("[^\n]*$") or ""):match("^%s*(.-)%s*$")
+    if fed == "" then
+      return false
+    end
+    for lineNumber = lastLine, lastLineBefore, -1 do
+      local committed = (getLines("main", lineNumber, lineNumber + 1)[1] or ""):match("^(.-)%s*$")
+      if committed ~= "" then
+        return committed:sub(-#fed) == fed
+      end
+    end
+    return false
+  end
+
   local function feedAndSettle(data)
+    local lastLineBefore = getLastLineNumber("main")
     feed(data)
-    settle()
+    settle(function() return lastLineFedIsCommitted(data, lastLineBefore) end)
   end
 
   -- whole buffer lines, compared exactly: a segment that was joined onto its
