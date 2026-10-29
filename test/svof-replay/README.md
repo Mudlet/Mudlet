@@ -7,8 +7,9 @@ with a large system feels. Linux only.
 
 ## Inputs
 
-Everything a run needs is in one file, `SvofBench.mpackage`, which is not in the repository. Download it from
-[Mudlet/bench-data](https://github.com/Mudlet/bench-data/releases/tag/svof-1) and check it:
+Everything a run needs is in one file, `SvofBench.mpackage`, which is not in the repository. It is
+published as a release of [Mudlet/bench-data](https://github.com/Mudlet/bench-data/releases/tag/svof-1);
+`run.sh` downloads it on first use and checks its SHA-256. For standalone mode, fetch it yourself:
 
 ```sh
 curl -LO https://github.com/Mudlet/bench-data/releases/download/svof-1/SvofBench.mpackage
@@ -34,12 +35,12 @@ longer mentions them, and runs without it repeat more closely.
 
 | Variable | What |
 | --- | --- |
-| `SVOF_BENCH` | the `SvofBench.mpackage` to run |
-| `SVOF_CACHE` | where `run.sh` unpacks it, default `~/.cache/svof-replay` |
+| `SVOF_BENCH` | a `SvofBench.mpackage` to run instead of the published one |
+| `SVOF_CACHE` | where `run.sh` downloads and unpacks it, default `~/.cache/svof-replay` |
 | `SVOF_RUNS` | where run folders go, default `$TMPDIR/svof-replay` |
 | `SVOF_SETTLE` | seconds svof gets to start before the replay, default 4 |
 
-A run needs `Xvfb`, `flock`, `bc`, `unzip`, `md5sum` and `lua5.1` with LuaSocket.
+A run needs `Xvfb`, `flock`, `bc`, `curl`, `unzip`, `md5sum`, `sha256sum` and `lua5.1` with LuaSocket.
 
 ### Building a package from your own log
 
@@ -147,7 +148,7 @@ lua5.1 make-package.lua ... --expect /tmp/svof-replay/ref/result.txt [--expect <
 ## Running
 
 ```bash
-SVOF_BENCH=SvofBench.mpackage test/svof-replay/run.sh before build-before/src/mudlet
+test/svof-replay/run.sh before build-before/src/mudlet
 ```
 
 Use a release build without sanitizers. The script takes the machine-wide benchmark lock

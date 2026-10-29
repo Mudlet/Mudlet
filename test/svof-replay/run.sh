@@ -1,16 +1,36 @@
 #!/bin/bash
 # One run of the svof replay benchmark: a private HOME with svof installed into a fresh profile, a
 # log server replaying an Achaea session over loopback, Mudlet on a private Xvfb. Its inputs all come
-# from SVOF_BENCH, a SvofBench.mpackage built by make-package.lua. See README.md.
-# usage: SVOF_BENCH=<SvofBench.mpackage> run.sh <label> <mudlet-exe> [timeout-s=400]
+# from one SvofBench.mpackage: the published one, or SVOF_BENCH's if set. See README.md.
+# usage: [SVOF_BENCH=<SvofBench.mpackage>] run.sh <label> <mudlet-exe> [timeout-s=400]
 set -u
 P="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ $# -lt 2 ] || [[ "$1" == */* ]] || [ -z "$1" ]; then
-    echo "usage: SVOF_BENCH=<SvofBench.mpackage> run.sh <label> <mudlet-exe> [timeout-s=400]" >&2
+    echo "usage: [SVOF_BENCH=<SvofBench.mpackage>] run.sh <label> <mudlet-exe> [timeout-s=400]" >&2
     exit 2
 fi
-if [ ! -f "${SVOF_BENCH:-}" ]; then
-    echo "run.sh: set SVOF_BENCH to a SvofBench.mpackage (see README.md)" >&2
+cacheroot=${SVOF_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/svof-replay}
+if [ -z "${SVOF_BENCH:-}" ]; then
+    url=https://github.com/Mudlet/bench-data/releases/download/svof-1/SvofBench.mpackage
+    sha=1659af70b73c0e74ea5bb0a3cd53b7f5d6f2392f5acc6b1a0ba41c2fab16c980
+    SVOF_BENCH=$cacheroot/SvofBench-svof-1.mpackage
+    if [ ! -f "$SVOF_BENCH" ]; then
+        mkdir -p "$cacheroot"
+        if ! curl -fsSL -o "$SVOF_BENCH.tmp" "$url"; then
+            rm -f "$SVOF_BENCH.tmp"
+            echo "run.sh: cannot download $url" >&2
+            exit 2
+        fi
+        if [ "$(sha256sum < "$SVOF_BENCH.tmp" | cut -c1-64)" != "$sha" ]; then
+            rm -f "$SVOF_BENCH.tmp"
+            echo "run.sh: $url does not match its SHA-256" >&2
+            exit 2
+        fi
+        mv "$SVOF_BENCH.tmp" "$SVOF_BENCH"
+    fi
+fi
+if [ ! -f "$SVOF_BENCH" ]; then
+    echo "run.sh: $SVOF_BENCH is not a file" >&2
     exit 2
 fi
 
@@ -32,7 +52,7 @@ timeout=${3:-400}
 
 # Unpacked once per package, by its checksum
 bench=$(readlink -f "$SVOF_BENCH")
-cache=${SVOF_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/svof-replay}/$(md5sum < "$bench" | cut -c1-32)
+cache=$cacheroot/$(md5sum < "$bench" | cut -c1-32)
 if [ ! -f "$cache/manifest.lua" ]; then
     rm -rf "$cache.tmp"
     mkdir -p "$cache.tmp"
