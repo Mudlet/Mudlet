@@ -49,6 +49,7 @@
 #include <zlib.h>
 
 #include <bitset>
+#include <chrono>
 #include <iostream>
 #include <memory>
 #include <queue>
@@ -382,6 +383,14 @@ private:
     friend class PasswordEntryPolicyTest;
     friend class PasswordEntryTest;
 
+    // Wait on the posting and NAWS settle timers rather than sleeping past them
+    friend class MirrorToStdOutTest;
+    friend class NawsWidthReportTest;
+
+    // Shorten mFailedConnectionRetryDelay and mNetworkLatencyTimeout rather than sitting them out
+    friend class TelnetConnectFailureTest;
+    friend class TelnetLatencyMeasurementTest;
+
     // Host calls reset(), not cTelnet's constructor: it clears Host members declared after
     // cTelnet, which don't exist yet while cTelnet is constructed.
     friend class Host;
@@ -642,6 +651,17 @@ private:
     bool mAutoLoginPasswordMaskWithdrawn = false;
     QTimer* mTimerPasswordModeTimeout = nullptr;
     QTimer* mTimerFailedConnectionRetry = nullptr;
+    // How long to leave a game alone after a connection attempt to it failed, before
+    // trying again for a profile that reconnects automatically. A refused connection
+    // comes back at once, so without a wait here the retries are a tight loop. The
+    // wait doubles with each failure in a row up to FAILED_CONNECTION_RETRY_MAX_DELAY.
+    std::chrono::milliseconds mFailedConnectionRetryDelay = std::chrono::seconds(5);
+    // A command the game never answers would otherwise leave the next unrelated
+    // line it sends - minutes later - being timed as that command's reply, so a
+    // measurement unanswered this long is abandoned and nothing is published for
+    // it. Set well past any wait still worth calling a ping rather than tight, so
+    // that a game which is merely lagging badly still has its lag reported.
+    std::chrono::milliseconds mNetworkLatencyTimeout = std::chrono::seconds(10);
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;

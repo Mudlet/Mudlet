@@ -110,11 +110,7 @@ constexpr auto PASSWORD_MASK_TIMEOUT = 60s;
 // re-reserve their borders, the longest step of a resize:
 constexpr auto NAWS_SETTLE_TIME = 300ms;
 
-// How long to leave a game alone after a connection attempt to it failed, before
-// trying again for a profile that reconnects automatically. A refused connection
-// comes back at once, so without a wait here the retries are a tight loop. The
-// wait doubles with each failure in a row up to the maximum:
-constexpr auto FAILED_CONNECTION_RETRY_DELAY = 5s;
+// Cap on cTelnet::mFailedConnectionRetryDelay as it doubles
 constexpr auto FAILED_CONNECTION_RETRY_MAX_DELAY = 60s;
 
 // A latency reading is the wall time between writing a command and reading the
@@ -131,12 +127,6 @@ constexpr auto NETWORK_LATENCY_BEAT = 100ms;
 // freeze anyone would notice.
 constexpr auto NETWORK_LATENCY_MAX_STALL = 250ms;
 static_assert(NETWORK_LATENCY_MAX_STALL > NETWORK_LATENCY_BEAT, "a reading has to survive beats that arrive on time");
-// A command the game never answers would otherwise leave the next unrelated
-// line it sends - minutes later - being timed as that command's reply, so a
-// measurement unanswered this long is abandoned and nothing is published for
-// it. Set well past any wait still worth calling a ping rather than tight, so
-// that a game which is merely lagging badly still has its lag reported.
-constexpr auto NETWORK_LATENCY_TIMEOUT = 10s;
 
 constexpr size_t BUFFER_SIZE = 100000L;
 
@@ -978,12 +968,12 @@ void cTelnet::handleFailedConnection()
     // Doubling for each failure in a row, because a game that is down tends to stay down for a
     // while and a fixed wait would spend the evening announcing that in the middle of whatever
     // else the player is reading:
-    const auto delay = std::min(FAILED_CONNECTION_RETRY_DELAY * (1 << std::min(mFailedConnectionCount - 1, 5)), FAILED_CONNECTION_RETRY_MAX_DELAY);
+    const std::chrono::milliseconds delay = std::min<std::chrono::milliseconds>(mFailedConnectionRetryDelay * (1 << std::min(mFailedConnectionCount - 1, 5)), FAILED_CONNECTION_RETRY_MAX_DELAY);
     //: %n is the number of seconds before Mudlet tries the connection again.
     postMessage(tr("[ INFO ]  - Trying again in %n second(s)...",
                    // Intentional comment to separate arguments
                    "",
-                   static_cast<int>(delay.count())));
+                   static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(delay).count())));
     mTimerFailedConnectionRetry->start(delay);
 }
 
@@ -2051,7 +2041,7 @@ void cTelnet::slot_networkLatencyBeat()
     mNetworkLatencyWorstStallNs = std::max(mNetworkLatencyWorstStallNs, nowNs - mNetworkLatencyLastBeatNs);
     mNetworkLatencyLastBeatNs = nowNs;
 
-    if (std::chrono::nanoseconds(nowNs) >= NETWORK_LATENCY_TIMEOUT) {
+    if (std::chrono::nanoseconds(nowNs) >= mNetworkLatencyTimeout) {
         abandonNetworkLatencyMeasurement();
     }
 }

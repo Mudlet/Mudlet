@@ -102,7 +102,7 @@ const auto changelogMarker = qsl("stub release notes");
 constexpr int downloadChunkSize = 8192;
 // Qt throttles QNetworkReply::downloadProgress to one emission per 100ms and
 // drops the rest, so a body written in a single burst arrives as a single
-// emission at completion (measured: exactly one, 65536 of 65536). That is
+// emission at completion (measured: exactly one, at completion). That is
 // enough to move a progress bar, but it cannot tell a bar that follows the
 // download from one that only ever jumps to 100% at the end. Dribbling the body
 // out at more than one Qt interval per chunk is what produces the intermediate
@@ -156,7 +156,7 @@ QByteArray stubReleasesJson(const QString& version, const QString& base, qint64 
 
 QByteArray stubDownloadPayload()
 {
-    return QByteArray(64 * 1024, 'm');
+    return QByteArray(48 * 1024, 'm');
 }
 } // namespace
 
@@ -605,9 +605,9 @@ void FeedChecksumRaceTest::secondDownloadRequestDuringChecksumFetchDoesNotCrash(
     feed.downloadRelease(release, /*requireChecksums=*/true);
     feed.downloadRelease(release, /*requireChecksums=*/true);
 
-    // Long enough for both checksum answers - including the deliberately late
-    // one - and the download requests they lead to
-    QTest::qWait(1500ms);
+    // Long enough for a second checksum request, which the stub answers 300ms
+    // late, and the download it would lead to
+    QTest::qWait(800ms);
 
     QCOMPARE(server.downloadRequests(), 1);
     QCOMPARE(server.checksumRequests(), 1);
