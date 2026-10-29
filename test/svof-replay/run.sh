@@ -1,11 +1,11 @@
 #!/bin/bash
 # One run of the svof replay benchmark: a private HOME with svof installed into a fresh profile, a
 # log server replaying an Achaea session over loopback, Mudlet on a private Xvfb. See README.md.
-# usage: run.sh <label> <mudlet-exe> [repeats=1] [timeout-s=400]
+# usage: run.sh <label> <mudlet-exe> [timeout-s=400]
 set -u
 P="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ $# -lt 2 ] || [[ "$1" == */* ]] || [ -z "$1" ]; then
-    echo "usage: run.sh <label> <mudlet-exe> [repeats=1] [timeout-s=400]" >&2
+    echo "usage: run.sh <label> <mudlet-exe> [timeout-s=400]" >&2
     exit 2
 fi
 for v in SVOF_CORPUS SVOF_PACKAGE SVOF_CONFIG; do
@@ -29,8 +29,7 @@ fi
 
 label=$1
 exe=$(readlink -f "$2")
-repeats=${3:-1}
-timeout=${4:-400}
+timeout=${3:-400}
 corpus=$(readlink -f "$SVOF_CORPUS")
 pkg=$(readlink -f "$SVOF_PACKAGE")
 runs=${SVOF_RUNS:-${TMPDIR:-/tmp}/svof-replay}
@@ -94,7 +93,7 @@ else
     xpid=$!
     qpa=(QT_QPA_PLATFORM=xcb DISPLAY=":$disp")
 fi
-lua5.1 "$P/logserver.lua" "$corpus" "$port" "$repeats" "$run/logserver.log" 9>&- &
+lua5.1 "$P/logserver.lua" "$corpus" "$port" "$run/logserver.log" 9>&- &
 srv=$!
 sleep 0.7
 # Keep Mudlet off the desktop's Wayland session, where it does not paint and the run looks faster

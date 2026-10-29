@@ -1,9 +1,9 @@
--- Serves a corpus file N times over TCP, bracketed by BEGIN/END markers, as fast
+-- Serves a corpus file once over TCP, bracketed by BEGIN/END markers, as fast
 -- as the socket will take it. Afterwards records the first lines the client
 -- writes back and counts the rest (CLIENT_LINES).
--- usage: lua5.1 logserver.lua <corpus> <port> <repeats> <log>
+-- usage: lua5.1 logserver.lua <corpus> <port> <log>
 local socket = require("socket")
-local corpusPath, port, repeats, logPath = arg[1], tonumber(arg[2]), tonumber(arg[3] or "10"), arg[4]
+local corpusPath, port, logPath = arg[1], tonumber(arg[2]), arg[3]
 local logf = assert(io.open(logPath, "w"))
 local function note(m)
   logf:write(os.date("%H:%M:%S ") .. m .. "\n")
@@ -16,7 +16,7 @@ f:close()
 
 local server = assert(socket.bind("127.0.0.1", port))
 server:settimeout(120)
-note(("listening on %d, %d bytes x %d"):format(port, #data, repeats))
+note(("listening on %d, %d bytes"):format(port, #data))
 local client, err = server:accept()
 if not client then
   note("accept failed: " .. tostring(err))
@@ -28,19 +28,14 @@ note("client connected")
 local t0 = socket.gettime()
 client:settimeout(nil)
 assert(client:send("--- BEGIN MEASURING ---\r\n"))
-for _ = 1, repeats do
-  client:settimeout(0)
-  client:receive(8192)
-  client:settimeout(nil)
-  local ok, serr = client:send(data)
-  if not ok then
-    note("send failed: " .. tostring(serr))
-    os.exit(1)
-  end
+local ok, serr = client:send(data)
+if not ok then
+  note("send failed: " .. tostring(serr))
+  os.exit(1)
 end
 assert(client:send("--- END MEASURING ---\r\n"))
 local elapsed = socket.gettime() - t0
-local total = #data * repeats
+local total = #data
 note(("sent %d bytes in %.3fs (%.1f MB/s)"):format(total, elapsed, total / elapsed / 1048576))
 
 client:settimeout(1)
