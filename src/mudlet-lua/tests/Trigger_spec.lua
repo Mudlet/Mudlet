@@ -8327,15 +8327,10 @@ describe("Trigger processing", function()
         end)
 
         it("leaves the pinned filters alone when a trigger creates another trigger", function()
-            -- A pass pins a copy of every root trigger's pattern summary and
-            -- stops trusting those copies the moment one of the triggers they
-            -- were taken from changes. A trigger a script creates from inside a
-            -- trigger - a one-shot, a prompt capture, a combat follow-up, a line
-            -- trigger - is in none of those copies, because no snapshot has ever
-            -- filed it, so announcing it would cost every root trigger left on
-            -- the line its copy for nothing. This reads the announcement counter rather than
-            -- a firing, as the filters only decide how a line is walked and
-            -- never which triggers fire on it.
+            -- A trigger a script creates mid-line, a line trigger included, is in none of the
+            -- copies a pass pinned, so announcing it would cost every root left on the line its
+            -- copy for nothing. This reads the counters, not a firing: the filters only decide
+            -- how a line is walked, never which triggers fire on it.
             if not os.getenv("MUDLET_TEST_MODE") then
                 pending("counting announcements to a line in progress needs MUDLET_TEST_MODE")
             end

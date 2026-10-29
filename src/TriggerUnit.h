@@ -83,9 +83,7 @@ public:
     int getNewID();
     QMultiMap<QString, TTrigger*> mLookupTable;
     void markCleanup(TTrigger* pT);
-    // TTrigger's channel for any change to whether or how pT can be ruled out of a line without being
-    // matched: the change decides which of the root prescan, the root filter copies and the tree index
-    // file it again
+    // Call on any change to whether or how pT can be ruled out of a line without being matched; see TriggerRefile
     void refile(TTrigger* pT, TriggerRefile change);
     // How many times a change has been announced to the passes that pinned a copy of the root
     // triggers' filters. Moves only for a change one of those copies could be of, so a spec can tell a

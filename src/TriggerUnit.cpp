@@ -933,8 +933,8 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             }
         });
         // A script can make a later trigger act on a line it does not match after the candidate list was
-        // settled - setTriggerStayOpen(), making it a line or multiline trigger, or a line it feeds opening
-        // it; from then on the rest of the line goes to every remaining trigger. See refile().
+        // settled - setTriggerStayOpen(), or a line it feeds opening it; from then on the rest of the line
+        // goes to every remaining trigger. See refile().
         const quint32 unfilterableEpochAtStart = mUnfilterableEpoch;
         // The pinned filters are copies, and a firing script can change what they were copied from (a
         // pattern, a stay-open count, a trigger made multiline); from then on the line asks the triggers.
