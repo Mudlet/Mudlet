@@ -5797,6 +5797,24 @@ void Host::setName(const QString& name)
     consoleFrontend()->setProfileName(name);
 }
 
+// The items keep their function flag: 0 is never a function's registry slot, so they report it
+// as not found, as they would looking it up in a state that never had it
+void Host::forgetLuaFunctionRefs()
+{
+    for (auto* pTrigger : mTriggerUnit.getTriggerRootNodeList()) {
+        pTrigger->mLuaFunctionRef = 0;
+    }
+    for (auto* pAlias : mAliasUnit.getAliasRootNodeList()) {
+        pAlias->mLuaFunctionRef = 0;
+    }
+    for (auto* pTimer : mTimerUnit.getTimerRootNodeList()) {
+        pTimer->mLuaFunctionRef = 0;
+    }
+    for (auto* pKey : mKeyUnit.getKeyRootNodeList()) {
+        pKey->mLuaFunctionRef = 0;
+    }
+}
+
 void Host::removeAllNonPersistentStopWatches()
 {
     auto it = mStopWatchMap.begin();

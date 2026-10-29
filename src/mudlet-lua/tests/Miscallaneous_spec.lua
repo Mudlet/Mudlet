@@ -3501,9 +3501,9 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
       -- Loads a profile whose script runs code once, from a timer; the code
       -- answers through report(), which raises mudletSpecTornDownResult. The
-      -- marker file turns a reset's re-run of the script into the global event
-      -- mudletSpecTornDownRerun instead of starting it all over again.
-      local function runInProfileBeingTornDown(code)
+      -- marker file turns a reset's re-run of the script into rerunCode and the
+      -- global event mudletSpecTornDownRerun instead of starting it all over again.
+      local function runInProfileBeingTornDown(code, rerunCode)
         for _, name in ipairs({closing, target}) do
           local path = profilesDirectory .. "/" .. name
           assert.is_true(lfs.attributes(path) == nil or ownedByUs(name),
@@ -3536,13 +3536,14 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 local function report(...) raiseGlobalEvent("mudletSpecTornDownResult", ...) end
 local marker = getMudletHomeDir() .. "/mudlet-spec-ran"
 if io.exists(marker) then
+  %s
   raiseGlobalEvent("mudletSpecTornDownRerun")
 else
   io.open(marker, "w"):close()
   tempTimer(0, function()
     %s
   end)
-end]], code)
+end]], rerunCode or "", code)
         script = script:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
 
         -- left behind by a run that crashed or was killed
@@ -3598,6 +3599,31 @@ end]], code)
         assert.equals("true", run.result[1])
         assert.is_true(waitUntil(function() return run.reset end), "the profile was not reset")
         assert.is_true(loaded(target))
+      end)
+
+      -- lua_close() runs __gc finalisers; a timer one of them makes outlives that state
+      it("never runs another function for a timer made while its state closed", function()
+        if needsTestMode() then
+          return
+        end
+        local wrong = {}
+        local handler = registerAnonymousEventHandler("mudletSpecTornDownWrong", function(_, which)
+          wrong[#wrong + 1] = which
+        end)
+        finally(function() killAnonymousEventHandler(handler) end)
+        local run = runInProfileBeingTornDown([[
+local keep = newproxy(true)
+getmetatable(keep).__gc = function() tempTimer(0.2, function() end) end
+mudletSpecKeep = keep
+resetProfile()
+report("reset")]], [[
+for i = 1, 2000 do
+  tempTimer(60, function() raiseGlobalEvent("mudletSpecTornDownWrong", i) end)
+end]])
+        assert.equals("reset", run.result[1])
+        assert.is_true(waitUntil(function() return run.reset end), "the profile was not reset")
+        pumpEvents(600)
+        assert.are.same({}, wrong, "functions made after the reset ran early")
       end)
 
       it("closes another profile after closeProfile(), then closes", function()

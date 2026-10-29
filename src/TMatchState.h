@@ -200,8 +200,9 @@ public:
     TMatchState(const TMatchState&) = delete;
     TMatchState& operator=(const TMatchState&) = delete;
 
-    // Destroyed only once nothing reads its captures: TTrigger removes a completed or expired
-    // state from its condition map before running any script.
+    // Destroyed or recycle()d only once nothing reads its captures: TTrigger takes a completed or
+    // expired state out of its condition map before running any script, and recycles a completed
+    // one only after its script.
     ~TMatchState()
     {
         for (auto& captures : multiCaptureList) {
@@ -215,15 +216,51 @@ public:
     // Recycled nodes: copying the lists would allocate per capture on every condition an open trigger matches
     void addCaptures(const TCaptureGroups& captures, const std::vector<int>& positions)
     {
-        auto& targetCaptures = multiCaptureList.emplace_back();
+        if (mSpareCaptureLists.empty()) {
+            multiCaptureList.emplace_back();
+        } else {
+            multiCaptureList.splice(multiCaptureList.end(), mSpareCaptureLists, mSpareCaptureLists.begin());
+        }
+        auto& targetCaptures = multiCaptureList.back();
         for (std::size_t i = 0; i < captures.size(); ++i) {
             const std::string_view capture = captures[i];
             TCaptureNodePool::takeCapture(targetCaptures).assign(capture.data(), capture.size());
         }
-        auto& targetPositions = multiCapturePosList.emplace_back();
+        if (mSparePositionLists.empty()) {
+            multiCapturePosList.emplace_back();
+        } else {
+            multiCapturePosList.splice(multiCapturePosList.end(), mSparePositionLists, mSparePositionLists.begin());
+        }
+        auto& targetPositions = multiCapturePosList.back();
         for (const int position : positions) {
             TCaptureNodePool::takePosition(targetPositions) = position;
         }
+    }
+
+    // Parks its captures, keeping the emptied per-condition lists for addCaptures() to reuse
+    void recycle()
+    {
+        for (auto& captures : multiCaptureList) {
+            TCaptureNodePool::park(captures);
+            captures.clear();
+        }
+        for (auto& positions : multiCapturePosList) {
+            TCaptureNodePool::park(positions);
+            positions.clear();
+        }
+        mSpareCaptureLists.splice(mSpareCaptureLists.end(), multiCaptureList);
+        mSparePositionLists.splice(mSparePositionLists.end(), multiCapturePosList);
+        nameCaptures.clear();
+    }
+
+    // Resets what the constructor sets; recycle() must already have emptied the lists
+    void reopen(const int numberOfConditions, const int delta)
+    {
+        mNumberOfConditions = numberOfConditions;
+        mNextCondition = 1;
+        mLineCount = 1;
+        mDelta = delta;
+        mSpacer = 0;
     }
 
     int nextCondition() { return mNextCondition; }
@@ -251,6 +288,10 @@ public:
     int mLineCount = 1;
     int mDelta = 0;
     int mSpacer = 0;
+
+private:
+    std::list<std::list<std::string>> mSpareCaptureLists;
+    std::list<std::list<int>> mSparePositionLists;
 };
 
 #endif // MUDLET_TMATCHSTATE_H

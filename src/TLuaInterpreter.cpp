@@ -5775,7 +5775,7 @@ void TLuaInterpreter::setMatches(lua_State* L, const MultimatchesSource source)
 }
 
 // No documentation available in wiki - internal function
-bool TLuaInterpreter::call_luafunction(void* pT, const QString& itemName, const bool aliasScript)
+bool TLuaInterpreter::call_luafunction(const int functionRef, const QString& itemName, const bool aliasScript)
 {
     const ScriptCallerScope callerScope(*this, aliasScript);
     QElapsedTimer executionTimer;
@@ -5786,8 +5786,7 @@ bool TLuaInterpreter::call_luafunction(void* pT, const QString& itemName, const 
 
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
-    lua_pushlightuserdata(L, pT);
-    lua_gettable(L, LUA_REGISTRYINDEX);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, functionRef);
     if (lua_isfunction(L, -1)) {
         setMatches(L);
         // A multiline trigger's Lua function gets multimatches just as its script would
@@ -5829,12 +5828,13 @@ bool TLuaInterpreter::call_luafunction(void* pT, const QString& itemName, const 
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::delete_luafunction(void* pT)
+void TLuaInterpreter::delete_luafunction(int& functionRef)
 {
-    lua_State* L = pGlobalLua;
-    lua_pushlightuserdata(L, pT);
-    lua_pushnil(L);
-    lua_rawset(L, LUA_REGISTRYINDEX);
+    // luaL_unref() of 0 would empty the registry's free list
+    if (functionRef > 0) {
+        luaL_unref(pGlobalLua, LUA_REGISTRYINDEX, functionRef);
+    }
+    functionRef = 0;
 }
 
 // No documentation available in wiki - internal function
@@ -5855,7 +5855,7 @@ void TLuaInterpreter::delete_luafunction(const QString& name)
 // No documentation available in wiki - internal function
 // returns true if function ran without errors
 // as well as the boolean return value from the function
-std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT, const QString& itemName)
+std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(const int functionRef, const QString& itemName)
 {
     const ScriptCallerScope callerScope(*this, false);
     QElapsedTimer executionTimer;
@@ -5867,8 +5867,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT, const
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
 
-    lua_pushlightuserdata(L, pT);
-    lua_gettable(L, LUA_REGISTRYINDEX);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, functionRef);
     bool returnValue = false;
 
     if (lua_isfunction(L, -1)) {
@@ -7099,6 +7098,9 @@ void TLuaInterpreter::initLuaGlobals()
         lua_close(pGlobalLua);
         mClosingGlobalLua = false;
         forgetLazyGlobals();
+        // Only now: Lua run after the reset removed the temp items, and __gc finalisers the close ran,
+        // can have made new ones
+        mpHost->forgetLuaFunctionRefs();
     }
 
     pGlobalLua = newstate();

@@ -108,10 +108,10 @@ public:
     bool callMulti(const QString& function, const QString& mName);
     std::pair<bool, bool> callMultiReturnBool(const QString& function, const QString& mName);
     bool callConditionFunction(std::string& function, const QString& mName);
-    bool call_luafunction(void* pT, const QString& itemName = QString(), const bool aliasScript = false);
-    void delete_luafunction(void* pT);
+    bool call_luafunction(int functionRef, const QString& itemName = QString(), const bool aliasScript = false);
+    void delete_luafunction(int& functionRef);
     void delete_luafunction(const QString& name);
-    std::pair<bool, bool> callLuaFunctionReturnBool(void* pT, const QString& itemName = QString());
+    std::pair<bool, bool> callLuaFunctionReturnBool(int functionRef, const QString& itemName = QString());
     double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
     static QString compileErrorAsPlainText(const QString& error);
