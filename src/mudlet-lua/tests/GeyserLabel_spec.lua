@@ -1,3 +1,24 @@
+-- deleteLabel() leaves the widget to a deferred delete that cannot run until the
+-- whole suite is over, so its callbacks, and the labels they hold, are let go here.
+-- The setters are taken before any spec spies on them.
+local realDeleteLabel
+setup(function()
+  local globals = package.loaded._G
+  realDeleteLabel = globals.deleteLabel
+  local clearers = {globals.setLabelClickCallback, globals.setLabelDoubleClickCallback, globals.setLabelReleaseCallback,
+                    globals.setLabelMoveCallback, globals.setLabelWheelCallback, globals.setLabelOnEnter, globals.setLabelOnLeave}
+  globals.deleteLabel = function(name, ...)
+    for _, clear in ipairs(clearers) do
+      pcall(clear, name, nil)
+    end
+    return realDeleteLabel(name, ...)
+  end
+end)
+
+teardown(function()
+  package.loaded._G.deleteLabel = realDeleteLabel
+end)
+
 describe("Tests functionality of Geyser.Label", function()
   describe('Tests that decho/hecho/cecho preserve font size', function()
     local label
@@ -22,6 +43,12 @@ describe("Tests functionality of Geyser.Label", function()
       _G.echo:revert()
       if label then
         label:hide()
+      end
+    end)
+
+    teardown(function()
+      if label then
+        label:delete()
       end
     end)
 
@@ -136,6 +163,9 @@ describe("Tests functionality of Geyser.Label", function()
       label:setFont("")
       assertEchoes('<div align="right"  style="color: #405060; font-size: 12pt; "><s><u><i>MP</i></u></s></div>')
       assertEchoes('<div align="right"  style=" font-size: 12pt; "><s><u><i>MP</i></u></s></div>', "MP", "nocolor")
+      label:setFontSize(14)
+      assertEchoes('<div align="right"  style=" font-size: 14pt; "><s><u><i>MP</i></u></s></div>')
+      assertEchoes('<div align="right"  style="color: #405060; font-size: 14pt; "><s><u><i>MP</i></u></s></div>', "MP", "#405060")
     end)
   end)
 
@@ -354,7 +384,7 @@ describe("Tests functionality of Geyser.Label", function()
       end)
 
       teardown(function()
-        label:hide()
+        label:delete()
       end)
 
       -- Geyser.Label:new always echoes an empty rich-text div, so the hint has to
@@ -557,18 +587,29 @@ describe("Tests functionality of Geyser.Label widget state", function()
     end)
 
     it("decho, hecho and cecho put their colours into the markup", function()
-      label:decho("<0,0,255>blue")
+      assert.is_true(label:decho("<0,0,255>blue"))
       local blue = getLabelText("glsText")
       assert.is_truthy(blue:find("blue", 1, true))
       assert.is_truthy(blue:find("color: rgb(0, 0, 255)", 1, true))
-      label:hecho("|cff0000red")
+      assert.is_true(label:hecho("|cff0000red"))
       local red = getLabelText("glsText")
       assert.is_truthy(red:find("red", 1, true))
       assert.is_truthy(red:find("color: rgb(255, 0, 0)", 1, true))
-      label:cecho("<green>green")
+      assert.is_true(label:cecho("<green>green"))
       local green = getLabelText("glsText")
       assert.is_truthy(green:find("green", 1, true))
       assert.is_truthy(green:find("color: rgb(0, 255, 0)", 1, true))
+    end)
+
+    it("decho, hecho and cecho refuse a label whose widget is gone, and keep the message it showed", function()
+      label:decho("<0,255,0>shown")
+      deleteLabel("glsText")
+      for _, call in ipairs({ { "decho", "<255,0,0>x" }, { "hecho", "|cff0000x" }, { "cecho", "<red>x" } }) do
+        local ok, err = label[call[1]](label, call[2])
+        assert.is_nil(ok, call[1])
+        assert.are.equal("label 'glsText' does not exist", err, call[1])
+        assert.are.equal("<0,255,0>shown", label.message, call[1])
+      end
     end)
   end)
 
@@ -663,6 +704,248 @@ describe("Tests functionality of Geyser.Label widget state", function()
       assert.is_false(ok)
       assert.is_truthy(tostring(message):find("format as string expected, got number", 1, true))
     end)
+  end)
+
+  describe("Geyser.Label format setters on a decho, hecho or cecho message", function()
+    local label
+    local flavours = {
+      { name = "decho", message = "<255,0,0>red<r> plain" },
+      { name = "hecho", message = "#ff0000red#r plain" },
+      { name = "cecho", message = "<red>red<reset> plain" },
+    }
+    local setters = {
+      { name = "setFontSize", args = { 20 }, shows = "font%-size: 20pt" },
+      { name = "setBold", args = { true }, shows = "font%-weight: bold", hides = "font%-weight: normal" },
+      { name = "setItalics", args = { true }, shows = "font%-style: italic", hides = "font%-style: normal" },
+      { name = "setUnderline", args = { true }, shows = "text%-decoration: underline", hides = "text%-decoration: none" },
+      { name = "setStrikethrough", args = { true }, shows = "text%-decoration: line%-through", hides = "text%-decoration: none" },
+      { name = "setAlignment", args = { "center" }, shows = 'align="center"' },
+      { name = "setFormat", args = { "b18" }, shows = "font%-size: 18pt" },
+      { name = "setFont", args = { "Bitstream Vera Sans Mono" }, shows = "<font face=" },
+      { name = "setFgColor", args = { "blue" }, shows = "color: #0000ff" },
+    }
+
+    before_each(function()
+      label = track(Geyser.Label:new({name = "glsFlavour", x = 0, y = 0, width = 300, height = 50}))
+    end)
+
+    for _, flavour in ipairs(flavours) do
+      for _, setter in ipairs(setters) do
+        it(string.format("%s keeps the colours of a %s message", setter.name, flavour.name), function()
+          assert.is_true(label[flavour.name](label, flavour.message))
+          label[setter.name](label, unpack(setter.args))
+          local text = getLabelText("glsFlavour")
+          assert.is_truthy(text:find(setter.shows), text)
+          if setter.hides then
+            assert.is_nil(text:find(setter.hides), text)
+          end
+          assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+          assert.is_nil(text:find("#ff0000red", 1, true), text)
+          assert.is_nil(text:find("<255,0,0>", 1, true), text)
+          assert.is_nil(text:find("<red>", 1, true), text)
+          assert.are.equal(flavour.message, label.message)
+        end)
+      end
+    end
+
+    for _, flavour in ipairs(flavours) do
+      it(string.format("draws a %s message bold when setBold comes before or after it", flavour.name), function()
+        local text = "WWWWWWWWWWWWWWWWWWWW"
+        label:echo(text)
+        local plainWidth = getLabelSizeHint("glsFlavour")
+        label:setBold(true)
+        local boldWidth = getLabelSizeHint("glsFlavour")
+        if boldWidth <= plainWidth then
+          -- seen on the Windows CI runner, where the label font measures bold no wider
+          pending("this platform's label font draws plain bold text no wider")
+          return
+        end
+        label:setBold(false)
+        label[flavour.name](label, (flavour.message:gsub("red", text, 1)))
+        local colouredWidth = getLabelSizeHint("glsFlavour")
+        label:setBold(true)
+        local after = getLabelSizeHint("glsFlavour")
+        assert.is_true(after > colouredWidth)
+        label[flavour.name](label, (flavour.message:gsub("red", text, 1)))
+        assert.are.equal(after, getLabelSizeHint("glsFlavour"))
+      end)
+    end
+
+    it("shows a plain echo after hecho as it was given", function()
+      label:hecho("#ff0000red")
+      label:echo("#ff0000 is a colour code")
+      label:setFontSize(20)
+      local text = getLabelText("glsFlavour")
+      assert.is_truthy(text:find("#ff0000 is a colour code", 1, true), text)
+      assert.is_truthy(text:find("font%-size: 20pt"), text)
+    end)
+
+    it("echo with no message shows a hecho message again with its colours", function()
+      label:hecho("#ff0000red")
+      label:echo(nil, nil, "c")
+      local text = getLabelText("glsFlavour")
+      assert.is_truthy(text:find('align="center"', 1, true), text)
+      assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+      assert.is_nil(text:find("#ff0000red", 1, true), text)
+    end)
+
+    it("shows a plain echo on a label made from a hecho'd prototype as it was given", function()
+      label:hecho("#ff0000red")
+      local child = track(label:new({name = "glsFlavourChild", x = 0, y = 60, width = 300, height = 50}))
+      assert.is_truthy(getLabelText("glsFlavourChild"):find("color: rgb(255, 0, 0)", 1, true))
+      child:echo("#00ff00 stays text")
+      child:setFontSize(20)
+      assert.is_truthy(getLabelText("glsFlavourChild"):find("#00ff00 stays text", 1, true))
+    end)
+
+    it("gives a label made from a cecho'd prototype its own message as plain text", function()
+      label:cecho("<red>hp")
+      track(label:new({name = "glsFlavourOwn", x = 0, y = 60, width = 300, height = 50, message = "<red> stays text"}))
+      assert.is_truthy(getLabelText("glsFlavourOwn"):find("<red> stays text", 1, true))
+    end)
+
+    it("replays a cecho message put up after a plain echo", function()
+      label:echo("Offline")
+      label:cecho("<red>HP 10")
+      label:setFontSize(14)
+      local text = getLabelText("glsFlavour")
+      assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+      assert.is_nil(text:find("<red>", 1, true), text)
+    end)
+
+    it("replays through the flavour that put the message up last", function()
+      label:decho("<255,0,0>a")
+      label:hecho("#00ff00b")
+      label:setBold(true)
+      local text = getLabelText("glsFlavour")
+      assert.is_truthy(text:find("color: rgb(0, 255, 0)", 1, true), text)
+      assert.is_nil(text:find("#00ff00", 1, true), text)
+    end)
+
+    it("stays empty when a setter follows clear", function()
+      label:hecho("#ff0000HP")
+      label:clear()
+      label:setFontSize(14)
+      local text = getLabelText("glsFlavour")
+      assert.is_nil(text:find("HP", 1, true), text)
+      assert.is_nil(text:find("rgb(255, 0, 0)", 1, true), text)
+    end)
+
+    it("shows the same string given to echo explicitly as plain text", function()
+      label:hecho("#ff0000red")
+      label:echo(label.message, "blue")
+      assert.is_truthy(getLabelText("glsFlavour"):find("#ff0000red", 1, true))
+      label:setFontSize(14)
+      local text = getLabelText("glsFlavour")
+      assert.is_truthy(text:find("#ff0000red", 1, true), text)
+      assert.is_truthy(text:find("font%-size: 14pt"), text)
+    end)
+
+    it("reports through debugc when a setter cannot show a hecho message again", function()
+      label:hecho("#ff0000HP")
+      deleteLabel("glsFlavour")
+      local debugcSpy = spy.on(_G, "debugc")
+      local ok, err = pcall(label.setFontSize, label, 14)
+      _G.debugc:revert()
+      assert.is_true(ok, err)
+      assert.spy(debugcSpy).was.called()
+      local reported = debugcSpy.calls[#debugcSpy.calls].vals[1]
+      assert.is_truthy(reported:find("label 'glsFlavour' does not exist", 1, true), reported)
+    end)
+
+    it("does not replay the flavour before a call that raised on the same string", function()
+      label:cecho("<red>HP")
+      label.fgColor = "notacolour"
+      assert.is_false((pcall(label.decho, label, "<red>HP")))
+      label:setFgColor("white")
+      local text = getLabelText("glsFlavour")
+      assert.is_nil(text:find("rgb(255, 0, 0)", 1, true), text)
+      assert.is_truthy(text:find("<red>HP", 1, true), text)
+    end)
+
+    it("records the message echo was given when its format raises", function()
+      label:hecho("#ff0000red")
+      assert.is_false((pcall(label.echo, label, "new text", nil, 5)))
+      assert.are.equal("new text", label.message)
+    end)
+
+    it("shows a message a script put on the label itself as it was given", function()
+      label:cecho("<red>HP")
+      label.message = "<b>Status</b>"
+      label:setFontSize(14)
+      assert.is_truthy(getLabelText("glsFlavour"):find("<b>Status</b>", 1, true))
+    end)
+
+    it("echo given false after hecho shows the hecho message with its colours", function()
+      label:hecho("#ff0000red")
+      label:echo(false, "blue")
+      local text = getLabelText("glsFlavour")
+      assert.is_nil(text:find("#ff0000red", 1, true), text)
+      assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+    end)
+
+    for _, flavour in ipairs(flavours) do
+      it(string.format("takes nocolor after %s without an error", flavour.name), function()
+        assert.is_true(label[flavour.name](label, flavour.message))
+        label:setFgColor("nocolor")
+        local text = getLabelText("glsFlavour")
+        assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+        assert.are.equal("nocolor", label.fgColor)
+      end)
+
+      it(string.format("keeps the setters working after %s refuses a message that is not a string", flavour.name), function()
+        assert.is_true(label[flavour.name](label, flavour.message))
+        assert.is_false((pcall(label[flavour.name], label, 42)))
+        assert.are.equal(42, label.message)
+        assert.is_true((pcall(label.setFontSize, label, 12)))
+        local text = getLabelText("glsFlavour")
+        assert.is_truthy(text:find("font%-size: 12pt"), text)
+        assert.is_truthy(text:find(">42</div>", 1, true), text)
+      end)
+
+      it(string.format("records the message %s was given when the label's colour raises", flavour.name), function()
+        label.fgColor = "notacolour"
+        assert.is_false((pcall(label[flavour.name], label, flavour.message)))
+        assert.are.equal(flavour.message, label.message)
+        label:setFgColor("white")
+        assert.is_truthy(getLabelText("glsFlavour"):find(flavour.message, 1, true))
+      end)
+
+      it(string.format("does not recurse when an overridden %s calls a setter", flavour.name), function()
+        label[flavour.name] = function(self, message)
+          Geyser.Label[flavour.name](self, message)
+          self:setAlignment("center")
+        end
+        assert.is_true((pcall(label[flavour.name], label, flavour.message)))
+        assert.is_truthy(getLabelText("glsFlavour"):find('align="center"', 1, true))
+      end)
+
+      it(string.format("keeps the %s flavour after a setter is given a colour it cannot use", flavour.name), function()
+        assert.is_true(label[flavour.name](label, flavour.message))
+        assert.is_false((pcall(label.setFgColor, label, "notacolour")))
+        label:setFgColor("white")
+        local text = getLabelText("glsFlavour")
+        assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+        assert.is_nil(text:find(flavour.message, 1, true), text)
+      end)
+
+      it(string.format("raises at the setter for an empty colour on a %s message, as plain echo does", flavour.name), function()
+        assert.is_true(label[flavour.name](label, flavour.message))
+        assert.is_false((pcall(label.setFgColor, label, "")))
+      end)
+
+      it(string.format("does not raise when a replaced Geyser.Label.%s returns nothing", flavour.name), function()
+        local original = Geyser.Label[flavour.name]
+        Geyser.Label[flavour.name] = function(self, message)
+          original(self, message)
+        end
+        label[flavour.name](label, flavour.message)
+        local ok, err = pcall(label.setFontSize, label, 14)
+        Geyser.Label[flavour.name] = original
+        assert.is_true(ok, err)
+        assert.is_truthy(getLabelText("glsFlavour"):find("font%-size: 14pt"))
+      end)
+    end
   end)
 
   describe("Geyser.Label:getSizeHint and Geyser.Label auto-size adjustSize/adjustHeight/adjustWidth/autoAdjustSize/enableAutoAdjustSize/disableAutoAdjustSize", function()
@@ -790,11 +1073,204 @@ describe("Tests functionality of Geyser.Label widget state", function()
       assert.is_nil(Geyser.windowList.glsDelete)
     end)
 
-    it("clears the nested label bookkeeping", function()
+    it("deletes its nested labels with it, however deep they go", function()
       local label = track(Geyser.Label:new({name = "glsNested", x = 0, y = 0, width = 40, height = 20}))
-      label.nestedLabels = {"something"}
+      local child = track(label:addChild({name = "glsNestedChild", width = 40, height = 20}))
+      track(child:addChild({name = "glsNestedGrandChild", width = 40, height = 20}))
+      label:displayNest()
+      child:displayNest()
       label:delete()
       assert.are.same({}, label.nestedLabels)
+      assert.is_nil(getWindowGeometry("glsNestedChild"))
+      assert.is_nil(getWindowGeometry("glsNestedGrandChild"))
+      assert.is_nil(Geyser.windowList.glsNestedChild)
+      assert.is_nil(Geyser.windowList.glsNestedGrandChild)
+    end)
+
+    it("leaves its nest parent's list when deleted on its own", function()
+      local label = track(Geyser.Label:new({name = "glsNestedOwner", x = 0, y = 0, width = 40, height = 20}))
+      local first = track(label:addChild({name = "glsNestedFirst", width = 40, height = 20}))
+      local second = track(label:addChild({name = "glsNestedSecond", width = 40, height = 20}))
+      first:delete()
+      assert.are.same({second}, label.nestedLabels)
+    end)
+
+    it("deletes a hidden right click menu item with it", function()
+      local label = track(Geyser.Label:new({name = "glsMenuOwner", x = 0, y = 0, width = 40, height = 20}))
+      label:createRightClickMenu({MenuItems = {"First", "Second"}})
+      local second = label:findMenuElement("Second").name
+      label:hideMenuLabel("Second")
+      label:delete()
+      assert.is_nil(getWindowGeometry(second))
+      assert.is_nil(Geyser.windowList[second])
+    end)
+
+    it("leaves a label reusing the name of a hidden menu item deleted on its own", function()
+      local label = track(Geyser.Label:new({name = "glsMenuReuseOwner", x = 0, y = 0, width = 40, height = 20}))
+      label:createRightClickMenu({MenuItems = {"First", "Second"}})
+      local item = label:findMenuElement("Second")
+      label:hideMenuLabel("Second")
+      item:delete()
+      local replacement = track(Geyser.Label:new({name = item.name, x = 0, y = 0, width = 40, height = 20}))
+      label:delete()
+      assert.is_not_nil(getWindowGeometry(replacement.name))
+      assert.are.equal(replacement, Geyser.windowList[replacement.name])
+    end)
+
+    it("deletes the scroll labels of a nest too tall to show at once", function()
+      local _, mainHeight = getMainWindowSize()
+      -- three fit and the fourth does not, which makes room for the scroll labels by taking two off
+      local height = math.floor(mainHeight / 4) + 1
+      local label = track(Geyser.Label:new({name = "glsScrolled", x = 0, y = 0, width = 40, height = 20}))
+      for i = 1, 5 do
+        track(label:addChild({name = "glsScrolledChild" .. i, width = 40, height = height, layoutDir = "RV"}))
+      end
+      label:displayNest()
+      local scrolls = Geyser.Label.scrollV[label]
+      assert.is_not_nil(scrolls, "the nest fitted, so it has no scroll labels to delete")
+      local backward, forward = scrolls[1].name, scrolls[2].name
+      label:delete()
+      assert.is_nil(Geyser.Label.scrollV[label])
+      assert.is_nil(getWindowGeometry(backward))
+      assert.is_nil(getWindowGeometry(forward))
+      assert.is_nil(Geyser.windowList[backward])
+      assert.is_nil(Geyser.windowList[forward])
+    end)
+
+    it("leaves a label reusing the name of a scroll label its container already deleted", function()
+      local _, mainHeight = getMainWindowSize()
+      local height = math.floor(mainHeight / 4) + 1
+      local box = track(Geyser.Container:new({name = "glsScrollBox", x = 0, y = 0, width = "100%", height = "100%"}))
+      local label = track(Geyser.Label:new({name = "glsScrollOwner", x = 0, y = 0, width = 40, height = 20}))
+      for i = 1, 5 do
+        label:addChild({name = "glsScrollOwnerChild" .. i, width = 40, height = height, layoutDir = "RV"}, box)
+      end
+      label:displayNest()
+      local scrolls = Geyser.Label.scrollV[label]
+      assert.is_not_nil(scrolls, "the nest fitted, so it has no scroll labels to delete")
+      box:delete()
+      local replacement = track(Geyser.Label:new({name = scrolls[1].name, x = 0, y = 0, width = 40, height = 20}))
+      label:delete()
+      assert.is_not_nil(getWindowGeometry(replacement.name))
+      assert.are.equal(replacement, Geyser.windowList[replacement.name])
+    end)
+
+    it("deletes every label of a nest a script deletes from an ipairs loop", function()
+      local label = track(Geyser.Label:new({name = "glsLoopOwner", x = 0, y = 0, width = 40, height = 20}))
+      for i = 1, 4 do
+        track(label:addChild({name = "glsLoopChild" .. i, width = 40, height = 20}))
+      end
+      for _, child in ipairs(label.nestedLabels) do
+        child:delete()
+      end
+      assert.are.same({}, label.nestedLabels)
+      for i = 1, 4 do
+        assert.is_nil(getWindowGeometry("glsLoopChild" .. i))
+      end
+    end)
+
+    it("leaves its nest parent's list when an addChild under its sibling's name left a gap", function()
+      local label = track(Geyser.Label:new({name = "glsGapOwner", x = 0, y = 0, width = 40, height = 20}))
+      track(label:addChild({name = "glsGapFirst", width = 40, height = 20}))
+      local second = track(label:addChild({name = "glsGapSecond", width = 40, height = 20}))
+      local again = track(label:addChild({name = "glsGapFirst", width = 40, height = 20}))
+      second:delete()
+      assert.are.same({again}, label.nestedLabels)
+      local replacement = track(Geyser.Label:new({name = "glsGapSecond", x = 0, y = 0, width = 40, height = 20}))
+      label:delete()
+      assert.is_not_nil(getWindowGeometry(replacement.name))
+      assert.are.equal(replacement, Geyser.windowList[replacement.name])
+    end)
+
+    it("still deletes itself and its nest when its nest holds something that is not a label", function()
+      local label = track(Geyser.Label:new({name = "glsNotALabel", x = 0, y = 0, width = 40, height = 20}))
+      track(label:addChild({name = "glsNotALabelChild", width = 40, height = 20}))
+      table.insert(label.nestedLabels, 1, "something")
+      assert.has_no.errors(function() label:delete() end)
+      assert.is_nil(getWindowGeometry("glsNotALabel"))
+      assert.is_nil(getWindowGeometry("glsNotALabelChild"))
+    end)
+
+    it("shows a hidden right click menu item again after a sibling was deleted", function()
+      local label = track(Geyser.Label:new({name = "glsMenuReshow", x = 0, y = 0, width = 40, height = 20}))
+      label:createRightClickMenu({MenuItems = {"First", "Second", "Third"}})
+      local third = label:findMenuElement("Third")
+      label:hideMenuLabel("Third")
+      label:findMenuElement("First"):delete()
+      label:showMenuLabel("Third")
+      assert.is_truthy(table.index_of(label.rightClickMenu.nestedLabels, third))
+    end)
+
+    it("hides a label with something that is not a label in its nest along with its container", function()
+      local box = track(Geyser.Container:new({name = "glsNotALabelBox", x = 0, y = 0, width = 100, height = 100}))
+      local label = track(Geyser.Label:new({name = "glsNotALabelHidden", x = 0, y = 0, width = 40, height = 20}, box))
+      label.nestedLabels = {"something"}
+      assert.has_no.errors(function() box:hide() end)
+      assert.has_no.errors(function() box:show() end)
+      label.nestedLabels = nil
+    end)
+
+    it("keeps a deleted right click menu item out of the menu when the menu changes", function()
+      local label = track(Geyser.Label:new({name = "glsMenuRebuild", x = 0, y = 0, width = 40, height = 20}))
+      label:createRightClickMenu({MenuItems = {"First", "Second"}})
+      label:findMenuElement("Second"):delete()
+      label:addMenuLabel("Third")
+      local names = {}
+      for _, item in ipairs(label.rightClickMenu.nestedLabels) do
+        names[#names + 1] = item.menuName
+        assert.is_not_nil(getWindowGeometry(item.name))
+      end
+      assert.are.same({"First", "Third"}, names)
+      assert.is_nil(label:findMenuElement("Second"))
+    end)
+
+    it("moves a right click menu item into place after a sibling was deleted", function()
+      local label = track(Geyser.Label:new({name = "glsMenuMove", x = 0, y = 0, width = 40, height = 20}))
+      label:createRightClickMenu({MenuItems = {"First", "Second", "Third"}})
+      label:findMenuElement("First"):delete()
+      label:changeMenuIndex("Third", 1)
+      local names = {}
+      for i = 1, table.maxn(label.rightClickMenu.nestedLabels) do
+        names[#names + 1] = label.rightClickMenu.nestedLabels[i].menuName
+      end
+      assert.are.same({"Third", "Second"}, names)
+    end)
+
+    it("adds a right click menu item after the others when one of them is hidden", function()
+      local label = track(Geyser.Label:new({name = "glsMenuAddHidden", x = 0, y = 0, width = 40, height = 20}))
+      label:createRightClickMenu({MenuItems = {"First", "Second", "Third"}})
+      label:hideMenuLabel("First")
+      label:addMenuLabel("Fourth")
+      local nested = label.rightClickMenu.nestedLabels
+      assert.are.equal(#nested, table.maxn(nested))
+      local names = {}
+      for _, item in ipairs(nested) do
+        names[#names + 1] = item.menuName
+      end
+      assert.are.same({"Second", "Third", "Fourth"}, names)
+    end)
+
+    it("forgets the scroll labels its children's container deleted", function()
+      local _, mainHeight = getMainWindowSize()
+      local height = math.floor(mainHeight / 4) + 1
+      local owner = track(Geyser.Container:new({name = "glsScrollForgetOwner", x = 0, y = 0, width = 100, height = 100}))
+      local box = track(Geyser.Container:new({name = "glsScrollForgetBox", x = 0, y = 0, width = "100%", height = "100%"}))
+      local label = track(Geyser.Label:new({name = "glsScrollForget", x = 0, y = 0, width = 40, height = 20}, owner))
+      for i = 1, 5 do
+        label:addChild({name = "glsScrollForgetChild" .. i, width = 40, height = height, layoutDir = "RV"}, box)
+      end
+      label:displayNest()
+      local scrolls = Geyser.Label.scrollV[label]
+      assert.is_not_nil(scrolls, "the nest fitted, so it has no scroll labels to delete")
+      box:delete()
+      assert.is_nil(Geyser.Label.scrollV[label])
+      local hidden = track(Geyser.Label:new({name = scrolls[1].name, x = 0, y = 0, width = 40, height = 20}))
+      local shown = track(Geyser.Label:new({name = scrolls[2].name, x = 0, y = 0, width = 40, height = 20}))
+      hidden:hide()
+      owner:hide()
+      assert.is_true(windowVisible(shown.name))
+      owner:show()
+      assert.is_false(windowVisible(hidden.name))
     end)
   end)
 
@@ -813,6 +1289,19 @@ describe("Tests functionality of Geyser.Label widget state", function()
       assert.are.equal("OpenHand", label.cursorShape)
       label:setCursor(mudlet.cursor.ClosedHand)
       assert.are.equal("ClosedHand", label.cursorShape)
+    end)
+
+    it("setCursor refuses a shape name or number that does not exist and keeps the one it had", function()
+      local label = track(Geyser.Label:new({name = "glsBadCursor", x = 0, y = 0, width = 40, height = 20}))
+      assert.is_true(label:setCursor("OpenHand"))
+      local ok, err = label:setCursor("NoSuchCursor")
+      assert.is_nil(ok)
+      assert.are.equal("cursor shape 'NoSuchCursor' not found. see https://wiki.mudlet.org/w/CursorShapes", err)
+      assert.are.equal("OpenHand", label.cursorShape)
+      ok, err = label:setCursor(9999)
+      assert.is_nil(ok)
+      assert.are.equal("cursor shape '9999' not found. see https://doc.qt.io/qt-5/qt.html#CursorShape-enum", err)
+      assert.are.equal("OpenHand", label.cursorShape)
     end)
 
     it("resetCursor puts the shape back to the default", function()
@@ -852,10 +1341,195 @@ describe("Tests functionality of Geyser.Label widget state", function()
       assert.are.equal("border: 1px solid red;", getLabelStyleSheet("glsBackground"))
     end)
 
+    -- packages such as the-two-towers-exits-window clear their images this way
+    it("an empty path takes the image away", function()
+      local label = track(Geyser.Label:new({name = "glsEmptyPath", x = 0, y = 0, width = 40, height = 20}))
+      -- what a label with nothing on it measures depends on its font, which moves to the
+      -- application's on the first re-polish, so settle both labels before reading the twin
+      createLabel("glsEmptyTwin", 0, 0, 40, 20, 1)
+      for _, name in ipairs({"glsEmptyPath", "glsEmptyTwin"}) do
+        setLabelStyleSheet(name, getLabelStyleSheet(name))
+        setLabelStyleSheet(name, getLabelStyleSheet(name))
+      end
+      local blank = {getLabelSizeHint("glsEmptyTwin")}
+      deleteLabel("glsEmptyTwin")
+      local hint = function() return {getLabelSizeHint("glsEmptyPath")} end
+
+      assert.is_true(setBackgroundImage("glsEmptyPath", ":/icons/mudlet.png"))
+      assert.are.same({getImageSize(":/icons/mudlet.png")}, hint())
+      assert.is_true(setBackgroundImage("glsEmptyPath", ""))
+      assert.are.same(blank, hint())
+
+      assert.is_true(label:setBackgroundImage(":/icons/mudlet.png"))
+      assert.is_true(label:setBackgroundImage(""))
+      assert.are.same(blank, hint())
+
+      -- as setPixmap() did in 5.0.1, the text goes along with the image
+      label:echo("words")
+      assert.is_true(setBackgroundImage("glsEmptyPath", ""))
+      assert.are.equal("", getLabelText("glsEmptyPath"))
+      assert.are.same(blank, hint())
+
+      local svgPath = getMudletHomeDir() .. "/empty_path_spec.svg"
+      local file = io.open(svgPath, "w")
+      file:write([[<svg xmlns="http://www.w3.org/2000/svg" width="30" height="12"><rect width="30" height="12" fill="red"/></svg>]])
+      file:close()
+      finally(function() os.remove(svgPath) end)
+      assert.is_true(setBackgroundImage("glsEmptyPath", svgPath))
+      assert.are.same({30, 12}, hint())
+      assert.is_true(setBackgroundImage("glsEmptyPath", ""))
+      assert.are.same(blank, hint())
+    end)
+
+    it("a path that cannot be loaded leaves the image in place", function()
+      track(Geyser.Label:new({name = "glsBadPath", x = 0, y = 0, width = 40, height = 20}))
+      local imageWidth, imageHeight = getImageSize(":/icons/mudlet.png")
+      assert.is_true(setBackgroundImage("glsBadPath", ":/icons/mudlet.png"))
+      local ok, err = setBackgroundImage("glsBadPath", getMudletHomeDir() .. "/no-such-image.png")
+      assert.is_nil(ok)
+      assert.is_string(err)
+      assert.are.same({imageWidth, imageHeight}, {getLabelSizeHint("glsBadPath")})
+    end)
+
     it("setTiledBackgroundImage goes through the stylesheet instead", function()
       local label = track(Geyser.Label:new({name = "glsTiled", x = 0, y = 0, width = 40, height = 20}))
       label:setTiledBackgroundImage("/tmp/whatever.png")
       assert.are.equal("background-image: url(/tmp/whatever.png);", getLabelStyleSheet("glsTiled"))
+    end)
+
+    it("resetBackgroundImage takes a tiled image away, and only the image", function()
+      local label = track(Geyser.Label:new({name = "glsTiledReset", x = 0, y = 0, width = 40, height = 20}))
+      setLabelStyleSheet("glsTiledReset", "border: 1px solid red; background-image: url(data:image/png;base64,AAAA); color: blue;")
+      assert.is_true(resetBackgroundImage("glsTiledReset"))
+      assert.are.equal("border: 1px solid red;  color: blue;", getLabelStyleSheet("glsTiledReset"))
+
+      label:setTiledBackgroundImage(":/icons/mudlet.png")
+      assert.is_true(resetBackgroundImage("glsTiledReset"))
+      assert.are.equal("", getLabelStyleSheet("glsTiledReset"))
+    end)
+
+    it("resetBackgroundImage leaves an image inside a rule of the stylesheet alone", function()
+      track(Geyser.Label:new({name = "glsHoverImage", x = 0, y = 0, width = 40, height = 20}))
+      local sheet = "QLabel{color: red;} QLabel::hover{background-image: url(hover.png);}"
+      setLabelStyleSheet("glsHoverImage", sheet)
+      assert.is_true(resetBackgroundImage("glsHoverImage"))
+      assert.are.equal(sheet, getLabelStyleSheet("glsHoverImage"))
+    end)
+
+    it("resetBackgroundImage passes over comments and quoted text in the stylesheet", function()
+      track(Geyser.Label:new({name = "glsCommentedImage", x = 0, y = 0, width = 40, height = 20}))
+      setLabelStyleSheet("glsCommentedImage", "/* background-image: url(old.png) */ color: blue; background-image: url(current.png);")
+      assert.is_true(resetBackgroundImage("glsCommentedImage"))
+      assert.are.equal("/* background-image: url(old.png) */ color: blue; ", getLabelStyleSheet("glsCommentedImage"))
+
+      setLabelStyleSheet("glsCommentedImage", [[background-image: url("image (1); copy.png"); color: blue;]])
+      assert.is_true(resetBackgroundImage("glsCommentedImage"))
+      assert.are.equal(" color: blue;", getLabelStyleSheet("glsCommentedImage"))
+
+      setLabelStyleSheet("glsCommentedImage", "/* { */ background-image: url(current.png);")
+      assert.is_true(resetBackgroundImage("glsCommentedImage"))
+      assert.are.equal("/* { */ ", getLabelStyleSheet("glsCommentedImage"))
+
+      -- the '(' in the quotes would otherwise leave the url open
+      setLabelStyleSheet("glsCommentedImage", [[background-image: url("a(.png"); color: blue;]])
+      assert.is_true(resetBackgroundImage("glsCommentedImage"))
+      assert.are.equal(" color: blue;", getLabelStyleSheet("glsCommentedImage"))
+    end)
+
+    it("resetBackgroundImage takes the image away whatever case its property is written in", function()
+      track(Geyser.Label:new({name = "glsCasedImage", x = 0, y = 0, width = 40, height = 20}))
+      setLabelStyleSheet("glsCasedImage", "Background-Image: url(:/icons/mudlet.png); color: blue;")
+      assert.is_true(resetBackgroundImage("glsCasedImage"))
+      assert.are.equal(" color: blue;", getLabelStyleSheet("glsCasedImage"))
+
+      setLabelStyleSheet("glsCasedImage", "BACKGROUND-IMAGE: url(:/icons/mudlet.png);")
+      assert.is_true(resetBackgroundImage("glsCasedImage"))
+      assert.are.equal("", getLabelStyleSheet("glsCasedImage"))
+    end)
+
+    it("resetBackgroundImage leaves a selector that names background-image alone", function()
+      track(Geyser.Label:new({name = "glsImageSelector", x = 0, y = 0, width = 40, height = 20}))
+      local sheet = "QLabel#background-image:hover { color: red; }"
+      setLabelStyleSheet("glsImageSelector", sheet)
+      assert.is_true(resetBackgroundImage("glsImageSelector"))
+      assert.are.equal(sheet, getLabelStyleSheet("glsImageSelector"))
+    end)
+
+    it("Geyser.Label:resetBackgroundImage takes a tiled image away for good", function()
+      local label = track(Geyser.Label:new({name = "glsTiledGeyserReset", x = 0, y = 0, width = 40, height = 20}))
+      label:setTiledBackgroundImage(":/icons/mudlet.png")
+      assert.is_true(label:resetBackgroundImage())
+      -- with no argument, setStyleSheet puts back the sheet the label remembers
+      label:setStyleSheet()
+      assert.are.equal("", getLabelStyleSheet("glsTiledGeyserReset"))
+      assert.are.equal("", label.stylesheet)
+    end)
+
+    it("Geyser.Label:resetBackgroundImage keeps the rest of the stylesheet it remembers", function()
+      local label = track(Geyser.Label:new({name = "glsRememberedReset", x = 0, y = 0, width = 40, height = 20}))
+      label:setStyleSheet("border: 1px solid red; background-image: url(:/icons/mudlet.png);")
+      assert.is_true(label:resetBackgroundImage())
+      label:setStyleSheet()
+      assert.are.equal("border: 1px solid red; ", getLabelStyleSheet("glsRememberedReset"))
+    end)
+
+    it("Geyser.Label:resetBackgroundImage does not remember the colour the label's stylesheet was given", function()
+      local label = track(Geyser.Label:new({name = "glsColouredReset", x = 0, y = 0, width = 40, height = 20}))
+      label:setStyleSheet("border: 1px solid red; background-image: url(:/icons/mudlet.png);")
+      setBackgroundColor("glsColouredReset", 255, 0, 0, 255)
+      assert.is_true(label:resetBackgroundImage())
+      assert.are.equal("border: 1px solid red; ", label.stylesheet)
+      assert.are.equal("border: 1px solid red; \nbackground-color: rgba(255, 0, 0, 255);", getLabelStyleSheet("glsColouredReset"))
+
+      label:setStyleSheet("border: 1px solid red;")
+      setBackgroundColor("glsColouredReset", 0, 0, 255, 255)
+      assert.is_true(label:resetBackgroundImage())
+      assert.are.equal("border: 1px solid red;", label.stylesheet)
+    end)
+
+    it("Geyser.Label:resetBackgroundImage answers nil and a message for a deleted label", function()
+      local label = track(Geyser.Label:new({name = "glsDeletedReset", x = 0, y = 0, width = 40, height = 20}))
+      label:delete()
+      local ok, err = label:resetBackgroundImage()
+      assert.is_nil(ok)
+      assert.are.equal("console 'glsDeletedReset' not found", err)
+    end)
+
+    it("Geyser.Label:resetBackgroundImage does not apply the stylesheet it remembers to the label", function()
+      local label = track(Geyser.Label:new({name = "glsStaleReset", x = 0, y = 0, width = 40, height = 20}))
+      label:setStyleSheet("qproperty-text: 'stale'; background-image: url(:/icons/mudlet.png);")
+      setLabelStyleSheet("glsStaleReset", "color: red;")
+      label:echo("current")
+      assert.is_true(label:resetBackgroundImage())
+      assert.are.equal("qproperty-text: 'stale'; ", label.stylesheet)
+      assert.are.equal("color: red;", getLabelStyleSheet("glsStaleReset"))
+      assert.truthy(getLabelText("glsStaleReset"):find("current", 1, true))
+    end)
+
+    it("Geyser.Label:resetBackgroundImage takes from the stylesheet it remembers what resetBackgroundImage takes from the label's", function()
+      local label = track(Geyser.Label:new({name = "glsResetParity", x = 0, y = 0, width = 40, height = 20}))
+      for _, sheet in ipairs({
+        "border: 1px solid red; background-image: url(data:image/png;base64,AAAA); color: blue;",
+        "QLabel{color: red;} QLabel::hover{background-image: url(hover.png);}",
+        "/* background-image: url(old.png) */ color: blue; background-image: url(current.png);",
+        [[background-image: url("image (1); copy.png"); color: blue;]],
+        "/* { */ background-image: url(current.png);",
+        [[background-image: url("a(.png"); color: blue;]],
+        [[background-image: url('a\'b.png'); color: blue;]],
+        "Background-Image: url(:/icons/mudlet.png); color: blue;",
+        "BACKGROUND-IMAGE : url(:/icons/mudlet.png)",
+        "QLabel#background-image:hover { color: red; }",
+        "background-imagex: foo; color: blue;",
+        "color: blue; background-image: url(a.png) /* unterminated",
+        "color: blue;background-image:url(a.png);font-size: 12px;",
+      }) do
+        setLabelStyleSheet("glsResetParity", sheet)
+        assert.is_true(resetBackgroundImage("glsResetParity"))
+        local expected = getLabelStyleSheet("glsResetParity")
+        label.stylesheet = sheet
+        assert.is_true(label:resetBackgroundImage())
+        assert.are.equal(expected, label.stylesheet, sheet)
+      end
     end)
   end)
 end)
@@ -1273,6 +1947,81 @@ describe("Tests Geyser.Label movies, callbacks and nesting", function()
       assert.is_false(windowVisible(grandChild.name))
     end)
 
+    it("hiding the parent closes its open nest", function()
+      local grandChild = track(child:addChild({name = "glnHideGrandChild", width = 50, height = 20}, container))
+      parent:displayNest()
+      child:displayNest()
+      parent:hide()
+      assert.is_false(windowVisible("glnNestParent"))
+      assert.is_false(windowVisible("glnNestChild"))
+      assert.is_false(windowVisible(grandChild.name))
+    end)
+
+    it("closeNestChildren hides each label of a deep nest once", function()
+      local grandChild = track(child:addChild({name = "glnOnceGrandChild", width = 50, height = 20}, container))
+      track(grandChild:addChild({name = "glnOnceGreatGrandChild", width = 50, height = 20}, container))
+      local hide = spy.on(Geyser.Container, "hide")
+      finally(function() hide:revert() end)
+      closeNestChildren(parent)
+      assert.spy(hide).was.called(3)
+    end)
+
+    it("closeNestChildren closes the nest of a label whose hide() is overridden", function()
+      local grandChild = track(child:addChild({name = "glnOverrideGrandChild", width = 50, height = 20}, container))
+      child.hide = function(self, auto) Geyser.Window.hide(self, auto) end
+      parent:displayNest()
+      child:displayNest()
+      closeNestChildren(parent)
+      assert.is_false(windowVisible(grandChild.name))
+    end)
+
+    it("a nest hidden along with its container comes back when the container is shown", function()
+      parent:displayNest()
+      container:hide()
+      assert.is_false(windowVisible("glnNestChild"))
+      container:show()
+      assert.is_true(windowVisible("glnNestParent"))
+      assert.is_true(windowVisible("glnNestChild"))
+    end)
+
+    it("a nested label outside the container hides and comes back with it", function()
+      local outside = track(parent:addChild({name = "glnOutsideChild", width = 50, height = 20}))
+      outside:show()
+      container:hide()
+      assert.is_false(windowVisible(outside.name))
+      container:show()
+      assert.is_true(windowVisible(outside.name))
+    end)
+
+    it("a closed nest stays closed when its container is shown again", function()
+      container:hide()
+      container:show()
+      assert.is_true(windowVisible("glnNestParent"))
+      assert.is_false(windowVisible("glnNestChild"))
+    end)
+
+    it("a nest stays hidden while its parent's container is, when its own container comes back", function()
+      local outer = track(Geyser.Container:new({name = "glnOuter", x = 0, y = 0, width = 400, height = 400}))
+      local inner = track(Geyser.Container:new({name = "glnInner", x = 0, y = 0, width = 200, height = 200}, outer))
+      local owner = track(Geyser.Label:new({name = "glnInnerParent", x = 0, y = 0, width = 50, height = 20}, inner))
+      local flyout = track(owner:addChild({name = "glnInnerChild", width = 50, height = 20, layoutDir = "RV"}, outer))
+      owner:displayNest()
+      inner:hide()
+      outer:hide()
+      outer:show()
+      assert.is_false(windowVisible(flyout.name))
+      inner:show()
+      assert.is_true(windowVisible(flyout.name))
+    end)
+
+    it("hiding a label skips something in its nest that is not a label", function()
+      local odd = track(Geyser.Label:new({name = "glnOddNest", x = 0, y = 0, width = 50, height = 20}, container))
+      odd.nestedLabels = {"something"}
+      assert.has_no.errors(function() odd:hide() end)
+      assert.is_false(windowVisible(odd.name))
+      odd.nestedLabels = nil
+    end)
+
     it("closeNestChildren does nothing for a label with no nest", function()
       local lonely = track(Geyser.Label:new({name = "glnLonely", x = 0, y = 0, width = 50, height = 20}, container))
       assert.has_no.errors(function() closeNestChildren(lonely) end)
@@ -1637,6 +2386,153 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       assert.is_truthy(getLabelText("glfLink"):find("#00ffff", 1, true))
     end)
 
+    it("leaves a Lua command link holding quotes intact, and resetLinkStyle takes the colour away again", function()
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff")
+      echo("glfLink", [[<a href="myFunction('arg')">go</a>]])
+      assert.are.equal([[<a href="myFunction('arg')" style="color: #00ffff;">go</a>]], getLabelText("glfLink"))
+      echo("glfLink", [[<a href='myFunction("arg")'>go</a>]])
+      assert.are.equal([[<a href='myFunction("arg")' style="color: #00ffff;">go</a>]], getLabelText("glfLink"))
+
+      resetLinkStyle("glfLink")
+      assert.are.equal([[<a href='myFunction("arg")'>go</a>]], getLabelText("glfLink"))
+    end)
+
+    it("does not grow a text that is styled again", function()
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff")
+      echo("glfLink", [[<a href="plain()">go</a>]])
+      local styled = getLabelText("glfLink")
+      for _ = 1, 3 do
+        echo("glfLink", getLabelText("glfLink"))
+      end
+      assert.are.equal(styled, getLabelText("glfLink"))
+    end)
+
+    it("takes away the styling of a text that was styled again, even one added to", function()
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff")
+      echo("glfLink", [[<a href="plain()">go</a>]])
+      echo("glfLink", getLabelText("glfLink") .. " and more")
+      resetLinkStyle("glfLink")
+      assert.are.equal([[<a href="plain()">go</a> and more]], getLabelText("glfLink"))
+    end)
+
+    it("styles the links a label already shows", function()
+      echo("glfLink", [[<a href="plain()">go</a>]])
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff")
+      assert.are.equal([[<a href="plain()" style="color: #00ffff;">go</a>]], getLabelText("glfLink"))
+    end)
+
+    it("keeps a link color the script wrote itself when resetLinkStyle takes the label's one away", function()
+      local own = [[<a href="plain()" style="color: #00ffff;">go</a>]]
+      echo("glfLink", own)
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff")
+      resetLinkStyle("glfLink")
+      assert.are.equal(own, getLabelText("glfLink"))
+    end)
+
+    it("keeps a link color the script wrote itself that matches a link color the label no longer uses", function()
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff")
+      echo("glfLink", [[<a href="plain()">go</a>]])
+      setLinkStyle("glfLink", "#ffff00", "#ff00ff")
+      local own = [[<a href="plain()" style="color: #00ffff;">go</a>]]
+      echo("glfLink", own)
+      resetLinkStyle("glfLink")
+      assert.are.equal(own, getLabelText("glfLink"))
+    end)
+
+    it("styles over a link's own style and gives it back on resetLinkStyle", function()
+      local own = [[<a href="plain()" style="color: #00ffff;">go</a>]]
+      echo("glfLink", own)
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff", false)
+      assert.are.equal([[<a href="plain()" style="color: #00ffff; text-decoration: none;">go</a>]], getLabelText("glfLink"))
+      resetLinkStyle("glfLink")
+      assert.are.equal(own, getLabelText("glfLink"))
+    end)
+
+    it("replaces a link's own style without leaving a space behind", function()
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff")
+      echo("glfLink", [[<a href="a()" style="font-weight:bold">x</a>]])
+      assert.are.equal([[<a href="a()" style="color: #00ffff;">x</a>]], getLabelText("glfLink"))
+    end)
+
+    it("keeps a link color the script wrote itself on a link the label did not style", function()
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff")
+      echo("glfLink", [[<a href="a()">x</a>]])
+      local own = [[<a href="b()" style="color: #00ffff;">y</a>]]
+      echo("glfLink", own)
+      resetLinkStyle("glfLink")
+      assert.are.equal(own, getLabelText("glfLink"))
+    end)
+
+    it("keeps a link color the script wrote itself after a picture took the place of the text", function()
+      local png = getMudletHomeDir() .. "/glfLink_spec.png"
+      local file = io.open(png, "wb")
+      file:write("\137\80\78\71\13\10\26\10\0\0\0\13\73\72\68\82\0\0\0\1\0\0\0\1\8\2\0\0\0\144\119\83\222\0\0\0\12\73\68\65\84\120\156\99\248\207\192\0\0\3\1\1\0\201\254\146\239\0\0\0\0\73\69\78\68\174\66\96\130")
+      file:close()
+      finally(function() os.remove(png) end)
+      setLinkStyle("glfLink", "#00ffff", "")
+      echo("glfLink", [[<a href="a()">a</a>]])
+      assert.is_true(setBackgroundImage("glfLink", png))
+      resetLinkStyle("glfLink")
+      -- the same tag the label wrote for the text the picture took the place of
+      local own = [[<a href="a()" style="color: #00ffff;">a</a>]]
+      echo("glfLink", own)
+      assert.are.equal(own, getLabelText("glfLink"))
+    end)
+
+    it("does not take a data-style attribute for the link's style", function()
+      setLinkStyle("glfLink", "#00ffff", "")
+      echo("glfLink", [[<a href="x()" data-style="big">x</a>]])
+      assert.are.equal([[<a href="x()" style="color: #00ffff;" data-style="big">x</a>]], getLabelText("glfLink"))
+      echo("glfLink", [[<a href="a()">a</a>]])
+      local own = [[<a href="x()" data-style="color: #00ffff;">x</a>]]
+      echo("glfLink", own)
+      resetLinkStyle("glfLink")
+      assert.are.equal(own, getLabelText("glfLink"))
+    end)
+
+    it("gives links read back in another order back as they were written", function()
+      setLinkStyle("glfLink", "#00ffff", "")
+      echo("glfLink", [[<a href="a()">A</a> <a href="b()">B</a>]])
+      echo("glfLink", [[<a href="b()" style="color: #00ffff;">B</a> <a href="a()" style="color: #00ffff;">A</a>]])
+      resetLinkStyle("glfLink")
+      assert.are.equal([[<a href="b()">B</a> <a href="a()">A</a>]], getLabelText("glfLink"))
+    end)
+
+    it("replaces a link's own style written straight after the href", function()
+      setLinkStyle("glfLink", "#00ffff", "")
+      echo("glfLink", [[<a href="x()"style="color:red">x</a>]])
+      assert.are.equal([[<a href="x()" style="color: #00ffff;">x</a>]], getLabelText("glfLink"))
+    end)
+
+    it("replaces every style a link has of its own", function()
+      setLinkStyle("glfLink", "#00ffff", "")
+      echo("glfLink", [[<a href="a()" style="x" style="color:red" title="t">go</a>]])
+      assert.are.equal([[<a href="a()" style="color: #00ffff;" title="t">go</a>]], getLabelText("glfLink"))
+    end)
+
+    it("does not take a style= inside a value it cannot read for the link's style", function()
+      setLinkStyle("glfLink", "#00ffff", "")
+      echo("glfLink", [[<a href="a()" title=a"b style=c">go</a>]])
+      assert.are.equal([[<a href="a()" style="color: #00ffff;" title=a"b style=c">go</a>]], getLabelText("glfLink"))
+    end)
+
+    it("gives a link split by whitespace back as it was written", function()
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff")
+      echo("glfLink", "<a\nhref='x()'>go</a>")
+      echo("glfLink", getLabelText("glfLink"))
+      resetLinkStyle("glfLink")
+      assert.are.equal("<a\nhref='x()'>go</a>", getLabelText("glfLink"))
+    end)
+
+    it("does not let a quote in a link color write attributes into the links", function()
+      echo("glfLink", [[<a href="a()">a</a>]])
+      setLinkStyle("glfLink", 'red" x="', "")
+      assert.is_falsy(getLabelText("glfLink"):find([[" x="]], 1, true))
+      echo("glfLink", getLabelText("glfLink"))
+      resetLinkStyle("glfLink")
+      assert.are.equal([[<a href="a()">a</a>]], getLabelText("glfLink"))
+    end)
+
     pending("Geyser.Label:setLinkStyle reporting whether the styling reached the label - the three wrappers discard the nil and error message their global answers with, and Mudlet has no link style getter")
   end)
 
@@ -1692,6 +2588,86 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       assert.are.equal("from the constructor", getLabelToolTip("glfToolTipCons"))
       assert.are.equal("from the constructor", built.toolTip)
       assert.are.equal(7, built.toolTipDuration)
+    end)
+  end)
+
+  describe("Geyser.Label:setAccessibleName", function()
+    it("names the label for screen readers and remembers it", function()
+      local label = track(Geyser.Label:new({name = "glfAccessibleName", x = 0, y = 0, width = 200, height = 50, message = "icon"}))
+      label:setAccessibleName("Open the map")
+      assert.are.equal("Open the map", getLabelAccessibleName("glfAccessibleName"))
+      assert.are.equal("Open the map", label.accessibleName)
+    end)
+
+    it("says why the label refused a role", function()
+      local label = track(Geyser.Label:new({name = "glfAccessibleRoleReason", x = 0, y = 0, width = 200, height = 50}))
+      local ok, err = label:setAccessibleRole("slider")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("'slider' is not a valid role", 1, true))
+      assert.is_true(label:setAccessibleRole("button"))
+    end)
+
+    it("keeps the name it had when the label refuses a new one", function()
+      local label = track(Geyser.Label:new({name = "glfAccessibleNameRefused", x = 0, y = 0, width = 200, height = 50}))
+      label:setAccessibleName("Open the map")
+      deleteLabel("glfAccessibleNameRefused")
+      local ok, err = label:setAccessibleName("Close the map")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("glfAccessibleNameRefused", 1, true))
+      assert.are.equal("Open the map", label.accessibleName)
+    end)
+
+    it("is given the name when created with one", function()
+      track(Geyser.Label:new({name = "glfAccessibleNameAtStart", x = 0, y = 0, width = 200, height = 50, accessibleName = "Close"}))
+      assert.are.equal("Close", getLabelAccessibleName("glfAccessibleNameAtStart"))
+    end)
+  end)
+
+  describe("Geyser.Label:setAccessibleRole", function()
+    it("sets the role and remembers it", function()
+      local label = track(Geyser.Label:new({name = "glfAccessibleRole", x = 0, y = 0, width = 200, height = 50}))
+      label:setClickCallback(function() end)
+      label:setAccessibleRole("text")
+      assert.are.equal("text", getLabelAccessibleRole("glfAccessibleRole"))
+      assert.are.equal("text", label.accessibleRole)
+      label:setAccessibleRole("")
+      assert.are.equal("button", getLabelAccessibleRole("glfAccessibleRole"))
+    end)
+
+    it("is given the role when created with one", function()
+      track(Geyser.Label:new({name = "glfAccessibleRoleAtStart", x = 0, y = 0, width = 200, height = 50, accessibleRole = "button"}))
+      assert.are.equal("button", getLabelAccessibleRole("glfAccessibleRoleAtStart"))
+    end)
+  end)
+
+  describe("Geyser.Label:setLiveRegion", function()
+    it("sets the live region and remembers it, keeping it when refused", function()
+      local label = track(Geyser.Label:new({name = "glfLiveRegion", x = 0, y = 0, width = 200, height = 50}))
+      label:setLiveRegion("assertive")
+      assert.are.equal("assertive", getLabelLiveRegion("glfLiveRegion"))
+      assert.are.equal("assertive", label.liveRegion)
+      local ok, err = label:setLiveRegion("loud")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("'loud' is not a valid live region", 1, true))
+      assert.are.equal("assertive", label.liveRegion)
+    end)
+
+    it("does not keep a live region the constructor was given and the label refused", function()
+      local label = track(Geyser.Label:new({name = "glfLiveRegionRefused", x = 0, y = 0, width = 200, height = 50, liveRegion = "loud"}))
+      assert.is_nil(label.liveRegion)
+      assert.are.equal("off", getLabelLiveRegion("glfLiveRegionRefused"))
+    end)
+
+    it("is still built in full when the constructor is given a live region that is not a string", function()
+      local label = track(Geyser.Label:new({name = "glfLiveRegionNotString", x = 0, y = 0, width = 200, height = 50, liveRegion = true, stylesheet = "color: red;"}))
+      assert.is_nil(label.liveRegion)
+      assert.are.equal("off", getLabelLiveRegion("glfLiveRegionNotString"))
+      assert.are.equal("color: red;", getLabelStyleSheet("glfLiveRegionNotString"))
+    end)
+
+    it("is given the live region when created with one", function()
+      track(Geyser.Label:new({name = "glfLiveRegionAtStart", x = 0, y = 0, width = 200, height = 50, liveRegion = "polite"}))
+      assert.are.equal("polite", getLabelLiveRegion("glfLiveRegionAtStart"))
     end)
   end)
 end)
@@ -1763,9 +2739,84 @@ describe("Tests Geyser.Label right click menus", function()
       assert.are.equal("glmHostrightClickMenu", menu.name)
       assert.are.equal(label, menu.container)
       assert.are.equal(Geyser.Label.onRightClick, label.clickCallback)
+      -- a screen reader's press is a left click, which opens no menu
+      assert.are.equal("text", getLabelAccessibleRole(label.name))
       -- the menu itself is a nestable label of no size, so only its items show
       assert.are.equal(0, menu:get_width())
       assert.are.equal(0, menu:get_height())
+    end)
+
+    it("still marks a label as text after it refused a role", function()
+      local other = Geyser.Label:new({name = "glmRefusedRole", x = 0, y = 0, width = 100, height = 30})
+      other:setAccessibleRole("slider")
+      assert.is_nil(other.accessibleRole)
+      other:createRightClickMenu({MenuItems = {"Only"}})
+      assert.are.equal("text", getLabelAccessibleRole("glmRefusedRole"))
+    end)
+
+    it("does not keep a role the constructor was given and the label refused", function()
+      local debugMessage = spy.on(_G, "debugc")
+      finally(function() debugMessage:revert() end)
+      local other = Geyser.Label:new({name = "glmConstructorRefusedRole", x = 0, y = 0, width = 100, height = 30, accessibleRole = "slider"})
+      assert.is_nil(other.accessibleRole)
+      assert.is_truthy(debugMessage.calls[#debugMessage.calls].vals[1]:find("'slider' is not a valid role", 1, true))
+      other:createRightClickMenu({MenuItems = {"Only"}})
+      assert.are.equal("text", getLabelAccessibleRole("glmConstructorRefusedRole"))
+    end)
+
+    it("makes a label text again when its release callback is cleared", function()
+      local other = Geyser.Label:new({name = "glmReleaseCleared", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"Only"}})
+      other:setReleaseCallback(function() end)
+      other:setReleaseCallback(nil)
+      assert.are.equal("text", getLabelAccessibleRole("glmReleaseCleared"))
+    end)
+
+    it("leaves a label with a release callback from before the menu a button", function()
+      local other = Geyser.Label:new({name = "glmReleaseFirst", x = 0, y = 0, width = 100, height = 30})
+      other:setReleaseCallback(function() end)
+      other:createRightClickMenu({MenuItems = {"Only"}})
+      assert.are.equal("button", getLabelAccessibleRole("glmReleaseFirst"))
+    end)
+
+    it("makes a label with a release callback as well a button", function()
+      local other = Geyser.Label:new({name = "glmReleaseCallback", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"Only"}})
+      other:setReleaseCallback(function() end)
+      assert.are.equal("button", getLabelAccessibleRole("glmReleaseCallback"))
+    end)
+
+    it("leaves a label whose role was set to automatic as text", function()
+      local other = Geyser.Label:new({name = "glmAutomaticRole", x = 0, y = 0, width = 100, height = 30, accessibleRole = ""})
+      other:createRightClickMenu({MenuItems = {"Only"}})
+      assert.are.equal("text", getLabelAccessibleRole("glmAutomaticRole"))
+    end)
+
+    it("makes a menu label a button when a script gives it a click callback of its own", function()
+      local other = Geyser.Label:new({name = "glmOwnClick", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"Only"}})
+      other:setClickCallback(function(event)
+        other:onRightClick(event)
+      end)
+      assert.are.equal("button", getLabelAccessibleRole("glmOwnClick"))
+    end)
+
+    it("decides a menu label's role by the menu rule again when the role is set back to automatic", function()
+      local other = Geyser.Label:new({name = "glmBackToAutomatic", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"Only"}})
+      assert.is_true(other:setAccessibleRole("button"))
+      assert.are.equal("button", getLabelAccessibleRole("glmBackToAutomatic"))
+      assert.is_true(other:setAccessibleRole(""))
+      assert.are.equal("text", getLabelAccessibleRole("glmBackToAutomatic"))
+    end)
+
+    it("keeps a role a script chose through the menu and its release callback", function()
+      local other = Geyser.Label:new({name = "glmChosenRole", x = 0, y = 0, width = 100, height = 30, accessibleRole = "button"})
+      other:createRightClickMenu({MenuItems = {"Only"}})
+      assert.are.equal("button", getLabelAccessibleRole("glmChosenRole"))
+      other:setReleaseCallback(function() end)
+      other:setReleaseCallback(nil)
+      assert.are.equal("button", getLabelAccessibleRole("glmChosenRole"))
     end)
 
     it("makes one hidden item per entry, in order", function()
@@ -1904,6 +2955,21 @@ describe("Tests Geyser.Label right click menus", function()
       assert.are.same({"First", "Fourth", "Second", "Third"}, menuOrder())
     end)
 
+    it("refuses an index it cannot use without adding the item", function()
+      local ok, message = label:addMenuLabel("Fourth", nil, 99)
+      assert.is_false(ok)
+      assert.are.equal("addMenuLabel: index 99 out of range (1-4)", message)
+      ok, message = label:addMenuLabel("Fourth", nil, "2")
+      assert.is_false(ok)
+      assert.are.equal("addMenuLabel: index must be a whole number, got 2 (string)", message)
+      assert.are.same({"First", "Second", "Third"}, menuOrder())
+      assert.are.same({"First", "Second", "Third"}, label.rightClickMenu.MenuItems)
+      assert.is_nil(label:findMenuElement("Fourth"))
+      -- the slot after the last item is one the new item can take
+      assert.is_true(label:addMenuLabel("Fourth", nil, 4))
+      assert.are.same({"First", "Second", "Third", "Fourth"}, menuOrder())
+    end)
+
     -- the names of the labels a call to addMenuLabel handed a stylesheet to; the
     -- global is swapped in _G because this file runs in an environment of its own
     local function labelsStyledBy(menuLabel, ...)
@@ -1962,6 +3028,21 @@ describe("Tests Geyser.Label right click menus", function()
       label:addMenuLabel("Second")
       assert.are.same({"First", "Second", "Third"}, menuOrder())
       assert.is_false(menuItem("Second").ignore)
+    end)
+
+    it("counts a hidden item it brings back as one more slot for its index", function()
+      label:hideMenuLabel("Second")
+      assert.is_true(label:addMenuLabel("Second", nil, 3))
+      assert.are.same({"First", "Third", "Second"}, menuOrder())
+    end)
+
+    it("moves an item already shown to an index among the items there are", function()
+      assert.is_true(label:addMenuLabel("Third", nil, 1))
+      assert.are.same({"Third", "First", "Second"}, menuOrder())
+      local ok, message = label:addMenuLabel("Third", nil, 4)
+      assert.is_false(ok)
+      assert.are.equal("addMenuLabel: index 4 out of range (1-3)", message)
+      assert.are.same({"Third", "First", "Second"}, menuOrder())
     end)
 
     it("adds an item under a nested parent named by its full path", function()
@@ -2036,6 +3117,32 @@ describe("Tests Geyser.Label right click menus", function()
 
     it("raises for an item that is not in the menu", function()
       assert.has_error(function() label:changeMenuIndex("Nowhere", 1) end)
+    end)
+
+    it("raises a readable error for an index past the end, leaving the menu alone", function()
+      assert.has_error(function() label:changeMenuIndex("Third", 99) end, "changeMenuIndex: index 99 out of range (1-3)")
+      assert.has_error(function() label:changeMenuIndex("Third", 0) end, "changeMenuIndex: index 0 out of range (1-3)")
+      assert.are.same({"First", "Second", "Third"}, menuOrder())
+      assert.are.same({"First", "Second", "Third"}, label.rightClickMenu.MenuItems)
+    end)
+
+    it("raises for a negative index", function()
+      assert.has_error(function() label:changeMenuIndex("Third", -1) end, "changeMenuIndex: index -1 out of range (1-3)")
+    end)
+
+    it("says an index has to be a whole number rather than calling it out of range", function()
+      assert.has_error(function() label:changeMenuIndex("Third", "2") end, "changeMenuIndex: index must be a whole number, got 2 (string)")
+      assert.has_error(function() label:changeMenuIndex("Third", 1.5) end, "changeMenuIndex: index must be a whole number, got 1.5 (number)")
+      assert.are.same({"First", "Second", "Third"}, menuOrder())
+    end)
+
+    it("takes the range from the item's own level of a nested menu", function()
+      local other = Geyser.Label:new({name = "glmIndexNest", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"First", {"Sub1", "Sub2"}, "Second", "Third"}})
+      assert.has_error(function() other:changeMenuIndex("First.Sub1", 5) end, "changeMenuIndex: index 5 out of range (1-2)")
+      assert.has_error(function() other:changeMenuIndex("First", 99) end, "changeMenuIndex: index 99 out of range (1-3)")
+      other:changeMenuIndex("First.Sub2", 1)
+      assert.are.same({"First", {"Sub2", "Sub1"}, "Second", "Third"}, other.rightClickMenu.MenuItems)
     end)
   end)
 
@@ -2117,5 +3224,116 @@ describe("Tests Geyser.Label right click menus", function()
       assert.are.equal(label:get_x() + 8, label.rightClickMenu:get_x())
       assert.are.equal(label:get_y() + 12, label.rightClickMenu:get_y())
     end)
+  end)
+end)
+
+-- a label inside a scroll box carries the scroll box's name as its windowname,
+-- which getUserWindowSize refuses as no user window
+describe("Tests Geyser.Label nests and menus inside a Geyser.ScrollBox", function()
+  local scrollBox
+  local topLevelBefore
+
+  before_each(function()
+    topLevelBefore = {}
+    for name in pairs(Geyser.windowList) do
+      topLevelBefore[name] = true
+    end
+    scrollBox = Geyser.ScrollBox:new({name = "glsbBox", x = 0, y = 0, width = 300, height = 300})
+  end)
+
+  after_each(function()
+    if Geyser.Label.closeAllTimer then
+      killTimer(Geyser.Label.closeAllTimer)
+      Geyser.Label.closeAllTimer = nil
+    end
+    scrollBox:delete()
+    for name, object in pairs(Geyser.windowList) do
+      if not topLevelBefore[name] then
+        Geyser.Label.scrollV[object] = nil
+        Geyser.Label.scrollH[object] = nil
+        object:delete()
+      end
+    end
+  end)
+
+  it("opens a right click menu", function()
+    local label = Geyser.Label:new({name = "glsbMenuHost", x = 10, y = 10, width = 100, height = 30}, scrollBox)
+    label:createRightClickMenu({MenuItems = {"First"}})
+    label:onRightClick({button = "RightButton", buttons = {"RightButton"}, x = 1, y = 1, globalX = 1, globalY = 1})
+    assert.is_true(windowVisible(label:findMenuElement("First").name))
+  end)
+
+  it("displays a nest", function()
+    local parent = Geyser.Label:new({name = "glsbNestParent", x = 10, y = 10, width = 50, height = 20}, scrollBox)
+    local child = parent:addChild({name = "glsbNestChild", width = 50, height = 20, layoutDir = "RV"}, scrollBox)
+    parent:displayNest()
+    assert.is_true(windowVisible(child.name))
+  end)
+
+  -- every refusal is a warning in the Central Debug Console
+  it("does not ask getUserWindowSize about the scroll box", function()
+    local label = Geyser.Label:new({name = "glsbAskMenu", x = 10, y = 10, width = 100, height = 30}, scrollBox)
+    label:createRightClickMenu({MenuItems = {"First"}})
+    local parent = Geyser.Label:new({name = "glsbAskNest", x = 10, y = 50, width = 50, height = 20}, scrollBox)
+    parent:addChild({name = "glsbAskNestChild", width = 50, height = 20, layoutDir = "RV"}, scrollBox)
+    local sizeSpy = spy.on(_G, "getUserWindowSize")
+    finally(function() sizeSpy:revert() end)
+    label:onRightClick({button = "RightButton", buttons = {"RightButton"}, x = 1, y = 1, globalX = 1, globalY = 1})
+    parent:displayNest()
+    assert.spy(sizeSpy).was_not_called()
+  end)
+end)
+
+describe("Tests a Geyser.Label right click menu in a user window deleted behind Geyser's back", function()
+  it("does not ask getUserWindowSize about the window that is gone", function()
+    local userWindow = Geyser.UserWindow:new({name = "glGoneUW", x = 10, y = 20, width = 200, height = 150})
+    local sizeSpy
+    -- one finally() only: a second one replaces the first
+    finally(function()
+      if sizeSpy then
+        sizeSpy:revert()
+      end
+      if Geyser.Label.closeAllTimer then
+        killTimer(Geyser.Label.closeAllTimer)
+        Geyser.Label.closeAllTimer = nil
+      end
+      userWindow:delete()
+    end)
+    local label = Geyser.Label:new({name = "glGoneUWLabel", x = 0, y = 0, width = 50, height = 20}, userWindow)
+    label:createRightClickMenu({MenuItems = {"First"}})
+    deleteMiniConsole("glGoneUW")
+    sizeSpy = spy.on(_G, "getUserWindowSize")
+    label:onRightClick({button = "RightButton", buttons = {"RightButton"}, x = 1, y = 1, globalX = 1, globalY = 1})
+    assert.spy(sizeSpy).was_not_called()
+  end)
+end)
+
+describe("Tests the typeface a label's colour leaves it with", function()
+  local geyserLabel
+
+  after_each(function()
+    if geyserLabel then
+      geyserLabel:delete()
+      geyserLabel = nil
+    end
+    deleteLabel("gltfDefault")
+    deleteLabel("gltfOther")
+  end)
+
+  local function otherColourFont()
+    createLabel("gltfOther", 0, 140, 300, 50, 1)
+    setBackgroundColor("gltfOther", 0, 0, 0, 255)
+    return getFont("gltfOther")
+  end
+
+  it("is the same for a Geyser.Label with no colour of its own as for one with a colour", function()
+    geyserLabel = Geyser.Label:new({name = "gltfOwn", x = 0, y = 0, width = 300, height = 50})
+    assert.are.equal(otherColourFont(), getFont("gltfOwn"))
+  end)
+
+  it("is the same for a label set to the default colour as for one set to another", function()
+    createLabel("gltfDefault", 0, 70, 300, 50, 1)
+    setBackgroundColor("gltfDefault", 32, 32, 32, 255)
+    assert.are.equal(otherColourFont(), getFont("gltfDefault"))
   end)
 end)

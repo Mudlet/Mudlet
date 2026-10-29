@@ -226,6 +226,16 @@ for LIB in ${NEEDED_LIBS[@]}; do
 done
 echo "    ... done copying identified libraries."
 
+# Over the MSYS2 lua51.dll the rocks brought in above, as mudlet.exe needs the
+# one it was built with
+if grep -qiE "^USE_BUNDLED_LUA:BOOL=(ON|TRUE|YES|Y|1)[[:space:]]*$" "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/CMakeCache.txt"; then
+  if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/lua51.dll" ]; then
+    echo "=== ERROR: Mudlet was built with its own Lua, but its lua51.dll is missing, so the package would carry MSYS2's ==="
+    exit 1
+  fi
+  cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/lua51.dll" .
+fi
+
 echo ""
 echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 # Using the '/./' notation provides the point at which rsync reproduces the
@@ -238,9 +248,11 @@ rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/src/mudlet-lua/./* ./mudlet-lua/
 echo ""
 
 echo "Copying Lua code formatter Lua files in..."
-# As written it copies every file but it should be polished up to skip unneeded
-# ones:
-rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/3rdparty/lcf/./* ./lcf/
+# The same set as the lcf install() rule in src/CMakeLists.txt; the first
+# matching filter wins, and -m drops directories left with nothing in them:
+rsync -avR -m --exclude='.*' --include='*/' --include='*.lua' \
+    --include='LICENSE*' --include='COPYING*' --exclude='*' \
+    "${GITHUB_WORKSPACE_UNIX_PATH}"/3rdparty/lcf/./* ./lcf/
 echo ""
 
 echo "Copying Lua translation files in..."

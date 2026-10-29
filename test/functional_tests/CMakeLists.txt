@@ -36,6 +36,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     AccessibleToolTipTest.cpp
     AddonControlsTest.cpp
     AsciiLineBreakTest.cpp
+    BlinkRowRepaintTest.cpp
     ConsoleModelExtractionTest.cpp
     ConsoleTextStyleTest.cpp
     CopyAsImageTest.cpp
@@ -53,6 +54,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     HostConsolePrintTest.cpp
     DetachedWindowTabActivityTest.cpp
     AboutDialogLicencesTest.cpp
+    LabelAccessibleInterfaceTest.cpp
     LabelAnchorInteractionTest.cpp
     MainWindowTitleTest.cpp
     LabelMovieRefusalTest.cpp
@@ -67,6 +69,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     CommandLineScrollRangeTest.cpp
     DetachedWindowOwnershipTest.cpp
     SpeechAcrossProfilesTest.cpp
+    MudletProxyStyleTest.cpp
     MxpFramePlacementTest.cpp
     MxpDestFrameClearTest.cpp
     LabelBackgroundPaintTest.cpp
@@ -79,6 +82,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowToolBarIconSizeTest.cpp
     DetachedWindowToolBarVisibilityTest.cpp
     DetachedWindowMuteStateTest.cpp
+    GlobalSettingsFlushTest.cpp
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
     RecolouredLineCacheTest.cpp
@@ -109,6 +113,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConnectionDialogNewProfileTest.cpp
     ConnectionDialogOfflineProfileTest.cpp
     ConnectionDialogOpenProfileTest.cpp
+    ConnectionDialogSecureSettingTest.cpp
     CredentialFilePermissionsTest.cpp
     DefaultGameDeleteTest.cpp
     DictionaryRoundTripTest.cpp
@@ -116,6 +121,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ProfileCloseGuardTest.cpp
     MissingDisplayFontTest.cpp
     PortableRootNoticeTest.cpp
+    ProfileDataWriteTest.cpp
     ProfileDeletionSafetyTest.cpp
     ProfileDictionaryTest.cpp
     ProfileFolderNameTest.cpp
@@ -128,7 +134,9 @@ set(PROFILE_GROUP_TEST_SOURCES
     SavedVariableFenceTest.cpp
     SelfTestProfileIconTest.cpp
     SpellDictionaryFailureTest.cpp
+    TestProfileFirstRunTourTest.cpp
     XMLexportVariablesTest.cpp
+    XmlImportStateTest.cpp
 )
 
 # Telnet and the other network protocols Mudlet speaks, the escape sequences
@@ -172,14 +180,18 @@ set(TELNET_GROUP_TEST_SOURCES
 set(TRIGGER_GROUP_TEST_SOURCES
     CaptureGroupParkingTest.cpp
     BigramFilterTest.cpp
+    CompileErrorLabelTest.cpp
     CorruptTriggerPatternsTest.cpp
     EmergencyStopResumeTest.cpp
+    GetLuaStringTest.cpp
+    LazyGlobalsCacheTest.cpp
     MultilineTriggerReentrancyTest.cpp
     PrescanStayOpenRefileTest.cpp
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerMatchPoolTest.cpp
     TreeChildTeardownTest.cpp
+    TriggerSoundArgumentTest.cpp
     UnitDeferredDeleteTest.cpp
     UnitProcessingDepthTest.cpp
     UnitsReachHostTest.cpp
@@ -192,17 +204,21 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorAutoCompleteFocusTest.cpp
     EditorClipboardXmlTest.cpp
     EditorBannerViewSwitchTest.cpp
+    EditorEmptySelectionTest.cpp
     EditorItemXMLHelpersTest.cpp
     ColorTriggerDialogTest.cpp
     EditorReshowTest.cpp
     PackageExporterTest.cpp
     EditorWindowPositionTest.cpp
+    LuaFunctionListLoadTest.cpp
     MissingEditorThemeTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     EditorAddItemTest.cpp
+    EditorFolderViewTest.cpp
     EditorSearchTest.cpp
     TreeWidgetItemMoveTest.cpp
     TriggerEditorDisclosureTest.cpp
+    TimerEditorCountdownTest.cpp
     TriggerEditorTest.cpp
     TriggerPatternListLayoutTest.cpp
     VariableEditorWriteBackTest.cpp
@@ -223,13 +239,18 @@ set(MAP_GROUP_TEST_SOURCES
     MapLevelOfDetailTest.cpp
     MapMouseInteractionTest.cpp
     MapOffscreenCustomLineTest.cpp
+    MapRoomNameVisibilityTest.cpp
     MapFileStatsTest.cpp
     MapTextLabelCacheTest.cpp
     MapViewAreaListTest.cpp
+    MapViewTeardownTest.cpp
     MapLabelRenderTest.cpp
+    MapDecalsTest.cpp
     MapViewCueTest.cpp
     LuaMapperCueTest.cpp
     MapLockNoOpTest.cpp
+    MapLabelDeleteTest.cpp
+    MapRevisionTest.cpp
     RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
     MapperPanelTest.cpp
@@ -238,13 +259,14 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaImageExportTest.cpp
     MapRoundTripTest.cpp
     MapSymbolFontTest.cpp
+    DioramaLayoutTest.cpp
     RoomAppearanceTest.cpp
     RoomExitsDeletedEditItemTest.cpp
 )
 
 # CameraController and GeometryManager are only compiled into the library with the 3D mapper
 if(USE_3DMAPPER)
-    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp Map3DViewEditingTest.cpp Map3DViewInteractionTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp ModernMapperRenderTest.cpp ModernRoomTextureTest.cpp)
+    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp Map3DViewEditingTest.cpp Map3DViewInteractionTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp ModernMapperRenderTest.cpp ModernMapperSceneTest.cpp ModernRoomTextureTest.cpp)
 endif()
 
 # Packages and modules: installing them, saving them and removing them
@@ -257,11 +279,15 @@ set(PACKAGE_GROUP_TEST_SOURCES
     DualPackageModuleTest.cpp
     ModuleManagerListingTest.cpp
     ModuleSaveTeardownTest.cpp
+    ModuleSyncReloadTest.cpp
+    ModuleSyncSaveReentryTest.cpp
     PackageDownloadDialogRestyleTest.cpp
     PackageExporterDialogTest.cpp
+    PackageFolderRemovalTest.cpp
     PackageFontsOnRefusedArchiveTest.cpp
     PackageManagerHeadingTest.cpp
     PackageManagerRemovalTest.cpp
+    PackageManagerRepositoryLinksTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     PackageRepositoryDownloadTest.cpp
     PackageSelfRemovalTest.cpp
@@ -290,6 +316,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsBannerTest.cpp
     SettingsDeepLinkTest.cpp
     SettingsDirtyApplyTest.cpp
+    SettingsExperimentsTest.cpp
     SettingsHostLifecycleTest.cpp
     SettingsInstantApplyTest.cpp
     SettingsLiveSyncTest.cpp
@@ -325,6 +352,8 @@ set(MEDIA_GROUP_TEST_SOURCES
     TDiscordModeTest.cpp
     VideoOutputHideTest.cpp
     TMediaLoopTest.cpp
+    TAudioMixerTest.cpp
+    TMediaPanTest.cpp
     TtsInterruptingSpeakTest.cpp
     HeadlessMediaDebugTest.cpp
 )
@@ -335,6 +364,9 @@ set(FUNCTIONAL_TEST_UTILS
 )
 
 mudlet_add_test_pch_provider(mudlet_functional_test_pch)
+
+# XmlImportStateTest imports every package, profile and map XML in the source tree
+set_property(SOURCE XmlImportStateTest.cpp APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 
 # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
 macro(add_functional_test_binary target)
@@ -661,20 +693,18 @@ endif()
 # and each clip has to be waited out in real time, so it needs a longer timeout.
 # VideoOutputHideTest boots one profile for the whole class and waits two of its three endings
 # out in real time, and takes the same headroom.
-# No test binary runs src/main.cpp, so pin QT_MEDIA_BACKEND for both, and for HeadlessMediaDebugTest,
+# No test binary runs src/main.cpp, so pin QT_MEDIA_BACKEND for both, and for HeadlessMediaDebugTest, TAudioMixerTest and TMediaPanTest,
 # to what main.cpp picks for the shipped application - otherwise the tests silently exercise Qt's default backend for
 # the platform rather than the one users actually get. It is empty, and so a no-op, on Linux.
-if(APPLE)
-    set(mediaLoopTestBackend "darwin")
-elseif(WIN32)
+if(APPLE OR WIN32)
     set(mediaLoopTestBackend "ffmpeg")
 else()
     set(mediaLoopTestBackend "")
 endif()
-set_tests_properties(TMediaLoopTest VideoOutputHideTest PROPERTIES TIMEOUT 300)
+set_tests_properties(TMediaLoopTest VideoOutputHideTest TAudioMixerTest TMediaPanTest PROPERTIES TIMEOUT 300)
 if(mediaLoopTestBackend)
     # APPEND, so the environment set by the loop above stays in force rather than being replaced
-    set_property(TEST TMediaLoopTest VideoOutputHideTest HeadlessMediaDebugTest APPEND PROPERTY ENVIRONMENT "QT_MEDIA_BACKEND=${mediaLoopTestBackend}")
+    set_property(TEST TMediaLoopTest VideoOutputHideTest HeadlessMediaDebugTest TAudioMixerTest TMediaPanTest APPEND PROPERTY ENVIRONMENT "QT_MEDIA_BACKEND=${mediaLoopTestBackend}")
 endif()
 
 # StarterUiSectionsTest creates a fresh profile per test method and one of them

@@ -64,12 +64,8 @@ TAction::~TAction()
     if (mpHost) {
         mpHost->getActionUnit()->unregisterAction(this);
 
-        if (isTemporary()) {
-            if (mScript.isEmpty()) {
-                mpHost->mLuaInterpreter.delete_luafunction(this);
-            } else {
-                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
-            }
+        if (isTemporary() && !mScript.isEmpty()) {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
         }
     }
 
@@ -159,6 +155,11 @@ void TAction::execute()
         }
     }
 
+    runScript();
+}
+
+void TAction::runScript()
+{
     // Recorded before the compile step below, which returns early on failure
     mpHost->mainConsoleModel().mButtonState = (mButtonState ? 2 : 1);
 
@@ -172,7 +173,7 @@ void TAction::execute()
     // Whilst this frame is on the stack ActionUnit::uninstall() must defer
     // deleting this profile's actions: the script run below can uninstall its
     // own package (e.g. a "reload package" button calling uninstallPackage())
-    // and freeing this TAction mid-execute() is a use-after-free - the members
+    // and freeing this TAction mid-runScript() is a use-after-free - the members
     // read after the call would be dangling. The guard defers that delete past
     // the last member access here; see ActionUnit::mProcessingDepth.
     ActionUnit* pUnit = mpHost->getActionUnit();

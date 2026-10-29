@@ -53,7 +53,7 @@ jobs:
             buildname: 'ubuntu / gcc / lua tests + leak detection'
             compiler: gcc_64
             gcc_compiler_version: 12
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: ubuntu-gcc-asan
             # 22.04's ccache 4.5 cleans each sixteenth of the cache on its own, and at
             # 500M that is smaller than the 35-50MB precompiled header - which GCC does
@@ -69,20 +69,20 @@ jobs:
             buildname: 'ubuntu (x86_64)'
             compiler: gcc_64
             gcc_compiler_version: 12
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: ubuntu-gcc
             ccache_maxsize: 2G
           - os: ubuntu-26.04
             buildname: 'ubuntu / clang'
             compiler: clang_64
             gcc_compiler_version: 14
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: ubuntu-clang
           # No tests: none branch on host architecture, so the arm64 job covers them on a faster pool.
           - os: macos-15-intel
             buildname: 'macos (x86_64)'
             compiler: clang_64
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: macos-x64
             deploy: 'deploy'
             build_tests: 'false'
@@ -90,7 +90,7 @@ jobs:
           - os: macos-15
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: macos-arm64
             deploy: 'deploy'
             run_tests: 'true'
@@ -529,6 +529,9 @@ jobs:
         # somewhere, a lost codec or a changed default backend would turn the whole file
         # green-by-skip on every platform and say nothing about it.
         MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK: 1
+        # dbus-daemon is installed here, so MudletProxyStyleTest's screen reader
+        # detection cases must run on their private session bus rather than skip.
+        MUDLET_TEST_REQUIRE_DBUS: 1
 
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS' && matrix.run_tests == 'true'
@@ -752,6 +755,10 @@ jobs:
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        # Off by default; the flood specs pend without it
+        MUDLET_MATCH_THREADS: 2
+        # Its statistics sample would take lines the flood specs compare off the pool
+        MUDLET_MATCH_SAMPLE_EVERY: 0
         MUDLET_TEST_MODE: 1
         MUDLET_TEST_REQUIRE_TTS_MOCK: 1
         MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
@@ -801,6 +808,10 @@ jobs:
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        # Off by default; the flood specs pend without it
+        MUDLET_MATCH_THREADS: 2
+        # Its statistics sample would take lines the flood specs compare off the pool
+        MUDLET_MATCH_SAMPLE_EVERY: 0
         MUDLET_TEST_MODE: 1
         MUDLET_TEST_REQUIRE_TTS_MOCK: 1
         MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1

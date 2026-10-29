@@ -45,12 +45,14 @@
  */
 class SecureStringUtils
 {
+    friend class SecureStringUtilsTest;
+
 public:
     /**
      * @brief Encrypt a string using a profile-specific encryption key
      * @param plaintext The string to encrypt
      * @param profileName Name of the profile (used for key lookup)
-     * @return Base64-encoded encrypted string, or empty string if input is empty
+     * @return Base64-encoded encrypted string, or empty string if input is empty or no key could be stored for the profile
      */
     static QString encryptStringForProfile(const QString& plaintext, const QString& profileName);
 
@@ -58,9 +60,11 @@ public:
      * @brief Decrypt a string using a profile-specific encryption key
      * @param ciphertext Base64-encoded encrypted string
      * @param profileName Name of the profile (used for key lookup)
-     * @return Decrypted plaintext, or empty string if input is empty/invalid
+     * @param usedDerivableKey If given, set to whether only the key anyone can derive from the
+     *        profile name decrypted it, so the caller can re-encrypt it
+     * @return Decrypted plaintext, or empty string if input is empty/invalid or neither key decrypts it
      */
-    static QString decryptStringForProfile(const QString& ciphertext, const QString& profileName);
+    static QString decryptStringForProfile(const QString& ciphertext, const QString& profileName, bool* usedDerivableKey = nullptr);
 
     /**
      * @brief Check if a string appears to be in encrypted format
@@ -129,6 +133,15 @@ public:
      * @return false when other accounts on the machine can still reach into the directory
      */
     static bool restrictDirectoryToOwner(const QString& path);
+
+    /**
+     * @brief Check, without changing them, that a file holding a secret has owner-only permissions
+     *
+     * For a file narrowed before the secret went into it. Warns and reports as restrictFileToOwner() does.
+     * @param path Path of the file to check
+     * @return false when other accounts on the machine can read the file
+     */
+    static bool confirmFileIsOwnerOnly(const QString& path);
 
     /**
      * @brief The secret that could not be narrowed, forgetting it as it is handed over
@@ -200,14 +213,22 @@ private:
      * @param iterations Number of PBKDF2 iterations
      * @return 32-byte key
      */
-    static QByteArray generateKey(const QByteArray& password, const QByteArray& salt, int iterations = 10000);
+    static QByteArray generateKey(const QByteArray& password, const QByteArray& salt, int iterations);
 
     /**
      * @brief Get or create a profile-specific encryption key
      * @param profileName Name of the profile
-     * @return 32-byte encryption key for the profile
+     * @return 32-byte encryption key for the profile, or empty if no key could be stored
      */
     static QByteArray getProfileEncryptionKey(const QString& profileName);
+
+    /**
+     * @brief The key older Mudlets encrypted with when no key could be stored, which anyone can derive
+     *        from the profile name - only ever used to decrypt what they wrote
+     * @param profileName Name of the profile
+     * @return 32-byte key
+     */
+    static QByteArray legacyProfileEncryptionKey(const QString& profileName);
 
     /**
      * @brief Load encryption key from profile directory file

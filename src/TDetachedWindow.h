@@ -65,6 +65,7 @@ public:
     // showing. mudlet reaches these through addonToolBarFor()/addonOptionsMenuFor().
     QToolBar* toolBar() const { return mpToolBar; }
     QMenu* optionsMenu() const { return mpOptionsMenu; }
+    QMenu* createPopupMenu() override;
     void updateDiscordNamedIcon();
     void setReattaching(bool reattaching) { mIsReattaching = reattaching; }
     void refreshTabBar();                             // Update tab text to account for CDC identifiers
@@ -93,6 +94,7 @@ public:
 
     // Toolbar synchronization methods
     void setToolBarVisibility(bool visible);
+    void setMenuBarVisibility(bool visible);
     bool isToolBarVisible() const;
     bool canHideToolBar() const;
 

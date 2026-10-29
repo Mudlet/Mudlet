@@ -52,7 +52,7 @@ public:
     // do not get saved
     static constexpr int scmMaxTableDepth = 99;
 
-    explicit LuaInterface(lua_State*);
+    explicit LuaInterface(lua_State*, TLuaInterpreter* = nullptr);
     ~LuaInterface();
     void iterateTable(lua_State*, int, TVar*, bool);
     void getVars(bool);
@@ -100,9 +100,14 @@ private:
     bool pushKey(TVar*, const QString& name, const int keyType);
     bool pushOwningTable(const QList<TVar*>&);
     bool newNameIsFree(TVar*);
+    bool savedWalkCanCopyAlias(lua_State*, const void* pKey, const void* pValue, const int valueType);
+
+    static constexpr int scmMaxAliasCopyNodes = 10000;
 
     int depth = 0;
     lua_State* mL;
+    // Reading or writing a variable can run a script's metamethod
+    TLuaInterpreter* mpInterpreter = nullptr;
     QSet<TVar> hiddenVars;
     QScopedPointer<VarUnit> varUnit;
     QList<int> lrefs;
@@ -121,6 +126,12 @@ private:
     // ...and the ones missing from the tree it ended up with
     QStringList mUnreadableSavedRoots;
     QStringList mTruncatedSavedTables;
+    // the tables a saved-variables walk is inside, outermost first
+    QList<const void*> mSavedWalkPath;
+    // how many second copies of a table the walk is inside...
+    int mAliasCopyDepth = 0;
+    // ...and how many variables such copies have added to the current saved global
+    int mAliasCopyNodes = 0;
 };
 
 #endif // MUDLET_LUAINTERFACE_H

@@ -33,6 +33,8 @@ ENV WITH_VARIABLE_SPLASH_SCREEN=NO
 ENV MUDLET_VERSION_BUILD=""
 # apt and dnf update the package, so the built-in updater must not
 ENV WITH_UPDATER=NO
+# A distribution's package links the distribution's Lua
+ENV WITH_BUNDLED_LUA=NO
 RUN --mount=type=cache,target=/ccache,uid=2000,gid=2000 \
     cmake -S Mudlet -B Mudlet/build -G Ninja \
       -DCMAKE_BUILD_TYPE=Release \

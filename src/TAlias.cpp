@@ -70,7 +70,7 @@ TAlias::~TAlias()
 
         if (isTemporary()) {
             if (mScript.isEmpty()) {
-                mpHost->mLuaInterpreter.delete_luafunction(this);
+                mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
             } else {
                 mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
             }
@@ -354,7 +354,7 @@ bool TAlias::setScript(const QString& script)
     // destructor would take its mScript-based branch and delete the compiled function.
     if (mRegisteredAnonymousLuaFunction) {
         if (mpHost) {
-            mpHost->mLuaInterpreter.delete_luafunction(this);
+            mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
         }
         mRegisteredAnonymousLuaFunction = false;
     }
@@ -384,7 +384,14 @@ bool TAlias::compileScript()
 void TAlias::execute()
 {
     if (!mCommand.isEmpty()) {
+        // Sending runs a whole alias pass, and any alias it matches empties the
+        // captures. "command" is left as that pass sets it, as it is for every
+        // script but an alias script's own expandAlias().
+        const int dispatchDepth = mpHost->mLuaInterpreter.pushNestedDispatchState(false);
         mpHost->send(mCommand);
+        if (dispatchDepth >= 0) {
+            mpHost->mLuaInterpreter.popNestedDispatchState(dispatchDepth);
+        }
     }
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
@@ -393,7 +400,7 @@ void TAlias::execute()
     }
 
     if (mRegisteredAnonymousLuaFunction) {
-        mpHost->mLuaInterpreter.call_luafunction(this, mName, true);
+        mpHost->mLuaInterpreter.call_luafunction(mLuaFunctionRef, mName, true);
         return;
     }
 

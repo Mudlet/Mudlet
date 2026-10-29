@@ -84,17 +84,19 @@ class TLuaInterpreter : public QThread
 
     friend class TForkedProcess;
     friend class LuaInterface;
-    // reads the parked capture vectors' capacity, which nothing else exposes
+    // reads the kept capture storage's capacity, which nothing else exposes
     friend class CaptureGroupParkingTest;
+    // checks a line really skipped looking for the handlers before it tests what follows
+    friend class LazyGlobalsCacheTest;
 
 public:
     Q_DISABLE_COPY(TLuaInterpreter)
     TLuaInterpreter(Host* pH, const QString& hostName, const int id);
     ~TLuaInterpreter();
     void setMSDPTable(QString& key, const QString& string_data);
-    void parseJSON(QString& key, const QString& string_data, const QString& protocol);
+    void parseJSON(QString& key, const QByteArray& utf8Data, const QString& protocol);
     void parseMSSP(const QString& string_data);
-    void handleIreComposerEdit(const QString& jsonData);
+    void handleIreComposerEdit(const QByteArray& jsonData);
     void msdp2Lua(const char*);
     void initLuaGlobals();
     void abortAllDownloads();
@@ -106,15 +108,17 @@ public:
     bool callMulti(const QString& function, const QString& mName);
     std::pair<bool, bool> callMultiReturnBool(const QString& function, const QString& mName);
     bool callConditionFunction(std::string& function, const QString& mName);
-    bool call_luafunction(void* pT, const QString& itemName = QString(), const bool aliasScript = false);
-    void delete_luafunction(void* pT);
+    bool call_luafunction(int functionRef, const QString& itemName = QString(), const bool aliasScript = false);
+    void delete_luafunction(int& functionRef);
     void delete_luafunction(const QString& name);
-    std::pair<bool, bool> callLuaFunctionReturnBool(void* pT, const QString& itemName = QString());
+    std::pair<bool, bool> callLuaFunctionReturnBool(int functionRef, const QString& itemName = QString());
     double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
+    static QString compileErrorAsPlainText(const QString& error);
     void setAtcpTable(const QString&, const QString&);
     void signalMXPEvent(const QString& type, const QMap<QString, QString>& attrs, const QStringList& actions, const QString& caption = QString());
     void setGMCPTable(QString&, const QString&);
+    void setGMCPTable(QString& key, const QByteArray& utf8Data);
     void setMSSPTable(const QString&);
     void setChannel102Table(int& var, int& arg);
     bool compileAndExecuteScript(const QString&);
@@ -139,6 +143,10 @@ public:
     bool lazyCaptureGlobals() const { return mLazyCaptureGlobals; }
     void set_lua_table(const QString& tableName, QStringList& variableList);
     void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
+    void setCaptureGroups(const TCaptureGroups&, const std::vector<int>&);
+    // After setCaptureGroups(), for captures whose text on screen is no longer as long as what matched
+    void setCaptureGroupLengths(std::vector<int>&& lengths) { mCaptureGroupLengthList = std::move(lengths); }
+    int captureGroupLength(std::size_t index) const;
     void setCaptureNameGroups(const NameGroupMatches&, const NamedMatchesRanges&);
     void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList, QVector<NameGroupMatches>& nameMatches);
     void setMultiCaptureGroups(std::list<std::list<std::string>>&& captureList, std::list<std::list<int>>&& posList, QVector<NameGroupMatches>&& nameMatches);
@@ -160,21 +168,40 @@ public:
     void setExpandedCommand(const QString&);
     void settleCommandAfterAliasPass();
     // expandAlias() gives "command" back only to an alias script, so every way into
-    // a script says whether it is one
+    // a script says whether it is one. Every way into Lua goes through one, as
+    // lazyGlobalsUsable() relies on hearing of each script that runs.
     class ScriptCallerScope
     {
     public:
         ScriptCallerScope(TLuaInterpreter& lua, const bool aliasScript)
-        : mLua(lua)
-        , mWasAliasScript(std::exchange(lua.mRunningAliasScript, aliasScript))
+        : ScriptCallerScope(&lua, aliasScript)
         {
         }
-        ~ScriptCallerScope() { mLua.mRunningAliasScript = mWasAliasScript; }
+        // For a caller that can be working on a Lua state with no interpreter
+        ScriptCallerScope(TLuaInterpreter* lua, const bool aliasScript)
+        : mpLua(lua)
+        , mWasAliasScript(lua && std::exchange(lua->mRunningAliasScript, aliasScript))
+        {
+            if (mpLua) {
+                ++mpLua->mScriptCallDepth;
+                mpLua->mGlobalsHandlersVerified = false;
+                if (std::exchange(mpLua->mGlobalsHandlersTrusted, false)) {
+                    mpLua->lazyGlobalsUsable(mpLua->pGlobalLua);
+                }
+            }
+        }
+        ~ScriptCallerScope()
+        {
+            if (mpLua) {
+                mpLua->mRunningAliasScript = mWasAliasScript;
+                --mpLua->mScriptCallDepth;
+            }
+        }
         ScriptCallerScope(const ScriptCallerScope&) = delete;
         ScriptCallerScope& operator=(const ScriptCallerScope&) = delete;
 
     private:
-        TLuaInterpreter& mLua;
+        TLuaInterpreter* mpLua;
         const bool mWasAliasScript;
     };
     bool callEventHandler(const QString& function, const TEvent& pE);
@@ -219,6 +246,7 @@ public:
     static int sendMSDP(lua_State*);
     static int auditAreas(lua_State*);
     static int getAreaExits(lua_State*);
+    static int getAreaGraph(lua_State*);
     static int setMergeTables(lua_State*);
     static int addSupportedTelnetOption(lua_State*);
     static int setDoor(lua_State*);
@@ -378,6 +406,7 @@ public:
     static int setCustomEnvColor(lua_State*);
     static int roomLocked(lua_State*);
     static int setAreaName(lua_State*);
+    static int setAreaGraphPosition(lua_State*);
     static int getRoomCoordinates(lua_State*);
     static int setRoomCoordinates(lua_State*);
     static int roomExists(lua_State*);
@@ -386,6 +415,7 @@ public:
     static int createRoomID(lua_State*);
     static int setRoomArea(lua_State*);
     static int resetRoomArea(lua_State*);
+    static int resetAreaGraphLayout(lua_State*);
     static int getRoomArea(lua_State*);
     static int denyCurrentSend(lua_State*);
     static int tempBeginOfLineTrigger(lua_State*);
@@ -439,6 +469,7 @@ public:
     static int setFont(lua_State*);
     static int getFont(lua_State*);
     static int setFontSize(lua_State*);
+    static int setMiniConsoleFontSize(lua_State*);
     static int getFontSize(lua_State*);
     static int openUserWindow(lua_State*);
     static int setUserWindowTitle(lua_State*);
@@ -539,6 +570,12 @@ public:
     static int deleteScrollBox(lua_State*);
     static int setLabelToolTip(lua_State*);
     static int getLabelToolTip(lua_State*);
+    static int setLabelAccessibleName(lua_State*);
+    static int getLabelAccessibleName(lua_State*);
+    static int setLabelAccessibleRole(lua_State*);
+    static int getLabelAccessibleRole(lua_State*);
+    static int setLabelLiveRegion(lua_State*);
+    static int getLabelLiveRegion(lua_State*);
     static int setLabelCursor(lua_State*);
     static int setLabelCustomCursor(lua_State*);
     static int moveWindow(lua_State*);
@@ -586,6 +623,7 @@ public:
     static int showToolBar(lua_State*);
     static int hideToolBar(lua_State*);
     static int loadReplay(lua_State*);
+    static int loadRawFile(lua_State*);
     static int setBold(lua_State*);
     static int setItalics(lua_State*);
     static int setReverse(lua_State*);
@@ -621,6 +659,9 @@ public:
     static int pauseSounds(lua_State*);
     static int pauseMusic(lua_State*);
     static int pauseVideos(lua_State*);
+    static int updateSounds(lua_State*);
+    static int setMediaListener(lua_State*);
+    static int getMediaListener(lua_State*);
     static int purgeMediaCache(lua_State*);
     static int setBorderSizes(lua_State*);
     static int setBorderTop(lua_State*);
@@ -710,6 +751,9 @@ public:
     static int addMapEvent(lua_State*);
     static int removeMapEvent(lua_State*);
     static int getMapEvents(lua_State*);
+    static int getMapEnvironmentKit(lua_State*);
+    static int getMapEnvironmentKits(lua_State*);
+    static int setMapEnvironmentKit(lua_State*);
     static int addMapMenu(lua_State*);
     static int removeMapMenu(lua_State*);
     static int getMapMenus(lua_State*);
@@ -847,6 +891,8 @@ public:
     static int getLabelSizeHint(lua_State*);
     static int announce(lua_State*);
     static int scrollTo(lua_State*);
+    static int scrollUp(lua_State*);
+    static int scrollDown(lua_State*);
     static int getScroll(lua_State*);
     static int getConfig(lua_State*);
     static int getSaveCommandHistory(lua_State*);
@@ -876,7 +922,7 @@ public:
     int duplicateLuaRegistryIndex(int index);
     void freeAllInLuaRegistry(TEvent);
     // For C++ that runs a nested event loop for this profile outside a Lua call,
-    // so pumpingEvents() holds off a reset or close until it returns.
+    // so pumpingEvents() refuses a reset or a profile close while it runs.
     void enterNestedEventLoop() { ++mEventPumpDepth; }
     void leaveNestedEventLoop() { --mEventPumpDepth; }
 
@@ -919,6 +965,8 @@ public slots:
     void slot_deleteSender(int, QProcess::ExitStatus);
 
 private:
+    static int loadReplayFile(lua_State*, const char* functionName);
+    static int setConsoleFontSize(lua_State*, const char* functionName, const bool windowNamed);
     static bool getVerifiedBool(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static QString getVerifiedString(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static bool checkStringArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
@@ -943,6 +991,7 @@ private:
     static std::pair<bool, QString> discordApiEnabled(lua_State*, bool writeAccess = false);
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
     static int performHttpRequest(lua_State*, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const char* verb);
+    static bool httpSchemeAllowed(const QUrl&);
     static void validateHttpHeaders(lua_State*, const int index, const char* functionName);
     static void applyHttpHeaders(lua_State*, const int index, QNetworkRequest& request);
     // The last argument is only needed if the third one is true:
@@ -994,6 +1043,11 @@ private:
     void deferDispatchGlobals(lua_State*, const MultimatchesSource source, const bool setsMatches);
     bool lazyGlobalsUsable(lua_State*);
     bool globalsHandlersInPlace(lua_State*);
+    bool globalHeld(lua_State*, const int keyRef, const quint8 absentFact);
+    void clearGlobal(lua_State*, const int keyRef, const quint8 absentFact);
+    void learn(lua_State*, const quint8 fact);
+    bool barrierIntact(lua_State*);
+    void watch(lua_State*, const int index);
     void standDownDeferral(lua_State*);
     void stripGlobalsHandlers(lua_State*);
     bool restoreGlobalsHandlers(lua_State*, const int metatable);
@@ -1035,15 +1089,12 @@ private:
 
 
     const int LUA_FUNCTION_MAX_ARGS = 50;
-    std::vector<std::string> mCaptureGroupList;
+    // Kept across fires for their capacity, which clearCaptureGroups() bounds
+    TCaptureGroups mCaptureGroups;
     std::vector<int> mCaptureGroupPosList;
-    // clearCaptureGroups() parks emptied storage here so the next fire reuses the strings' buffers
-    std::vector<std::string> mSpareCaptureGroupList;
-    std::vector<int> mSpareCaptureGroupPosList;
-    static constexpr std::size_t scmMaxParkedCaptures = 512;
-    static constexpr std::string::size_type scmMaxParkedCaptureBytes = 1024;
-    // Well past the cap, so a trigger slightly over it doesn't reallocate each way per fire
-    static constexpr std::size_t scmMaxParkedCaptureSlack = 4 * scmMaxParkedCaptures;
+    // Each capture's width on screen once replace() or an earlier trigger's edit changed it,
+    // -1 where untouched; the capture text stays what the game sent, as "matches" may first be built after it
+    std::vector<int> mCaptureGroupLengthList;
     QString mLastGlobalName;
     QByteArray mLastGlobalNameUtf8;
     // set_lua_string()'s encode buffer, kept for its capacity; dropped past a length no game line reaches
@@ -1103,9 +1154,18 @@ private:
     // afterwards hands the metatable out past the guard, with nothing here to
     // notice. lazyGlobalsUsable() still asks whether the handlers are there
     // before anything is left out, which covers a change made that way before
-    // a line, though not one made while a script is running.
-    lua_CFunction mStockMetatableFunctions[4] = {};
+    // a line, though not one made while a script is running. The fifth slot
+    // is rawget(), which puts a name still left out in place before reading.
+    lua_CFunction mStockMetatableFunctions[5] = {};
     bool mGlobalsMetatableTouched = false;
+    // Once both handlers are seen in place with no script running, the next
+    // lines do not look for them again until a script runs. Lua can also run
+    // outside any script - a finaliser in the collection step nearly any C API
+    // call can take - so whatever was left out on that remembered answer is
+    // looked at again before the next script, the first thing that can read it.
+    bool mGlobalsHandlersVerified = false;
+    bool mGlobalsHandlersTrusted = false;
+    int mScriptCallDepth = 0;
     // Once nothing is left out the handlers only cost every read of a global
     // that is not there a C call, so the next line takes them off. Not in the
     // guard itself, so that a getter hands the script the metatable as it was
@@ -1113,12 +1173,39 @@ private:
     bool mGlobalsHandlersLinger = false;
     int mIndexHandlerRef = LUA_NOREF;
     int mNewindexHandlerRef = LUA_NOREF;
-    // expandAlias() overwrites "command" and the captures; the caller's are saved here (one entry per
-    // nesting level) and restored when the pass returns - "command" only for an alias script.
+    // Facts the write barrier (3rdparty/lua51/README.md) lets the trigger path
+    // skip re-checking; a bit set in mFacts holds while *mLuaWriteEpoch equals
+    // mFactsEpoch
+    static constexpr quint8 scmHandlersInPlace = 0x01;
+    static constexpr quint8 scmMatchesAbsent = 0x02;
+    static constexpr quint8 scmMultimatchesAbsent = 0x04;
+    static constexpr quint8 scmLineAbsent = 0x08;
+    static constexpr quint8 scmEmptyMatchesUnused = 0x10;
+    // Null with a Lua that has no barrier, and once the barrier can no longer
+    // vouch (see barrierIntact()), which leaves every check to be made
+    const size_t* mLuaWriteEpoch = nullptr;
+    size_t mFactsEpoch = 0;
+    quint8 mFacts = 0;
+    bool factsCurrent() const { return mLuaWriteEpoch && *mLuaWriteEpoch == mFactsEpoch; }
+    bool knows(const quint8 fact) const { return factsCurrent() && (mFacts & fact); }
+    void forget(const quint8 fact) { mFacts &= static_cast<quint8>(~fact); }
+    // After a raw store of Mudlet's own, which runs no Lua: if the facts were
+    // current, only that store can have moved the epoch, so they stay - less
+    // any the caller forget()s for what it stored
+    void keepFacts(const bool wereCurrent)
+    {
+        if (wereCurrent) {
+            mFactsEpoch = *mLuaWriteEpoch;
+        }
+    }
+    // A nested alias pass - from expandAlias(), feedTriggers(), or an alias's or trigger's command field - overwrites
+    // "command" and the captures; the caller's are saved here (one entry per nesting level) and
+    // restored when the pass returns - "command" only for an alias script's expandAlias().
     struct NestedDispatchState
     {
-        std::vector<std::string> captureGroupList;
+        TCaptureGroups captureGroups;
         std::vector<int> captureGroupPosList;
+        std::vector<int> captureGroupLengthList;
         std::list<std::list<std::string>> multiCaptureGroupList;
         std::list<std::list<int>> multiCaptureGroupPosList;
         NameGroupMatches capturedNameGroups;

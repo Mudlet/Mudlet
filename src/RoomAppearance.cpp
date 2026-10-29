@@ -22,22 +22,191 @@
 #include "ExitAppearance.h"
 #include "Host.h"
 #include "TMap.h"
+#include "TRoom.h"
+#include "TRoomDB.h"
+#include "utils.h"
 
 #include <QFontMetrics>
+#include <QGlyphRun>
 #include <QPainter>
 #include <QStringList>
+#include <QTextLayout>
 
 #include <cmath>
 
 namespace RoomAppearance {
 
-QColor environmentColor(const TMap& map, const Host& host, int env)
+Look look(const TMap& map, const Host& host, const TRoom& room, const int playerRoomId, const int viewedLevel)
+{
+    Look result;
+    result.color = environmentColor(map, host, room.environment);
+    result.symbol = room.mSymbol;
+    result.symbolColor = room.mSymbolColor;
+    result.highlighted = room.highlight;
+    if (result.highlighted) {
+        result.highlightColor = room.highlightColor;
+        result.highlightCenterColor = room.highlightColor2;
+        result.highlightRadius = room.highlightRadius;
+    }
+    result.playerRoom = room.getId() == playerRoomId;
+    result.levelOffset = room.z() - viewedLevel;
+    return result;
+}
+
+QString groundGlyph(const EnvironmentKit::Kit ground, const bool gridMode, const bool ascii)
+{
+    switch (ground) {
+    case EnvironmentKit::Kit::Plain:
+        return gridMode ? qsl(".") : qsl("\"");
+    case EnvironmentKit::Kit::Water:
+        return ascii ? qsl("~") : QString(QChar(0x2248));
+    case EnvironmentKit::Kit::Road:
+        return qsl("#");
+    case EnvironmentKit::Kit::Forest:
+        return ascii ? qsl("*") : QString(QChar(0x2663));
+    case EnvironmentKit::Kit::Building:
+        return ascii ? qsl("=") : QString(QChar(0x25A0));
+    }
+    return qsl("#");
+}
+
+bool fontShows(const QFont& font, const QString& text)
+{
+    QTextLayout layout(text, font);
+    layout.beginLayout();
+    layout.createLine();
+    layout.endLayout();
+    const QList<QGlyphRun> runs = layout.glyphRuns();
+    if (runs.isEmpty()) {
+        return false;
+    }
+    for (const QGlyphRun& run : runs) {
+        // Glyph 0 is every font's "missing glyph" box
+        if (run.glyphIndexes().contains(0)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+QString terminalGlyph(const TRoom& room, const Look& look, const bool gridMode, const std::optional<EnvironmentKit::Kit> ground, const bool asciiGround)
+{
+    if (look.playerRoom) {
+        return qsl("@");
+    }
+    if (!look.symbol.isEmpty()) {
+        return look.symbol;
+    }
+    const bool up = room.getExit(DIR_UP) > 0 || room.exitStubs.contains(DIR_UP);
+    const bool down = room.getExit(DIR_DOWN) > 0 || room.exitStubs.contains(DIR_DOWN);
+    // X as Dwarf Fortress marks a staircase that goes both ways
+    if (up && down) {
+        return qsl("X");
+    }
+    if (up) {
+        return qsl("<");
+    }
+    if (down) {
+        return qsl(">");
+    }
+    if (ground) {
+        return groundGlyph(*ground, gridMode, asciiGround);
+    }
+    return gridMode ? qsl(".") : qsl("#");
+}
+
+QChar terminalLineGlyph(const qreal degrees)
+{
+    // A line reads the same either way along it, so only its angle within a half turn counts
+    qreal angle = std::fmod(degrees, 180.0);
+    if (angle < 0.0) {
+        angle += 180.0;
+    }
+    if (angle < 22.5 || angle >= 157.5 || (angle >= 67.5 && angle < 112.5)) {
+        return terminalExitDot;
+    }
+    return angle < 67.5 ? QLatin1Char('/') : QLatin1Char('\\');
+}
+
+int exitCount(const TRoom& room)
+{
+    int count = 0;
+    for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
+        if (room.getExit(direction) > 0) {
+            ++count;
+        }
+    }
+    for (const int destination : room.getSpecialExits()) {
+        if (destination > 0) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+const TRoom* drawnExit(const TMap& map, const TRoom& room, const int direction)
+{
+    const int destination = room.getExit(direction);
+    if (destination <= 0 || room.customLines.contains(TRoom::dirCodeToShortString(direction))) {
+        return nullptr;
+    }
+    const TRoom* pDestination = map.mpRoomDB->getRoom(destination);
+    return pDestination && !pDestination->isHidden() ? pDestination : nullptr;
+}
+
+bool onEnvironmentLine(const TMap& map, const TRoom& room)
+{
+    if (room.isHidden()) {
+        return false;
+    }
+    const auto sameLine = [&room](const TRoom* pOther) {
+        return pOther && pOther->environment == room.environment && pOther->z() == room.z() && pOther->getArea() == room.getArea();
+    };
+    for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
+        if (sameLine(drawnExit(map, room, direction))) {
+            return true;
+        }
+    }
+    // A one-way exit into the room draws a line to it as well
+    const QMultiHash<int, int>& entrances = map.mpRoomDB->getEntranceHash();
+    for (auto it = entrances.constFind(room.getId()); it != entrances.cend() && it.key() == room.getId(); ++it) {
+        const TRoom* pFrom = map.mpRoomDB->getRoom(it.value());
+        if (!pFrom || pFrom->isHidden() || !sameLine(pFrom)) {
+            continue;
+        }
+        for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
+            if (const TRoom* pTo = drawnExit(map, *pFrom, direction); pTo && pTo->getId() == room.getId()) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+namespace {
+// The color an environment is drawn in: an ANSI color's number, or a custom color's environment ID
+std::optional<int> colorEnvironment(const TMap& map, int env)
 {
     if (map.mEnvColors.contains(env)) {
         env = map.mEnvColors[env];
     } else if (!map.mCustomEnvColors.contains(env)) {
-        env = 1;
+        return std::nullopt;
     }
+    if ((env >= 1 && env < 256) || map.mCustomEnvColors.contains(env)) {
+        return env;
+    }
+    return std::nullopt;
+}
+} // namespace
+
+bool environmentDefined(const TMap& map, const int environmentId)
+{
+    return colorEnvironment(map, environmentId).has_value();
+}
+
+QColor environmentColor(const TMap& map, const Host& host, const int environmentId)
+{
+    const int env = colorEnvironment(map, environmentId).value_or(1);
     switch (env) {
     case 1:
         return host.mRed_2;
@@ -194,6 +363,11 @@ QPointF nameOffset(const QString& positionData)
         break;
     }
     return offset;
+}
+
+bool nameShown(const TRoom& room)
+{
+    return !room.name.isEmpty() && getUserDataBool(room.userData, ROOM_UI_SHOWNAME, true);
 }
 
 QColor nameColor(const QString& colorData, const QColor& background)

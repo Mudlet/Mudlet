@@ -41,6 +41,7 @@
 #include <QList>
 #include <memory>
 #include <optional>
+#include <utility>
 
 class Host;
 class TArea;
@@ -78,6 +79,7 @@ public:
     Q_DISABLE_COPY(T2DMap)
     explicit T2DMap(QWidget* parent = nullptr);
     ~T2DMap() override;
+    QSize sizeHint() const override;
     std::pair<bool, QString> setMapZoom(const qreal zoom, const int areaId = 0);
     void init();
     // Public so MapRenderBenchmark need not copy the arithmetic.
@@ -193,13 +195,27 @@ public:
     // per secondary map view as well as the mapper's own:
     qsizetype symbolPixmapCacheCount() const { return mSymbolPixmapCache.size(); }
     void addSymbolToPixmapCache(const QString, const QString, const QColor, const bool);
-    void flushTextLabelPixmapCache() { mTextLabelPixmapCache.clear(); }
-    void addTextLabelToCache(const QString& key, const TMapLabel& label, const QSize& targetSize);
+    void flushTextLabelPixmapCache()
+    {
+        mTextLabelPixmapCache.clear();
+        mTextLabelPixmapCache.setMaxCost(mTextLabelPixmapBudgetKiB);
+        mTextLabelPixmapFrameKiB = 0;
+        mTextLabelPixmapLastFrameKiB = 0;
+    }
+    void startTextLabelFrame();
+    qsizetype textLabelPixmapCacheCount() const { return mTextLabelPixmapCache.size(); }
+    static constexpr qsizetype scmTextLabelPixmapBudgetKiB = 32 * 1024;
+    void setTextLabelPixmapBudgetKiB(qsizetype budgetKiB)
+    {
+        mTextLabelPixmapBudgetKiB = budgetKiB;
+        flushTextLabelPixmapCache();
+    }
     void drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect);
     void setPlayerRoomStyle(const int style);
     void switchArea(const QString& newAreaName);
     void switchArea(int areaId);
     void clearSelection();
+    void forgetDeletedRoom(int roomId);
     void pruneRoomSelectionToArea(int areaId);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
 
@@ -437,14 +453,44 @@ private:
 
     void resizeMultiSelectionWidget();
     void hideSelectionWidget();
+    void pruneDeletedRoomsFromSelectionWidget();
     std::pair<int, int> getMousePosition();
     std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
     bool isSnapCustomLinePointsToGridEnabled() const;
     QPointF snapPointToGrid(const QPointF& point) const;
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
-    inline void drawRoom(
-            QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const bool showRoomCollision);
+    // A highlight reaches over the rooms around it but stays under their symbols, ids, names and exit markers, so
+    // with one in view every room's body is drawn first, then the highlights, then everything else.
+    enum class RoomDrawPass { Whole, Body, Highlight, Labels };
+    inline void drawRoom(QPainter&,
+                         QFont&,
+                         QFont&,
+                         QPen&,
+                         TRoom*,
+                         const bool isGridMode,
+                         const bool areRoomIdsLegible,
+                         const bool showRoomNames,
+                         const int,
+                         const float,
+                         const float,
+                         const bool showRoomCollision,
+                         const RoomDrawPass pass = RoomDrawPass::Whole);
+    void drawRoomHighlightsAndLabels(QPainter&,
+                                     QFont& roomVNumFont,
+                                     QFont& mapNameFont,
+                                     QPen&,
+                                     const QList<QPair<TRoom*, QPointF>>& rooms,
+                                     const bool isGridMode,
+                                     const bool areRoomIdsLegible,
+                                     const bool showRoomNames,
+                                     const int speedWalkStartRoomId);
+    bool anyRoomHighlighted(const QList<int>& roomIds) const;
+    // A double-clicked room's speedwalk runs Lua, which may delete rooms, so it waits until no room is held for drawing
+    std::optional<std::pair<int, int>> mPendingSpeedWalk;
+    void startPendingSpeedWalk();
+    // The grid and reduced-detail loops draw their highlights before the player's room is drawn, so they put its body under them first
+    void drawPlayerRoomBody(QPainter&, TRoom* pPlayerRoom, const QPointF& roomCenter, const bool isGridMode, const bool showRoomCollision);
     // Batch rendering for large grid mode areas - draws rooms grouped by color
     void drawGridModeRooms(QPainter&,
                            const TArea* pDrawnArea,
@@ -459,6 +505,7 @@ private:
                            QFont& roomVNumFont,
                            bool& isPlayerRoomVisible,
                            QPointF& playerRoomOnWidgetCoordinates,
+                           bool& isPlayerRoomBodyDrawn,
                            bool areRoomIdsLegible,
                            QString* profileOutput = nullptr);
     // The non-grid room loop for zooms where a room is a few pixels across.
@@ -471,6 +518,7 @@ private:
                                  float widgetHeight,
                                  bool& isPlayerRoomVisible,
                                  QPointF& playerRoomOnWidgetCoordinates,
+                                 bool& isPlayerRoomBodyDrawn,
                                  QString* profileOutput = nullptr);
     QColor environmentColor(int environmentId) const;
     QSize lodRoomBlobSize() const;
@@ -483,6 +531,8 @@ private:
         // The destination's reverse exit doesn't lead back. Not the sole arrow test: an exit also gets
         // an arrow when a sibling exit to the same room is one-way.
         bool oneWay = false;
+        // A straight custom line between the two rooms draws this exit's line, but not this room's door on it.
+        bool drawnByCustomLine = false;
     };
     void paintRoomExits(QPainter&, QPen&, QList<ExitToPaint>& exitList, const TArea*, int zLevel, const QRect& roomBounds, const QList<int>& viewportRooms, float exitWidth, QMap<int, QPointF>&);
     void resolveAreaExitClick(QPainter&, const QMap<int, QPointF>& areaExitsMap, const int speedWalkStartRoomId);
@@ -512,13 +562,45 @@ private:
 
     bool mIsSelectionSorting = true;
     bool mIsSelectionSortByNames = false;
+    QSet<int> mRoomsToDropFromSelectionWidget;
 
     // Used to keep track of if sorting the multiple
     // room listing/selection widget, and by what,
     // as we now show room names (if present) as well.
     bool mIsSelectionUsingNames = false;
     QCache<QString, QPixmap> mSymbolPixmapCache;
-    QCache<QString, QPixmap> mTextLabelPixmapCache;
+
+    struct LabelPixmapKey
+    {
+        int areaId = 0;
+        int labelId = 0;
+        QSize size;
+
+        friend bool operator==(const LabelPixmapKey&, const LabelPixmapKey&) = default;
+        friend size_t qHash(const LabelPixmapKey& key, size_t seed = 0) noexcept { return qHashMulti(seed, key.areaId, key.labelId, key.size.width(), key.size.height()); }
+    };
+    // A label drawn at its zoomed size, with what it was drawn from so an edited
+    // label is redrawn rather than served stale.
+    struct LabelPixmap
+    {
+        QPixmap pixmap;
+        QString text;
+        QFont font;
+        QRgb fgColor = 0;
+        QRgb bgColor = 0;
+        QRgb outlineColor = 0;
+        qint64 sourcePixmapKey = 0;
+        qsizetype costKiB = 1;
+    };
+    static bool labelPixmapIsCurrent(const LabelPixmap& cached, const TMapLabel& label);
+    const LabelPixmap* addTextLabelToCache(const LabelPixmapKey& key, const TMapLabel& label);
+    // Costed in KiB, not entries, which thrash once more labels are on screen; grows past
+    // the budget to hold those, up to four labels of the largest size it caches.
+    static constexpr qsizetype scmTextLabelPixmapCeilingKiB = 256 * 1024;
+    qsizetype mTextLabelPixmapBudgetKiB = scmTextLabelPixmapBudgetKiB;
+    QCache<LabelPixmapKey, LabelPixmap> mTextLabelPixmapCache{scmTextLabelPixmapBudgetKiB};
+    qsizetype mTextLabelPixmapFrameKiB = 0;
+    qsizetype mTextLabelPixmapLastFrameKiB = 0;
     ushort mSymbolFontSize = 1;
     QFont mMapSymbolFont;
     // in the players current area, how many digits does the biggest room number have?

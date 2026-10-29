@@ -46,6 +46,7 @@ set(mudlet_SRCS
     AliasUnit.cpp
     CredentialManager.cpp
     ctelnet.cpp
+    DioramaLayout.cpp
     discord.cpp
     EditorAddItemCommand.cpp
     EditorDeleteItemCommand.cpp
@@ -54,6 +55,7 @@ set(mudlet_SRCS
     EditorMoveItemCommand.cpp
     EditorToggleActiveCommand.cpp
     EditorUndoStack.cpp
+    EnvironmentKit.cpp
     EventLoopPump.cpp
     ExitAppearance.cpp
     FontManager.cpp
@@ -66,6 +68,8 @@ set(mudlet_SRCS
     LuaInterface.cpp
     LuaLiteral.cpp
     mapInfoContributorManager.cpp
+    MapDecals.cpp
+    MapStyle.cpp
     MMCPClient.cpp
     MMCPServer.cpp
     MudletApp.cpp
@@ -86,10 +90,12 @@ set(mudlet_SRCS
     TAction.cpp
     TAlias.cpp
     TArea.cpp
+    TAreaGraph.cpp
     TAreaGridIndex.cpp
     TAreaLodExitIndex.cpp
     TAreaSpanIndex.cpp
     TAreaZLevelIndex.cpp
+    TAudioMixer.cpp
     TBuffer.cpp
     TConsoleModel.cpp
     TDebug.cpp
@@ -103,6 +109,7 @@ set(mudlet_SRCS
     THyperlinkSelectionManager.cpp
     THyperlinkVisibilityManager.cpp
     TimerUnit.cpp
+    TIngestPipeline.cpp
     TIrcClient.cpp
     TKey.cpp
     TLabelModel.cpp
@@ -120,6 +127,7 @@ set(mudlet_SRCS
     TMap.cpp
     TMapLabel.cpp
     TMedia.cpp
+    TMediaVoice.cpp
     TMediaPlaylist.cpp
     TMxpBRTagHandler.cpp
     TMxpColorTagHandler.cpp
@@ -169,12 +177,13 @@ set(mudlet_SRCS
     VarUnit.cpp
     VoskRecognizer.cpp
     XMLexport.cpp
-    XMLimport.cpp)
+    XMLimport.cpp
+    XmlImportReader.cpp)
 
 # Every .cpp source file that needs Qt Widgets goes here instead, in mudlet_app, kept
 # in alphabetical order (case-insensitive).
 set(mudlet_app_SRCS
-    AltFocusMenuBarDisable.cpp
+    ../3rdparty/qt-tags-widget/src/qtagedit.cpp
     CustomLineDrawContextMenuHandler.cpp
     CustomLineDrawHandler.cpp
     CustomLineEditContextMenuHandler.cpp
@@ -215,6 +224,7 @@ set(mudlet_app_SRCS
     LabelInteractionHandler.cpp
     MiddleMousePanHandler.cpp
     mudlet.cpp
+    MudletProxyStyle.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
@@ -223,6 +233,7 @@ set(mudlet_app_SRCS
     SelectionRectangleHandler.cpp
     SingleLineTextEdit.cpp
     T2DMap.cpp
+    TAccessibleLabel.cpp
     TAccessibleTextEdit.cpp
     TCommandLine.cpp
     TPasswordEntry.cpp
@@ -335,6 +346,7 @@ set(mudlet_HDRS
     AliasUnit.h
     CredentialManager.h
     ctelnet.h
+    DioramaLayout.h
     discord.h
     EditorAddItemCommand.h
     EditorCommand.h
@@ -344,6 +356,7 @@ set(mudlet_HDRS
     EditorMoveItemCommand.h
     EditorToggleActiveCommand.h
     EditorUndoStack.h
+    EnvironmentKit.h
     enums.h
     EventLoopPump.h
     ExitAppearance.h
@@ -358,6 +371,8 @@ set(mudlet_HDRS
     LuaLiteral.h
     MacMicrophonePermission.h
     mapInfoContributorManager.h
+    MapDecals.h
+    MapStyle.h
     MMCP.h
     MMCPClient.h
     MMCPServer.h
@@ -381,11 +396,13 @@ set(mudlet_HDRS
     TAlias.h
     TAppFrontend.h
     TArea.h
+    TAreaGraph.h
     TAreaGridIndex.h
     TAreaLodExitIndex.h
     TAreaSpanIndex.h
     TAreaZLevelIndex.h
     TAstar.h
+    TAudioMixer.h
     TBuffer.h
     TConsoleFrontend.h
     TConsoleModel.h
@@ -404,6 +421,7 @@ set(mudlet_HDRS
     THyperlinkStyling.h
     THyperlinkVisibilityManager.h
     TimerUnit.h
+    TIngestPipeline.h
     TIrcClient.h
     TKey.h
     TLabelModel.h
@@ -415,6 +433,7 @@ set(mudlet_HDRS
     TMapViewsFrontend.h
     TMatchState.h
     TMedia.h
+    TMediaVoice.h
     TMediaData.h
     TMediaPlaylist.h
     TMxpBRTagHandler.h
@@ -475,12 +494,13 @@ set(mudlet_HDRS
     VoskRecognizer.h
     widechar_width.h
     XMLexport.h
-    XMLimport.h)
+    XMLimport.h
+    XmlImportReader.h)
 
 # Every .h header file that needs Qt Widgets goes here instead, in mudlet_app, kept
 # in alphabetical order (case-insensitive).
 set(mudlet_app_HDRS
-    AltFocusMenuBarDisable.h
+    ../3rdparty/qt-tags-widget/include/QTagEdit/qtagedit.hpp
     CustomLineDrawContextMenuHandler.h
     CustomLineDrawHandler.h
     CustomLineEditContextMenuHandler.h
@@ -521,6 +541,7 @@ set(mudlet_app_HDRS
     LabelInteractionHandler.h
     MiddleMousePanHandler.h
     mudlet.h
+    MudletProxyStyle.h
     PackageItemDelegate.h
     PanInteractionHandler.h
     RoomContextMenuHandler.h
@@ -530,6 +551,7 @@ set(mudlet_app_HDRS
     SingleLineTextEdit.h
     T2DMap.h
     TAccessibleConsole.h
+    TAccessibleLabel.h
     TAccessibleTextEdit.h
     TCommandLine.h
     TPasswordEntry.h
@@ -587,6 +609,10 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_app_HDRS glwidget.h)
   list(APPEND mudlet_app_SRCS modern_glwidget.cpp)
   list(APPEND mudlet_app_HDRS modern_glwidget.h)
+  list(APPEND mudlet_app_SRCS MapSearchPanel.cpp)
+  list(APPEND mudlet_app_HDRS MapSearchPanel.h)
+  list(APPEND mudlet_SRCS BloomPass.cpp)
+  list(APPEND mudlet_HDRS BloomPass.h)
   list(APPEND mudlet_SRCS CameraController.cpp)
   list(APPEND mudlet_HDRS CameraController.h)
   list(APPEND mudlet_SRCS ExitScene.cpp)
@@ -595,12 +621,22 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_HDRS GeometryManager.h)
   list(APPEND mudlet_SRCS LabelTextureCache.cpp)
   list(APPEND mudlet_HDRS LabelTextureCache.h)
+  list(APPEND mudlet_SRCS MapAtlas.cpp)
+  list(APPEND mudlet_HDRS MapAtlas.h)
+  list(APPEND mudlet_SRCS MapRoute.cpp)
+  list(APPEND mudlet_HDRS MapRoute.h)
+  list(APPEND mudlet_SRCS MapSearch.cpp)
+  list(APPEND mudlet_HDRS MapSearch.h)
+  list(APPEND mudlet_SRCS MapStitch.cpp)
+  list(APPEND mudlet_HDRS MapStitch.h)
   list(APPEND mudlet_SRCS RenderCommand.cpp)
   list(APPEND mudlet_HDRS RenderCommand.h)
   list(APPEND mudlet_SRCS RenderCommandQueue.cpp)
   list(APPEND mudlet_HDRS RenderCommandQueue.h)
   list(APPEND mudlet_SRCS ResourceManager.cpp)
   list(APPEND mudlet_HDRS ResourceManager.h)
+  list(APPEND mudlet_SRCS RetainedMapScene.cpp)
+  list(APPEND mudlet_HDRS RetainedMapScene.h)
   list(APPEND mudlet_SRCS ShaderManager.cpp)
   list(APPEND mudlet_HDRS ShaderManager.h)
   list(APPEND mudlet_app_HDRS glwidget_integration.h)
@@ -668,10 +704,18 @@ if(Qt6TextToSpeech_FOUND)
   message(STATUS "Using TextToSpeech module")
 endif()
 
+# MudletProxyStyle reads the AT-SPI screen reader status over D-Bus
+if(UNIX AND NOT APPLE)
+  find_package(Qt6 COMPONENTS DBus REQUIRED)
+  list(APPEND QT_APP_LIBS Qt6::DBus)
+endif()
+
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
 find_package(ZIP REQUIRED)
-find_package(Lua51 REQUIRED)
+if(NOT USE_BUNDLED_LUA)
+  find_package(Lua51 REQUIRED)
+endif()
 find_package(ZLIB REQUIRED)
 # 10.36 is the floor for PCRE2_MATCH_INVALID_UTF: it arrived in 10.34, and 10.36
 # fixed it mis-optimising the start of a match in 8-bit mode with PCRE2_CASELESS
@@ -1011,9 +1055,13 @@ target_include_directories(${LIB_MUDLET_APP_TARGET} INTERFACE
 # would otherwise be found in the system Qt rather than beside Qt6Gui.
 target_link_libraries(${LIB_MUDLET_APP_TARGET} PUBLIC
     edbee-lib
-    QTagEdit
     ${QT_APP_LIBS}
     ${LIB_MUDLET_TARGET})
+
+# qt-tags-widget is listed in mudlet_app_SRCS/HDRS, not add_subdirectory()'d, as its own
+# project has install() rules; a file upstream adds or renames has to be listed there too.
+set_property(SOURCE ../3rdparty/qt-tags-widget/src/qtagedit.cpp APPEND PROPERTY
+  INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/qt-tags-widget/include/QTagEdit)
 
 # main() stays out of the libraries: a test that links them brings its own, and
 # the linker can pull main.cpp's object in for any inline function it defines.
@@ -1193,8 +1241,28 @@ if(UNIX AND NOT APPLE)
   install(
     DIRECTORY "../3rdparty/lcf"
     DESTINATION "share/mudlet/lua"
-    PATTERN ".git" EXCLUDE PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
-                                       WORLD_READ)
+    FILES_MATCHING
+    PATTERN "*.lua" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    PATTERN "LICENSE*" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    PATTERN "COPYING*" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    PATTERN ".*" EXCLUDE)
+  # FILES_MATCHING still creates every directory it walks, so a directory holding no Lua would ship
+  # empty; EXCLUDE_EMPTY_DIRECTORIES would do this but needs CMake 3.31
+  install(
+    CODE [[
+    file(GLOB_RECURSE lcfEntries LIST_DIRECTORIES true
+         "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/lcf/*")
+    # deepest first, so a parent left empty by removing its children goes too
+    list(SORT lcfEntries ORDER DESCENDING)
+    foreach(lcfEntry IN LISTS lcfEntries)
+      if(IS_DIRECTORY "${lcfEntry}")
+        file(GLOB lcfChildren "${lcfEntry}/*")
+        if(NOT lcfChildren)
+          file(REMOVE_RECURSE "${lcfEntry}")
+        endif()
+      endif()
+    endforeach()
+  ]])
 
   install(
     FILES "../mudlet.desktop"

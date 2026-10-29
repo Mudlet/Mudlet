@@ -27,6 +27,8 @@
 
 #include <QString>
 
+#include <optional>
+
 class TMediaData
 {
 public:
@@ -88,6 +90,9 @@ public:
     enum MediaClose {
         MediaCloseEnabled = true,
         MediaCloseDefault = false};
+
+    static constexpr int MediaPanLeft = -100;
+    static constexpr int MediaPanRight = 100;
 
     int mediaProtocol() const { return mMediaProtocol; }
     void setMediaProtocol(int mediaProtocol) { mMediaProtocol = mediaProtocol; }
@@ -209,6 +214,18 @@ public:
     QString mediaCaption() const { return mMediaCaption; }
     void setMediaCaption(QString mediaCaption) { mMediaCaption = mediaCaption; }
 
+    // The full path an API call named a file by, before it became the name of its copy
+    QString mediaSourcePath() const { return mMediaSourcePath; }
+    void setMediaSourcePath(QString mediaSourcePath) { mMediaSourcePath = mediaSourcePath; }
+
+    // Unset is not the same as 0: a sound given neither a pan nor a direction plays as recorded
+    std::optional<int> mediaPan() const { return mMediaPan; }
+    void setMediaPan(std::optional<int> mediaPan) { mMediaPan = mediaPan ? std::optional<int>(qBound(MediaPanLeft, *mediaPan, MediaPanRight)) : std::nullopt; }
+
+    // As TMedia::canonicalMediaDirection() spells it, or empty for none
+    QString mediaDirection() const { return mMediaDirection; }
+    void setMediaDirection(QString mediaDirection) { mMediaDirection = mediaDirection; }
+
 private:
     int mMediaProtocol = MediaProtocolNotSet;
     int mMediaType = MediaTypeNotSet;
@@ -231,6 +248,9 @@ private:
     QString mMediaWidget = MediaWidgetLabel;
     QString mMediaAbsolutePathFileName;
     QString mMediaCaption;
+    QString mMediaSourcePath;
+    std::optional<int> mMediaPan;
+    QString mMediaDirection;
 };
 
 #endif // MUDLET_TMEDIA_DATA_H

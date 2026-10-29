@@ -131,6 +131,27 @@ describe("Tests the room and area database behind the map", function()
       local second = addAreaName("RoomDBSpecMadeAfter")
       assert.is_true(second > first)
     end)
+
+    it("addAreaName does not take the ID of an area that only has a name", function()
+      -- setAreaName on an unused ID makes an area with no TArea behind it
+      -- until a room moves in, so the ID search must not go by TAreas alone
+      local before = addAreaName("RoomDBSpecBeforeNameOnly")
+      finally(function()
+        deleteArea("RoomDBSpecBeforeNameOnly")
+        deleteArea("RoomDBSpecNameOnly")
+        deleteArea("RoomDBSpecAfterNameOnly")
+      end)
+      local nameOnlyId = before + 1
+      while getAreaTableSwap()[nameOnlyId] do
+        nameOnlyId = nameOnlyId + 1
+      end
+      assert.is_true(setAreaName(nameOnlyId, "RoomDBSpecNameOnly"))
+
+      local after = addAreaName("RoomDBSpecAfterNameOnly")
+      assert.are_not.equal(nameOnlyId, after)
+      assert.are.equal(nameOnlyId, getAreaTable()["RoomDBSpecNameOnly"])
+      assert.are.equal(after, getAreaTable()["RoomDBSpecAfterNameOnly"])
+    end)
   end)
 
   describe("Tests room ID allocation", function()

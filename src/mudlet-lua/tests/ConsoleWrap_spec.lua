@@ -6,9 +6,11 @@
 -- wrapping is applied - all read back out of the buffer, which is what the
 -- console draws from.
 --
--- A miniconsole is used throughout: it wraps with the same code as the main
--- console but its width is ours to set, while the main console's belongs to
--- the profile and is recomputed whenever the window is resized.
+-- A miniconsole is used wherever one will do: it wraps with the same code as
+-- the main console but its width is ours to set, while the main console's
+-- belongs to the profile and is recomputed whenever the window is resized.
+-- Text from the game only ever reaches the main console, so the specs for
+-- that route set its width and put it back.
 
 local win = "consoleWrapSpecWindow"
 
@@ -165,6 +167,81 @@ describe("Tests how a console wraps the lines it is given", function()
       assert.are.same({"aaaa bbbb ", "cccc dddd ", "eeee"}, lines())
     end)
 
+    -- the first line exactly fills the width, indent included, so measuring it
+    -- as though the indent were still to come would break it again
+    local alphabetWrapped = {"  abcdefghij", "    klmnopqr", "    stuvwxyz"}
+
+    it("leaves an indented line alone when wrapLine() rewraps it at the same width", function()
+      assert.are.same(alphabetWrapped, wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4))
+      wrapLine(win, 0)
+      assert.are.same(alphabetWrapped, lines())
+      wrapLine(win, 0)
+      assert.are.same(alphabetWrapped, lines())
+    end)
+
+    it("leaves an indented line that is not plain ASCII alone when wrapLine() rewraps it at the same width", function()
+      local accented = {"  abcdéfghij", "    klmnopqr", "    stuvwxyz"}
+      assert.are.same(accented, wrapped(12, "abcdéfghijklmnopqrstuvwxyz", 2, 4))
+      wrapLine(win, 0)
+      assert.are.same(accented, lines())
+    end)
+
+    it("indents an already indented line once when wrapLine() rewraps it narrower", function()
+      wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4)
+      setWindowWrap(win, 8)
+      wrapLine(win, 0)
+      assert.are.same({"  abcdef", "    ghij", "    klmn", "    opqr", "    stuv", "    wxyz"}, lines())
+    end)
+
+    it("indents an already indented line once when a newline is inserted into it", function()
+      wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4)
+      moveCursor(win, 5, 0)
+      insertText(win, "\n")
+      assert.are.same({"  abc", "defghij", "    klmnopqr", "    stuvwxyz"}, lines())
+    end)
+
+    it("indents the line a newline inserted into a wrapped line starts when wrapLine() breaks it", function()
+      wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4)
+      moveCursor(win, 5, 0)
+      insertText(win, "\n")
+      setWindowWrap(win, 5)
+      wrapLine(win, 1)
+      assert.are.equal("  def", lines()[2])
+    end)
+
+    it("indents the line a newline inserted into a wrapped line starts when that line begins with spaces", function()
+      wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4)
+      moveCursor(win, 5, 0)
+      insertText(win, "\n  ")
+      setWindowWrap(win, 8)
+      wrapLine(win, 1)
+      local result = lines()
+      -- the spaces are text, so it wraps as that text echoed as a paragraph of its own does
+      local fresh = wrapped(8, "  defghij", 2, 4)
+      assert.are.same(fresh, {select(2, unpack(result, 1, #fresh + 1))})
+    end)
+
+    it("indents an already indented line once when wrapLine() rewraps it narrower after its continuation lines were deleted", function()
+      wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4)
+      moveCursor(win, 0, 1)
+      deleteLine(win)
+      moveCursor(win, 0, 1)
+      deleteLine(win)
+      setWindowWrap(win, 8)
+      wrapLine(win, 0)
+      assert.are.same({"  abcdef", "    ghij"}, lines())
+    end)
+
+    it("leaves the indented lines below alone when a newline is inserted above them", function()
+      wrapAt(12, 2, 4)
+      echo(win, "one\n")
+      echo(win, "abcdefghijklmnopqrstuvwxyz\n")
+      moveCursor(win, 3, 0)
+      insertText(win, "\ntwo")
+      local result = lines()
+      assert.are.same(alphabetWrapped, {select(3, unpack(result))})
+    end)
+
     -- Wider than the main console's own width, so a rewrap at that width shows
     local longRun = string.rep("y", 300)
 
@@ -227,8 +304,79 @@ describe("Tests how a console wraps the lines it is given", function()
     it("gives a continued line no timestamp of its own", function()
       wrapAt(20)
       echo(win, "aaaaaaaaaa bbbbbbbbbb cccc\n")
-      assert.is_not.matches("^%-+%s*$", getTimestamp(win, 0))
+      assert.matches("^%d%d:%d%d:%d%d%.%d%d%d $", getTimestamp(win, 0))
       assert.matches("^%-+%s*$", getTimestamp(win, 1))
+      assert.are.equal(#getTimestamp(win, 0), #getTimestamp(win, 1))
+    end)
+  end)
+
+  -- A line from the game reaches the buffer by a different route from echo(),
+  -- one that decides for itself whether the line needs wrapping at all.
+  describe("Tests how a line arriving from the game is wrapped", function()
+    local savedWrap, triggerId
+
+    before_each(function()
+      savedWrap = getWindowWrap("main")
+    end)
+
+    after_each(function()
+      if triggerId then
+        killTrigger(triggerId)
+        triggerId = nil
+      end
+      setWindowWrap("main", savedWrap)
+      setWindowWrapIndent("main", 0)
+    end)
+
+    -- the lines one game line became, read back after the line before it is closed
+    local function fed(text)
+      feedTriggers("\n")
+      local from = getLineCount("main")
+      feedTriggers(text .. "\n")
+      return getLines("main", from, getLineCount("main"))
+    end
+
+    local function lastLines(count)
+      local all = getLines("main", 0, getLineCount("main"))
+      local out = {}
+      for index = #all - count + 1, #all do
+        out[#out + 1] = all[index]
+      end
+      return out
+    end
+
+    it("wraps a line that fits the width but not the width less the indent", function()
+      setWindowWrap("main", 20)
+      setWindowWrapIndent("main", 4)
+      feedTriggers("\naaaaaaaaaaaaaa bbbbb\n")
+      assert.are.same({"    aaaaaaaaaaaaaa ", "bbbbb"}, lastLines(2))
+    end)
+
+    it("leaves a line that fits the width less the indent alone", function()
+      setWindowWrap("main", 20)
+      setWindowWrapIndent("main", 4)
+      feedTriggers("\naaaaaaaaaa bbbbb\n")
+      assert.are.same({"aaaaaaaaaa bbbbb"}, lastLines(1))
+    end)
+
+    it("wraps a line one column wider than the width", function()
+      setWindowWrap("main", 20)
+      feedTriggers("\naaaaaaaaaaaaaa bbbbbb\n")
+      assert.are.same({"aaaaaaaaaaaaaa ", "bbbbbb"}, lastLines(2))
+    end)
+
+    -- in a trigger echo() adds to the line without wrapping it, so the wrap
+    -- that follows the triggers has to take in what they added
+    it("wraps a line a trigger's echo() made too long", function()
+      setWindowWrap("main", 20)
+      triggerId = tempExactMatchTrigger("GLGROW", function() echo(" " .. string.rep("x", 30)) end)
+      assert.are.same({"GLGROW ", string.rep("x", 20), string.rep("x", 10)}, fed("GLGROW"))
+    end)
+
+    it("leaves no blank line after a line a trigger fed in", function()
+      setWindowWrap("main", 80)
+      triggerId = tempExactMatchTrigger("GLOUTER", function() feedTriggers("GLINNER\n") end)
+      assert.are.same({"GLOUTER", "GLINNER"}, fed("GLOUTER"))
     end)
   end)
 

@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <LuaInterface.h>
 #include <TTreeWidget.h>
 #include <TVar.h>
@@ -753,6 +754,17 @@ private slots:
         TVar* var = findChild(interface->getVarUnit()->getBase(), QStringLiteral("testVar"));
         QVERIFY(var);
         QCOMPARE(interface->getValue(var), QStringLiteral("42"));
+    }
+
+    // The editor writes its text back into Lua when it differs from the walk's value
+    void testGetValueNumberMatchesWalk()
+    {
+        execLua(qsl("testVar = 1/3"));
+        interface->getVars(false);
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("testVar"));
+        QVERIFY(var);
+        QCOMPARE(interface->getValue(var), qsl("0.3333333333333333"));
+        QCOMPARE(interface->getValue(var), var->getValue());
     }
 
     void testGetValueBoolean()
@@ -1612,8 +1624,7 @@ private slots:
         // a row of the other kind: one holding a variable being added, which
         // saveVar() reads back to turn into a real one
         auto* pendingItem = new QTreeWidgetItem(rootItem, QStringList() << qsl("pendingName"));
-        auto* pendingVar = new TVar(vu->getBase());
-        tree.setNewVariableForRow(vu, pendingItem, pendingVar);
+        tree.setNewVariableForRow(vu, pendingItem, std::make_unique<TVar>(vu->getBase()));
         QVERIFY2(tree.newVariableForRow(vu, pendingItem), "the pending row has to resolve before the rebuild");
 
         interface->getVars(false); // frees every TVar the rows were built from
@@ -1670,8 +1681,9 @@ private slots:
         VarUnit* replacement = interface->getVarUnit();
 
         auto* addedItem = new QTreeWidgetItem(rootItem, QStringList() << qsl("addedName"));
-        auto* addedVar = new TVar(replacement->getBase());
-        tree.setNewVariableForRow(replacement, addedItem, addedVar);
+        auto added = std::make_unique<TVar>(replacement->getBase());
+        TVar* addedVar = added.get();
+        tree.setNewVariableForRow(replacement, addedItem, std::move(added));
 
         QCOMPARE(tree.newVariableForRow(replacement, addedItem), addedVar);
         QVERIFY2(!tree.variableForRow(replacement, strandedItem), "while the row the reset stranded still stands for nothing");
@@ -2120,4 +2132,4 @@ private slots:
 };
 
 #include "TVariableEditorTest.moc"
-QTEST_MAIN(TVariableEditorTest)
+MUDLET_GROUPED_TEST_MAIN(TVariableEditorTest)

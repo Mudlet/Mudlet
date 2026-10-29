@@ -128,7 +128,7 @@ end
 -- @param dimension "width" or "height"
 -- @param container the container to measure the constraint in
 local function constraintInPixels(self, constraint, dimension, container)
-    local probe = {x = self.x, y = self.y, width = self.width, height = self.height, fontSize = self.fontSize}
+    local probe = {name = self.name, x = self.x, y = self.y, width = self.width, height = self.height, fontSize = self.fontSize}
     probe[dimension] = constraint
     Geyser.calc_constraints(probe, probe, container)
     return probe["get_"..dimension](probe)
@@ -227,6 +227,7 @@ end
 
 -- internal function to handle the onRelease event of main Adjustable.Container Label
 --- raises an event "AdjustableContainerRepositionFinish", passed values (name, width, height, x, y)
+--- (width, height, x and y are the whole pixels the container's widget was placed at)
 -- @param label the main Adjustable.Container Label
 -- @param event the onRelease event and its information
 function Adjustable.Container:onRelease (label, event)
@@ -234,13 +235,14 @@ function Adjustable.Container:onRelease (label, event)
         if label.cursorShape == "ClosedHand" then
             label:setCursor("OpenHand")
         end
+        local x, y, width, height = self:pixel_geometry()
         raiseEvent(
           "AdjustableContainerRepositionFinish",
           self.name,
-          self.get_width(),
-          self.get_height(),
-          self.get_x(),
-          self.get_y()
+          width,
+          height,
+          x,
+          y
         )
         adjustInfo = {}
     end
@@ -335,8 +337,15 @@ function Adjustable.Container:changeContainer(container)
     if self.container ~= windowRoot(self) then
         self.draggedOut = false
     end
+    if self.attached then
+        self:adjustBorder()
+    end
     return result, err
 end
+
+-- nonzero while a border is being written, as each write raises sysWindowResizeEvent and GeyserReposition answers it,
+-- and while a drag or a follower's two-step move and resize lays a container out, as its border is adjusted after
+local settlingBorders = 0
 
 -- internal function to handle the onMove event of main Adjustable.Container Label
 -- @param label the main Adjustable.Container Label
@@ -428,7 +437,9 @@ function Adjustable.Container:onMove (label, event)
             -- one pass over the subtree per drag event, where move() then resize()
             -- took two; neither runs here, so an override of either is not invoked
             self.x, self.y, self.width, self.height = tx, ty, tw, th
+            settlingBorders = settlingBorders + 1
             self:set_constraints(self)
+            settlingBorders = settlingBorders - 1
             if self.connectedContainers then
                 self:adjustConnectedContainers()
             end
@@ -439,8 +450,12 @@ function Adjustable.Container:onMove (label, event)
     end
 end
 
--- internal function to check which valid attach position the container is at
+-- internal function to check which valid attach position the container is at; there is none
+-- outside the main window, as user windows have no borders to reserve
 function Adjustable.Container:validAttachPositions()
+    if self.windowname ~= "main" then
+        return {}
+    end
     local winw, winh = getMainWindowSize()
     local found_positions = {}
     if  (winh*0.8)-self.get_height()<= self.get_y()  then  found_positions[#found_positions+1] = "bottom" end
@@ -461,15 +476,17 @@ end
 function Adjustable.Container:measureBorder()
     local winw, winh = getMainWindowSize()
     local where = type(self.attached) == "string" and self.attached:lower()
+    -- measured from the edges the widget was placed at, so it never overlaps the console
+    local x, y, width, height = self:pixel_geometry()
 
     if  where == "right" then 
-        self.borderSize = winw+self.attachedMargin-self.get_x()
+        self.borderSize = winw+self.attachedMargin-x
     elseif  where == "left"    then
-        self.borderSize =  self.get_width()+self.get_x()+self.attachedMargin
+        self.borderSize =  width+x+self.attachedMargin
     elseif  where == "bottom"  then 
-        self.borderSize = winh+self.attachedMargin-self.get_y()
+        self.borderSize = winh+self.attachedMargin-y
     elseif  where == "top"     then 
-        self.borderSize = self.get_height()+self.get_y()+self.attachedMargin
+        self.borderSize = height+y+self.attachedMargin
     else
         return false
     end
@@ -519,6 +536,7 @@ local function setAxisBorders(where)
     if not opposite then
         return
     end
+    settlingBorders = settlingBorders + 1
     local near = axisShares(where, opposite)
     setConsoleBorder(where, near)
     if next(Adjustable.Container.Attached[opposite] or {}) then
@@ -526,6 +544,7 @@ local function setAxisBorders(where)
         local _, far = axisShares(where, opposite)
         setConsoleBorder(opposite, far)
     end
+    settlingBorders = settlingBorders - 1
 end
 
 -- internal function to adjust the main console borders if needed
@@ -547,6 +566,56 @@ function Adjustable.Container:adjustBorder()
     setAxisBorders(where)
 end
 
+-- internal function: lines a container on another border up with the given edge of the one it follows,
+-- keeping its own far side where it is
+local function followEdge(container, where, edge)
+    -- every size below is measured from where the move actually put the
+    -- container rather than from the position it asked for: a pixel
+    -- constraint is stored whole, so dropping the fraction twice walks
+    -- the far edge in a pixel on every mouse move
+    local px, py, pw, ph = parentFrame(container)
+    settlingBorders = settlingBorders + 1
+    if where == "right" then
+        Geyser.Container.resize(container, keepRelativeSize(container.width, edge - container:get_x(), pw), nil)
+    end
+    if where == "left" then
+        local right_x = container:get_x() + container:get_width()
+        local left_x = math.min(edge, right_x)
+        Geyser.Container.move(container, keepRelativePosition(container.x, left_x, pw, px), nil)
+        Geyser.Container.resize(container, keepRelativeSize(container.width, right_x - container:get_x(), pw), nil)
+    end
+    if where == "bottom" then
+        Geyser.Container.resize(container, nil, keepRelativeSize(container.height, edge - container:get_y(), ph))
+    end
+    if where == "top" then
+        local bottom_y = container:get_y() + container:get_height()
+        local top_y = math.min(edge, bottom_y)
+        Geyser.Container.move(container, nil, keepRelativePosition(container.y, top_y, ph, py))
+        Geyser.Container.resize(container, nil, keepRelativeSize(container.height, bottom_y - container:get_y(), ph))
+    end
+    settlingBorders = settlingBorders - 1
+end
+
+-- internal function: the containers on other borders that follow the given border line up with the
+-- inner edge of whatever is still attached to it, or with the window's edge once nothing is
+local function closeGap(where)
+    local inward = (where == "left" or where == "top") and math.max or math.min
+    for _, container in pairs(Adjustable.Container.all) do
+        if container.connectedToBorder and container.connectedToBorder[where]
+            and (container.attached or container.hiddenAttached) ~= where then
+            local px, py, pw, ph = parentFrame(container)
+            local edge = ({left = px, right = px + pw, top = py, bottom = py + ph})[where]
+            for _, anchor in pairs(Adjustable.Container.Attached[where] or {}) do
+                local inner = ({left = anchor:get_x() + anchor:get_width(), right = anchor:get_x(),
+                                top = anchor:get_y() + anchor:get_height(), bottom = anchor:get_y()})[where]
+                edge = inward(edge, inner)
+            end
+            followEdge(container, where, edge)
+            container:adjustBorder()
+        end
+    end
+end
+
 -- internal function to adjust connected containers
 function Adjustable.Container:adjustConnectedContainers()
     local where = self.attached
@@ -557,7 +626,8 @@ function Adjustable.Container:adjustConnectedContainers()
     for k in pairs(self.connectedContainers) do
         local container = Adjustable.Container.all[k]
         if container then
-            if container.attached == where then
+            -- a hidden container keeps following the border it takes back when shown
+            if (container.attached or container.hiddenAttached) == where then
                 if where == "right" or where == "left" then
                     height = nil
                     y = nil
@@ -566,32 +636,14 @@ function Adjustable.Container:adjustConnectedContainers()
                     width = nil
                     x = nil
                 end
+                settlingBorders = settlingBorders + 1
                 Geyser.Container.move(container, x, y)
                 Geyser.Container.resize(container, width, height)
+                settlingBorders = settlingBorders - 1
             else
-                -- every size below is measured from where the move actually put the
-                -- container rather than from the position it asked for: a pixel
-                -- constraint is stored whole, so dropping the fraction twice walks
-                -- the far edge in a pixel on every mouse move
-                local px, py, pw, ph = parentFrame(container)
-                if where == "right" then
-                    Geyser.Container.resize(container, keepRelativeSize(container.width, self:get_x() - container:get_x(), pw), nil)
-                end
-                if where == "left" then
-                    local right_x = container:get_x() + container:get_width()
-                    local left_x = math.min(self:get_x() + self:get_width(), right_x)
-                    Geyser.Container.move(container, keepRelativePosition(container.x, left_x, pw, px), nil)
-                    Geyser.Container.resize(container, keepRelativeSize(container.width, right_x - container:get_x(), pw), nil)
-                end
-                if where == "bottom" then
-                    Geyser.Container.resize(container, nil, keepRelativeSize(container.height, self:get_y() - container:get_y(), ph))
-                end
-                if where == "top" then
-                    local bottom_y = container:get_y() + container:get_height()
-                    local top_y = math.min(self:get_y() + self:get_height(), bottom_y)
-                    Geyser.Container.move(container, nil, keepRelativePosition(container.y, top_y, ph, py))
-                    Geyser.Container.resize(container, nil, keepRelativeSize(container.height, bottom_y - container:get_y(), ph))
-                end
+                local edges = {left = self:get_x() + self:get_width(), right = self:get_x(),
+                               top = self:get_y() + self:get_height(), bottom = self:get_y()}
+                followEdge(container, where, edges[where])
             end
             container:adjustBorder()
         end
@@ -599,24 +651,49 @@ function Adjustable.Container:adjustConnectedContainers()
 end
 
 --- connect your container to a border
--- @param border main border ("top", "bottom", "left", "right")
+-- @param border main border ("top", "bottom", "left", "right"), in any case
+-- @return true, or nil and an error message if the border does not exist, the container is not attached
+-- to a border, or nothing is attached to the border to connect to
 function Adjustable.Container:connectToBorder(border)
-    if not self.attached or not Adjustable.Container.Attached[border] then
-        return
+    border = type(border) == "string" and border:lower()
+    if not oppositeBorder[border] then
+        return nil, "connectToBorder: bad argument #1 value (\"top\", \"bottom\", \"left\" or \"right\" expected)"
+    end
+    local attached = self.attached or self.hiddenAttached
+    if not attached then
+        return nil, "connectToBorder: the container is not attached to a border"
+    end
+    -- a hidden container is off the registry but takes its border back when shown, so it counts too
+    local onBorder = {}
+    for k, v in pairs(Adjustable.Container.Attached[border] or {}) do
+        onBorder[k] = v
+    end
+    for k, v in pairs(Adjustable.Container.all) do
+        if v.hiddenAttached == border then
+            onBorder[k] = v
+        end
+    end
+    if not next(onBorder) then
+        return nil, string.format("connectToBorder: nothing is attached to the %s border", border)
     end
     self.connectedToBorder = self.connectedToBorder or {}
     self.connectedToBorder[border] = true
     self.connectedContainers = self.connectedContainers or {}
-    for k,v in pairs(Adjustable.Container.Attached[border]) do
+    for k,v in pairs(onBorder) do
         v.connectedContainers = v.connectedContainers or {}
         v.connectedContainers[self.name] = true
-        if self.attached == border then
+        if attached == border then
             v.connectedToBorder = v.connectedToBorder or {}
             v.connectedToBorder[border] = true
             self.connectedContainers[k] = v
         end
         v:adjustConnectedContainers()
     end
+    -- adjustConnectedContainers() leaves a hidden anchor's followers alone
+    if not next(Adjustable.Container.Attached[border] or {}) then
+        closeGap(border)
+    end
+    return true
 end
 
 --- adds elements to connect containers to borders into the right click menu
@@ -650,15 +727,12 @@ function Adjustable.Container:disconnect()
     if not self.connectedToBorder then
         return
     end
-    for k in pairs(self.connectedToBorder) do
-        if Adjustable.Container.Attached[k] then
-            for k1,v1 in pairs(Adjustable.Container.Attached[k]) do
-                if v1.connectedContainers and v1.connectedContainers[self.name] then
-                    v1.connectedContainers[self.name] = nil
-                    if table.is_empty(v1.connectedContainers) then
-                        v1.connectedContainers = nil
-                    end
-                end
+    -- every container, not just those on the border: a hidden one has left it but still links back
+    for _, container in pairs(Adjustable.Container.all) do
+        if container.connectedContainers and container.connectedContainers[self.name] then
+            container.connectedContainers[self.name] = nil
+            if table.is_empty(container.connectedContainers) then
+                container.connectedContainers = nil
             end
         end
     end
@@ -697,9 +771,36 @@ end
 
 --- attaches your container to the given border
 -- attach is only possible if the container is located near the border
--- @param border possible border values are "top", "bottom", "right", "left"
+-- @param border possible border values are "top", "bottom", "right", "left", in any case
+-- @return true, or nil and an error message for any other border, if the container has been deleted
+-- or is not in the main window, or if it is minimized or too far from that border to attach; a refused
+-- attach changes nothing, unless a sysWindowResizeEvent handler moves the container away while it
+-- leaves its old border, and a hidden container takes the border when shown
 function Adjustable.Container:attachToBorder(border)
+    -- the registry and adjustBorder() both work in lower case
+    border = type(border) == "string" and border:lower()
+    if not oppositeBorder[border] then
+        return nil, "attachToBorder: bad argument #1 value (\"top\", \"bottom\", \"left\" or \"right\" expected)"
+    end
+    if self.deleted then
+        return nil, "attachToBorder: the container has been deleted"
+    end
+    if self.windowname ~= "main" then
+        return nil, "attachToBorder: only a container in the main window can attach to its borders"
+    end
+    local refused = string.format("attachToBorder: the container is minimized or too far from the %s border to attach", border)
+    -- adjustBorder()'s own test, made before this container or a namesake is taken off its border
+    if self.minimized or not table.contains(self:validAttachPositions(), border) then
+        closeAllLevels(self.rCLabel)
+        return nil, refused
+    end
     if self.attached then self:detach() end
+    -- a hidden container reserves nothing, so it takes the border when shown
+    if self.hidden or self.auto_hidden then
+        self.hiddenAttached = border
+        return true
+    end
+    self.hiddenAttached = nil
     Adjustable.Container.Attached[border] = Adjustable.Container.Attached[border] or {}
     -- the registry is keyed by name, so a still live container of the same name
     -- has to be taken off the border properly instead of being dropped from it:
@@ -712,8 +813,14 @@ function Adjustable.Container:attachToBorder(border)
     Adjustable.Container.Attached[border][self.name] = self
     self.attached = border
     self:adjustBorder()
-    self.resizeHandlerID=registerAnonymousEventHandler("sysWindowResizeEvent", function() self:resizeBorder() end)
     closeAllLevels(self.rCLabel)
+    -- the detaches above raise sysWindowResizeEvent, whose handlers may have moved this container away
+    if self.attached ~= border then
+        return nil, refused
+    end
+    -- hide() keeps the handler, so connected containers go on answering the event in the order they attached
+    self.resizeHandlerID = self.resizeHandlerID or registerAnonymousEventHandler("sysWindowResizeEvent", function() self:resizeBorder() end)
+    return true
 end
 
 --- detaches the given container
@@ -722,6 +829,7 @@ function Adjustable.Container:detach()
     -- a container of the same name may have taken over the registration, so
     -- only unregister while it is still ours - the same guard type_delete uses
     local where = self.attached
+    self.hiddenAttached = nil
     local attachedTo = Adjustable.Container.Attached and Adjustable.Container.Attached[where]
     if attachedTo and attachedTo[self.name] == self then
         attachedTo[self.name] = nil
@@ -730,6 +838,7 @@ function Adjustable.Container:detach()
     -- unhooked first: handing the border back raises an event we would answer by re-reserving
     self.attached = false
     if self.resizeHandlerID then killAnonymousEventHandler(self.resizeHandlerID) end
+    self.resizeHandlerID = nil
     self:resetBorder(where)
 end
 
@@ -760,49 +869,85 @@ function Adjustable.Container:createContainers()
     },self)
 end
 
+local function callable(func)
+    if type(func) == "function" then
+        return true
+    end
+    local mt = getmetatable(func)
+    return type(mt) == "table" and mt.__call ~= nil
+end
+
+local function usableLockStyle(self, name)
+    local style = type(name) == "string" and self.lockStyles[name]
+    return style and callable(style[2]) or false
+end
+
 --- locks your adjustable container
 --lock means that your container is no longer moveable/resizable by mouse. 
 --You can also choose different lockStyles which changes the border or container style. 
---if no lockStyle is added "standard" style will be used 
--- @param lockNr the number of the lockStyle [optional]
--- @param lockStyle the lockstyle used to lock the container, 
--- the lockStyle is the behaviour/mode of the locked state.
+--if no lockStyle is given the container's current lockStyle is used, or "standard" if that one does not exist (yet)
+-- @param lockNr the number or the name of the lockStyle [optional]; anything else, such as the
+-- mouse event of a click callback, is ignored
+-- @param lockStyle the name or the number of the lockstyle used to lock the container, only used when
+-- lockNr is not given; the lockStyle is the behaviour/mode of the locked state.
 -- integrated lockStyles are "standard", "border", "full" and "light" (default "standard")
 -- standard:    This is the default lockstyle, with a small margin on top to keep the right click menu usable.
 -- light:       Only hides the min/restore and close labels. Borders and margin are not affected.
 -- full:        The container gets fully locked without any margin left for the right click menu.
 -- border:      Keeps the borders of the container visible while locked.
+-- @return true once locked, or nil and an error message for a lock style that does not exist or a minimized
+-- container that is not locked yet (a locked one that is minimized takes the new style)
 
 function Adjustable.Container:lockContainer(lockNr, lockStyle)
     closeAllLevels(self.rCLabel)
 
-    if type(lockNr) == "string" then
+    if type(lockNr) == "number" or type(lockNr) == "string" then
       lockStyle = lockNr
-    elseif type(lockNr) == "number" then
-      lockStyle = self.lockStyles[lockNr][1]
+    end
+    if type(lockStyle) == "number" then
+      if not self.lockStyles[lockStyle] then
+        return nil, string.format("lockContainer: there is no lock style number %s", lockStyle)
+      end
+      lockStyle = self.lockStyles[lockStyle][1]
     end
 
-    lockStyle = lockStyle or self.lockStyle
-    if not self.lockStyles[lockStyle] then
-      lockStyle = "standard"
+    if lockStyle ~= nil and not usableLockStyle(self, lockStyle) then
+      return nil, string.format("lockContainer: unknown lock style \"%s\"", tostring(lockStyle))
+    end
+
+    if self.minimized == true and not self.locked then
+      return nil, "lockContainer: a minimized container cannot be locked"
+    end
+
+    if lockStyle then
+      self.pendingLockStyle = nil
+    else
+      lockStyle = self.lockStyle
+      -- a saved layout or the constructor may name a style the script only adds later with
+      -- newLockStyle, so it is kept for that and for save() instead of being refused
+      if not usableLockStyle(self, lockStyle) then
+        self.pendingLockStyle = lockStyle
+        lockStyle = "standard"
+      elseif lockStyle ~= "standard" then
+        -- "standard" may still be the stand-in for the pending style; any other was set since
+        self.pendingLockStyle = nil
+      end
     end
 
     self.lockStyle = lockStyle
-
-    if self.minimized == false then
-        self.lockStyles[lockStyle][2](self)
-        self.exitLabel:hide()
-        self.minimizeLabel:hide()
-        self.locked = true
-        self:adjustBorder()
-    end
+    self.lockStyles[lockStyle][2](self)
+    self.exitLabel:hide()
+    self.minimizeLabel:hide()
+    self.locked = true
+    self:adjustBorder()
+    return true
 end
 
 -- internal function to handle the custom Items onClick event
 -- @param customItem the item clicked at
 function Adjustable.Container:customMenu(customItem)
     closeAllLevels(self.rCLabel)
-    if self.minimized == false then
+    if self.minimized ~= true then
         self.customItems[customItem][2](self)
     end
 end
@@ -820,17 +965,37 @@ function Adjustable.Container:unlockContainer()
     self:setTitle()
 end
 
+-- internal function: a padding goes into "-"..padding constraints, which the constraint parser reads after
+-- stripping letters, so "--5", "-inf", "-nan" and an exponent all break it. Rounding to 4 decimal places turns
+-- a tiny padding into 0; one just below 1e14 rounds up to "1e+14", while one below 1e13 never gets an exponent
+local function validPadding(padding)
+    padding = tonumber(padding)
+    if not (padding and padding >= 0) then
+        return nil
+    end
+    padding = math.floor(padding * 10000 + 0.5) / 10000
+    if padding < 1e13 then
+        return padding
+    end
+end
+
 --- sets the padding of your container
 -- changes how far the the container is positioned from the border of the container 
 -- padding behaviour also depends on your lockStyle
--- @param padding the padding value (standard is 10)
+-- @param padding the padding value, a number of 0 or more and below 1e13 (standard is 10), rounded to 4 decimal places
+-- @return true, or nil and an error message if the padding is not a number of 0 or more and below 1e13
 function Adjustable.Container:setPadding(padding)
-    self.padding = padding
+    local valid = validPadding(padding)
+    if not valid then
+        return nil, "setPadding: bad argument #1 value (padding as a number of 0 or more and below 1e13 expected, got "..tostring(padding)..")"
+    end
+    self.padding = valid
     if self.locked then
         self:lockContainer()
     else
         self:unlockContainer()
     end
+    return true
 end
 
 -- internal function: onClick Lock event
@@ -842,19 +1007,18 @@ function Adjustable.Container:onClickL()
     end
 end
 
--- internal function: adjusts/sets the borders if an container gets hidden
+-- internal function: onClick close event
 function Adjustable.Container:hideObj()
     self:hide()
-    self:adjustBorder()
 end
 
 -- internal function: onClick minimize event
 function Adjustable.Container:onClickMin()
     closeAllLevels(self.rCLabel)
-    if self.minimized == false then
-        self:minimize()
-    else
+    if self.minimized == true then
         self:restore()
+    else
+        self:minimize()
     end
 end
 
@@ -871,9 +1035,9 @@ function Adjustable.Container:onClickLoad()
 end
 
 --- minimizes the container
--- hides everything beside the title
+-- hides everything beside the title; does nothing if it is already minimized
 function Adjustable.Container:minimize()
-    if self.minimized and self.locked then
+    if self.minimized == true then
         return
     end
     self.origh = self.height
@@ -1015,10 +1179,40 @@ function Adjustable.Container:remove(window)
     end
 end
 
--- overridden show function to prevent to show the right click menu on show
+--- hides the container. One attached to a border gives the border back while hidden:
+-- its attached field reads false and its hiddenAttached field names the border, which show() takes back
+-- if the container can still attach to it
+-- @param auto true when a parent container is hiding it [optional]
+function Adjustable.Container:hide(auto)
+    local attached = self.attached
+    Geyser.Container.hide(self, auto)
+    if attached then
+        -- kept from detach() for show() to reuse, see attachToBorder()
+        local handler = self.resizeHandlerID
+        self.resizeHandlerID = nil
+        self:detach()
+        self.resizeHandlerID = handler
+        self.hiddenAttached = attached
+        closeGap(attached)
+    end
+end
+
+--- shows the container, closing its right click menu, and attaches it again to the border it
+-- gave back when it was hidden (its hiddenAttached field); if it can no longer attach there, for
+-- example because it was moved out of reach, it lets go of that border for good
+-- @param auto true when a parent container is showing it [optional]
 function Adjustable.Container:show(auto)
     Geyser.Container.show(self, auto)
     closeAllLevels(self.rCLabel)
+    if self.hiddenAttached and not (self.hidden or self.auto_hidden) then
+        if self:attachToBorder(self.hiddenAttached) then
+            -- resizeBorder() only lays the connected containers out again when the window itself changes size
+            self:adjustConnectedContainers()
+        else
+            -- a refused attach changes nothing, so the border is let go of here as adjustBorder() would
+            self:detach()
+        end
+    end
 end
 
 --- saves your container settings
@@ -1055,7 +1249,8 @@ function Adjustable.Container:save(slot, dir)
     mytable.origh= self.origh
     mytable.locked = self.locked
     mytable.attached = self.attached
-    mytable.lockStyle = self.lockStyle
+    mytable.hiddenAttached = self.hiddenAttached
+    mytable.lockStyle = self.pendingLockStyle or self.lockStyle
     mytable.padding = self.padding
     mytable.attachedMargin = self.attachedMargin
     mytable.hidden = self.hidden
@@ -1121,21 +1316,34 @@ function Adjustable.Container:load(slot, dir)
     end
 
     self.lockStyle = mytable.lockStyle or self.lockStyle
-    self.padding = mytable.padding or self.padding
+    self.pendingLockStyle = nil
+    if mytable.padding ~= nil and not validPadding(mytable.padding) then
+        debugc(string.format("Adjustable.Container.load: ignored the invalid padding %s saved for %s", tostring(mytable.padding), self.name))
+    end
+    self.padding = validPadding(mytable.padding) or self.padding
     self.attachedMargin = mytable.attachedMargin or self.attachedMargin
 
 
     if mytable.x then
+        local fullHeight = self.minimized == true and self.origh or self.height
         self:move(mytable.x, mytable.y)
         self:resize(mytable.width, mytable.height)
-        self.minimized = mytable.minimized
-
+        -- lockContainer refuses a minimized container, so lock it before minimizing it again
+        self.minimized = false
         if mytable.locked == true then self:lockContainer()  else self:unlockContainer() end
+        self.minimized = mytable.minimized == true
 
         if self.minimized == true then self.Inside:hide() self:resize(nil, self.buttonsize + 10) else self.Inside:show() end
         self.origh = mytable.origh
+        -- a layout saved by a version that let minimize() run twice holds the
+        -- collapsed height as the one to restore to, which would never expand again
+        if self.minimized == true and mytable.origh == mytable.height then
+            self.origh = fullHeight
+        end
     end
 
+    -- detached first, so a hidden container is not shown back onto the border it had before the load
+    self:detach()
     if mytable.auto_hidden or mytable.hidden then
         self:hide()
         if not mytable.hidden then
@@ -1146,16 +1354,20 @@ function Adjustable.Container:load(slot, dir)
         self:show()
     end
 
-    self:detach()
-    if mytable.attached then
-        self:attachToBorder(mytable.attached) 
+    if mytable.attached or mytable.hiddenAttached then
+        self:attachToBorder(mytable.attached or mytable.hiddenAttached)
     end
 
     self:adjustBorder()
 
     self.connectedContainers = mytable.connectedContainers or self.connectedContainers
-    self.connectedToBorder = mytable.connectedToBorder or self.connectedToBorder
-    if self.connectedToBorder then
+    local connectedToBorder = mytable.connectedToBorder or self.connectedToBorder
+    if connectedToBorder then
+        -- a layout saved before border names were lower cased can hold "Left"
+        self.connectedToBorder = {}
+        for k, v in pairs(connectedToBorder) do
+            self.connectedToBorder[type(k) == "string" and k:lower() or k] = v
+        end
         for k in pairs(self.connectedToBorder) do
             self:connectToBorder(k)
         end
@@ -1166,17 +1378,23 @@ end
 
 --- overridden reposition function to raise an "AdjustableContainerReposition" event
 --- Event: "AdjustableContainerReposition" passed values (name, width, height, x, y, isMouseAction)
+--- (width, height, x and y are the whole pixels the container's widget was placed at)
 --- (the isMouseAction property is true if the reposition is an effect of user dragging/resizing the window,
 --- and false if the reposition event comes as effect of external action, such as resizing of main window)
 function Adjustable.Container:reposition(skipChildren)
     Geyser.Container.reposition(self, skipChildren)
+    -- set_constraints() places the container through here, so a script laying it out again moves its border too
+    if self.attached and settlingBorders == 0 then
+        self:adjustBorder()
+    end
+    local x, y, width, height = self:pixel_geometry()
     raiseEvent(
       "AdjustableContainerReposition",
       self.name,
-      self.get_width(),
-      self.get_height(),
-      self.get_x(),
-      self.get_y(),
+      width,
+      height,
+      x,
+      y,
       adjustInfo.name == self.adjLabel.name and (adjustInfo.move or adjustInfo.right or adjustInfo.left or adjustInfo.top or adjustInfo.bottom)
     )
 end
@@ -1212,7 +1430,8 @@ end
 
 -- internal function to delete the labels of a right click menu and of all its submenus.
 -- Menu labels are created as top level Geyser objects rather than as children of
--- the menu they belong to, so Geyser.Container:delete()'s cascade never reaches them.
+-- the menu they belong to. Geyser.Label:type_delete deletes them when the
+-- container's cascade reaches the menu, so this normally finds none left.
 -- @param menu the menu label whose MenuLabels are to be deleted
 local function deleteMenuLabels(menu)
     if not menu or not menu.MenuLabels then
@@ -1228,14 +1447,16 @@ local function deleteMenuLabels(menu)
 end
 
 -- internal function called by Geyser.Container:delete() to clean up what the
--- delete cascade cannot reach: the right click menu labels, the event handlers
--- that keep firing on a deleted container, and the container's entries in
--- Adjustable.Container's own bookkeeping
+-- delete cascade does not: the event handlers that keep firing on a deleted
+-- container and the container's entries in Adjustable.Container's own
+-- bookkeeping, along with any right click menu label the cascade left
 function Adjustable.Container:type_delete()
     deleteMenuLabels(self.adjLabel and self.adjLabel.rightClickMenu)
+    self.deleted = true
     -- detach() also kills the resize handler and drops the container out of
-    -- Adjustable.Container.Attached, which otherwise keeps reserving a border
-    if self.attached then
+    -- Adjustable.Container.Attached, which otherwise keeps reserving a border;
+    -- a hidden one still holds its handler and the border show() would take back
+    if self.attached or self.hiddenAttached then
         self:detach()
     end
     self:disconnect()
@@ -1327,9 +1548,16 @@ function Adjustable.Container:setPercent (size_as_percent, position_as_percent)
         x,y = x-self.container.get_x(),y-self.container.get_y()
         winw, winh = self.container.get_width(), self.container.get_height()
     end
-    x, y, w, h = make_percent(x/winw), make_percent(y/winh), make_percent(w/winw), make_percent(h/winh)
-    if size_as_percent then self:resize(w,h) end
-    if position_as_percent then self:move(x,y) end
+    -- an axis the container has no size on (such as the root container of a
+    -- deleted user window) has nothing to be a share of, so it is left as it is
+    local function share(value, total)
+        if total ~= 0 then
+            return make_percent(value/total)
+        end
+    end
+    x, y, w, h = share(x, winw), share(y, winh), share(w, winw), share(h, winh)
+    if size_as_percent and (w or h) then self:resize(w,h) end
+    if position_as_percent and (x or y) then self:move(x,y) end
 end
 -- Save a reference to our parent constructor
 Adjustable.Container.parent = Geyser.Container
@@ -1373,15 +1601,28 @@ end
 --- creates a new Lockstyle
 -- @param name Name of the menu item/lockstyle
 -- @param func function of the new lockstyle
+-- @return true, also when the name already exists (its style is kept), or nil and an error message
+-- when func is neither a function nor a callable table
 function Adjustable.Container:newLockStyle(name, func)
     if self.lockStyles[name] then
-        return
+        return true
+    end
+    if not callable(func) then
+        return nil, string.format("newLockStyle: lock style \"%s\" needs a function, got %s", tostring(name), type(func))
     end
     self.lockStyles[#self.lockStyles + 1] = {name, func}
     self.lockStyles[name] = self.lockStyles[#self.lockStyles]
     if self.lockStylesLabel then
         createMenus(self, "lockStylesLabel", name, "Adjustable.Container.lockContainer")
     end
+    if name == self.pendingLockStyle then
+        self.pendingLockStyle = nil
+        self.lockStyle = name
+        if self.locked then
+            self:lockContainer(name)
+        end
+    end
+    return true
 end
 
 --- creates a new custom menu item
@@ -1422,7 +1663,7 @@ end
 --@param[opt="8"] cons.MenuFontSize  font size of the menu items
 --@param[opt="15"] cons.buttonsize  size of the minimize and close buttons
 --@param[opt="8"] cons.buttonFontSize  font size of the minimize and close buttons
---@param[opt="10"] cons.padding  how far is the inside element placed from the corner (depends also on the lockstyle setting)
+--@param[opt="10"] cons.padding  how far is the inside element placed from the corner (depends also on the lockstyle setting); one setPadding() would refuse is replaced by 10
 --@param[opt="5"] cons.attachedMargin  margin for the MainWindow border if an adjustable container is attached
 --@param cons.adjLabelstyle  style of the main Label where all elements are in
 --@param cons.menustyle  menu items style
@@ -1451,6 +1692,16 @@ function Adjustable.Container:new(cons,container)
     Adjustable.Container.Locale = Adjustable.Container.Locale or loadTranslations("AdjustableContainer")
     cons = cons or {}
     cons.type = cons.type or "adjustablecontainer"
+    -- its labels are made only once it is in its container, too late to stop there
+    if cons.name then
+        for _, suffix in ipairs({"adjLabel", "exitLabel", "minimizeLabel"}) do
+            local taken = mudlet.nameTakenByOtherKind(cons.name .. suffix, "label", cons.windowname or (container or Geyser).windowname)
+            if taken then
+                printError(string.format("Adjustable.Container '%s' was not created: %s", cons.name, taken), false, false)
+                return nil, taken
+            end
+        end
+    end
     local me = self.parent:new(cons, container)
     setmetatable(me, self)
     self.__index = self
@@ -1461,7 +1712,8 @@ function Adjustable.Container:new(cons,container)
     me.MenuFontSize = me.MenuFontSize or "8"
     me.buttonsize = me.buttonsize or "15"
     me.buttonFontSize = me.buttonFontSize or "8"
-    me.padding = me.padding or 10
+    local givenPadding = me.padding
+    me.padding = validPadding(me.padding) or 10
     me.attachedMargin = me.attachedMargin or 5
 
     me.adjLabelstyle = me.adjLabelstyle or [[
@@ -1499,6 +1751,8 @@ function Adjustable.Container:new(cons,container)
     me.adjLabel:setClickCallback("Adjustable.Container.onClick",me, me.adjLabel)
     me.adjLabel:setReleaseCallback("Adjustable.Container.onRelease",me, me.adjLabel)
     me.adjLabel:setMoveCallback("Adjustable.Container.onMove",me, me.adjLabel)
+    -- A drag handle: its callbacks start and end a move, which a screen reader's press cannot make
+    me.adjLabel:setAccessibleRole("text")
     me.minLabel:setClickCallback("Adjustable.Container.onClickMin", me)
     me.saveLabel:setClickCallback("Adjustable.Container.onClickSave", me)
     me.lockLabel:setClickCallback("Adjustable.Container.onClickL", me)
@@ -1532,12 +1786,16 @@ function Adjustable.Container:new(cons,container)
         Adjustable.Container.all[me.name]:detach()
     end
 
-    if me.minimized then
-        me:minimize()
-    end
-
+    -- minimize() skips a container already flagged as minimized and
+    -- lockContainer() refuses one, so lock first and minimize after
+    local startMinimized = me.minimized
+    me.minimized = false
     if me.locked then
         me:lockContainer()
+    end
+
+    if startMinimized then
+        me:minimize()
     end
 
     if me.attached then
@@ -1557,6 +1815,11 @@ function Adjustable.Container:new(cons,container)
     if not(me.autoLoad == false) then
         me.autoLoad = true
         me:load()
+    end
+
+    -- after load(), which may have replaced the fallback 10 with a saved padding
+    if givenPadding ~= nil and not validPadding(givenPadding) then
+        debugc(string.format("Adjustable.Container:new: ignored the invalid padding %s given for %s, using %s", tostring(givenPadding), me.name, tostring(me.padding)))
     end
 
     -- Saves on Exit if autoSave is not false

@@ -69,6 +69,14 @@
 
 using namespace std::chrono_literals;
 
+namespace {
+// Qt reads a "&" in a menu item's text as a mnemonic, and a profile name or window title may hold one
+QString menuItemSafe(const QString& text)
+{
+    return QString(text).replace(QLatin1Char('&'), QLatin1String("&&"));
+}
+} // namespace
+
 // Deliberately parentless: a QWidget parent on a top-level window gives it a
 // QWindow transient parent, and Windows implements that as native window
 // ownership - an owned window is pinned above its owner forever, so clicking the
@@ -94,9 +102,7 @@ TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* conso
     }
 
     // Set initial toolbar visibility based on main window state
-    if (mpToolBar) {
-        mpToolBar->setVisible(toolbarVisible);
-    }
+    setToolBarVisibility(toolbarVisible);
 
     // Set window properties
     //: This is the title of a Mudlet window which was detached from the main Mudlet window, and %1 is the name of the profile.
@@ -316,14 +322,14 @@ void TDetachedWindow::createMenus()
     connect(mpMenuScriptEditorAction, &QAction::triggered, this, &TDetachedWindow::slot_showTriggerDialog);
     toolboxMenu->addAction(mpMenuScriptEditorAction);
 
-    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
+    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Package exporter" among them.
     auto showErrorsAction = new QAction(tr("Show &errors"), this);
     //: This explains the "Show errors" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     showErrorsAction->setStatusTip(tr("Show errors from scripts that you have running"));
     connect(showErrorsAction, &QAction::triggered, this, &TDetachedWindow::slot_showEditorDialog);
     toolboxMenu->addAction(showErrorsAction);
 
-    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
+    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Module manager" among them.
     mpMenuShowMapAction = new QAction(tr("Show &map"), this);
     //: This explains the "Show map" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuShowMapAction->setStatusTip(tr("Show or hide the game map."));
@@ -360,15 +366,15 @@ void TDetachedWindow::createMenus()
     connect(replayAction, &QAction::triggered, this, &TDetachedWindow::slot_showReplayDialog);
     toolboxMenu->addAction(replayAction);
 
-    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
-    mpMenuModuleManagerAction = new QAction(tr("&Module manager"), this);
+    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Show map" among them.
+    mpMenuModuleManagerAction = new QAction(tr("M&odule manager"), this);
     //: This explains the "Module manager" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuModuleManagerAction->setStatusTip(tr("Install and remove (share- & sync-able) collections of Mudlet lua items (modules)."));
     connect(mpMenuModuleManagerAction, &QAction::triggered, this, &TDetachedWindow::slot_showModuleManagerDialog);
     toolboxMenu->addAction(mpMenuModuleManagerAction);
 
-    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
-    auto packageExporterAction = new QAction(tr("Package &exporter"), this);
+    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Show errors" among them.
+    auto packageExporterAction = new QAction(tr("Package e&xporter"), this);
     //: This explains the "Package exporter" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     packageExporterAction->setStatusTip(tr("Gather and bundle up collections of Mudlet Lua items and other reasources into a module."));
     connect(packageExporterAction, &QAction::triggered, this, &TDetachedWindow::slot_showPackageExporterDialog);
@@ -455,7 +461,7 @@ void TDetachedWindow::createMenus()
     connect(fullScreenAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleFullScreen);
     mpWindowMenu->addAction(fullScreenAction);
 
-    //: This is an item in the "Window" menu in the menubar of a detached Mudlet window.
+    //: This is an item in the "Window" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Minimize" among them.
     mpMenuMultiViewAction = new QAction(tr("&Multiview"), this);
     //: This explains the "Multiview" item in the "Window" menu in the menubar of a detached Mudlet window.
     mpMenuMultiViewAction->setStatusTip(tr("Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded."));
@@ -482,8 +488,8 @@ void TDetachedWindow::createMenus()
     connect(alwaysOnTopAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleAlwaysOnTop);
     mpWindowMenu->addAction(alwaysOnTopAction);
 
-    //: This is an item in the "Window" menu in the menubar of a detached Mudlet window.
-    auto minimizeAction = new QAction(tr("&Minimize"), this);
+    //: This is an item in the "Window" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Multiview" among them.
+    auto minimizeAction = new QAction(tr("Mi&nimize"), this);
     //: This explains the "Minimize" item in the "Window" menu in the menubar of a detached Mudlet window.
     minimizeAction->setStatusTip(tr("Minimize this window"));
     connect(minimizeAction, &QAction::triggered, this, &QWidget::showMinimized);
@@ -547,14 +553,14 @@ void TDetachedWindow::createMenus()
     aboutMenu->addAction(aboutAction);
 
 #if defined(INCLUDE_UPDATER)
-    //: This is an item in the "About" menu in the menubar of a detached Mudlet window.
-    auto updateAction = new QAction(tr("&Check for updates..."), this);
+    //: This is an item in the "About" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Show changelog" among them.
+    auto updateAction = new QAction(tr("Check for &updates..."), this);
     //: This explains the "Check for updates..." item in the "About" menu in the menubar of a detached Mudlet window.
     updateAction->setStatusTip(tr("Check for newer versions of Mudlet"));
     connect(updateAction, &QAction::triggered, pMudlet, &mudlet::slot_manualUpdateCheck);
     aboutMenu->addAction(updateAction);
 
-    //: This is an item in the "About" menu in the menubar of a detached Mudlet window.
+    //: This is an item in the "About" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Check for updates..." among them.
     auto changelogAction = new QAction(tr("Show &changelog"), this);
     //: This explains the "Show changelog" item in the "About" menu in the menubar of a detached Mudlet window.
     changelogAction->setStatusTip(tr("Show the changelog for this version"));
@@ -569,18 +575,44 @@ void TDetachedWindow::createMenus()
     connect(reportIssueAction, &QAction::triggered, this, &TDetachedWindow::slot_reportIssue);
     aboutMenu->addAction(reportIssueAction);
 
-    // Toolbar visibility toggle
-    //: This is an item for the toolbar visibility toggle in a detached Mudlet window.
-    mpActionToggleToolBar = new QAction(tr("Show &Toolbar"), this);
+    // Toolbar visibility toggle; the constructor checks it, once the toolbar has its state
+    //: This is an item in the "Window" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Always on Top" among them.
+    mpActionToggleToolBar = new QAction(tr("Show Tool&bar"), this);
     mpActionToggleToolBar->setObjectName(qsl("toggle_toolbar_action"));
     mpActionToggleToolBar->setCheckable(true);
-    mpActionToggleToolBar->setChecked(mpToolBar ? mpToolBar->isVisible() : true);
-    //: This explains the "Show Toolbar" action for toolbar visibility in a detached Mudlet window.
+    //: This explains the "Show Toolbar" item in the "Window" menu in the menubar of a detached Mudlet window.
     mpActionToggleToolBar->setStatusTip(tr("Show or hide the toolbar"));
     connect(mpActionToggleToolBar, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
+    mpWindowMenu->insertAction(minimizeAction, mpActionToggleToolBar);
 
     // Connect the Window menu's aboutToShow signal to update the window list
     connect(mpWindowMenu, &QMenu::aboutToShow, this, &TDetachedWindow::updateWindowMenu);
+}
+
+// Qt names each dock and toolbar in this menu by its title, which stays unescaped
+// because it is also the caption of the floating window. Escaped from the title
+// rather than the action's text, which keeps what the last popup set
+QMenu* TDetachedWindow::createPopupMenu()
+{
+    QMenu* pMenu = QMainWindow::createPopupMenu();
+    if (!pMenu) {
+        return nullptr;
+    }
+    const auto listed = pMenu->actions();
+    const auto escape = [&listed](QAction* pToggle, const QString& title) {
+        if (listed.contains(pToggle)) {
+            pToggle->setText(menuItemSafe(title));
+        }
+    };
+    const auto docks = findChildren<QDockWidget*>();
+    for (QDockWidget* pDock : docks) {
+        escape(pDock->toggleViewAction(), pDock->windowTitle());
+    }
+    const auto toolBars = findChildren<QToolBar*>();
+    for (QToolBar* pToolBar : toolBars) {
+        escape(pToolBar->toggleViewAction(), pToolBar->windowTitle());
+    }
+    return pMenu;
 }
 
 void TDetachedWindow::closeEvent(QCloseEvent* event)
@@ -751,7 +783,7 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
 
     auto reattachAction = contextMenu.addAction(QIcon(qsl(":/icons/view-restore.png")),
                                                 //: This is an item in the context menu when clicked on a detached tab, and %1 is the name of the profile.
-                                                tr("Reattach '%1' to Main Window").arg(profileName));
+                                                tr("Reattach '%1' to Main Window").arg(menuItemSafe(profileName)));
     connect(reattachAction, &QAction::triggered, [this, profileName] {
         // Switch to this profile first, then reattach
         switchToProfile(profileName);
@@ -762,7 +794,7 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
 
     auto closeTabAction = contextMenu.addAction(QIcon(qsl(":/icons/profile-close.png")),
                                                 //: This is an item in the context menu when clicked on a detached tab, and %1 is the name of the profile.
-                                                tr("Close Profile '%1'").arg(profileName));
+                                                tr("Close Profile '%1'").arg(menuItemSafe(profileName)));
     connect(closeTabAction, &QAction::triggered, [this, tabIndex] {
         closeProfileByIndex(tabIndex);
     });
@@ -1203,6 +1235,12 @@ void TDetachedWindow::updateMenuShortcuts()
         }
 
         action->setShortcut(resolveShortcut(key, fallback));
+        // Held by the window too: Qt fires no shortcut of an action whose only
+        // containers are menus of a hidden menu bar. Adding one the window
+        // already holds would remove it and add it again.
+        if (!actions().contains(action)) {
+            addAction(action);
+        }
     };
 
 #if defined(Q_OS_MACOS)
@@ -1713,6 +1751,11 @@ void TDetachedWindow::setToolBarVisibility(bool visible)
     }
 }
 
+void TDetachedWindow::setMenuBarVisibility(bool visible)
+{
+    menuBar()->setVisible(visible);
+}
+
 bool TDetachedWindow::isToolBarVisible() const
 {
     // Returns false when mpToolBar is null — callers that distinguish
@@ -1744,7 +1787,7 @@ void TDetachedWindow::slot_saveProfile()
     Host* pHost = pHostManager->getHost(mCurrentProfileName);
 
     if (pHost) {
-        pHost->saveProfile();
+        pHost->saveProfileReportingFailure();
     }
 }
 
@@ -1766,6 +1809,9 @@ void TDetachedWindow::updateWindowMenu()
     if (!pMudlet) {
         return;
     }
+
+    // Disabled when hiding would cause lockout (menu bar also never shown)
+    mpActionToggleToolBar->setEnabled(!(isToolBarVisible() && !canHideToolBar()));
 
     // Clean up existing window list actions
     for (QAction* action : std::as_const(mWindowListActions)) {
@@ -1813,7 +1859,7 @@ void TDetachedWindow::updateWindowMenu()
         if (!mainWindowProfiles.isEmpty()) {
             for (const QString& profileName : mainWindowProfiles) {
                 //: This is an item in list of profiles in the "Window" menu of a detached Mudlet window. %1 is the name of the profile, and it is located not in the detached window, but in Mudlet's main window.
-                QString actionText = tr("%1 (Main Window)").arg(profileName);
+                QString actionText = tr("%1 (Main Window)").arg(menuItemSafe(profileName));
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
                 profileAction->setChecked(pMudlet->isActiveWindow() && pMudlet->getActiveHost() && pMudlet->getActiveHost()->getName() == profileName);
@@ -1841,7 +1887,7 @@ void TDetachedWindow::updateWindowMenu()
 
             for (const QString& windowProfileName : std::as_const(profilesInWindow)) {
                 //: This is an item in list of profiles in the "Window" menu of a detached Mudlet window. %1 is the name of the profile, and it is located not in Mudlet's main window, but in the detached window.
-                QString actionText = tr("%1 (Detached)").arg(windowProfileName);
+                QString actionText = tr("%1 (Detached)").arg(menuItemSafe(windowProfileName));
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
                 profileAction->setChecked(detachedWindow == this && detachedWindow->getCurrentProfileName() == windowProfileName);
@@ -3366,10 +3412,10 @@ void TDetachedWindow::slot_updateShowMapActionText()
         }
     }
     if (willHide) {
-        //: Toolbox menu entry of a detached window while the map is on screen - activating it hides the map
+        //: Toolbox menu entry of a detached window while the map is on screen - activating it hides the map. Its "&" letter must differ from the other items in that menu, "Module manager" among them.
         mpMenuShowMapAction->setText(tr("Hide &map"));
     } else {
-        //: Toolbox menu entry of a detached window while no map is on screen - activating it shows the map, creating it if need be
+        //: Toolbox menu entry of a detached window while no map is on screen - activating it shows the map, creating it if need be. Its "&" letter must differ from the other items in that menu, "Module manager" among them.
         mpMenuShowMapAction->setText(tr("Show &map"));
     }
 }

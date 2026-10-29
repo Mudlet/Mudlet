@@ -44,7 +44,8 @@ using namespace std::chrono_literals;
 // timestamps and prompt flags it carries over decide what the timestamp column
 // and TConsole::printCommand() do next. These lock all of that down, along with
 // the one thing about the server-wrap flush that a spec cannot sample in time:
-// that the line it commits is painted rather than appended.
+// that the line it commits is painted rather than appended, and that
+// deleteLines() keeps those per-line lists and wrap markers in step.
 class WrapLineRewrapTest : public QObject
 {
     Q_OBJECT
@@ -142,18 +143,18 @@ private slots:
         echo(qsl("a line that fits\\n"));
         QCOMPARE(console->buffer.lineBuffer.size(), 2);
 
-        console->buffer.timeBuffer[0] = qsl("11:22:33.444");
+        console->buffer.timeBuffer[0] = 1234567890123;
         console->buffer.promptBuffer[0] = true;
 
         console->buffer.wrapLine(0, 200, 0, 0);
 
         QCOMPARE(console->buffer.line(0), qsl("a line that fits"));
-        QCOMPARE(console->buffer.timeBuffer.at(0), qsl("11:22:33.444"));
+        QCOMPARE(console->buffer.timeBuffer.at(0), 1234567890123);
         QVERIFY(console->buffer.promptBuffer.at(0));
     }
 
-    // Continuation lines are marked by a blank timestamp, which is what tells a
-    // later rewrap not to indent them as though they started a line.
+    // Continuation lines are marked csmWrappedLineTimeStamp, which is what tells
+    // a later rewrap not to indent them as though they started a line.
     void test_aWrappedLineIsSplitAndItsContinuationsAreBlankStamped()
     {
         auto* console = consoleWithWrapWidth(10);
@@ -163,9 +164,9 @@ private slots:
         QCOMPARE(joinedText(console), qsl("abcdefghijklmnopqrstuvwxyz"));
         QCOMPARE(nonEmptyLineCount(console), 3);
         QCOMPARE(console->buffer.line(0), qsl("abcdefghij"));
-        QVERIFY2(console->buffer.timeBuffer.at(0) != TBuffer::smBlankTimeStamp, "the line that starts the paragraph lost its timestamp");
-        QCOMPARE(console->buffer.timeBuffer.at(1), TBuffer::smBlankTimeStamp);
-        QCOMPARE(console->buffer.timeBuffer.at(2), TBuffer::smBlankTimeStamp);
+        QVERIFY2(console->buffer.timeBuffer.at(0) != TBuffer::csmWrappedLineTimeStamp, "the line that starts the paragraph lost its timestamp");
+        QCOMPARE(console->buffer.timeBuffer.at(1), TBuffer::csmWrappedLineTimeStamp);
+        QCOMPARE(console->buffer.timeBuffer.at(2), TBuffer::csmWrappedLineTimeStamp);
     }
 
     // The shortcut stops at a blank line rather than keeping it: the rewrap
@@ -182,7 +183,7 @@ private slots:
         QCOMPARE(console->buffer.line(2), qsl("below"));
 
         console->buffer.promptBuffer[1] = true;
-        console->buffer.timeBuffer[1] = qsl("sentinel");
+        console->buffer.timeBuffer[1] = 42;
 
         QCOMPARE(console->buffer.wrapLine(0, 200, 0, 0), 3);
 
@@ -190,7 +191,7 @@ private slots:
         QVERIFY(console->buffer.line(1).isEmpty());
         QCOMPARE(console->buffer.line(2), qsl("below"));
         QVERIFY2(!console->buffer.promptBuffer.at(1), "the replacement blank line kept the old one's prompt flag");
-        QVERIFY2(console->buffer.timeBuffer.at(1) != qsl("sentinel"), "the replacement blank line kept the old one's timestamp");
+        QVERIFY2(console->buffer.timeBuffer.at(1) != 42, "the replacement blank line kept the old one's timestamp");
     }
 
     // A line whose text has gone but whose formatting has not is replaced by an
@@ -268,7 +269,7 @@ private slots:
                 continue;
             }
 
-            const std::vector<TChar>& chars = console->buffer.buffer.at(i);
+            const TLineFormat& chars = console->buffer.buffer.at(i);
             QCOMPARE(static_cast<int>(chars.size()), line.size());
             const QColor& textColour = chars.at(firstTextChar).background();
             sawFirstHalf = sawFirstHalf || textColour == firstHalf;
@@ -324,7 +325,7 @@ private slots:
             if (line.isEmpty()) {
                 continue;
             }
-            const std::vector<TChar>& chars = console->buffer.buffer.at(i);
+            const TLineFormat& chars = console->buffer.buffer.at(i);
             QCOMPARE(static_cast<int>(chars.size()), line.size());
             for (int j = 0; j < line.size(); ++j) {
                 const QChar letter = line.at(j);
@@ -551,6 +552,101 @@ private slots:
         QVERIFY2(!console->buffer.promptBuffer.at(0), "the prompt flag was not cleared once the command was echoed onto it");
         QCOMPARE(console->buffer.lineBuffer.size(), 2);
         QVERIFY(console->buffer.lineBuffer.constLast().isEmpty());
+    }
+
+    // deleteLines() has to drop the same rows from every per-line list and line
+    // marker as from the TChar grid, or what is below lands on other lines.
+    void test_deletingARangeOfLinesKeepsEveryLineListInStep()
+    {
+        auto* console = consoleWithWrapWidth(200);
+        QVERIFY(console);
+        echo(qsl("line one\\nline two\\nline three\\nline four\\nline five\\n"));
+        TBuffer& buffer = console->buffer;
+        QCOMPARE(buffer.lineBuffer.size(), 6);
+        buffer.timeBuffer[3] = 424242;
+        buffer.promptBuffer[3] = true;
+        buffer.wrapGapBuffer[3] = 7;
+        QVERIFY(buffer.applyAttribute(QPoint(0, 3), QPoint(buffer.line(4).size(), 4), TChar::Found, true));
+
+        QVERIFY(buffer.deleteLines(0, 2));
+
+        QCOMPARE(buffer.lineBuffer.size(), 3);
+        QCOMPARE(static_cast<qsizetype>(buffer.buffer.size()), buffer.lineBuffer.size());
+        QCOMPARE(buffer.timeBuffer.size(), buffer.lineBuffer.size());
+        QCOMPARE(buffer.promptBuffer.size(), buffer.lineBuffer.size());
+        QCOMPARE(buffer.wrapGapBuffer.size(), buffer.lineBuffer.size());
+        QCOMPARE(buffer.line(0), qsl("line four"));
+        QCOMPARE(buffer.line(1), qsl("line five"));
+        QCOMPARE(static_cast<qsizetype>(buffer.buffer.at(0).size()), buffer.line(0).size());
+        QCOMPARE(buffer.timeBuffer.at(0), qint64(424242));
+        QVERIFY(buffer.promptBuffer.at(0));
+        QVERIFY(!buffer.promptBuffer.at(1));
+        QCOMPARE(buffer.wrapGapBuffer.at(0), 7);
+        buffer.clearSearchHighlights();
+        for (int y = 0; y < buffer.lineBuffer.size(); ++y) {
+            for (const auto& character : buffer.buffer.at(y)) {
+                QVERIFY2(!character.isFound(), qPrintable(qsl("line %1 kept its search highlight").arg(y)));
+            }
+        }
+    }
+
+    // A line wrapped off one in a deleted range takes the timestamp of the start
+    // of its logical line; with no start in the range it still continues the line above.
+    void test_deletingARangeOfWrappedLinesKeepsTheLogicalLinesApart()
+    {
+        auto* console = consoleWithWrapWidth(200);
+        QVERIFY(console);
+        echo(qsl("X\\nY\\nZ\\nW\\nV\\nU\\n"));
+        TBuffer& buffer = console->buffer;
+        QCOMPARE(buffer.lineBuffer.size(), 7);
+        const QList<qint64> stamps{1000, TBuffer::csmWrappedLineTimeStamp, 3000, TBuffer::csmWrappedLineTimeStamp, TBuffer::csmWrappedLineTimeStamp, TBuffer::csmWrappedLineTimeStamp};
+        for (int i = 0; i < stamps.size(); ++i) {
+            buffer.timeBuffer[i] = stamps.at(i);
+        }
+
+        QVERIFY(buffer.deleteLines(4, 4));
+        QCOMPARE(buffer.line(4), qsl("U"));
+        QCOMPARE(buffer.timeBuffer.at(4), TBuffer::csmWrappedLineTimeStamp);
+
+        QVERIFY(buffer.deleteLines(1, 2));
+        QCOMPARE(buffer.line(1), qsl("W"));
+        QCOMPARE(buffer.timeBuffer.at(1), qint64(3000));
+        QCOMPARE(buffer.timeBuffer.at(2), TBuffer::csmWrappedLineTimeStamp);
+    }
+
+    // Only the last start in the range counts, wherever it sits in it, and a range
+    // of continuation lines alone gives the line below no timestamp of its own.
+    void test_deletingARangeOfWrappedLinesTakesTheLastStartInIt()
+    {
+        auto* console = consoleWithWrapWidth(200);
+        QVERIFY(console);
+        TBuffer& buffer = console->buffer;
+        const QList<qint64> stamps{1000, TBuffer::csmWrappedLineTimeStamp, 3000, TBuffer::csmWrappedLineTimeStamp, TBuffer::csmWrappedLineTimeStamp, TBuffer::csmWrappedLineTimeStamp};
+        const auto echoStampedLines = [&]() {
+            const int first = buffer.lineBuffer.size() - 1;
+            echo(qsl("X\\nY\\nZ\\nW\\nV\\nU\\n"));
+            for (int i = 0; i < stamps.size(); ++i) {
+                buffer.timeBuffer[first + i] = stamps.at(i);
+            }
+            return first;
+        };
+
+        int first = echoStampedLines();
+        QCOMPARE(first, 0);
+        QVERIFY(buffer.deleteLines(0, 3));
+        QCOMPARE(buffer.line(0), qsl("V"));
+        QCOMPARE(buffer.timeBuffer.at(0), qint64(3000));
+        QCOMPARE(buffer.timeBuffer.at(1), TBuffer::csmWrappedLineTimeStamp);
+
+        first = echoStampedLines();
+        QVERIFY(buffer.deleteLines(first + 2, first + 3));
+        QCOMPARE(buffer.line(first + 2), qsl("V"));
+        QCOMPARE(buffer.timeBuffer.at(first + 2), qint64(3000));
+
+        first = echoStampedLines();
+        QVERIFY(buffer.deleteLines(first + 3, first + 4));
+        QCOMPARE(buffer.line(first + 3), qsl("U"));
+        QCOMPARE(buffer.timeBuffer.at(first + 3), TBuffer::csmWrappedLineTimeStamp);
     }
 
     // Declared last: without the clamp this aborts, taking the rest of the run

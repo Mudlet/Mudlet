@@ -321,6 +321,7 @@ describe("Tests the rest of the SGR decoder", function()
       local value = (index - 232) * 10 + 8
       checkRgb("38;5;" .. index, ("SgrGrey%d"):format(index), {value, value, value}, "foreground")
     end
+    checkRgb("48;5;255", "SgrGreyBg255", {238, 238, 238}, "background")
   end)
 
   it("maps the indexed colour cube onto a background colour", function()
@@ -371,6 +372,39 @@ describe("Tests the rest of the SGR decoder", function()
     assert.is_true(isAnsiBgColor(4), "an unreadable background index was treated as a request for index zero")
   end)
 
+  -- as xterm does, an index past the end of the 256-colour palette changes
+  -- nothing, rather than reading as black or overflowing the greyscale ramp
+  it("leaves the colour alone when an indexed colour's index is out of range", function()
+    for i, index in ipairs({"256", "999", "2147483647"}) do
+      for form, separator in ipairs({";", ":"}) do
+        local fg = ("38%s5%s%s"):format(separator, separator, index)
+        local before, after = ("SgrBigIdxFgA%d%d"):format(form, i), ("SgrBigIdxFgB%d%d"):format(form, i)
+        feed("\27[31m" .. before .. " \27[" .. fg .. "m" .. after)
+        selectMarker(before)
+        assert.is_true(isAnsiFgColor(4), "the precondition colour did not take")
+        selectMarker(after)
+        assert.is_true(isAnsiFgColor(4), "SGR " .. fg .. " changed the foreground")
+
+        local bg = ("48%s5%s%s"):format(separator, separator, index)
+        before, after = ("SgrBigIdxBgA%d%d"):format(form, i), ("SgrBigIdxBgB%d%d"):format(form, i)
+        feed("\27[41m" .. before .. " \27[" .. bg .. "m" .. after)
+        selectMarker(before)
+        assert.is_true(isAnsiBgColor(4), "the precondition background did not take")
+        selectMarker(after)
+        assert.is_true(isAnsiBgColor(4), "SGR " .. bg .. " changed the background")
+      end
+    end
+  end)
+
+  it("still applies the codes after an out-of-range indexed colour", function()
+    feed("\27[31mSgrBigIdxThenA \27[38;5;999;32;48;5;999;42mSgrBigIdxThenB")
+    selectMarker("SgrBigIdxThenA")
+    assert.is_true(isAnsiFgColor(4), "the precondition colour did not take")
+    selectMarker("SgrBigIdxThenB")
+    assert.is_true(isAnsiFgColor(6), "the code after an out-of-range foreground index was not applied")
+    assert.is_true(isAnsiBgColor(6), "the code after an out-of-range background index was not applied")
+  end)
+
   -- types 3 (direct CMY) and 4 (direct CMYK) are not rendered, but their
   -- arguments still have to be stepped over or the codes behind them are read
   -- as colour requests of their own
@@ -392,7 +426,7 @@ describe("Tests the rest of the SGR decoder", function()
     assert.is_true(isAnsiBgColor(6), "the SGR 42 behind a 48;4 sequence was not reached")
   end)
 
-  it("abandons a colour sequence whose type is missing, zero or unreadable", function()
+  it("leaves the colour alone when its type is missing, zero or empty", function()
     feed("\27[31mSgrStopA \27[38mSgrStopB")
     selectMarker("SgrStopB")
     assert.is_true(isAnsiFgColor(4), "a bare SGR 38 disturbed the foreground")
@@ -412,6 +446,32 @@ describe("Tests the rest of the SGR decoder", function()
     feed("\27[41mSgrStopI \27[48;mSgrStopJ")
     selectMarker("SgrStopJ")
     assert.is_true(isAnsiBgColor(4), "an empty background colour type disturbed the background")
+  end)
+
+  it("applies the parameters around a colour whose type is empty, zero, unreadable or not rendered", function()
+    for i, colour in ipairs({"38;;", "38;0;", "38;<;", "38;1;", "38;9;", "48;;", "48;0;", "48;<;", "48;1;", "48;9;"}) do
+      local marker = ("SgrBadTypeAttr%02d"):format(i)
+      feed("\27[3;41;" .. colour .. "4m" .. marker)
+      local format = formatOf(marker)
+      assert.is_true(format.italic, "the italic before SGR " .. colour .. " was dropped")
+      assert.is_true(format.underline, "the underline after SGR " .. colour .. " was dropped")
+      assert.is_false(format.bold, "the type of SGR " .. colour .. " was read as bold")
+      assert.is_false(format.strikeout, "the type of SGR " .. colour .. " was read as strikeout")
+      selectMarker(marker)
+      assert.is_true(isAnsiBgColor(4), "the background before SGR " .. colour .. " was dropped")
+    end
+  end)
+
+  -- a sequence with an intermediate byte is held over a split between two
+  -- reads like any other, rather than its tail reaching the screen
+  it("carries a sequence with an intermediate byte over to the next read", function()
+    for i, case in ipairs({{"\27[1 ", "qAB"}, {"\27[38;5;-", "1mAB"}}) do
+      local marker = ("SgrSplitInt%d"):format(i)
+      assert.is_true(feedTelnet(marker .. "(" .. case[1]))
+      assert.is_true(feedTelnet(case[2] .. ")" .. marker .. "\r\n"))
+      local line = lineNumberOf(marker)
+      assert.equals(marker .. "(AB)" .. marker, line and getLines("main", line, line + 1)[1])
+    end
   end)
 
   it("ignores a sub-parameter colour type Mudlet does not render", function()
@@ -1024,6 +1084,40 @@ describe("Tests how a GMCP message is split into name and data", function()
     assert.same({t = "\27[31mred"}, gmcp.Spec.Ansi)
   end)
 
+  it("hands Lua the UTF-8 a game sent", function()
+    feed("<T_IAC><T_SB><O_GMCP>Spec.Utf8 {\"t\": \"café ☕ 𝄞\"}<T_IAC><T_SE>")
+    assert.same({t = "café ☕ 𝄞"}, gmcp.Spec.Utf8)
+  end)
+
+  it("replaces bytes that are not UTF-8 rather than losing the message", function()
+    -- a lone 0x80, and an escaped IAC that unescapes to a lone 0xFF
+    feed("<T_IAC><T_SB><O_GMCP>Spec.NotUtf8 {\"t\": \"a\128b<T_IAC><T_IAC>c\"}<T_IAC><T_SE>")
+    assert.same({t = "a\239\191\189b\239\191\189c"}, gmcp.Spec.NotUtf8)
+  end)
+
+  it("ignores a byte order mark ahead of the name", function()
+    feed("<T_IAC><T_SB><O_GMCP>\239\187\191Spec.Bom {\"a\": 1}<T_IAC><T_SE>")
+    assert.same({a = 1}, gmcp.Spec.Bom)
+  end)
+
+  it("ends a message at a NUL", function()
+    -- the two bytes ahead of the NUL are lost as well, which the spaces absorb
+    feed("<T_IAC><T_SB><O_GMCP>Spec.Nul {\"n\": 1}  \0}}<T_IAC><T_SE>")
+    assert.same({n = 1}, gmcp.Spec.Nul)
+  end)
+
+  it("treats data of nothing but Unicode spaces as no data", function()
+    feed("<T_IAC><T_SB><O_GMCP>Spec.Nbsp \194\160\226\128\131<T_IAC><T_SE>")
+    assert.same({}, gmcp.Spec.Nbsp)
+  end)
+
+  it("puts together a message that arrives over several reads", function()
+    feed("<T_IAC><T_SB><O_GMCP>Spec.Split {\"a\": ")
+    feed("\"x\", \"b\"")
+    feed(": 2}<T_IAC><T_SE>")
+    assert.same({a = "x", b = 2}, gmcp.Spec.Split)
+  end)
+
   it("reads a payload that is a bare number", function()
     pending("json_to_value returns a function rather than a number for a bare JSON number, so gmcp.X ends up holding a function (#10362)")
   end)
@@ -1032,9 +1126,9 @@ end)
 describe("Tests the Client.GUI package offer", function()
 
   -- A game may send Client.GUI as JSON, or as the raw telnet form of a version
-  -- and a URL on two lines. Either way the offer only has to reach the
-  -- downloader, so the URL is one nothing answers: the harness's fixture server
-  -- 404s it when it started one, a closed port refuses it when it did not.
+  -- and a URL on two lines. Most offers here only have to reach the
+  -- downloader, so offerUrl() is one nothing answers: the harness's fixture
+  -- server 404s it when it started one, a closed port refuses it when it did not.
   local httpPort = os.getenv("MUDLET_TEST_HTTP_PORT")
 
   local function offerUrl(packageName)
@@ -1124,6 +1218,241 @@ describe("Tests the Client.GUI package offer", function()
     -- the same offer made complete, so the silence above is about what was missing
     mark = offerGui('{"version": "5", "url": "' .. offerUrl("RegressCompleteGui") .. '"}', "RegressCompleteGui")
     assert.is_truthy(downloadStarted(mark, "RegressCompleteGui"), "a complete offer was not acted on either: " .. displayedSince(mark))
+  end)
+
+  local minimalGuiPackage = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE MudletPackage><MudletPackage version="1.001"></MudletPackage>'
+  local servedGuiCleanups = {}
+
+  -- busted keeps one finally() per test, so every offerServedGui() of a test is
+  -- undone by this one, last first
+  local function cleanUpServedGuis()
+    for index = #servedGuiCleanups, 1, -1 do
+      servedGuiCleanups[index]()
+      servedGuiCleanups[index] = nil
+    end
+  end
+
+  -- serves content as name.xml from a file: URL, offers it as the game's
+  -- interface at this version and waits for the download to be settled one way
+  -- or the other. afterOffer, if given, runs straight after the offer. The test
+  -- passes cleanUpServedGuis to finally() first
+  local function offerServedGui(name, content, version, afterOffer)
+    local source = getMudletHomeDir() .. "/mudlet-spec-servedgui-source"
+    local served = source .. "/" .. name .. ".xml"
+    local downloaded = getMudletHomeDir() .. "/" .. name .. ".xml"
+    local previousClient = gmcp.Client
+    -- the starter UI stands aside on sysServerGuiInstalled and saves that in its
+    -- settings, which are not this spec's to change
+    local standAside = BaseUI and BaseUI.standAside
+    local result = {guis = {}, listed = {}, installs = {}, downloaded = downloaded}
+    local handlers = {
+      registerAnonymousEventHandler("sysServerGuiInstalled", function(_, packageName)
+        result.guis[#result.guis + 1] = packageName
+        result.listed[#result.listed + 1] = table.contains(getPackages(), packageName)
+      end),
+      registerAnonymousEventHandler("sysInstallPackage", function(_, packageName)
+        result.installs[#result.installs + 1] = packageName
+      end),
+    }
+    servedGuiCleanups[#servedGuiCleanups + 1] = function()
+      for _, handler in ipairs(handlers) do
+        killAnonymousEventHandler(handler)
+      end
+      gmcp.Client = previousClient
+      if standAside then
+        BaseUI.standAside = standAside
+      end
+      for _ = 1, 100 do
+        if not table.contains(getPackages(), name) or uninstallPackage(name) then
+          break
+        end
+        pumpEvents(50)
+      end
+      os.remove(downloaded)
+      os.remove(served)
+      lfs.rmdir(source)
+    end
+    if standAside then
+      BaseUI.standAside = function() end
+    end
+    if lfs.attributes(source, "mode") ~= "directory" then
+      assert(lfs.mkdir(source))
+    end
+    local file = io.open(served, "wb")
+    assert.is_not_nil(file, "could not write " .. served)
+    file:write(content)
+    file:close()
+    local path = served:gsub("\\", "/"):gsub("[%%#%?%s]", function(character) return string.format("%%%02X", character:byte()) end)
+    -- A Windows path starts with its drive letter, which Qt would read as the URL's host
+    if path:sub(1, 1) ~= "/" then
+      path = "/" .. path
+    end
+    local url = "file://" .. path
+
+    -- while a profile save runs, installPackage() postpones the install and
+    -- answers true, and an upgrade cannot uninstall the old interface; it gives
+    -- a save away by postponing even the empty path it would otherwise refuse
+    for _ = 1, 100 do
+      if installPackage("") == nil then
+        break
+      end
+      local pumped, why = pumpEvents(50)
+      assert.is_true(pumped, "pumpEvents could not run the event loop: " .. tostring(why))
+    end
+    assert.is_nil(installPackage(""), "a profile save was still running after 5s, so this offer's install would be postponed")
+
+    local mark = getLastLineNumber("main")
+    result.mark = mark
+    local ok, msg = feedTelnet('<T_IAC><T_SB><O_GMCP>Client.GUI {"version": "' .. (version or "1") .. '", "url": "' .. url .. '"}<T_IAC><T_SE>')
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    assert.is_truthy(downloadStarted(mark, name), "the offer never reached the downloader: " .. displayedSince(mark))
+    if afterOffer then
+      afterOffer()
+    end
+    for _ = 1, 300 do
+      -- sysInstallPackage is raised a pass after sysServerGuiInstalled
+      if (#result.guis > 0 and #result.installs > 0) or shownSince(mark, "was empty") or shownSince(mark, "Package download failed") or shownSince(mark, "Failed to load package") then
+        break
+      end
+      local pumped, why = pumpEvents(50)
+      assert.is_true(pumped, "pumpEvents could not run the event loop: " .. tostring(why))
+    end
+    return result
+  end
+
+  it("installs nothing from a Client.GUI download that came back empty", function()
+    local name = "mudlet-spec-emptygui"
+    finally(cleanUpServedGuis)
+    local result = offerServedGui(name, "")
+
+    -- the URL is shown decoded, so only its end is matched
+    assert.is_truthy(shownSince(result.mark, "/" .. name .. ".xml' was empty"), displayedSince(result.mark))
+    assert.same({}, result.guis, "an empty download was announced as the game's interface")
+    assert.same({}, result.installs, "an empty download was announced as an installed package")
+    assert.is_false(table.contains(getPackages(), name), "an empty download was registered as a package")
+    assert.is_nil(lfs.attributes(result.downloaded), "an empty download was written into the profile")
+  end)
+
+  -- the progress dialog closing on completion must not cancel the download it
+  -- tracked: aborting a finished file: reply empties it
+  it("installs a Client.GUI package downloaded from a file URL", function()
+    local name = "mudlet-spec-servedgui"
+    finally(cleanUpServedGuis)
+    local result = offerServedGui(name, minimalGuiPackage)
+
+    assert.same({name}, result.guis, "the downloaded interface was not announced: " .. displayedSince(result.mark))
+    assert.same({name}, result.installs, displayedSince(result.mark))
+    assert.is_true(table.contains(getPackages(), name), "the downloaded interface was not registered")
+    assert.is_falsy(shownSince(result.mark, "was empty"), displayedSince(result.mark))
+    assert.is_true((lfs.attributes(result.downloaded, "size") or 0) > 0, "the package was saved into the profile without its contents")
+  end)
+
+  -- the recorded version is the installed copy's, so offering that version again
+  -- has nothing to do, where anything else would reinstall it at every login
+  it("leaves an installed Client.GUI package alone when it is offered at the same version", function()
+    local name = "mudlet-spec-currentgui"
+    finally(cleanUpServedGuis)
+    assert.same({name}, offerServedGui(name, minimalGuiPackage, "10660").guis)
+
+    local mark = offerGui('{"version": "10660", "url": "' .. offerUrl(name) .. '"}', name)
+    assert.is_falsy(shownSince(mark, "Upgrading the GUI"), displayedSince(mark))
+    assert.is_falsy(downloadStarted(mark, name), displayedSince(mark))
+  end)
+
+  -- the version recorded for an interface that has since been uninstalled
+  -- belongs to no installed copy, so it must not stand for one installed later
+  it("forgets the recorded Client.GUI version once that package is uninstalled", function()
+    local name = "mudlet-spec-forgottengui"
+    finally(cleanUpServedGuis)
+    -- a save postpones an install and refuses an uninstall, so each step waits one out first
+    local function waitForSaveToPass()
+      for _ = 1, 100 do
+        if installPackage("") == nil then
+          return
+        end
+        pumpEvents(50)
+      end
+    end
+    local result = offerServedGui(name, minimalGuiPackage, "10662")
+    assert.same({name}, result.guis)
+    waitForSaveToPass()
+    assert.is_true(uninstallPackage(name), "the served interface could not be uninstalled")
+    waitForSaveToPass()
+    assert.is_true(installPackage(result.downloaded), "the interface could not be put back by hand")
+    waitForSaveToPass()
+    assert.is_true(table.contains(getPackages(), name), "the interface put back by hand was not registered")
+
+    local mark = offerGui('{"version": "10662", "url": "' .. offerUrl(name) .. '"}', name)
+    assert.is_truthy(shownSince(mark, "Upgrading the GUI to new version '10662'"), displayedSince(mark))
+  end)
+
+  -- an upgrade has to replace the installed copy of the package offered, even
+  -- when another interface was recorded since: otherwise every offer fails again
+  it("upgrades a Client.GUI package after another one was installed", function()
+    local switched, other = "mudlet-spec-switchedgui", "mudlet-spec-othergui"
+    finally(cleanUpServedGuis)
+    assert.same({switched}, offerServedGui(switched, minimalGuiPackage, "1").guis)
+    assert.same({other}, offerServedGui(other, minimalGuiPackage, "2").guis)
+
+    local result = offerServedGui(switched, minimalGuiPackage, "3")
+    assert.is_truthy(shownSince(result.mark, "Upgrading the GUI to new version '3'"), displayedSince(result.mark))
+    assert.same({switched}, result.guis, displayedSince(result.mark))
+    assert.is_true(table.contains(getPackages(), other), "upgrading one interface uninstalled another")
+  end)
+
+  -- while a profile save runs installPackage() only queues the install, so
+  -- announcing the package then would announce one that is not installed yet
+  it("announces a Client.GUI package only once it is installed when a save was running", function()
+    local name = "mudlet-spec-savedovergui"
+    finally(cleanUpServedGuis)
+    local result = offerServedGui(name, minimalGuiPackage, "1", function()
+      assert.is_true(saveProfile())
+    end)
+    assert.same({name}, result.guis, displayedSince(result.mark))
+    assert.same({true}, result.listed, "the interface was announced before it was installed")
+  end)
+
+  -- installing runs the package's scripts, and an offer handled meanwhile must
+  -- not be taken for the package that has just installed
+  it("records the Client.GUI package that installed, not an offer made while it installed", function()
+    local name, offeredMeanwhile = "mudlet-spec-scriptedgui", "mudlet-spec-meanwhilegui"
+    local mark = getLastLineNumber("main")
+    finally(function()
+      _G.mudletSpecOfferMeanwhile = nil
+      cleanUpServedGuis()
+    end)
+    _G.mudletSpecOfferMeanwhile = function()
+      _G.mudletSpecOfferMeanwhile = nil
+      feedTelnet('<T_IAC><T_SB><O_GMCP>Client.GUI {"version": "2", "url": "' .. offerUrl(offeredMeanwhile) .. '"}<T_IAC><T_SE>')
+    end
+    local scripted = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE MudletPackage><MudletPackage version="1.001"><ScriptPackage>'
+      .. '<Script isActive="yes" isFolder="no"><name>mudlet-spec-scriptedgui</name><packageName></packageName>'
+      .. '<script>if mudletSpecOfferMeanwhile then mudletSpecOfferMeanwhile() end</script><eventHandlerList /></Script>'
+      .. '</ScriptPackage></MudletPackage>'
+    local result = offerServedGui(name, scripted, "1")
+    assert.is_truthy(downloadStarted(mark, offeredMeanwhile), "the package's script made no offer: " .. displayedSince(mark))
+    assert.same({name}, result.guis, displayedSince(result.mark))
+    -- the offer made meanwhile is this test's to finish, as in offerGui()
+    for _ = 1, 150 do
+      if shownSince(mark, "Package download failed from '" .. offerUrl(offeredMeanwhile) .. "'") then
+        break
+      end
+      pumpEvents(20)
+    end
+    assert.is_truthy(shownSince(mark, "Package download failed from '" .. offerUrl(offeredMeanwhile) .. "'"), displayedSince(mark))
+  end)
+
+  -- the recorded version is what decides whether an installed interface is
+  -- offered an upgrade, so one that never arrived must not take its place
+  it("records no version for a Client.GUI download that installed nothing", function()
+    local installed = "mudlet-spec-keptgui"
+    finally(cleanUpServedGuis)
+    assert.same({installed}, offerServedGui(installed, minimalGuiPackage, "10660").guis)
+    offerServedGui("mudlet-spec-emptiedgui", "", "10661")
+
+    local result = offerServedGui(installed, minimalGuiPackage, "10661")
+    assert.is_truthy(shownSince(result.mark, "Upgrading the GUI to new version '10661'"), displayedSince(result.mark))
+    assert.same({installed}, result.guis, displayedSince(result.mark))
   end)
 
   -- a game with an interface of its own can decline the built-in starter UI,
@@ -1220,6 +1549,94 @@ describe("Tests addSupportedTelnetOption", function()
     local ok, err = pcall(function() addSupportedTelnetOption(2 ^ 40) end)
     assert.is_false(ok)
     assert.is_truthy(tostring(err):find("integer over/under-flow", 1, true), tostring(err))
+  end)
+end)
+
+describe("Tests the payload sysTelnetEvent hands over", function()
+  -- Options Mudlet has no handler of its own for can carry binary data, so the
+  -- payload has to reach Lua byte for byte, NULs and bytes from 0x80 up
+  -- included. 140 is never registered, so the WILL below is refused rather
+  -- than leaving an option negotiated for the specs that follow.
+  local option = 140
+
+  local function received(data)
+    local seen = {}
+    local handler = registerAnonymousEventHandler("sysTelnetEvent", function(_, kind, opt, payload)
+      if opt == option then
+        seen[kind] = payload
+      end
+    end)
+    local ok, msg = feedTelnet(data)
+    killAnonymousEventHandler(handler)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    return seen
+  end
+
+  it("hands the subnegotiation payload over byte for byte", function()
+    -- the IAC is doubled in the stream, as telnet escapes it
+    local seen = received("<T_IAC><T_SB>" .. string.char(option) .. "AB<00>CD\195\169<T_IAC><T_IAC>EF<T_IAC><T_SE>")
+    assert.equals("AB\0CD\195\169\255EF", seen[250])
+  end)
+
+  it("hands an empty subnegotiation over as an empty payload", function()
+    -- not as its framing, which an escaped payload of those same five bytes would also give
+    assert.equals("", received("<T_IAC><T_SB>" .. string.char(option) .. "<T_IAC><T_SE>")[250])
+    assert.equals("\255\250\140\255\240", received("<T_IAC><T_SB>" .. string.char(option) .. "<T_IAC><T_IAC>\250\140<T_IAC><T_IAC>\240<T_IAC><T_SE>")[250])
+  end)
+
+  it("hands a command that is not a subnegotiation over whole", function()
+    assert.equals("\255\251\140", received("<T_IAC><T_WILL>" .. string.char(option))[251])
+  end)
+
+  it("hands the payload over byte for byte to waitForEvent", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waitForEvent needs MUDLET_TEST_MODE")
+      return
+    end
+    tempTimer(0, function()
+      feedTelnet("<T_IAC><T_SB>" .. string.char(option) .. "AB<00>\195\169<T_IAC><T_IAC><T_IAC><T_SE>")
+    end)
+    local name, kind, opt, data = waitForEvent("sysTelnetEvent", 2000)
+    assert.equals("sysTelnetEvent", name)
+    assert.equals(250, kind)
+    assert.equals(option, opt)
+    assert.equals("AB\0\195\169\255", data)
+  end)
+
+  it("hands a replayed subnegotiation over as the live one was", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("letting the replay timer run needs MUDLET_TEST_MODE")
+      return
+    end
+    local function bigEndian32(value)
+      return string.char(math.floor(value / 16777216) % 256, math.floor(value / 65536) % 256, math.floor(value / 256) % 256, value % 256)
+    end
+    local wire = "\255\250" .. string.char(option) .. "AB\0CD\255\255EF\255\240"
+    local replay = getMudletHomeDir() .. "/telnet-spec-subnegotiation-replay.dat"
+    local file = assert(io.open(replay, "wb"))
+    file:write(bigEndian32(0) .. bigEndian32(#wire) .. wire)
+    file:close()
+    local replayed
+    local handler = registerAnonymousEventHandler("sysTelnetEvent", function(_, kind, opt, payload)
+      if kind == 250 and opt == option then
+        replayed = payload
+      end
+    end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+      os.remove(replay)
+    end)
+
+    assert.is_true(loadReplay(replay))
+    for _ = 1, 40 do
+      if replayed then
+        break
+      end
+      pumpEvents(50)
+    end
+    -- whether a replay is running is application-wide, so let this one run out
+    pumpEvents(200)
+    assert.equals("AB\0CD\255EF", replayed)
   end)
 end)
 
@@ -1429,20 +1846,24 @@ describe("Tests telnet option negotiation", function()
     assert.same({"sysProtocolDisabled:MXP"}, protocolEventsFrom("<T_IAC><T_DONT><O_MXP>"))
   end)
 
-  it("switches the MXP processor on from a subnegotiation, in locked mode", function()
+  it("switches the MXP processor on from a subnegotiation, in open mode", function()
     -- some games negotiate nothing and just send IAC SB MXP IAC SE. That starts
-    -- the processor in locked mode, where nothing is a tag until the game sends
-    -- a mode switch of its own
+    -- the processor in open mode, the initial default in the MXP spec, so the
+    -- open tags are read without a mode switch and the rest wait for one
     finally(restoreMxpDefaultMode)
     assert.same({"sysProtocolEnabled:MXP"}, protocolEventsFrom("<T_IAC><T_SB><O_MXP><T_IAC><T_SE>"))
 
     local mark = getLastLineNumber("main")
-    feed("<B>MXPSUBNEGLOCKED</B>\r\n")
-    assert.same({"<B>MXPSUBNEGLOCKED</B>"}, getLines("main", mark, getLastLineNumber("main")))
+    feed("<B>MXPSUBNEGDEFAULT</B><SEND href=\"x\">N</SEND>\r\n")
+    assert.same({"MXPSUBNEGDEFAULT<SEND href=\"x\">N</SEND>"}, getLines("main", mark, getLastLineNumber("main")))
 
     mark = getLastLineNumber("main")
-    feed("\27[1z<B>MXPSUBNEGOPEN</B>\r\n")
-    assert.same({"MXPSUBNEGOPEN"}, getLines("main", mark, getLastLineNumber("main")))
+    feed("\27[1z<SEND href=\"x\">MXPSUBNEGSECURE</SEND>\r\n")
+    assert.same({"MXPSUBNEGSECURE"}, getLines("main", mark, getLastLineNumber("main")))
+
+    mark = getLastLineNumber("main")
+    feed("<B>MXPSUBNEGAFTER</B><SEND href=\"x\">N</SEND>\r\n")
+    assert.same({"MXPSUBNEGAFTER<SEND href=\"x\">N</SEND>"}, getLines("main", mark, getLastLineNumber("main")))
 
     assert.same({"sysProtocolDisabled:MXP"}, protocolEventsFrom("<T_IAC><T_DONT><O_MXP>"))
   end)
@@ -1548,11 +1969,10 @@ end)
 
 describe("Tests MCCP compressed streams", function()
 
-  -- feedTelnet() reads its argument as a C string and turns "<..>" tokens into
-  -- bytes, so a compressed stream has to reach it with its NULs written as the
-  -- token and its angle brackets doubled
+  -- feedTelnet() turns "<..>" tokens into bytes, so a compressed stream has to
+  -- reach it with its angle brackets doubled; its NULs go through as they are
   local function escaped(bytes)
-    return (bytes:gsub("[%z<>]", {["\0"] = "<00>", ["<"] = "<<", [">"] = ">>"}))
+    return (bytes:gsub("[<>]", {["<"] = "<<", [">"] = ">>"}))
   end
 
   local function feed(data)
@@ -1683,31 +2103,26 @@ describe("Tests MCCP compressed streams", function()
     assert.is_truthy(shown:find("MCCPV1PLAINAFTER", 1, true), shown)
   end)
 
-  -- One read that inflates past the decompression bomb cap cannot be followed
-  -- to the end, and the part it drops leaves the stream unreadable, so the
-  -- stream has to be refused there rather than fed whatever comes next.
-  it("refuses a stream that inflates past the cap in one read", function()
+  -- One read can inflate to more than the drain works through in one go: the
+  -- rest has to be shown too, and what the game sends after it
+  it("shows all of a stream that inflates past the depth of one drain", function()
     -- zlib.compress(string.rep("\0", 1000000) .. "MCCPTAILOFBOMB\r\n", 9): NULs
-    -- are not displayed, so the cap is reached without drawing ~1 MB of text.
+    -- are not displayed, so the depth is reached without drawing ~1 MB of text.
     -- It has to inflate to more than scmMaxDecompressionRecursion * BUFFER_SIZE
-    -- (8 * 100000 bytes in ctelnet), or raising either leaves the cap unreached.
+    -- (8 * 100000 bytes in ctelnet), or the drain never goes that deep.
     local bomb = "\120\218\237\193\209\9\0\16\20\0\64\223\202\80\40\165\188\248\176\255\44\6\113\119\41\1"
       .. string.rep("\0", 968)
       .. "\191\138\222\207\173\115\237\209\118\180\146\31\105\128\4\26"
     local mark = getLastLineNumber("main")
     feed("<T_IAC><T_WILL><O_MCCP2>")
     feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(bomb))
-    -- what a game sends once it has seen the DONT
-    feed("MCCPPLAINAFTERCAP\r\n")
+    -- the stream ended with the bomb, so this is plain text
+    feed("MCCPPLAINAFTERBOMB\r\n")
     local shown = linesSince(mark)
-    assert.is_truthy(shown:find("Too much compressed data to process at once", 1, true), shown)
-    assert.is_falsy(shown:find("MCCP decompression error", 1, true), "the plain text was fed to the dropped stream: " .. shown)
-    assert.is_truthy(shown:find("MCCPPLAINAFTERCAP", 1, true), shown)
-
-    feed("<T_IAC><T_WILL><O_MCCP2>")
-    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED))
-    shown = linesSince(mark)
-    assert.is_truthy(shown:find("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK", 1, true), "offering MCCP again did not bring it back: " .. shown)
+    assert.is_truthy(shown:find("MCCPTAILOFBOMB", 1, true), shown)
+    assert.is_falsy(shown:find("Too much compressed data to process at once", 1, true), shown)
+    assert.is_falsy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_truthy(shown:find("MCCPPLAINAFTERBOMB", 1, true), shown)
   end)
 end)
 
@@ -2058,6 +2473,141 @@ describe("MXP auto-detection from the mode switch escape", function()
     feed("\r\n")
   end)
 
+  -- each feedTelnet() is a read of its own, as two packets from the game are
+  for cut = 1, 3 do
+    it(("finds the switch when it is split between two reads after byte %d"):format(cut), function()
+      local mark = getLastLineNumber("main")
+      local switch = "\27[1z"
+      feed(switch:sub(1, cut))
+      feed(switch:sub(cut + 1) .. "<send>MXPSPLITLOOK</send>\r\n")
+      assert.is_true(getConfig("promptForMXPProcessorOn"))
+      -- and in time for the line it opens to be read as MXP
+      local lines = getLines("main", mark, getLastLineNumber("main"))
+      assert.equals("MXPSPLITLOOK", lines[#lines])
+    end)
+  end
+
+  it("finds the switch when each of its bytes is a read of its own", function()
+    for byte in ("\27[1z"):gmatch(".") do
+      feed(byte)
+    end
+    feed("<send>MXPSPLITBYTES</send>\r\n")
+    assert.is_true(getConfig("promptForMXPProcessorOn"))
+  end)
+
+  -- a read that is not scanned, here because MXP was negotiated, comes between
+  -- the two, so they are not the two halves of one switch
+  it("does not join a read to one from before MXP was negotiated and dropped", function()
+    -- a profile with MXP off refuses the DO, and the middle read is then
+    -- scanned like the other two, so nothing unscanned comes between them
+    local enabledBefore = getConfig("enableMXP")
+    setConfig("enableMXP", true)
+    finally(function() setConfig("enableMXP", enabledBefore) end)
+    local negotiated = false
+    local handler = registerAnonymousEventHandler("sysProtocolEnabled", function(_, protocol)
+      negotiated = negotiated or protocol == "MXP"
+    end)
+    feed("\27[1")
+    feed("<T_IAC><T_DO><O_MXP>")
+    killAnonymousEventHandler(handler)
+    assert.is_true(negotiated, "the game's DO MXP was not taken up")
+    feed("mMXPNEGOTIATEDREAD\r\n")
+    feed("<T_IAC><T_DONT><O_MXP>")
+    feed("z after it\r\n")
+    assert.is_false(getConfig("promptForMXPProcessorOn"))
+    assert.is_false(getConfig("specialForceMXPProcessorOn"))
+  end)
+
+  -- the game pausing mid-switch for longer than the network packet timeout
+  -- makes cTelnet flush what it holds, which must not lose the switch's start
+  it("finds the switch when the posting timer flushes between its two reads", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waiting out the posting timeout needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+      return
+    end
+    local quietFor = function()
+      for _ = 1, 10 do
+        assert.is_true(pumpEvents(50), "pumpEvents needs MUDLET_TEST_MODE set, see the tests README")
+      end
+    end
+    -- held until the timer flushes it, or the case would not reach the timer
+    local mark = getLastLineNumber("main")
+    feed("MXPTIMERCHECK")
+    local heldBack = not table.contains(getLines("main", mark, getLastLineNumber("main") + 1), "MXPTIMERCHECK")
+    quietFor()
+    local flushed = table.contains(getLines("main", mark, getLastLineNumber("main") + 1), "MXPTIMERCHECK")
+    feed("\r\n")
+    if not (heldBack and flushed) then
+      -- an IAC GA from an earlier spec stops the posting timer for the session
+      pending("cTelnet's posting timer is not running in this session")
+      return
+    end
+    feed("\27[1")
+    quietFor()
+    feed("z<send>MXPTIMERSPLIT</send>\r\n")
+    assert.is_true(getConfig("promptForMXPProcessorOn"))
+  end)
+
+  -- the console joins an escape a read leaves unfinished to the next read, not
+  -- to what a trigger the read fired feeds in the meantime. cTelnet posts a read
+  -- in two places, depending on whether the game has sent an IAC GA yet, and
+  -- once it has, that holds for the rest of the connection, so that run is last
+  for _, gaDriven in ipairs({false, true}) do
+    local after = gaDriven and " once the game has sent an IAC GA" or ""
+
+    local function feedingTrigger(fedData)
+      local fired = 0
+      local id = tempExactMatchTrigger("MXPFEEDINGLINE", function()
+        fired = fired + 1
+        feedTelnet(fedData)
+      end)
+      if gaDriven then
+        feed("<T_IAC><T_GA>")
+      end
+      return id, function() return fired end
+    end
+
+    it("finds the switch split around a read whose trigger feeds more data" .. after, function()
+      local id, firings = feedingTrigger("fed by a trigger\r\n")
+      finally(function() killTrigger(id) end)
+      feed("MXPFEEDINGLINE\r\n\27[1")
+      feed("z<send>MXPAFTERFEED</send>\r\n")
+      assert.equals(1, firings(), "the trigger that feeds more data did not fire")
+      assert.is_true(getConfig("promptForMXPProcessorOn"))
+    end)
+
+    it("does not join what a trigger feeds to the end of the read that fired it" .. after, function()
+      local id, firings = feedingTrigger("z fed by a trigger\r\n")
+      finally(function() killTrigger(id) end)
+      feed("MXPFEEDINGLINE\r\n\27[1")
+      feed("m after it\27[0m\r\n")
+      assert.equals(1, firings(), "the trigger that feeds more data did not fire")
+      assert.is_false(getConfig("promptForMXPProcessorOn"))
+      assert.is_false(getConfig("specialForceMXPProcessorOn"))
+    end)
+  end
+
+  -- a GA prompt that came while MXP was negotiated is not scanned, so it too
+  -- comes between the reads either side of it
+  it("does not join a read to one from before a prompt sent while MXP was negotiated", function()
+    local enabledBefore = getConfig("enableMXP")
+    setConfig("enableMXP", true)
+    finally(function() setConfig("enableMXP", enabledBefore) end)
+    local negotiated = false
+    local handler = registerAnonymousEventHandler("sysProtocolEnabled", function(_, protocol)
+      negotiated = negotiated or protocol == "MXP"
+    end)
+    feed("x\27[1")
+    feed("<T_IAC><T_DO><O_MXP>")
+    killAnonymousEventHandler(handler)
+    assert.is_true(negotiated, "the game's DO MXP was not taken up")
+    feed("HP> <T_IAC><T_GA>")
+    feed("<T_IAC><T_DONT><O_MXP>")
+    feed("z after it\r\n")
+    assert.is_false(getConfig("promptForMXPProcessorOn"))
+    assert.is_false(getConfig("specialForceMXPProcessorOn"))
+  end)
+
   it("ignores a mode number MXP does not define", function()
     feed("\27[8z<send>look</send>\r\n")
     assert.is_false(getConfig("promptForMXPProcessorOn"))
@@ -2075,5 +2625,619 @@ describe("MXP auto-detection from the mode switch escape", function()
   it("ignores SGR sequences and a bracket that is not part of an escape", function()
     feed("\27[1mBold\27[0m and [1z in plain text\r\n")
     assert.is_false(getConfig("promptForMXPProcessorOn"))
+  end)
+
+  -- connecting and disconnecting both reset cTelnet, so the reads either side
+  -- of a connection are not the two halves of one switch
+  it("does not join a read to one from before a connection", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waiting for the connection to come and go needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+      return
+    end
+    local telnetDirectory = os.getenv("MUDLET_TEST_TELNET_DIR")
+    local handle = telnetDirectory and io.open(telnetDirectory .. "/port", "r")
+    local port = handle and tonumber((handle:read("*a") or ""):match("%d+") or "")
+    if handle then
+      handle:close()
+    end
+    if not port then
+      local reason = "needs the telnet fixture (run CI/telnet-fixture-server.py with MUDLET_TEST_TELNET_DIR set)"
+      assert.is_nil(os.getenv("MUDLET_TEST_REQUIRE_TELNET_FIXTURE"), "MUDLET_TEST_REQUIRE_TELNET_FIXTURE is set but this " .. reason)
+      pending(reason)
+      return
+    end
+    local function connected()
+      local _, _, isConnected = getConnectionInfo()
+      return isConnected
+    end
+    local function waitFor(predicate)
+      for _ = 1, 100 do
+        if predicate() then
+          return true
+        end
+        pumpEvents(50)
+      end
+      return predicate()
+    end
+
+    feed("\27[1")
+    connectToServer("127.0.0.1", port)
+    assert.is_true(waitFor(connected), "never connected to the telnet fixture on port " .. port)
+    disconnect()
+    assert.is_true(waitFor(function() return not connected() end), "the telnet fixture connection outlived the disconnect")
+    feed("z after it\r\n")
+    assert.is_false(getConfig("promptForMXPProcessorOn"))
+    assert.is_false(getConfig("specialForceMXPProcessorOn"))
+  end)
+end)
+
+-- A forced processor goes on scanning what the game sends, so that a game
+-- turning MXP back on re-locks it secure
+describe("MXP re-initialisation of a forced processor", function()
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  local function displayed(data)
+    local mark = getLastLineNumber("main")
+    feed(data)
+    return table.concat(getLines("main", mark, getLastLineNumber("main")), "|")
+  end
+
+  local stillOpen = "<SEND href=\"x\">MXPSTILLOPEN</SEND>"
+  local promptedBefore, forcedBefore
+
+  -- forcing a processor the game already had on and locked open leaves it open,
+  -- so only a re-initialisation makes a secure tag act
+  before_each(function()
+    promptedBefore = getConfig("promptForMXPProcessorOn")
+    forcedBefore = getConfig("specialForceMXPProcessorOn")
+    setConfig("specialForceMXPProcessorOn", false)
+    setConfig("promptForMXPProcessorOn", false)
+    feed("<T_IAC><T_DO><O_MXP>")
+    feed("\27[5z\r\n")
+    setConfig("specialForceMXPProcessorOn", true)
+    setConfig("promptForMXPProcessorOn", true)
+    feed("<T_IAC><T_DONT><O_MXP>")
+    assert.equals(stillOpen, displayed(stillOpen .. "\r\n"))
+  end)
+
+  -- a forced processor refuses to unlock a secure default, so unlock it unforced
+  after_each(function()
+    setConfig("specialForceMXPProcessorOn", false)
+    feed("<T_IAC><T_DO><O_MXP>")
+    feed("\27[5z\r\n")
+    feed("<T_IAC><T_DONT><O_MXP>")
+    setConfig("specialForceMXPProcessorOn", forcedBefore)
+    setConfig("promptForMXPProcessorOn", promptedBefore)
+  end)
+
+  it("re-locks it secure from a switch split between two reads", function()
+    feed("\27[1")
+    feed("z<B>MXPREINIT</B>\r\n")
+    assert.equals("MXPRELOCKED", displayed("<SEND href=\"x\">MXPRELOCKED</SEND>\r\n"))
+  end)
+
+  it("re-locks it secure from a switch in a prompt", function()
+    feed("\27[1z<B>MXPREINIT</B> <T_IAC><T_GA>")
+    feed("\r\n")
+    assert.equals("MXPRELOCKED", displayed("<SEND href=\"x\">MXPRELOCKED</SEND>\r\n"))
+  end)
+
+  it("re-locks it secure from a switch split between a read and a prompt", function()
+    feed("\27[1")
+    feed("z<B>MXPREINIT</B> <T_IAC><T_GA>")
+    feed("\r\n")
+    assert.equals("MXPRELOCKED", displayed("<SEND href=\"x\">MXPRELOCKED</SEND>\r\n"))
+  end)
+
+  it("does not re-lock it from two reads a prompt came between", function()
+    feed("x\27[1")
+    feed("HP> <T_IAC><T_GA>")
+    feed("z after it\r\n")
+    assert.equals(stillOpen, displayed(stillOpen .. "\r\n"))
+  end)
+end)
+
+describe("Tests game text the ingest worker parses ahead", function()
+  -- These feed the same lines one read per line, which the worker never sees, and as one read, and
+  -- require the same buffer from both.
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  local function parsedAhead()
+    return getProfileStats().linesParsedAhead
+  end
+
+  -- a test whose reads the worker did not parse compared the main thread with itself
+  local function requireWorker(before)
+    if not before then
+      pending("telling whether the worker parsed the read needs MUDLET_TEST_MODE")
+    elseif parsedAhead() == before then
+      pending("the ingest worker is off, so this compared the main thread with itself")
+    end
+  end
+
+  -- each line's text, then the format getTextFormat() reports for each of its characters, or only the first
+  local function snapshot(from, to, firstOnly)
+    local result = {}
+    for line = from, to do
+      assert.is_true(moveCursor("main", 0, line))
+      local text = getCurrentLine("main")
+      local cells = {text, "prompt=" .. tostring(isPrompt())}
+      local count = firstOnly and math.min(1, utf8.len(text)) or utf8.len(text)
+      for offset = 0, count - 1 do
+        selectSection("main", offset, 1)
+        local fields = {}
+        for key, value in pairs(getTextFormat("main")) do
+          fields[#fields + 1] = key .. "=" .. (type(value) == "table" and table.concat(value, ",") or tostring(value))
+        end
+        table.sort(fields)
+        cells[#cells + 1] = table.concat(fields, " ")
+      end
+      result[#result + 1] = table.concat(cells, "|")
+    end
+    deselect("main")
+    return result
+  end
+
+  local passes = 0
+
+  -- feeds the lines one read each, or all in one read (or two, cut after byte cut), and returns what they left in the buffer
+  local function pass(lines, oneRead, firstOnly, cut)
+    passes = passes + 1
+    local opening, closing = "IngestPassOpens" .. passes, "IngestPassCloses" .. passes
+    local mark = getLastLineNumber("main")
+    feed("\27[0m" .. opening .. "\r\n")
+    if oneRead then
+      local joined = table.concat(lines, "\r\n") .. "\r\n"
+      if cut then
+        feed(joined:sub(1, cut))
+        feed(joined:sub(cut + 1))
+      else
+        feed(joined)
+      end
+    else
+      for _, line in ipairs(lines) do
+        feed(line .. "\r\n")
+      end
+    end
+    feed("\27[0m" .. closing .. "\r\n")
+    local found = getLines("main", mark, getLastLineNumber("main") + 1)
+    local from, to
+    for i, text in ipairs(found) do
+      if text == opening then
+        from = mark + i
+      elseif text == closing then
+        to = mark + i - 2
+      end
+    end
+    assert.is_truthy(from and to, "the pass markers did not both reach the buffer")
+    return snapshot(from, to, firstOnly)
+  end
+
+  local function sameLines(apart, together)
+    assert.are.equal(#apart, #together, "a different number of lines came out of one read")
+    for i = 1, #apart do
+      assert.are.equal(apart[i], together[i], "line " .. i .. " came out differently from one read")
+    end
+  end
+
+  local function sameEitherWay(lines, firstOnly)
+    local apart = pass(lines, false, firstOnly)
+    local together = pass(lines, true, firstOnly)
+    sameLines(apart, together)
+    return together
+  end
+
+  local function corpus(count)
+    local lines = {}
+    for i = 1, count or 48 do
+      local kind = i % 8
+      if kind == 0 then
+        lines[i] = "IngestPlain line " .. i .. " with nothing but text in it"
+      elseif kind == 1 then
+        lines[i] = "\27[31mIngestRed " .. i .. " \27[1;32mbright green\27[39m default \27[0mreset"
+      elseif kind == 2 then
+        -- left open, so the next line starts in it
+        lines[i] = "IngestCarry " .. i .. " \27[33;44m yellow on blue to the end"
+      elseif kind == 3 then
+        lines[i] = "\27[38;5;208mIngest256 " .. i .. "\27[48;5;17m on navy \27[38;2;10;200;30mtruecolour\27[0m"
+      elseif kind == 4 then
+        lines[i] = "\27[3mIngestItalic\27[23m \27[4munder\27[24m \27[9mstruck\27[29m \27[7mrev\27[27m \27[53mover\27[55m \27[5mblink\27[25m " .. i
+      elseif kind == 5 then
+        lines[i] = "IngestUnicode " .. i .. " ┌─┐ café ✓ 😀 │ naïve"
+      elseif kind == 6 then
+        lines[i] = ""
+      else
+        lines[i] = "\27[12mIngestFont " .. i .. "\27[10m back\tand a tab"
+      end
+    end
+    return lines
+  end
+
+  local triggers
+
+  before_each(function()
+    triggers = {}
+  end)
+
+  after_each(function()
+    for _, id in ipairs(triggers) do
+      killTrigger(id)
+    end
+    deselect("main")
+    feed("\27[0m\r\n")
+  end)
+
+  it("commits the same text and formats from one read as from a read per line", function()
+    local before = parsedAhead()
+    sameEitherWay(corpus())
+    requireWorker(before)
+  end)
+
+  it("commits the same from a read that a line was cut across", function()
+    -- without a GA from the game, the telnet layer holds an unfinished line back and the buffer never sees a cut
+    feed("<T_IAC><T_GA>")
+    local lines = corpus()
+    local joined = table.concat(lines, "\r\n") .. "\r\n"
+    local apart = pass(lines, false)
+    local cuts = {
+      ["text"] = joined:find("bright", 1, true) + 2,
+      ["an SGR sequence"] = joined:find("\27[1;32m", 1, true) + 4,
+      ["a UTF-8 character"] = joined:find("\226\148\140", 1, true),
+      ["a line ending"] = joined:find("\r\n", 1, true),
+      ["text later on"] = joined:find("IngestPlain line 24", 1, true) + 8,
+      ["an SGR sequence later on"] = joined:find("\27[38;5;208mIngest256 27", 1, true) + 5,
+      ["a UTF-8 character later on"] = joined:find("IngestUnicode 29 \226", 1, true) + #"IngestUnicode 29 ",
+    }
+    local before = parsedAhead()
+    for name, cut in pairs(cuts) do
+      local together = pass(lines, true, false, cut)
+      assert.are.equal(#apart, #together, "a different number of lines came out of a read cut in " .. name)
+      for i = 1, #apart do
+        assert.are.equal(apart[i], together[i], "line " .. i .. " came out differently from a read cut in " .. name)
+      end
+    end
+    requireWorker(before)
+  end)
+
+  it("leaves a line too long for the worker to the main thread", function()
+    local long = "\27[31m" .. ("r"):rep(5000) .. "\27[32m" .. ("g"):rep(4000) .. "\27[0m IngestLong"
+    local before = parsedAhead()
+    for _, at in ipairs({1, 20}) do
+      local lines = corpus(60)
+      lines[at] = long
+      sameEitherWay(lines, true)
+    end
+    requireWorker(before)
+  end)
+
+  it("puts a hyperlink still open at the end of a line on the next line", function()
+    local lines = {}
+    for i = 1, 60 do
+      lines[i] = "IngestLink " .. i .. " and enough text after it to leave the worker a long rest of the read"
+    end
+    -- nothing after it, so the link stays open past the end of the line
+    lines[20] = "IngestLinkOpens 20 \27]8;;send:x?config={\"style\":{\"color\":\"#00ff00\"}}\27\\"
+    lines[30] = "IngestLinkCloses 30\27]8;;\27\\ after it"
+    local before = parsedAhead()
+    local together = sameEitherWay(lines, true)
+    assert.truthy(together[21]:find("foreground=0,255,0", 1, true), "the link's colour did not reach the next line")
+    requireWorker(before)
+  end)
+
+  it("decodes a single byte code page through its table from one read", function()
+    local original = getServerEncoding()
+    finally(function()
+      setServerEncoding(original)
+    end)
+    setServerEncoding("CP437")
+    local lines = {}
+    for i = 1, 40 do
+      lines[i] = "IngestCp437 " .. i .. " \196\179\218\191"
+    end
+    local before = parsedAhead()
+    local together = sameEitherWay(lines, true)
+    assert.truthy(together[20]:find("^IngestCp437 20 ─│┌┐|"), "the read was not decoded as CP437")
+    requireWorker(before)
+  end)
+
+  it("picks up the rest of a read where the worker stopped short of it", function()
+    local lines = corpus(700)
+    -- an unhandled sequence the worker leaves to the main thread, part way through
+    lines[40] = "\27[5nIngestUnhandled 40"
+    local before = parsedAhead()
+    assert.are.equal(700, #sameEitherWay(lines, true))
+    requireWorker(before)
+    -- the first job stops after 39 lines and a job holds at most 512, so more than 39 + 512 takes at least two resumes
+    assert.is_true(parsedAhead() - before > 39 + 512, "the worker was not handed the rest of the read")
+  end)
+
+  it("carries an attribute a trigger feeds part way through a read on to the lines after it", function()
+    local control = pass(corpus(), true, true)
+    local first = parsedAhead()
+    local replayed = {}
+    for _, sgr in ipairs({"\27[35m", "\27[45m", "\27[1m", "\27[3m", "\27[4:3m", "\27[6m", "\27[7m", "\27[8m", "\27[9m", "\27[53m", "\27[11m"}) do
+      local id = tempTrigger("IngestFont 7 back", function()
+        feedTriggers(sgr)
+      end)
+      local before = parsedAhead()
+      local together = sameEitherWay(corpus(), true)
+      killTrigger(id)
+      assert.are_not.equal(control[8], together[8], "the trigger's " .. sgr:sub(2) .. " did not reach the next line")
+      replayed[sgr:sub(2)] = before and parsedAhead() - before
+    end
+    requireWorker(first)
+    for sgr, count in pairs(replayed) do
+      -- lines 1-7, then 10-48 once the reset at the end of line 9 brings both parses back in step
+      assert.is_true(count >= 40, "after " .. sgr .. " only " .. count .. " lines were parsed ahead")
+    end
+  end)
+
+  it("colours every palette entry the same from one read", function()
+    local lines = {}
+    for n = 0, 7 do
+      lines[#lines + 1] = "\27[3" .. n .. "mIngestPalette fg " .. n .. "\27[0m"
+      lines[#lines + 1] = "\27[9" .. n .. "mIngestPalette bright fg " .. n .. "\27[0m"
+      lines[#lines + 1] = "\27[4" .. n .. "mIngestPalette bg " .. n .. "\27[0m"
+      lines[#lines + 1] = "\27[10" .. n .. "mIngestPalette bright bg " .. n .. "\27[0m"
+      lines[#lines + 1] = "\27[1;3" .. n .. "mIngestPalette bold fg " .. n .. "\27[0m"
+    end
+    for n = 0, 15 do
+      lines[#lines + 1] = "\27[38;5;" .. n .. "mIngestPalette 256 " .. n .. "\27[0m"
+    end
+    local before = parsedAhead()
+    sameEitherWay(lines, true)
+    requireWorker(before)
+  end)
+
+  it("uses the profile background a trigger sets part way through a read", function()
+    local r, g, b = getBackgroundColor("main")
+    finally(function()
+      setBackgroundColor("main", r, g, b)
+    end)
+    triggers[#triggers + 1] = tempTrigger("IngestHostColour 20 ", function()
+      setBackgroundColor("main", 10, 20, 30)
+    end)
+    -- Each line ends in the background the trigger sets, so only the profile colour tells the parses apart
+    local lines = {}
+    for i = 1, 700 do
+      lines[i] = "\27[0mIngestHostColour " .. i .. " \27[48;2;10;20;30m"
+    end
+    local apart = pass(lines, false, true)
+    setBackgroundColor("main", r, g, b)
+    local before = parsedAhead()
+    local together = pass(lines, true, true)
+    sameLines(apart, together)
+    assert.truthy(together[600]:find("background=10,20,30", 1, true), "the new background did not reach the rest of the read")
+    requireWorker(before)
+    -- 20 lines before the change; a job of at most 512 resumed under the new background parses the rest
+    assert.is_true(parsedAhead() - before > 20 + 100, "the worker was not handed the rest of the read")
+  end)
+
+  it("marks a prompt in a read as a prompt", function()
+    -- A prompt ends the read it is in, so the worker only sees one after enough lines to take the read
+    local lines = {}
+    for i = 1, 60 do
+      lines[i] = i % 20 == 0 and ("IngestPrompt " .. i .. "> <T_IAC><T_GA>") or ("IngestPromptText " .. i)
+    end
+    local before = parsedAhead()
+    local together = sameEitherWay(lines, true)
+    local marked = {}
+    for _, line in ipairs(together) do
+      local text, prompt = line:match("^([^|]*)|prompt=(%a+)")
+      marked[text] = prompt
+    end
+    assert.are.equal("true", marked["IngestPrompt 20> "], "the prompt was not marked")
+    assert.are.equal("false", marked["IngestPromptText 19"], "the line before the prompt was marked")
+    requireWorker(before)
+  end)
+
+  it("takes up the read again after a burst a trigger feeds part way through it", function()
+    local burst = {}
+    for i = 1, 20 do
+      burst[i] = "IngestNested " .. i
+    end
+    triggers[#triggers + 1] = tempTrigger("IngestFont 7 back", function()
+      feedTelnet(table.concat(burst, "\r\n") .. "\r\n\27[36m")
+    end)
+    local before = parsedAhead()
+    sameEitherWay(corpus())
+    requireWorker(before)
+    -- lines 1-7, then 10-48 once the reset at the end of line 9 brings both parses back in step
+    assert.is_true(parsedAhead() - before >= 40, "only " .. parsedAhead() - before .. " lines were parsed ahead")
+  end)
+
+  it("joins the lines a game wrapped itself the same from one read", function()
+    local wrap, width = getConfig("undoServerWrap"), getConfig("undoServerWrapWidth")
+    finally(function()
+      setConfig("undoServerWrap", wrap)
+      setConfig("undoServerWrapWidth", width)
+    end)
+    setConfig("undoServerWrap", true)
+    setConfig("undoServerWrapWidth", 40)
+    local vocabulary = {"the", "quick", "brown", "fox", "jumps", "over", "lazy", "dogs", "while", "ingest", "runs"}
+    local lines, line = {}, ""
+    for i = 1, 400 do
+      local word = vocabulary[i % #vocabulary + 1]
+      if #line + 1 + #word > 40 then
+        lines[#lines + 1] = line
+        line = word
+      else
+        line = line == "" and word or line .. " " .. word
+      end
+    end
+    lines[#lines + 1] = line .. "."
+    local before = parsedAhead()
+    local together = sameEitherWay(lines, true)
+    assert.is_true(#together < #lines, "no wrapped lines were joined")
+    requireWorker(before)
+  end)
+
+  it("follows a trigger that edits the line it fired on", function()
+    triggers[#triggers + 1] = tempTrigger("IngestRed 9 ", function()
+      selectString("bright green", 1)
+      fg("magenta")
+      deselect()
+      echo(" IngestEchoed")
+    end)
+    local before = parsedAhead()
+    local together = sameEitherWay(corpus())
+    assert.truthy(together[9]:find("IngestEchoed", 1, true))
+    requireWorker(before)
+  end)
+
+  it("decodes a whole read in the encoding it arrived in, even when a trigger switches it part way", function()
+    local original = getServerEncoding()
+    finally(function()
+      setServerEncoding(original)
+    end)
+    triggers[#triggers + 1] = tempTrigger("IngestEncodingSwitch", function()
+      setServerEncoding("ISO 8859-1")
+    end)
+    setServerEncoding("UTF-8")
+    local lines = {}
+    for i = 1, 40 do
+      lines[i] = "IngestEncoding " .. i .. " caf\233"
+    end
+    lines[5] = "IngestEncodingSwitch"
+    local before = parsedAhead()
+    local together = pass(lines, true, true)
+    -- in UTF-8 a lone \233 is no character
+    assert.truthy(together[20]:find("^IngestEncoding 20 caf\239\191\189|"), "the switch reached the rest of the read it was made in")
+    local after = pass({"IngestEncoding after caf\233"}, true, true)
+    assert.truthy(after[1]:find("^IngestEncoding after café|"), "the switch did not reach the next read")
+    requireWorker(before)
+  end)
+
+  it("decodes the rest of a read in the encoding a trigger's own feed switched it to", function()
+    local original = getServerEncoding()
+    finally(function()
+      setServerEncoding(original)
+    end)
+    triggers[#triggers + 1] = tempTrigger("IngestGbkSwitch", function()
+      setServerEncoding("GBK")
+      -- a feed of its own applies the encoding at once, to the rest of this read as well
+      feedTriggers("IngestGbkFed\n")
+    end)
+    local lines = {}
+    for i = 1, 700 do
+      lines[i] = "IngestGbk " .. i .. " \196\227\186\195"
+    end
+    lines[5] = "IngestGbkSwitch"
+    setServerEncoding("UTF-8")
+    local apart = pass(lines, false, true)
+    setServerEncoding("UTF-8")
+    local before = parsedAhead()
+    local together = pass(lines, true, true)
+    sameLines(apart, together)
+    assert.truthy(together[#together]:find("^IngestGbk 700 你好|"), "the rest of the read was not decoded as GBK")
+    requireWorker(before)
+  end)
+
+  it("styles a read with the MXP colour left open when MXP was turned off", function()
+    -- separate reads: a read's telnet commands are handled before its text, and an MXP mode sequence turns MXP on
+    finally(function()
+      feed("<T_IAC><T_DO><O_MXP>\27[5z\27[3z\r\n")
+      feed("<T_IAC><T_DONT><O_MXP>")
+    end)
+    feed("<T_IAC><T_DO><O_MXP>\27[6z<COLOR red>IngestMxpLeftOpen\r\n")
+    feed("<T_IAC><T_DONT><O_MXP>")
+    local lines = {}
+    for i = 1, 40 do
+      lines[i] = "<B>IngestMxpColour " .. i .. "</B>"
+    end
+    local together = sameEitherWay(lines, true)
+    assert.truthy(together[20]:find("^<B>IngestMxpColour 20</B>|"), "MXP was still on")
+    assert.truthy(together[20]:find("foreground=255,0,0", 1, true), "the MXP colour did not reach the read")
+  end)
+
+  it("styles a read with the MXP bold, italic, underline and strikeout left open when MXP was turned off", function()
+    finally(function()
+      feed("<T_IAC><T_DO><O_MXP>\27[5z\27[3z\r\n")
+      feed("<T_IAC><T_DONT><O_MXP>")
+    end)
+    feed("<T_IAC><T_DO><O_MXP>\27[6z<B><I><U><S>IngestMxpLeftOpen\r\n")
+    feed("<T_IAC><T_DONT><O_MXP>")
+    local lines = {}
+    for i = 1, 40 do
+      lines[i] = "IngestMxpStyle " .. i
+    end
+    local before = parsedAhead()
+    local together = sameEitherWay(lines, true)
+    for _, field in ipairs({"bold=true", "italic=true", "strikeout=true", "underline=true"}) do
+      assert.truthy(together[20]:find(field, 1, true), "the MXP style did not reach the read: " .. field)
+    end
+    requireWorker(before)
+  end)
+
+  it("hands the rest of a read to MXP once a trigger turns it on", function()
+    finally(function()
+      feed("<T_IAC><T_DONT><O_MXP>")
+    end)
+    local lines = {}
+    for i = 1, 40 do
+      lines[i] = "<B>IngestMxp" .. i .. "</B>"
+    end
+    lines[5] = "IngestMxpSwitch"
+    triggers[#triggers + 1] = tempTrigger("IngestMxpSwitch", function()
+      feedTelnet("<T_IAC><T_DO><O_MXP>")
+    end)
+    local apart = pass(lines, false)
+    feed("<T_IAC><T_DONT><O_MXP>")
+    local before = parsedAhead()
+    local together = pass(lines, true)
+    assert.are.same(apart, together)
+    assert.truthy(together[3]:find("^<B>IngestMxp3</B>|"), "a tag before the switch was acted on")
+    assert.truthy(together[20]:find("^IngestMxp20|"), "a tag after the switch was not acted on")
+    requireWorker(before)
+  end)
+
+  it("runs a read's triggers after the GMCP that arrived with it", function()
+    finally(function()
+      gmcp.IngestSpec = nil
+    end)
+    local seen = {}
+    triggers[#triggers + 1] = tempRegexTrigger("^IngestGmcpLine (\\d+)$", function()
+      seen[#seen + 1] = tostring(gmcp.IngestSpec and gmcp.IngestSpec.Order and gmcp.IngestSpec.Order.n)
+    end)
+    local parts = {}
+    for i = 1, 60 do
+      parts[#parts + 1] = "IngestGmcpLine " .. i .. "\r\n"
+      if i % 20 == 0 then
+        parts[#parts + 1] = "<T_IAC><T_SB><O_GMCP>IngestSpec.Order {\"n\": " .. i .. "}<T_IAC><T_SE>"
+      end
+    end
+    local before = parsedAhead()
+    feed(table.concat(parts))
+    assert.are.equal(60, #seen)
+    for i = 1, 60 do
+      assert.are.equal("60", seen[i], "line " .. i .. " ran its triggers before the read's GMCP was handled")
+    end
+    requireWorker(before)
+  end)
+
+  it("goes on with the rest of a read after a trigger disconnects", function()
+    local count = 0
+    triggers[#triggers + 1] = tempRegexTrigger("^IngestDisconnect \\d+$", function()
+      count = count + 1
+      if count == 10 then
+        disconnect()
+      end
+    end)
+    local lines = {}
+    for i = 1, 40 do
+      lines[i] = "IngestDisconnect " .. i
+    end
+    local before = parsedAhead()
+    feed(table.concat(lines, "\r\n") .. "\r\n")
+    assert.are.equal(40, count)
+    requireWorker(before)
   end)
 end)

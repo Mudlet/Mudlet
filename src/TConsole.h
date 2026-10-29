@@ -131,10 +131,12 @@ public:
     void changeColors();
     void scrollDown(int lines);
     void scrollUp(int lines);
+    // To an absolute buffer position, as the scroll bar does, splitting the screen if it is not split yet
+    void scrollTo(int line);
     void print(const QString& msg);
     void print(const char*);
-    // timeStampOverride keeps the arrival time for held-back content being replayed.
-    void print(const QString& msg, QColor fgColor, QColor bgColor, const QString& timeStampOverride = QString());
+    // timeStampOverride keeps the arrival time for held-back content being replayed; csmNoTimeStamp stamps it now.
+    void print(const QString& msg, QColor fgColor, QColor bgColor, qint64 timeStampOverride = TBuffer::csmNoTimeStamp);
     // The repaint cues for text the model wrote: showNewLines() for lines appended to it, and
     // showCommandEcho() for whatever TConsoleModel::printCommand() did.
     void showNewLines();
@@ -142,7 +144,7 @@ public:
     // The Central Debug Console's find bar is hidden until Ctrl+F or its context menu calls this.
     void showSearchBar();
     void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore) override;
-    void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) override;
+    void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, qint64 arrivalMSecs) override;
     void discardAll() override;
     void discardLastLine() override;
     void printSystemMessage(const QString& msg);
@@ -312,6 +314,8 @@ signals:
     void resized(QResizeEvent* event);
 
 protected:
+    // For a console with a command line, which the output area is laid out above
+    void layoutMainDisplay();
     void dragEnterEvent(QDragEnterEvent*) override;
     void dragMoveEvent(QDragMoveEvent*) override;
     void dropEvent(QDropEvent*) override;
@@ -338,6 +342,8 @@ private:
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();
     void updateScrollBarStyle();
+    // Returns whether the lower pane was hidden
+    bool showLowerPane();
 
     ConsoleType mType = UnknownType;
     // the size the last resize reported to Lua
