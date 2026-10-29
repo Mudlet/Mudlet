@@ -44,7 +44,11 @@ if [ ! -f "$cache/manifest.lua" ]; then
     mv "$cache.tmp" "$cache"
 fi
 read -r corpus want < <(lua5.1 -e "local m = dofile([==[$cache/manifest.lua]==]) print(m.corpus, m.md5)")
-corpus="$cache/$corpus"
+corpus="$cache/${corpus:-}"
+if [ -z "${want:-}" ] || [ ! -f "$corpus" ]; then
+    echo "run.sh: cannot read the corpus named in $cache/manifest.lua" >&2
+    exit 2
+fi
 if [ "$(md5sum < "$corpus" | cut -c1-32)" != "$want" ]; then
     echo "run.sh: $corpus does not match the package's manifest" >&2
     exit 2
