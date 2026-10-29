@@ -14,7 +14,8 @@ Everything a run needs is in one file, `SvofBench.mpackage`, which is not in the
   its `svo` folder), with the class set to the corpus's and svof unpaused, as a player does at the start of a
   session;
 - the replay stream (`corpus.txt`), with other players' names and words replaced;
-- `manifest.lua`: bundle version, class, prompt count, line count and the corpus's md5;
+- `manifest.lua`: bundle version, class, prompt count, line count, the corpus's md5 and the line counts of a
+  reference run in each mode;
 - `bench.lua` and `gate.lua`, and the loader for standalone mode.
 
 svof's name database (`Database_namedb.db`) is left out. It holds real players' names, the scrubbed corpus no
@@ -34,7 +35,7 @@ A run needs `Xvfb`, `flock`, `bc`, `unzip`, `md5sum` and `lua5.1` with LuaSocket
 ```bash
 lua5.1 promptify.lua session.log corpus.txt
 lua5.1 make-package.lua --corpus corpus.txt --svof svof.mpackage --config <profile>/svo \
-    --out SvofBench.mpackage [--names names.txt]
+    --out SvofBench.mpackage [--namedb <profile>/Database_namedb.db] [--names names.txt]
 ```
 
 svof does almost nothing until it sees prompts, so the corpus must carry the game's protocol: an
@@ -44,17 +45,34 @@ every few lines. Without GA prompts svof's `getLines()` scans turn the replay qu
 
 `make-package.lua` then scrubs the log, deterministically, so the same inputs build the same file:
 
-- names get a stand-in of the same shape, the same everywhere, including `Char.Status`: speakers, people
-  told something, people acting at the start of a line, any capitalised word never seen in lower case,
-  and the names listed one per line in `--names`;
-- quoted speech, channels and tells typed at the prompt, and emotes seen only once are replaced with filler
-  of the same shape: letters stay letters of the same case, digits stay digits, punctuation stays;
+- real names are collected from svof's name database (`--namedb`, by default `Database_namedb.db` beside
+  the `svo` folder), the who-lists in the log (`qw`, `cwho` and svof's own), the player's name in GMCP and
+  `--names`, one per line. Each is renamed as a whole word in any case, everywhere, prompts and GMCP
+  included, to a stand-in of the same length and case shape. So are speakers, people told something,
+  people acting at the start of a line, and capitalised words never seen in lower case outside speech;
+- everything inside double quotes, whoever says it, is replaced with filler of the same shape, with quotes
+  followed across lines; so are channels, tells and says typed at the prompt, and emotes seen only once.
+  Letters stay letters of the same case, digits stay digits, punctuation stays;
 - line count, byte count, prompts, GA and GMCP are unchanged, and the build stops unless every changed
-  line still matches the same svof exact, begin and substring patterns (and, with lrexlib-pcre installed,
-  the same top-level regexes). Words svof's patterns use are never renamed.
+  line still matches the same svof exact, begin and substring patterns and regexes, nested ones included.
+  Words svof's patterns use are never renamed.
 
-`--no-scrub` packages the log as it is, for a package you keep to yourself. Building needs `zip` and
-`unzip`.
+The build then audits its output and stops if any listed name is left in the corpus or the config, in any
+case, or if any six-word run from inside a quote in the log is left where it was quoted, or more often than
+the game prints it unquoted. Quoted text svof's own patterns match, a few of the game's fixed messages, is
+kept and listed in the build's output.
+
+A package is held to the line counts of reference runs, one per mode. Build it, run it once in each mode
+you will use (the gate fails for want of a reference), then build again with the results; the corpus does
+not change, so they still apply:
+
+```bash
+SVOF_BENCH=SvofBench.mpackage test/svof-replay/run.sh ref build/src/mudlet
+lua5.1 make-package.lua ... --expect /tmp/svof-replay/ref/result.txt [--expect <profile>/SvofBench/result.txt]
+```
+
+`--no-scrub` packages the log as it is, for a package you keep to yourself. Building needs `zip`,
+`unzip`, and to scrub, `sqlite3` and lrexlib-pcre.
 
 ## Running
 
@@ -82,7 +100,8 @@ seconds after svof installs, the package feeds the corpus to Mudlet with `feedTe
 chunk per event loop turn, then prints the same report as `run.sh` to the main window and writes it to
 `SvofBench/result.txt` in the profile's folder. With `SVOF_BENCH_QUIT=1` in the environment, Mudlet closes
 afterwards. Use a fresh profile for every run: svof keeps state, so a profile it has already run in does
-different work, and the package refuses to start in one.
+different work. Opened again, such a profile reports `gate FAIL` instead of a run; the last run's
+`result.txt` is removed first.
 
 Standalone numbers are not interchangeable with `run.sh`'s: they skip Mudlet's socket reads, and the event
 loop gets a turn after every chunk, so `elapsed_s` and the heartbeat figures differ. `run.sh` is the
@@ -95,7 +114,9 @@ The report ends with `gate pass`, or `gate FAIL:` and the reasons, and `run.sh` 
 - `stop_reason` is not `end_marker`: the replay stalled or hit the sample limit;
 - svof did not load, is paused, has a class other than the manifest's, or saw a prompt count other than the
   manifest's;
-- `game_lines` is 0: no line of the corpus came through unchanged.
+- `lines`, or `game_lines` (corpus lines that came through unchanged), is more than 0.5% from the package's
+  reference run in that mode, or the package has none. Repeat runs differ by up to about a hundred lines in
+  141,800.
 
 ## Checking both builds did the same work
 
@@ -104,5 +125,5 @@ wall-clock timers write into the buffer. Check instead that:
 
 - `svo_prompts` is identical, and equals the manifest's prompt count;
 - `client_sends` is 0;
-- `game_lines` (corpus lines that came through unchanged) agrees within 1%, and `added_lines` (svof's own
-  output) is close. `run.sh` keeps the buffer in `result.txt.buffer` for a closer look.
+- `game_lines` agrees more closely than the gate's 0.5%, and `added_lines` (svof's own output) is close.
+  `run.sh` keeps the buffer in `result.txt.buffer` for a closer look.
