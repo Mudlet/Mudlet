@@ -2299,23 +2299,24 @@ describe("Media playback effects with a generated sound file", function()
     handle:write(silentWav(10000))
     handle:close()
     onCleanup(function() os.remove(outside) end)
-    local function removeTree(path)
-      if lfs.attributes(path, "mode") == "directory" then
-        for entry in lfs.dir(path) do
-          if entry ~= "." and entry ~= ".." then
-            removeTree(path .. "/" .. entry)
-          end
-        end
-        lfs.rmdir(path)
-      else
-        os.remove(path)
+    local copy
+    onCleanup(function()
+      if not copy then
+        return
       end
-    end
-    onCleanup(function() removeTree(mediaDirectory .. "/_absolute") end)
+      os.remove(copy)
+      -- Only the folders the copy needed, and only once empty: the profile may have other sounds cached there
+      local folder = copy:match("^(.*)/[^/]+$")
+      while folder and #folder > #mediaDirectory and lfs.rmdir(folder) do
+        folder = folder:match("^(.*)/[^/]+$")
+      end
+    end)
     onCleanup(function() stopSounds() stopMusic() end)
 
     assert.is_true(playSoundFile({name = outside, key = "busted-elsewhere-sound"}))
-    local _, file = waitForEvent("sysMediaStarted", 5000)
+    local _, file, path = waitForEvent("sysMediaStarted", 5000)
+    copy = eventPath(path)
+    assert.equals(mediaDirectory .. "/_absolute/", copy:sub(1, #mediaDirectory + 11), "the sound did not play from its cached copy")
     assert.equals(fileName, file)
     local playing = getPlayingSounds({key = "busted-elsewhere-sound"})
     assert.equals(1, #playing)
