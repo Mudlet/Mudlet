@@ -120,8 +120,10 @@ void TPasswordEntry::takeTypedAhead(const QString& typedAhead)
 void TPasswordEntry::setReopened()
 {
     mReopened = true;
-    //: Placeholder text of the hidden-input box when it opens again after the player pressed Esc on an empty one and their next line did not make the game stop hiding input
-    setPlaceholderText(tr("Still hidden - Esc again to stop hiding input until the game says otherwise"));
+    //: Placeholder text of the hidden-input box when it opens again after the player pressed Esc on an empty one and their next line did not make the game stop hiding input. Keep it short: the box is only as wide as the command line, and the tooltip below carries the full instruction
+    setPlaceholderText(tr("Esc stops hiding input"));
+    //: Tooltip of the hidden-input box when it opens again after the player pressed Esc on an empty one and their next line did not make the game stop hiding input
+    setToolTip(tr("Still hidden - Esc on the empty box stops hiding input until the game says otherwise"));
     slot_adjustAccessibleNames();
 }
 
