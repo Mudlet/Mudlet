@@ -439,6 +439,10 @@ private:
     const QString mHostname = qsl("Test-CharLogin");
     quint16 mPort = 0; // assigned the stub's actual loopback port in init()
     QList<QUrl> mOpenedUrls;
+    // The typeless-drop case keeps a window wide enough for a loaded runner to land a burst inside
+    // it; cases that only sign in more than once use one that barely holds them up.
+    static constexpr std::chrono::milliseconds csShortSignInInterval = 500ms;
+    static constexpr std::chrono::milliseconds csQuickSignInInterval = 50ms;
 
     // Store operations held back by holdStoreOperations(), oldest first.
     struct HeldStoreOperation
@@ -2252,6 +2256,7 @@ private slots:
     {
         Host* host = connectAndNegotiate(true);
         QVERIFY(host);
+        host->mpAuth->mSignInAttemptInterval = csQuickSignInInterval;
         host->setLogin(QString());
         host->setPass(QString());
         const QString tokenJson = qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"token-A\"}");
@@ -2455,6 +2460,7 @@ private slots:
     {
         Host* host = connectAndNegotiate(true);
         QVERIFY(host);
+        host->mpAuth->mSignInAttemptInterval = csQuickSignInInterval;
         host->setLogin(QString());
         host->setPass(QString());
         QVERIFY2(!host->userSentInputThisConnection(), "precondition: no user input yet");
@@ -2696,6 +2702,7 @@ private slots:
         QVERIFY(host);
         host->setLogin(QString());
         host->setPass(QString());
+        QVERIFY2(host->mpAuth->mSignInAttemptInterval == 1s, "sign-in attempts are no longer throttled to one a second");
 
         mpServer->clearReceived();
         for (int i = 0; i < 200; ++i) {
@@ -2708,7 +2715,13 @@ private slots:
         // Cost is bounded by wall clock, not by how much the server sent: one immediate attempt plus
         // one when the window closes, not 200. A range, so a loaded runner slipping into the next
         // window does not flake, and a lower bound because a re-offer must still be answered.
-        QTest::qWait(2500ms);
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return mpServer->countReceived(qsl("Char.Login.Credentials")) >= 2;
+                         },
+                         8s),
+                 "a throttled burst must still be answered when the window closes");
+        QTest::qWait(host->mpAuth->mSignInAttemptInterval * 3 / 2);
         const int attempts = mpServer->countReceived(qsl("Char.Login.Credentials"));
         QVERIFY2(attempts >= 2, qPrintable(qsl("a throttled burst must still be answered, saw %1 attempts").arg(attempts)));
         QVERIFY2(attempts <= 4, qPrintable(qsl("200 frames should not buy 200 sign-in attempts, saw %1").arg(attempts)));
@@ -2720,6 +2733,7 @@ private slots:
         QVERIFY(host);
         host->setLogin(qsl("player"));
         host->setPass(qsl("secret"));
+        host->mpAuth->mSignInAttemptInterval = csShortSignInInterval;
 
         mpServer->clearReceived();
         // One burst: the first frame is answered straight away, the second falls inside the throttle
@@ -2730,7 +2744,7 @@ private slots:
         mpServer->sendGmcp(typed);
         mpServer->sendGmcp(qsl("Char.Login.Default {}"));
 
-        QTest::qWait(2500ms);
+        QTest::qWait(csShortSignInInterval * 5 / 2);
         const int attempts = mpServer->countReceived(qsl("Char.Login.Credentials"));
         QCOMPARE(attempts, 1);
     }
@@ -3033,6 +3047,7 @@ private slots:
     {
         Host* host = connectAndNegotiate();
         QVERIFY(host);
+        host->mpAuth->mSignInAttemptInterval = csQuickSignInInterval;
         host->setLogin(QString());
         host->setPass(QString());
         QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": false}"), qsl("dead-token")));
@@ -3108,6 +3123,7 @@ private slots:
     {
         Host* host = connectAndNegotiate();
         QVERIFY(host);
+        host->mpAuth->mSignInAttemptInterval = csQuickSignInInterval;
         host->setLogin(QString());
         host->setPass(QString());
         QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": false}"), qsl("locked-away")));
@@ -3148,6 +3164,7 @@ private slots:
     {
         Host* host = connectAndNegotiate(true);
         QVERIFY(host);
+        host->mpAuth->mSignInAttemptInterval = csQuickSignInInterval;
         host->setLogin(QString());
         host->setPass(QString());
         const QString recordPath = reconnectCredentialPath(host->getName(), qsl("reconnect"));

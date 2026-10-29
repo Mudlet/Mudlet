@@ -201,9 +201,9 @@ private:
     QString mPort; // assigned the stub's actual loopback port in init()
 
     // Long enough that the login is set on the loaded profile before the username timer reads it,
-    // short enough that four cases do not dominate the group's run time.
+    // and that a prompt sent after the login line arrives before the password step runs.
     static constexpr int csUsernameDelayMs = 800;
-    static constexpr int csPasswordDelayMs = 1200;
+    static constexpr int csPasswordDelayMs = 1000;
 
 private slots:
     void initTestCase()
@@ -327,9 +327,11 @@ private slots:
         QVERIFY2(waitForThePasswordStep(host), "the auto-login never reached its password step");
         QCOMPARE(mpServer->receivedText(), csLoginLine);
 
+        QVERIFY2(!host->mTelnet.mTimerCharacterModeDetect || !host->mTelnet.mTimerCharacterModeDetect->isActive(), "the login line started the character-at-a-time detection");
         // Past the detection window (CHARACTER_MODE_DETECT, 3 s), so a verdict the login line had
-        // started would have latched by now and refused the password below
+        // started some other way would have latched by now and refused the password below
         QTest::qWait(3500ms);
+        QVERIFY(!host->mTelnet.mCharacterModeDetected);
 
         deliverLatePassword(host);
         QVERIFY2(waitForReceivedText(csLoginLine + csPasswordLine), "the late password was not sent to the still-masked password prompt");
