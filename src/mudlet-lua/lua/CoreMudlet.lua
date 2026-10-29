@@ -35,9 +35,10 @@ if false then
   channel102 = {}
 
 
-  --- Clears the user window or a mini console with the name given as argument.
+  --- Closes (hides) the user window or a mini console with the name given as argument.
   ---
-  --- @param windowName optional
+  --- @param windowName name of the user window or mini console
+  --- @return true, or nil and an error message for a window that does not exist or is not a user window or mini console
   function closeUserWindow(windowName)
   end
 
@@ -85,8 +86,11 @@ if false then
 
 
 
-  --- <b><u>TODO</u></b>  cut - TLuaInterpreter::cut
-  function cut()
+  --- Cuts the current selection to the clipboard, removing it from the window.
+  ---
+  --- @param windowName optional name of the window to cut from, the main console if not given
+  --- @return true, or nil and an error message for a window that does not exist
+  function cut(windowName)
   end
 
 
@@ -1267,6 +1271,9 @@ if false then
   --- This will effectively have the same result as a call to deleteLine() but the buffer line will not
   --- be entirely removed. Consequently, further calls to echo() etc. sort of functions are possible
   --- without using wrapLine() unnecessarily.
+  ---
+  --- Returns true, or nil and a message when the window does not exist or the line is below 0 or
+  --- more than one past the window's last line.
   function wrapLine()
   end
 

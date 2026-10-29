@@ -226,7 +226,11 @@ void TLabel::updateKeyboardAccess()
             QWidget::focusNextPrevChild(true);
         }
     }
-    update();
+    // Only a focused label draws the outline, and losing the focus repaints it. A translucent label's
+    // repaint redraws whatever lies under it as well, and a gauge's text label is set on every prompt.
+    if (hasFocus()) {
+        update();
+    }
 }
 
 bool TLabel::announcesTextChanges() const
@@ -588,9 +592,10 @@ bool TLabel::setBackgroundImage(const QString& path)
     }
 
     // the label keeps what it is showing when the file is not an image at all,
-    // and the caller's error message is then the truth
+    // and the caller's error message is then the truth; an empty path is how
+    // scripts cleared the image before resetBackgroundImage() existed
     const QPixmap raster(path);
-    if (raster.isNull()) {
+    if (raster.isNull() && !path.isEmpty()) {
         return false;
     }
 
@@ -778,14 +783,18 @@ void TLabel::setBackgroundColor(const QColor& color)
 // QWidget::setStyleSheet() repolishes and repaints even when handed the sheet it
 // already has. Re-applying one still matters when it names a file, as that is what
 // makes Qt reload an image rewritten on disk, and after the link styling replaced the
-// palette, as that is what restores the colours the sheet sets.
+// palette, as that is what restores the colours the sheet sets. The first re-polish
+// also moves the font from the parent's to the application's, and scripts size labels
+// to that, so it is never skipped.
 bool TLabel::restyle(const QString& sheet)
 {
-    if (sheet == styleSheet() && !mPaletteSetSinceStyled && !sheet.contains(qsl("url("), Qt::CaseInsensitive)) {
+    if (sheet == styleSheet() && mRepolished && !mPaletteSetSinceStyled && !sheet.contains(qsl("url("), Qt::CaseInsensitive)) {
         return false;
     }
     mPaletteSetSinceStyled = false;
+    const bool wasStyled = testAttribute(Qt::WA_StyleSheet);
     setStyleSheet(sheet);
+    mRepolished = wasStyled && testAttribute(Qt::WA_StyleSheet);
     return true;
 }
 

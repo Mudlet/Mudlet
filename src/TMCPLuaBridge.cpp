@@ -237,6 +237,7 @@ MCPToolResult TMCPLuaBridge::callTool(const QString& toolName, const QJsonObject
         return {false, tr("That profile has no Lua interpreter running.")};
     }
 
+    const TLuaInterpreter::ScriptCallerScope callerScope(*pTarget->getLuaInterpreter(), false);
     return runLua(L, luaCode);
 }
 

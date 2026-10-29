@@ -236,6 +236,62 @@ describe("Mudlet object API edges", function()
     end)
   end)
 
+  describe("temporary items made with a function", function()
+    -- whether a function, handed to make and its item killed, is still held anywhere
+    local function keptAfter(make)
+      local weak = setmetatable({}, {__mode = "k"})
+      local function handOver()
+        local fn = function() end
+        weak[fn] = true
+        make(fn)
+      end
+      handOver()
+      -- killed items are only destroyed by the next line's cleanup
+      feedTriggers("\n")
+      collectgarbage("collect")
+      collectgarbage("collect")
+      return next(weak) ~= nil
+    end
+
+    -- luaL_unref()'d registry slots form a list headed at index 0; a slot
+    -- released twice is linked in again, so two later functions would share it
+    local function assertFreeListWhole()
+      local registry = debug.getregistry()
+      local seen = {}
+      local ref = registry[0]
+      while type(ref) == "number" and ref ~= 0 do
+        assert.is_nil(seen[ref], ("registry slot %d is on the free list twice"):format(ref))
+        seen[ref] = true
+        ref = registry[ref]
+      end
+    end
+
+    -- not tempTimer: specs run inside a timer, and killed timers are freed only once no timer script runs
+    it("let go of their function once killed", function()
+      local makers = {
+        tempTrigger = function(fn) killTrigger(tempTrigger("objSpecNeverSeen", fn)) end,
+        tempComplexRegexTrigger = function(fn)
+          tempComplexRegexTrigger("objSpecComplex", "^objSpecNeverSeen$", fn, 0, 0, 0, 0, 0, "blue", "transparent", 0, 0, 0)
+          killTrigger("objSpecComplex")
+        end,
+        tempAlias = function(fn) killAlias(tempAlias("^objSpecNeverTyped$", fn)) end,
+        tempKey = function(fn) killKey(tempKey(mudlet.keymodifier.Control, mudlet.key.F11, fn)) end,
+      }
+      for name, make in pairs(makers) do
+        assert.is_false(keptAfter(make), name .. " kept its function")
+      end
+      assertFreeListWhole()
+    end)
+
+    it("let go of their function once a trigger expires", function()
+      assert.is_false(keptAfter(function(fn)
+        tempTrigger("objSpecExpiring", fn, 1)
+        feedTriggers("objSpecExpiring\n")
+      end))
+      assertFreeListWhole()
+    end)
+  end)
+
   describe("tempButtonToolbar and tempButton refusals", function()
     local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
     local toolbarName = "objSpecToolbar" .. suffix

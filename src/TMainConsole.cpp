@@ -50,6 +50,7 @@
 #include "dlgMapper.h"
 #include "mudlet.h"
 #include "GifTracker.h"
+#include "TriggerMatchPool.h"
 
 #include <QCursor>
 #include <QDataStream>
@@ -319,6 +320,8 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
     new MainWindowSizeReporter(this, {mpLeftToolBar, mpRightToolBar, mpTopToolBar, mpCommandLine.data()});
     reportMainWindowSize();
+
+    mpMainFrame->installEventFilter(this);
 }
 
 TMainConsole::~TMainConsole()
@@ -2042,6 +2045,21 @@ void TMainConsole::closePasswordEntry()
 
 bool TMainConsole::eventFilter(QObject* watched, QEvent* event)
 {
+    // A bar shown or hidden has the layout resize this frame but not the console, so no
+    // resizeEvent() sizes the display in it. Not sized mid-layout, while the frame's
+    // ancestors are still at their old size: the panes would count rows that are clipped.
+    if (watched == mpMainFrame && event->type() == QEvent::Resize && !mMainDisplayLayoutPending) {
+        mMainDisplayLayoutPending = true;
+        using namespace std::chrono_literals;
+        QTimer::singleShot(0ms, this, [this]() {
+            mMainDisplayLayoutPending = false;
+            // a console a tab switch has made zero wide is left alone, as resizeEvent() leaves it
+            if (width() && mpHost && mpCommandLine && !mpCommandLine->isHidden()) {
+                mBorders = mpHost->borders();
+                layoutMainDisplay();
+            }
+        });
+    }
     if (mpPasswordEntry && watched == mpCommandLine && (event->type() == QEvent::Resize || event->type() == QEvent::Move)) {
         mpPasswordEntry->setGeometry(mpCommandLine->geometry());
     }
@@ -2370,7 +2388,7 @@ bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
     }
 
     if (!toEnd) {
-        pC->scrollUp(pC->mUpperPane->mCursorY - line);
+        pC->scrollTo(line);
         return true;
     }
     if (!pC->mUpperPane->mIsTailMode) {
@@ -2384,6 +2402,12 @@ bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
         pC->mUpperPane->forceUpdate();
     }
     return true;
+}
+
+bool TMainConsole::windowFollowsNewLines(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    return pC && pC->mUpperPane->mIsTailMode;
 }
 
 std::optional<std::pair<bool, QString>> TMainConsole::setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight)
@@ -2538,7 +2562,7 @@ bool TMainConsole::setTextBoxTabMovesFocus(const QString& name, bool tabMovesFoc
 
 QPoint TMainConsole::mousePosition() const
 {
-    return mapFromGlobal(QCursor::pos());
+    return mpMainFrame->mapFromGlobal(QCursor::pos());
 }
 
 bool TMainConsole::hasKeyboardFocus() const
@@ -3661,6 +3685,7 @@ void TMainConsole::createMapperDock(const QString& title, const QString& objectN
     mpHost->mpMap->setMapper(new dlgMapper(mpDockableMapWidget, mpHost, mpHost->mpMap.data()));
     mpHost->mpMap->mapper()->setStyleSheet(mpHost->mProfileStyleSheet);
     mpDockableMapWidget->setWidget(mpHost->mpMap->mapper());
+    mudlet::self()->growDockToSizeHintWhenShown(mpDockableMapWidget);
 }
 
 QDockWidget* TMainConsole::mapWidget() const
@@ -3908,6 +3933,16 @@ void TMainConsole::dockMapWidget(Qt::DockWidgetArea area)
     mudlet::self()->addDockWidget(area, mpDockableMapWidget);
 }
 
+void TMainConsole::redockMapWidget(Qt::DockWidgetArea area)
+{
+    const bool moving = mpDockableMapWidget->isFloating() || mudlet::self()->dockWidgetArea(mpDockableMapWidget) != area;
+    mpDockableMapWidget->setFloating(false);
+    dockMapWidget(area);
+    if (moving) {
+        mudlet::self()->growDockToSizeHint(mpDockableMapWidget, false);
+    }
+}
+
 std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x, int y, int width, int height)
 {
     auto pM = mpDockableMapWidget;
@@ -3935,26 +3970,22 @@ std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x
     }
 
     if (area == QLatin1String("r") || area == QLatin1String("right")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::RightDockWidgetArea);
+        redockMapWidget(Qt::RightDockWidgetArea);
         return {true, QString()};
     }
 
     if (area == QLatin1String("l") || area == QLatin1String("left")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::LeftDockWidgetArea);
+        redockMapWidget(Qt::LeftDockWidgetArea);
         return {true, QString()};
     }
 
     if (area == QLatin1String("t") || area == QLatin1String("top")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::TopDockWidgetArea);
+        redockMapWidget(Qt::TopDockWidgetArea);
         return {true, QString()};
     }
 
     if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::BottomDockWidgetArea);
+        redockMapWidget(Qt::BottomDockWidgetArea);
         return {true, QString()};
     }
 
@@ -4185,6 +4216,10 @@ void TMainConsole::showStatistics()
     QString itemMsg = std::get<0>(mpHost->getTriggerUnit()->assembleReport());
     print(itemMsg, QColor(150, 120, 0), Qt::black);
 
+    //: Heading for the system's statistics information displayed in the console, about matching triggers on several threads during a flood of text
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Trigger Match Pool:")));
+    print(assembleTriggerMatchPoolReport(), QColor(150, 120, 0), Qt::black);
+
     //: Heading for the system's statistics information displayed in the console
     mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Timer Report:")));
     itemMsg = std::get<0>(mpHost->getTimerUnit()->assembleReport());
@@ -4218,6 +4253,46 @@ void TMainConsole::showStatistics()
     mpHost->mLuaInterpreter.compileAndExecuteScript(QLatin1String("resetFormat();"));
 
     mpHost->mainConsoleView()->raise();
+}
+
+QString TMainConsole::assembleTriggerMatchPoolReport() const
+{
+    const TriggerMatchPool& pool = TriggerMatchPool::instance();
+    if (pool.workerCount() == 0) {
+        //: Shown in the statistics report when matching triggers on several threads is switched off
+        return tr("off - switch it on under Preferences, Advanced, Performance to find out whether it speeds up this profile during floods of text.\n");
+    }
+    const TriggerMatchPool::Report& report = pool.report();
+    const auto microseconds = [](const qint64 nanoseconds) {
+        return QString::number(static_cast<double>(nanoseconds) / 1000.0, 'f', 1);
+    };
+    QString text;
+    //: Statistics report line; %n is the number of threads matching triggers, the main thread included
+    text += tr("on, with %n thread(s); the figures below cover every profile since it was last switched on or changed\n", nullptr, pool.workerCount());
+    //: Statistics report line; %1 is a number of lines of game text, %2 an average time in microseconds
+    text += tr("lines it matched: %1, taking %2 µs each on average\n").arg(QString::number(report.pooledLines), microseconds(report.averagePooledNanoseconds()));
+    //: Statistics report line; %1 is a number of lines of game text, %2 an average time in microseconds
+    text += tr("lines like those matched without it, for comparison: %1, taking %2 µs each on average\n").arg(QString::number(report.sampledLines), microseconds(report.averageSampledNanoseconds()));
+    switch (report.verdict()) {
+    case TriggerMatchPool::Report::Verdict::NotEnoughData:
+        //: Statistics report line; %1 is the number of comparison lines needed. Lines are only compared during a flood of game text that triggers with regular expressions have to search
+        text += tr("verdict: not enough data yet - it needs %1 comparison lines, which come from floods of text that many regex triggers search\n")
+                        .arg(TriggerMatchPool::Report::scmSampledLinesForVerdict);
+        break;
+    case TriggerMatchPool::Report::Verdict::WorthIt:
+        //: Statistics report line; %1 is a time in milliseconds
+        text += tr("verdict: worth it on this workload so far, saving about %1 ms\n").arg(QString::number(report.savedNanoseconds() / 1000000));
+        break;
+    case TriggerMatchPool::Report::Verdict::AboutEven:
+        //: Statistics report line
+        text += tr("verdict: about even on this workload so far - it is no faster, and uses more CPU\n");
+        break;
+    case TriggerMatchPool::Report::Verdict::NotWorthIt:
+        //: Statistics report line; %1 is a time in milliseconds
+        text += tr("verdict: not worth it on this workload so far, costing about %1 ms - consider switching it off\n").arg(QString::number(-report.savedNanoseconds() / 1000000));
+        break;
+    }
+    return text;
 }
 
 void TMainConsole::closeEvent(QCloseEvent* event)

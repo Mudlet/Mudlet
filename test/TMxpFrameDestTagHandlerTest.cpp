@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <QTest>
 #include "TMxpFrameTagHandler.h"
 #include "TMxpDestTagHandler.h"
@@ -236,4 +237,4 @@ private slots:
 };
 
 #include "TMxpFrameDestTagHandlerTest.moc"
-QTEST_MAIN(TMxpFrameDestTagHandlerTest)
+MUDLET_GROUPED_TEST_MAIN(TMxpFrameDestTagHandlerTest)

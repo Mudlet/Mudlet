@@ -101,6 +101,32 @@ describe("Tests the script editor's own font", function()
     assert.is_true(getConfig("editorFontFollowsDisplay"))
   end)
 
+  it("keeps following when handed back a getConfig() snapshot taken before the display font moved", function()
+    setConfig("editorFontFollowsDisplay", true)
+    local mainFont, mainSize = getFont("main"), getFontSize("main")
+    -- the snapshot holds showSentText as a boolean, which would turn "always" into "script"
+    local sentText = getConfig("showSentText", true)
+    finally(function()
+      setConfig("showSentText", sentText)
+    end)
+    local snapshot = getConfig()
+    -- with a mapper open, setting show3dMapView to either value builds the
+    -- OpenGL view, after which a headless run never exits
+    snapshot.show3dMapView = nil
+    setFontSize("main", mainSize + 1)
+
+    -- the snapshot's family and size are the display font's as it was, no font
+    -- of the editor's own, in whichever order the table form reaches them
+    local seen = editorFontEvents(function()
+      local ok, err = setConfig(snapshot)
+      assert.is_true(ok, tostring(err))
+    end)
+    assert.same({}, seen)
+    assert.is_true(getConfig("editorFontFollowsDisplay"))
+    assert.equals(mainFont, getConfig("editorFont"))
+    assert.equals(mainSize + 1, getConfig("editorFontSize"))
+  end)
+
   it("goes back to the display font when following again", function()
     assert.is_true(setConfig("editorFont", otherFamily(getFont("main"))))
     assert.is_true(setConfig("editorFontSize", getFontSize("main") + 3))

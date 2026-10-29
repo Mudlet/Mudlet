@@ -1,4 +1,5 @@
 
+#include "GroupedTest.h"
 #include "TMxpTagParser.h"
 #include <MxpTag.h>
 #include <QtTest/QtTest>
@@ -397,4 +398,4 @@ private slots:
 };
 
 #include "TMxpTagParserTest.moc"
-QTEST_MAIN(TMxpTagParserTest)
+MUDLET_GROUPED_TEST_MAIN(TMxpTagParserTest)

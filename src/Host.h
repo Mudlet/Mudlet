@@ -364,7 +364,7 @@ public:
     // The one clipboard every console copies to and pastes from. Each answers
     // whether it found the console.
     bool copyToClipboard(const QString& name);
-    void cutMainConsoleToClipboard();
+    bool cutToClipboard(const QString& name);
     bool pasteClipboard(const QString& name);
     bool appendClipboard(const QString& name);
     // The main console's scrollback limit is also the profile's setting. With
@@ -455,6 +455,8 @@ public:
     // This actually does the bulk of the reset but must wait until the profile
     // is quiescent:
     void resetProfile_phase2();
+    // For when the Lua state they were taken in has closed
+    void forgetLuaFunctionRefs();
     std::tuple<bool, QString, QString> saveProfile(const QString& saveLocation = QString(), const QString& saveName = QString(), bool syncModules = false);
     std::tuple<bool, QString, QString> saveProfileAs(const QString& fileName);
     void saveProfileReportingFailure(const QString& saveName = QString());

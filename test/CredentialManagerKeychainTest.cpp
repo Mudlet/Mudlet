@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <CredentialManager.h>
 #include <QDir>
 #include <QFile>
@@ -84,6 +85,7 @@ private slots:
     void testALookupFindsThePasswordInTheEncryptedFileBeforeTheCollidingFormat();
     void testARecoveredPasswordIsReturnedWhileItsMigrationStalls();
     void testARecoveredPasswordSurvivesAKeychainThatRefusesToStoreIt();
+    void testAStoreTheKeychainRefusesSaysItWentToTheFile();
     void testAKeychainErrorIsReportedRatherThanNothingFound_data();
     void testAKeychainErrorIsReportedRatherThanNothingFound();
     void testAnUndecryptableFileIsReportedRatherThanNothingFound_data();
@@ -1311,6 +1313,44 @@ void CredentialManagerKeychainTest::testARecoveredPasswordSurvivesAKeychainThatR
     QVERIFY2(filed == secret, "removing the colliding entry also removed the file its password had just been moved to, so the password ended up nowhere");
 }
 
+// The file fallback still saves the password, but the caller has to be able to tell the player
+// it is not in the keychain they chose (#11030)
+void CredentialManagerKeychainTest::testAStoreTheKeychainRefusesSaysItWentToTheFile()
+{
+    JobStaller staller;
+    staller.stallEvery<QKeychain::WritePasswordJob>();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+
+    const auto answer = std::make_shared<Answer>();
+    manager.storePassword(mProfile, mKey, QStringLiteral("refused-secret"), [answer](bool success, const QString& error) {
+        ++answer->count;
+        answer->success = success;
+        answer->error = error;
+    });
+    QKeychain::Job* store = staller.waitForStalled();
+    QVERIFY2(store, "the store never reached the keychain, so this run tested nothing");
+    JobStaller::answer(store, QKeychain::AccessDenied, QStringLiteral("synthetic: keychain refused the write"));
+
+    QVERIFY(waitForAnswer(answer));
+    QVERIFY2(answer->success, qPrintable(answer->error));
+    QCOMPARE(CredentialManager::retrieveCredential(mProfile, mKey), QStringLiteral("refused-secret"));
+    QVERIFY2(manager.keychainRefusal().contains(QStringLiteral("synthetic: keychain refused the write")),
+             "a password the keychain refused was saved in the profile's encrypted file without the caller being told");
+
+    // The next store on the same manager reports only its own outcome
+    CredentialManager::profileStorageOverrideForTesting() = true;
+    const auto second = std::make_shared<Answer>();
+    manager.storePassword(mProfile, mKey, QStringLiteral("file-secret"), [second](bool success, const QString& error) {
+        ++second->count;
+        second->success = success;
+        second->error = error;
+    });
+    QVERIFY(waitForAnswer(second));
+    QVERIFY2(second->success, qPrintable(second->error));
+    QVERIFY2(manager.keychainRefusal().isEmpty(), "a store that never asked the keychain still reported the previous store's refusal");
+}
+
 void CredentialManagerKeychainTest::testAKeychainErrorIsReportedRatherThanNothingFound_data()
 {
     QTest::addColumn<int>("refusedRead");
@@ -2106,5 +2146,5 @@ void CredentialManagerKeychainTest::testALateAnswerFollowsTheFilesOlderCopy()
     QCOMPARE(answers->late->count, 1);
 }
 
-QTEST_GUILESS_MAIN(CredentialManagerKeychainTest)
+MUDLET_GROUPED_TEST_GUILESS_MAIN(CredentialManagerKeychainTest)
 #include "CredentialManagerKeychainTest.moc"

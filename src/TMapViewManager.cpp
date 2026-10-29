@@ -24,6 +24,7 @@
 #include "T2DMap.h"
 #include "TMap.h"
 #include "TMapView.h"
+#include "TRoom.h"
 #include "TRoomDB.h"
 #include "utils.h"
 
@@ -44,7 +45,15 @@ TMapViewManager::TMapViewManager(Host* pHost, TMap* pMap)
 
 TMapViewManager::~TMapViewManager()
 {
-    closeAllViews();
+    // Not closeAllViews(): a view left to deleteLater() would go on drawing, and taking
+    // events for, the TMap being freed around us until the event loop next ran
+    const QList<QPointer<QDockWidget>> dockWidgets = mDockWidgets.values() + mClosingDockWidgets;
+    mDockWidgets.clear();
+    mViews.clear();
+    mClosingDockWidgets.clear();
+    for (const auto& dockWidget : dockWidgets) {
+        delete dockWidget.data();
+    }
 }
 
 std::pair<int, QString> TMapViewManager::createView(int initialAreaId)
@@ -70,6 +79,10 @@ std::pair<int, QString> TMapViewManager::createView(int initialAreaId)
 
     if (initialAreaId > 0) {
         mapView->setArea(initialAreaId);
+    } else if (initialAreaId == 0 && mpMap->mpRoomDB) {
+        if (const TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName))) {
+            mapView->setArea(pPlayerRoom->getArea());
+        }
     }
 
     mDockWidgets[viewId] = dockWidget;
@@ -106,6 +119,10 @@ std::pair<bool, QString> TMapViewManager::closeView(int viewId)
     mDockWidgets.remove(viewId);
     mViews.remove(viewId);
 
+    mClosingDockWidgets.removeIf([](const QPointer<QDockWidget>& closing) {
+        return closing.isNull();
+    });
+    mClosingDockWidgets.append(dockWidget);
     // Already forgotten, so the destroyed() this brings finds nothing to report again
     dockWidget->deleteLater();
 

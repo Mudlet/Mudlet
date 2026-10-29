@@ -293,6 +293,22 @@ private slots:
         QVERIFY2(waitForReceivedText(csLoginLine + csPasswordLine), "a command the game never saw disarmed the late password");
     }
 
+    // The password goes out with no sysDataSendRequest, so no handler can mean to deny it
+    void testADenyOutsideASendRequestDoesNotDropThePassword()
+    {
+        const ScopedAutoLoginDelays delays(csUsernameDelayMs, csPasswordDelayMs);
+        Host* host = connectWithLoginAndNoPassword();
+        QVERIFY(host);
+
+        mpServer->sendRaw(csPasswordPrompt + csMaskOn);
+        QVERIFY2(waitForMasking(host, true), "the client never entered password-masking mode");
+        QVERIFY2(waitForThePasswordStep(host), "the auto-login never reached its password step");
+
+        QVERIFY(host->mLuaInterpreter.compileAndExecuteScript(qsl("denyCurrentSend()")));
+        deliverLatePassword(host);
+        QVERIFY2(waitForReceivedText(csLoginLine + csPasswordLine), "a denyCurrentSend() made outside a handler dropped the password");
+    }
+
     // P3: a line-mode game that masks its login prompt as well as its password prompt has ECHO
     // and SGA on from its first byte, which is also what a character-at-a-time server looks like.
     // The login line going out under that mask must not start the character-at-a-time verdict:

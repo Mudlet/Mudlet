@@ -345,7 +345,7 @@ int TLuaInterpreter::alert(lua_State* L)
 
     if (lua_gettop(L) > 0) {
         luaAlertDuration = getVerifiedDouble(L, __func__, 1, "alert duration in seconds");
-        if (luaAlertDuration < 0.000) {
+        if (qIsNaN(luaAlertDuration) || luaAlertDuration < 0.000) {
             lua_pushstring(L, "alert: duration, in seconds, is optional but if given must be zero or greater.");
             return lua_error(L);
         }
@@ -460,6 +460,18 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
     return 0;
 }
 
+// Documentation: ? - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
+int TLuaInterpreter::closeUserWindow(lua_State* L)
+{
+    const QString text = getVerifiedString(L, __func__, 1, "name");
+    Host& host = getHostFromLua(L);
+    if (!host.closeWindow(text)) {
+        return windowNotFoundOrUnsupported(L, host, text);
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#copy
 int TLuaInterpreter::copy(lua_State* L)
 {
@@ -477,8 +489,17 @@ int TLuaInterpreter::copy(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#cut
 int TLuaInterpreter::cut(lua_State* L)
 {
-    getHostFromLua(L).cutMainConsoleToClipboard();
-    return 0;
+    QString windowName;
+    // Any other argument still means the main console, as cut() long ignored its arguments
+    if (lua_type(L, 1) == LUA_TSTRING) {
+        windowName = lua_tostring(L, 1);
+    }
+
+    if (!getHostFromLua(L).cutToClipboard(windowName)) {
+        return windowNotFound(L, windowName);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createBuffer
@@ -1148,7 +1169,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(windowName);
     if (!pModel) {
-        return windowNotFound(L, windowName);
+        return windowNotFoundOrUnsupported(L, host, windowName);
     }
 
     QString command;
@@ -1212,7 +1233,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(windowName);
     if (!pModel) {
-        return windowNotFound(L, windowName);
+        return windowNotFoundOrUnsupported(L, host, windowName);
     }
 
     QStringList commandList;
@@ -2019,6 +2040,11 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
 
     lua_settable(L, -3);
 
+    // A key of its own: scripts compare background with {r, g, b}, so it must stay three long
+    lua_pushstring(L, "backgroundAlpha");
+    lua_pushnumber(L, background.alpha());
+    lua_settable(L, -3);
+
     return 1;
 }
 
@@ -2188,7 +2214,7 @@ int TLuaInterpreter::insertLink(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(windowName);
     if (!pModel) {
-        return windowNotFound(L, windowName);
+        return windowNotFoundOrUnsupported(L, host, windowName);
     }
     // refused even where an empty link could be appended, as it would cover no text;
     // the QString stops at the first NUL, so "\0..." counts as empty too
@@ -2248,7 +2274,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(windowName);
     if (!pModel) {
-        return windowNotFound(L, windowName);
+        return windowNotFoundOrUnsupported(L, host, windowName);
     }
     // refused even where an empty link could be appended, as it would cover no text;
     // the QString stops at the first NUL, so "\0..." counts as empty too
@@ -2304,7 +2330,7 @@ int TLuaInterpreter::insertText(lua_State* L)
     const QString consoleName{windowName};
     Host& host = getHostFromLua(L);
     if (!host.insertWindowText(consoleName, text)) {
-        return windowNotFound(L, consoleName);
+        return windowNotFoundOrUnsupported(L, host, consoleName);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -2672,7 +2698,7 @@ int TLuaInterpreter::replace(lua_State* L)
     const QString consoleName{windowName};
     Host& host = getHostFromLua(L);
     if (!host.replaceWindowText(consoleName, text)) {
-        return windowNotFound(L, consoleName);
+        return windowNotFoundOrUnsupported(L, host, consoleName);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -2802,10 +2828,10 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
         }
         // We want capture groups to start with 1 instead of 0 so predecrement
         // luaNumOfMatch :
-        if (--captureGroup < static_cast<int>(pL->mCaptureGroupList.size())) {
+        if (--captureGroup < static_cast<int>(pL->mCaptureGroups.size())) {
             const auto offset = static_cast<std::size_t>(captureGroup);
             begin = pL->mCaptureGroupPosList[offset];
-            length = QString::fromStdString(pL->mCaptureGroupList[offset]).size();
+            length = pL->captureGroupLength(offset);
             if (TDebug::wants(TDebug::Category::Selection)) {
                 TDebug(Qt::white, Qt::red, TDebug::Category::Selection) << "selectCaptureGroup(" << begin << ", " << length << ")\n" >> &host;
             }
@@ -4030,7 +4056,7 @@ int TLuaInterpreter::setLink(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(consoleName);
     if (!pModel) {
-        return windowNotFound(L, consoleName);
+        return windowNotFoundOrUnsupported(L, host, consoleName);
     }
 
     QString command;
@@ -4211,7 +4237,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(consoleName);
     if (!pModel) {
-        return windowNotFound(L, consoleName);
+        return windowNotFoundOrUnsupported(L, host, consoleName);
     }
 
     QStringList commandList;
@@ -4839,6 +4865,46 @@ int TLuaInterpreter::scrollTo(lua_State* L)
     return 0;
 }
 
+// Through scrollTo(), for its range check on the line
+static int scrollConsoleBy(lua_State* L, const bool up)
+{
+    QString windowName = qsl("main");
+    int linesArgument = 1;
+    if (lua_type(L, 1) == LUA_TSTRING) {
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
+        linesArgument = 2;
+    }
+    const lua_Number lines = lua_isnumber(L, linesArgument) ? lua_tonumber(L, linesArgument) : 1;
+
+    Host& host = getHostFromLua(L);
+    const auto scroll = host.windowScroll(windowName);
+    if (!scroll) {
+        lua_pushnil(L);
+        lua_pushstring(L, "window does not exist");
+        return 2;
+    }
+    const lua_Number lastLine = host.consoleModelNamed(windowName)->buffer.getLastLineNumber();
+    // getScroll() is still at the end as it was before this packet while the triggers on it run
+    const lua_Number from = host.consoleFrontend()->windowFollowsNewLines(windowName) ? lastLine : *scroll;
+    lua_getglobal(L, "scrollTo");
+    lua_pushstring(L, windowName.toUtf8().constData());
+    lua_pushnumber(L, up ? std::max(from - lines, lua_Number{0}) : std::min(from + lines, lastLine));
+    lua_call(L, 2, 0);
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollUp
+int TLuaInterpreter::scrollUp(lua_State* L)
+{
+    return scrollConsoleBy(L, true);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollDown
+int TLuaInterpreter::scrollDown(lua_State* L)
+{
+    return scrollConsoleBy(L, false);
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#windowType
 int TLuaInterpreter::windowType(lua_State* L)
 {
@@ -4866,18 +4932,22 @@ int TLuaInterpreter::wrapLine(lua_State* L)
     const QString windowName = hasWindowName ? QString{lua_tostring(L, 1)} : qsl("main");
 
     Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView() && isMain(windowName)) {
-        // The main buffer is the model's and keeps the view's wrap settings.
-        TBuffer& buffer = host.mainConsoleModel().buffer;
-        buffer.wrapLine(lineNumber, buffer.mWrapAt, buffer.mWrapIndent, buffer.mWrapHangingIndent);
-        lua_pushboolean(L, true);
-        return 1;
-    }
+    const bool viewlessMain = !host.hasConsoleView() && isMain(windowName);
     auto pModel = host.consoleModelNamed(windowName);
     if (!pModel) {
         return windowNotFound(L, windowName);
     }
-    pModel->wrapLine(lineNumber);
+    // One past the last line is where deleteLine() leaves a trigger's getLineNumber(), so the
+    // documented deleteLine(), echo(), wrapLine(getLineNumber()) sequence must not be refused
+    if (lineNumber < 0 || lineNumber > pModel->buffer.size()) {
+        return warnArgumentValue(L, __func__, qsl("line %1 does not exist in window \"%2\"").arg(QString::number(lineNumber), isMain(windowName) ? qsl("main") : windowName));
+    }
+    if (viewlessMain) {
+        // The main buffer is the model's and keeps the view's wrap settings.
+        pModel->buffer.wrapLine(lineNumber);
+    } else {
+        pModel->wrapLine(lineNumber);
+    }
     lua_pushboolean(L, true);
     return 1;
 }

@@ -1,3 +1,23 @@
+-- deleteLabel() leaves the widget to a deferred delete that cannot run until the
+-- whole suite is over, so its callbacks, and the containers they hold, are let go here
+local realDeleteLabel
+setup(function()
+  local globals = package.loaded._G
+  realDeleteLabel = globals.deleteLabel
+  local clearers = {globals.setLabelClickCallback, globals.setLabelDoubleClickCallback, globals.setLabelReleaseCallback,
+                    globals.setLabelMoveCallback, globals.setLabelWheelCallback, globals.setLabelOnEnter, globals.setLabelOnLeave}
+  globals.deleteLabel = function(name, ...)
+    for _, clear in ipairs(clearers) do
+      pcall(clear, name, nil)
+    end
+    return realDeleteLabel(name, ...)
+  end
+end)
+
+teardown(function()
+  package.loaded._G.deleteLabel = realDeleteLabel
+end)
+
 describe("Tests functionality of Adjustable.Container", function()
   describe("Tests the functionality of Adjustable.Container:addConnectMenu", function()
     local testContainer
@@ -1250,6 +1270,45 @@ describe("Tests the Adjustable.Container mouse handlers", function()
       assert.are.equal(x + width + container.attachedMargin, getBorderLeft())
     end)
 
+    it("keeps a widened anchor and its follower on the right while a container holds the left", function()
+      local follower, wide
+      local realTempTimer, realMousePosition = tempTimer, getMousePosition
+      finally(function()
+        _G.tempTimer = realTempTimer
+        _G.getMousePosition = realMousePosition
+        for _, other in ipairs({follower, wide}) do
+          if other.attached then
+            other:detach()
+          end
+          other:delete()
+        end
+      end)
+      _G.tempTimer = function() return -1 end
+
+      local winw = getMainWindowSize()
+      wide = Adjustable.Container:new({name = "gapDragWide", x = 0, y = 300, width = winw - 160, height = 100, autoLoad = false, autoSave = false})
+      wide:attachToBorder("left")
+      container:resize(150, 100)
+      container:move(winw - 150, 0)
+      container:attachToBorder("right")
+      follower = Adjustable.Container:new({name = "gapDragRightFollower", x = winw - 150, y = 200, width = 150, height = 100, autoLoad = false, autoSave = false})
+      follower:attachToBorder("right")
+      assert.is_true(follower:connectToBorder("right"))
+
+      -- the inner edge, pulled 250 pixels towards the console
+      local pointerX = winw - 148
+      _G.getMousePosition = function() return pointerX, 50 end
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", 2, 50))
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", 2, 50))
+      pointerX = pointerX - 250
+      container:onMove(container.adjLabel, mouseEvent("LeftButton", 2, 50))
+
+      assert.is_true(container:get_width() > 300, "the drag was undone")
+      assert.are.equal(container:get_x(), follower:get_x())
+      assert.are.equal(container:get_width(), follower:get_width())
+      assert.are.equal("right", follower.attached)
+    end)
+
     it("reports the pixels its widget was placed at in both reposition events", function()
       local reported, finished
       local handler = registerAnonymousEventHandler("AdjustableContainerReposition",
@@ -2171,6 +2230,19 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       container:resize(300, 100)
       container:adjustBorder()
       assert.are.equal(container:get_width() + container:get_x() + 5, getBorderLeft())
+    end)
+
+    it("follows a container a script lays out again with set_constraints and reposition", function()
+      local container = make("gapSetConstraints", {width = 112})
+      container:attachToBorder("left")
+      container:resize(350, nil)
+      assert.are.equal(350 + container:get_x() + 5, getBorderLeft())
+
+      container:set_constraints({x = 0, y = 0, width = 112, height = 100})
+      container:reposition()
+
+      assert.are.equal(112, container:get_width())
+      assert.are.equal(112 + container:get_x() + 5, getBorderLeft())
     end)
 
     it("detaches a container that has been moved out of reach of its border", function()

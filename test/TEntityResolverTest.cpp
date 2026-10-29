@@ -1,4 +1,5 @@
 
+#include "GroupedTest.h"
 #include <QMap>
 #include <TEntityResolver.h>
 #include <QtTest/QtTest>
@@ -147,4 +148,4 @@ private slots:
 };
 
 #include "TEntityResolverTest.moc"
-QTEST_MAIN(TEntityResolverTest)
+MUDLET_GROUPED_TEST_MAIN(TEntityResolverTest)

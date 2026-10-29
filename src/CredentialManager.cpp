@@ -435,6 +435,7 @@ void CredentialManager::storePassword(const QString& profileName, const QString&
         storeCredential(service, key, password, profileName, callback);
     } else {
         // Use SecureStringUtils for portable/test environments
+        mKeychainRefusal.clear();
         bool success = storeCredentialToFileForThisOperation(profileName, key, password);
 
         if (callback) {
@@ -1203,6 +1204,7 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
     // Cleanup any existing operation
     cleanupCurrentOperation();
     mUnprotectedSecretPath.clear();
+    mKeychainRefusal.clear();
 
     auto* writeJob = new QKeychain::WritePasswordJob(service, this);
     // Use service as the key - on Windows, only setKey() value is used as the credential target,
@@ -1241,12 +1243,13 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
 
                 // If keychain failed, try file storage fallback
                 if (!success) {
-                    qDebug() << "CredentialManager: Keychain storage failed, using encrypted file storage:" << errorMessage;
+                    qWarning().noquote() << "CredentialManager: the keychain refused the" << mCurrentOperationDescription << "- using encrypted file storage instead:" << errorMessage;
 
                     bool fileSuccess = storeCredentialToFileForThisOperation(profileName, account, password);
 
                     if (fileSuccess) {
                         success = true;
+                        mKeychainRefusal = errorMessage.isEmpty() ? qsl("unknown keychain error") : errorMessage;
                         errorMessage = QString(); // Clear error message on successful fallback
                         qDebug() << "CredentialManager: Password stored to encrypted file storage";
                     } else {
@@ -1529,21 +1532,20 @@ bool CredentialManager::storeCredential(const QString& profileName, const QStrin
     return storeCredentialToFile(profileName, key, credential);
 }
 
-QString CredentialManager::retrieveCredential(const QString& profileName, const QString& key)
+QString CredentialManager::retrieveCredential(const QString& profileName, const QString& key, ReadOutcome* failure)
 {
-    if (profileName.isEmpty() || key.isEmpty()) {
-        return QString();
-    }
-
     // Validate key name to prevent directory traversal and other security issues
-    if (!isValidKeyName(key)) {
+    if (profileName.isEmpty() || key.isEmpty() || !isValidKeyName(key)) {
+        if (failure) {
+            *failure = ReadOutcome::Unavailable;
+        }
         return QString();
     }
 
     // Static API uses encrypted file storage for synchronous operation
     // NOTE: For QtKeychain integration, use the async API methods instead.
     //       Main UI components (dlgConnectionProfiles) have been migrated to async API.
-    return retrieveCredentialFromFile(profileName, key);
+    return retrieveCredentialFromFile(profileName, key, failure);
 }
 
 bool CredentialManager::removeCredential(const QString& profileName, const QString& key)
