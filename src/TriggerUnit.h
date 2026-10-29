@@ -83,13 +83,18 @@ public:
     int getNewID();
     QMultiMap<QString, TTrigger*> mLookupTable;
     void markCleanup(TTrigger* pT);
-    // Call on any change to whether or how pT can be ruled out of a line without being matched: it is
-    // filed again in whichever of the root prescan, the root filter copies and the tree index hold it
+    // TTrigger's channel for any change to whether or how pT can be ruled out of a line without being
+    // matched: the change decides which of the root prescan, the root filter copies and the tree index
+    // file it again
     void refile(TTrigger* pT, TriggerRefile change);
     // How many times a change has been announced to the passes that pinned a copy of the root
     // triggers' filters. Moves only for a change one of those copies could be of, so a spec can tell a
     // needed announcement from one that cost a line its filters for nothing.
     quint32 rootFilterEpoch() const { return mRootFilterEpoch; }
+    // As above, for the announcements that cost the rest of a line its candidate list
+    quint32 unfilterableEpoch() const { return mUnfilterableEpoch; }
+    // Whether the last snapshot engaged the root prescan, so a test can tell it is relying on it
+    bool rootPrescanActive() const { return mpRootNodeSnapshot && mpRootNodeSnapshot->mPrescan.active(); }
     // Both paths build the same index, so this is how a test checks the incremental path keeps full
     // rebuilds flat.
     quint64 prescanRebuildCount() const { return mPrescanRebuilds; }

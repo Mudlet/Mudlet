@@ -322,6 +322,7 @@ private slots:
             feedTriggers("nestedwarmupline\n")
         )")),
                  "the triggers did not compile");
+        QVERIFY2(mpHost->getTriggerUnit()->rootPrescanActive(), "the root prescan has not engaged, so it cannot skip the opened trigger");
         TTrigger* opened = mpHost->getTriggerUnit()->getTrigger(luaInteger("nestedOpenedId"));
         QVERIFY(opened);
         // No Lua function sets how long a substring trigger stays open after it matches

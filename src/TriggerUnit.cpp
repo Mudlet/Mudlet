@@ -662,24 +662,44 @@ void TriggerUnit::stampTreeCandidates(const QString& line)
 
 void TriggerUnit::refile(TTrigger* pT, const TriggerRefile change)
 {
+    // The stay-open count is read live by the tree index, so only a change to the grams unfiles a trigger
+    bool unfile = false;
+    // The line's candidate list was settled before any script ran, so the rest of it goes unfiltered
+    bool actsOnLineInFlight = false;
+    switch (change) {
+    case TriggerRefile::Patterns:
+        unfile = true;
+        break;
+    case TriggerRefile::SeesEveryLine:
+        unfile = true;
+        actsOnLineInFlight = true;
+        break;
+    case TriggerRefile::OpenedByScript:
+        actsOnLineInFlight = true;
+        break;
+    case TriggerRefile::OpenedByMatch:
+        actsOnLineInFlight = mProcessingDepth > 1;
+        break;
+    case TriggerRefile::Shut:
+        break;
+    }
     // A root is never filed in the tree index, so the temporary triggers scripts arm every line cost it no rebuild
-    if ((change == TriggerRefile::Patterns || change == TriggerRefile::SeesEveryLine) && (pT->mTreeIndexPosition >= 0 || pT->getParent())) {
+    if (unfile && (pT->mTreeIndexPosition >= 0 || pT->getParent())) {
         unfileTreeNode(pT);
     }
     // The epochs stop the rest of a line trusting what a pass pinned, so only a trigger a pinned snapshot
     // could hold moves them. rootFilter() and prescanGrams() read only the trigger's own state, so one no
-    // snapshot has filed - a child, or one a script creates mid-line - is in none. One that has left the
-    // root list may still be pinned, and the filter check runs ahead of isActive().
+    // snapshot has filed - a trigger only ever a child, or one a script creates mid-line - is in none. One
+    // that has left the root list may still be pinned, and the filter check runs ahead of isActive().
     const int position = pT->rootSnapshotPosition();
     if (position == TTrigger::scmNeverSnapshotted) {
         return;
     }
     ++mRootFilterEpoch;
-    // The line's candidate list was settled before any script ran, so the rest of it goes unfiltered
-    if (change == TriggerRefile::SeesEveryLine || change == TriggerRefile::OpenedByScript || (change == TriggerRefile::OpenedByMatch && mProcessingDepth > 1)) {
+    if (actsOnLineInFlight) {
         ++mUnfilterableEpoch;
     }
-    // A dropped trigger is out of the next snapshot, so has nothing to be filed in
+    // A dropped trigger has no slot to refile; if it is a root again, appending files it from its current state
     if (position >= 0) {
         mRootNodeSnapshotStale = true;
         if (!mRootNodeSnapshotNeedsRebuild) {
@@ -912,8 +932,9 @@ void TriggerUnit::processDataStream(const QString& data, int line)
                 mCandidates = std::move(candidates);
             }
         });
-        // A script can make a later trigger fire without matching (setTriggerStayOpen()) after the
-        // candidate list was settled; from then on the rest of the line goes to every remaining trigger.
+        // A script can make a later trigger act on a line it does not match after the candidate list was
+        // settled - setTriggerStayOpen(), making it a line or multiline trigger, or a line it feeds opening
+        // it; from then on the rest of the line goes to every remaining trigger. See refile().
         const quint32 unfilterableEpochAtStart = mUnfilterableEpoch;
         // The pinned filters are copies, and a firing script can change what they were copied from (a
         // pattern, a stay-open count, a trigger made multiline); from then on the line asks the triggers.

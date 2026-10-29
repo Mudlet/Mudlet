@@ -186,18 +186,19 @@ private:
 };
 
 // What changed about a trigger that TriggerUnit::refile() is told of, which decides what of the skip
-// indexes it has to redo and whether the line in flight hears of it
+// indexes it has to redo and whether the line in flight has to drop its candidate list
 enum class TriggerRefile : quint8 {
     // Its patterns were recompiled, or it stopped being a line or multiline trigger
     Patterns,
     // It became a line or multiline trigger, so acts on lines it does not match, the one in flight included
     SeesEveryLine,
-    // setTriggerStayOpen() held it open, so it fires on the rest of the line in flight without matching
+    // setTriggerStayOpen() held it open, so it fires without matching, on the line in flight too if the
+    // pass has yet to reach it
     OpenedByScript,
     // Its own match held it open: the pass that matched it is past it, but an outer pass that fed that
     // line by feedTriggers() may not be
     OpenedByMatch,
-    // Its stay-open window closed; the line in flight was already offered it
+    // Its stay-open window closed; the line in flight still counts it a candidate, so match() decides
     Shut,
 };
 

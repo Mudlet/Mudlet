@@ -8342,6 +8342,9 @@ describe("Trigger processing", function()
             local function epoch()
                 return getProfileStats().triggers.rootFilterEpoch
             end
+            local function candidatesEpoch()
+                return getProfileStats().triggers.unfilterableEpoch
+            end
 
             local makerId = track(tempTrigger("ruledoutmaker_fires", function()
                 track(tempTrigger("ruledoutmade_qzv_never_sent", function() end))
@@ -8351,15 +8354,44 @@ describe("Trigger processing", function()
             feedTriggers(warmUpLine)
 
             local before = epoch()
+            local candidatesBefore = candidatesEpoch()
             feedTriggers("\nruledoutmaker_fires now\n")
             assert.are.equal(before, epoch(),
                              "creating a trigger mid-line staled filter copies that could not have been of it")
+            assert.are.equal(candidatesBefore, candidatesEpoch(),
+                             "creating a line trigger mid-line cost the rest of the line its candidate list")
 
-            -- A control, so the assertion above cannot pass on a counter that
-            -- never moves: holding open a trigger a snapshot has filed makes it
+            -- A control, so the assertions above cannot pass on counters that
+            -- never move: holding open a trigger a snapshot has filed makes it
             -- fire on lines it does not match, which its pinned copy has to hear about.
             setTriggerStayOpen(tostring(makerId), 1)
             assert.is_true(epoch() > before, "a change every pinned copy has to hear about went unannounced")
+            assert.is_true(candidatesEpoch() > candidatesBefore, "a trigger held open went unannounced to the line in flight")
+        end)
+
+        it("drops a line's candidate list for a trigger its own match held open only on a line that fed it", function()
+            -- The pass a trigger matches in is already past it, so opening
+            -- itself there must not cost the rest of that line its candidates;
+            -- an outer line that fed the matched one has yet to reach it.
+            if not os.getenv("MUDLET_TEST_MODE") then
+                pending("counting announcements to a line in progress needs MUDLET_TEST_MODE")
+            end
+            local function candidatesEpoch()
+                return getProfileStats().triggers.unfilterableEpoch
+            end
+            track(tempTrigger("ownopenfeeder_fires", function() feedTriggers("\nqwzxv_own_open\n") end))
+            tempComplexRegexTrigger(track("SpecOwnOpen"), "qwzxv_own_open", [[]], 0, 0, 0, 0, 0, 0, 0, 0, 2, 0)
+            feedTriggers(warmUpLine)
+
+            local before = candidatesEpoch()
+            feedTriggers("\nqwzxv_own_open\n")
+            assert.are.equal(before, candidatesEpoch(), "a trigger opening itself cost its own line the candidate list")
+
+            -- two lines close its window again, so the feed below opens it afresh
+            feedTriggers(warmUpLine)
+            feedTriggers(warmUpLine)
+            feedTriggers("\nownopenfeeder_fires now\n")
+            assert.is_true(candidatesEpoch() > before, "a trigger opened by a fed line went unannounced to the line that fed it")
         end)
 
         it("fires a regex whose brace is the brace itself and not a quantifier", function()
