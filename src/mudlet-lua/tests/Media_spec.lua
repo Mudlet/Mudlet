@@ -2324,12 +2324,6 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(1, #getPlayingSounds({name = playing[1].name}), "the listed name did not find the sound again")
     assert.is_true(pauseSounds({key = "busted-elsewhere-sound"}))
     assert.equals(fileName, getPausedSounds({key = "busted-elsewhere-sound"})[1].name)
-    stopSounds({key = "busted-elsewhere-sound"})
-    -- No file in the media folder carries the listed name, yet 5.0 played the sound again by it
-    assert.is_true(playSoundFile({name = playing[1].name, key = "busted-elsewhere-again"}))
-    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), "the listed name did not play the sound again")
-    assert.equals(1, #getPlayingSounds({key = "busted-elsewhere-again"}))
-    stopSounds({key = "busted-elsewhere-again"})
 
     assert.is_true(playMusicFile({name = outside, key = "busted-elsewhere-music"}))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))

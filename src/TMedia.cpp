@@ -183,15 +183,6 @@ void TMedia::playMedia(TMediaData& mediaData)
     if (mediaData.mediaInput() == TMediaData::MediaInputStream) {
         TMedia::setupMediaAbsolutePathFileName(mediaData);
     } else if (mediaData.mediaInput() == TMediaData::MediaInputFile) {
-        // A file played by its full path is listed by its own name, which nothing in the media folder may
-        // carry, so that name plays the file again as it did when 5.0 copied it there under it
-        if (mediaData.mediaProtocol() == TMediaData::MediaProtocolAPI && mediaData.mediaUrl().isEmpty()) {
-            const auto source = mListedMediaSources.constFind(mediaData.mediaFileName());
-            if (source != mListedMediaSources.cend() && !QFileInfo(qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName())).isFile()) {
-                mediaData.setMediaFileName(source.value());
-            }
-        }
-
         const bool fileRelative = TMedia::isFileRelative(mediaData);
 
         if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
@@ -1183,7 +1174,6 @@ bool TMedia::transitionNonRelativeFile(TMediaData& mediaData)
 
         mediaData.setMediaFileName(copy);
         mediaData.setMediaSourcePath(QDir::cleanPath(source));
-        mListedMediaSources.insert(QFileInfo(source).fileName(), QDir::cleanPath(source));
         return true;
     }
 
@@ -1201,7 +1191,6 @@ bool TMedia::transitionNonRelativeFile(TMediaData& mediaData)
 
     mediaData.setMediaFileName(cacheFileName);
     mediaData.setMediaSourcePath(QDir::cleanPath(source));
-    mListedMediaSources.insert(QFileInfo(source).fileName(), QDir::cleanPath(source));
     return true;
 }
 
