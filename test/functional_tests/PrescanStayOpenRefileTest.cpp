@@ -347,7 +347,7 @@ private slots:
             multilineFires = 0
         )")),
                  "the triggers did not compile");
-        // No Lua function makes a multiline trigger of plain-text patterns, which the root prescan could file
+        // The plain-text multiline triggers Lua makes (perm*Trigger) have a line delta of 0, so only C++ can make one span lines
         auto* pTrigger = new TTrigger(nullptr, mpHost);
         pTrigger->setName(qsl("plainMultiline"));
         QVERIFY(pTrigger->registerTrigger());
