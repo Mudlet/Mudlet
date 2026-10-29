@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <CredentialManager.h>
 #include <MudletApp.h>
 #include <SecureStringUtils.h>
@@ -28,7 +29,9 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QScopeGuard>
 #include <QStandardPaths>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 
 #include <optional>
@@ -138,10 +141,16 @@ private slots:
     void testAsyncStoreAndRetrieve();
     void testAsyncApiSharesTheStoreWithTheStaticOne();
     void testAnUndecryptableFileIsNotReportedAsNothingStored();
+    void testAFileHiddenByItsFolderIsNotReportedAsNothingStored();
+    void testANewerOlderNamedFileThatWontOpenIsNotReportedAsNothingStored();
+    void testANameNoFileCanBeMadeForIsNotReportedAsRefused();
+    void testTheStaticReadSaysWhyNothingCameBack();
     void testAsyncRemovePassword();
     void testCredentialExistsWithoutHandingOverTheSecret();
     void testAsyncEmptyArgumentsAreReportedThroughTheCallback();
     void testAsyncApiRefusesTheKeysTheStaticApiRefuses();
+    void testAStoreWithNowhereToKeepTheKeyFails();
+    void testAnUndecryptableFileIsNotReportedAsNoPassword();
     void cleanupTestCase();
 
 private:
@@ -792,6 +801,130 @@ void CredentialManagerTest::testAnUndecryptableFileIsNotReportedAsNothingStored(
     QVERIFY(CredentialManager::removeCredential(profile, key));
 }
 
+namespace {
+std::optional<CredentialManager::ReadOutcome> readOutcome(CredentialManager& manager, const QString& profile, const QString& key)
+{
+    std::optional<CredentialManager::ReadOutcome> answer;
+    manager.retrievePassword(
+            profile,
+            key,
+            [&answer](bool, QString, const QString&, CredentialManager::ReadOutcome outcome) {
+                answer = outcome;
+            },
+            nullptr,
+            nullptr);
+    return answer;
+}
+
+// Permissions do not stop root, and Windows has no search bit on a folder
+bool permissionsCanHideAFile()
+{
+#if defined(Q_OS_WIN)
+    return false;
+#else
+    QTemporaryDir probe;
+    if (!probe.isValid() || !QFile::setPermissions(probe.path(), QFileDevice::Permissions())) {
+        return false;
+    }
+    const bool hidden = !QFileInfo(qsl("%1/x").arg(probe.path())).isReadable() && !QDir(probe.path()).isReadable();
+    QFile::setPermissions(probe.path(), QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    return hidden;
+#endif
+}
+} // namespace
+
+void CredentialManagerTest::testAFileHiddenByItsFolderIsNotReportedAsNothingStored()
+{
+    if (!permissionsCanHideAFile()) {
+        QSKIP("folder permissions cannot hide a file here (Windows, or running as root)");
+    }
+    CredentialManager manager;
+    const QString profile = "HiddenByItsFolderProfile";
+    const QString key = "password";
+    QVERIFY(CredentialManager::storeCredential(profile, key, "behind_a_locked_folder"));
+    const QString folder = QFileInfo(credentialPath(profile, key)).absolutePath();
+    const QString profileFolder = QFileInfo(folder).absolutePath();
+    const auto unlock = qScopeGuard([&folder, &profileFolder, &profile, &key] {
+        const auto open = QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner;
+        QFile::setPermissions(profileFolder, open);
+        QFile::setPermissions(folder, open);
+        CredentialManager::removeCredential(profile, key);
+    });
+
+    QVERIFY(QFile::setPermissions(folder, QFileDevice::Permissions()));
+    QCOMPARE(readOutcome(manager, profile, key), std::optional(CredentialManager::ReadOutcome::Unreadable));
+
+    // A folder further up hides it just the same
+    QVERIFY(QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner));
+    QVERIFY(QFile::setPermissions(profileFolder, QFileDevice::Permissions()));
+    QCOMPARE(readOutcome(manager, profile, key), std::optional(CredentialManager::ReadOutcome::Unreadable));
+}
+
+void CredentialManagerTest::testANewerOlderNamedFileThatWontOpenIsNotReportedAsNothingStored()
+{
+    if (!permissionsCanHideAFile()) {
+        QSKIP("file permissions cannot stop a read here (Windows, or running as root)");
+    }
+    CredentialManager manager;
+    const QString sharedPrefix(50, QChar('u'));
+    const QString profile = sharedPrefix + "OlderCopyLockedAway";
+    const QString key = "character";
+    const QString legacyDir = qsl("%1/profiles/%2/passwords").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), sharedPrefix);
+    QVERIFY(QDir().mkpath(legacyDir));
+    QFile legacyFile(qsl("%1/%2").arg(legacyDir, key));
+    const auto cleanUp = qScopeGuard([&legacyFile, &profile, &key] {
+        legacyFile.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+        legacyFile.remove();
+        CredentialManager::removeCredential(profile, key);
+    });
+    // An older copy under the current name that can be read: it is stale, so it must not be handed back
+    QVERIFY(CredentialManager::storeCredential(profile, key, "stale_current_copy"));
+    QVERIFY(legacyFile.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate));
+    QVERIFY(legacyFile.write(SecureStringUtils::encryptStringForProfile("saved_long_ago", profile).toUtf8()) != -1);
+    legacyFile.close();
+    QVERIFY(setModificationTime(legacyFile.fileName(), 60));
+
+    QVERIFY(legacyFile.setPermissions(QFileDevice::Permissions()));
+    QCOMPARE(readOutcome(manager, profile, key), std::optional(CredentialManager::ReadOutcome::Unreadable));
+}
+
+// The password migration and the proxy password read through this, and must not take an unreadable file for none
+void CredentialManagerTest::testTheStaticReadSaysWhyNothingCameBack()
+{
+    const QString profile = "StaticReadOutcomeProfile";
+    const QString key = "character";
+    auto outcome = CredentialManager::ReadOutcome::Found;
+
+    QVERIFY(CredentialManager::retrieveCredential(profile, key, &outcome).isEmpty());
+    QCOMPARE(outcome, CredentialManager::ReadOutcome::NothingStored);
+
+    outcome = CredentialManager::ReadOutcome::Found;
+    QVERIFY(CredentialManager::retrieveCredential(profile, qsl("../escape"), &outcome).isEmpty());
+    QCOMPARE(outcome, CredentialManager::ReadOutcome::Unavailable);
+
+    if (!permissionsCanHideAFile()) {
+        QSKIP("folder permissions cannot hide a file here (Windows, or running as root)");
+    }
+    QVERIFY(CredentialManager::storeCredential(profile, key, "behind_a_locked_folder"));
+    const QString folder = QFileInfo(credentialPath(profile, key)).absolutePath();
+    const auto unlock = qScopeGuard([&folder, &profile, &key] {
+        QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+        CredentialManager::removeCredential(profile, key);
+    });
+
+    QVERIFY(QFile::setPermissions(folder, QFileDevice::Permissions()));
+    outcome = CredentialManager::ReadOutcome::Found;
+    QVERIFY(CredentialManager::retrieveCredential(profile, key, &outcome).isEmpty());
+    QCOMPARE(outcome, CredentialManager::ReadOutcome::Unreadable);
+}
+
+// No file can hold a password for such a name, so the profile must not be told one could not be read
+void CredentialManagerTest::testANameNoFileCanBeMadeForIsNotReportedAsRefused()
+{
+    CredentialManager manager;
+    QCOMPARE(readOutcome(manager, qsl("Realm..."), qsl("character")), std::optional(CredentialManager::ReadOutcome::Unavailable));
+}
+
 // The static API is the migration and cleanup path for credentials the async API
 // wrote, so the two have to be looking at the same store rather than two of them
 void CredentialManagerTest::testAsyncApiSharesTheStoreWithTheStaticOne()
@@ -1025,6 +1158,93 @@ void CredentialManagerTest::testAsyncApiRefusesTheKeysTheStaticApiRefuses()
     CredentialManager::removeCredential(profile, accepted);
 }
 
+// With no encryption key that can be stored, the password is not saved, and the callback the
+// connection dialog waits on has to say so
+void CredentialManagerTest::testAStoreWithNowhereToKeepTheKeyFails()
+{
+    CredentialManager manager;
+    const QString profile = qsl("NowhereToKeepTheKey");
+    const QString profileDir = qsl("%1/profiles/%2").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), profile);
+    QVERIFY(QDir(profileDir).removeRecursively());
+    // Where XDG_CONFIG_HOME is not honoured this is the real config folder, so it goes whatever the outcome
+    auto cleanup = qScopeGuard([&profileDir] {
+        QDir(profileDir).removeRecursively();
+    });
+    // A directory where the key file belongs makes it impossible to write
+    QVERIFY(QDir().mkpath(profileDir + qsl("/encryption_key")));
+
+    bool answered = false;
+    bool stored = true;
+    manager.storePassword(profile, qsl("character"), qsl("cannot_be_protected"), [&](bool success, const QString&) {
+        answered = true;
+        stored = success;
+    });
+    QVERIFY2(answered, "the file store answered later than it returned, which MUDLET_TEST_MODE should never let it do");
+    QVERIFY2(!stored, "the store reported a password saved that it had no key to protect");
+    QVERIFY(CredentialManager::retrieveCredential(profile, qsl("character")).isEmpty());
+}
+
+// The dialog has to be able to tell the player a saved password is unreadable, rather than leave
+// them looking at an empty field as if none had been saved
+void CredentialManagerTest::testAnUndecryptableFileIsNotReportedAsNoPassword()
+{
+    CredentialManager manager;
+    const QString profile = qsl("UndecryptableProfile");
+    const QString key = qsl("character");
+
+    bool stored = false;
+    manager.storePassword(profile, key, qsl("soon_unreadable"), [&](bool success, const QString&) {
+        stored = success;
+    });
+    QVERIFY(stored);
+
+    QFile file(credentialPath(profile, key));
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    const QByteArray saved = file.readAll();
+    file.close();
+    // One byte changed in a file that is otherwise well formed gets as far as the HMAC check, as a
+    // regenerated profile key does; text that is not Mudlet's at all is turned away before that
+    QByteArray flipped = QByteArray::fromBase64(saved.trimmed());
+    QVERIFY2(flipped.size() > 64, "the saved file is too short to get past the size check once a byte is flipped");
+    flipped[flipped.size() / 2] = static_cast<char>(flipped.at(flipped.size() / 2) ^ 0x01);
+    const QList<QPair<const char*, QByteArray>> damage = {{"one byte changed", flipped.toBase64()}, {"not Mudlet's at all", QByteArrayLiteral("this is not anything Mudlet encrypted")}};
+
+    for (const auto& [what, content] : damage) {
+        QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        QVERIFY(file.write(content) > 0);
+        file.close();
+
+        bool retrieved = true;
+        QString retrieveError;
+        manager.retrievePassword(profile, key, [&](bool success, QString, const QString& error) {
+            retrieved = success;
+            retrieveError = error;
+        });
+        QVERIFY2(!retrieved, what);
+        QCOMPARE(retrieveError, CredentialManager::unreadableFileError(profile));
+    }
+
+    // ...while a profile that never had one saved still says so
+    bool retrieved = true;
+    QString retrieveError;
+    manager.retrievePassword(qsl("NeverSavedAnything"), key, [&](bool success, QString, const QString& error) {
+        retrieved = success;
+        retrieveError = error;
+    });
+    QVERIFY(!retrieved);
+    QCOMPARE(retrieveError, qsl("No password stored in encrypted file storage"));
+
+    // ...and so does one no file can be made for, with no saved password to ask for again
+    retrieveError.clear();
+    manager.retrievePassword(qsl("Realm..."), key, [&](bool, QString, const QString& error) {
+        retrieveError = error;
+    });
+    QVERIFY(!retrieveError.isEmpty());
+    QVERIFY2(retrieveError != CredentialManager::unreadableFileError(qsl("Realm...")), qPrintable(retrieveError));
+
+    CredentialManager::removeCredential(profile, key);
+}
+
 void CredentialManagerTest::cleanupTestCase()
 {
     // Clean up test passwords
@@ -1073,4 +1293,4 @@ void CredentialManagerTest::cleanupTestCase()
 }
 
 #include "CredentialManagerTest.moc"
-QTEST_MAIN(CredentialManagerTest)
+MUDLET_GROUPED_TEST_MAIN(CredentialManagerTest)

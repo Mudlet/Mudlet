@@ -43,6 +43,9 @@
 // Helper functions for XML serialization and compression
 // =============================================================================
 
+// Without parse_eol: the snapshot holds a carriage return raw, and parse_eol would turn it into a line feed
+static constexpr unsigned int scmSnapshotParseOptions = pugi::parse_default & ~pugi::parse_eol;
+
 // Internal helper functions for compression (static to keep them local to this file)
 static QString compressXML(const QString& xml)
 {
@@ -52,6 +55,12 @@ static QString compressXML(const QString& xml)
 
     QByteArray compressed = qCompress(xml.toUtf8(), 9);
     return QString::fromLatin1(compressed.toBase64());
+}
+
+// XMLexport::writeScriptElement() writes a NUL as U+FFFC U+2400, as pugixml cannot hold one in text
+static QString scriptFromSnapshot(QString script)
+{
+    return script.replace(qsl("\xFFFC\x2400"), QChar(u'\0'));
 }
 
 static QString decompressXML(const QString& data)
@@ -256,7 +265,7 @@ TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Ho
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "importTriggerFromXML: Failed to parse XML:" << result.description();
         return nullptr;
@@ -321,7 +330,7 @@ static TTrigger* importTriggerNode(pugi::xml_node triggerNode, TTrigger* pParent
         if (nodeName == "name") {
             pT->setName(nodeValue);
         } else if (nodeName == "script") {
-            pT->setScript(nodeValue);
+            pT->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "packageName") {
             pT->mPackageName = nodeValue;
         } else if (nodeName == "triggerType") {
@@ -388,7 +397,7 @@ bool updateTriggerFromXML(TTrigger* pT, const QString& xmlSnapshot)
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "updateTriggerFromXML: Failed to parse XML:" << result.description();
         return false;
@@ -427,7 +436,7 @@ bool updateTriggerFromXML(TTrigger* pT, const QString& xmlSnapshot)
         if (nodeName == "name") {
             pT->setName(nodeValue);
         } else if (nodeName == "script") {
-            pT->setScript(nodeValue);
+            pT->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "packageName") {
             pT->mPackageName = nodeValue;
         } else if (nodeName == "triggerType") {
@@ -489,7 +498,7 @@ TAlias* importAliasFromXML(const QString& xmlSnapshot, TAlias* pParent, Host* ho
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "importAliasFromXML: Failed to parse XML:" << result.description();
         return nullptr;
@@ -546,7 +555,7 @@ static TAlias* importAliasNode(pugi::xml_node aliasNode, TAlias* pParent, Host* 
         if (nodeName == "name") {
             pA->setName(nodeValue);
         } else if (nodeName == "script") {
-            pA->setScript(nodeValue);
+            pA->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "packageName") {
             pA->mPackageName = nodeValue;
         } else if (nodeName == "regex") {
@@ -585,7 +594,7 @@ bool updateAliasFromXML(TAlias* pA, const QString& xmlSnapshot)
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "updateAliasFromXML: Failed to parse XML:" << result.description();
         return false;
@@ -617,7 +626,7 @@ bool updateAliasFromXML(TAlias* pA, const QString& xmlSnapshot)
         if (nodeName == "name") {
             pA->setName(nodeValue);
         } else if (nodeName == "script") {
-            pA->setScript(nodeValue);
+            pA->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "regex") {
             pA->setRegexCode(nodeValue);
         } else if (nodeName == "command") {
@@ -652,7 +661,7 @@ TTimer* importTimerFromXML(const QString& xmlSnapshot, TTimer* pParent, Host* ho
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "importTimerFromXML: Failed to parse XML:" << result.description();
         return nullptr;
@@ -709,7 +718,7 @@ static TTimer* importTimerNode(pugi::xml_node timerNode, TTimer* pParent, Host* 
         if (nodeName == "name") {
             pT->setName(nodeValue);
         } else if (nodeName == "script") {
-            pT->setScript(nodeValue);
+            pT->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "packageName") {
             pT->mPackageName = nodeValue;
         } else if (nodeName == "command") {
@@ -746,7 +755,7 @@ bool updateTimerFromXML(TTimer* pT, const QString& xmlSnapshot)
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "updateTimerFromXML: Failed to parse XML:" << result.description();
         return false;
@@ -778,7 +787,7 @@ bool updateTimerFromXML(TTimer* pT, const QString& xmlSnapshot)
         if (nodeName == "name") {
             pT->setName(nodeValue);
         } else if (nodeName == "script") {
-            pT->setScript(nodeValue);
+            pT->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "command") {
             pT->setCommand(nodeValue);
         } else if (nodeName == "time") {
@@ -812,7 +821,7 @@ TScript* importScriptFromXML(const QString& xmlSnapshot, TScript* pParent, Host*
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "importScriptFromXML: Failed to parse XML:" << result.description();
         return nullptr;
@@ -871,7 +880,7 @@ static TScript* importScriptNode(pugi::xml_node scriptNode, TScript* pParent, Ho
         } else if (nodeName == "packageName") {
             pS->mPackageName = nodeValue;
         } else if (nodeName == "script") {
-            pS->setScript(nodeValue);
+            pS->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "eventHandlerList") {
             for (auto eventNode : node.children("string")) {
                 eventHandlers << QString::fromStdString(eventNode.child_value());
@@ -913,7 +922,7 @@ bool updateScriptFromXML(TScript* pS, const QString& xmlSnapshot)
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "updateScriptFromXML: Failed to parse XML:" << result.description();
         return false;
@@ -945,7 +954,7 @@ bool updateScriptFromXML(TScript* pS, const QString& xmlSnapshot)
         if (nodeName == "name") {
             pS->setName(nodeValue);
         } else if (nodeName == "script") {
-            pS->setScript(nodeValue);
+            pS->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "packageName") {
             pS->mPackageName = nodeValue;
         } else if (nodeName == "eventHandlerList") {
@@ -984,7 +993,7 @@ TKey* importKeyFromXML(const QString& xmlSnapshot, TKey* pParent, Host* host, in
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "importKeyFromXML: Failed to parse XML:" << result.description();
         return nullptr;
@@ -1042,7 +1051,7 @@ static TKey* importKeyNode(pugi::xml_node keyNode, TKey* pParent, Host* host, in
         } else if (nodeName == "packageName") {
             pK->mPackageName = nodeValue;
         } else if (nodeName == "script") {
-            pK->setScript(nodeValue);
+            pK->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "command") {
             pK->setCommand(nodeValue);
         } else if (nodeName == "keyCode") {
@@ -1081,7 +1090,7 @@ bool updateKeyFromXML(TKey* pK, const QString& xmlSnapshot)
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "updateKeyFromXML: Failed to parse XML:" << result.description();
         return false;
@@ -1112,7 +1121,7 @@ bool updateKeyFromXML(TKey* pK, const QString& xmlSnapshot)
         if (nodeName == "name") {
             pK->setName(nodeValue);
         } else if (nodeName == "script") {
-            pK->setScript(nodeValue);
+            pK->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "command") {
             pK->setCommand(nodeValue);
         } else if (nodeName == "keyCode") {
@@ -1149,7 +1158,7 @@ TAction* importActionFromXML(const QString& xmlSnapshot, TAction* pParent, Host*
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "importActionFromXML: Failed to parse XML:" << result.description();
         return nullptr;
@@ -1210,7 +1219,7 @@ static TAction* importActionNode(pugi::xml_node actionNode, TAction* pParent, Ho
         } else if (nodeName == "packageName") {
             pA->mPackageName = nodeValue;
         } else if (nodeName == "script") {
-            pA->setScript(nodeValue);
+            pA->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "css") {
             pA->css = nodeValue;
         } else if (nodeName == "commandButtonUp") {
@@ -1274,7 +1283,7 @@ bool updateActionFromXML(TAction* pA, const QString& xmlSnapshot)
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "updateActionFromXML: Failed to parse XML:" << result.description();
         return false;
@@ -1308,7 +1317,7 @@ bool updateActionFromXML(TAction* pA, const QString& xmlSnapshot)
         if (nodeName == "name") {
             pA->setName(nodeValue);
         } else if (nodeName == "script") {
-            pA->setScript(nodeValue);
+            pA->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "css") {
             pA->css = nodeValue;
         } else if (nodeName == "commandButtonUp") {

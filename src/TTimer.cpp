@@ -75,7 +75,7 @@ TTimer::~TTimer()
 
         if (isTemporary()) {
             if (mScript.isEmpty()) {
-                mpHost->mLuaInterpreter.delete_luafunction(this);
+                mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
             } else {
                 mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
             }
@@ -145,6 +145,14 @@ bool TTimer::setIsActive(bool b)
     return condition1 && condition2;
 }
 
+bool TTimer::stayActive()
+{
+    if (mpQTimer->isActive() && activate() && canBeUnlocked()) {
+        return true;
+    }
+    return setIsActive(true);
+}
+
 
 void TTimer::start()
 {
@@ -182,13 +190,12 @@ bool TTimer::setScript(const QString& script)
 {
     // Switching from a registered anonymous Lua function (set up by tempTimer with a
     // function argument) to a script string: release the old function from the Lua
-    // registry and leave callback mode. Unlike triggers/aliases/keys, TTimer::execute()
-    // keys off mScript rather than the flag, so the new script does run - but without
-    // this the registry entry still leaks, as the destructor would then take its
-    // mScript-based branch and delete the compiled function instead.
+    // registry and leave callback mode. TTimer::execute() picks a temporary timer's
+    // payload by the flag, so it has to be cleared for the new script to run at all,
+    // and the destructor's mScript-based branch would otherwise leak the registry entry.
     if (mRegisteredAnonymousLuaFunction) {
         if (mpHost) {
-            mpHost->mLuaInterpreter.delete_luafunction(this);
+            mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
         }
         mRegisteredAnonymousLuaFunction = false;
     }
@@ -254,9 +261,9 @@ void TTimer::execute()
     }
 
     if (isTemporary()) {
-        if (mScript.isEmpty()) {
-            mpHost->mLuaInterpreter.call_luafunction(this, mName);
-        } else {
+        if (mRegisteredAnonymousLuaFunction) {
+            mpHost->mLuaInterpreter.call_luafunction(mLuaFunctionRef, mName);
+        } else if (!mScript.isEmpty()) {
             mpHost->mLuaInterpreter.compileAndExecuteScript(mScript);
         }
 
@@ -274,9 +281,10 @@ void TTimer::execute()
                 timer->enableTimer(timer->getID());
             }
         }
+        // Not disableTimer(mID): that would also stop the offset children just armed above
         if (isOffsetTimer()) {
-            disableTimer(mID);
             deactivate();
+            mpQTimer->stop();
         }
     }
 
@@ -336,6 +344,28 @@ void TTimer::enableTimer(int id)
     }
 }
 
+// Only for the resume, on a timer the emergency stop disarmed: Tree refuses to activate one
+// whose script does not compile, and leaving it disarmed would outlast fixing the script
+bool TTimer::keepArmedWithBrokenScript()
+{
+    if (!mOK_init || mOK_code) {
+        return false;
+    }
+    // Tree keeps mActive to itself and only sets it for a script that compiled
+    mOK_code = true;
+    Tree<TTimer>::activate();
+    mOK_code = false;
+    if (TDebug::wants(TDebug::Category::Error)) {
+        //: Central Debug Console line on resuming from the emergency stop; %1 is the timer's name, %2 the Lua compile error
+        TDebug(Qt::white,
+               Qt::red,
+               TDebug::Category::Error,
+               mName) << QObject::tr("ERROR: timer \"%1\" cannot run until its script compiles: %2\n").arg(mName, TLuaInterpreter::compileErrorAsPlainText(getError()))
+                >> mpHost;
+    }
+    return true;
+}
+
 void TTimer::disableTimer(int id)
 {
     if (mID == id) {
@@ -343,9 +373,11 @@ void TTimer::disableTimer(int id)
         mpQTimer->stop();
     }
 
+    // Including offset children: one its parent has already armed would still fire,
+    // and deactivate() leaves their shouldBeActive() alone for the parent to re-arm them
     for (auto* timerNode : *mpMyChildrenList) {
         auto* timer = static_cast<TTimer*>(timerNode);
-        if (!timer->isOffsetTimer() && timer->shouldBeActive()) {
+        if (timer->shouldBeActive()) {
             timer->disableTimer(timer->getID());
         }
     }

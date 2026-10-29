@@ -116,7 +116,8 @@ jobs:
         LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)
         export LUA_CPATH
 
-        ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure -j $(nproc)
+        # Twice the cores: most of these tests wait on timers and sockets (#12196: 339s at -j4, 233s at -j8)
+        ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure -j $(( 2 * $(nproc) ))
       env:
         # This runner has Qt's FFmpeg backend and can decode, so TMediaLoopTest must
         # demonstrate every media behaviour rather than skip any of them. Without a floor
@@ -131,6 +132,10 @@ jobs:
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        # Off by default; the flood specs pend without it
+        MUDLET_MATCH_THREADS: 2
+        # Its statistics sample would take lines the flood specs compare off the pool
+        MUDLET_MATCH_SAMPLE_EVERY: 0
         MUDLET_TEST_MODE: 1
         MUDLET_TEST_REQUIRE_TTS_MOCK: 1
         MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1

@@ -146,6 +146,8 @@ private:
         const char* name;
         // Added to BOTH the x and y of the start room, so the target of
         // {"near", 10} is 10 map units away on each axis, not 10 in total.
+        // Each axis is capped at the level's edge, so on a small level a long
+        // scenario walks to the edge instead of finding no room.
         int offset;
     };
 
@@ -299,10 +301,12 @@ private slots:
         }
         emitMetric("bench_span_x", static_cast<qint64>(maxX - minX));
         emitMetric("bench_span_y", static_cast<qint64>(maxY - minY));
+        // Every room on the level lies within this Chebyshev distance of any point inside its bounds.
+        const int searchRadius = std::max(maxX - minX, maxY - minY);
 
         const int centreX = (minX + maxX) / 2;
         const int centreY = (minY + maxY) / 2;
-        const int startId = nearestTo(byCoordinate, centreX, centreY, maxX - minX);
+        const int startId = nearestTo(byCoordinate, centreX, centreY, searchRadius);
         QVERIFY2(startId > 0, "no room found near the middle of the chosen Z level");
         emitMetric("bench_start_room", static_cast<qint64>(startId));
 
@@ -311,6 +315,8 @@ private slots:
             QString name;
             int from;
             int to;
+            // A capped target sits on the level's edge, so it may be the same room another scenario measured.
+            bool clamped = false;
         };
         QList<Walk> walks;
         if (const QString routes = qEnvironmentVariable("MUDLET_BENCH_ROUTES"); routes == qsl("none")) {
@@ -326,13 +332,15 @@ private slots:
             QVERIFY2(!walks.isEmpty(), "MUDLET_BENCH_ROUTES names no routes");
         } else {
             for (const Scenario& scenario : kScenarios) {
-                const int targetId =
-                        (scenario.offset == 0) ? nearestTo(byCoordinate, maxX, maxY, maxX - minX) : nearestTo(byCoordinate, centreX + scenario.offset, centreY + scenario.offset, maxX - minX);
+                const int offsetX = std::min(scenario.offset, maxX - centreX);
+                const int offsetY = std::min(scenario.offset, maxY - centreY);
+                const int targetId = (scenario.offset == 0) ? nearestTo(byCoordinate, maxX, maxY, searchRadius) : nearestTo(byCoordinate, centreX + offsetX, centreY + offsetY, searchRadius);
                 QVERIFY2(targetId > 0, qPrintable(qsl("scenario \"%1\" found no target room").arg(QString::fromUtf8(scenario.name))));
                 if (targetId != startId) {
-                    walks.append({QString::fromUtf8(scenario.name), startId, targetId});
+                    walks.append({QString::fromUtf8(scenario.name), startId, targetId, offsetX != scenario.offset || offsetY != scenario.offset});
                 }
             }
+            QVERIFY2(!walks.isEmpty(), "every scenario's target was the start room, so the chosen Z level has nothing to walk to");
         }
 
         for (const Walk& walk : walks) {
@@ -363,6 +371,9 @@ private slots:
             // length through different rooms would pass this.
             emitMetric(qsl("%1_steps").arg(prefix), static_cast<qint64>(steps));
             emitMetric(qsl("%1_target_room").arg(prefix), static_cast<qint64>(walk.to));
+            if (walk.clamped) {
+                emitMetric(qsl("%1_clamped").arg(prefix), static_cast<qint64>(1));
+            }
         }
 
         // Where the fixed toll used to go. findPath() allocated two vertex-sized
@@ -379,7 +390,7 @@ private slots:
         // the end-to-end figure compare path_adjacent_ms against a build made
         // without this change.
         {
-            const int targetId = nearestTo(byCoordinate, centreX + 1, centreY, maxX - minX);
+            const int targetId = nearestTo(byCoordinate, centreX + 1, centreY, searchRadius);
             const auto vertexCount = static_cast<std::size_t>(boost::num_vertices(pMap->g));
             const TMap::vertex start = pMap->roomidToIndex.value(startId);
             const TMap::vertex goal = pMap->roomidToIndex.value(targetId);
@@ -394,7 +405,7 @@ private slots:
                 try {
                     boost::astar_search(pMap->g,
                                         start,
-                                        distance_heuristic<TMap::mygraph_t, cost, std::vector<location>>(pMap->locations, goal),
+                                        distance_heuristic<TMap::mygraph_t, cost, std::vector<location>>(pMap->locations, goal, pMap->mHeuristicScale),
                                         boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(astar_goal_visitor<TMap::vertex>(goal)));
                 } catch (const found_goal&) {
                 }
@@ -418,7 +429,7 @@ private slots:
                 try {
                     boost::astar_search(pMap->g,
                                         start,
-                                        distance_heuristic<TMap::mygraph_t, cost, std::vector<location>>(pMap->locations, goal),
+                                        distance_heuristic<TMap::mygraph_t, cost, std::vector<location>>(pMap->locations, goal, pMap->mHeuristicScale),
                                         boost::predecessor_map(&predecessor[0]).distance_map(&distance[0]).rank_map(&rank[0]).color_map(&colour[0]).visitor(astar_goal_visitor<TMap::vertex>(goal)));
                 } catch (const found_goal&) {
                 }
@@ -452,12 +463,12 @@ private slots:
                 }
                 touched.clear();
                 put(distanceMap, start, cost(0));
-                put(rankMap, start, distance_heuristic<TMap::mygraph_t, cost, std::vector<location>>(pMap->locations, goal)(start));
+                put(rankMap, start, distance_heuristic<TMap::mygraph_t, cost, std::vector<location>>(pMap->locations, goal, pMap->mHeuristicScale)(start));
                 try {
                     boost::astar_search_no_init(
                             pMap->g,
                             start,
-                            distance_heuristic<TMap::mygraph_t, cost, std::vector<location>>(pMap->locations, goal),
+                            distance_heuristic<TMap::mygraph_t, cost, std::vector<location>>(pMap->locations, goal, pMap->mHeuristicScale),
                             boost::predecessor_map(predecessorMap).distance_map(distanceMap).rank_map(rankMap).color_map(colourMap).visitor(astar_goal_visitor<TMap::vertex>(goal)));
                 } catch (const found_goal&) {
                 }
@@ -511,39 +522,26 @@ private:
         return bestZ;
     }
 
-    // The room at (x, y) if the level holds one, else one found by an outward
-    // ring search, so a level with holes in it still yields a pair. The rings
-    // are square, so this is nearest by Chebyshev distance, and ties within a
-    // ring go to the lowest room id.
+    // The room nearest (x, y) by Chebyshev distance, no further than maxRadius,
+    // so a level with holes in it still yields a pair; ties go to the lowest
+    // room id. A scan of the rooms rather than an outward search of the grid,
+    // which costs the cube of the gap on a sparse level.
     static int nearestTo(const QHash<QPair<int, int>, int>& byCoordinate, int x, int y, int maxRadius)
     {
-        if (const auto it = byCoordinate.constFind({x, y}); it != byCoordinate.constEnd()) {
-            return it.value();
-        }
-        for (int radius = 1; radius <= maxRadius; ++radius) {
-            int best = 0;
-            for (int dx = -radius; dx <= radius; ++dx) {
-                for (int dy = -radius; dy <= radius; ++dy) {
-                    if (std::max(std::abs(dx), std::abs(dy)) != radius) {
-                        continue;
-                    }
-                    const auto it = byCoordinate.constFind({x + dx, y + dy});
-                    if (it != byCoordinate.constEnd() && (best == 0 || it.value() < best)) {
-                        best = it.value();
-                    }
-                }
-            }
-            if (best > 0) {
-                return best;
+        int best = 0;
+        // 64-bit because maxRadius is INT_MAX on a level whose span is the whole int range.
+        qint64 bestDistance = static_cast<qint64>(maxRadius) + 1;
+        for (const auto& [coordinate, roomId] : byCoordinate.asKeyValueRange()) {
+            const int distance = std::max(std::abs(coordinate.first - x), std::abs(coordinate.second - y));
+            if (distance < bestDistance || (distance == bestDistance && roomId < best)) {
+                best = roomId;
+                bestDistance = distance;
             }
         }
-        return 0;
+        return best;
     }
 
-    void deleteProfileDirectory()
-    {
-        TestProfile::removeProfileDirectory(mHostname);
-    }
+    void deleteProfileDirectory() { TestProfile::removeProfileDirectory(mHostname); }
 };
 
 static void initializeQRCResources()

@@ -203,6 +203,17 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_MEMORY_TRACKING
                         OPTION_VARIABLE USE_MEMORY_TRACKING
                         READABLE_NAME "memory tracking"
                         DEFAULT OFF)
+# Off by default on a Linux without Debian's multiarch layout, whose Lua modules
+# live where 3rdparty/lua51 does not look
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT CMAKE_LIBRARY_ARCHITECTURE)
+  set(BUNDLED_LUA_DEFAULT OFF)
+else()
+  set(BUNDLED_LUA_DEFAULT ON)
+endif()
+include_optional_module(ENVIRONMENT_VARIABLE WITH_BUNDLED_LUA
+                        OPTION_VARIABLE USE_BUNDLED_LUA
+                        READABLE_NAME "bundled Lua 5.1"
+                        DEFAULT ${BUNDLED_LUA_DEFAULT})
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
@@ -224,9 +235,9 @@ git_submodule_init(
   CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
-  git_submodule_init(
-    CHECK_FILE "3rdparty/qt-tags-widget/CMakeLists.txt" SUBMODULE_PATH
-    "3rdparty/qt-tags-widget" READABLE_NAME "qt-tags-widget widget")
+git_submodule_init(
+  CHECK_FILE "3rdparty/qt-tags-widget/src/qtagedit.cpp" SUBMODULE_PATH
+  "3rdparty/qt-tags-widget" READABLE_NAME "qt-tags-widget widget")
 
 # TODO: On macOS, we need to build qtkeychain from source because Homebrew's
 # qtkeychain package is built against Homebrew's Qt, which is incompatible with
@@ -339,10 +350,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_compile_options(edbee-lib PRIVATE -Wno-sfinae-incomplete)
 endif()
 add_subdirectory(3rdparty/communi)
-# Upstream ships a standalone library, so add_subdirectory() would adopt its install() rules and
-# put its dev files into every package. EXCLUDE_FROM_ALL keeps them out (observed, not documented
-# CMake behaviour, so the packaging scripts check the staged tree); mudlet_app still links it.
-add_subdirectory(3rdparty/qt-tags-widget EXCLUDE_FROM_ALL)
+if(USE_BUNDLED_LUA)
+  add_subdirectory(3rdparty/lua51)
+endif()
 add_subdirectory(translations/translated)
 add_subdirectory(src)
 

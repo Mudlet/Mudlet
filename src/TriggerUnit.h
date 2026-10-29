@@ -99,6 +99,21 @@ public:
     // Both paths build the same index, so this is how a test checks the incremental path keeps full
     // rebuilds flat.
     quint64 prescanRebuildCount() const { return mPrescanRebuilds; }
+    // The whole-tree index - see TTrigger::skippableForLine() and docs/platform-builds.md
+    enum class TreeIndexMode { Off, On, Verify };
+    static TreeIndexMode treeIndexMode() { return smTreeIndexMode; }
+    static bool treeIndexVerifying() { return smTreeIndexMode == TreeIndexMode::Verify; }
+    // Call on any change to a trigger's place below a root or to what its treeIndexGrams() answers:
+    // the trigger is visited until the next rebuild files it again
+    void unfileTreeNode(TTrigger* pT);
+    // Call on any change to which children pFrom has, or to how one of them is filed: it and every
+    // trigger above it walk their children down the list until the next rebuild
+    void invalidateChildWalks(TTrigger* pFrom);
+    // A trigger below a root started acting on lines it does not match, so every pass has to enter it
+    // while it does
+    void noteOpenTreeNode(TTrigger* pT);
+    // Triggers the last rebuild filed, so a spec can tell the index is armed before it relies on it
+    int treeIndexFiledCount() const { return static_cast<int>(mTreeNodes.size()); }
     void doCleanup();
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
@@ -150,6 +165,9 @@ public:
 
     QList<TTrigger*> uninstallList;
     bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
+    // Killed or uninstalled, itself or through an ancestor, but still in the lookup tables until doCleanup(),
+    // which an idle profile may not run for up to a minute
+    bool pendingDeletion(TTrigger* pItem) const;
 
 private:
     TriggerUnit() = default;
@@ -164,6 +182,15 @@ private:
     void startOrExtendSameLineChain(TTrigger* pT);
     void collectPrescanTasks(TTrigger* pT);
     void rebuildPrescanTasksIfStale();
+    bool prescanPays() const;
+    static TreeIndexMode readTreeIndexMode();
+    bool fileTreeNodes(TTrigger* pT, std::vector<quint64>& grams);
+    void dropChildWalks(TTrigger* pT);
+    void markTreeNode(TTrigger* pT, quint32 stamp);
+    void forgetOpenTreeNode(TTrigger* pT);
+    void clearTreeNodes();
+    void rebuildTreeIndex();
+    void stampTreeCandidates(const QString& line);
     void stopSameLineCreationLoop(const int chainId);
     void markRootNodeAppended(TTrigger* pT);
     void markRootNodeRemoved(TTrigger* pT);
@@ -183,9 +210,11 @@ private:
     // Handed to the match pool as one list per line; see collectPrescanTasks()
     std::vector<TTrigger*> mPrescanTasks;
     quint64 mPrescanTasksGeneration = std::numeric_limits<quint64>::max();
-    // Estimates the work the pool could share out on this line. Not the count of regex triggers: most
-    // may be disabled or settled before their regex is reached.
+    // Estimate the work the pool could share out on this line, and how much of it would be a match the
+    // pool cannot save. Not the count of regex triggers: most may be disabled or settled before their
+    // regex is reached.
     int mRegexSearchesOnTheLastLine = 0;
+    int mRegexMatchesOnTheLastLine = 0;
     QMap<int, TTrigger*> mTriggerMap;
     std::list<TTrigger*> mTriggerRootNodeList;
     // Where each root node sits in mTriggerRootNodeList: std::list::remove() walks the whole list,
@@ -215,6 +244,15 @@ private:
     std::vector<int> mCandidateScratch;
     std::vector<int> mCandidates;
     quint64 mPrescanRebuilds = 0;
+    static TreeIndexMode smTreeIndexMode;
+    // Every filed trigger, in walk order, at the last rebuild; a slot is nulled when its trigger goes:
+    // the next rebuild and any nested pass still read this list
+    std::vector<TTrigger*> mTreeNodes;
+    std::vector<int> mTreeHits;
+    // Triggers below a root that noteOpenTreeNode() was told of, until a line finds them shut again
+    std::vector<TTrigger*> mOpenTreeNodes;
+    TTriggerPrescan mTreeIndex;
+    bool mTreeIndexStale = true;
     quint32 mUnfilterableEpoch = 0;
     // Moves whenever a trigger changes in a way its TRootTriggerFilter copies,
     // which a pass that has pinned those copies has no other way to hear of
@@ -228,6 +266,8 @@ private:
     int statsPatternsActive = 0;
     // Counter for nested processing; cleanup deferred until 0
     int mProcessingDepth = 0;
+    // Set while a top-level line is matched without the pool as a sample, so the lines it feeds are too
+    bool mSamplingLine = false;
     bool mRunawayFeedStopped = false;
     // Decides whether summarising the next line is worth it; see TBigramFilter
     int mSubstringQuestionsOnTheLastLine = 0;

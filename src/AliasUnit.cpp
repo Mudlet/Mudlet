@@ -410,6 +410,19 @@ std::vector<int> AliasUnit::findItems(const QString& name, const bool exactMatch
     return ids;
 }
 
+bool AliasUnit::pendingDeletion(TAlias* pItem) const
+{
+    if (!hasPendingDeletes()) {
+        return false;
+    }
+    for (auto* pAncestor = pItem; pAncestor; pAncestor = pAncestor->getParent()) {
+        if (mCleanupSet.contains(pAncestor) || uninstallList.contains(pAncestor)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool AliasUnit::enableAlias(const QString& name)
 {
     bool found = false;
@@ -427,7 +440,9 @@ bool AliasUnit::enableAlias(const QString& name)
         }
         pT->setIsActive(true);
         found = true;
-        emit mpHost->signal_aliasToggled(pT->getID());
+        if (!pT->isTemporary() || pT->getParent()) {
+            emit mpHost->signal_aliasToggled(pT->getID());
+        }
     }
     return found;
 }
@@ -441,7 +456,9 @@ bool AliasUnit::disableAlias(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
-        emit mpHost->signal_aliasToggled(it.value()->getID());
+        if (!it.value()->isTemporary() || it.value()->getParent()) {
+            emit mpHost->signal_aliasToggled(it.value()->getID());
+        }
     }
     return found;
 }

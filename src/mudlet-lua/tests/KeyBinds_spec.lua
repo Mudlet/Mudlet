@@ -272,6 +272,45 @@ describe("Tests keybind-related functions", function()
         "disabling the outer group should not have touched the group inside it")
     end)
 
+    it("gives a group the unknown key code rather than an out-of-range one", function()
+      local groupName = freshNames("SpecPermKeyGroupCode", "")
+      finally(function() disableKey(groupName) end)
+
+      assert.is_true(permGroup(groupName, "key"), "could not create the key group")
+      local keyCode = getKeyCode(groupName)
+      assert.are.equal(mudlet.key.unknown, keyCode)
+    end)
+
+    it("refuses a key code outside Qt's key range", function()
+      for _, keyCode in ipairs({-2, mudlet.key.unknown + 1, 0x7fffffff}) do
+        local id, message = tempKey(mudlet.keymodifier.None, keyCode, [[echo("x")]])
+        assert.is_nil(id, "tempKey took key code " .. keyCode)
+        assert.is_string(message, "tempKey gave no reason for refusing key code " .. keyCode)
+
+        local keyName = freshNames("SpecPermKeyBadCode", "")
+        local ok, permMessage = pcall(permKey, keyName, "", mudlet.keymodifier.None, keyCode, "")
+        assert.is_false(ok, "permKey took key code " .. keyCode)
+        assert.truthy(tostring(permMessage):find("is not a key code", 1, true), "permKey raised the wrong error for key code " .. keyCode .. ": " .. tostring(permMessage))
+        assert.are.equal(0, exists(keyName, "keybind"), "permKey made a key for key code " .. keyCode)
+      end
+    end)
+
+    it("keeps a key code at either end of Qt's key range", function()
+      -- busted keeps only the last finally(), so one callback kills every key
+      local ids = {}
+      finally(function()
+        for _, id in ipairs(ids) do
+          killKey(id)
+        end
+      end)
+      for _, keyCode in ipairs({0, mudlet.key.A, mudlet.key.unknown}) do
+        local id = tempKey(mudlet.keymodifier.None, keyCode, [[echo("x")]])
+        assert.is_number(id, "tempKey refused key code " .. keyCode)
+        ids[#ids + 1] = id
+        assert.are.equal(keyCode, (getKeyCode(id)), "key code " .. keyCode .. " did not read back unchanged")
+      end
+    end)
+
   end)
 
   describe("enable, disable, kill, isActive and exists for keys", function()
@@ -290,11 +329,14 @@ describe("Tests keybind-related functions", function()
     end)
 
     it("killKey returns false the second time, as the key is already dead", function()
+      -- earlier specs' killed items would be freed by the flush below too, so free them first
+      feedTriggers("\nspec_key_kill_settle\n")
       local id = tempKey(mudlet.key.F11, [[echo("x")]])
       assert.is_true(killKey(id), "killing a live temporary key should report success")
-      -- the key is still present here: only the deferred cleanup frees it, so the
-      -- second kill really is being told about a corpse it can find
-      assert.are.equal(1, exists(id, "keybind"), "the killed key is still present until cleanup runs")
+      -- only the deferred cleanup frees it, so the second kill is told about a
+      -- corpse it can still find: exists() does not count it, but the profile still holds it
+      local held = getProfileStats().keys.temp
+      assert.are.equal(0, exists(id, "keybind"), "a killed key waiting for cleanup should not be counted")
       assert.are.equal(0, isActive(id, "keybind"), "a killed key is no longer active")
       assert.is_false(killKey(id),
         "killing an already killed key achieves nothing and has to say so")
@@ -303,8 +345,18 @@ describe("Tests keybind-related functions", function()
       -- synthesised headlessly, so there is no in-callback double kill to pin here -
       -- KeyUnit's depth and cleanup machinery matches AliasUnit's, whose spec has one
       feedTriggers("\nspec_key_kill_flush\n")
+      assert.are.equal(held - 1, getProfileStats().keys.temp, "the cleanup should have freed the killed key")
       assert.are.equal(0, exists(id, "keybind"), "the key should be gone after kill and cleanup")
       assert.is_false(killKey(id), "a freed key cannot be killed either")
+    end)
+
+    it("getKeyCode does not report a killed key waiting to be freed", function()
+      local id = tempKey(mudlet.key.F10, [[ ]])
+      assert.is_not_nil(getKeyCode(id))
+      assert.is_true(killKey(id))
+      local code, err = getKeyCode(id)
+      assert.is_nil(code, "a killed key has no key code to report")
+      assert.is_string(err)
     end)
 
     it("killKey returns false for a permanent key (they cannot be killed)", function()
@@ -391,6 +443,85 @@ describe("Tests keybind-related functions", function()
       assert.is_true(killKey(tempId), "killKey must scan past the permanent key")
     end)
 
+  end)
+
+end)
+
+-- A profile or package written by hand, or by an older Mudlet, can hold any
+-- number as a key code, and readKey() takes it straight from the XML
+describe("key codes read from a package", function()
+  local packageName = "mudlet-spec-keycodes"
+  local packageFile = getMudletHomeDir() .. "/" .. packageName .. ".xml"
+
+  local function waitUntil(condition, timeoutMilliseconds)
+    local waited = 0
+    while waited < timeoutMilliseconds do
+      if condition() then
+        return true
+      end
+      pumpEvents(50)
+      waited = waited + 50
+    end
+    return condition() and true or false
+  end
+
+  local function packageIsInstalled()
+    return table.contains(getPackages(), packageName)
+  end
+
+  -- installPackage() postpones even the empty path while a profile save runs
+  local function waitForProfileSaveToPass()
+    return waitUntil(function() return installPackage("") == nil end, 5000)
+  end
+
+  setup(function()
+    local handle = assert(io.open(packageFile, "wb"))
+    handle:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+  <KeyPackage>
+    <KeyGroup isActive="yes" isFolder="yes">
+      <name>SpecPackageKeyGroup</name><packageName></packageName><script></script><command></command>
+      <keyCode>-1</keyCode><keyModifier>0</keyModifier>
+      <Key isActive="yes" isFolder="no">
+        <name>SpecPackageKeyInGroup</name><packageName></packageName><script></script><command></command>
+        <keyCode>16777274</keyCode><keyModifier>0</keyModifier>
+      </Key>
+    </KeyGroup>
+    <Key isActive="yes" isFolder="no">
+      <name>SpecPackageKeyTooBig</name><packageName></packageName><script></script><command></command>
+      <keyCode>99999999</keyCode><keyModifier>0</keyModifier>
+    </Key>
+  </KeyPackage>
+</MudletPackage>
+]])
+    handle:close()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was already running, so this install would be postponed")
+    assert.is_true(installPackage(packageFile), "could not install " .. packageFile)
+    assert.is_true(waitUntil(packageIsInstalled, 5000), packageName .. " did not turn up in getPackages()")
+  end)
+
+  teardown(function()
+    if packageIsInstalled() then
+      assert.is_true(waitUntil(function() return uninstallPackage(packageName) == true end, 5000),
+        packageName .. " could not be uninstalled")
+    end
+    -- the save the uninstall queues must finish before Mudlet shuts down
+    pumpEvents(300)
+    assert.is_true(waitForProfileSaveToPass(), "the profile save the uninstall queued never finished")
+    os.remove(packageFile)
+  end)
+
+  it("reads a group's -1 as the unknown key code", function()
+    assert.are.equal(mudlet.key.unknown, (getKeyCode("SpecPackageKeyGroup")))
+  end)
+
+  it("reads a key code above Qt's key range as the unknown key code", function()
+    assert.are.equal(mudlet.key.unknown, (getKeyCode("SpecPackageKeyTooBig")))
+  end)
+
+  it("keeps a key code inside Qt's key range", function()
+    assert.are.equal(mudlet.key.F11, (getKeyCode("SpecPackageKeyInGroup")))
   end)
 
 end)

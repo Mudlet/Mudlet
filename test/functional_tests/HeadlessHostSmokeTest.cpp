@@ -315,6 +315,10 @@ local ok, err = pcall(function()
   assert(setLabelCursor("stateLabel", 2) == true, "setLabelCursor did not answer true")
   local badShape, badShapeMsg = setLabelCursor("stateLabel", 99)
   assert(badShape == nil and badShapeMsg:find("cursor shape"), "an unknown cursor shape was not refused")
+  local badName, badNameMsg = setLabelCursor("stateLabel", "NoSuchCursor")
+  assert(badName == nil and badNameMsg:find("cursor shape 'NoSuchCursor' not found", 1, true) == 1 and badNameMsg:find("wiki.mudlet.org/w/CursorShapes", 1, true), "an unknown cursor name was not refused")
+  local noLabel, noLabelMsg = setLabelCursor("noSuchStateLabel", "NoSuchCursor")
+  assert(noLabel == nil and noLabelMsg == "label name 'noSuchStateLabel' not found", "a missing label was not refused before an unknown cursor name")
   local missing, missingMsg = setLabelStyleSheet("noSuchStateLabel", "color: red;")
   assert(missing == nil and missingMsg:find("not found"), "styling a missing label did not answer nil and a message")
   assert(setLabelClickCallback("stateLabel", function() end) == true, "setLabelClickCallback did not answer true")
@@ -418,7 +422,8 @@ local ok, err = pcall(function()
   end
   assert(setFont("gridMini", family) == true, "setFont did not answer true for the miniconsole")
   assert(setFont("gridMini", family) == true, "setFont did not answer true for an unchanged family")
-  assert(joined(getUserWindowSize("gridMini")) == gridMainSize, "a miniconsole has a user window size of its own")
+  local miniSize, miniSizeMsg = getUserWindowSize("gridMini")
+  assert(miniSize == nil and type(miniSizeMsg) == "string", "getUserWindowSize did not refuse the miniconsole with a message")
   local missing, missingMsg = setFontSize("noSuchGridWindow", 10)
   assert(missing == nil and type(missingMsg) == "string", "setFontSize on a missing window did not answer nil and a message")
 
@@ -605,12 +610,12 @@ headlessContract = ok and "ok" or tostring(err)
         QCOMPARE(luaGlobalString(host, "contractGrid"), qsl("%1,%2").arg(host->mScreenWidth).arg(host->mScreenHeight));
         QCOMPARE(luaGlobalString(host, "contractTimeStamps"), qsl("false"));
         // Taken from the same Lua run in the GUI self-test profile: what a real view answers for a name it
-        // has no window for, where a few calls have always answered nothing or false rather than nil and a message
+        // has no window for, where showWindow answers false rather than nil and a message
         const QStringList missingAnswers{qsl("echo=[2]nil:msg"),
-                                         qsl("moveWindow=[0]"),
-                                         qsl("resizeWindow=[0]"),
+                                         qsl("moveWindow=[2]nil:msg"),
+                                         qsl("resizeWindow=[2]nil:msg"),
                                          qsl("showWindow=[1]false"),
-                                         qsl("hideWindow=[0]"),
+                                         qsl("hideWindow=[2]nil:msg"),
                                          qsl("windowVisible=[2]nil:msg"),
                                          qsl("windowType=[2]nil:msg"),
                                          qsl("getWindowGeometry=[2]nil:msg"),
@@ -619,8 +624,8 @@ headlessContract = ok and "ok" or tostring(err)
                                          qsl("getFont=[2]nil:msg"),
                                          qsl("getFontSize=[2]nil:msg"),
                                          qsl("setFontSize=[2]nil:msg"),
-                                         qsl("calcFontSize=[1]nil"),
-                                         qsl("clearWindow=[0]"),
+                                         qsl("calcFontSize=[2]nil:msg"),
+                                         qsl("clearWindow=[2]nil:msg"),
                                          qsl("getLineCount=[2]nil:msg"),
                                          qsl("setBackgroundColor=[2]nil:msg"),
                                          qsl("getBackgroundColor=[2]nil:msg"),
@@ -711,7 +716,7 @@ headlessProfileSheet = ok and "ok" or tostring(err)
                                   qsl("sheetC=[1]QWidget { color: rgb(1,2,3); }"),
                                   qsl("ownA=[1]true"),
                                   qsl("sheetA=[1]color: green;"),
-                                  qsl("closeB=[0]"),
+                                  qsl("closeB=[1]true"),
                                   qsl("set=[1]true"),
                                   qsl("sheetB=[1]QWidget { color: red; }"),
                                   qsl("reopenB=[1]true"),
@@ -919,14 +924,14 @@ headlessMovie = ok and "ok" or tostring(err)
                                   qsl("pauseScaled=[1]true"),
                                   qsl("frame1=[1]true"),
                                   qsl("scaledFrame:hint=100x20,text=,gifs=1/0"),
-                                  qsl("resize=[0]"),
+                                  qsl("resize=[1]true"),
                                   qsl("frame2=[1]true"),
                                   qsl("resizedFrame:hint=200x40,text=,gifs=1/0"),
                                   qsl("setFollowed=[1]true"),
                                   qsl("followed:hint=200x40,text=,gifs=1/1"),
                                   qsl("unscale=[1]true"),
                                   qsl("scaleText=raised"),
-                                  qsl("resize=[0]"),
+                                  qsl("resize=[1]true"),
                                   qsl("frame0=[1]true"),
                                   qsl("unscaledFrame:hint=200x40,text=,gifs=1/1"),
                                   qsl("start=[1]true"),
@@ -948,11 +953,11 @@ headlessMovie = ok and "ok" or tostring(err)
                                   qsl("sheet:hint=210x50,text=,gifs=2/2"),
                                   qsl("move=[1]true"),
                                   qsl("startMoved=[1]true"),
-                                  qsl("hide=[0]"),
+                                  qsl("hide=[1]true"),
                                   qsl("pauseHidden=[1]true"),
                                   qsl("hidden:hint=210x50,text=,gifs=2/1"),
                                   qsl("scaleHidden=[1]true"),
-                                  qsl("resizeHidden=[0]"),
+                                  qsl("resizeHidden=[1]true"),
                                   qsl("setHidden=[1]true"),
                                   qsl("resizedHidden:hint=60x20,text=,gifs=2/2"),
                                   qsl("show=[1]true"),
@@ -1050,6 +1055,12 @@ local ok, err = pcall(function()
   step("notImage", setBackgroundImage, "bgA", fake)
   step("badSvg", setBackgroundImage, "bgA", bad)
   state("kept", "bgA")
+  step("empty", setBackgroundImage, "bgA", "")
+  state("empty", "bgA")
+  step("emptyAgain", setBackgroundImage, "bgA", "")
+  step("echoText", echo, "bgA", "words")
+  step("emptyOnText", setBackgroundImage, "bgA", "")
+  state("emptyOnText", "bgA")
   step("mode3", setBackgroundImage, "bgA", still, 3)
   step("mode4", setBackgroundImage, "bgA", "background-color: red;", 4)
   step("mode5", setBackgroundImage, "bgA", still, 5)
@@ -1074,6 +1085,9 @@ local ok, err = pcall(function()
   step("startMovie", startMovie, "bgA")
   step("setMovieAgain", setMovie, "bgA", gif)
   state("movieAgain", "bgA")
+  step("emptyOnMovie", setBackgroundImage, "bgA", "")
+  state("emptyOnMovie", "bgA")
+  step("setMovieAgain", setMovie, "bgA", gif)
   step("resetMovie", resetBackgroundImage, "bgA")
   state("resetMovie", "bgA")
   step("sized", setBackgroundImage, "bgA", sized)
@@ -1106,6 +1120,9 @@ local ok, err = pcall(function()
   step("sized", setBackgroundImage, "bgA", sized)
   step("resetSvg", resetBackgroundImage, "bgA")
   state("resetSvg", "bgA")
+  step("sized", setBackgroundImage, "bgA", sized)
+  step("emptyOnSvg", setBackgroundImage, "bgA", "")
+  state("emptyOnSvg", "bgA")
   step("sized", setBackgroundImage, "bgA", sized)
   step("still", setBackgroundImage, "bgA", still)
   step("echoText", echo, "bgA", "words")
@@ -1186,6 +1203,12 @@ headlessBackground = ok and "ok" or tostring(err)
                                   qsl("notImage=[2]nil:console or label 'bgA' not found, or '<dir>/fake.gif' could not be loaded as an image"),
                                   qsl("badSvg=[2]nil:console or label 'bgA' not found, or '<dir>/bad.svg' could not be loaded as an image"),
                                   qsl("kept:hint=24x10,text=,movie=false,gifs=0/0"),
+                                  qsl("empty=[1]true"),
+                                  qsl("empty:hint=twin,text=,movie=false,gifs=0/0"),
+                                  qsl("emptyAgain=[1]true"),
+                                  qsl("echoText=[1]true"),
+                                  qsl("emptyOnText=[1]true"),
+                                  qsl("emptyOnText:hint=twin,text=,movie=false,gifs=0/0"),
                                   qsl("mode3=[1]true"),
                                   qsl("mode4=[2]nil:console or label 'bgA' not found, or 'background-color: red;' could not be loaded as an image"),
                                   qsl("mode5=[2]nil:mode 'cover' is not supported for the main display - pass true as the 4th argument to apply it to the full window background instead"),
@@ -1210,6 +1233,9 @@ headlessBackground = ok and "ok" or tostring(err)
                                   qsl("startMovie=[2]nil:no movie found at label 'bgA'"),
                                   qsl("setMovieAgain=[1]true"),
                                   qsl("movieAgain:hint=40x16,text=,movie=true,gifs=1/1"),
+                                  qsl("emptyOnMovie=[1]true"),
+                                  qsl("emptyOnMovie:hint=twin,text=,movie=false,gifs=1/0"),
+                                  qsl("setMovieAgain=[1]true"),
                                   qsl("resetMovie=[1]true"),
                                   qsl("resetMovie:hint=twin,text=,movie=false,gifs=1/0"),
                                   qsl("sized=[1]true"),
@@ -1242,6 +1268,9 @@ headlessBackground = ok and "ok" or tostring(err)
                                   qsl("sized=[1]true"),
                                   qsl("resetSvg=[1]true"),
                                   qsl("resetSvg:hint=twin,text=,movie=false,gifs=1/0"),
+                                  qsl("sized=[1]true"),
+                                  qsl("emptyOnSvg=[1]true"),
+                                  qsl("emptyOnSvg:hint=twin,text=,movie=false,gifs=1/0"),
                                   qsl("sized=[1]true"),
                                   qsl("still=[1]true"),
                                   qsl("echoText=[1]true"),
@@ -1286,7 +1315,7 @@ headlessBackground = ok and "ok" or tostring(err)
                                   qsl("miniReset=[1]true"),
                                   qsl("window=[1]true"),
                                   qsl("windowReset=[1]true"),
-                                  qsl("closeWindow=[0]"),
+                                  qsl("closeWindow=[1]true"),
                                   qsl("closedWindow=[1]true"),
                                   qsl("closedWindowReset=[1]true"),
                                   qsl("buffer=[1]true"),
@@ -1302,6 +1331,34 @@ headlessBackground = ok and "ok" or tostring(err)
                                   qsl("gone:gifs=0/0")};
         QCOMPARE(luaGlobalString(host, "headlessBackgroundAnswers"), answers.join(QLatin1Char('\n')));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Setting the background images created a widget.");
+    }
+
+    // The answers are those GeyserLabel_spec.lua gets in the GUI self-test profile
+    void test_headlessResetTakesStyleSheetImage()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Sheet-Image");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+local answers = {}
+createLabel("sheetImage", 0, 0, 40, 20, 1)
+for _, sheet in ipairs({
+  "border: 1px solid red; background-image: url(data:image/png;base64,AAAA); color: blue;",
+  "QLabel{color: red;} QLabel::hover{background-image: url(hover.png);}",
+  "Background-Image: url(:/icons/mudlet.png); color: blue;",
+}) do
+  setLabelStyleSheet("sheetImage", sheet)
+  answers[#answers + 1] = tostring(resetBackgroundImage("sheetImage")) .. ":" .. getLabelStyleSheet("sheetImage")
+end
+headlessSheetImageAnswers = table.concat(answers, "\n")
+)lua"));
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        const QStringList answers{qsl("true:border: 1px solid red;  color: blue;"), qsl("true:QLabel{color: red;} QLabel::hover{background-image: url(hover.png);}"), qsl("true: color: blue;")};
+        QCOMPARE(luaGlobalString(host, "headlessSheetImageAnswers"), answers.join(QLatin1Char('\n')));
     }
 
     // The answers are those of the same Lua run in the GUI self-test profile
@@ -1406,13 +1463,13 @@ headlessRaise = ok and "ok" or tostring(err)
                                   qsl("noArgsLower=[1]false"),
                                   qsl("tableRaise=raised:raiseWindow: bad argument #1 type (window name as string expected, got table)!"),
                                   qsl("tableLower=raised:lowerWindow: bad argument #1 type (window name as string expected, got table)!"),
-                                  qsl("hide=[0]"),
+                                  qsl("hide=[1]true"),
                                   qsl("hiddenLabelRaise=[1]true"),
                                   qsl("hiddenLabelLower=[1]true"),
-                                  qsl("hideMini=[0]"),
+                                  qsl("hideMini=[1]true"),
                                   qsl("hiddenMiniRaise=[1]true"),
                                   qsl("hiddenMiniLower=[1]true"),
-                                  qsl("closeWindow=[0]"),
+                                  qsl("closeWindow=[1]true"),
                                   qsl("closedWindowRaise=[1]true"),
                                   qsl("closedWindowLower=[1]true"),
                                   qsl("closedInnerRaise=[1]true"),
@@ -1617,12 +1674,12 @@ end
                                   qsl("miniFontSize=[1]12"),
                                   qsl("createWinBoxMini=[1]true"),
                                   qsl("winBoxMiniFontSize=[1]12"),
-                                  qsl("move=[0]"),
-                                  qsl("resize=[0]"),
+                                  qsl("move=[1]true"),
+                                  qsl("resize=[1]true"),
                                   qsl("moved:type=[1]scrollbox,geometry=[4]11:12:120:90,visible=[1]true"),
                                   qsl("raise=[1]true"),
                                   qsl("lower=[1]true"),
-                                  qsl("hide=[0]"),
+                                  qsl("hide=[1]true"),
                                   qsl("hidden:type=[1]scrollbox,geometry=[4]11:12:120:90,visible=[1]false"),
                                   qsl("hiddenLabel:type=[1]label,geometry=[4]7:8:40:20,visible=[1]false"),
                                   qsl("hiddenMini:type=[1]miniconsole,geometry=[4]9:10:50:40,visible=[1]false"),
@@ -1634,7 +1691,7 @@ end
                                   qsl("shown:type=[1]scrollbox,geometry=[4]11:12:120:90,visible=[1]true"),
                                   qsl("shownLabel:type=[1]label,geometry=[4]7:8:40:20,visible=[1]true"),
                                   qsl("shownInnerLabel:type=[1]label,geometry=[4]2:2:20:10,visible=[1]true"),
-                                  qsl("hideWindow=[0]"),
+                                  qsl("hideWindow=[1]true"),
                                   qsl("winBoxInHidden:type=[1]scrollbox,geometry=[4]3:4:150:80,visible=[1]false"),
                                   qsl("winBoxLabelInHidden:type=[1]label,geometry=[4]1:1:40:20,visible=[1]false"),
                                   qsl("showWindow=[1]true"),
@@ -1644,7 +1701,7 @@ end
                                   qsl("echoClashLabel=[1]true"),
                                   qsl("clashLabel:font=sbWindow"),
                                   qsl("createClashMini=[1]true"),
-                                  qsl("hideClash=[0]"),
+                                  qsl("hideClash=[1]true"),
                                   qsl("clashHidden=[1]false"),
                                   qsl("clashLabelHidden:type=[1]label,geometry=[4]0:0:40:20,visible=[1]false"),
                                   qsl("clashMiniHidden:type=[1]miniconsole,geometry=[4]0:0:40:20,visible=[1]true"),
@@ -1652,7 +1709,7 @@ end
                                   qsl("deleteClash=[1]true"),
                                   qsl("clashDeleted=[1]userwindow"),
                                   qsl("bgImage=[2]nil:console or label 'sbBox' not found, or 'nothing.png' could not be loaded as an image"),
-                                  qsl("bgColor=[2]nil:window/label 'sbBox' not found"),
+                                  qsl("bgColor=[2]nil:'sbBox' is a scroll box, use setProfileStyleSheet() to set its background"),
                                   qsl("beforeDelete:events=sbWindow"),
                                   qsl("delete=[1]true"),
                                   qsl("delete:events=sbBox"),
@@ -2441,9 +2498,9 @@ end
         QCOMPARE(luaGlobalString(host, "headlessCommandLine"), qsl("ok"));
         const QStringList answers{qsl("create=[1]true"),
                                   qsl("created:type=[1]commandline,geometry=[4]10:20:200:30,visible=[1]true"),
-                                  qsl("createAgain=[2]nil:couldn't create commandLine"),
-                                  qsl("createEmpty=[2]nil:a commandLine cannot have an empty string as its name"),
-                                  qsl("createInMissing=[2]nil:window 'clNoSuch' not found"),
+                                  qsl("createAgain=[2]false:couldn't create commandLine"),
+                                  qsl("createEmpty=[2]false:a commandLine cannot have an empty string as its name"),
+                                  qsl("createInMissing=[2]false:window 'clNoSuch' not found"),
                                   qsl("lost:type=[2]nil:'clLost' is not a known label, any type of console, command line, text edit, nor scroll box,geometry=[2]nil:window \"clLost\" not "
                                       "found,visible=[2]nil:window \"clLost\" not found"),
                                   qsl("createInMain=[1]true"),
@@ -2484,25 +2541,25 @@ end
                                   qsl("actionAgain=[1]true"),
                                   qsl("actionMissing=[2]nil:command line name 'clNoSuch' not found"),
                                   qsl("actionEmpty=[2]nil:command line name cannot be an empty string"),
-                                  qsl("actionMain=[2]nil:command line name 'main' not found"),
+                                  qsl("actionMain=[2]nil:the main command line's action cannot be changed, use an alias to act on what is typed there"),
                                   qsl("actionBadName=raised:setCmdLineAction: bad argument #1 type (command line name as string expected, got table!)"),
                                   qsl("reset=[1]true"),
                                   qsl("resetAgain=[1]true"),
                                   qsl("resetMissing=[2]nil:command line name 'clNoSuch' not found"),
                                   qsl("resetEmpty=[2]nil:command line name cannot be an empty string"),
-                                  qsl("resetMain=[2]nil:command line name 'main' not found"),
+                                  qsl("resetMain=[2]nil:the main command line's action cannot be changed, use an alias to act on what is typed there"),
                                   qsl("raise=[1]true"),
                                   qsl("lower=[1]true"),
-                                  qsl("hide=[0]"),
+                                  qsl("hide=[1]true"),
                                   qsl("hidden:type=[1]commandline,geometry=[4]10:20:200:30,visible=[1]false"),
                                   qsl("show=[1]true"),
                                   qsl("shown:type=[1]commandline,geometry=[4]10:20:200:30,visible=[1]true"),
-                                  qsl("move=[0]"),
-                                  qsl("resize=[0]"),
+                                  qsl("move=[1]true"),
+                                  qsl("resize=[1]true"),
                                   qsl("moved:type=[1]commandline,geometry=[4]5:6:70:25,visible=[1]true"),
-                                  qsl("resizeNegative=[0]"),
+                                  qsl("resizeNegative=[1]true"),
                                   qsl("resizedNegative:type=[1]commandline,geometry=[4]5:6:0:0,visible=[1]true"),
-                                  qsl("resizeBack=[0]"),
+                                  qsl("resizeBack=[1]true"),
                                   qsl("createInWindow=[1]true"),
                                   qsl("inWindow:type=[1]commandline,geometry=[4]1:1:50:20,visible=[1]true"),
                                   qsl("inHiddenWindow:type=[1]commandline,geometry=[4]1:1:50:20,visible=[1]false"),
@@ -2514,7 +2571,7 @@ end
                                   qsl("madeInHiddenBox:type=[1]commandline,geometry=[4]2:25:40:20,visible=[1]false"),
                                   qsl("showInHiddenBox=[1]true"),
                                   qsl("shownInHiddenBox:type=[1]commandline,geometry=[4]2:25:40:20,visible=[1]false"),
-                                  qsl("hideBoxed=[0]"),
+                                  qsl("hideBoxed=[1]true"),
                                   qsl("boxedStaysHidden:type=[1]commandline,geometry=[4]2:2:40:20,visible=[1]false"),
                                   qsl("textInBox=[0]"),
                                   qsl("getInBox=[1]boxed"),
@@ -2537,7 +2594,7 @@ end
                                   qsl("riderAfterMove:type=[1]commandline,geometry=[4]1:1:40:20,visible=[1]true"),
                                   qsl("lineAfterBox=[1]true"),
                                   qsl("boxThenLine:type=[1]scrollbox,geometry=[4]1:2:100:100,visible=[1]false"),
-                                  qsl("resizeShared=[0]"),
+                                  qsl("resizeShared=[1]true"),
                                   qsl("sharedResized:type=[1]scrollbox,geometry=[4]1:2:60:70,visible=[1]false"),
                                   qsl("deleteSharedLine=[1]true"),
                                   qsl("sharedLineDeleted:type=[1]scrollbox,geometry=[4]1:2:60:70,visible=[1]false"),
@@ -2852,9 +2909,9 @@ end
         QCOMPARE(luaGlobalString(host, "headlessTextEdit"), qsl("ok"));
         const QStringList answers{qsl("create=[1]true"),
                                   qsl("created:type=[1]textedit,geometry=[4]10:20:200:100,visible=[1]true"),
-                                  qsl("createAgain=[2]nil:couldn't create text edit"),
-                                  qsl("createEmpty=[2]nil:a text edit cannot have an empty string as its name"),
-                                  qsl("createInMissing=[2]nil:window 'teNoSuch' not found"),
+                                  qsl("createAgain=[2]false:couldn't create text edit"),
+                                  qsl("createEmpty=[2]false:a text edit cannot have an empty string as its name"),
+                                  qsl("createInMissing=[2]false:window 'teNoSuch' not found"),
                                   qsl("lost:type=[2]nil:'teLost' is not a known label, any type of console, command line, text edit, nor scroll box,geometry=[2]nil:window \"teLost\" not "
                                       "found,visible=[2]nil:window \"teLost\" not found"),
                                   qsl("createInMain=[1]true"),
@@ -2884,7 +2941,7 @@ end
                                   qsl("sheet=[1]true"),
                                   qsl("font=[1]true"),
                                   qsl("fontSize=[1]true"),
-                                  qsl("fontSizeNegative=[1]true"),
+                                  qsl("fontSizeNegative=[2]nil:size cannot be 0 or negative"),
                                   qsl("tab=[1]true"),
                                   qsl("getOther=[1]"),
                                   qsl("afterSetters:type=[1]textedit,geometry=[4]10:20:200:100,visible=[1]true"),
@@ -2902,16 +2959,16 @@ end
                                   qsl("setBadText=raised:setTextEditText: bad argument #2 type (text as string expected, got table!)"),
                                   qsl("raise=[1]true"),
                                   qsl("lower=[1]true"),
-                                  qsl("hide=[0]"),
+                                  qsl("hide=[1]true"),
                                   qsl("hidden:type=[1]textedit,geometry=[4]10:20:200:100,visible=[1]false"),
                                   qsl("show=[1]true"),
                                   qsl("shown:type=[1]textedit,geometry=[4]10:20:200:100,visible=[1]true"),
-                                  qsl("move=[0]"),
-                                  qsl("resize=[0]"),
+                                  qsl("move=[1]true"),
+                                  qsl("resize=[1]true"),
                                   qsl("moved:type=[1]textedit,geometry=[4]5:6:70:25,visible=[1]true"),
-                                  qsl("resizeNegative=[0]"),
+                                  qsl("resizeNegative=[1]true"),
                                   qsl("resizedNegative:type=[1]textedit,geometry=[4]5:6:0:0,visible=[1]true"),
-                                  qsl("resizeBack=[0]"),
+                                  qsl("resizeBack=[1]true"),
                                   qsl("createInWindow=[1]true"),
                                   qsl("inWindow:type=[1]textedit,geometry=[4]1:1:50:20,visible=[1]true"),
                                   qsl("inHiddenWindow:type=[1]textedit,geometry=[4]1:1:50:20,visible=[1]false"),
@@ -2921,7 +2978,7 @@ end
                                   qsl("inHiddenBox:type=[1]textedit,geometry=[4]2:2:40:20,visible=[1]false"),
                                   qsl("createInHiddenBox=[1]true"),
                                   qsl("madeInHiddenBox:type=[1]textedit,geometry=[4]2:25:40:20,visible=[1]false"),
-                                  qsl("hideBoxed=[0]"),
+                                  qsl("hideBoxed=[1]true"),
                                   qsl("boxedStaysHidden:type=[1]textedit,geometry=[4]2:2:40:20,visible=[1]false"),
                                   qsl("textInBox=[1]true"),
                                   qsl("getInBox=[1]boxed"),
@@ -2959,7 +3016,7 @@ end
                                   qsl("tripleBoxDeleted:type=[1]textedit,geometry=[4]5:5:50:50,visible=[1]true"),
                                   qsl("editAfterBox=[1]true"),
                                   qsl("boxThenEdit:type=[1]scrollbox,geometry=[4]1:2:100:100,visible=[1]false"),
-                                  qsl("resizeBoxShared=[0]"),
+                                  qsl("resizeBoxShared=[1]true"),
                                   qsl("deleteBoxShared=[1]true"),
                                   qsl("sharedBoxDeleted:type=[1]textedit,geometry=[4]5:6:40:20,visible=[1]true"),
                                   qsl("editBeforeBox=[1]true"),
@@ -3013,7 +3070,7 @@ end
     }
 
     // What a profile with no view answers the scroll calls, taken from the same Lua run in the GUI self-test
-    // profile, which lets each real pane repaint before it is read and re-issues each scroll until it holds.
+    // profile, which lets each real pane repaint before it is read.
     void test_headlessScrollContract()
     {
         const QString hostname = qsl("Test-Headless-Host-Scroll");
@@ -3021,7 +3078,6 @@ end
         Host* host = HostManager::self()->getHost(hostname);
         QVERIFY2(host, "The profile is not in the pool.");
         QVERIFY(!host->hasConsoleView());
-        // For scrollUp() and scrollDown(), which GUIUtils.lua builds on getScroll() and scrollTo()
         host->getLuaInterpreter()->loadGlobal();
 
         const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
@@ -3166,7 +3222,7 @@ headlessScroll = ok and "ok" or tostring(err)
                                     qsl("cleared=[1]0[1]0"),
                                     qsl("fedAfterClear=[1]30[1]30")};
         QCOMPARE(luaGlobalString(host, "scrollMain"), mainSteps.join(QLatin1Char(';')));
-        QCOMPARE(luaGlobalString(host, "scrollMainForms"), qsl("[0][1]30;[0][1]25;[0][1]20;[0][1]30;[1]true[1]true[1]true[1]true"));
+        QCOMPARE(luaGlobalString(host, "scrollMainForms"), qsl("[0][1]30;[0][1]25;[0][1]20;[0][1]30;[2]nil:msg[1]true[2]nil:msg[1]true"));
         const QStringList subConsoleSteps{qsl("fresh=[1]0[1]false[1]true"),
                                           qsl("filled=[1]60"),
                                           qsl("bar=[0][1]true[0][1]false"),
@@ -3193,15 +3249,15 @@ headlessScroll = ok and "ok" or tostring(err)
                                       qsl("filled=[1]60"),
                                       qsl("bar=[0][1]true[0][1]false"),
                                       qsl("hbar=[0][0]"),
-                                      qsl("frozen=[1]true[1]true[0][1]60"),
-                                      qsl("thawed=[1]true[1]true[0][1]60"),
+                                      qsl("frozen=[2]nil:msg[1]true[0][1]60"),
+                                      qsl("thawed=[2]nil:msg[1]true[0][1]60"),
                                       qsl("to10=[0][1]60"),
                                       qsl("to20=[0][1]60"),
                                       qsl("toMinus5=[0][1]60"),
                                       qsl("up3=[0][1]60"),
                                       qsl("down2=[0][1]60"),
                                       qsl("fedWhileBack=[1]65[1]65"),
-                                      qsl("frozenWhileBack=[1]true[1]65"),
+                                      qsl("frozenWhileBack=[2]nil:msg[1]65"),
                                       qsl("toMinus100=[0][1]65"),
                                       qsl("toEnd=[0][1]65"),
                                       qsl("to1000=[0][1]65"),
@@ -3394,7 +3450,8 @@ headlessFontWrap = ok and "ok" or tostring(err)
             return font ? font->pointSize() : -1;
         };
         QVERIFY(startFont.pointSize() != 10);
-        QCOMPARE(labelPointSize(qsl("fwLabel")), startFont.pointSize());
+        // The walk's setFontSize(13) reaches a label too
+        QCOMPARE(labelPointSize(qsl("fwLabel")), 13);
         QCOMPARE(labelPointSize(qsl("fwWindowLabel")), 10);
         QCOMPARE(labelPointSize(qsl("fwLateLabel")), 13);
         QCOMPARE(labelPointSize(qsl("fwWindowLateLabel")), 13);
@@ -3454,7 +3511,7 @@ headlessFontWrap = ok and "ok" or tostring(err)
                                qsl("indentNeg=[2]nil:msg"),
                                qsl("hanging=[1]true"),
                                qsl("lengths=0,27,28,26,0"),
-                               qsl("wrapLine=[0]"),
+                               qsl("wrapLine=[1]true"),
                                qsl("wrapBack=[1]true"),
                                qsl("pt0=[2]nil:msg"),
                                qsl("pt13=[1]true"),
@@ -3469,13 +3526,20 @@ headlessFontWrap = ok and "ok" or tostring(err)
                                qsl("familyAvg=%1").arg(averaged(familyFont))}
                     .join(QLatin1Char(';'));
         };
-        // A label has a font but no size, wrap or text of its own; a missing name has none of them
-        const auto otherSteps = [&](const QString& font, const QString& familyAnswer) {
-            return qsl("size=[1]nil;avg=[1]nil;font=%1;pt=[2]nil:msg;wrap=[2]nil:msg;wrap0=[2]nil:msg;wrap30=[2]nil:msg;wrapNow=[2]nil:msg;"
-                       "indent=[2]nil:msg;indentNeg=[2]nil:msg;hanging=[2]nil:msg;wrapLine=[0];wrapBack=[2]nil:msg;pt0=[2]nil:msg;pt13=[2]nil:msg;"
-                       "size13=[1]nil;avg13=[1]nil;fontEmpty=[2]nil:msg;fontMissing=[2]nil:msg;fontFamily=%2;familyFont=%3;familyPt=[2]nil:msg;"
-                       "familySize=[1]nil;familyAvg=[1]nil")
-                    .arg(font, familyAnswer.isEmpty() ? qsl("[2]nil:msg") : qsl("[1]true"), familyAnswer.isEmpty() ? qsl("[2]nil:msg") : familyAnswer);
+        // A label has a font and a point size but no measured size, wrap or text of its own; a missing name has none of them
+        const auto otherSteps = [&](const QString& font, const QString& familyAnswer, const int pointSize = 0) {
+            const QString refused = qsl("[2]nil:msg");
+            const bool label = pointSize > 0;
+            return qsl("size=[2]nil:msg;avg=[2]nil:msg;font=%1;pt=%4;wrap=[2]nil:msg;wrap0=[2]nil:msg;wrap30=[2]nil:msg;wrapNow=[2]nil:msg;"
+                       "indent=[2]nil:msg;indentNeg=[2]nil:msg;hanging=[2]nil:msg;wrapLine=[2]nil:msg;wrapBack=[2]nil:msg;pt0=[2]nil:msg;pt13=%5;"
+                       "size13=[2]nil:msg;avg13=[2]nil:msg;fontEmpty=[2]nil:msg;fontMissing=[2]nil:msg;fontFamily=%2;familyFont=%3;familyPt=%6;"
+                       "familySize=[2]nil:msg;familyAvg=[2]nil:msg")
+                    .arg(font,
+                         familyAnswer.isEmpty() ? refused : qsl("[1]true"),
+                         familyAnswer.isEmpty() ? refused : familyAnswer,
+                         label ? qsl("[1]%1").arg(pointSize) : refused,
+                         label ? qsl("[1]true") : refused,
+                         label ? qsl("[1]13") : refused);
         };
 
         QCOMPARE(luaGlobalString(host, "fwGlobal"), qsl("%1;%2;[1]%3;[1]%4;[1]100").arg(measured(startFont), averaged(startFont), family(startFont)).arg(startFont.pointSize()));
@@ -3490,7 +3554,7 @@ headlessFontWrap = ok and "ok" or tostring(err)
         QVERIFY(TFontAttributes(pFreshMini->mUpperPaneFont) == TFontAttributes(subConsoleFont(12)));
         QCOMPARE(luaGlobalString(host, "fwWindowSteps"), consoleSteps(subConsoleFont(10), 99999999));
         QCOMPARE(luaGlobalString(host, "fwBufferSteps"), consoleSteps(subConsoleFont(14), 100));
-        QCOMPARE(luaGlobalString(host, "fwLabelSteps"), otherSteps(qsl("[1]%1").arg(family(startFont)), qsl("[1]%1").arg(family(familyFont))));
+        QCOMPARE(luaGlobalString(host, "fwLabelSteps"), otherSteps(qsl("[1]%1").arg(family(startFont)), qsl("[1]%1").arg(family(familyFont)), startFont.pointSize()));
         QCOMPARE(luaGlobalString(host, "fwMissing"), otherSteps(qsl("[2]nil:msg"), QString()));
         QCOMPARE(luaGlobalString(host, "fwLabelFonts"), qsl("%1;%2;%2").arg(family(subConsoleFont(10)), family(familyFont)));
         // Moved to another window, one given no font by setFont() takes the application's
@@ -5253,8 +5317,15 @@ local ok, err = pcall(function()
   check("getConfig showUpperLowerLevels default", answered(true), getConfig("showUpperLowerLevels"))
   check("setConfig showUpperLowerLevels", answered(true), setConfig("showUpperLowerLevels", false))
   check("getConfig showUpperLowerLevels", answered(false), getConfig("showUpperLowerLevels"))
-  -- This drives the mapper widget, as in the GUI before its mapper exists
-  check("setConfig show3dMapView", refused(notAnOption), setConfig("show3dMapView", false))
+  -- Stored for a mapper made later, as in the GUI before its mapper exists; a build without the 3D mapper does not know the key
+  if setMapPerspective then
+    check("setConfig show3dMapView", answered(true), setConfig("show3dMapView", true))
+    check("getConfig show3dMapView", answered(true), getConfig("show3dMapView"))
+    check("setConfig show3dMapView false", answered(true), setConfig("show3dMapView", false))
+    check("getConfig show3dMapView false", answered(false), getConfig("show3dMapView"))
+  else
+    check("setConfig show3dMapView", refused(notAnOption), setConfig("show3dMapView", false))
+  end
 end)
 headlessMapConfig = ok and 'ok' or tostring(err)
 )lua");

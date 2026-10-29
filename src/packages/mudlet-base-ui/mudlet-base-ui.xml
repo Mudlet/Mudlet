@@ -435,10 +435,10 @@
 	<AliasPackage>
 		<Alias isActive="yes" isFolder="no">
 			<name>baseui</name>
-			<script>BaseUI.alias(matches[2])</script>
+			<script>BaseUI.alias(matches[2], matches[3])</script>
 			<command></command>
 			<packageName></packageName>
-			<regex>^baseui(?:\s+(\w+))?$</regex>
+			<regex>^baseui(?:\s+(\w+)(?:(?&lt;=\s(?i:background))\s+(.+))?)?$</regex>
 		</Alias>
 	</AliasPackage>
 	<ActionPackage />
@@ -447,7 +447,7 @@
 			<name>Mudlet base UI</name>
 			<packageName></packageName>
 			<script>-- Mudlet base UI: a small starter interface that adapts to whatever the game
--- provides. Nothing is created until the game actually sends something:
+-- provides. Nothing is created until the game has actually sent something:
 -- vitals gauges are built from GMCP character data (normalised across the
 -- dialects games speak, and only for the fields that exist), with the map and
 -- chat windows alongside them. Chat comes from gmcp.Comm.Channel.Text when
@@ -460,7 +460,11 @@
 -- negotiated quietly, self-sufficient prompt lines (labelled cur/max or
 -- percent) are trusted once they recur, score screens are read passively,
 -- and as a last resort "score" is sent once - visibly - to learn the maxima
--- on games whose prompt only carries current values.
+-- on games whose prompt only carries current values. When no protocol reports
+-- an enemy, the enemy bar can come from the sentence a fight prints each round
+-- ("Kaninen är tagen.").
+-- When a game's data is missed, teach this script its format; do not add
+-- functions for players' scripts to feed it (see docs/CONTRIBUTING.md).
 -- Every section starts in the dock but none is stuck there: dragging a header
 -- row pulls that section out to sit anywhere over the game's text, the sections
 -- left behind share out the space it had, and where each one was left is
@@ -477,6 +481,7 @@ BaseUI.shapeSightings = BaseUI.shapeSightings or {}
 BaseUI.vitalsData = BaseUI.vitalsData or {}
 BaseUI.vitalsLock = BaseUI.vitalsLock or 0
 BaseUI.eventHandlerIds = BaseUI.eventHandlerIds or {}
+BaseUI.conditionSightings = BaseUI.conditionSightings or {}
 
 -- An anonymous event handler belongs to the profile rather than to the package
 -- that registered it, so uninstalling has to take these with it. Every
@@ -634,6 +639,7 @@ local gaugeText = [[background-color: transparent; padding-left: 8px; padding-bo
 -- Written as the character rather than as an HTML entity because it goes into
 -- console text as well as into a label, and cecho prints an entity literally.
 local paletteGlyph = "◐"
+local pictureGlyph = "▣"
 
 local mapPlaceholderText = "Your map will appear&lt;br&gt;here as you explore"
 
@@ -642,45 +648,99 @@ local mapPlaceholderText = "Your map will appear&lt;br&gt;here as you explore"
 local css = {}
 local gaugeDefs = { hp = {}, mp = {}, xp = {}, mv = {}, enemy = {} }
 
-local function rebuildCss()
+-- How much of a background picture the dock's own surfaces hide while one is
+-- showing, as a stylesheet percentage. Floating sections keep their full colour,
+-- since they sit over the game's text.
+local panelOpacity = 10
+-- the docked map's 0-255 alpha over it: darker than the dock, so the map stays readable
+local mapAlpha = 26
+
+-- a look's "#rrggbb" with an opacity, or the colour exactly as written when there
+-- is none, so a profile with no picture is painted with the same stylesheets as ever
+local function shade(color, opacity)
+  if not opacity then
+    return color
+  end
+  local red, green, blue = color:match("^#(%x%x)(%x%x)(%x%x)$")
+  return string.format("rgba(%d,%d,%d,%d%%)", tonumber(red, 16), tonumber(green, 16), tonumber(blue, 16), opacity)
+end
+
+local function rebuildCss(opacity)
   css.placeholder = string.format(
     [[background-color: %s; border: 1px solid %s; border-radius: 6px;]],
-    theme.panel, theme.borderSoft)
+    -- clear rather than shaded: the placeholder sits on the dock, which already
+    -- hides its share of the picture, and a second layer would double it
+    opacity and "transparent" or theme.panel, theme.borderSoft)
   css.sectionFloating = string.format(
     [[background-color: %s; border: 1px solid %s; border-radius: 6px; padding-left: 2px; qproperty-alignment: 'AlignLeft | AlignTop';]],
     theme.bg, theme.border)
   -- the line closing off a header row. It sits on the row's own bottom pixel, so
   -- it is click-through and takes none of the strip a drag has to land on.
-  css.headerRule = string.format([[background-color: %s; border: 0px;]], theme.borderSoft)
+  css.headerRule = string.format([[background-color: %s; border: 0px;]], shade(theme.borderSoft, opacity))
   css.button = string.format(
     [[QLabel{ border-color: %s; background-color: %s; } QLabel::hover{ background-color: %s; }]],
-    theme.border, theme.bg, theme.hover)
-  css.dock = string.format("background-color: %s; border: 1px solid %s;", theme.bg, theme.border)
+    theme.border, shade(theme.bg, opacity), theme.hover)
+  css.dock = string.format("background-color: %s; border: 1px solid %s;", shade(theme.bg, opacity), theme.border)
   css.tabActive = string.format(
     [[background-color: %s; border: 1px solid %s; border-bottom: 2px solid %s; border-top-left-radius: 4px; border-top-right-radius: 4px;]],
-    theme.tabActive, theme.border, theme.accent)
+    shade(theme.tabActive, opacity), theme.border, theme.accent)
   css.tabInactive = string.format(
     [[background-color: %s; border: 1px solid %s; border-bottom: 2px solid %s; border-top-left-radius: 4px; border-top-right-radius: 4px;]],
-    theme.tabInactive, theme.borderSoft, theme.borderSoft)
+    shade(theme.tabInactive, opacity), theme.borderSoft, theme.borderSoft)
   css.gaugeBack = gaugeStyle(theme.gaugeBack)
   for key, color in pairs(theme.gauges) do
     gaugeDefs[key].front = gaugeStyle(color)
   end
 end
 
--- GMCP vitals arrive in several dialects: lowercase namespaces, maxima inside
--- the vitals message or in a separate Maxstats one, and varying key names.
--- Every node listed here is scanned on each update (the gmcp table keeps the
--- latest message per node, so currents and maxima merge naturally even when
--- they arrive separately) - supporting another dialect is one more line
+-- GMCP vitals arrive in several dialects: maxima inside the vitals message or
+-- in a separate Maxstats one, and varying key names. GMCP names are
+-- case-insensitive, so each node here (written in lowercase) is matched in any
+-- casing, and so is the message that triggers an update. Every node listed is
+-- scanned on each update (the gmcp table keeps the latest message per node, so
+-- currents and maxima merge naturally even when they arrive separately) -
+-- supporting another dialect is one more line
 local vitalsNodes = {
-  { "Char", "Vitals" },
   { "char", "vitals" },
-  { "Char", "Maxstats" },
   { "char", "maxstats" },
-  { "Char", "Status" },
   { "char", "status" },
 }
+
+local vitalsEvents = {}
+for _, path in ipairs(vitalsNodes) do
+  vitalsEvents["gmcp." .. table.concat(path, ".")] = true
+end
+
+-- not "*", which every event would pay a call for; other spellings are picked
+-- up by BaseUI.routeGmcpVitals
+local knownVitalsEvents = {
+  "gmcp.Char.Vitals", "gmcp.char.vitals",
+  "gmcp.Char.Maxstats", "gmcp.Char.MaxStats", "gmcp.char.maxstats",
+  "gmcp.Char.Status", "gmcp.char.status",
+}
+local knownVitalsEvent = {}
+for _, event in ipairs(knownVitalsEvents) do
+  knownVitalsEvent[event] = true
+end
+
+-- the namespace events (gmcp.Char) in every casing
+local vitalsNamespaceEvents = {}
+for _, path in ipairs(vitalsNodes) do
+  local spellings = { "gmcp." }
+  for letter in path[1]:gmatch(".") do
+    local longer = {}
+    for _, spelling in ipairs(spellings) do
+      longer[#longer + 1] = spelling .. letter:lower()
+      longer[#longer + 1] = spelling .. letter:upper()
+    end
+    spellings = longer
+  end
+  for _, spelling in ipairs(spellings) do
+    if not table.contains(vitalsNamespaceEvents, spelling) then
+      vitalsNamespaceEvents[#vitalsNamespaceEvents + 1] = spelling
+    end
+  end
+end
 
 -- one row per gauge; current/max/percent list every key spelling observed in
 -- the wild. A percent key is a ready 0-100 value and needs no max: nl (IRE
@@ -725,16 +785,43 @@ local msdpStats = {
   { key = "enemy", current = "OPPONENT_HEALTH", max = "OPPONENT_HEALTH_MAX", transient = true },
 }
 
-local function gmcpNode(path)
-  local node = gmcp
-  for _, key in ipairs(path) do
-    if type(node) ~= "table" then
-      return nil
-    end
-    node = node[key]
+-- the first value found for a stat wins, so when a node is present in two
+-- casings the conventional capitalised one (Char.Maxstats) is read first
+local function gmcpNameBefore(a, b)
+  local aCapitalised = a == a:sub(1, 1):upper() .. a:sub(2):lower()
+  local bCapitalised = b == b:sub(1, 1):upper() .. b:sub(2):lower()
+  if aCapitalised ~= bCapitalised then
+    return aCapitalised
   end
-  if type(node) == "table" then
-    return node
+  return a &lt; b
+end
+
+-- appends every table found at path in any casing; sorted, so a game sending
+-- two casings of one node has them read in the same order every time
+local function addGmcpNodes(path, found)
+  local level = { gmcp }
+  for _, key in ipairs(path) do
+    local nextLevel = {}
+    for _, node in ipairs(level) do
+      if type(node) == "table" then
+        local names = {}
+        for name in pairs(node) do
+          if type(name) == "string" and name:lower() == key then
+            names[#names + 1] = name
+          end
+        end
+        table.sort(names, gmcpNameBefore)
+        for _, name in ipairs(names) do
+          nextLevel[#nextLevel + 1] = node[name]
+        end
+      end
+    end
+    level = nextLevel
+  end
+  for _, node in ipairs(level) do
+    if type(node) == "table" then
+      found[#found + 1] = node
+    end
   end
 end
 
@@ -966,7 +1053,8 @@ local labelFirstGuard = [=[(?&lt;![\d%])(?&lt;!\d[ ]|\d[ ]{2}|\d[ ]{3}|\d[ ]{4}|
 -- is built from these tables, and a spelling that only exists inline is missing
 -- from the prefilter, so the shape never sees a line to read.
 local promptLabels = {
-  hp = [=[hp|health|hits?]=],
+  -- lk/livskraft: Swedish games' health ("LK:  74/114  MP:   34/98")
+  hp = [=[hp|health|hits?|lk|livskraft]=],
   mp = [=[mp|mana|sp|magic|energy]=],
   mv = [=[mv|moves?|movement|end(?:urance)?|st(?:amina)?]=],
   xp = [=[xp|exp|tnl]=],
@@ -1533,6 +1621,115 @@ function BaseUI.killVitalsTriggers()
   BaseUI.vitalsTriggerIds = {}
 end
 
+-- Enemy health from a sentence describing it, which some games print every round
+-- of a fight. A scale runs from unhurt to dying, each step an even share of the
+-- bar, and the bar's text is the game's own sentence. Add a game's wording here.
+local conditionScales = {
+  -- SvenskMUD: "Kaninen är tagen."
+  { "är i toppform.", "är i ganska bra form.", "är sliten.", "är tagen.", "är illa tilltygad.",
+    "är riktigt illa tilltygad.", "är nästan DÖD." },
+  -- the diagnose sentences of CircleMUD/tbaMUD and ROM: "The orc has a few scratches."
+  { "is in excellent condition.", "has a few scratches.", "has some small wounds and bruises.",
+    "has quite a few wounds.", "has some big nasty wounds and scratches.", "looks pretty hurt.",
+    "is in awful condition." },
+}
+-- below the bottom step: still fighting, on negative health (Circle, ROM)
+local conditionDying = { "is bleeding awfully from big wounds.", "is bleeding to death." }
+-- what ends a fight sooner than the timeout below would
+local conditionDeaths = { "dog.", "is DEAD!!", "is dead!  R.I.P." }
+-- SvenskMUD reports the player's own condition in the same shape
+local selfSubjects = { du = true }
+-- a fight reports a condition every round or two
+local enemyTimeout = 15
+
+local conditionPercent = {}
+local conditionAlternatives = {}
+for _, scale in ipairs(conditionScales) do
+  for step, phrase in ipairs(scale) do
+    conditionPercent[phrase] = (#scale - step + 1) / #scale * 100
+    conditionAlternatives[#conditionAlternatives + 1] = phrase
+  end
+end
+for _, phrase in ipairs(conditionDying) do
+  conditionPercent[phrase] = 0
+  conditionAlternatives[#conditionAlternatives + 1] = phrase
+end
+for _, phrase in ipairs(conditionDeaths) do
+  conditionAlternatives[#conditionAlternatives + 1] = phrase
+end
+for index, phrase in ipairs(conditionAlternatives) do
+  conditionAlternatives[index] = (phrase:gsub("[%.%!%?%*%+%(%)%[%]%^%$|\\]", "\\%0"))
+end
+-- the subject is short and free of the punctuation chat lines and markup bring
+BaseUI.conditionPattern = [=[^([^\s"'\[\]():,&lt;&gt;&amp;][^"'\[\]():,&lt;&gt;&amp;]{0,39}?) (]=]
+  .. table.concat(conditionAlternatives, "|") .. [=[)\s*$]=]
+
+function BaseUI.onConditionLine()
+  BaseUI.readCondition(matches[2], matches[3])
+end
+
+-- One sentence can be a look at someone, so a subject only becomes the enemy on
+-- its second sentence within the timeout; after that every sentence updates it.
+-- Sightings are per subject so two foes reported in turn still get there.
+function BaseUI.readCondition(subject, phrase)
+  if BaseUI.dormant() or selfSubjects[subject:lower()] then
+    return
+  end
+  local enemy = BaseUI.textEnemy
+  local percent = conditionPercent[phrase]
+  local sightings = BaseUI.conditionSightings
+  if not percent then
+    -- the next one of the same name is a new foe, and has to be seen twice again
+    sightings[subject] = nil
+    if enemy and enemy.name == subject then
+      BaseUI.forgetTextEnemy()
+    end
+    return
+  end
+  local now = getEpoch()
+  local last = sightings[subject]
+  sightings[subject] = now
+  if not (enemy and enemy.name == subject) and not (last and now - last &lt;= enemyTimeout) then
+    return
+  end
+  BaseUI.textEnemy = { name = subject, percent = percent, label = subject .. " " .. phrase:gsub("%.$", "") }
+  if BaseUI.textEnemyTimer then
+    killTimer(BaseUI.textEnemyTimer)
+  end
+  BaseUI.textEnemyTimer = tempTimer(enemyTimeout, function()
+    BaseUI.textEnemyTimer = nil
+    BaseUI.forgetTextEnemy()
+  end)
+  BaseUI.renderVitals()
+end
+
+function BaseUI.forgetTextEnemy()
+  if BaseUI.textEnemyTimer then
+    killTimer(BaseUI.textEnemyTimer)
+    BaseUI.textEnemyTimer = nil
+  end
+  if BaseUI.textEnemy then
+    BaseUI.textEnemy = nil
+    BaseUI.renderVitals()
+  end
+end
+
+-- unlike the vitals prefilter this stays on under GMCP and MSDP, which rarely
+-- carry an enemy's health
+function BaseUI.createConditionTrigger()
+  if BaseUI.dormant() or BaseUI.conditionTriggerId then
+    return
+  end
+  BaseUI.conditionTriggerId = tempRegexTrigger(BaseUI.conditionPattern, BaseUI.onConditionLine)
+end
+
+function BaseUI.killConditionTrigger()
+  if BaseUI.conditionTriggerId then
+    killTrigger(BaseUI.conditionTriggerId)
+    BaseUI.conditionTriggerId = nil
+  end
+end
+
 -- last rung of the ladder: a game whose prompt only carries currents gets
 -- asked for its score screen - once per session, visibly, and only when no
 -- protocol has offered vitals and no maximum is known yet. The score output
@@ -1609,6 +1806,19 @@ local function sameTint(one, other)
     and one[3] == other[3] and one[4] == other[4]
 end
 
+-- The background colour as the player has it. While a picture shows, the console is
+-- exactly the colour in settings.seeThroughConsole with alpha 0, and that entry holds
+-- the alpha to give back. Anything else was set since, by the player or a game's own
+-- interface, and stands.
+local function playerConsoleColor()
+  local current = { getBackgroundColor("main") }
+  local held = BaseUI.settings.seeThroughConsole
+  if held and sameTint(current, { held[1], held[2], held[3], 0 }) then
+    current[4] = held[4]
+  end
+  return current
+end
+
 -- A look tints the background the game's own text sits on, which is the difference
 -- between a themed strip beside a black screen and a themed window. That colour
 -- belongs to the player though, so we only ever move one we can still account for.
@@ -1620,7 +1830,7 @@ end
 -- dislikes and cannot place: Preferences has a "Reset colours" button that sets the
 -- background back to black, and we would put our own colour straight back.
 function BaseUI.consoleTintIsOurs()
-  local current = { getBackgroundColor("main") }
+  local current = playerConsoleColor()
   if BaseUI.settings.consoleTint then
     return sameTint(current, BaseUI.settings.consoleTint)
   end
@@ -1637,51 +1847,132 @@ local function matchChatPanesToConsole()
   if not BaseUI.chats then
     return
   end
-  local red, green, blue = getBackgroundColor("main")
+  local red, green, blue, alpha = getBackgroundColor("main")
   for _, tab in ipairs(chatTabs) do
     local console = BaseUI.chats[tab.key]
     if console then
-      setBackgroundColor(console.name, red, green, blue)
+      setBackgroundColor(console.name, red, green, blue, BaseUI.backgroundShown and alpha or 255)
     end
   end
 end
 
--- Writes BaseUI.settings.consoleTint, so a caller that also saves has to run this
--- before its saveSettings or it persists the tint from before. Returns whether the
--- background is ours to colour, which is not the same as having changed it.
--- giveBack asks for the untinted colour whatever the look wants, for the one caller
--- that is on its way out and has no dormant flag to set
+-- Writes BaseUI.settings.consoleTint and seeThroughConsole, so a caller that also saves
+-- has to run this before its saveSettings or it persists the ones from before.
+-- Returns whether the background is ours to colour, which is not the same as having
+-- changed it. giveBack asks for the untinted, opaque colour whatever the look wants,
+-- for the one caller that is on its way out and has no dormant flag to set
 local function applyConsoleTint(giveBack)
-  if not BaseUI.consoleTintIsOurs() then
-    -- the player has a background of their own: stop tinting, but keep the panes
-    -- in step with the colour they chose
+  local ours = BaseUI.consoleTintIsOurs()
+  local wanted = playerConsoleColor()
+  if ours then
+    -- A hidden UI, or one standing aside for the game's own interface, has no
+    -- business colouring the game's text. Neither has one that does not exist yet:
+    -- the dock is built only once the game has sent something to show, and a tint
+    -- with no dock beside it is a recoloured window with nothing to show for it, so
+    -- build() applies this once it has one.
+    local tint = not giveBack and BaseUI.container and not BaseUI.dormant() and theme.console
+    -- the player's own transparency is left as it is: a look picks a hue, not
+    -- whether the window can be seen through
+    wanted = { tint and tint[1] or defaultConsoleTint[1],
+               tint and tint[2] or defaultConsoleTint[2],
+               tint and tint[3] or defaultConsoleTint[3], wanted[4] }
+    -- with the player's alpha, not the picture's 0, so the next session recognises it
+    BaseUI.settings.consoleTint = tint and { wanted[1], wanted[2], wanted[3], wanted[4] } or nil
+  else
+    -- the player has a background of their own: stop tinting, but still let a
+    -- background picture through it, and keep the panes in step with it
     BaseUI.settings.consoleTint = nil
-    matchChatPanesToConsole()
-    return false
   end
-  -- A hidden UI, or one standing aside for the game's own interface, has no
-  -- business colouring the game's text. Neither has one that does not exist yet:
-  -- the dock is built only once the game sends something to show, and a tint with
-  -- no dock beside it is a recoloured window with nothing to show for it, so
-  -- build() applies this once it has one.
-  local tint = not giveBack and BaseUI.container and not BaseUI.dormant() and theme.console
-  -- the player's own transparency is left as it is: a look picks a hue, not
-  -- whether the window can be seen through
-  local alpha = select(4, getBackgroundColor("main"))
-  local wanted = { tint and tint[1] or defaultConsoleTint[1],
-                   tint and tint[2] or defaultConsoleTint[2],
-                   tint and tint[3] or defaultConsoleTint[3], alpha }
+  -- a background picture only shows through a console that lets all of it through
+  local seeThrough = not giveBack and BaseUI.backgroundShown
+  BaseUI.settings.seeThroughConsole = seeThrough and wanted or nil
+  local applied = { wanted[1], wanted[2], wanted[3], seeThrough and 0 or wanted[4] }
   -- Only when it would actually differ. Untinted looks want plain black, which is
   -- already what an untouched profile has - writing it anyway would put every
   -- profile's background through a needless change on every single load.
-  if not sameTint({ getBackgroundColor("main") }, wanted) then
-    setBackgroundColor("main", wanted[1], wanted[2], wanted[3], wanted[4])
+  if not sameTint({ getBackgroundColor("main") }, applied) then
+    setBackgroundColor("main", applied[1], applied[2], applied[3], applied[4])
   end
-  -- copied rather than referenced, and with the alpha actually in force, so the
-  -- next session recognises this as ours
-  BaseUI.settings.consoleTint = tint and { wanted[1], wanted[2], wanted[3], wanted[4] } or nil
   matchChatPanesToConsole()
-  return true
+  return ours
+end
+
+-- The picture "baseui background" puts behind the whole window, while the UI is
+-- neither hidden nor standing aside. A path that cannot be shown is tried once,
+-- not again on every repaint that comes through here.
+local choosingBackground = false
+local function applyBackground(giveBack)
+  local path = not giveBack and not BaseUI.dormant() and BaseUI.settings.background or nil
+  if path == BaseUI.backgroundTried then
+    return
+  end
+  BaseUI.backgroundTried = path
+  if path then
+    local shown, problem = setBackgroundImage("main", path, 5, true)
+    BaseUI.backgroundShown = shown == true
+    BaseUI.backgroundProblem = problem
+    -- one being chosen is reported, and taken back, by setBackground
+    if not BaseUI.backgroundShown and not choosingBackground then
+      cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not show the background picture ")
+      echo(path .. " (" .. tostring(problem) .. ")")
+      cecho("&lt;dim_grey&gt; - &lt;yellow&gt;baseui background off&lt;dim_grey&gt; forgets it.&lt;reset&gt;\n")
+    end
+  elseif BaseUI.backgroundShown then
+    resetBackgroundImage("main", true)
+    BaseUI.backgroundShown = false
+  end
+end
+
+-- The map's background colour is the profile's own and saved with it, so as with the
+-- console's it is given back only while it is still the one put there. Only a docked
+-- map lets the picture through: a floating one sits over the game's text.
+local function syncMapBackground(giveBack)
+  -- the colour put there last session stays until the dock it was for is back
+  if not giveBack and BaseUI.backgroundShown and not BaseUI.sections.map then
+    return
+  end
+  local held = BaseUI.settings.mapBackground
+  local current = { getMapBackgroundColor() }
+  if held and not sameTint(current, held.set) then
+    held = nil
+  end
+  local wanted = not giveBack and BaseUI.backgroundShown and BaseUI.sections.map ~= nil
+    and not BaseUI.sectionFloating("map")
+  local before = BaseUI.settings.mapBackground
+  if wanted then
+    local base = held and held.before or current
+    local set = { base[1], base[2], base[3], math.min(base[4], mapAlpha) }
+    if not (held and sameTint(held.set, set)) then
+      held = { before = base, set = set }
+      setMapBackgroundColor(set[1], set[2], set[3], set[4])
+    end
+  elseif held then
+    setMapBackgroundColor(held.before[1], held.before[2], held.before[3], held.before[4])
+    held = nil
+  end
+  BaseUI.settings.mapBackground = held
+  if held ~= before then
+    BaseUI.saveSettings()
+  end
+end
+
+-- Everything a background picture changes, in the order it depends on: the picture
+-- first, since whether it is up decides how see-through the rest is painted. The dock
+-- is repainted only when that changes, or when the look did and asks for it.
+local function applyBackdrop(giveBack, newLook)
+  applyBackground(giveBack)
+  local opacity = BaseUI.backgroundShown and panelOpacity or nil
+  local repaint = newLook or opacity ~= BaseUI.paintedOpacity
+  if repaint then
+    rebuildCss(opacity)
+    BaseUI.paintedOpacity = opacity
+  end
+  local tookBackground = applyConsoleTint(giveBack)
+  if repaint then
+    BaseUI.restyle()
+  end
+  syncMapBackground(giveBack)
+  return tookBackground
 end
 
 local function paintPaletteButton()
@@ -1692,6 +1983,17 @@ local function paintPaletteButton()
   BaseUI.paletteButton:echo(paletteGlyph, theme.textDim, "c")
   BaseUI.paletteButton:setToolTip(
     string.format("Change the look - now %s, %s", theme.label, theme.blurb), 0)
+end
+
+local function paintPictureButton()
+  if not BaseUI.pictureButton then
+    return
+  end
+  BaseUI.pictureButton:setStyleSheet(css.button)
+  BaseUI.pictureButton:echo(pictureGlyph, BaseUI.settings.background and theme.accent or theme.textDim, "c")
+  BaseUI.pictureButton:setToolTip(BaseUI.settings.background
+    and "Choose another background picture - right-click to remove it"
+    or "Put a picture behind the whole window", 0)
 end
 
 -- Repaints what is already on screen from the refilled css table and `theme`. Everything
@@ -1709,6 +2011,7 @@ function BaseUI.restyle()
   BaseUI.container.titleTxtColor = theme.text
   BaseUI.container:setTitle()
   paintPaletteButton()
+  paintPictureButton()
   if BaseUI.mapPlaceholder then
     BaseUI.mapPlaceholder:setStyleSheet(css.placeholder)
     BaseUI.mapPlaceholder:setFont(theme.font)
@@ -1770,9 +2073,7 @@ function BaseUI.setTheme(name, quiet)
     theme[field] = value
   end
   BaseUI.themeName = name
-  rebuildCss()
-  local tookBackground = applyConsoleTint()
-  BaseUI.restyle()
+  local tookBackground = applyBackdrop(false, true)
   -- unconditionally: applyConsoleTint moves settings.consoleTint even on a look
   -- that is already in force, and that has to be remembered too
   BaseUI.settings.theme = name
@@ -1815,16 +2116,22 @@ end
 function BaseUI.standAside(_, packageName)
   BaseUI.settings.standingAside = packageName or "the game's interface"
   -- the game's own interface brings its own colours; give the background back
-  applyConsoleTint()
+  applyBackdrop()
   BaseUI.saveSettings()
   BaseUI.disarmChatTriggers()
   BaseUI.killVitalsTriggers()
+  BaseUI.killConditionTrigger()
   if BaseUI.container then
     BaseUI.container:hide()
     BaseUI.container:adjustBorder()
   end
   -- a section dragged out of the dock is no longer its child to hide
   BaseUI.layoutDock()
+  -- hiding an embedded mapper shrinks the profile's one map widget to 0x0, and
+  -- the game's interface may have put a mapper of its own on that widget already
+  if BaseUI.map then
+    Geyser:reposition()
+  end
 end
 
 -- An uninstall of this package and one of the game's own interface arrive on the
@@ -1839,7 +2146,7 @@ end
 
 -- Uninstalling the package takes the alias, the chat trigger tree and this very
 -- script with it - and nothing else. The dock and everything in it are Geyser
--- objects made at runtime, the vitals prefilter is a temporary trigger and the
+-- objects made at runtime, the vitals and condition triggers are temporary and the
 -- handlers below are anonymous ones: all three belong to the profile rather than
 -- to the package, so they would be left on screen and still repainting from game
 -- text, with the "baseui" command that could have dismissed them gone. So the
@@ -1853,13 +2160,17 @@ function BaseUI.uninstall()
   end
   BaseUI.eventHandlerIds = {}
   BaseUI.killVitalsTriggers()
+  BaseUI.killConditionTrigger()
+  if BaseUI.textEnemyTimer then
+    killTimer(BaseUI.textEnemyTimer)
+  end
   if BaseUI.settleTimerId then
     killTimer(BaseUI.settleTimerId)
     BaseUI.settleTimerId = nil
   end
   -- before the settings that record the tint as ours are thrown away, and while
   -- the chat panes it also matches are still there
-  applyConsoleTint(true)
+  pcall(applyBackdrop, true)
   -- the game was asked for its channel text on this interface's behalf
   if type(gmcp) == "table" and next(gmcp) then
     pcall(gmod.disableModule, "BaseUI", "Comm.Channel")
@@ -1894,10 +2205,11 @@ function BaseUI.serverGuiRemoved(_, packageName)
       return
     end
     BaseUI.settings.standingAside = nil
-    applyConsoleTint()
+    applyBackdrop()
     BaseUI.saveSettings()
     BaseUI.armChatTriggers()
     BaseUI.createVitalsTriggers()
+    BaseUI.createConditionTrigger()
     BaseUI.renderVitals()
     -- standing aside hid the dock, and a section is a window in its own right
     -- rather than a child widget of it, so showing the sections alone would
@@ -1910,8 +2222,9 @@ function BaseUI.serverGuiRemoved(_, packageName)
   end)
 end
 
+-- getRooms() copies out every room name, so most maps get answered by room 1
 function BaseUI.mapHasData()
-  return next(getRooms()) ~= nil
+  return roomExists(1) or next(getRooms()) ~= nil
 end
 
 function BaseUI.createMapper()
@@ -1925,11 +2238,22 @@ end
 -- profile has no map data, so a placeholder holds its spot until the first
 -- room exists (made by a mapping script, a map download or a manual load).
 -- Cheap to poll: getRooms() stays empty right up until the swap happens.
-function BaseUI.checkMapData()
+function BaseUI.checkMapData(event)
   if not BaseUI.container or BaseUI.map or BaseUI.dormant() then
     return
   end
   if not BaseUI.mapHasData() then
+    return
+  end
+  -- a game's Client.GUI package opens or loads the map while it is being installed,
+  -- and sysServerGuiInstalled only stands this UI aside once that install returns
+  if event then
+    -- BaseUI is gone by then if this package was uninstalled in the meantime
+    tempTimer(0, function()
+      if BaseUI then
+        BaseUI.checkMapData()
+      end
+    end)
     return
   end
   if BaseUI.mapPlaceholder then
@@ -1970,9 +2294,16 @@ function BaseUI.build()
     x = -(buttonSize * 3.8), y = 4, width = buttonSize, height = buttonSize,
     fontSize = BaseUI.container.buttonFontSize,
   }, BaseUI.container)
+  BaseUI.pictureButton = Geyser.Label:new({
+    name = "BaseUI_picture",
+    x = -(buttonSize * 5.0), y = 4, width = buttonSize, height = buttonSize,
+    fontSize = BaseUI.container.buttonFontSize,
+  }, BaseUI.container)
   BaseUI.container.goInside = true
   paintPaletteButton()
   BaseUI.paletteButton:setClickCallback(BaseUI.cycleTheme)
+  paintPictureButton()
+  BaseUI.pictureButton:setClickCallback(BaseUI.pictureClicked)
   BaseUI.createSection("map")
   if BaseUI.mapHasData() then
     BaseUI.createMapper()
@@ -2018,6 +2349,7 @@ function BaseUI.build()
   BaseUI.chat = BaseUI.chats.all
   -- now that there is a dock to tint alongside, and panes to keep in step with it
   applyConsoleTint()
+  BaseUI.settings.built = true
   BaseUI.saveSettings()
   BaseUI.refreshChatTabs()
   BaseUI.chats.all:decho("&lt;150,158,167&gt;Tells, says and channel chat from the game will be collected here.\n")
@@ -2294,6 +2626,8 @@ function BaseUI.layoutDock()
   for _, key in ipairs(sectionOrder) do
     BaseUI.placeSection(key, places[key])
   end
+  -- the map lets a background picture through only while it is in the dock
+  syncMapBackground()
 end
 
 -- Geyser has no dragging back into a parent, so this is the way back. It is
@@ -2424,7 +2758,17 @@ function BaseUI.ensureGauge(key)
   local def = gaugeDefs[key]
   -- without the panel a gauge would parent to the main window instead, where
   -- its panel-relative size would stretch it across the top of the screen
-  if not def or not BaseUI.sections.vitals or BaseUI.usedGaugeSlots &gt;= maxGaugeSlots then
+  if not def or not BaseUI.sections.vitals then
+    return nil
+  end
+  -- a hidden enemy bar gives its slot back, or one fight would cost the xp bar for good
+  local enemy = BaseUI.gauges.enemy
+  if BaseUI.usedGaugeSlots &gt;= maxGaugeSlots and key ~= "enemy" and enemy and enemy.hidden then
+    enemy:delete()
+    BaseUI.gauges.enemy = nil
+    BaseUI.usedGaugeSlots = BaseUI.usedGaugeSlots - 1
+  end
+  if BaseUI.usedGaugeSlots &gt;= maxGaugeSlots then
     return nil
   end
   BaseUI.usedGaugeSlots = BaseUI.usedGaugeSlots + 1
@@ -2443,6 +2787,11 @@ function BaseUI.ensureGauge(key)
   BaseUI.gauges[key] = gauge
   BaseUI.layoutGauges()
   return gauge
+end
+
+-- a protocol's enemy wins over the one read from a fight's sentences
+local function shownVitals(stat)
+  return BaseUI.vitalsData[stat.key] or (stat.key == "enemy" and BaseUI.textEnemy or nil)
 end
 
 local function completeReading(data)
@@ -2476,6 +2825,10 @@ function BaseUI.applyVitals(source, readings, snapshot)
       BaseUI.killVitalsTriggers()
     end
   end
+  -- the protocol saw the fight end, so the sentences read during it are stale
+  if snapshot and BaseUI.vitalsData.enemy and not readings.enemy then
+    BaseUI.forgetTextEnemy()
+  end
   for _, stat in ipairs(vitalsStats) do
     local reading = readings[stat.key]
     if snapshot then
@@ -2497,7 +2850,7 @@ function BaseUI.renderVitals()
   end
   local paintable = false
   for _, stat in ipairs(vitalsStats) do
-    if completeReading(BaseUI.vitalsData[stat.key]) then
+    if completeReading(shownVitals(stat)) then
       paintable = true
       break
     end
@@ -2507,15 +2860,22 @@ function BaseUI.renderVitals()
   end
   BaseUI.build()
   BaseUI.checkMapData()
+  -- before painting, so a stat that needs an ended enemy's slot can take it
+  for _, stat in ipairs(vitalsStats) do
+    local gauge = BaseUI.gauges[stat.key]
+    if stat.transient and gauge and not gauge.hidden and not completeReading(shownVitals(stat)) then
+      gauge:hide()
+    end
+  end
   for _, stat in ipairs(vitalsStats) do
     -- a gauge is only painted once a full reading is known: either a ready
     -- percentage, or both a current and a max (maxima are never assumed, so
     -- a stat may wait for a Maxstats message or a score screen)
-    local data = BaseUI.vitalsData[stat.key] or {}
+    local data = shownVitals(stat) or {}
     if data.percent then
       local gauge = BaseUI.ensureGauge(stat.key)
       if gauge then
-        gauge:setValue(data.percent, 100, string.format("%s %d%%", stat.label, math.floor(data.percent + 0.5)))
+        gauge:setValue(data.percent, 100, data.label or string.format("%s %d%%", stat.label, math.floor(data.percent + 0.5)))
         if gauge.hidden then
           gauge:show()
         end
@@ -2528,8 +2888,6 @@ function BaseUI.renderVitals()
           gauge:show()
         end
       end
-    elseif stat.transient and BaseUI.gauges[stat.key] and not BaseUI.gauges[stat.key].hidden then
-      BaseUI.gauges[stat.key]:hide()
     end
   end
   -- The panel is built before there are any bars to put in it, so it starts
@@ -2546,13 +2904,29 @@ function BaseUI.renderVitals()
   end
 end
 
+-- GMCP names are case-insensitive: the namespace event (gmcp.CHAR) comes first and
+-- carries the full key, so any other spelling gets a handler before its own events
+local routedVitalsKeys = {}
+function BaseUI.routeGmcpVitals(_, key)
+  if type(key) ~= "string" or routedVitalsKeys[key] then
+    return
+  end
+  routedVitalsKeys[key] = true
+  local from = key:find(".", #"gmcp." + 1, true)
+  while from do
+    local to = key:find(".", from + 1, true)
+    local event = key:sub(1, (to or 0) - 1)
+    if not knownVitalsEvent[event] and vitalsEvents[event:lower()] then
+      onEvent(event, "BaseUI.updateVitals")
+    end
+    from = to
+  end
+end
+
 function BaseUI.updateVitals()
   local sources = {}
   for _, path in ipairs(vitalsNodes) do
-    local node = gmcpNode(path)
-    if node then
-      sources[#sources + 1] = node
-    end
+    addGmcpNodes(path, sources)
   end
   if not sources[1] then
     return
@@ -2627,9 +3001,11 @@ end
 -- a reconnect (possibly to a different game or character) starts the ladder
 -- fresh: recurrence counters, the source lock and the one-time score request
 -- are all per-connection state. Painted gauges keep their last values until
--- fresh data arrives.
+-- fresh data arrives, except the enemy bar: its fight is over.
 function BaseUI.handleDisconnect()
   BaseUI.vitalsData = {}
+  BaseUI.conditionSightings = {}
+  BaseUI.forgetTextEnemy()
   BaseUI.vitalsLock = 0
   BaseUI.shapeSightings = {}
   BaseUI.scoreRequested = false
@@ -2721,10 +3097,11 @@ end
 function BaseUI.hide()
   BaseUI.settings.hidden = true
   -- before the save, so the tint it gives back is what gets remembered
-  applyConsoleTint()
+  applyBackdrop()
   BaseUI.saveSettings()
   BaseUI.disarmChatTriggers()
   BaseUI.killVitalsTriggers()
+  BaseUI.killConditionTrigger()
   if BaseUI.container then
     BaseUI.container:hide()
     BaseUI.container:adjustBorder()
@@ -2736,7 +3113,7 @@ end
 function BaseUI.show()
   BaseUI.settings.hidden = false
   BaseUI.settings.standingAside = nil
-  applyConsoleTint()
+  applyBackdrop()
   BaseUI.saveSettings()
   if type(gmcp) == "table" and next(gmcp) then
     gmod.enableModule("BaseUI", "Comm.Channel")
@@ -2748,7 +3125,11 @@ function BaseUI.show()
   BaseUI.updateMsdpVitals()
   BaseUI.armChatTriggers()
   BaseUI.createVitalsTriggers()
+  BaseUI.createConditionTrigger()
   BaseUI.renderVitals()
+  if not BaseUI.container and BaseUI.settings.built then
+    BaseUI.build()
+  end
   if BaseUI.container then
     BaseUI.container:show()
     if not BaseUI.container.attached then
@@ -2764,8 +3145,92 @@ function BaseUI.show()
   end
 end
 
-function BaseUI.alias(input)
+local function refuseBackground(path, problem)
+  cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not use this as a background picture: ")
+  echo(path .. " (" .. tostring(problem) .. ")")
+  cecho("&lt;reset&gt;\n")
+  return false, problem
+end
+
+-- Scriptable as well as typed: a path to show behind the whole window, or nil to stop.
+-- Returns false and the reason, leaving the picture before in place, for one that
+-- cannot be shown.
+function BaseUI.setBackground(path)
+  if path then
+    -- checked even while hidden, when nothing would show it until a later session
+    local width, problem = getImageSize(path)
+    if not width then
+      return refuseBackground(path, problem)
+    end
+    -- chosen again after failing to show, it gets another try
+    BaseUI.backgroundTried = nil
+  end
+  local previous = BaseUI.settings.background
+  BaseUI.settings.background = path
+  choosingBackground = true
+  applyBackdrop()
+  choosingBackground = false
+  if path and not BaseUI.dormant() and not BaseUI.backgroundShown then
+    local problem = BaseUI.backgroundProblem
+    BaseUI.settings.background = previous
+    applyBackdrop()
+    return refuseBackground(path, problem)
+  end
+  BaseUI.saveSettings()
+  paintPictureButton()
+  if not path then
+    cecho(previous and "\n&lt;cyan&gt;[ Mudlet UI ] Background picture removed.&lt;reset&gt;\n"
+      or "\n&lt;cyan&gt;[ Mudlet UI ] There is no background picture to remove.&lt;reset&gt;\n")
+    return true
+  end
+  -- the path through echo rather than cecho, which would read a "&lt;" in it as a colour
+  cecho("\n&lt;cyan&gt;[ Mudlet UI ] Background picture: &lt;yellow&gt;")
+  echo(path)
+  if BaseUI.dormant() then
+    cecho("&lt;cyan&gt; - it will show once the interface is back (&lt;yellow&gt;baseui show&lt;cyan&gt;).&lt;reset&gt;\n")
+  else
+    cecho("&lt;cyan&gt; - &lt;yellow&gt;baseui background off&lt;cyan&gt; removes it.&lt;reset&gt;\n")
+  end
+  return true
+end
+
+-- the button beside the palette one: a click picks a picture, a right-click removes it
+function BaseUI.pictureClicked(event)
+  if event and event.button == "RightButton" then
+    if BaseUI.settings.background then
+      BaseUI.setBackground(nil)
+    end
+    return
+  end
+  local path = invokeFileDialog(true, "Choose a background picture")
+  if path and path ~= "" then
+    BaseUI.setBackground(path)
+  end
+end
+
+local function backgroundCommand(argument)
+  argument = (argument or ""):trim()
+  -- a path pasted from a file manager often comes quoted
+  argument = argument:match('^"(.*)"$') or argument:match("^'(.*)'$") or argument
+  if argument:lower() == "off" then
+    BaseUI.setBackground(nil)
+  elseif argument ~= "" then
+    BaseUI.setBackground(argument)
+  elseif BaseUI.settings.background then
+    cecho("\n&lt;cyan&gt;[ Mudlet UI ] Background picture: &lt;yellow&gt;")
+    echo(BaseUI.settings.background)
+    cecho("&lt;cyan&gt; - &lt;yellow&gt;baseui background off&lt;cyan&gt; removes it.&lt;reset&gt;\n")
+  else
+    cecho("\n&lt;cyan&gt;[ Mudlet UI ] Type &lt;yellow&gt;baseui background (file)&lt;cyan&gt; to put a picture behind the whole window.&lt;reset&gt;\n")
+  end
+end
+
+function BaseUI.alias(input, argument)
   input = (input or ""):trim():lower()
+  if input == "background" then
+    backgroundCommand(argument)
+    return
+  end
   -- looks are matched after the commands, so naming one "hide" could never take
   -- that command away from the player
   if input == "hide" then
@@ -2798,6 +3263,11 @@ function BaseUI.alias(input)
     cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui hide&lt;cyan&gt; - hide it (remembered between sessions)\n")
     cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui show&lt;cyan&gt; - bring it back\n")
     cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui dock&lt;cyan&gt; - put every section back in the dock, if you dragged any out\n")
+    cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui background (file)&lt;cyan&gt; - put a picture behind the whole window, or click the &lt;yellow&gt;" .. pictureGlyph .. "&lt;cyan&gt; in its title bar\n")
+    if BaseUI.settings.background then
+      cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui background off&lt;cyan&gt; - remove the picture (currently ")
+      echo(BaseUI.settings.background .. ")\n")
+    end
     cecho("&lt;cyan&gt;[ Mudlet UI ] Looks - or click the &lt;yellow&gt;" .. paletteGlyph .. "&lt;cyan&gt; in its title bar to try each in turn:\n")
     for _, name in ipairs(themeOrder) do
       cecho(string.format("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui %s&lt;cyan&gt; - %s%s\n",
@@ -2825,6 +3295,7 @@ end
 -- vitals layer gets a look at it
 BaseUI.armChatTriggers()
 BaseUI.createVitalsTriggers()
+BaseUI.createConditionTrigger()
 -- negotiate MSDP up front: it costs nothing on servers without it and gives
 -- gauges to games that have it but lack GMCP. Seeded once rather than asserted
 -- on every load: this script runs at every profile open, so setting it each time
@@ -2835,12 +3306,12 @@ if not BaseUI.settings.msdpSeeded then
   setConfig("enableMSDP", true)
 end
 
-onEvent("gmcp.Char.Vitals", "BaseUI.updateVitals")
-onEvent("gmcp.char.vitals", "BaseUI.updateVitals")
-onEvent("gmcp.Char.Maxstats", "BaseUI.updateVitals")
-onEvent("gmcp.char.maxstats", "BaseUI.updateVitals")
-onEvent("gmcp.Char.Status", "BaseUI.updateVitals")
-onEvent("gmcp.char.status", "BaseUI.updateVitals")
+for _, event in ipairs(knownVitalsEvents) do
+  onEvent(event, "BaseUI.updateVitals")
+end
+for _, event in ipairs(vitalsNamespaceEvents) do
+  onEvent(event, "BaseUI.routeGmcpVitals")
+end
 onEvent("gmcp.Comm.Channel.Text", "BaseUI.addChatMessage")
 onEvent("sysProtocolEnabled", "BaseUI.enableChannelCapture")
 onEvent("sysProtocolEnabled", "BaseUI.enableMsdpVitals")
@@ -2858,6 +3329,8 @@ onEvent("sysMapDownloadEvent", "BaseUI.checkMapData")
 onEvent("sysMapAreaChanged", "BaseUI.checkMapData")
 onEvent("gmcp.Room.Info", "BaseUI.checkMapData")
 onEvent("gmcp.room.info", "BaseUI.checkMapData")
+-- a profile's saved map is loaded after its scripts have run
+onEvent("sysLoadEvent", "BaseUI.checkMapData")
 
 -- Everything above only reacts to what arrives next, which leaves the dock
 -- waiting on a game that has already spoken. Installing the package mid-session,
@@ -2869,7 +3342,7 @@ onEvent("gmcp.room.info", "BaseUI.checkMapData")
 -- the dock appearing at once and it appearing whenever the character next takes
 -- damage.
 --
--- On a fresh connection every branch below is a no-op, so this costs nothing and
+-- On a fresh connection every branch of this catch-up is a no-op, so it costs nothing and
 -- sends nothing: gmcp is created empty and only filled once data arrives, and
 -- msdp is not created at all until the first MSDP variable lands. What is sent
 -- is only what the handlers themselves would have sent.
@@ -2888,6 +3361,12 @@ if connected then
     BaseUI.enableMsdpVitals(nil, "MSDP")
     BaseUI.updateMsdpVitals()
   end
+end
+
+-- The profile restores the border the dock had at exit, so a dock this game has
+-- filled before is built now rather than leaving that border empty until it speaks
+if BaseUI.settings.built and not BaseUI.dormant() then
+  BaseUI.build()
 end</script>
 			<eventHandlerList />
 		</Script>

@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <OAuthClientFlow.h>
 #include <QtTest/QtTest>
 #include <QJsonDocument>
@@ -360,4 +361,4 @@ void OAuthClientFlowTest::testEmptyCodeFailsFlow()
 }
 
 #include "OAuthClientFlowTest.moc"
-QTEST_MAIN(OAuthClientFlowTest)
+MUDLET_GROUPED_TEST_MAIN(OAuthClientFlowTest)

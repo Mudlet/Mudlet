@@ -27,7 +27,7 @@
 
 bool TEncodingHelper::isCustomEncoding(const QByteArray& encoding)
 {
-    return encoding.startsWith("M_") || encoding == "CP437" || encoding == "CP667" || encoding == "CP737" || encoding == "CP869";
+    return encoding.startsWith("M_") || encoding == "CP437" || encoding == "CP667" || encoding == "CP737" || encoding == "CP869" || encoding == "MEDIEVIA";
 }
 
 // Check if an encoding is available via Qt6's QStringDecoder

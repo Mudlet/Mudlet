@@ -291,7 +291,7 @@ int sheetLength(const QString& value, const QFont& font)
         number.chop(1);
     }
     // lengthValueFromData()'s bounds, as qRound() is undefined outside int
-    return qRound(qBound(double(INT_MIN) + 0.1, scale.value_or(1) * number.toDouble(), double(INT_MAX)));
+    return qRound(qBound(static_cast<double>(INT_MIN) + 0.1, scale.value_or(1) * number.toDouble(), static_cast<double>(INT_MAX)));
 }
 
 // QRect and QSize add in int, which wraps past INT_MAX, and QWidget then holds a size it is given to 0 to QWIDGETSIZE_MAX
@@ -691,8 +691,12 @@ bool TNullConsoleFrontend::setLabelText(const QString& name, const QString& text
     if (it == mLabels.end()) {
         return false;
     }
-    Label& label = it->second;
-    const QString shown = label.pModel->linkStyledText(text);
+    showLabelText(it->second, it->second.pModel->linkStyledText(text));
+    return true;
+}
+
+void TNullConsoleFrontend::showLabelText(Label& label, const QString& shown)
+{
     // TLabel::setText() stops the movie even when QLabel::setText() keeps it for being given the same text
     if (label.showsMovie) {
         label.movie->stop();
@@ -704,8 +708,15 @@ bool TNullConsoleFrontend::setLabelText(const QString& name, const QString& text
         label.pixmapSize.reset();
         label.sizeHint.reset();
     }
-    label.pModel->mText = shown;
-    return true;
+    label.pModel->setText(shown);
+}
+
+// TLabel::reapplyLinkStyle()
+void TNullConsoleFrontend::reapplyLabelLinkStyle(Label& label)
+{
+    if (!label.pModel->mText.isEmpty() && TLabelModel::containsAnchorTag(label.pModel->mText)) {
+        showLabelText(label, label.pModel->restyledText());
+    }
 }
 
 std::optional<QSize> TNullConsoleFrontend::getLabelSizeHint(const QString& name) const
@@ -772,10 +783,11 @@ void TNullConsoleFrontend::polishLabel(Label& label)
 void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
 {
     TLabelModel& model = *label.pModel;
-    if (sheet == model.mStyleSheet && !label.restyleDue && !sheet.contains(qsl("url("), Qt::CaseInsensitive)) {
+    if (sheet == model.mStyleSheet && label.repolished && !label.restyleDue && !sheet.contains(qsl("url("), Qt::CaseInsensitive)) {
         return;
     }
     label.restyleDue = false;
+    label.repolished = label.styled && !sheet.isEmpty();
     const QFont before = model.mFont;
     model.mStyleSheet = sheet;
     if (sheet.isEmpty()) {
@@ -1512,7 +1524,7 @@ std::pair<bool, QString> TNullConsoleFrontend::setLabelToolTip(const QString& na
     if (!pLabel) {
         return {false, qsl("label name '%1' not found").arg(name)};
     }
-    pLabel->mToolTip = text;
+    pLabel->setToolTip(text);
     return {true, QString()};
 }
 
@@ -1561,6 +1573,7 @@ bool TNullConsoleFrontend::setLabelLinkStyle(const QString& name, const QString&
     pLabel->mLinkColor = linkColor;
     pLabel->mLinkVisitedColor = linkVisitedColor;
     pLabel->mLinkUnderline = underline;
+    reapplyLabelLinkStyle(it->second);
     return true;
 }
 
@@ -1571,15 +1584,12 @@ bool TNullConsoleFrontend::resetLabelLinkStyle(const QString& name)
 
 bool TNullConsoleFrontend::clearLabelVisitedLinks(const QString& name)
 {
-    TLabelModel* pLabel = labelModel(name);
-    if (!pLabel) {
+    const auto it = mLabels.find(name);
+    if (it == mLabels.end()) {
         return false;
     }
-    pLabel->mVisitedLinks.clear();
-    // TLabel::clearVisitedLinks() sets the text again, which picks up the current link style
-    if (!pLabel->mText.isEmpty() && TLabelModel::containsAnchorTag(pLabel->mText)) {
-        setLabelText(name, pLabel->mText);
-    }
+    it->second.pModel->mVisitedLinks.clear();
+    reapplyLabelLinkStyle(it->second);
     return true;
 }
 
@@ -1676,7 +1686,8 @@ bool TNullConsoleFrontend::setLabelBackgroundImage(const QString& name, const QS
         }
     }
     const QImage raster(path);
-    if (raster.isNull()) {
+    // TLabel::setBackgroundImage() takes an empty path to mean no image
+    if (raster.isNull() && !path.isEmpty()) {
         return false;
     }
     label.svgSize.reset();
@@ -1684,7 +1695,9 @@ bool TNullConsoleFrontend::setLabelBackgroundImage(const QString& name, const QS
         label.movie->stop();
     }
     clearLabelContents(label);
-    label.pixmapSize = raster.deviceIndependentSize().toSize();
+    if (!raster.isNull()) {
+        label.pixmapSize = raster.deviceIndependentSize().toSize();
+    }
     return true;
 }
 
@@ -1702,6 +1715,9 @@ bool TNullConsoleFrontend::resetLabelBackgroundImage(const QString& name)
             label.movie->stop();
         }
         clearLabelContents(label);
+    }
+    if (const QString withoutImage = TLabelModel::styleSheetWithoutBackgroundImage(label.pModel->mStyleSheet); withoutImage != label.pModel->mStyleSheet) {
+        restyleLabel(label, withoutImage);
     }
     return true;
 }
@@ -2110,8 +2126,6 @@ bool TNullConsoleFrontend::setWindowScrolling(const QString& name, const bool en
     return true;
 }
 
-// Lands on the line itself, where TMainConsole::scrollWindowTo() lands its first scroll short by the rows of
-// the split screen pane it opens
 bool TNullConsoleFrontend::scrollWindowTo(const QString& name, const int line, const bool toEnd)
 {
     TConsoleModel* pModel = mpHost->consoleModelNamed(name);
@@ -2129,6 +2143,12 @@ bool TNullConsoleFrontend::scrollWindowTo(const QString& name, const int line, c
     }
     pModel->mScrolledBackTo = line < 0 ? std::max(lastLine + line, 0) : line;
     return true;
+}
+
+bool TNullConsoleFrontend::windowFollowsNewLines(const QString& name)
+{
+    const TConsoleModel* pModel = mpHost->consoleModelNamed(name);
+    return pModel && !pModel->mScrolledBackTo;
 }
 
 // As TTextEdit::getColumnCount() and getRowCount() count it

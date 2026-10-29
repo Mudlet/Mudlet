@@ -34,7 +34,8 @@
 #include <QDebug>
 #include <QString>
 
-#include <math.h> // for sqrt
+#include <algorithm>
+#include <cmath>
 
 class TRoom;
 
@@ -44,52 +45,80 @@ using namespace boost;
 // auxiliary types
 struct location
 {
-    int id;    // Typically 4 bytes
-    TRoom* pR; // 4 or 8 bytes? - so may have reduced size from 20 to 8 or 12 plus padding...?
+    int id;
+    // Copied rather than read through pR: TMap::initGraph() scales the heuristic to these, and a
+    // room moved after it would otherwise let the heuristic overestimate.
+    int x;
+    int y;
+    int z;
+    TRoom* pR;
 };
 
-typedef float cost;
+// double, not float: weights go up to INT_MAX and a route sums several of them, all exactly.
+typedef double cost;
+
+// The least an edge costs per coordinate unit it spans, over every edge, so distance times it never
+// overestimates a route. Zero (Dijkstra) when an edge spans distance for free or none spans any.
+struct heuristicScale
+{
+    cost chebyshev = 0;
+    cost euclidean = 0;
+};
+
+// Shared by the heuristic and the scale it is held to: measured differently, it could overestimate.
+struct coordinateSpan
+{
+    cost chebyshev;
+    cost euclidean;
+};
+
+inline coordinateSpan spanBetween(const location& a, const location& b)
+{
+    // Subtracted as cost: two coordinates anywhere in the int range can differ by more than an int holds.
+    const cost dx = std::abs(static_cast<cost>(a.x) - b.x);
+    const cost dy = std::abs(static_cast<cost>(a.y) - b.y);
+    const cost dz = std::abs(static_cast<cost>(a.z) - b.z);
+    return {std::max({dx, dy, dz}), std::sqrt(dx * dx + dy * dy + dz * dz)};
+}
 
 // Used to record edge details and to deduplicate parallel ones:
 struct route
 {
-    float cost;              // Needed during establishing the best parallel edge
+    int cost;                // Needed during establishing the best parallel edge
     quint8 direction;        // Use DIR_xxx values to code exit direction
     QString specialExitName; // If direction is DIR_OTHER then this is needed
 };
 
-// euclidean distance heuristic
+// Admissible and consistent: each distance is scaled by its heuristicScale, and the larger kept.
+// Chebyshev is exact on a grid with diagonal exits; euclidean is the closer of the two on one without.
 template <class Graph, class CostType, class LocMap>
 class distance_heuristic : public boost::astar_heuristic<Graph, CostType>
 {
 public:
     typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
-    // Held by reference: a per-search copy (35MB on a 2.3M-room map) costs more than the search.
+    // Held by reference: a per-search copy (55MB on a 2.3M-room map) costs more than the search.
     // Callers pass TMap::locations, which initGraph() only clear()s: it can't dangle, but goes stale
     // across initGraph() (rooms renumbered), so never store a heuristic.
-    distance_heuristic(const LocMap& l, Vertex goal)
+    distance_heuristic(const LocMap& l, Vertex goal, const heuristicScale& scale)
     : m_location(l)
     , m_goal(goal)
-    {}
+    , m_scale(scale)
+    {
+    }
 
     // A temporary would leave m_location dangling.
-    distance_heuristic(const LocMap&&, Vertex) = delete;
+    distance_heuristic(const LocMap&&, Vertex, const heuristicScale&) = delete;
 
     CostType operator()(Vertex u)
     {
-        if (m_location[m_goal].pR->getArea() != m_location[u].pR->getArea()) {
-            return 1;
-        }
-        CostType dx = m_location[m_goal].pR->x() - m_location[u].pR->x();
-        CostType dy = m_location[m_goal].pR->y() - m_location[u].pR->y();
-        CostType dz = m_location[m_goal].pR->z() - m_location[u].pR->z();
-
-        return std::sqrt(dx * dx + dy * dy + dz * dz);
+        const coordinateSpan toGoal = spanBetween(m_location[m_goal], m_location[u]);
+        return std::max(toGoal.chebyshev * m_scale.chebyshev, toGoal.euclidean * m_scale.euclidean);
     }
 
 private:
     const LocMap& m_location;
     Vertex m_goal;
+    heuristicScale m_scale;
 };
 
 
@@ -105,10 +134,12 @@ class astar_goal_visitor : public boost::default_astar_visitor
 public:
     explicit astar_goal_visitor(Vertex goal)
     : m_goal(goal)
-    {}
+    {
+    }
 
     template <class Graph>
-    void examine_vertex(Vertex u, Graph& g) {
+    void examine_vertex(Vertex u, Graph& g)
+    {
         Q_UNUSED(g)
         if (u == m_goal) {
             throw found_goal();

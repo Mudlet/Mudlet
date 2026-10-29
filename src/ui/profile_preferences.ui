@@ -1826,6 +1826,19 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_folderView">
+            <property name="toolTip">
+             <string>&lt;p&gt;Adds a &lt;b&gt;Folders&lt;/b&gt; button to the editor's item toolbar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>Adds a Folders button to the editor's item toolbar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.</string>
+            </property>
+            <property name="text">
+             <string>Show a Folders view of all item types</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -3002,6 +3015,26 @@ you can use it but there could be issues with aligning columns of text</string>
               </widget>
              </item>
             </layout>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_mapStyle">
+            <property name="text">
+             <string>Modern 3D map style:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_mapStyle</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QComboBox" name="comboBox_mapStyle">
+            <property name="toolTip">
+             <string>&lt;p&gt;How the modern 3D mapper draws the map. Scripts can set it with setConfig(&quot;mapStyle&quot;, name).&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>How the modern 3D mapper draws the map. Scripts can set it with setConfig("mapStyle", name).</string>
+            </property>
            </widget>
           </item>
          </layout>
@@ -4743,6 +4776,54 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="7" column="0">
+           <widget class="QLabel" name="label_menuBarAltKeyNavigation">
+            <property name="text">
+             <string>Pressing Alt on its own moves focus to the menu bar:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_menuBarAltKeyNavigation</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QComboBox" name="comboBox_menuBarAltKeyNavigation">
+            <property name="toolTip">
+             <string>&lt;p&gt;Screen reader users reach Mudlet's menus by pressing and releasing Alt. Mudlet turns this on when the system reports a screen reader. Choose &lt;b&gt;always&lt;/b&gt; if yours is not detected, or &lt;b&gt;never&lt;/b&gt; if a mistimed Alt keybinding keeps moving focus away from the command line.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>Screen reader users reach Mudlet's menus by pressing and releasing Alt. Mudlet turns this on when the system reports a screen reader. Choose always if yours is not detected, or never if a mistimed Alt keybinding keeps moving focus away from the command line.</string>
+            </property>
+            <item>
+             <property name="text">
+              <string>when a screen reader is running</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>always</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>never</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="8" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_accessibleLabels">
+            <property name="toolTip">
+             <string>&lt;p&gt;Lets you reach the buttons that scripts and packages make out of labels with the Tab key, and press them with Space or Enter. A focused button is outlined. This changes the Tab order in packages, so it is off unless you turn it on.&lt;/p&gt;&lt;p&gt;It also lets a screen reader read out the new text of labels that scripts mark as live, such as a health gauge.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>When checked, buttons that scripts and packages make out of labels can be reached with the Tab key and pressed with Space or Enter, and a focused one is outlined. A screen reader also reads out the new text of labels that scripts mark as live.</string>
+            </property>
+            <property name="text">
+             <string>Make script buttons reachable with the keyboard</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -5464,7 +5545,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="7" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_lazyCaptureGlobals">
             <property name="toolTip">
-             <string>&lt;p&gt;Makes triggers faster by preparing the &lt;tt&gt;matches&lt;/tt&gt;, &lt;tt&gt;multimatches&lt;/tt&gt; and &lt;tt&gt;line&lt;/tt&gt; variables only when a script reads them. Scripts see the same values either way.&lt;/p&gt;&lt;p&gt;Turn this off only if a script or package looks through Lua's global table directly (with &lt;tt&gt;rawget&lt;/tt&gt;, &lt;tt&gt;next&lt;/tt&gt; or &lt;tt&gt;pairs&lt;/tt&gt; on &lt;tt&gt;_G&lt;/tt&gt;) and misbehaves because it does not find them there.&lt;/p&gt;</string>
+             <string>&lt;p&gt;Makes triggers faster by preparing the &lt;tt&gt;matches&lt;/tt&gt;, &lt;tt&gt;multimatches&lt;/tt&gt; and &lt;tt&gt;line&lt;/tt&gt; variables only when a script reads them. Scripts see the same values either way.&lt;/p&gt;&lt;p&gt;Turn this off only if a script or package looks through Lua's global table directly (with &lt;tt&gt;next&lt;/tt&gt; or &lt;tt&gt;pairs&lt;/tt&gt; on &lt;tt&gt;_G&lt;/tt&gt;) and misbehaves because it does not find them there.&lt;/p&gt;</string>
             </property>
             <property name="accessibleDescription">
              <string>When checked, triggers run faster because the matches, multimatches and line variables are only prepared when a script reads them. Turn this off only if a script or package that looks through Lua's global table directly misbehaves.</string>
@@ -5568,6 +5649,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_showBidi</tabstop>
   <tabstop>checkBox_showLineFeedsAndParagraphs</tabstop>
   <tabstop>checkBox_showIdNumbers</tabstop>
+  <tabstop>checkBox_folderView</tabstop>
   <tabstop>pushButton_foreground_color</tabstop>
   <tabstop>pushButton_command_line_foreground_color</tabstop>
   <tabstop>pushButton_command_foreground_color</tabstop>
@@ -5678,8 +5760,10 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_enableClosedCaption</tabstop>
   <tabstop>comboBox_blankLinesBehaviour</tabstop>
   <tabstop>comboBox_caretModeKey</tabstop>
+  <tabstop>comboBox_menuBarAltKeyNavigation</tabstop>
   <tabstop>checkBox_f3SearchEnabled</tabstop>
   <tabstop>checkBox_enableBlinkText</tabstop>
+  <tabstop>checkBox_accessibleLabels</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
   <tabstop>mFORCE_GA_OFF</tabstop>
   <tabstop>checkBox_mForceMXPProcessorOn</tabstop>

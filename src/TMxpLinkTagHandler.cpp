@@ -23,6 +23,19 @@
 #include "TMxpClient.h"
 #include "UntrustedText.h"
 
+#include <QCoreApplication>
+#include <QDebug>
+#include <QUrl>
+
+namespace {
+// Shown in place of the address, so the tooltip and a screen reader say the click will do nothing
+QString refusedHint(const QString& href)
+{
+    //: Tooltip on a link from the game whose address Mudlet will not open, such as a file or a program's own scheme; %1 is that address
+    return QCoreApplication::translate("TMxpLinkTagHandler", "Mudlet does not open this kind of address: %1").arg(UntrustedText::forTarget(href));
+}
+} // namespace
+
 // <A href=URL [hint=text] [expire=name]>
 TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
@@ -46,8 +59,13 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     // Server-supplied, and lands in the same tooltip as an OSC 8 hint. An
     // explicit hint is prose written to be read; falling back to the href makes
     // this a link target the user is being asked to trust.
-    const QString hint = tag->hasAttribute(qsl("hint")) ? UntrustedText::forAuthoredText(tag->getAttributeValue(qsl("hint"))) : UntrustedText::forTarget(mHref);
-    const QString action = actionFor(mHref);
+    mHintIsHref = !tag->hasAttribute(qsl("hint"));
+    QString hint = mHintIsHref ? UntrustedText::forTarget(mHref) : UntrustedText::forAuthoredText(tag->getAttributeValue(qsl("hint")));
+    // An address taken from the wrapped text is only known, and checked, at the end tag
+    const QString action = mIsHrefInContent ? QString() : actionFor(mHref);
+    if (!mIsHrefInContent && action.isEmpty()) {
+        hint = refusedHint(mHref);
+    }
 
     // Use the version of setLink that supports expire names
     if (!expireName.isEmpty()) {
@@ -74,6 +92,13 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
     if (links != nullptr && mIsHrefInContent && !links->isEmpty()) {
         const QString href = QString(mHref).replace(TAG_CONTENT_PLACEHOLDER, mCurrentTagContent, Qt::CaseInsensitive);
         links->first() = actionFor(href);
+        if (hints != nullptr && !hints->isEmpty()) {
+            if (links->first().isEmpty()) {
+                hints->first() = refusedHint(href);
+            } else if (mHintIsHref) {
+                hints->first() = UntrustedText::forTarget(href);
+            }
+        }
     }
 
     mIsHrefInContent = false;
@@ -84,6 +109,12 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
 
 QString TMxpLinkTagHandler::actionFor(const QString& href)
 {
+    // Game servers choose MXP link addresses, so only these schemes may reach the system's URL handler
+    const QString scheme = QUrl(href).scheme().toLower();
+    if (scheme != qsl("http") && scheme != qsl("https") && scheme != qsl("ftp") && scheme != qsl("mailto")) {
+        qWarning().noquote().nospace() << "TMxpLinkTagHandler::actionFor(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\" in link to: \"" << href.left(80) << "\"";
+        return QString();
+    }
     return qsl("openUrl(%1)").arg(LuaLiteral::quote(href));
 }
 

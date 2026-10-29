@@ -31,7 +31,9 @@
 #include "Host.h"
 #include "HostDialogs.h"
 #include "HostManager.h"
+#include "MapStyle.h"
 #include "MudletApp.h"
+#include "MudletProxyStyle.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
@@ -44,6 +46,7 @@
 #include "TScript.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
+#include "TriggerMatchPool.h"
 #include "TTrigger.h"
 #include "ctelnet.h"
 #include "discord.h"
@@ -94,6 +97,7 @@
 #include <QTableWidget>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
+#include <QThread>
 #include <QToolBar>
 #include <QtMath>
 #include <QUiLoader>
@@ -876,6 +880,12 @@ void dlgProfilePreferences::buildShell()
     moveIntoCard(pCard_captions, {checkBox_enableBlinkText, checkBox_enableClosedCaption});
     auto* pCard_keyboard = createCard(qsl("card_accessibilityKeyboard"));
     addCardRow(pCard_keyboard, label_caretModeKey, comboBox_caretModeKey);
+    addCardRow(pCard_keyboard, label_menuBarAltKeyNavigation, comboBox_menuBarAltKeyNavigation);
+#if defined(Q_OS_MACOS)
+    // The native menu bar takes no part in Alt key navigation
+    label_menuBarAltKeyNavigation->hide();
+    comboBox_menuBarAltKeyNavigation->hide();
+#endif
     moveIntoCard(pCard_keyboard, {checkBox_f3SearchEnabled});
     buildCategoryPage(scmCategory_accessibility, {groupBox_accessibility, pCard_captions, pCard_keyboard});
 
@@ -883,7 +893,9 @@ void dlgProfilePreferences::buildShell()
 
     auto* pCard_performance = createCard(qsl("card_performance"));
     moveIntoCard(pCard_performance, {checkBox_lazyCaptureGlobals});
-    buildCategoryPage(scmCategory_advanced, {pCard_performance, groupBox_debug});
+    createTriggerMatchPoolControls(pCard_performance);
+    buildExperimentsCard();
+    buildCategoryPage(scmCategory_advanced, {pCard_performance, groupBox_debug, mpCard_experiments});
 
     buildSearchResultsPage();
 
@@ -1160,6 +1172,8 @@ void dlgProfilePreferences::retranslateShell()
     cardTitles.append({qsl("card_crashReports"), tr("Crash reports")});
     //: Card title on the Advanced settings page, above options that trade compatibility for speed
     cardTitles.append({qsl("card_performance"), tr("Performance")});
+    //: Card title on the Advanced settings page, above the checkboxes that switch unfinished features on for this profile
+    cardTitles.append({qsl("card_experiments"), tr("Experiments (unsupported)")});
     //: Card title on the Chat and sharing settings page, above the row leading to the Discord Rich Presence settings
     cardTitles.append({qsl("card_discord"), tr("Discord Rich Presence")});
     //: Card title on the game protocols subpage, above the ten protocols Mudlet can offer the game
@@ -1234,6 +1248,7 @@ void dlgProfilePreferences::retranslateShell()
 #endif
     updateSecurityStatus();
     setCardDescriptions();
+    retranslateExperiments();
 
     if (mpFrame_migrationBanner) {
         //: Title of the banner explaining that the settings dialog has been reorganised
@@ -1250,6 +1265,7 @@ void dlgProfilePreferences::retranslateShell()
                                         "To change those, including the accessibility options, open Settings from a loaded profile."));
     updateNoProfileNotice();
 
+    retranslateTriggerMatchPoolControls();
     setSearchKeywords();
 
     // Nothing is current while the shell is being built, and search sets its own title on the next query
@@ -1259,6 +1275,160 @@ void dlgProfilePreferences::retranslateShell()
         } else {
             mpLabel_pageTitle->setText(tr("%1 › %2").arg(pCurrent->text(), mSubpageTitles.value(mCurrentSubpage)));
         }
+    }
+}
+
+void dlgProfilePreferences::createTriggerMatchPoolControls(QGroupBox* pCard)
+{
+    mpCheckBox_triggerMatchPool = new QCheckBox(pCard);
+    mpCheckBox_triggerMatchPool->setObjectName(qsl("checkBox_triggerMatchPool"));
+    moveIntoCard(pCard, {mpCheckBox_triggerMatchPool});
+    auto* pCardLayout = qobject_cast<QVBoxLayout*>(pCard->layout());
+    Q_ASSERT_X(pCardLayout, "dlgProfilePreferences::createTriggerMatchPoolControls", "the controls can only be added to a card that createCard() made");
+    if (!pCardLayout) {
+        return;
+    }
+    // One grid so the fields line up, indented to the check box's text as they only apply while it is on
+    auto* pGrid = new QGridLayout();
+    pGrid->setContentsMargins(style()->pixelMetric(QStyle::PM_IndicatorWidth, nullptr, mpCheckBox_triggerMatchPool)
+                                      + style()->pixelMetric(QStyle::PM_CheckBoxLabelSpacing, nullptr, mpCheckBox_triggerMatchPool),
+                              0,
+                              0,
+                              0);
+    pGrid->setSpacing(8);
+    // A number field stretched to the card's width reads as a text field
+    pGrid->setColumnStretch(2, 1);
+    pCardLayout->addLayout(pGrid);
+    const auto addRow = [pCard, pGrid](QLabel*& pLabel, QSpinBox*& pSpinBox, const QString& name, const int minimum, const int maximum) {
+        pLabel = new QLabel(pCard);
+        pSpinBox = new QSpinBox(pCard);
+        pSpinBox->setObjectName(qsl("spinBox_%1").arg(name));
+        pSpinBox->setRange(minimum, maximum);
+        pLabel->setBuddy(pSpinBox);
+        const int row = pGrid->count() / 2;
+        pGrid->addWidget(pLabel, row, 0);
+        pGrid->addWidget(pSpinBox, row, 1);
+    };
+    addRow(mpLabel_triggerMatchThreads, mpSpinBox_triggerMatchThreads, qsl("triggerMatchThreads"), 1, std::max(1, QThread::idealThreadCount() - 1));
+    addRow(mpLabel_triggerMatchThreshold, mpSpinBox_triggerMatchThreshold, qsl("triggerMatchThreshold"), 1, 100000);
+    addRow(mpLabel_triggerMatchMissesPerMatch, mpSpinBox_triggerMatchMissesPerMatch, qsl("triggerMatchMissesPerMatch"), 0, 1000);
+    addRow(mpLabel_triggerMatchFloodLines, mpSpinBox_triggerMatchFloodLines, qsl("triggerMatchFloodLines"), 1, 100000);
+    addRow(mpLabel_triggerMatchSpin, mpSpinBox_triggerMatchSpin, qsl("triggerMatchSpinMicroseconds"), 0, 100000);
+    connect(mpCheckBox_triggerMatchPool, &QCheckBox::toggled, this, &dlgProfilePreferences::enableTriggerMatchPoolTuning);
+}
+
+void dlgProfilePreferences::enableTriggerMatchPoolTuning(const bool enabled)
+{
+    for (auto* pControl : std::initializer_list<QWidget*>{mpLabel_triggerMatchThreads,
+                                                          mpSpinBox_triggerMatchThreads,
+                                                          mpLabel_triggerMatchThreshold,
+                                                          mpSpinBox_triggerMatchThreshold,
+                                                          mpLabel_triggerMatchMissesPerMatch,
+                                                          mpSpinBox_triggerMatchMissesPerMatch,
+                                                          mpLabel_triggerMatchFloodLines,
+                                                          mpSpinBox_triggerMatchFloodLines,
+                                                          mpLabel_triggerMatchSpin,
+                                                          mpSpinBox_triggerMatchSpin}) {
+        pControl->setEnabled(enabled);
+    }
+}
+
+void dlgProfilePreferences::retranslateTriggerMatchPoolControls()
+{
+    //: Check box in the Performance settings; the triggers' regular expressions are then searched on several CPU cores while game text floods in
+    mpCheckBox_triggerMatchPool->setText(tr("Match triggers on several threads during floods of text (experimental)"));
+    //: Tooltip of the check box that matches triggers on several threads
+    mpCheckBox_triggerMatchPool->setToolTip(tr("<p>Mudlet checks each line of game text against your triggers one at a time. Regex triggers are the slow ones, and on a busy "
+                                               "profile most of them do not match most lines.</p>"
+                                               "<p>When the game sends many lines at once, this has other CPU cores check the regex triggers first and tell Mudlet which ones "
+                                               "cannot match, so it skips them. Your triggers still fire in the same order as before.</p>"
+                                               "<p>On most profiles it makes no difference and uses more CPU, so it is off unless you switch it on. Once it is on, the Statistics "
+                                               "report in the trigger editor (Ctrl+9) tells you whether it helps your profile.</p>"));
+    const TriggerMatchPool::Settings defaults;
+    //: Label of a number field in the Performance settings: how many threads help the main one match triggers
+    mpLabel_triggerMatchThreads->setText(tr("Extra threads helping the main one:"));
+    //: Tooltip of the number of extra threads that match triggers; %1 is the default number of them
+    mpSpinBox_triggerMatchThreads->setToolTip(tr("<p>How many other CPU cores help the main one check triggers. More than three rarely helps: they then spend longer "
+                                                 "waiting for each other than checking.</p><p>Default: %1</p>")
+                                                      .arg(TriggerMatchPool::automaticThreads() - 1));
+    //: Label of a number field in the Performance settings: how many regex searches that find nothing a line needs before other threads help with it
+    mpLabel_triggerMatchThreshold->setText(tr("Failed regex searches a line needs before the threads help:"));
+    //: Tooltip of the threshold of failed regex searches per line; %1 is the default
+    mpSpinBox_triggerMatchThreshold->setToolTip(tr("<p>The extra threads help only if the previous line had at least this many regex triggers that did not match. "
+                                                   "With fewer, handing the work out costs more than it saves.</p><p>Default: %1</p>")
+                                                        .arg(defaults.threshold));
+    //: Label of a number field in the Performance settings: how many failed regex searches a line needs for every one that matched
+    mpLabel_triggerMatchMissesPerMatch->setText(tr("Failed searches needed for each one that matched:"));
+    //: Tooltip of the failed searches per match ratio; %1 is the default
+    mpSpinBox_triggerMatchMissesPerMatch->setToolTip(tr("<p>The extra threads help only if, on the previous line, at least this many regex triggers did not match for "
+                                                        "each one that did. Lines where many triggers match are quicker on one thread. 0 turns this check off.</p>"
+                                                        "<p>Default: %1</p>")
+                                                             .arg(defaults.missesPerMatch));
+    //: Label of a number field in the Performance settings: how many lines must arrive at once to count as a flood
+    mpLabel_triggerMatchFloodLines->setText(tr("Lines arriving at once that make a flood:"));
+    //: Tooltip of the lines that make a flood; %1 is the default
+    mpSpinBox_triggerMatchFloodLines->setToolTip(tr("<p>The extra threads help only when the game sends at least this many lines at once. For a line or two at a time "
+                                                    "they would use CPU for nothing.</p><p>Default: %1</p>")
+                                                         .arg(defaults.floodChunkLines));
+    //: Label of a number field in the Performance settings: how long, in microseconds, the helper threads stay awake waiting for the next line
+    mpLabel_triggerMatchSpin->setText(tr("Microseconds the threads stay awake for the next line:"));
+    //: Tooltip of the helper threads' spin time; %1 is the default, in microseconds
+    mpSpinBox_triggerMatchSpin->setToolTip(tr("<p>After a line, the extra threads stay awake this long waiting for the next one before they go to sleep, because "
+                                              "waking a sleeping thread costs more than the work it is given.</p><p>Default: %1</p>")
+                                                   .arg(defaults.spinMicroseconds));
+    for (const auto& [pLabel, pSpinBox] : std::initializer_list<std::pair<QLabel*, QSpinBox*>>{{mpLabel_triggerMatchThreads, mpSpinBox_triggerMatchThreads},
+                                                                                               {mpLabel_triggerMatchThreshold, mpSpinBox_triggerMatchThreshold},
+                                                                                               {mpLabel_triggerMatchMissesPerMatch, mpSpinBox_triggerMatchMissesPerMatch},
+                                                                                               {mpLabel_triggerMatchFloodLines, mpSpinBox_triggerMatchFloodLines},
+                                                                                               {mpLabel_triggerMatchSpin, mpSpinBox_triggerMatchSpin}}) {
+        pLabel->setToolTip(pSpinBox->toolTip());
+    }
+}
+
+// App-wide like the pool, so read from Mudlet.ini with or without a profile
+void dlgProfilePreferences::populateTriggerMatchPoolSettings()
+{
+    // Validated as the pool validates them, so a field shows the value the pool would use
+    const TriggerMatchPool::Settings saved = TriggerMatchPool::savedSettings();
+    const bool enabled = saved.threads >= 2;
+    {
+        const QSignalBlocker blocker(mpCheckBox_triggerMatchPool);
+        mpCheckBox_triggerMatchPool->setChecked(enabled);
+    }
+    enableTriggerMatchPoolTuning(enabled);
+    // One core leaves no other thread to share the matching with
+    mpCheckBox_triggerMatchPool->setEnabled(QThread::idealThreadCount() >= 2 || enabled);
+    for (const auto& [pSpinBox, value] : std::initializer_list<std::pair<QSpinBox*, int>>{{mpSpinBox_triggerMatchThreads, (enabled ? saved.threads : TriggerMatchPool::automaticThreads()) - 1},
+                                                                                          {mpSpinBox_triggerMatchThreshold, saved.threshold},
+                                                                                          {mpSpinBox_triggerMatchMissesPerMatch, saved.missesPerMatch},
+                                                                                          {mpSpinBox_triggerMatchFloodLines, saved.floodChunkLines},
+                                                                                          {mpSpinBox_triggerMatchSpin, saved.spinMicroseconds}}) {
+        const QSignalBlocker spinBlocker(pSpinBox);
+        pSpinBox->setValue(value);
+    }
+}
+
+void dlgProfilePreferences::applyTriggerMatchPoolSettings()
+{
+    // Only what the player changed: a key left unwritten keeps following the defaults of later releases
+    QSettings* settings = MudletApp::getQSettings();
+    bool changed = false;
+    if (mSnapshot.anyDirty({mpCheckBox_triggerMatchPool, mpSpinBox_triggerMatchThreads})) {
+        settings->setValue(qsl("triggerMatchThreads"), mpCheckBox_triggerMatchPool->isChecked() ? mpSpinBox_triggerMatchThreads->value() + 1 : 0);
+        changed = true;
+    }
+    for (const auto& [pSpinBox, key] : std::initializer_list<std::pair<QSpinBox*, QString>>{{mpSpinBox_triggerMatchThreshold, qsl("triggerMatchThreshold")},
+                                                                                            {mpSpinBox_triggerMatchMissesPerMatch, qsl("triggerMatchMissesPerMatch")},
+                                                                                            {mpSpinBox_triggerMatchFloodLines, qsl("triggerMatchFloodLines")},
+                                                                                            {mpSpinBox_triggerMatchSpin, qsl("triggerMatchSpinMicroseconds")}}) {
+        if (mSnapshot.anyDirty({pSpinBox})) {
+            settings->setValue(key, pSpinBox->value());
+            changed = true;
+        }
+    }
+    if (changed) {
+        // Through settingsFromConfig() rather than from the controls, so an environment override still wins
+        TriggerMatchPool::instance().configure(TriggerMatchPool::settingsFromConfig());
     }
 }
 
@@ -1276,6 +1446,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({checkBox_askTlsAvailable, tr("TLS, SSL, secure connection, reminder")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for preparing the matches, multimatches and line trigger variables only when a script reads them.
     synonyms.append({checkBox_lazyCaptureGlobals, tr("performance, speed, fast, slow, lag, lazy, matches, multimatches, line, _G, global variables")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for matching triggers on several threads (CPU cores) during floods of game text.
+    synonyms.append({mpCheckBox_triggerMatchPool, tr("performance, speed, fast, slow, lag, threads, cores, CPU, multithreading, parallel, triggers, regex, flood, spam")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the proxy server settings.
     synonyms.append({groupBox_proxy, tr("proxy, SOCKS, tunnel, firewall")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for where game passwords are kept.
@@ -1284,8 +1456,12 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({disable_password_masking_checkbox, tr("password, masking, hidden characters")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for telling the game that a screen reader is in use.
     synonyms.append({checkBox_advertiseScreenReader, tr("screen reader, NVDA, JAWS, VoiceOver, Orca, accessibility")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for reaching buttons in scripts and packages with the keyboard.
+    synonyms.append({checkBox_accessibleLabels, tr("keyboard, tab, focus, buttons, labels, screen reader, accessibility")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for reading incoming text out loud.
     synonyms.append({checkBox_announceIncomingText, tr("text to speech, TTS, speech, spoken, screen reader")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for whether pressing Alt on its own moves focus to the menu bar.
+    synonyms.append({label_menuBarAltKeyNavigation, tr("Alt key, menu bar, menus, keyboard, screen reader")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for putting the time in front of each logged line.
     synonyms.append({mIsLoggingTimestamps, tr("timestamps, time, date, transcript")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the format logs are written in.
@@ -1342,6 +1518,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_specialOptions, tr("special options, workaround, old game, compatibility")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for script debugging options, which used to be on a tab called "Special options".
     synonyms.append({groupBox_debug, tr("special options, advanced, debug, developer")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the unfinished features that can be switched on for a profile.
+    synonyms.append({mpCard_experiments.data(), tr("experiment, experimental, beta, preview, unsupported, 3D map, renderer")});
     for (const auto& [pControl, words] : synonyms) {
         pControl->setProperty(scmProp_searchKeywords, words);
     }
@@ -1679,9 +1857,14 @@ void dlgProfilePreferences::setCardDescriptions()
     setCardDescription(findChild<QGroupBox*>(qsl("card_crashReports")),
                        tr("If Mudlet stops unexpectedly it can tell the developers what went wrong. A report says where Mudlet was in its own code - never what you typed or what the game sent."));
     //: Description line under the "Performance" card title on the Advanced settings page
-    setCardDescription(findChild<QGroupBox*>(qsl("card_performance")), tr("Ways Mudlet speeds up your scripts. Leave these on unless a script or package misbehaves."));
+    setCardDescription(findChild<QGroupBox*>(qsl("card_performance")),
+                       tr("Ways Mudlet speeds up your scripts. Leave the first on unless a script or package misbehaves; matching on several threads is off unless you switch it on."));
     //: Description line under the "Developer" card title on the Advanced settings page
     setCardDescription(groupBox_debug, tr("How much Mudlet's debugging tools report while you work on scripts."));
+    //: Description line under the "Experiments (unsupported)" card title on the Advanced settings page
+    setCardDescription(mpCard_experiments,
+                       tr("Unfinished features that are still being tried out. They are not supported: they may misbehave, change or be removed in any release. "
+                          "Each one is switched for this profile only."));
 }
 
 void dlgProfilePreferences::buildProtocolsSubpage()
@@ -1754,6 +1937,104 @@ void dlgProfilePreferences::buildProtocolsSubpage()
     connect(pushButton_chooseProtocols, &QAbstractButton::clicked, this, [this]() {
         showSubpage(scmCategory_connection, qsl("protocols"));
     });
+}
+
+void dlgProfilePreferences::buildExperimentsCard()
+{
+    mpCard_experiments = createCard(qsl("card_experiments"));
+    auto* pCardLayout = qobject_cast<QVBoxLayout*>(mpCard_experiments->layout());
+    pCardLayout->setSpacing(4);
+
+    for (const auto& key : Host::getValidExperiments()) {
+        auto* pCheckBox = new QCheckBox(mpCard_experiments);
+        pCheckBox->setObjectName(qsl("checkBox_%1").arg(key));
+        pCardLayout->addWidget(pCheckBox);
+        auto* pDescription = new QLabel(mpCard_experiments);
+        pDescription->setObjectName(qsl("checkBox_%1_description").arg(key));
+        pDescription->setProperty("settingsControlDescription", true);
+        pDescription->setWordWrap(true);
+        pCardLayout->addWidget(pDescription);
+        mExperimentCheckBoxes.insert(key, pCheckBox);
+    }
+#if !defined(INCLUDE_3DMAPPER)
+    // Every experiment so far only changes the 3D map, which this build leaves out
+    mpCard_experiments->hide();
+#endif
+
+    // Mirrors Host::setExperimentEnabled(), which switches the rest of a group off, so the
+    // dialog never shows two of one group ticked
+    for (const auto& [key, pCheckBox] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+        const QString group = Host::experimentGroup(key);
+        if (group.isEmpty()) {
+            continue;
+        }
+        connect(pCheckBox, &QAbstractButton::toggled, this, [this, ownKey = key, group](const bool checked) {
+            if (mPopulating || !checked) {
+                return;
+            }
+            for (const auto& [siblingKey, pSibling] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+                if (siblingKey != ownKey && pSibling && Host::experimentGroup(siblingKey) == group) {
+                    pSibling->setChecked(false);
+                }
+            }
+        });
+    }
+}
+
+void dlgProfilePreferences::retranslateExperiments()
+{
+    QHash<QString, QString> labels;
+    QHash<QString, QString> descriptions;
+    //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    labels.insert(qsl("experiment.3dmap.modernmapper"), tr("Modern 3D mapper"));
+    //: Description under the "Modern 3D mapper" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    descriptions.insert(qsl("experiment.3dmap.modernmapper"), tr("Draws the 3D map with the new renderer instead of the original one. The other 3D map experiments only work with it."));
+    //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    labels.insert(qsl("experiment.3d-player-icon"), tr("3D player marker"));
+    //: Description under the "3D player marker" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    descriptions.insert(qsl("experiment.3d-player-icon"), tr("Shows a marker above the room you are in on the modern 3D map."));
+    //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    labels.insert(qsl("experiment.render-in-out-exits"), tr("In and out exits on the 3D map"));
+    //: Description under the "In and out exits on the 3D map" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    descriptions.insert(qsl("experiment.render-in-out-exits"), tr("Draws in and out exits on the modern 3D map, and marks the rooms that have them with arrows."));
+    //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    labels.insert(qsl("experiment.rendering.more-transparent"), tr("Darken other levels"));
+    //: Description under the "Darken other levels" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    descriptions.insert(qsl("experiment.rendering.more-transparent"),
+                        tr("Draws rooms on the modern 3D map darker the further their level is from yours, instead of making the rooms above you see-through."));
+    //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    labels.insert(qsl("experiment.rendering.originalish"), tr("Original level shading"));
+    //: Description under the "Original level shading" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    descriptions.insert(qsl("experiment.rendering.originalish"), tr("Draws the rooms on other levels of the modern 3D map the usual way, with the rooms above you see-through."));
+
+    for (const auto& [key, pCheckBox] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+        if (!pCheckBox) {
+            continue;
+        }
+        pCheckBox->setText(labels.value(key, key));
+
+        QStringList siblings;
+        const QString group = Host::experimentGroup(key);
+        for (const auto& siblingKey : mExperimentCheckBoxes.keys()) {
+            if (!group.isEmpty() && siblingKey != key && Host::experimentGroup(siblingKey) == group) {
+                siblings << labels.value(siblingKey, siblingKey);
+            }
+        }
+        QString description = descriptions.value(key);
+        if (!siblings.isEmpty()) {
+            //: Added to the description of an experiment on the Advanced settings page that cannot be on together with others; %1 is the list of their names
+            const QString exclusive = tr("Turning this on turns off: %1.").arg(siblings.join(qsl(", ")));
+            description = description.isEmpty() ? exclusive : qsl("%1 %2").arg(description, exclusive);
+        }
+        if (auto* pDescription = findChild<QLabel*>(qsl("%1_description").arg(pCheckBox->objectName())); pDescription) {
+            pDescription->setText(description);
+            pDescription->setVisible(!description.isEmpty());
+        }
+        pCheckBox->setAccessibleDescription(description);
+        //: Tooltip line on an experiment's checkbox on the Advanced settings page; %1 is the name a script passes to setConfig() to switch it, which is not translated
+        const QString scriptName = tr("Name for scripts: %1").arg(qsl("<tt>%1</tt>").arg(key.toHtmlEscaped()));
+        pCheckBox->setToolTip(description.isEmpty() ? qsl("<p>%1</p>").arg(scriptName) : qsl("<p>%1</p><p>%2</p>").arg(description.toHtmlEscaped(), scriptName));
+    }
 }
 
 void dlgProfilePreferences::updateProtocolSummary()
@@ -1983,12 +2264,22 @@ void dlgProfilePreferences::reflowWideCards()
 
     const QList<QWidget*> mapViewOptions{
             mMapperUseAntiAlias, checkBox_drawUpperLowerLevels, checkbox_mMapperShowRoomBorders, checkBox_invertMapZoom, checkBox_largeAreaExitArrows, checkBox_showDefaultArea};
-    takeOutOfLayout(gridLayout_groupBox_mapViewOptions, mapViewOptions + QList<QWidget*>{gridGroupBox, groupBox_mapSymbols});
+    takeOutOfLayout(gridLayout_groupBox_mapViewOptions, mapViewOptions + QList<QWidget*>{label_mapStyle, comboBox_mapStyle, gridGroupBox, groupBox_mapSymbols});
     for (int i = 0, total = mapViewOptions.size(); i < total; ++i) {
         gridLayout_groupBox_mapViewOptions->addWidget(mapViewOptions.at(i), i / 2, i % 2);
     }
-    gridLayout_groupBox_mapViewOptions->addWidget(gridGroupBox, 3, 0, 1, 2);
-    gridLayout_groupBox_mapViewOptions->addWidget(groupBox_mapSymbols, 4, 0, 1, 2);
+#if defined(INCLUDE_3DMAPPER)
+    auto* pMapStyleRow = new QHBoxLayout();
+    pMapStyleRow->addWidget(label_mapStyle);
+    pMapStyleRow->addWidget(comboBox_mapStyle);
+    pMapStyleRow->addStretch(1);
+    gridLayout_groupBox_mapViewOptions->addLayout(pMapStyleRow, 3, 0, 1, 2);
+#else
+    label_mapStyle->hide();
+    comboBox_mapStyle->hide();
+#endif
+    gridLayout_groupBox_mapViewOptions->addWidget(gridGroupBox, 4, 0, 1, 2);
+    gridLayout_groupBox_mapViewOptions->addWidget(groupBox_mapSymbols, 5, 0, 1, 2);
 
     // A column of three, leaving free the two cells initWithHost() appends the scaling factor to
     const QList<QWidget*> mapSymbolRows{label_mapSymbolsFont, fontComboBox_mapSymbols, pushButton_showGlyphUsage, checkBox_isOnlyMapSymbolFontToBeUsed};
@@ -2313,6 +2604,13 @@ bool dlgProfilePreferences::event(QEvent* pEvent)
     const bool handled = QDialog::event(pEvent);
     if (pEvent->type() == QEvent::WindowActivate) {
         refreshFromSettings();
+    }
+    // Sent when this dialog's stylesheet or the application's is replaced
+    if (pEvent->type() == QEvent::StyleChange && mpWidget_shell) {
+        bool themeSurface = false;
+        if (shellPalette(themeSurface) != mShellPalette) {
+            applyShellStyle();
+        }
     }
     return handled;
 }
@@ -3025,6 +3323,35 @@ void dlgProfilePreferences::restyleSidebarIcons(const QColor& normal, const QCol
     }
 }
 
+// The application's palette, not the dialog's: a stylesheet freezes its widget's palette, and the dialog's is
+// still stale when signal_appearanceChanged() arrives. A stylesheet painting plain widgets paints the controls
+// on the cards, so it decides; read off an unparented probe, which starts from qApp's palette.
+QPalette dlgProfilePreferences::shellPalette(bool& themeSurface) const
+{
+    themeSurface = false;
+    if (qApp->styleSheet().isEmpty() && styleSheet().isEmpty()) {
+        return QApplication::palette();
+    }
+    QWidget probe;
+    probe.setStyleSheet(styleSheet());
+    probe.ensurePolished();
+    QPalette palette = probe.palette();
+    const QBrush window = palette.brush(QPalette::Active, QPalette::Window);
+    if (palette.isBrushSet(QPalette::Active, QPalette::Window) && window.style() == Qt::SolidPattern && window.color().alpha() == 255) {
+        palette.setColor(QPalette::Base, window.color());
+        themeSurface = true;
+        return palette;
+    }
+    // A gradient or translucent background is no colour to draw a surface in, and Qt copies it into Base too
+    const QPalette appPalette = QApplication::palette();
+    for (const auto group : {QPalette::Active, QPalette::Inactive, QPalette::Disabled}) {
+        for (const auto role : {QPalette::Window, QPalette::Base}) {
+            palette.setBrush(group, role, appPalette.brush(group, role));
+        }
+    }
+    return palette;
+}
+
 // On the shell widget, not the dialog, whose stylesheet mudlet::showOptionsDialog() replaces with the
 // profile's Lua one on every show. Selectors are scoped by objectName or the card property, so a profile
 // stylesheet still reaches the controls inside the pages.
@@ -3033,11 +3360,9 @@ void dlgProfilePreferences::applyShellStyle()
     if (!mpWidget_shell) {
         return;
     }
-    // The application's palette, not the dialog's: a stylesheet freezes its widget's palette, so a profile
-    // stylesheet pins the dialog to the theme it was shown in, and even without one the palette change is
-    // still undelivered when signal_appearanceChanged() arrives. mudlet::setAppearance() swaps qApp's
-    // palette synchronously.
-    const QPalette themePalette = QApplication::palette();
+    bool themeSurface = false;
+    const QPalette themePalette = shellPalette(themeSurface);
+    mShellPalette = themePalette;
     const QColor cardColor = themePalette.color(QPalette::Base);
     const QColor textColor = themePalette.color(QPalette::WindowText);
     const QColor accentColor = themePalette.color(QPalette::Highlight);
@@ -3045,11 +3370,14 @@ void dlgProfilePreferences::applyShellStyle()
     const bool darkPage = cardColor.lightness() < 128;
 
     // Mixed from card and text, the one pair a usable palette keeps apart: Mudlet's light appearance has
-    // window, base and mid within three levels, so a border mixed from those is invisible
-    const QColor pageColor = blend(cardColor, QColor(Qt::black), darkPage ? 0.35 : 0.04);
+    // window, base and mid within three levels, so a border mixed from those is invisible.
+    // A theme paints every label and control on the page as well, so a darker page would box each of them.
+    const QColor pageColor = themeSurface ? cardColor : blend(cardColor, QColor(Qt::black), darkPage ? 0.35 : 0.04);
     const QColor borderColor = blend(cardColor, textColor, darkPage ? 0.28 : 0.16);
     const QString hoverSoft = rgba(textColor, 0.07);
     const QString accentSoft = rgba(accentColor, 0.14);
+    // The theme paints the labels on a banner too, so a tint would leave each of them in a box
+    const QString bannerFill = themeSurface ? cardColor.name() : accentSoft;
     // A saturated highlight colour rarely holds its own against both pages
     const QColor accentText = darkPage ? blend(accentColor, QColor(Qt::white), 0.45) : blend(accentColor, QColor(Qt::black), 0.2);
     const QColor mutedText = blend(cardColor, textColor, 0.7);
@@ -3135,9 +3463,9 @@ void dlgProfilePreferences::applyShellStyle()
                                       // A .ui group box nested in a card would draw a second frame; a heading alone divides them
                                       "QGroupBox[settingsCard=\"true\"] QGroupBox { border: none; background: transparent; margin-top: 20px; padding: 0px 0px 0px 8px; font-weight: bold; }"
                                       "QGroupBox[settingsCard=\"true\"] QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; left: 0px; padding: 0px; }"
-                                      "#settingsMigrationBanner { background-color: %4; border: 1px solid %7; border-radius: 8px; }"
+                                      "#settingsMigrationBanner { background-color: %17; border: 1px solid %7; border-radius: 8px; }"
                                       "#settingsMigrationBannerTitle { font-weight: bold; }"
-                                      "#settingsNoProfileNotice { background-color: %4; border: 1px solid %7; border-radius: 8px; padding: 12px 16px; }"
+                                      "#settingsNoProfileNotice { background-color: %17; border: 1px solid %7; border-radius: 8px; padding: 12px 16px; }"
                                       "#settingsNoProfileNotice:focus { border: 1px solid %5; }"
                                       "#settingsSearchHeader { font-weight: bold; font-size: 110%; color: %2; }"
                                       "#settingsSearchEmpty { padding: 32px; color: %9; }"
@@ -3159,12 +3487,12 @@ void dlgProfilePreferences::applyShellStyle()
                                       "QAbstractButton[settingsChevronRow=\"true\"]:hover { background-color: %3; }"
                                       "QAbstractButton[settingsChevronRow=\"true\"]:focus { border: 1px solid %5; }"
                                       // Carries no setting, so tinted rather than framed like a card
-                                      "QGroupBox[settingsHero=\"true\"] { background-color: %4; border: 1px solid %5; }"
+                                      "QGroupBox[settingsHero=\"true\"] { background-color: %17; border: 1px solid %5; }"
                                       "#settingsHeroHeadline { font-weight: bold; font-size: 115%; }"
                                       "#settingsHeroDetail { color: %9; }")
                                           .arg(pageColor.name(), textColor.name(), hoverSoft, accentSoft, accentColor.name(), accentText.name(), borderColor.name(), cardColor.name(), mutedText.name())
                                           .arg(markerSoft, QString::number(accentBarStop, 'f', 5), QString::number(accentBarStop + 0.0001, 'f', 5), scrollHandle.name(), scrollHandleHover.name())
-                                          .arg(QString::number(railAccentBarStop, 'f', 5), QString::number(railAccentBarStop + 0.0001, 'f', 5))
+                                          .arg(QString::number(railAccentBarStop, 'f', 5), QString::number(railAccentBarStop + 0.0001, 'f', 5), bannerFill)
                                   + cardIndicatorRules + cardTitleRule);
 
     // Fusion draws every control outline, indicators included, as palette(window) darkened 40%, within 1.1:1
@@ -3493,8 +3821,14 @@ void dlgProfilePreferences::setupPasswordsMigration()
     });
 
     connect(mudlet::self(), &mudlet::signal_passwordsMigratedToProfiles, this, [=, this]() {
-        label_password_migration_notification->setText(tr("Migrated all passwords to profile storage."));
         comboBox_store_passwords_in->setEnabled(true);
+        const QStringList notMigrated = mudlet::self()->passwordsNotMigratedToProfiles();
+        if (!notMigrated.isEmpty()) {
+            //: Shown in the preferences when some passwords could not be saved into their profiles while switching to profile storage; %1 is a list of profile names
+            label_password_migration_notification->setText(tr("Could not save the passwords of these profiles into them, so they are still in secure storage: %1").arg(notMigrated.join(qsl(", "))));
+            return;
+        }
+        label_password_migration_notification->setText(tr("Migrated all passwords to profile storage."));
         hidePasswordMigrationLabelTimer->start(10s);
     });
 
@@ -3628,6 +3962,7 @@ void dlgProfilePreferences::disableHostDetails()
     label_caretModeKey->setEnabled(false);
     checkBox_announceIncomingText->setEnabled(false);
     checkBox_advertiseScreenReader->setEnabled(false);
+    checkBox_accessibleLabels->setEnabled(false);
     checkBox_enableClosedCaption->setEnabled(false);
     checkBox_enableBlinkText->setEnabled(false);
     checkBox_f3SearchEnabled->setEnabled(false);
@@ -3647,6 +3982,7 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_debugShowAllCodepointProblems->setEnabled(false);
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
     checkBox_lazyCaptureGlobals->setEnabled(false);
+    mpCard_experiments->setEnabled(false);
     label_networkPacketTimeout->setEnabled(false);
     doubleSpinBox_networkPacketTimeout->setEnabled(false);
 
@@ -3752,6 +4088,7 @@ void dlgProfilePreferences::enableHostDetails()
     label_caretModeKey->setEnabled(true);
     checkBox_announceIncomingText->setEnabled(true);
     checkBox_advertiseScreenReader->setEnabled(true);
+    checkBox_accessibleLabels->setEnabled(true);
     checkBox_enableClosedCaption->setEnabled(true);
     checkBox_enableBlinkText->setEnabled(true);
     checkBox_f3SearchEnabled->setEnabled(true);
@@ -3768,6 +4105,7 @@ void dlgProfilePreferences::enableHostDetails()
     widget_timerDebugOutputMinimumInterval->setEnabled(true);
     checkBox_debugShowAllCodepointProblems->setEnabled(true);
     checkBox_lazyCaptureGlobals->setEnabled(true);
+    mpCard_experiments->setEnabled(true);
     label_networkPacketTimeout->setEnabled(true);
     doubleSpinBox_networkPacketTimeout->setEnabled(true);
 
@@ -3833,10 +4171,12 @@ void dlgProfilePreferences::populateApplicationSettings()
         const QSignalBlocker blocker(comboBox_appearance);
         comboBox_appearance->setCurrentIndex(pMudlet->mAppearance);
     }
+    comboBox_menuBarAltKeyNavigation->setCurrentIndex(static_cast<int>(MudletProxyStyle::altKeyNavigation()));
     {
         const QSignalBlocker blocker(telnetHandlerEnabled);
         telnetHandlerEnabled->setChecked(MudletApp::getQSettings()->value("telnetHandlerEnabled", false).toBool());
     }
+    populateTriggerMatchPoolSettings();
     {
         // The one setting here that lives in its own QSettings group rather than
         // in the mudlet instance, so the only one with no change to announce
@@ -3868,6 +4208,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     loadEditorTab();
 
     fontComboBox_displayFont->setCurrentFont(pHost->getDisplayFont());
+    rememberDisplayFontFamilyShown();
     // Accommodate an initial font size being larger than expected - and ensure
     // it is a positive value:
     spinBox_displayFontSize->setMaximum(std::max(pHost->getDisplayFont().pointSize(), 40));
@@ -3875,8 +4216,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_antiAlias->setChecked(pHost->fontsAntiAlias());
 
     connect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_displayFontChanged, Qt::UniqueConnection);
+    connect(comboBox_dictionary, &QComboBox::activated, this, &dlgProfilePreferences::slot_dictionaryPicked, Qt::UniqueConnection);
+    // currentFontChanged is not emitted when the family already shown is picked again
+    connect(fontComboBox_displayFont, &QComboBox::activated, this, &dlgProfilePreferences::slot_displayFontChanged, Qt::UniqueConnection);
     connect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_displayFontSizeChanged, Qt::UniqueConnection);
     connect(checkBox_antiAlias, &QCheckBox::clicked, this, &dlgProfilePreferences::slot_displayFontAliasingChanged, Qt::UniqueConnection);
+
+    connect(pHost, &Host::signal_consoleFontChanged, this, &dlgProfilePreferences::slot_hostDisplayFontChanged, Qt::UniqueConnection);
 
     // Emptied first so a second run replaces the list
     {
@@ -3919,8 +4265,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // Unfortunately OpenBSD does not ship a dictionary for THAT language which
     // prevents us using it to find any system ones
     const QString& currentDictionary = pHost->getSpellDic();
+    const bool currentDictionaryFound = TSpellChecker::systemDictionaryFound(currentDictionary);
     // Also settles MudletApp::usingMudletDictionaries(), read below
-    const QString path = MudletApp::getMudletPath(enums::hunspellDictionaryPath, currentDictionary);
+    const QString path = TSpellChecker::dictionaryFolderToList(currentDictionary);
     // Tweak the label for the provided spelling dictionaries depending on where
     // they come from:
     if (MudletApp::usingMudletDictionaries()) {
@@ -3953,12 +4300,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             if (entries.at(i).endsWith(qsl("med"), Qt::CaseInsensitive)) {
                 continue;
             }
+            // Listed by the affix file, but only loaded when both files can be read
+            if (!TSpellChecker::dictionaryUsable(path, entries.at(i))) {
+                continue;
+            }
 
-            auto key = entries.at(i).toLower();
-            key.replace(QLatin1String("-"), QLatin1String("_"));
-
-            QString displayText = mudlet::self()->mDictionaryLanguageCodeMap.contains(key) ? mudlet::self()->mDictionaryLanguageCodeMap.value(key) : tr("%1 - not recognised").arg(entries.at(i));
-            translatedNameToEntriesMap.insert(displayText, i);
+            translatedNameToEntriesMap.insert(dictionaryDisplayName(entries.at(i)), i);
         }
 
         QMapIterator<QString, int> itTranslatedName(translatedNameToEntriesMap);
@@ -3983,6 +4330,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             }
         }
 
+        // Shown rather than left to fall back to the first entry, which would read as the profile's choice.
+        // Unlisted need not mean missing: "med" names are left out, and the file system may ignore case.
+        if (currentIndex < 0 && !currentDictionary.isEmpty()) {
+            //: %1 is the code of the spell-check dictionary the profile uses, such as "de_DE", when no dictionary file of that name is on this computer
+            comboBox_dictionary->addItem(currentDictionaryFound ? dictionaryDisplayName(currentDictionary) : tr("%1 - not available").arg(currentDictionary), currentDictionary);
+            currentIndex = comboBox_dictionary->count() - 1;
+        }
+
         if (currentIndex >= 0) {
             comboBox_dictionary->setCurrentIndex(currentIndex);
         }
@@ -3991,6 +4346,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_dictionary->setToolTip(utils::richText(tr("No Hunspell dictionary files found, spell-checking will not be available.")));
     }
     comboBox_dictionary->blockSignals(false);
+    // Installed since it was looked for, the dictionary is read now rather than shown as there while checking nothing
+    if (currentDictionaryFound && pHost->spellChecker().systemDictionaryMissing()) {
+        pHost->setSpellDic(currentDictionary);
+    }
 
     if (!pHost->getMmpMapLocation().isEmpty()) {
         groupBox_downloadMapOptions->setVisible(true);
@@ -4010,6 +4369,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_announceIncomingText->setChecked(pHost->mAnnounceIncomingText);
     checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
     connect(checkBox_advertiseScreenReader, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAdvertiseScreenReader, Qt::UniqueConnection);
+    checkBox_accessibleLabels->setChecked(pHost->mAccessibleLabels);
+    connect(checkBox_accessibleLabels, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAccessibleLabels, Qt::UniqueConnection);
     checkBox_enableOSC8Hyperlinks->setChecked(pHost->mEnableOSC8Hyperlinks);
     connect(checkBox_enableOSC8Hyperlinks, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks, Qt::UniqueConnection);
 
@@ -4152,6 +4513,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_mmcpSnoopInMainConsole->setChecked(pHost->getMMCPShowSnoopInMainConsole());
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
 
+    for (QSpinBox* pSpinBox : {topBorderHeight, bottomBorderHeight, leftBorderWidth, rightBorderWidth}) {
+        pSpinBox->setRange(-Host::scmMaxBorderSize, Host::scmMaxBorderSize);
+    }
     auto originalBorders = pHost->userBorders();
     topBorderHeight->setValue(originalBorders.top());
     bottomBorderHeight->setValue(originalBorders.bottom());
@@ -4341,6 +4705,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(fontComboBox_mapSymbols, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setMapSymbolFont, Qt::UniqueConnection);
         connect(checkBox_isOnlyMapSymbolFontToBeUsed, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapSymbolFontStrategy, Qt::UniqueConnection);
         connect(pHost->mpMap.data(), &TMap::signal_mapSymbolFontChanged, this, &dlgProfilePreferences::slot_mapSymbolFontChanged, Qt::UniqueConnection);
+        disconnect(mMapStyleConnection);
+        mMapStyleConnection = connect(pHost->mpMap.data(), &TMap::signal_mapperSettingChanged, this, [this](const TMap::MapperSetting setting) {
+            if (setting == TMap::MapperSetting::Style) {
+                followMapStyle();
+            }
+        });
 
         groupBox_playerRoomStyle->setEnabled(true);
         comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mPlayerRoomStyle);
@@ -4595,6 +4965,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_lazyCaptureGlobals->setChecked(pHost->lazyCaptureGlobals());
+    for (const auto& [key, pCheckBox] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+        if (pCheckBox) {
+            pCheckBox->setChecked(pHost->experimentEnabled(key));
+        }
+    }
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
     doubleSpinBox_networkPacketTimeout->setValue(pHost->mTelnet.getPostingTimeout() / 1000.0);
     {
@@ -4602,6 +4977,21 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_caretModeKey->setCurrentIndex(static_cast<int>(pHost->mCaretShortcut));
     }
     checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
+    {
+        const QSignalBlocker blocker(comboBox_mapStyle);
+        // Kept from the last time round, as this runs again each time the dialog is activated and the pictures
+        // take a few milliseconds to paint; clearHostDetails() empties it
+        if (comboBox_mapStyle->count() != MapStyle::all().size()) {
+            comboBox_mapStyle->clear();
+            // Wider than tall, as the combo box has room across for the preview's rooms to show
+            const QSize previewSize(72, 48);
+            comboBox_mapStyle->setIconSize(previewSize);
+            for (const MapStyle& style : MapStyle::all()) {
+                comboBox_mapStyle->addItem(style.previewIcon(previewSize), style.displayName(), style.id);
+            }
+        }
+        comboBox_mapStyle->setCurrentIndex(comboBox_mapStyle->findData(pHost->mapStyle()));
+    }
     checkBox_invertMapZoom->setChecked(mudlet::self()->invertMapZoom());
     comboBox_blankLinesBehaviour->setCurrentIndex(static_cast<int>(pHost->mBlankLineBehaviour));
 
@@ -4837,6 +5227,8 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     // arguments to get the wanted wild-card behaviour for them:
 
     disconnect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, nullptr, nullptr);
+    disconnect(comboBox_dictionary, &QComboBox::activated, nullptr, nullptr);
+    disconnect(fontComboBox_displayFont, &QComboBox::activated, nullptr, nullptr);
     disconnect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(checkBox_antiAlias, &QCheckBox::clicked, nullptr, nullptr);
 
@@ -5007,6 +5399,8 @@ void dlgProfilePreferences::clearHostDetails()
 
     comboBox_mapFileSaveFormatVersion->clear();
     comboBox_mapFileSaveFormatVersion->setEnabled(true);
+    disconnect(mMapStyleConnection);
+    comboBox_mapStyle->clear();
     label_mapFileSaveFormatVersion->setEnabled(false);
     checkBox_showDefaultArea->setChecked(false);
     checkBox_showDefaultArea->hide();
@@ -5035,8 +5429,14 @@ void dlgProfilePreferences::clearHostDetails()
 
     checkBox_debugShowAllCodepointProblems->setChecked(false);
     checkBox_lazyCaptureGlobals->setChecked(true);
+    for (const auto& pCheckBox : std::as_const(mExperimentCheckBoxes)) {
+        if (pCheckBox) {
+            pCheckBox->setChecked(false);
+        }
+    }
     checkBox_announceIncomingText->setChecked(false);
     checkBox_advertiseScreenReader->setChecked(false);
+    checkBox_accessibleLabels->setChecked(false);
     checkBox_enableClosedCaption->setChecked(false);
     checkBox_enableBlinkText->setChecked(false);
     comboBox_blankLinesBehaviour->setCurrentIndex(0);
@@ -5109,11 +5509,16 @@ void dlgProfilePreferences::loadEditorTab()
     script_preview_combobox->setMaxVisibleItems(20);
     script_preview_combobox->setDuplicatesEnabled(true);
 
-    theme_download_label->hide();
+    // Once fetched, the label reports how that went for as long as the dialog is open, and this runs again
+    // every time the dialog is reactivated
+    if (!mEditorThemesChecked) {
+        theme_download_label->hide();
+    }
 
     checkBox_autocompleteLuaCode->setChecked(pHost->mEditorAutoComplete);
     checkBox_showBidi->setChecked(pHost->getEditorShowBidi());
     checkBox_showIdNumbers->setChecked(pHost->showIdsInEditor());
+    checkBox_folderView->setChecked(pHost->folderViewInEditor());
 
     // changes the theme being previewed
     connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_themeSelected, Qt::UniqueConnection);
@@ -5358,9 +5763,9 @@ void dlgProfilePreferences::slot_resetMapColors()
     // As per values in Host.h:
     pHost->mFgColor_2 = QColorConstants::LightGray;
     pHost->mBgColor_2 = QColorConstants::Black;
-    pHost->mLowerLevelColor = QColorConstants::DarkGray;
-    pHost->mUpperLevelColor = QColorConstants::White;
-    pHost->mRoomBorderColor = QColorConstants::LightGray;
+    pHost->mLowerLevelColor = Host::scmDefaultLowerLevelColor;
+    pHost->mUpperLevelColor = Host::scmDefaultUpperLevelColor;
+    pHost->mRoomBorderColor = Host::scmDefaultRoomBorderColor;
     pHost->mRoomCollisionBorderColor = QColorConstants::Yellow;
     pHost->mBlack_2 = QColorConstants::Black;
     pHost->mLightBlack_2 = QColorConstants::DarkGray;
@@ -5378,13 +5783,14 @@ void dlgProfilePreferences::slot_resetMapColors()
     pHost->mLightMagenta_2 = QColorConstants::Magenta;
     pHost->mWhite_2 = QColorConstants::LightGray;
     pHost->mLightWhite_2 = QColorConstants::White;
-    pHost->mMapInfoBg = QColor(150, 150, 150, 120);
+    pHost->mMapInfoBg = Host::scmDefaultMapInfoBg;
     pHost->mMapGridColor = QColor(211, 211, 211, 64);
 
     // This aplies the above colors to the buttons on display:
     setColors2();
 
     if (pHost->mpMap) {
+        pHost->mpMap->restore16ColorSet();
         pHost->mpMap->updateArea(-1);
     }
 }
@@ -5639,7 +6045,10 @@ void dlgProfilePreferences::slot_setMapBgColor()
 #if defined(INCLUDE_3DMAPPER)
         if (pHost->mpMap->mapper()->glWidget) {
             QOpenGLWidget* map = pHost->mpMap->mapper()->glWidget;
-            if (pHost->mBgColor_2.alpha() < 255) {
+            if (auto* modernMap = qobject_cast<ModernGLWidget*>(map)) {
+                // Its style may paint its own background, whatever the profile's is
+                modernMap->applyStyle();
+            } else if (pHost->mBgColor_2.alpha() < 255) {
                 map->setAttribute(Qt::WA_OpaquePaintEvent, false);
                 map->setAttribute(Qt::WA_AlwaysStackOnTop, true);
             } else {
@@ -6024,6 +6433,7 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     bool success = false;
+    const bool isJson = fileName.endsWith(qsl(".json"), Qt::CaseInsensitive);
     label_mapFileActionResult->setText(tr("Loading map - please wait..."));
     qApp->processEvents(); // Needed to make the above message show up when loading big maps
     if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
@@ -6031,8 +6441,8 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
         success = pHost->importMapFile(fileName);
 
     } else {
-        if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
-            auto [localSuccess, errorMessage] = pHost->mpMap->readJsonMapFile(fileName);
+        if (isJson) {
+            auto [localSuccess, errorMessage] = pHost->mpMap->importJsonMapFile(fileName);
             success = localSuccess;
             if (!localSuccess) {
                 pHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\n"
@@ -6047,7 +6457,9 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
 
     if (success) {
         // TMap::audit() is what paints up the "[  OK  ]" message for the map load.
-        pHost->mpMap->audit();
+        if (!isJson) {
+            pHost->mpMap->audit();
+        }
         label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName.toHtmlEscaped()));
     } else {
         label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName.toHtmlEscaped()));
@@ -6722,6 +7134,14 @@ void dlgProfilePreferences::applyAll()
         //tab security
         if (mSnapshot.dirty(groupBox_ssl)) {
             pHost->mSslTsl = groupBox_ssl->isChecked();
+            // The connection dialog seeds its Secure checkbox from this file, and hands that back
+            // to the profile on connect
+            if (const auto [written, error] = pHost->writeProfileData(qsl("ssl_tsl"), QString::number(groupBox_ssl->isChecked() ? Qt::Checked : Qt::Unchecked)); !written) {
+                //: %1 is the reason the file could not be written, from the operating system
+                pHost->postMessage(tr("[ WARN ]  - Could not save the secure connection setting for the Connect dialog: %1. "
+                                      "Connecting from that dialog may change the setting back.")
+                                           .arg(error));
+            }
         }
         if (mSnapshot.dirty(checkBox_expired)) {
             pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
@@ -6787,6 +7207,9 @@ void dlgProfilePreferences::applyAll()
         }
         if (mSnapshot.dirty(checkBox_showIdNumbers)) {
             pHost->setShowIdsInEditor(checkBox_showIdNumbers->isChecked());
+        }
+        if (mSnapshot.dirty(checkBox_folderView)) {
+            pHost->setFolderViewInEditor(checkBox_folderView->isChecked());
         }
         // Re-theming an open script editor fully reconfigures edbee, so only when one of these changed
         auto* pDialogs = HostDialogs::find(pHost);
@@ -6915,8 +7338,16 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(checkBox_lazyCaptureGlobals)) {
             pHost->setLazyCaptureGlobals(checkBox_lazyCaptureGlobals->isChecked());
         }
+        for (const auto& [key, pCheckBox] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+            if (pCheckBox && mSnapshot.dirty(pCheckBox)) {
+                pHost->setExperimentEnabled(key, pCheckBox->isChecked());
+            }
+        }
         if (mSnapshot.dirty(comboBox_caretModeKey)) {
             pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
+        }
+        if (mSnapshot.dirty(comboBox_mapStyle) && comboBox_mapStyle->currentIndex() >= 0) {
+            pHost->setMapStyle(comboBox_mapStyle->currentData().toString());
         }
         if (groupBox_playerRoomStyle->isEnabled() && mSnapshot.anyDirty({comboBox_playerRoomStyle, spinBox_playerRoomOuterDiameter, spinBox_playerRoomInnerDiameter})) {
             // Although the controls have been interactively modifying the
@@ -6965,6 +7396,9 @@ void dlgProfilePreferences::applyAll()
         }
         if (mSnapshot.dirty(checkBox_advertiseScreenReader)) {
             pHost->setAdvertiseScreenReader(checkBox_advertiseScreenReader->isChecked());
+        }
+        if (mSnapshot.dirty(checkBox_accessibleLabels)) {
+            pHost->setAccessibleLabels(checkBox_accessibleLabels->isChecked());
         }
         if (mSnapshot.dirty(checkBox_enableClosedCaption)) {
             pHost->setEnableClosedCaption(checkBox_enableClosedCaption->isChecked());
@@ -7026,12 +7460,16 @@ void dlgProfilePreferences::applyAll()
     if (mSnapshot.dirty(comboBox_appearance)) {
         pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
     }
+    if (mSnapshot.dirty(comboBox_menuBarAltKeyNavigation)) {
+        MudletProxyStyle::setAltKeyNavigation(static_cast<enums::MenuBarAltKeyNavigation>(comboBox_menuBarAltKeyNavigation->currentIndex()));
+    }
     if (mSnapshot.dirty(telnetHandlerEnabled)) {
         QSettings* settings = MudletApp::getQSettings();
         if (settings->value("telnetHandlerEnabled", false).toBool() != telnetHandlerEnabled->isChecked()) {
             settings->setValue("telnetHandlerEnabled", telnetHandlerEnabled->isChecked());
         }
     }
+    applyTriggerMatchPoolSettings();
 
     Discord::self()->UpdatePresence();
 
@@ -7341,14 +7779,18 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
     pHost->updateProxySettings(manager);
     QNetworkReply* getReply = manager->get(request);
 
+    auto failThemeUpdate = [this](const QString& reason, const QString& loggedReason = QString()) {
+        qWarning() << "dlgProfilePreferences: could not update the editor themes:" << (loggedReason.isEmpty() ? reason : loggedReason);
+        //: Shown under the editor theme list in the preferences; %1 is why the update failed: a network or file system error from the system, or "the downloaded themes could not be unpacked"
+        theme_download_label->setText(tr("Could not update themes: %1").arg(reason));
+        // A profile closed mid-fetch has greyed this page out and put the label away
+        if (mpHost) {
+            theme_download_label->show();
+        }
+    };
+
     connect(getReply, &QNetworkReply::errorOccurred, this, [=, this](QNetworkReply::NetworkError) {
-        // The label hides the message after a few seconds, so this is the only lasting record
-        qWarning() << "dlgProfilePreferences: could not update the editor themes:" << getReply->errorString();
-        theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
-        QTimer::singleShot(5s, theme_download_label, [label = theme_download_label] {
-            label->hide();
-            label->setText(tr("Updating themes from colorsublime.github.io..."));
-        });
+        failThemeUpdate(getReply->errorString());
         getReply->deleteLater();
     });
 
@@ -7363,16 +7805,37 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
                         }
 
                         const QByteArray downloadedArchive = reply->readAll();
+                        const QUrl fetchedUrl = reply->url();
+                        reply->deleteLater();
 
                         tempThemesArchive = new QTemporaryFile(this);
                         if (!tempThemesArchive->open()) {
+                            failThemeUpdate(tempThemesArchive->errorString());
+                            tempThemesArchive->deleteLater();
                             return;
                         }
-                        tempThemesArchive->write(downloadedArchive);
+                        // Qt sets no error when only part of a write reaches the disk - in write() for a large one,
+                        // in flush() for a small one it buffered - so the rest is tried again to get the reason.
+                        // close() cannot report a failure at all.
+                        qint64 written = 0;
+                        while (written < downloadedArchive.size()) {
+                            const qint64 count = tempThemesArchive->write(downloadedArchive.constData() + written, downloadedArchive.size() - written);
+                            if (count <= 0) {
+                                break;
+                            }
+                            written += count;
+                        }
+                        if (written != downloadedArchive.size() || !(tempThemesArchive->flush() || tempThemesArchive->flush())) {
+                            failThemeUpdate(tempThemesArchive->errorString());
+                            tempThemesArchive->deleteLater();
+                            return;
+                        }
                         tempThemesArchive->close();
 
                         const QTemporaryDir temporaryDir;
                         if (!temporaryDir.isValid()) {
+                            failThemeUpdate(temporaryDir.errorString());
+                            tempThemesArchive->deleteLater();
                             return;
                         }
 
@@ -7382,16 +7845,21 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
                         connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
                             if (future.result()) {
                                 populateThemesList();
+                                theme_download_label->hide();
 
                                 emit signal_themeUpdateCompleted();
+                            } else {
+                                // PreferCache would otherwise hand the same unusable download to every later dialog
+                                diskCache->remove(fetchedUrl);
+                                //: Shown after "Could not update themes: " when the downloaded editor themes could not be unpacked
+                                const char* const unpackFailure = QT_TR_NOOP("the downloaded themes could not be unpacked");
+                                failThemeUpdate(tr(unpackFailure), QString::fromLatin1(unpackFailure));
                             }
 
-                            theme_download_label->hide();
                             tempThemesArchive->deleteLater();
                             watcher->deleteLater();
                         });
                         watcher->setFuture(future);
-                        reply->deleteLater();
                     },
                     getReply));
 }
@@ -7954,6 +8422,22 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont& font)
     }
 
     pHost->mpMap->setSymbolFont(font);
+}
+
+// A style set while the dialog is open, such as by a script, replaces any pick
+// not yet applied, so that Save does not write the older pick back over it
+void dlgProfilePreferences::followMapStyle()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    const int index = comboBox_mapStyle->findData(pHost->mapStyle());
+    if (index != comboBox_mapStyle->currentIndex()) {
+        const QSignalBlocker blocker(comboBox_mapStyle);
+        comboBox_mapStyle->setCurrentIndex(index);
+    }
+    mSnapshot.take(comboBox_mapStyle);
 }
 
 // Keeps the controls (and the glyph usage dialog, when open) in step with the
@@ -8814,6 +9298,13 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
     }
 }
 
+void dlgProfilePreferences::slot_toggleAccessibleLabels(const bool state)
+{
+    if (mpHost) {
+        mpHost->setAccessibleLabels(state);
+    }
+}
+
 void dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks(const bool state)
 {
     Host* pHost = mpHost;
@@ -8996,7 +9487,12 @@ bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange chan
                                                              : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality));
 
     if (TFontAttributes(mpHost->getDisplayFont()) == TFontAttributes(displayFont)) {
-        // No change!
+        // Nothing changes on screen, but a pick still has to reach the Host: re-picking
+        // the family standing in for a missing font settles for it. Every pick of a new
+        // family lands here as well, as activated follows currentFontChanged
+        if (change == Host::DisplayFontChange::UserChoice) {
+            mpHost->setDisplayFont(displayFont, change);
+        }
         return false;
     }
 
@@ -9050,11 +9546,45 @@ void dlgProfilePreferences::cancelShortcutCaptures()
     }
 }
 
+// A missing dictionary picked again, once installed, is no change of entry for the apply to see,
+// so this is what retries it
+void dlgProfilePreferences::slot_dictionaryPicked(const int index)
+{
+    if (!mpHost) {
+        return;
+    }
+    const QString dictionary = comboBox_dictionary->itemData(index).toString();
+    mpHost->setSpellDic(dictionary);
+    if (TSpellChecker::systemDictionaryFound(dictionary)) {
+        comboBox_dictionary->setItemText(index, dictionaryDisplayName(dictionary));
+    }
+}
+
+QString dlgProfilePreferences::dictionaryDisplayName(const QString& dictionary)
+{
+    auto key = dictionary.toLower();
+    key.replace(QLatin1String("-"), QLatin1String("_"));
+    return mudlet::self()->mDictionaryLanguageCodeMap.value(key, tr("%1 - not recognised").arg(dictionary));
+}
+
+void dlgProfilePreferences::rememberDisplayFontFamilyShown()
+{
+    const QString family = fontComboBox_displayFont->currentFont().family();
+    mDisplayFontFamilyShown = (mpHost && mpHost->resolveFontFamily(family).available) ? family : QString();
+}
+
 void dlgProfilePreferences::slot_displayFontChanged()
 {
-    // Only fires from QFontComboBox::currentFontChanged, so the family really is
-    // one the user just picked out of the list
-    if (!mpHost.isNull() && updateDisplayFont(Host::DisplayFontChange::UserChoice)) {
+    // QFontComboBox moves off a family by itself when its package is uninstalled: no choice of the
+    // user's, and the profile's own check is about to put the stand-in up and say so
+    const QString shownBefore = mDisplayFontFamilyShown;
+    rememberDisplayFontFamilyShown();
+    if (mpHost.isNull() || (!shownBefore.isEmpty() && !mpHost->resolveFontFamily(shownBefore).available)) {
+        return;
+    }
+    // Past that, only a pick out of the list gets here (currentFontChanged and activated both land
+    // here, so a second run for the same font must change nothing), so the family really is the user's choice
+    if (updateDisplayFont(Host::DisplayFontChange::UserChoice)) {
         mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
     }
 }
@@ -9063,6 +9593,38 @@ void dlgProfilePreferences::slot_displayFontSizeChanged()
 {
     if (!mpHost.isNull() && updateDisplayFont(Host::DisplayFontChange::Adjustment)) {
         mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT_SIZE"));
+    }
+}
+
+// The font can change behind the dialog, from a script or as a package brings a missing family
+// back, and the next edit here builds the whole font from these controls
+void dlgProfilePreferences::slot_hostDisplayFontChanged(const QFont& font)
+{
+    // The connection outlives slot_handleHostDeletion(), which has cleared these controls
+    if (mpHost.isNull()) {
+        return;
+    }
+    {
+        const QSignalBlocker comboBlocker(fontComboBox_displayFont);
+        const QSignalBlocker sizeBlocker(spinBox_displayFontSize);
+        const QSignalBlocker antiAliasBlocker(checkBox_antiAlias);
+        fontComboBox_displayFont->setCurrentFont(font);
+        spinBox_displayFontSize->setMaximum(std::max(font.pointSize(), spinBox_displayFontSize->maximum()));
+        spinBox_displayFontSize->setValue(std::max(1, font.pointSize()));
+        // Not fontsAntiAlias(): applyAll() writes that from this box only once the apply timer fires
+        checkBox_antiAlias->setChecked(!(font.styleStrategy() & QFont::NoAntialias));
+    }
+    rememberDisplayFontFamilyShown();
+    // Not the user's edits, so they must not keep refreshFromSettings() from re-reading the rest - nor
+    // the line edits inside the list and the spin box, which the snapshot holds as well. The anti-alias
+    // box stays dirty, as this runs for the dialog's own toggle too and applyAll() must still store it
+    for (QWidget* pControl : {static_cast<QWidget*>(fontComboBox_displayFont), static_cast<QWidget*>(spinBox_displayFontSize)}) {
+        mSnapshot.take(pControl);
+        for (const auto* pPart : pControl->findChildren<QWidget*>()) {
+            if (SettingsSnapshot::carriesValue(pPart)) {
+                mSnapshot.take(pPart);
+            }
+        }
     }
 }
 
@@ -9171,10 +9733,13 @@ void dlgProfilePreferences::closeEvent(QCloseEvent* event)
 
     // The profile XML is written once per close rather than on every apply
     if (Host* pHost = mpHost; pHost && pHost->mFORCE_SAVE_ON_EXIT) {
-        pHost->saveProfile();
+        pHost->saveProfileReportingFailure();
     }
 
     MudletApp::getQSettings()->setValue(qsl("profilePreferencesGeometry"), saveGeometry());
+    // Most application-wide settings reach Mudlet.ini only at quit, so an
+    // unclean exit would lose the ones changed here
+    mudlet::self()->writeSettings();
 
     if (mpHost) {
         emit preferencesClosing(mpHost->getName());

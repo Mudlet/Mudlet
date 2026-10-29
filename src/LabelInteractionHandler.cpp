@@ -32,6 +32,15 @@
 #include <QRectF>
 #include <QtGlobal>
 
+#include <optional>
+
+static QRectF labelClickRect(const T2DMap& mapWidget, const TMapLabel& label)
+{
+    const float labelX = label.pos.x() * mapWidget.mRoomWidth + mapWidget.mRX;
+    const float labelY = label.pos.y() * mapWidget.mRoomHeight * -1 + mapWidget.mRY;
+    return QRectF(labelX, labelY, label.clickSize.width(), label.clickSize.height());
+}
+
 LabelInteractionHandler::LabelInteractionHandler(T2DMap& mapWidget)
 : mMapWidget(mapWidget)
 {
@@ -101,6 +110,19 @@ bool LabelInteractionHandler::handleMousePress(T2DMap::MapInteractionContext& co
         return false;
     }
 
+    std::optional<bool> roomUnderClick;
+    // A label drawn under the rooms is their backdrop, so a room in front of it takes the click -
+    // but not from a label being moved from its menu, which stays under the mouse
+    const auto yieldsToRoom = [&](const TMapLabel& label) {
+        if (label.showOnTop || (label.highlight && mMapWidget.mMoveLabel)) {
+            return false;
+        }
+        if (!roomUnderClick) {
+            roomUnderClick = mMapWidget.roomIdAtWidgetPosition(context.widgetPosition, area).has_value();
+        }
+        return *roomUnderClick;
+    };
+
     if (context.button == Qt::LeftButton) {
         if (mMapWidget.mMoveLabel) {
             mMapWidget.mMoveLabel = false;
@@ -134,11 +156,8 @@ bool LabelInteractionHandler::handleMousePress(T2DMap::MapInteractionContext& co
                 continue;
             }
 
-            const float labelX = mapLabel.pos.x() * mMapWidget.mRoomWidth + mMapWidget.mRX;
-            const float labelY = mapLabel.pos.y() * mMapWidget.mRoomHeight * -1 + mMapWidget.mRY;
-            const QPoint click = context.widgetPosition;
-            const QRectF boundingRect(labelX, labelY, mapLabel.clickSize.width(), mapLabel.clickSize.height());
-            if (boundingRect.contains(click)) {
+            // A picked-up label is still put down by a click over a room
+            if (labelClickRect(mMapWidget, mapLabel).contains(context.widgetPosition) && (mapLabel.highlight || !yieldsToRoom(mapLabel))) {
                 mapLabel.highlight = !mapLabel.highlight;
                 mMapWidget.mLabelHighlighted = mapLabel.highlight;
                 context.isLabelHighlighted = mMapWidget.mLabelHighlighted;
@@ -167,10 +186,7 @@ bool LabelInteractionHandler::handleMousePress(T2DMap::MapInteractionContext& co
             const bool isSameZLevel = qRound(mapLabel.pos.z()) == mMapWidget.mMapCenterZ;
             bool shouldHighlight = false;
             if (isSameZLevel) {
-                const float labelX = mapLabel.pos.x() * mMapWidget.mRoomWidth + mMapWidget.mRX;
-                const float labelY = mapLabel.pos.y() * mMapWidget.mRoomHeight * -1 + mMapWidget.mRY;
-                const QRectF boundingRect(labelX, labelY, mapLabel.clickSize.width(), mapLabel.clickSize.height());
-                shouldHighlight = boundingRect.contains(context.widgetPosition);
+                shouldHighlight = labelClickRect(mMapWidget, mapLabel).contains(context.widgetPosition) && !yieldsToRoom(mapLabel);
             }
 
             if (mapLabel.highlight != shouldHighlight) {
@@ -239,6 +255,17 @@ bool LabelInteractionHandler::handleMousePress(T2DMap::MapInteractionContext& co
     }
 
     return false;
+}
+
+QList<int> LabelInteractionHandler::belowRoomsLabelsAt(const T2DMap& mapWidget, const TArea& area, const QPoint& widgetPosition)
+{
+    QList<int> labelIds;
+    for (const auto& [id, label] : area.mMapLabels.asKeyValueRange()) {
+        if (!label.showOnTop && qRound(label.pos.z()) == mapWidget.mMapCenterZ && labelClickRect(mapWidget, label).contains(widgetPosition)) {
+            labelIds.prepend(id);
+        }
+    }
+    return labelIds;
 }
 
 bool LabelInteractionHandler::handleMouseMove(T2DMap::MapInteractionContext& context) const

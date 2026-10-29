@@ -42,6 +42,8 @@ class dlgPackageManager : public QDialog, public Ui::package_manager
 {
     Q_OBJECT
 
+    friend class PackageManagerRepositoryLinksTest;
+
 public:
     Q_DISABLE_COPY(dlgPackageManager)
     explicit dlgPackageManager(QWidget* parent, Host*);
@@ -76,10 +78,12 @@ private:
     bool eventFilter(QObject* pWatched, QEvent* pEvent) override;
     void fillPackageDetails(const QString& name, const QString& title, const QString& author, const QString& version);
     bool hasNewerVersion(const QString& installed, const QString& repo) const;
+    bool matchesRepositoryPackage(const QString& packageName) const;
     QString packageHelpUrl(const QString& packageName) const;
     void populatePackagesWithUpdates();
     void setupNavigationButtons();
     void showImportStatus(const QString& message);
+    void showMissingFromIndex(const QString& packageName);
     void updateUpdatesBadge();
 
     Host* mpHost = nullptr;

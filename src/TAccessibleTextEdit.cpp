@@ -114,15 +114,9 @@ void TAccessibleTextEdit::selection(int selectionIndex, int* startOffset, int* e
         return;
     }
 
-    TTextEdit* edit = textEdit();
-
-    if (edit->mSelectedRegion == QRegion(0, 0, 0, 0)) {
-        *startOffset = *endOffset = 0;
-        return;
-    }
-
-    *startOffset = offsetForPosition(edit->mPA.y(), edit->mPA.x());
-    *endOffset = offsetForPosition(edit->mPB.y(), edit->mPB.x());
+    const auto [start, end] = textEdit()->accessibleSelection();
+    *startOffset = start;
+    *endOffset = end;
 }
 
 /*
@@ -130,7 +124,7 @@ void TAccessibleTextEdit::selection(int selectionIndex, int* startOffset, int* e
  */
 int TAccessibleTextEdit::selectionCount() const
 {
-    return textEdit()->mSelectedRegion != QRegion(0, 0, 0, 0);
+    return textEdit()->accessibleSelectionLength() > 0;
 }
 
 /*
@@ -153,6 +147,12 @@ void TAccessibleTextEdit::addSelection(int startOffset, int endOffset)
         std::swap(startOffset, endOffset);
     }
 
+    // mPB holds the last selected cell, which an empty range does not have
+    if (startOffset == endOffset) {
+        removeSelection(0);
+        return;
+    }
+
     TTextEdit* edit = textEdit();
     edit->mPA.setX(columnForOffset(startOffset));
     edit->mPA.setY(lineForOffset(startOffset));
@@ -160,6 +160,9 @@ void TAccessibleTextEdit::addSelection(int startOffset, int endOffset)
     edit->mPB.setX(columnForOffset(endOffset - 1));
     edit->mPB.setY(lineForOffset(endOffset - 1));
     edit->mDragSelectionEnd = edit->mPB;
+    const QStringList& lineBuffer = edit->mpBuffer->lineBuffer;
+    const bool takesNewline = edit->mPB.y() < lineBuffer.size() && edit->mPB.x() == lineBuffer.at(edit->mPB.y()).size();
+    edit->mPBTakingNewline = takesNewline ? edit->mPB : QPoint(-1, -1);
 
     textEdit()->highlightSelection();
 }
@@ -175,6 +178,8 @@ void TAccessibleTextEdit::removeSelection(int selectionIndex)
 
     textEdit()->unHighlight();
     textEdit()->mSelectedRegion = QRegion(0, 0, 0, 0);
+    // unHighlight() only deselects the characters, and the screen keeps showing them selected until a repaint
+    textEdit()->forceUpdate();
 }
 
 /*
@@ -616,7 +621,7 @@ bool TAccessibleTextEdit::thaiRunReaches(int firstLine, int lastLine) const
 }
 
 /*
- * Auxiliary function for textAtOffset() and textAfterOffset().
+ * Auxiliary function for textAtOffset(), textBeforeOffset() and textAfterOffset().
  */
 QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp operation, int offset, QAccessible::TextBoundaryType boundaryType, int* startOffset, int* endOffset) const
 {
@@ -660,12 +665,15 @@ QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp operat
         int start = 0, end = 0;
 
         finder.setPosition(offset - windowStart);
+        // An offset on a boundary is in the item it starts, not the one it ends, as in
+        // Qt's own lookups; the end of the text starts none
+        const bool atItemStart = finder.isAtBoundary() && finder.position() < contents.length();
 
         if (operation == TAccessibleTextEdit::TextOp::BeforeOffset) {
-            end = finder.toPreviousBoundary();
+            end = atItemStart ? finder.position() : finder.toPreviousBoundary();
             start = finder.toPreviousBoundary();
         } else if (operation == TAccessibleTextEdit::TextOp::AtOffset) {
-            start = finder.toPreviousBoundary();
+            start = atItemStart ? finder.position() : finder.toPreviousBoundary();
             end = finder.toNextBoundary();
         } else {
             start = finder.toNextBoundary();

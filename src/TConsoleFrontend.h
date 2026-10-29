@@ -185,6 +185,8 @@ public:
     // A negative line counts back from the end. One at or past the end, or toEnd, puts the console back
     // to following new lines.
     virtual bool scrollWindowTo(const QString& name, int line, bool toEnd) = 0;
+    // False for a name that is no console
+    virtual bool windowFollowsNewLines(const QString& name) = 0;
 
     // These name a console as the scroll bar ones do; for a name that is none of those, setWindowFontSize()
     // fails and the others have no value. This console's font is the profile's display font, which Host
@@ -272,8 +274,10 @@ public:
     virtual void regenerateToolBars(const std::list<TAction*>& rootActions) = 0;
     virtual void regenerateEasyButtonBars(const std::list<TAction*>& rootActions) = 0;
     // Takes an action's bars out of the window without destroying them, for an action that is being
-    // removed or has stopped being a root one.
+    // removed.
     virtual void detachActionBars(TAction* pAction) = 0;
+    // Destroys an action's own bars, for one that is now a menu on another's.
+    virtual void disposeActionBars(TAction* pAction) = 0;
     virtual bool hasEasyButtonBar(TAction* pAction) const = 0;
     // Checks or unchecks the action's button and its entry in a bar's menu, where it has them.
     virtual void setActionButtonChecked(TAction* pAction, bool checked) = 0;
@@ -342,7 +346,8 @@ public:
     // Caret navigation of the text: on moves keyboard focus to it, grabbing the keyboard on Windows and Linux;
     // off releases that and makes the command line its focus proxy again.
     virtual void setCaretMode(bool enabled) = 0;
-    // The mouse pointer's position relative to this console's top-left corner, so it can lie outside it.
+    // The mouse pointer's position relative to the frame labels are placed in, below and right of any button
+    // bars; it can lie outside that frame.
     virtual QPoint mousePosition() const = 0;
     // True while keyboard focus is on this console's focus proxy, normally its own command line, so false
     // while it is on the text, as in caret navigation, or in another window.

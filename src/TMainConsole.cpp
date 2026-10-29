@@ -50,6 +50,7 @@
 #include "dlgMapper.h"
 #include "mudlet.h"
 #include "GifTracker.h"
+#include "TriggerMatchPool.h"
 
 #include <QCursor>
 #include <QDataStream>
@@ -70,12 +71,16 @@
 #include <QShortcut>
 #include <QSizePolicy>
 #include <QTextCodec>
+#include <QTextCursor>
 #include <QTimer>
 #include <QPainter>
 #include <QResizeEvent>
 #include <QVideoWidget>
 
+#include <algorithm>
+#include <utility>
 #include <chrono>
+#include <utility>
 
 namespace {
 // See TWindowRegistry::SubConsoleKind for what Other is for.
@@ -315,6 +320,8 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
     new MainWindowSizeReporter(this, {mpLeftToolBar, mpRightToolBar, mpTopToolBar, mpCommandLine.data()});
     reportMainWindowSize();
+
+    mpMainFrame->installEventFilter(this);
 }
 
 TMainConsole::~TMainConsole()
@@ -978,24 +985,29 @@ void TMainConsole::regenerateToolBars(const std::list<TAction*>& rootActions)
 
 void TMainConsole::regenerateEasyButtonBars(const std::list<TAction*>& rootActions)
 {
+    // A floating/dockable bar is a TToolBar, so drop any TEasyButtonBar the
+    // action had before it was made one
+    auto releaseEasyButtonBar = [this](TAction* pAction) {
+        if (TEasyButtonBar* pOldBar = actionEasyButtonBar(pAction)) {
+            mEasyButtonBarList.remove(pOldBar);
+            pOldBar->deleteLater();
+            setActionEasyButtonBar(pAction, nullptr);
+        }
+    };
     for (auto& rootAction : rootActions) {
         if (rootAction->mLocation == 4) {
-            // This TAction is set to be a floating/dockable widget
-            if (TEasyButtonBar* pOldBar = actionEasyButtonBar(rootAction)) {
-                // But it has a TEasyButtonBar type toolbar so we need to
-                // remove the TEasyButtonBar from the list of TEasyButtonBars:
-                mEasyButtonBarList.remove(pOldBar);
-                // And destroy it:
-                pOldBar->deleteLater();
-                setActionEasyButtonBar(rootAction, nullptr);
-            }
-            continue; // skip over any root action node that IS going to be a TToolBar.
+            releaseEasyButtonBar(rootAction);
+            continue;
         }
         if (!rootAction->mPackageName.isEmpty()) {
             // It has a package name so it is actually the parent
             // module/package item rather than the actual ToolBar
             for (auto* childActionNode : *rootAction->mpMyChildrenList) {
                 auto* childAction = static_cast<TAction*>(childActionNode);
+                if (childAction->mLocation == 4) {
+                    releaseEasyButtonBar(childAction);
+                    continue;
+                }
                 TEasyButtonBar* pTB = nullptr;
                 for (auto& easyButtonBar : mEasyButtonBarList) {
                     if (easyButtonBar == actionEasyButtonBar(childAction)) {
@@ -1004,7 +1016,7 @@ void TMainConsole::regenerateEasyButtonBars(const std::list<TAction*>& rootActio
                     }
                 }
                 if (!pTB) {
-                    pTB = createEasyButtonBar(rootAction, childAction->getName());
+                    pTB = createEasyButtonBar(childAction, childAction->getName());
                     mEasyButtonBarList.emplace_back(pTB);
                     setActionEasyButtonBar(childAction, pTB); // needed for drag&drop
                 }
@@ -1157,6 +1169,25 @@ void TMainConsole::detachActionBars(TAction* pAction)
     if (TToolBar* pToolBar = actionToolBar(pAction); pToolBar && pAction->mLocation == 4) {
         pToolBar->setFloating(false);
         undockToolBar(pToolBar);
+    }
+}
+
+void TMainConsole::disposeActionBars(TAction* pAction)
+{
+    if (TEasyButtonBar* pBar = actionEasyButtonBar(pAction)) {
+        detachEasyButtonBar(pBar, pAction->mLocation);
+        mEasyButtonBarList.remove(pBar);
+        pBar->hide();
+        pBar->deleteLater();
+        setActionEasyButtonBar(pAction, nullptr);
+    }
+    if (TToolBar* pToolBar = actionToolBar(pAction)) {
+        pToolBar->setFloating(false);
+        undockToolBar(pToolBar);
+        mToolBarList.remove(pToolBar);
+        pToolBar->hide();
+        pToolBar->deleteLater();
+        setActionToolBar(pAction, nullptr);
     }
 }
 
@@ -1397,6 +1428,10 @@ void TMainConsole::deleteLabel(const QString& name)
 {
     auto pL = mLabelMap.value(name);
     if (pL) {
+        // Destroyed later, and a destroyed widget leaves the focus with nobody
+        if (pL->hasFocus() && pL->window() == window()) {
+            focusButtonAfter(pL, true);
+        }
         mpHost->windowRegistry().deregisterLabel(name, &pL->model());
         deregisterLabelWidget(pL);
         if (pL->mpMovie) {
@@ -1415,6 +1450,10 @@ void TMainConsole::deleteMiniConsole(const QString& name)
     auto pConsole = deregisterSubConsole(name);
     if (pConsole) {
         mpHost->windowRegistry().forgetUserWindowSize(name);
+        // Its command line is registered under its name and would hold that name until the deferred delete
+        if (pConsole->mpCommandLine) {
+            deregisterSubCommandLine(pConsole->mpCommandLine);
+        }
 
         // A UserWindow's TConsole lives *inside* a TDockWidget. Deleting only the
         // console (as for an ordinary miniconsole) leaves the dock orphaned in
@@ -1530,6 +1569,79 @@ std::pair<bool, QString> TMainConsole::deleteScrollBox(const QString& name)
     return {false, qsl("scrollbox name '%1' not found").arg(name)};
 }
 
+namespace {
+bool readsBefore(const QWidget* a, const QWidget* b)
+{
+    const QPoint first = a->mapToGlobal(QPoint());
+    const QPoint second = b->mapToGlobal(QPoint());
+    return first.y() != second.y() ? first.y() < second.y() : first.x() < second.x();
+}
+} // namespace
+
+QList<TLabel*> TMainConsole::keyboardButtons() const
+{
+    QList<TLabel*> labels;
+    for (TLabel* pLabel : mLabelMap) {
+        // A floating user window is a window of its own, out of reach of Tab here
+        if (pLabel && pLabel->isVisible() && pLabel->isEnabled() && pLabel->window() == window() && pLabel->keyboardReachable()) {
+            labels.append(pLabel);
+        }
+    }
+    std::stable_sort(labels.begin(), labels.end(), readsBefore);
+    return labels;
+}
+
+bool TMainConsole::focusKeyboardButton(bool forward)
+{
+    const QList<TLabel*> buttons = keyboardButtons();
+    if (buttons.isEmpty()) {
+        return false;
+    }
+    mKeyboardButtonsFromCaret = mpHost->caretEnabled();
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+    // Caret mode holds the keyboard and only lets go of it on a timer, which a key pressed straight away would beat
+    mUpperPane->releaseKeyboard();
+#endif
+    (forward ? buttons.first() : buttons.last())->setFocus(forward ? Qt::TabFocusReason : Qt::BacktabFocusReason);
+    return true;
+}
+
+void TMainConsole::focusButtonAfter(const TLabel* pLabel, bool next)
+{
+    const QList<TLabel*> buttons = keyboardButtons();
+    TLabel* pTarget = nullptr;
+    // Labels at the same corner read neither before nor after each other, so one still in the list goes by its place there
+    if (const auto it = std::find(buttons.cbegin(), buttons.cend(), pLabel); it != buttons.cend()) {
+        const qsizetype target = std::distance(buttons.cbegin(), it) + (next ? 1 : -1);
+        pTarget = target >= 0 && target < buttons.size() ? buttons.at(target) : nullptr;
+    } else if (next) {
+        const auto after = std::find_if(buttons.cbegin(), buttons.cend(), [pLabel](const TLabel* pButton) {
+            return !readsBefore(pButton, pLabel);
+        });
+        pTarget = after == buttons.cend() ? nullptr : *after;
+    } else {
+        const auto before = std::find_if(buttons.crbegin(), buttons.crend(), [pLabel](const TLabel* pButton) {
+            return readsBefore(pButton, pLabel);
+        });
+        pTarget = before == buttons.crend() ? nullptr : *before;
+    }
+    if (pTarget) {
+        pTarget->setFocus(next ? Qt::TabFocusReason : Qt::BacktabFocusReason);
+        return;
+    }
+    leaveKeyboardButtons(next);
+}
+
+void TMainConsole::leaveKeyboardButtons(bool next)
+{
+    if (std::exchange(mKeyboardButtonsFromCaret, false)) {
+        mpHost->setCaretEnabled(true);
+        mUpperPane->moveCaretToLink(next);
+    } else if (mpCommandLine) {
+        mpCommandLine->setFocus(next ? Qt::TabFocusReason : Qt::BacktabFocusReason);
+    }
+}
+
 std::pair<bool, QString> TMainConsole::setLabelToolTip(const QString& name, const QString& text, double duration)
 {
     if (name.isEmpty()) {
@@ -1557,8 +1669,10 @@ std::pair<bool, QString> TMainConsole::setLabelCursor(const QString& name, int s
     auto pL = mLabelMap.value(name);
     if (pL) {
         if (shape > -1 && shape < 22) {
+            pL->endLinkHover();
             pL->setCursor(static_cast<Qt::CursorShape>(shape));
         } else if (shape == -1) {
+            pL->endLinkHover();
             pL->unsetCursor();
         } else {
             return {false, qsl("cursor shape '%1' not found. see https://doc.qt.io/qt-5/qt.html#CursorShape-enum").arg(shape)};
@@ -1585,6 +1699,7 @@ std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name,
             return {false, qsl("couldn't find custom cursor, is the location \"%1\" correct?").arg(pixMapLocation)};
         }
         const QCursor custom_cursor = QCursor(cursor_pixmap, hotX, hotY);
+        pL->endLinkHover();
         pL->setCursor(custom_cursor);
         return {true, QString()};
     }
@@ -1694,6 +1809,10 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
     // No Host::createCommandLine() wrapper makes this check, unlike the other creators.
     if (mpHost->parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+
+    if (mpHost->windowRegistry().hasLabel(name)) {
+        return {false, qsl("label with the name '%1' already exists").arg(name)};
     }
 
     auto pN = mSubCommandLineMap.value(name);
@@ -1867,7 +1986,8 @@ void TMainConsole::openPasswordEntry()
         typedAhead.remove(QChar::CarriageReturn);
         typedAhead.remove(QChar::LineFeed);
         if (!typedAhead.isEmpty()) {
-            mpPasswordEntry->setText(typedAhead);
+            mpPasswordEntry->takeTypedAhead(typedAhead);
+            mPasswordEntryTypedAhead = typedAhead;
             mpCommandLine->clear();
             mpHost->passwordEntryEdited();
         }
@@ -1907,6 +2027,15 @@ void TMainConsole::closePasswordEntry()
         mpCommandLine->setFocus(Qt::OtherFocusReason);
     }
     mpCommandLine->removeEventFilter(this);
+    // A game toggling ECHO takes the box away before the player has finished typing a command into the
+    // command line. What they typed there goes back; what they typed into the box may be a password, and
+    // so may text typed ahead of a slow prompt when the connection drops instead.
+    QString typedAhead = std::exchange(mPasswordEntryTypedAhead, QString());
+    if (mpHost->passwordEntryClosedByTheGame() && pEntry->holdsOnlyTypedAhead() && mpCommandLine->toPlainText().isEmpty()) {
+        mpCommandLine->restorePlayerTypedLine(typedAhead);
+    } else {
+        typedAhead.fill(QChar::Null);
+    }
     // Hidden before the deferred delete, or a WONT and a WILL in one read leave
     // two boxes alive. Qt zero-fills only a password-mode line edit's text.
     pEntry->setEchoMode(QLineEdit::Password);
@@ -1916,6 +2045,21 @@ void TMainConsole::closePasswordEntry()
 
 bool TMainConsole::eventFilter(QObject* watched, QEvent* event)
 {
+    // A bar shown or hidden has the layout resize this frame but not the console, so no
+    // resizeEvent() sizes the display in it. Not sized mid-layout, while the frame's
+    // ancestors are still at their old size: the panes would count rows that are clipped.
+    if (watched == mpMainFrame && event->type() == QEvent::Resize && !mMainDisplayLayoutPending) {
+        mMainDisplayLayoutPending = true;
+        using namespace std::chrono_literals;
+        QTimer::singleShot(0ms, this, [this]() {
+            mMainDisplayLayoutPending = false;
+            // a console a tab switch has made zero wide is left alone, as resizeEvent() leaves it
+            if (width() && mpHost && mpCommandLine && !mpCommandLine->isHidden()) {
+                mBorders = mpHost->borders();
+                layoutMainDisplay();
+            }
+        });
+    }
     if (mpPasswordEntry && watched == mpCommandLine && (event->type() == QEvent::Resize || event->type() == QEvent::Move)) {
         mpPasswordEntry->setGeometry(mpCommandLine->geometry());
     }
@@ -1957,9 +2101,20 @@ TCommandLine* TMainConsole::activeCommandLine()
 
 void TMainConsole::focusActiveCommandLine()
 {
+    focusActiveCommandLine(nullptr);
+}
+
+void TMainConsole::focusActiveCommandLine(const QWidget* pWindow)
+{
     using namespace std::chrono_literals;
 
     TCommandLine* pCommandLine = activeCommandLine();
+    if (pCommandLine && pWindow && pCommandLine->window() != pWindow) {
+        pCommandLine = nullptr;
+        // The setFocus() below can land only once pWindow activates, as a Qt::ActiveWindowFocusReason
+        // focus-in that TCommandLine does not record, so record the line it gives the keyboard here
+        recordActiveCommandLine(mpCommandLine);
+    }
     TCommandLine* targetCommandLine = pCommandLine ? pCommandLine : mpCommandLine.data();
     if (!targetCommandLine) {
         return;
@@ -2233,7 +2388,7 @@ bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
     }
 
     if (!toEnd) {
-        pC->scrollUp(pC->mUpperPane->mCursorY - line);
+        pC->scrollTo(line);
         return true;
     }
     if (!pC->mUpperPane->mIsTailMode) {
@@ -2247,6 +2402,12 @@ bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
         pC->mUpperPane->forceUpdate();
     }
     return true;
+}
+
+bool TMainConsole::windowFollowsNewLines(const QString& name)
+{
+    auto pC = consoleNamed(name);
+    return pC && pC->mUpperPane->mIsTailMode;
 }
 
 std::optional<std::pair<bool, QString>> TMainConsole::setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight)
@@ -2309,6 +2470,10 @@ std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, 
     // No Host::createTextEdit() wrapper makes this check, unlike the other creators.
     if (mpHost->parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+
+    if (mpHost->windowRegistry().hasLabel(name)) {
+        return {false, qsl("label with the name '%1' already exists").arg(name)};
     }
 
     auto pT = mTextBoxMap.value(name);
@@ -2397,7 +2562,7 @@ bool TMainConsole::setTextBoxTabMovesFocus(const QString& name, bool tabMovesFoc
 
 QPoint TMainConsole::mousePosition() const
 {
-    return mapFromGlobal(QCursor::pos());
+    return mpMainFrame->mapFromGlobal(QCursor::pos());
 }
 
 bool TMainConsole::hasKeyboardFocus() const
@@ -2553,7 +2718,8 @@ std::pair<bool, QString> TMainConsole::setLabelMovie(const QString& name, const 
     myMovie->setFileName(moviePath);
     myMovie->stop();
     pL->setMovie(myMovie);
-    pL->model().mText = pL->text();
+    pL->model().setText(pL->text());
+    pL->imageMayHaveChanged();
     myMovie->start();
     return {true, QString()};
 }
@@ -3519,6 +3685,7 @@ void TMainConsole::createMapperDock(const QString& title, const QString& objectN
     mpHost->mpMap->setMapper(new dlgMapper(mpDockableMapWidget, mpHost, mpHost->mpMap.data()));
     mpHost->mpMap->mapper()->setStyleSheet(mpHost->mProfileStyleSheet);
     mpDockableMapWidget->setWidget(mpHost->mpMap->mapper());
+    mudlet::self()->growDockToSizeHintWhenShown(mpDockableMapWidget);
 }
 
 QDockWidget* TMainConsole::mapWidget() const
@@ -3766,6 +3933,16 @@ void TMainConsole::dockMapWidget(Qt::DockWidgetArea area)
     mudlet::self()->addDockWidget(area, mpDockableMapWidget);
 }
 
+void TMainConsole::redockMapWidget(Qt::DockWidgetArea area)
+{
+    const bool moving = mpDockableMapWidget->isFloating() || mudlet::self()->dockWidgetArea(mpDockableMapWidget) != area;
+    mpDockableMapWidget->setFloating(false);
+    dockMapWidget(area);
+    if (moving) {
+        mudlet::self()->growDockToSizeHint(mpDockableMapWidget, false);
+    }
+}
+
 std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x, int y, int width, int height)
 {
     auto pM = mpDockableMapWidget;
@@ -3793,26 +3970,22 @@ std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x
     }
 
     if (area == QLatin1String("r") || area == QLatin1String("right")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::RightDockWidgetArea);
+        redockMapWidget(Qt::RightDockWidgetArea);
         return {true, QString()};
     }
 
     if (area == QLatin1String("l") || area == QLatin1String("left")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::LeftDockWidgetArea);
+        redockMapWidget(Qt::LeftDockWidgetArea);
         return {true, QString()};
     }
 
     if (area == QLatin1String("t") || area == QLatin1String("top")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::TopDockWidgetArea);
+        redockMapWidget(Qt::TopDockWidgetArea);
         return {true, QString()};
     }
 
     if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::BottomDockWidgetArea);
+        redockMapWidget(Qt::BottomDockWidgetArea);
         return {true, QString()};
     }
 
@@ -4043,6 +4216,10 @@ void TMainConsole::showStatistics()
     QString itemMsg = std::get<0>(mpHost->getTriggerUnit()->assembleReport());
     print(itemMsg, QColor(150, 120, 0), Qt::black);
 
+    //: Heading for the system's statistics information displayed in the console, about matching triggers on several threads during a flood of text
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Trigger Match Pool:")));
+    print(assembleTriggerMatchPoolReport(), QColor(150, 120, 0), Qt::black);
+
     //: Heading for the system's statistics information displayed in the console
     mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Timer Report:")));
     itemMsg = std::get<0>(mpHost->getTimerUnit()->assembleReport());
@@ -4078,6 +4255,46 @@ void TMainConsole::showStatistics()
     mpHost->mainConsoleView()->raise();
 }
 
+QString TMainConsole::assembleTriggerMatchPoolReport() const
+{
+    const TriggerMatchPool& pool = TriggerMatchPool::instance();
+    if (pool.workerCount() == 0) {
+        //: Shown in the statistics report when matching triggers on several threads is switched off
+        return tr("off - switch it on under Preferences, Advanced, Performance to find out whether it speeds up this profile during floods of text.\n");
+    }
+    const TriggerMatchPool::Report& report = pool.report();
+    const auto microseconds = [](const qint64 nanoseconds) {
+        return QString::number(static_cast<double>(nanoseconds) / 1000.0, 'f', 1);
+    };
+    QString text;
+    //: Statistics report line; %n is the number of threads matching triggers, the main thread included
+    text += tr("on, with %n thread(s); the figures below cover every profile since it was last switched on or changed\n", nullptr, pool.workerCount());
+    //: Statistics report line; %1 is a number of lines of game text, %2 an average time in microseconds
+    text += tr("lines it matched: %1, taking %2 µs each on average\n").arg(QString::number(report.pooledLines), microseconds(report.averagePooledNanoseconds()));
+    //: Statistics report line; %1 is a number of lines of game text, %2 an average time in microseconds
+    text += tr("lines like those matched without it, for comparison: %1, taking %2 µs each on average\n").arg(QString::number(report.sampledLines), microseconds(report.averageSampledNanoseconds()));
+    switch (report.verdict()) {
+    case TriggerMatchPool::Report::Verdict::NotEnoughData:
+        //: Statistics report line; %1 is the number of comparison lines needed. Lines are only compared during a flood of game text that triggers with regular expressions have to search
+        text += tr("verdict: not enough data yet - it needs %1 comparison lines, which come from floods of text that many regex triggers search\n")
+                        .arg(TriggerMatchPool::Report::scmSampledLinesForVerdict);
+        break;
+    case TriggerMatchPool::Report::Verdict::WorthIt:
+        //: Statistics report line; %1 is a time in milliseconds
+        text += tr("verdict: worth it on this workload so far, saving about %1 ms\n").arg(QString::number(report.savedNanoseconds() / 1000000));
+        break;
+    case TriggerMatchPool::Report::Verdict::AboutEven:
+        //: Statistics report line
+        text += tr("verdict: about even on this workload so far - it is no faster, and uses more CPU\n");
+        break;
+    case TriggerMatchPool::Report::Verdict::NotWorthIt:
+        //: Statistics report line; %1 is a time in milliseconds
+        text += tr("verdict: not worth it on this workload so far, costing about %1 ms - consider switching it off\n").arg(QString::number(-report.savedNanoseconds() / 1000000));
+        break;
+    }
+    return text;
+}
+
 void TMainConsole::closeEvent(QCloseEvent* event)
 {
     // Guard against duplicate close events during widget destruction.
@@ -4099,6 +4316,12 @@ void TMainConsole::closeEvent(QCloseEvent* event)
             pHost->getLuaInterpreter()->leaveNestedEventLoop();
         }
     });
+    mpHost->pauseServerWrapFlush();
+    const auto serverWrapFlushGuard = qScopeGuard([pHost = QPointer<Host>(mpHost), event]() {
+        if (pHost && !event->isAccepted()) {
+            pHost->resumeServerWrapFlush();
+        }
+    });
     TEvent conCloseEvent{};
     conCloseEvent.mArgumentList.append(qsl("sysExitEvent"));
     conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -4107,8 +4330,11 @@ void TMainConsole::closeEvent(QCloseEvent* event)
     if (mpHost->mFORCE_SAVE_ON_EXIT || mpHost->isClosingForced()) {
         mudlet::self()->saveWindowLayout();
         mpHost->modulesToWrite.clear();
-        // We are not checking the status result from here!
-        mpHost->saveProfile();
+        // A save still running would turn this one away, and it may predate the session's last changes
+        mpHost->waitForProfileSave();
+        mpHost->saveProfileReportingFailure();
+        // Other profiles can keep Mudlet running long after this one closes
+        mudlet::self()->writeSettings();
 
         if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
             // There is a map loaded - but it *could* have no rooms at all!
@@ -4141,6 +4367,7 @@ void TMainConsole::closeEvent(QCloseEvent* event)
                         this, tr("Could not save profile"), tr("Sorry, could not save your profile as \"%1\" - got the following error: \"%2\".").arg(filename, error), QMessageBox::Retry);
                 goto ASK_PROFILE;
             }
+            mudlet::self()->writeSettings();
 
             if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
                 // There is a map loaded - but it *could* have no rooms at all!

@@ -30,7 +30,6 @@
 #include "MudletApp.h"
 #include "MudletMedia.h"
 
-#include "AltFocusMenuBarDisable.h"
 #include "CredentialManager.h"
 #include "DarkTheme.h"
 #include "FontManager.h"
@@ -41,6 +40,7 @@
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletProxyStyle.h"
 #include "TDetachedWindow.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
@@ -197,6 +197,24 @@ bool relinkIfOrphaned(QWidget* pChildWindow)
     return true;
 }
 
+// Qt 6.12 skips Tool windows when it picks a transient parent, so a dialog opened from a
+// floating dock would otherwise be stacked and minimized with the main window
+void relinkPastFloatingDock(QWidget* pChildWindow)
+{
+    if (!pChildWindow->isWindow() || !pChildWindow->parentWidget()) {
+        return;
+    }
+    QWindow* pHandle = pChildWindow->windowHandle();
+    auto* pDock = qobject_cast<QDockWidget*>(pChildWindow->parentWidget()->window());
+    if (!pHandle || !pHandle->transientParent() || !pDock || !pDock->isFloating()) {
+        return;
+    }
+    QWindow* pDockWindow = pDock->windowHandle();
+    if (pDockWindow && pHandle->transientParent() != pDockWindow) {
+        pHandle->setTransientParent(pDockWindow);
+    }
+}
+
 void relinkOrphansUnder(const QWidget* pWindow)
 {
     const auto children = pWindow->findChildren<QWidget*>();
@@ -214,6 +232,11 @@ public:
 
     bool eventFilter(QObject* watched, QEvent* event) override
     {
+        if (event->type() == QEvent::Show && watched->isWidgetType()) {
+            // Sent before the window is mapped, so the window manager only ever sees the dock
+            relinkPastFloatingDock(static_cast<QWidget*>(watched));
+            return false;
+        }
         if (event->type() != QEvent::WinIdChange || !watched->isWidgetType()) {
             return false;
         }
@@ -2264,11 +2287,7 @@ void mudlet::initEdbee()
     // We only need the single Lua lexer, probably ever
     grammarManager->readGrammarFile(QLatin1String(":/edbee_defaults/Lua.tmLanguage"));
 
-    //Open and parse the luaFunctionList document into a stringlist for use with autocomplete
     loadLuaFunctionList();
-
-    //QFile file(fileName);
-    //if( file.exists() && file.open(QIODevice::ReadOnly) ) {
 
     loadEdbeeTheme(qsl("Mudlet"), qsl("Mudlet.tmTheme"));
 }
@@ -3016,6 +3035,16 @@ void mudlet::slot_closeProfileRequested(int tab)
         return;
     }
 
+    if (pH->waitingForProfileSave()) {
+        QTimer::singleShot(50ms, this, [this, name, pClosingHost = QPointer<Host>(pH)]() {
+            const int retryTab = mpTabBar->tabIndex(name);
+            if (retryTab >= 0 && mHostManager.getHost(name) == pClosingHost) {
+                slot_closeProfileRequested(retryTab);
+            }
+        });
+        return;
+    }
+
     if (closeHeldOffByEventPump(pH)) {
         return;
     }
@@ -3038,7 +3067,8 @@ void mudlet::slot_closeProfileRequested(int tab)
 
 // Closing a profile destroys the lua_State the pump is still executing on.
 // closeMudlet() waits for the pump instead, as refusing would cancel a shutdown
-// nobody would retry.
+// nobody would retry. A Host::waitForProfileSave() is not one of these: it ends
+// on its own, so the callers retry a close asked for during it.
 bool mudlet::closeHeldOffByEventPump(Host* pHost) const
 {
     if (!pHost->getLuaInterpreter()->pumpingEvents()) {
@@ -3052,6 +3082,15 @@ void mudlet::slot_closeProfileByName(const QString& profileName)
 {
     Host* pH = mHostManager.getHost(profileName);
     if (!pH) {
+        return;
+    }
+
+    if (pH->waitingForProfileSave()) {
+        QTimer::singleShot(50ms, this, [this, profileName, pClosingHost = QPointer<Host>(pH)]() {
+            if (mHostManager.getHost(profileName) == pClosingHost) {
+                slot_closeProfileByName(profileName);
+            }
+        });
         return;
     }
 
@@ -3108,7 +3147,7 @@ void mudlet::slot_reattachAllDetachedWindows()
             qDebug() << "slot_reattachAllDetachedWindows: Reattaching profile" << profileName;
 #endif
             // Use the existing reattach mechanism
-            reattachTab(profileName, -1); // Use default insert index
+            reattachTab(profileName, mainTabSlotFor(profileName));
         }
     }
 
@@ -3202,7 +3241,8 @@ void mudlet::updateWindowMenu()
         if (!mainWindowProfiles.isEmpty()) {
             // Add main window section
             for (const QString& profileName : mainWindowProfiles) {
-                QString actionText = tr("%1 (Main Window)").arg(profileName);
+                //: This is an item in list of profiles in the "Window" menu of Mudlet's main window. %1 is the name of the profile, and it is located in the main window.
+                QString actionText = tr("%1 (Main Window)").arg(addonLabel(profileName));
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
                 profileAction->setChecked(isActiveWindow() && mpCurrentActiveHost && mpCurrentActiveHost->getName() == profileName);
@@ -3229,7 +3269,8 @@ void mudlet::updateWindowMenu()
             QStringList profilesInWindow = detachedWindow->getProfileNames();
 
             for (const QString& windowProfileName : std::as_const(profilesInWindow)) {
-                QString actionText = tr("%1 (Detached)").arg(windowProfileName);
+                //: This is an item in list of profiles in the "Window" menu of Mudlet's main window. %1 is the name of the profile, and it is located not in the main window, but in a detached window.
+                QString actionText = tr("%1 (Detached)").arg(addonLabel(windowProfileName));
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
                 profileAction->setChecked(detachedWindow->isActiveWindow() && detachedWindow->getCurrentProfileName() == windowProfileName);
@@ -3361,10 +3402,12 @@ void mudlet::closeHost(const QString& name)
     // event loop - loading or closing another profile, a modal dialog, a
     // reconnect - after the profile's own script asked for the close: the
     // script is still running, and destroying the Host would lua_close() the
-    // state under it. Retried on a timer rather than immediately: the retry
-    // would otherwise land back in the same pump, spinning until the operation
-    // ends instead of letting it get there.
-    if (mapOperationRunning || pH->getLuaInterpreter()->luaOnStack()) {
+    // state under it. Likewise a Host::waitForProfileSave(), whose pump runs
+    // with the Host it waits on - and its caller - still on the stack. Retried
+    // on a timer rather than immediately: the retry would otherwise land back
+    // in the same pump, spinning until the operation ends instead of letting
+    // it get there.
+    if (mapOperationRunning || pH->getLuaInterpreter()->luaOnStack() || pH->waitingForProfileSave()) {
         if (mapOperationRunning) {
             if (!pH->mpMap->mapOperationAbortRequested()) {
                 qDebug().nospace().noquote() << "mudlet::closeHost(\"" << name << "\") INFO - a map operation is still running, so the profile will be closed once it has stopped.";
@@ -3839,8 +3882,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
     HostDialogs::of(pH).mpEditorDialog = pEditor;
     connect(pH, &Host::profileSaveStarted, pEditor, &dlgTriggerEditor::slot_profileSaveStarted);
     connect(pH, &Host::profileSaveFinished, pEditor, &dlgTriggerEditor::slot_profileSaveFinished);
-    // Item trees are deliberately not populated here: ScriptUnit::compileAll() queues a full rebuild once
-    // the profile's scripts have run, so populating now would double the cost of the load.
+    // Item trees are deliberately not populated here: the rebuild ScriptUnit::compileAll() queues is put off
+    // until the editor is first opened (see dlgTriggerEditor::runScheduledCleanReset()).
 
     pH->getActionUnit()->updateAllToolbars();
 
@@ -4207,7 +4250,7 @@ bool mudlet::saveWindowLayout()
         ofs.setVersion(QDataStream::Qt_5_12);
         ofs << layoutData;
         if (!layoutFile.commit()) {
-            qDebug() << "mudlet::saveWindowLayout: error saving window layout: " << layoutFile.errorString();
+            qWarning() << "mudlet::saveWindowLayout: error saving window layout file:" << layoutFilePath << layoutFile.errorString();
             return false;
         }
 
@@ -4218,6 +4261,7 @@ bool mudlet::saveWindowLayout()
         mHasSavedLayout = true;
         return true;
     }
+    qWarning() << "mudlet::saveWindowLayout: error opening window layout file for writing:" << layoutFilePath << layoutFile.errorString();
     return false;
 }
 
@@ -4305,6 +4349,56 @@ bool mudlet::saveFloatingDockGeometries()
         return false;
     }
     return true;
+}
+
+// Qt gives a dock shown in an area that was used before, or that a restored layout left empty, the depth the area
+// had rather than its size hint, down to its minimum
+void mudlet::growDockToSizeHint(QDockWidget* dock, bool onlyFromMinimum)
+{
+    using namespace std::chrono_literals;
+    QTimer::singleShot(0ms, dock, [this, dock, onlyFromMinimum]() {
+        if (dock->parentWidget() != this || dock->isFloating()) {
+            return;
+        }
+        // Hidden again before this ran, a move would otherwise leave it the area's old depth when next shown; growing
+        // from the minimum needs no retry, as growDockToSizeHintWhenShown() does that on every show
+        if (!dock->isVisible()) {
+            if (!onlyFromMinimum) {
+                // The dock owns its one pending retry, so a retry still waiting when the dock is deleted goes with it
+                delete dock->findChild<QObject*>(qsl("dockGrowthRetry"), Qt::FindDirectChildrenOnly);
+                auto pRetry = new QObject(dock);
+                pRetry->setObjectName(qsl("dockGrowthRetry"));
+                const auto retry = [this, dock, pRetry]() {
+                    pRetry->deleteLater();
+                    growDockToSizeHint(dock, false);
+                };
+                connect(dock, &QDockWidget::visibilityChanged, pRetry, retry, Qt::SingleShotConnection);
+            }
+            return;
+        }
+        layout()->activate();
+        const Qt::DockWidgetArea area = dockWidgetArea(dock);
+        const Qt::Orientation orientation = (area == Qt::TopDockWidgetArea || area == Qt::BottomDockWidgetArea) ? Qt::Vertical : Qt::Horizontal;
+        const auto depth = [orientation](const QSize& size) {
+            return orientation == Qt::Vertical ? size.height() : size.width();
+        };
+        const int current = depth(dock->size());
+        const int wanted = depth(dock->sizeHint());
+        if (current >= wanted || (onlyFromMinimum && current > depth(dock->minimumSizeHint()))) {
+            return;
+        }
+        resizeDocks({dock}, {wanted}, orientation);
+    });
+}
+
+// Only from its minimum, so a size the player chose or a saved layout restored stays
+void mudlet::growDockToSizeHintWhenShown(QDockWidget* dock)
+{
+    connect(dock, &QDockWidget::visibilityChanged, this, [this, dock](bool visible) {
+        if (visible) {
+            growDockToSizeHint(dock, true);
+        }
+    });
 }
 
 void mudlet::restoreFloatingDockGeometries()
@@ -4489,6 +4583,18 @@ void mudlet::closeEvent(QCloseEvent* event)
         mCloseRequestedDuringProfileLoad = true;
         event->ignore();
         return;
+    }
+
+    for (auto pHost : mHostManager) {
+        // Its caller still uses the profile once the wait returns, and the
+        // wait ends on its own, so ask again then
+        if (pHost->waitingForProfileSave()) {
+            event->ignore();
+            QTimer::singleShot(50ms, this, [this]() {
+                close();
+            });
+            return;
+        }
     }
 
     for (auto pHost : mHostManager) {
@@ -4682,6 +4788,9 @@ void mudlet::readEarlySettings(const QSettings& settings)
     } else {
         mAppearance = static_cast<enums::Appearance>(appearance);
     }
+
+    MudletProxyStyle::setAltKeyNavigation(
+            static_cast<enums::MenuBarAltKeyNavigation>(settings.value(qsl("menuBarAltKeyNavigation"), static_cast<int>(enums::MenuBarAltKeyNavigation::WhenScreenReaderRunning)).toInt()));
 
     const QString interfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
     MudletApp::setInterfaceLanguage(interfaceLanguage);
@@ -4886,11 +4995,13 @@ void mudlet::setMenuBarVisibility(const enums::controlsVisibility state)
 // This only adjusts the visibility as appropriate
 void mudlet::adjustMenuBarVisibility()
 {
-    const int hostCount = mHostManager.getHostCount();
-    if ((hostCount < 1 && (mMenuBarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mMenuBarVisibility & enums::visibleMaskNormally))) {
-        menuBar()->show();
-    } else {
-        menuBar()->hide();
+    const bool menuBarVisible = controlShouldBeVisible(mMenuBarVisibility);
+    menuBar()->setVisible(menuBarVisible);
+
+    for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
+        if (detachedWindow) {
+            detachedWindow->setMenuBarVisibility(menuBarVisible);
+        }
     }
 }
 
@@ -4916,7 +5027,7 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 {
     if (!isVisible && mMenuBarVisibility == enums::visibleNever) {
         // Only need to worry about it DIS-appearing if the menu bar is not showing
-        if (toolBarShouldBeVisible()) {
+        if (controlShouldBeVisible(mToolbarVisibility)) {
             mpMainToolBar->show();
         }
     }
@@ -4951,20 +5062,20 @@ void mudlet::slot_toolbarToggleActionTriggered(bool checked)
     synchronizeToolBarVisibility(checked);
 }
 
-bool mudlet::toolBarShouldBeVisible()
+bool mudlet::controlShouldBeVisible(const enums::controlsVisibility visibility)
 {
     const int hostCount = mHostManager.getHostCount();
-    return (hostCount < 1 && (mToolbarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & enums::visibleMaskNormally));
+    return (hostCount < 1 && (visibility & enums::visibleAlways)) || (hostCount >= 1 && (visibility & enums::visibleMaskNormally));
 }
 
 void mudlet::adjustToolBarVisibility()
 {
-    const bool toolBarVisible = toolBarShouldBeVisible();
+    const bool toolBarVisible = controlShouldBeVisible(mToolbarVisibility);
     mpMainToolBar->setVisible(toolBarVisible);
 
     // Detached windows only get the toolbar state in their constructor and from the toolbar's own toggle,
     // so push the setting to them too. They mirror the main window even for a hide canHideToolBar() would
-    // refuse: a detached window always keeps its own menu bar.
+    // refuse, and are left with the same console context menu to get the controls back.
     for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
         if (detachedWindow) {
             detachedWindow->setToolBarVisibility(toolBarVisible);
@@ -5107,6 +5218,7 @@ void mudlet::writeSettings()
     // 'darkTheme' value was only used during PTBs, remove it to reduce confusion in the future
     settings.remove("darkTheme");
     settings.setValue("appearance", mAppearance);
+    settings.setValue(qsl("menuBarAltKeyNavigation"), static_cast<int>(MudletProxyStyle::altKeyNavigation()));
 
     settings.setValue("minLengthForSpellCheck", mMinLengthForSpellCheck);
     settings.setValue(qsl("enableMultiViewMode"), mMultiView);
@@ -6112,6 +6224,7 @@ void mudlet::slot_showMapperDialog()
         mainMapper->show();
     }
 
+    growDockToSizeHintWhenShown(newMapDockWidget);
     // Add the dock widget to the main window
     addDockWidget(Qt::RightDockWidgetArea, newMapDockWidget);
 
@@ -6555,6 +6668,15 @@ QString mudlet::findMatchingProfile(const QString& host, int port)
     for (const auto& profileName : std::as_const(profileNames)) {
         QString profileHost = MudletApp::readProfileData(profileName, qsl("url"));
         QString profilePort = MudletApp::readProfileData(profileName, qsl("port"));
+        // A catalog game's folder can lack either file, as showing the game in the connection dialog writes neither
+        if (auto it = TGameDetails::findGame(profileName); it != TGameDetails::scmDefaultGames.end() && QFileInfo::exists(MudletApp::getMudletPath(enums::profileHomePath, profileName))) {
+            if (profileHost.isEmpty()) {
+                profileHost = (*it).hostUrl;
+            }
+            if (profilePort.isEmpty()) {
+                profilePort = QString::number((*it).port);
+            }
+        }
 
         if (!profileHost.compare(host, Qt::CaseInsensitive) && profilePort.toInt() == port) {
             QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, profileName);
@@ -6592,11 +6714,16 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
 
     // Bounded loop to avoid hanging on unexpected collisions
     QString originalName = profileName;
-    for (int suffix = 2; suffix < 100 && profileExists(profileName); ++suffix) {
+    // A name whose removed profile's sign-in is still being deleted counts as taken: the new profile
+    // would read that sign-in and send its token to whatever server this link names
+    const auto taken = [this](const QString& name) {
+        return profileExists(name) || dlgConnectionProfiles::signInRemovalPending(name);
+    };
+    for (int suffix = 2; suffix < 100 && taken(profileName); ++suffix) {
         profileName = qsl("%1-%2").arg(originalName).arg(suffix);
     }
 
-    if (profileExists(profileName)) {
+    if (taken(profileName)) {
         qWarning() << "mudlet::createProfileForUri() - Could not find unique name for profile";
         return QString();
     }
@@ -7008,8 +7135,8 @@ void mudlet::slot_showTabContextMenu(const QPoint& position)
     if (tabIndex >= 0 && mpTabBar->count() > 1) {
         const QString profileName = mpTabBar->tabData(tabIndex).toString();
 
-        // Add "Detach Tab" option
-        QAction* detachTabAction = new QAction(tr("Detach Tab \"%1\"").arg(profileName), &contextMenu);
+        //: This is an item in the context menu shown when right-clicking a tab in Mudlet's main window. %1 is the name of the profile.
+        QAction* detachTabAction = new QAction(tr("Detach Tab \"%1\"").arg(addonLabel(profileName)), &contextMenu);
         detachTabAction->setIcon(QIcon(":/icons/window-new.png"));
         connect(detachTabAction, &QAction::triggered, this, [this, tabIndex]() {
             detachTab(tabIndex, QPoint()); // Position doesn't matter for manual detach
@@ -7273,26 +7400,58 @@ void mudlet::requestProfilesToReloadMaps(QList<QString> affectedProfiles)
 }
 
 //loads the luaFunctionList for use by the edbee Autocompleter
-bool mudlet::loadLuaFunctionList()
+bool mudlet::loadLuaFunctionList(const QString& fileName)
 {
-    auto jsonFile = QFile(qsl(":/lua-function-list.json"));
+    auto warn = [&fileName](const QString& reason) {
+        qWarning().nospace().noquote() << "mudlet::loadLuaFunctionList() WARNING - \"" << fileName << "\" " << reason << ", so the script editors will offer no API autocompletion";
+    };
+
+    // A directory opens and reads as empty, which would otherwise be reported as an empty file
+    if (QFileInfo(fileName).isDir()) {
+        warn(qsl("is a directory, not a file"));
+        return false;
+    }
+
+    auto jsonFile = QFile(fileName);
     if (!jsonFile.open(QFile::ReadOnly)) {
+        warn(qsl("could not be opened (%1)").arg(jsonFile.errorString()));
         return false;
     }
 
     const QByteArray data = jsonFile.readAll();
     jsonFile.close();
 
-    auto json_doc = QJsonDocument::fromJson(data);
+    if (data.isEmpty()) {
+        warn(qsl("is empty"));
+        return false;
+    }
 
-    if (json_doc.isNull() || !json_doc.isObject()) {
+    QJsonParseError parseError;
+    auto json_doc = QJsonDocument::fromJson(data, &parseError);
+
+    // Qt rejects a top-level scalar such as 42 here too, so this is not only malformed syntax
+    if (json_doc.isNull()) {
+        warn(qsl("could not be parsed as a JSON object: %1 at offset %2").arg(parseError.errorString(), QString::number(parseError.offset)));
+        return false;
+    }
+
+    if (!json_doc.isObject()) {
+        warn(qsl("holds a JSON array, not an object"));
         return false;
     }
 
     const QJsonObject json_obj = json_doc.object();
 
     if (json_obj.isEmpty()) {
+        warn(qsl("lists no functions"));
         return false;
+    }
+
+    for (auto it = json_obj.constBegin(); it != json_obj.constEnd(); ++it) {
+        if (!it.value().isString()) {
+            warn(qsl("gives \"%1\" a description that is not a string").arg(it.key()));
+            return false;
+        }
     }
 
     mudlet::smLuaFunctionNames = json_obj.toVariantHash();
@@ -7596,20 +7755,27 @@ bool mudlet::migratePasswordsToProfileStorage()
         return false;
     }
     MudletApp::setStorePasswordsSecurely(false);
+    mPasswordsNotMigratedToProfiles.clear();
 
     const QStringList profiles = QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     for (const auto& profile : profiles) {
         // Try to retrieve password from CredentialManager
-        QString password = CredentialManager::retrieveCredential(profile, "character");
+        CredentialManager::ReadOutcome outcome = CredentialManager::ReadOutcome::NothingStored;
+        QString password = CredentialManager::retrieveCredential(profile, "character", &outcome);
 
-        if (!password.isEmpty()) {
-            // Store in profile data
-            MudletApp::writeProfileData(profile, qsl("password"), password);
-
-            // Only remove from secure storage if this version is >= 4.20.0
+        if (password.isEmpty() && outcome == CredentialManager::ReadOutcome::Unreadable) {
+            qWarning().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() WARNING - could not read the saved password for profile \"" << profile
+                                           << "\", so it stays in secure storage.";
+            mPasswordsNotMigratedToProfiles.append(profile);
+        } else if (!password.isEmpty()) {
+            // Only remove from secure storage once it is saved here, and only if this version is >= 4.20.0
             // This prevents breaking compatibility with older Mudlet versions
-            if (isVersionAtLeast(qsl("4.20.0"))) {
+            if (!MudletApp::writeProfileData(profile, qsl("password"), password).first) {
+                qWarning().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() WARNING - could not migrate the password for profile \"" << profile
+                                               << "\", so it stays in secure storage.";
+                mPasswordsNotMigratedToProfiles.append(profile);
+            } else if (isVersionAtLeast(qsl("4.20.0"))) {
                 CredentialManager::removeCredential(profile, "character");
                 qDebug().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() INFO - migrated password for profile \"" << profile
                                              << "\" to profile storage and cleaned up secure storage.";
@@ -7654,11 +7820,15 @@ void mudlet::slot_passwordMigratedToPortableStorage(QKeychain::Job* job)
 
     } else {
         auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
-        MudletApp::writeProfileData(profileName, qsl("password"), readJob->textData());
-
-        // Only delete from secure storage if this version is >= 4.20.0
+        // Only delete from secure storage once it is saved here, and only if this version is >= 4.20.0
         // This prevents breaking compatibility with older Mudlet versions
-        if (isVersionAtLeast(qsl("4.20.0"))) {
+        if (!MudletApp::writeProfileData(profileName, qsl("password"), readJob->textData()).first) {
+            qWarning().nospace().noquote() << "mudlet::slot_passwordMigratedToPortableStorage(...) WARNING - could not migrate the password for profile \"" << profileName
+                                           << "\", so it stays in the legacy keychain storage.";
+            if (!mPasswordsNotMigratedToProfiles.contains(profileName)) {
+                mPasswordsNotMigratedToProfiles.append(profileName);
+            }
+        } else if (isVersionAtLeast(qsl("4.20.0"))) {
             auto* deleteJob = new QKeychain::DeletePasswordJob(qsl("Mudlet profile"));
             deleteJob->setAutoDelete(true);
             deleteJob->setKey(profileName);
@@ -7813,11 +7983,11 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
             qApp->setStyle(new DarkTheme);
         } else {
             // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-            qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+            qApp->setStyle(new MudletProxyStyle(mDefaultStyle));
         }
     } else {
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-        qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+        qApp->setStyle(new MudletProxyStyle(mDefaultStyle));
     }
 
     refreshTabBarsAfterStyleChange();
@@ -8361,12 +8531,16 @@ void mudlet::armForceClose()
         for (auto pHost : mHostManager) {
             if (pHost->getLuaInterpreter()->pumpingEvents()) {
                 qWarning() << "mudlet::armForceClose() - a nested event loop is running, waiting for it to finish";
-                QTimer::singleShot(50ms, this, [this]() {
-                    mForceClosePending = false;
-                    armForceClose();
-                });
-                return;
+            } else if (pHost->waitingForProfileSave()) {
+                qWarning() << "mudlet::armForceClose() - profile" << pHost->getName() << "is waiting for its save to finish, waiting for it";
+            } else {
+                continue;
             }
+            QTimer::singleShot(50ms, this, [this]() {
+                mForceClosePending = false;
+                armForceClose();
+            });
+            return;
         }
         forceClose();
         // Not left set: closeEvent() can still refuse the close, and a later
@@ -8599,7 +8773,7 @@ void mudlet::closeHostOfClosedDetachedWindow(const QString& profileName)
         return;
     }
 
-    if (closeHeldOffByEventPump(pHost)) {
+    if (pHost->waitingForProfileSave() || closeHeldOffByEventPump(pHost)) {
         QTimer::singleShot(50ms, this, [this, profileName]() {
             closeHostOfClosedDetachedWindow(profileName);
         });
@@ -8665,6 +8839,7 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
         }
     }
 
+    syncMainTabOrder();
     // Remove tab from main window tab bar since it will be in the detached window
     mpTabBar->removeTab(tabIndex);
 
@@ -8683,6 +8858,7 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
     // Create detached window with toolbar state inherited from main window
     bool toolbarVisible = (mpMainToolBar && mpMainToolBar->isVisible());
     auto detachedWindow = new TDetachedWindow(profileName, console, toolbarVisible);
+    detachedWindow->setMenuBarVisibility(controlShouldBeVisible(mMenuBarVisibility));
     mDetachedWindows.insert(profileName, detachedWindow);
 
     // Transfer any dock widgets from the main window to the detached window
@@ -8690,7 +8866,7 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
 
     // Connect signals
     connect(detachedWindow, &TDetachedWindow::reattachRequested, this, [this](const QString& profileName) {
-        slot_tabReattachRequested(profileName, -1); // Use default insert index
+        slot_tabReattachRequested(profileName, mainTabSlotFor(profileName));
     });
     connect(detachedWindow, &TDetachedWindow::windowClosed, this, &mudlet::slot_detachedWindowClosed);
     connect(detachedWindow, &TDetachedWindow::profileDetachToWindowRequested, this, &mudlet::slot_profileDetachToWindow);
@@ -8712,9 +8888,14 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
     // moment control returns to the event loop. Ours is queued later so it runs
     // later; the 10ms and 50ms retries behind it only setFocus(), which cannot
     // activate an inactive window.
-    QTimer::singleShot(0ms, detachedWindow, [detachedWindow]() {
+    QTimer::singleShot(0ms, detachedWindow, [detachedWindow, pDetachedHost = QPointer<Host>(pHost)]() {
         detachedWindow->raise();
         detachedWindow->activateWindow();
+        if (pDetachedHost && pDetachedHost->mainConsoleView()) {
+            // Without this no command line in the new window has the keyboard. User windows do not
+            // move with the profile, and focusing a command line in one would take the keyboard away
+            pDetachedHost->mainConsoleView()->focusActiveCommandLine(detachedWindow);
+        }
     });
 
     // Update multi-view controls
@@ -9161,6 +9342,7 @@ void mudlet::moveProfileFromMainToDetachedWindow(const QString& profileName, int
         return;
     }
 
+    syncMainTabOrder();
     // Remove tab from main window tab bar
     mpTabBar->removeTab(tabIndex);
 
@@ -9325,6 +9507,48 @@ void mudlet::cleanupDetachedWindowsMap()
     }
 }
 
+void mudlet::syncMainTabOrder()
+{
+    const QStringList barOrder = mpTabBar->tabNames();
+    // Keyed by the attached tab each detached profile follows; an empty key is
+    // the front of the bar
+    QHash<QString, QStringList> detachedBehind;
+    QString lastAttached;
+    for (const QString& name : std::as_const(mMainTabOrder)) {
+        if (barOrder.contains(name)) {
+            lastAttached = name;
+        } else if (mDetachedWindows.contains(name)) {
+            detachedBehind[lastAttached].append(name);
+        }
+    }
+
+    QStringList order = detachedBehind.value(QString());
+    for (const QString& name : barOrder) {
+        order.append(name);
+        order.append(detachedBehind.value(name));
+    }
+    mMainTabOrder = order;
+}
+
+// The main tab bar index that puts a detached profile back where it was, or
+// -1 when it has no recorded place
+int mudlet::mainTabSlotFor(const QString& profileName)
+{
+    syncMainTabOrder();
+    const qsizetype position = mMainTabOrder.indexOf(profileName);
+    if (position < 0) {
+        return -1;
+    }
+
+    int slot = 0;
+    for (qsizetype i = 0; i < position; ++i) {
+        if (findTabIndex(mMainTabOrder.at(i)) >= 0) {
+            ++slot;
+        }
+    }
+    return slot;
+}
+
 int mudlet::findTabIndex(const QString& profileName) const
 {
     for (int i = 0; i < mpTabBar->count(); ++i) {
@@ -9392,7 +9616,10 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
     }
 
     // Now add console to main window - it should have parent=nullptr now
-    const int insertIndex = mpTabBar->count(); // Insert at end
+    int insertIndex = mainTabSlotFor(profileName);
+    if (insertIndex < 0) {
+        insertIndex = mpTabBar->count();
+    }
 
     // CRITICAL DEBUG: Check if main window splitter already contains a console for this profile
     for (int i = 0; i < mpSplitter_profileContainer->count(); ++i) {
@@ -9830,6 +10057,8 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
 
     // Add the dock widget to the main window
     addDockWidget(Qt::RightDockWidgetArea, detachedDockWidget);
+    // Made in the detached window, or disconnected by transferDockWidgetToDetachedWindow(), it has no such hook
+    growDockToSizeHintWhenShown(detachedDockWidget);
 
     // Transfer to main window's tracking map
     mMainWindowDockWidgetMap[mapKey] = detachedDockWidget;
@@ -9899,6 +10128,7 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
     if (intendedVisible) {
         // Update main window's global reference if it's now visible
         mpCurrentMapDockWidget = detachedDockWidget;
+        growDockToSizeHint(detachedDockWidget, true);
     }
 
     // Update the mapper's parent

@@ -90,7 +90,7 @@ bool consoleScrollBarStyleWanted()
         return false;
     }
 
-    // Mudlet's style is a proxy (AltFocusMenuBarDisable or DarkTheme) with no object name; use the base's.
+    // Mudlet's style is a proxy (MudletProxyStyle or DarkTheme) with no object name; use the base's.
     QString styleName = pStyle->objectName();
     if (styleName.isEmpty()) {
         if (const auto* pProxy = qobject_cast<const QProxyStyle*>(pStyle); pProxy && pProxy->baseStyle()) {
@@ -903,19 +903,15 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layoutLayer2->activate();
     }
 
-    // Move before resizing: resizing first could leave the display overrunning
-    // its parent frame, clipping it and making TTextEdit::updateScreenView()
-    // undercount the visible rows:
-    mpMainDisplay->move(mBorders.left(), mBorders.top());
     if (mType & (MainConsole | SubConsole | UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
         mpBaseHFrame->resize(x, y);
         x -= (mpLeftToolBar->width() + mpRightToolBar->width());
         y -= mpTopToolBar->height();
-        // The mBorders components will be all zeros for all but the MainConsole:
-        mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
+        layoutMainDisplay();
     } else {
+        mpMainDisplay->move(mBorders.left(), mBorders.top());
         mpMainFrame->resize(x, y);
         // Sized before this frame's layout has run, while the bar still has Qt's 100x30 default
         // geometry, so use its size hint - exact, as its vertical policy is Fixed in a QVBoxLayout.
@@ -940,8 +936,9 @@ void TConsole::resizeEvent(QResizeEvent* event)
     }
 
     // Sync Host dimensions on resize so wraps and NAWS reflect the current pane width.
-    if ((mType & MainConsole) && !mpHost.isNull() && mUpperPane && !mUpperPane->visibleRegion().isEmpty()) {
-        syncHostScreenDimensions(mUpperPane->visibleRegion().boundingRect().width(), -1);
+    const QSize upperPane = (mType & MainConsole) && mUpperPane ? mUpperPane->drawableSize() : QSize();
+    if (!mpHost.isNull() && !upperPane.isEmpty()) {
+        syncHostScreenDimensions(upperPane.width(), -1);
 
         // Background-tab consoles share this container but get no resize event, so size them from here.
         // A detached profile has its own window.
@@ -1017,6 +1014,18 @@ void TConsole::resizeEvent(QResizeEvent* event)
     }
 }
 
+void TConsole::layoutMainDisplay()
+{
+    const int x = width() - mpLeftToolBar->width() - mpRightToolBar->width();
+    const int y = height() - mpTopToolBar->height() - mpCommandLine->height();
+    // Move before resizing: resizing first could leave the display overrunning
+    // its parent frame, clipping it and making TTextEdit::updateScreenView()
+    // undercount the visible rows:
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
+    // The mBorders components will be all zeros for all but the MainConsole:
+    mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom());
+}
+
 void TConsole::refresh()
 {
     if (mType == MainConsole) {
@@ -1042,7 +1051,7 @@ void TConsole::refresh()
         y -= mpTopToolBar->height();
     }
 
-    // Move before resizing, see comment in resizeEvent():
+    // Move before resizing, see comment in layoutMainDisplay():
     mpMainDisplay->move(mBorders.left(), mBorders.top());
     mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
 
@@ -1417,29 +1426,50 @@ void TConsole::scrollUp(int lines)
         return;
     }
 
+    if (showLowerPane()) {
+        QTimer::singleShot(0ms, this, [this, lines]() {
+            mUpperPane->scrollUp(mLowerPane->getRowCount() + lines);
+        });
+    } else {
+        mUpperPane->scrollUp(lines);
+    }
+    slot_adjustAccessibleNames();
+}
+
+void TConsole::scrollTo(int line)
+{
+    // A buffer is never drawn, so it never shows itself scrolled back - as TNullConsoleFrontend has it
+    if (mType == Buffer || ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled)) {
+        return;
+    }
+
+    // The split-screen tutorial prints here, and in a full buffer that trims lines from above the target
+    const qint64 linesRemovedBefore = buffer.linesRemovedTotal();
+    showLowerPane();
+    line = static_cast<int>(std::max<qint64>(0, line - (buffer.linesRemovedTotal() - linesRemovedBefore)));
+    mUpperPane->scrollTo(line);
+    mUpperPane->updateScrollBar(buffer.mCursorY);
+    slot_adjustAccessibleNames();
+}
+
+bool TConsole::showLowerPane()
+{
     const bool lowerAppears = mLowerPane->isHidden();
     mLowerPane->mCursorY = buffer.size();
     mLowerPane->show();
     mLowerPane->updateScreenView();
     mLowerPane->forceUpdate();
 
-    if (lowerAppears) {
-        QTimer::singleShot(0ms, this, [this, lines]() {
-            mUpperPane->scrollUp(mLowerPane->getRowCount() + lines);
-        });
-        if (mudlet::self()->showSplitscreenTutorial()) {
+    if (lowerAppears && mudlet::self()->showSplitscreenTutorial()) {
 #if defined(Q_OS_MACOS)
-            const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
+        const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
 #else
-            const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <CTRL>+<ENTER> to cancel.");
+        const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <CTRL>+<ENTER> to cancel.");
 #endif
-            mpHost->postMessage(infoMsg);
-            mudlet::self()->showedSplitscreenTutorial();
-        }
-    } else {
-        mUpperPane->scrollUp(lines);
+        mpHost->postMessage(infoMsg);
+        mudlet::self()->showedSplitscreenTutorial();
     }
-    slot_adjustAccessibleNames();
+    return lowerAppears;
 }
 
 void TConsole::showEvent(QShowEvent* event)
@@ -1893,15 +1923,15 @@ void TConsole::print(const QString& msg)
 
 // printDebug(QColor& c, QColor& d, const QString& msg) was functionally the
 // same as this method it was just that the arguments were in a different order
-void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgColor, const QString& timeStampOverride)
+void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgColor, const qint64 timeStampOverride)
 {
     mpModel->print(msg, fgColor, bgColor, timeStampOverride);
     showNewLines();
 }
 
-void TConsole::printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp)
+void TConsole::printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const qint64 arrivalMSecs)
 {
-    print(text, foreground, background, timeStamp);
+    print(text, foreground, background, arrivalMSecs);
 }
 
 void TConsole::printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore)
@@ -2081,10 +2111,10 @@ void TConsole::slot_searchBufferUp()
         } while (searchX > -1);
 
         if (found) {
-            // Scroll to show the match
-            scrollUp(buffer.mCursorY - searchY - 3);
-            mUpperPane->forceUpdate();
+            // Set first, so that a trim as the scroll opens the split screen moves it with the match
             mCurrentSearchResult = searchY;
+            scrollTo(std::min(searchY + 3, buffer.getLastLineNumber()));
+            mUpperPane->forceUpdate();
             return;
         }
     }
@@ -2124,10 +2154,10 @@ void TConsole::slot_searchBufferDown()
         } while (searchX > -1);
 
         if (found) {
-            // Scroll to show the match
-            scrollUp(buffer.mCursorY - searchY - 3);
-            mUpperPane->forceUpdate();
+            // Set first, so that a trim as the scroll opens the split screen moves it with the match
             mCurrentSearchResult = searchY;
+            scrollTo(std::min(searchY + 3, buffer.getLastLineNumber()));
+            mUpperPane->forceUpdate();
             return;
         }
     }
@@ -2641,8 +2671,11 @@ void TConsole::setProxyForFocus(TCommandLine* pCommandLine)
         mLowerPane->setFocusProxy(pCommandLine);
         // The hidden-input box when it stands in, or a screen reader may speak typed characters
         QWidget* pFocusTarget = (pCommandLine && pCommandLine->focusProxy()) ? pCommandLine->focusProxy() : pCommandLine;
-        QAccessibleEvent event(pFocusTarget, QAccessible::Focus);
-        QAccessible::updateAccessibility(&event);
+        // Not when the focus has gone on to a script button, which Qt announces itself
+        if (!qobject_cast<TLabel*>(QApplication::focusWidget())) {
+            QAccessibleEvent event(pFocusTarget, QAccessible::Focus);
+            QAccessible::updateAccessibility(&event);
+        }
     } else if (mType == UserWindow) {
         if (pCommandLine && pCommandLine->isVisible()) {
             // Update all focus proxies to the UserWindow's command line

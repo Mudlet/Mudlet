@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <CredentialManager.h>
 #include <QDir>
 #include <QFile>
@@ -84,8 +85,14 @@ private slots:
     void testALookupFindsThePasswordInTheEncryptedFileBeforeTheCollidingFormat();
     void testARecoveredPasswordIsReturnedWhileItsMigrationStalls();
     void testARecoveredPasswordSurvivesAKeychainThatRefusesToStoreIt();
+    void testAStoreTheKeychainRefusesSaysItWentToTheFile();
     void testAKeychainErrorIsReportedRatherThanNothingFound_data();
     void testAKeychainErrorIsReportedRatherThanNothingFound();
+    void testAnUndecryptableFileIsReportedRatherThanNothingFound_data();
+    void testAnUndecryptableFileIsReportedRatherThanNothingFound();
+    void testAnUndecryptableFileIsReportedWhileTheKeychainStillRefuses();
+    void testAnUndecryptableFileIsReportedWhenTheKeychainStalls_data();
+    void testAnUndecryptableFileIsReportedWhenTheKeychainStalls();
     void testAStoreThatRefusesIsNotAskedForEveryOtherLayout();
     void testAFreshRefusalSparesTheNextLookupTheStore();
     void testARefusalOfTheSignInsOnlyKeychainReadSparesTheNextLookup();
@@ -95,6 +102,7 @@ private slots:
     void testARefusalForOneProfileDoesNotSkipTheStoreForAnother();
     void testATrimmedLookupStillFindsTheProfilesOwnCopy();
     void testForgettingSaysSoWhenTheKeychainCopyRemains();
+    void testAKeychainNotOnDBusHoldsNothingToRemove();
     void testRefusalsAfterTheStoreHasAnsweredDoNotStopTheChain();
     void testOneUnreadableEntryDoesNotHideAnOlderLayout();
     void testASignInKeyIsNotLookedForInLayoutsOlderThanItself();
@@ -1305,6 +1313,44 @@ void CredentialManagerKeychainTest::testARecoveredPasswordSurvivesAKeychainThatR
     QVERIFY2(filed == secret, "removing the colliding entry also removed the file its password had just been moved to, so the password ended up nowhere");
 }
 
+// The file fallback still saves the password, but the caller has to be able to tell the player
+// it is not in the keychain they chose (#11030)
+void CredentialManagerKeychainTest::testAStoreTheKeychainRefusesSaysItWentToTheFile()
+{
+    JobStaller staller;
+    staller.stallEvery<QKeychain::WritePasswordJob>();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+
+    const auto answer = std::make_shared<Answer>();
+    manager.storePassword(mProfile, mKey, QStringLiteral("refused-secret"), [answer](bool success, const QString& error) {
+        ++answer->count;
+        answer->success = success;
+        answer->error = error;
+    });
+    QKeychain::Job* store = staller.waitForStalled();
+    QVERIFY2(store, "the store never reached the keychain, so this run tested nothing");
+    JobStaller::answer(store, QKeychain::AccessDenied, QStringLiteral("synthetic: keychain refused the write"));
+
+    QVERIFY(waitForAnswer(answer));
+    QVERIFY2(answer->success, qPrintable(answer->error));
+    QCOMPARE(CredentialManager::retrieveCredential(mProfile, mKey), QStringLiteral("refused-secret"));
+    QVERIFY2(manager.keychainRefusal().contains(QStringLiteral("synthetic: keychain refused the write")),
+             "a password the keychain refused was saved in the profile's encrypted file without the caller being told");
+
+    // The next store on the same manager reports only its own outcome
+    CredentialManager::profileStorageOverrideForTesting() = true;
+    const auto second = std::make_shared<Answer>();
+    manager.storePassword(mProfile, mKey, QStringLiteral("file-secret"), [second](bool success, const QString& error) {
+        ++second->count;
+        second->success = success;
+        second->error = error;
+    });
+    QVERIFY(waitForAnswer(second));
+    QVERIFY2(second->success, qPrintable(second->error));
+    QVERIFY2(manager.keychainRefusal().isEmpty(), "a store that never asked the keychain still reported the previous store's refusal");
+}
+
 void CredentialManagerKeychainTest::testAKeychainErrorIsReportedRatherThanNothingFound_data()
 {
     QTest::addColumn<int>("refusedRead");
@@ -1334,6 +1380,113 @@ void CredentialManagerKeychainTest::testAKeychainErrorIsReportedRatherThanNothin
     // looking in the others: the read after it is answered here, so the chain runs to the end. Only
     // refusals with nothing answered between them are the store itself saying no (#11029).
     QCOMPARE(staller.reads().size(), expectedReads(mProfile, mKey).size());
+}
+
+namespace {
+bool storeThenCorrupt(const QString& profile, const QString& key)
+{
+    if (!CredentialManager::storeCredential(profile, key, QStringLiteral("soon_unreadable"))) {
+        return false;
+    }
+    QFile file(QStringLiteral("%1/profiles/%2/passwords/%3").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), profile, key));
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        return false;
+    }
+    const bool written = file.write("this is not anything Mudlet encrypted") > 0;
+    file.close();
+    return written;
+}
+} // namespace
+
+void CredentialManagerKeychainTest::testAnUndecryptableFileIsReportedRatherThanNothingFound_data()
+{
+    QTest::addColumn<QKeychain::Error>("keychainAnswer");
+    QTest::newRow("nothing in the keychain") << QKeychain::EntryNotFound;
+    // A keychain that fails may still hold the password, but the field is empty either way, and
+    // the damaged file is the one thing the player can fix by typing it again
+    QTest::newRow("a keychain that fails") << QKeychain::OtherError;
+    QTest::newRow("a keychain that refuses") << QKeychain::AccessDenied;
+}
+
+// A file that is there but cannot be decrypted is a password the player has to type again, not
+// one that was never saved
+void CredentialManagerKeychainTest::testAnUndecryptableFileIsReportedRatherThanNothingFound()
+{
+    QFETCH(QKeychain::Error, keychainAnswer);
+    QVERIFY(storeThenCorrupt(mProfile, mKey));
+
+    JobStaller staller;
+    staller.answerOtherReadsNotFound(keychainAnswer);
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    QVERIFY(waitForAnswer(answer));
+    QVERIFY(!answer->success);
+    QCOMPARE(answer->error, CredentialManager::unreadableFileError(mProfile));
+}
+
+// The lookup straight after a refusal reads only the file, which is no reason to blame the keychain
+// for a file that cannot be decrypted
+void CredentialManagerKeychainTest::testAnUndecryptableFileIsReportedWhileTheKeychainStillRefuses()
+{
+    QVERIFY(storeThenCorrupt(mProfile, mKey));
+    {
+        JobStaller staller;
+        staller.answerOtherReadsNotFound(QKeychain::AccessDenied);
+        CredentialManager manager;
+        manager.mJobStartHook = staller.hook();
+        QVERIFY(waitForAnswer(startRetrieval(manager, mProfile, mKey)));
+    }
+
+    JobStaller staller;
+    staller.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    QVERIFY(waitForAnswer(answer));
+    QVERIFY2(staller.reads().isEmpty(), "the lookup straight after a refusal asked the keychain again, so this test cannot cover the refusal window");
+    QCOMPARE(answer->error, CredentialManager::unreadableFileError(mProfile));
+}
+
+void CredentialManagerKeychainTest::testAnUndecryptableFileIsReportedWhenTheKeychainStalls_data()
+{
+    QTest::addColumn<int>("stalledRead");
+    QTest::newRow("a read before the file") << 0;
+    int readsBeforeTheFile = 0;
+    for (const auto& read : expectedReads(QStringLiteral("profile"), QStringLiteral("kctest"))) {
+        if (read.name.startsWith(QStringLiteral("colliding"))) {
+            break;
+        }
+        ++readsBeforeTheFile;
+    }
+    QTest::newRow("a read after the file") << readsBeforeTheFile;
+}
+
+// The deadline reads the file too, and has to say what it found there rather than only that it
+// gave up waiting
+void CredentialManagerKeychainTest::testAnUndecryptableFileIsReportedWhenTheKeychainStalls()
+{
+    QFETCH(int, stalledRead);
+    QVERIFY(storeThenCorrupt(mProfile, mKey));
+
+    JobStaller staller;
+    staller.stallNth<QKeychain::ReadPasswordJob>(stalledRead);
+    staller.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    manager.mOperationTimeoutMs = 300;
+
+    QObject lateContext;
+    const auto answers = startTimedRetrieval(manager, mProfile, mKey, &lateContext);
+    QVERIFY(waitForAnswer(answers->first));
+    QVERIFY2(staller.waitForAnyStalled(), "the read meant to stall was never started, so this run tested nothing");
+    QCOMPARE(answers->first->error, CredentialManager::unreadableFileError(mProfile));
+    // still a timeout: the read it gave up on can yet answer with the password
+    QVERIFY(answers->timedOut);
+
+    staller.release();
+    QTRY_VERIFY2(!staller.firstStalledAlive(), "a read that answered after its lookup gave up was never deleted");
 }
 
 // SlySven's report (#11029): a locked or dismissed keychain was asked once per historical layout,
@@ -1694,6 +1847,41 @@ void CredentialManagerKeychainTest::testForgettingSaysSoWhenTheKeychainCopyRemai
     QVERIFY2(reported.contains(QStringLiteral("synthetic: this entry will not be deleted")), qPrintable(QStringLiteral("the keychain's own reason was dropped: %1").arg(reported)));
 }
 
+// With no Secret Service on D-Bus, libsecret answers every job with OtherError. A store that fails
+// falls back to the encrypted file, so nothing can be in a keychain that isn't there, and a removal
+// should not report one as left behind (raised in review of #11906).
+void CredentialManagerKeychainTest::testAKeychainNotOnDBusHoldsNothingToRemove()
+{
+    JobStaller watcher;
+    watcher.stallEvery<QKeychain::DeletePasswordJob>();
+    CredentialManager manager;
+    manager.mJobStartHook = watcher.hook();
+
+    bool removed = false;
+    bool removeAnswered = false;
+    manager.removePassword(mProfile, mKey, [&removed, &removeAnswered](bool success, const QString&) {
+        removed = success;
+        removeAnswered = true;
+    });
+
+    const int deletions = onWindows() ? 4 : 2;
+    for (int deletion = 0; deletion < deletions; ++deletion) {
+        QKeychain::Job* cleanup = watcher.waitForStalled(deletion);
+        QVERIFY(cleanup);
+#if !defined(Q_OS_MACOS) && !defined(Q_OS_WIN)
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("could not reach the keychain.*org\\.freedesktop\\.secrets")));
+#endif
+        JobStaller::answer(cleanup, QKeychain::OtherError, QStringLiteral("The name org.freedesktop.secrets was not provided by any .service files"));
+    }
+
+    QTRY_VERIFY(removeAnswered);
+#if defined(Q_OS_MACOS) || defined(Q_OS_WIN)
+    QVERIFY2(!removed, "a keychain that is part of the OS failing to delete an entry was reported as nothing left behind");
+#else
+    QVERIFY2(removed, "a keychain with no service on D-Bus was reported as still holding the credential");
+#endif
+}
+
 // Once the store has answered a read it is unlocked, so every refusal after that is one entry's
 // own however many of them arrive - and the password may be in a layout behind them. Two in a row
 // must not be read as a locked store here, which is what separates "nothing has answered" from
@@ -1751,17 +1939,20 @@ void CredentialManagerKeychainTest::testASignInKeyIsNotLookedForInLayoutsOlderTh
 // tell "the store has nothing" from "the store would not say"
 void CredentialManagerKeychainTest::testALookupThatFindsNothingSaysWhetherTheStoreAnswered_data()
 {
-    QTest::addColumn<bool>("refused");
+    QTest::addColumn<QKeychain::Error>("firstReadError");
     QTest::addColumn<bool>("garbledFile");
     QTest::addColumn<CredentialManager::ReadOutcome>("expected");
-    QTest::newRow("nothing stored anywhere") << false << false << CredentialManager::ReadOutcome::NothingStored;
-    QTest::newRow("the first read refused") << true << false << CredentialManager::ReadOutcome::Unreadable;
-    QTest::newRow("the encrypted file garbled") << false << true << CredentialManager::ReadOutcome::Unreadable;
+    QTest::newRow("nothing stored anywhere") << QKeychain::NoError << false << CredentialManager::ReadOutcome::NothingStored;
+    QTest::newRow("the first read refused") << QKeychain::AccessDenied << false << CredentialManager::ReadOutcome::Unreadable;
+    // What libsecret reports when no Secret Service is running on D-Bus
+    QTest::newRow("no keychain service to ask") << QKeychain::OtherError << false << CredentialManager::ReadOutcome::Unavailable;
+    QTest::newRow("the encrypted file garbled") << QKeychain::NoError << true << CredentialManager::ReadOutcome::Unreadable;
+    QTest::newRow("no keychain service, and the file garbled") << QKeychain::OtherError << true << CredentialManager::ReadOutcome::Unreadable;
 }
 
 void CredentialManagerKeychainTest::testALookupThatFindsNothingSaysWhetherTheStoreAnswered()
 {
-    QFETCH(bool, refused);
+    QFETCH(QKeychain::Error, firstReadError);
     QFETCH(bool, garbledFile);
     QFETCH(CredentialManager::ReadOutcome, expected);
     const QString filePath = CredentialManager::generateFilePath(mProfile, mKey);
@@ -1775,7 +1966,7 @@ void CredentialManagerKeychainTest::testALookupThatFindsNothingSaysWhetherTheSto
         file.write("not an encrypted credential");
     }
     JobStaller staller;
-    if (refused) {
+    if (firstReadError != QKeychain::NoError) {
         staller.stallNth<QKeychain::ReadPasswordJob>(0);
     }
     staller.answerOtherReadsNotFound();
@@ -1784,10 +1975,10 @@ void CredentialManagerKeychainTest::testALookupThatFindsNothingSaysWhetherTheSto
     QObject lateContext;
 
     const auto answers = startTimedRetrieval(manager, mProfile, mKey, &lateContext);
-    if (refused) {
+    if (firstReadError != QKeychain::NoError) {
         QKeychain::Job* firstRead = staller.waitForStalled();
         QVERIFY(firstRead);
-        JobStaller::answer(firstRead, QKeychain::AccessDenied, QStringLiteral("synthetic: access refused"));
+        JobStaller::answer(firstRead, firstReadError, QStringLiteral("synthetic: the first read failed"));
     }
     QVERIFY(waitForAnswer(answers->first));
     QVERIFY(!answers->first->success);
@@ -1955,5 +2146,5 @@ void CredentialManagerKeychainTest::testALateAnswerFollowsTheFilesOlderCopy()
     QCOMPARE(answers->late->count, 1);
 }
 
-QTEST_GUILESS_MAIN(CredentialManagerKeychainTest)
+MUDLET_GROUPED_TEST_GUILESS_MAIN(CredentialManagerKeychainTest)
 #include "CredentialManagerKeychainTest.moc"

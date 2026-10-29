@@ -227,6 +227,7 @@ private slots:
     void slot_setPostingTimeout(const double);
     void slot_changeControlCharacterHandling();
     void slot_toggleAdvertiseScreenReader(const bool);
+    void slot_toggleAccessibleLabels(const bool);
     void slot_toggleEnableOSC8Hyperlinks(const bool);
     void slot_changeWrapAt();
     void slot_toggleUseMaxBufferSize(bool checked);
@@ -240,8 +241,10 @@ private slots:
     void slot_borderSizeChanged(int size);
     void slot_gridSizeChanged(double size);
     void slot_displayFontChanged();
+    void slot_dictionaryPicked(const int index);
     void slot_displayFontSizeChanged();
     void slot_displayFontAliasingChanged();
+    void slot_hostDisplayFontChanged(const QFont&);
     void slot_changeShowTabConnectionIndicators(bool state);
     void slot_crashReportPolicyChanged(int index);
     // Named rather than lambdas so initWithHost() can connect them with Qt::UniqueConnection
@@ -304,9 +307,11 @@ private:
     void loadMap(const QString&);
     void fillOutMapHistory();
     bool updateDisplayFont(Host::DisplayFontChange change);
+    void rememberDisplayFontFamilyShown();
     void cancelShortcutCaptures();
     void updateShortcutConflictWarning();
     void switchEditorTheme(const QString& themeName);
+    static QString dictionaryDisplayName(const QString&);
     static QString findThemeCounterpart(const QString& themeName, const QComboBox* themeComboBox, bool toDark);
 
     // The sidebar-and-cards shell that replaces the .ui file's tab widget
@@ -343,6 +348,9 @@ private:
     void setCardDescriptions();
     void buildProtocolsSubpage();
     void updateProtocolSummary();
+    // One checkbox per experiment the Host accepts, so a new one needs no work here
+    void buildExperimentsCard();
+    void retranslateExperiments();
     void buildDiscordSummaryCard();
     void updateDiscordSummary();
 #ifdef INCLUDE_MCPSERVER
@@ -358,6 +366,12 @@ private:
     // Search synonyms not in a setting's own words; here rather than in the .ui file so they can carry
     // a translator note.
     void setSearchKeywords();
+    // Matching triggers on several threads during floods: app-wide, in Mudlet.ini, built in code
+    void createTriggerMatchPoolControls(QGroupBox* pCard);
+    void retranslateTriggerMatchPoolControls();
+    void populateTriggerMatchPoolSettings();
+    void applyTriggerMatchPoolSettings();
+    void enableTriggerMatchPoolTuning(bool enabled);
     void moveIntoCard(QGroupBox* pCard, const QList<QWidget*>& controls);
     void addCardRow(QGroupBox* pCard, QWidget* pLabel, QWidget* pControl);
     void retitleCards();
@@ -390,6 +404,7 @@ private:
     void showCategory(const QString& key, QWidget* pSpotlightTarget = nullptr);
     void spotlight(QWidget* pTarget);
     void applyShellStyle();
+    QPalette shellPalette(bool& themeSurface) const;
     void restyleSidebarIcons(const QColor& normal, const QColor& selected);
     // Search indexes the real widget tree and lends matching cards to the results page while the query stands
     void buildSearchResultsPage();
@@ -408,6 +423,9 @@ private:
     void maybeDownloadEditorThemes();
 
     QPointer<Host> mpHost;
+    // The family the display font list was last set to while the font database had it, so that
+    // the list moving off it as it leaves the database is not taken for the user's choice
+    QString mDisplayFontFamilyShown;
     QPointer<QTemporaryFile> tempThemesArchive;
     QMap<QString, QString> mSearchEngineMap;
     QPointer<QMenu> mpMenu;
@@ -416,6 +434,9 @@ private:
     // the other symbol settings changing does not cost a rebuild:
     QFont mGlyphDisplayFont;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
+    // Kept so that initWithHost(), which runs again for each profile, can replace it rather than stack another
+    QMetaObject::Connection mMapStyleConnection;
+    void followMapStyle();
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
     QMap<QString, QKeySequence> currentShortcuts;
     // Must be declared after currentShortcuts, which it references
@@ -444,9 +465,22 @@ private:
     };
 
     QWidget* mpWidget_shell = nullptr;
+    // What applyShellStyle() last drew from, so a StyleChange that alters nothing does not restyle the shell
+    QPalette mShellPalette;
     QWidget* mpWidget_sidebar = nullptr;
     QWidget* mpWidget_titleRow = nullptr;
     QLabel* mpLabel_wordmark = nullptr;
+    QCheckBox* mpCheckBox_triggerMatchPool = nullptr;
+    QLabel* mpLabel_triggerMatchThreads = nullptr;
+    QSpinBox* mpSpinBox_triggerMatchThreads = nullptr;
+    QLabel* mpLabel_triggerMatchThreshold = nullptr;
+    QSpinBox* mpSpinBox_triggerMatchThreshold = nullptr;
+    QLabel* mpLabel_triggerMatchMissesPerMatch = nullptr;
+    QSpinBox* mpSpinBox_triggerMatchMissesPerMatch = nullptr;
+    QLabel* mpLabel_triggerMatchFloodLines = nullptr;
+    QSpinBox* mpSpinBox_triggerMatchFloodLines = nullptr;
+    QLabel* mpLabel_triggerMatchSpin = nullptr;
+    QSpinBox* mpSpinBox_triggerMatchSpin = nullptr;
     QListWidget* mpListWidget_categories = nullptr;
     // The sidebar row that is a link rather than a category
     QListWidgetItem* mpItem_support = nullptr;
@@ -485,6 +519,9 @@ private:
     // The card on the parent category page that opens each subpage
     QMap<QString, QPointer<QWidget>> mSubpageOpeners;
     QPointer<QGroupBox> mpCard_protocolList;
+    QPointer<QGroupBox> mpCard_experiments;
+    // Keyed by experiment, e.g. "experiment.3dmap.modernmapper"
+    QMap<QString, QPointer<QCheckBox>> mExperimentCheckBoxes;
     QPointer<QGroupBox> mpCard_discord;
     QPointer<QPushButton> mpButton_discordSubpage;
     QPointer<QGroupBox> mpCard_securityStatus;

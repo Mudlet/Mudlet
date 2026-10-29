@@ -62,9 +62,11 @@ class Host;
 class QOpenGLWidget;
 #endif
 class TArea;
+class TAreaGraph;
 class TMapViewManager;
 class TRoom;
 class TRoomDB;
+class TMapLabel;
 class QFile;
 class QNetworkAccessManager;
 class MapInfoContributorManager;
@@ -77,17 +79,20 @@ class TMap : public QObject
     friend class FrontendRoutingContractTest;
 
 public:
-    // Host settings the 2D map keeps a copy of to draw with
-    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid };
+    // Host settings the 2D map keeps a copy of to draw with, and the 3D view's style
+    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid, Style };
 
 signals:
     void signal_saveErrorChanged(bool hasError);
     void signal_areaChanged(int areaId);
     void signal_mmpMapLocationChanged();
     void signal_mapSymbolFontChanged();
+    // Reaches every 2D map showing this map, the mapper's and each secondary view's
+    void signal_roomDeleted(int roomId);
 
-    // Cues for the mapper drawing this map (mpMapper); the symbol cache one
-    // also reaches every secondary map view. With no mapper nothing listens.
+    // Cues for the mapper drawing this map (mpMapper); the colour and symbol
+    // cache ones also reach every secondary map view, and with the 3D mapper
+    // built in so do the repaint and mapper-setting ones.
     void signal_mapperColoursChanged();
     void signal_mapCleared();
     void signal_mapLabelsChanged();
@@ -126,7 +131,9 @@ public:
     ~TMap();
     void mapClear();
     void refreshMapperColours();
+    // Returns the new label's id, -1 for an unknown area, or scmUnreadableImageLabel for an image that cannot be read.
     int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool temporary);
+    static constexpr int scmUnreadableImageLabel = -2;
     int createMapLabel(int area,
                        const QString& text,
                        float x,
@@ -149,7 +156,14 @@ public:
     void logError(const QString&);
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
+    // After a change to the map: also counts its revision up
     void updateArea(int areaId);
+    // For when only what views read afresh on every paint changed, such as the player's room: unlike updateArea(),
+    // not taken as a change to how the area looks, so a view need not remake what it keeps of it
+    void updatePlayerArea(int areaId);
+    // For updateMap() and a new speedwalk: what a view keeps of the area's look is remade, but the map's revision
+    // stays, as the rooms and exits themselves did not change
+    void refreshArea(int areaId);
     // For a whole map read in outside TMap, as XMLimport does:
     void announceMapLoaded(bool showPlayerArea);
     void requestMapperShown();
@@ -173,6 +187,8 @@ public:
     bool serialize(QDataStream&, int saveVersion = 0);
     static bool listLengthFits(QDataStream&, qint64 minBytesPerElement);
     bool restore(QString location);
+    static void restoreLabelFontFromUserData(TMapLabel&, int labelId, QMap<QString, QString>& userData);
+    static void restoreLabelOutlineColorFromUserData(TMapLabel&, int labelId, QMap<QString, QString>& userData);
     bool retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
     void initGraph();
     QString connectExitStubByDirection(const int fromRoomId, const int dirType);
@@ -292,6 +308,7 @@ public:
 
     std::pair<bool, QString> writeJsonMapFile(const QString&);
     std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false);
+    std::pair<bool, QString> importJsonMapFile(const QString&);
     qsizetype getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
     // TRoomDB calls this before it deletes an area or clears the map.
@@ -309,8 +326,21 @@ public:
     // underlying flag (and by setting a breakpoint on setUnsave() we can
     // determine which bit of code is responsible for changing the flag!)
     void setUnsaved(const char*);
+    // For a change no cache is made from, so nothing is rebuilt for it; a view that may show it still needs asking to repaint
+    void setUnsavedKeepingRevisions(const char*);
     void resetUnsaved() { mUnsavedMap = false; }
+    // Counts up on every change to the map's contents (bar setUnsavedKeepingRevisions() ones) or to the colors it is drawn in, so that a view can tell
+    // whether what it worked out from them last frame still holds
+    quint64 revision() const { return mRevision; }
     bool isUnsaved() const { return mUnsavedMap; }
+    // Bumped by setUnsaved() and whenever the whole map is replaced, so a cache can tell it is stale.
+    quint64 mapRevision() const { return mMapRevision; }
+    // Bumped by updateArea(), for changes such as a room highlighted that mapRevision() misses
+    quint64 appearanceRevision() const { return mAppearanceRevision; }
+    // Bumped by initGraph(), as room locks and exit weights change what findPath() finds without bumping mapRevision()
+    quint64 pathGraphRevision() const { return mPathGraphRevision; }
+    // Call TAreaGraph::refresh() before reading it.
+    TAreaGraph* areaGraph() const { return mpAreaGraph.get(); }
     void setSaveError(bool state);
     bool hasSaveError() const { return mSaveError; }
     void setDefaultAreaShown(bool);
@@ -390,13 +420,15 @@ public:
     static const QStringList& builtInMenuItemNames();
     bool menuItemShown(const QString& itemName) const;
 
-    typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
+    typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
     typedef boost::property_map<mygraph_t, boost::edge_weight_t>::type WeightMap;
     typedef mygraph_t::vertex_descriptor vertex;
     typedef mygraph_t::edge_descriptor edge_descriptor;
     mygraph_t g;
     QHash<QPair<unsigned int, unsigned int>, route> edgeHash; // For Mudlet to decode BGL edges
     std::vector<location> locations;
+    // Set by initGraph() from the graph it builds, so it is only valid alongside that graph.
+    heuristicScale mHeuristicScale;
     bool mMapGraphNeedsUpdate = true;
     bool mNewMove = true;
 
@@ -491,6 +523,7 @@ public slots:
 
 
 private:
+    void clearRoutes();
     void resetSearchState(const std::size_t roomCount);
 
     // The same object as mpViewManager, set with it by setViewManager().
@@ -527,7 +560,12 @@ private:
             }
             ++mpMap->mMapOperationDepth;
         }
-        ~MapOperationScope() { --mpMap->mMapOperationDepth; }
+        // A load replaces rooms and user data without going through setUnsaved().
+        ~MapOperationScope()
+        {
+            --mpMap->mMapOperationDepth;
+            ++mpMap->mMapRevision;
+        }
         MapOperationScope(const MapOperationScope&) = delete;
         MapOperationScope& operator=(const MapOperationScope&) = delete;
 
@@ -541,6 +579,12 @@ private:
     bool mMapOperationAbortRequested = false;
     int mScriptCallbackDepth = 0;
     bool mGraphBuildInProgress = false;
+    quint64 mMapRevision = 0;
+    quint64 mAppearanceRevision = 0;
+    quint64 mPathGraphRevision = 0;
+    // Per map, not per process, or one profile's pending update swallows another's
+    std::optional<int> mPendingAreaId;
+    std::unique_ptr<TAreaGraph> mpAreaGraph;
 
     void addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& bestRoutes,
                              const QMap<QString, int>& exitWeights,
@@ -553,7 +597,7 @@ private:
     const QString createFileHeaderLine(QString, QChar);
     void warnIfMapProgressUnwired(const char* context, bool transferPath);
     void writeJsonUserData(QJsonObject&) const;
-    void readJsonUserData(const QJsonObject&);
+    static QMap<QString, QString> readJsonUserData(const QJsonObject&);
     bool validatePotentialMapFile(QFile&, QDataStream&);
     void flushSymbolCaches();
 
@@ -601,6 +645,7 @@ private:
 
     // Used to flag whether the map auto-save needs to be done after the next interval:
     bool mUnsavedMap = false;
+    quint64 mRevision = 0;
     // Used to indicate that the last map save attempt failed:
     bool mSaveError = false;
     // Used to hide the default area from casual viewing for those MUDs that

@@ -44,6 +44,7 @@
 #include <QMouseEvent>
 #include <QPixmap>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -124,6 +125,7 @@ private:
 
     static inline const QVector3D kLabelPosition{2, 0, 0};
     static inline const QSizeF kLabelClickSize{40, 20};
+    static inline const QVector3D kMapImagePosition{-2, 2, 0};
     static constexpr int kSouthRoomId = 8;
     static constexpr int kOtherAreaRoomId = 20;
 
@@ -231,6 +233,51 @@ private:
         const int id = area()->mMapLabels.isEmpty() ? 0 : area()->mMapLabels.lastKey() + 1;
         area()->mMapLabels.insert(id, label);
         return id;
+    }
+
+    // Covers the whole block of rooms and some empty map besides, as createMapImageLabel() would.
+    int addMapImage(const bool onTop) const
+    {
+        TMapLabel label;
+        label.pos = kMapImagePosition;
+        label.size = QSizeF(5, 5);
+        label.clickSize = label.size * kPixelsPerMapUnit;
+        label.pix = QPixmap(10, 10);
+        label.pix.fill(Qt::darkGreen);
+        label.showOnTop = onTop;
+        const int id = area()->mMapLabels.isEmpty() ? 0 : area()->mMapLabels.lastKey() + 1;
+        area()->mMapLabels.insert(id, label);
+        renderFrame();
+        return id;
+    }
+
+    // Lies exactly over the block of rooms, edge to edge with their grid cells.
+    int addMapImageOverTheRooms() const
+    {
+        TMapLabel label;
+        label.pos = QVector3D(-1.5, 1.5, 0);
+        label.size = QSizeF(3, 3);
+        label.clickSize = label.size * kPixelsPerMapUnit;
+        label.pix = QPixmap(10, 10);
+        label.pix.fill(Qt::darkGreen);
+        const int id = area()->mMapLabels.isEmpty() ? 0 : area()->mMapLabels.lastKey() + 1;
+        area()->mMapLabels.insert(id, label);
+        renderFrame();
+        return id;
+    }
+
+    // Inside the picture but clear of every room.
+    QPoint pointOnMapImageAwayFromRooms() const { return pointUnitsFromCentre(2.5, -2.5); }
+
+    // Leaves the image picked up with the mouse inside both it and the east room.
+    void carryMapImageOverEastRoom(const int labelId) const
+    {
+        pressAt(pointOnMapImageAwayFromRooms());
+        QVERIFY(area()->mMapLabels.value(labelId).highlight);
+        const QPoint overEastRoom = pointUnitsFromCentre(1, 0) - QPoint(2, 2);
+        moveTo(overEastRoom);
+        releaseAt(overEastRoom);
+        QVERIFY2(area()->mMapLabels.value(labelId).pos != kMapImagePosition, "the picked up image did not follow the mouse");
     }
 
     // A label clear of the rooms on the level being shown.
@@ -365,6 +412,24 @@ private:
         return pRoom;
     }
 
+    // Picks the exit's button in the custom line dialog for that room, which
+    // hides the dialog for the rest of the drawing.
+    bool startDrawingALineFromTheDialog(const int fromRoomId, const QString& exit) const
+    {
+        mp2dMap->mMultiSelectionSet = QSet<int>{fromRoomId};
+        mp2dMap->mMultiSelectionHighlightRoomId = fromRoomId;
+        mp2dMap->slot_setCustomLine();
+        if (!mp2dMap->mpCustomLinesDialog) {
+            return false;
+        }
+        auto* pButton = mp2dMap->mpCustomLinesDialog->findChild<QPushButton*>(exit);
+        if (!pButton || !pButton->isEnabled()) {
+            return false;
+        }
+        pButton->click();
+        return mp2dMap->mCustomLinesRoomFrom == fromRoomId && mp2dMap->mCustomLinesRoomExit == exit;
+    }
+
     void rightClickAt(const QPoint& position) const
     {
         sendMouse(QEvent::MouseButtonPress, position, Qt::RightButton, Qt::RightButton, Qt::NoModifier);
@@ -379,6 +444,21 @@ private:
             return nullptr;
         }
         for (QAction* pAction : mp2dMap->mActiveContextMenu->actions()) {
+            if (pAction->text() == text) {
+                return pAction;
+            }
+        }
+        return nullptr;
+    }
+
+    // An item in the submenu with this title on the menu the last right click put up.
+    QAction* contextSubmenuItem(const QString& title, const QString& text) const
+    {
+        QAction* pSubmenuAction = contextMenuItem(title);
+        if (!pSubmenuAction || !pSubmenuAction->menu()) {
+            return nullptr;
+        }
+        for (QAction* pAction : pSubmenuAction->menu()->actions()) {
             if (pAction->text() == text) {
                 return pAction;
             }
@@ -828,6 +908,9 @@ private slots:
         }
         runLua(qsl("mudlet.custom_speedwalk = nil\ndoSpeedWalk = nil"));
         mpHost->mainConsoleView()->discardAll();
+        if (mp2dMap->mpCustomLinesDialog) {
+            mp2dMap->mpCustomLinesDialog->reject();
+        }
         mp2dMap->mCustomLinesRoomFrom = 0;
         mp2dMap->mCustomLinesRoomTo = 0;
         mp2dMap->mCustomLinesRoomExit.clear();
@@ -966,6 +1049,242 @@ private slots:
 
         const QSet<int> expected{1, kNorthRoomId, kWestRoomId, kPlayerRoomId};
         QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
+    }
+
+    // Whatever is done to the selection afterwards must not reach a room that is gone.
+    void test_deletingASelectedRoomDropsItFromTheSelection()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, (QSet<int>{1, kNorthRoomId, kWestRoomId, kPlayerRoomId}));
+        const int centre = mp2dMap->getCenterSelectedRoomId();
+        QVERIFY(mp2dMap->mMultiSelectionSet.contains(centre));
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(centre)));
+
+        QSet<int> remaining{1, kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        remaining.remove(centre);
+        QCOMPARE(mp2dMap->mMultiSelectionSet, remaining);
+        QVERIFY2(remaining.contains(mp2dMap->getCenterSelectedRoomId()), "the selection's centre is still the deleted room");
+    }
+
+    // A shift- or ctrl-drag rebuilds the selection on each move from the rooms
+    // selected at its press, so a room a script deletes mid-drag must leave
+    // those too or the next move brings it back.
+    void test_aRoomDeletedMidDragIsNotBroughtBackByTheDrag()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+
+        const QPoint south = pointUnitsFromCentre(0, -1);
+        pressAt(south, Qt::ShiftModifier);
+        moveTo(south, Qt::ShiftModifier);
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kNorthWestRoomId)));
+        moveTo(south + QPoint(1, 1), Qt::ShiftModifier);
+        const QSet<int> afterShiftDrag{kNorthRoomId, kWestRoomId, kPlayerRoomId, kSouthRoomId};
+        QCOMPARE(mp2dMap->mMultiSelectionSet, afterShiftDrag);
+        releaseAt(south + QPoint(1, 1), Qt::ShiftModifier);
+
+        const QPoint emptySpot = pointUnitsFromCentre(3.5, 3.5);
+        pressAt(emptySpot, Qt::ControlModifier);
+        moveTo(emptySpot, Qt::ControlModifier);
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kNorthRoomId)));
+        moveTo(emptySpot + QPoint(1, 1), Qt::ControlModifier);
+        const QSet<int> afterCtrlDrag{kWestRoomId, kPlayerRoomId, kSouthRoomId};
+        QCOMPARE(mp2dMap->mMultiSelectionSet, afterCtrlDrag);
+        releaseAt(emptySpot + QPoint(1, 1), Qt::ControlModifier);
+        QCOMPARE(mp2dMap->mMultiSelectionSet, afterCtrlDrag);
+    }
+
+    void test_deletingASelectedRoomKeepsTheRestInTheList()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+        const int centre = mp2dMap->getCenterSelectedRoomId();
+        QSet<int> remaining{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        const int deleted = centre == kNorthWestRoomId ? kNorthRoomId : kNorthWestRoomId;
+        remaining.remove(deleted);
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(deleted)));
+        QCoreApplication::processEvents();
+
+        QCOMPARE(mp2dMap->mMultiSelectionSet, remaining);
+        QCOMPARE(mp2dMap->getCenterSelectedRoomId(), centre);
+        QVERIFY2(!mp2dMap->mMultiSelectionListWidget.isHidden(), "the list went away with rooms still selected");
+        QCOMPARE(listedRoomIds(), remaining);
+    }
+
+    // Picking a room from the list leaves the others listed but not selected,
+    // and picking a deleted one again would put it back in the selection.
+    void test_deletingAListedButUnselectedRoomDropsItsRow()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+        for (QTreeWidgetItem* item : listedRooms()) {
+            item->setSelected(item->text(0).toInt() == kPlayerRoomId);
+        }
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kPlayerRoomId});
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kNorthWestRoomId)));
+        QCoreApplication::processEvents();
+
+        const QSet<int> stillListed{kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        QCOMPARE(listedRoomIds(), stillListed);
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kPlayerRoomId});
+        for (QTreeWidgetItem* item : listedRooms()) {
+            item->setSelected(true);
+        }
+        QCOMPARE(mp2dMap->mMultiSelectionSet, stillListed);
+    }
+
+    void test_deletingOneOfTwoSelectedRoomsLeavesTheOtherHighlighted()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, 0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, (QSet<int>{kNorthWestRoomId, kNorthRoomId}));
+        const int deleted = mp2dMap->getCenterSelectedRoomId();
+        const int other = deleted == kNorthRoomId ? kNorthWestRoomId : kNorthRoomId;
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(deleted)));
+        QCoreApplication::processEvents();
+
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{other});
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, other);
+        QVERIFY2(mp2dMap->mMultiSelectionListWidget.isHidden(), "the list stayed up for a single room");
+    }
+
+    void test_aSecondaryViewDropsADeletedRoomFromItsSelection()
+    {
+        buildMap();
+        showMapper(false);
+        const auto [viewId, error] = mpHost->createMapView(mAreaId);
+        QVERIFY2(viewId > 0, qPrintable(error));
+        const int openedViewId = viewId;
+        const auto closeTheView = qScopeGuard([this, openedViewId] {
+            mpHost->closeMapView(openedViewId);
+        });
+        T2DMap* pViewMap = map()->getViewManager()->getView(viewId)->get2DMap();
+        pViewMap->mMultiSelectionSet = QSet<int>{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        pViewMap->mMultiSelectionHighlightRoomId = kWestRoomId;
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kWestRoomId)));
+
+        const QSet<int> remaining{kNorthWestRoomId, kNorthRoomId, kPlayerRoomId};
+        QCOMPARE(pViewMap->mMultiSelectionSet, remaining);
+        QVERIFY2(remaining.contains(pViewMap->mMultiSelectionHighlightRoomId), "the view's highlight is still the deleted room");
+    }
+
+    // Room ids are reused, so a line left in progress would go on in another room.
+    void test_deletingTheRoomALineIsDrawnFromEndsTheDrawing()
+    {
+        buildMap();
+        showMapper(false);
+        QVERIFY(runLua(qsl("setExit(%1, %2, 'n')").arg(kEastRoomId).arg(kNorthEastRoomId)));
+        QVERIFY(startDrawingALineFromTheDialog(kEastRoomId, qsl("n")));
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kEastRoomId)));
+        QCOMPARE(mp2dMap->mCustomLinesRoomFrom, 0);
+        QVERIFY2(!mp2dMap->mpCustomLinesDialog, "the custom line dialog outlived the drawing");
+
+        QVERIFY(addRoomAt(kEastRoomId, 1, 0, 0));
+        clickAt(pointUnitsFromCentre(1.5, 2.5));
+        QVERIFY2(map()->mpRoomDB->getRoom(kEastRoomId)->customLines.isEmpty(), "the click drew a line in the new room");
+    }
+
+    // Deleting the room a line leads to takes the exit and the line with it
+    void test_deletingTheRoomALineIsDrawnToEndsTheDrawing()
+    {
+        buildMap();
+        showMapper(false);
+        QVERIFY(runLua(qsl("setExit(%1, %2, 'n')").arg(kPlayerRoomId).arg(kNorthRoomId)));
+        QVERIFY(startDrawingALineFromTheDialog(kPlayerRoomId, qsl("n")));
+        QCOMPARE(mp2dMap->mCustomLinesRoomTo, kNorthRoomId);
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kNorthRoomId)));
+        QCOMPARE(mp2dMap->mCustomLinesRoomFrom, 0);
+        QCOMPARE(mp2dMap->mCustomLinesRoomTo, 0);
+
+        clickAt(pointUnitsFromCentre(0.5, 1.5));
+        QVERIFY2(!map()->mpRoomDB->getRoom(kPlayerRoomId)->customLines.contains(qsl("n")), "the click drew a line for an exit that is gone");
+    }
+
+    void test_deletingARoomDropsItsSelectedCustomLine()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 2));
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, kLineRoomId);
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kLineRoomId)));
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, 0);
+
+        QVERIFY(addRoomAt(kLineRoomId, 1, 0, 0));
+        TRoom* pNewRoom = addLineToTheEastRoom();
+        QVERIFY(pNewRoom);
+        rightClickAt(pointUnitsFromCentre(-3, -3));
+        QVERIFY2(!contextMenuItem(qsl("Delete line")), "the menu offers to delete a line in the room that took the deleted one's id");
+    }
+
+    // Room ids are reused, so a room a script makes after deleting a listed one
+    // may get its id, and must not get its row as well.
+    void test_aRoomGivenADeletedListedRoomsIdIsNotListed()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+
+        QVERIFY(runLua(qsl("deleteRoom(%1); addRoom(%1); setRoomArea(%1, %2); setRoomCoordinates(%1, 5, 5, 0)").arg(kNorthWestRoomId).arg(mAreaId)));
+        QCoreApplication::processEvents();
+
+        const QSet<int> remaining{kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        QCOMPARE(listedRoomIds(), remaining);
+        for (QTreeWidgetItem* item : listedRooms()) {
+            item->setSelected(item->text(0).toInt() == kPlayerRoomId);
+        }
+        for (QTreeWidgetItem* item : listedRooms()) {
+            item->setSelected(true);
+        }
+        QCOMPARE(mp2dMap->mMultiSelectionSet, remaining);
+    }
+
+    void test_theListFitsTheRoomsLeftAfterADeletion()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(1.5, 0.5));
+        const int threeRowsHigh = mp2dMap->mMultiSelectionListWidget.height();
+        QVERIFY(runLua(qsl("setRoomName(%1, 'a'); setRoomName(%2, 'b')").arg(kNorthWestRoomId).arg(kNorthRoomId)));
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(1.5, -1.5));
+        QVERIFY(mp2dMap->mMultiSelectionListWidget.height() > threeRowsHigh);
+        QVERIFY(!mp2dMap->mMultiSelectionListWidget.isColumnHidden(1));
+
+        QVERIFY(runLua(qsl("for _, id in ipairs({1, 2, 3, 4, 6, 7}) do deleteRoom(id) end")));
+        QCoreApplication::processEvents();
+
+        QCOMPARE(listedRoomIds(), (QSet<int>{kPlayerRoomId, kSouthRoomId, 9}));
+        QCOMPARE(mp2dMap->mMultiSelectionListWidget.height(), threeRowsHigh);
+        QVERIFY2(mp2dMap->mMultiSelectionListWidget.isColumnHidden(1), "the name column is still shown with no named room left");
+    }
+
+    // A hidden list is rebuilt before it is shown again, so it is not worth walking
+    void test_deletingARoomLeavesAHiddenListAlone()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+        dragFromTo(pointUnitsFromCentre(0.6, -0.6), pointUnitsFromCentre(1.4, -1.4));
+        QVERIFY(mp2dMap->mMultiSelectionListWidget.isHidden());
+        QVERIFY(mp2dMap->mMultiSelectionListWidget.topLevelItemCount() > 0);
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kNorthEastRoomId)));
+
+        QVERIFY2(mp2dMap->mRoomsToDropFromSelectionWidget.isEmpty(), "a walk of the hidden list was queued");
     }
 
     // The list of selected rooms is rebuilt when the box takes in different
@@ -1224,6 +1543,262 @@ private slots:
         QCOMPARE(static_cast<double>(moved.y()), 1.0);
     }
 
+    // A picture drawn behind the rooms is their backdrop, so a click on a room
+    // over it must not pick the picture up and drag it out of place.
+    void test_clickingARoomOverABackgroundImageSelectsTheRoomNotTheImage()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(false);
+        const QPoint onEastRoom = pointUnitsFromCentre(1, 0);
+
+        for (const Qt::KeyboardModifiers modifiers : {Qt::KeyboardModifiers(), Qt::KeyboardModifiers(Qt::ShiftModifier), Qt::KeyboardModifiers(Qt::ControlModifier)}) {
+            mp2dMap->mMultiSelectionSet.clear();
+            pressAt(onEastRoom, modifiers);
+            QVERIFY2(!area()->mMapLabels.value(labelId).highlight, qPrintable(qsl("a click on a room over a background image picked the image up (modifiers %1)").arg(modifiers.toInt())));
+            QVERIFY(!mp2dMap->mLabelHighlighted);
+            QVERIFY2(mp2dMap->mMultiSelectionSet.contains(kEastRoomId), qPrintable(qsl("a click on a room over a background image did not select it (modifiers %1)").arg(modifiers.toInt())));
+            // Without a modifier the press picks the room up to move it instead
+            if (modifiers != Qt::NoModifier) {
+                moveTo(onEastRoom, modifiers);
+                moveTo(pointUnitsFromCentre(1, 2), modifiers);
+            }
+            releaseAt(onEastRoom, modifiers);
+            QCOMPARE(area()->mMapLabels.value(labelId).pos, kMapImagePosition);
+        }
+    }
+
+    void test_rightClickingARoomOverABackgroundImageOffersTheRoomMenu()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(false);
+
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY2(contextMenuItem(qsl("Set exits...")), "a right click on a room over a background image did not offer the room menu");
+        QVERIFY(!area()->mMapLabels.value(labelId).highlight);
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kEastRoomId});
+    }
+
+    // Where no room is in the way a background image can still be picked up and moved.
+    void test_aBackgroundImageClickedAwayFromTheRoomsCanBeMoved()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(false);
+
+        pressAt(pointOnMapImageAwayFromRooms());
+        QVERIFY2(area()->mMapLabels.value(labelId).highlight, "a background image clicked where there is no room was not picked up");
+        moveTo(pointUnitsFromCentre(3, -2));
+
+        QCOMPARE(area()->mMapLabels.value(labelId).pos, QVector3D(3, -2, 0));
+    }
+
+    // A picked-up image the next click lands on is put down, even where a room
+    // is under the click too, or it would be left marked as picked up.
+    void test_aCarriedBackgroundImageIsPutDownByAClickOverARoom()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(false);
+        const QPoint onEastRoom = pointUnitsFromCentre(1, 0);
+        carryMapImageOverEastRoom(labelId);
+        const QVector3D carriedTo = area()->mMapLabels.value(labelId).pos;
+
+        pressAt(onEastRoom, Qt::ShiftModifier);
+
+        QVERIFY2(!area()->mMapLabels.value(labelId).highlight, "a click over a room did not put down the image being carried");
+        QVERIFY(!mp2dMap->mLabelHighlighted);
+        releaseAt(onEastRoom, Qt::ShiftModifier);
+        QCOMPARE(area()->mMapLabels.value(labelId).pos, carriedTo);
+    }
+
+    // An image meant to lie under the rooms is likely to be over one when the click that ends Move comes.
+    void test_aBackgroundImageMovedFromItsMenuCanBePutDownOverARoom()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(false);
+        const QPoint onEastRoom = pointUnitsFromCentre(1, 0);
+
+        rightClickAt(pointOnMapImageAwayFromRooms());
+        QVERIFY(pickContextMenuItem(qsl("Move")));
+        QVERIFY(mp2dMap->mMoveLabel);
+        hoverTo(onEastRoom - QPoint(2, 2));
+        const QVector3D putDownAt = area()->mMapLabels.value(labelId).pos;
+        QVERIFY2(putDownAt != kMapImagePosition, "the image being moved did not follow the mouse");
+        pressAt(onEastRoom);
+
+        QVERIFY2(!mp2dMap->mMoveLabel, "a click over a room did not finish moving the image");
+        QVERIFY2(!mp2dMap->mRoomBeingMoved, "the click that finished moving the image picked up the room under it");
+        const QPoint dragTo = pointUnitsFromCentre(1, 2);
+        moveTo(onEastRoom);
+        moveTo(dragTo);
+        releaseAt(dragTo);
+        QVERIFY(!area()->mMapLabels.value(labelId).highlight);
+        QCOMPARE(area()->mMapLabels.value(labelId).pos, putDownAt);
+        TRoom* pEastRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pEastRoom);
+        QCOMPARE(pEastRoom->x(), 1);
+        QCOMPARE(pEastRoom->y(), 0);
+    }
+
+    void test_rightClickingABackgroundImageBeingMovedOverARoomOffersTheLabelMenu()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(false);
+        const QPoint onEastRoom = pointUnitsFromCentre(1, 0);
+
+        rightClickAt(pointOnMapImageAwayFromRooms());
+        QVERIFY(pickContextMenuItem(qsl("Move")));
+        hoverTo(onEastRoom - QPoint(2, 2));
+        QVERIFY2(area()->mMapLabels.value(labelId).pos != kMapImagePosition, "the image being moved did not follow the mouse");
+        rightClickAt(onEastRoom);
+
+        QVERIFY2(!contextMenuItem(qsl("Set exits...")), "a right click on an image being moved offered the room menu instead of its own");
+        QVERIFY(area()->mMapLabels.value(labelId).highlight);
+    }
+
+    // Closing a label's menu leaves the label marked as picked up, which must not stop a room drag.
+    void test_aRoomCanBeDraggedAfterALabelMenuIsClosed()
+    {
+        buildMap();
+        showMapper(false);
+        addTestLabel();
+
+        rightClickAt(pointOnTestLabel());
+        QVERIFY(contextMenuItem(qsl("Move")));
+        closeContextMenu();
+        dragFromTo(pointUnitsFromCentre(1, 0), pointUnitsFromCentre(1, 2));
+
+        TRoom* pEastRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pEastRoom);
+        QCOMPARE(pEastRoom->y(), 2);
+    }
+
+    void test_rightClickingARoomOverABackgroundImageAfterItsMenuIsClosedOffersTheRoomMenu()
+    {
+        buildMap();
+        showMapper(false);
+        addMapImage(false);
+
+        rightClickAt(pointOnMapImageAwayFromRooms());
+        QVERIFY(contextMenuItem(qsl("Move")));
+        closeContextMenu();
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY2(contextMenuItem(qsl("Set exits...")), "a right click on a room over a background image whose menu was just closed did not offer the room menu");
+    }
+
+    // Over a room on a background image, Alt and a drag moves the map, not the image.
+    void test_holdingAltAndDraggingOverABackgroundImagePansTheMap()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(false);
+
+        dragFromTo(pointUnitsFromCentre(1, 0), pointUnitsFromCentre(1, -1), Qt::AltModifier);
+
+        QCOMPARE(mp2dMap->mMapCenterY, -1.0);
+        QVERIFY(!area()->mMapLabels.value(labelId).highlight);
+        QCOMPARE(area()->mMapLabels.value(labelId).pos, kMapImagePosition);
+    }
+
+    void test_rightClickingABackgroundImageAwayFromTheRoomsOffersTheLabelMenu()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(false);
+
+        rightClickAt(pointOnMapImageAwayFromRooms());
+
+        QVERIFY2(contextMenuItem(qsl("Move")) && !contextMenuItem(qsl("Set exits...")), "a right click on a background image where there is no room did not offer the label menu");
+        QVERIFY(area()->mMapLabels.value(labelId).highlight);
+    }
+
+    // In grid mode every cell of a block of rooms takes the click, so an image lined up with the block has no spot of its own.
+    void test_aBackgroundImageWhollyUnderRoomsCanBeMovedFromTheRoomMenu()
+    {
+        buildMap(true);
+        showMapper(false);
+        const int labelId = addMapImageOverTheRooms();
+
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QVERIFY2(contextMenuItem(qsl("Set exits...")), "a right click on a room over a background image did not offer the room menu");
+        QVERIFY2(pickContextMenuItem(qsl("Move label")), "the room menu did not offer to move the image under the room");
+        QVERIFY(mp2dMap->mMoveLabel);
+        QVERIFY(area()->mMapLabels.value(labelId).highlight);
+        hoverTo(pointUnitsFromCentre(2, 2));
+        pressAt(pointUnitsFromCentre(2, 2));
+        releaseAt(pointUnitsFromCentre(2, 2));
+
+        QVERIFY(!mp2dMap->mMoveLabel);
+        QVERIFY(!area()->mMapLabels.value(labelId).highlight);
+        QCOMPARE(area()->mMapLabels.value(labelId).pos, QVector3D(2, 2, 0));
+    }
+
+    void test_aBackgroundImageWhollyUnderRoomsCanBeDeletedFromTheRoomMenu()
+    {
+        buildMap(true);
+        showMapper(false);
+        const int labelId = addMapImageOverTheRooms();
+        const int otherLabelId = addTestLabel();
+
+        rightClickAt(pointUnitsFromCentre(-1, 1));
+        QVERIFY2(pickContextMenuItem(qsl("Delete label")), "the room menu did not offer to delete the image under the room");
+
+        QVERIFY2(!area()->mMapLabels.contains(labelId), "the image under the room was not deleted");
+        QVERIFY2(area()->mMapLabels.contains(otherLabelId), "deleting the image under the room deleted another label too");
+        QVERIFY(!mp2dMap->mLabelHighlighted);
+    }
+
+    // A small label laid on a room over a background image is drawn on top of the image, and must not be shadowed by it.
+    void test_eachLabelUnderARoomCanBeReachedFromTheRoomMenu()
+    {
+        buildMap();
+        showMapper(false);
+        const int imageId = addMapImage(false);
+        const int iconId = addLabel(QVector3D(0.9F, 0.1F, 0), QSizeF(4, 4));
+
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QVERIFY(contextMenuItem(qsl("Set exits...")));
+        QVERIFY2(!contextMenuItem(qsl("Delete label")), "the room menu offered to delete just one of the two labels under the room");
+        QVERIFY2(contextSubmenuItem(qsl("Image label %1").arg(imageId), qsl("Delete")), "the room menu did not offer the background image under the room");
+        QAction* pDeleteIcon = contextSubmenuItem(qsl("Label: a label"), qsl("Delete"));
+        QVERIFY2(pDeleteIcon, "the room menu did not offer the small label lying on the room");
+        pDeleteIcon->trigger();
+        closeContextMenu();
+
+        QVERIFY2(!area()->mMapLabels.contains(iconId), "the small label under the room was not deleted");
+        QVERIFY2(area()->mMapLabels.contains(imageId), "deleting the small label deleted the background image too");
+    }
+
+    void test_theRoomMenuOffersNoLabelActionsWithoutALabelUnderTheRoom()
+    {
+        buildMap();
+        showMapper(false);
+        addTestLabel();
+
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(contextMenuItem(qsl("Set exits...")));
+        QVERIFY2(!contextMenuItem(qsl("Move label")) && !contextMenuItem(qsl("Delete label")), "the room menu offered label actions with no label under the room");
+    }
+
+    // A picture drawn over the rooms hides them, so it is what a click there lands on.
+    void test_clickingARoomUnderAnImageOnTopPicksTheImageUp()
+    {
+        buildMap();
+        showMapper(false);
+        const int labelId = addMapImage(true);
+
+        pressAt(pointUnitsFromCentre(1, 0), Qt::ShiftModifier);
+
+        QVERIFY2(area()->mMapLabels.value(labelId).highlight, "a click on an image drawn over the rooms did not pick it up");
+    }
+
     // A room the map is locked for viewing cannot be dragged out of place by a
     // stray click.
     void test_aRoomCannotBeDraggedWhileViewing()
@@ -1447,8 +2022,13 @@ private slots:
         TRoom* pRoom = startDrawingALine(kPlayerRoomId, qsl("e"));
         QVERIFY(pRoom);
 
+        // Each point is a change to the map, which views keeping what they drew from it go by
+        quint64 revision = mpHost->mpMap->revision();
         clickAt(pointUnitsFromCentre(0.5, 0.5));
+        QVERIFY(mpHost->mpMap->revision() > revision);
+        revision = mpHost->mpMap->revision();
         clickAt(pointUnitsFromCentre(1.5, 0.5));
+        QVERIFY(mpHost->mpMap->revision() > revision);
 
         const QList<QPointF> expected{QPointF(0.5, 0.5), QPointF(1.5, 0.5)};
         QCOMPARE(pRoom->customLines.value(qsl("e")), expected);
