@@ -67,6 +67,8 @@ public:
     bool setScript(const QString& script);
     bool canBeUnlocked();
     bool setIsActive(bool);
+    // setIsActive(true), except that a countdown already under way carries on rather than starting over
+    bool stayActive();
     void stop();
     void start();
     void enableTimer();

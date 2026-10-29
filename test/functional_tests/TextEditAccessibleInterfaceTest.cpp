@@ -47,6 +47,7 @@
 #include <QTextBoundaryFinder>
 #include <QtTest/QtTest>
 
+#include <algorithm>
 #include <chrono>
 
 #include "Host.h"
@@ -215,26 +216,32 @@ private:
 
     enum class Step { Before, At, After };
 
-    // A word or sentence lookup done over the whole text, which is what the
-    // interface has to agree with however much of the text it looks at.
-    static QString boundaryOverWholeText(const QString& all, const QTextBoundaryFinder::BoundaryType type, const Step step, const int offset, int* start, int* end)
+    static QList<int> boundariesOf(const QString& all, const QTextBoundaryFinder::BoundaryType type)
     {
+        QList<int> boundaries;
         QTextBoundaryFinder finder(type, all);
-        finder.setPosition(offset);
-        if (step == Step::Before) {
-            *end = static_cast<int>(finder.toPreviousBoundary());
-            *start = static_cast<int>(finder.toPreviousBoundary());
-        } else if (step == Step::At) {
-            *start = static_cast<int>(finder.toPreviousBoundary());
-            *end = static_cast<int>(finder.toNextBoundary());
-        } else {
-            *start = static_cast<int>(finder.toNextBoundary());
-            *end = static_cast<int>(finder.toNextBoundary());
+        for (qsizetype boundary = finder.position(); boundary != -1; boundary = finder.toNextBoundary()) {
+            boundaries << static_cast<int>(boundary);
         }
-        if (*start == -1 || *end == -1) {
+        return boundaries;
+    }
+
+    // The items between the whole text's boundaries, which is what the interface
+    // has to agree with however much of the text it looks at. An offset is in the
+    // item it starts or is inside of, and the end of the text in the last item.
+    static QString boundaryOverWholeText(const QString& all, const QList<int>& boundaries, const Step step, const int offset, int* start, int* end)
+    {
+        int item = static_cast<int>(std::upper_bound(boundaries.cbegin(), boundaries.cend(), offset) - boundaries.cbegin()) - 1;
+        if (offset == all.length()) {
+            --item;
+        }
+        item += step == Step::Before ? -1 : step == Step::After ? 1 : 0;
+        if (item < 0 || item + 1 >= boundaries.size()) {
             *start = *end = 0;
             return QString();
         }
+        *start = boundaries.at(item);
+        *end = boundaries.at(item + 1);
         return all.mid(*start, *end - *start);
     }
 
@@ -432,6 +439,111 @@ private slots:
 
         QCOMPARE(ti->textAtOffset(offset, QAccessible::WordBoundary, &start, &end), qsl("accessible"));
         QCOMPARE(wholeText().mid(start, end - start), qsl("accessible"));
+    }
+
+    // Ctrl+Left/Right leaves the caret on the first character of a word, so
+    // that word is the one a screen reader has to be given, not the one before
+    void test_wordBoundaryAtTheStartOfAWordReturnsThatWord()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const QString line = qsl("a well-known word");
+        if (lineOf(line) == -1) {
+            mpHost->mainConsoleView()->print(line + QChar::LineFeed);
+        }
+        const int lineStart = offsetOfLine(lineOf(line));
+        QVERIFY(lineStart > 0);
+
+        struct Expected
+        {
+            int column;
+            QString before;
+            QString at;
+            QString after;
+        };
+        const QList<Expected> cases = {
+                {0, qsl("\n"), qsl("a"), qsl(" ")},
+                {2, qsl(" "), qsl("well"), qsl("-")},
+                {4, qsl(" "), qsl("well"), qsl("-")},
+                {6, qsl("well"), qsl("-"), qsl("known")},
+                {7, qsl("-"), qsl("known"), qsl(" ")},
+                {9, qsl("-"), qsl("known"), qsl(" ")},
+                {13, qsl(" "), qsl("word"), qsl("\n")},
+                // Where Ctrl+Right stops on a line's last word
+                {16, qsl(" "), qsl("word"), qsl("\n")},
+        };
+        for (const Expected& expected : cases) {
+            const int offset = lineStart + expected.column;
+            const QByteArray where = qsl("column %1").arg(expected.column).toUtf8();
+            int start = -1;
+            int end = -1;
+            QVERIFY2(ti->textBeforeOffset(offset, QAccessible::WordBoundary, &start, &end) == expected.before, where.constData());
+            QVERIFY2(wholeText().mid(start, end - start) == expected.before, where.constData());
+            QVERIFY2(ti->textAtOffset(offset, QAccessible::WordBoundary, &start, &end) == expected.at, where.constData());
+            QVERIFY2(wholeText().mid(start, end - start) == expected.at, where.constData());
+            QVERIFY2(ti->textAfterOffset(offset, QAccessible::WordBoundary, &start, &end) == expected.after, where.constData());
+            QVERIFY2(wholeText().mid(start, end - start) == expected.after, where.constData());
+        }
+
+        // What follows the newline depends on what is printed after this line
+        const int lineEnd = lineStart + line.length();
+        int start = -1;
+        int end = -1;
+        QCOMPARE(ti->textAtOffset(lineEnd, QAccessible::WordBoundary, &start, &end), qsl("\n"));
+        QCOMPARE(start, lineEnd);
+        QCOMPARE(ti->textBeforeOffset(lineEnd, QAccessible::WordBoundary, &start, &end), qsl("word"));
+        QCOMPARE(end, lineEnd);
+
+        // The end of the text starts no word, so the one there is the last
+        const int count = ti->characterCount();
+        const QString last = ti->textAtOffset(count, QAccessible::WordBoundary, &start, &end);
+        QVERIFY(start < count);
+        QCOMPARE(end, count);
+        QCOMPARE(last, wholeText().mid(start));
+        const int lastStart = start;
+        ti->textBeforeOffset(count, QAccessible::WordBoundary, &start, &end);
+        QCOMPARE(end, lastStart);
+        QCOMPARE(ti->textAfterOffset(count, QAccessible::WordBoundary, &start, &end), QString());
+        QCOMPARE(start, 0);
+        QCOMPARE(end, 0);
+
+        const QString first = ti->textAtOffset(0, QAccessible::WordBoundary, &start, &end);
+        QVERIFY(!first.isEmpty());
+        QCOMPARE(start, 0);
+        QCOMPARE(end, boundariesOf(wholeText(), QTextBoundaryFinder::Word).at(1));
+    }
+
+    // The same goes for the first character of a sentence
+    void test_sentenceBoundaryAtTheStartOfASentenceReturnsThatSentence()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const QString line = qsl("First one. Second one.");
+        if (lineOf(line) == -1) {
+            mpHost->mainConsoleView()->print(line + QChar::LineFeed);
+        }
+        const int lineStart = offsetOfLine(lineOf(line));
+        QVERIFY(lineStart > 0);
+        const int secondStart = lineStart + line.indexOf(qsl("Second"));
+        int start = -1;
+        int end = -1;
+
+        for (const int column : {0, 3}) {
+            const QByteArray where = qsl("column %1").arg(column).toUtf8();
+            QVERIFY2(ti->textAtOffset(lineStart + column, QAccessible::SentenceBoundary, &start, &end) == qsl("First one. "), where.constData());
+            QVERIFY2(start == lineStart, where.constData());
+            QVERIFY2(ti->textBeforeOffset(lineStart + column, QAccessible::SentenceBoundary, &start, &end).endsWith(QChar::LineFeed), where.constData());
+            QVERIFY2(end == lineStart, where.constData());
+            QVERIFY2(ti->textAfterOffset(lineStart + column, QAccessible::SentenceBoundary, &start, &end) == qsl("Second one.\n"), where.constData());
+            QVERIFY2(start == secondStart, where.constData());
+        }
+        for (const int column : {11, 15}) {
+            const QByteArray where = qsl("column %1").arg(column).toUtf8();
+            QVERIFY2(ti->textAtOffset(lineStart + column, QAccessible::SentenceBoundary, &start, &end) == qsl("Second one.\n"), where.constData());
+            QVERIFY2(start == secondStart, where.constData());
+            QVERIFY2(ti->textBeforeOffset(lineStart + column, QAccessible::SentenceBoundary, &start, &end) == qsl("First one. "), where.constData());
+            QVERIFY2(start == lineStart && end == secondStart, where.constData());
+        }
     }
 
     // Only four of Qt's boundary types are implemented; the rest have to be
@@ -895,12 +1007,12 @@ private slots:
         }
 
         for (const auto type : {QAccessible::WordBoundary, QAccessible::SentenceBoundary}) {
-            const auto finderType = type == QAccessible::WordBoundary ? QTextBoundaryFinder::Word : QTextBoundaryFinder::Sentence;
+            const QList<int> boundaries = boundariesOf(all, type == QAccessible::WordBoundary ? QTextBoundaryFinder::Word : QTextBoundaryFinder::Sentence);
             for (const int offset : std::as_const(offsets)) {
                 for (const Step step : {Step::Before, Step::At, Step::After}) {
                     int expectedStart = -1;
                     int expectedEnd = -1;
-                    const QString expected = boundaryOverWholeText(all, finderType, step, offset, &expectedStart, &expectedEnd);
+                    const QString expected = boundaryOverWholeText(all, boundaries, step, offset, &expectedStart, &expectedEnd);
                     int start = -1;
                     int end = -1;
                     const QString actual = step == Step::Before ? ti->textBeforeOffset(offset, type, &start, &end)
@@ -913,6 +1025,27 @@ private slots:
                 }
             }
         }
+    }
+
+    // An empty line's word is its own newline, between the newlines either side of it
+    void test_wordBoundaryOnAnEmptyLineIsItsNewline()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        printTrickyLines();
+        const int line = lineOf(qsl("the lazy dog")) + 1;
+        QVERIFY(line > 0);
+        QVERIFY(lines().at(line).isEmpty());
+        const int offset = offsetOfLine(line);
+        int start = -1;
+        int end = -1;
+
+        QCOMPARE(ti->textAtOffset(offset, QAccessible::WordBoundary, &start, &end), qsl("\n"));
+        QCOMPARE(start, offset);
+        QCOMPARE(ti->textBeforeOffset(offset, QAccessible::WordBoundary, &start, &end), qsl("\n"));
+        QCOMPARE(start, offset - 1);
+        QCOMPARE(ti->textAfterOffset(offset, QAccessible::WordBoundary, &start, &end), qsl("Mr"));
+        QCOMPARE(start, offset + 1);
     }
 
     // Including the newline at the end of every line, empty ones too

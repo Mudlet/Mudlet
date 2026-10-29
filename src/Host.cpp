@@ -310,7 +310,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     TDebug::addHost(this, mHostName);
     setDisplayFont(QFont(scmDefaultFontFamily, 14, QFont::Normal));
 
-    mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
+    mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState(), getLuaInterpreter()));
 
     // Copy across the details needed for the "color_table":
     mLuaInterpreter.updateAnsi16ColorsInTable();
@@ -1446,7 +1446,7 @@ void Host::resetProfile_phase2()
     // of the user's saved variables from the profile:
     const QSet<QString> savedVars = mLuaInterface->getVarUnit()->savedVars;
     const QSet<QString> hiddenByUserVars = mLuaInterface->getVarUnit()->hiddenByUser;
-    mLuaInterface.reset(new LuaInterface(mLuaInterpreter.getLuaGlobalState()));
+    mLuaInterface.reset(new LuaInterface(mLuaInterpreter.getLuaGlobalState(), &mLuaInterpreter));
     mLuaInterface->getVarUnit()->savedVars = savedVars;
     mLuaInterface->getVarUnit()->hiddenByUser = hiddenByUserVars;
     mLuaInterpreter.loadGlobal();
@@ -7276,7 +7276,9 @@ std::optional<int> Host::windowScroll(const QString& name) const
         return {};
     }
     const int lastLine = pModel->buffer.getLastLineNumber();
-    const int line = hasConsoleView() ? pModel->mUpperPaneCursorY : pModel->mScrolledBackTo.value_or(lastLine);
+    // Not mUpperPaneCursorY: that is only a copy taken at the last paint, and a pane
+    // scrolled back may not paint again before a trim moves the line under it
+    const int line = hasConsoleView() ? pModel->buffer.mCursorY : pModel->mScrolledBackTo.value_or(lastLine);
     return {std::max(std::min(line, lastLine), 0)};
 }
 

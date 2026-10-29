@@ -711,9 +711,8 @@ for _, path in ipairs(vitalsNodes) do
   vitalsEvents["gmcp." .. table.concat(path, ".")] = true
 end
 
--- the spellings games are known to send get a handler of their own: "*"
--- handlers run after every exact-name one, so routing these through "*" would
--- update the gauges after other packages' handlers for the same message
+-- not "*", which every event would pay a call for; other spellings are picked
+-- up by BaseUI.routeGmcpVitals
 local knownVitalsEvents = {
   "gmcp.Char.Vitals", "gmcp.char.vitals",
   "gmcp.Char.Maxstats", "gmcp.Char.MaxStats", "gmcp.char.maxstats",
@@ -722,6 +721,25 @@ local knownVitalsEvents = {
 local knownVitalsEvent = {}
 for _, event in ipairs(knownVitalsEvents) do
   knownVitalsEvent[event] = true
+end
+
+-- the namespace events (gmcp.Char) in every casing
+local vitalsNamespaceEvents = {}
+for _, path in ipairs(vitalsNodes) do
+  local spellings = { "gmcp." }
+  for letter in path[1]:gmatch(".") do
+    local longer = {}
+    for _, spelling in ipairs(spellings) do
+      longer[#longer + 1] = spelling .. letter:lower()
+      longer[#longer + 1] = spelling .. letter:upper()
+    end
+    spellings = longer
+  end
+  for _, spelling in ipairs(spellings) do
+    if not table.contains(vitalsNamespaceEvents, spelling) then
+      vitalsNamespaceEvents[#vitalsNamespaceEvents + 1] = spelling
+    end
+  end
 end
 
 -- one row per gauge; current/max/percent list every key spelling observed in
@@ -2204,8 +2222,9 @@ function BaseUI.serverGuiRemoved(_, packageName)
   end)
 end
 
+-- getRooms() copies out every room name, so most maps get answered by room 1
 function BaseUI.mapHasData()
-  return next(getRooms()) ~= nil
+  return roomExists(1) or next(getRooms()) ~= nil
 end
 
 function BaseUI.createMapper()
@@ -2885,12 +2904,22 @@ function BaseUI.renderVitals()
   end
 end
 
--- registered on "*": GMCP names are case-insensitive, so no list of event names
--- is complete. The prefix test spares every non-GMCP event a lowercase copy.
-function BaseUI.routeGmcpVitals(event)
-  if type(event) == "string" and event:find("^gmcp%.") and not knownVitalsEvent[event]
-    and vitalsEvents[event:lower()] then
-    BaseUI.updateVitals()
+-- GMCP names are case-insensitive: the namespace event (gmcp.CHAR) comes first and
+-- carries the full key, so any other spelling gets a handler before its own events
+local routedVitalsKeys = {}
+function BaseUI.routeGmcpVitals(_, key)
+  if type(key) ~= "string" or routedVitalsKeys[key] then
+    return
+  end
+  routedVitalsKeys[key] = true
+  local from = key:find(".", #"gmcp." + 1, true)
+  while from do
+    local to = key:find(".", from + 1, true)
+    local event = key:sub(1, (to or 0) - 1)
+    if not knownVitalsEvent[event] and vitalsEvents[event:lower()] then
+      onEvent(event, "BaseUI.updateVitals")
+    end
+    from = to
   end
 end
 
@@ -3280,7 +3309,9 @@ end
 for _, event in ipairs(knownVitalsEvents) do
   onEvent(event, "BaseUI.updateVitals")
 end
-onEvent("*", "BaseUI.routeGmcpVitals")
+for _, event in ipairs(vitalsNamespaceEvents) do
+  onEvent(event, "BaseUI.routeGmcpVitals")
+end
 onEvent("gmcp.Comm.Channel.Text", "BaseUI.addChatMessage")
 onEvent("sysProtocolEnabled", "BaseUI.enableChannelCapture")
 onEvent("sysProtocolEnabled", "BaseUI.enableMsdpVitals")

@@ -609,12 +609,212 @@ private slots:
         QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
         QCOMPARE(highlightedText(), qsl("faintly"));
         QCOMPARE(copiedText(pane), qsl("faintly"));
-        // one move: over several, expandSelectionToWords() walks the anchor
-        // left with the pointer and "faintly" drops out of the highlight itself
         moveAndReleaseLeftButton(pane, cellInMiddleRow(pane, 20));
 
         QCOMPARE(highlightedText(), qsl("distance you faintly"));
         QCOMPARE(copiedText(pane), qsl("distance you faintly"));
+    }
+
+    // Each move keeps the double-clicked word selected, in either direction,
+    // and a double-click on a space anchors the drag to the space alone.
+    void test_doubleClickDraggedOverSeveralWordsKeepsTheClickedWord_data()
+    {
+        QTest::addColumn<int>("clickedColumn");
+        QTest::addColumn<QString>("clickedWord");
+        QTest::addColumn<QList<int>>("columns");
+        QTest::addColumn<QStringList>("expected");
+        // columns 14-16 "the", 18-25 "distance", 27-29 "you", 31-37 "faintly",
+        // 39-42 "hear", 44 "a", 46-56 "grandfather"
+        QTest::newRow("leftwards") << 33 << qsl("faintly") << QList<int>{28, 29, 27, 24, 19, 15}
+                                   << QStringList{
+                                              qsl("you faintly"), qsl("you faintly"), qsl("you faintly"), qsl("distance you faintly"), qsl("distance you faintly"), qsl("the distance you faintly")};
+        QTest::newRow("rightwards") << 33 << qsl("faintly") << QList<int>{40, 42, 44, 50}
+                                    << QStringList{qsl("faintly hear"), qsl("faintly hear"), qsl("faintly hear a"), qsl("faintly hear a grandfather")};
+        QTest::newRow("left then back right") << 33 << qsl("faintly") << QList<int>{28, 20, 29, 33, 31, 40}
+                                              << QStringList{qsl("you faintly"), qsl("distance you faintly"), qsl("you faintly"), qsl("faintly"), qsl("faintly"), qsl("faintly hear")};
+        QTest::newRow("right then back left") << 33 << qsl("faintly") << QList<int>{40, 34, 28} << QStringList{qsl("faintly hear"), qsl("faintly"), qsl("you faintly")};
+        QTest::newRow("from a space leftwards") << 30 << QString() << QList<int>{28, 20} << QStringList{qsl("you"), qsl("distance you")};
+        QTest::newRow("from a space rightwards") << 30 << QString() << QList<int>{33, 40} << QStringList{qsl("faintly"), qsl("faintly hear")};
+    }
+
+    void test_doubleClickDraggedOverSeveralWordsKeepsTheClickedWord()
+    {
+        QFETCH(int, clickedColumn);
+        QFETCH(QString, clickedWord);
+        QFETCH(QList<int>, columns);
+        QFETCH(QStringList, expected);
+        QCOMPARE(columns.size(), expected.size());
+
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+
+        const QPointF pressPos = cellInMiddleRow(pane, clickedColumn);
+        QCOMPARE(lineUnder(pane, pressPos).mid(14, 43), qsl("the distance you faintly hear a grandfather"));
+
+        pressLeftButton(pane, pressPos, 2);
+        QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
+        QCOMPARE(highlightedText(), clickedWord);
+
+        for (int i = 0; i < columns.size(); ++i) {
+            sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, cellInMiddleRow(pane, columns.at(i)));
+            QVERIFY2(highlightedText() == expected.at(i),
+                     qPrintable(qsl("with the pointer at column %1 \"%2\" is highlighted, not \"%3\"").arg(QString::number(columns.at(i)), highlightedText(), expected.at(i))));
+        }
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, cellInMiddleRow(pane, columns.constLast()));
+
+        QCOMPARE(highlightedText(), expected.constLast());
+        QCOMPARE(copiedText(pane), expected.constLast());
+    }
+
+    // A word drag across lines keeps the double-clicked word on its own line
+    // while the pointer moves within a word on another.
+    void test_doubleClickDraggedAcrossLinesKeepsTheClickedWord()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+
+        const QPointF pressPos = cellInMiddleRow(pane, 33);
+        const QPointF lineUp(0, -pane->mFontHeight);
+        const QPointF lineDown(0, pane->mFontHeight);
+        const QString clickedLine = lineUnder(pane, pressPos);
+        const QString lineAbove = lineUnder(pane, pressPos + lineUp);
+        const QString lineBelow = lineUnder(pane, pressPos + lineDown);
+        QCOMPARE(lineAbove.mid(18, 8), qsl("distance"));
+        QCOMPARE(lineBelow.mid(3, 3), qsl("way"));
+
+        pressLeftButton(pane, pressPos, 2);
+        QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
+
+        // columns 18-25 "distance" on the line above, 31-37 "faintly" on the clicked one
+        const QString upwards = lineAbove.mid(18) + QChar::LineFeed + clickedLine.left(38);
+        for (const int column : {20, 21}) {
+            sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, cellInMiddleRow(pane, column) + lineUp);
+            QVERIFY2(highlightedText() == upwards, qPrintable(qsl("with the pointer at column %1 of the line above \"%2\" is highlighted").arg(QString::number(column), highlightedText())));
+            // a highlight left over from the previous move can hide a wrong end, which the copy shows
+            QVERIFY2(copiedText(pane) == upwards, qPrintable(qsl("with the pointer at column %1 of the line above \"%2\" is copied").arg(QString::number(column), copiedText(pane))));
+        }
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, cellInMiddleRow(pane, 28));
+        QCOMPARE(highlightedText(), qsl("you faintly"));
+
+        // columns 3-5 "way" on the line below
+        const QString downwards = clickedLine.mid(31) + QChar::LineFeed + lineBelow.left(6);
+        moveAndReleaseLeftButton(pane, cellInMiddleRow(pane, 4) + lineDown);
+        QCOMPARE(highlightedText(), downwards);
+        QCOMPARE(copiedText(pane), downwards);
+    }
+
+    // A word drag that stops with the pointer partway into a word on the next
+    // line highlights all of it, and a click elsewhere has to clear all of it.
+    void test_clickAfterAWordDragStoppingMidWordClearsTheWholeHighlight()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+
+        const QPointF pressPos = cellInMiddleRow(pane, 33);
+        const QPointF lineDown(0, pane->mFontHeight);
+        // partway into "grandfather" (columns 46-56) on the line below
+        const QString expected = lineUnder(pane, pressPos).mid(31) + QChar::LineFeed + lineUnder(pane, pressPos + lineDown).left(57);
+        pressLeftButton(pane, pressPos, 2);
+        QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
+        moveAndReleaseLeftButton(pane, cellInMiddleRow(pane, 47) + lineDown);
+        QCOMPARE(highlightedText(), expected);
+        QCOMPARE(copiedText(pane), expected);
+
+        // the next click must not join the double-click into a triple
+        QTest::qWait(400ms);
+        const QPointF elsewhere = cellInMiddleRow(pane, 5);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, elsewhere);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, elsewhere);
+
+        QCOMPARE(highlightedText(), QString());
+        QCOMPARE(copiedText(pane), mNothingCopied);
+    }
+
+    // Dragged from a separator that sits next to another one, the selection
+    // starts or ends at the nearest word, leaving out the clicked separator and
+    // those beside it; a pointer on separators keeps those it has passed over.
+    void test_doubleClickOnASeparatorRunDragsFromTheNearestWord_data()
+    {
+        QTest::addColumn<int>("clickedColumn");
+        QTest::addColumn<QString>("clickedWord");
+        QTest::addColumn<int>("releaseColumn");
+        QTest::addColumn<QString>("expected");
+        // columns 0-3 "end.", 4-5 two spaces, 6-9 "Next", 11-13 "say", 15 and 21 quotes, 22 a space, 23-27 "there"
+        QTest::newRow("closing quote rightwards") << 21 << QString() << 25 << qsl("there");
+        QTest::newRow("opening quote leftwards") << 15 << QString() << 12 << qsl("say");
+        QTest::newRow("closing quote leftwards") << 21 << QString() << 12 << qsl("say \"hello");
+        QTest::newRow("space after a quote leftwards") << 22 << QString() << 12 << qsl("say \"hello");
+        QTest::newRow("first of two spaces rightwards") << 4 << QString() << 8 << qsl("Next");
+        QTest::newRow("second of two spaces leftwards") << 5 << QString() << 1 << qsl("end.");
+        QTest::newRow("word rightwards onto the space after a quote") << 12 << qsl("say") << 22 << qsl("say \"hello\"");
+        QTest::newRow("word leftwards onto the space before a quote") << 25 << qsl("there") << 14 << qsl("\"hello\" there");
+    }
+
+    void test_doubleClickOnASeparatorRunDragsFromTheNearestWord()
+    {
+        QFETCH(int, clickedColumn);
+        QFETCH(QString, clickedWord);
+        QFETCH(int, releaseColumn);
+        QFETCH(QString, expected);
+
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+
+        const QString text = qsl("end.  Next say \"hello\" there");
+        const int line = printedLineNumber(text);
+        QVERIFY2(line >= 0, "the line to select was not printed");
+        // keeps the line clear of the bottom edge, where a drag scrolls the pane
+        mudlet::self()->getActiveHost()->mainConsoleView()->print(qsl("\n\n\n"));
+        const int y = (line - pane->imageTopLine()) * pane->mFontHeight + pane->mFontHeight / 2;
+        QVERIFY2(y > 10 && y < pane->height() - 10, "the line to select is not on screen");
+        auto cell = [pane, y](int column) {
+            return QPointF(column * pane->mFontWidth + pane->mFontWidth / 2.0, y);
+        };
+
+        pressLeftButton(pane, cell(clickedColumn), 2);
+        QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
+        QCOMPARE(highlightedText(), clickedWord);
+        moveAndReleaseLeftButton(pane, cell(releaseColumn));
+
+        QCOMPARE(highlightedText(), expected);
+        QCOMPARE(copiedText(pane), expected);
+    }
+
+    // "Analyse characters" is offered for a double-clicked word, but not after
+    // a double-click on a space, which selects nothing.
+    void test_analyseCharactersFollowsADoubleClick_data()
+    {
+        QTest::addColumn<int>("clickedColumn");
+        QTest::addColumn<bool>("offered");
+        QTest::newRow("on a word") << 33 << true;
+        QTest::newRow("on a space") << 30 << false;
+    }
+
+    void test_analyseCharactersFollowsADoubleClick()
+    {
+        QFETCH(int, clickedColumn);
+        QFETCH(bool, offered);
+
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+        mudlet::self()->getActiveHost()->mEnableTextAnalyzer = true;
+
+        const QPointF pos = cellInMiddleRow(pane, clickedColumn);
+        pressLeftButton(pane, pos, 2);
+        QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, pos);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, pos);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, pos);
+
+        QPointer<QMenu> menu = pane->findChildren<QMenu*>().value(0);
+        QVERIFY2(menu, "the right click put up no menu");
+        bool found = false;
+        for (const QAction* action : menu->actions()) {
+            found = found || action->text() == pane->tr("Analyse characters");
+        }
+        menu->close();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QCOMPARE(found, offered);
     }
 
     // A double-click on a space has no word to highlight, and leaves the
@@ -1005,7 +1205,7 @@ private slots:
             console->buffer.append(text, 0, text.size(), QColorConstants::White, background, TChar::None, 0);
             const int y = console->buffer.getLastLineNumber() - 1;
             QCOMPARE(console->buffer.line(y), qsl("system"));
-            for (auto& character : console->buffer.buffer[y]) {
+            for (auto& character : console->buffer.buffer[y].expand()) {
                 character.select();
             }
 

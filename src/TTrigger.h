@@ -37,7 +37,6 @@
 #include <QSharedPointer>
 #include <QString>
 #include <QStringList>
-#include <QStringMatcher>
 #include <QtGlobal>
 
 #define PCRE2_CODE_UNIT_WIDTH 8
@@ -47,6 +46,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <QCoreApplication>
 
@@ -77,6 +77,25 @@ struct TColorTable
     QRgb mBgRgba = 0;
     bool mFgValid = false;
     bool mBgValid = false;
+};
+
+// A case-sensitive search for one fixed text. It scans for the text's code unit that is rarest in game
+// output and tests the rarest unit unlike it before comparing the rest, so few starts get compared at
+// all. Case-sensitive as TBigramFilter::bitsFor() is: change one and the other must follow.
+class TNeedle
+{
+public:
+    explicit TNeedle(const QString& text);
+
+    const QString& pattern() const { return mText; }
+    // Where text first starts in haystack, or -1, as QStringMatcher answers. Read-only, so other
+    // threads may search with it.
+    qsizetype indexIn(QStringView haystack) const;
+
+private:
+    QString mText;
+    qsizetype mRarest = 0;
+    qsizetype mNextRarest = 1;
 };
 
 // A 256-bit Bloom filter over a line's adjacent character pairs: a substring pattern missing any of
@@ -245,12 +264,13 @@ public:
     bool dropsText() const
     {
         if (mDropsText < 0) {
-            mDropsText = mpLine && !mpLine->isValidUtf16();
+            mDropsText = mpLine && holdsUnpairedSurrogate(*mpLine);
         }
         return mDropsText;
     }
 
 private:
+    static bool holdsUnpairedSurrogate(const QString& line);
     void encode() const;
 
     const QString* const mpLine = nullptr;
@@ -259,6 +279,28 @@ private:
     mutable QByteArray mScratch;
     mutable const char* mData = nullptr;
     mutable int mLength = 0;
+};
+
+class TTrigger;
+
+// A parent's children in walk order, with the ones a pass along the line has to enter, so it need not
+// touch the rest. Built by TriggerUnit's tree index rebuild; see TriggerUnit::markTreeNode().
+struct TChildWalk
+{
+    // Position of the next child to enter at or after position, or past the end when none is
+    int nextToEnter(int position, quint32 lineStamp) const;
+
+    std::vector<TTrigger*> mChildren;
+    // One bit per position in mChildren. Entered on every line: an unfiled child, other than a folder
+    // with nothing below it to enter every line
+    std::vector<quint64> mAlways;
+    // Entered on the line stamped mMarkedStamp only: a child the index hit or that acts without
+    // matching, or a child above one
+    std::vector<quint64> mMarked;
+    quint32 mMarkedStamp = 0;
+    // Cleared by any change to the children or to how one is filed: mChildren may then name freed
+    // triggers, so the walk goes down the live list. Only an outermost pass's rebuild frees or replaces it.
+    bool mValid = false;
 };
 
 class TTrigger : public Tree<TTrigger>
@@ -309,26 +351,50 @@ public:
     bool compileScript();
     bool match(const TUtf8Subject& subject, const QString&, int line, int posOffset = 0, const TBigramFilter* pLineBigrams = nullptr, bool haystackIsCapture = false);
     // Runs only the patterns that are a pure function of the line, just far enough for yes or no.
-    // Called from helper threads, so it writes nothing shared: PCRE2 match data and the regexSearches
-    // tally are the caller's own. Answers yes to anything it cannot decide, so false is a promise and
-    // true only a maybe. The main thread must have called lineBigrams.prepareForSharing().
+    // Called from helper threads, so it writes only this trigger's own prescan fields and regex match data,
+    // which no other thread touches until the batch is joined, plus the caller's scratch and tallies. A
+    // regex that matches leaves its result for match_perl() to take instead of searching again. Answers
+    // yes to anything it cannot decide, so false is a promise and true only a maybe. The main thread must
+    // have called lineBigrams.prepareForSharing().
     // lineDropsText is the line's TUtf8Subject::dropsText(), asked on the main thread as it is cached
     // lazily; it gates match_perl()'s literal pre-check, which only holds while the UTF-8 and the
     // QString carry the same text.
-    bool prescanMayFire(const char* haystackC, int haystackCLength, const QString& haystack, const TBigramFilter& lineBigrams, bool lineDropsText, pcre2_match_data* scratch, int& regexSearches) const;
+    bool prescanMayFire(const char* haystackC,
+                        int haystackCLength,
+                        const QString& haystack,
+                        const TBigramFilter& lineBigrams,
+                        bool lineDropsText,
+                        pcre2_match_data* scratch,
+                        int& regexSearches,
+                        int& regexMatches);
+    // Main thread, before a prescan: a helper copies a match into mMatchData for match_perl() to reuse, and
+    // cannot allocate it there itself.
+    void createPrescanMatchData();
     // Regex searches match() has run on the main thread across all profiles, counting only those a
     // prescan could have run instead (not a multiline trigger's). Read before and after a pass to cost it.
     static quint64 regexSearches() { return smRegexSearches; }
+    // Of those, the ones that found a match
+    static quint64 regexMatches() { return smRegexMatches; }
+    // Regex matches match_perl() took from a prescan instead of searching for again
+    static quint64 prescanMatchesReused() { return smPrescanMatchesReused; }
     // Written from a worker thread, and only for a trigger no other worker is holding.
     void setPrescanVerdict(const quint32 passId, const bool mayFire)
     {
         mPrescanPassId = passId;
         mPrescanMayFire = mayFire;
     }
-    // Which pass's verdicts match() believes. Zero while no prescan is in force, which is also an
-    // untouched trigger's id, so a trigger the prescan never visited is never mistaken for one it cleared.
+    // Which pass's verdicts match() believes, and the UTF-8 subject whose matches match_perl() may reuse.
+    // Zero and null while no prescan is in force; zero is also an untouched trigger's id, so a trigger the
+    // prescan never visited is never mistaken for one it cleared.
     static quint32 prescanPassId() { return smPrescanPassId; }
-    static void setPrescanPassId(const quint32 id) { smPrescanPassId = id; }
+    static const char* prescanSubject() { return smPrescanSubject; }
+    static int prescanSubjectLength() { return smPrescanSubjectLength; }
+    static void setPrescanPass(const quint32 id, const char* subject, const int subjectLength)
+    {
+        smPrescanPassId = id;
+        smPrescanSubject = subject;
+        smPrescanSubjectLength = subjectLength;
+    }
     // Zero is skipped on wrap so it keeps meaning "no prescan in force".
     static quint32 nextPrescanPassId()
     {
@@ -373,7 +439,10 @@ public:
     // match. One-sided like the index: false leaves match() to decide. A trigger changed or created
     // mid-line is unfiled until the next rebuild; mKeepFiring and the multiline states are read live.
     bool skippableForLine() const { return mTreeIndexPosition >= 0 && mLineStamp != smLineStamp && mKeepFiring <= 0 && mConditionMap.empty(); }
-    // MUDLET_TREE_INDEX=verify: runs a trigger skippableForLine() would skip and reports it if it acted
+    // Has to be entered on lines it does not match: held open, or partway through a multiline match
+    bool actsWithoutMatching() const { return mKeepFiring > 0 || !mConditionMap.empty(); }
+    // MUDLET_TREE_INDEX=verify: runs a trigger the index would skip (skippableForLine(), or passed over by
+    // its parent's TChildWalk) and reports it if it acted
     bool verifySkippable(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams);
     // Stamp of the outermost pass in flight anywhere, which nested passes (a script feeding text back,
     // from any profile) share: a nested line only adds stamps, so nothing the outer line stamped is lost.
@@ -467,6 +536,11 @@ public:
     // Written by TriggerUnit's tree index - see skippableForLine(); the position is -1 while unfiled
     quint32 mLineStamp = 0;
     int mTreeIndexPosition = -1;
+    // Only TriggerUnit's tree index may set these. The position in the parent's walk is never reset, so
+    // it holds only while the parent's mChildren still has this trigger there
+    std::unique_ptr<TChildWalk> mpChildWalk;
+    int mChildWalkPosition = -1;
+    bool mInOpenTreeNodes = false;
     QPointer<Host> mpHost;
     QString mName;
     QStringList mPatterns;
@@ -500,11 +574,15 @@ public:
 
 
 private:
+    pcre2_match_data* matchDataFor(int patternNumber);
+    int search(int patternNumber, const char* subject, int subjectLength, pcre2_match_data* matchData) const;
     TTrigger() = default;
 
-    inline void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
-    inline void filter(std::string&, int&, int lineNumber, bool positionsInCurrentColumns);
-    bool selectTextMatch(int lineNumber, int from, int length) const;
+    inline void updateMultistates(int regexNumber, const TCaptureGroups& captureList, const std::vector<int>& posList, const NameGroupMatches* nameMatches = nullptr);
+    void enterChildren(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams, bool haystackIsCapture, bool& conditionMet);
+    void noteOpen();
+    inline void filter(std::string_view capture, int posOffset, int lineNumber, bool positionsInCurrentColumns);
+    bool selectTextMatch(int lineNumber, int from, std::string_view capture) const;
     void processExactMatch(int patternNumber, int posOffset, int lineNumber);
     void processRegexMatch(const char* haystackC,
                            const QString& haystack,
@@ -517,12 +595,12 @@ private:
                            int lineNumber);
     void processBeginOfLine(int patternNumber, int posOffset, int lineNumber);
     void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where, int lineNumber);
-    void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList, int lineNumber);
+    void processColorPattern(int patternNumber, const TCaptureGroups& captureList, const std::vector<int>& posList, int lineNumber);
     void processPromptMatch(int patternNumber);
     bool fireReachesLua() const;
     bool playsSound() const;
-    void executeWithCaptures(const std::list<std::string>& captureList,
-                             const std::list<int>& posList,
+    void executeWithCaptures(const TCaptureGroups& captureList,
+                             const std::vector<int>& posList,
                              int lineNumber,
                              const NameGroupMatches* nameGroups = nullptr,
                              const QMap<QString, QPair<int, int>>* namePositions = nullptr);
@@ -536,7 +614,7 @@ private:
     // matcher is null for non-substring patterns; kept beside its bits so the two can't fall out of step
     struct TSubstringPattern
     {
-        std::unique_ptr<QStringMatcher> matcher;
+        std::unique_ptr<TNeedle> matcher;
         TBigramFilter::Bits bigrams;
     };
     // Indexed, not keyed, by pattern number: every line reaches these for every pattern of every trigger,
@@ -548,7 +626,7 @@ private:
     // that guarantees no text of two characters or more
     struct TRegexLiteral
     {
-        std::unique_ptr<QStringMatcher> matcher;
+        std::unique_ptr<TNeedle> matcher;
         TBigramFilter::Bits bigrams;
     };
     std::vector<TRegexLiteral> mRegexLiterals;
@@ -595,12 +673,21 @@ private:
     int mSameLineGeneration = 0;
     static quint64 smStructureGeneration;
     static quint64 smRegexSearches;
+    static quint64 smRegexMatches;
+    static quint64 smPrescanMatchesReused;
     static quint32 smPrescanPassId;
     static quint32 smPrescanPassIdCounter;
+    // A match the prescan left behind is only good for the bytes it was found in
+    static const char* smPrescanSubject;
+    static int smPrescanSubjectLength;
     static quint32 smLineStamp;
     static int smPassDepth;
     quint32 mPrescanPassId = 0;
     bool mPrescanMayFire = true;
+    // The regex pattern the prescan found a match for under mPrescanPassId, -1 for none or once taken, and
+    // pcre2's return for it; the match itself is in mMatchData
+    int mPrescanMatchedPattern = -1;
+    int mPrescanMatchRc = 0;
 };
 
 #ifndef QT_NO_DEBUG_STREAM

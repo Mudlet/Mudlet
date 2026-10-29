@@ -1084,6 +1084,40 @@ describe("Tests how a GMCP message is split into name and data", function()
     assert.same({t = "\27[31mred"}, gmcp.Spec.Ansi)
   end)
 
+  it("hands Lua the UTF-8 a game sent", function()
+    feed("<T_IAC><T_SB><O_GMCP>Spec.Utf8 {\"t\": \"café ☕ 𝄞\"}<T_IAC><T_SE>")
+    assert.same({t = "café ☕ 𝄞"}, gmcp.Spec.Utf8)
+  end)
+
+  it("replaces bytes that are not UTF-8 rather than losing the message", function()
+    -- a lone 0x80, and an escaped IAC that unescapes to a lone 0xFF
+    feed("<T_IAC><T_SB><O_GMCP>Spec.NotUtf8 {\"t\": \"a\128b<T_IAC><T_IAC>c\"}<T_IAC><T_SE>")
+    assert.same({t = "a\239\191\189b\239\191\189c"}, gmcp.Spec.NotUtf8)
+  end)
+
+  it("ignores a byte order mark ahead of the name", function()
+    feed("<T_IAC><T_SB><O_GMCP>\239\187\191Spec.Bom {\"a\": 1}<T_IAC><T_SE>")
+    assert.same({a = 1}, gmcp.Spec.Bom)
+  end)
+
+  it("ends a message at a NUL", function()
+    -- the two bytes ahead of the NUL are lost as well, which the spaces absorb
+    feed("<T_IAC><T_SB><O_GMCP>Spec.Nul {\"n\": 1}  \0}}<T_IAC><T_SE>")
+    assert.same({n = 1}, gmcp.Spec.Nul)
+  end)
+
+  it("treats data of nothing but Unicode spaces as no data", function()
+    feed("<T_IAC><T_SB><O_GMCP>Spec.Nbsp \194\160\226\128\131<T_IAC><T_SE>")
+    assert.same({}, gmcp.Spec.Nbsp)
+  end)
+
+  it("puts together a message that arrives over several reads", function()
+    feed("<T_IAC><T_SB><O_GMCP>Spec.Split {\"a\": ")
+    feed("\"x\", \"b\"")
+    feed(": 2}<T_IAC><T_SE>")
+    assert.same({a = "x", b = 2}, gmcp.Spec.Split)
+  end)
+
   it("reads a payload that is a bare number", function()
     pending("json_to_value returns a function rather than a number for a bare JSON number, so gmcp.X ends up holding a function (#10362)")
   end)

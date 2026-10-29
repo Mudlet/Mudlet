@@ -31,7 +31,10 @@
  * Run with: ctest -R ResetProfileTest -V
  */
 
+#include <QCryptographicHash>
+#include <QDataStream>
 #include <QFileInfo>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -86,6 +89,8 @@ class ResetProfileTest : public QObject {
 private:
   QTemporaryDir mConfigDir;
   QByteArray mSavedXdg;
+  QTemporaryDir mCacheDir;
+  QByteArray mSavedXdgCache;
   TelnetServerStub *mpServer = nullptr;
   Host *mpHost = nullptr;
   const QString mHostname = "ResetProfile-Test";
@@ -115,6 +120,69 @@ private:
     return isTrue;
   }
 
+  QString bytecodeCachePathFileName() const {
+    return qsl("%1/lua-bytecode.dat")
+        .arg(QStandardPaths::writableLocation(QStandardPaths::CacheLocation));
+  }
+
+  QHash<QByteArray, QByteArray> readBytecodeCache() const {
+    QHash<QByteArray, QByteArray> entries;
+    QFile file(bytecodeCachePathFileName());
+    if (file.open(QIODevice::ReadOnly)) {
+      QDataStream ifs(&file);
+      ifs.setVersion(QDataStream::Qt_5_12);
+      QByteArray magic;
+      ifs >> magic;
+      // Leaves a cache in a format these tests do not know looking empty
+      if (magic == QByteArrayLiteral("Mudlet Lua bytecode 1")) {
+        ifs >> entries;
+      }
+    }
+    return entries;
+  }
+
+  void writeBytecodeCache(const QHash<QByteArray, QByteArray> &entries) const {
+    QFile file(bytecodeCachePathFileName());
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    QDataStream ofs(&file);
+    ofs.setVersion(QDataStream::Qt_5_12);
+    ofs << QByteArrayLiteral("Mudlet Lua bytecode 1") << entries;
+  }
+
+  // "ok", or what is wrong with the file and line that functions from
+  // LuaGlobal.lua's files report
+  QString luaGlobalFunctionOrigins() {
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    // A raw string literal here trips up moc
+    const int error = luaL_dostring(
+        L,
+        "local sep = package.config:sub(1, 1)\n"
+        "local function check(fn, file, definition)\n"
+        "  local info = debug.getinfo(fn, \"S\")\n"
+        "  local expected = \"@\" .. nativeLuaGlobalPath .. sep .. (file:gsub(\"/\", sep))\n"
+        "  if info.source ~= expected then\n"
+        "    return \"source \" .. info.source .. \" is not \" .. expected\n"
+        "  end\n"
+        "  local lineNumber = 0\n"
+        "  for line in io.lines(luaGlobalPath .. \"/\" .. file) do\n"
+        "    lineNumber = lineNumber + 1\n"
+        "    if line:find(definition, 1, true) then\n"
+        "      if info.linedefined == lineNumber then\n"
+        "        return nil\n"
+        "      end\n"
+        "      return file .. \" line \" .. info.linedefined .. \" is not \" .. lineNumber\n"
+        "    end\n"
+        "  end\n"
+        "  return definition .. \" is not in \" .. file\n"
+        "end\n"
+        "return check(string.cut, \"StringUtils.lua\", \"function string:cut(\")\n"
+        "  or check(Geyser.Label.new, \"geyser/GeyserLabel.lua\", \"function Geyser.Label:new (\")\n"
+        "  or \"ok\"\n");
+    const QString result = QString::fromUtf8(lua_tostring(L, -1));
+    lua_pop(L, 1);
+    return error ? qsl("error: %1").arg(result) : result;
+  }
+
   int countTempKeys() {
     int count = 0;
     for (auto *key : mpHost->getKeyUnit()->getKeyRootNodeList()) {
@@ -142,6 +210,12 @@ private slots:
     QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
     mSavedXdg = qgetenv("XDG_CONFIG_HOME");
     qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    // Where the platform honours it, keeps the bytecode cache this test
+    // tampers with away from the developer's own. Elsewhere the tests use the
+    // real one, which every reset leaves holding freshly compiled entries.
+    QVERIFY(mCacheDir.isValid());
+    mSavedXdgCache = qgetenv("XDG_CACHE_HOME");
+    qputenv("XDG_CACHE_HOME", mCacheDir.path().toUtf8());
 
     mpServer = new TelnetServerStub(qApp);
     mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
@@ -173,6 +247,8 @@ private slots:
     }
     mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME")
                        : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    mSavedXdgCache.isNull() ? qunsetenv("XDG_CACHE_HOME")
+                            : qputenv("XDG_CACHE_HOME", mSavedXdgCache);
   }
 
   // Per-test cleanup: reset the profile so each test starts from clean state.
@@ -790,6 +866,71 @@ private slots:
     QVERIFY2(!lua_isnil(L, -1),
              "Geyser framework should be loaded after reset");
     lua_pop(L, 1);
+  }
+
+  void test_resetLoadsLuaGlobalFilesFromBytecodeCache() {
+    QVERIFY2(readBytecodeCache().contains("StringUtils.lua"),
+             "opening the profile should have cached LuaGlobal.lua's files");
+    const QDateTime written =
+        QFileInfo(bytecodeCachePathFileName()).lastModified();
+
+    performReset();
+
+    QCOMPARE(QFileInfo(bytecodeCachePathFileName()).lastModified(), written);
+    QCOMPARE(luaGlobalFunctionOrigins(), qsl("ok"));
+  }
+
+  void test_editedLuaGlobalFileIsRecompiled() {
+    auto entries = readBytecodeCache();
+    QVERIFY(entries.contains("StringUtils.lua"));
+    QVERIFY(entries.contains("TableUtils.lua"));
+    // Another file's bytecode, filed under a source that no longer matches
+    const QByteArray otherSourceHash(20, '\0');
+    entries.insert("StringUtils.lua",
+                   otherSourceHash + entries.value("TableUtils.lua").mid(20));
+    writeBytecodeCache(entries);
+
+    performReset();
+
+    QCOMPARE(luaGlobalFunctionOrigins(), qsl("ok"));
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_getglobal(L, "luaGlobalPath");
+    QFile source(
+        qsl("%1/StringUtils.lua").arg(QString::fromUtf8(lua_tostring(L, -1))));
+    lua_pop(L, 1);
+    QVERIFY(source.open(QIODevice::ReadOnly));
+    QCOMPARE(readBytecodeCache().value("StringUtils.lua").left(20),
+             QCryptographicHash::hash(source.readAll(),
+                                      QCryptographicHash::Sha1));
+  }
+
+  void test_damagedBytecodeIsRecompiled() {
+    auto entries = readBytecodeCache();
+    QVERIFY(entries.contains("StringUtils.lua"));
+    QVERIFY(entries.contains("TableUtils.lua"));
+    // StringUtils.lua's source and bytecode hashes, over bytecode that no
+    // longer matches the second of them
+    const QByteArray damaged = entries.value("StringUtils.lua").left(40) +
+                               entries.value("TableUtils.lua").mid(40);
+    entries.insert("StringUtils.lua", damaged);
+    writeBytecodeCache(entries);
+
+    performReset();
+
+    QCOMPARE(luaGlobalFunctionOrigins(), qsl("ok"));
+    QVERIFY(readBytecodeCache().value("StringUtils.lua") != damaged);
+  }
+
+  void test_unreadableBytecodeCacheIsReplaced() {
+    QFile file(bytecodeCachePathFileName());
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    file.write("not a bytecode cache");
+    file.close();
+
+    performReset();
+
+    QCOMPARE(luaGlobalFunctionOrigins(), qsl("ok"));
+    QVERIFY(readBytecodeCache().contains("StringUtils.lua"));
   }
 
   void test_gmcpTableFreshAfterReset() {

@@ -66,8 +66,9 @@ static QString numberToText(const lua_Number number)
     return text;
 }
 
-LuaInterface::LuaInterface(lua_State* L)
+LuaInterface::LuaInterface(lua_State* L, TLuaInterpreter* pInterpreter)
 : mL(L)
+, mpInterpreter(pInterpreter)
 {
     varUnit.reset(new VarUnit());
     //set our panic function
@@ -165,6 +166,7 @@ bool LuaInterface::loadKey(lua_State* L, TVar* var)
 
 bool LuaInterface::loadValue(lua_State* L, TVar* var, int index)
 {
+    const TLuaInterpreter::ScriptCallerScope callerScope(mpInterpreter, false);
     // Pushes the value on success and leaves the stack alone on every failure
     // path. Every caller hands over the profile's live state, where a slot left
     // behind stays for the rest of the session (#9885).
@@ -444,6 +446,7 @@ bool LuaInterface::pushOwningTable(const QList<TVar*>& vars)
 // the long-bracket literal it was written into.
 bool LuaInterface::setValue(TVar* var)
 {
+    const TLuaInterpreter::ScriptCallerScope callerScope(mpInterpreter, false);
     const QList<TVar*> vars = varOrder(var);
     if (vars.isEmpty()) {
         // a variable named _G - varOrder() gives it no path
@@ -510,6 +513,7 @@ bool LuaInterface::setValue(TVar* var)
 // and left the member itself where it was, to reappear in the Variables view.
 void LuaInterface::deleteVar(TVar* var)
 {
+    const TLuaInterpreter::ScriptCallerScope callerScope(mpInterpreter, false);
     const QList<TVar*> vars = varOrder(var);
     if (vars.isEmpty()) {
         // a variable named _G - varOrder() gives it no path
@@ -538,6 +542,7 @@ void LuaInterface::deleteVar(TVar* var)
 // a word - the write is refused instead.
 bool LuaInterface::newNameIsFree(TVar* var)
 {
+    const TLuaInterpreter::ScriptCallerScope callerScope(mpInterpreter, false);
     if (var->isReference() || (var->getNewName() == var->getName() && var->getNewKeyType() == var->getKeyType())) {
         // a member reached by a reference key is renamed onto the very key it
         // already has, and so is one whose name has not in fact changed
@@ -575,6 +580,7 @@ bool LuaInterface::newNameIsFree(TVar* var)
 // all, and a key that closed the subscript ran the rest of itself as Lua.
 bool LuaInterface::renameVar(TVar* var)
 {
+    const TLuaInterpreter::ScriptCallerScope callerScope(mpInterpreter, false);
     //this assumes anything like reparenting has been done
 
     const QList<TVar*> vars = varOrder(var);
@@ -661,6 +667,7 @@ bool LuaInterface::renameVar(TVar* var)
 // its values off the tree the walk built, see exportedValue() in XMLexport.cpp.
 QString LuaInterface::getValue(TVar* var)
 {
+    const TLuaInterpreter::ScriptCallerScope callerScope(mpInterpreter, false);
     // A save calls this once per exported variable, on the profile's live stack,
     // so every exit has to put that stack back where it found it: what one left
     // behind used to be charged to the state for the rest of the session (#9885).

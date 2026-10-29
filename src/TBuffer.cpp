@@ -49,6 +49,7 @@
 #include <QJsonValue>
 #include <QRegularExpression>
 #include <QTextBoundaryFinder>
+#include <QTextCodec>
 #include <QTime>
 #include <QTimer>
 #include <QUrlQuery>
@@ -518,6 +519,13 @@ QList<RawQueryParameter> splitOscQueryParameters(const QString& query)
     return parameters;
 }
 
+// Game servers choose OSC 8 link and menu URLs, so only these schemes may reach the system's URL handler
+bool systemMayOpenUrl(const QUrl& url)
+{
+    const QString scheme = url.scheme().toLower();
+    return scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp");
+}
+
 } // anonymous namespace
 
 TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
@@ -528,9 +536,10 @@ TChar::TChar(const QColor& foreground, const QColor& background, const TChar::At
 {
 }
 
+// Every empty line holds one of these, so the colors are not converted through QColor
 TChar::TChar()
-: mFgColor(QColorConstants::White.rgba())
-, mBgColor(QColorConstants::Black.rgba())
+: mFgColor(qRgb(255, 255, 255))
+, mBgColor(qRgb(0, 0, 0))
 {
 }
 
@@ -539,6 +548,73 @@ TChar::TChar()
 bool TChar::operator==(const TChar& other) const
 {
     return mLinkIndex == other.mLinkIndex && mFgColor == other.mFgColor && mBgColor == other.mBgColor && mFlags == other.mFlags && mRightHalf == other.mRightHalf;
+}
+
+namespace {
+// A selected run stays per character, as copying the shared TChar back out would deselect it
+bool storableAsOne(const std::vector<TChar>& chars)
+{
+    if (chars.empty() || chars.front().isSelected()) {
+        return false;
+    }
+    const TChar& first = chars.front();
+    return std::all_of(chars.cbegin() + 1, chars.cend(), [&first](const TChar& character) {
+        return character == first;
+    });
+}
+} // namespace
+
+TLineFormat::TLineFormat(std::vector<TChar>&& chars)
+{
+    if (storableAsOne(chars)) {
+        mUniform = chars.front();
+        mUniformCount = chars.size();
+    } else {
+        mChars = std::move(chars);
+    }
+}
+
+TLineFormat::TLineFormat(const std::vector<TChar>& chars)
+{
+    if (storableAsOne(chars)) {
+        mUniform = chars.front();
+        mUniformCount = chars.size();
+    } else {
+        mChars = chars;
+    }
+}
+
+std::vector<TChar>& TLineFormat::expand()
+{
+    if (mUniformCount) {
+        mChars.assign(std::exchange(mUniformCount, 0), mUniform);
+    }
+    return mChars;
+}
+
+void TLineFormat::insert(const size_type index, const size_type count, const TChar& format)
+{
+    if (!count) {
+        return;
+    }
+    const TChar copy(format);
+    if (mChars.empty() && (!mUniformCount || copy == mUniform)) {
+        if (!mUniformCount) {
+            mUniform = copy;
+        }
+        mUniformCount += count;
+        return;
+    }
+    std::vector<TChar>& chars = expand();
+    chars.insert(chars.begin() + static_cast<difference_type>(index), count, copy);
+}
+
+std::vector<TChar> TLineFormat::toVector() const
+{
+    if (mUniformCount) {
+        return std::vector<TChar>(mUniformCount, mUniform);
+    }
+    return mChars;
 }
 
 namespace {
@@ -649,12 +725,21 @@ quint8 TChar::alternateFont() const
 }
 
 #ifndef QT_NO_DEBUG
-static quint64 colorFingerprint(const std::vector<TChar>& line)
+static quint64 colorFingerprint(const TLineFormat& line)
 {
     quint64 hash = 14695981039346656037ULL;
-    for (const TChar& character : line) {
-        hash = (hash ^ character.foreground().rgba()) * 1099511628211ULL;
-        hash = (hash ^ character.background().rgba()) * 1099511628211ULL;
+    // Runs twice per line in every debug build, where a range-for's iterator calls are not inlined
+    if (line.uniform()) {
+        const TChar& character = line.front();
+        for (std::size_t i = 0, total = line.size(); i < total; ++i) {
+            hash = (hash ^ character.foregroundRgba()) * 1099511628211ULL;
+            hash = (hash ^ character.backgroundRgba()) * 1099511628211ULL;
+        }
+        return hash;
+    }
+    for (const TChar *character = line.heapData(), *end = character + line.size(); character != end; ++character) {
+        hash = (hash ^ character->foregroundRgba()) * 1099511628211ULL;
+        hash = (hash ^ character->backgroundRgba()) * 1099511628211ULL;
     }
     return hash;
 }
@@ -790,6 +875,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mEncoding(other.mEncoding)
 , mDecoder(other.mDecoder)
 , mMultibyteDecoder(multibyteDecoderFor(other.mDecoder, other.mEncoding))
+, mLegacyMultibyteCodec(other.mLegacyMultibyteCodec)
 , mCurrentHyperlinkCommand(other.mCurrentHyperlinkCommand)
 , mCurrentHyperlinkHint(other.mCurrentHyperlinkHint)
 , mCurrentHyperlinkLinkId(other.mCurrentHyperlinkLinkId)
@@ -897,6 +983,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mEncoding = other.mEncoding;
         mDecoder = other.mDecoder;
         mMultibyteDecoder = multibyteDecoderFor(mDecoder, mEncoding);
+        mLegacyMultibyteCodec = other.mLegacyMultibyteCodec;
         mCurrentHyperlinkCommand = other.mCurrentHyperlinkCommand;
         mCurrentHyperlinkHint = other.mCurrentHyperlinkHint;
         mCurrentHyperlinkLinkId = other.mCurrentHyperlinkLinkId;
@@ -1119,7 +1206,7 @@ void TBuffer::noteRemovedLinkId(const int id, const qint64 lastLine)
 }
 
 // to < 0 runs to the end of the line
-void TBuffer::noteRemovedLinks(const std::vector<TChar>& line, const qint64 lineNumber, const int from, const int to)
+void TBuffer::noteRemovedLinks(const TLineFormat& line, const qint64 lineNumber, const int from, const int to)
 {
     if (mLinkStore.pristine()) {
         return;
@@ -1468,7 +1555,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                     const QString literalText = mpHost->mMxpProcessor.abortCurrentTag();
                     mMudLine.append(literalText);
                     for (int i = 0; i < literalText.length(); ++i) {
-                        mMudBuffer.push_back(c);
+                        mMudBuffer.append(1, c);
                     }
 
                     mTagWatchdog->stop();
@@ -1680,7 +1767,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         const TChar c(mBackGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
                         for (int spaceCount = 0; spaceCount < spacesNeeded; ++spaceCount) {
                             mMudLine.append(QChar::Space);
-                            mMudBuffer.push_back(c);
+                            mMudBuffer.append(1, c);
                         }
                         // For debugging:
                         //                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - CUF (cursor forward) sequence of form CSI" << temp << "C received, converting into " << spacesNeeded << " spaces.";
@@ -1929,7 +2016,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
                         // We also need to set the color attributes for the special character
                         while (valueLength--) {
-                            mMudBuffer.push_back(c);
+                            mMudBuffer.append(1, c);
                         }
                         // We already handled the input, go to the next character
                         localBufferPosition++;
@@ -1948,7 +2035,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
                         mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
                         while (valueLength--) {
-                            mMudBuffer.push_back(c);
+                            mMudBuffer.append(1, c);
                         }
                         // Do NOT increment position - the current character needs to be reprocessed
                         continue;
@@ -1975,7 +2062,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
                         mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
                         while (valueLength--) {
-                            mMudBuffer.push_back(c);
+                            mMudBuffer.append(1, c);
                         }
                         localBufferPosition++;
                         continue;
@@ -1988,7 +2075,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                         size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
                         mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
                         while (valueLength--) {
-                            mMudBuffer.push_back(c);
+                            mMudBuffer.append(1, c);
                         }
                         continue;
                     }
@@ -2089,8 +2176,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 
         if (isTwoTCharsNeeded) {
             // CHECK: Do we need to duplicate stuff for mMXP_LINK_MODE - yes I think we do:
-            mMudBuffer.push_back(c);
-            mMudBuffer.push_back(c);
+            mMudBuffer.append(1, c);
+            mMudBuffer.append(1, c);
             if (mHyperlinkActive) {
                 // Capture the column position when the first character of the hyperlink is added
                 if (mCurrentHyperlinkText.isEmpty()) {
@@ -2100,7 +2187,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 mCurrentHyperlinkText += QString(QChar(ch));
             }
         } else {
-            mMudBuffer.push_back(c);
+            mMudBuffer.append(1, c);
             if (mHyperlinkActive) {
                 // Capture the column position when the first character of the hyperlink is added
                 if (mCurrentHyperlinkText.isEmpty()) {
@@ -2137,7 +2224,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                             mxp.processRawInput(QByteArrayView(bytes + localBufferPosition + 1, static_cast<qsizetype>(runLength)));
                         }
                         mMudLine.append(QLatin1StringView(bytes + localBufferPosition + 1, static_cast<qsizetype>(runLength)));
-                        mMudBuffer.insert(mMudBuffer.cend(), runLength, c);
+                        mMudBuffer.append(runLength, c);
                         localBufferPosition = runEnd - 1;
                     }
                 }
@@ -2156,7 +2243,7 @@ void TBuffer::flushPendingDestinationContent()
 
     if (mpHost->mMxpFrameManager.hasActiveDestination()) {
         if (TPrintSink* destSink = mpHost->mMxpFrameManager.currentDestinationSink()) {
-            destSink->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+            destSink->printFormatted(mMudLine, mMudBuffer.expand(), mLinkStore);
             mMudLine.clear();
             mMudBuffer.clear();
         }
@@ -2216,7 +2303,7 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
                 }
             }
             if (!mMudLine.isEmpty()) {
-                destSink->printFormatted(mMudLine, mMudBuffer, mLinkStore);
+                destSink->printFormatted(mMudLine, mMudBuffer.expand(), mLinkStore);
             }
             mMudLine.clear();
             mMudBuffer.clear();
@@ -2294,26 +2381,26 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
     // Copy out and clear rather than swap: the accumulators keep their allocation (regrowing costs more than
     // the copy) and stored lines are exactly sized, not worst-case; past csmMaxRetainedLineCapacity the
     // accumulator is released instead. Emptied before the commit so nested passes from commitLineData() can
-    // use them. Characters are moved: none can be selected, so the copy constructor's flag clearing is wasted.
+    // use them.
     QString line;
     if (!mMudLine.isEmpty()) {
         line = QString(mMudLine.constData(), mMudLine.size());
         mMudLine.resize(0);
     }
-    std::vector<TChar> chars(std::make_move_iterator(mMudBuffer.begin()), std::make_move_iterator(mMudBuffer.end()));
+    TLineFormat chars(mMudBuffer);
     mMudBuffer.clear();
     if (static_cast<size_t>(mMudLine.capacity()) > csmMaxRetainedLineCapacity) {
         QString().swap(mMudLine);
     }
     if (mMudBuffer.capacity() > csmMaxRetainedLineCapacity) {
-        std::vector<TChar>().swap(mMudBuffer);
+        TLineFormat().swap(mMudBuffer);
     }
     commitLineData(std::move(line), std::move(chars), ch);
     ++localBufferPosition;
     return true;
 }
 
-void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char ch)
+void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
 {
     // An empty '\r' commit, such as the posting timer's flush, ends no line of text: drop it before the
     // blank-line setting below can turn it into a line of one space
@@ -2330,7 +2417,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             // foreground color as well so that we are transparent:
             const TChar c(mBackGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
             line.append(QChar::Space);
-            chars.push_back(c);
+            chars.append(1, c);
         }
     }
 
@@ -2410,7 +2497,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         // from inside this pass would aim at this line instead:
         materialisePreTriggerPassLine(mPreTriggerPassLineNumber);
         // Save/restore gives each nested pass its own snapshot; the spare member recycles its allocation:
-        std::vector<TChar> savedPassLine;
+        TLineFormat savedPassLine;
         savedPassLine.swap(mPreTriggerPassLine);
         mEnclosingTriggerPasses.append({mPreTriggerPassLineNumber, std::exchange(mDetachedTriggerPassLineText, QString()), std::exchange(mTriggerPassLineEdits, {})});
         const int savedPassLineAsCommitted = mTriggerPassLineAsCommitted;
@@ -2438,7 +2525,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         passLineAfterTriggers = (mPreTriggerPassLineNumber >= 0) ? mPreTriggerPassLineNumber : lineIndex;
         mSpareTriggerPassLine.swap(mPreTriggerPassLine);
         if (mSpareTriggerPassLine.capacity() > csmMaxRetainedLineCapacity) {
-            std::vector<TChar>().swap(mSpareTriggerPassLine);
+            TLineFormat().swap(mSpareTriggerPassLine);
         }
         mPreTriggerPassLine.swap(savedPassLine);
         EnclosingTriggerPass enclosing = mEnclosingTriggerPasses.takeLast();
@@ -2459,7 +2546,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     const int lastValidLine = static_cast<int>(lineBuffer.size()) - 1;
     const int wrapStartLine = (lastValidLine >= 0) ? std::min(passLineAfterTriggers, lastValidLine) : 0;
     // Spares wrapLine()'s setup for the usual last line that fits; one with no text or no TChars still goes
-    // through, as wrapLine() rebuilds it. The width must stay getWrapInfo()'s widthAvailable for mWrapAt.
+    // through, as wrapLine() rebuilds it. The width must not exceed getWrapInfo()'s widthAvailable for mWrapAt.
     const bool fitsAsIs = wrapStartLine == lastValidLine && !lineBuffer.at(wrapStartLine).isEmpty() && !buffer[wrapStartLine].empty()
                           && fitsUnwrapped(lineBuffer.at(wrapStartLine), wrapsFromPreviousLine(wrapStartLine) ? mWrapAt : mWrapAt - clampedWrapIndent(mWrapIndent, mWrapAt));
     const int addedLines = fitsAsIs ? 0 : wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
@@ -2704,7 +2791,7 @@ void TBuffer::joinPendingServerWrapOntoCurrent()
     // The game's wrapper swallowed the space it broke the line at:
     if (!mServerWrapPendingLine.endsWith(QChar::Space) && !mMudLine.startsWith(QChar::Space)) {
         mServerWrapPendingLine.append(QChar::Space);
-        mServerWrapPendingBuffer.push_back(mServerWrapPendingBuffer.empty() ? TChar(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags()) : mServerWrapPendingBuffer.back());
+        mServerWrapPendingBuffer.append(1, mServerWrapPendingBuffer.empty() ? TChar(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags()) : mServerWrapPendingBuffer.back());
     }
     const int heldLength = static_cast<int>(mServerWrapPendingLine.size());
     if (mHyperlinkActive && mCurrentHyperlinkStartsAfterHeldText) {
@@ -2712,13 +2799,17 @@ void TBuffer::joinPendingServerWrapOntoCurrent()
         mCurrentHyperlinkStartsAfterHeldText = false;
     }
     mMudLine.prepend(mServerWrapPendingLine);
-    mMudBuffer.insert(mMudBuffer.begin(), mServerWrapPendingBuffer.begin(), mServerWrapPendingBuffer.end());
+    if (mServerWrapPendingBuffer.uniform()) {
+        mMudBuffer.insert(0, mServerWrapPendingBuffer.size(), mServerWrapPendingBuffer.front());
+    } else if (!mServerWrapPendingBuffer.empty()) {
+        std::vector<TChar>& chars = mMudBuffer.expand();
+        chars.insert(chars.begin(), mServerWrapPendingBuffer.cbegin(), mServerWrapPendingBuffer.cend());
+    }
     if (mHeldSpoilerLinkId) {
         maskSpoilerText(mHeldSpoilerLinkId, mMudLine, mHeldSpoilerStartColumn, heldLength - mHeldSpoilerStartColumn + mHeldSpoilerContinuationLength);
         mHeldSpoilerLinkId = 0;
     }
-    if (mHeldVisibility.linkId) {
-        const HeldVisibility held = std::exchange(mHeldVisibility, HeldVisibility{});
+    for (const HeldVisibility& held : std::exchange(mHeldVisibilities, {})) {
         if (held.startsAfterHeldText) {
             registerLinkVisibility(held.linkId, held.startColumn + heldLength, held.continuationLength - held.startColumn, held.styling);
         } else {
@@ -2741,7 +2832,7 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
     }
     // A link closed after the held text sits whole on the line after it, at the columns it recorded;
     // one that began in the held text now spans two lines, which visibility does not cover.
-    const HeldVisibility heldVisibility = std::exchange(mHeldVisibility, HeldVisibility{});
+    const QList<HeldVisibility> heldVisibilities = std::exchange(mHeldVisibilities, {});
     const bool linkStartsAfterHeldText = mHyperlinkActive && mCurrentHyperlinkStartsAfterHeldText;
     if (mHyperlinkActive && !linkStartsAfterHeldText) {
         if (endsHyperlink) {
@@ -2756,7 +2847,7 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
             finaliseActiveHyperlink();
             mServerWrapPendingLine.swap(mMudLine);
             mMudLine.swap(rest);
-            for (auto& c : mMudBuffer) {
+            for (auto& c : mMudBuffer.expand()) {
                 if (c.mLinkIndex == linkId) {
                     c.mLinkIndex = 0;
                 }
@@ -2766,7 +2857,7 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
         }
     }
     QString line;
-    std::vector<TChar> chars;
+    TLineFormat chars;
     line.swap(mServerWrapPendingLine);
     chars.swap(mServerWrapPendingBuffer);
     commitLineData(std::move(line), std::move(chars), '\n');
@@ -2774,8 +2865,10 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
         mCurrentHyperlinkStartLine = static_cast<int>(lineBuffer.size()) - 1;
         mCurrentHyperlinkStartsAfterHeldText = false;
     }
-    if (heldVisibility.linkId && heldVisibility.startsAfterHeldText) {
-        registerLinkVisibility(heldVisibility.linkId, heldVisibility.startColumn, heldVisibility.continuationLength - heldVisibility.startColumn, heldVisibility.styling);
+    for (const HeldVisibility& held : heldVisibilities) {
+        if (held.startsAfterHeldText) {
+            registerLinkVisibility(held.linkId, held.startColumn, held.continuationLength - held.startColumn, held.styling);
+        }
     }
 }
 
@@ -2788,11 +2881,13 @@ void TBuffer::triggerPassLinesRemoved(const int from, const int to)
         mPreTriggerPassLineNumber -= delta;
     } else if (mPreTriggerPassLineNumber >= from) {
         // The snapshot, where taken, holds the colors as they arrived for as much of the line as it covers
-        std::vector<TChar> detached = std::move(buffer[mPreTriggerPassLineNumber]);
         if (mPreTriggerPassSnapshotTaken) {
+            std::vector<TChar> detached = std::move(buffer[mPreTriggerPassLineNumber].expand());
             std::copy_n(mPreTriggerPassLine.cbegin(), std::min(mPreTriggerPassLine.size(), detached.size()), detached.begin());
+            mPreTriggerPassLine = std::move(detached);
+        } else {
+            mPreTriggerPassLine = std::move(buffer[mPreTriggerPassLineNumber]);
         }
-        mPreTriggerPassLine = std::move(detached);
         mPreTriggerPassSnapshotTaken = true;
         mDetachedTriggerPassLineText = lineBuffer.at(mPreTriggerPassLineNumber);
         mPreTriggerPassLineNumber = csmDetachedTriggerPassLine;
@@ -2864,7 +2959,7 @@ void TBuffer::noteTriggerPassLineEdit(const int y, const int x, const int remove
     }
 }
 
-const std::vector<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
+const TLineFormat* TBuffer::preTriggerPassLine(int lineNumber) const
 {
     if (lineNumber >= 0 && lineNumber == mPreTriggerPassLineNumber && mPreTriggerPassSnapshotTaken) {
         return &mPreTriggerPassLine;
@@ -2879,13 +2974,14 @@ void TBuffer::spliceInsertIntoPreTriggerPassLine(int y, int x, int count, const 
     if (!mPreTriggerPassSnapshotTaken || y < 0 || y != mPreTriggerPassLineNumber || y >= static_cast<int>(buffer.size())) {
         return;
     }
-    const int known = static_cast<int>(mPreTriggerPassLine.size());
+    std::vector<TChar>& passLine = mPreTriggerPassLine.expand();
+    const int known = static_cast<int>(passLine.size());
     const int padEnd = std::min(x, static_cast<int>(buffer[y].size()));
     if (padEnd > known) {
-        mPreTriggerPassLine.insert(mPreTriggerPassLine.end(), buffer[y].cbegin() + known, buffer[y].cbegin() + padEnd);
+        passLine.insert(passLine.end(), buffer[y].cbegin() + known, buffer[y].cbegin() + padEnd);
     }
-    const int at = std::min(x, static_cast<int>(mPreTriggerPassLine.size()));
-    mPreTriggerPassLine.insert(mPreTriggerPassLine.begin() + at, static_cast<std::size_t>(count), format);
+    const int at = std::min(x, static_cast<int>(passLine.size()));
+    passLine.insert(passLine.begin() + at, static_cast<std::size_t>(count), format);
     mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
 }
 
@@ -2898,7 +2994,8 @@ void TBuffer::spliceEraseFromPreTriggerPassLine(int y, int x, int xEnd)
     const int from = std::min(x, size);
     const int to = std::min(xEnd, size);
     if (from < to) {
-        mPreTriggerPassLine.erase(mPreTriggerPassLine.begin() + from, mPreTriggerPassLine.begin() + to);
+        std::vector<TChar>& passLine = mPreTriggerPassLine.expand();
+        passLine.erase(passLine.begin() + from, passLine.begin() + to);
         mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
     }
 }
@@ -2911,11 +3008,12 @@ void TBuffer::wrapPreTriggerPassLine(const WrapInfo& firstSegment, int indentWid
     const int from = std::min(firstSegment.firstChar, known);
     const int to = std::min(firstSegment.lastChar, known);
     if (from < to) {
-        const TChar indentColors = mPreTriggerPassLine[from];
-        mPreTriggerPassLine.erase(mPreTriggerPassLine.begin() + to, mPreTriggerPassLine.end());
-        mPreTriggerPassLine.erase(mPreTriggerPassLine.begin(), mPreTriggerPassLine.begin() + from);
+        std::vector<TChar>& passLine = mPreTriggerPassLine.expand();
+        const TChar indentColors = passLine[from];
+        passLine.erase(passLine.begin() + to, passLine.end());
+        passLine.erase(passLine.begin(), passLine.begin() + from);
         if (firstSegment.needsIndent) {
-            mPreTriggerPassLine.insert(mPreTriggerPassLine.begin(), static_cast<std::size_t>(indentWidth), indentColors);
+            passLine.insert(passLine.begin(), static_cast<std::size_t>(indentWidth), indentColors);
         }
     } else {
         mPreTriggerPassLine.clear();
@@ -2926,7 +3024,7 @@ void TBuffer::wrapPreTriggerPassLine(const WrapInfo& firstSegment, int indentWid
 void TBuffer::materialisePreTriggerPassLine(int y)
 {
     if (!mPreTriggerPassSnapshotTaken && y >= 0 && y == mPreTriggerPassLineNumber && y < static_cast<int>(buffer.size())) {
-        mPreTriggerPassLine.assign(buffer[y].cbegin(), buffer[y].cend());
+        mPreTriggerPassLine = buffer[y];
         mPreTriggerPassSnapshotTaken = true;
     }
 }
@@ -2937,11 +3035,14 @@ const TChar* TBuffer::preTriggerPassLineUniformColors(int lineNumber)
         return nullptr;
     }
     // Until a write materialises the snapshot, the line still holds the game's colors - most lines do:
-    const std::vector<TChar>& passLine = mPreTriggerPassSnapshotTaken ? mPreTriggerPassLine : buffer[lineNumber];
+    const TLineFormat& passLine = mPreTriggerPassSnapshotTaken ? mPreTriggerPassLine : buffer[lineNumber];
     if (passLine.empty()) {
         return nullptr;
     }
     const TChar& first = passLine.front();
+    if (passLine.uniform()) {
+        return &first;
+    }
     if (mPreTriggerPassLineUniformity == PassLineUniformity::Unknown) {
         // The first character stands for the rest only while this compares colors as the trigger does.
         const bool uniform = std::all_of(passLine.cbegin() + 1, passLine.cend(), [&first](const TChar& character) {
@@ -2996,7 +3097,7 @@ void TBuffer::processMxpWatchdogCallback()
 
                 mMudLine.append(lastEntityValue);
                 for (qsizetype i = 0; i < lastEntityValue.size(); ++i) {
-                    mMudBuffer.push_back(style);
+                    mMudBuffer.append(1, style);
                 }
                 // In trigger context, as for every other line the game sends
                 const bool wasInTriggerEngineMode = mpModel->mTriggerEngineMode;
@@ -4321,6 +4422,13 @@ void TBuffer::decodeOSC(const QString& sequence)
         }
 
         if (!rawUrl.isEmpty()) {
+            // Per the OSC 8 spec a new link ends the open one, even if rejected below: else the text after
+            // it joins the open link, which then closes with the rejected link's config. preset: only
+            // registers a style and opens no link, so it leaves the open link alone.
+            if (mHyperlinkActive && !rawUrl.startsWith(qsl("preset:"))) {
+                finaliseActiveHyperlink();
+            }
+
             if (rawUrl.length() > static_cast<int>(MAX_OSC_SEQUENCE_LENGTH)) {
                 qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << rawUrl;
                 return;
@@ -4465,7 +4573,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                 QUrl qurl(baseUrl);
                 QString scheme = qurl.scheme().toLower();
 
-                if (scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp")) {
+                if (systemMayOpenUrl(qurl)) {
                     mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionOpenUrl;
                     mCurrentHyperlinkStyling.baseCommand = baseUrl;
                     command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
@@ -4513,6 +4621,9 @@ void TBuffer::decodeOSC(const QString& sequence)
                         // Special case: "-" creates a menu separator
                         menuCommands.append(QString());
                         menuHints.append(QString());
+                    } else if (systemMayOpenUrl(QUrl(menuCommand))) {
+                        menuCommands.append(qsl("openUrl(%1)").arg(LuaLiteral::quote(menuCommand)));
+                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     } else {
                         // Treat as direct command
                         menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(menuCommand)));
@@ -5292,7 +5403,7 @@ void TBuffer::clearLinkIndices(int lineNumber, int startColumn, int length)
     }
 
     materialisePreTriggerPassLine(lineNumber);
-    std::vector<TChar>& line = buffer[lineNumber];
+    std::vector<TChar>& line = buffer[lineNumber].expand();
 
     // Extra safety: ensure we don't go out of bounds
     if (line.empty()) {
@@ -5339,7 +5450,7 @@ void TBuffer::restoreLinkIndices(int lineNumber, int startColumn, int length, in
     }
 
     materialisePreTriggerPassLine(lineNumber);
-    std::vector<TChar>& line = buffer[lineNumber];
+    std::vector<TChar>& line = buffer[lineNumber].expand();
 
     // Extra safety: ensure we don't go out of bounds
     if (line.empty()) {
@@ -5624,7 +5735,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
     // being added to would regrow it on every call rather than geometrically
     if (firstChar) {
         lineBuffer.back().reserve(text.size());
-        buffer.back().reserve(text.size());
+        buffer.back().expand().reserve(text.size());
     }
     QHash<int, int> remappedLinkIds;
     const qsizetype formatted = std::min(text.size(), static_cast<qsizetype>(formatting.size()));
@@ -5642,7 +5753,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
         }
         if (const qsizetype runLength = runEnd - runStart; runLength > 0) {
             lineBuffer.back().append(QStringView(text).sliced(runStart, runLength));
-            std::vector<TChar>& chars = buffer.back();
+            std::vector<TChar>& chars = buffer.back().expand();
             const size_t first = chars.size();
             if (const qsizetype copied = std::clamp<qsizetype>(formatted - runStart, 0, runLength); copied > 0) {
                 const auto from = formatting.begin() + runStart;
@@ -5757,49 +5868,45 @@ void TBuffer::appendLine(
         lastLine = 0;
         // The ternary operator is used here to set/reset only the TChar::Echo bit in the flags:
         const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | (flags & TChar::TestMask)) : (flags & TChar::TestMask)));
-        buffer.back().push_back(styling);
+        buffer.back().append(1, styling);
     }
 
     if (text.isEmpty()) {
         return;
     }
 
-    bool firstChar = (lineBuffer.back().isEmpty());
+    bool firstChar = lineBuffer.back().isEmpty();
     const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
-    int lineEndPos = sub_end;
-
-    if (lineEndPos >= length) {
-        lineEndPos = length - 1;
-    }
-
-    for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
-        const QChar thisChar = text.at(i);
-
-        if (thisChar == QChar::LineFeed) {
-            firstChar = true;
-            appendEmptyLine();
-            continue;
+    const qsizetype end = std::min(static_cast<qsizetype>(sub_start) + std::min(sub_end, length - 1) + 1, text.size());
+    const QStringView chunk = QStringView(text).first(end);
+    const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
+    qsizetype runStart = sub_start;
+    while (true) {
+        qsizetype runEnd = chunk.indexOf(QChar::LineFeed, runStart);
+        if (runEnd < 0) {
+            runEnd = end;
         }
-        if (firstChar && dropSpaceAtWrap(thisChar)) {
-            continue;
+        while (firstChar && runStart < runEnd && dropSpaceAtWrap(chunk.at(runStart))) {
+            ++runStart;
         }
-
-        lineBuffer.back().append(thisChar);
-        const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
-        buffer.back().push_back(styling);
-
-        // Note: Original character storage for ANSI-styled OSC 8 links happens in
-        // translateToPlainText() where the TChar is created with ANSI formatting
-        // before JSON styling is applied
-
-        if (firstChar) {
-            // Replayed held-back content supplies its arrival time, and an
-            // empty wrapped line is the rest of the line above it:
-            if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
-                timeBuffer.back() = timeStampOverride == csmNoTimeStamp ? QDateTime::currentMSecsSinceEpoch() : timeStampOverride;
+        if (const qsizetype runLength = runEnd - runStart; runLength > 0) {
+            lineBuffer.back().append(chunk.sliced(runStart, runLength));
+            buffer.back().append(static_cast<std::size_t>(runLength), styling);
+            if (firstChar) {
+                // Replayed held-back content supplies its arrival time, and an
+                // empty wrapped line is the rest of the line above it:
+                if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
+                    timeBuffer.back() = timeStampOverride == csmNoTimeStamp ? QDateTime::currentMSecsSinceEpoch() : timeStampOverride;
+                }
+                firstChar = false;
             }
-            firstChar = false;
         }
+        if (runEnd >= end) {
+            break;
+        }
+        firstChar = true;
+        appendEmptyLine();
+        runStart = runEnd + 1;
     }
 }
 
@@ -5838,7 +5945,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
         // time into the middle of the QString/std::vector is O(n) per character,
         // which is quadratic for large inserts.
         lineBuffer[y].insert(x, insertedText);
-        buffer[y].insert(buffer[y].begin() + x, static_cast<std::size_t>(insertedText.size()), format);
+        buffer[y].insert(x, static_cast<std::size_t>(insertedText.size()), format);
         spliceInsertIntoPreTriggerPassLine(y, x, static_cast<int>(insertedText.size()), format);
         noteTriggerPassLineEdit(y, x, 0, static_cast<int>(insertedText.size()));
     } else {
@@ -5922,7 +6029,7 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
         append(QString(QChar::LineFeed), 0, 1, Qt::black, Qt::black, TChar::None);
         return;
     }
-    appendFormatted(chunk.lineBuffer.at(0), chunk.buffer.at(0), chunk.mLinkStore);
+    appendFormatted(chunk.lineBuffer.at(0), chunk.buffer.at(0).toVector(), chunk.mLinkStore);
 }
 
 int TBuffer::calculateWrapPosition(int lineNumber, int begin, int end)
@@ -5965,7 +6072,8 @@ int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
 }
 
 // find lindbreaks and indents (if not necessary, return empty list)
-inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent)
+// startsIndented: the line already carries the wrap indent, from an earlier wrap; only read when isNewline
+inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewline, bool startsIndented, const int maxWidth, const int indent, const int hangingIndent)
 {
     QList<WrapInfo> output;
     if (lineText.isEmpty()) {
@@ -5979,7 +6087,8 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         return output;
     }
 
-    const qsizetype widthAvailable = std::min<qsizetype>(isNewline ? maxWidth - indent : maxWidth, mWrapAt);
+    const bool indentToCome = isNewline && !startsIndented;
+    const qsizetype widthAvailable = std::min<qsizetype>(indentToCome ? maxWidth - indent : maxWidth, mWrapAt);
     if (fitsUnwrapped(lineText, widthAvailable)) {
         return output;
     }
@@ -6027,7 +6136,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
     int xPos = 0;
     int totalWidth = 0;
     int firstChar = 0;
-    bool needsIndent = isNewline;
+    bool needsIndent = indentToCome;
     bool hasNewline = false;
 
     // find all the appropriate wrap points assuming (hanging-)indentation prepended to each line
@@ -6048,6 +6157,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             setGraphemePosition(indexOfChar);
             firstChar = indexOfChar;
             isNewline = true;
+            startsIndented = false;
             needsIndent = false;
             xPos = 0;
             continue;
@@ -6062,7 +6172,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         }
         const int indentationHere = isNewline ? indent : hangingIndent;
         if (xPos + charWidth > maxWidth - (needsIndent ? indentationHere : 0)) {
-            if (isNewline) {
+            if (isNewline && !startsIndented) {
                 needsIndent = true;
             }
             // we check c == QChar::Space since we are happy to break at -any- space,
@@ -6097,6 +6207,16 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         xPos += charWidth;
         totalWidth += charWidth;
         indexOfChar = nextBoundary;
+        if (plainAscii) {
+            // Plain ASCII has no line feeds and skips spaces only at a segment's first column, so every
+            // character until the segment is full takes one column with nothing else to check
+            const int run = std::min(maxWidth - (needsIndent ? indentationHere : 0) - xPos, total - indexOfChar);
+            if (run > 0) {
+                xPos += run;
+                totalWidth += run;
+                indexOfChar += run;
+            }
+        }
     }
     // it's possible that no wrapping is needed
     if (totalWidth <= mWrapAt && !hasNewline) {
@@ -6246,19 +6366,25 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         }
     }
 
+    // Leading spaces alone can't tell padding from text, so this needs the record an earlier wrap left, and the
+    // spaces too in case an edit has since removed them. Safe mid-loop: the old lines stay in the buffer until it is done.
+    const auto carriesIndent = [this, indent](const int lineNumber) {
+        return indent > 0 && wrapGapBuffer.at(lineNumber) >= indent && wrapIndentWidth(lineNumber) >= indent;
+    };
+
     // Leading lines that getWrapInfo() finds no break points in stay where they
     // are. The loop below reproduces such a line unchanged, but only after
-    // moving it out of the buffer into a queue and back again and standing up
-    // four temporary containers to do it. A line with no TChars or no text is
-    // not left alone: the loop turns that one into appendEmptyLine(), which
-    // drops its TChars, restamps it and clears its prompt flag.
+    // moving it out of the buffer and back again. A line with no TChars or no
+    // text is not left alone: the loop turns that one into appendEmptyLine(),
+    // which drops its TChars, restamps it and clears its prompt flag.
     int firstRewrappedLine = startLine;
     QList<WrapInfo> lineBreaks;
     while (firstRewrappedLine < wrapUpTo) {
         if (buffer[firstRewrappedLine].empty() || lineBuffer.at(firstRewrappedLine).isEmpty()) {
             break;
         }
-        lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), timeBuffer.at(firstRewrappedLine) != TBuffer::csmWrappedLineTimeStamp, maxWidth, indent, hangingIndent);
+        const bool isNewline = timeBuffer.at(firstRewrappedLine) != TBuffer::csmWrappedLineTimeStamp;
+        lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), isNewline, isNewline && carriesIndent(firstRewrappedLine), maxWidth, indent, hangingIndent);
         if (!lineBreaks.isEmpty()) {
             break;
         }
@@ -6293,17 +6419,22 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         }
     }
 
-    std::queue<std::vector<TChar>> queue;
-    QStringList tempList;
-    QList<qint64> timeList;
-    QList<bool> promptList;
-    QList<quint16> wrapGapList;
+    struct RewrappedLine
+    {
+        TLineFormat chars;
+        QString text;
+        qint64 time;
+        quint16 wrapGap;
+        bool prompt;
+    };
+    // Most calls rewrap a single incoming line into a few, which fit in this array's own inline storage
+    QVarLengthArray<RewrappedLine, 8> rewrapped;
     int lineCount = 0;
     for (int i = firstRewrappedLine; i < total; ++i) {
         lineCount++;
         for (const MovingPassLine& passLine : std::as_const(passLines)) {
             if (passLine.from == i) {
-                *passLine.pLineNumber = firstRewrappedLine + static_cast<int>(tempList.size());
+                *passLine.pLineNumber = firstRewrappedLine + static_cast<int>(rewrapped.size());
             }
         }
         std::vector<TChar> newBufferLine;
@@ -6311,11 +6442,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         const qint64 time = timeBuffer[i];
         // trivial case
         if (buffer[i].empty()) {
-            tempList.append(newLineText);
-            queue.push(std::move(newBufferLine));
-            timeList.append(time);
-            promptList.append(false);
-            wrapGapList.append(wrapGapBuffer.at(i));
+            rewrapped.append({std::move(newBufferLine), newLineText, time, wrapGapBuffer.at(i), false});
             continue;
         }
 
@@ -6332,14 +6459,10 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         if (i >= wrapUpTo) {
             lineBreaks.clear();
         } else if (i != firstRewrappedLine) {
-            lineBreaks = getWrapInfo(lineText, isNewline, maxWidth, indent, hangingIndent);
+            lineBreaks = getWrapInfo(lineText, isNewline, isNewline && carriesIndent(i), maxWidth, indent, hangingIndent);
         }
         if (lineBreaks.isEmpty()) {
-            tempList.append(lineText);
-            queue.push(std::move(buffer[i]));
-            timeList.append(time);
-            promptList.append(isPrompt);
-            wrapGapList.append(wrapGapBuffer.at(i));
+            rewrapped.append({std::move(buffer[i]), lineText, time, wrapGapBuffer.at(i), isPrompt});
             continue;
         }
         if (i == mPreTriggerPassLineNumber) {
@@ -6347,14 +6470,12 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             materialisePreTriggerPassLine(i);
             wrapPreTriggerPassLine(lineBreaks.first(), lineBreaks.first().isNewline ? indent : hangingIndent);
         }
-        const QString qIndent(indent, QChar::Space);
-        const QString qHangingIndent(hangingIndent, QChar::Space);
         // The source line is read through a cursor rather than consumed from
         // its front, which a vector cannot do without shuffling every
         // remaining TChar down one place per character. It is therefore left
         // fully populated here; the loop below this one pops the whole range
         // off the back of the buffer, which is what discards it.
-        const std::vector<TChar>& sourceChars = buffer[i];
+        const TLineFormat& sourceChars = buffer[i];
         const int sourceSize = static_cast<int>(sourceChars.size());
         int previousSegmentEnd = -1;
         for (const WrapInfo w : std::as_const(lineBreaks)) {
@@ -6362,18 +6483,14 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             if (newBufferCharPosition < w.firstChar) {
                 newBufferCharPosition = std::min(w.firstChar, sourceSize);
             }
-            if (w.needsIndent && newBufferCharPosition < sourceSize) {
+            const bool addsIndent = w.needsIndent && newBufferCharPosition < sourceSize;
+            if (addsIndent) {
                 // indentation takes the styling of the character it precedes, so
                 // that it reads as part of the same run of text
                 const TChar& indentSpace = sourceChars[newBufferCharPosition];
-                // add indentation to TChar buffer and newLineText
-                if (w.isNewline) {
-                    newBufferLine.insert(newBufferLine.end(), indent, indentSpace);
-                    newLineText.append(qIndent);
-                } else {
-                    newBufferLine.insert(newBufferLine.end(), hangingIndent, indentSpace);
-                    newLineText.append(qHangingIndent);
-                }
+                const int indentWidth = w.isNewline ? indent : hangingIndent;
+                newBufferLine.insert(newBufferLine.end(), indentWidth, indentSpace);
+                newLineText.resize(newLineText.size() + indentWidth, QChar::Space);
             }
             // append TChars of the wrapped lineText to TChar buffer
             const int copyEnd = std::min(w.lastChar, sourceSize);
@@ -6382,26 +6499,27 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
                 newBufferCharPosition = copyEnd;
             }
             // everything else
-            newLineText.append(lineText.mid(w.firstChar, w.lastChar - w.firstChar));
-            tempList.append(newLineText);
+            newLineText.append(QStringView(lineText).mid(w.firstChar, w.lastChar - w.firstChar));
+            qint64 segmentTime = TBuffer::csmWrappedLineTimeStamp;
             if (w.isNewline && previousSegmentEnd >= 0 && time == TBuffer::csmWrappedLineTimeStamp) {
                 // A line feed inserted into a wrapped line starts a line of its
                 // own, which csmWrappedLineTimeStamp would join back onto the last
-                timeList.append(QDateTime::currentMSecsSinceEpoch());
+                segmentTime = QDateTime::currentMSecsSinceEpoch();
             } else if (w.isNewline) {
-                timeList.append(time);
-            } else {
-                timeList.append(TBuffer::csmWrappedLineTimeStamp);
+                segmentTime = time;
             }
-            queue.push(std::move(newBufferLine));
-            promptList.append(isPrompt);
             // getWrapInfo() only ever skips spaces between the segments of a
             // line, and the first segment carries over the source line's own gap
+            // (or, starting a paragraph, its own indent)
             int wrapGap = 0;
             if (!w.isNewline) {
                 wrapGap = (previousSegmentEnd < 0) ? wrapGapBuffer.at(i) : w.firstChar - previousSegmentEnd;
+            } else if (addsIndent) {
+                wrapGap = indent;
+            } else if (previousSegmentEnd < 0) {
+                wrapGap = wrapGapBuffer.at(i);
             }
-            wrapGapList.append(static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())));
+            rewrapped.append({std::move(newBufferLine), std::move(newLineText), segmentTime, static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())), isPrompt});
             previousSegmentEnd = w.lastChar;
             newBufferLine.clear();
             newLineText = QString();
@@ -6415,24 +6533,22 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         wrapGapBuffer.pop_back();
     }
 
-    const int rewrappedLines = static_cast<int>(queue.size());
-    for (int i = 0; i < rewrappedLines; ++i) {
-        if (tempList[i].isEmpty()) {
-            queue.pop();
+    const int rewrappedLines = static_cast<int>(rewrapped.size());
+    for (RewrappedLine& line : rewrapped) {
+        if (line.text.isEmpty()) {
             appendEmptyLine();
             // A break that leaves only dropped spaces for the last line keeps
             // it wrapped, for whatever is echoed next to carry on from them
-            if (timeList[i] == TBuffer::csmWrappedLineTimeStamp) {
+            if (line.time == TBuffer::csmWrappedLineTimeStamp) {
                 timeBuffer.back() = TBuffer::csmWrappedLineTimeStamp;
-                wrapGapBuffer.back() = wrapGapList[i];
+                wrapGapBuffer.back() = line.wrapGap;
             }
         } else {
-            buffer.push_back(std::move(queue.front()));
-            queue.pop();
-            lineBuffer.append(tempList[i]);
-            timeBuffer.append(timeList[i]);
-            promptBuffer.push_back(promptList[i]);
-            wrapGapBuffer.append(wrapGapList[i]);
+            buffer.push_back(std::move(line.chars));
+            lineBuffer.append(std::move(line.text));
+            timeBuffer.append(line.time);
+            promptBuffer.push_back(line.prompt);
+            wrapGapBuffer.append(line.wrapGap);
         }
     }
 
@@ -6550,7 +6666,7 @@ void TBuffer::expandLine(int y, int count, TChar& pC)
     materialisePreTriggerPassLine(y);
     const int size = buffer[y].size() - 1;
     for (int i = size, total = size + count; i < total; ++i) {
-        buffer[y].push_back(pC);
+        buffer[y].append(1, pC);
         lineBuffer[y].append(QChar::Space);
     }
 }
@@ -6570,8 +6686,8 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
     if (x1 < 0 || x2 < 0) {
         return false;
     }
-    // the erase() below is undefined behaviour when the start is past the end:
-    // it moves a range of negative length, writing beyond the allocation
+    // the erase() below corrupts the line when the start is past the end:
+    // a range of negative length
     if (y1 > y2 || (y1 == y2 && x1 > x2)) {
         return false;
     }
@@ -6589,16 +6705,14 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
         // multi-line one can still start past its own end: an empty line has
         // an x_end of -1, and a first line selected from its very last column
         // leaves x at buffer[y].size(). Either way there is nothing on the line
-        // to remove, and erase() over that range is the same reversed move.
+        // to remove, and erase() over that range is the same reversed range.
         if (x > x_end) {
             continue;
         }
         noteRemovedLinks(buffer[y], mLinesRemovedTotal + y, x, x_end);
         materialisePreTriggerPassLine(y);
         lineBuffer[y].remove(x, x_end - x);
-        auto it1 = buffer[y].begin() + x;
-        auto it2 = buffer[y].begin() + x_end;
-        buffer[y].erase(it1, it2);
+        buffer[y].erase(x, x_end);
         spliceEraseFromPreTriggerPassLine(y, x, x_end);
         noteTriggerPassLineEdit(y, x, x_end - x, 0);
     }
@@ -6656,7 +6770,7 @@ void TBuffer::finaliseActiveHyperlink()
         if (!mServerWrapPendingLine.isEmpty()) {
             // Held text may yet be joined on in front, shifting the columns, or be committed on its
             // own, leaving them as they are - so registered once that is known.
-            mHeldVisibility = {mCurrentHyperlinkLinkId, mCurrentHyperlinkStartColumn, static_cast<int>(mMudLine.length()), mCurrentHyperlinkStartsAfterHeldText, mCurrentHyperlinkStyling};
+            mHeldVisibilities.append({mCurrentHyperlinkLinkId, mCurrentHyperlinkStartColumn, static_cast<int>(mMudLine.length()), mCurrentHyperlinkStartsAfterHeldText, mCurrentHyperlinkStyling});
         } else if (mCurrentHyperlinkStartLine == static_cast<int>(lineBuffer.size()) - 1) {
             registerLinkVisibility(mCurrentHyperlinkLinkId, mCurrentHyperlinkStartColumn, mMudLine.length() - mCurrentHyperlinkStartColumn, mCurrentHyperlinkStyling);
         } else {
@@ -6958,7 +7072,9 @@ void TBuffer::shrinkBuffer()
         constexpr int prefetchDistance = 8;
         if (prefetchDistance < lineBuffer.size() && static_cast<size_t>(prefetchDistance) < buffer.size()) {
             prefetchAllocatorHeader(lineBuffer.at(prefetchDistance).constData(), sizeof(QArrayData));
-            prefetchAllocatorHeader(buffer[prefetchDistance].data(), 0);
+            if (const TChar* chars = buffer[prefetchDistance].heapData()) {
+                prefetchAllocatorHeader(chars, 0);
+            }
         }
         lineBuffer.pop_front();
         promptBuffer.pop_front();
@@ -7165,7 +7281,7 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
                 if (linkID == 0) {
                     linkID = addLinkToStore(linkFunction, linkHint, luaReference, QString(), y1);
                 }
-                TChar& c = buffer.at(y).at(x++);
+                TChar& c = buffer.at(y).expand().at(x++);
                 if (c.mLinkIndex && c.mLinkIndex != linkID) {
                     noteRemovedLinkId(c.mLinkIndex, mLinesRemovedTotal + y);
                 }
@@ -7217,7 +7333,7 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
                         return true;
                     }
                 }
-                buffer.at(y).at(x).setAttributes(attributes, state);
+                buffer.at(y).expand().at(x).setAttributes(attributes, state);
                 ++x;
             }
         }
@@ -7260,7 +7376,7 @@ bool TBuffer::applyFgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
                     return true;
                 }
 
-                buffer.at(y).at(x++).setForeground(newColor);
+                buffer.at(y).expand().at(x++).setForeground(newColor);
             }
         }
         return true;
@@ -7302,7 +7418,7 @@ bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
                     return true;
                 }
 
-                buffer.at(y).at(x++).setBackground(newColor);
+                buffer.at(y).expand().at(x++).setBackground(newColor);
             }
         }
         return true;
@@ -7401,7 +7517,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
         s.append(qsl("<span>%1").arg(QString(spacePadding, QChar::Space)));
     }
 
-    const std::vector<TChar>& lineChars = buffer.at(cookedRow);
+    const TLineFormat& lineChars = buffer.at(cookedRow);
     const QString& lineText = lineBuffer.at(row);
     // Text is read in runs straight from the QString, so never past its end
     lastPos = std::min(lastPos, static_cast<int>(lineText.size()));
@@ -8098,7 +8214,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         // Try and convert two or four byte sequence to Unicode using Qts own
         // decoder - and check number of codepoints returned
 
-        QString codePoint;
+        QStringView codePoint;
         if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, gbSequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
@@ -8220,7 +8336,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
         // Try and convert two byte sequence to Unicode using Qts own
         // decoder - and check number of codepoints returned
 
-        QString codePoint;
+        QStringView codePoint;
         if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, big5SequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
@@ -8347,7 +8463,7 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
         // Try and convert two byte sequence to Unicode using Qts own
         // decoder - and check number of codepoints returned
 
-        QString codePoint;
+        QStringView codePoint;
         if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, eucSequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
@@ -8510,7 +8626,7 @@ bool TBuffer::processJapaneseSequence(const std::string& data, const bool isFrom
             return true;
         }
     }
-    QString decoded;
+    QStringView decoded;
     decodeMultibyteSequence(QByteArrayView(data.data() + position, count), decoded);
     if (decoded.isEmpty() || decoded.contains(QChar::ReplacementCharacter)) {
         mMudLine.append(QChar::ReplacementCharacter);
@@ -8658,7 +8774,7 @@ void TBuffer::appendReplacementCharacter(TChar c)
 {
     mMudLine.append(QChar::ReplacementCharacter);
     styleForCurrentLink(c);
-    mMudBuffer.push_back(c);
+    mMudBuffer.append(1, c);
     if (mHyperlinkActive) {
         if (mCurrentHyperlinkText.isEmpty()) {
             mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 1;
@@ -8711,18 +8827,26 @@ QStringDecoder TBuffer::multibyteDecoderFor(const Decoder decoder, const QByteAr
     }
 }
 
-// Falls back to TEncodingHelper (lookup tables, Qt5Compat codecs) for Qt builds without ICU
-bool TBuffer::decodeMultibyteSequence(QByteArrayView bytes, QString& decoded)
+// Falls back to a Qt5Compat codec for Qt builds without ICU
+bool TBuffer::decodeMultibyteSequence(QByteArrayView bytes, QStringView& decoded)
 {
     if (mMultibyteDecoder.isValid()) {
         mMultibyteDecoder.resetState();
-        decoded = mMultibyteDecoder.decode(bytes);
+        // Spares a QString allocation per character; callers pass at most four bytes
+        if (Q_LIKELY(mMultibyteDecoder.requiredSpace(bytes.size()) <= static_cast<qsizetype>(mMultibyteDecoded.size()))) {
+            const QChar* end = mMultibyteDecoder.appendToBuffer(mMultibyteDecoded.data(), bytes);
+            decoded = QStringView(mMultibyteDecoded.data(), end);
+        } else {
+            mMultibyteDecodedString = mMultibyteDecoder.decode(bytes);
+            decoded = mMultibyteDecodedString;
+        }
         return true;
     }
-    if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
+    if (!mLegacyMultibyteCodec) {
         return false;
     }
-    decoded = TEncodingHelper::decode(bytes.toByteArray(), mEncoding);
+    mMultibyteDecodedString = mLegacyMultibyteCodec->toUnicode(bytes.data(), static_cast<int>(bytes.size()));
+    decoded = mMultibyteDecodedString;
     return true;
 }
 
@@ -8732,7 +8856,11 @@ void TBuffer::encodingChanged(const QByteArray& newEncoding)
         mEncoding = newEncoding;
         mDecoder = decoderFor(mEncoding);
         mMultibyteDecoder = multibyteDecoderFor(mDecoder, mEncoding);
+        mLegacyMultibyteCodec = nullptr;
         if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR" || mEncoding == "SHIFT_JIS" || mEncoding == "EUC-JP") {
+            if (!mMultibyteDecoder.isValid()) {
+                mLegacyMultibyteCodec = TEncodingHelper::legacyCodec(mEncoding);
+            }
             if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";
             } else {
@@ -8782,7 +8910,14 @@ void TBuffer::clearSearchHighlights()
     }
     const int lastLine = std::min(mLastFoundLine, static_cast<int>(buffer.size()) - 1);
     for (int y = mFirstFoundLine; y <= lastLine; ++y) {
-        for (auto& character : buffer[y]) {
+        TLineFormat& line = buffer[y];
+        // Checked first so a line with nothing to clear stays stored as one TChar
+        if (std::none_of(line.cbegin(), line.cend(), [](const TChar& character) {
+                return character.isFound();
+            })) {
+            continue;
+        }
+        for (auto& character : line.expand()) {
             character.mFlags &= ~TChar::AttributeFlag::Found;
         }
     }
@@ -9694,9 +9829,18 @@ void TBuffer::updateLinkCharacters(int linkIndex, int fromLine)
 
     // Iterate through all lines in the buffer
     for (auto lineNumber = static_cast<size_t>(std::max(0, fromLine)); lineNumber < buffer.size(); ++lineNumber) {
-        auto& line = buffer[lineNumber];
+        TLineFormat& lineFormat = buffer[lineNumber];
+        // Checked first so a line without the link stays stored as one TChar
+        if (std::none_of(lineFormat.cbegin(), lineFormat.cend(), [linkIndex](const TChar& character) {
+                return character.linkIndex() == linkIndex;
+            })) {
+#if defined(DEBUG_OSC_PROCESSING)
+            totalCharacters += static_cast<int>(lineFormat.size());
+#endif
+            continue;
+        }
         // Iterate through all characters in the line
-        for (auto& tchar : line) {
+        for (auto& tchar : lineFormat.expand()) {
 #if defined(DEBUG_OSC_PROCESSING)
             totalCharacters++;
 #endif
