@@ -545,5 +545,7 @@ private:
     QString mListenerFacing = qsl("north");
     QString mScriptListenerFacing;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;
+    // A file's own name, as getPlayingSounds() and the like list it, to the full path it was played from
+    QMap<QString, QString> mListedMediaSources;
 };
 #endif // MUDLET_TMEDIA_H
