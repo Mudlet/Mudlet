@@ -5095,6 +5095,10 @@ bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L)
         materialisePendingGlobals(L);
         return false;
     }
+    if (mGlobalsHandlersVerified) {
+        mGlobalsHandlersTrusted = true;
+        return true;
+    }
     if (!globalsHandlersInPlace(L)) {
         // The guard turns the deferral off for good once the metatable is
         // handed out, but a package that replaced getmetatable() after Mudlet's
@@ -5107,6 +5111,8 @@ bool TLuaInterpreter::lazyGlobalsUsable(lua_State* L)
         stripGlobalsHandlers(L);
         return false;
     }
+    // A script still running can change the metatable between two lines it feeds
+    mGlobalsHandlersVerified = mScriptCallDepth == 0;
     learn(L, scmHandlersInPlace);
     return true;
 }
@@ -5148,6 +5154,8 @@ void TLuaInterpreter::standDownDeferral(lua_State* L)
 void TLuaInterpreter::stripGlobalsHandlers(lua_State* L)
 {
     mGlobalsHandlersLinger = false;
+    mGlobalsHandlersVerified = false;
+    mGlobalsHandlersTrusted = false;
     const int callerStackTop = lua_gettop(L);
     lua_rawgeti(L, LUA_REGISTRYINDEX, mGlobalsTableRef);
     if (!lua_getmetatable(L, -1)) {
@@ -5678,6 +5686,8 @@ void TLuaInterpreter::installLazyGlobals()
             mGlobalsTable = lua_topointer(L, LUA_GLOBALSINDEX);
             mGlobalsMetatableTouched = false;
             mGlobalsHandlersLinger = false;
+            mGlobalsHandlersVerified = false;
+            mGlobalsHandlersTrusted = false;
             mLazyGlobalsInstalled = installGlobalsMetatableGuard(L, nullptr, "getmetatable", 0) && installGlobalsMetatableGuard(L, nullptr, "setmetatable", 1)
                                     && installGlobalsMetatableGuard(L, "debug", "getmetatable", 2) && installGlobalsMetatableGuard(L, "debug", "setmetatable", 3)
                                     && installGlobalsMetatableGuard(L, nullptr, "rawget", 4);
@@ -5729,6 +5739,8 @@ void TLuaInterpreter::forgetLazyGlobals()
     mGlobalsTableRef = LUA_NOREF;
     mGlobalsMetatableTouched = false;
     mGlobalsHandlersLinger = false;
+    mGlobalsHandlersVerified = false;
+    mGlobalsHandlersTrusted = false;
     mIndexHandlerRef = LUA_NOREF;
     mNewindexHandlerRef = LUA_NOREF;
     mCaptureScopeOpen = false;
@@ -6944,6 +6956,7 @@ QString TLuaInterpreter::getLuaString(const QString& stringName)
     if (!pGlobalLua) {
         return QString();
     }
+    const ScriptCallerScope callerScope(*this, false);
     lua_State* L = pGlobalLua;
     const int top = lua_gettop(L);
 

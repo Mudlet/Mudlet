@@ -86,6 +86,8 @@ class TLuaInterpreter : public QThread
     friend class LuaInterface;
     // reads the parked capture vectors' capacity, which nothing else exposes
     friend class CaptureGroupParkingTest;
+    // checks a line really skipped looking for the handlers before it tests what follows
+    friend class LazyGlobalsCacheTest;
 
 public:
     Q_DISABLE_COPY(TLuaInterpreter)
@@ -164,21 +166,40 @@ public:
     void setExpandedCommand(const QString&);
     void settleCommandAfterAliasPass();
     // expandAlias() gives "command" back only to an alias script, so every way into
-    // a script says whether it is one
+    // a script says whether it is one. Every way into Lua goes through one, as
+    // lazyGlobalsUsable() relies on hearing of each script that runs.
     class ScriptCallerScope
     {
     public:
         ScriptCallerScope(TLuaInterpreter& lua, const bool aliasScript)
-        : mLua(lua)
-        , mWasAliasScript(std::exchange(lua.mRunningAliasScript, aliasScript))
+        : ScriptCallerScope(&lua, aliasScript)
         {
         }
-        ~ScriptCallerScope() { mLua.mRunningAliasScript = mWasAliasScript; }
+        // For a caller that can be working on a Lua state with no interpreter
+        ScriptCallerScope(TLuaInterpreter* lua, const bool aliasScript)
+        : mpLua(lua)
+        , mWasAliasScript(lua && std::exchange(lua->mRunningAliasScript, aliasScript))
+        {
+            if (mpLua) {
+                ++mpLua->mScriptCallDepth;
+                mpLua->mGlobalsHandlersVerified = false;
+                if (std::exchange(mpLua->mGlobalsHandlersTrusted, false)) {
+                    mpLua->lazyGlobalsUsable(mpLua->pGlobalLua);
+                }
+            }
+        }
+        ~ScriptCallerScope()
+        {
+            if (mpLua) {
+                mpLua->mRunningAliasScript = mWasAliasScript;
+                --mpLua->mScriptCallDepth;
+            }
+        }
         ScriptCallerScope(const ScriptCallerScope&) = delete;
         ScriptCallerScope& operator=(const ScriptCallerScope&) = delete;
 
     private:
-        TLuaInterpreter& mLua;
+        TLuaInterpreter* mpLua;
         const bool mWasAliasScript;
     };
     bool callEventHandler(const QString& function, const TEvent& pE);
@@ -1141,6 +1162,14 @@ private:
     // is rawget(), which puts a name still left out in place before reading.
     lua_CFunction mStockMetatableFunctions[5] = {};
     bool mGlobalsMetatableTouched = false;
+    // Once both handlers are seen in place with no script running, the next
+    // lines do not look for them again until a script runs. Lua can also run
+    // outside any script - a finaliser in the collection step nearly any C API
+    // call can take - so whatever was left out on that remembered answer is
+    // looked at again before the next script, the first thing that can read it.
+    bool mGlobalsHandlersVerified = false;
+    bool mGlobalsHandlersTrusted = false;
+    int mScriptCallDepth = 0;
     // Once nothing is left out the handlers only cost every read of a global
     // that is not there a C call, so the next line takes them off. Not in the
     // guard itself, so that a getter hands the script the metatable as it was
