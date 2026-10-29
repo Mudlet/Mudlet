@@ -13,9 +13,10 @@ Everything a run needs is in one file, `SvofBench.mpackage`, which is not in the
 - svof's saved settings (the `config`, `defup+keepup`, `namedb`, `pipes`, `prios` and `rift+inv` folders of
   its `svo` folder), with the class set to the corpus's and svof unpaused, as a player does at the start of a
   session;
-- the replay stream (`corpus.txt`), with other players' names and words replaced;
-- `manifest.lua`: bundle version, class, prompt count, line count, the corpus's md5 and the line counts of a
-  reference run in each mode;
+- the replay stream (`corpus.txt`), cut down to the text svof's triggers react to, with everything else
+  replaced by filler of the same shape;
+- `manifest.lua`: bundle version, class, prompt count, line count, the corpus's md5, the counts of a
+  reference run in each mode and how far a run may stray from them;
 - `bench.lua` and `gate.lua`, and the loader for standalone mode.
 
 svof's name database (`Database_namedb.db`) is left out. It holds real players' names, the scrubbed corpus no
@@ -33,7 +34,7 @@ A run needs `Xvfb`, `flock`, `bc`, `unzip`, `md5sum` and `lua5.1` with LuaSocket
 ### Building a package from your own log
 
 ```bash
-lua5.1 promptify.lua session.log corpus.txt
+lua5.1 promptify.lua session.log corpus.txt <character-name>
 lua5.1 make-package.lua --corpus corpus.txt --svof svof.mpackage --config <profile>/svo \
     --out SvofBench.mpackage [--namedb <profile>/Database_namedb.db] [--names names.txt]
 ```
@@ -43,28 +44,42 @@ svof does almost nothing until it sees prompts, so the corpus must carry the gam
 class. `promptify.lua` adds these, and for a log captured with prompts gagged it inserts a synthetic prompt
 every few lines. Without GA prompts svof's `getLines()` scans turn the replay quadratic.
 
-`make-package.lua` then scrubs the log, deterministically, so the same inputs build the same file:
+`make-package.lua` then scrubs the log, deterministically, so the same inputs build the same file. It
+keeps what svof reacts to and nothing else:
 
-- real names are collected from svof's name database (`--namedb`, by default `Database_namedb.db` beside
-  the `svo` folder), the who-lists in the log (`qw`, `cwho` and svof's own), the player's name in GMCP and
-  `--names`, one per line. Each is renamed as a whole word in any case, everywhere, prompts and GMCP
-  included, to a stand-in of the same length and case shape. So are speakers, people told something,
-  people acting at the start of a line, and capitalised words never seen in lower case outside speech;
-- everything inside double quotes, whoever says it, is replaced with filler of the same shape, with quotes
-  followed across lines; so are channels, tells and says typed at the prompt, and emotes seen only once.
-  Letters stay letters of the same case, digits stay digits, punctuation stays;
-- line count, byte count, prompts, GA and GMCP are unchanged, and the build stops unless every changed
-  line still matches the same svof exact, begin and substring patterns and regexes, nested ones included.
-  Words svof's patterns use are never renamed.
+- for every line it works out which of svof's patterns match: all of its triggers' patterns of every kind,
+  children where their parent lets them run, children of filter triggers on their captures, and the
+  triggers svof makes at runtime (its defences' messages, and strings it passes to temp triggers). Lua
+  patterns that read only the line are run; those that read svof's state are taken to match, and are
+  listed in the build's output;
+- a line becomes filler unless that changes which patterns match it: every letter is replaced with a
+  letter of the same case, every digit with a digit, and spaces, punctuation, symbols, ANSI and telnet
+  bytes stay, so the trigger engine does the same shape of work. Most lines go this way;
+- in a line svof does match, a word stays only if filler in its place changes what matches. Real names
+  get a stand-in of the same length and case shape, the same one everywhere, other capitalised words a
+  stand-in of their own, and the rest is filler;
+- real names come from svof's name database (`--namedb`, by default `Database_namedb.db` beside the `svo`
+  folder), the who-lists in the log (`qw`, `cwho` and svof's own), the player's name in GMCP and
+  `--names`, one per line;
+- GMCP keeps its keys and `Char.Vitals` as it is. In `Char.Status` the class, race, level, gender and
+  specialisation stay, the name gets its stand-in and every other value is filler, as is every value of
+  any other package;
+- an exported priority list in the config loses its author and time stamp.
 
-The build then audits its output and stops if any listed name is left in the corpus or the config, in any
-case, or if any six-word run from inside a quote in the log is left where it was quoted, or more often than
-the game prints it unquoted. Quoted text svof's own patterns match, a few of the game's fixed messages, is
-kept and listed in the build's output.
+The build then audits its output and stops unless every line matches exactly the svof patterns it did
+before, no listed name is left in the corpus or the config in any case, and no run of four words from a
+line that became filler is left anywhere, other than svof's own text. It prints how many lines were kept
+and which svof triggers kept them; `--report <file>` writes every one with an example line, for a person
+to read through.
 
-A package is held to the line counts of reference runs, one per mode. Build it, run it once in each mode
-you will use (the gate fails for want of a reference), then build again with the results; the corpus does
-not change, so they still apply:
+Filler changes some of what svof does as well as what it sees, because its scripts read text its patterns
+capture, such as the herb in an eating message. A run of a scrubbed package writes about 2,000 more lock
+warnings than its raw log's and fewer illusion marks, and in eight interleaved pairs it was up to 10% faster,
+4% at the median, so compare builds on the same package.
+
+A package is held to the counts of a reference run in each mode, within its slack (see below). Build it,
+run it once in each mode you will use (the gate fails for want of a reference), then build again with the
+results; the corpus does not change, so they still apply:
 
 ```bash
 SVOF_BENCH=SvofBench.mpackage test/svof-replay/run.sh ref build/src/mudlet
@@ -114,9 +129,12 @@ The report ends with `gate pass`, or `gate FAIL:` and the reasons, and `run.sh` 
 - `stop_reason` is not `end_marker`: the replay stalled or hit the sample limit;
 - svof did not load, is paused, has a class other than the manifest's, or saw a prompt count other than the
   manifest's;
-- `lines`, or `game_lines` (corpus lines that came through unchanged), is more than 0.5% from the package's
-  reference run in that mode, or the package has none. Repeat runs differ by up to about a hundred lines in
-  141,800.
+- `lines`, `game_lines` or `added_lines` is further from the package's reference run in that mode than
+  the manifest's `slack`, or the package has no reference. `game_lines` counts the corpus's lines that came
+  through, once the timings and illusion marks svof appends are taken off; `added_lines` counts every other
+  line svof wrote, other than its lock warnings, which it repeats at every prompt while it thinks it is
+  locked, so their number swings by hundreds between runs. The slack, 42 lines, 12 game lines and 32
+  added lines in about 141,850, is twice the widest spread measured on one machine.
 
 ## Checking both builds did the same work
 
@@ -125,5 +143,5 @@ wall-clock timers write into the buffer. Check instead that:
 
 - `svo_prompts` is identical, and equals the manifest's prompt count;
 - `client_sends` is 0;
-- `game_lines` agrees more closely than the gate's 0.5%, and `added_lines` (svof's own output) is close.
-  `run.sh` keeps the buffer in `result.txt.buffer` for a closer look.
+- `game_lines` and `added_lines` agree within the gate's slack. `run.sh` keeps the buffer in
+  `result.txt.buffer` for a closer look.

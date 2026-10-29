@@ -1,12 +1,12 @@
 -- Gives a plain Achaea log the protocol shape svof needs: a GMCP Char.Vitals before every prompt
 -- and IAC GA after it. Logs captured with prompts gagged get a synthetic prompt after every N lines,
 -- at a sentence end. The stream opens with IAC WILL GMCP and a Char.Status so svof learns its class.
--- usage: lua5.1 promptify.lua <plain-log> <out> [every=5] [class=Infernal]
-local src, dst = arg[1], arg[2]
-local every = tonumber(arg[3] or "5")
-local class = arg[4] or "Infernal"
-if not src or not dst then
-  io.stderr:write("usage: lua5.1 promptify.lua <plain-log> <out> [every=5] [class=Infernal]\n")
+-- usage: lua5.1 promptify.lua <plain-log> <out> <character-name> [every=5] [class=Infernal]
+local src, dst, name = arg[1], arg[2], arg[3]
+local every = tonumber(arg[4] or "5")
+local class = arg[5] or "Infernal"
+if not src or not dst or not (name or ""):match("^%a+$") or not every then
+  io.stderr:write("usage: lua5.1 promptify.lua <plain-log> <out> <character-name> [every=5] [class=Infernal]\n")
   os.exit(2)
 end
 
@@ -16,7 +16,7 @@ local function gmcp(pkg, body)
   return IAC .. SB .. GMCP .. pkg .. " " .. body .. IAC .. SE
 end
 
-local STATUS = gmcp("Char.Status", '{ "name": "Elon", "fullname": "Elon", "age": "120", "race": "Human", "specialisation": "", "level": "99", "xp": "50%", "xprank": "100", "class": "' .. class .. '", "city": "Mhaldor", "house": "", "order": "", "boundcredits": "0", "unboundcredits": "0", "lessons": "0", "explorerrank": "", "mayancrowns": "0", "boundmayancrowns": "0", "gold": "0", "bank": "0", "unread_news": "0", "unread_msgs": "0", "target": "None", "gender": "male" }')
+local STATUS = gmcp("Char.Status", '{ "name": "' .. name .. '", "fullname": "' .. name .. '", "age": "120", "race": "Human", "specialisation": "", "level": "99", "xp": "50%", "xprank": "100", "class": "' .. class .. '", "city": "Mhaldor", "house": "", "order": "", "boundcredits": "0", "unboundcredits": "0", "lessons": "0", "explorerrank": "", "mayancrowns": "0", "boundmayancrowns": "0", "gold": "0", "bank": "0", "unread_news": "0", "unread_msgs": "0", "target": "None", "gender": "male" }')
 
 local function vitals(h, m, bal, eq)
   return gmcp("Char.Vitals", string.format('{ "hp": "%d", "maxhp": "6710", "mp": "%d", "maxmp": "5399", "ep": "28169", "maxep": "28169", "wp": "18809", "maxwp": "18809", "nl": "35", "bal": "%d", "eq": "%d", "vote": "1", "string": "H:%d/6710 M:%d/5399 E:28169/28169 W:18809/18809 NL:35/100 ", "charstats": [ "Bleed: 0", "Rage: 0" ] }', h, m, bal, eq, h, m))

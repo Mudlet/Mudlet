@@ -133,11 +133,11 @@ local function finish(why)
   end
   local ref = manifest.expect and manifest.expect[CFG.mode]
   if not ref then
-    problems[#problems + 1] = "no reference line counts for " .. CFG.mode .. " runs"
+    problems[#problems + 1] = "no reference counts for " .. CFG.mode .. " runs"
   else
-    local got = {lines = lines, game_lines = checked.game_lines}
-    for _, k in ipairs({"lines", "game_lines"}) do
-      local slack = math.ceil(ref[k] * manifest.tolerance)
+    local got = {lines = lines, game_lines = checked.game_lines, added_lines = checked.added_lines}
+    for _, k in ipairs({"lines", "game_lines", "added_lines"}) do
+      local slack = manifest.slack[k]
       if math.abs(got[k] - ref[k]) > slack then
         problems[#problems + 1] = string.format("%s %d is more than %d from the reference %d", k, got[k], slack, ref[k])
       end

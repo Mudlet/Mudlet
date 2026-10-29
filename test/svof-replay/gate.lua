@@ -1,6 +1,6 @@
--- Identity gate for a replay, loaded by bench.lua: the game's own lines must come through unchanged, and
--- svof's added output is counted. Its timing annotations vary with wall-clock and read chunking, so those
--- are normalised away before hashing.
+-- Identity gate for a replay, loaded by bench.lua: the game's own lines must come through, and svof's
+-- added output is counted. What svof appends to a line, timings and illusion marks, varies with wall-clock
+-- and read chunking, so it is normalised away first.
 local gate = {}
 
 -- The corpus's lines as Mudlet shows them, without their telnet sequences
@@ -38,8 +38,13 @@ function gate.check(lines, plain)
         l = l:gsub("%(%d+%.%d+%)$", "")
         l = l:match("^(%*%*%*%*%*%*%*%*%*%*+) %([%d%.]+s%)$") or l
         if l:match("^%(%d+%.%d+s%)$") then l = "" end
-        l = l:gsub("%(svof%): Winnar!", "(svof): You won!")
-        if l ~= "" then added[#added + 1] = l end
+        l = l:gsub("%(svof%): Winnar!", "(svof): You won!"):gsub(" %(!?i%)", "")
+        if l ~= "" and plain[l] then
+          game[#game + 1] = l
+        -- Repeated at every prompt while svof thinks it is locked, so one run can have hundreds more
+        elseif l ~= "" and not l:find("^%(locks?: ") then
+          added[#added + 1] = l
+        end
       end
     end
   end

@@ -1,10 +1,10 @@
 -- Builds SvofBench.mpackage, everything the svof replay benchmark needs in one file: svof, its saved
--- config, a prompted corpus with players' names and their words replaced, and the scripts that run it
+-- config, a prompted corpus scrubbed down to the text svof's triggers read, and the scripts that run it
 -- (bench.lua, gate.lua, and standalone mode's loader). See README.md.
 local USAGE = [[
 usage: lua5.1 make-package.lua --corpus <prompted-log> --svof <svof.mpackage> --config <svo-folder>
            --out <SvofBench.mpackage> [--namedb <Database_namedb.db>] [--names <file>]
-           [--expect <result.txt>]... [--bundle-version <n>] [--no-scrub]
+           [--expect <result.txt>]... [--bundle-version <n>] [--report <file>] [--no-scrub]
 ]]
 local here = arg[0]:match("^(.*)/[^/]*$") or "."
 
@@ -14,7 +14,7 @@ local function usage(msg)
 end
 
 local VALUED = {corpus = true, svof = true, config = true, out = true, namedb = true, names = true,
-  expect = true, ["bundle-version"] = true}
+  expect = true, ["bundle-version"] = true, report = true}
 local opts, expects = {}, {}
 do
   local i = 1
@@ -120,168 +120,461 @@ do
   end
 end
 
-local texts, prompt = {}, {}
-for i, l in ipairs(lines) do
-  local t = {}
-  for _, s in ipairs(segments(l)) do
-    if s.text then t[#t + 1] = s.text elseif s.proto == "\255\249" then prompt[i] = true end
+-- Each line's text as svof's triggers see it, whether it is a prompt, and the player's name from GMCP by then
+local texts, prompt, me = {}, {}, {}
+local class
+do
+  local name
+  for i, l in ipairs(lines) do
+    local t = {}
+    for _, s in ipairs(segments(l)) do
+      if s.text then
+        t[#t + 1] = s.text
+      elseif s.proto == "\255\249" then
+        prompt[i] = true
+      elseif s.proto:sub(1, 3) == "\255\250\201" and s.proto:match("^...Char%.Status ") then
+        name = s.proto:match('"name": "([^"]*)"') or name
+        class = class or s.proto:match('"class": "([^"]+)"')
+      end
+    end
+    texts[i] = table.concat(t)
+    me[i] = name
   end
-  texts[i] = table.concat(t)
 end
-
 local _, prompts = corpus:gsub("\255\249", "")
 local _, newlines = corpus:gsub("\n", "")
-local class = corpus:match('\255\250\201Char%.Status [^\255]-"class": "([^"]+)"')
 if prompts == 0 then die("the corpus has no IAC GA prompts; build it with promptify.lua") end
 if not class then die("the corpus has no GMCP Char.Status with a class; build it with promptify.lua") end
 
--- svof's trigger patterns. A word in one is only renamed if it is a listed name, and each line the scrub
--- changes must match the same ones as before, except one-character patterns under another trigger: those
--- only see a prompt's flags.
-local svof = {words = {}, exact = {}, beginsBy = {}, subs = {}, regex = {}, text = {}}
+local function unxml(s)
+  return (s:gsub("&lt;", "<"):gsub("&gt;", ">"):gsub("&quot;", '"'):gsub("&apos;", "'"):gsub("&amp;", "&"))
+end
+
+-- svof's triggers as Mudlet runs them: the tree, each node's patterns, and how its children are reached
+local SUBSTRING, PERL, BEGIN, EXACT, LUA, SPACER, COLOUR, PROMPT = 0, 1, 2, 3, 4, 5, 6, 7
+local nodes, pats, literals, runtime = {}, {}, {}, {}
+local svofWords = {}
 do
   local p = io.popen("unzip -p " .. q(opts.svof) .. " '*.xml'")
   local xml = p:read("*a")
   p:close()
   if #xml == 0 then die("no XML in " .. opts.svof) end
-  local function unxml(s)
-    return (s:gsub("&lt;", "<"):gsub("&gt;", ">"):gsub("&quot;", '"'):gsub("&apos;", "'"):gsub("&amp;", "&"))
-  end
-  -- Runs of plain text in a regex
-  local function regexRuns(re)
-    local runs, run, i, n = {}, {}, 1, #re
-    local function flush()
-      if #run > 0 then runs[#runs + 1] = table.concat(run) end
-      run = {}
-    end
-    while i <= n do
-      local c = re:sub(i, i)
-      if c == "\\" then
-        local e = re:sub(i + 1, i + 1)
-        if e:match("%w") then flush() else run[#run + 1] = e end
-        i = i + 2
-      elseif c == "[" then
-        flush()
-        local j = i + 1
-        if re:sub(j, j) == "^" then j = j + 1 end
-        if re:sub(j, j) == "]" then j = j + 1 end
-        while j <= n and re:sub(j, j) ~= "]" do
-          if re:sub(j, j) == "\\" then j = j + 1 end
-          j = j + 1
-        end
-        i = j + 1
-      elseif c == "(" then
-        flush()
-        i = i + 1
-        if re:sub(i, i) == "?" then i = (re:find("[:=!>)]", i) or n) + 1 end
-      elseif c == "?" or c == "*" or c == "{" then
-        run[#run] = nil
-        flush()
-        i = c == "{" and (re:find("}", i, true) or n) + 1 or i + 1
-      elseif c:match("[%^%$%.|)+]") then
-        flush()
-        i = i + 1
-      else
-        run[#run + 1] = c
-        i = i + 1
-      end
-    end
-    flush()
-    return runs
-  end
-  -- One entry per open trigger: whether it has patterns, so its children only run once it fires
-  local open, pos = {}, 1
+  local stack, pos = {}, 1
   while true do
-    local s, e, close, tag = xml:find("<(/?)(%a+)[^>]*>", pos)
+    local s, e, close, tag, attrs = xml:find("<(/?)(%a+)([^>]*)>", pos)
     if not s then break end
     pos = e + 1
-    if (tag == "Trigger" or tag == "TriggerGroup") and xml:sub(e - 1, e) ~= "/>" then
-      if close == "/" then open[#open] = nil else open[#open + 1] = false end
-    elseif tag == "regexCodeList" and close == "" and xml:sub(e - 1, e) ~= "/>" then
-      local listEnd = xml:find("</regexCodeList>", pos, true)
-      local _, typesEnd, types = xml:find("^%s*<regexCodePropertyList>(.-)</regexCodePropertyList>", listEnd + 16)
-      if not typesEnd then die("unexpected trigger XML in " .. opts.svof) end
-      local kinds = {}
-      for k in types:gmatch("<integer>(%-?%d+)</integer>") do kinds[#kinds + 1] = tonumber(k) end
-      local top = true
-      for k = 1, #open - 1 do top = top and not open[k] end
-      local n = 0
-      for pat in xml:sub(pos, listEnd - 1):gmatch("<string>(.-)</string>") do
-        n = n + 1
-        pat = unxml(pat)
-        open[#open] = true
-        for w in pat:gmatch("%a+") do svof.words[w:lower()] = true end
-        local kind, checked = kinds[n], top or #pat >= 2
-        if kind == 0 or kind == 2 or kind == 3 then svof.text[#svof.text + 1] = pat end
-        if kind == 3 and checked then
-          svof.exact[pat] = true
-        elseif kind == 2 and checked then
-          local b = pat:byte(1)
-          svof.beginsBy[b] = svof.beginsBy[b] or {}
-          table.insert(svof.beginsBy[b], pat)
-        elseif kind == 0 and checked then
-          svof.subs[#svof.subs + 1] = pat
-        elseif kind == 1 then
-          local runs = regexRuns(pat)
-          for _, r in ipairs(runs) do svof.text[#svof.text + 1] = r end
-          svof.regex[#svof.regex + 1] = {pat = pat, runs = runs}
+    local empty = attrs:sub(-1) == "/"
+    if tag == "Trigger" or tag == "TriggerGroup" then
+      if empty then
+        -- nothing to match
+      elseif close == "/" then
+        stack[#stack] = nil
+      else
+        local node = {parent = stack[#stack], pats = {}, stay = 0,
+          multi = attrs:find('isMultiline="yes"', 1, true) ~= nil, filter = attrs:find('isFilterTrigger="yes"', 1, true) ~= nil}
+        nodes[#nodes + 1] = node
+        stack[#stack + 1] = node
+      end
+    elseif close == "" and not empty and stack[#stack] then
+      local node = stack[#stack]
+      if tag == "name" and not node.name then
+        node.name = unxml(xml:match("^(.-)</name>", pos) or "")
+      elseif tag == "mStayOpen" then
+        node.stay = tonumber(xml:match("^%s*(%d+)", pos)) or 0
+      elseif tag == "regexCodeList" then
+        local listEnd = xml:find("</regexCodeList>", pos, true) or die("unexpected trigger XML in " .. opts.svof)
+        local list = xml:sub(pos, listEnd - 1)
+        local _, typesEnd, types = xml:find("^%s*<regexCodePropertyList>(.-)</regexCodePropertyList>", listEnd + 16)
+        if not typesEnd then die("unexpected trigger XML in " .. opts.svof) end
+        local strs, i = {}, 1
+        while true do
+          local a, b, slash = list:find("<string(/?)>", i)
+          if not a then break end
+          if slash == "/" then
+            strs[#strs + 1] = ""
+            i = b + 1
+          else
+            local c = list:find("</string>", b + 1, true)
+            strs[#strs + 1] = unxml(list:sub(b + 1, c - 1))
+            i = c + 9
+          end
+        end
+        local kinds = {}
+        for k in types:gmatch("<integer>(%-?%d+)</integer>") do kinds[#kinds + 1] = tonumber(k) end
+        if #kinds ~= #strs then die("trigger " .. tostring(node.name) .. " has " .. #strs .. " patterns but " .. #kinds .. " kinds") end
+        for k, str in ipairs(strs) do
+          local pat = {id = #pats + 1, kind = kinds[k], text = str, node = node}
+          pats[#pats + 1] = pat
+          node.pats[#node.pats + 1] = pat
+          for w in str:gmatch("%a+") do svofWords[w:lower()] = true end
+        end
+        pos = typesEnd + 1
+      end
+    end
+  end
+  -- svof also makes triggers at runtime: its defences' messages, and strings passed straight to temp triggers
+  local KEYS = {on = EXACT, off = EXACT, on_only = EXACT, on_free = EXACT, off_free = EXACT, def = EXACT,
+    onr = PERL, offr = PERL, defr = PERL, offs = SUBSTRING}
+  local CALLS = {tempExactMatchTrigger = EXACT, tempRegexTrigger = PERL, tempTrigger = SUBSTRING,
+    tempBeginOfLineTrigger = BEGIN}
+  local ESC = {n = "\n", t = "\t", r = "\r", a = "\a", b = "\b", f = "\f", v = "\v"}
+  for body in xml:gmatch("<script>(.-)</script>") do
+    local src, i = unxml(body), 1
+    local want, depth = nil, 0
+    local function found(str)
+      literals[str] = true
+      if want then
+        runtime[#runtime + 1] = {kind = want.kind, text = str}
+        if not want.depth then want = nil end
+      end
+    end
+    while i <= #src do
+      local c = src:sub(i, i)
+      if c:match("[%a_]") then
+        local name = src:match("^[%w_]+", i)
+        i = i + #name
+        if KEYS[name] and src:match("^%s*=[^=]", i) then
+          want = {kind = KEYS[name], depth = src:match("^%s*=%s*{", i) and depth + 1}
+        elseif CALLS[name] and (src:match("^%s*%(", i) or src:match("^%s+or%s+[%w_]+%)%s*%(", i)) then
+          want = {kind = CALLS[name]}
+          i = src:find("(", i, true)
+        elseif want and not want.depth then
+          want = nil
+        end
+      elseif c == "{" or c == "}" then
+        depth = depth + (c == "{" and 1 or -1)
+        if want and want.depth and depth < want.depth then want = nil end
+        i = i + 1
+      elseif c == "-" and src:sub(i + 1, i + 1) == "-" then
+        local eq = src:match("^%-%-%[(=*)%[", i)
+        local close = eq and select(2, src:find("]" .. eq .. "]", i, true)) or src:find("\n", i, true)
+        i = (close or #src) + 1
+      elseif c == '"' or c == "'" then
+        local buf, j = {}, i + 1
+        while j <= #src do
+          local d = src:sub(j, j)
+          if d == "\\" then
+            local nx = src:sub(j + 1, j + 1)
+            local digits = src:match("^%d%d?%d?", j + 1)
+            if digits then
+              buf[#buf + 1] = string.char(tonumber(digits) % 256)
+              j = j + 1 + #digits
+            else
+              buf[#buf + 1] = ESC[nx] or nx
+              j = j + 2
+            end
+          elseif d == c or d == "\n" then
+            break
+          else
+            buf[#buf + 1] = d
+            j = j + 1
+          end
+        end
+        found(table.concat(buf))
+        i = j + 1
+      elseif c == "[" and src:match("^%[=*%[", i) then
+        local eq = src:match("^%[(=*)%[", i)
+        local from = i + 2 + #eq
+        local e1, e2 = src:find("]" .. eq .. "]", from, true)
+        found((src:sub(from, (e1 or #src + 1) - 1):gsub("^\n", "")))
+        i = (e2 or #src) + 1
+      else
+        i = i + 1
+      end
+    end
+  end
+  for s in pairs(literals) do
+    for w in s:gmatch("%a+") do svofWords[w:lower()] = true end
+  end
+end
+if #pats == 0 then die("no trigger patterns in " .. opts.svof) end
+
+-- Literal text a regex must contain wherever it matches, so most lines skip running it
+local function mandatory(re)
+  if re:find("(?", 1, true) and re:find("%(%?%a*[ix]") then return nil end
+  if re:find("\\[xQEcpPNo0-9]") then return nil end
+  local best, run, i, n, depth = "", {}, 1, #re, 0
+  local function flush()
+    local s = table.concat(run)
+    if depth == 0 and #s > #best then best = s end
+    run = {}
+  end
+  while i <= n do
+    local c = re:sub(i, i)
+    if c == "\\" then
+      local e = re:sub(i + 1, i + 1)
+      if e:match("%w") then flush() elseif depth == 0 then run[#run + 1] = e end
+      i = i + 2
+    elseif c == "[" then
+      flush()
+      local j = i + 1
+      if re:sub(j, j) == "^" then j = j + 1 end
+      if re:sub(j, j) == "]" then j = j + 1 end
+      while j <= n and re:sub(j, j) ~= "]" do
+        if re:sub(j, j) == "\\" then j = j + 1 end
+        j = j + 1
+      end
+      i = j + 1
+    elseif c == "(" then
+      flush()
+      depth = depth + 1
+      i = i + 1
+      if re:sub(i, i) == "?" then i = i + 1 end
+    elseif c == ")" then
+      flush()
+      depth = depth - 1
+      i = i + 1
+    elseif c == "|" then
+      if depth == 0 then return nil end
+      flush()
+      i = i + 1
+    elseif c == "?" or c == "*" or c == "{" or c == "+" then
+      if c ~= "+" then run[#run] = nil end
+      flush()
+      i = c == "{" and (re:find("}", i, true) or n) + 1 or i + 1
+      if re:sub(i, i) == "?" or re:sub(i, i) == "+" then i = i + 1 end
+    elseif c == "^" or c == "$" or c == "." then
+      flush()
+      i = i + 1
+    else
+      if depth == 0 then run[#run + 1] = c else flush() end
+      i = i + 1
+    end
+  end
+  flush()
+  return best ~= "" and best or nil
+end
+
+-- The text an anchored regex's match starts with
+local function prefixOf(re)
+  if re:sub(1, 1) ~= "^" or not mandatory(re) then return nil end
+  local run, i = {}, 2
+  while i <= #re do
+    local c = re:sub(i, i)
+    if c == "\\" then
+      local e = re:sub(i + 1, i + 1)
+      if e:match("%w") or e == "" then break end
+      run[#run + 1] = e
+      i = i + 2
+    elseif c:match("[%[%(%.%*%+%?{|%$%^]") then
+      if c == "?" or c == "*" or c == "{" then run[#run] = nil end
+      break
+    else
+      run[#run + 1] = c
+      i = i + 1
+    end
+  end
+  return #run > 0 and table.concat(run) or nil
+end
+
+local rex, PCRE_FLAGS
+local function compile(re)
+  local ok, compiled = pcall(rex.new, re, PCRE_FLAGS)
+  return ok and compiled or nil
+end
+
+-- A Lua pattern is evaluated when its result depends only on the line, the prompt and the player's name;
+-- one that reads svof's state or GMCP is assumed to fire, and is listed when it reads the line too
+local SANDBOX = {string = string, tostring = tostring, tonumber = tonumber, type = type}
+local function luaKind(code)
+  local reads = {}
+  for ref in code:gmatch("svo%.([%w_%.]+)") do
+    if ref ~= "me.name" and ref ~= "paragraph_length" then reads[#reads + 1] = ref end
+  end
+  if #reads > 0 or code:find("gmcp", 1, true) then return "state" end
+  local fn = loadstring(code)
+  if not fn then return "state" end
+  local svoT = {me = {}, paragraph_length = 0}
+  local env = setmetatable({svo = svoT}, {__index = function(_, k)
+    if SANDBOX[k] ~= nil then return SANDBOX[k] end
+    error("reads " .. k)
+  end})
+  setfenv(fn, env)
+  local function eval(line, isPrompt, name)
+    env.line = line
+    env.isPrompt = function() return isPrompt end
+    svoT.me.name = name or ""
+    svoT.paragraph_length = 0
+    local ok, r = pcall(fn)
+    if not ok then return nil end
+    return r and true or false
+  end
+  for _, sample in ipairs({"", "You eat a piece of kelp.", "Someone"}) do
+    if eval(sample, true, "Someone") == nil or eval(sample, false, "Someone") == nil then return "state" end
+  end
+  if code:find("%f[%w_]line%f[^%w_]") then return "line", eval end
+  return "prompt", eval("", true, ""), eval("", false, "")
+end
+
+local signature, describe, unevaluated
+if scrub then
+  local ok
+  ok, rex = pcall(require, "rex_pcre")
+  if not ok then die("scrubbing needs lrexlib-pcre (rex_pcre) to run svof's regexes") end
+  local f = rex.flags()
+  PCRE_FLAGS = f.UTF8 + f.UCP
+  unevaluated = {}
+
+  -- Where each node runs: on the line, gated by the nearest ancestor that must match on this same line
+  -- (one that stays open or needs several lines may fire on any line, so it passes its reach down), or on
+  -- the captures of a filter
+  for _, node in ipairs(nodes) do
+    local anc = node.parent
+    while anc and #anc.pats == 0 do anc = anc.parent end
+    if not anc then
+      node.group = 0
+    elseif anc.filter then
+      node.group, node.gate = anc, nil
+    elseif anc.multi or anc.stay > 0 then
+      node.group, node.gate = anc.group, anc.gate
+    else
+      node.group, node.gate = anc.group, anc
+    end
+  end
+
+  local function newGroup()
+    return {exact = {}, begins = {}, subs = {}, regexes = {}, anchored = {}, luas = {}, names = {}, filters = {}}
+  end
+  local groups = {[0] = newGroup()}
+  for _, node in ipairs(nodes) do
+    if node.group ~= 0 and not groups[node.group] then groups[node.group] = newGroup() end
+  end
+  local function add(g, pat)
+    local k = pat.kind
+    if k == EXACT then
+      g.exact[pat.text] = g.exact[pat.text] or {}
+      table.insert(g.exact[pat.text], pat)
+    elseif k == BEGIN then
+      local b = pat.text:byte(1) or 0
+      g.begins[b] = g.begins[b] or {}
+      table.insert(g.begins[b], pat)
+    elseif k == SUBSTRING then
+      g.subs[#g.subs + 1] = pat
+    elseif k == PERL then
+      pat.re = compile(pat.text)
+      if pat.re then
+        pat.need, pat.prefix = mandatory(pat.text), prefixOf(pat.text)
+        if pat.prefix then
+          local b = pat.prefix:byte(1)
+          g.anchored[b] = g.anchored[b] or {}
+          table.insert(g.anchored[b], pat)
+        else
+          g.regexes[#g.regexes + 1] = pat
         end
       end
-      pos = typesEnd + 1
+    elseif k == LUA then
+      local kind, a, b = luaKind(pat.text)
+      if pat.text:gsub("%s+", " ") == "return line:find(svo.me.name, 1, true) and true or false" then
+        g.names[#g.names + 1] = pat
+      elseif kind == "line" then
+        pat.eval = a
+        g.luas[#g.luas + 1] = pat
+      elseif kind == "prompt" then
+        pat.onPrompt, pat.offPrompt = a, b
+      else
+        pat.always = true
+        if pat.text:find("%f[%w_]line%f[^%w_]") then unevaluated[#unevaluated + 1] = pat end
+      end
+    elseif k == PROMPT then
+      pat.onPrompt, pat.offPrompt = true, false
+    else
+      pat.always = true
     end
   end
-end
+  for _, pat in ipairs(pats) do add(groups[pat.node.group], pat) end
+  for _, node in ipairs(nodes) do
+    if node.filter then table.insert(groups[node.group].filters, node) end
+  end
+  local made, seen = {name = "svof's runtime triggers", group = 0}, {}
+  for _, r in ipairs(runtime) do
+    local key = r.kind .. ":" .. r.text
+    if not seen[key] and (r.kind ~= PERL or compile(r.text)) then
+      seen[key] = true
+      local pat = {id = #pats + 1, kind = r.kind, text = r.text, node = made}
+      pats[#pats + 1] = pat
+      add(groups[0], pat)
+    end
+  end
 
--- Every regex, nested ones included, is checked
-local regexes = {}
-if scrub then
-  local ok, rex = pcall(require, "rex_pcre")
-  if not ok then die("scrubbing needs lrexlib-pcre (rex_pcre) to check svof's regexes") end
-  for _, r in ipairs(svof.regex) do
-    local compiled, re = pcall(rex.new, r.pat)
-    if not compiled then die("PCRE cannot compile svof's regex " .. r.pat) end
-    regexes[#regexes + 1] = {re = re, runs = r.runs}
-  end
-end
-
--- Which of svof's checked patterns match a line, and with pins, the columns their literal text sits on
-local function analyse(t, pins)
-  local hits = {}
-  local function pin(s, e)
-    for c = s, e do pins[c] = true end
-  end
-  local function pinAll(lit)
-    local s, e = t:find(lit, 1, true)
-    while s do
-      pin(s, e)
-      s, e = t:find(lit, s + 1, true)
+  -- The patterns that match, those of children only where their parent lets them run
+  local function evalGroup(g, hay, isPrompt, name, out, prefix)
+    local hit = {}
+    for _, pat in ipairs(g.exact[hay] or {}) do hit[pat] = true end
+    for _, pat in ipairs(g.begins[hay:byte(1) or 0] or {}) do
+      if hay:sub(1, #pat.text) == pat.text then hit[pat] = true end
     end
-  end
-  if svof.exact[t] then
-    hits[#hits + 1] = "="
-    if pins then pin(1, #t) end
-  end
-  for _, p in ipairs(svof.beginsBy[t:byte(1) or 0] or {}) do
-    if t:sub(1, #p) == p then
-      hits[#hits + 1] = "^" .. p
-      if pins then pin(1, #p) end
+    for _, pat in ipairs(g.subs) do
+      if hay:find(pat.text, 1, true) then hit[pat] = true end
     end
-  end
-  for _, p in ipairs(svof.subs) do
-    if t:find(p, 1, true) then
-      hits[#hits + 1] = "~" .. p
-      if pins then pinAll(p) end
+    for _, pat in ipairs(g.anchored[hay:byte(1) or 0] or {}) do
+      if hay:sub(1, #pat.prefix) == pat.prefix and hay:find(pat.need, 1, true) and pat.re:exec(hay) then hit[pat] = true end
     end
-  end
-  for k, r in ipairs(regexes) do
-    if r.re:exec(t) then
-      hits[#hits + 1] = "/" .. k
-      if pins then
-        for _, run in ipairs(r.runs) do pinAll(run) end
+    for _, pat in ipairs(g.regexes) do
+      if (not pat.need or hay:find(pat.need, 1, true)) and pat.re:exec(hay) then hit[pat] = true end
+    end
+    if name and name ~= "" and #g.names > 0 and hay:find(name, 1, true) then
+      for _, pat in ipairs(g.names) do hit[pat] = true end
+    end
+    for _, pat in ipairs(g.luas) do
+      if pat.eval(hay, isPrompt, name) then hit[pat] = true end
+    end
+    local fires = {}
+    local function fired(node)
+      if not node then return true end
+      local f = fires[node]
+      if f == nil then
+        f = node.multi or node.stay > 0
+        if not f then
+          for _, pat in ipairs(node.pats) do
+            if hit[pat] or pat.always or (isPrompt and pat.onPrompt) or (not isPrompt and pat.offPrompt) then
+              f = true
+              break
+            end
+          end
+        end
+        f = f and fired(node.gate)
+        fires[node] = f
+      end
+      return f
+    end
+    local ids = {}
+    for pat in pairs(hit) do
+      if fired(pat.node.gate) then ids[#ids + 1] = pat.id end
+    end
+    table.sort(ids)
+    for _, id in ipairs(ids) do out[#out + 1] = prefix .. id end
+    for _, node in ipairs(g.filters) do
+      if fired(node) then
+        for _, pat in ipairs(node.pats) do
+          if hit[pat] and pat.kind == PERL then
+            local caps = {select(3, pat.re:tfind(hay))}
+            caps = caps[1] or {}
+            for ci = 1, #caps do
+              if type(caps[ci]) == "string" and caps[ci] ~= "" then
+                evalGroup(groups[node], caps[ci], isPrompt, name, out, prefix .. pat.id .. ":" .. ci .. ">")
+              end
+            end
+          end
+        end
       end
     end
   end
-  return table.concat(hits, "\0")
+  function signature(text, isPrompt, name)
+    local out = {}
+    evalGroup(groups[0], text, isPrompt, name, out, "")
+    return table.concat(out, " ")
+  end
+  function describe(entry)
+    local id = tonumber(entry:match("^(%d+)"))
+    local node, names = pats[id].node, {}
+    while node and node.name do
+      table.insert(names, 1, node.name)
+      node = node.parent
+    end
+    while #names > 2 and (names[1] == "svo (aliases, triggers)" or names[1] == "svo") do table.remove(names, 1) end
+    return table.concat(names, "/")
+  end
 end
 
 -- Deterministic: the same inputs build the same package
@@ -298,14 +591,16 @@ local function rng(seed)
   end
 end
 local VOWELS, CONSONANTS, DIGITS = "aeiou", "bcdfghjklmnprstvwz", "0123456789"
-local function reshape(s, roll, pins, from)
-  return (s:gsub("()(%w)", function(col, c)
-    if pins and pins[from + col - 1] then return c end
+local function reshape(s, roll)
+  return (s:gsub("%w", function(c)
     local pool = c:match("%d") and DIGITS or c:lower():match("[aeiouy]") and VOWELS or CONSONANTS
     local k = roll(#pool)
     local r = pool:sub(k, k)
     return c:match("%u") and r:upper() or r
   end))
+end
+local function caseLike(model, s)
+  return (s:gsub("()(%a)", function(c, ch) return model:sub(c, c):match("%u") and ch:upper() or nil end))
 end
 
 -- Without the log's timestamp, or the ">" a line after a prompt can start with
@@ -313,101 +608,56 @@ local function bare(t)
   return (t:gsub("^>", ""):gsub("^%d%d:%d%d:%d%d%.%d+ ", ""))
 end
 
-local fakes, listed, people = {}, {}, {}
-local function rename(s)
-  return (s:gsub("%a+", function(w)
-    local f = fakes[w:lower()]
-    if not f then return nil end
-    return (f:gsub("()(%a)", function(c, ch) return w:sub(c, c):match("%u") and ch:upper() or nil end))
+local stats = {listed = {}, filled = 0, kept = 0, pinned = 0, renamed = 0, rerolls = 0, backoff = 0, nameLetters = 0,
+  nameSwaps = 0, trimmed = 0, categories = {}}
+local listed, fakes, taken = {}, {}, {}
+local function fakeOf(w)
+  local l = w:lower()
+  local f = fakes[l]
+  if not f then
+    local roll, tries = rng(seedOf(l)), 0
+    repeat
+      f = reshape(l, roll)
+      tries = tries + 1
+      if tries > 1000 then die("no free stand-in for a " .. #l .. "-letter word") end
+    -- One- and two-letter words run out of unused stand-ins; a common one is no clue to a name
+    until not listed[f] and (not taken[f] or (#l <= 2 and tries > 20 and not listed[l]))
+    taken[f] = true
+    fakes[l] = f
+  end
+  return caseLike(w, f)
+end
+-- Same shape, other letters: a word that comes out as itself or as a listed name is rolled again
+local function filler(s, key)
+  return (reshape(s, rng(seedOf(key))):gsub("()(%a+)", function(pos, w)
+    local was, n = s:sub(pos, pos + #w - 1):lower(), 0
+    while listed[w:lower()] or w:lower() == was do
+      n = n + 1
+      if n > 100 then die("no filler for a " .. #w .. "-letter word") end
+      w = reshape(w, rng(seedOf(key .. ":" .. pos .. ":" .. n)))
+    end
+    return w
   end))
 end
 
-local stats = {listed = {}, renamed = 0, quotes = 0, quoteLines = 0, retro = 0, unclosed = 0, typed = 0,
-  emotes = 0, emoteLines = 0, kept = 0, rerolls = 0}
-local hard, soft = {}, {}
-local function span(list, i, a, b)
-  if b < a then return end
-  list[i] = list[i] or {}
-  table.insert(list[i], {a, b})
+local function tokens(t)
+  local list2 = {}
+  for s, w in t:gmatch("()(%a+)") do list2[#list2 + 1] = {s = s, e = s + #w - 1, w = w, alpha = true} end
+  for s, w in t:gmatch("()(%d+)") do list2[#list2 + 1] = {s = s, e = s + #w - 1, w = w} end
+  table.sort(list2, function(a, b) return a.s < b.s end)
+  return list2
 end
 
+local out, stexts = {}, {}
+local meFake = {}
 if scrub then
-  -- Everything inside double quotes, whoever says it. A quote opens after a space or at the start of a line
-  -- and closes before a space, punctuation or the end of one; any other quote flips the state. Prompts
-  -- inserted into wrapped speech leave it open, and a blank line closes it.
-  local RETRO = 10
-  local inside, startCol, outLine, outCol, blockStart = false, nil, nil, nil, 1
-  local function opens()
-    inside = true
-    stats.quotes = stats.quotes + 1
+  for _, t in ipairs(texts) do
+    for w in t:gmatch("%a+") do taken[w:lower()] = true end
   end
-  for k, t in ipairs(texts) do
-    if prompt[k] then
-      -- left as is: prompts carry svof's vitals
-    elseif t:match("^%s*$") then
-      if inside then stats.unclosed = stats.unclosed + 1 end
-      inside, outLine, blockStart = false, nil, k + 1
-    else
-      startCol = 1
-      local pos = 1
-      while true do
-        local c = t:find('"', pos, true)
-        if not c then break end
-        local prev, nxt = t:sub(c - 1, c - 1), t:sub(c + 1, c + 1)
-        if c == 1 then prev = "" end
-        local opener = (prev == "" or prev:match("[%s%(%[{]")) and nxt ~= "" and not nxt:match("%s")
-        local closer = prev ~= "" and not prev:match("%s") and (nxt == "" or nxt:match("[%s%.,;:!%?%)%]}'%-]"))
-        if opener == closer then opener = not inside end
-        if opener then
-          if not inside then
-            opens()
-            startCol = c + 1
-          end
-        elseif inside then
-          span(hard, k, startCol, c - 1)
-          inside = false
-          outLine, outCol = k, c + 1
-        else
-          -- A close with no open: the opening was missed, so everything since the last close was speech
-          local fromLine, fromCol = outLine or blockStart, outLine and outCol or 1
-          if k - fromLine > RETRO then fromLine, fromCol = k - RETRO, 1 end
-          for m = fromLine, k do
-            if not prompt[m] then
-              span(hard, m, m == fromLine and fromCol or 1, m == k and c - 1 or #texts[m])
-            end
-          end
-          stats.retro = stats.retro + 1
-          outLine, outCol = k, c + 1
-        end
-        pos = c + 1
-      end
-      if inside then
-        span(hard, k, startCol, #t)
-        stats.quoteLines = stats.quoteLines + 1
-      end
-    end
-  end
-  if inside then stats.unclosed = stats.unclosed + 1 end
+  for w in pairs(svofWords) do taken[w] = true end
 
-  -- How often each word is seen capitalised, and in lower case outside prompts (with or without GA), the
-  -- commands typed after them and speech, where names are often typed in lower case
-  local cap, low, taken = {}, {}, {}
-  for i, t in ipairs(texts) do
-    local promptish = prompt[i] or t:find("%d+h, %d+m") or bare(t):find("^H:%d+[| ]")
-    for col, w in t:gmatch("()(%a+)") do
-      local l = w:lower()
-      taken[l] = true
-      if w:match("^%u%l+$") then
-        cap[l] = (cap[l] or 0) + 1
-      elseif not promptish and w:match("^%l+$") then
-        local quoted = false
-        for _, sp in ipairs(hard[i] or {}) do quoted = quoted or (col >= sp[1] and col <= sp[2]) end
-        if not quoted then low[l] = (low[l] or 0) + 1 end
-      end
-    end
-  end
-
-  -- Real names: svof's name database, who-lists in the corpus, --names and GMCP. Each is renamed in any case.
+  -- Real names, for renaming the ones svof's text holds on to, and for the audit: svof's name database,
+  -- who-lists in the corpus, --names and GMCP
   local function list(w, source)
     local l = w:lower()
     if l == class:lower() then return end
@@ -422,10 +672,10 @@ if scrub then
   end
   if opts.namedb then
     local p = io.popen("sqlite3 -readonly -batch -noheader " .. q(opts.namedb) .. " 'select name from people' 2>&1")
-    local out = p:read("*a")
+    local res = p:read("*a")
     local ok = p:close()
-    if (ok ~= 0 and ok ~= true) or out:find("Error") then die("cannot read names from " .. opts.namedb .. ": " .. out) end
-    for w in out:gmatch("[^\n]+") do
+    if (ok ~= 0 and ok ~= true) or res:find("Error") then die("cannot read names from " .. opts.namedb .. ": " .. res) end
+    for w in res:gmatch("[^\n]+") do
       if not w:match("^%a+$") then die("unexpected name in " .. opts.namedb .. ": " .. w) end
       list(w, "namedb")
     end
@@ -442,8 +692,7 @@ if scrub then
   for payload in corpus:gmatch("\255\250\201(.-)\255\240") do
     for w in payload:gmatch('"name": "(%a+)"') do list(w, "gmcp") end
   end
-
-  -- QW lists ("Abysal, Aedesynne, ..., and Zriek.", then "(81 total)"), svof's QW by city, and CWHO rows
+  -- QW lists ("Abysal, Aedesynne, ..., and Zriek." then "(81 total)"), svof's QW by city, and CWHO rows
   local function listNames(t)
     t = bare(t):gsub("^%s*%a+%s*%(%d+%):", "")
     local names = {}
@@ -460,7 +709,6 @@ if scrub then
     while j <= #texts and prompt[j] do j = j + 1 end
     return j
   end
-  local whoLine = {}
   local i = 1
   while i <= #texts do
     local t = bare(texts[i])
@@ -468,7 +716,6 @@ if scrub then
       local j = nextText(i + 1)
       while j <= #texts and listNames(texts[j]) do
         for _, w in ipairs(listNames(texts[j])) do list(w, "who") end
-        whoLine[j] = true
         j = nextText(j + 1)
       end
       i = j
@@ -478,11 +725,9 @@ if scrub then
       while j <= #texts do
         local col = bare(texts[j]):match("^(%u.-)%s%s+%d+%s+O[nf]f?%s")
         if not col then break end
-        -- Titles share the column with names: a name is a capitalised word never seen in lower case outside speech
-        for w in col:gmatch("%a+") do
-          if w:match("^%u%l+$") and not low[w:lower()] and not svof.words[w:lower()] then list(w, "who") end
+        for w in col:gmatch("%u%l+") do
+          if not svofWords[w:lower()] then list(w, "who") end
         end
-        whoLine[j] = true
         j = nextText(j + 1)
       end
       i = j
@@ -495,7 +740,6 @@ if scrub then
       if j <= #texts and texts[j]:find("%(%d+ total%)") then
         for _, k in ipairs(run) do
           for _, w in ipairs(listNames(texts[k])) do list(w, "who") end
-          whoLine[k] = true
         end
       end
       i = j
@@ -503,187 +747,282 @@ if scrub then
       i = i + 1
     end
   end
+  local sortedListed = {}
+  for l in pairs(listed) do sortedListed[#sortedListed + 1] = l end
+  table.sort(sortedListed)
+  for _, l in ipairs(sortedListed) do fakeOf(l) end
+  for i2 = 1, #texts do meFake[i2] = me[i2] and fakeOf(me[i2]) end
 
-  -- Others found by how they appear: speakers, people told something and those acting at the start of a
-  -- line, and any capitalised word never seen in lower case in game text. A word mostly seen in lower
-  -- case is not a name, and a word svof's patterns use is left as it is.
-  local SPEECH = {}
-  for w in ([[say says tell tells ask asks exclaim exclaims yell yells shout shouts whisper whispers sing sings
-    reply replies answer answers cry cries mutter mutters murmur murmurs declare declares intone intones
-    recite recites chant chants call calls croon croons growl growls hiss hisses snarl snarls remark remarks
-    state states add adds continue continues note notes bellow bellows decree decrees]]):gmatch("%a+") do
-    SPEECH[w] = true
+  -- Every line is filler, unless that changes which of svof's patterns match it. Then svof's own text
+  -- is kept: a word stays only if filler in its place changes the match, names get the same stand-in
+  -- everywhere, and anything else is filler
+  local function splice(t, toks, repl)
+    local parts, pos = {}, 1
+    for k, tok in ipairs(toks) do
+      if repl[k] then
+        parts[#parts + 1] = t:sub(pos, tok.s - 1)
+        parts[#parts + 1] = repl[k]
+        pos = tok.e + 1
+      end
+    end
+    parts[#parts + 1] = t:sub(pos)
+    return table.concat(parts)
   end
-  local found = {}
-  for k, t in ipairs(texts) do
-    if not prompt[k] then
-      local b = bare(t):gsub("^%([^)]+%): ", "")
-      local w, rest = b:match("^(%u%l+)[ ,'](.*)")
-      if w then
-        local speaks = false
-        local s = b:find('[,:] "')
-        if s and s <= 150 then
-          for v in b:sub(1, s):gmatch("%a+") do speaks = speaks or SPEECH[v] end
+  -- Where in t the svof matches that got lost were: the letters a renamed name has to keep
+  local function lostSpans(t, want, got)
+    local have, spans = {}, {}
+    for e in got:gmatch("%S+") do have[e] = true end
+    for e in want:gmatch("%S+") do
+      if not have[e] then
+        local id, ci = e:match("^(%d+):?(%d*)")
+        local pat = pats[tonumber(id)]
+        local a, b
+        if pat.kind == SUBSTRING then
+          a, b = t:find(pat.text, 1, true)
+        elseif pat.kind == BEGIN then
+          a, b = 1, #pat.text
+        elseif pat.kind == EXACT then
+          a, b = 1, #t
+        elseif pat.kind == PERL and pat.re then
+          local s0, e0, offs = pat.re:exec(t)
+          a, b = s0, e0
+          if ci ~= "" and offs and offs[2 * ci - 1] then a, b = offs[2 * ci - 1], offs[2 * ci] end
         end
-        if speaks or (rest:match("^(%l+)") or ""):match("s$") then found[w] = true end
-      end
-      w = b:match("^You tell (%u%l+), ") or b:match("^(%u%l+) tells you, ")
-      if w then found[w] = true end
-    end
-  end
-  local function common(l)
-    return svof.words[l] or l == class:lower() or #l < 3
-  end
-  for w in pairs(found) do
-    local l = w:lower()
-    if not common(l) and not w:match("ing$") and (low[l] or 0) * 8 <= (cap[l] or 0) then people[l] = true end
-  end
-  for l in pairs(listed) do people[l] = true end
-  local sorted = {}
-  for l in pairs(people) do sorted[#sorted + 1] = l end
-  for l in pairs(cap) do
-    if not people[l] and not low[l] and not common(l) then sorted[#sorted + 1] = l end
-  end
-  table.sort(sorted)
-
-  for l in pairs(listed) do taken[l] = true end
-  for l in pairs(svof.words) do taken[l] = true end
-  local function sameMatches(a, b)
-    local function title(s) return s:sub(1, 1):upper() .. s:sub(2) end
-    return analyse(a) == analyse(b) and analyse(title(a)) == analyse(title(b)) and analyse(a:upper()) == analyse(b:upper())
-  end
-  for _, l in ipairs(sorted) do
-    local roll, fake, tries, pins = rng(seedOf(l)), nil, 0, {}
-    analyse(l, pins)
-    analyse(l:sub(1, 1):upper() .. l:sub(2), pins)
-    analyse(l:upper(), pins)
-    repeat
-      fake = reshape(l, roll, pins, 1)
-      tries = tries + 1
-      if tries > 1000 then die("no free name of the shape of a " .. #l .. "-letter name") end
-    until not taken[fake] and sameMatches(l, fake)
-    taken[fake] = true
-    fakes[l] = fake
-  end
-  stats.renamed = #sorted
-
-  -- What the player typed, in any case: channels, tells, says and emotes, after a prompt or echoed on a
-  -- line of its own. A long one wraps onto lines before the game's "You ..." reply.
-  local TYPED = {"say", "tell", "whisper", "reply", "shout", "yell", "emote", "[pcgo]t", "clt%d*", "newbie",
-    "market"}
-  for k, t in ipairs(texts) do
-    local from, lt = nil, t:lower()
-    for _, p in ipairs(TYPED) do
-      local e
-      if prompt[k] then
-        e = select(2, lt:find("%f[%w]" .. p .. " %S"))
-      else
-        e = select(2, lt:find("^" .. p .. " %S", #t - #bare(t) + 1))
-      end
-      if e and (not from or e < from) then from = e end
-    end
-    if from then
-      span(hard, k, from, #t)
-      stats.typed = stats.typed + 1
-      local j = k
-      while j < k + 3 and #texts[j] >= 55 and not texts[j]:match('[%.!%?"~]%s*$') and texts[j + 1]
-        and not prompt[j + 1] and not texts[j + 1]:match("^%s*$") and not bare(texts[j + 1]):match("^You ")
-        and not bare(texts[j + 1]):match("^%(") do
-        j = j + 1
-        span(hard, j, 1, #texts[j])
+        if not a then return nil end
+        spans[#spans + 1] = {a, b}
       end
     end
+    return spans
   end
-
-  -- Emotes: game messages repeat with other names, so a line starting with someone that is seen once is
-  -- their own words. svof's patterns come first: such a line is kept if filler would change what matches.
-  local function startsWithPerson(t)
-    local off = #t - #bare(t)
-    local w = bare(t):match("^(%u%l+) %l")
-    return w and people[w:lower()] and off + #w
-  end
-  local function template(t)
-    return (t:gsub("%a+", function(w) if fakes[w:lower()] then return "N" end end):gsub("%d+", "#"))
-  end
-  local seen = {}
-  for k, t in ipairs(texts) do
-    if not prompt[k] and startsWithPerson(t) then
-      local key = template(bare(t))
-      seen[key] = (seen[key] or 0) + 1
-    end
-  end
-  for k, t in ipairs(texts) do
-    local e = not prompt[k] and not whoLine[k] and startsWithPerson(t)
-    if e and seen[template(bare(t))] == 1 then
-      span(soft, k, e + 2, #t)
-      stats.emotes = stats.emotes + 1
-      stats.emoteLines = stats.emoteLines + 1
-      local j = k
-      while not texts[j]:match('[%.!%?"\')]%s*$') and j < k + 3 and texts[j + 1] and not texts[j + 1]:match("^%s*$")
-        and not prompt[j + 1] and not startsWithPerson(texts[j + 1]) and not texts[j + 1]:find('"', 1, true) do
-        j = j + 1
-        span(soft, j, 1, #texts[j])
-        stats.emoteLines = stats.emoteLines + 1
+  local function keepSpans(t, toks, repl, spans)
+    for k, r in pairs(repl) do
+      local tok, chars = toks[k], {}
+      for pos = tok.s, tok.e do
+        local c = r:sub(pos - tok.s + 1, pos - tok.s + 1)
+        for _, sp in ipairs(spans) do
+          if pos >= sp[1] and pos <= sp[2] then c = t:sub(pos, pos) end
+        end
+        chars[#chars + 1] = c
       end
+      repl[k] = table.concat(chars)
     end
   end
-end
-
--- Filler is rerolled until the line matches the same svof patterns as before; an emote that cannot be
--- filled that way is left as it is
-local function scrubbedText(i)
-  local t = texts[i]
-  if not hard[i] and not soft[i] then
-    local r = rename(t)
-    if r ~= t and analyse(r) ~= analyse(t) then
-      die("line " .. i .. ": renaming changes which svof patterns match it")
-    end
-    return r
-  end
-  local pins = {}
-  local want = analyse(t, pins)
-  local function fill(spans)
-    for attempt = 1, 200 do
-      local s = t
-      for _, sp in ipairs(spans) do
-        local a, b = sp[1], sp[2]
-        s = s:sub(1, a - 1) .. reshape(s:sub(a, b), rng(seedOf(i .. ":" .. a .. ":" .. attempt)), pins, a) .. s:sub(b + 1)
-      end
-      s = rename(s)
-      if analyse(s) == want then
+  local reportLines = {}
+  for i2, t in ipairs(texts) do
+    local p, real, fake = prompt[i2] or false, me[i2], meFake[i2]
+    local want = signature(t, p, real)
+    local result
+    local first
+    for attempt = 1, 4 do
+      local f = filler(t, i2 .. ":" .. attempt)
+      first = first or f
+      if signature(f, p, fake) == want then
+        result = f
         stats.rerolls = stats.rerolls + attempt - 1
-        return s
+        break
       end
     end
+    if result then
+      stats.filled = stats.filled + 1
+    else
+      local toks = tokens(t)
+      local names, repl = {}, {}
+      for k, tok in ipairs(toks) do
+        if tok.alpha and listed[tok.w:lower()] then
+          names[k] = true
+          repl[k] = fakeOf(tok.w)
+        end
+      end
+      local base = splice(t, toks, repl)
+      -- A name svof's pattern runs into keeps the letters it matches; a stand-in that matches too much is
+      -- swapped for another on this line only
+      for attempt = 1, 8 do
+        local got = signature(base, p, fake)
+        if got == want then break end
+        local spans = lostSpans(t, want, got)
+        if spans and #spans > 0 then
+          keepSpans(t, toks, repl, spans)
+          base = splice(t, toks, repl)
+          if signature(base, p, fake) == want then
+            stats.nameLetters = stats.nameLetters + 1
+            break
+          end
+        end
+        if attempt == 8 then die("line " .. i2 .. ": renaming a listed name changes which svof patterns match it") end
+        for k in pairs(names) do
+          local l, f2, tries = toks[k].w:lower(), nil, 0
+          local roll = rng(seedOf(l .. ":" .. i2 .. ":" .. attempt))
+          repeat
+            f2 = reshape(l, roll)
+            tries = tries + 1
+          until (not taken[f2] and not listed[f2]) or tries > 1000
+          repl[k] = caseLike(toks[k].w, f2)
+        end
+        stats.nameSwaps = stats.nameSwaps + 1
+        base = splice(t, toks, repl)
+      end
+      local function fillTok(k, attempt)
+        return filler(toks[k].w, i2 .. ":" .. k .. ":" .. attempt)
+      end
+      local function variant(attempt, which)
+        local r = {}
+        for k, v in pairs(repl) do r[k] = v end
+        for k in pairs(which) do r[k] = fillTok(k, attempt) end
+        return splice(t, toks, r)
+      end
+      local cand = {}
+      for k in ipairs(toks) do
+        if not names[k] then cand[k] = true end
+      end
+      local variable = {}
+      if signature(variant(1, cand), p, fake) == want then
+        variable = cand
+      else
+        for k in ipairs(toks) do
+          if cand[k] then
+            local one = {[k] = true}
+            if signature(variant(1, one), p, fake) == want and signature(variant(2, one), p, fake) == want then
+              variable[k] = true
+            end
+          end
+        end
+      end
+      local function build(attempt, spare)
+        local r = {}
+        for k, v in pairs(repl) do r[k] = v end
+        for k in pairs(variable) do
+          if not spare[k] then
+            local tok = toks[k]
+            r[k] = tok.alpha and tok.w:match("^%u%a%a") and attempt == 1 and fakeOf(tok.w) or fillTok(k, attempt)
+          end
+        end
+        return splice(t, toks, r), r
+      end
+      local spare, final = {}, nil
+      for attempt = 1, 4 do
+        local s, r = build(attempt, spare)
+        if signature(s, p, fake) == want then
+          result, final = s, r
+          break
+        end
+      end
+      -- Words svof can do without one at a time but not all together: fill them one by one from the
+      -- line as it was, and keep each one whose filler changes the match
+      if not result then
+        local r = {}
+        for k, v in pairs(repl) do r[k] = v end
+        for k in ipairs(toks) do
+          if variable[k] then
+            r[k] = fillTok(k, 1)
+            if signature(splice(t, toks, r), p, fake) ~= want then
+              r[k] = nil
+              spare[k] = true
+              stats.backoff = stats.backoff + 1
+            end
+          end
+        end
+        result, final = splice(t, toks, r), r
+      end
+      -- A word kept for a pattern that matches only part of it keeps just that part
+      for k, tok in ipairs(toks) do
+        if not names[k] and (not variable[k] or spare[k]) and #tok.w > 1 then
+          local probe = {}
+          for k2, v in pairs(final) do probe[k2] = v end
+          probe[k] = fillTok(k, 1)
+          local spans = lostSpans(result, want, signature(splice(t, toks, probe), p, fake))
+          if spans and #spans > 0 then
+            local one = {[k] = probe[k]}
+            keepSpans(t, toks, one, spans)
+            if one[k] ~= tok.w and not listed[one[k]:lower()] then
+              probe[k] = one[k]
+              local s = splice(t, toks, probe)
+              if signature(s, p, fake) == want then
+                result, final = s, probe
+                stats.trimmed = stats.trimmed + 1
+              end
+            end
+          end
+        end
+      end
+      stats.kept = stats.kept + 1
+      for k, tok in ipairs(toks) do
+        if names[k] then
+          stats.renamed = stats.renamed + 1
+        elseif not variable[k] or spare[k] then
+          stats.pinned = stats.pinned + 1
+        end
+      end
+      -- What makes it svof's: the matches filler loses
+      local lost, have = nil, {}
+      for e in signature(first, p, fake):gmatch("%S+") do have[e] = true end
+      for e in want:gmatch("%S+") do
+        if not have[e] then
+          lost = e
+          break
+        end
+      end
+      local cat = lost and describe(lost) or "renamed only"
+      local c = stats.categories[cat]
+      if not c then
+        c = {n = 0, example = result}
+        stats.categories[cat] = c
+      end
+      c.n = c.n + 1
+      reportLines[#reportLines + 1] = i2
+    end
+    stexts[i2] = result
   end
-  local all = {}
-  for _, s in ipairs(hard[i] or {}) do all[#all + 1] = s end
-  for _, s in ipairs(soft[i] or {}) do all[#all + 1] = s end
-  local s = fill(all)
-  if not s and soft[i] then
-    stats.kept = stats.kept + 1
-    s = fill(hard[i] or {})
-  end
-  return s or die("line " .. i .. ": no filler matches the same svof patterns")
+  stats.reportLines = reportLines
 end
 
-local out, stexts = {}, {}
+-- GMCP: keys and vitals stay; a name gets its stand-in, and every other value is filler, except the
+-- Char.Status fields svof reads that many players share
+local STATUS_KEEP = {class = true, race = true, level = true, gender = true, specialisation = true}
+local function scrubGmcp(seg, i, n)
+  local pkg, body = seg:match("^\255\250\201(%S+)(.-)\255\240$")
+  if not pkg or pkg == "Char.Vitals" then return seg end
+  local k = 0
+  local function fill(s)
+    k = k + 1
+    return filler(s, i .. ":gmcp:" .. n .. ":" .. k)
+  end
+  local parts, pos, key = {}, 1, nil
+  while pos <= #body do
+    local s, e, v, colon = body:find('^"([^"]*)"(%s*:?)', pos)
+    if s then
+      local new = v
+      if colon:find(":", 1, true) then
+        key = v
+      elseif pkg == "Char.Status" and STATUS_KEEP[key] then
+        new = v
+      elseif key == "name" or key == "fullname" then
+        new = v:gsub("%a+", function(w) return listed[w:lower()] and fakeOf(w) or fill(w) end):gsub("%d+", fill)
+      else
+        new = fill(v)
+      end
+      parts[#parts + 1] = '"' .. new .. '"' .. colon
+      pos = e + 1
+    else
+      local stop = body:find('"', pos, true) or #body + 1
+      parts[#parts + 1] = body:sub(pos, stop - 1):gsub("%d+", fill)
+      pos = stop
+    end
+  end
+  return "\255\250\201" .. pkg .. table.concat(parts) .. "\255\240"
+end
+
 for i, l in ipairs(lines) do
   if not scrub then
     out[i] = l
   else
-    local t, pos, parts = scrubbedText(i), 1, {}
-    stexts[i] = t
+    local t, pos, parts, n = stexts[i], 1, {}, 0
     for _, s in ipairs(segments(l)) do
       if s.text then
         parts[#parts + 1] = t:sub(pos, pos + #s.text - 1)
         pos = pos + #s.text
       elseif s.proto:sub(2, 2) == "\250" then
-        -- GMCP values, not keys: svof reads them by key
-        parts[#parts + 1] = s.proto:gsub('"([^"]*)"(%s*:?)', function(v, colon)
-          if colon:find(":", 1, true) then return nil end
-          return '"' .. rename(v) .. '"' .. colon
-        end)
+        n = n + 1
+        parts[#parts + 1] = scrubGmcp(s.proto, i, n)
       else
         parts[#parts + 1] = s.proto
       end
@@ -718,15 +1057,25 @@ for _, f in ipairs(config) do
     -- A saved config is usually paused; a player unpauses it at the start of a session
     data = data:gsub("(%[%[paused%]%] *%] *= *)true", "%1false")
   end
+  if scrub then
+    -- An exported priority list is stamped with its author and the time; svof reads neither
+    data = data:gsub("^(%-%- Priorities list '[^'\n]*') by [^\n]*", "%1")
+  end
   run("mkdir -p " .. q(stage .. "/svo/" .. f:match("^(.*)/")))
   spit(stage .. "/svo/" .. f, data)
   configData[#configData + 1] = data
 end
 
--- The audit reads the result, not the scrub's bookkeeping: no listed name in any case, and no run of
--- six words from inside quotes in the original, except where svof's own patterns hold that text
-local audit = {names = 0, spans = 0, runs = 0, game = 0, allowed = {}}
+-- The audit reads the result, not the scrub's bookkeeping
+local audit = {names = 0, runs = 0, shared = 0}
 if scrub then
+  -- Every line matches the same svof patterns as before
+  for i, t in ipairs(stexts) do
+    if signature(t, prompt[i] or false, meFake[i]) ~= signature(texts[i], prompt[i] or false, me[i]) then
+      die("audit: line " .. i .. " matches other svof patterns than it did")
+    end
+  end
+  -- No listed name in any case, in the corpus, GMCP included, or the config
   local left = {}
   for _, data in ipairs({scrubbed, table.concat(configData, "\n")}) do
     for w in data:gmatch("%a+") do
@@ -734,131 +1083,68 @@ if scrub then
       if listed[l] then left[l] = (left[l] or 0) + 1 end
     end
   end
-  for l in pairs(listed) do audit.names = audit.names + 1 end
+  for _ in pairs(listed) do audit.names = audit.names + 1 end
   local leaked = {}
   for l, n in pairs(left) do leaked[#leaked + 1] = string.format("%d-letter %s name x%d", #l, listed[l], n) end
   table.sort(leaked)
   if #leaked > 0 then die("audit: listed names survive: " .. table.concat(leaked, ", ")) end
 
-  local W, ECHO = 6, 6
+  -- No run of four words from a line that became filler is left anywhere, except in a line svof matches
+  -- that needs every one of those words: the game's fixed messages appear in both kinds of line
+  local W = 4
   local function words(s)
     local ws = {}
-    for w in s:gmatch("[%a']+") do
-      w = w:lower():gsub("^'+", ""):gsub("'+$", "")
-      if w ~= "" then ws[#ws + 1] = w end
-    end
+    for w in s:gmatch("%a+") do ws[#ws + 1] = w:lower() end
     return ws
   end
   local function each(ws, f)
-    for s = 1, #ws - W + 1 do f(table.concat(ws, " ", s, s + W - 1)) end
+    for s = 1, #ws - W + 1 do f(table.concat(ws, " ", s, s + W - 1), s) end
   end
-  -- Quoted text by its own rule, not the scrub's: a quote after a space or at the start of a line opens,
-  -- one more level when already open; any other quote closes a level, and is ignored when none is open
-  local quoted, outside, shortOnes = {}, {}, {}
-  local depth = 0
-  for k, t in ipairs(texts) do
-    local parts, rest = {}, {}
-    if t:match("^%s*$") then
-      depth = 0
-    elseif prompt[k] then
-      rest[1] = t
-    else
-      local from, last, pos = 1, 1, 1
-      while true do
-        local c = t:find('"', pos, true)
-        if not c then break end
-        local prev, nxt = c > 1 and t:sub(c - 1, c - 1) or " ", t:sub(c + 1, c + 1)
-        if prev:match("[%s%(%[{]") and nxt:match("%S") then
-          if depth == 0 then
-            rest[#rest + 1] = t:sub(last, c - 1)
-            from = c + 1
-            audit.spans = audit.spans + 1
-          end
-          depth = depth + 1
-        elseif depth > 0 then
-          depth = depth - 1
-          if depth == 0 then
-            parts[#parts + 1] = t:sub(from, c - 1)
-            last = c + 1
+  local function needed(i, t, from)
+    local want, n = signature(t, prompt[i] or false, meFake[i]), 0
+    for pos, w in t:gmatch("()(%a+)") do
+      n = n + 1
+      if n >= from and n < from + W then
+        local changed = false
+        for attempt = 1, 4 do
+          local f = reshape(w, rng(seedOf("audit:" .. i .. ":" .. pos .. ":" .. attempt)))
+          local u = t:sub(1, pos - 1) .. f .. t:sub(pos + #w)
+          if f:lower() ~= w:lower() and signature(u, prompt[i] or false, meFake[i]) ~= want then
+            changed = true
+            break
           end
         end
-        pos = c + 1
-      end
-      if depth > 0 then parts[#parts + 1] = t:sub(from) else rest[#rest + 1] = t:sub(last) end
-    end
-    for _, frag in ipairs(parts) do
-      local ws = words(frag)
-      if #ws >= W then
-        each(ws, function(key)
-          quoted[key] = quoted[key] or {}
-          quoted[key][k] = true
-        end)
-      elseif select(2, frag:gsub("%a%a+", "")) >= 3 then
-        shortOnes[#shortOnes + 1] = {k, frag:match("^%s*(.-)%s*$")}
+        if not changed then return false end
       end
     end
-    outside[k] = rest
+    return true
   end
-  -- The same words outside quotes are game text, unless just before the quote: the player's command, echoed
-  -- before the game's "You say"
-  local game = {}
-  for k, rest in pairs(outside) do
-    for _, part in ipairs(rest) do
-      each(words(part), function(key)
-        local lines = quoted[key]
-        if lines then
-          local echo = false
-          for d = 0, ECHO do echo = echo or lines[k + d] or false end
-          if not echo then game[key] = (game[key] or 0) + 1 end
-        end
-      end)
-    end
+  local runs = {}
+  local keptSet = {}
+  for _, k in ipairs(stats.reportLines) do keptSet[k] = true end
+  for i, t in ipairs(texts) do
+    if not keptSet[i] then each(words(t), function(key) runs[key] = true end) end
   end
-  for _ in pairs(quoted) do audit.runs = audit.runs + 1 end
-  audit.runs = audit.runs + #shortOnes
-  local svofWords = {}
-  for _, p in ipairs(svof.text) do svofWords[#svofWords + 1] = table.concat(words(p), " ") end
-  svofWords = "\n" .. table.concat(svofWords, "\n") .. "\n"
-  local function svofHas(s)
-    return svofWords:find(s, 1, true) ~= nil
-  end
-  local survivors, found = {}, {}
+  for _ in pairs(runs) do audit.runs = audit.runs + 1 end
+  local survivors, shared = {}, {}
   for i, t in ipairs(stexts) do
-    each(words(t), function(key)
-      local lines = quoted[key]
-      if not lines then return end
-      if svofHas(key) then
-        audit.allowed[key] = true
-      elseif lines[i] then
-        survivors[#survivors + 1] = "line " .. i .. " still says: " .. key
-      else
-        found[key] = (found[key] or 0) + 1
+    each(words(t), function(key, from)
+      if runs[key] then
+        if keptSet[i] and needed(i, t, from) then
+          shared[key] = true
+        else
+          survivors[#survivors + 1] = "line " .. i .. ": " .. key
+        end
       end
     end)
   end
-  for key, n in pairs(found) do
-    if n > (game[key] or 0) then
-      survivors[#survivors + 1] = string.format("seen %d times, %d as game text: %s", n, game[key] or 0, key)
-    else
-      audit.game = audit.game + 1
-    end
-  end
-  for _, so in ipairs(shortOnes) do
-    if stexts[so[1]]:find(so[2], 1, true) then
-      if svofHas(table.concat(words(so[2]), " ")) then
-        audit.allowed[so[2]] = true
-      else
-        survivors[#survivors + 1] = "line " .. so[1] .. " still says: " .. so[2]
-      end
-    end
-  end
-  table.sort(survivors)
+  for _ in pairs(shared) do audit.shared = audit.shared + 1 end
   if #survivors > 0 then
-    die("audit: " .. #survivors .. " quoted runs survive:\n  " .. table.concat(survivors, "\n  ", 1, math.min(#survivors, 20)))
+    die("audit: " .. #survivors .. " four-word runs from filler lines survive:\n  " .. table.concat(survivors, "\n  ", 1, math.min(#survivors, 20)))
   end
 end
 
--- Reference runs of this corpus: a run is held to their line counts
+-- Reference runs of this corpus: a run is held to their counts
 local expect = {}
 for _, path in ipairs(expects) do
   local r = {}
@@ -874,20 +1160,24 @@ for _, path in ipairs(expects) do
   if tonumber(need("svo_prompts")) ~= prompts then die(path .. ": svof saw " .. r.svo_prompts .. " of " .. prompts .. " prompts") end
   local mode = need("mode")
   -- A package built without reference counts fails only that check; any other failure disqualifies the run
-  if need("gate") ~= "pass" and need("gate") ~= "FAIL: no reference line counts for " .. mode .. " runs" then
+  if need("gate") ~= "pass" and need("gate") ~= "FAIL: no reference counts for " .. mode .. " runs" then
     die(path .. " failed the gate: " .. r.gate)
   end
   if expect[mode] then die("two --expect results for " .. mode .. " mode") end
-  expect[mode] = string.format("%s = {lines = %d, game_lines = %d}", mode, tonumber(need("lines")), tonumber(need("game_lines")))
+  expect[mode] = string.format("%s = {lines = %d, game_lines = %d, added_lines = %d}", mode, tonumber(need("lines")),
+    tonumber(need("game_lines")), tonumber(need("added_lines")))
 end
 local expectList = {}
 for _, e in pairs(expect) do expectList[#expectList + 1] = e end
 table.sort(expectList)
 
+-- How far a run may stray from its reference: twice the widest spread seen on one machine, 21 lines, 6 game
+-- lines and 16 added lines, over 29 socket runs of a scrubbed package, 16 of a raw one and 7 feed runs
+local SLACK = {lines = 42, game_lines = 12, added_lines = 32}
+
 local version = tonumber(opts["bundle-version"] or "1") or die("--bundle-version takes a number")
 local cfgList = {}
 for _, f in ipairs(config) do cfgList[#cfgList + 1] = string.format("%q", f) end
--- Repeat runs differ by up to about a hundred lines in 141,800; 0.5% is far above that, far below a broken replay
 spit(stage .. "/manifest.lua", string.format([[return {
   bundle = %d,
   class = %q,
@@ -899,10 +1189,10 @@ spit(stage .. "/manifest.lua", string.format([[return {
   scrubbed = %s,
   config = {%s},
   expect = {%s},
-  tolerance = 0.005,
+  slack = {lines = %d, game_lines = %d, added_lines = %d},
 }
 ]], version, class, prompts, newlines, #scrubbed, md5, tostring(scrub), table.concat(cfgList, ", "),
-  table.concat(expectList, ", ")))
+  table.concat(expectList, ", "), SLACK.lines, SLACK.game_lines, SLACK.added_lines))
 
 spit(stage .. "/config.lua", string.format([[mpackage = [==[SvofBench]==]
 author = [==[Mudlet]==]
@@ -939,20 +1229,32 @@ run("cd " .. q(stage) .. " && export TZ=UTC && find . -exec touch -h -d '2026-01
 run("rm -rf " .. q(stage))
 
 print(string.format("%s: class %s, %d lines, %d prompts, corpus md5 %s", opts.out, class, newlines, prompts, md5))
-if #expectList > 0 then print("reference line counts: " .. table.concat(expectList, ", ")) end
+if #expectList > 0 then print("reference counts: " .. table.concat(expectList, ", ")) end
 if scrub then
   local l = stats.listed
-  print(string.format("names: %d listed (namedb %d, who-lists %d, --names %d, GMCP %d), %d renamed in any case",
-    audit.names, l.namedb or 0, l.who or 0, l.names or 0, l.gmcp or 0, stats.renamed))
-  print(string.format("scrubbed: %d quotes (%d lines carried over, %d reopened, %d never closed), %d typed, %d emotes (%d lines, %d kept for svof)",
-    stats.quotes, stats.quoteLines, stats.retro, stats.unclosed, stats.typed, stats.emotes, stats.emoteLines, stats.kept))
-  print(string.format("every changed line matches the same svof patterns (%d exact, begin and substring patterns, %d regexes; %d filler rerolls)",
-    (function() local n = #svof.subs for _ in pairs(svof.exact) do n = n + 1 end for _, b in pairs(svof.beginsBy) do n = n + #b end return n end)(),
-    #regexes, stats.rerolls))
-  local allowed = {}
-  for s in pairs(audit.allowed) do allowed[#allowed + 1] = s end
-  table.sort(allowed)
-  print(string.format("audit: 0 of %d listed names left in any case; 0 of %d quoted runs (from %d quotes) left (%d also game text), %d kept as svof's own text%s",
-    audit.names, audit.runs, audit.spans, audit.game, #allowed, #allowed > 0 and ":" or ""))
-  for _, s in ipairs(allowed) do print("  " .. s) end
+  local cats = {}
+  for name, c in pairs(stats.categories) do cats[#cats + 1] = {name = name, n = c.n, example = c.example} end
+  table.sort(cats, function(a, b) return a.n > b.n or (a.n == b.n and a.name < b.name) end)
+  print(string.format("names: %d listed (namedb %d, who-lists %d, --names %d, GMCP %d)",
+    audit.names, l.namedb or 0, l.who or 0, l.names or 0, l.gmcp or 0))
+  print(string.format("lines: %d filler, %d kept for svof (%d words svof matches on, %d of them cut to the part it matches, %d names renamed, %d words kept as a last resort), %d rerolls",
+    stats.filled, stats.kept, stats.pinned, stats.trimmed, stats.renamed, stats.backoff, stats.rerolls))
+  print(string.format("renamed names: %d lines keep letters a pattern matches inside a name, %d use another stand-in",
+    stats.nameLetters, stats.nameSwaps))
+  print(string.format("audit: every line matches the same svof patterns; 0 of %d listed names left in any case; of %d four-word runs from filler lines, none left except %d in lines svof needs every word of",
+    audit.names, audit.runs, audit.shared))
+  if #unevaluated > 0 then
+    local u = {}
+    for _, pat in ipairs(unevaluated) do u[#u + 1] = describe(tostring(pat.id)) end
+    print(string.format("assumed to fire (they read svof's state as well as the line): %s", table.concat(u, ", ")))
+  end
+  print(string.format("kept lines by the svof trigger that needs them (%d triggers%s):", #cats,
+    opts.report and ", every one in " .. opts.report or ", top 25; --report lists all"))
+  local rep = {}
+  for k, c in ipairs(cats) do
+    local row = string.format("%6d  %s", c.n, c.name)
+    if k <= 25 then print(row) end
+    rep[#rep + 1] = row .. "\n        " .. c.example
+  end
+  if opts.report then spit(opts.report, table.concat(rep, "\n") .. "\n") end
 end
