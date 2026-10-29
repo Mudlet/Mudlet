@@ -47,8 +47,8 @@ elseif(MUDLET_PGO_COMPILER STREQUAL "GCC")
   # there were no profile; unreached blocks inside trained ones stay cold.
   add_compile_options("-fprofile-use=${MUDLET_PGO_DIR}" "-fprofile-partial-training" "-fprofile-correction" "-Wno-missing-profile")
 else()
-  # Clang has no counterpart: functions the training never entered are treated
-  # as cold. The held-out 2D mapper measured no slower for it.
+  # Clang's counterpart is CI/pgo-train.sh merging the profile with -sparse, which
+  # leaves out functions the training never entered so they are not treated as cold.
   set(_mudlet_pgo_profdata "${MUDLET_PGO_DIR}/mudlet.profdata")
   if(NOT EXISTS "${_mudlet_pgo_profdata}")
     message(FATAL_ERROR "MUDLET_PGO=USE but ${_mudlet_pgo_profdata} does not exist - build with MUDLET_PGO=GENERATE and run CI/pgo-train.sh first")

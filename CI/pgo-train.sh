@@ -8,7 +8,8 @@
 # The workload is PipelineBenchmark - text decoding, the trigger engine, the
 # default packages and painting the console - because that is the per-line path
 # a busy game hammers. Functions it never enters are optimised as if there were
-# no profile under GCC, but Clang treats them as cold.
+# no profile: GCC through -fprofile-partial-training, Clang because the merge
+# below leaves them out of the profile.
 
 set -euo pipefail
 
@@ -93,7 +94,10 @@ if [[ "${COMPILER}" == *Clang* ]]; then
     echo "the training run wrote no .profraw files to ${PROFILE_DIR}" >&2
     exit 1
   fi
-  "${PROFDATA}" merge -output="${PROFILE_DIR}/mudlet.profdata" "${RAW_PROFILES[@]}"
+  # -sparse leaves out functions the training never entered. Kept in with zero
+  # counts, Clang marks them cold, and Apple's compiler then optimises them for
+  # size: held-out map loading and pathfinding came out up to 1.3x slower.
+  "${PROFDATA}" merge -sparse -output="${PROFILE_DIR}/mudlet.profdata" "${RAW_PROFILES[@]}"
   rm -f "${RAW_PROFILES[@]}"
   echo "Profile written to ${PROFILE_DIR}/mudlet.profdata"
 else
