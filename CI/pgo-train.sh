@@ -86,10 +86,10 @@ find "${PROFILE_DIR}" -type f \( -name '*.gcda' -o -name '*.profraw' -o -name '*
 train PipelineBenchmark text_best_pass_ms trigger_best_pass_ms defaults_text_best_pass_ms display_paint_ms
 
 # The benchmarks convert the XML to the binary format themselves, so TMap::restore() is trained too.
-# PathfindBenchmark searches four routes only under Clang, which compiles untrained code as cold:
-# without them, Clang 21 took 1.11 to 1.14 times as long per search as with no profile, with them
-# 0.87 to 0.90, on maps it never saw too. Trained on them, GCC 12 turned the conditional moves in
-# TMap::searchGraph() into branches and took 1.15 times as long per search, on the trained map too.
+# PathfindBenchmark searches four routes only under Clang: without them, Clang 21 took 1.04 to 1.09
+# times as long per search as with no profile on a map it never saw, with them 0.99 to 1.00. Trained
+# on them, GCC 12 turned the conditional moves in TMap::searchGraph() into branches and took 1.15
+# times as long per search, on the trained map too.
 # Under the profile directory rather than mktemp's, as the benchmarks need a path Windows can open.
 MAP_DIR="${PROFILE_DIR}/training-map"
 rm -rf "${MAP_DIR}"

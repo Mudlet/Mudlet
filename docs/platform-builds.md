@@ -165,9 +165,9 @@ reports as a `hash mismatch` warning.
 The training is PipelineBenchmark - text decoding, the trigger engine, the default packages and
 console painting - then MapRenderBenchmark and PathfindBenchmark on the Achaea map in
 `src/mudlet-lua/tests/fixtures/maps`, which load, audit and draw it and build its pathfinding graph.
-Only Clang builds also search four routes across it: left untrained, Clang 21 took 1.11 to 1.14
-times as long per search as with no profile, and trained 0.87 to 0.90, on maps it never saw too,
-while GCC 12 trained on them took about 1.15 times as long per search, on the trained map too.
+Only Clang builds also search four routes across it: left untrained, Clang 21 took 1.04 to 1.09
+times as long per search as with no profile on a map it never saw, and trained 0.99 to 1.00, while
+GCC 12 trained on them took about 1.15 times as long per search, on the trained map too.
 Functions the training never enters are compiled as if there were no profile: under GCC thanks to
 `-fprofile-partial-training`, under Clang because `CI/pgo-train.sh` merges the profile with
 `llvm-profdata merge -sparse`, which leaves them out of it. Kept in with zero counts, Clang marks
