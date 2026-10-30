@@ -101,7 +101,6 @@ class TEvent;
 class TLabel;
 class translation;
 class TScrollBox;
-class TSpeechBridge;
 class TTabBar;
 class TToolBar;
 class TUiTour;
@@ -701,7 +700,6 @@ private:
     QPointer<QToolButton> mpButtonConnect;
     QPointer<QToolButton> mpButtonDiscord;
     QPointer<QToolButton> mpButtonMute;
-    QPointer<TSpeechBridge> mpSpeechBridge;
     void refreshMicrophoneMarkers();
     QPointer<QToolButton> mpButtonPackageManagers;
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;

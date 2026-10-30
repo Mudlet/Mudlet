@@ -1482,10 +1482,7 @@ mudlet::mudlet()
     static DebugProfileObserver debugProfileObserver;
     TDebug::setProfileObserver(&debugProfileObserver);
     qApp->installEventFilter(new TransientParentRelinker(this));
-    // A child rather than a member, so it and the recognizer it owns are torn
-    // down with the main window's other children
-    mpSpeechBridge = new TSpeechBridge(this);
-    connect(mpSpeechBridge, &TSpeechBridge::microphoneOwnerChanged, this, &mudlet::refreshMicrophoneMarkers);
+    connect(TSpeechBridge::instance(), &TSpeechBridge::microphoneOwnerChanged, this, &mudlet::refreshMicrophoneMarkers);
     // Queued, so a tab change before the event loop first runs - while a test or startup is still
     // building profiles - does not reach Discord, which also only starts polling then.
     QTimer::singleShot(0ms, this, [this]() {
@@ -3478,17 +3475,12 @@ void mudlet::closeHost(const QString& name)
     // Every command this profile placed, on whichever surface
     removeAddonCommandsForHost(pH);
 
-    mpSpeechBridge->profileClosing(pH);
-
     mpTabBar->removeTab(name);
     // PLACEMARKER: Host destruction (1) - from all sources
     int hostCount = mHostManager.getHostCount();
     emit signal_hostDestroyed(pH, --hostCount);
     // This is what kills the Host instance:
     mHostManager.deleteHost(name);
-    if (!mHostManager.getHostCount()) {
-        mpSpeechBridge->allProfilesClosed();
-    }
     // A detached profile has no tab here, so when it was the active one its
     // closing changes no tab to hand activation to the profile left showing
     if (!getActiveHost() && mpTabBar->count() > 0) {
@@ -4127,7 +4119,8 @@ void mudlet::updateMainWindowTitle()
 // background listening, and nothing anywhere saying the microphone was live.
 QString mudlet::mainWindowMicrophoneMarker() const
 {
-    Host* pOwner = mpSpeechBridge ? mpSpeechBridge->microphoneOwner() : nullptr;
+    auto* pSpeechBridge = TSpeechBridge::instance();
+    Host* pOwner = pSpeechBridge ? pSpeechBridge->microphoneOwner() : nullptr;
     if (!pOwner || mDetachedWindows.contains(pOwner->getName())) {
         return QString();
     }
@@ -4145,7 +4138,8 @@ QString mudlet::mainWindowMicrophoneMarker() const
 // title is no place to guess at it.
 QString mudlet::microphoneMarkerFor(const QString& profileName) const
 {
-    Host* pOwner = mpSpeechBridge ? mpSpeechBridge->microphoneOwner() : nullptr;
+    auto* pSpeechBridge = TSpeechBridge::instance();
+    Host* pOwner = pSpeechBridge ? pSpeechBridge->microphoneOwner() : nullptr;
     if (!pOwner || pOwner->getName() != profileName) {
         return QString();
     }
@@ -7033,6 +7027,11 @@ mudlet::~mudlet()
     // their visibilityChanged handlers read members that are gone by then.
     for (auto* pDockWidget : findChildren<QDockWidget*>()) {
         disconnect(pDockWidget, &QDockWidget::visibilityChanged, this, nullptr);
+    }
+    // And the speech bridge: mHostManager ends any session as it goes, and the title refresh that
+    // triggers reads members destroyed before it
+    if (auto* pSpeechBridge = TSpeechBridge::instance()) {
+        disconnect(pSpeechBridge, nullptr, this, nullptr);
     }
     TSpellChecker::closeSharedDictionary();
     if (!mTranslatorsLoadedList.isEmpty()) {
