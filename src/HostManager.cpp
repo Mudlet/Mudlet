@@ -27,10 +27,11 @@
 #include "Host.h"
 #include "MudletApp.h"
 #include "MudletMedia.h"
+#include "discord.h"
+#include "TAppFrontend.h"
 #include "TGameDetails.h"
 #include "TMap.h"
 #include "TSpeechBridge.h"
-#include "discord.h"
 #include "utils.h"
 
 #include <QDebug>
@@ -109,6 +110,11 @@ HostManager::~HostManager()
     mGoingDown = true;
     for (const auto& pHost : hostList()) {
         pHost->raiseExitEventIfOwed();
+        // As in deleteHost(): the handlers may have deleted this profile, which closed it
+        if (mHostPool.value(pHost->getName()) != pHost) {
+            continue;
+        }
+        TAppFrontend::instance()->profileClosing(pHost.get());
     }
     if (auto* pSpeechBridge = TSpeechBridge::instance()) {
         for (const auto& pHost : hostList()) {
@@ -117,6 +123,11 @@ HostManager::~HostManager()
     }
     // Drain the pool while self() still answers: ~Host() may reach the manager it is being removed from.
     mHostPool.clear();
+    // A second pool skips this while self()'s is open, whose saves take what this one's profiles left; one outliving it,
+    // with no self() left to save for, warns of what is still held and drops it, rather than hold it for a later pool
+    if (smpSelf == this || !smpSelf) {
+        TAppFrontend::instance()->profilesClosed();
+    }
     if (smpSelf == this) {
         smpSelf = nullptr;
     }
@@ -147,8 +158,9 @@ void HostManager::deleteHost(const QString& hostname)
     if (auto* pSpeechBridge = TSpeechBridge::instance()) {
         pSpeechBridge->profileClosing(pHost.data());
     }
-    // The handlers may have deleted this profile and opened another under its name
+    // The handlers may have deleted this profile, closing it, and opened another under its name
     if (mHostPool.value(hostname) == pHost) {
+        TAppFrontend::instance()->profileClosing(pHost.get());
         // The Host is destroyed as pHost goes out of scope, once it is out of the pool
         mHostPool.remove(hostname);
     }
@@ -162,6 +174,10 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
 {
     if (hostname.isEmpty()) {
         qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") ERROR: an unnamed Host is not permitted, aborting and returning false!";
+        return false;
+    }
+    if (mGoingDown) {
+        qWarning() << "HostManager::addHost() - not adding" << hostname << "as the pool is being destroyed";
         return false;
     }
 

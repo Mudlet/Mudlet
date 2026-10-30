@@ -76,6 +76,7 @@ public:
     FontManager& fonts() { return *mpFonts; }
 
     Host* getHost(const QString& hostname);
+    // False for an empty name, one already open, or while the pool is being destroyed
     bool addHost(const QString& name, const QString& port, const QString& login, const QString& pass);
     // Loads and starts a profile with no window, as the GUI's load does, a new profile getting its game's
     // default packages. Null when that profile is already open, or the pool is going.

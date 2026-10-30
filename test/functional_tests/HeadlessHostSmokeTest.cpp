@@ -50,6 +50,7 @@
 #include <QtTest/QtTest>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <memory>
 
@@ -71,6 +72,7 @@
 #include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TMxpFrameFrontend.h"
+#include "TNullConsoleFrontend.h"
 #include "TNullMapViews.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -149,6 +151,9 @@ private:
     // The main window owns the profile pool in the app; here nothing else would.
     std::unique_ptr<HostManager> mpHostManager;
     const QString mHostname = qsl("Test-Headless-Host-Smoke");
+    // Sorted last, as the pool closes profiles in name order and a later one's save would also write its window,
+    // masking a missing save of its own
+    const QString mAppCloseHostname = qsl("Test-Headless-Host-Zz-Window-Layout-App-Close");
     const QString mConnectingHostname = qsl("Test-Headless-Host-Connect");
     const QString mSecureHostname = qsl("Test-Headless-Host-Secure");
     const QString mHeldLineHostname = qsl("Test-Headless-Host-Held-Line");
@@ -162,6 +167,8 @@ private:
     static constexpr int scmMatchThreshold = 1000;
 
     static bool mudletIniWritten() { return qgetenv("MUDLET_TEST_MUDLET_INI") == "present"; }
+
+    bool mAppCloseLayoutChecked = false;
 
     static QString luaGlobalString(Host* host, const char* name)
     {
@@ -189,6 +196,33 @@ private:
  </rooms>
 </map>
 )");
+    }
+
+    static QString headlessLayoutPath() { return MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat")); }
+    static bool writeHeadlessLayout(const QByteArray& bytes)
+    {
+        QFile layoutFile(headlessLayoutPath());
+        return layoutFile.open(QIODevice::WriteOnly) && layoutFile.write(bytes) == bytes.size();
+    }
+    // The headless layout file's magic and a later version, which a save refuses to replace
+    static QByteArray laterVersionLayout() { return QByteArray::fromHex("4d574c4800000002"); }
+    static void ignoreLaterVersionLayout()
+    {
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("has version 2 not 1 - none of it will be loaded, nor a layout saved over it, until it is deleted or renamed$")));
+    }
+    static void ignoreRefusedLayoutSave() { QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("has version 2 not 1 - this save does not replace it: delete or rename it to save one$"))); }
+    static QMap<QString, std::pair<QRect, bool>> savedUserWindows()
+    {
+        QMap<QString, std::pair<QRect, bool>> placements;
+        QFile layoutFile(headlessLayoutPath());
+        if (layoutFile.open(QIODevice::ReadOnly)) {
+            QDataStream ifs(&layoutFile);
+            ifs.setVersion(QDataStream::Qt_5_12);
+            quint32 magic = 0;
+            quint32 version = 0;
+            ifs >> magic >> version >> placements;
+        }
+        return placements;
     }
 
     static QString veraFontFolder() { return qsl("%1/ttf-bitstream-vera-1.10").arg(MudletApp::getMudletPath(enums::mainFontsPath)); }
@@ -444,6 +478,25 @@ private slots:
         if (!mpHostManager) {
             return;
         }
+        QFile layoutFile(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat")));
+        // initTestCase() may have skipped before redirecting the config dir to this test's own
+        const bool ownLayoutFile = layoutFile.fileName().startsWith(mConfigDir.path() + QLatin1Char('/'));
+        if (ownLayoutFile) {
+            layoutFile.remove();
+        }
+        // A pool outliving the one self() answers with, whose profiles close after it with no pool to save them: what
+        // they leave must not be held over for a later pool's save
+        const QString outlivingHostname = qsl("Test-Headless-Host-Window-Layout-Outliving-Pool");
+        std::unique_ptr<HostManager> pOutliving;
+        if (ownLayoutFile) {
+            QTest::ignoreMessage(QtWarningMsg, "HostManager::HostManager() WARNING - a HostManager already exists, so self() keeps pointing at that one.");
+            pOutliving = std::make_unique<HostManager>();
+            if (pOutliving->addHost(outlivingHostname, QString(), QString(), QString())) {
+                pOutliving->getHost(outlivingHostname)->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('wlA', false, false, 'f'); resizeWindow('wlA', 250, 160)"));
+            }
+        }
+        // Read before the pool goes, and compared after, so a mismatch still leaves the environment as it found it
+        const QString lastHostname = mAppCloseLayoutChecked ? HostManager::self()->hostList().constLast()->getName() : QString();
         // Mudlet.ini is read by the first pool alone, so a pool made once it has gone starts from its mutes:
         // the one as read, the other as changed since
         const bool apiMuted = mudletIniWritten();
@@ -451,6 +504,45 @@ private slots:
         QCOMPARE(mpHostManager->media().apiMuted(), apiMuted);
         mpHostManager->media().setGameMuted(gameMuted);
         mpHostManager.reset();
+        // ~HostManager() saves as each profile closes, after its sysExitEvent, as TMainConsole::closeEvent() asks for one in the GUI
+        const bool appCloseSaved = QFile::exists(layoutFile.fileName());
+        quint32 magic = 0;
+        quint32 version = 0;
+        QMap<QString, std::pair<QRect, bool>> placements;
+        if (ownLayoutFile && mAppCloseLayoutChecked && layoutFile.open(QIODevice::ReadOnly)) {
+            QDataStream ifs(&layoutFile);
+            ifs.setVersion(QDataStream::Qt_5_12);
+            ifs >> magic >> version >> placements;
+            layoutFile.close();
+        }
+        bool outlivingHeld = false;
+        bool nextPoolSaved = true;
+        if (pOutliving) {
+            QTest::ignoreMessage(QtWarningMsg,
+                                 QRegularExpression(qsl("with no HostManager, the window layout could not be saved, so where these were is lost: QList\\(\"%1/wlA\"\\)$").arg(outlivingHostname)));
+            pOutliving->deleteHost(outlivingHostname);
+            pOutliving.reset();
+            layoutFile.remove();
+            const HostManager nextPool;
+            nextPoolSaved = TAppFrontend::instance()->saveWindowLayoutForScript();
+            outlivingHeld = savedUserWindows().contains(outlivingHostname + qsl("/wlA"));
+        }
+        if (ownLayoutFile) {
+            layoutFile.remove();
+        }
+        QVERIFY2(nextPoolSaved, "A later pool could not save, so what it held of an outliving pool's profile went unchecked.");
+        QVERIFY2(!outlivingHeld, "A pool outliving the one self() answers with left its profile's windows for a later pool to save.");
+        if (mAppCloseLayoutChecked) {
+            QCOMPARE(lastHostname, mAppCloseHostname);
+        }
+        if (ownLayoutFile && mAppCloseLayoutChecked) {
+            QVERIFY2(appCloseSaved, "Closing the app saved no layout.");
+            QCOMPARE(magic, quint32(0x4d574c48));
+            QCOMPARE(version, quint32(1));
+            const auto placement = placements.value(mAppCloseHostname + qsl("/wlA"));
+            QCOMPARE(placement.first, QRect(9, 10, 132, 62));
+            QVERIFY(placement.second);
+        }
         HostManager nextPool;
         QCOMPARE(nextPool.media().apiMuted(), apiMuted);
         QCOMPARE(nextPool.media().gameMuted(), gameMuted);
@@ -2176,8 +2268,8 @@ local ok, err = pcall(function()
   createMiniConsole("uwrMainMini", 0, 0, 100, 100)
   step("mainMini", resizeWindow, "uwrMainMini", 50, 50)
   -- As in the GUI, the window a show sends the resize to stays hidden through the handler, until a change reports its
-  -- name, such as one to its own command line, and what it holds keeps its answer unless the handler makes, shows or
-  -- hides it
+  -- name, such as one to its own command line, or a layout load succeeds, and what it holds keeps its answer unless the
+  -- handler makes, shows or hides it
   openUserWindow("uwrOther", false, false, "f")
   hideWindow("uwr")
   resizeWindow("uwr", 260, 170)
@@ -2330,6 +2422,12 @@ if not ok then uwShowHandler = tostring(err) end
         QTest::newRow("new label, then the window hidden") << qsl("createLabel('uwc', 'uwcLabel', 0, 0, 20, 20, 1); hideWindow('uwc'); return windowVisible('uwcLabel')") << qsl("false|true|false");
         QTest::newRow("window deleted") << qsl("deleteMiniConsole('uwc'); return 'deleted'") << qsl("deleted|false|nil");
         QTest::newRow("window deleted and reopened") << qsl("deleteMiniConsole('uwc'); openUserWindow('uwc', false, false, 'f'); return 'reopened'") << qsl("reopened|true|true");
+        // As the GUI's reportDockGeometry() once a load succeeds, here from a layout without the window
+        QTest::newRow("layout loaded, then a scroll box shown") << qsl(
+                "assert(loadWindowLayout()); showWindow('uwcBox'); return tostring(windowVisible('uwc')) .. ',' .. tostring(windowVisible('uwcOld'))")
+                                                                << qsl("true,false|true|true");
+        QTest::newRow("opened with the layout") << qsl("openUserWindow('uwc', true, false, 'f'); return tostring(windowVisible('uwc')) .. ',' .. tostring(windowVisible('uwcOld'))")
+                                                << qsl("true,false|true|true");
     }
 
     // As the GUI self-test profile answers the same
@@ -2342,6 +2440,7 @@ if not ok then uwShowHandler = tostring(err) end
         Host* host = HostManager::self()->getHost(hostname);
         QVERIFY2(host, "The profile is not in the pool.");
         host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onUwcShowHandler"));
+        QFile::remove(headlessLayoutPath());
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
 uwcShowHandler = "not run"
 local during, found = nil, "not run"
@@ -2353,6 +2452,7 @@ function onUwcShowHandler(_, _, _, name)
   end
 end
 local ok, err = pcall(function()
+  assert(saveWindowLayout())
   openUserWindow("uwc", false, false, "f")
   openUserWindow("uwcOther", false, false, "f")
   createMiniConsole("uwc", "uwcOld", 0, 0, 50, 50)
@@ -2376,6 +2476,2045 @@ if not ok then uwcShowHandler = tostring(err) end
         // Before comparing, so a failing row leaves the next its profile name
         HostManager::self()->deleteHost(hostname);
         QCOMPARE(answer, expected);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // As the GUI self-test profile answers, but for the frame and positions its window manager chooses
+    void test_headlessWindowLayoutRoundTripContract()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlResize"));
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+wlResult = "not run"
+local ok, err = pcall(function()
+  local events = {}
+  function onWlResize(_, width, height, name)
+    events[#events + 1] = table.concat({width, height, name}, ":")
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    local results = {f(...)}
+    for i = 1, #results do results[i] = tostring(results[i]) end
+    answers[#answers + 1] = label .. "=" .. table.concat(results, ":") .. "|" .. table.concat(events, ";")
+    events = {}
+  end
+  step("loadNone", loadWindowLayout)
+  step("openA", openUserWindow, "wlA", false, false, "f")
+  step("openB", openUserWindow, "wlB", false, false, "f")
+  step("placeA", function() resizeWindow("wlA", 300, 200); moveWindow("wlA", 40, 50) end)
+  step("placeB", function() resizeWindow("wlB", 320, 220); hideWindow("wlB") end)
+  step("save", saveWindowLayout)
+  step("saveAgain", saveWindowLayout)
+  step("changeA", function() resizeWindow("wlA", 400, 330); moveWindow("wlA", 70, 80) end)
+  step("changeB", function() resizeWindow("wlB", 410, 340); showWindow("wlB") end)
+  step("openC", function() openUserWindow("wlC", false, false, "f"); resizeWindow("wlC", 150, 100) end)
+  step("load", loadWindowLayout)
+  step("geometryA", getWindowGeometry, "wlA")
+  step("sizeA", getUserWindowSize, "wlA")
+  step("geometryB", getWindowGeometry, "wlB")
+  step("visibleB", windowVisible, "wlB")
+  step("geometryC", getWindowGeometry, "wlC")
+  step("visibleC", windowVisible, "wlC")
+  step("loadAgain", loadWindowLayout)
+  -- closed when saved, resized while closed, then reopened with the layout
+  step("openD", function() openUserWindow("wlD", false, false, "f"); resizeWindow("wlD", 222, 111); closeUserWindow("wlD") end)
+  step("saveClosed", saveWindowLayout)
+  step("resizeClosedD", resizeWindow, "wlD", 333, 144)
+  step("reopenD", openUserWindow, "wlD", true, false, "f")
+  step("geometryD", getWindowGeometry, "wlD")
+  step("visibleD", windowVisible, "wlD")
+  -- a second open with the layout does not load it again
+  step("resizeD", resizeWindow, "wlD", 250, 120)
+  step("reopenDAgain", openUserWindow, "wlD", true, false, "f")
+  step("geometryDAgain", getWindowGeometry, "wlD")
+  -- not in the saved layout
+  step("openE", openUserWindow, "wlE", true, false, "f")
+  step("geometryE", getWindowGeometry, "wlE")
+  step("geometryAAfterE", getWindowGeometry, "wlA")
+  wlAnswers = table.concat(answers, "\n")
+end)
+wlResult = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "wlResult"), qsl("ok"));
+        QVERIFY2(QFile::exists(layoutFile), "saveWindowLayout() wrote no layout file.");
+        const QSize opened = host->mainWindowSize().value_or(QSize());
+        const QString openedSize = qsl("%1:%2").arg(opened.width()).arg(opened.height());
+        const QStringList answers{qsl("loadNone=false|"),
+                                  qsl("openA=true|%1:wlA").arg(openedSize),
+                                  qsl("openB=true|%1:wlB").arg(openedSize),
+                                  qsl("placeA=|300:200:wlA"),
+                                  qsl("placeB=|320:220:wlB"),
+                                  qsl("save=true|"),
+                                  qsl("saveAgain=true|"),
+                                  qsl("changeA=|400:330:wlA"),
+                                  qsl("changeB=|410:340:wlB"),
+                                  qsl("openC=|%1:wlC;150:100:wlC").arg(openedSize),
+                                  qsl("load=true|300:200:wlA"),
+                                  qsl("geometryA=40:50:300:200|"),
+                                  qsl("sizeA=300:200|"),
+                                  qsl("geometryB=0:0:320:220|"),
+                                  qsl("visibleB=false|"),
+                                  qsl("geometryC=0:0:150:100|"),
+                                  qsl("visibleC=true|"),
+                                  qsl("loadAgain=true|"),
+                                  qsl("openD=|%1:wlD;222:111:wlD").arg(openedSize),
+                                  qsl("saveClosed=true|"),
+                                  qsl("resizeClosedD=true|"),
+                                  qsl("reopenD=true|"),
+                                  qsl("geometryD=0:0:222:111|"),
+                                  qsl("visibleD=true|"),
+                                  qsl("resizeD=true|250:120:wlD"),
+                                  qsl("reopenDAgain=true|"),
+                                  qsl("geometryDAgain=0:0:250:120|"),
+                                  qsl("openE=true|%1:wlE").arg(openedSize),
+                                  qsl("geometryE=0:0:%1|").arg(openedSize),
+                                  qsl("geometryAAfterE=40:50:300:200|")};
+        QCOMPARE(luaGlobalString(host, "wlAnswers"), answers.join(QLatin1Char('\n')));
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    // With nothing held of a closed profile, a load from a file of a later version, or a damaged one, answers false and
+    // places nothing
+    void test_headlessWindowLayoutRefusesDamagedFile()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Damaged");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlResize"));
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+wlDamagedResult = "not run"
+local ok, err = pcall(function()
+  local events = {}
+  function onWlResize(_, width, height, name)
+    events[#events + 1] = table.concat({width, height, name}, ":")
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    local results = {f(...)}
+    for i = 1, #results do results[i] = tostring(results[i]) end
+    answers[#answers + 1] = label .. "=" .. table.concat(results, ":") .. "|" .. table.concat(events, ";")
+    events = {}
+  end
+  local path = getMudletHomeDir():match("^(.*)/profiles/[^/]*$") .. "/windowLayoutHeadless.dat"
+  local function writeBytes(bytes)
+    local handle = assert(io.open(path, "wb"))
+    handle:write(bytes)
+    handle:close()
+  end
+  step("open", function() openUserWindow("wlA", false, false, "f"); resizeWindow("wlA", 300, 200) end)
+  -- a save lands at this path, so the refusals below are of this file and not of a missing one
+  step("saveFirst", function()
+    assert(saveWindowLayout())
+    local handle = assert(io.open(path, "rb"))
+    local bytes = handle:read("*a")
+    handle:close()
+    return #bytes > 0
+  end)
+  step("otherVersion", function() writeBytes("MWLH\0\0\0\2"); return loadWindowLayout() end)
+  step("foreign", function() writeBytes("junk"); return loadWindowLayout() end)
+  step("truncated", function() writeBytes("MWLH\0\0\0\1\0\0"); return loadWindowLayout() end)
+  step("geometry", getWindowGeometry, "wlA")
+  step("saveOver", saveWindowLayout)
+  step("resize", resizeWindow, "wlA", 400, 330)
+  step("loadOver", loadWindowLayout)
+  wlDamagedAnswers = table.concat(answers, "\n")
+end)
+wlDamagedResult = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "wlDamagedResult"), qsl("ok"));
+        const QSize opened = host->mainWindowSize().value_or(QSize());
+        const QStringList answers{qsl("open=|%1:%2:wlA;300:200:wlA").arg(opened.width()).arg(opened.height()),
+                                  qsl("saveFirst=true|"),
+                                  qsl("otherVersion=false|"),
+                                  qsl("foreign=false|"),
+                                  qsl("truncated=false|"),
+                                  qsl("geometry=0:0:300:200|"),
+                                  qsl("saveOver=true|"),
+                                  qsl("resize=true|400:330:wlA"),
+                                  qsl("loadOver=true|300:200:wlA")};
+        QCOMPARE(luaGlobalString(host, "wlDamagedAnswers"), answers.join(QLatin1Char('\n')));
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    // Short, foreign or pre-first-version files are damaged and replaced by a save; one that cannot be opened, such as a
+    // directory at its path, is kept, as a later version's is
+    void test_headlessWindowLayoutReplacesDamagedFileButNotUnopenable()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Short");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        const QString layoutFilePath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFilePath);
+        const QString saveAndLoad = qsl(R"lua(
+resizeWindow("wlA", 300, 200)
+local saved = saveWindowLayout()
+resizeWindow("wlA", 400, 330)
+wlShort = tostring(saved) .. "|" .. tostring(loadWindowLayout()) .. "|" .. table.concat({getWindowGeometry("wlA")}, ":")
+)lua");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(openUserWindow("wlA", false, false, "f"))lua")));
+
+        QList<QByteArray> damaged;
+        for (const int size : {0, 1, 2, 3, 4, 8}) {
+            damaged.append(QByteArray(size, '\0'));
+        }
+        damaged << QByteArray("junk") << QByteArray::fromHex("4d574c48") << QByteArray::fromHex("4d574c4800000000") << QByteArray::fromHex("484c574d00000001")
+                << QByteArray::fromHex("484c574d00000002");
+        // Whole user windows, then map widgets cut short, so a save must drop what was read before the damage
+        QByteArray truncated;
+        {
+            QDataStream ofs(&truncated, QIODevice::WriteOnly);
+            ofs.setVersion(QDataStream::Qt_5_12);
+            ofs << quint32(0x4d574c48) << quint32(1) << QMap<QString, std::pair<QRect, bool>>{{hostname + qsl("/wlZ"), {QRect(1, 2, 3, 4), true}}} << quint32(1);
+        }
+        damaged << truncated;
+        for (const QByteArray& bytes : damaged) {
+            QVERIFY(writeHeadlessLayout(bytes));
+            QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("windowLayoutHeadless\\.dat\" is damaged.* - this save replaces it$")));
+            QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(saveAndLoad));
+            QCOMPARE(luaGlobalString(host, "wlShort"), qsl("true|true|0:0:300:200"));
+            QVERIFY2(!savedUserWindows().contains(hostname + qsl("/wlZ")), "A save kept a window read from a damaged file.");
+        }
+
+        QVERIFY(QFile::remove(layoutFilePath));
+        QVERIFY(QDir().mkpath(layoutFilePath));
+        QTest::ignoreMessage(QtWarningMsg,
+                             QRegularExpression(qsl("error opening window layout file: .*windowLayoutHeadless\\.dat\" .* - this save does not replace it: delete or rename it to save one$")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("error opening window layout file: .*windowLayoutHeadless\\.dat\" .* until it is deleted or renamed$")));
+        // Once each for the save and the load
+        QTest::failOnWarning(QRegularExpression(qsl("window layout file")));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(saveAndLoad));
+        QCOMPARE(luaGlobalString(host, "wlShort"), qsl("false|false|0:0:400:330"));
+        QVERIFY(QFileInfo(layoutFilePath).isDir());
+        QVERIFY(QDir().rmdir(layoutFilePath));
+        HostManager::self()->deleteHost(hostname);
+        QFile::remove(layoutFilePath);
+    }
+
+    // Two profiles' windows of one name are placed apart, as the GUI keys a floating dock's geometry by profile
+    void test_headlessWindowLayoutKeepsProfilesApart()
+    {
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        const QString chunk = qsl(R"lua(
+wlApartResult = "not run"
+local ok, err = pcall(function()
+  wlEvents = {}
+  function onWlResize(_, width, height, name)
+    wlEvents[#wlEvents + 1] = table.concat({width, height, name}, ":")
+  end
+  openUserWindow("wlA", false, false, "f")
+  resizeWindow("wlA", WIDTH, HEIGHT)
+  moveWindow("wlA", X, Y)
+  if HIDDEN then hideWindow("wlA") end
+  wlEvents = {}
+end)
+wlApartResult = ok and "ok" or tostring(err)
+)lua");
+        const QString placed = qsl(R"lua(
+wlPlaced = table.concat({getWindowGeometry("wlA")}, ":") .. ":" .. tostring(windowVisible("wlA")) .. "|" .. table.concat(wlEvents, ";")
+wlEvents = {}
+)lua");
+        std::array<Host*, 2> hosts{};
+        const std::array<QString, 2> hostnames{qsl("Test-Headless-Host-Window-Layout-One"), qsl("Test-Headless-Host-Window-Layout-Two")};
+        const std::array<QString, 2> placements{qsl("WIDTH, HEIGHT, X, Y, HIDDEN = 300, 200, 10, 20, false"), qsl("WIDTH, HEIGHT, X, Y, HIDDEN = 150, 100, 30, 40, true")};
+        for (size_t i = 0; i < hosts.size(); ++i) {
+            QVERIFY2(HostManager::self()->addHost(hostnames[i], QString(), QString(), QString()), "Could not create a profile with no main window.");
+            hosts[i] = HostManager::self()->getHost(hostnames[i]);
+            QVERIFY2(hosts[i], "The profile is not in the pool.");
+            hosts[i]->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlResize"));
+            QVERIFY(hosts[i]->getLuaInterpreter()->compileAndExecuteScript(placements[i] + chunk));
+            QCOMPARE(luaGlobalString(hosts[i], "wlApartResult"), qsl("ok"));
+        }
+        QVERIFY(hosts[0]->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(saveWindowLayout())")));
+        QVERIFY(hosts[0]->getLuaInterpreter()->compileAndExecuteScript(qsl("resizeWindow('wlA', 400, 330); wlEvents = {}")));
+        QVERIFY(hosts[1]->getLuaInterpreter()->compileAndExecuteScript(qsl("showWindow('wlA'); resizeWindow('wlA', 500, 400); wlEvents = {}")));
+        QVERIFY(hosts[1]->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(loadWindowLayout())")));
+        QVERIFY(hosts[0]->getLuaInterpreter()->compileAndExecuteScript(placed));
+        QVERIFY(hosts[1]->getLuaInterpreter()->compileAndExecuteScript(placed));
+        QCOMPARE(luaGlobalString(hosts[0], "wlPlaced"), qsl("10:20:300:200:true|300:200:wlA"));
+        QCOMPARE(luaGlobalString(hosts[1], "wlPlaced"), qsl("30:40:150:100:false|"));
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    // As in the GUI's restoreState(), resize handlers run mid-load; a load from one is refused, and so is a save, as it
+    // would write windows not yet placed
+    void test_headlessWindowLayoutLoadRefusesReentry()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Reentry");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlResize"));
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+wlReentryResult = "not run"
+local ok, err = pcall(function()
+  local inLoad = {}
+  local armed = false
+  function onWlResize(_, width, height, name)
+    if armed then
+      armed = false
+      local saved, saveError = saveWindowLayout()
+      inLoad[#inLoad + 1] = "save=" .. tostring(saved) .. ":" .. tostring(saveError) .. ",load=" .. tostring(loadWindowLayout())
+    end
+  end
+  openUserWindow("wlA", false, false, "f")
+  openUserWindow("wlB", false, false, "f")
+  resizeWindow("wlA", 300, 200)
+  resizeWindow("wlB", 320, 220)
+  assert(saveWindowLayout())
+  resizeWindow("wlA", 400, 330)
+  resizeWindow("wlB", 410, 340)
+  local function sizes()
+    return table.concat({getWindowGeometry("wlA")}, ":") .. "," .. table.concat({getWindowGeometry("wlB")}, ":")
+  end
+  armed = true
+  assert(loadWindowLayout())
+  local answers = {table.concat(inLoad, ";"), sizes()}
+  -- the handler's save, had it happened, writes the window this load had yet to reach at its old size
+  resizeWindow("wlA", 500, 400)
+  resizeWindow("wlB", 510, 410)
+  assert(loadWindowLayout())
+  answers[#answers + 1] = sizes()
+  wlReentryAnswers = table.concat(answers, "|")
+end)
+wlReentryResult = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "wlReentryResult"), qsl("ok"));
+        QCOMPARE(luaGlobalString(host, "wlReentryAnswers"), qsl("save=nil:cannot save the window layout while it is being loaded,load=false|0:0:300:200,0:0:320:220|0:0:300:200,0:0:320:220"));
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    // As TMainConsole::closeEvent() asks for a save after sysExitEvent, but every close writes, not only those until one
+    // in the session has saved
+    void test_headlessWindowLayoutSavedAsProfileCloses()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Close");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+openUserWindow("wlA", false, false, "f")
+resizeWindow("wlA", 123, 45)
+moveWindow("wlA", 7, 8)
+hideWindow("wlA")
+function onWlExit() resizeWindow("wlA", 130, 60) end
+registerAnonymousEventHandler("sysExitEvent", "onWlExit")
+)lua")));
+        QVERIFY(!QFile::exists(layoutFile));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY2(QFile::exists(layoutFile), "Closing the profile saved no layout.");
+
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create the profile again.");
+        host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+openUserWindow("wlA", true, false, "f")
+wlReopened = table.concat({getWindowGeometry("wlA")}, ":") .. ":" .. tostring(windowVisible("wlA"))
+)lua")));
+        QCOMPARE(luaGlobalString(host, "wlReopened"), qsl("7:8:130:60:true"));
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    // A save keeps a closed profile's windows, else a later save would undo the one its close made
+    void test_headlessWindowLayoutKeepsClosedProfilesPlacements()
+    {
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        const std::array<QString, 2> hostnames{qsl("Test-Headless-Host-Window-Layout-Closed-One"), qsl("Test-Headless-Host-Window-Layout-Closed-Two")};
+        const std::array<QString, 2> sizes{qsl("101, 51"), qsl("202, 52")};
+        for (size_t i = 0; i < hostnames.size(); ++i) {
+            QVERIFY2(HostManager::self()->addHost(hostnames[i], QString(), QString(), QString()), "Could not create a profile with no main window.");
+            Host* host = HostManager::self()->getHost(hostnames[i]);
+            QVERIFY2(host, "The profile is not in the pool.");
+            QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('wlA', false, false, 'f'); resizeWindow('wlA', %1)").arg(sizes[i])));
+        }
+        for (const QString& hostname : hostnames) {
+            HostManager::self()->deleteHost(hostname);
+        }
+        QVERIFY2(QFile::exists(layoutFile), "Closing the profiles saved no layout.");
+        const std::array<QString, 2> reopened{qsl("0:0:101:51"), qsl("0:0:202:52")};
+        for (size_t i = 0; i < hostnames.size(); ++i) {
+            QVERIFY2(HostManager::self()->addHost(hostnames[i], QString(), QString(), QString()), "Could not create the profile again.");
+            Host* host = HostManager::self()->getHost(hostnames[i]);
+            QVERIFY2(host, "The profile is not in the pool.");
+            QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('wlA', true, false, 'f'); wlReopened = table.concat({getWindowGeometry('wlA')}, ':')")));
+            QCOMPARE(luaGlobalString(host, "wlReopened"), reopened[i]);
+        }
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    // A window a resize handler opens with the layout during a load has its own load refused, so the
+    // running load places it
+    void test_headlessWindowLayoutPlacesWindowOpenedDuringLoad()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Opened-In-Load");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlResize"));
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+wlOpenedResult = "not run"
+local ok, err = pcall(function()
+  local armed = false
+  function onWlResize(_, _, _, name)
+    if armed and name == "wlA" then
+      armed = false
+      openUserWindow("wlB", true, false, "f")
+    end
+  end
+  openUserWindow("wlA", false, false, "f")
+  openUserWindow("wlB", false, false, "f")
+  resizeWindow("wlA", 300, 200)
+  resizeWindow("wlB", 320, 220)
+  assert(saveWindowLayout())
+  assert(deleteMiniConsole("wlB"))
+  assert(getWindowGeometry("wlB") == nil, "wlB is still there")
+  resizeWindow("wlA", 400, 330)
+  armed = true
+  assert(loadWindowLayout())
+  assert(not armed, "the handler did not open wlB")
+  wlOpenedAnswers = table.concat({getWindowGeometry("wlA")}, ":") .. "|" .. table.concat({getWindowGeometry("wlB")}, ":") .. ":" .. tostring(windowVisible("wlB"))
+end)
+wlOpenedResult = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "wlOpenedResult"), qsl("ok"));
+        QCOMPARE(luaGlobalString(host, "wlOpenedAnswers"), qsl("0:0:300:200|0:0:320:220:true"));
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    // A window a resize handler opens with the layout during a load stays shown though saved hidden: in the GUI it
+    // is not a dock QMainWindow::restoreState() began with, so only restoreFloatingDockGeometries() after it places it
+    void test_headlessWindowLayoutKeepsWindowOpenedDuringLoadShown()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Opened-In-Load-Shown");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlResize"));
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+wlShownResult = "not run"
+local ok, err = pcall(function()
+  local armed = false
+  function onWlResize(_, _, _, name)
+    if armed and name == "wlA" then
+      armed = false
+      openUserWindow("wlB", true, false, "f")
+    end
+  end
+  openUserWindow("wlA", false, false, "f")
+  openUserWindow("wlB", false, false, "f")
+  resizeWindow("wlA", 300, 200)
+  resizeWindow("wlB", 320, 220)
+  assert(hideWindow("wlB"))
+  assert(saveWindowLayout())
+  assert(deleteMiniConsole("wlB"))
+  resizeWindow("wlA", 400, 330)
+  armed = true
+  assert(loadWindowLayout())
+  assert(not armed, "the handler did not open wlB")
+  wlShownAnswers = table.concat({getWindowGeometry("wlA")}, ":") .. "|" .. table.concat({getWindowGeometry("wlB")}, ":") .. ":" .. tostring(windowVisible("wlB"))
+end)
+wlShownResult = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "wlShownResult"), qsl("ok"));
+        QCOMPARE(luaGlobalString(host, "wlShownAnswers"), qsl("0:0:300:200|0:0:320:220:true"));
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    // The answers are those of the same Lua run in the GUI self-test profile
+    void test_headlessUserWindowDeletedByFontChangeHandler()
+    {
+        const QString hostname = qsl("Test-Headless-Host-User-Window-Deleted-By-Font-Handler");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+fontGoneResult = "not run"
+local ok, err = pcall(function()
+  local function pack(...)
+    local parts = {}
+    for i = 1, select("#", ...) do parts[#parts + 1] = tostring((select(i, ...))) end
+    return "[" .. select("#", ...) .. "]" .. table.concat(parts, ":")
+  end
+  local answers = {}
+  local target, replace, deleted
+  function onFontGone(_, window)
+    if window == target then
+      target = nil
+      deleted = pack(deleteMiniConsole(window))
+      if replace then
+        -- the call must neither load the layout for this one nor show it
+        deleted = deleted .. "+" .. pack(openUserWindow(window, false, false, "f")) .. "+" .. pack(hideWindow(window))
+      end
+    end
+  end
+  registerAnonymousEventHandler("sysFontChangeEvent", "onFontGone")
+  -- a window so deleted does not load the layout, which would put this one back
+  openUserWindow("fontOther", false, false, "f")
+  resizeWindow("fontOther", 300, 200)
+  assert(saveWindowLayout())
+  for _, case in ipairs({{"fontGonefalse", false, false}, {"fontGonetrue", true, false}, {"fontReplaced", true, true}}) do
+    local name, loadLayout = case[1], case[2]
+    target, replace, deleted = name, case[3], "not fired"
+    resizeWindow("fontOther", 400, 330)
+    local opened = pack(openUserWindow(name, loadLayout, false, "f"))
+    answers[#answers + 1] = table.concat({deleted, opened, pack(windowType(name)), pack(windowVisible(name)), pack(getWindowGeometry("fontOther"))}, "|")
+  end
+  target = nil
+  -- nothing of a deleted one is left behind to stop it opening again
+  local reopened = {}
+  for _, loadLayout in ipairs({false, true}) do
+    local reopenName = "fontGone" .. tostring(loadLayout)
+    openUserWindow(reopenName, true, false, "f")
+    reopened[#reopened + 1] = pack(windowType(reopenName))
+  end
+  answers[#answers + 1] = table.concat(reopened, "|")
+  fontGoneAnswers = table.concat(answers, "\n")
+end)
+fontGoneResult = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "fontGoneResult"), qsl("ok"));
+        QCOMPARE(luaGlobalString(host, "fontGoneAnswers"),
+                 qsl("[1]true|[2]nil:userwindow 'fontGonefalse' was deleted while it was being opened|[2]nil:'fontGonefalse' is not a known label, any type of console, command "
+                     "line, text edit, nor scroll box|[2]nil:window \"fontGonefalse\" not found|[4]0:0:400:330\n"
+                     "[1]true|[2]nil:userwindow 'fontGonetrue' was deleted while it was being opened|[2]nil:'fontGonetrue' is not a known label, any type of console, command "
+                     "line, text edit, nor scroll box|[2]nil:window \"fontGonetrue\" not found|[4]0:0:400:330\n"
+                     "[1]true+[1]true+[1]true|[2]nil:userwindow 'fontReplaced' was deleted while it was being opened|[1]userwindow|[1]false|[4]0:0:400:330\n"
+                     "[1]userwindow|[1]userwindow"));
+        QFile::remove(layoutFile);
+    }
+
+    // The answers are those of the same Lua run in the GUI self-test profile
+    void test_headlessUserWindowReplacedByResizeHandler()
+    {
+        const QString hostname = qsl("Test-Headless-Host-User-Window-Replaced-By-Resize-Handler");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+resizeReplacedResult = "not run"
+local ok, err = pcall(function()
+  local function pack(...)
+    local parts = {}
+    for i = 1, select("#", ...) do parts[#parts + 1] = tostring((select(i, ...))) end
+    return "[" .. select("#", ...) .. "]" .. table.concat(parts, ":")
+  end
+  local answers = {}
+  local trigger, target, replaced
+  function onResizeReplace(_, _, _, window)
+    if window == trigger then
+      trigger = nil
+      replaced = pack(deleteMiniConsole(target)) .. "+" .. pack(openUserWindow(target, false, false, "f")) .. "+" .. pack(hideWindow(target))
+    end
+  end
+  registerAnonymousEventHandler("sysUserWindowResizeEvent", "onResizeReplace")
+  openUserWindow("resizeOther", false, false, "f")
+  resizeWindow("resizeOther", 300, 200)
+  assert(saveWindowLayout())
+  -- replaced as the load resizes another window, then as its own show sends it its size
+  for _, case in ipairs({{"resizeInLoad", true, "resizeOther"}, {"resizeInShow", false, "resizeInShow"}}) do
+    local name, loadLayout = case[1], case[2]
+    resizeWindow("resizeOther", 400, 330)
+    trigger, target, replaced = case[3], name, "not fired"
+    local opened = pack(openUserWindow(name, loadLayout, false, "f"))
+    answers[#answers + 1] = table.concat({replaced, opened, pack(windowType(name)), pack(windowVisible(name)), pack(getWindowGeometry("resizeOther"))}, "|")
+  end
+  trigger = nil
+  resizeReplacedAnswers = table.concat(answers, "\n")
+end)
+resizeReplacedResult = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "resizeReplacedResult"), qsl("ok"));
+        QCOMPARE(luaGlobalString(host, "resizeReplacedAnswers"),
+                 qsl("[1]true+[1]true+[1]true|[2]nil:userwindow 'resizeInLoad' was deleted while it was being opened|[1]userwindow|[1]false|[4]0:0:300:200\n"
+                     "[1]true+[1]true+[1]true|[2]nil:userwindow 'resizeInShow' was deleted while it was being opened|[1]userwindow|[1]false|[4]0:0:400:330"));
+        QFile::remove(layoutFile);
+    }
+
+    // A placed window a later handler reopens with the layout is new and placed again: in the GUI mIsLoadingLayout
+    // refuses the reopen's load, and restoreFloatingDockGeometries() after restoreState() places it
+    void test_headlessWindowLayoutPlacesWindowReopenedDuringLoad()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Reopened-In-Load");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlResize"));
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+wlReopenedResult = "not run"
+local ok, err = pcall(function()
+  -- which window the load places first is not pinned, so the handler reopens whichever was
+  local armed, placedFirst, done = false, nil, false
+  function onWlResize(_, _, _, name)
+    if not armed or done then return end
+    if not placedFirst then
+      placedFirst = name
+    else
+      done = true
+      assert(deleteMiniConsole(placedFirst))
+      openUserWindow(placedFirst, true, false, "f")
+    end
+  end
+  openUserWindow("wlA", false, false, "f")
+  openUserWindow("wlB", false, false, "f")
+  resizeWindow("wlA", 300, 200)
+  resizeWindow("wlB", 320, 220)
+  assert(saveWindowLayout())
+  resizeWindow("wlA", 400, 330)
+  resizeWindow("wlB", 410, 340)
+  armed = true
+  assert(loadWindowLayout())
+  assert(done, "the handler did not reopen " .. tostring(placedFirst))
+  wlReopenedAnswers = table.concat({getWindowGeometry("wlA")}, ":") .. "|" .. table.concat({getWindowGeometry("wlB")}, ":")
+end)
+wlReopenedResult = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "wlReopenedResult"), qsl("ok"));
+        QCOMPARE(luaGlobalString(host, "wlReopenedAnswers"), qsl("0:0:300:200|0:0:320:220"));
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    // The bytes are written out by hand so the format, not just a round trip, is pinned. A file of a later
+    // version is refused by a save too, which would otherwise drop every placement it holds.
+    void test_headlessWindowLayoutFileFormat()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Format");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        const QString layoutFilePath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        auto bigEndian = [](QByteArray& bytes, const quint32 value) {
+            for (int shift = 24; shift >= 0; shift -= 8) {
+                bytes.append(static_cast<char>((value >> shift) & 0xff));
+            }
+        };
+        // A one-entry map: the key's length in bytes and its UTF-16, a QRect as left, top, right and bottom, then shown
+        auto placement = [&](QByteArray& bytes, const QString& key, const std::array<quint32, 4>& edges, const bool shown) {
+            bigEndian(bytes, 1);
+            bigEndian(bytes, key.size() * 2);
+            for (const QChar character : key) {
+                bytes.append(static_cast<char>(character.unicode() >> 8));
+                bytes.append(static_cast<char>(character.unicode() & 0xff));
+            }
+            for (const quint32 edge : edges) {
+                bigEndian(bytes, edge);
+            }
+            bytes.append(shown ? '\x01' : '\x00');
+        };
+        auto fixture = [&](const quint32 version) {
+            QByteArray bytes("MWLH");
+            bigEndian(bytes, version);
+            // The user windows', then the map widgets': QRect(7, 8, 123, 45) shown, and QRect(20, 30, 200, 100) hidden
+            placement(bytes, hostname + qsl("/wlA"), {7, 8, 129, 52}, true);
+            placement(bytes, hostname, {20, 30, 219, 129}, false);
+            return bytes;
+        };
+        auto writeLayoutFile = writeHeadlessLayout;
+        auto readLayoutFile = [&layoutFilePath]() {
+            QFile layoutFile(layoutFilePath);
+            return layoutFile.open(QIODevice::ReadOnly) ? layoutFile.readAll() : QByteArray();
+        };
+
+        QVERIFY(writeLayoutFile(fixture(1)));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+openUserWindow("wlA", true, false, "f")
+wlFormatOne = table.concat({getWindowGeometry("wlA")}, ":") .. ":" .. tostring(windowVisible("wlA"))
+)lua")));
+        QCOMPARE(luaGlobalString(host, "wlFormatOne"), qsl("7:8:123:45:true"));
+        // The first map widget takes its saved place, and is shown though saved hidden, as in the GUI
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(wlFormatMap = tostring(openMapWidget()) .. "|" .. table.concat({getMapWidgetGeometry()}, ":"))lua")));
+        QCOMPARE(luaGlobalString(host, "wlFormatMap"), qsl("true|20:30:200:100"));
+
+        QVERIFY(writeLayoutFile(fixture(2)));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+assert(deleteMiniConsole("wlA"))
+openUserWindow("wlA", true, false, "f")
+wlFormatTwo = table.concat({getWindowGeometry("wlA")}, ":") .. "|" .. tostring(loadWindowLayout()) .. "|" .. tostring(saveWindowLayout())
+)lua")));
+        const QSize opened = host->mainWindowSize().value_or(QSize());
+        QCOMPARE(luaGlobalString(host, "wlFormatTwo"), qsl("0:0:%1:%2|false|false").arg(opened.width()).arg(opened.height()));
+        QCOMPARE(readLayoutFile(), fixture(2));
+        HostManager::self()->deleteHost(hostname);
+        QCOMPARE(readLayoutFile(), fixture(2));
+        // Its refused saves leave its windows held, for the next save that succeeds, which is this one rather than the next test's
+        QVERIFY(QFile::remove(layoutFilePath));
+        QVERIFY(TAppFrontend::instance()->saveWindowLayoutForScript());
+        QVERIFY(QFile::remove(layoutFilePath));
+    }
+
+    // As the GUI, where a deleted dock stays in the saved layout where it was when deleted, even if that placement was never saved
+    void test_headlessWindowLayoutKeepsDeletedWindowsPlacement()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Deleted");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+openUserWindow("wlA", false, false, "f")
+resizeWindow("wlA", 300, 200)
+assert(saveWindowLayout())
+resizeWindow("wlA", 260, 170)
+assert(deleteMiniConsole("wlA"))
+assert(saveWindowLayout())
+openUserWindow("wlA", true, false, "f")
+wlDeletedReopened = table.concat({getWindowGeometry("wlA")}, ":")
+)lua")));
+        QCOMPARE(luaGlobalString(host, "wlDeletedReopened"), qsl("0:0:260:170"));
+
+        // Saved, it is not held for later saves: one into a fresh file has nothing of it
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("resizeWindow('wlA', 250, 160); assert(deleteMiniConsole('wlA')); assert(saveWindowLayout())")));
+        QVERIFY(QFile::remove(layoutFile));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("assert(saveWindowLayout()); openUserWindow('wlA', true, false, 'f'); wlDeletedReopened = table.concat({getWindowGeometry('wlA')}, ':')")));
+        const QSize opened = host->mainWindowSize().value_or(QSize());
+        QCOMPARE(luaGlobalString(host, "wlDeletedReopened"), qsl("0:0:%1:%2").arg(opened.width()).arg(opened.height()));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    // As the GUI, where restoreState() replaces each deleted dock's placeholder with the file's placement or with none
+    void test_headlessWindowLayoutLoadDropsDeletedWindowsPlacement()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Deleted-Then-Loaded");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+openUserWindow("wlA", false, false, "f")
+resizeWindow("wlA", 300, 200)
+assert(saveWindowLayout())
+resizeWindow("wlA", 260, 170)
+assert(deleteMiniConsole("wlA"))
+openUserWindow("wlB", false, false, "f")
+resizeWindow("wlB", 240, 150)
+assert(deleteMiniConsole("wlB"))
+assert(loadWindowLayout())
+assert(saveWindowLayout())
+openUserWindow("wlA", true, false, "f")
+openUserWindow("wlB", true, false, "f")
+wlDeletedThenLoaded = table.concat({getWindowGeometry("wlA")}, ":") .. "|" .. table.concat({getWindowGeometry("wlB")}, ":")
+)lua")));
+        const QSize opened = host->mainWindowSize().value_or(QSize());
+        QCOMPARE(luaGlobalString(host, "wlDeletedThenLoaded"), qsl("0:0:300:200|0:0:%1:%2").arg(opened.width()).arg(opened.height()));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    void test_headlessWindowLayoutKeepsDeletedWindowThroughRefusedSave()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Deleted-Save-Refused");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        const QString layoutFilePath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFilePath);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+openUserWindow("wlA", false, false, "f")
+resizeWindow("wlA", 300, 200)
+assert(deleteMiniConsole("wlA"))
+)lua")));
+        QVERIFY(writeHeadlessLayout(laterVersionLayout()));
+        ignoreRefusedLayoutSave();
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("wlRefusedSave = tostring(saveWindowLayout())")));
+        QCOMPARE(luaGlobalString(host, "wlRefusedSave"), qsl("false"));
+        QVERIFY(QFile::remove(layoutFilePath));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("assert(saveWindowLayout()); openUserWindow('wlA', true, false, 'f'); wlRefusedSave = table.concat({getWindowGeometry('wlA')}, ':')")));
+        QCOMPARE(luaGlobalString(host, "wlRefusedSave"), qsl("0:0:300:200"));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(layoutFilePath));
+    }
+
+    // A refused closing save leaves the windows of the profile, which has gone, held through any load for the next save
+    // that succeeds
+    void test_headlessWindowLayoutKeepsWindowsOfProfileClosedWithRefusedSave()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Close-Refused");
+        const QString otherHostname = qsl("Test-Headless-Host-Window-Layout-Close-Refused-Other");
+        QVERIFY2(HostManager::self()->addHost(otherHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* other = HostManager::self()->getHost(otherHostname);
+        QVERIFY2(other, "The profile is not in the pool.");
+        const QString layoutFilePath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        auto writeLayoutFile = writeHeadlessLayout;
+        auto closeWithRefusedSave = [&](const int width, const int height) {
+            QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+            Host* host = HostManager::self()->getHost(hostname);
+            QVERIFY2(host, "The profile is not in the pool.");
+            QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('wlA', true, false, 'f'); resizeWindow('wlA', %1, %2)").arg(width).arg(height)));
+            QVERIFY(writeLayoutFile(laterVersionLayout()));
+            ignoreRefusedLayoutSave();
+            HostManager::self()->deleteHost(hostname);
+        };
+        auto reopened = [&]() {
+            if (!HostManager::self()->addHost(hostname, QString(), QString(), QString())) {
+                return qsl("not added");
+            }
+            Host* host = HostManager::self()->getHost(hostname);
+            host->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('wlA', true, false, 'f'); wlCloseRefused = table.concat({getWindowGeometry('wlA')}, ':')"));
+            const QString geometry = luaGlobalString(host, "wlCloseRefused");
+            HostManager::self()->deleteHost(hostname);
+            return geometry;
+        };
+
+        QFile::remove(layoutFilePath);
+        closeWithRefusedSave(300, 200);
+        QVERIFY(QFile::remove(layoutFilePath));
+        QVERIFY(other->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(saveWindowLayout())")));
+        QCOMPARE(reopened(), qsl("0:0:300:200"));
+
+        closeWithRefusedSave(250, 160);
+        // A readable file, version 1, with no placements
+        QVERIFY(writeLayoutFile(QByteArray::fromHex("4d574c48000000010000000000000000")));
+        QVERIFY(other->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(loadWindowLayout()); assert(saveWindowLayout())")));
+        QCOMPARE(reopened(), qsl("0:0:250:160"));
+        HostManager::self()->deleteHost(otherHostname);
+        QVERIFY(QFile::remove(layoutFilePath));
+    }
+
+    // A save writes an open window over where one of its name was deleted, and keeps whether a deleted one showed
+    void test_headlessWindowLayoutSavesOpenWindowOverDeletedOne()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Recreated-Saved");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QFile::remove(headlessLayoutPath());
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+openUserWindow("wlA", false, false, "f")
+resizeWindow("wlA", 300, 200)
+assert(deleteMiniConsole("wlA"))
+openUserWindow("wlA", false, false, "f")
+resizeWindow("wlA", 400, 330)
+assert(saveWindowLayout())
+resizeWindow("wlA", 500, 400)
+assert(loadWindowLayout())
+openUserWindow("wlB", false, false, "f")
+resizeWindow("wlB", 222, 111)
+hideWindow("wlB")
+assert(deleteMiniConsole("wlB"))
+assert(saveWindowLayout())
+openUserWindow("wlB", false, false, "f")
+assert(loadWindowLayout())
+wlRecreatedSaved = table.concat({getWindowGeometry("wlA")}, ":") .. "|" .. table.concat({getWindowGeometry("wlB")}, ":") .. ":" .. tostring(windowVisible("wlB"))
+)lua")));
+        QCOMPARE(luaGlobalString(host, "wlRecreatedSaved"), qsl("0:0:400:330|0:0:222:111:false"));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // A profile whose closing save was refused gets its windows back as it reopens, whether the file is then gone or
+    // an older one is back, as those placements are newer than any the file can hold
+    void test_headlessWindowLayoutLoadsWindowsHeldAsProfileClosed()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Held-Reopened");
+        auto run = [&hostname](const QString& chunk, const char* name) {
+            Host* host = HostManager::self()->getHost(hostname);
+            return host && host->getLuaInterpreter()->compileAndExecuteScript(chunk) ? luaGlobalString(host, name) : qsl("did not run");
+        };
+        QFile::remove(headlessLayoutPath());
+
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        run(qsl("openUserWindow('wlA', false, false, 'f'); resizeWindow('wlA', 300, 200); openMapWidget(50, 60, 333, 222)"), "");
+        QVERIFY(writeHeadlessLayout(laterVersionLayout()));
+        ignoreRefusedLayoutSave();
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create the profile again.");
+        QCOMPARE(run(qsl("openUserWindow('wlA', true, false, 'f'); openMapWidget(); wlHeld = table.concat({getWindowGeometry('wlA')}, ':') .. '|' .. "
+                         "table.concat({getMapWidgetGeometry()}, ':')"),
+                     "wlHeld"),
+                 qsl("0:0:300:200|50:60:333:222"));
+        // Held until a save succeeds, but older than the profile's own windows and its deleted ones
+        const QString placed = qsl("wlHeld = table.concat({getWindowGeometry('wlA')}, ':') .. '|' .. table.concat({getMapWidgetGeometry()}, ':')");
+        QCOMPARE(run(qsl("resizeWindow('wlA', 222, 111); openMapWidget(70, 80, 111, 99); assert(saveWindowLayout()); resizeWindow('wlA', 400, 330); "
+                         "openMapWidget(10, 20, 300, 200); assert(loadWindowLayout()); ")
+                             + placed,
+                     "wlHeld"),
+                 qsl("0:0:222:111|70:80:111:99"));
+        run(qsl("resizeWindow('wlA', 260, 170)"), "");
+        QVERIFY(writeHeadlessLayout(laterVersionLayout()));
+        ignoreRefusedLayoutSave();
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create the profile again.");
+        QCOMPARE(run(qsl("openUserWindow('wlA', true, false, 'f'); resizeWindow('wlA', 222, 111); assert(deleteMiniConsole('wlA')); assert(saveWindowLayout()); "
+                         "openUserWindow('wlA', true, false, 'f'); wlHeld = table.concat({getWindowGeometry('wlA')}, ':')"),
+                     "wlHeld"),
+                 qsl("0:0:222:111"));
+        HostManager::self()->deleteHost(hostname);
+
+        QFile::remove(headlessLayoutPath());
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create the profile again.");
+        run(qsl("openUserWindow('wlA', false, false, 'f'); resizeWindow('wlA', 111, 77); assert(saveWindowLayout()); resizeWindow('wlA', 250, 160)"), "");
+        QFile layoutFile(headlessLayoutPath());
+        QVERIFY(layoutFile.open(QIODevice::ReadOnly));
+        const QByteArray older = layoutFile.readAll();
+        layoutFile.close();
+        QVERIFY(writeHeadlessLayout(laterVersionLayout()));
+        ignoreRefusedLayoutSave();
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(writeHeadlessLayout(older));
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create the profile again.");
+        QCOMPARE(run(qsl("openUserWindow('wlA', true, false, 'f'); wlHeld = table.concat({getWindowGeometry('wlA')}, ':')"), "wlHeld"), qsl("0:0:250:160"));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // Only the pool self() answers with ending tries a last save of what is held, saying what it loses if that fails;
+    // cleanupTestCase() checks that a pool outliving it, which cannot save, says what it drops
+    void test_headlessWindowLayoutHoldsUntilTheirPoolEnds()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Held-To-Pool-End");
+        auto closeWithRefusedSave = [&hostname](const int width, const int height) {
+            QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+            QVERIFY(HostManager::self()->getHost(hostname)->getLuaInterpreter()->compileAndExecuteScript(
+                    qsl("openUserWindow('wlA', false, false, 'f'); resizeWindow('wlA', %1, %2)").arg(width).arg(height)));
+            QVERIFY(writeHeadlessLayout(laterVersionLayout()));
+            ignoreRefusedLayoutSave();
+            HostManager::self()->deleteHost(hostname);
+        };
+        QString opened;
+        auto reopened = [&hostname, &opened]() {
+            if (!HostManager::self()->addHost(hostname, QString(), QString(), QString())) {
+                return qsl("not added");
+            }
+            Host* host = HostManager::self()->getHost(hostname);
+            host->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('wlA', true, false, 'f'); wlPoolEnd = table.concat({getWindowGeometry('wlA')}, ':')"));
+            const QString geometry = luaGlobalString(host, "wlPoolEnd");
+            const QSize size = host->mainWindowSize().value_or(QSize());
+            opened = qsl("0:0:%1:%2").arg(size.width()).arg(size.height());
+            HostManager::self()->deleteHost(hostname);
+            return geometry;
+        };
+        QFile::remove(headlessLayoutPath());
+
+        closeWithRefusedSave(300, 200);
+        {
+            // A second pool, as in test_exitEventIsRaisedOnceAsTheProfileGoes()
+            auto pool = std::make_unique<HostManager>();
+        }
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+        QVERIFY(TAppFrontend::instance()->saveWindowLayoutForScript());
+        QCOMPARE(reopened(), qsl("0:0:300:200"));
+
+        closeWithRefusedSave(250, 160);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+        // Stands in for self()'s pool ending
+        TAppFrontend::instance()->profilesClosed();
+        QVERIFY2(QFile::exists(headlessLayoutPath()), "The pool's end saved nothing of what was held.");
+        QCOMPARE(reopened(), qsl("0:0:250:160"));
+
+        closeWithRefusedSave(240, 150);
+        ignoreRefusedLayoutSave();
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("could not be saved, so where these were is lost: QList\\(\"%1/wlA\"\\)$").arg(hostname)));
+        TAppFrontend::instance()->profilesClosed();
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+        QVERIFY(TAppFrontend::instance()->saveWindowLayoutForScript());
+        QCOMPARE(reopened(), opened);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // Answers as the same Lua does in the GUI self-test profile, but for the docked geometry, which there is its dock's: a
+    // load, and the first openMapWidget() after a reopen, put the map widget back where it was
+    void test_headlessWindowLayoutPlacesMapWidget()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Map-Placed");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QFile::remove(headlessLayoutPath());
+        const QString geometry = qsl(R"lua(
+function wlMapGeometry()
+  local x, y, w, h = getMapWidgetGeometry()
+  return table.concat({tostring(x), tostring(y), tostring(w), tostring(h)}, ":")
+end
+)lua");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(geometry + qsl(R"lua(
+local answers = {}
+local function record(value) answers[#answers + 1] = tostring(value) end
+local ok, err = pcall(function()
+record(openMapWidget())
+local docked = wlMapGeometry()
+assert(saveWindowLayout())
+openMapWidget(10, 20, 300, 200)
+assert(loadWindowLayout())
+record(wlMapGeometry() == docked)
+openMapWidget(50, 60, 333, 222)
+assert(saveWindowLayout())
+-- as moveMapWidget() and resizeMapWidget() do, which this profile, with no mudlet-lua, lacks
+openMapWidget(120, 130)
+openMapWidget(-1, -1, 444, 255)
+record(wlMapGeometry())
+assert(loadWindowLayout())
+record(wlMapGeometry())
+closeMapWidget()
+assert(saveWindowLayout())
+openMapWidget()
+record(wlMapGeometry())
+assert(loadWindowLayout())
+record(wlMapGeometry())
+openMapWidget()
+assert(saveWindowLayout())
+closeMapWidget()
+assert(loadWindowLayout())
+record(wlMapGeometry())
+closeMapWidget()
+end)
+wlMapPlaced = ok and table.concat(answers, "|") or tostring(err)
+)lua")));
+        QCOMPARE(luaGlobalString(host, "wlMapPlaced"), qsl("true|true|120:130:444:255|50:60:333:222|50:60:333:222|nil:no floating/dockable type map window found:nil:nil|50:60:333:222"));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create the profile again.");
+        host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(geometry + qsl("wlMapPlaced = tostring(openMapWidget()) .. '|' .. wlMapGeometry()")));
+        QCOMPARE(luaGlobalString(host, "wlMapPlaced"), qsl("true|50:60:333:222"));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // As the GUI, where createMapper() deleting the hidden map dock leaves a placeholder a save writes, so the map widget
+    // comes back where it was when replaced; with no file, it opens docked at the main window's size
+    void test_headlessWindowLayoutKeepsMapWidgetReplacedByEmbeddedMapper()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Map-Replaced");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QFile::remove(headlessLayoutPath());
+        const QString geometry = qsl(R"lua(
+function wlMapGeometry()
+  local x, y, w, h = getMapWidgetGeometry()
+  return table.concat({tostring(x), tostring(y), tostring(w), tostring(h)}, ":")
+end
+)lua");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(geometry + qsl(R"lua(
+local ok, err = pcall(function()
+  assert(openMapWidget())
+  wlMapDocked = wlMapGeometry()
+  assert(openMapWidget(50, 60, 333, 222))
+  assert(saveWindowLayout())
+  assert(openMapWidget(120, 130))
+  assert(closeMapWidget())
+  assert(createMapper(0, 0, 100, 100))
+  assert(saveWindowLayout())
+end)
+wlMapReplaced = ok and "ok" or tostring(err)
+)lua")));
+        QCOMPARE(luaGlobalString(host, "wlMapReplaced"), qsl("ok"));
+        const QSize opened = host->mainWindowSize().value_or(QSize());
+        QCOMPARE(luaGlobalString(host, "wlMapDocked"), qsl("0:0:%1:%2").arg(opened.width()).arg(opened.height()));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create the profile again.");
+        host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(geometry + qsl("wlMapReplaced = tostring(openMapWidget()) .. '|' .. wlMapGeometry()")));
+        QCOMPARE(luaGlobalString(host, "wlMapReplaced"), qsl("true|120:130:333:222"));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // A load of an unreadable file still places a closed profile's held windows, which its next close keeps, and, as a
+    // failed restoreState() leaves the GUI's placeholders, keeps an open profile's deleted window
+    void test_headlessWindowLayoutLoadsHeldWindowsPastUnreadableFile()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Held-Unreadable");
+        const QString otherHostname = qsl("Test-Headless-Host-Window-Layout-Held-Unreadable-Other");
+        QVERIFY2(HostManager::self()->addHost(otherHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* other = HostManager::self()->getHost(otherHostname);
+        QVERIFY2(other, "The profile is not in the pool.");
+        auto run = [&hostname](const QString& chunk, const char* name) {
+            Host* host = HostManager::self()->getHost(hostname);
+            return host && host->getLuaInterpreter()->compileAndExecuteScript(chunk) ? luaGlobalString(host, name) : qsl("did not run");
+        };
+        const QString reopen = qsl("openUserWindow('wlA', true, false, 'f'); wlHeldUnreadable = table.concat({getWindowGeometry('wlA')}, ':')");
+        QFile::remove(headlessLayoutPath());
+
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        run(qsl("openUserWindow('wlA', false, false, 'f'); resizeWindow('wlA', 300, 200)"), "");
+        QVERIFY(writeHeadlessLayout(laterVersionLayout()));
+        ignoreRefusedLayoutSave();
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(other->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('wlB', false, false, 'f'); resizeWindow('wlB', 222, 111); assert(deleteMiniConsole('wlB'))")));
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create the profile again.");
+        ignoreLaterVersionLayout();
+        QCOMPARE(run(reopen, "wlHeldUnreadable"), qsl("0:0:300:200"));
+        ignoreRefusedLayoutSave();
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+        QVERIFY(TAppFrontend::instance()->saveWindowLayoutForScript());
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create the profile again.");
+        QCOMPARE(run(reopen, "wlHeldUnreadable"), qsl("0:0:300:200"));
+        QVERIFY(other->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('wlB', true, false, 'f'); wlHeldUnreadable = table.concat({getWindowGeometry('wlB')}, ':')")));
+        QCOMPARE(luaGlobalString(other, "wlHeldUnreadable"), qsl("0:0:222:111"));
+        HostManager::self()->deleteHost(hostname);
+        HostManager::self()->deleteHost(otherHostname);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // A view taking over drops the null view's windows, which no script deleted, so holds no placeholder for them; this
+    // calls dropWindows() as setMainConsoleView() does, as a TMainConsole needs a main window this test lacks
+    void test_headlessWindowLayoutHoldsNothingOfWindowsAViewTakesOver()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-View-Takes-Over");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY2(!host->hasConsoleView(), "The profile has a console view.");
+        QFile::remove(headlessLayoutPath());
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+openUserWindow("wlA", false, false, "f")
+resizeWindow("wlA", 250, 160)
+openUserWindow("wlB", false, false, "f")
+resizeWindow("wlB", 222, 111)
+assert(deleteMiniConsole("wlB"))
+)lua")));
+        static_cast<TNullConsoleFrontend*>(host->consoleFrontend())->dropWindows();
+        QVERIFY(TAppFrontend::instance()->saveWindowLayoutForScript());
+        const auto saved = savedUserWindows();
+        QCOMPARE(saved.value(hostname + qsl("/wlB")).first, QRect(0, 0, 222, 111));
+        QVERIFY2(!saved.contains(hostname + qsl("/wlA")), "A window a view took over was saved as one a script deleted.");
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // A closing profile's deleted window and replaced map widget are held with its open ones, so a later load, which
+    // drops the placeholders of deleted ones, leaves them for the next save that succeeds
+    void test_headlessWindowLayoutHoldsDeletedWindowsOfClosedProfile()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Deleted-Then-Closed");
+        const QString otherHostname = qsl("Test-Headless-Host-Window-Layout-Deleted-Then-Closed-Other");
+        QVERIFY2(HostManager::self()->addHost(otherHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* other = HostManager::self()->getHost(otherHostname);
+        QVERIFY2(other, "The profile is not in the pool.");
+        QFile::remove(headlessLayoutPath());
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+local ok, err = pcall(function()
+  openUserWindow("wlA", false, false, "f")
+  resizeWindow("wlA", 250, 160)
+  assert(deleteMiniConsole("wlA"))
+  assert(openMapWidget(50, 60, 333, 222))
+  assert(closeMapWidget())
+  assert(createMapper(0, 0, 100, 100))
+end)
+wlDeletedClosed = ok and "ok" or tostring(err)
+)lua")));
+        QCOMPARE(luaGlobalString(host, "wlDeletedClosed"), qsl("ok"));
+        QVERIFY(writeHeadlessLayout(laterVersionLayout()));
+        ignoreRefusedLayoutSave();
+        HostManager::self()->deleteHost(hostname);
+        // A readable file, version 1, with no placements
+        QVERIFY(writeHeadlessLayout(QByteArray::fromHex("4d574c48000000010000000000000000")));
+        QVERIFY(other->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(loadWindowLayout()); assert(saveWindowLayout())")));
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create the profile again.");
+        host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+openUserWindow("wlA", true, false, "f")
+openMapWidget()
+wlDeletedClosed = table.concat({getWindowGeometry("wlA")}, ":") .. "|" .. table.concat({getMapWidgetGeometry()}, ":")
+)lua")));
+        QCOMPARE(luaGlobalString(host, "wlDeletedClosed"), qsl("0:0:250:160|50:60:333:222"));
+        HostManager::self()->deleteHost(hostname);
+        HostManager::self()->deleteHost(otherHostname);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // A handler opening the map widget mid-load gets it docked, as the GUI's does, its own load being refused
+    void test_headlessWindowLayoutDocksMapWidgetOpenedDuringLoad()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Map-Opened-In-Load");
+        QFile::remove(headlessLayoutPath());
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        QVERIFY(HostManager::self()->getHost(hostname)->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("openUserWindow('wlA', false, false, 'f'); resizeWindow('wlA', 300, 200); assert(openMapWidget(50, 60, 333, 222)); assert(saveWindowLayout())")));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create the profile again.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlResize"));
+        QTest::failOnWarning(QRegularExpression(qsl("^TNullAppFrontend::loadWindowLayout")));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+local armed = false
+function onWlResize(_, width, height, name)
+  if armed and name == "wlA" then
+    armed = false
+    openMapWidget()
+  end
+end
+openUserWindow("wlA", false, false, "f")
+resizeWindow("wlA", 400, 330)
+armed = true
+wlMapInLoad = tostring(loadWindowLayout()) .. "|" .. table.concat({getWindowGeometry("wlA")}, ":") .. "|" .. table.concat({getMapWidgetGeometry()}, ":")
+)lua")));
+        const QSize opened = host->mainWindowSize().value_or(QSize());
+        QCOMPARE(luaGlobalString(host, "wlMapInLoad"), qsl("true|0:0:300:200|0:0:%1:%2").arg(opened.width()).arg(opened.height()));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // Placed before the user windows, so a handler their placing runs has the last word on the map widget
+    void test_headlessWindowLayoutPlacesMapWidgetBeforeUserWindows()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Map-Before-Windows");
+        QFile::remove(headlessLayoutPath());
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlResize"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+local armed = false
+function onWlResize(_, width, height, name)
+  if armed and name == "wlA" then
+    armed = false
+    openMapWidget(70, 80, 111, 99)
+  end
+end
+openUserWindow("wlA", false, false, "f")
+resizeWindow("wlA", 300, 200)
+assert(openMapWidget(50, 60, 333, 222))
+assert(saveWindowLayout())
+resizeWindow("wlA", 400, 330)
+openMapWidget(10, 20, 300, 200)
+armed = true
+wlMapFirst = tostring(loadWindowLayout()) .. "|" .. table.concat({getMapWidgetGeometry()}, ":")
+)lua")));
+        QCOMPARE(luaGlobalString(host, "wlMapFirst"), qsl("true|70:80:111:99"));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // A reset deletes the user windows as a script would, so each keeps its placeholder, unlike a view taking over
+    void test_headlessWindowLayoutHoldsWindowsOfAReset()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Reset");
+        QFile::remove(headlessLayoutPath());
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('wlA', false, false, 'f'); resizeWindow('wlA', 250, 160)")));
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QVERIFY2(host->resetProfile_phase1(), "The profile reset did not start.");
+        QTRY_VERIFY(!host->profileResetInProgress());
+        QVERIFY2(!host->windowRegistry().subConsoleNames().contains(qsl("wlA")), "The reset left the user window.");
+        QVERIFY(TAppFrontend::instance()->saveWindowLayoutForScript());
+        QCOMPARE(savedUserWindows().value(hostname + qsl("/wlA")).first, QRect(0, 0, 250, 160));
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // A profile its exit handler deleted, so closed, and reopened under its name is not closed again, which would take
+    // the new one's deleted window as its own and write its own over it
+    void test_headlessWindowLayoutLeavesProfileReopenedUnderItsExitHandler()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Exit-Reopened");
+        QFile::remove(headlessLayoutPath());
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "reopenWithDeletedWindow", [](lua_State* L) -> int {
+            const QString name = QString::fromUtf8(lua_tostring(L, 1));
+            HostManager::self()->deleteHost(name);
+            Host* pReopened = HostManager::self()->addHost(name, QString(), QString(), QString()) ? HostManager::self()->getHost(name) : nullptr;
+            lua_pushboolean(L,
+                            pReopened
+                                    && pReopened->getLuaInterpreter()->compileAndExecuteScript(
+                                            qsl("openUserWindow('wlA', false, false, 'f'); resizeWindow('wlA', 300, 200); assert(deleteMiniConsole('wlA'))")));
+            return 1;
+        });
+        host->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onWlExit"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+openUserWindow("wlA", false, false, "f")
+resizeWindow("wlA", 250, 160)
+function onWlExit() assert(reopenWithDeletedWindow(getProfileName())) end
+)lua")));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY2(HostManager::self()->getHost(hostname), "Closing the profile also removed the one reopened under its name.");
+        QVERIFY(TAppFrontend::instance()->saveWindowLayoutForScript());
+        QCOMPARE(savedUserWindows().value(hostname + qsl("/wlA")).first, QRect(0, 0, 300, 200));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // A load shows a map widget hidden since the save, as restoreState() shows its dock, so its 2D map paints again
+    void test_headlessWindowLayoutShowsMapWidgetHiddenSinceSave()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Map-Shown");
+        QFile::remove(headlessLayoutPath());
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        // The null view paints on short chains of zero timers, so passes rather than time deliver them
+        lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State*) -> int {
+            for (int pass = 0; pass < 10; ++pass) {
+                QCoreApplication::processEvents();
+            }
+            return 0;
+        });
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+local ok, err = pcall(function()
+wlShownChanges = {}
+function wlShownAreaChanged(_, shown) wlShownChanges[#wlShownChanges + 1] = getRoomAreaName(tonumber(shown)) end
+registerAnonymousEventHandler("sysMapAreaChanged", "wlShownAreaChanged")
+local function room(area)
+  local id = createRoomID()
+  addRoom(id)
+  setRoomArea(id, addAreaName(area))
+  setRoomCoordinates(id, 0, 0, 0)
+  return id
+end
+local near, far, farther = room("WlNear"), room("WlFar"), room("WlFarther")
+assert(openMapWidget())
+centerview(near)
+pumpEvents()
+assert(saveWindowLayout())
+assert(closeMapWidget())
+centerview(far)
+pumpEvents()
+local hidden = table.concat(wlShownChanges, ",")
+wlShownChanges = {}
+assert(loadWindowLayout())
+centerview(farther)
+pumpEvents()
+wlMapShown = hidden .. "|" .. table.concat(wlShownChanges, ",")
+end)
+if not ok then wlMapShown = "raised:" .. tostring(err) end
+)lua")));
+        QCOMPARE(luaGlobalString(host, "wlMapShown"), qsl("WlNear|WlFarther"));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // As the GUI, where restoreState() holds a dock it found no window for and saveState() writes it back
+    void test_headlessWindowLayoutKeepsUnopenedWindowsPlacement()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Unopened");
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+openUserWindow("wlA", false, false, "f")
+openUserWindow("wlB", false, false, "f")
+resizeWindow("wlB", 300, 200)
+assert(saveWindowLayout())
+)lua")));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create the profile again.");
+        host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+openUserWindow("wlA", true, false, "f")
+assert(saveWindowLayout())
+openUserWindow("wlB", true, false, "f")
+wlUnopenedReopened = table.concat({getWindowGeometry("wlB")}, ":")
+)lua")));
+        QCOMPARE(luaGlobalString(host, "wlUnopenedReopened"), qsl("0:0:300:200"));
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    void test_headlessWindowLayoutKeepsFilePlacementOfWindowDeletedMidLoad_data()
+    {
+        QTest::addColumn<bool>("savedShown");
+        QTest::newRow("saved shown") << true;
+        QTest::newRow("saved hidden") << false;
+    }
+
+    // A window a resize handler deletes before the load reaches it keeps the file's placement, as the placeholder
+    // restoreState() gives it does in the GUI, not where it was before the load
+    void test_headlessWindowLayoutKeepsFilePlacementOfWindowDeletedMidLoad()
+    {
+        QFETCH(const bool, savedShown);
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Deleted-Mid-Load");
+        QFile::remove(headlessLayoutPath());
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlDeleteOther"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("wlSavedShown = %1").arg(savedShown ? qsl("true") : qsl("false"))));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+wlDeletedMidLoad = "not run"
+local armed, deleted = false, nil
+function onWlDeleteOther(_, _, _, name)
+  if armed and not deleted and (name == "wlA" or name == "wlB") then
+    deleted = name == "wlA" and "wlB" or "wlA"
+    assert(deleteMiniConsole(deleted))
+  end
+end
+local ok, err = pcall(function()
+  openUserWindow("wlA", false, false, "f")
+  openUserWindow("wlB", false, false, "f")
+  resizeWindow("wlA", 300, 200)
+  resizeWindow("wlB", 320, 220)
+  if not wlSavedShown then
+    assert(hideWindow("wlB"))
+  end
+  assert(saveWindowLayout())
+  assert(showWindow("wlB"))
+  resizeWindow("wlA", 400, 330)
+  resizeWindow("wlB", 410, 340)
+  armed = true
+  assert(loadWindowLayout())
+  armed = false
+  assert(saveWindowLayout())
+  wlDeletedName = deleted
+  openUserWindow(deleted, true, false, "f")
+  wlDeletedMidLoad = deleted .. "|" .. table.concat({getWindowGeometry(deleted)}, ":")
+end)
+if not ok then wlDeletedMidLoad = tostring(err) end
+)lua")));
+        const QString answer = luaGlobalString(host, "wlDeletedMidLoad");
+        const QString deleted = luaGlobalString(host, "wlDeletedName");
+        const bool savedAsShown = savedUserWindows().value(qsl("%1/%2").arg(hostname, deleted)).second;
+        // Before comparing, so a failing row leaves the next its profile name
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+        QVERIFY2(answer == qsl("wlB|0:0:320:220") || answer == qsl("wlA|0:0:300:200"), qPrintable(answer));
+        // wlA always shows: only wlB is saved hidden
+        QCOMPARE(savedAsShown, savedShown || deleted == qsl("wlA"));
+    }
+
+    void test_headlessWindowLayoutLeavesHiddenWindowItsResizeHandlerHid_data()
+    {
+        QTest::addColumn<QString>("handler");
+        QTest::addColumn<QString>("expected");
+        // Each answer: wlA as its handler finds it, both after the handler, and both after the load
+        QTest::newRow("hides its own") << qsl("assert(hideWindow('wlA'))") << qsl("false/false,true|false|true");
+        // restoreState() reaches wlB after wlA's handler hid it, so shows it as the file says
+        QTest::newRow("hides one yet to be placed") << qsl("assert(hideWindow('wlB'))") << qsl("false/false,false|true|true");
+        QTest::newRow("replaces its own with a hidden one") << qsl("assert(deleteMiniConsole('wlA')); openUserWindow('wlA', false, false, 'f'); assert(hideWindow('wlA'))")
+                                                            << qsl("false/false,true|false|true");
+    }
+
+    // As in the GUI, where restoreState() hides a dock before placing it, so its resize handler finds it hidden, and does not
+    // show again one the handler hid or replaced
+    void test_headlessWindowLayoutLeavesHiddenWindowItsResizeHandlerHid()
+    {
+        QFETCH(const QString, handler);
+        QFETCH(const QString, expected);
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Hidden-Mid-Load");
+        QFile::remove(headlessLayoutPath());
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlHideMidLoad"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+wlHiddenMidLoad = "not run"
+local armed, saw = false, "handler not run"
+function onWlHideMidLoad(_, _, _, name)
+  if armed and name == "wlA" then
+    armed = false
+    local found = tostring(windowVisible("wlA"))
+    local ok, err = pcall(function()
+      %1
+    end)
+    saw = ok and (found .. "/" .. tostring(windowVisible("wlA")) .. "," .. tostring(windowVisible("wlB"))) or ("handler raised: " .. tostring(err))
+  end
+end
+local ok, err = pcall(function()
+  openUserWindow("wlA", false, false, "f")
+  openUserWindow("wlB", false, false, "f")
+  resizeWindow("wlA", 300, 200)
+  resizeWindow("wlB", 320, 220)
+  assert(saveWindowLayout())
+  resizeWindow("wlA", 400, 330)
+  resizeWindow("wlB", 410, 340)
+  armed = true
+  assert(loadWindowLayout())
+  wlHiddenMidLoad = saw .. "|" .. tostring(windowVisible("wlA")) .. "|" .. tostring(windowVisible("wlB"))
+end)
+if not ok then wlHiddenMidLoad = tostring(err) end
+)lua")
+                                                                           .arg(handler)));
+        const QString answer = luaGlobalString(host, "wlHiddenMidLoad");
+        // Before comparing, so a failing row leaves the next its profile name
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+        QCOMPARE(answer, expected);
+    }
+
+    void test_headlessWindowLayoutTakesWindowBeingShownAsShown_data()
+    {
+        QTest::addColumn<QString>("setup");
+        QTest::addColumn<QString>("handler");
+        QTest::addColumn<QString>("after");
+        QTest::addColumn<QString>("expected");
+        // Each answer: wlA's resize events from its show on, and whether it shows at the end
+        QTest::newRow("save") << QString() << qsl("assert(saveWindowLayout())") << qsl("assert(hideWindow('wlA')); assert(loadWindowLayout())") << qsl("1|true");
+        QTest::newRow("load") << qsl("assert(hideWindow('wlA')); assert(saveWindowLayout())") << qsl("assert(loadWindowLayout())") << QString() << qsl("1|false");
+        // As restoreState() hides it, places it and shows it again, which sends the resize once more
+        QTest::newRow("load shown") << qsl("assert(saveWindowLayout())") << qsl("assert(loadWindowLayout())") << QString() << qsl("2|true");
+    }
+
+    // A save or load in the handler of the resize a show sends takes the window as shown, as the GUI's !isHidden() does,
+    // though it can answer hidden to scripts there until a load succeeds
+    void test_headlessWindowLayoutTakesWindowBeingShownAsShown()
+    {
+        QFETCH(const QString, setup);
+        QFETCH(const QString, handler);
+        QFETCH(const QString, after);
+        QFETCH(const QString, expected);
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Being-Shown");
+        QFile::remove(headlessLayoutPath());
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlBeingShown"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+wlBeingShown = "not run"
+local armed, events = false, 0
+function onWlBeingShown(_, _, _, name)
+  if name == "wlA" then
+    events = events + 1
+    if armed then
+      armed = false
+      %2
+    end
+  end
+end
+local ok, err = pcall(function()
+  openUserWindow("wlA", false, false, "f")
+  resizeWindow("wlA", 300, 200)
+  %1
+  hideWindow("wlA")
+  resizeWindow("wlA", 260, 170)
+  events = 0
+  armed = true
+  assert(showWindow("wlA"))
+  %3
+  wlBeingShown = events .. "|" .. tostring(windowVisible("wlA"))
+end)
+if not ok then wlBeingShown = tostring(err) end
+)lua")
+                                                                           .arg(setup, handler, after)));
+        const QString answer = luaGlobalString(host, "wlBeingShown");
+        // Before comparing, so a failing row leaves the next its profile name
+        HostManager::self()->deleteHost(hostname);
+        QCOMPARE(answer, expected);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // As restoreFloatingDockGeometries() gives a floating dock its saved geometry again once restoreState() is done
+    void test_headlessWindowLayoutRestoresGeometryItsResizeHandlerChanged()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Resized-Mid-Load");
+        QFile::remove(headlessLayoutPath());
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlResizeMidLoad"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+wlResizedMidLoad = "not run"
+local armed, events = false, {}
+function onWlResizeMidLoad(_, width, height, name)
+  if name == "wlA" then
+    events[#events + 1] = width .. "x" .. height .. ":" .. tostring(windowVisible(name))
+    if armed then
+      armed = false
+      moveWindow("wlA", 77, 88)
+      resizeWindow("wlA", 222, 133)
+    end
+  end
+end
+local ok, err = pcall(function()
+  openUserWindow("wlA", false, false, "f")
+  moveWindow("wlA", 31, 41)
+  resizeWindow("wlA", 300, 200)
+  assert(saveWindowLayout())
+  resizeWindow("wlA", 260, 170)
+  events = {}
+  armed = true
+  assert(loadWindowLayout())
+  wlResizedMidLoad = table.concat(events, ";") .. "|" .. table.concat({getUserWindowSize("wlA")}, "x")
+end)
+if not ok then wlResizedMidLoad = tostring(err) end
+)lua")));
+        const QString answer = luaGlobalString(host, "wlResizedMidLoad");
+        const QPoint position = host->windowRegistry().subConsoleGeometry(qsl("wlA")).value_or(QRect()).topLeft();
+        // Before comparing, so a failure leaves later tests its profile name
+        HostManager::self()->deleteHost(hostname);
+        QCOMPARE(answer, qsl("300x200:false;300x200:true|300x200"));
+        QCOMPARE(position, QPoint(31, 41));
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // As restoreFloatingDockGeometries() places a window a handler opened during restoreState() once, so a size its own
+    // handler then gives it stays
+    void test_headlessWindowLayoutPlacesWindowAHandlerOpenedOnce()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Handler-Opened-Once");
+        QFile::remove(headlessLayoutPath());
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlOpenedMidLoad"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+wlOpenedMidLoad = "not run"
+local armed, events = false, nil
+function onWlOpenedMidLoad(_, width, height, name)
+  if name == "wlA" and armed then
+    armed = false
+    openUserWindow("wlB", false, false, "f")
+    events = {}
+  elseif name == "wlB" and events then
+    events[#events + 1] = width .. "x" .. height
+    if #events == 1 then
+      resizeWindow("wlB", 222, 133)
+    end
+  end
+end
+local ok, err = pcall(function()
+  openUserWindow("wlA", false, false, "f")
+  resizeWindow("wlA", 300, 200)
+  openUserWindow("wlB", false, false, "f")
+  resizeWindow("wlB", 280, 180)
+  assert(saveWindowLayout())
+  assert(deleteMiniConsole("wlB"))
+  resizeWindow("wlA", 260, 170)
+  armed = true
+  assert(loadWindowLayout())
+  wlOpenedMidLoad = table.concat(events, ";") .. "|" .. table.concat({getUserWindowSize("wlB")}, "x")
+end)
+if not ok then wlOpenedMidLoad = tostring(err) end
+)lua")));
+        const QString answer = luaGlobalString(host, "wlOpenedMidLoad");
+        // Before comparing, so a failure leaves later tests its profile name
+        HostManager::self()->deleteHost(hostname);
+        QCOMPARE(answer, qsl("280x180;222x133|222x133"));
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // As TMainConsole::reportDockGeometry() reports each dock's name, so also a window of that name the showing one
+    // holds, which a hidden dock's delete leaves to its deferred deletes
+    void test_headlessWindowLayoutLoadReportsUserWindowNames()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Reports-Names");
+        QFile::remove(headlessLayoutPath());
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlReportsNames"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+wlReportsNames = "not run"
+local armed, found = false, "not run"
+function onWlReportsNames(_, _, _, name)
+  if name == "wlShowing" and armed then
+    armed = false
+    found = tostring(loadWindowLayout()) .. "," .. tostring(deleteMiniConsole("wlHidden")) .. "," .. tostring(windowVisible("wlHidden"))
+  end
+end
+local ok, err = pcall(function()
+  openUserWindow("wlHidden", false, false, "f")
+  hideWindow("wlHidden")
+  assert(saveWindowLayout())
+  openUserWindow("wlShowing", false, false, "f")
+  createTextEdit("wlShowing", "wlHidden", 0, 0, 50, 50)
+  hideWindow("wlShowing")
+  resizeWindow("wlShowing", 260, 170)
+  armed = true
+  showWindow("wlShowing")
+  wlReportsNames = found
+end)
+if not ok then wlReportsNames = tostring(err) end
+)lua")));
+        const QString answer = luaGlobalString(host, "wlReportsNames");
+        // Before comparing, so a failure leaves later tests its profile name
+        HostManager::self()->deleteHost(hostname);
+        QCOMPARE(answer, qsl("true,true,true"));
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // HostManager::addHost() takes a '/' or '\' that dlgConnectionProfiles refuses, so a profile name holding one must
+    // not share a window's key with another profile
+    void test_headlessWindowLayoutKeepsProfilesWithSlashesApart_data()
+    {
+        QTest::addColumn<QString>("outer");
+        QTest::addColumn<QString>("outerWindow");
+        QTest::addColumn<QString>("inner");
+        QTest::addColumn<QString>("innerWindow");
+        // Without escaping, the first pair would share a key; escaping only '/', the second would
+        QTest::newRow("slash") << qsl("Test-Headless-Host-Layout-Key") << qsl("x/w") << qsl("Test-Headless-Host-Layout-Key/x") << qsl("w");
+        QTest::newRow("backslash") << qsl("Test-Headless-Host-Layout-Key\\") << qsl("/w") << qsl("Test-Headless-Host-Layout-Key/") << qsl("w");
+    }
+
+    void test_headlessWindowLayoutKeepsProfilesWithSlashesApart()
+    {
+        QFETCH(const QString, outer);
+        QFETCH(const QString, outerWindow);
+        QFETCH(const QString, inner);
+        QFETCH(const QString, innerWindow);
+        QFile::remove(headlessLayoutPath());
+        QVERIFY2(HostManager::self()->addHost(outer, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        QVERIFY2(HostManager::self()->addHost(inner, QString(), QString(), QString()), "Could not create a profile whose name holds a '/'.");
+        Host* outerHost = HostManager::self()->getHost(outer);
+        Host* innerHost = HostManager::self()->getHost(inner);
+        QVERIFY2(outerHost && innerHost, "The profiles are not in the pool.");
+        const auto run = [](Host* host, const QString& lua) {
+            return host->getLuaInterpreter()->compileAndExecuteScript(qsl("local ok, err = pcall(function() %1 end) keyResult = ok and keyResult or tostring(err)").arg(lua));
+        };
+        QVERIFY(run(outerHost, qsl("openUserWindow('%1', false, false, 'f'); resizeWindow('%1', 300, 200)").arg(outerWindow)));
+        QVERIFY(run(innerHost, qsl("openUserWindow('%1', false, false, 'f'); resizeWindow('%1', 280, 180)").arg(innerWindow)));
+        QVERIFY(run(outerHost, qsl("assert(saveWindowLayout()); resizeWindow('%1', 260, 170)").arg(outerWindow)));
+        QVERIFY(run(innerHost, qsl("resizeWindow('%1', 250, 150)").arg(innerWindow)));
+        QVERIFY(run(outerHost, qsl("assert(loadWindowLayout()); keyResult = table.concat({getUserWindowSize('%1')}, 'x')").arg(outerWindow)));
+        QVERIFY(run(innerHost, qsl("keyResult = table.concat({getUserWindowSize('%1')}, 'x')").arg(innerWindow)));
+        const QString answer = luaGlobalString(outerHost, "keyResult") + qsl("|") + luaGlobalString(innerHost, "keyResult");
+        // Before comparing, so a failure leaves later tests their profile names
+        HostManager::self()->deleteHost(inner);
+        HostManager::self()->deleteHost(outer);
+        QCOMPARE(answer, qsl("300x200|280x180"));
+        QVERIFY(QFile::remove(headlessLayoutPath()));
+    }
+
+    // As a new TDockWidget's hasLayoutAlready, nothing of a deleted window stops its next open with the layout loading it
+    void test_headlessWindowLayoutLoadsForRecreatedWindow()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Recreated");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+openUserWindow("wlA", true, false, "f")
+resizeWindow("wlA", 300, 200)
+assert(saveWindowLayout())
+resizeWindow("wlA", 400, 330)
+assert(deleteMiniConsole("wlA"))
+openUserWindow("wlA", true, false, "f")
+wlRecreated = table.concat({getWindowGeometry("wlA")}, ":")
+)lua")));
+        QCOMPARE(luaGlobalString(host, "wlRecreated"), qsl("0:0:300:200"));
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    // The answers are those of the same Lua run in the GUI self-test profile, but for the frame and positions it reports
+    void test_headlessWindowLayoutLoadedByFirstMapWidget()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Map-Widget");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlResize"));
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+local events = {}
+function onWlResize(_, width, height, name)
+  events[#events + 1] = table.concat({width, height, name}, ":")
+end
+openUserWindow("wlA", false, false, "f")
+resizeWindow("wlA", 300, 200)
+assert(saveWindowLayout())
+resizeWindow("wlA", 400, 330)
+local answers = {}
+for _ = 1, 2 do
+  events = {}
+  local opened = openMapWidget()
+  answers[#answers + 1] = tostring(opened) .. "|" .. table.concat({getWindowGeometry("wlA")}, ":") .. "|" .. table.concat(events, ";")
+  resizeWindow("wlA", 400, 330)
+end
+wlMapWidget = table.concat(answers, "\n")
+)lua")));
+        QCOMPARE(luaGlobalString(host, "wlMapWidget"), qsl("true|0:0:300:200|300:200:wlA\ntrue|0:0:400:330|"));
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    // As the GUI, which docks the first map widget before the load and shows it after, so a handler's placement stands
+    void test_headlessWindowLayoutLeavesMapWidgetWhereLoadHandlerPutIt()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Map-Widget-Handler");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlMapResize"));
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+local armed = false
+function onWlMapResize(_, _, _, name)
+  if armed and name == "wlA" then
+    armed = false
+    openMapWidget(10, 20, 400, 300)
+  end
+end
+openUserWindow("wlA", false, false, "f")
+resizeWindow("wlA", 300, 200)
+assert(saveWindowLayout())
+resizeWindow("wlA", 400, 330)
+armed = true
+wlMapHandler = tostring(openMapWidget()) .. "|" .. tostring(armed) .. "|" .. table.concat({getMapWidgetGeometry()}, ":")
+)lua")));
+        QCOMPARE(luaGlobalString(host, "wlMapHandler"), qsl("true|false|10:20:400:300"));
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    // As the GUI: resized before it is shown, so it reports nothing, being back at the size it last reported
+    void test_headlessWindowLayoutShowsHiddenWindowAtSavedSize()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Hidden-Resized");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlResize"));
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+local events = {}
+function onWlResize(_, width, height, name)
+  events[#events + 1] = table.concat({width, height, name}, ":")
+end
+openUserWindow("wlA", false, false, "f")
+resizeWindow("wlA", 300, 200)
+assert(saveWindowLayout())
+hideWindow("wlA")
+resizeWindow("wlA", 400, 330)
+events = {}
+local loaded = loadWindowLayout()
+wlHiddenResized = tostring(loaded) .. "|" .. table.concat({getWindowGeometry("wlA")}, ":") .. ":" .. tostring(windowVisible("wlA")) .. "|" .. table.concat(events, ";")
+)lua")));
+        QCOMPARE(luaGlobalString(host, "wlHiddenResized"), qsl("true|0:0:300:200:true|"));
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    // As the GUI, which saves and restores the geometry of docks only, so a deleted user window's is kept while a
+    // miniconsole has its name
+    void test_headlessWindowLayoutLeavesMiniConsoleOfUserWindowsName()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Kind");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+openUserWindow("wlA", false, false, "f")
+resizeWindow("wlA", 300, 200)
+hideWindow("wlA")
+assert(saveWindowLayout())
+assert(deleteMiniConsole("wlA"))
+createMiniConsole("wlA", 10, 20, 150, 100)
+local loaded = loadWindowLayout()
+wlKind = tostring(loaded) .. "|" .. tostring(windowType("wlA")) .. "|" .. table.concat({getWindowGeometry("wlA")}, ":") .. ":" .. tostring(windowVisible("wlA"))
+assert(saveWindowLayout())
+assert(deleteMiniConsole("wlA"))
+openUserWindow("wlA", true, false, "f")
+wlKind = wlKind .. "|" .. table.concat({getWindowGeometry("wlA")}, ":")
+)lua")));
+        QCOMPARE(luaGlobalString(host, "wlKind"), qsl("true|miniconsole|10:20:150:100:true|0:0:300:200"));
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    // As the GUI's restoreState() and then restoreFloatingDockGeometries(), a load places in two passes, so a
+    // handler that reopens its window each time the load resizes it cannot keep it going
+    void test_headlessWindowLayoutStopsPlacingReopenedWindows()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Reopened-Always");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlResize"));
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        QTest::failOnWarning(QRegularExpression(qsl("^TNullAppFrontend::loadWindowLayout")));
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+wlAlwaysResult = "not run"
+local ok, err = pcall(function()
+  local armed, reopened = false, 0
+  -- only at the load's resize, not the reopened window's own, and bounded so a regression fails rather than hangs
+  function onWlResize(_, width, _, name)
+    if armed and name == "wlA" and width == 300 and reopened < 50 then
+      reopened = reopened + 1
+      assert(deleteMiniConsole("wlA"))
+      openUserWindow("wlA", false, false, "f")
+    end
+  end
+  openUserWindow("wlA", false, false, "f")
+  resizeWindow("wlA", 300, 200)
+  assert(saveWindowLayout())
+  resizeWindow("wlA", 400, 330)
+  armed = true
+  assert(loadWindowLayout())
+  armed = false
+  wlAlwaysAnswers = reopened .. "|" .. table.concat({getWindowGeometry("wlA")}, ":")
+end)
+wlAlwaysResult = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "wlAlwaysResult"), qsl("ok"));
+        const QSize opened = host->mainWindowSize().value_or(QSize());
+        QCOMPARE(luaGlobalString(host, "wlAlwaysAnswers"), qsl("2|0:0:%1:%2").arg(opened.width()).arg(opened.height()));
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    // A chain of windows each opened at the previous one's resize ends with the second pass, as in the GUI, leaving the
+    // one opened in it where it opened
+    void test_headlessWindowLayoutLeavesWindowsOpenedInSecondPass()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Chain");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlResize"));
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        QTest::failOnWarning(QRegularExpression(qsl("^TNullAppFrontend::loadWindowLayout")));
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+wlChainResult = "not run"
+local ok, err = pcall(function()
+  local armed = false
+  function onWlResize(_, width, _, name)
+    if not armed then return end
+    if name == "pA" then
+      openUserWindow("pB", true, false, "f")
+    elseif name == "pB" and width == 320 then
+      openUserWindow("pC", true, false, "f")
+    end
+  end
+  for _, window in ipairs({{"pA", 300, 200}, {"pB", 320, 220}, {"pC", 330, 230}}) do
+    openUserWindow(window[1], false, false, "f")
+    resizeWindow(window[1], window[2], window[3])
+  end
+  assert(saveWindowLayout())
+  assert(deleteMiniConsole("pB"))
+  assert(deleteMiniConsole("pC"))
+  resizeWindow("pA", 400, 330)
+  armed = true
+  local loaded = loadWindowLayout()
+  armed = false
+  local sizes = {}
+  for _, window in ipairs({"pA", "pB", "pC"}) do
+    sizes[#sizes + 1] = table.concat({getWindowGeometry(window)}, ":")
+  end
+  wlChainAnswers = tostring(loaded) .. "|" .. table.concat(sizes, "|")
+end)
+wlChainResult = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "wlChainResult"), qsl("ok"));
+        const QSize opened = host->mainWindowSize().value_or(QSize());
+        QCOMPARE(luaGlobalString(host, "wlChainAnswers"), qsl("true|0:0:300:200|0:0:320:220|0:0:%1:%2").arg(opened.width()).arg(opened.height()));
+        QVERIFY(QFile::remove(layoutFile));
+    }
+
+    // A window freed mid-load can leave its address to one a handler opens, which must not pass for the one the load
+    // found: as a dock made during the GUI's restoreState(), the new one takes its saved geometry, not its hidden state
+    void test_headlessWindowLayoutTellsReplacedWindowFromFreedOne()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Layout-Replaced");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "replaceWlBAtItsAddress", [](lua_State* L) -> int {
+            Host& profile = getHostFromLua(L);
+            const QString name = qsl("wlB");
+            const void* original = &profile.windowRegistry().subConsoleModel(name)->mNotifier;
+            const char* outcome = "never reused";
+            for (int attempt = 0; attempt < 20; ++attempt) {
+                const QPointer<const QObject> freed = &profile.windowRegistry().subConsoleModel(name)->mNotifier;
+                if (!profile.deleteMiniConsole(name).first) {
+                    outcome = "not deleted";
+                    break;
+                }
+                for (int pass = 0; freed && pass < 100; ++pass) {
+                    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+                }
+                if (freed) {
+                    outcome = "not freed";
+                    break;
+                }
+                if (!profile.openWindow(name, false, false, qsl("f")).first) {
+                    outcome = "not reopened";
+                    break;
+                }
+                if (&profile.windowRegistry().subConsoleModel(name)->mNotifier == original) {
+                    outcome = "reused";
+                    break;
+                }
+            }
+            lua_pushstring(L, outcome);
+            return 1;
+        });
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onWlResize"));
+        const QString layoutFile = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutFile);
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+wlReplacedResult = "not run"
+local ok, err = pcall(function()
+  local armed = false
+  function onWlResize(_, _, _, name)
+    if armed and name == "wlA" then
+      armed = false
+      wlReplaced = replaceWlBAtItsAddress()
+    end
+  end
+  openUserWindow("wlA", false, false, "f")
+  openUserWindow("wlB", false, false, "f")
+  resizeWindow("wlA", 300, 200)
+  resizeWindow("wlB", 320, 220)
+  hideWindow("wlB")
+  assert(saveWindowLayout())
+  resizeWindow("wlA", 400, 330)
+  armed = true
+  assert(loadWindowLayout())
+  assert(not armed, "the handler did not run")
+  wlReplacedAnswers = table.concat({getWindowGeometry("wlB")}, ":") .. ":" .. tostring(windowVisible("wlB"))
+end)
+wlReplacedResult = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "wlReplacedResult"), qsl("ok"));
+        QVERIFY(QFile::remove(layoutFile));
+        if (luaGlobalString(host, "wlReplaced") == qsl("never reused")) {
+            QSKIP("No reopened window took the freed one's address, so there was nothing to tell apart.");
+        }
+        QCOMPARE(luaGlobalString(host, "wlReplaced"), qsl("reused"));
+        QCOMPARE(luaGlobalString(host, "wlReplacedAnswers"), qsl("0:0:320:220:true"));
     }
 
     void test_headlessUserWindowNamesInItsShowHandler_data()
@@ -2435,6 +4574,7 @@ if not ok then uwcShowHandler = tostring(err) end
             }
             return 0;
         });
+        QFile::remove(headlessLayoutPath());
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
 uwnShowHandler = "not run"
 local during, found = nil, "not run"
@@ -2463,6 +4603,7 @@ if not ok then uwnShowHandler = tostring(err) end
         // Before comparing, so a failing row leaves the next its profile name
         HostManager::self()->deleteHost(hostname);
         QCOMPARE(answer, expected);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
     }
 
     void test_headlessUserWindowCommandLineInItsShowHandler_data()
@@ -2482,6 +4623,9 @@ if not ok then uwnShowHandler = tostring(err) end
         QTest::newRow("shown command line shown again") << shown << qsl("enableCommandLine('uwl'); %1").arg(answer) << qsl("false,false|true|true");
         QTest::newRow("hidden command line hidden again") << hidden << qsl("disableCommandLine('uwl'); %1").arg(answer) << qsl("false,false|true|true");
         QTest::newRow("no command line hidden") << QString() << qsl("disableCommandLine('uwl'); %1").arg(answer) << qsl("false,false|true|true");
+        // As the GUI's reportDockGeometry() once a load succeeds, here from a layout without the window
+        QTest::newRow("layout loaded, then the shown command line shown again") << shown << qsl("assert(loadWindowLayout()); enableCommandLine('uwl'); %1").arg(answer) << qsl("true,false|true|true");
+        QTest::newRow("layout loaded, then the hidden command line shown") << hidden << qsl("assert(loadWindowLayout()); enableCommandLine('uwl'); %1").arg(answer) << qsl("true,false|true|true");
     }
 
     // As the GUI self-test profile answers the same
@@ -2495,6 +4639,7 @@ if not ok then uwnShowHandler = tostring(err) end
         Host* host = HostManager::self()->getHost(hostname);
         QVERIFY2(host, "The profile is not in the pool.");
         host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onUwlShowHandler"));
+        QFile::remove(headlessLayoutPath());
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
 uwlShowHandler = "not run"
 local during, found = nil, "not run"
@@ -2506,6 +4651,7 @@ function onUwlShowHandler(_, _, _, name)
   end
 end
 local ok, err = pcall(function()
+  assert(saveWindowLayout())
   openUserWindow("uwl", false, false, "f")
   resizeWindow("uwl", 400, 250)
   %1
@@ -2525,6 +4671,7 @@ if not ok then uwlShowHandler = tostring(err) end
         // Before comparing, so a failing row leaves the next its profile name
         HostManager::self()->deleteHost(hostname);
         QCOMPARE(answer, expected);
+        QVERIFY(QFile::remove(headlessLayoutPath()));
     }
 
     // The answers are those of the same Lua run in the GUI self-test profile
@@ -8354,6 +10501,8 @@ fbYT0tapBHTFGBkf6NgxBGenwL5TDeL9g3w57+FWiHtIKUylQhCoNb20
         Host* host = HostManager::self()->getHost(hostname);
         QVERIFY2(host, "The profile is not in the pool.");
 
+        // A profile closing earlier in this run saved its layout, which loadWindowLayout() would answer true for
+        QFile::remove(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat")));
         // Each of these calls the app view without asking whether there is one
         const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
 headlessAppResult = 'not run'
@@ -9818,6 +11967,39 @@ end
         QCOMPARE(recorded(), qsl("%1 sysExitEvent reset:false\n%2 sysExitEvent reset:false\n").arg(deletedHostname, quitHostname));
     }
 
+    // An exit handler run as its pool is destroyed adds no profile, which the pool would drop without closing it
+    void test_headlessPoolEndingAddsNoProfile()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Pool-End-Adds-None");
+        const QString addedHostname = qsl("Test-Headless-Host-Pool-End-Added");
+        QStringList record;
+        // A second pool, as in test_exitEventIsRaisedOnceAsTheProfileGoes()
+        auto pool = std::make_unique<HostManager>();
+        QVERIFY2(pool->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = pool->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_pushlightuserdata(L, pool.get());
+        lua_pushlightuserdata(L, &record);
+        lua_pushcclosure(
+                L,
+                [](lua_State* L) -> int {
+                    auto pPool = static_cast<HostManager*>(lua_touserdata(L, lua_upvalueindex(1)));
+                    auto pRecord = static_cast<QStringList*>(lua_touserdata(L, lua_upvalueindex(2)));
+                    pRecord->append(qsl("sysExitEvent"));
+                    pRecord->append(pPool->addHost(QString::fromUtf8(lua_tostring(L, 1)), QString(), QString(), QString()) ? qsl("added") : qsl("refused"));
+                    return 0;
+                },
+                2);
+        lua_setglobal(L, "addProfileAsPoolEnds");
+        host->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onPoolEndExit"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("function onPoolEndExit() addProfileAsPoolEnds([[%1]]) end").arg(addedHostname)));
+        QTest::ignoreMessage(QtWarningMsg, qPrintable(qsl("HostManager::addHost() - not adding \"%1\" as the pool is being destroyed").arg(addedHostname)));
+        pool.reset();
+        QCOMPARE(record, QStringList({qsl("sysExitEvent"), qsl("refused")}));
+        QFile::remove(headlessLayoutPath());
+    }
+
     void test_openProfileLoadsAndStartsTheSaveWithNoMainWindow()
     {
         QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
@@ -10620,6 +12802,24 @@ headlessRecord("closeProfile " .. tostring(closeProfile([[%1]])))
         QCOMPARE(record.takeLast(), qsl("%1 script ends").arg(resettingName));
         record.sort();
         QCOMPARE(record, (QStringList{qsl("%1 sysExitEvent").arg(otherName), qsl("%1 sysExitEvent").arg(resettingName)}));
+    }
+
+    // Last, after the closeMudlet() tests have closed every profile: its profile stays open, for cleanupTestCase() to
+    // find its window in the layout the app's close saves
+    void test_headlessWindowLayoutSavedAsAppCloses()
+    {
+        const QString& hostname = mAppCloseHostname;
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+openUserWindow("wlA", false, false, "f")
+resizeWindow("wlA", 131, 61)
+moveWindow("wlA", 9, 10)
+function onWlAppExit() resizeWindow("wlA", 132, 62) end
+registerAnonymousEventHandler("sysExitEvent", "onWlAppExit")
+)lua")));
+        mAppCloseLayoutChecked = true;
     }
 };
 

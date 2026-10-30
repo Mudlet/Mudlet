@@ -26,6 +26,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "TAppFrontend.h"
 #include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "TCommandLine.h"
@@ -333,6 +334,48 @@ private slots:
         QVERIFY(closeAllowed);
         QCOMPARE(host->consoleFrontend(), attached);
         QVERIFY(host->hasConsoleView());
+    }
+
+    // An embedder with no main window, which the null frontend stands in for here: when a profile a view took over
+    // closes (the direct profileClosing() stands in for the close), a user window a script deleted before the view keeps
+    // its placement through a load and the next save
+    void test_viewedProfileClosingKeepsWindowsDeletedBeforeTheView()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
+        const QString layoutPath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutPath);
+
+        // Checked only once mudlet is the frontend again, so a failure cannot leave the fixture without it
+        TAppFrontend::setInstance(nullptr);
+        TAppFrontend* pNullFrontend = TAppFrontend::instance();
+        const bool firstSaved = pNullFrontend->saveWindowLayoutForScript();
+        host->setMainConsoleView(nullptr);
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('wlB', false, false, 'f'); resizeWindow('wlB', 222, 111); assert(deleteMiniConsole('wlB'))"));
+        host->setMainConsoleView(console);
+        pNullFrontend->profileClosing(host);
+        const bool loaded = pNullFrontend->loadWindowLayout();
+        const bool saved = pNullFrontend->saveWindowLayoutForScript();
+        TAppFrontend::setInstance(mudlet::self());
+
+        QVERIFY(firstSaved);
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QVERIFY(loaded);
+        QVERIFY(saved);
+        QMap<QString, std::pair<QRect, bool>> placements;
+        QFile layoutFile(layoutPath);
+        QVERIFY(layoutFile.open(QIODevice::ReadOnly));
+        QDataStream ifs(&layoutFile);
+        ifs.setVersion(QDataStream::Qt_5_12);
+        quint32 magic = 0;
+        quint32 version = 0;
+        ifs >> magic >> version >> placements;
+        layoutFile.close();
+        QCOMPARE(placements.value(mHostname + qsl("/wlB")).first, QRect(0, 0, 222, 111));
+        QVERIFY(QFile::remove(layoutPath));
     }
 
     // With the console detached, each call answers as for a missing window, even for a label and a user

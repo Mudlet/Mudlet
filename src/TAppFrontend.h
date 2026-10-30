@@ -66,8 +66,18 @@ public:
     virtual void setAppStyleSheet(const QString& styleSheet) = 0;
     virtual void resizeMainWindow(int width, int height) = 0;
     virtual bool loadWindowLayout() = 0;
+    virtual bool layoutLoading() const = 0;
     // Saves even if quitting already saved the layout; if this save fails, quitting saves it again.
     virtual bool saveWindowLayoutForScript() = 0;
+    // For a frontend keeping the layout of profiles with no console view: a script or a profile reset deleting a user
+    // window, an embedded mapper replacing a map widget, a profile closing, and its pool ending.
+    // Called while the window or map widget is still there.
+    virtual void userWindowRemoved(Host*, const QString&) {}
+    virtual void mapWidgetRemoved(Host*) {}
+    // At most once per Host, after HostManager raises any sysExitEvent it still owes, while its windows are still there.
+    virtual void profileClosing(Host*) {}
+    // By self()'s pool as it ends, and by any pool ending while self() answers with none, once its Hosts are gone.
+    virtual void profilesClosed() {}
     virtual bool quitting() const = 0;
     // Loads and starts the profile and, if connect, connects it; false if it could not be loaded.
     virtual bool openProfile(const QString& profileName, bool connect) = 0;
