@@ -4330,7 +4330,7 @@ void TMainConsole::closeEvent(QCloseEvent* event)
     if (mpHost->mFORCE_SAVE_ON_EXIT || mpHost->isClosingForced()) {
         mudlet::self()->saveWindowLayout();
         if (!mpHost->saveForClose()) {
-            qWarning() << "TMainConsole::closeEvent(...) WARNING - forced close map save failed";
+            qWarning() << "TMainConsole::closeEvent(...) WARNING - forced close save failed";
         }
         mEnableClose = true;
         event->accept();

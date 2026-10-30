@@ -51,6 +51,7 @@
 
 #include <QCoreApplication>
 #include <QDataStream>
+#include <QDeadlineTimer>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -346,6 +347,8 @@ cTelnet::~cTelnet()
     if (mpSocket && mpSocket->state() != QAbstractSocket::UnconnectedState) {
         // Block all signals from the socket first
         mpSocket->blockSignals(true);
+        // What was sent last, as from sysExitEvent, waits for the event loop, which may not run again first
+        mpSocket->flush();
         mpSocket->disconnectFromHost();
         // Force immediate closure without waiting
         mpSocket->abort();
@@ -866,14 +869,44 @@ void cTelnet::abortConnection()
     }
 }
 
+// Natively, as Qt cannot half-close a socket
+static void stopSending(const qintptr socketDescriptor)
+{
+#if defined(Q_OS_WINDOWS)
+    ::shutdown(static_cast<SOCKET>(socketDescriptor), SD_SEND);
+#else
+    ::shutdown(static_cast<int>(socketDescriptor), SHUT_WR);
+#endif
+}
+
 //The Host class wants us to end the connection (Profile is closing)
-void cTelnet::terminateConnection()
+void cTelnet::terminateConnection(const bool waitForTheGameToClose)
 {
 #if !defined(QT_NO_SSL)
     if (mCurrent_sslTsl) {
         abortConnection();
     } else {
 #endif
+        // The reads below re-enter the socket's slots, which return early once the profile is closing down
+        Q_ASSERT(!mpHost || mpHost->isClosingDown());
+        // ConnectedState only: Qt reads nothing from a closing socket
+        if (mpSocket && mpSocket->state() == QAbstractSocket::ConnectedState) {
+            // What was sent last, as from sysExitEvent, waits for the event loop, which may not run again first
+            mpSocket->flush();
+            // Unread incoming data makes our close a reset, as does data the game sends after it, and a Windows
+            // peer then discards what it has received but not read, the line just sent included. Bounded, as a
+            // game may never stop sending, nor close.
+            if (waitForTheGameToClose && mpSocket->bytesToWrite() == 0) {
+                stopSending(mpSocket->socketDescriptor());
+                const QDeadlineTimer deadline(1s);
+                while (!deadline.hasExpired() && mpSocket->state() == QAbstractSocket::ConnectedState && mpSocket->waitForReadyRead(static_cast<int>(deadline.remainingTime()))) {
+                    mpSocket->readAll();
+                }
+            }
+            for (int reads = 0; reads < 16 && mpSocket->state() == QAbstractSocket::ConnectedState && (mpSocket->bytesAvailable() > 0 || mpSocket->waitForReadyRead(0)); ++reads) {
+                mpSocket->readAll();
+            }
+        }
         disconnectIt();
 #if !defined(QT_NO_SSL)
     }
@@ -1939,6 +1972,9 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         const bool armCharacterModeDetection = isGameCommand && !mCharacterModeDetected && mServerRequestedSGA && mpHost->isRemoteEchoingActive();
 
         const bool sent = socketOutRaw(outData);
+        if (!sent && isGameCommand) {
+            ++mGameCommandsNotWritten;
+        }
 
         if (sent && armCharacterModeDetection) {
             if (!mTimerCharacterModeDetect) {

@@ -64,15 +64,16 @@ bool resetPending(const HostManager& pool)
 // The pool of a session in its shutdown(), or of a deleted one, which holds HostManager::self() until it goes
 HostManager* gpClosingPool = nullptr;
 
-// The lines being handed out, whose commit nothing in the pool shows. One pool a process, so not a session's
-// own: the pool of one deleted from a handler waits on it.
-int gLinesBeingHandedOut = 0;
+// The signals being sent from inside the profile's code (a line's commit, a print, an error), which nothing
+// in the pool shows. One pool a process, so not a session's own: the pool of one deleted from a handler waits on it.
+int gSignalsBeingHandedOut = 0;
 
-// Closes the profiles, unsaved, once no line is being handed out and nothing in the pool is busy or waiting to reset
+// Closes the profiles, unsaved, once none of those signals is being sent, nothing in the pool is busy or waiting
+// to reset, and no profile taken out of it is still being let go
 void deletePoolOnceIdle(HostManager* pPool)
 {
     gpClosingPool = pPool;
-    if (gLinesBeingHandedOut || poolBusy(*pPool) || resetPending(*pPool) || HostManager::releasingProfile()) {
+    if (gSignalsBeingHandedOut || poolBusy(*pPool) || resetPending(*pPool) || HostManager::releasingProfile()) {
         QTimer::singleShot(50ms, QCoreApplication::instance(), [pPool]() {
             deletePoolOnceIdle(pPool);
         });
@@ -118,6 +119,15 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& options)
 
     // Before the lookup, as making it settles the config root and reports profiles that the lookup cannot see
     mpPool = std::make_unique<HostManager>();
+    // Every profile, a script's loadProfile() ones too, as one closed unsaved is lost all the same; the pool
+    // may outlive the session
+    mpPool->setProfileOpenedHook([self = QPointer<THeadlessSession>(this)](Host* pNewHost) {
+        if (self) {
+            connect(pNewHost, &Host::closeSaveFailed, self.data(), [self, name = pNewHost->getName()]() {
+                self->mUnsavedProfiles.append(name);
+            });
+        }
+    });
     mProfileName = MudletApp::getCanonicalProfileName(options.profile);
     if (mProfileName.isEmpty()) {
         mpPool.reset();
@@ -139,10 +149,45 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& options)
     // The load runs the event loop, where the frontend may delete the session
     const QPointer<THeadlessSession> self(this);
     const unsigned int run = ++mRun;
+    mUnsavedProfiles.clear();
     mLoadFailed = false;
     Host* pHost = mpPool->openProfile(mProfileName, options.connect, [this, run](Host* pNewHost) {
         mpHost = pNewHost;
         connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineCommitted, this, &THeadlessSession::lineCommitted);
+        connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::textPrinted, this, [this](const QString& text) {
+            const QString profile = mProfileName;
+            ++gSignalsBeingHandedOut;
+            emit localText(profile, text);
+            --gSignalsBeingHandedOut;
+        });
+        connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text) {
+            const QString profile = mProfileName;
+            ++gSignalsBeingHandedOut;
+            emit errorConsoleText(profile, text);
+            --gSignalsBeingHandedOut;
+        });
+        connect(
+                &pNewHost->mTelnet,
+                &cTelnet::signal_connected,
+                this,
+                [this, run]() {
+                    if (run == mRun) {
+                        const QString profile = mProfileName;
+                        emit connected(profile);
+                    }
+                },
+                Qt::QueuedConnection);
+        connect(
+                &pNewHost->mTelnet,
+                &cTelnet::signal_disconnected,
+                this,
+                [this, run]() {
+                    if (run == mRun) {
+                        const QString profile = mProfileName;
+                        emit disconnected(profile);
+                    }
+                },
+                Qt::QueuedConnection);
         // Queued, so a close during the load is seen once the event loop runs, where quitting can end it; one
         // that arrives after a later start(), or after the shutdown() that closed this profile, is dropped
         connect(
@@ -173,8 +218,11 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& options)
 
     if (!pHost->mLoadedOk) {
         mLoadFailed = true;
-        //: Error when a profile's saved settings and scripts could not be loaded, and no reason was given
-        mErrorString = pHost->mProfileLoadError.isEmpty() ? tr("The profile's save could not be read.") : pHost->mProfileLoadError;
+        mErrorString = pHost->mProfileLoadError.isEmpty()
+                               //: Error when a profile's saved settings and scripts could not be loaded, and no reason was given
+                               ? tr("The profile's save could not be read.")
+                               //: Error when a profile's saved settings and scripts could not be loaded; %1 is the profile's name, %2 the reason, such as "Premature end of document."
+                               : tr("The profile \"%1\" could not be loaded: %2").arg(mProfileName, pHost->mProfileLoadError);
         return StartResult::loadFailed;
     }
     // A copy, as a handler may delete the session while its argument is in use
@@ -308,6 +356,7 @@ void THeadlessSession::detachFromHost()
     if (mpHost) {
         disconnect(mpHost, nullptr, this, nullptr);
         disconnect(&mpHost->mainConsoleModel().mNotifier, nullptr, this, nullptr);
+        disconnect(&mpHost->mTelnet, nullptr, this, nullptr);
     }
 }
 
@@ -322,13 +371,13 @@ void THeadlessSession::lineCommitted(const int lineIndex)
     }
     // A handler may delete the session, whose pool then waits for the commit to end; hence the copy of the name
     const QString profile = mProfileName;
-    ++gLinesBeingHandedOut;
+    ++gSignalsBeingHandedOut;
     emit outputLine(profile, buffer.lineBuffer.at(lineIndex), buffer.promptBuffer.at(lineIndex));
-    --gLinesBeingHandedOut;
+    --gSignalsBeingHandedOut;
 }
 
-// A line a handler fed would be committed in the middle of the one being handed out, and a load that runs
-// the event loop has yet to start the profile's scripts
+// A handler of outputLine, localText or errorConsoleText runs in the middle of a write, which a line it fed
+// would cut into, and a load that runs the event loop has yet to start the profile's scripts
 bool THeadlessSession::refused()
 {
     if (mShuttingDown) {
@@ -337,10 +386,10 @@ bool THeadlessSession::refused()
         mErrorString = tr("Refused while the profiles close.");
         return true;
     }
-    if (mpPool && gLinesBeingHandedOut) {
-        qWarning() << "THeadlessSession: called from an outputLine handler, which is refused; queue the call instead";
-        //: Error from a frontend with no window that called it back while it was handing out a line
-        mErrorString = tr("Refused while a line is being handed out; queue the call instead.");
+    if (mpPool && gSignalsBeingHandedOut) {
+        qWarning() << "THeadlessSession: called from an outputLine, localText or errorConsoleText handler, which is refused; queue the call instead";
+        //: Error from a frontend with no window that called it back from a handler of the game's lines, of the text the profile printed, or of its error console
+        mErrorString = tr("Refused from a handler of outputLine, localText or errorConsoleText; queue the call instead.");
         return true;
     }
     if (mpPool && mpPool->loadingProfile()) {
@@ -367,10 +416,12 @@ bool THeadlessSession::usable()
         mErrorString = tr("The profile's save could not be loaded, so it takes no commands; close it.");
         return false;
     }
-    // Its aliases and connection stop then, though it is deleted only later
-    if (mpHost->isClosingDown()) {
-        //: Error from a frontend with no window that was given a command or Lua for a profile that had closed
-        mErrorString = tr("The profile has closed, so it takes no more commands.");
+    // Refused from the start of a close, while sysExitEvent and the save still run with the connection up, so
+    // nothing reaches the game after sysExitEvent; sooner than the GUI's command line, which takes typing until
+    // the save is done
+    if (mpHost->closeStarted()) {
+        //: Error from a frontend with no window that was given a command or Lua for a profile that has begun to close
+        mErrorString = tr("The profile is closing, so it takes no more commands.");
         return false;
     }
     return true;
