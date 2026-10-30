@@ -31,7 +31,6 @@
 #include "TArea.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TForkedProcess.h"
 #include "TIrcClient.h"
 #include "TMap.h"
 #include "TMapLabel.h"

@@ -9,6 +9,18 @@
 
 describe("spawn", function()
 
+  local unavailable = "spawn: starting processes is not available in this build of Mudlet"
+  local _, probeError = pcall(spawn, function() end, "/nonexistent/mudlet-spawn-test")
+  if probeError == unavailable then
+    it("should raise in a build that cannot start processes", function()
+      local ok, err = pcall(spawn, function() end, "echo")
+      assert.is_false(ok)
+      assert.are.equal(unavailable, err)
+    end)
+    pending("this build of Mudlet cannot start processes")
+    return
+  end
+
   describe("argument checking", function()
 
     it("should reject a call with no process name", function()

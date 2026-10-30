@@ -41,7 +41,9 @@
 #include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
+#if defined(INCLUDE_SPAWN)
 #include "TForkedProcess.h"
+#endif
 #include "TGameDetails.h"
 #include "TKey.h"
 #include "TMap.h"
@@ -815,11 +817,8 @@ void TLuaInterpreter::slot_pathChanged(const QString& path)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::slot_deleteSender(int exitCode, QProcess::ExitStatus exitStatus)
+void TLuaInterpreter::slot_deleteSender()
 {
-    Q_UNUSED(exitCode)
-    Q_UNUSED(exitStatus)
-
     objectsToDelete.append(sender());
 }
 
@@ -839,7 +838,9 @@ void TLuaInterpreter::slot_purge()
 void TLuaInterpreter::stopSpawnedProcesses()
 {
     slot_purge();
+#if defined(INCLUDE_SPAWN)
     qDeleteAll(findChildren<TForkedProcess*>(Qt::FindDirectChildrenOnly));
+#endif
 }
 
 // No documentation available in wiki - internal function
@@ -1042,6 +1043,11 @@ int TLuaInterpreter::getWindowsCodepage(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#spawn
 int TLuaInterpreter::spawn(lua_State* L)
 {
+#if !defined(INCLUDE_SPAWN)
+    // Raised, as a process that fails to start is
+    lua_pushstring(L, "spawn: starting processes is not available in this build of Mudlet");
+    return lua_error(L);
+#else
     Host& host = getHostFromLua(L);
     TLuaInterpreter* interpreter = host.getLuaInterpreter();
     if (interpreter->mClosingGlobalLua) {
@@ -1050,6 +1056,7 @@ int TLuaInterpreter::spawn(lua_State* L)
         return 2;
     }
     return TForkedProcess::startProcess(interpreter, L);
+#endif
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadReplay
