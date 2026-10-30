@@ -72,6 +72,7 @@
 #include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TMxpFrameFrontend.h"
+#include "TNullAppFrontend.h"
 #include "TNullConsoleFrontend.h"
 #include "TNullMapViews.h"
 #include "TRoom.h"
@@ -10589,15 +10590,6 @@ fbYT0tapBHTFGBkf6NgxBGenwL5TDeL9g3w57+FWiHtIKUylQhCoNb20
         QVERIFY(app->getOpenFileName(qsl("title"), QDir::tempPath()).isEmpty());
         QVERIFY(!app->quitting());
 
-        // Scripts get this text once the command bindings stop checking for a main window themselves
-        const TAppFrontend::CommandRequest request{.name = qsl("headless command")};
-        QString error = qsl("left over from an earlier call");
-        QCOMPARE(app->addAddonCommand(request, nullptr, QString(), error), -1);
-        QCOMPARE(error, qsl("mudlet instance not available"));
-        error = qsl("left over from an earlier call");
-        QCOMPARE(app->setAddonCommandPulse(1, true, qsl("red"), qsl("blue"), 500, nullptr, error), false);
-        QCOMPARE(error, qsl("mudlet instance not available"));
-
         const QString hostname = qsl("Test-Headless-Host-App-View");
         QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
         Host* host = HostManager::self()->getHost(hostname);
@@ -10630,17 +10622,9 @@ headlessAppResult = ok and 'ok' or tostring(err)
         Host* host = HostManager::self()->getHost(hostname);
         QVERIFY2(host, "The profile is not in the pool.");
 
-        // addCommand and setCommandPulse take this answer from the null view, removeCommand from its own check
         const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
 headlessAnswersResult = 'not run'
 local ok, err = pcall(function()
-  local missing = "mudlet instance not available"
-  local id, idMsg = addCommand({name = "Headless", menuPath = "Headless"})
-  assert(id == nil and idMsg == missing, "addCommand answered " .. tostring(id) .. ", " .. tostring(idMsg))
-  local pulse, pulseMsg = setCommandPulse(1, true)
-  assert(pulse == nil and pulseMsg == missing, "setCommandPulse answered " .. tostring(pulse) .. ", " .. tostring(pulseMsg))
-  local removed, removedMsg = removeCommand(1)
-  assert(removed == nil and removedMsg == missing, "removeCommand answered " .. tostring(removed) .. ", " .. tostring(removedMsg))
   assert(invokeFileDialog(true, "headless") == "", "invokeFileDialog did not answer an empty string")
   alert(0)
   local shown, shownMsg = showToolBar("headless missing toolbar")
@@ -10650,6 +10634,142 @@ headlessAnswersResult = ok and 'ok' or tostring(err)
 )lua"));
         QVERIFY2(ran, "The Lua chunk did not run.");
         QCOMPARE(luaGlobalString(host, "headlessAnswersResult"), qsl("ok"));
+    }
+
+    // The answers are AddonCommand_spec.lua's for the same calls, but for what only the main window's bars, its own
+    // shortcuts and its widgets' can refuse
+    void test_addonCommandsWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+
+        const QString hostname = qsl("Test-Headless-Host-Addon-Commands");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessCommands = 'not run'
+local ok, err = pcall(function()
+  local id = addCommand({name = "Speech", menuPath = "Speech/Voices", shortcut = "Ctrl+Alt+F5, Ctrl+Alt+F6, Ctrl+Alt+F7, Ctrl+Alt+F8", tooltip = "<b>talk</b>"})
+  assert(type(id) == "number", "addCommand did not hand back a number: " .. tostring(id))
+  local second = addCommand({name = "Speech", menuPath = "Speech/Voices"})
+  assert(type(second) == "number" and second ~= id, "a second command did not get an id of its own")
+  assert(type(addCommand({name = "Comma", shortcut = "Ctrl+,, Ctrl+Alt+F1, Ctrl+Alt+F2, Ctrl+Alt+F3"})) == "number", "a sequence of four steps starting with the comma key was refused")
+  headlessCommandId = id
+
+  assert(disableCommand(id) == true, "disableCommand did not answer true")
+  assert(enableCommand(id) == true, "enableCommand did not answer true")
+  assert(setCommandChecked(id, true) == true, "setCommandChecked did not answer true")
+  assert(setCommandPinned(id, true) == true, "setCommandPinned did not answer true")
+  assert(setCommandIcon(id, "/no/such/icon.png") == true, "setCommandIcon did not answer true")
+  assert(setCommandTooltip(id, [[Damage 5 <10 & rising]]) == true, "setCommandTooltip did not answer true")
+  assert(setCommandPulse(id, true, "#22aa44", "#116622", 700) == true, "setCommandPulse did not answer true")
+  assert(setCommandPulse(id, false) == true, "stopping the pulse did not answer true")
+  local badColour, badColourMsg = setCommandPulse(id, true, "reed", "#116622")
+  assert(badColour == nil and badColourMsg == '"reed" is not a colour Qt recognises', "an unknown colour was not refused: " .. tostring(badColourMsg))
+  local menuOnly = addCommand({name = "Menu only", surfaces = "menu"})
+  local noButton, noButtonMsg = setCommandPulse(menuOnly, true)
+  assert(noButton == nil and noButtonMsg == "that command is not on the toolbar, and a pulse has nothing to colour without a button", "a menu-only command took a pulse: " .. tostring(noButtonMsg))
+  assert(type(addCommand({name = "Toolbar only", surfaces = "toolbar"})) == "number", "a toolbar-only command was refused")
+
+  local function refused(request, expected)
+    local refusedId, why = addCommand(request)
+    assert(refusedId == nil and why == expected, request.name .. " answered " .. tostring(refusedId) .. ", " .. tostring(why))
+  end
+  refused({name = "ToolbarPath", surfaces = "toolbar", menuPath = "Spec"}, 'a menu path needs a menu item to go in, so it cannot be used with surfaces = "toolbar"')
+  refused({name = "ToolbarKey", surfaces = "toolbar", shortcut = "Ctrl+Alt+F11"}, 'a shortcut needs a menu item to hang on, so it cannot be used with surfaces = "toolbar"')
+  refused({name = "Typo", shortcut = "Ctrl+Alt+F10, Ctrl+Shft+B"}, "that is not a key sequence Qt understands")
+  refused({name = "FiveSteps", shortcut = "Ctrl++, Ctrl+Alt+F1, Ctrl+Alt+F2, Ctrl+Alt+F3, Ctrl+Alt+F4"}, "a key sequence can be 4 step(s) long at most")
+  refused({name = "Speech"}, '"Speech" is already a submenu here, so a command cannot take that label too')
+  refused({name = "Deeper", menuPath = "Speech/Voices/Speech/More"}, '"Speech" is already a command in this menu, so it cannot also be a submenu')
+  assert(type(addCommand({name = "Speech", surfaces = "toolbar"})) == "number", "a toolbar-only command was refused the label of a submenu")
+
+  local function refusedFor(request, holder)
+    local refusedId, why = addCommand(request)
+    assert(refusedId == nil and tostring(why):find(holder, 1, true), request.name .. " answered " .. tostring(refusedId) .. ", " .. tostring(why))
+  end
+  assert(type(addCommand({name = "KeyHolder", shortcut = "Ctrl+Alt+J"})) == "number", "a free key was refused")
+  refusedFor({name = "WantsKey", shortcut = "Ctrl+Alt+J"}, 'is already taken by "KeyHolder"')
+  -- Alt and F9: mudlet.keymodifier and mudlet.key come with mudlet-lua, which this run has not loaded
+  permKey("HeadlessKeyClash", "", 0x08000000, 0x01000038, [[echo("bound")]])
+  refusedFor({name = "WantsBoundKey", shortcut = "Alt+F9"}, 'is already taken by the "HeadlessKeyClash" key binding')
+
+  assert(removeCommand(second) == true, "removeCommand did not answer true")
+  for name, call in pairs({
+    removeCommand = function() return removeCommand(second) end,
+    enableCommand = function() return enableCommand(second) end,
+    disableCommand = function() return disableCommand(second) end,
+    setCommandChecked = function() return setCommandChecked(second, true) end,
+    setCommandIcon = function() return setCommandIcon(second, "") end,
+    setCommandTooltip = function() return setCommandTooltip(second, "nothing") end,
+    setCommandPinned = function() return setCommandPinned(second, true) end,
+    setCommandPulse = function() return setCommandPulse(second, true) end,
+  }) do
+    assert(call() == false, name .. " did not answer false for a removed command")
+  end
+end)
+headlessCommands = ok and 'ok' or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessCommands"), qsl("ok"));
+        const QString idText = luaGlobalString(host, "headlessCommandId");
+        QVERIFY2(!idText.isEmpty(), "The command's id was not kept.");
+
+        // Only its own profile addresses a command
+        const QString otherHostname = qsl("Test-Headless-Host-Addon-Commands-Other");
+        QVERIFY2(HostManager::self()->addHost(otherHostname, QString(), QString(), QString()), "Could not create a second profile with no main window.");
+        Host* other = HostManager::self()->getHost(otherHostname);
+        QVERIFY2(other, "The second profile is not in the pool.");
+        QVERIFY(other->getLuaInterpreter()->compileAndExecuteScript(qsl("otherAnswer = tostring(enableCommand(%1)) .. ' ' .. tostring(removeCommand(%1))").arg(idText)));
+        QCOMPARE(luaGlobalString(other, "otherAnswer"), qsl("false false"));
+        QVERIFY(other->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+local otherId, otherWhy = addCommand({name = "OtherKey", shortcut = "Ctrl+Alt+J"})
+otherKeyAnswer = tostring(otherId) .. " " .. tostring(otherWhy)
+)lua")));
+        QVERIFY2(luaGlobalString(other, "otherKeyAnswer").endsWith(qsl("is already taken by a command from another profile")), qPrintable(luaGlobalString(other, "otherKeyAnswer")));
+        HostManager::self()->deleteHost(otherHostname);
+
+        // Kept for a frontend to show, and activated as a click on the main window's would
+        auto* app = static_cast<TNullAppFrontend*>(TAppFrontend::instance());
+        const int commandId = idText.toInt();
+        const TNullAppFrontend::AddonCommand command = app->addonCommands().value(commandId);
+        QCOMPARE(command.request.name, qsl("Speech"));
+        QCOMPARE(command.request.menuPath, qsl("Speech/Voices"));
+        QCOMPARE(command.icon, qsl("/no/such/icon.png"));
+        QCOMPARE(command.tooltip, qsl("Damage 5 <10 & rising"));
+        QVERIFY(command.enabled && command.checkable && command.checked && command.pinned);
+        QVERIFY(!command.pulseEnabled);
+        QCOMPARE(command.pulseColor1, qsl("#22aa44"));
+        QCOMPARE(command.pulseInterval, 700);
+        host->registerAnonymousEventHandler(qsl("sysCommandClicked"), qsl("onHeadlessCommandClicked"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+clickedCommands = ""
+function onHeadlessCommandClicked(_, clicked) clickedCommands = clickedCommands .. type(clicked) .. clicked .. " " end
+)lua")));
+        QVERIFY(app->activateAddonCommand(commandId));
+        QCOMPARE(luaGlobalString(host, "clickedCommands"), qsl("number%1 ").arg(commandId));
+        QVERIFY2(!app->addonCommands().value(commandId).checked, "Activating a ticked command did not untick it.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("disableCommand(%1)").arg(commandId)));
+        QVERIFY2(!app->activateAddonCommand(commandId), "A disabled command was activated.");
+        QVERIFY2(!app->activateAddonCommand(-1), "An unknown command was activated.");
+        QCOMPARE(luaGlobalString(host, "clickedCommands"), qsl("number%1 ").arg(commandId));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("enableCommand(%1)").arg(commandId)));
+
+        // A command goes with its package, and every one of a profile's with a reset
+        const TAppFrontend::CommandRequest request{.name = qsl("packaged")};
+        QString error;
+        const int kept = app->addAddonCommand(request, host, qsl("keptPackage"), error);
+        const int packaged = app->addAddonCommand(request, host, qsl("removedPackage"), error);
+        QVERIFY(kept > 0 && packaged > 0);
+        emit host->signal_packageRemoved(qsl("removedPackage"));
+        QVERIFY2(!app->setAddonCommandEnabled(packaged, true, host), "A command outlived its package.");
+        QVERIFY2(app->setAddonCommandEnabled(kept, true, host), "Removing one package took another's command.");
+        QVERIFY2(app->setAddonCommandEnabled(idText.toInt(), true, host), "Removing a package took the profile's own command.");
+        emit host->signal_profileResetting();
+        QVERIFY2(!app->setAddonCommandEnabled(kept, true, host), "A command outlived its profile's reset.");
+        QVERIFY2(!app->setAddonCommandEnabled(idText.toInt(), true, host), "The profile's own command outlived its reset.");
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The commands created a widget.");
+        HostManager::self()->deleteHost(hostname);
     }
 
     // As the GUI answers with no saved settings
