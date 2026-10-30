@@ -963,16 +963,17 @@ bool Host::saveMapFile(const QString& location, int saveVersion)
 
 bool Host::prepareMapperForMapLoad()
 {
-    // The console owns the mapper dock, so without one the map loads into the model alone
-    if (mpMap && !hasConsoleView()) {
-        return true;
-    }
-
-    if (!mpMap || !mpMap->mapViewFrontend()) {
+    if (!mpMap || !hasMapper()) {
         // Not the default map: the caller loads the one it was asked for
         showHideOrCreateMapper(false);
     }
-    return mpMap && mpMap->mapViewFrontend();
+    return mpMap && hasMapper();
+}
+
+// With no view nothing draws the map, so a mapper the null view has recorded stands for one that would
+bool Host::hasMapper() const
+{
+    return hasConsoleView() ? mpMap->mapViewFrontend() != nullptr : mpNullConsoleFrontend->hasMapper();
 }
 
 bool Host::loadMapFile(const QString& location)
@@ -6640,11 +6641,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
 
 std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, int width, int height)
 {
-    if (!hasConsoleView()) {
-        return {false, qsl("no console for this profile - it may be closing")};
-    }
-
-    if (!consoleFrontend()->mapWidgetCreated() && !mpMap->mapViewFrontend()) {
+    if (!consoleFrontend()->mapWidgetCreated() && !hasMapper()) {
         showHideOrCreateMapper(true);
     }
 
@@ -6673,10 +6670,6 @@ void Host::refreshColours()
 
 std::pair<bool, QString> Host::closeMapWidget()
 {
-    if (!hasConsoleView()) {
-        return {false, qsl("no console for this profile - it may be closing")};
-    }
-
     // Checked first so a profile that never made a widget is told apart from one that hid it.
     // createMapper() nulls the widget when it takes a hidden one over, so that also answers never-made.
     if (!consoleFrontend()->mapWidgetCreated()) {
@@ -7063,7 +7056,7 @@ bool Host::interceptMapperButton()
 // loads/imports a non-default (last saved map in profile's map directory).
 void Host::showHideOrCreateMapper(const bool loadDefaultMap)
 {
-    if (mpMap->mapViewFrontend()) {
+    if (hasMapper()) {
         toggleMapperVisibility();
         return;
     }
@@ -7087,29 +7080,45 @@ void Host::toggleMapperVisibility()
     consoleFrontend()->setMapperShown(!mapperShown());
 }
 
+bool Host::loadMapForNewMapper(const bool embedded)
+{
+    // Past closeChildren() with its view gone, the close is all that is left, so there is no map to show, and its
+    // error log is not written to again
+    if ((mIsClosingDown && !hasConsoleView()) || !mpMap->mpRoomDB->isEmpty()) {
+        return false;
+    }
+    // Numbered as the GUI numbers them: case 2 is TMainConsole::createMapper()'s, case 3 the map widget's
+    const QString now = QDateTime::currentDateTime().toString(Qt::ISODate);
+    QString preLoadTitle;
+    QString loadTitle;
+    if (embedded) {
+        //: Heading in the map error log, written before an embedded mapper loads the profile's last saved map
+        preLoadTitle = QCoreApplication::translate("TMainConsole", "Pre-Map loading(2) report");
+        //: Heading in the map error log, written after an embedded mapper loaded the profile's last saved map; %1 is the time
+        loadTitle = QCoreApplication::translate("TMainConsole", "Loading map(2) at %1 report").arg(now);
+    } else {
+        //: Heading in the map error log, written before the map window loads the profile's last saved map
+        preLoadTitle = tr("Pre-Map loading(3) report");
+        //: Heading in the map error log, written after the map window loaded the profile's last saved map; %1 is the time
+        loadTitle = tr("Loading map(3) at %1 report").arg(now);
+    }
+    qDebug() << "Host::loadMapForNewMapper() - restore map case" << (embedded ? 2 : 3);
+    mpMap->pushErrorMessagesToFile(preLoadTitle, true);
+    if (mpMap->restore(QString())) {
+        mpMap->audit();
+        consoleFrontend()->showLoadedMap();
+    }
+
+    mpMap->pushErrorMessagesToFile(loadTitle, true);
+    return true;
+}
+
 void Host::createMapper(const bool loadDefaultMap)
 {
-    // The console owns the map dock; bail if the profile has no console yet or is
-    // already being torn down.
-    if (!hasConsoleView()) {
-        return;
-    }
-    auto pMap = mpMap.data();
     auto hostName(getName());
     consoleFrontend()->createMapperDock(tr("Map - %1").arg(hostName), qsl("dockMap_%1").arg(hostName));
 
-    if (loadDefaultMap && pMap->mpRoomDB->isEmpty()) {
-        qDebug() << "Host::create_mapper() - restore map case 3.";
-        pMap->pushErrorMessagesToFile(tr("Pre-Map loading(3) report"), true);
-        const QDateTime now(QDateTime::currentDateTime());
-        if (pMap->restore(QString())) {
-            pMap->audit();
-            consoleFrontend()->showLoadedMap();
-        }
-
-        pMap->pushErrorMessagesToFile(tr("Loading map(3) at %1 report").arg(now.toString(Qt::ISODate)), true);
-
-    } else {
+    if (!loadDefaultMap || !loadMapForNewMapper(false)) {
         // Needed to set the area selector widget to right area when map is
         // loaded by clicking on Map main toolbar button:
         consoleFrontend()->showMapAtPlayerArea();
