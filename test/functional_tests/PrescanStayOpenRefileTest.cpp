@@ -90,9 +90,9 @@ private:
         return runLua(setup);
     }
 
-    // Each slot leaves the profile as it found it. The index rebuilds once its
-    // mutations reach max(32, live roots), so triggers an earlier slot left
-    // behind raise the bar the next one is measured against and its budget
+    // Each slot leaves the profile as it found it. The index rebuilds once what
+    // refiling abandons outnumbers what it holds, so triggers an earlier slot
+    // left behind raise the bar the next one is measured against and its budget
     // stops meaning anything.
     void removeProbe(const QString& tag)
     {
@@ -202,7 +202,7 @@ private slots:
 
     // A script that sets the same stay-open count every line changes nothing the
     // index files on. The refile it would otherwise cost is not merely wasted
-    // work: each one counts towards the mutations that buy a rebuild.
+    // work: each one abandons entries that buy a rebuild.
     void repeatedStayOpenCallsThatChangeNothingCostNothing()
     {
         constexpr int lines = 400;
@@ -229,8 +229,8 @@ private slots:
     // A script that opens and closes one trigger repeatedly inside a single line
     // queues that one slot to be filed again as many times as it was called,
     // because the index a line is reading from is only patched once the line is
-    // over. Filing it once is enough; filing it again for every call spends
-    // mutations that buy a rebuild.
+    // over. Filing it once is enough; filing it again for every call abandons
+    // entries that buy a rebuild.
     void manyFlipsInsideOneLineCostOneRefile()
     {
         constexpr int lines = 60;

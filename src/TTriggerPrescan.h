@@ -22,7 +22,6 @@
 
 #include <QString>
 
-#include <algorithm>
 #include <array>
 #include <unordered_map>
 #include <vector>
@@ -48,60 +47,81 @@ public:
     // The pattern's rarest-looking n-gram, which keeps candidate lists short, or 0 when it is too short
     static quint64 patternGram(const QString& pattern);
 
-    void rebuild(const std::vector<TTrigger*>& roots);
-    // Incremental updates for root-list changes that keep existing positions, so one trigger costs one
-    // trigger's work. Removed slots are never reused, keeping positions stable, until shouldRebuild()
-    // says the holes outweigh what the incremental path saves.
-    void appendSlot(const std::vector<quint64>& grams);
-    void removeSlot(int position);
-    void refileSlot(int position, const std::vector<quint64>& grams);
-    bool shouldRebuild() const { return mMutations >= std::max(scmMinimumIndexedTriggers, mLiveSlots); }
-    bool active() const { return mActive; }
+    // One trigger's worth of work each, so arming and killing triggers every line costs no rebuild. A
+    // freed slot is handed out again; grams must not be empty.
+    int fileSlot(const std::vector<quint64>& grams);
+    void removeSlot(int slot);
+    void refileSlot(int slot, const std::vector<quint64>& grams);
+    // For freeing many at once: costs one pass over what stays filed, not one per slot
+    void removeSlots(const std::vector<int>& freed);
 
-    // Fills `out` in root-list order. `scratch` is caller-owned so a trigger script feeding text back
-    // through the pipeline cannot disturb an outer pass.
-    void candidates(const QString& line, std::vector<int>& scratch, std::vector<int>& out) const;
-    // Only the filed slots the line's n-grams hit, in no particular order and without the unfilterable
-    // ones, for a caller that marks slots rather than walks them.
+    // The filed slots the line's n-grams hit, each once, in no particular order
     void hits(const QString& line, std::vector<int>& out) const;
+    // Each refiled every slot, so a test can check the incremental path keeps them rare
+    quint64 reindexCount() const { return mReindexes; }
 
 private:
-    // Below this the plain walk is cheaper than filtering it.
-    static constexpr int scmMinimumIndexedTriggers = 32;
+    // reindex() reclaims abandoned mGramPool entries once they outnumber both the filed ones and this
+    static constexpr int scmMinimumWaste = 64;
     static constexpr quint32 scmGramBitsLog = 16;
     static constexpr quint32 scmGramBitsMask = (1u << scmGramBitsLog) - 1;
 
     static quint32 gramBit(quint64 gram);
     static int gramLength(const quint64 gram) { return static_cast<int>(gram >> 32); }
 
-    // A position's slice of mGramPool. A count of -1 marks a removed trigger; 0 one that cannot be filtered.
+    // A slot's slice of mGramPool; a count of 0 marks a free slot
     struct GramRange
     {
         int mOffset = 0;
         int mCount = 0;
     };
-    static constexpr int scmRemovedSlot = -1;
 
-    void fileSlot(int position, const std::vector<quint64>& grams);
-    void unfileSlot(int position);
+    void fileGrams(int slot, const std::vector<quint64>& grams);
+    void unfileGrams(int slot);
+    void compactIfWasteful();
+    void reindex();
 
-    bool mActive = false;
-    // Which n-grams anything is filed under: one bit test rejects most of a line's before the map lookup
+    // Which n-grams anything is filed under: one bit test rejects most of a line's before the map lookup.
+    // Unfiling leaves bits set, as grams share them, and keeps emptied buckets for the next trigger
+    // filed under them, both until reindex().
     std::vector<quint64> mGramBits;
     std::unordered_map<quint64, std::vector<int>> mIndex;
-    // Sorted, so the merge hands processDataStream() its triggers in root-list order
-    std::vector<int> mUnfiltered;
-    // Lets removing a trigger find its buckets without a scan. Append-only: a refiled position abandons
-    // its old entries until the next rebuild.
+    // Lets unfiling a slot find its buckets without a scan. Append-only, so a removed or refiled slot
+    // abandons its entries until reindex() reclaims them.
     std::vector<GramRange> mSlotGrams;
     std::vector<quint64> mGramPool;
+    int mFiledGrams = 0;
+    std::vector<int> mFreeSlots;
     // Grams filed per length, so a line is only walked at lengths in use
     std::array<int, scmMaxGramLength + 1> mLengthUse{};
-    int mIndexedSlots = 0;
-    int mLiveSlots = 0;
-    int mMutations = 0;
     mutable std::vector<quint32> mSeen;
     mutable quint32 mGeneration = 0;
+    quint64 mReindexes = 0;
+};
+
+// A parent's children in walk order, with the ones a pass along the line has to enter, so it need not
+// touch the rest. Built by TriggerUnit's tree index rebuild, and for the root list by its snapshot; see
+// TriggerUnit::markTreeNode().
+struct TChildWalk
+{
+    // Position of the next child to enter at or after position, or past the end when none is
+    int nextToEnter(int position, quint32 lineStamp) const;
+    // False when position was marked for this line already
+    bool mark(int position, quint32 lineStamp);
+    void setAlways(int position, bool always);
+
+    std::vector<TTrigger*> mChildren;
+    // One bit per position in mChildren. Entered on every line: an unfiled child, other than a folder
+    // with nothing below it to enter every line
+    std::vector<quint64> mAlways;
+    // Entered on the line stamped mMarkedStamp only: a child the index hit or that acts without
+    // matching, or a child above one
+    std::vector<quint64> mMarked;
+    quint32 mMarkedStamp = 0;
+    // Cleared by any change to the children or to how one is filed: mChildren may then name freed
+    // triggers, so the walk goes down the live list. Only an outermost pass's rebuild frees or replaces it.
+    // Unused for the root list, whose snapshot nulls a freed trigger instead.
+    bool mValid = false;
 };
 
 #endif // MUDLET_TTRIGGERPRESCAN_H

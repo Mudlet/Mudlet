@@ -89,13 +89,13 @@ public:
     // triggers' filters. Moves only for a change one of those copies could be of, so a spec can tell a
     // needed announcement from one that cost a line its filters for nothing.
     quint32 rootFilterEpoch() const { return mRootFilterEpoch; }
-    // As above, for the announcements that cost the rest of a line its candidate list
+    // As above, for the announcements that cost the rest of a line its root walk
     quint32 unfilterableEpoch() const { return mUnfilterableEpoch; }
-    // Whether the last snapshot engaged the root prescan, so a test can tell it is relying on it
-    bool rootPrescanActive() const { return mpRootNodeSnapshot && mpRootNodeSnapshot->mPrescan.active(); }
-    // Both paths build the same index, so this is how a test checks the incremental path keeps full
-    // rebuilds flat.
-    quint64 prescanRebuildCount() const { return mPrescanRebuilds; }
+    // Whether the last snapshot walks the roots by the index, so a test can tell it is relying on it
+    bool rootPrescanActive() const { return mpRootNodeSnapshot && mpRootNodeSnapshot->mIndexed; }
+    // Snapshot rebuilds and index reindexes, each refiling every root: both paths file the same, so this
+    // is how a test checks the incremental path keeps them flat
+    quint64 prescanRebuildCount() const { return mPrescanRebuilds + mTreeIndex.reindexCount(); }
     // The whole-tree index - see TTrigger::skippableForLine() and docs/platform-builds.md
     enum class TreeIndexMode { Off, On, Verify };
     static TreeIndexMode treeIndexMode() { return smTreeIndexMode; }
@@ -106,8 +106,8 @@ public:
     // A trigger below a root started acting on lines it does not match, so every pass has to enter it
     // while it does
     void noteOpenTreeNode(TTrigger* pT);
-    // Triggers the last rebuild filed, so a spec can tell the index is armed before it relies on it
-    int treeIndexFiledCount() const { return static_cast<int>(mTreeNodes.size()); }
+    // Triggers below a root the last rebuild filed, so a spec can tell the index is armed before it relies on it
+    int treeIndexFiledCount() const { return static_cast<int>(mChildSlots.size()); }
     void doCleanup();
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
@@ -187,7 +187,13 @@ private:
     void unfileTreeNode(TTrigger* pT);
     void clearTreeNodes();
     void rebuildTreeIndex();
-    void stampTreeCandidates(const QString& line);
+    int fileIndexSlot(TTrigger* pT, bool root, const std::vector<quint64>& grams);
+    // False, with the root unfiled, when its text cannot rule it out of a line
+    bool fileRoot(TTrigger* pT, std::vector<quint64>& grams);
+    void unfileRoot(TTrigger* pT);
+    struct RootNodeSnapshot;
+    // False when the roots have to be walked in full on this line
+    bool stampTreeCandidates(const QString& line, RootNodeSnapshot& snapshot);
     void stopSameLineCreationLoop(const int chainId);
     void markRootNodeAppended(TTrigger* pT);
     void markRootNodeRemoved(TTrigger* pT);
@@ -220,14 +226,16 @@ private:
     // What processDataStream() iterates instead of mTriggerRootNodeList. A pass pins the snapshot current
     // when it started, so a mid-pass mutation only affects the next pass. Every mutation of
     // mTriggerRootNodeList must set the flag below, or a pass would walk freed triggers.
-    // The prescan files triggers by snapshot position, so the two are rebuilt and pinned together.
-    // mFilters runs parallel to mNodes; what it says about a trigger holds only while mRootFilterEpoch
+    // The roots are the children of mWalk, which the tree index marks as it does a parent's walk.
+    // mFilters runs parallel to them; what it says about a trigger holds only while mRootFilterEpoch
     // stands still - see processDataStream().
     struct RootNodeSnapshot
     {
-        std::vector<TTrigger*> mNodes;
+        TChildWalk mWalk;
         std::vector<TRootTriggerFilter> mFilters;
-        TTriggerPrescan mPrescan;
+        int mHoles = 0;
+        // Enough roots are filed for the walk to beat visiting every one
+        bool mIndexed = false;
     };
     std::shared_ptr<RootNodeSnapshot> mpRootNodeSnapshot;
     bool mRootNodeSnapshotStale = true;
@@ -238,17 +246,28 @@ private:
     std::vector<TTrigger*> mRootNodesAppended;
     std::vector<int> mRootNodesRemoved;
     std::vector<int> mRootNodesRefiled;
-    std::vector<int> mCandidateScratch;
-    std::vector<int> mCandidates;
     quint64 mPrescanRebuilds = 0;
     static TreeIndexMode smTreeIndexMode;
-    // Every filed trigger, in walk order, at the last rebuild; a slot is nulled when its trigger goes:
-    // the next rebuild and any nested pass still read this list
-    std::vector<TTrigger*> mTreeNodes;
+    // Roots and the triggers below them in one index, each population filed by its own rules: a root
+    // by prescanGrams() as its snapshot entry is refreshed, the rest by treeIndexGrams() at a rebuild
+    TTriggerPrescan mTreeIndex;
+    // Per population: with fewer filed, walking every trigger is cheaper than filtering them
+    static constexpr int scmMinimumIndexedTriggers = 32;
+    struct IndexSlot
+    {
+        TTrigger* mpTrigger = nullptr;
+        bool mRoot = false;
+    };
+    // A child's slot is nulled when its trigger goes, and freed only by the next rebuild, as any nested
+    // pass still reads it
+    std::vector<IndexSlot> mIndexSlots;
+    // The slots the last rebuild filed
+    std::vector<int> mChildSlots;
+    int mFiledRoots = 0;
+    bool mTreeIndexActive = false;
     std::vector<int> mTreeHits;
     // Triggers below a root that noteOpenTreeNode() was told of, until a line finds them shut again
     std::vector<TTrigger*> mOpenTreeNodes;
-    TTriggerPrescan mTreeIndex;
     bool mTreeIndexStale = true;
     quint32 mUnfilterableEpoch = 0;
     // Moves whenever a trigger changes in a way its TRootTriggerFilter copies,

@@ -312,26 +312,7 @@ private:
 };
 
 class TTrigger;
-
-// A parent's children in walk order, with the ones a pass along the line has to enter, so it need not
-// touch the rest. Built by TriggerUnit's tree index rebuild; see TriggerUnit::markTreeNode().
-struct TChildWalk
-{
-    // Position of the next child to enter at or after position, or past the end when none is
-    int nextToEnter(int position, quint32 lineStamp) const;
-
-    std::vector<TTrigger*> mChildren;
-    // One bit per position in mChildren. Entered on every line: an unfiled child, other than a folder
-    // with nothing below it to enter every line
-    std::vector<quint64> mAlways;
-    // Entered on the line stamped mMarkedStamp only: a child the index hit or that acts without
-    // matching, or a child above one
-    std::vector<quint64> mMarked;
-    quint32 mMarkedStamp = 0;
-    // Cleared by any change to the children or to how one is filed: mChildren may then name freed
-    // triggers, so the walk goes down the live list. Only an outermost pass's rebuild frees or replaces it.
-    bool mValid = false;
-};
+struct TChildWalk;
 
 class TTrigger : public Tree<TTrigger>
 {
@@ -470,10 +451,10 @@ public:
     // Grams for the whole-tree index, one per textDecidedPatterns(). Empty, with false, when the line's
     // text cannot rule the trigger out.
     bool treeIndexGrams(std::vector<quint64>& grams) const;
-    // The same for the root list's index, whose candidate list is settled before a line runs and reads no
-    // trigger after: one held open is offered every line until refile() files it again, and a multiline
-    // one always, as nothing refiles it when it opens or closes a state. A perl one is left to the bigram
-    // filters: filed, a profile's regex triggers switch the index on where walking those is cheaper.
+    // The same for a root, whose place in the walk is settled before a line runs and reads no trigger
+    // after: one held open is entered every line until refile() files it again, and a multiline one
+    // always, as nothing refiles it when it opens or closes a state. A perl one is left to the bigram
+    // filters: filed, a profile's regex triggers switch the root walk on where walking those is cheaper.
     bool prescanGrams(std::vector<quint64>& grams) const;
     // Whether match() would do nothing on this line, so need not be entered: the tree index filed this
     // trigger and the line held none of its grams, and nothing makes it act on a line it does not
@@ -505,8 +486,8 @@ public:
     // The one color pair a root trigger's color pattern would find across the whole line, as
     // match_color_pattern() reads it; false when the line has more than one, or cannot be answered for.
     static bool uniformLineColors(Host* pHost, int line, QRgb& foreground, QRgb& background);
-    // Never filed by a snapshot: a child, which the index never files, or a root still queued for
-    // appending. No pinned pass can hold a filter copy of it.
+    // Never filed by a snapshot: a child, or a root still queued for appending. No pinned pass can hold a
+    // filter copy of it.
     static constexpr int scmNeverSnapshotted = -1;
     // Left the root list since last filed. A snapshot pinned before the removal still holds it and its
     // filter copy, so a change to it still has to be announced.
@@ -575,6 +556,8 @@ public:
     // Written by TriggerUnit's tree index - see skippableForLine(); the position is -1 while unfiled
     quint32 mLineStamp = 0;
     int mTreeIndexPosition = -1;
+    // The same index's slot for a root, filed as its snapshot entry is refreshed; -1 while unfiled
+    int mRootIndexSlot = -1;
     // Only TriggerUnit's tree index may set these. The position in the parent's walk is never reset, so
     // it holds only while the parent's mChildren still has this trigger there
     std::unique_ptr<TChildWalk> mpChildWalk;
