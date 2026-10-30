@@ -673,6 +673,108 @@ headlessDeletedNames = table.concat(headlessDeleted, ",")
         QCOMPARE(luaGlobalString(host, "headlessLabelText"), qsl("label words"));
     }
 
+    // The answers are those UI_spec.lua's accessibility cases expect of a real label, and TLabel's for what it shows.
+    void test_labelAccessibilityWithNoMainWindow()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Label-Accessibility");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+
+        QTemporaryDir imageDir;
+        QVERIFY(imageDir.isValid());
+        const auto writeFile = [&imageDir](const QString& name, const QByteArray& data) {
+            QFile file(imageDir.filePath(name));
+            return file.open(QIODevice::WriteOnly) && file.write(data) == data.size();
+        };
+        QVERIFY(writeFile(qsl("still.png"), QByteArray::fromBase64("iVBORw0KGgoAAAANSUhEUgAAABgAAAAKCAIAAAAhCwk/AAAAGUlEQVR4nGPk5ORkoAZgooopowaNGkQlAABsJgAvM+NphgAAAABJRU5ErkJggg==")));
+        QVERIFY(writeFile(qsl("anim.gif"),
+                          QByteArray::fromBase64("R0lGODlhKAAQAIEAAP8AAAAAAAAAAAAAACH/"
+                                                 "C05FVFNDQVBFMi4wAwEAAAAh+"
+                                                 "QQACgAAACwAAAAAKAAQAAAIKwABCBxIsKDBgwgTKlzIsKHDhxAjSpxIsaLFixgzatzIsaPHjyBDihypMCAAIfkEAQoAAQAsAAAAACgAEACBAP8AAAAAAAAAAAAACCsAAQgcSLCgwYMIEypcyLChw4"
+                                                 "cQI0qcSLGixYsYM2rcyLGjx48gQ4ocqTAgACH5BAEKAAEALAAAAAAoABAAgQAA/wAAAAAAAAAAAAgrAAEIHEiwoMGDCBMqXMiwocOHECNKnEixosWLGDNq3Mixo8ePIEOKHKkwIAA7")));
+        QVERIFY(writeFile(qsl("shape.svg"), QByteArrayLiteral("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"10\"><rect width=\"20\" height=\"10\"/></svg>")));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("a11yDir = [==[%1]==]").arg(imageDir.path())));
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessLabelAccess = 'not run'
+local ok, err = pcall(function()
+  local still, gif, svg = a11yDir .. "/still.png", a11yDir .. "/anim.gif", a11yDir .. "/shape.svg"
+  assert(createLabel("a11yLabel", 0, 0, 100, 20, 1) == true, "createLabel did not answer true")
+
+  echo("a11yLabel", "&nbsp;&nbsp;<b>Map</b> &amp; Exits")
+  assert(getLabelAccessibleName("a11yLabel") == "Map & Exits", "an unnamed label is not named after its text")
+  assert(setLabelAccessibleName("a11yLabel", "Open the map") == true, "setLabelAccessibleName did not answer true")
+  assert(getLabelAccessibleName("a11yLabel") == "Open the map", "the accessible name did not read back")
+  assert(setLabelAccessibleName("a11yLabel", "") == true, "clearing the accessible name did not answer true")
+  assert(getLabelAccessibleName("a11yLabel") == "Map & Exits", "a cleared name did not go back to the text")
+  echo("a11yLabel", "")
+  setLabelToolTip("a11yLabel", "Open the map")
+  assert(getLabelAccessibleName("a11yLabel") == "Open the map", "a label with no text is not named after its tooltip")
+
+  assert(getLabelAccessibleRole("a11yLabel") == "text", "a label with no callbacks is not text")
+  setLabelReleaseCallback("a11yLabel", function() end)
+  assert(getLabelAccessibleRole("a11yLabel") == "button", "a label with a release callback is not a button")
+  setLabelReleaseCallback("a11yLabel", nil)
+  setLabelClickCallback("a11yLabel", function() end)
+  assert(getLabelAccessibleRole("a11yLabel") == "button", "a label with a click callback is not a button")
+  assert(setLabelAccessibleRole("a11yLabel", "text") == true, "setLabelAccessibleRole did not answer true")
+  assert(getLabelAccessibleRole("a11yLabel") == "text", "the role a script gave did not win over the callbacks")
+  assert(setLabelAccessibleRole("a11yLabel", "") == true, "clearing the role did not answer true")
+  assert(enableClickthrough("a11yLabel") == true, "enableClickthrough did not answer true")
+  assert(getLabelAccessibleRole("a11yLabel") == "text", "a click-through label is a button")
+  disableClickthrough("a11yLabel")
+  assert(getLabelAccessibleRole("a11yLabel") == "button", "a label no longer click-through is not a button again")
+  setLabelClickCallback("a11yLabel", nil)
+  local badRole, badRoleMsg = setLabelAccessibleRole("a11yLabel", "slider")
+  assert(badRole == nil and badRoleMsg:find("'slider' is not a valid role", 1, true), "an unknown role was not refused")
+
+  assert(setBackgroundImage("a11yLabel", still) == true, "setBackgroundImage did not answer true")
+  assert(getLabelAccessibleRole("a11yLabel") == "graphic", "a label showing a picture is not a graphic")
+  assert(setMovie("a11yLabel", gif) == true, "setMovie did not answer true")
+  assert(getLabelAccessibleRole("a11yLabel") == "animation", "a label showing a movie is not an animation")
+  echo("a11yLabel", "words")
+  assert(getLabelAccessibleRole("a11yLabel") == "text", "a label given text after a movie is not text")
+  assert(setBackgroundImage("a11yLabel", svg) == true, "setBackgroundImage did not take the SVG")
+  assert(getLabelAccessibleRole("a11yLabel") == "text", "text over an SVG is not what the label shows")
+  echo("a11yLabel", "")
+  assert(getLabelAccessibleRole("a11yLabel") == "graphic", "an SVG with no text over it is not a graphic")
+  resetBackgroundImage("a11yLabel")
+  assert(getLabelAccessibleRole("a11yLabel") == "text", "a label with its image reset is not text")
+
+  assert(getLabelLiveRegion("a11yLabel") == "off", "the live region of a new label is not off")
+  for _, mode in ipairs({"polite", "assertive", "off"}) do
+    assert(setLabelLiveRegion("a11yLabel", mode) == true, "setLabelLiveRegion did not answer true for " .. mode)
+    assert(getLabelLiveRegion("a11yLabel") == mode, "the live region did not read back as " .. mode)
+  end
+  local badMode, badModeMsg = setLabelLiveRegion("a11yLabel", "loud")
+  assert(badMode == nil and badModeMsg:find("'loud' is not a valid live region", 1, true), "an unknown live region was not refused")
+
+  local missing = "label name 'noSuchA11yLabel' not found"
+  for name, call in pairs({
+    getLabelAccessibleName = function() return getLabelAccessibleName("noSuchA11yLabel") end,
+    setLabelAccessibleName = function() return setLabelAccessibleName("noSuchA11yLabel", "n") end,
+    getLabelAccessibleRole = function() return getLabelAccessibleRole("noSuchA11yLabel") end,
+    setLabelAccessibleRole = function() return setLabelAccessibleRole("noSuchA11yLabel", "text") end,
+    getLabelLiveRegion = function() return getLabelLiveRegion("noSuchA11yLabel") end,
+    setLabelLiveRegion = function() return setLabelLiveRegion("noSuchA11yLabel", "polite") end,
+  }) do
+    local value, message = call()
+    assert(value == nil and message == missing, name .. " did not refuse a missing label as the GUI does: " .. tostring(message))
+  end
+end)
+headlessLabelAccess = ok and 'ok' or tostring(err)
+)lua"));
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessLabelAccess"), qsl("ok"));
+        const TLabelModel* label = host->windowRegistry().labelModel(qsl("a11yLabel"));
+        QVERIFY2(label, "The label has no model.");
+        QCOMPARE(label->mLiveRegion, TLabelLiveRegion::Off);
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The accessibility calls created a widget.");
+    }
+
     // What a real view records as it moves, shows, styles or titles a window, the null view records too.
     void test_windowStateReadsBackWithNoMainWindow()
     {
