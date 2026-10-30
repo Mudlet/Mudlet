@@ -34,15 +34,18 @@
  */
 
 #include <QFileInfo>
+#include <QPointer>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QtTest/QtTest>
+#include <chrono>
 #include <string>
 
 #include "MudletApp.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TDetachedWindow.h"
 #include "TMainConsole.h"
@@ -52,6 +55,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class DetachedWindowTabActivityTest : public QObject
 {
@@ -69,6 +74,7 @@ private:
     const QString mFirstHostname = qsl("DetachedWindowTabActivity-First");
     const QString mSecondHostname = qsl("DetachedWindowTabActivity-Second");
     const QString mThirdHostname = qsl("DetachedWindowTabActivity-Third");
+    const QString mClosingHostname = qsl("DetachedWindowTabActivity-Closing");
 
     // setupConfig() consults portable.txt before the XDG logic
     static bool portableMarkerPresent()
@@ -128,6 +134,7 @@ private slots:
             deleteProfileDirectory(mFirstHostname);
             deleteProfileDirectory(mSecondHostname);
             deleteProfileDirectory(mThirdHostname);
+            deleteProfileDirectory(mClosingHostname);
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
@@ -295,6 +302,42 @@ private slots:
         QVERIFY2(orphansMidMove.isEmpty(), qPrintable(qsl("orphaned while moving into a detached window: %1").arg(orphansMidMove.join(qsl(", ")))));
         QCOMPARE(mudlet::self()->getDetachedWindows().value(mThirdHostname), pWindow);
         QCOMPARE(mudlet::self()->mpTabBar->count(), 1);
+    }
+
+    // Closing a detached profile takes it out of its window a zero-timer before
+    // the profile itself goes, and the orphan check can land in that gap. A
+    // profile of its own, as one closed here cannot be opened again under the
+    // same name.
+    void test_aProfileClosingFromAWindowIsNeverOrphaned()
+    {
+        deleteProfileDirectory(mClosingHostname);
+        QVERIFY(startProfile(mClosingHostname));
+        mudlet::self()->slot_tabDetachRequested(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), QPoint(200, 200));
+        QPointer<TDetachedWindow> pWindow = mudlet::self()->getDetachedWindows().value(mClosingHostname);
+        QVERIFY(pWindow);
+
+        // What the window's Close profile action calls
+        QVERIFY(QMetaObject::invokeMethod(pWindow.data(), "closeProfile", Qt::DirectConnection));
+        QVERIFY2(HostManager::self()->getHost(mClosingHostname), "the profile closed at once, so there was no gap for the orphan check to land in");
+        QVERIFY(!mudlet::self()->getDetachedWindows().contains(mClosingHostname));
+        QCOMPARE(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), -1);
+
+        const QStringList orphansMidClose = mudlet::self()->getOrphanedProfiles();
+        mudlet::self()->reattachOrphanedProfiles();
+        QVERIFY2(orphansMidClose.isEmpty(), qPrintable(qsl("orphaned while closing: %1").arg(orphansMidClose.join(qsl(", ")))));
+
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !HostManager::self()->getHost(mClosingHostname);
+                         },
+                         2000ms),
+                 "the closing profile was never closed");
+        QVERIFY(QTest::qWaitFor(
+                [&pWindow]() {
+                    return pWindow.isNull();
+                },
+                2000ms));
+        QCOMPARE(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), -1);
     }
 
 private:
