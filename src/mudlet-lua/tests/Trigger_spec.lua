@@ -8060,7 +8060,7 @@ describe("Trigger processing", function()
         end)
 
         -- A firing script can feed more text through the same unit, so the
-        -- candidate list the outer pass is walking has to survive the nested one.
+        -- root walk the outer pass is on has to survive the nested one.
         it("keeps the outer line's remaining triggers across a nested feed", function()
             track(tempTrigger("nested_inner_line", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "inner" end))
             track(tempTrigger("outer_feeder_here", function()
@@ -8085,7 +8085,7 @@ describe("Trigger processing", function()
             assert.are.equal(11, _G.TrigSpec.count, "a rebuilt root list lost a trigger it cannot file, or one armed just before it")
         end)
 
-        -- The candidate list for a line is settled before any trigger runs, so a
+        -- The root walk for a line is marked before any trigger runs, so a
         -- script that makes a LATER trigger fire without matching has to reach
         -- the line already in flight.
         it("fires a trigger opened by an earlier trigger on that same line", function()

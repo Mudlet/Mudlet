@@ -400,8 +400,8 @@ describe("trigger matching through the whole-tree index", function()
         assert.are.same({shutsFirst = 1, shutsLast = 3}, fired)
     end)
 
-    -- Comfortably past the roots the root walk needs filed, in the index whose child slots a refiling of
-    -- the tree frees
+    -- Comfortably past the roots the root walk needs filed, in the index a refiling of the tree files
+    -- its children in
     itIndexed("fires a root trigger the line holds after a refiling of the tree", function()
         local ids = {}
         finally(function()

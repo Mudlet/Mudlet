@@ -96,13 +96,18 @@ private:
     // stops meaning anything.
     void removeProbe(const QString& tag)
     {
-        QString teardown;
+        // killTrigger() refuses permanent triggers
+        QStringList names{qsl("%1Target").arg(tag), qsl("%1Probe").arg(tag)};
         for (int i = 1; i <= scFillerTriggers; ++i) {
-            teardown += qsl("killTrigger('%1Filler%2')\n").arg(tag).arg(i);
+            names << qsl("%1Filler%2").arg(tag).arg(i);
         }
-        teardown += qsl("killTrigger('%1Target')\nkillTrigger('%1Probe')\n").arg(tag);
-        QVERIFY2(runLua(teardown), "the teardown did not compile, so the next slot would measure against this one's triggers");
-        // one line, so the snapshot drops the killed roots and the next slot
+        auto* triggerUnit = mpHost->getTriggerUnit();
+        for (const QString& name : names) {
+            TTrigger* pTrigger = triggerUnit->findTrigger(name);
+            QVERIFY2(pTrigger, qPrintable(qsl("probe trigger %1 is missing, so the next slot would not start from a clean profile").arg(name)));
+            delete pTrigger;
+        }
+        // one line, so the snapshot drops the deleted roots and the next slot
         // measures against its own triggers
         runLua(qsl("feedTriggers('teardownline\\n')"));
     }
@@ -235,8 +240,8 @@ private slots:
     // A script that opens and closes one trigger repeatedly inside a single line
     // queues that one slot to be filed again as many times as it was called,
     // because the index a line is reading from is only patched once the line is
-    // over. Filing it once is enough, and filing it again for every call must
-    // still cost the index no rebuild.
+    // over. Filing it once is enough; filing it for every call must not cost a
+    // rebuild each time.
     void manyFlipsInsideOneLineCostOneRefile()
     {
         constexpr int lines = 60;
@@ -401,6 +406,45 @@ private slots:
         runLua(qsl("for _, id in ipairs(editedIds) do killTrigger(id) end feedTriggers('editedteardownline\\n')"));
 
         QCOMPARE(fires, 1);
+    }
+
+    // Deleting one child while most of the index stays filed unfiles its slot gram by gram, and the
+    // roots filed under the same text have to keep their entries. Lua cannot delete a permanent trigger.
+    // Half the roots are filed before the child and half after, so its slot sits among theirs whichever
+    // order free slots come back in.
+    void rootsSharingADeletedChildsTextStillFire()
+    {
+        QVERIFY2(runLua(qsl(R"(
+            sharedIds = {}
+            sharedFires = 0
+            local function armRoots()
+                for index = 1, 20 do
+                    sharedIds[#sharedIds + 1] = tempTrigger("qzsharedjx", function() sharedFires = sharedFires + 1 end)
+                end
+                feedTriggers("sharedwarmupline\n")
+            end
+            armRoots()
+            permGroup("sharedGroup", "trigger")
+            for index = 1, 40 do
+                permSubstringTrigger("sharedFiller" .. index, "sharedGroup", {"qqsharedfiller" .. index .. "zz"}, "")
+            end
+            permSubstringTrigger("sharedChild", "sharedGroup", {"qzsharedjx"}, "")
+            feedTriggers("sharedwarmupline\n")
+            armRoots()
+        )")),
+                 "the triggers did not compile");
+        auto* triggerUnit = mpHost->getTriggerUnit();
+        QVERIFY2(triggerUnit->rootPrescanActive(), "the root prescan has not engaged, so it cannot skip the roots");
+        QVERIFY2(triggerUnit->treeIndexFiledCount() >= 41, "the tree index has not engaged, so the child was never filed beside the roots");
+
+        delete triggerUnit->findTrigger(qsl("sharedChild"));
+        runLua(qsl("feedTriggers('sharedrefileline\\n')"));
+        runLua(qsl("feedTriggers('qzsharedjx\\n')"));
+        const int fires = luaInteger("sharedFires");
+        delete triggerUnit->findTrigger(qsl("sharedGroup"));
+        runLua(qsl("for _, id in ipairs(sharedIds) do killTrigger(id) end feedTriggers('sharedteardownline\\n')"));
+
+        QCOMPARE(fires, 40);
     }
 };
 

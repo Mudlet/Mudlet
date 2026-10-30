@@ -113,10 +113,10 @@ struct TChildWalk
 
     std::vector<TTrigger*> mChildren;
     // One bit per position in mChildren. Entered on every line: an unfiled child, other than a folder
-    // with nothing below it to enter every line
+    // with nothing below it to enter every line; in the root list, every unfiled root
     std::vector<quint64> mAlways;
     // Entered on the line stamped mMarkedStamp only: a child the index hit or that acts without
-    // matching, or a child above one
+    // matching, or a child above one; in the root list, a root the index hit
     std::vector<quint64> mMarked;
     quint32 mMarkedStamp = 0;
     // Cleared by any change to the children or to how one is filed: mChildren may then name freed
