@@ -3083,6 +3083,39 @@ describe("Tests UI functions", function()
     end)
   end)
 
+  describe("Test the starter UI's introduction", function()
+    if not (type(BaseUI) == "table" and type(BaseUI.announce) == "function") then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.announce is unavailable in this profile")
+      end)
+      return
+    end
+
+    local savedSettings
+
+    before_each(function()
+      savedSettings = table.deepcopy(BaseUI.settings)
+      BaseUI.settings.hidden, BaseUI.settings.standingAside, BaseUI.settings.announced = nil, nil, nil
+    end)
+
+    after_each(function()
+      BaseUI.settings = savedSettings
+      BaseUI.saveSettings()
+    end)
+
+    -- the main console wraps at the profile's wrap width, which can be wider than the console
+    it("should fit every line of the introduction into the main console", function()
+      local columns = getColumnCount("main")
+      local mark = getLastLineNumber("main")
+      BaseUI.announce()
+      local lines = getLines("main", mark, getLastLineNumber("main") + 1)
+      assert.is_true(#lines >= 3, "the introduction was not printed")
+      for _, line in ipairs(lines) do
+        assert.is_true(utf8.len(line) < columns, string.format("%d columns: %s", columns, line))
+      end
+    end)
+  end)
+
   describe("Test the starter UI's background picture", function()
     if not (type(BaseUI) == "table" and type(BaseUI.setBackground) == "function") then
       it("needs the base UI package installed", function()
