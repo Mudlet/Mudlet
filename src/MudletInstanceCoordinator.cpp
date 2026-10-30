@@ -27,6 +27,9 @@
 using namespace std::chrono_literals;
 
 const int WAIT_FOR_RESPONSE_MS = 500;
+// Windows local sockets have no buffer, so a write completes only once the running
+// instance's event loop reads it; giving up sooner reports a delivered message as lost
+const int WAIT_FOR_DELIVERY_MS = 3000;
 
 MudletInstanceCoordinator::MudletInstanceCoordinator(const QString& serverName, QObject* parent)
 : QLocalServer(parent)
@@ -51,7 +54,7 @@ bool MudletInstanceCoordinator::installPackagesRemotely()
         if (socket.write(packagePathsData.toUtf8()) == -1) {
             return false;
         }
-        if (!socket.waitForBytesWritten(WAIT_FOR_RESPONSE_MS)) {
+        if (!socket.waitForBytesWritten(WAIT_FOR_DELIVERY_MS)) {
             return false;
         }
         socket.disconnectFromServer();
@@ -190,7 +193,7 @@ bool MudletInstanceCoordinator::forwardTelnetUriToRunningInstance()
     if (socket.write(data) == -1) {
         return false;
     }
-    if (!socket.waitForBytesWritten(WAIT_FOR_RESPONSE_MS)) {
+    if (!socket.waitForBytesWritten(WAIT_FOR_DELIVERY_MS)) {
         return false;
     }
 

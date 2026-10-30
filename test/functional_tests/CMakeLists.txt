@@ -337,6 +337,7 @@ set(TEARDOWN_GROUP_TEST_SOURCES
     HostChildTeardownTest.cpp
     HostManagerAccessorTest.cpp
     HostWidgetDecouplingTest.cpp
+    InstanceForwardTest.cpp
 )
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
