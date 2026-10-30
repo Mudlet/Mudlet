@@ -230,6 +230,9 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_SPAWN
 include_optional_module(ENVIRONMENT_VARIABLE WITH_DISCORD_RPC
                         OPTION_VARIABLE USE_DISCORD_RPC
                         READABLE_NAME "Discord RPC library loading")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_SPEECH_ENGINES
+                        OPTION_VARIABLE USE_SPEECH_ENGINES
+                        READABLE_NAME "Vosk and sherpa-onnx speech engine loading")
 
 find_package(Qt6 6.8.2 REQUIRED)
 

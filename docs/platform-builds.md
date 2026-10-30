@@ -268,6 +268,7 @@ above, so turn one off with `-DUSE_SPAWN=OFF` or `WITH_SPAWN=NO` in the environm
 | --- | --- | --- |
 | `USE_SPAWN` | `TForkedProcess`, the `QProcess` behind `spawn()` | `spawn()` raises an error, as when a process fails to start |
 | `USE_DISCORD_RPC` | the `QLibrary` that loads the Discord RPC library, and with it Rich Presence | the Discord functions return `nil` and `"Discord API is not available"`, as when the library is missing; `setDiscordGameUrl()` still works |
+| `USE_SPEECH_ENGINES` | the `QLibrary` loading of the Vosk and sherpa-onnx speech engines | the `stt.*` functions refuse, saying the build cannot load a speech engine library, and `stt.getPlatformKey()` returns `nil`; a platform engine (macOS's own) still works |
 
 ## Debugging options
 
