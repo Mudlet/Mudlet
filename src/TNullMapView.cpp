@@ -96,6 +96,16 @@ void TNullMapView::paint()
     mpHost->raiseEvent(areaViewedChangedEvent);
 }
 
+std::pair<bool, QString> TNullMapView::show3DView(const bool shown)
+{
+    if (shown) {
+        return {false, qsl("there is no main window to show the 3D map view in")};
+    }
+    // As dlgMapper does, so a profile saved with the 3D view showing opens without it
+    mpHost->mShow3DView = false;
+    return {true, QString()};
+}
+
 // As dlgMapper::setMapZoom() and T2DMap::setMapZoom()
 std::pair<bool, QString> TNullMapView::setMapZoom(const qreal zoom, const int areaId)
 {

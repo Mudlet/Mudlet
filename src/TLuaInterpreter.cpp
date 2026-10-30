@@ -9710,11 +9710,13 @@ int TLuaInterpreter::setConfig(lua_State* L)
 #if defined(INCLUDE_3DMAPPER)
         if (key == qsl("show3dMapView")) {
             const bool show = getVerifiedBool(L, __func__, 2, "value");
+            if (auto* mapper = host.mapViewFrontend()) {
+                if (auto [shown, refusal] = mapper->show3DView(show); !shown) {
+                    return warnArgumentValue(L, __func__, refusal);
+                }
+            }
             // getConfig reads this back while the mapper is hidden, whichever frontend shows it
             host.mShow3DView = show;
-            if (auto* mapper = host.mpMap->mapViewFrontend()) {
-                mapper->show3DView(show);
-            }
             return success();
         }
 #endif
@@ -10295,8 +10297,8 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("show3dMapView"),
              [&]() {
 #if defined(INCLUDE_3DMAPPER)
-                 // A mapper hidden by closeMapWidget() shows no 3D view, but reopens in the stored mode
-                 if (auto* mapper = host.mpMap ? host.mpMap->mapViewFrontend() : nullptr; mapper && mapper->onScreen()) {
+                 // A mapper hidden by closeMapWidget() shows no 3D view, but reopens in the stored mode; the null view never has one
+                 if (auto* mapper = host.mpMap ? host.mapViewFrontend() : nullptr; mapper && (mapper->onScreen() || !host.hasConsoleView())) {
                      lua_pushboolean(L, mapper->showing3DView());
                      return;
                  }

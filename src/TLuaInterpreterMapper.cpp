@@ -847,14 +847,9 @@ int TLuaInterpreter::clearAreaUserDataItem(lua_State* L)
 int TLuaInterpreter::clearMapSelection(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    auto* mapper = host.mpMap ? host.mpMap->mapViewFrontend() : nullptr;
+    auto* mapper = host.mpMap ? host.mapViewFrontend() : nullptr;
     if (!mapper) {
-        if (!host.mapOpen()) {
-            return warnArgumentValue(L, __func__, "no map present or loaded");
-        }
-        // Rooms are selected on a mapper, so with none there is no selection to clear
-        lua_pushboolean(L, false);
-        return 1;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
     if (mapper->selectingRooms()) {
         return warnArgumentValue(L, __func__, "rooms are being selected right now and cannot be stopped at this point");
@@ -2139,14 +2134,9 @@ int TLuaInterpreter::getHiddenMapMenuItems(lua_State* L)
 int TLuaInterpreter::getMapSelection(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
-    auto* mapper = pHost && pHost->mpMap ? pHost->mpMap->mapViewFrontend() : nullptr;
+    auto* mapper = pHost && pHost->mpMap ? pHost->mapViewFrontend() : nullptr;
     if (!mapper) {
-        if (!pHost->mapOpen()) {
-            return warnArgumentValue(L, __func__, "no map present or loaded");
-        }
-        // Rooms are selected on a mapper, so with none the selection is empty
-        lua_newtable(L);
-        return 1;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     lua_newtable(L);
@@ -2221,7 +2211,8 @@ int TLuaInterpreter::getMapZoom(lua_State* L)
         return 1;
     }
 
-    if (!host.mapOpen()) {
+    auto* mapper = host.mapViewFrontend();
+    if (!mapper) {
         return warnArgumentValue(L, __func__, "no active mapper");
     }
 
@@ -2233,11 +2224,6 @@ int TLuaInterpreter::getMapZoom(lua_State* L)
         return 1;
     }
 
-    // Only a mapper on screen has an area it is showing
-    auto* mapper = host.mapViewFrontend();
-    if (!mapper) {
-        return warnArgumentValue(L, __func__, "no active mapper");
-    }
     areaID = mapper->shownAreaId();
     lua_pushnumber(L, host.mpMap->mpRoomDB->get2DMapZoom(areaID.value()));
     return 1;
@@ -4293,22 +4279,7 @@ int TLuaInterpreter::setMapZoom(lua_State* L)
     // Primary mapper behavior
     auto* mapper = host.mapViewFrontend();
     if (!mapper) {
-        if (!host.mapOpen()) {
-            return warnArgumentValue(L, __func__, "no active mapper");
-        }
-        if (const QString error = TMap::zoomError(zoom); !error.isEmpty()) {
-            return warnArgumentValue(L, __func__, error);
-        }
-        // Only a mapper on screen has an area it is showing
-        if (!areaID) {
-            return warnArgumentValue(L, __func__, "no active mapper");
-        }
-        if (!host.mpMap->mpRoomDB->set2DMapZoom(areaID, zoom)) {
-            return warnArgumentValue(L, __func__, qsl("number %1 is not a valid areaID").arg(areaID));
-        }
-        lua_pushboolean(L, true);
-        host.mpMap->updateArea(-1);
-        return 1;
+        return warnArgumentValue(L, __func__, "no active mapper");
     }
 
     auto [success, errMsg] = mapper->setMapZoom(zoom, areaID);
@@ -4960,7 +4931,7 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("areaID %1 not found").arg(QString::number(areaId)));
     }
 
-    auto* mapper = host.mpMap->mapViewFrontend();
+    auto* mapper = host.mapViewFrontend();
     if (!mapper) {
         return warnArgumentValue(L, __func__, "map needs to be open");
     }
