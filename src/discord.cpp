@@ -73,6 +73,7 @@ Discord::Discord(QObject* parent)
     // library is absent - self() must still answer in that case.
     smpSelf = this;
 
+#if defined(INCLUDE_DISCORD_RPC)
 #if defined(Q_OS_WIN64)
     // Only defined on 64 bit Windows
     mpLibrary.reset(new QLibrary(qsl("discord-rpc64")));
@@ -126,6 +127,7 @@ Discord::Discord(QObject* parent)
     QTimer::singleShot(0ms, this, [this]() {
         startTimer(50ms);
     });
+#endif
 }
 
 void Discord::initializeRpc()

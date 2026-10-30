@@ -4076,8 +4076,10 @@ void dlgProfilePreferences::enableHostDetails()
 #endif
 
     // ===== tab_chat =====
-    groupBox_discordPrivacy->show();
-    mpCard_discord->show();
+    // initWithHost() only fills these in when the library loaded
+    const bool discordAvailable = Discord::self()->libraryLoaded();
+    groupBox_discordPrivacy->setVisible(discordAvailable);
+    mpCard_discord->setVisible(discordAvailable);
     groupBox_MMCPOptions->setEnabled(true);
 
     // ===== tab_shortcuts =====

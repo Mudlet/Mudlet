@@ -1026,6 +1026,10 @@ if(USE_SPAWN)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_SPAWN)
 endif()
 
+if(USE_DISCORD_RPC)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_DISCORD_RPC)
+endif()
+
 if(USE_VARIABLE_SPLASH_SCREEN)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_VARIABLE_SPLASH_SCREEN)
 endif()
