@@ -4824,9 +4824,8 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
 
-    TMap::smShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
+    mHostManager.readSettings(settings);
     mInvertMapZoom = settings.value("invertMapZoom", QVariant(false)).toBool(); // Default to false for modern (non-inverted) behavior
-    MudletApp::setStorePasswordsSecurely(settings.value("storePasswordsSecurely", QVariant(true)).toBool());
     mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
 
 
@@ -4859,9 +4858,6 @@ void mudlet::readLateSettings(const QSettings& settings)
         multiView = settings.value(qsl("enableMultiViewMode"), QVariant(false)).toBool();
     }
     slot_multiView(multiView);
-
-    mHostManager.media().setApiMuted(settings.contains(qsl("enableMuteAPI")) ? settings.value(qsl("enableMuteAPI"), QVariant(false)).toBool() : false);
-    mHostManager.media().setGameMuted(settings.contains(qsl("enableMuteGame")) ? settings.value(qsl("enableMuteGame"), QVariant(false)).toBool() : false);
 
 #ifdef INCLUDE_MCPSERVER
     const int savedMcpPort = settings.value(qsl("mcpServerPort"), QVariant(mMCPServerPort)).toInt();
