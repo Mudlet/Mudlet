@@ -106,17 +106,29 @@ fi
 # version of its own, or its installer would take the published one's name
 BUILD_COUNTER_SUFFIX=""
 if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]] && [[ "${GITHUB_FORCE_BUILD}" == "true" ]] && [[ -n "${BUILD_COMMIT}" ]]; then
+  if ! PTB_TAGS=$(gh release list --repo "${GITHUB_REPOSITORY}" --limit 100 --json tagName --jq '.[].tagName | select(contains("-ptb-"))'); then
+    echo "::warning::Could not list PTB releases, so a forced rebuild of a published PTB may overwrite its installer"
+  fi
   while IFS= read -r existing_tag; do
     existing_commit="${existing_tag##*-}"
-    if [[ -n "${existing_commit}" ]] \
-        && { [[ "${BUILD_COMMIT}" == "${existing_commit}"* ]] || [[ "${existing_commit}" == "${BUILD_COMMIT}"* ]]; } \
-        && gh release view "${existing_tag}" --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets[].name' 2>/dev/null \
-          | grep -q -- '-windows-64\.exe$'; then
+    if [[ -z "${existing_commit}" ]] \
+        || { [[ "${BUILD_COMMIT}" != "${existing_commit}"* ]] && [[ "${existing_commit}" != "${BUILD_COMMIT}"* ]]; }; then
+      continue
+    fi
+    if ! EXISTING_ASSETS=$(gh release view "${existing_tag}" --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets[].name'); then
+      echo "::warning::Could not read the assets of ${existing_tag}, so a forced rebuild may overwrite its installer"
+      continue
+    fi
+    if grep -q -- '-windows-64\.exe$' <<< "${EXISTING_ASSETS}"; then
+      # Re-running a workflow keeps its run number, so the attempt keeps a rerun from clobbering the first run's upload
       BUILD_COUNTER_SUFFIX="rebuild${GITHUB_RUN_NUMBER}"
-      echo "=== PTB ${existing_tag} already has a Windows installer for ${BUILD_COMMIT}, using build counter: ${GITHUB_RUN_NUMBER} ==="
+      if [[ "${GITHUB_RUN_ATTEMPT:-1}" -gt 1 ]]; then
+        BUILD_COUNTER_SUFFIX="${BUILD_COUNTER_SUFFIX}a${GITHUB_RUN_ATTEMPT}"
+      fi
+      echo "=== PTB ${existing_tag} already has a Windows installer for ${BUILD_COMMIT}, using build counter: ${BUILD_COUNTER_SUFFIX} ==="
       break
     fi
-  done < <(gh release list --repo "${GITHUB_REPOSITORY}" --limit 100 --json tagName --jq '.[].tagName | select(contains("-ptb-"))' || true)
+  done <<< "${PTB_TAGS}"
 fi
 
 # Check if MUDLET_VERSION_BUILD is empty and print accordingly
