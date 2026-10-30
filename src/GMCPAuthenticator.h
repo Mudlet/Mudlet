@@ -314,6 +314,7 @@ private:
     // attempt reads the credential store. Throttling bounds that cost by wall clock rather than by how
     // much the server sent, and unlike a hard per-connection cap never refuses a legitimate re-offer.
     inline static constexpr std::chrono::milliseconds scmSignInAttemptInterval = std::chrono::seconds(1);
+    std::chrono::milliseconds mSignInAttemptInterval = scmSignInAttemptInterval;
     QElapsedTimer mLastSignInAttempt;
     bool mSignInAttemptPending = false;
     // Bumped whenever a connection begins or ends, so a deferred attempt from a previous one is dropped.
