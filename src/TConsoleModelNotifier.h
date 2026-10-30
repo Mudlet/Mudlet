@@ -35,6 +35,9 @@ public:
 signals:
     // The count is of every line in the buffer, not just the new ones.
     void linesAppended(int lineCount);
+    // Before triggers run on the line; read it now, as a buffer shrink moves it. The commit is half
+    // done, so a handler may neither add a line nor run the event loop.
+    void lineCommitted(int lineIndex);
     // A line that may have been wrapped by the game is being held back for its
     // continuation, which may never come.
     void serverWrapLineHeld();

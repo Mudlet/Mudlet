@@ -214,6 +214,11 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_BUNDLED_LUA
                         OPTION_VARIABLE USE_BUNDLED_LUA
                         READABLE_NAME "bundled Lua 5.1"
                         DEFAULT ${BUNDLED_LUA_DEFAULT})
+# On by default: it links mudlet_core alone, so building it is what proves the core still runs without
+# Qt Widgets, and the teardown tests run it
+include_optional_module(ENVIRONMENT_VARIABLE WITH_HEADLESS
+                        OPTION_VARIABLE USE_HEADLESS
+                        READABLE_NAME "headless runner")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
