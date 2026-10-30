@@ -299,6 +299,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPass(pass)
 , mPort(port)
 {
+    Q_ASSERT_X(MudletApp::configRootSettled(), "Host::Host", "a profile was made before the config root was settled, so it has no Mudlet.ini to read");
     mpMapStyle = &MapStyle::findOrDefault(MapStyle::defaultId());
     // mTelnet is declared ahead of the members reset() clears (mMxpProcessor and friends),
     // so its own constructor can't do this.
@@ -471,12 +472,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         }
     }
 
-    // Null until mudlet::setupConfig() settles the config root, which a profile made with no main window never waits for
-    const QSettings* settings = MudletApp::getQSettings();
-    const auto interval = settings ? settings->value("autosaveIntervalMinutes", 2).toInt() : 2;
-    startMapAutosave(interval);
+    const QSettings& settings = *MudletApp::getQSettings();
+    startMapAutosave(settings.value(qsl("autosaveIntervalMinutes"), 2).toInt());
 
-    mMapperCenterSmallAreas = settings && settings->value("mapCenterSmallAreas", false).toBool();
+    mMapperCenterSmallAreas = settings.value(qsl("mapCenterSmallAreas"), false).toBool();
 
     // Built here, at the end of the constructor, rather than on first use: the
     // model's buffer snapshots this Host's colours, so every one of them has to

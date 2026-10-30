@@ -69,7 +69,7 @@ QString configRoot;
 //   unresolved   - nothing has asked yet, or setConfigPath(QString()) forgot it
 //   selfResolved - getMudletPath() resolved it on first use, before startup got
 //                  a chance to report what the resolution found
-//   installed    - mudlet::setupConfig() settled it and has reported it
+//   installed    - MudletApp::settleConfigRoot() settled it and has reported it
 enum class ConfigRootState { unresolved, selfResolved, installed };
 ConfigRootState configRootState = ConfigRootState::unresolved;
 // Whether the root in force came from a portable.txt that was honoured. A
@@ -318,6 +318,38 @@ bool MudletApp::configDirHoldsProfiles(const QString& dir)
     }
     // Counted as mudlet.cpp's anyProfilesExist() does, so the two cannot disagree
     return !QFileInfo(profiles.path()).isReadable() || !profiles.entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty();
+}
+
+MudletApp::ConfigDirResolution MudletApp::settleConfigRoot()
+{
+    const auto resolution = resolveConfigRoot(executableDir());
+    const QString confPath = resolution.path;
+    // The main window also puts a refusal on screen; with no main window this is the only report of it
+    if (resolution.portableRootRejected) {
+        if (resolution.rejectedRoot.isEmpty()) {
+            qWarning().nospace().noquote() << "MudletApp::settleConfigRoot() WARN - \"" << resolution.portableMarker << "\" names no data directory, so \"" << confPath << "\" is in use.";
+        } else {
+            qWarning().nospace().noquote() << "MudletApp::settleConfigRoot() WARN - \"" << resolution.portableMarker << "\" names the data directory \"" << resolution.rejectedRoot
+                                           << "\", which Mudlet cannot use, so \"" << confPath
+                                           << "\" is in use instead. Profiles kept where the marker points will not be listed until it is corrected.";
+        }
+    }
+    if (resolution.migrationPending) {
+        qInfo().nospace() << "MudletApp::settleConfigRoot() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet holds no profiles, so the existing " << confPath
+                          << " is still in use. Move its contents into $XDG_CONFIG_HOME/mudlet to migrate.";
+    }
+    if (!resolution.shadowedProfilesPath.isEmpty()) {
+        qWarning().nospace() << "MudletApp::settleConfigRoot() WARN: using $XDG_CONFIG_HOME/mudlet (" << confPath << ") because it holds profiles, but " << resolution.shadowedProfilesPath
+                             << " holds profiles as well and they will not be listed. Unset XDG_CONFIG_HOME to use that directory instead.";
+    }
+    qDebug() << "MudletApp::settleConfigRoot() INFO:" << "using config dir:" << confPath;
+    setConfigPath(confPath, resolution.portable && !resolution.portableRootRejected);
+    return resolution;
+}
+
+bool MudletApp::configRootSettled()
+{
+    return !installedConfigRoot().isEmpty();
 }
 
 void MudletApp::setConfigPath(const QString& path, const bool portable)
@@ -703,9 +735,9 @@ QSettings* MudletApp::getQSettings()
     if (smpSettings) {
         return smpSettings;
     }
-    // Null until mudlet::setupConfig() has settled the root and had its chance
-    // to report what the resolution found: nothing may write Mudlet.ini before
-    // the user has been told which directory they are about to be running in.
+    // Null until settleConfigRoot() has settled the root and reported what the
+    // resolution found: nothing may write Mudlet.ini before the user has been
+    // told which directory they are about to be running in.
     const QString root = installedConfigRoot();
     if (root.isEmpty()) {
         return nullptr;
@@ -758,8 +790,8 @@ bool MudletApp::portableRootInUse()
     }
     // Nothing has settled a root yet, so there is no settled answer to give. Ask
     // the resolver without settling anything - the credential path reaches this
-    // only before startup, since mudlet::setupConfig() settles the root before
-    // any profile is opened.
+    // only before startup, since settleConfigRoot() runs before any profile is
+    // opened.
     const auto resolution = resolveConfigRoot(executableDir());
     return resolution.portable && !resolution.portableRootRejected;
 }

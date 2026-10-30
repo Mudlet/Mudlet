@@ -481,6 +481,13 @@ add_test(NAME HeadlessHostSmokeTestWithDiscordLibrary
         test_deleteHostForgetsDiscordDataOfAProfileReopenedUnderItsExitHandler
         test_aSecondPoolForgetsDiscordDataOfAProfileReopenedUnderItsExitHandler)
 list(APPEND allFunctionalTestNames HeadlessHostSmokeTestWithDiscordLibrary)
+# HeadlessHostSmokeTest runs with no Mudlet.ini, so its tests see the defaults. Its Mudlet.ini case runs
+# again in a process of its own, where one is written before anything reads it: the trigger match pool
+# reads it once, and no other test there runs on its values.
+add_test(NAME HeadlessHostSmokeTestWithMudletIni
+    COMMAND $<TARGET_FILE:functional_teardown_tests> HeadlessHostSmokeTest
+        test_profileWithNoMainWindowTakesItsSettingsFromMudletIni)
+list(APPEND allFunctionalTestNames HeadlessHostSmokeTestWithMudletIni)
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
 
 # On macOS the app reads its dictionaries from the bundle's Resources folder,
@@ -828,6 +835,11 @@ set_property(TEST TDiscordModeTest HeadlessHostSmokeTestWithDiscordLibrary APPEN
 set_property(TEST HeadlessHostSmokeTest APPEND PROPERTY ENVIRONMENT "MUDLET_TEST_DISCORD_LIBRARY=absent")
 set_property(TEST HeadlessHostSmokeTestWithDiscordLibrary APPEND PROPERTY ENVIRONMENT "MUDLET_TEST_DISCORD_LIBRARY=present")
 set_tests_properties(HeadlessHostSmokeTestWithDiscordLibrary PROPERTIES SKIP_REGULAR_EXPRESSION "SKIP   : HeadlessHostSmokeTest::initTestCase")
+set_property(TEST HeadlessHostSmokeTestWithMudletIni APPEND PROPERTY ENVIRONMENT "MUDLET_TEST_MUDLET_INI=present")
+# The environment outranks Mudlet.ini for the trigger match pool, and the pool is what only this run can check
+set_property(TEST HeadlessHostSmokeTestWithMudletIni APPEND PROPERTY
+    ENVIRONMENT_MODIFICATION "MUDLET_MATCH_THREADS=unset:" "MUDLET_MATCH_THRESHOLD=unset:")
+set_tests_properties(HeadlessHostSmokeTestWithMudletIni PROPERTIES SKIP_REGULAR_EXPRESSION "SKIP   : HeadlessHostSmokeTest::initTestCase")
 # Report-only: what a Lua enableTrigger()/disableTrigger() call costs on a large
 # trigger tree with the script editor closed and open. Never registered with
 # ctest; run it directly and read the METRIC lines.
