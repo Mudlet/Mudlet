@@ -44,6 +44,7 @@
 class Host;
 class TTrigger;
 struct TRootTriggerFilter;
+enum class TriggerRefile : quint8;
 
 class TriggerUnit
 {
@@ -82,20 +83,16 @@ public:
     int getNewID();
     QMultiMap<QString, TTrigger*> mLookupTable;
     void markCleanup(TTrigger* pT);
-    // Call on any change to whether a trigger can be ruled out of a line by its text alone.
-    void markPrescanStale(TTrigger* pT);
-    // As above, for a change made mid-line: that line's candidate list is already settled, so the
-    // epoch sends the rest of it down the unfiltered path.
-    void markPrescanStaleForLineInFlight(TTrigger* pT)
-    {
-        ++mUnfilterableEpoch;
-        ++mRootFilterEpoch;
-        markPrescanStale(pT);
-    }
+    // Call on any change to whether or how pT can be ruled out of a line without being matched; see TriggerRefile
+    void refile(TTrigger* pT, TriggerRefile change);
     // How many times a change has been announced to the passes that pinned a copy of the root
     // triggers' filters. Moves only for a change one of those copies could be of, so a spec can tell a
     // needed announcement from one that cost a line its filters for nothing.
     quint32 rootFilterEpoch() const { return mRootFilterEpoch; }
+    // As above, for the announcements that cost the rest of a line its candidate list
+    quint32 unfilterableEpoch() const { return mUnfilterableEpoch; }
+    // Whether the last snapshot engaged the root prescan, so a test can tell it is relying on it
+    bool rootPrescanActive() const { return mpRootNodeSnapshot && mpRootNodeSnapshot->mPrescan.active(); }
     // Both paths build the same index, so this is how a test checks the incremental path keeps full
     // rebuilds flat.
     quint64 prescanRebuildCount() const { return mPrescanRebuilds; }
@@ -103,9 +100,6 @@ public:
     enum class TreeIndexMode { Off, On, Verify };
     static TreeIndexMode treeIndexMode() { return smTreeIndexMode; }
     static bool treeIndexVerifying() { return smTreeIndexMode == TreeIndexMode::Verify; }
-    // Call on any change to a trigger's place below a root or to what its treeIndexGrams() answers:
-    // the trigger is visited until the next rebuild files it again
-    void unfileTreeNode(TTrigger* pT);
     // Call on any change to which children pFrom has, or to how one of them is filed: it and every
     // trigger above it walk their children down the list until the next rebuild
     void invalidateChildWalks(TTrigger* pFrom);
@@ -188,6 +182,9 @@ private:
     void dropChildWalks(TTrigger* pT);
     void markTreeNode(TTrigger* pT, quint32 stamp);
     void forgetOpenTreeNode(TTrigger* pT);
+    // Call on any change to a trigger's place below a root or to what its treeIndexGrams() answers:
+    // the trigger is visited until the next rebuild files it again
+    void unfileTreeNode(TTrigger* pT);
     void clearTreeNodes();
     void rebuildTreeIndex();
     void stampTreeCandidates(const QString& line);

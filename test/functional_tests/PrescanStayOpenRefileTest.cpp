@@ -305,6 +305,35 @@ private slots:
         QCOMPARE(luaInteger("movedFires"), 3);
         delete group;
     }
+
+    // A line's candidates are settled before any script runs, so a root that its own match on a line fed
+    // from a script holds open has to reach the line that script's trigger matched, as it would unfiltered
+    void rootHeldOpenByItsMatchInANestedFeedFiresOnTheOuterLine()
+    {
+        QVERIFY2(runLua(qsl(R"(
+            nestedIds = {}
+            for index = 1, 80 do
+                nestedIds[index] = tempTrigger("qqnestedfiller" .. index .. "zz", function() end)
+            end
+            nestedIds[#nestedIds + 1] = tempTrigger("nestedfeederbait", function() feedTriggers("qqnestedopenedbaitzz\n") end)
+            nestedFires = 0
+            nestedOpenedId = tempTrigger("qqnestedopenedbaitzz", function() nestedFires = nestedFires + 1 end)
+            nestedIds[#nestedIds + 1] = nestedOpenedId
+            feedTriggers("nestedwarmupline\n")
+        )")),
+                 "the triggers did not compile");
+        QVERIFY2(mpHost->getTriggerUnit()->rootPrescanActive(), "the root prescan has not engaged, so it cannot skip the opened trigger");
+        TTrigger* opened = mpHost->getTriggerUnit()->getTrigger(luaInteger("nestedOpenedId"));
+        QVERIFY(opened);
+        // No Lua function sets how long a substring trigger stays open after it matches
+        opened->mStayOpen = 2;
+
+        runLua(qsl("feedTriggers('nestedfeederbait here\\n')"));
+        const int fires = luaInteger("nestedFires");
+        runLua(qsl("for _, id in ipairs(nestedIds) do killTrigger(id) end feedTriggers('nestedteardownline\\n')"));
+
+        QCOMPARE(fires, 2);
+    }
 };
 
 #include "PrescanStayOpenRefileTest.moc"

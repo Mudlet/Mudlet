@@ -914,16 +914,14 @@ void TTrigger::rebuildPrescanGrams()
         break;
     }
     mPatternBigrams = std::move(patternBigrams);
-    invalidatePrescan();
-    invalidateTreeIndex();
+    refile(TriggerRefile::Patterns);
 }
 
-void TTrigger::invalidateTreeIndex()
+void TTrigger::refile(const TriggerRefile change)
 {
-    // A root is never filed, so the temporary triggers scripts arm every line cost no rebuild
-    if (mpHost && (mTreeIndexPosition >= 0 || getParent())) {
+    if (mpHost) {
         if (auto* unit = mpHost->getTriggerUnit()) {
-            unit->unfileTreeNode(this);
+            unit->refile(this, change);
         }
     }
 }
@@ -970,21 +968,6 @@ bool TTrigger::treeIndexGrams(std::vector<quint64>& grams) const
         grams.push_back(gram);
     }
     return true;
-}
-
-// Call on anything that changes whether or how the trigger can be filtered; the unit refiles it from
-// its current state.
-void TTrigger::invalidatePrescan(const bool nowFiresWithoutMatching)
-{
-    if (mpHost) {
-        if (auto* unit = mpHost->getTriggerUnit()) {
-            if (nowFiresWithoutMatching) {
-                unit->markPrescanStaleForLineInFlight(this);
-            } else {
-                unit->markPrescanStale(this);
-            }
-        }
-    }
 }
 
 const std::vector<quint64>& TTrigger::prescanGrams() const
@@ -2181,14 +2164,14 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
             if (!mIsMultiline) {
                 if (ret) {
                     conditionMet = true;
-                    const bool wasFilterable = !mKeepFiring;
+                    const bool wasOpen = mKeepFiring > 0;
                     mKeepFiring = mStayOpen;
-                    if (mKeepFiring > 0) {
+                    const bool nowOpen = mKeepFiring > 0;
+                    if (nowOpen) {
                         noteOpen();
                     }
-                    if (wasFilterable != !mKeepFiring) {
-                        // It now does or no longer fires without matching, which changes its filterability
-                        invalidatePrescan();
+                    if (wasOpen != nowOpen) {
+                        refile(nowOpen ? TriggerRefile::OpenedByMatch : TriggerRefile::Shut);
                     }
                     break;
                 }
@@ -2285,7 +2268,7 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
         if ((mKeepFiring > 0) && (!conditionMet)) {
             mKeepFiring--;
             if (!mKeepFiring) {
-                invalidatePrescan();
+                refile(TriggerRefile::Shut);
             }
             if ((mKeepFiring == mStayOpen) || (mpMyChildrenList->empty())) {
                 execute();
