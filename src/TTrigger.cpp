@@ -1370,7 +1370,7 @@ END: {
         mpHost->resetMainConsoleFormat();
     }
     if (mIsMultiline) {
-        updateMultistates(patternNumber, captureList, posList, &nameGroups);
+        updateMultistates(patternNumber, captureList, &nameGroups);
         return;
     }
     executeWithCaptures(captureList, posList, lineNumber, &nameGroups, &namePositions);
@@ -1437,7 +1437,7 @@ void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumb
         mpHost->resetMainConsoleFormat();
     }
     if (mIsMultiline) {
-        updateMultistates(patternNumber, captureList, posList);
+        updateMultistates(patternNumber, captureList);
         return;
     }
     executeWithCaptures(captureList, posList, lineNumber);
@@ -1448,7 +1448,7 @@ void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumb
     }
 }
 
-void TTrigger::updateMultistates(int regexNumber, const TCaptureGroups& captureList, const std::vector<int>& posList, const NameGroupMatches* nameMatches)
+void TTrigger::updateMultistates(int regexNumber, const TCaptureGroups& captureList, const NameGroupMatches* nameMatches)
 {
     if (regexNumber == 0) {
         // automatically set to #1
@@ -1463,12 +1463,7 @@ void TTrigger::updateMultistates(int regexNumber, const TCaptureGroups& captureL
             mConditionMap[pConditionRaw] = std::move(pCondition);
         }
         noteOpen();
-        pConditionRaw->addCaptures(captureList, posList);
-        if (nameMatches) {
-            pConditionRaw->nameCaptures.push_back(*nameMatches);
-        } else {
-            pConditionRaw->nameCaptures.push_back(QVector<QPair<QString, QString>>());
-        }
+        pConditionRaw->addCaptures(captureList, nameMatches);
         if (TDebug::wants(TDebug::Category::TriggerDetail)) {
             TDebug(Qt::darkYellow, Qt::black, TDebug::Category::TriggerDetail, mName) << "match state " << mConditionMap.size() << "/" << mConditionMap.size() << " condition #" << regexNumber
                                                                                       << "=true (" << regexNumber << "/" << mPatterns.size() << ") regex=" << mPatterns[regexNumber] << "\n"
@@ -1485,12 +1480,7 @@ void TTrigger::updateMultistates(int regexNumber, const TCaptureGroups& captureL
                             >> mpHost;
                 }
                 matchStatePair.second->conditionMatched();
-                matchStatePair.second->addCaptures(captureList, posList);
-                if (nameMatches != nullptr) {
-                    matchStatePair.second->nameCaptures.push_back(*nameMatches);
-                } else {
-                    matchStatePair.second->nameCaptures.push_back(QVector<QPair<QString, QString>>());
-                }
+                matchStatePair.second->addCaptures(captureList, nameMatches);
             }
         }
     }
@@ -1593,7 +1583,7 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
         mpHost->resetMainConsoleFormat();
     }
     if (mIsMultiline) {
-        updateMultistates(regexNumber, captureList, posList);
+        updateMultistates(regexNumber, captureList);
         return;
     }
     executeWithCaptures(captureList, posList, lineNumber);
@@ -1738,7 +1728,7 @@ void TTrigger::processColorPattern(int patternNumber, const TCaptureGroups& capt
         mpHost->resetMainConsoleFormat();
     }
     if (mIsMultiline) {
-        updateMultistates(patternNumber, captureList, posList);
+        updateMultistates(patternNumber, captureList);
         return;
     }
     // Color matching reads the line in its current columns already
@@ -1769,8 +1759,7 @@ bool TTrigger::match_line_spacer(int patternNumber)
                                 >> mpHost;
                     }
                     matchStatePair.second->conditionMatched();
-                    matchStatePair.second->addCaptures({}, {});
-                    matchStatePair.second->nameCaptures.push_back(QVector<QPair<QString, QString>>());
+                    matchStatePair.second->addCaptures({}, nullptr);
                 }
             }
         }
@@ -1791,7 +1780,7 @@ bool TTrigger::match_lua_code(int patternNumber)
             TDebug(Qt::yellow, Qt::black, TDebug::Category::TriggerMatch, mName) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
         }
         if (mIsMultiline) {
-            updateMultistates(patternNumber, TCaptureGroups(), std::vector<int>());
+            updateMultistates(patternNumber, TCaptureGroups());
             return true;
         }
         execute();
@@ -1815,7 +1804,7 @@ void TTrigger::processPromptMatch(int patternNumber)
         TDebug(Qt::yellow, Qt::black, TDebug::Category::TriggerMatch, mName) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
     }
     if (mIsMultiline) {
-        updateMultistates(patternNumber, TCaptureGroups(), std::vector<int>());
+        updateMultistates(patternNumber, TCaptureGroups());
         return;
     }
     execute();
@@ -1865,7 +1854,7 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
         mpHost->resetMainConsoleFormat();
     }
     if (mIsMultiline) {
-        updateMultistates(patternNumber, captureList, posList);
+        updateMultistates(patternNumber, captureList);
         return;
     }
     executeWithCaptures(captureList, posList, lineNumber);
@@ -2248,38 +2237,27 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
                             >> mpHost;
                 }
                 conditionMet = true;
-                TLuaInterpreter* pL = mpHost->getLuaInterpreter();
                 if (!fireReachesLua()) {
                     execute();
-                } else if (mFilterTrigger) {
-                    // A filter reads the captures again once the script has run
-                    pL->setMultiCaptureGroups(matchState->multiCaptureList, matchState->multiCapturePosList, matchState->nameCaptures);
-                    execute();
-                    pL->clearCaptureGroups();
                 } else {
-                    pL->setMultiCaptureGroups(std::move(matchState->multiCaptureList), std::move(matchState->multiCapturePosList), std::move(matchState->nameCaptures));
+                    TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+                    pL->setMultiCaptureGroups(matchState->captures());
                     execute();
-                    // Back into the state, whose recycle() or destructor parks the nodes
-                    pL->takeBackMultiCaptureGroups(matchState->multiCaptureList, matchState->multiCapturePosList);
                     pL->clearCaptureGroups();
                 }
                 if (mFilterTrigger) {
-                    const std::list<std::list<std::string>>& multiCaptureList = matchState->multiCaptureList;
-                    for (const auto& captures : multiCaptureList) {
-                        const int total = captures.size();
-                        auto its = captures.begin();
-                        for (int i = 1; its != captures.end(); ++its, i++) {
-                            std::string s = *its;
-                            int p = 0;
+                    const TMultiCaptureGroups& captures = matchState->captures();
+                    for (std::size_t condition = 0; condition < captures.conditions(); ++condition) {
+                        std::size_t capture = captures.capturesBegin(condition);
+                        const std::size_t end = captures.capturesEnd(condition);
+                        // Children skip a condition's first capture, its whole match, when it has more than one
+                        if (end - capture > 1) {
+                            ++capture;
+                        }
+                        for (; capture < end; ++capture) {
                             // multiline captures may come from earlier lines, so no
                             // single line number applies here
-                            if (total > 1) {
-                                if (i % total != 1) {
-                                    filter(s, p, -1, mPositionsInCurrentColumns);
-                                }
-                            } else {
-                                filter(s, p, -1, mPositionsInCurrentColumns);
-                            }
+                            filter(captures.captures()[capture], 0, -1, mPositionsInCurrentColumns);
                         }
                     }
                 }

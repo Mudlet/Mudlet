@@ -3798,55 +3798,19 @@ std::pair<bool, QString> TLuaInterpreter::validLuaCode(const QString& code)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList, QVector<QVector<QPair<QString, QString>>>& nameGroups)
+void TLuaInterpreter::setMultiCaptureGroups(const TMultiCaptureGroups& captures)
 {
-    mMultiCaptureGroupList = captureList;
-    mMultiCaptureGroupPosList = posList;
-    mMultiCaptureNameGroups = nameGroups;
+    // Assigned over, so storage an earlier fire grew is reused
+    mMultiCaptureGroups = captures;
     mCaptureScopeOpen = true;
-
-    /*
-     * std::list< std::list<string> >::const_iterator mit = mMultiCaptureGroupList.begin();
-     *
-     * int k=1;
-     * for ( ; mit!=mMultiCaptureGroupList.end(); mit++, k++) {
-     *     cout << "regex#"<<k<<" got:"<<endl;
-     *     std::list<string>::const_iterator it = (*mit).begin();
-     *     for ( int i=1; it!=(*mit).end(); it++, i++ ) {
-     *         cout << i<<"#"<<"<"<<*it<<">"<<endl;
-     *     }
-     *     cout << "-----------------------------"<<endl;
-     * }
-     */
-}
-
-// No documentation available in wiki - internal function
-void TLuaInterpreter::setMultiCaptureGroups(std::list<std::list<std::string>>&& captureList, std::list<std::list<int>>&& posList, QVector<NameGroupMatches>&& nameGroups)
-{
-    mMultiCaptureGroupList = std::move(captureList);
-    mMultiCaptureGroupPosList = std::move(posList);
-    mMultiCaptureNameGroups = std::move(nameGroups);
-    mCaptureScopeOpen = true;
-}
-
-// No documentation available in wiki - internal function
-// Returns what a move into setMultiCaptureGroups() handed over, so the nodes
-// go back to their pool instead of the allocator
-void TLuaInterpreter::takeBackMultiCaptureGroups(std::list<std::list<std::string>>& captureList, std::list<std::list<int>>& posList)
-{
-    // Before the lists go, as a globals table setfenv(0, ...) took away is owed
-    // what they hold
-    lazyGlobalsUsable(pGlobalLua);
-    captureList = std::move(mMultiCaptureGroupList);
-    posList = std::move(mMultiCaptureGroupPosList);
-    mMultiCaptureGroupList.clear();
-    mMultiCaptureGroupPosList.clear();
 }
 
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList, const std::list<int>& posList)
 {
-    mCaptureGroups.clear();
+    // Trimmed here as well: a command trigger's alias sets these over a fire that
+    // clearCaptureGroups() would only see emptied
+    mCaptureGroups.clearAndTrim();
     for (const auto& capture : captureList) {
         mCaptureGroups.append(capture);
     }
@@ -3944,7 +3908,7 @@ void TLuaInterpreter::clearCaptureGroups()
 {
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
-    // Before the lists go, as a globals table setfenv(0, ...) took away is owed
+    // Before the captures go, as a globals table setfenv(0, ...) took away is owed
     // what they hold
     const bool lazy = lazyGlobalsUsable(L);
 
@@ -3958,11 +3922,9 @@ void TLuaInterpreter::clearCaptureGroups()
         std::vector<int>().swap(mCaptureGroupPosList);
     }
     mCaptureGroupLengthList.clear();
-    mMultiCaptureGroupList.clear();
-    mMultiCaptureGroupPosList.clear();
+    mMultiCaptureGroups.clearAndTrim();
     mCapturedNameGroups.clear();
     mCapturedNameGroupsPosList.clear();
-    mMultiCaptureNameGroups.clear();
 
     mCaptureScopeOpen = false;
     if (lazy) {
@@ -4031,11 +3993,9 @@ int TLuaInterpreter::pushNestedDispatchState(const bool parkCommand)
     saved.captureGroups = mCaptureGroups;
     saved.captureGroupPosList = mCaptureGroupPosList;
     saved.captureGroupLengthList = mCaptureGroupLengthList;
-    saved.multiCaptureGroupList = mMultiCaptureGroupList;
-    saved.multiCaptureGroupPosList = mMultiCaptureGroupPosList;
+    saved.multiCaptureGroups = mMultiCaptureGroups;
     saved.capturedNameGroups = mCapturedNameGroups;
     saved.capturedNameGroupsPosList = mCapturedNameGroupsPosList;
-    saved.multiCaptureNameGroups = mMultiCaptureNameGroups;
 
     return static_cast<int>(mNestedDispatchStates.size()) - 1;
 }
@@ -4081,11 +4041,9 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
     mCaptureGroups = std::move(saved.captureGroups);
     mCaptureGroupPosList = std::move(saved.captureGroupPosList);
     mCaptureGroupLengthList = std::move(saved.captureGroupLengthList);
-    mMultiCaptureGroupList = std::move(saved.multiCaptureGroupList);
-    mMultiCaptureGroupPosList = std::move(saved.multiCaptureGroupPosList);
+    mMultiCaptureGroups = std::move(saved.multiCaptureGroups);
     mCapturedNameGroups = std::move(saved.capturedNameGroups);
     mCapturedNameGroupsPosList = std::move(saved.capturedNameGroupsPosList);
-    mMultiCaptureNameGroups = std::move(saved.multiCaptureNameGroups);
     mCaptureScopeOpen = saved.captureScopeOpen;
 
     // Raw again, and for the same reason: a reference to a global that was nil
@@ -4946,7 +4904,7 @@ bool TLuaInterpreter::buildingCaptureTables()
 void TLuaInterpreter::pushMatchesTable(lua_State* L)
 {
     // Every push below can run a __gc finaliser, and one that starts a trigger or
-    // alias pass would replace the lists this walk holds iterators into, so passes
+    // alias pass would replace the captures this walk is reading, so passes
     // are refused until it ends
     ++mCaptureBuildDepth;
     // presized, so filling it in does not rehash the table on the way up
@@ -4972,21 +4930,26 @@ void TLuaInterpreter::pushMultimatchesTable(lua_State* L)
 {
     // Passes are refused for the same reason pushMatchesTable() gives
     ++mCaptureBuildDepth;
-    int k = 1;
+    // Cut at the first NUL, as scripts expect
+    auto pushCapture = [L](const std::string_view capture) {
+        lua_pushlstring(L, capture.data(), qstrnlen(capture.data(), capture.size()));
+    };
+    const TCaptureGroups& captures = mMultiCaptureGroups.captures();
+    const TCaptureGroups& namedCaptures = mMultiCaptureGroups.namedCaptures();
     lua_newtable(L);
-    for (auto mit = mMultiCaptureGroupList.begin(); mit != mMultiCaptureGroupList.end(); mit++, k++) {
+    for (std::size_t condition = 0; condition < mMultiCaptureGroups.conditions(); ++condition) {
         // multimatches{ trigger_idx{ table_matches{ ... } } }
-        lua_pushnumber(L, k);
+        lua_pushnumber(L, static_cast<lua_Number>(condition + 1));
         lua_newtable(L);
-        int i = 1;
-        for (auto it = (*mit).begin(); it != (*mit).end(); it++, i++) {
-            lua_pushnumber(L, i);
-            lua_pushstring(L, (*it).c_str());
+        const std::size_t first = mMultiCaptureGroups.capturesBegin(condition);
+        for (std::size_t capture = first; capture < mMultiCaptureGroups.capturesEnd(condition); ++capture) {
+            lua_pushnumber(L, static_cast<lua_Number>(capture - first + 1));
+            pushCapture(captures[capture]);
             lua_settable(L, -3);
         }
-        for (const auto& [name, capture] : mMultiCaptureNameGroups.value(k - 1)) {
-            lua_pushstring(L, name.toUtf8().constData());
-            lua_pushstring(L, capture.toUtf8().constData());
+        for (std::size_t named = mMultiCaptureGroups.namedBegin(condition); named < mMultiCaptureGroups.namedEnd(condition); named += 2) {
+            pushCapture(namedCaptures[named]);
+            pushCapture(namedCaptures[named + 1]);
             lua_settable(L, -3);
         }
         lua_settable(L, -3);
@@ -5790,7 +5753,7 @@ bool TLuaInterpreter::call_luafunction(const int functionRef, const QString& ite
     if (lua_isfunction(L, -1)) {
         setMatches(L);
         // A multiline trigger's Lua function gets multimatches just as its script would
-        if (!mMultiCaptureGroupList.empty()) {
+        if (!mMultiCaptureGroups.empty()) {
             setMatches(L, MultimatchesSource::Captures);
         }
         const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
@@ -5872,7 +5835,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(const int funct
 
     if (lua_isfunction(L, -1)) {
         setMatches(L);
-        if (!mMultiCaptureGroupList.empty()) {
+        if (!mMultiCaptureGroups.empty()) {
             setMatches(L, MultimatchesSource::Captures);
         }
         const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
@@ -6114,7 +6077,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
 
-    if (!mMultiCaptureGroupList.empty()) {
+    if (!mMultiCaptureGroups.empty()) {
         setMatches(L, MultimatchesSource::Captures);
     }
 
@@ -6157,7 +6120,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
 
     bool returnValue = false;
 
-    if (!mMultiCaptureGroupList.empty()) {
+    if (!mMultiCaptureGroups.empty()) {
         setMatches(L, MultimatchesSource::Captures);
     }
 

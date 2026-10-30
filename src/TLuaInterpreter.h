@@ -148,9 +148,7 @@ public:
     void setCaptureGroupLengths(std::vector<int>&& lengths) { mCaptureGroupLengthList = std::move(lengths); }
     int captureGroupLength(std::size_t index) const;
     void setCaptureNameGroups(const NameGroupMatches&, const NamedMatchesRanges&);
-    void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList, QVector<NameGroupMatches>& nameMatches);
-    void setMultiCaptureGroups(std::list<std::list<std::string>>&& captureList, std::list<std::list<int>>&& posList, QVector<NameGroupMatches>&& nameMatches);
-    void takeBackMultiCaptureGroups(std::list<std::list<std::string>>& captureList, std::list<std::list<int>>& posList);
+    void setMultiCaptureGroups(const TMultiCaptureGroups&);
     void adjustCaptureGroups(int x, int a);
     void adjustCaptureGroupsForReplace(int x, int replacedLength, const QString& replacement);
     void clearCaptureGroups();
@@ -1100,11 +1098,10 @@ private:
     // set_lua_string()'s encode buffer, kept for its capacity; dropped past a length no game line reaches
     static constexpr qsizetype scmMaxRetainedUtf8Scratch = 3 * 8192;
     QByteArray mUtf8Scratch;
-    std::list<std::list<std::string>> mMultiCaptureGroupList;
-    std::list<std::list<int>> mMultiCaptureGroupPosList;
+    // Kept across fires for its capacity, which clearCaptureGroups() bounds
+    TMultiCaptureGroups mMultiCaptureGroups;
     QVector<QPair<QString, QString>> mCapturedNameGroups;
     QMap<QString, QPair<int, int>> mCapturedNameGroupsPosList;
-    QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
     int mCaptureBuildDepth = 0;
     // Most scripts never read "matches" or "multimatches", so lazyGlobalsIndex()
     // builds them on first read. "matches" is left out only while a capture
@@ -1206,11 +1203,9 @@ private:
         TCaptureGroups captureGroups;
         std::vector<int> captureGroupPosList;
         std::vector<int> captureGroupLengthList;
-        std::list<std::list<std::string>> multiCaptureGroupList;
-        std::list<std::list<int>> multiCaptureGroupPosList;
+        TMultiCaptureGroups multiCaptureGroups;
         NameGroupMatches capturedNameGroups;
         NamedMatchesRanges capturedNameGroupsPosList;
-        QVector<NameGroupMatches> multiCaptureNameGroups;
         int matchesRef = LUA_NOREF;
         int multimatchesRef = LUA_NOREF;
         int commandRef = LUA_NOREF;

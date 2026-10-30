@@ -8549,12 +8549,24 @@ describe("Trigger processing", function()
 
             it("hands a multiline fire the groups of each line" .. mode, function()
                 arm()
-                local code = [==[_G.TrigCaptures = {first = {unpack(multimatches[1])}, second = {unpack(multimatches[2])}}]==]
-                complex("SpecCapturesMulti", [[^capmulti one (\S+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+                local code = [==[_G.TrigCaptures = {first = {unpack(multimatches[1])}, who = multimatches[1].who, second = {unpack(multimatches[2])}}]==]
+                complex("SpecCapturesMulti", [[^capmulti one (?<who>\S+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
                 complex("SpecCapturesMulti", [[^capmulti two( x)? (\S+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
                 feedTriggers("\ncapmulti one ñandú\n")
                 feedTriggers("capmulti two café\n")
-                assert.are.same({first = {"capmulti one ñandú", "ñandú"}, second = {"capmulti two café", "", "café"}}, _G.TrigCaptures)
+                assert.are.same({first = {"capmulti one ñandú", "ñandú"}, who = "ñandú", second = {"capmulti two café", "", "café"}}, _G.TrigCaptures)
+            end)
+
+            it("hands a multiline filter's script its groups, and its children the groups after" .. mode, function()
+                arm()
+                local code = [==[_G.TrigCaptures = {first = {unpack(multimatches[1])}, second = {unpack(multimatches[2])}, children = {}}]==]
+                complex("SpecCapturesMultiFilter", [[^capmf one (\S+)$]], code, 1, 0, 0, 1, 0, 0, 0, 0, 0, 3)
+                complex("SpecCapturesMultiFilter", [[^capmf two (\S+)$]], code, 1, 0, 0, 1, 0, 0, 0, 0, 0, 3)
+                names[#names + 1] = "SpecCapturesMultiFilterChild"
+                permRegexTrigger("SpecCapturesMultiFilterChild", "SpecCapturesMultiFilter", {[[^(.+)$]]}, [==[table.insert(_G.TrigCaptures.children, matches[2])]==])
+                feedTriggers("\ncapmf one ñandú\n")
+                feedTriggers("capmf two café\n")
+                assert.are.same({first = {"capmf one ñandú", "ñandú"}, second = {"capmf two café", "café"}, children = {"ñandú", "café"}}, _G.TrigCaptures)
             end)
 
             it("keeps its own captures across a nested pass in its script" .. mode, function()
