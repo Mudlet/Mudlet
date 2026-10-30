@@ -29,7 +29,7 @@ using namespace std::chrono_literals;
 const int WAIT_FOR_RESPONSE_MS = 500;
 // Windows local sockets have no buffer, so a write completes only once the running
 // instance's event loop reads it; giving up sooner reports a delivered message as lost
-const int WAIT_FOR_DELIVERY_MS = 10000;
+const int WAIT_FOR_DELIVERY_MS = 3000;
 
 MudletInstanceCoordinator::MudletInstanceCoordinator(const QString& serverName, QObject* parent)
 : QLocalServer(parent)
