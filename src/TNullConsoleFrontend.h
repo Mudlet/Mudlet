@@ -105,6 +105,12 @@ public:
     virtual ~TNullConsoleFrontend();
 
     void dropWindows();
+    // For Host's constructor, as TConsole's constructor makes the main command line ahead of any other
+    void makeMainCommandLine(bool savesHistory);
+    // The main command line's history writer goes as a view attaches, with the main window's stand-in that is
+    // its parent. Once the view goes, these make it again, so the view's last setting is still saved.
+    void followView(QObject* view);
+    void resumeMainCommandLine();
     bool ownsContainer(const QString& windowname) const;
     bool holdsWindow(const QString& name) const { return mLabels.contains(name) || subConsoleModel(name) || mScrollBoxes.contains(name) || mCommandLines.contains(name) || mTextBoxes.contains(name); }
     // A deleted window's model can still be in use, as a sysBufferShrinkEvent handler runs inside its
@@ -172,7 +178,7 @@ public:
     bool setWindowCommandLineVisible(const QString& name, bool visible) override;
     void setCommandLinePlaceholderText(const QString&) override {}
     void updateCommandLineSpellCheck(bool) override {}
-    void setCommandLineText(const QString&) override {}
+    void setCommandLineText(const QString& text) override { replaceCommandLineText(QString(), text); }
     void focusActiveCommandLine() override {}
     std::pair<bool, QString> createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height) override;
     std::pair<bool, QString> deleteTextBox(const QString& name) override;
@@ -417,6 +423,7 @@ private:
     bool shownWithin(const QString& userWindow, const ScrollBox* box) const;
     bool setPlainWindowShown(const QString& name, bool shown);
     bool ownsCommandLine(const QString& name) const;
+    PlainWindow* commandLineNamed(const QString& name);
     void releaseCommandLine(const QString& name, const PlainWindow& commandLine);
     QObject* holderFor(const QString& userWindow, const ScrollBox* box) const;
     HistoryWriter* makeHistoryWriter(QObject* parent, const QString& name, bool savesHistory);
@@ -451,6 +458,8 @@ private:
     std::map<QString, Label> mLabels;
     std::map<QString, std::shared_ptr<ScrollBox>> mScrollBoxes;
     std::map<QString, PlainWindow> mCommandLines;
+    // Only its menu items and history writer, as its text, sheet and setting are in the registry
+    PlainWindow mMainCommandLine;
     std::map<QString, PlainWindow> mTextBoxes;
     std::vector<std::unique_ptr<TConsoleModel>> mRetiredConsoles;
     std::vector<std::unique_ptr<TLabelModel>> mRetiredLabels;
