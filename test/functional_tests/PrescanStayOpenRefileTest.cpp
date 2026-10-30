@@ -438,7 +438,10 @@ private slots:
         QVERIFY2(triggerUnit->treeIndexFiledCount() >= 41, "the tree index has not engaged, so the child was never filed beside the roots");
 
         delete triggerUnit->findTrigger(qsl("sharedChild"));
+        const quint64 rebuildsBefore = triggerUnit->prescanRebuildCount();
         runLua(qsl("feedTriggers('sharedrefileline\\n')"));
+        // A reindex would refile the roots and mend whatever unfiling the child broke
+        QVERIFY2(triggerUnit->prescanRebuildCount() == rebuildsBefore, "the refiling reindexed, so it says nothing about unfiling one child");
         runLua(qsl("feedTriggers('qzsharedjx\\n')"));
         const int fires = luaInteger("sharedFires");
         delete triggerUnit->findTrigger(qsl("sharedGroup"));
