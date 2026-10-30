@@ -190,6 +190,7 @@ void startUnattendedJob(QKeychain::Job* job, const std::function<bool(QKeychain:
 
 CredentialManager::CredentialManager(QObject* parent)
 : QObject(parent)
+, mJobStartHook(jobStartHookForTesting())
 {
 }
 
@@ -321,6 +322,12 @@ bool CredentialManager::isOperationValid() const
 {
     static std::optional<bool> override;
     return override;
+}
+
+/*static*/ std::function<bool(QKeychain::Job*)>& CredentialManager::jobStartHookForTesting()
+{
+    static std::function<bool(QKeychain::Job*)> hook;
+    return hook;
 }
 
 /*static*/ bool CredentialManager::profileStoragePreferred()
