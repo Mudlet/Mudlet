@@ -177,6 +177,9 @@ public:
     // For texts printed before there is a window or a profile, in Mudlet.ini's language or else the
     // system's. Installed on the application; null when there is none. A print-and-exit run warns why not.
     static QTranslator* loadTranslationsForCommandLine(bool printAndExitRun);
+    // For the whole of a run with no main window, in the interface language its pool reports, as the main window
+    // loads its own. Installed on the application; null when there is none.
+    static QTranslator* loadTranslationsForRun();
     // FFmpeg on Windows and AVFoundation on macOS over Qt Multimedia's own default, unless QT_MEDIA_BACKEND
     // names one; before the first media object is made
     static void setDefaultMediaBackend();
@@ -191,9 +194,16 @@ public:
     // for french, without a country designation. Replaces xx in "mudlet_xx.qm" to
     // provide the translation file for GUI translation.
     // Read under a lock and so returned by value: a reference would escape it, and
-    // the language is written both at startup by mudlet::readEarlySettings() and
+    // the language is written both at startup, by mudlet::readEarlySettings() or readInterfaceLanguage(), and
     // later by the preferences dialog.
     static QString getInterfaceLanguage();
+    // What a Mudlet.ini with no interfaceLanguage gets, as the main window picks it: en_GB when that is one of the
+    // system's UI languages, else en_US
+    static QString autodetectPreferredLanguage();
+    static QString interfaceLanguageSetting(const QSettings& settings);
+    // For a pool with no main window, as mudlet::readEarlySettings(); warns of a language that names no locale or has
+    // no translation
+    static void readInterfaceLanguage(const QSettings& settings);
 
     // Preferences and facts about this run that the main window settles and
     // profiles consult. Read and written on the main thread only.

@@ -37,6 +37,7 @@
 #include <QThread>
 #include <QThreadPool>
 #include <QTimer>
+#include <QTranslator>
 #include <QWidget>
 #include <QXmlStreamReader>
 #include <QtNetwork/QTcpServer>
@@ -444,7 +445,8 @@ private slots:
                           "enableMuteAPI=true\n"
                           "enableMuteGame=true\n"
                           "reportMapIssuesToConsole=true\n"
-                          "storePasswordsSecurely=false\n")
+                          "storePasswordsSecurely=false\n"
+                          "interfaceLanguage=de_DE\n")
                               .arg(scmAutosaveMinutes)
                               .arg(scmUsernameDelayMs)
                               .arg(scmPasswordDelayMs)
@@ -10366,6 +10368,44 @@ headlessDiscord = ok and 'ok' or tostring(err)
         QCOMPARE(sEvents, QStringList());
     }
 
+    // Kept as given, as the main window keeps it, but said out loud: the main window's own warning never runs here
+    void test_unusableInterfaceLanguageIsReportedWithNoMainWindow()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        // A file of its own each time: QSettings takes one of the same size and time as unchanged
+        const auto readFrom = [&dir](const QByteArray& line) {
+            const QString path = dir.filePath(qsl("Mudlet-%1.ini").arg(QString::fromLatin1(line.toHex())));
+            QFile ini(path);
+            if (ini.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                ini.write("[General]\n" + line + "\n");
+                ini.close();
+            }
+            const QSettings settings(path, QSettings::IniFormat);
+            MudletApp::readInterfaceLanguage(settings);
+        };
+        // A language with a translation, which the settings test after this one reads back
+        auto restore = qScopeGuard([readFrom, before = MudletApp::getInterfaceLanguage().toUtf8()]() {
+            readFrom("interfaceLanguage=" + before);
+        });
+
+        QTest::ignoreMessage(QtWarningMsg, "MudletApp::readInterfaceLanguage(...) WARNING - the interface language \"klingon\" is not a recognised locale, so the interface is in English.");
+        readFrom("interfaceLanguage=klingon");
+        QCOMPARE(MudletApp::getInterfaceLanguage(), qsl("klingon"));
+
+        QTest::ignoreMessage(QtWarningMsg, "MudletApp::readInterfaceLanguage(...) WARNING - there is no translation for the interface language \"de_AT\", so the interface is in English.");
+        readFrom("interfaceLanguage=de_AT");
+        QCOMPARE(MudletApp::getInterfaceLanguage(), qsl("de_AT"));
+
+        QTest::ignoreMessage(QtWarningMsg, "MudletApp::readInterfaceLanguage(...) WARNING - the interface language \"\" is not a recognised locale, so the interface is in English.");
+        readFrom("interfaceLanguage=");
+        QCOMPARE(MudletApp::getInterfaceLanguage(), QString());
+
+        QTest::failOnWarning(QRegularExpression(qsl("^MudletApp::readInterfaceLanguage")));
+        readFrom("interfaceLanguage=fr_FR");
+        QCOMPARE(MudletApp::getInterfaceLanguage(), qsl("fr_FR"));
+    }
+
     // Run twice: here, where Mudlet.ini holds none of these keys, and by HeadlessHostSmokeTestWithMudletIni,
     // where initTestCase() wrote each of them before the pool existed
     void test_profileWithNoMainWindowTakesItsSettingsFromMudletIni()
@@ -10384,7 +10424,8 @@ headlessDiscord = ok and 'ok' or tostring(err)
                                qsl("enableMuteAPI"),
                                qsl("enableMuteGame"),
                                qsl("reportMapIssuesToConsole"),
-                               qsl("storePasswordsSecurely")};
+                               qsl("storePasswordsSecurely"),
+                               qsl("interfaceLanguage")};
         for (const QString& key : keys) {
             QVERIFY2(settings->contains(key) == fromIni, qPrintable(key));
         }
@@ -10402,6 +10443,18 @@ headlessDiscord = ok and 'ok' or tostring(err)
         QCOMPARE(MudletApp::storingPasswordsSecurely(), !fromIni);
         QCOMPARE(CredentialManager::profileStoragePreferred(), fromIni);
         QCOMPARE(host->getPass(), fromIni ? qsl("inistored") : QString());
+        // As the main window with no saved language: British English for a desktop that asks for it, else American
+        const QStringList uiLanguages = QLocale::system().uiLanguages();
+        const QString unsetLanguage = uiLanguages.contains(qsl("en-GB")) || uiLanguages.contains(qsl("en_GB")) ? qsl("en_GB") : qsl("en_US");
+        const QString language = fromIni ? qsl("de_DE") : unsetLanguage;
+        QCOMPARE(MudletApp::getInterfaceLanguage(), language);
+        // The headless runner's translation is the one for the language its profiles report
+        QTranslator* pTranslator = MudletApp::loadTranslationsForRun();
+        QVERIFY2(pTranslator, "No translation was loaded for the interface language.");
+        const QString translatorFile = pTranslator->filePath();
+        QCoreApplication::removeTranslator(pTranslator);
+        delete pTranslator;
+        QCOMPARE(translatorFile, qsl(":/lang/mudlet_%1.qm").arg(language));
 
         QCOMPARE(HostManager::self()->media().apiMuted(), fromIni);
         QCOMPARE(HostManager::self()->media().gameMuted(), fromIni);

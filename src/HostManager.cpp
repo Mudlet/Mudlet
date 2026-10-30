@@ -90,8 +90,10 @@ HostManager::HostManager(const ConfigRoot configRoot)
     // Settling again would delete the settings store under whoever holds it
     if (configRoot == ConfigRoot::settledHere && !MudletApp::configRootSettled()) {
         MudletApp::settleConfigRoot();
-        // Once per process: where the main window settles the root, its readLateSettings() reads them instead
+        // Once per process: where the main window settles the root, its readEarlySettings() and readLateSettings()
+        // read them instead
         readSettings(*MudletApp::getQSettings());
+        MudletApp::readInterfaceLanguage(*MudletApp::getQSettings());
     } else if (sMutesLeft && MudletMedia::self() == mpMedia.get()) {
         mpMedia->setApiMuted(sMutesLeft->api);
         mpMedia->setGameMuted(sMutesLeft->game);
