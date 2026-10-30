@@ -21,6 +21,7 @@
 #include <QApplication>
 #include <QDataStream>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
 #include <QFontInfo>
@@ -29,12 +30,15 @@
 #include <QImage>
 #include <QPointer>
 #include <QScopeGuard>
+#include <QSemaphore>
 #include <QSettings>
 #include <QSvgRenderer>
 #include <QTemporaryDir>
 #include <QThread>
+#include <QThreadPool>
 #include <QTimer>
 #include <QWidget>
+#include <QXmlStreamReader>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
 // After a QtNetwork header, which is what defines QT_NO_SSL
@@ -217,6 +221,134 @@ private:
         map->serialize(out);
         map->mapClear();
         return serialized;
+    }
+
+    // A saved profile whose script appends "<profile> <what>" to recordPath for its start, its sysLoadEvent and
+    // its sysExitEvent, and defines headlessRecord(what) for more
+    static bool writeRecordingProfile(const QString& name, const bool saveOnExit, const QString& recordPath)
+    {
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, name);
+        if (!QDir().mkpath(saveFolder)) {
+            return false;
+        }
+        // Opened binary so Windows writes no \r
+        const QString script = qsl(R"lua(function headlessRecord(what)
+  local file = io.open([[%1]], "ab")
+  file:write(getProfileName(), " ", what, "\n")
+  file:close()
+end
+headlessRecord("started")
+registerAnonymousEventHandler("sysLoadEvent", function() headlessRecord("sysLoadEvent") end)
+registerAnonymousEventHandler("sysExitEvent", function() headlessRecord("sysExitEvent") end))lua")
+                                       .arg(recordPath);
+        QFile saveFile(qsl("%1/2020-01-01#00-00-00.xml").arg(saveFolder));
+        if (!saveFile.open(QIODevice::WriteOnly)) {
+            return false;
+        }
+        saveFile.write(qsl(R"(<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+<HostPackage><Host mFORCE_SAVE_ON_EXIT="%1"></Host></HostPackage>
+<ScriptPackage><Script isActive="yes" isFolder="no"><name>headlessRecording</name><packageName></packageName><script>%2</script><eventHandlerList/></Script></ScriptPackage>
+</MudletPackage>
+)")
+                               .arg(saveOnExit ? qsl("yes") : qsl("no"), script.toHtmlEscaped())
+                               .toUtf8());
+        return true;
+    }
+
+    static QString readRecord(const QString& recordPath)
+    {
+        QFile file(recordPath);
+        return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString();
+    }
+
+    static qsizetype saveCount(const QString& name) { return QDir(MudletApp::getMudletPath(enums::profileXmlFilesPath, name)).entryList(QStringList{qsl("*.xml")}, QDir::Files).size(); }
+
+    // Whether the profile's newest save, not the one writeRecordingProfile() made, reads to its end
+    static bool newestSaveIsComplete(const QString& name)
+    {
+        const QDir folder(MudletApp::getMudletPath(enums::profileXmlFilesPath, name));
+        const QStringList saves = folder.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Name | QDir::Reversed);
+        if (saves.isEmpty() || saves.first() == qsl("2020-01-01#00-00-00.xml")) {
+            return false;
+        }
+        QFile file(folder.filePath(saves.first()));
+        if (!file.open(QIODevice::ReadOnly)) {
+            return false;
+        }
+        QXmlStreamReader reader(&file);
+        bool sawHost = false;
+        while (!reader.atEnd()) {
+            reader.readNext();
+            sawHost |= reader.isStartElement() && reader.name() == qsl("Host");
+        }
+        return sawHost && !reader.hasError();
+    }
+
+    // Stands in for any Lua API that runs the event loop, which the profile has to outlast
+    static void registerRunEventLoop(Host* pHost)
+    {
+        // One for each profile, which its C function reaches through an upvalue
+        static std::vector<std::unique_ptr<QPointer<Host>>> sRunning;
+        sRunning.push_back(std::make_unique<QPointer<Host>>(pHost));
+        lua_State* state = pHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_pushlightuserdata(state, sRunning.back().get());
+        lua_pushcclosure(
+                state,
+                [](lua_State* L) -> int {
+                    const auto* pRunning = static_cast<const QPointer<Host>*>(lua_touserdata(L, lua_upvalueindex(1)));
+                    QTest::qWait(200);
+                    if (!*pRunning) {
+                        // Returning would run on its closed Lua state
+                        qFatal("The profile was deleted under its own script as it ran the event loop.");
+                    }
+                    return 0;
+                },
+                1);
+        lua_setglobal(state, "runEventLoop");
+    }
+
+    // So that whichever map save is found afterwards is a new one
+    static bool clearMapSaves(const QString& name)
+    {
+        QDir folder(MudletApp::getMudletPath(enums::profileMapsPath, name));
+        const QStringList saves = folder.entryList(QStringList{qsl("*.dat")}, QDir::Files);
+        for (const QString& save : saves) {
+            if (!folder.remove(save)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Read into a profile of a pool of its own, so the pool under test is left as it was
+    static bool newestMapSaveHoldsRoom(const QString& name, const int roomId)
+    {
+        const QDir folder(MudletApp::getMudletPath(enums::profileMapsPath, name));
+        const QStringList saves = folder.entryList(QStringList{qsl("????-??-??#??-??-??map.dat")}, QDir::Files, QDir::Name | QDir::Reversed);
+        if (saves.isEmpty()) {
+            return false;
+        }
+        HostManager pool;
+        const QString readerName = qsl("Test-Headless-Host-Map-Reader");
+        if (!pool.addHost(readerName, QString(), QString(), QString())) {
+            return false;
+        }
+        TMap* map = pool.getHost(readerName)->mpMap.data();
+        return map->restore(folder.filePath(saves.first())) && map->mpRoomDB->getRoom(roomId);
+    }
+
+    // What QCoreApplication::exec() returns once closeMudlet() quits, or 2 if it has not by the timeout
+    int execUntilQuit(const std::chrono::milliseconds timeout)
+    {
+        QTimer watchdog;
+        watchdog.setSingleShot(true);
+        connect(&watchdog, &QTimer::timeout, this, []() {
+            QCoreApplication::exit(2);
+        });
+        watchdog.start(timeout);
+        return QCoreApplication::exec();
     }
 
     // As the stt.* bindings count one, the built-in macOS engine included
@@ -6202,6 +6334,195 @@ end))lua");
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Opening the profile created a widget.");
     }
 
+    // The GUI's answers to the same Lua: the profile is loaded and started before loadProfile() returns,
+    // and closeProfile() raises sysExitEvent and saves before it returns. The profile leaves the pool
+    // later, from the event loop.
+    void test_luaLoadsAndClosesAProfileWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString recordPath = recordDir.filePath(qsl("record.txt"));
+        const QString target = qsl("Test-Headless-Host-Lua-Opened");
+        const QString unsaved = qsl("Test-Headless-Host-Lua-Unsaved");
+        QVERIFY(writeRecordingProfile(target, true, recordPath));
+        QVERIFY(writeRecordingProfile(unsaved, false, recordPath));
+
+        // Where loadProfile() connects the profile to when it is not asked for offline
+        QTcpServer server;
+        QVERIFY2(server.listen(QHostAddress::LocalHost), "Could not start the local test server.");
+        bool connected = false;
+        connect(&server, &QTcpServer::newConnection, this, [&connected]() {
+            connected = true;
+        });
+        QVERIFY(MudletApp::writeProfileData(target, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(target, qsl("port"), QString::number(server.serverPort())).first);
+
+        const QString runnerName = qsl("Test-Headless-Host-Lua-Runner");
+        QVERIFY2(HostManager::self()->addHost(runnerName, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* runner = HostManager::self()->getHost(runnerName);
+        const auto answer = [runner](const QString& call) {
+            const QString chunk = qsl(R"lua(local r = {%1}
+headlessAnswer = table.maxn(r) .. " " .. tostring(r[1]) .. " " .. tostring(r[2]))lua")
+                                          .arg(call);
+            return runner->getLuaInterpreter()->compileAndExecuteScript(chunk) ? luaGlobalString(runner, "headlessAnswer") : qsl("did not run");
+        };
+
+        QCOMPARE(answer(qsl("loadProfile('%1')").arg(target)), qsl("1 true nil"));
+        Host* opened = HostManager::self()->getHost(target);
+        QVERIFY2(opened, "loadProfile() left the profile out of the pool.");
+        QVERIFY(!opened->hasConsoleView());
+        QCOMPARE(readRecord(recordPath), qsl("%1 started\n%1 sysLoadEvent\n").arg(target));
+        QTRY_VERIFY_WITH_TIMEOUT(connected, 10000);
+        QCOMPARE(answer(qsl("loadProfile('%1', true)").arg(target)), qsl("2 nil loadProfile: profile '%1' is already loaded").arg(target));
+
+        const QPointer<Host> pOpened(opened);
+        opened->mpMap->addRoom(5);
+        QVERIFY(clearMapSaves(target));
+        QCOMPARE(answer(qsl("closeProfile('%1'), getProfiles()['%1'].loaded").arg(target)), qsl("2 true true"));
+        QCOMPARE(readRecord(recordPath), qsl("%1 started\n%1 sysLoadEvent\n%1 sysExitEvent\n").arg(target));
+        QVERIFY2(pOpened, "The profile went before the event loop ran.");
+        QVERIFY2(!pOpened->currentlySavingProfile(), "closeProfile() returned with the profile's save still running.");
+        QVERIFY2(newestSaveIsComplete(target), "closeProfile() returned before the profile's save was whole on disk.");
+        QCOMPARE(saveCount(target), 2);
+        QVERIFY2(newestMapSaveHoldsRoom(target, 5), "closeProfile() did not save the profile's map.");
+        QTRY_VERIFY_WITH_TIMEOUT(!pOpened, 5000);
+        QVERIFY(!HostManager::self()->hostLoaded(target));
+        QCOMPARE(answer(qsl("closeProfile('%1')").arg(target)), qsl("2 nil closeProfile: profile '%1' is not loaded").arg(target));
+
+        // The GUI asks whether to save a profile that does not save on exit. Nobody can answer that here,
+        // so it closes as for the answer No.
+        QCOMPARE(answer(qsl("loadProfile('%1', true)").arg(unsaved)), qsl("1 true nil"));
+        const QPointer<Host> pUnsaved(HostManager::self()->getHost(unsaved));
+        // As the GUI's: a close asked for while the profile is already closing is ignored
+        QVERIFY(pUnsaved->getLuaInterpreter()->compileAndExecuteScript(
+                qsl(R"lua(registerAnonymousEventHandler("sysExitEvent", function() headlessRecord("closeProfile in exit " .. tostring(closeProfile())) end))lua")));
+        QTest::ignoreMessage(QtWarningMsg, qPrintable(qsl("HostManager: asked to close profile \"%1\" while it is running a nested event loop, ignoring").arg(unsaved)));
+        QCOMPARE(answer(qsl("closeProfile('%1')").arg(unsaved)), qsl("1 true nil"));
+        QTRY_VERIFY_WITH_TIMEOUT(!pUnsaved, 5000);
+        QCOMPARE(saveCount(unsaved), 1);
+        QCOMPARE(readRecord(recordPath), qsl("%1 started\n%1 sysLoadEvent\n%1 sysExitEvent\n%2 started\n%2 sysLoadEvent\n%2 sysExitEvent\n%2 closeProfile in exit true\n").arg(target, unsaved));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Loading or closing a profile created a widget.");
+        HostManager::self()->deleteHost(runnerName);
+    }
+
+    // As the GUI's tab close: sysExitEvent under the script that asked, and the profile goes only once
+    // that script has finished, even if it runs the event loop after asking
+    void test_luaClosesItsOwnProfileWithNoMainWindow()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString recordPath = recordDir.filePath(qsl("record.txt"));
+        const QString hostname = qsl("Test-Headless-Host-Lua-Self-Closed");
+        const QString other = qsl("Test-Headless-Host-Lua-Closed-After");
+        QVERIFY(writeRecordingProfile(hostname, true, recordPath));
+        QVERIFY(writeRecordingProfile(other, true, recordPath));
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The saved profile did not open.");
+        QVERIFY2(HostManager::self()->openProfile(other, false), "The saved profile did not open.");
+        QVERIFY(QFile::remove(recordPath));
+        const QPointer<Host> pHost(host);
+
+        // The other profile's save waits on the event loop, where a close that did not wait for this
+        // script would delete its profile under it
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+local ok, err = closeProfile()
+headlessRecord("closeProfile " .. tostring(ok) .. " " .. tostring(err))
+headlessRecord("closeProfile other " .. tostring(closeProfile([[%1]])))
+headlessRecord("finished")
+)lua")
+                                                                                    .arg(other));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(readRecord(recordPath), qsl("%1 sysExitEvent\n%1 closeProfile true nil\n%2 sysExitEvent\n%1 closeProfile other true\n%1 finished\n").arg(hostname, other));
+        QCOMPARE(saveCount(hostname), 2);
+        QCOMPARE(saveCount(other), 2);
+        QVERIFY2(pHost, "The profile went before the event loop ran.");
+        QTRY_VERIFY_WITH_TIMEOUT(!pHost, 5000);
+        QVERIFY(!HostManager::self()->hostLoaded(hostname));
+        QTRY_VERIFY_WITH_TIMEOUT(!HostManager::self()->hostLoaded(other), 5000);
+
+        // A profile already closing is not closed, or saved, again
+        const QString again = qsl("Test-Headless-Host-Lua-Closed-Twice");
+        Host* closedTwice = HostManager::self()->openProfile(again, false);
+        QVERIFY2(closedTwice, "The profile did not open.");
+        QVERIFY(HostManager::self()->requestProfileClose(again));
+        QVERIFY2(!closedTwice->closeWithNoView(), "A profile already closing was closed again.");
+        QTRY_VERIFY_WITH_TIMEOUT(!HostManager::self()->hostLoaded(again), 5000);
+    }
+
+    // As in the GUI: the load runs on, but the closed profile's handlers hear no sysLoadEvent
+    void test_luaClosesAProfileFromItsOwnLoadWithNoMainWindow()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString recordPath = recordDir.filePath(qsl("record.txt"));
+        const QString hostname = qsl("Test-Headless-Host-Lua-Closed-At-Load");
+        QVERIFY(writeRecordingProfile(hostname, true, recordPath));
+        QFile save(qsl("%1/2020-01-01#00-00-00.xml").arg(MudletApp::getMudletPath(enums::profileXmlFilesPath, hostname)));
+        QVERIFY(save.open(QIODevice::ReadOnly));
+        QByteArray xml = save.readAll();
+        save.close();
+        xml.replace("</script>", "\nheadlessRecord(&quot;closeProfile &quot; .. tostring(closeProfile()))</script>");
+        QVERIFY(save.open(QIODevice::WriteOnly));
+        save.write(xml);
+        save.close();
+
+        const QPointer<Host> pHost(HostManager::self()->openProfile(hostname, false));
+        QVERIFY2(pHost, "The saved profile did not open.");
+        QCOMPARE(readRecord(recordPath), qsl("%1 started\n%1 sysExitEvent\n%1 closeProfile true\n").arg(hostname));
+        QTRY_VERIFY_WITH_TIMEOUT(!pHost, 5000);
+        QCOMPARE(readRecord(recordPath), qsl("%1 started\n%1 sysExitEvent\n%1 closeProfile true\n").arg(hostname));
+    }
+
+    // A close that closeMudlet() posts can wait for a save whose writes ended, and posted that they had, before
+    // the close ran; an event loop pass run from a posted call need not deliver those, and the wait must end
+    void test_aSaveIsWaitedOutFromAPostedCall()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString hostname = qsl("Test-Headless-Host-Save-Waited-From-A-Posted-Call");
+        QVERIFY(writeRecordingProfile(hostname, true, recordDir.filePath(qsl("record.txt"))));
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The saved profile did not open.");
+        host->waitForProfileSave();
+
+        // Every pool thread held, so the save's writes end, and post that they have, only after the call below
+        auto* pool = QThreadPool::globalInstance();
+        const int threads = pool->maxThreadCount();
+        QSemaphore held;
+        QSemaphore release;
+        for (int i = 0; i < threads; ++i) {
+            pool->start([&held, &release]() {
+                held.release();
+                release.acquire();
+            });
+        }
+        QVERIFY(held.tryAcquire(threads, 10000));
+        const bool started = std::get<0>(host->saveProfile());
+        bool waited = false;
+        bool saveEnded = false;
+        qint64 waitMs = -1;
+        QMetaObject::invokeMethod(
+                host,
+                [host, &waited, &saveEnded, &waitMs]() {
+                    QElapsedTimer clock;
+                    clock.start();
+                    host->waitForProfileSave();
+                    saveEnded = !host->currentlySavingProfile();
+                    waitMs = clock.elapsed();
+                    waited = true;
+                },
+                Qt::QueuedConnection);
+        release.release(threads);
+        QVERIFY(started);
+        QVERIFY(pool->waitForDone(10000));
+
+        QTRY_VERIFY_WITH_TIMEOUT(waited, 60000);
+        QVERIFY2(saveEnded, qPrintable(qsl("The wait gave up on a save that had ended, after %1 ms.").arg(waitMs)));
+        QVERIFY2(waitMs < 10000, qPrintable(qsl("The wait took %1 ms.").arg(waitMs)));
+        HostManager::self()->deleteHost(hostname);
+    }
+
     void test_deleteHostKeepsAProfileReopenedUnderItsExitHandler()
     {
         const QString hostname = qsl("Test-Headless-Host-Exit-Reopened");
@@ -6220,6 +6541,468 @@ end))lua");
         HostManager::self()->deleteHost(hostname);
         QVERIFY2(HostManager::self()->getHost(hostname), "Closing the profile also removed the one reopened under its name.");
         HostManager::self()->deleteHost(hostname);
+    }
+
+    // A profile opened then would be deleted with the pool without its sysExitEvent
+    void test_aPoolBeingDestroyedOpensNoProfile()
+    {
+        static HostManager* spPool = nullptr;
+        static int sOpened = -1;
+        auto pool = std::make_unique<HostManager>();
+        spPool = pool.get();
+        const QString hostname = qsl("Test-Headless-Host-Pool-Going");
+        QVERIFY2(pool->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = pool->getHost(hostname);
+        // Stands in for an embedder's slot that runs while an exit handler pumps events
+        lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "openInPool", [](lua_State* L) -> int {
+            sOpened = spPool->openProfile(QString::fromUtf8(lua_tostring(L, 1)), false) ? 1 : 0;
+            return 0;
+        });
+        host->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onPoolGoing"));
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("function onPoolGoing() openInPool('Test-Headless-Host-Pool-Late') end")), "The Lua chunk did not run.");
+        pool.reset();
+        QCOMPARE(sOpened, 0);
+    }
+
+    // An embedder may close every profile from a slot that runs while one of them is closing, here
+    // under the script of another profile that asked for that close
+    void test_closeAllProfilesUnderAClosingProfilesExitHandler()
+    {
+        static HostManager* spPool = nullptr;
+        static Host* spClosing = nullptr;
+        static int sClosedAgain = -1;
+        auto pool = std::make_unique<HostManager>();
+        spPool = pool.get();
+        const QString closingName = qsl("Test-Headless-Host-Close-All-Under-Exit");
+        const QString askingName = qsl("Test-Headless-Host-Close-All-Asking");
+        QVERIFY2(pool->addHost(closingName, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        QVERIFY2(pool->addHost(askingName, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        spClosing = pool->getHost(closingName);
+        Host* asking = pool->getHost(askingName);
+        // closeProfile() would reach the first pool
+        lua_register(asking->getLuaInterpreter()->getLuaGlobalState(), "closeInPool", [](lua_State* L) -> int {
+            lua_pushboolean(L, spPool->requestProfileClose(QString::fromUtf8(lua_tostring(L, 1))));
+            return 1;
+        });
+        lua_register(spClosing->getLuaInterpreter()->getLuaGlobalState(), "closeAllInPool", [](lua_State*) -> int {
+            sClosedAgain = spClosing->closeWithNoView() ? 1 : 0;
+            spPool->closeAllProfiles();
+            return 0;
+        });
+        spClosing->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onCloseAllUnderExit"));
+        QVERIFY2(spClosing->getLuaInterpreter()->compileAndExecuteScript(qsl("function onCloseAllUnderExit() closeAllInPool() end")), "The Lua chunk did not run.");
+        const QPointer<Host> pClosing(spClosing);
+        const QPointer<Host> pAsking(asking);
+
+        QVERIFY(asking->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessClosed = tostring(closeInPool([[%1]]))").arg(closingName)));
+        QVERIFY2(pAsking, "The profile was deleted under its own script.");
+        QCOMPARE(luaGlobalString(asking, "headlessClosed"), qsl("true"));
+        QCOMPARE(sClosedAgain, 0);
+        QTRY_VERIFY_WITH_TIMEOUT(!pClosing && !pAsking, 5000);
+        QCOMPARE(pool->getHostCount(), 0);
+    }
+
+    // An embedder may close every profile from a slot that a map operation's event loop runs
+    void test_closeAllProfilesUnderAMapOperation()
+    {
+        static HostManager* spPool = nullptr;
+        auto pool = std::make_unique<HostManager>();
+        spPool = pool.get();
+        const QString hostname = qsl("Test-Headless-Host-Close-All-Under-Export");
+        QVERIFY2(pool->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = pool->getHost(hostname);
+        connect(
+                host->mpMap.data(),
+                &TMap::signal_mapProgressSetValue,
+                this,
+                []() {
+                    spPool->closeAllProfiles();
+                },
+                Qt::SingleShotConnection);
+        QTemporaryDir exportDir;
+        QVERIFY(exportDir.isValid());
+        const QPointer<Host> pHost(host);
+        const auto [exported, exportMessage] = host->mpMap->writeJsonMapFile(exportDir.filePath(qsl("map.json")));
+        QVERIFY2(pHost, "The profile was deleted under its map operation.");
+        QVERIFY(!exported);
+        QCOMPARE(exportMessage, qsl("aborted by user"));
+        QTRY_VERIFY_WITH_TIMEOUT(!pHost, 5000);
+    }
+
+    // Nor one deleted meanwhile while its own script, which asked for the close, still runs
+    void test_closeAllProfilesKeepsADeletedProfileUntilItsScriptEnds()
+    {
+        static HostManager* spPool = nullptr;
+        auto pool = std::make_unique<HostManager>();
+        spPool = pool.get();
+        const QString askingName = qsl("Test-Headless-Host-Close-All-Asks");
+        const QString deletingName = qsl("Test-Headless-Host-Close-All-Deletes");
+        QVERIFY2(pool->addHost(askingName, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        QVERIFY2(pool->addHost(deletingName, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* asking = pool->getHost(askingName);
+        Host* deleting = pool->getHost(deletingName);
+        // Stand in for an embedder's slots
+        lua_register(asking->getLuaInterpreter()->getLuaGlobalState(), "closeAllInPool", [](lua_State*) -> int {
+            spPool->closeAllProfiles();
+            return 0;
+        });
+        // Where the release is first tried
+        registerRunEventLoop(asking);
+        lua_register(deleting->getLuaInterpreter()->getLuaGlobalState(), "deleteFromPool", [](lua_State* L) -> int {
+            spPool->deleteHost(QString::fromUtf8(lua_tostring(L, 1)));
+            return 0;
+        });
+        deleting->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onDeleteAsking"));
+        QVERIFY2(deleting->getLuaInterpreter()->compileAndExecuteScript(qsl("function onDeleteAsking() deleteFromPool([[%1]]) end").arg(askingName)), "The Lua chunk did not run.");
+        const QPointer<Host> pAsking(asking);
+        QVERIFY(asking->getLuaInterpreter()->compileAndExecuteScript(qsl("closeAllInPool() runEventLoop() headlessAfterCloseAll = string.rep('x', 1000)")));
+        QVERIFY2(pAsking, "The profile was deleted under its own script.");
+        QTRY_VERIFY_WITH_TIMEOUT(!pAsking, 5000);
+        QCOMPARE(pool->getHostCount(), 0);
+    }
+
+    // Nor while it runs a nested event loop, as a save question would
+    void test_closeAllProfilesLeavesAProfileInANestedEventLoopUntilItEnds()
+    {
+        auto pool = std::make_unique<HostManager>();
+        const QString hostname = qsl("Test-Headless-Host-Close-All-Pumping");
+        QVERIFY2(pool->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = pool->getHost(hostname);
+        const QPointer<Host> pHost(host);
+        host->getLuaInterpreter()->enterNestedEventLoop();
+        pool->closeAllProfiles();
+        QTest::qWait(100);
+        QVERIFY2(pHost, "The profile was deleted under its nested event loop.");
+        host->getLuaInterpreter()->leaveNestedEventLoop();
+        QTRY_VERIFY_WITH_TIMEOUT(!pHost, 5000);
+    }
+
+    // A profile an embedder deletes while closing every profile is not then closed, or saved, as well
+    void test_closeAllProfilesLeavesAProfileDeletedMeanwhile()
+    {
+        static HostManager* spPool = nullptr;
+        auto pool = std::make_unique<HostManager>();
+        spPool = pool.get();
+        const QString closingName = qsl("Test-Headless-Host-Close-All-Deleting");
+        // Named to come after the closing one, so the pass reaches it after the handler deleted it
+        const QString deletedName = qsl("Test-Headless-Host-Close-All-Removed");
+        Host* closing = pool->openProfile(closingName, false);
+        QVERIFY2(closing, "The profile did not open.");
+        QVERIFY2(pool->openProfile(deletedName, false), "The profile did not open.");
+        // Stands in for an embedder's slot that runs while an exit handler pumps events
+        lua_register(closing->getLuaInterpreter()->getLuaGlobalState(), "deleteFromPool", [](lua_State* L) -> int {
+            spPool->deleteHost(QString::fromUtf8(lua_tostring(L, 1)));
+            return 0;
+        });
+        closing->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onDeleteOther"));
+        QVERIFY2(closing->getLuaInterpreter()->compileAndExecuteScript(qsl("function onDeleteOther() deleteFromPool([[%1]]) end").arg(deletedName)), "The Lua chunk did not run.");
+        const QPointer<Host> pClosing(closing);
+        pool->closeAllProfiles();
+        QCOMPARE(pool->getHostCount(), 0);
+        QVERIFY2(!pClosing, "A profile with no script running outlived its close.");
+        QCOMPARE(saveCount(closingName), 1);
+        QCOMPARE(saveCount(deletedName), 0);
+    }
+
+    // An embedder holding a profile past its pool's end
+    void test_aProfileClosedThenHeldPastItsPool()
+    {
+        auto pool = std::make_unique<HostManager>();
+        const QString hostname = qsl("Test-Headless-Host-Held-Past-Pool");
+        QVERIFY2(pool->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        QList<QSharedPointer<Host>> held = pool->hostList();
+        const QPointer<Host> pHost(held.first().data());
+        QVERIFY(pool->requestProfileClose(hostname));
+        pool.reset();
+        QVERIFY2(pHost, "The held profile went with its pool.");
+        QTest::qWait(200);
+        held.clear();
+        QVERIFY(!pHost);
+    }
+
+    // As deleteHost(): a profile reopened under the closing one's name is not the one that goes
+    void test_requestProfileCloseKeepsAProfileReopenedUnderItsExitHandler()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Close-Reopened");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        // Stands in for an embedder's slot that runs while an exit handler pumps events
+        lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "reopenProfile", [](lua_State* L) -> int {
+            const QString name = QString::fromUtf8(lua_tostring(L, 1));
+            HostManager::self()->deleteHost(name);
+            lua_pushboolean(L, HostManager::self()->addHost(name, QString(), QString(), QString()));
+            return 1;
+        });
+        lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "closeSelf", [](lua_State* L) -> int {
+            lua_pushboolean(L, HostManager::self()->requestProfileClose(QString::fromUtf8(lua_tostring(L, 1))));
+            return 1;
+        });
+        // Where the release is first tried
+        registerRunEventLoop(host);
+        host->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onReopenExit"));
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("function onReopenExit() assert(reopenProfile(getProfileName())) end")), "The Lua chunk did not run.");
+
+        // From the profile's own script, which the profile taken out of the pool has to outlast
+        const QPointer<Host> pClosing(host);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(closeSelf(getProfileName())) runEventLoop() headlessAfterClose = string.rep('x', 1000)")),
+                 "The Lua chunk did not run.");
+        QVERIFY2(pClosing, "The profile was deleted under its own script.");
+        const QPointer<Host> pReopened(HostManager::self()->getHost(hostname));
+        QVERIFY2(pReopened && pReopened != host, "The profile was not reopened under its name.");
+        QTRY_VERIFY_WITH_TIMEOUT(!pClosing, 5000);
+        QVERIFY2(pReopened, "Closing the profile also removed the one reopened under its name.");
+        HostManager::self()->deleteHost(hostname);
+    }
+
+    // As in the GUI, whose save question runs the event loop first: a reset the close comes after is moot
+    void test_requestProfileCloseDropsAResetOfTheProfile()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString recordPath = recordDir.filePath(qsl("record.txt"));
+        const QString name = qsl("Test-Headless-Host-Reset-Then-Close");
+        QVERIFY(writeRecordingProfile(name, false, recordPath));
+        Host* host = HostManager::self()->openProfile(name, false);
+        QVERIFY2(host, "The saved profile did not open.");
+        const QPointer<Host> pHost(host);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessRecord('reset ' .. tostring(resetProfile())) headlessRecord('close ' .. tostring(closeProfile(getProfileName())))")),
+                 "The Lua chunk did not run.");
+        QTRY_VERIFY_WITH_TIMEOUT(!pHost, 5000);
+        QCOMPARE(readRecord(recordPath), qsl("%1 started\n%1 sysLoadEvent\n%1 reset true\n%1 sysExitEvent\n%1 close true\n").arg(name));
+    }
+
+    // Near the end, as it closes every profile in the pool. As the GUI's: once the calling script has finished,
+    // each profile gets sysExitEvent and is saved, whatever its save on exit says, and the application quits.
+    void test_closeMudletClosesEveryProfileAndQuitsWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString recordPath = recordDir.filePath(qsl("record.txt"));
+        const QString first = qsl("Test-Headless-Host-Quit-1");
+        const QString second = qsl("Test-Headless-Host-Quit-2");
+        const QString closedFirst = qsl("Test-Headless-Host-Quit-3");
+        QVERIFY(writeRecordingProfile(first, true, recordPath));
+        QVERIFY(writeRecordingProfile(second, false, recordPath));
+        QVERIFY(writeRecordingProfile(closedFirst, true, recordPath));
+        // The first profile's load asks to quit, then reads a JSON map, which runs the event loop
+        QFile save(qsl("%1/2020-01-01#00-00-00.xml").arg(MudletApp::getMudletPath(enums::profileXmlFilesPath, first)));
+        QVERIFY(save.open(QIODevice::ReadOnly));
+        QByteArray xml = save.readAll();
+        save.close();
+        xml.replace("</script>", "\ncloseMudlet() headlessRecord(&quot;closeMudlet returned&quot;)</script>");
+        QVERIFY(save.open(QIODevice::WriteOnly));
+        save.write(xml);
+        save.close();
+        const QString makerName = qsl("Test-Headless-Host-Quit-Map-Maker");
+        QVERIFY2(HostManager::self()->addHost(makerName, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        TMap* makerMap = HostManager::self()->getHost(makerName)->mpMap.data();
+        makerMap->addRoom(5);
+        makerMap->setRoomArea(5, makerMap->mpRoomDB->addArea(qsl("Headless Quit Area")));
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileMapsPath, first)));
+        QVERIFY(makerMap->writeJsonMapFile(qsl("%1/headless.json").arg(MudletApp::getMudletPath(enums::profileMapsPath, first))).first);
+        HostManager::self()->deleteHost(makerName);
+
+        QVERIFY2(HostManager::self()->openProfile(second, false), "The saved profile did not open.");
+        QVERIFY2(HostManager::self()->openProfile(closedFirst, false), "The saved profile did not open.");
+        QVERIFY(QFile::remove(recordPath));
+        // As in the GUI, the close waits for the load, rather than cutting its map short
+        Host* host = HostManager::self()->openProfile(first, false);
+        QVERIFY2(host, "The saved profile did not open.");
+        QVERIFY2(host->mpMap->mpRoomDB->getRoom(5), "The profile's map was cut short as it loaded.");
+        QCOMPARE(readRecord(recordPath), qsl("%1 started\n%1 closeMudlet returned\n%1 sysLoadEvent\n").arg(first));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(registerAnonymousEventHandler("sysExitEvent", function()
+  headlessRecord("closeProfile in exit " .. tostring(closeProfile([[%1]])))
+end))lua")
+                                                                           .arg(second)));
+        const int openBefore = HostManager::self()->getHostCount();
+        QVERIFY(clearMapSaves(first));
+        // Nothing waits for a save once its profile has gone
+        QStringList saveOrder;
+        // Goes before saveOrder does, so a test that ends early leaves no connection to it
+        QObject saveWatch;
+        for (const QString& name : {first, second, closedFirst}) {
+            Host* pClosing = HostManager::self()->getHost(name);
+            connect(pClosing, &Host::profileSaveFinished, &saveWatch, [&saveOrder, name]() {
+                saveOrder << qsl("%1 saved").arg(name);
+            });
+            connect(pClosing, &QObject::destroyed, &saveWatch, [&saveOrder, name]() {
+                saveOrder << qsl("%1 gone").arg(name);
+            });
+        }
+
+        // As in the GUI, nor while a profile runs a nested event loop, as its save question would
+        Host* pumping = HostManager::self()->getHost(second);
+        pumping->getLuaInterpreter()->enterNestedEventLoop();
+        QTest::qWait(200);
+        pumping->getLuaInterpreter()->leaveNestedEventLoop();
+        QCOMPARE(HostManager::self()->getHostCount(), openBefore);
+
+        // Where the close then runs, as the GUI's does
+        registerRunEventLoop(host);
+        const QPointer<Host> pHost(host);
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+runEventLoop()
+headlessRecord("closeProfile " .. tostring(closeProfile([[%1]])))
+)lua")
+                                                                                    .arg(closedFirst));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QVERIFY2(pHost, "The profile was deleted under its script.");
+        QCOMPARE(HostManager::self()->getHostCount(), 1);
+
+        // The close can run from an event loop pump before the embedder's exec(), and the quit then
+        // waits for that exec(), the way an embedder learns of it
+        QElapsedTimer pumped;
+        pumped.start();
+        while (HostManager::self()->getHostCount() && pumped.elapsed() < 10000) {
+            QCoreApplication::processEvents();
+        }
+        QCOMPARE(HostManager::self()->getHostCount(), 0);
+        QCOMPARE(execUntilQuit(std::chrono::seconds(20)), 0);
+        // Once the application has quit, it is not asked to again
+        QCOMPARE(execUntilQuit(std::chrono::milliseconds(300)), 2);
+        QCOMPARE(readRecord(recordPath),
+                 qsl("%1 started\n%1 closeMudlet returned\n%1 sysLoadEvent\n%1 sysExitEvent\n%2 sysExitEvent\n%1 closeProfile in exit true\n%3 sysExitEvent\n%1 closeProfile nil\n")
+                         .arg(first, second, closedFirst));
+        QCOMPARE(saveCount(first), 2);
+        QCOMPARE(saveCount(second), 2);
+        QCOMPARE(saveCount(closedFirst), 2);
+        for (const QString& name : {first, second, closedFirst}) {
+            QCOMPARE(saveOrder.count(qsl("%1 saved").arg(name)), 1);
+            QVERIFY2(saveOrder.indexOf(qsl("%1 saved").arg(name)) < saveOrder.indexOf(qsl("%1 gone").arg(name)), qPrintable(saveOrder.join(qsl(", "))));
+        }
+        QVERIFY2(newestMapSaveHoldsRoom(first, 5), "closeMudlet() did not save the profile's map.");
+    }
+    // After the one above, as it quits too. A profile an exit handler takes out of the pool as its own
+    // script runs is deleted before the quit, as nothing would delete it after, and a profile that script
+    // opens meanwhile is closed and saved too.
+    void test_closeMudletQuitsOnceAProfileTakenOutOfThePoolIsDeleted()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString recordPath = recordDir.filePath(qsl("record.txt"));
+        const QString heldName = qsl("Test-Headless-Host-Quit-Held");
+        const QString takingName = qsl("Test-Headless-Host-Quit-Takes");
+        const QString openedName = qsl("Test-Headless-Host-Quit-Opened-Meanwhile");
+        QVERIFY(writeRecordingProfile(openedName, false, recordPath));
+        QVERIFY2(HostManager::self()->addHost(heldName, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        QVERIFY2(HostManager::self()->addHost(takingName, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* held = HostManager::self()->getHost(heldName);
+        Host* taking = HostManager::self()->getHost(takingName);
+        // Stands in for an embedder's slot
+        lua_register(taking->getLuaInterpreter()->getLuaGlobalState(), "deleteFromPool", [](lua_State* L) -> int {
+            HostManager::self()->deleteHost(QString::fromUtf8(lua_tostring(L, 1)));
+            return 0;
+        });
+        taking->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onExitTakeHeld"));
+        QVERIFY2(taking->getLuaInterpreter()->compileAndExecuteScript(qsl("function onExitTakeHeld() deleteFromPool([[%1]]) end").arg(heldName)), "The Lua chunk did not run.");
+        // Where the close and the quit then run
+        registerRunEventLoop(held);
+        const QPointer<Host> pHeld(held);
+        bool heldRan = false;
+        // Goes before heldRan does, so a test that ends early leaves no timer writing to it
+        QObject runWatch;
+        QTimer::singleShot(0, &runWatch, [pHeld, &heldRan, openedName]() {
+            heldRan = pHeld && pHeld->getLuaInterpreter()->compileAndExecuteScript(qsl("runEventLoop() assert(loadProfile([[%1]], true))").arg(openedName));
+        });
+        QVERIFY2(taking->getLuaInterpreter()->compileAndExecuteScript(qsl("closeMudlet()")), "The Lua chunk did not run.");
+
+        QCOMPARE(execUntilQuit(std::chrono::seconds(20)), 0);
+        QVERIFY2(heldRan, "The Lua chunk did not run.");
+        QVERIFY2(!pHeld, "The application quit with a profile taken out of the pool still undeleted.");
+        QCOMPARE(HostManager::self()->getHostCount(), 0);
+        QCOMPARE(readRecord(recordPath), qsl("%1 started\n%1 sysLoadEvent\n%1 sysExitEvent\n").arg(openedName));
+        QCOMPARE(saveCount(openedName), 2);
+    }
+
+    // After the ones above, as it quits too. As in the GUI, whose alert runs the event loop before its
+    // close: a reset asked for first ends before the close
+    void test_closeMudletLetsAResetAskedForFirstEnd()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString recordPath = recordDir.filePath(qsl("record.txt"));
+        const QString name = qsl("Test-Headless-Host-Quit-Reset");
+        QVERIFY(writeRecordingProfile(name, false, recordPath));
+        Host* host = HostManager::self()->openProfile(name, false);
+        QVERIFY2(host, "The saved profile did not open.");
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("closeMudlet() headlessRecord('reset ' .. tostring(resetProfile()))")), "The Lua chunk did not run.");
+
+        QCOMPARE(execUntilQuit(std::chrono::seconds(20)), 0);
+        QCOMPARE(HostManager::self()->getHostCount(), 0);
+        QCOMPARE(readRecord(recordPath), qsl("%1 started\n%1 sysLoadEvent\n%1 reset true\n%1 started\n%1 sysLoadEvent\n%1 sysExitEvent\n").arg(name));
+    }
+
+    // After the ones above, as it quits too. As in the GUI, the other profiles close while a closed profile
+    // still runs its script, even one whose reset its close made moot
+    void test_closeMudletDoesNotWaitForTheResetOfAClosedProfile()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString recordPath = recordDir.filePath(qsl("record.txt"));
+        const QString closedName = qsl("Test-Headless-Host-Quit-Closed-Reset");
+        const QString otherName = qsl("Test-Headless-Host-Quit-Other");
+        QVERIFY(writeRecordingProfile(closedName, false, recordPath));
+        QVERIFY(writeRecordingProfile(otherName, false, recordPath));
+        Host* closed = HostManager::self()->openProfile(closedName, false);
+        QVERIFY2(closed, "The saved profile did not open.");
+        Host* other = HostManager::self()->openProfile(otherName, false);
+        QVERIFY2(other, "The saved profile did not open.");
+        QVERIFY(QFile::remove(recordPath));
+        registerRunEventLoop(closed);
+        const QPointer<Host> pClosed(closed);
+        bool closedRan = false;
+        // Goes before closedRan does, so a test that ends early leaves no timer writing to it
+        QObject runWatch;
+        QTimer::singleShot(0, &runWatch, [pClosed, &closedRan]() {
+            closedRan = pClosed
+                        && pClosed->getLuaInterpreter()->compileAndExecuteScript(
+                                qsl("closeProfile(getProfileName()) headlessRecord('reset ' .. tostring(resetProfile())) runEventLoop() headlessRecord('script ends')"));
+        });
+        QVERIFY2(other->getLuaInterpreter()->compileAndExecuteScript(qsl("closeMudlet()")), "The Lua chunk did not run.");
+
+        QCOMPARE(execUntilQuit(std::chrono::seconds(20)), 0);
+        QVERIFY2(closedRan, "The Lua chunk did not run.");
+        QCOMPARE(readRecord(recordPath), qsl("%1 sysExitEvent\n%1 reset true\n%2 sysExitEvent\n%1 script ends\n").arg(closedName, otherName));
+        QTRY_VERIFY_WITH_TIMEOUT(!pClosed, 5000);
+        QCOMPARE(HostManager::self()->getHostCount(), 0);
+    }
+
+    // After the ones above, as it quits too. As in the GUI, whose alert runs the event loop only once: a reset
+    // asked for by a script still running is not waited for, and the close makes it moot
+    void test_closeMudletDoesNotWaitForAResetItsScriptHolds()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString recordPath = recordDir.filePath(qsl("record.txt"));
+        const QString resettingName = qsl("Test-Headless-Host-Quit-Resetting");
+        const QString otherName = qsl("Test-Headless-Host-Quit-Beside-Reset");
+        QVERIFY(writeRecordingProfile(resettingName, false, recordPath));
+        QVERIFY(writeRecordingProfile(otherName, false, recordPath));
+        Host* resetting = HostManager::self()->openProfile(resettingName, false);
+        QVERIFY2(resetting, "The saved profile did not open.");
+        QVERIFY2(HostManager::self()->openProfile(otherName, false), "The saved profile did not open.");
+        QVERIFY(QFile::remove(recordPath));
+        registerRunEventLoop(resetting);
+        const QPointer<Host> pResetting(resetting);
+        bool resettingRan = false;
+        // Goes before resettingRan does, so a test that ends early leaves no timer writing to it
+        QObject runWatch;
+        QTimer::singleShot(0, &runWatch, [pResetting, &resettingRan]() {
+            resettingRan =
+                    pResetting
+                    && pResetting->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessRecord('reset ' .. tostring(resetProfile())) closeMudlet() runEventLoop() headlessRecord('script ends')"));
+        });
+
+        QCOMPARE(execUntilQuit(std::chrono::seconds(20)), 0);
+        QVERIFY2(resettingRan, "The Lua chunk did not run.");
+        QTRY_VERIFY_WITH_TIMEOUT(!pResetting, 5000);
+        QCOMPARE(HostManager::self()->getHostCount(), 0);
+        QStringList record = readRecord(recordPath).split(QChar('\n'), Qt::SkipEmptyParts);
+        QCOMPARE(record.takeFirst(), qsl("%1 reset true").arg(resettingName));
+        QCOMPARE(record.takeLast(), qsl("%1 script ends").arg(resettingName));
+        record.sort();
+        QCOMPARE(record, (QStringList{qsl("%1 sysExitEvent").arg(otherName), qsl("%1 sysExitEvent").arg(resettingName)}));
     }
 };
 

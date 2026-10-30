@@ -230,7 +230,7 @@ public:
     bool saveWindowLayout();
     bool saveWindowLayoutForScript() override;
     bool openProfile(const QString& profileName, bool connect) override;
-    bool requestProfileTabClose(const QString& profileName) override;
+    bool requestProfileClose(const QString& profileName) override;
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
     void setAppearance(enums::Appearance, const bool& loading = false);
