@@ -11778,11 +11778,18 @@ void dlgTriggerEditor::slot_toggleCentralDebugConsole()
     TDebug::smDebugMode = !TDebug::smDebugMode;
     mudlet::smpDebugArea->setWindowTitle(tr("Central Debug Console"));
     if (TDebug::smDebugMode) {
-        // If this is the first time the window is shown we want any previously
-        // enqueued messages to be painted onto the central debug console:
-        TDebug::flushMessageQueue();
-        // Every time, not just the first: the filters may have been narrowed since it was last closed:
-        TDebug::announceFilters();
+        // Posted to run after the console's own deferred fit of its wrap to the window that showing it
+        // queued: printed now, a first opening's lines wrap at the initial 100 columns and are cut off
+        QTimer::singleShot(0ms, this, []() {
+            if (!TDebug::smDebugMode) {
+                return;
+            }
+            // If this is the first time the window is shown we want any previously
+            // enqueued messages to be painted onto the central debug console:
+            TDebug::flushMessageQueue();
+            // Every time, not just the first: the filters may have been narrowed since it was last closed:
+            TDebug::announceFilters();
+        });
     }
     mudlet::self()->refreshTabBar();
 }

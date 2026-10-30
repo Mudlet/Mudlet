@@ -4863,7 +4863,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -5491,7 +5491,8 @@ void dlgProfilePreferences::loadEditorTab()
     }
 
     // pre-select the current theme
-    code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(qsl("Select theme"));
+    //: Placeholder of the editor colour theme picker on the Editor page of the settings
+    code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(tr("Select theme"));
     auto themeIndex = code_editor_theme_selection_combobox->findText(pHost->getEditorTheme());
     code_editor_theme_selection_combobox->setCurrentIndex(themeIndex);
     slot_themeSelected(themeIndex);
@@ -5500,7 +5501,8 @@ void dlgProfilePreferences::loadEditorTab()
     code_editor_theme_selection_combobox->setMaxVisibleItems(20);
 
     // pre-select the last shown script to preview
-    script_preview_combobox->lineEdit()->setPlaceholderText(qsl("Select script to preview"));
+    //: Placeholder of the picker for the script shown as the theme preview on the Editor page of the settings
+    script_preview_combobox->lineEdit()->setPlaceholderText(tr("Select script to preview"));
     auto scriptIndex = script_preview_combobox->findData(QVariant::fromValue(QPair<QString, int>(pHost->mThemePreviewType, pHost->mThemePreviewItemID)));
     script_preview_combobox->setCurrentIndex(scriptIndex == -1 ? 1 : scriptIndex);
     slot_scriptSelected(scriptIndex == -1 ? 1 : scriptIndex);
