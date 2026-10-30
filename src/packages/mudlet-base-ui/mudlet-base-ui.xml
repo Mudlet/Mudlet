@@ -3052,6 +3052,25 @@ function BaseUI.maybeAnnounce()
   BaseUI.announce()
 end
 
+-- The main console wraps at the profile's wrap width, not at what the dock
+-- leaves of the window, so a longer line runs on underneath the dock. The floor
+-- is for a console in a background tab, which is measured as next to no width.
+local function fitConsole(text)
+  local width = math.min(getWindowWrap("main"), math.max(40, getColumnCount("main") - 1))
+  local lines, words, used = {}, {}, 0
+  for word in text:gmatch("%S+") do
+    local length = utf8.len((word:gsub("&lt;[^&gt;]*&gt;", "")))
+    if used &gt; 0 and used + 1 + length &gt; width then
+      lines[#lines + 1] = table.concat(words, " ")
+      words, used = {}, 0
+    end
+    used = used + (used &gt; 0 and 1 or 0) + length
+    words[#words + 1] = word
+  end
+  lines[#lines + 1] = table.concat(words, " ")
+  return table.concat(lines, "\n")
+end
+
 function BaseUI.announce()
   -- dormant covers the tour-finished callback arriving after the UI has
   -- already stepped aside or been hidden - no point introducing it then
@@ -3060,9 +3079,9 @@ function BaseUI.announce()
   end
   BaseUI.settings.announced = true
   BaseUI.saveSettings()
-  cecho("\n&lt;cyan&gt;[ Mudlet UI ] Built you a starter interface from what your game supports - health bars, map and chat.\n")
-  cecho("&lt;cyan&gt;[ Mudlet UI ] Drag its title bar to move it, or any section's header out of it to put that section anywhere.\n")
-  cecho("&lt;cyan&gt;[ Mudlet UI ] The &lt;yellow&gt;" .. paletteGlyph .. "&lt;cyan&gt; in its title bar changes how it looks - type &lt;yellow&gt;baseui&lt;cyan&gt; for the rest.&lt;reset&gt;\n")
+  cecho("\n" .. fitConsole("&lt;cyan&gt;[ Mudlet UI ] Built you a starter interface from what your game supports - health bars, map and chat.") .. "\n")
+  cecho(fitConsole("&lt;cyan&gt;[ Mudlet UI ] Drag its title bar to move it, or any section's header out of it to put that section anywhere.") .. "\n")
+  cecho(fitConsole("&lt;cyan&gt;[ Mudlet UI ] The &lt;yellow&gt;" .. paletteGlyph .. "&lt;cyan&gt; in its title bar changes how it looks - type &lt;yellow&gt;baseui&lt;cyan&gt; for the rest.&lt;reset&gt;") .. "\n")
 end
 
 function BaseUI.hide()
