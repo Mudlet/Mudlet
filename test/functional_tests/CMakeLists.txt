@@ -341,6 +341,7 @@ set(TEARDOWN_GROUP_TEST_SOURCES
     HostChildTeardownTest.cpp
     HostManagerAccessorTest.cpp
     HostWidgetDecouplingTest.cpp
+    InstanceForwardTest.cpp
 )
 if(USE_HEADLESS)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessRunnerTest.cpp HeadlessSessionTest.cpp)
