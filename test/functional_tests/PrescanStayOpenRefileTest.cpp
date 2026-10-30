@@ -102,8 +102,8 @@ private:
         }
         teardown += qsl("killTrigger('%1Target')\nkillTrigger('%1Probe')\n").arg(tag);
         QVERIFY2(runLua(teardown), "the teardown did not compile, so the next slot would measure against this one's triggers");
-        // one line, so the killings are reclaimed and the live-root count the
-        // next slot measures against is its own
+        // one line, so the snapshot drops the killed roots and the next slot
+        // measures against its own triggers
         runLua(qsl("feedTriggers('teardownline\\n')"));
     }
 
@@ -202,7 +202,7 @@ private slots:
 
     // A script that sets the same stay-open count every line changes nothing the
     // index files on. The refile it would otherwise cost is not merely wasted
-    // work: each one abandons entries that buy a rebuild.
+    // work: each one costs the rest of its line the filters.
     void repeatedStayOpenCallsThatChangeNothingCostNothing()
     {
         constexpr int lines = 400;
@@ -211,6 +211,11 @@ private slots:
 
         const quint64 rebuilds = feedAndCountRebuilds(qsl("steady"), lines);
         const int fires = luaInteger("steadyFires");
+        auto* triggerUnit = mpHost->getTriggerUnit();
+        const quint32 filterEpoch = triggerUnit->rootFilterEpoch();
+        const quint32 unfilterableEpoch = triggerUnit->unfilterableEpoch();
+        runLua(qsl("feedTriggers('steadyprobeline again\\n')"));
+        const bool filtersKept = filterEpoch == triggerUnit->rootFilterEpoch() && unfilterableEpoch == triggerUnit->unfilterableEpoch();
         removeProbe(qsl("steady"));
 
         // The window is reopened at 3 before it can ever count down to 0, so
@@ -224,13 +229,14 @@ private slots:
                                     .arg(callsPerLine)
                                     .arg(lines)
                                     .arg(rebuilds)));
+        QVERIFY2(filtersKept, "a stay-open call that changed nothing still cost the rest of its line the filters");
     }
 
     // A script that opens and closes one trigger repeatedly inside a single line
     // queues that one slot to be filed again as many times as it was called,
     // because the index a line is reading from is only patched once the line is
-    // over. Filing it once is enough; filing it again for every call abandons
-    // entries that buy a rebuild.
+    // over. Filing it once is enough, and filing it again for every call must
+    // still cost the index no rebuild.
     void manyFlipsInsideOneLineCostOneRefile()
     {
         constexpr int lines = 60;
@@ -276,8 +282,8 @@ private slots:
         delete group;
     }
 
-    // A root is entered by the root loop whatever the tree index says, so one held open is not tracked
-    // as open; moved below a group by the editor, it has to be entered all the same while it stays open
+    // A root held open is unfiled, so the root walk enters it without tracking it as open; moved below a
+    // group by the editor, it has to be entered all the same while it stays open
     void openRootMovedBelowAGroupStillFires()
     {
         QVERIFY2(runLua(qsl(R"(
@@ -306,7 +312,7 @@ private slots:
         delete group;
     }
 
-    // A line's candidates are settled before any script runs, so a root that its own match on a line fed
+    // A line's root walk is marked before any script runs, so a root that its own match on a line fed
     // from a script holds open has to reach the line that script's trigger matched, as it would unfiltered
     void rootHeldOpenByItsMatchInANestedFeedFiresOnTheOuterLine()
     {
@@ -364,6 +370,35 @@ private slots:
         const int fires = luaInteger("multilineFires");
         delete pTrigger;
         runLua(qsl("for _, id in ipairs(multilineIds) do killTrigger(id) end feedTriggers('multilineteardownline\\n')"));
+
+        QCOMPARE(fires, 1);
+    }
+
+    // The editor recompiles a root in place, which only C++ can do, and its slot has to be refiled under the new text
+    void editedRootFiresOnItsNewPattern()
+    {
+        QVERIFY2(runLua(qsl(R"(
+            editedIds = {}
+            for index = 1, 80 do
+                editedIds[index] = tempTrigger("qqeditedfiller" .. index .. "zz", function() end)
+            end
+            editedFires = 0
+        )")),
+                 "the triggers did not compile");
+        auto* pTrigger = new TTrigger(nullptr, mpHost);
+        pTrigger->setName(qsl("editedRoot"));
+        QVERIFY(pTrigger->registerTrigger());
+        QVERIFY(pTrigger->setRegexCodeList({qsl("qzvjk")}, {REGEX_SUBSTRING}));
+        QVERIFY(pTrigger->setScript(qsl("editedFires = editedFires + 1")));
+        pTrigger->setIsActive(true);
+        runLua(qsl("feedTriggers('editedwarmupline\\n')"));
+        QVERIFY2(mpHost->getTriggerUnit()->rootPrescanActive(), "the root prescan has not engaged, so it cannot skip the edited trigger");
+
+        QVERIFY(pTrigger->setRegexCodeList({qsl("xjqwv")}, {REGEX_SUBSTRING}));
+        runLua(qsl("feedTriggers('xjqwv\\n')"));
+        const int fires = luaInteger("editedFires");
+        delete pTrigger;
+        runLua(qsl("for _, id in ipairs(editedIds) do killTrigger(id) end feedTriggers('editedteardownline\\n')"));
 
         QCOMPARE(fires, 1);
     }

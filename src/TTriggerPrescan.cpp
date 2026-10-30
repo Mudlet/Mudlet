@@ -106,13 +106,22 @@ void TTriggerPrescan::removeSlot(const int slot)
 
 void TTriggerPrescan::removeSlots(const std::vector<int>& freed)
 {
+    const bool reindexing = freed.size() * 2 >= mSlotGrams.size() - mFreeSlots.size();
     for (const int slot : freed) {
-        GramRange& range = mSlotGrams[slot];
-        mFiledGrams -= range.mCount;
-        range = GramRange{};
+        if (reindexing) {
+            GramRange& range = mSlotGrams[slot];
+            mFiledGrams -= range.mCount;
+            range = GramRange{};
+        } else {
+            unfileGrams(slot);
+        }
         mFreeSlots.push_back(slot);
     }
-    reindex();
+    if (reindexing) {
+        reindex();
+    } else {
+        compactIfWasteful();
+    }
 }
 
 void TTriggerPrescan::refileSlot(const int slot, const std::vector<quint64>& grams)

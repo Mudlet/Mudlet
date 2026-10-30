@@ -695,6 +695,9 @@ bool TriggerUnit::stampTreeCandidates(const QString& line, RootNodeSnapshot& sna
         }
         const int position = node->rootSnapshotPosition();
         if (position < 0 || position >= rootCount || roots.mChildren[position] != node) {
+            if (Q_UNLIKELY(smTreeIndexMode == TreeIndexMode::Verify)) {
+                qWarning().nospace() << "TriggerUnit tree index MISMATCH: root " << node->getName() << " is filed at position " << position << " of a root list it is not at";
+            }
             rootsWalkable = false;
             continue;
         }
@@ -721,7 +724,7 @@ void TriggerUnit::refile(TTrigger* pT, const TriggerRefile change)
 {
     // The stay-open count is read live by the tree index, so only a change to the grams unfiles a trigger
     bool unfile = false;
-    // The line's candidate list was settled before any script ran, so the rest of it goes unfiltered
+    // The line's root walk was marked before any script ran, so the rest of it goes unfiltered
     bool actsOnLineInFlight = false;
     switch (change) {
     case TriggerRefile::Patterns:
@@ -740,7 +743,7 @@ void TriggerUnit::refile(TTrigger* pT, const TriggerRefile change)
     case TriggerRefile::Shut:
         break;
     }
-    // A root is refiled with its snapshot position, so the temporary triggers scripts arm every line cost the tree no rebuild
+    // A root is refiled as its snapshot entry is, so the temporary triggers scripts arm every line cost the tree no refiling
     if (unfile && (pT->mTreeIndexPosition >= 0 || pT->getParent())) {
         unfileTreeNode(pT);
     }
@@ -776,7 +779,7 @@ void TriggerUnit::markRootNodeAppended(TTrigger* pT)
 void TriggerUnit::markRootNodeRemoved(TTrigger* pT)
 {
     mRootNodeSnapshotStale = true;
-    // Now, as the trigger may be freed before the next line, and the line in flight has stamped already
+    // Unfiled at once: the trigger may be freed before the next line, and the line in flight has stamped already
     unfileRoot(pT);
     const int position = pT->rootSnapshotPosition();
     // Even when rebuilding: a stale position on a trigger registered again later would make its next
@@ -1220,7 +1223,7 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
         const bool nowOpen = pT->mKeepFiring > 0;
         if (wasOpen == nowOpen) {
             // Staying open or shut changes nothing the trigger is filtered by, and scripts often set the
-            // same count every line: refiling would spend a mutation per call towards a rebuild. Not keyed
+            // same count every line: refiling would cost the rest of each such line its filters. Not keyed
             // on grams: a regex or colour trigger has none, yet can be ruled out of a line while shut.
             continue;
         }

@@ -199,7 +199,7 @@ struct TPatternLiteral
 };
 
 // What changed about a trigger that TriggerUnit::refile() is told of, which decides what of the skip
-// indexes it has to redo and whether the line in flight has to drop its candidate list
+// indexes it has to redo and whether the line in flight has to drop its root walk
 enum class TriggerRefile : quint8 {
     // Its patterns were recompiled, or it stopped being a line or multiline trigger
     Patterns,
@@ -553,7 +553,7 @@ public:
     int mColorTriggerFgAnsi = scmIgnored;
     int mColorTriggerBgAnsi = scmIgnored;
     int mKeepFiring = 0;
-    // Written by TriggerUnit's tree index - see skippableForLine(); the position is -1 while unfiled
+    // Written by TriggerUnit's tree index - see skippableForLine(); the slot is -1 while unfiled
     quint32 mLineStamp = 0;
     int mTreeIndexPosition = -1;
     // The same index's slot for a root, filed as its snapshot entry is refreshed; -1 while unfiled

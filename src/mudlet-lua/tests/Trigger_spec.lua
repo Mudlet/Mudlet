@@ -8073,6 +8073,18 @@ describe("Trigger processing", function()
                 "a nested feedTriggers disturbed the outer line's remaining triggers")
         end)
 
+        -- The outer line holds the root list, so a nested line after an arming
+        -- has it rebuilt rather than patched, and has to walk what it cannot file
+        it("fires an unfiled trigger and one just armed on a line fed after the arming", function()
+            track(tempRegexTrigger("nestedregex_\\d+", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            track(tempTrigger("rebuild_feeder_here", function()
+                track(tempTrigger("rebuild_armed_text", function() _G.TrigSpec.count = _G.TrigSpec.count + 10 end))
+                feedTriggers("\nnestedregex_7 rebuild_armed_text\n")
+            end))
+            feedTriggers("\nrebuild_feeder_here\n")
+            assert.are.equal(11, _G.TrigSpec.count, "a rebuilt root list lost a trigger it cannot file, or one armed just before it")
+        end)
+
         -- The candidate list for a line is settled before any trigger runs, so a
         -- script that makes a LATER trigger fire without matching has to reach
         -- the line already in flight.

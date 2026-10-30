@@ -44,7 +44,7 @@ public:
     // Shorter n-grams reject nothing since nearly every line holds them; such triggers are offered every line.
     static constexpr int scmMinGramLength = 2;
 
-    // The pattern's rarest-looking n-gram, which keeps candidate lists short, or 0 when it is too short
+    // The pattern's rarest-looking n-gram, which keeps buckets short, or 0 when it is too short
     static quint64 patternGram(const QString& pattern);
 
     // One trigger's worth of work each, so arming and killing triggers every line costs no rebuild. A
@@ -52,7 +52,8 @@ public:
     int fileSlot(const std::vector<quint64>& grams);
     void removeSlot(int slot);
     void refileSlot(int slot, const std::vector<quint64>& grams);
-    // For freeing many at once: costs one pass over what stays filed, not one per slot
+    // For freeing many at once: when they are most of what is filed, one pass over the rest is cheaper
+    // than unfiling each, and otherwise the rest is left alone
     void removeSlots(const std::vector<int>& freed);
 
     // The filed slots the line's n-grams hit, each once, in no particular order
@@ -86,8 +87,8 @@ private:
     // filed under them, both until reindex().
     std::vector<quint64> mGramBits;
     std::unordered_map<quint64, std::vector<int>> mIndex;
-    // Lets unfiling a slot find its buckets without a scan. Append-only, so a removed or refiled slot
-    // abandons its entries until reindex() reclaims them.
+    // Lets unfiling a slot find its buckets without a scan. mGramPool is append-only, so a removed or
+    // refiled slot abandons its entries until reindex() reclaims them.
     std::vector<GramRange> mSlotGrams;
     std::vector<quint64> mGramPool;
     int mFiledGrams = 0;

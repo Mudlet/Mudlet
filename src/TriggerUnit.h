@@ -94,7 +94,8 @@ public:
     // Whether the last snapshot walks the roots by the index, so a test can tell it is relying on it
     bool rootPrescanActive() const { return mpRootNodeSnapshot && mpRootNodeSnapshot->mIndexed; }
     // Snapshot rebuilds and index reindexes, each refiling every root: both paths file the same, so this
-    // is how a test checks the incremental path keeps them flat
+    // is how a test checks the incremental path keeps them flat. A tree refiling that frees most of the
+    // index counts too.
     quint64 prescanRebuildCount() const { return mPrescanRebuilds + mTreeIndex.reindexCount(); }
     // The whole-tree index - see TTrigger::skippableForLine() and docs/platform-builds.md
     enum class TreeIndexMode { Off, On, Verify };
@@ -197,7 +198,7 @@ private:
     void stopSameLineCreationLoop(const int chainId);
     void markRootNodeAppended(TTrigger* pT);
     void markRootNodeRemoved(TTrigger* pT);
-    // For changes that move existing triggers, which the snapshot and its index can only follow by rebuilding
+    // For changes that move existing triggers, which the snapshot can only follow by rebuilding
     void markRootNodeListReordered()
     {
         mRootNodeSnapshotStale = true;
