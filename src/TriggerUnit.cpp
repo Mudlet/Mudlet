@@ -757,17 +757,20 @@ void TriggerUnit::refreshRootNodeSnapshot()
             std::sort(mRootNodesRefiled.begin(), mRootNodesRefiled.end());
             mRootNodesRefiled.erase(std::unique(mRootNodesRefiled.begin(), mRootNodesRefiled.end()), mRootNodesRefiled.end());
         }
+        std::vector<quint64> grams;
         for (const int position : mRootNodesRefiled) {
             if (TTrigger* pT = snapshot.mNodes[position]) {
                 snapshot.mFilters[position] = pT->rootFilter();
-                snapshot.mPrescan.refileSlot(position, pT->prescanGrams());
+                pT->prescanGrams(grams);
+                snapshot.mPrescan.refileSlot(position, grams);
             }
         }
         for (TTrigger* pT : mRootNodesAppended) {
             pT->setRootSnapshotPosition(static_cast<int>(snapshot.mNodes.size()));
             snapshot.mNodes.push_back(pT);
             snapshot.mFilters.push_back(pT->rootFilter());
-            snapshot.mPrescan.appendSlot(pT->prescanGrams());
+            pT->prescanGrams(grams);
+            snapshot.mPrescan.appendSlot(grams);
         }
     } else {
         // Replace only a snapshot an outer pass has pinned; refilling an unpinned one avoids allocating

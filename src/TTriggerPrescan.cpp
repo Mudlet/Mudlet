@@ -152,8 +152,10 @@ void TTriggerPrescan::rebuild(const std::vector<TTrigger*>& roots)
     mMutations = 0;
 
     const int rootCount = static_cast<int>(roots.size());
+    std::vector<quint64> grams;
     for (int position = 0; position < rootCount; ++position) {
-        fileSlot(position, roots[position]->prescanGrams());
+        roots[position]->prescanGrams(grams);
+        fileSlot(position, grams);
     }
     mActive = mIndexedSlots >= scmMinimumIndexedTriggers;
 }

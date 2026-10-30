@@ -184,12 +184,26 @@ private:
     mutable int mQuestionsAsked = 0;
 };
 
+// The text every match of one pattern has to contain, so a line without it rules the pattern out
+// unrun. Every text prefilter reads it from here.
+struct TPatternLiteral
+{
+    TBigramFilter::Bits bigrams;
+    // TTriggerPrescan::patternGram() of the text: 0, with no bigrams set, when the pattern has no text
+    // of two characters or more to be ruled out by
+    quint64 gram = 0;
+    // How a substring pattern matches, and how a perl pattern's text is searched for before pcre2 is
+    // asked; null for every other pattern, and for a perl pattern without such text
+    std::unique_ptr<TNeedle> matcher;
+};
+
 // What changed about a trigger that TriggerUnit::refile() is told of, which decides what of the skip
 // indexes it has to redo and whether the line in flight has to drop its candidate list
 enum class TriggerRefile : quint8 {
     // Its patterns were recompiled, or it stopped being a line or multiline trigger
     Patterns,
-    // It became a line or multiline trigger, so acts on lines it does not match, the one in flight included
+    // It became a line or multiline trigger, which acts on lines its pinned copies would rule out, the one
+    // in flight included
     SeesEveryLine,
     // setTriggerStayOpen() held it open, so it fires without matching, on the line in flight too if the
     // pass has yet to reach it
@@ -361,7 +375,6 @@ public:
     void execute();
     bool isFilterChain();
     bool setRegexCodeList(QStringList patterns, QList<int> patternKinds, bool existingTrigger = true);
-    void rebuildPrescanGrams();
     QString getScript() const { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();
@@ -424,29 +437,44 @@ public:
     static void bumpStructureGeneration() { ++smStructureGeneration; }
     bool checkIfNew();
     void unmarkAsNew();
-    // Empty when the trigger cannot be decided from the line's text alone, in
-    // which case TTriggerPrescan offers it every line.
-    const std::vector<quint64>& prescanGrams() const;
+    // How many patterns, from the first, decide whether a line can make this trigger act while nothing
+    // holds it open (see actsWithoutMatching()): it acts only on a line holding the text of one of
+    // them. Every pattern, or the first alone for a multiline trigger, which with no state in progress
+    // tests nothing else; 0 when the line's text cannot rule it out.
+    int textDecidedPatterns() const
+    {
+        if (mIsLineTrigger || mPatternLiterals.empty()) {
+            return 0;
+        }
+        if (mIsMultiline) {
+            return mPatternLiterals.front().gram ? 1 : 0;
+        }
+        return mEveryPatternHasText ? static_cast<int>(mPatternLiterals.size()) : 0;
+    }
     // Whether the line's bigram summary already rules this trigger out, so match() need not be entered.
-    // One-sided like the summary: false leaves match() to decide. Only a trigger whose every pattern
-    // matches by containing text, and that never fires on a line it does not match - the cases
-    // prescanGrams() reads, taken live so a script changing them mid-line is seen at once.
+    // One-sided like the summary: false leaves match() to decide. Read live, so a script changing the
+    // trigger mid-line is seen at once.
     bool cannotMatch(const TBigramFilter& lineBigrams, const QString& line) const
     {
-        if (mPatternBigrams.empty() || mIsLineTrigger || mIsMultiline || mKeepFiring > 0) {
+        const int count = textDecidedPatterns();
+        if (!count || actsWithoutMatching()) {
             return false;
         }
-        for (const TBigramFilter::Bits& bits : mPatternBigrams) {
-            if (lineBigrams.couldContain(line, bits)) {
+        for (int i = 0; i < count; ++i) {
+            if (lineBigrams.couldContain(line, mPatternLiterals[i].bigrams)) {
                 return false;
             }
         }
         return true;
     }
-    // Grams for the whole-tree index: those of every pattern, or of the first alone for a multiline
-    // trigger, which with no state in progress tests nothing else. Empty, with false, when the line's
+    // Grams for the whole-tree index, one per textDecidedPatterns(). Empty, with false, when the line's
     // text cannot rule the trigger out.
     bool treeIndexGrams(std::vector<quint64>& grams) const;
+    // The same for the root list's index, whose candidate list is settled before a line runs and reads no
+    // trigger after: one held open is offered every line until refile() files it again, and a multiline
+    // one always, as nothing refiles it when it opens or closes a state. A perl one is left to the bigram
+    // filters: filed, a profile's regex triggers switch the index on where walking those is cheaper.
+    bool prescanGrams(std::vector<quint64>& grams) const;
     // Whether match() would do nothing on this line, so need not be entered: the tree index filed this
     // trigger and the line held none of its grams, and nothing makes it act on a line it does not
     // match. One-sided like the index: false leaves match() to decide. A trigger changed or created
@@ -555,7 +583,6 @@ public:
     QPointer<Host> mpHost;
     QString mName;
     QStringList mPatterns;
-    std::vector<quint64> mPrescanGrams;
     int mRootSnapshotPosition = scmNeverSnapshotted;
     bool exportItem = true;
     bool mModuleMasterFolder = false;
@@ -593,6 +620,7 @@ private:
     void enterChildren(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams, bool haystackIsCapture, bool& conditionMet);
     void noteOpen();
     void refile(TriggerRefile change);
+    void patternLiteralsChanged();
     inline void filter(std::string_view capture, int posOffset, int lineNumber, bool positionsInCurrentColumns);
     bool selectTextMatch(int lineNumber, int from, std::string_view capture) const;
     void processExactMatch(int patternNumber, int posOffset, int lineNumber);
@@ -623,29 +651,9 @@ private:
 
 
     QList<int> mPatternKinds;
-    // matcher is null for non-substring patterns; kept beside its bits so the two can't fall out of step
-    struct TSubstringPattern
-    {
-        std::unique_ptr<TNeedle> matcher;
-        TBigramFilter::Bits bigrams;
-    };
     // Indexed, not keyed, by pattern number: every line reaches these for every pattern of every trigger,
     // too hot for a tree lookup and a reference count
-    std::vector<TSubstringPattern> mSubstringPatterns;
-    // Text every match of a perl pattern has to contain, prepared like a
-    // substring pattern so that a line without it is dismissed without asking
-    // pcre2. A null matcher for every other pattern kind and for a perl pattern
-    // that guarantees no text of two characters or more
-    struct TRegexLiteral
-    {
-        std::unique_ptr<TNeedle> matcher;
-        TBigramFilter::Bits bigrams;
-    };
-    std::vector<TRegexLiteral> mRegexLiterals;
-    // One entry per pattern while every pattern of the trigger can be dismissed
-    // by a line's bigram summary; empty as soon as one cannot, which hands every
-    // line to match() - see cannotMatch()
-    std::vector<TBigramFilter::Bits> mPatternBigrams;
+    std::vector<TPatternLiteral> mPatternLiterals;
     std::vector<QSharedPointer<pcre2_code>> mRegexes;
     std::vector<QSharedPointer<pcre2_match_data>> mMatchData;
     // char, not bool, to avoid the bit-packed vector<bool> specialisation
@@ -659,6 +667,8 @@ private:
     int mTriggerType = REGEX_SUBSTRING;
 
     bool mIsLineTrigger = false;
+    // Every pattern has a gram in mPatternLiterals; false with no patterns
+    bool mEveryPatternHasText = false;
     int mStartOfLineDelta = 0;
     int mLineDelta = 3;
     bool mIsMultiline = false;

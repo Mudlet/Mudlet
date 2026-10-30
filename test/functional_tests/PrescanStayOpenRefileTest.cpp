@@ -334,6 +334,39 @@ private slots:
 
         QCOMPARE(fires, 2);
     }
+
+    // Nothing refiles a multiline trigger when it opens a state, so a root one part-way through has to be
+    // offered a line holding only a later pattern's text
+    void multilineRootReachesItsLaterPatternWhileTheRootPrescanIsOn()
+    {
+        QVERIFY2(runLua(qsl(R"(
+            multilineIds = {}
+            for index = 1, 80 do
+                multilineIds[index] = tempTrigger("qqmultilinefiller" .. index .. "zz", function() end)
+            end
+            multilineFires = 0
+        )")),
+                 "the triggers did not compile");
+        // The plain-text multiline triggers Lua makes (perm*Trigger) have a line delta of 0, so only C++ can make one span lines
+        auto* pTrigger = new TTrigger(nullptr, mpHost);
+        pTrigger->setName(qsl("plainMultiline"));
+        QVERIFY(pTrigger->registerTrigger());
+        QVERIFY(pTrigger->setRegexCodeList({qsl("qzvjx opens"), qsl("plain closes")}, {REGEX_SUBSTRING, REGEX_SUBSTRING}));
+        pTrigger->setIsMultiline(true);
+        pTrigger->setConditionLineDelta(2);
+        QVERIFY(pTrigger->setScript(qsl("multilineFires = multilineFires + 1")));
+        pTrigger->setIsActive(true);
+        runLua(qsl("feedTriggers('multilinewarmupline\\n')"));
+        QVERIFY2(mpHost->getTriggerUnit()->rootPrescanActive(), "the root prescan has not engaged, so it cannot skip the multiline trigger");
+
+        runLua(qsl("feedTriggers('qzvjx opens\\n')"));
+        runLua(qsl("feedTriggers('plain closes\\n')"));
+        const int fires = luaInteger("multilineFires");
+        delete pTrigger;
+        runLua(qsl("for _, id in ipairs(multilineIds) do killTrigger(id) end feedTriggers('multilineteardownline\\n')"));
+
+        QCOMPARE(fires, 1);
+    }
 };
 
 #include "PrescanStayOpenRefileTest.moc"
