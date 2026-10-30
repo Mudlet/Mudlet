@@ -22,6 +22,7 @@
 
 #include "TConsoleFrontend.h"
 #include "TMxpFrameFrontend.h"
+#include "TNullMapView.h"
 #include "TPrintSink.h"
 #include "TWindowRegistry.h"
 #include "utils.h"
@@ -252,10 +253,12 @@ public:
     std::optional<QRect> mapWidgetGeometry() const override;
     bool hideMapWidget() override;
     // A map widget or an embedded mapper, either of which a real view would draw the map in
-    bool hasMapper() const { return mMapWidget || mpEmbeddedMapper; }
+    bool hasMapper() const { return mapView() != nullptr; }
+    TMapViewFrontend* mapView() const { return mpEmbeddedMapper ? mpEmbeddedMapper.data() : mMapWidget ? mMapWidget->pView.get() : nullptr; }
     void restoreOwnMapper() override {}
-    void showLoadedMap() override {}
-    void showMapAfterFailedLoad() override {}
+    // TMainConsole shows the dlgMapper drawing the map after a load; a closed map widget's dock keeps it hidden
+    void showLoadedMap() override { showEmbeddedMapper(); }
+    void showMapAfterFailedLoad() override { showEmbeddedMapper(); }
     void showMapAtPlayerArea() override {}
     bool mapperShown() const override { return false; }
     void setMapperShown(bool) override {}
@@ -413,10 +416,13 @@ private:
         QString title;
         QRect geometry;
         bool shown = false;
+        std::unique_ptr<TNullMapView> pView;
     };
     // TMainConsole::raiseWindow(), lowerWindow() and reparentWindow() take "mapper" in any case for it
     bool namesEmbeddedMapper(const QString& name) const { return mpEmbeddedMapper && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive); }
     void copyPlayerRoomStyleToMap();
+    void showEmbeddedMapper();
+    void reportEmbeddedMapperVisibility();
     QMovie* shownMovie(const QString& name) const;
     void setLabelVisible(Label& label, bool visible);
     void setLabelSize(Label& label, const QSize& size);
@@ -482,8 +488,12 @@ private:
     // TMxpFrameWidgets' container widget of each frame, which holds the frame's console until a script moves it
     std::map<QString, QPointer<QObject>> mFrameHolders;
     std::optional<MapWidget> mMapWidget;
-    // The dlgMapper createMapper() makes, a child of what holds it, so it goes with the window it is in
-    QPointer<QObject> mpEmbeddedMapper;
+    // In place of the dlgMapper createMapper() makes, a child of what holds it, so it goes with the window it is in
+    QPointer<TNullMapView> mpEmbeddedMapper;
+    // Where it is and whether it shows there, as it paints only while it and the windows holding it show
+    QString mEmbeddedMapperWindow;
+    std::shared_ptr<ScrollBox> mpEmbeddedMapperBox;
+    bool mEmbeddedMapperShown = false;
 };
 
 #endif // MUDLET_TNULLCONSOLEFRONTEND_H
