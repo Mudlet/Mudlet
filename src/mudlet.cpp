@@ -10220,46 +10220,14 @@ void mudlet::transferDockWidgetBetweenDetachedWindows(const QString& profileName
 #endif
 }
 
-bool mudlet::hasOrphanedProfiles()
-{
-    // Check all loaded profiles to see if any are orphaned
-    for (const auto& pHost : mHostManager) {
-        if (!pHost || !pHost->mainConsoleView()) {
-            continue;
-        }
-
-        const QString profileName = pHost->getName();
-
-        // Check if profile is in main window (has a tab)
-        bool inMainWindow = false;
-
-        for (int i = 0; i < mpTabBar->count(); ++i) {
-            if (mpTabBar->tabData(i).toString() == profileName) {
-                inMainWindow = true;
-                break;
-            }
-        }
-
-        // Check if profile is in a detached window
-        bool inDetachedWindow = mDetachedWindows.contains(profileName);
-
-        // If profile is not visible in either location, it's orphaned
-        if (!inMainWindow && !inDetachedWindow) {
-            qWarning() << "hasOrphanedProfiles: Found orphaned profile:" << profileName;
-            return true;
-        }
-    }
-
-    return false;
-}
-
 QStringList mudlet::getOrphanedProfiles()
 {
     QStringList orphanedProfiles;
 
     // Find all loaded profiles that don't have visible windows
     for (const auto& pHost : mHostManager) {
-        if (!pHost || !pHost->mainConsoleView()) {
+        // A closing profile has left its window, which is being torn down with its console still inside
+        if (!pHost || !pHost->mainConsoleView() || pHost->isClosingDown()) {
             continue;
         }
 
