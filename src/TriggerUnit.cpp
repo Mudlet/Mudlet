@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <chrono>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <vector>
 
@@ -511,9 +512,8 @@ bool TriggerUnit::fileTreeNodes(TTrigger* pT, std::vector<quint64>& grams)
         }
         const bool filed = child->treeIndexGrams(grams);
         if (filed) {
-            child->mTreeIndexPosition = static_cast<int>(mTreeNodes.size());
-            mTreeNodes.push_back(child);
-            mTreeIndex.appendSlot(grams);
+            child->mTreeIndexPosition = fileChildSlot(child, grams);
+            mChildSlots.push_back(child->mTreeIndexPosition);
         }
         const bool childrenQuiet = fileTreeNodes(child, grams);
         // Entering a folder only walks its children; one held open is marked through mOpenTreeNodes
@@ -554,17 +554,10 @@ void TriggerUnit::markTreeNode(TTrigger* pT, const quint32 stamp)
         if (!walk || position < 0 || position >= static_cast<int>(walk->mChildren.size()) || walk->mChildren[position] != pT) {
             continue;
         }
-        if (walk->mMarkedStamp != stamp) {
-            std::fill(walk->mMarked.begin(), walk->mMarked.end(), 0);
-            walk->mMarkedStamp = stamp;
-        }
-        quint64& word = walk->mMarked[position / 64];
-        const quint64 bit = quint64(1) << (position % 64);
-        if (word & bit) {
+        if (!walk->mark(position, stamp)) {
             // Every marking goes all the way up, so the rest of the way is marked already
             return;
         }
-        word |= bit;
     }
 }
 
@@ -589,25 +582,41 @@ void TriggerUnit::forgetOpenTreeNode(TTrigger* pT)
     }
 }
 
-void TriggerUnit::clearTreeNodes()
+void TriggerUnit::freeChildSlots(const std::vector<int>& freed)
 {
-    for (TTrigger* node : mTreeNodes) {
-        if (node) {
+    if (freed.empty()) {
+        return;
+    }
+    for (const int slot : freed) {
+        if (TTrigger* node = mIndexSlots[slot].mpTrigger) {
             node->mTreeIndexPosition = -1;
         }
+        mIndexSlots[slot] = IndexSlot{};
     }
-    mTreeNodes.clear();
+    mTreeIndex.removeSlots(freed);
+}
+
+void TriggerUnit::clearTreeNodes()
+{
+    freeChildSlots(mChildSlots);
+    mChildSlots.clear();
 }
 
 void TriggerUnit::rebuildTreeIndex()
 {
-    clearTreeNodes();
-    mTreeIndex.rebuild({});
+    std::vector<int> previous;
+    previous.swap(mChildSlots);
     std::vector<quint64> grams;
     for (auto* root : mTriggerRootNodeList) {
         fileTreeNodes(root, grams);
     }
-    if (!mTreeIndex.active()) {
+    std::sort(previous.begin(), previous.end());
+    std::sort(mChildSlots.begin(), mChildSlots.end());
+    std::vector<int> unused;
+    std::set_difference(previous.cbegin(), previous.cend(), mChildSlots.cbegin(), mChildSlots.cend(), std::back_inserter(unused));
+    freeChildSlots(unused);
+    mTreeIndexActive = static_cast<int>(mChildSlots.size()) >= scmMinimumIndexedTriggers;
+    if (!mTreeIndexActive) {
         // Nothing stamps, so nothing may be skipped
         clearTreeNodes();
         for (auto* root : mTriggerRootNodeList) {
@@ -617,11 +626,60 @@ void TriggerUnit::rebuildTreeIndex()
     mTreeIndexStale = false;
 }
 
+// A child keeps its slot while it stays filed, so refiling a tree whose patterns did not change costs the
+// index nothing
+int TriggerUnit::fileChildSlot(TTrigger* pT, const std::vector<quint64>& grams)
+{
+    const int slot = pT->mTreeIndexPosition;
+    if (slot >= 0 && slot < static_cast<int>(mIndexSlots.size()) && mIndexSlots[slot].mpTrigger == pT && !mIndexSlots[slot].mRoot) {
+        mTreeIndex.refileSlot(slot, grams);
+        return slot;
+    }
+    return fileIndexSlot(pT, false, grams);
+}
+
+int TriggerUnit::fileIndexSlot(TTrigger* pT, const bool root, const std::vector<quint64>& grams)
+{
+    const int slot = mTreeIndex.fileSlot(grams);
+    if (slot >= static_cast<int>(mIndexSlots.size())) {
+        mIndexSlots.resize(slot + 1);
+    }
+    mIndexSlots[slot] = IndexSlot{pT, root};
+    return slot;
+}
+
+bool TriggerUnit::fileRoot(TTrigger* pT, std::vector<quint64>& grams)
+{
+    if (smTreeIndexMode == TreeIndexMode::Off || !pT->prescanGrams(grams)) {
+        unfileRoot(pT);
+        return false;
+    }
+    if (pT->mRootIndexSlot >= 0) {
+        mTreeIndex.refileSlot(pT->mRootIndexSlot, grams);
+    } else {
+        pT->mRootIndexSlot = fileIndexSlot(pT, true, grams);
+        ++mFiledRoots;
+    }
+    return true;
+}
+
+void TriggerUnit::unfileRoot(TTrigger* pT)
+{
+    const int slot = pT->mRootIndexSlot;
+    if (slot < 0) {
+        return;
+    }
+    mTreeIndex.removeSlot(slot);
+    mIndexSlots[slot] = IndexSlot{};
+    pT->mRootIndexSlot = -1;
+    --mFiledRoots;
+}
+
 void TriggerUnit::unfileTreeNode(TTrigger* pT)
 {
-    const int position = pT->mTreeIndexPosition;
-    if (position >= 0 && position < static_cast<int>(mTreeNodes.size()) && mTreeNodes[position] == pT) {
-        mTreeNodes[position] = nullptr;
+    const int slot = pT->mTreeIndexPosition;
+    if (slot >= 0 && slot < static_cast<int>(mIndexSlots.size()) && mIndexSlots[slot].mpTrigger == pT && !mIndexSlots[slot].mRoot) {
+        mIndexSlots[slot].mpTrigger = nullptr;
     }
     pT->mTreeIndexPosition = -1;
     invalidateChildWalks(pT->getParent());
@@ -630,22 +688,47 @@ void TriggerUnit::unfileTreeNode(TTrigger* pT)
 
 // Rebuilt only by this unit's outermost pass: a nested rebuild would file a trigger the outer line's
 // stamping never saw, and the outer walk would then skip it on a line it matches. Until then a
-// changed or new trigger is unfiled, so it is visited.
-void TriggerUnit::stampTreeCandidates(const QString& line)
+// changed or new trigger is unfiled, so it is visited. A root is filed as its snapshot is refreshed,
+// so by the time a pass stamps, the snapshot it pinned holds every root the index has.
+bool TriggerUnit::stampTreeCandidates(const QString& line, RootNodeSnapshot& snapshot)
 {
     if (mTreeIndexStale && mProcessingDepth == 1) {
         rebuildTreeIndex();
     }
-    if (!mTreeIndex.active()) {
-        return;
+    bool rootsWalkable = snapshot.mIndexed;
+    if (!rootsWalkable && !mTreeIndexActive) {
+        return false;
     }
     mTreeIndex.hits(line, mTreeHits);
     const quint32 stamp = TTrigger::lineStamp();
-    for (const int position : mTreeHits) {
-        if (TTrigger* node = mTreeNodes[position]) {
+    TChildWalk& roots = snapshot.mWalk;
+    const int rootCount = static_cast<int>(roots.mChildren.size());
+    for (const int slot : mTreeHits) {
+        const IndexSlot entry = mIndexSlots[slot];
+        TTrigger* const node = entry.mpTrigger;
+        if (!node) {
+            continue;
+        }
+        if (!entry.mRoot) {
             node->mLineStamp = stamp;
             markTreeNode(node, stamp);
+            continue;
         }
+        if (!rootsWalkable) {
+            continue;
+        }
+        const int position = node->rootSnapshotPosition();
+        if (position < 0 || position >= rootCount || roots.mChildren[position] != node) {
+            if (Q_UNLIKELY(smTreeIndexMode == TreeIndexMode::Verify)) {
+                qWarning().nospace() << "TriggerUnit tree index MISMATCH: root " << node->getName() << " is filed at position " << position << " of a root list it is not at";
+            }
+            rootsWalkable = false;
+            continue;
+        }
+        roots.mark(position, stamp);
+    }
+    if (!mTreeIndexActive) {
+        return rootsWalkable;
     }
     for (size_t i = 0; i < mOpenTreeNodes.size();) {
         TTrigger* node = mOpenTreeNodes[i];
@@ -658,13 +741,14 @@ void TriggerUnit::stampTreeCandidates(const QString& line)
         mOpenTreeNodes[i] = mOpenTreeNodes.back();
         mOpenTreeNodes.pop_back();
     }
+    return rootsWalkable;
 }
 
 void TriggerUnit::refile(TTrigger* pT, const TriggerRefile change)
 {
     // The stay-open count is read live by the tree index, so only a change to the grams unfiles a trigger
     bool unfile = false;
-    // The line's candidate list was settled before any script ran, so the rest of it goes unfiltered
+    // The line's root walk was marked before any script ran, so the rest of it goes unfiltered
     bool actsOnLineInFlight = false;
     switch (change) {
     case TriggerRefile::Patterns:
@@ -683,7 +767,7 @@ void TriggerUnit::refile(TTrigger* pT, const TriggerRefile change)
     case TriggerRefile::Shut:
         break;
     }
-    // A root is never filed in the tree index, so the temporary triggers scripts arm every line cost it no rebuild
+    // A root is refiled as its snapshot entry is, so the temporary triggers scripts arm every line cost the tree no refiling
     if (unfile && (pT->mTreeIndexPosition >= 0 || pT->getParent())) {
         unfileTreeNode(pT);
     }
@@ -719,6 +803,8 @@ void TriggerUnit::markRootNodeAppended(TTrigger* pT)
 void TriggerUnit::markRootNodeRemoved(TTrigger* pT)
 {
     mRootNodeSnapshotStale = true;
+    // Unfiled at once: the trigger may be freed before the next line, and the line in flight has stamped already
+    unfileRoot(pT);
     const int position = pT->rootSnapshotPosition();
     // Even when rebuilding: a stale position on a trigger registered again later would make its next
     // removal empty another trigger's slot. The dropped sentinel, not the never-filed one, is how
@@ -742,35 +828,36 @@ void TriggerUnit::markRootNodeRemoved(TTrigger* pT)
 // is for changes that move existing triggers, and to reclaim the holes removals leave.
 void TriggerUnit::refreshRootNodeSnapshot()
 {
-    const bool canPatch = mpRootNodeSnapshot && mpRootNodeSnapshot.use_count() == 1 && !mRootNodeSnapshotNeedsRebuild && !mpRootNodeSnapshot->mPrescan.shouldRebuild();
+    const bool canPatch = mpRootNodeSnapshot && mpRootNodeSnapshot.use_count() == 1 && !mRootNodeSnapshotNeedsRebuild
+                          && mpRootNodeSnapshot->mHoles < std::max(scmMinimumIndexedTriggers, static_cast<int>(mTriggerRootNodeList.size()));
+    std::vector<quint64> grams;
     if (canPatch) {
         RootNodeSnapshot& snapshot = *mpRootNodeSnapshot;
+        TChildWalk& walk = snapshot.mWalk;
         // Removals first, so a refile queued for a since-freed trigger finds an empty slot and is skipped
         // rather than dereferencing it
         for (const int position : mRootNodesRemoved) {
-            snapshot.mNodes[position] = nullptr;
+            walk.mChildren[position] = nullptr;
+            walk.setAlways(position, false);
             snapshot.mFilters[position] = TRootTriggerFilter();
-            snapshot.mPrescan.removeSlot(position);
+            ++snapshot.mHoles;
         }
         if (mRootNodesRefiled.size() > 1) {
-            // The index counts every refile, duplicates included, towards the mutations that force a rebuild
             std::sort(mRootNodesRefiled.begin(), mRootNodesRefiled.end());
             mRootNodesRefiled.erase(std::unique(mRootNodesRefiled.begin(), mRootNodesRefiled.end()), mRootNodesRefiled.end());
         }
-        std::vector<quint64> grams;
         for (const int position : mRootNodesRefiled) {
-            if (TTrigger* pT = snapshot.mNodes[position]) {
+            if (TTrigger* pT = walk.mChildren[position]) {
                 snapshot.mFilters[position] = pT->rootFilter();
-                pT->prescanGrams(grams);
-                snapshot.mPrescan.refileSlot(position, grams);
+                walk.setAlways(position, !fileRoot(pT, grams));
             }
         }
         for (TTrigger* pT : mRootNodesAppended) {
-            pT->setRootSnapshotPosition(static_cast<int>(snapshot.mNodes.size()));
-            snapshot.mNodes.push_back(pT);
+            const int position = static_cast<int>(walk.mChildren.size());
+            pT->setRootSnapshotPosition(position);
+            walk.mChildren.push_back(pT);
             snapshot.mFilters.push_back(pT->rootFilter());
-            pT->prescanGrams(grams);
-            snapshot.mPrescan.appendSlot(grams);
+            walk.setAlways(position, !fileRoot(pT, grams));
         }
     } else {
         // Replace only a snapshot an outer pass has pinned; refilling an unpinned one avoids allocating
@@ -778,16 +865,26 @@ void TriggerUnit::refreshRootNodeSnapshot()
             mpRootNodeSnapshot = std::make_shared<RootNodeSnapshot>();
         }
         RootNodeSnapshot& snapshot = *mpRootNodeSnapshot;
-        snapshot.mNodes.assign(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
-        const int rootCount = static_cast<int>(snapshot.mNodes.size());
+        TChildWalk& walk = snapshot.mWalk;
+        walk.mChildren.assign(mTriggerRootNodeList.cbegin(), mTriggerRootNodeList.cend());
+        const int rootCount = static_cast<int>(walk.mChildren.size());
+        const size_t words = (rootCount + 63) / 64;
+        walk.mAlways.assign(words, 0);
+        walk.mMarked.assign(words, 0);
+        walk.mMarkedStamp = 0;
         snapshot.mFilters.resize(rootCount);
+        snapshot.mHoles = 0;
         for (int position = 0; position < rootCount; ++position) {
-            snapshot.mNodes[position]->setRootSnapshotPosition(position);
-            snapshot.mFilters[position] = snapshot.mNodes[position]->rootFilter();
+            TTrigger* const pT = walk.mChildren[position];
+            pT->setRootSnapshotPosition(position);
+            snapshot.mFilters[position] = pT->rootFilter();
+            if (!fileRoot(pT, grams)) {
+                walk.mAlways[position / 64] |= quint64(1) << (position % 64);
+            }
         }
-        snapshot.mPrescan.rebuild(snapshot.mNodes);
         ++mPrescanRebuilds;
     }
+    mpRootNodeSnapshot->mIndexed = mFiledRoots >= scmMinimumIndexedTriggers;
     mRootNodesAppended.clear();
     mRootNodesRemoved.clear();
     mRootNodesRefiled.clear();
@@ -851,14 +948,15 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         refreshRootNodeSnapshot();
     }
     const auto pinnedSnapshot = mpRootNodeSnapshot;
-    const std::vector<TTrigger*>& pinnedNodeList = pinnedSnapshot->mNodes;
+    const std::vector<TTrigger*>& pinnedNodeList = pinnedSnapshot->mWalk.mChildren;
     TTrigger::enterPass();
     const auto passGuard = qScopeGuard([] {
         TTrigger::leavePass();
     });
+    bool rootsWalkable = false;
     if (smTreeIndexMode != TreeIndexMode::Off) {
         // After enterPass(): the stamps have to carry this line's stamp
-        stampTreeCandidates(data);
+        rootsWalkable = stampTreeCandidates(data, *pinnedSnapshot);
     }
     // Triggers registered by a script during this pass (tempTrigger() & Co.)
     // are missing from the snapshot but must still match the current line:
@@ -919,25 +1017,12 @@ void TriggerUnit::processDataStream(const QString& data, int line)
 
     {
         const std::vector<TRootTriggerFilter>& pinnedFilters = pinnedSnapshot->mFilters;
-        const bool prescanActive = pinnedSnapshot->mPrescan.active();
-        // Borrowed from the unit so that only a longer line than any before it
-        // allocates, and moved out so a nested pass grows its own.
-        std::vector<int> scratch;
-        std::vector<int> candidates;
-        if (prescanActive) {
-            scratch = std::move(mCandidateScratch);
-            candidates = std::move(mCandidates);
-            pinnedSnapshot->mPrescan.candidates(data, scratch, candidates);
-        }
-        const auto candidateGuard = qScopeGuard([this, prescanActive, &scratch, &candidates] {
-            if (prescanActive) {
-                mCandidateScratch = std::move(scratch);
-                mCandidates = std::move(candidates);
-            }
-        });
-        // A script can make a later trigger act on a line it does not match after the candidate list was
-        // settled - setTriggerStayOpen(), or a line it feeds opening it; from then on the rest of the line
-        // goes to every remaining trigger. See refile().
+        const TChildWalk& rootWalk = pinnedSnapshot->mWalk;
+        const quint32 stamp = TTrigger::lineStamp();
+        const bool verifying = treeIndexVerifying();
+        // A script can make a later trigger act on a line it does not match after the walk was settled -
+        // setTriggerStayOpen(), or a line it feeds opening it; from then on the rest of the line goes to
+        // every remaining trigger. See refile().
         const quint32 unfilterableEpochAtStart = mUnfilterableEpoch;
         // The pinned filters are copies, and a firing script can change what they were copied from (a
         // pattern, a stay-open count, a trigger made multiline); from then on the line asks the triggers.
@@ -949,13 +1034,19 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         QRgb lineForeground = 0;
         QRgb lineBackground = 0;
         const int rootCount = static_cast<int>(pinnedNodeList.size());
-        size_t nextCandidate = 0;
         for (int position = 0; position < rootCount; ++position) {
-            if (prescanActive && mUnfilterableEpoch == unfilterableEpochAtStart) {
-                if (nextCandidate >= candidates.size()) {
-                    break;
+            bool passedOver = false;
+            if (rootsWalkable && mUnfilterableEpoch == unfilterableEpochAtStart) {
+                const int next = rootWalk.nextToEnter(position, stamp);
+                if (Q_UNLIKELY(verifying)) {
+                    // Enters every root, and reports any the walk would have passed over that acted
+                    passedOver = next != position;
+                } else {
+                    if (next >= rootCount) {
+                        break;
+                    }
+                    position = next;
                 }
-                position = candidates[nextCandidate++];
             }
             // Read before the trigger is, as most lines are over for most
             // triggers right here and the trigger's own memory is never touched
@@ -983,7 +1074,11 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             if (!trigger || !trigger->isActive() || (!textDecided && trigger->cannotMatch(lineBigrams, data) && !subject.dropsText())) {
                 continue;
             }
-            trigger->match(subject, data, line, 0, &lineBigrams);
+            if (Q_UNLIKELY(passedOver)) {
+                trigger->verifySkippable(subject, data, line, 0, &lineBigrams);
+            } else {
+                trigger->match(subject, data, line, 0, &lineBigrams);
+            }
             lineColorsKnown = false;
         }
     }
@@ -1152,7 +1247,7 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
         const bool nowOpen = pT->mKeepFiring > 0;
         if (wasOpen == nowOpen) {
             // Staying open or shut changes nothing the trigger is filtered by, and scripts often set the
-            // same count every line: refiling would spend a mutation per call towards a rebuild. Not keyed
+            // same count every line: refiling would cost the rest of each such line its filters. Not keyed
             // on grams: a regex or colour trigger has none, yet can be ruled out of a line while shut.
             continue;
         }

@@ -52,11 +52,9 @@
 #include <QVector>
 
 #include <algorithm>
-#include <bit>
 #include <cstdint>
 #include <cstring>
 #include <deque>
-#include <limits>
 #include <list>
 #include <new>
 #include <sstream>
@@ -1929,24 +1927,6 @@ bool TTrigger::prescanMayFire(const char* haystackC,
         }
     }
     return false;
-}
-
-int TChildWalk::nextToEnter(const int position, const quint32 lineStamp) const
-{
-    const int words = static_cast<int>(mAlways.size());
-    int word = position / 64;
-    if (word >= words) {
-        return std::numeric_limits<int>::max();
-    }
-    const bool marked = mMarkedStamp == lineStamp;
-    quint64 bits = (mAlways[word] | (marked ? mMarked[word] : 0)) & (~quint64(0) << (position % 64));
-    while (!bits) {
-        if (++word >= words) {
-            return std::numeric_limits<int>::max();
-        }
-        bits = mAlways[word] | (marked ? mMarked[word] : 0);
-    }
-    return word * 64 + std::countr_zero(bits);
 }
 
 void TTrigger::noteOpen()
