@@ -306,3 +306,33 @@ When a chunk from the game carries 16 lines or more, `TIngestPipeline` (`src/TIn
 | `ingestThread` | `MUDLET_INGEST_THREAD` | `true` | `false` (or `0`, `false` or `off` in the environment) turns the worker off, and the main thread parses everything as it did before it existed. |
 
 `MUDLET_INGEST_THREAD=verify` has the main thread parse every line as well and warn `TBuffer ingest worker MISMATCH` for any line the worker made differently. Under `MUDLET_TEST_MODE` the main thread waits for the worker rather than parse a line itself, so that a spec's burst is parsed ahead whatever the scheduling; the ingest worker specs in `src/mudlet-lua/tests/Telnet_spec.lua` feed the same lines one per chunk and all in one chunk and require the same buffer from both.
+
+## mudlet_core on Android and iOS
+
+`mudlet_core` (the library every frontend links, `src/CMakeLists.txt`) already builds without Qt
+Widgets, which `cmake/audit-core-widgets.sh` enforces. What still keeps it from an Android or iOS
+build (#9011) is a handful of features that start processes, open local sockets, load libraries at
+run time or need a Qt module those platforms lack. Each is to be put behind a build-time option, so
+that a mobile build can leave it out while desktop builds keep it:
+
+| Blocker | Where in `mudlet_core` | What it backs | Option to leave it out |
+| --- | --- | --- | --- |
+| `QProcess` | `TForkedProcess` and its two callers in `TLuaInterpreter.cpp`, the `QProcess` signal `TLuaInterpreter::slot_deleteSender()` takes, and `TForkedProcess.h` includes that four other `TLuaInterpreter*.cpp` files do not use | `spawn()` | `USE_SPAWN` (planned) |
+| `QLocalServer` | `MudletInstanceCoordinator` | a second launch handing its packages and `telnet://` links to the running Mudlet; only `main.cpp`, `mudlet.cpp` and `FileOpenHandler.cpp` use it, all in `mudlet_app` | none needed once it moves to `mudlet_app` (planned) |
+| `QLibrary`: Discord RPC | `Discord` (`discord.cpp`) | Discord Rich Presence, and the `setDiscord*` functions | `USE_DISCORD_RPC` (planned) |
+| `QLibrary`: Vosk and sherpa-onnx | `VoskRecognizer` and `SherpaRecognizer`, which `SpeechRecognizerFactory` and `TLuaInterpreterSpeechToText.cpp` use | the `stt.*` speech recognition functions | `USE_SPEECH_ENGINES` (planned) |
+| Lua C modules loaded with `dlopen` | `package.cpath` in `TLuaInterpreter::initLuaGlobals()` and `initIndenterGlobals()`, and `ENABLE_EXPORTS` on the `mudlet` and `mudlet-headless` executables | `lfs`, `brimworks.zip`/`zip`, `rex_pcre2`, `luasql.sqlite3`, `lpeg` and `yajl`, and the Lua code built on them | none yet: needs the modules linked in statically |
+| Sentry | `SentryWrapper.cpp`, whose Sentry calls are all under `WITH_SENTRY` (`src/crash_reporter` is an executable of its own) | crash reports | `WITH_SENTRY`, an ordinary `option()` that is already OFF by default |
+| `Qt6::HttpServer` | `TMCPServer`, `TMCPBridge` and `TMCPLuaBridge` | the MCP server | `USE_MCPSERVER` |
+| iOS only: code that tests `Q_OS_MACOS` and so takes the Linux branch on iOS | `TBuffer.cpp` (`sys/sysinfo.h`, which Darwin lacks) and `cTelnet::setKeepAlive()` in `ctelnet.cpp` (`TCP_KEEPIDLE`, which Darwin calls `TCP_KEEPALIVE`) | the physical memory check and TCP keep-alive | none needed: those branches have to test `Q_OS_DARWIN` instead |
+
+`mudlet-headless` (`src/headless`, built while `USE_HEADLESS` is on) links `mudlet_core` alone, so
+it is the reference frontend for a mobile build. It opens one profile with no window (`-p`), can connect it to a server of its own choosing (`--host`, `--port`,
+`--tls`/`--no-tls`, `--login`, `--password-env`) or leave it offline (`--offline`), installs
+`--package` files and runs Lua from `-e` once the profile has loaded. What the game sends goes to
+standard output, and each line of standard input is taken as if typed on the command line unless it
+is given `--no-stdin`. It exits `0` once the profile closes or input ends, `1` when something it was
+asked to do failed, `2` on a command line error, `3` when it could not write its output (its reader
+going away, as `| head` does, still gives `0`), `4` when the connection ended or could not be made
+under `--exit-on-disconnect`, and `128` plus the signal's number when a signal stopped it.
+`mudlet-headless --help` lists every option and the full rules.
