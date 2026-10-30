@@ -2,8 +2,9 @@
 # what a training run measured, rather than by guesswork. It takes two builds of
 # the SAME build tree - GCC finds each object's profile by the object's path:
 #
-#   1. Configure with -DMUDLET_PGO=GENERATE and build PipelineBenchmark, which
-#      needs BUILD_TESTING=ON: the instrumented program the training runs.
+#   1. Configure with -DMUDLET_PGO=GENERATE and build PipelineBenchmark,
+#      MapRenderBenchmark and PathfindBenchmark, which need BUILD_TESTING=ON:
+#      the instrumented programs the training runs.
 #   2. Run CI/pgo-train.sh on that tree, which records the profile.
 #   3. Reconfigure with -DMUDLET_PGO=USE and build again: the optimised Mudlet.
 #

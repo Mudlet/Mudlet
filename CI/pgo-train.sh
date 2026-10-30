@@ -7,9 +7,12 @@
 #
 # The workload is PipelineBenchmark - text decoding, the trigger engine, the
 # default packages and painting the console - because that is the per-line path
-# a busy game hammers. Functions it never enters are optimised as if there were
-# no profile: GCC through -fprofile-partial-training, Clang because the merge
-# below leaves them out of the profile.
+# a busy game hammers. Functions the training never enters are optimised as if
+# there were no profile: GCC through -fprofile-partial-training, Clang because
+# the merge below leaves them out of the profile.
+# MapRenderBenchmark and PathfindBenchmark then train the mapper on the Achaea
+# map the Lua specs use: without them, GCC 12 loaded, audited and built the
+# pathfinding graph of a big map slower than with no profile at all.
 
 set -euo pipefail
 
@@ -36,19 +39,43 @@ if [ -z "${PROFILE_DIR}" ] || [ -z "${COMPILER}" ]; then
 fi
 
 # The Windows preset gathers every executable into CMAKE_RUNTIME_OUTPUT_DIRECTORY
-BENCHMARK=""
-for DIR in "$(cache_value CMAKE_RUNTIME_OUTPUT_DIRECTORY)" "${BUILD_DIR}/test/functional_tests"; do
-  for CANDIDATE in "${DIR}/PipelineBenchmark" "${DIR}/PipelineBenchmark.exe"; do
-    if [ -n "${DIR}" ] && [ -x "${CANDIDATE}" ]; then
-      BENCHMARK="${CANDIDATE}"
-      break 2
+find_benchmark() {
+  local dir candidate
+  for dir in "$(cache_value CMAKE_RUNTIME_OUTPUT_DIRECTORY)" "${BUILD_DIR}/test/functional_tests"; do
+    for candidate in "${dir}/$1" "${dir}/$1.exe"; do
+      if [ -n "${dir}" ] && [ -x "${candidate}" ]; then
+        echo "${candidate}"
+        return
+      fi
+    done
+  done
+  echo "$1 is missing from ${BUILD_DIR} - build that target (it needs BUILD_TESTING=ON)" >&2
+  return 1
+}
+
+# Runs one benchmark, then fails unless it printed every metric listed after its
+# name: a skipped slot exits 0 and still writes a profile - one of startup alone,
+# if initTestCase() skips - which would leave that slot's code untrained.
+train() {
+  local benchmark log metric
+  benchmark="$(find_benchmark "$1")"
+  log="${PROFILE_DIR}/training-$1.log"
+  shift
+  echo "Training with ${benchmark}"
+  # MUDLET_TEST_MODE as ctest and compare-perf-baseline.py set it: a release or PTB
+  # build would otherwise look for updates, and install mpkg, which updates itself
+  # from the network part way through a slot
+  if ! QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" MUDLET_TEST_MODE="${MUDLET_TEST_MODE:-1}" "${benchmark}" 2>&1 | tee "${log}"; then
+    echo "=== ERROR: the training run failed - see the $(basename "${benchmark}") output above ===" >&2
+    exit 1
+  fi
+  for metric in "$@"; do
+    if ! grep -q "^METRIC ${metric} " "${log}"; then
+      echo "=== ERROR: the training run reported no ${metric}, so that slot did not run and its code would go untrained ===" >&2
+      exit 1
     fi
   done
-done
-if [ -z "${BENCHMARK}" ]; then
-  echo "PipelineBenchmark is missing from ${BUILD_DIR} - build that target (it needs BUILD_TESTING=ON)" >&2
-  exit 1
-fi
+}
 
 # Clang names each raw profile after the binary that wrote it, so an older
 # build's would be merged into this one; GCC would add to the counts of a
@@ -56,23 +83,27 @@ fi
 mkdir -p "${PROFILE_DIR}"
 find "${PROFILE_DIR}" -type f \( -name '*.gcda' -o -name '*.profraw' -o -name '*.profdata' \) -delete
 
-echo "Training with ${BENCHMARK}"
-TRAINING_LOG="${PROFILE_DIR}/training.log"
-# MUDLET_TEST_MODE as ctest and compare-perf-baseline.py set it: a release or PTB
-# build would otherwise look for updates, and install mpkg, which updates itself
-# from the network part way through a slot
-if ! QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" MUDLET_TEST_MODE="${MUDLET_TEST_MODE:-1}" "${BENCHMARK}" 2>&1 | tee "${TRAINING_LOG}"; then
-  echo "=== ERROR: the training run failed - see the PipelineBenchmark output above ===" >&2
-  exit 1
+train PipelineBenchmark text_best_pass_ms trigger_best_pass_ms defaults_text_best_pass_ms display_paint_ms
+
+# The benchmarks convert the XML to the binary format themselves, so TMap::restore() is trained too.
+# PathfindBenchmark searches four routes only under Clang: without them, Clang 21 took 1.04 to 1.09
+# times as long per search as with no profile on a map it never saw, with them 0.99 to 1.00. Trained
+# on them, GCC 12 turned the conditional moves in TMap::searchGraph() into branches and took 1.15
+# times as long per search, on the trained map too.
+# Under the profile directory rather than mktemp's, as the benchmarks need a path Windows can open.
+MAP_DIR="${PROFILE_DIR}/training-map"
+rm -rf "${MAP_DIR}"
+mkdir -p "${MAP_DIR}"
+trap 'rm -rf "${MAP_DIR}"' EXIT
+MAP_ARCHIVE="$(cd "$(dirname "$0")/.." && pwd)/src/mudlet-lua/tests/fixtures/maps/achaea-map.zip"
+(cd "${MAP_DIR}" && cmake -E tar xf "${MAP_ARCHIVE}")
+export MUDLET_BENCH_MAP="${MAP_DIR}/achaea-map.xml"
+train MapRenderBenchmark map_restore_seconds render_fit_ms
+if [[ "${COMPILER}" == *Clang* ]]; then
+  MUDLET_BENCH_ROUTES="107:1192,1192:107,6595:18690,18690:6595" train PathfindBenchmark init_graph_ms path_route_18690_6595_ms
+else
+  MUDLET_BENCH_ROUTES=none train PathfindBenchmark init_graph_ms
 fi
-# A skipped slot exits 0 and still writes a profile - one of startup alone, if
-# initTestCase() skips - so require a metric from each slot the training is for.
-for METRIC in text_best_pass_ms trigger_best_pass_ms defaults_text_best_pass_ms display_paint_ms; do
-  if ! grep -q "^METRIC ${METRIC} " "${TRAINING_LOG}"; then
-    echo "=== ERROR: the training run reported no ${METRIC}, so that slot did not run and its code would go untrained ===" >&2
-    exit 1
-  fi
-done
 
 if [[ "${COMPILER}" == *Clang* ]]; then
   # The merged profile has to be in the format of the compiler that reads it, so

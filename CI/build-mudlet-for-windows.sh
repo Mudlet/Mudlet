@@ -146,9 +146,9 @@ else
   PARALLEL=()
 fi
 
-# A profile-guided build (releases and PTBs) builds twice: first an instrumented PipelineBenchmark,
-# which CI/pgo-train.sh runs to record the profile, then Mudlet built against it.
-# Only the benchmark in the first pass, as building mudlet would send the
+# A profile-guided build (releases and PTBs) builds twice: first the instrumented benchmarks
+# CI/pgo-train.sh runs to record the profile, then Mudlet built against it.
+# Only the benchmarks in the first pass, as building mudlet would send the
 # instrumented binary's debug files to Sentry.
 if [ "${MUDLET_PGO_BUILD}" = "true" ]; then
   echo "Building the instrumented pass of a profile-guided build ..."
@@ -156,7 +156,7 @@ if [ "${MUDLET_PGO_BUILD}" = "true" ]; then
     echo "=== ERROR: CMake configuration of the instrumented pass failed ==="
     exit 4
   fi
-  if ! cmake --build --preset ci-windows "${PARALLEL[@]}" --target PipelineBenchmark; then
+  if ! cmake --build --preset ci-windows "${PARALLEL[@]}" --target PipelineBenchmark MapRenderBenchmark PathfindBenchmark; then
     echo "=== ERROR: the instrumented pass failed to build ==="
     exit 5
   fi

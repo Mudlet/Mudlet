@@ -30,12 +30,15 @@
  *   MUDLET_BENCH_MAP=/path/to/map.dat QT_QPA_PLATFORM=offscreen ./PathfindBenchmark
  *
  * Set MUDLET_BENCH_AREA to pin a particular area instead of the busiest one.
+ * An .xml map is converted to the binary format before the timed restore.
  *
  * Scenarios walk between rooms of the busiest Z level of the chosen area, at
  * increasing separations, because A* cost scales with how much of the graph the
  * frontier has to sweep - and the whole question is how much of the per-search
  * cost is that sweep and how much is a fixed toll paid on every search
- * regardless of how far apart the two rooms are.
+ * regardless of how far apart the two rooms are. MUDLET_BENCH_ROUTES=<from>:<to>,...
+ * times those walks instead, for a map whose levels are too small for the
+ * scenarios' separations, and MUDLET_BENCH_ROUTES=none walks none.
  */
 
 #include <QFileInfo>
@@ -48,6 +51,7 @@
 #include <cstdio>
 #include <limits>
 
+#include "BenchMapTestHelper.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -242,9 +246,12 @@ private slots:
         QVERIFY(host->mpMap);
         TMap* pMap = host->mpMap.data();
 
+        QString conversionError;
+        const QString mapToRestore = binaryBenchMap(host, mMapPath, mConfigDir.path(), conversionError);
+        QVERIFY2(!mapToRestore.isEmpty(), qPrintable(qsl("could not convert the XML map at \"%1\": %2").arg(mMapPath, conversionError)));
         QElapsedTimer timer;
         timer.start();
-        QVERIFY2(pMap->restore(mMapPath), qPrintable(qsl("could not restore the map at \"%1\"").arg(mMapPath)));
+        QVERIFY2(pMap->restore(mapToRestore), qPrintable(qsl("could not restore the map at \"%1\"").arg(mapToRestore)));
         emitMetric("map_restore_seconds", timer.nsecsElapsed() / 1.0e9);
 
         emitMetric("map_rooms", static_cast<qint64>(pMap->mpRoomDB->size()));
@@ -303,50 +310,71 @@ private slots:
         QVERIFY2(startId > 0, "no room found near the middle of the chosen Z level");
         emitMetric("bench_start_room", static_cast<qint64>(startId));
 
-        int measured = 0;
-        for (const Scenario& scenario : kScenarios) {
-            const int offsetX = std::min(scenario.offset, maxX - centreX);
-            const int offsetY = std::min(scenario.offset, maxY - centreY);
-            const int targetId = (scenario.offset == 0) ? nearestTo(byCoordinate, maxX, maxY, searchRadius) : nearestTo(byCoordinate, centreX + offsetX, centreY + offsetY, searchRadius);
-            QVERIFY2(targetId > 0, qPrintable(qsl("scenario \"%1\" found no target room").arg(QString::fromUtf8(scenario.name))));
-            if (targetId == startId) {
-                continue;
+        struct Walk
+        {
+            QString name;
+            int from;
+            int to;
+            // A capped target sits on the level's edge, so it may be the same room another scenario measured.
+            bool clamped = false;
+        };
+        QList<Walk> walks;
+        if (const QString routes = qEnvironmentVariable("MUDLET_BENCH_ROUTES"); routes == qsl("none")) {
+            // findPath() is never called: CI/pgo-train.sh trains GCC builds on the graph build without it.
+        } else if (!routes.isEmpty()) {
+            for (const QString& route : routes.split(QLatin1Char(','), Qt::SkipEmptyParts)) {
+                const QStringList ends = route.split(QLatin1Char(':'));
+                const int from = (ends.size() == 2) ? ends.constFirst().toInt() : 0;
+                const int to = (ends.size() == 2) ? ends.constLast().toInt() : 0;
+                QVERIFY2(from > 0 && to > 0, qPrintable(qsl("MUDLET_BENCH_ROUTES entry \"%1\" is not <room id>:<room id>").arg(route)));
+                walks.append({qsl("route_%1_%2").arg(from).arg(to), from, to});
             }
+            QVERIFY2(!walks.isEmpty(), "MUDLET_BENCH_ROUTES names no routes");
+        } else {
+            for (const Scenario& scenario : kScenarios) {
+                const int offsetX = std::min(scenario.offset, maxX - centreX);
+                const int offsetY = std::min(scenario.offset, maxY - centreY);
+                const int targetId = (scenario.offset == 0) ? nearestTo(byCoordinate, maxX, maxY, searchRadius) : nearestTo(byCoordinate, centreX + offsetX, centreY + offsetY, searchRadius);
+                QVERIFY2(targetId > 0, qPrintable(qsl("scenario \"%1\" found no target room").arg(QString::fromUtf8(scenario.name))));
+                if (targetId != startId) {
+                    walks.append({QString::fromUtf8(scenario.name), startId, targetId, offsetX != scenario.offset || offsetY != scenario.offset});
+                }
+            }
+            QVERIFY2(!walks.isEmpty(), "every scenario's target was the start room, so the chosen Z level has nothing to walk to");
+        }
 
+        for (const Walk& walk : walks) {
             // One untimed search first, so the timed passes cannot be the run
             // that faults in whatever the first search touches, and so a failed
             // search is caught here rather than silently timed as a success.
-            QVERIFY2(pMap->findPath(startId, targetId),
-                     qPrintable(qsl("scenario \"%1\" found no path from %2 to %3, so its timings would describe a failed search")
-                                        .arg(QString::fromUtf8(scenario.name), QString::number(startId), QString::number(targetId))));
+            QVERIFY2(
+                    pMap->findPath(walk.from, walk.to),
+                    qPrintable(qsl("scenario \"%1\" found no path from %2 to %3, so its timings would describe a failed search").arg(walk.name, QString::number(walk.from), QString::number(walk.to))));
             const int steps = pMap->mPathList.size();
 
             double best = std::numeric_limits<double>::max();
             for (int pass = 0; pass < kPasses; ++pass) {
                 timer.restart();
-                const bool found = pMap->findPath(startId, targetId);
+                const bool found = pMap->findPath(walk.from, walk.to);
                 best = std::min(best, timer.nsecsElapsed() / 1.0e6);
                 // These are the repeats, so they are the passes running on state
                 // the previous search left behind. A pass that stopped finding
                 // the route would otherwise be reported as a faster one.
-                QVERIFY2(found, qPrintable(qsl("scenario \"%1\" pass %2 found no path the first search found").arg(QString::fromUtf8(scenario.name), QString::number(pass))));
+                QVERIFY2(found, qPrintable(qsl("scenario \"%1\" pass %2 found no path the first search found").arg(walk.name, QString::number(pass))));
                 QCOMPARE(pMap->mPathList.size(), steps);
             }
 
-            const QString prefix = qsl("path_%1").arg(QString::fromUtf8(scenario.name));
+            const QString prefix = qsl("path_%1").arg(walk.name);
             emitMetric(qsl("%1_ms").arg(prefix), best);
             // Workload invariant: a build that walked a different distance, or
             // to a different room, did not do the same work. Two routes of equal
             // length through different rooms would pass this.
             emitMetric(qsl("%1_steps").arg(prefix), static_cast<qint64>(steps));
-            emitMetric(qsl("%1_target_room").arg(prefix), static_cast<qint64>(targetId));
-            // A capped target sits on the level's edge, so it may be the same room another scenario measured.
-            if (offsetX != scenario.offset || offsetY != scenario.offset) {
+            emitMetric(qsl("%1_target_room").arg(prefix), static_cast<qint64>(walk.to));
+            if (walk.clamped) {
                 emitMetric(qsl("%1_clamped").arg(prefix), static_cast<qint64>(1));
             }
-            ++measured;
         }
-        QVERIFY2(measured > 0, "every scenario's target was the start room, so the chosen Z level has nothing to walk to");
 
         // Where the fixed toll used to go. findPath() allocated two vertex-sized
         // vectors of its own and handed them to astar_search(), which writes four
