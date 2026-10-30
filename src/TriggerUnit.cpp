@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <chrono>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <vector>
 
@@ -511,7 +512,7 @@ bool TriggerUnit::fileTreeNodes(TTrigger* pT, std::vector<quint64>& grams)
         }
         const bool filed = child->treeIndexGrams(grams);
         if (filed) {
-            child->mTreeIndexPosition = fileIndexSlot(child, false, grams);
+            child->mTreeIndexPosition = fileChildSlot(child, grams);
             mChildSlots.push_back(child->mTreeIndexPosition);
         }
         const bool childrenQuiet = fileTreeNodes(child, grams);
@@ -581,28 +582,39 @@ void TriggerUnit::forgetOpenTreeNode(TTrigger* pT)
     }
 }
 
-void TriggerUnit::clearTreeNodes()
+void TriggerUnit::freeChildSlots(const std::vector<int>& freed)
 {
-    if (mChildSlots.empty()) {
+    if (freed.empty()) {
         return;
     }
-    for (const int slot : mChildSlots) {
+    for (const int slot : freed) {
         if (TTrigger* node = mIndexSlots[slot].mpTrigger) {
             node->mTreeIndexPosition = -1;
         }
         mIndexSlots[slot] = IndexSlot{};
     }
-    mTreeIndex.removeSlots(mChildSlots);
+    mTreeIndex.removeSlots(freed);
+}
+
+void TriggerUnit::clearTreeNodes()
+{
+    freeChildSlots(mChildSlots);
     mChildSlots.clear();
 }
 
 void TriggerUnit::rebuildTreeIndex()
 {
-    clearTreeNodes();
+    std::vector<int> previous;
+    previous.swap(mChildSlots);
     std::vector<quint64> grams;
     for (auto* root : mTriggerRootNodeList) {
         fileTreeNodes(root, grams);
     }
+    std::sort(previous.begin(), previous.end());
+    std::sort(mChildSlots.begin(), mChildSlots.end());
+    std::vector<int> unused;
+    std::set_difference(previous.cbegin(), previous.cend(), mChildSlots.cbegin(), mChildSlots.cend(), std::back_inserter(unused));
+    freeChildSlots(unused);
     mTreeIndexActive = static_cast<int>(mChildSlots.size()) >= scmMinimumIndexedTriggers;
     if (!mTreeIndexActive) {
         // Nothing stamps, so nothing may be skipped
@@ -612,6 +624,18 @@ void TriggerUnit::rebuildTreeIndex()
         }
     }
     mTreeIndexStale = false;
+}
+
+// A child keeps its slot while it stays filed, so refiling a tree whose patterns did not change costs the
+// index nothing
+int TriggerUnit::fileChildSlot(TTrigger* pT, const std::vector<quint64>& grams)
+{
+    const int slot = pT->mTreeIndexPosition;
+    if (slot >= 0 && slot < static_cast<int>(mIndexSlots.size()) && mIndexSlots[slot].mpTrigger == pT && !mIndexSlots[slot].mRoot) {
+        mTreeIndex.refileSlot(slot, grams);
+        return slot;
+    }
+    return fileIndexSlot(pT, false, grams);
 }
 
 int TriggerUnit::fileIndexSlot(TTrigger* pT, const bool root, const std::vector<quint64>& grams)

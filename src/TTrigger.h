@@ -212,7 +212,7 @@ enum class TriggerRefile : quint8 {
     // Its own match held it open: the pass that matched it is past it, but an outer pass that fed that
     // line by feedTriggers() may not be
     OpenedByMatch,
-    // Its stay-open window closed; the line in flight still counts it a candidate, so match() decides
+    // Its stay-open window closed; the line in flight still enters it, so match() decides
     Shut,
 };
 

@@ -94,8 +94,8 @@ public:
     // Whether the last snapshot walks the roots by the index, so a test can tell it is relying on it
     bool rootPrescanActive() const { return mpRootNodeSnapshot && mpRootNodeSnapshot->mIndexed; }
     // Snapshot rebuilds and index reindexes, each refiling every root: both paths file the same, so this
-    // is how a test checks the incremental path keeps them flat. A tree refiling that frees most of the
-    // index counts too.
+    // is how a test checks the incremental path keeps them flat. A tree refiling that frees half or more
+    // of the index counts too.
     quint64 prescanRebuildCount() const { return mPrescanRebuilds + mTreeIndex.reindexCount(); }
     // The whole-tree index - see TTrigger::skippableForLine() and docs/platform-builds.md
     enum class TreeIndexMode { Off, On, Verify };
@@ -186,8 +186,10 @@ private:
     // Call on any change to a trigger's place below a root or to what its treeIndexGrams() answers:
     // the trigger is visited until the next rebuild files it again
     void unfileTreeNode(TTrigger* pT);
+    void freeChildSlots(const std::vector<int>& freed);
     void clearTreeNodes();
     void rebuildTreeIndex();
+    int fileChildSlot(TTrigger* pT, const std::vector<quint64>& grams);
     int fileIndexSlot(TTrigger* pT, bool root, const std::vector<quint64>& grams);
     // False, with the root unfiled, when its text cannot rule it out of a line
     bool fileRoot(TTrigger* pT, std::vector<quint64>& grams);

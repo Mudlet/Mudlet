@@ -52,8 +52,8 @@ public:
     int fileSlot(const std::vector<quint64>& grams);
     void removeSlot(int slot);
     void refileSlot(int slot, const std::vector<quint64>& grams);
-    // For freeing many at once: when they are most of what is filed, one pass over the rest is cheaper
-    // than unfiling each, and otherwise the rest is left alone
+    // For freeing many at once: when they are half or more of what is filed, one pass over the rest is
+    // cheaper than unfiling each, and otherwise the rest is left alone
     void removeSlots(const std::vector<int>& freed);
 
     // The filed slots the line's n-grams hit, each once, in no particular order
