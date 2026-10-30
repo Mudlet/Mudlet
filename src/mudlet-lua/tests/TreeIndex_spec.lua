@@ -399,6 +399,25 @@ describe("trigger matching through the whole-tree index", function()
         assert.are.same({shutsFirst = 1, shutsLast = 3}, fired)
     end)
 
+    -- Enough roots for theirs to be filed too, in the one index a refiling of the tree rebuilds
+    itIndexed("fires a root trigger the line holds after a refiling of the tree", function()
+        local ids = {}
+        finally(function()
+            for _, id in ipairs(ids) do
+                killTrigger(id)
+            end
+        end)
+        for index = 1, 40 do
+            ids[#ids + 1] = tempTrigger("treeindex_root_" .. index .. "_bait", function() note("root") end)
+        end
+        feed("treeindex warm-up line")
+
+        assert(permSubstringTrigger("treeindex root refiler", packageName, {"treeindex_root_refiler_bait"}, ""))
+        feed("treeindex_root_7_bait", "treeindex_root_40_bait")
+
+        assert.are.same({root = 2}, fired, "refiling the tree must keep the roots filed alongside it")
+    end)
+
     -- Last, as it takes the fixture away: a script's uninstall takes filed
     -- triggers away at the end of the line, which the index's next filing has
     -- to survive - the sanitiser builds are what would catch it not doing so
