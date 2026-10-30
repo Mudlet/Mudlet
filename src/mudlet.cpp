@@ -10226,8 +10226,7 @@ QStringList mudlet::getOrphanedProfiles()
 
     // Find all loaded profiles that don't have visible windows
     for (const auto& pHost : mHostManager) {
-        // A closing profile has already left its tab or window, and putting it
-        // back hands the splitter a console whose window is being torn down
+        // A closing profile has left its window, which is being torn down with its console still inside
         if (!pHost || !pHost->mainConsoleView() || pHost->isClosingDown()) {
             continue;
         }

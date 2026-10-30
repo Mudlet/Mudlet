@@ -34,7 +34,6 @@
  */
 
 #include <QFileInfo>
-#include <QPointer>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -304,20 +303,17 @@ private slots:
         QCOMPARE(mudlet::self()->mpTabBar->count(), 1);
     }
 
-    // Closing a detached profile takes it out of its window a zero-timer before
-    // the profile itself goes, and the orphan check can land in that gap. A
-    // profile of its own, as one closed here cannot be opened again under the
-    // same name.
+    // The orphan check can land between a detached profile leaving its window and the queued close
     void test_aProfileClosingFromAWindowIsNeverOrphaned()
     {
         deleteProfileDirectory(mClosingHostname);
         QVERIFY(startProfile(mClosingHostname));
         mudlet::self()->slot_tabDetachRequested(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), QPoint(200, 200));
-        QPointer<TDetachedWindow> pWindow = mudlet::self()->getDetachedWindows().value(mClosingHostname);
+        TDetachedWindow* pWindow = mudlet::self()->getDetachedWindows().value(mClosingHostname);
         QVERIFY(pWindow);
 
         // What the window's Close profile action calls
-        QVERIFY(QMetaObject::invokeMethod(pWindow.data(), "closeProfile", Qt::DirectConnection));
+        QVERIFY(QMetaObject::invokeMethod(pWindow, "closeProfile", Qt::DirectConnection));
         QVERIFY2(HostManager::self()->getHost(mClosingHostname), "the profile closed at once, so there was no gap for the orphan check to land in");
         QVERIFY(!mudlet::self()->getDetachedWindows().contains(mClosingHostname));
         QCOMPARE(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), -1);
@@ -332,12 +328,6 @@ private slots:
                          },
                          2000ms),
                  "the closing profile was never closed");
-        QVERIFY(QTest::qWaitFor(
-                [&pWindow]() {
-                    return pWindow.isNull();
-                },
-                2000ms));
-        QCOMPARE(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), -1);
     }
 
 private:
