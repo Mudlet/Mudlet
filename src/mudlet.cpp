@@ -3488,6 +3488,11 @@ void mudlet::closeHost(const QString& name)
     if (!mHostManager.getHostCount()) {
         mpSpeechBridge->allProfilesClosed();
     }
+    // A detached profile has no tab here, so when it was the active one its
+    // closing changes no tab to hand activation to the profile left showing
+    if (!getActiveHost() && mpTabBar->count() > 0) {
+        slot_tabChanged(mpTabBar->currentIndex());
+    }
     emit signal_adjustAccessibleNames();
     updateMultiViewControls();
     // Update main window title since a profile was closed

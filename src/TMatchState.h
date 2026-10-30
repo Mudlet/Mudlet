@@ -24,8 +24,7 @@
 
 #include "utils.h" // For NameGroupMatches
 
-#include <iterator>
-#include <list>
+#include <algorithm>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -57,6 +56,15 @@ public:
     }
 
     void append(const std::string_view capture) { append(capture.data(), capture.size()); }
+
+    void append(const TCaptureGroups& captures)
+    {
+        const std::size_t offset = mBytes.size();
+        mBytes.append(captures.mBytes);
+        for (const std::size_t end : captures.mEnds) {
+            mEnds.push_back(offset + end);
+        }
+    }
 
     void appendEmpty() { mEnds.push_back(mBytes.size()); }
 
@@ -92,19 +100,27 @@ public:
     static constexpr std::size_t scmMaxKeptCaptures = 2048;
     static constexpr std::size_t scmMaxKeptBytes = 32 * 1024;
 
-    // Empties it, and gives back whatever a fire past the bounds grew it to,
-    // which would otherwise stay for the session
-    void clearAndTrim()
+    // Empties it, and frees the storage of a fire past the bounds, which would
+    // otherwise stay for the session. Judged by size, not capacity: growing
+    // doubles the storage, so a fire within them can leave up to twice them.
+    void clearAndTrim(const std::size_t maxCaptures = scmMaxKeptCaptures, const std::size_t maxBytes = scmMaxKeptBytes)
     {
-        clear();
-        if (mBytes.capacity() > scmMaxKeptBytes) {
+        if (mBytes.size() > maxBytes) {
             std::string().swap(mBytes);
         }
-        if (mEnds.capacity() > scmMaxKeptCaptures) {
+        if (mEnds.size() > maxCaptures) {
             std::vector<std::size_t>().swap(mEnds);
         }
+        clear();
     }
 
+    void reserve(const std::size_t captures, const std::size_t bytes)
+    {
+        mEnds.reserve(captures);
+        mBytes.reserve(bytes);
+    }
+
+    std::size_t bytes() const { return mBytes.size(); }
     std::size_t bytesCapacity() const { return mBytes.capacity(); }
     std::size_t capturesCapacity() const { return mEnds.capacity(); }
 
@@ -114,76 +130,71 @@ private:
     std::vector<std::size_t> mEnds;
 };
 
-// Recycles the capture list nodes open multiline states hold: splice() moves nodes without the allocator
-// and assigning into a recycled string reuses its buffer, so a condition shaped like the last allocates nothing.
-//
-// No lock: triggers and the Lua engine run on the main thread, and nothing else may reach this pool.
-class TCaptureNodePool
+// A multiline match's captures, condition by condition, as flat as
+// TCaptureGroups, so a match shaped like the last allocates nothing
+class TMultiCaptureGroups
 {
 public:
-    static std::string& takeCapture(std::list<std::string>& into)
+    // One per condition met, those that capture nothing included
+    std::size_t conditions() const { return mConditionEnds.size(); }
+    bool empty() const { return mConditionEnds.empty(); }
+
+    const TCaptureGroups& captures() const { return mCaptures; }
+    std::size_t capturesBegin(const std::size_t condition) const { return condition ? mConditionEnds[condition - 1].captures : 0; }
+    std::size_t capturesEnd(const std::size_t condition) const { return mConditionEnds[condition].captures; }
+
+    // Each named group as its name followed by its capture
+    const TCaptureGroups& namedCaptures() const { return mNamedCaptures; }
+    std::size_t namedBegin(const std::size_t condition) const { return condition ? mConditionEnds[condition - 1].namedCaptures : 0; }
+    std::size_t namedEnd(const std::size_t condition) const { return mConditionEnds[condition].namedCaptures; }
+
+    // Room for this many conditions shaped like the one given, so a fresh state
+    // does not regrow condition by condition; capped at the bounds, or a guess
+    // past a match that fits them would be kept with it
+    void reserve(const std::size_t conditions, const TCaptureGroups& captures, const NameGroupMatches* namedCaptures, const std::size_t maxCaptures, const std::size_t maxBytes)
     {
-        if (smSpareCaptures.empty()) {
-            into.emplace_back();
-        } else {
-            into.splice(into.end(), smSpareCaptures, smSpareCaptures.begin());
+        mConditionEnds.reserve(std::min(conditions, maxCaptures));
+        mCaptures.reserve(std::min(conditions * captures.size(), maxCaptures), std::min(conditions * captures.bytes(), maxBytes));
+        if (namedCaptures) {
+            std::size_t bytes = 0;
+            for (const auto& [name, capture] : *namedCaptures) {
+                bytes += static_cast<std::size_t>(name.size() + capture.size());
+            }
+            mNamedCaptures.reserve(std::min(conditions * 2 * static_cast<std::size_t>(namedCaptures->size()), maxCaptures), std::min(conditions * bytes, maxBytes));
         }
-        return into.back();
     }
 
-    static int& takePosition(std::list<int>& into)
+    void addCondition(const TCaptureGroups& captures, const NameGroupMatches* namedCaptures)
     {
-        if (smSparePositions.empty()) {
-            into.emplace_back();
-        } else {
-            into.splice(into.end(), smSparePositions, smSparePositions.begin());
-        }
-        return into.back();
-    }
-
-    static void park(std::list<std::string>& used)
-    {
-        // Else a line-sized capture would hold its buffer in the pool for the rest of the session
-        for (auto it = used.begin(); it != used.end();) {
-            if (it->capacity() > scmMaxPooledCapture) {
-                it = used.erase(it);
-            } else {
-                ++it;
+        mCaptures.append(captures);
+        if (namedCaptures) {
+            for (const auto& [name, capture] : *namedCaptures) {
+                mNamedCaptures.append(QStringView(name));
+                mNamedCaptures.append(QStringView(capture));
             }
         }
-        const size_t room = roomFor(smSpareCaptures.size());
-        if (used.size() <= room) {
-            smSpareCaptures.splice(smSpareCaptures.end(), used);
-            return;
-        }
-        auto last = used.begin();
-        std::advance(last, room);
-        smSpareCaptures.splice(smSpareCaptures.end(), used, used.begin(), last);
+        mConditionEnds.push_back({mCaptures.size(), mNamedCaptures.size()});
     }
 
-    static void park(std::list<int>& used)
+    void clearAndTrim(const std::size_t maxCaptures = TCaptureGroups::scmMaxKeptCaptures, const std::size_t maxBytes = TCaptureGroups::scmMaxKeptBytes)
     {
-        const size_t room = roomFor(smSparePositions.size());
-        if (used.size() <= room) {
-            smSparePositions.splice(smSparePositions.end(), used);
-            return;
+        mCaptures.clearAndTrim(maxCaptures, maxBytes);
+        mNamedCaptures.clearAndTrim(maxCaptures, maxBytes);
+        if (mConditionEnds.size() > maxCaptures) {
+            std::vector<ConditionEnd>().swap(mConditionEnds);
         }
-        auto last = used.begin();
-        std::advance(last, room);
-        smSparePositions.splice(smSparePositions.end(), used, used.begin(), last);
+        mConditionEnds.clear();
     }
 
 private:
-    static size_t roomFor(const size_t held) { return (held >= scmMaxPooledNodes) ? 0 : (scmMaxPooledNodes - held); }
-
-    // Caps the high-water mark a match-all condition over a hostile line would otherwise set for the
-    // session; enough for the open multiline states of any ordinary profile.
-    static constexpr size_t scmMaxPooledNodes = 512;
-    static constexpr std::string::size_type scmMaxPooledCapture = 1024;
-    // Destroyed at static teardown, after every Host; a TMatchState outliving them (e.g. a
-    // namespace-scope object in a test binary) would park into destroyed lists.
-    inline static std::list<std::string> smSpareCaptures;
-    inline static std::list<int> smSparePositions;
+    struct ConditionEnd
+    {
+        std::size_t captures;
+        std::size_t namedCaptures;
+    };
+    TCaptureGroups mCaptures;
+    TCaptureGroups mNamedCaptures;
+    std::vector<ConditionEnd> mConditionEnds;
 };
 
 
@@ -196,64 +207,24 @@ public:
     {
     }
 
-    // A copy would take nodes out of circulation without parking them; states are moved in unique_ptrs.
-    TMatchState(const TMatchState&) = delete;
-    TMatchState& operator=(const TMatchState&) = delete;
+    // Every multiline trigger keeps a spare state, so it keeps far less than the
+    // interpreter's one copy: enough for an ordinary match over long lines
+    static constexpr std::size_t scmMaxSpareCaptures = 64;
+    static constexpr std::size_t scmMaxSpareBytes = 4096;
 
-    // Destroyed or recycle()d only once nothing reads its captures: TTrigger takes a completed or
-    // expired state out of its condition map before running any script, and recycles a completed
-    // one only after its script.
-    ~TMatchState()
+    void addCaptures(const TCaptureGroups& captures, const NameGroupMatches* namedCaptures)
     {
-        for (auto& captures : multiCaptureList) {
-            TCaptureNodePool::park(captures);
+        if (mCaptures.empty()) {
+            mCaptures.reserve(static_cast<std::size_t>(mNumberOfConditions), captures, namedCaptures, scmMaxSpareCaptures, scmMaxSpareBytes);
         }
-        for (auto& positions : multiCapturePosList) {
-            TCaptureNodePool::park(positions);
-        }
+        mCaptures.addCondition(captures, namedCaptures);
     }
+    const TMultiCaptureGroups& captures() const { return mCaptures; }
 
-    // Recycled nodes: copying the lists would allocate per capture on every condition an open trigger matches
-    void addCaptures(const TCaptureGroups& captures, const std::vector<int>& positions)
-    {
-        if (mSpareCaptureLists.empty()) {
-            multiCaptureList.emplace_back();
-        } else {
-            multiCaptureList.splice(multiCaptureList.end(), mSpareCaptureLists, mSpareCaptureLists.begin());
-        }
-        auto& targetCaptures = multiCaptureList.back();
-        for (std::size_t i = 0; i < captures.size(); ++i) {
-            const std::string_view capture = captures[i];
-            TCaptureNodePool::takeCapture(targetCaptures).assign(capture.data(), capture.size());
-        }
-        if (mSparePositionLists.empty()) {
-            multiCapturePosList.emplace_back();
-        } else {
-            multiCapturePosList.splice(multiCapturePosList.end(), mSparePositionLists, mSparePositionLists.begin());
-        }
-        auto& targetPositions = multiCapturePosList.back();
-        for (const int position : positions) {
-            TCaptureNodePool::takePosition(targetPositions) = position;
-        }
-    }
+    // Keeps the emptied storage of a match within the spare bounds for reopen()
+    void recycle() { mCaptures.clearAndTrim(scmMaxSpareCaptures, scmMaxSpareBytes); }
 
-    // Parks its captures, keeping the emptied per-condition lists for addCaptures() to reuse
-    void recycle()
-    {
-        for (auto& captures : multiCaptureList) {
-            TCaptureNodePool::park(captures);
-            captures.clear();
-        }
-        for (auto& positions : multiCapturePosList) {
-            TCaptureNodePool::park(positions);
-            positions.clear();
-        }
-        mSpareCaptureLists.splice(mSpareCaptureLists.end(), multiCaptureList);
-        mSparePositionLists.splice(mSparePositionLists.end(), multiCapturePosList);
-        nameCaptures.clear();
-    }
-
-    // Resets what the constructor sets; recycle() must already have emptied the lists
+    // Resets what the constructor sets; recycle() must already have emptied the captures
     void reopen(const int numberOfConditions, const int delta)
     {
         mNumberOfConditions = numberOfConditions;
@@ -279,9 +250,6 @@ public:
         return false;
     }
 
-    std::list<std::list<std::string>> multiCaptureList;
-    std::list<std::list<int>> multiCapturePosList;
-    QVector<NameGroupMatches> nameCaptures;
     int mNumberOfConditions = 0;
     // first condition was true when the state was created
     int mNextCondition = 1;
@@ -290,8 +258,7 @@ public:
     int mSpacer = 0;
 
 private:
-    std::list<std::list<std::string>> mSpareCaptureLists;
-    std::list<std::list<int>> mSparePositionLists;
+    TMultiCaptureGroups mCaptures;
 };
 
 #endif // MUDLET_TMATCHSTATE_H
