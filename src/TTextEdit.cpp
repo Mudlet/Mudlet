@@ -2078,7 +2078,7 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
     if (lineIndex < lineCount && tCharIndex < charCount && mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOfbounds) {
         int linkIndex = mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex();
 
-        setCursor(Qt::PointingHandCursor);
+        setCursor(mpBuffer->linkIsNote(linkIndex) ? Qt::IBeamCursor : Qt::PointingHandCursor);
         // The server chooses this text and QToolTip renders anything
         // Qt::mightBeRichText() accepts as HTML, so escape it and wrap it
         // in an explicit document rather than letting that guess decide
@@ -2356,6 +2356,9 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                         forceUpdate();
 
                         mpConsole->model().runLink(linkIndex, 0, false);
+                        if (mpBuffer->linkOpensItsMenu(linkIndex)) {
+                            showLinkMenuAt(linkIndex, event->globalPosition().toPoint());
+                        }
                         return;
                     }
                 }
@@ -4295,6 +4298,12 @@ void TTextEdit::showKeyboardContextMenu()
     }
 
     // Show popup at caret position (not mouse position) since this is keyboard-driven
+    showLinkMenuAt(focusedLink, caretGlobalPosition());
+}
+
+void TTextEdit::showLinkMenuAt(const int linkIndex, const QPoint& globalPosition)
+{
+    const Mudlet::HyperlinkStyling hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
     auto popup = new QMenu(this);
     popup->setAttribute(Qt::WA_DeleteOnClose);
     popup->setFont(font());
@@ -4334,9 +4343,9 @@ void TTextEdit::showKeyboardContextMenu()
         popup->addSeparator();
     }
 
-    mPopupLinkIndex = focusedLink;
-    mPopupLinkIssue = mpBuffer->mLinkStore.issueOf(focusedLink);
-    const QList<TLinkStore::MenuItem> items = mpBuffer->mLinkStore.menuItems(focusedLink);
+    mPopupLinkIndex = linkIndex;
+    mPopupLinkIssue = mpBuffer->mLinkStore.issueOf(linkIndex);
+    const QList<TLinkStore::MenuItem> items = mpBuffer->mLinkStore.menuItems(linkIndex);
     for (int i = 0, total = items.size(); i < total; ++i) {
         QAction* pA = items.at(i).separator ? popup->addSeparator() : popup->addAction(items.at(i).label);
         pA->setData(i + 1);
@@ -4347,7 +4356,7 @@ void TTextEdit::showKeyboardContextMenu()
         }
     }
 
-    popup->popup(caretGlobalPosition());
+    popup->popup(globalPosition);
 }
 
 QPoint TTextEdit::caretGlobalPosition()
@@ -4685,6 +4694,9 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             }
 
             mpConsole->model().runLink(focusedLink, 0, false);
+            if (mpBuffer->linkOpensItsMenu(focusedLink)) {
+                showLinkMenuAt(focusedLink, caretGlobalPosition());
+            }
             return;
         }
         break;

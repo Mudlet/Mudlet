@@ -1015,7 +1015,10 @@ bool TConsoleModel::runLink(const int linkIndex, const int item, const bool from
     }
     mHyperlinkVisibilityManager.onLinkClicked(linkIndex);
     bool ran = false;
-    if (luaReference) {
+    if (!fromMenu && buffer.linkOpensItsMenu(linkIndex)) {
+        // A click opens its menu; only a pick from it runs an item
+        ran = true;
+    } else if (luaReference) {
         ran = mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, fromMenu ? qsl("echoPopup") : qsl("echoLink"));
     } else {
         // An empty command runs nothing, which is no error

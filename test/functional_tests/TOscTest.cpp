@@ -1360,6 +1360,147 @@ private slots:
     QCOMPARE(manager.modifyUriForSelection(styling.actionScheme, styling.baseCommand, group, qsl("v")), qsl("sendGMCP(%1)").arg(LuaLiteral::quote(expectedCleared)));
   }
 
+  void test_Osc8LocalLinkDoesNothingOutsideTheClient_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("expectedTooltip");
+
+    QTest::newRow("bare") << qsl("local:") << QString();
+    QTest::newRow("a tooltip") << qsl("local:?config={\"tooltip\":\"It needs a silver key\"}") << qsl("It needs a silver key");
+    QTest::newRow("reserved text before the query is ignored") << qsl("local:later?config={\"tooltip\":\"Note\"}") << qsl("Note");
+    QTest::newRow("a spoiler") << qsl("local:?config={\"spoiler\":true}") << qsl("Click to reveal");
+  }
+
+  void test_Osc8LocalLinkDoesNothingOutsideTheClient() {
+    QFETCH(QString, uri);
+    QFETCH(QString, expectedTooltip);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Text\x1b]8;;\x1b\\"));
+
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "the link was refused");
+    QCOMPARE(findFirstLinkCommands(), QStringList(QString()));
+    QCOMPARE(mpHost->mainConsoleView()->buffer.getLinkTooltip(std::get<2>(*pos)), expectedTooltip);
+  }
+
+  void test_Osc8LocalSchemeInCapitalsIsPlainText() {
+    injectData(qsl("\x1b]8;;LOCAL:\x1b\\Text\x1b]8;;\x1b\\"));
+    QVERIFY(!findFirstLinkPositionWithId().has_value());
+    QVERIFY(bufferShows(qsl("Text")));
+  }
+
+  void test_Osc8LocalMenuItemIsLeftOut_data() {
+    QTest::addColumn<QString>("item");
+    QTest::newRow("lower case") << qsl("local:");
+    QTest::newRow("capitals") << qsl("LOCAL:");
+  }
+
+  void test_Osc8LocalMenuItemIsLeftOut() {
+    QFETCH(QString, item);
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Nothing\":\"%1\"},{\"Look\":\"send:look\"}]}\x1b\\Text\x1b]8;;\x1b\\").arg(item));
+    QCOMPARE(findFirstLinkCommands(), QStringList(qsl("send(%1, false)").arg(LuaLiteral::quote(qsl("look")))));
+  }
+
+  void test_Osc8AMenuOfOnlyLocalItemsLeavesTheLinksOwnAction() {
+    injectData(qsl("\x1b]8;;send:look?config={\"tooltip\":\"Look\",\"menu\":[{\"Nothing\":\"local:\"}]}\x1b\\Text\x1b]8;;\x1b\\"));
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    QCOMPARE(findFirstLinkCommands(), QStringList(qsl("send(%1, false)").arg(LuaLiteral::quote(qsl("look")))));
+    QCOMPARE(mpHost->mainConsoleView()->buffer.getLinkTooltip(std::get<2>(*pos)), qsl("Look"));
+  }
+
+  void test_Osc8LocalNoteOrControl_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<bool>("isNote");
+
+    QTest::newRow("bare") << qsl("local:") << true;
+    QTest::newRow("a tooltip") << qsl("local:?config={\"tooltip\":\"Note\"}") << true;
+    QTest::newRow("style only") << qsl("local:?config={\"style\":{\"color\":\"red\"}}") << true;
+    QTest::newRow("reveals by itself") << qsl("local:?config={\"visibility\":{\"action\":\"reveal\",\"delay\":100}}") << true;
+    QTest::newRow("a spoiler") << qsl("local:?config={\"spoiler\":true}") << false;
+    QTest::newRow("a selection") << qsl("local:?config={\"selection\":{\"group\":\"notes\",\"value\":\"a\"}}") << false;
+    QTest::newRow("a menu") << qsl("local:?config={\"menu\":[{\"Look\":\"send:look\"}]}") << false;
+    QTest::newRow("a click hides it") << qsl("local:?config={\"visibility\":{\"action\":\"conceal\"}}") << false;
+    QTest::newRow("a click hides it after showing") << qsl("local:?config={\"visibility\":{\"action\":\"reveal-then-conceal\"}}") << false;
+    QTest::newRow("a send link") << qsl("send:look") << false;
+  }
+
+  // A note is skipped by Tab, and read when the caret reaches it by other means
+  void test_Osc8LocalNoteOrControl() {
+    QFETCH(QString, uri);
+    QFETCH(bool, isNote);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\First\x1b]8;;\x1b\\ then \x1b]8;;send:north\x1b\\North\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto first = findNthDistinctLinkPosition(1);
+    auto second = findNthDistinctLinkPosition(2);
+    QVERIFY(first.has_value() && second.has_value());
+    QCOMPARE(console->buffer.linkIsNote(std::get<2>(*first)), isNote);
+
+    int line = -1;
+    int column = -1;
+    QVERIFY(console->buffer.findNextLink(0, -1, line, column));
+    const auto &expected = isNote ? *second : *first;
+    QCOMPARE(line, std::get<0>(expected));
+    QCOMPARE(column, std::get<1>(expected));
+
+    // Backwards from the link after it, a note is passed over, which leaves that link the only stop
+    const bool found = console->buffer.findPreviousLink(std::get<0>(*second), std::get<1>(*second), line, column);
+    QCOMPARE(found && std::make_pair(line, column) == std::make_pair(std::get<0>(*first), std::get<1>(*first)), !isNote);
+  }
+
+  // A click opens the menu rather than running its first item; nothing is sent until an item is chosen
+  void test_Osc8LocalLinkWithAMenuOpensItWhenActivated() {
+    injectData(qsl("\x1b]8;;local:?config={\"menu\":[{\"Look\":\"send:look\"},{\"Wield\":\"send:wield\"}]}\x1b\\Word\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    QCOMPARE(console->buffer.getLinkTooltip(std::get<2>(*pos)), qsl("Click for menu"));
+    QVERIFY(console->buffer.linkOpensItsMenu(std::get<2>(*pos)));
+
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    TTextEdit *pane = console->mUpperPane;
+    pane->setCaretPosition(std::get<0>(*pos), std::get<1>(*pos));
+    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(pane, &activate);
+
+    QMenu *menu = pane->findChild<QMenu *>();
+    QVERIFY2(menu && menu->isVisible(), "activating the link did not open its menu");
+    QStringList labels;
+    for (QAction *action : menu->actions()) {
+      labels << action->text();
+    }
+    QCOMPARE(labels, QStringList({qsl("Look"), qsl("Wield")}));
+    QVERIFY2(mpHost->caretEnabled(), "opening the menu took the player out of caret mode");
+    menu->close();
+    QTRY_VERIFY(!pane->findChild<QMenu *>());
+    QVERIFY2(mpHost->caretEnabled(), "closing the menu took the player out of caret mode");
+  }
+
+  // A checklist's state lives in the client, so ticking it has no message to build
+  void test_Osc8LocalSelectionTogglesAndSendsNothing() {
+    injectData(qsl("\x1b]8;;local:?config={\"selection\":{\"group\":\"recipe\",\"value\":\"flour\",\"exclusive\":false}}\x1b\\flour\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    const int linkId = std::get<2>(*pos);
+    QVERIFY(!console->buffer.isLinkSelected(linkId));
+
+    const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
+    QCOMPARE(console->getHyperlinkSelectionManager().modifyUriForSelection(styling.actionScheme, styling.baseCommand, qsl("recipe"), qsl("flour")), QString());
+
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(std::get<0>(*pos), std::get<1>(*pos));
+    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(console->mUpperPane, &activate);
+    QVERIFY(console->buffer.isLinkSelected(linkId));
+    QCOMPARE(console->getLinkStore().getLinksConst(linkId), QStringList(QString()));
+  }
+
   // A "config" parameter carrying something that is not an object is not a
   // config, so it must not displace a valid one earlier in the same query.
   void test_Osc8ValuelessConfigDoesNotDisplaceAValidOne_data() {

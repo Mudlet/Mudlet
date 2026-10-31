@@ -123,6 +123,7 @@ public:
     void moveCaretToLink(bool first);
     void updateCaret();
     void showKeyboardContextMenu();
+    void showLinkMenuAt(int linkIndex, const QPoint& globalPosition);
     void announceLinkFocus(int linkIndex);
 
     QColor mBgColor;

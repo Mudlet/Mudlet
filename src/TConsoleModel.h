@@ -220,8 +220,8 @@ struct TConsoleModel
     // them. linkMayRun() reveals a spoiler not yet revealed (revealedSpoiler) or marks a disabled link
     // (disabled), and gives ran only where runLink() should follow; unknown for no such link. runLink() updates
     // the link's selection group and runs its command item, as TLinkStore::menuItems() indexes them; fromMenu
-    // names the Lua a menu pick runs "echoPopup", as the GUI does. False where there was no such item or its Lua
-    // raised an error.
+    // names the Lua a menu pick runs "echoPopup", as the GUI does, and is the only way a local: link with a menu
+    // runs an item. False where there was no such item or its Lua raised an error.
     enum class LinkFollowed { ran, revealedSpoiler, disabled, unknown };
     LinkFollowed linkMayRun(int linkIndex);
     bool runLink(int linkIndex, int item, bool fromMenu);

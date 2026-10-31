@@ -5284,6 +5284,10 @@ void TBuffer::decodeOSC(const QString& sequence)
                 command = {qsl("sendGMCP(%1)").arg(LuaLiteral::quote(message))};
                 //: Start of the tooltip on a game's link that sends a GMCP message, followed by a colon and the message
                 hint = {qsl("%1: %2").arg(QObject::tr("Send GMCP"), UntrustedText::forTarget(message))};
+            } else if (baseUrl.startsWith(qsl("local:"))) {
+                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionLocal;
+                command = {QString()};
+                hint = {QString()};
             } else {
                 QUrl qurl(baseUrl);
                 QString scheme = qurl.scheme().toLower();
@@ -5351,6 +5355,9 @@ void TBuffer::decodeOSC(const QString& sequence)
                         const auto gmcpItem = parseGmcpLinkUri(menuCommand);
                         menuCommands.append(gmcpItem ? qsl("sendGMCP(%1)").arg(LuaLiteral::quote(gmcpItem->message())) : QString());
                         menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+                    } else if (menuCommand.startsWith(qsl("local:"), Qt::CaseInsensitive)) {
+                        // An item is an action, and this has none: it is left out rather than typed at the game
+                        continue;
                     } else if (menuCommand == qsl("-")) {
                         // Special case: "-" creates a menu separator
                         menuCommands.append(QString());
@@ -5378,6 +5385,10 @@ void TBuffer::decodeOSC(const QString& sequence)
                 } else {
                     // Default tooltip for menu links
                     linkTooltip = QObject::tr("Right-click for menu");
+                    if (mCurrentHyperlinkStyling.actionScheme == Mudlet::HyperlinkStyling::ActionLocal) {
+                        //: Tooltip on a game's link whose only action is a menu, which a left click opens
+                        linkTooltip = QObject::tr("Click for menu");
+                    }
                 }
 
                 // For menus, we need tooltip as first hint, then menu labels
@@ -5387,8 +5398,13 @@ void TBuffer::decodeOSC(const QString& sequence)
                 finalHints.append(linkTooltip); // First: tooltip for hover
                 finalHints.append(menuHints);   // Rest: menu labels for right-click menu
 
-                command = menuCommands;
-                hint = finalHints;
+                // Every item may have been left out, which leaves a link with no menu
+                if (!menuCommands.isEmpty()) {
+                    command = menuCommands;
+                    hint = finalHints;
+                } else if (!customTooltip.isEmpty()) {
+                    hint = {customTooltip};
+                }
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC] Final menu commands:" << command;
                 qDebug() << "[OSC] Final menu hints:" << hint;
@@ -10667,6 +10683,23 @@ int TBuffer::getLinkIndexAt(int line, int column) const
     return bufferLine.at(column).linkIndex();
 }
 
+bool TBuffer::linkOpensItsMenu(const int linkIndex) const
+{
+    return mLinkStore.hasStyling(linkIndex) && mLinkStore.getStyling(linkIndex).actionScheme == Mudlet::HyperlinkStyling::ActionLocal
+           && (mLinkStore.getLinksConst(linkIndex).size() > 1 || mLinkStore.getHintsConst(linkIndex).size() > mLinkStore.getLinksConst(linkIndex).size());
+}
+
+bool TBuffer::linkIsNote(const int linkIndex) const
+{
+    if (!mLinkStore.hasStyling(linkIndex)) {
+        return false;
+    }
+    const Mudlet::HyperlinkStyling styling = mLinkStore.getStyling(linkIndex);
+    using Action = Mudlet::HyperlinkStyling::VisibilitySettings::Action;
+    const bool clickHides = styling.visibility.hasVisibilitySettings && (styling.visibility.action == Action::Conceal || styling.visibility.action == Action::RevealThenConceal);
+    return styling.actionScheme == Mudlet::HyperlinkStyling::ActionLocal && !styling.isSpoiler && !styling.selection.hasSelectionSettings && !clickHides && !linkOpensItsMenu(linkIndex);
+}
+
 bool TBuffer::findNextLink(int fromLine, int fromColumn, int& outLine, int& outColumn, bool* wrapped) const
 {
     if (buffer.empty()) {
@@ -10691,7 +10724,7 @@ bool TBuffer::findNextLink(int fromLine, int fromColumn, int& outLine, int& outC
 
         for (int col = startCol; col < static_cast<int>(bufferLine.size()); ++col) {
             int linkIdx = bufferLine.at(col).linkIndex();
-            if (linkIdx > 0 && linkIdx != currentLinkAtStart) {
+            if (linkIdx > 0 && linkIdx != currentLinkAtStart && !linkIsNote(linkIdx)) {
                 outLine = line;
                 outColumn = col;
                 return true;
@@ -10706,7 +10739,7 @@ bool TBuffer::findNextLink(int fromLine, int fromColumn, int& outLine, int& outC
 
         for (int col = 0; col < endCol; ++col) {
             int linkIdx = bufferLine.at(col).linkIndex();
-            if (linkIdx > 0 && linkIdx != currentLinkAtStart) {
+            if (linkIdx > 0 && linkIdx != currentLinkAtStart && !linkIsNote(linkIdx)) {
                 outLine = line;
                 outColumn = col;
                 if (wrapped) {
@@ -10748,7 +10781,7 @@ bool TBuffer::findPreviousLink(int fromLine, int fromColumn, int& outLine, int& 
 
         for (int col = startCol; col >= 0; --col) {
             int linkIdx = bufferLine.at(col).linkIndex();
-            if (linkIdx > 0 && linkIdx != currentLinkAtStart) {
+            if (linkIdx > 0 && linkIdx != currentLinkAtStart && !linkIsNote(linkIdx)) {
                 // Found a different link — now find its start (first column with this linkIdx on this line)
                 int linkStart = col;
                 while (linkStart > 0 && bufferLine.at(linkStart - 1).linkIndex() == linkIdx) {
@@ -10768,7 +10801,7 @@ bool TBuffer::findPreviousLink(int fromLine, int fromColumn, int& outLine, int& 
 
         for (int col = startCol; col >= 0; --col) {
             int linkIdx = bufferLine.at(col).linkIndex();
-            if (linkIdx > 0 && linkIdx != currentLinkAtStart) {
+            if (linkIdx > 0 && linkIdx != currentLinkAtStart && !linkIsNote(linkIdx)) {
                 int linkStart = col;
                 while (linkStart > 0 && bufferLine.at(linkStart - 1).linkIndex() == linkIdx) {
                     --linkStart;

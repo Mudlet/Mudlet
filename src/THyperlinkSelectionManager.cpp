@@ -116,6 +116,7 @@ QString THyperlinkSelectionManager::modifyUriForSelection(Mudlet::HyperlinkStyli
     case Mudlet::HyperlinkStyling::ActionGmcp:
         return qsl("sendGMCP(%1)").arg(LuaLiteral::quote(gmcpMessageWithSelected(baseCommand, isSelected)));
     case Mudlet::HyperlinkStyling::ActionOpenUrl:
+    case Mudlet::HyperlinkStyling::ActionLocal:
     case Mudlet::HyperlinkStyling::ActionNone:
         break;
     }

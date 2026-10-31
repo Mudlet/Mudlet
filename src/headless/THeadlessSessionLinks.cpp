@@ -100,7 +100,8 @@ THeadlessSession::LinkResult THeadlessSession::followLink(const int link, const 
     case TConsoleModel::LinkFollowed::unknown:
         return LinkResult::unknown;
     }
-    // A left click runs the first item whatever it holds; the GUI's menu greys out an item with nothing to run
+    // A left click runs the first item whatever it holds, but on a local: link that opens its menu; the GUI's menu
+    // greys out an item with nothing to run
     const bool fromMenu = item && store.opensMenu(link);
     if (fromMenu && !items.at(*item).enabled) {
         return LinkResult::disabled;

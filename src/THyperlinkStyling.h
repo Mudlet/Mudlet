@@ -74,7 +74,7 @@ struct HyperlinkStyling {
     // The link's primary action as parsed from the URI, kept alongside the
     // generated Lua so selection callbacks can rebuild the call without
     // parsing Lua source back apart.
-    enum ActionScheme { ActionNone, ActionSend, ActionPrompt, ActionOpenUrl, ActionGmcp };
+    enum ActionScheme { ActionNone, ActionSend, ActionPrompt, ActionOpenUrl, ActionGmcp, ActionLocal };
     ActionScheme actionScheme = ActionNone;
     QString baseCommand;
 
