@@ -523,6 +523,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
 {
     const QString packageName = ui->packageList->currentText();
     uncheckAllChildren();
+    mPackageDataPath.clear();
     if (index != 0) {
         ui->lineEdit_packageName->setText(packageName);
     } else {
@@ -617,9 +618,11 @@ void dlgPackageExporter::slot_packageChanged(int index)
     if (!info.exists()) {
         return;
     }
+    mPackageDataPath = qsl("%1/%2/.mudlet").arg(packagePath, packageName);
     QDirIterator it(info.absoluteFilePath(), QDir::NoDotAndDotDot | QDir::Hidden | QDir::AllEntries);
     QStringList ignore;
-    ignore << QLatin1String("config.lua") << qsl("%1.xml").arg(packageName);
+    // .mudlet is rebuilt on export from the icon and description, see copyPackageDataToTmp()
+    ignore << QLatin1String("config.lua") << qsl("%1.xml").arg(packageName) << qsl(".mudlet");
     while (it.hasNext()) {
         const QFileInfo f(it.next());
         if (ignore.contains(f.fileName(), Qt::CaseInsensitive)) {
@@ -1007,6 +1010,7 @@ void dlgPackageExporter::slot_exportPackage()
     }
 
     auto plainDescription = copyNewImagesToTmp(tempPath);
+    copyPackageDataToTmp(tempPath);
 
     QStringList assetPaths;
     for (int i = 0; i < ui->listWidget_addedFiles->count(); ++i) {
@@ -1429,6 +1433,30 @@ QFileInfo dlgPackageExporter::copyIconToTmp(const QString& tempPath) const
         QFile::copy(mPackageIconPath, iconDirName);
     }
     return iconFile;
+}
+
+// Leaves the old icon behind, as copyIconToTmp() supplies the one the package has now;
+// description images the description no longer uses are dropped by cleanupUnusedImages()
+void dlgPackageExporter::copyPackageDataToTmp(const QString& tempPath) const
+{
+    if (mPackageDataPath.isEmpty() || !QFileInfo(mPackageDataPath).isDir()) {
+        return;
+    }
+    const QString stagedDataPath = qsl("%1.mudlet").arg(tempPath);
+    QDir().mkpath(stagedDataPath);
+    QDirIterator it(mPackageDataPath, QDir::NoDotAndDotDot | QDir::Hidden | QDir::AllEntries);
+    while (it.hasNext()) {
+        const QFileInfo entry(it.next());
+        if (entry.isSymLink() || entry.fileName() == QLatin1String("Icon")) {
+            continue;
+        }
+        const QString target = qsl("%1/%2").arg(stagedDataPath, entry.fileName());
+        if (entry.isDir()) {
+            copy_directory(entry.absoluteFilePath(), target, false);
+        } else {
+            QFile::copy(entry.absoluteFilePath(), target);
+        }
+    }
 }
 
 std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath)
