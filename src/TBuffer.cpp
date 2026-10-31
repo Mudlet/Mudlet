@@ -78,6 +78,8 @@
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <unistd.h>
+#elif defined(Q_OS_DARWIN)
+#include <os/proc.h>
 #elif defined(Q_OS_HURD)
 #include <errno.h>
 #include <unistd.h>
@@ -140,6 +142,14 @@ int64_t physicalMemoryTotal()
         return memInfo;
     }
 
+    return -1;
+#elif defined(Q_OS_DARWIN)
+    // iOS has no swap and stops an app at a limit of its own, well short of the device's memory, so all
+    // there is room for is what is left under that limit
+    if (const size_t available = os_proc_available_memory(); available > 0) {
+        return static_cast<int64_t>(available);
+    }
+    qWarning().nospace().noquote() << "physicalMemoryTotal() WARNING - os_proc_available_memory() did not say how much memory is left for Mudlet.";
     return -1;
 #elif defined(Q_OS_OPENBSD)
     // Very similar to MacOS but uses a different second level name
