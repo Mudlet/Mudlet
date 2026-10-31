@@ -247,6 +247,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapViewTeardownTest.cpp
     MapLabelRenderTest.cpp
     MapDecalsTest.cpp
+    MapExitStubTest.cpp
     MapViewCueTest.cpp
     LuaMapperCueTest.cpp
     MapLockNoOpTest.cpp
