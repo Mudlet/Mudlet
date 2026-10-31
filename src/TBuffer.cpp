@@ -2085,16 +2085,15 @@ void TBuffer::parseChunk(
                     warnAboutDiscardedStringSequence(qsl("passed %1 bytes, so its command will be ignored").arg(MAX_OSC_SEQUENCE_LENGTH), localBuffer, spanStart, spanEnd);
                     // An OSC 8 link start ends the open link even when it is dropped, as decodeOSC() does for
                     // one it rejects: a URI too long for the cap is only ever seen here
-                    if (mHyperlinkActive && mpHost && mpHost->mEnableOSC8Hyperlinks) {
-                        const std::string_view payload = std::string_view(localBuffer).substr(spanStart, spanEnd - spanStart);
-                        const size_t uriStart = payload.starts_with("8;") ? payload.find(';', 2) : std::string_view::npos;
-                        if (uriStart != std::string_view::npos && uriStart + 1 < payload.size()) {
-                            const std::string_view uri = payload.substr(uriStart + 1);
-                            const std::string_view preset = "preset:";
-                            // A URI cut off part way through "preset:" may still be one
-                            if (uri.substr(0, preset.size()) != preset.substr(0, uri.size())) {
-                                finaliseActiveHyperlink();
-                            }
+                    const std::string_view payload = std::string_view(localBuffer).substr(spanStart, spanEnd - spanStart);
+                    if (mHyperlinkActive && mpHost && mpHost->mEnableOSC8Hyperlinks && payload.starts_with("8;")) {
+                        const size_t uriStart = payload.find(';', 2);
+                        // Parameters that run past the cap hide the URI, so it is taken for a link start like any other
+                        const std::string_view uri = uriStart == std::string_view::npos ? std::string_view() : payload.substr(uriStart + 1);
+                        const std::string_view preset = "preset:";
+                        // A URI cut off part way through "preset:" may still be one
+                        if (uri.empty() || uri.substr(0, preset.size()) != preset.substr(0, uri.size())) {
+                            finaliseActiveHyperlink();
                         }
                     }
                 }

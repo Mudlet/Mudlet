@@ -205,6 +205,11 @@ describe("Tests TBuffer OSC sequence handling", function()
         assert.equals("OSCLONG1( more)OSCLONG1", findRecentLine("OSCLONG1"))
       end)
 
+      it("should end the open link when its parameters run past the cap", function()
+        assert.is_true(feedTriggers("OSCLONG4(" .. concealed .. "A\027]8;id=" .. long .. ";send:big\027\\more\027]8;;\027\\)OSCLONG4\n"))
+        assert.equals("OSCLONG4( more)OSCLONG4", findRecentLine("OSCLONG4"))
+      end)
+
       it("should leave the open link alone when it is a preset", function()
         assert.is_true(feedTriggers("OSCLONG2(" .. concealed .. "A\027]8;;preset:big?x=" .. long .. "\027\\more\027]8;;\027\\)OSCLONG2\n"))
         assert.equals("OSCLONG2(     )OSCLONG2", findRecentLine("OSCLONG2"))
