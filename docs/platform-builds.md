@@ -272,6 +272,16 @@ above, so turn one off with `-DUSE_SPAWN=OFF` or `WITH_SPAWN=NO` in the environm
 | `USE_DISCORD_RPC` | the `QLibrary` that loads the Discord RPC library, and with it Rich Presence | the Discord functions return `nil` and `"Discord API is not available"`, as when the library is missing; `setDiscordGameUrl()` still works |
 | `USE_SPEECH_ENGINES` | the `QLibrary` loading of the Vosk and sherpa-onnx speech engines | the `stt.*` functions refuse, saying the build cannot load a speech engine library, and `stt.getPlatformKey()` returns `nil`; a platform engine (macOS's own) still works |
 
+The `linux-core-minimal` preset turns these off, along with `USE_MCPSERVER`, `USE_UPDATER`,
+`USE_3DMAPPER` and `WITH_SENTRY`, and builds only `mudlet-headless`. CI builds it on every pull
+request that touches the sources (`.github/workflows/core-mobile-build.yml`), and fails if
+`mudlet_core` still calls into `QProcess`, `QLibrary`, `QLocalServer`, Qt HttpServer or Sentry:
+
+```bash
+cmake --preset linux-core-minimal
+cmake --build --preset linux-core-minimal
+```
+
 ## Debugging options
 
 `src/CMakeLists.txt` contains commented debugging defines for development (search "Debugging code inclusions"):
