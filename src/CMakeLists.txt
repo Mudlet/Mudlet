@@ -67,6 +67,7 @@ set(mudlet_SRCS
     KeyUnit.cpp
     LuaInterface.cpp
     LuaLiteral.cpp
+    MailtoUri.cpp
     mapInfoContributorManager.cpp
     MapDecals.cpp
     MapStyle.cpp
@@ -370,6 +371,7 @@ set(mudlet_HDRS
     KeyUnit.h
     LuaInterface.h
     LuaLiteral.h
+    MailtoUri.h
     MacMicrophonePermission.h
     mapInfoContributorManager.h
     MapDecals.h

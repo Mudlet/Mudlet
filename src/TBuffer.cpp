@@ -25,6 +25,7 @@
 
 #include "Host.h"
 #include "LuaLiteral.h"
+#include "MailtoUri.h"
 #include "MudletApp.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
@@ -539,7 +540,7 @@ QList<RawQueryParameter> splitOscQueryParameters(const QString& query)
 bool systemMayOpenUrl(const QUrl& url)
 {
     const QString scheme = url.scheme().toLower();
-    return scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp");
+    return scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp") || scheme == qsl("mailto");
 }
 
 } // anonymous namespace
@@ -4999,7 +5000,7 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             QString baseUrl = rawUrl;
 
-            if (rawUrl.startsWith(qsl("http://")) || rawUrl.startsWith(qsl("https://")) || rawUrl.startsWith(qsl("ftp://"))) {
+            if (systemMayOpenUrl(QUrl(rawUrl))) {
                 int queryStart = baseUrl.indexOf('?');
                 if (queryStart != -1) {
                     // Strip reserved parameters when corresponding OSC 8 features are enabled
@@ -5053,10 +5054,16 @@ void TBuffer::decodeOSC(const QString& sequence)
                 QString scheme = qurl.scheme().toLower();
 
                 if (systemMayOpenUrl(qurl)) {
+                    baseUrl = MailtoUri::withOnlyMessageFields(baseUrl);
                     mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionOpenUrl;
                     mCurrentHyperlinkStyling.baseCommand = baseUrl;
                     command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
-                    hint = {qsl("%1: %2").arg(QObject::tr("Open browser to"), UntrustedText::forTarget(baseUrl))};
+                    QString action = QObject::tr("Open browser to");
+                    if (scheme == qsl("mailto")) {
+                        //: Start of the tooltip on a game's link that opens the mail app, followed by a colon and the link's mailto: address
+                        action = QObject::tr("Write an email to");
+                    }
+                    hint = {qsl("%1: %2").arg(action, UntrustedText::forTarget(baseUrl))};
                 } else {
                     qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
                     return;
@@ -5101,7 +5108,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                         menuCommands.append(QString());
                         menuHints.append(QString());
                     } else if (systemMayOpenUrl(QUrl(menuCommand))) {
-                        menuCommands.append(qsl("openUrl(%1)").arg(LuaLiteral::quote(menuCommand)));
+                        menuCommands.append(qsl("openUrl(%1)").arg(LuaLiteral::quote(MailtoUri::withOnlyMessageFields(menuCommand))));
                         menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     } else {
                         // Treat as direct command
