@@ -697,9 +697,14 @@ bool Host::loadProfileSave(const QString& saveFileName)
     const QString profileName = getName();
     const auto it = TGameDetails::findGame(profileName);
     if (it != TGameDetails::scmDefaultGames.end()) {
-        setUrl((*it).hostUrl);
-        setPort((*it).port);
-        // A saved Secure choice is the player's own, which the connection dialog keeps over the catalog's too
+        // Saved details are the player's own, which the connection dialog keeps over the catalog's too;
+        // the constructor has already read them, and a telnet:// link chose this profile by them
+        if (MudletApp::readProfileData(profileName, qsl("url")).isEmpty()) {
+            setUrl((*it).hostUrl);
+        }
+        if (!MudletApp::gamePortUsable(MudletApp::readProfileData(profileName, qsl("port")).toInt())) {
+            setPort((*it).port);
+        }
         if (MudletApp::readProfileData(profileName, qsl("ssl_tsl")).isEmpty()) {
             mSslTsl = (*it).tlsEnabled;
         }
@@ -7258,8 +7263,11 @@ void Host::setupIreDriverBugfix()
     // but other games implementing GA don't. Thus, only enable the workaround
     // for the former only
 
+    // A catalog game is judged by the game, not by another address the player saved for it
+    const auto game = TGameDetails::findGame(getName());
+    const QString url = game != TGameDetails::scmDefaultGames.end() ? (*game).hostUrl : getUrl();
     const QStringList ireGameUrls{"achaea.com", "lusternia.com", "imperian.com", "aetolia.com", "starmourn.com"};
-    if (ireGameUrls.contains(getUrl(), Qt::CaseInsensitive)) {
+    if (ireGameUrls.contains(url, Qt::CaseInsensitive)) {
         set_USE_IRE_DRIVER_BUGFIX(true);
     }
 }
