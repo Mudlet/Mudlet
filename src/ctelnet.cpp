@@ -5566,7 +5566,7 @@ void cTelnet::gotRest(std::string& mud_data)
             mMudData.append(mud_data, 0, i + 1);
             postKeepingDetectionTail();
 
-            if (!mIsTimerPosting && (mpPostingTimer->interval() != mTimeOut)) {
+            if (mpPostingTimer->interval() != mTimeOut) {
                 mpPostingTimer->setInterval(mTimeOut);
             }
 
@@ -5577,7 +5577,7 @@ void cTelnet::gotRest(std::string& mud_data)
         } else {
             mMudData += mud_data;
 
-            if (!mIsTimerPosting && mpPostingTimer->interval() != mTimeOut) {
+            if (mpPostingTimer->interval() != mTimeOut) {
                 mpPostingTimer->setInterval(mTimeOut);
             }
 
