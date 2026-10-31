@@ -57,6 +57,7 @@
 class dlgMapper;
 class TMapViewFrontend;
 class TMapViewsFrontend;
+class TNullMapViews;
 class Host;
 #if defined(INCLUDE_3DMAPPER)
 class QOpenGLWidget;
@@ -158,8 +159,8 @@ public:
     bool setRoomCoordinates(int id, int x, int y, int z);
     // After a change to the map: also counts its revision up
     void updateArea(int areaId);
-    // For when only the player's room changed, which views read afresh anyway: unlike updateArea(), not taken
-    // as a change to how the area looks, so a view need not remake what it keeps of it
+    // For when only what views read afresh on every paint changed, such as the player's room: unlike updateArea(),
+    // not taken as a change to how the area looks, so a view need not remake what it keeps of it
     void updatePlayerArea(int areaId);
     // For updateMap() and a new speedwalk: what a view keeps of the area's look is remade, but the map's revision
     // stays, as the rooms and exits themselves did not change
@@ -326,8 +327,10 @@ public:
     // underlying flag (and by setting a breakpoint on setUnsave() we can
     // determine which bit of code is responsible for changing the flag!)
     void setUnsaved(const char*);
+    // For a change no cache is made from, so nothing is rebuilt for it; a view that may show it still needs asking to repaint
+    void setUnsavedKeepingRevisions(const char*);
     void resetUnsaved() { mUnsavedMap = false; }
-    // Counts up on every change to the map's contents or to the colors it is drawn in, so that a view can tell
+    // Counts up on every change to the map's contents (bar setUnsavedKeepingRevisions() ones) or to the colors it is drawn in, so that a view can tell
     // whether what it worked out from them last frame still holds
     quint64 revision() const { return mRevision; }
     bool isUnsaved() const { return mUnsavedMap; }
@@ -356,8 +359,8 @@ public:
     TMapViewManager* getViewManager() { return mpViewManager; }
     // Defined in TMapViewManager.cpp, which can see that TMapViewManager is a TMapViewsFrontend.
     void setViewManager(TMapViewManager* pViewManager);
-    // mpViewManager as core code drives it. Never null: with no manager, as in a profile with no
-    // console view, a frontend that has no views and can make none.
+    // mpViewManager as core code drives it. Never null: with no manager, mpNullViews, or in the GUI a
+    // frontend that has no views and can make none.
     TMapViewsFrontend* mapViewsFrontend() const;
 
     // Was a single int mRoomId but that breaks things when maps are
@@ -418,13 +421,15 @@ public:
     static const QStringList& builtInMenuItemNames();
     bool menuItemShown(const QString& itemName) const;
 
-    typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
+    typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
     typedef boost::property_map<mygraph_t, boost::edge_weight_t>::type WeightMap;
     typedef mygraph_t::vertex_descriptor vertex;
     typedef mygraph_t::edge_descriptor edge_descriptor;
     mygraph_t g;
     QHash<QPair<unsigned int, unsigned int>, route> edgeHash; // For Mudlet to decode BGL edges
     std::vector<location> locations;
+    // Set by initGraph() from the graph it builds, so it is only valid alongside that graph.
+    heuristicScale mHeuristicScale;
     bool mMapGraphNeedsUpdate = true;
     bool mNewMove = true;
 
@@ -524,6 +529,8 @@ private:
 
     // The same object as mpViewManager, set with it by setViewManager().
     TMapViewsFrontend* mpViewsFrontend = nullptr;
+    // The secondary views of a profile made with no main window, else null. A child, so Qt deletes it.
+    TNullMapViews* mpNullViews = nullptr;
     QPointer<dlgMapper> mpMapper;
     // The same object as mpMapper, set with it by setMapper(); read only while mpMapViewObject is set.
     TMapViewFrontend* mpMapViewFrontend = nullptr;

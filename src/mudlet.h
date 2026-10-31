@@ -103,7 +103,6 @@ class TEvent;
 class TLabel;
 class translation;
 class TScrollBox;
-class TSpeechBridge;
 class TTabBar;
 class TToolBar;
 class TUiTour;
@@ -112,6 +111,7 @@ class mudlet : public QMainWindow, public Ui::main_window, public TAppFrontend
 {
     Q_OBJECT
     friend class ConnectionDialogOfflineProfileTest;
+    friend class ConsoleSearchBarTest;
 
 public:
     Q_DISABLE_COPY(mudlet)
@@ -161,6 +161,8 @@ public:
     void commitLayoutUpdates(bool flush = false);
     bool saveFloatingDockGeometries();
     void restoreFloatingDockGeometries();
+    void growDockToSizeHint(QDockWidget*, bool onlyFromMinimum);
+    void growDockToSizeHintWhenShown(QDockWidget*);
     void deleteProfileData(const QString& profile, const QString& item);
     void disableToolbarButtons();
     void doAutoLogin(const QString&, bool offline, bool useTlsThisSession = false);
@@ -200,6 +202,7 @@ public:
     bool closeHeldOffByEventPump(Host*) const;
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
     bool loadWindowLayout() override;
+    bool layoutLoading() const override { return mIsLoadingLayout; }
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
     bool migratePasswordsToProfileStorage();
@@ -212,7 +215,6 @@ public:
     bool openWebPage(const QString&) override;
 
     // Profile validation and orphan detection
-    bool hasOrphanedProfiles();
     QStringList getOrphanedProfiles();
     void reattachOrphanedProfiles();
     void processEventLoopHack() override;
@@ -231,7 +233,7 @@ public:
     bool saveWindowLayout();
     bool saveWindowLayoutForScript() override;
     bool openProfile(const QString& profileName, bool connect) override;
-    bool requestProfileTabClose(const QString& profileName) override;
+    bool requestProfileClose(const QString& profileName) override;
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
     void setAppearance(enums::Appearance, const bool& loading = false);
@@ -352,7 +354,6 @@ public:
     // reported in the dictionary selection as the hunspell dictionary/affix
     // filename (e.g. a "xx" or "xx_YY" form rather than "words"):
     QHash<QString, QString> mDictionaryLanguageCodeMap;
-    Discord mDiscord;
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
     // and ::ShowLineAndParagraphSeparators
@@ -570,7 +571,6 @@ private slots:
 
 private:
     void assignKeySequences();
-    QString autodetectPreferredLanguage();
 #ifdef INCLUDE_MCPSERVER
     // Everything setMCPEnabled() does bar the discovery file, which has to be squared
     // with whatever this leaves behind whichever way it goes
@@ -706,7 +706,6 @@ private:
     QPointer<QToolButton> mpButtonConnect;
     QPointer<QToolButton> mpButtonDiscord;
     QPointer<QToolButton> mpButtonMute;
-    QPointer<TSpeechBridge> mpSpeechBridge;
     void refreshMicrophoneMarkers();
     QPointer<QToolButton> mpButtonPackageManagers;
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;

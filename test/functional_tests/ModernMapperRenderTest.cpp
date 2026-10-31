@@ -1236,6 +1236,37 @@ private slots:
         QCOMPARE(widget.mRoomTexturesInUse.size(), widget.mMaxRoomTextures);
     }
 
+    // With room names shown, a room whose own ROOM_UI_SHOWNAME is off shows none, and one without it shows its name
+    void test_aRoomWithItsNameTurnedOffShowsNoNameWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->name = qsl("Market Cross");
+        TRoom* pEastRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        pEastRoom->name = qsl("Mill");
+        pEastRoom->userData.insert(ROOM_UI_SHOWNAME, qsl("0"));
+        map()->setRoomNamesShown(true);
+        const auto restore = qScopeGuard([this]() {
+            map()->setRoomNamesShown(false);
+        });
+        ModernGLWidget widget(map(), mpHost);
+        const auto nameDrawn = [&widget](const QString& text) {
+            for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+                if (key.startsWith(qsl("name|")) && (key.endsWith(qsl("|%1").arg(text)) || key.contains(qsl("|%1|").arg(text)))) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        queueFrame(widget, areaId);
+        QVERIFY2(nameDrawn(qsl("Market Cross")), "a room with no name flag of its own shows no name");
+        QVERIFY2(!nameDrawn(qsl("Mill")), "a room whose name is turned off shows it");
+
+        pEastRoom->userData.insert(ROOM_UI_SHOWNAME, qsl("1"));
+        queueFrame(widget, areaId);
+        QVERIFY2(nameDrawn(qsl("Mill")), "a room whose name is turned back on shows none");
+    }
+
     // The redness of the exit bar between the two rooms of the level below, which fades toward the lower level color
     static float lowerExitRedness(const ModernGLWidget& widget)
     {

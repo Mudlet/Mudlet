@@ -9,6 +9,18 @@
 
 describe("spawn", function()
 
+  local unavailable = "spawn: starting processes is not available in this build of Mudlet"
+  local _, probeError = pcall(spawn, function() end, "/nonexistent/mudlet-spawn-test")
+  if probeError == unavailable then
+    it("should raise in a build that cannot start processes", function()
+      local ok, err = pcall(spawn, function() end, "echo")
+      assert.is_false(ok)
+      assert.are.equal(unavailable, err)
+    end)
+    pending("this build of Mudlet cannot start processes")
+    return
+  end
+
   describe("argument checking", function()
 
     it("should reject a call with no process name", function()
@@ -216,9 +228,10 @@ describe("spawn", function()
   -- A child outlives the Lua state that spawned it unless something ends it:
   -- once its profile closed, the next line it wrote was read off the freed
   -- interpreter, and after a reset it called whatever the new state held at the
-  -- old callback reference. Each child below writes a line after a second and,
-  -- if still alive a second later, touches a file. The suite's own profile
-  -- cannot be torn down from inside it, so each test loads a second one.
+  -- old callback reference. Each child below writes a line after a second and
+  -- then touches a file, so a two second wait is twice what a survivor needs.
+  -- The suite's own profile cannot be torn down from inside it, so each test
+  -- loads a second one.
   describe("a profile torn down while its process runs", function()
     -- Writes a profile whose script is `script` with its %s replaced by the
     -- spawn() call, and returns the file the child touches if it survives
@@ -226,7 +239,7 @@ describe("spawn", function()
       local survivor = getMudletHomeDir() .. "/" .. name .. "-survivor"
       onCleanup(function() os.remove(survivor) end)
       os.remove(survivor)
-      local command = string.format("sleep 1; echo spawnAfterTeardown; sleep 1; touch '%s'", survivor)
+      local command = string.format("sleep 1; echo spawnAfterTeardown; touch '%s'", survivor)
       local child = string.format([[spawn(function(line) raiseGlobalEvent("mudletSpecSpawnLine", line) end, "/bin/sh", "-c", %q)]], command)
       makeFixtureProfile(name, string.format(script, child))
       return survivor
@@ -251,7 +264,7 @@ describe("spawn", function()
 
       assert.is_true(loadProfile(name, true))
       assert.is_true(closeProfile(name))
-      for _ = 1, 30 do
+      for _ = 1, 20 do
         pumpEvents(100)
       end
 
@@ -283,7 +296,7 @@ else
 end]])
 
       assert.is_true(loadProfile(name, true))
-      for _ = 1, 30 do
+      for _ = 1, 20 do
         pumpEvents(100)
       end
 
@@ -312,7 +325,7 @@ if not io.exists(marker) then
 end]])
 
       assert.is_true(loadProfile(name, true))
-      for _ = 1, 30 do
+      for _ = 1, 20 do
         pumpEvents(100)
       end
 

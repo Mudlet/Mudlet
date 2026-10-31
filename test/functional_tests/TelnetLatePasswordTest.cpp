@@ -201,9 +201,9 @@ private:
     QString mPort; // assigned the stub's actual loopback port in init()
 
     // Long enough that the login is set on the loaded profile before the username timer reads it,
-    // short enough that four cases do not dominate the group's run time.
+    // and that a prompt sent after the login line arrives before the password step runs.
     static constexpr int csUsernameDelayMs = 800;
-    static constexpr int csPasswordDelayMs = 1200;
+    static constexpr int csPasswordDelayMs = 1000;
 
 private slots:
     void initTestCase()
@@ -327,9 +327,11 @@ private slots:
         QVERIFY2(waitForThePasswordStep(host), "the auto-login never reached its password step");
         QCOMPARE(mpServer->receivedText(), csLoginLine);
 
+        QVERIFY2(!host->mTelnet.mTimerCharacterModeDetect || !host->mTelnet.mTimerCharacterModeDetect->isActive(), "the login line started the character-at-a-time detection");
         // Past the detection window (CHARACTER_MODE_DETECT, 3 s), so a verdict the login line had
-        // started would have latched by now and refused the password below
+        // started some other way would have latched by now and refused the password below
         QTest::qWait(3500ms);
+        QVERIFY(!host->mTelnet.mCharacterModeDetected);
 
         deliverLatePassword(host);
         QVERIFY2(waitForReceivedText(csLoginLine + csPasswordLine), "the late password was not sent to the still-masked password prompt");
@@ -489,18 +491,18 @@ private slots:
     // keychain that answers only when the test says so. A password is on its way - so the login
     // step arms the password step - while the lookup is out and after its deadline, until the
     // keychain answers; a refusal then is final.
-    // Every other test of the storage preference stands in for it with the testing override, so this is
-    // the one that reads it where the running application keeps it: Preferences -> Store passwords in
-    // (raised in review of #11032).
+    // Every other test of the storage preference with a main window stands in for it with the testing
+    // override, so this is the one that reads it where the running application keeps it: Preferences ->
+    // Store passwords in.
     void testTheCredentialManagerFollowsThePlayersStoragePreference()
     {
         CredentialManager::profileStorageOverrideForTesting().reset();
 
         mudlet::self()->setStorePasswordsSecurely(false);
-        QCOMPARE(CredentialManager::profileStoragePreferred(), std::optional<bool>(true));
+        QCOMPARE(CredentialManager::profileStoragePreferred(), true);
 
         mudlet::self()->setStorePasswordsSecurely(true);
-        QCOMPARE(CredentialManager::profileStoragePreferred(), std::optional<bool>(false));
+        QCOMPARE(CredentialManager::profileStoragePreferred(), false);
     }
 
     // A saved password the store will not hand over leaves auto-login sending nothing, which the player

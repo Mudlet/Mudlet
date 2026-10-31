@@ -240,6 +240,8 @@ private slots:
         Host* host = startProfile();
         QVERIFY(host);
         host->mTelnet.setAutoReconnect(true);
+        QVERIFY2(host->mTelnet.mFailedConnectionRetryDelay == 5s, "a profile that reconnects automatically no longer waits 5s before its first retry");
+        host->mTelnet.mFailedConnectionRetryDelay = 200ms;
 
         const int connectionsBefore = mpServer->connectionCount();
         // The game goes down, and the profile's attempt to reach it is refused.
@@ -270,6 +272,10 @@ private slots:
         mpServer->stop();
         QVERIFY(connectToADeadPort(host, mpServer->serverPort()));
         QVERIFY2(waitForTextInBuffer(host, qsl("Trying again")), "no retry was scheduled, so calling one off proves nothing");
+        QVERIFY(host->mTelnet.mTimerFailedConnectionRetry && host->mTelnet.mTimerFailedConnectionRetry->isActive());
+        const std::chrono::milliseconds retryDueIn = host->mTelnet.mTimerFailedConnectionRetry->remainingTimeAsDuration();
+        QElapsedTimer sinceRetryScheduled;
+        sinceRetryScheduled.start();
 
         host->mTelnet.disconnectIt();
 
@@ -286,7 +292,9 @@ private slots:
 
         const int connectionsBefore = mpServer->connectionCount();
         QVERIFY2(mpServer->restart(), "the stub could not take its port back");
-        QTest::qWait(15s);
+        const auto sinceScheduled = std::chrono::duration_cast<std::chrono::milliseconds>(sinceRetryScheduled.durationElapsed());
+        QVERIFY2(sinceScheduled < retryDueIn, "the game came back after the retry was due, so a retry left running would have missed it");
+        QTest::qWait(retryDueIn - sinceScheduled + host->mTelnet.mFailedConnectionRetryDelay);
         QCOMPARE(mpServer->connectionCount(), connectionsBefore);
     }
 
@@ -558,10 +566,7 @@ private:
         return host;
     }
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        TestProfile::removeProfileDirectory(profileName);
-    }
+    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
 };
 
 #include "TelnetConnectFailureTest.moc"

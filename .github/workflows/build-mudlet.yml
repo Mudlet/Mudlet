@@ -3,7 +3,8 @@
 # ccache/Lua/Lua rocks/xcb-util-cursor save steps below and the ccache trim
 # and prune that go with them: only builds of development write these shared
 # caches, every other build restores read-only, so build-mudlet-pr.yml has no
-# equivalent steps at all.
+# equivalent steps at all. The same goes for the profile-guided build of
+# releases and PTBs, which a pull request never makes.
 # build-mudlet-pr.yml also runs its macOS C++ tests after packaging, alongside
 # the Lua tests; here they stay ahead of a package step that can publish.
 name: 🔨 Build Mudlet
@@ -15,6 +16,10 @@ on:
     inputs:
       scheduled:
         description: 'Imitate a PTB'
+        required: false
+        default: 'false'
+      pgo:
+        description: 'Build macOS and Linux profile-guided, as a tagged release does'
         required: false
         default: 'false'
   schedule:
@@ -32,6 +37,11 @@ jobs:
       LUA_VERSION: '5.1.5'
       CCACHE_MAXSIZE: ${{ matrix.ccache_maxsize || '500M' }}
       CCACHE_COMPRESSLEVEL: ${{ (github.ref_name == 'development' && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true') && '19' || '1' }}
+      # macOS and Linux releases are built profile-guided - see cmake/ProfileGuidedOptimization.cmake -
+      # and so are macOS PTBs, at their own build type, so a broken profile-guided build shows up the
+      # next morning rather than on release day. Linux PTBs are AddressSanitizer builds instead, so
+      # only a tag or a manual pgo run builds Linux profile-guided.
+      MUDLET_PGO_BUILD: ${{ matrix.pgo == 'true' && (startsWith(github.ref, 'refs/tags/Mudlet-') || github.event.inputs.pgo == 'true' || (matrix.enable_asan != 'true' && (github.event_name == 'schedule' || github.event.inputs.scheduled == 'true'))) }}
     strategy:
       fail-fast: false
       matrix:
@@ -44,7 +54,7 @@ jobs:
             buildname: 'ubuntu / gcc / lua tests + leak detection'
             compiler: gcc_64
             gcc_compiler_version: 12
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: ubuntu-gcc-asan
             # 22.04's ccache 4.5 cleans each sixteenth of the cache on its own, and at
             # 500M that is smaller than the 35-50MB precompiled header - which GCC does
@@ -53,46 +63,46 @@ jobs:
             deploy: 'deploy'
             run_tests: 'true'
             # Enable AddressSanitizer for PTB and testing builds, but not release
-            # builds (tagged Mudlet-*) - ASAN adds significant runtime overhead
+            # builds (tagged Mudlet-*) or a manual pgo run - ASAN adds significant runtime overhead
             enable_asan: 'true'
+            pgo: 'true'
           - os: ubuntu-22.04
             # Another try to use GCC12
             buildname: 'ubuntu (x86_64)'
             compiler: gcc_64
             gcc_compiler_version: 12
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: ubuntu-gcc
             ccache_maxsize: 2G
           - os: ubuntu-26.04
             buildname: 'ubuntu / clang'
             compiler: clang_64
             gcc_compiler_version: 14
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: ubuntu-clang
           # No tests: none branch on host architecture, so the arm64 job covers them on a faster pool.
           - os: macos-15-intel
             buildname: 'macos (x86_64)'
             compiler: clang_64
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: macos-x64
             deploy: 'deploy'
             build_tests: 'false'
+            pgo: 'true'
           - os: macos-15
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: macos-arm64
             deploy: 'deploy'
             run_tests: 'true'
+            pgo: 'true'
 
     steps:
     - name: Checkout Mudlet source code
       uses: actions/checkout@v7
       with:
         submodules: recursive
-        # Enough for CI/generate-changelog.lua.
-        # MAX_COMMITS_PER_CHANGELOG (100) commits
-        fetch-depth: 100
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
@@ -380,14 +390,15 @@ jobs:
          echo "CMAKE_DISABLE_PRECOMPILE_HEADERS=ON" >> $GITHUB_ENV
 
     # Saves are keyed per commit, so the primary key deliberately matches no entry
-    # and every restore prefix-matches the newest. On a tagged release the
-    # leak-detection leg compiles without ASan, so it wants the plain leg's cache.
+    # and every restore prefix-matches the newest. A profile-guided build skips it:
+    # the profile flags are on every object it compiles, so nothing in the cache matches.
     - name: Restore ccache
+      if: env.MUDLET_PGO_BUILD != 'true'
       uses: actions/cache/restore@v6
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{ matrix.enable_asan == 'true' && startsWith(github.ref, 'refs/tags/Mudlet-') && 'ubuntu-gcc' || matrix.ccache_id }}-sha-
-        restore-keys: ccache-${{ matrix.enable_asan == 'true' && startsWith(github.ref, 'refs/tags/Mudlet-') && 'ubuntu-gcc' || matrix.ccache_id }}-sha-
+        key: ccache-${{ matrix.ccache_id }}-sha-
+        restore-keys: ccache-${{ matrix.ccache_id }}-sha-
 
     - name: (Linux) Set build info
       if: runner.os == 'Linux'
@@ -422,17 +433,23 @@ jobs:
         ccache --show-compression
         echo "CCACHE_BUILD_START=$(date +%s)" >> "$GITHUB_ENV"
 
+    # A profile-guided build (releases, macOS PTBs and manual pgo runs) builds only the instrumented benchmarks
+    # CI/pgo-train.sh trains on here - it needs the test tree even where the job ships
+    # without one. Building mudlet in this pass would send the instrumented
+    # binary's debug files to Sentry.
     - name: Build Mudlet
       uses: lukka/run-cmake@v10.9
       with:
-        configurePreset: ${{ runner.os == 'macOS' && (matrix.build_tests == 'false' && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
-        buildPreset: ${{ runner.os == 'macOS' && (matrix.build_tests == 'false' && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
+        configurePreset: ${{ runner.os == 'macOS' && ((matrix.build_tests == 'false' && env.MUDLET_PGO_BUILD != 'true') && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
+        buildPreset: ${{ runner.os == 'macOS' && ((matrix.build_tests == 'false' && env.MUDLET_PGO_BUILD != 'true') && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
+        buildPresetAdditionalArgs: ${{ env.MUDLET_PGO_BUILD == 'true' && '[''--target'', ''PipelineBenchmark'', ''MapRenderBenchmark'', ''PathfindBenchmark'']' || '[]' }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
         # The run-varying half of the ci-linux/ci-macos presets - everything else
         # about the configuration lives in CMakePresets.json
-        CMAKE_BUILD_TYPE: ${{ startsWith(github.ref, 'refs/tags/Mudlet-') && 'Release' || '' }}
-        USE_SANITIZER: ${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'Address' || '' }}
+        CMAKE_BUILD_TYPE: ${{ (startsWith(github.ref, 'refs/tags/Mudlet-') || (matrix.pgo == 'true' && github.event.inputs.pgo == 'true')) && 'Release' || '' }}
+        MUDLET_PGO: ${{ env.MUDLET_PGO_BUILD == 'true' && 'GENERATE' || '' }}
+        USE_SANITIZER: ${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && github.event.inputs.pgo != 'true' && 'Address' || '' }}
         WITH_SENTRY: 'ON'
         SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
@@ -454,6 +471,7 @@ jobs:
       if: >-
         always() && github.ref_name == 'development'
         && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
+        && env.MUDLET_PGO_BUILD != 'true'
       uses: actions/cache/save@v6
       with:
         path: ${{runner.workspace}}/ccache
@@ -488,6 +506,17 @@ jobs:
       with:
         path: ~/.luarocks
         key: ${{ steps.rocks.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+
+    # After the Lua rocks are installed above, as the training run needs them
+    - name: Train, then do the profile-guided build
+      if: env.MUDLET_PGO_BUILD == 'true'
+      run: |
+        ${{github.workspace}}/CI/pgo-train.sh ${{runner.workspace}}/b/ninja
+        cmake -B ${{runner.workspace}}/b/ninja -DMUDLET_PGO=USE -DBUILD_TESTING=${{ matrix.build_tests == 'false' && 'OFF' || 'ON' }}
+        cmake --build ${{runner.workspace}}/b/ninja
+      env:
+        NINJA_STATUS: '[%f/%t %o/sec] '
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     - name: (Linux) Run C++ tests
       if: runner.os == 'Linux' && matrix.run_tests == 'true'
@@ -527,14 +556,6 @@ jobs:
       run: |
         export ARCH=$(uname -m)
         echo "ARCH=$ARCH" >> $GITHUB_ENV
-        if [ "$RUNNER_OS" = "macOS" ] && [ "$ARCH" = "arm64" ]; then
-          # dblsqd only supports 'arm' as an architecture and not 'arm64'
-          export ARCH_DBLSQD=arm
-          echo "ARCH_DBLSQD=arm" >> $GITHUB_ENV
-        else
-          export ARCH_DBLSQD=$ARCH
-          echo "ARCH_DBLSQD=$ARCH" >> $GITHUB_ENV
-        fi
         ${{github.workspace}}/CI/after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
@@ -542,8 +563,6 @@ jobs:
         X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
         DEPLOY: ${{matrix.deploy}}
         DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
-        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
-        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
         MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
         APPLE_USERNAME: ${{secrets.APPLE_USERNAME}}
@@ -726,6 +745,10 @@ jobs:
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        # Off by default; the flood specs pend without it
+        MUDLET_MATCH_THREADS: 2
+        # Its statistics sample would take lines the flood specs compare off the pool
+        MUDLET_MATCH_SAMPLE_EVERY: 0
         MUDLET_TEST_MODE: 1
         MUDLET_TEST_REQUIRE_TTS_MOCK: 1
         MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
@@ -775,6 +798,10 @@ jobs:
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        # Off by default; the flood specs pend without it
+        MUDLET_MATCH_THREADS: 2
+        # Its statistics sample would take lines the flood specs compare off the pool
+        MUDLET_MATCH_SAMPLE_EVERY: 0
         MUDLET_TEST_MODE: 1
         MUDLET_TEST_REQUIRE_TTS_MOCK: 1
         MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1

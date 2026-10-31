@@ -178,9 +178,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       it("gives a line the local time it arrived at, as hh:mm:ss.zzz and a space", function()
+        -- before the echo: the line may keep the time the echo read, a fraction of a millisecond earlier
+        local before = os.date("%H:%M:%S")
         echo("\n")
         local line = getLastLineNumber("main")
-        local before = os.date("%H:%M:%S")
         feedTriggers("getTimestamp arrival line\n")
         local after = os.time()
         local timestamp = getTimestamp(line)
@@ -210,6 +211,23 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         local a, b = getTimestamp(first), getTimestamp(first + 1)
         assert.are_not.equal(a, b)
         assert.are.equal(a, getTimestamp(first))
+      end)
+
+      it("gives a line that arrived with another the time it was stored, after the other's trigger ran", function()
+        -- a stored line's time is only ever reused once the TSC rate has been measured, over 100 ms
+        echo("\n")
+        local calibrationStart = getEpoch()
+        repeat until getEpoch() - calibrationStart >= 0.12
+        echo("\n")
+        local first = getLastLineNumber("main")
+        local triggerId = tempExactMatchTrigger("getTimestamp slow trigger line", function()
+          local start = getEpoch()
+          repeat until getEpoch() - start >= 0.005
+        end)
+        finally(function() killTrigger(triggerId) end)
+        feedTriggers("getTimestamp slow trigger line\ngetTimestamp line after it\n")
+        assert.are.equal("getTimestamp line after it", getLines(first + 1, first + 2)[1])
+        assert.are_not.equal(getTimestamp(first), getTimestamp(first + 1))
       end)
 
       it("should return nil+msg for a negative line number", function()
@@ -2219,6 +2237,20 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         return false
       end
 
+      -- Whether a replay is running is application-wide, so each spec lets its
+      -- own run out before the next asks for one. loadReplay() refuses while one
+      -- runs before it looks at the file, so a missing file tells which it is.
+      local function replayEnded()
+        for _ = 1, 40 do
+          local _, err = loadReplay(getMudletHomeDir() .. "/mudlet-spec-no-such-replay.dat")
+          if not contains(err, "in progress") then
+            return true
+          end
+          pumpEvents(50)
+        end
+        return false
+      end
+
       it("raises a Lua error when called with no arguments", function()
         assertArgError(function() loadReplay() end, "loadReplay: bad argument #1 type")
       end)
@@ -2278,9 +2310,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(loadReplay(replay))
 
         assert.is_true(playedBack(mark, "mudlet-spec-replayed-line"), "the replay did not reach the console")
-        -- whether a replay is running is application-wide, so let this one run
-        -- out before the next spec asks for one
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end)
 
       it("plays back a replay written with the eight byte delay", function()
@@ -2296,7 +2326,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(loadReplay(replay))
 
         assert.is_true(playedBack(mark, "mudlet-spec-wide-replay-line"), "the replay did not reach the console")
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end)
 
       -- older Mudlets recorded an empty chunk when a compressed read
@@ -2314,7 +2344,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(loadReplay(replay))
 
         assert.is_true(playedBack(mark, "mudlet-spec-after-empty-line"), "the replay did not reach the console")
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end)
 
       -- a first delay of zero makes the wider shape start with eight zero
@@ -2333,7 +2363,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
         assert.is_true(playedBack(mark, "mudlet-spec-wide-after-empty-line"), "the replay did not reach the console")
         assert.is_true(contains(textFrom(mark), "mudlet-spec-wide-before-empty-line"), "the line before the empty chunk did not reach the console")
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end)
 
       -- read with four byte delays, this file runs out part way through a
@@ -2351,7 +2381,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(loadReplay(replay))
 
         assert.is_true(playedBack(mark, "Zq"), "the replay did not reach the console")
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end)
 
       it("loads a replay after refusing a file too short to be one", function()
@@ -2375,7 +2405,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         local mark = getLastLineNumber("main")
         assert.is_true(loadReplay(replay))
         assert.is_true(playedBack(mark, "mudlet-spec-after-short-line"), "the replay did not reach the console")
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end)
 
       it("acts on telnet negotiation that was recorded with the text", function()
@@ -2402,7 +2432,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(playedBack(mark, "mudlet-spec-gmcp-replay-line"), "the replay did not reach the console")
         assert.is_truthy(gmcp.Replay and gmcp.Replay.Marker, "the subnegotiation recorded in the replay was played back as text instead of acted on")
         assert.equals("seen", gmcp.Replay.Marker.note)
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end)
 
       it("refuses a second replay while one is still running", function()
@@ -2430,7 +2460,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(playedBack(mark, "mudlet-spec-first-replay-line"), "the replay that was accepted did not reach the console")
         assert.is_true(playedBack(mark, "mudlet-spec-first-replay-tail"), "refusing the second replay cut the first one short")
         assert.is_false(contains(textFrom(mark), "mudlet-spec-second-replay-line"), "the replay that was refused played anyway")
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end)
 
       -- The file is only vetted when it is loaded, so this rewrites the second
@@ -2460,7 +2490,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         writeFile(after, chunk(0, "mudlet-spec-after-rewritten-line\r\n"))
         assert.is_true(loadReplay(after), "the aborted replay was still counted as running")
         assert.is_true(playedBack(mark, "mudlet-spec-after-rewritten-line"), "the replay after the aborted one did not reach the console")
-        pumpEvents(200)
+        assert.is_true(replayEnded(), "the replay was still running")
       end
 
       it("ends a replay at a chunk whose length turned negative after loading", function()
@@ -3471,9 +3501,9 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
       -- Loads a profile whose script runs code once, from a timer; the code
       -- answers through report(), which raises mudletSpecTornDownResult. The
-      -- marker file turns a reset's re-run of the script into the global event
-      -- mudletSpecTornDownRerun instead of starting it all over again.
-      local function runInProfileBeingTornDown(code)
+      -- marker file turns a reset's re-run of the script into rerunCode and the
+      -- global event mudletSpecTornDownRerun instead of starting it all over again.
+      local function runInProfileBeingTornDown(code, rerunCode)
         for _, name in ipairs({closing, target}) do
           local path = profilesDirectory .. "/" .. name
           assert.is_true(lfs.attributes(path) == nil or ownedByUs(name),
@@ -3506,13 +3536,14 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 local function report(...) raiseGlobalEvent("mudletSpecTornDownResult", ...) end
 local marker = getMudletHomeDir() .. "/mudlet-spec-ran"
 if io.exists(marker) then
+  %s
   raiseGlobalEvent("mudletSpecTornDownRerun")
 else
   io.open(marker, "w"):close()
   tempTimer(0, function()
     %s
   end)
-end]], code)
+end]], rerunCode or "", code)
         script = script:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
 
         -- left behind by a run that crashed or was killed
@@ -3568,6 +3599,31 @@ end]], code)
         assert.equals("true", run.result[1])
         assert.is_true(waitUntil(function() return run.reset end), "the profile was not reset")
         assert.is_true(loaded(target))
+      end)
+
+      -- lua_close() runs __gc finalisers; a timer one of them makes outlives that state
+      it("never runs another function for a timer made while its state closed", function()
+        if needsTestMode() then
+          return
+        end
+        local wrong = {}
+        local handler = registerAnonymousEventHandler("mudletSpecTornDownWrong", function(_, which)
+          wrong[#wrong + 1] = which
+        end)
+        finally(function() killAnonymousEventHandler(handler) end)
+        local run = runInProfileBeingTornDown([[
+local keep = newproxy(true)
+getmetatable(keep).__gc = function() tempTimer(0.2, function() end) end
+mudletSpecKeep = keep
+resetProfile()
+report("reset")]], [[
+for i = 1, 2000 do
+  tempTimer(60, function() raiseGlobalEvent("mudletSpecTornDownWrong", i) end)
+end]])
+        assert.equals("reset", run.result[1])
+        assert.is_true(waitUntil(function() return run.reset end), "the profile was not reset")
+        pumpEvents(600)
+        assert.are.same({}, wrong, "functions made after the reset ran early")
       end)
 
       it("closes another profile after closeProfile(), then closes", function()

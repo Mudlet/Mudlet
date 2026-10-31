@@ -169,6 +169,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 # -DENABLE_STATIC_ANALYSIS=ON (see cmake/StaticAnalysis.cmake for details)
 include(StaticAnalysis)
 
+# Profile-guided optimisation - inactive unless configured with -DMUDLET_PGO=GENERATE
+# or USE (see cmake/ProfileGuidedOptimization.cmake for the steps)
+include(ProfileGuidedOptimization)
+
 include(IncludeOptionalModule)
 
 include_optional_module(ENVIRONMENT_VARIABLE WITH_UPDATER
@@ -184,13 +188,9 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS
 include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER
                         OPTION_VARIABLE USE_3DMAPPER
                         READABLE_NAME "3D mapper")
-# Off by default: it needs Qt6::HttpServer, which several of the project's own build
-# environments do not install, and it opens a port that runs arbitrary Lua - opting in
-# is the right shape for both.
 include_optional_module(ENVIRONMENT_VARIABLE WITH_MCPSERVER
                         OPTION_VARIABLE USE_MCPSERVER
-                        READABLE_NAME "MCP server"
-                        DEFAULT OFF)
+                        READABLE_NAME "MCP server")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_SHADER_HOT_RELOAD
                         OPTION_VARIABLE USE_SHADER_HOT_RELOAD
                         READABLE_NAME "shader hot-reloading"
@@ -199,9 +199,36 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_MEMORY_TRACKING
                         OPTION_VARIABLE USE_MEMORY_TRACKING
                         READABLE_NAME "memory tracking"
                         DEFAULT OFF)
+# Off by default on a Linux without Debian's multiarch layout, whose Lua modules
+# live where 3rdparty/lua51 does not look
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT CMAKE_LIBRARY_ARCHITECTURE)
+  set(BUNDLED_LUA_DEFAULT OFF)
+else()
+  set(BUNDLED_LUA_DEFAULT ON)
+endif()
+include_optional_module(ENVIRONMENT_VARIABLE WITH_BUNDLED_LUA
+                        OPTION_VARIABLE USE_BUNDLED_LUA
+                        READABLE_NAME "bundled Lua 5.1"
+                        DEFAULT ${BUNDLED_LUA_DEFAULT})
+# On by default: it links mudlet_core alone, so building it is what proves the core still runs without
+# Qt Widgets, and the teardown tests run it
+include_optional_module(ENVIRONMENT_VARIABLE WITH_HEADLESS
+                        OPTION_VARIABLE USE_HEADLESS
+                        READABLE_NAME "headless runner")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
+# Each of these uses something an Android or iOS build of mudlet_core cannot have; see
+# "Leaving out what a mobile build cannot use" in docs/platform-builds.md
+include_optional_module(ENVIRONMENT_VARIABLE WITH_SPAWN
+                        OPTION_VARIABLE USE_SPAWN
+                        READABLE_NAME "spawn() of processes")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_DISCORD_RPC
+                        OPTION_VARIABLE USE_DISCORD_RPC
+                        READABLE_NAME "Discord RPC library loading")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_SPEECH_ENGINES
+                        OPTION_VARIABLE USE_SPEECH_ENGINES
+                        READABLE_NAME "Vosk and sherpa-onnx speech engine loading")
 
 find_package(Qt6 6.8.2 REQUIRED)
 
@@ -335,6 +362,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_compile_options(edbee-lib PRIVATE -Wno-sfinae-incomplete)
 endif()
 add_subdirectory(3rdparty/communi)
+if(USE_BUNDLED_LUA)
+  add_subdirectory(3rdparty/lua51)
+endif()
 add_subdirectory(translations/translated)
 add_subdirectory(src)
 

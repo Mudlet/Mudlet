@@ -67,6 +67,8 @@ public:
     bool setScript(const QString& script);
     bool canBeUnlocked();
     bool setIsActive(bool);
+    // setIsActive(true), except that a countdown already under way carries on rather than starting over
+    bool stayActive();
     void stop();
     void start();
     void enableTimer();
@@ -108,6 +110,8 @@ public:
     // specifies whenever the payload is Lua code as a string
     // or a function
     bool mRegisteredAnonymousLuaFunction = false;
+    // 0 when no function is held; luaL_ref() never returns 0
+    int mLuaFunctionRef = 0;
     bool exportItem = true;
     bool mModuleMasterFolder = false;
 

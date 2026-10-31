@@ -713,6 +713,9 @@ private slots:
 #if defined(Q_OS_WIN)
         QSKIP("no /bin/echo for the child");
 #endif
+#if !defined(INCLUDE_SPAWN)
+        QSKIP("this build of Mudlet cannot start processes");
+#endif
         auto* host = startDebuggingProfile();
         TDebug::setEnabledCategories({TDebug::Category::Error});
 

@@ -1271,6 +1271,9 @@ if false then
   --- This will effectively have the same result as a call to deleteLine() but the buffer line will not
   --- be entirely removed. Consequently, further calls to echo() etc. sort of functions are possible
   --- without using wrapLine() unnecessarily.
+  ---
+  --- Returns true, or nil and a message when the window does not exist or the line is below 0 or
+  --- more than one past the window's last line.
   function wrapLine()
   end
 
