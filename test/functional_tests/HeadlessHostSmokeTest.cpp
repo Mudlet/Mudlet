@@ -28,6 +28,8 @@
 #include <QFontMetrics>
 #include <QFontMetricsF>
 #include <QImage>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QPointer>
 #include <QScopeGuard>
 #include <QSemaphore>
@@ -10412,6 +10414,55 @@ headlessDiscord = ok and 'ok' or tostring(err)
         QCOMPARE(MudletApp::getInterfaceLanguage(), qsl("fr_FR"));
     }
 
+    void test_firstRunLanguageFollowsTheDesktopToAGoldStarTranslation()
+    {
+        // These need no translation statistics, so they run before the skips below
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("en-GB")}), qsl("en_GB"));
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("en-AU")}), qsl("en_US"));
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("en-Latn-AU"), qsl("en-AU"), qsl("en-Latn"), qsl("en")}), qsl("en_US"));
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("en-Latn-GB"), qsl("en-GB"), qsl("en-Latn"), qsl("en")}), qsl("en_GB"));
+        QCOMPARE(MudletApp::autodetectPreferredLanguage(QStringList()), qsl("en_US"));
+
+        QFile statsFile(qsl(":/translation-stats.json"));
+        QVERIFY2(statsFile.open(QIODevice::ReadOnly | QIODevice::Text), "The translation statistics are not built in.");
+        QJsonParseError parseError;
+        const QJsonDocument statsDocument = QJsonDocument::fromJson(statsFile.readAll(), &parseError);
+        QVERIFY2(parseError.error == QJsonParseError::NoError && statsDocument.isObject(), qPrintable(qsl("The translation statistics do not parse: %1").arg(parseError.errorString())));
+        const QJsonObject stats = statsDocument.object();
+        if (stats.isEmpty()) {
+            QSKIP("Built without translation statistics (generate-translation-stats.lua had no lua-yajl), so only English can be detected.");
+        }
+        QString goldStar;
+        QString partial;
+        for (auto it = stats.constBegin(); it != stats.constEnd(); ++it) {
+            const QString code = it.key();
+            if (code.startsWith(qsl("en_")) || !QFile::exists(qsl(":/lang/mudlet_%1.qm").arg(code))) {
+                continue;
+            }
+            const int percent = it.value().toObject().value(qsl("translated_percent")).toInt();
+            if (percent >= MudletApp::scmTranslationGoldStar && goldStar.isEmpty()) {
+                goldStar = code;
+            } else if (percent > 0 && percent < MudletApp::scmTranslationGoldStar && partial.isEmpty()) {
+                partial = code;
+            }
+        }
+        if (goldStar.isEmpty() || partial.isEmpty()) {
+            QSKIP("No translation other than English has a gold star, or none falls short of one.");
+        }
+        const auto asUiLanguage = [](QString code) {
+            return code.replace(QLatin1Char('_'), QLatin1Char('-'));
+        };
+
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({asUiLanguage(goldStar), qsl("en-US")}), goldStar);
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({asUiLanguage(partial), asUiLanguage(goldStar)}), goldStar);
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({asUiLanguage(partial)}), qsl("en_US"));
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("en-GB"), asUiLanguage(goldStar)}), qsl("en_GB"));
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("en-AU"), asUiLanguage(goldStar)}), qsl("en_US"));
+        // As Qt 6 lists a desktop set to en_AU, then the gold-star language
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("en-Latn-AU"), qsl("en-AU"), qsl("en-Latn"), qsl("en"), asUiLanguage(goldStar)}), qsl("en_US"));
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("en-Latn-GB"), qsl("en-GB"), qsl("en-Latn"), qsl("en"), asUiLanguage(goldStar)}), qsl("en_GB"));
+    }
+
     // Run twice: here, where Mudlet.ini holds none of these keys, and by HeadlessHostSmokeTestWithMudletIni,
     // where initTestCase() wrote each of them before the pool existed
     void test_profileWithNoMainWindowTakesItsSettingsFromMudletIni()
@@ -10449,10 +10500,8 @@ headlessDiscord = ok and 'ok' or tostring(err)
         QCOMPARE(MudletApp::storingPasswordsSecurely(), !fromIni);
         QCOMPARE(CredentialManager::profileStoragePreferred(), fromIni);
         QCOMPARE(host->getPass(), fromIni ? qsl("inistored") : QString());
-        // As the main window with no saved language: British English for a desktop that asks for it, else American
-        const QStringList uiLanguages = QLocale::system().uiLanguages();
-        const QString unsetLanguage = uiLanguages.contains(qsl("en-GB")) || uiLanguages.contains(qsl("en_GB")) ? qsl("en_GB") : qsl("en_US");
-        const QString language = fromIni ? qsl("de_DE") : unsetLanguage;
+        // With no saved language, the desktop's, by the rule test_firstRunLanguageFollowsTheDesktopToAGoldStarTranslation checks
+        const QString language = fromIni ? qsl("de_DE") : MudletApp::autodetectPreferredLanguage();
         QCOMPARE(MudletApp::getInterfaceLanguage(), language);
         // The headless runner's translation is the one for the language its profiles report
         QTranslator* pTranslator = MudletApp::loadTranslationsForRun();
