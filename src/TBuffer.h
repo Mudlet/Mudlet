@@ -1066,6 +1066,8 @@ private:
     QStringList mCurrentHyperlinkHint;
     int mCurrentHyperlinkLinkId = 0;
     bool mHyperlinkActive = false;
+    // The MXP link this OSC 8 hyperlink opened inside, which it overrides until it closes; 0 if none
+    int mHyperlinkEnclosingMxpLinkId = 0;
     // Track hyperlink start position for visibility manager registration
     int mCurrentHyperlinkStartLine = 0;
     int mCurrentHyperlinkStartColumn = 0;

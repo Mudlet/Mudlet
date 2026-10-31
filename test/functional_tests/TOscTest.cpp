@@ -211,6 +211,13 @@ private:
     mpHost->mUndoServerWrapWidth = 80;
   }
 
+  // As specialForceMXPProcessorOn has it once connected; cleanup() undoes it
+  void forceMxpOn() {
+    mpHost->setForceMXPProcessorOn(true);
+    mpHost->mMxpProcessor.enable();
+    mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
+  }
+
 private slots:
   // Start mudlet and create a profile once for all tests.
   void initTestCase() {
@@ -284,6 +291,10 @@ private slots:
       // held back rather than leaving it to be joined onto the next test's text
       feedFromServer(qsl("\n"));
       mpHost->mUndoServerWrap = false;
+    }
+    if (mpHost && mpHost->getForceMXPProcessorOn()) {
+      mpHost->setForceMXPProcessorOn(false);
+      mpHost->mMxpProcessor.disable();
     }
   }
 
@@ -1848,6 +1859,64 @@ private slots:
     const int link = console->buffer.getLinkIndexAt(line, 10);
     QVERIFY(link > 0);
     QCOMPARE(console->buffer.getLinkIndexAt(line, 12), link);
+  }
+
+  // Whichever of an MXP link and an OSC 8 link opened inside the other takes
+  // the text it wraps, and the outer one takes back the text after it
+  void test_Osc8LinkInsideAnMxpLink_data() {
+    QTest::addColumn<QString>("inside");
+
+    QTest::newRow("one link")
+        << qsl("\x1b]8;;send:look\x1b\\yy\x1b]8;;\x1b\\");
+    QTest::newRow("two links")
+        << qsl("\x1b]8;;send:look\x1b\\y\x1b]8;;send:read\x1b\\y\x1b]8;;\x1b\\");
+    QTest::newRow("a rejected link after an accepted one")
+        << qsl("\x1b]8;;send:look\x1b\\y\x1b]8;;gmcp:Foo\x1b\\y\x1b]8;;\x1b\\");
+  }
+
+  void test_Osc8LinkInsideAnMxpLink() {
+    QFETCH(QString, inside);
+    forceMxpOn();
+
+    feedFromServer(qsl("MXPOSC <SEND \"north\">xx ") + inside +
+                   qsl(" ww</SEND> after\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("MXPOSC"));
+    QVERIFY(line >= 0);
+    QCOMPARE(console->buffer.line(line), qsl("MXPOSC xx yy ww after"));
+
+    const int sendLink = console->buffer.getLinkIndexAt(line, 7);
+    QVERIFY2(sendLink > 0, "the MXP link's text is not a link");
+    QCOMPARE(console->getLinkStore().getLinksConst(sendLink),
+             QStringList(qsl("send(%1)").arg(LuaLiteral::quote(qsl("north")))));
+    const int osc8Link = console->buffer.getLinkIndexAt(line, 10);
+    QVERIFY2(osc8Link > 0 && osc8Link != sendLink,
+             "the OSC 8 link's text is not its own link");
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 12), sendLink);
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 13), sendLink);
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 16), 0);
+  }
+
+  void test_MxpLinkInsideAnOsc8Link() {
+    forceMxpOn();
+
+    feedFromServer(qsl("OSCMXP \x1b]8;;send:look\x1b\\aa <SEND \"north\">xx</SEND> bb\x1b]8;;\x1b\\ after\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("OSCMXP"));
+    QVERIFY(line >= 0);
+    QCOMPARE(console->buffer.line(line), qsl("OSCMXP aa xx bb after"));
+
+    const int osc8Link = console->buffer.getLinkIndexAt(line, 7);
+    QVERIFY2(osc8Link > 0, "the OSC 8 link's text is not a link");
+    const int sendLink = console->buffer.getLinkIndexAt(line, 10);
+    QVERIFY2(sendLink > 0 && sendLink != osc8Link,
+             "the MXP link's text is not its own link");
+    QCOMPARE(console->getLinkStore().getLinksConst(sendLink),
+             QStringList(qsl("send(%1)").arg(LuaLiteral::quote(qsl("north")))));
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 13), osc8Link);
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 16), 0);
   }
 
 
