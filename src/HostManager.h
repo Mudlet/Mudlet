@@ -112,6 +112,8 @@ public:
     // Whether a profile taken out of its pool is still held until no script of its own runs, which
     // closeMudlet() waits for
     static bool releasingProfile();
+    // From the start of the destructor, which runs the profiles' sysExitEvent handlers
+    bool goingDown() const { return mGoingDown; }
 
 private:
     // The GUI's call, from mudlet::readLateSettings()

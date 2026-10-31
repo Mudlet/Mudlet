@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QDir>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtNetwork/QTcpServer>
@@ -490,6 +491,21 @@ private:
     int mAreaId = 0;
     int mShownAreaId = 0;
 
+    // pumpEvents() and waitForEvent() answer only in test mode
+    static auto inTestMode()
+    {
+        const bool wasSet = qEnvironmentVariableIsSet("MUDLET_TEST_MODE");
+        const QByteArray value = qgetenv("MUDLET_TEST_MODE");
+        qputenv("MUDLET_TEST_MODE", "1");
+        return qScopeGuard([wasSet, value]() {
+            if (wasSet) {
+                qputenv("MUDLET_TEST_MODE", value);
+            } else {
+                qunsetenv("MUDLET_TEST_MODE");
+            }
+        });
+    }
+
     QString runLua(const QString& chunk)
     {
         const QString wrapped = qsl("routingResult = 'not run'\nlocal ok, err = pcall(function()\n%1\nend)\nroutingResult = ok and 'ok' or tostring(err)\n").arg(chunk);
@@ -794,6 +810,35 @@ assert(getProfileTabNumber() == 3, "getProfileTabNumber did not count from one")
                 qsl("profileTabIndex(%1)").arg(mHostname),
         };
         QCOMPARE(app.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
+    }
+
+    // Only the view's destruction counts: a view a run sets and clears again, as this file's do, leaves waits running
+    void test_onlyTheViewGoingCountsAsShuttingDown()
+    {
+        const auto restore = inTestMode();
+        const auto noView = qScopeGuard([]() {
+            TAppFrontend::setInstance(nullptr);
+        });
+        RecordingAppFrontend app;
+        TAppFrontend::setInstance(&app);
+        TAppFrontend::setInstance(nullptr);
+        QVERIFY(!TAppFrontend::viewGone());
+        QCOMPARE(runLua(qsl("assert(pumpEvents(1) == true)")), qsl("ok"));
+
+        TAppFrontend::setInstance(&app);
+        TAppFrontend::viewDestroyed();
+        QVERIFY(TAppFrontend::viewGone());
+        QVERIFY(!TAppFrontend::hasView());
+        QCOMPARE(runLua(qsl(R"(
+local ok, err = pumpEvents(1)
+assert(ok == nil and err:find("shutting down", 1, true), tostring(err))
+local event, waitError = waitForEvent("neverRaised", 1000)
+assert(event == nil and waitError:find("shutting down", 1, true), tostring(waitError))
+)")),
+                 qsl("ok"));
+
+        TAppFrontend::setInstance(&app);
+        QVERIFY(!TAppFrontend::viewGone());
     }
 
     void test_mapZoomReachesTheMapView()

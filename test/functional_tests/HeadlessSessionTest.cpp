@@ -28,6 +28,7 @@
 
 #include <QDataStream>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QScopeGuard>
 #include <QSignalSpy>
@@ -176,6 +177,21 @@ end))lua")
 
     static qsizetype saveCount(const QString& name) { return QDir(MudletApp::getMudletPath(enums::profileXmlFilesPath, name)).entryList(QStringList{qsl("*.xml")}, QDir::Files).size(); }
 
+    // pumpEvents() and waitForEvent() answer only in test mode
+    static auto inTestMode()
+    {
+        const bool wasSet = qEnvironmentVariableIsSet("MUDLET_TEST_MODE");
+        const QByteArray value = qgetenv("MUDLET_TEST_MODE");
+        qputenv("MUDLET_TEST_MODE", "1");
+        return qScopeGuard([wasSet, value]() {
+            if (wasSet) {
+                qputenv("MUDLET_TEST_MODE", value);
+            } else {
+                qunsetenv("MUDLET_TEST_MODE");
+            }
+        });
+    }
+
     static QString luaGlobalString(Host* host, const char* name)
     {
         lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
@@ -272,6 +288,52 @@ private slots:
         QVERIFY(session.runLua(qsl("headlessMutes = tostring(getConfig('muteMediaAPI')) .. ' ' .. tostring(getConfig('muteMediaGame'))")));
         QCOMPARE(luaGlobalString(session.host(), "headlessMutes"), qsl("true true"));
         QVERIFY(session.shutdown(false));
+    }
+
+    void test_waitsRunWithNoMainWindow()
+    {
+        const auto restore = inTestMode();
+        const QString name = qsl("Headless Waits");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"(
+local pumped, pumpError = pumpEvents(10)
+tempTimer(0, function() raiseEvent("headlessWait", 7) end)
+local event, arg = waitForEvent("headlessWait", 5000)
+headlessWaits = tostring(pumped) .. " " .. tostring(pumpError) .. " " .. tostring(event) .. " " .. tostring(arg)
+)")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessWaits"), qsl("true nil headlessWait 7"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // As in the GUI, where the main window has gone by then: a wait there would pump a pool part-way destroyed
+    void test_aWaitInAnExitHandlerIsToldOfTheShutdown()
+    {
+        const auto restore = inTestMode();
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString resultPath = dir.filePath(qsl("exit.txt"));
+        const QString name = qsl("Headless Exit Wait");
+        QVERIFY(writeProfile(name,
+                             qsl(R"(
+registerAnonymousEventHandler("sysExitEvent", function()
+  local ok, err = pumpEvents(3000)
+  local file = io.open([[%1]], "w")
+  file:write(tostring(ok) .. " " .. tostring(err))
+  file:close()
+end)
+)")
+                                     .arg(resultPath)));
+        QElapsedTimer elapsed;
+        {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            elapsed.start();
+            QVERIFY(session.shutdown(false));
+        }
+        QCOMPARE(readFile(resultPath), qsl("nil pumpEvents: stopped early, Mudlet is shutting down"));
+        QVERIFY2(elapsed.elapsed() < 2500, qPrintable(QString::number(elapsed.elapsed())));
     }
 
     void test_profileNameIsMatchedIgnoringCase()

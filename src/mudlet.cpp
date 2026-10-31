@@ -6912,7 +6912,7 @@ mudlet::~mudlet()
     saveDetachedWindowsGeometry();
 
     if (TAppFrontend::instance() == this) {
-        TAppFrontend::setInstance(nullptr);
+        TAppFrontend::viewDestroyed();
     }
     mudlet::smpSelf = nullptr;
 }

@@ -56,7 +56,6 @@
 #include <memory>
 
 #include "CredentialManager.h"
-#include "EventLoopPump.h"
 #include "FontManager.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -4672,7 +4671,7 @@ wlReplacedResult = ok and "ok" or tostring(err)
         Host* host = HostManager::self()->getHost(hostname);
         QVERIFY2(host, "The profile is not in the pool.");
         host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onUwnShowHandler"));
-        // With no view, pumpEvents() takes Mudlet for shutting down and pumps nothing
+        // The null view paints on short chains of zero timers, so passes rather than time deliver them
         lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State*) -> int {
             for (int pass = 0; pass < 10; ++pass) {
                 QCoreApplication::processEvents();
@@ -5625,12 +5624,6 @@ end
         QVERIFY(!host->hasConsoleView());
         QVERIFY2(host->mLoadedOk, qPrintable(host->mProfileLoadError));
 
-        // With no view, pumpEvents() takes Mudlet for shutting down and pumps nothing, so the waits for a save use the
-        // pump it would
-        lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State* L) -> int {
-            static_cast<void>(EventLoopPump::pumpFor(static_cast<int>(lua_tointeger(L, 1))));
-            return 0;
-        });
         // Run from the event loop, as a script in the GUI is, so the saves it waits out deliver no deferred deletes
         bool ran = false;
         bool pendingDeleteHeld = false;
@@ -7685,8 +7678,8 @@ headlessMapView = ok and "ok" or tostring(err)
                 return QStringList{qsl("the profile could not be made")};
             }
             host->getLuaInterpreter()->loadGlobal();
-            // With no view, pumpEvents() takes Mudlet for shutting down and pumps nothing. The null view paints on short
-            // chains of zero timers, each link a pass, so passes rather than time deliver them however slow a pass is
+            // The null view paints on short chains of zero timers, each link a pass, so passes rather than time deliver
+            // them however slow a pass is
             lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State*) -> int {
                 for (int pass = 0; pass < 10; ++pass) {
                     QCoreApplication::processEvents();
@@ -11549,7 +11542,7 @@ headlessMapConfig = ok and 'ok' or tostring(err)
         Host* host = HostManager::self()->getHost(hostname);
         QVERIFY2(host, "The profile is not in the pool.");
         host->getLuaInterpreter()->loadGlobal();
-        // With no view, pumpEvents() takes Mudlet for shutting down and pumps nothing
+        // The null view paints on short chains of zero timers, so passes rather than time deliver them
         lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State*) -> int {
             for (int pass = 0; pass < 10; ++pass) {
                 QCoreApplication::processEvents();
