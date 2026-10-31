@@ -1273,6 +1273,122 @@ tempTrigger("Gamma", [[echo(" <c>")]]))lua")));
         session.shutdown(false);
     }
 
+    // As a resize of the GUI's main window tells the game
+    void test_theScreenSizeReachesTheGame()
+    {
+        const QString name = qsl("Headless Screen Size");
+        QVERIFY(writeProfile(name, QString()));
+        TelnetServerStub server;
+        server.start(qsl("127.0.0.1"));
+        QVERIFY(server.isListening());
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QVERIFY(!session.setScreenSize(60, 40));
+        QCOMPARE(session.errorString(), qsl("No profile is open."));
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(registerAnonymousEventHandler("sysWindowResizeEvent", function(_, w, h, window)
+  headlessResizes = (headlessResizes or "") .. w .. "x" .. h .. " " .. window .. ";"
+end))lua")));
+        // Before the game asks, so it is told when it does
+        QVERIFY(session.setScreenSize(70, 30));
+        QTRY_VERIFY_WITH_TIMEOUT(server.clientConnected(), 10000);
+        server.sendRaw(QByteArray::fromHex("fffd1f"));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(70, 30)}), 10000);
+        server.clearNawsUpdates();
+        QVERIFY(session.runLua(qsl("headlessResizes = ''")));
+
+        QVERIFY(session.setScreenSize(60, 40));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(60, 40)}), 10000);
+        server.clearNawsUpdates();
+        QVERIFY(session.runLua(qsl("headlessGrid = getColumnCount() .. 'x' .. getRowCount()")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessGrid"), qsl("60x40"));
+        // As the GUI raises it for its main window, in pixels
+        QVERIFY(session.runLua(qsl("local w, h = getMainWindowSize(); headlessResized = w .. 'x' .. h .. ' main;'")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessResizes"), luaGlobalString(session.host(), "headlessResized"));
+        QVERIFY(session.setScreenSize(60, 40));
+        QTest::qWait(1000);
+        QVERIFY(server.nawsUpdates().isEmpty());
+        QCOMPARE(luaGlobalString(session.host(), "headlessResizes"), luaGlobalString(session.host(), "headlessResized"));
+
+        // As a frontend that reports its size on every layout pass would
+        QVERIFY(session.setScreenSize(50, 40));
+        for (int i = 0; i < 10; ++i) {
+            QTest::qWait(100);
+            QVERIFY(session.setScreenSize(50, 40));
+        }
+        QTest::qWait(100);
+        QCOMPARE(server.nawsUpdates(), (QVector<QSize>{QSize(50, 40)}));
+        server.clearNawsUpdates();
+
+        // As the GUI's main console reports it
+        QVERIFY(session.setScreenSize(20, 40));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(40, 40)}), 10000);
+        server.clearNawsUpdates();
+        QVERIFY(session.setScreenSize(300, 40));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(std::min(300, session.host()->mWrapAt), 40)}), 10000);
+        server.clearNawsUpdates();
+        // A byte of 255 goes out doubled, as IAC
+        QVERIFY(session.setScreenSize(60, 255));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(60, 255)}), 10000);
+        server.clearNawsUpdates();
+        QVERIFY(session.setScreenSize(60, 65535));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(60, 65535)}), 10000);
+        server.clearNawsUpdates();
+
+        for (const auto& [columns, rows] : {std::pair(0, 40), std::pair(60, 0), std::pair(65536, 40), std::pair(60, 65536), std::pair(-1, -1)}) {
+            QVERIFY(!session.setScreenSize(columns, rows));
+            QVERIFY2(session.errorString().contains(qsl("from 1 to 65535")), qPrintable(session.errorString()));
+        }
+        QTest::qWait(500);
+        QVERIFY(server.nawsUpdates().isEmpty());
+        session.shutdown(false);
+    }
+
+    void test_aResizeHandlerThatClosesTheProfile_data()
+    {
+        QTest::addColumn<bool>("deleteSession");
+        QTest::newRow("session kept") << false;
+        QTest::newRow("session deleted") << true;
+    }
+
+    // A close from the resize handlers runs there and then; as a frontend's function bound into Lua would, they
+    // can delete the session too
+    void test_aResizeHandlerThatClosesTheProfile()
+    {
+        static THeadlessSession* spSession = nullptr;
+        QFETCH(const bool, deleteSession);
+        const QString name = deleteSession ? qsl("Headless Resize Closes Deleted") : qsl("Headless Resize Closes");
+        const QString recordPath = qsl("%1/%2.record").arg(mConfigDir.path(), name);
+        QVERIFY(writeProfile(name, recordingScript(recordPath)));
+        QObject owner;
+        auto* pSession = new THeadlessSession(&owner);
+        spSession = pSession;
+        QCOMPARE(pSession->start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        lua_register(pSession->host()->getLuaInterpreter()->getLuaGlobalState(), "deleteSession", [](lua_State*) -> int {
+            delete spSession;
+            return 0;
+        });
+        QVERIFY(pSession->runLua(qsl(R"lua(function handleWindowResizeEvent() closeProfile()%1 end
+registerAnonymousEventHandler("sysWindowResizeEvent", function()
+  local file = io.open([[%2]], "ab")
+  file:write("sysWindowResizeEvent\n")
+  file:close()
+end))lua")
+                                         .arg(deleteSession ? qsl("; deleteSession()") : QString(), recordPath)));
+        const QPointer<THeadlessSession> session(pSession);
+
+        QVERIFY(pSession->setScreenSize(60, 40));
+        QCOMPARE(session.isNull(), deleteSession);
+        QCOMPARE(readFile(recordPath), qsl("sysExitEvent\n"));
+        QTRY_VERIFY_WITH_TIMEOUT(!HostManager::self() || !HostManager::self()->getHost(name), 10000);
+        if (deleteSession) {
+            // A pool deleted with a script running closes from a timer, and turns away a start() till then
+            QTRY_VERIFY_WITH_TIMEOUT(!HostManager::self(), 10000);
+        }
+    }
+
     // A frontend that opens the profile again asks about that run's close alone
     void test_aStartForgetsAFailedSave()
     {

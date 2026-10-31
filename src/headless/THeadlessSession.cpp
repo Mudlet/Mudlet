@@ -26,6 +26,7 @@
 #include "SecureStringUtils.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
+#include "TEvent.h"
 #include "TGameDetails.h"
 #include "TLuaInterpreter.h"
 
@@ -37,6 +38,7 @@
 #include <QScopeGuard>
 #include <QTimer>
 
+#include <algorithm>
 #include <functional>
 #include <utility>
 
@@ -540,6 +542,46 @@ THeadlessSession::PackageResult THeadlessSession::installPackage(const QString& 
     //: %1 is the path of a package file, %2 is why it could not be installed
     mErrorString = tr("The package \"%1\" could not be installed: %2").arg(path, reason);
     return PackageResult::failed;
+}
+
+bool THeadlessSession::setScreenSize(const int columns, const int rows)
+{
+    if (!usable()) {
+        return false;
+    }
+    if (columns < 1 || columns > 65535 || rows < 1 || rows > 65535) {
+        //: Error from a frontend with no window given a screen size that cannot be sent to the game; %1 is the number of columns asked for, %2 the number of rows
+        mErrorString = tr("A screen of %1 columns by %2 rows cannot be sent to the game: each must be from 1 to 65535.").arg(columns).arg(rows);
+        return false;
+    }
+    // The GUI's main console never reports itself narrower
+    const int width = std::max(40, columns);
+    // As the GUI's resize: each call would put NAWS off for another 0.3s
+    if (width == mpHost->mScreenWidth && rows == mpHost->mScreenHeight) {
+        return true;
+    }
+    mpHost->setScreenDimensions(width, rows);
+    mpHost->updateDisplayDimensions();
+
+    // As TConsole::resizeEvent() reports the main window. The first handler may close the profile, and a
+    // function the frontend bound into Lua delete the session.
+    const QPointer<THeadlessSession> self(this);
+    mpHost->getLuaInterpreter()->call(qsl("handleWindowResizeEvent"), qsl("WindowResizeEvent"));
+    if (!self || !mpHost || mpHost->closeStarted()) {
+        return true;
+    }
+    const QSize size = mpHost->mainWindowSize().value_or(QSize());
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysWindowResizeEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(size.width()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(size.height()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(qsl("main"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
+    return true;
 }
 
 void THeadlessSession::noteAlreadyInstalled(const QString& path, const QString& name)
