@@ -67,6 +67,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowDiscordButtonTest.cpp
     MainWindowSizeReportTest.cpp
     CommandLineScrollRangeTest.cpp
+    CommandLineColorTest.cpp
     DetachedWindowOwnershipTest.cpp
     SpeechAcrossProfilesTest.cpp
     MudletProxyStyleTest.cpp
