@@ -565,6 +565,7 @@ private slots:
 
 private:
     void assignKeySequences();
+    void keepFloatingDocksOnScreen();
 #ifdef INCLUDE_MCPSERVER
     // Everything setMCPEnabled() does bar the discovery file, which has to be squared
     // with whatever this leaves behind whichever way it goes
