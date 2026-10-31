@@ -3015,6 +3015,8 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
     // deleteLines() has already adjusted the deferred logging state
     if (mCommitLineIndices.takeLast() >= 0) {
         log(lineBuffer.size() - 1, lineBuffer.size() - 1);
+    } else {
+        logTextAppendedBehindPendingLine();
     }
 
     // Suppress new empty line IFF echoes already created a new empty line
@@ -6802,6 +6804,27 @@ void TBuffer::logRemainingOutput()
 
     pModel->mLogStream << pendingText;
     pModel->mLogStream.flush();
+}
+
+// A gagged line never reaches log(), so without this a run of them would hold
+// their appendLog() text in memory until a line that is not gagged arrives.
+// A later line has been committed, so the pending one can no longer be logged again.
+void TBuffer::logTextAppendedBehindPendingLine()
+{
+    if (mTextAppendedToLog.isEmpty()) {
+        return;
+    }
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (!pModel || this != &pModel->buffer || !pModel->mLogToLogFile) {
+        return;
+    }
+
+    pModel->mLogStream << lastTextToLog << mTextAppendedToLog;
+    lastTextToLog.clear();
+    mTextAppendedToLog.clear();
+    lastLoggedFromLine = -1;
+    lastloggedToLine = -1;
+    pModel->scheduleLogFlush();
 }
 
 // logs a string directly to the log file
