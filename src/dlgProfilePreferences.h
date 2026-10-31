@@ -69,6 +69,8 @@ public:
     // For one control whose list was rebuilt while the dialog is showing
     void take(const QObject* pControl);
     bool dirty(const QObject* pControl) const;
+    // dirty() and the half-typed field it leaves out, which is still an edit nothing may overwrite
+    bool edited(const QObject* pControl) const;
     bool anyDirty(const QList<const QObject*>& controls) const;
     bool shortcutsDirty() const;
     bool shortcutDirty(const QString& key) const;
@@ -309,7 +311,7 @@ private:
     void fillOutMapHistory();
     bool updateDisplayFont(Host::DisplayFontChange change);
     void rememberDisplayFontFamilyShown();
-    void showEditorFont(const QFont&);
+    void showEditorFont(const QFont&, bool showFamily = true, bool showSize = true);
     void reflectEditorFontControls();
     void cancelShortcutCaptures();
     void updateShortcutConflictWarning();
