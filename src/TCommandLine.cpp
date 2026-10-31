@@ -182,7 +182,7 @@ void TCommandLine::insertFromMimeData(const QMimeData* source)
 
 bool TCommandLine::claimsShortcutOverride(const QKeyEvent* ke) const
 {
-    if (!mpHost || mpHost->isClosingDown()) {
+    if (mpHost->isClosingDown()) {
         return false;
     }
     // The caret-mode shortcut must beat application-wide QShortcuts, such as
@@ -218,7 +218,7 @@ bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
 {
     // Don't process keybindings if the host is closing down to prevent crashes
     // when multiple profiles are closed quickly
-    if (mpHost && mpHost->isClosingDown()) {
+    if (mpHost->isClosingDown()) {
         return false;
     }
 
@@ -232,7 +232,7 @@ bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
 
 bool TCommandLine::keybindingWouldMatchProfileSwitchShortcut(const QKeyEvent* keyEvent) const
 {
-    if (!mpKeyUnit || (mpHost && mpHost->isClosingDown())) {
+    if (!mpKeyUnit || mpHost->isClosingDown()) {
         return false;
     }
 
@@ -259,7 +259,7 @@ bool TCommandLine::event(QEvent* event)
 
     // Don't process events if the host is closing down to prevent crashes
     // when multiple profiles are closed quickly
-    if (!mpHost || mpHost->isClosingDown()) {
+    if (mpHost->isClosingDown()) {
         return QPlainTextEdit::event(event);
     }
 
@@ -710,7 +710,7 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
     // if it was Qt::ActiveWindowFocusReason as that gets used just by
     // switching away and back to the Mudlet application and it messes up
     // the record:
-    if (mpHost && event->reason() != Qt::ActiveWindowFocusReason && mpHost->mainConsoleView()) {
+    if (event->reason() != Qt::ActiveWindowFocusReason && mpHost->mainConsoleView()) {
         mpHost->mainConsoleView()->recordActiveCommandLine(this);
     }
 
@@ -732,7 +732,7 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 void TCommandLine::hideEvent(QHideEvent* event)
 {
     // Redirect focus to main commandline when hiding a SubCommandLine to prevent keyboard input being trapped
-    if (mType == enums::SubCommandLine && hasFocus() && mpHost && mpHost->mainConsoleView() && mpHost->mainConsoleView()->mpCommandLine) {
+    if (mType == enums::SubCommandLine && hasFocus() && mpHost->mainConsoleView() && mpHost->mainConsoleView()->mpCommandLine) {
         mpHost->mainConsoleView()->mpCommandLine->setFocus();
     }
 
@@ -799,7 +799,7 @@ void TCommandLine::adjustHeight()
 
 void TCommandLine::spellCheck()
 {
-    if (!mpHost || !mpHost->getEnableSpellCheck()) {
+    if (!mpHost->getEnableSpellCheck()) {
         return;
     }
 
@@ -815,7 +815,7 @@ void TCommandLine::spellCheck()
 void TCommandLine::slot_popupMenu()
 {
     auto* pA = qobject_cast<QAction*>(sender());
-    if (!mpHost || !pA) {
+    if (!pA) {
         return;
     }
 #if defined(Q_OS_FREEBSD)
@@ -1362,7 +1362,7 @@ void TCommandLine::slot_addWord()
 
 void TCommandLine::spellCheckWord(QTextCursor& c)
 {
-    if (!mpHost || !mpHost->getEnableSpellCheck()) {
+    if (!mpHost->getEnableSpellCheck()) {
         return;
     }
 
@@ -1459,7 +1459,7 @@ bool TCommandLine::handleCtrlTabChange(QKeyEvent* ke, int tabNumber)
 
 void TCommandLine::recheckWholeLine()
 {
-    if (!mpHost || !mpHost->getEnableSpellCheck()) {
+    if (!mpHost->getEnableSpellCheck()) {
         return;
     }
 
