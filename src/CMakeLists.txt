@@ -73,7 +73,6 @@ set(mudlet_SRCS
     MMCPClient.cpp
     MMCPServer.cpp
     MudletApp.cpp
-    MudletInstanceCoordinator.cpp
     MudletMedia.cpp
     MudletReplay.cpp
     MxpTag.cpp
@@ -182,8 +181,8 @@ set(mudlet_SRCS
     XMLimport.cpp
     XmlImportReader.cpp)
 
-# Every .cpp source file that needs Qt Widgets goes here instead, in mudlet_app, kept
-# in alphabetical order (case-insensitive).
+# Every .cpp source file that needs Qt Widgets, or that only the desktop app uses, goes
+# here instead, in mudlet_app, kept in alphabetical order (case-insensitive).
 set(mudlet_app_SRCS
     ../3rdparty/qt-tags-widget/src/qtagedit.cpp
     CustomLineDrawContextMenuHandler.cpp
@@ -226,6 +225,7 @@ set(mudlet_app_SRCS
     LabelInteractionHandler.cpp
     MiddleMousePanHandler.cpp
     mudlet.cpp
+    MudletInstanceCoordinator.cpp
     MudletProxyStyle.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
@@ -379,7 +379,6 @@ set(mudlet_HDRS
     MMCPClient.h
     MMCPServer.h
     MudletApp.h
-    MudletInstanceCoordinator.h
     MudletMedia.h
     MudletReplay.h
     MxpTag.h
@@ -501,8 +500,8 @@ set(mudlet_HDRS
     XMLimport.h
     XmlImportReader.h)
 
-# Every .h header file that needs Qt Widgets goes here instead, in mudlet_app, kept
-# in alphabetical order (case-insensitive).
+# Every .h header file that needs Qt Widgets, or that only the desktop app uses, goes
+# here instead, in mudlet_app, kept in alphabetical order (case-insensitive).
 set(mudlet_app_HDRS
     ../3rdparty/qt-tags-widget/include/QTagEdit/qtagedit.hpp
     CustomLineDrawContextMenuHandler.h
@@ -545,6 +544,7 @@ set(mudlet_app_HDRS
     LabelInteractionHandler.h
     MiddleMousePanHandler.h
     mudlet.h
+    MudletInstanceCoordinator.h
     MudletProxyStyle.h
     PackageItemDelegate.h
     PanInteractionHandler.h
