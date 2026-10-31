@@ -868,6 +868,15 @@ private slots:
     QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
     QCOMPARE(console->getLinkStore().getStyling(linkId).selection.disabled, expectedDisabled);
     QCOMPARE(console->buffer.getLinkState(linkId) == Mudlet::HyperlinkStyling::StateDisabled, expectedDisabled);
+
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(std::get<0>(*pos), std::get<1>(*pos));
+    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(console->mUpperPane, &activate);
+    QCOMPARE(console->buffer.isLinkSelected(linkId), !expectedDisabled);
   }
 
   // A "config" parameter carrying something that is not an object is not a
