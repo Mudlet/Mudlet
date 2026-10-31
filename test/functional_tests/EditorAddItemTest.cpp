@@ -25,6 +25,7 @@
  */
 
 #include <QTemporaryDir>
+#include <QToolBar>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
 #include <algorithm>
@@ -383,6 +384,42 @@ private slots:
 
         QVERIFY2(pKey->isActive(), "saving a newly made key did not switch it on");
         QCOMPARE(pItem->data(0, Qt::AccessibleDescriptionRole).toString(), mpEditor->descActive);
+    }
+
+    // Grabbing a key switches the toolbars' shortcuts off so the grab sees the
+    // key press; however the grab ends, every one of them has to come back (#7812)
+    void test_toolbarShortcutsComeBackAfterGrabbingAKey_data()
+    {
+        QTest::addColumn<int>("key");
+        QTest::newRow("grabbed") << static_cast<int>(Qt::Key_F10);
+        QTest::newRow("cancelled") << static_cast<int>(Qt::Key_Escape);
+    }
+
+    void test_toolbarShortcutsComeBackAfterGrabbingAKey()
+    {
+        QFETCH(int, key);
+        mpEditor->slot_showKeys();
+        QList<QAction*> actions = mpEditor->toolBar->actions() + mpEditor->toolBar2->actions();
+        QHash<QAction*, QList<QKeySequence>> before;
+        for (auto* pAction : actions) {
+            before.insert(pAction, pAction->shortcuts());
+        }
+        QCOMPARE(mpEditor->mAddItem->shortcut(), QKeySequence(QKeySequence::New));
+
+        mpEditor->slot_keyGrab();
+        QVERIFY2(mpEditor->mAddItem->shortcut().isEmpty(), "the add shortcut stayed live while a key was being grabbed");
+        QTest::keyClick(mpEditor, static_cast<Qt::Key>(key));
+        QVERIFY2(!mpEditor->mIsGrabKey, "the key press did not end the grab");
+
+        for (auto* pAction : actions) {
+            QVERIFY2(pAction->shortcuts() == before.value(pAction), qPrintable(qsl("\"%1\" lost its shortcut after grabbing a key").arg(pAction->text())));
+        }
+
+        // clicking "grab key" again mid-grab must not hold aside the already cleared shortcuts
+        mpEditor->slot_keyGrab();
+        mpEditor->slot_keyGrab();
+        QTest::keyClick(mpEditor, Qt::Key_Escape);
+        QCOMPARE(mpEditor->mAddItem->shortcut(), QKeySequence(QKeySequence::New));
     }
 };
 

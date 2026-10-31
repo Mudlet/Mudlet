@@ -13703,7 +13703,14 @@ void dlgTriggerEditor::setShortcuts(QList<QAction*> actionList, const bool activ
     QString buttonLabel;
     for (auto& action : actionList) {
         if (!active) {
+            if (!mSuspendedShortcuts.contains(action)) {
+                mSuspendedShortcuts.insert(action, action->shortcuts());
+            }
             action->setShortcut(QString());
+            continue;
+        }
+        if (mSuspendedShortcuts.contains(action)) {
+            action->setShortcuts(mSuspendedShortcuts.take(action));
             continue;
         }
         buttonLabel = action->text();
