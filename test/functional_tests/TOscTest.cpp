@@ -29,6 +29,7 @@
 
 #include <QFileInfo>
 #include <QKeyEvent>
+#include <QMenu>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -1719,6 +1720,73 @@ private slots:
              "wrapped should be set to true when backward search wrapped");
     QCOMPARE(outLine, linkLine);
     QCOMPARE(console->buffer.getLinkIndexAt(outLine, outCol), linkId);
+  }
+
+  // A closing popup can leave the window inactive, and only the active window's focus widget hears a popup open
+  bool focusPaneInActiveWindow(TTextEdit *pane) {
+    mudlet::self()->show();
+    pane->window()->activateWindow();
+    pane->setFocus();
+    return QTest::qWaitFor([pane] { return QApplication::activeWindow() == pane->window() && pane->hasFocus(); }, 3000);
+  }
+
+  // The pane's own menu only borrows the focus, so caret mode stays on, and the menu must still get the keys
+  void test_ALinkMenuLeavesCaretModeOn() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Look\":\"send:look\"},{\"Wield\":\"send:wield\"}]}\x1b\\Sword\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] {
+      if (mpHost->caretEnabled()) {
+        mpHost->setCaretEnabled(false);
+      }
+    });
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY(focusPaneInActiveWindow(pane));
+    pane->setCaretPosition(std::get<0>(*pos), std::get<1>(*pos));
+    QKeyEvent menuKey(QEvent::KeyPress, Qt::Key_Menu, Qt::NoModifier);
+    QApplication::sendEvent(pane, &menuKey);
+
+    QMenu *menu = pane->findChild<QMenu *>();
+    QVERIFY2(menu && menu->isVisible(), "the Menu key did not open the link's menu");
+    const auto closeMenu = qScopeGuard([pane] {
+      if (QMenu *open = pane->findChild<QMenu *>()) {
+        open->close();
+      }
+    });
+    QVERIFY2(mpHost->caretEnabled(), "opening the menu took the player out of caret mode");
+
+    // Through the window, as a real key arrives: caret mode's keyboard grab would otherwise beat the menu to it
+    const int caretLine = pane->mCaretLine;
+    QTest::keyClick(pane->window()->windowHandle(), Qt::Key_Down);
+    QVERIFY2(menu->activeAction(), "the menu did not get the key");
+    QCOMPARE(pane->mCaretLine, caretLine);
+
+    menu->close();
+    QTRY_VERIFY(!pane->findChild<QMenu *>());
+    QVERIFY2(mpHost->caretEnabled(), "closing the menu took the player out of caret mode");
+    QVERIFY2(pane->hasFocus() || !QApplication::activeWindow(), "the pane did not get the focus back");
+  }
+
+  // A menu that isn't the pane's, such as the menu bar's, may open a dialog, which the keyboard grab would keep keys from
+  void test_AnotherWidgetsMenuStillEndsCaretMode() {
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] {
+      if (mpHost->caretEnabled()) {
+        mpHost->setCaretEnabled(false);
+      }
+    });
+    TTextEdit *pane = mpHost->mainConsoleView()->mUpperPane;
+    QVERIFY(focusPaneInActiveWindow(pane));
+
+    QMenu menu(pane->window());
+    menu.addAction(qsl("Elsewhere"));
+    menu.popup(pane->mapToGlobal(QPoint(1, 1)));
+    const auto closeMenu = qScopeGuard([&menu] { menu.close(); });
+    QVERIFY2(!mpHost->caretEnabled(), "a menu that was not the pane's left caret mode on");
   }
 
   void test_KeyNav_CtrlBracketRight_MovesToNextLink() {

@@ -260,6 +260,11 @@ void TTextEdit::needUpdate(int y1, int y2)
 
 void TTextEdit::focusInEvent(QFocusEvent* event)
 {
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+    if (mpHost && mpHost->caretEnabled() && event->reason() == Qt::PopupFocusReason) {
+        grabKeyboard();
+    }
+#endif
     update();
     QWidget::focusInEvent(event);
 }
@@ -270,8 +275,15 @@ void TTextEdit::focusOutEvent(QFocusEvent* event)
     // Avoid disabling caret mode when the window is merely deactivated
     // (e.g., user Alt+Tabs away). This preserves focus for screen reader
     // users like NVDA so returning to Mudlet restores the original widget
-    // rather than forcing focus to the command line.
-    if (mpHost && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
+    // rather than forcing focus to the command line. This pane's own menus only
+    // borrow the focus and hand it back on closing, so caret mode stays on; a menu bar's may open a dialog.
+    const QWidget* popup = QApplication::activePopupWidget();
+    if (event->reason() == Qt::PopupFocusReason && popup && popup->parentWidget() == this) {
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+        // Caret mode's keyboard grab would otherwise beat the popup to every key
+        releaseKeyboard();
+#endif
+    } else if (mpHost && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
         mpHost->setCaretEnabled(false);
     }
 

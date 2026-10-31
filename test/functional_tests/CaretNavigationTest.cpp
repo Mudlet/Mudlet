@@ -738,8 +738,8 @@ private slots:
         QTest::qWait(100ms);
         const int line = consoleBuffer().lineBuffer.indexOf(qsl("LINKTHREE"));
         QVERIFY2(line > 0, "the third link never reached the buffer");
-        // Anything that takes focus off the pane while that wait runs turns caret
-        // mode off through focusOutEvent, and setCaretPosition() then returns
+        // Focus moving to another widget while that wait runs turns caret mode
+        // off through focusOutEvent, and setCaretPosition() then returns
         // before it focuses a link. Linux and Windows hold the focus with a
         // keyboard grab that setCaretMode() does not do on macOS, which is why
         // this only ever failed there. The caret is this case's precondition
