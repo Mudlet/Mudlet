@@ -188,7 +188,7 @@ public:
     TConsole* deregisterSubConsole(const QString& name);
     void registerDockWidget(const QString& name, TDockWidget* pDockWidget);
     TDockWidget* deregisterDockWidget(const QString& name);
-    void openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) override;
+    bool openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) override;
     TConsole* subConsoleWidget(const QString& name) const { return mSubConsoleMap.value(name); }
     QString subConsoleName(TConsole* pConsole) const { return mSubConsoleMap.key(pConsole); }
     TDockWidget* dockWidget(const QString& name) const { return mDockWidgetMap.value(name); }
@@ -245,6 +245,7 @@ public:
     bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible) override;
     bool setWindowScrolling(const QString& name, bool enabled) override;
     bool scrollWindowTo(const QString& name, int line, bool toEnd) override;
+    bool windowFollowsNewLines(const QString& name) override;
     std::optional<std::pair<bool, QString>> setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight) override;
     bool setWindowFontSize(const QString& name, int size) override;
     bool setWindowCommandLineVisible(const QString& name, bool visible) override;
@@ -384,12 +385,14 @@ signals:
 
 
 private:
+    QString assembleTriggerMatchPoolReport() const;
     bool eventFilter(QObject* watched, QEvent* event) override;
     void openPasswordEntry();
     void closePasswordEntry();
     TPasswordEntry* passwordEntry() const;
     dlgMapper* dockedMapper() const;
     void dockMapWidget(Qt::DockWidgetArea area);
+    void redockMapWidget(Qt::DockWidgetArea area);
     TDockWidget* createUserWindow(const QString& name);
     TToolBar* createToolBar(TAction* pAction, const QString& name);
     TEasyButtonBar* createEasyButtonBar(TAction* pRootAction, const QString& name);
@@ -423,7 +426,7 @@ private:
     QWidget* plainWindowWidget(const QString& name) const;
     void watchWindowState(const QString& name, QWidget* pWidget);
     void reportWindowState(const QStringList& names);
-    void placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
+    bool placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
     TCommandLine* commandLineNamed(const QString& name) const;
     TConsole* consoleNamed(const QString& name);
     // The single answer to "does this profile have a map widget on screen right
@@ -470,6 +473,7 @@ private:
     QString mPasswordEntryTypedAhead;
 
     bool mEnableClose = false;
+    bool mMainDisplayLayoutPending = false;
     std::unique_ptr<TMxpFrameWidgets> mpMxpFrameWidgets;
 };
 

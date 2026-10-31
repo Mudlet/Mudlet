@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <CredentialManager.h>
 #include <MudletApp.h>
 #include <SecureStringUtils.h>
@@ -1292,4 +1293,4 @@ void CredentialManagerTest::cleanupTestCase()
 }
 
 #include "CredentialManagerTest.moc"
-QTEST_MAIN(CredentialManagerTest)
+MUDLET_GROUPED_TEST_MAIN(CredentialManagerTest)

@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include "TTextEdit.h"
 
 #include <QTest>
@@ -118,5 +119,5 @@ private slots:
     }
 };
 
-QTEST_GUILESS_MAIN(TTextEditBlinkTest)
+MUDLET_GROUPED_TEST_GUILESS_MAIN(TTextEditBlinkTest)
 #include "TTextEditBlinkTest.moc"

@@ -50,6 +50,24 @@
 
 using namespace std::chrono_literals;
 
+// Unnamed namespace: other tests in the same grouped binary have a PaintCounter of their own
+namespace {
+class PaintCounter : public QObject
+{
+public:
+    int mCount = 0;
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::Paint) {
+            ++mCount;
+        }
+        return QObject::eventFilter(watched, event);
+    }
+};
+} // namespace
+
 class LabelAccessibleInterfaceTest : public QObject
 {
     Q_OBJECT
@@ -408,7 +426,67 @@ private:
         runLua(qsl("clearWindow()"));
     }
 
+    // a window that has just been shown or activated goes on painting for a while
+    static bool settlePaints(const PaintCounter& counter)
+    {
+        int seen = -1;
+        for (int wait = 0; wait < 25; ++wait) {
+            if (seen == counter.mCount) {
+                return true;
+            }
+            seen = counter.mCount;
+            QTest::qWait(200ms);
+        }
+        return false;
+    }
+
 private slots:
+    // A gauge sets its text label on every prompt, mostly to what it already says, and repainting a
+    // translucent label redraws everything under it as well
+    void test_anUnfocusedLabelGivenTheTextItHasIsNotRepainted()
+    {
+        mudlet::self()->show();
+        QTRY_VERIFY(label()->isVisible());
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); setLabelClickCallback('%1', function() end); echo('%1', 'steady')").arg(mLabelName)));
+        PaintCounter counter;
+        label()->installEventFilter(&counter);
+        QTRY_VERIFY2(counter.mCount > 0, "the label was never painted, so no paint count below means anything");
+        QVERIFY2(settlePaints(counter), "the label never stopped being repainted, so no paint count below means anything");
+
+        counter.mCount = 0;
+        for (int prompt = 0; prompt < 10; ++prompt) {
+            QVERIFY(runLua(qsl("echo('%1', 'steady')").arg(mLabelName)));
+            QTest::qWait(20ms);
+        }
+        // the window may repaint the label for reasons of its own while this runs, but not on every prompt
+        QVERIFY2(counter.mCount < 5, qPrintable(qsl("the label was repainted %1 times for being given its own text 10 times").arg(counter.mCount)));
+
+        counter.mCount = 0;
+        QVERIFY(runLua(qsl("echo('%1', 'changed')").arg(mLabelName)));
+        QTRY_VERIFY2(counter.mCount > 0, "new text was not painted");
+    }
+
+    // the outline a focused button is drawn with has to go when it stops being one but keeps the focus
+    void test_aFocusedLabelThatStopsBeingAButtonLosesItsOutline()
+    {
+        auto restore = qScopeGuard([this]() {
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        mpHost->setCaretEnabled(false);
+        QVERIFY(runLua(qsl("echo('%1', '<a href=\"send:look\">look</a>')").arg(mLabelName)));
+        label()->setFocus(Qt::TabFocusReason);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        PaintCounter counter;
+        label()->installEventFilter(&counter);
+        QVERIFY2(settlePaints(counter), "the label never stopped being repainted, so no paint count below means anything");
+
+        counter.mCount = 0;
+        QVERIFY(runLua(qsl("setLabelAccessibleRole('%1', 'text')").arg(mLabelName)));
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        QTRY_VERIFY2(counter.mCount > 0, "the label kept the outline of a button it no longer is");
+    }
+
     // Caret mode starts below the links, so Tab goes on to the buttons, then round to the first link, the second,
     // and the buttons again; Shift+Tab goes the other way
     void test_tabCyclesThroughTheLinksAndTheButtons()

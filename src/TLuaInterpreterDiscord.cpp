@@ -34,7 +34,6 @@
 #include "TArea.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TForkedProcess.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"

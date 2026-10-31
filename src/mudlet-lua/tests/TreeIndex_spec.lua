@@ -1,6 +1,7 @@
 -- TriggerUnit files every trigger below a root by the runs of text its patterns
 -- need, stamps the ones a line holds before the tree is walked, and
--- TTrigger::match() skips the children of a folder that were not stamped. The
+-- TTrigger::match() skips the children of a folder that were not stamped; the
+-- root triggers are filed in the same index, and Trigger_spec.lua pins them. The
 -- index is one-sided - it only ever says what cannot match - so a wrong answer
 -- can only lose a firing, and these specs pin what must still fire. They run
 -- once the index is armed, which takes MUDLET_TEST_MODE to report and a few
@@ -18,8 +19,9 @@ describe("trigger matching through the whole-tree index", function()
 
     -- the fixture's folder holds eleven triggers, of which the lua one cannot be filed
     local fixtureFiled = 10
-    -- Enough filed triggers below one root to make the index engage
-    local paddingTriggers = 40
+    -- Enough filed triggers below one root to make the index engage, and to take its children past
+    -- the 64 a word of TChildWalk holds
+    local paddingTriggers = 70
 
     local fired
     local firedBeforePadding, filedBeforePadding
@@ -263,6 +265,159 @@ describe("trigger matching through the whole-tree index", function()
         feed("treeindex_spawned_bait")
         assert.are.same({spawned = 2}, fired, "once filed, the same trigger must still fire")
         assert.are.equal(filedBefore + 2, filedCount())
+    end)
+
+    itIndexed("enters a trigger a script holds open below a folder below a folder", function()
+        assert(permGroup("treeindex open folder", "trigger", packageName))
+        assert(permSubstringTrigger("treeindex open", "treeindex open folder", {"treeindex_open_bait"}, 'TreeIndexSpecNote("open")'))
+        feed("treeindex warm-up line")
+
+        setTriggerStayOpen("treeindex open", 2)
+        feed("quiet", "quiet", "quiet")
+
+        assert.are.same({open = 2}, fired, "held open for two lines, so it fires on both without its bait")
+    end)
+
+    itIndexed("enters a trigger below a folder on the line a script earlier in the walk opened it", function()
+        -- made before the folder, so that the walk reaches the folder after the opener's script has run
+        assert(permSubstringTrigger("treeindex opener", packageName, {"treeindex_opener_bait"}, [[
+            TreeIndexSpecNote("opener")
+            setTriggerStayOpen("treeindex held", 1)
+        ]]))
+        assert(permGroup("treeindex held folder", "trigger", packageName))
+        assert(permSubstringTrigger("treeindex held", "treeindex held folder", {"treeindex_held_bait"}, 'TreeIndexSpecNote("held")'))
+        feed("treeindex warm-up line")
+
+        feed("treeindex_opener_bait")
+        assert.are.same({opener = 1, held = 1}, fired, "opened for one line, the line the opener matched")
+
+        feed("quiet")
+        assert.are.same({opener = 1, held = 1}, fired, "the one line it was opened for is over")
+    end)
+
+    itIndexed("visits a trigger the index cannot file below a folder below a folder on every line", function()
+        assert(permGroup("treeindex outer folder", "trigger", packageName))
+        assert(permGroup("treeindex inner folder", "trigger", "treeindex outer folder"))
+        assert(permRegexTrigger("treeindex nested regex", "treeindex inner folder", {[[^\d{6}$]]}, 'TreeIndexSpecNote("nestedRegex")'))
+        feed("treeindex warm-up line")
+
+        feed("654321", "quiet", "123456")
+
+        assert.are.same({nestedRegex = 2}, fired, "nothing else on these lines is filed in either folder, so only the regex itself can have them entered")
+    end)
+
+    itIndexed("enters a filed trigger past a folder's first 64 children", function()
+        feed("treeindex_padding_64_bait", "treeindex_padding_70_bait")
+
+        assert.are.same({padding = 2}, fired)
+    end)
+
+    itIndexed("enters what the line holds below a folder after a script fed a line of its own", function()
+        -- made before the folder, so that its line is fed before the walk reaches the folder
+        assert(permSubstringTrigger("treeindex feeder", packageName, {"treeindex_feeder_bait"}, [[
+            TreeIndexSpecNote("feeder")
+            feedTriggers("zqxjk\n")
+        ]]))
+        assert(permGroup("treeindex fed folder", "trigger", packageName))
+        -- of rare letters only, so that neither is filed under text the other's line holds
+        assert(permSubstringTrigger("treeindex fed one", "treeindex fed folder", {"qzjxv"}, 'TreeIndexSpecNote("fedOne")'))
+        assert(permSubstringTrigger("treeindex fed two", "treeindex fed folder", {"zqxjk"}, 'TreeIndexSpecNote("fedTwo")'))
+        feed("treeindex warm-up line")
+
+        feed("treeindex_feeder_bait qzjxv")
+
+        assert.are.same({feeder = 1, fedOne = 1, fedTwo = 1}, fired, "the fed line must not take away what the line feeding it holds")
+    end)
+
+    itIndexed("enters a trigger held open below a folder across a refiling of the tree", function()
+        assert(permGroup("treeindex refiled folder", "trigger", packageName))
+        assert(permSubstringTrigger("treeindex refiled open", "treeindex refiled folder", {"treeindex_refiled_bait"}, 'TreeIndexSpecNote("refiledOpen")'))
+        feed("treeindex warm-up line")
+
+        setTriggerStayOpen("treeindex refiled open", 2)
+        -- a new trigger has the tree refiled on the next line
+        assert(permSubstringTrigger("treeindex refiler", packageName, {"treeindex_refiler_bait"}, ""))
+        feed("quiet", "quiet", "quiet")
+        assert.are.same({refiledOpen = 2}, fired)
+
+        feed("treeindex_ml_open")
+        assert(permSubstringTrigger("treeindex second refiler", packageName, {"treeindex_second_refiler_bait"}, ""))
+        feed("the curtain falls")
+        assert.are.same({refiledOpen = 2, multiline = 1}, fired, "a multiline trigger part-way through must be entered after the refiling too")
+    end)
+
+    itIndexed("enters a trigger below a folder on a line an unpaired surrogate splits its text on", function()
+        assert(permGroup("treeindex split folder", "trigger", packageName))
+        assert(permRegexTrigger("treeindex split", "treeindex split folder", {"qzxjv"}, 'TreeIndexSpecNote("split")'))
+        feed("treeindex warm-up line")
+        setConfig("specialForceMXPProcessorOn", true)
+        finally(function()
+            setConfig("specialForceMXPProcessorOn", false)
+        end)
+
+        feedTriggers("\nzz qz&#xD800;xjv\n")
+
+        assert.are.same({split = 1}, fired, "pcre2 reads the line without the surrogate, which the index cannot see")
+    end)
+
+    itIndexed("walks a trigger a script creates mid-line below a folder below a folder", function()
+        -- made before the folders, so that the walk reaches them after its script has run
+        assert(permSubstringTrigger("treeindex maker", packageName, {"treeindex_maker_bait"}, [[
+            TreeIndexSpecNote("maker")
+            assert(permSubstringTrigger("treeindex made", "treeindex made inner", {"treeindex_made_bait"}, 'TreeIndexSpecNote("made")'))
+        ]]))
+        assert(permGroup("treeindex made outer", "trigger", packageName))
+        assert(permGroup("treeindex made inner", "trigger", "treeindex made outer"))
+        -- of rare letters only, so that the line does not hold what it is filed under
+        assert(permSubstringTrigger("treeindex made sibling", "treeindex made inner", {"vzqjx"}, ""))
+        feed("treeindex warm-up line")
+
+        feed("treeindex_maker_bait treeindex_made_bait")
+
+        assert.are.same({maker = 1, made = 1}, fired, "the line stamped before the trigger existed, so every folder above it has to be walked down its list")
+    end)
+
+    itIndexed("passes lines holding nothing filed to the children of a trigger its match holds open", function()
+        assert(permRegexTrigger("treeindex gated digits", packageName .. " gate", {[[^\d{4}$]]}, 'TreeIndexSpecNote("gatedDigits")'))
+        feed("treeindex warm-up line")
+
+        feed("treeindex_gate_open", "1234", "1234", "1234")
+
+        assert.are.same({gate = 1, gatedDigits = 2}, fired, "no child's text is on the held lines, so only the gate being open can have it entered")
+    end)
+
+    itIndexed("enters each trigger held open below a folder after another of them shuts", function()
+        assert(permGroup("treeindex shut folder", "trigger", packageName))
+        -- of rare letters only, so that no line here holds what they are filed under
+        assert(permSubstringTrigger("treeindex shuts first", "treeindex shut folder", {"jqzvx"}, 'TreeIndexSpecNote("shutsFirst")'))
+        assert(permSubstringTrigger("treeindex shuts last", "treeindex shut folder", {"xjvqz"}, 'TreeIndexSpecNote("shutsLast")'))
+        feed("treeindex warm-up line")
+
+        setTriggerStayOpen("treeindex shuts first", 1)
+        setTriggerStayOpen("treeindex shuts last", 3)
+        feed("quiet", "quiet", "quiet")
+
+        assert.are.same({shutsFirst = 1, shutsLast = 3}, fired)
+    end)
+
+    -- Comfortably past the roots the root walk needs filed, in the index a refiling of the tree files
+    -- its children in
+    itIndexed("fires a root trigger the line holds after a refiling of the tree", function()
+        local ids = {}
+        finally(function()
+            for _, id in ipairs(ids) do
+                killTrigger(id)
+            end
+        end)
+        for index = 1, 80 do
+            ids[#ids + 1] = tempTrigger("treeindex_root_" .. index .. "_bait", function() note("root") end)
+        end
+        feed("treeindex warm-up line")
+
+        assert(permSubstringTrigger("treeindex root refiler", packageName, {"treeindex_root_refiler_bait"}, ""))
+        feed("treeindex_root_7_bait", "treeindex_root_80_bait")
+
+        assert.are.same({root = 2}, fired, "refiling the tree must keep the roots filed alongside it")
     end)
 
     -- Last, as it takes the fixture away: a script's uninstall takes filed

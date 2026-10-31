@@ -5909,7 +5909,7 @@ mmp.lagtable =
     [4] = {description = "Bad. Terrible. Terribad.", time = 5},
     [5] = {description = "Carrier Pigeon", time = 10},
   }
-local newversion = "26.9.1"
+local newversion = "26.10.1"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo("Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.")
@@ -6419,7 +6419,13 @@ do
 
   function setRoomIDbyHash(roomNumber, hash, ...)
     local results = pack(original.setRoomIDbyHash(roomNumber, hash, ...))
-    if getRoomIDbyHash(hash) == tonumber(roomNumber) then
+    local applied = results[1]
+    -- Older Mudlet versions return no values on success.
+    if results.n == 0 then
+      applied = tonumber(roomNumber) and tonumber(roomNumber) &gt; 0
+        and getRoomIDbyHash(hash) == tonumber(roomNumber)
+    end
+    if applied then
       service.submit({ type = "set-room-hash", roomNumber = tonumber(roomNumber), hash = hash })
     end
     return unpackResults(results)
@@ -7355,6 +7361,7 @@ function mmp.speedwalking(event, num)
   if num == nil and gmcp.Room.Info.roomhash then
     num = mmp.roomidFromHash(gmcp.Room.Info.roomhash)
   end
+  if num == -1 then return end
   
   if num ~= mmp.currentroom then
     mmp.previousroom = mmp.currentroom
@@ -11122,7 +11129,8 @@ end
     if gmcp.Room.Info.num then
       centerview(gmcp.Room.Info.num)
     elseif gmcp.Room.Info.roomhash then
-      centerview(mmp.roomidFromHash(gmcp.Room.Info.roomhash))
+      local id = mmp.roomidFromHash(gmcp.Room.Info.roomhash)
+      if id ~= -1 then centerview(id) end
     end
   end
 end</script>
@@ -11242,6 +11250,7 @@ end
 -- at the same time, it'll mark the userdata "hashonly" as "true" so mmp.roomExists won't say this room exists
 -- this preserves the same logic in the code as non-hash games
 function mmp.roomidFromHash(hash)
+  if hash == "" then return -1 end
   local id = getRoomIDbyHash(hash)
   if id == -1 then 
     id = createRoomID()
@@ -11280,6 +11289,7 @@ function mmp.mappingNewroom(_, num)
         if not num and gmcp.Room.Info.roomhash then
           num = mmp.roomidFromHash(gmcp.Room.Info.roomhash)
         end
+        if num == -1 then return end
         local currentexits = gmcp.Room.Info.exits
         local s = ""
         if not mmp.roomexists(num) then
@@ -11293,7 +11303,7 @@ function mmp.mappingNewroom(_, num)
                 id = mmp.roomidFromHash(id)
               end
               
-              if mmp.roomexists(id) then
+              if id ~= -1 and mmp.roomexists(id) then
                 s = makeroom(id, num, getshiftedcoords(exit, getRoomCoordinates(id)))
               end
             end
@@ -11324,7 +11334,7 @@ function mmp.mappingNewroom(_, num)
                   exit ..
                   ", it leads to a room with ID 0 (and that's not supported yet)."
               else
-                if not x[mmp.anytolong(exit)] then
+                if id ~= -1 and not x[mmp.anytolong(exit)] then
                   if not mmp.roomexists(id) then
                     s =
                       makeroom(

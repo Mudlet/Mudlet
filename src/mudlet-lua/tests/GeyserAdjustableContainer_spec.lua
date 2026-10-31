@@ -1,3 +1,23 @@
+-- deleteLabel() leaves the widget to a deferred delete that cannot run until the
+-- whole suite is over, so its callbacks, and the containers they hold, are let go here
+local realDeleteLabel
+setup(function()
+  local globals = package.loaded._G
+  realDeleteLabel = globals.deleteLabel
+  local clearers = {globals.setLabelClickCallback, globals.setLabelDoubleClickCallback, globals.setLabelReleaseCallback,
+                    globals.setLabelMoveCallback, globals.setLabelWheelCallback, globals.setLabelOnEnter, globals.setLabelOnLeave}
+  globals.deleteLabel = function(name, ...)
+    for _, clear in ipairs(clearers) do
+      pcall(clear, name, nil)
+    end
+    return realDeleteLabel(name, ...)
+  end
+end)
+
+teardown(function()
+  package.loaded._G.deleteLabel = realDeleteLabel
+end)
+
 describe("Tests functionality of Adjustable.Container", function()
   describe("Tests the functionality of Adjustable.Container:addConnectMenu", function()
     local testContainer

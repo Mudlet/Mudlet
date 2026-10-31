@@ -17,11 +17,17 @@ set(QT_SKIP_DEFAULT_TESTCASE_DIRS ON)
 # stderr has a console attached, which an MSYS2 shell or a CI runner does not give
 # it, so a failing test reports an exit code and nothing else (#9747). Deferred so
 # that tests registered further down the file are covered too; TESTS does not
-# descend into subdirectories, hence the second call in functional_tests.
+# descend into subdirectories, hence the second call in functional_tests. It also
+# puts the bundled lua51.dll's directory first on PATH.
 function(restore_windows_test_output)
     get_property(registeredTests DIRECTORY PROPERTY TESTS)
     foreach(testName ${registeredTests})
         set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "QT_ASSUME_STDERR_HAS_CONSOLE=1")
+        # Unless built beside the bundled lua51.dll, a test would load the MSYS2
+        # one from PATH instead
+        if(WIN32 AND TARGET lua51)
+            set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:lua51>")
+        endif()
     endforeach()
 endfunction()
 cmake_language(DEFER CALL restore_windows_test_output)
@@ -59,6 +65,8 @@ function(sandbox_test_config_dirs)
     foreach(testName ${registeredTests})
         set(testConfigDir "${CMAKE_CURRENT_BINARY_DIR}/xdg-config/${testName}")
         set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "XDG_CONFIG_HOME=${testConfigDir}")
+        # TLuaInterpreter::loadGlobal() writes its bytecode cache under CacheLocation
+        set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "XDG_CACHE_HOME=${CMAKE_CURRENT_BINARY_DIR}/xdg-cache/${testName}")
         if(APPLE)
             # CoreFoundation is handed a home directory rather than a config root,
             # and one that has to exist - Qt creates a config root on the way to
@@ -76,6 +84,12 @@ function(sandbox_test_config_dirs)
 endfunction()
 cmake_language(DEFER CALL sandbox_test_config_dirs)
 
+# Every test here that links the Mudlet library shares one executable, the way
+# the functional tests share one per subsystem: each link costs a build tree
+# ~340MB and a link step, and none of that is per-test. A new test goes in this
+# list and writes MUDLET_GROUPED_TEST_MAIN() (or MUDLET_GROUPED_TEST_GUILESS_MAIN())
+# rather than QTEST_MAIN(), with a class named after its file - see
+# functional_tests/GroupedTest.h. Each still runs as its own ctest case and process.
 set(UNIT_TESTS
     TEntityResolverTest
     TEntityHandlerTest
@@ -84,6 +98,7 @@ set(UNIT_TESTS
     TLinkStoreTest
     TMxpTagParserTest
     TMxpSendTagHandlerTest
+    TMxpLinkTagHandlerTest
     TMxpEntityTagHandlerTest
     TMxpFrameDestTagHandlerTest
     TMxpVersionTagTest
@@ -110,6 +125,7 @@ set(UNIT_TESTS
     TMediaPathTraversalTest
     TAudioMixerMixTest
     ProfileNameValidationTest
+    XmlImportReaderTest
 )
 
 # The MCP server only lands in the Mudlet library when configured with USE_MCPSERVER, so
@@ -121,13 +137,16 @@ endif()
 
 mudlet_add_test_pch_provider(mudlet_unit_test_pch)
 
+list(TRANSFORM UNIT_TESTS APPEND .cpp OUTPUT_VARIABLE unitTestSources)
+add_executable(unit_tests ${CMAKE_CURRENT_SOURCE_DIR}/functional_tests/GroupedTestMain.cpp ${unitTestSources})
+target_include_directories(unit_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/functional_tests)
+mudlet_reuse_test_pch(unit_tests mudlet_unit_test_pch)
+add_dependencies(unit_tests ${LIB_MUDLET_APP_TARGET})
+# mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
+target_link_libraries(unit_tests PRIVATE Qt6::Test ${LIB_MUDLET_APP_TARGET} mudlet_lsan_hooks)
+
 foreach(test_name ${UNIT_TESTS})
-    add_executable(${test_name} ${test_name}.cpp)
-    mudlet_reuse_test_pch(${test_name} mudlet_unit_test_pch)
-    add_dependencies(${test_name} ${LIB_MUDLET_APP_TARGET})
-    # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
-    target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_APP_TARGET} mudlet_lsan_hooks)
-    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
+    add_test(NAME ${test_name} COMMAND $<TARGET_FILE:unit_tests> ${test_name})
     set_tests_properties(${test_name} PROPERTIES
         ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
     )
@@ -142,8 +161,11 @@ set_tests_properties(EventLoopPumpTest TAreaGridIndexTest PROPERTIES TIMEOUT 60)
 if(USE_MCPSERVER)
     # The end-to-end cases pipe JSON-RPC through a real `mudlet --mcp-bridge` process,
     # so the test needs the application binary itself, not just the library.
-    target_compile_definitions(TMCPBridgeTest PRIVATE MUDLET_BINARY_PATH="$<TARGET_FILE:mudlet_executable>")
-    add_dependencies(TMCPBridgeTest mudlet_executable)
+    # On the one file that reads it, so the rest of the binary's objects stay
+    # free of build-tree paths and ccache can share them between worktrees.
+    set_property(SOURCE TMCPBridgeTest.cpp
+        APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_BINARY_PATH="$<TARGET_FILE:mudlet_executable>")
+    add_dependencies(unit_tests mudlet_executable)
 endif()
 
 # TKeySequenceEditTest's focus traversal cases need an active window, which an X
@@ -244,7 +266,20 @@ set_tests_properties(CrashReportUploadTest PROPERTIES
 )
 
 # DiscordTest checks the Lua API permission gating contract by scanning the source
-target_compile_definitions(DiscordTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
+set_property(SOURCE DiscordTest.cpp APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
+# XmlImportReaderTest reads every package, profile and map XML in the source tree
+set_property(SOURCE XmlImportReaderTest.cpp APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
+
+# Which stores move the bundled Lua's write barrier, through the C API and the
+# sites no spec reaches. Links that Lua and nothing of Mudlet's.
+if(TARGET lua51)
+    add_executable(LuaWriteBarrierTest LuaWriteBarrierTest.cpp)
+    target_link_libraries(LuaWriteBarrierTest PRIVATE Qt6::Test lua51)
+    add_test(NAME LuaWriteBarrierTest COMMAND $<TARGET_FILE:LuaWriteBarrierTest>)
+    set_tests_properties(LuaWriteBarrierTest PROPERTIES
+        ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+    )
+endif()
 
 # Build-file consistency check. Independent of the Mudlet library: it only reads
 # src/CMakeLists.txt and the src/ directory, so it does not link LIB_MUDLET_TARGET.

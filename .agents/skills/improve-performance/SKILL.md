@@ -200,6 +200,7 @@ Four live in `test/functional_tests/`, built alongside the functional tests into
   `compare-perf-baseline.py` understands MapRenderBenchmark's output too.
 - `TelnetBenchmark` (small, medium and large payloads) is an ordinary grouped ctest case:
   `ctest -R TelnetBenchmark`.
+- `test/svof-replay/` times a real curing system against a replayed game session; see its README.
 
 When extending them:
 

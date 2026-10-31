@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <QtTest/QtTest>
 
 #include <QElapsedTimer>
@@ -139,5 +140,5 @@ void EventLoopPumpTest::pumpingFromInsideATimerCallback()
     QVERIFY2(firedDuringPump, "a timer did not fire while pumping from inside a timer callback");
 }
 
-QTEST_MAIN(EventLoopPumpTest)
+MUDLET_GROUPED_TEST_MAIN(EventLoopPumpTest)
 #include "EventLoopPumpTest.moc"

@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <discord.h>
 #include <Host.h>
 #include <utils.h>
@@ -330,4 +331,4 @@ private slots:
 };
 
 #include "DiscordTest.moc"
-QTEST_MAIN(DiscordTest)
+MUDLET_GROUPED_TEST_MAIN(DiscordTest)

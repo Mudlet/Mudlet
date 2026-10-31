@@ -17,7 +17,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <CredentialManager.h>
+#include <MudletApp.h>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -96,6 +98,7 @@ private slots:
     void testAFreshRefusalSparesTheNextLookupTheStore();
     void testARefusalOfTheSignInsOnlyKeychainReadSparesTheNextLookup();
     void testTheProfileStoragePreferenceKeepsTheKeychainOutOfIt();
+    void testTheMudletAppPreferenceKeepsTheKeychainOutOfIt();
     void testARemovalTheClientMakesItselfLeavesTheKeychainAlone();
     void testTheForgetCheckSeesAKeychainCopyTheProfileLacks();
     void testARefusalForOneProfileDoesNotSkipTheStoreForAnother();
@@ -491,6 +494,7 @@ public:
     }
 
     const QList<QPair<QString, QString>>& reads() const { return mReads; }
+    qsizetype stalledCount() const { return mStalled.size(); }
     const QList<QPair<QString, QString>>& deletes() const { return mDeletes; }
 
     bool waitForAnyStalled()
@@ -688,6 +692,7 @@ void CredentialManagerKeychainTest::init()
     // cases after it
     CredentialManager::forgetStoreRefusal();
     CredentialManager::profileStorageOverrideForTesting().reset();
+    MudletApp::setStorePasswordsSecurely(true);
     const QString runId = QUuid::createUuid().toString(QUuid::Id128).left(8);
     mProfile = QStringLiteral("MudletKCTest-%1").arg(runId);
     mKey = QStringLiteral("kctest_%1").arg(runId);
@@ -1609,6 +1614,35 @@ void CredentialManagerKeychainTest::testTheProfileStoragePreferenceKeepsTheKeych
              qPrintable(QStringLiteral("the colliding-format entry was not cleared, only: %1").arg(describeDeletes(watcher.deletes()))));
 }
 
+// The preference as MudletApp holds it, where either frontend puts Mudlet.ini's value, rather than the
+// testing override. Every job is taken over, so none can reach the keychain.
+void CredentialManagerKeychainTest::testTheMudletAppPreferenceKeepsTheKeychainOutOfIt()
+{
+    MudletApp::setStorePasswordsSecurely(false);
+    const QString secret = QStringLiteral("token-kept-in-the-profile-with-no-main-window");
+
+    JobStaller watcher;
+    watcher.stallEvery<QKeychain::Job>();
+    CredentialManager manager;
+    manager.mJobStartHook = watcher.hook();
+
+    bool stored = false;
+    bool storeAnswered = false;
+    manager.storePassword(mProfile, mKey, secret, [&stored, &storeAnswered](bool success, const QString&) {
+        stored = success;
+        storeAnswered = true;
+    });
+    QTRY_VERIFY2(storeAnswered, "the store never answered, as when it waits on a keychain job");
+    QVERIFY2(stored, "the profile's own store did not take the credential");
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    QVERIFY(waitForAnswer(answer));
+    QVERIFY2(answer->success, qPrintable(QStringLiteral("the profile's own copy was not read back: %1").arg(answer->error)));
+    QCOMPARE(answer->password, secret);
+
+    QCOMPARE(watcher.stalledCount(), 0);
+}
+
 // A removal the client makes by itself - a token the game rejected, dropped - can be set off by the
 // game as often as it likes, so with the profile chosen it must not reach the keychain: each would
 // be a prompt, and a keychain that refused would fail a removal the profile's file had already
@@ -2145,5 +2179,5 @@ void CredentialManagerKeychainTest::testALateAnswerFollowsTheFilesOlderCopy()
     QCOMPARE(answers->late->count, 1);
 }
 
-QTEST_GUILESS_MAIN(CredentialManagerKeychainTest)
+MUDLET_GROUPED_TEST_GUILESS_MAIN(CredentialManagerKeychainTest)
 #include "CredentialManagerKeychainTest.moc"

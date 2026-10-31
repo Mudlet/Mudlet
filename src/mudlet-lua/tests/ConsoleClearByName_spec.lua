@@ -18,29 +18,6 @@ describe("Tests that clearWindow() finds its console by name", function()
     assert.are.same({""}, getLines(window, 0, 1))
   end
 
-  -- getScroll() is copied out of the buffer as the pane repaints, and the first
-  -- scroll of a console waits a turn for its lower pane to appear, so a new
-  -- position needs the event loop to run before it can be read back
-  local function pumpEventLoop()
-    tempTimer(0, function() raiseEvent("specClearByNamePump") end)
-    waitForEvent("specClearByNamePump", 2000)
-  end
-
-  -- scrollTo() scrolls by the distance from where the pane last painted, so it
-  -- can land short until the pane catches up; repeating it settles it
-  local function parkAt(window, line)
-    for _ = 1, 10 do
-      scrollTo(window, line)
-      for _ = 1, 20 do
-        if getScroll(window) == line then
-          return line
-        end
-        pumpEventLoop()
-      end
-    end
-    return getScroll(window)
-  end
-
   setup(function()
     assert.is_true(createMiniConsole(sibling, 0, 0, 300, 100))
   end)
@@ -154,16 +131,13 @@ describe("Tests that clearWindow() finds its console by name", function()
           assert.are.equal(1, selectString(window, "fter", 1))
         end)
 
-        if isBuffer then
-          -- a buffer has no pane to scroll
-        elseif not os.getenv("MUDLET_TEST_MODE") then
-          pending("follows new text again after being scrolled back - needs MUDLET_TEST_MODE for waitForEvent")
-        else
+        if not isBuffer then
           it("follows new text again after being scrolled back", function()
             assert.is_true(getRowCount(window) > 0, kind[1] .. " came up with no visible rows")
             clearWindow(window)
             fill(window, 200)
-            assert.are.equal(150, parkAt(window, 150))
+            scrollTo(window, 150)
+            assert.are.equal(150, getScroll(window))
             clearWindow(window)
             fill(window, 200)
             assert.are.equal(getLastLineNumber(window), getScroll(window))
@@ -184,17 +158,14 @@ describe("Tests that clearWindow() finds its console by name", function()
       end)
     end
 
-    if not os.getenv("MUDLET_TEST_MODE") then
-      pending("follows new text again after being scrolled back - needs MUDLET_TEST_MODE for waitForEvent")
-    else
-      it("follows new text again after being scrolled back", function()
-        clearWindow()
-        fill("main", 200)
-        assert.are.equal(150, parkAt("main", 150))
-        clearWindow()
-        fill("main", 200)
-        assert.are.equal(getLastLineNumber("main"), getScroll("main"))
-      end)
-    end
+    it("follows new text again after being scrolled back", function()
+      clearWindow()
+      fill("main", 200)
+      scrollTo("main", 150)
+      assert.are.equal(150, getScroll("main"))
+      clearWindow()
+      fill("main", 200)
+      assert.are.equal(getLastLineNumber("main"), getScroll("main"))
+    end)
   end)
 end)
