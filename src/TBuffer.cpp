@@ -2934,7 +2934,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
     }
     mCommitLineIndices.append(lineIndex);
     // A line committed from inside a pass (feedTriggers()) can delete, rewrap or trim lines above
-    // that pass's line; neither deleteLines() nor shrinkBuffer() moves a cursor, so one a script
+    // that pass's line; deleteLines() moves no cursor, so one a script
     // still has on that line is moved with it below
     const int enclosingPassLine = mPreTriggerPassLineNumber;
     const bool userCursorOnEnclosingPassLine = mpModel && enclosingPassLine >= 0 && mpModel->mUserCursor.y() == enclosingPassLine;
@@ -7569,6 +7569,18 @@ void TBuffer::shrinkBuffer()
         // As mCursorY above, which a real view's upper pane takes its line from as it repaints
         if (mpModel->mScrolledBackTo) {
             mpModel->mScrolledBackTo = std::max(0, *mpModel->mScrolledBackTo - mBatchDeleteSize);
+        }
+        // A script's cursor and selection name their line by number, so they move up with it, or to the top when it went
+        QPoint& userCursor = mpModel->mUserCursor;
+        userCursor = (userCursor.y() < mBatchDeleteSize) ? QPoint() : QPoint(userCursor.x(), userCursor.y() - mBatchDeleteSize);
+        if (mpModel->mEngineCursor >= 0) {
+            mpModel->mEngineCursor = std::max(0, mpModel->mEngineCursor - mBatchDeleteSize);
+        }
+        if (mpModel->P_begin.y() < mBatchDeleteSize) {
+            mpModel->deselect();
+        } else {
+            mpModel->P_begin.ry() -= mBatchDeleteSize;
+            mpModel->P_end.ry() -= mBatchDeleteSize;
         }
     }
     if (mLastFoundLine >= mBatchDeleteSize) {

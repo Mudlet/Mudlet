@@ -3183,8 +3183,8 @@ void Host::runTriggers(int line)
 
     if (nested) {
         // Only a nested pass restores: at the top level a script's moveCursor()
-        // is meant to outlive the line. shrinkBuffer() adjusts neither cursor, so
-        // a saved index can by now point past the end.
+        // is meant to outlive the line. shrinkBuffer() cannot adjust the saved
+        // copies, so a saved index can by now point past the end.
         const int lastLine = consoleModel.buffer.getLastLineNumber();
         consoleModel.mUserCursor = QPoint(previousUserCursor.x(), qMin(previousUserCursor.y(), lastLine));
         consoleModel.mEngineCursor = qMin(previousEngineCursor, lastLine);
