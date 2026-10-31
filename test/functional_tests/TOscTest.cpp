@@ -728,6 +728,9 @@ private slots:
     QTest::newRow("mailto")
         << qsl("mailto:someone@example.com?subject=Hello")
         << opens(qsl("mailto:someone@example.com?subject=Hello"));
+    QTest::newRow("mailto keeps only its message fields")
+        << qsl("mailto:someone@example.com?subject=Hello&attach=/etc/hostname")
+        << opens(qsl("mailto:someone@example.com?subject=Hello"));
     QTest::newRow("other scheme sent verbatim")
         << qsl("steam://run/1") << sends(qsl("steam://run/1"));
   }
@@ -778,6 +781,30 @@ private slots:
         << qsl("mailto:admin@example.com?subject=Hello")
         << qsl("mailto:admin@example.com?subject=Hello")
         << qsl("Write an email to: mailto:admin@example.com?subject=Hello");
+    QTest::newRow("only the message fields survive")
+        << qsl("mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text&attach=/etc/hostname&attachment=/etc/passwd&X-Other=1")
+        << qsl("mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text")
+        << qsl("Write an email to: mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text");
+    QTest::newRow("field names in capitals")
+        << qsl("MAILTO:admin@example.com?SUBJECT=Hi&ATTACH=/etc/hostname")
+        << qsl("MAILTO:admin@example.com?SUBJECT=Hi")
+        << qsl("Write an email to: MAILTO:admin@example.com?SUBJECT=Hi");
+    QTest::newRow("an encoded field name")
+        << qsl("mailto:admin@example.com?subject=Hi&%61ttach=/etc/hostname")
+        << qsl("mailto:admin@example.com?subject=Hi")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hi");
+    QTest::newRow("a field hidden behind another separator")
+        << qsl("mailto:admin@example.com?subject=Hi;attach=/etc/hostname")
+        << qsl("mailto:admin@example.com?subject=Hi%3Battach=/etc/hostname")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hi%3Battach=/etc/hostname");
+    QTest::newRow("nothing left of the query")
+        << qsl("mailto:admin@example.com?attach=/etc/hostname")
+        << qsl("mailto:admin@example.com")
+        << qsl("Write an email to: mailto:admin@example.com");
+    QTest::newRow("a fragment")
+        << qsl("mailto:admin@example.com?subject=Hi#&attach=/etc/hostname")
+        << qsl("mailto:admin@example.com?subject=Hi")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hi");
   }
 
   void test_Osc8MailtoLink() {

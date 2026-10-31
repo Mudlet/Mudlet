@@ -25,6 +25,7 @@
 
 #include "Host.h"
 #include "LuaLiteral.h"
+#include "MailtoUri.h"
 #include "MudletApp.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
@@ -5043,6 +5044,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                 QString scheme = qurl.scheme().toLower();
 
                 if (systemMayOpenUrl(qurl)) {
+                    baseUrl = MailtoUri::withOnlyMessageFields(baseUrl);
                     mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionOpenUrl;
                     mCurrentHyperlinkStyling.baseCommand = baseUrl;
                     command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
@@ -5096,7 +5098,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                         menuCommands.append(QString());
                         menuHints.append(QString());
                     } else if (systemMayOpenUrl(QUrl(menuCommand))) {
-                        menuCommands.append(qsl("openUrl(%1)").arg(LuaLiteral::quote(menuCommand)));
+                        menuCommands.append(qsl("openUrl(%1)").arg(LuaLiteral::quote(MailtoUri::withOnlyMessageFields(menuCommand))));
                         menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     } else {
                         // Treat as direct command

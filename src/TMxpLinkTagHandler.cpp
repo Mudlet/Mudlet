@@ -20,6 +20,7 @@
 
 #include "TMxpLinkTagHandler.h"
 #include "LuaLiteral.h"
+#include "MailtoUri.h"
 #include "TMxpClient.h"
 #include "UntrustedText.h"
 
@@ -115,7 +116,7 @@ QString TMxpLinkTagHandler::actionFor(const QString& href)
         qWarning().noquote().nospace() << "TMxpLinkTagHandler::actionFor(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\" in link to: \"" << href.left(80) << "\"";
         return QString();
     }
-    return qsl("openUrl(%1)").arg(LuaLiteral::quote(href));
+    return qsl("openUrl(%1)").arg(LuaLiteral::quote(MailtoUri::withOnlyMessageFields(href)));
 }
 
 QString TMxpLinkTagHandler::getHref(const MxpStartTag* tag)
