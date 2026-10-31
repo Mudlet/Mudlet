@@ -3015,12 +3015,7 @@ void TConsole::slot_saveCommandSearchSettings()
         return;
     }
 
-    QSettings* pQSettings = MudletApp::getQSettings();
-    if (!pQSettings) {
-        return;
-    }
-
-    pQSettings->setValue("commandSearchSplitterState", commandSplitter->saveState());
+    mpHost->writeProfileIniData(qsl("MainConsole/CommandSearchSplitterState"), QString::fromLatin1(commandSplitter->saveState().toBase64()));
 }
 
 void TConsole::restoreCommandSearchSettings()
@@ -3029,10 +3024,17 @@ void TConsole::restoreCommandSearchSettings()
         return;
     }
 
+    const QString profileState = mpHost->readProfileIniData(qsl("MainConsole/CommandSearchSplitterState"));
+    if (!profileState.isEmpty()) {
+        commandSplitter->restoreState(QByteArray::fromBase64(profileState.toLatin1()));
+        return;
+    }
+
+    // Mudlet once kept one position for every profile; it is the best guess for a profile yet to have its own
     QSettings* pQSettings = MudletApp::getQSettings();
     if (!pQSettings) {
         return;
     }
 
-    commandSplitter->restoreState(pQSettings->value("commandSearchSplitterState").toByteArray());
+    commandSplitter->restoreState(pQSettings->value(qsl("commandSearchSplitterState")).toByteArray());
 }
