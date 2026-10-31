@@ -34,6 +34,7 @@
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "THyperlinkCompactManager.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "ctelnet.h"
@@ -329,6 +330,20 @@ private slots:
         QTest::qWait(1s);
         QVERIFY2(!bufferContains(host, qsl("Unable to connect")), "a disconnect the user asked for was reported as a failure to connect as well");
         QCOMPARE(recordedEventCount(host, qsl("sysDisconnectionEvent")), 1);
+    }
+
+    void test_osc8PresetsEndWithTheConnection()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        THyperlinkCompactManager& compact = host->mainConsoleView()->getHyperlinkCompactManager();
+
+        QByteArray definition = "\x1b]8;;preset:danger?config=%7B%22s%22%3A%7B%22c%22%3A%22red%22%7D%7D\x1b\\\x1b]8;;\x1b\\\r\n";
+        host->mTelnet.loopbackTest(definition);
+        QTRY_VERIFY2(compact.hasPreset(qsl("danger")), "the preset was never defined, so its absence later would prove nothing");
+
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        QVERIFY2(!compact.hasPreset(qsl("danger")), "the preset outlived the connection that defined it");
     }
 
 #if !defined(QT_NO_SSL)
