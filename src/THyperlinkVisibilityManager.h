@@ -60,9 +60,7 @@ struct TrackedHyperlink
     bool expireOnPrompt = false;  // GA/EOR telnet signal received
     bool expireOnOutput = false;  // New output after idle gap
     quint32 outputDelayMs = 500;  // Idle gap for output trigger
-    bool expireActivated = false; // Link has been clicked, expire triggers are active
     bool skipFirstPrompt = false; // Skip the immediate prompt after registration
-    bool skipFirstOutput = false; // Skip the first output gap after registration
 };
 
 // Tracks which OSC 8 hyperlinks are concealed and when each is due to change:
@@ -106,7 +104,6 @@ signals:
 
 private slots:
     void slot_checkTimers();
-    void slot_outputGapExpired();
     void slot_announceHiddenLinks();
 
 private:
@@ -121,7 +118,6 @@ private:
     TConsoleModel& mModel;
     QMap<int, TrackedHyperlink> mTrackedLinks;
     QTimer* mpTimer = nullptr;
-    QTimer* mpOutputGapTimer = nullptr;
     QTimer* mpAnnouncementTimer = nullptr;
     int mPendingHiddenCount = 0;
     bool mHasTimerBasedLinks = false;

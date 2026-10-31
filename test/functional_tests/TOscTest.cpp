@@ -39,6 +39,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TAccessibleTextEdit.h"
+#include "TCommandLine.h"
 #include "THyperlinkStyling.h"
 #include "THyperlinkVisibilityManager.h"
 #include "TLinkStore.h"
@@ -2007,6 +2008,224 @@ private slots:
     const int linkId = console->buffer.getLinkIndexAt(joinedLine, 71);
     QVERIFY2(linkId > 0, "the link text is no longer a link");
     QVERIFY(console->getHyperlinkVisibilityManager().trackedLinkIds().contains(linkId));
+  }
+
+  bool bufferShows(const QString &text) {
+    TBuffer &buffer = mpHost->mainConsoleView()->buffer;
+    for (int line = 0; line <= buffer.getLastLineNumber(); ++line) {
+      if (buffer.line(line).contains(text)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  QString expireLink(const QString &action, const QString &settings) {
+    return qsl("\x1b]8;;send:look?config={\"visibility\":{\"action\":\"%1\",%2}}\x1b\\Hint\x1b]8;;\x1b\\").arg(action, settings);
+  }
+
+  void test_Osc8ExpireEventsCountFromWhenALinkIsPrinted_data() {
+    QTest::addColumn<QString>("action");
+    QTest::addColumn<QString>("event");
+
+    for (const QString &action : {qsl("conceal"), qsl("reveal"), qsl("reveal-then-conceal")}) {
+      for (const QString &event : {qsl("input"), qsl("prompt"), qsl("output")}) {
+        QTest::addRow("%s on %s", qPrintable(action), qPrintable(event)) << action << event;
+      }
+    }
+  }
+
+  void test_Osc8ExpireEventsCountFromWhenALinkIsPrinted() {
+    QFETCH(QString, action);
+    QFETCH(QString, event);
+    const bool startsVisible = action == qsl("conceal");
+
+    injectData(expireLink(action, qsl("\"expire\":{\"%1\":true,\"outputDelay\":30}").arg(event)));
+    auto &manager = mpHost->mainConsoleView()->getHyperlinkVisibilityManager();
+    QCOMPARE(bufferShows(qsl("Hint")), startsVisible);
+
+    if (event == qsl("input")) {
+      manager.onUserInput();
+    } else if (event == qsl("prompt")) {
+      manager.onPromptReceived();
+      QVERIFY2(bufferShows(qsl("Hint")) == startsVisible, "the prompt ending the link's own output counted");
+      manager.onPromptReceived();
+    } else {
+      QTest::qWait(60ms);
+      manager.onDataReceived();
+    }
+    QCOMPARE(bufferShows(qsl("Hint")), !startsVisible);
+  }
+
+  void test_Osc8ExpiredRevealThenConcealHidesWhenClicked() {
+    injectData(expireLink(qsl("reveal-then-conceal"), qsl("\"expire\":{\"input\":true}")));
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    const int linkId = std::get<2>(*pos);
+    auto &manager = mpHost->mainConsoleView()->getHyperlinkVisibilityManager();
+
+    QVERIFY2(!bufferShows(qsl("Hint")), "a link waiting for an event showed at once");
+    manager.onUserInput();
+    QVERIFY(bufferShows(qsl("Hint")));
+    manager.onLinkClicked(linkId);
+    QVERIFY(!bufferShows(qsl("Hint")));
+  }
+
+  void test_Osc8ClickingAConcealLinkWithExpireHidesItAtOnce() {
+    injectData(expireLink(qsl("conceal"), qsl("\"expire\":{\"input\":true}")));
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    QVERIFY(bufferShows(qsl("Hint")));
+    mpHost->mainConsoleView()->getHyperlinkVisibilityManager().onLinkClicked(std::get<2>(*pos));
+    QVERIFY(!bufferShows(qsl("Hint")));
+  }
+
+  void test_Osc8AnExpireEventBeatsTheDelay_data() {
+    QTest::addColumn<QString>("action");
+    QTest::addColumn<bool>("showsAfterwards");
+
+    QTest::newRow("conceal") << qsl("conceal") << false;
+    QTest::newRow("reveal") << qsl("reveal") << true;
+  }
+
+  void test_Osc8AnExpireEventBeatsTheDelay() {
+    QFETCH(QString, action);
+    QFETCH(bool, showsAfterwards);
+
+    injectData(expireLink(action, qsl("\"delay\":60000,\"expire\":{\"input\":true}")));
+    QCOMPARE(bufferShows(qsl("Hint")), !showsAfterwards);
+    mpHost->mainConsoleView()->getHyperlinkVisibilityManager().onUserInput();
+    QCOMPARE(bufferShows(qsl("Hint")), showsAfterwards);
+  }
+
+  // A game's prompt arrives in the same read as the text before it, or in a
+  // later one, and either way it is the next prompt that hides the link.
+  void test_Osc8PromptExpiryWithARealGoAhead_data() {
+    QTest::addColumn<bool>("promptInTheSameRead");
+    QTest::addColumn<bool>("forceGaOff");
+    QTest::newRow("same read") << true << false;
+    QTest::newRow("later read") << false << false;
+    QTest::newRow("same read, GA interpretation forced off") << true << true;
+    QTest::newRow("later read, GA interpretation forced off") << false << true;
+  }
+
+  void test_Osc8PromptExpiryWithARealGoAhead() {
+    QFETCH(bool, promptInTheSameRead);
+    QFETCH(bool, forceGaOff);
+    const bool wasGaDriver = mpHost->mTelnet.mGA_Driver;
+    const bool wasForceGaOff = mpHost->mTelnet.mFORCE_GA_OFF;
+    const auto restoreFlags = qScopeGuard([this, wasGaDriver, wasForceGaOff] {
+      mpHost->mTelnet.mGA_Driver = wasGaDriver;
+      mpHost->mTelnet.mFORCE_GA_OFF = wasForceGaOff;
+    });
+    mpHost->mTelnet.mFORCE_GA_OFF = forceGaOff;
+
+    const QByteArray prompt = QByteArray("> ") + QByteArray("\xff\xf9", 2);
+    QByteArray link = (expireLink(qsl("conceal"), qsl("\"expire\":{\"prompt\":true}")) + qsl("\r\n")).toUtf8();
+    if (promptInTheSameRead) {
+      QByteArray read = link + prompt;
+      mpHost->mTelnet.loopbackTest(read);
+    } else {
+      mpHost->mTelnet.loopbackTest(link);
+      QTest::qWait(50ms);
+      QByteArray read = prompt;
+      mpHost->mTelnet.loopbackTest(read);
+    }
+    QTest::qWait(50ms);
+    QVERIFY2(bufferShows(qsl("Hint")), "the link's own prompt hid it");
+
+    QByteArray next = prompt;
+    mpHost->mTelnet.loopbackTest(next);
+    QTest::qWait(50ms);
+    QVERIFY2(!bufferShows(qsl("Hint")), "the next prompt did not hide it");
+  }
+
+  void test_Osc8OutputExpiryWaitsForAQuietGap() {
+    // Wide enough that a stalled machine can't turn the burst into a gap
+    feedFromServer(expireLink(qsl("conceal"), qsl("\"expire\":{\"output\":true,\"outputDelay\":1000}")) + qsl("\n"));
+    feedFromServer(qsl("the same burst\n"));
+    QVERIFY2(bufferShows(qsl("Hint")), "the link's own burst of text hid it");
+
+    QTest::qWait(1100ms);
+    feedFromServer(qsl("after a gap\n"));
+    QVERIFY2(!bufferShows(qsl("Hint")), "text after a quiet gap did not hide it");
+  }
+
+  void test_Osc8OutputExpiryIgnoresSteadyOutput() {
+    feedFromServer(expireLink(qsl("conceal"), qsl("\"expire\":{\"output\":true,\"outputDelay\":1000}")) + qsl("\n"));
+    for (int i = 0; i < 8; ++i) {
+      QTest::qWait(150ms);
+      feedFromServer(qsl("steady %1\n").arg(i));
+    }
+    QVERIFY2(bufferShows(qsl("Hint")), "output with no gap in it hid the link once the delay had passed since it was printed");
+  }
+
+  void test_Osc8OutputExpiryCountsFromAScriptPrintedLink() {
+    std::string printed = (expireLink(qsl("conceal"), qsl("\"expire\":{\"output\":true,\"outputDelay\":2000}")) + qsl("\n")).toStdString();
+    mpHost->printOnDisplay(printed, false);
+    QVERIFY(bufferShows(qsl("Hint")));
+    feedFromServer(qsl("the game speaks at once\n"));
+    QVERIFY2(bufferShows(qsl("Hint")), "the first data after a script printed the link hid it");
+  }
+
+  void test_Osc8OutputDelayBelongsToEachLink() {
+    const QString shortDelay = qsl("\x1b]8;;send:a?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"output\":true,\"outputDelay\":30}}}\x1b\\Brief\x1b]8;;\x1b\\");
+    const QString longDelay = qsl("\x1b]8;;send:b?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"output\":true,\"outputDelay\":60000}}}\x1b\\Lasting\x1b]8;;\x1b\\");
+    feedFromServer(shortDelay + qsl("\n") + longDelay + qsl("\n"));
+    QTest::qWait(60ms);
+    feedFromServer(qsl("after a gap\n"));
+    QVERIFY(!bufferShows(qsl("Brief")));
+    QVERIFY2(bufferShows(qsl("Lasting")), "one link's outputDelay decided another's");
+  }
+
+  // cTelnet posts these with no game text in them, and script output isn't the game's
+  void test_Osc8OutputExpiryIgnoresWhatIsNotGameOutput_data() {
+    QTest::addColumn<QByteArray>("posted");
+    QTest::addColumn<bool>("fromServer");
+
+    QTest::newRow("bare flush marker") << QByteArray("\r") << true;
+    QTest::newRow("empty post at a disconnect") << QByteArray() << true;
+    QTest::newRow("prompt marker alone") << QByteArray("\xff") << true;
+    QTest::newRow("prompt read as a newline") << QByteArray("\n") << true;
+    QTest::newRow("script output") << QByteArray("printed by a script\n") << false;
+  }
+
+  void test_Osc8OutputExpiryIgnoresWhatIsNotGameOutput() {
+    QFETCH(QByteArray, posted);
+    QFETCH(bool, fromServer);
+
+    feedFromServer(expireLink(qsl("conceal"), qsl("\"expire\":{\"output\":true,\"outputDelay\":30}")) + qsl("\n"));
+    QTest::qWait(60ms);
+    std::string data = posted.toStdString();
+    mpHost->printOnDisplay(data, fromServer);
+    QVERIFY2(bufferShows(qsl("Hint")), "something that is not game output hid the link");
+  }
+
+  void test_Osc8ExpiryRemovesWholeLinesInABatch() {
+    const QString wholeLine = qsl("\x1b]8;;send:%1?config={\"visibility\":{\"action\":\"conceal\",\"wholeline\":true,\"expire\":{\"input\":true}}}\x1b\\%2\x1b]8;;\x1b\\");
+    feedFromServer(wholeLine.arg(qsl("a"), qsl("FirstGone")) + qsl("\n") + wholeLine.arg(qsl("b"), qsl("SecondGone")) + qsl("\n") + wholeLine.arg(qsl("c"), qsl("ThirdGone")) + qsl(" ") + wholeLine.arg(qsl("d"), qsl("SameLine")) + qsl("\nThe text that stays\n"));
+    QVERIFY(bufferShows(qsl("SecondGone")));
+
+    mpHost->mainConsoleView()->getHyperlinkVisibilityManager().onUserInput();
+
+    for (const QString &gone : {qsl("FirstGone"), qsl("SecondGone"), qsl("ThirdGone"), qsl("SameLine")}) {
+      QVERIFY2(!bufferShows(gone), qPrintable(gone));
+    }
+    QVERIFY2(bufferShows(qsl("The text that stays")), "a neighbouring line went with the links");
+  }
+
+  void test_Osc8InputExpiryHearsTheInputLine() {
+    injectData(expireLink(qsl("conceal"), qsl("\"expire\":{\"input\":true}")));
+    QVERIFY(bufferShows(qsl("Hint")));
+
+    QVERIFY2(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("send('from a script', false)")), "the script did not run");
+    QVERIFY2(bufferShows(qsl("Hint")), "a script's send() counted as the player's input");
+
+    TCommandLine *commandLine = mpHost->mainConsoleView()->mpCommandLine;
+    QVERIFY(commandLine);
+    QTest::keyClicks(commandLine, qsl("look"));
+    QTest::keyClick(commandLine, Qt::Key_Return);
+    QVERIFY2(!bufferShows(qsl("Hint")), "the player's command did not hide the link");
   }
 
   // Every link with visibility settings that closes while text is held keeps
