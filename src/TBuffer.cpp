@@ -10049,6 +10049,23 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "\x1b]8;;send:p4?preset=btn&config={\"s\":{\"c\":\"yellow\"}}\x1b\\Override\x1b]8;;\x1b\\\n\n";
 
     // ═══════════════════════════════════════════════════════════════════
+    // GMCP AND LOCAL - No command typed at the game
+    // ═══════════════════════════════════════════════════════════════════
+    output += "── GMCP AND LOCAL (no command typed at the game) ──────────────────────\n";
+    output += "GMCP:  ";
+    output += "\x1b]8;;gmcp:IRE.Target.Set%20%22rat%22\x1b\\Target the rat\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;gmcp:Game.Preference.Set%20%7B%22preference%22%3A%22hints%22%7D?config={\"selection\":{\"group\":\"docPrefs\",\"value\":\"hints\",\"exclusive\":false},\"style\":{\"selected\":{"
+              "\"bold\":true}}}\x1b\\Hints\x1b]8;;\x1b\\\n";
+    output += "       one GMCP message per click, nothing when GMCP is off\n";
+    output += "Local: ";
+    output += "\x1b]8;;local:?config={\"tooltip\":\"It needs a silver key\",\"style\":{\"u\":\"dotted\"}}\x1b\\Note\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;local:?config={\"spoiler\":true}\x1b\\The butler\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;local:?config={\"tooltip\":\"Click to dismiss\",\"visibility\":{\"action\":\"conceal\"}}\x1b\\Dismiss\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;local:?config={\"selection\":{\"group\":\"docRecipe\",\"value\":\"flour\",\"exclusive\":false},\"style\":{\"selected\":{\"strikethrough\":true}}}\x1b\\Flour\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;local:?config={\"menu\":[{\"Look\":\"send:look sword\"},{\"Wield\":\"send:wield sword\"}]}\x1b\\Sword\x1b]8;;\x1b\\\n";
+    output += "       a note, a spoiler, a dismiss, a checklist item, and a menu on click\n\n";
+
+    // ═══════════════════════════════════════════════════════════════════
     // REAL-WORLD SHOWCASE
     // ═══════════════════════════════════════════════════════════════════
     output += "── REAL-WORLD EXAMPLE ─────────────────────────────────────────────────\n";
@@ -10063,6 +10080,7 @@ void TBuffer::injectOSC8DocumentationExamples()
 
     output += "───────────────────────────────────────────────────────────────────────\n";
     output += "Docs: https://wiki.mudlet.org/w/Area_51#OSC_8:_Hyperlink_Protocol\n";
+    output += "Standard: https://wiki.mudlet.org/w/Standards:OSC_8_Hyperlinks\n";
 
     // Process the output through the normal text processing pipeline
     // Skip trigger processing to avoid re-entrancy issues during injection
