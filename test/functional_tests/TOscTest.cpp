@@ -786,6 +786,7 @@ private slots:
 
     injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"bold\":%1},\"selection\":{\"group\":\"booleans\",\"value\":\"x\",\"toggle\":%1}}\x1b\\Link\x1b]8;;\x1b\\").arg(value));
 
+    QVERIFY2(findFirstLinkPositionWithId().has_value(), "the whole link was refused");
     const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
     QCOMPARE(styling.isBold, expectedBold);
     QCOMPARE(styling.selection.toggle, expectedToggle);
@@ -812,6 +813,7 @@ private slots:
 
     injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"underline\":%1}}\x1b\\Link\x1b]8;;\x1b\\").arg(value));
 
+    QVERIFY2(findFirstLinkPositionWithId().has_value(), "the whole link was refused");
     const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
     QCOMPARE(styling.isUnderlined, expectedUnderlined);
     QCOMPARE(static_cast<int>(styling.underlineStyle), expectedStyle);
@@ -834,6 +836,7 @@ private slots:
 
     injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"overline\":%1,\"strikethrough\":%1}}\x1b\\Link\x1b]8;;\x1b\\").arg(value));
 
+    QVERIFY2(findFirstLinkPositionWithId().has_value(), "the whole link was refused");
     const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
     QCOMPARE(styling.isOverlined, expectedOn);
     QCOMPARE(styling.isStrikeOut, expectedOn);
@@ -865,6 +868,15 @@ private slots:
     QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
     QCOMPARE(console->getLinkStore().getStyling(linkId).selection.disabled, expectedDisabled);
     QCOMPARE(console->buffer.getLinkState(linkId) == Mudlet::HyperlinkStyling::StateDisabled, expectedDisabled);
+
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(std::get<0>(*pos), std::get<1>(*pos));
+    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(console->mUpperPane, &activate);
+    QCOMPARE(console->buffer.isLinkSelected(linkId), !expectedDisabled);
   }
 
   // A "config" parameter carrying something that is not an object is not a
