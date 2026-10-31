@@ -155,6 +155,7 @@ private:
                                                std::shared_ptr<std::atomic<bool>> cancelled);
     static std::pair<bool, QString> copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath);
     QFileInfo copyIconToTmp(const QString& tempPath) const;
+    void copyPackageDataToTmp(const QString& tempPath) const;
     QString normalizedHelpUrl() const;
     void writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile, const QString& packageDescription);
     void exportXml(bool& isOk,
@@ -192,6 +193,8 @@ private:
     QString mPackagePath;
     QString mPackagePathFileName;
     QString mPackageIconPath;
+    // The .mudlet folder of the installed package being re-exported, if any
+    QString mPackageDataPath;
     QString mPackageConfig;
     QString mPackageComment;
     bool mCheckChildren = true;
