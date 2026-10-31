@@ -406,6 +406,50 @@ private slots:
         QVERIFY(!mudlet::self()->getDetachedWindows().contains(mClosingHostname));
     }
 
+    // A close asked for while a save is being waited out is retried by the window once the wait ends
+    void test_aProfileClosedDuringASaveWaitClosesWithItsTab()
+    {
+        deleteProfileDirectory(mClosingHostname);
+        Host* pHost = startProfile(mClosingHostname);
+        QVERIFY(pHost);
+        const QPointer<Host> hostGuard(pHost);
+        mudlet::self()->slot_tabDetachRequested(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), QPoint(200, 200));
+        const QPointer<TDetachedWindow> pWindow = mudlet::self()->getDetachedWindows().value(mClosingHostname);
+        QVERIFY(pWindow);
+        const QPointer<TTabBar> pTabBar = tabBarOf(pWindow);
+        QVERIFY(pTabBar);
+        pHost->mFORCE_SAVE_ON_EXIT = true;
+
+        // The save's end is announced from inside waitForProfileSave()
+        bool askedDuringWait = false;
+        auto connection = connect(pHost, &Host::profileSaveFinished, this, [&askedDuringWait, pHost, pWindow]() {
+            if (askedDuringWait || !pWindow) {
+                return;
+            }
+            askedDuringWait = pHost->waitingForProfileSave();
+            QMetaObject::invokeMethod(pWindow, "closeProfile", Qt::DirectConnection);
+        });
+        QVERIFY(std::get<0>(pHost->saveProfile()));
+        pHost->waitForProfileSave();
+        disconnect(connection);
+        QVERIFY2(askedDuringWait, "the close was not asked for while the save was being waited out");
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&hostGuard]() {
+                             return hostGuard.isNull();
+                         },
+                         3000ms),
+                 "the profile was never closed");
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !mudlet::self()->getDetachedWindows().contains(mClosingHostname);
+                         },
+                         1000ms),
+                 "the closed profile stayed listed in its window");
+        QVERIFY2(!pTabBar || pTabBar->tabIndex(mClosingHostname) == -1, "the closed profile's tab stayed in its window");
+        QCOMPARE(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), -1);
+    }
+
 private:
     // Leaves the first profile in the main window and puts the other two in one
     // detached window. That window ends up showing the third, since a profile
