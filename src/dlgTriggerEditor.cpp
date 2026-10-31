@@ -9308,6 +9308,9 @@ void dlgTriggerEditor::populateKeys()
         auto pItem = new QTreeWidgetItem(mpKeyBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(key->getID()));
         mpKeyBaseItem->addChild(pItem);
+        if (key->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QIcon icon;
         QString itemDescription;
         const bool itemActive = key->isActive();
@@ -9477,6 +9480,9 @@ void dlgTriggerEditor::populateActions()
         auto pItem = new QTreeWidgetItem(mpActionBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(action->getID()));
         mpActionBaseItem->addChild(pItem);
+        if (action->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QIcon icon;
         QString itemDescription;
         if (action->hasChildren()) {
@@ -9560,6 +9566,9 @@ void dlgTriggerEditor::populateAliases()
         auto pItem = new QTreeWidgetItem(mpAliasBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(alias->getID()));
         mpAliasBaseItem->addChild(pItem);
+        if (alias->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QIcon icon;
         QString itemDescription;
         const bool itemActive = alias->isActive();
@@ -9636,6 +9645,9 @@ void dlgTriggerEditor::populateScripts()
         auto pItem = new QTreeWidgetItem(mpScriptsBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(script->getID()));
         mpScriptsBaseItem->addChild(pItem);
+        if (script->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QIcon icon;
         QString itemDescription;
         const bool itemActive = script->isActive();
@@ -9801,6 +9813,9 @@ void dlgTriggerEditor::populateTimers()
         auto pItem = new QTreeWidgetItem(mpTimerBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(timer->getID()));
         mpTimerBaseItem->addChild(pItem);
+        if (timer->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QIcon icon;
         QString itemDescription;
         const bool itemActive = timer->isActive();
@@ -9982,6 +9997,9 @@ void dlgTriggerEditor::populateTriggers()
         auto pItem = new QTreeWidgetItem(mpTriggerBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(trigger->getID()));
         mpTriggerBaseItem->addChild(pItem);
+        if (trigger->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QIcon icon;
         QString itemDescription;
         const bool itemActive = trigger->isActive();
@@ -11649,7 +11667,18 @@ void dlgTriggerEditor::slot_sourceFindTextChanges()
 
 void dlgTriggerEditor::slot_deleteItemOrGroup()
 {
-    switch (resolveCurrentView()) {
+    const EditorViewType view = resolveCurrentView();
+    if (QTreeWidget* pTree = treeForView(view)) {
+        for (const QTreeWidgetItem* pItem : pTree->selectedItems()) {
+            const QString moduleName = moduleOfMasterFolder(view, pItem->data(0, Qt::UserRole).toInt());
+            if (!moduleName.isEmpty()) {
+                offerToUninstallModule(moduleName);
+                return;
+            }
+        }
+    }
+
+    switch (view) {
     case EditorViewType::cmTriggerView:
         delete_trigger();
         break;
@@ -16661,6 +16690,78 @@ bool dlgTriggerEditor::folderItem(const EditorViewType view, const int id)
         break;
     }
     return false;
+}
+
+// A module's folder is rebuilt from the module file on every load and is not written back to it
+QString dlgTriggerEditor::moduleOfMasterFolder(const EditorViewType view, const int id) const
+{
+    switch (view) {
+    case EditorViewType::cmTriggerView:
+        if (auto* pTrigger = mpHost->getTriggerUnit()->getTrigger(id); pTrigger && pTrigger->mModuleMasterFolder) {
+            return pTrigger->mPackageName;
+        }
+        break;
+    case EditorViewType::cmAliasView:
+        if (auto* pAlias = mpHost->getAliasUnit()->getAlias(id); pAlias && pAlias->mModuleMasterFolder) {
+            return pAlias->mPackageName;
+        }
+        break;
+    case EditorViewType::cmScriptView:
+        if (auto* pScript = mpHost->getScriptUnit()->getScript(id); pScript && pScript->mModuleMasterFolder) {
+            return pScript->mPackageName;
+        }
+        break;
+    case EditorViewType::cmTimerView:
+        if (auto* pTimer = mpHost->getTimerUnit()->getTimer(id); pTimer && pTimer->mModuleMasterFolder) {
+            return pTimer->mPackageName;
+        }
+        break;
+    case EditorViewType::cmKeysView:
+        if (auto* pKey = mpHost->getKeyUnit()->getKey(id); pKey && pKey->mModuleMasterFolder) {
+            return pKey->mPackageName;
+        }
+        break;
+    case EditorViewType::cmActionView:
+        if (auto* pAction = mpHost->getActionUnit()->getAction(id); pAction && pAction->mModuleMasterFolder) {
+            return pAction->mPackageName;
+        }
+        break;
+    case EditorViewType::cmVarsView:
+    case EditorViewType::cmUnknownView:
+        break;
+    }
+    return {};
+}
+
+void dlgTriggerEditor::offerToUninstallModule(const QString& moduleName)
+{
+    QMessageBox box(this);
+    box.setIcon(QMessageBox::Question);
+    //: Title of the dialog shown when the user tries to delete the folder that holds a module's items
+    box.setWindowTitle(tr("Delete module folder"));
+    //: %1 is the name of the module whose folder the user tried to delete
+    box.setText(tr("This folder belongs to the module \"%1\" and can't be deleted on its own. Would you like to uninstall the module?").arg(moduleName));
+    //: Button that removes the module whose folder the user tried to delete, along with all its items
+    QPushButton* pUninstallButton = box.addButton(tr("Uninstall"), QMessageBox::AcceptRole);
+    box.addButton(QMessageBox::Cancel);
+    box.setDefaultButton(QMessageBox::Cancel);
+    box.exec();
+    if (box.clickedButton() != pUninstallButton) {
+        return;
+    }
+
+    if (!mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromUI)) {
+        QString message;
+        if (mpHost->currentlySavingProfile()) {
+            //: %1 is the name of the module the user asked to remove
+            message = tr("\"%1\" could not be removed while the profile is being saved. Please try again in a moment.").arg(moduleName);
+        } else {
+            //: %1 is the name of the module the user asked to remove, which turned out not to be installed any more
+            message = tr("\"%1\" is no longer installed, so there was nothing to remove.").arg(moduleName);
+        }
+        //: Title of the dialog that says why a module the user asked to remove was not removed
+        QMessageBox::warning(this, tr("Removal failed"), message);
+    }
 }
 
 QTreeWidgetItem* dlgTriggerEditor::findItemById(QTreeWidget* pTree, const int id)
