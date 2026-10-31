@@ -543,11 +543,15 @@ private slots:
         QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("updateMusic({key = 'theme', volume = 10, duration = 3000})")));
         QElapsedTimer sinceUpdate;
         sinceUpdate.start();
-        // Well into the glide; what is mixed lags what is decoded by up to a voice's 300 ms queue
-        QTest::qWait(1500ms);
-        const float partway = loudestOnEachSide(20).first;
-        // Read only once the glide is over, or it is caught passing through the band on its way somewhere else
-        QTest::qWait(std::max<qint64>(0, 3700 - sinceUpdate.elapsed()));
+        // Polled, as one read after a fixed wait lands anywhere in the glide if the runner stalls
+        int readsPartway = 0;
+        while (sinceUpdate.elapsed() < 3700) {
+            const float level = loudestOnEachSide(20).first;
+            if (level > start * 0.2F && level < start * 0.8F) {
+                ++readsPartway;
+            }
+            QTest::qWait(50ms);
+        }
         std::pair<float, float> heard;
         QVERIFY2(comesOut(
                          // A band, not a ceiling: a read that lands between two pieces of audio is silence
@@ -557,9 +561,7 @@ private slots:
                          heard,
                          2s),
                  qPrintable(qsl("Updated to volume 10, the music stayed at %1 (from %2).").arg(heard.first).arg(start)));
-        const float settled = heard.first;
-        QVERIFY2(partway < start * 0.85F && partway > settled * 1.5F,
-                 qPrintable(qsl("Partway through a 3 s glide the music was at %1, between %2 at the start and %3 at the end.").arg(partway).arg(start).arg(settled)));
+        QVERIFY2(readsPartway >= 10, qPrintable(qsl("Through a 3 s glide from %1, only %2 reads were between 0.2 and 0.8 of the way down: it did not glide.").arg(start).arg(readsPartway)));
     }
 
     // A game moves a sound by sending its play and an update together, before any of it is heard
