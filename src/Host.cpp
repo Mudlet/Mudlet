@@ -3041,9 +3041,9 @@ void Host::printOnDisplay(std::string& data, const bool isFromServer)
     TConsoleModel& model = *mpMainConsoleModel;
     TBuffer& buffer = model.buffer;
 
-    // Notify visibility manager of incoming data (for output gap detection). A disconnect
-    // posts nothing, and a prompt with no text before it posts only its marker.
-    if (isFromServer && carriesText && !data.empty() && data != "\xff") {
+    // Notify visibility manager of incoming data (for output gap detection). A disconnect posts
+    // nothing, and a prompt with no text before it posts only its marker or, unread as a prompt, a newline.
+    if (isFromServer && data.find_first_not_of("\r\n\xff") != std::string::npos) {
         model.mHyperlinkVisibilityManager.onDataReceived();
     }
 

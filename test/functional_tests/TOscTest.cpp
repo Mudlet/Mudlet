@@ -2186,6 +2186,7 @@ private slots:
     QTest::newRow("bare flush marker") << QByteArray("\r") << true;
     QTest::newRow("empty post at a disconnect") << QByteArray() << true;
     QTest::newRow("prompt marker alone") << QByteArray("\xff") << true;
+    QTest::newRow("prompt read as a newline") << QByteArray("\n") << true;
     QTest::newRow("script output") << QByteArray("printed by a script\n") << false;
   }
 
@@ -2222,6 +2223,7 @@ private slots:
 
     TCommandLine *commandLine = mpHost->mainConsoleView()->mpCommandLine;
     QVERIFY(commandLine);
+    QTest::keyClicks(commandLine, qsl("look"));
     QTest::keyClick(commandLine, Qt::Key_Return);
     QVERIFY2(!bufferShows(qsl("Hint")), "the player's command did not hide the link");
   }
