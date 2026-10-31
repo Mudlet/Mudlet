@@ -45,6 +45,8 @@ public:
     virtual void showOptionsDialog(const QString& tab, Host* pHost) = 0;
     virtual void showConnectionDialog() = 0;
     virtual void handleTelnetUri(const QString& uri) = 0;
+    // A link from a game to a telnet:// or telnets:// address: asks the player first, always.
+    virtual void connectFromGameLink(const QString& uri) = 0;
     // Only the profile in the active tab drives the menu's checkbox.
     virtual void setCompactInputLineChecked(Host* pHost, bool checked) = 0;
     // closeMudlet(): asks, from the event loop, for every profile to close and save and then the application to quit
