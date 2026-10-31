@@ -3213,6 +3213,50 @@ describe("Tests Geyser.Label right click menus", function()
       assert.are.equal("R", menuItem("First").flyDir)
     end)
 
+    describe("with a submenu", function()
+      local mainWidth
+
+      before_each(function()
+        mainWidth = getMainWindowSize()
+        -- wide enough for the first level beside the click, but not the second as well
+        label = Geyser.Label:new({name = "glmSubHost", x = mainWidth - 200, y = 10, width = 190, height = 30})
+        label:createRightClickMenu({MenuWidth = 140, MenuItems = {"First", {"Sub1", "Sub2"}, "Second"}})
+      end)
+
+      local function openSubmenu()
+        doNestEnter(menuItem("First"))
+        return menuItem("First.Sub1"), menuItem("First.Sub2")
+      end
+
+      it("flies out to the left when only the first level fits on the right", function()
+        label:onRightClick(mouseEvent("RightButton", 1, 1))
+        assert.are.equal("R", menuItem("First").flyDir)
+        local sub1, sub2 = openSubmenu()
+        assert.is_true(windowVisible(sub1.name))
+        assert.are.equal("L", sub1.flyDir)
+        assert.are.equal("L", sub2.flyDir)
+        assert.are.equal(menuItem("First"):get_x() - sub1:get_width(), sub1:get_x())
+        assert.is_true(sub1:get_x() >= 0)
+      end)
+
+      it("flies back out to the right once there is room for it", function()
+        label:onRightClick(mouseEvent("RightButton", 1, 1))
+        openSubmenu()
+        label:move(10, 10)
+        label:onRightClick(mouseEvent("RightButton", 1, 1))
+        local sub1 = openSubmenu()
+        assert.are.equal("R", sub1.flyDir)
+        assert.are.equal(menuItem("First"):get_x() + menuItem("First"):get_width(), sub1:get_x())
+      end)
+
+      it("follows the first level out to the left", function()
+        label:move(mainWidth - 20, 10)
+        label:onRightClick(mouseEvent("RightButton", 1, 1))
+        assert.are.equal("L", menuItem("First").flyDir)
+        assert.are.equal("L", openSubmenu().flyDir)
+      end)
+    end)
+
     -- unlike clicking a nestable label, which puts its nest away again, a
     -- second right click moves the menu to where the second click was: it
     -- closes every level before opening, so the nest it then opens was shut
