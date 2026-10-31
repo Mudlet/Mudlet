@@ -1290,7 +1290,19 @@ bool TriggerUnit::killTrigger(const QString& name)
         markCleanup(pT);
         return true;
     }
-    return false;
+    // tempComplexRegexTrigger() returns the ID of a trigger named after its first argument, not after that ID
+    bool isNumber = false;
+    const int id = name.toInt(&isNumber);
+    if (!isNumber) {
+        return false;
+    }
+    TTrigger* pT = getTrigger(id);
+    if (!pT || !pT->isTemporary() || pendingDeletion(pT)) {
+        return false;
+    }
+    pT->setIsActive(false);
+    markCleanup(pT);
+    return true;
 }
 
 void TriggerUnit::assembleReport(TTrigger* pItem)
