@@ -153,8 +153,12 @@ private:
         return path;
     }
 
+    // QSKIP here returns only from this helper, so each caller returns on QTest::currentTestResolved()
     void requireStub()
     {
+#if !defined(INCLUDE_SPEECH_ENGINES)
+        QSKIP("this build of Mudlet cannot load a speech engine library, so the stand-in cannot be loaded either");
+#endif
         if (mSystemEngineWins) {
             QSKIP("libvosk answers the bare name here, so the loader would reach it before the stand-in this case installs");
         }
@@ -221,6 +225,9 @@ private slots:
     void aRecognizerComingIntoExistenceIsAnnounced()
     {
         requireStub();
+        if (QTest::currentTestResolved()) {
+            return;
+        }
         QVERIFY(runLua(qsl("_capabilityEvents = 0\n"
                            "_handlers = _handlers or {}\n"
                            "table.insert(_handlers, registerAnonymousEventHandler('sysSTTCapabilitiesChanged', function() _capabilityEvents = _capabilityEvents + 1 end))\n"
@@ -259,6 +266,9 @@ private slots:
     void aReloadRefusedInsideAnErrorHandlerDoesNotRunTheHandlerAgain()
     {
         requireStub();
+        if (QTest::currentTestResolved()) {
+            return;
+        }
         QVERIFY(runLua(qsl("_loaded = stt.init([[%1]])").arg(stubModelDirectory())).isNull());
         QVERIFY2(luaTrue(qsl("_loaded")), "the stand-in model did not load, so the library is not in use");
         QVERIFY(countErrors(qsl("stt.reloadLibrary()")).isNull());
@@ -284,6 +294,9 @@ private slots:
     {
         QFETCH(QString, call);
         requireStub();
+        if (QTest::currentTestResolved()) {
+            return;
+        }
         QVERIFY(runLua(qsl("_loaded = stt.init([[%1]])").arg(stubModelDirectory())).isNull());
         QVERIFY2(luaTrue(qsl("_loaded")), "the stand-in model did not load, so the library is not in use");
         QVERIFY(countErrors().isNull());
@@ -301,6 +314,9 @@ private slots:
     void aReadyHandlerClosingTheBridgeMakesTheLoadFail()
     {
         requireStub();
+        if (QTest::currentTestResolved()) {
+            return;
+        }
         QVERIFY(countErrors().isNull());
         QVERIFY(runLua(qsl("_closed = false\n"
                            "table.insert(_handlers, registerAnonymousEventHandler('sysSTTStateChanged', function(_, state)\n"
@@ -325,6 +341,9 @@ private slots:
     void aReadyHandlerReloadingTheSameModelLeavesTheLoadStanding()
     {
         requireStub();
+        if (QTest::currentTestResolved()) {
+            return;
+        }
         const QString model = stubModelDirectory();
         QVERIFY(runLua(qsl("_reentered = false\n"
                            "_handlers = _handlers or {}\n"
@@ -356,6 +375,9 @@ private slots:
     void aModelLoadedFromTheLostSessionReportSurvives()
     {
         requireStub();
+        if (QTest::currentTestResolved()) {
+            return;
+        }
         const QString model = stubModelDirectory();
         const QString handlerModel = otherStubModelDirectory();
 
@@ -400,6 +422,9 @@ private slots:
     void aHandlerReloadingTheSameModelDoesNotStopTheLoadItInterrupted()
     {
         requireStub();
+        if (QTest::currentTestResolved()) {
+            return;
+        }
         const QString model = stubModelDirectory();
         const QString outerModel = otherStubModelDirectory();
 
@@ -446,6 +471,9 @@ private slots:
     void aHandlersFailedLoadDoesNotStopTheLoadItInterrupted()
     {
         requireStub();
+        if (QTest::currentTestResolved()) {
+            return;
+        }
         const QString model = stubModelDirectory();
         const QString alreadyLoaded = otherStubModelDirectory();
         const QString unloadable = unloadableStubModelDirectory();
@@ -482,6 +510,9 @@ private slots:
     void aStartAfterAFailedLoadDoesNotOfferAReload()
     {
         requireStub();
+        if (QTest::currentTestResolved()) {
+            return;
+        }
         QVERIFY(runLua(qsl("_loadOk = stt.init([[%1]])").arg(unloadableStubModelDirectory())).isNull());
         QVERIFY2(!luaTrue(qsl("_loadOk")), "the unloadable stand-in model loaded, so this case is not about a failed load");
         QCOMPARE(luaString(qsl("stt.getInfo().state")), qsl("error"));

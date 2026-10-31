@@ -1030,6 +1030,10 @@ if(USE_DISCORD_RPC)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_DISCORD_RPC)
 endif()
 
+if(USE_SPEECH_ENGINES)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_SPEECH_ENGINES)
+endif()
+
 if(USE_VARIABLE_SPLASH_SCREEN)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_VARIABLE_SPLASH_SCREEN)
 endif()

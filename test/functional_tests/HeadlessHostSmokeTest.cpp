@@ -10046,6 +10046,12 @@ headlessDiscord = ok and 'ok' or tostring(err)
         }
         // Only with no engine is every one of these refused, so only then is every binding's caller checked
         const bool noEngine = !TSpeechBridge::instance()->speechRecognizer() && !speechEngineAvailable();
+#if defined(INCLUDE_SPEECH_ENGINES)
+        const bool unloadRefused = false;
+#else
+        // with no library it could have loaded, there is none to unload
+        const bool unloadRefused = true;
+#endif
         const QList<QPair<QString, bool>> calls{{qsl("stt.init('/nonexistent/headless/model')"), true},
                                                 {qsl("stt.start()"), true},
                                                 {qsl("stt.toggle()"), true},
@@ -10056,7 +10062,7 @@ headlessDiscord = ok and 'ok' or tostring(err)
                                                 {qsl("stt.cancel()"), false},
                                                 {qsl("stt.close()"), false},
                                                 {qsl("stt.reloadLibrary()"), true},
-                                                {qsl("stt.unloadLibrary()"), false},
+                                                {qsl("stt.unloadLibrary()"), unloadRefused},
                                                 {qsl("stt.start()"), true},
                                                 {qsl("stt.reloadLibrary()"), true}};
         for (int i = 0; i < calls.size(); ++i) {
