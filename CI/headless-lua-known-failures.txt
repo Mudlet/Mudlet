@@ -1,0 +1,97 @@
+# Specs that fail in mudlet-headless, which has no main window, read by
+# CI/check-headless-lua-failures.py, which says what each line means.
+minimum successes: 7768
+maximum pending: 261
+
+# Need a main window
+Error UI_spec.lua: Window and label state console metrics getProfileTabNumber returns the one-based tab position
+Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour hands out a key as soon as whatever held it is switched off
+Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour keeps the search's key when it is switched off and on in one turn
+Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour refuses one Mudlet reserves for a menu command
+Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour refuses one Mudlet uses for switching profiles, and says what holds it
+Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour says so when the search is switched on over a command's key
+Failure ConsoleCursorByName_spec.lua: Tests that the cursor and line functions find their console by name with a sub-console's name of a mini console with its split screen open counts the rows above the split
+Failure ConsoleEdges_spec.lua: Console edges refuses names it cannot use a name a label already has
+Failure ConsoleFontsByName_spec.lua: Tests that the font functions find their console by name with a sub-console's name gives a mini console a command line of its own and hides it again
+Failure ConsoleFontsByName_spec.lua: Tests that the font functions find their console by name with a sub-console's name gives a user window a command line of its own and hides it again
+Failure ConsoleFontsByName_spec.lua: Tests that the font functions find their console by name with a sub-console's name reads the size a style sheet gives a user window's text
+Failure ConsoleWrapByName_spec.lua: Tests that the timestamp and wrap functions find their console by name with a sub-console's name of a mini console reports a size it has not reported yet when its timestamps change
+Failure ConsoleWrapByName_spec.lua: Tests that the timestamp and wrap functions find their console by name with a sub-console's name of a user window reports a size it has not reported yet when its timestamps change
+Failure GeyserAdjustableContainer_spec.lua: Tests Adjustable.Container borders, persistence and menu items Adjustable.Container:adjustBorder/setBorderMargin/resetBorder keeps the console its rows through a window resize with both sides attached
+Failure GeyserAdjustableContainer_spec.lua: Tests Adjustable.Container borders, persistence and menu items Adjustable.Container:adjustBorder/setBorderMargin/resetBorder reserves nothing for a container a nested detach took off the facing border
+Failure GeyserAdjustableContainer_spec.lua: Tests Adjustable.Container borders, persistence and menu items Adjustable.Container:hideObj is followed once shown by a container that connected while it was hidden
+Failure GeyserAdjustableContainer_spec.lua: Tests Adjustable.Container borders, persistence and menu items Adjustable.Container:hideObj still leads the containers connected to it after being hidden and shown
+Failure GeyserAdjustableContainer_spec.lua: Tests Adjustable.Container borders, persistence and menu items Tests the functionality of Adjustable.Container:connectToBorder keeps a connected container following the window once it is resized
+Failure GeyserAdjustableContainer_spec.lua: Tests Adjustable.Container borders, persistence and menu items Tests the functionality of Adjustable.Container:connectToBorder leaves a far-edge constraint measuring from the far edge
+Failure GeyserAdjustableContainer_spec.lua: Tests functionality of Adjustable.Container Tests the functionality of Adjustable.Container:attachToBorder/detach ends detached when a resize handler moves it out of reach mid-move
+Failure GeyserAdjustableContainer_spec.lua: Tests functionality of Adjustable.Container Tests the functionality of Adjustable.Container:attachToBorder/detach takes the new border when shown after a resize handler hides it mid-move
+Failure GeyserAdjustableContainer_spec.lua: Tests the Adjustable.Container mouse handlers Adjustable.Container:onMove raises AdjustableContainerReposition while the drag is in progress
+Failure GeyserUserWindow_spec.lua: Tests functionality of Geyser.UserWindow Geyser.UserWindow:new/new2 gives itself a root container sized to the user window
+Failure HostApi_spec.lua: openUserWindow still refuses the name of a mini console inside a deleted user window
+Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for brings the first tab to the front of a frame that already has one nested in it
+Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for closes one tab of a frame without its sibling or its parent
+Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for docks a frame into another as a tab and closes it with its parent
+Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for makes a width given in characters hold that many columns on a proportional font
+Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for nests a frame opened inside a redirect in the frame it was redirected to
+Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for reads a size given in characters as characters
+Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for takes rows instead when the frame is along the bottom
+Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for takes the columns an internal frame needs from the main window
+Failure MapSymbolPrivateUse_spec.lua: Tests room symbols from a font's Private Use Area draws a glyph the symbol font has there, from any font, in a map loaded from a JSON file
+Failure MapSymbolPrivateUse_spec.lua: Tests room symbols from a font's Private Use Area draws a glyph the symbol font has there, from any font, in a map loaded from a binary file
+Failure MapSymbolPrivateUse_spec.lua: Tests room symbols from a font's Private Use Area draws a glyph the symbol font has there, from only the selected font, in a map loaded from a binary file
+Failure MapViewportLimits_spec.lua: Tests painting a map label many times bigger than the map window exports an area holding a huge scaled image label above the rooms
+Failure MapViewportLimits_spec.lua: Tests painting a map label many times bigger than the map window exports an area holding a huge scaled image label below the rooms
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage can be called twice in a row
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage draws a room's symbol
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage of every z level checks the files it writes, not the name they are made from
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage of every z level writes none of them when one is refused
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage reports a save that failed against that export alone
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage returns false and a message for a directory that is not there
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage returns false and a message for a path that is a directory
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage returns false and a message for an empty file name
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage returns false and a message for an image format it cannot write
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage returns false and a message when the directory is a file
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage returns true for a valid area (the file is written asynchronously)
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage takes a nil areaID when the player is in a room
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage takes a single z level
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage takes true for every z level at once
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export with a target it may not write exportAreaImage returns false and a message for a directory it may not write to
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export with a target it may not write exportAreaImage returns false and a message for a file it may not overwrite
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests registered map info refuses to delete rooms or areas, or replace the map, from inside a map info callback
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests registered map info survives a map info callback that registers and kills contributors while the map is painted
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests secondary map views createMapView with no area opens on the player's area and level
+Failure Media_spec.lua: Media playback effects with a generated sound file a Client.Media.Play message that names the video type is played as a video
+Failure Media_spec.lua: Media playback effects with a generated sound file a video asked to close takes its label off screen when it ends
+Failure Media_spec.lua: Media playback effects with a generated sound file a video that never asked to close leaves its label on screen
+Failure Media_spec.lua: Media playback effects with a generated sound file playVideoFile plays into the label its key names and the video family reports it
+Failure Media_spec.lua: Media playback effects with a generated sound file playVideoFile starts nothing when its key names no widget to draw into
+Failure Media_spec.lua: Media playback effects with a generated sound file the video pause and stop table forms act only on the key they name
+Failure TextEditSelection_spec.lua: Tests sysWindowOverflowEvent raises the event only once the lines no longer fit
+Failure Trigger_spec.lua: Trigger processing feedTriggers contract scrolls the main console to the lines it feeds from text a trigger feeds, once the game data that fired the trigger is handled
+Failure Trigger_spec.lua: Trigger processing feedTriggers contract scrolls the main console to the lines it feeds from text a trigger feeds, once the pass that fired the trigger ends
+Failure UI_spec.lua: A user window driven from Lua announces sysWindowOverflowEvent when it is not allowed to scroll
+Failure UI_spec.lua: Main window size and saved layout saveWindowLayout and loadWindowLayout saveWindowLayout returns false when the layout file cannot be opened, and saves again once it can
+Failure UI_spec.lua: Main window size and saved layout saveWindowLayout and loadWindowLayout saveWindowLayout returns true and writes the layout file
+Failure UI_spec.lua: Widget state getters getUserWindowTitle reports the title a style sheet gives a floating user window
+Failure UI_spec.lua: Window state getters getLabelText reports text a style sheet gives the label
+Failure UI_spec.lua: sysWindowOverflowEvent goes quiet again when the console is allowed to scroll once more
+Failure UI_spec.lua: sysWindowOverflowEvent names the console and how many lines are past the bottom of it
+Failure WindowGeometry_spec.lua: getWindowGeometry follows a docked user window as the main window lays its dock area out again
+Failure WindowSize_spec.lua: window sizes getMainWindowSize follows a button bar shown along its top
+Failure WindowSize_spec.lua: window sizes getMainWindowSize follows the command line as it grows with its text
+Failure WindowVisible_spec.lua: windowVisible of a window inside another of an MXP frame follows the tab that is showing
+Failure WindowVisible_spec.lua: windowVisible of a window inside another of an MXP frame is visible once opened
+Failure zz_Mapper3DView_spec.lua: Tests show3dMapView with the mapper hidden reads back the mode the hidden mapper will reopen in
+Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing both are accepted while the modern 3D view shows, and refused for the classic view
+Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing paints rooms with a symbol, a highlight and a border, in and out of grid mode
+Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing setMapZoom keeps its contract while the modern 3D view shows
+Failure zz_Mapper3DView_spec.lua: Tests the blueprint style on an area spread over several levels paints a multi-level area in blueprint and switches back to tiles
+Failure zz_Mapper3DView_spec.lua: Tests the modern 3D mapper surviving context rebuilds floats, redocks and switches back to the classic view
+
+# Fail for want of something other than a main window; each wants looking into
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests the command history saving accessors Tests that an end of session save writes the command line histories writes the main command line's history file out again
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests the functionality of saveProfile writes the application-wide settings to Mudlet.ini as well
+Failure Package_spec.lua: Tests exporting the profile to a file with saveProfile saves the command line history even when the profile file cannot be written
+Failure Package_spec.lua: Tests installing an archive named after one of the profile's own folders keeps the profile's log folder when it syncs a module from an archive called log
+Failure Package_spec.lua: Tests installing an archive named after one of the profile's own folders leaves the staging folder of an install still unpacking to it when another install of that name starts
+Failure Package_spec.lua: The package specs clean up after themselves leaves no fixture package, module or folder behind
