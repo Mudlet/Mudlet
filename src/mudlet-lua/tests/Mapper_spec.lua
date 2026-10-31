@@ -4658,6 +4658,24 @@ describe("Tests the open and closed states of the map widget", function()
         assert.is_true(pumpEvents(200))
         assert.are.equal(saved, mapWidth(), "docking the map where it already was resized it")
       end)
+
+      -- As one saved on a bigger screen is: Qt fits it to the whole screen, leaving its title bar above the top
+      it("fits a floating map bigger than the screen below the screen's top", function()
+        if not os.getenv("MUDLET_TEST_MODE") then
+          pending("the dock is only placed once pumpEvents() runs")
+          return
+        end
+        local huge = 20000
+        assert.is_true(openMapWidget(50, 50, huge, huge))
+        assert.is_true(pumpEvents(200))
+        assert.is_true(saveWindowLayout())
+        assert.is_true(loadWindowLayout())
+        assert.is_true(pumpEvents(200))
+        local x, y, width, height = getMapWidgetGeometry()
+        assert.is_true(width < huge and height < huge, "the layout did not shrink the map to the screen, so nothing was tested")
+        assert.is_true(x >= 0, "the map's left edge is off the screen, at " .. x)
+        assert.is_true(y > 0, "the map's top is at " .. y .. ", leaving no room on the screen for its title bar")
+      end)
     end)
   end)
 
