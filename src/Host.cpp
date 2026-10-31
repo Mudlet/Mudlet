@@ -482,7 +482,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // be initialised first. The view subscribes to the model's notifier when
     // it attaches (TConsole::TConsole) and unsubscribes when it goes away, and
     // TConsole::changeColors() refreshes the snapshot as it does so.
-    mpMainConsoleModel = std::make_shared<TConsoleModel>(this);
+    mpMainConsoleModel = std::make_unique<TConsoleModel>(this);
     mpMainConsoleModel->mConsoleName = qsl("main");
     mpMainConsoleModel->mScriptAddressable = true;
     refreshMainConsoleColors();
@@ -519,6 +519,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
 Host::~Host()
 {
+    Q_ASSERT_X(mpConsole.isNull(), "Host::~Host()", "the main console view would outlive the model it refers to");
     // Mark the host as closing down to prevent keybinding processing during destruction
     mIsClosingDown = true;
 
@@ -2760,11 +2761,6 @@ void Host::setF3SearchEnabled(const bool enabled)
 {
     mF3SearchEnabled = enabled;
     consoleFrontend()->setF3SearchEnabled(enabled);
-}
-
-std::shared_ptr<TConsoleModel> Host::sharedMainConsoleModel()
-{
-    return mpMainConsoleModel;
 }
 
 void Host::deselectMainConsole()

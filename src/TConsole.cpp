@@ -154,14 +154,13 @@ QStyle* consoleScrollBarStyle()
     return pStyle;
 }
 
-// The main console co-owns Host's model so the trigger pipeline outlives the
-// view; every other console owns its own model.
-std::shared_ptr<TConsoleModel> resolveConsoleModel(Host* pHost, const QString& name, const TConsole::ConsoleType type)
+// None for the main console, which uses Host's so the trigger pipeline runs without a view
+std::unique_ptr<TConsoleModel> ownConsoleModel(Host* pHost, const QString& name, const TConsole::ConsoleType type)
 {
     if (type == TConsole::MainConsole) {
-        return pHost->sharedMainConsoleModel();
+        return nullptr;
     }
-    auto model = std::make_shared<TConsoleModel>(pHost);
+    auto model = std::make_unique<TConsoleModel>(pHost);
     model->mConsoleName = name;
     model->mScriptAddressable = type.testAnyFlags(TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer);
     return model;
@@ -193,7 +192,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 : QWidget(parent)
 , mpHost(pH)
 , mDisplayFontDetails(pH->fontsAntiAlias())
-, mpModel(resolveConsoleModel(pH, name, type))
+, mpOwnModel(ownConsoleModel(pH, name, type))
+, mpModel(mpOwnModel ? mpOwnModel.get() : &pH->mainConsoleModel())
 , buffer(mpModel->buffer)
 , emergencyStop(new QToolButton)
 , mBgColor(mpModel->mBgColor)
@@ -830,16 +830,16 @@ TConsole::~TConsole()
         TDebug::setSink(nullptr);
     }
 
-    // Host co-owns the main console's model, so the model - and its buffer -
-    // can outlive this view. ~QObject() would only drop these connections once
-    // it runs, leaving the buffer notifying a half-destroyed widget for the
-    // whole of this teardown, so drop them up front.
+    // The main console's model, and its buffer, belong to Host and outlive this
+    // view. ~QObject() would only drop these connections once it runs, leaving
+    // the buffer notifying a half-destroyed widget for the whole of this
+    // teardown, so drop them up front.
     disconnect(&mpModel->mNotifier, nullptr, this, nullptr);
 
     // Backstop: TMainConsole deregisters sub-consoles it destroys, but one can also die with the
     // widget it was created into, e.g. a scroll box.
     if (mpHost && (mType & (SubConsole | UserWindow | Buffer))) {
-        mpHost->windowRegistry().deregisterSubConsole(mConsoleName, mpModel.get());
+        mpHost->windowRegistry().deregisterSubConsole(mConsoleName, mpModel);
     }
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
