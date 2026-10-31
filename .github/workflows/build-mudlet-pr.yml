@@ -44,7 +44,7 @@ jobs:
             buildname: 'ubuntu / gcc / lua tests + leak detection'
             compiler: gcc_64
             gcc_compiler_version: 12
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: ubuntu-gcc-asan
             deploy: 'deploy'
             run_tests: 'true'
@@ -54,7 +54,7 @@ jobs:
           - os: macos-15
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: macos-arm64
             deploy: 'deploy'
             run_tests: 'true'
@@ -65,7 +65,7 @@ jobs:
             buildname: 'ubuntu / clang'
             compiler: clang_64
             gcc_compiler_version: 14
-            qt: '6.11.1'
+            qt: '6.11.3'
             ccache_id: ubuntu-clang
             compile_only: 'true'
 
@@ -74,9 +74,8 @@ jobs:
       uses: actions/checkout@v7
       with:
         submodules: recursive
-        # Enough for CI/generate-changelog.lua.
-        # MAX_COMMITS_PER_CHANGELOG (100) commits
-        fetch-depth: 100
+        # CI/set-build-info.sh reads the PR head as the merge commit's second parent
+        fetch-depth: 2
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
@@ -462,14 +461,6 @@ jobs:
       run: |
         export ARCH=$(uname -m)
         echo "ARCH=$ARCH" >> $GITHUB_ENV
-        if [ "$RUNNER_OS" = "macOS" ] && [ "$ARCH" = "arm64" ]; then
-          # dblsqd only supports 'arm' as an architecture and not 'arm64'
-          export ARCH_DBLSQD=arm
-          echo "ARCH_DBLSQD=arm" >> $GITHUB_ENV
-        else
-          export ARCH_DBLSQD=$ARCH
-          echo "ARCH_DBLSQD=$ARCH" >> $GITHUB_ENV
-        fi
         ${{github.workspace}}/CI/after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
@@ -477,8 +468,6 @@ jobs:
         X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
         DEPLOY: ${{matrix.deploy}}
         DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
-        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
-        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
         MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
         APPLE_USERNAME: ${{secrets.APPLE_USERNAME}}
@@ -616,6 +605,10 @@ jobs:
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        # Off by default; the flood specs pend without it
+        MUDLET_MATCH_THREADS: 2
+        # Its statistics sample would take lines the flood specs compare off the pool
+        MUDLET_MATCH_SAMPLE_EVERY: 0
         MUDLET_TEST_MODE: 1
         MUDLET_TEST_REQUIRE_TTS_MOCK: 1
         MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
@@ -675,6 +668,10 @@ jobs:
         # their own environment on to the app they launch
         lua_tests_env=(
           AUTORUN_BUSTED_TESTS=true
+          # Off by default; the flood specs pend without it
+          MUDLET_MATCH_THREADS=2
+          # Its statistics sample would take lines the flood specs compare off the pool
+          MUDLET_MATCH_SAMPLE_EVERY=0
           MUDLET_TEST_MODE=1
           MUDLET_TEST_REQUIRE_TTS_MOCK=1
           MUDLET_TEST_REQUIRE_HTTP_FIXTURE=1

@@ -54,13 +54,26 @@ describe("Tests UI functions", function()
       assert.are.equal(testdecho, copy2decho("testconsole"))
     end)
 
-    -- TODO: https://github.com/Mudlet/Mudlet/issues/5590
-    -- it("Should copy text with background transparency", function()
-    --   local testdecho = "<50,50,0:0,255,0,100>semi-transparent"
-    --   decho("testconsole", testdecho)
+    it("Should copy text with background transparency", function()
+      local testdecho = "<50,50,0:0,255,0,100>semi-transparent<r><50,50,0:0,255,0>opaque<r>"
+      decho("testconsole", testdecho)
 
-    --   assert.are.equal(testdecho, copy2decho("testconsole", true))
-    -- end)
+      assert.are.equal(testdecho, copy2decho("testconsole"))
+    end)
+
+    it("Should copy the alpha of a console's own translucent background", function()
+      local window = "uiSpecCopy2dechoTranslucent"
+      finally(function() deleteMiniConsole(window) end)
+      createMiniConsole(window, 0, 0, 400, 50)
+      setBackgroundColor(window, 10, 20, 30, 0)
+      resetFormat(window)
+      echo(window, "plain")
+      selectSection(window, 0, 1)
+      local fg = getTextFormat(window).foreground
+
+      assert.are.equal(string.format("<%d,%d,%d:10,20,30,0>plain<r>", fg[1], fg[2], fg[3]), copy2decho(window))
+      assert.are.equal(string.format("<span style='color: rgb(%d,%d,%d);background: rgb(10,20,30);'>plain</span>", fg[1], fg[2], fg[3]), copy2html(window))
+    end)
 
     it("Should copy colored Chinese text", function()
       local testdecho = "<50,50,0:0,255,0>测试<r><192,192,192:0,0,0> <r><255,0,0:0,0,0>红色<r><0,255,0:0,0,0>绿色<r><0,0,255:0,0,0>蓝色<r>"
@@ -95,13 +108,65 @@ describe("Tests UI functions", function()
       assert.are.equal("", copy2decho("testconsole", "dup dup dup dup"))
     end)
 
-    -- TODO: https://github.com/Mudlet/Mudlet/issues/5589
-    -- it("Should copy2decho text with italics, bold, and underline", function()
-    --   local testdecho = "separate: <i>italic</i>, <b>bold</b>, <u>underline</u>. all together: <i>italic<b>bold<u>underline<r>"
-    --   decho("testconsole", testdecho)
+    it("Should copy2decho text with italics, bold, and underline", function()
+      local testdecho = "separate: <i>italic</i>, <b>bold</b>, <u>underline</u>. all together: <i>italic<b>bold<u>underline<r>"
+      decho("testconsole", testdecho)
 
-    --   assert.are.equal(testdecho, copy2decho("testconsole"))
-    -- end)
+      selectSection("testconsole", 0, 1)
+      local format = getTextFormat("testconsole")
+      local fg, bg = format.foreground, format.background
+      local colour = string.format("<%d,%d,%d:%d,%d,%d>", fg[1], fg[2], fg[3], bg[1], bg[2], bg[3])
+      assert.are.equal(colour .. testdecho, copy2decho("testconsole"))
+    end)
+
+    it("Should copy strikeout and overline, and restate formatting after a colour change resets it", function()
+      local testdecho = "<255,0,0:0,0,0><s>struck</s><o>over<r><0,255,0:0,0,0><o>still over</o> plain<r>"
+      decho("testconsole", testdecho)
+
+      assert.are.equal(testdecho, copy2decho("testconsole"))
+      assert.are.equal("<span style='color: rgb(255,0,0);background: rgb(0,0,0);'>struckover</span><span style='color: rgb(0,255,0);background: rgb(0,0,0);'>still over plain</span>", copy2html("testconsole"))
+    end)
+
+    it("Should open the formatting a copied part of the line starts in", function()
+      decho("testconsole", "<255,0,0:0,0,0>plain <b>bold <i>both</b> italic<r>")
+
+      assert.are.equal("<255,0,0:0,0,0><b><i>both</b> ita<r>", copy2decho("testconsole", "both ita"))
+    end)
+
+    describe("when the copy is echoed back with decho", function()
+      local copyWindow = "uiSpecCopy2dechoRoundTrip"
+
+      setup(function()
+        createBuffer(copyWindow)
+      end)
+
+      teardown(function()
+        deleteMiniConsole(copyWindow)
+      end)
+
+      local function formats(window)
+        local result = {}
+        for i = 0, utf8.len(getCurrentLine(window)) - 1 do
+          selectSection(window, i, 1)
+          result[#result + 1] = getTextFormat(window)
+        end
+        deselect(window)
+        return result
+      end
+
+      it("Should reproduce every character's colours, alpha and formatting", function()
+        clearWindow(copyWindow)
+        moveCursorEnd(copyWindow)
+        decho("testconsole", "plain <i>it<255,0,0>al<b>ic bo</i>ld<:0,0,255,80>see<u>through<0,255,0:10,20,30>green</b> u<r><s>s<o>o</s></o>ff")
+        local original = formats("testconsole")
+        assert.are.equal(80, original[#"plain italic bold" + 1].backgroundAlpha)
+
+        decho(copyWindow, copy2decho("testconsole"))
+
+        assert.are.equal(getCurrentLine("testconsole"), getCurrentLine(copyWindow))
+        assert.are.same(original, formats(copyWindow))
+      end)
+    end)
   end)
 
   describe("Test the functionality of copy2html", function()
@@ -1294,7 +1359,7 @@ describe("Tests UI functions", function()
       local expectedFields = {
         bold = true, italic = true, overline = true, reverse = true,
         strikeout = true, underline = true, underlineStyle = true, concealed = true,
-        blinking = true, alternateFont = true, foreground = true, background = true
+        blinking = true, alternateFont = true, foreground = true, background = true, backgroundAlpha = true
       }
       
       print("Checking for unexpected fields:")
@@ -2709,16 +2774,47 @@ describe("Tests UI functions", function()
       assert.are.same({ current = 30, max = 60 }, applied[1].mv)
     end)
 
-    -- GMCP package and message names are case-insensitive
+    -- fed rather than raised: an unknown spelling is picked up from the namespace event
     it("should read a vitals node sent in any casing", function()
       for _, spelling in ipairs({ { "char", "MaxStats" }, { "Char", "maxStats" }, { "CHAR", "MAXSTATS" }, { "Char", "vitals" } }) do
         applied = {}
         local namespace, message = spelling[1], spelling[2]
-        _G.gmcp = { [namespace] = { [message] = { hp = 50, maxhp = 100 } } }
-        raiseEvent("gmcp." .. namespace .. "." .. message)
+        _G.gmcp = {}
+        feedTelnet("<T_IAC><T_SB><O_GMCP>" .. namespace .. "." .. message .. ' {"hp":50,"maxhp":100}<T_IAC><T_SE>')
         assert.are.equal(1, #applied, namespace .. "." .. message)
         assert.are.same({ current = 50, max = 100 }, applied[1].hp, namespace .. "." .. message)
+        raiseEvent("gmcp." .. namespace .. "." .. message)
+        assert.are.equal(2, #applied, namespace .. "." .. message .. " raised again")
       end
+    end)
+
+    it("should update after a handler registered earlier for a spelling no game is known to send", function()
+      _G.gmcp = {}
+      local seen
+      local id = registerAnonymousEventHandler("gmcp.cHaR.vItAlS", function()
+        seen = #applied
+      end)
+      feedTelnet('<T_IAC><T_SB><O_GMCP>cHaR.vItAlS {"hp":50,"maxhp":100}<T_IAC><T_SE>')
+      killAnonymousEventHandler(id)
+      assert.are.equal(0, seen)
+      assert.are.equal(1, #applied)
+    end)
+
+    it("should not be called for events that cannot announce vitals", function()
+      local routed, route = 0, BaseUI.routeGmcpVitals
+      BaseUI.routeGmcpVitals = function(...)
+        routed = routed + 1
+        return route(...)
+      end
+      finally(function() BaseUI.routeGmcpVitals = route end)
+      _G.gmcp = { Room = { Info = { num = 1 } } }
+      raiseEvent("sysUIspecUnrelatedEvent")
+      raiseEvent("gmcp.Room", "gmcp.Room.Info")
+      raiseEvent("gmcp.Room.Info", "gmcp.Room.Info")
+      assert.are.equal(0, routed)
+      raiseEvent("gmcp.Char", "gmcp.Char.Items.List")
+      assert.are.equal(1, routed)
+      assert.are.equal(0, #applied)
     end)
 
     it("should read the capitalised spelling first when a node is present in two casings", function()
@@ -2743,6 +2839,7 @@ describe("Tests UI functions", function()
     it("should only update for a vitals message", function()
       _G.gmcp = { Char = { Vitals = { hp = 50, maxhp = 100 }, Items = { List = {} } } }
       raiseEvent("gmcp.Char")
+      raiseEvent("gmcp.CHAR", "gmcp.CHAR.Items.List")
       raiseEvent("gmcp.Char.Items.List")
       raiseEvent("Char.Vitals")
       assert.are.equal(0, #applied)
@@ -2983,6 +3080,39 @@ describe("Tests UI functions", function()
         return
       end
       assert.are.same(originalBorders, getBorderSizes())
+    end)
+  end)
+
+  describe("Test the starter UI's introduction", function()
+    if not (type(BaseUI) == "table" and type(BaseUI.announce) == "function") then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.announce is unavailable in this profile")
+      end)
+      return
+    end
+
+    local savedSettings
+
+    before_each(function()
+      savedSettings = table.deepcopy(BaseUI.settings)
+      BaseUI.settings.hidden, BaseUI.settings.standingAside, BaseUI.settings.announced = nil, nil, nil
+    end)
+
+    after_each(function()
+      BaseUI.settings = savedSettings
+      BaseUI.saveSettings()
+    end)
+
+    -- the main console wraps at the profile's wrap width, which can be wider than the console
+    it("should fit every line of the introduction into the main console", function()
+      local columns = getColumnCount("main")
+      local mark = getLastLineNumber("main")
+      BaseUI.announce()
+      local lines = getLines("main", mark, getLastLineNumber("main") + 1)
+      assert.is_true(#lines >= 3, "the introduction was not printed")
+      for _, line in ipairs(lines) do
+        assert.is_true(utf8.len(line) < columns, string.format("%d columns: %s", columns, line))
+      end
     end)
   end)
 
@@ -7836,6 +7966,9 @@ describe("Main window size and saved layout", function()
   end
 
   setup(function()
+    -- A docked map squeezed short of the width it wants takes a growing window's width before the console
+    -- does, which would read here as a display that cannot resize
+    closeMapWidget()
     local firstWidth, firstHeight = getMainWindowSize()
     measurable = testMode and firstWidth > 0 and firstHeight > 0
     if not measurable then
@@ -7846,11 +7979,11 @@ describe("Main window size and saved layout", function()
     local width, height = getMainWindowSize()
     resizable = width > firstWidth and height > firstHeight
 
-    -- A dock another spec file left open - the map widget is the one that does
-    -- this - only takes its width out of the console at the next re-layout,
-    -- which is the resize just above. So the size to put the window back to is
-    -- read after asking for the first one again rather than before: a size the
-    -- window has actually been is a size it can be put back to.
+    -- A dock opened or closed just before this, as the map is above, only
+    -- changes the console's width at the next re-layout, which is the resize
+    -- just above. So the size to put the window back to is read after asking
+    -- for the first one again rather than before: a size the window has
+    -- actually been is a size it can be put back to.
     setMainWindowSize(firstWidth, firstHeight)
     pumpEvents(200)
     originalWidth, originalHeight = getMainWindowSize()
@@ -8114,6 +8247,108 @@ describe("Main window size and saved layout", function()
       assert.is_true(loadWindowLayout())
     end)
 
+    it("saveWindowLayout is refused from a handler the load runs, so the load still places every window", function()
+      local first, second = "layoutSaveInLoadA", "layoutSaveInLoadB"
+      local handler
+      finally(function()
+        if handler then
+          killAnonymousEventHandler(handler)
+        end
+        deleteMiniConsole(first)
+        deleteMiniConsole(second)
+      end)
+      openUserWindow(first, false, false, "f")
+      openUserWindow(second, false, false, "f")
+      moveWindow(first, 100, 100)
+      resizeWindow(first, 300, 200)
+      moveWindow(second, 500, 100)
+      resizeWindow(second, 250, 150)
+      pumpEvents(300)
+      local savedSecond = {getWindowGeometry(second)}
+      assert.is_true(saveWindowLayout())
+      moveWindow(first, 150, 150)
+      resizeWindow(first, 320, 220)
+      moveWindow(second, 550, 150)
+      resizeWindow(second, 270, 170)
+      pumpEvents(300)
+      local loading, saved, saveError = false, "not run", nil
+      handler = registerAnonymousEventHandler("sysUserWindowResizeEvent", function(_, _, _, name)
+        if loading and saved == "not run" and (name == first or name == second) then
+          saved, saveError = saveWindowLayout()
+        end
+      end)
+      loading = true
+      assert.is_true(loadWindowLayout())
+      loading = false
+      pumpEvents(300)
+      assert.is_nil(saved)
+      assert.equals("cannot save the window layout while it is being loaded", saveError)
+      -- a save from there wrote this one where it was before the load, and kept the load from moving it; a restored
+      -- floating dock's position can drift under a real window server, its size does not
+      local _, _, savedWidth, savedHeight = unpack(savedSecond)
+      local _, _, width, height = getWindowGeometry(second)
+      assert.are.same({savedWidth, savedHeight}, {width, height})
+    end)
+
+    it("openUserWindow refuses a window a handler deletes or replaces as it is made or as the layout loads", function()
+      local other, deleted, replaced, replacedInLoad = "layoutFontOther", "layoutFontDeleted", "layoutFontReplaced", "layoutLoadReplaced"
+      local target, replace, trigger
+      local function replaceTarget(window)
+        deleteMiniConsole(window)
+        if replace then
+          openUserWindow(window, false, false, "f")
+          hideWindow(window)
+        end
+      end
+      local fontHandler = registerAnonymousEventHandler("sysFontChangeEvent", function(_, window)
+        if window == target then
+          target = nil
+          replaceTarget(window)
+        end
+      end)
+      -- the load resizes the other window, and its handler replaces the one being opened
+      local resizeHandler = registerAnonymousEventHandler("sysUserWindowResizeEvent", function(_, _, _, window)
+        if trigger and window == trigger.resized then
+          local opening = trigger.window
+          trigger = nil
+          replaceTarget(opening)
+        end
+      end)
+      finally(function()
+        killAnonymousEventHandler(fontHandler)
+        killAnonymousEventHandler(resizeHandler)
+        for _, name in ipairs({other, deleted, replaced, replacedInLoad}) do
+          deleteMiniConsole(name)
+        end
+      end)
+      openUserWindow(other, false, false, "f")
+      resizeWindow(other, 300, 200)
+      pumpEvents(300)
+      assert.is_true(saveWindowLayout())
+      -- the layout has the other one at 300x200, so only a load puts it back
+      for _, case in ipairs({{deleted, false, false, {400, 330}}, {replaced, true, false, {400, 330}}, {replacedInLoad, true, true, {300, 200}}}) do
+        resizeWindow(other, 400, 330)
+        pumpEvents(300)
+        replace = case[2]
+        if case[3] then
+          trigger = {resized = other, window = case[1]}
+        else
+          target = case[1]
+        end
+        local opened, openError = openUserWindow(case[1], true, false, "f")
+        pumpEvents(300)
+        assert.is_nil(opened)
+        assert.equals(("userwindow '%s' was deleted while it was being opened"):format(case[1]), openError)
+        local _, _, width, height = getWindowGeometry(other)
+        assert.are.same(case[4], {width, height})
+      end
+      assert.is_nil(windowType(deleted))
+      for _, name in ipairs({replaced, replacedInLoad}) do
+        assert.equals("userwindow", windowType(name))
+        assert.is_false(windowVisible(name))
+      end
+    end)
+
     it("verifying the restored dock geometry", function()
       pending("dock widget geometry is not readable from Lua - needs a functional test")
     end)
@@ -8151,6 +8386,9 @@ describe("Application and profile style sheets", function()
     end)
 
     it("raises the event with an empty tag when none is given", function()
+      -- Swapping one sheet for another repolishes every live widget, seconds once the
+      -- suite has built many; from no sheet Qt installs a fresh style instead
+      setAppStyleSheet("")
       local events = collectStyleSheetEvents()
       assert.is_true(setAppStyleSheet("QLabel { color: rgb(4,5,6); }"))
       assert.are.equal(1, #events)

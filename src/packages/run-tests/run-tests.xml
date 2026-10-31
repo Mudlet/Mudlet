@@ -140,6 +140,17 @@ function bustedState.isBustedAvailable()
   end
 end
 
+-- the test file loader reports a missing path, or no matching files, with no element name
+function bustedState.warnLoadErrors()
+  for _, loadError in ipairs(bustedState.loadErrors or {}) do
+    if loadError.element.name then
+      print("Warning: Cannot load test file " .. loadError.element.name .. ":\n" .. tostring(loadError.message))
+    else
+      print("Warning: " .. tostring(loadError.message))
+    end
+  end
+end
+
 			-- BEGIN Busted init section
 
 -- This is where you change options. See the busted documentation
@@ -329,11 +340,33 @@ function bustedState.setup( filesTable, patternsTable )
   bustedState.setupRun = true
 
   local testFileLoader = testFileLoader or require 'busted.modules.test_file_loader'(busted, {'lua'})
-  testFileLoader(bustedState.filesTable, bustedState.patternsTable, {
-      excludes = {},
-      verbose = bustedState.verbose,
-      recursive = bustedState.recursive,
-    })
+  bustedState.loadErrors = {}
+  -- subscribed here rather than once at startup, so it also works after the package is upgraded mid-session
+  local collector = busted.subscribe({ 'error' }, function(element, parent, message)
+      table.insert(bustedState.loadErrors, { element = element, message = message })
+      return nil, true
+    end)
+  local loaded, loaderError = pcall(function()
+      local path = require 'pl.path'
+      for _, file in ipairs(bustedState.filesTable) do
+        -- busted skips a named file it has no loader for without reporting it
+        if path.isfile(file) and path.extension(file) ~= '.lua' then
+          busted.publish({ 'error' }, {}, nil, "Not a .lua file, so it was not run: " .. file, {})
+        end
+      end
+      testFileLoader(bustedState.filesTable, bustedState.patternsTable, {
+          excludes = {},
+          verbose = bustedState.verbose,
+          recursive = bustedState.recursive,
+        })
+    end)
+  busted.unsubscribe(collector.id, { 'error' })
+  if not loaded then
+    error(loaderError, 0)
+  end
+  bustedState.warnLoadErrors()
+  -- freshly loaded tests need no cleanup, which would also report their load errors a second time
+  bustedState.runTestsRun = false
 
   bustedState.execute = bustedState.execute or require 'busted.execute'(busted)
 end -- bustedState.setup()
@@ -356,7 +389,7 @@ function bustedState.runTests()
     print("Warning: Without installing \"busted\", the test system will not work!")
     return
   end
-  -- Some cleanup is needed if busted has run already
+  -- Some cleanup is needed if these tests have run already
   -- it doesn't really clean up after itself.
   if bustedState.runTestsRun then
     local tablex = require 'pl.tablex'
@@ -376,6 +409,11 @@ function bustedState.runTests()
     end
     root = busted.context.get()
     busted.safe_publish('suite', { 'suite', 'reset' }, root, 1, 1)
+    -- the files are not reloaded, so whatever failed to load is still missing from this run
+    for _, loadError in ipairs(bustedState.loadErrors or {}) do
+      busted.publish({ 'error', loadError.element.descriptor }, loadError.element, nil, loadError.message, {})
+    end
+    bustedState.warnLoadErrors()
   end
   bustedState.runTestsRun = true
 

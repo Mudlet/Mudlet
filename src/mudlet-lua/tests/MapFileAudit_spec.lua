@@ -189,6 +189,48 @@ describe("Tests the audit of a damaged binary map file", function()
     end)
   end)
 
+  describe("Tests normal exit data that the file holds without the exit", function()
+    it("drops what only an exit can carry and keeps what a stub can, beside sound exits", function()
+      local area = newArea("MapFileAuditSpecExitless")
+      local room = newRoom(area, 0)
+      local gone = newRoom(area, 1, distantRoomId)
+      local kept = newRoom(area, 2)
+      local plain = newRoom(area, 3)
+      assert.is_true(setExit(room, gone, "east"))
+      assert.is_true(setExitWeight(room, "east", 5))
+      assert.is_true(setDoor(room, "e", 2))
+      assert.is_true(addCustomLine(room, {{0.5, 0.5, 0}}, "e", "dot line", {1, 2, 3}, false))
+      lockExit(room, "east", true)
+      assert.is_true(setExit(room, kept, "west"))
+      assert.is_true(setExitWeight(room, "west", 7))
+      assert.is_true(setDoor(room, "w", 3))
+      assert.is_true(addCustomLine(room, {{-0.5, 0.5, 0}}, "w", "dash line", {4, 5, 6}, true))
+      setExitStub(room, "north", true)
+      assert.is_true(setDoor(room, "n", 1))
+      -- the control: a room with none of these to lose
+      assert.is_true(setExit(plain, kept, "east"))
+
+      reloadWith(function(data)
+        return planted(data, minusOne .. minusOne .. int32(gone) .. minusOne,
+                       minusOne .. minusOne .. minusOne .. minusOne, 1)
+      end)
+
+      assert.is_nil(getRoomExits(room)["east"])
+      assert.is_false(listHas(getExitStubs1(room), 4)) -- DIR_EAST
+      assert.is_nil(getDoors(room)["e"])
+      assert.is_nil(getExitWeights(room)["e"])
+      assert.is_nil((getCustomLines1(room) or {})["e"])
+      assert.is_false(hasExitLock(room, "east"))
+      assert.are.equal(kept, getRoomExits(room)["west"])
+      assert.are.equal(3, getDoors(room)["w"])
+      assert.are.equal(7, getExitWeights(room)["w"])
+      assert.is_not_nil((getCustomLines1(room) or {})["w"])
+      assert.are.equal(1, getDoors(room)["n"])
+      assert.are.equal(kept, getRoomExits(plain)["east"])
+      assert.are.same({}, getAllRoomEntrances(gone))
+    end)
+  end)
+
   describe("Tests special exit data that the file holds without the exit", function()
     it("removes a special exit that has no command", function()
       local area = newArea("MapFileAuditSpecNameless")
@@ -355,6 +397,54 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.are.same({renumbered}, getRoomsByPosition1(area, x, y, z))
       assert.are.same({renumbered}, getAllRoomEntrances(from))
       assert.are.same({from}, getAllRoomEntrances(renumbered))
+    end)
+
+    it("gives each of two rooms with IDs below one an ID of its own", function()
+      local area = newArea("MapFileAuditSpecTwoBadRoomIds")
+      local from = newRoom(area, 0)
+      local bystander = newRoom(area, 3)
+      newRoom(area, 1, distantRoomId)
+      newRoom(area, 2, otherDistantRoomId)
+      setRoomName(distantRoomId, "MapFileAuditSpecBadRoomZero")
+      setRoomName(otherDistantRoomId, "MapFileAuditSpecBadRoomMinusSeven")
+      assert.is_true(setExit(from, distantRoomId, "east"))
+      assert.is_true(setExit(distantRoomId, from, "west"))
+      assert.is_true(setExit(from, otherDistantRoomId, "west"))
+      assert.is_true(setExit(otherDistantRoomId, from, "east"))
+
+      reloadWith(function(data)
+        -- each room's own key, its place in its area's list of rooms and the exit that leads to it
+        data = planted(data, int32(distantRoomId), int32(0), 3)
+        return planted(data, int32(otherDistantRoomId), int32(-7), 3)
+      end)
+
+      local renumberedZero, renumberedMinusSeven
+      local roomCount = 0
+      for id, name in pairs(getRooms()) do
+        roomCount = roomCount + 1
+        if name == "MapFileAuditSpecBadRoomZero" then
+          renumberedZero = id
+        elseif name == "MapFileAuditSpecBadRoomMinusSeven" then
+          renumberedMinusSeven = id
+        end
+      end
+      assert.are.equal(4, roomCount)
+      assert.is_not_nil(renumberedZero, "the room with ID 0 was lost")
+      assert.is_not_nil(renumberedMinusSeven, "the room with ID -7 was lost")
+      assert.is_true(renumberedZero >= 1)
+      assert.is_true(renumberedMinusSeven >= 1)
+      assert.are_not.equal(renumberedZero, renumberedMinusSeven)
+      assert.is_false(table.contains({from, bystander}, renumberedZero))
+      assert.is_false(table.contains({from, bystander}, renumberedMinusSeven))
+      assert.are.equal("0", getRoomUserData(renumberedZero, "audit.remapped_id"))
+      assert.are.equal("-7", getRoomUserData(renumberedMinusSeven, "audit.remapped_id"))
+      assert.are.equal(renumberedZero, getRoomExits(from)["east"])
+      assert.are.equal(renumberedMinusSeven, getRoomExits(from)["west"])
+      assert.are.same({from}, getAllRoomEntrances(renumberedZero))
+      assert.are.same({from}, getAllRoomEntrances(renumberedMinusSeven))
+      local expected = {renumberedZero, renumberedMinusSeven}
+      table.sort(expected)
+      assert.are.same(expected, getAllRoomEntrances(from))
     end)
 
     it("keeps the player in a room it renumbers", function()

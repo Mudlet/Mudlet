@@ -345,7 +345,7 @@ int TLuaInterpreter::alert(lua_State* L)
 
     if (lua_gettop(L) > 0) {
         luaAlertDuration = getVerifiedDouble(L, __func__, 1, "alert duration in seconds");
-        if (luaAlertDuration < 0.000) {
+        if (qIsNaN(luaAlertDuration) || luaAlertDuration < 0.000) {
             lua_pushstring(L, "alert: duration, in seconds, is optional but if given must be zero or greater.");
             return lua_error(L);
         }
@@ -2040,6 +2040,11 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
 
     lua_settable(L, -3);
 
+    // A key of its own: scripts compare background with {r, g, b}, so it must stay three long
+    lua_pushstring(L, "backgroundAlpha");
+    lua_pushnumber(L, background.alpha());
+    lua_settable(L, -3);
+
     return 1;
 }
 
@@ -2789,6 +2794,10 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#saveWindowLayout
 int TLuaInterpreter::saveWindowLayout(lua_State* L)
 {
+    // Mid-load, the GUI's saveState() writes the windows the load has yet to reach where they were, and stops it moving them
+    if (TAppFrontend::instance()->layoutLoading()) {
+        return warnArgumentValue(L, __func__, qsl("cannot save the window layout while it is being loaded"));
+    }
     lua_pushboolean(L, TAppFrontend::instance()->saveWindowLayoutForScript());
     return 1;
 }
@@ -2823,7 +2832,7 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
         }
         // We want capture groups to start with 1 instead of 0 so predecrement
         // luaNumOfMatch :
-        if (--captureGroup < static_cast<int>(pL->mCaptureGroupList.size())) {
+        if (--captureGroup < static_cast<int>(pL->mCaptureGroups.size())) {
             const auto offset = static_cast<std::size_t>(captureGroup);
             begin = pL->mCaptureGroupPosList[offset];
             length = pL->captureGroupLength(offset);
@@ -3434,9 +3443,6 @@ int TLuaInterpreter::setCmdLineStyleSheet(lua_State* L)
     const QString styleSheet{lua_tostring(L, styleSheetIndex)};
     const Host& host = getHostFromLua(L);
 
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto [success, message] = host.consoleFrontend()->setCmdLineStyleSheet(name, styleSheet); !success) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -3590,9 +3596,6 @@ int TLuaInterpreter::setLabelAccessibleName(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (!host.setLabelAccessibleName(labelName, accessibleName)) {
         return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
     }
@@ -3610,9 +3613,6 @@ int TLuaInterpreter::getLabelAccessibleName(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto accessibleName = host.labelAccessibleName(labelName)) {
         lua_pushstring(L, accessibleName->toUtf8().constData());
         return 1;
@@ -3643,9 +3643,6 @@ int TLuaInterpreter::setLabelAccessibleRole(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (!host.setLabelAccessibleButton(labelName, button)) {
         return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
     }
@@ -3678,9 +3675,6 @@ int TLuaInterpreter::setLabelLiveRegion(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (!host.setLabelLiveRegion(labelName, liveRegion)) {
         return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
     }
@@ -3698,9 +3692,6 @@ int TLuaInterpreter::getLabelLiveRegion(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto liveRegion = host.labelLiveRegion(labelName)) {
         switch (*liveRegion) {
         case TLabelLiveRegion::Polite:
@@ -3728,9 +3719,6 @@ int TLuaInterpreter::getLabelAccessibleRole(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto role = host.labelAccessibleRole(labelName)) {
         lua_pushstring(L, role->toUtf8().constData());
         return 1;
@@ -4860,6 +4848,46 @@ int TLuaInterpreter::scrollTo(lua_State* L)
     return 0;
 }
 
+// Through scrollTo(), for its range check on the line
+static int scrollConsoleBy(lua_State* L, const bool up)
+{
+    QString windowName = qsl("main");
+    int linesArgument = 1;
+    if (lua_type(L, 1) == LUA_TSTRING) {
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
+        linesArgument = 2;
+    }
+    const lua_Number lines = lua_isnumber(L, linesArgument) ? lua_tonumber(L, linesArgument) : 1;
+
+    Host& host = getHostFromLua(L);
+    const auto scroll = host.windowScroll(windowName);
+    if (!scroll) {
+        lua_pushnil(L);
+        lua_pushstring(L, "window does not exist");
+        return 2;
+    }
+    const lua_Number lastLine = host.consoleModelNamed(windowName)->buffer.getLastLineNumber();
+    // getScroll() is still at the end as it was before this packet while the triggers on it run
+    const lua_Number from = host.consoleFrontend()->windowFollowsNewLines(windowName) ? lastLine : *scroll;
+    lua_getglobal(L, "scrollTo");
+    lua_pushstring(L, windowName.toUtf8().constData());
+    lua_pushnumber(L, up ? std::max(from - lines, lua_Number{0}) : std::min(from + lines, lastLine));
+    lua_call(L, 2, 0);
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollUp
+int TLuaInterpreter::scrollUp(lua_State* L)
+{
+    return scrollConsoleBy(L, true);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollDown
+int TLuaInterpreter::scrollDown(lua_State* L)
+{
+    return scrollConsoleBy(L, false);
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#windowType
 int TLuaInterpreter::windowType(lua_State* L)
 {
@@ -4887,18 +4915,22 @@ int TLuaInterpreter::wrapLine(lua_State* L)
     const QString windowName = hasWindowName ? QString{lua_tostring(L, 1)} : qsl("main");
 
     Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView() && isMain(windowName)) {
-        // The main buffer is the model's and keeps the view's wrap settings.
-        TBuffer& buffer = host.mainConsoleModel().buffer;
-        buffer.wrapLine(lineNumber, buffer.mWrapAt, buffer.mWrapIndent, buffer.mWrapHangingIndent);
-        lua_pushboolean(L, true);
-        return 1;
-    }
+    const bool viewlessMain = !host.hasConsoleView() && isMain(windowName);
     auto pModel = host.consoleModelNamed(windowName);
     if (!pModel) {
         return windowNotFound(L, windowName);
     }
-    pModel->wrapLine(lineNumber);
+    // One past the last line is where deleteLine() leaves a trigger's getLineNumber(), so the
+    // documented deleteLine(), echo(), wrapLine(getLineNumber()) sequence must not be refused
+    if (lineNumber < 0 || lineNumber > pModel->buffer.size()) {
+        return warnArgumentValue(L, __func__, qsl("line %1 does not exist in window \"%2\"").arg(QString::number(lineNumber), isMain(windowName) ? qsl("main") : windowName));
+    }
+    if (viewlessMain) {
+        // The main buffer is the model's and keeps the view's wrap settings.
+        pModel->buffer.wrapLine(lineNumber);
+    } else {
+        pModel->wrapLine(lineNumber);
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -5220,10 +5252,6 @@ int TLuaInterpreter::removeCommand(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->removeAddonCommand(commandId, &host));
     return 1;
@@ -5236,10 +5264,6 @@ int TLuaInterpreter::enableCommand(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandEnabled(commandId, true, &host));
     return 1;
@@ -5252,10 +5276,6 @@ int TLuaInterpreter::disableCommand(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandEnabled(commandId, false, &host));
     return 1;
@@ -5269,10 +5289,6 @@ int TLuaInterpreter::setCommandChecked(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandChecked(commandId, checked, &host));
     return 1;
@@ -5286,10 +5302,6 @@ int TLuaInterpreter::setCommandPinned(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandPinned(commandId, pinned, &host));
     return 1;
@@ -5303,10 +5315,6 @@ int TLuaInterpreter::setCommandIcon(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandIcon(commandId, icon, &host));
     return 1;
@@ -5320,10 +5328,6 @@ int TLuaInterpreter::setCommandTooltip(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandTooltip(commandId, tooltip, &host));
     return 1;

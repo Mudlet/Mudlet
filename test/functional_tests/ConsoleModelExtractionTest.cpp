@@ -574,12 +574,14 @@ private slots:
             int matchStart;
         };
         // A pattern of its own per case, so a line can only ever be painted by
-        // the trigger it is meant for.
+        // the trigger it is meant for. Each holds a character that takes two bytes
+        // in UTF-8, so painting a byte count spills past the match, or past the
+        // line, which the selection refuses.
         const QList<ColorizerCase> colorizerCases{
-                {qsl("substring"), REGEX_SUBSTRING, qsl("paint alpha"), qsl("before paint alpha after"), 7},
-                {qsl("perl"), REGEX_PERL, qsl("paint beta"), qsl("before paint beta after"), 7},
-                {qsl("beginOfLine"), REGEX_BEGIN_OF_LINE_SUBSTRING, qsl("paint gamma"), qsl("paint gamma and the rest"), 0},
-                {qsl("exact"), REGEX_EXACT_MATCH, qsl("paint delta"), qsl("paint delta"), 0},
+                {qsl("substring"), REGEX_SUBSTRING, qsl("paint ålpha"), qsl("before paint ålpha after"), 7},
+                {qsl("perl"), REGEX_PERL, qsl("paint bëta"), qsl("before paint bëta after"), 7},
+                {qsl("beginOfLine"), REGEX_BEGIN_OF_LINE_SUBSTRING, qsl("paint gämma"), qsl("paint gämma and the rest"), 0},
+                {qsl("exact"), REGEX_EXACT_MATCH, qsl("paint délta"), qsl("paint délta"), 0},
         };
 
         // Built while the view is still up: setScript() compiles against the
@@ -731,19 +733,21 @@ private slots:
     // timeouts and written out as the literal text it was.
     void test_aStalledMxpTagIsWrittenOutWithAView()
     {
+        // A line ending that arrives while the tag is open writes it out too,
+        // and cTelnet's posting timer supplies one shortly after any game output,
+        // so the stub sends no welcome
+        mpServer->setSendsWelcome(false);
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        // A line ending that arrives while the tag is open writes it out too,
-        // and cTelnet's posting timer supplies one shortly after any game
-        // output - so let the connection's own traffic finish first.
-        QTest::qWait(1000ms);
         TBuffer& buffer = host->mainConsoleModel().buffer;
-        QElapsedTimer sinceFeed;
-        sinceFeed.start();
         feedStalledMxpTag(host, buffer, "WDOGVIEW <send");
+        runTagWatchdogEarly(buffer, qsl("WDOGVIEW"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
 
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
@@ -751,9 +755,6 @@ private slots:
                          },
                          8s),
                  "The stalled tag was never written out as text.");
-        // Both watchdog phases have to have run, or something other than the
-        // watchdog wrote it out.
-        QVERIFY2(sinceFeed.elapsed() >= 2 * TBuffer::MAX_TAG_TIMEOUT_MS - 100, qPrintable(qsl("The tag was written out after %1ms, before the watchdog could have.").arg(sinceFeed.elapsed())));
     }
 
     // The line the watchdog writes out came from the game, so its triggers have
@@ -761,6 +762,7 @@ private slots:
     // one of the things that depends on it.
     void test_aStalledMxpTagLineRunsItsTriggersInTriggerContext()
     {
+        mpServer->setSendsWelcome(false);
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
@@ -775,11 +777,13 @@ private slots:
                    "  wdogCapture = getSelection()\n"
                    "  deselect()\n"
                    "end)"));
-        QTest::qWait(1000ms);
         TBuffer& buffer = host->mainConsoleModel().buffer;
-        QElapsedTimer sinceFeed;
-        sinceFeed.start();
         feedStalledMxpTag(host, buffer, "WDOGCTX <send");
+        // Anything else writing the line out would already be in trigger context
+        runTagWatchdogEarly(buffer, qsl("WDOGC"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
 
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
@@ -787,8 +791,6 @@ private slots:
                          },
                          8s),
                  "The trigger never ran on the line the watchdog wrote out.");
-        // Anything else writing the line out would already be in trigger context
-        QVERIFY2(sinceFeed.elapsed() >= 2 * TBuffer::MAX_TAG_TIMEOUT_MS - 100, qPrintable(qsl("The tag was written out after %1ms, before the watchdog could have.").arg(sinceFeed.elapsed())));
         runLua(host, qsl("killTrigger(wdogTriggerId)"));
         QCOMPARE(luaGlobalString(host, "wdogCapture"), qsl("<send"));
     }
@@ -834,6 +836,7 @@ private slots:
     // reach for one.
     void test_aStalledMxpTagIsLeftAloneWithNoView()
     {
+        mpServer->setSendsWelcome(false);
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
@@ -842,10 +845,13 @@ private slots:
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
         feedStalledMxpTag(host, model->buffer, "WDOGNOVIEW <send");
+        runTagWatchdogEarly(model->buffer, qsl("WDOGNOVIEW"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
 
-        // Both watchdog phases and then some; there is nothing to poll for,
-        // since what is being checked is that nothing happens.
-        QTest::qWait(2 * TBuffer::MAX_TAG_TIMEOUT_MS + 1000);
+        // Room for a continuation the second phase queued to run
+        QTest::qWait(200ms);
         QVERIFY2(lastLineHolding(model->buffer, qsl("WDOGNOVIEW")) < 0, "The stalled tag was written out with no view.");
         QCOMPARE(QString::fromStdString(host->mMxpProcessor.getMxpTagBuilder().getRawTagContent()), qsl("send"));
     }
@@ -855,6 +861,9 @@ private slots:
     // for any other the text and the repaint would land on different consoles.
     void test_aStalledMxpTagInAnotherBufferIsLeftAlone()
     {
+        // The MXP tag builder is the profile's, so no game text may reach it
+        // while a tag is held open in it.
+        mpServer->setSendsWelcome(false);
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
@@ -863,12 +872,14 @@ private slots:
         runLua(host, qsl("createMiniConsole('wdogsub', 0, 0, 300, 100)"));
         TConsoleModel* subModel = host->windowRegistry().subConsoleModel(qsl("wdogsub"));
         QVERIFY2(subModel, "The mini console has no model.");
-        // The MXP tag builder is the profile's, so let the connection's own
-        // traffic finish before holding a tag open in it.
-        QTest::qWait(1000ms);
         feedStalledMxpTag(host, subModel->buffer, "WDOGSUB <send");
+        runTagWatchdogEarly(subModel->buffer, qsl("WDOGSUB"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
 
-        QTest::qWait(2 * TBuffer::MAX_TAG_TIMEOUT_MS + 1000);
+        // Room for a continuation the second phase queued to run
+        QTest::qWait(200ms);
         QVERIFY2(lastLineHolding(subModel->buffer, qsl("WDOGSUB")) < 0, "The stalled tag was written out into a buffer that is not the main console's.");
     }
 
@@ -1310,7 +1321,13 @@ private slots:
         model->buffer.translateToPlainText(data, true);
         QCOMPARE(model->buffer.mServerWrapPendingLine, lateLine);
         QVERIFY2(host->mServerWrapFlushTimer.isActive(), "Holding a line back after the close did not start the flush timer, so the assertion below cannot fail.");
-        QTest::qWait(TBuffer::csmServerWrapFlushDelayMs * 3);
+        QVERIFY2(QTest::qWaitFor(
+                         [host]() {
+                             return !host->mServerWrapFlushTimer.isActive();
+                         },
+                         5s),
+                 "The flush timer never fired.");
+        QTest::qWait(100ms);
         QVERIFY2(lastLineHolding(model->buffer, lateLine) < 0, "A line held after the close was committed on a closed profile.");
     }
 
@@ -1952,7 +1969,17 @@ mainNamedSheets = getCmdLineStyleSheet() .. "|" .. getCmdLineStyleSheet("main")
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         QVERIFY2(!FontManager::availableFonts().isEmpty(), "No font is installed, so setFont() refuses every family before it looks for a console.");
+        runLua(host, qsl("setSaveCommandHistory(false)"));
         destroyTheView(host);
+        // The key is set the other way before each save, so the save is seen to write it. The view's setting goes on without it.
+        const QString key = qsl("CommandLines/SaveHistory/main");
+        host->writeProfileIniData(key, qsl("true"));
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QVERIFY(std::get<0>(host->saveProfile()));
+        QCOMPARE(host->readProfileIniData(key), qsl("false"));
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        // So the save below is seen to write what the Lua sets
+        host->writeProfileIniData(key, qsl("false"));
 
         runLua(host, qsl(R"LUA(
 noViewProblems = {}
@@ -2027,25 +2054,28 @@ expectRefusal('pauseMovie', pauseMovie('noViewLbl'))
 expectRefusal('setMovieFrame', setMovieFrame('noViewLbl', 0))
 expectRefusal('setMovieSpeed', setMovieSpeed('noViewLbl', 100))
 expectRefusal('scaleMovie', scaleMovie('noViewLbl'))
-expectRefusal('clearCmdLine', clearCmdLine())
-expectRefusal('getCmdLine', getCmdLine())
-expectRefusal('printCmdLine', printCmdLine('main', 'x'))
-expectRefusal('appendCmdLine', appendCmdLine('main', 'x'))
-expectRefusal('selectCmdLineText', selectCmdLineText())
-expectRefusal('addCmdLineSuggestion', addCmdLineSuggestion('main', 'x'))
-expectRefusal('removeCmdLineSuggestion', removeCmdLineSuggestion('main', 'x'))
-expectRefusal('clearCmdLineSuggestions', clearCmdLineSuggestions())
-expectRefusal('addCmdLineBlacklist', addCmdLineBlacklist('main', 'x'))
-expectRefusal('removeCmdLineBlacklist', removeCmdLineBlacklist('main', 'x'))
-expectRefusal('clearCmdLineBlacklist', clearCmdLineBlacklist())
-expectRefusal('addCommandLineMenuEvent', addCommandLineMenuEvent('l', 'e'))
-expectRefusal('removeCommandLineMenuEvent', removeCommandLineMenuEvent('l'))
-expectRefusal('getSaveCommandHistory', getSaveCommandHistory())
-expectRefusal('setSaveCommandHistory', setSaveCommandHistory(true))
+-- the main command line goes on without its view, its setting written by a save, so it answers as a real one does
+expectAnswer('clearCmdLine', '[0]nil', clearCmdLine())
+expectValue('getCmdLine', '', getCmdLine())
+expectAnswer('printCmdLine', '[0]nil', printCmdLine('main', 'x'))
+expectAnswer('appendCmdLine', '[0]nil', appendCmdLine('main', 'y'))
+expectValue('getCmdLine after printing', 'xy', getCmdLine())
+expectValue('selectCmdLineText', true, selectCmdLineText())
+expectAnswer('addCmdLineSuggestion', '[0]nil', addCmdLineSuggestion('main', 'x'))
+expectAnswer('removeCmdLineSuggestion', '[0]nil', removeCmdLineSuggestion('main', 'x'))
+expectAnswer('clearCmdLineSuggestions', '[0]nil', clearCmdLineSuggestions())
+expectAnswer('addCmdLineBlacklist', '[0]nil', addCmdLineBlacklist('main', 'x'))
+expectAnswer('removeCmdLineBlacklist', '[0]nil', removeCmdLineBlacklist('main', 'x'))
+expectAnswer('clearCmdLineBlacklist', '[0]nil', clearCmdLineBlacklist())
+expectValue('addCommandLineMenuEvent', true, addCommandLineMenuEvent('l', 'e'))
+expectValue('removeCommandLineMenuEvent', true, removeCommandLineMenuEvent('l'))
+expectValue('getSaveCommandHistory', false, getSaveCommandHistory())
+expectValue('setSaveCommandHistory', true, setSaveCommandHistory(true))
+expectValue('getSaveCommandHistory after setting it', true, getSaveCommandHistory())
 expectRefusal('enableCommandLine', enableCommandLine('noViewCl'))
 expectRefusal('disableCommandLine', disableCommandLine('noViewCl'))
-expectRefusal('getCmdLineStyleSheet', getCmdLineStyleSheet())
-expectRefusal('setCmdLineStyleSheet', setCmdLineStyleSheet(''))
+expectValue('setCmdLineStyleSheet', true, setCmdLineStyleSheet('color: red;'))
+expectValue('getCmdLineStyleSheet', 'color: red;', getCmdLineStyleSheet())
 expectRefusal('getMousePosition', getMousePosition())
 -- the main console is the character grid NAWS reports; a name with no user window has no size of its own
 expectValue('getMainWindowSize', 'number', type(getMainWindowSize()))
@@ -2120,6 +2150,10 @@ noViewReport = table.concat(noViewProblems, '; ')
 )LUA"));
 
         QCOMPARE(luaGlobalString(host, "noViewReport"), QString());
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QVERIFY(std::get<0>(host->saveProfile()));
+        QCOMPARE(host->readProfileIniData(key), qsl("true"));
+        QTRY_VERIFY(!host->currentlySavingProfile());
     }
 
     // echo(), insertHTML() and isPrompt() on the main console are its model's
@@ -4920,19 +4954,23 @@ noViewWindowReport = table.concat(noViewWindowProblems, '; ')
 #endif
     }
 
-    void test_getMousePositionIsRelativeToTheMainConsole()
+    // Labels are placed below a top button bar and right of a left one, so a
+    // label made at the reported position has to land under the pointer
+    void test_getMousePositionIsRelativeToWhereLabelsArePlaced()
     {
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+        TMainConsole* console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
         // Anywhere else this would move the real pointer (X11), or not move it at all (Wayland)
         if (QGuiApplication::platformName() != qsl("offscreen")) {
             QSKIP("Needs the offscreen platform, which ctest sets, to place the pointer.");
         }
 
+        // With no bar shown, scripts rely on the reading being relative to the whole console
         const QPoint local(13, 7);
-        const QPoint global = host->mainConsoleView()->mapToGlobal(local);
+        const QPoint global = console->mapToGlobal(local);
         QVERIFY2(global != local, "The main console sits at the screen origin, so this cannot tell its coordinates from the screen's.");
         QCursor::setPos(global);
         QCOMPARE(QCursor::pos(), global);
@@ -4940,6 +4978,36 @@ noViewWindowReport = table.concat(noViewWindowProblems, '; ')
         runLua(host, qsl("mouseX, mouseY = getMousePosition()\n"));
         QCOMPARE(luaGlobalNumber(host, "mouseX"), local.x());
         QCOMPARE(luaGlobalNumber(host, "mouseY"), local.y());
+
+        runLua(host,
+               qsl("tempButtonToolbar('mouseTopBar', 0, 0)\ntempButton('mouseTopBar', 'top', 0)\n"
+                   "tempButtonToolbar('mouseLeftBar', 1, 1)\ntempButton('mouseLeftBar', 'left', 1)\n"
+                   "tempButtonToolbar('mouseRightBar', 2, 1)\ntempButton('mouseRightBar', 'right', 1)\n"));
+        QVERIFY2(QTest::qWaitFor(
+                         [console]() {
+                             const QPoint frameOrigin = console->mpMainFrame->mapTo(console, QPoint(0, 0));
+                             return frameOrigin.x() > 0 && frameOrigin.y() > 0 && console->mpRightToolBar->width() > 0;
+                         },
+                         5s),
+                 "Showing button bars along the top and down both sides did not lay them out around the frame labels are placed in.");
+
+        QCursor::setPos(console->mpTopToolBar->mapToGlobal(QPoint(5, 2)));
+        runLua(host, qsl("mouseX, mouseY = getMousePosition()\n"));
+        QVERIFY2(luaGlobalNumber(host, "mouseY") < 0, "A pointer over the top button bar did not read as above the frame labels are placed in.");
+        QCursor::setPos(console->mpLeftToolBar->mapToGlobal(QPoint(2, 5)));
+        runLua(host, qsl("mouseX, mouseY = getMousePosition()\n"));
+        QVERIFY2(luaGlobalNumber(host, "mouseX") < 0, "A pointer over the left button bar did not read as left of the frame labels are placed in.");
+
+        const QPoint pastBars = console->mpMainFrame->mapToGlobal(local);
+        QCursor::setPos(pastBars);
+        QCOMPARE(QCursor::pos(), pastBars);
+
+        runLua(host, qsl("mouseX, mouseY = getMousePosition()\ncreateLabel('atPointer', mouseX, mouseY, 10, 10, 1)\n"));
+        QCOMPARE(luaGlobalNumber(host, "mouseX"), local.x());
+        QCOMPARE(luaGlobalNumber(host, "mouseY"), local.y());
+        TLabel* label = console->labelWidget(qsl("atPointer"));
+        QVERIFY2(label, "createLabel() made no widget.");
+        QCOMPARE(label->mapToGlobal(QPoint(0, 0)), pastBars);
     }
 
     // A script can read back neither the speed of a label's movie nor the size
@@ -5266,6 +5334,27 @@ private:
         host->mMxpProcessor.setLastEntityValue(QString());
         buffer.translateToPlainText(text, true);
         QVERIFY2(host->mMxpProcessor.getMxpTagBuilder().isInsideTag(), "The feed left no tag open, so no watchdog was armed.");
+    }
+
+    // Utility function running both phases of the tag watchdog the feed armed
+    // without waiting MAX_TAG_TIMEOUT_MS out for each, once the buffer is seen
+    // to have armed each phase for that long. Nothing holding text may have
+    // been written out before the second phase runs.
+    void runTagWatchdogEarly(TBuffer& buffer, const QString& text)
+    {
+        for (const auto phase : {TBuffer::WatchdogPhase::Phase1_Snapshot, TBuffer::WatchdogPhase::Phase2_Unfreeze}) {
+            QVERIFY2(buffer.mTagWatchdog->isActive(), "The tag watchdog was not armed.");
+            QVERIFY(buffer.mWatchdogPhase == phase);
+            QCOMPARE(buffer.mTagWatchdog->interval(), TBuffer::MAX_TAG_TIMEOUT_MS);
+            QVERIFY2(lastLineHolding(buffer, text) < 0, "The stalled tag was written out before the watchdog's second phase.");
+            buffer.mTagWatchdog->start(0);
+            QVERIFY2(QTest::qWaitFor(
+                             [&buffer, phase]() {
+                                 return buffer.mWatchdogPhase != phase;
+                             },
+                             5s),
+                     "The tag watchdog did not run its phase.");
+        }
     }
 
     static int lastLineHolding(TBuffer& buffer, const QString& text)

@@ -46,6 +46,7 @@
 #include "TScript.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
+#include "TriggerMatchPool.h"
 #include "TTrigger.h"
 #include "ctelnet.h"
 #include "discord.h"
@@ -96,6 +97,7 @@
 #include <QTableWidget>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
+#include <QThread>
 #include <QToolBar>
 #include <QtMath>
 #include <QUiLoader>
@@ -406,6 +408,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     label_languageChangeWarning->hide();
     label_invalidFontError->hide();
     label_variableWidthFontWarning->hide();
+    label_editorFontInvalid->hide();
+    label_editorFontVariableWidth->hide();
 
     comboBox_guiLanguage->clear();
     for (auto& code : pMudlet->getAvailableTranslationCodes()) {
@@ -839,7 +843,7 @@ void dlgProfilePreferences::buildShell()
     buildCategoryPage(scmCategory_inputLine, {groupBox_input, groupBox_spellCheck});
 
     moveIntoCard(groupBox_autoComplete, {checkBox_echoLuaErrors});
-    buildCategoryPage(scmCategory_editor, {groupbox_codeEditorThemeSelection, groupBox_autoComplete, groupBox_editorDisplayOptions});
+    buildCategoryPage(scmCategory_editor, {groupbox_codeEditorThemeSelection, groupBox_editorFont, groupBox_autoComplete, groupBox_editorDisplayOptions});
 
     buildCategoryPage(scmCategory_mapper, {groupBox_mapFiles, groupBox_downloadMapOptions, groupBox_mapViewOptions, groupBox_mapperColors, groupBox_playerRoomStyle});
 
@@ -891,6 +895,7 @@ void dlgProfilePreferences::buildShell()
 
     auto* pCard_performance = createCard(qsl("card_performance"));
     moveIntoCard(pCard_performance, {checkBox_lazyCaptureGlobals});
+    createTriggerMatchPoolControls(pCard_performance);
     buildExperimentsCard();
     buildCategoryPage(scmCategory_advanced, {pCard_performance, groupBox_debug, mpCard_experiments});
 
@@ -1262,6 +1267,7 @@ void dlgProfilePreferences::retranslateShell()
                                         "To change those, including the accessibility options, open Settings from a loaded profile."));
     updateNoProfileNotice();
 
+    retranslateTriggerMatchPoolControls();
     setSearchKeywords();
 
     // Nothing is current while the shell is being built, and search sets its own title on the next query
@@ -1271,6 +1277,160 @@ void dlgProfilePreferences::retranslateShell()
         } else {
             mpLabel_pageTitle->setText(tr("%1 › %2").arg(pCurrent->text(), mSubpageTitles.value(mCurrentSubpage)));
         }
+    }
+}
+
+void dlgProfilePreferences::createTriggerMatchPoolControls(QGroupBox* pCard)
+{
+    mpCheckBox_triggerMatchPool = new QCheckBox(pCard);
+    mpCheckBox_triggerMatchPool->setObjectName(qsl("checkBox_triggerMatchPool"));
+    moveIntoCard(pCard, {mpCheckBox_triggerMatchPool});
+    auto* pCardLayout = qobject_cast<QVBoxLayout*>(pCard->layout());
+    Q_ASSERT_X(pCardLayout, "dlgProfilePreferences::createTriggerMatchPoolControls", "the controls can only be added to a card that createCard() made");
+    if (!pCardLayout) {
+        return;
+    }
+    // One grid so the fields line up, indented to the check box's text as they only apply while it is on
+    auto* pGrid = new QGridLayout();
+    pGrid->setContentsMargins(style()->pixelMetric(QStyle::PM_IndicatorWidth, nullptr, mpCheckBox_triggerMatchPool)
+                                      + style()->pixelMetric(QStyle::PM_CheckBoxLabelSpacing, nullptr, mpCheckBox_triggerMatchPool),
+                              0,
+                              0,
+                              0);
+    pGrid->setSpacing(8);
+    // A number field stretched to the card's width reads as a text field
+    pGrid->setColumnStretch(2, 1);
+    pCardLayout->addLayout(pGrid);
+    const auto addRow = [pCard, pGrid](QLabel*& pLabel, QSpinBox*& pSpinBox, const QString& name, const int minimum, const int maximum) {
+        pLabel = new QLabel(pCard);
+        pSpinBox = new QSpinBox(pCard);
+        pSpinBox->setObjectName(qsl("spinBox_%1").arg(name));
+        pSpinBox->setRange(minimum, maximum);
+        pLabel->setBuddy(pSpinBox);
+        const int row = pGrid->count() / 2;
+        pGrid->addWidget(pLabel, row, 0);
+        pGrid->addWidget(pSpinBox, row, 1);
+    };
+    addRow(mpLabel_triggerMatchThreads, mpSpinBox_triggerMatchThreads, qsl("triggerMatchThreads"), 1, std::max(1, QThread::idealThreadCount() - 1));
+    addRow(mpLabel_triggerMatchThreshold, mpSpinBox_triggerMatchThreshold, qsl("triggerMatchThreshold"), 1, 100000);
+    addRow(mpLabel_triggerMatchMissesPerMatch, mpSpinBox_triggerMatchMissesPerMatch, qsl("triggerMatchMissesPerMatch"), 0, 1000);
+    addRow(mpLabel_triggerMatchFloodLines, mpSpinBox_triggerMatchFloodLines, qsl("triggerMatchFloodLines"), 1, 100000);
+    addRow(mpLabel_triggerMatchSpin, mpSpinBox_triggerMatchSpin, qsl("triggerMatchSpinMicroseconds"), 0, 100000);
+    connect(mpCheckBox_triggerMatchPool, &QCheckBox::toggled, this, &dlgProfilePreferences::enableTriggerMatchPoolTuning);
+}
+
+void dlgProfilePreferences::enableTriggerMatchPoolTuning(const bool enabled)
+{
+    for (auto* pControl : std::initializer_list<QWidget*>{mpLabel_triggerMatchThreads,
+                                                          mpSpinBox_triggerMatchThreads,
+                                                          mpLabel_triggerMatchThreshold,
+                                                          mpSpinBox_triggerMatchThreshold,
+                                                          mpLabel_triggerMatchMissesPerMatch,
+                                                          mpSpinBox_triggerMatchMissesPerMatch,
+                                                          mpLabel_triggerMatchFloodLines,
+                                                          mpSpinBox_triggerMatchFloodLines,
+                                                          mpLabel_triggerMatchSpin,
+                                                          mpSpinBox_triggerMatchSpin}) {
+        pControl->setEnabled(enabled);
+    }
+}
+
+void dlgProfilePreferences::retranslateTriggerMatchPoolControls()
+{
+    //: Check box in the Performance settings; the triggers' regular expressions are then searched on several CPU cores while game text floods in
+    mpCheckBox_triggerMatchPool->setText(tr("Match triggers on several threads during floods of text (experimental)"));
+    //: Tooltip of the check box that matches triggers on several threads
+    mpCheckBox_triggerMatchPool->setToolTip(tr("<p>Mudlet checks each line of game text against your triggers one at a time. Regex triggers are the slow ones, and on a busy "
+                                               "profile most of them do not match most lines.</p>"
+                                               "<p>When the game sends many lines at once, this has other CPU cores check the regex triggers first and tell Mudlet which ones "
+                                               "cannot match, so it skips them. Your triggers still fire in the same order as before.</p>"
+                                               "<p>On most profiles it makes no difference and uses more CPU, so it is off unless you switch it on. Once it is on, the Statistics "
+                                               "report in the trigger editor (Ctrl+9) tells you whether it helps your profile.</p>"));
+    const TriggerMatchPool::Settings defaults;
+    //: Label of a number field in the Performance settings: how many threads help the main one match triggers
+    mpLabel_triggerMatchThreads->setText(tr("Extra threads helping the main one:"));
+    //: Tooltip of the number of extra threads that match triggers; %1 is the default number of them
+    mpSpinBox_triggerMatchThreads->setToolTip(tr("<p>How many other CPU cores help the main one check triggers. More than three rarely helps: they then spend longer "
+                                                 "waiting for each other than checking.</p><p>Default: %1</p>")
+                                                      .arg(TriggerMatchPool::automaticThreads() - 1));
+    //: Label of a number field in the Performance settings: how many regex searches that find nothing a line needs before other threads help with it
+    mpLabel_triggerMatchThreshold->setText(tr("Failed regex searches a line needs before the threads help:"));
+    //: Tooltip of the threshold of failed regex searches per line; %1 is the default
+    mpSpinBox_triggerMatchThreshold->setToolTip(tr("<p>The extra threads help only if the previous line had at least this many regex triggers that did not match. "
+                                                   "With fewer, handing the work out costs more than it saves.</p><p>Default: %1</p>")
+                                                        .arg(defaults.threshold));
+    //: Label of a number field in the Performance settings: how many failed regex searches a line needs for every one that matched
+    mpLabel_triggerMatchMissesPerMatch->setText(tr("Failed searches needed for each one that matched:"));
+    //: Tooltip of the failed searches per match ratio; %1 is the default
+    mpSpinBox_triggerMatchMissesPerMatch->setToolTip(tr("<p>The extra threads help only if, on the previous line, at least this many regex triggers did not match for "
+                                                        "each one that did. Lines where many triggers match are quicker on one thread. 0 turns this check off.</p>"
+                                                        "<p>Default: %1</p>")
+                                                             .arg(defaults.missesPerMatch));
+    //: Label of a number field in the Performance settings: how many lines must arrive at once to count as a flood
+    mpLabel_triggerMatchFloodLines->setText(tr("Lines arriving at once that make a flood:"));
+    //: Tooltip of the lines that make a flood; %1 is the default
+    mpSpinBox_triggerMatchFloodLines->setToolTip(tr("<p>The extra threads help only when the game sends at least this many lines at once. For a line or two at a time "
+                                                    "they would use CPU for nothing.</p><p>Default: %1</p>")
+                                                         .arg(defaults.floodChunkLines));
+    //: Label of a number field in the Performance settings: how long, in microseconds, the helper threads stay awake waiting for the next line
+    mpLabel_triggerMatchSpin->setText(tr("Microseconds the threads stay awake for the next line:"));
+    //: Tooltip of the helper threads' spin time; %1 is the default, in microseconds
+    mpSpinBox_triggerMatchSpin->setToolTip(tr("<p>After a line, the extra threads stay awake this long waiting for the next one before they go to sleep, because "
+                                              "waking a sleeping thread costs more than the work it is given.</p><p>Default: %1</p>")
+                                                   .arg(defaults.spinMicroseconds));
+    for (const auto& [pLabel, pSpinBox] : std::initializer_list<std::pair<QLabel*, QSpinBox*>>{{mpLabel_triggerMatchThreads, mpSpinBox_triggerMatchThreads},
+                                                                                               {mpLabel_triggerMatchThreshold, mpSpinBox_triggerMatchThreshold},
+                                                                                               {mpLabel_triggerMatchMissesPerMatch, mpSpinBox_triggerMatchMissesPerMatch},
+                                                                                               {mpLabel_triggerMatchFloodLines, mpSpinBox_triggerMatchFloodLines},
+                                                                                               {mpLabel_triggerMatchSpin, mpSpinBox_triggerMatchSpin}}) {
+        pLabel->setToolTip(pSpinBox->toolTip());
+    }
+}
+
+// App-wide like the pool, so read from Mudlet.ini with or without a profile
+void dlgProfilePreferences::populateTriggerMatchPoolSettings()
+{
+    // Validated as the pool validates them, so a field shows the value the pool would use
+    const TriggerMatchPool::Settings saved = TriggerMatchPool::savedSettings();
+    const bool enabled = saved.threads >= 2;
+    {
+        const QSignalBlocker blocker(mpCheckBox_triggerMatchPool);
+        mpCheckBox_triggerMatchPool->setChecked(enabled);
+    }
+    enableTriggerMatchPoolTuning(enabled);
+    // One core leaves no other thread to share the matching with
+    mpCheckBox_triggerMatchPool->setEnabled(QThread::idealThreadCount() >= 2 || enabled);
+    for (const auto& [pSpinBox, value] : std::initializer_list<std::pair<QSpinBox*, int>>{{mpSpinBox_triggerMatchThreads, (enabled ? saved.threads : TriggerMatchPool::automaticThreads()) - 1},
+                                                                                          {mpSpinBox_triggerMatchThreshold, saved.threshold},
+                                                                                          {mpSpinBox_triggerMatchMissesPerMatch, saved.missesPerMatch},
+                                                                                          {mpSpinBox_triggerMatchFloodLines, saved.floodChunkLines},
+                                                                                          {mpSpinBox_triggerMatchSpin, saved.spinMicroseconds}}) {
+        const QSignalBlocker spinBlocker(pSpinBox);
+        pSpinBox->setValue(value);
+    }
+}
+
+void dlgProfilePreferences::applyTriggerMatchPoolSettings()
+{
+    // Only what the player changed: a key left unwritten keeps following the defaults of later releases
+    QSettings* settings = MudletApp::getQSettings();
+    bool changed = false;
+    if (mSnapshot.anyDirty({mpCheckBox_triggerMatchPool, mpSpinBox_triggerMatchThreads})) {
+        settings->setValue(qsl("triggerMatchThreads"), mpCheckBox_triggerMatchPool->isChecked() ? mpSpinBox_triggerMatchThreads->value() + 1 : 0);
+        changed = true;
+    }
+    for (const auto& [pSpinBox, key] : std::initializer_list<std::pair<QSpinBox*, QString>>{{mpSpinBox_triggerMatchThreshold, qsl("triggerMatchThreshold")},
+                                                                                            {mpSpinBox_triggerMatchMissesPerMatch, qsl("triggerMatchMissesPerMatch")},
+                                                                                            {mpSpinBox_triggerMatchFloodLines, qsl("triggerMatchFloodLines")},
+                                                                                            {mpSpinBox_triggerMatchSpin, qsl("triggerMatchSpinMicroseconds")}}) {
+        if (mSnapshot.anyDirty({pSpinBox})) {
+            settings->setValue(key, pSpinBox->value());
+            changed = true;
+        }
+    }
+    if (changed) {
+        // Through settingsFromConfig() rather than from the controls, so an environment override still wins
+        TriggerMatchPool::instance().configure(TriggerMatchPool::settingsFromConfig());
     }
 }
 
@@ -1288,6 +1448,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({checkBox_askTlsAvailable, tr("TLS, SSL, secure connection, reminder")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for preparing the matches, multimatches and line trigger variables only when a script reads them.
     synonyms.append({checkBox_lazyCaptureGlobals, tr("performance, speed, fast, slow, lag, lazy, matches, multimatches, line, _G, global variables")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for matching triggers on several threads (CPU cores) during floods of game text.
+    synonyms.append({mpCheckBox_triggerMatchPool, tr("performance, speed, fast, slow, lag, threads, cores, CPU, multithreading, parallel, triggers, regex, flood, spam")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the proxy server settings.
     synonyms.append({groupBox_proxy, tr("proxy, SOCKS, tunnel, firewall")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for where game passwords are kept.
@@ -1348,6 +1510,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_mapperColors, tr("colour, colours, map colours, palette, background")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the font the game's text is drawn in.
     synonyms.append({groupBox_font, tr("font, typeface, size, monospace, antialiasing")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the font the script editor's code is written in.
+    synonyms.append({groupBox_editorFont, tr("editor font, code font, script font, typeface, size, monospace")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for how long Mudlet waits for the game to answer.
     synonyms.append({label_networkPacketTimeout, tr("timeout, lag, latency, slow connection")});
 #ifdef INCLUDE_MCPSERVER
@@ -1697,7 +1861,8 @@ void dlgProfilePreferences::setCardDescriptions()
     setCardDescription(findChild<QGroupBox*>(qsl("card_crashReports")),
                        tr("If Mudlet stops unexpectedly it can tell the developers what went wrong. A report says where Mudlet was in its own code - never what you typed or what the game sent."));
     //: Description line under the "Performance" card title on the Advanced settings page
-    setCardDescription(findChild<QGroupBox*>(qsl("card_performance")), tr("Ways Mudlet speeds up your scripts. Leave these on unless a script or package misbehaves."));
+    setCardDescription(findChild<QGroupBox*>(qsl("card_performance")),
+                       tr("Ways Mudlet speeds up your scripts. Leave the first on unless a script or package misbehaves; matching on several threads is off unless you switch it on."));
     //: Description line under the "Developer" card title on the Advanced settings page
     setCardDescription(groupBox_debug, tr("How much Mudlet's debugging tools report while you work on scripts."));
     //: Description line under the "Experiments (unsupported)" card title on the Advanced settings page
@@ -3742,6 +3907,7 @@ void dlgProfilePreferences::disableHostDetails()
     // ----- groupbox_codeEditorThemeSelection -----
     theme_download_label->hide();
 
+    groupBox_editorFont->setEnabled(false);
     groupBox_autoComplete->setEnabled(false);
     groupBox_editorDisplayOptions->setEnabled(false);
 
@@ -3875,6 +4041,7 @@ void dlgProfilePreferences::enableHostDetails()
     // ===== tab_codeEditor =====
     groupbox_codeEditorThemeSelection->setEnabled(true);
 
+    groupBox_editorFont->setEnabled(true);
     groupBox_autoComplete->setEnabled(true);
     groupBox_editorDisplayOptions->setEnabled(true);
 
@@ -3915,8 +4082,10 @@ void dlgProfilePreferences::enableHostDetails()
 #endif
 
     // ===== tab_chat =====
-    groupBox_discordPrivacy->show();
-    mpCard_discord->show();
+    // initWithHost() only fills these in when the library loaded
+    const bool discordAvailable = Discord::self()->libraryLoaded();
+    groupBox_discordPrivacy->setVisible(discordAvailable);
+    mpCard_discord->setVisible(discordAvailable);
     groupBox_MMCPOptions->setEnabled(true);
 
     // ===== tab_shortcuts =====
@@ -4015,6 +4184,7 @@ void dlgProfilePreferences::populateApplicationSettings()
         const QSignalBlocker blocker(telnetHandlerEnabled);
         telnetHandlerEnabled->setChecked(MudletApp::getQSettings()->value("telnetHandlerEnabled", false).toBool());
     }
+    populateTriggerMatchPoolSettings();
     {
         // The one setting here that lives in its own QSettings group rather than
         // in the mudlet instance, so the only one with no change to announce
@@ -4701,7 +4871,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -5069,6 +5239,9 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(fontComboBox_displayFont, &QComboBox::activated, nullptr, nullptr);
     disconnect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(checkBox_antiAlias, &QCheckBox::clicked, nullptr, nullptr);
+    disconnect(checkBox_editorFontFollowsDisplay, &QCheckBox::toggled, nullptr, nullptr);
+    disconnect(fontComboBox_editorFont, &QFontComboBox::currentFontChanged, nullptr, nullptr);
+    disconnect(spinBox_editorFontSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
 
     disconnect(buttonDownloadMap, &QAbstractButton::clicked, nullptr, nullptr);
 
@@ -5217,6 +5390,11 @@ void dlgProfilePreferences::clearHostDetails()
     fontComboBox_displayFont->clear();
     spinBox_displayFontSize->setValue(14);
     checkBox_antiAlias->setChecked(false);
+    checkBox_editorFontFollowsDisplay->setChecked(true);
+    fontComboBox_editorFont->clear();
+    spinBox_editorFontSize->setValue(14);
+    label_editorFontInvalid->hide();
+    label_editorFontVariableWidth->hide();
     mFORCE_MCCP_OFF->setChecked(false);
     mFORCE_GA_OFF->setChecked(false);
     mAlertOnNewData->setChecked(false);
@@ -5311,7 +5489,7 @@ void dlgProfilePreferences::loadEditorTab()
     config->setCaretWidth(1);
     config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces) ? edbee::TextEditorConfig::ShowWhitespaces : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
-    config->setFont(pHost->getDisplayFont());
+    config->setFont(pHost->getEditorFont());
     config->setAutocompleteAutoShow(pHost->mEditorAutoComplete);
     config->setRenderBidiContolCharacters(pHost->getEditorShowBidi());
     config->setAutocompleteMinimalCharacters(3);
@@ -5329,7 +5507,8 @@ void dlgProfilePreferences::loadEditorTab()
     }
 
     // pre-select the current theme
-    code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(qsl("Select theme"));
+    //: Placeholder of the editor colour theme picker on the Editor page of the settings
+    code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(tr("Select theme"));
     auto themeIndex = code_editor_theme_selection_combobox->findText(pHost->getEditorTheme());
     code_editor_theme_selection_combobox->setCurrentIndex(themeIndex);
     slot_themeSelected(themeIndex);
@@ -5338,7 +5517,8 @@ void dlgProfilePreferences::loadEditorTab()
     code_editor_theme_selection_combobox->setMaxVisibleItems(20);
 
     // pre-select the last shown script to preview
-    script_preview_combobox->lineEdit()->setPlaceholderText(qsl("Select script to preview"));
+    //: Placeholder of the picker for the script shown as the theme preview on the Editor page of the settings
+    script_preview_combobox->lineEdit()->setPlaceholderText(tr("Select script to preview"));
     auto scriptIndex = script_preview_combobox->findData(QVariant::fromValue(QPair<QString, int>(pHost->mThemePreviewType, pHost->mThemePreviewItemID)));
     script_preview_combobox->setCurrentIndex(scriptIndex == -1 ? 1 : scriptIndex);
     slot_scriptSelected(scriptIndex == -1 ? 1 : scriptIndex);
@@ -5357,6 +5537,13 @@ void dlgProfilePreferences::loadEditorTab()
     checkBox_showBidi->setChecked(pHost->getEditorShowBidi());
     checkBox_showIdNumbers->setChecked(pHost->showIdsInEditor());
     checkBox_folderView->setChecked(pHost->folderViewInEditor());
+
+    checkBox_editorFontFollowsDisplay->setChecked(pHost->editorFontFollowsDisplay());
+    showEditorFont(pHost->getEditorFont());
+    connect(checkBox_editorFontFollowsDisplay, &QCheckBox::toggled, this, &dlgProfilePreferences::reflectEditorFontControls, Qt::UniqueConnection);
+    connect(fontComboBox_editorFont, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::reflectEditorFontControls, Qt::UniqueConnection);
+    connect(spinBox_editorFontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::reflectEditorFontControls, Qt::UniqueConnection);
+    connect(pHost, &Host::signal_editorFontChanged, this, &dlgProfilePreferences::slot_hostEditorFontChanged, Qt::UniqueConnection);
 
     // changes the theme being previewed
     connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_themeSelected, Qt::UniqueConnection);
@@ -7049,6 +7236,20 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(checkBox_folderView)) {
             pHost->setFolderViewInEditor(checkBox_folderView->isChecked());
         }
+        // Ahead of the switch: a family or size picked straight after unticking it is the font the editor
+        // leaves the display font for, and switching first would put the Host's own back into the controls
+        if (!checkBox_editorFontFollowsDisplay->isChecked() && mSnapshot.anyDirty({fontComboBox_editorFont, spinBox_editorFontSize})) {
+            const QFont base = pHost->editorFontBase();
+            const QString family = mSnapshot.dirty(fontComboBox_editorFont) ? fontComboBox_editorFont->currentFont().family() : base.family();
+            const int size = mSnapshot.dirty(spinBox_editorFontSize) ? spinBox_editorFontSize->value() : base.pointSize();
+            const QFont font = pHost->createFontWithSettings(family, size);
+            if (QFontMetrics(font).averageCharWidth() > 0) {
+                pHost->setEditorFont(font);
+            }
+        }
+        if (mSnapshot.dirty(checkBox_editorFontFollowsDisplay)) {
+            pHost->setEditorFontFollowsDisplay(checkBox_editorFontFollowsDisplay->isChecked());
+        }
         // Re-theming an open script editor fully reconfigures edbee, so only when one of these changed
         auto* pDialogs = HostDialogs::find(pHost);
         if (auto* pEditor = pDialogs ? pDialogs->mpEditorDialog.data() : nullptr;
@@ -7307,6 +7508,7 @@ void dlgProfilePreferences::applyAll()
             settings->setValue("telnetHandlerEnabled", telnetHandlerEnabled->isChecked());
         }
     }
+    applyTriggerMatchPoolSettings();
 
     Discord::self()->UpdatePresence();
 
@@ -9311,6 +9513,19 @@ void dlgProfilePreferences::slot_caretModeKeyChanged(const int index)
     app->announce(announcement, QString(), true);
 }
 
+// Under the display font's picker and the editor font's: false when Mudlet cannot draw in the font at all
+static bool showFontWarnings(const QFont& font, QLabel* pInvalidLabel, QLabel* pVariableWidthLabel)
+{
+    const QFontMetrics metrics(font);
+    if (metrics.averageCharWidth() == 0) {
+        pInvalidLabel->show();
+        return false;
+    }
+    pInvalidLabel->hide();
+    pVariableWidthLabel->setVisible(!QFontInfo(font).fixedPitch());
+    return true;
+}
+
 bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange change)
 {
     if (mpHost.isNull() || !mpHost->mainConsoleView()) {
@@ -9333,17 +9548,8 @@ bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange chan
         return false;
     }
 
-    const QFontMetrics metrics(displayFont);
-    if (metrics.averageCharWidth() == 0) {
-        label_invalidFontError->show();
+    if (!showFontWarnings(displayFont, label_invalidFontError, label_variableWidthFontWarning)) {
         return false;
-    }
-    label_invalidFontError->hide();
-
-    if (!QFontInfo(displayFont).fixedPitch()) {
-        label_variableWidthFontWarning->show();
-    } else {
-        label_variableWidthFontWarning->hide();
     }
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
@@ -9358,11 +9564,6 @@ bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange chan
     // update the display properly when font or size or antiAliasing selections
     // change.
     mpHost->setDisplayFont(displayFont, change);
-
-    auto config = edbeePreviewWidget->config();
-    config->beginChanges();
-    config->setFont(displayFont);
-    config->endChanges();
 
     return true;
 }
@@ -9468,6 +9669,62 @@ void dlgProfilePreferences::slot_hostDisplayFontChanged(const QFont& font)
 void dlgProfilePreferences::slot_displayFontAliasingChanged()
 {
     updateDisplayFont(Host::DisplayFontChange::Adjustment);
+}
+
+// Writes the controls only, so the caller decides whether the snapshot is to follow
+void dlgProfilePreferences::showEditorFont(const QFont& font)
+{
+    {
+        const QSignalBlocker comboBlocker(fontComboBox_editorFont);
+        const QSignalBlocker sizeBlocker(spinBox_editorFontSize);
+        fontComboBox_editorFont->setCurrentFont(font);
+        spinBox_editorFontSize->setMaximum(std::max(font.pointSize(), 40));
+        spinBox_editorFontSize->setValue(std::max(1, font.pointSize()));
+    }
+    reflectEditorFontControls();
+}
+
+void dlgProfilePreferences::reflectEditorFontControls()
+{
+    // Disabled rather than hidden while following, so what following gives is on show
+    const bool ownFont = !checkBox_editorFontFollowsDisplay->isChecked();
+    fontComboBox_editorFont->setEnabled(ownFont);
+    spinBox_editorFontSize->setEnabled(ownFont);
+    // ...and the display font's own card says whatever there is to say about that one
+    if (!ownFont) {
+        label_editorFontInvalid->hide();
+        label_editorFontVariableWidth->hide();
+        return;
+    }
+    QFont font = fontComboBox_editorFont->currentFont();
+    font.setPointSize(spinBox_editorFontSize->value());
+    showFontWarnings(font, label_editorFontInvalid, label_editorFontVariableWidth);
+}
+
+// A script, or the display font moving while the editor follows it
+void dlgProfilePreferences::slot_hostEditorFontChanged(const QFont& font)
+{
+    if (mpHost.isNull()) {
+        return;
+    }
+    {
+        const QSignalBlocker followBlocker(checkBox_editorFontFollowsDisplay);
+        checkBox_editorFontFollowsDisplay->setChecked(mpHost->editorFontFollowsDisplay());
+    }
+    showEditorFont(font);
+    auto config = edbeePreviewWidget->config();
+    config->beginChanges();
+    config->setFont(font);
+    config->endChanges();
+    // As in slot_hostDisplayFontChanged(): not the user's edits
+    for (QWidget* pControl : {static_cast<QWidget*>(checkBox_editorFontFollowsDisplay), static_cast<QWidget*>(fontComboBox_editorFont), static_cast<QWidget*>(spinBox_editorFontSize)}) {
+        mSnapshot.take(pControl);
+        for (const auto* pPart : pControl->findChildren<QWidget*>()) {
+            if (SettingsSnapshot::carriesValue(pPart)) {
+                mSnapshot.take(pPart);
+            }
+        }
+    }
 }
 
 void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)

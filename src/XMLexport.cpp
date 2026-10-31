@@ -692,6 +692,11 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mDisplayFont").text().set(pHost->getDisplayFontForSaving().toString().toUtf8().constData());
         // We don't use this ourselves any more but still write it out for older versions:
         host.append_child("mCommandLineFont").text().set(pHost->getDisplayFontForSaving().toString().toUtf8().constData());
+        // Ahead of the switch, so reading it back finds the font there before the editor leaves the display font
+        if (const auto& editorFont = pHost->editorFontChoice(); editorFont.has_value()) {
+            host.append_child("mEditorFont").text().set(editorFont->toString().toUtf8().constData());
+        }
+        host.append_child("mEditorFontFollowsDisplay").text().set(pHost->editorFontFollowsDisplay() ? "yes" : "no");
         // There was a mis-spelt duplicate commandSeperator above but it is now gone
         host.append_child("mCommandSeparator").text().set(pHost->mCommandSeparator.toUtf8().constData());
         host.append_child("commandLineMinimumHeight").text().set(QString::number(pHost->commandLineMinimumHeight).toUtf8().constData());

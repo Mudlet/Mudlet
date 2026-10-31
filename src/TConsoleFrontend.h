@@ -152,8 +152,9 @@ public:
 
     // Makes the user window unless one has that name and shows it, then floats it ("f") or docks it
     // ("r", "l", "t", "b"), each also accepted as the word it stands for; an empty or unknown area leaves
-    // it where it is. Host refuses a name that is some other window's.
-    virtual void openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) = 0;
+    // it where it is. Host refuses a name that is some other window's. False when a handler it runs deletes the window
+    // or puts another in its place, so the call goes no further.
+    virtual bool openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) = 0;
     // These fail for a name that is not a user window's; an empty text restores the default title.
     virtual std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet) = 0;
     virtual std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text) = 0;
@@ -185,6 +186,8 @@ public:
     // A negative line counts back from the end. One at or past the end, or toEnd, puts the console back
     // to following new lines.
     virtual bool scrollWindowTo(const QString& name, int line, bool toEnd) = 0;
+    // False for a name that is no console
+    virtual bool windowFollowsNewLines(const QString& name) = 0;
 
     // These name a console as the scroll bar ones do; for a name that is none of those, setWindowFontSize()
     // fails and the others have no value. This console's font is the profile's display font, which Host
@@ -344,7 +347,8 @@ public:
     // Caret navigation of the text: on moves keyboard focus to it, grabbing the keyboard on Windows and Linux;
     // off releases that and makes the command line its focus proxy again.
     virtual void setCaretMode(bool enabled) = 0;
-    // The mouse pointer's position relative to this console's top-left corner, so it can lie outside it.
+    // The mouse pointer's position relative to the frame labels are placed in, below and right of any button
+    // bars; it can lie outside that frame.
     virtual QPoint mousePosition() const = 0;
     // True while keyboard focus is on this console's focus proxy, normally its own command line, so false
     // while it is on the text, as in caret navigation, or in another window.

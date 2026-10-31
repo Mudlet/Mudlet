@@ -73,7 +73,6 @@ set(mudlet_SRCS
     MMCPClient.cpp
     MMCPServer.cpp
     MudletApp.cpp
-    MudletInstanceCoordinator.cpp
     MudletMedia.cpp
     MudletReplay.cpp
     MxpTag.cpp
@@ -103,12 +102,12 @@ set(mudlet_SRCS
     TEncodingTable.cpp
     TEntityHandler.cpp
     TEntityResolver.cpp
-    TForkedProcess.cpp
     TGlyphCache.cpp
     THyperlinkCompactManager.cpp
     THyperlinkSelectionManager.cpp
     THyperlinkVisibilityManager.cpp
     TimerUnit.cpp
+    TIngestPipeline.cpp
     TIrcClient.cpp
     TKey.cpp
     TLabelModel.cpp
@@ -158,6 +157,8 @@ set(mudlet_SRCS
     TMxpVersionTagHandler.cpp
     TNullAppFrontend.cpp
     TNullConsoleFrontend.cpp
+    TNullMapView.cpp
+    TNullMapViews.cpp
     TriggerMatchPool.cpp
     TriggerUnit.cpp
     TTriggerPrescan.cpp
@@ -176,10 +177,11 @@ set(mudlet_SRCS
     VarUnit.cpp
     VoskRecognizer.cpp
     XMLexport.cpp
-    XMLimport.cpp)
+    XMLimport.cpp
+    XmlImportReader.cpp)
 
-# Every .cpp source file that needs Qt Widgets goes here instead, in mudlet_app, kept
-# in alphabetical order (case-insensitive).
+# Every .cpp source file that needs Qt Widgets, or that only the desktop app uses, goes
+# here instead, in mudlet_app, kept in alphabetical order (case-insensitive).
 set(mudlet_app_SRCS
     ../3rdparty/qt-tags-widget/src/qtagedit.cpp
     CustomLineDrawContextMenuHandler.cpp
@@ -222,6 +224,7 @@ set(mudlet_app_SRCS
     LabelInteractionHandler.cpp
     MiddleMousePanHandler.cpp
     mudlet.cpp
+    MudletInstanceCoordinator.cpp
     MudletProxyStyle.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
@@ -375,7 +378,6 @@ set(mudlet_HDRS
     MMCPClient.h
     MMCPServer.h
     MudletApp.h
-    MudletInstanceCoordinator.h
     MudletMedia.h
     MudletReplay.h
     MxpTag.h
@@ -411,7 +413,6 @@ set(mudlet_HDRS
     TEntityHandler.h
     TEntityResolver.h
     TEvent.h
-    TForkedProcess.h
     TGameDetails.h
     TGlyphCache.h
     THyperlinkCompactManager.h
@@ -419,6 +420,7 @@ set(mudlet_HDRS
     THyperlinkStyling.h
     THyperlinkVisibilityManager.h
     TimerUnit.h
+    TIngestPipeline.h
     TIrcClient.h
     TKey.h
     TLabelModel.h
@@ -468,6 +470,8 @@ set(mudlet_HDRS
     TMxpVersionTagHandler.h
     TNullAppFrontend.h
     TNullConsoleFrontend.h
+    TNullMapView.h
+    TNullMapViews.h
     TPrintSink.h
     Tree.h
     TriggerMatchPool.h
@@ -491,10 +495,11 @@ set(mudlet_HDRS
     VoskRecognizer.h
     widechar_width.h
     XMLexport.h
-    XMLimport.h)
+    XMLimport.h
+    XmlImportReader.h)
 
-# Every .h header file that needs Qt Widgets goes here instead, in mudlet_app, kept
-# in alphabetical order (case-insensitive).
+# Every .h header file that needs Qt Widgets, or that only the desktop app uses, goes
+# here instead, in mudlet_app, kept in alphabetical order (case-insensitive).
 set(mudlet_app_HDRS
     ../3rdparty/qt-tags-widget/include/QTagEdit/qtagedit.hpp
     CustomLineDrawContextMenuHandler.h
@@ -537,6 +542,7 @@ set(mudlet_app_HDRS
     LabelInteractionHandler.h
     MiddleMousePanHandler.h
     mudlet.h
+    MudletInstanceCoordinator.h
     MudletProxyStyle.h
     PackageItemDelegate.h
     PanInteractionHandler.h
@@ -639,6 +645,11 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_app_SRCS glwidget_integration.cpp)
 endif(USE_3DMAPPER)
 
+if(USE_SPAWN)
+  list(APPEND mudlet_SRCS TForkedProcess.cpp)
+  list(APPEND mudlet_HDRS TForkedProcess.h)
+endif()
+
 if(USE_MCPSERVER)
   list(APPEND mudlet_SRCS TMCPBridge.cpp)
   list(APPEND mudlet_SRCS TMCPServer.cpp)
@@ -709,7 +720,9 @@ endif()
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
 find_package(ZIP REQUIRED)
-find_package(Lua51 REQUIRED)
+if(NOT USE_BUNDLED_LUA)
+  find_package(Lua51 REQUIRED)
+endif()
 find_package(ZLIB REQUIRED)
 # 10.36 is the floor for PCRE2_MATCH_INVALID_UTF: it arrived in 10.34, and 10.36
 # fixed it mis-optimising the start of a match in 8-bit mode with PCRE2_CASELESS
@@ -1009,6 +1022,18 @@ if(USE_MCPSERVER)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_MCPSERVER)
 endif()
 
+if(USE_SPAWN)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_SPAWN)
+endif()
+
+if(USE_DISCORD_RPC)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_DISCORD_RPC)
+endif()
+
+if(USE_SPEECH_ENGINES)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_SPEECH_ENGINES)
+endif()
+
 if(USE_VARIABLE_SPLASH_SCREEN)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_VARIABLE_SPLASH_SCREEN)
 endif()
@@ -1059,6 +1084,10 @@ target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_APP_TARGET} mudlet_lsan_
 # can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
 # will fail to load with "undefined symbol" errors.
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES ENABLE_EXPORTS ON)
+
+if(USE_HEADLESS)
+  add_subdirectory(headless)
+endif()
 
 if (WITH_SENTRY)
   include(cmake/WithSentry.cmake)

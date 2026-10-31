@@ -36,6 +36,7 @@
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
+#include <QStringConverter>
 #include <QStringList>
 #if defined(QT_NO_SSL)
 #include <QTcpSocket>
@@ -48,6 +49,7 @@
 #include <zlib.h>
 
 #include <bitset>
+#include <chrono>
 #include <iostream>
 #include <memory>
 #include <queue>
@@ -192,7 +194,7 @@ public:
     void sendInfoNewEnvironValues(const QStringList&);
     void sendInfoNewEnvironOSCHyperlinks();
     void setATCPVariables(const QByteArray&);
-    void setGMCPVariables(const QByteArray&);
+    void setGMCPVariables(QByteArrayView);
     void setMSSPVariables(const QByteArray&);
     void setMSPVariables(const QByteArray&);
     bool isIPAddress(const QString&);
@@ -255,6 +257,8 @@ public:
     QString decodeOption(const unsigned char) const;
     QString formatShortTelnetCommand(const std::string& telnetCommand, const QString& commandName) const;
     QAbstractSocket::SocketState getConnectionState() const;
+    // Game commands sendData() could not write, as with no connection, over the profile's life
+    int gameCommandsNotWritten() const { return mGameCommandsNotWritten; }
     std::tuple<QString, int, bool> getConnectionInfo() const;
     void setPostingTimeout(const int);
     int getPostingTimeout() const { return mTimeOut; }
@@ -280,7 +284,8 @@ public:
     // a keychain read the user only answered by then. Sends it only while the game is provably
     // still waiting at that prompt, see the definition.
     void sendOutstandingAutoLoginPassword();
-    void terminateConnection();
+    // The wait blocks, so is only for a profile with no window to freeze
+    void terminateConnection(bool waitForTheGameToClose);
     bool currentlySecure() const
     {
 #if defined(QT_NO_SSL)
@@ -381,6 +386,14 @@ private:
     friend class PasswordEntryPolicyTest;
     friend class PasswordEntryTest;
 
+    // Wait on the posting and NAWS settle timers rather than sleeping past them
+    friend class MirrorToStdOutTest;
+    friend class NawsWidthReportTest;
+
+    // Shorten mFailedConnectionRetryDelay and mNetworkLatencyTimeout rather than sitting them out
+    friend class TelnetConnectFailureTest;
+    friend class TelnetLatencyMeasurementTest;
+
     // Host calls reset(), not cTelnet's constructor: it clears Host members declared after
     // cTelnet, which don't exist yet while cTelnet is constructed.
     friend class Host;
@@ -453,6 +466,7 @@ private:
     void postHeldDataBeforeEncodingChange();
     void processSubnegotiation(const std::string& subnegotiation, std::string& textAhead);
     void encodingChanged(const QByteArray&);
+    void openSendConverters();
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void beginNetworkLatencyMeasurement();
     void finishNetworkLatencyMeasurement();
@@ -593,6 +607,11 @@ private:
 
     QString termType;
     QByteArray mEncoding;
+    // Opened once per encoding, as each ICU converter takes most of a microsecond to open
+    QByteArray mSendConvertersEncoding;
+    bool mSendEncodingAvailable = false;
+    QStringEncoder mSendEncoder;
+    QStringDecoder mSendRoundTripDecoder;
     QTimer* mpPostingTimer = nullptr;
     // We do not directly adjust the interval for the above because doing so
     // while it is active changes the timerId which might have unforeseen
@@ -635,6 +654,17 @@ private:
     bool mAutoLoginPasswordMaskWithdrawn = false;
     QTimer* mTimerPasswordModeTimeout = nullptr;
     QTimer* mTimerFailedConnectionRetry = nullptr;
+    // How long to leave a game alone after a connection attempt to it failed, before
+    // trying again for a profile that reconnects automatically. A refused connection
+    // comes back at once, so without a wait here the retries are a tight loop. The
+    // wait doubles with each failure in a row up to FAILED_CONNECTION_RETRY_MAX_DELAY.
+    std::chrono::milliseconds mFailedConnectionRetryDelay = std::chrono::seconds(5);
+    // A command the game never answers would otherwise leave the next unrelated
+    // line it sends - minutes later - being timed as that command's reply, so a
+    // measurement unanswered this long is abandoned and nothing is published for
+    // it. Set well past any wait still worth calling a ping rather than tight, so
+    // that a game which is merely lagging badly still has its lag reported.
+    std::chrono::milliseconds mNetworkLatencyTimeout = std::chrono::seconds(10);
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;
@@ -695,6 +725,7 @@ private:
     bool mEncodingWarningIssued = false;
     // Same sort of thing if an encoder fails to be found/loaded:
     bool mEncoderFailureNoticeIssued = false;
+    int mGameCommandsNotWritten = 0;
 
     // Set if the current connection is via a proxy
     bool mConnectViaProxy = false;

@@ -2110,7 +2110,8 @@ void ModernGLWidget::renderRooms()
 
         auto rx = static_cast<float>(pR->x());
         auto ry = static_cast<float>(pR->y());
-        const QPointF nameOffset = showRoomNames && !pR->name.isEmpty() ? RoomAppearance::nameOffset(pR->userData.value(ROOM_UI_NAMEPOS)) : QPointF();
+        const bool showThisRoomName = showRoomNames && RoomAppearance::nameShown(*pR);
+        const QPointF nameOffset = showThisRoomName ? RoomAppearance::nameOffset(pR->userData.value(ROOM_UI_NAMEPOS)) : QPointF();
         const float highlightReach = pR->highlight ? pR->highlightRadius * style.highlightScale / 2.0f : 0.0f;
         if (!keptRooms && outOfView(QVector3D(rx, ry, static_cast<float>(pR->z())), qMax(static_cast<float>(std::hypot(nameOffset.x(), nameOffset.y())), highlightReach))) {
             continue;
@@ -2436,7 +2437,7 @@ void ModernGLWidget::renderRooms()
         }
 
         // Only the viewed level's, as only the 2D map's are
-        if (detailed && showRoomNames && look.onViewedLevel() && !pR->name.isEmpty()) {
+        if (detailed && showThisRoomName && look.onViewedLevel()) {
             // One room's size below the room on screen, or standing up just under its front edge, then moved by its
             // offset along the map, in rooms' spacing, y downward
             const QVector3D shift(static_cast<float>(nameOffset.x()), -static_cast<float>(nameOffset.y()), 0.0f);
@@ -4283,6 +4284,10 @@ bool ModernGLWidget::followingPlayer() const
         return false;
     }
     if (!mShiftMode || !mpMap) {
+        return true;
+    }
+    // The area it was taken to was deleted, and paintGL() would only re-present that area's last frame
+    if (mpMap->mpRoomDB && !mpMap->mpRoomDB->getArea(mAID)) {
         return true;
     }
     // Not while rooms are dragged, as they follow the pointer across the map and would go along with the view
@@ -6647,10 +6652,12 @@ void ModernGLWidget::paintScannerOverlay(QPainter& painter, const int top)
     bracket.setAlphaF(0.45f);
     constexpr int margin = 12;
     constexpr int leg = 18;
+    // The top legs fall in the map info box's 10px top padding, above its text
+    constexpr int bracketInset = 4;
     painter.save();
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setPen(QPen(bracket, 1.5));
-    const QRectF frame = QRectF(rect()).adjusted(margin, margin, -margin, -margin);
+    const QRectF frame = QRectF(rect()).adjusted(bracketInset, bracketInset, -bracketInset, -bracketInset);
     for (const QPointF& corner : {frame.topLeft(), frame.topRight(), frame.bottomLeft(), frame.bottomRight()}) {
         // Each leg runs from the corner toward the middle
         const qreal across = corner.x() < frame.center().x() ? leg : -leg;
@@ -6673,7 +6680,7 @@ void ModernGLWidget::paintScannerOverlay(QPainter& painter, const int top)
     const QString scan = metrics.elidedText(tr("SCAN // %1").arg(areaName.toUpper()), Qt::ElideRight, textWidth);
     //: The 3D map's readout in the Hologram style, below the area's name: the level being viewed (%1), the area's lowest and highest levels (%2 and %3, as -1 and +3) and how many rooms it has
     const QString levels = metrics.elidedText(
-            tr("Z %1   LEVELS %2 … %3   %n ROOMS", nullptr, static_cast<int>(pArea->getAreaRooms().size())).arg(signedLevel(mMapCenterZ), signedLevel(pArea->min_z), signedLevel(pArea->max_z)),
+            tr("Z %1   LEVELS %2 … %3   %n ROOM(S)", nullptr, static_cast<int>(pArea->getAreaRooms().size())).arg(signedLevel(mMapCenterZ), signedLevel(pArea->min_z), signedLevel(pArea->max_z)),
             Qt::ElideRight,
             textWidth);
     // So that it reads over a crowded map
