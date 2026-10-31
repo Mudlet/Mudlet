@@ -12678,73 +12678,92 @@ void dlgTriggerEditor::slot_copyXml()
 }
 
 // FIXME: The switch cases in here need to handle EditorViewType::cmVarsView but how is not clear
-// Applies the same placement to every pasted item that pasting a single item
-// would get: into the selected group/folder, or next to the selected item.
+// The import leaves pasted items at the bottom of the list; move them to just
+// beneath the selected item, beside it even when it is a folder.
 void dlgTriggerEditor::placePastedItems(EditorViewType itemType, const QList<int>& itemIDs)
 {
+    // The units' sibling lists also hold temporary items the tree does not show,
+    // so a tree row is not a position in them - find the selected item itself
+    const auto positionAfter = [](auto* pTarget, const auto& rootList) {
+        const auto indexAfter = [pTarget](const auto& siblings) {
+            int position = 1;
+            for (const auto* pSibling : siblings) {
+                if (pSibling == pTarget) {
+                    return position;
+                }
+                ++position;
+            }
+            return -1;
+        };
+        if (!pTarget) {
+            return -1;
+        }
+        return pTarget->getParent() ? indexAfter(*pTarget->getParent()->getChildrenList()) : indexAfter(rootList);
+    };
+
     QTreeWidget* targetTree = nullptr;
-    std::function<bool(int)> itemIsFolder;
-    std::function<void(int, int, int, int)> reParentItem;
+    std::function<int(int)> positionAfterItem;
+    std::function<void(int, int, TreeItemInsertMode, int)> reParentItem;
 
     switch (itemType) {
     case EditorViewType::cmTriggerView:
         targetTree = treeWidget_triggers;
-        itemIsFolder = [this](int id) {
-            auto* pItem = mpHost->getTriggerUnit()->getTrigger(id);
-            return pItem && pItem->isFolder();
+        positionAfterItem = [this, positionAfter](int id) {
+            auto* pUnit = mpHost->getTriggerUnit();
+            return positionAfter(pUnit->getTrigger(id), pUnit->getTriggerRootNodeList());
         };
-        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
-            mpHost->getTriggerUnit()->reParentTrigger(id, 0, parentId, parentPos, childPos);
+        reParentItem = [this](int id, int parentId, TreeItemInsertMode mode, int position) {
+            mpHost->getTriggerUnit()->reParentTrigger(id, 0, parentId, mode, position);
         };
         break;
     case EditorViewType::cmTimerView:
         targetTree = treeWidget_timers;
-        itemIsFolder = [this](int id) {
-            auto* pItem = mpHost->getTimerUnit()->getTimer(id);
-            return pItem && pItem->isFolder();
+        positionAfterItem = [this, positionAfter](int id) {
+            auto* pUnit = mpHost->getTimerUnit();
+            return positionAfter(pUnit->getTimer(id), pUnit->getTimerRootNodeList());
         };
-        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
-            mpHost->getTimerUnit()->reParentTimer(id, 0, parentId, parentPos, childPos);
+        reParentItem = [this](int id, int parentId, TreeItemInsertMode mode, int position) {
+            mpHost->getTimerUnit()->reParentTimer(id, 0, parentId, mode, position);
         };
         break;
     case EditorViewType::cmAliasView:
         targetTree = treeWidget_aliases;
-        itemIsFolder = [this](int id) {
-            auto* pItem = mpHost->getAliasUnit()->getAlias(id);
-            return pItem && pItem->isFolder();
+        positionAfterItem = [this, positionAfter](int id) {
+            auto* pUnit = mpHost->getAliasUnit();
+            return positionAfter(pUnit->getAlias(id), pUnit->getAliasRootNodeList());
         };
-        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
-            mpHost->getAliasUnit()->reParentAlias(id, 0, parentId, parentPos, childPos);
+        reParentItem = [this](int id, int parentId, TreeItemInsertMode mode, int position) {
+            mpHost->getAliasUnit()->reParentAlias(id, 0, parentId, mode, position);
         };
         break;
     case EditorViewType::cmScriptView:
         targetTree = treeWidget_scripts;
-        itemIsFolder = [this](int id) {
-            auto* pItem = mpHost->getScriptUnit()->getScript(id);
-            return pItem && pItem->isFolder();
+        positionAfterItem = [this, positionAfter](int id) {
+            auto* pUnit = mpHost->getScriptUnit();
+            return positionAfter(pUnit->getScript(id), pUnit->getScriptRootNodeList());
         };
-        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
-            mpHost->getScriptUnit()->reParentScript(id, 0, parentId, parentPos, childPos);
+        reParentItem = [this](int id, int parentId, TreeItemInsertMode mode, int position) {
+            mpHost->getScriptUnit()->reParentScript(id, 0, parentId, mode, position);
         };
         break;
     case EditorViewType::cmActionView:
         targetTree = treeWidget_actions;
-        itemIsFolder = [this](int id) {
-            auto* pItem = mpHost->getActionUnit()->getAction(id);
-            return pItem && pItem->isFolder();
+        positionAfterItem = [this, positionAfter](int id) {
+            auto* pUnit = mpHost->getActionUnit();
+            return positionAfter(pUnit->getAction(id), pUnit->getActionRootNodeList());
         };
-        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
-            mpHost->getActionUnit()->reParentAction(id, 0, parentId, parentPos, childPos);
+        reParentItem = [this](int id, int parentId, TreeItemInsertMode mode, int position) {
+            mpHost->getActionUnit()->reParentAction(id, 0, parentId, mode, position);
         };
         break;
     case EditorViewType::cmKeysView:
         targetTree = treeWidget_keys;
-        itemIsFolder = [this](int id) {
-            auto* pItem = mpHost->getKeyUnit()->getKey(id);
-            return pItem && pItem->isFolder();
+        positionAfterItem = [this, positionAfter](int id) {
+            auto* pUnit = mpHost->getKeyUnit();
+            return positionAfter(pUnit->getKey(id), pUnit->getKeyRootNodeList());
         };
-        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
-            mpHost->getKeyUnit()->reParentKey(id, 0, parentId, parentPos, childPos);
+        reParentItem = [this](int id, int parentId, TreeItemInsertMode mode, int position) {
+            mpHost->getKeyUnit()->reParentKey(id, 0, parentId, mode, position);
         };
         break;
     case EditorViewType::cmVarsView:
@@ -12763,22 +12782,13 @@ void dlgTriggerEditor::placePastedItems(EditorViewType itemType, const QList<int
         return;
     }
 
-    QTreeWidgetItem* targetItem = targetTree->itemFromIndex(targetIndex);
-    const int targetId = targetIndex.data(Qt::UserRole).toInt();
-    const bool isGroup = (targetItem && targetItem->childCount() > 0) || itemIsFolder(targetId);
-
-    if (isGroup) {
-        for (const int itemID : itemIDs) {
-            reParentItem(itemID, targetId, -1, -1);
-        }
-    } else {
-        // mirror single-item paste: insert as siblings right after the selected item
-        const QModelIndex parentIndex = targetIndex.parent();
-        const int parentId = parentIndex.data(Qt::UserRole).toInt();
-        const int parentRow = parentIndex.row();
-        int childRow = targetIndex.row() + 1;
-        for (const int itemID : itemIDs) {
-            reParentItem(itemID, parentId, parentRow, childRow++);
+    const int parentId = targetIndex.parent().data(Qt::UserRole).toInt();
+    int position = positionAfterItem(targetIndex.data(Qt::UserRole).toInt());
+    for (const int itemID : itemIDs) {
+        if (position == -1) {
+            reParentItem(itemID, parentId, TreeItemInsertMode::Append, 0);
+        } else {
+            reParentItem(itemID, parentId, TreeItemInsertMode::AtPosition, position++);
         }
     }
 }
@@ -12884,183 +12894,10 @@ void dlgTriggerEditor::slot_pasteXml()
     }
 
     mCurrentView = static_cast<EditorViewType>(importedItemType);
-    // importing drops the item at the bottom of the list - move it to be a sibling
-    // of the currently selected item instead
-    switch (mCurrentView) {
-    case EditorViewType::cmTriggerView: {
-        if (xmlPackages.size() > 1) {
-            // multi-item pastes were already reparented above; reparenting the
-            // first trigger again would link it into its parent's children twice
-            break;
-        }
-        // Handle multi-selection: use the first selected item as reference
-        QModelIndex targetIndex = treeWidget_triggers->currentIndex();
-        if (!targetIndex.isValid()) {
-            // If no current index, try to get from selected items
-            QList<QTreeWidgetItem*> selectedItems = treeWidget_triggers->selectedItems();
-            if (!selectedItems.isEmpty()) {
-                targetIndex = treeWidget_triggers->indexFromItem(selectedItems.first());
-            }
-        }
-
-        if (targetIndex.isValid()) {
-            // Check if the selected item is a trigger group/folder
-            QTreeWidgetItem* targetItem = treeWidget_triggers->itemFromIndex(targetIndex);
-            int targetId = targetIndex.data(Qt::UserRole).toInt();
-            TTrigger* targetTrigger = mpHost->getTriggerUnit()->getTrigger(targetId);
-
-            // Check if target is a group/folder (has children OR is a group trigger)
-            bool isGroup = (targetItem && targetItem->childCount() > 0) || (targetTrigger && targetTrigger->isFolder());
-
-            if (isGroup) {
-                // Paste INSIDE the selected group/folder
-                mpHost->getTriggerUnit()->reParentTrigger(importedItemID, 0, targetId, -1, -1);
-            } else {
-                // Paste as sibling next to the selected item
-                auto parent = targetIndex.parent();
-                auto parentRow = parent.row();
-                auto parentId = parent.data(Qt::UserRole).toInt();
-
-                const int siblingRow = targetIndex.row() + 1;
-                mpHost->getTriggerUnit()->reParentTrigger(importedItemID, 0, parentId, parentRow, siblingRow);
-            }
-        } else {
-            // If no valid target, place at the root level
-            mpHost->getTriggerUnit()->reParentTrigger(importedItemID, 0, 0, -1, -1);
-        }
-        break;
-    }
-    case EditorViewType::cmTimerView: {
-        if (xmlPackages.size() > 1) {
-            // multi-item pastes were already reparented above
-            break;
-        }
-        QModelIndex targetIndex = treeWidget_timers->currentIndex();
-        if (!targetIndex.isValid()) {
-            QList<QTreeWidgetItem*> selectedItems = treeWidget_timers->selectedItems();
-            if (!selectedItems.isEmpty()) {
-                targetIndex = treeWidget_timers->indexFromItem(selectedItems.first());
-            }
-        }
-
-        if (targetIndex.isValid()) {
-            auto parent = targetIndex.parent();
-            auto parentRow = parent.row();
-            auto parentId = parent.data(Qt::UserRole).toInt();
-
-            const int siblingRow = targetIndex.row() + 1;
-            mpHost->getTimerUnit()->reParentTimer(importedItemID, 0, parentId, parentRow, siblingRow);
-        } else {
-            mpHost->getTimerUnit()->reParentTimer(importedItemID, 0, 0, -1, -1);
-        }
-        break;
-    }
-    case EditorViewType::cmAliasView: {
-        if (xmlPackages.size() > 1) {
-            // multi-item pastes were already reparented above
-            break;
-        }
-        QModelIndex targetIndex = treeWidget_aliases->currentIndex();
-        if (!targetIndex.isValid()) {
-            QList<QTreeWidgetItem*> selectedItems = treeWidget_aliases->selectedItems();
-            if (!selectedItems.isEmpty()) {
-                targetIndex = treeWidget_aliases->indexFromItem(selectedItems.first());
-            }
-        }
-
-        if (targetIndex.isValid()) {
-            auto parent = targetIndex.parent();
-            auto parentRow = parent.row();
-            auto parentId = parent.data(Qt::UserRole).toInt();
-
-            const int siblingRow = targetIndex.row() + 1;
-            mpHost->getAliasUnit()->reParentAlias(importedItemID, 0, parentId, parentRow, siblingRow);
-        } else {
-            mpHost->getAliasUnit()->reParentAlias(importedItemID, 0, 0, -1, -1);
-        }
-        break;
-    }
-    case EditorViewType::cmScriptView: {
-        if (xmlPackages.size() > 1) {
-            // multi-item pastes were already reparented above
-            break;
-        }
-        QModelIndex targetIndex = treeWidget_scripts->currentIndex();
-        if (!targetIndex.isValid()) {
-            QList<QTreeWidgetItem*> selectedItems = treeWidget_scripts->selectedItems();
-            if (!selectedItems.isEmpty()) {
-                targetIndex = treeWidget_scripts->indexFromItem(selectedItems.first());
-            }
-        }
-
-        if (targetIndex.isValid()) {
-            auto parent = targetIndex.parent();
-            auto parentRow = parent.row();
-            auto parentId = parent.data(Qt::UserRole).toInt();
-
-            const int siblingRow = targetIndex.row() + 1;
-            mpHost->getScriptUnit()->reParentScript(importedItemID, 0, parentId, parentRow, siblingRow);
-        } else {
-            mpHost->getScriptUnit()->reParentScript(importedItemID, 0, 0, -1, -1);
-        }
-        break;
-    }
-    case EditorViewType::cmActionView: {
-        if (xmlPackages.size() > 1) {
-            // multi-item pastes were already reparented above
-            break;
-        }
-        QModelIndex targetIndex = treeWidget_actions->currentIndex();
-        if (!targetIndex.isValid()) {
-            QList<QTreeWidgetItem*> selectedItems = treeWidget_actions->selectedItems();
-            if (!selectedItems.isEmpty()) {
-                targetIndex = treeWidget_actions->indexFromItem(selectedItems.first());
-            }
-        }
-
-        if (targetIndex.isValid()) {
-            auto parent = targetIndex.parent();
-            auto parentRow = parent.row();
-            auto parentId = parent.data(Qt::UserRole).toInt();
-
-            const int siblingRow = targetIndex.row() + 1;
-            mpHost->getActionUnit()->reParentAction(importedItemID, 0, parentId, parentRow, siblingRow);
-        } else {
-            mpHost->getActionUnit()->reParentAction(importedItemID, 0, 0, -1, -1);
-        }
-        break;
-    }
-    case EditorViewType::cmKeysView: {
-        if (xmlPackages.size() > 1) {
-            // multi-item pastes were already reparented above
-            break;
-        }
-        QModelIndex targetIndex = treeWidget_keys->currentIndex();
-        if (!targetIndex.isValid()) {
-            QList<QTreeWidgetItem*> selectedItems = treeWidget_keys->selectedItems();
-            if (!selectedItems.isEmpty()) {
-                targetIndex = treeWidget_keys->indexFromItem(selectedItems.first());
-            }
-        }
-
-        if (targetIndex.isValid()) {
-            auto parent = targetIndex.parent();
-            auto parentRow = parent.row();
-            auto parentId = parent.data(Qt::UserRole).toInt();
-
-            const int siblingRow = targetIndex.row() + 1;
-            mpHost->getKeyUnit()->reParentKey(importedItemID, 0, parentId, parentRow, siblingRow);
-        } else {
-            mpHost->getKeyUnit()->reParentKey(importedItemID, 0, 0, -1, -1);
-        }
-        break;
-    }
-    case EditorViewType::cmVarsView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_pasteXml() WARNING - switch(EditorViewType) number 2 not expected to be called for \"EditorViewType::cmVarsView!\"";
-        break;
-    case EditorViewType::cmUnknownView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_pasteXml() WARNING - switch(EditorViewType) number 2 not expected to be called for \"EditorViewType::cmUnknownView!\"";
-        break;
+    // multi-item pastes were already placed above; placing the first again would
+    // link it into its parent's children twice
+    if (xmlPackages.size() == 1) {
+        placePastedItems(importedItemType, {importedItemID});
     }
 
     // Register undo commands for the pasted items
