@@ -4223,17 +4223,44 @@ void TTextEdit::announceLinkFocus(int linkIndex)
         return;
     }
 
-    QString announcement;
-    QString tooltip = mpBuffer->getLinkTooltip(linkIndex);
-    const QStringList commands = mpBuffer->mLinkStore.getLinksConst(linkIndex);
+    if (auto* pMudlet = mudlet::self()) {
+        pMudlet->announce(linkAnnouncement(linkIndex), QString(), true);
+    }
+}
 
-    if (!tooltip.isEmpty()) {
-        announcement = tooltip;
-    } else if (!commands.isEmpty() && !commands.first().isEmpty()) {
-        announcement = commands.first();
+QString TTextEdit::linkAnnouncement(const int linkIndex) const
+{
+    const QString tooltip = mpBuffer->getLinkTooltip(linkIndex);
+    const QStringList commands = mpBuffer->mLinkStore.getLinksConst(linkIndex);
+    const Mudlet::HyperlinkStyling styling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
+    const bool selected = mpBuffer->isLinkSelected(linkIndex);
+
+    // A link is announced by what it does, which its appearance need not show
+    QString role;
+    if (mpBuffer->linkIsNote(linkIndex)) {
+        //: Screen reader role for a game's text that has a tooltip or styling but does nothing when activated
+        role = tr("note");
+    } else if (styling.isSpoiler && mpBuffer->isSpoilerUnrevealed(linkIndex)) {
+        //: Screen reader role for a game's hidden text that activating the link reveals
+        role = tr("button");
+    } else if (styling.selection.hasSelectionSettings && styling.selection.exclusive) {
+        //: Screen reader role for one link of a group where only one can be selected
+        role = selected ? tr("radio button, checked") : tr("radio button, not checked");
+    } else if (styling.selection.hasSelectionSettings) {
+        //: Screen reader role for a link that can be selected independently of any others
+        role = selected ? tr("checkbox, checked") : tr("checkbox, not checked");
     } else {
-        //: Generic screen-reader announcement for a link with no tooltip or URL — used as fallback link description
-        announcement = tr("link");
+        //: Screen reader role for a link that does something when activated
+        role = tr("link");
+    }
+
+    QString announcement;
+    if (!tooltip.isEmpty()) {
+        announcement = qsl("%1, %2").arg(tooltip, role);
+    } else if (!commands.isEmpty() && !commands.first().isEmpty()) {
+        announcement = qsl("%1, %2").arg(commands.first(), role);
+    } else {
+        announcement = role;
     }
 
     if (mpBuffer->isLinkVisited(linkIndex)) {
@@ -4244,19 +4271,12 @@ void TTextEdit::announceLinkFocus(int linkIndex)
         //: Appended to link announcement when the link is disabled
         announcement += tr(", disabled");
     }
-    if (mpBuffer->isLinkSelected(linkIndex)) {
-        //: Appended to link announcement when the link is selected
-        announcement += tr(", selected");
-    }
 
-    if (commands.size() > 1) {
+    if (commands.size() > 1 || mpBuffer->mLinkStore.getHintsConst(linkIndex).size() > commands.size()) {
         //: Appended to link announcement when the link opens a menu
         announcement += tr(", has menu");
     }
-
-    if (auto* pMudlet = mudlet::self()) {
-        pMudlet->announce(announcement, QString(), true);
-    }
+    return announcement;
 }
 
 void TTextEdit::showKeyboardContextMenu()

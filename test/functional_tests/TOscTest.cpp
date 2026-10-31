@@ -1501,6 +1501,32 @@ private slots:
     QCOMPARE(console->getLinkStore().getLinksConst(linkId), QStringList(QString()));
   }
 
+  void test_LinkAnnouncementSaysWhatItDoes_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("expected");
+
+    QTest::newRow("send") << qsl("send:look") << qsl("Send: look, link");
+    QTest::newRow("gmcp") << qsl("gmcp:Game.UI.Close?config={\"tooltip\":\"Close\"}") << qsl("Close, link");
+    QTest::newRow("note") << qsl("local:?config={\"tooltip\":\"It needs a silver key\"}") << qsl("It needs a silver key, note");
+    QTest::newRow("note with no tooltip") << qsl("local:") << qsl("note");
+    QTest::newRow("spoiler") << qsl("local:?config={\"spoiler\":true}") << qsl("Click to reveal, button");
+    QTest::newRow("radio button") << qsl("local:?config={\"selection\":{\"group\":\"announceA\",\"value\":\"a\"}}") << qsl("radio button, not checked");
+    QTest::newRow("radio button checked") << qsl("local:?config={\"selection\":{\"group\":\"announceB\",\"value\":\"a\",\"selected\":true}}") << qsl("radio button, checked");
+    QTest::newRow("checkbox") << qsl("local:?config={\"selection\":{\"group\":\"announceC\",\"value\":\"a\",\"exclusive\":false}}") << qsl("checkbox, not checked");
+    QTest::newRow("menu") << qsl("local:?config={\"menu\":[{\"Look\":\"send:look\"}]}") << qsl("Click for menu, link, has menu");
+    QTest::newRow("disabled") << qsl("send:look?config={\"disabled\":true,\"tooltip\":\"Locked\"}") << qsl("Locked, link, disabled");
+  }
+
+  void test_LinkAnnouncementSaysWhatItDoes() {
+    QFETCH(QString, uri);
+    QFETCH(QString, expected);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Text\x1b]8;;\x1b\\"));
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    QCOMPARE(mpHost->mainConsoleView()->mUpperPane->linkAnnouncement(std::get<2>(*pos)), expected);
+  }
+
   // A "config" parameter carrying something that is not an object is not a
   // config, so it must not displace a valid one earlier in the same query.
   void test_Osc8ValuelessConfigDoesNotDisplaceAValidOne_data() {

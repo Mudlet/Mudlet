@@ -121,6 +121,7 @@ public:
     void setCaretPosition(int line, int column);
     // Onto the first or the last link, where Tab leaving the script buttons lands; nowhere new with no links
     void moveCaretToLink(bool first);
+    QString linkAnnouncement(int linkIndex) const;
     void updateCaret();
     void showKeyboardContextMenu();
     void showLinkMenuAt(int linkIndex, const QPoint& globalPosition);
