@@ -3443,7 +3443,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     case TN_GA:
     case TN_EOR: {
         recvdGA = true;
-        emit signal_promptReceived();
         break;
     }
     case TN_AYT: {
@@ -6077,6 +6076,7 @@ void cTelnet::slot_processReplayChunk()
             recvdGA = false;
             gotPrompt(cleandata);
             cleandata = "";
+            emit signal_promptReceived();
         }
     } //for
 
@@ -6518,7 +6518,12 @@ Some data loss is likely - please mention this problem to the game admins.)",
             } else {
                 cleandata.push_back('\n');
                 recvdGA = false;
+                gameSpoke = true;
+                gotRest(cleandata);
+                cleandata = "";
             }
+            // After the text is posted, so a link in it has been registered by the time its own prompt counts
+            emit signal_promptReceived();
         }
     } //for
 

@@ -703,8 +703,8 @@ private:
     }
 
     // The wholeline flag is what makes performConcealment() delete the line
-    // rather than blank the link out. No delay and no expire trigger, so the
-    // click conceals it there and then.
+    // rather than blank the link out. No delay, so the click conceals it there
+    // and then.
     Mudlet::HyperlinkStyling wholeLineConcealStyling() const
     {
         Mudlet::HyperlinkStyling styling;
