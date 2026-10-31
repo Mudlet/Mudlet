@@ -755,6 +755,62 @@ private slots:
     QCOMPARE(hints.last(), qsl("Item"));
   }
 
+  // Activating a link in a selection group runs the menu item the player
+  // picked; only a link without a menu has its own command rebuilt to carry
+  // the new selected state.
+  void test_Osc8SelectionGroupActivationCommand_data() {
+    QTest::addColumn<QString>("url");
+    QTest::addColumn<QString>("expectedCommand");
+
+    const QString selection =
+        qsl("\"selection\":{\"group\":\"%1\",\"value\":\"v\"}");
+    const auto sends = [](const QString &command) {
+      return qsl("send(%1, false)").arg(LuaLiteral::quote(command));
+    };
+
+    QTest::newRow("no menu")
+        << qsl("send:look?config={%1}").arg(selection.arg(qsl("noMenu")))
+        << sends(qsl("look?selected=true"));
+    QTest::newRow("one-item menu")
+        << qsl("send:look?config={\"menu\":[{\"Attack\":\"send:attack\"}],%1}")
+               .arg(selection.arg(qsl("oneItem")))
+        << sends(qsl("attack"));
+    QTest::newRow("one-item menu with a web link")
+        << qsl("send:look?config={\"menu\":[{\"Wiki\":\"https://wiki.mudlet.org/\"}],%1}")
+               .arg(selection.arg(qsl("oneWebItem")))
+        << qsl("openUrl(%1)").arg(LuaLiteral::quote(qsl("https://wiki.mudlet.org/")));
+    QTest::newRow("two-item menu")
+        << qsl("send:look?config={\"menu\":[{\"Attack\":\"send:attack\"},{\"Flee\":\"send:flee\"}],%1}")
+               .arg(selection.arg(qsl("twoItems")))
+        << sends(qsl("attack"));
+  }
+
+  void test_Osc8SelectionGroupActivationCommand() {
+    QFETCH(QString, url);
+    QFETCH(QString, expectedCommand);
+
+    injectData(qsl("\x1b]8;;") + url + qsl("\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    const Mudlet::HyperlinkStyling styling =
+        console->getLinkStore().getStyling(linkId);
+    QVERIFY(styling.selection.hasSelectionSettings);
+
+    const QStringList commands = console->getLinkStore().getLinksConst(linkId);
+    QVERIFY(!commands.isEmpty());
+    QString command = commands.first();
+    console->mUpperPane->applyHyperlinkSelectionGroupState(
+        linkId, command, styling.selection, "TOscTest");
+    QCOMPARE(command, expectedCommand);
+  }
+
   // A "config" parameter carrying something that is not an object is not a
   // config, so it must not displace a valid one earlier in the same query.
   void test_Osc8ValuelessConfigDoesNotDisplaceAValidOne_data() {

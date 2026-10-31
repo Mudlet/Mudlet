@@ -4382,8 +4382,9 @@ void TTextEdit::applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, c
     // A menu link's commands are built from its menu items and the base URI's
     // command is discarded, so baseCommand matches none of what can actually be
     // run here. Callers pass the item the user picked; rebuilding from the base
-    // would send something they did not choose.
-    if (mpBuffer->mLinkStore.getLinksConst(linkIndex).size() <= 1) {
+    // would send something they did not choose. A one-item menu has a single
+    // command too, but its hints carry the tooltip ahead of the item's label.
+    if (mpBuffer->mLinkStore.getLinksConst(linkIndex).size() <= 1 && mpBuffer->mLinkStore.getHintsConst(linkIndex).size() <= 1) {
         const Mudlet::HyperlinkStyling styling = mpBuffer->mLinkStore.getStyling(linkIndex);
         const QString rebuiltUri = mgr->modifyUriForSelection(styling.actionScheme, styling.baseCommand, group, value);
         if (!rebuiltUri.isEmpty()) {
