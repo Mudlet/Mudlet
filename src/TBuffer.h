@@ -846,8 +846,8 @@ private:
     void decodeOSC(const QString&);
     void finaliseActiveHyperlink();
     void registerLinkVisibility(const int linkId, const int column, const int length, const Mudlet::HyperlinkStyling& styling);
-    void carryActiveHyperlinkPastFlush(QString& line);
-    void maskSpoilerText(const int linkId, QString& line, const int column, const int length);
+    void carryActiveHyperlinkPastFlush(QString& line, const TLineFormat& format);
+    void maskSpoilerText(const int linkId, QString& line, const TLineFormat& format, const int column, const int length);
     void resetColors();
     bool commitLine(char ch, size_t& localBufferPosition, bool isFromServer = false, bool forcedLineBreak = false);
     void commitLineData(QString line, TLineFormat chars, char ch);
