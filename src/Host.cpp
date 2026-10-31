@@ -7920,17 +7920,30 @@ void Host::setEditorFontFromString(const QString& fontData)
     setEditorFont(font);
 }
 
-void Host::setEditorFontFollowsDisplay(const bool follows)
+void Host::setEditorFontFollowsDisplay(const bool follows, const EditorFontStart start)
 {
     if (mEditorFontFollowsDisplay == follows) {
         return;
     }
-    if (!follows && !mEditorFont.has_value()) {
-        setEditorFont(getDisplayFont());
+    if (!follows && (start == EditorFontStart::FontOnShow || !mEditorFont.has_value())) {
+        setEditorFont(getDisplayFontForSaving());
     }
     mEditorFontFollowsDisplay = follows;
     raiseSettingChangedEvent(qsl("editorFontFollowsDisplay"), follows);
     raiseEditorFontChange();
+}
+
+void Host::setFontsAntiAlias(const bool antiAlias)
+{
+    if (fontsAntiAlias() == antiAlias) {
+        return;
+    }
+    mNoAntiAlias = !antiAlias;
+    // The display font carries the strategy to a following editor. Not refreshEditorFont(): straight
+    // after a load that only records the font, so the first toggle would never reach the editor
+    if (!mEditorFontFollowsDisplay && mEditorFont.has_value()) {
+        raiseEditorFontChange();
+    }
 }
 
 QFont Host::getAndClearTempDisplayFont()

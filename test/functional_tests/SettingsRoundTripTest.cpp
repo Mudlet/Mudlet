@@ -1260,6 +1260,121 @@ private slots:
         QVERIFY2(!pFamily->isEnabled() && !pSize->isEnabled(), "ticking the box again left the editor font open to picking");
         QCOMPARE(pFamily->currentFont().family(), display.family());
         QCOMPARE(pSize->value(), display.pointSize());
+
+        // Unticking it again keeps what the greyed-out controls showed, not the editor's earlier own font
+        applySpy.clear();
+        pFollow->click();
+        QVERIFY2(applyAndWait(applySpy), "unticking the box again never wrote the settings back");
+        QVERIFY(!mpHost->editorFontFollowsDisplay());
+        const QFont left = mpHost->getEditorFont();
+        QVERIFY2(left.family() == display.family() && left.pointSize() == display.pointSize(),
+                 qPrintable(qsl("the editor went back to its earlier own font, %1 %2pt, instead of the font on show, %3 %4pt")
+                                    .arg(left.family())
+                                    .arg(left.pointSize())
+                                    .arg(display.family())
+                                    .arg(display.pointSize())));
+        QCOMPARE(pFamily->currentFont().family(), display.family());
+        QCOMPARE(pSize->value(), display.pointSize());
+#endif
+    }
+
+    // Toggling anti-aliasing raises the editor font change: in the apply while the editor has a font of its own,
+    // and at the click while it follows the display font. Neither may drop an editor font edit waiting on that apply
+    void test_anAntiAliasingToggleInTheSameApplyKeepsTheEditorFontEdits()
+    {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so the bundled \"Ubuntu Mono\" this gives the editor as a font of its own is not in the resources");
+#else
+        QVERIFY(mpHost->editorFontFollowsDisplay());
+        QVERIFY(mpHost->fontsAntiAlias());
+        const QFont display = mpHost->getDisplayFont();
+        // Clicking the anti-alias box rebuilds the display font with the other strategy straight away
+        restoreLater([this, display]() {
+            mpHost->setEditorFontFollowsDisplay(true);
+            mpHost->setFontsAntiAlias(true);
+            mpHost->setDisplayFont(display, Host::DisplayFontChange::UserChoice);
+        });
+        QVERIFY(display.family() != mEditorOwnFamily);
+        const auto editorAntiAliased = [this]() {
+            return !(mpHost->getEditorFont().styleStrategy() & QFont::NoAntialias);
+        };
+
+        openPreferences();
+        QCheckBox* pFollow = mpPreferences->checkBox_editorFontFollowsDisplay;
+        QFontComboBox* pFamily = mpPreferences->fontComboBox_editorFont;
+        QSpinBox* pSize = mpPreferences->spinBox_editorFontSize;
+        QCheckBox* pAntiAlias = mpPreferences->checkBox_antiAlias;
+        QVERIFY(pAntiAlias->isChecked());
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pFollow->click();
+        QVERIFY2(applyAndWait(applySpy), "unticking the box never wrote the settings back");
+        applySpy.clear();
+        pFamily->setCurrentFont(QFont(mEditorOwnFamily));
+        QVERIFY2(applyAndWait(applySpy), "picking a family never wrote the settings back");
+        QVERIFY(!mpHost->editorFontFollowsDisplay());
+        QCOMPARE(mpHost->getEditorFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), display.pointSize());
+        QVERIFY(mpHost->fontsAntiAlias());
+
+        // With a font of its own, the editor hears of anti-aliasing from the apply
+        applySpy.clear();
+        pSize->stepBy(1);
+        pAntiAlias->click();
+        QVERIFY2(applyAndWait(applySpy), "stepping the size and toggling anti-aliasing never wrote the settings back");
+        QVERIFY(!mpHost->editorFontFollowsDisplay());
+        QCOMPARE(mpHost->getEditorFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), display.pointSize() + 1);
+        QVERIFY(!mpHost->fontsAntiAlias());
+        QVERIFY2(!editorAntiAliased(), "the editor font kept anti-aliasing after the size stored in the same apply");
+
+        applySpy.clear();
+        pAntiAlias->click();
+        pSize->stepBy(1);
+        QVERIFY2(applyAndWait(applySpy), "toggling anti-aliasing and stepping the size never wrote the settings back");
+        QVERIFY(!mpHost->editorFontFollowsDisplay());
+        QCOMPARE(mpHost->getEditorFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), display.pointSize() + 2);
+        QVERIFY(mpHost->fontsAntiAlias());
+        QVERIFY2(editorAntiAliased(), "the editor font stayed without anti-aliasing after the size stored in the same apply");
+
+        applySpy.clear();
+        pFamily->setCurrentFont(QFont(Host::scmDefaultFontFamily));
+        pAntiAlias->click();
+        QVERIFY2(applyAndWait(applySpy), "picking a family and toggling anti-aliasing never wrote the settings back");
+        QVERIFY(!mpHost->editorFontFollowsDisplay());
+        QCOMPARE(mpHost->getEditorFont().family(), Host::scmDefaultFontFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), display.pointSize() + 2);
+        QVERIFY2(!editorAntiAliased(), "the editor font kept anti-aliasing after the family stored in the same apply");
+        QVERIFY(!mpHost->fontsAntiAlias());
+
+        applySpy.clear();
+        pFollow->click();
+        pAntiAlias->click();
+        QVERIFY2(applyAndWait(applySpy), "ticking the box and toggling anti-aliasing never wrote the settings back");
+        QVERIFY2(mpHost->editorFontFollowsDisplay(), "toggling anti-aliasing undid ticking the box");
+        QCOMPARE(mpHost->getEditorFont().family(), display.family());
+        QCOMPARE(mpHost->getEditorFont().pointSize(), display.pointSize());
+        QVERIFY(mpHost->fontsAntiAlias());
+
+        // Following the display font, the editor hears of anti-aliasing at the click, ahead of the apply
+        applySpy.clear();
+        pFollow->click();
+        pAntiAlias->click();
+        QVERIFY2(applyAndWait(applySpy), "unticking the box and toggling anti-aliasing never wrote the settings back");
+        QVERIFY2(!mpHost->editorFontFollowsDisplay(), "toggling anti-aliasing undid unticking the box");
+        QCOMPARE(mpHost->getEditorFont().family(), display.family());
+        QCOMPARE(mpHost->getEditorFont().pointSize(), display.pointSize());
+        QVERIFY(!mpHost->fontsAntiAlias());
+        QVERIFY(!pFollow->isChecked());
+        QCOMPARE(pFamily->currentFont().family(), display.family());
+        QCOMPARE(pSize->value(), display.pointSize());
+
+        // The strategy differs while anti-aliasing is off, so only these two are the same font
+        const TFontAttributes displayAfter(mpHost->getDisplayFont());
+        const TFontAttributes displayBefore(display);
+        QCOMPARE(displayAfter.mName, displayBefore.mName);
+        QCOMPARE(displayAfter.mPointSize, displayBefore.mPointSize);
 #endif
     }
 

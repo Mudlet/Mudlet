@@ -3688,6 +3688,11 @@ bool SettingsSnapshot::dirty(const QObject* pControl) const
     return *it != controlValue(pControl);
 }
 
+bool SettingsSnapshot::edited(const QObject* pControl) const
+{
+    return beingTypedInto(pControl) || dirty(pControl);
+}
+
 // For a setting spread over several controls (borders, Discord privacy flags), any one changing triggers the
 // write, still composed per control: a clean control contributes the Host's current value, not what it
 // shows, which a script may have changed since. Members that are separate settings take their own guard.
@@ -3721,8 +3726,7 @@ bool SettingsSnapshot::pendingEdits(const QTimer* pApplyTimer, const QLineEdit* 
         if (pWidget == pSearchField || !carriesValue(pWidget)) {
             continue;
         }
-        // dirty() is false for a field being typed into, exactly the edit that must not be overwritten here
-        if (beingTypedInto(pWidget) || dirty(pWidget)) {
+        if (edited(pWidget)) {
             return true;
         }
     }
@@ -7133,9 +7137,6 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(comboBox_logFileNameFormat)) {
             pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
         }
-        if (mSnapshot.dirty(checkBox_antiAlias)) {
-            pHost->setFontsAntiAlias(checkBox_antiAlias->isChecked());
-        }
         if (mSnapshot.dirty(mAlertOnNewData)) {
             pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
         }
@@ -7238,6 +7239,7 @@ void dlgProfilePreferences::applyAll()
         }
         // Ahead of the switch: a family or size picked straight after unticking it is the font the editor
         // leaves the display font for, and switching first would put the Host's own back into the controls
+        bool ownFontStored = false;
         if (!checkBox_editorFontFollowsDisplay->isChecked() && mSnapshot.anyDirty({fontComboBox_editorFont, spinBox_editorFontSize})) {
             const QFont base = pHost->editorFontBase();
             const QString family = mSnapshot.dirty(fontComboBox_editorFont) ? fontComboBox_editorFont->currentFont().family() : base.family();
@@ -7245,10 +7247,17 @@ void dlgProfilePreferences::applyAll()
             const QFont font = pHost->createFontWithSettings(family, size);
             if (QFontMetrics(font).averageCharWidth() > 0) {
                 pHost->setEditorFont(font);
+                ownFontStored = true;
             }
         }
         if (mSnapshot.dirty(checkBox_editorFontFollowsDisplay)) {
-            pHost->setEditorFontFollowsDisplay(checkBox_editorFontFollowsDisplay->isChecked());
+            // A pick stored above sits on top of the font on show, so the earlier choice keeps it; a refused
+            // pick stored nothing, and the font on show is what the player leaves from
+            pHost->setEditorFontFollowsDisplay(checkBox_editorFontFollowsDisplay->isChecked(), ownFontStored ? Host::EditorFontStart::EarlierChoice : Host::EditorFontStart::FontOnShow);
+        }
+        // Last of the font writes, so what this reports to the editor is the font the apply has just stored
+        if (mSnapshot.dirty(checkBox_antiAlias)) {
+            pHost->setFontsAntiAlias(checkBox_antiAlias->isChecked());
         }
         // Re-theming an open script editor fully reconfigures edbee, so only when one of these changed
         auto* pDialogs = HostDialogs::find(pHost);
@@ -9672,14 +9681,18 @@ void dlgProfilePreferences::slot_displayFontAliasingChanged()
 }
 
 // Writes the controls only, so the caller decides whether the snapshot is to follow
-void dlgProfilePreferences::showEditorFont(const QFont& font)
+void dlgProfilePreferences::showEditorFont(const QFont& font, const bool showFamily, const bool showSize)
 {
     {
         const QSignalBlocker comboBlocker(fontComboBox_editorFont);
         const QSignalBlocker sizeBlocker(spinBox_editorFontSize);
-        fontComboBox_editorFont->setCurrentFont(font);
-        spinBox_editorFontSize->setMaximum(std::max(font.pointSize(), 40));
-        spinBox_editorFontSize->setValue(std::max(1, font.pointSize()));
+        if (showFamily) {
+            fontComboBox_editorFont->setCurrentFont(font);
+        }
+        if (showSize) {
+            spinBox_editorFontSize->setMaximum(std::max(font.pointSize(), 40));
+            spinBox_editorFontSize->setValue(std::max(1, font.pointSize()));
+        }
     }
     reflectEditorFontControls();
 }
@@ -9701,30 +9714,54 @@ void dlgProfilePreferences::reflectEditorFontControls()
     showFontWarnings(font, label_editorFontInvalid, label_editorFontVariableWidth);
 }
 
-// A script, or the display font moving while the editor follows it
+// A script, or the display font moving while the editor follows it. It also fires inside applyAll() and on a click
+// of the anti-alias box, so a control holding an edit keeps it, still dirty, for applyAll() to write
 void dlgProfilePreferences::slot_hostEditorFontChanged(const QFont& font)
 {
     if (mpHost.isNull()) {
         return;
     }
-    {
-        const QSignalBlocker followBlocker(checkBox_editorFontFollowsDisplay);
-        checkBox_editorFontFollowsDisplay->setChecked(mpHost->editorFontFollowsDisplay());
-    }
-    showEditorFont(font);
-    auto config = edbeePreviewWidget->config();
-    config->beginChanges();
-    config->setFont(font);
-    config->endChanges();
-    // As in slot_hostDisplayFontChanged(): not the user's edits
-    for (QWidget* pControl : {static_cast<QWidget*>(checkBox_editorFontFollowsDisplay), static_cast<QWidget*>(fontComboBox_editorFont), static_cast<QWidget*>(spinBox_editorFontSize)}) {
+    // The control, or the line edit inside it, which the snapshot holds apart
+    const auto editPending = [this](const QWidget* pControl) {
+        if (mSnapshot.edited(pControl)) {
+            return true;
+        }
+        for (const auto* pPart : pControl->findChildren<QWidget*>()) {
+            if (SettingsSnapshot::carriesValue(pPart) && mSnapshot.edited(pPart)) {
+                return true;
+            }
+        }
+        return false;
+    };
+    // As in slot_hostDisplayFontChanged(): what is refreshed from the Host is not the user's edit
+    const auto markClean = [this](const QWidget* pControl) {
         mSnapshot.take(pControl);
         for (const auto* pPart : pControl->findChildren<QWidget*>()) {
             if (SettingsSnapshot::carriesValue(pPart)) {
                 mSnapshot.take(pPart);
             }
         }
+    };
+
+    const bool showFollow = !editPending(checkBox_editorFontFollowsDisplay);
+    const bool showFamily = !editPending(fontComboBox_editorFont);
+    const bool showSize = !editPending(spinBox_editorFontSize);
+    if (showFollow) {
+        const QSignalBlocker followBlocker(checkBox_editorFontFollowsDisplay);
+        checkBox_editorFontFollowsDisplay->setChecked(mpHost->editorFontFollowsDisplay());
+        markClean(checkBox_editorFontFollowsDisplay);
     }
+    showEditorFont(font, showFamily, showSize);
+    if (showFamily) {
+        markClean(fontComboBox_editorFont);
+    }
+    if (showSize) {
+        markClean(spinBox_editorFontSize);
+    }
+    auto config = edbeePreviewWidget->config();
+    config->beginChanges();
+    config->setFont(font);
+    config->endChanges();
 }
 
 void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
