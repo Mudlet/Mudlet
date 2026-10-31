@@ -238,8 +238,11 @@ Host* HostManager::openProfile(const QString& name, const bool connect, const st
 }
 
 // The packages the GUI installs into a profile on its first load, for its game
-QStringList HostManager::defaultPackages(const QString& gameUrl, const QString& profileName, const bool serverGuiAccepted)
+QStringList HostManager::defaultPackages(const QString& address, const QString& profileName, const bool serverGuiAccepted)
 {
+    // A catalog game's are chosen for the game, not for another address the player saved for it
+    const auto game = TGameDetails::findGame(profileName);
+    const QString gameUrl = game != TGameDetails::scmDefaultGames.end() ? (*game).hostUrl.toLower() : address;
     QStringList packages;
     const QHash<QString, QStringList> defaultScripts = {
             // clang-format off
