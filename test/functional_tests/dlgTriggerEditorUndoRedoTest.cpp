@@ -2448,10 +2448,40 @@ private slots:
     itemType.showView();
     cleanupAll(itemType);
 
+    // A temporary item sits in the unit's list but not in the tree, so the
+    // group's tree row is not its place in that list
+    TLuaInterpreter *interpreter = mpHost->getLuaInterpreter();
+    int tempID = 0;
+    switch (itemType.viewType) {
+    case EditorViewType::cmTriggerView:
+      tempID = interpreter->startTempTrigger(qsl("pasteOrderTemp"), QString());
+      break;
+    case EditorViewType::cmTimerView:
+      tempID = interpreter->startTempTimer(600, QString()).first;
+      break;
+    case EditorViewType::cmAliasView:
+      tempID = interpreter->startTempAlias(qsl("^pasteOrderTemp$"), QString());
+      break;
+    default:
+      break;
+    }
+    QVERIFY(tempID >= 0);
+
     itemType.addFolder();
     QCOMPARE(itemType.baseItem()->childCount(), 1);
+    const int groupID = itemType.baseItem()->child(0)->data(0, Qt::UserRole).toInt();
+    itemType.treeWidget()->setCurrentItem(nullptr);
+    itemType.addFolder();
+    QCOMPARE(itemType.baseItem()->childCount(), 2);
+    int siblingID = itemType.baseItem()->child(0)->data(0, Qt::UserRole).toInt();
+    if (siblingID == groupID) {
+      siblingID = itemType.baseItem()->child(1)->data(0, Qt::UserRole).toInt();
+    }
+
+    QEnterEvent enterEvent{QPointF(), QPointF(), QPointF()};
+    QApplication::sendEvent(mpEditor, &enterEvent);
     QTreeWidgetItem *group = itemType.baseItem()->child(0);
-    const int groupID = group->data(0, Qt::UserRole).toInt();
+    QCOMPARE(group->data(0, Qt::UserRole).toInt(), groupID);
 
     itemType.treeWidget()->setCurrentItem(group);
     itemType.addItem();
@@ -2469,14 +2499,34 @@ private slots:
     itemType.treeWidget()->setCurrentItem(group);
     mpEditor->slot_pasteXml();
 
-    QEnterEvent enterEvent{QPointF(), QPointF(), QPointF()};
     QApplication::sendEvent(mpEditor, &enterEvent);
-    QCOMPARE(itemType.baseItem()->childCount(), 1 + copied);
+    QCOMPARE(itemType.baseItem()->childCount(), 2 + copied);
     QCOMPARE(itemType.baseItem()->child(0)->data(0, Qt::UserRole).toInt(),
              groupID);
     QCOMPARE(itemType.baseItem()->child(0)->childCount(), 2);
+    for (int row = 1; row <= copied; ++row) {
+      const int pastedID =
+          itemType.baseItem()->child(row)->data(0, Qt::UserRole).toInt();
+      QVERIFY2(pastedID != groupID && pastedID != siblingID,
+               "a pasted item did not land right beneath the group");
+    }
+    QCOMPARE(itemType.baseItem()->child(1 + copied)->data(0, Qt::UserRole).toInt(),
+             siblingID);
 
     cleanupAll(itemType);
+    switch (itemType.viewType) {
+    case EditorViewType::cmTriggerView:
+      mpHost->getTriggerUnit()->killTrigger(QString::number(tempID));
+      break;
+    case EditorViewType::cmTimerView:
+      mpHost->getTimerUnit()->killTimer(QString::number(tempID));
+      break;
+    case EditorViewType::cmAliasView:
+      mpHost->getAliasUnit()->killAlias(QString::number(tempID));
+      break;
+    default:
+      break;
+    }
   }
 
   void testMultiTriggerPasteAfterSibling() {
