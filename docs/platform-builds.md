@@ -232,6 +232,15 @@ tracking default to OFF, the rest to ON.
 This applies only to those seven. Other `WITH_*` names are ordinary options: `WITH_SENTRY` and
 `SENTRY_SEND_DEBUG` are declared with `option()` and are set on the command line as normal.
 
+### Version suffix
+
+`MUDLET_VERSION_BUILD` in the environment sets what follows `APP_VERSION`
+(`cmake/MudletBuildSuffix.cmake`): unset gives `-dev-<commit>`, empty gives a release with no
+suffix, and any other value is followed by `-<commit>`. A distributor labelling their own package
+can set `WITH_COMMIT_IN_VERSION=NO` (or `-DUSE_COMMIT_IN_VERSION=OFF`) to keep the label alone, so
+`MUDLET_VERSION_BUILD=-mylabel` shows as `Mudlet 5.0.1-mylabel`. Mudlet treats any non-empty
+suffix not starting with `-ptb` as a development build either way.
+
 ### MCP server: extra Qt modules
 
 The MCP server is the one optional module that needs Qt modules the rest of Mudlet does not, so it

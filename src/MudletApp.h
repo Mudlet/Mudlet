@@ -224,7 +224,8 @@ public:
 
     // The suffix CMake writes into :/app-build.txt: empty for an official release,
     // otherwise MUDLET_VERSION_BUILD (or "-dev" when it is unset) followed by the
-    // commit - so "-ptb", "-dev" and "-test" are all values seen in practice.
+    // commit, unless a distributor dropped it with WITH_COMMIT_IN_VERSION=NO - so
+    // "-ptb", "-dev" and "-test" are all values seen in practice.
     // Which build that makes it is publicTest() and development()'s answer, not
     // something to read off the suffix.
     static const QString& buildSuffix();
