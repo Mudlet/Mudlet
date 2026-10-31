@@ -755,6 +755,93 @@ private slots:
     QCOMPARE(hints.last(), qsl("Item"));
   }
 
+  // Toggle defaults to true, so it shows that a value that is not a boolean
+  // leaves the default alone, where bold cannot tell that from false.
+  void test_Osc8BooleanForms_data() {
+    QTest::addColumn<QString>("value");
+    QTest::addColumn<bool>("expectedBold");
+    QTest::addColumn<bool>("expectedToggle");
+
+    QTest::newRow("true") << qsl("true") << true << true;
+    QTest::newRow("false") << qsl("false") << false << false;
+    QTest::newRow("string true") << qsl("\"true\"") << true << true;
+    QTest::newRow("string false") << qsl("\"false\"") << false << false;
+    QTest::newRow("string in capitals") << qsl("\"TRUE\"") << true << true;
+    QTest::newRow("string false in capitals") << qsl("\"False\"") << false << false;
+    QTest::newRow("one") << qsl("1") << true << true;
+    QTest::newRow("zero") << qsl("0") << false << false;
+    QTest::newRow("string one") << qsl("\"1\"") << true << true;
+    QTest::newRow("string zero") << qsl("\"0\"") << false << false;
+    QTest::newRow("string with spaces") << qsl("\" true \"") << true << true;
+    QTest::newRow("another number") << qsl("2") << false << true;
+    QTest::newRow("another string") << qsl("\"yes\"") << false << true;
+    QTest::newRow("empty string") << qsl("\"\"") << false << true;
+    QTest::newRow("null") << qsl("null") << false << true;
+  }
+
+  void test_Osc8BooleanForms() {
+    QFETCH(QString, value);
+    QFETCH(bool, expectedBold);
+    QFETCH(bool, expectedToggle);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"bold\":%1},\"selection\":{\"group\":\"booleans\",\"value\":\"x\",\"toggle\":%1}}\x1b\\Link\x1b]8;;\x1b\\").arg(value));
+
+    QVERIFY2(findFirstLinkPositionWithId().has_value(), "the whole link was refused");
+    const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
+    QCOMPARE(styling.isBold, expectedBold);
+    QCOMPARE(styling.selection.toggle, expectedToggle);
+  }
+
+  void test_Osc8LineStyleStringsAndBooleans_data() {
+    QTest::addColumn<QString>("value");
+    QTest::addColumn<bool>("expectedUnderlined");
+    QTest::addColumn<int>("expectedStyle");
+
+    QTest::newRow("string true") << qsl("\"true\"") << true << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+    QTest::newRow("string false") << qsl("\"false\"") << false << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+    QTest::newRow("one") << qsl("1") << true << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+    QTest::newRow("string zero") << qsl("\"0\"") << false << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+    QTest::newRow("another number") << qsl("2") << false << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+    QTest::newRow("a style") << qsl("\"wavy\"") << true << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineWavy);
+    QTest::newRow("another string") << qsl("\"thick\"") << true << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+  }
+
+  void test_Osc8LineStyleStringsAndBooleans() {
+    QFETCH(QString, value);
+    QFETCH(bool, expectedUnderlined);
+    QFETCH(int, expectedStyle);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"underline\":%1}}\x1b\\Link\x1b]8;;\x1b\\").arg(value));
+
+    QVERIFY2(findFirstLinkPositionWithId().has_value(), "the whole link was refused");
+    const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
+    QCOMPARE(styling.isUnderlined, expectedUnderlined);
+    QCOMPARE(static_cast<int>(styling.underlineStyle), expectedStyle);
+  }
+
+  void test_Osc8OverlineAndStrikethroughBooleanForms_data() {
+    QTest::addColumn<QString>("value");
+    QTest::addColumn<bool>("expectedOn");
+
+    QTest::newRow("string true") << qsl("\"true\"") << true;
+    QTest::newRow("string false") << qsl("\"false\"") << false;
+    QTest::newRow("string zero") << qsl("\"0\"") << false;
+    QTest::newRow("zero") << qsl("0") << false;
+    QTest::newRow("a style") << qsl("\"dotted\"") << true;
+  }
+
+  void test_Osc8OverlineAndStrikethroughBooleanForms() {
+    QFETCH(QString, value);
+    QFETCH(bool, expectedOn);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"overline\":%1,\"strikethrough\":%1}}\x1b\\Link\x1b]8;;\x1b\\").arg(value));
+
+    QVERIFY2(findFirstLinkPositionWithId().has_value(), "the whole link was refused");
+    const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
+    QCOMPARE(styling.isOverlined, expectedOn);
+    QCOMPARE(styling.isStrikeOut, expectedOn);
+  }
+
   // A "config" parameter carrying something that is not an object is not a
   // config, so it must not displace a valid one earlier in the same query.
   void test_Osc8ValuelessConfigDoesNotDisplaceAValidOne_data() {
