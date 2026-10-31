@@ -38,6 +38,7 @@ class Discord;
 class FontManager;
 class Host;
 class MudletMedia;
+class MudletReplay;
 class QSettings;
 class TEvent;
 class TSpeechBridge;
@@ -74,6 +75,7 @@ public:
 
     MudletMedia& media() { return *mpMedia; }
     FontManager& fonts() { return *mpFonts; }
+    MudletReplay& replay() { return *mpReplay; }
 
     Host* getHost(const QString& hostname);
     // False for an empty name, one already open, or while the pool is being destroyed
@@ -127,6 +129,8 @@ private:
     std::unique_ptr<MudletMedia> mpMedia;
     // Before mHostPool too, as the profiles reach it through FontManager::self()
     std::unique_ptr<FontManager> mpFonts;
+    // Before mHostPool too, as the profiles reach it through MudletReplay::self(); a second pool's goes unused
+    std::unique_ptr<MudletReplay> mpReplay;
     // Before mHostPool too, as the profiles reach it through Discord::self(); a second pool's goes unused
     std::unique_ptr<Discord> mpDiscord;
     // Before mHostPool too, as the profiles reach it through TSpeechBridge::instance(); a second pool's goes unused

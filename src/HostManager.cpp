@@ -27,6 +27,7 @@
 #include "Host.h"
 #include "MudletApp.h"
 #include "MudletMedia.h"
+#include "MudletReplay.h"
 #include "discord.h"
 #include "TAppFrontend.h"
 #include "TGameDetails.h"
@@ -84,6 +85,7 @@ bool HostManager::releasingProfile()
 HostManager::HostManager(const ConfigRoot configRoot)
 : mpMedia(std::make_unique<MudletMedia>())
 , mpFonts(std::make_unique<FontManager>())
+, mpReplay(std::make_unique<MudletReplay>())
 , mpDiscord(std::make_unique<Discord>())
 , mpSpeechBridge(std::make_unique<TSpeechBridge>())
 {
