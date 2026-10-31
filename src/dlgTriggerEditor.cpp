@@ -982,6 +982,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     frame_left->addAction(mAddGroup);
     connect(mAddGroup, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewGroup);
 
+    // A grab leaves focus on its button, outside frame_left, and the next key is often added straight after
+    mpKeysMainArea->pushButton_key_grabKey->addAction(mAddItem);
+    mpKeysMainArea->pushButton_key_grabKey->addAction(mAddGroup);
+
     // 'Save Item' does not see to be translated as it is only ever used programmatically and not visible to the player
     // PLACEMARKER 1/3 save button texts need to be kept in sync
     mSaveItem = new QAction(QIcon(qsl(":/icons/document-save-as.png")), qsl("Save Item"), this);

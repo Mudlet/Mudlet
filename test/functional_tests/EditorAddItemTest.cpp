@@ -27,6 +27,7 @@
 #include <QTemporaryDir>
 #include <QToolBar>
 #include <QTreeWidget>
+#include <QTreeWidgetItemIterator>
 #include <QtTest/QtTest>
 #include <algorithm>
 #include <chrono>
@@ -420,6 +421,41 @@ private slots:
         mpEditor->slot_keyGrab();
         QTest::keyClick(mpEditor, Qt::Key_Escape);
         QCOMPARE(mpEditor->mAddItem->shortcut(), QKeySequence(QKeySequence::New));
+    }
+
+    // The steps from #7812, by keyboard only: a grab leaves focus on the grab
+    // button, outside the tree that Ctrl+N is scoped to
+    void test_ctrlNAddsAnotherKeyStraightAfterGrabbingOne()
+    {
+        // counts rows, not "New key"s: adding the second key saves the first under its binding's name
+        auto countKeys = [this]() {
+            int count = 0;
+            for (QTreeWidgetItemIterator it(mpEditor->treeWidget_keys); *it; ++it) {
+                ++count;
+            }
+            return count;
+        };
+        mpEditor->activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(mpEditor));
+        mpEditor->slot_showKeys();
+        mpEditor->treeWidget_keys->setCurrentItem(mpEditor->mpKeyBaseItem);
+        QTRY_VERIFY(mpEditor->treeWidget_keys->hasFocus());
+        const int before = countKeys();
+
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_N, Qt::ControlModifier);
+        QCOMPARE(countKeys(), before + 1);
+
+        auto* pGrab = mpEditor->mpKeysMainArea->pushButton_key_grabKey;
+        pGrab->setFocus(Qt::TabFocusReason);
+        QTRY_VERIFY(pGrab->hasFocus());
+        QTest::keyClick(pGrab, Qt::Key_Space);
+        QVERIFY2(mpEditor->mIsGrabKey, "pressing the grab button did not start a grab");
+        QTest::keyClick(pGrab, Qt::Key_F10);
+        QVERIFY2(!mpEditor->mIsGrabKey, "the key press did not end the grab");
+        QCOMPARE(mpEditor->mpKeysMainArea->lineEdit_key_binding->text(), qsl("F10"));
+
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_N, Qt::ControlModifier);
+        QVERIFY2(countKeys() == before + 2, "Ctrl+N straight after grabbing a key did not add another key");
     }
 };
 
