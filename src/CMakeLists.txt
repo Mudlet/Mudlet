@@ -102,7 +102,6 @@ set(mudlet_SRCS
     TEncodingTable.cpp
     TEntityHandler.cpp
     TEntityResolver.cpp
-    TForkedProcess.cpp
     TGlyphCache.cpp
     THyperlinkCompactManager.cpp
     THyperlinkSelectionManager.cpp
@@ -414,7 +413,6 @@ set(mudlet_HDRS
     TEntityHandler.h
     TEntityResolver.h
     TEvent.h
-    TForkedProcess.h
     TGameDetails.h
     TGlyphCache.h
     THyperlinkCompactManager.h
@@ -646,6 +644,11 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_app_HDRS glwidget_integration.h)
   list(APPEND mudlet_app_SRCS glwidget_integration.cpp)
 endif(USE_3DMAPPER)
+
+if(USE_SPAWN)
+  list(APPEND mudlet_SRCS TForkedProcess.cpp)
+  list(APPEND mudlet_HDRS TForkedProcess.h)
+endif()
 
 if(USE_MCPSERVER)
   list(APPEND mudlet_SRCS TMCPBridge.cpp)
@@ -1017,6 +1020,10 @@ endif()
 
 if(USE_MCPSERVER)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_MCPSERVER)
+endif()
+
+if(USE_SPAWN)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_SPAWN)
 endif()
 
 if(USE_VARIABLE_SPLASH_SCREEN)

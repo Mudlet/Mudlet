@@ -259,6 +259,17 @@ cmake --preset linux-debug -DUSE_MCPSERVER=OFF
 `WITH_MCPSERVER=NO` in the environment does the same for a fresh build tree. The sources and the
 `TMCPServerTest` / `TMCPBridgeTest` ctest cases are then simply not built.
 
+### Leaving out what a mobile build cannot use
+
+These options default to ON and are declared through `include_optional_module` like the modules
+above, so turn one off with `-DUSE_SPAWN=OFF` or `WITH_SPAWN=NO` in the environment, never
+`-DWITH_SPAWN=NO`. Each leaves out something an Android or iOS build of `mudlet_core` cannot use
+(#9011); `mudlet-headless` is the reference frontend for a build without them.
+
+| Option | Turning it off removes | What scripts see |
+| --- | --- | --- |
+| `USE_SPAWN` | `TForkedProcess`, the `QProcess` behind `spawn()` | `spawn()` raises an error, as when a process fails to start |
+
 ## Debugging options
 
 `src/CMakeLists.txt` contains commented debugging defines for development (search "Debugging code inclusions"):
