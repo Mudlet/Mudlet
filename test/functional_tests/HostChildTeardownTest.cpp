@@ -196,6 +196,7 @@ private:
 
     OpenWindows mWindowsLeftOpenAtTheEnd;
     bool mLeftOpenProfileWasSetUp = false;
+    bool mLeftOpenConsoleOutlivedItsHost = false;
     const QString mProfileLeftOpenAtTheEnd = qsl("HostChildTeardown-LeftOpen");
 
 private slots:
@@ -267,6 +268,7 @@ private slots:
             // them either way.
             const QStringList leftBehind = windowsLeftBehind(mWindowsLeftOpenAtTheEnd);
             QVERIFY2(leftBehind.isEmpty(), qPrintable(qsl("Destroying the main window left %1 of the profile that was still loaded behind").arg(leftBehind.join(qsl(" and ")))));
+            QVERIFY2(!mLeftOpenConsoleOutlivedItsHost, "Destroying the main window took the Host of the profile still loaded before its main console");
 
             QDir(leftOpenProfilePath).removeRecursively();
         }
@@ -561,6 +563,9 @@ private slots:
 
         mWindowsLeftOpenAtTheEnd = openEveryChildWindow(pHost);
         QVERIFY2(everyWindowWasOpened(mWindowsLeftOpenAtTheEnd), "Not all of the profile's windows were opened");
+        connect(pHost, &QObject::destroyed, this, [this, pConsole = QPointer<TMainConsole>(pHost->mainConsoleView())]() {
+            mLeftOpenConsoleOutlivedItsHost = !pConsole.isNull();
+        });
         mLeftOpenProfileWasSetUp = true;
     }
 };
