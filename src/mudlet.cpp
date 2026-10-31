@@ -45,10 +45,10 @@
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TFeatureCallout.h"
-#include "TKey.h"
 #include "TLabelModel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TNullAppFrontend.h"
 #ifdef INCLUDE_MCPSERVER
 #include "TMCPBridge.h"
 #include "TMCPServer.h"
@@ -347,8 +347,7 @@ QMenu* mudlet::addonMenuForPath(QMainWindow* pContainer, const QString& menuPath
             if (placement == AddonPlacement::Moving) {
                 continue;
             }
-            //: Refusal shown to a package, %1 is one part of the menu path it asked for
-            error = tr("\"%1\" is already a command in this menu, so it cannot also be a submenu").arg(part);
+            error = TNullAppFrontend::addonSubmenuRefusal(part);
             return nullptr;
         }
         if (!submenu) {
@@ -397,73 +396,11 @@ QString mudlet::addonPlainLabel(const QString& label)
     return plain;
 }
 
-// QKeySequencePrivate::MaxKeyCount, which Qt does not publish
-static constexpr int addonMaximumSequenceChunks = 4;
-
-// Qt stops parsing at that many chunks and keeps what it has, so a longer
-// sequence comes back as a shorter one nobody asked for and fires on a prefix
-// of it. Counting the separating commas the way Qt does catches that before the
-// truncated sequence is handed out. Anything at or under the cap is left to Qt,
-// which has the rest of the syntax.
-//
-// A comma separates, with two exceptions Qt makes so that the comma key itself
-// can be named: a trailing one is that key, and where two run together the
-// first is the key and the second separates. A comma after a '+' is NOT one of
-// those exceptions - "Ctrl++,A" is the plus key then A, two chunks. Qt then
-// steps over one space, and stops if that was the end of the string, so a
-// sequence written "Ctrl+A, Ctrl+B, " is two steps rather than a third of
-// nothing.
-static int addonSequenceChunkCount(const QString& text)
-{
-    int chunks = 1;
-    for (int index = 0; index < text.size(); ++index) {
-        if (text.at(index) != QLatin1Char(',')) {
-            continue;
-        }
-        if (index == text.size() - 1) {
-            continue;
-        }
-        if (text.at(index + 1) == QLatin1Char(',')) {
-            ++index;
-            if (index == text.size() - 1) {
-                continue;
-            }
-        }
-        if (text.at(index + 1) == QLatin1Char(' ')) {
-            ++index;
-            if (index == text.size() - 1) {
-                continue;
-            }
-        }
-        ++chunks;
-    }
-    return chunks;
-}
-
-// A key sequence Qt could not parse holds Key_unknown rather than nothing, so
-// a typo passes an isEmpty() test, shows a blank shortcut column and never
-// fires. One already spoken for is worse than useless: Qt disables both, and
+// A sequence already spoken for is worse than useless: Qt disables both, and
 // the "Ambiguous shortcut overload" warning goes to a console that release
 // builds do not have.
 bool mudlet::addonShortcutUsable(const QKeySequence& sequence, const Host* pHost, QString& error) const
 {
-    if (sequence.isEmpty()) {
-        //: Refusal shown to a package that asked for a keyboard shortcut Qt could not make sense of
-        error = tr("that is not a key sequence Qt understands");
-        return false;
-    }
-    // Key_unknown can sit in any chunk of a multi-step sequence, not just the
-    // first: "Ctrl+K, Ctrl+Shft+B" parses to a two-chunk sequence whose second
-    // chunk is unknown, which Qt then renders as a trailing comma and never
-    // matches.
-    for (int i = 0; i < sequence.count(); ++i) {
-        if (sequence[i].key() == Qt::Key_unknown) {
-            //: Refusal shown to a package that asked for a keyboard shortcut Qt could not make sense of
-            error = tr("that is not a key sequence Qt understands");
-            return false;
-        }
-    }
-
     // Mudlet's own sequences are the authority here rather than whatever is
     // currently wired up, because where they live moves: the profile tab keys
     // have no menu counterpart and are always plain QShortcuts, and hiding the
@@ -477,8 +414,7 @@ bool mudlet::addonShortcutUsable(const QKeySequence& sequence, const Host* pHost
             const QString key = keys.next();
             const QKeySequence* pMudletSequence = mpShortcutsManager->getSequence(key);
             if (pMudletSequence && !pMudletSequence->isEmpty() && *pMudletSequence == sequence) {
-                //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" and %2 the name of whatever already uses it
-                error = tr("%1 is already taken by \"%2\"").arg(sequence.toString(QKeySequence::NativeText), mpShortcutsManager->getLabel(key));
+                error = TNullAppFrontend::addonShortcutTakenRefusal(sequence, mpShortcutsManager->getLabel(key));
                 return false;
             }
         }
@@ -508,16 +444,14 @@ bool mudlet::addonShortcutUsable(const QKeySequence& sequence, const Host* pHost
         // alternative leaks a label out of a profile the caller cannot see.
         const Host* pOwner = addonCommandOwning(action);
         if (pOwner && pOwner != pHost) {
-            //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" that a command belonging to a different profile already uses
-            error = tr("%1 is already taken by a command from another profile").arg(sequence.toString(QKeySequence::NativeText));
+            error = TNullAppFrontend::addonShortcutTakenElsewhereRefusal(sequence);
             return false;
         }
         // The label as the player reads it: an addon command's text carries
         // the doubled ampersand that makes Qt draw one, and Mudlet's own
         // actions carry the single marker that names their access key.
         // Quoting either hands a package a label it cannot find on screen.
-        //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" and %2 the name of whatever already uses it
-        error = tr("%1 is already taken by \"%2\"").arg(sequence.toString(QKeySequence::NativeText), addonPlainLabel(action->text()));
+        error = TNullAppFrontend::addonShortcutTakenRefusal(sequence, addonPlainLabel(action->text()));
         return false;
     }
 
@@ -549,30 +483,10 @@ bool mudlet::addonShortcutUsable(const QKeySequence& sequence, const Host* pHost
         return false;
     }
 
-    // The profile's own key bindings are the one holder none of the scans above
-    // can see: they live in the KeyUnit and are matched from the command line's
-    // key handling rather than by Qt, so a menu item placed over one takes the
-    // key away silently - the item gets the event first and the binding simply
-    // stops firing. Only a single-chunk sequence can clash, as a binding is one
-    // key and its modifiers. A switched off binding counts: enableKey() checks
-    // for no commands, and scripts commonly switch groups of bindings on and off.
-    if (pHost && sequence.count() == 1) {
-        const QKeyCombination combination = sequence[0];
-        if (const TKey* pKey = pHost->getKeyUnit()->firstBinding(combination.key(), combination.keyboardModifiers())) {
-            // A temporary binding is named after its own id and one made in the
-            // editor need never have been given a name, so there is nothing
-            // worth quoting: saying what holds the key beats quoting a label
-            // the player cannot find.
-            const QString name = pKey->isTemporary() ? QString() : pKey->getName();
-            if (name.isEmpty()) {
-                //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" that one of the profile's own key bindings already uses
-                error = tr("%1 is already taken by a key binding in this profile").arg(sequence.toString(QKeySequence::NativeText));
-            } else {
-                //: Refusal shown to a package, %1 is a keyboard shortcut such as "Ctrl+K" and %2 the name of the profile's key binding that already uses it
-                error = tr("%1 is already taken by the \"%2\" key binding").arg(sequence.toString(QKeySequence::NativeText), name);
-            }
-            return false;
-        }
+    // The profile's own key bindings are the one holder none of the scans above can see
+    error = TNullAppFrontend::addonKeyBindingRefusal(sequence, pHost);
+    if (!error.isEmpty()) {
+        return false;
     }
     return true;
 }
@@ -618,22 +532,9 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, const QS
     const bool wantsToolbar = request.surfaces != CommandSurface::Menu;
     const bool wantsMenu = request.surfaces != CommandSurface::Toolbar;
 
-    // A toolbar button has nowhere to show a menu path or hang a shortcut, so
-    // a package that supplied either has misunderstood where its command is
-    // going. That is a mistake in the request rather than in this client's
-    // layout, so it is answered before anything about what is on screen - the
-    // package gets the same reason whatever the player's bars are doing.
-    if (!wantsMenu) {
-        if (!request.menuPath.isEmpty()) {
-            //: Refusal shown to a package that gave a menu path for a command it also asked to keep off the menu. Leave surfaces and toolbar as they are, they are the names a package writes in its own code
-            error = tr("a menu path needs a menu item to go in, so it cannot be used with surfaces = \"toolbar\"");
-            return -1;
-        }
-        if (!request.shortcut.isEmpty()) {
-            //: Refusal shown to a package that asked for a keyboard shortcut on a command it also asked to keep off the menu. Leave surfaces and toolbar as they are, they are the names a package writes in its own code
-            error = tr("a shortcut needs a menu item to hang on, so it cannot be used with surfaces = \"toolbar\"");
-            return -1;
-        }
+    error = TNullAppFrontend::addonRequestRefusal(request);
+    if (!error.isEmpty()) {
+        return -1;
     }
 
     // A command is only placeable if at least one surface it asks for is
@@ -672,9 +573,8 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, const QS
             error = tr("the menu bar is hidden, so a shortcut would never fire - turn it on in Preferences -> General");
             return -1;
         }
-        if (addonSequenceChunkCount(request.shortcut) > addonMaximumSequenceChunks) {
-            //: Refusal shown to a package that asked for a keyboard shortcut of more steps than Qt can hold, %n is that limit as a number
-            error = tr("a key sequence can be %n step(s) long at most", "", addonMaximumSequenceChunks);
+        error = TNullAppFrontend::addonShortcutRefusal(request.shortcut);
+        if (!error.isEmpty()) {
             return -1;
         }
         shortcut = QKeySequence(request.shortcut);
@@ -700,8 +600,7 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, const QS
         // sharing a label is fine, and stays fine; ids are the identity.
         for (const QAction* existing : targetMenu->actions()) {
             if (existing->menu() && existing->text() == addonLabel(request.name) && mAddonChrome[pContainer].submenuOwners.value(existing->menu()) == pHost) {
-                //: Refusal shown to a package, %1 is the name it gave its command
-                error = tr("\"%1\" is already a submenu here, so a command cannot take that label too").arg(request.name);
+                error = TNullAppFrontend::addonLabelRefusal(request.name);
                 return -1;
             }
         }
@@ -1381,25 +1280,12 @@ bool mudlet::setAddonCommandPulse(int commandId, bool enabled, const QString& co
     }
 
     AddonCommand& command = mAddonCommands[commandId];
-    if (!command.button) {
-        //: Refusal shown to a package that asked to flash a command placed on the menu only, where there is no button to colour
-        error = tr("that command is not on the toolbar, and a pulse has nothing to colour without a button");
+    error = TNullAppFrontend::addonPulseRefusal(!command.button.isNull(), enabled, color1, color2);
+    if (!error.isEmpty()) {
         return false;
     }
 
     if (enabled) {
-        // Both colours go into a stylesheet verbatim, so an unparseable one is
-        // refused rather than dropped by Qt: a dropped background-color leaves
-        // the border-radius half of the rule and paints the button black, and a
-        // value carrying its own ';' would append declarations of its choosing.
-        for (const QString& colour : {color1, color2}) {
-            if (!QColor::isValidColorName(colour)) {
-                //: Refusal shown to a package, %1 is the colour name or code it supplied
-                error = tr("\"%1\" is not a colour Qt recognises").arg(colour);
-                return false;
-            }
-        }
-
         command.pulseColor1 = color1;
         command.pulseColor2 = color2;
         command.pulseState = true;

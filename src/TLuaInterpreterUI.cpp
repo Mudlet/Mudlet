@@ -5252,10 +5252,6 @@ int TLuaInterpreter::removeCommand(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->removeAddonCommand(commandId, &host));
     return 1;
@@ -5268,10 +5264,6 @@ int TLuaInterpreter::enableCommand(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandEnabled(commandId, true, &host));
     return 1;
@@ -5284,10 +5276,6 @@ int TLuaInterpreter::disableCommand(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandEnabled(commandId, false, &host));
     return 1;
@@ -5301,10 +5289,6 @@ int TLuaInterpreter::setCommandChecked(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandChecked(commandId, checked, &host));
     return 1;
@@ -5318,10 +5302,6 @@ int TLuaInterpreter::setCommandPinned(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandPinned(commandId, pinned, &host));
     return 1;
@@ -5335,10 +5315,6 @@ int TLuaInterpreter::setCommandIcon(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandIcon(commandId, icon, &host));
     return 1;
@@ -5352,10 +5328,6 @@ int TLuaInterpreter::setCommandTooltip(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandTooltip(commandId, tooltip, &host));
     return 1;
