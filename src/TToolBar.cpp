@@ -111,6 +111,11 @@ void TToolBar::slot_topLevelChanged(bool topLevel)
     }
 }
 
+Host* TToolBar::getHost() const
+{
+    return mpHost;
+}
+
 void TToolBar::addButton(TFlipButton* pB)
 {
     if (!mpTAction->mUseCustomLayout) {
