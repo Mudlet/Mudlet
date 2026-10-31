@@ -265,9 +265,10 @@ public:
         mCalls << call("openWebPage", {path});
         return true;
     }
-    void showNotification(const QString& title, const QString& text, std::optional<int> expiryMs) override
+    bool showNotification(const QString& title, const QString& text, std::optional<int> expiryMs) override
     {
         mCalls << call("showNotification", {title, text, expiryMs ? QString::number(*expiryMs) : qsl("none")});
+        return true;
     }
     int profileTabIndex(const QString& name) const override
     {

@@ -1046,6 +1046,7 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
     Host& host = getHostFromLua(L);
 
     bool errorPushed = false;
+    bool noVideoOutput = false;
     {
         TMediaData mediaData{};
 
@@ -1166,6 +1167,8 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
             if (mediaData.mediaFileName().isEmpty()) {
                 lua_pushstring(L, R"(playVideoFile: missing name (add name = "file to play"))");
                 errorPushed = true;
+            } else if (!host.mpMedia->canShowVideo()) {
+                noVideoOutput = true;
             } else {
                 mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
                 mediaData.setMediaType(TMediaData::MediaTypeVideo);
@@ -1176,6 +1179,9 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
 
     if (errorPushed) {
         return lua_error(L);
+    }
+    if (noVideoOutput) {
+        return warnArgumentValue(L, func, "the profile has no main window");
     }
 
     lua_pushboolean(L, true);

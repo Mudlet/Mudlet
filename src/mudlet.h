@@ -246,7 +246,11 @@ public:
     void setShowTabConnectionIndicators(const bool) override;
     int profileTabIndex(const QString& profileName) const override;
     void setActiveProfileTab(const QString& profileName) override;
-    void resizeMainWindow(int width, int height) override { resize(width, height); }
+    bool resizeMainWindow(int width, int height) override
+    {
+        resize(width, height);
+        return true;
+    }
     void setupPreInstallPackages(const QString&, const QString&, const bool);
     void setToolBarIconSize(int);
     void setToolBarVisibility(enums::controlsVisibility);
@@ -256,7 +260,7 @@ public:
     void setCompactInputLineChecked(Host* pHost, bool checked) override;
     bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const override { return mShowTabConnectionIndicators; }
-    void showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
+    bool showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
     void setDrawUpperLowerLevels(bool draw) override;
     // Addon toolbar button management

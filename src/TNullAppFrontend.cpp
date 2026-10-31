@@ -549,6 +549,17 @@ std::optional<QSize> TNullAppFrontend::getImageSize(const QString& imageLocation
     return TLabelModel::imageSize(imageLocation);
 }
 
+Host* TNullAppFrontend::getActiveHost()
+{
+    return mpActiveHost.data();
+}
+
+void TNullAppFrontend::setActiveProfileTab(const QString& profileName)
+{
+    HostManager* pool = HostManager::self();
+    mpActiveHost = pool ? pool->getHost(profileName) : nullptr;
+}
+
 bool TNullAppFrontend::openProfile(const QString& profileName, const bool connect)
 {
     HostManager* pool = HostManager::self();

@@ -4421,7 +4421,7 @@ void mudlet::setCompactInputLineChecked(Host* pHost, bool checked)
     }
 }
 
-void mudlet::showNotification(const QString& title, const QString& text, std::optional<int> msecs)
+bool mudlet::showNotification(const QString& title, const QString& text, std::optional<int> msecs)
 {
     mTrayIcon.show();
     if (msecs.has_value()) {
@@ -4430,6 +4430,7 @@ void mudlet::showNotification(const QString& title, const QString& text, std::op
         mTrayIcon.showMessage(title, text, mTrayIcon.icon());
     }
     mTrayIcon.hide();
+    return true;
 }
 
 // Received when the OS/DE/WM tells Mudlet to close (or we force the close
