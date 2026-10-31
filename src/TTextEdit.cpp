@@ -215,6 +215,7 @@ void TTextEdit::markLinesDirty(const int firstLine, const int lastLine)
     if (firstLine < 0 || lastLine < firstLine) {
         return;
     }
+    followTrimsWithDirtyLines();
     mDirtyFirstLine = (mDirtyFirstLine < 0) ? firstLine : std::min(mDirtyFirstLine, firstLine);
     mDirtyLastLine = (mDirtyLastLine < 0) ? lastLine : std::max(mDirtyLastLine, lastLine);
 
@@ -234,6 +235,24 @@ void TTextEdit::markLinesDirty(const int firstLine, const int lastLine)
         return;
     }
     scheduleUpdate(QRect(0, top * mFontHeight, width(), (bottom - top + 1) * mFontHeight));
+}
+
+// A trim renumbers the lines still pending a repaint along with all the rest
+void TTextEdit::followTrimsWithDirtyLines()
+{
+    const qint64 linesTrimmed = mpBuffer->linesTrimmedTotal();
+    const qint64 trimmedSince = linesTrimmed - mDirtyLinesTrimmedAt;
+    mDirtyLinesTrimmedAt = linesTrimmed;
+    if (trimmedSince <= 0 || mDirtyFirstLine < 0) {
+        return;
+    }
+    if (mDirtyLastLine < trimmedSince) {
+        mDirtyFirstLine = -1;
+        mDirtyLastLine = -1;
+        return;
+    }
+    mDirtyFirstLine = static_cast<int>(std::max<qint64>(0, mDirtyFirstLine - trimmedSince));
+    mDirtyLastLine = static_cast<int>(mDirtyLastLine - trimmedSince);
 }
 
 void TTextEdit::needUpdate(int y1, int y2)
@@ -1415,11 +1434,16 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 
     int lineOffset = imageTopLine();
     int from = 0;
+    // A trim renumbers every line, so a full buffer taking in exactly as many
+    // lines as it dropped keeps the same offset while its text moves up.
+    const qint64 linesTrimmed = mpBuffer->linesTrimmedTotal();
+    const qint64 lastRenderedOffset = mLastRenderedOffset - (linesTrimmed - mLinesTrimmedAtRender);
+    followTrimsWithDirtyLines();
 
     // A scroll moves every row, and a retired cache has no row worth keeping, so
     // the region handed to us is then a floor and not a ceiling: taken as a
     // ceiling it redraws only the rows named in it and leaves the rest stale.
-    const bool scrolledSinceLastPaint = (lineOffset != mLastRenderedOffset);
+    const bool scrolledSinceLastPaint = (lineOffset != lastRenderedOffset);
     if (scrolledSinceLastPaint || cacheRetired) {
         y_bottom = mScreenHeight;
     }
@@ -1428,7 +1452,8 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         mScrollVector = 0;
     } else {
         if (mLastRenderedOffset) {
-            mScrollVector = lineOffset - mLastRenderedOffset;
+            // A pane left hidden can fall more trims behind than an int holds
+            mScrollVector = static_cast<int>(std::min<qint64>(lineOffset - lastRenderedOffset, std::numeric_limits<int>::max()));
         } else {
             mScrollVector = y_bottom + lineOffset;
         }
@@ -1662,6 +1687,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     }
     mScrollVector = 0;
     mLastRenderedOffset = lineOffset;
+    mLinesTrimmedAtRender = linesTrimmed;
     mForceUpdate = false;
     if (!noCopy) {
         // noCopy left the cache untouched, so the change has not been preserved
