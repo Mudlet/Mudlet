@@ -224,8 +224,10 @@ splash screen. Each has a
 `USE_*` option and a `WITH_*` name, and they are **not** interchangeable — `cmake/IncludeOptionalModule.cmake`
 reads the `WITH_*` name from the **environment** only. So `-DWITH_UPDATER=NO` on the command line is
 accepted by CMake and silently ignored; use `-DUSE_UPDATER=OFF`, or set `WITH_UPDATER=NO` in the
-environment. Note that the MCP server, shader hot-reloading and memory tracking default to OFF, the
-rest to ON.
+environment. A `USE_*` value already in the cache - from `-D` or an earlier configure of the same
+build tree - takes precedence over the `WITH_*` environment variable, so changing the environment
+of an existing build tree has no effect; pass `-DUSE_*` instead. Shader hot-reloading and memory
+tracking default to OFF, the rest to ON.
 
 This applies only to those seven. Other `WITH_*` names are ordinary options: `WITH_SENTRY` and
 `SENTRY_SEND_DEBUG` are declared with `option()` and are set on the command line as normal.
@@ -235,8 +237,8 @@ This applies only to those seven. Other `WITH_*` names are ordinary options: `WI
 The MCP server is the one optional module that needs Qt modules the rest of Mudlet does not, so it
 is the one that fails at configure time rather than silently doing nothing when they are missing:
 `src/CMakeLists.txt` does `find_package(Qt6 COMPONENTS HttpServer REQUIRED)` only under
-`USE_MCPSERVER`. Qt HttpServer in turn pulls in Qt WebSockets, and distributions package the two
-separately, so install both:
+`USE_MCPSERVER`, which is on by default. Qt HttpServer in turn pulls in Qt WebSockets, and
+distributions package the two separately, so install both:
 
 | Environment | Packages |
 | --- | --- |
@@ -245,17 +247,17 @@ separately, so install both:
 | Fedora | `qt6-qthttpserver-devel` `qt6-qtwebsockets-devel` |
 | MSYS2 (CLANG64) | `${MINGW_PACKAGE_PREFIX}-qt6-httpserver` `${MINGW_PACKAGE_PREFIX}-qt6-websockets` — `CI/setup-windows-sdk.sh` installs both |
 | macOS (Homebrew) | included in the `qt` formula, nothing extra to install |
+| Flatpak (KDE runtime) | the runtime has Qt WebSockets; `CI/org.mudlet.mudlet.yml` builds Qt HttpServer from source |
 | aqtinstall (what CI uses) | `-m qthttpserver qtwebsockets` alongside the existing modules |
 
-Then build with the module on — remembering that the `WITH_*` name is read from the environment:
+To build without it, and so without either package, turn it off:
 
 ```bash
-WITH_MCPSERVER=ON cmake --preset linux-debug
+cmake --preset linux-debug -DUSE_MCPSERVER=OFF
 ```
 
-`-DUSE_MCPSERVER=ON` on the command line works too. Leaving it off is the default and needs
-neither package; the sources and the `TMCPServerTest` / `TMCPBridgeTest` ctest cases are simply
-not built.
+`WITH_MCPSERVER=NO` in the environment does the same for a fresh build tree. The sources and the
+`TMCPServerTest` / `TMCPBridgeTest` ctest cases are then simply not built.
 
 ## Debugging options
 
