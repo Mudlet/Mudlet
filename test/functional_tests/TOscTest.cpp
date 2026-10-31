@@ -786,6 +786,7 @@ private slots:
 
     injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"bold\":%1},\"selection\":{\"group\":\"booleans\",\"value\":\"x\",\"toggle\":%1}}\x1b\\Link\x1b]8;;\x1b\\").arg(value));
 
+    QVERIFY2(findFirstLinkPositionWithId().has_value(), "the whole link was refused");
     const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
     QCOMPARE(styling.isBold, expectedBold);
     QCOMPARE(styling.selection.toggle, expectedToggle);
@@ -812,6 +813,7 @@ private slots:
 
     injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"underline\":%1}}\x1b\\Link\x1b]8;;\x1b\\").arg(value));
 
+    QVERIFY2(findFirstLinkPositionWithId().has_value(), "the whole link was refused");
     const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
     QCOMPARE(styling.isUnderlined, expectedUnderlined);
     QCOMPARE(static_cast<int>(styling.underlineStyle), expectedStyle);
@@ -834,6 +836,7 @@ private slots:
 
     injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"overline\":%1,\"strikethrough\":%1}}\x1b\\Link\x1b]8;;\x1b\\").arg(value));
 
+    QVERIFY2(findFirstLinkPositionWithId().has_value(), "the whole link was refused");
     const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
     QCOMPARE(styling.isOverlined, expectedOn);
     QCOMPARE(styling.isStrikeOut, expectedOn);
