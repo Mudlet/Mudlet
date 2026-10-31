@@ -19,6 +19,9 @@
 
 #include <QtTest/QtTest>
 
+#include <QClipboard>
+#include <QLineEdit>
+
 #include <algorithm>
 #include <utility>
 
@@ -34,6 +37,7 @@
 #include "TDebugFilterBar.h"
 #include "TLuaInterpreter.h"
 #include "TTabBar.h"
+#include "TTextEdit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -908,6 +912,39 @@ private slots:
         QVERIFY2(console->rect().contains(findBar->geometry()), "Resizing the console left the find bar outside it");
         const QPoint middle = findBar->geometry().center();
         QVERIFY2(middle.x() > console->width() / 2 && middle.y() > console->height() / 2, "The find bar did not follow the corner it hangs off");
+    }
+
+    // #604: the console has no command line to copy for it, so clicking into
+    // the text has to take the focus from wherever it was, here the filter
+    // bar's text box, for Ctrl+C to reach the console at all.
+    void test_ctrlCCopiesTheSelectedText()
+    {
+        startDebuggingProfile();
+        auto* console = mudlet::smpDebugConsole.data();
+        const QString sentinel = qsl("qzxdebugcopyline");
+        console->print(qsl("%1\n").arg(sentinel));
+
+        mudlet::smpDebugArea->show();
+        mudlet::smpDebugArea->activateWindow();
+        QVERIFY2(QTest::qWaitForWindowActive(mudlet::smpDebugArea), "the debug window never became active");
+        auto* textFilter = mudlet::smpDebugFilterBar->findChild<QLineEdit*>();
+        QVERIFY2(textFilter, "the filter bar has no text box to start with the focus");
+        textFilter->setFocus();
+        QTRY_VERIFY2(textFilter->hasFocus(), "the filter bar's text box would not take the focus");
+
+        QClipboard* clipboard = QApplication::clipboard();
+        QVERIFY(clipboard);
+        clipboard->setText(qsl("nothing has been copied yet"));
+
+        QTest::mouseClick(console->mUpperPane, Qt::LeftButton, Qt::NoModifier, console->mUpperPane->rect().center());
+        console->mUpperPane->slot_selectAll();
+        QVERIFY2(!console->mUpperPane->mSelectedRegion.isEmpty(), "select-all put no selection on the console");
+
+        QWidget* focused = QApplication::focusWidget();
+        QVERIFY2(focused, "nothing in the application has the focus to press Ctrl+C in");
+        QTest::keyClick(focused, Qt::Key_C, Qt::ControlModifier);
+
+        QVERIFY2(clipboard->text().contains(sentinel), qPrintable(qsl("Ctrl+C copied '%1' rather than the console's selection").arg(clipboard->text().left(60))));
     }
 
     void cleanup()
