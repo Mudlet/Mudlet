@@ -4654,7 +4654,7 @@ void mudlet::readEarlySettings(const QSettings& settings)
     MudletProxyStyle::setAltKeyNavigation(
             static_cast<enums::MenuBarAltKeyNavigation>(settings.value(qsl("menuBarAltKeyNavigation"), static_cast<int>(enums::MenuBarAltKeyNavigation::WhenScreenReaderRunning)).toInt()));
 
-    const QString interfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
+    const QString interfaceLanguage = MudletApp::interfaceLanguageSetting(settings);
     MudletApp::setInterfaceLanguage(interfaceLanguage);
     mUserLocale = QLocale(interfaceLanguage);
     if (mUserLocale == QLocale::c()) {
@@ -7912,36 +7912,6 @@ void mudlet::setInterfaceLanguage(const QString& languageCode)
         // within the Mudlet application code}...
         emit signal_guiLanguageChanged(languageCode);
     }
-}
-
-// return the user's desktop language if we have a quality translation for it
-// or a back-up language they've specified
-QString mudlet::autodetectPreferredLanguage()
-{
-    // en_GB is a temporary special exception due to its likeness to en_US, while its
-    // translation is still only at 20%
-    QVector<QString> availableQualityTranslations{qsl("en_GB")};
-    for (auto& code : getAvailableTranslationCodes()) {
-        auto& translation = mTranslationsMap[code];
-        if (translation.fromResourceFile()) {
-            auto& translatedPc = translation.getTranslatedPercentage();
-            if (translatedPc >= scmTranslationGoldStar) {
-                availableQualityTranslations.append(code);
-            }
-        }
-    }
-
-    QStringList systemUiLanguages = QLocale::system().uiLanguages();
-    // The code in the loop may modify the value anyway so explicity detach
-    // from the original:
-    systemUiLanguages.detach();
-    for (auto& language : systemUiLanguages) {
-        if (availableQualityTranslations.contains(language.replace(qsl("-"), qsl("_")))) {
-            return language;
-        }
-    }
-
-    return qsl("en_US");
 }
 
 void mudlet::activateProfile(Host* pHost)

@@ -710,7 +710,7 @@ int main(int argc, char* argv[])
     }
     setApplicationNames();
     // Kept for the whole run: with no mudlet object, nothing loads the interface's translations later
-    MudletApp::loadTranslationsForCommandLine(false);
+    MudletApp::loadTranslationsForRun();
     MudletApp::setDefaultMediaBackend();
 
     // Strict this time: the application object has taken out the options that were Qt's

@@ -862,7 +862,7 @@ QTranslator* MudletApp::loadTranslationsForCommandLine(const bool printAndExitRu
     auto interfaceLanguage = settings.value(QLatin1String("interfaceLanguage")).toString();
     auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
     if (userLocale == QLocale::c()) {
-        // Other runs have mudlet::readEarlySettings() report a code that names no locale
+        // Other runs report a code that names no locale where they read the interface language
         if (printAndExitRun && !interfaceLanguage.isEmpty()) {
             qWarning().nospace().noquote() << "MudletApp::loadTranslationsForCommandLine() WARNING - the interface language \"" << interfaceLanguage
                                            << "\" is not a recognised locale, so the command line text is in English.";
@@ -883,6 +883,25 @@ QTranslator* MudletApp::loadTranslationsForCommandLine(const bool printAndExitRu
             qWarning().nospace().noquote() << "MudletApp::loadTranslationsForCommandLine() WARNING - no translation could be loaded for the interface language \"" << interfaceLanguage
                                            << "\", so the command line text is in English.";
         }
+        delete pMudletTranslator;
+        return nullptr;
+    }
+    QCoreApplication::installTranslator(pMudletTranslator);
+    return pMudletTranslator;
+}
+
+QTranslator* MudletApp::loadTranslationsForRun()
+{
+    // As loadTranslationsForCommandLine(): the settings store is not made yet
+    QSettings settings(qsl("%1/Mudlet.ini").arg(MudletApp::getMudletPath(enums::mainPath)), QSettings::IniFormat);
+    noteEarlySettingsStatus(settings);
+    // The file named for the language exactly, as the main window loads it
+    const QString fileName = qsl(":/lang/mudlet_%1.qm").arg(interfaceLanguageSetting(settings));
+    if (!QFile::exists(fileName)) {
+        return nullptr;
+    }
+    QTranslator* pMudletTranslator = new QTranslator(QCoreApplication::instance());
+    if (!pMudletTranslator->load(fileName)) {
         delete pMudletTranslator;
         return nullptr;
     }
@@ -934,6 +953,32 @@ QString MudletApp::getInterfaceLanguage()
 {
     const QMutexLocker locker(&settingsMutex);
     return smInterfaceLanguage;
+}
+
+QString MudletApp::autodetectPreferredLanguage()
+{
+    for (QString language : QLocale::system().uiLanguages()) {
+        if (language.replace(QLatin1Char('-'), QLatin1Char('_')) == qsl("en_GB")) {
+            return language;
+        }
+    }
+    return qsl("en_US");
+}
+
+QString MudletApp::interfaceLanguageSetting(const QSettings& settings)
+{
+    return settings.value(qsl("interfaceLanguage"), autodetectPreferredLanguage()).toString();
+}
+
+void MudletApp::readInterfaceLanguage(const QSettings& settings)
+{
+    const QString language = interfaceLanguageSetting(settings);
+    setInterfaceLanguage(language);
+    if (QLocale(language) == QLocale::c()) {
+        qWarning().nospace().noquote() << "MudletApp::readInterfaceLanguage(...) WARNING - the interface language \"" << language << "\" is not a recognised locale, so the interface is in English.";
+    } else if (!QFile::exists(qsl(":/lang/mudlet_%1.qm").arg(language))) {
+        qWarning().nospace().noquote() << "MudletApp::readInterfaceLanguage(...) WARNING - there is no translation for the interface language \"" << language << "\", so the interface is in English.";
+    }
 }
 
 void MudletApp::setInterfaceLanguage(const QString& language)
