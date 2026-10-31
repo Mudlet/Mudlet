@@ -1044,6 +1044,8 @@ private:
     int lastLoggedFromLine = 0;
     int lastloggedToLine = 0;
     QString lastTextToLog;
+    // appendLog() text written after lastTextToLog, so it keeps its place in arrival order
+    QString mTextAppendedToLog;
     // indices of lines being committed while their triggers run - a stack,
     // because a trigger calling feedTriggers() re-enters commitLine();
     // deleteLines() adjusts the entries so commitLine() can tell whether its
