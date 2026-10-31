@@ -787,12 +787,19 @@ void Host::startProfileScripts()
         moduleOrder[it.value()] = moduleEntry;
     }
 
+    std::vector<int> profileRootScriptIds;
+    for (auto* pScript : getScriptUnit()->getScriptRootNodeList()) {
+        profileRootScriptIds.push_back(pScript->getID());
+    }
+
     //First load modules with negative number priority
     QMapIterator<int, QStringList> it2(moduleOrder);
     while (it2.hasNext() && it2.peekNext().key() < 0) {
         it2.next();
         installModulesList(it2.value());
     }
+    // The profile's own scripts were read in before these modules, but run after them
+    getScriptUnit()->moveRootNodesToEnd(profileRootScriptIds);
 
     mBlockStopWatchCreation = false;
     // This will build all the scripts in the collection of script items (but
