@@ -1421,6 +1421,34 @@ private slots:
         QVERIFY2(QFileInfo::exists(stagedDescriptionImage(existingPackage, qsl("shot.png"))), "the image the description already used was left out");
     }
 
+    // Going back to the first dropdown entry keeps the description, so it has to
+    // keep the images that description uses as well
+    void test_theFirstEntryKeepsTheDescriptionImagesOfThePackageBefore_5254()
+    {
+        const QString existingPackage = packageNamed(qsl("exporter-backtofirst"));
+        const QString dataDirectory = qsl("%1/%2/.mudlet").arg(profileHome(), existingPackage);
+        QVERIFY(QDir().mkpath(qsl("%1/description_images").arg(dataDirectory)));
+        QVERIFY(writeImage(qsl("%1/description_images/shot.png").arg(dataDirectory)));
+
+        auto* member = makeTrigger(qsl("exporter backtofirst member"), nullptr);
+        member->mPackageName = existingPackage;
+        mpHost->mInstalledPackages << existingPackage;
+        mpHost->mPackageInfo[existingPackage] = QMap<QString, QString>{{qsl("mpackage"), existingPackage}, {qsl("description"), qsl("![shot](<$packagePath/.mudlet/description_images/shot.png>)")}};
+
+        openExporter();
+        auto* packageList = comboNamed(qsl("packageList"));
+        const int index = packageList->findText(existingPackage);
+        QVERIFY2(index > 0, "the installed package was not offered in the dropdown");
+        packageList->setCurrentIndex(index);
+        packageList->setCurrentIndex(0);
+        QVERIFY(checkItem(triggersTop(), qsl("exporter backtofirst member")));
+
+        const QString newPackage = packageNamed(qsl("exporter-backtofirst-copy"));
+        QVERIFY2(runExport(newPackage), "the export never finished");
+        QVERIFY2(QFileInfo::exists(packagePath(newPackage)), qPrintable(qsl("No package was written. The dialog said: \"%1\"").arg(infoLabel()->text())));
+        QVERIFY2(QFileInfo::exists(stagedDescriptionImage(newPackage, qsl("shot.png"))), "the image the kept description uses was left out");
+    }
+
     // The zip's finished handler dies with the dialog, so the dialog's destructor
     // has to wind the export up: cursor, lock and watcher
     void test_closingTheDialogMidExportLeavesExportingPossible_10441()

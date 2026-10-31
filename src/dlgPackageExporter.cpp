@@ -523,7 +523,6 @@ void dlgPackageExporter::slot_packageChanged(int index)
 {
     const QString packageName = ui->packageList->currentText();
     uncheckAllChildren();
-    mPackageDataPath.clear();
     if (index != 0) {
         ui->lineEdit_packageName->setText(packageName);
     } else {
@@ -584,6 +583,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
     const QString packagePath{MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())};
     //fill package metadata
     mPackageIconPath.clear();
+    mPackageDataPath.clear();
     QMap<QString, QString> const packageInfo = mpHost->mPackageInfo.value(packageName);
     ui->lineEdit_author->setText(packageInfo.value(qsl("author")));
     const QString icon{packageInfo.value(qsl("icon"))};
