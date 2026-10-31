@@ -1313,6 +1313,8 @@ public:
     QMap<QString, QStringList> mConsoleActions;
 
     std::map<QString, std::unique_ptr<QKeySequence>> profileShortcuts;
+    // Filled only with no ShortcutsManager, which only the main window makes; a save then writes them back as read
+    QMap<QString, QString> mProfileShortcutsAsRead;
 
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;

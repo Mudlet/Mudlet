@@ -35,6 +35,7 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTemporaryDir>
+#include <QXmlStreamReader>
 #include <QtTest/QtTest>
 
 #include <memory>
@@ -105,7 +106,7 @@ private:
         return zip_close(archive) == 0;
     }
 
-    static bool writeProfile(const QString& name, const QString& script)
+    static bool writeProfile(const QString& name, const QString& script, const QString& hostXml = QString())
     {
         const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, name);
         if (!QDir().mkpath(saveFolder)) {
@@ -118,11 +119,11 @@ private:
         saveFile.write(qsl(R"(<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE MudletPackage>
 <MudletPackage version="1.001">
-<HostPackage><Host></Host></HostPackage>
+<HostPackage><Host>%2</Host></HostPackage>
 <ScriptPackage><Script isActive="yes" isFolder="no"><name>headlessSession</name><packageName></packageName><script>%1</script><eventHandlerList/></Script></ScriptPackage>
 </MudletPackage>
 )")
-                               .arg(script.toHtmlEscaped())
+                               .arg(script.toHtmlEscaped(), hostXml)
                                .toUtf8());
         return true;
     }
@@ -1135,6 +1136,33 @@ end))lua");
         const auto welcome = output.at(outputTexts(output).indexOf(qsl("Welcome to the headless session test.")));
         QCOMPARE(welcome.at(0).toString(), name);
         QCOMPARE(welcome.at(2).toBool(), false);
+    }
+
+    // Only the main window makes a ShortcutsManager, and the GUI would open a save that had none with the defaults
+    void test_aSaveKeepsTheKeyboardShortcuts()
+    {
+        const QString name = qsl("Headless Shortcuts");
+        const QString shortcuts = qsl(R"(<profileShortcut key="Show Map">Ctrl+Shift+M</profileShortcut><profileShortcut key="Notepad"></profileShortcut>)");
+        QVERIFY(writeProfile(name, QString(), shortcuts));
+        {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            QVERIFY(session.shutdown(true));
+        }
+        QDir saves(MudletApp::getMudletPath(enums::profileXmlFilesPath, name));
+        const QStringList written = saves.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Time);
+        QCOMPARE(written.size(), 2);
+        // Read as XML, as pugixml builds differ on whether an empty element is written <a></a> or <a />
+        QStringList saved;
+        QXmlStreamReader reader(readFile(saves.filePath(written.first())));
+        while (!reader.atEnd()) {
+            if (reader.readNext() == QXmlStreamReader::StartElement && reader.name() == u"profileShortcut") {
+                const QString key = reader.attributes().value(u"key").toString();
+                saved << qsl("%1=%2").arg(key, reader.readElementText());
+            }
+        }
+        QVERIFY2(!reader.hasError(), qPrintable(reader.errorString()));
+        QCOMPARE(saved, (QStringList{qsl("Notepad="), qsl("Show Map=Ctrl+Shift+M")}));
     }
 
     void test_aReplayPlaysWithNoMainWindow()
