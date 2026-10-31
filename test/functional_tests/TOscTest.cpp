@@ -783,8 +783,8 @@ private slots:
         << qsl("Write an email to: mailto:admin@example.com?subject=Hello");
     QTest::newRow("only the message fields survive")
         << qsl("mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text&attach=/etc/hostname&attachment=/etc/passwd&X-Other=1")
-        << qsl("mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text")
-        << qsl("Write an email to: mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text");
+        << qsl("mailto:admin@example.com?subject=Hi&body=Text")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hi&body=Text");
     QTest::newRow("field names in capitals")
         << qsl("MAILTO:admin@example.com?SUBJECT=Hi&ATTACH=/etc/hostname")
         << qsl("MAILTO:admin@example.com?SUBJECT=Hi")

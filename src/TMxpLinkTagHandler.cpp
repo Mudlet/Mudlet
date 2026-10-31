@@ -61,7 +61,7 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     // explicit hint is prose written to be read; falling back to the href makes
     // this a link target the user is being asked to trust.
     mHintIsHref = !tag->hasAttribute(qsl("hint"));
-    QString hint = mHintIsHref ? UntrustedText::forTarget(mHref) : UntrustedText::forAuthoredText(tag->getAttributeValue(qsl("hint")));
+    QString hint = mHintIsHref ? UntrustedText::forTarget(MailtoUri::withOnlyMessageFields(mHref)) : UntrustedText::forAuthoredText(tag->getAttributeValue(qsl("hint")));
     // An address taken from the wrapped text is only known, and checked, at the end tag
     const QString action = mIsHrefInContent ? QString() : actionFor(mHref);
     if (!mIsHrefInContent && action.isEmpty()) {
@@ -97,7 +97,7 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
             if (links->first().isEmpty()) {
                 hints->first() = refusedHint(href);
             } else if (mHintIsHref) {
-                hints->first() = UntrustedText::forTarget(href);
+                hints->first() = UntrustedText::forTarget(MailtoUri::withOnlyMessageFields(href));
             }
         }
     }

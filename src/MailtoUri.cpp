@@ -39,7 +39,7 @@ QString MailtoUri::withOnlyMessageFields(const QString& uri)
     QStringList kept;
     for (const QString& field : withoutFragment.mid(queryStart + 1).split(QLatin1Char('&'))) {
         const QString name = QUrl::fromPercentEncoding(field.left(field.indexOf(QLatin1Char('='))).toUtf8()).trimmed().toLower();
-        if (name == qsl("to") || name == qsl("cc") || name == qsl("bcc") || name == qsl("subject") || name == qsl("body")) {
+        if (name == qsl("subject") || name == qsl("body")) {
             // Some handlers also split a query on these
             QString value = field;
             kept.append(value.replace(QLatin1Char(';'), qsl("%3B")).replace(QLatin1Char('?'), qsl("%3F")));
