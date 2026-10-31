@@ -40,6 +40,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLibraryInfo>
 #include <QLocale>
 #include <QMutex>
@@ -957,10 +959,35 @@ QString MudletApp::getInterfaceLanguage()
 
 QString MudletApp::autodetectPreferredLanguage()
 {
-    for (QString language : QLocale::system().uiLanguages()) {
-        if (language.replace(QLatin1Char('-'), QLatin1Char('_')) == qsl("en_GB")) {
+    return autodetectPreferredLanguage(QLocale::system().uiLanguages());
+}
+
+QString MudletApp::autodetectPreferredLanguage(const QStringList& systemUiLanguages)
+{
+    // en_GB is close enough to en_US to be offered while its translation is still partial
+    QStringList qualityTranslations{qsl("en_GB")};
+    QFile statsFile(qsl(":/translation-stats.json"));
+    if (statsFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        const QJsonObject stats = QJsonDocument::fromJson(statsFile.readAll()).object();
+        for (auto it = stats.constBegin(); it != stats.constEnd(); ++it) {
+            if (it.value().toObject().value(qsl("translated_percent")).toInt() >= scmTranslationGoldStar && QFile::exists(qsl(":/lang/mudlet_%1.qm").arg(it.key()))) {
+                qualityTranslations.append(it.key());
+            }
+        }
+    }
+    // Qt lists each preference in several forms (en-Latn-AU, en-AU, en-Latn, en), so an English preference with no
+    // translation of its own ends at the first language after it that is not English
+    bool englishPreferred = false;
+    for (QString language : systemUiLanguages) {
+        language.replace(QLatin1Char('-'), QLatin1Char('_'));
+        const bool english = language == qsl("en") || language.startsWith(qsl("en_"));
+        if (englishPreferred && !english) {
+            break;
+        }
+        if (qualityTranslations.contains(language)) {
             return language;
         }
+        englishPreferred = english;
     }
     return qsl("en_US");
 }
