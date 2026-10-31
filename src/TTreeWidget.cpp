@@ -298,7 +298,7 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
                     if (pTChild->isFolder()) {
                         // Timer folder
                         if (pTChild->shouldBeActive()) {
-                            if (pTChild->ancestorsActive()) {
+                            if (pTChild->ancestorsShownActive(mpHost->mEmergencyStop)) {
                                 if (!pTChild->mPackageName.isEmpty()) {
                                     icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
                                 } else {
@@ -308,7 +308,7 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
                                 icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
                             }
                         } else {
-                            if (pTChild->ancestorsActive()) {
+                            if (pTChild->ancestorsShownActive(mpHost->mEmergencyStop)) {
                                 if (!pTChild->mPackageName.isEmpty()) {
                                     icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
                                 } else {
@@ -321,13 +321,13 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
                     } else if (pTChild->isOffsetTimer()) {
                         // Offset timer
                         if (pTChild->shouldBeActive()) {
-                            if (pTChild->ancestorsActive()) {
+                            if (pTChild->ancestorsShownActive(mpHost->mEmergencyStop)) {
                                 icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
                             } else {
                                 icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on-grey.png")), QIcon::Normal, QIcon::Off);
                             }
                         } else {
-                            if (pTChild->ancestorsActive()) {
+                            if (pTChild->ancestorsShownActive(mpHost->mEmergencyStop)) {
                                 icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
                             } else {
                                 icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off-grey.png")), QIcon::Normal, QIcon::Off);
@@ -336,13 +336,13 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
                     } else {
                         // Regular timer
                         if (pTChild->shouldBeActive()) {
-                            if (pTChild->ancestorsActive()) {
+                            if (pTChild->ancestorsShownActive(mpHost->mEmergencyStop)) {
                                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                             } else {
                                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
                             }
                         } else {
-                            if (pTChild->ancestorsActive()) {
+                            if (pTChild->ancestorsShownActive(mpHost->mEmergencyStop)) {
                                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                             } else {
                                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
@@ -642,42 +642,42 @@ void TTreeWidget::updateTriggerIcon(QTreeWidgetItem* pItem, int triggerID)
     QIcon icon;
     if (pT->state()) {
         if (pT->isFilterChain()) {
-            if (pT->isActive()) {
-                if (pT->ancestorsActive()) {
+            if (pT->shownActive(mpHost->mEmergencyStop)) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon.addPixmap(QPixmap(qsl(":/icons/filter.png")), QIcon::Normal, QIcon::Off);
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/filter-grey.png")), QIcon::Normal, QIcon::Off);
                 }
             } else {
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon.addPixmap(QPixmap(qsl(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/filter-grey-locked.png")), QIcon::Normal, QIcon::Off);
                 }
             }
         } else if (pT->isFolder()) {
-            if (pT->isActive()) {
-                if (pT->ancestorsActive()) {
+            if (pT->shownActive(mpHost->mEmergencyStop)) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
                 }
             } else {
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
                 }
             }
         } else {
-            if (pT->isActive()) {
-                if (pT->ancestorsActive()) {
+            if (pT->shownActive(mpHost->mEmergencyStop)) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
                 }
             } else {
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);

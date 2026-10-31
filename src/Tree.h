@@ -65,6 +65,9 @@ public:
     void setTemporary(bool state);
     // Returns true if all the ancestors of this node are active. If there are no ancestors it also returns true.
     bool ancestorsActive() const;
+    // For the editor to show: an emergency stop switches items off without changing what the user switched on
+    bool shownActive(bool emergencyStop) const;
+    bool ancestorsShownActive(bool emergencyStop) const;
     QString& getError();
     void setError(QString);
     inline bool state() const;
@@ -196,6 +199,19 @@ bool Tree<T>::ancestorsActive() const
 }
 
 template <class T>
+bool Tree<T>::ancestorsShownActive(bool emergencyStop) const
+{
+    Tree<T>* node(mpParent);
+    while (node) {
+        if (!node->shownActive(emergencyStop)) {
+            return false;
+        }
+        node = node->mpParent;
+    }
+    return true;
+}
+
+template <class T>
 bool Tree<T>::shouldBeActive() const
 {
     return mUserActiveState;
@@ -255,6 +271,15 @@ bool Tree<T>::isActive() const
         return false;
     }
     return (mActive && canBeActivated());
+}
+
+template <class T>
+bool Tree<T>::shownActive(bool emergencyStop) const
+{
+    if (!emergencyStop) {
+        return isActive();
+    }
+    return mpMyChildrenList && canBeActivated();
 }
 
 template <class T>
