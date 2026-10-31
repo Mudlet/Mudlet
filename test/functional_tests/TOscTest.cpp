@@ -1480,6 +1480,17 @@ private slots:
     QCOMPARE(console->buffer.buffer.at(line).at(2).foreground(), QColor(0x80, 0x80, 0x80));
   }
 
+  void test_DisabledStyleKeepsTheTextsOwnFormatting() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\\x1b[1mOff\x1b[22m\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    const TChar &ch = console->buffer.buffer.at(std::get<0>(*pos)).at(std::get<1>(*pos));
+    QCOMPARE(ch.foreground(), QColor(0x80, 0x80, 0x80));
+    QVERIFY2(ch.allDisplayAttributes() & TChar::Bold, "the disabled style cleared the game's bold");
+  }
+
   void test_LinkThatIsNotDisabledStartsInTheDefaultState() {
     injectData(qsl("\x1b]8;;send:look?config={\"disabled\":false,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\Open\x1b]8;;\x1b\\"));
 

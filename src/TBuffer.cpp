@@ -7230,7 +7230,10 @@ void TBuffer::finaliseActiveHyperlink()
 #endif
         if (mCurrentHyperlinkStyling.selection.disabled) {
             setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
-            mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
+            // Its characters were built in this state, and restyling them would clear the game's own formatting
+            if (mCurrentHyperlinkStyling.selection.hasSelectionSettings) {
+                mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
+            }
         } else if (mCurrentHyperlinkStyling.selection.selected) {
             setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
             mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
