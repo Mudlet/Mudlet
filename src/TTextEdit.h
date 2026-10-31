@@ -111,6 +111,7 @@ public:
     void searchSelectionOnline();
     int getColumnCount() const;
     int getRowCount() const;
+    int drawnColumnCount() const;
     // Upper pane only: its grid is what Host::windowGridSize() answers for the console.
     void reportGridSize();
     void toggleTimeStamps(const bool);
