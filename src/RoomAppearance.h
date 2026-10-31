@@ -119,6 +119,11 @@ bool nameShown(const TRoom& room);
 // From the room's ROOM_UI_NAMECOLOR, else whichever of black or white stands out on background
 QColor nameColor(const QString& colorData, const QColor& background);
 
+// False for variation selectors, the zero width joiner and the other code
+// points that steer how their neighbours are drawn: fonts rarely map them, so
+// checking them against a font would reject symbols like U+2694 U+FE0F.
+bool symbolCodePointNeedsGlyph(char32_t codePoint);
+
 // Draws text centered in rect at the largest size that fits, or nothing if
 // even the smallest is too big. fontSize is where the search for that size
 // starts and is left near the size found, so a caller drawing many symbols of
