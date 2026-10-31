@@ -975,12 +975,34 @@ QString MudletApp::autodetectPreferredLanguage(const QStringList& systemUiLangua
             }
         }
     }
-    // Qt lists each preference in several forms (en-Latn-AU, en-AU, en-Latn, en), so an English preference with no
-    // translation of its own ends at the first language after it that is not English
+    return autodetectPreferredLanguage(systemUiLanguages, qualityTranslations);
+}
+
+QString MudletApp::autodetectPreferredLanguage(const QStringList& systemUiLanguages, const QStringList& qualityTranslations)
+{
+    // Qt lists each preference in several forms (pt-Latn-PT, pt-PT, pt-Latn, pt), so a translation of the language for
+    // another territory waits until the forms in that language and script have had their exact match, and an English
+    // preference with no translation of its own ends at the first language after it that is not English
     bool englishPreferred = false;
+    QString fallback;
+    QLocale::Language fallbackLanguage = QLocale::AnyLanguage;
+    QLocale::Script fallbackScript = QLocale::AnyScript;
+    QStringList seenLanguages;
     for (QString language : systemUiLanguages) {
         language.replace(QLatin1Char('-'), QLatin1Char('_'));
-        const bool english = language == qsl("en") || language.startsWith(qsl("en_"));
+        const QStringList parts = language.split(QLatin1Char('_'));
+        const bool english = parts.constFirst() == qsl("en");
+        const QLocale wanted(language);
+        // QLocale swaps a script it has no data for (ru_Latn) for the language's usual one
+        bool scriptKept = true;
+        for (qsizetype i = 1; i < parts.size(); ++i) {
+            if (parts.at(i).size() == 4) {
+                scriptKept = QLocale::codeToScript(parts.at(i)) == wanted.script();
+            }
+        }
+        if (!fallback.isEmpty() && (wanted.language() != fallbackLanguage || wanted.script() != fallbackScript || !scriptKept)) {
+            return fallback;
+        }
         if (englishPreferred && !english) {
             break;
         }
@@ -988,8 +1010,24 @@ QString MudletApp::autodetectPreferredLanguage(const QStringList& systemUiLangua
             return language;
         }
         englishPreferred = english;
+        // Qt repeats a bare language after a preference's other forms, where it stands for the usual script: zh after
+        // zh-Hant-HK would be Simplified
+        const bool repeatedBareLanguage = parts.size() == 1 && seenLanguages.contains(parts.constFirst());
+        seenLanguages.append(parts.constFirst());
+        if (!fallback.isEmpty() || english || repeatedBareLanguage || !scriptKept || wanted.language() == QLocale::C) {
+            continue;
+        }
+        for (const QString& code : qualityTranslations) {
+            const QLocale offered(code);
+            if (offered.language() == wanted.language() && offered.script() == wanted.script()) {
+                fallback = code;
+                fallbackLanguage = wanted.language();
+                fallbackScript = wanted.script();
+                break;
+            }
+        }
     }
-    return qsl("en_US");
+    return fallback.isEmpty() ? qsl("en_US") : fallback;
 }
 
 QString MudletApp::interfaceLanguageSetting(const QSettings& settings)
