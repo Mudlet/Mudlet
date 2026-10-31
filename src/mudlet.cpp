@@ -6623,7 +6623,8 @@ void mudlet::handleTelnetUri(const QString& uri)
 }
 
 // A game's link to a telnet:// or telnets:// address always asks first, as a saved profile for it logs in with its
-// saved details. telnets:// uses TLS until the profile closes and never changes a saved profile's own setting.
+// saved details. telnets:// uses TLS until the profile closes or a script dials elsewhere, and never changes a saved
+// profile's own setting.
 void mudlet::connectFromGameLink(const QString& uri)
 {
     // The question's event loop runs further clicks on game links
@@ -6646,7 +6647,13 @@ void mudlet::connectFromGameLink(const QString& uri)
         mGameLinkQuestionOpen = false;
     });
 
-    const QString address = UntrustedText::forTarget(qsl("%1:%2").arg(uriData->host).arg(uriData->port));
+    QString target = (uriData->host.contains(QLatin1Char(':')) ? qsl("[%1]:%2") : qsl("%1:%2")).arg(uriData->host, QString::number(uriData->port));
+    // A Unicode host can look like another site's, so the name it really resolves as goes beside it
+    const QString aceHost = QString::fromLatin1(QUrl::toAce(uriData->host));
+    if (!aceHost.isEmpty() && aceHost.compare(uriData->host, Qt::CaseInsensitive) != 0) {
+        target += qsl(" (%1)").arg(aceHost);
+    }
+    const QString address = UntrustedText::forTarget(target);
     QString profileName = findMatchingProfile(uriData->host, uriData->port);
     QString question;
     if (profileName.isEmpty()) {

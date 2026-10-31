@@ -814,6 +814,30 @@ private slots:
     QCOMPARE(commands.at(1), QString());
   }
 
+  void test_AGameLinkQuestionShowsTheAddressItDials_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("expected");
+
+    QTest::newRow("IPv6 with a zone") << qsl("telnet://[fe80::1%252]:4000") << qsl("Connect to [fe80::1%2]:4000?");
+    QTest::newRow("IPv6") << qsl("telnet://[2001:db8::1]:4000") << qsl("Connect to [2001:db8::1]:4000?");
+    QTest::newRow("a lookalike Unicode host") << qsl("telnet://xn--pple-43d.com:4000") << qsl("Connect to аpple.com:4000 (xn--pple-43d.com)?");
+    QTest::newRow("an ASCII host") << qsl("telnet://games.example:4000") << qsl("Connect to games.example:4000?");
+  }
+
+  void test_AGameLinkQuestionShowsTheAddressItDials() {
+    QFETCH(QString, uri);
+    QFETCH(QString, expected);
+
+    QString asked;
+    mudlet::self()->mConfirmGameLink = [&asked](const QString &question) {
+      asked = question;
+      return false;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mudlet::self()->connectFromGameLink(uri);
+    QCOMPARE(asked, expected);
+  }
+
   // One that could never connect would otherwise say "Connect to" and then do
   // nothing when clicked
   void test_Osc8TelnetLinkWithoutAHostIsNotMade() {
