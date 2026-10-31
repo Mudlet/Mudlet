@@ -63,6 +63,7 @@
 #include "MudletApp.h"
 #include "MudletMedia.h"
 #include "PortableModeTestHelper.h"
+#include "ScriptUnit.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
 #include "TAppFrontend.h"
@@ -78,6 +79,7 @@
 #include "TNullMapViews.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
+#include "TScript.h"
 #include "TSpeechBridge.h"
 #include "TriggerMatchPool.h"
 #include "XMLexport.h"
@@ -12377,6 +12379,65 @@ end))lua");
         QVERIFY2(!fresh->mainConsoleModel().mLogToLogFile, "A profile that never logged started logging.");
         QCoreApplication::processEvents();
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Opening the profile created a widget.");
+    }
+
+    // A negative priority module runs before the profile's own scripts, so the editor, which lists the root
+    // scripts in order, has to show it above them - and a profile reset runs them in that order too
+    void test_negativePriorityModulesComeBeforeTheProfileScripts()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Module-Priority");
+        const auto script = [](const QString& name) {
+            return qsl(R"(<Script isActive="yes" isFolder="no"><name>%1</name><packageName></packageName><script>scriptOrder = (scriptOrder or "") .. "%1,"</script><eventHandlerList/></Script>)")
+                    .arg(name);
+        };
+        const auto package = [](const QString& hostPackage, const QString& scripts) {
+            return qsl(R"(<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+%1<ScriptPackage>%2</ScriptPackage>
+</MudletPackage>
+)")
+                    .arg(hostPackage, scripts);
+        };
+        QTemporaryDir moduleDir;
+        QVERIFY(moduleDir.isValid());
+        QString modules;
+        for (const auto& [name, priority] : {std::pair{qsl("moduleFirst"), -2}, std::pair{qsl("moduleSecond"), -1}, std::pair{qsl("moduleLast"), 1}}) {
+            const QString path = moduleDir.filePath(qsl("%1.xml").arg(name));
+            QFile moduleFile(path);
+            QVERIFY(moduleFile.open(QIODevice::WriteOnly));
+            moduleFile.write(package(QString(), script(name)).toUtf8());
+            moduleFile.close();
+            modules += qsl("<mInstalledModules><key>%1</key><filepath>%2</filepath><globalSave>0</globalSave><priority>%3</priority></mInstalledModules>").arg(name, path, QString::number(priority));
+        }
+
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, hostname);
+        QVERIFY(QDir().mkpath(saveFolder));
+        QFile saveFile(qsl("%1/2020-01-01#00-00-00.xml").arg(saveFolder));
+        QVERIFY(saveFile.open(QIODevice::WriteOnly));
+        saveFile.write(package(qsl("<HostPackage><Host>%1</Host></HostPackage>").arg(modules), script(qsl("profileOne")) + script(qsl("profileTwo"))).toUtf8());
+        saveFile.close();
+
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The saved profile did not open.");
+        QVERIFY2(host->mLoadedOk, qPrintable(host->mProfileLoadError));
+        QCOMPARE(luaGlobalString(host, "scriptOrder"), qsl("moduleFirst,moduleSecond,profileOne,profileTwo,moduleLast,"));
+
+        QStringList rootNames;
+        for (auto* pScript : host->getScriptUnit()->getScriptRootNodeList()) {
+            rootNames << pScript->getName();
+        }
+        QCOMPARE(rootNames, QStringList({qsl("moduleFirst"), qsl("moduleSecond"), qsl("profileOne"), qsl("profileTwo"), qsl("moduleLast")}));
+
+        QVERIFY(host->resetProfile_phase1());
+        QVERIFY2(QTest::qWaitFor(
+                         [host]() {
+                             return !host->mResetProfile;
+                         },
+                         5000),
+                 "The profile reset did not finish.");
+        QCOMPARE(luaGlobalString(host, "scriptOrder"), qsl("moduleFirst,moduleSecond,profileOne,profileTwo,moduleLast,"));
+        HostManager::self()->deleteHost(hostname);
     }
 
     // The GUI's answers to the same Lua: the profile is loaded and started before loadProfile() returns,
