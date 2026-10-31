@@ -342,8 +342,25 @@ private slots:
         host->mTelnet.loopbackTest(definition);
         QTRY_VERIFY2(compact.hasPreset(qsl("danger")), "the preset was never defined, so its absence later would prove nothing");
 
+        QByteArray link = "\x1b]8;;send:look?preset=danger\x1b\\PRINTED_LINK\x1b]8;;\x1b\\\r\n";
+        host->mTelnet.loopbackTest(link);
+        TBuffer& buffer = host->mainConsoleView()->buffer;
+        int printedLine = -1;
+        QTRY_VERIFY2(([&]() {
+                         for (int line = buffer.getLastLineNumber(); line >= 0 && printedLine < 0; --line) {
+                             if (buffer.line(line).contains(qsl("PRINTED_LINK"))) {
+                                 printedLine = line;
+                             }
+                         }
+                         return printedLine >= 0;
+                     }()),
+                     "the link using the preset was never printed");
+        const QColor printedColor = buffer.buffer.at(printedLine).at(0).foreground();
+        QCOMPARE(printedColor, QColor(Qt::red));
+
         QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
         QVERIFY2(!compact.hasPreset(qsl("danger")), "the preset outlived the connection that defined it");
+        QCOMPARE(buffer.buffer.at(printedLine).at(0).foreground(), printedColor);
     }
 
 #if !defined(QT_NO_SSL)
