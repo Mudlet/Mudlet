@@ -1,5 +1,239 @@
 describe("Tests DB.lua functions", function()
 
+  describe("Tests db:safe_name()", function()
+    it("keeps digits and strips non-alphanumeric characters", function()
+      assert.are.equal("log1", db:safe_name("log1"))
+      assert.are.equal("log2", db:safe_name("log2"))
+      assert.are.equal("db2024", db:safe_name("db2024"))
+      assert.are.equal("mydatabase", db:safe_name("my_database"))
+      assert.are.equal("a1b2", db:safe_name("A1B2"))
+      assert.are.equal("questlog7", db:safe_name("quest_log_7"))
+      assert.are.equal("etcpasswd", db:safe_name("../../../../etc/passwd"))
+    end)
+
+    it("does not collapse names that differ only by digits", function()
+      assert.are_not.equal(db:safe_name("stats1"), db:safe_name("stats2"))
+    end)
+  end)
+
+  -- Older Mudlet stored "stats1" as Database_stats.db. These specs create that
+  -- file and open it, and they create two new files when no older file exists.
+  describe("Tests database files for names that contain digits", function()
+    local schema = {sheet = {name = ""}}
+    local legacy_name = "oldstatstestingonly"
+    local digit_name = "oldstatstestingonly1"
+    local shared_name = "oldstatstestingonly2"
+    local fresh_one = "digitfile1testingonly"
+    local fresh_two = "digitfile2testingonly"
+    local fresh_legacy = "digitfiletestingonly"
+
+    local function db_path(name)
+      return getMudletHomeDir() .. "/Database_" .. db:safe_name(name) .. ".db"
+    end
+
+    local function remove_files()
+      os.remove(db_path(legacy_name))
+      os.remove(db_path(digit_name))
+      os.remove(db_path(shared_name))
+      os.remove(db_path(fresh_one))
+      os.remove(db_path(fresh_two))
+      os.remove(db_path(fresh_legacy))
+      os.remove(db_path(legacy_name) .. ".aside")
+      os.remove(getMudletHomeDir() .. "/Database_.db")
+      os.remove(getMudletHomeDir() .. "/Database_90731.db")
+      os.remove(db_path("rvwqcap"))
+      os.remove(db_path("rvwqcap2"))
+      os.remove(db_path("rvwqmid"))
+      os.remove(db_path("rvwqmid1"))
+      os.remove(db_path("rvwqmid2"))
+    end
+
+    local function names_in(database)
+      local found = {}
+      for _, row in ipairs(db:fetch(database.sheet)) do
+        found[#found + 1] = row.name
+      end
+      table.sort(found)
+      return found
+    end
+
+    before_each(remove_files)
+
+    after_each(function()
+      if db.__env then
+        db:close()
+      end
+      remove_files()
+    end)
+
+    it("opens an existing digit-stripped file instead of creating an empty one", function()
+      -- [^%a] is the old class: [^%ad] kept letters and a literal d, so digits were dropped
+      local old_safe = (digit_name:gsub("[^%a]", "")):lower()
+      assert.are.equal(legacy_name, old_safe)
+      assert.are.equal(old_safe, (shared_name:gsub("[^%a]", "")):lower())
+
+      local legacy = db:create(legacy_name, schema)
+      db:add(legacy.sheet, {name = "kept"})
+      db:close()
+      -- db:create stamps a file it creates. A 4.18 file has no stamp.
+      db:_clear_new_naming_mark(db_path(legacy_name))
+
+      local opened = db:create(digit_name, schema)
+      assert.are.same({"kept"}, names_in(opened))
+      assert.is_truthy(db:_isActiveDBName(digit_name))
+      assert.is_truthy(io.exists(db_path(legacy_name)))
+      assert.is_falsy(io.exists(db_path(digit_name)))
+
+      -- a second create must keep using the open legacy file
+      db:create(digit_name, schema)
+      assert.is_falsy(io.exists(db_path(digit_name)))
+      db:close()
+
+      -- "oldstats...1" and "oldstats...2" used to be one file, so both still read it
+      local shared = db:create(shared_name, schema)
+      assert.are.same({"kept"}, names_in(shared))
+      assert.is_falsy(io.exists(db_path(shared_name)))
+    end)
+
+    it("opens the digit-stripped file when a digit-named file is also present", function()
+      -- 4.18.0 and 4.18.1 kept the digits. 4.18.2 went back to stripping them.
+      -- The stripped file is the later copy, so it wins when both are on disk.
+      local legacy = db:create(legacy_name, schema)
+      db:add(legacy.sheet, {name = "fromold"})
+      db:close()
+
+      local legacy_path = db_path(legacy_name)
+      local aside = legacy_path .. ".aside"
+      assert.is_truthy(os.rename(legacy_path, aside))
+      local fresh = db:create(digit_name, schema)
+      db:add(fresh.sheet, {name = "fromnew"})
+      db:close()
+      assert.is_truthy(os.rename(aside, legacy_path))
+      db:_clear_new_naming_mark(legacy_path)
+
+      local opened = db:create(digit_name, schema)
+      assert.are.same({"fromold"}, names_in(opened))
+      assert.is_truthy(io.exists(db_path(digit_name)))
+      assert.is_truthy(io.exists(db_path(legacy_name)))
+      db:close()
+
+      local old = db:create(legacy_name, schema)
+      assert.are.same({"fromold"}, names_in(old))
+    end)
+
+    it("keeps a row written through the other name that opens the same legacy file", function()
+      local legacy = db:create(legacy_name, schema)
+      db:add(legacy.sheet, {name = "kept"})
+      db:close()
+      db:_clear_new_naming_mark(db_path(legacy_name))
+
+      local first = db:create(digit_name, schema)
+      local second = db:create(shared_name, schema)
+      assert.is_true(db:add(second.sheet, {name = "fromsecond"}))
+      assert.are.same({"fromsecond", "kept"}, names_in(first))
+
+      assert.is_true(first:_begin())
+      assert.is_true(db:add(second.sheet, {name = "held"}))
+      assert.is_true(first:_rollback())
+      assert.are.same({"fromsecond", "kept"}, names_in(first))
+
+      db:close(digit_name)
+      assert.is_true(db:add(second.sheet, {name = "afterclose"}))
+      db:close()
+
+      local reopened = db:create(digit_name, schema)
+      assert.are.same({"afterclose", "fromsecond", "kept"}, names_in(reopened))
+    end)
+
+    it("opens Database_.db for a name that is only digits", function()
+      local digits_name = "90731"
+      assert.are.equal("", db:_legacy_safe_name(db:safe_name(digits_name)))
+
+      -- safe_name drops the dots, so this is the empty name: Database_.db
+      local seeded = db:create("...", schema)
+      db:add(seeded.sheet, {name = "fromempty"})
+      db:close()
+      db:_clear_new_naming_mark(getMudletHomeDir() .. "/Database_.db")
+
+      local opened = db:create(digits_name, schema)
+      assert.are.same({"fromempty"}, names_in(opened))
+      assert.is_truthy(io.exists(getMudletHomeDir() .. "/Database_.db"))
+      assert.is_falsy(io.exists(getMudletHomeDir() .. "/Database_90731.db"))
+    end)
+
+    it("recreates a database after its file is deleted", function()
+      local created = db:create(fresh_one, schema)
+      db:add(created.sheet, {name = "first"})
+      os.remove(db_path(fresh_one))
+      if io.exists(db_path(fresh_one)) then
+        -- Windows will not unlink a file sqlite still has open
+        pending("this platform keeps a database file that is still open")
+      end
+
+      local again = db:create(fresh_one, schema)
+      assert.is_true(db:add(again.sheet, {name = "second"}))
+      assert.are.same({"second"}, names_in(again))
+      assert.is_truthy(io.exists(db_path(fresh_one)))
+    end)
+
+    it("creates and reopens two files when no digit-stripped file exists", function()
+      assert.is_falsy(io.exists(db_path(fresh_legacy)))
+
+      local first = db:create(fresh_one, schema)
+      db:add(first.sheet, {name = "one"})
+      db:close()
+
+      local second = db:create(fresh_two, schema)
+      db:add(second.sheet, {name = "two"})
+      db:close()
+
+      assert.is_truthy(io.exists(db_path(fresh_one)))
+      assert.is_truthy(io.exists(db_path(fresh_two)))
+      assert.is_falsy(io.exists(db_path(fresh_legacy)))
+      assert.are_not.equal(db_path(fresh_one), db_path(fresh_two))
+
+      first = db:create(fresh_one, schema)
+      assert.are.same({"one"}, names_in(first))
+      db:close()
+
+      second = db:create(fresh_two, schema)
+      assert.are.same({"two"}, names_in(second))
+    end)
+
+    it("keeps a digit-named row when a later digit-free database exists", function()
+      local named = db:create("rvwqcap2", schema)
+      db:add(named.sheet, {name = "own"})
+      db:close()
+
+      local plain = db:create("rvwqcap", schema)
+      db:add(plain.sheet, {name = "plain"})
+      db:close()
+
+      named = db:create("rvwqcap2", schema)
+      assert.are.same({"own"}, names_in(named))
+      assert.are.equal(db_path("rvwqcap2"), db.__path["rvwqcap2"])
+      db:close()
+
+      plain = db:create("rvwqcap", schema)
+      assert.are.same({"plain"}, names_in(plain))
+    end)
+
+    it("does not hand a new digit name the connection of an already open one", function()
+      local first = db:create("rvwqmid1", schema)
+      db:add(first.sheet, {name = "first"})
+
+      local plain = db:create("rvwqmid", schema)
+      db:add(plain.sheet, {name = "plain"})
+      db:close("rvwqmid")
+
+      local second = db:create("rvwqmid2", schema)
+      assert.is_true(db:add(second.sheet, {name = "second"}))
+      assert.are.same({"first"}, names_in(first))
+      assert.are.same({"second"}, names_in(second))
+      assert.are_not.equal(db.__path["rvwqmid1"], db.__path["rvwqmid2"])
+    end)
+  end)
+
   describe("Tests that DB creation and deletion works", function()
     describe("Test the functionality of db:create", function()
       it("Should create a db", function()
