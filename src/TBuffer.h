@@ -876,7 +876,7 @@ private:
     // Helper function for parsing JSON selection config to SelectionSettings
     void parseJsonSelectionConfig(const QJsonObject& selectionObj, Mudlet::HyperlinkStyling::SelectionSettings& settings);
     // Helper function for JSON menu array conversion
-    QString jsonMenuArrayToString(const QJsonArray& menuArray);
+    QStringList jsonMenuArrayToList(const QJsonArray& menuArray);
     // Helper function for parsing visibility JSON object into VisibilitySettings
     bool parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::HyperlinkStyling::VisibilitySettings& settings);
     // Helper function for appending query parameters to URIs (handles existing params)
@@ -1102,7 +1102,7 @@ private:
 
     // Enhanced OSC 8 hyperlink styling and menu support
     Mudlet::HyperlinkStyling mCurrentHyperlinkStyling;
-    QStringList mCurrentHyperlinkMenu; // Format: "Label|Command|Label|Command..."
+    QStringList mCurrentHyperlinkMenu; // Label, command, label, command...
 
     // Link state tracking for interactive pseudo-classes
     QMap<int, Mudlet::HyperlinkStyling::LinkState> mLinkStates; // Track current state per linkIndex
