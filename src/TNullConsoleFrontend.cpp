@@ -930,7 +930,7 @@ void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
 
 TConsoleModel& TNullConsoleFrontend::addSubConsole(const QString& name, const TWindowRegistry::SubConsoleKind kind, const QString& windowname)
 {
-    // As resolveConsoleModel() and the TConsole constructor set up a sub-console's model
+    // As ownConsoleModel() and the TConsole constructor set up a sub-console's model
     auto pModel = std::make_unique<TConsoleModel>(mpHost);
     pModel->mConsoleName = name;
     pModel->mScriptAddressable = true;
