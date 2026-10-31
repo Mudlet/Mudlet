@@ -389,11 +389,29 @@ constexpr size_t MAX_CSI_SEQUENCE_LENGTH = 4096;
 // Inline room for any SGR parameter string a game actually sends, avoiding the heap:
 constexpr qsizetype SGR_INLINE_CHARS = 64;
 
-// Helper to interpret JSON values as boolean
-// Accepts both boolean true and numeric non-zero values (servers may send 1 instead of true)
-bool jsonBoolValue(const QJsonValue& val)
+// Some MUD drivers have no JSON boolean to send, so the forms Char.Login 2 accepts count too: "true"/"false"
+// and "1"/"0" in any letter case, ignoring surrounding whitespace, and the numbers 1/0. Anything else is nullopt.
+std::optional<bool> jsonBoolValue(const QJsonValue& val)
 {
-    return val.toBool() || (val.isDouble() && val.toDouble() != 0);
+    if (val.isBool()) {
+        return val.toBool();
+    }
+    if (val.isDouble()) {
+        const double number = val.toDouble();
+        if (number == 0 || number == 1) {
+            return number == 1;
+        }
+    }
+    if (val.isString()) {
+        const QString text = val.toString().trimmed().toLower();
+        if (text == qsl("true") || text == qsl("1")) {
+            return true;
+        }
+        if (text == qsl("false") || text == qsl("0")) {
+            return false;
+        }
+    }
+    return std::nullopt;
 }
 
 // One parameter of an OSC 8 URI query, kept exactly as it arrived. The styling parser decodes
@@ -5162,13 +5180,16 @@ void TBuffer::decodeOSC(const QString& sequence)
                 setLinkSelected(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling.selection.selected);
                 if (mCurrentHyperlinkStyling.selection.selected) {
                     setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
-                } else if (mCurrentHyperlinkStyling.selection.disabled) {
-                    setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
                 }
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC] Link" << mCurrentHyperlinkLinkId << "initialized with selection state:" << "group=" << group << "value=" << value
                          << "selected=" << mCurrentHyperlinkStyling.selection.selected << "disabled=" << mCurrentHyperlinkStyling.selection.disabled;
 #endif
+            }
+
+            // Here and not when it closes: its characters take this state as they are built, and outrank being selected
+            if (mCurrentHyperlinkStyling.selection.disabled) {
+                setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
             }
 
 #if defined(DEBUG_OSC_PROCESSING)
@@ -5487,7 +5508,7 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
     }
 
     if (root.contains(qsl("spoiler"))) {
-        styling.isSpoiler = jsonBoolValue(root[qsl("spoiler")]);
+        styling.isSpoiler = jsonBoolValue(root[qsl("spoiler")]).value_or(styling.isSpoiler);
         if (styling.isSpoiler) {
             styling.hasCustomStyling = true;
 
@@ -5522,13 +5543,13 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
     }
 
     if (root.contains(qsl("disabled"))) {
-        styling.selection.disabled = jsonBoolValue(root[qsl("disabled")]);
-        if (styling.selection.disabled) {
-            styling.hasCustomStyling = true;
-        }
+        styling.selection.disabled = styling.selection.disabled || jsonBoolValue(root[qsl("disabled")]).value_or(false);
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC] Disabled config parsed from JSON:" << styling.selection.disabled;
 #endif
+    }
+    if (styling.selection.disabled) {
+        styling.hasCustomStyling = true;
     }
 
     if (styling.isSpoiler) {
@@ -5608,20 +5629,20 @@ void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::Hyperlink
         }
     }
 
-    if (stateObj.contains(qsl("bold"))) {
-        stateStyle.isBold = jsonBoolValue(stateObj[qsl("bold")]);
+    if (const auto bold = jsonBoolValue(stateObj[qsl("bold")])) {
+        stateStyle.isBold = *bold;
         hasAnyCustomStyling = true;
     }
 
-    if (stateObj.contains(qsl("italic"))) {
-        stateStyle.isItalic = jsonBoolValue(stateObj[qsl("italic")]);
+    if (const auto italic = jsonBoolValue(stateObj[qsl("italic")])) {
+        stateStyle.isItalic = *italic;
         hasAnyCustomStyling = true;
     }
 
     if (stateObj.contains(qsl("underline"))) {
         QJsonValue underlineVal = stateObj[qsl("underline")];
-        if (underlineVal.isBool() || underlineVal.isDouble()) {
-            stateStyle.isUnderlined = jsonBoolValue(underlineVal);
+        if (const auto underlined = jsonBoolValue(underlineVal)) {
+            stateStyle.isUnderlined = *underlined;
             if (stateStyle.isUnderlined) {
                 stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
             }
@@ -5644,8 +5665,8 @@ void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::Hyperlink
 
     if (stateObj.contains(qsl("overline"))) {
         QJsonValue overlineVal = stateObj[qsl("overline")];
-        if (overlineVal.isBool() || overlineVal.isDouble()) {
-            stateStyle.isOverlined = jsonBoolValue(overlineVal);
+        if (const auto overlined = jsonBoolValue(overlineVal)) {
+            stateStyle.isOverlined = *overlined;
             hasAnyCustomStyling = true;
         } else if (overlineVal.isString()) {
             stateStyle.isOverlined = true;
@@ -5655,8 +5676,8 @@ void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::Hyperlink
 
     if (stateObj.contains(qsl("strikethrough"))) {
         QJsonValue strikeVal = stateObj[qsl("strikethrough")];
-        if (strikeVal.isBool() || strikeVal.isDouble()) {
-            stateStyle.isStrikeOut = jsonBoolValue(strikeVal);
+        if (const auto struckOut = jsonBoolValue(strikeVal)) {
+            stateStyle.isStrikeOut = *struckOut;
             hasAnyCustomStyling = true;
         } else if (strikeVal.isString()) {
             stateStyle.isStrikeOut = true;
@@ -5692,15 +5713,19 @@ void TBuffer::parseJsonSelectionConfig(const QJsonObject& selectionObj, Mudlet::
     }
 
     if (selectionObj.contains(qsl("toggle"))) {
-        settings.toggle = jsonBoolValue(selectionObj[qsl("toggle")]);
+        settings.toggle = jsonBoolValue(selectionObj[qsl("toggle")]).value_or(settings.toggle);
     }
 
     if (selectionObj.contains(qsl("selected"))) {
-        settings.selected = jsonBoolValue(selectionObj[qsl("selected")]);
+        settings.selected = jsonBoolValue(selectionObj[qsl("selected")]).value_or(settings.selected);
     }
 
     if (selectionObj.contains(qsl("exclusive"))) {
-        settings.exclusive = jsonBoolValue(selectionObj[qsl("exclusive")]);
+        settings.exclusive = jsonBoolValue(selectionObj[qsl("exclusive")]).value_or(settings.exclusive);
+    }
+
+    if (selectionObj.contains(qsl("disabled"))) {
+        settings.disabled = jsonBoolValue(selectionObj[qsl("disabled")]).value_or(settings.disabled);
     }
 }
 
@@ -5779,7 +5804,7 @@ bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
 
     // Parse wholeline (optional)
     if (visibilityObj.contains(qsl("wholeline"))) {
-        settings.deletesEntireLine = jsonBoolValue(visibilityObj[qsl("wholeline")]);
+        settings.deletesEntireLine = jsonBoolValue(visibilityObj[qsl("wholeline")]).value_or(settings.deletesEntireLine);
     }
 
     // Parse expire triggers (optional)
@@ -5787,15 +5812,15 @@ bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
         QJsonObject expireObj = visibilityObj[qsl("expire")].toObject();
 
         if (expireObj.contains(qsl("input"))) {
-            settings.expireOnInput = jsonBoolValue(expireObj[qsl("input")]);
+            settings.expireOnInput = jsonBoolValue(expireObj[qsl("input")]).value_or(settings.expireOnInput);
         }
 
         if (expireObj.contains(qsl("prompt"))) {
-            settings.expireOnPrompt = jsonBoolValue(expireObj[qsl("prompt")]);
+            settings.expireOnPrompt = jsonBoolValue(expireObj[qsl("prompt")]).value_or(settings.expireOnPrompt);
         }
 
         if (expireObj.contains(qsl("output"))) {
-            settings.expireOnOutput = jsonBoolValue(expireObj[qsl("output")]);
+            settings.expireOnOutput = jsonBoolValue(expireObj[qsl("output")]).value_or(settings.expireOnOutput);
         }
 
         if (expireObj.contains(qsl("outputDelay"))) {
@@ -7208,16 +7233,19 @@ void TBuffer::finaliseActiveHyperlink()
 {
     // Apply initial selection/disabled state styling when link closes (from selection branch)
     // OR apply :link pseudo-class styling for preset-only links (from compact branch)
-    if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.selection.hasSelectionSettings) {
+    if (mCurrentHyperlinkLinkId > 0 && (mCurrentHyperlinkStyling.selection.hasSelectionSettings || mCurrentHyperlinkStyling.selection.disabled)) {
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC] Queuing initial selection styling for link" << mCurrentHyperlinkLinkId << "selected:" << mCurrentHyperlinkStyling.selection.selected
                  << "disabled:" << mCurrentHyperlinkStyling.selection.disabled << "selectedStyle.hasCustomStyling:" << mCurrentHyperlinkStyling.selectedStyle.hasCustomStyling;
 #endif
-        if (mCurrentHyperlinkStyling.selection.selected) {
-            setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
-            mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
-        } else if (mCurrentHyperlinkStyling.selection.disabled) {
+        if (mCurrentHyperlinkStyling.selection.disabled) {
             setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
+            // Its characters were built in this state, and restyling them would clear the game's own formatting
+            if (mCurrentHyperlinkStyling.selection.hasSelectionSettings) {
+                mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
+            }
+        } else if (mCurrentHyperlinkStyling.selection.selected) {
+            setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
             mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
         }
     } else if (mCurrentHyperlinkLinkId > 0) {
@@ -9862,7 +9890,7 @@ void TBuffer::setHoveredLink(int linkIndex)
             // Priority: disabled > selected > visited > default
             // Disabled links should stay disabled
             Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousHoveredLink);
-            if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
+            if (linkStyling.selection.disabled) {
                 setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateDisabled);
             } else if (isLinkSelected(previousHoveredLink)) {
                 setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateSelected);
@@ -9897,7 +9925,7 @@ void TBuffer::setActiveLink(int linkIndex)
     if (previousActiveLink > 0 && previousActiveLink != linkIndex) {
         // Return to appropriate state based on priority: disabled > hover > selected > visited > default
         Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousActiveLink);
-        if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
+        if (linkStyling.selection.disabled) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateDisabled);
         } else if (previousActiveLink == mCurrentHoveredLinkIndex) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateHover);
@@ -9928,7 +9956,7 @@ void TBuffer::setFocusedLink(int linkIndex)
     if (previousFocusedLink > 0 && previousFocusedLink != linkIndex) {
         // Preserve disabled state, otherwise return to base state
         Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousFocusedLink);
-        if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
+        if (linkStyling.selection.disabled) {
             setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateDisabled);
         } else if (isLinkSelected(previousFocusedLink)) {
             setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateSelected);
@@ -9941,9 +9969,12 @@ void TBuffer::setFocusedLink(int linkIndex)
 
     // Set new link to focus state
     if (linkIndex > 0) {
-        // Determine if focus came from keyboard (would use StateFocusVisible)
-        // For now, we use StateFocus
-        setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateFocus);
+        // Disabled links stay disabled, and a screen reader is told so from this state.
+        if (getLinkState(linkIndex) != Mudlet::HyperlinkStyling::StateDisabled) {
+            // Determine if focus came from keyboard (would use StateFocusVisible)
+            // For now, we use StateFocus
+            setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateFocus);
+        }
     }
 }
 

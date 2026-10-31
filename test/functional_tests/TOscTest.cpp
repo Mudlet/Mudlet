@@ -755,6 +755,130 @@ private slots:
     QCOMPARE(hints.last(), qsl("Item"));
   }
 
+  // Toggle defaults to true, so it shows that a value that is not a boolean
+  // leaves the default alone, where bold cannot tell that from false.
+  void test_Osc8BooleanForms_data() {
+    QTest::addColumn<QString>("value");
+    QTest::addColumn<bool>("expectedBold");
+    QTest::addColumn<bool>("expectedToggle");
+
+    QTest::newRow("true") << qsl("true") << true << true;
+    QTest::newRow("false") << qsl("false") << false << false;
+    QTest::newRow("string true") << qsl("\"true\"") << true << true;
+    QTest::newRow("string false") << qsl("\"false\"") << false << false;
+    QTest::newRow("string in capitals") << qsl("\"TRUE\"") << true << true;
+    QTest::newRow("string false in capitals") << qsl("\"False\"") << false << false;
+    QTest::newRow("one") << qsl("1") << true << true;
+    QTest::newRow("zero") << qsl("0") << false << false;
+    QTest::newRow("string one") << qsl("\"1\"") << true << true;
+    QTest::newRow("string zero") << qsl("\"0\"") << false << false;
+    QTest::newRow("string with spaces") << qsl("\" true \"") << true << true;
+    QTest::newRow("another number") << qsl("2") << false << true;
+    QTest::newRow("another string") << qsl("\"yes\"") << false << true;
+    QTest::newRow("empty string") << qsl("\"\"") << false << true;
+    QTest::newRow("null") << qsl("null") << false << true;
+  }
+
+  void test_Osc8BooleanForms() {
+    QFETCH(QString, value);
+    QFETCH(bool, expectedBold);
+    QFETCH(bool, expectedToggle);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"bold\":%1},\"selection\":{\"group\":\"booleans\",\"value\":\"x\",\"toggle\":%1}}\x1b\\Link\x1b]8;;\x1b\\").arg(value));
+
+    QVERIFY2(findFirstLinkPositionWithId().has_value(), "the whole link was refused");
+    const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
+    QCOMPARE(styling.isBold, expectedBold);
+    QCOMPARE(styling.selection.toggle, expectedToggle);
+  }
+
+  void test_Osc8LineStyleStringsAndBooleans_data() {
+    QTest::addColumn<QString>("value");
+    QTest::addColumn<bool>("expectedUnderlined");
+    QTest::addColumn<int>("expectedStyle");
+
+    QTest::newRow("string true") << qsl("\"true\"") << true << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+    QTest::newRow("string false") << qsl("\"false\"") << false << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+    QTest::newRow("one") << qsl("1") << true << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+    QTest::newRow("string zero") << qsl("\"0\"") << false << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+    QTest::newRow("another number") << qsl("2") << false << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+    QTest::newRow("a style") << qsl("\"wavy\"") << true << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineWavy);
+    QTest::newRow("another string") << qsl("\"thick\"") << true << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+  }
+
+  void test_Osc8LineStyleStringsAndBooleans() {
+    QFETCH(QString, value);
+    QFETCH(bool, expectedUnderlined);
+    QFETCH(int, expectedStyle);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"underline\":%1}}\x1b\\Link\x1b]8;;\x1b\\").arg(value));
+
+    QVERIFY2(findFirstLinkPositionWithId().has_value(), "the whole link was refused");
+    const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
+    QCOMPARE(styling.isUnderlined, expectedUnderlined);
+    QCOMPARE(static_cast<int>(styling.underlineStyle), expectedStyle);
+  }
+
+  void test_Osc8OverlineAndStrikethroughBooleanForms_data() {
+    QTest::addColumn<QString>("value");
+    QTest::addColumn<bool>("expectedOn");
+
+    QTest::newRow("string true") << qsl("\"true\"") << true;
+    QTest::newRow("string false") << qsl("\"false\"") << false;
+    QTest::newRow("string zero") << qsl("\"0\"") << false;
+    QTest::newRow("zero") << qsl("0") << false;
+    QTest::newRow("a style") << qsl("\"dotted\"") << true;
+  }
+
+  void test_Osc8OverlineAndStrikethroughBooleanForms() {
+    QFETCH(QString, value);
+    QFETCH(bool, expectedOn);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"overline\":%1,\"strikethrough\":%1}}\x1b\\Link\x1b]8;;\x1b\\").arg(value));
+
+    QVERIFY2(findFirstLinkPositionWithId().has_value(), "the whole link was refused");
+    const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
+    QCOMPARE(styling.isOverlined, expectedOn);
+    QCOMPARE(styling.isStrikeOut, expectedOn);
+  }
+
+  void test_Osc8SelectionDisabled_data() {
+    QTest::addColumn<QString>("config");
+    QTest::addColumn<bool>("expectedDisabled");
+
+    QTest::newRow("inside selection") << qsl("{\"selection\":{\"group\":\"poll\",\"value\":\"a\",\"disabled\":true}}") << true;
+    QTest::newRow("at the top level") << qsl("{\"disabled\":true,\"selection\":{\"group\":\"poll\",\"value\":\"b\"}}") << true;
+    QTest::newRow("either one is enough") << qsl("{\"disabled\":false,\"selection\":{\"group\":\"poll\",\"value\":\"c\",\"disabled\":true}}") << true;
+    QTest::newRow("the other one is enough") << qsl("{\"disabled\":true,\"selection\":{\"group\":\"poll\",\"value\":\"e\",\"disabled\":false}}") << true;
+    QTest::newRow("neither") << qsl("{\"selection\":{\"group\":\"poll\",\"value\":\"d\",\"disabled\":false}}") << false;
+  }
+
+  void test_Osc8SelectionDisabled() {
+    QFETCH(QString, config);
+    QFETCH(bool, expectedDisabled);
+
+    injectData(qsl("\x1b]8;;send:vote?config=%1\x1b\\Option\x1b]8;;\x1b\\").arg(config));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+    QCOMPARE(console->getLinkStore().getStyling(linkId).selection.disabled, expectedDisabled);
+    QCOMPARE(console->buffer.getLinkState(linkId) == Mudlet::HyperlinkStyling::StateDisabled, expectedDisabled);
+
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(std::get<0>(*pos), std::get<1>(*pos));
+    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(console->mUpperPane, &activate);
+    QCOMPARE(console->buffer.isLinkSelected(linkId), !expectedDisabled);
+  }
+
   // A "config" parameter carrying something that is not an object is not a
   // config, so it must not displace a valid one earlier in the same query.
   void test_Osc8ValuelessConfigDoesNotDisplaceAValidOne_data() {
@@ -1279,6 +1403,102 @@ private slots:
         qPrintable(
             qsl("Expected 'text-link-visited:true' after visiting but got: %1")
                 .arg(attrsAfter)));
+  }
+
+  // The style has to be on the text from the start, not wait for a click, and
+  // to come back after anything that gives the link another state for a moment.
+  void test_DisabledLinkHasItsStyleFromTheStart() {
+    injectData(qsl("\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\",\"strikethrough\":true}}}\x1b\\Off\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto showsDisabledStyle = [&, line = linkLine, col = linkCol]() {
+      const TChar &ch = console->buffer.buffer.at(line).at(col);
+      return ch.foreground() == QColor(0x80, 0x80, 0x80) && (ch.allDisplayAttributes() & TChar::StrikeOut);
+    };
+
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QVERIFY2(showsDisabledStyle(), "the disabled style is not on the text as printed");
+
+    console->buffer.setHoveredLink(linkId);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    console->buffer.setHoveredLink(0);
+
+    console->buffer.setFocusedLink(linkId);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    console->buffer.setFocusedLink(0);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+
+    console->buffer.setActiveLink(linkId);
+    console->buffer.setActiveLink(0);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QVERIFY2(showsDisabledStyle(), "the disabled style did not come back");
+  }
+
+  void test_DisabledOutranksSelectedFromTheStart_data() {
+    QTest::addColumn<QString>("selection");
+
+    QTest::newRow("in a group") << qsl("{\"group\":\"ranks\",\"value\":\"a\",\"selected\":true,\"disabled\":true}");
+    QTest::newRow("no group") << qsl("{\"selected\":true,\"disabled\":true}");
+    QTest::newRow("disabled without a group") << qsl("{\"disabled\":true}");
+  }
+
+  void test_DisabledOutranksSelectedFromTheStart() {
+    QFETCH(QString, selection);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"selection\":%1,\"style\":{\"selected\":{\"color\":\"#00ff00\"},\"disabled\":{\"color\":\"#808080\"}}}\x1b\\Off\x1b]8;;\x1b\\").arg(selection));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), QColor(0x80, 0x80, 0x80));
+  }
+
+  // The flush marker splits the link's text, and held text commits apart from the link's own line
+  void test_DisabledStyleSurvivesTheLinkBeingSplit() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const QString link = qsl("\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\");
+
+    feedFromServer(link + qsl("FLUSHED \r"));
+    feedFromServer(qsl("REST\x1b]8;;\x1b\\\n"));
+    int line = lineStartingWith(qsl("REST"));
+    QVERIFY2(line >= 1, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(line).at(0).foreground(), QColor(0x80, 0x80, 0x80));
+    const int flushedLine = lineStartingWith(qsl("FLUSHED"));
+    QVERIFY2(flushedLine >= 0, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(flushedLine).at(0).foreground(), QColor(0x80, 0x80, 0x80));
+
+    undoServerWrap();
+    feedFromServer(QString(64, QLatin1Char('x')) + qsl(" alpha\n"));
+    feedFromServer(qsl("- ") + link + qsl("listed\x1b]8;;\x1b\\\n"));
+    line = lineStartingWith(qsl("- listed"));
+    QVERIFY2(line >= 0, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(line).at(2).foreground(), QColor(0x80, 0x80, 0x80));
+  }
+
+  void test_DisabledStyleKeepsTheTextsOwnFormatting() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\\x1b[1mOff\x1b[22m\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    const TChar &ch = console->buffer.buffer.at(std::get<0>(*pos)).at(std::get<1>(*pos));
+    QCOMPARE(ch.foreground(), QColor(0x80, 0x80, 0x80));
+    QVERIFY2(ch.allDisplayAttributes() & TChar::Bold, "the disabled style cleared the game's bold");
+  }
+
+  void test_LinkThatIsNotDisabledStartsInTheDefaultState() {
+    injectData(qsl("\x1b]8;;send:look?config={\"disabled\":false,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\Open\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDefault);
   }
 
   void test_LinkAttributes_DisabledState() {
