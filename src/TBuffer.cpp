@@ -65,6 +65,7 @@
 #include <algorithm>
 #include <cstring>
 #include <span>
+#include <string_view>
 #include <iterator>
 #include <limits>
 #include <optional>
@@ -2082,6 +2083,20 @@ void TBuffer::parseChunk(
                     // the cap is ordinary - a Sixel image or a Kitty graphic
                     // legitimately runs to many times it:
                     warnAboutDiscardedStringSequence(qsl("passed %1 bytes, so its command will be ignored").arg(MAX_OSC_SEQUENCE_LENGTH), localBuffer, spanStart, spanEnd);
+                    // An OSC 8 link start ends the open link even when it is dropped, as decodeOSC() does for
+                    // one it rejects: a URI too long for the cap is only ever seen here
+                    if (mHyperlinkActive && mpHost && mpHost->mEnableOSC8Hyperlinks) {
+                        const std::string_view payload = std::string_view(localBuffer).substr(spanStart, spanEnd - spanStart);
+                        const size_t uriStart = payload.starts_with("8;") ? payload.find(';', 2) : std::string_view::npos;
+                        if (uriStart != std::string_view::npos && uriStart + 1 < payload.size()) {
+                            const std::string_view uri = payload.substr(uriStart + 1);
+                            const std::string_view preset = "preset:";
+                            // A URI cut off part way through "preset:" may still be one
+                            if (uri.substr(0, preset.size()) != preset.substr(0, uri.size())) {
+                                finaliseActiveHyperlink();
+                            }
+                        }
+                    }
                 }
                 // Stay in the sequence and consume the rest as it arrives, but
                 // what is left is no longer the whole payload so it must not
@@ -4906,11 +4921,6 @@ void TBuffer::decodeOSC(const QString& sequence)
             // registers a style and opens no link, so it leaves the open link alone.
             if (mHyperlinkActive && !rawUrl.startsWith(qsl("preset:"))) {
                 finaliseActiveHyperlink();
-            }
-
-            if (rawUrl.length() > static_cast<int>(MAX_OSC_SEQUENCE_LENGTH)) {
-                qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << rawUrl;
-                return;
             }
 
             if (rawUrl.startsWith(qsl("preset:"))) {

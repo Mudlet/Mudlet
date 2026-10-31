@@ -193,6 +193,29 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("OSCLINK1(click me)OSCLINK1", findRecentLine("OSCLINK1"))
     end)
 
+    -- A link written concealed shows which text joined it. Only a link start over
+    -- the length cap ends the open link: a preset: opens none, and the rest are not OSC 8.
+    describe("an OSC sequence too long to decode inside an open link", function()
+      local concealed = "\027]8;;send:look?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\"
+      local long = string.rep("z", 5000)
+      after_each(function() feedTriggers("\027]8;;\027\\\n") end)
+
+      it("should end the open link when it starts a link", function()
+        assert.is_true(feedTriggers("OSCLONG1(" .. concealed .. "A\027]8;;send:big?x=" .. long .. "\027\\more\027]8;;\027\\)OSCLONG1\n"))
+        assert.equals("OSCLONG1( more)OSCLONG1", findRecentLine("OSCLONG1"))
+      end)
+
+      it("should leave the open link alone when it is a preset", function()
+        assert.is_true(feedTriggers("OSCLONG2(" .. concealed .. "A\027]8;;preset:big?x=" .. long .. "\027\\more\027]8;;\027\\)OSCLONG2\n"))
+        assert.equals("OSCLONG2(     )OSCLONG2", findRecentLine("OSCLONG2"))
+      end)
+
+      it("should leave the open link alone when it is not OSC 8", function()
+        assert.is_true(feedTriggers("OSCLONG3(" .. concealed .. "A\027]2;" .. long .. "\027\\more\027]8;;\027\\)OSCLONG3\n"))
+        assert.equals("OSCLONG3(     )OSCLONG3", findRecentLine("OSCLONG3"))
+      end)
+    end)
+
     it("should still consume OSC color sequences", function()
       assert.is_true(feedTriggers("OSCCOLOR1(\027]P1ff0000\027\\)OSCCOLOR1\n"))
       assert.equals("OSCCOLOR1()OSCCOLOR1", findRecentLine("OSCCOLOR1"))
