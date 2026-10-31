@@ -1182,6 +1182,60 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(contains(contents, "mudlet-spec-appended-line"), "the appended text is not in the log")
         end)
 
+        it("keeps a gagged line appended by its trigger in arrival order", function()
+          local logPath
+          local triggerId
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          triggerId = tempExactMatchTrigger("SpecAppendOrderGagged", function()
+            deleteLine()
+            appendLog("SpecAppendOrderGagged\n")
+          end)
+          logPath = select(3, startLogging(true))
+
+          feedTelnet("SpecAppendOrderBefore\nSpecAppendOrderGagged\nSpecAppendOrderAfter\n")
+          -- a received line is only written once the next one commits
+          feedTelnet("SpecAppendOrderFlush\n")
+          startLogging(false)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the text log file that was closed is not readable")
+          assert.is_true(contains(contents, "SpecAppendOrderBefore\nSpecAppendOrderGagged\nSpecAppendOrderAfter\n"), "the appended line is out of arrival order:\n" .. contents)
+        end)
+
+        it("writes text appended by gagged lines without waiting for a line that is not gagged", function()
+          local logPath
+          local triggerId
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          triggerId = tempRegexTrigger("^SpecAppendHeld\\d$", function()
+            deleteLine()
+            appendLog(line .. "\n")
+          end)
+          logPath = select(3, startLogging(true))
+
+          feedTelnet("SpecAppendHeldBefore\nSpecAppendHeld1\nSpecAppendHeld2\n")
+          pumpEvents(50)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the open text log file is not readable")
+          assert.is_true(contains(contents, "SpecAppendHeldBefore\nSpecAppendHeld1\nSpecAppendHeld2\n"), "the appended lines were held back:\n" .. contents)
+        end)
+
         it("writes nothing while logging is off", function()
           local logPath
           finally(function()

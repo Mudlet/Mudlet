@@ -888,6 +888,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , lastLoggedFromLine(other.lastLoggedFromLine)
 , lastloggedToLine(other.lastloggedToLine)
 , lastTextToLog(other.lastTextToLog)
+, mTextAppendedToLog(other.mTextAppendedToLog)
 , mEncoding(other.mEncoding)
 , mDecoder(other.mDecoder)
 , mMultibyteDecoder(multibyteDecoderFor(other.mDecoder, other.mEncoding))
@@ -997,6 +998,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         lastLoggedFromLine = other.lastLoggedFromLine;
         lastloggedToLine = other.lastloggedToLine;
         lastTextToLog = other.lastTextToLog;
+        mTextAppendedToLog = other.mTextAppendedToLog;
         mEncoding = other.mEncoding;
         mDecoder = other.mDecoder;
         mMultibyteDecoder = multibyteDecoderFor(mDecoder, mEncoding);
@@ -3013,6 +3015,8 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
     // deleteLines() has already adjusted the deferred logging state
     if (mCommitLineIndices.takeLast() >= 0) {
         log(lineBuffer.size() - 1, lineBuffer.size() - 1);
+    } else {
+        logTextAppendedBehindPendingLine();
     }
 
     // Suppress new empty line IFF echoes already created a new empty line
@@ -6735,7 +6739,8 @@ void TBuffer::log(int fromLine, int toLine)
     // if we've been called to log the same line - which can happen when the user
     // enters a command after in-game text - then skip recording the last line
     if (fromLine != lastLoggedFromLine && toLine != lastloggedToLine) {
-        pModel->mLogStream << lastTextToLog;
+        pModel->mLogStream << lastTextToLog << mTextAppendedToLog;
+        mTextAppendedToLog.clear();
         pModel->scheduleLogFlush();
     }
 
@@ -6780,14 +6785,15 @@ void TBuffer::logRemainingOutput()
     // buffer state and needs no view, and leaving it behind would let a
     // successor view replay this pending line and let the stale line indexes
     // suppress a real flush in log()
-    const QString pendingText = lastTextToLog;
+    const QString pendingText = lastTextToLog + mTextAppendedToLog;
     lastTextToLog.clear();
+    mTextAppendedToLog.clear();
     lastLoggedFromLine = -1;
     lastloggedToLine = -1;
 
-    // No mLogToLogFile test on purpose: both callers have already decided the
+    // No mLogToLogFile test on purpose: every caller has already decided the
     // pending line must be flushed - toggleLogging() once it has cleared the
-    // flag, clear() while it is still set. The file being open is tested
+    // flag, clear() while it is still set, ~Host() either way. The file being open is tested
     // instead, because a QTextStream written to after its device closed latches
     // WriteFailed and then silently keeps every later write in its own buffer,
     // to be replayed into the next log file the moment setDevice() rearms it.
@@ -6800,6 +6806,27 @@ void TBuffer::logRemainingOutput()
     pModel->mLogStream.flush();
 }
 
+// A gagged line never reaches log(), so without this a run of them would hold
+// their appendLog() text in memory until a line that is not gagged arrives.
+// A later line has been committed, so the pending one can no longer be logged again.
+void TBuffer::logTextAppendedBehindPendingLine()
+{
+    if (mTextAppendedToLog.isEmpty()) {
+        return;
+    }
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (!pModel || this != &pModel->buffer || !pModel->mLogToLogFile) {
+        return;
+    }
+
+    pModel->mLogStream << lastTextToLog << mTextAppendedToLog;
+    lastTextToLog.clear();
+    mTextAppendedToLog.clear();
+    lastLoggedFromLine = -1;
+    lastloggedToLine = -1;
+    pModel->scheduleLogFlush();
+}
+
 // logs a string directly to the log file
 void TBuffer::appendLog(const QString& text)
 {
@@ -6809,6 +6836,11 @@ void TBuffer::appendLog(const QString& text)
         return;
     }
 
+    // Held behind the line log() is still deferring, which arrived first
+    if (!lastTextToLog.isEmpty() || !mTextAppendedToLog.isEmpty()) {
+        mTextAppendedToLog.append(text);
+        return;
+    }
     pModel->mLogStream << text;
 }
 

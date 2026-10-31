@@ -535,6 +535,11 @@ Host::~Host()
 
     mStopWatchMap.clear();
 
+    // No line will now arrive to let out the one log() holds back, nor appendLog() text queued behind it
+    if (mpMainConsoleModel) {
+        mpMainConsoleModel->buffer.logRemainingOutput();
+    }
+
     mErrorLogStream.flush();
     mErrorLogFile.close();
     // Since this is a destructor, it's risky to rely on member variables within the destructor itself.

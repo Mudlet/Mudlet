@@ -49,6 +49,7 @@
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TAction.h"
+#include "TConsoleModel.h"
 #include "TMainConsole.h"
 #include "TToolBar.h"
 #include "TelnetServerStub.h"
@@ -312,6 +313,38 @@ private slots:
         QCOMPARE(noteContentOnDisk(profileName), csmNoteText);
 
         deleteProfileDirectory(profileName);
+    }
+
+    // log() holds the latest line back until another arrives, and appendLog() text waits behind it
+    void test_appendLogTextFromTheExitEventReachesTheLog()
+    {
+        const QString profileName = qsl("HostChildTeardown-ExitEventLog");
+        Host* pHost = startProfile(profileName);
+        QVERIFY2(pHost, "Profile took too long to load");
+        auto cleanUp = qScopeGuard([&]() {
+            if (HostManager::self()->getHost(profileName)) {
+                HostManager::self()->deleteHost(profileName);
+            }
+            deleteProfileDirectory(profileName);
+        });
+
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("startLogging(true)")));
+        const QString logFileName = pHost->mainConsoleModel().mLogFileName;
+        QVERIFY2(pHost->mainConsoleModel().mLogToLogFile && !logFileName.isEmpty(), "Logging did not start");
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("registerAnonymousEventHandler('sysExitEvent', function() appendLog('teardown-exit-event-text\\n') end)")));
+
+        pHost->forceClose();
+        QVERIFY2(pHost->requestClose(), "Closing the profile was refused");
+        const QPointer<Host> hostGuard(pHost);
+        pHost = nullptr;
+        HostManager::self()->deleteHost(profileName);
+        QVERIFY2(hostGuard.isNull(), "The Host outlived deleteHost(), so ~Host() never ran");
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QFile logFile(logFileName);
+        QVERIFY2(logFile.open(QIODevice::ReadOnly | QIODevice::Text), "The log file is not readable");
+        const QString contents = QString::fromUtf8(logFile.readAll());
+        QVERIFY2(contents.contains(qsl("teardown-exit-event-text\n")), qPrintable(qsl("The text sysExitEvent appended never reached the log:\n%1").arg(contents)));
     }
 
     // closeChildren() disposes of these windows through deleteLater(), and
