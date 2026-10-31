@@ -1889,6 +1889,38 @@ void Host::updateConsolesFont()
     raiseEvent(event);
 
     emit signal_consoleFontChanged(consoleFrontend()->displayFont());
+    reportDisplayFontChangeToEditor();
+}
+
+void Host::reportDisplayFontChangeToEditor()
+{
+    if (mEditorFontFollowsDisplay) {
+        raiseEditorFontChange();
+    }
+}
+
+// Shaped as the "main window font" one above
+void Host::raiseEditorFontChange()
+{
+    // As in raiseSettingChangedEvent(): a value read from the profile's own file is not a change
+    if (!TAppFrontend::hasView() || hasConsoleView()) {
+        const QFont font = getEditorFont();
+        TEvent event{};
+        event.mArgumentList.append(qsl("sysSettingChanged"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(qsl("editor font"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(font.family());
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(QString::number(font.pointSize()));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        raiseEvent(event);
+    }
+
+    // Read afresh: a handler of the event may have changed it again
+    const QFont reported = getEditorFont();
+    mEditorFontReported = TFontAttributes(reported);
+    emit signal_editorFontChanged(reported);
 }
 
 // a little message to make the player feel special for helping us find bugs
@@ -5236,6 +5268,7 @@ void Host::substituteMissingDisplayFonts()
         for (const auto& pHost : hosts->hostList()) {
             if (pHost && !pHost->isClosingDown() && pHost->mDisplayFontCheckReached) {
                 pHost->substituteMissingDisplayFont();
+                pHost->refreshEditorFont();
             }
         }
     }
@@ -5247,6 +5280,7 @@ void Host::restoreMissingDisplayFonts()
         for (const auto& pHost : hosts->hostList()) {
             if (pHost && !pHost->isClosingDown()) {
                 pHost->restoreMissingDisplayFont();
+                pHost->refreshEditorFont();
             }
         }
     }
@@ -5294,6 +5328,23 @@ bool Host::restoreMissingDisplayFont()
     //: %1 is the font family the profile asked for, which had been missing and has now been made available, by a package or module that this or another profile installed or opened
     postMessage(tr("[ INFO ]  - The font \"%1\" that this profile uses is now available, so it is being used instead of the default.").arg(family));
     return true;
+}
+
+void Host::refreshEditorFont()
+{
+    // A display font that moves already re-reports an editor following it
+    if (mEditorFontFollowsDisplay || !mEditorFont.has_value()) {
+        return;
+    }
+
+    const TFontAttributes current(getEditorFont());
+    if (!mEditorFontReported.has_value()) {
+        mEditorFontReported = current;
+        return;
+    }
+    if (current != mEditorFontReported.value()) {
+        raiseEditorFontChange();
+    }
 }
 
 void Host::setEnableBlinkText(const bool enable)
@@ -7803,6 +7854,71 @@ QFont Host::getDisplayFontForSaving()
         font.setFamily(mMissingDisplayFontFamily);
     }
     return font;
+}
+
+QFont Host::getEditorFont()
+{
+    if (mEditorFontFollowsDisplay || !mEditorFont.has_value()) {
+        return getDisplayFont();
+    }
+
+    // Stood in for here rather than when chosen, so the save keeps the family asked for
+    const auto resolved = resolveFontFamily(mEditorFont->family());
+    QFont font = createFontWithSettings(resolved.available ? resolved.family : scmDefaultFontFamily, mEditorFont->pointSize());
+    if (resolved.available && resolved.weight != QFont::Normal) {
+        font.setWeight(resolved.weight);
+    }
+    // The editor's readers divide by the letters' width, which is what setDisplayFont() refuses such a font for
+    if (resolved.available && QFontMetrics(font).averageCharWidth() == 0) {
+        return createFontWithSettings(scmDefaultFontFamily, mEditorFont->pointSize());
+    }
+    return font;
+}
+
+QFont Host::editorFontBase()
+{
+    if (mEditorFontFollowsDisplay || !mEditorFont.has_value()) {
+        return getEditorFont();
+    }
+    return mEditorFont.value();
+}
+
+void Host::setEditorFont(const QFont& font)
+{
+    int pointSize = font.pointSize();
+    if (pointSize <= 0) {
+        // Given in pixels, so the size Qt shows it at
+        pointSize = QFontInfo(font).pointSize();
+    }
+
+    const QFont before = getEditorFont();
+    mEditorFont = createFontWithSettings(font.family(), std::clamp(pointSize, 1, scmMaxFontSize));
+    if (!mEditorFontFollowsDisplay && TFontAttributes(getEditorFont()) != TFontAttributes(before)) {
+        raiseEditorFontChange();
+    }
+}
+
+void Host::setEditorFontFromString(const QString& fontData)
+{
+    QFont font;
+    if (!font.fromString(fontData)) {
+        qWarning().nospace().noquote() << "Host::setEditorFontFromString(...) WARNING - \"" << fontData << "\" is not a font description, so the editor font is kept.";
+        return;
+    }
+    setEditorFont(font);
+}
+
+void Host::setEditorFontFollowsDisplay(const bool follows)
+{
+    if (mEditorFontFollowsDisplay == follows) {
+        return;
+    }
+    if (!follows && !mEditorFont.has_value()) {
+        setEditorFont(getDisplayFont());
+    }
+    mEditorFontFollowsDisplay = follows;
+    raiseSettingChangedEvent(qsl("editorFontFollowsDisplay"), follows);
+    raiseEditorFontChange();
 }
 
 QFont Host::getAndClearTempDisplayFont()

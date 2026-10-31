@@ -1246,6 +1246,10 @@ void XMLimport::readHost(Host* pHost)
 #endif
                 // For Qt 6.9+, emoji font support is handled globally in FontManager::addEmojiFont()
 #endif
+            } else if (name() == qsl("mEditorFont")) {
+                pHost->setEditorFontFromString(readElementText());
+            } else if (name() == qsl("mEditorFontFollowsDisplay")) {
+                pHost->setEditorFontFollowsDisplay(readElementText() == YES);
             } else if (name() == qsl("mCommandLineFont")) {
                 // We use the same font as the main console now so discard this
                 // one silently:

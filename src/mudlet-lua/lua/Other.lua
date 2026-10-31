@@ -1615,6 +1615,9 @@ local configOptions = {
   "compactInputLine",
   "controlCharacterHandling",
   "editorAutoComplete",
+  "editorFont",
+  "editorFontFollowsDisplay",
+  "editorFontSize",
   "enableBlinkText",
   "enableCHARSET",
   "enableClosedCaption",
@@ -1709,10 +1712,23 @@ function setConfig(...)
     return oldsetConfig(...)
   end
 
+  -- A table switching the editor to the display font has no use for a family or
+  -- size: a getConfig() snapshot taken while following carries the display font's,
+  -- which would give the editor a font of its own once the display font has moved
+  local wanted = args[1]
+  if wanted.editorFontFollowsDisplay == true then
+    wanted = {}
+    for k, v in pairs(args[1]) do
+      if k ~= "editorFont" and k ~= "editorFontSize" then
+        wanted[k] = v
+      end
+    end
+  end
+
   -- every key is tried before anything is reported, so one refusal - or a raised
   -- bad-argument error - does not leave the rest unapplied
   local failures, warnings, raised = {}, {}, false
-  for k,v in pairs(args[1]) do
+  for k,v in pairs(wanted) do
     local called, ok, message = pcall(oldsetConfig, k, v)
     if not called then
       ok, message = nil, ok

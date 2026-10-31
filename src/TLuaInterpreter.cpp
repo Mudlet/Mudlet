@@ -10029,6 +10029,42 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.mEditorAutoComplete = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    // A family or size asked for is one of the editor's own, so the editor stops following the display
+    // font - unless it is the one in use already, so that a getConfig() table handed back changes nothing
+    if (key == qsl("editorFont")) {
+        const QString fontName = getVerifiedString(L, __func__, 2, "value");
+        if (fontName.trimmed().isEmpty()) {
+            return warnArgumentValue(L, __func__, "editorFont must not be empty");
+        }
+        const auto resolved = host.resolveFontFamily(fontName);
+        if (!resolved.available) {
+            return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
+        }
+        if (host.getEditorFont().family().compare(resolved.family, Qt::CaseInsensitive) != 0) {
+            QFont font = host.editorFontBase();
+            font.setFamily(resolved.family);
+            host.setEditorFont(font);
+            host.setEditorFontFollowsDisplay(false);
+        }
+        return success();
+    }
+    if (key == qsl("editorFontSize")) {
+        const int size = getVerifiedInt(L, __func__, 2, "value");
+        if (size < 1 || size > Host::scmMaxFontSize) {
+            return warnArgumentValue(L, __func__, qsl("editorFontSize %1 is out of range, it must be between 1 and %2").arg(QString::number(size), QString::number(Host::scmMaxFontSize)));
+        }
+        if (host.getEditorFont().pointSize() != size) {
+            QFont font = host.editorFontBase();
+            font.setPointSize(size);
+            host.setEditorFont(font);
+            host.setEditorFontFollowsDisplay(false);
+        }
+        return success();
+    }
+    if (key == qsl("editorFontFollowsDisplay")) {
+        host.setEditorFontFollowsDisplay(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
     if (key == qsl("mapperPanelVisible")) {
         host.setMapperPanelVisible(getVerifiedBool(L, __func__, 2, "value"));
         return success();
@@ -10338,6 +10374,18 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("editorAutoComplete"),
              [&]() {
                  lua_pushboolean(L, host.mEditorAutoComplete);
+             }},
+            {qsl("editorFont"),
+             [&]() {
+                 lua_pushstring(L, host.getEditorFont().family().toUtf8().constData());
+             }},
+            {qsl("editorFontSize"),
+             [&]() {
+                 lua_pushinteger(L, host.getEditorFont().pointSize());
+             }},
+            {qsl("editorFontFollowsDisplay"),
+             [&]() {
+                 lua_pushboolean(L, host.editorFontFollowsDisplay());
              }},
             {qsl("enableGMCP"),
              [&]() {
