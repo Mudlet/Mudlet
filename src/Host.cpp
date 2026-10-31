@@ -6802,10 +6802,6 @@ bool Host::setLabelClickCallback(const QString& name, const int func)
 
 bool Host::setLabelLiveRegion(const QString& name, TLabelLiveRegion liveRegion)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setLiveRegion(liveRegion);
@@ -6816,10 +6812,6 @@ bool Host::setLabelLiveRegion(const QString& name, TLabelLiveRegion liveRegion)
 
 bool Host::setLabelAccessibleName(const QString& name, const QString& accessibleName)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setAccessibleName(accessibleName);
@@ -6830,10 +6822,6 @@ bool Host::setLabelAccessibleName(const QString& name, const QString& accessible
 
 bool Host::setLabelAccessibleButton(const QString& name, std::optional<bool> button)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setAccessibleButton(button);
@@ -7317,9 +7305,6 @@ std::optional<QString> Host::labelToolTip(const QString& name) const
 
 std::optional<QString> Host::labelAccessibleName(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
         return pLabel->effectiveAccessibleName();
     }
@@ -7328,9 +7313,6 @@ std::optional<QString> Host::labelAccessibleName(const QString& name) const
 
 std::optional<TLabelLiveRegion> Host::labelLiveRegion(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
         return pLabel->mLiveRegion;
     }
@@ -7339,9 +7321,6 @@ std::optional<TLabelLiveRegion> Host::labelLiveRegion(const QString& name) const
 
 std::optional<QString> Host::labelAccessibleRole(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     const TLabelModel* pLabel = mWindowRegistry.labelModel(name);
     if (!pLabel) {
         return {};

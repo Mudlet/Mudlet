@@ -3596,9 +3596,6 @@ int TLuaInterpreter::setLabelAccessibleName(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (!host.setLabelAccessibleName(labelName, accessibleName)) {
         return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
     }
@@ -3616,9 +3613,6 @@ int TLuaInterpreter::getLabelAccessibleName(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto accessibleName = host.labelAccessibleName(labelName)) {
         lua_pushstring(L, accessibleName->toUtf8().constData());
         return 1;
@@ -3649,9 +3643,6 @@ int TLuaInterpreter::setLabelAccessibleRole(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (!host.setLabelAccessibleButton(labelName, button)) {
         return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
     }
@@ -3684,9 +3675,6 @@ int TLuaInterpreter::setLabelLiveRegion(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (!host.setLabelLiveRegion(labelName, liveRegion)) {
         return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
     }
@@ -3704,9 +3692,6 @@ int TLuaInterpreter::getLabelLiveRegion(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto liveRegion = host.labelLiveRegion(labelName)) {
         switch (*liveRegion) {
         case TLabelLiveRegion::Polite:
@@ -3734,9 +3719,6 @@ int TLuaInterpreter::getLabelAccessibleRole(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto role = host.labelAccessibleRole(labelName)) {
         lua_pushstring(L, role->toUtf8().constData());
         return 1;

@@ -715,9 +715,10 @@ std::pair<QString, std::shared_ptr<TNullConsoleFrontend::ScrollBox>> TNullConsol
     return {userWindow, nullptr};
 }
 
-void TNullConsoleFrontend::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool, bool)
+void TNullConsoleFrontend::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool, bool clickThrough)
 {
     auto pLabel = std::make_unique<TLabelModel>(mpHost, name);
+    pLabel->setClickThrough(clickThrough);
     pLabel->mGeometry = QRect(QPoint(x, y), widgetSize(width, height));
     auto [userWindow, box] = containerFor(windowname, false);
     // A real label takes its console's font as it is made, and keeps it as that font changes
@@ -727,6 +728,16 @@ void TNullConsoleFrontend::createLabel(const QString& windowname, const QString&
     reportWindowVisibility(name);
     // TMainConsole::createLabel()'s colour
     setLabelBackgroundColor(name, QColor(32, 32, 32, 255));
+}
+
+bool TNullConsoleFrontend::setLabelClickThrough(const QString& name, const bool clickThrough)
+{
+    TLabelModel* pLabel = labelModel(name);
+    if (!pLabel) {
+        return false;
+    }
+    pLabel->setClickThrough(clickThrough);
+    return true;
 }
 
 void TNullConsoleFrontend::deleteLabel(const QString& name)
@@ -794,6 +805,16 @@ void TNullConsoleFrontend::showLabelText(Label& label, const QString& shown)
         label.sizeHint.reset();
     }
     label.pModel->setText(shown);
+    updateShownContent(label);
+}
+
+// TLabel::imageMayHaveChanged()
+void TNullConsoleFrontend::updateShownContent(Label& label)
+{
+    using ShownContent = TLabelModel::ShownContent;
+    // TLabel::showsImage(): text drawn over an SVG is what the label then shows
+    const bool showsImage = label.pixmapSize || (label.svgSize && QTextDocumentFragment::fromHtml(label.pModel->mText).toPlainText().trimmed().isEmpty());
+    label.pModel->mShownContent = label.showsMovie ? ShownContent::Animation : showsImage ? ShownContent::Graphic : ShownContent::Text;
 }
 
 // TLabel::reapplyLinkStyle()
@@ -2257,6 +2278,7 @@ std::pair<bool, QString> TNullConsoleFrontend::setLabelMovie(const QString& name
     label.textLabel = false;
     label.sizeHint.reset();
     label.pModel->mText.clear();
+    updateShownContent(label);
     label.movie->start();
     return {true, QString()};
 }
@@ -2286,6 +2308,7 @@ bool TNullConsoleFrontend::setLabelBackgroundImage(const QString& name, const QS
             if (label.pixmapSize) {
                 clearLabelContents(label);
             }
+            updateShownContent(label);
             return true;
         }
     }
@@ -2302,6 +2325,7 @@ bool TNullConsoleFrontend::setLabelBackgroundImage(const QString& name, const QS
     if (!raster.isNull()) {
         label.pixmapSize = raster.deviceIndependentSize().toSize();
     }
+    updateShownContent(label);
     return true;
 }
 
@@ -2323,6 +2347,7 @@ bool TNullConsoleFrontend::resetLabelBackgroundImage(const QString& name)
     if (const QString withoutImage = TLabelModel::styleSheetWithoutBackgroundImage(label.pModel->mStyleSheet); withoutImage != label.pModel->mStyleSheet) {
         restyleLabel(label, withoutImage);
     }
+    updateShownContent(label);
     return true;
 }
 
