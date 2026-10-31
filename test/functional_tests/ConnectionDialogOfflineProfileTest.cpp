@@ -83,6 +83,8 @@ private:
     // Every checkbox the dialog saves ticked, and no address: showing a profile after this one
     // changes each box, and validation along the way finds no address to connect to
     const QString mTickedProfile = qsl("Ticked-ConnDialogOffline");
+    // Not from the catalog, with saves made at different times
+    const QString mSavesProfile = qsl("Saves-ConnDialogOffline");
 
     dlgConnectionProfiles* dialog() const { return mudlet::self()->mpConnectionDialog.data(); }
 
@@ -129,7 +131,8 @@ private slots:
                                     mUncopyableCatalogProfile,
                                     mAutoLoginSecureCatalogProfile,
                                     mSavedProfile,
-                                    mTickedProfile}) {
+                                    mTickedProfile,
+                                    mSavesProfile}) {
             QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles/%2").arg(mXdgDir.path(), name)));
         }
         qputenv("XDG_CONFIG_HOME", mXdgDir.path().toUtf8());
@@ -331,6 +334,35 @@ private slots:
         QCOMPARE(saved(copy, qsl("ssl_tsl")), QString::number(Qt::Checked));
         QCOMPARE(saved(copy, qsl("description")), (*game).description);
         QCOMPARE(saved(copy, qsl("website")), (*game).websiteInfo);
+    }
+
+    // Opening a profile loads its newest save by modification time, so the copy has to keep the time of each save
+    void test_aCopyOpensTheSameSaveAsTheOriginal()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QDir saves(MudletApp::getMudletPath(enums::profileXmlFilesPath, mSavesProfile));
+        QVERIFY(saves.mkpath(saves.absolutePath()));
+        const QString newest = qsl("2026-01-02#00-00-00.xml");
+        // the editor's autosave sorts, and so is copied, after the dated saves
+        const QList<QPair<QString, int>> savesAndAgeInDays{{qsl("2026-01-01#00-00-00.xml"), 2}, {newest, 1}, {qsl("autosave.xml"), 30}};
+        for (const auto& [name, ageInDays] : savesAndAgeInDays) {
+            QFile save(saves.absoluteFilePath(name));
+            QVERIFY(save.open(QIODevice::WriteOnly));
+            QVERIFY(save.write("<MudletPackage/>") > 0);
+            QVERIFY(save.flush());
+            QVERIFY(save.setFileTime(QDateTime::currentDateTime().addDays(-ageInDays), QFileDevice::FileModificationTime));
+        }
+        QCOMPARE(saves.entryList({qsl("*.xml")}, QDir::Files, QDir::Time).first(), newest);
+        selectTestProfile();
+        selectProfile(mSavesProfile);
+
+        dialog()->slot_copyProfile();
+        QVERIFY2(waitForTheCopy(), "the copy never finished");
+        const QDir copiedSaves(MudletApp::getMudletPath(enums::profileXmlFilesPath, mSavesProfile + qsl("1")));
+        for (const auto& save : savesAndAgeInDays) {
+            QCOMPARE(QFileInfo(copiedSaves.absoluteFilePath(save.first)).lastModified(), QFileInfo(saves.absoluteFilePath(save.first)).lastModified());
+        }
+        QCOMPARE(copiedSaves.entryList({qsl("*.xml")}, QDir::Files, QDir::Time).first(), newest);
     }
 
     // ssl_tsl is one of the connection details a settings copy carries over, with the address and port
