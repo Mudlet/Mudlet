@@ -553,6 +553,56 @@ private slots:
         QVERIFY2(supports.contains(qsl(R"("Char.Login 2")")), qPrintable(supports));
     }
 
+    QStringList gmcpLinkCommands(Host* host)
+    {
+        QByteArray link("\x1b]8;;gmcp:IRE.Target.Set%20%22rat%22\x1b\\GMCP_LINK\x1b]8;;\x1b\\\r\n");
+        host->mTelnet.loopbackTest(link);
+        TMainConsole* console = host->mainConsoleView();
+        int linkId = 0;
+        for (int line = console->buffer.getLastLineNumber(); line >= 0 && linkId == 0; --line) {
+            linkId = console->buffer.getLinkIndexAt(line, 0);
+        }
+        return linkId ? console->getLinkStore().getLinksConst(linkId) : QStringList();
+    }
+
+    void testAGmcpLinkSendsOneMessageAndTypesNothing()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        const QStringList commands = gmcpLinkCommands(host);
+        QCOMPARE(commands.size(), 1);
+
+        host->mLuaInterpreter.compileAndExecuteScript(commands.first());
+        const auto sent = [this]() {
+            return mpServer->receivedGmcp().count(qsl("IRE.Target.Set \"rat\""));
+        };
+        QVERIFY2(QTest::qWaitFor([&]() { return sent() > 0; }, 3000), "the message never reached the game");
+        QTest::qWait(100);
+        QCOMPARE(sent(), 1);
+        QVERIFY2(!mpServer->receivedText().contains("IRE.Target"), "the message was typed at the game");
+    }
+
+    // With GMCP off the message has nowhere to go, and it must not be typed at the game instead
+    void testAGmcpLinkSendsNothingWhileGmcpIsOff()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        const QStringList commands = gmcpLinkCommands(host);
+        QCOMPARE(commands.size(), 1);
+
+        host->mEnableGMCP = false;
+        const int connections = mpServer->connectionCount();
+        host->mTelnet.reconnect();
+        QVERIFY(QTest::qWaitFor([&]() { return mpServer->connectionCount() > connections; }, 5000));
+        QVERIFY(QTest::qWaitFor([&]() { return host->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState; }, 5000));
+        QTest::qWait(200);
+        QVERIFY(!host->mTelnet.isGMCPEnabled());
+        host->mLuaInterpreter.compileAndExecuteScript(commands.first());
+        QTest::qWait(200);
+        QCOMPARE(mpServer->receivedGmcp().count(qsl("IRE.Target.Set \"rat\"")), 0);
+        QVERIFY2(!mpServer->receivedText().contains("IRE.Target"), "the message was typed at the game");
+    }
+
     // ---- Char.Login.Credentials / hand-off ---------------------------------
 
     void testStoredCredentialsAutofillWithVersionEcho()

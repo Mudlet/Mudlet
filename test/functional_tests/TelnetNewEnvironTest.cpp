@@ -757,6 +757,14 @@ private slots:
         }
     }
 
+    // A server must see these before it sends the scheme, even in a menu, where an older client types it at the game
+    void test_gmcpLinksAreAdvertisedWithTheOtherHyperlinkFeatures()
+    {
+        QCOMPARE(mpHost->mTelnet.getNewEnvironDataMap().value(qsl("OSC_HYPERLINKS_GMCP")).second, qsl("1"));
+        mpHost->mEnableOSC8Hyperlinks = false;
+        QCOMPARE(mpHost->mTelnet.getNewEnvironDataMap().value(qsl("OSC_HYPERLINKS_GMCP")).second, qsl("0"));
+    }
+
     // MNES narrows the advertised set to five names and moves them into the
     // well-known namespace.
     void test_mnesAnswersItsFiveVariablesAsWellKnownOnes()

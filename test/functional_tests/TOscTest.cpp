@@ -41,6 +41,7 @@
 #include "ProfileTestHelper.h"
 #include "TAccessibleTextEdit.h"
 #include "TCommandLine.h"
+#include "THyperlinkSelectionManager.h"
 #include "THyperlinkStyling.h"
 #include "THyperlinkVisibilityManager.h"
 #include "TLinkStore.h"
@@ -1229,6 +1230,134 @@ private slots:
     }
     QVERIFY2(line >= 0, "the link's text was not printed");
     QCOMPARE(console->buffer.getLinkIndexAt(line, 0), 0);
+  }
+
+  // The message is checked when the link arrives, and what was checked is what a click sends
+  void test_Osc8GmcpLink_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("expectedMessage");
+
+    QTest::newRow("name only") << qsl("gmcp:Game.UI.Close") << qsl("Game.UI.Close");
+    QTest::newRow("string") << qsl("gmcp:IRE.Target.Set%20%22rat%22") << qsl("IRE.Target.Set \"rat\"");
+    QTest::newRow("number") << qsl("gmcp:Char.Items.Contents%2012345") << qsl("Char.Items.Contents 12345");
+    QTest::newRow("object") << qsl("gmcp:Char.Skills.Get%20%7B%22group%22%3A%22Perception%22%7D") << qsl("Char.Skills.Get {\"group\":\"Perception\"}");
+    QTest::newRow("array") << qsl("gmcp:Game.List%20%5B1%2C2%5D") << qsl("Game.List [1,2]");
+    QTest::newRow("true") << qsl("gmcp:Game.Flag%20true") << qsl("Game.Flag true");
+    QTest::newRow("null") << qsl("gmcp:Game.Flag%20null") << qsl("Game.Flag null");
+    QTest::newRow("empty string") << qsl("gmcp:Char.Items.Inv%20%22%22") << qsl("Char.Items.Inv \"\"");
+    QTest::newRow("spaces around the JSON") << qsl("gmcp:Game.Flag%20%20true%20") << qsl("Game.Flag true");
+    QTest::newRow("config is not part of it") << qsl("gmcp:Game.Flag%20true?config={\"tooltip\":\"Flag it\"}") << qsl("Game.Flag true");
+    QTest::newRow("raw JSON") << qsl("gmcp:Game.Pref {\"a\":1}") << qsl("Game.Pref {\"a\":1}");
+    QTest::newRow("a name a package only starts like") << qsl("gmcp:Char.Loginish.Get") << qsl("Char.Loginish.Get");
+    QTest::newRow("Core as a later part") << qsl("gmcp:Game.Core.Set") << qsl("Game.Core.Set");
+    QTest::newRow("longest name") << qsl("gmcp:A.") + QString(126, QLatin1Char('b')) << qsl("A.") + QString(126, QLatin1Char('b'));
+  }
+
+  void test_Osc8GmcpLink() {
+    QFETCH(QString, uri);
+    QFETCH(QString, expectedMessage);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Text\x1b]8;;\x1b\\"));
+
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "the link was refused");
+    QCOMPARE(findFirstLinkCommands(), QStringList(qsl("sendGMCP(%1)").arg(LuaLiteral::quote(expectedMessage))));
+  }
+
+  void test_Osc8GmcpDefaultTooltipNamesTheMessage() {
+    injectData(qsl("\x1b]8;;gmcp:IRE.Target.Set%20%22rat%22\x1b\\a rat\x1b]8;;\x1b\\"));
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    QCOMPARE(mpHost->mainConsoleView()->buffer.getLinkTooltip(std::get<2>(*pos)), qsl("Send GMCP: IRE.Target.Set \"rat\""));
+  }
+
+  void test_Osc8GmcpLinkThatIsNotValidIsPlainText_data() {
+    QTest::addColumn<QString>("uri");
+
+    QTest::newRow("no name") << qsl("gmcp:");
+    QTest::newRow("one part") << qsl("gmcp:Target");
+    QTest::newRow("empty part") << qsl("gmcp:Game..Set");
+    QTest::newRow("trailing dot") << qsl("gmcp:Game.Set.");
+    QTest::newRow("part starts with a digit") << qsl("gmcp:Game.1Set");
+    QTest::newRow("hyphen") << qsl("gmcp:Game.Set-It");
+    QTest::newRow("name too long") << qsl("gmcp:A.") + QString(127, QLatin1Char('b'));
+    QTest::newRow("space and nothing") << qsl("gmcp:Game.Set%20");
+    QTest::newRow("not JSON") << qsl("gmcp:Game.Set%20rat");
+    QTest::newRow("two values") << qsl("gmcp:Game.Set%201%2C2");
+    QTest::newRow("closes the wrapper") << qsl("gmcp:Game.Set%201%5D%5B2");
+    QTest::newRow("trailing comma") << qsl("gmcp:Game.Set%201%2C");
+    QTest::newRow("a raw query mark cuts the JSON") << qsl("gmcp:Game.Set%20%22a?b%22");
+    QTest::newRow("NUL in the JSON") << qsl("gmcp:Game.Set%20%22a%00b%22");
+    QTest::newRow("newline in the name") << qsl("gmcp:Game.Set%0A");
+    QTest::newRow("newline in the JSON") << qsl("gmcp:Game.Set%20%22a%0Ab%22");
+    QTest::newRow("DEL in the JSON") << qsl("gmcp:Game.Set%20%22a%7Fb%22");
+    QTest::newRow("Core") << qsl("gmcp:Core.Hello");
+    QTest::newRow("Core in another case") << qsl("gmcp:cORE.sUPPORTS.Set%20%5B%5D");
+    QTest::newRow("Char.Login message") << qsl("gmcp:Char.Login.Credentials%20%7B%7D");
+    QTest::newRow("Char.Login in another case") << qsl("gmcp:CHAR.LOGIN.Reconnect");
+    QTest::newRow("Char.Login itself") << qsl("gmcp:char.login%20%7B%7D");
+    QTest::newRow("encoded Core") << qsl("gmcp:%43ore.Hello");
+    QTest::newRow("a selection with data that is not an object") << qsl("gmcp:Game.Set%20%22rat%22?config={\"selection\":{\"group\":\"g\",\"value\":\"v\"}}");
+    QTest::newRow("scheme in capitals") << qsl("GMCP:Game.Set");
+  }
+
+  void test_Osc8GmcpLinkThatIsNotValidIsPlainText() {
+    QFETCH(QString, uri);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Text\x1b]8;;\x1b\\"));
+
+    QVERIFY2(!findFirstLinkPositionWithId().has_value(), "a link was made");
+    QVERIFY(bufferShows(qsl("Text")));
+  }
+
+  void test_Osc8GmcpMenuItem_data() {
+    QTest::addColumn<QString>("item");
+    QTest::addColumn<QString>("expected");
+
+    QTest::newRow("valid") << qsl("gmcp:IRE.Target.Set%20%22rat%22") << qsl("sendGMCP(%1)").arg(LuaLiteral::quote(qsl("IRE.Target.Set \"rat\"")));
+    QTest::newRow("not valid shows greyed out") << qsl("gmcp:Target") << QString();
+    QTest::newRow("refused shows greyed out") << qsl("gmcp:Core.Hello") << QString();
+    QTest::newRow("capitals are not typed at the game") << qsl("GMCP:Target") << QString();
+  }
+
+  void test_Osc8GmcpMenuItem() {
+    QFETCH(QString, item);
+    QFETCH(QString, expected);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Pick\":\"%1\"},{\"Look\":\"send:look\"}]}\x1b\\Text\x1b]8;;\x1b\\").arg(QString(item).replace(qsl("%22"), qsl("%2522")).replace(qsl("%20"), qsl("%2520"))));
+
+    const QStringList commands = findFirstLinkCommands();
+    QCOMPARE(commands.size(), 2);
+    QCOMPARE(commands.first(), expected);
+  }
+
+  void test_Osc8GmcpSelectionAddsItsState_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("expectedSelected");
+    QTest::addColumn<QString>("expectedCleared");
+
+    QTest::newRow("no data") << qsl("gmcp:Game.Pref.Set") << qsl("Game.Pref.Set {\"selected\":true}") << qsl("Game.Pref.Set {\"selected\":false}");
+    QTest::newRow("an object") << qsl("gmcp:Game.Pref.Set%20%7B%22pref%22%3A%22hints%22%7D") << qsl("Game.Pref.Set {\"pref\":\"hints\",\"selected\":true}") << qsl("Game.Pref.Set {\"pref\":\"hints\",\"selected\":false}");
+    QTest::newRow("replaces selected") << qsl("gmcp:Game.Pref.Set%20%7B%22selected%22%3A%22x%22%7D") << qsl("Game.Pref.Set {\"selected\":true}") << qsl("Game.Pref.Set {\"selected\":false}");
+  }
+
+  void test_Osc8GmcpSelectionAddsItsState() {
+    QFETCH(QString, uri);
+    QFETCH(QString, expectedSelected);
+    QFETCH(QString, expectedCleared);
+
+    THyperlinkSelectionManager &manager = mpHost->mainConsoleView()->getHyperlinkSelectionManager();
+    const QString group = qsl("gmcpSelection%1").arg(QTest::currentDataTag());
+    injectData(qsl("\x1b]8;;%1?config={\"selection\":{\"group\":\"%2\",\"value\":\"v\",\"exclusive\":false}}\x1b\\Text\x1b]8;;\x1b\\").arg(uri, group));
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "the link was refused");
+    const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
+    QCOMPARE(styling.actionScheme, Mudlet::HyperlinkStyling::ActionGmcp);
+
+    manager.setSelected(group, qsl("v"), true);
+    QCOMPARE(manager.modifyUriForSelection(styling.actionScheme, styling.baseCommand, group, qsl("v")), qsl("sendGMCP(%1)").arg(LuaLiteral::quote(expectedSelected)));
+    manager.setSelected(group, qsl("v"), false);
+    QCOMPARE(manager.modifyUriForSelection(styling.actionScheme, styling.baseCommand, group, qsl("v")), qsl("sendGMCP(%1)").arg(LuaLiteral::quote(expectedCleared)));
   }
 
   // A "config" parameter carrying something that is not an object is not a

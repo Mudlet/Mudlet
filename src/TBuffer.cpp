@@ -24,6 +24,7 @@
 #include "TBuffer.h"
 
 #include "Host.h"
+#include "GmcpLinkUri.h"
 #include "LuaLiteral.h"
 #include "MailtoUri.h"
 #include "MudletApp.h"
@@ -5270,6 +5271,19 @@ void TBuffer::decodeOSC(const QString& sequence)
                 mCurrentHyperlinkStyling.baseCommand = innerCommand;
                 command = {qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand))};
                 hint = {qsl("%1: %2").arg(QObject::tr("Prompt"), UntrustedText::forTarget(innerCommand))};
+            } else if (baseUrl.startsWith(qsl("gmcp:"))) {
+                const auto gmcpLink = parseGmcpLinkUri(baseUrl);
+                // A selection reports its state in the link's JSON object, so other data leaves it nowhere to go
+                if (!gmcpLink || (mCurrentHyperlinkStyling.selection.hasSelectionSettings && !gmcpLink->dataAllowsSelection())) {
+                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored a gmcp: link that is not valid or may not be sent: \"" << baseUrl << "\"";
+                    return;
+                }
+                const QString message = gmcpLink->message();
+                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionGmcp;
+                mCurrentHyperlinkStyling.baseCommand = message;
+                command = {qsl("sendGMCP(%1)").arg(LuaLiteral::quote(message))};
+                //: Start of the tooltip on a game's link that sends a GMCP message, followed by a colon and the message
+                hint = {qsl("%1: %2").arg(QObject::tr("Send GMCP"), UntrustedText::forTarget(message))};
             } else {
                 QUrl qurl(baseUrl);
                 QString scheme = qurl.scheme().toLower();
@@ -5331,6 +5345,11 @@ void TBuffer::decodeOSC(const QString& sequence)
                     } else if (menuCommand.startsWith(qsl("prompt:"))) {
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
                         menuCommands.append(qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand)));
+                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+                    } else if (menuCommand.startsWith(qsl("gmcp:"), Qt::CaseInsensitive)) {
+                        // One that is not valid stays in the menu with nothing to run, so it shows greyed out, and is never typed at the game
+                        const auto gmcpItem = parseGmcpLinkUri(menuCommand);
+                        menuCommands.append(gmcpItem ? qsl("sendGMCP(%1)").arg(LuaLiteral::quote(gmcpItem->message())) : QString());
                         menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     } else if (menuCommand == qsl("-")) {
                         // Special case: "-" creates a menu separator

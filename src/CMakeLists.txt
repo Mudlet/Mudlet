@@ -61,6 +61,7 @@ set(mudlet_SRCS
     FontManager.cpp
     GifTracker.cpp
     GMCPAuthenticator.cpp
+    GmcpLinkUri.cpp
     Host.cpp
     HostManager.cpp
     ircmessageformatter.cpp
@@ -369,6 +370,7 @@ set(mudlet_HDRS
     FontManager.h
     GifTracker.h
     GMCPAuthenticator.h
+    GmcpLinkUri.h
     Host.h
     HostManager.h
     ircmessageformatter.h
