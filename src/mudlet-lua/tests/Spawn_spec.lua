@@ -228,21 +228,57 @@ describe("spawn", function()
   -- A child outlives the Lua state that spawned it unless something ends it:
   -- once its profile closed, the next line it wrote was read off the freed
   -- interpreter, and after a reset it called whatever the new state held at the
-  -- old callback reference. Each child below writes a line after a second and
-  -- then touches a file, so a two second wait is twice what a survivor needs.
-  -- The suite's own profile cannot be torn down from inside it, so each test
-  -- loads a second one.
+  -- old callback reference. Each child below touches a file and writes a line
+  -- only once the spec releases it, after the teardown is over: a teardown can
+  -- outlast any fixed head start, as the sysExitEvent handlers and the profile
+  -- save run first, and a child on a timer then acts before it is due to be
+  -- ended. The suite's own profile cannot be torn down from inside it, so each
+  -- test loads a second one.
   describe("a profile torn down while its process runs", function()
+    -- Pumps events until `condition` holds or `timeoutMs` has run out, and
+    -- returns whether it held
+    local function waitUntil(condition, timeoutMs)
+      for _ = 1, timeoutMs / 50 do
+        if condition() then
+          return true
+        end
+        pumpEvents(50)
+      end
+      return condition() and true or false
+    end
+
     -- Writes a profile whose script is `script` with its %s replaced by the
-    -- spawn() call, and returns the file the child touches if it survives
+    -- spawn() call, and returns the files the child touches: `started` as it
+    -- starts, `survivor` if it is still running once `release` is called, and
+    -- `gaveUp` if it stopped waiting first
     local function makeProfile(name, script)
-      local survivor = getMudletHomeDir() .. "/" .. name .. "-survivor"
-      onCleanup(function() os.remove(survivor) end)
-      os.remove(survivor)
-      local command = string.format("sleep 1; echo spawnAfterTeardown; touch '%s'", survivor)
-      local child = string.format([[spawn(function(line) raiseGlobalEvent("mudletSpecSpawnLine", line) end, "/bin/sh", "-c", %q)]], command)
-      makeFixtureProfile(name, string.format(script, child))
-      return survivor
+      local base = getMudletHomeDir() .. "/" .. name
+      local child = {started = base .. "-started", go = base .. "-go", survivor = base .. "-survivor", gaveUp = base .. "-gaveup"}
+      local function removeFiles()
+        for _, path in pairs(child) do
+          os.remove(path)
+        end
+      end
+      onCleanup(removeFiles)
+      removeFiles()
+      -- Gives up after 30s so a survivor of a failed run does not linger. The
+      -- script lands in the profile's XML unescaped, so it cannot hold & or <.
+      local command = string.format(
+        "touch '%s'; n=0; until [ -e '%s' ] || [ $n -ge 300 ]; do sleep 0.1; n=$((n + 1)); done; if [ -e '%s' ]; then touch '%s'; echo spawnAfterTeardown; else touch '%s'; fi",
+        child.started, child.go, child.go, child.survivor, child.gaveUp)
+      local call = string.format([[spawn(function(line) raiseGlobalEvent("mudletSpecSpawnLine", line) end, "/bin/sh", "-c", %q)]], command)
+      makeFixtureProfile(name, string.format(script, call))
+      return child
+    end
+
+    -- Lets a child that outlived its teardown act, and waits long enough for
+    -- one polling every 0.1s to have done so many times over. One that gave up
+    -- first, as it would at once where sleep takes no fractions, could never
+    -- act, so that fails rather than passing as an ended child.
+    local function release(child, lines)
+      assert.is_nil(lfs.attributes(child.gaveUp), "the child stopped waiting before it was released")
+      assert(io.open(child.go, "w")):close()
+      waitUntil(function() return #lines > 0 or lfs.attributes(child.survivor) ~= nil end, 2000)
     end
 
     local function collectLines()
@@ -260,17 +296,16 @@ describe("spawn", function()
       end
       local name = "mudlet-spec-spawn-closed"
       local lines = collectLines()
-      local survivor = makeProfile(name, "%s")
+      local child = makeProfile(name, "%s")
 
       assert.is_true(loadProfile(name, true))
+      assert.is_true(waitUntil(function() return lfs.attributes(child.started) ~= nil end, 10000), "the profile's process never started")
       assert.is_true(closeProfile(name))
-      for _ = 1, 20 do
-        pumpEvents(100)
-      end
+      assert.is_true(waitUntil(function() return not loaded(name) end, 10000), "the profile never finished closing")
+      release(child, lines)
 
-      assert.is_false(loaded(name))
       assert.are.same({}, lines)
-      assert.is_nil(lfs.attributes(survivor), "the closed profile's process was still running")
+      assert.is_nil(lfs.attributes(child.survivor), "the closed profile's process was still running")
     end)
 
     it("should end the process when its profile is reset", function()
@@ -284,25 +319,33 @@ describe("spawn", function()
         reruns = reruns + 1
       end)
       onCleanup(function() killAnonymousEventHandler(handler) end)
+      -- told by the script, as the reset can end the child before it touches its started file
+      local spawned = 0
+      local spawnedHandler = registerAnonymousEventHandler("mudletSpecSpawnStarted", function()
+        spawned = spawned + 1
+      end)
+      onCleanup(function() killAnonymousEventHandler(spawnedHandler) end)
       -- the reset runs the script again, which must not start a second child
-      local survivor = makeProfile(name, [[
+      local child = makeProfile(name, [[
 local marker = getMudletHomeDir() .. "/mudlet-spec-spawned"
 if io.exists(marker) then
   raiseGlobalEvent("mudletSpecSpawnRerun")
 else
   io.open(marker, "w"):close()
-  %s
+  if %s then
+    raiseGlobalEvent("mudletSpecSpawnStarted")
+  end
   tempTimer(0, function() resetProfile() end)
 end]])
 
       assert.is_true(loadProfile(name, true))
-      for _ = 1, 20 do
-        pumpEvents(100)
-      end
+      assert.are.equal(1, spawned, "the profile's process never started")
+      assert.is_true(waitUntil(function() return reruns > 0 end, 10000), "the profile was never reset")
+      release(child, lines)
 
       assert.are.equal(1, reruns)
       assert.are.same({}, lines)
-      assert.is_nil(lfs.attributes(survivor), "the reset profile's process was still running")
+      assert.is_nil(lfs.attributes(child.survivor), "the reset profile's process was still running")
     end)
 
     -- finalizers run inside lua_close(), after the profile's processes were ended
@@ -312,25 +355,44 @@ end]])
       end
       local name = "mudlet-spec-spawn-finalizer"
       local lines = collectLines()
-      local survivor = makeProfile(name, [[
+      local reset = false
+      local handler = registerAnonymousEventHandler("mudletSpecSpawnRerun", function()
+        reset = true
+      end)
+      onCleanup(function() killAnonymousEventHandler(handler) end)
+      -- Written by the finalizer, as Lua drops an error raised in one, so a
+      -- finalizer that never got as far as spawn() would leave no trace
+      local outcome = getMudletHomeDir() .. "/" .. name .. "-finalized"
+      onCleanup(function() os.remove(outcome) end)
+      os.remove(outcome)
+      local child = makeProfile(name, [[
 local marker = getMudletHomeDir() .. "/mudlet-spec-spawned"
-if not io.exists(marker) then
+if io.exists(marker) then
+  raiseGlobalEvent("mudletSpecSpawnRerun")
+else
   io.open(marker, "w"):close()
   local proxy = newproxy(true)
   getmetatable(proxy).__gc = function()
-    %s
+    local process = %s
+    local file = io.open(]] .. string.format("%q", outcome) .. [[, "w")
+    file:write(process and "started" or "refused")
+    file:close()
   end
   mudletSpecSpawnProxy = proxy
   tempTimer(0, function() resetProfile() end)
 end]])
 
       assert.is_true(loadProfile(name, true))
-      for _ = 1, 20 do
-        pumpEvents(100)
-      end
+      assert.is_true(waitUntil(function() return reset end, 10000), "the profile was never reset")
+      local file = io.open(outcome)
+      assert.is_not_nil(file, "the finalizer never got as far as spawn()")
+      local result = file:read("*a")
+      file:close()
+      assert.are.equal("refused", result)
+      release(child, lines)
 
       assert.are.same({}, lines)
-      assert.is_nil(lfs.attributes(survivor), "the finalizer started a process the reset left running")
+      assert.is_nil(lfs.attributes(child.survivor), "the finalizer started a process the reset left running")
     end)
 
   end)
