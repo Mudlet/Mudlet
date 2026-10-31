@@ -26,6 +26,7 @@
  * Run with: ctest -R HeadlessSessionTest -V
  */
 
+#include <QDataStream>
 #include <QDir>
 #include <QFile>
 #include <QScopeGuard>
@@ -1072,6 +1073,32 @@ end))lua");
         const auto welcome = output.at(outputTexts(output).indexOf(qsl("Welcome to the headless session test.")));
         QCOMPARE(welcome.at(0).toString(), name);
         QCOMPARE(welcome.at(2).toBool(), false);
+    }
+
+    void test_aReplayPlaysWithNoMainWindow()
+    {
+        const QString name = qsl("Headless Replay");
+        QVERIFY(writeProfile(name, QString()));
+        const QString logDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, name);
+        QVERIFY(QDir().mkpath(logDir));
+        {
+            QFile file(qsl("%1/headless.dat").arg(logDir));
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QDataStream stream(&file);
+            stream.setVersion(QDataStream::Qt_5_12);
+            const QByteArray bytes = QByteArrayLiteral("Replayed with no main window.\r\n");
+            stream << qint32{0} << static_cast<qint32>(bytes.size());
+            stream.writeRawData(bytes.constData(), static_cast<int>(bytes.size()));
+            QCOMPARE(stream.status(), QDataStream::Ok);
+        }
+
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("local ok, err = loadReplay('headless.dat') headlessReplay = tostring(ok) .. (err and ' ' .. err or '')")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessReplay"), qsl("true"));
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Replayed with no main window.")), 10000);
+        QVERIFY(session.shutdown(false));
     }
 
     // A prompt the game ends with GA, and commands as the command line sends them, a trailing line feed

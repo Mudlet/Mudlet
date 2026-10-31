@@ -1079,9 +1079,14 @@ int TLuaInterpreter::loadReplayFile(lua_State* L, const char* functionName)
         return warnArgumentValue(L, functionName, "a blank string is not a valid replay file name");
     }
 
+    auto* replay = MudletReplay::self();
+    if (!replay) {
+        return warnArgumentValue(L, functionName, "replays are not available, as no profile pool is running");
+    }
+
     Host& host = getHostFromLua(L);
     QString errMsg;
-    if (MudletReplay::self()->load(&host, replayFileName, &errMsg)) {
+    if (replay->load(&host, replayFileName, &errMsg)) {
         lua_pushboolean(L, true);
         return 1;
     }

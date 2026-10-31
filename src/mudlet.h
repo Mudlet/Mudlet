@@ -28,7 +28,6 @@
 
 #include "discord.h"
 #include "HostManager.h"
-#include "MudletReplay.h"
 #include "ShortcutsManager.h"
 #include "TAppFrontend.h"
 #include "utils.h"
@@ -612,8 +611,6 @@ private:
     // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
     HostManager mHostManager;
-    // After mHostManager, so it is gone before the profiles that reach it are
-    MudletReplay mReplay;
     QKeySequence mKeySequenceCloseProfile;
     QKeySequence mKeySequenceConnect;
     QKeySequence mKeySequenceDisconnect;

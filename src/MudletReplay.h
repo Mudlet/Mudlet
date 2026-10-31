@@ -29,9 +29,8 @@ class Host;
 // The one replay the application plays at a time, whichever profile plays it:
 // who holds it, how fast it runs and how much recorded time it has covered.
 // cTelnet reads the file and feeds it through; this is the state around that
-// which the main window shows on its replay toolbar. A member of the
-// application object like HostManager, so a profile reaches it through self()
-// rather than through the main window.
+// which the main window shows on its replay toolbar. Owned by HostManager, so a
+// profile with no main window has one too, and reaches it through self().
 class MudletReplay : public QObject
 {
     Q_OBJECT

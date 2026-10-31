@@ -29,6 +29,7 @@
 #include "mudlet.h"
 #include "MudletApp.h"
 #include "MudletMedia.h"
+#include "MudletReplay.h"
 
 #include "CredentialManager.h"
 #include "DarkTheme.h"
@@ -1780,9 +1781,9 @@ void mudlet::init()
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_moduleManager);
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_packageExporter);
     connect(&mHostManager.media(), &MudletMedia::signal_muteSet, this, &mudlet::slot_muteSet);
-    connect(&mReplay, &MudletReplay::signal_replayStarted, this, &mudlet::slot_replayStarted);
-    connect(&mReplay, &MudletReplay::signal_replayOver, this, &mudlet::slot_replayOver);
-    connect(&mReplay, &MudletReplay::signal_replaySpeedChanged, this, &mudlet::slot_replaySpeedChanged);
+    connect(&mHostManager.replay(), &MudletReplay::signal_replayStarted, this, &mudlet::slot_replayStarted);
+    connect(&mHostManager.replay(), &MudletReplay::signal_replayOver, this, &mudlet::slot_replayOver);
+    connect(&mHostManager.replay(), &MudletReplay::signal_replaySpeedChanged, this, &mudlet::slot_replaySpeedChanged);
     connect(mpActionMuteMedia.data(), &QAction::triggered, &mHostManager.media(), &MudletMedia::toggleAllMuted);
     connect(mpActionMuteAPI.data(), &QAction::triggered, &mHostManager.media(), &MudletMedia::setApiMuted);
     connect(mpActionMuteGame.data(), &QAction::triggered, &mHostManager.media(), &MudletMedia::setGameMuted);
@@ -6351,7 +6352,7 @@ void mudlet::slot_replay()
     settings.setValue("lastFileDialogLocation", lastDir);
 
     // No third argument causes error messages to be sent to pHost's main console:
-    mReplay.load(pHost, fileName);
+    mHostManager.replay().load(pHost, fileName);
 }
 
 void mudlet::deleteProfileData(const QString& profile, const QString& item)
@@ -6891,6 +6892,8 @@ mudlet::~mudlet()
     if (auto* pSpeechBridge = TSpeechBridge::instance()) {
         disconnect(pSpeechBridge, nullptr, this, nullptr);
     }
+    // And the replay, which a profile still replaying ends as mHostManager deletes it
+    disconnect(&mHostManager.replay(), nullptr, this, nullptr);
     TSpellChecker::closeSharedDictionary();
     if (!mTranslatorsLoadedList.isEmpty()) {
         qDebug().nospace().noquote() << "mudlet::~mudlet() INFO - uninstalling translation...";
@@ -7092,10 +7095,10 @@ void mudlet::slot_replayStarted()
 
     connect(mpActionReplayPause.data(), &QAction::toggled, this, &mudlet::slot_replayPauseToggled);
     connect(mpActionReplayStop.data(), &QAction::triggered, this, &mudlet::slot_replayStop);
-    connect(mpActionReplaySpeedUp.data(), &QAction::triggered, &mReplay, &MudletReplay::speedUp);
-    connect(mpActionReplaySpeedDown.data(), &QAction::triggered, &mReplay, &MudletReplay::speedDown);
+    connect(mpActionReplaySpeedUp.data(), &QAction::triggered, &mHostManager.replay(), &MudletReplay::speedUp);
+    connect(mpActionReplaySpeedDown.data(), &QAction::triggered, &mHostManager.replay(), &MudletReplay::speedDown);
 
-    mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplay.speed())));
+    mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mHostManager.replay().speed())));
 
     mpTimerReplay = new QTimer(this);
     mpTimerReplay->setInterval(1s);
@@ -7127,9 +7130,9 @@ void mudlet::updateReplayTimeLabel()
 
     // A replay can be quiet for long stretches, so read "held" from the profile, not the button, to report
     // what playback is actually doing:
-    Host* pHost = mReplay.host();
+    Host* pHost = mHostManager.replay().host();
     const bool paused = pHost && pHost->mTelnet.replayPaused();
-    mpLabelReplayTime->setText(replayTimeLabelText(mReplay.elapsed().toString(mTimeFormat), paused));
+    mpLabelReplayTime->setText(replayTimeLabelText(mHostManager.replay().elapsed().toString(mTimeFormat), paused));
     mpLabelReplayTime->show();
 }
 
@@ -7162,7 +7165,7 @@ void mudlet::fitReplayPauseButton()
 void mudlet::slot_replayPauseToggled(const bool paused)
 {
     // Tell playback first, so that the readout below reports what it did:
-    if (Host* pHost = mReplay.host()) {
+    if (Host* pHost = mHostManager.replay().host()) {
         if (paused) {
             pHost->mTelnet.pauseReplay();
         } else {
@@ -7186,7 +7189,7 @@ void mudlet::slot_replayPauseToggled(const bool paused)
 
 void mudlet::slot_replayStop()
 {
-    if (Host* pHost = mReplay.host()) {
+    if (Host* pHost = mHostManager.replay().host()) {
         // This ends up in slot_replayOver(), which is what takes this toolbar down:
         pHost->mTelnet.stopReplay();
     }
@@ -7200,8 +7203,8 @@ void mudlet::slot_replayOver()
 
     disconnect(mpActionReplayPause.data(), &QAction::toggled, this, &mudlet::slot_replayPauseToggled);
     disconnect(mpActionReplayStop.data(), &QAction::triggered, this, &mudlet::slot_replayStop);
-    disconnect(mpActionReplaySpeedUp.data(), &QAction::triggered, &mReplay, &MudletReplay::speedUp);
-    disconnect(mpActionReplaySpeedDown.data(), &QAction::triggered, &mReplay, &MudletReplay::speedDown);
+    disconnect(mpActionReplaySpeedUp.data(), &QAction::triggered, &mHostManager.replay(), &MudletReplay::speedUp);
+    disconnect(mpActionReplaySpeedDown.data(), &QAction::triggered, &mHostManager.replay(), &MudletReplay::speedDown);
     mpToolBarReplay->removeAction(mpActionReplayPause);
     mpToolBarReplay->removeAction(mpActionReplayStop);
     mpToolBarReplay->removeAction(mpActionReplaySpeedUp);
