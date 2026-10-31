@@ -24,6 +24,7 @@
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "SecureStringUtils.h"
+#include "TAppFrontend.h"
 #include "TConsoleModel.h"
 #include "TGameDetails.h"
 #include "TLuaInterpreter.h"
@@ -606,6 +607,72 @@ bool THeadlessSession::shutdown(const bool save)
     mShuttingDown = false;
     detachFromHost();
     mpHost.clear();
+    return true;
+}
+
+bool THeadlessSession::save()
+{
+    if (refused()) {
+        return false;
+    }
+    if (!mpPool) {
+        //: Error from a frontend with no window that has no open profile to send to
+        mErrorString = tr("No profile is open.");
+        return false;
+    }
+    if (poolBusy(*mpPool)) {
+        qWarning() << "THeadlessSession: save() while a profile runs a script or waits for its save is refused; call it once that has returned";
+        //: Error from a frontend with no window that was asked to save its profiles while one ran a script or waited for its save to be written
+        mErrorString = tr("A profile is running a script or waiting for its save, so its profiles cannot be saved until that has ended.");
+        return false;
+    }
+    // Each save waits for its writes in the event loop, where a profile may close or the session be deleted
+    const QPointer<THeadlessSession> self(this);
+    QList<QPointer<Host>> profiles;
+    for (const auto& pHost : mpPool->hostList()) {
+        if (pHost->mLoadedOk) {
+            profiles.append(pHost.data());
+        }
+    }
+    const qsizetype closesUnsavedBefore = mUnsavedProfiles.size();
+    QStringList unsaved;
+    for (const QPointer<Host>& pHost : std::as_const(profiles)) {
+        // A close begun meanwhile saves it, or not, as it was asked to
+        if (!pHost || pHost->closeStarted()) {
+            continue;
+        }
+        const QString name = pHost->getName();
+        bool saved = pHost->saveForClose();
+        if (!self) {
+            return false;
+        }
+        // The event loop would write it after this returns; a close has the Host's deletion write it
+        if (pHost && !pHost->syncProfileIni()) {
+            saved = false;
+        }
+        if (!saved) {
+            unsaved.append(name);
+        }
+    }
+    for (const QString& name : mUnsavedProfiles.mid(closesUnsavedBefore)) {
+        if (!unsaved.contains(name)) {
+            unsaved.append(name);
+        }
+    }
+    QStringList problems;
+    if (!unsaved.isEmpty()) {
+        //: Error from a frontend with no window whose profiles could not all be saved; %1 lists the names of the ones that were not
+        problems.append(tr("These profiles could not be saved: %1").arg(unsaved.join(qsl(", "))));
+    }
+    // As each close writes it
+    if (auto* pFrontend = TAppFrontend::instance(); !pFrontend || !pFrontend->saveWindowLayoutForScript()) {
+        //: Error from a frontend with no window that saved its profiles but not where their windows are
+        problems.append(tr("Where the profiles' windows are could not be saved."));
+    }
+    if (!problems.isEmpty()) {
+        mErrorString = problems.join(QLatin1Char(' '));
+        return false;
+    }
     return true;
 }
 

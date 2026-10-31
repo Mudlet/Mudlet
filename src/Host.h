@@ -540,6 +540,8 @@ public:
     // creates.
     void writeProfileIniData(const QString& item, const QString& what);
     QString readProfileIniData(const QString& item);
+    // Now, not from the event loop; false if the file could not be written
+    bool syncProfileIni();
     void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
     // Whether the end of a save is reloading its synced modules in the other profiles, whose scripts
@@ -1463,8 +1465,9 @@ private:
     // purpose: it must keep working after the Host that ordered it has been destroyed,
     // so it may not reach for any member. Usually a thread pool task, but a waiter in
     // waitForProfileSave() can steal it onto the main thread, so it must suit either.
-    static void writeModuleFiles(const QList<ModuleWriteJob>& jobs);
-    static void updateModuleZip(const ModuleWriteJob& job);
+    // False if a module was not written.
+    static bool writeModuleFiles(const QList<ModuleWriteJob>& jobs);
+    static bool updateModuleZip(const ModuleWriteJob& job);
     // Main thread only: snapshot of the still-pending profile-save futures, so a
     // background task never reads `writers`/`saveFutures` while the main thread mutates
     // them (that concurrent access is a heap-corrupting data race).
@@ -1590,7 +1593,7 @@ private:
     // keeps track of all of the array writers we're currently operating with
     QHash<QString, std::shared_ptr<XMLexport>> writers;
 
-    QFuture<void> mModuleFuture;
+    QFuture<bool> mModuleFuture;
 
     // Will be null/empty if is to use Mudlet's default/own presence
     QString mDiscordApplicationID;
