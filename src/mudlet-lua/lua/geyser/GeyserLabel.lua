@@ -1120,6 +1120,12 @@ local function fitMenuLevel(parent, windowWidth)
   for _, item in ipairs(items) do
     item.flyDir = flyDir
   end
+  -- the scroll buttons outlive the menu being closed, so they would keep the side they were made on
+  for _, scrolls in pairs({Geyser.Label.scrollV[parent] or {}, Geyser.Label.scrollH[parent] or {}}) do
+    for _, scroll in ipairs(scrolls) do
+      scroll.flyDir = flyDir
+    end
+  end
 end
 
 --- Displays the nested elements within label, and orients them

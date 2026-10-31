@@ -3255,6 +3255,30 @@ describe("Tests Geyser.Label right click menus", function()
         assert.are.equal("L", menuItem("First").flyDir)
         assert.are.equal("L", openSubmenu().flyDir)
       end)
+
+      it("takes the scroll buttons of a submenu too tall to show along with its rows", function()
+        local _, mainHeight = getMainWindowSize()
+        local subItems = {}
+        for i = 1, math.floor(mainHeight / 25) + 3 do
+          subItems[i] = "Sub" .. i
+        end
+        label = Geyser.Label:new({name = "glmTallSubHost", x = 10, y = 10, width = 190, height = 30})
+        label:createRightClickMenu({MenuWidth = 140, MenuItems = {"First", subItems}})
+        label:onRightClick(mouseEvent("RightButton", 1, 1))
+        openSubmenu()
+        local scrolls = Geyser.Label.scrollV[menuItem("First")]
+        assert.is_not_nil(scrolls, "the submenu fitted, so it has no scroll buttons")
+        assert.are.equal("R", scrolls[1].flyDir)
+
+        label:move(mainWidth - 200, 10)
+        label:onRightClick(mouseEvent("RightButton", 1, 1))
+        local sub1 = openSubmenu()
+        assert.are.equal("L", sub1.flyDir)
+        for _, scroll in ipairs(scrolls) do
+          assert.are.equal("L", scroll.flyDir)
+          assert.are.equal(sub1:get_x(), scroll:get_x())
+        end
+      end)
     end)
 
     -- unlike clicking a nestable label, which puts its nest away again, a
