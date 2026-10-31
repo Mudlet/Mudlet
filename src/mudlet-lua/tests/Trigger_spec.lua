@@ -8060,7 +8060,7 @@ describe("Trigger processing", function()
         end)
 
         -- A firing script can feed more text through the same unit, so the
-        -- candidate list the outer pass is walking has to survive the nested one.
+        -- root walk the outer pass is on has to survive the nested one.
         it("keeps the outer line's remaining triggers across a nested feed", function()
             track(tempTrigger("nested_inner_line", function() _G.TrigSpec.seen[#_G.TrigSpec.seen + 1] = "inner" end))
             track(tempTrigger("outer_feeder_here", function()
@@ -8073,7 +8073,19 @@ describe("Trigger processing", function()
                 "a nested feedTriggers disturbed the outer line's remaining triggers")
         end)
 
-        -- The candidate list for a line is settled before any trigger runs, so a
+        -- The outer line holds the root list, so a nested line after an arming
+        -- has it rebuilt rather than patched, and has to walk what it cannot file
+        it("fires an unfiled trigger and one just armed on a line fed after the arming", function()
+            track(tempRegexTrigger("nestedregex_\\d+", function() _G.TrigSpec.count = _G.TrigSpec.count + 1 end))
+            track(tempTrigger("rebuild_feeder_here", function()
+                track(tempTrigger("rebuild_armed_text", function() _G.TrigSpec.count = _G.TrigSpec.count + 10 end))
+                feedTriggers("\nnestedregex_7 rebuild_armed_text\n")
+            end))
+            feedTriggers("\nrebuild_feeder_here\n")
+            assert.are.equal(11, _G.TrigSpec.count, "a rebuilt root list lost a trigger it cannot file, or one armed just before it")
+        end)
+
+        -- The root walk for a line is marked before any trigger runs, so a
         -- script that makes a LATER trigger fire without matching has to reach
         -- the line already in flight.
         it("fires a trigger opened by an earlier trigger on that same line", function()
@@ -8327,40 +8339,79 @@ describe("Trigger processing", function()
         end)
 
         it("leaves the pinned filters alone when a trigger creates another trigger", function()
-            -- A pass pins a copy of every root trigger's pattern summary and
-            -- stops trusting those copies the moment one of the triggers they
-            -- were taken from changes. A trigger a script creates from inside a
-            -- trigger - a one-shot, a prompt capture, a combat follow-up - is in
-            -- none of those copies, because no snapshot has ever filed it, so
-            -- announcing it would cost every root trigger left on the line its
-            -- copy for nothing. This reads the announcement counter rather than
-            -- a firing, as the filters only decide how a line is walked and
-            -- never which triggers fire on it.
+            -- A trigger a script creates mid-line, a line trigger included, is in none of the
+            -- copies a pass pinned, so announcing it would cost every root left on the line its
+            -- copy for nothing. This reads the counters, not a firing: the filters only decide
+            -- how a line is walked, never which triggers fire on it.
             if not os.getenv("MUDLET_TEST_MODE") then
                 pending("counting announcements to a line in progress needs MUDLET_TEST_MODE")
             end
             local function epoch()
                 return getProfileStats().triggers.rootFilterEpoch
             end
+            local function candidatesEpoch()
+                return getProfileStats().triggers.unfilterableEpoch
+            end
 
-            track(tempTrigger("ruledoutmaker_fires", function()
+            local makerId = track(tempTrigger("ruledoutmaker_fires", function()
                 track(tempTrigger("ruledoutmade_qzv_never_sent", function() end))
+                track(tempLineTrigger(1, 1, function() end))
             end))
             -- files the maker itself, so the line below changes nothing else
             feedTriggers(warmUpLine)
 
             local before = epoch()
+            local candidatesBefore = candidatesEpoch()
             feedTriggers("\nruledoutmaker_fires now\n")
             assert.are.equal(before, epoch(),
                              "creating a trigger mid-line staled filter copies that could not have been of it")
+            assert.are.equal(candidatesBefore, candidatesEpoch(),
+                             "creating a line trigger mid-line cost the rest of the line its candidate list")
 
-            -- A control, so the assertion above cannot pass on a counter that
-            -- never moves: a line trigger fires on its position rather than on
-            -- text, which every pinned copy has to hear about at once.
-            local lineId = tempLineTrigger(0, 1, function() end)
+            -- A control, so the assertions above cannot pass on counters that
+            -- never move: holding open a trigger a snapshot has filed makes it
+            -- fire on lines it does not match, which its pinned copy has to hear about.
+            setTriggerStayOpen(tostring(makerId), 1)
             assert.is_true(epoch() > before, "a change every pinned copy has to hear about went unannounced")
-            disableTrigger(lineId)
-            killTrigger(lineId)
+            assert.is_true(candidatesEpoch() > candidatesBefore, "a trigger held open went unannounced to the line in flight")
+        end)
+
+        it("drops a line's candidate list for a trigger its own match held open only on a line that fed it", function()
+            -- The pass a trigger matches in is already past it, so opening
+            -- itself there must not cost the rest of that line its candidates;
+            -- an outer line that fed the matched one has yet to reach it.
+            if not os.getenv("MUDLET_TEST_MODE") then
+                pending("counting announcements to a line in progress needs MUDLET_TEST_MODE")
+            end
+            local function candidatesEpoch()
+                return getProfileStats().triggers.unfilterableEpoch
+            end
+            track(tempTrigger("ownopenfeeder_fires", function() feedTriggers("\nqwzxv_own_open\n") end))
+            tempComplexRegexTrigger(track("SpecOwnOpen"), "qwzxv_own_open", [[]], 0, 0, 0, 0, 0, 0, 0, 0, 2, 0)
+            feedTriggers(warmUpLine)
+
+            local before = candidatesEpoch()
+            feedTriggers("\nqwzxv_own_open\n")
+            assert.are.equal(before, candidatesEpoch(), "a trigger opening itself cost its own line the candidate list")
+
+            -- two lines close its window again, so the feed below opens it afresh
+            feedTriggers(warmUpLine)
+            feedTriggers(warmUpLine)
+            feedTriggers("\nownopenfeeder_fires now\n")
+            assert.is_true(candidatesEpoch() > before, "a trigger opened by a fed line went unannounced to the line that fed it")
+        end)
+
+        it("opens a multiline trigger on a line an unpaired surrogate splits its first pattern's text on", function()
+            local code = [[_G.TrigSpec.count = _G.TrigSpec.count + 1]]
+            tempComplexRegexTrigger(track("SpecRuledOutSplitMultiline"), "qzxjv", code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2)
+            tempComplexRegexTrigger("SpecRuledOutSplitMultiline", "^mlsplit close$", code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2)
+            setConfig("specialForceMXPProcessorOn", true)
+            finally(function() setConfig("specialForceMXPProcessorOn", false) end)
+            feedTriggers(warmUpLine)
+            -- the surrogate has no UTF-8, so pcre2 reads "qzxjv" from a line that does not hold it
+            feedTriggers("zz qz&#xD800;xjv\n")
+            feedTriggers("mlsplit close\n")
+            assert.are.equal(1, _G.TrigSpec.count, "a multiline trigger was ruled out of a line whose UTF-8 holds its first pattern's text")
         end)
 
         it("fires a regex whose brace is the brace itself and not a quantifier", function()
@@ -8398,6 +8449,16 @@ describe("Trigger processing", function()
             assert.are.equal(3, _G.TrigSpec.count, "a trigger was ruled out of the lines its own match held it open for")
             feedTriggers(warmUpLine)
             assert.are.equal(3, _G.TrigSpec.count, "and it has to close again once they have passed")
+        end)
+
+        it("keeps a trigger firing through its window when a script had set a negative stay-open count", function()
+            -- a negative count is shut, the same as 0, so the match that opens it has to be announced
+            tempComplexRegexTrigger(track("SpecRuledOutNegative"), "pqwmzn_window_text", [[_G.TrigSpec.count = _G.TrigSpec.count + 1]], 0, 0, 0, 0, 0, 0, 0, 0, 2, 0)
+            setTriggerStayOpen("SpecRuledOutNegative", -1)
+            feedTriggers(warmUpLine)
+            feedTriggers("\npqwmzn_window_text arrives\n")
+            feedTriggers(warmUpLine)
+            assert.are.equal(3, _G.TrigSpec.count, "a trigger opened from a negative count was ruled out of the lines its match held it open for")
         end)
 
         it("judges a color trigger afresh once an earlier trigger has edited the line", function()
@@ -8549,12 +8610,24 @@ describe("Trigger processing", function()
 
             it("hands a multiline fire the groups of each line" .. mode, function()
                 arm()
-                local code = [==[_G.TrigCaptures = {first = {unpack(multimatches[1])}, second = {unpack(multimatches[2])}}]==]
-                complex("SpecCapturesMulti", [[^capmulti one (\S+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+                local code = [==[_G.TrigCaptures = {first = {unpack(multimatches[1])}, who = multimatches[1].who, second = {unpack(multimatches[2])}}]==]
+                complex("SpecCapturesMulti", [[^capmulti one (?<who>\S+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
                 complex("SpecCapturesMulti", [[^capmulti two( x)? (\S+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
                 feedTriggers("\ncapmulti one ñandú\n")
                 feedTriggers("capmulti two café\n")
-                assert.are.same({first = {"capmulti one ñandú", "ñandú"}, second = {"capmulti two café", "", "café"}}, _G.TrigCaptures)
+                assert.are.same({first = {"capmulti one ñandú", "ñandú"}, who = "ñandú", second = {"capmulti two café", "", "café"}}, _G.TrigCaptures)
+            end)
+
+            it("hands a multiline filter's script its groups, and its children the groups after" .. mode, function()
+                arm()
+                local code = [==[_G.TrigCaptures = {first = {unpack(multimatches[1])}, second = {unpack(multimatches[2])}, children = {}}]==]
+                complex("SpecCapturesMultiFilter", [[^capmf one (\S+)$]], code, 1, 0, 0, 1, 0, 0, 0, 0, 0, 3)
+                complex("SpecCapturesMultiFilter", [[^capmf two (\S+)$]], code, 1, 0, 0, 1, 0, 0, 0, 0, 0, 3)
+                names[#names + 1] = "SpecCapturesMultiFilterChild"
+                permRegexTrigger("SpecCapturesMultiFilterChild", "SpecCapturesMultiFilter", {[[^(.+)$]]}, [==[table.insert(_G.TrigCaptures.children, matches[2])]==])
+                feedTriggers("\ncapmf one ñandú\n")
+                feedTriggers("capmf two café\n")
+                assert.are.same({first = {"capmf one ñandú", "ñandú"}, second = {"capmf two café", "café"}, children = {"ñandú", "café"}}, _G.TrigCaptures)
             end)
 
             it("keeps its own captures across a nested pass in its script" .. mode, function()

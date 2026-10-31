@@ -73,6 +73,7 @@
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
+#include "discord.h"
 #include "edbee/edbee.h"
 #include "widgetutils.h"
 
@@ -1475,21 +1476,20 @@ void mudlet::applyToolBarStyleToAddonCommands()
 
 mudlet::mudlet()
 : QMainWindow()
+, mHostManager(HostManager::ConfigRoot::leftToMainWindow)
 {
     // Stateless, reaching the GUI through mudlet::self() and the debug area
     // statics, so one serves every mudlet instance and is never uninstalled:
     static DebugProfileObserver debugProfileObserver;
     TDebug::setProfileObserver(&debugProfileObserver);
     qApp->installEventFilter(new TransientParentRelinker(this));
-    // A child rather than a member, so it and the recognizer it owns are torn
-    // down with the main window's other children
-    mpSpeechBridge = new TSpeechBridge(this);
-    connect(mpSpeechBridge, &TSpeechBridge::microphoneOwnerChanged, this, &mudlet::refreshMicrophoneMarkers);
+    connect(TSpeechBridge::instance(), &TSpeechBridge::microphoneOwnerChanged, this, &mudlet::refreshMicrophoneMarkers);
     // Queued, so a tab change before the event loop first runs - while a test or startup is still
     // building profiles - does not reach Discord, which also only starts polling then.
     QTimer::singleShot(0ms, this, [this]() {
-        if (mDiscord.libraryLoaded()) {
-            connect(this, &mudlet::signal_tabChanged, &mDiscord, &Discord::UpdatePresence);
+        auto* discord = Discord::self();
+        if (discord && discord->libraryLoaded()) {
+            connect(this, &mudlet::signal_tabChanged, discord, &Discord::UpdatePresence);
         }
     });
     // Initialisation happens later in setupConfig() and init()
@@ -2186,37 +2186,12 @@ void mudlet::init()
 
 void mudlet::setupConfig()
 {
-    const auto resolution = MudletApp::resolveConfigRoot(MudletApp::executableDir());
-    const QString confPath = resolution.path;
+    const auto resolution = MudletApp::settleConfigRoot();
+    // Carried until main() can put it on screen once the connection dialog is up.
     // A resolution that goes through retires an earlier complaint, or the notice
-    // would name a portable.txt that no longer governs anything
-    mRejectedPortableMarker.clear();
-    mRejectedPortableRoot.clear();
-    if (resolution.portableRootRejected) {
-        // Carry on at the location the resolver fell back to; main() puts this
-        // on screen once the connection dialog is up
-        mRejectedPortableMarker = resolution.portableMarker;
-        mRejectedPortableRoot = resolution.rejectedRoot;
-        if (mRejectedPortableRoot.isEmpty()) {
-            qWarning().nospace().noquote() << "mudlet::setupConfig() WARN - \"" << mRejectedPortableMarker << "\" names no data directory, so \"" << confPath << "\" is in use.";
-        } else {
-            qWarning().nospace().noquote() << "mudlet::setupConfig() WARN - \"" << mRejectedPortableMarker << "\" names the data directory \"" << mRejectedPortableRoot
-                                           << "\", which Mudlet cannot use, so \"" << confPath
-                                           << "\" is in use instead. Profiles kept where the marker points will not be listed until it is corrected.";
-        }
-    }
-    if (resolution.migrationPending) {
-        qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet holds no profiles, so the existing " << confPath
-                          << " is still in use. Move its contents into $XDG_CONFIG_HOME/mudlet to migrate.";
-    }
-    if (!resolution.shadowedProfilesPath.isEmpty()) {
-        qWarning().nospace() << "mudlet::setupConfig() WARN: using $XDG_CONFIG_HOME/mudlet (" << confPath << ") because it holds profiles, but " << resolution.shadowedProfilesPath
-                             << " holds profiles as well and they will not be listed. Unset XDG_CONFIG_HOME to use that directory instead.";
-    }
-    qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
-    // Discards any settings store built under the previous root, so setupConfig()
-    // must not run again once init() has created the Updater, which keeps using it
-    MudletApp::setConfigPath(confPath, resolution.portable && !resolution.portableRootRejected);
+    // would name a portable.txt that no longer governs anything.
+    mRejectedPortableMarker = resolution.portableRootRejected ? resolution.portableMarker : QString();
+    mRejectedPortableRoot = resolution.portableRootRejected ? resolution.rejectedRoot : QString();
 }
 
 // The only thing on screen telling the user that the profiles they are about to
@@ -3476,17 +3451,16 @@ void mudlet::closeHost(const QString& name)
     // Every command this profile placed, on whichever surface
     removeAddonCommandsForHost(pH);
 
-    mpSpeechBridge->profileClosing(pH);
-
     mpTabBar->removeTab(name);
     // PLACEMARKER: Host destruction (1) - from all sources
-    mDiscord.resetData(pH);
     int hostCount = mHostManager.getHostCount();
     emit signal_hostDestroyed(pH, --hostCount);
     // This is what kills the Host instance:
     mHostManager.deleteHost(name);
-    if (!mHostManager.getHostCount()) {
-        mpSpeechBridge->allProfilesClosed();
+    // A detached profile has no tab here, so when it was the active one its
+    // closing changes no tab to hand activation to the profile left showing
+    if (!getActiveHost() && mpTabBar->count() > 0) {
+        slot_tabChanged(mpTabBar->currentIndex());
     }
     emit signal_adjustAccessibleNames();
     updateMultiViewControls();
@@ -4121,7 +4095,8 @@ void mudlet::updateMainWindowTitle()
 // background listening, and nothing anywhere saying the microphone was live.
 QString mudlet::mainWindowMicrophoneMarker() const
 {
-    Host* pOwner = mpSpeechBridge ? mpSpeechBridge->microphoneOwner() : nullptr;
+    auto* pSpeechBridge = TSpeechBridge::instance();
+    Host* pOwner = pSpeechBridge ? pSpeechBridge->microphoneOwner() : nullptr;
     if (!pOwner || mDetachedWindows.contains(pOwner->getName())) {
         return QString();
     }
@@ -4139,7 +4114,8 @@ QString mudlet::mainWindowMicrophoneMarker() const
 // title is no place to guess at it.
 QString mudlet::microphoneMarkerFor(const QString& profileName) const
 {
-    Host* pOwner = mpSpeechBridge ? mpSpeechBridge->microphoneOwner() : nullptr;
+    auto* pSpeechBridge = TSpeechBridge::instance();
+    Host* pOwner = pSpeechBridge ? pSpeechBridge->microphoneOwner() : nullptr;
     if (!pOwner || pOwner->getName() != profileName) {
         return QString();
     }
@@ -4491,7 +4467,7 @@ bool mudlet::openProfile(const QString& profileName, bool connect)
     return loaded;
 }
 
-bool mudlet::requestProfileTabClose(const QString& profileName)
+bool mudlet::requestProfileClose(const QString& profileName)
 {
     const int index = mpTabBar->tabIndex(profileName);
     if (index == -1) {
@@ -4848,9 +4824,8 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
 
-    TMap::smShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
+    mHostManager.readSettings(settings);
     mInvertMapZoom = settings.value("invertMapZoom", QVariant(false)).toBool(); // Default to false for modern (non-inverted) behavior
-    MudletApp::setStorePasswordsSecurely(settings.value("storePasswordsSecurely", QVariant(true)).toBool());
     mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
 
 
@@ -4883,9 +4858,6 @@ void mudlet::readLateSettings(const QSettings& settings)
         multiView = settings.value(qsl("enableMultiViewMode"), QVariant(false)).toBool();
     }
     slot_multiView(multiView);
-
-    mHostManager.media().setApiMuted(settings.contains(qsl("enableMuteAPI")) ? settings.value(qsl("enableMuteAPI"), QVariant(false)).toBool() : false);
-    mHostManager.media().setGameMuted(settings.contains(qsl("enableMuteGame")) ? settings.value(qsl("enableMuteGame"), QVariant(false)).toBool() : false);
 
 #ifdef INCLUDE_MCPSERVER
     const int savedMcpPort = settings.value(qsl("mcpServerPort"), QVariant(mMCPServerPort)).toInt();
@@ -7028,6 +7000,11 @@ mudlet::~mudlet()
     for (auto* pDockWidget : findChildren<QDockWidget*>()) {
         disconnect(pDockWidget, &QDockWidget::visibilityChanged, this, nullptr);
     }
+    // And the speech bridge: mHostManager ends any session as it goes, and the title refresh that
+    // triggers reads members destroyed before it
+    if (auto* pSpeechBridge = TSpeechBridge::instance()) {
+        disconnect(pSpeechBridge, nullptr, this, nullptr);
+    }
     TSpellChecker::closeSharedDictionary();
     if (!mTranslatorsLoadedList.isEmpty()) {
         qDebug().nospace().noquote() << "mudlet::~mudlet() INFO - uninstalling translation...";
@@ -8350,83 +8327,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
     if (mSkipDefaultPackageInstall) {
         return;
     }
-
-    const QHash<QString, QStringList> defaultScripts = {
-            // clang-format off
-        // scripts to pre-install for a profile      games this applies to, * means all games
-        {qsl(":/packages/run-lua-code/run-lua-code.mpackage"), {qsl("*")}},
-        {qsl(":/packages/echo/echo.mpackage"), {qsl("*")}},
-        {qsl(":/packages/deleteOldProfiles/deleteOldProfiles.mpackage"), {qsl("*")}},
-        {qsl(":/packages/enable-accessibility/enable-accessibility.mpackage"), {qsl("*")}},
-        {qsl(":/packages/mpkg/mpkg.mpackage"), {qsl("*")}},
-        {qsl(":/packages/gui-drop/gui-drop.mpackage"), {qsl("*")}},
-        {qsl(":/packages/CF-loader/CF-loader.mpackage"), {qsl("carrionfields.net")}},
-        {qsl(":/packages/icesus-loader/icesus-loader.mpackage"), {qsl("icesus.org")}},
-        {qsl(":/packages/mg-loader/mg-loader.mpackage"), {qsl("mg.mud.de"),
-                                                          qsl("mud.morgengrauen.info"),
-                                                          qsl("mg.morgengrauen.info"),
-                                                          qsl("morgengrauen.info")}},
-        {qsl(":/packages/run-tests/run-tests.mpackage"), {qsl("mudlet.org")}},
-        {qsl(":/packages/StressinatorDisplayBench/StressinatorDisplayBench.mpackage"), {qsl("mudlet.org")}},
-        // the IRE mapper is maintained upstream and published as an xml, so it
-        // is the one preinstall that is not packaged - see update-3rdparty.yml
-        {qsl(":/mudlet-mapper.xml"), {qsl("aetolia.com"),
-                                      qsl("achaea.com"),
-                                      qsl("lusternia.com"),
-                                      qsl("imperian.com"),
-                                      qsl("starmourn.com"),
-                                      qsl("stickmud.com")}},
-        {qsl(":/packages/MedBootstrap/MedBootstrap.mpackage"), {qsl("medievia.com")}}
-            // clang-format on
-    };
-
-    // mpkg fetches the package listing as it loads and, when the repository carries a
-    // newer mpkg than the bundled one, uninstalls itself at once and reinstalls two
-    // seconds plus a download later. Each of those calls doCleanReset() if an editor is
-    // open, which queues a clear of its tree widgets onto the next event loop turn and
-    // frees every item a test is holding, and each announces itself in the main console.
-    // Whether it lands mid-test is down to how fast the download is.
-    //
-    // generic_mapper below can self-update the same way, but its upstream is this repo's
-    // own development branch, so bundled and remote move together; mpkg is published from
-    // a separate repository on its own schedule, which is what leaves a released Mudlet
-    // upgrading itself mid-test for days at a time.
-    const bool skipSelfUpgradingPackage = qEnvironmentVariableIsSet("MUDLET_TEST_MODE");
-
-    QHashIterator<QString, QStringList> i(defaultScripts);
-    while (i.hasNext()) {
-        i.next();
-        if (skipSelfUpgradingPackage && i.key() == qsl(":/packages/mpkg/mpkg.mpackage")) {
-            continue;
-        }
-        if (i.value().first() == QLatin1String("*") || i.value().contains(gameUrl)) {
-            mudlet::self()->mPackagesToInstallList.append(i.key());
-        }
-    }
-
-    if (!mudlet::self()->mPackagesToInstallList.contains(qsl(":/mudlet-mapper.xml"))) {
-        mudlet::self()->mPackagesToInstallList.append(qsl(":/packages/generic_mapper/generic_mapper.mpackage"));
-    }
-
-    // A modest starter UI that adapts to whatever any game provides.
-    // Games known to install their own full interface, by a bundled loader
-    // above or by Client.GUI (flagged in TGameDetails), are skipped: the
-    // starter UI would only fight it for the same screen space, and would
-    // build and announce itself before a post-login Client.GUI package lands.
-    // Other games that push a GUI via Client.GUI are handled at runtime
-    // instead - the starter UI stands aside when one installs.
-    // A Client.GUI package only arrives if the profile lets it in, and a
-    // profile copied with its settings can already refuse it.
-    const auto ownUi = TGameDetails::gameOwnUi(gameUrl);
-    const bool ownUiArrives = ownUi == GameDetail::OwnUi::BundledLoader || (ownUi == GameDetail::OwnUi::ClientGui && serverGuiAccepted);
-    if (!ownUiArrives) {
-        mudlet::self()->mPackagesToInstallList.append(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage"));
-    }
-
-    // Don't play tutorial for every connection to localhost. There are legit other reasons to connect there.
-    if (profileName == qsl("Mudlet Tutorial") && gameUrl == qsl("localhost")) {
-        mudlet::self()->mPackagesToInstallList.append(qsl(":/packages/mudlet-tutorial/mudlet-tutorial.mpackage"));
-    }
+    mPackagesToInstallList = HostManager::defaultPackages(gameUrl, profileName, serverGuiAccepted);
 }
 
 
@@ -10215,46 +10116,14 @@ void mudlet::transferDockWidgetBetweenDetachedWindows(const QString& profileName
 #endif
 }
 
-bool mudlet::hasOrphanedProfiles()
-{
-    // Check all loaded profiles to see if any are orphaned
-    for (const auto& pHost : mHostManager) {
-        if (!pHost || !pHost->mainConsoleView()) {
-            continue;
-        }
-
-        const QString profileName = pHost->getName();
-
-        // Check if profile is in main window (has a tab)
-        bool inMainWindow = false;
-
-        for (int i = 0; i < mpTabBar->count(); ++i) {
-            if (mpTabBar->tabData(i).toString() == profileName) {
-                inMainWindow = true;
-                break;
-            }
-        }
-
-        // Check if profile is in a detached window
-        bool inDetachedWindow = mDetachedWindows.contains(profileName);
-
-        // If profile is not visible in either location, it's orphaned
-        if (!inMainWindow && !inDetachedWindow) {
-            qWarning() << "hasOrphanedProfiles: Found orphaned profile:" << profileName;
-            return true;
-        }
-    }
-
-    return false;
-}
-
 QStringList mudlet::getOrphanedProfiles()
 {
     QStringList orphanedProfiles;
 
     // Find all loaded profiles that don't have visible windows
     for (const auto& pHost : mHostManager) {
-        if (!pHost || !pHost->mainConsoleView()) {
+        // A closing profile has left its window, which is being torn down with its console still inside
+        if (!pHost || !pHost->mainConsoleView() || pHost->isClosingDown()) {
             continue;
         }
 

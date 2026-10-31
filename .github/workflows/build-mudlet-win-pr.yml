@@ -48,9 +48,6 @@ jobs:
       uses: actions/checkout@v7
       with:
         submodules: recursive
-        # Enough for CI/generate-changelog.lua.
-        # MAX_COMMITS_PER_CHANGELOG (100) commits
-        fetch-depth: 100
 
     - name: (Windows) Setup MSYS2
       if: matrix.buildname == 'windows64'
@@ -299,8 +296,6 @@ jobs:
     - name: (Windows) Deploy
       shell: msys2 {0}
       env:
-        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
-        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
         X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
         DEPLOY_SSH_KEY: ${{secrets.UPLOAD_PRIVATEKEY}}
@@ -390,10 +385,3 @@ jobs:
       # job re-run) as a 4xx with the reason in the body, which plain curl would exit 0 on
       run: curl --fail-with-body --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
 
-    - name: Register PTB Release
-      shell: msys2 {0}
-      if: ${{ (github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && env.VERSION_STRING != '' }}
-      env:
-        VERSION_STRING: ${{env.VERSION_STRING}}
-        BUILD_COMMIT: ${{env.BUILD_COMMIT}}
-      run: $GITHUB_WORKSPACE/CI/register-windows-release.sh

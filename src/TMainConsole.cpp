@@ -470,6 +470,13 @@ void Host::setMainConsoleView(TMainConsole* view)
     if (view) {
         mpNullConsoleFrontend->dropWindows();
         mExitEventOwed = false;
+        // What scripts set on the main command line with no view was never the view's
+        mWindowRegistry.setMainCommandLineText(view->mpCommandLine->toPlainText());
+        mWindowRegistry.setMainCommandLineStyleSheet(view->mpCommandLine->styleSheet());
+        mWindowRegistry.setMainCommandLineSavesHistory(view->mpCommandLine->mSaveCommands);
+        mpNullConsoleFrontend->followView(view);
+    } else if (mpConsole) {
+        mpNullConsoleFrontend->resumeMainCommandLine();
     }
     mpConsole = view;
     mpConsoleFrontend = view;
@@ -638,54 +645,64 @@ TDockWidget* TMainConsole::createUserWindow(const QString& name)
     return dockwidget;
 }
 
-void TMainConsole::openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
+bool TMainConsole::openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
 {
-    placeUserWindow(name, loadLayout, autoDock, area);
+    if (!placeUserWindow(name, loadLayout, autoDock, area)) {
+        return false;
+    }
     reportGeometry(name);
+    return true;
 }
 
-void TMainConsole::placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
+bool TMainConsole::placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
 {
     // Host::openWindow() has refused a name holding a console or a dock but not both
-    auto dockwidget = dockWidget(name);
+    QPointer<TDockWidget> dockwidget = dockWidget(name);
+    // A handler run as it is made, as the layout loads, as it shows or as it docks can delete it, leaving the dock only to
+    // its deleteLater(), or put another in its place
+    const auto gone = [this, &name, &dockwidget]() {
+        return !dockwidget || dockWidget(name) != dockwidget;
+    };
     if (!dockwidget) {
         dockwidget = createUserWindow(name);
+        if (gone()) {
+            return false;
+        }
         shareDockAreaIfSqueezed(dockwidget);
     }
     dockwidget->update();
 
     if (loadLayout && !dockwidget->hasLayoutAlready) {
         mudlet::self()->loadWindowLayout();
+        if (gone()) {
+            return false;
+        }
         dockwidget->hasLayoutAlready = true;
     }
     dockwidget->show();
+    if (gone()) {
+        return false;
+    }
     dockwidget->setAllowedAreas(autoDock ? Qt::AllDockWidgetAreas : Qt::NoDockWidgetArea);
 
     if (area == QLatin1String("f") || area == QLatin1String("floating")) {
         if (!dockwidget->isFloating()) {
             dockwidget->setFloating(true);
         }
-        return;
-    }
-    if (area == QLatin1String("r") || area == QLatin1String("right")) {
+    } else if (area == QLatin1String("r") || area == QLatin1String("right")) {
         dockwidget->setFloating(false);
         mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
-        return;
-    }
-    if (area == QLatin1String("l") || area == QLatin1String("left")) {
+    } else if (area == QLatin1String("l") || area == QLatin1String("left")) {
         dockwidget->setFloating(false);
         mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, dockwidget);
-        return;
-    }
-    if (area == QLatin1String("t") || area == QLatin1String("top")) {
+    } else if (area == QLatin1String("t") || area == QLatin1String("top")) {
         dockwidget->setFloating(false);
         mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, dockwidget);
-        return;
-    }
-    if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+    } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
         dockwidget->setFloating(false);
         mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, dockwidget);
     }
+    return !gone();
 }
 
 void TMainConsole::registerScrollBox(const QString& name, TScrollBox* pScrollBox)
@@ -4329,20 +4346,9 @@ void TMainConsole::closeEvent(QCloseEvent* event)
 
     if (mpHost->mFORCE_SAVE_ON_EXIT || mpHost->isClosingForced()) {
         mudlet::self()->saveWindowLayout();
-        mpHost->modulesToWrite.clear();
-        // A save still running would turn this one away, and it may predate the session's last changes
-        mpHost->waitForProfileSave();
-        mpHost->saveProfileReportingFailure();
-        // Other profiles can keep Mudlet running long after this one closes
-        mudlet::self()->writeSettings();
-
-        if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
-            // There is a map loaded - but it *could* have no rooms at all!
-            if (!mpHost->saveMapFile(QString())) {
-                qWarning() << "TMainConsole::closeEvent(...) WARNING - forced close map save failed";
-            }
+        if (!mpHost->saveForClose()) {
+            qWarning() << "TMainConsole::closeEvent(...) WARNING - forced close save failed";
         }
-        mpHost->waitForProfileSave();
         mEnableClose = true;
         event->accept();
         return;

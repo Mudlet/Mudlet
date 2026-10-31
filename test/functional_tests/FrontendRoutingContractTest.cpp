@@ -362,10 +362,11 @@ public:
         return exportAllZLevels ? std::pair{true, QString()} : std::pair{false, qsl("routed export refusal")};
     }
 
-    void show3DView(bool shown) override
+    std::pair<bool, QString> show3DView(bool shown) override
     {
         mCalls << call("show3DView", {flag(shown)});
         mShowing3D = shown;
+        return {true, QString()};
     }
     bool showing3DView() const override
     {

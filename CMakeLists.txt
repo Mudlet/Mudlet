@@ -169,6 +169,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 # -DENABLE_STATIC_ANALYSIS=ON (see cmake/StaticAnalysis.cmake for details)
 include(StaticAnalysis)
 
+# Profile-guided optimisation - inactive unless configured with -DMUDLET_PGO=GENERATE
+# or USE (see cmake/ProfileGuidedOptimization.cmake for the steps)
+include(ProfileGuidedOptimization)
+
 include(IncludeOptionalModule)
 
 include_optional_module(ENVIRONMENT_VARIABLE WITH_UPDATER
@@ -184,13 +188,9 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS
 include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER
                         OPTION_VARIABLE USE_3DMAPPER
                         READABLE_NAME "3D mapper")
-# Off by default: it needs Qt6::HttpServer, which several of the project's own build
-# environments do not install, and it opens a port that runs arbitrary Lua - opting in
-# is the right shape for both.
 include_optional_module(ENVIRONMENT_VARIABLE WITH_MCPSERVER
                         OPTION_VARIABLE USE_MCPSERVER
-                        READABLE_NAME "MCP server"
-                        DEFAULT OFF)
+                        READABLE_NAME "MCP server")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_SHADER_HOT_RELOAD
                         OPTION_VARIABLE USE_SHADER_HOT_RELOAD
                         READABLE_NAME "shader hot-reloading"
@@ -210,6 +210,11 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_BUNDLED_LUA
                         OPTION_VARIABLE USE_BUNDLED_LUA
                         READABLE_NAME "bundled Lua 5.1"
                         DEFAULT ${BUNDLED_LUA_DEFAULT})
+# On by default: it links mudlet_core alone, so building it is what proves the core still runs without
+# Qt Widgets, and the teardown tests run it
+include_optional_module(ENVIRONMENT_VARIABLE WITH_HEADLESS
+                        OPTION_VARIABLE USE_HEADLESS
+                        READABLE_NAME "headless runner")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")

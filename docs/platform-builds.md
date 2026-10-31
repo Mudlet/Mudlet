@@ -104,6 +104,7 @@ as what CI passes — set them to match the job being reproduced:
 | `USE_SANITIZER` | `Address` on Linux, empty on macOS | empty |
 | `WITH_SENTRY` | `ON` | `ON` |
 | `SENTRY_SEND_DEBUG` | `0` | `1` |
+| `MUDLET_PGO` | empty | `GENERATE` for the first pass on macOS and the Linux build that ships (Windows passes it with `-D`); see below |
 
 ```bash
 USE_SANITIZER=Address cmake --preset ci-linux
@@ -138,6 +139,83 @@ are active.
 Because IDEs read `CMakePresets.json` natively, selecting one of these presets in CLion, VS Code or
 Qt Creator is enough — no per-IDE sanitizer configuration is needed.
 
+## Profile-guided optimisation
+
+A PGO build lays out and inlines code by what a training run measured. It is off by default and
+takes two builds of the *same* tree, since GCC finds each object's profile by the object's path:
+
+```bash
+cmake --preset linux-release -DMUDLET_PGO=GENERATE
+cmake --build build-linux-release --target PipelineBenchmark MapRenderBenchmark PathfindBenchmark
+CI/pgo-train.sh build-linux-release       # runs those three, writes the profile
+cmake -B build-linux-release -DMUDLET_PGO=USE
+cmake --build build-linux-release --target mudlet_executable
+```
+
+GCC and Clang are both supported; for Clang, `CI/pgo-train.sh` merges the raw profiles with
+`llvm-profdata` (`LLVM_PROFDATA` picks a particular one), and on Linux the instrumented link needs
+the compiler-rt profile runtime (`libclang-rt-<version>-dev` on Ubuntu). The profile lands in
+`MUDLET_PGO_DIR`, `<build>/pgo-profile` unless set. The training script clears it before each run,
+as Clang names each raw profile after the binary that wrote it and would otherwise merge an older
+build's in. It also fails when a slot the training is for did not run, since a skipped slot still
+leaves a profile - one that leaves its code untrained. Keep the sources the same between the two
+builds: a function whose code changed loses its profile, which GCC refuses as an error and Clang
+reports as a `hash mismatch` warning.
+
+The training is PipelineBenchmark - text decoding, the trigger engine, the default packages and
+console painting - then MapRenderBenchmark and PathfindBenchmark on the Achaea map in
+`src/mudlet-lua/tests/fixtures/maps`, which load, audit and draw it and build its pathfinding graph.
+Only Clang builds also search four routes across it: left untrained, Clang 21 took 1.04 to 1.09
+times as long per search as with no profile on a map it never saw, and trained 0.99 to 1.00, while
+GCC 12 trained on them took about 1.15 times as long per search, on the trained map too.
+Functions the training never enters are compiled as if there were no profile: under GCC thanks to
+`-fprofile-partial-training`, under Clang because `CI/pgo-train.sh` merges the profile with
+`llvm-profdata merge -sparse`, which leaves them out of it. Kept in with zero counts, Clang marks
+them cold, and Apple's compiler then optimises them for size, which made held-out map loading and
+path searches up to 1.3 times as slow on Apple Silicon. With PipelineBenchmark as the only training,
+measured as time taken relative to a plain Release build of the same compiler at `-O3` - below 1 is
+faster - interleaved and paired per round, with svof (an Achaea combat system of 3,086 triggers),
+the 2D mapper and the pathfinder held out:
+
+| | GCC 13 | Clang 18 |
+| --- | --- | --- |
+| trigger engine (trained) | 0.99 | 0.81 |
+| text pipeline (trained) | 0.98 | 0.83 |
+| console painting (trained) | noise | 0.95 |
+| svof triggers (held out) | 0.98 | noise |
+| pathfinder graph build (held out) | noise | 0.82 |
+| 2D map rendering (held out) | noise | noise |
+
+So through the benchmark's own slots it pays mostly for Clang builds, and a big trigger package
+like svof gained little from a profile of the benchmark's triggers. Held-out code can move either
+way: on the 2.3-million-room Aetherspace map, GCC 12 with that profile took 1.12 of the time to load
+the map, 1.09 to audit it and 1.04 to build the pathfinding graph, which is why the training covers
+the mapper too - with it, those came out at 0.97, 0.99 and 0.97. Hand-placed `Q_LIKELY`/`Q_UNLIKELY`
+hints are not a substitute - removing all of Mudlet's, or adding more to the hottest branches,
+measured as noise.
+
+CI builds all three releases this way: macOS and Windows with Clang, Linux with the GCC 12 it
+already uses. Switching Linux to Clang would trade one for the other: with PipelineBenchmark as the
+only training, profile-guided Clang beat plain GCC on the trained paths (triggers 0.90, text 0.86)
+but not on svof (0.98, noise), and was slower at 2D map rendering (1.08 to 1.24), plain Clang being
+slower than GCC there to begin with. Measured end to end on the Linux release configuration
+rather than through PipelineBenchmark's slots, GCC 12 with the profile took 0.89 of the time on a
+replayed session with 46 triggers, 0.89 on the same session with none and 0.94 on svof, drew the
+Aetherspace map within noise, and took 1.00 to 1.05 of the time to search for paths on four maps.
+
+The first pass builds only the instrumented benchmarks - building `mudlet` would send the
+instrumented binary's debug files to Sentry - and the second builds everything against the profile,
+so the tests that follow run on what ships. Tagged releases and the nightly macOS and Windows PTBs
+build this way, so a broken profile-guided build shows up the morning after it lands rather than on
+release day; Linux PTBs are AddressSanitizer builds and are not profile-guided. macOS PTBs keep
+their own build type, which is unoptimised, so there the nightly run proves the steps work but not
+that the optimised compile does - before tagging a release, run the *Build Mudlet* workflow by hand
+with its `pgo` input set to `true`, which builds macOS and the Linux build that ships as Release,
+without AddressSanitizer, the way a tag does (*Build Mudlet (windows)* takes the same input, though its PTBs
+are Release already).
+Pull requests never build profile-guided, and no profile-guided run saves its objects to the
+shared ccache.
+
 ## Optional feature modules
 
 Seven feature modules are declared through `include_optional_module` in `CMakeLists.txt`: the
@@ -146,8 +224,10 @@ splash screen. Each has a
 `USE_*` option and a `WITH_*` name, and they are **not** interchangeable — `cmake/IncludeOptionalModule.cmake`
 reads the `WITH_*` name from the **environment** only. So `-DWITH_UPDATER=NO` on the command line is
 accepted by CMake and silently ignored; use `-DUSE_UPDATER=OFF`, or set `WITH_UPDATER=NO` in the
-environment. Note that the MCP server, shader hot-reloading and memory tracking default to OFF, the
-rest to ON.
+environment. A `USE_*` value already in the cache - from `-D` or an earlier configure of the same
+build tree - takes precedence over the `WITH_*` environment variable, so changing the environment
+of an existing build tree has no effect; pass `-DUSE_*` instead. Shader hot-reloading and memory
+tracking default to OFF, the rest to ON.
 
 This applies only to those seven. Other `WITH_*` names are ordinary options: `WITH_SENTRY` and
 `SENTRY_SEND_DEBUG` are declared with `option()` and are set on the command line as normal.
@@ -157,8 +237,8 @@ This applies only to those seven. Other `WITH_*` names are ordinary options: `WI
 The MCP server is the one optional module that needs Qt modules the rest of Mudlet does not, so it
 is the one that fails at configure time rather than silently doing nothing when they are missing:
 `src/CMakeLists.txt` does `find_package(Qt6 COMPONENTS HttpServer REQUIRED)` only under
-`USE_MCPSERVER`. Qt HttpServer in turn pulls in Qt WebSockets, and distributions package the two
-separately, so install both:
+`USE_MCPSERVER`, which is on by default. Qt HttpServer in turn pulls in Qt WebSockets, and
+distributions package the two separately, so install both:
 
 | Environment | Packages |
 | --- | --- |
@@ -167,17 +247,17 @@ separately, so install both:
 | Fedora | `qt6-qthttpserver-devel` `qt6-qtwebsockets-devel` |
 | MSYS2 (CLANG64) | `${MINGW_PACKAGE_PREFIX}-qt6-httpserver` `${MINGW_PACKAGE_PREFIX}-qt6-websockets` — `CI/setup-windows-sdk.sh` installs both |
 | macOS (Homebrew) | included in the `qt` formula, nothing extra to install |
+| Flatpak (KDE runtime) | the runtime has Qt WebSockets; `CI/org.mudlet.mudlet.yml` builds Qt HttpServer from source |
 | aqtinstall (what CI uses) | `-m qthttpserver qtwebsockets` alongside the existing modules |
 
-Then build with the module on — remembering that the `WITH_*` name is read from the environment:
+To build without it, and so without either package, turn it off:
 
 ```bash
-WITH_MCPSERVER=ON cmake --preset linux-debug
+cmake --preset linux-debug -DUSE_MCPSERVER=OFF
 ```
 
-`-DUSE_MCPSERVER=ON` on the command line works too. Leaving it off is the default and needs
-neither package; the sources and the `TMCPServerTest` / `TMCPBridgeTest` ctest cases are simply
-not built.
+`WITH_MCPSERVER=NO` in the environment does the same for a fresh build tree. The sources and the
+`TMCPServerTest` / `TMCPBridgeTest` ctest cases are then simply not built.
 
 ## Debugging options
 
@@ -215,7 +295,7 @@ A value that is set but does not parse as an integer, or is out of range, is ref
 triggerMatchThreads=2
 ```
 
-Independent of the pool, `TriggerUnit` files every trigger below a root trigger by the n-grams its patterns need, and a line stamps the ones it can reach before the tree is walked, so `TTrigger::match()` skips the rest of each folder, and passes over a folder with nothing in it to enter - see `TTrigger::skippableForLine()` and `TChildWalk`. It needs no tuning, but `MUDLET_TREE_INDEX` has two settings for checking it: `0` turns it off, and `verify` walks the triggers and folders it would have skipped and warns `TTrigger tree index MISS` for any that fired or opened a multiline state. `src/mudlet-lua/tests/TreeIndex_spec.lua` covers it, and reports as pending when it is off.
+Independent of the pool, `TriggerUnit` files triggers by the n-grams their patterns need, and a line stamps the ones it can reach before the tree is walked, so the walk skips the rest of the root triggers and of each folder, and passes over a folder with nothing in it to enter - see `TTrigger::skippableForLine()` and `TChildWalk`. It needs no tuning, but `MUDLET_TREE_INDEX` has two settings for checking it: `0` turns it off, and `verify` walks the triggers and folders it would have skipped and warns `TTrigger tree index MISS` for any that fired or opened a multiline state. `src/mudlet-lua/tests/TreeIndex_spec.lua` covers it, and reports as pending when it is off.
 
 Setting the threshold and flood lines to `1` and the misses per match to `0` puts every line through the pool, which is the way to run `src/mudlet-lua/tests/TriggerFlood_spec.lua` and the rest of the trigger specs against both paths; `MUDLET_MATCH_SPIN_US=0` on top makes every one of those lines a cold start. No checked-in CI job does this yet, so it is a local run. CI's Lua test runs and `.claude/scripts/run-lua-tests.sh` set `MUDLET_MATCH_THREADS=2`, so the flood specs run rather than pend, and `MUDLET_MATCH_SAMPLE_EVERY=0`, so no line those specs compare is quietly matched without the pool; anything else that measures the pool, `PipelineBenchmark` included, needs it set too. `PipelineBenchmark` reads `MUDLET_BENCH_TRIGGERS` and `MUDLET_BENCH_CHUNK_LINES` to sweep trigger counts and chunk sizes against these thresholds - see the comment at the top of `test/functional_tests/PipelineBenchmark.cpp`.
 

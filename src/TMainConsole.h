@@ -188,7 +188,7 @@ public:
     TConsole* deregisterSubConsole(const QString& name);
     void registerDockWidget(const QString& name, TDockWidget* pDockWidget);
     TDockWidget* deregisterDockWidget(const QString& name);
-    void openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) override;
+    bool openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) override;
     TConsole* subConsoleWidget(const QString& name) const { return mSubConsoleMap.value(name); }
     QString subConsoleName(TConsole* pConsole) const { return mSubConsoleMap.key(pConsole); }
     TDockWidget* dockWidget(const QString& name) const { return mDockWidgetMap.value(name); }
@@ -426,7 +426,7 @@ private:
     QWidget* plainWindowWidget(const QString& name) const;
     void watchWindowState(const QString& name, QWidget* pWidget);
     void reportWindowState(const QStringList& names);
-    void placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
+    bool placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
     TCommandLine* commandLineNamed(const QString& name) const;
     TConsole* consoleNamed(const QString& name);
     // The single answer to "does this profile have a map widget on screen right

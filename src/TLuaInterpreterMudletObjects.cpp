@@ -788,6 +788,10 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
         lua_pushnumber(L, static_cast<double>(host.getTriggerUnit()->rootFilterEpoch()));
         lua_settable(L, -3);
 
+        lua_pushstring(L, "unfilterableEpoch");
+        lua_pushnumber(L, static_cast<double>(host.getTriggerUnit()->unfilterableEpoch()));
+        lua_settable(L, -3);
+
         if (TriggerUnit::treeIndexMode() != TriggerUnit::TreeIndexMode::Off) {
             lua_pushstring(L, "treeIndexFiled");
             lua_pushnumber(L, host.getTriggerUnit()->treeIndexFiledCount());
@@ -3328,7 +3332,7 @@ int TLuaInterpreter::closeProfile(lua_State* L)
         return 2;
     }
 
-    if (!TAppFrontend::instance()->requestProfileTabClose(profileName)) {
+    if (!TAppFrontend::instance()->requestProfileClose(profileName)) {
         return 0;
     }
     lua_pushboolean(L, true);

@@ -1,6 +1,7 @@
 -- TriggerUnit files every trigger below a root by the runs of text its patterns
 -- need, stamps the ones a line holds before the tree is walked, and
--- TTrigger::match() skips the children of a folder that were not stamped. The
+-- TTrigger::match() skips the children of a folder that were not stamped; the
+-- root triggers are filed in the same index, and Trigger_spec.lua pins them. The
 -- index is one-sided - it only ever says what cannot match - so a wrong answer
 -- can only lose a firing, and these specs pin what must still fire. They run
 -- once the index is armed, which takes MUDLET_TEST_MODE to report and a few
@@ -397,6 +398,26 @@ describe("trigger matching through the whole-tree index", function()
         feed("quiet", "quiet", "quiet")
 
         assert.are.same({shutsFirst = 1, shutsLast = 3}, fired)
+    end)
+
+    -- Comfortably past the roots the root walk needs filed, in the index a refiling of the tree files
+    -- its children in
+    itIndexed("fires a root trigger the line holds after a refiling of the tree", function()
+        local ids = {}
+        finally(function()
+            for _, id in ipairs(ids) do
+                killTrigger(id)
+            end
+        end)
+        for index = 1, 80 do
+            ids[#ids + 1] = tempTrigger("treeindex_root_" .. index .. "_bait", function() note("root") end)
+        end
+        feed("treeindex warm-up line")
+
+        assert(permSubstringTrigger("treeindex root refiler", packageName, {"treeindex_root_refiler_bait"}, ""))
+        feed("treeindex_root_7_bait", "treeindex_root_80_bait")
+
+        assert.are.same({root = 2}, fired, "refiling the tree must keep the roots filed alongside it")
     end)
 
     -- Last, as it takes the fixture away: a script's uninstall takes filed

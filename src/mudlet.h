@@ -101,7 +101,6 @@ class TEvent;
 class TLabel;
 class translation;
 class TScrollBox;
-class TSpeechBridge;
 class TTabBar;
 class TToolBar;
 class TUiTour;
@@ -201,6 +200,7 @@ public:
     bool closeHeldOffByEventPump(Host*) const;
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
     bool loadWindowLayout() override;
+    bool layoutLoading() const override { return mIsLoadingLayout; }
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
     bool migratePasswordsToProfileStorage();
@@ -213,7 +213,6 @@ public:
     bool openWebPage(const QString&) override;
 
     // Profile validation and orphan detection
-    bool hasOrphanedProfiles();
     QStringList getOrphanedProfiles();
     void reattachOrphanedProfiles();
     void processEventLoopHack() override;
@@ -232,7 +231,7 @@ public:
     bool saveWindowLayout();
     bool saveWindowLayoutForScript() override;
     bool openProfile(const QString& profileName, bool connect) override;
-    bool requestProfileTabClose(const QString& profileName) override;
+    bool requestProfileClose(const QString& profileName) override;
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
     void setAppearance(enums::Appearance, const bool& loading = false);
@@ -350,7 +349,6 @@ public:
     // reported in the dictionary selection as the hunspell dictionary/affix
     // filename (e.g. a "xx" or "xx_YY" form rather than "words"):
     QHash<QString, QString> mDictionaryLanguageCodeMap;
-    Discord mDiscord;
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
     // and ::ShowLineAndParagraphSeparators
@@ -703,7 +701,6 @@ private:
     QPointer<QToolButton> mpButtonConnect;
     QPointer<QToolButton> mpButtonDiscord;
     QPointer<QToolButton> mpButtonMute;
-    QPointer<TSpeechBridge> mpSpeechBridge;
     void refreshMicrophoneMarkers();
     QPointer<QToolButton> mpButtonPackageManagers;
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;

@@ -2918,6 +2918,10 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         }
     }
     const int lineIndex = lineBuffer.size() - 1;
+    if (Q_LIKELY(mpModel)) {
+        mpModel->endPrintedLine();
+        emit mpModel->mNotifier.lineCommitted(lineIndex);
+    }
     mCommitLineIndices.append(lineIndex);
     // A line committed from inside a pass (feedTriggers()) can delete, rewrap or trim lines above
     // that pass's line; neither deleteLines() nor shrinkBuffer() moves a cursor, so one a script

@@ -35,6 +35,7 @@
 #include <QString>
 
 class QNetworkRequest;
+class QTranslator;
 class QUrl;
 
 // The application-wide services that need no main window: where Mudlet keeps
@@ -44,16 +45,13 @@ class QUrl;
 // the build suffix are settled once and remembered; everything else recomputes on
 // every call.
 //
-// The settings store is the one service that is main-window-only today, and
-// deliberately so: getQSettings() stays null until mudlet::setupConfig() has
-// settled the root. The two resolve the root the same way - setupConfig()
-// validates nothing getMudletPath() does not - so this is about ordering, not
-// about one answer being better than the other. setupConfig() is what reports a
-// rejected portable.txt to the user, and no Mudlet.ini may be opened before that
-// has had its chance: a root resolved on first use can be replaced afterwards,
-// but a store opened under one hands out a pointer the Updater keeps for the
-// life of the process. Settling the root without a main window is for libmudlet
-// (#8681) to add, not for a caller here to work around.
+// The settings store waits for the config root to be settled: getQSettings()
+// stays null until settleConfigRoot() has run. That reports a refused portable.txt,
+// and no Mudlet.ini may be opened before it has had its chance: a root resolved on
+// first use can be replaced afterwards, but a store opened under one hands out a
+// pointer the Updater keeps for the life of the process. The main window settles
+// it in mudlet::setupConfig(), once it is built and can put that report on screen;
+// any other HostManager settles it as it is made, unless it is settled already.
 class MudletApp
 {
 public:
@@ -116,7 +114,10 @@ public:
     // inference is what hides profiles, so assume the strongest content instead.
     static bool configDirHoldsProfiles(const QString& dir);
 
-    // Resolves the root on first use and caches it. setConfigPath() replaces it (that is how setupConfig()
+    // Whether a root is installed, which getQSettings() needs: settleConfigRoot() has run, or a test put one in
+    static bool configRootSettled();
+
+    // Resolves the root on first use and caches it. setConfigPath() replaces it (that is how settleConfigRoot()
     // installs the validated root); an empty path forgets it instead.
     static QString getMudletPath(enums::mudletPathType mode, const QString& extra1 = QString(), const QString& extra2 = QString());
 
@@ -134,6 +135,20 @@ public:
     // Items that hold a password in plain text, which only the owner may read
     static bool profileDataItemHoldsSecret(const QString& item);
 
+    // What a new profile may be named: ASCII a folder can have on every OS, with the parentheses of a file
+    // manager's copies ("profile (2)"); firstInvalidProfileNameChar() gives the first character outside it,
+    // or a null QChar. profileNameUsableAsIs() is required of every name, those already on disk too: it must
+    // name a folder of its own and have none of the characters sanitizeForPath() rewrites, which
+    // CredentialManager::generateFilePath() refuses, so its password could never be stored.
+    static const QString scmAllowedProfileNameChars;
+    static QChar firstInvalidProfileNameChar(const QString& name);
+    static bool profileNameUsableAsIs(const QString& name);
+    static bool gamePortUsable(int port) { return port >= 1 && port <= 65535; }
+    // Why the connection dialog would not take this game server address and port with TLS as given (which
+    // needs SSL support), translated, or an empty string. The host is trimmed here; none at all, like a port
+    // of 0, is left for the connect to report.
+    static QString connectionDetailsProblem(const QString& host, int port, bool tls);
+
     static QString readProfileData(const QString& profile, const QString& item);
 
     // Creates the profile's directory if missing, so writing for a nonexistent profile brings it into being
@@ -147,8 +162,10 @@ public:
 
     // The persistent application settings in Mudlet.ini under the config root, or
     // nullptr until the root has been settled - see the note on the class above.
-    // Callers that can run before mudlet::setupConfig() have to check; the rest
-    // run long after startup and dereference it directly.
+    // Callers that can run before settleConfigRoot() have to check. A profile is
+    // made only after it - by a HostManager, or once mudlet::setupConfig() has run -
+    // which Host's constructor asserts, so anything a profile reaches can
+    // dereference it.
     static QSettings* getQSettings();
     // For a QSettings that reads Mudlet.ini before getQSettings() exists. Qt hands
     // a file parsed moments ago to the next QSettings without parsing it again,
@@ -157,6 +174,12 @@ public:
     static void noteEarlySettingsStatus(const QSettings&);
     // What noteEarlySettingsStatus() last heard of that file, or NoError
     static QSettings::Status earlySettingsStatus(const QString& fileName);
+    // For texts printed before there is a window or a profile, in Mudlet.ini's language or else the
+    // system's. Installed on the application; null when there is none. A print-and-exit run warns why not.
+    static QTranslator* loadTranslationsForCommandLine(bool printAndExitRun);
+    // FFmpeg on Windows and AVFoundation on macOS over Qt Multimedia's own default, unless QT_MEDIA_BACKEND
+    // names one; before the first media object is made
+    static void setDefaultMediaBackend();
 
     // Whether the config root in force actually came from a portable.txt. False
     // when a marker was present but named a root that had to be refused, which is
@@ -202,11 +225,13 @@ public:
     static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
 
 private:
-    // Only the main window moves the config root, the language or the
-    // preferences below in a running Mudlet: setupConfig() installs the root it
-    // has settled, and the language follows the preferences dialog through
+    // Only the main window moves the language or the preferences below in a
+    // running Mudlet: the language follows the preferences dialog through
     // mudlet::setInterfaceLanguage()
     friend class mudlet;
+    // So that a pool with no main window can call settleConfigRoot() and take the
+    // password preference from Mudlet.ini, as the main window would
+    friend class HostManager;
     // Resolving the root once is the point, so the only way to test it is to be
     // able to forget the answer - which setConfigPath(QString()) does
     friend class ConfigDirOverrideTest;
@@ -214,11 +239,17 @@ private:
     friend class FeedChecksumRaceTest;
     // A fresh scratch config reads as a first launch, which never shows callouts
     friend class FeatureCalloutTest;
+    // Sets the password preference as Mudlet.ini would, with no main window and no pool
+    friend class CredentialManagerKeychainTest;
+    friend class HeadlessSessionTest;
     // Discards any settings store built under the previous root - and with it any
     // pointer a caller cached, so this must not run once init() has handed the
     // store to the Updater. portable says whether the root came from a
     // portable.txt that was honoured.
     static void setConfigPath(const QString& path, bool portable = false);
+    // Resolves the config root, logs what the resolution found - a refused portable.txt included - and
+    // installs it through setConfigPath(), after which getQSettings() opens the Mudlet.ini under it.
+    static ConfigDirResolution settleConfigRoot();
     static void setInterfaceLanguage(const QString& language);
     static void setStorePasswordsSecurely(bool);
     static void setFirstLaunch(bool);

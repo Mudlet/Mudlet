@@ -81,10 +81,10 @@ static const char* speechSensitivityName(const SpeechRecognizer::Sensitivity sen
 // has to hear a refusal too, and with no engine installed there is no recognizer
 // to emit errorOccurred through - so this raises the event through the bridge itself.
 // Without it "no engine" and "nothing said yet" look identical from Lua.
-static void reportSpeechRefusal(const QString& message)
+static void reportSpeechRefusal(lua_State* L, const QString& message)
 {
     if (auto* pBridge = TSpeechBridge::instance()) {
-        pBridge->raiseSpeechEvent(qsl("sysSTTError"), message);
+        pBridge->raiseSpeechEvent(qsl("sysSTTError"), message, findHostFromLua(L));
     }
 }
 
@@ -421,6 +421,7 @@ int TLuaInterpreter::sttInit(lua_State* L)
         }
     }
 
+    const TSpeechBridge::CallerScope callerScope(findHostFromLua(L));
     auto* pBridge = TSpeechBridge::instance();
     if (!pBridge) {
         return warnArgumentValue(L, funcName, "mudlet instance not available");
@@ -570,7 +571,7 @@ int TLuaInterpreter::sttStart(lua_State* L)
     auto* pRecognizer = pBridge->speechRecognizer();
     if (!pRecognizer) {
         const QString message = noEngineMessage();
-        reportSpeechRefusal(message);
+        reportSpeechRefusal(L, message);
         return warnArgumentValue(L, funcName, message);
     }
 
@@ -584,7 +585,7 @@ int TLuaInterpreter::sttStart(lua_State* L)
 
     if (!pRecognizer->initialized()) {
         const QString message = qsl("speech recognizer not initialized with a model - call stt.init() first");
-        reportSpeechRefusal(message);
+        reportSpeechRefusal(L, message);
         return warnArgumentValue(L, funcName, message);
     }
 
@@ -746,7 +747,7 @@ int TLuaInterpreter::sttToggle(lua_State* L)
     }
     if (!pRecognizer || !pRecognizer->initialized()) {
         const QString message = pRecognizer ? qsl("speech recognizer not initialized - call stt.init() first") : noEngineMessage();
-        reportSpeechRefusal(message);
+        reportSpeechRefusal(L, message);
         return warnArgumentValue(L, funcName, message);
     }
 
@@ -1034,6 +1035,7 @@ int TLuaInterpreter::sttClose(lua_State* L)
 {
     const char* funcName = "stt.close";
 
+    const TSpeechBridge::CallerScope callerScope(findHostFromLua(L));
     auto* pBridge = TSpeechBridge::instance();
     if (pBridge) {
         auto* pRecognizer = pBridge->speechRecognizer();
@@ -1110,7 +1112,7 @@ int TLuaInterpreter::sttSetSilenceTimeout(lua_State* L)
     auto* pRecognizer = pBridge->speechRecognizer();
     if (!pRecognizer) {
         const QString message = noEngineMessage();
-        reportSpeechRefusal(message);
+        reportSpeechRefusal(L, message);
         return warnArgumentValue(L, "stt.setSilenceTimeout", message);
     }
 
@@ -1140,6 +1142,7 @@ int TLuaInterpreter::sttSetSensitivity(lua_State* L)
         return warnArgumentChoice(L, "stt.setSensitivity", qsl("sensitivity"), {qsl("short"), qsl("default"), qsl("long")}, mode);
     }
 
+    const TSpeechBridge::CallerScope callerScope(findHostFromLua(L));
     auto* pBridge = TSpeechBridge::instance();
     if (!pBridge) {
         return warnArgumentValue(L, "stt.setSensitivity", "mudlet instance not available");
@@ -1149,7 +1152,7 @@ int TLuaInterpreter::sttSetSensitivity(lua_State* L)
     auto* pRecognizer = pBridge->speechRecognizer();
     if (!pRecognizer) {
         const QString message = noEngineMessage();
-        reportSpeechRefusal(message);
+        reportSpeechRefusal(L, message);
         return warnArgumentValue(L, "stt.setSensitivity", message);
     }
 
@@ -1217,6 +1220,7 @@ int TLuaInterpreter::sttSetVocabulary(lua_State* L)
         lua_pop(L, 1);
     }
 
+    const TSpeechBridge::CallerScope callerScope(findHostFromLua(L));
     auto* pBridge = TSpeechBridge::instance();
     if (!pBridge) {
         return warnArgumentValue(L, "stt.setVocabulary", "mudlet instance not available");
@@ -1226,7 +1230,7 @@ int TLuaInterpreter::sttSetVocabulary(lua_State* L)
     auto* pRecognizer = pBridge->speechRecognizer();
     if (!pRecognizer) {
         const QString message = noEngineMessage();
-        reportSpeechRefusal(message);
+        reportSpeechRefusal(L, message);
         return warnArgumentValue(L, "stt.setVocabulary", message);
     }
 
@@ -1292,7 +1296,7 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
             // package that left the recognizer in use is usually not the one that
             // asked for the reload, and it is the one that needs to hear this.
             const QString refusal = qsl("cannot reload the speech recognition library while it is in use, close speech recognition first");
-            reportSpeechRefusal(refusal);
+            reportSpeechRefusal(L, refusal);
             return warnArgumentValue(L, "stt.reloadLibrary", refusal, true);
         }
     }
@@ -1304,7 +1308,7 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
         // The loader still holds the module: an engine fault rather than a state
         // guard, and the one an installer replacing the file most needs told.
         const QString refusal = qsl("the speech recognition library is still mapped and could not be released, so detection could not be re-run");
-        reportSpeechRefusal(refusal);
+        reportSpeechRefusal(L, refusal);
         return warnArgumentValue(L, "stt.reloadLibrary", refusal, true);
     }
     // sherpa latches its own "already looked" flag, and resetting only Vosk's
@@ -1317,7 +1321,7 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
         // The loader still holds the module: an engine fault rather than a state
         // guard, and the one an installer replacing the file most needs told.
         const QString refusal = qsl("the speech recognition library is still mapped and could not be released, so detection could not be re-run");
-        reportSpeechRefusal(refusal);
+        reportSpeechRefusal(L, refusal);
         return warnArgumentValue(L, "stt.reloadLibrary", refusal, true);
     }
     // Lift the latch stt.unloadLibrary() set, since asking for a reload is
@@ -1344,7 +1348,7 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
         // rather than anything the caller got wrong - so it speaks like the other
         // refusals here instead of leaving a bare false to be guessed at.
         const QString refusal = noEngineMessage();
-        reportSpeechRefusal(refusal);
+        reportSpeechRefusal(L, refusal);
         return warnArgumentValue(L, "stt.reloadLibrary", refusal, true);
     }
     lua_pushboolean(L, true);
@@ -1369,7 +1373,7 @@ int TLuaInterpreter::sttUnloadLibrary(lua_State* L)
             // stt.reloadLibrary(): no arguments to get wrong, so this is the
             // engine refusing, and other packages on the profile are affected.
             const QString refusal = qsl("cannot unload the speech recognition library while it is in use, close speech recognition first");
-            reportSpeechRefusal(refusal);
+            reportSpeechRefusal(L, refusal);
             return warnArgumentValue(L, "stt.unloadLibrary", refusal, true);
         }
         // Only Vosk's loader is wired to this call, so an engine that has a
@@ -1391,7 +1395,7 @@ int TLuaInterpreter::sttUnloadLibrary(lua_State* L)
             // engine is loaded is not the caller's argument, and a consumer
             // driving an install flow from events alone would otherwise see a
             // false it could not attribute to anything.
-            reportSpeechRefusal(message);
+            reportSpeechRefusal(L, message);
             return warnArgumentValue(L, "stt.unloadLibrary", message, true);
         }
     }
@@ -1401,7 +1405,7 @@ int TLuaInterpreter::sttUnloadLibrary(lua_State* L)
         // failure here is precisely what the caller - and anything else about to
         // touch that file - has to hear about.
         const QString refusal = qsl("the speech recognition library is still mapped and could not be unloaded, so its file cannot be replaced yet");
-        reportSpeechRefusal(refusal);
+        reportSpeechRefusal(L, refusal);
         return warnArgumentValue(L, "stt.unloadLibrary", refusal, true);
     }
 

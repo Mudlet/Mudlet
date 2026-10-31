@@ -53,6 +53,7 @@
 #include <QTextStream>
 #include <QTimer>
 
+#include <chrono>
 #include <memory>
 #include <string>
 
@@ -84,6 +85,7 @@ class TMainConsole;
 struct TConsoleModel;
 struct MapStyle;
 class TMap;
+class TMapViewFrontend;
 class MMCPServer;
 class dlgIRC;
 class TIrcClient;
@@ -172,10 +174,15 @@ class Host : public QObject
     friend class TelnetLatePasswordTest;
     friend class PasswordEntryPolicyTest;
     friend class PasswordEntryTest;
+    friend class HeadlessSessionTest;
     // Allows the functional test to size its archives past the unpacking dialog's threshold:
     friend class PackageRemovalSaveTeardownTest;
     // Allows the functional test to put a recording view in place of the null one:
     friend class FrontendRoutingContractTest;
+    // Only callers that hold the profile alive through its handlers may close it with no view:
+    friend class HostManager;
+    // Allows the functional test to close a profile with no view, and to hold a save open past a shortened wait:
+    friend class HeadlessHostSmokeTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
@@ -214,6 +221,17 @@ public:
     void setLogin(const QString& login) { mLogin = login; }
     QString& getPass() { return mPass; }
     void setPass(const QString& password) { mPass = password; }
+    // One given for this run, as a headless frontend's option is, which the stored one does not replace; an
+    // empty one is none. Copied whole, as the caller's secureStringClear() zeroes its own only while nothing
+    // shares it.
+    void givePass(const QString& password)
+    {
+        if (password.isEmpty()) {
+            return;
+        }
+        mPass = QString(password.constData(), password.size());
+        mPassGiven = true;
+    }
     // A password still being fetched from the keychain counts: the auto-login is timer based, so
     // the password step has to be armed before the read that answers it comes back, or there is
     // no prompt left for a late answer to be typed at.
@@ -285,15 +303,28 @@ public:
     static QString experimentGroup(const QString& experimentKey);
 
     void forceClose();
+    // closeMudlet()'s mark: the close that follows saves, whatever save on exit says
+    void markClosingForced();
     bool profileResetInProgress() const { return mResetProfile; }
     bool isClosingDown() const { return mIsClosingDown; }
+    // Also true while a close with no view runs sysExitEvent and its save, before isClosingDown()
+    bool closeStarted() const { return mIsClosingDown || mClosingWithNoView; }
     bool isClosingForced() const { return mForcedClose; }
     bool requestClose();
     // A main console raises sysExitEvent as it closes; a profile that never had one gets it from this.
     void raiseExitEventIfOwed();
+    // The save a close makes without asking: the profile, Mudlet's settings and the map, waited for; false if
+    // either the profile or the map failed
+    bool saveForClose();
+    // Whether deleting the profile now would pull its Lua state or map from under code still running
+    // on them; asks a map operation to stop, so the wait ends.
+    bool deletionMustWait();
+    // What deletionMustWait() answers, without asking anything to stop
+    bool deletionWouldWait() const;
 
-    // The profile load, in this order, with the GUI doing its window work between the steps. The first
-    // returns true when the profile has no save of its own yet, so the GUI adds the default packages.
+    // The profile load, in this order, as the GUI and HostManager::openProfile() run it, the GUI doing its
+    // window work between the steps. The first returns true when the profile has no save of its own yet,
+    // so the default packages are added.
     bool loadProfileSave(const QString& saveFileName);
     void startProfileScripts();
     void loadMapAndConnect(bool connect);
@@ -342,9 +373,10 @@ public:
     // through it and has no other windows.
     TConsoleFrontend* consoleFrontend() const;
     bool hasConsoleView() const;
-    // Whether scripts see the map as open: once a mapper shows it, or always with no console view,
-    // where no mapper can be made and the model is the whole map.
+    // Whether scripts see the map as open: once there is a mapper, a closed one included
     bool mapOpen() const;
+    // The mapper whose 2D map scripts ask about; with no console view, the one the null view has recorded
+    TMapViewFrontend* mapViewFrontend() const;
     void setMainConsoleView(TMainConsole* view);
     // Keeps TMainConsole's translation context, so the existing translations still apply.
     static QString loggingAnnouncementText(const bool isLogging, const QString& logFileName);
@@ -459,7 +491,7 @@ public:
     void forgetLuaFunctionRefs();
     std::tuple<bool, QString, QString> saveProfile(const QString& saveLocation = QString(), const QString& saveName = QString(), bool syncModules = false);
     std::tuple<bool, QString, QString> saveProfileAs(const QString& fileName);
-    void saveProfileReportingFailure(const QString& saveName = QString());
+    bool saveProfileReportingFailure(const QString& saveName = QString());
     void stopAllTriggers();
     void reenableAllTriggers();
 
@@ -474,13 +506,17 @@ public:
 
     void updateDisplayDimensions();
 
-    // false: the string is why the install was refused. true: installed, or queued if a profile save was
-    // running, and the string lists "<item name>: <error>" per item whose Lua failed. Empty with true is
-    // not "all well": a queued install, an unreadable config.lua and an
-    // XML that stopped part-way report themselves on the console instead.
-    std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet = false);
+    // false: the string is why the install was refused. true: installed, or queued behind a profile save,
+    // with "<item name>: <error>" for each item whose Lua failed, as Lua's installPackage() hands it to
+    // scripts. An unreadable config.lua (not said during a module sync) or XML that stopped part-way goes to the
+    // console and, when given, problems, not the string; a queued install reports nothing.
+    std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet = false, QStringList* problems = nullptr);
+    // installPackage()'s reason for refusing a package under a name a package already has
+    static QString packageAlreadyInstalledReason(const QString& packageName) { return qsl("package %1 is already installed").arg(packageName); }
     void reportScriptsThatFailedToLoad();
     bool uninstallPackage(const QString&, enums::PackageModuleType thing);
+    // The name a package file is installed under, unless its manifest renames it
+    QString sanitizePackageName(const QString packageName) const;
     bool removeDir(const QString&, const QString&);
     // whyNotRead, when given, is set to why no manifest came back - telling a
     // config.lua that would not run apart from one that simply names no package
@@ -714,6 +750,9 @@ public:
     bool moveWindow(const QString& name, int, int);
     std::pair<bool, QString> setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show);
     std::pair<bool, QString> openMapWidget(const QString& area, int x, int y, int width, int height);
+    // Loads and shows the profile's last saved map for a mapper being made, embedded or the map widget; false, doing
+    // nothing, when a map is loaded or the profile is closing with its view gone.
+    bool loadMapForNewMapper(bool embedded);
     std::pair<bool, QString> closeMapWidget();
     std::optional<QRect> mapWidgetGeometry() const;
     void refreshColours();
@@ -855,6 +894,9 @@ public:
     void setFontsAntiAlias(const bool);
 
 private:
+    // A main console's close, for a profile that never had one; with nobody to ask, an unforced close
+    // saves only if save on exit is set. False, doing nothing, for a profile already closing.
+    bool closeWithNoView();
     QSettings& profileIni();
 
     bool mNoAntiAlias = false;
@@ -911,6 +953,7 @@ private:
     // What consoleFrontend() hands out while mpConsole is not set.
     std::unique_ptr<TNullConsoleFrontend> mpNullConsoleFrontend;
     bool mExitEventOwed = true;
+    bool mClosingWithNoView = false;
 
 public:
     cTelnet mTelnet;
@@ -1305,6 +1348,8 @@ signals:
     void signal_changeEnableBlinkText(bool);
     void profileSaveStarted();
     void profileSaveFinished();
+    // From a close with no main console, which has nobody to show it to
+    void closeSaveFailed();
     void signal_changeSpellDict(const QString&);
     // Spell check has just been turned on, so the system dictionary is wanted
     // where it was not before. The main console reads it off the event loop.
@@ -1409,6 +1454,7 @@ private:
     void thankForUsingPTB();
     void toggleMapperVisibility();
     void createMapper(const bool);
+    bool hasMapper() const;
     void removePackageInfo(const QString& packageName, const bool);
     // A removal uninstallPackage() held over because the package was still being
     // read in when it was asked for.
@@ -1458,7 +1504,6 @@ private:
     void startMapAutosave(const int interval);
     void timerEvent(QTimerEvent* event) override;
     void autoSaveMap();
-    QString sanitizePackageName(const QString packageName) const;
     void closeChildren();
     void installModulesList(const QStringList&);
     void setupSandboxedLuaState(lua_State* L);
@@ -1507,6 +1552,8 @@ private:
     QTimer mDeferredSaveTimer;
     // A counter, not a flag: a timer in one wait's pump can start another
     int mProfileSaveWaitDepth = 0;
+    // Long enough that reaching it means something is wrong, not that a disk is busy
+    std::chrono::milliseconds mProfileSaveNotificationTimeout = std::chrono::seconds(30);
 
     QFile mErrorLogFile;
 
@@ -1530,6 +1577,7 @@ private:
     QString mTriggerHaystack;
     QString mLogin;
     QString mPass;
+    bool mPassGiven = false;
     bool mSecuredPasswordPending = false;
     // The store refused the saved password, as against having none or not being there at all
     bool mSecuredPasswordUnreadable = false;

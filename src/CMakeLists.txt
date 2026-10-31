@@ -159,6 +159,8 @@ set(mudlet_SRCS
     TMxpVersionTagHandler.cpp
     TNullAppFrontend.cpp
     TNullConsoleFrontend.cpp
+    TNullMapView.cpp
+    TNullMapViews.cpp
     TriggerMatchPool.cpp
     TriggerUnit.cpp
     TTriggerPrescan.cpp
@@ -471,6 +473,8 @@ set(mudlet_HDRS
     TMxpVersionTagHandler.h
     TNullAppFrontend.h
     TNullConsoleFrontend.h
+    TNullMapView.h
+    TNullMapViews.h
     TPrintSink.h
     Tree.h
     TriggerMatchPool.h
@@ -1065,6 +1069,10 @@ target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_APP_TARGET} mudlet_lsan_
 # can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
 # will fail to load with "undefined symbol" errors.
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES ENABLE_EXPORTS ON)
+
+if(USE_HEADLESS)
+  add_subdirectory(headless)
+endif()
 
 if (WITH_SENTRY)
   include(cmake/WithSentry.cmake)
