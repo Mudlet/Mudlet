@@ -1865,17 +1865,20 @@ private slots:
   // the text it wraps, and the outer one takes back the text after it
   void test_Osc8LinkInsideAnMxpLink_data() {
     QTest::addColumn<QString>("inside");
+    // What the second y sends, or empty when it is the MXP link's again
+    QTest::addColumn<QString>("secondSends");
 
     QTest::newRow("one link")
-        << qsl("\x1b]8;;send:look\x1b\\yy\x1b]8;;\x1b\\");
+        << qsl("\x1b]8;;send:look\x1b\\yy\x1b]8;;\x1b\\") << qsl("look");
     QTest::newRow("two links")
-        << qsl("\x1b]8;;send:look\x1b\\y\x1b]8;;send:read\x1b\\y\x1b]8;;\x1b\\");
+        << qsl("\x1b]8;;send:look\x1b\\y\x1b]8;;send:read\x1b\\y\x1b]8;;\x1b\\") << qsl("read");
     QTest::newRow("a rejected link after an accepted one")
-        << qsl("\x1b]8;;send:look\x1b\\y\x1b]8;;gmcp:Foo\x1b\\y\x1b]8;;\x1b\\");
+        << qsl("\x1b]8;;send:look\x1b\\y\x1b]8;;gmcp:Foo\x1b\\y\x1b]8;;\x1b\\") << QString();
   }
 
   void test_Osc8LinkInsideAnMxpLink() {
     QFETCH(QString, inside);
+    QFETCH(QString, secondSends);
     forceMxpOn();
 
     feedFromServer(qsl("MXPOSC <SEND \"north\">xx ") + inside +
@@ -1893,6 +1896,17 @@ private slots:
     const int osc8Link = console->buffer.getLinkIndexAt(line, 10);
     QVERIFY2(osc8Link > 0 && osc8Link != sendLink,
              "the OSC 8 link's text is not its own link");
+    QCOMPARE(console->getLinkStore().getLinksConst(osc8Link),
+             QStringList(qsl("send(%1, false)").arg(LuaLiteral::quote(qsl("look")))));
+    const int secondLink = console->buffer.getLinkIndexAt(line, 11);
+    if (secondSends.isEmpty()) {
+      QCOMPARE(secondLink, sendLink);
+    } else {
+      QVERIFY2(secondLink > 0 && secondLink != sendLink,
+               "the second y is not an OSC 8 link");
+      QCOMPARE(console->getLinkStore().getLinksConst(secondLink),
+               QStringList(qsl("send(%1, false)").arg(LuaLiteral::quote(secondSends))));
+    }
     QCOMPARE(console->buffer.getLinkIndexAt(line, 12), sendLink);
     QCOMPARE(console->buffer.getLinkIndexAt(line, 13), sendLink);
     QCOMPARE(console->buffer.getLinkIndexAt(line, 16), 0);
