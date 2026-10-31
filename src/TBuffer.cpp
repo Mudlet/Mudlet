@@ -386,8 +386,11 @@ std::optional<bool> jsonBoolValue(const QJsonValue& val)
     if (val.isBool()) {
         return val.toBool();
     }
-    if (val.isDouble() && (val.toDouble() == 0 || val.toDouble() == 1)) {
-        return val.toDouble() == 1;
+    if (val.isDouble()) {
+        const double number = val.toDouble();
+        if (number == 0 || number == 1) {
+            return number == 1;
+        }
     }
     if (val.isString()) {
         const QString text = val.toString().trimmed().toLower();
