@@ -218,6 +218,17 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_HEADLESS
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
+# Each of these uses something an Android or iOS build of mudlet_core cannot have; see
+# "Leaving out what a mobile build cannot use" in docs/platform-builds.md
+include_optional_module(ENVIRONMENT_VARIABLE WITH_SPAWN
+                        OPTION_VARIABLE USE_SPAWN
+                        READABLE_NAME "spawn() of processes")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_DISCORD_RPC
+                        OPTION_VARIABLE USE_DISCORD_RPC
+                        READABLE_NAME "Discord RPC library loading")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_SPEECH_ENGINES
+                        OPTION_VARIABLE USE_SPEECH_ENGINES
+                        READABLE_NAME "Vosk and sherpa-onnx speech engine loading")
 
 find_package(Qt6 6.8.2 REQUIRED)
 

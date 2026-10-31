@@ -100,6 +100,7 @@ static void reportSpeechRefusalTo(Host& host, const QString& message)
     }
 }
 
+#if defined(INCLUDE_SPEECH_ENGINES)
 // Every directory a dynamically-loaded engine could have been installed into,
 // across all of them rather than Vosk's alone. A reader told where Mudlet
 // looked has to be told where it looked for the engine they installed, and on
@@ -114,6 +115,7 @@ static QStringList speechLibrarySearchPaths()
     }
     return paths;
 }
+#endif
 
 // Whether two paths name the same model directory. A handler that reloads the
 // model this call is loading has replaced nothing, and telling the two apart by
@@ -130,7 +132,7 @@ static bool sameModelDirectory(const QString& loaded, const QString& requested)
     return canonicalLoaded == QFileInfo(requested).canonicalFilePath();
 }
 
-// The message for a call that needs an engine when there is none. "failed to
+#if defined(INCLUDE_SPEECH_ENGINES)
 // Why a library that is there would not load, or nothing when no file was
 // found at all. A library present but unloadable - a dependency of its own
 // missing, most often - was reported as "not installed", naming the very path
@@ -150,11 +152,19 @@ static QString speechLibraryLoadFailure()
     }
     return QString();
 }
+#endif
 
+// The message for a call that needs an engine when there is none. "failed to
 // create speech recognizer" described the symptom of a missing library rather
 // than the library, and sent people looking for a fault in Mudlet.
 static QString noEngineMessage()
 {
+#if !defined(INCLUDE_SPEECH_ENGINES)
+    if (SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform)) {
+        return qsl("this build of Mudlet cannot load a speech engine library, so only the built-in engine can be used - call stt.init() with no argument for it");
+    }
+    return qsl("this build of Mudlet cannot load a speech engine library, so speech recognition cannot be used");
+#else
     if (VoskRecognizer::libraryUnloadedByRequest()) {
         return qsl("the speech engine library was unloaded on request - call stt.reloadLibrary() before using speech recognition again");
     }
@@ -162,6 +172,7 @@ static QString noEngineMessage()
         return qsl("the speech engine library is installed but could not be loaded: %1").arg(reason);
     }
     return qsl("the speech engine library is not installed, so speech recognition cannot be used - looked in: %1").arg(speechLibrarySearchPaths().join(qsl(", ")));
+#endif
 }
 
 // A failed load leaves no model, and model-less backends never have one, so
@@ -299,6 +310,7 @@ static QString speechBackendLabel(const SpeechRecognizerFactory::Backend backend
     return qsl("speech");
 }
 
+#if defined(INCLUDE_SPEECH_ENGINES)
 // Where one engine's library is looked for, as opposed to
 // speechLibrarySearchPaths()'s union across all of them: a refusal about a
 // named engine must name only that engine's directories. Empty for a backend
@@ -313,6 +325,7 @@ static QStringList speechLibrarySearchPathsFor(const SpeechRecognizerFactory::Ba
     }
     return QStringList();
 }
+#endif
 
 // The message for a call that asked for one engine by name and did not get
 // it. initSpeechRecognition() keeps a working engine rather than leaving the
@@ -321,6 +334,9 @@ static QStringList speechLibrarySearchPathsFor(const SpeechRecognizerFactory::Ba
 // being handed the other engine's model and blamed for refusing it.
 static QString engineNotInstalledMessage(const SpeechRecognizerFactory::Backend backend)
 {
+#if !defined(INCLUDE_SPEECH_ENGINES)
+    return qsl("this build of Mudlet cannot load the %1 speech engine library, so nothing was loaded").arg(speechBackendLabel(backend));
+#else
     if (backend == SpeechRecognizerFactory::Backend::Vosk && VoskRecognizer::libraryUnloadedByRequest()) {
         return qsl("the Vosk speech engine library was unloaded on request - call stt.reloadLibrary() before loading a Vosk model");
     }
@@ -329,6 +345,7 @@ static QString engineNotInstalledMessage(const SpeechRecognizerFactory::Backend 
         return qsl("the %1 speech engine is not available on this machine, so nothing was loaded").arg(speechBackendLabel(backend));
     }
     return qsl("this model needs the %1 speech engine, whose library is not installed - looked in: %2").arg(speechBackendLabel(backend), paths.join(qsl(", ")));
+#endif
 }
 
 // stt.init([modelPath])
@@ -401,6 +418,9 @@ int TLuaInterpreter::sttInit(lua_State* L)
                     backend = SpeechRecognizerFactory::Backend::Platform;
                 } else {
                     QString message;
+#if !defined(INCLUDE_SPEECH_ENGINES)
+                    message = qsl("this build of Mudlet cannot load a speech engine library, so no model can be loaded");
+#else
                     if (VoskRecognizer::libraryUnloadedByRequest()) {
                         message = qsl("the speech engine library was unloaded on request - call stt.reloadLibrary() before loading a model");
                     } else if (const QString reason = speechLibraryLoadFailure(); !reason.isEmpty()) {
@@ -410,6 +430,7 @@ int TLuaInterpreter::sttInit(lua_State* L)
                     } else {
                         message = qsl("the speech engine library is not installed, so no model can be loaded - looked in: %1").arg(speechLibrarySearchPaths().join(qsl(", ")));
                     }
+#endif
                     reportSpeechRefusalTo(host, message);
                     return warnArgumentValue(L, funcName, message);
                 }
@@ -1248,7 +1269,9 @@ int TLuaInterpreter::sttSetVocabulary(lua_State* L)
 // Returns a key string, or nil if this platform has no published build.
 int TLuaInterpreter::sttGetPlatformKey(lua_State* L)
 {
-#if defined(Q_OS_MACOS)
+#if !defined(INCLUDE_SPEECH_ENGINES)
+    lua_pushnil(L);
+#elif defined(Q_OS_MACOS)
     lua_pushstring(L, "macos");
 #elif defined(Q_OS_WIN)
 #if defined(Q_PROCESSOR_ARM_64)
@@ -1363,6 +1386,11 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
 // use, or still holds live native resources, and cannot be safely unloaded.
 int TLuaInterpreter::sttUnloadLibrary(lua_State* L)
 {
+#if !defined(INCLUDE_SPEECH_ENGINES)
+    const QString refusal = qsl("this build of Mudlet cannot load a speech engine library, so there is none to unload");
+    reportSpeechRefusalTo(getHostFromLua(L), refusal);
+    return warnArgumentValue(L, "stt.unloadLibrary", refusal, true);
+#else
     auto* pBridge = TSpeechBridge::instance();
     if (pBridge) {
         auto* pRecognizer = pBridge->speechRecognizer();
@@ -1417,4 +1445,5 @@ int TLuaInterpreter::sttUnloadLibrary(lua_State* L)
 
     lua_pushboolean(L, true);
     return 1;
+#endif
 }

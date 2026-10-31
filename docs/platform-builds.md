@@ -259,6 +259,29 @@ cmake --preset linux-debug -DUSE_MCPSERVER=OFF
 `WITH_MCPSERVER=NO` in the environment does the same for a fresh build tree. The sources and the
 `TMCPServerTest` / `TMCPBridgeTest` ctest cases are then simply not built.
 
+### Leaving out what a mobile build cannot use
+
+These options default to ON and are declared through `include_optional_module` like the modules
+above, so turn one off with `-DUSE_SPAWN=OFF` or `WITH_SPAWN=NO` in the environment, never
+`-DWITH_SPAWN=NO`. Each leaves out something an Android or iOS build of `mudlet_core` cannot use
+(#9011); `mudlet-headless` is the reference frontend for a build without them.
+
+| Option | Turning it off removes | What scripts see |
+| --- | --- | --- |
+| `USE_SPAWN` | `TForkedProcess`, the `QProcess` behind `spawn()` | `spawn()` raises an error, as when a process fails to start |
+| `USE_DISCORD_RPC` | the `QLibrary` that loads the Discord RPC library, and with it Rich Presence | the Discord functions return `nil` and `"Discord API is not available"`, as when the library is missing; `setDiscordGameUrl()` still works |
+| `USE_SPEECH_ENGINES` | the `QLibrary` loading of the Vosk and sherpa-onnx speech engines | the `stt.*` functions refuse, saying the build cannot load a speech engine library, and `stt.getPlatformKey()` returns `nil`; a platform engine (macOS's own) still works |
+
+The `linux-core-minimal` preset turns these off, along with `USE_MCPSERVER`, `USE_UPDATER`,
+`USE_3DMAPPER` and `WITH_SENTRY`, and builds only `mudlet-headless`. CI builds it on every pull
+request that touches the sources (`.github/workflows/core-mobile-build.yml`), and fails if
+`mudlet_core` still calls into `QProcess`, `QLibrary`, `QLocalServer`, Qt HttpServer or Sentry:
+
+```bash
+cmake --preset linux-core-minimal
+cmake --build --preset linux-core-minimal
+```
+
 ## Debugging options
 
 `src/CMakeLists.txt` contains commented debugging defines for development (search "Debugging code inclusions"):

@@ -139,7 +139,7 @@ public:
     std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration) override;
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape) override;
     std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY) override;
-    bool setLabelClickThrough(const QString& name, bool) override { return labelModel(name) != nullptr; }
+    bool setLabelClickThrough(const QString& name, bool clickThrough) override;
     bool setLabelLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline) override;
     bool resetLabelLinkStyle(const QString& name) override;
     bool clearLabelVisitedLinks(const QString& name) override;
@@ -478,6 +478,7 @@ private:
     void moveScrollBoxContents(const ScrollBox* box);
     void inheritLabelFont(Label& label, bool restyle);
     void showLabelText(Label& label, const QString& shown);
+    static void updateShownContent(Label& label);
     void reapplyLabelLinkStyle(Label& label);
     TLabelModel* labelModel(const QString& name) const;
     TConsoleModel* subConsoleModel(const QString& name) const;

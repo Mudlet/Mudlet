@@ -36,7 +36,6 @@
 #include <QNetworkCookie>
 #include <QNetworkReply>
 #include <QPointer>
-#include <QProcess>
 #include <QQueue>
 #include <QThread>
 #include <QTimer>
@@ -960,7 +959,7 @@ public slots:
     void slot_httpRequestFinished(QNetworkReply*);
     void slot_pathChanged(const QString& path);
     void slot_purge();
-    void slot_deleteSender(int, QProcess::ExitStatus);
+    void slot_deleteSender();
 
 private:
     static int loadReplayFile(lua_State*, const char* functionName);

@@ -37,6 +37,7 @@
 #include <QThread>
 #include <QThreadPool>
 #include <QTimer>
+#include <QTranslator>
 #include <QWidget>
 #include <QXmlStreamReader>
 #include <QtNetwork/QTcpServer>
@@ -72,6 +73,7 @@
 #include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TMxpFrameFrontend.h"
+#include "TNullAppFrontend.h"
 #include "TNullConsoleFrontend.h"
 #include "TNullMapViews.h"
 #include "TRoom.h"
@@ -443,7 +445,8 @@ private slots:
                           "enableMuteAPI=true\n"
                           "enableMuteGame=true\n"
                           "reportMapIssuesToConsole=true\n"
-                          "storePasswordsSecurely=false\n")
+                          "storePasswordsSecurely=false\n"
+                          "interfaceLanguage=de_DE\n")
                               .arg(scmAutosaveMinutes)
                               .arg(scmUsernameDelayMs)
                               .arg(scmPasswordDelayMs)
@@ -671,6 +674,108 @@ headlessDeletedNames = table.concat(headlessDeleted, ",")
         QCOMPARE(label->mGeometry, QRect(5, 6, 70, 80));
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(headlessLabelText = getLabelText("headlessTextLabel"))lua")));
         QCOMPARE(luaGlobalString(host, "headlessLabelText"), qsl("label words"));
+    }
+
+    // The answers are those UI_spec.lua's accessibility cases expect of a real label, and TLabel's for what it shows.
+    void test_labelAccessibilityWithNoMainWindow()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Label-Accessibility");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+
+        QTemporaryDir imageDir;
+        QVERIFY(imageDir.isValid());
+        const auto writeFile = [&imageDir](const QString& name, const QByteArray& data) {
+            QFile file(imageDir.filePath(name));
+            return file.open(QIODevice::WriteOnly) && file.write(data) == data.size();
+        };
+        QVERIFY(writeFile(qsl("still.png"), QByteArray::fromBase64("iVBORw0KGgoAAAANSUhEUgAAABgAAAAKCAIAAAAhCwk/AAAAGUlEQVR4nGPk5ORkoAZgooopowaNGkQlAABsJgAvM+NphgAAAABJRU5ErkJggg==")));
+        QVERIFY(writeFile(qsl("anim.gif"),
+                          QByteArray::fromBase64("R0lGODlhKAAQAIEAAP8AAAAAAAAAAAAAACH/"
+                                                 "C05FVFNDQVBFMi4wAwEAAAAh+"
+                                                 "QQACgAAACwAAAAAKAAQAAAIKwABCBxIsKDBgwgTKlzIsKHDhxAjSpxIsaLFixgzatzIsaPHjyBDihypMCAAIfkEAQoAAQAsAAAAACgAEACBAP8AAAAAAAAAAAAACCsAAQgcSLCgwYMIEypcyLChw4"
+                                                 "cQI0qcSLGixYsYM2rcyLGjx48gQ4ocqTAgACH5BAEKAAEALAAAAAAoABAAgQAA/wAAAAAAAAAAAAgrAAEIHEiwoMGDCBMqXMiwocOHECNKnEixosWLGDNq3Mixo8ePIEOKHKkwIAA7")));
+        QVERIFY(writeFile(qsl("shape.svg"), QByteArrayLiteral("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"10\"><rect width=\"20\" height=\"10\"/></svg>")));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("a11yDir = [==[%1]==]").arg(imageDir.path())));
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessLabelAccess = 'not run'
+local ok, err = pcall(function()
+  local still, gif, svg = a11yDir .. "/still.png", a11yDir .. "/anim.gif", a11yDir .. "/shape.svg"
+  assert(createLabel("a11yLabel", 0, 0, 100, 20, 1) == true, "createLabel did not answer true")
+
+  echo("a11yLabel", "&nbsp;&nbsp;<b>Map</b> &amp; Exits")
+  assert(getLabelAccessibleName("a11yLabel") == "Map & Exits", "an unnamed label is not named after its text")
+  assert(setLabelAccessibleName("a11yLabel", "Open the map") == true, "setLabelAccessibleName did not answer true")
+  assert(getLabelAccessibleName("a11yLabel") == "Open the map", "the accessible name did not read back")
+  assert(setLabelAccessibleName("a11yLabel", "") == true, "clearing the accessible name did not answer true")
+  assert(getLabelAccessibleName("a11yLabel") == "Map & Exits", "a cleared name did not go back to the text")
+  echo("a11yLabel", "")
+  setLabelToolTip("a11yLabel", "Open the map")
+  assert(getLabelAccessibleName("a11yLabel") == "Open the map", "a label with no text is not named after its tooltip")
+
+  assert(getLabelAccessibleRole("a11yLabel") == "text", "a label with no callbacks is not text")
+  setLabelReleaseCallback("a11yLabel", function() end)
+  assert(getLabelAccessibleRole("a11yLabel") == "button", "a label with a release callback is not a button")
+  setLabelReleaseCallback("a11yLabel", nil)
+  setLabelClickCallback("a11yLabel", function() end)
+  assert(getLabelAccessibleRole("a11yLabel") == "button", "a label with a click callback is not a button")
+  assert(setLabelAccessibleRole("a11yLabel", "text") == true, "setLabelAccessibleRole did not answer true")
+  assert(getLabelAccessibleRole("a11yLabel") == "text", "the role a script gave did not win over the callbacks")
+  assert(setLabelAccessibleRole("a11yLabel", "") == true, "clearing the role did not answer true")
+  assert(enableClickthrough("a11yLabel") == true, "enableClickthrough did not answer true")
+  assert(getLabelAccessibleRole("a11yLabel") == "text", "a click-through label is a button")
+  disableClickthrough("a11yLabel")
+  assert(getLabelAccessibleRole("a11yLabel") == "button", "a label no longer click-through is not a button again")
+  setLabelClickCallback("a11yLabel", nil)
+  local badRole, badRoleMsg = setLabelAccessibleRole("a11yLabel", "slider")
+  assert(badRole == nil and badRoleMsg:find("'slider' is not a valid role", 1, true), "an unknown role was not refused")
+
+  assert(setBackgroundImage("a11yLabel", still) == true, "setBackgroundImage did not answer true")
+  assert(getLabelAccessibleRole("a11yLabel") == "graphic", "a label showing a picture is not a graphic")
+  assert(setMovie("a11yLabel", gif) == true, "setMovie did not answer true")
+  assert(getLabelAccessibleRole("a11yLabel") == "animation", "a label showing a movie is not an animation")
+  echo("a11yLabel", "words")
+  assert(getLabelAccessibleRole("a11yLabel") == "text", "a label given text after a movie is not text")
+  assert(setBackgroundImage("a11yLabel", svg) == true, "setBackgroundImage did not take the SVG")
+  assert(getLabelAccessibleRole("a11yLabel") == "text", "text over an SVG is not what the label shows")
+  echo("a11yLabel", "")
+  assert(getLabelAccessibleRole("a11yLabel") == "graphic", "an SVG with no text over it is not a graphic")
+  resetBackgroundImage("a11yLabel")
+  assert(getLabelAccessibleRole("a11yLabel") == "text", "a label with its image reset is not text")
+
+  assert(getLabelLiveRegion("a11yLabel") == "off", "the live region of a new label is not off")
+  for _, mode in ipairs({"polite", "assertive", "off"}) do
+    assert(setLabelLiveRegion("a11yLabel", mode) == true, "setLabelLiveRegion did not answer true for " .. mode)
+    assert(getLabelLiveRegion("a11yLabel") == mode, "the live region did not read back as " .. mode)
+  end
+  local badMode, badModeMsg = setLabelLiveRegion("a11yLabel", "loud")
+  assert(badMode == nil and badModeMsg:find("'loud' is not a valid live region", 1, true), "an unknown live region was not refused")
+
+  local missing = "label name 'noSuchA11yLabel' not found"
+  for name, call in pairs({
+    getLabelAccessibleName = function() return getLabelAccessibleName("noSuchA11yLabel") end,
+    setLabelAccessibleName = function() return setLabelAccessibleName("noSuchA11yLabel", "n") end,
+    getLabelAccessibleRole = function() return getLabelAccessibleRole("noSuchA11yLabel") end,
+    setLabelAccessibleRole = function() return setLabelAccessibleRole("noSuchA11yLabel", "text") end,
+    getLabelLiveRegion = function() return getLabelLiveRegion("noSuchA11yLabel") end,
+    setLabelLiveRegion = function() return setLabelLiveRegion("noSuchA11yLabel", "polite") end,
+  }) do
+    local value, message = call()
+    assert(value == nil and message == missing, name .. " did not refuse a missing label as the GUI does: " .. tostring(message))
+  end
+end)
+headlessLabelAccess = ok and 'ok' or tostring(err)
+)lua"));
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessLabelAccess"), qsl("ok"));
+        const TLabelModel* label = host->windowRegistry().labelModel(qsl("a11yLabel"));
+        QVERIFY2(label, "The label has no model.");
+        QCOMPARE(label->mLiveRegion, TLabelLiveRegion::Off);
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The accessibility calls created a widget.");
     }
 
     // What a real view records as it moves, shows, styles or titles a window, the null view records too.
@@ -10046,6 +10151,12 @@ headlessDiscord = ok and 'ok' or tostring(err)
         }
         // Only with no engine is every one of these refused, so only then is every binding's caller checked
         const bool noEngine = !TSpeechBridge::instance()->speechRecognizer() && !speechEngineAvailable();
+#if defined(INCLUDE_SPEECH_ENGINES)
+        const bool unloadRefused = false;
+#else
+        // with no library it could have loaded, there is none to unload
+        const bool unloadRefused = true;
+#endif
         const QList<QPair<QString, bool>> calls{{qsl("stt.init('/nonexistent/headless/model')"), true},
                                                 {qsl("stt.start()"), true},
                                                 {qsl("stt.toggle()"), true},
@@ -10056,7 +10167,7 @@ headlessDiscord = ok and 'ok' or tostring(err)
                                                 {qsl("stt.cancel()"), false},
                                                 {qsl("stt.close()"), false},
                                                 {qsl("stt.reloadLibrary()"), true},
-                                                {qsl("stt.unloadLibrary()"), false},
+                                                {qsl("stt.unloadLibrary()"), unloadRefused},
                                                 {qsl("stt.start()"), true},
                                                 {qsl("stt.reloadLibrary()"), true}};
         for (int i = 0; i < calls.size(); ++i) {
@@ -10263,6 +10374,44 @@ headlessDiscord = ok and 'ok' or tostring(err)
         QCOMPARE(sEvents, QStringList());
     }
 
+    // Kept as given, as the main window keeps it, but said out loud: the main window's own warning never runs here
+    void test_unusableInterfaceLanguageIsReportedWithNoMainWindow()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        // A file of its own each time: QSettings takes one of the same size and time as unchanged
+        const auto readFrom = [&dir](const QByteArray& line) {
+            const QString path = dir.filePath(qsl("Mudlet-%1.ini").arg(QString::fromLatin1(line.toHex())));
+            QFile ini(path);
+            if (ini.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                ini.write("[General]\n" + line + "\n");
+                ini.close();
+            }
+            const QSettings settings(path, QSettings::IniFormat);
+            MudletApp::readInterfaceLanguage(settings);
+        };
+        // A language with a translation, which the settings test after this one reads back
+        auto restore = qScopeGuard([readFrom, before = MudletApp::getInterfaceLanguage().toUtf8()]() {
+            readFrom("interfaceLanguage=" + before);
+        });
+
+        QTest::ignoreMessage(QtWarningMsg, "MudletApp::readInterfaceLanguage(...) WARNING - the interface language \"klingon\" is not a recognised locale, so the interface is in English.");
+        readFrom("interfaceLanguage=klingon");
+        QCOMPARE(MudletApp::getInterfaceLanguage(), qsl("klingon"));
+
+        QTest::ignoreMessage(QtWarningMsg, "MudletApp::readInterfaceLanguage(...) WARNING - there is no translation for the interface language \"de_AT\", so the interface is in English.");
+        readFrom("interfaceLanguage=de_AT");
+        QCOMPARE(MudletApp::getInterfaceLanguage(), qsl("de_AT"));
+
+        QTest::ignoreMessage(QtWarningMsg, "MudletApp::readInterfaceLanguage(...) WARNING - the interface language \"\" is not a recognised locale, so the interface is in English.");
+        readFrom("interfaceLanguage=");
+        QCOMPARE(MudletApp::getInterfaceLanguage(), QString());
+
+        QTest::failOnWarning(QRegularExpression(qsl("^MudletApp::readInterfaceLanguage")));
+        readFrom("interfaceLanguage=fr_FR");
+        QCOMPARE(MudletApp::getInterfaceLanguage(), qsl("fr_FR"));
+    }
+
     // Run twice: here, where Mudlet.ini holds none of these keys, and by HeadlessHostSmokeTestWithMudletIni,
     // where initTestCase() wrote each of them before the pool existed
     void test_profileWithNoMainWindowTakesItsSettingsFromMudletIni()
@@ -10281,7 +10430,8 @@ headlessDiscord = ok and 'ok' or tostring(err)
                                qsl("enableMuteAPI"),
                                qsl("enableMuteGame"),
                                qsl("reportMapIssuesToConsole"),
-                               qsl("storePasswordsSecurely")};
+                               qsl("storePasswordsSecurely"),
+                               qsl("interfaceLanguage")};
         for (const QString& key : keys) {
             QVERIFY2(settings->contains(key) == fromIni, qPrintable(key));
         }
@@ -10299,6 +10449,18 @@ headlessDiscord = ok and 'ok' or tostring(err)
         QCOMPARE(MudletApp::storingPasswordsSecurely(), !fromIni);
         QCOMPARE(CredentialManager::profileStoragePreferred(), fromIni);
         QCOMPARE(host->getPass(), fromIni ? qsl("inistored") : QString());
+        // As the main window with no saved language: British English for a desktop that asks for it, else American
+        const QStringList uiLanguages = QLocale::system().uiLanguages();
+        const QString unsetLanguage = uiLanguages.contains(qsl("en-GB")) || uiLanguages.contains(qsl("en_GB")) ? qsl("en_GB") : qsl("en_US");
+        const QString language = fromIni ? qsl("de_DE") : unsetLanguage;
+        QCOMPARE(MudletApp::getInterfaceLanguage(), language);
+        // The headless runner's translation is the one for the language its profiles report
+        QTranslator* pTranslator = MudletApp::loadTranslationsForRun();
+        QVERIFY2(pTranslator, "No translation was loaded for the interface language.");
+        const QString translatorFile = pTranslator->filePath();
+        QCoreApplication::removeTranslator(pTranslator);
+        delete pTranslator;
+        QCOMPARE(translatorFile, qsl(":/lang/mudlet_%1.qm").arg(language));
 
         QCOMPARE(HostManager::self()->media().apiMuted(), fromIni);
         QCOMPARE(HostManager::self()->media().gameMuted(), fromIni);
@@ -10487,15 +10649,6 @@ fbYT0tapBHTFGBkf6NgxBGenwL5TDeL9g3w57+FWiHtIKUylQhCoNb20
         QVERIFY(app->getOpenFileName(qsl("title"), QDir::tempPath()).isEmpty());
         QVERIFY(!app->quitting());
 
-        // Scripts get this text once the command bindings stop checking for a main window themselves
-        const TAppFrontend::CommandRequest request{.name = qsl("headless command")};
-        QString error = qsl("left over from an earlier call");
-        QCOMPARE(app->addAddonCommand(request, nullptr, QString(), error), -1);
-        QCOMPARE(error, qsl("mudlet instance not available"));
-        error = qsl("left over from an earlier call");
-        QCOMPARE(app->setAddonCommandPulse(1, true, qsl("red"), qsl("blue"), 500, nullptr, error), false);
-        QCOMPARE(error, qsl("mudlet instance not available"));
-
         const QString hostname = qsl("Test-Headless-Host-App-View");
         QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
         Host* host = HostManager::self()->getHost(hostname);
@@ -10528,17 +10681,9 @@ headlessAppResult = ok and 'ok' or tostring(err)
         Host* host = HostManager::self()->getHost(hostname);
         QVERIFY2(host, "The profile is not in the pool.");
 
-        // addCommand and setCommandPulse take this answer from the null view, removeCommand from its own check
         const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
 headlessAnswersResult = 'not run'
 local ok, err = pcall(function()
-  local missing = "mudlet instance not available"
-  local id, idMsg = addCommand({name = "Headless", menuPath = "Headless"})
-  assert(id == nil and idMsg == missing, "addCommand answered " .. tostring(id) .. ", " .. tostring(idMsg))
-  local pulse, pulseMsg = setCommandPulse(1, true)
-  assert(pulse == nil and pulseMsg == missing, "setCommandPulse answered " .. tostring(pulse) .. ", " .. tostring(pulseMsg))
-  local removed, removedMsg = removeCommand(1)
-  assert(removed == nil and removedMsg == missing, "removeCommand answered " .. tostring(removed) .. ", " .. tostring(removedMsg))
   assert(invokeFileDialog(true, "headless") == "", "invokeFileDialog did not answer an empty string")
   alert(0)
   local shown, shownMsg = showToolBar("headless missing toolbar")
@@ -10548,6 +10693,142 @@ headlessAnswersResult = ok and 'ok' or tostring(err)
 )lua"));
         QVERIFY2(ran, "The Lua chunk did not run.");
         QCOMPARE(luaGlobalString(host, "headlessAnswersResult"), qsl("ok"));
+    }
+
+    // The answers are AddonCommand_spec.lua's for the same calls, but for what only the main window's bars, its own
+    // shortcuts and its widgets' can refuse
+    void test_addonCommandsWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+
+        const QString hostname = qsl("Test-Headless-Host-Addon-Commands");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessCommands = 'not run'
+local ok, err = pcall(function()
+  local id = addCommand({name = "Speech", menuPath = "Speech/Voices", shortcut = "Ctrl+Alt+F5, Ctrl+Alt+F6, Ctrl+Alt+F7, Ctrl+Alt+F8", tooltip = "<b>talk</b>"})
+  assert(type(id) == "number", "addCommand did not hand back a number: " .. tostring(id))
+  local second = addCommand({name = "Speech", menuPath = "Speech/Voices"})
+  assert(type(second) == "number" and second ~= id, "a second command did not get an id of its own")
+  assert(type(addCommand({name = "Comma", shortcut = "Ctrl+,, Ctrl+Alt+F1, Ctrl+Alt+F2, Ctrl+Alt+F3"})) == "number", "a sequence of four steps starting with the comma key was refused")
+  headlessCommandId = id
+
+  assert(disableCommand(id) == true, "disableCommand did not answer true")
+  assert(enableCommand(id) == true, "enableCommand did not answer true")
+  assert(setCommandChecked(id, true) == true, "setCommandChecked did not answer true")
+  assert(setCommandPinned(id, true) == true, "setCommandPinned did not answer true")
+  assert(setCommandIcon(id, "/no/such/icon.png") == true, "setCommandIcon did not answer true")
+  assert(setCommandTooltip(id, [[Damage 5 <10 & rising]]) == true, "setCommandTooltip did not answer true")
+  assert(setCommandPulse(id, true, "#22aa44", "#116622", 700) == true, "setCommandPulse did not answer true")
+  assert(setCommandPulse(id, false) == true, "stopping the pulse did not answer true")
+  local badColour, badColourMsg = setCommandPulse(id, true, "reed", "#116622")
+  assert(badColour == nil and badColourMsg == '"reed" is not a colour Qt recognises', "an unknown colour was not refused: " .. tostring(badColourMsg))
+  local menuOnly = addCommand({name = "Menu only", surfaces = "menu"})
+  local noButton, noButtonMsg = setCommandPulse(menuOnly, true)
+  assert(noButton == nil and noButtonMsg == "that command is not on the toolbar, and a pulse has nothing to colour without a button", "a menu-only command took a pulse: " .. tostring(noButtonMsg))
+  assert(type(addCommand({name = "Toolbar only", surfaces = "toolbar"})) == "number", "a toolbar-only command was refused")
+
+  local function refused(request, expected)
+    local refusedId, why = addCommand(request)
+    assert(refusedId == nil and why == expected, request.name .. " answered " .. tostring(refusedId) .. ", " .. tostring(why))
+  end
+  refused({name = "ToolbarPath", surfaces = "toolbar", menuPath = "Spec"}, 'a menu path needs a menu item to go in, so it cannot be used with surfaces = "toolbar"')
+  refused({name = "ToolbarKey", surfaces = "toolbar", shortcut = "Ctrl+Alt+F11"}, 'a shortcut needs a menu item to hang on, so it cannot be used with surfaces = "toolbar"')
+  refused({name = "Typo", shortcut = "Ctrl+Alt+F10, Ctrl+Shft+B"}, "that is not a key sequence Qt understands")
+  refused({name = "FiveSteps", shortcut = "Ctrl++, Ctrl+Alt+F1, Ctrl+Alt+F2, Ctrl+Alt+F3, Ctrl+Alt+F4"}, "a key sequence can be 4 step(s) long at most")
+  refused({name = "Speech"}, '"Speech" is already a submenu here, so a command cannot take that label too')
+  refused({name = "Deeper", menuPath = "Speech/Voices/Speech/More"}, '"Speech" is already a command in this menu, so it cannot also be a submenu')
+  assert(type(addCommand({name = "Speech", surfaces = "toolbar"})) == "number", "a toolbar-only command was refused the label of a submenu")
+
+  local function refusedFor(request, holder)
+    local refusedId, why = addCommand(request)
+    assert(refusedId == nil and tostring(why):find(holder, 1, true), request.name .. " answered " .. tostring(refusedId) .. ", " .. tostring(why))
+  end
+  assert(type(addCommand({name = "KeyHolder", shortcut = "Ctrl+Alt+J"})) == "number", "a free key was refused")
+  refusedFor({name = "WantsKey", shortcut = "Ctrl+Alt+J"}, 'is already taken by "KeyHolder"')
+  -- Alt and F9: mudlet.keymodifier and mudlet.key come with mudlet-lua, which this run has not loaded
+  permKey("HeadlessKeyClash", "", 0x08000000, 0x01000038, [[echo("bound")]])
+  refusedFor({name = "WantsBoundKey", shortcut = "Alt+F9"}, 'is already taken by the "HeadlessKeyClash" key binding')
+
+  assert(removeCommand(second) == true, "removeCommand did not answer true")
+  for name, call in pairs({
+    removeCommand = function() return removeCommand(second) end,
+    enableCommand = function() return enableCommand(second) end,
+    disableCommand = function() return disableCommand(second) end,
+    setCommandChecked = function() return setCommandChecked(second, true) end,
+    setCommandIcon = function() return setCommandIcon(second, "") end,
+    setCommandTooltip = function() return setCommandTooltip(second, "nothing") end,
+    setCommandPinned = function() return setCommandPinned(second, true) end,
+    setCommandPulse = function() return setCommandPulse(second, true) end,
+  }) do
+    assert(call() == false, name .. " did not answer false for a removed command")
+  end
+end)
+headlessCommands = ok and 'ok' or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessCommands"), qsl("ok"));
+        const QString idText = luaGlobalString(host, "headlessCommandId");
+        QVERIFY2(!idText.isEmpty(), "The command's id was not kept.");
+
+        // Only its own profile addresses a command
+        const QString otherHostname = qsl("Test-Headless-Host-Addon-Commands-Other");
+        QVERIFY2(HostManager::self()->addHost(otherHostname, QString(), QString(), QString()), "Could not create a second profile with no main window.");
+        Host* other = HostManager::self()->getHost(otherHostname);
+        QVERIFY2(other, "The second profile is not in the pool.");
+        QVERIFY(other->getLuaInterpreter()->compileAndExecuteScript(qsl("otherAnswer = tostring(enableCommand(%1)) .. ' ' .. tostring(removeCommand(%1))").arg(idText)));
+        QCOMPARE(luaGlobalString(other, "otherAnswer"), qsl("false false"));
+        QVERIFY(other->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+local otherId, otherWhy = addCommand({name = "OtherKey", shortcut = "Ctrl+Alt+J"})
+otherKeyAnswer = tostring(otherId) .. " " .. tostring(otherWhy)
+)lua")));
+        QVERIFY2(luaGlobalString(other, "otherKeyAnswer").endsWith(qsl("is already taken by a command from another profile")), qPrintable(luaGlobalString(other, "otherKeyAnswer")));
+        HostManager::self()->deleteHost(otherHostname);
+
+        // Kept for a frontend to show, and activated as a click on the main window's would
+        auto* app = static_cast<TNullAppFrontend*>(TAppFrontend::instance());
+        const int commandId = idText.toInt();
+        const TNullAppFrontend::AddonCommand command = app->addonCommands().value(commandId);
+        QCOMPARE(command.request.name, qsl("Speech"));
+        QCOMPARE(command.request.menuPath, qsl("Speech/Voices"));
+        QCOMPARE(command.icon, qsl("/no/such/icon.png"));
+        QCOMPARE(command.tooltip, qsl("Damage 5 <10 & rising"));
+        QVERIFY(command.enabled && command.checkable && command.checked && command.pinned);
+        QVERIFY(!command.pulseEnabled);
+        QCOMPARE(command.pulseColor1, qsl("#22aa44"));
+        QCOMPARE(command.pulseInterval, 700);
+        host->registerAnonymousEventHandler(qsl("sysCommandClicked"), qsl("onHeadlessCommandClicked"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+clickedCommands = ""
+function onHeadlessCommandClicked(_, clicked) clickedCommands = clickedCommands .. type(clicked) .. clicked .. " " end
+)lua")));
+        QVERIFY(app->activateAddonCommand(commandId));
+        QCOMPARE(luaGlobalString(host, "clickedCommands"), qsl("number%1 ").arg(commandId));
+        QVERIFY2(!app->addonCommands().value(commandId).checked, "Activating a ticked command did not untick it.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("disableCommand(%1)").arg(commandId)));
+        QVERIFY2(!app->activateAddonCommand(commandId), "A disabled command was activated.");
+        QVERIFY2(!app->activateAddonCommand(-1), "An unknown command was activated.");
+        QCOMPARE(luaGlobalString(host, "clickedCommands"), qsl("number%1 ").arg(commandId));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("enableCommand(%1)").arg(commandId)));
+
+        // A command goes with its package, and every one of a profile's with a reset
+        const TAppFrontend::CommandRequest request{.name = qsl("packaged")};
+        QString error;
+        const int kept = app->addAddonCommand(request, host, qsl("keptPackage"), error);
+        const int packaged = app->addAddonCommand(request, host, qsl("removedPackage"), error);
+        QVERIFY(kept > 0 && packaged > 0);
+        emit host->signal_packageRemoved(qsl("removedPackage"));
+        QVERIFY2(!app->setAddonCommandEnabled(packaged, true, host), "A command outlived its package.");
+        QVERIFY2(app->setAddonCommandEnabled(kept, true, host), "Removing one package took another's command.");
+        QVERIFY2(app->setAddonCommandEnabled(idText.toInt(), true, host), "Removing a package took the profile's own command.");
+        emit host->signal_profileResetting();
+        QVERIFY2(!app->setAddonCommandEnabled(kept, true, host), "A command outlived its profile's reset.");
+        QVERIFY2(!app->setAddonCommandEnabled(idText.toInt(), true, host), "The profile's own command outlived its reset.");
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The commands created a widget.");
+        HostManager::self()->deleteHost(hostname);
     }
 
     // As the GUI answers with no saved settings

@@ -126,6 +126,22 @@
       }
     },
     {
+      "name": "linux-core-minimal",
+      "displayName": "Linux mudlet_core and mudlet-headless only, without what an Android or iOS build must leave out",
+      "inherits": ["variant", "linux-debug"],
+      "cacheVariables": {
+        "USE_SANITIZER": "",
+        "BUILD_TESTING": "OFF",
+        "USE_SPAWN": "OFF",
+        "USE_DISCORD_RPC": "OFF",
+        "USE_SPEECH_ENGINES": "OFF",
+        "USE_MCPSERVER": "OFF",
+        "USE_UPDATER": "OFF",
+        "USE_3DMAPPER": "OFF",
+        "WITH_SENTRY": "OFF"
+      }
+    },
+    {
       "name": "linux-release",
       "displayName": "Linux Release, no sanitizers (what CI ships to players)",
       "inherits": ["variant", "linux-debug"],
@@ -279,6 +295,12 @@
       "inherits": "on-linux",
       "configurePreset": "linux-lowspec",
       "jobs": 2
+    },
+    {
+      "name": "linux-core-minimal",
+      "inherits": "on-linux",
+      "configurePreset": "linux-core-minimal",
+      "targets": ["mudlet_headless_executable"]
     },
     { "name": "linux-release", "inherits": "on-linux", "configurePreset": "linux-release" },
     {
