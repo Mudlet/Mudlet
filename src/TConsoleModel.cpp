@@ -1001,7 +1001,7 @@ TConsoleModel::LinkFollowed TConsoleModel::linkMayRun(const int linkIndex)
     return LinkFollowed::ran;
 }
 
-bool TConsoleModel::runLink(const int linkIndex, const int item, const bool fromMenu)
+bool TConsoleModel::runLink(const int linkIndex, const int item, const bool fromMenu, const bool selectionApplied)
 {
     const QStringList commands = buffer.mLinkStore.getLinksConst(linkIndex);
     if (!mpHost || item < 0 || item >= commands.size()) {
@@ -1010,7 +1010,7 @@ bool TConsoleModel::runLink(const int linkIndex, const int item, const bool from
     QString command = commands.at(item);
     const int luaReference = buffer.mLinkStore.getReference(linkIndex).value(item, 0);
     const Mudlet::HyperlinkStyling styling = buffer.mLinkStore.getStyling(linkIndex);
-    if (styling.selection.hasSelectionSettings) {
+    if (styling.selection.hasSelectionSettings && !selectionApplied) {
         applyLinkSelection(linkIndex, command, styling.selection);
     }
     mHyperlinkVisibilityManager.onLinkClicked(linkIndex);
@@ -1028,10 +1028,10 @@ bool TConsoleModel::runLink(const int linkIndex, const int item, const bool from
     return ran;
 }
 
-void TConsoleModel::runMenuPick(const int linkIndex, const qint64 issue, const int item)
+void TConsoleModel::runMenuPick(const int linkIndex, const qint64 issue, const int item, const bool selectionApplied)
 {
     if (buffer.mLinkStore.issueOf(linkIndex) == issue) {
-        runLink(linkIndex, item, true);
+        runLink(linkIndex, item, true, selectionApplied);
     }
 }
 

@@ -224,10 +224,10 @@ struct TConsoleModel
     // runs an item. False where there was no such item or its Lua raised an error.
     enum class LinkFollowed { ran, revealedSpoiler, disabled, unknown };
     LinkFollowed linkMayRun(int linkIndex);
-    bool runLink(int linkIndex, int item, bool fromMenu);
+    bool runLink(int linkIndex, int item, bool fromMenu, bool selectionApplied = false);
     // runLink() for a menu's pick, unless its link is no longer the one with the TLinkStore::issueOf() the menu
-    // was built for
-    void runMenuPick(int linkIndex, qint64 issue, int item);
+    // was built for. selectionApplied where activating the link opened the menu and already changed its selection.
+    void runMenuPick(int linkIndex, qint64 issue, int item, bool selectionApplied = false);
     // Selects the link in its group, rewriting a single-command link's command for the value chosen
     void applyLinkSelection(int linkIndex, QString& command, const Mudlet::HyperlinkStyling::SelectionSettings& selection);
 

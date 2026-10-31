@@ -124,7 +124,8 @@ public:
     QString linkAnnouncement(int linkIndex) const;
     void updateCaret();
     void showKeyboardContextMenu();
-    void showLinkMenuAt(int linkIndex, const QPoint& globalPosition);
+    void showLinkMenuAt(int linkIndex, const QPoint& globalPosition, bool alreadyActivated = false);
+    QPoint caretGlobalPosition();
     void announceLinkFocus(int linkIndex);
 
     QColor mBgColor;
@@ -169,6 +170,8 @@ public:
     int mPopupLinkIndex = 0;
     // Its TLinkStore::issueOf() as the menu was built, as a pick must not run a link that has since taken its id
     qint64 mPopupLinkIssue = 0;
+    // Activating a local: link opens its menu, so choosing an item must not change its selection a second time
+    bool mPopupLinkAlreadyActivated = false;
     // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;
     QRegion mSelectedRegion;
@@ -208,7 +211,6 @@ private:
     QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false);
     inline static QString htmlCenter(const QString&);
     QString selectionAnalysisHtml();
-    QPoint caretGlobalPosition();
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
     std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;

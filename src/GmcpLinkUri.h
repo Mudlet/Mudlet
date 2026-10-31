@@ -34,9 +34,8 @@ struct GmcpLinkUri
     QString message() const;
 };
 
-// A gmcp: link is parsed when it arrives and what was checked is what gets sent, so nothing a game
-// or another player's relayed text puts in a link can reach the wire unvalidated. Takes the whole
-// URI, in any letter case of the scheme; anything from the first '?' on is the link's own parameters.
+// Parsed on arrival so only what was checked reaches the wire: a game or another player's relayed text wrote it.
+// Takes the whole URI; a menu item's scheme may be in any letter case. From the first '?' on is the link's own parameters.
 std::optional<GmcpLinkUri> parseGmcpLinkUri(const QString& uri);
 
 // The message a selection link sends: its JSON object with "selected" set, replacing any already

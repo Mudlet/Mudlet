@@ -66,7 +66,7 @@ std::optional<GmcpLinkUri> parseGmcpLinkUri(const QString& uri)
 
     // Qt's JSON parser lets these through inside a string, and a NUL would cut the message short on its way through Lua
     for (const QChar character : decoded) {
-        if (character.unicode() < 0x20 || character.unicode() == 0x7F) {
+        if (character.category() == QChar::Other_Control) {
             return std::nullopt;
         }
     }

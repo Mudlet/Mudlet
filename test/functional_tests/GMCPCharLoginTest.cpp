@@ -59,6 +59,7 @@
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
 #include "TMainConsole.h"
+#include "TTextEdit.h"
 #include "utils.h"
 
 #include "GroupedTest.h"
@@ -563,6 +564,52 @@ private slots:
             linkId = console->buffer.getLinkIndexAt(line, 0);
         }
         return linkId ? console->getLinkStore().getLinksConst(linkId) : QStringList();
+    }
+
+    // Prints the link and presses Return on it, the way a keyboard player activates one
+    void activateGmcpLink(Host* host, QByteArray link, const int times)
+    {
+        host->mTelnet.loopbackTest(link);
+        TMainConsole* console = host->mainConsoleView();
+        for (int line = console->buffer.getLastLineNumber(); line >= 0; --line) {
+            if (console->buffer.getLinkIndexAt(line, 0)) {
+                host->setCaretEnabled(true);
+                console->mUpperPane->setCaretPosition(line, 0);
+                for (int i = 0; i < times; ++i) {
+                    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+                    QApplication::sendEvent(console->mUpperPane, &activate);
+                }
+                host->setCaretEnabled(false);
+                return;
+            }
+        }
+    }
+
+    void testAGmcpSelectionLinkTellsTheGameItsState()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        activateGmcpLink(host, QByteArray("\x1b]8;;gmcp:Game.Pref.Set%20%7B%22pref%22%3A%22hints%22%7D?config={\"selection\":{\"group\":\"prefs\",\"value\":\"hints\",\"exclusive\":false}}\x1b\\GMCP_LINK\x1b]8;;\x1b\\\r\n"), 2);
+
+        const QString selected = qsl(R"(Game.Pref.Set {"pref":"hints","selected":true})");
+        const QString cleared = qsl(R"(Game.Pref.Set {"pref":"hints","selected":false})");
+        QVERIFY2(QTest::qWaitFor([&]() { return mpServer->receivedGmcp().contains(cleared); }, 3000), qPrintable(mpServer->receivedGmcp().join(QChar::LineFeed)));
+        QCOMPARE(mpServer->receivedGmcp().count(selected), 1);
+        QVERIFY(mpServer->receivedGmcp().indexOf(selected) < mpServer->receivedGmcp().indexOf(cleared));
+    }
+
+    // Once a link has a menu its own URI is not used, so its selection has no callback to send
+    void testAOneItemMenuOnAGmcpSelectionLinkSendsTheItem()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        activateGmcpLink(host, QByteArray("\x1b]8;;gmcp:Game.Base?config={\"selection\":{\"group\":\"oneItem\",\"value\":\"v\"},\"menu\":[{\"Pick\":\"gmcp:Game.Chosen\"}]}\x1b\\GMCP_LINK\x1b]8;;\x1b\\\r\n"), 1);
+
+        QVERIFY2(QTest::qWaitFor([&]() { return mpServer->receivedGmcp().contains(qsl("Game.Chosen")); }, 3000), "the item was not sent");
+        QTest::qWait(100);
+        for (const QString& message : mpServer->receivedGmcp()) {
+            QVERIFY2(!message.startsWith(qsl("Game.Base")), qPrintable(message));
+        }
     }
 
     void testAGmcpLinkSendsOneMessageAndTypesNothing()

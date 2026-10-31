@@ -1291,6 +1291,7 @@ private slots:
     QTest::newRow("newline in the name") << qsl("gmcp:Game.Set%0A");
     QTest::newRow("newline in the JSON") << qsl("gmcp:Game.Set%20%22a%0Ab%22");
     QTest::newRow("DEL in the JSON") << qsl("gmcp:Game.Set%20%22a%7Fb%22");
+    QTest::newRow("C1 control in the JSON") << qsl("gmcp:Game.Set%20%22a%C2%85b%22");
     QTest::newRow("Core") << qsl("gmcp:Core.Hello");
     QTest::newRow("Core in another case") << qsl("gmcp:cORE.sUPPORTS.Set%20%5B%5D");
     QTest::newRow("Char.Login message") << qsl("gmcp:Char.Login.Credentials%20%7B%7D");
@@ -1424,7 +1425,7 @@ private slots:
     QTest::newRow("a send link") << qsl("send:look") << false;
   }
 
-  // A note is skipped by Tab, and read when the caret reaches it by other means
+  // A note is skipped by Tab in both directions; anything a click acts on stays a stop
   void test_Osc8LocalNoteOrControl() {
     QFETCH(QString, uri);
     QFETCH(bool, isNote);
@@ -1449,34 +1450,178 @@ private slots:
     QCOMPARE(found && std::make_pair(line, column) == std::make_pair(std::get<0>(*first), std::get<1>(*first)), !isNote);
   }
 
-  // A click opens the menu rather than running its first item; nothing is sent until an item is chosen
+  void activateLink(TTextEdit *pane, const std::tuple<int, int, int> &pos, const bool withMouse) {
+    pane->setCaretPosition(std::get<0>(pos), std::get<1>(pos));
+    if (withMouse) {
+      // The caret's position is the bottom left of its cell
+      const QPoint global = pane->caretGlobalPosition() + QPoint(1, -1);
+      const QPointF local = pane->mapFromGlobal(global);
+      QMouseEvent press(QEvent::MouseButtonPress, local, QPointF(global), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+      QApplication::sendEvent(pane, &press);
+    } else {
+      QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+      QApplication::sendEvent(pane, &activate);
+    }
+  }
+
+  void test_Osc8LocalLinkWithAMenuOpensItWhenActivated_data() {
+    QTest::addColumn<bool>("withMouse");
+    QTest::newRow("Return") << false;
+    QTest::newRow("left click") << true;
+  }
+
   void test_Osc8LocalLinkWithAMenuOpensItWhenActivated() {
-    injectData(qsl("\x1b]8;;local:?config={\"menu\":[{\"Look\":\"send:look\"},{\"Wield\":\"send:wield\"}]}\x1b\\Word\x1b]8;;\x1b\\"));
+    QFETCH(bool, withMouse);
+    injectData(qsl("\x1b]8;;local:?config={\"menu\":[{\"Look\":\"send:look\"},{\"Wield\":\"send:wield\"}],\"style\":{\"active\":{\"color\":\"red\"}}}\x1b\\Word\x1b]8;;\x1b\\"));
 
     TMainConsole *console = mpHost->mainConsoleView();
     auto pos = findFirstLinkPositionWithId();
     QVERIFY(pos.has_value());
-    QCOMPARE(console->buffer.getLinkTooltip(std::get<2>(*pos)), qsl("Click for menu"));
-    QVERIFY(console->buffer.linkOpensItsMenu(std::get<2>(*pos)));
+    const int linkId = std::get<2>(*pos);
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), qsl("Click for menu"));
+    QVERIFY(console->buffer.linkOpensItsMenu(linkId));
 
-    mpHost->setCaretEnabled(true);
-    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    // Only the keyboard path uses caret mode
+    if (!withMouse) {
+      mpHost->setCaretEnabled(true);
+    }
+    const auto caretOff = qScopeGuard([this] {
+      if (mpHost->caretEnabled()) {
+        mpHost->setCaretEnabled(false);
+      }
+    });
     TTextEdit *pane = console->mUpperPane;
-    pane->setCaretPosition(std::get<0>(*pos), std::get<1>(*pos));
-    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
-    QApplication::sendEvent(pane, &activate);
+    // Without the focus there is nothing for the popup to take, and caret mode would survive regardless
+    if (!withMouse) {
+      pane->setFocus();
+      QTRY_VERIFY(pane->hasFocus());
+    }
+    const QByteArray sentBefore = mpServer->receivedSoFar();
+    activateLink(pane, *pos, withMouse);
 
     QMenu *menu = pane->findChild<QMenu *>();
     QVERIFY2(menu && menu->isVisible(), "activating the link did not open its menu");
+    const auto closeMenu = qScopeGuard([&] { if (QMenu *open = pane->findChild<QMenu *>()) { open->close(); } });
     QStringList labels;
     for (QAction *action : menu->actions()) {
       labels << action->text();
     }
     QCOMPARE(labels, QStringList({qsl("Look"), qsl("Wield")}));
-    QVERIFY2(mpHost->caretEnabled(), "opening the menu took the player out of caret mode");
+    QVERIFY2(withMouse || mpHost->caretEnabled(), "opening the menu took the player out of caret mode");
+    QVERIFY2(console->buffer.getLinkState(linkId) != Mudlet::HyperlinkStyling::StateActive, "the popup takes the release, leaving the link active");
+    QTest::qWait(50);
+    QCOMPARE(mpServer->receivedSoFar(), sentBefore);
     menu->close();
     QTRY_VERIFY(!pane->findChild<QMenu *>());
-    QVERIFY2(mpHost->caretEnabled(), "closing the menu took the player out of caret mode");
+    QVERIFY2(withMouse || mpHost->caretEnabled(), "closing the menu took the player out of caret mode");
+  }
+
+  // Activating changes the selection, and choosing an item from the menu it opened must not change it back
+  void test_Osc8LocalMenuAndSelectionTogglesOnce_data() {
+    QTest::addColumn<bool>("withMouse");
+    QTest::newRow("Return") << false;
+    QTest::newRow("left click") << true;
+  }
+
+  void test_Osc8LocalMenuAndSelectionTogglesOnce() {
+    QFETCH(bool, withMouse);
+    const QString group = qsl("menuAndSelection%1").arg(withMouse);
+    injectData(qsl("\x1b]8;;local:?config={\"selection\":{\"group\":\"%1\",\"value\":\"v\",\"exclusive\":false},\"menu\":[{\"Look\":\"send:look\"},{\"Wield\":\"send:wield\"}]}\x1b\\Word\x1b]8;;\x1b\\").arg(group));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    const int linkId = std::get<2>(*pos);
+
+    // Only the keyboard path uses caret mode
+    if (!withMouse) {
+      mpHost->setCaretEnabled(true);
+    }
+    const auto caretOff = qScopeGuard([this] {
+      if (mpHost->caretEnabled()) {
+        mpHost->setCaretEnabled(false);
+      }
+    });
+    TTextEdit *pane = console->mUpperPane;
+    activateLink(pane, *pos, withMouse);
+    QVERIFY(console->buffer.isLinkSelected(linkId));
+
+    QMenu *menu = pane->findChild<QMenu *>();
+    QVERIFY(menu);
+    menu->actions().first()->trigger();
+    menu->close();
+    QTRY_VERIFY(!pane->findChild<QMenu *>());
+    QVERIFY2(console->buffer.isLinkSelected(linkId), "choosing an item changed the selection a second time");
+  }
+
+  // The tooltip shares a list with the menu's labels, so revealing must not take them with it
+  void test_Osc8RevealingASpoilerKeepsItsMenu_data() {
+    QTest::addColumn<QString>("menu");
+    QTest::addColumn<int>("items");
+    QTest::newRow("two items") << qsl("[{\"Look\":\"send:look\"},{\"Wield\":\"send:wield\"}]") << 2;
+    QTest::newRow("one item") << qsl("[{\"Look\":\"send:look\"}]") << 1;
+  }
+
+  void test_Osc8RevealingASpoilerKeepsItsMenu() {
+    QFETCH(QString, menu);
+    QFETCH(int, items);
+    injectData(qsl("\x1b]8;;local:?config={\"spoiler\":true,\"menu\":%1}\x1b\\Word\x1b]8;;\x1b\\").arg(menu));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    const int linkId = std::get<2>(*pos);
+    QVERIFY(console->buffer.isSpoilerUnrevealed(linkId));
+    console->buffer.revealSpoilerLink(linkId);
+
+    QVERIFY(console->buffer.linkOpensItsMenu(linkId));
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), qsl("Click for menu"));
+    const QStringList hints = console->getLinkStore().getHintsConst(linkId);
+    QCOMPARE(hints.size(), items + 1);
+    QCOMPARE(hints.at(1), qsl("Look"));
+  }
+
+  void test_Osc8RevealedLocalSpoilerBecomesANote() {
+    injectData(qsl("\x1b]8;;local:?config={\"spoiler\":true}\x1b\\Word\x1b]8;;\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    const int linkId = std::get<2>(*pos);
+    QVERIFY(!console->buffer.linkIsNote(linkId));
+    console->buffer.revealSpoilerLink(linkId);
+    QVERIFY(console->buffer.linkIsNote(linkId));
+  }
+
+  // Nothing happened, so a note does not take the visited style
+  void test_Osc8ActivatingANoteDoesNothing_data() {
+    QTest::addColumn<bool>("withMouse");
+    QTest::newRow("Return") << false;
+    QTest::newRow("left click") << true;
+  }
+
+  void test_Osc8ActivatingANoteDoesNothing() {
+    QFETCH(bool, withMouse);
+    injectData(qsl("\x1b]8;;local:?config={\"tooltip\":\"Note\"}\x1b\\Word\x1b]8;;\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+
+    // Only the keyboard path uses caret mode
+    if (!withMouse) {
+      mpHost->setCaretEnabled(true);
+    }
+    const auto caretOff = qScopeGuard([this] {
+      if (mpHost->caretEnabled()) {
+        mpHost->setCaretEnabled(false);
+      }
+    });
+    activateLink(console->mUpperPane, *pos, withMouse);
+    QVERIFY(!console->buffer.isLinkVisited(std::get<2>(*pos)));
+  }
+
+  void test_Osc8AMenuOfOnlySeparatorsLeavesTheLinksOwnAction() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[\"-\",{\"Nothing\":\"local:\"}]}\x1b\\Text\x1b]8;;\x1b\\"));
+    QCOMPARE(findFirstLinkCommands(), QStringList(qsl("send(%1, false)").arg(LuaLiteral::quote(qsl("look")))));
   }
 
   // A checklist's state lives in the client, so ticking it has no message to build

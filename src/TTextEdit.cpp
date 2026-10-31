@@ -2282,7 +2282,7 @@ void TTextEdit::slot_popupMenu()
         // The item may open a dialog, whose keys caret mode's keyboard grab would keep for this pane
         releaseKeyboard();
 #endif
-        mpConsole->model().runMenuPick(mPopupLinkIndex, mPopupLinkIssue, index - 1);
+        mpConsole->model().runMenuPick(mPopupLinkIndex, mPopupLinkIssue, index - 1, mPopupLinkAlreadyActivated);
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
         const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
         if (!centralDebug && mpHost->caretEnabled() && hasFocus()) {
@@ -2340,7 +2340,8 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
                     int linkIndex = mpBuffer->buffer.at(y).at(x).linkIndex();
                     QStringList command = mpBuffer->mLinkStore.getLinks(linkIndex);
-                    if (!command.empty() && mpHost && mpConsole) {
+                    // A note has nothing for a click to do, so the press selects text as it would anywhere else
+                    if (!command.empty() && mpHost && mpConsole && !mpBuffer->linkIsNote(linkIndex)) {
                         mpBuffer->setActiveLink(linkIndex);
                         if (mpConsole->model().linkMayRun(linkIndex) != TConsoleModel::LinkFollowed::ran) {
                             forceUpdate();
@@ -2357,7 +2358,9 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
                         mpConsole->model().runLink(linkIndex, 0, false);
                         if (mpBuffer->linkOpensItsMenu(linkIndex)) {
-                            showLinkMenuAt(linkIndex, event->globalPosition().toPoint());
+                            // The popup takes the release, which is what would have ended the active state
+                            mpBuffer->setActiveLink(0);
+                            showLinkMenuAt(linkIndex, event->globalPosition().toPoint(), true);
                         }
                         return;
                     }
@@ -3028,6 +3031,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                         }
 
                         mPopupLinkIndex = linkIndex;
+                        mPopupLinkAlreadyActivated = false;
                         mPopupLinkIssue = mpBuffer->mLinkStore.issueOf(linkIndex);
                         const QList<TLinkStore::MenuItem> items = mpBuffer->mLinkStore.menuItems(linkIndex);
                         for (int i = 0, total = items.size(); i < total; ++i) {
@@ -4244,11 +4248,21 @@ QString TTextEdit::linkAnnouncement(const int linkIndex) const
         //: Screen reader role for a game's hidden text that activating the link reveals
         role = tr("button");
     } else if (styling.selection.hasSelectionSettings && styling.selection.exclusive) {
-        //: Screen reader role for one link of a group where only one can be selected
-        role = selected ? tr("radio button, checked") : tr("radio button, not checked");
+        if (selected) {
+            //: Screen reader role for the selected link of a group where only one can be selected
+            role = tr("radio button, checked");
+        } else {
+            //: Screen reader role for an unselected link of a group where only one can be selected
+            role = tr("radio button, not checked");
+        }
     } else if (styling.selection.hasSelectionSettings) {
-        //: Screen reader role for a link that can be selected independently of any others
-        role = selected ? tr("checkbox, checked") : tr("checkbox, not checked");
+        if (selected) {
+            //: Screen reader role for a selected link that can be selected independently of any others
+            role = tr("checkbox, checked");
+        } else {
+            //: Screen reader role for an unselected link that can be selected independently of any others
+            role = tr("checkbox, not checked");
+        }
     } else {
         //: Screen reader role for a link that does something when activated
         role = tr("link");
@@ -4321,8 +4335,9 @@ void TTextEdit::showKeyboardContextMenu()
     showLinkMenuAt(focusedLink, caretGlobalPosition());
 }
 
-void TTextEdit::showLinkMenuAt(const int linkIndex, const QPoint& globalPosition)
+void TTextEdit::showLinkMenuAt(const int linkIndex, const QPoint& globalPosition, const bool alreadyActivated)
 {
+    mPopupLinkAlreadyActivated = alreadyActivated;
     const Mudlet::HyperlinkStyling hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
     auto popup = new QMenu(this);
     popup->setAttribute(Qt::WA_DeleteOnClose);
@@ -4439,8 +4454,8 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     // refreshed when the caret moves, so deleteLine() or a buffer trim can leave it naming a
     // link that is no longer under the caret.
     const int focusedLinkIndex = mpBuffer->getFocusedLink();
-    const bool activatesFocusedLink = event->key() == Qt::Key_Space && focusedLinkIndex > 0 && mpBuffer->getLinkIndexAt(mCaretLine, mCaretColumn) == focusedLinkIndex
-                                      && !mpBuffer->mLinkStore.getLinksConst(focusedLinkIndex).isEmpty();
+    const bool activatesFocusedLink = event->key() == Qt::Key_Space && focusedLinkIndex > 0 && !mpBuffer->linkIsNote(focusedLinkIndex)
+                                      && mpBuffer->getLinkIndexAt(mCaretLine, mCaretColumn) == focusedLinkIndex && !mpBuffer->mLinkStore.getLinksConst(focusedLinkIndex).isEmpty();
     if (!activatesFocusedLink && !(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) && !event->text().isEmpty() && event->text().front().isPrint()) {
         if (mpConsole && mpConsole->mpCommandLine) {
             mpHost->setCaretEnabled(false);
@@ -4701,7 +4716,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     case Qt::Key_Enter:
     case Qt::Key_Space: {
         int focusedLink = mpBuffer->getFocusedLink();
-        if (focusedLink > 0 && mpConsole) {
+        if (focusedLink > 0 && mpConsole && !mpBuffer->linkIsNote(focusedLink)) {
             const TConsoleModel::LinkFollowed mayRun = mpConsole->model().linkMayRun(focusedLink);
             if (mayRun == TConsoleModel::LinkFollowed::revealedSpoiler || mayRun == TConsoleModel::LinkFollowed::disabled) {
                 forceUpdate();
@@ -4715,7 +4730,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
 
             mpConsole->model().runLink(focusedLink, 0, false);
             if (mpBuffer->linkOpensItsMenu(focusedLink)) {
-                showLinkMenuAt(focusedLink, caretGlobalPosition());
+                showLinkMenuAt(focusedLink, caretGlobalPosition(), true);
             }
             return;
         }

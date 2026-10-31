@@ -5249,7 +5249,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     }
                 }
             } else {
-                // For send: and prompt: commands, remove all query parameters
+                // Schemes Mudlet handles itself (send:, prompt:, gmcp:, local:) lose all query parameters
                 int queryStart = baseUrl.indexOf('?');
                 if (queryStart != -1) {
                     baseUrl = baseUrl.left(queryStart);
@@ -5335,8 +5335,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                 QStringList menuHints;
 
                 // Add menu items in pairs (label, command)
-                // The first menu item becomes the primary left-click action (index 0)
-                // All items (including first) appear in the right-click menu (index 1+)
+                // The first menu item becomes the primary left-click action (index 0), except on a local: link, where a left click opens the menu
+                // All items (including first) appear in the menu (index 1+)
                 for (int i = 0; i < mCurrentHyperlinkMenu.size() - 1; i += 2) {
                     QString menuLabel = mCurrentHyperlinkMenu[i];
                     QString menuCommand = mCurrentHyperlinkMenu[i + 1];
@@ -5377,7 +5377,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                 }
 
                 // Set the tooltip for the link (what shows on hover)
-                // Use custom tooltip if provided, otherwise show "Right-click for menu" message
+                // Use custom tooltip if provided, otherwise say how to open the menu
                 QString linkTooltip;
                 if (!customTooltip.isEmpty()) {
                     // Custom tooltip explicitly provided
@@ -5393,13 +5393,17 @@ void TBuffer::decodeOSC(const QString& sequence)
 
                 // For menus, we need tooltip as first hint, then menu labels
                 // This ensures tooltip.size() > commands.size() so only first hint shows in tooltip
-                // But menu labels are available for right-click menu display
+                // But menu labels are available for menu display
                 QStringList finalHints;
                 finalHints.append(linkTooltip); // First: tooltip for hover
-                finalHints.append(menuHints);   // Rest: menu labels for right-click menu
+                finalHints.append(menuHints);   // Rest: menu labels for the menu
 
-                // Every item may have been left out, which leaves a link with no menu
-                if (!menuCommands.isEmpty()) {
+                // Every item may have been left out, or a separator with nothing to separate, which leaves a link with no menu
+                bool hasMenuItem = false;
+                for (int i = 0; i < menuCommands.size(); ++i) {
+                    hasMenuItem = hasMenuItem || !menuCommands.at(i).isEmpty() || !menuHints.at(i).isEmpty();
+                }
+                if (hasMenuItem) {
                     command = menuCommands;
                     hint = finalHints;
                 } else if (!customTooltip.isEmpty()) {
@@ -10048,10 +10052,7 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "\x1b]8;;send:p3?preset=danger\x1b\\Danger\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;send:p4?preset=btn&config={\"s\":{\"c\":\"yellow\"}}\x1b\\Override\x1b]8;;\x1b\\\n\n";
 
-    // ═══════════════════════════════════════════════════════════════════
-    // GMCP AND LOCAL - No command typed at the game
-    // ═══════════════════════════════════════════════════════════════════
-    output += "── GMCP AND LOCAL (no command typed at the game) ──────────────────────\n";
+    output += "── GMCP AND LOCAL (a click types no command) ──────────────────────────\n";
     output += "GMCP:  ";
     output += "\x1b]8;;gmcp:IRE.Target.Set%20%22rat%22\x1b\\Target the rat\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;gmcp:Game.Preference.Set%20%7B%22preference%22%3A%22hints%22%7D?config={\"selection\":{\"group\":\"docPrefs\",\"value\":\"hints\",\"exclusive\":false},\"style\":{\"selected\":{"
@@ -10575,7 +10576,12 @@ void TBuffer::revealSpoilerLink(int linkIndex)
     if (styling.isSpoiler) {
         QStringList hints = mLinkStore.getHintsConst(linkIndex);
         if (!hints.isEmpty() && hints.first() == QObject::tr("Click to reveal")) {
-            mLinkStore.getHints(linkIndex).clear();
+            // A menu's labels follow the tooltip in the same list, so with a menu only the tooltip is replaced
+            if (hints.size() > mLinkStore.getLinksConst(linkIndex).size()) {
+                mLinkStore.getHints(linkIndex).first() = styling.actionScheme == Mudlet::HyperlinkStyling::ActionLocal ? QObject::tr("Click for menu") : QObject::tr("Right-click for menu");
+            } else {
+                mLinkStore.getHints(linkIndex).clear();
+            }
 
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug() << "[OSC] Cleared auto-generated 'Click to reveal' tooltip for spoiler link" << linkIndex;
@@ -10715,7 +10721,7 @@ bool TBuffer::linkIsNote(const int linkIndex) const
     const Mudlet::HyperlinkStyling styling = mLinkStore.getStyling(linkIndex);
     using Action = Mudlet::HyperlinkStyling::VisibilitySettings::Action;
     const bool clickHides = styling.visibility.hasVisibilitySettings && (styling.visibility.action == Action::Conceal || styling.visibility.action == Action::RevealThenConceal);
-    return styling.actionScheme == Mudlet::HyperlinkStyling::ActionLocal && !styling.isSpoiler && !styling.selection.hasSelectionSettings && !clickHides && !linkOpensItsMenu(linkIndex);
+    return styling.actionScheme == Mudlet::HyperlinkStyling::ActionLocal && !isSpoilerUnrevealed(linkIndex) && !styling.selection.hasSelectionSettings && !clickHides && !linkOpensItsMenu(linkIndex);
 }
 
 bool TBuffer::findNextLink(int fromLine, int fromColumn, int& outLine, int& outColumn, bool* wrapped) const
