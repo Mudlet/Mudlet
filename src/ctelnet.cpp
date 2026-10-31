@@ -5566,7 +5566,7 @@ void cTelnet::gotRest(std::string& mud_data)
             mMudData.append(mud_data, 0, i + 1);
             postKeepingDetectionTail();
 
-            if (!mIsTimerPosting && (mpPostingTimer->interval() != mTimeOut)) {
+            if (mpPostingTimer->interval() != mTimeOut) {
                 mpPostingTimer->setInterval(mTimeOut);
             }
 
@@ -5577,14 +5577,14 @@ void cTelnet::gotRest(std::string& mud_data)
         } else {
             mMudData += mud_data;
 
-            if (!mIsTimerPosting) {
-                if (mpPostingTimer->interval() != mTimeOut) {
-                    mpPostingTimer->setInterval(mTimeOut);
-                }
-
-                mpPostingTimer->start();
-                mIsTimerPosting = true;
+            if (mpPostingTimer->interval() != mTimeOut) {
+                mpPostingTimer->setInterval(mTimeOut);
             }
+
+            // Restarted by every read, not just the first: the timeout is how long the game has to fall quiet, so a
+            // line trickling in, in pieces each sooner than that but slower overall, must not be broken up mid-way
+            mpPostingTimer->start();
+            mIsTimerPosting = true;
         }
     } else {
         mMudData += mud_data;
