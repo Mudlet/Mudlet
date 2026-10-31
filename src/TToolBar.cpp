@@ -64,7 +64,7 @@ TToolBar::TToolBar(Host* pHost, TAction* pA, const QString& name, QWidget* pW)
 void TToolBar::resizeEvent(QResizeEvent* e)
 {
     Q_UNUSED(e)
-    if (mpHost.isNull() || !mpHost->mainConsoleView()) {
+    if (!mpHost->mainConsoleView()) {
         return;
     }
     mpHost->mainConsoleView()->setToolBarLayoutChanged(this);
@@ -82,7 +82,7 @@ void TToolBar::setName(const QString& name)
 
 void TToolBar::moveEvent(QMoveEvent* e)
 {
-    if (!mpTAction || mpHost.isNull()) {
+    if (!mpTAction) {
         return;
     }
 
@@ -346,9 +346,6 @@ void TToolBar::clear()
 // Needed to detect mouse clicking on areas not covered by a button or menu:
 void TToolBar::mousePressEvent(QMouseEvent* e)
 {
-    if (mpHost.isNull()) {
-        return;
-    }
     if (e->button() & Qt::AllButtons) {
         // move focus back to the active console / command line
         mpHost->setFocusOnHostActiveCommandLine();
