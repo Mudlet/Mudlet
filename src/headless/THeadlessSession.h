@@ -107,6 +107,14 @@ public:
     // run the event loop; a session the frontend deletes there returns at once, false if the save asked for was
     // not yet made.
     bool shutdown(bool save);
+    // The save shutdown(true) makes, with the profiles left running: every profile that loaded, the session's own
+    // and ones its scripts opened, writes its save, synced modules, map and profile.ini, and the window layout is written,
+    // with no sysExitEvent, so a frontend the system may stop without warning, such as a phone app sent to the
+    // background, loses nothing. It returns once they are on disk, running the event loop as it waits, and refuses
+    // as shutdown() does. A profile whose save could not be loaded is left as it is, keeping its last good save and
+    // map. False if a profile was not saved, a close a script began meanwhile included, or the layout was not,
+    // errorString() saying which; a session the frontend deletes in the event loop returns at once, false.
+    bool save();
     // The profiles, the session's own or ones its scripts opened, that a close from a script or shutdown()
     // could not save, in the order it failed to
     QStringList unsavedProfiles() const { return mUnsavedProfiles; }

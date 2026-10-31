@@ -37,6 +37,7 @@
 
 #include <memory>
 #include <optional>
+#include <utility>
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
 #include <qtkeychain/keychain.h>
 #else
@@ -122,6 +123,21 @@ private:
                                .arg(script.toHtmlEscaped())
                                .toUtf8());
         return true;
+    }
+
+    // A save that breaks off after a script that opens the other profile
+    static bool writeOpenerThatFailsToLoad(const QString& name, const QString& other)
+    {
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, name);
+        return QDir().mkpath(saveFolder)
+               && writeFile(qsl("%1/2020-01-01#00-00-00.xml").arg(saveFolder),
+                            qsl(R"(<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+<ScriptPackage><Script isActive="yes" isFolder="no"><name>opener</name><packageName></packageName><script>loadProfile("%1", true)</script><eventHandlerList/></Script></ScriptPackage>
+<HostPackage><Host)")
+                                    .arg(other)
+                                    .toUtf8());
     }
 
     // Opened binary so Windows writes no \r
@@ -956,18 +972,7 @@ version = "1.2")"},
         const QString name = qsl("Headless Corrupt Opener");
         const QString other = qsl("Headless Opened By The Corrupt");
         QVERIFY(writeProfile(other, QString()));
-        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, name);
-        QVERIFY(QDir().mkpath(saveFolder));
-        QFile saveFile(qsl("%1/2020-01-01#00-00-00.xml").arg(saveFolder));
-        QVERIFY(saveFile.open(QIODevice::WriteOnly));
-        saveFile.write(qsl(R"(<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE MudletPackage>
-<MudletPackage version="1.001">
-<ScriptPackage><Script isActive="yes" isFolder="no"><name>opener</name><packageName></packageName><script>loadProfile("%1", true)</script><eventHandlerList/></Script></ScriptPackage>
-<HostPackage><Host)")
-                               .arg(other)
-                               .toUtf8());
-        saveFile.close();
+        QVERIFY(writeOpenerThatFailsToLoad(name, other));
 
         THeadlessSession session;
         QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::loadFailed);
@@ -1397,6 +1402,269 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         QCOMPARE(saveCount(name), save ? 2 : 1);
     }
 
+    // As a phone app sent to the background, where the system may stop it without warning
+    void test_saveLeavesTheProfileRunning()
+    {
+        const QString name = qsl("Headless Save");
+        const QString recordPath = qsl("%1/%2.record").arg(mConfigDir.path(), name);
+        QVERIFY(writeProfile(name, recordingScript(recordPath)));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(tempAlias("^headless$", [[headlessAliasRan = "yes"]]))lua")));
+        QSignalSpy quit(&session, &THeadlessSession::quitRequested);
+        const QString mapsFolder = MudletApp::getMudletPath(enums::profileMapsPath, name);
+        const qsizetype mapsBefore = QDir(mapsFolder).entryList(QDir::Files).size();
+
+        QVERIFY2(session.save(), qPrintable(session.errorString()));
+        QCOMPARE(saveCount(name), 2);
+        QCOMPARE(QDir(mapsFolder).entryList(QDir::Files).size(), mapsBefore + 1);
+        QVERIFY(readFile(recordPath).isEmpty());
+        QVERIFY(session.host());
+        QVERIFY(session.submit(qsl("headless")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessAliasRan"), qsl("yes"));
+        QVERIFY(session.runLua(qsl("headlessAfterSave = 'yes'")));
+        QTest::qWait(100);
+        QCOMPARE(quit.count(), 0);
+        QVERIFY(session.shutdown(false));
+        QCOMPARE(readFile(recordPath), qsl("sysExitEvent\n"));
+    }
+
+    // A frontend may be stopped as soon as save() returns
+    void test_theSaveIsOnDiskWhenSaveReturns()
+    {
+        const QString name = qsl("Headless Save On Disk");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(permAlias("headlessSavedAlias", "", "^xyzzy$", ""))lua")));
+        QVERIFY2(session.save(), qPrintable(session.errorString()));
+        // Before anything runs the event loop, which would let a write still running finish
+        QVERIFY(!session.host()->currentlySavingProfile());
+        const QDir saveFolder(MudletApp::getMudletPath(enums::profileXmlFilesPath, name));
+        const QStringList saves = saveFolder.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Name);
+        QCOMPARE(saves.size(), 2);
+        const QString newest = readFile(saveFolder.filePath(saves.constLast()));
+        QVERIFY2(newest.contains(qsl("headlessSavedAlias")) && newest.trimmed().endsWith(qsl("</MudletPackage>")), qPrintable(newest.right(200)));
+        // The command lines' history settings the save wrote
+        const QString profileIni = readFile(MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("profile.ini")));
+        QVERIFY2(profileIni.contains(qsl("SaveHistory")), qPrintable(profileIni));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_saveWritesTheWindowLayout()
+    {
+        const QString name = qsl("Headless Save Layout");
+        QVERIFY(writeProfile(name, QString()));
+        const QString layoutPath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutPath);
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("openUserWindow('headlessSaveWindow', false, false, 'f'); resizeWindow('headlessSaveWindow', 250, 160)")));
+
+        QVERIFY2(session.save(), qPrintable(session.errorString()));
+        QFile layoutFile(layoutPath);
+        QVERIFY2(layoutFile.open(QIODevice::ReadOnly), "save() wrote no window layout.");
+        // As QDataStream writes a QString: UTF-16, big-endian
+        QByteArray windowName;
+        for (const QChar c : qsl("headlessSaveWindow")) {
+            windowName.append('\0').append(c.toLatin1());
+        }
+        QVERIFY(layoutFile.readAll().contains(windowName));
+        layoutFile.close();
+        QVERIFY(session.shutdown(false));
+        QFile::remove(layoutPath);
+    }
+
+    // As a script that ran while another profile's save waited for its writes could
+    void test_aProfileThatCloseFailedToSaveDuringASaveIsNamed()
+    {
+        const QString name = qsl("Headless Save Opener");
+        const QString other = qsl("Headless Save Quit Meanwhile");
+        QVERIFY(writeProfile(other, QString()));
+        QVERIFY(writeProfile(name, qsl("loadProfile(\"%1\", true)").arg(other)));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(HostManager::self()->getHost(other));
+        QCOMPARE(HostManager::self()->hostList().constFirst()->getName(), name);
+        const QString current = qsl("%1/current").arg(MudletApp::getMudletPath(enums::profileHomePath, other));
+        QVERIFY(QDir().rename(current, current + qsl(".moved")));
+        QVERIFY(writeFile(current, "not a folder"));
+        bool closeAsked = false;
+        connect(session.host(), &Host::profileSaveFinished, this, [&closeAsked, other]() {
+            if (!std::exchange(closeAsked, true)) {
+                HostManager::self()->requestProfileClose(other);
+            }
+        });
+
+        QVERIFY(!session.save());
+        QVERIFY(closeAsked);
+        QCOMPARE(session.errorString(), qsl("These profiles could not be saved: Headless Save Quit Meanwhile"));
+        QCOMPARE(saveCount(name), 2);
+        QVERIFY(QFile::remove(current));
+        QVERIFY(QDir().rename(current + qsl(".moved"), current));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_saveLeavesAFailedLoadAsItWas()
+    {
+        const QString name = qsl("Headless Save Corrupt Opener");
+        const QString other = qsl("Headless Saved By The Corrupt");
+        QVERIFY(writeProfile(other, QString()));
+        QVERIFY(writeOpenerThatFailsToLoad(name, other));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::loadFailed);
+        const QString mapsFolder = MudletApp::getMudletPath(enums::profileMapsPath, name);
+        const QStringList mapsBefore = QDir(mapsFolder).entryList(QDir::Files);
+
+        QVERIFY2(session.save(), qPrintable(session.errorString()));
+        QCOMPARE(saveCount(name), 1);
+        QCOMPARE(QDir(mapsFolder).entryList(QDir::Files), mapsBefore);
+        QCOMPARE(saveCount(other), 2);
+        QVERIFY(HostManager::self()->getHost(other));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aSaveThatFailsNamesTheProfile()
+    {
+        const QString name = qsl("Headless Save Fails");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        const QString current = qsl("%1/current").arg(MudletApp::getMudletPath(enums::profileHomePath, name));
+        QVERIFY(QDir().rename(current, current + qsl(".moved")));
+        QVERIFY(writeFile(current, "not a folder"));
+
+        QVERIFY(!session.save());
+        QCOMPARE(session.errorString(), qsl("These profiles could not be saved: Headless Save Fails"));
+        QVERIFY(session.host());
+        QVERIFY(QFile::remove(current));
+        QVERIFY(QDir().rename(current + qsl(".moved"), current));
+        QVERIFY2(session.save(), qPrintable(session.errorString()));
+        QCOMPARE(saveCount(name), 2);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // As a full disk that is then cleared would: a QSettings keeps the first error it meets
+    void test_aSaveOnceProfileIniCanBeWrittenAgainSucceeds()
+    {
+        const QString name = qsl("Headless Save Profile Ini");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        const QString profileIni = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("profile.ini"));
+        QFile::remove(profileIni);
+        QVERIFY(QDir().mkpath(profileIni));
+        session.host()->writeProfileIniData(qsl("Headless/first"), qsl("1"));
+
+        QVERIFY(!session.save());
+        QCOMPARE(session.errorString(), qsl("These profiles could not be saved: Headless Save Profile Ini"));
+        QVERIFY(QDir(profileIni).removeRecursively());
+        session.host()->writeProfileIniData(qsl("Headless/second"), qsl("2"));
+        QVERIFY2(session.save(), qPrintable(session.errorString()));
+        const QString written = readFile(profileIni);
+        QVERIFY2(written.contains(qsl("first=1")) && written.contains(qsl("second=2")), qPrintable(written));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A QSettings that found its file damaged keeps that parse error, which would hide every write that fails after it
+    void test_aProfileIniThatCannotBeWrittenAfterItWasDamagedIsAFailedSave()
+    {
+        const QString name = qsl("Headless Save Damaged Profile Ini");
+        QVERIFY(writeProfile(name, QString()));
+        const QString profileIni = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("profile.ini"));
+        QVERIFY(writeFile(profileIni, "[CommandLines]\nUsedIndexes=1\nthis line was truncated mid-write\n"));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        session.host()->writeProfileIniData(qsl("Headless/first"), qsl("1"));
+        QVERIFY2(session.save(), qPrintable(session.errorString()));
+        QVERIFY(QFile::remove(profileIni));
+        QVERIFY(QDir().mkpath(profileIni));
+        session.host()->writeProfileIniData(qsl("Headless/second"), qsl("2"));
+
+        QVERIFY(!session.save());
+        QCOMPARE(session.errorString(), qsl("These profiles could not be saved: Headless Save Damaged Profile Ini"));
+        QVERIFY(QDir(profileIni).removeRecursively());
+        QVERIFY2(session.save(), qPrintable(session.errorString()));
+        const QString written = readFile(profileIni);
+        QVERIFY2(written.contains(qsl("first=1")) && written.contains(qsl("second=2")), qPrintable(written));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // The close's save writes the profile and map; profile.ini would otherwise only be written as the Host is deleted
+    void test_aProfileWhoseCloseCouldNotWriteProfileIniDuringASaveIsNamed()
+    {
+        const QString name = qsl("Headless Save Ini Opener");
+        const QString other = qsl("Headless Save Ini Quit Meanwhile");
+        QVERIFY(writeProfile(other, QString()));
+        QVERIFY(writeProfile(name, qsl("loadProfile(\"%1\", true)").arg(other)));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        auto pOther = HostManager::self()->getHost(other);
+        QVERIFY(pOther);
+        QCOMPARE(HostManager::self()->hostList().constFirst()->getName(), name);
+        pOther->writeProfileIniData(qsl("Headless/first"), qsl("1"));
+        const QString profileIni = MudletApp::getMudletPath(enums::profileDataItemPath, other, qsl("profile.ini"));
+        QFile::remove(profileIni);
+        QVERIFY(QDir().mkpath(profileIni));
+        bool closeAsked = false;
+        connect(session.host(), &Host::profileSaveFinished, this, [&closeAsked, other]() {
+            if (!std::exchange(closeAsked, true)) {
+                HostManager::self()->requestProfileClose(other);
+            }
+        });
+
+        QVERIFY(!session.save());
+        QVERIFY(closeAsked);
+        QCOMPARE(session.errorString(), qsl("These profiles could not be saved: Headless Save Ini Quit Meanwhile"));
+        QCOMPARE(saveCount(name), 2);
+        QVERIFY(QDir(profileIni).removeRecursively());
+        QVERIFY(session.shutdown(false));
+    }
+
+    // The profile's own save leaves a synced module's items out, so its file is the only place they are kept
+    void test_aSyncedModuleThatCannotBeWrittenIsAFailedSave()
+    {
+        const QString name = qsl("Headless Save Synced Module");
+        QVERIFY(writeProfile(name, QString()));
+        const QString modulePath = mConfigDir.filePath(qsl("headlessSyncedModule.xml"));
+        QVERIFY(writeFile(modulePath, packageXml(R"(headlessModuleRan = "yes")")));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("installModule([[%1]]); enableModuleSync('headlessSyncedModule')").arg(modulePath)));
+        QVERIFY2(session.save(), qPrintable(session.errorString()));
+        QVERIFY(QFile::remove(modulePath));
+        QVERIFY(QDir().mkpath(modulePath));
+
+        QVERIFY(!session.save());
+        QCOMPARE(session.errorString(), qsl("These profiles could not be saved: Headless Save Synced Module"));
+        QVERIFY(QDir(modulePath).removeRecursively());
+        QVERIFY2(session.save(), qPrintable(session.errorString()));
+        QVERIFY(readFile(modulePath).contains(qsl("headlessModuleRan")));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // As a frontend's function bound into Lua would: the profile's Lua state is still running
+    void test_saveFromUnderAScriptIsRefused()
+    {
+        static THeadlessSession* spSession = nullptr;
+        static bool sSaved = true;
+        const QString name = qsl("Headless Lua Save");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        spSession = &session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        lua_register(session.host()->getLuaInterpreter()->getLuaGlobalState(), "saveSession", [](lua_State*) -> int {
+            sSaved = spSession->save();
+            return 0;
+        });
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("refused")));
+        QVERIFY(session.runLua(qsl("saveSession()")));
+        QVERIFY(!sSaved);
+        QCOMPARE(saveCount(name), 1);
+        QVERIFY2(session.save(), qPrintable(session.errorString()));
+        QCOMPARE(saveCount(name), 2);
+    }
+
     void test_shutdownDoesNotRequestQuit_data()
     {
         QTest::addColumn<bool>("save");
@@ -1552,22 +1820,25 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         bool askedDuringTheLoad = false;
         bool ranLua = true;
         bool submitted = true;
+        bool saved = true;
         bool shutDown = true;
         QString refusal;
         QTimer::singleShot(0, &session, [&]() {
             askedDuringTheLoad = true;
             ranLua = session.runLua(qsl("headlessDuringLoad = 'yes'"));
             submitted = session.submit(qsl("look"));
+            saved = session.save();
             shutDown = session.shutdown(true);
             refusal = session.errorString();
         });
-        for (int refusal = 0; refusal < 3; ++refusal) {
+        for (int refusal = 0; refusal < 4; ++refusal) {
             QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("refused")));
         }
         QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
         QVERIFY(askedDuringTheLoad);
         QVERIFY(!ranLua);
         QVERIFY(!submitted);
+        QVERIFY(!saved);
         QVERIFY(!shutDown);
         QCOMPARE(refusal, qsl("Refused while a profile loads; call it once that has returned."));
         QVERIFY(session.host());
@@ -1824,19 +2095,22 @@ registerAnonymousEventHandler("sysExitEvent", function() loadMap() end))lua")
         std::optional<bool> nested;
         bool ranLua = true;
         bool submitted = true;
+        bool saved = true;
         QObject context;
-        QTimer::singleShot(0, &context, [&session, &nested, &ranLua, &submitted, save]() {
+        QTimer::singleShot(0, &context, [&session, &nested, &ranLua, &submitted, &saved, save]() {
             nested = session.shutdown(!save);
             ranLua = session.runLua(qsl("headlessRan = 'yes'"));
             submitted = session.submit(qsl("north"));
+            saved = session.save();
         });
-        for (int refusal = 0; refusal < 3; ++refusal) {
+        for (int refusal = 0; refusal < 4; ++refusal) {
             QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("refused")));
         }
         QVERIFY(session.shutdown(save));
         QCOMPARE(nested, std::optional(false));
         QVERIFY(!ranLua);
         QVERIFY(!submitted);
+        QVERIFY(!saved);
         QVERIFY(!HostManager::self());
         QCOMPARE(saveCount(name), save ? 2 : 1);
         QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
@@ -2143,25 +2417,28 @@ end))lua")
         QSignalSpy output(&session, &THeadlessSession::outputLine);
         bool ranLua = true;
         bool submitted = true;
+        bool saved = true;
         QString refusal;
         // One with no profiles of its own has nothing to refuse
         THeadlessSession unstarted;
         bool unstartedShutDown = false;
-        connect(&session, &THeadlessSession::outputLine, this, [&session, &ranLua, &submitted, &refusal, &unstarted, &unstartedShutDown](const QString&, const QString& text, bool) {
+        connect(&session, &THeadlessSession::outputLine, this, [&session, &ranLua, &submitted, &saved, &refusal, &unstarted, &unstartedShutDown](const QString&, const QString& text, bool) {
             if (text == qsl("outer line")) {
                 ranLua = session.runLua(qsl(R"lua(feedTriggers("inner line\n"))lua"));
                 submitted = session.submit(qsl("headless"));
+                saved = session.save();
                 session.shutdown(true);
                 refusal = session.errorString();
                 unstartedShutDown = unstarted.shutdown(false);
             }
         });
-        for (int refusal = 0; refusal < 3; ++refusal) {
+        for (int refusal = 0; refusal < 4; ++refusal) {
             QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("refused")));
         }
         QVERIFY(session.runLua(qsl(R"lua(feedTriggers("outer line\n") feedTriggers("after\n"))lua")));
         QVERIFY(!ranLua);
         QVERIFY(!submitted);
+        QVERIFY(!saved);
         QCOMPARE(refusal, qsl("Refused from a handler of outputLine, localText or errorConsoleText; queue the call instead."));
         QVERIFY(unstartedShutDown);
         QVERIFY(HostManager::self());
