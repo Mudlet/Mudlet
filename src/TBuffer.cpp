@@ -5527,13 +5527,13 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
     }
 
     if (root.contains(qsl("disabled"))) {
-        styling.selection.disabled = jsonBoolValue(root[qsl("disabled")]).value_or(styling.selection.disabled);
-        if (styling.selection.disabled) {
-            styling.hasCustomStyling = true;
-        }
+        styling.selection.disabled = styling.selection.disabled || jsonBoolValue(root[qsl("disabled")]).value_or(false);
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC] Disabled config parsed from JSON:" << styling.selection.disabled;
 #endif
+    }
+    if (styling.selection.disabled) {
+        styling.hasCustomStyling = true;
     }
 
     if (styling.isSpoiler) {
@@ -5706,6 +5706,10 @@ void TBuffer::parseJsonSelectionConfig(const QJsonObject& selectionObj, Mudlet::
 
     if (selectionObj.contains(qsl("exclusive"))) {
         settings.exclusive = jsonBoolValue(selectionObj[qsl("exclusive")]).value_or(settings.exclusive);
+    }
+
+    if (selectionObj.contains(qsl("disabled"))) {
+        settings.disabled = jsonBoolValue(selectionObj[qsl("disabled")]).value_or(settings.disabled);
     }
 }
 

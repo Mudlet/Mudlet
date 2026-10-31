@@ -839,6 +839,34 @@ private slots:
     QCOMPARE(styling.isStrikeOut, expectedOn);
   }
 
+  void test_Osc8SelectionDisabled_data() {
+    QTest::addColumn<QString>("config");
+    QTest::addColumn<bool>("expectedDisabled");
+
+    QTest::newRow("inside selection") << qsl("{\"selection\":{\"group\":\"poll\",\"value\":\"a\",\"disabled\":true}}") << true;
+    QTest::newRow("at the top level") << qsl("{\"disabled\":true,\"selection\":{\"group\":\"poll\",\"value\":\"b\"}}") << true;
+    QTest::newRow("either one is enough") << qsl("{\"disabled\":false,\"selection\":{\"group\":\"poll\",\"value\":\"c\",\"disabled\":true}}") << true;
+    QTest::newRow("the other one is enough") << qsl("{\"disabled\":true,\"selection\":{\"group\":\"poll\",\"value\":\"e\",\"disabled\":false}}") << true;
+    QTest::newRow("neither") << qsl("{\"selection\":{\"group\":\"poll\",\"value\":\"d\",\"disabled\":false}}") << false;
+  }
+
+  void test_Osc8SelectionDisabled() {
+    QFETCH(QString, config);
+    QFETCH(bool, expectedDisabled);
+
+    injectData(qsl("\x1b]8;;send:vote?config=%1\x1b\\Option\x1b]8;;\x1b\\").arg(config));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+    QCOMPARE(console->getLinkStore().getStyling(linkId).selection.disabled, expectedDisabled);
+    QCOMPARE(console->buffer.getLinkState(linkId) == Mudlet::HyperlinkStyling::StateDisabled, expectedDisabled);
+  }
+
   // A "config" parameter carrying something that is not an object is not a
   // config, so it must not displace a valid one earlier in the same query.
   void test_Osc8ValuelessConfigDoesNotDisplaceAValidOne_data() {
