@@ -269,6 +269,7 @@ above, so turn one off with `-DUSE_SPAWN=OFF` or `WITH_SPAWN=NO` in the environm
 | Option | Turning it off removes | What scripts see |
 | --- | --- | --- |
 | `USE_SPAWN` | `TForkedProcess`, the `QProcess` behind `spawn()` | `spawn()` raises an error, as when a process fails to start |
+| `USE_DISCORD_RPC` | the `QLibrary` that loads the Discord RPC library, and with it Rich Presence | the Discord functions return `nil` and `"Discord API is not available"`, as when the library is missing; `setDiscordGameUrl()` still works |
 
 ## Debugging options
 

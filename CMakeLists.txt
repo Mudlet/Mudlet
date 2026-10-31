@@ -223,6 +223,9 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
 include_optional_module(ENVIRONMENT_VARIABLE WITH_SPAWN
                         OPTION_VARIABLE USE_SPAWN
                         READABLE_NAME "spawn() of processes")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_DISCORD_RPC
+                        OPTION_VARIABLE USE_DISCORD_RPC
+                        READABLE_NAME "Discord RPC library loading")
 
 find_package(Qt6 6.8.2 REQUIRED)
 
