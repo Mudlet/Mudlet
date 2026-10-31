@@ -26,6 +26,7 @@
 
 #include "Host.h"
 #include "MudletApp.h"
+#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -40,6 +41,7 @@
 #include <QFileInfo>
 #include <QFontMetrics>
 #include <QFrame>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QListWidget>
 #include <QMenu>
@@ -594,6 +596,15 @@ bool dlgMapper::eventFilter(QObject* watched, QEvent* event)
         }
     }
     return QWidget::eventFilter(watched, event);
+}
+
+// A floating map is a window of its own, where a key none of its widgets used would go no further
+void dlgMapper::keyPressEvent(QKeyEvent* event)
+{
+    TMainConsole* pConsole = mpHost ? mpHost->mainConsoleView() : nullptr;
+    if (!pConsole || !pConsole->mpCommandLine || !pConsole->mpCommandLine->takeKeyPress(event)) {
+        QWidget::keyPressEvent(event);
+    }
 }
 
 int dlgMapper::getCurrentShownAreaIndex()

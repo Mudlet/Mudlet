@@ -139,6 +139,7 @@ public slots:
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
+    void keyPressEvent(QKeyEvent*) override;
 
 private:
     // Only the mapper TMap::mpMapper names acts on the map's cues, as other
