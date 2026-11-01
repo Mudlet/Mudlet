@@ -37,7 +37,19 @@ public:
     // destructor, this is a null view whose answers are all "not there".
     static TAppFrontend* instance() { return smpInstance ? smpInstance : nullView(); }
     static bool hasView() { return smpInstance != nullptr; }
-    static void setInstance(TAppFrontend* frontend) { smpInstance = frontend; }
+    // From viewDestroyed() until another view is set
+    static bool viewGone() { return smViewGone; }
+    static void setInstance(TAppFrontend* frontend)
+    {
+        smpInstance = frontend;
+        smViewGone = smViewGone && !frontend;
+    }
+    // For the end of the view's destructor, unlike setInstance(nullptr), which a run with no view at all may also do
+    static void viewDestroyed()
+    {
+        smpInstance = nullptr;
+        smViewGone = true;
+    }
 
     // The profile in the active tab, or nullptr if there is none or it has no console yet.
     virtual Host* getActiveHost() = 0;
@@ -125,6 +137,7 @@ private:
     static TAppFrontend* nullView();
 
     inline static TAppFrontend* smpInstance = nullptr;
+    inline static bool smViewGone = false;
 };
 
 #endif // MUDLET_TAPPFRONTEND_H
