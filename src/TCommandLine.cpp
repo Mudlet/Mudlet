@@ -231,6 +231,32 @@ bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
     return false;
 }
 
+bool TCommandLine::takeKeyPress(QKeyEvent* event)
+{
+    if (!mpHost || mpHost->isClosingDown()) {
+        return false;
+    }
+
+    switch (event->key()) {
+    case Qt::Key_Shift:
+    case Qt::Key_Control:
+    case Qt::Key_Alt:
+    case Qt::Key_AltGr:
+    case Qt::Key_Meta:
+        // Taken alone, it would move focus here ahead of the key it goes with, such as the Tab of Shift+Tab
+        return false;
+    default:
+        break;
+    }
+
+    // Focus in an inactive window waits for it to be activated
+    activateWindow();
+    setFocus(Qt::OtherFocusReason);
+    QCoreApplication::sendEvent(this, event);
+    event->accept();
+    return true;
+}
+
 bool TCommandLine::keybindingWouldMatchProfileSwitchShortcut(const QKeyEvent* keyEvent) const
 {
     if (!mpKeyUnit || mpHost->isClosingDown()) {

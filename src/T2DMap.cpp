@@ -4231,14 +4231,25 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
     event->accept();
 }
 
+// In a window without the command line the focus would fall to a panel button instead, which keeps arrows and Space
+// for itself; the map handles no keys, so they go on to the mapper around it, which hands them to the command line
+void T2DMap::takeFocusAwayFromTheCommandLine(const Qt::FocusReason reason)
+{
+    TMainConsole* pConsole = mpHost ? mpHost->mainConsoleView() : nullptr;
+    if (pConsole && window() != pConsole->window()) {
+        setFocus(reason);
+    }
+}
+
 bool T2DMap::event(QEvent* event)
 {
-    // NOTE: key events aren't being forwarded to T2DMap because the widget
-    // currently never has focus because it's more comfortable for the user
-    // to always have focus on the command line. If this were to be changed some
-    // day the setFocusPolicy() calls in the constructor need to be uncommented
+    // NOTE: the widget has the focus only in a window without the command line,
+    // as it is more comfortable for the user to always have focus on the command
+    // line, and it handles no key events itself
 
-    if (event->type() == QEvent::KeyPress) {
+    if (event->type() == QEvent::WindowActivate && !window()->focusWidget()) {
+        takeFocusAwayFromTheCommandLine(Qt::ActiveWindowFocusReason);
+    } else if (event->type() == QEvent::KeyPress) {
         //        auto* ke = static_cast<QKeyEvent*>(event);
         //        if (ke->key() == Qt::Key_Delete ) {
         //            if (mCustomLineSelectedRoom != 0  ) {
@@ -4277,6 +4288,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
     sysMapWindowMousePressEvent.mArgumentList.append(QLatin1String("sysMapWindowMousePressEvent"));
     sysMapWindowMousePressEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(sysMapWindowMousePressEvent);
+    takeFocusAwayFromTheCommandLine(Qt::MouseFocusReason);
 
     updateSelectionWidget();
     update();
