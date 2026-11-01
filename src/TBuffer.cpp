@@ -6619,7 +6619,6 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         return previous;
     };
     int xPos = 0;
-    int totalWidth = 0;
     int firstChar = 0;
     bool needsIndent = indentToCome;
     bool hasNewline = false;
@@ -6680,7 +6679,6 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
                 // line to guarantee the scan moves on
                 indexOfChar = (nextBoundary > firstChar) ? nextBoundary : firstChar + 1;
                 setGraphemePosition(indexOfChar);
-                totalWidth += charWidth;
             }
             output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
             isNewline = false;
@@ -6690,7 +6688,6 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             continue;
         }
         xPos += charWidth;
-        totalWidth += charWidth;
         indexOfChar = nextBoundary;
         if (plainAscii) {
             // Plain ASCII has no line feeds and skips spaces only at a segment's first column, so every
@@ -6698,15 +6695,33 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             const int run = std::min(maxWidth - (needsIndent ? indentationHere : 0) - xPos, total - indexOfChar);
             if (run > 0) {
                 xPos += run;
-                totalWidth += run;
                 indexOfChar += run;
             }
         }
     }
-    // it's possible that no wrapping is needed
-    if (totalWidth <= mWrapAt && !hasNewline) {
-        output.clear();
-        return output;
+    // A line that already fits is not broken to make room for the indent, so one read back out of the
+    // buffer, indent and all, echoes back unchanged. Trailing spaces don't count: a break drops them.
+    if (!hasNewline && !output.isEmpty()) {
+        qsizetype textEnd = lineText.size();
+        while (textEnd > 0 && lineText.at(textEnd - 1) == QChar::Space) {
+            --textEnd;
+        }
+        int width = 0;
+        if (plainAscii) {
+            width = static_cast<int>(textEnd);
+        } else {
+            graphemeFinder->toStart();
+            const bool wideAmbiguous = mpHost->wideAmbiguousEAsianGlyphs();
+            for (int position = 0; position < textEnd && width <= mWrapAt;) {
+                const int next = graphemeFinder->toNextBoundary();
+                width += graphemeInfo::getWidth(graphemeInfo::getBaseCharacter(QStringView(lineText).mid(position, next - position)), wideAmbiguous);
+                position = next;
+            }
+        }
+        if (width <= mWrapAt) {
+            output.clear();
+            return output;
+        }
     }
     // if the line has been wrapped, append last remaining bit
     if (!output.isEmpty()) {
