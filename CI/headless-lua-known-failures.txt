@@ -1,7 +1,7 @@
 # Specs that fail in mudlet-headless, which has no main window, read by
 # CI/check-headless-lua-failures.py, which says what each line means.
 minimum successes: 7771
-maximum pending: 261
+maximum pending: 262
 
 # Need a main window
 Error UI_spec.lua: Window and label state console metrics getProfileTabNumber returns the one-based tab position

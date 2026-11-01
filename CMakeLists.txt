@@ -229,6 +229,12 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_DISCORD_RPC
 include_optional_module(ENVIRONMENT_VARIABLE WITH_SPEECH_ENGINES
                         OPTION_VARIABLE USE_SPEECH_ENGINES
                         READABLE_NAME "Vosk and sherpa-onnx speech engine loading")
+# Off by default: the desktop builds load these modules as luarocks installs them, and turning it
+# on fetches their sources at configure time
+include_optional_module(ENVIRONMENT_VARIABLE WITH_STATIC_LUA_MODULES
+                        OPTION_VARIABLE USE_STATIC_LUA_MODULES
+                        READABLE_NAME "Lua C modules linked into mudlet_core"
+                        DEFAULT OFF)
 
 find_package(Qt6 6.8.2 REQUIRED)
 
