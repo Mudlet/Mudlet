@@ -1185,6 +1185,75 @@ end))lua");
         QCOMPARE(welcome.at(2).toBool(), false);
     }
 
+    void test_outputLineCarriesTheLinesColoursAndStyles()
+    {
+        const QString name = qsl("Headless Styled");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        Host* pHost = session.host();
+        QVERIFY(pHost);
+        // Not a raw string: moc misreads this one and drops the class
+        QVERIFY(session.runLua(qsl("feedTriggers('\\27[31mred\\27[0m \\27[1mbold\\27[0m \\27[4;7mrev\\27[0m \\27[38;2;1;2;3;48;2;4;5;6mtrue\\27[0m\\nplain\\n\\n\\27[1;31mbright\\27[0m "
+                                   "\\27[1;38;2;1;2;3mdeep\\27[0m\\n\\27[38;5;9mwarn\\27[39m after\\27[0m \\27[1;38;5;1mdark\\27[0m\\n')")));
+        const QStringList texts = outputTexts(output);
+        const qsizetype styled = texts.indexOf(qsl("red bold rev true"));
+        QVERIFY2(styled >= 0, qPrintable(texts.join(QChar::LineFeed)));
+        QCOMPARE(texts.mid(styled), (QStringList{qsl("red bold rev true"), qsl("plain"), QString(), qsl("bright deep"), qsl("warn after dark")}));
+
+        using Style = THeadlessSession::TextStyle;
+        const auto run = [pHost](int start, int length, const QColor& foreground, const QColor& background, THeadlessSession::TextStyles styles) {
+            return THeadlessSession::TextRun{.start = start,
+                                             .length = length,
+                                             .foreground = foreground,
+                                             .background = background,
+                                             .defaultForeground = foreground == pHost->mFgColor,
+                                             .defaultBackground = background == pHost->mBgColor,
+                                             .styles = styles};
+        };
+        const QColor fg = pHost->mFgColor;
+        const QColor bg = pHost->mBgColor;
+        const QList<THeadlessSession::TextRun> expected{run(0, 3, pHost->mRed, bg, {}),
+                                                        run(3, 1, fg, bg, {}),
+                                                        run(4, 4, fg, bg, Style::Bold),
+                                                        run(8, 1, fg, bg, {}),
+                                                        run(9, 3, fg, bg, Style::Underline | Style::Reverse),
+                                                        run(12, 1, fg, bg, {}),
+                                                        run(13, 4, QColor(1, 2, 3), QColor(4, 5, 6), {})};
+        const auto runs = output.at(styled).at(3).value<QList<THeadlessSession::TextRun>>();
+        QCOMPARE(runs.size(), expected.size());
+        for (qsizetype i = 0; i < runs.size(); ++i) {
+            QVERIFY2(runs.at(i) == expected.at(i),
+                     qPrintable(qsl("run %1: start %2 length %3 fg %4 bg %5 styles %6")
+                                        .arg(QString::number(i), QString::number(runs.at(i).start), QString::number(runs.at(i).length), runs.at(i).foreground.name(), runs.at(i).background.name())
+                                        .arg(runs.at(i).styles.toInt())));
+        }
+        QVERIFY(!expected.at(0).defaultForeground);
+        QVERIFY(expected.at(1).defaultForeground && expected.at(1).defaultBackground);
+        QVERIFY(!expected.at(6).defaultForeground && !expected.at(6).defaultBackground);
+
+        const auto plain = output.at(styled + 1).at(3).value<QList<THeadlessSession::TextRun>>();
+        QCOMPARE(plain.size(), 1);
+        QVERIFY(plain.constFirst() == run(0, 5, fg, bg, {}));
+        QVERIFY(output.at(styled + 2).at(3).value<QList<THeadlessSession::TextRun>>().isEmpty());
+
+        // Bold with a colour: painted as the bright colour, or for 24-bit colour not at all, but bold all the same
+        const auto coloured = output.at(styled + 3).at(3).value<QList<THeadlessSession::TextRun>>();
+        QCOMPARE(coloured.size(), 3);
+        QVERIFY2(coloured.at(0) == run(0, 6, pHost->mLightRed, bg, Style::Bold), qPrintable(coloured.at(0).foreground.name() + QChar::Space + QString::number(coloured.at(0).styles.toInt())));
+        QVERIFY(coloured.at(1) == run(6, 1, fg, bg, {}));
+        QVERIFY2(coloured.at(2) == run(7, 4, QColor(1, 2, 3), bg, Style::Bold), qPrintable(coloured.at(2).foreground.name() + QChar::Space + QString::number(coloured.at(2).styles.toInt())));
+
+        // A bright colour index is not bold, nor what follows it in the default colour, which the GUI paints in bold
+        const auto indexed = output.at(styled + 4).at(3).value<QList<THeadlessSession::TextRun>>();
+        QCOMPARE(indexed.size(), 3);
+        QVERIFY(indexed.at(0) == run(0, 4, pHost->mLightRed, bg, {}));
+        QVERIFY(indexed.at(1) == run(4, 7, fg, bg, {}));
+        QVERIFY(indexed.at(2) == run(11, 4, pHost->mRed, bg, Style::Bold));
+        QVERIFY(session.shutdown(false));
+    }
+
     // Only the main window makes a ShortcutsManager, and the GUI would open a save that had none with the defaults
     void test_aSaveKeepsTheKeyboardShortcuts()
     {
