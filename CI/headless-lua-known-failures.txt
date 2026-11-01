@@ -1,10 +1,9 @@
 # Specs that fail in mudlet-headless, which has no main window, read by
 # CI/check-headless-lua-failures.py, which says what each line means.
-minimum successes: 7789
-maximum pending: 261
+minimum successes: 7794
+maximum pending: 262
 
 # Need a main window
-Error UI_spec.lua: Window and label state console metrics getProfileTabNumber returns the one-based tab position
 Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour hands out a key as soon as whatever held it is switched off
 Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour keeps the search's key when it is switched off and on in one turn
 Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour refuses one Mudlet reserves for a menu command
@@ -52,8 +51,6 @@ Failure TextEditSelection_spec.lua: Tests sysWindowOverflowEvent raises the even
 Failure Trigger_spec.lua: Trigger processing feedTriggers contract scrolls the main console to the lines it feeds from text a trigger feeds, once the game data that fired the trigger is handled
 Failure Trigger_spec.lua: Trigger processing feedTriggers contract scrolls the main console to the lines it feeds from text a trigger feeds, once the pass that fired the trigger ends
 Failure UI_spec.lua: A user window driven from Lua announces sysWindowOverflowEvent when it is not allowed to scroll
-Failure UI_spec.lua: Main window size and saved layout saveWindowLayout and loadWindowLayout saveWindowLayout returns false when the layout file cannot be opened, and saves again once it can
-Failure UI_spec.lua: Main window size and saved layout saveWindowLayout and loadWindowLayout saveWindowLayout returns true and writes the layout file
 Failure UI_spec.lua: Widget state getters getUserWindowTitle reports the title a style sheet gives a floating user window
 Failure UI_spec.lua: Window state getters getLabelText reports text a style sheet gives the label
 Failure UI_spec.lua: sysWindowOverflowEvent goes quiet again when the console is allowed to scroll once more
@@ -69,8 +66,3 @@ Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with th
 Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing setMapZoom keeps its contract while the modern 3D view shows
 Failure zz_Mapper3DView_spec.lua: Tests the blueprint style on an area spread over several levels paints a multi-level area in blueprint and switches back to tiles
 Failure zz_Mapper3DView_spec.lua: Tests the modern 3D mapper surviving context rebuilds floats, redocks and switches back to the classic view
-
-# Fail for want of something other than a main window; each wants looking into
-Failure Package_spec.lua: Tests installing an archive named after one of the profile's own folders keeps the profile's log folder when it syncs a module from an archive called log
-Failure Package_spec.lua: Tests installing an archive named after one of the profile's own folders leaves the staging folder of an install still unpacking to it when another install of that name starts
-Failure Package_spec.lua: The package specs clean up after themselves leaves no fixture package, module or folder behind

@@ -5786,6 +5786,13 @@ describe("Window and label state", function()
     end)
 
     it("getProfileTabNumber returns the one-based tab position", function()
+      -- getMousePosition() has no answer only when there is no main window, which has no tabs
+      if not getMousePosition() then
+        local number, err = getProfileTabNumber()
+        assert.is_nil(number)
+        assert.are.equal("could not retrieve the tab number", err)
+        return
+      end
       assert.is_true(getProfileTabNumber() >= 1)
     end)
 
@@ -8185,9 +8192,12 @@ describe("Main window size and saved layout", function()
     -- files back the way they found them
     local configurationDirectory = getMudletHomeDir():match("^(.*)/profiles/[^/]*$")
     assert(configurationDirectory, "could not work out the configuration directory from " .. getMudletHomeDir())
+    -- getMousePosition() has no answer only when there is no main window, whose layout goes in a file of its own
+    local savedLayoutFile = configurationDirectory .. (getMousePosition() and "/windowLayout.dat" or "/windowLayoutHeadless.dat")
     local layoutFiles = {
       configurationDirectory .. "/windowLayout.dat",
       configurationDirectory .. "/windowLayoutGeometry.dat",
+      configurationDirectory .. "/windowLayoutHeadless.dat",
     }
     local contentsBefore = {}
 
@@ -8215,7 +8225,7 @@ describe("Main window size and saved layout", function()
     end)
 
     it("saveWindowLayout returns true and writes the layout file", function()
-      local layoutFile = layoutFiles[1]
+      local layoutFile = savedLayoutFile
       -- taking the file away first is what makes this about the call rather
       -- than about a file an earlier session left behind
       os.remove(layoutFile)
@@ -8233,7 +8243,7 @@ describe("Main window size and saved layout", function()
     end)
 
     it("saveWindowLayout returns false when the layout file cannot be opened, and saves again once it can", function()
-      local layoutFile = layoutFiles[1]
+      local layoutFile = savedLayoutFile
       os.remove(layoutFile)
       -- a directory in its place makes the open fail even for root, which a
       -- read-only directory does not
