@@ -4980,28 +4980,13 @@ void TBuffer::decodeOSC(const QString& sequence)
 #endif
             // Reset styling to defaults before parsing
             mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
+            mCurrentHyperlinkMenu.clear();
             QMap<QString, QString> queryParams;
             parseUriQueryParameters(rawUrl, mCurrentHyperlinkStyling, queryParams);
 
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug() << "[OSC] Styling parsed directly from JSON (isUnderlined=" << mCurrentHyperlinkStyling.isUnderlined << ")";
 #endif
-
-            // Extract menu parameters
-            if (queryParams.contains(qsl("menu"))) {
-                QString menuString = queryParams.value(qsl("menu"));
-                mCurrentHyperlinkMenu = menuString.split('|', Qt::SkipEmptyParts);
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] Menu parameter found:" << menuString;
-                qDebug() << "[OSC] Menu items parsed:" << mCurrentHyperlinkMenu;
-                qDebug() << "[OSC] Menu items count:" << mCurrentHyperlinkMenu.size();
-#endif
-            } else {
-                mCurrentHyperlinkMenu.clear();
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] No menu parameter found";
-#endif
-            }
 
             // Extract custom tooltip parameter
             QString customTooltip;
@@ -5441,13 +5426,12 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
 
     if (root.contains(qsl("menu")) && root[qsl("menu")].isArray()) {
         QJsonArray menuArray = root[qsl("menu")].toArray();
-        QString menuString = jsonMenuArrayToString(menuArray);
-        if (!menuString.isEmpty()) {
-            parameters.insert(qsl("menu"), menuString);
+        mCurrentHyperlinkMenu = jsonMenuArrayToList(menuArray);
+        if (!mCurrentHyperlinkMenu.isEmpty()) {
             // Enable custom styling for links with menus
             styling.hasCustomStyling = true;
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug() << "[OSC] Menu parameter added:" << menuString;
+            qDebug() << "[OSC] Menu items:" << mCurrentHyperlinkMenu;
 #endif
         }
     }
@@ -5569,26 +5553,27 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
     return true;
 }
 
-QString TBuffer::jsonMenuArrayToString(const QJsonArray& menuArray)
+QStringList TBuffer::jsonMenuArrayToList(const QJsonArray& menuArray)
 {
     QStringList menuItems;
 
     for (const QJsonValue& item : menuArray) {
         if (item.isString() && item.toString() == qsl("-")) {
             // Separator
-            menuItems << qsl("Separator|-");
+            menuItems << qsl("Separator") << qsl("-");
         } else if (item.isObject()) {
             QJsonObject menuObj = item.toObject();
             // Each menu object should have one key-value pair: label -> command
             for (auto it = menuObj.begin(); it != menuObj.end(); ++it) {
-                if (it.value().isString()) {
-                    menuItems << it.key() + qsl("|") + it.value().toString();
+                // An empty command would send a blank line, which a server writes as send:
+                if (it.value().isString() && !it.value().toString().isEmpty()) {
+                    menuItems << it.key() << it.value().toString();
                 }
             }
         }
     }
 
-    return menuItems.join(qsl("|"));
+    return menuItems;
 }
 
 void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::HyperlinkStyling::StateStyle& stateStyle)
