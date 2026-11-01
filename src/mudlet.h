@@ -122,10 +122,6 @@ public:
     static void start();
     static QImage getSplashScreen(bool releaseVersion, bool testVersion);
 
-
-    // translations done high enough will get a gold star to hide the last few percent
-    // as well as encourage translators to maintain it
-    static const int scmTranslationGoldStar = 95;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static QVariantHash smLuaFunctionNames;
     inline static QPointer<TConsole> smpDebugConsole;

@@ -418,7 +418,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         auto& nativeName = translation.getNativeName();
         if (translation.fromResourceFile()) {
             auto& translatedPc = translation.getTranslatedPercentage();
-            if (translatedPc >= pMudlet->scmTranslationGoldStar) {
+            if (translatedPc >= MudletApp::scmTranslationGoldStar) {
                 comboBox_guiLanguage->addItem(QIcon(":/icons/rating.png"), nativeName, code);
             } else {
                 // This will also be used if the percentage is set to zero
