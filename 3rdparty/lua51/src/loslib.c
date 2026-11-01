@@ -35,8 +35,20 @@ static int os_pushresult (lua_State *L, int i, const char *filename) {
 }
 
 
+/*
+** MUDLET: the iOS SDK marks system() unavailable, so there os.execute()
+** answers as system() does with no command processor: -1, as Lua 5.4's
+** l_system() does under LUA_USE_IOS. Not an error: a failed command never
+** raises in Lua 5.1, so scripts get the non-zero status they check for
+*/
+#if defined(LUA_USE_IOS)
+#define l_system(cmd)	((cmd) == NULL ? 0 : -1)
+#else
+#define l_system(cmd)	system(cmd)
+#endif
+
 static int os_execute (lua_State *L) {
-  lua_pushinteger(L, system(luaL_optstring(L, 1, NULL)));
+  lua_pushinteger(L, l_system(luaL_optstring(L, 1, NULL)));
   return 1;
 }
 
