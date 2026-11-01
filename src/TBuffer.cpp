@@ -888,6 +888,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , lastLoggedFromLine(other.lastLoggedFromLine)
 , lastloggedToLine(other.lastloggedToLine)
 , lastTextToLog(other.lastTextToLog)
+, mTextAppendedToLog(other.mTextAppendedToLog)
 , mEncoding(other.mEncoding)
 , mDecoder(other.mDecoder)
 , mMultibyteDecoder(multibyteDecoderFor(other.mDecoder, other.mEncoding))
@@ -997,6 +998,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         lastLoggedFromLine = other.lastLoggedFromLine;
         lastloggedToLine = other.lastloggedToLine;
         lastTextToLog = other.lastTextToLog;
+        mTextAppendedToLog = other.mTextAppendedToLog;
         mEncoding = other.mEncoding;
         mDecoder = other.mDecoder;
         mMultibyteDecoder = multibyteDecoderFor(mDecoder, mEncoding);
@@ -2748,7 +2750,7 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
                 if (endsStringSequence(ch) && !mCurrentHyperlinkText.isEmpty()) {
                     finaliseActiveHyperlink();
                 } else {
-                    carryActiveHyperlinkPastFlush(mMudLine);
+                    carryActiveHyperlinkPastFlush(mMudLine, mMudBuffer);
                 }
             }
             if (!mMudLine.isEmpty()) {
@@ -2823,7 +2825,7 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         if (endsStringSequence(ch) && !mCurrentHyperlinkText.isEmpty()) {
             finaliseActiveHyperlink();
         } else {
-            carryActiveHyperlinkPastFlush(mMudLine);
+            carryActiveHyperlinkPastFlush(mMudLine, mMudBuffer);
         }
     }
 
@@ -3013,6 +3015,8 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
     // deleteLines() has already adjusted the deferred logging state
     if (mCommitLineIndices.takeLast() >= 0) {
         log(lineBuffer.size() - 1, lineBuffer.size() - 1);
+    } else {
+        logTextAppendedBehindPendingLine();
     }
 
     // Suppress new empty line IFF echoes already created a new empty line
@@ -3259,7 +3263,7 @@ void TBuffer::joinPendingServerWrapOntoCurrent()
         chars.insert(chars.begin(), mServerWrapPendingBuffer.cbegin(), mServerWrapPendingBuffer.cend());
     }
     if (mHeldSpoilerLinkId) {
-        maskSpoilerText(mHeldSpoilerLinkId, mMudLine, mHeldSpoilerStartColumn, heldLength - mHeldSpoilerStartColumn + mHeldSpoilerContinuationLength);
+        maskSpoilerText(mHeldSpoilerLinkId, mMudLine, mMudBuffer, mHeldSpoilerStartColumn, heldLength - mHeldSpoilerStartColumn + mHeldSpoilerContinuationLength);
         mHeldSpoilerLinkId = 0;
     }
     for (const HeldVisibility& held : std::exchange(mHeldVisibilities, {})) {
@@ -3279,8 +3283,8 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
         return;
     }
     if (mHeldSpoilerLinkId) {
-        maskSpoilerText(mHeldSpoilerLinkId, mServerWrapPendingLine, mHeldSpoilerStartColumn, mServerWrapPendingLine.size() - mHeldSpoilerStartColumn);
-        maskSpoilerText(mHeldSpoilerLinkId, mMudLine, 0, mHeldSpoilerContinuationLength);
+        maskSpoilerText(mHeldSpoilerLinkId, mServerWrapPendingLine, mServerWrapPendingBuffer, mHeldSpoilerStartColumn, mServerWrapPendingLine.size() - mHeldSpoilerStartColumn);
+        maskSpoilerText(mHeldSpoilerLinkId, mMudLine, mMudBuffer, 0, mHeldSpoilerContinuationLength);
         mHeldSpoilerLinkId = 0;
     }
     // A link closed after the held text sits whole on the line after it, at the columns it recorded;
@@ -3297,7 +3301,9 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
             QString rest;
             rest.swap(mMudLine);
             mMudLine.swap(mServerWrapPendingLine);
+            mMudBuffer.swap(mServerWrapPendingBuffer);
             finaliseActiveHyperlink();
+            mServerWrapPendingBuffer.swap(mMudBuffer);
             mServerWrapPendingLine.swap(mMudLine);
             mMudLine.swap(rest);
             for (auto& c : mMudBuffer.expand()) {
@@ -3306,7 +3312,7 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
                 }
             }
         } else {
-            carryActiveHyperlinkPastFlush(mServerWrapPendingLine);
+            carryActiveHyperlinkPastFlush(mServerWrapPendingLine, mServerWrapPendingBuffer);
         }
     }
     QString line;
@@ -6735,7 +6741,8 @@ void TBuffer::log(int fromLine, int toLine)
     // if we've been called to log the same line - which can happen when the user
     // enters a command after in-game text - then skip recording the last line
     if (fromLine != lastLoggedFromLine && toLine != lastloggedToLine) {
-        pModel->mLogStream << lastTextToLog;
+        pModel->mLogStream << lastTextToLog << mTextAppendedToLog;
+        mTextAppendedToLog.clear();
         pModel->scheduleLogFlush();
     }
 
@@ -6780,14 +6787,15 @@ void TBuffer::logRemainingOutput()
     // buffer state and needs no view, and leaving it behind would let a
     // successor view replay this pending line and let the stale line indexes
     // suppress a real flush in log()
-    const QString pendingText = lastTextToLog;
+    const QString pendingText = lastTextToLog + mTextAppendedToLog;
     lastTextToLog.clear();
+    mTextAppendedToLog.clear();
     lastLoggedFromLine = -1;
     lastloggedToLine = -1;
 
-    // No mLogToLogFile test on purpose: both callers have already decided the
+    // No mLogToLogFile test on purpose: every caller has already decided the
     // pending line must be flushed - toggleLogging() once it has cleared the
-    // flag, clear() while it is still set. The file being open is tested
+    // flag, clear() while it is still set, ~Host() either way. The file being open is tested
     // instead, because a QTextStream written to after its device closed latches
     // WriteFailed and then silently keeps every later write in its own buffer,
     // to be replayed into the next log file the moment setDevice() rearms it.
@@ -6800,6 +6808,31 @@ void TBuffer::logRemainingOutput()
     pModel->mLogStream.flush();
 }
 
+// A gagged line never reaches log(), so without this a run of them would hold
+// their appendLog() text in memory until a line that is not gagged arrives.
+// Once the gagged line is gone the pending one is last again, so a prompt there
+// is held: the command echo still lands on it and logs it again.
+void TBuffer::logTextAppendedBehindPendingLine()
+{
+    if (mTextAppendedToLog.isEmpty()) {
+        return;
+    }
+    if (lastloggedToLine >= 0 && lastloggedToLine < promptBuffer.size() && promptBuffer.at(lastloggedToLine)) {
+        return;
+    }
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (!pModel || this != &pModel->buffer || !pModel->mLogToLogFile) {
+        return;
+    }
+
+    pModel->mLogStream << lastTextToLog << mTextAppendedToLog;
+    lastTextToLog.clear();
+    mTextAppendedToLog.clear();
+    lastLoggedFromLine = -1;
+    lastloggedToLine = -1;
+    pModel->scheduleLogFlush();
+}
+
 // logs a string directly to the log file
 void TBuffer::appendLog(const QString& text)
 {
@@ -6809,6 +6842,11 @@ void TBuffer::appendLog(const QString& text)
         return;
     }
 
+    // Held behind the line log() is still deferring, which arrived first
+    if (!lastTextToLog.isEmpty() || !mTextAppendedToLog.isEmpty()) {
+        mTextAppendedToLog.append(text);
+        return;
+    }
     pModel->mLogStream << text;
 }
 
@@ -7238,7 +7276,7 @@ void TBuffer::finaliseActiveHyperlink()
             mHeldSpoilerStartColumn = mCurrentHyperlinkStartColumn;
             mHeldSpoilerContinuationLength = static_cast<int>(mMudLine.length());
         } else {
-            maskSpoilerText(mCurrentHyperlinkLinkId, mMudLine, mCurrentHyperlinkStartColumn, mMudLine.length() - mCurrentHyperlinkStartColumn);
+            maskSpoilerText(mCurrentHyperlinkLinkId, mMudLine, mMudBuffer, mCurrentHyperlinkStartColumn, mMudLine.length() - mCurrentHyperlinkStartColumn);
         }
     }
 
@@ -7312,24 +7350,32 @@ void TBuffer::registerLinkVisibility(const int linkId, const int column, const i
 // which carries on into the text after it: a spoiler's text so far is masked
 // here, where finaliseActiveHyperlink() will not reach it, and the link's
 // columns count from the start of the next line.
-void TBuffer::carryActiveHyperlinkPastFlush(QString& line)
+void TBuffer::carryActiveHyperlinkPastFlush(QString& line, const TLineFormat& format)
 {
     if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.isSpoiler) {
-        maskSpoilerText(mCurrentHyperlinkLinkId, line, mCurrentHyperlinkStartColumn, line.length() - mCurrentHyperlinkStartColumn);
+        maskSpoilerText(mCurrentHyperlinkLinkId, line, format, mCurrentHyperlinkStartColumn, line.length() - mCurrentHyperlinkStartColumn);
     }
     mCurrentHyperlinkStartColumn = 0;
 }
 
 // Sets a spoiler's text aside and masks it space for space. One spread over
 // several lines is set aside a piece at a time, in the order
-// revealSpoilerLink() restores it.
-void TBuffer::maskSpoilerText(const int linkId, QString& line, const int column, const int length)
+// revealSpoilerLink() restores it. Text not stamped with the spoiler's id, such
+// as an MXP <SEND> inside it, is left alone: the reveal finds its text by that id.
+void TBuffer::maskSpoilerText(const int linkId, QString& line, const TLineFormat& format, const int column, const int length)
 {
     if (length <= 0) {
         return;
     }
-    mLinkOriginalText[linkId] += line.mid(column, length);
-    line.replace(column, length, QString(length, QChar::Space));
+    QString& originalText = mLinkOriginalText[linkId];
+    const int end = std::min(column + length, static_cast<int>(line.size()));
+    for (int i = std::max(column, 0); i < end; ++i) {
+        if (static_cast<size_t>(i) < format.size() && format[i].linkIndex() != linkId) {
+            continue;
+        }
+        originalText += line.at(i);
+        line[i] = QChar::Space;
+    }
 }
 
 // A scratch buffer has no model, so it cannot reach - and drop - the links of
@@ -7609,6 +7655,7 @@ void TBuffer::shrinkBuffer()
         }
     }
     mLinesRemovedTotal += mBatchDeleteSize;
+    mLinesTrimmedTotal += mBatchDeleteSize;
     // Enter runs the focused link, so a trim that removes that one sweeps at once
     sweepLinks = sweepLinks || (mCurrentFocusedLinkIndex && mLinkIdsRemovedSinceSweep.contains(mCurrentFocusedLinkIndex));
 

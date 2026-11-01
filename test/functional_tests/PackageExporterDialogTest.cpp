@@ -366,6 +366,49 @@ private:
         return mAnsweredPicker;
     }
 
+    // Picks a new icon the way the "add icon" button does, answering the file
+    // picker from a timer armed beforehand as chooseSaveLocation() does. The
+    // name is typed rather than selected, as the picker's model fills in too
+    // late for selectFile() to find it.
+    [[nodiscard]] bool chooseIcon(const QString& iconPath)
+    {
+        auto* iconButton = buttonNamed(qsl("pushButton_addIcon"));
+        if (!iconButton) {
+            return false;
+        }
+        mAnsweredPicker = false;
+        QElapsedTimer sinceArmed;
+        sinceArmed.start();
+        auto* timer = new QTimer(this);
+        timer->setInterval(20ms);
+        connect(timer, &QTimer::timeout, this, [this, iconPath, sinceArmed]() {
+            auto* modal = QApplication::activeModalWidget();
+            auto* picker = qobject_cast<QFileDialog*>(modal);
+            if (!picker) {
+                if (modal && sinceArmed.durationElapsed() > 10s) {
+                    modal->close();
+                }
+                return;
+            }
+            QDialog* answerable = picker;
+            picker->setDirectory(QFileInfo(iconPath).absolutePath());
+            if (auto* nameEdit = picker->findChild<QLineEdit*>(qsl("fileNameEdit"))) {
+                nameEdit->setText(QFileInfo(iconPath).fileName());
+            }
+            answerable->accept();
+            if (picker->isVisible()) {
+                answerable->reject();
+                return;
+            }
+            mAnsweredPicker = true;
+        });
+        timer->start();
+        iconButton->click();
+        timer->stop();
+        timer->deleteLater();
+        return mAnsweredPicker;
+    }
+
     static bool writeImage(const QString& path)
     {
         QImage image(4, 4, QImage::Format_ARGB32);
@@ -1340,6 +1383,70 @@ private slots:
 
         packageList->setCurrentIndex(withoutIconIndex);
         QVERIFY2(iconLabel->isHidden(), "the icon label was left showing for a package that has no icon");
+    }
+
+    // Re-exporting an installed package with a new icon has to ship that icon
+    // alone, without listing the package's own .mudlet folder as an asset, while
+    // the images its description already uses still come along.
+    void test_aNewIconReplacesTheOldOneWhenReExporting_5254()
+    {
+        const QString existingPackage = packageNamed(qsl("exporter-reiconed"));
+        const QString dataDirectory = qsl("%1/%2/.mudlet").arg(profileHome(), existingPackage);
+        QVERIFY(QDir().mkpath(qsl("%1/Icon").arg(dataDirectory)));
+        QVERIFY(QDir().mkpath(qsl("%1/description_images").arg(dataDirectory)));
+        QVERIFY(writeImage(qsl("%1/Icon/old-icon.png").arg(dataDirectory)));
+        QVERIFY(writeImage(qsl("%1/description_images/shot.png").arg(dataDirectory)));
+        const QString newIcon = qsl("%1/new-icon.png").arg(mExportDir);
+        QVERIFY(writeImage(newIcon));
+
+        auto* member = makeTrigger(qsl("exporter reiconed member"), nullptr);
+        member->mPackageName = existingPackage;
+        mpHost->mInstalledPackages << existingPackage;
+        mpHost->mPackageInfo[existingPackage] = QMap<QString, QString>{
+                {qsl("mpackage"), existingPackage}, {qsl("icon"), qsl("old-icon.png")}, {qsl("description"), qsl("![shot](<$packagePath/.mudlet/description_images/shot.png>)")}};
+
+        openExporter();
+        auto* packageList = comboNamed(qsl("packageList"));
+        const int index = packageList->findText(existingPackage);
+        QVERIFY2(index > 0, "the installed package was not offered in the dropdown");
+        packageList->setCurrentIndex(index);
+        QCOMPARE(addedFiles()->count(), 0);
+
+        QVERIFY2(chooseIcon(newIcon), "the icon picker was never answered");
+        QVERIFY2(runExport(existingPackage), "the export never finished");
+        QVERIFY2(QFileInfo::exists(packagePath(existingPackage)), qPrintable(qsl("No package was written. The dialog said: \"%1\"").arg(infoLabel()->text())));
+
+        const QString staging = stagingPath(existingPackage);
+        QCOMPARE(QDir(qsl("%1/.mudlet/Icon").arg(staging)).entryList(QDir::Files), QStringList{qsl("new-icon.png")});
+        QVERIFY2(QFileInfo::exists(stagedDescriptionImage(existingPackage, qsl("shot.png"))), "the image the description already used was left out");
+    }
+
+    // Going back to the first dropdown entry keeps the description, so it has to
+    // keep the images that description uses as well
+    void test_theFirstEntryKeepsTheDescriptionImagesOfThePackageBefore_5254()
+    {
+        const QString existingPackage = packageNamed(qsl("exporter-backtofirst"));
+        const QString dataDirectory = qsl("%1/%2/.mudlet").arg(profileHome(), existingPackage);
+        QVERIFY(QDir().mkpath(qsl("%1/description_images").arg(dataDirectory)));
+        QVERIFY(writeImage(qsl("%1/description_images/shot.png").arg(dataDirectory)));
+
+        auto* member = makeTrigger(qsl("exporter backtofirst member"), nullptr);
+        member->mPackageName = existingPackage;
+        mpHost->mInstalledPackages << existingPackage;
+        mpHost->mPackageInfo[existingPackage] = QMap<QString, QString>{{qsl("mpackage"), existingPackage}, {qsl("description"), qsl("![shot](<$packagePath/.mudlet/description_images/shot.png>)")}};
+
+        openExporter();
+        auto* packageList = comboNamed(qsl("packageList"));
+        const int index = packageList->findText(existingPackage);
+        QVERIFY2(index > 0, "the installed package was not offered in the dropdown");
+        packageList->setCurrentIndex(index);
+        packageList->setCurrentIndex(0);
+        QVERIFY(checkItem(triggersTop(), qsl("exporter backtofirst member")));
+
+        const QString newPackage = packageNamed(qsl("exporter-backtofirst-copy"));
+        QVERIFY2(runExport(newPackage), "the export never finished");
+        QVERIFY2(QFileInfo::exists(packagePath(newPackage)), qPrintable(qsl("No package was written. The dialog said: \"%1\"").arg(infoLabel()->text())));
+        QVERIFY2(QFileInfo::exists(stagedDescriptionImage(newPackage, qsl("shot.png"))), "the image the kept description uses was left out");
     }
 
     // The zip's finished handler dies with the dialog, so the dialog's destructor

@@ -38,6 +38,7 @@ class Discord;
 class FontManager;
 class Host;
 class MudletMedia;
+class MudletReplay;
 class QSettings;
 class TEvent;
 class TSpeechBridge;
@@ -74,6 +75,7 @@ public:
 
     MudletMedia& media() { return *mpMedia; }
     FontManager& fonts() { return *mpFonts; }
+    MudletReplay& replay() { return *mpReplay; }
 
     Host* getHost(const QString& hostname);
     // False for an empty name, one already open, or while the pool is being destroyed
@@ -97,6 +99,8 @@ public:
     void closeAllProfiles();
     int getHostCount();
     void deleteHost(const QString&);
+    // For a frontend closing every profile as it goes, ahead of the pool's own destruction
+    void refuseNewProfiles() { mGoingDown = true; }
     void postIrcMessage(const QString&, const QString&, const QString&);
     void postInterHostEvent(const Host*, const TEvent&, const bool = false);
     void changeAllHostColour(const Host*);
@@ -110,6 +114,13 @@ public:
     // Whether a profile taken out of its pool is still held until no script of its own runs, which
     // closeMudlet() waits for
     static bool releasingProfile();
+    // From the start of the destructor, which runs the profiles' sysExitEvent handlers
+    bool goingDown() const { return mGoingDown; }
+    // What readSettings() reads, for a save to write back
+    void writeSettings(QSettings&) const;
+    // Whether a pool with no main window read Mudlet.ini for this process, so that a save with none may write it
+    // back: one that was never read would go out at its defaults, over the player's settings
+    static bool settingsReadWithoutWindow() { return sSettingsReadWithoutWindow; }
 
 private:
     // The GUI's call, from mudlet::readLateSettings()
@@ -121,18 +132,22 @@ private:
     void deleteHostOnceUnwound(Host*, std::chrono::milliseconds delay);
 
     inline static HostManager* smpSelf = nullptr;
+    inline static bool sSettingsReadWithoutWindow = false;
 
     // Every profile obeys these switches, so whatever owns the profiles owns them too, and with no main
     // window a profile still has real ones. Before mHostPool, so they outlive the profiles that reach them.
     std::unique_ptr<MudletMedia> mpMedia;
     // Before mHostPool too, as the profiles reach it through FontManager::self()
     std::unique_ptr<FontManager> mpFonts;
+    // Before mHostPool too, as the profiles reach it through MudletReplay::self(); a second pool's goes unused
+    std::unique_ptr<MudletReplay> mpReplay;
     // Before mHostPool too, as the profiles reach it through Discord::self(); a second pool's goes unused
     std::unique_ptr<Discord> mpDiscord;
     // Before mHostPool too, as the profiles reach it through TSpeechBridge::instance(); a second pool's goes unused
     std::unique_ptr<TSpeechBridge> mpSpeechBridge;
     HostMap mHostPool;
-    // From the destructor on: a profile opened then would never get its sysExitEvent
+    // From refuseNewProfiles() or the destructor on: a profile opened then would never get its sysExitEvent,
+    // nor have its windows closed before it
     bool mGoingDown = false;
     int mProfileLoadsInProgress = 0;
     std::function<void(Host*)> mProfileOpenedHook;
