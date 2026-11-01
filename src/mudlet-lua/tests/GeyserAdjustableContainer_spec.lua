@@ -1123,6 +1123,52 @@ describe("Tests the Adjustable.Container mouse handlers", function()
       assert.are.equal("ClosedHand", container.adjLabel.cursorShape)
     end)
 
+    -- as in mudlet-headless, which has no main window to ask where the pointer is
+    describe("when the pointer position is unknown", function()
+      local realMousePosition
+      before_each(function()
+        realMousePosition = getMousePosition
+        _G.getMousePosition = function() return nil, "the profile has no main window" end
+      end)
+      after_each(function()
+        _G.getMousePosition = realMousePosition
+      end)
+
+      -- each event is against where the label is by then, as Qt reports it, so the
+      -- label's own place has to be part of where the pointer is taken to be
+      local function drag(grabX, grabY, steps, stepX)
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", grabX, grabY))
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", grabX, grabY))
+        local pointerX = container.adjLabel:get_x() + grabX
+        for _ = 1, steps do
+          pointerX = pointerX + stepX
+          container:onMove(container.adjLabel, mouseEvent("LeftButton", pointerX - container.adjLabel:get_x(), grabY))
+        end
+      end
+
+      it("follows a drag of several steps", function()
+        local originalX = container:get_x()
+        drag(100, 100, 3, 10)
+        assert.is_true(math.abs(container:get_x() - (originalX + 30)) <= 1, tostring(container:get_x() - originalX))
+        assert.are.equal(200, container:get_width())
+      end)
+
+      it("follows a resize of several steps from the right edge", function()
+        local originalX = container:get_x()
+        drag(195, 100, 3, 10)
+        assert.is_true(math.abs(container:get_width() - 230) <= 1, tostring(container:get_width()))
+        assert.is_true(math.abs(container:get_x() - originalX) <= 1)
+      end)
+
+      it("raises for an event with no position rather than guess one", function()
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", 100, 100))
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", 100, 100))
+        assert.has_error(function()
+          container:onMove(container.adjLabel, {button = "LeftButton", buttons = {"LeftButton"}})
+        end)
+      end)
+    end)
+
     it("takes the cursor away again and moves nothing while locked", function()
       container.adjLabel:setCursor("OpenHand")
       container:lockContainer()

@@ -26,18 +26,13 @@
 
 QString MailtoUri::withOnlyMessageFields(const QString& uri)
 {
-    if (QUrl(uri).scheme().toLower() != qsl("mailto")) {
+    const QUrl url(uri);
+    if (url.scheme().toLower() != qsl("mailto")) {
         return uri;
     }
 
-    const QString withoutFragment = uri.left(uri.indexOf(QLatin1Char('#')));
-    const qsizetype queryStart = withoutFragment.indexOf(QLatin1Char('?'));
-    if (queryStart < 0) {
-        return withoutFragment;
-    }
-
     QStringList kept;
-    for (const QString& field : withoutFragment.mid(queryStart + 1).split(QLatin1Char('&'))) {
+    for (const QString& field : url.query(QUrl::FullyEncoded).split(QLatin1Char('&'))) {
         const QString name = QUrl::fromPercentEncoding(field.left(field.indexOf(QLatin1Char('='))).toUtf8()).trimmed().toLower();
         if (name == qsl("subject") || name == qsl("body")) {
             // Some handlers also split a query on these
@@ -46,6 +41,6 @@ QString MailtoUri::withOnlyMessageFields(const QString& uri)
         }
     }
 
-    const QString address = withoutFragment.left(queryStart);
+    const QString address = qsl("mailto:%1").arg(url.path(QUrl::FullyEncoded));
     return kept.isEmpty() ? address : qsl("%1?%2").arg(address, kept.join(QLatin1Char('&')));
 }

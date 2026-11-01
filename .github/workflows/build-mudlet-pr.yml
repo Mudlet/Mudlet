@@ -740,6 +740,7 @@ jobs:
     # tests, still decide whether its snapshot is published - as the C++ tests of every
     # other job here do by running ahead of packaging. As before, the Lua tests do not.
     - name: Upload packaged Mudlet
+      id: upload
       uses: actions/upload-artifact@v7
       if: >-
         !cancelled() && env.UPLOAD_FILENAME
@@ -750,7 +751,7 @@ jobs:
 
     - name: Submit to make.mudlet.org
       if: >-
-        !cancelled() && env.UPLOAD_FILENAME
+        !cancelled() && env.UPLOAD_FILENAME && steps.upload.outcome == 'success'
         && (runner.os != 'macOS' || matrix.run_tests != 'true' || steps.tests.outputs.ctest == '0')
       # --fail-with-body: gha_queue.php reports refusals (e.g. a duplicate artifact name after a
       # job re-run) as a 4xx with the reason in the body, which plain curl would exit 0 on

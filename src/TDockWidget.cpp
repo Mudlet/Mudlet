@@ -47,7 +47,7 @@ void TDockWidget::setTConsole(TConsole* pC)
 // A qproperty-windowTitle in a style sheet sets the title without going through setUserWindowTitle()
 bool TDockWidget::event(QEvent* event)
 {
-    if (event->type() == QEvent::WindowTitleChange && mpHost) {
+    if (event->type() == QEvent::WindowTitleChange) {
         mpHost->windowRegistry().setUserWindowTitle(mWidgetConsoleName, windowTitle());
     }
     return QDockWidget::event(event);
@@ -55,7 +55,7 @@ bool TDockWidget::event(QEvent* event)
 
 void TDockWidget::closeEvent(QCloseEvent* event)
 {
-    if (mpHost && !mpHost->isClosingDown()) {
+    if (!mpHost->isClosingDown()) {
         mpHost->hideWindow(mWidgetConsoleName);
         event->ignore();
         return;
@@ -66,24 +66,18 @@ void TDockWidget::closeEvent(QCloseEvent* event)
 void TDockWidget::resizeEvent(QResizeEvent* event)
 {
     Q_UNUSED(event)
-    if (!mpHost) {
-        return;
-    }
     mpHost->setDockLayoutUpdated(mWidgetConsoleName);
 }
 
 void TDockWidget::moveEvent(QMoveEvent* event)
 {
     Q_UNUSED(event)
-    if (!mpHost) {
-        return;
-    }
     mpHost->setDockLayoutUpdated(mWidgetConsoleName);
 }
 
 void TDockWidget::setVisible(bool visible)
 {
-    auto pC = (mpHost && mpHost->mainConsoleView()) ? mpHost->mainConsoleView()->subConsoleWidget(mWidgetConsoleName) : nullptr;
+    auto pC = mpHost->mainConsoleView() ? mpHost->mainConsoleView()->subConsoleWidget(mWidgetConsoleName) : nullptr;
     if (!pC) {
         // During shutdown / profile closure TDockWidgets will get a hide event
         // as part of the underlying Qt class's built in handling of a close

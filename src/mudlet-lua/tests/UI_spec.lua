@@ -8004,14 +8004,23 @@ describe("Main window size and saved layout", function()
     assert.is_truthy(tostring(err):find("setMainWindowSize: bad argument #2 type", 1, true))
   end)
 
+  it("setMainWindowSize says so when there is no main window to size", function()
+    -- getMousePosition() has no answer only when there is no main window
+    if getMousePosition() then
+      pending("there is a main window")
+    end
+    local ok, err = setMainWindowSize(800, 600)
+    assert.is_nil(ok)
+    assert.are.equal("the profile has no main window", err)
+  end)
+
   it("a bigger main window is reported as bigger", function()
     if not resizableWindowAvailable() then
       return
     end
     finally(restoreMainWindowSize)
     local smallWidth, smallHeight = 700, 500
-    -- and it answers nothing at all while it is at it
-    assert.are.equal(0, select("#", setMainWindowSize(smallWidth, smallHeight)))
+    assert.is_true(setMainWindowSize(smallWidth, smallHeight))
     pumpEvents(200)
     local narrowWidth, shortHeight = getMainWindowSize()
 
