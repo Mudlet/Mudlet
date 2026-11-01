@@ -7619,6 +7619,7 @@ void TBuffer::shrinkBuffer()
         }
     }
     mLinesRemovedTotal += mBatchDeleteSize;
+    mLinesTrimmedTotal += mBatchDeleteSize;
     // Enter runs the focused link, so a trim that removes that one sweeps at once
     sweepLinks = sweepLinks || (mCurrentFocusedLinkIndex && mLinkIdsRemovedSinceSweep.contains(mCurrentFocusedLinkIndex));
 
