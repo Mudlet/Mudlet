@@ -1,6 +1,6 @@
 # Specs that fail in mudlet-headless, which has no main window, read by
 # CI/check-headless-lua-failures.py, which says what each line means.
-minimum successes: 7771
+minimum successes: 7804
 maximum pending: 261
 
 # Need a main window
@@ -61,6 +61,8 @@ Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests r
 Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests registered map info survives a map info callback that registers and kills contributors while the map is painted
 Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests secondary map views createMapView with no area opens on the player's area and level
 Failure Mapper_spec.lua: Tests the open and closed states of the map widget docks the map at a usable size with a saved window layout fits a floating map bigger than the screen below the screen's top
+Failure MapSymbolVariationSelector_spec.lua: Tests room symbols with a variation selector or zero width joiner draws a letter followed by each of them as the letter, from any font
+Failure MapSymbolVariationSelector_spec.lua: Tests room symbols with a variation selector or zero width joiner draws a letter followed by each of them as the letter, from only the selected font
 Failure Media_spec.lua: Media playback effects with a generated sound file a Client.Media.Play message that names the video type is played as a video
 Failure Media_spec.lua: Media playback effects with a generated sound file a video asked to close takes its label off screen when it ends
 Failure Media_spec.lua: Media playback effects with a generated sound file a video that never asked to close leaves its label on screen
