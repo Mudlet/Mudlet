@@ -12,8 +12,6 @@ Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour refuse
 Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour says so when the search is switched on over a command's key
 Failure ConsoleCursorByName_spec.lua: Tests that the cursor and line functions find their console by name with a sub-console's name of a mini console with its split screen open counts the rows above the split
 Failure ConsoleEdges_spec.lua: Console edges refuses names it cannot use a name a label already has
-Failure ConsoleFontsByName_spec.lua: Tests that the font functions find their console by name with a sub-console's name gives a mini console a command line of its own and hides it again
-Failure ConsoleFontsByName_spec.lua: Tests that the font functions find their console by name with a sub-console's name gives a user window a command line of its own and hides it again
 Failure ConsoleFontsByName_spec.lua: Tests that the font functions find their console by name with a sub-console's name reads the size a style sheet gives a user window's text
 Failure ConsoleWrapByName_spec.lua: Tests that the timestamp and wrap functions find their console by name with a sub-console's name of a mini console reports a size it has not reported yet when its timestamps change
 Failure ConsoleWrapByName_spec.lua: Tests that the timestamp and wrap functions find their console by name with a sub-console's name of a user window reports a size it has not reported yet when its timestamps change

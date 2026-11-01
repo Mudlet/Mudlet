@@ -2034,6 +2034,8 @@ bool TNullConsoleFrontend::setWindowCommandLineVisible(const QString& name, cons
             it->second.shown = visible;
             reportWindowVisibility(name);
         }
+        // As TConsole::setCmdVisible() resizes the console either way
+        reportGridSize(name);
         return true;
     }
     // A deleted one is still held until deferred deletes run, and nothing is made in its place
@@ -2059,6 +2061,7 @@ bool TNullConsoleFrontend::setWindowCommandLineVisible(const QString& name, cons
     registry.setCommandLineStyleSheet(name, commandLineSheet(mpHost->mCommandLineBgColor));
     // As TMainConsole::registerSubCommandLine() reports the name, and so the console's own window
     reportWindowVisibility(name);
+    reportGridSize(name);
     return true;
 }
 
@@ -2890,7 +2893,13 @@ void TNullConsoleFrontend::reportGridSize(const QString& name)
     if (!pModel) {
         return;
     }
-    const QSize size = mpHost->windowRegistry().subConsoleGeometry(name).value_or(QRect()).size();
+    QSize size = mpHost->windowRegistry().subConsoleGeometry(name).value_or(QRect()).size();
+    // TConsole::layoutMainDisplay() takes its own command line, in a layer fixed at 31 pixels tall, off the pane
+    const auto console = mSubConsoles.find(name);
+    const auto commandLine = mCommandLines.find(name);
+    if (console != mSubConsoles.end() && commandLine != mCommandLines.end() && ownsLine(console->second, commandLine->second) && commandLine->second.shown) {
+        size.setHeight(std::max(0, size.height() - 31));
+    }
     const QFontMetricsF metrics(pModel->mUpperPaneFont);
     pModel->mGridSize = QSize(qRound(size.width() / metrics.averageCharWidth()), qRound(size.height() / metrics.lineSpacing()));
 }
