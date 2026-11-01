@@ -660,6 +660,9 @@ private:
 #endif
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;
+#if defined(INCLUDE_UPDATER)
+    bool mUpdateInstalled = false;
+#endif
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;
     QPointer<QAction> mpActionCloseProfile;

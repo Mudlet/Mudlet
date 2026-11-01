@@ -7547,6 +7547,14 @@ void mudlet::slot_updateAvailable(const int updateCount)
     // And force the button to adopt the current style of the existing buttons
     // - it doesn't by default:
     mpButtonAbout->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
+
+    // The feed still lists an update that has been installed but not yet
+    // restarted into, so later checks must not hide the restart prompt:
+    if (mUpdateInstalled) {
+        return;
+    }
+    //: Review update(s) menu item, %n is the count of how many updates are available
+    dactionUpdate->setText(tr("Review %n update(s)...", nullptr, updateCount));
 }
 
 void mudlet::slot_updateInstalled()
@@ -7565,6 +7573,7 @@ void mudlet::slot_updateInstalled()
         pUpdater->slot_installOrRestartClicked(nullptr, QString());
     });
     dactionUpdate->setText(tr("Update installed - restart to apply"));
+    mUpdateInstalled = true;
 #endif // !Q_OS_MACOS
 }
 
