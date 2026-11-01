@@ -102,6 +102,7 @@
 
 #include <climits>
 #include <cmath>
+#include <numbers>
 
 #include <algorithm>
 #include <utility>
@@ -1453,13 +1454,8 @@ void T2DMap::drawRoom(QPainter& painter,
     QRectF roomRectangle;
     QRectF roomNameRectangle;
     double realHeight;
-    int borderWidth;
-    if (pRoom->mBorderThickness > 0) {
-        borderWidth = qMax(1, static_cast<int>(pRoom->mBorderThickness / mBSize * mRoomWidth * rSize));
-    } else {
-        borderWidth = qMax(1, static_cast<int>(1 / mBSize * mRoomWidth * rSize));
-    }
-    const bool shouldDrawBorder = (mpHost->mMapperShowRoomBorders || pRoom->mBorderColor.isValid() || pRoom->mBorderThickness > 0) && !isGridMode;
+    const int borderWidth = roomBorderWidth(*pRoom);
+    const bool shouldDrawBorder = roomBorderShown(*pRoom) && !isGridMode;
     const bool showThisRoomName = showRoomName && RoomAppearance::nameShown(*pRoom);
     if (isGridMode) {
         realHeight = mRoomHeight;
@@ -1691,6 +1687,17 @@ void T2DMap::drawRoom(QPainter& painter,
     ExitAppearance::paintExitMarkers(painter, pen, *pRoom, rx, ry, mRoomWidth * rSize, mRoomHeight * rSize, roomColor, mMapperUseAntiAlias);
 }
 
+bool T2DMap::roomBorderShown(const TRoom& room) const
+{
+    return mpHost->mMapperShowRoomBorders || room.mBorderColor.isValid() || room.mBorderThickness > 0;
+}
+
+int T2DMap::roomBorderWidth(const TRoom& room) const
+{
+    const double thickness = room.mBorderThickness > 0 ? room.mBorderThickness : 1.0;
+    return qMax(1, static_cast<int>(thickness / mBSize * mRoomWidth * rSize));
+}
+
 void T2DMap::drawRoomHighlightsAndLabels(QPainter& painter,
                                          QFont& roomVNumFont,
                                          QFont& mapNameFont,
@@ -1827,6 +1834,8 @@ QColor T2DMap::environmentColor(int env) const
 // symbol, name and vertical-exit markers: still visible, but far too costly there (see the note on
 // QPainterPath::addRect() in drawGridModeRooms()).
 static constexpr float cLodPixelThreshold = 4.0f;
+// Of the dot on the end of an exit stub, as a fraction of a room's spacing
+static constexpr qreal cStubDotRadius = 0.1;
 
 // Also decides which exits that tier drops: rooms are painted over exits, so one whose ends are within
 // a blob on both axes is hidden (bar its door tick, so this simplifies rather than matches).
@@ -3808,7 +3817,22 @@ void T2DMap::paintRoomExits(QPainter& painter,
                 // Stubs on non-XY plane exits are handled differently and we
                 // do not support special exit stubs (yet?)
                 const QVector3D uDirection = mpMap->scmUnitVectors.value(direction);
-                const QLineF stubLine(rx, ry, rx + uDirection.x() * 0.5 * mRoomWidth, ry + uDirection.y() * 0.5 * mRoomHeight);
+                const bool diagonal = uDirection.x() != 0.0f && uDirection.y() != 0.0f;
+                const int borderWidth = !lodTier && roomBorderShown(*room) ? roomBorderWidth(*room) : 0;
+                // The room and its border are painted over the stub later, so past its half cell it reaches
+                // only far enough for the dot to clear them: any further puts the dot under a room next door
+                const auto stubReach = [&](const qreal cellSize) {
+                    const qreal roomEdge = rSize * cellSize / 2.0 + borderWidth;
+                    const qreal dotRadius = cStubDotRadius * cellSize;
+                    if (!diagonal) {
+                        return qMax(0.5 * cellSize, roomEdge + dotRadius);
+                    }
+                    if (mBubbleMode) {
+                        return qMax(0.5 * cellSize, (roomEdge + dotRadius) / std::numbers::sqrt2);
+                    }
+                    return qMax(0.5 * cellSize, roomEdge + dotRadius / std::numbers::sqrt2);
+                };
+                const QLineF stubLine(rx, ry, rx + uDirection.x() * stubReach(mRoomWidth), ry + uDirection.y() * stubReach(mRoomHeight));
                 const QString doorKey{TRoom::dirCodeToShortString(direction)};
                 // Draw the door lines before we draw the stub or the filled
                 // circle on the end - so that the latter overlays the doors
@@ -3823,7 +3847,8 @@ void T2DMap::paintRoomExits(QPainter& painter,
                 // And turn off drawing the border (outline):
                 painter.setPen(Qt::NoPen);
                 QPainterPath stubMarkingCirclePath;
-                const QRectF surroundingRectF(stubLine.p2().x() - 0.1 * mRoomWidth, stubLine.p2().y() - 0.1 * mRoomHeight, 0.2 * mRoomWidth, 0.2 * mRoomHeight);
+                const QRectF surroundingRectF(
+                        stubLine.p2().x() - cStubDotRadius * mRoomWidth, stubLine.p2().y() - cStubDotRadius * mRoomHeight, 2.0 * cStubDotRadius * mRoomWidth, 2.0 * cStubDotRadius * mRoomHeight);
                 stubMarkingCirclePath.arcTo(surroundingRectF, 0.0, 360.0);
                 // So this should draw a solid filled circle whose diameter
                 // is fixed and not dependent on the exit line thickness:
