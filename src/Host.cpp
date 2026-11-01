@@ -7642,6 +7642,11 @@ bool Host::caretEnabled() const
 void Host::setCaretEnabled(bool enabled)
 {
     mCaretEnabled = enabled;
+    if (enabled) {
+        // Stands down any hand-off to the command line still queued or retrying
+        mFocusHandOffPending = false;
+        ++mKeyboardHandOffs;
+    }
     consoleFrontend()->setCaretMode(enabled);
 }
 
@@ -7667,20 +7672,16 @@ bool Host::caretShortcutMatches(const QKeyEvent* ke) const
 
 void Host::setFocusOnHostActiveCommandLine()
 {
-    if (mFocusTimerRunning) {
+    if (std::exchange(mFocusHandOffPending, true)) {
         return;
     }
 
-    mFocusTimerRunning = true;
-
-    // Lambda to set focus on command line
-    auto setCommandLineFocus = [this]() {
-        consoleFrontend()->focusActiveCommandLine();
-
-        mFocusTimerRunning = false;
-    };
-
-    QTimer::singleShot(0ms, this, setCommandLineFocus);
+    QTimer::singleShot(0ms, this, [this]() {
+        if (mFocusHandOffPending) {
+            consoleFrontend()->focusActiveCommandLine();
+            mFocusHandOffPending = false;
+        }
+    });
 }
 
 void Host::setBorders(QMargins borders)

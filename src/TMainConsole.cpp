@@ -2137,18 +2137,17 @@ void TMainConsole::focusActiveCommandLine(const QWidget* pWindow)
     // view going down while the Host stays - and a raw pointer would then
     // be read off freed memory, so they hold it by QPointer. They are timed
     // against the Host so that they end with the profile, not with this console.
+    // A later hand-off, such as the player turning caret mode on, stands them down.
     const QPointer<TCommandLine> pTarget(targetCommandLine);
-    QTimer::singleShot(10ms, mpHost, [pTarget]() {
-        if (pTarget && !pTarget->hasFocus()) {
+    Host* pHost = mpHost;
+    const quint64 handOff = ++pHost->mKeyboardHandOffs;
+    const auto retry = [pTarget, pHost, handOff]() {
+        if (pTarget && pHost->mKeyboardHandOffs == handOff && !pTarget->hasFocus()) {
             pTarget->setFocus(Qt::OtherFocusReason);
         }
-    });
-
-    QTimer::singleShot(50ms, mpHost, [pTarget]() {
-        if (pTarget && !pTarget->hasFocus()) {
-            pTarget->setFocus(Qt::OtherFocusReason);
-        }
-    });
+    };
+    QTimer::singleShot(10ms, pHost, retry);
+    QTimer::singleShot(50ms, pHost, retry);
 }
 
 TCommandLine* TMainConsole::commandLineNamed(const QString& name) const
