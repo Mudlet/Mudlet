@@ -2234,6 +2234,40 @@ private slots:
     QCOMPARE(console->buffer.line(joinedLine), padding + qsl(" alpha beta tail."));
   }
 
+  // An MXP <SEND> inside a spoiler keeps its own link id, so it is left on show
+  // rather than masked: the reveal only restores the spoiler's own characters.
+  void test_AnMxpLinkInsideASpoilerDoesNotGarbleItsReveal_data() {
+    QTest::addColumn<QString>("spoilerEnd");
+
+    QTest::newRow("closed") << qsl("\x1b]8;;\x1b\\ after");
+    QTest::newRow("ended by the next link") << qsl("\x1b]8;;send:next\x1b\\ after\x1b]8;;\x1b\\");
+  }
+
+  void test_AnMxpLinkInsideASpoilerDoesNotGarbleItsReveal() {
+    QFETCH(QString, spoilerEnd);
+
+    const bool mxpWasEnabled = mpHost->mMxpProcessor.isEnabled();
+    mpHost->setForceMXPProcessorOn(true);
+    mpHost->mMxpProcessor.enable();
+    feedFromServer(qsl("SPOILMXP \x1b]8;;send:look?config={\"spoiler\":true}\x1b\\aa <SEND \"north\">nn</SEND> bb") + spoilerEnd + qsl("\n"));
+    if (!mxpWasEnabled) {
+      mpHost->mMxpProcessor.disable();
+    }
+    mpHost->setForceMXPProcessorOn(false);
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("SPOILMXP"));
+    QVERIFY2(line >= 0, qPrintable(qsl("the line never reached the buffer: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.line(line), qsl("SPOILMXP    nn    after"));
+    const int linkId = console->buffer.getLinkIndexAt(line, 9);
+    QVERIFY2(linkId > 0, "the spoiler text is no longer a link");
+    const int sendId = console->buffer.getLinkIndexAt(line, 12);
+    QVERIFY2(sendId > 0 && sendId != linkId, "the MXP link inside the spoiler lost its own id");
+
+    console->buffer.revealSpoilerLink(linkId);
+    QCOMPARE(console->buffer.line(line), qsl("SPOILMXP aa nn bb after"));
+  }
+
   void cleanupTestCase() {
     delete mpServer;
     mpServer = nullptr;
