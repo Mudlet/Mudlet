@@ -117,6 +117,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class EditorEmptySelectionTest;
     friend class EditorFolderViewTest;
     friend class EditorFontTest;
+    friend class EditorModuleFolderTest;
     friend class EditorReshowTest;
     friend class EditorSearchTest;
     friend class HostWidgetDecouplingTest;
@@ -443,6 +444,8 @@ private:
     void leaveFolderView();
     void setFolderViewAvailable(const bool);
     bool folderItem(const EditorViewType view, const int id);
+    QString moduleOfMasterFolder(const EditorViewType view, const int id) const;
+    void offerToUninstallModule(const QString& moduleName);
     QTreeWidget* treeForView(const EditorViewType view) const;
     void selectItemInView(const EditorViewType view, QTreeWidgetItem* pItem);
     QByteArray* splitterStateForView(const EditorViewType view);
