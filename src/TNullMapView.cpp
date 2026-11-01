@@ -106,6 +106,16 @@ std::pair<bool, QString> TNullMapView::show3DView(const bool shown)
     return {true, QString()};
 }
 
+// Refuses what T2DMap refuses before it draws, so a script hears what is wrong with its file name
+std::pair<bool, QString> TNullMapView::exportAreaToImage(const int areaId, const QString& filePath, std::optional<int>, const qreal zoom, const bool exportAllZLevels)
+{
+    QList<std::pair<int, QString>> levelExports;
+    if (const QString problem = mpHost->mpMap->areaExportProblem(areaId, filePath, zoom, exportAllZLevels, levelExports); !problem.isEmpty()) {
+        return {false, problem};
+    }
+    return {false, qsl("there is no main window to draw the map in")};
+}
+
 // As dlgMapper::setMapZoom() and T2DMap::setMapZoom()
 std::pair<bool, QString> TNullMapView::setMapZoom(const qreal zoom, const int areaId)
 {
