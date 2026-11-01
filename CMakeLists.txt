@@ -215,6 +215,10 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_BUNDLED_LUA
 include_optional_module(ENVIRONMENT_VARIABLE WITH_HEADLESS
                         OPTION_VARIABLE USE_HEADLESS
                         READABLE_NAME "headless runner")
+# Off, only mudlet_core and what links it alone are built, so Qt Widgets need not be installed
+include_optional_module(ENVIRONMENT_VARIABLE WITH_GUI
+                        OPTION_VARIABLE USE_GUI
+                        READABLE_NAME "desktop GUI")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
@@ -243,13 +247,15 @@ option(BUILD_WITH_QT6 "" ON)
 
 include(InitGitSubmodule)
 
-git_submodule_init(
-  CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
-  "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
+if(USE_GUI)
+  git_submodule_init(
+    CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
+    "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
-git_submodule_init(
-  CHECK_FILE "3rdparty/qt-tags-widget/src/qtagedit.cpp" SUBMODULE_PATH
-  "3rdparty/qt-tags-widget" READABLE_NAME "qt-tags-widget widget")
+  git_submodule_init(
+    CHECK_FILE "3rdparty/qt-tags-widget/src/qtagedit.cpp" SUBMODULE_PATH
+    "3rdparty/qt-tags-widget" READABLE_NAME "qt-tags-widget widget")
+endif()
 
 # TODO: On macOS, we need to build qtkeychain from source because Homebrew's
 # qtkeychain package is built against Homebrew's Qt, which is incompatible with
@@ -349,17 +355,19 @@ if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
   set_alternate_linker(${USE_ALTERNATE_LINKER})
 endif()
 
-add_subdirectory(3rdparty/edbee-lib/edbee-lib)
-# edbee-lib's AUTOMOC mocs_compilation.cpp hits the same GCC 16
-# -Wsfinae-incomplete false positives as mudlet_core's (qmetatype.h's
-# is_complete SFINAE instantiated from one moc file while a type defined in a
-# later moc file is incomplete). The per-source property used for mudlet_core
-# does not cross the add_subdirectory() boundary for a generated AUTOMOC file,
-# so silence the warning on the edbee-lib target itself - PRIVATE so it does
-# not propagate to mudlet_core. Scoped to GCC: the flag is GCC-only (GCC 15+)
-# and Clang/MSVC would diagnose the unknown option.
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  target_compile_options(edbee-lib PRIVATE -Wno-sfinae-incomplete)
+if(USE_GUI)
+  add_subdirectory(3rdparty/edbee-lib/edbee-lib)
+  # edbee-lib's AUTOMOC mocs_compilation.cpp hits the same GCC 16
+  # -Wsfinae-incomplete false positives as mudlet_core's (qmetatype.h's
+  # is_complete SFINAE instantiated from one moc file while a type defined in a
+  # later moc file is incomplete). The per-source property used for mudlet_core
+  # does not cross the add_subdirectory() boundary for a generated AUTOMOC file,
+  # so silence the warning on the edbee-lib target itself - PRIVATE so it does
+  # not propagate to mudlet_core. Scoped to GCC: the flag is GCC-only (GCC 15+)
+  # and Clang/MSVC would diagnose the unknown option.
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(edbee-lib PRIVATE -Wno-sfinae-incomplete)
+  endif()
 endif()
 add_subdirectory(3rdparty/communi)
 if(USE_BUNDLED_LUA)
@@ -370,5 +378,9 @@ add_subdirectory(src)
 
 option(BUILD_TESTING "Build the test tree" ON)
 if(BUILD_TESTING)
-  add_subdirectory(test)
+  if(USE_GUI)
+    add_subdirectory(test)
+  else()
+    message(WARNING "BUILD_TESTING is on, but every test binary links the desktop GUI, so with USE_GUI off no tests are built")
+  endif()
 endif()
