@@ -89,10 +89,6 @@
 
 using namespace std::chrono_literals;
 
-extern "C" {
-int luaopen_yajl(lua_State*);
-}
-
 namespace {
 
 // Some modules' methods read their first argument as their own object unchecked, so a script

@@ -34,6 +34,8 @@ int luaopen_lfs(lua_State*);
 int luaopen_lpeg(lua_State*);
 int luaopen_rex_pcre2(lua_State*);
 int luaopen_utf8(lua_State*);
+int luaopen_brimworks_zip(lua_State*);
+int luaopen_yajl(lua_State*);
 }
 
 void registerStaticLuaModules(lua_State* L)
@@ -44,6 +46,8 @@ void registerStaticLuaModules(lua_State* L)
             {"lpeg", luaopen_lpeg},
             {"rex_pcre2", luaopen_rex_pcre2},
             {"lua-utf8", luaopen_utf8},
+            {"brimworks.zip", luaopen_brimworks_zip},
+            {"yajl", luaopen_yajl},
     };
 
     lua_getglobal(L, LUA_LOADLIBNAME);
