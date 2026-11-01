@@ -93,34 +93,39 @@ jobs:
 
       - uses: leafo/gh-actions-luarocks@v6
 
-      # busted, and the modules not linked into mudlet_core, which mudlet-lua needs to start
-      - name: Install the Lua rocks
+      # busted alone: every module mudlet-lua requires has to come from package.preload
+      - name: Install busted
         run: |
-          CI/install-lua-rocks.sh lua-yajl
-          CI/install-lua-rocks.sh
+          luarocks --lua-version 5.1 install --local busted
           eval "$(luarocks path --local --lua-version 5.1)"
           echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
           echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
-      # busted not loading at all writes no failure marker, so the summary has to be there too
-      - name: Check the linked-in Lua C modules load from package.preload
+      # busted not loading at all writes no failure marker, so the summary has to be there too.
+      # DB_spec.lua is there for the luasql.sqlite3 behaviour DB.lua depends on.
+      - name: Check the Lua C modules load with no dlopen
         timeout-minutes: 5
         shell: bash
         run: |
           set -o pipefail
           log="$RUNNER_TEMP/static-lua-modules.log"
-          mkdir -p "$XDG_CONFIG_HOME/mudlet/profiles"
+          mkdir -p "$XDG_CONFIG_HOME/mudlet/profiles" "$TESTS_DIRECTORY"
+          cp src/mudlet-lua/tests/StaticLuaModules_spec.lua src/mudlet-lua/tests/DB_spec.lua "$TESTS_DIRECTORY"
           build-linux-core-minimal/src/mudlet-headless -p "Mudlet self-test" --host mudlet.org --port 23 --offline --no-stdin \
             2>&1 | tee "$log"
           if [ -e "$MUDLET_TEST_FAILURE_MARKER" ]; then
-            echo "::error::StaticLuaModules_spec.lua failed"
+            echo "::error::StaticLuaModules_spec.lua or DB_spec.lua failed"
+            exit 1
+          fi
+          if grep -F '[ ERROR ] - Cannot find Lua module' "$log"; then
+            echo "::error::mudlet-headless could not load a Lua C module it requires at startup"
             exit 1
           fi
           grep -Eq '^[1-9][0-9]* successes / 0 failures / 0 errors / 0 pending' "$log"
         env:
           AUTORUN_BUSTED_TESTS: 'true'
           QUIT_MUDLET_AFTER_TESTS: 'true'
-          TESTS_DIRECTORY: ${{ github.workspace }}/src/mudlet-lua/tests/StaticLuaModules_spec.lua
+          TESTS_DIRECTORY: ${{ runner.temp }}/static-lua-module-specs
           MUDLET_EXPECT_STATIC_LUA_MODULES: '1'
           MUDLET_TEST_MODE: 1
           MUDLET_TEST_FAILURE_MARKER: ${{ runner.temp }}/static-lua-modules-failed
