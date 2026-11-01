@@ -1,6 +1,6 @@
 # Specs that fail in mudlet-headless, which has no main window, read by
 # CI/check-headless-lua-failures.py, which says what each line means.
-minimum successes: 7771
+minimum successes: 7772
 maximum pending: 261
 
 # Need a main window
@@ -59,7 +59,6 @@ Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests a
 Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export with a target it may not write exportAreaImage returns false and a message for a file it may not overwrite
 Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests registered map info refuses to delete rooms or areas, or replace the map, from inside a map info callback
 Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests registered map info survives a map info callback that registers and kills contributors while the map is painted
-Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests secondary map views createMapView with no area opens on the player's area and level
 Failure Media_spec.lua: Media playback effects with a generated sound file a Client.Media.Play message that names the video type is played as a video
 Failure Media_spec.lua: Media playback effects with a generated sound file a video asked to close takes its label off screen when it ends
 Failure Media_spec.lua: Media playback effects with a generated sound file a video that never asked to close leaves its label on screen

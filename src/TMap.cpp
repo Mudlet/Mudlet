@@ -4206,6 +4206,14 @@ void TMap::requestPlayerAreaShown()
     emit signal_playerAreaShowRequested();
 }
 
+std::optional<int> TMap::playerAreaId() const
+{
+    if (const TRoom* pPlayerRoom = mpRoomDB->getRoom(mRoomIdHash.value(mProfileName))) {
+        return pPlayerRoom->getArea();
+    }
+    return std::nullopt;
+}
+
 void TMap::announceDefaultAreaVisibilitySet(const bool wasShown)
 {
     emit signal_defaultAreaVisibilitySet(wasShown);
