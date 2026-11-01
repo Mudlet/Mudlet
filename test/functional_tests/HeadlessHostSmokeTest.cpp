@@ -56,13 +56,13 @@
 #include <memory>
 
 #include "CredentialManager.h"
-#include "EventLoopPump.h"
 #include "FontManager.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "MudletMedia.h"
 #include "PortableModeTestHelper.h"
+#include "ScriptUnit.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
 #include "TAppFrontend.h"
@@ -78,6 +78,7 @@
 #include "TNullMapViews.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
+#include "TScript.h"
 #include "TSpeechBridge.h"
 #include "TriggerMatchPool.h"
 #include "XMLexport.h"
@@ -446,6 +447,8 @@ private slots:
                           "enableMuteGame=true\n"
                           "reportMapIssuesToConsole=true\n"
                           "storePasswordsSecurely=false\n"
+                          "drawUpperLowerLevels=false\n"
+                          "showTabConnectionIndicators=true\n"
                           "interfaceLanguage=de_DE\n")
                               .arg(scmAutosaveMinutes)
                               .arg(scmUsernameDelayMs)
@@ -4672,7 +4675,7 @@ wlReplacedResult = ok and "ok" or tostring(err)
         Host* host = HostManager::self()->getHost(hostname);
         QVERIFY2(host, "The profile is not in the pool.");
         host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onUwnShowHandler"));
-        // With no view, pumpEvents() takes Mudlet for shutting down and pumps nothing
+        // The null view paints on short chains of zero timers, so passes rather than time deliver them
         lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State*) -> int {
             for (int pass = 0; pass < 10; ++pass) {
                 QCoreApplication::processEvents();
@@ -5625,12 +5628,6 @@ end
         QVERIFY(!host->hasConsoleView());
         QVERIFY2(host->mLoadedOk, qPrintable(host->mProfileLoadError));
 
-        // With no view, pumpEvents() takes Mudlet for shutting down and pumps nothing, so the waits for a save use the
-        // pump it would
-        lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State* L) -> int {
-            static_cast<void>(EventLoopPump::pumpFor(static_cast<int>(lua_tointeger(L, 1))));
-            return 0;
-        });
         // Run from the event loop, as a script in the GUI is, so the saves it waits out deliver no deferred deletes
         bool ran = false;
         bool pendingDeleteHeld = false;
@@ -7685,8 +7682,8 @@ headlessMapView = ok and "ok" or tostring(err)
                 return QStringList{qsl("the profile could not be made")};
             }
             host->getLuaInterpreter()->loadGlobal();
-            // With no view, pumpEvents() takes Mudlet for shutting down and pumps nothing. The null view paints on short
-            // chains of zero timers, each link a pass, so passes rather than time deliver them however slow a pass is
+            // The null view paints on short chains of zero timers, each link a pass, so passes rather than time deliver
+            // them however slow a pass is
             lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State*) -> int {
                 for (int pass = 0; pass < 10; ++pass) {
                     QCoreApplication::processEvents();
@@ -10412,8 +10409,8 @@ headlessDiscord = ok and 'ok' or tostring(err)
         QCOMPARE(MudletApp::getInterfaceLanguage(), qsl("fr_FR"));
     }
 
-    // Run twice: here, where Mudlet.ini holds none of these keys, and by HeadlessHostSmokeTestWithMudletIni,
-    // where initTestCase() wrote each of them before the pool existed
+    // Run twice: here, where Mudlet.ini held none of these keys when the pool read it, and by
+    // HeadlessHostSmokeTestWithMudletIni, where initTestCase() wrote each of them before the pool existed
     void test_profileWithNoMainWindowTakesItsSettingsFromMudletIni()
     {
         QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
@@ -10431,9 +10428,22 @@ headlessDiscord = ok and 'ok' or tostring(err)
                                qsl("enableMuteGame"),
                                qsl("reportMapIssuesToConsole"),
                                qsl("storePasswordsSecurely"),
+                               qsl("drawUpperLowerLevels"),
+                               qsl("showTabConnectionIndicators"),
                                qsl("interfaceLanguage")};
+        // The saves of the tests before this write these back, which without one are the defaults the pool read
+        const QMap<QString, bool> written{{qsl("enableMuteAPI"), false},
+                                          {qsl("enableMuteGame"), false},
+                                          {qsl("reportMapIssuesToConsole"), false},
+                                          {qsl("storePasswordsSecurely"), true},
+                                          {qsl("drawUpperLowerLevels"), true},
+                                          {qsl("showTabConnectionIndicators"), false}};
         for (const QString& key : keys) {
-            QVERIFY2(settings->contains(key) == fromIni, qPrintable(key));
+            if (fromIni || !written.contains(key)) {
+                QVERIFY2(settings->contains(key) == fromIni, qPrintable(key));
+            } else if (settings->contains(key)) {
+                QVERIFY2(settings->value(key).toBool() == written.value(key), qPrintable(key));
+            }
         }
 
         const QString hostname = qsl("Test-Headless-Host-Mudlet-Ini");
@@ -10466,6 +10476,40 @@ headlessDiscord = ok and 'ok' or tostring(err)
         QCOMPARE(HostManager::self()->media().gameMuted(), fromIni);
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("iniMutes = tostring(getConfig('muteMediaAPI')) .. ' ' .. tostring(getConfig('muteMediaGame'))")));
         QCOMPARE(luaGlobalString(host, "iniMutes"), fromIni ? qsl("true true") : qsl("false false"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("iniView = tostring(getConfig('showUpperLowerLevels')) .. ' ' .. tostring(getConfig('showTabConnectionIndicators'))")));
+        QCOMPARE(luaGlobalString(host, "iniView"), fromIni ? qsl("false true") : qsl("true false"));
+
+        // A save with no main window writes each back to its own key, as it is now
+        {
+            MudletMedia& media = HostManager::self()->media();
+            TAppFrontend* pView = TAppFrontend::instance();
+            const bool apiMuted = media.apiMuted();
+            const bool gameMuted = media.gameMuted();
+            const bool auditShown = TMap::smShowMapAuditErrors;
+            const bool upperLower = pView->drawUpperLowerLevels();
+            const bool tabIndicators = pView->showTabConnectionIndicators();
+            const auto restore = qScopeGuard([&]() {
+                media.setApiMuted(apiMuted);
+                media.setGameMuted(gameMuted);
+                TMap::smShowMapAuditErrors = auditShown;
+                pView->setDrawUpperLowerLevels(upperLower);
+                pView->setShowTabConnectionIndicators(tabIndicators);
+                pView->writeSettings();
+            });
+            media.setApiMuted(true);
+            media.setGameMuted(false);
+            TMap::smShowMapAuditErrors = true;
+            pView->setDrawUpperLowerLevels(false);
+            pView->setShowTabConnectionIndicators(true);
+            pView->writeSettings();
+            const QSettings onDisk(settings->fileName(), QSettings::IniFormat);
+            QCOMPARE(onDisk.value(qsl("enableMuteAPI")).toBool(), true);
+            QCOMPARE(onDisk.value(qsl("enableMuteGame")).toBool(), false);
+            QCOMPARE(onDisk.value(qsl("reportMapIssuesToConsole")).toBool(), true);
+            QCOMPARE(onDisk.value(qsl("storePasswordsSecurely")).toBool(), MudletApp::storingPasswordsSecurely());
+            QCOMPARE(onDisk.value(qsl("drawUpperLowerLevels")).toBool(), false);
+            QCOMPARE(onDisk.value(qsl("showTabConnectionIndicators")).toBool(), true);
+        }
 
         // An exit to a room that is not there is reported on the console only when Mudlet.ini asks for it
         constexpr int missingRoomId = 4242;
@@ -10664,7 +10708,8 @@ local ok, err = pcall(function()
   assert(tab == nil and type(tabMsg) == "string", "getProfileTabNumber did not answer nil and a message")
   assert(openWebPage("about:blank") == false, "openWebPage did not answer false")
   assert(loadWindowLayout() == false, "loadWindowLayout did not answer false")
-  assert(showNotification("headless title", "headless text") == true, "showNotification did not answer true")
+  local shown, shownMsg = showNotification("headless title", "headless text")
+  assert(shown == nil and shownMsg == "the profile has no main window", "showNotification did not answer nil and a message")
 end)
 headlessAppResult = ok and 'ok' or tostring(err)
 )lua"));
@@ -11549,7 +11594,7 @@ headlessMapConfig = ok and 'ok' or tostring(err)
         Host* host = HostManager::self()->getHost(hostname);
         QVERIFY2(host, "The profile is not in the pool.");
         host->getLuaInterpreter()->loadGlobal();
-        // With no view, pumpEvents() takes Mudlet for shutting down and pumps nothing
+        // The null view paints on short chains of zero timers, so passes rather than time deliver them
         lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State*) -> int {
             for (int pass = 0; pass < 10; ++pass) {
                 QCoreApplication::processEvents();
@@ -12377,6 +12422,65 @@ end))lua");
         QVERIFY2(!fresh->mainConsoleModel().mLogToLogFile, "A profile that never logged started logging.");
         QCoreApplication::processEvents();
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Opening the profile created a widget.");
+    }
+
+    // A negative priority module runs before the profile's own scripts, so the editor, which lists the root
+    // scripts in order, has to show it above them - and a profile reset runs them in that order too
+    void test_negativePriorityModulesComeBeforeTheProfileScripts()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Module-Priority");
+        const auto script = [](const QString& name) {
+            return qsl(R"(<Script isActive="yes" isFolder="no"><name>%1</name><packageName></packageName><script>scriptOrder = (scriptOrder or "") .. "%1,"</script><eventHandlerList/></Script>)")
+                    .arg(name);
+        };
+        const auto package = [](const QString& hostPackage, const QString& scripts) {
+            return qsl(R"(<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+%1<ScriptPackage>%2</ScriptPackage>
+</MudletPackage>
+)")
+                    .arg(hostPackage, scripts);
+        };
+        QTemporaryDir moduleDir;
+        QVERIFY(moduleDir.isValid());
+        QString modules;
+        for (const auto& [name, priority] : {std::pair{qsl("moduleFirst"), -2}, std::pair{qsl("moduleSecond"), -1}, std::pair{qsl("moduleLast"), 1}}) {
+            const QString path = moduleDir.filePath(qsl("%1.xml").arg(name));
+            QFile moduleFile(path);
+            QVERIFY(moduleFile.open(QIODevice::WriteOnly));
+            moduleFile.write(package(QString(), script(name)).toUtf8());
+            moduleFile.close();
+            modules += qsl("<mInstalledModules><key>%1</key><filepath>%2</filepath><globalSave>0</globalSave><priority>%3</priority></mInstalledModules>").arg(name, path, QString::number(priority));
+        }
+
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, hostname);
+        QVERIFY(QDir().mkpath(saveFolder));
+        QFile saveFile(qsl("%1/2020-01-01#00-00-00.xml").arg(saveFolder));
+        QVERIFY(saveFile.open(QIODevice::WriteOnly));
+        saveFile.write(package(qsl("<HostPackage><Host>%1</Host></HostPackage>").arg(modules), script(qsl("profileOne")) + script(qsl("profileTwo"))).toUtf8());
+        saveFile.close();
+
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The saved profile did not open.");
+        QVERIFY2(host->mLoadedOk, qPrintable(host->mProfileLoadError));
+        QCOMPARE(luaGlobalString(host, "scriptOrder"), qsl("moduleFirst,moduleSecond,profileOne,profileTwo,moduleLast,"));
+
+        QStringList rootNames;
+        for (auto* pScript : host->getScriptUnit()->getScriptRootNodeList()) {
+            rootNames << pScript->getName();
+        }
+        QCOMPARE(rootNames, QStringList({qsl("moduleFirst"), qsl("moduleSecond"), qsl("profileOne"), qsl("profileTwo"), qsl("moduleLast")}));
+
+        QVERIFY(host->resetProfile_phase1());
+        QVERIFY2(QTest::qWaitFor(
+                         [host]() {
+                             return !host->mResetProfile;
+                         },
+                         5000),
+                 "The profile reset did not finish.");
+        QCOMPARE(luaGlobalString(host, "scriptOrder"), qsl("moduleFirst,moduleSecond,profileOne,profileTwo,moduleLast,"));
+        HostManager::self()->deleteHost(hostname);
     }
 
     // The GUI's answers to the same Lua: the profile is loaded and started before loadProfile() returns,

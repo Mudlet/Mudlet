@@ -620,12 +620,13 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       finally(function() os.remove(target) end)
       assert.is_true(downloadFile(target, fixtureUrl("/no-such-fixture.txt")))
 
-      local event, message, localFile, url, response = waitForEvent("sysDownloadError", 2000)
+      local event, message, localFile, url, response, body = waitForEvent("sysDownloadError", 2000)
       assert.equals("sysDownloadError", event)
       assert.is_string(message)
       assert.equals(target, localFile)
       assert.equals(fixtureUrl("/no-such-fixture.txt"), url)
       assertFixtureResponse(response)
+      assert.is_true(contains(body, "File not found"), body)
       assert.is_nil(readFile(target))
     end)
 
@@ -682,11 +683,12 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       end
       assert.is_true(getHTTP(fixtureUrl("/no-such-fixture.txt")))
 
-      local event, message, url, response = waitForEvent("sysGetHttpError", 2000)
+      local event, message, url, response, body = waitForEvent("sysGetHttpError", 2000)
       assert.equals("sysGetHttpError", event)
       assert.is_string(message)
       assert.equals(fixtureUrl("/no-such-fixture.txt"), url)
       assertFixtureResponse(response)
+      assert.is_true(contains(body, "File not found"), body)
     end)
   end)
 
@@ -745,11 +747,12 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       -- Only /echo accepts a POST; the static fixture path answers 404.
       assert.is_true(postHTTP("payload", fixtureUrl("/fixture.txt")))
 
-      local event, message, url, response = waitForEvent("sysPostHttpError", 2000)
+      local event, message, url, response, body = waitForEvent("sysPostHttpError", 2000)
       assert.equals("sysPostHttpError", event)
       assert.is_string(message)
       assert.equals(fixtureUrl("/fixture.txt"), url)
       assertFixtureResponse(response)
+      assert.is_true(contains(body, "only /echo answers this method"), body)
     end)
   end)
 
@@ -776,10 +779,12 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       end
       assert.is_true(putHTTP("payload", fixtureUrl("/fixture.txt")))
 
-      local event, message, url = waitForEvent("sysPutHttpError", 2000)
+      local event, message, url, response, body = waitForEvent("sysPutHttpError", 2000)
       assert.equals("sysPutHttpError", event)
       assert.is_string(message)
       assert.equals(fixtureUrl("/fixture.txt"), url)
+      assertFixtureResponse(response)
+      assert.is_true(contains(body, "only /echo answers this method"), body)
     end)
   end)
 
@@ -805,10 +810,12 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       end
       assert.is_true(deleteHTTP(fixtureUrl("/fixture.txt")))
 
-      local event, message, url = waitForEvent("sysDeleteHttpError", 2000)
+      local event, message, url, response, body = waitForEvent("sysDeleteHttpError", 2000)
       assert.equals("sysDeleteHttpError", event)
       assert.is_string(message)
       assert.equals(fixtureUrl("/fixture.txt"), url)
+      assertFixtureResponse(response)
+      assert.is_true(contains(body, "only /echo answers this method"), body)
     end)
   end)
 
@@ -836,11 +843,13 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       end
       assert.is_true(customHTTP("REPORT", "payload", fixtureUrl("/fixture.txt")))
 
-      local event, message, url, method = waitForEvent("sysCustomHttpError", 2000)
+      local event, message, url, method, response, body = waitForEvent("sysCustomHttpError", 2000)
       assert.equals("sysCustomHttpError", event)
       assert.is_string(message)
       assert.equals(fixtureUrl("/fixture.txt"), url)
       assert.equals("REPORT", method)
+      assertFixtureResponse(response)
+      assert.is_true(contains(body, "only /echo answers this method"), body)
     end)
   end)
 end)
@@ -1727,8 +1736,20 @@ describe("MMCP effects against a scripted chat peer", function()
       if peerUnavailable() then return end
       ensurePeer()
       assert.is_true(mmcp.ignore(PEER_NAME))
-      peerSends(4, PEER_NAME .. " chats to everybody, 'ignored line'\n")
-      assert.is_nil(waitForEvent("sysMMCPChatMessage", 500))
+      -- No message within a fixed wait proves nothing: a slow peer's line can
+      -- land after the un-ignore below. Mudlet handles a peer's commands in the
+      -- order they arrive, so its answer to a ping sent after the line means
+      -- the line has been dealt with.
+      local mark = captureSeq()
+      local dropped = collectEvents("sysMMCPChatMessage", function()
+        peerSends(4, PEER_NAME .. " chats to everybody, 'ignored line'\n")
+        peerSends(26, "after the ignored line")
+        assert.is_table(waitForPeerEvent(mark, function(event)
+          return event.type == "command" and event.name == "PingResponse"
+                 and event.text == "after the ignored line"
+        end, 5000))
+      end)
+      assert.equals(0, #dropped, tostring(dropped[1] and dropped[1][2]))
 
       assert.is_true(mmcp.ignore(PEER_NAME))
       peerSends(4, PEER_NAME .. " chats to everybody, 'heard line'\n")
