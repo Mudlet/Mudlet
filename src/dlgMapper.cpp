@@ -500,9 +500,6 @@ bool dlgMapper::isMapProgressVisible() const
 
 void dlgMapper::loadMapFromFile()
 {
-    if (!mpHost) {
-        return;
-    }
     //: File dialog filter. Keep the extensions (in braces) unchanged - they are used programmatically.
     auto filters = QStringList() << tr("Any map file (*.dat *.json *.xml)") << tr("Mudlet binary map (*.dat)") << tr("Mudlet JSON map (*.json)") << tr("Mudlet XML map (*.xml)") << tr("Any file (*)");
 
@@ -981,7 +978,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
     glWidget->setVisible(is3DMode);
     if (glWidget->isVisible()) {
         widget_3DControls->setVisible(true);
-        widget_playerIconControls->setVisible(mpHost && mpHost->experimentEnabled("experiment.3d-player-icon")
+        widget_playerIconControls->setVisible(mpHost->experimentEnabled("experiment.3d-player-icon")
 #ifdef DEBUG_PLAYER_ICON_CONTROLS
                                               && true
 #else
@@ -1391,7 +1388,7 @@ void dlgMapper::slot_showSaveWarningMenu()
 
     auto* retryAction = new QAction(tr("Retry save"), this);
     connect(retryAction, &QAction::triggered, this, [this]() {
-        if (mpHost && mpHost->saveMapFile(QString())) {
+        if (mpHost->saveMapFile(QString())) {
             mpMap->setSaveError(false);
         }
     });
