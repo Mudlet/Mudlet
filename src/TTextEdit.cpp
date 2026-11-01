@@ -266,12 +266,11 @@ void TTextEdit::focusInEvent(QFocusEvent* event)
 
 void TTextEdit::focusOutEvent(QFocusEvent* event)
 {
-    // Safety check: during destruction, mpHost might be null
     // Avoid disabling caret mode when the window is merely deactivated
     // (e.g., user Alt+Tabs away). This preserves focus for screen reader
     // users like NVDA so returning to Mudlet restores the original widget
     // rather than forcing focus to the command line.
-    if (mpHost && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
+    if (mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
         mpHost->setCaretEnabled(false);
     }
 
@@ -379,8 +378,8 @@ void TTextEdit::updateHorizontalScrollBar()
 
 void TTextEdit::updateScreenView()
 {
-    // Safety check: during destruction, mpHost or mpConsole might be null
-    if (!mpHost || !mpConsole) {
+    // Safety check: during destruction, mpConsole might be null
+    if (!mpConsole) {
         return;
     }
 
@@ -472,7 +471,7 @@ void TTextEdit::showNewLines()
     scheduleUpdate();
 
 
-    if (mpHost && QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole && mpHost->mAnnounceIncomingText && mudlet::self()->getActiveHost() == mpHost) {
+    if (QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole && mpHost->mAnnounceIncomingText && mudlet::self()->getActiveHost() == mpHost) {
         QString newLines;
 
         // content has been deleted
@@ -630,7 +629,7 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
     }
 
     // If caret mode is enabled and the line is empty, still draw the caret.
-    if (mpHost && mpHost->caretEnabled() && mCaretLine == lineNumber && lineText.isEmpty()) {
+    if (mpHost->caretEnabled() && mCaretLine == lineNumber && lineText.isEmpty()) {
         GraphemeRun caretRun;
         caretRun.textRect = QRect(0, mFontHeight * lineOfScreen, mFontWidth, mFontHeight);
         caretRun.bgColor = mCaretColor;
@@ -1000,7 +999,7 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, QStringV
     if (charWidth > 0) {
         run.textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
     }
-    const bool caretIsHere = mpHost && mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
+    const bool caretIsHere = mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
     resolveRunColors(run, charStyle, caretIsHere);
     if (Q_UNLIKELY(charStyle.hasSplitFormat()) && charWidth == 2) {
         run.halfRect = QRect(run.textRect.x(), run.textRect.y(), mFontWidth, mFontHeight);
@@ -2247,7 +2246,7 @@ void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
 void TTextEdit::slot_popupMenu()
 {
     auto* pA = qobject_cast<QAction*>(sender());
-    if (!pA || !mpHost) {
+    if (!pA) {
         return;
     }
     // index is set to be greater than zero for every possible sender():
@@ -2530,7 +2529,7 @@ void TTextEdit::slot_copySelectionToClipboard()
 
 void TTextEdit::slot_copySelectionToClipboardHTML()
 {
-    if (!establishSelectedText() || !mpHost) {
+    if (!establishSelectedText()) {
         return;
     }
 
@@ -2883,7 +2882,7 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
 
 void TTextEdit::searchSelectionOnline()
 {
-    if (!establishSelectedText() || !mpHost) {
+    if (!establishSelectedText()) {
         return;
     }
 
@@ -3142,9 +3141,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
     // the editor Error console so those will avoid the focus being changed to
     // this profile now:
     QTimer::singleShot(0ms, this, [this]() {
-        if (mpHost) {
-            mudlet::self()->activateProfile(mpHost);
-        }
+        mudlet::self()->activateProfile(mpHost);
     });
 }
 
@@ -3259,21 +3256,19 @@ void TTextEdit::showContextMenu(const QPoint& globalPosition)
         popup->addAction(clearErrorConsole);
     }
 
-    if (mpHost) {
-        QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
+    QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
 
-        while (it.hasNext()) {
-            it.next();
-            QStringList actionInfo = it.value();
-            const QString& uniqueName = it.key();
-            const QString& actionName = actionInfo.at(1);
-            QAction* mouseAction = new QAction(actionName, popup);
-            mouseAction->setToolTip(actionInfo.at(2));
-            popup->addAction(mouseAction);
-            connect(mouseAction, &QAction::triggered, this, [this, uniqueName] {
-                slot_mouseAction(uniqueName);
-            });
-        }
+    while (it.hasNext()) {
+        it.next();
+        QStringList actionInfo = it.value();
+        const QString& uniqueName = it.key();
+        const QString& actionName = actionInfo.at(1);
+        QAction* mouseAction = new QAction(actionName, popup);
+        mouseAction->setToolTip(actionInfo.at(2));
+        popup->addAction(mouseAction);
+        connect(mouseAction, &QAction::triggered, this, [this, uniqueName] {
+            slot_mouseAction(uniqueName);
+        });
     }
 
     popup->popup(globalPosition, action);
@@ -3292,8 +3287,8 @@ void TTextEdit::resizeEvent(QResizeEvent* event)
     updateScreenView();
     reportGridSize();
 
-    // Safety check: during destruction, mpHost or mpConsole might be null
-    if (mpHost && mpConsole) {
+    // Safety check: during destruction, mpConsole might be null
+    if (mpConsole) {
         if (!mIsLowerPane && mpConsole->getType() == TConsole::MainConsole) {
             mpHost->updateDisplayDimensions();
         }
@@ -4150,10 +4145,6 @@ void TTextEdit::slot_changeDebugShowAllProblemCodepoints(const bool state)
 
 void TTextEdit::slot_mouseAction(const QString& uniqueName)
 {
-    if (!mpHost) {
-        return;
-    }
-
     // The menu is non-modal, so a script can removeMouseEvent() while it is still open
     const QStringList mouseEvent = mpHost->mConsoleActions.value(uniqueName);
     if (mouseEvent.isEmpty()) {
@@ -4243,7 +4234,7 @@ void TTextEdit::setCaretPosition(int line, int column)
     mCaretLine = line;
     mCaretColumn = column;
 
-    if (!mpHost || !mpHost->caretEnabled() || !mpBuffer) {
+    if (!mpHost->caretEnabled() || !mpBuffer) {
         return;
     }
 
@@ -4418,7 +4409,7 @@ void TTextEdit::applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, c
 
 void TTextEdit::showLinkContextMenu()
 {
-    if (!mpBuffer || !mpHost) {
+    if (!mpBuffer) {
         return;
     }
 
@@ -4545,7 +4536,7 @@ bool TTextEdit::focusNextPrevChild(bool next)
     Q_UNUSED(next)
     // In caret mode, prevent Qt from intercepting Tab/Backtab for focus
     // traversal so they reach keyPressEvent for link navigation
-    if (mpHost && mpHost->caretEnabled()) {
+    if (mpHost->caretEnabled()) {
         return false;
     }
     return QWidget::focusNextPrevChild(next);
@@ -4560,7 +4551,7 @@ bool TTextEdit::event(QEvent* event)
         // use Ctrl+Tab by default and all of them can be remapped onto these
         // keys - so claim it here to make it arrive as a KeyPress for the
         // caret-toggling code in keyPressEvent():
-        if (mpHost && mpHost->caretEnabled() && mpHost->caretShortcutMatches(ke)) {
+        if (mpHost->caretEnabled() && mpHost->caretShortcutMatches(ke)) {
             ke->accept();
             return true;
         }
@@ -4570,7 +4561,7 @@ bool TTextEdit::event(QEvent* event)
 
 void TTextEdit::keyPressEvent(QKeyEvent* event)
 {
-    if (!mpHost || !mpHost->caretEnabled()) {
+    if (!mpHost->caretEnabled()) {
         QWidget::keyPressEvent(event);
         return;
     }
@@ -4584,7 +4575,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     const bool activatesFocusedLink = event->key() == Qt::Key_Space && focusedLinkIndex > 0 && mpBuffer->getLinkIndexAt(mCaretLine, mCaretColumn) == focusedLinkIndex
                                       && !mpBuffer->mLinkStore.getLinksConst(focusedLinkIndex).isEmpty();
     if (!activatesFocusedLink && !(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) && !event->text().isEmpty() && event->text().front().isPrint()) {
-        if (mpHost && mpConsole && mpConsole->mpCommandLine) {
+        if (mpConsole && mpConsole->mpCommandLine) {
             mpHost->setCaretEnabled(false);
             mpHost->setFocusOnHostActiveCommandLine();
             QKeyEvent newEvent(event->type(), event->key(), event->modifiers(), event->text(), event->isAutoRepeat(), event->count());
