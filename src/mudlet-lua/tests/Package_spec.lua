@@ -4908,6 +4908,12 @@ describe("Tests installing an archive named after one of the profile's own folde
       pending("builds its archive with the zip command")
       return
     end
+    -- getMousePosition() has no answer only when there is no main window, which puts up no dialog;
+    -- the other install would then start in whichever spec runs next
+    if not getMousePosition() then
+      pending("there is no main window to put up an unpacking dialog")
+      return
+    end
     local renamed = "mudlet-spec-reentrant"
     local big = scratchDirectory .. "/big"
     local small = scratchDirectory .. "/small"
