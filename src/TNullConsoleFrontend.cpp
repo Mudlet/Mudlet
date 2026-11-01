@@ -957,6 +957,13 @@ TConsoleModel& TNullConsoleFrontend::addSubConsole(const QString& name, const TW
         QObject::connect(&model.mNotifier, &TConsoleModelNotifier::linesAppended, &model.mNotifier, [this, &model](const int lineCount) {
             reportLinesOverflow(model, lineCount);
         });
+        // As TConsole::applyTimeStamps(), shown or not
+        QObject::connect(&model.mNotifier, &TConsoleModelNotifier::timeStampsToggled, &model.mNotifier, [this, name]() {
+            // A hidden pane keeps the size it had until the resize it is owed reaches it
+            if (const auto it = mSubConsoles.find(name); it != mSubConsoles.end() && (!it->second.paneResizePending || paneShown(it->second))) {
+                reportConsoleSize(name);
+            }
+        });
     }
     return model;
 }
@@ -977,6 +984,59 @@ void TNullConsoleFrontend::reportLinesOverflow(const TConsoleModel& model, const
     event.mArgumentList.append(model.mConsoleName);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(-linesSpare));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mpHost->raiseEvent(event);
+}
+
+// As TTextEdit::resizeEvent(), which a hidden pane is sent only as it shows
+void TNullConsoleFrontend::resizePane(const QString& name)
+{
+    const auto it = mSubConsoles.find(name);
+    if (it == mSubConsoles.end()) {
+        return;
+    }
+    if (!paneShown(it->second) || it->second.sendingResize) {
+        it->second.paneResizePending = true;
+        return;
+    }
+    it->second.paneResizePending = false;
+    reportConsoleSize(name);
+}
+
+// As QWidget::show() sends a pane, and each pane in what it shows, the resize it was owed while hidden
+void TNullConsoleFrontend::sendPendingPaneResize(const QString& name)
+{
+    const auto it = mSubConsoles.find(name);
+    if (it == mSubConsoles.end() || !it->second.paneResizePending || it->second.sendingResize || !paneShown(it->second)) {
+        return;
+    }
+    it->second.paneResizePending = false;
+    reportConsoleSize(name);
+}
+
+// As TConsole::raiseMudletResizeEvent()
+void TNullConsoleFrontend::reportConsoleSize(const QString& name)
+{
+    const auto it = mSubConsoles.find(name);
+    if (it == mSubConsoles.end() || mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::Buffer) {
+        return;
+    }
+    const TConsoleModel& model = *it->second.pModel;
+    const QSize grid = model.mGridSize;
+    if (!grid.width() || grid == it->second.reportedGrid) {
+        return;
+    }
+    it->second.reportedGrid = grid;
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysConsoleSizeChanged"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(name);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(grid.width()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(grid.height()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(model.mShowTimeStamps ? TBuffer::smTimeStampFormat.size() : 0));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mpHost->raiseEvent(event);
 }
@@ -1435,10 +1495,12 @@ bool TNullConsoleFrontend::setSubConsoleShown(const QString& name, const bool sh
     }
     if (mpHost->windowRegistry().subConsoleKind(name) != TWindowRegistry::SubConsoleKind::UserWindow) {
         it->second.shown = shown;
+        sendPendingPaneResize(name);
         reportWindowVisibility(name);
         return true;
     }
     it->second.shown = shown;
+    const QPointer<const QObject> window = &it->second.pModel->mNotifier;
     if (shown) {
         // The dock's layout gives its console a size it took while hidden only now, before the console shows
         const QSize size = mpHost->windowRegistry().subConsoleGeometry(name).value_or(QRect()).size();
@@ -1452,13 +1514,16 @@ bool TNullConsoleFrontend::setSubConsoleShown(const QString& name, const bool sh
         // though what it holds answers as isVisibleTo() once a change reaches it (see reportVisibility()), and clears it
         // only once that is sent
         it->second.sendingResize = true;
-        const QPointer<const QObject> window = &it->second.pModel->mNotifier;
         raiseUserWindowResize(name);
         // Its handlers can delete the window, or open another of its name
         if (const auto again = mSubConsoles.find(name); window && again != mSubConsoles.end() && &again->second.pModel->mNotifier == window) {
             again->second.resizePending = false;
             again->second.sendingResize = false;
         }
+    }
+    // Its pane is sent the resize it is owed only as it shows, after the dock's
+    if (const auto again = mSubConsoles.find(name); shown && window && again != mSubConsoles.end() && &again->second.pModel->mNotifier == window) {
+        sendPendingPaneResize(name);
     }
     reportVisibility(name, nullptr);
     // A handler that deletes the window leaves showWindow() with none to show
@@ -1555,6 +1620,9 @@ void TNullConsoleFrontend::reportVisibility(const QString& changedWindow, const 
     }
     for (const QString& name : names) {
         reportWindowVisibility(name);
+    }
+    for (const QString& name : names) {
+        sendPendingPaneResize(name);
     }
 }
 
@@ -2036,6 +2104,7 @@ bool TNullConsoleFrontend::setWindowCommandLineVisible(const QString& name, cons
         }
         // As TConsole::setCmdVisible() resizes the console either way
         reportGridSize(name);
+        resizePane(name);
         return true;
     }
     // A deleted one is still held until deferred deletes run, and nothing is made in its place
@@ -2062,6 +2131,7 @@ bool TNullConsoleFrontend::setWindowCommandLineVisible(const QString& name, cons
     // As TMainConsole::registerSubCommandLine() reports the name, and so the console's own window
     reportWindowVisibility(name);
     reportGridSize(name);
+    resizePane(name);
     return true;
 }
 
@@ -2564,6 +2634,7 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
         }
         moveSubConsole(name, x, y);
         reportWindowVisibility(name);
+        sendPendingPaneResize(name);
         return {true, QString()};
     }
     const auto it = mScrollBoxes.find(name);
@@ -2728,13 +2799,18 @@ bool TNullConsoleFrontend::resizeSubConsole(const QString& name, const int width
     }
     TWindowRegistry& registry = mpHost->windowRegistry();
     QRect geometry = registry.subConsoleGeometry(name).value_or(QRect());
+    const QSize before = geometry.size();
     geometry.setSize(widgetSize(width, height));
     registry.setSubConsoleGeometry(name, geometry);
     registry.setUserWindowSize(name, geometry.size());
     reportGridSize(name);
-    // A hidden dock's console takes the size as it next shows
+    if (geometry.size() != before) {
+        resizePane(name);
+    }
+    // A hidden dock's console takes the size as it next shows, and a handler of the pane's report may have resized it
     const auto it = mSubConsoles.find(name);
-    if (it == mSubConsoles.end() || !it->second.shown || it->second.consoleSize == geometry.size() || registry.subConsoleKind(name) != TWindowRegistry::SubConsoleKind::UserWindow) {
+    if (it == mSubConsoles.end() || !it->second.shown || it->second.consoleSize == geometry.size() || registry.subConsoleGeometry(name).value_or(QRect()).size() != geometry.size()
+        || registry.subConsoleKind(name) != TWindowRegistry::SubConsoleKind::UserWindow) {
         return true;
     }
     it->second.consoleSize = geometry.size();
