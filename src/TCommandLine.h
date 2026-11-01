@@ -76,6 +76,8 @@ public:
     void restorePlayerTypedLine(const QString& text);
     // So the hidden-input box can make the same claims
     bool claimsShortcutOverride(const QKeyEvent*) const;
+    // For a key pressed in another window of the profile's, such as a floating map, that nothing there used
+    bool takeKeyPress(QKeyEvent*);
 
     int mActionFunction = 0;
     QPalette mRegularPalette;

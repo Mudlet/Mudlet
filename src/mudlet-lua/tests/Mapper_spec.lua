@@ -4406,6 +4406,42 @@ describe("Tests the open and closed states of the map widget", function()
       end
     end
 
+    -- One slow pass of the event loop can use up a fixed pumpEvents() before the next pass gives the map its size.
+    -- Each use follows a fixed wait, as until the first pass the map keeps the size of the area it left.
+    local function waitUntil(condition)
+      for _ = 1, 100 do
+        if condition() then
+          return
+        end
+        assert.is_true(pumpEvents(50))
+      end
+    end
+
+    local function consoleRoomy()
+      local width, height = getMainWindowSize()
+      return width >= 1100 and height >= 800
+    end
+
+    local function consoleTall()
+      local _, height = getMainWindowSize()
+      return height >= 800
+    end
+
+    local function mapWidth()
+      local _, _, width = getMapWidgetGeometry()
+      return width
+    end
+
+    local function mapHeight()
+      local _, _, _, height = getMapWidgetGeometry()
+      return height
+    end
+
+    -- the console and the map docked beside it fill a window 1280 pixels wide again
+    local function windowWide()
+      return getMainWindowSize() + mapWidth() > 1200
+    end
+
     -- Measured with the map closed, so the console has the whole width
     before_each(function()
       if not os.getenv("MUDLET_TEST_MODE") then
@@ -4419,8 +4455,11 @@ describe("Tests the open and closed states of the map widget", function()
       -- Qt keeps about 700 by 450 pixels for the console and gives the dock only what is left
       setMainWindowSize(1280, 900)
       pumpEvents(200)
-      local width, height = getMainWindowSize()
-      roomy = width >= 1100 and height >= 800
+      -- only where it must grow, as elsewhere the window may never get there
+      if resizeRequired then
+        waitUntil(consoleRoomy)
+      end
+      roomy = consoleRoomy()
     end)
 
     after_each(function()
@@ -4448,20 +4487,15 @@ describe("Tests the open and closed states of the map widget", function()
       return true
     end
 
-    local function mapWidth()
-      local _, _, width = getMapWidgetGeometry()
-      return width
-    end
-
     local function assertDocksUsably(position)
       assert.is_true(openMapWidget(position))
       assert.is_true(pumpEvents(200))
-      local _, _, width, height = getMapWidgetGeometry()
-      if position == "t" or position == "b" then
-        assert.is_true(height > 150, "map docked at " .. position .. " is only " .. height .. " pixels tall")
-      else
-        assert.is_true(width > 150, "map docked at " .. position .. " is only " .. width .. " pixels wide")
-      end
+      local across = (position == "t" or position == "b") and "tall" or "wide"
+      local depth = across == "tall" and mapHeight or mapWidth
+      waitUntil(function()
+        return depth() > 150
+      end)
+      assert.is_true(depth() > 150, "map docked at " .. position .. " is only " .. depth() .. " pixels " .. across)
     end
 
     -- Docks that shared an area and left it leave Qt nothing but its minimum to give the next one
@@ -4486,6 +4520,9 @@ describe("Tests the open and closed states of the map widget", function()
     local function squeezeMap(windowWidth, atMost, atLeast)
       setMainWindowSize(windowWidth, 900)
       pumpEvents(200)
+      waitUntil(function()
+        return mapWidth() <= atMost
+      end)
       local width = mapWidth()
       if width > atMost then
         cannotSqueeze("the console left the map " .. width .. " pixels in a narrow window, so it cannot be squeezed")
@@ -4526,7 +4563,10 @@ describe("Tests the open and closed states of the map widget", function()
       assert.is_true(pumpEvents(200))
       setMainWindowSize(1280, 200)
       assert.is_true(pumpEvents(200))
-      local _, _, _, squeezed = getMapWidgetGeometry()
+      waitUntil(function()
+        return mapHeight() < 150
+      end)
+      local squeezed = mapHeight()
       if squeezed >= 150 then
         cannotSqueeze("the main window kept the map " .. squeezed .. " pixels tall, so it cannot be squeezed")
         return
@@ -4535,6 +4575,8 @@ describe("Tests the open and closed states of the map widget", function()
       assert.is_true(pumpEvents(200))
       setMainWindowSize(1280, 900)
       assert.is_true(pumpEvents(200))
+      -- docked along the top of a window still short, the map would keep that depth as the window grew
+      waitUntil(consoleTall)
       assertDocksUsably("t")
     end)
 
@@ -4553,11 +4595,15 @@ describe("Tests the open and closed states of the map widget", function()
       assert.is_true(pumpEvents(200))
       setMainWindowSize(1280, 900)
       assert.is_true(pumpEvents(200))
+      waitUntil(windowWide)
       assert.is_true(openMapWidget("l"))
       assert.is_true(closeMapWidget())
       assert.is_true(pumpEvents(200))
       assert.is_true(openMapWidget())
       assert.is_true(pumpEvents(200))
+      waitUntil(function()
+        return mapWidth() > squeezed
+      end)
       assert.is_true(mapWidth() > squeezed, "the map came back " .. mapWidth() .. " pixels wide, as the left area last was")
     end)
 
@@ -4609,6 +4655,9 @@ describe("Tests the open and closed states of the map widget", function()
         assert.is_true(pumpEvents(200))
         assert.is_true(openMapWidget())
         assert.is_true(pumpEvents(200))
+        waitUntil(function()
+          return mapWidth() > 150
+        end)
         assert.is_true(mapWidth() > 150, "the map shown after the layout loaded is only " .. mapWidth() .. " pixels wide")
       end)
 
@@ -4624,12 +4673,16 @@ describe("Tests the open and closed states of the map widget", function()
         assert.is_true(saveWindowLayout())
         setMainWindowSize(1280, 900)
         assert.is_true(pumpEvents(200))
+        waitUntil(windowWide)
         assert.is_true(closeMapWidget())
         assert.is_true(pumpEvents(200))
         assert.is_true(loadWindowLayout())
         assert.is_true(pumpEvents(200))
         assert.is_true(openMapWidget())
         assert.is_true(pumpEvents(200))
+        waitUntil(function()
+          return mapWidth() > 150
+        end)
         assert.is_true(mapWidth() > 150, "the map the layout showed is only " .. mapWidth() .. " pixels wide")
       end)
 
