@@ -1,6 +1,6 @@
 # Specs that fail in mudlet-headless, which has no main window, read by
 # CI/check-headless-lua-failures.py, which says what each line means.
-minimum successes: 7772
+minimum successes: 7773
 maximum pending: 261
 
 # Need a main window
@@ -11,7 +11,6 @@ Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour refuse
 Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour refuses one Mudlet uses for switching profiles, and says what holds it
 Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour says so when the search is switched on over a command's key
 Failure ConsoleCursorByName_spec.lua: Tests that the cursor and line functions find their console by name with a sub-console's name of a mini console with its split screen open counts the rows above the split
-Failure ConsoleEdges_spec.lua: Console edges refuses names it cannot use a name a label already has
 Failure ConsoleFontsByName_spec.lua: Tests that the font functions find their console by name with a sub-console's name gives a mini console a command line of its own and hides it again
 Failure ConsoleFontsByName_spec.lua: Tests that the font functions find their console by name with a sub-console's name gives a user window a command line of its own and hides it again
 Failure ConsoleFontsByName_spec.lua: Tests that the font functions find their console by name with a sub-console's name reads the size a style sheet gives a user window's text
