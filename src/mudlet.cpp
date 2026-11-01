@@ -29,6 +29,7 @@
 #include "mudlet.h"
 #include "MudletApp.h"
 #include "MudletMedia.h"
+#include "MudletReplay.h"
 
 #include "CredentialManager.h"
 #include "DarkTheme.h"
@@ -60,6 +61,7 @@
 #include "TSpeechBridge.h"
 #include "TSpellChecker.h"
 #include "TTabBar.h"
+#include "TToolBar.h"
 #include "TUiTour.h"
 #include "TelnetUri.h"
 #include "UntrustedText.h"
@@ -1782,9 +1784,9 @@ void mudlet::init()
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_moduleManager);
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_packageExporter);
     connect(&mHostManager.media(), &MudletMedia::signal_muteSet, this, &mudlet::slot_muteSet);
-    connect(&mReplay, &MudletReplay::signal_replayStarted, this, &mudlet::slot_replayStarted);
-    connect(&mReplay, &MudletReplay::signal_replayOver, this, &mudlet::slot_replayOver);
-    connect(&mReplay, &MudletReplay::signal_replaySpeedChanged, this, &mudlet::slot_replaySpeedChanged);
+    connect(&mHostManager.replay(), &MudletReplay::signal_replayStarted, this, &mudlet::slot_replayStarted);
+    connect(&mHostManager.replay(), &MudletReplay::signal_replayOver, this, &mudlet::slot_replayOver);
+    connect(&mHostManager.replay(), &MudletReplay::signal_replaySpeedChanged, this, &mudlet::slot_replaySpeedChanged);
     connect(mpActionMuteMedia.data(), &QAction::triggered, &mHostManager.media(), &MudletMedia::toggleAllMuted);
     connect(mpActionMuteAPI.data(), &QAction::triggered, &mHostManager.media(), &MudletMedia::setApiMuted);
     connect(mpActionMuteGame.data(), &QAction::triggered, &mHostManager.media(), &MudletMedia::setGameMuted);
@@ -3356,6 +3358,71 @@ void mudlet::closeHost(const QString& name)
     updateMainWindowTitle();
 }
 
+void mudlet::profileClosing(Host* pHost)
+{
+    // Its child windows go first: an open context menu closing gives the focus back to the view, which by then is half destroyed
+    const auto destroyView = [](QWidget* pView) {
+        if (!pView) {
+            return;
+        }
+        QList<QPointer<QWidget>> childWindows;
+        for (auto pChild : pView->findChildren<QWidget*>()) {
+            if (pChild->isWindow()) {
+                childWindows.append(pChild);
+            }
+        }
+        for (const auto& pChildWindow : childWindows) {
+            delete pChildWindow.data();
+        }
+        delete pView;
+    };
+    if (smpDebugConsole && smpDebugConsole->getHost() == pHost) {
+        destroyView(smpDebugArea.data());
+    }
+    if (TMap* pMap = pHost->mpMap.data()) {
+        if (TMapViewManager* pViews = pMap->getViewManager()) {
+            pMap->setViewManager(nullptr);
+            delete pViews;
+        }
+    }
+    // Takes its sub-consoles, labels, command lines and embedded mapper with it
+    destroyView(pHost->mainConsoleView());
+    const auto belongsToHost = [pHost](QWidget* pWidget) {
+        if (auto* pConsole = qobject_cast<TConsole*>(pWidget)) {
+            return pConsole->getHost() == pHost;
+        }
+        if (auto* pUserWindow = qobject_cast<TDockWidget*>(pWidget)) {
+            return pUserWindow->getHost() == pHost;
+        }
+        // One taken off its console's list is left waiting on a deleteLater()
+        if (auto* pToolBar = qobject_cast<TToolBar*>(pWidget)) {
+            return pToolBar->getHost() == pHost;
+        }
+        if (auto* pDock = qobject_cast<QDockWidget*>(pWidget)) {
+            auto* pMapper = qobject_cast<dlgMapper*>(pDock->widget());
+            return pMapper && pMapper->getHost() == pHost;
+        }
+        return false;
+    };
+    // Buffers have no parent, and user windows, toolbars and map docks hang off whichever main window they were docked in
+    QList<QPointer<QWidget>> views;
+    const auto topLevels = QApplication::topLevelWidgets();
+    for (QWidget* pTopLevel : topLevels) {
+        if (belongsToHost(pTopLevel)) {
+            views.append(pTopLevel);
+        }
+        const auto docks = pTopLevel->findChildren<QDockWidget*>();
+        for (QDockWidget* pDock : docks) {
+            if (belongsToHost(pDock)) {
+                views.append(pDock);
+            }
+        }
+    }
+    for (const auto& pView : views) {
+        destroyView(pView.data());
+    }
+}
+
 void mudlet::updateMultiViewControls()
 {
     const bool isEnabled = (mHostManager.getHostCount() > 1);
@@ -4154,6 +4221,7 @@ bool mudlet::loadWindowLayout()
 
             if (rv) {
                 restoreFloatingDockGeometries();
+                keepFloatingDocksOnScreen();
                 commitLayoutUpdates(true);
                 for (auto pHost : mHostManager) {
                     if (pHost && pHost->mainConsoleView()) {
@@ -4299,6 +4367,42 @@ void mudlet::restoreFloatingDockGeometries()
     }
 }
 
+// A floating dock saved on a bigger screen is fitted by restoreState() to the whole of this one, leaving its title
+// bar above the top and its bottom under any taskbar, where the player cannot grab it
+void mudlet::keepFloatingDocksOnScreen()
+{
+    // Guarded, as a resize can run a script that deletes a dock
+    QList<QPointer<QDockWidget>> docks;
+    for (QDockWidget* pDock : findChildren<QDockWidget*>(Qt::FindDirectChildrenOnly)) {
+        docks.append(pDock);
+    }
+    for (const auto& pDock : docks) {
+        if (!pDock || !pDock->isFloating()) {
+            continue;
+        }
+        const QRect geometry = pDock->geometry();
+        const QScreen* pScreen = QGuiApplication::screenAt(geometry.center());
+        if (!pScreen) {
+            pScreen = pDock->screen();
+        }
+        if (!pScreen) {
+            continue;
+        }
+        const QRect available = pScreen->availableGeometry();
+        // The frame is not known before the dock is first shown, so this is what QWidget::restoreGeometry() allows too
+        const int titleBarHeight = pDock->style()->pixelMetric(QStyle::PM_TitleBarHeight, nullptr, pDock);
+        QRect fitted = geometry;
+        fitted.setWidth(qMin(fitted.width(), available.width()));
+        fitted.setHeight(qMin(fitted.height(), available.height() - titleBarHeight));
+        fitted.moveRight(qMin(fitted.right(), available.right()));
+        fitted.moveLeft(qMax(fitted.left(), available.left()));
+        fitted.moveBottom(qMin(fitted.bottom(), available.bottom()));
+        fitted.moveTop(qMax(fitted.top(), available.top() + titleBarHeight));
+        if (fitted != geometry) {
+            pDock->setGeometry(fitted);
+        }
+    }
+}
 
 void mudlet::showEvent(QShowEvent* event)
 {
@@ -4422,7 +4526,7 @@ void mudlet::setCompactInputLineChecked(Host* pHost, bool checked)
     }
 }
 
-void mudlet::showNotification(const QString& title, const QString& text, std::optional<int> msecs)
+bool mudlet::showNotification(const QString& title, const QString& text, std::optional<int> msecs)
 {
     mTrayIcon.show();
     if (msecs.has_value()) {
@@ -4431,6 +4535,7 @@ void mudlet::showNotification(const QString& title, const QString& text, std::op
         mTrayIcon.showMessage(title, text, mTrayIcon.icon());
     }
     mTrayIcon.hide();
+    return true;
 }
 
 // Received when the OS/DE/WM tells Mudlet to close (or we force the close
@@ -5068,9 +5173,7 @@ void mudlet::writeSettings()
     settings.setValue("maximized", static_cast<bool>(windowState() & Qt::WindowMaximized));
     settings.setValue("fullScreen", static_cast<bool>(windowState() & Qt::WindowFullScreen));
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
-    settings.setValue("reportMapIssuesToConsole", TMap::smShowMapAuditErrors);
     settings.setValue("invertMapZoom", mInvertMapZoom);
-    settings.setValue("storePasswordsSecurely", MudletApp::storingPasswordsSecurely());
     settings.setValue("showTabConnectionIndicators", mShowTabConnectionIndicators);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
@@ -5082,9 +5185,8 @@ void mudlet::writeSettings()
 
     settings.setValue("minLengthForSpellCheck", mMinLengthForSpellCheck);
     settings.setValue(qsl("enableMultiViewMode"), mMultiView);
-    settings.setValue(qsl("enableMuteAPI"), mHostManager.media().apiMuted());
-    settings.setValue(qsl("enableMuteGame"), mHostManager.media().gameMuted());
     settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
+    mHostManager.writeSettings(settings);
 #ifdef INCLUDE_MCPSERVER
     settings.setValue(qsl("mcpServerEnabled"), mEnableMCP);
     settings.setValue(qsl("mcpServerPort"), mMCPServerPort);
@@ -6353,7 +6455,7 @@ void mudlet::slot_replay()
     settings.setValue("lastFileDialogLocation", lastDir);
 
     // No third argument causes error messages to be sent to pHost's main console:
-    mReplay.load(pHost, fileName);
+    mHostManager.replay().load(pHost, fileName);
 }
 
 void mudlet::deleteProfileData(const QString& profile, const QString& item)
@@ -6932,6 +7034,8 @@ mudlet::~mudlet()
     if (auto* pSpeechBridge = TSpeechBridge::instance()) {
         disconnect(pSpeechBridge, nullptr, this, nullptr);
     }
+    // And the replay, which a profile still replaying ends as mHostManager deletes it
+    disconnect(&mHostManager.replay(), nullptr, this, nullptr);
     TSpellChecker::closeSharedDictionary();
     if (!mTranslatorsLoadedList.isEmpty()) {
         qDebug().nospace().noquote() << "mudlet::~mudlet() INFO - uninstalling translation...";
@@ -6949,8 +7053,15 @@ mudlet::~mudlet()
 
     saveDetachedWindowsGeometry();
 
+    // While this window is whole and still the frontend, so that profileClosing() takes each profile's windows before
+    // its Host, rather than mHostManager's destruction taking the Hosts and ~QMainWindow their windows after
+    mHostManager.refuseNewProfiles();
+    for (const auto& pHost : mHostManager.hostList()) {
+        mHostManager.deleteHost(pHost->getName());
+    }
+
     if (TAppFrontend::instance() == this) {
-        TAppFrontend::setInstance(nullptr);
+        TAppFrontend::viewDestroyed();
     }
     mudlet::smpSelf = nullptr;
 }
@@ -7133,10 +7244,10 @@ void mudlet::slot_replayStarted()
 
     connect(mpActionReplayPause.data(), &QAction::toggled, this, &mudlet::slot_replayPauseToggled);
     connect(mpActionReplayStop.data(), &QAction::triggered, this, &mudlet::slot_replayStop);
-    connect(mpActionReplaySpeedUp.data(), &QAction::triggered, &mReplay, &MudletReplay::speedUp);
-    connect(mpActionReplaySpeedDown.data(), &QAction::triggered, &mReplay, &MudletReplay::speedDown);
+    connect(mpActionReplaySpeedUp.data(), &QAction::triggered, &mHostManager.replay(), &MudletReplay::speedUp);
+    connect(mpActionReplaySpeedDown.data(), &QAction::triggered, &mHostManager.replay(), &MudletReplay::speedDown);
 
-    mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplay.speed())));
+    mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mHostManager.replay().speed())));
 
     mpTimerReplay = new QTimer(this);
     mpTimerReplay->setInterval(1s);
@@ -7168,9 +7279,9 @@ void mudlet::updateReplayTimeLabel()
 
     // A replay can be quiet for long stretches, so read "held" from the profile, not the button, to report
     // what playback is actually doing:
-    Host* pHost = mReplay.host();
+    Host* pHost = mHostManager.replay().host();
     const bool paused = pHost && pHost->mTelnet.replayPaused();
-    mpLabelReplayTime->setText(replayTimeLabelText(mReplay.elapsed().toString(mTimeFormat), paused));
+    mpLabelReplayTime->setText(replayTimeLabelText(mHostManager.replay().elapsed().toString(mTimeFormat), paused));
     mpLabelReplayTime->show();
 }
 
@@ -7203,7 +7314,7 @@ void mudlet::fitReplayPauseButton()
 void mudlet::slot_replayPauseToggled(const bool paused)
 {
     // Tell playback first, so that the readout below reports what it did:
-    if (Host* pHost = mReplay.host()) {
+    if (Host* pHost = mHostManager.replay().host()) {
         if (paused) {
             pHost->mTelnet.pauseReplay();
         } else {
@@ -7227,7 +7338,7 @@ void mudlet::slot_replayPauseToggled(const bool paused)
 
 void mudlet::slot_replayStop()
 {
-    if (Host* pHost = mReplay.host()) {
+    if (Host* pHost = mHostManager.replay().host()) {
         // This ends up in slot_replayOver(), which is what takes this toolbar down:
         pHost->mTelnet.stopReplay();
     }
@@ -7241,8 +7352,8 @@ void mudlet::slot_replayOver()
 
     disconnect(mpActionReplayPause.data(), &QAction::toggled, this, &mudlet::slot_replayPauseToggled);
     disconnect(mpActionReplayStop.data(), &QAction::triggered, this, &mudlet::slot_replayStop);
-    disconnect(mpActionReplaySpeedUp.data(), &QAction::triggered, &mReplay, &MudletReplay::speedUp);
-    disconnect(mpActionReplaySpeedDown.data(), &QAction::triggered, &mReplay, &MudletReplay::speedDown);
+    disconnect(mpActionReplaySpeedUp.data(), &QAction::triggered, &mHostManager.replay(), &MudletReplay::speedUp);
+    disconnect(mpActionReplaySpeedDown.data(), &QAction::triggered, &mHostManager.replay(), &MudletReplay::speedDown);
     mpToolBarReplay->removeAction(mpActionReplayPause);
     mpToolBarReplay->removeAction(mpActionReplayStop);
     mpToolBarReplay->removeAction(mpActionReplaySpeedUp);

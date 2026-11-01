@@ -226,6 +226,26 @@ describe("Tests the Lua an MXP link runs", function()
         assert.are.same({}, run(actions[1]))
       end)
     end
+
+    -- a mail address can name local files for the mail client to attach, so only the recipient, subject and body go through
+    for href, opened in pairs({
+      ["mailto:x@example.invalid?attachment=/etc/hostname"] = "mailto:x@example.invalid",
+      ["mailto:x@example.invalid?subject=Hi&attach=/etc/hostname&body=Text"] = "mailto:x@example.invalid?subject=Hi&body=Text",
+      ["MAILTO:x@example.invalid?%61ttachment=/etc/hostname&SUBJECT=Hi"] = "mailto:x@example.invalid?SUBJECT=Hi",
+      ["mailto:x@example.invalid?subject=a%26attachment%3D/etc/hostname"] = "mailto:x@example.invalid?subject=a%26attachment%3D/etc/hostname",
+      ["mailto:x@example.invalid#?attachment=/etc/hostname"] = "mailto:x@example.invalid",
+    }) do
+      it(("opens %s as %s"):format(href, opened), function()
+        assertRunsOnly(actionsAfter(("<A href=\"%s\">go</A>"):format(href)), "openUrl", opened)
+      end)
+
+      -- in the text a bare A wraps, an & starts an MXP entity rather than a new field
+      if not href:find("&", 1, true) then
+        it(("opens %s as %s from the text a bare A wraps"):format(href, opened), function()
+          assertRunsOnly(actionsAfter(("<A>%s</A>"):format(href)), "openUrl", opened)
+        end)
+      end
+    end
   end)
 
   -- a bare <A> takes its address from the text it wraps; none of that text may

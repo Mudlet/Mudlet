@@ -4067,8 +4067,11 @@ int TLuaInterpreter::setMainWindowSize(lua_State* L)
 {
     const int x1 = getVerifiedInt(L, __func__, 1, "mainWidth");
     const int y1 = getVerifiedInt(L, __func__, 2, "mainHeight");
-    TAppFrontend::instance()->resizeMainWindow(x1, y1);
-    return 0;
+    if (!TAppFrontend::instance()->resizeMainWindow(x1, y1)) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapWindowTitle

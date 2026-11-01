@@ -37,9 +37,22 @@ public:
     // destructor, this is a null view whose answers are all "not there".
     static TAppFrontend* instance() { return smpInstance ? smpInstance : nullView(); }
     static bool hasView() { return smpInstance != nullptr; }
-    static void setInstance(TAppFrontend* frontend) { smpInstance = frontend; }
+    // From viewDestroyed() until another view is set
+    static bool viewGone() { return smViewGone; }
+    static void setInstance(TAppFrontend* frontend)
+    {
+        smpInstance = frontend;
+        smViewGone = smViewGone && !frontend;
+    }
+    // For the end of the view's destructor, unlike setInstance(nullptr), which a run with no view at all may also do
+    static void viewDestroyed()
+    {
+        smpInstance = nullptr;
+        smViewGone = true;
+    }
 
-    // The profile in the active tab, or nullptr if there is none or it has no console yet.
+    // The profile in the active tab, or nullptr if there is none or it has no console yet. With no main window, the open
+    // profile setActiveProfileTab() last named.
     virtual Host* getActiveHost() = 0;
     virtual void announce(const QString& text, const QString& processing, bool isPlain) = 0;
     virtual void showOptionsDialog(const QString& tab, Host* pHost) = 0;
@@ -54,7 +67,8 @@ public:
     virtual void writeSettings() = 0;
     virtual bool openWebPage(const QString& url) = 0;
     // Without msecs, the frontend picks how long the notification stays up.
-    virtual void showNotification(const QString& title, const QString& text, std::optional<int> msecs) = 0;
+    // false when there is no window to show it from
+    virtual bool showNotification(const QString& title, const QString& text, std::optional<int> msecs) = 0;
     virtual bool drawUpperLowerLevels() const = 0;
     virtual void setDrawUpperLowerLevels(bool draw) = 0;
     virtual void updateMapActionAvailability() = 0;
@@ -66,7 +80,8 @@ public:
     virtual int profileTabIndex(const QString& profileName) const = 0;
     virtual void setActiveProfileTab(const QString& profileName) = 0;
     virtual void setAppStyleSheet(const QString& styleSheet) = 0;
-    virtual void resizeMainWindow(int width, int height) = 0;
+    // false when there is no window to resize
+    virtual bool resizeMainWindow(int width, int height) = 0;
     virtual bool loadWindowLayout() = 0;
     virtual bool layoutLoading() const = 0;
     // Saves even if quitting already saved the layout; if this save fails, quitting saves it again.
@@ -127,6 +142,7 @@ private:
     static TAppFrontend* nullView();
 
     inline static TAppFrontend* smpInstance = nullptr;
+    inline static bool smViewGone = false;
 };
 
 #endif // MUDLET_TAPPFRONTEND_H
