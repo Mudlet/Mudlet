@@ -56,6 +56,7 @@ public:
 
     void setLinkMode(bool val) override { mLinkMode = val; }
     bool isInLinkMode() const { return mLinkMode; }
+    int linkId() const { return mLinkId; }
 
     void pushColor(const QString& fgColor, const QString& bgColor) override;
 
@@ -164,6 +165,7 @@ private:
 
     Host* mpHost;
     bool mLinkMode;
+    int mLinkId = 0;
 };
 
 #endif //MUDLET_TMXPMUDLET_H
