@@ -1,8 +1,9 @@
 # Android and iOS builds of mudlet_core have to leave out spawn(), Discord, the
 # Vosk and sherpa-onnx engines, the MCP server, the updater, the 3D mapper and
-# Sentry (#9011). Nothing else builds with all of those off, so this does, to
-# keep the options that leave them out from rotting. See "Leaving out what a
-# mobile build cannot use" in docs/platform-builds.md.
+# Sentry (#9011), and link in the Lua C modules they cannot dlopen. Nothing else
+# builds that way, so this does, to keep those options from rotting. See
+# "Leaving out what a mobile build cannot use" and "Lua C modules without
+# dlopen" in docs/platform-builds.md.
 name: Build mudlet_core without its desktop-only parts
 
 on:
@@ -54,6 +55,8 @@ jobs:
             libpcre2-dev \
             libpugixml-dev \
             libpulse-dev \
+            libsqlite3-dev \
+            libyajl-dev \
             libzip-dev \
             lua5.1 \
             ninja-build \
@@ -81,3 +84,47 @@ jobs:
 
       - name: Run mudlet-headless
         run: build-linux-core-minimal/src/mudlet-headless --version
+
+      - name: Install Lua and Luarocks
+        uses: leafo/gh-actions-lua@v13
+        with:
+          luaVersion: '5.1.5'
+          buildCache: false
+
+      - uses: leafo/gh-actions-luarocks@v6
+
+      # busted, and the modules not linked into mudlet_core, which mudlet-lua needs to start
+      - name: Install the Lua rocks
+        run: |
+          CI/install-lua-rocks.sh lua-yajl
+          CI/install-lua-rocks.sh
+          eval "$(luarocks path --local --lua-version 5.1)"
+          echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
+          echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
+
+      # busted not loading at all writes no failure marker, so the summary has to be there too
+      - name: Check the linked-in Lua C modules load from package.preload
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -o pipefail
+          log="$RUNNER_TEMP/static-lua-modules.log"
+          mkdir -p "$XDG_CONFIG_HOME/mudlet/profiles"
+          build-linux-core-minimal/src/mudlet-headless -p "Mudlet self-test" --host mudlet.org --port 23 --offline --no-stdin \
+            2>&1 | tee "$log"
+          if [ -e "$MUDLET_TEST_FAILURE_MARKER" ]; then
+            echo "::error::StaticLuaModules_spec.lua failed"
+            exit 1
+          fi
+          grep -Eq '^[1-9][0-9]* successes / 0 failures / 0 errors / 0 pending' "$log"
+        env:
+          AUTORUN_BUSTED_TESTS: 'true'
+          QUIT_MUDLET_AFTER_TESTS: 'true'
+          TESTS_DIRECTORY: ${{ github.workspace }}/src/mudlet-lua/tests/StaticLuaModules_spec.lua
+          MUDLET_EXPECT_STATIC_LUA_MODULES: '1'
+          MUDLET_TEST_MODE: 1
+          MUDLET_TEST_FAILURE_MARKER: ${{ runner.temp }}/static-lua-modules-failed
+          HOME: ${{ runner.temp }}/headless-home
+          XDG_CONFIG_HOME: ${{ runner.temp }}/headless-home/.config
+          QT_QPA_PLATFORM: offscreen
+          DBUS_SESSION_BUS_ADDRESS: 'disabled:'

@@ -652,6 +652,11 @@ if(USE_SPAWN)
   list(APPEND mudlet_HDRS TForkedProcess.h)
 endif()
 
+if(USE_STATIC_LUA_MODULES)
+  list(APPEND mudlet_SRCS LuaStaticModules.cpp)
+  list(APPEND mudlet_HDRS LuaStaticModules.h)
+endif()
+
 if(USE_MCPSERVER)
   list(APPEND mudlet_SRCS TMCPBridge.cpp)
   list(APPEND mudlet_SRCS TMCPServer.cpp)
@@ -1038,6 +1043,12 @@ endif()
 
 if(USE_VARIABLE_SPLASH_SCREEN)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_VARIABLE_SPLASH_SCREEN)
+endif()
+
+if(USE_STATIC_LUA_MODULES)
+  # Only the file that calls into them needs to know, so turning this on rebuilds nothing else
+  set_property(SOURCE TLuaInterpreter.cpp APPEND PROPERTY COMPILE_DEFINITIONS INCLUDE_STATIC_LUA_MODULES)
+  include(StaticLuaModules)
 endif()
 
 target_compile_options(${LIB_MUDLET_TARGET} PUBLIC -Wno-deprecated)

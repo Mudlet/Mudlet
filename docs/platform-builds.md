@@ -324,6 +324,23 @@ cmake --preset linux-core-minimal
 cmake --build --preset linux-core-minimal
 ```
 
+### Lua C modules without dlopen
+
+mudlet-lua `require`s Lua C modules that the desktop builds load from `package.cpath`, as luarocks
+installs them. A platform that cannot `dlopen` them builds with `-DUSE_STATIC_LUA_MODULES=ON`
+(or `WITH_STATIC_LUA_MODULES=YES` in the environment), which is off by default: it fetches each
+module's source at configure time, pinned to a release's commit in `cmake/StaticLuaModules.cmake`,
+links it into `mudlet_core`, and puts its `luaopen_*` function into `package.preload`, which
+`require` searches before `package.cpath`. So far these are `lfs` and `lpeg`. The fetch needs git
+and network access; to build from a local copy instead, point `FETCHCONTENT_SOURCE_DIR_<NAME>`
+at it, as in `-DFETCHCONTENT_SOURCE_DIR_LFS=/src/luafilesystem`.
+
+`StaticLuaModules_spec.lua` checks that each one loads from `package.preload` with
+`package.path` and `package.cpath` emptied. It pends in a build without the option, unless
+`MUDLET_EXPECT_STATIC_LUA_MODULES=1` is set, which makes it fail there instead. The
+`linux-core-minimal` preset turns the option on, and `.github/workflows/core-mobile-build.yml`
+runs the spec in the `mudlet-headless` it builds, with that variable set.
+
 ## Debugging options
 
 `src/CMakeLists.txt` contains commented debugging defines for development (search "Debugging code inclusions"):
