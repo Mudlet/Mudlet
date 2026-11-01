@@ -418,6 +418,7 @@ public slots:
 
 private:
     void set3DViewCenter(int areaId, int x, int y, int z);
+    void takeFocusAwayFromTheCommandLine(Qt::FocusReason);
 
     class InteractionDispatcher
     {

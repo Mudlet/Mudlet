@@ -30,6 +30,7 @@
 #include <QDockWidget>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QToolButton>
 #include <QtTest/QtTest>
 
 #include "Host.h"
@@ -100,7 +101,7 @@ private:
         const auto restore = qScopeGuard([pCommandLine]() {
             pCommandLine->clear();
         });
-        QCOMPARE(runLua(qsl("keyPresses = 0")), QString());
+        QCOMPARE(runLua(qsl("keyPresses = 0; upPresses = 0")), QString());
 
         QWidget* pWindow = p2dMap->window();
         QVERIFY(activate(pWindow));
@@ -111,6 +112,27 @@ private:
 
         QTest::keyClick(pWindow->windowHandle(), Qt::Key_S);
         QCOMPARE(pCommandLine->toPlainText(), qsl("s"));
+
+        // A button with the focus would take these for itself; the number pad's 8 with Num Lock off
+        QVERIFY(activate(pWindow));
+        QTest::mouseClick(p2dMap, Qt::LeftButton, Qt::NoModifier, p2dMap->rect().center());
+        QTest::keyClick(pWindow->windowHandle(), Qt::Key_Up, Qt::KeypadModifier);
+        QCOMPARE(luaGlobalNumber(qsl("upPresses")), 1);
+
+        pCommandLine->clear();
+        QVERIFY(activate(pWindow));
+        QTest::mouseClick(p2dMap, Qt::LeftButton, Qt::NoModifier, p2dMap->rect().center());
+        QTest::keyClick(pWindow->windowHandle(), Qt::Key_Space);
+        QCOMPARE(pCommandLine->toPlainText(), qsl(" "));
+
+        // and the panel button is still reachable with Tab
+        QVERIFY(activate(pWindow));
+        QTest::mouseClick(p2dMap, Qt::LeftButton, Qt::NoModifier, p2dMap->rect().center());
+        QVERIFY(p2dMap->hasFocus());
+        for (int i = 0; i < 20 && !qobject_cast<QToolButton*>(QApplication::focusWidget()); ++i) {
+            QTest::keyClick(pWindow->windowHandle(), Qt::Key_Tab);
+        }
+        QVERIFY2(qobject_cast<QToolButton*>(QApplication::focusWidget()) && QApplication::focusWidget()->window() == pWindow, "Tab never reached a button in the map's window");
     }
 
     static bool activate(QWidget* pWindow)
@@ -163,6 +185,7 @@ private slots:
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
         QVERIFY2(connected.wait(3s), "could not connect to the telnet stub");
         QCOMPARE(runLua(qsl("keyPresses = 0; tempKey(%1, function() keyPresses = keyPresses + 1 end)").arg(static_cast<int>(Qt::Key_F1))), QString());
+        QCOMPARE(runLua(qsl("upPresses = 0; tempKey(%1, %2, function() upPresses = upPresses + 1 end)").arg(static_cast<int>(Qt::KeypadModifier)).arg(static_cast<int>(Qt::Key_Up))), QString());
     }
 
     void cleanupTestCase()
