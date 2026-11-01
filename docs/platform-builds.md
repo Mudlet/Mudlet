@@ -331,7 +331,8 @@ installs them. A platform that cannot `dlopen` them builds with `-DUSE_STATIC_LU
 (or `WITH_STATIC_LUA_MODULES=YES` in the environment), which is off by default: it fetches each
 module's source at configure time, pinned to a release's commit in `cmake/StaticLuaModules.cmake`,
 links it into `mudlet_core`, and puts its `luaopen_*` function into `package.preload`, which
-`require` searches before `package.cpath`. So far these are `lfs`, `lpeg`, `rex_pcre2` and `lua-utf8`. The fetch needs git
+`require` searches before `package.cpath`. So far these are `lfs`, `lpeg`, `rex_pcre2`, `lua-utf8`, `brimworks.zip` and `yajl`, which
+needs libyajl. The fetch needs git
 and network access; to build from a local copy instead, point `FETCHCONTENT_SOURCE_DIR_<NAME>`
 at it, as in `-DFETCHCONTENT_SOURCE_DIR_LFS=/src/luafilesystem`.
 
