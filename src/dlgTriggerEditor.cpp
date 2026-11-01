@@ -2657,6 +2657,9 @@ void dlgTriggerEditor::searchKeys(const QString& text)
 {
     std::list<TKey*> const nodes = mpHost->getKeyUnit()->getKeyRootNodeList();
     for (auto key : nodes) {
+        if (key->isTemporary()) {
+            continue;
+        }
         searchSingleKey(key, text);
         recursiveSearchKeys(key, text);
     }
@@ -2779,6 +2782,9 @@ void dlgTriggerEditor::searchTimers(const QString& text)
 {
     std::list<TTimer*> const nodes = mpHost->getTimerUnit()->getTimerRootNodeList();
     for (auto timer : nodes) {
+        if (timer->isTemporary()) {
+            continue;
+        }
         searchSingleTimer(timer, text);
         recursiveSearchTimers(timer, text);
     }
@@ -2867,6 +2873,9 @@ void dlgTriggerEditor::searchActions(const QString& text)
 {
     std::list<TAction*> const nodes = mpHost->getActionUnit()->getActionRootNodeList();
     for (auto action : nodes) {
+        if (action->isTemporary()) {
+            continue;
+        }
         searchSingleAction(action, text);
         recursiveSearchActions(action, text);
     }
@@ -2980,6 +2989,9 @@ void dlgTriggerEditor::searchAliases(const QString& text)
 {
     std::list<TAlias*> const nodes = mpHost->getAliasUnit()->getAliasRootNodeList();
     for (auto alias : nodes) {
+        if (alias->isTemporary()) {
+            continue;
+        }
         searchSingleAlias(alias, text);
         recursiveSearchAlias(alias, text);
     }
@@ -3050,6 +3062,9 @@ void dlgTriggerEditor::searchTriggers(const QString& text)
 {
     std::list<TTrigger*> const nodes = mpHost->getTriggerUnit()->getTriggerRootNodeList();
     for (auto trigger : nodes) {
+        if (trigger->isTemporary()) {
+            continue;
+        }
         searchSingleTrigger(trigger, text);
         recursiveSearchTriggers(trigger, text);
     }

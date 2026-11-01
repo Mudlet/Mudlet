@@ -2533,6 +2533,7 @@ int TLuaInterpreter::tempButton(lua_State* L)
 
     pT->registerAction();
     host.getActionUnit()->updateAllToolbars();
+    host.getLuaInterpreter()->updateEditor();
     lua_pushnumber(L, pT->getID());
     return 1;
 }
@@ -2578,6 +2579,7 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
     pT->setIsActive(true);
     pT->registerAction();
     host.getActionUnit()->updateAllToolbars();
+    host.getLuaInterpreter()->updateEditor();
 
     lua_pushnumber(L, pT->getID());
     return 1;
