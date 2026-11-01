@@ -420,6 +420,8 @@ public:
     QSet<QString> mHiddenMenuItems;
     static const QStringList& builtInMenuItemNames();
     bool menuItemShown(const QString& itemName) const;
+    // The area of the player's room, which a map view opened on no area shows
+    std::optional<int> playerAreaId() const;
 
     typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
     typedef boost::property_map<mygraph_t, boost::edge_weight_t>::type WeightMap;
