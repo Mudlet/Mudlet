@@ -10080,7 +10080,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return success();
     }
     if (key == qsl("editorFontFollowsDisplay")) {
-        host.setEditorFontFollowsDisplay(getVerifiedBool(L, __func__, 2, "value"));
+        host.setEditorFontFollowsDisplay(getVerifiedBool(L, __func__, 2, "value"), Host::EditorFontStart::FontOnShow);
         return success();
     }
     if (key == qsl("mapperPanelVisible")) {
