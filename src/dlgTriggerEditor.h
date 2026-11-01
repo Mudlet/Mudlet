@@ -671,6 +671,8 @@ private:
                                                              {tr("Debug"), qsl("Ctrl+0")}};
 
     std::unordered_map<SingleLineTextEdit*, bool> lineEditShouldMarkSpaces;
+    // Toolbar shortcuts held aside while a key is being grabbed, so all of them come back afterwards
+    QHash<QAction*, QList<QKeySequence>> mSuspendedShortcuts;
 
     QToolBar* toolBar = nullptr;
     QToolBar* toolBar2 = nullptr;
