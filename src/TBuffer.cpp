@@ -6808,10 +6808,14 @@ void TBuffer::logRemainingOutput()
 
 // A gagged line never reaches log(), so without this a run of them would hold
 // their appendLog() text in memory until a line that is not gagged arrives.
-// A later line has been committed, so the pending one can no longer be logged again.
+// Once the gagged line is gone the pending one is last again, so a prompt there
+// is held: the command echo still lands on it and logs it again.
 void TBuffer::logTextAppendedBehindPendingLine()
 {
     if (mTextAppendedToLog.isEmpty()) {
+        return;
+    }
+    if (lastloggedToLine >= 0 && lastloggedToLine < promptBuffer.size() && promptBuffer.at(lastloggedToLine)) {
         return;
     }
     TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();

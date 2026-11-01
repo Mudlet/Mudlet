@@ -1236,6 +1236,40 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(contains(contents, "SpecAppendHeldBefore\nSpecAppendHeld1\nSpecAppendHeld2\n"), "the appended lines were held back:\n" .. contents)
         end)
 
+        it("logs a prompt once when a gagged line appends to the log before a command is echoed onto it", function()
+          local logPath
+          local triggerId
+          local htmlLogging = getConfig("logInHTML")
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            if logPath then
+              os.remove(logPath)
+            end
+            setConfig("logInHTML", htmlLogging)
+          end)
+          setConfig("logInHTML", false)
+          triggerId = tempExactMatchTrigger("SpecAppendPromptGagged", function()
+            deleteLine()
+            appendLog("SpecAppendPromptGagged\n")
+          end)
+          logPath = select(3, startLogging(true))
+
+          feedTelnet("SpecAppendPromptBefore\nSpecAppendPrompt>\255\249")
+          feedTelnet("SpecAppendPromptGagged\n")
+          send("spec-append-prompt-command", true)
+          feedTelnet("SpecAppendPromptAfter\nSpecAppendPromptFlush\n")
+          startLogging(false)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the text log file that was closed is not readable")
+          assert.is_true(contains(contents, "SpecAppendPrompt>spec-append-prompt-command\n"), "the prompt with its command echo is not in the log:\n" .. contents)
+          assert.is_false(contains(contents, "SpecAppendPrompt>\n"), "the prompt was logged again without its command echo:\n" .. contents)
+          assert.is_true(contains(contents, "SpecAppendPromptGagged\n"), "the appended text is not in the log:\n" .. contents)
+        end)
+
         it("writes nothing while logging is off", function()
           local logPath
           finally(function()
