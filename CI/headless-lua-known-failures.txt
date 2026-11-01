@@ -66,16 +66,12 @@ Failure Media_spec.lua: Media playback effects with a generated sound file a vid
 Failure Media_spec.lua: Media playback effects with a generated sound file playVideoFile plays into the label its key names and the video family reports it
 Failure Media_spec.lua: Media playback effects with a generated sound file playVideoFile starts nothing when its key names no widget to draw into
 Failure Media_spec.lua: Media playback effects with a generated sound file the video pause and stop table forms act only on the key they name
-Failure TextEditSelection_spec.lua: Tests sysWindowOverflowEvent raises the event only once the lines no longer fit
 Failure Trigger_spec.lua: Trigger processing feedTriggers contract scrolls the main console to the lines it feeds from text a trigger feeds, once the game data that fired the trigger is handled
 Failure Trigger_spec.lua: Trigger processing feedTriggers contract scrolls the main console to the lines it feeds from text a trigger feeds, once the pass that fired the trigger ends
-Failure UI_spec.lua: A user window driven from Lua announces sysWindowOverflowEvent when it is not allowed to scroll
 Failure UI_spec.lua: Main window size and saved layout saveWindowLayout and loadWindowLayout saveWindowLayout returns false when the layout file cannot be opened, and saves again once it can
 Failure UI_spec.lua: Main window size and saved layout saveWindowLayout and loadWindowLayout saveWindowLayout returns true and writes the layout file
 Failure UI_spec.lua: Widget state getters getUserWindowTitle reports the title a style sheet gives a floating user window
 Failure UI_spec.lua: Window state getters getLabelText reports text a style sheet gives the label
-Failure UI_spec.lua: sysWindowOverflowEvent goes quiet again when the console is allowed to scroll once more
-Failure UI_spec.lua: sysWindowOverflowEvent names the console and how many lines are past the bottom of it
 Failure WindowGeometry_spec.lua: getWindowGeometry follows a docked user window as the main window lays its dock area out again
 Failure WindowSize_spec.lua: window sizes getMainWindowSize follows a button bar shown along its top
 Failure WindowSize_spec.lua: window sizes getMainWindowSize follows the command line as it grows with its text

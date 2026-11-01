@@ -505,6 +505,7 @@ private:
     void reportDisplayFontChange(const QFont& before);
     void raiseFontEvent(const QString& eventName, const QString& subject, const QFont& font);
     void reportGridSize(const QString& name);
+    void reportLinesOverflow(const TConsoleModel& model, int lineCount);
 
     Host* mpHost = nullptr;
     TNullMxpFrameFrontend mMxpFrames{*this};

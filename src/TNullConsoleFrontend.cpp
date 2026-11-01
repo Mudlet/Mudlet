@@ -952,7 +952,33 @@ TConsoleModel& TNullConsoleFrontend::addSubConsole(const QString& name, const TW
             removeSubConsole(name);
         }
     });
+    // As TConsole connects only these two, the only kinds that can be told not to scroll
+    if (kind == TWindowRegistry::SubConsoleKind::MiniConsole || kind == TWindowRegistry::SubConsoleKind::UserWindow) {
+        QObject::connect(&model.mNotifier, &TConsoleModelNotifier::linesAppended, &model.mNotifier, [this, &model](const int lineCount) {
+            reportLinesOverflow(model, lineCount);
+        });
+    }
     return model;
+}
+
+// As TConsole::handleLinesOverflowEvent()
+void TNullConsoleFrontend::reportLinesOverflow(const TConsoleModel& model, const int lineCount)
+{
+    if (model.mScrollingEnabled) {
+        return;
+    }
+    const int linesSpare = model.mGridSize.height() - lineCount;
+    if (linesSpare >= 0) {
+        return;
+    }
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysWindowOverflowEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(model.mConsoleName);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(-linesSpare));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mpHost->raiseEvent(event);
 }
 
 void TNullConsoleFrontend::removeSubConsole(const QString& name, const bool keepWidget)
