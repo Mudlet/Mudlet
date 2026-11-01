@@ -762,7 +762,11 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
 
     if (existingTrigger) {
         for (int i = 0; i < patterns.size(); i++) {
-            if (patterns.at(i).isEmpty() && patternKinds.at(i) != REGEX_PROMPT) {
+            const int kind = patternKinds.at(i);
+            // A blank entry among other patterns is an unused row, but a lone empty substring, start of
+            // line or regex pattern is how a script asks to match every line
+            const bool loneTextPattern = patterns.size() == 1 && (kind == REGEX_SUBSTRING || kind == REGEX_BEGIN_OF_LINE_SUBSTRING || kind == REGEX_PERL);
+            if (patterns.at(i).isEmpty() && kind != REGEX_PROMPT && !loneTextPattern) {
                 continue;
             }
 

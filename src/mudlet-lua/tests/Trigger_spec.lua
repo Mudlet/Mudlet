@@ -59,6 +59,26 @@ describe("Trigger processing", function()
 
     end)
 
+    describe("an empty pattern", function()
+
+        for _, case in ipairs({
+            {"tempRegexTrigger", tempRegexTrigger},
+            {"tempTrigger", tempTrigger},
+            {"tempBeginOfLineTrigger", tempBeginOfLineTrigger},
+        }) do
+            it("matches the start of every line in a " .. case[1], function()
+                local fired = {}
+                local id = case[2]("", function()
+                    fired[#fired + 1] = {matches[1], line}
+                end)
+                feedTriggers("empty_pattern_probe one\nempty_pattern_probe two\n")
+                killTrigger(id)
+                assert.are.same({{"", "empty_pattern_probe one"}, {"", "empty_pattern_probe two"}}, fired)
+            end)
+        end
+
+    end)
+
     -- Test for nested trigger processing with self-deletion
     -- This verifies the fix that uses mProcessingDepth counter instead of a bool flag
     -- (same fix as for aliases - see Alias_spec.lua for detailed explanation)
