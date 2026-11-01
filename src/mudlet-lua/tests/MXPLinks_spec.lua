@@ -201,6 +201,10 @@ describe("Tests the Lua an MXP link runs", function()
       end)
     end
 
+    it("opens a mailto with only its message fields", function()
+      assertRunsOnly(actionsAfter('<A href="mailto:admin@example.com?subject=Hi&attach=/etc/hostname&body=Text">go</A>'), "openUrl", "mailto:admin@example.com?subject=Hi&body=Text")
+    end)
+
     for _, href in ipairs({"file:///etc/hosts", "steam://run/1", "javascript:alert(1)", "www.example.com"}) do
       it(("does not open %s"):format(href), function()
         local actions = actionsAfter(("<A href=\"%s\">go</A>"):format(href))

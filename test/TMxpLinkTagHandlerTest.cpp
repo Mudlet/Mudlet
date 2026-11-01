@@ -92,6 +92,23 @@ private slots:
     QCOMPARE(stub.mHints, QStringList(refusal(qsl("file:///etc/hosts"))));
   }
 
+  // The tooltip is what the player trusts, so it shows what opens rather than what the game wrote
+  void testMailtoTooltipShowsWhatOpens() {
+    TMxpStubClient stub;
+    feed(stub, "<A href=\"mailto:a@example.com?subject=Hi&attach=/etc/hostname\">mail</A>");
+
+    QCOMPARE(stub.mHrefs, QStringList(opens(qsl("mailto:a@example.com?subject=Hi"))));
+    QCOMPARE(stub.mHints, QStringList(qsl("mailto:a@example.com?subject=Hi")));
+  }
+
+  void testBareAMailtoTooltipShowsWhatOpens() {
+    TMxpStubClient stub;
+    feed(stub, "<A>mailto:a@example.com?cc=b@example.com</A>");
+
+    QCOMPARE(stub.mHrefs, QStringList(opens(qsl("mailto:a@example.com"))));
+    QCOMPARE(stub.mHints, QStringList(qsl("mailto:a@example.com")));
+  }
+
   void testFilledAddressKeepsTheGamesHint() {
     TMxpStubClient stub;
     feed(stub, "<A href=\"https://wiki.example/&text;\" hint=\"Wiki page\">Page</A>");
