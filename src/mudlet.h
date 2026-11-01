@@ -231,6 +231,8 @@ public:
     bool saveWindowLayoutForScript() override;
     bool openProfile(const QString& profileName, bool connect) override;
     bool requestProfileClose(const QString& profileName) override;
+    // Destroys the profile's windows, so that none of them outlives its Host
+    void profileClosing(Host* pHost) override;
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
     void setAppearance(enums::Appearance, const bool& loading = false);

@@ -326,6 +326,11 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
 TMainConsole::~TMainConsole()
 {
+    // Before any of the teardown, so nothing it reaches through Host::consoleFrontend() meets a half-destroyed view
+    if (mpHost) {
+        mpHost->setMainConsoleView(nullptr);
+    }
+
     // These widgets' destroyed() handlers would write to maps already destroyed if they ran after this
     // console's members go but before ~QObject severs connections. Only our own children, deleted by
     // ~QWidget, die in that window (a user window's belong to its TDockWidget), so sweep children - not map

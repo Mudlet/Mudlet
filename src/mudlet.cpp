@@ -61,6 +61,7 @@
 #include "TSpeechBridge.h"
 #include "TSpellChecker.h"
 #include "TTabBar.h"
+#include "TToolBar.h"
 #include "TUiTour.h"
 
 #include "dlgAboutDialog.h"
@@ -3353,6 +3354,71 @@ void mudlet::closeHost(const QString& name)
     updateMultiViewControls();
     // Update main window title since a profile was closed
     updateMainWindowTitle();
+}
+
+void mudlet::profileClosing(Host* pHost)
+{
+    // Its child windows go first: an open context menu closing gives the focus back to the view, which by then is half destroyed
+    const auto destroyView = [](QWidget* pView) {
+        if (!pView) {
+            return;
+        }
+        QList<QPointer<QWidget>> childWindows;
+        for (auto pChild : pView->findChildren<QWidget*>()) {
+            if (pChild->isWindow()) {
+                childWindows.append(pChild);
+            }
+        }
+        for (const auto& pChildWindow : childWindows) {
+            delete pChildWindow.data();
+        }
+        delete pView;
+    };
+    if (smpDebugConsole && smpDebugConsole->getHost() == pHost) {
+        destroyView(smpDebugArea.data());
+    }
+    if (TMap* pMap = pHost->mpMap.data()) {
+        if (TMapViewManager* pViews = pMap->getViewManager()) {
+            pMap->setViewManager(nullptr);
+            delete pViews;
+        }
+    }
+    // Takes its sub-consoles, labels, command lines and embedded mapper with it
+    destroyView(pHost->mainConsoleView());
+    const auto belongsToHost = [pHost](QWidget* pWidget) {
+        if (auto* pConsole = qobject_cast<TConsole*>(pWidget)) {
+            return pConsole->getHost() == pHost;
+        }
+        if (auto* pUserWindow = qobject_cast<TDockWidget*>(pWidget)) {
+            return pUserWindow->getHost() == pHost;
+        }
+        // One taken off its console's list is left waiting on a deleteLater()
+        if (auto* pToolBar = qobject_cast<TToolBar*>(pWidget)) {
+            return pToolBar->getHost() == pHost;
+        }
+        if (auto* pDock = qobject_cast<QDockWidget*>(pWidget)) {
+            auto* pMapper = qobject_cast<dlgMapper*>(pDock->widget());
+            return pMapper && pMapper->getHost() == pHost;
+        }
+        return false;
+    };
+    // Buffers have no parent, and user windows, toolbars and map docks hang off whichever main window they were docked in
+    QList<QPointer<QWidget>> views;
+    const auto topLevels = QApplication::topLevelWidgets();
+    for (QWidget* pTopLevel : topLevels) {
+        if (belongsToHost(pTopLevel)) {
+            views.append(pTopLevel);
+        }
+        const auto docks = pTopLevel->findChildren<QDockWidget*>();
+        for (QDockWidget* pDock : docks) {
+            if (belongsToHost(pDock)) {
+                views.append(pDock);
+            }
+        }
+    }
+    for (const auto& pView : views) {
+        destroyView(pView.data());
+    }
 }
 
 void mudlet::updateMultiViewControls()
