@@ -446,6 +446,8 @@ private slots:
         QVERIFY2(pHost, "the profile was not opened");
         QCOMPARE(pHost->getUrl(), qsl("localhost"));
         QVERIFY2(pHost->mUSE_IRE_DRIVER_BUGFIX, "the IRE workaround was chosen for the saved address instead of for the game");
+        QVERIFY2(pHost->mInstalledPackages.contains(qsl("mudlet-mapper")), qPrintable(qsl("the game's mapper was not installed, only: %1").arg(pHost->mInstalledPackages.join(qsl(", ")))));
+        QVERIFY2(!pHost->mInstalledPackages.contains(qsl("generic_mapper")), "the generic mapper was chosen for the saved address instead of the game's own");
     }
 
     void test_openingAnUntouchedCatalogGameUsesTheCatalogsAddress()
