@@ -753,8 +753,11 @@ int TCommandLine::heightForRows(const int rows) const
     }
     const QTextLayout* layout = firstBlock.layout();
     const int rowsInFirstBlock = (layout && layout->lineCount() > 0) ? layout->lineCount() : 1;
+    // Only the top and bottom insets: under a stylesheet frameWidth() is the widest of all four,
+    // so a "margin-left" would otherwise be added to the height twice over.
+    const QMargins insets = contentsMargins();
     // a viewport that merely matches the text still keeps a row of range, so clear it by one
-    return qCeil(blockHeight / rowsInFirstBlock * rows + 2 * documentMargin) + 1 + 2 * frameWidth();
+    return qCeil(blockHeight / rowsInFirstBlock * rows + 2 * documentMargin) + 1 + insets.top() + insets.bottom();
 }
 
 void TCommandLine::adjustHeight()

@@ -270,6 +270,36 @@ private slots:
         auto [deleted, deleteMsg] = mpHost->deleteMiniConsole(name);
         QVERIFY2(deleted, qPrintable(deleteMsg));
     }
+
+    // setAppStyleSheet([[TCommandLine { margin-left: 345px; }]]) is a common way to
+    // leave room beside the input line. Under a stylesheet frameWidth() is the widest
+    // inset on any side, so a horizontal margin must not reach the height.
+    void test_aSideMarginLeavesTheHeightAlone()
+    {
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        const QString savedStyleSheet = qApp->styleSheet();
+        // wide enough that the margin leaves room to type; at the default test size it eats the whole line
+        mudlet::self()->resize(1200, 800);
+        qApp->processEvents();
+
+        fill(pCommandLine, QString());
+        const int plainHeight = pCommandLine->height();
+
+        qApp->setStyleSheet(qsl("TCommandLine { margin-left: 345px; }"));
+        qApp->processEvents();
+        QVERIFY2(pCommandLine->frameWidth() >= 345, "the stylesheet never reached the command line, so nothing was measured");
+        fill(pCommandLine, QString());
+        const int styledHeight = pCommandLine->height();
+        const int styledRange = pCommandLine->verticalScrollBar()->maximum();
+        const int styledTextWidth = pCommandLine->viewport()->width();
+
+        qApp->setStyleSheet(savedStyleSheet);
+        qApp->processEvents();
+
+        QVERIFY2(styledTextWidth > 100, "the margin left no room to type, so a scroll range would come from wrapping, not the height");
+        QCOMPARE(styledHeight, plainHeight);
+        QCOMPARE(styledRange, 0);
+    }
 };
 
 #include "CommandLineScrollRangeTest.moc"
