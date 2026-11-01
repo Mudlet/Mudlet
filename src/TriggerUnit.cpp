@@ -1242,6 +1242,7 @@ void TriggerUnit::setTriggerStayOpen(const QString& name, int lines)
     const auto [begin, end] = mLookupTable.equal_range(name);
     for (auto it = begin; it != end; ++it) {
         TTrigger* pT = it.value();
+        ++pT->mStayOpenSetsByScript;
         const bool wasOpen = pT->mKeepFiring > 0;
         pT->mKeepFiring = lines;
         const bool nowOpen = pT->mKeepFiring > 0;
