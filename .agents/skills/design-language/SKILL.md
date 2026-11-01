@@ -233,7 +233,9 @@ Adopted (styled through `uiDesign`, guarded by the tests below):
   every button whose popup mode says it has one (`QToolButton[popupMode="1"]` - Connect,
   Sound, Packages and an addon's command button), a checked action lit in the accent's wash
   rather than sunk, and the profile's own Lua sheet appended after the design's on the same
-  widget; guarded by `MainToolBarStyleTest`
+  widget; guarded by `MainToolBarStyleTest`. While an update waits, About is `aboutUpdateButton`:
+  the Lucide "!" in a circle and the word "Update", both in `scmStateHue_update` walked to
+  `scmTextMinimumRatio`, with no menu arrow; guarded by `AboutMenuReleaseNoticeTest`
 - Debug filter bar `TDebugFilterBar`
 - The console's foot `TConsole` (main window, user windows and miniconsoles with a command
   line) - one 1px seam along its top mixed from the profile's command-line colours at

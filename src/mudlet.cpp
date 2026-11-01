@@ -4939,6 +4939,9 @@ void mudlet::setToolBarIconSize(const int s)
 
     mToolbarIconSize = s;
     mpMainToolBar->setIconSize(QSize(s * 8, s * 8));
+    if (mpButtonAbout) {
+        mpButtonAbout->setIconSize(mpMainToolBar->iconSize());
+    }
     if (mToolbarIconSize > 2) {
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         mpButtonConnect->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
@@ -4980,10 +4983,26 @@ static QString splitToolBarButtonRules(const QString& barSelector, const uiDesig
            + uiDesign::splitButtonMenuHalfStyleSheet(splitSelector, uiDesign::scmToolBarButtonRadius, tokens);
 }
 
+// Held to the text floor rather than the quiet one, since the word under the glyph carries it too
+static QColor aboutUpdateInk(const uiDesign::ThemeTokens& tokens)
+{
+    return uiDesign::readableOn(tokens.page, uiDesign::stateColor(uiDesign::scmStateHue_update, tokens.darkPage), tokens.text, uiDesign::scmTextMinimumRatio);
+}
+
+static QIcon aboutUpdateIcon(const uiDesign::ThemeTokens& tokens)
+{
+    return QIcon(uiDesign::tintedGlyph(uiDesign::glyphPixmap(qsl(":/icons/toolbar-about-update.svg")), aboutUpdateInk(tokens)));
+}
+
 // Colour only: QToolBar scales the 128px glyphs itself, so an icon size change need not call this
 void mudlet::restyleToolBarIcons()
 {
-    uiDesign::restyleToolBarGlyphs(mToolBarGlyphs, uiDesign::themeTokens());
+    const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+    uiDesign::restyleToolBarGlyphs(mToolBarGlyphs, tokens);
+    // Outside mToolBarGlyphs, which inks every glyph as chrome
+    if (mpButtonAbout) {
+        mpButtonAbout->setIcon(aboutUpdateIcon(tokens));
+    }
     restyleMainToolBar();
 }
 
@@ -5007,7 +5026,11 @@ void mudlet::restyleMainToolBar()
         return;
     }
 
-    const QString mainSheet = toolBarShellStyleSheet(qsl("QToolBar#mpMainToolBar")) + mMainToolBarProfileStyleSheet;
+    // Under the pointer too, where the bar's own rule would turn the word accent beside a green glyph. The arrow Qt
+    // adds for a menu is drawn over the word, so it goes
+    const QString aboutUpdateButton = qsl("QToolBar#mpMainToolBar QToolButton#aboutUpdateButton");
+    const QString aboutUpdateRules = qsl("%1, %1:hover { color: %2; } %1::menu-indicator { image: none; }").arg(aboutUpdateButton, aboutUpdateInk(uiDesign::themeTokens()).name());
+    const QString mainSheet = toolBarShellStyleSheet(qsl("QToolBar#mpMainToolBar")) + aboutUpdateRules + mMainToolBarProfileStyleSheet;
     // setStyleSheet() re-polishes the whole bar, and this runs on every palette change and profile switch
     if (mpMainToolBar->styleSheet() != mainSheet) {
         mpMainToolBar->setStyleSheet(mainSheet);
@@ -7589,6 +7612,8 @@ void mudlet::slot_updateAvailable(const int updateCount)
     // to a new menu which also contains a "goto updater" option
 
     if (mpActionAboutWithUpdates) {
+        // Back on the bar first: the new button goes before this action, and without it goes to the far end
+        mpMainToolBar->insertAction(mpActionAboutWithUpdates, mpActionAbout);
         mpMainToolBar->removeAction(mpActionAboutWithUpdates);
     }
 
@@ -7609,7 +7634,10 @@ void mudlet::slot_updateAvailable(const int updateCount)
     // can modify the popupMode away from the delayed one that is hardwared into
     // the transmuted QAction-to-QToolButton ones):
     mpButtonAbout = new QToolButton();
-    mpButtonAbout->setIcon(QIcon(qsl(":/icons/mudlet_important.png")));
+    mpButtonAbout->setObjectName(qsl("aboutUpdateButton"));
+    mpButtonAbout->setIcon(aboutUpdateIcon(uiDesign::themeTokens()));
+    // Made with no parent, so it does not follow the bar's iconSizeChanged
+    mpButtonAbout->setIconSize(mpMainToolBar->iconSize());
     /*:
     This is the tooltip text for the 'About' Mudlet main toolbar button when it has been changed by adding a menu which now contains the original 'About Mudlet' action
     and a new one to access the manual update process
@@ -7619,7 +7647,8 @@ void mudlet::slot_updateAvailable(const int updateCount)
                                  // Intentional comment
                                  nullptr,
                                  updateCount));
-    mpButtonAbout->setText(tr("About"));
+    //: Word on the main toolbar's About button while an update is waiting, in place of "About"; the button's menu still holds About
+    mpButtonAbout->setText(tr("Update"));
     mpButtonAbout->setPopupMode(QToolButton::InstantPopup);
     // Now insert our new button after the current QAction/QToolButton
     mpActionAboutWithUpdates = mpMainToolBar->insertWidget(mpActionAbout, mpButtonAbout);

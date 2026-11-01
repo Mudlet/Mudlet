@@ -111,6 +111,9 @@ inline constexpr qreal scmAccentWashStrength = 0.24;
 // reader cannot tell those apart
 inline constexpr qreal scmStateHue_ok = 0.58;
 inline constexpr qreal scmStateHue_warning = 0.09;
+// Green, apart from scmStateHue_ok: an update waiting is never read beside "broken", and the "!" and the word
+// "Update" say it for a reader who cannot see the hue
+inline constexpr qreal scmStateHue_update = 0.34;
 // A shade off pure red rather than towards orange: at the saturation a red is
 // mixed at, the orange side of it reads as tomato
 inline constexpr qreal scmStateHue_error = 0.01;

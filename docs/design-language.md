@@ -988,6 +988,12 @@ into a corner of it.
   appearance change already calls, and a detached window's bar is redrawn by its
   own `restyleToolBarIcons()` for the same reason. The replay bar is named
   `mpToolBarReplay` so it can be scoped to; it carries no profile sheet.
+- While an update waits, `slot_updateAvailable()` swaps the About action for
+  `aboutUpdateButton`: the Lucide "!" in a circle (`toolbar-about-update.svg`) and the
+  word "Update". Both take `scmStateHue_update`, walked to `scmTextMinimumRatio` since
+  the word carries the ink too, and keep it under the pointer. Qt's menu arrow is hidden
+  because it is drawn over the word. The hue is apart from `scmStateHue_ok`: an update
+  waiting is never read beside "broken", and the "!" and the word say it without colour.
 
 `test/functional_tests/MainToolBarStyleTest.cpp` holds it: the sheet's
 composition, and the hover wash, the accent wash and the seam on the menu half
