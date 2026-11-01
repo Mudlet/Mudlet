@@ -144,6 +144,18 @@ session->save();                     // before the system may stop the app, as a
 session->shutdown(true);             // sysExitEvent, then the save
 ```
 
+`options.configDir` names the folder to keep the profiles and `Mudlet.ini` in, in place of the GUI's
+config folder, such as an app's own data folder; it is made if need be. The passwords stored for its
+profiles are kept in it too, under `credentials/`, not in the system's keychain or the GUI's own
+password files, so a profile there shares none with a GUI profile of the same name. It is the folder
+until the process ends, so a later `start()` may name it again, but no other, nor leave it out for the
+GUI's. Nor may it be any folder the GUI could keep its profiles in, whose passwords are kept elsewhere:
+`$XDG_CONFIG_HOME/mudlet`, `~/.config/mudlet`, the Flatpak's `~/.var/app/org.mudlet.mudlet/config/mudlet`
+and the folder a `portable.txt` beside the app's executable or in `~/.config/mudlet` names, by any
+path that leads to one, even before it is made. Not caught: a portable install whose `portable.txt` is
+beside another executable, and a GUI run under another HOME. Naming one of their folders shares its
+profiles and `Mudlet.ini` with that GUI (not its passwords), so `start()` warns when a folder it accepts already holds profiles.
+
 The signals' handlers are called while a line is being written, so they must not call the session
 back or run the event loop; queue the work for later instead. `host()` reaches what the session
 does not cover, such as settings and the map, and goes null once the profile closes, so hold it in a

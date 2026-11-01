@@ -28,16 +28,19 @@
 
 #include <QDataStream>
 #include <QDir>
+#include <QDirIterator>
 #include <QElapsedTimer>
 #include <QFile>
 #include <QScopeGuard>
 #include <QSignalSpy>
+#include <QStandardPaths>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTemporaryDir>
 #include <QXmlStreamReader>
 #include <QtTest/QtTest>
 
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -174,6 +177,50 @@ end))lua")
             }
         }
         return true;
+    }
+
+    static QMap<QString, QByteArray> filesUnder(const QString& dir)
+    {
+        QMap<QString, QByteArray> files;
+        QDirIterator it(dir, QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            const QString path = it.next();
+            QFile file(path);
+            files.insert(QDir(dir).relativeFilePath(path), file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray());
+        }
+        return files;
+    }
+
+    static bool storePassword(const QString& profile, const QString& key, const QString& password)
+    {
+        CredentialManager store;
+        std::optional<bool> stored;
+        store.storePassword(profile, key, password, [&stored](const bool success, const QString&) {
+            stored = success;
+        });
+        return QTest::qWaitFor(
+                       [&stored]() {
+                           return stored.has_value();
+                       },
+                       10000)
+               && *stored;
+    }
+
+    // Empty for none, or one that could not be read
+    static QString retrievePassword(const QString& profile, const QString& key)
+    {
+        CredentialManager store;
+        std::optional<QString> found;
+        store.retrievePassword(profile, key, [&found](const bool success, const QString& password, const QString&) {
+            found = success ? password : QString();
+        });
+        return QTest::qWaitFor(
+                       [&found]() {
+                           return found.has_value();
+                       },
+                       10000)
+                       ? *found
+                       : qsl("(no answer)");
     }
 
     static qsizetype saveCount(const QString& name) { return QDir(MudletApp::getMudletPath(enums::profileXmlFilesPath, name)).entryList(QStringList{qsl("*.xml")}, QDir::Files).size(); }
@@ -2783,6 +2830,354 @@ end))lua")
         QVERIFY(luaGlobalString(session.host(), "headlessAliasRan").isEmpty());
         QVERIFY(session.submit(qsl("headless")));
         QCOMPARE(luaGlobalString(session.host(), "headlessAliasRan"), qsl("yes"));
+    }
+
+    void test_aChosenConfigDirKeepsTheProfilesAndSettings()
+    {
+        QVERIFY(!HostManager::self());
+        // The root is settled once a process, so the other tests' one is forgotten, and brought back after
+        MudletApp::setConfigPath(QString());
+        const auto forget = qScopeGuard([]() {
+            MudletApp::setConfigPath(QString());
+        });
+        QTemporaryDir parent;
+        QVERIFY(parent.isValid());
+        const QString chosen = parent.filePath(qsl("chosen"));
+        QVERIFY(QDir().mkpath(chosen));
+        QVERIFY(writeFile(qsl("%1/Mudlet.ini").arg(chosen), "[General]\nenableMuteAPI=true\n"));
+        const QString name = qsl("Headless Own Folder");
+        const QString profileFolder = qsl("%1/profiles/%2").arg(chosen, name);
+        {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = name, .connect = false, .host = qsl("game.example"), .configDir = chosen + qsl("/./")}), THeadlessSession::StartResult::started);
+            QVERIFY(MudletApp::portableRootInUse());
+            QVERIFY(QDir(profileFolder).exists());
+            QVERIFY(!QDir(qsl("%1/mudlet/profiles/%2").arg(mConfigDir.path(), name)).exists());
+            QVERIFY(session.runLua(qsl("headlessHome = getMudletHomeDir() headlessMuted = tostring(getConfig('muteMediaAPI'))")));
+            QCOMPARE(luaGlobalString(session.host(), "headlessHome"), profileFolder);
+            QCOMPARE(luaGlobalString(session.host(), "headlessMuted"), qsl("true"));
+            HostManager::self()->media().setApiMuted(false);
+            QVERIFY(session.shutdown(true));
+        }
+        QVERIFY(readFile(qsl("%1/Mudlet.ini").arg(chosen)).contains(qsl("enableMuteAPI=false")));
+        QVERIFY(!QDir(MudletApp::getMudletPath(enums::profileXmlFilesPath, name)).isEmpty());
+
+        // Settled now, so it can be named again but no other can
+        THeadlessSession again;
+        QCOMPARE(again.start({.profile = name, .connect = false, .configDir = chosen}), THeadlessSession::StartResult::started);
+        QVERIFY(again.shutdown(false));
+        THeadlessSession elsewhere;
+        QCOMPARE(elsewhere.start({.profile = name, .connect = false, .configDir = parent.path()}), THeadlessSession::StartResult::invalidConfigDir);
+        QVERIFY(elsewhere.errorString().contains(chosen));
+        // Nor is the GUI's folder, which an empty one names
+        THeadlessSession unnamed;
+        QCOMPARE(unnamed.start({.profile = name, .connect = false}), THeadlessSession::StartResult::invalidConfigDir);
+        QVERIFY(unnamed.errorString().contains(chosen));
+        QVERIFY(!HostManager::self());
+    }
+
+    // A profile of the same name in the GUI keeps its passwords, and the chosen folder's are its own
+    void test_aChosenConfigDirKeepsItsPasswordsApart()
+    {
+        QVERIFY(!HostManager::self());
+        const bool storedSecurely = MudletApp::storingPasswordsSecurely();
+        const QString name = qsl("Headless Shared Name");
+        const QString desktopStore = qsl("%1/profiles/%2").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), name);
+        const auto restore = qScopeGuard([storedSecurely, desktopStore]() {
+            MudletApp::setConfigPath(QString());
+            MudletApp::setStorePasswordsSecurely(storedSecurely);
+            QDir(desktopStore).removeRecursively();
+        });
+        // In test mode the GUI's store is the file one, as when Preferences say to keep passwords in the profile
+        MudletApp::setConfigPath(QString());
+        {
+            const HostManager desktopPool;
+        }
+        MudletApp::setStorePasswordsSecurely(true);
+        for (const QString& key : {qsl("character"), qsl("proxy")}) {
+            QVERIFY(storePassword(name, key, qsl("desktop")));
+        }
+        const QMap<QString, QByteArray> desktopFiles = filesUnder(desktopStore);
+        QVERIFY(!desktopFiles.isEmpty());
+
+        MudletApp::setConfigPath(QString());
+        QTemporaryDir parent;
+        QVERIFY(parent.isValid());
+        const QString chosen = parent.filePath(qsl("chosen"));
+        {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = name, .connect = false, .host = qsl("game.example"), .configDir = chosen}), THeadlessSession::StartResult::started);
+            QVERIFY(MudletApp::storingPasswordsSecurely());
+            QCOMPARE(retrievePassword(name, qsl("character")), QString());
+            QVERIFY(storePassword(name, qsl("character"), qsl("chosen")));
+            QCOMPARE(retrievePassword(name, qsl("character")), qsl("chosen"));
+            QVERIFY(session.shutdown(false));
+        }
+        QCOMPARE(filesUnder(desktopStore), desktopFiles);
+        const QStringList chosenFiles = filesUnder(chosen).keys();
+        const QString credentials = qsl("credentials/profiles/%1/").arg(name);
+        const QString profile = qsl("profiles/%1/").arg(name);
+        QVERIFY2(chosenFiles.contains(credentials + qsl("encryption_key")), qPrintable(chosenFiles.join(qsl(", "))));
+        QVERIFY2(std::any_of(chosenFiles.cbegin(),
+                             chosenFiles.cend(),
+                             [&credentials](const QString& file) {
+                                 return file.startsWith(credentials + qsl("passwords/"));
+                             }),
+                 qPrintable(chosenFiles.join(qsl(", "))));
+        QVERIFY2(std::none_of(chosenFiles.cbegin(),
+                              chosenFiles.cend(),
+                              [&profile](const QString& file) {
+                                  return file.startsWith(profile) && (file.endsWith(qsl("/encryption_key")) || file.contains(qsl("/passwords/")));
+                              }),
+                 qPrintable(chosenFiles.join(qsl(", "))));
+
+        MudletApp::setConfigPath(QString());
+        {
+            const HostManager desktopAgain;
+        }
+        MudletApp::setStorePasswordsSecurely(true);
+        QCOMPARE(retrievePassword(name, qsl("character")), qsl("desktop"));
+    }
+
+    void test_aConfigDirThatCannotBeUsedIsRefused()
+    {
+        QVERIFY(!HostManager::self());
+        MudletApp::setConfigPath(QString());
+        const auto forget = qScopeGuard([]() {
+            MudletApp::setConfigPath(QString());
+        });
+        QTemporaryDir parent;
+        QVERIFY(parent.isValid());
+        const QString file = parent.filePath(qsl("a file"));
+        QVERIFY(writeFile(file, "not a folder"));
+        const QString underFile = qsl("%1/below").arg(file);
+        const QString relative = qsl("headless-relative-config-dir");
+        for (const QString& configDir : {file, underFile, relative}) {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = qsl("Headless Refused Folder"), .connect = false, .host = qsl("game.example"), .configDir = configDir}),
+                     THeadlessSession::StartResult::invalidConfigDir);
+            QVERIFY2(session.errorString().contains(configDir), qPrintable(session.errorString()));
+            QVERIFY(!HostManager::self());
+            QVERIFY(!MudletApp::configRootSettled());
+        }
+        QVERIFY(!QFileInfo::exists(relative));
+
+        const QString made = parent.filePath(qsl("made/here"));
+        {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = qsl("Headless Made Folder"), .connect = false, .host = qsl("game.example"), .configDir = made}), THeadlessSession::StartResult::started);
+            QVERIFY(QDir(qsl("%1/profiles/Headless Made Folder").arg(made)).exists());
+            QVERIFY(session.shutdown(false));
+        }
+        MudletApp::setConfigPath(QString());
+
+        // One settled by the usual means is not swapped for a folder named afterwards
+        {
+            const HostManager pool;
+        }
+        QVERIFY(MudletApp::configRootSettled());
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Refused Folder"), .connect = false, .host = qsl("game.example"), .configDir = parent.path()}),
+                 THeadlessSession::StartResult::invalidConfigDir);
+        QVERIFY(!QDir(parent.filePath(qsl("profiles"))).exists());
+        const QString settled = MudletApp::getMudletPath(enums::mainPath);
+        QCOMPARE(session.start({.profile = qsl("Headless Refused Folder"), .connect = false, .host = qsl("game.example"), .configDir = settled}), THeadlessSession::StartResult::invalidConfigDir);
+        QVERIFY2(session.errorString().contains(qsl("the GUI's")), qPrintable(session.errorString()));
+        QVERIFY(!HostManager::self());
+    }
+
+    // Its profiles' passwords are in the keychain or AppConfigLocation, which a chosen folder would not look in
+    void test_theGUIsFolderCannotBeChosen()
+    {
+        QVERIFY(!HostManager::self());
+        MudletApp::setConfigPath(QString());
+        const auto forget = qScopeGuard([]() {
+            MudletApp::setConfigPath(QString());
+        });
+        const QString guiFolder = MudletApp::resolveConfigRoot(MudletApp::executableDir()).path;
+        QVERIFY(QDir().mkpath(guiFolder));
+        QTemporaryDir parent;
+        QVERIFY(parent.isValid());
+        QStringList spellings{guiFolder, qsl("%1/profiles/..").arg(guiFolder)};
+#if !defined(Q_OS_WINDOWS)
+        const QString alias = parent.filePath(qsl("alias"));
+        QVERIFY(QFile::link(guiFolder, alias));
+        spellings << alias;
+#endif
+        for (const QString& configDir : spellings) {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = qsl("Headless GUI Folder"), .connect = false, .host = qsl("game.example"), .configDir = configDir}), THeadlessSession::StartResult::invalidConfigDir);
+            QVERIFY2(session.errorString().contains(qsl("the GUI's")), qPrintable(session.errorString()));
+            QVERIFY(!HostManager::self());
+            QVERIFY(!MudletApp::configRootSettled());
+        }
+#if !defined(Q_OS_WINDOWS)
+        // Nor by another name once the GUI's is settled
+        {
+            const HostManager pool;
+        }
+        QVERIFY(MudletApp::configRootSettled());
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless GUI Folder"), .connect = false, .host = qsl("game.example"), .configDir = alias}), THeadlessSession::StartResult::invalidConfigDir);
+        QVERIFY2(session.errorString().contains(qsl("the GUI's")), qPrintable(session.errorString()));
+#endif
+    }
+
+    // The GUI picks again at every launch, and a chosen folder that fills with profiles can win that pick
+    void test_noFolderTheGUICouldPickCanBeChosen()
+    {
+#if defined(Q_OS_WINDOWS)
+        QSKIP("redirects HOME and makes symlinks");
+#else
+        QVERIFY(!HostManager::self());
+        MudletApp::setConfigPath(QString());
+        QTemporaryDir sandbox;
+        QVERIFY(sandbox.isValid());
+        const QByteArray savedHome = qgetenv("HOME");
+        const QByteArray savedXdg = qgetenv("XDG_CONFIG_HOME");
+        const auto restore = qScopeGuard([savedHome, savedXdg]() {
+            MudletApp::setConfigPath(QString());
+            qputenv("HOME", savedHome);
+            qputenv("XDG_CONFIG_HOME", savedXdg);
+        });
+        qputenv("HOME", sandbox.path().toUtf8());
+        const QString xdgHome = sandbox.filePath(qsl("xdg"));
+        qputenv("XDG_CONFIG_HOME", xdgHome.toUtf8());
+        const QString dotConfig = sandbox.filePath(qsl(".config"));
+        for (const QString& folder : {xdgHome, dotConfig}) {
+            QVERIFY(QDir().mkpath(folder));
+        }
+        QVERIFY(QFile::link(xdgHome, sandbox.filePath(qsl("xdg-link"))));
+        QVERIFY(QFile::link(dotConfig, sandbox.filePath(qsl("config-link"))));
+        const QString legacy = MudletApp::legacyConfigDir();
+        const QString xdg = qsl("%1/mudlet").arg(xdgHome);
+        QCOMPARE(legacy, qsl("%1/mudlet").arg(dotConfig));
+        const auto refused = [&legacy, &xdg](const QString& configDir) {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = qsl("Headless GUI Folder"), .connect = false, .host = qsl("game.example"), .configDir = configDir}), THeadlessSession::StartResult::invalidConfigDir);
+            QVERIFY2(session.errorString().contains(qsl("the GUI's")), qPrintable(session.errorString()));
+            QVERIFY(!HostManager::self());
+            QVERIFY(!MudletApp::configRootSettled());
+            QVERIFY(!QFileInfo::exists(qsl("%1/profiles").arg(legacy)));
+            QVERIFY(!QFileInfo::exists(qsl("%1/profiles").arg(xdg)));
+        };
+
+        // Neither exists, so the GUI would take the XDG one; either can still become its pick
+        QCOMPARE(MudletApp::resolveConfigRoot(MudletApp::executableDir()).path, xdg);
+        for (const QString& configDir : {legacy, sandbox.filePath(qsl("config-link/mudlet")), sandbox.filePath(qsl("xdg-link/mudlet"))}) {
+            refused(configDir);
+            if (QTest::currentTestFailed()) {
+                return;
+            }
+            QVERIFY(!QFileInfo::exists(legacy));
+            QVERIFY(!QFileInfo::exists(xdg));
+        }
+
+        // Only the legacy one holds profiles, so the GUI is on it; the XDG one would win once it holds some
+        QVERIFY(QDir().mkpath(qsl("%1/profiles/GUI Profile").arg(legacy)));
+        QCOMPARE(MudletApp::resolveConfigRoot(MudletApp::executableDir()).path, legacy);
+        const auto withLegacyProfiles = [&legacy](const QString& configDir) {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = qsl("Headless GUI Folder"), .connect = false, .host = qsl("game.example"), .configDir = configDir}), THeadlessSession::StartResult::invalidConfigDir);
+            QVERIFY2(session.errorString().contains(qsl("the GUI's")), qPrintable(session.errorString()));
+            QVERIFY(!MudletApp::configRootSettled());
+            QCOMPARE(QDir(qsl("%1/profiles").arg(legacy)).entryList(QDir::Dirs | QDir::NoDotAndDotDot), QStringList{qsl("GUI Profile")});
+        };
+        for (const QString& configDir : {xdg, sandbox.filePath(qsl("xdg-link/mudlet"))}) {
+            withLegacyProfiles(configDir);
+            if (QTest::currentTestFailed()) {
+                return;
+            }
+            QVERIFY(!QFileInfo::exists(xdg));
+        }
+#endif
+    }
+
+    // Reached through a link to nowhere, or named by a portable.txt the GUI refuses today, it is still the GUI's
+    void test_theGUIsFoldersAreRefusedHoweverTheyAreReached()
+    {
+#if defined(Q_OS_WINDOWS)
+        QSKIP("redirects HOME and makes symlinks");
+#else
+        QVERIFY(!HostManager::self());
+        MudletApp::setConfigPath(QString());
+        QTemporaryDir sandbox;
+        QVERIFY(sandbox.isValid());
+        const QByteArray savedHome = qgetenv("HOME");
+        const QByteArray savedXdg = qgetenv("XDG_CONFIG_HOME");
+        const auto restore = qScopeGuard([savedHome, savedXdg]() {
+            MudletApp::setConfigPath(QString());
+            qputenv("HOME", savedHome);
+            qputenv("XDG_CONFIG_HOME", savedXdg);
+        });
+        qputenv("HOME", sandbox.path().toUtf8());
+        qunsetenv("XDG_CONFIG_HOME");
+        const auto refusedSaying = [](const QString& configDir, const QString& why) {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = qsl("Headless Other Mudlet"), .connect = false, .host = qsl("game.example"), .configDir = configDir}), THeadlessSession::StartResult::invalidConfigDir);
+            QVERIFY2(session.errorString().contains(why), qPrintable(session.errorString()));
+            QVERIFY(!HostManager::self());
+            QVERIFY(!MudletApp::configRootSettled());
+        };
+
+        // ~/.config linked to a folder not there yet: making its target would make the GUI's folder
+        const QString dots = sandbox.filePath(qsl("dots/config"));
+        const QString dotConfig = sandbox.filePath(qsl(".config"));
+        QVERIFY(QFile::link(dots, dotConfig));
+        refusedSaying(qsl("%1/mudlet").arg(dots), qsl("the GUI's"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY(!QFileInfo::exists(sandbox.filePath(qsl("dots"))));
+        QVERIFY(QFile::remove(dotConfig));
+
+        // A portable.txt the GUI refuses today, as the folder it names has no parent yet
+        const QString legacy = MudletApp::legacyConfigDir();
+        QVERIFY(QDir().mkpath(legacy));
+        const QString portableRoot = sandbox.filePath(qsl("missing/data"));
+        QVERIFY(writeFile(qsl("%1/portable.txt").arg(legacy), portableRoot.toUtf8()));
+        refusedSaying(portableRoot, qsl("the GUI's"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY(!QFileInfo::exists(sandbox.filePath(qsl("missing"))));
+#if defined(Q_OS_MACOS)
+        refusedSaying(sandbox.filePath(qsl(".config/MUDLET")), qsl("the GUI's"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+#endif
+        QVERIFY(QFile::remove(qsl("%1/portable.txt").arg(legacy)));
+
+        // The Flatpak GUI's, whose XDG_CONFIG_HOME is its own under HOME, made or not
+        const QString flatpak = sandbox.filePath(qsl(".var/app/org.mudlet.mudlet/config/mudlet"));
+        refusedSaying(flatpak, qsl("the GUI's"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY(!QFileInfo::exists(sandbox.filePath(qsl(".var"))));
+        QVERIFY(QDir().mkpath(qsl("%1/profiles/Flatpak Profile").arg(flatpak)));
+        refusedSaying(flatpak, qsl("the GUI's"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY(!QFileInfo::exists(qsl("%1/profiles/Headless Other Mudlet").arg(flatpak)));
+
+        // A folder that is none of the GUI's is the app's, profiles it put there before its first start
+        // included, and again in a later run that has nothing of the first one's but its profiles
+        const QString seeded = sandbox.filePath(qsl("app data"));
+        QVERIFY(QDir().mkpath(qsl("%1/profiles/Seeded Game").arg(seeded)));
+        for (int run = 0; run < 2; ++run) {
+            THeadlessSession session;
+            QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("\"%1\" already holds profiles").arg(QRegularExpression::escape(seeded))));
+            QCOMPARE(session.start({.profile = qsl("Headless Other Mudlet"), .connect = false, .host = qsl("game.example"), .configDir = seeded}), THeadlessSession::StartResult::started);
+            QVERIFY(QDir(qsl("%1/profiles/Headless Other Mudlet").arg(seeded)).exists());
+            QVERIFY(QDir(qsl("%1/profiles/Seeded Game").arg(seeded)).exists());
+            QVERIFY(session.shutdown(false));
+            MudletApp::setConfigPath(QString());
+            QVERIFY(QDir(qsl("%1/credentials").arg(seeded)).removeRecursively());
+        }
+#endif
     }
 };
 

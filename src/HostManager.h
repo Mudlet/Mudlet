@@ -66,7 +66,8 @@ public:
     enum class ConfigRoot { settledHere, leftToMainWindow };
 
     Q_DISABLE_COPY(HostManager)
-    explicit HostManager(ConfigRoot = ConfigRoot::settledHere);
+    // configDir, when settled here, is taken as the root in place of the one resolved, as a portable one is
+    explicit HostManager(ConfigRoot = ConfigRoot::settledHere, const QString& configDir = QString());
     ~HostManager();
 
     // A value member of the application object, so valid from that object's constructor body until its

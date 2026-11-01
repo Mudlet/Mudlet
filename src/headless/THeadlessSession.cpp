@@ -36,6 +36,7 @@
 #include <QDir>
 #include <QEventLoop>
 #include <QFile>
+#include <QFileInfo>
 #include <QScopeGuard>
 #include <QTimer>
 
@@ -159,6 +160,69 @@ QString removeStalePasswords(const QString& profile)
     return QString();
 }
 
+// The GUI picks again at every launch by what each candidate holds, so a chosen root filling with profiles
+// could become its pick: all of them are its, not only today's
+bool aFolderTheGUICouldPick(const QString& dir)
+{
+    QStringList candidates = MudletApp::configRootCandidates(MudletApp::executableDir());
+    // Mudlet's Flatpak (CI/org.mudlet.mudlet.yml) runs its GUI with an XDG_CONFIG_HOME of its own under HOME,
+    // which this process's candidates cannot name
+    candidates << qsl("%1/.var/app/org.mudlet.mudlet/config/mudlet").arg(QDir::homePath());
+    return std::any_of(candidates.cbegin(), candidates.cend(), [&dir](const QString& candidate) {
+        return MudletApp::sameFolder(candidate, dir);
+    });
+}
+
+// Empty if dir, cleaned, can be the config root, or for none the GUI's can, else why not. The GUI's own folder
+// is never one: its profiles' passwords are in the keychain or AppConfigLocation, where a chosen one does not look.
+QString configDirProblem(const QString& dir)
+{
+    if (!dir.isEmpty() && !QDir::isAbsolutePath(dir)) {
+        //: %1 is the folder an app that embeds Mudlet asked for its profiles to be kept in
+        return THeadlessSession::tr("\"%1\" is not an absolute path, so profiles cannot be kept in it.").arg(dir);
+    }
+    if (MudletApp::configRootSettled()) {
+        const QString settled = QDir::cleanPath(MudletApp::getMudletPath(enums::mainPath));
+        const bool chosen = MudletApp::configRootChosen();
+        if (chosen ? MudletApp::sameFolder(settled, dir) : dir.isEmpty()) {
+            return QString();
+        }
+        if (dir.isEmpty()) {
+            //: %1 is the folder an app that embeds Mudlet chose for its profiles, in use until the app restarts
+            return THeadlessSession::tr("Profiles are kept in \"%1\" until the app restarts, so they cannot be kept in the GUI's folder.").arg(settled);
+        }
+        if (!chosen && MudletApp::sameFolder(settled, dir)) {
+            //: %1 is the folder the GUI keeps its profiles in, in use until the app restarts
+            return THeadlessSession::tr("\"%1\" is in use as the GUI's folder until the app restarts, so it cannot be chosen as one of the app's own.").arg(dir);
+        }
+        //: %1 is the folder profiles are kept in until the app restarts, %2 another one an app that embeds Mudlet asked for
+        return THeadlessSession::tr("Profiles are kept in \"%1\" until the app restarts, so they cannot be kept in \"%2\".").arg(settled, dir);
+    }
+    if (dir.isEmpty()) {
+        return QString();
+    }
+    if (aFolderTheGUICouldPick(dir)) {
+        //: %1 is a folder the GUI keeps its profiles in or can at its next launch, which an app that embeds Mudlet asked to keep its own in
+        return THeadlessSession::tr("\"%1\" is a folder the GUI keeps its profiles in, or can at its next launch, so it cannot be chosen as one of the app's own; leave it out to use the GUI's.")
+                .arg(dir);
+    }
+    if (const QFileInfo info(dir); info.exists() && !info.isDir()) {
+        //: %1 is the path an app that embeds Mudlet asked for its profiles to be kept in
+        return THeadlessSession::tr("\"%1\" is not a folder, so profiles cannot be kept in it.").arg(dir);
+    }
+    if (!QDir().mkpath(dir)) {
+        //: %1 is the folder an app that embeds Mudlet asked for its profiles to be kept in
+        return THeadlessSession::tr("The folder \"%1\" could not be made, so profiles cannot be kept in it.").arg(dir);
+    }
+    // Nothing here tells the app's own profiles from those of a Mudlet out of sight, which would share them
+    if (MudletApp::configDirHoldsProfiles(dir)) {
+        qWarning().nospace().noquote() << "THeadlessSession::start(...) WARN: \"" << dir
+                                       << "\" already holds profiles; a Mudlet that keeps its own there too, such as a portable install or one run under another HOME, "
+                                          "shares them and its Mudlet.ini with this app.";
+    }
+    return QString();
+}
+
 } // namespace
 
 THeadlessSession::THeadlessSession(QObject* parent)
@@ -205,8 +269,14 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
         return StartResult::notOpened;
     }
 
+    const QString configDir = options.configDir.isEmpty() ? QString() : QDir::cleanPath(options.configDir);
+    if (const QString problem = configDirProblem(configDir); !problem.isEmpty()) {
+        mErrorString = problem;
+        return StartResult::invalidConfigDir;
+    }
+
     // Before the lookup, as making it settles the config root and reports profiles that the lookup cannot see
-    mpPool = std::make_unique<HostManager>();
+    mpPool = std::make_unique<HostManager>(HostManager::ConfigRoot::settledHere, configDir);
     // Every profile, a script's loadProfile() ones too, as one closed unsaved is lost all the same; the pool
     // may outlive the session
     mpPool->setProfileOpenedHook([self = QPointer<THeadlessSession>(this)](Host* pNewHost) {

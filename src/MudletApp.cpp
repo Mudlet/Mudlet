@@ -56,6 +56,7 @@
 #if !defined(QT_NO_SSL)
 #include <QSslSocket>
 #endif
+#include <QStandardPaths>
 #include <QTextStream>
 #include <QTranslator>
 #include <QUrl>
@@ -84,6 +85,8 @@ ConfigRootState configRootState = ConfigRootState::unresolved;
 // marker naming a root that had to be refused leaves this false, so nothing
 // downstream treats a rejected marker as portable mode.
 bool configRootPortable = false;
+// Set only with the root, by MudletApp::chooseConfigRoot()
+bool configRootChosenByFrontend = false;
 std::atomic<bool> mudletDictionariesInUse = false;
 // The settings store and the interface language get a lock of their own rather
 // than sharing configRootMutex: building the store asks for the config root, and
@@ -139,14 +142,6 @@ ConfigDirClaim xdgConfigDirClaim(const QString& dir)
     return configDirClaim(dir);
 }
 
-// cleanPath() is not enough: a symlinked ~/.config gives one directory two
-// spellings, and dotfile managers produce exactly that
-QString configDirIdentity(const QString& dir)
-{
-    const QString canonical = QFileInfo(dir).canonicalFilePath();
-    return canonical.isEmpty() ? QDir::cleanPath(dir) : canonical;
-}
-
 QString pathResolveRelative(const QString& path, const QString& base)
 {
     if (path.isEmpty() || QDir::isAbsolutePath(path)) {
@@ -170,6 +165,29 @@ QString readMarkerFile(const QString& path)
     }
     QTextStream(&file).readLineInto(&line);
     return line;
+}
+
+// The root a portable.txt names, whether or not it can be used
+QString portableRootNamedBy(const QString& marker, const QString& execDir)
+{
+    QString portPath = readMarkerFile(marker);
+    // Only beside the executable does an empty marker mean "the data is here
+    // too"; the one in the config dir names no such default
+    if (portPath.isEmpty() && marker == markerIn(execDir)) {
+        portPath = qsl("./portable");
+    }
+    return pathResolveRelative(QDir::cleanPath(portPath), execDir);
+}
+
+// The XDG base-dir spec requires an absolute path; a relative (or empty)
+// value must be ignored, which also avoids a surprising CWD-relative root.
+QString xdgTargetDir()
+{
+    const QString xdgConfigHome = qEnvironmentVariable("XDG_CONFIG_HOME");
+    if (xdgConfigHome.isEmpty() || !QDir::isAbsolutePath(xdgConfigHome)) {
+        return QString();
+    }
+    return QDir::cleanPath(qsl("%1/mudlet").arg(xdgConfigHome));
 }
 
 // The installed root, or an empty string when startup has not settled one yet.
@@ -275,13 +293,7 @@ MudletApp::ConfigDirResolution MudletApp::resolveConfigRoot(const QString& execD
     if (marker.isEmpty()) {
         return xdgConfigDir(configDir);
     }
-    QString portPath = readMarkerFile(marker);
-    // Only beside the executable does an empty marker mean "the data is here
-    // too"; the one in the config dir names no such default
-    if (portPath.isEmpty() && marker == markerIn(execDir)) {
-        portPath = qsl("./portable");
-    }
-    const QString portableRoot = pathResolveRelative(QDir::cleanPath(portPath), execDir);
+    const QString portableRoot = portableRootNamedBy(marker, execDir);
     if (portableRootUsable(portableRoot)) {
         return {.path = portableRoot, .portable = true, .portableMarker = marker};
     }
@@ -297,19 +309,81 @@ MudletApp::ConfigDirResolution MudletApp::resolveConfigRoot(const QString& execD
 
 MudletApp::ConfigDirResolution MudletApp::xdgConfigDir(const QString& legacyDefault)
 {
-    const QString xdgConfigHome = qEnvironmentVariable("XDG_CONFIG_HOME");
-    // The XDG base-dir spec requires an absolute path; a relative (or empty)
-    // value must be ignored, which also avoids a surprising CWD-relative root.
-    if (xdgConfigHome.isEmpty() || !QDir::isAbsolutePath(xdgConfigHome)) {
+    const QString xdgTarget = xdgTargetDir();
+    if (xdgTarget.isEmpty()) {
         return {.path = legacyDefault};
     }
-    const QString xdgTarget = QDir::cleanPath(qsl("%1/mudlet").arg(xdgConfigHome));
     if (xdgConfigDirClaim(xdgTarget) < configDirClaim(legacyDefault)) {
         return {.path = legacyDefault, .migrationPending = true};
     }
-    // XDG_CONFIG_HOME=$HOME/.config makes both candidates one directory
-    const bool shadowing = configDirIdentity(legacyDefault) != configDirIdentity(xdgTarget) && configDirHoldsProfiles(legacyDefault);
+    // XDG_CONFIG_HOME=$HOME/.config makes both candidates one directory, and a symlinked ~/.config gives one
+    // directory two spellings, which dotfile managers produce exactly. Case-sensitive: over-matching is the safe
+    // side for refusing a folder, not for dropping this warning.
+    const bool shadowing = !sameFolder(legacyDefault, xdgTarget, Qt::CaseSensitive) && configDirHoldsProfiles(legacyDefault);
     return {.path = xdgTarget, .shadowedProfilesPath = shadowing ? legacyDefault : QString()};
+}
+
+QStringList MudletApp::configRootCandidates(const QString& execDir, const QString& configDir)
+{
+    QStringList candidates;
+    // Both markers: the one beside the executable outranks the config dir's only while it is there
+    for (const QString& marker : {markerIn(execDir), markerIn(configDir)}) {
+        if (!QFileInfo(marker).isFile()) {
+            continue;
+        }
+        if (const QString root = portableRootNamedBy(marker, execDir); !root.isEmpty()) {
+            candidates << root;
+        }
+    }
+    if (const QString xdgTarget = xdgTargetDir(); !xdgTarget.isEmpty()) {
+        candidates << xdgTarget;
+    }
+    candidates << configDir;
+    return candidates;
+}
+
+Qt::CaseSensitivity MudletApp::fileNameCaseSensitivity()
+{
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
+    return Qt::CaseInsensitive;
+#else
+    return Qt::CaseSensitive;
+#endif
+}
+
+QString MudletApp::folderIdentity(const QString& path)
+{
+    if (const QString real = QFileInfo(path).canonicalFilePath(); !real.isEmpty()) {
+        return real;
+    }
+    // A loop of links to nowhere ends here rather than hanging
+    constexpr int maxLinksFollowed = 32;
+    int linksFollowed = 0;
+    QString existing = QDir::cleanPath(path);
+    QStringList rest;
+    while (true) {
+        const QFileInfo info(existing);
+        if (const QString real = info.canonicalFilePath(); !real.isEmpty()) {
+            rest.prepend(real);
+            return QDir::cleanPath(rest.join(u'/'));
+        }
+        // canonicalFilePath() gives nothing for a link to nowhere, which leads where it names once that is made
+        if (const QString target = info.symLinkTarget(); !target.isEmpty() && linksFollowed < maxLinksFollowed) {
+            ++linksFollowed;
+            existing = QDir::cleanPath(target);
+            continue;
+        }
+        if (info.path() == existing) {
+            return QDir::cleanPath(path);
+        }
+        rest.prepend(info.fileName());
+        existing = info.path();
+    }
+}
+
+bool MudletApp::sameFolder(const QString& first, const QString& second, const Qt::CaseSensitivity caseSensitivity)
+{
+    return QString::compare(folderIdentity(first), folderIdentity(second), caseSensitivity) == 0;
 }
 
 bool MudletApp::configDirHoldsProfiles(const QString& dir)
@@ -368,10 +442,35 @@ void MudletApp::setConfigPath(const QString& path, const bool portable)
         // An empty root is not an answer, so forget it rather than settle on it
         configRootState = path.isEmpty() ? ConfigRootState::unresolved : ConfigRootState::installed;
         configRootPortable = !path.isEmpty() && portable;
+        configRootChosenByFrontend = false;
     }
     // Must not run again once init() has created the Updater, which keeps using
     // the settings object this discards
     discardSettingsStore();
+}
+
+void MudletApp::chooseConfigRoot(const QString& path)
+{
+    setConfigPath(path, true);
+    const QMutexLocker locker(&configRootMutex);
+    configRootChosenByFrontend = !path.isEmpty();
+}
+
+bool MudletApp::configRootChosen()
+{
+    const QMutexLocker locker(&configRootMutex);
+    return configRootState == ConfigRootState::installed && configRootChosenByFrontend;
+}
+
+QString MudletApp::credentialFilesRoot()
+{
+    {
+        const QMutexLocker locker(&configRootMutex);
+        if (configRootState == ConfigRootState::installed && configRootChosenByFrontend) {
+            return qsl("%1/credentials").arg(configRoot);
+        }
+    }
+    return QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
 }
 
 bool MudletApp::usingMudletDictionaries()

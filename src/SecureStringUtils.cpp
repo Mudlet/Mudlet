@@ -19,6 +19,8 @@
 
 #include "SecureStringUtils.h"
 
+#include "MudletApp.h"
+
 #include "utils.h"
 
 #include <atomic>
@@ -33,7 +35,6 @@
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QSet>
-#include <QStandardPaths>
 #include <QVersionNumber>
 // Qt includes for encryption and SSL availability check
 #include <QCryptographicHash>
@@ -450,8 +451,7 @@ QByteArray SecureStringUtils::legacyProfileEncryptionKey(const QString& profileN
 
 QByteArray SecureStringUtils::loadEncryptionKeyFromFile(const QString& profileName)
 {
-    // Build path manually to avoid circular dependencies
-    QString configPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    QString configPath = MudletApp::credentialFilesRoot();
     QString keyFilePath = QString("%1/profiles/%2/encryption_key").arg(configPath, profileName);
 
     QFile file(keyFilePath);
@@ -461,7 +461,7 @@ QByteArray SecureStringUtils::loadEncryptionKeyFromFile(const QString& profileNa
     }
 
     restrictFileToOwner(keyFilePath);
-    // Only this key and the passwords directory live under AppConfigLocation, so it is owner-only too
+    // Only this key and the passwords directory live under the credential files' root, so it is owner-only too
     restrictDirectoryToOwner(QFileInfo(keyFilePath).absolutePath());
 
     QDataStream ifs(&file);
@@ -487,8 +487,7 @@ bool SecureStringUtils::storeEncryptionKeyToFile(const QString& profileName, con
         return false;
     }
 
-    // Build path manually to avoid circular dependencies
-    QString configPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    QString configPath = MudletApp::credentialFilesRoot();
     QString profileDir = QString("%1/profiles/%2").arg(configPath, profileName);
     QString keyFilePath = QString("%1/encryption_key").arg(profileDir);
 
@@ -739,8 +738,7 @@ bool SecureStringUtils::hasPassword(const QString& profileName, const QString& k
 
 QString SecureStringUtils::getPasswordFilePath(const QString& profileName, const QString& key)
 {
-    // Use the same profile path structure as mudlet
-    QString configPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    QString configPath = MudletApp::credentialFilesRoot();
     return QString("%1/profiles/%2/passwords/%3.dat").arg(configPath, profileName, key);
 }
 

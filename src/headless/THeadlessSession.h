@@ -58,13 +58,18 @@ public:
         QString login;
         // For this run only; nothing stores it
         QString password;
+        // An absolute path, made if need be: the folder that holds the profiles, Mudlet.ini and the passwords
+        // stored for them, in place of the GUI's folder and the system's keychain. Settled once a process, so a
+        // later start() may name it again, but no other, nor leave it out for the GUI's. Never the GUI's folder.
+        QString configDir;
     };
 
     // invalidName, invalidConnectionDetails: a profile was to be made under a name, or given a host, port or
     // TLS, that the connection dialog would not take; nothing is stored. poolClosing: the profiles of a
     // session, this one or another, are still closing, from its shutdown() or, once it is deleted, from the
-    // event loop.
-    enum class StartResult { started, noSuchProfile, invalidName, invalidConnectionDetails, notOpened, loadFailed, poolClosing };
+    // event loop. invalidConfigDir: the configDir is not absolute, cannot be made or is not a folder, or
+    // is the GUI's, or another folder, the GUI's or one chosen, is in use; nothing is made.
+    enum class StartResult { started, noSuchProfile, invalidName, invalidConnectionDetails, notOpened, loadFailed, poolClosing, invalidConfigDir };
 
     explicit THeadlessSession(QObject* parent = nullptr);
     // Closes the profiles unsaved, at once or, while one is busy as for shutdown(), a reset is pending, one is

@@ -82,7 +82,7 @@ bool HostManager::releasingProfile()
     return sReleasesPending > 0;
 }
 
-HostManager::HostManager(const ConfigRoot configRoot)
+HostManager::HostManager(const ConfigRoot configRoot, const QString& configDir)
 : mpMedia(std::make_unique<MudletMedia>())
 , mpFonts(std::make_unique<FontManager>())
 , mpReplay(std::make_unique<MudletReplay>())
@@ -91,7 +91,11 @@ HostManager::HostManager(const ConfigRoot configRoot)
 {
     // Settling again would delete the settings store under whoever holds it
     if (configRoot == ConfigRoot::settledHere && !MudletApp::configRootSettled()) {
-        MudletApp::settleConfigRoot();
+        if (configDir.isEmpty()) {
+            MudletApp::settleConfigRoot();
+        } else {
+            MudletApp::chooseConfigRoot(configDir);
+        }
         // Once per process: where the main window settles the root, its readEarlySettings() and readLateSettings()
         // read them instead
         const QSettings& settings = *MudletApp::getQSettings();

@@ -35,7 +35,6 @@
 #include <QScopeGuard>
 #include <QRegularExpression>
 #include <QCryptographicHash>
-#include <QStandardPaths>
 #include <QTimer>
 #include <QVersionNumber>
 
@@ -72,10 +71,9 @@ bool keychainDeleteSucceeded(const QKeychain::Job& job)
 // Worded so a caller can tell a refused argument from a storage failure
 const auto scmInvalidKeyNameError = qsl("Key name is not valid for credential storage");
 
-// QStandardPaths automatically handles portable mode configuration paths
 QString credentialFilePath(const QString& profileComponent, const QString& keyComponent)
 {
-    return qsl("%1/profiles/%2/passwords/%3").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), profileComponent, keyComponent);
+    return qsl("%1/profiles/%2/passwords/%3").arg(MudletApp::credentialFilesRoot(), profileComponent, keyComponent);
 }
 
 // Not tied to sanitizeForPath()'s limit, which may change: this records what is already on disk.
