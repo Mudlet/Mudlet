@@ -134,6 +134,16 @@ local function constraintInPixels(self, constraint, dimension, container)
     return probe["get_"..dimension](probe)
 end
 
+-- With no main window there is no pointer to ask about, so where the event
+-- landed on the label stands in for it
+local function pointerPosition(label, event)
+    local x, y = getMousePosition()
+    if x then
+        return x, y
+    end
+    return label:get_x() + event.x, label:get_y() + event.y
+end
+
 -- Internal function: checks where the mouse is at on the Label
 -- and saves the information for further use at resizing/repositioning
 -- also changes the mousecursor for easier use of the resizing/repositioning functionality
@@ -141,7 +151,7 @@ end
 -- @param label the Label which allows the Container to be adjustable
 -- @param event Mouse Click event and its infomations
 local function adjust_Info(self, label, event)
-    local x, y = getMousePosition()
+    local x, y = pointerPosition(label, event)
     local w, h = self.adjLabel:get_width(), self.adjLabel:get_height()
     local x1, y1 = x - event.x, y - event.y
     local x2, y2 = x1 + w, y1 + h
@@ -372,7 +382,7 @@ function Adjustable.Container:onMove (label, event)
     end
 
     if adjustInfo.x and adjustInfo.name == label.name then
-        local x, y = getMousePosition()
+        local x, y = pointerPosition(label, event)
         local winw, winh = getMainWindowSize()
         local x1, y1, w, h = self.get_x(), self.get_y(), self:get_width(), self:get_height()
         if (self.container) and (self.container ~= Geyser) then
