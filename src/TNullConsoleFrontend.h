@@ -404,6 +404,10 @@ private:
         // TDockWidget::hasLayoutAlready: whether opening this user window has asked for the saved layout,
         // which a load already running refuses
         bool layoutRequested = false;
+        // TConsole::mDimensions, the grid last reported, and whether the pane was resized while hidden, as its
+        // TTextEdit::resizeEvent() then waits for the pane to show
+        QSize reportedGrid;
+        bool paneResizePending = true;
     };
     // As TConsole::mpCommandLine tells a console's own command line from another of its name
     static bool ownsLine(const SubConsole& console, const PlainWindow& commandLine) { return commandLine.writer && commandLine.writer == console.ownLine; }
@@ -473,6 +477,7 @@ private:
     QString userWindowOrMain(const QString& windowname) const;
     std::pair<QString, std::shared_ptr<ScrollBox>> containerFor(const QString& windowname, bool scrollBoxFirst) const;
     bool shownWithin(const QString& userWindow, const ScrollBox* box) const;
+    bool paneShown(const SubConsole& console) const { return console.shown && shownWithin(console.userWindow, console.box.get()); }
     bool setPlainWindowShown(const QString& name, bool shown);
     bool ownsCommandLine(const QString& name) const;
     PlainWindow* commandLineNamed(const QString& name);
@@ -506,6 +511,9 @@ private:
     void raiseFontEvent(const QString& eventName, const QString& subject, const QFont& font);
     void reportGridSize(const QString& name);
     void reportLinesOverflow(const TConsoleModel& model, int lineCount);
+    void resizePane(const QString& name);
+    void sendPendingPaneResize(const QString& name);
+    void reportConsoleSize(const QString& name);
 
     Host* mpHost = nullptr;
     TNullMxpFrameFrontend mMxpFrames{*this};
