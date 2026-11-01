@@ -4219,6 +4219,7 @@ bool mudlet::loadWindowLayout()
 
             if (rv) {
                 restoreFloatingDockGeometries();
+                keepFloatingDocksOnScreen();
                 commitLayoutUpdates(true);
                 for (auto pHost : mHostManager) {
                     if (pHost && pHost->mainConsoleView()) {
@@ -4364,6 +4365,42 @@ void mudlet::restoreFloatingDockGeometries()
     }
 }
 
+// A floating dock saved on a bigger screen is fitted by restoreState() to the whole of this one, leaving its title
+// bar above the top and its bottom under any taskbar, where the player cannot grab it
+void mudlet::keepFloatingDocksOnScreen()
+{
+    // Guarded, as a resize can run a script that deletes a dock
+    QList<QPointer<QDockWidget>> docks;
+    for (QDockWidget* pDock : findChildren<QDockWidget*>(Qt::FindDirectChildrenOnly)) {
+        docks.append(pDock);
+    }
+    for (const auto& pDock : docks) {
+        if (!pDock || !pDock->isFloating()) {
+            continue;
+        }
+        const QRect geometry = pDock->geometry();
+        const QScreen* pScreen = QGuiApplication::screenAt(geometry.center());
+        if (!pScreen) {
+            pScreen = pDock->screen();
+        }
+        if (!pScreen) {
+            continue;
+        }
+        const QRect available = pScreen->availableGeometry();
+        // The frame is not known before the dock is first shown, so this is what QWidget::restoreGeometry() allows too
+        const int titleBarHeight = pDock->style()->pixelMetric(QStyle::PM_TitleBarHeight, nullptr, pDock);
+        QRect fitted = geometry;
+        fitted.setWidth(qMin(fitted.width(), available.width()));
+        fitted.setHeight(qMin(fitted.height(), available.height() - titleBarHeight));
+        fitted.moveRight(qMin(fitted.right(), available.right()));
+        fitted.moveLeft(qMax(fitted.left(), available.left()));
+        fitted.moveBottom(qMin(fitted.bottom(), available.bottom()));
+        fitted.moveTop(qMax(fitted.top(), available.top() + titleBarHeight));
+        if (fitted != geometry) {
+            pDock->setGeometry(fitted);
+        }
+    }
+}
 
 void mudlet::showEvent(QShowEvent* event)
 {

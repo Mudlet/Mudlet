@@ -658,6 +658,10 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
 
         event.mArgumentList << QString::number(createHttpResponseTable(reply));
         event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
+        // Last, after the response table, so handlers written for the
+        // earlier argument positions keep working
+        event.mArgumentList << QString(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
         reply->deleteLater();
         downloadMap.remove(reply);
