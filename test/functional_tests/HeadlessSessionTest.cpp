@@ -1191,6 +1191,52 @@ end))lua");
         QVERIFY(session.shutdown(false));
     }
 
+    // What the speech bridge, Discord and the MCP bridge take for the profile in front
+    void test_setActiveProfileNamesTheActiveHost()
+    {
+        const QString name = qsl("Headless Active");
+        QVERIFY(writeProfile(name, QString()));
+        {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            QVERIFY(!TAppFrontend::instance()->getActiveHost());
+            QVERIFY(session.runLua(qsl("headlessActive = tostring(setActiveProfile('%1'))").arg(name)));
+            QCOMPARE(luaGlobalString(session.host(), "headlessActive"), qsl("true"));
+            QCOMPARE(TAppFrontend::instance()->getActiveHost(), session.host());
+            QVERIFY(session.shutdown(false));
+        }
+        QVERIFY(!TAppFrontend::instance()->getActiveHost());
+        // As with a main window, the profile in front went with it, so opening it again does not bring it back
+        THeadlessSession reopened;
+        QCOMPARE(reopened.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(!TAppFrontend::instance()->getActiveHost());
+        QVERIFY(reopened.shutdown(false));
+    }
+
+    // A preload only fetches the file, which needs no window
+    void test_whatOnlyAMainWindowCanShowSaysSo()
+    {
+        const QString name = qsl("Headless No Window");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+local function answer(f, ...)
+  local ok, err = f(...)
+  return tostring(ok) .. "|" .. tostring(err)
+end
+headlessNoWindow = table.concat({
+  answer(setMainWindowSize, 800, 600),
+  answer(showNotification, "headless title", "headless text"),
+  answer(playVideoFile, {name = "headless-absent.mp4"}),
+  answer(loadVideoFile, {name = "headless-absent.mp4"}),
+}, ";")
+)lua")));
+        const QString refused = qsl("nil|the profile has no main window");
+        QCOMPARE(luaGlobalString(session.host(), "headlessNoWindow"), QStringList({refused, refused, refused, qsl("true|nil")}).join(qsl(";")));
+        QVERIFY(session.shutdown(false));
+    }
+
     // A prompt the game ends with GA, and commands as the command line sends them, a trailing line feed
     // making an empty one as there
     void test_promptsAndCommandsReachTheGame()
