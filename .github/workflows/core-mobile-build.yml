@@ -62,20 +62,50 @@ jobs:
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 12
           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 12
 
+      - name: Take Qt Widgets out of reach
+        # install-qt-action brings Widgets with qtbase, and the checkout the GUI's own
+        # widget libraries, so without this a core source could include or link them
+        # unnoticed. It fails if it finds nothing to remove or leaves any behind, so a
+        # renamed variable or a new Qt layout cannot quietly undo it.
+        run: |
+          test -d "${QT_ROOT_DIR:?install-qt-action did not set QT_ROOT_DIR}"
+          git submodule deinit --force 3rdparty/edbee-lib 3rdparty/qt-tags-widget
+          cd "$QT_ROOT_DIR"
+          for f in Qt6WidgetsConfig.cmake 'libQt6Widgets.so*' qwidget.h; do
+            if [ -z "$(find . -name "$f" -print -quit)" ]; then
+              echo "::error::No $f under $QT_ROOT_DIR, so this step would remove nothing"
+              exit 1
+            fi
+          done
+          rm -rf lib/cmake/Qt6*Widgets* lib/cmake/Qt6UiTools* lib/cmake/Qt6Designer* \
+            lib/libQt6*Widgets* lib/libQt6UiTools* lib/libQt6Designer* \
+            include/Qt*Widgets* include/QtUiTools* include/QtDesigner*
+          left=$(find . \( -name 'Qt6*Widgets*Config.cmake' -o -name 'libQt6*Widgets*' -o -name qwidget.h \) -print)
+          if [ -n "$left" ]; then
+            echo "$left"
+            echo "::error::Qt Widgets is still under $QT_ROOT_DIR, so Qt's layout has changed"
+            exit 1
+          fi
+
       - name: Configure
         run: cmake --preset linux-core-minimal
 
       - name: Build
         run: cmake --build --preset linux-core-minimal
 
-      - name: Check mudlet_core uses none of what was left out
+      - name: Check mudlet_core uses none of what was left out, nor Qt Widgets
         # Undefined symbols are what the library calls into, so this cannot be
         # fooled by code that only sits behind an #if. nm runs on its own so that
         # an archive it cannot read fails the step instead of matching nothing.
         run: |
           nm -C --undefined-only build-linux-core-minimal/src/libmudlet_core.a > "$RUNNER_TEMP/core-undefined.txt"
-          if grep -E 'QProcess::|QLibrary::|QLocalServer::|QLocalSocket::|QHttpServer|sentry_' "$RUNNER_TEMP/core-undefined.txt"; then
+          if grep -E 'QProcess::|QLibrary::|QLocalServer::|QLocalSocket::|QHttpServer|sentry_|QWidget|QApplication::' "$RUNNER_TEMP/core-undefined.txt"; then
             echo "::error::mudlet_core still uses one of the above with the mobile options off"
+            exit 1
+          fi
+          readelf -d build-linux-core-minimal/src/mudlet-headless > "$RUNNER_TEMP/headless-needed.txt"
+          if grep -E 'NEEDED.*libQt6(Widgets|OpenGLWidgets|MultimediaWidgets|UiTools)' "$RUNNER_TEMP/headless-needed.txt"; then
+            echo "::error::mudlet-headless links Qt Widgets, which an app embedding mudlet_core may not have"
             exit 1
           fi
 
