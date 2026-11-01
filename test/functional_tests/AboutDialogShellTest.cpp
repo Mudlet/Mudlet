@@ -329,6 +329,34 @@ private slots:
         QCoreApplication::processEvents();
     }
 
+    void test_licenceWordsRunTheWholeWidthOfThePage()
+    {
+        mpDialog->findChild<QToolButton*>(qsl("aboutNavButton_license"))->click();
+        QCoreApplication::processEvents();
+        const auto* pNotice = mpDialog->findChild<QGroupBox*>(qsl("aboutLicenseNotice"));
+        const auto* pLicence = mpDialog->findChild<QTextBrowser*>(qsl("textBrowser_license"));
+        QVERIFY2(pNotice && pLicence, "the License page has lost its notice or its browser");
+        QCOMPARE(pLicence->width(), pNotice->width());
+
+        mpDialog->findChild<QToolButton*>(qsl("aboutNavButton_thirdparty"))->click();
+        QCoreApplication::processEvents();
+        const auto* pList = mpDialog->findChild<QGroupBox*>(qsl("aboutThirdPartyList"));
+        const auto* pIntro = mpDialog->findChild<QLabel*>(qsl("aboutThirdPartyIntro"));
+        QVERIFY2(pList && pIntro, "the Third party page has lost its list or its introduction");
+        QCOMPARE(pIntro->width(), pList->width());
+
+        auto* pToggle = mpDialog->findChild<QToolButton*>(qsl("aboutThirdPartyToggle"));
+        const auto* pBody = mpDialog->findChild<QLabel*>(qsl("aboutThirdPartyBody"));
+        QVERIFY2(pToggle && pBody, "the Third party page has no rows");
+        pToggle->setChecked(true);
+        QCoreApplication::processEvents();
+        QCOMPARE(pBody->width(), pBody->parentWidget()->width());
+        pToggle->setChecked(false);
+
+        mpDialog->findChild<QToolButton*>(qsl("aboutNavButton_mudlet"))->click();
+        QCoreApplication::processEvents();
+    }
+
     void test_everySupporterHasABannerOfTheRightTier()
     {
         QToolButton* pNav = mpDialog->findChild<QToolButton*>(qsl("aboutNavButton_supporters"));

@@ -95,11 +95,6 @@ constexpr int scmCopiedMilliseconds = 1600;
 
 constexpr int scmPrimaryButtonHeight = 30;
 
-// In characters rather than pixels, so a column grows with the interface font
-constexpr int scmLicenceColumnCharacters = 72;
-constexpr int scmThirdPartyIntroCharacters = 70;
-constexpr int scmThirdPartyBodyCharacters = 76;
-
 // Opened up a little so the capitals do not close up
 constexpr int scmTierLetterSpacing = 106;
 
@@ -120,11 +115,6 @@ QPixmap glyphAt(const QString& file, const int size, const qreal ratio, const QC
     QPixmap glyph = uiDesign::glyphPixmap(file).scaled(qRound(size * ratio), qRound(size * ratio), Qt::KeepAspectRatio, Qt::SmoothTransformation);
     glyph.setDevicePixelRatio(ratio);
     return uiDesign::tintedGlyph(glyph, colour);
-}
-
-void capToCharacters(QWidget* pWidget, const int characters)
-{
-    pWidget->setMaximumWidth(QFontMetrics(pWidget->font()).averageCharWidth() * characters);
 }
 
 } // namespace
@@ -802,18 +792,7 @@ QWidget* dlgAboutDialog::buildLicensePage()
     textBrowser_license->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     markAsShellSurface(textBrowser_license->viewport());
 
-    // Centred by stretches, not an alignment flag, which would hold the browser at its
-    // 256px size hint; zero-factor stretches only get what its width cap leaves
-    auto* pReadingRow = new QWidget(pPage);
-    pReadingRow->setObjectName(qsl("aboutLicenseReadingRow"));
-    markAsShellSurface(pReadingRow);
-    auto* pReadingLayout = new QHBoxLayout(pReadingRow);
-    pReadingLayout->setContentsMargins(0, 0, 0, 0);
-    pReadingLayout->setSpacing(0);
-    pReadingLayout->addStretch(0);
-    pReadingLayout->addWidget(textBrowser_license, 1);
-    pReadingLayout->addStretch(0);
-    pPageLayout->addWidget(pReadingRow, 1);
+    pPageLayout->addWidget(textBrowser_license, 1);
     return pPage;
 }
 
@@ -834,7 +813,6 @@ QWidget* dlgAboutDialog::buildThirdPartyPage()
                        "licenses."),
                     //: Second half of the introduction to the Third party page, saying that a row opens
                     tr("Open a row to read the licence as shipped.")));
-    capToCharacters(pIntro, scmThirdPartyIntroCharacters);
     pColumnLayout->addWidget(pIntro);
 
     QGroupBox* pList = createCard(QString(), pColumn);
@@ -1207,12 +1185,6 @@ void dlgAboutDialog::applyShellStyle()
     // carry is the costliest step of construction
     if (tokens.accentText != mInkedLinkColour) {
         restyleRichText(tokens);
-    }
-
-    // Capped here, not where the label is built: its 92% rule only applies once the
-    // sheet is assigned, and a cap measured at 100% is the wrong number
-    for (QLabel* pBody : mpWidget_shell->findChildren<QLabel*>(qsl("aboutThirdPartyBody"))) {
-        capToCharacters(pBody, scmThirdPartyBodyCharacters);
     }
 
     // Half a megabyte of rich text: only re-parsed when one of its head's three inks changed
@@ -1759,7 +1731,6 @@ void dlgAboutDialog::setLicenseText(const ThemeTokens& tokens)
     // A QTextDocument ignores the head's "a { color }" rule when inking anchors
     textBrowser_license->setHtml(qsl("<html>%1<body>%2</body></html>").arg(htmlHead, uiDesign::withLinkColour(gplText, tokens.accentText)));
     textBrowser_license->verticalScrollBar()->setValue(wasAt);
-    textBrowser_license->setMaximumWidth(QFontMetrics(textBrowser_license->font()).averageCharWidth() * scmLicenceColumnCharacters + textBrowser_license->verticalScrollBar()->sizeHint().width());
 }
 
 QVector<aboutMaker> dlgAboutDialog::makers()
