@@ -20,7 +20,9 @@
 #include "TNullConsoleFrontend.h"
 
 #include "Host.h"
+#include "MudletApp.h"
 #include "TAppFrontend.h"
+#include "TCommandHistory.h"
 #include "TEvent.h"
 #include "TLabelModel.h"
 #include "TMap.h"
@@ -645,7 +647,8 @@ void TNullConsoleFrontend::resumeMainCommandLine()
     // A view detached by setMainConsoleView(nullptr) asks for this again as it goes
     if (!mMainCommandLine.writer) {
         // The key a command line named "main" writes is the main command line's
-        mMainCommandLine.writer = makeHistoryWriter(mpMainHolder.get(), qsl("main"), *mpHost->windowRegistry().commandLineSavesHistory(QString()));
+        mMainCommandLine.writer = makeHistoryWriter(
+                mpMainHolder.get(), qsl("main"), std::get<0>(mpHost->getCmdLineSettings(enums::MainCommandLine, QString())), *mpHost->windowRegistry().commandLineSavesHistory(QString()));
     }
 }
 
@@ -1722,9 +1725,9 @@ std::pair<bool, QString> TNullConsoleFrontend::createCommandLine(const QString& 
     // TMainConsole::parentWidgetFor() takes a scroll box before a user window
     std::tie(commandLine.userWindow, commandLine.box) = containerFor(windowname, true);
     commandLine.geometry = QRect(QPoint(x, y), widgetSize(width, height));
-    // TCommandLine's constructor takes the setting a profile save last wrote for the name
-    const bool savesHistory = std::get<1>(mpHost->getCmdLineSettings(enums::SubCommandLine, name));
-    commandLine.writer = makeHistoryWriter(holderFor(commandLine.userWindow, commandLine.box.get()), name, savesHistory);
+    // TCommandLine's constructor takes the file and the setting a profile save last wrote for the name
+    const auto [fileName, savesHistory] = mpHost->getCmdLineSettings(enums::SubCommandLine, name);
+    commandLine.writer = makeHistoryWriter(holderFor(commandLine.userWindow, commandLine.box.get()), name, fileName, savesHistory);
     registry.registerCommandLine(name);
     registry.setCommandLineSavesHistory(name, savesHistory);
     registry.setCommandLineStyleSheet(name, commandLineSheet(mpHost->mCommandLineBgColor));
@@ -1816,15 +1819,45 @@ QObject* TNullConsoleFrontend::holderFor(const QString& userWindow, const Scroll
 
 // Connected as the TCommandLine would be, so a save writes in the order the GUI's do: names that differ only
 // in a '/' or '\' share a key
-TNullConsoleFrontend::HistoryWriter* TNullConsoleFrontend::makeHistoryWriter(QObject* parent, const QString& name, const bool savesHistory)
+TNullConsoleFrontend::HistoryWriter* TNullConsoleFrontend::makeHistoryWriter(QObject* parent, const QString& name, const QString& fileName, const bool savesHistory)
 {
     auto pWriter = new HistoryWriter(parent);
     pWriter->savesHistory = savesHistory;
+    pWriter->fileName = fileName;
     Host* pHost = mpHost;
+    QString error;
+    if (!TCommandHistory::read(MudletApp::getMudletPath(enums::profileDataItemPath, pHost->getName(), fileName), pWriter->history, error)) {
+        pWriter->readFailed = true;
+        qWarning().nospace().noquote() << "TNullConsoleFrontend::makeHistoryWriter() WARNING - unable to read the command history of the command line called: " << name << " reason: " << error;
+    }
     QObject::connect(mpHost, &Host::signal_saveCommandLinesHistory, pWriter, [pHost, pWriter, name]() {
         pHost->setCmdLineSettings(enums::SubCommandLine, pWriter->savesHistory, name);
+        // As TCommandLine::slot_saveHistory(), which leaves a file it no longer writes as it was
+        const int saveSize = pHost->getCommandLineHistorySaveSize();
+        if (!saveSize || !pWriter->savesHistory) {
+            return;
+        }
+        if (pWriter->readFailed) {
+            qWarning().nospace().noquote() << "TNullConsoleFrontend::makeHistoryWriter() WARNING - not saving the command history of the command line called: " << name
+                                           << ", as its file could not be read";
+            return;
+        }
+        QString writeError;
+        if (!TCommandHistory::write(MudletApp::getMudletPath(enums::profileDataItemPath, pHost->getName(), pWriter->fileName), pWriter->history, saveSize, writeError)) {
+            qWarning().nospace().noquote() << "TNullConsoleFrontend::makeHistoryWriter() WARNING - unable to save the command history of the command line called: " << name
+                                           << " reason: " << writeError;
+        }
     });
     return pWriter;
+}
+
+void TNullConsoleFrontend::addMainCommandLineHistory(const QString& command)
+{
+    // As TCommandLine::enterCommand(), past the hidden-input box
+    if (command.isEmpty() || !mMainCommandLine.writer || (mpHost->isRemoteEchoingActive() && !mpHost->disablePasswordMasking())) {
+        return;
+    }
+    TCommandHistory::add(mMainCommandLine.writer->history, command);
 }
 
 // In the order TMainConsole::plainWindowWidget() takes them after a scroll box
@@ -1986,13 +2019,13 @@ bool TNullConsoleFrontend::setWindowCommandLineVisible(const QString& name, cons
         mpHost->windowRegistry().deregisterCommandLine(name);
         mCommandLines.erase(it);
     }
-    const bool savesHistory = std::get<1>(mpHost->getCmdLineSettings(enums::ConsoleCommandLine, name));
+    const auto [fileName, savesHistory] = mpHost->getCmdLineSettings(enums::ConsoleCommandLine, name);
     PlainWindow& commandLine = mCommandLines[name];
     commandLine.inConsole = true;
     commandLine.userWindow = console->second.userWindow;
     commandLine.box = console->second.box;
     // A child of the console, as TConsole::setCmdVisible() makes it
-    commandLine.writer = makeHistoryWriter(console->second.holder ? console->second.holder.data() : mpMainHolder.get(), name, savesHistory);
+    commandLine.writer = makeHistoryWriter(console->second.holder ? console->second.holder.data() : mpMainHolder.get(), name, fileName, savesHistory);
     console->second.ownLine = commandLine.writer;
     TWindowRegistry& registry = mpHost->windowRegistry();
     registry.registerCommandLine(name);
