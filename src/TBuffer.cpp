@@ -856,6 +856,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mBackGroundColor(other.mBackGroundColor)
 , mpHost(other.mpHost)
 , mBold(other.mBold)
+, mBoldAsked(other.mBoldAsked)
 , mItalics(other.mItalics)
 , mOverline(other.mOverline)
 , mReverse(other.mReverse)
@@ -966,6 +967,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mBackGroundColor = other.mBackGroundColor;
         mpHost = other.mpHost;
         mBold = other.mBold;
+        mBoldAsked = other.mBoldAsked;
         mItalics = other.mItalics;
         mOverline = other.mOverline;
         mReverse = other.mReverse;
@@ -2463,6 +2465,7 @@ TBuffer::ParseState TBuffer::parseState() const
     state.gotString = mGotString;
     state.isDefaultColor = mIsDefaultColor;
     state.bold = mBold;
+    state.boldAsked = mBoldAsked;
     state.italics = mItalics;
     state.overline = mOverline;
     state.reverse = mReverse;
@@ -2485,7 +2488,7 @@ bool TBuffer::parseStateIs(const ParseState& state) const
            && mUnderline == state.underline && mUnderlineWavy == state.underlineWavy && mUnderlineDotted == state.underlineDotted && mUnderlineDashed == state.underlineDashed && mBlink == state.blink
            && mFastBlink == state.fastBlink && mConcealed == state.concealed && mHyperlinkActive == state.hyperlinkActive && mAltFont == state.altFont && mPendingLead == state.pendingLead
            && mDecoder == state.decoder && mIncompleteSequenceBytes == state.incompleteSequenceBytes && mForeGroundColor == state.foreground && mForeGroundColorLight == state.foregroundLight
-           && mBackGroundColor == state.background && mPendingLeadFormat == state.pendingLeadFormat;
+           && mBackGroundColor == state.background && mPendingLeadFormat == state.pendingLeadFormat && mBoldAsked == state.boldAsked;
 }
 
 void TBuffer::setParseState(const ParseState& state)
@@ -2505,6 +2508,7 @@ void TBuffer::setParseState(const ParseState& state)
     mGotString = state.gotString;
     mIsDefaultColor = state.isDefaultColor;
     mBold = state.bold;
+    mBoldAsked = state.boldAsked;
     mItalics = state.italics;
     mOverline = state.overline;
     mReverse = state.reverse;
@@ -2721,6 +2725,7 @@ void TBuffer::resetCurrentTextFormat()
     mForeGroundColorLight = mpHost->mFgColor;
     mBackGroundColor = mpHost->mBgColor;
     mBold = false;
+    mBoldAsked = false;
     mItalics = false;
     mOverline = false;
     mReverse = false;
@@ -3591,7 +3596,7 @@ TChar::AttributeFlags TBuffer::computeCurrentAttributeFlags() const
            | (mOverline ? TChar::Overline : TChar::None) | (mReverse ? TChar::Reverse : TChar::None) | (mStrikeOut || mxpClientStrikeOut() ? TChar::StrikeOut : TChar::None)
            | (mUnderline || mxpClientUnderline() ? TChar::Underline : TChar::None) | (mUnderlineWavy ? TChar::UnderlineWavy : TChar::None) | (mUnderlineDotted ? TChar::UnderlineDotted : TChar::None)
            | (mUnderlineDashed ? TChar::UnderlineDashed : TChar::None) | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink : TChar::None)) | (TChar::alternateFontFlag(mAltFont))
-           | (mConcealed ? TChar::Concealed : TChar::None);
+           | (mConcealed ? TChar::Concealed : TChar::None) | (mBoldAsked || mxpClientBold() ? TChar::BoldAsked : TChar::None);
 }
 
 void TBuffer::decodeSGR38(const SgrParameters& parameters, bool isColonSeparated)
@@ -4273,6 +4278,7 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     mForeGroundColor = hostForeground();
                     mBackGroundColor = hostBackground();
                     mBold = false;
+                    mBoldAsked = false;
                     mItalics = false;
                     mOverline = false;
                     mReverse = false;
@@ -4288,12 +4294,14 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     break;
                 case 1:
                     mBold = true;
+                    mBoldAsked = true;
                     break;
                 case 2:
                     // Technically this should be faint (i.e. decreased
                     // intensity compared to normal and 22 should be
                     // the reset to "normal" intensity):
                     mBold = false;
+                    mBoldAsked = false;
                     break;
                 case 3:
                     // There is a proposal by the "VTE" terminal
@@ -4370,6 +4378,7 @@ void TBuffer::decodeSGR(const QStringView sequence)
                 //    break;
                 case 22:
                     mBold = false;
+                    mBoldAsked = false;
                     break;
                 case 23:
                     mItalics = false;
@@ -9236,7 +9245,7 @@ void TBuffer::styleForCurrentLink(TChar& c)
                 c.setBackground(effectiveStyling.backgroundColor);
             }
             if (effectiveStyling.isBold) {
-                c.setAttributes(TChar::Bold, true);
+                c.setAttributes(TChar::Bold | TChar::BoldAsked, true);
             }
             if (effectiveStyling.isItalic) {
                 c.setAttributes(TChar::Italic, true);
@@ -9299,7 +9308,7 @@ void TBuffer::styleForCurrentLink(TChar& c)
             }
 
             if (mCurrentHyperlinkStyling.isBold) {
-                c.setAttributes(TChar::Bold, true);
+                c.setAttributes(TChar::Bold | TChar::BoldAsked, true);
             }
 
             if (mCurrentHyperlinkStyling.isItalic) {

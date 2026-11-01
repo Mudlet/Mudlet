@@ -125,8 +125,9 @@ QCoreApplication::setOrganizationName(qsl("Mudlet"));
 QCoreApplication::setApplicationName(qsl("Mudlet"));
 
 auto session = std::make_unique<THeadlessSession>();
-QObject::connect(session.get(), &THeadlessSession::outputLine, [](const QString& profile, const QString& text, bool isPrompt) {
-    // A line from the game, to show
+QObject::connect(session.get(), &THeadlessSession::outputLine,
+                 [](const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs) {
+    // A line from the game, to show; runs give its colours, bold, underline and so on, piece by piece
 });
 QObject::connect(session.get(), &THeadlessSession::localText, [](const QString& profile, const QString& text) {
     // echo(), print(), the commands sent and Mudlet's messages; does not always end a line
@@ -160,6 +161,11 @@ and the folder a `portable.txt` beside the app's executable or in `~/.config/mud
 path that leads to one, even before it is made. Not caught: a portable install whose `portable.txt` is
 beside another executable, and a GUI run under another HOME. Naming one of their folders shares its
 profiles and `Mudlet.ini` with that GUI (not its passwords), so `start()` warns when a folder it accepts already holds profiles.
+
+Each of `outputLine`'s runs covers part of the line, in order, with the colours and styles the game
+asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, strike-out, reverse, blink,
+fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap
+for its own theme's. Links in the line, and what `echo()` and the like print, come as plain text for now.
 
 The signals' handlers are called while a line is being written, so they must not call the session
 back or run the event loop; queue the work for later instead. `host()` reaches what the session

@@ -806,6 +806,53 @@ void THeadlessSession::detachFromHost()
     }
 }
 
+namespace {
+
+THeadlessSession::TextStyles textStyles(const TChar& format)
+{
+    THeadlessSession::TextStyles styles;
+    styles.setFlag(THeadlessSession::TextStyle::Bold, format.isBoldAsked());
+    styles.setFlag(THeadlessSession::TextStyle::Italic, format.isItalic());
+    styles.setFlag(THeadlessSession::TextStyle::Underline, format.isUnderlined() || format.isUnderlineWavy() || format.isUnderlineDotted() || format.isUnderlineDashed());
+    styles.setFlag(THeadlessSession::TextStyle::Overline, format.isOverlined());
+    styles.setFlag(THeadlessSession::TextStyle::StrikeOut, format.isStruckOut());
+    styles.setFlag(THeadlessSession::TextStyle::Reverse, format.isReversed());
+    styles.setFlag(THeadlessSession::TextStyle::Blink, format.isBlinking());
+    styles.setFlag(THeadlessSession::TextStyle::FastBlink, format.isFastBlinking());
+    styles.setFlag(THeadlessSession::TextStyle::Concealed, format.isConcealed());
+    return styles;
+}
+
+// A split double-byte character (TChar::hasSplitFormat()) is given its left half's format, as one QChar holds both halves
+QList<THeadlessSession::TextRun> textRuns(const QString& text, const TLineFormat& format, const QColor& profileForeground, const QColor& profileBackground)
+{
+    QList<THeadlessSession::TextRun> runs;
+    const int length = std::min(static_cast<qsizetype>(format.size()), text.size());
+    int start = 0;
+    while (start < length) {
+        const TChar& first = format[start];
+        const THeadlessSession::TextStyles styles = textStyles(first);
+        int end = start + 1;
+        // By style rather than TChar's flags, which also tell alternate fonts apart
+        while (end < length && format[end].foregroundRgba() == first.foregroundRgba() && format[end].backgroundRgba() == first.backgroundRgba() && textStyles(format[end]) == styles) {
+            ++end;
+        }
+        THeadlessSession::TextRun run;
+        run.start = start;
+        run.length = end - start;
+        run.foreground = first.foreground();
+        run.background = first.background();
+        run.defaultForeground = first.foregroundRgba() == profileForeground.rgba();
+        run.defaultBackground = first.backgroundRgba() == profileBackground.rgba();
+        run.styles = styles;
+        runs.append(run);
+        start = end;
+    }
+    return runs;
+}
+
+} // namespace
+
 void THeadlessSession::lineCommitted(const int lineIndex)
 {
     if (!mpHost) {
@@ -815,10 +862,12 @@ void THeadlessSession::lineCommitted(const int lineIndex)
     if (lineIndex < 0 || lineIndex >= buffer.lineBuffer.size()) {
         return;
     }
+    const QString& text = buffer.lineBuffer.at(lineIndex);
+    const QList<TextRun> runs = textRuns(text, buffer.buffer.at(lineIndex), mpHost->mFgColor, mpHost->mBgColor);
     // A handler may delete the session, whose pool then waits for the commit to end; hence the copy of the name
     const QString profile = mProfileName;
     ++gSignalsBeingHandedOut;
-    emit outputLine(profile, buffer.lineBuffer.at(lineIndex), buffer.promptBuffer.at(lineIndex));
+    emit outputLine(profile, text, buffer.promptBuffer.at(lineIndex), runs);
     --gSignalsBeingHandedOut;
 }
 
