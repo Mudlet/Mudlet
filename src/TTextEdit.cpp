@@ -289,7 +289,9 @@ void TTextEdit::focusOutEvent(QFocusEvent* event)
     // (e.g., user Alt+Tabs away). This preserves focus for screen reader
     // users like NVDA so returning to Mudlet restores the original widget
     // rather than forcing focus to the command line.
-    if (mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
+    // The central debug console shares its Host's caret mode without driving it.
+    const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
+    if (!centralDebug && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
         mpHost->setCaretEnabled(false);
     }
 
