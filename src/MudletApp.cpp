@@ -40,6 +40,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLibraryInfo>
 #include <QLocale>
 #include <QMutex>
@@ -957,12 +959,75 @@ QString MudletApp::getInterfaceLanguage()
 
 QString MudletApp::autodetectPreferredLanguage()
 {
-    for (QString language : QLocale::system().uiLanguages()) {
-        if (language.replace(QLatin1Char('-'), QLatin1Char('_')) == qsl("en_GB")) {
-            return language;
+    return autodetectPreferredLanguage(QLocale::system().uiLanguages());
+}
+
+QString MudletApp::autodetectPreferredLanguage(const QStringList& systemUiLanguages)
+{
+    // en_GB is close enough to en_US to be offered while its translation is still partial
+    QStringList qualityTranslations{qsl("en_GB")};
+    QFile statsFile(qsl(":/translation-stats.json"));
+    if (statsFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        const QJsonObject stats = QJsonDocument::fromJson(statsFile.readAll()).object();
+        for (auto it = stats.constBegin(); it != stats.constEnd(); ++it) {
+            if (it.value().toObject().value(qsl("translated_percent")).toInt() >= scmTranslationGoldStar && QFile::exists(qsl(":/lang/mudlet_%1.qm").arg(it.key()))) {
+                qualityTranslations.append(it.key());
+            }
         }
     }
-    return qsl("en_US");
+    return autodetectPreferredLanguage(systemUiLanguages, qualityTranslations);
+}
+
+QString MudletApp::autodetectPreferredLanguage(const QStringList& systemUiLanguages, const QStringList& qualityTranslations)
+{
+    // Qt lists each preference in several forms (pt-Latn-PT, pt-PT, pt-Latn, pt), so a translation of the language for
+    // another territory waits until the forms in that language and script have had their exact match, and an English
+    // preference with no translation of its own ends at the first language after it that is not English
+    bool englishPreferred = false;
+    QString fallback;
+    QLocale::Language fallbackLanguage = QLocale::AnyLanguage;
+    QLocale::Script fallbackScript = QLocale::AnyScript;
+    QStringList seenLanguages;
+    for (QString language : systemUiLanguages) {
+        language.replace(QLatin1Char('-'), QLatin1Char('_'));
+        const QStringList parts = language.split(QLatin1Char('_'));
+        const bool english = parts.constFirst() == qsl("en");
+        const QLocale wanted(language);
+        // QLocale swaps a script it has no data for (ru_Latn) for the language's usual one
+        bool scriptKept = true;
+        for (qsizetype i = 1; i < parts.size(); ++i) {
+            if (parts.at(i).size() == 4) {
+                scriptKept = QLocale::codeToScript(parts.at(i)) == wanted.script();
+            }
+        }
+        if (!fallback.isEmpty() && (wanted.language() != fallbackLanguage || wanted.script() != fallbackScript || !scriptKept)) {
+            return fallback;
+        }
+        if (englishPreferred && !english) {
+            break;
+        }
+        if (qualityTranslations.contains(language)) {
+            return language;
+        }
+        englishPreferred = english;
+        // Qt repeats a bare language after a preference's other forms, where it stands for the usual script: zh after
+        // zh-Hant-HK would be Simplified
+        const bool repeatedBareLanguage = parts.size() == 1 && seenLanguages.contains(parts.constFirst());
+        seenLanguages.append(parts.constFirst());
+        if (!fallback.isEmpty() || english || repeatedBareLanguage || !scriptKept || wanted.language() == QLocale::C) {
+            continue;
+        }
+        for (const QString& code : qualityTranslations) {
+            const QLocale offered(code);
+            if (offered.language() == wanted.language() && offered.script() == wanted.script()) {
+                fallback = code;
+                fallbackLanguage = wanted.language();
+                fallbackScript = wanted.script();
+                break;
+            }
+        }
+    }
+    return fallback.isEmpty() ? qsl("en_US") : fallback;
 }
 
 QString MudletApp::interfaceLanguageSetting(const QSettings& settings)

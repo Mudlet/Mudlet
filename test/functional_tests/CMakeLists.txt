@@ -220,6 +220,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorAddItemTest.cpp
     EditorFolderViewTest.cpp
     EditorFontTest.cpp
+    EditorModuleFolderTest.cpp
     EditorSearchTest.cpp
     TreeWidgetItemMoveTest.cpp
     TriggerEditorDisclosureTest.cpp
@@ -232,6 +233,7 @@ set(EDITOR_GROUP_TEST_SOURCES
 # The map: its rooms and areas, its file format, and the mapper widget
 set(MAP_GROUP_TEST_SOURCES
     EmbeddedMapperCreationTest.cpp
+    FloatingMapKeyBindingTest.cpp
     ExitAppearanceTest.cpp
     MapAreaReassignmentTest.cpp
     MapAreaSelectionTest.cpp

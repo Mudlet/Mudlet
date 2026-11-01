@@ -65,6 +65,7 @@
 #include <algorithm>
 #include <cstring>
 #include <span>
+#include <string_view>
 #include <iterator>
 #include <limits>
 #include <optional>
@@ -2084,6 +2085,19 @@ void TBuffer::parseChunk(
                     // the cap is ordinary - a Sixel image or a Kitty graphic
                     // legitimately runs to many times it:
                     warnAboutDiscardedStringSequence(qsl("passed %1 bytes, so its command will be ignored").arg(MAX_OSC_SEQUENCE_LENGTH), localBuffer, spanStart, spanEnd);
+                    // An OSC 8 link start ends the open link even when it is dropped, as decodeOSC() does for
+                    // one it rejects: a URI too long for the cap is only ever seen here
+                    const std::string_view payload = std::string_view(localBuffer).substr(spanStart, spanEnd - spanStart);
+                    if (mHyperlinkActive && mpHost && mpHost->mEnableOSC8Hyperlinks && payload.starts_with("8;")) {
+                        const size_t uriStart = payload.find(';', 2);
+                        // Parameters that run past the cap hide the URI, so it is taken for a link start like any other
+                        const std::string_view uri = uriStart == std::string_view::npos ? std::string_view() : payload.substr(uriStart + 1);
+                        const std::string_view preset = "preset:";
+                        // A URI cut off part way through "preset:" may still be one
+                        if (uri.empty() || uri.substr(0, preset.size()) != preset.substr(0, uri.size())) {
+                            finaliseActiveHyperlink();
+                        }
+                    }
                 }
                 // Stay in the sequence and consume the rest as it arrives, but
                 // what is left is no longer the whole payload so it must not
@@ -2936,7 +2950,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
     }
     mCommitLineIndices.append(lineIndex);
     // A line committed from inside a pass (feedTriggers()) can delete, rewrap or trim lines above
-    // that pass's line; neither deleteLines() nor shrinkBuffer() moves a cursor, so one a script
+    // that pass's line; deleteLines() moves no cursor, so one a script
     // still has on that line is moved with it below
     const int enclosingPassLine = mPreTriggerPassLineNumber;
     const bool userCursorOnEnclosingPassLine = mpModel && enclosingPassLine >= 0 && mpModel->mUserCursor.y() == enclosingPassLine;
@@ -4914,11 +4928,6 @@ void TBuffer::decodeOSC(const QString& sequence)
                 finaliseActiveHyperlink();
             }
 
-            if (rawUrl.length() > static_cast<int>(MAX_OSC_SEQUENCE_LENGTH)) {
-                qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << rawUrl;
-                return;
-            }
-
             if (rawUrl.startsWith(qsl("preset:"))) {
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC] Detected preset: URL:" << rawUrl;
@@ -6619,7 +6628,6 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         return previous;
     };
     int xPos = 0;
-    int totalWidth = 0;
     int firstChar = 0;
     bool needsIndent = indentToCome;
     bool hasNewline = false;
@@ -6680,7 +6688,6 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
                 // line to guarantee the scan moves on
                 indexOfChar = (nextBoundary > firstChar) ? nextBoundary : firstChar + 1;
                 setGraphemePosition(indexOfChar);
-                totalWidth += charWidth;
             }
             output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
             isNewline = false;
@@ -6690,7 +6697,6 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             continue;
         }
         xPos += charWidth;
-        totalWidth += charWidth;
         indexOfChar = nextBoundary;
         if (plainAscii) {
             // Plain ASCII has no line feeds and skips spaces only at a segment's first column, so every
@@ -6698,15 +6704,33 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             const int run = std::min(maxWidth - (needsIndent ? indentationHere : 0) - xPos, total - indexOfChar);
             if (run > 0) {
                 xPos += run;
-                totalWidth += run;
                 indexOfChar += run;
             }
         }
     }
-    // it's possible that no wrapping is needed
-    if (totalWidth <= mWrapAt && !hasNewline) {
-        output.clear();
-        return output;
+    // A line that already fits is not broken to make room for the indent, so one read back out of the
+    // buffer, indent and all, echoes back unchanged. Trailing spaces don't count: a break drops them.
+    if (!hasNewline && !output.isEmpty()) {
+        qsizetype textEnd = lineText.size();
+        while (textEnd > 0 && lineText.at(textEnd - 1) == QChar::Space) {
+            --textEnd;
+        }
+        int width = 0;
+        if (plainAscii) {
+            width = static_cast<int>(textEnd);
+        } else {
+            graphemeFinder->toStart();
+            const bool wideAmbiguous = mpHost->wideAmbiguousEAsianGlyphs();
+            for (int position = 0; position < textEnd && width <= mWrapAt;) {
+                const int next = graphemeFinder->toNextBoundary();
+                width += graphemeInfo::getWidth(graphemeInfo::getBaseCharacter(QStringView(lineText).mid(position, next - position)), wideAmbiguous);
+                position = next;
+            }
+        }
+        if (width <= mWrapAt) {
+            output.clear();
+            return output;
+        }
     }
     // if the line has been wrapped, append last remaining bit
     if (!output.isEmpty()) {
@@ -7615,6 +7639,18 @@ void TBuffer::shrinkBuffer()
         // As mCursorY above, which a real view's upper pane takes its line from as it repaints
         if (mpModel->mScrolledBackTo) {
             mpModel->mScrolledBackTo = std::max(0, *mpModel->mScrolledBackTo - mBatchDeleteSize);
+        }
+        // A script's cursor and selection name their line by number, so they move up with it, or to the top when it went
+        QPoint& userCursor = mpModel->mUserCursor;
+        userCursor = (userCursor.y() < mBatchDeleteSize) ? QPoint() : QPoint(userCursor.x(), userCursor.y() - mBatchDeleteSize);
+        if (mpModel->mEngineCursor >= 0) {
+            mpModel->mEngineCursor = std::max(0, mpModel->mEngineCursor - mBatchDeleteSize);
+        }
+        if (mpModel->P_begin.y() < mBatchDeleteSize) {
+            mpModel->deselect();
+        } else {
+            mpModel->P_begin.ry() -= mBatchDeleteSize;
+            mpModel->P_end.ry() -= mBatchDeleteSize;
         }
     }
     if (mLastFoundLine >= mBatchDeleteSize) {

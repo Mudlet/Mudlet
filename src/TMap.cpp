@@ -25,6 +25,7 @@
 
 #include "Host.h"
 #include "MudletApp.h"
+#include "RoomAppearance.h"
 #include "TAppFrontend.h"
 #include "TArea.h"
 #include "TAreaGraph.h"
@@ -3502,7 +3503,7 @@ QStringList TMap::symbolsNotInFont(const QFont& font)
     const QHash<QString, QSet<int>> symbolsInUse = roomSymbolsHash();
     for (auto it = symbolsInUse.cbegin(), end = symbolsInUse.cend(); it != end; ++it) {
         for (const quint32 codePoint : it.key().toUcs4()) {
-            if (!metrics.inFontUcs4(codePoint)) {
+            if (RoomAppearance::symbolCodePointNeedsGlyph(codePoint) && !metrics.inFontUcs4(codePoint)) {
                 missingSymbols << it.key();
                 break;
             }
