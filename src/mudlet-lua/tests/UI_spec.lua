@@ -4307,6 +4307,18 @@ describe("Tests UI functions", function()
       assert.are.equal("ERROR: mini console does not exist", first)
       assert.is_string(second)
     end)
+
+    it("getCurrentLine returns nil and a message for an unknown window when asked for full error reporting", function()
+      local first, second = getCurrentLine("uiReadbackNoSuchWindow", true)
+      assert.is_nil(first)
+      assert.are.equal('window "uiReadbackNoSuchWindow" not found', second)
+    end)
+
+    it("getCurrentLine rejects an enableFullErrorReporting that is not a boolean", function()
+      local wanted = "getCurrentLine: bad argument #2 type (enableFullErrorReporting {default = false} as boolean is optional, got string!)"
+      assert.has_error(function() getCurrentLine("main", "yes") end, wanted)
+      assert.has_error(function() getCurrentLine("uiReadbackNoSuchWindow", 1) end)
+    end)
   end)
 
   -- these all return nil plus a 'window "..." not found' message for an
