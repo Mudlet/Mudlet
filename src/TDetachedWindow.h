@@ -190,6 +190,7 @@ private:
     void showMuteState();
     void createToolBar();
     void connectToolBarActions();
+    void closeProfileByName(const QString& profileName);
     void updateTabIndicator(int tabIndex = -1);                            // -1 means current tab
     void updateDockWidgetVisibilityForProfile(const QString& profileName); // Show/hide docked widgets based on active profile
     void restoreWindowGeometry();
@@ -304,7 +305,8 @@ private:
     // Docked widgets management
     QMap<QString, QPointer<QDockWidget>> mDockWidgetMap;
     QMap<QString, bool> mDockWidgetUserPreference; // User's show/hide preference for dock widgets
-    QDockWidget* mpMapDockWidget{nullptr};
+    // A closing profile's map dock goes without the window being told
+    QPointer<QDockWidget> mpMapDockWidget;
 };
 
 #endif // TDETACHEDWINDOW_H

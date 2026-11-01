@@ -755,6 +755,62 @@ private slots:
     QCOMPARE(hints.last(), qsl("Item"));
   }
 
+  // Activating a link in a selection group runs the menu item the player
+  // picked; only a link without a menu has its own command rebuilt to carry
+  // the new selected state.
+  void test_Osc8SelectionGroupActivationCommand_data() {
+    QTest::addColumn<QString>("url");
+    QTest::addColumn<QString>("expectedCommand");
+
+    const QString selection =
+        qsl("\"selection\":{\"group\":\"%1\",\"value\":\"v\"}");
+    const auto sends = [](const QString &command) {
+      return qsl("send(%1, false)").arg(LuaLiteral::quote(command));
+    };
+
+    QTest::newRow("no menu")
+        << qsl("send:look?config={%1}").arg(selection.arg(qsl("noMenu")))
+        << sends(qsl("look?selected=true"));
+    QTest::newRow("one-item menu")
+        << qsl("send:look?config={\"menu\":[{\"Attack\":\"send:attack\"}],%1}")
+               .arg(selection.arg(qsl("oneItem")))
+        << sends(qsl("attack"));
+    QTest::newRow("one-item menu with a web link")
+        << qsl("send:look?config={\"menu\":[{\"Wiki\":\"https://wiki.mudlet.org/\"}],%1}")
+               .arg(selection.arg(qsl("oneWebItem")))
+        << qsl("openUrl(%1)").arg(LuaLiteral::quote(qsl("https://wiki.mudlet.org/")));
+    QTest::newRow("two-item menu")
+        << qsl("send:look?config={\"menu\":[{\"Attack\":\"send:attack\"},{\"Flee\":\"send:flee\"}],%1}")
+               .arg(selection.arg(qsl("twoItems")))
+        << sends(qsl("attack"));
+  }
+
+  void test_Osc8SelectionGroupActivationCommand() {
+    QFETCH(QString, url);
+    QFETCH(QString, expectedCommand);
+
+    injectData(qsl("\x1b]8;;") + url + qsl("\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    const Mudlet::HyperlinkStyling styling =
+        console->getLinkStore().getStyling(linkId);
+    QVERIFY(styling.selection.hasSelectionSettings);
+
+    const QStringList commands = console->getLinkStore().getLinksConst(linkId);
+    QVERIFY(!commands.isEmpty());
+    QString command = commands.first();
+    console->mUpperPane->applyHyperlinkSelectionGroupState(
+        linkId, command, styling.selection, "TOscTest");
+    QCOMPARE(command, expectedCommand);
+  }
+
   // Toggle defaults to true, so it shows that a value that is not a boolean
   // leaves the default alone, where bold cannot tell that from false.
   void test_Osc8BooleanForms_data() {
@@ -2263,6 +2319,40 @@ private slots:
 
     console->buffer.revealSpoilerLink(linkId);
     QCOMPARE(console->buffer.line(joinedLine), padding + qsl(" alpha beta tail."));
+  }
+
+  // An MXP <SEND> inside a spoiler keeps its own link id, so it is left on show
+  // rather than masked: the reveal only restores the spoiler's own characters.
+  void test_AnMxpLinkInsideASpoilerDoesNotGarbleItsReveal_data() {
+    QTest::addColumn<QString>("spoilerEnd");
+
+    QTest::newRow("closed") << qsl("\x1b]8;;\x1b\\ after");
+    QTest::newRow("ended by the next link") << qsl("\x1b]8;;send:next\x1b\\ after\x1b]8;;\x1b\\");
+  }
+
+  void test_AnMxpLinkInsideASpoilerDoesNotGarbleItsReveal() {
+    QFETCH(QString, spoilerEnd);
+
+    const bool mxpWasEnabled = mpHost->mMxpProcessor.isEnabled();
+    mpHost->setForceMXPProcessorOn(true);
+    mpHost->mMxpProcessor.enable();
+    feedFromServer(qsl("SPOILMXP \x1b]8;;send:look?config={\"spoiler\":true}\x1b\\aa <SEND \"north\">nn</SEND> bb") + spoilerEnd + qsl("\n"));
+    if (!mxpWasEnabled) {
+      mpHost->mMxpProcessor.disable();
+    }
+    mpHost->setForceMXPProcessorOn(false);
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("SPOILMXP"));
+    QVERIFY2(line >= 0, qPrintable(qsl("the line never reached the buffer: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.line(line), qsl("SPOILMXP    nn    after"));
+    const int linkId = console->buffer.getLinkIndexAt(line, 9);
+    QVERIFY2(linkId > 0, "the spoiler text is no longer a link");
+    const int sendId = console->buffer.getLinkIndexAt(line, 12);
+    QVERIFY2(sendId > 0 && sendId != linkId, "the MXP link inside the spoiler lost its own id");
+
+    console->buffer.revealSpoilerLink(linkId);
+    QCOMPARE(console->buffer.line(line), qsl("SPOILMXP aa nn bb after"));
   }
 
   void cleanupTestCase() {
