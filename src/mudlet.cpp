@@ -6978,6 +6978,13 @@ mudlet::~mudlet()
 
     saveDetachedWindowsGeometry();
 
+    // While this window is whole and still the frontend, so that profileClosing() takes each profile's windows before
+    // its Host, rather than mHostManager's destruction taking the Hosts and ~QMainWindow their windows after
+    mHostManager.refuseNewProfiles();
+    for (const auto& pHost : mHostManager.hostList()) {
+        mHostManager.deleteHost(pHost->getName());
+    }
+
     if (TAppFrontend::instance() == this) {
         TAppFrontend::viewDestroyed();
     }

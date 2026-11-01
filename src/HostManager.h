@@ -99,6 +99,8 @@ public:
     void closeAllProfiles();
     int getHostCount();
     void deleteHost(const QString&);
+    // For a frontend closing every profile as it goes, ahead of the pool's own destruction
+    void refuseNewProfiles() { mGoingDown = true; }
     void postIrcMessage(const QString&, const QString&, const QString&);
     void postInterHostEvent(const Host*, const TEvent&, const bool = false);
     void changeAllHostColour(const Host*);
@@ -138,7 +140,8 @@ private:
     // Before mHostPool too, as the profiles reach it through TSpeechBridge::instance(); a second pool's goes unused
     std::unique_ptr<TSpeechBridge> mpSpeechBridge;
     HostMap mHostPool;
-    // From the destructor on: a profile opened then would never get its sysExitEvent
+    // From refuseNewProfiles() or the destructor on: a profile opened then would never get its sysExitEvent,
+    // nor have its windows closed before it
     bool mGoingDown = false;
     int mProfileLoadsInProgress = 0;
     std::function<void(Host*)> mProfileOpenedHook;
