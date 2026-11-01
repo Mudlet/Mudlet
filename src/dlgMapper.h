@@ -49,6 +49,7 @@ class dlgMapper : public QWidget, public Ui::mapper, public TMapViewFrontend
 public:
     Q_DISABLE_COPY(dlgMapper)
     dlgMapper(QWidget*, Host*, TMap*);
+    Host* getHost() const { return mpHost; }
 #if defined(INCLUDE_3DMAPPER)
     QOpenGLWidget* glWidget = nullptr;
 #endif

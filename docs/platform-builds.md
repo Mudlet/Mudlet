@@ -116,6 +116,48 @@ involves Sentry; `SENTRY_DSN` is a repository secret and cannot be matched local
 These presets build outside the checkout, into `../b/ninja`, because that is where the workflows'
 ctest and packaging steps look — `ci-windows` is the exception and uses `build-$MSYSTEM/`.
 
+### The Lua specs with no main window
+
+`.github/workflows/headless-lua-tests.yml` runs the Lua specs in `mudlet-headless`, the terminal
+runner, which has no main window, as a phone app has none; `headless.md` explains running it and
+embedding a profile without a window. It runs nightly against `development`,
+when started by hand, and on pull requests and pushes to `development` that change `src/headless/`,
+the `src/TNull*` views, the list, its checker or the workflow itself. It is not part of every pull
+request, as it would double the time the spec run takes there. Many specs still need a main
+window, so the run passes only when exactly the failures listed in
+`CI/headless-lua-known-failures.txt` fail and the run passes and pends as many tests as the list
+records. It fails on any other failure, on a listed one that now passes, on a spec file that does
+not load, and on a run that does not finish or exits with an error. To reproduce it:
+
+```bash
+set -o pipefail
+CONFIG_DIR=$(mktemp -d)
+mkdir -p "$CONFIG_DIR/.config/mudlet/profiles"
+AUTORUN_BUSTED_TESTS=true MUDLET_TEST_MODE=1 QUIT_MUDLET_AFTER_TESTS=true QT_QPA_PLATFORM=offscreen \
+  MUDLET_MATCH_THREADS=2 MUDLET_MATCH_SAMPLE_EVERY=0 DBUS_SESSION_BUS_ADDRESS='disabled:' \
+  TESTS_DIRECTORY="$PWD/src/mudlet-lua/tests" HOME="$CONFIG_DIR" XDG_CONFIG_HOME="$CONFIG_DIR/.config" \
+  MUDLET_TEST_FAILURE_MARKER="$CONFIG_DIR/busted-tests-failed" \
+  build/src/mudlet-headless -p "Mudlet self-test" --host mudlet.org --port 23 --offline --no-stdin \
+  2>&1 | tee headless-lua.log
+CI/check-headless-lua-failures.py headless-lua.log CI/headless-lua-known-failures.txt
+```
+
+A private `HOME` keeps the run off your own profiles: with an empty `$XDG_CONFIG_HOME/mudlet`,
+Mudlet goes on using `~/.config/mudlet`. A local run can still differ from CI's, whose Qt, compiler
+and sanitizer are its own, and run as root it pends the specs that need a file it may not write,
+so update the list from the `headless-lua-tests` artifact the job
+uploads, which holds its log:
+
+```bash
+CI/check-headless-lua-failures.py headless-lua-tests.log CI/headless-lua-known-failures.txt --write
+```
+
+`--write` keeps the comments and the entries that still fail where they are, drops the ones that
+no longer fail and adds new failures at the end. A new failure there is a regression in a profile
+with no main window, unless the spec is about something only a main window has; a spec whose
+setup or teardown needs one should pend instead, as the checker will not accept a failed hook.
+`CI/test-check-headless-lua-failures.py` tests the checker itself, and the workflow runs it first.
+
 ## Sanitizers and static analysis
 
 Sanitizers are enabled on every non-Windows build; `USE_SANITIZER` defaults to `address`, and a

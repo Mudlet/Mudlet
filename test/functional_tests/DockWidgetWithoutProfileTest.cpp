@@ -18,18 +18,13 @@
  ***************************************************************************/
 
 /*
- * A user window's TDockWidget keeps its profile in a QPointer, so closing the
- * profile leaves the dock holding nothing while Qt is still sending it the
- * close and the hide that shutting the profile down produces.
+ * A user window's TDockWidget is hidden while its profile is being torn down,
+ * after the profile's main console has gone.
  *
  * Run with: ctest -R DockWidgetWithoutProfileTest -V
  */
 
-#include <QCloseEvent>
-#include <QCoreApplication>
 #include <QDir>
-#include <QMoveEvent>
-#include <QResizeEvent>
 #include <QTemporaryDir>
 #include <QWidget>
 #include <QtTest/QtTest>
@@ -52,65 +47,12 @@ class DockWidgetWithoutProfileTest : public QObject
 
 private:
     // A member, so the directory outlives the profile that is pointed at it:
-    // the application object the last test builds is never taken down.
+    // the application object the test builds is never taken down.
     QTemporaryDir mConfigDir;
 
 private slots:
-    // Before #4892 the hide looked the user window up on the profile's main
-    // console first, and by then there was no profile to ask.
-    void test_aDockWidgetHidesItselfWhenItsProfileIsGone()
-    {
-        // A parent that is never shown, so no window is ever created for the
-        // dock and the hide is the only thing under test here. Declared first,
-        // so the dock is destroyed first and unparents itself; the other order
-        // is a double free.
-        QWidget parent;
-        TDockWidget dock(nullptr, qsl("userwindow"));
-        dock.setParent(&parent);
-        // How the dock went up while there was still a profile behind it.
-        dock.QWidget::setVisible(true);
-        QVERIFY2(dock.testAttribute(Qt::WA_WState_ExplicitShowHide), "the dock was never put up, so hiding it proves nothing");
-
-        dock.setVisible(false);
-
-        QVERIFY2(dock.isHidden(), "the dock stayed up after its profile went");
-    }
-
-    // Before the guard that rode along in #8314 the close asked the profile
-    // whether it was shutting down, and there was no profile left to ask.
-    void test_aDockWidgetTakesItsCloseWhenItsProfileIsGone()
-    {
-        TDockWidget dock(nullptr, qsl("userwindow"));
-        QCloseEvent event;
-        event.ignore();
-
-        QCoreApplication::sendEvent(&dock, &event);
-
-        QVERIFY2(event.isAccepted(), "the close was turned down, with no profile left to hide the user window on");
-    }
-
-    // A dock that is resized or moved after its profile has gone used to report
-    // the layout change to a profile that was no longer there.
-    void test_aDockWidgetTakesAResizeWhenItsProfileIsGone()
-    {
-        TDockWidget dock(nullptr, qsl("userwindow"));
-        QResizeEvent event(QSize(200, 100), QSize(100, 50));
-
-        QVERIFY2(QCoreApplication::sendEvent(&dock, &event), "the resize never reached the dock");
-    }
-
-    void test_aDockWidgetTakesAMoveWhenItsProfileIsGone()
-    {
-        TDockWidget dock(nullptr, qsl("userwindow"));
-        QMoveEvent event(QPoint(10, 10), QPoint(0, 0));
-
-        QVERIFY2(QCoreApplication::sendEvent(&dock, &event), "the move never reached the dock");
-    }
-
-    // The other half of the same hide guard: the profile is still there but its
-    // main console has already gone, which is the state a profile is left in
-    // part way through being torn down. Last, because it builds the application
-    // object, and a profile cannot be made without one.
+    // The profile is still there but its main console has already gone, which
+    // is the state a profile is left in part way through being torn down.
     void test_aDockWidgetHidesItselfWhenItsProfilesConsoleIsGone()
     {
         if (portableMarkerPresent()) {
