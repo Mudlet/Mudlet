@@ -18,6 +18,11 @@ The executable is `build/src/mudlet-headless`. The `linux-core-minimal` preset b
 what a mobile build has to leave out turned off; see "Leaving out what a mobile build cannot use"
 in `platform-builds.md`.
 
+With `-DUSE_GUI=OFF` (or `WITH_GUI=NO` in the environment) a build tree has no desktop GUI at all:
+Qt Widgets need not be installed, and neither the `edbee-lib` nor the `qt-tags-widget` submodule
+needs checking out. Only `mudlet_core`, `mudlet_headless` and `mudlet-headless` are built, with no
+tests, as every test binary links the GUI; `WITH_SENTRY` needs the GUI too.
+
 It needs no display. With `QT_QPA_PLATFORM` unset it uses Qt's `offscreen` platform, and does not
 pass that on to the programs a script starts. Set `QT_QPA_PLATFORM` yourself to use another one.
 
