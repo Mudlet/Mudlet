@@ -122,6 +122,9 @@ public:
     // its parent. Once the view goes, these make it again, so the view's last setting is still saved.
     void followView(QObject* view);
     void resumeMainCommandLine();
+    // As the main command line takes a command once it is sent, which a line typed while the game hides what is
+    // typed is not
+    void addMainCommandLineHistory(const QString& command);
     bool ownsContainer(const QString& windowname) const;
     bool subConsoleShown(const QString& name) const;
     void reportUserWindowVisibility();
@@ -318,13 +321,19 @@ public:
 private:
     friend class TNullMxpFrameFrontend;
 
-    // Lives as long as a TCommandLine would, as that writes its history setting on each end of session profile
-    // save until it is destroyed. Each window that can hold one has a QObject standing for its widget, as a parent.
+    // Lives as long as a TCommandLine would, as that writes its history and its history setting on each end of
+    // session profile save until it is destroyed. Each window that can hold one has a QObject standing for its
+    // widget, as a parent.
     class HistoryWriter : public QObject
     {
     public:
         using QObject::QObject;
         bool savesHistory = true;
+        // TCommandLine::mBackingFileName and mHistoryList
+        QString fileName;
+        QStringList history;
+        // So a file that could not be read is not written over with what little was
+        bool readFailed = false;
     };
 
     // QWidget's minimumSize() and maximumSize(), which QStyleSheetStyle::setGeometry() sets from a sheet
@@ -469,7 +478,7 @@ private:
     PlainWindow* commandLineNamed(const QString& name);
     void releaseCommandLine(const QString& name, const PlainWindow& commandLine);
     QObject* holderFor(const QString& userWindow, const ScrollBox* box) const;
-    HistoryWriter* makeHistoryWriter(QObject* parent, const QString& name, bool savesHistory);
+    HistoryWriter* makeHistoryWriter(QObject* parent, const QString& name, const QString& fileName, bool savesHistory);
     void dropModels();
     PlainWindow* plainWindow(const QString& name);
     void republishPlainWindow(const QString& name);

@@ -34,6 +34,7 @@
 #include "MapStyle.h"
 #include "MudletApp.h"
 #include "MudletProxyStyle.h"
+#include "RoomAppearance.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
@@ -417,7 +418,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         auto& nativeName = translation.getNativeName();
         if (translation.fromResourceFile()) {
             auto& translatedPc = translation.getTranslatedPercentage();
-            if (translatedPc >= pMudlet->scmTranslationGoldStar) {
+            if (translatedPc >= MudletApp::scmTranslationGoldStar) {
                 comboBox_guiLanguage->addItem(QIcon(":/icons/rating.png"), nativeName, code);
             } else {
                 // This will also be used if the percentage is set to zero
@@ -8227,6 +8228,9 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         QStringList codePointsString;
         for (uint i = 0, total = pCodePoints.size(); i < total; ++i) {
             codePointsString << qsl("U+%1").arg(pCodePoints.at(i), 4, 16, QChar('0')).toUpper();
+            if (!RoomAppearance::symbolCodePointNeedsGlyph(pCodePoints.at(i))) {
+                continue;
+            }
             if (!SymbolAnyFontMetrics.inFontUcs4(pCodePoints.at(i))) {
                 isAllFontUsable = false;
                 // By definition if all the fonts together cannot render the

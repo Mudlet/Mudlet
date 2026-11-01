@@ -33,6 +33,7 @@
 #include <QPair>
 #include <QSettings>
 #include <QString>
+#include <QStringList>
 
 class QNetworkRequest;
 class QTranslator;
@@ -197,9 +198,16 @@ public:
     // the language is written both at startup, by mudlet::readEarlySettings() or readInterfaceLanguage(), and
     // later by the preferences dialog.
     static QString getInterfaceLanguage();
-    // What a Mudlet.ini with no interfaceLanguage gets, as the main window picks it: en_GB when that is one of the
-    // system's UI languages, else en_US
+    // translations done high enough will get a gold star to hide the last few percent
+    // as well as encourage translators to maintain it
+    static constexpr int scmTranslationGoldStar = 95;
+    // What a Mudlet.ini with no interfaceLanguage gets: the first of the system's UI languages with a gold-star
+    // translation of its own, or of its language in the same script (de_DE for de_AT) when no other form of that
+    // preference has one, or en_GB, else en_US - which an English variant with no translation of its own also gets
     static QString autodetectPreferredLanguage();
+    static QString autodetectPreferredLanguage(const QStringList& systemUiLanguages);
+    // The same rule over the given translations, each a code such as pt_BR
+    static QString autodetectPreferredLanguage(const QStringList& systemUiLanguages, const QStringList& qualityTranslations);
     static QString interfaceLanguageSetting(const QSettings& settings);
     // For a pool with no main window, as mudlet::readEarlySettings(); warns of a language that names no locale or has
     // no translation

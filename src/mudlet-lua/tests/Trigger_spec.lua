@@ -3868,6 +3868,40 @@ describe("Trigger processing", function()
             assert.are.equal(2, _G.TrigStayOpen, "and stop once the window has run out")
         end)
 
+        -- The trigger's script runs before its match applies the fire length, so the
+        -- length the script itself sets on that line has to be the one that holds
+        for _, fireLength in ipairs({0, 1}) do
+            it("keeps the length a matching trigger's own script sets, with a fire length of " .. fireLength, function()
+                local name = "SpecStayOpenOwnScript" .. fireLength
+                local captured = {}
+                local text, length
+                tempComplexRegexTrigger(name, "^stayopen_capture start", function()
+                    text = (text or "") .. line
+                    length = (length or 1) + 1
+                    if line:find("the end%.$") then
+                        captured[#captured + 1] = text
+                        text, length = nil, nil
+                        setTriggerStayOpen(name, 0)
+                    else
+                        text = text .. " "
+                        setTriggerStayOpen(name, length)
+                    end
+                end, 0, 0, 0, 0, 0, 0, 0, 0, fireLength, 0)
+                finally(function() killTrigger(name) end)
+
+                feedTriggers("stayopen_capture start of one line, the end.\n")
+                feedTriggers("a line after the single one\n")
+                feedTriggers("stayopen_capture start of a text that\n")
+                feedTriggers("goes on to a second line, the end.\n")
+                feedTriggers("a line after the longer one\n")
+
+                assert.are.same({
+                    "stayopen_capture start of one line, the end.",
+                    "stayopen_capture start of a text that goes on to a second line, the end.",
+                }, captured)
+            end)
+        end
+
     end)
 
     -- Prompt pipeline, driven through the real telnet parser: a prompt trigger

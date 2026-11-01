@@ -28,6 +28,8 @@
 #include <QFontMetrics>
 #include <QFontMetricsF>
 #include <QImage>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QPointer>
 #include <QScopeGuard>
 #include <QSemaphore>
@@ -56,13 +58,13 @@
 #include <memory>
 
 #include "CredentialManager.h"
-#include "EventLoopPump.h"
 #include "FontManager.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "MudletMedia.h"
 #include "PortableModeTestHelper.h"
+#include "ScriptUnit.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
 #include "TAppFrontend.h"
@@ -78,6 +80,7 @@
 #include "TNullMapViews.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
+#include "TScript.h"
 #include "TSpeechBridge.h"
 #include "TriggerMatchPool.h"
 #include "XMLexport.h"
@@ -446,6 +449,8 @@ private slots:
                           "enableMuteGame=true\n"
                           "reportMapIssuesToConsole=true\n"
                           "storePasswordsSecurely=false\n"
+                          "drawUpperLowerLevels=false\n"
+                          "showTabConnectionIndicators=true\n"
                           "interfaceLanguage=de_DE\n")
                               .arg(scmAutosaveMinutes)
                               .arg(scmUsernameDelayMs)
@@ -4672,7 +4677,7 @@ wlReplacedResult = ok and "ok" or tostring(err)
         Host* host = HostManager::self()->getHost(hostname);
         QVERIFY2(host, "The profile is not in the pool.");
         host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onUwnShowHandler"));
-        // With no view, pumpEvents() takes Mudlet for shutting down and pumps nothing
+        // The null view paints on short chains of zero timers, so passes rather than time deliver them
         lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State*) -> int {
             for (int pass = 0; pass < 10; ++pass) {
                 QCoreApplication::processEvents();
@@ -5625,12 +5630,6 @@ end
         QVERIFY(!host->hasConsoleView());
         QVERIFY2(host->mLoadedOk, qPrintable(host->mProfileLoadError));
 
-        // With no view, pumpEvents() takes Mudlet for shutting down and pumps nothing, so the waits for a save use the
-        // pump it would
-        lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State* L) -> int {
-            static_cast<void>(EventLoopPump::pumpFor(static_cast<int>(lua_tointeger(L, 1))));
-            return 0;
-        });
         // Run from the event loop, as a script in the GUI is, so the saves it waits out deliver no deferred deletes
         bool ran = false;
         bool pendingDeleteHeld = false;
@@ -7685,8 +7684,8 @@ headlessMapView = ok and "ok" or tostring(err)
                 return QStringList{qsl("the profile could not be made")};
             }
             host->getLuaInterpreter()->loadGlobal();
-            // With no view, pumpEvents() takes Mudlet for shutting down and pumps nothing. The null view paints on short
-            // chains of zero timers, each link a pass, so passes rather than time deliver them however slow a pass is
+            // The null view paints on short chains of zero timers, each link a pass, so passes rather than time deliver
+            // them however slow a pass is
             lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State*) -> int {
                 for (int pass = 0; pass < 10; ++pass) {
                     QCoreApplication::processEvents();
@@ -10412,8 +10411,126 @@ headlessDiscord = ok and 'ok' or tostring(err)
         QCOMPARE(MudletApp::getInterfaceLanguage(), qsl("fr_FR"));
     }
 
-    // Run twice: here, where Mudlet.ini holds none of these keys, and by HeadlessHostSmokeTestWithMudletIni,
-    // where initTestCase() wrote each of them before the pool existed
+    void test_firstRunLanguageFollowsTheDesktopToAGoldStarTranslation()
+    {
+        // These need no translation statistics, so they run before the skips below
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("en-GB")}), qsl("en_GB"));
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("en-AU")}), qsl("en_US"));
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("en-Latn-AU"), qsl("en-AU"), qsl("en-Latn"), qsl("en")}), qsl("en_US"));
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("en-Latn-GB"), qsl("en-GB"), qsl("en-Latn"), qsl("en")}), qsl("en_GB"));
+        QCOMPARE(MudletApp::autodetectPreferredLanguage(QStringList()), qsl("en_US"));
+
+        QFile statsFile(qsl(":/translation-stats.json"));
+        QVERIFY2(statsFile.open(QIODevice::ReadOnly | QIODevice::Text), "The translation statistics are not built in.");
+        QJsonParseError parseError;
+        const QJsonDocument statsDocument = QJsonDocument::fromJson(statsFile.readAll(), &parseError);
+        QVERIFY2(parseError.error == QJsonParseError::NoError && statsDocument.isObject(), qPrintable(qsl("The translation statistics do not parse: %1").arg(parseError.errorString())));
+        const QJsonObject stats = statsDocument.object();
+        if (stats.isEmpty()) {
+            QSKIP("Built without translation statistics (generate-translation-stats.lua had no lua-yajl), so only English can be detected.");
+        }
+        QStringList goldStars;
+        QStringList partials;
+        for (auto it = stats.constBegin(); it != stats.constEnd(); ++it) {
+            const QString code = it.key();
+            if (code.startsWith(qsl("en_")) || !QFile::exists(qsl(":/lang/mudlet_%1.qm").arg(code))) {
+                continue;
+            }
+            const int percent = it.value().toObject().value(qsl("translated_percent")).toInt();
+            if (percent >= MudletApp::scmTranslationGoldStar) {
+                goldStars << code;
+            } else if (percent > 0) {
+                partials << code;
+            }
+        }
+        // One in its language's usual script, so another territory of that language means the same translation
+        QString goldStar;
+        for (const QString& code : std::as_const(goldStars)) {
+            const QLocale locale(code);
+            if (locale.script() == QLocale(locale.language()).script()) {
+                goldStar = code;
+                break;
+            }
+        }
+        // One whose language has no gold star in any territory
+        QString partial;
+        for (const QString& code : std::as_const(partials)) {
+            bool languageHasGoldStar = false;
+            for (const QString& gold : std::as_const(goldStars)) {
+                languageHasGoldStar = languageHasGoldStar || QLocale(gold).language() == QLocale(code).language();
+            }
+            if (!languageHasGoldStar) {
+                partial = code;
+                break;
+            }
+        }
+        if (goldStar.isEmpty() || partial.isEmpty()) {
+            QSKIP("No translation other than English has a gold star, or none falls short of one.");
+        }
+        const auto asUiLanguage = [](QString code) {
+            return code.replace(QLatin1Char('_'), QLatin1Char('-'));
+        };
+
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({asUiLanguage(goldStar), qsl("en-US")}), goldStar);
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({asUiLanguage(partial), asUiLanguage(goldStar)}), goldStar);
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({asUiLanguage(partial)}), qsl("en_US"));
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("en-GB"), asUiLanguage(goldStar)}), qsl("en_GB"));
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("en-AU"), asUiLanguage(goldStar)}), qsl("en_US"));
+        // As Qt 6 lists a desktop set to en_AU, then the gold-star language
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("en-Latn-AU"), qsl("en-AU"), qsl("en-Latn"), qsl("en"), asUiLanguage(goldStar)}), qsl("en_US"));
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("en-Latn-GB"), qsl("en-GB"), qsl("en-Latn"), qsl("en"), asUiLanguage(goldStar)}), qsl("en_GB"));
+
+        // A territory with no translation of its own takes its language's gold-star one
+        const QString goldLanguage = goldStar.section(QLatin1Char('_'), 0, 0);
+        const QString elsewhere = goldStar.endsWith(qsl("_AT")) ? qsl("CH") : qsl("AT");
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("%1-%2").arg(goldLanguage, elsewhere)}), goldStar);
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("%1-%2").arg(goldLanguage, elsewhere), qsl("en-US")}), goldStar);
+        const QString partialLanguage = partial.section(QLatin1Char('_'), 0, 0);
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("xx-YY"), qsl("%1-%2").arg(partialLanguage, elsewhere), qsl("%1-%2").arg(goldLanguage, elsewhere), qsl("en-US")}), goldStar);
+        QCOMPARE(MudletApp::autodetectPreferredLanguage({qsl("en-AU"), qsl("%1-%2").arg(goldLanguage, elsewhere)}), qsl("en_US"));
+    }
+
+    // Against chosen gold-star sets, as only a few translations have one at a time; each desktop list is as Qt 6.9 gives it
+    void test_firstRunLanguageFallsBackWithinTheLanguageAndScript()
+    {
+        const auto pick = [](const QStringList& uiLanguages, const QStringList& goldStars) {
+            return MudletApp::autodetectPreferredLanguage(uiLanguages, QStringList{qsl("en_GB"), qsl("en_US")} + goldStars);
+        };
+        const QStringList deAT{qsl("de-Latn-AT"), qsl("de-AT"), qsl("de-Latn"), qsl("de")};
+        const QStringList frCA{qsl("fr-Latn-CA"), qsl("fr-CA"), qsl("fr-Latn"), qsl("fr")};
+        const QStringList frFR{qsl("fr-Latn-FR"), qsl("fr-FR"), qsl("fr-Latn"), qsl("fr")};
+        const QStringList ptPT{qsl("pt-Latn-PT"), qsl("pt-PT"), qsl("pt-Latn"), qsl("pt")};
+        const QStringList zhHK{qsl("zh-Hant-HK"), qsl("zh-HK"), qsl("zh-Hant"), qsl("zh")};
+
+        QCOMPARE(pick(deAT, {qsl("de_DE")}), qsl("de_DE"));
+        QCOMPARE(pick(frCA, {qsl("fr_FR")}), qsl("fr_FR"));
+        QCOMPARE(pick(deAT + QStringList{qsl("en-US")}, {qsl("de_DE")}), qsl("de_DE"));
+        // A language the desktop puts first, in another territory, comes before an exact match lower down
+        QCOMPARE(pick(QStringList{qsl("xx-YY")} + deAT + frFR, {qsl("de_DE"), qsl("fr_FR")}), qsl("de_DE"));
+        QCOMPARE(pick(QStringList{qsl("en-Latn-AU"), qsl("en-AU"), qsl("en-Latn"), qsl("en")} + deAT, {qsl("de_DE")}), qsl("en_US"));
+        QCOMPARE(pick({qsl("cs")}, {qsl("cs_CZ")}), qsl("cs_CZ"));
+
+        // A preference's own translation, listed after the form with its script, comes before another territory's
+        QCOMPARE(pick(ptPT, {qsl("pt_BR"), qsl("pt_PT")}), qsl("pt_PT"));
+        QCOMPARE(pick({qsl("ar-Arab-SA"), qsl("ar-SA"), qsl("ar-Arab"), qsl("ar")}, {qsl("ar_EG"), qsl("ar_SA")}), qsl("ar_SA"));
+        QCOMPARE(pick({qsl("pt-Latn-AO"), qsl("pt-AO"), qsl("pt-Latn-PT"), qsl("pt-PT"), qsl("pt-Latn"), qsl("pt")}, {qsl("pt_BR"), qsl("pt_PT")}), qsl("pt_PT"));
+        QCOMPARE(pick(ptPT, {qsl("pt_BR")}), qsl("pt_BR"));
+
+        // Never another script: not Simplified Chinese for Hong Kong, whose list ends in a bare zh, nor Cyrillic Serbian
+        // or Russian for a desktop that asks for the Latin script
+        QCOMPARE(pick(zhHK, {qsl("zh_CN")}), qsl("en_US"));
+        QCOMPARE(pick(zhHK.mid(0, 3), {qsl("zh_CN")}), qsl("en_US"));
+        QCOMPARE(pick(zhHK, {qsl("zh_TW")}), qsl("zh_TW"));
+        QCOMPARE(pick(zhHK + QStringList{qsl("zh-Hans-CN"), qsl("zh-CN"), qsl("zh-Hans")}, {qsl("zh_CN"), qsl("zh_TW")}), qsl("zh_TW"));
+        QCOMPARE(pick({qsl("zh-Hans-CN"), qsl("zh-CN"), qsl("zh-Hans"), qsl("zh"), qsl("zh-Hant-HK"), qsl("zh-HK"), qsl("zh-Hant")}, {qsl("zh_TW")}), qsl("zh_TW"));
+        QCOMPARE(pick({qsl("sr-Latn-ME"), qsl("sr-ME"), qsl("sr-Latn"), qsl("sr")}, {qsl("sr_RS")}), qsl("en_US"));
+        QCOMPARE(pick({qsl("sr-Cyrl-BA"), qsl("sr-BA"), qsl("sr-Cyrl"), qsl("sr")}, {qsl("sr_RS")}), qsl("sr_RS"));
+        // QLocale has no Latin data for Russian, and reads ru-Latn as Cyrillic
+        QCOMPARE(pick({qsl("ru-Latn")}, {qsl("ru_RU")}), qsl("en_US"));
+    }
+
+    // Run twice: here, where Mudlet.ini held none of these keys when the pool read it, and by
+    // HeadlessHostSmokeTestWithMudletIni, where initTestCase() wrote each of them before the pool existed
     void test_profileWithNoMainWindowTakesItsSettingsFromMudletIni()
     {
         QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
@@ -10431,9 +10548,22 @@ headlessDiscord = ok and 'ok' or tostring(err)
                                qsl("enableMuteGame"),
                                qsl("reportMapIssuesToConsole"),
                                qsl("storePasswordsSecurely"),
+                               qsl("drawUpperLowerLevels"),
+                               qsl("showTabConnectionIndicators"),
                                qsl("interfaceLanguage")};
+        // The saves of the tests before this write these back, which without one are the defaults the pool read
+        const QMap<QString, bool> written{{qsl("enableMuteAPI"), false},
+                                          {qsl("enableMuteGame"), false},
+                                          {qsl("reportMapIssuesToConsole"), false},
+                                          {qsl("storePasswordsSecurely"), true},
+                                          {qsl("drawUpperLowerLevels"), true},
+                                          {qsl("showTabConnectionIndicators"), false}};
         for (const QString& key : keys) {
-            QVERIFY2(settings->contains(key) == fromIni, qPrintable(key));
+            if (fromIni || !written.contains(key)) {
+                QVERIFY2(settings->contains(key) == fromIni, qPrintable(key));
+            } else if (settings->contains(key)) {
+                QVERIFY2(settings->value(key).toBool() == written.value(key), qPrintable(key));
+            }
         }
 
         const QString hostname = qsl("Test-Headless-Host-Mudlet-Ini");
@@ -10449,10 +10579,8 @@ headlessDiscord = ok and 'ok' or tostring(err)
         QCOMPARE(MudletApp::storingPasswordsSecurely(), !fromIni);
         QCOMPARE(CredentialManager::profileStoragePreferred(), fromIni);
         QCOMPARE(host->getPass(), fromIni ? qsl("inistored") : QString());
-        // As the main window with no saved language: British English for a desktop that asks for it, else American
-        const QStringList uiLanguages = QLocale::system().uiLanguages();
-        const QString unsetLanguage = uiLanguages.contains(qsl("en-GB")) || uiLanguages.contains(qsl("en_GB")) ? qsl("en_GB") : qsl("en_US");
-        const QString language = fromIni ? qsl("de_DE") : unsetLanguage;
+        // With no saved language, the desktop's, by the rule test_firstRunLanguageFollowsTheDesktopToAGoldStarTranslation checks
+        const QString language = fromIni ? qsl("de_DE") : MudletApp::autodetectPreferredLanguage();
         QCOMPARE(MudletApp::getInterfaceLanguage(), language);
         // The headless runner's translation is the one for the language its profiles report
         QTranslator* pTranslator = MudletApp::loadTranslationsForRun();
@@ -10466,6 +10594,40 @@ headlessDiscord = ok and 'ok' or tostring(err)
         QCOMPARE(HostManager::self()->media().gameMuted(), fromIni);
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("iniMutes = tostring(getConfig('muteMediaAPI')) .. ' ' .. tostring(getConfig('muteMediaGame'))")));
         QCOMPARE(luaGlobalString(host, "iniMutes"), fromIni ? qsl("true true") : qsl("false false"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("iniView = tostring(getConfig('showUpperLowerLevels')) .. ' ' .. tostring(getConfig('showTabConnectionIndicators'))")));
+        QCOMPARE(luaGlobalString(host, "iniView"), fromIni ? qsl("false true") : qsl("true false"));
+
+        // A save with no main window writes each back to its own key, as it is now
+        {
+            MudletMedia& media = HostManager::self()->media();
+            TAppFrontend* pView = TAppFrontend::instance();
+            const bool apiMuted = media.apiMuted();
+            const bool gameMuted = media.gameMuted();
+            const bool auditShown = TMap::smShowMapAuditErrors;
+            const bool upperLower = pView->drawUpperLowerLevels();
+            const bool tabIndicators = pView->showTabConnectionIndicators();
+            const auto restore = qScopeGuard([&]() {
+                media.setApiMuted(apiMuted);
+                media.setGameMuted(gameMuted);
+                TMap::smShowMapAuditErrors = auditShown;
+                pView->setDrawUpperLowerLevels(upperLower);
+                pView->setShowTabConnectionIndicators(tabIndicators);
+                pView->writeSettings();
+            });
+            media.setApiMuted(true);
+            media.setGameMuted(false);
+            TMap::smShowMapAuditErrors = true;
+            pView->setDrawUpperLowerLevels(false);
+            pView->setShowTabConnectionIndicators(true);
+            pView->writeSettings();
+            const QSettings onDisk(settings->fileName(), QSettings::IniFormat);
+            QCOMPARE(onDisk.value(qsl("enableMuteAPI")).toBool(), true);
+            QCOMPARE(onDisk.value(qsl("enableMuteGame")).toBool(), false);
+            QCOMPARE(onDisk.value(qsl("reportMapIssuesToConsole")).toBool(), true);
+            QCOMPARE(onDisk.value(qsl("storePasswordsSecurely")).toBool(), MudletApp::storingPasswordsSecurely());
+            QCOMPARE(onDisk.value(qsl("drawUpperLowerLevels")).toBool(), false);
+            QCOMPARE(onDisk.value(qsl("showTabConnectionIndicators")).toBool(), true);
+        }
 
         // An exit to a room that is not there is reported on the console only when Mudlet.ini asks for it
         constexpr int missingRoomId = 4242;
@@ -10664,7 +10826,8 @@ local ok, err = pcall(function()
   assert(tab == nil and type(tabMsg) == "string", "getProfileTabNumber did not answer nil and a message")
   assert(openWebPage("about:blank") == false, "openWebPage did not answer false")
   assert(loadWindowLayout() == false, "loadWindowLayout did not answer false")
-  assert(showNotification("headless title", "headless text") == true, "showNotification did not answer true")
+  local shown, shownMsg = showNotification("headless title", "headless text")
+  assert(shown == nil and shownMsg == "the profile has no main window", "showNotification did not answer nil and a message")
 end)
 headlessAppResult = ok and 'ok' or tostring(err)
 )lua"));
@@ -11549,7 +11712,7 @@ headlessMapConfig = ok and 'ok' or tostring(err)
         Host* host = HostManager::self()->getHost(hostname);
         QVERIFY2(host, "The profile is not in the pool.");
         host->getLuaInterpreter()->loadGlobal();
-        // With no view, pumpEvents() takes Mudlet for shutting down and pumps nothing
+        // The null view paints on short chains of zero timers, so passes rather than time deliver them
         lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State*) -> int {
             for (int pass = 0; pass < 10; ++pass) {
                 QCoreApplication::processEvents();
@@ -12377,6 +12540,65 @@ end))lua");
         QVERIFY2(!fresh->mainConsoleModel().mLogToLogFile, "A profile that never logged started logging.");
         QCoreApplication::processEvents();
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Opening the profile created a widget.");
+    }
+
+    // A negative priority module runs before the profile's own scripts, so the editor, which lists the root
+    // scripts in order, has to show it above them - and a profile reset runs them in that order too
+    void test_negativePriorityModulesComeBeforeTheProfileScripts()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Module-Priority");
+        const auto script = [](const QString& name) {
+            return qsl(R"(<Script isActive="yes" isFolder="no"><name>%1</name><packageName></packageName><script>scriptOrder = (scriptOrder or "") .. "%1,"</script><eventHandlerList/></Script>)")
+                    .arg(name);
+        };
+        const auto package = [](const QString& hostPackage, const QString& scripts) {
+            return qsl(R"(<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+%1<ScriptPackage>%2</ScriptPackage>
+</MudletPackage>
+)")
+                    .arg(hostPackage, scripts);
+        };
+        QTemporaryDir moduleDir;
+        QVERIFY(moduleDir.isValid());
+        QString modules;
+        for (const auto& [name, priority] : {std::pair{qsl("moduleFirst"), -2}, std::pair{qsl("moduleSecond"), -1}, std::pair{qsl("moduleLast"), 1}}) {
+            const QString path = moduleDir.filePath(qsl("%1.xml").arg(name));
+            QFile moduleFile(path);
+            QVERIFY(moduleFile.open(QIODevice::WriteOnly));
+            moduleFile.write(package(QString(), script(name)).toUtf8());
+            moduleFile.close();
+            modules += qsl("<mInstalledModules><key>%1</key><filepath>%2</filepath><globalSave>0</globalSave><priority>%3</priority></mInstalledModules>").arg(name, path, QString::number(priority));
+        }
+
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, hostname);
+        QVERIFY(QDir().mkpath(saveFolder));
+        QFile saveFile(qsl("%1/2020-01-01#00-00-00.xml").arg(saveFolder));
+        QVERIFY(saveFile.open(QIODevice::WriteOnly));
+        saveFile.write(package(qsl("<HostPackage><Host>%1</Host></HostPackage>").arg(modules), script(qsl("profileOne")) + script(qsl("profileTwo"))).toUtf8());
+        saveFile.close();
+
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The saved profile did not open.");
+        QVERIFY2(host->mLoadedOk, qPrintable(host->mProfileLoadError));
+        QCOMPARE(luaGlobalString(host, "scriptOrder"), qsl("moduleFirst,moduleSecond,profileOne,profileTwo,moduleLast,"));
+
+        QStringList rootNames;
+        for (auto* pScript : host->getScriptUnit()->getScriptRootNodeList()) {
+            rootNames << pScript->getName();
+        }
+        QCOMPARE(rootNames, QStringList({qsl("moduleFirst"), qsl("moduleSecond"), qsl("profileOne"), qsl("profileTwo"), qsl("moduleLast")}));
+
+        QVERIFY(host->resetProfile_phase1());
+        QVERIFY2(QTest::qWaitFor(
+                         [host]() {
+                             return !host->mResetProfile;
+                         },
+                         5000),
+                 "The profile reset did not finish.");
+        QCOMPARE(luaGlobalString(host, "scriptOrder"), qsl("moduleFirst,moduleSecond,profileOne,profileTwo,moduleLast,"));
+        HostManager::self()->deleteHost(hostname);
     }
 
     // The GUI's answers to the same Lua: the profile is loaded and started before loadProfile() returns,

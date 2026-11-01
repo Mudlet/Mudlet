@@ -33,6 +33,7 @@
 #include <QAction>
 #include <QCheckBox>
 #include <QDialog>
+#include <QLineEdit>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPixmap>
@@ -382,6 +383,36 @@ private slots:
         const TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
         QVERIFY(pRoom);
         QVERIFY(pRoom->customLinesArrow.value(kLineExit));
+    }
+
+
+    // A special exit can share its name with a normal exit; with no normal exit that way, the line is the special exit's
+    void test_linePropertiesShowWhereASpecialExitNamedLikeANormalOneLeads()
+    {
+        buildMap();
+        TRoom* pRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
+        QVERIFY(pRoom);
+        QVERIFY(!pRoom->hasExit(DIR_NORTH));
+        constexpr int northRoomId = 2;
+        pRoom->setSpecialExit(northRoomId, kLineExit);
+        pRoom->customLines[kLineExit] = {QPointF(0.0, 1.0)};
+        pRoom->customLinesColor[kLineExit] = QColor(0, 255, 128);
+        pRoom->customLinesStyle[kLineExit] = Qt::SolidLine;
+        pRoom->customLinesArrow[kLineExit] = false;
+        pRoom->calcRoomDimensions();
+        showMapper();
+        qDeleteAll(mp2dMap->findChildren<QDialog*>(qsl("custom_line_properties")));
+        mp2dMap->mCustomLineSelectedRoom = kPlayerRoomId;
+        mp2dMap->mCustomLineSelectedExit = kLineExit;
+
+        mp2dMap->slot_customLineProperties();
+
+        QPointer<QDialog> dialog = mp2dMap->findChild<QDialog*>(qsl("custom_line_properties"));
+        QVERIFY2(dialog, "no line properties dialog was opened");
+        auto* toId = dialog->findChild<QLineEdit*>(qsl("toId"));
+        QVERIFY(toId);
+        QCOMPARE(toId->text(), QString::number(northRoomId));
+        dialog->reject();
     }
 
     void test_theRoomMenusItemsGoAwayWithTheMenu()
