@@ -1096,6 +1096,38 @@ local function labelWindowSize(windowname)
   return getMainWindowSize()
 end
 
+-- a right click menu level flies out the way its parent item did, unless only
+-- the other side of that item has room for it
+local function fitMenuLevel(parent, windowWidth)
+  local items = parent.nestedLabels
+  local first = items and items[1]
+  if not first or not first.menuName then
+    return
+  end
+  local flyDir = parent.flyDir or first.flyDir
+  if flyDir ~= "R" and flyDir ~= "L" then
+    return
+  end
+  local width = first.get_width()
+  local x = parent.get_x()
+  local fitsRight = x + parent.get_width() + width <= windowWidth
+  local fitsLeft = x - width >= 0
+  if flyDir == "R" and not fitsRight and fitsLeft then
+    flyDir = "L"
+  elseif flyDir == "L" and not fitsLeft and fitsRight then
+    flyDir = "R"
+  end
+  for _, item in ipairs(items) do
+    item.flyDir = flyDir
+  end
+  -- the scroll buttons outlive the menu being closed, so they would keep the side they were made on
+  for _, scrolls in pairs({Geyser.Label.scrollV[parent] or {}, Geyser.Label.scrollH[parent] or {}}) do
+    for _, scroll in ipairs(scrolls) do
+      scroll.flyDir = flyDir
+    end
+  end
+end
+
 --- Displays the nested elements within label, and orients them
 -- appropriately
 -- @param label The name of the label to use
@@ -1103,6 +1135,7 @@ function Geyser.Label:displayNest()
   local maxDim = {}
   local flyMap = { R = { 1, 0 }, L = { -1, 0 }, T = { 0, -1 }, B = { 0, 1 } }
   maxDim["H"], maxDim["V"] = labelWindowSize(self.windowname)
+  fitMenuLevel(self, maxDim["H"])
   local parent = self
   --build a list of the labels we can use until we hit the max
   local nestedLabels = {}
