@@ -54,7 +54,11 @@ runner is started. A folder that cannot be used is a command line error.
 ### Input and output
 
 - **Standard output** gets each line the game sends, and each a script feeds with `feedTriggers()`,
-  as it reaches the main console and before the profile's triggers run on it.
+  as it reaches the main console and before the profile's triggers run on it. On a terminal, other
+  than on Windows, it is in the colours and styles the game asked for, unless `NO_COLOR` is set or
+  `TERM` is `dumb`; `--color always` or `--color never` says otherwise, and pipes and files get
+  plain text by default. The profile's own colours are left to the terminal's theme, and 24-bit
+  colour is used when `COLORTERM` is `truecolor` or `24bit`, else the nearest of 256.
 - **Standard error** gets what the GUI shows only on the profile's own screen: `echo()`, `print()`,
   the commands sent, Mudlet's own messages, and the error console.
 - **Standard input** is read one line at a time, each as if typed on the command line, so the
