@@ -64,3 +64,11 @@ mudlet_static_lua_module(lua_yajl
   GIT_TAG 167c294046d5bbdc5bc4a791e6397439b6c825df # v2.1
   SOURCES lua_yajl.c
   LIBRARIES YAJL::YAJL)
+
+# The 2.6 line: 2.8.0 breaks the PRAGMA table_info handling DB.lua relies on
+find_package(SQLite3 REQUIRED)
+mudlet_static_lua_module(luasql
+  GIT_REPOSITORY https://github.com/lunarmodules/luasql.git
+  GIT_TAG 22d4a911f35cf851af9db71124e3998d96fb3fa1 # 2.6.0
+  SOURCES src/luasql.c src/ls_sqlite3.c
+  LIBRARIES SQLite::SQLite3)
