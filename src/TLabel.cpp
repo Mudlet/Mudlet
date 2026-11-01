@@ -108,12 +108,10 @@ TLabel::~TLabel()
         }
     }
     // Backstop: TMainConsole deregisters labels it destroys, but one can also die with its parent console.
-    if (mpHost) {
-        mpHost->windowRegistry().deregisterLabel(mName, mpModel.get());
-        // The tracker holds a raw pointer and dereferences every entry when reporting.
-        if (mpMovie) {
-            mpHost->getGifTracker()->unregisterGif(mpMovie);
-        }
+    mpHost->windowRegistry().deregisterLabel(mName, mpModel.get());
+    // The tracker holds a raw pointer and dereferences every entry when reporting.
+    if (mpMovie) {
+        mpHost->getGifTracker()->unregisterGif(mpMovie);
     }
 
     if (mpMovie) {
@@ -159,7 +157,7 @@ void TLabel::press()
     if (!self) {
         return;
     }
-    if (mpHost && mpHost->windowRegistry().labelModel(mName) == mpModel.get()) {
+    if (mpHost->windowRegistry().labelModel(mName) == mpModel.get()) {
         QMouseEvent releaseEvent(QEvent::MouseButtonRelease, centre, mapToGlobal(centre), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
         mouseReleaseEvent(&releaseEvent);
     }
@@ -168,17 +166,17 @@ void TLabel::press()
 
 bool TLabel::keyboardOperable() const
 {
-    return mpHost && mpHost->mAccessibleLabels && mpModel->actsAsButton();
+    return mpHost->mAccessibleLabels && mpModel->actsAsButton();
 }
 
 bool TLabel::keyboardReachable() const
 {
-    return keyboardOperable() || (mpHost && mpHost->mAccessibleLabels && textInteractionFlags().testFlag(Qt::LinksAccessibleByKeyboard));
+    return keyboardOperable() || (mpHost->mAccessibleLabels && textInteractionFlags().testFlag(Qt::LinksAccessibleByKeyboard));
 }
 
 TMainConsole* TLabel::mainWindowConsole() const
 {
-    TMainConsole* pConsole = mpHost ? mpHost->mainConsoleView() : nullptr;
+    TMainConsole* pConsole = mpHost->mainConsoleView();
     return pConsole && window() == pConsole->window() ? pConsole : nullptr;
 }
 
@@ -236,7 +234,7 @@ void TLabel::updateKeyboardAccess()
 bool TLabel::announcesTextChanges() const
 {
     // Hidden, as on a tab not showing or in a background profile, it would talk over the game in view
-    return mpHost && mpHost->mAccessibleLabels && mpModel->mLiveRegion != TLabelLiveRegion::Off && isVisible() && QAccessible::isActive();
+    return mpHost->mAccessibleLabels && mpModel->mLiveRegion != TLabelLiveRegion::Off && isVisible() && QAccessible::isActive();
 }
 
 void TLabel::announceTextChange(const QString& spokenBefore)
@@ -316,7 +314,7 @@ void TLabel::focusInEvent(QFocusEvent* event)
 void TLabel::focusOutEvent(QFocusEvent* event)
 {
     QLabel::focusOutEvent(event);
-    TMainConsole* pConsole = mpHost ? mpHost->mainConsoleView() : nullptr;
+    TMainConsole* pConsole = mpHost->mainConsoleView();
     // Focus that leaves only for a menu, or for the window to lose it, comes back to the label
     const bool windowOnly = event->reason() == Qt::ActiveWindowFocusReason || event->reason() == Qt::PopupFocusReason || event->reason() == Qt::MenuBarFocusReason;
     if (pConsole && !windowOnly && !qobject_cast<TLabel*>(QApplication::focusWidget())) {
@@ -385,7 +383,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
         takenByQt = event->isAccepted();
     }
 
-    if (mpHost && mClickFunction) {
+    if (mClickFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mClickFunction, event);
         // The use of accept() here prevents the propagation of the event to
         // any parent, e.g. the containing TConsole
@@ -398,7 +396,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 
 void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 {
-    if (mpHost && mDoubleClickFunction) {
+    if (mDoubleClickFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mDoubleClickFunction, event);
         event->accept();
     } else {
@@ -420,7 +418,7 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
         mudlet::self()->activateProfile(mpHost);
     }
 
-    if (mpHost && mReleaseFunction) {
+    if (mReleaseFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mReleaseFunction, event);
         event->accept();
     } else if (!takenByQt && !mClickFunction && event->button() == Qt::RightButton && forwardRightClickToConsole(event)) {
@@ -473,7 +471,7 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
         QLabel::mouseMoveEvent(event);
     }
 
-    if (mpHost && mMoveFunction) {
+    if (mMoveFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mMoveFunction, event);
         event->accept();
     } else {
@@ -483,7 +481,7 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
 
 void TLabel::wheelEvent(QWheelEvent* event)
 {
-    if (mpHost && mWheelFunction) {
+    if (mWheelFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mWheelFunction, event);
         event->accept();
     } else {
@@ -506,7 +504,7 @@ void TLabel::endLinkHover()
 void TLabel::leaveEvent(QEvent* event)
 {
     endLinkHover();
-    if (mpHost && mLeaveFunction) {
+    if (mLeaveFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mLeaveFunction, event);
         event->accept();
     } else {
@@ -516,7 +514,7 @@ void TLabel::leaveEvent(QEvent* event)
 
 void TLabel::enterEvent(TEnterEvent* event)
 {
-    if (mpHost && mEnterFunction) {
+    if (mEnterFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mEnterFunction, event);
         event->accept();
     } else {
@@ -911,10 +909,6 @@ void TLabel::reapplyLinkStyle()
 
 void TLabel::slot_linkActivated(const QString& link)
 {
-    if (!mpHost) {
-        return;
-    }
-
     if (!mLinkVisitedColor.isEmpty()) {
         mVisitedLinks.insert(link);
         reapplyLinkStyle();
