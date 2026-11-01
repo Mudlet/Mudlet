@@ -3316,4 +3316,27 @@ describe("Tests the posting timer of a game that sends no GA", function()
     assert.is_true(table.contains(flushed, "TrickleStart coloured and more text TrickleEnd"),
       "the line was broken up into: " .. table.concat(flushed, " | "))
   end)
+
+  -- a game streaming text that never has a newline still has it shown, once
+  -- the part line has been held for ten timeouts (or three seconds)
+  it("shows a part line that keeps growing past the hold cap", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waiting out the posting timeout needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+      return
+    end
+    local ok, reason = forgetGA()
+    if not ok then
+      pending(reason)
+      return
+    end
+    local mark = getLastLineNumber("main")
+    feed("EndlessStart ")
+    for _ = 1, 100 do
+      feed("more ")
+      quietFor(50)
+    end
+    local shown = table.concat(getLines("main", mark, getLastLineNumber("main") + 1), " | ")
+    feed("\r\n")
+    assert.is_truthy(shown:find("EndlessStart", 1, true), "still held after 5s of reads: " .. shown)
+  end)
 end)

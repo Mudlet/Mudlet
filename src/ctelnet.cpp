@@ -5574,7 +5574,11 @@ void cTelnet::gotRest(std::string& mud_data)
             mIsTimerPosting = true;
 
             mMudData.assign(mud_data, i + 1, std::string::npos);
+            mPartialLineHeldSince.start();
         } else {
+            if (mMudData.empty()) {
+                mPartialLineHeldSince.start();
+            }
             mMudData += mud_data;
 
             if (mpPostingTimer->interval() != mTimeOut) {
@@ -5582,8 +5586,11 @@ void cTelnet::gotRest(std::string& mud_data)
             }
 
             // Restarted by every read, not just the first: the timeout is how long the game has to fall quiet, so a
-            // line trickling in, in pieces each sooner than that but slower overall, must not be broken up mid-way
-            mpPostingTimer->start();
+            // line trickling in, in pieces each sooner than that but slower overall, must not be broken up mid-way.
+            // Capped, so a game that streams text without a newline still has it shown.
+            if (!mpPostingTimer->isActive() || mPartialLineHeldSince.elapsed() < std::max(10 * mTimeOut, 3000)) {
+                mpPostingTimer->start();
+            }
             mIsTimerPosting = true;
         }
     } else {
