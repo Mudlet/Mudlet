@@ -94,8 +94,16 @@ HostManager::HostManager(const ConfigRoot configRoot)
         MudletApp::settleConfigRoot();
         // Once per process: where the main window settles the root, its readEarlySettings() and readLateSettings()
         // read them instead
-        readSettings(*MudletApp::getQSettings());
-        MudletApp::readInterfaceLanguage(*MudletApp::getQSettings());
+        const QSettings& settings = *MudletApp::getQSettings();
+        readSettings(settings);
+        MudletApp::readInterfaceLanguage(settings);
+        // Not in readSettings(), as the main window keeps these itself
+        if (!TAppFrontend::hasView()) {
+            TAppFrontend* pView = TAppFrontend::instance();
+            pView->setDrawUpperLowerLevels(settings.value(qsl("drawUpperLowerLevels"), true).toBool());
+            pView->setShowTabConnectionIndicators(settings.value(qsl("showTabConnectionIndicators"), false).toBool());
+            sSettingsReadWithoutWindow = true;
+        }
     } else if (sMutesLeft && MudletMedia::self() == mpMedia.get()) {
         mpMedia->setApiMuted(sMutesLeft->api);
         mpMedia->setGameMuted(sMutesLeft->game);
@@ -147,6 +155,14 @@ void HostManager::readSettings(const QSettings& settings)
     mpMedia->setGameMuted(settings.value(qsl("enableMuteGame"), false).toBool());
     TMap::smShowMapAuditErrors = settings.value(qsl("reportMapIssuesToConsole"), false).toBool();
     MudletApp::setStorePasswordsSecurely(settings.value(qsl("storePasswordsSecurely"), true).toBool());
+}
+
+void HostManager::writeSettings(QSettings& settings) const
+{
+    settings.setValue(qsl("enableMuteAPI"), mpMedia->apiMuted());
+    settings.setValue(qsl("enableMuteGame"), mpMedia->gameMuted());
+    settings.setValue(qsl("reportMapIssuesToConsole"), TMap::smShowMapAuditErrors);
+    settings.setValue(qsl("storePasswordsSecurely"), MudletApp::storingPasswordsSecurely());
 }
 
 void HostManager::deleteHost(const QString& hostname)

@@ -1,6 +1,6 @@
 # Specs that fail in mudlet-headless, which has no main window, read by
 # CI/check-headless-lua-failures.py, which says what each line means.
-minimum successes: 7770
+minimum successes: 7771
 maximum pending: 261
 
 # Need a main window
@@ -89,7 +89,6 @@ Failure zz_Mapper3DView_spec.lua: Tests the blueprint style on an area spread ov
 Failure zz_Mapper3DView_spec.lua: Tests the modern 3D mapper surviving context rebuilds floats, redocks and switches back to the classic view
 
 # Fail for want of something other than a main window; each wants looking into
-Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests the functionality of saveProfile writes the application-wide settings to Mudlet.ini as well
 Failure Package_spec.lua: Tests installing an archive named after one of the profile's own folders keeps the profile's log folder when it syncs a module from an archive called log
 Failure Package_spec.lua: Tests installing an archive named after one of the profile's own folders leaves the staging folder of an install still unpacking to it when another install of that name starts
 Failure Package_spec.lua: The package specs clean up after themselves leaves no fixture package, module or folder behind

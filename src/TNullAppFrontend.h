@@ -56,7 +56,7 @@ public:
     void handleTelnetUri(const QString&) override {}
     void setCompactInputLineChecked(Host*, bool) override {}
     void armForceClose() override;
-    void writeSettings() override {}
+    void writeSettings() override;
     bool openWebPage(const QString&) override { return false; }
     bool showNotification(const QString&, const QString&, std::optional<int>) override { return false; }
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
@@ -137,7 +137,7 @@ private:
     void removeAddonCommandsOf(const Host* pHost, const QString& package = QString());
 
     // Held, unlike the rest, as getConfig() reads these back. Each starts at the main window's default
-    // with no saved settings; nothing saves them.
+    // with no saved settings, until a pool with no main window reads Mudlet.ini's.
     bool mDrawUpperLowerLevels = true;
     bool mShowTabConnectionIndicators = false;
     // A pointer, as the main window keeps it, so a profile opened again under the name is not in front
