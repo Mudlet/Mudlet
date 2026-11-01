@@ -49,7 +49,9 @@
 #include <QtUiTools>
 #include <QApplication>
 #include <QColorDialog>
+#include <QDateTime>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QPointer>
 #include <QRandomGenerator>
@@ -57,9 +59,9 @@
 #include <QSignalBlocker>
 #include <QTabBar>
 #include <QTime>
+#include <QTimeZone>
 #include <array>
 #include <chrono>
-#include <filesystem>
 
 using namespace std::chrono_literals;
 
@@ -2790,13 +2792,11 @@ bool dlgConnectionProfiles::validateProfile()
 // map picks the newest save by that date, which would then be whichever was copied last
 static void keepModificationTime(const QString& source, const QString& copy)
 {
-    std::error_code error;
-    const auto modified = std::filesystem::last_write_time(std::filesystem::path(source.toStdU16String()), error);
-    if (!error) {
-        std::filesystem::last_write_time(std::filesystem::path(copy.toStdU16String()), modified, error);
-    }
-    if (error) {
-        qWarning().noquote() << "dlgConnectionProfiles::copyFolder(...) WARNING - could not give" << copy << "the modification time of" << source << "-" << QString::fromStdString(error.message());
+    const QDateTime modified = QFileInfo(source).lastModified(QTimeZone::UTC);
+    QFile file(copy);
+    // Not WriteOnly, which would truncate the copy
+    if (!file.open(QIODevice::ReadWrite) || !file.setFileTime(modified, QFileDevice::FileModificationTime)) {
+        qWarning().noquote() << "dlgConnectionProfiles::copyFolder(...) WARNING - could not give" << copy << "the modification time of" << source << "-" << file.errorString();
     }
 }
 

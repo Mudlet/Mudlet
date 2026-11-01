@@ -361,6 +361,7 @@ private slots:
         const QDir copiedSaves(MudletApp::getMudletPath(enums::profileXmlFilesPath, mSavesProfile + qsl("1")));
         for (const auto& save : savesAndAgeInDays) {
             QCOMPARE(QFileInfo(copiedSaves.absoluteFilePath(save.first)).lastModified(), QFileInfo(saves.absoluteFilePath(save.first)).lastModified());
+            QCOMPARE(QFileInfo(copiedSaves.absoluteFilePath(save.first)).size(), QFileInfo(saves.absoluteFilePath(save.first)).size());
         }
         QCOMPARE(copiedSaves.entryList({qsl("*.xml")}, QDir::Files, QDir::Time).first(), newest);
     }
