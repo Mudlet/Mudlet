@@ -1107,8 +1107,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QShortcut* previousSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Tab), this);
     connect(previousSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_previousSection);
 
-    QShortcut* activateMainWindowAction = new QShortcut(QKeySequence((Qt::ALT | Qt::Key_E)), this);
-    connect(activateMainWindowAction, &QShortcut::activated, this, &dlgTriggerEditor::slot_activateMainWindow);
+    mpShortcutActivateMainWindow = new QShortcut(this);
+    connect(mpShortcutActivateMainWindow, &QShortcut::activated, this, &dlgTriggerEditor::slot_activateMainWindow);
+    slot_updateActivateMainWindowShortcut();
+    connect(mudlet::self(), &mudlet::signal_shortcutsChanged, this, &dlgTriggerEditor::slot_updateActivateMainWindowShortcut);
 
     toolBar = new QToolBar();
     toolBar2 = new QToolBar();
@@ -12078,6 +12080,24 @@ void dlgTriggerEditor::slot_previousSection()
     }
 }
 
+// The same key that opens the editor brings the main window back from it
+void dlgTriggerEditor::slot_updateActivateMainWindowShortcut()
+{
+    const QString key = qsl("Script editor");
+    QKeySequence sequence;
+    if (!mpHost) {
+        return;
+    }
+    if (auto it = mpHost->profileShortcuts.find(key); it != mpHost->profileShortcuts.end()) {
+        sequence = *it->second;
+    } else if (auto* pManager = mudlet::self()->shortcutsManager()) {
+        if (auto* pSequence = pManager->getSequence(key)) {
+            sequence = *pSequence;
+        }
+    }
+    mpShortcutActivateMainWindow->setKey(sequence);
+}
+
 void dlgTriggerEditor::slot_activateMainWindow()
 {
     mudlet::self()->activateWindow();
@@ -13700,6 +13720,7 @@ void dlgTriggerEditor::setShortcuts(const bool active)
 {
     setShortcuts(toolBar->actions(), active);
     setShortcuts(toolBar2->actions(), active);
+    mpShortcutActivateMainWindow->setEnabled(active);
 }
 
 void dlgTriggerEditor::setShortcuts(QList<QAction*> actionList, const bool active)

@@ -296,6 +296,7 @@ public slots:
     void slot_showKeys();
     void slot_showFolders();
     void slot_activateMainWindow();
+    void slot_updateActivateMainWindowShortcut();
     void slot_treeSelectionChanged();
     void slot_triggerSelected(QTreeWidgetItem* pItem);
     void slot_timerSelected(QTreeWidgetItem* pItem);
@@ -724,6 +725,7 @@ private:
     QStringList mPatternList;
     QVector<QIcon> mPatternIcons;
 
+    QShortcut* mpShortcutActivateMainWindow = nullptr;
     QShortcut* mFirstPatternShortcut = nullptr;
     QShortcut* mLastPatternShortcut = nullptr;
     QVector<QShortcut*> mPatternNavigationShortcuts;
