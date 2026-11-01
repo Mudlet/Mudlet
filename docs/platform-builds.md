@@ -119,7 +119,8 @@ ctest and packaging steps look — `ci-windows` is the exception and uses `build
 ### The Lua specs with no main window
 
 `.github/workflows/headless-lua-tests.yml` runs the Lua specs in `mudlet-headless`, the terminal
-runner, which has no main window, as a phone app has none. It runs nightly against `development`,
+runner, which has no main window, as a phone app has none; `headless.md` explains running it and
+embedding a profile without a window. It runs nightly against `development`,
 when started by hand, and on pull requests and pushes to `development` that change `src/headless/`,
 the `src/TNull*` views, the list, its checker or the workflow itself. It is not part of every pull
 request, as it would double the time the spec run takes there. Many specs still need a main
