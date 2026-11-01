@@ -3303,16 +3303,33 @@ describe("Tests the posting timer of a game that sends no GA", function()
       pending(reason)
       return
     end
-    local mark = getLastLineNumber("main")
     local line = "TrickleStart \27[48;5;93mcoloured\27[0m and \27[38;5;21mmore\27[0m text TrickleEnd"
-    for i = 1, #line, 6 do
-      feed(line:sub(i, i + 5))
-      quietFor(50)
+    -- A runner stalled for a whole timeout between two reads rightly breaks the
+    -- line, so only an attempt whose reads really did come sooner counts
+    local flushed
+    for _ = 1, 5 do
+      local mark = getLastLineNumber("main")
+      local longestGap, lastRead = 0, getEpoch()
+      for i = 1, #line, 6 do
+        feed(line:sub(i, i + 5))
+        local now = getEpoch()
+        longestGap = math.max(longestGap, now - lastRead)
+        lastRead = now
+        quietFor(50)
+      end
+      -- and the timer still flushes the line once the game does fall quiet
+      quietFor(600)
+      local lines = getLines("main", mark, getLastLineNumber("main") + 1)
+      feed("\r\n")
+      if longestGap < 0.25 then
+        flushed = lines
+        break
+      end
     end
-    -- and the timer still flushes the line once the game does fall quiet
-    quietFor(600)
-    local flushed = getLines("main", mark, getLastLineNumber("main") + 1)
-    feed("\r\n")
+    if not flushed then
+      pending("every attempt had a gap between reads as long as the timeout")
+      return
+    end
     assert.is_true(table.contains(flushed, "TrickleStart coloured and more text TrickleEnd"),
       "the line was broken up into: " .. table.concat(flushed, " | "))
   end)
