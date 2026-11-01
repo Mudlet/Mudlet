@@ -4856,39 +4856,41 @@ void T2DMap::populateUserContextMenus(QMenu& menu)
     if (!mpMap) {
         return;
     }
+    struct UserEntry
+    {
+        int priority;
+        bool menu;
+        QString uniqueName;
+        QString parent;
+    };
     QMap<QString, QMenu*> userMenus;
-    QMapIterator<QString, QStringList> menuIterator(mpMap->mUserMenus);
-
-    while (menuIterator.hasNext()) {
-        menuIterator.next();
-        const QStringList menuInfo = menuIterator.value();
-        const QString displayName = menuInfo.value(1);
-        auto* userMenu = new QMenu(displayName, &menu);
-        userMenus.insert(menuIterator.key(), userMenu);
+    QList<UserEntry> entries;
+    for (const auto& [uniqueName, menuInfo] : std::as_const(mpMap->mUserMenus).asKeyValueRange()) {
+        userMenus.insert(uniqueName, new QMenu(menuInfo.value(1), &menu));
+        entries.append({mpMap->mUserMenuPriorities.value(uniqueName), true, uniqueName, menuInfo.value(0)});
     }
+    for (const auto& [uniqueName, actionInfo] : std::as_const(mpMap->mUserActions).asKeyValueRange()) {
+        entries.append({mpMap->mUserMenuPriorities.value(uniqueName), false, uniqueName, actionInfo.value(1)});
+    }
+    // Stable: ties keep the default order of menus, then events, each by unique name
+    std::stable_sort(entries.begin(), entries.end(), [](const UserEntry& a, const UserEntry& b) {
+        return a.priority < b.priority;
+    });
 
-    menuIterator.toFront();
-    while (menuIterator.hasNext()) {
-        menuIterator.next();
-        const QStringList menuInfo = menuIterator.value();
-        const QString menuParent = menuInfo.value(0);
-
-        if (auto* childMenu = userMenus.value(menuIterator.key(), nullptr)) {
-            if (menuParent.isEmpty()) {
+    for (const UserEntry& entry : std::as_const(entries)) {
+        const QString& uniqueName = entry.uniqueName;
+        const QString& menuParentKey = entry.parent;
+        if (entry.menu) {
+            QMenu* childMenu = userMenus.value(uniqueName);
+            if (menuParentKey.isEmpty()) {
                 menu.addMenu(childMenu);
-            } else if (auto* parentMenu = userMenus.value(menuParent, nullptr)) {
+            } else if (auto* parentMenu = userMenus.value(menuParentKey, nullptr)) {
                 parentMenu->addMenu(childMenu);
             }
+            continue;
         }
-    }
 
-    QMapIterator<QString, QStringList> actionIterator(mpMap->mUserActions);
-    while (actionIterator.hasNext()) {
-        actionIterator.next();
-        const QString uniqueName = actionIterator.key();
-        const QStringList actionInfo = actionIterator.value();
-        const QString menuParentKey = actionInfo.value(1);
-        const QString displayText = actionInfo.value(2);
+        const QString displayText = mpMap->mUserActions.value(uniqueName).value(2);
 
         auto* action = new QAction(displayText, &menu);
         if (menuParentKey.isEmpty()) {
