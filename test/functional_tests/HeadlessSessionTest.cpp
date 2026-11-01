@@ -1321,6 +1321,64 @@ tempTrigger("Third", [[echo(" <third>")]]))lua")));
         QVERIFY2(!shown.contains(qsl("secret")), qPrintable(shown));
     }
 
+    // In the file the GUI's main command line reads, newest first behind the line being typed, and as there
+    // without what was typed while the game hid it
+    void test_submittedCommandsAreKeptInTheCommandHistory()
+    {
+        const QString name = qsl("Headless History");
+        QVERIFY(writeProfile(name, QString()));
+        const QString historyFile = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("command_history_main"));
+        QVERIFY(writeFile(historyFile, "\nnewest from the GUI\noldest from the GUI"));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        {
+            THeadlessSession session;
+            QSignalSpy output(&session, &THeadlessSession::outputLine);
+            QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+            QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+            std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+            QVERIFY(session.submit(qsl("look")));
+            QVERIFY(session.submit(qsl("oldest from the GUI")));
+            QVERIFY(session.submit(QString()));
+            game->write("\xff\xfb\x01Password:\r\n");
+            QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Password:")), 10000);
+            QVERIFY(session.submit(qsl("typed secret")));
+            QByteArray received;
+            QTRY_VERIFY_WITH_TIMEOUT((received += game->readAll()).contains("typed secret"), 10000);
+            QVERIFY2(session.shutdown(true), qPrintable(session.errorString()));
+        }
+        QCOMPARE(readFile(historyFile), qsl("\noldest from the GUI\nlook\nnewest from the GUI"));
+    }
+
+    // Writing it would lose the history it holds. Write-only, as the save refuses a file it cannot write
+    void test_aCommandHistoryThatCannotBeReadIsNotWrittenOver()
+    {
+        const QString name = qsl("Headless Unreadable History");
+        QVERIFY(writeProfile(name, QString()));
+        const QString historyFile = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("command_history_main"));
+        QVERIFY(writeFile(historyFile, "\nfrom the GUI"));
+        QVERIFY(QFile::setPermissions(historyFile, QFileDevice::WriteOwner));
+        const auto restoreRights = [historyFile]() {
+            QFile::setPermissions(historyFile, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+        };
+        const auto restore = qScopeGuard(restoreRights);
+        if (QFile probe(historyFile); probe.open(QIODevice::ReadOnly)) {
+            QSKIP("Running with the right to read any file, so the history cannot be made unreadable");
+        }
+
+        {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            QVERIFY(session.submit(qsl("look")));
+            QVERIFY2(session.shutdown(true), qPrintable(session.errorString()));
+        }
+        restoreRights();
+        QCOMPARE(readFile(historyFile), qsl("\nfrom the GUI"));
+    }
+
     // What a profile sends on its way out, as from sysExitEvent, reaches the game before the connection goes
     void test_whatIsSentAsTheProfileClosesReachesTheGame()
     {
