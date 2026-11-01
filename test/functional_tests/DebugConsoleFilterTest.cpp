@@ -947,6 +947,30 @@ private slots:
         QVERIFY2(clipboard->text().contains(sentinel), qPrintable(qsl("Ctrl+C copied '%1' rather than the console's selection").arg(clipboard->text().left(60))));
     }
 
+    // Caret mode belongs to the profile's own console, so leaving a debug pane for the filter box must not turn it off
+    void test_leavingADebugPaneKeepsTheProfilesCaretMode()
+    {
+        auto* host = startDebuggingProfile();
+        auto* console = mudlet::smpDebugConsole.data();
+        QCOMPARE(console->mpHost.data(), host);
+
+        mudlet::smpDebugArea->show();
+        mudlet::smpDebugArea->activateWindow();
+        QVERIFY2(QTest::qWaitForWindowActive(mudlet::smpDebugArea), "the debug window never became active");
+        host->setCaretEnabled(true);
+        QVERIFY2(QApplication::activeWindow() == mudlet::smpDebugArea, "turning caret mode on took the debug window's activation");
+        QTest::mouseClick(console->mUpperPane, Qt::LeftButton, Qt::NoModifier, console->mUpperPane->rect().center());
+        QTRY_VERIFY2(console->mUpperPane->hasFocus(), "clicking the debug pane did not give it the focus");
+        QVERIFY2(host->caretEnabled(), "caret mode was off before the focus left the debug pane");
+
+        auto* textFilter = mudlet::smpDebugFilterBar->findChild<QLineEdit*>();
+        QVERIFY2(textFilter, "the filter bar has no text box to move the focus to");
+        textFilter->setFocus();
+        QTRY_VERIFY2(textFilter->hasFocus(), "the filter bar's text box would not take the focus");
+
+        QVERIFY2(host->caretEnabled(), "leaving the debug pane turned off the profile's caret mode");
+    }
+
     void cleanup()
     {
         TDebug::setPaused(false);
