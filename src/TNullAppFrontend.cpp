@@ -43,6 +43,7 @@
 #include <QRect>
 #include <QSaveFile>
 #include <QScopedValueRollback>
+#include <QSettings>
 #include <QStringList>
 #include <QThread>
 #include <QTimer>
@@ -549,6 +550,17 @@ std::optional<QSize> TNullAppFrontend::getImageSize(const QString& imageLocation
     return TLabelModel::imageSize(imageLocation);
 }
 
+Host* TNullAppFrontend::getActiveHost()
+{
+    return mpActiveHost.data();
+}
+
+void TNullAppFrontend::setActiveProfileTab(const QString& profileName)
+{
+    HostManager* pool = HostManager::self();
+    mpActiveHost = pool ? pool->getHost(profileName) : nullptr;
+}
+
 bool TNullAppFrontend::openProfile(const QString& profileName, const bool connect)
 {
     HostManager* pool = HostManager::self();
@@ -630,6 +642,22 @@ void closeAllAndQuit()
     }
 }
 } // namespace
+
+void TNullAppFrontend::writeSettings()
+{
+    QSettings* pSettings = MudletApp::getQSettings();
+    HostManager* pManager = HostManager::self();
+    if (!HostManager::settingsReadWithoutWindow() || !pSettings || !pManager) {
+        return;
+    }
+    pManager->writeSettings(*pSettings);
+    pSettings->setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
+    pSettings->setValue(qsl("showTabConnectionIndicators"), mShowTabConnectionIndicators);
+    pSettings->sync();
+    if (pSettings->status() != QSettings::NoError) {
+        qWarning().nospace() << "TNullAppFrontend::writeSettings() ERROR - failed to save the settings to " << pSettings->fileName() << ", status: " << pSettings->status();
+    }
+}
 
 void TNullAppFrontend::armForceClose()
 {

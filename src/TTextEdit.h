@@ -209,6 +209,7 @@ private slots:
 
 private:
     void applyPendingScrollBarUpdate();
+    void followTrimsWithDirtyLines();
     QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false);
     inline static QString htmlCenter(const QString&);
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
@@ -306,6 +307,8 @@ private:
     int mLowerPaneCursorY = 0;
     // last line offset rendered
     int mLastRenderedOffset = 0;
+    // The buffer's linesTrimmedTotal() as of that render
+    qint64 mLinesTrimmedAtRender = 0;
     bool mMouseTracking = false;
     // 1/2/3 for single/double/triple click seen so far
     int mMouseTrackLevel = 0;
@@ -348,6 +351,8 @@ private:
     // cannot be trusted for the rows they land on. -1 for "none pending".
     int mDirtyFirstLine = -1;
     int mDirtyLastLine = -1;
+    // The buffer's linesTrimmedTotal() that the dirty lines are numbered against
+    qint64 mDirtyLinesTrimmedAt = 0;
     int mScreenWidth = 100;
     int mScreenOffset = 0;
     int mMaxHRange = 0;

@@ -24,9 +24,12 @@
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "SecureStringUtils.h"
+#include "TAppFrontend.h"
 #include "TConsoleModel.h"
+#include "TEvent.h"
 #include "TGameDetails.h"
 #include "TLuaInterpreter.h"
+#include "TNullConsoleFrontend.h"
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -36,6 +39,7 @@
 #include <QScopeGuard>
 #include <QTimer>
 
+#include <algorithm>
 #include <functional>
 #include <utility>
 
@@ -426,7 +430,8 @@ bool THeadlessSession::submit(const QString& line)
     const QPointer<THeadlessSession> self(this);
     // As the GUI's command line, each line of a paste is a command of its own; unlike there, it is checked as a
     // call, so one that a close in an earlier line's alias leaves nowhere to go ends the paste with the reason
-    for (QString command : line.split(QChar::LineFeed)) {
+    QStringList commands = line.split(QChar::LineFeed);
+    for (QString& command : commands) {
         if (!usable()) {
             return false;
         }
@@ -441,6 +446,12 @@ bool THeadlessSession::submit(const QString& line)
         }
         if (!self) {
             return true;
+        }
+    }
+    // The whole paste is one entry, as the GUI's command line keeps it once every line is sent
+    if (mpHost) {
+        if (auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend())) {
+            pView->addMainCommandLineHistory(commands.join(QChar::LineFeed));
         }
     }
     return true;
@@ -541,6 +552,46 @@ THeadlessSession::PackageResult THeadlessSession::installPackage(const QString& 
     return PackageResult::failed;
 }
 
+bool THeadlessSession::setScreenSize(const int columns, const int rows)
+{
+    if (!usable()) {
+        return false;
+    }
+    if (columns < 1 || columns > 65535 || rows < 1 || rows > 65535) {
+        //: Error from a frontend with no window given a screen size that cannot be sent to the game; %1 is the number of columns asked for, %2 the number of rows
+        mErrorString = tr("A screen of %1 columns by %2 rows cannot be sent to the game: each must be from 1 to 65535.").arg(columns).arg(rows);
+        return false;
+    }
+    // The GUI's main console never reports itself narrower
+    const int width = std::max(40, columns);
+    // As the GUI's resize: each call would put NAWS off for another 0.3s
+    if (width == mpHost->mScreenWidth && rows == mpHost->mScreenHeight) {
+        return true;
+    }
+    mpHost->setScreenDimensions(width, rows);
+    mpHost->updateDisplayDimensions();
+
+    // As TConsole::resizeEvent() reports the main window. The first handler may close the profile, and a
+    // function the frontend bound into Lua delete the session.
+    const QPointer<THeadlessSession> self(this);
+    mpHost->getLuaInterpreter()->call(qsl("handleWindowResizeEvent"), qsl("WindowResizeEvent"));
+    if (!self || !mpHost || mpHost->closeStarted()) {
+        return true;
+    }
+    const QSize size = mpHost->mainWindowSize().value_or(QSize());
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysWindowResizeEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(size.width()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(size.height()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(qsl("main"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
+    return true;
+}
+
 void THeadlessSession::noteAlreadyInstalled(const QString& path, const QString& name)
 {
     const QString version = mpHost->mPackageInfo.value(name).value(qsl("version"));
@@ -606,6 +657,72 @@ bool THeadlessSession::shutdown(const bool save)
     mShuttingDown = false;
     detachFromHost();
     mpHost.clear();
+    return true;
+}
+
+bool THeadlessSession::save()
+{
+    if (refused()) {
+        return false;
+    }
+    if (!mpPool) {
+        //: Error from a frontend with no window that has no open profile to send to
+        mErrorString = tr("No profile is open.");
+        return false;
+    }
+    if (poolBusy(*mpPool)) {
+        qWarning() << "THeadlessSession: save() while a profile runs a script or waits for its save is refused; call it once that has returned";
+        //: Error from a frontend with no window that was asked to save its profiles while one ran a script or waited for its save to be written
+        mErrorString = tr("A profile is running a script or waiting for its save, so its profiles cannot be saved until that has ended.");
+        return false;
+    }
+    // Each save waits for its writes in the event loop, where a profile may close or the session be deleted
+    const QPointer<THeadlessSession> self(this);
+    QList<QPointer<Host>> profiles;
+    for (const auto& pHost : mpPool->hostList()) {
+        if (pHost->mLoadedOk) {
+            profiles.append(pHost.data());
+        }
+    }
+    const qsizetype closesUnsavedBefore = mUnsavedProfiles.size();
+    QStringList unsaved;
+    for (const QPointer<Host>& pHost : std::as_const(profiles)) {
+        // A close begun meanwhile saves it, or not, as it was asked to
+        if (!pHost || pHost->closeStarted()) {
+            continue;
+        }
+        const QString name = pHost->getName();
+        bool saved = pHost->saveForClose();
+        if (!self) {
+            return false;
+        }
+        // The event loop would write it after this returns; a close has the Host's deletion write it
+        if (pHost && !pHost->syncProfileIni()) {
+            saved = false;
+        }
+        if (!saved) {
+            unsaved.append(name);
+        }
+    }
+    for (const QString& name : mUnsavedProfiles.mid(closesUnsavedBefore)) {
+        if (!unsaved.contains(name)) {
+            unsaved.append(name);
+        }
+    }
+    QStringList problems;
+    if (!unsaved.isEmpty()) {
+        //: Error from a frontend with no window whose profiles could not all be saved; %1 lists the names of the ones that were not
+        problems.append(tr("These profiles could not be saved: %1").arg(unsaved.join(qsl(", "))));
+    }
+    // As each close writes it
+    if (auto* pFrontend = TAppFrontend::instance(); !pFrontend || !pFrontend->saveWindowLayoutForScript()) {
+        //: Error from a frontend with no window that saved its profiles but not where their windows are
+        problems.append(tr("Where the profiles' windows are could not be saved."));
+    }
+    if (!problems.isEmpty()) {
+        mErrorString = problems.join(QLatin1Char(' '));
+        return false;
+    }
     return true;
 }
 

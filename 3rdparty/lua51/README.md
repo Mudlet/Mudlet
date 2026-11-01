@@ -17,6 +17,12 @@ or is a call of one of the `luaC_watch` macros.
 - `luaconf.h`: the default `package.path` and `package.cpath` of the system Lua
   each platform's Mudlet links with `USE_BUNDLED_LUA` off - Debian's on Linux
   (`LUA_MULTIARCH`, set by CMake), MSYS2's on Windows, upstream's on macOS.
+- `loslib.c`: on iOS, whose SDK marks `system()` unavailable, `os.execute()`
+  answers as `system()` does with no command processor - `0` with no command,
+  and with one `-1`, POSIX's value for a shell that could not be started - so
+  scripts see a non-zero status, as for any command that fails. Lua 5.4's
+  `l_system()` gives the same values under `LUA_USE_IOS`, which CMake defines
+  when `CMAKE_SYSTEM_NAME` is `iOS`.
 - The write barrier, below: `lua.h`, `lgc.h`, `lstate.h`, `lstate.c`, `lvm.c`,
   `lapi.c` and `loadlib.c`.
 
