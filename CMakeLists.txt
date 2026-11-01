@@ -139,21 +139,16 @@ endif()
 # Set APP_VERSION
 set(APP_VERSION 5.0.0)
 
-# Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD. An explicitly
-# empty value must be distinguished from an unset one so release builds (CI exports
-# MUDLET_VERSION_BUILD="") get a clean version with no "-dev-<sha>" suffix:
-#   unset (local dev build)         -> "-dev-<sha>"
-#   defined but empty (release)     -> "" (no suffix)
-#   defined with a value (ptb/test) -> "<value>-<sha>"
-if(DEFINED ENV{MUDLET_VERSION_BUILD})
-    if("$ENV{MUDLET_VERSION_BUILD}" STREQUAL "")
-        set(BUILD_VALUE "")
-    else()
-        set(BUILD_VALUE "$ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
-    endif()
-else()
-    set(BUILD_VALUE "-dev-${GIT_SHA1}")
-endif()
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
+include(IncludeOptionalModule)
+
+# WITH_COMMIT_IN_VERSION=NO lets a distributor's own MUDLET_VERSION_BUILD label
+# stand alone, without the commit hash that ptb/test builds need
+include_optional_module(ENVIRONMENT_VARIABLE WITH_COMMIT_IN_VERSION
+                        OPTION_VARIABLE USE_COMMIT_IN_VERSION
+                        READABLE_NAME "commit hash after MUDLET_VERSION_BUILD")
+include(MudletBuildSuffix)
+mudlet_build_suffix(BUILD_VALUE "${GIT_SHA1}" ${USE_COMMIT_IN_VERSION})
 
 # Write to app-build.txt and set APP_BUILD
 file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "${BUILD_VALUE}")
@@ -163,8 +158,6 @@ set(APP_BUILD ${BUILD_VALUE} CACHE STRING "Auto-set during CMake run. Do not alt
 set(LIB_MUDLET_TARGET "mudlet_core")
 set(LIB_MUDLET_APP_TARGET "mudlet_app")
 
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
-
 # Static analysis support - always included, but only active when configured with
 # -DENABLE_STATIC_ANALYSIS=ON (see cmake/StaticAnalysis.cmake for details)
 include(StaticAnalysis)
@@ -172,8 +165,6 @@ include(StaticAnalysis)
 # Profile-guided optimisation - inactive unless configured with -DMUDLET_PGO=GENERATE
 # or USE (see cmake/ProfileGuidedOptimization.cmake for the steps)
 include(ProfileGuidedOptimization)
-
-include(IncludeOptionalModule)
 
 include_optional_module(ENVIRONMENT_VARIABLE WITH_UPDATER
                         OPTION_VARIABLE USE_UPDATER

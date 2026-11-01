@@ -402,6 +402,14 @@ if(NOT WIN32)
     )
 endif()
 
+# The version suffix decides which build Mudlet believes it is. Not on Windows,
+# where putenv() removes a variable given an empty value
+if(NOT WIN32)
+    add_test(NAME BuildSuffixTest
+        COMMAND ${CMAKE_COMMAND} -E env MUDLET_VERSION_BUILD= ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/ci/build-suffix-test.cmake
+    )
+endif()
+
 # GitHub refuses release notes over its size limit, and a refused release publishes
 # nothing at all
 if(NOT WIN32)
