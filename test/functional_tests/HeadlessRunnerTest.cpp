@@ -34,6 +34,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QProcess>
+#include <QSettings>
 #include <QThread>
 #include <QTemporaryDir>
 #include <QtNetwork/QTcpServer>
@@ -294,6 +295,9 @@ private slots:
                                       << qsl("--host was given more than once");
         QTest::newRow("--port twice") << QStringList{qsl("-p"), qsl("a"), qsl("--port"), qsl("23"), qsl("--port"), qsl("4000")} << 2 << QString() << qsl("--port was given more than once");
         QTest::newRow("--login twice") << QStringList{qsl("-p"), qsl("a"), qsl("--login"), qsl("one"), qsl("--login"), qsl("two")} << 2 << QString() << qsl("--login was given more than once");
+        QTest::newRow("an empty config dir") << QStringList{qsl("-p"), qsl("a"), qsl("--config-dir"), QString()} << 2 << QString() << qsl("--config-dir was given nothing");
+        QTest::newRow("--config-dir twice") << QStringList{qsl("-p"), qsl("a"), qsl("--config-dir"), qsl("/one"), qsl("--config-dir"), qsl("/two")} << 2 << QString()
+                                            << qsl("--config-dir was given more than once");
         QTest::newRow("--password-env twice") << QStringList{qsl("-p"), qsl("a"), qsl("--password-env"), qsl("ONE"), qsl("--password-env"), qsl("TWO")} << 2 << QString()
                                               << qsl("--password-env was given more than once");
     }
@@ -314,6 +318,47 @@ private slots:
         QVERIFY2(child.exitCode() == exitCode, qPrintable(qsl("exit code %1, stderr: %2").arg(child.exitCode()).arg(standardError)));
         QVERIFY2(standardOutput.contains(standardOutputHas), qPrintable(standardOutput));
         QVERIFY2(standardError.contains(standardErrorHas), qPrintable(standardError));
+    }
+
+    // Relative to where it is run from, as a path on a command line is
+    void test_configDirKeepsTheProfiles()
+    {
+        const QString name = qsl("Headless Runner Own Folder");
+        const QString chosen = qsl("%1/chosen config").arg(mSandbox.path());
+        QProcess child;
+        child.setWorkingDirectory(mSandbox.path());
+        startChild(child, {qsl("--config-dir"), qsl("chosen config"), qsl("-p"), name, qsl("--host"), qsl("game.example"), qsl("--offline"), qsl("--no-stdin"), qsl("-e"), qsl("closeMudlet()")});
+        QTRY_COMPARE_WITH_TIMEOUT(child.state(), QProcess::NotRunning, scmFinishTimeoutMs);
+        const QString standardError = textOf(child.readAllStandardError());
+        QCOMPARE(child.exitStatus(), QProcess::NormalExit);
+        QVERIFY2(child.exitCode() == 0, qPrintable(standardError));
+        QVERIFY(QDir(qsl("%1/profiles/%2").arg(chosen, name)).exists());
+        QVERIFY(QFileInfo::exists(qsl("%1/Mudlet.ini").arg(chosen)));
+        QVERIFY(!QDir(profileFolder(name)).exists());
+        QVERIFY2(standardError.contains(qsl("loaded in offline mode")), qPrintable(standardError));
+
+        // Its language is the one its Mudlet.ini names, not the GUI's
+        {
+            QSettings ini(qsl("%1/Mudlet.ini").arg(chosen), QSettings::IniFormat);
+            ini.setValue(qsl("interfaceLanguage"), qsl("de_DE"));
+            ini.sync();
+            QCOMPARE(ini.status(), QSettings::NoError);
+        }
+        QProcess translated;
+        translated.setWorkingDirectory(mSandbox.path());
+        startChild(translated, {qsl("--config-dir"), qsl("chosen config"), qsl("-p"), name, qsl("--offline"), qsl("--no-stdin"), qsl("-e"), qsl("closeMudlet()")});
+        QTRY_COMPARE_WITH_TIMEOUT(translated.state(), QProcess::NotRunning, scmFinishTimeoutMs);
+        const QString translatedError = textOf(translated.readAllStandardError());
+        QVERIFY2(translated.exitCode() == 0, qPrintable(translatedError));
+        QVERIFY2(translatedError.contains(qsl("im Offline-Modus geladen")), qPrintable(translatedError));
+
+        const QString file = qsl("%1/Mudlet.ini").arg(chosen);
+        QProcess refused;
+        startChild(refused, {qsl("--config-dir"), file, qsl("-p"), name, qsl("--offline"), qsl("--no-stdin")});
+        QTRY_COMPARE_WITH_TIMEOUT(refused.state(), QProcess::NotRunning, scmFinishTimeoutMs);
+        const QString refusal = textOf(refused.readAllStandardError());
+        QVERIFY2(refused.exitCode() == 2, qPrintable(refusal));
+        QVERIFY2(refusal.contains(qsl("is not a folder")), qPrintable(refusal));
     }
 
 #if defined(Q_OS_UNIX)

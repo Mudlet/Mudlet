@@ -188,10 +188,11 @@ public:
     static QSettings::Status earlySettingsStatus(const QString& fileName);
     // For texts printed before there is a window or a profile, in Mudlet.ini's language or else the
     // system's. Installed on the application; null when there is none. A print-and-exit run warns why not.
-    static QTranslator* loadTranslationsForCommandLine(bool printAndExitRun);
+    // configRoot, a root a frontend will choose, is read in place of the one resolved, and not settled.
+    static QTranslator* loadTranslationsForCommandLine(bool printAndExitRun, const QString& configRoot = QString());
     // For the whole of a run with no main window, in the interface language its pool reports, as the main window
-    // loads its own. Installed on the application; null when there is none.
-    static QTranslator* loadTranslationsForRun();
+    // loads its own. Installed on the application; null when there is none. configRoot as above.
+    static QTranslator* loadTranslationsForRun(const QString& configRoot = QString());
     // FFmpeg on Windows and AVFoundation on macOS over Qt Multimedia's own default, unless QT_MEDIA_BACKEND
     // names one; before the first media object is made
     static void setDefaultMediaBackend();

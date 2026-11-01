@@ -942,11 +942,11 @@ QSettings::Status MudletApp::earlySettingsStatus(const QString& fileName)
     return smEarlySettingsErrors.value(fileName, QSettings::NoError);
 }
 
-QTranslator* MudletApp::loadTranslationsForCommandLine(const bool printAndExitRun)
+QTranslator* MudletApp::loadTranslationsForCommandLine(const bool printAndExitRun, const QString& configRoot)
 {
     // Not MudletApp::getQSettings(): it stays null until setupConfig(), which a --help or --version run never
     // reaches. Same file and format as setupConfig() opens - keep the spellings in step.
-    QSettings settings(qsl("%1/Mudlet.ini").arg(MudletApp::getMudletPath(enums::mainPath)), QSettings::IniFormat);
+    QSettings settings(qsl("%1/Mudlet.ini").arg(configRoot.isEmpty() ? MudletApp::getMudletPath(enums::mainPath) : configRoot), QSettings::IniFormat);
     noteEarlySettingsStatus(settings);
     // By name: only the first reader to parse a file is told of a format error, and the reader before this
     // one, applyHighDpiRoundingPolicyFromConfig()'s, finds its root from argv[0] so it can have parsed another file
@@ -991,10 +991,10 @@ QTranslator* MudletApp::loadTranslationsForCommandLine(const bool printAndExitRu
     return pMudletTranslator;
 }
 
-QTranslator* MudletApp::loadTranslationsForRun()
+QTranslator* MudletApp::loadTranslationsForRun(const QString& configRoot)
 {
     // As loadTranslationsForCommandLine(): the settings store is not made yet
-    QSettings settings(qsl("%1/Mudlet.ini").arg(MudletApp::getMudletPath(enums::mainPath)), QSettings::IniFormat);
+    QSettings settings(qsl("%1/Mudlet.ini").arg(configRoot.isEmpty() ? MudletApp::getMudletPath(enums::mainPath) : configRoot), QSettings::IniFormat);
     noteEarlySettingsStatus(settings);
     // The file named for the language exactly, as the main window loads it
     const QString fileName = qsl(":/lang/mudlet_%1.qm").arg(interfaceLanguageSetting(settings));

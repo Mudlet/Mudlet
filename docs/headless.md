@@ -46,6 +46,11 @@ profile at once, as each saves over what the other saved. `Mudlet.ini` is shared
 so its save also writes the application-wide settings below as this run has them, over a change the
 GUI made meanwhile.
 
+`--config-dir <folder>` keeps the profiles, `Mudlet.ini` and the passwords stored for them in that
+folder instead, made if need be, so a run there shares no profiles, settings or passwords with the
+GUI, and takes its interface language from that `Mudlet.ini`; a relative path is taken from where the
+runner is started. A folder that cannot be used is a command line error.
+
 ### Input and output
 
 - **Standard output** gets each line the game sends, and each a script feeds with `feedTriggers()`,
