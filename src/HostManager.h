@@ -116,6 +116,11 @@ public:
     static bool releasingProfile();
     // From the start of the destructor, which runs the profiles' sysExitEvent handlers
     bool goingDown() const { return mGoingDown; }
+    // What readSettings() reads, for a save to write back
+    void writeSettings(QSettings&) const;
+    // Whether a pool with no main window read Mudlet.ini for this process, so that a save with none may write it
+    // back: one that was never read would go out at its defaults, over the player's settings
+    static bool settingsReadWithoutWindow() { return sSettingsReadWithoutWindow; }
 
 private:
     // The GUI's call, from mudlet::readLateSettings()
@@ -127,6 +132,7 @@ private:
     void deleteHostOnceUnwound(Host*, std::chrono::milliseconds delay);
 
     inline static HostManager* smpSelf = nullptr;
+    inline static bool sSettingsReadWithoutWindow = false;
 
     // Every profile obeys these switches, so whatever owns the profiles owns them too, and with no main
     // window a profile still has real ones. Before mHostPool, so they outlive the profiles that reach them.

@@ -5134,9 +5134,7 @@ void mudlet::writeSettings()
     settings.setValue("maximized", static_cast<bool>(windowState() & Qt::WindowMaximized));
     settings.setValue("fullScreen", static_cast<bool>(windowState() & Qt::WindowFullScreen));
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
-    settings.setValue("reportMapIssuesToConsole", TMap::smShowMapAuditErrors);
     settings.setValue("invertMapZoom", mInvertMapZoom);
-    settings.setValue("storePasswordsSecurely", MudletApp::storingPasswordsSecurely());
     settings.setValue("showTabConnectionIndicators", mShowTabConnectionIndicators);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
@@ -5148,9 +5146,8 @@ void mudlet::writeSettings()
 
     settings.setValue("minLengthForSpellCheck", mMinLengthForSpellCheck);
     settings.setValue(qsl("enableMultiViewMode"), mMultiView);
-    settings.setValue(qsl("enableMuteAPI"), mHostManager.media().apiMuted());
-    settings.setValue(qsl("enableMuteGame"), mHostManager.media().gameMuted());
     settings.setValue(qsl("drawUpperLowerLevels"), mDrawUpperLowerLevels);
+    mHostManager.writeSettings(settings);
 #ifdef INCLUDE_MCPSERVER
     settings.setValue(qsl("mcpServerEnabled"), mEnableMCP);
     settings.setValue(qsl("mcpServerPort"), mMCPServerPort);

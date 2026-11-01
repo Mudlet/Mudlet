@@ -445,6 +445,8 @@ private slots:
                           "enableMuteGame=true\n"
                           "reportMapIssuesToConsole=true\n"
                           "storePasswordsSecurely=false\n"
+                          "drawUpperLowerLevels=false\n"
+                          "showTabConnectionIndicators=true\n"
                           "interfaceLanguage=de_DE\n")
                               .arg(scmAutosaveMinutes)
                               .arg(scmUsernameDelayMs)
@@ -10405,8 +10407,8 @@ headlessDiscord = ok and 'ok' or tostring(err)
         QCOMPARE(MudletApp::getInterfaceLanguage(), qsl("fr_FR"));
     }
 
-    // Run twice: here, where Mudlet.ini holds none of these keys, and by HeadlessHostSmokeTestWithMudletIni,
-    // where initTestCase() wrote each of them before the pool existed
+    // Run twice: here, where Mudlet.ini held none of these keys when the pool read it, and by
+    // HeadlessHostSmokeTestWithMudletIni, where initTestCase() wrote each of them before the pool existed
     void test_profileWithNoMainWindowTakesItsSettingsFromMudletIni()
     {
         QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
@@ -10424,9 +10426,22 @@ headlessDiscord = ok and 'ok' or tostring(err)
                                qsl("enableMuteGame"),
                                qsl("reportMapIssuesToConsole"),
                                qsl("storePasswordsSecurely"),
+                               qsl("drawUpperLowerLevels"),
+                               qsl("showTabConnectionIndicators"),
                                qsl("interfaceLanguage")};
+        // The saves of the tests before this write these back, which without one are the defaults the pool read
+        const QMap<QString, bool> written{{qsl("enableMuteAPI"), false},
+                                          {qsl("enableMuteGame"), false},
+                                          {qsl("reportMapIssuesToConsole"), false},
+                                          {qsl("storePasswordsSecurely"), true},
+                                          {qsl("drawUpperLowerLevels"), true},
+                                          {qsl("showTabConnectionIndicators"), false}};
         for (const QString& key : keys) {
-            QVERIFY2(settings->contains(key) == fromIni, qPrintable(key));
+            if (fromIni || !written.contains(key)) {
+                QVERIFY2(settings->contains(key) == fromIni, qPrintable(key));
+            } else if (settings->contains(key)) {
+                QVERIFY2(settings->value(key).toBool() == written.value(key), qPrintable(key));
+            }
         }
 
         const QString hostname = qsl("Test-Headless-Host-Mudlet-Ini");
@@ -10459,6 +10474,40 @@ headlessDiscord = ok and 'ok' or tostring(err)
         QCOMPARE(HostManager::self()->media().gameMuted(), fromIni);
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("iniMutes = tostring(getConfig('muteMediaAPI')) .. ' ' .. tostring(getConfig('muteMediaGame'))")));
         QCOMPARE(luaGlobalString(host, "iniMutes"), fromIni ? qsl("true true") : qsl("false false"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("iniView = tostring(getConfig('showUpperLowerLevels')) .. ' ' .. tostring(getConfig('showTabConnectionIndicators'))")));
+        QCOMPARE(luaGlobalString(host, "iniView"), fromIni ? qsl("false true") : qsl("true false"));
+
+        // A save with no main window writes each back to its own key, as it is now
+        {
+            MudletMedia& media = HostManager::self()->media();
+            TAppFrontend* pView = TAppFrontend::instance();
+            const bool apiMuted = media.apiMuted();
+            const bool gameMuted = media.gameMuted();
+            const bool auditShown = TMap::smShowMapAuditErrors;
+            const bool upperLower = pView->drawUpperLowerLevels();
+            const bool tabIndicators = pView->showTabConnectionIndicators();
+            const auto restore = qScopeGuard([&]() {
+                media.setApiMuted(apiMuted);
+                media.setGameMuted(gameMuted);
+                TMap::smShowMapAuditErrors = auditShown;
+                pView->setDrawUpperLowerLevels(upperLower);
+                pView->setShowTabConnectionIndicators(tabIndicators);
+                pView->writeSettings();
+            });
+            media.setApiMuted(true);
+            media.setGameMuted(false);
+            TMap::smShowMapAuditErrors = true;
+            pView->setDrawUpperLowerLevels(false);
+            pView->setShowTabConnectionIndicators(true);
+            pView->writeSettings();
+            const QSettings onDisk(settings->fileName(), QSettings::IniFormat);
+            QCOMPARE(onDisk.value(qsl("enableMuteAPI")).toBool(), true);
+            QCOMPARE(onDisk.value(qsl("enableMuteGame")).toBool(), false);
+            QCOMPARE(onDisk.value(qsl("reportMapIssuesToConsole")).toBool(), true);
+            QCOMPARE(onDisk.value(qsl("storePasswordsSecurely")).toBool(), MudletApp::storingPasswordsSecurely());
+            QCOMPARE(onDisk.value(qsl("drawUpperLowerLevels")).toBool(), false);
+            QCOMPARE(onDisk.value(qsl("showTabConnectionIndicators")).toBool(), true);
+        }
 
         // An exit to a room that is not there is reported on the console only when Mudlet.ini asks for it
         constexpr int missingRoomId = 4242;
