@@ -2096,14 +2096,26 @@ void TMainConsole::focusActiveCommandLine()
     focusActiveCommandLine(nullptr);
 }
 
+// A script hid it or something holding it, as switching between tabs of miniconsoles
+// does: showing its console again to give it the keyboard would undo that
+static bool hiddenWithin(const QWidget* pWidget, const QWidget* pMainConsole)
+{
+    for (; pWidget && pWidget != pMainConsole && !pWidget->isWindow(); pWidget = pWidget->parentWidget()) {
+        if (pWidget->isHidden()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void TMainConsole::focusActiveCommandLine(const QWidget* pWindow)
 {
     using namespace std::chrono_literals;
 
     TCommandLine* pCommandLine = activeCommandLine();
-    if (pCommandLine && pWindow && pCommandLine->window() != pWindow) {
+    if (pCommandLine && (hiddenWithin(pCommandLine, this) || (pWindow && pCommandLine->window() != pWindow))) {
         pCommandLine = nullptr;
-        // The setFocus() below can land only once pWindow activates, as a Qt::ActiveWindowFocusReason
+        // The setFocus() below may land only once the window activates, as a Qt::ActiveWindowFocusReason
         // focus-in that TCommandLine does not record, so record the line it gives the keyboard here
         recordActiveCommandLine(mpCommandLine);
     }
