@@ -1,7 +1,7 @@
 -- A build with USE_STATIC_LUA_MODULES links these into Mudlet and puts them in package.preload, for a
 -- platform that cannot dlopen them. Any other build loads them from package.cpath, so these pend
 -- there, unless MUDLET_EXPECT_STATIC_LUA_MODULES=1 says the build under test must have them.
-local modules = { "lfs", "lpeg" }
+local modules = { "lfs", "lpeg", "rex_pcre2", "lua-utf8" }
 local expectStatic = os.getenv("MUDLET_EXPECT_STATIC_LUA_MODULES") == "1"
 
 local function shallowCopy(t)

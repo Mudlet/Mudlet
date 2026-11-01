@@ -39,3 +39,15 @@ mudlet_static_lua_module(lpeg
   GIT_REPOSITORY https://github.com/roberto-ieru/LPeg.git
   GIT_TAG 73a96935337d78d0e1015d7ccce6cf7470c192c4 # v1.1.0
   SOURCES lpcap.c lpcode.c lpcset.c lpprint.c lptree.c lpvm.c)
+
+mudlet_static_lua_module(rex_pcre2
+  GIT_REPOSITORY https://github.com/rrthomas/lrexlib.git
+  GIT_TAG d2bae6c69b0c1ce5442eab103b9782c9d13ba479 # rel-2-9-4
+  SOURCES src/common.c src/pcre2/lpcre2.c src/pcre2/lpcre2_f.c
+  DEFINITIONS VERSION="2.9.4" PCRE2_CODE_UNIT_WIDTH=8
+  LIBRARIES PCRE2::PCRE2)
+
+mudlet_static_lua_module(luautf8
+  GIT_REPOSITORY https://github.com/starwing/luautf8.git
+  GIT_TAG 08b0fc930f5a52eff36348ed1ea39aadfc697fa6 # 0.2.1
+  SOURCES lutf8lib.c)
