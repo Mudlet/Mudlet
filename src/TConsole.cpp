@@ -157,14 +157,13 @@ QStyle* consoleScrollBarStyle()
     return pStyle;
 }
 
-// The main console co-owns Host's model so the trigger pipeline outlives the
-// view; every other console owns its own model.
-std::shared_ptr<TConsoleModel> resolveConsoleModel(Host* pHost, const QString& name, const TConsole::ConsoleType type)
+// None for the main console, which uses Host's so the trigger pipeline runs without a view
+std::unique_ptr<TConsoleModel> ownConsoleModel(Host* pHost, const QString& name, const TConsole::ConsoleType type)
 {
     if (type == TConsole::MainConsole) {
-        return pHost->sharedMainConsoleModel();
+        return nullptr;
     }
-    auto model = std::make_shared<TConsoleModel>(pHost);
+    auto model = std::make_unique<TConsoleModel>(pHost);
     model->mConsoleName = name;
     model->mScriptAddressable = type.testAnyFlags(TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer);
     return model;
@@ -188,6 +187,30 @@ QPointer<TConsole> parentTConsole(QObject* start)
     }
     return qobject_cast<TConsole*>(ptr);
 }
+
+// Under an app style sheet QStyleSheetStyle pins a copy of each polished widget's palette onto it and
+// restores that copy on unpolish, so a palette set while polished is undone by the next setAppStyleSheet()
+void setPaletteWhileUnpolished(QWidget* pWidget, const QPalette& palette)
+{
+    QStyle* pStyle = pWidget->style();
+    pStyle->unpolish(pWidget);
+    pWidget->setPalette(palette);
+    pStyle->polish(pWidget);
+}
+
+// The viewport paints the background, but a child of a polished widget does not inherit its palette,
+// so the viewport is let go of its pinned copy while both are unpolished
+void setCommandLinePalette(TCommandLine* pCommandLine, const QPalette& palette)
+{
+    QStyle* pStyle = pCommandLine->style();
+    QWidget* pViewport = pCommandLine->viewport();
+    pStyle->unpolish(pViewport);
+    pStyle->unpolish(pCommandLine);
+    pCommandLine->setPalette(palette);
+    pViewport->setPalette(QPalette());
+    pStyle->polish(pCommandLine);
+    pStyle->polish(pViewport);
+}
 } // namespace
 
 // A high-performance text widget with split screen ability for scrolling back
@@ -196,7 +219,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 : QWidget(parent)
 , mpHost(pH)
 , mDisplayFontDetails(pH->fontsAntiAlias())
-, mpModel(resolveConsoleModel(pH, name, type))
+, mpOwnModel(ownConsoleModel(pH, name, type))
+, mpModel(mpOwnModel ? mpOwnModel.get() : &pH->mainConsoleModel())
 , buffer(mpModel->buffer)
 , emergencyStop(new QToolButton)
 , mBgColor(mpModel->mBgColor)
@@ -817,7 +841,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         // They always use "Control Pictures" to show control characters:
         mControlCharacter = ControlCharacterMode::Picture;
         refreshView();
-    } else if (mpHost) {
+    } else {
         connect(mpHost, &Host::signal_controlCharacterHandlingChanged, this, &TConsole::slot_changeControlCharacterHandling);
     }
 
@@ -852,16 +876,16 @@ TConsole::~TConsole()
         TDebug::setSink(nullptr);
     }
 
-    // Host co-owns the main console's model, so the model - and its buffer -
-    // can outlive this view. ~QObject() would only drop these connections once
-    // it runs, leaving the buffer notifying a half-destroyed widget for the
-    // whole of this teardown, so drop them up front.
+    // The main console's model, and its buffer, belong to Host and outlive this
+    // view. ~QObject() would only drop these connections once it runs, leaving
+    // the buffer notifying a half-destroyed widget for the whole of this
+    // teardown, so drop them up front.
     disconnect(&mpModel->mNotifier, nullptr, this, nullptr);
 
     // Backstop: TMainConsole deregisters sub-consoles it destroys, but one can also die with the
     // widget it was created into, e.g. a scroll box.
-    if (mpHost && (mType & (SubConsole | UserWindow | Buffer))) {
-        mpHost->windowRegistry().deregisterSubConsole(mConsoleName, mpModel.get());
+    if (mType & (SubConsole | UserWindow | Buffer)) {
+        mpHost->windowRegistry().deregisterSubConsole(mConsoleName, mpModel);
     }
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
@@ -887,9 +911,6 @@ void TConsole::resizeConsole()
 
 void TConsole::raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight)
 {
-    if (mpHost.isNull()) {
-        return;
-    }
     TEvent mudletEvent{};
     mudletEvent.mArgumentList.append(QLatin1String("sysWindowResizeEvent"));
     mudletEvent.mArgumentList.append(QString::number(overallWidth - mBorders.left() - mBorders.right()));
@@ -959,7 +980,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
 
     // Sync Host dimensions on resize so wraps and NAWS reflect the current pane width.
     const QSize upperPane = (mType & MainConsole) && mUpperPane ? mUpperPane->drawableSize() : QSize();
-    if (!mpHost.isNull() && !upperPane.isEmpty()) {
+    if (!upperPane.isEmpty()) {
         syncHostScreenDimensions(upperPane.width(), -1);
 
         // Background-tab consoles share this container but get no resize event, so size them from here.
@@ -1001,23 +1022,19 @@ void TConsole::resizeEvent(QResizeEvent* event)
         const bool preventLuaEvent = (getMainWindowSize() == mOldSize);
         mOldSize = getMainWindowSize();
         // Laying out a hidden console, as above, resizes its command line with no event to report it
-        if (!mpHost.isNull()) {
-            mpHost->windowRegistry().setMainWindowSize(mOldSize);
-        }
+        mpHost->windowRegistry().setMainWindowSize(mOldSize);
         if (preventLuaEvent) {
             return;
         }
-        if (!mpHost.isNull()) {
-            TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
-            const QString func = "handleWindowResizeEvent";
-            const QString n = "WindowResizeEvent";
-            pLua->call(func, n);
+        TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
+        const QString func = "handleWindowResizeEvent";
+        const QString n = "WindowResizeEvent";
+        pLua->call(func, n);
 
-            raiseMudletSysWindowResizeEvent(x, y);
-        }
+        raiseMudletSysWindowResizeEvent(x, y);
     }
     //create the sysUserWindowResize Event for automatic resizing with Geyser
-    if (mType & (UserWindow) && !mpHost.isNull()) {
+    if (mType & (UserWindow)) {
         TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
         const QString func = "handleWindowResizeEvent";
         const QString n = "WindowResizeEvent";
@@ -1304,8 +1321,8 @@ void TConsole::changeColors()
             commandLinePalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
             commandLinePalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
             commandLinePalette.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
-            mpCommandLine->setPalette(commandLinePalette);
-            mpButtonMainLayer->setPalette(commandLinePalette);
+            setCommandLinePalette(mpCommandLine, commandLinePalette);
+            setPaletteWhileUnpolished(mpButtonMainLayer, commandLinePalette);
             mpCommandLine->mRegularPalette = commandLinePalette;
             mpCommandLine->setStyleSheet(styleSheet);
         }
@@ -1506,9 +1523,7 @@ bool TConsole::showLowerPane()
 void TConsole::showEvent(QShowEvent* event)
 {
     if (mType & (MainConsole | Buffer)) {
-        if (mpHost) {
-            mAlertOnNewData = false;
-        }
+        mAlertOnNewData = false;
     }
     QWidget::showEvent(event); //FIXME-refac: might cause problems
 }
@@ -1516,11 +1531,9 @@ void TConsole::showEvent(QShowEvent* event)
 void TConsole::hideEvent(QHideEvent* event)
 {
     if (mType & (MainConsole | Buffer)) {
-        if (mpHost) {
-            if (mudlet::self()->mWindowMinimized) {
-                if (mpHost->mAlertOnNewData) {
-                    mAlertOnNewData = true;
-                }
+        if (mudlet::self()->mWindowMinimized) {
+            if (mpHost->mAlertOnNewData) {
+                mAlertOnNewData = true;
             }
         }
     }
@@ -1756,14 +1769,11 @@ void TConsole::setCmdVisible(bool isVisible)
         layoutLayer2->addWidget(mpCommandLine);
     }
     if (mType == MainConsole) {
-        if (mpHost) {
-            if (!mpHost->getCompactInputLine() && isVisible) {
-                mpButtonMainLayer->setVisible(true);
-            } else {
-                mpButtonMainLayer->setVisible(false);
-            }
+        if (!mpHost->getCompactInputLine() && isVisible) {
+            mpButtonMainLayer->setVisible(true);
+        } else {
+            mpButtonMainLayer->setVisible(false);
         }
-
     } else {
         mpButtonMainLayer->setVisible(false);
     }
@@ -1777,7 +1787,7 @@ void TConsole::setCmdVisible(bool isVisible)
     setProxyForFocus(isVisible ? mpCommandLine : nullptr);
     // Need to remove the TCommandLine from the last used stack
     // if it has been explicitly hidden:
-    if (!isVisible && mpHost && mpHost->mainConsoleView()) {
+    if (!isVisible && mpHost->mainConsoleView()) {
         mpHost->mainConsoleView()->forgetCommandLine(mpCommandLine);
     }
 }
@@ -1794,9 +1804,6 @@ void TConsole::refreshView() const
 
 void TConsole::raiseFontChangeEvent()
 {
-    if (!mpHost) {
-        return;
-    }
     if (!(mType & (MainConsole | UserWindow | SubConsole))) {
         return;
     }
@@ -1821,7 +1828,7 @@ void TConsole::setFont(const QFont& newFont, const bool forceChange)
         QWidget::setFont(newFont);
         // Update associated TCommandLine's:
         if (mType & (MainConsole | SubConsole | UserWindow)) {
-            if (mpHost && mpHost->mainConsoleView()) {
+            if (mpHost->mainConsoleView()) {
                 for (auto commandLine : mpHost->mainConsoleView()->subCommandLineWidgets()) {
                     auto pConsole = commandLine->console();
                     if (pConsole && (pConsole == this)) {
@@ -2223,11 +2230,9 @@ void TConsole::slot_searchBufferDown()
 int TConsole::upperPaneWidthFor(const int containerWidth) const
 {
     int paneWidth = containerWidth - (mpLeftToolBar->width() + mpRightToolBar->width());
-    if (!mpHost.isNull()) {
-        // Not mBorders: it is only refreshed on layout, so is stale for a background console.
-        const QMargins borders = mpHost->borders();
-        paneWidth -= borders.left() + borders.right();
-    }
+    // Not mBorders: it is only refreshed on layout, so is stale for a background console.
+    const QMargins borders = mpHost->borders();
+    paneWidth -= borders.left() + borders.right();
     if (!mpScrollBar->isHidden()) {
         paneWidth -= mpScrollBar->width() + scrollBarSpacing;
     }
@@ -2241,10 +2246,8 @@ int TConsole::upperPaneHeightFor(const int containerHeight) const
         return -1;
     }
     int paneHeight = containerHeight - mpTopToolBar->height();
-    if (!mpHost.isNull()) {
-        const QMargins borders = mpHost->borders();
-        paneHeight -= borders.top() + borders.bottom();
-    }
+    const QMargins borders = mpHost->borders();
+    paneHeight -= borders.top() + borders.bottom();
     if (mpCommandLine) {
         paneHeight -= mpCommandLine->height();
     }
@@ -2257,7 +2260,7 @@ int TConsole::upperPaneHeightFor(const int containerHeight) const
 // Either dimension can be -1 to leave what the Host already has.
 void TConsole::syncHostScreenDimensions(const int paneWidthPx, const int paneHeightPx)
 {
-    if (mpHost.isNull() || !mUpperPane) {
+    if (!mUpperPane) {
         return;
     }
     const QFontMetrics metrics(mUpperPane->font());
@@ -2286,7 +2289,7 @@ void TConsole::syncHiddenScreenDimensions()
     // Only for a console hidden by a tab switch. One sharing the container (multi-view, or an unassigned
     // splitter share) is on screen and sizes itself; a detached one has its own window.
     const QWidget* container = parentWidget();
-    if (mType != MainConsole || mpHost.isNull() || !isHidden() || !container) {
+    if (mType != MainConsole || !isHidden() || !container) {
         return;
     }
     mudlet* const app = mudlet::self();
@@ -3053,7 +3056,7 @@ void TConsole::applyTimeStamps()
     mUpperPane->toggleTimeStamps(state);
     mLowerPane->toggleTimeStamps(state);
 
-    if (mpHost && mType == TConsole::MainConsole) {
+    if (mType == TConsole::MainConsole) {
         // Update and send out the NAWS data:
         mpHost->updateDisplayDimensions();
     }
@@ -3065,10 +3068,6 @@ void TConsole::applyTimeStamps()
 
 void TConsole::slot_saveCommandSearchSettings()
 {
-    if (!mpHost) {
-        return;
-    }
-
     QSettings* pQSettings = MudletApp::getQSettings();
     if (!pQSettings) {
         return;
@@ -3079,10 +3078,6 @@ void TConsole::slot_saveCommandSearchSettings()
 
 void TConsole::restoreCommandSearchSettings()
 {
-    if (!mpHost) {
-        return;
-    }
-
     QSettings* pQSettings = MudletApp::getQSettings();
     if (!pQSettings) {
         return;

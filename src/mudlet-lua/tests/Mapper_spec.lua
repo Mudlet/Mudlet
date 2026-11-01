@@ -4658,6 +4658,30 @@ describe("Tests the open and closed states of the map widget", function()
         assert.is_true(pumpEvents(200))
         assert.are.equal(saved, mapWidth(), "docking the map where it already was resized it")
       end)
+
+      -- As one saved on a bigger screen is: Qt fits it to the whole screen, leaving its title bar above the top
+      it("fits a floating map bigger than the screen below the screen's top", function()
+        if not os.getenv("MUDLET_TEST_MODE") then
+          pending("the dock is only placed once pumpEvents() runs")
+          return
+        end
+        local huge = 20000
+        assert.is_true(openMapWidget(50, 50, huge, huge))
+        assert.is_true(pumpEvents(200))
+        assert.is_true(saveWindowLayout())
+        assert.is_true(loadWindowLayout())
+        assert.is_true(pumpEvents(200))
+        local x, y, width, height = getMapWidgetGeometry()
+        assert.is_true(width < huge and height < huge, "the layout did not shrink the map to the screen, so nothing was tested")
+        assert.is_true(x >= 0, "the map's left edge is off the screen, at " .. x)
+        -- Where the window manager frames a floating dock its position is the frame's, title bar included, which may
+        -- touch the screen's top; where Qt frames it the position is the dock's own, a title bar's height below that
+        if getOS() == "windows" or getOS() == "mac" then
+          assert.is_true(y >= 0, "the map's title bar is above the screen's top, at " .. y)
+        else
+          assert.is_true(y > 0, "the map's top is at " .. y .. ", leaving no room on the screen for its title bar")
+        end
+      end)
     end)
   end)
 

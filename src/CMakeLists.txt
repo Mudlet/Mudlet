@@ -97,6 +97,7 @@ set(mudlet_SRCS
     TAreaZLevelIndex.cpp
     TAudioMixer.cpp
     TBuffer.cpp
+    TCommandHistory.cpp
     TConsoleModel.cpp
     TDebug.cpp
     TEncodingHelper.cpp
@@ -425,6 +426,7 @@ set(mudlet_HDRS
     TAstar.h
     TAudioMixer.h
     TBuffer.h
+    TCommandHistory.h
     TConsoleFrontend.h
     TConsoleModel.h
     TConsoleModelNotifier.h

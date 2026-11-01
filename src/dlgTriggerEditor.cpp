@@ -1259,6 +1259,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     frame_left->addAction(mAddGroup);
     connect(mAddGroup, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewGroup);
 
+    // A grab leaves focus on the binding field, outside frame_left, and the next key is often added straight after
+    mpKeysMainArea->lineEdit_key_binding->addAction(mAddItem);
+    mpKeysMainArea->lineEdit_key_binding->addAction(mAddGroup);
+
     // 'Save Item' does not see to be translated as it is only ever used programmatically and not visible to the player
     mSaveItem = new QAction(QIcon(qsl(":/icons/document-save-as.png")), qsl("Save Item"), this);
     mSaveItem->setShortcut(QKeySequence(QKeySequence::Save));
@@ -1381,8 +1385,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QShortcut* previousSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Tab), this);
     connect(previousSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_previousSection);
 
-    QShortcut* activateMainWindowAction = new QShortcut(QKeySequence((Qt::ALT | Qt::Key_E)), this);
-    connect(activateMainWindowAction, &QShortcut::activated, this, &dlgTriggerEditor::slot_activateMainWindow);
+    mpShortcutActivateMainWindow = new QShortcut(this);
+    connect(mpShortcutActivateMainWindow, &QShortcut::activated, this, &dlgTriggerEditor::slot_activateMainWindow);
+    slot_updateActivateMainWindowShortcut();
+    connect(mudlet::self(), &mudlet::signal_shortcutsChanged, this, &dlgTriggerEditor::slot_updateActivateMainWindowShortcut);
 
     toolBar = new QToolBar();
 
@@ -9571,6 +9577,9 @@ void dlgTriggerEditor::populateKeys()
         auto pItem = new QTreeWidgetItem(mpKeyBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(key->getID()));
         mpKeyBaseItem->addChild(pItem);
+        if (key->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QString itemDescription;
         if (key->hasChildren()) {
             expand_child_key(key, pItem);
@@ -9697,6 +9706,9 @@ void dlgTriggerEditor::populateActions()
         auto pItem = new QTreeWidgetItem(mpActionBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(action->getID()));
         mpActionBaseItem->addChild(pItem);
+        if (action->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QString itemDescription;
         if (action->hasChildren()) {
             expand_child_action(action, pItem);
@@ -9740,6 +9752,9 @@ void dlgTriggerEditor::populateAliases()
         auto pItem = new QTreeWidgetItem(mpAliasBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(alias->getID()));
         mpAliasBaseItem->addChild(pItem);
+        if (alias->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QString itemDescription;
         const bool itemActive = alias->isActive();
         if (alias->hasChildren()) {
@@ -9781,6 +9796,9 @@ void dlgTriggerEditor::populateScripts()
         auto pItem = new QTreeWidgetItem(mpScriptsBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(script->getID()));
         mpScriptsBaseItem->addChild(pItem);
+        if (script->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QString itemDescription;
         if (script->hasChildren()) {
             expand_child_scripts(script, pItem);
@@ -9907,6 +9925,9 @@ void dlgTriggerEditor::populateTimers()
         auto pItem = new QTreeWidgetItem(mpTimerBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(timer->getID()));
         mpTimerBaseItem->addChild(pItem);
+        if (timer->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QString itemDescription;
         if (timer->hasChildren()) {
             expand_child_timers(timer, pItem);
@@ -10041,6 +10062,9 @@ void dlgTriggerEditor::populateTriggers()
         auto pItem = new QTreeWidgetItem(mpTriggerBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(trigger->getID()));
         mpTriggerBaseItem->addChild(pItem);
+        if (trigger->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QString itemDescription;
         if (trigger->hasChildren()) {
             expand_child_triggers(trigger, pItem);
@@ -11901,7 +11925,18 @@ void dlgTriggerEditor::slot_sourceFindTextChanges()
 
 void dlgTriggerEditor::slot_deleteItemOrGroup()
 {
-    switch (resolveCurrentView()) {
+    const EditorViewType view = resolveCurrentView();
+    if (QTreeWidget* pTree = treeForView(view)) {
+        for (const QTreeWidgetItem* pItem : pTree->selectedItems()) {
+            const QString moduleName = moduleOfMasterFolder(view, pItem->data(0, Qt::UserRole).toInt());
+            if (!moduleName.isEmpty()) {
+                offerToUninstallModule(moduleName);
+                return;
+            }
+        }
+    }
+
+    switch (view) {
     case EditorViewType::cmTriggerView:
         delete_trigger();
         break;
@@ -12246,6 +12281,24 @@ void dlgTriggerEditor::slot_previousSection()
     case EditorViewType::cmUnknownView:
         return;
     }
+}
+
+// The same key that opens the editor brings the main window back from it
+void dlgTriggerEditor::slot_updateActivateMainWindowShortcut()
+{
+    const QString key = qsl("Script editor");
+    QKeySequence sequence;
+    if (!mpHost) {
+        return;
+    }
+    if (auto it = mpHost->profileShortcuts.find(key); it != mpHost->profileShortcuts.end()) {
+        sequence = *it->second;
+    } else if (auto* pManager = mudlet::self()->shortcutsManager()) {
+        if (auto* pSequence = pManager->getSequence(key)) {
+            sequence = *pSequence;
+        }
+    }
+    mpShortcutActivateMainWindow->setKey(sequence);
 }
 
 void dlgTriggerEditor::slot_activateMainWindow()
@@ -13988,21 +14041,23 @@ void dlgTriggerEditor::suspendShortcuts()
 {
     for (auto* action : toolbarActions()) {
         // A second arm finds every shortcut already empty, so the first grab's record stands
-        if (const QKeySequence shortcut = action->shortcut(); !shortcut.isEmpty()) {
-            mKeyGrabSuspendedShortcuts.insert(action, shortcut);
+        if (const QList<QKeySequence> shortcuts = action->shortcuts(); !shortcuts.isEmpty()) {
+            mSuspendedShortcuts.insert(action, shortcuts);
             action->setShortcut(QKeySequence());
         }
     }
+    mpShortcutActivateMainWindow->setEnabled(false);
 }
 
 void dlgTriggerEditor::restoreShortcuts()
 {
     for (auto* action : toolbarActions()) {
-        if (const auto it = mKeyGrabSuspendedShortcuts.constFind(action); it != mKeyGrabSuspendedShortcuts.constEnd()) {
-            action->setShortcut(it.value());
+        if (const auto it = mSuspendedShortcuts.constFind(action); it != mSuspendedShortcuts.constEnd()) {
+            action->setShortcuts(it.value());
         }
     }
-    mKeyGrabSuspendedShortcuts.clear();
+    mSuspendedShortcuts.clear();
+    mpShortcutActivateMainWindow->setEnabled(true);
 }
 
 void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModifiers modifier)
@@ -19024,6 +19079,78 @@ bool dlgTriggerEditor::folderItem(const EditorViewType view, const int id)
         break;
     }
     return false;
+}
+
+// A module's folder is rebuilt from the module file on every load and is not written back to it
+QString dlgTriggerEditor::moduleOfMasterFolder(const EditorViewType view, const int id) const
+{
+    switch (view) {
+    case EditorViewType::cmTriggerView:
+        if (auto* pTrigger = mpHost->getTriggerUnit()->getTrigger(id); pTrigger && pTrigger->mModuleMasterFolder) {
+            return pTrigger->mPackageName;
+        }
+        break;
+    case EditorViewType::cmAliasView:
+        if (auto* pAlias = mpHost->getAliasUnit()->getAlias(id); pAlias && pAlias->mModuleMasterFolder) {
+            return pAlias->mPackageName;
+        }
+        break;
+    case EditorViewType::cmScriptView:
+        if (auto* pScript = mpHost->getScriptUnit()->getScript(id); pScript && pScript->mModuleMasterFolder) {
+            return pScript->mPackageName;
+        }
+        break;
+    case EditorViewType::cmTimerView:
+        if (auto* pTimer = mpHost->getTimerUnit()->getTimer(id); pTimer && pTimer->mModuleMasterFolder) {
+            return pTimer->mPackageName;
+        }
+        break;
+    case EditorViewType::cmKeysView:
+        if (auto* pKey = mpHost->getKeyUnit()->getKey(id); pKey && pKey->mModuleMasterFolder) {
+            return pKey->mPackageName;
+        }
+        break;
+    case EditorViewType::cmActionView:
+        if (auto* pAction = mpHost->getActionUnit()->getAction(id); pAction && pAction->mModuleMasterFolder) {
+            return pAction->mPackageName;
+        }
+        break;
+    case EditorViewType::cmVarsView:
+    case EditorViewType::cmUnknownView:
+        break;
+    }
+    return {};
+}
+
+void dlgTriggerEditor::offerToUninstallModule(const QString& moduleName)
+{
+    QMessageBox box(this);
+    box.setIcon(QMessageBox::Question);
+    //: Title of the dialog shown when the user tries to delete the folder that holds a module's items
+    box.setWindowTitle(tr("Delete module folder"));
+    //: %1 is the name of the module whose folder the user tried to delete
+    box.setText(tr("This folder belongs to the module \"%1\" and can't be deleted on its own. Would you like to uninstall the module?").arg(moduleName));
+    //: Button that removes the module whose folder the user tried to delete, along with all its items
+    QPushButton* pUninstallButton = box.addButton(tr("Uninstall"), QMessageBox::AcceptRole);
+    box.addButton(QMessageBox::Cancel);
+    box.setDefaultButton(QMessageBox::Cancel);
+    box.exec();
+    if (box.clickedButton() != pUninstallButton) {
+        return;
+    }
+
+    if (!mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromUI)) {
+        QString message;
+        if (mpHost->currentlySavingProfile()) {
+            //: %1 is the name of the module the user asked to remove
+            message = tr("\"%1\" could not be removed while the profile is being saved. Please try again in a moment.").arg(moduleName);
+        } else {
+            //: %1 is the name of the module the user asked to remove, which turned out not to be installed any more
+            message = tr("\"%1\" is no longer installed, so there was nothing to remove.").arg(moduleName);
+        }
+        //: Title of the dialog that says why a module the user asked to remove was not removed
+        QMessageBox::warning(this, tr("Removal failed"), message);
+    }
 }
 
 QTreeWidgetItem* dlgTriggerEditor::findItemById(QTreeWidget* pTree, const int id)

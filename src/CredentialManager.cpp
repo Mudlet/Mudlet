@@ -57,9 +57,9 @@ namespace {
 bool keychainDeleteSucceeded(const QKeychain::Job& job)
 {
     const QKeychain::Error error = job.error();
-#if !defined(Q_OS_MACOS) && !defined(Q_OS_WIN)
+#if !defined(Q_OS_DARWIN) && !defined(Q_OS_WIN)
     // libsecret reports a Secret Service missing from D-Bus as OtherError, where KWallet says
-    // NoBackendAvailable; on macOS and Windows the store is part of the OS, so there it is the entry's own failure
+    // NoBackendAvailable; on Apple platforms and Windows the store is part of the OS, so there it is the entry's own failure
     if (error == QKeychain::OtherError) {
         // Logged all the same: an entry saved in a session that had the keychain is still in it
         qWarning().noquote() << "CredentialManager: could not reach the keychain to remove an entry, so taking it to hold none:" << job.errorString();

@@ -32,6 +32,46 @@ function(restore_windows_test_output)
 endfunction()
 cmake_language(DEFER CALL restore_windows_test_output)
 
+# LuaGlobal.lua needs the rocks luarocks installed (yajl first), and on Windows
+# nothing puts them on the embedded interpreter's search path unless whoever runs
+# ctest has exported LUA_PATH and LUA_CPATH themselves (#9749). Appended, so paths
+# already exported still come first, and ";;" keeps Lua's default paths.
+find_program(LUAROCKS_EXECUTABLE luarocks)
+if(LUAROCKS_EXECUTABLE)
+    set(luarocksCommand "${LUAROCKS_EXECUTABLE}")
+    cmake_path(GET LUAROCKS_EXECUTABLE EXTENSION luarocksExtension)
+    if(WIN32 AND NOT luarocksExtension)
+        # MSYS2's luarocks is a Lua script with no extension, which Windows cannot start
+        find_program(LUAROCKS_LUA_INTERPRETER lua)
+        set(luarocksCommand "${LUAROCKS_LUA_INTERPRETER}" "${LUAROCKS_EXECUTABLE}")
+    endif()
+    foreach(pathKind path cpath)
+        execute_process(COMMAND ${luarocksCommand} --lua-version 5.1 path --lr-${pathKind}
+            OUTPUT_VARIABLE luarocksPath
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            RESULT_VARIABLE luarocksResult
+            ERROR_QUIET)
+        if(luarocksResult EQUAL 0 AND luarocksPath)
+            string(TOUPPER "${pathKind}" pathKindUpper)
+            # Escaped, as a test property is a list and Lua's separator is CMake's
+            string(REPLACE ";" "\\;" "MUDLET_TEST_LUA_${pathKindUpper}" "${luarocksPath}")
+        endif()
+    endforeach()
+endif()
+
+# Deferred, and per directory, for the same reason as restore_windows_test_output().
+function(add_luarocks_paths_to_tests)
+    get_property(registeredTests DIRECTORY PROPERTY TESTS)
+    foreach(testName ${registeredTests})
+        foreach(variable LUA_PATH LUA_CPATH)
+            if(MUDLET_TEST_${variable})
+                set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT_MODIFICATION "${variable}=string_append:\\;${MUDLET_TEST_${variable}}\\;\\;")
+            endif()
+        endforeach()
+    endforeach()
+endfunction()
+cmake_language(DEFER CALL add_luarocks_paths_to_tests)
+
 # Where a test's config root goes. CredentialManager and SecureStringUtils write
 # per-profile encryption keys and passwords under QStandardPaths::AppConfigLocation
 # without asking Mudlet where its config root is, so for a QTEST_MAIN program that

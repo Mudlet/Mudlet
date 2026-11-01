@@ -6609,7 +6609,7 @@ void cTelnet::setKeepAlive(int socketHandle)
 
 #else // For OSes other than Windows:
 
-#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS) || defined(Q_OS_OPENBSD)
+#if defined(Q_OS_LINUX) || defined(Q_OS_DARWIN) || defined(Q_OS_OPENBSD)
     setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on));
 #else
     // FreeBSD always has the Keep-alive option enabled, so the above is not
@@ -6634,8 +6634,8 @@ void cTelnet::setKeepAlive(int socketHandle)
 #endif
 
     // Start keepalives after this interval of idleness, in seconds:
-#if defined(Q_OS_MACOS)
-    // TCP_KEEPIDLE is TCP_KEEPALIVE on MacOs
+#if defined(Q_OS_DARWIN)
+    // TCP_KEEPIDLE is TCP_KEEPALIVE on macOS and iOS
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPALIVE, &timeout, sizeof(timeout));
 #elif defined(Q_OS_OPENBSD)
     // There does not appear to be a per-socket option for TCP_KEEPALIVE on OpenBSD

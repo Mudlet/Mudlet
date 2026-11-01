@@ -761,6 +761,12 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
                 shortcut.text().set(it->second->toString().toUtf8().constData());
             }
         }
+    } else {
+        for (const auto& [key, sequence] : pHost->mProfileShortcutsAsRead.asKeyValueRange()) {
+            auto shortcut = host.append_child("profileShortcut");
+            shortcut.append_attribute("key") = key.toUtf8().constData();
+            shortcut.text().set(sequence.toUtf8().constData());
+        }
     }
     {
         auto stopwatches = host.append_child("stopwatches");

@@ -26,6 +26,7 @@
 #include <QCoreApplication>
 #include <QDebug>
 #include <QUrl>
+#include <QUrlQuery>
 
 namespace {
 // Shown in place of the address, so the tooltip and a screen reader say the click will do nothing
@@ -60,12 +61,13 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     // explicit hint is prose written to be read; falling back to the href makes
     // this a link target the user is being asked to trust.
     mHintIsHref = !tag->hasAttribute(qsl("hint"));
-    QString hint = mHintIsHref ? UntrustedText::forTarget(mHref) : UntrustedText::forAuthoredText(tag->getAttributeValue(qsl("hint")));
     // An address taken from the wrapped text is only known, and checked, at the end tag
-    const QString action = mIsHrefInContent ? QString() : actionFor(mHref);
-    if (!mIsHrefInContent && action.isEmpty()) {
+    const QString address = mIsHrefInContent ? QString() : openableAddress(mHref);
+    QString hint = mHintIsHref ? UntrustedText::forTarget(address.isEmpty() ? mHref : address) : UntrustedText::forAuthoredText(tag->getAttributeValue(qsl("hint")));
+    if (!mIsHrefInContent && address.isEmpty()) {
         hint = refusedHint(mHref);
     }
+    const QString action = actionFor(address);
 
     // Use the version of setLink that supports expire names
     if (!expireName.isEmpty()) {
@@ -91,12 +93,13 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
     // written to close the Lua string stays inside it
     if (links != nullptr && mIsHrefInContent && !links->isEmpty()) {
         const QString href = QString(mHref).replace(TAG_CONTENT_PLACEHOLDER, mCurrentTagContent, Qt::CaseInsensitive);
-        links->first() = actionFor(href);
+        const QString address = openableAddress(href);
+        links->first() = actionFor(address);
         if (hints != nullptr && !hints->isEmpty()) {
-            if (links->first().isEmpty()) {
+            if (address.isEmpty()) {
                 hints->first() = refusedHint(href);
             } else if (mHintIsHref) {
-                hints->first() = UntrustedText::forTarget(href);
+                hints->first() = UntrustedText::forTarget(address);
             }
         }
     }
@@ -107,15 +110,37 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
     return MXP_TAG_HANDLED;
 }
 
-QString TMxpLinkTagHandler::actionFor(const QString& href)
+QString TMxpLinkTagHandler::openableAddress(const QString& href)
 {
     // Game servers choose MXP link addresses, so only these schemes may reach the system's URL handler
-    const QString scheme = QUrl(href).scheme().toLower();
+    const QUrl url(href);
+    const QString scheme = url.scheme().toLower();
     if (scheme != qsl("http") && scheme != qsl("https") && scheme != qsl("ftp") && scheme != qsl("mailto")) {
-        qWarning().noquote().nospace() << "TMxpLinkTagHandler::actionFor(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\" in link to: \"" << href.left(80) << "\"";
+        qWarning().noquote().nospace() << "TMxpLinkTagHandler::openableAddress(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\" in link to: \"" << href.left(80) << "\"";
         return QString();
     }
-    return qsl("openUrl(%1)").arg(LuaLiteral::quote(href));
+    if (scheme != qsl("mailto")) {
+        return href;
+    }
+
+    // Mail clients and the desktop portal attach local files named by "attach" or "attachment"
+    QUrlQuery kept;
+    for (const auto& [name, value] : QUrlQuery(url).queryItems(QUrl::FullyEncoded)) {
+        const QString field = QUrl::fromPercentEncoding(name.toUtf8()).toLower();
+        if (field == qsl("subject") || field == qsl("body")) {
+            kept.addQueryItem(name, value);
+        }
+    }
+    const QString recipients = qsl("mailto:%1").arg(url.path(QUrl::FullyEncoded));
+    return kept.isEmpty() ? recipients : qsl("%1?%2").arg(recipients, kept.query(QUrl::FullyEncoded));
+}
+
+QString TMxpLinkTagHandler::actionFor(const QString& address)
+{
+    if (address.isEmpty()) {
+        return QString();
+    }
+    return qsl("openUrl(%1)").arg(LuaLiteral::quote(address));
 }
 
 QString TMxpLinkTagHandler::getHref(const MxpStartTag* tag)

@@ -484,7 +484,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // be initialised first. The view subscribes to the model's notifier when
     // it attaches (TConsole::TConsole) and unsubscribes when it goes away, and
     // TConsole::changeColors() refreshes the snapshot as it does so.
-    mpMainConsoleModel = std::make_shared<TConsoleModel>(this);
+    mpMainConsoleModel = std::make_unique<TConsoleModel>(this);
     mpMainConsoleModel->mConsoleName = qsl("main");
     mpMainConsoleModel->mScriptAddressable = true;
     refreshMainConsoleColors();
@@ -521,6 +521,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
 Host::~Host()
 {
+    Q_ASSERT_X(mpConsole.isNull(), "Host::~Host()", "the main console view would outlive the model it refers to");
     // Mark the host as closing down to prevent keybinding processing during destruction
     mIsClosingDown = true;
 
@@ -536,6 +537,11 @@ Host::~Host()
     mpNullConsoleFrontend->releaseRetired();
 
     mStopWatchMap.clear();
+
+    // No line will now arrive to let out the one log() holds back, nor appendLog() text queued behind it
+    if (mpMainConsoleModel) {
+        mpMainConsoleModel->buffer.logRemainingOutput();
+    }
 
     mErrorLogStream.flush();
     mErrorLogFile.close();
@@ -642,7 +648,8 @@ bool Host::closeWithNoView()
     // or reset of this profile reached from there meanwhile would delete it under this call
     mLuaInterpreter.enterNestedEventLoop();
     raiseExitEventIfOwed();
-    if ((mFORCE_SAVE_ON_EXIT || mForcedClose) && !saveForClose()) {
+    // profile.ini too, which the Host's deletion would otherwise write with no one to tell
+    if ((mFORCE_SAVE_ON_EXIT || mForcedClose) && !(saveForClose() && syncProfileIni())) {
         qWarning().nospace().noquote() << "Host::closeWithNoView() WARNING - \"" << getName() << "\" could not be saved.";
         emit closeSaveFailed();
     }
@@ -676,6 +683,7 @@ bool Host::saveForClose()
     bool xmlWritten = saveProfileReportingFailure();
     // Taken now, as a writer leaves pendingXmlSaveFutures() once it has written
     const QList<QFuture<bool>> xmlWrites = pendingXmlSaveFutures();
+    const QFuture<bool> moduleWrite = mModuleFuture;
     // Other profiles can keep Mudlet running long after this one closes
     if (auto* frontend = TAppFrontend::instance()) {
         frontend->writeSettings();
@@ -686,7 +694,8 @@ bool Host::saveForClose()
     for (const auto& write : xmlWrites) {
         xmlWritten = xmlWritten && write.isFinished() && write.result();
     }
-    return xmlWritten && mapSaved;
+    // Only reached when this save started, so the module write is its own
+    return xmlWritten && moduleWrite.isFinished() && moduleWrite.result() && mapSaved;
 }
 
 bool Host::loadProfileSave(const QString& saveFileName)
@@ -786,12 +795,19 @@ void Host::startProfileScripts()
         moduleOrder[it.value()] = moduleEntry;
     }
 
+    std::vector<int> profileRootScriptIds;
+    for (auto* pScript : getScriptUnit()->getScriptRootNodeList()) {
+        profileRootScriptIds.push_back(pScript->getID());
+    }
+
     //First load modules with negative number priority
     QMapIterator<int, QStringList> it2(moduleOrder);
     while (it2.hasNext() && it2.peekNext().key() < 0) {
         it2.next();
         installModulesList(it2.value());
     }
+    // The profile's own scripts were read in before these modules, but run after them
+    getScriptUnit()->moveRootNodesToEnd(profileRootScriptIds);
 
     mBlockStopWatchCreation = false;
     // This will build all the scripts in the collection of script items (but
@@ -1220,21 +1236,26 @@ QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
     return jobs;
 }
 
-void Host::writeModuleFiles(const QList<ModuleWriteJob>& jobs)
+bool Host::writeModuleFiles(const QList<ModuleWriteJob>& jobs)
 {
     // Pure file I/O over self-contained jobs, usually on a thread pool thread. It is
     // static because a close that answers "No" to "Save profile?", and one that finds
     // the main console already gone, wait for nothing: the Host that ordered these
     // writes can be, and regularly is, destroyed while they are still queued.
+    bool allWritten = true;
     for (const auto& job : jobs) {
         if (!job.backupName.isEmpty()) {
             createModuleBackup(job.filename, job.backupName);
         }
         if (!XMLexport::saveXmlDocToFile(job.xmlFilename, *job.document)) {
             qWarning().noquote().nospace() << "Host::writeModuleFiles() WARNING - failed to write module \"" << job.moduleName << "\" to \"" << job.xmlFilename << "\".";
+            allWritten = false;
         }
-        updateModuleZip(job);
+        if (!updateModuleZip(job)) {
+            allWritten = false;
+        }
     }
+    return allWritten;
 }
 
 void Host::reloadModules()
@@ -1267,14 +1288,14 @@ void Host::reloadModules()
     mModulesToSync.clear();
 }
 
-void Host::updateModuleZip(const ModuleWriteJob& job)
+bool Host::updateModuleZip(const ModuleWriteJob& job)
 {
     // Static for the same reason writeModuleFiles() is: every path it needs was
     // resolved, and every folder it needs created, on the main thread beforehand.
     const QString zipName = job.filename;
     const QString moduleName = job.moduleName;
     if (!(zipName.endsWith(qsl("mpackage"), Qt::CaseInsensitive) || zipName.endsWith(qsl("zip"), Qt::CaseInsensitive))) {
-        return;
+        return true;
     }
     zip* zipFile = nullptr;
     const QString filename_xml = job.xmlFilename;
@@ -1293,7 +1314,7 @@ void Host::updateModuleZip(const ModuleWriteJob& job)
         qWarning().noquote().nospace() << "Host::updateModuleZip(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to open module to update it, error: \""
                                        << zip_error_strerror(&zipError) << "\"";
         zip_error_fini(&zipError);
-        return;
+        return false;
     }
     const int xmlIndex = zip_name_locate(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), ZIP_FL_ENC_GUESS);
     zip_delete(zipFile, xmlIndex);
@@ -1304,6 +1325,7 @@ void Host::updateModuleZip(const ModuleWriteJob& job)
                                        << "\" inside the module to update it, error: \"" << zip_strerror(zipFile) << "\"";
     }
     err = zip_file_add(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), s, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE);
+    const bool added = s && err >= 0;
 
     if (zipFile) {
         // This is the point at which the data is written out to the archive,
@@ -1316,7 +1338,9 @@ void Host::updateModuleZip(const ModuleWriteJob& job)
         // Properly dispose of things after failing to zip_close(...) the
         // archive:
         zip_discard(zipFile);
+        return false;
     }
+    return added;
 }
 
 std::pair<bool, QString> Host::reloadModule(const QString& syncModuleName, const QString& syncingFromHost)
@@ -1674,7 +1698,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         for (auto future : xmlSaveFutures) {
             future.waitForFinished();
         }
-        Host::writeModuleFiles(moduleJobs);
+        return Host::writeModuleFiles(moduleJobs);
     });
     // Only the names: holding the whole jobs would keep every module's document in
     // memory until this runs, and all it needs is what to retire from `writers`.
@@ -1708,7 +1732,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         }
     });
     connect(watcher, &QFutureWatcher<void>::finished, watcher, &QObject::deleteLater);
-    watcher->setFuture(mModuleFuture);
+    watcher->setFuture(QFuture<void>(mModuleFuture));
     return {true, filename_xml, QString()};
 }
 
@@ -2753,11 +2777,6 @@ void Host::setF3SearchEnabled(const bool enabled)
     consoleFrontend()->setF3SearchEnabled(enabled);
 }
 
-std::shared_ptr<TConsoleModel> Host::sharedMainConsoleModel()
-{
-    return mpMainConsoleModel;
-}
-
 void Host::deselectMainConsole()
 {
     mpMainConsoleModel->deselect();
@@ -3174,8 +3193,8 @@ void Host::runTriggers(int line)
 
     if (nested) {
         // Only a nested pass restores: at the top level a script's moveCursor()
-        // is meant to outlive the line. shrinkBuffer() adjusts neither cursor, so
-        // a saved index can by now point past the end.
+        // is meant to outlive the line. shrinkBuffer() cannot adjust the saved
+        // copies, so a saved index can by now point past the end.
         const int lastLine = consoleModel.buffer.getLastLineNumber();
         consoleModel.mUserCursor = QPoint(previousUserCursor.x(), qMin(previousUserCursor.y(), lastLine));
         consoleModel.mEngineCursor = qMin(previousEngineCursor, lastLine);
@@ -5123,6 +5142,28 @@ QString Host::readProfileIniData(const QString& item)
 void Host::removeProfileIniData(const QString& item)
 {
     profileIni().remove(item);
+}
+
+bool Host::syncProfileIni()
+{
+    if (!mpProfileIni) {
+        return true;
+    }
+    // status() keeps its first error for the object's life, a parse error too, so only a fresh one can judge this write
+    if (mpProfileIni->status() != QSettings::NoError) {
+        QHash<QString, QVariant> values;
+        for (const auto& key : mpProfileIni->allKeys()) {
+            values.insert(key, mpProfileIni->value(key));
+        }
+        delete mpProfileIni;
+        mpProfileIni = nullptr;
+        QSettings& fresh = profileIni();
+        for (auto it = values.cbegin(); it != values.cend(); ++it) {
+            fresh.setValue(it.key(), it.value());
+        }
+    }
+    mpProfileIni->sync();
+    return mpProfileIni->status() == QSettings::NoError;
 }
 
 // This function retrieves command line history settings based on the given

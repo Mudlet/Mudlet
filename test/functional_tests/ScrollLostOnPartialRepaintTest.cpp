@@ -182,6 +182,86 @@ private slots:
                  "is missing from the pane until something unrelated forces a full repaint");
     }
 
+    // A full buffer that takes in as many lines as it trims ends on the same
+    // offset it started on, while every line on screen has moved up.
+    void test_aFullBufferTrimmingAsManyLinesAsItTakesIn()
+    {
+        mpServer->setSendsWelcome(false);
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
+        QVERIFY(pane);
+        TBuffer& buffer = host->mainConsoleView()->buffer;
+        auto* lua = host->getLuaInterpreter();
+
+        constexpr int batch = 100;
+        lua->compileAndExecuteScript(qsl("setConsoleBufferSize('main', 1000, %1)\n").arg(batch));
+        lua->compileAndExecuteScript(qsl("for i = 1, 1100 do echo('OLD LINE ' .. i .. '\\n') end\n"));
+        QVERIFY2(buffer.linesTrimmedTotal() > 0, "the buffer never reached its limit");
+        qApp->processEvents();
+        pane->forceUpdate();
+        pane->repaint();
+        const int offsetBefore = pane->imageTopLine();
+        const qint64 trimmedBefore = buffer.linesTrimmedTotal();
+
+        lua->compileAndExecuteScript(qsl("for i = 1, %1 do echo('NEW LINE ' .. i .. '\\n') end\n").arg(batch));
+        QCOMPARE(buffer.linesTrimmedTotal(), trimmedBefore + batch);
+        QCOMPARE(pane->imageTopLine(), offsetBefore);
+
+        pane->repaint();
+        const QImage afterIncremental = pane->cachedScreen().copy();
+
+        pane->forceUpdate();
+        pane->repaint();
+        const QImage authoritative = pane->cachedScreen().copy();
+
+        QVERIFY2(!afterIncremental.isNull() && !authoritative.isNull(), "no cached screen to compare");
+        QCOMPARE(afterIncremental.size(), authoritative.size());
+        QVERIFY2(afterIncremental == authoritative,
+                 "a trim that left the view's offset where it was read as no scroll at all, so only the bottom row was redrawn and the rest "
+                 "kept the text from before the new lines arrived");
+    }
+
+    // Scrolled back, the view follows its lines up as the buffer trims, so its
+    // offset drops by the trim while what it shows stays put.
+    void test_aTrimUnderAScrolledBackView()
+    {
+        mpServer->setSendsWelcome(false);
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
+        QVERIFY(pane);
+        TBuffer& buffer = host->mainConsoleView()->buffer;
+        auto* lua = host->getLuaInterpreter();
+
+        constexpr int batch = 100;
+        lua->compileAndExecuteScript(qsl("setConsoleBufferSize('main', 1000, %1)\n").arg(batch));
+        lua->compileAndExecuteScript(qsl("for i = 1, 1100 do echo(string.format('OLD LINE %04d %s\\n', i, string.rep('#', i % 37))) end\n"));
+        qApp->processEvents();
+        pane->scrollUp(300);
+        qApp->processEvents();
+        pane->forceUpdate();
+        pane->repaint();
+        const int offsetBefore = pane->imageTopLine();
+        const qint64 trimmedBefore = buffer.linesTrimmedTotal();
+
+        // A line on screen changes in place before the trim renumbers it
+        lua->compileAndExecuteScript(qsl("moveCursor('main', 0, %1) selectCurrentLine('main') fg('main', 'red') deselect('main') moveCursorEnd('main')\n").arg(offsetBefore + 5));
+        QVERIFY2(pane->mDirtyFirstLine >= 0, "recolouring the line did not leave it pending for the next paint");
+        lua->compileAndExecuteScript(qsl("for i = 1, %1 do echo('NEW LINE ' .. i .. '\\n') end\n").arg(batch));
+        QCOMPARE(buffer.linesTrimmedTotal(), trimmedBefore + batch);
+        QCOMPARE(pane->imageTopLine(), offsetBefore - batch);
+
+        pane->repaint();
+        const QImage afterIncremental = pane->cachedScreen().copy();
+        pane->forceUpdate();
+        pane->repaint();
+        const QImage authoritative = pane->cachedScreen().copy();
+        QVERIFY2(!afterIncremental.isNull() && afterIncremental == authoritative, "a trim under a scrolled back view left it showing something other than a full redraw");
+    }
+
     // The cached screen slides over a buffer twice its height and moves the rows
     // it keeps back to the far end whenever it reaches an end, so each direction
     // scrolls more than a screen's worth to cross both ends at least once.

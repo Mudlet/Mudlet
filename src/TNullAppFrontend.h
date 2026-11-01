@@ -49,16 +49,16 @@ public:
         QMap<QString, Placement> mapWidgets;
     };
 
-    Host* getActiveHost() override { return nullptr; }
+    Host* getActiveHost() override;
     void announce(const QString&, const QString&, bool) override {}
     void showOptionsDialog(const QString&, Host*) override {}
     void showConnectionDialog() override {}
     void handleTelnetUri(const QString&) override {}
     void setCompactInputLineChecked(Host*, bool) override {}
     void armForceClose() override;
-    void writeSettings() override {}
+    void writeSettings() override;
     bool openWebPage(const QString&) override { return false; }
-    void showNotification(const QString&, const QString&, std::optional<int>) override {}
+    bool showNotification(const QString&, const QString&, std::optional<int>) override { return false; }
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
     void setDrawUpperLowerLevels(bool draw) override { mDrawUpperLowerLevels = draw; }
     void updateMapActionAvailability() override {}
@@ -67,9 +67,9 @@ public:
     void alertUser(int) override {}
     std::optional<QSize> getImageSize(const QString& imageLocation) override;
     int profileTabIndex(const QString&) const override { return -1; }
-    void setActiveProfileTab(const QString&) override {}
+    void setActiveProfileTab(const QString& profileName) override;
     void setAppStyleSheet(const QString&) override {}
-    void resizeMainWindow(int, int) override {}
+    bool resizeMainWindow(int, int) override { return false; }
     bool loadWindowLayout() override;
     bool layoutLoading() const override { return mpLayoutLoad != nullptr; }
     bool saveWindowLayoutForScript() override;
@@ -137,9 +137,11 @@ private:
     void removeAddonCommandsOf(const Host* pHost, const QString& package = QString());
 
     // Held, unlike the rest, as getConfig() reads these back. Each starts at the main window's default
-    // with no saved settings; nothing saves them.
+    // with no saved settings, until a pool with no main window reads Mudlet.ini's.
     bool mDrawUpperLowerLevels = true;
     bool mShowTabConnectionIndicators = false;
+    // A pointer, as the main window keeps it, so a profile opened again under the name is not in front
+    QPointer<Host> mpActiveHost;
     struct LayoutLoad
     {
         const QMap<QString, Placement>& placements;

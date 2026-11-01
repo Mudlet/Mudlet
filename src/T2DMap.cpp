@@ -148,6 +148,22 @@ const QString& key_in = qsl("in");
 const QString& key_out = qsl("out");
 
 namespace {
+// A special exit can be named like a normal one ("n", "up"...); a custom line by
+// that name is the special exit's when the room has no such normal exit.
+int customLineDestination(const TRoom& room, const QString& key)
+{
+    for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
+        if (TRoom::dirCodeToShortString(direction) == key) {
+            const int destination = room.getExit(direction);
+            if (destination > 0 || !room.getSpecialExits().contains(key)) {
+                return destination;
+            }
+            break;
+        }
+    }
+    return room.getSpecialExits().value(key);
+}
+
 // The room an XY-plane exit leads to, or 0 for any other exit.
 int xyExitFor(const TRoom& room, const QString& key)
 {
@@ -3426,33 +3442,7 @@ void T2DMap::paintRoomExits(QPainter& painter,
     } else if (mCustomLineSelectedRoom > 0 && !mCustomLineSelectedExit.isEmpty()) {
         TRoom* pSR = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
         if (pSR) {
-            if (mCustomLineSelectedExit == key_nw) {
-                customLineDestinationTarget = pSR->getNorthwest();
-            } else if (mCustomLineSelectedExit == key_n) {
-                customLineDestinationTarget = pSR->getNorth();
-            } else if (mCustomLineSelectedExit == key_ne) {
-                customLineDestinationTarget = pSR->getNortheast();
-            } else if (mCustomLineSelectedExit == key_up) {
-                customLineDestinationTarget = pSR->getUp();
-            } else if (mCustomLineSelectedExit == key_w) {
-                customLineDestinationTarget = pSR->getWest();
-            } else if (mCustomLineSelectedExit == key_e) {
-                customLineDestinationTarget = pSR->getEast();
-            } else if (mCustomLineSelectedExit == key_down) {
-                customLineDestinationTarget = pSR->getDown();
-            } else if (mCustomLineSelectedExit == key_sw) {
-                customLineDestinationTarget = pSR->getSouthwest();
-            } else if (mCustomLineSelectedExit == key_s) {
-                customLineDestinationTarget = pSR->getSouth();
-            } else if (mCustomLineSelectedExit == key_se) {
-                customLineDestinationTarget = pSR->getSoutheast();
-            } else if (mCustomLineSelectedExit == key_in) {
-                customLineDestinationTarget = pSR->getIn();
-            } else if (mCustomLineSelectedExit == key_out) {
-                customLineDestinationTarget = pSR->getOut();
-            } else {
-                customLineDestinationTarget = pSR->getSpecialExits().value(mCustomLineSelectedExit);
-            }
+            customLineDestinationTarget = customLineDestination(*pSR, mCustomLineSelectedExit);
         }
     }
     // Viewport rooms plus every custom-line room on the level, as such a line can cross the whole level.
@@ -4479,32 +4469,8 @@ void T2DMap::slot_customLineProperties()
             }
             le_cmd->setText(exit);
             le_fromId->setText(QString::number(room->getId()));
-            if (exit == key_nw) {
-                le_toId->setText(QString::number(room->getNorthwest()));
-            } else if (exit == key_n) {
-                le_toId->setText(QString::number(room->getNorth()));
-            } else if (exit == key_ne) {
-                le_toId->setText(QString::number(room->getNortheast()));
-            } else if (exit == key_up) {
-                le_toId->setText(QString::number(room->getUp()));
-            } else if (exit == key_w) {
-                le_toId->setText(QString::number(room->getWest()));
-            } else if (exit == key_e) {
-                le_toId->setText(QString::number(room->getEast()));
-            } else if (exit == key_down) {
-                le_toId->setText(QString::number(room->getDown()));
-            } else if (exit == key_sw) {
-                le_toId->setText(QString::number(room->getSouthwest()));
-            } else if (exit == key_s) {
-                le_toId->setText(QString::number(room->getSouth()));
-            } else if (exit == key_se) {
-                le_toId->setText(QString::number(room->getSoutheast()));
-            } else if (exit == key_in) {
-                le_toId->setText(QString::number(room->getIn()));
-            } else if (exit == key_out) {
-                le_toId->setText(QString::number(room->getOut()));
-            } else if (room->getSpecialExits().contains(exit)) {
-                le_toId->setText(QString::number(room->getSpecialExits().value(exit)));
+            if (const int destination = customLineDestination(*room, exit); destination || room->getSpecialExits().contains(exit)) {
+                le_toId->setText(QString::number(destination));
             } else {
                 qWarning().noquote().nospace() << "T2DMap::slot_customLineProperties() WARNING - missing no exit \"" << exit
                                                << "\" to be associated with a custom exit line with that designation in room id " << room->getId();

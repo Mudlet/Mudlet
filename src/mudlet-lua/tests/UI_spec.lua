@@ -7773,12 +7773,9 @@ describe("Console buffer size", function()
     assert.is_true(named > 0, ("%d trims were announced, none of them naming %s"):format(#seen, console))
   end)
 
-  -- The count the event carries is the amount every surviving index moved by.
-  -- The cursor moveCursor() sets is not moved with them: it keeps the index it
-  -- was given rather than following the line it was parked on. The engine's own
-  -- cursor is left behind too, but no Lua call reads that one back. That is the
-  -- known limitation the event exists to work around, so a script that ignores
-  -- it is left pointing at whatever text has since moved under its index.
+  -- The count the event carries is the amount every surviving index moved by, so a
+  -- script moves the indexes it saved by it. The cursor moveCursor() sets is not one
+  -- of those: it follows the line it was parked on.
   it("shifts the lines under a saved index down by the count the event reports", function()
     clearWindow(console)
     assert.is_true(setConsoleBufferSize(console, 100, 10))
@@ -7803,9 +7800,7 @@ describe("Console buffer size", function()
     assert.is_true(trimmed > 0, "the buffer never trimmed, so nothing moved")
     assert.are_not.equal(savedText, getLines(console, savedIndex, savedIndex + 1)[1])
     assert.are.equal(savedText, getLines(console, savedIndex - trimmed, savedIndex - trimmed + 1)[1])
-    -- the cursor stayed on the index it was given, not on the line it was on
-    assert.are.equal(savedIndex, getLineNumber(console))
-    moveCursor(console, 0, savedIndex - trimmed)
+    assert.are.equal(savedIndex - trimmed, getLineNumber(console))
     selectCurrentLine(console)
     assert.are.equal(savedText, getSelection(console))
   end)
@@ -8004,14 +7999,23 @@ describe("Main window size and saved layout", function()
     assert.is_truthy(tostring(err):find("setMainWindowSize: bad argument #2 type", 1, true))
   end)
 
+  it("setMainWindowSize says so when there is no main window to size", function()
+    -- getMousePosition() has no answer only when there is no main window
+    if getMousePosition() then
+      pending("there is a main window")
+    end
+    local ok, err = setMainWindowSize(800, 600)
+    assert.is_nil(ok)
+    assert.are.equal("the profile has no main window", err)
+  end)
+
   it("a bigger main window is reported as bigger", function()
     if not resizableWindowAvailable() then
       return
     end
     finally(restoreMainWindowSize)
     local smallWidth, smallHeight = 700, 500
-    -- and it answers nothing at all while it is at it
-    assert.are.equal(0, select("#", setMainWindowSize(smallWidth, smallHeight)))
+    assert.is_true(setMainWindowSize(smallWidth, smallHeight))
     pumpEvents(200)
     local narrowWidth, shortHeight = getMainWindowSize()
 

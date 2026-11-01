@@ -2144,6 +2144,66 @@ tempTimer(0, function() feedTriggers("headless ready\n") end))lua"),
         QCOMPARE(readFile(recordPath), qsl("sysExitEvent\n"));
     }
 
+    // The terminal standard output goes to is the main console's size, as the GUI's main window is, and a resize
+    // of it is passed on
+    void test_theGameIsToldTheTerminalsSize()
+    {
+        const QString name = qsl("Headless Runner Terminal Size");
+        QString recordPath;
+        QVERIFY(writeRecordingProfile(name, qsl(R"lua(registerAnonymousEventHandler("sysWindowResizeEvent", function() record("resized") end))lua"), recordPath));
+        TelnetServerStub server;
+        server.start(qsl("127.0.0.1"));
+        QVERIFY(server.isListening());
+        QVERIFY(writeProfileData(name, qsl("url"), qsl("127.0.0.1")));
+        QVERIFY(writeProfileData(name, qsl("port"), QString::number(server.serverPort())));
+        const int terminal = ::posix_openpt(O_RDWR | O_NOCTTY);
+        QVERIFY(terminal >= 0);
+        QVERIFY(::grantpt(terminal) == 0 && ::unlockpt(terminal) == 0);
+        const int output = ::open(::ptsname(terminal), O_RDWR | O_NOCTTY);
+        QVERIFY(output >= 0);
+        // Narrower than the default wrap width, which caps what the game is told
+        winsize size{};
+        size.ws_col = 80;
+        size.ws_row = 30;
+        QVERIFY(::ioctl(output, TIOCSWINSZ, &size) == 0);
+        QVERIFY(::fcntl(terminal, F_SETFD, FD_CLOEXEC) == 0 && ::fcntl(output, F_SETFD, FD_CLOEXEC) == 0);
+        QVERIFY(::fcntl(terminal, F_SETFL, O_NONBLOCK) == 0);
+        const auto closeTerminal = qScopeGuard([terminal]() {
+            ::close(terminal);
+        });
+        // Read as it comes, so the runner's writes to the terminal never wait
+        const auto drain = [terminal]() {
+            char buffer[4096];
+            while (::read(terminal, buffer, sizeof(buffer)) > 0) {
+            }
+        };
+
+        QProcess child;
+        child.setChildProcessModifier([output]() {
+            ::dup2(output, STDOUT_FILENO);
+        });
+        startChild(child, {qsl("-p"), name, qsl("--no-stdin")});
+        ::close(output);
+        QVERIFY(child.waitForStarted(scmFinishTimeoutMs));
+        QTRY_VERIFY_WITH_TIMEOUT((drain(), server.clientConnected()), scmFinishTimeoutMs);
+        // IAC DO NAWS
+        server.sendRaw(QByteArray("\xff\xfd\x1f", 3));
+        QTRY_VERIFY_WITH_TIMEOUT((drain(), server.nawsUpdates().contains(QSize(80, 30))), scmFinishTimeoutMs);
+
+        size.ws_col = 70;
+        size.ws_row = 20;
+        QVERIFY(::ioctl(terminal, TIOCSWINSZ, &size) == 0);
+        // The terminal is not the child's controlling one, so nothing else sends it this
+        QVERIFY(::kill(static_cast<pid_t>(child.processId()), SIGWINCH) == 0);
+        QTRY_VERIFY_WITH_TIMEOUT((drain(), server.nawsUpdates().contains(QSize(70, 20))), scmFinishTimeoutMs);
+
+        QVERIFY(::kill(static_cast<pid_t>(child.processId()), SIGTERM) == 0);
+        QTRY_COMPARE_WITH_TIMEOUT((drain(), child.state()), QProcess::NotRunning, scmFinishTimeoutMs);
+        const QString standardError = textOf(child.readAllStandardError());
+        QVERIFY2(child.exitCode() == 128 + SIGTERM, qPrintable(qsl("exit code %1, stderr: %2").arg(child.exitCode()).arg(standardError)));
+        QCOMPARE(readFile(recordPath), qsl("resized\nresized\nsysExitEvent\n"));
+    }
+
     // What a phone app built on mudlet_core can count on: nothing the core runs needs Qt Widgets
     void test_noQtWidgets()
     {

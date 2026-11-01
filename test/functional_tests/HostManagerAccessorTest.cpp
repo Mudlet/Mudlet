@@ -279,7 +279,7 @@ private slots:
         // Listening as it goes, so the pool's teardown ends a session while the main window's members go
         const auto restoreFactory = installStandInFactory();
         QVERIFY2(startListening(pHost), "the profile did not start listening");
-        // Run by the exit event the pool raises as it goes, once the main window's later members are gone
+        // Run by the exit event raised as the main window closes the profile on its way out
         static mudlet* sMainWindow = nullptr;
         static bool sConnectionChecked = false;
         static bool sStillConnected = false;
@@ -301,9 +301,43 @@ private slots:
         QVERIFY2(accessorAnsweredDuringTeardown, "the accessor was cleared before the profile pool it describes was emptied");
         QVERIFY2(sConnectionChecked, "the profile's exit handler never ran, so nothing was checked");
         QVERIFY2(!sStillConnected, "the main window was still taking the speech bridge's signal as its members went");
-        // Ended as the profile went, without running its scripts while the main window's members go
-        QCOMPARE(smEngineStates, QStringList({qsl("Ready")}));
+        // Ended as the profile went, without running its scripts, and released as closing the last profile does
+        QCOMPARE(smEngineStates, QStringList({qsl("Ready"), qsl("Uninitialized")}));
         QCOMPARE(smScriptStates, QStringList({qsl("listening")}));
+    }
+
+    // One opened then would outlive the main window, which closes its windows before its Host
+    void anExitHandlerCannotOpenAProfileAsTheMainWindowGoes()
+    {
+        mudlet::start();
+        mudlet::self()->setupConfig();
+        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
+        mudlet::self()->init();
+        mudlet::self()->setStorePasswordsSecurely(false);
+
+        const QString lateProfile = qsl("HostManagerAccessor-Late");
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles/%2").arg(mConfigDir.path(), lateProfile)));
+        // With no main console it still owes its exit event when the main window goes
+        const QString profileName = qsl("HostManagerAccessor-Exit");
+        QVERIFY2(HostManager::self()->addHost(profileName, QString(), QString(), QString()), "failed to put a profile in the pool");
+        Host* pHost = HostManager::self()->getHost(profileName);
+        QVERIFY(pHost);
+        static bool sHandlerRan = false;
+        static bool sLateProfileOpened = false;
+        sHandlerRan = false;
+        sLateProfileOpened = false;
+        lua_register(pHost->getLuaInterpreter()->getLuaGlobalState(), "recordLateOpen", [](lua_State* L) -> int {
+            sHandlerRan = true;
+            sLateProfileOpened = !lua_isnil(L, 1);
+            return 0;
+        });
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("function openLateProfile() recordLateOpen(loadProfile('%1', true)) end").arg(lateProfile)));
+        pHost->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("openLateProfile"));
+
+        delete mudlet::self();
+
+        QVERIFY2(sHandlerRan, "the profile's exit handler never ran, so nothing was checked");
+        QVERIFY2(!sLateProfileOpened, "a profile was opened after the main window had closed the others");
     }
 };
 
