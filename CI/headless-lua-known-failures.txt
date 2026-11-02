@@ -1,6 +1,6 @@
 # Specs that fail in mudlet-headless, which has no main window, read by
 # CI/check-headless-lua-failures.py, which says what each line means.
-minimum successes: 7773
+minimum successes: 7789
 maximum pending: 261
 
 # Need a main window
@@ -40,22 +40,6 @@ Failure MapSymbolPrivateUse_spec.lua: Tests room symbols from a font's Private U
 Failure MapSymbolPrivateUse_spec.lua: Tests room symbols from a font's Private Use Area draws a glyph the symbol font has there, from only the selected font, in a map loaded from a binary file
 Failure MapViewportLimits_spec.lua: Tests painting a map label many times bigger than the map window exports an area holding a huge scaled image label above the rooms
 Failure MapViewportLimits_spec.lua: Tests painting a map label many times bigger than the map window exports an area holding a huge scaled image label below the rooms
-Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage can be called twice in a row
-Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage draws a room's symbol
-Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage of every z level checks the files it writes, not the name they are made from
-Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage of every z level writes none of them when one is refused
-Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage reports a save that failed against that export alone
-Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage returns false and a message for a directory that is not there
-Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage returns false and a message for a path that is a directory
-Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage returns false and a message for an empty file name
-Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage returns false and a message for an image format it cannot write
-Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage returns false and a message when the directory is a file
-Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage returns true for a valid area (the file is written asynchronously)
-Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage takes a nil areaID when the player is in a room
-Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage takes a single z level
-Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage takes true for every z level at once
-Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export with a target it may not write exportAreaImage returns false and a message for a directory it may not write to
-Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export with a target it may not write exportAreaImage returns false and a message for a file it may not overwrite
 Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests registered map info refuses to delete rooms or areas, or replace the map, from inside a map info callback
 Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests registered map info survives a map info callback that registers and kills contributors while the map is painted
 Failure Media_spec.lua: Media playback effects with a generated sound file a Client.Media.Play message that names the video type is played as a video

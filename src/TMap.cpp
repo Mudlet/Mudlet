@@ -43,7 +43,9 @@
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QElapsedTimer>
+#include <QFileInfo>
 #include <QFontMetrics>
+#include <QImageWriter>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -4223,6 +4225,96 @@ void TMap::announceDefaultAreaVisibilitySet(const bool wasShown)
 void TMap::announceMapInfoContributorsChanged()
 {
     emit signal_mapInfoContributorsChanged();
+}
+
+QString TMap::exportImageFormat(const QString& filePath)
+{
+    const QString suffix = QFileInfo(filePath).suffix();
+    return suffix.isEmpty() ? qsl("png") : suffix.toLower();
+}
+
+namespace {
+// The image is written on another thread, too late for the caller to hear of a
+// failure, so the likely causes are checked first; others (a full disk, a name
+// the file system refuses) still only show on the console. A name template for
+// every z level is never written itself, so only what its level files share is
+// checked against it. Returns an empty string when nothing is wrong.
+QString exportTargetProblem(const QString& filePath, const bool nameTemplate)
+{
+    if (filePath.isEmpty()) {
+        return qsl("No file name given");
+    }
+    const QFileInfo targetFileInfo(filePath);
+    if (targetFileInfo.isDir() && (!nameTemplate || targetFileInfo.fileName().isEmpty())) {
+        return qsl("%1 is a directory").arg(targetFileInfo.absoluteFilePath());
+    }
+    const QString directory = targetFileInfo.absolutePath();
+    const QFileInfo directoryInfo(directory);
+    if (!directoryInfo.exists()) {
+        return qsl("Directory %1 does not exist").arg(directory);
+    }
+    if (!directoryInfo.isDir()) {
+        return qsl("%1 is not a directory").arg(directory);
+    }
+    if (targetFileInfo.fileName().isEmpty()) {
+        return qsl("No file name given");
+    }
+    if (!nameTemplate) {
+        if (targetFileInfo.exists() && !targetFileInfo.isWritable()) {
+            return qsl("File %1 is not writable").arg(targetFileInfo.absoluteFilePath());
+        }
+#if !defined(Q_OS_WIN)
+        // Not on Windows: there isWritable() reads a directory's read-only attribute,
+        // which shell folders such as Documents carry and which does not stop a write
+        if (!targetFileInfo.exists() && !directoryInfo.isWritable()) {
+            return qsl("Directory %1 is not writable").arg(directory);
+        }
+#endif
+    }
+    const QString format = TMap::exportImageFormat(filePath);
+    if (!QImageWriter::supportedImageFormats().contains(format.toLatin1())) {
+        return qsl("Image format \"%1\" is not supported").arg(format);
+    }
+    return {};
+}
+} // namespace
+
+QString TMap::areaExportProblem(const int areaId, const QString& filePath, const qreal zoom, const bool exportAllZLevels, QList<std::pair<int, QString>>& levelExports) const
+{
+    if (zoom <= 0.0 || zoom > 10.0) {
+        return qsl("Zoom must be between 0.1 and 10.0");
+    }
+    if (const QString problem = exportTargetProblem(filePath, exportAllZLevels); !problem.isEmpty()) {
+        return problem;
+    }
+    TArea* pArea = mpRoomDB->getArea(areaId);
+    if (!pArea) {
+        return qsl("Area %1 not found").arg(areaId);
+    }
+    if (pArea->rooms.isEmpty()) {
+        return qsl("Area %1 contains no rooms").arg(areaId);
+    }
+    if (!exportAllZLevels) {
+        return {};
+    }
+    if (pArea->zLevels.isEmpty()) {
+        return qsl("Area %1 has no Z levels").arg(areaId);
+    }
+    const QFileInfo fileInfo(filePath);
+    const QString baseFileName = fileInfo.completeBaseName();
+    const QString extension = fileInfo.suffix();
+    const QString basePath = fileInfo.absolutePath();
+    // Collected before any export runs: each export's calcSpan() replaces
+    // zLevels, which would free the list under a loop over it
+    for (const int zLevel : std::as_const(pArea->zLevels)) {
+        const QString levelFileName = qsl("%1/%2_level_%3.%4").arg(basePath, baseFileName, QString::number(zLevel), extension.isEmpty() ? qsl("png") : extension);
+        // Every level is checked before any is queued, so a refusal leaves nothing written
+        if (const QString problem = exportTargetProblem(levelFileName, false); !problem.isEmpty()) {
+            return qsl("Failed to export Z level %1: %2").arg(zLevel).arg(problem);
+        }
+        levelExports.append({zLevel, levelFileName});
+    }
+    return {};
 }
 
 QString TMap::zoomError(const qreal zoom)

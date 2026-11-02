@@ -303,6 +303,11 @@ public:
     static constexpr qreal scmMinXYZoom = 3.0;
     // Why a script's 2D zoom can't be used, or empty when it can
     static QString zoomError(qreal zoom);
+    // What an image export to the file is written as, from its suffix
+    static QString exportImageFormat(const QString& filePath);
+    // Why an image export of the area would be refused before it is drawn, or empty when it would not;
+    // for every z level, levelExports takes each level and the file it is written to
+    QString areaExportProblem(int areaId, const QString& filePath, qreal zoom, bool exportAllZLevels, QList<std::pair<int, QString>>& levelExports) const;
     // Which of the symbols in use would be drawn as the replacement character
     // if the given font were the symbol font:
     QStringList symbolsNotInFont(const QFont&);
