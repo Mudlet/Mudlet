@@ -1182,6 +1182,94 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(contains(contents, "mudlet-spec-appended-line"), "the appended text is not in the log")
         end)
 
+        it("keeps a gagged line appended by its trigger in arrival order", function()
+          local logPath
+          local triggerId
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          triggerId = tempExactMatchTrigger("SpecAppendOrderGagged", function()
+            deleteLine()
+            appendLog("SpecAppendOrderGagged\n")
+          end)
+          logPath = select(3, startLogging(true))
+
+          feedTelnet("SpecAppendOrderBefore\nSpecAppendOrderGagged\nSpecAppendOrderAfter\n")
+          -- a received line is only written once the next one commits
+          feedTelnet("SpecAppendOrderFlush\n")
+          startLogging(false)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the text log file that was closed is not readable")
+          assert.is_true(contains(contents, "SpecAppendOrderBefore\nSpecAppendOrderGagged\nSpecAppendOrderAfter\n"), "the appended line is out of arrival order:\n" .. contents)
+        end)
+
+        it("writes text appended by gagged lines without waiting for a line that is not gagged", function()
+          local logPath
+          local triggerId
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            if logPath then
+              os.remove(logPath)
+            end
+          end)
+          triggerId = tempRegexTrigger("^SpecAppendHeld\\d$", function()
+            deleteLine()
+            appendLog(line .. "\n")
+          end)
+          logPath = select(3, startLogging(true))
+
+          feedTelnet("SpecAppendHeldBefore\nSpecAppendHeld1\nSpecAppendHeld2\n")
+          pumpEvents(50)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the open text log file is not readable")
+          assert.is_true(contains(contents, "SpecAppendHeldBefore\nSpecAppendHeld1\nSpecAppendHeld2\n"), "the appended lines were held back:\n" .. contents)
+        end)
+
+        it("logs a prompt once when a gagged line appends to the log before a command is echoed onto it", function()
+          local logPath
+          local triggerId
+          local htmlLogging = getConfig("logInHTML")
+          finally(function()
+            startLogging(false)
+            if triggerId then
+              killTrigger(triggerId)
+            end
+            if logPath then
+              os.remove(logPath)
+            end
+            setConfig("logInHTML", htmlLogging)
+          end)
+          setConfig("logInHTML", false)
+          triggerId = tempExactMatchTrigger("SpecAppendPromptGagged", function()
+            deleteLine()
+            appendLog("SpecAppendPromptGagged\n")
+          end)
+          logPath = select(3, startLogging(true))
+
+          feedTelnet("SpecAppendPromptBefore\nSpecAppendPrompt>\255\249")
+          feedTelnet("SpecAppendPromptGagged\n")
+          send("spec-append-prompt-command", true)
+          feedTelnet("SpecAppendPromptAfter\nSpecAppendPromptFlush\n")
+          startLogging(false)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the text log file that was closed is not readable")
+          assert.is_true(contains(contents, "SpecAppendPrompt>spec-append-prompt-command\n"), "the prompt with its command echo is not in the log:\n" .. contents)
+          assert.is_false(contains(contents, "SpecAppendPrompt>\n"), "the prompt was logged again without its command echo:\n" .. contents)
+          assert.is_true(contains(contents, "SpecAppendPromptGagged\n"), "the appended text is not in the log:\n" .. contents)
+        end)
+
         it("writes nothing while logging is off", function()
           local logPath
           finally(function()

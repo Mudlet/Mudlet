@@ -25,6 +25,7 @@
 #include "TCommandLine.h"
 
 #include "MudletApp.h"
+#include "TCommandHistory.h"
 #include "TEncodingHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -38,13 +39,14 @@
 #include <hunspell/hunspell.h>
 
 #include <QAbstractTextDocumentLayout>
+#include <QFileInfo>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QMimeData>
 #include <QRegularExpression>
 #include <QResizeEvent>
 #include <QScrollBar>
-#include <QSaveFile>
+#include <QStyleOptionFrame>
 #include <QtMath>
 #include <QTextBlock>
 #include <algorithm>
@@ -182,7 +184,7 @@ void TCommandLine::insertFromMimeData(const QMimeData* source)
 
 bool TCommandLine::claimsShortcutOverride(const QKeyEvent* ke) const
 {
-    if (!mpHost || mpHost->isClosingDown()) {
+    if (mpHost->isClosingDown()) {
         return false;
     }
     // The caret-mode shortcut must beat application-wide QShortcuts, such as
@@ -218,7 +220,7 @@ bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
 {
     // Don't process keybindings if the host is closing down to prevent crashes
     // when multiple profiles are closed quickly
-    if (mpHost && mpHost->isClosingDown()) {
+    if (mpHost->isClosingDown()) {
         return false;
     }
 
@@ -230,9 +232,35 @@ bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
     return false;
 }
 
+bool TCommandLine::takeKeyPress(QKeyEvent* event)
+{
+    if (!mpHost || mpHost->isClosingDown()) {
+        return false;
+    }
+
+    switch (event->key()) {
+    case Qt::Key_Shift:
+    case Qt::Key_Control:
+    case Qt::Key_Alt:
+    case Qt::Key_AltGr:
+    case Qt::Key_Meta:
+        // Taken alone, it would move focus here ahead of the key it goes with, such as the Tab of Shift+Tab
+        return false;
+    default:
+        break;
+    }
+
+    // Focus in an inactive window waits for it to be activated
+    activateWindow();
+    setFocus(Qt::OtherFocusReason);
+    QCoreApplication::sendEvent(this, event);
+    event->accept();
+    return true;
+}
+
 bool TCommandLine::keybindingWouldMatchProfileSwitchShortcut(const QKeyEvent* keyEvent) const
 {
-    if (!mpKeyUnit || (mpHost && mpHost->isClosingDown())) {
+    if (!mpKeyUnit || mpHost->isClosingDown()) {
         return false;
     }
 
@@ -259,7 +287,7 @@ bool TCommandLine::event(QEvent* event)
 
     // Don't process events if the host is closing down to prevent crashes
     // when multiple profiles are closed quickly
-    if (!mpHost || mpHost->isClosingDown()) {
+    if (mpHost->isClosingDown()) {
         return QPlainTextEdit::event(event);
     }
 
@@ -710,7 +738,7 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
     // if it was Qt::ActiveWindowFocusReason as that gets used just by
     // switching away and back to the Mudlet application and it messes up
     // the record:
-    if (mpHost && event->reason() != Qt::ActiveWindowFocusReason && mpHost->mainConsoleView()) {
+    if (event->reason() != Qt::ActiveWindowFocusReason && mpHost->mainConsoleView()) {
         mpHost->mainConsoleView()->recordActiveCommandLine(this);
     }
 
@@ -732,7 +760,7 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 void TCommandLine::hideEvent(QHideEvent* event)
 {
     // Redirect focus to main commandline when hiding a SubCommandLine to prevent keyboard input being trapped
-    if (mType == enums::SubCommandLine && hasFocus() && mpHost && mpHost->mainConsoleView() && mpHost->mainConsoleView()->mpCommandLine) {
+    if (mType == enums::SubCommandLine && hasFocus() && mpHost->mainConsoleView() && mpHost->mainConsoleView()->mpCommandLine) {
         mpHost->mainConsoleView()->mpCommandLine->setFocus();
     }
 
@@ -753,7 +781,27 @@ int TCommandLine::heightForRows(const int rows) const
     const QTextLayout* layout = firstBlock.layout();
     const int rowsInFirstBlock = (layout && layout->lineCount() > 0) ? layout->lineCount() : 1;
     // a viewport that merely matches the text still keeps a row of range, so clear it by one
-    return qCeil(blockHeight / rowsInFirstBlock * rows + 2 * documentMargin) + 1 + 2 * frameWidth();
+    const QMargins frame = frameSides();
+    return qCeil(blockHeight / rowsInFirstBlock * rows + 2 * documentMargin) + 1 + frame.top() + frame.bottom();
+}
+
+// What QFrame derives its frame from, asked of the style: contentsMargins() reads zero until the widget is first shown.
+QMargins TCommandLine::frameSides() const
+{
+    QStyleOptionFrame option;
+    initStyleOption(&option);
+    const QRect contents = style()->subElementRect(QStyle::SE_ShapedFrameContents, &option, this);
+    return {contents.left() - option.rect.left(), contents.top() - option.rect.top(), option.rect.right() - contents.right(), option.rect.bottom() - contents.bottom()};
+}
+
+// QAbstractScrollArea adds twice frameWidth(), its widest side, to both axes, and a style sheet's
+// padding counts as frame - so padding-left: 1000px alone would demand over 2000px each way.
+QSize TCommandLine::minimumSizeHint() const
+{
+    const QSize hint = QPlainTextEdit::minimumSizeHint();
+    const QMargins frame = frameSides();
+    const int assumedFrame = 2 * frameWidth();
+    return {hint.width() - assumedFrame + frame.left() + frame.right(), hint.height() - assumedFrame + frame.top() + frame.bottom()};
 }
 
 void TCommandLine::adjustHeight()
@@ -799,7 +847,7 @@ void TCommandLine::adjustHeight()
 
 void TCommandLine::spellCheck()
 {
-    if (!mpHost || !mpHost->getEnableSpellCheck()) {
+    if (!mpHost->getEnableSpellCheck()) {
         return;
     }
 
@@ -815,7 +863,7 @@ void TCommandLine::spellCheck()
 void TCommandLine::slot_popupMenu()
 {
     auto* pA = qobject_cast<QAction*>(sender());
-    if (!mpHost || !pA) {
+    if (!pA) {
         return;
     }
 #if defined(Q_OS_FREEBSD)
@@ -1123,13 +1171,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
             mHistoryBuffer = 1;
         }
 
-        mHistoryList.removeAll(toPlainText());
-        if (!mHistoryList.isEmpty()) {
-            mHistoryList[0] = toPlainText();
-        } else {
-            mHistoryList.push_front(toPlainText());
-        }
-        mHistoryList.push_front(QString());
+        TCommandHistory::add(mHistoryList, toPlainText());
     }
 
     if (mpHost->mAutoClearCommandLineAfterSend) {
@@ -1290,13 +1332,7 @@ void TCommandLine::historyMove(MoveDirection direction)
 {
     // DOWN at position 0 with text: save to history and clear input
     if (direction == MOVE_DOWN && mHistoryBuffer == 0 && !toPlainText().isEmpty() && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
-        mHistoryList.removeAll(toPlainText());
-        if (!mHistoryList.isEmpty()) {
-            mHistoryList[0] = toPlainText();
-        } else {
-            mHistoryList.push_front(toPlainText());
-        }
-        mHistoryList.push_front(QString());
+        TCommandHistory::add(mHistoryList, toPlainText());
 
         clear();
         adjustHeight();
@@ -1362,7 +1398,7 @@ void TCommandLine::slot_addWord()
 
 void TCommandLine::spellCheckWord(QTextCursor& c)
 {
-    if (!mpHost || !mpHost->getEnableSpellCheck()) {
+    if (!mpHost->getEnableSpellCheck()) {
         return;
     }
 
@@ -1459,7 +1495,7 @@ bool TCommandLine::handleCtrlTabChange(QKeyEvent* ke, int tabNumber)
 
 void TCommandLine::recheckWholeLine()
 {
-    if (!mpHost || !mpHost->getEnableSpellCheck()) {
+    if (!mpHost->getEnableSpellCheck()) {
         return;
     }
 
@@ -1675,40 +1711,19 @@ void TCommandLine::restoreHistory()
     }
 
     QString pathFileName{MudletApp::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
-    QFile historyFile(pathFileName, this);
-    if (historyFile.exists()) {
-        if (historyFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered)) {
-            QTextStream ifs(&historyFile);
-            QString buffer;
-            while (!ifs.atEnd() && ifs.status() == QTextStream::Ok) {
-                ifs.readLineInto(&buffer);
-                mHistoryList.append(buffer);
-            }
-
-            if (historyFile.error() != QFileDevice::NoError) {
-                qWarning() << "TCommandLine::restoreHistory() ERROR - unable to read command history from file for the command line called: " << mCommandLineName << " of type: " << mType
-                           << " reason: " << historyFile.errorString();
-                historyFile.close();
-                return;
-            }
-
-            historyFile.close();
-            // Success!
-            return;
+    if (!QFileInfo::exists(pathFileName)) {
+        // which will be the case for the first time the command line is
+        // created - so it might not be an error:
+        if (mCommandLineName != qsl("main")) {
+            qDebug() << "TCommandLine::restoreHistory() ALERT - unable to open command history for the command line called: " << mCommandLineName << " of type: " << mType
+                     << " because the file: " << mBackingFileName << " does not exist in the profile's home directory, unless this is a new command line then this is an unexpected error.";
         }
-
-        // else failed to open the file despite it existing
-        if (historyFile.error() != QFileDevice::NoError) {
-            qWarning() << "TCommandLine::restoreHistory() ERROR - unable to open command history for the command line called: " << mCommandLineName << " of type: " << mType
-                       << " reason: " << historyFile.errorString();
-            return;
-        }
+        return;
     }
-    // else no such file - which will be the case for the first time the
-    // command line is created - so it might not be an error:
-    if (mCommandLineName != qsl("main")) {
-        qDebug() << "TCommandLine::restoreHistory() ALERT - unable to open command history for the command line called: " << mCommandLineName << " of type: " << mType
-                 << " because the file: " << mBackingFileName << " does not exist in the profile's home directory, unless this is a new command line then this is an unexpected error.";
+    QString error;
+    if (!TCommandHistory::read(pathFileName, mHistoryList, error)) {
+        qWarning() << "TCommandLine::restoreHistory() ERROR - unable to read command history from file for the command line called: " << mCommandLineName << " of type: " << mType
+                   << " reason: " << error;
     }
 }
 
@@ -1730,18 +1745,10 @@ void TCommandLine::slot_saveHistory()
     }
 
     QString pathFileName{MudletApp::getMudletPath(enums::profileDataItemPath, pHost->getName(), mBackingFileName)};
-    QSaveFile historyFile(pathFileName, this);
-    if (historyFile.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        QTextStream ofs(&historyFile);
-        // We need to add one here because usually the first line in
-        // mHistoryList is an empty one - maybe it might represent the current
-        // line and will get captured/saved if the profile is closed with some
-        // unsent text in the command line?
-        ofs << mHistoryList.mid(0, saveSize + 1).join(QChar::LineFeed);
-        if (!historyFile.commit()) {
-            qDebug().nospace().noquote() << "TCommandLine::slot_saveHistory() ERROR - unable to save command history for the command line called: " << mCommandLineName << " of type: " << mType
-                                         << " reason: " << historyFile.errorString();
-        }
+    QString error;
+    if (!TCommandHistory::write(pathFileName, mHistoryList, saveSize, error)) {
+        qDebug().nospace().noquote() << "TCommandLine::slot_saveHistory() ERROR - unable to save command history for the command line called: " << mCommandLineName << " of type: " << mType
+                                     << " reason: " << error;
     }
 }
 

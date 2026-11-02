@@ -1681,12 +1681,14 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
     return 1;
 }
 
-// A gone Host, or no main window (as once mudlet is past its destructor), is
-// further along than the flags rather than healthier, so both count as
-// shutting down too.
+// A gone Host, a main window that has gone (as once mudlet is past its
+// destructor) or a pool being destroyed is further along than the flags rather
+// than healthier, so each counts as shutting down too. A run that never had a
+// main window is not.
 static bool shuttingDown(const QPointer<Host>& pHost)
 {
-    return !pHost || pHost->isClosingDown() || !TAppFrontend::hasView() || TAppFrontend::instance()->quitting();
+    const HostManager* pool = HostManager::self();
+    return !pHost || pHost->isClosingDown() || TAppFrontend::viewGone() || (pool && pool->goingDown()) || TAppFrontend::instance()->quitting();
 }
 
 // No documentation available in wiki - internal, test-only function

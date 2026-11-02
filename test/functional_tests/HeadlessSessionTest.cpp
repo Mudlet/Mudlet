@@ -26,13 +26,16 @@
  * Run with: ctest -R HeadlessSessionTest -V
  */
 
+#include <QDataStream>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTemporaryDir>
+#include <QXmlStreamReader>
 #include <QtTest/QtTest>
 
 #include <memory>
@@ -103,7 +106,7 @@ private:
         return zip_close(archive) == 0;
     }
 
-    static bool writeProfile(const QString& name, const QString& script)
+    static bool writeProfile(const QString& name, const QString& script, const QString& hostXml = QString())
     {
         const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, name);
         if (!QDir().mkpath(saveFolder)) {
@@ -116,11 +119,11 @@ private:
         saveFile.write(qsl(R"(<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE MudletPackage>
 <MudletPackage version="1.001">
-<HostPackage><Host></Host></HostPackage>
+<HostPackage><Host>%2</Host></HostPackage>
 <ScriptPackage><Script isActive="yes" isFolder="no"><name>headlessSession</name><packageName></packageName><script>%1</script><eventHandlerList/></Script></ScriptPackage>
 </MudletPackage>
 )")
-                               .arg(script.toHtmlEscaped())
+                               .arg(script.toHtmlEscaped(), hostXml)
                                .toUtf8());
         return true;
     }
@@ -174,6 +177,21 @@ end))lua")
     }
 
     static qsizetype saveCount(const QString& name) { return QDir(MudletApp::getMudletPath(enums::profileXmlFilesPath, name)).entryList(QStringList{qsl("*.xml")}, QDir::Files).size(); }
+
+    // pumpEvents() and waitForEvent() answer only in test mode
+    static auto inTestMode()
+    {
+        const bool wasSet = qEnvironmentVariableIsSet("MUDLET_TEST_MODE");
+        const QByteArray value = qgetenv("MUDLET_TEST_MODE");
+        qputenv("MUDLET_TEST_MODE", "1");
+        return qScopeGuard([wasSet, value]() {
+            if (wasSet) {
+                qputenv("MUDLET_TEST_MODE", value);
+            } else {
+                qunsetenv("MUDLET_TEST_MODE");
+            }
+        });
+    }
 
     static QString luaGlobalString(Host* host, const char* name)
     {
@@ -271,6 +289,52 @@ private slots:
         QVERIFY(session.runLua(qsl("headlessMutes = tostring(getConfig('muteMediaAPI')) .. ' ' .. tostring(getConfig('muteMediaGame'))")));
         QCOMPARE(luaGlobalString(session.host(), "headlessMutes"), qsl("true true"));
         QVERIFY(session.shutdown(false));
+    }
+
+    void test_waitsRunWithNoMainWindow()
+    {
+        const auto restore = inTestMode();
+        const QString name = qsl("Headless Waits");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"(
+local pumped, pumpError = pumpEvents(10)
+tempTimer(0, function() raiseEvent("headlessWait", 7) end)
+local event, arg = waitForEvent("headlessWait", 5000)
+headlessWaits = tostring(pumped) .. " " .. tostring(pumpError) .. " " .. tostring(event) .. " " .. tostring(arg)
+)")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessWaits"), qsl("true nil headlessWait 7"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // As in the GUI, where the main window has gone by then: a wait there would pump a pool part-way destroyed
+    void test_aWaitInAnExitHandlerIsToldOfTheShutdown()
+    {
+        const auto restore = inTestMode();
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString resultPath = dir.filePath(qsl("exit.txt"));
+        const QString name = qsl("Headless Exit Wait");
+        QVERIFY(writeProfile(name,
+                             qsl(R"(
+registerAnonymousEventHandler("sysExitEvent", function()
+  local ok, err = pumpEvents(3000)
+  local file = io.open([[%1]], "w")
+  file:write(tostring(ok) .. " " .. tostring(err))
+  file:close()
+end)
+)")
+                                     .arg(resultPath)));
+        QElapsedTimer elapsed;
+        {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            elapsed.start();
+            QVERIFY(session.shutdown(false));
+        }
+        QCOMPARE(readFile(resultPath), qsl("nil pumpEvents: stopped early, Mudlet is shutting down"));
+        QVERIFY2(elapsed.elapsed() < 2500, qPrintable(QString::number(elapsed.elapsed())));
     }
 
     void test_profileNameIsMatchedIgnoringCase()
@@ -1074,6 +1138,105 @@ end))lua");
         QCOMPARE(welcome.at(2).toBool(), false);
     }
 
+    // Only the main window makes a ShortcutsManager, and the GUI would open a save that had none with the defaults
+    void test_aSaveKeepsTheKeyboardShortcuts()
+    {
+        const QString name = qsl("Headless Shortcuts");
+        const QString shortcuts = qsl(R"(<profileShortcut key="Show Map">Ctrl+Shift+M</profileShortcut><profileShortcut key="Notepad"></profileShortcut>)");
+        QVERIFY(writeProfile(name, QString(), shortcuts));
+        {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            QVERIFY(session.shutdown(true));
+        }
+        QDir saves(MudletApp::getMudletPath(enums::profileXmlFilesPath, name));
+        const QStringList written = saves.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Time);
+        QCOMPARE(written.size(), 2);
+        // Read as XML, as pugixml builds differ on whether an empty element is written <a></a> or <a />
+        QStringList saved;
+        QXmlStreamReader reader(readFile(saves.filePath(written.first())));
+        while (!reader.atEnd()) {
+            if (reader.readNext() == QXmlStreamReader::StartElement && reader.name() == u"profileShortcut") {
+                const QString key = reader.attributes().value(u"key").toString();
+                saved << qsl("%1=%2").arg(key, reader.readElementText());
+            }
+        }
+        QVERIFY2(!reader.hasError(), qPrintable(reader.errorString()));
+        QCOMPARE(saved, (QStringList{qsl("Notepad="), qsl("Show Map=Ctrl+Shift+M")}));
+    }
+
+    void test_aReplayPlaysWithNoMainWindow()
+    {
+        const QString name = qsl("Headless Replay");
+        QVERIFY(writeProfile(name, QString()));
+        const QString logDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, name);
+        QVERIFY(QDir().mkpath(logDir));
+        {
+            QFile file(qsl("%1/headless.dat").arg(logDir));
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QDataStream stream(&file);
+            stream.setVersion(QDataStream::Qt_5_12);
+            const QByteArray bytes = QByteArrayLiteral("Replayed with no main window.\r\n");
+            stream << qint32{0} << static_cast<qint32>(bytes.size());
+            stream.writeRawData(bytes.constData(), static_cast<int>(bytes.size()));
+            QCOMPARE(stream.status(), QDataStream::Ok);
+        }
+
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("local ok, err = loadReplay('headless.dat') headlessReplay = tostring(ok) .. (err and ' ' .. err or '')")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessReplay"), qsl("true"));
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Replayed with no main window.")), 10000);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // What the speech bridge, Discord and the MCP bridge take for the profile in front
+    void test_setActiveProfileNamesTheActiveHost()
+    {
+        const QString name = qsl("Headless Active");
+        QVERIFY(writeProfile(name, QString()));
+        {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            QVERIFY(!TAppFrontend::instance()->getActiveHost());
+            QVERIFY(session.runLua(qsl("headlessActive = tostring(setActiveProfile('%1'))").arg(name)));
+            QCOMPARE(luaGlobalString(session.host(), "headlessActive"), qsl("true"));
+            QCOMPARE(TAppFrontend::instance()->getActiveHost(), session.host());
+            QVERIFY(session.shutdown(false));
+        }
+        QVERIFY(!TAppFrontend::instance()->getActiveHost());
+        // As with a main window, the profile in front went with it, so opening it again does not bring it back
+        THeadlessSession reopened;
+        QCOMPARE(reopened.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(!TAppFrontend::instance()->getActiveHost());
+        QVERIFY(reopened.shutdown(false));
+    }
+
+    // A preload only fetches the file, which needs no window
+    void test_whatOnlyAMainWindowCanShowSaysSo()
+    {
+        const QString name = qsl("Headless No Window");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+local function answer(f, ...)
+  local ok, err = f(...)
+  return tostring(ok) .. "|" .. tostring(err)
+end
+headlessNoWindow = table.concat({
+  answer(setMainWindowSize, 800, 600),
+  answer(showNotification, "headless title", "headless text"),
+  answer(playVideoFile, {name = "headless-absent.mp4"}),
+  answer(loadVideoFile, {name = "headless-absent.mp4"}),
+}, ";")
+)lua")));
+        const QString refused = qsl("nil|the profile has no main window");
+        QCOMPARE(luaGlobalString(session.host(), "headlessNoWindow"), QStringList({refused, refused, refused, qsl("true|nil")}).join(qsl(";")));
+        QVERIFY(session.shutdown(false));
+    }
+
     // A prompt the game ends with GA, and commands as the command line sends them, a trailing line feed
     // making an empty one as there
     void test_promptsAndCommandsReachTheGame()
@@ -1156,6 +1319,64 @@ tempTrigger("Third", [[echo(" <third>")]]))lua")));
         QVERIFY2(received.contains("trigger secret"), received.constData());
         const QString shown = outputTexts(local).join(QString());
         QVERIFY2(!shown.contains(qsl("secret")), qPrintable(shown));
+    }
+
+    // In the file the GUI's main command line reads, newest first behind the line being typed, and as there
+    // without what was typed while the game hid it
+    void test_submittedCommandsAreKeptInTheCommandHistory()
+    {
+        const QString name = qsl("Headless History");
+        QVERIFY(writeProfile(name, QString()));
+        const QString historyFile = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("command_history_main"));
+        QVERIFY(writeFile(historyFile, "\nnewest from the GUI\noldest from the GUI"));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        {
+            THeadlessSession session;
+            QSignalSpy output(&session, &THeadlessSession::outputLine);
+            QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+            QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+            std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+            QVERIFY(session.submit(qsl("look")));
+            QVERIFY(session.submit(qsl("oldest from the GUI")));
+            QVERIFY(session.submit(QString()));
+            game->write("\xff\xfb\x01Password:\r\n");
+            QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Password:")), 10000);
+            QVERIFY(session.submit(qsl("typed secret")));
+            QByteArray received;
+            QTRY_VERIFY_WITH_TIMEOUT((received += game->readAll()).contains("typed secret"), 10000);
+            QVERIFY2(session.shutdown(true), qPrintable(session.errorString()));
+        }
+        QCOMPARE(readFile(historyFile), qsl("\noldest from the GUI\nlook\nnewest from the GUI"));
+    }
+
+    // Writing it would lose the history it holds. Write-only, as the save refuses a file it cannot write
+    void test_aCommandHistoryThatCannotBeReadIsNotWrittenOver()
+    {
+        const QString name = qsl("Headless Unreadable History");
+        QVERIFY(writeProfile(name, QString()));
+        const QString historyFile = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("command_history_main"));
+        QVERIFY(writeFile(historyFile, "\nfrom the GUI"));
+        QVERIFY(QFile::setPermissions(historyFile, QFileDevice::WriteOwner));
+        const auto restoreRights = [historyFile]() {
+            QFile::setPermissions(historyFile, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+        };
+        const auto restore = qScopeGuard(restoreRights);
+        if (QFile probe(historyFile); probe.open(QIODevice::ReadOnly)) {
+            QSKIP("Running with the right to read any file, so the history cannot be made unreadable");
+        }
+
+        {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            QVERIFY(session.submit(qsl("look")));
+            QVERIFY2(session.shutdown(true), qPrintable(session.errorString()));
+        }
+        restoreRights();
+        QCOMPARE(readFile(historyFile), qsl("\nfrom the GUI"));
     }
 
     // What a profile sends on its way out, as from sysExitEvent, reaches the game before the connection goes

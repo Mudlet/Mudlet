@@ -117,6 +117,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class EditorEmptySelectionTest;
     friend class EditorFolderViewTest;
     friend class EditorFontTest;
+    friend class EditorModuleFolderTest;
     friend class EditorReshowTest;
     friend class EditorSearchTest;
     friend class HostWidgetDecouplingTest;
@@ -296,6 +297,7 @@ public slots:
     void slot_showKeys();
     void slot_showFolders();
     void slot_activateMainWindow();
+    void slot_updateActivateMainWindowShortcut();
     void slot_treeSelectionChanged();
     void slot_triggerSelected(QTreeWidgetItem* pItem);
     void slot_timerSelected(QTreeWidgetItem* pItem);
@@ -442,6 +444,8 @@ private:
     void leaveFolderView();
     void setFolderViewAvailable(const bool);
     bool folderItem(const EditorViewType view, const int id);
+    QString moduleOfMasterFolder(const EditorViewType view, const int id) const;
+    void offerToUninstallModule(const QString& moduleName);
     QTreeWidget* treeForView(const EditorViewType view) const;
     void selectItemInView(const EditorViewType view, QTreeWidgetItem* pItem);
     QByteArray* splitterStateForView(const EditorViewType view);
@@ -671,6 +675,8 @@ private:
                                                              {tr("Debug"), qsl("Ctrl+0")}};
 
     std::unordered_map<SingleLineTextEdit*, bool> lineEditShouldMarkSpaces;
+    // Toolbar shortcuts held aside while a key is being grabbed, so all of them come back afterwards
+    QHash<QAction*, QList<QKeySequence>> mSuspendedShortcuts;
 
     QToolBar* toolBar = nullptr;
     QToolBar* toolBar2 = nullptr;
@@ -722,6 +728,7 @@ private:
     QStringList mPatternList;
     QVector<QIcon> mPatternIcons;
 
+    QShortcut* mpShortcutActivateMainWindow = nullptr;
     QShortcut* mFirstPatternShortcut = nullptr;
     QShortcut* mLastPatternShortcut = nullptr;
     QVector<QShortcut*> mPatternNavigationShortcuts;

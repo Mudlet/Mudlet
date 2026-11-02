@@ -7806,6 +7806,8 @@ void ModernGLWidget::keyPressEvent(QKeyEvent* event)
         pCommandLine->activateWindow();
         pCommandLine->setFocus(Qt::OtherFocusReason);
         QCoreApplication::sendEvent(pCommandLine, event);
+        // Or one the command line left would reach the map around this view, which hands it over again
+        event->accept();
         return;
     }
     QOpenGLWidget::keyPressEvent(event);

@@ -28,7 +28,6 @@
 
 #include "discord.h"
 #include "HostManager.h"
-#include "MudletReplay.h"
 #include "ShortcutsManager.h"
 #include "TAppFrontend.h"
 #include "utils.h"
@@ -123,10 +122,6 @@ public:
     static void start();
     static QImage getSplashScreen(bool releaseVersion, bool testVersion);
 
-
-    // translations done high enough will get a gold star to hide the last few percent
-    // as well as encourage translators to maintain it
-    static const int scmTranslationGoldStar = 95;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static QVariantHash smLuaFunctionNames;
     inline static QPointer<TConsole> smpDebugConsole;
@@ -232,6 +227,8 @@ public:
     bool saveWindowLayoutForScript() override;
     bool openProfile(const QString& profileName, bool connect) override;
     bool requestProfileClose(const QString& profileName) override;
+    // Destroys the profile's windows, so that none of them outlives its Host
+    void profileClosing(Host* pHost) override;
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
     void setAppearance(enums::Appearance, const bool& loading = false);
@@ -247,7 +244,11 @@ public:
     void setShowTabConnectionIndicators(const bool) override;
     int profileTabIndex(const QString& profileName) const override;
     void setActiveProfileTab(const QString& profileName) override;
-    void resizeMainWindow(int width, int height) override { resize(width, height); }
+    bool resizeMainWindow(int width, int height) override
+    {
+        resize(width, height);
+        return true;
+    }
     void setupPreInstallPackages(const QString&, const QString&, const bool);
     void setToolBarIconSize(int);
     void setToolBarVisibility(enums::controlsVisibility);
@@ -257,7 +258,7 @@ public:
     void setCompactInputLineChecked(Host* pHost, bool checked) override;
     bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const override { return mShowTabConnectionIndicators; }
-    void showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
+    bool showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
     void setDrawUpperLowerLevels(bool draw) override;
     // Addon toolbar button management
@@ -565,6 +566,7 @@ private slots:
 
 private:
     void assignKeySequences();
+    void keepFloatingDocksOnScreen();
 #ifdef INCLUDE_MCPSERVER
     // Everything setMCPEnabled() does bar the discovery file, which has to be squared
     // with whatever this leaves behind whichever way it goes
@@ -612,8 +614,6 @@ private:
     // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
     HostManager mHostManager;
-    // After mHostManager, so it is gone before the profiles that reach it are
-    MudletReplay mReplay;
     QKeySequence mKeySequenceCloseProfile;
     QKeySequence mKeySequenceConnect;
     QKeySequence mKeySequenceDisconnect;
@@ -656,6 +656,9 @@ private:
 #endif
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;
+#if defined(INCLUDE_UPDATER)
+    bool mUpdateInstalled = false;
+#endif
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;
     QPointer<QAction> mpActionCloseProfile;

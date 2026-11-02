@@ -20,6 +20,7 @@
 #include <QDir>
 #include <QLineEdit>
 #include <QScrollBar>
+#include <QSplitter>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -27,6 +28,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "TLuaInterpreter.h"
@@ -55,6 +57,7 @@ private:
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-ConsoleSearch";
+    const QString mOtherHostname = "Test-ConsoleSearch-Other";
     QString mPort; // assigned the stub's actual ephemeral port in init()
     const QString mLocalhost = "localhost";
 
@@ -216,6 +219,52 @@ private:
         return host;
     }
 
+    // Picks an existing profile in the connection dialog and loads it, without connecting
+    Host* reopenProfile(const QString& profileName)
+    {
+        if (!QTest::qWaitFor(
+                    []() {
+                        return mudlet::self()->mpConnectionDialog.isNull();
+                    },
+                    5s)) {
+            qWarning() << "the connection dialog the profiles were opened with never went away";
+            return nullptr;
+        }
+        mudlet::self()->slot_showConnectionDialog();
+        dlgConnectionProfiles* dialog = mudlet::self()->mpConnectionDialog.data();
+        if (!dialog) {
+            qWarning() << "the connection dialog did not come back";
+            return nullptr;
+        }
+        const auto items = dialog->findData(*dialog->listWidget_profiles, profileName, dlgConnectionProfiles::csmNameRole);
+        if (items.isEmpty()) {
+            qWarning() << "the connection dialog does not list" << profileName;
+            return nullptr;
+        }
+        dialog->listWidget_profiles->setCurrentItem(items.first());
+        dialog->slot_itemClicked(items.first());
+        dialog->slot_load();
+        if (!QTest::qWaitFor(
+                    [&profileName]() {
+                        Host* host = mudlet::self()->getActiveHost();
+                        return host && host->getName() == profileName;
+                    },
+                    15s)) {
+            qWarning() << profileName << "did not load again";
+            return nullptr;
+        }
+        return mudlet::self()->getActiveHost();
+    }
+
+    // The console is never shown in a test, so nothing else lays the splitter out
+    static QList<int> commandSplitterSizes(Host* host)
+    {
+        QSplitter* splitter = host->mainConsoleView()->commandSplitter;
+        splitter->resize(1000, 30);
+        splitter->refresh();
+        return splitter->sizes();
+    }
+
     void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletApp::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
@@ -254,15 +303,19 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory(mHostname);
+        deleteProfileDirectory(mOtherHostname);
+        MudletApp::getQSettings()->remove(qsl("commandSearchSplitterState"));
     }
 
     void cleanup()
     {
         const QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
+        const QString otherProfilePath = MudletApp::getMudletPath(enums::profileHomePath, mOtherHostname);
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;
         deleteDirectory(profilePath);
+        deleteDirectory(otherProfilePath);
     }
 
     // A search is for the most recent thing said, so it starts at the end of the
@@ -609,6 +662,57 @@ private slots:
 
         QVERIFY2(console->mpFindBar->isHidden(), "the find bar stayed up");
         QCOMPARE(markedLineCount(console), 0);
+    }
+
+    // Side by side in multi-view each profile has a split of its own, so
+    // dragging one must neither decide where another opens nor where the
+    // first comes back to.
+    void test_eachProfileKeepsItsOwnSplitBetweenCommandLineAndSearchBar()
+    {
+        Host* first = startProfile(mHostname, mLocalhost, mPort);
+        QVERIFY2(first, "the first profile never started - see the warning above");
+        TMainConsole* firstConsole = first->mainConsoleView();
+        QVERIFY(firstConsole->commandSplitter);
+        firstConsole->commandSplitter->setSizes({100, 900});
+        firstConsole->slot_saveCommandSearchSettings();
+
+        Host* second = startProfile(mOtherHostname, mLocalhost, mPort);
+        QVERIFY2(second && second != first, "the second profile never started - see the warning above");
+        TMainConsole* secondConsole = second->mainConsoleView();
+        QVERIFY(secondConsole->commandSplitter);
+        QList<int> sizes = commandSplitterSizes(second);
+        QCOMPARE(sizes.size(), 2);
+        QVERIFY2(sizes.at(0) > sizes.at(1), qPrintable(qsl("the second profile opened with its command line %1 px wide and its search bar %2 px wide").arg(sizes.at(0)).arg(sizes.at(1))));
+        secondConsole->commandSplitter->setSizes({900, 100});
+        secondConsole->slot_saveCommandSearchSettings();
+
+        first->forceClose();
+        QVERIFY2(first->requestClose(), "closing the first profile was refused");
+        HostManager::self()->deleteHost(mHostname);
+
+        Host* reopened = reopenProfile(mHostname);
+        QVERIFY2(reopened, "the first profile never came back - see the warning above");
+        sizes = commandSplitterSizes(reopened);
+        QCOMPARE(sizes.size(), 2);
+        QVERIFY2(sizes.at(0) < sizes.at(1), qPrintable(qsl("the first profile came back with its command line %1 px wide and its search bar %2 px wide").arg(sizes.at(0)).arg(sizes.at(1))));
+    }
+
+    // Mudlet once kept a single split for every profile, so whoever dragged it
+    // then should not lose it to a profile that has no split of its own yet.
+    void test_aProfileWithoutASplitOfItsOwnStartsFromTheOneEveryProfileShared()
+    {
+        QSplitter shared;
+        shared.addWidget(new QWidget(&shared));
+        shared.addWidget(new QWidget(&shared));
+        shared.setSizes({100, 900});
+        MudletApp::getQSettings()->setValue(qsl("commandSearchSplitterState"), shared.saveState());
+
+        Host* host = startProfile(mHostname, mLocalhost, mPort);
+        QVERIFY2(host, "the profile never started - see the warning above");
+        QVERIFY(host->mainConsoleView()->commandSplitter);
+        const QList<int> sizes = commandSplitterSizes(host);
+        QCOMPARE(sizes.size(), 2);
+        QVERIFY2(sizes.at(0) < sizes.at(1), qPrintable(qsl("the profile opened with its command line %1 px wide and its search bar %2 px wide").arg(sizes.at(0)).arg(sizes.at(1))));
     }
 };
 

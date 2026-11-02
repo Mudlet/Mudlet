@@ -145,8 +145,8 @@ Q_DECLARE_METATYPE(ControlCharacterMode)
 // pipeline run with no view at all, which is the point of the Widgets-free
 // core (#8681).
 //
-// The main console's model is co-owned by Host (see Host::sharedMainConsoleModel)
-// so the pipeline outlives the view; sub-consoles own their own model. Every
+// The main console's model is owned by Host (see Host::mainConsoleModel()) so
+// the pipeline outlives the view; sub-consoles own their own model. Every
 // TConsole reaches its model through TConsole::model(); the widget keeps the
 // former members (buffer, mFgColor, ...) as references that alias the model, so
 // the existing accesses across the codebase are preserved unchanged.
@@ -305,10 +305,6 @@ struct TConsoleModel
 
     // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.
     TBuffer buffer;
-    // A QPointer because Host and view are torn down in either order: quitting
-    // destroys every Host before the consoles' deferred deletes run, while
-    // closing one profile deletes its console first. The view co-owns the
-    // model, so it can be left holding one whose Host has gone.
     QPointer<Host> mpHost;
     // On the main console model, the profile's colours, kept there by
     // Host::refreshMainConsoleColors(); colour triggers set to "default" match

@@ -27,6 +27,7 @@
 #include "Host.h"
 #include "MudletApp.h"
 #include "MudletMedia.h"
+#include "MudletReplay.h"
 #include "discord.h"
 #include "TAppFrontend.h"
 #include "TGameDetails.h"
@@ -84,6 +85,7 @@ bool HostManager::releasingProfile()
 HostManager::HostManager(const ConfigRoot configRoot)
 : mpMedia(std::make_unique<MudletMedia>())
 , mpFonts(std::make_unique<FontManager>())
+, mpReplay(std::make_unique<MudletReplay>())
 , mpDiscord(std::make_unique<Discord>())
 , mpSpeechBridge(std::make_unique<TSpeechBridge>())
 {
@@ -92,8 +94,16 @@ HostManager::HostManager(const ConfigRoot configRoot)
         MudletApp::settleConfigRoot();
         // Once per process: where the main window settles the root, its readEarlySettings() and readLateSettings()
         // read them instead
-        readSettings(*MudletApp::getQSettings());
-        MudletApp::readInterfaceLanguage(*MudletApp::getQSettings());
+        const QSettings& settings = *MudletApp::getQSettings();
+        readSettings(settings);
+        MudletApp::readInterfaceLanguage(settings);
+        // Not in readSettings(), as the main window keeps these itself
+        if (!TAppFrontend::hasView()) {
+            TAppFrontend* pView = TAppFrontend::instance();
+            pView->setDrawUpperLowerLevels(settings.value(qsl("drawUpperLowerLevels"), true).toBool());
+            pView->setShowTabConnectionIndicators(settings.value(qsl("showTabConnectionIndicators"), false).toBool());
+            sSettingsReadWithoutWindow = true;
+        }
     } else if (sMutesLeft && MudletMedia::self() == mpMedia.get()) {
         mpMedia->setApiMuted(sMutesLeft->api);
         mpMedia->setGameMuted(sMutesLeft->game);
@@ -145,6 +155,14 @@ void HostManager::readSettings(const QSettings& settings)
     mpMedia->setGameMuted(settings.value(qsl("enableMuteGame"), false).toBool());
     TMap::smShowMapAuditErrors = settings.value(qsl("reportMapIssuesToConsole"), false).toBool();
     MudletApp::setStorePasswordsSecurely(settings.value(qsl("storePasswordsSecurely"), true).toBool());
+}
+
+void HostManager::writeSettings(QSettings& settings) const
+{
+    settings.setValue(qsl("enableMuteAPI"), mpMedia->apiMuted());
+    settings.setValue(qsl("enableMuteGame"), mpMedia->gameMuted());
+    settings.setValue(qsl("reportMapIssuesToConsole"), TMap::smShowMapAuditErrors);
+    settings.setValue(qsl("storePasswordsSecurely"), MudletApp::storingPasswordsSecurely());
 }
 
 void HostManager::deleteHost(const QString& hostname)
@@ -238,8 +256,11 @@ Host* HostManager::openProfile(const QString& name, const bool connect, const st
 }
 
 // The packages the GUI installs into a profile on its first load, for its game
-QStringList HostManager::defaultPackages(const QString& gameUrl, const QString& profileName, const bool serverGuiAccepted)
+QStringList HostManager::defaultPackages(const QString& address, const QString& profileName, const bool serverGuiAccepted)
 {
+    // A catalog game's are chosen for the game, not for another address the player saved for it
+    const auto game = TGameDetails::findGame(profileName);
+    const QString gameUrl = game != TGameDetails::scmDefaultGames.end() ? (*game).hostUrl.toLower() : address;
     QStringList packages;
     const QHash<QString, QStringList> defaultScripts = {
             // clang-format off

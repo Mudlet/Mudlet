@@ -49,7 +49,9 @@
 #include <QtUiTools>
 #include <QApplication>
 #include <QColorDialog>
+#include <QDateTime>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QPointer>
 #include <QRandomGenerator>
@@ -57,6 +59,7 @@
 #include <QSignalBlocker>
 #include <QTabBar>
 #include <QTime>
+#include <QTimeZone>
 #include <array>
 #include <chrono>
 
@@ -2785,6 +2788,18 @@ bool dlgConnectionProfiles::validateProfile()
     return false;
 }
 
+// QFile::copy() dates a copy by when it was made on some platforms, and loading a profile or its
+// map picks the newest save by that date, which would then be whichever was copied last
+static void keepModificationTime(const QString& source, const QString& copy)
+{
+    const QDateTime modified = QFileInfo(source).lastModified(QTimeZone::UTC);
+    QFile file(copy);
+    // Not WriteOnly, which would truncate the copy
+    if (!file.open(QIODevice::ReadWrite) || !file.setFileTime(modified, QFileDevice::FileModificationTime)) {
+        qWarning().noquote() << "dlgConnectionProfiles::copyFolder(...) WARNING - could not give" << copy << "the modification time of" << source << "-" << file.errorString();
+    }
+}
+
 // credit: http://www.qtcentre.org/archive/index.php/t-23469.html
 bool dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QString& destFolder)
 {
@@ -2802,7 +2817,11 @@ bool dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QStrin
     for (const QString& file : std::as_const(files)) {
         const QString srcName = sourceFolder + QDir::separator() + file;
         const QString destName = destFolder + QDir::separator() + file;
-        copiedAll = QFile::copy(srcName, destName) && copiedAll;
+        if (QFile::copy(srcName, destName)) {
+            keepModificationTime(srcName, destName);
+        } else {
+            copiedAll = false;
+        }
     }
     files.clear();
     files = sourceDir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot);

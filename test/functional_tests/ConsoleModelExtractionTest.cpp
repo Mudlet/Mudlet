@@ -97,12 +97,12 @@ struct SignalReceiverCount : QObject
 
 // The main console's text buffer, cursor/prompt state, fg/bg colours and log
 // lifecycle were lifted out of the TConsole widget into a core TConsoleModel
-// that Host co-owns, and the per-line trigger orchestration moved from
+// that Host owns, and the per-line trigger orchestration moved from
 // TMainConsole::runTriggers() to Host::runTriggers() (#8681). The widget keeps
 // the former members as references aliasing the model, so these tests pin down
 // that the aliasing really is one object, that the pipeline runs off the model,
 // and that the model stays usable once its view has been destroyed - the
-// co-ownership exists precisely so the two can outlive each other, and the
+// model belongs to Host precisely so it can outlive the view, and the
 // chosen system spell dictionary lives on Host for that same reason.
 class ConsoleModelExtractionTest : public QObject
 {
@@ -188,7 +188,7 @@ private slots:
         QPointer<TMainConsole> console = host->mainConsoleView();
         TConsoleModel& model = host->mainConsoleModel();
 
-        QCOMPARE(host->sharedMainConsoleModel().get(), &model);
+        QCOMPARE(&host->mainConsoleModel(), &model);
         QCOMPARE(&console->model(), &model);
         QCOMPARE(&console->buffer, &model.buffer);
         QCOMPARE(&console->mFgColor, &model.mFgColor);
@@ -275,7 +275,7 @@ private slots:
                  "Driving Host::runTriggers() straight off the model must fire the trigger with the same line the fed one did.");
     }
 
-    // Host co-owns the model, so closing the profile destroys the console
+    // Host owns the model, so closing the profile destroys the console
     // widget while the model - and its buffer - live on. Buffer work done in
     // that window used to reach through the buffer's back-pointer to the view
     // that has just gone (TBuffer::log() and TBuffer::shrinkBuffer()) and
@@ -287,16 +287,14 @@ private slots:
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        // Co-own the model the way Host does, so the test still holds it even
-        // if Host were to let go of its own reference.
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
 
         // The floor for a buffer limit is 100 lines, so a couple of hundred
         // appends are needed to reach the shrink.
         model->buffer.setBufferSize(100, 10);
 
         destroyTheView(host);
-        QCOMPARE(&host->mainConsoleModel(), model.get());
+        QCOMPARE(&host->mainConsoleModel(), model);
 
         QString lastAppended;
         for (int i = 0; i < 200; ++i) {
@@ -337,7 +335,7 @@ private slots:
                qsl("viewlessTriggerHit = 'none'\n"
                    "tempRegexTrigger('^ViewlessPipeline', [[viewlessTriggerHit = line]], 10)\n"));
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
         // Closing the profile emergency-stops the trigger engine
         // (Host::closeChildren()), which a profile that simply never had a view
@@ -367,7 +365,7 @@ private slots:
                qsl("viewlessPrompt = 'none'\n"
                    "tempRegexTrigger('^ViewlessContext', [[viewlessPrompt = tostring(isPrompt())]], 10)\n"));
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
         host->reenableAllTriggers();
 
@@ -396,7 +394,7 @@ private slots:
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
 
         model->mUserCursor.setY(model->buffer.promptBuffer.size());
@@ -428,7 +426,7 @@ private slots:
                    "tempRegexTrigger('^ViewlessIncoming', [[viewlessIncoming = viewlessIncoming .. 'trigger:' .. line .. ':' .. tostring(isPrompt()) .. ';']], 10)\n"
                    "registerAnonymousEventHandler('mxp.rviewless', function() viewlessIncoming = viewlessIncoming .. 'event' end)\n"));
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
         // Closing the profile emergency-stops the trigger engine
         // (Host::closeChildren()), which a profile that simply never had a view
@@ -458,7 +456,7 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
         TBuffer& buffer = model->buffer;
 
@@ -480,7 +478,7 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
         TBuffer& buffer = model->buffer;
 
@@ -499,7 +497,7 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
         TBuffer& buffer = model->buffer;
 
@@ -600,7 +598,7 @@ private slots:
             QVERIFY2(trigger->setScript(qsl("viewlessColorizerRan = '%1'").arg(colorizerCase.name)), qPrintable(qsl("%1: the colorizer trigger's script did not compile.").arg(colorizerCase.name)));
         }
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
         // Closing the profile emergency-stops the trigger engine
         // (Host::closeChildren()), which a profile that simply never had a view
@@ -664,7 +662,7 @@ private slots:
         QVERIFY2(trigger->registerTrigger(), "The color pattern trigger was not registered.");
         QVERIFY2(trigger->setScript(qsl("viewlessColorPatternRan = 'yes'")), "The color pattern trigger's script did not compile.");
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
         host->reenableAllTriggers();
 
@@ -714,7 +712,7 @@ private slots:
 
         registerShrinkHandler(host);
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         model->buffer.setBufferSize(100, 10);
 
         destroyTheView(host);
@@ -842,7 +840,7 @@ private slots:
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
         feedStalledMxpTag(host, model->buffer, "WDOGNOVIEW <send");
         runTagWatchdogEarly(model->buffer, qsl("WDOGNOVIEW"));
@@ -892,7 +890,7 @@ private slots:
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
@@ -924,7 +922,7 @@ private slots:
                qsl("viewlessHeldLine = 'none'\n"
                    "tempRegexTrigger('^x+ alpha$', [[viewlessHeldLine = line]], 10)\n"));
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
 
@@ -969,7 +967,7 @@ private slots:
 
         const QString heldLine = QString(64, QChar('y')) + qsl(" omega");
         std::string data = heldLine.toStdString() + "\n";
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         model->buffer.translateToPlainText(data, true);
         QVERIFY2(host->mServerWrapFlushTimer.isActive(), "The full-width line was not held back for a continuation.");
 
@@ -997,7 +995,7 @@ private slots:
         // From the game, so that cTelnet's posting timer runs as well: its
         // flush marker would commit the held line just as the flush timer does
         const QString heldLine = QString(64, QChar('v')) + qsl(" sigma");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         mpServer->sendRaw(heldLine.toUtf8() + "\n");
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
@@ -1060,7 +1058,7 @@ private slots:
         host->mFORCE_SAVE_ON_EXIT = false;
 
         const QString heldLine = QString(64, QChar('u')) + qsl(" kappa");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         QElapsedTimer sinceSent;
         QElapsedTimer sinceHeld;
         bool heldDuringQuestion = false;
@@ -1120,7 +1118,7 @@ private slots:
         runLua(host, qsl("heldTriggerRan = 'no'\ntempRegexTrigger('^t+ theta$', [[heldTriggerRan = 'yes']])\n"));
 
         const QString heldLine = QString(64, QChar('t')) + qsl(" theta");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         mpServer->sendRaw(heldLine.toUtf8() + "\n");
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
@@ -1180,7 +1178,7 @@ private slots:
         QTest::qWait(500ms);
 
         const QString heldLine = QString(64, QChar('p')) + qsl(" iota");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         std::string data = heldLine.toStdString() + "\n";
         host->printOnDisplay(data, true);
         QCOMPARE(model->buffer.mServerWrapPendingLine, heldLine);
@@ -1285,7 +1283,7 @@ private slots:
         host->forceClose();
 
         const QString heldLine = QString(64, QChar('f')) + qsl(" kappa");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         std::string data = heldLine.toStdString() + "\n";
         model->buffer.translateToPlainText(data, true);
         QCOMPARE(model->buffer.mServerWrapPendingLine, heldLine);
@@ -1311,7 +1309,7 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
@@ -1341,7 +1339,7 @@ private slots:
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
 
         const QString phrase = qsl("!osc8-docs");
@@ -1363,7 +1361,7 @@ private slots:
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         host->mEnableOSC8Hyperlinks = true;
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
 
         std::string preset = "\x1b]8;;preset:modelpreset?config={\"style\":{\"color\":\"red\"}}\x1b\\";
@@ -1392,7 +1390,7 @@ private slots:
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
 
         const QColor background{12, 34, 56};
@@ -1418,7 +1416,7 @@ private slots:
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         const QColor staleFg{1, 2, 3};
         const QColor staleBg{4, 5, 6};
         QVERIFY2(host->mFgColor != staleFg && host->mBgColor != staleBg, "The profile already uses the stale colours, so the assertions cannot fail.");
@@ -1514,7 +1512,7 @@ private slots:
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
 
         // false = no announcement, the way startLogging() calls it from Lua
@@ -1677,7 +1675,7 @@ private slots:
                    "tempAnsiColorTrigger(%1, %2, [==[colourTriggerHit = matches[1]]==])\n")
                        .arg(QString::number(TTrigger::scmDefault), QString::number(TTrigger::scmIgnored)));
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
         // Closing the profile emergency-stops the trigger engine, which a
         // profile that simply never had a view would not do:
@@ -1764,7 +1762,7 @@ private slots:
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
 
         const QColor redefinedRed(0x12, 0x34, 0x56);
@@ -1800,7 +1798,7 @@ private slots:
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
 
         const QColor scriptedBackground(0x11, 0x22, 0x33);
@@ -2164,7 +2162,7 @@ noViewReport = table.concat(noViewProblems, '; ')
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
 
         appendModelLine(model->buffer, QString());
@@ -2303,7 +2301,7 @@ end
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
 
         const int first = appendModelLine(model->buffer, qsl("NoViewCursor first"));
@@ -2459,7 +2457,7 @@ noViewCursor = table.concat(results, '|')
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
 
         const int line = appendModelLine(model->buffer, qsl("headless alpha beta"));
@@ -2513,7 +2511,7 @@ headlessProblems = table.concat(headlessProblems, '; ')
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
 
         appendModelLine(model->buffer, qsl("headless one"));
@@ -2537,7 +2535,7 @@ headlessProblems = table.concat(headlessProblems, '; ')
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
 
         const QColor pastedFg(200, 0, 0);
@@ -2586,7 +2584,7 @@ paste('main')
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
 
         runLua(host, qsl("setWindowWrap('main', 23)\nsetWindowWrapIndent('', 2)\nsetWindowWrapHangingIndent('main', 3)\nnoViewWrap = getWindowWrap()\n"));
@@ -3180,7 +3178,7 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
                qsl("captureGroupResult = 'the trigger did not run'\n"
                    "tempRegexTrigger([[^NoViewCapture (\\w+)]], [[captureGroupResult = tostring(selectCaptureGroup(2))]], 10)\n"));
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
         host->reenableAllTriggers();
         host->deselectMainConsole();
@@ -3206,7 +3204,7 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
                qsl("noViewPaintRan = 'no'\n"
                    "tempRegexTrigger([[^NoViewPaint (\\w+) after]], [[noViewPaintRan = 'yes'; selectCaptureGroup(2)]], 10)\n"));
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
         host->reenableAllTriggers();
         host->deselectMainConsole();
@@ -3235,7 +3233,7 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
 
         const int line = appendModelLine(model->buffer, qsl("noview alpha bravo"));
@@ -3320,7 +3318,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
         const int line = appendModelLine(model->buffer, qsl("noview wrap me"));
 
@@ -3368,7 +3366,7 @@ noViewWindowReport = table.concat(noViewWindowProblems, '; ')
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
 
         const QColor scriptedBackground(0x44, 0x55, 0x66);
@@ -3418,7 +3416,7 @@ noViewWindowReport = table.concat(noViewWindowProblems, '; ')
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         destroyTheView(host);
 
         const QString longLine = qsl("alpha bravo charlie delta echo foxtrot golf hotel");
@@ -5266,7 +5264,7 @@ private:
     QString joinedBuffer() { return joinedBuffer(mudlet::self()->getActiveHost()->mainConsoleModel().buffer); }
 
     // Utility function destroying the main console widget while Host - and the
-    // model it co-owns - live on, which is the window every view-less test here
+    // model it owns - live on, which is the window every view-less test here
     // needs.
     void destroyTheView(Host* host)
     {

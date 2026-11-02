@@ -4406,6 +4406,42 @@ describe("Tests the open and closed states of the map widget", function()
       end
     end
 
+    -- One slow pass of the event loop can use up a fixed pumpEvents() before the next pass gives the map its size.
+    -- Each use follows a fixed wait, as until the first pass the map keeps the size of the area it left.
+    local function waitUntil(condition)
+      for _ = 1, 100 do
+        if condition() then
+          return
+        end
+        assert.is_true(pumpEvents(50))
+      end
+    end
+
+    local function consoleRoomy()
+      local width, height = getMainWindowSize()
+      return width >= 1100 and height >= 800
+    end
+
+    local function consoleTall()
+      local _, height = getMainWindowSize()
+      return height >= 800
+    end
+
+    local function mapWidth()
+      local _, _, width = getMapWidgetGeometry()
+      return width
+    end
+
+    local function mapHeight()
+      local _, _, _, height = getMapWidgetGeometry()
+      return height
+    end
+
+    -- the console and the map docked beside it fill a window 1280 pixels wide again
+    local function windowWide()
+      return getMainWindowSize() + mapWidth() > 1200
+    end
+
     -- Measured with the map closed, so the console has the whole width
     before_each(function()
       if not os.getenv("MUDLET_TEST_MODE") then
@@ -4419,8 +4455,11 @@ describe("Tests the open and closed states of the map widget", function()
       -- Qt keeps about 700 by 450 pixels for the console and gives the dock only what is left
       setMainWindowSize(1280, 900)
       pumpEvents(200)
-      local width, height = getMainWindowSize()
-      roomy = width >= 1100 and height >= 800
+      -- only where it must grow, as elsewhere the window may never get there
+      if resizeRequired then
+        waitUntil(consoleRoomy)
+      end
+      roomy = consoleRoomy()
     end)
 
     after_each(function()
@@ -4448,20 +4487,15 @@ describe("Tests the open and closed states of the map widget", function()
       return true
     end
 
-    local function mapWidth()
-      local _, _, width = getMapWidgetGeometry()
-      return width
-    end
-
     local function assertDocksUsably(position)
       assert.is_true(openMapWidget(position))
       assert.is_true(pumpEvents(200))
-      local _, _, width, height = getMapWidgetGeometry()
-      if position == "t" or position == "b" then
-        assert.is_true(height > 150, "map docked at " .. position .. " is only " .. height .. " pixels tall")
-      else
-        assert.is_true(width > 150, "map docked at " .. position .. " is only " .. width .. " pixels wide")
-      end
+      local across = (position == "t" or position == "b") and "tall" or "wide"
+      local depth = across == "tall" and mapHeight or mapWidth
+      waitUntil(function()
+        return depth() > 150
+      end)
+      assert.is_true(depth() > 150, "map docked at " .. position .. " is only " .. depth() .. " pixels " .. across)
     end
 
     -- Docks that shared an area and left it leave Qt nothing but its minimum to give the next one
@@ -4486,6 +4520,9 @@ describe("Tests the open and closed states of the map widget", function()
     local function squeezeMap(windowWidth, atMost, atLeast)
       setMainWindowSize(windowWidth, 900)
       pumpEvents(200)
+      waitUntil(function()
+        return mapWidth() <= atMost
+      end)
       local width = mapWidth()
       if width > atMost then
         cannotSqueeze("the console left the map " .. width .. " pixels in a narrow window, so it cannot be squeezed")
@@ -4526,7 +4563,10 @@ describe("Tests the open and closed states of the map widget", function()
       assert.is_true(pumpEvents(200))
       setMainWindowSize(1280, 200)
       assert.is_true(pumpEvents(200))
-      local _, _, _, squeezed = getMapWidgetGeometry()
+      waitUntil(function()
+        return mapHeight() < 150
+      end)
+      local squeezed = mapHeight()
       if squeezed >= 150 then
         cannotSqueeze("the main window kept the map " .. squeezed .. " pixels tall, so it cannot be squeezed")
         return
@@ -4535,6 +4575,8 @@ describe("Tests the open and closed states of the map widget", function()
       assert.is_true(pumpEvents(200))
       setMainWindowSize(1280, 900)
       assert.is_true(pumpEvents(200))
+      -- docked along the top of a window still short, the map would keep that depth as the window grew
+      waitUntil(consoleTall)
       assertDocksUsably("t")
     end)
 
@@ -4553,11 +4595,15 @@ describe("Tests the open and closed states of the map widget", function()
       assert.is_true(pumpEvents(200))
       setMainWindowSize(1280, 900)
       assert.is_true(pumpEvents(200))
+      waitUntil(windowWide)
       assert.is_true(openMapWidget("l"))
       assert.is_true(closeMapWidget())
       assert.is_true(pumpEvents(200))
       assert.is_true(openMapWidget())
       assert.is_true(pumpEvents(200))
+      waitUntil(function()
+        return mapWidth() > squeezed
+      end)
       assert.is_true(mapWidth() > squeezed, "the map came back " .. mapWidth() .. " pixels wide, as the left area last was")
     end)
 
@@ -4609,6 +4655,9 @@ describe("Tests the open and closed states of the map widget", function()
         assert.is_true(pumpEvents(200))
         assert.is_true(openMapWidget())
         assert.is_true(pumpEvents(200))
+        waitUntil(function()
+          return mapWidth() > 150
+        end)
         assert.is_true(mapWidth() > 150, "the map shown after the layout loaded is only " .. mapWidth() .. " pixels wide")
       end)
 
@@ -4624,12 +4673,16 @@ describe("Tests the open and closed states of the map widget", function()
         assert.is_true(saveWindowLayout())
         setMainWindowSize(1280, 900)
         assert.is_true(pumpEvents(200))
+        waitUntil(windowWide)
         assert.is_true(closeMapWidget())
         assert.is_true(pumpEvents(200))
         assert.is_true(loadWindowLayout())
         assert.is_true(pumpEvents(200))
         assert.is_true(openMapWidget())
         assert.is_true(pumpEvents(200))
+        waitUntil(function()
+          return mapWidth() > 150
+        end)
         assert.is_true(mapWidth() > 150, "the map the layout showed is only " .. mapWidth() .. " pixels wide")
       end)
 
@@ -4657,6 +4710,30 @@ describe("Tests the open and closed states of the map widget", function()
         assert.is_true(openMapWidget("r"))
         assert.is_true(pumpEvents(200))
         assert.are.equal(saved, mapWidth(), "docking the map where it already was resized it")
+      end)
+
+      -- As one saved on a bigger screen is: Qt fits it to the whole screen, leaving its title bar above the top
+      it("fits a floating map bigger than the screen below the screen's top", function()
+        if not os.getenv("MUDLET_TEST_MODE") then
+          pending("the dock is only placed once pumpEvents() runs")
+          return
+        end
+        local huge = 20000
+        assert.is_true(openMapWidget(50, 50, huge, huge))
+        assert.is_true(pumpEvents(200))
+        assert.is_true(saveWindowLayout())
+        assert.is_true(loadWindowLayout())
+        assert.is_true(pumpEvents(200))
+        local x, y, width, height = getMapWidgetGeometry()
+        assert.is_true(width < huge and height < huge, "the layout did not shrink the map to the screen, so nothing was tested")
+        assert.is_true(x >= 0, "the map's left edge is off the screen, at " .. x)
+        -- Where the window manager frames a floating dock its position is the frame's, title bar included, which may
+        -- touch the screen's top; where Qt frames it the position is the dock's own, a title bar's height below that
+        if getOS() == "windows" or getOS() == "mac" then
+          assert.is_true(y >= 0, "the map's title bar is above the screen's top, at " .. y)
+        else
+          assert.is_true(y > 0, "the map's top is at " .. y .. ", leaving no room on the screen for its title bar")
+        end
       end)
     end)
   end)
@@ -7947,5 +8024,132 @@ describe("Tests hiding the mapper's built-in context menu items", function()
   it("should raise an error when the item name is not a string", function()
     assert.has_error(function() hideMapMenuItem({}) end)
     assert.has_error(function() showMapMenuItem() end)
+  end)
+end)
+
+describe("Tests setMapMenuPriority and getMapMenuPriority", function()
+  local missing = "map menu entry doesn't exist"
+
+  after_each(function()
+    removeMapMenu("specPriorityMenu")
+    removeMapEvent("specPriorityEvent")
+    removeMapEvent("specPriorityMenu")
+  end)
+
+  it("should report 0 for an entry with no priority set", function()
+    addMapMenu("specPriorityNeverSetMenu", "", "Spec priority menu")
+    addMapEvent("specPriorityNeverSetEvent", "specPriorityEvent", "", "Spec priority event")
+    finally(function()
+      removeMapMenu("specPriorityNeverSetMenu")
+      removeMapEvent("specPriorityNeverSetEvent")
+    end)
+    assert.equals(0, getMapMenuPriority("specPriorityNeverSetMenu"))
+    assert.equals(0, getMapMenuPriority("specPriorityNeverSetEvent"))
+  end)
+
+  it("should give back the priority set on a menu or an event", function()
+    addMapMenu("specPriorityMenu", "", "Spec priority menu")
+    addMapEvent("specPriorityEvent", "specPriorityEvent", "specPriorityMenu", "Spec priority event")
+    assert.is_true(setMapMenuPriority("specPriorityMenu", -3))
+    assert.is_true(setMapMenuPriority("specPriorityEvent", 12))
+    assert.equals(-3, getMapMenuPriority("specPriorityMenu"))
+    assert.equals(12, getMapMenuPriority("specPriorityEvent"))
+    assert.is_true(setMapMenuPriority("specPriorityEvent", 0))
+    assert.equals(0, getMapMenuPriority("specPriorityEvent"))
+  end)
+
+  it("should take numbers as unique names, like addMapMenu and addMapEvent do", function()
+    addMapMenu(4874, "", "Spec priority number menu")
+    addMapEvent(48741, "specPriorityEvent", 4874, "Spec priority number event")
+    finally(function()
+      removeMapMenu(4874)
+    end)
+    assert.is_true(setMapMenuPriority(4874, 1))
+    assert.is_true(setMapMenuPriority(48741, -1))
+    assert.equals(1, getMapMenuPriority(4874))
+    assert.equals(1, getMapMenuPriority("4874"))
+    assert.equals(-1, getMapMenuPriority(48741))
+  end)
+
+  it("should share one priority between a menu and an event with the same unique name", function()
+    addMapMenu("specPriorityMenu", "", "Spec priority menu")
+    addMapEvent("specPriorityMenu", "specPriorityEvent", "", "Spec priority event")
+    assert.is_true(setMapMenuPriority("specPriorityMenu", 4))
+    removeMapMenu("specPriorityMenu")
+    assert.equals(4, getMapMenuPriority("specPriorityMenu"))
+  end)
+
+  it("should keep a priority while its entry is removed and added again", function()
+    addMapMenu("specPriorityMenu", "", "Spec priority menu")
+    addMapEvent("specPriorityEvent", "specPriorityEvent", "specPriorityMenu", "Spec priority event")
+    assert.is_true(setMapMenuPriority("specPriorityMenu", -2))
+    assert.is_true(setMapMenuPriority("specPriorityEvent", 7))
+    for _ = 1, 3 do
+      removeMapMenu("specPriorityMenu")
+      local ok, err = getMapMenuPriority("specPriorityEvent")
+      assert.is_nil(ok)
+      assert.equals(missing, err)
+      addMapMenu("specPriorityMenu", "", "Spec priority menu")
+      addMapEvent("specPriorityEvent", "specPriorityEvent", "specPriorityMenu", "Spec priority event")
+      assert.equals(-2, getMapMenuPriority("specPriorityMenu"))
+      assert.equals(7, getMapMenuPriority("specPriorityEvent"))
+    end
+  end)
+
+  it("should return nil and a message for an entry that doesn't exist", function()
+    local ok, err = setMapMenuPriority("specPriorityNeverAdded", 1)
+    assert.is_nil(ok)
+    assert.equals(missing, err)
+    ok, err = getMapMenuPriority("specPriorityNeverAdded")
+    assert.is_nil(ok)
+    assert.equals(missing, err)
+  end)
+
+  it("should not store a priority it refused for an entry not added yet", function()
+    finally(function()
+      removeMapEvent("specPriorityLate")
+    end)
+    local ok, err = setMapMenuPriority("specPriorityLate", 5)
+    assert.is_nil(ok)
+    assert.equals(missing, err)
+    addMapEvent("specPriorityLate", "specPriorityEvent", "", "Spec priority late event")
+    assert.equals(0, getMapMenuPriority("specPriorityLate"))
+  end)
+
+  it("should not change a removed entry's priority when refusing to set it", function()
+    finally(function()
+      removeMapEvent("specPriorityRemoved")
+    end)
+    addMapEvent("specPriorityRemoved", "specPriorityEvent", "", "Spec priority removed event")
+    assert.is_true(setMapMenuPriority("specPriorityRemoved", 2))
+    removeMapEvent("specPriorityRemoved")
+    local ok, err = setMapMenuPriority("specPriorityRemoved", 9)
+    assert.is_nil(ok)
+    assert.equals(missing, err)
+    addMapEvent("specPriorityRemoved", "specPriorityEvent", "", "Spec priority removed event")
+    assert.equals(2, getMapMenuPriority("specPriorityRemoved"))
+  end)
+
+  it("should leave the tables getMapMenus and getMapEvents return alone", function()
+    addMapMenu("specPriorityMenu", "", "Spec priority menu")
+    addMapEvent("specPriorityEvent", "specPriorityEvent", "specPriorityMenu", "Spec priority event")
+    local menus, events = getMapMenus(), getMapEvents()
+    assert.is_true(setMapMenuPriority("specPriorityEvent", -1))
+    assert.are.same(menus, getMapMenus())
+    assert.are.same(events, getMapEvents())
+  end)
+
+  it("should raise an error when the unique name is not a string", function()
+    assert.error_matches(function() setMapMenuPriority({}, 1) end, "setMapMenuPriority: bad argument #1 type", nil, true)
+    assert.error_matches(function() setMapMenuPriority() end, "setMapMenuPriority: bad argument #1 type", nil, true)
+    assert.error_matches(function() getMapMenuPriority({}) end, "getMapMenuPriority: bad argument #1 type", nil, true)
+    assert.error_matches(function() getMapMenuPriority() end, "getMapMenuPriority: bad argument #1 type", nil, true)
+  end)
+
+  it("should raise an error when the priority is not a number", function()
+    addMapEvent("specPriorityEvent", "specPriorityEvent", "", "Spec priority event")
+    assert.error_matches(function() setMapMenuPriority("specPriorityEvent") end, "setMapMenuPriority: bad argument #2 type", nil, true)
+    assert.error_matches(function() setMapMenuPriority("specPriorityEvent", "high") end, "setMapMenuPriority: bad argument #2 type", nil, true)
+    assert.error_matches(function() setMapMenuPriority("specPriorityEvent", 2^40) end, "setMapMenuPriority: integer over/under-flow in argument #2", nil, true)
   end)
 end)

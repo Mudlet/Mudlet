@@ -31,6 +31,7 @@
 #include <QGuiApplication>
 #include <QMutex>
 #include <QPointer>
+#include <QSize>
 #include <QWaitCondition>
 
 #include <algorithm>
@@ -43,6 +44,7 @@
 #include <cstdio>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <thread>
 #include <utility>
 
@@ -55,6 +57,7 @@
 #include <QSocketNotifier>
 #include <fcntl.h>
 #include <poll.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 #endif
 
@@ -86,6 +89,8 @@ void initializeQRCResources()
 
 #if !defined(Q_OS_WINDOWS)
 int gSignalPipe[2] = {-1, -1};
+// Apart from gSignalPipe, which a blocked write takes any byte in for a stop
+int gResizePipe[2] = {-1, -1};
 
 // How long the writes may still wait, all told, once a stop signal comes: a slow reader still gets the last lines,
 // and one that has stopped reading, as `| less` at its prompt has, cannot hold up the save. The rest is dropped.
@@ -494,6 +499,46 @@ QStringList catchStopSignals()
         }
     }
     return problems;
+}
+
+void forwardResize(int)
+{
+    const int savedErrno = errno;
+    const char byte = 0;
+    // A full pipe already holds a resize to act on
+    [[maybe_unused]] const auto written = ::write(gResizePipe[1], &byte, 1);
+    errno = savedErrno;
+}
+
+// In characters, of the terminal standard output goes to; none for a file or a pipe
+std::optional<QSize> terminalSize()
+{
+    winsize size = {};
+    if (::ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) != 0 || !size.ws_col || !size.ws_row) {
+        return std::nullopt;
+    }
+    return QSize(size.ws_col, size.ws_row);
+}
+
+// Why SIGWINCH cannot be caught, which leaves the size as it was when the run began; empty once it is
+QString catchResizes()
+{
+    if (::pipe(gResizePipe) != 0) {
+        return systemReason();
+    }
+    struct sigaction action = {};
+    action.sa_handler = forwardResize;
+    sigemptyset(&action.sa_mask);
+    action.sa_flags = SA_RESTART;
+    if (::fcntl(gResizePipe[0], F_SETFD, FD_CLOEXEC) == -1 || ::fcntl(gResizePipe[1], F_SETFD, FD_CLOEXEC) == -1 || ::fcntl(gResizePipe[0], F_SETFL, O_NONBLOCK) == -1
+        || ::fcntl(gResizePipe[1], F_SETFL, O_NONBLOCK) == -1 || sigaction(SIGWINCH, &action, nullptr) != 0) {
+        const QString reason = systemReason();
+        ::close(gResizePipe[0]);
+        ::close(gResizePipe[1]);
+        gResizePipe[0] = gResizePipe[1] = -1;
+        return reason;
+    }
+    return QString();
 }
 #endif
 
@@ -941,6 +986,30 @@ int main(int argc, char* argv[])
     const THeadlessSession::StartResult started = session->start(options);
     SecureStringUtils::secureStringClear(options.password);
     if (started == THeadlessSession::StartResult::started) {
+#if !defined(Q_OS_WINDOWS)
+        // As the GUI tells the game the main window's size
+        std::unique_ptr<QSocketNotifier> resizeNotifier;
+        const auto followTerminal = [&session]() {
+            if (const std::optional<QSize> size = terminalSize()) {
+                session->setScreenSize(size->width(), size->height());
+            }
+        };
+        if (::isatty(STDOUT_FILENO)) {
+            if (const QString problem = catchResizes(); !problem.isEmpty()) {
+                //: Warning from the headless runner; %1 is the system's reason
+                errors.report(QCoreApplication::translate("headless", "cannot catch SIGWINCH, so the game will not be told when the terminal is resized: %1").arg(problem));
+            } else {
+                resizeNotifier = std::make_unique<QSocketNotifier>(gResizePipe[0], QSocketNotifier::Read);
+                QObject::connect(resizeNotifier.get(), &QSocketNotifier::activated, [followTerminal]() {
+                    char bytes[64];
+                    while (::read(gResizePipe[0], bytes, sizeof(bytes)) > 0) {
+                    }
+                    followTerminal();
+                });
+            }
+            followTerminal();
+        }
+#endif
         // Not ended by output that cannot be written, which leaves the profile running and its steps to do
         const auto stepsEnded = [&]() {
             drainStopSignals();
@@ -994,6 +1063,9 @@ int main(int argc, char* argv[])
         // One that ended a wait on standard output may still be in the pipe, its notifier not run since; it still
         // decides the exit status.
         drainStopSignals();
+#if !defined(Q_OS_WINDOWS)
+        resizeNotifier.reset();
+#endif
         if (linesNotSent) {
             //: Error from the headless runner; %1 is how many lines of standard input sent the game something while there was no connection, which was lost
             errors.report(QCoreApplication::translate("headless", "standard input was read while there was no connection to the game to send it to; lines not sent: %1").arg(linesNotSent));

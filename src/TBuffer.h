@@ -666,6 +666,8 @@ public:
     bool moveCursor(QPoint& where);
     int getLastLineNumber();
     qint64 linesRemovedTotal() const { return mLinesRemovedTotal; }
+    // Only the lines dropped off the top for the line limit, each of which moves every line left up by one
+    qint64 linesTrimmedTotal() const { return mLinesTrimmedTotal; }
     QStringList getEndLines(int);
     void clear();
     void clearLinkState(const QSet<int>& stillLiveLinkIds = {});
@@ -771,6 +773,7 @@ private:
     int mLinesUntilLinkSweep = 0;
     QSet<int> mLinkIdsRemovedSinceSweep;
     qint64 mLinesRemovedTotal = 0;
+    qint64 mLinesTrimmedTotal = 0;
     QHash<int, qint64> mLinkIdIssuedAtLine;
     bool linkHoldsState(const int id) const;
     QSet<int> collectLiveLinkIdsResettingIssueLines();
@@ -846,8 +849,8 @@ private:
     void decodeOSC(const QString&);
     void finaliseActiveHyperlink();
     void registerLinkVisibility(const int linkId, const int column, const int length, const Mudlet::HyperlinkStyling& styling);
-    void carryActiveHyperlinkPastFlush(QString& line);
-    void maskSpoilerText(const int linkId, QString& line, const int column, const int length);
+    void carryActiveHyperlinkPastFlush(QString& line, const TLineFormat& format);
+    void maskSpoilerText(const int linkId, QString& line, const TLineFormat& format, const int column, const int length);
     void resetColors();
     bool commitLine(char ch, size_t& localBufferPosition, bool isFromServer = false, bool forcedLineBreak = false);
     void commitLineData(QString line, TLineFormat chars, char ch);
@@ -1044,6 +1047,9 @@ private:
     int lastLoggedFromLine = 0;
     int lastloggedToLine = 0;
     QString lastTextToLog;
+    // appendLog() text written after lastTextToLog, so it keeps its place in arrival order
+    QString mTextAppendedToLog;
+    void logTextAppendedBehindPendingLine();
     // indices of lines being committed while their triggers run - a stack,
     // because a trigger calling feedTriggers() re-enters commitLine();
     // deleteLines() adjusts the entries so commitLine() can tell whether its

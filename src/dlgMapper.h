@@ -49,6 +49,7 @@ class dlgMapper : public QWidget, public Ui::mapper, public TMapViewFrontend
 public:
     Q_DISABLE_COPY(dlgMapper)
     dlgMapper(QWidget*, Host*, TMap*);
+    Host* getHost() const { return mpHost; }
 #if defined(INCLUDE_3DMAPPER)
     QOpenGLWidget* glWidget = nullptr;
 #endif
@@ -139,6 +140,7 @@ public slots:
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
+    void keyPressEvent(QKeyEvent*) override;
 
 private:
     // Only the mapper TMap::mpMapper names acts on the map's cues, as other

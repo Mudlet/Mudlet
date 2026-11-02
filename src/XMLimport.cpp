@@ -28,6 +28,7 @@
 #include "CredentialManager.h"
 #include "Host.h"
 #include "SecureStringUtils.h"
+#include "ShortcutsManager.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
@@ -2276,6 +2277,10 @@ void XMLimport::readProfileShortcut()
     // Copied, as reading the text moves the reader on from the attribute
     const QString key = attributes().value(qsl("key")).toString();
     auto sequenceString = readElementText();
+    if (!ShortcutsManager::self()) {
+        mpHost->mProfileShortcutsAsRead.insert(key, sequenceString);
+        return;
+    }
     if (auto it = mpHost->profileShortcuts.find(key); it != mpHost->profileShortcuts.end()) {
         QKeySequence sequence = !sequenceString.isEmpty() ? QKeySequence(sequenceString) : QKeySequence();
         it->second->swap(sequence);
