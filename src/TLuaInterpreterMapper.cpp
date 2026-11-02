@@ -2041,6 +2041,21 @@ int TLuaInterpreter::getMapLabels(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapMenuPriority
+int TLuaInterpreter::getMapMenuPriority(lua_State* L)
+{
+    const QString uniqueName = getVerifiedString(L, __func__, 1, "unique name");
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    if (!host.mpMap->mUserMenus.contains(uniqueName) && !host.mpMap->mUserActions.contains(uniqueName)) {
+        return warnArgumentValue(L, __func__, "map menu entry doesn't exist");
+    }
+    lua_pushinteger(L, host.mpMap->mUserMenuPriorities.value(uniqueName));
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapMenus
 int TLuaInterpreter::getMapMenus(lua_State* L)
 {
@@ -4212,6 +4227,27 @@ int TLuaInterpreter::setMapEnvironmentKit(lua_State* L)
     }
     host.mpMap->setUnsaved(__func__);
     host.mpMap->updateArea(-1);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapMenuPriority
+int TLuaInterpreter::setMapMenuPriority(lua_State* L)
+{
+    if (!checkStringArg(L, __func__, 1, "unique name")) {
+        return lua_error(L);
+    }
+    const int priority = getVerifiedInt(L, __func__, 2, "priority");
+    const QString uniqueName{lua_tostring(L, 1)};
+
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    if (!host.mpMap->mUserMenus.contains(uniqueName) && !host.mpMap->mUserActions.contains(uniqueName)) {
+        return warnArgumentValue(L, __func__, "map menu entry doesn't exist");
+    }
+    host.mpMap->mUserMenuPriorities.insert(uniqueName, priority);
     lua_pushboolean(L, true);
     return 1;
 }
