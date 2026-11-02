@@ -33,6 +33,7 @@
 #include <QContextMenuEvent>
 #include <QMenu>
 #include <QScopeGuard>
+#include <QShortcut>
 
 #include "HostDialogs.h"
 #include "MudletApp.h"
@@ -900,6 +901,49 @@ private slots:
     QTRY_VERIFY(!pEditor->mCleanResetQueued);
     mpHost->getScriptUnit()->compileAll();
     QVERIFY2(pEditor->mCleanResetQueued, "recompiling every script did not rebuild the editor's trees");
+  }
+
+  // The "Script editor" shortcut that opens the editor also takes the player
+  // back to the main window from it, follows a change to it, and stands aside
+  // while a key binding grabs a key (#6980)
+  void test_scriptEditorShortcutLeavesTheEditor() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+
+    auto it = mpHost->profileShortcuts.find(qsl("Script editor"));
+    QVERIFY(it != mpHost->profileShortcuts.end());
+    const QKeySequence original = *it->second;
+    const QKeySequence changed(Qt::CTRL | Qt::ALT | Qt::Key_F12);
+    auto restore = qScopeGuard([&] {
+      *it->second = original;
+      QMetaObject::invokeMethod(mudlet::self(), "slot_assignShortcutsFromProfile", Q_ARG(Host *, mpHost));
+    });
+
+    const auto shortcutFor = [pEditor](const QKeySequence &sequence) -> QShortcut * {
+      for (auto *pShortcut : pEditor->findChildren<QShortcut *>()) {
+        if (pShortcut->key() == sequence) {
+          return pShortcut;
+        }
+      }
+      return nullptr;
+    };
+
+    QVERIFY2(shortcutFor(original), "the editor has no shortcut back to the main window on the \"Script editor\" key");
+
+    *it->second = changed;
+    QVERIFY(QMetaObject::invokeMethod(mudlet::self(), "slot_assignShortcutsFromProfile", Q_ARG(Host *, mpHost)));
+    QVERIFY2(!shortcutFor(original), "the editor kept the old \"Script editor\" key after it was changed");
+    QShortcut *pShortcut = shortcutFor(changed);
+    QVERIFY2(pShortcut, "the editor did not take up the changed \"Script editor\" key");
+    QVERIFY(pShortcut->isEnabled());
+
+    pEditor->slot_keyGrab();
+    QVERIFY2(!pShortcut->isEnabled(), "the \"Script editor\" key stayed live while a key was being grabbed");
+    QTest::keyClick(pEditor, Qt::Key_Escape);
+    QVERIFY(!pEditor->mIsGrabKey);
+    QVERIFY2(pShortcut->isEnabled(), "the \"Script editor\" key did not come back after grabbing a key");
   }
 };
 

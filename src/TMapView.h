@@ -74,6 +74,9 @@ public:
     // For after the profile changes which 3D renderer it uses
     void update3DViewAvailability();
 
+protected:
+    void keyPressEvent(QKeyEvent*) override;
+
 private slots:
     void slot_switchArea(int index);
 

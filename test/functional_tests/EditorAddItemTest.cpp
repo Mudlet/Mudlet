@@ -25,7 +25,9 @@
  */
 
 #include <QTemporaryDir>
+#include <QToolBar>
 #include <QTreeWidget>
+#include <QTreeWidgetItemIterator>
 #include <QtTest/QtTest>
 #include <algorithm>
 #include <chrono>
@@ -383,6 +385,77 @@ private slots:
 
         QVERIFY2(pKey->isActive(), "saving a newly made key did not switch it on");
         QCOMPARE(pItem->data(0, Qt::AccessibleDescriptionRole).toString(), mpEditor->descActive);
+    }
+
+    // Grabbing a key switches the toolbars' shortcuts off so the grab sees the
+    // key press; however the grab ends, every one of them has to come back (#7812)
+    void test_toolbarShortcutsComeBackAfterGrabbingAKey_data()
+    {
+        QTest::addColumn<int>("key");
+        QTest::newRow("grabbed") << static_cast<int>(Qt::Key_F10);
+        QTest::newRow("cancelled") << static_cast<int>(Qt::Key_Escape);
+    }
+
+    void test_toolbarShortcutsComeBackAfterGrabbingAKey()
+    {
+        QFETCH(int, key);
+        mpEditor->slot_showKeys();
+        QList<QAction*> actions = mpEditor->toolBar->actions() + mpEditor->toolBar2->actions();
+        QHash<QAction*, QList<QKeySequence>> before;
+        for (auto* pAction : actions) {
+            before.insert(pAction, pAction->shortcuts());
+        }
+        QCOMPARE(mpEditor->mAddItem->shortcut(), QKeySequence(QKeySequence::New));
+
+        mpEditor->slot_keyGrab();
+        QVERIFY2(mpEditor->mAddItem->shortcut().isEmpty(), "the add shortcut stayed live while a key was being grabbed");
+        QTest::keyClick(mpEditor, static_cast<Qt::Key>(key));
+        QVERIFY2(!mpEditor->mIsGrabKey, "the key press did not end the grab");
+
+        for (auto* pAction : actions) {
+            QVERIFY2(pAction->shortcuts() == before.value(pAction), qPrintable(qsl("\"%1\" lost its shortcut after grabbing a key").arg(pAction->text())));
+        }
+
+        // clicking "grab key" again mid-grab must not hold aside the already cleared shortcuts
+        mpEditor->slot_keyGrab();
+        mpEditor->slot_keyGrab();
+        QTest::keyClick(mpEditor, Qt::Key_Escape);
+        QCOMPARE(mpEditor->mAddItem->shortcut(), QKeySequence(QKeySequence::New));
+    }
+
+    // The steps from #7812, by keyboard only: a grab leaves focus on the grab
+    // button, outside the tree that Ctrl+N is scoped to
+    void test_ctrlNAddsAnotherKeyStraightAfterGrabbingOne()
+    {
+        // counts rows, not "New key"s: adding the second key saves the first under its binding's name
+        auto countKeys = [this]() {
+            int count = 0;
+            for (QTreeWidgetItemIterator it(mpEditor->treeWidget_keys); *it; ++it) {
+                ++count;
+            }
+            return count;
+        };
+        mpEditor->activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(mpEditor));
+        mpEditor->slot_showKeys();
+        mpEditor->treeWidget_keys->setCurrentItem(mpEditor->mpKeyBaseItem);
+        QTRY_VERIFY(mpEditor->treeWidget_keys->hasFocus());
+        const int before = countKeys();
+
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_N, Qt::ControlModifier);
+        QCOMPARE(countKeys(), before + 1);
+
+        auto* pGrab = mpEditor->mpKeysMainArea->pushButton_key_grabKey;
+        pGrab->setFocus(Qt::TabFocusReason);
+        QTRY_VERIFY(pGrab->hasFocus());
+        QTest::keyClick(pGrab, Qt::Key_Space);
+        QVERIFY2(mpEditor->mIsGrabKey, "pressing the grab button did not start a grab");
+        QTest::keyClick(pGrab, Qt::Key_F10);
+        QVERIFY2(!mpEditor->mIsGrabKey, "the key press did not end the grab");
+        QCOMPARE(mpEditor->mpKeysMainArea->lineEdit_key_binding->text(), qsl("F10"));
+
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_N, Qt::ControlModifier);
+        QVERIFY2(countKeys() == before + 2, "Ctrl+N straight after grabbing a key did not add another key");
     }
 };
 
