@@ -76,6 +76,7 @@ private:
     const QString mAddressSavedCatalogProfile = qsl("Slothmud");
     const QString mUncopyableCatalogProfile = qsl("Materia Magica");
     const QString mAutoLoginSecureCatalogProfile = qsl("MorgenGrauen");
+    const QString mAutoLoginIreCatalogProfile = qsl("Lusternia");
     // A catalog game with no folder at all
     const QString mUnopenedCatalogProfile = qsl("3Scapes");
     // Not from the catalog, with every detail saved
@@ -130,6 +131,7 @@ private slots:
                                     mAddressSavedCatalogProfile,
                                     mUncopyableCatalogProfile,
                                     mAutoLoginSecureCatalogProfile,
+                                    mAutoLoginIreCatalogProfile,
                                     mSavedProfile,
                                     mTickedProfile,
                                     mSavesProfile}) {
@@ -444,18 +446,54 @@ private slots:
         QCOMPARE(pMudlet->findMatchingProfile(qsl("elsewhere.example"), (*addressSaved).port), mAddressSavedCatalogProfile);
     }
 
-    // Opening a profile without the dialog, as autologin and --profile do, keeps the saved Secure
-    // choice over the catalog's just as the dialog does. Last, as it loads the profile
-    void test_openingWithoutTheDialogKeepsTheSavedSecureChoice()
+    // Opening a profile without the dialog, as autologin, --profile and telnet:// links do, keeps the
+    // saved address and Secure choice over the catalog's just as the dialog does. These last, as they load profiles
+    void test_openingWithoutTheDialogKeepsTheSavedDetails()
     {
         const auto game = TGameDetails::findGame(mAutoLoginSecureCatalogProfile);
         QVERIFY2(game != TGameDetails::scmDefaultGames.end() && (*game).tlsEnabled, "The game is not one the catalog turns TLS on for, so this proves nothing");
+        const QString savedUrl = qsl("elsewhere.example");
+        const int savedPort = (*game).port + 1;
+        QVERIFY(savedUrl != (*game).hostUrl);
+        QVERIFY(MudletApp::writeProfileData(mAutoLoginSecureCatalogProfile, qsl("url"), savedUrl).first);
+        QVERIFY(MudletApp::writeProfileData(mAutoLoginSecureCatalogProfile, qsl("port"), QString::number(savedPort)).first);
         QVERIFY(MudletApp::writeProfileData(mAutoLoginSecureCatalogProfile, qsl("ssl_tsl"), QString::number(Qt::Unchecked)).first);
 
         mudlet::self()->doAutoLogin(mAutoLoginSecureCatalogProfile, true);
         Host* pHost = HostManager::self()->getHost(mAutoLoginSecureCatalogProfile);
         QVERIFY2(pHost, "the profile was not opened");
         QVERIFY2(!pHost->mSslTsl, "the catalog's TLS default replaced the Secure choice saved for the profile");
+        QCOMPARE(pHost->getUrl(), savedUrl);
+        QCOMPARE(pHost->getPort(), savedPort);
+    }
+
+    // What a game's first load sets up for it is still chosen for the game
+    void test_aSavedAddressStillGetsTheGamesFirstLoadSetup()
+    {
+        const auto game = TGameDetails::findGame(mAutoLoginIreCatalogProfile);
+        QVERIFY2(game != TGameDetails::scmDefaultGames.end() && (*game).hostUrl == qsl("lusternia.com"), "The game is not an IRE one, so this proves nothing");
+        QVERIFY(MudletApp::writeProfileData(mAutoLoginIreCatalogProfile, qsl("url"), qsl("localhost")).first);
+
+        mudlet::self()->doAutoLogin(mAutoLoginIreCatalogProfile, true);
+        Host* pHost = HostManager::self()->getHost(mAutoLoginIreCatalogProfile);
+        QVERIFY2(pHost, "the profile was not opened");
+        QCOMPARE(pHost->getUrl(), qsl("localhost"));
+        QVERIFY2(pHost->mUSE_IRE_DRIVER_BUGFIX, "the IRE workaround was chosen for the saved address instead of for the game");
+        QVERIFY2(pHost->mInstalledPackages.contains(qsl("mudlet-mapper")), qPrintable(qsl("the game's mapper was not installed, only: %1").arg(pHost->mInstalledPackages.join(qsl(", ")))));
+        QVERIFY2(!pHost->mInstalledPackages.contains(qsl("generic_mapper")), "the generic mapper was chosen for the saved address instead of the game's own");
+    }
+
+    void test_openingAnUntouchedCatalogGameUsesTheCatalogsAddress()
+    {
+        const auto game = TGameDetails::findGame(mCatalogProfile);
+        QVERIFY(game != TGameDetails::scmDefaultGames.end());
+        QVERIFY2(!savedAtAll(mCatalogProfile, qsl("url")) && !savedAtAll(mCatalogProfile, qsl("port")), "The game's folder holds its address, so this proves nothing");
+
+        mudlet::self()->doAutoLogin(mCatalogProfile, true);
+        Host* pHost = HostManager::self()->getHost(mCatalogProfile);
+        QVERIFY2(pHost, "the profile was not opened");
+        QCOMPARE(pHost->getUrl(), (*game).hostUrl);
+        QCOMPARE(pHost->getPort(), (*game).port);
     }
 };
 
