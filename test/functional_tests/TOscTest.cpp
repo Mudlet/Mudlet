@@ -74,6 +74,10 @@ private:
     QTest::qWait(50ms);
   }
 
+  static QString connects(const QString &address) {
+    return qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(address));
+  }
+
   // Scans backward through the buffer to find the first hyperlink and returns
   // its command list from the link store.
   QStringList findFirstLinkCommands() {
@@ -809,6 +813,127 @@ private slots:
     console->mUpperPane->applyHyperlinkSelectionGroupState(
         linkId, command, styling.selection, "TOscTest");
     QCOMPARE(command, expectedCommand);
+  }
+
+  void test_Osc8TelnetLinkAsksBeforeConnecting() {
+    injectData(qsl("\x1b]8;;telnet://games.example:4000\x1b\\Visit\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+    QCOMPARE(console->getLinkStore().getLinksConst(linkId),
+             QStringList(connects(qsl("telnet://games.example:4000"))));
+    QCOMPARE(console->buffer.getLinkTooltip(linkId),
+             qsl("Connect to: telnet://games.example:4000"));
+
+    QString asked;
+    mudlet::self()->mConfirmGameLink = [&asked](const QString &question) {
+      asked = question;
+      return false;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mpHost->mLuaInterpreter.compileAndExecuteScript(
+        console->getLinkStore().getLinksConst(linkId).at(0));
+    QTRY_COMPARE(asked, qsl("Connect to games.example:4000?"));
+    QVERIFY2(!mudlet::self()->profileExists(qsl("Games")),
+             "declining still made a profile");
+  }
+
+  void test_Osc8TelnetMenuItemAsksBeforeConnecting() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Look\":\"send:look\"},{\"Visit\":\"telnet://games.example:4000\"}]}\x1b\\Menu\x1b]8;;\x1b\\"));
+
+    const QStringList commands = findFirstLinkCommands();
+    QCOMPARE(commands.size(), 2);
+    QCOMPARE(commands.at(1), connects(qsl("telnet://games.example:4000")));
+
+    QString asked;
+    mudlet::self()->mConfirmGameLink = [&asked](const QString &question) {
+      asked = question;
+      return false;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mpHost->mLuaInterpreter.compileAndExecuteScript(commands.at(1));
+    QTRY_COMPARE(asked, qsl("Connect to games.example:4000?"));
+  }
+
+  // Typed at the game, an address it could never connect to would be sent as a
+  // command, so the item has nothing to run and shows greyed out
+  void test_Osc8TelnetMenuItemWithoutAHostDoesNothing() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Look\":\"send:look\"},{\"Visit\":\"telnet://:4000\"}]}\x1b\\Menu\x1b]8;;\x1b\\"));
+
+    const QStringList commands = findFirstLinkCommands();
+    QCOMPARE(commands.size(), 2);
+    QCOMPARE(commands.at(1), QString());
+  }
+
+  void test_AGameLinkQuestionShowsTheAddressItDials_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("expected");
+
+    QTest::newRow("IPv6 with a zone") << qsl("telnet://[fe80::1%252]:4000") << qsl("Connect to [fe80::1%2]:4000?");
+    QTest::newRow("IPv6") << qsl("telnet://[2001:db8::1]:4000") << qsl("Connect to [2001:db8::1]:4000?");
+    QTest::newRow("a lookalike Unicode host") << qsl("telnet://xn--pple-43d.com:4000") << qsl("Connect to аpple.com:4000 (xn--pple-43d.com)?");
+    QTest::newRow("an ASCII host") << qsl("telnet://games.example:4000") << qsl("Connect to games.example:4000?");
+  }
+
+  void test_AGameLinkQuestionShowsTheAddressItDials() {
+    QFETCH(QString, uri);
+    QFETCH(QString, expected);
+
+    QString asked;
+    mudlet::self()->mConfirmGameLink = [&asked](const QString &question) {
+      asked = question;
+      return false;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mudlet::self()->connectFromGameLink(uri);
+    QCOMPARE(asked, expected);
+  }
+
+  // One that could never connect would otherwise say "Connect to" and then do
+  // nothing when clicked
+  void test_Osc8TelnetLinkWithoutAHostIsNotMade() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int linksBefore = console->getLinkStore().getCurrentLinkID();
+    injectData(qsl("\x1b]8;;telnet://:4000\x1b\\Visit\x1b]8;;\x1b\\"));
+    QCOMPARE(console->getLinkStore().getCurrentLinkID(), linksBefore);
+  }
+
+  // A profile already connected is only brought forward, so the link cannot
+  // set TLS for some later reconnection the player never asked for
+  void test_AGameLinkToAConnectedProfileLeavesItsTlsAlone() {
+    QVERIFY(mpHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
+    QString asked;
+    mudlet::self()->mConfirmGameLink = [&asked](const QString &question) {
+      asked = question;
+      return true;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mudlet::self()->connectFromGameLink(qsl("telnets://%1:%2").arg(mLocalhost, mPort));
+
+    QCOMPARE(asked, qsl("Connect to %1:%2 with your profile %3? It will log in with your saved details.").arg(mLocalhost, mPort, mHostname));
+    QVERIFY(!mpHost->mUseTlsThisSession);
+    QVERIFY(!mpHost->mSslTsl);
+    QVERIFY2(MudletApp::readProfileData(mHostname, qsl("ssl_tsl")).isEmpty(),
+             "the link changed the profile's saved TLS setting");
+  }
+
+  // The question runs an event loop, which carries on running clicks
+  void test_AGameLinkClickedWhileAskingIsNotAskedAgain() {
+    int questions = 0;
+    mudlet::self()->mConfirmGameLink = [&questions](const QString &) {
+      if (++questions == 1) {
+        mudlet::self()->connectFromGameLink(qsl("telnet://games.example:4000"));
+      }
+      return false;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mudlet::self()->connectFromGameLink(qsl("telnet://games.example:4000"));
+    QCOMPARE(questions, 1);
   }
 
   // A "config" parameter carrying something that is not an object is not a

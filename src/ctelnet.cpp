@@ -1652,7 +1652,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
      * (currently it can be done in the "Profile preferences") it doesn't modify
      * the execution of code in this class until it is safe to do so:
      */
-    mCurrent_sslTsl = mpHost->mSslTsl;
+    mCurrent_sslTsl = mpHost->mSslTsl || mpHost->mUseTlsThisSession;
     if (mCurrent_sslTsl) {
         if (hasIPv4_address && hasIPv6_address) {
             /* Got both types of IP address so do the happy eyeballs stuff.

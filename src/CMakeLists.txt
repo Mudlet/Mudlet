@@ -99,6 +99,7 @@ set(mudlet_SRCS
     TCommandHistory.cpp
     TConsoleModel.cpp
     TDebug.cpp
+    TelnetUri.cpp
     TEncodingHelper.cpp
     TEncodingTable.cpp
     TEntityHandler.cpp
@@ -410,6 +411,7 @@ set(mudlet_HDRS
     TConsoleModel.h
     TConsoleModelNotifier.h
     TDebug.h
+    TelnetUri.h
     TEncodingHelper.h
     TEncodingTable.h
     TEntityHandler.h

@@ -363,6 +363,97 @@ private slots:
     }
 #endif
 
+    // connectToServer() can save an address the open profile is not using, which is the one a game's
+    // link is matched to and asked about, so that is the one dialled
+    void test_aGameLinkDialsTheAddressItAskedAbout()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        host->setUrl(qsl("unreachable.invalid"));
+
+        mudlet::self()->mConfirmGameLink = [](const QString&) {
+            return true;
+        };
+        const auto unhook = qScopeGuard([] {
+            mudlet::self()->mConfirmGameLink = nullptr;
+        });
+        QSignalSpy connected(&host->mTelnet, &cTelnet::signal_connected);
+        mudlet::self()->connectFromGameLink(qsl("telnet://%1:%2").arg(mLocalhost).arg(mPort));
+        QVERIFY2(connected.wait(3s), "the link dialled the open profile's address, not the one it asked about");
+    }
+
+#if !defined(QT_NO_SSL)
+    // A game's telnets:// link to a saved profile connects it with TLS, which this plain game fails,
+    // without saving TLS to the profile; a telnet:// link afterwards connects it without
+    void test_aGameLinkToASavedProfileUsesTlsOnlyWhenItSaysSo()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        const QString savedTls = MudletApp::readProfileData(mHostname, qsl("ssl_tsl"));
+        const int disconnectsBefore = countLines(host, qsl("Socket got disconnected"));
+        mpServer->setGreeting(QByteArray("Welcome to the game.\r\n"));
+
+        QString asked;
+        mudlet::self()->mConfirmGameLink = [&asked](const QString& question) {
+            asked = question;
+            return true;
+        };
+        const auto unhook = qScopeGuard([] {
+            mudlet::self()->mConfirmGameLink = nullptr;
+        });
+        mudlet::self()->connectFromGameLink(qsl("telnets://%1:%2").arg(mLocalhost).arg(mPort));
+        QCOMPARE(asked, qsl("Connect to %1:%2 with your profile %3? It will log in with your saved details.").arg(mLocalhost).arg(mPort).arg(mHostname));
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
+                         },
+                         20s),
+                 "the telnets:// link did not connect with TLS");
+        QVERIFY(!host->mSslTsl);
+        QCOMPARE(MudletApp::readProfileData(mHostname, qsl("ssl_tsl")), savedTls);
+
+        const int disconnectsAfterTls = countLines(host, qsl("Socket got disconnected"));
+        QSignalSpy connected(&host->mTelnet, &cTelnet::signal_connected);
+        mudlet::self()->connectFromGameLink(qsl("telnet://%1:%2").arg(mLocalhost).arg(mPort));
+        QVERIFY2(connected.wait(3s), "the telnet:// link did not connect");
+        QTest::qWait(1s);
+        QCOMPARE(countLines(host, qsl("Socket got disconnected")), disconnectsAfterTls);
+        QVERIFY(!host->mUseTlsThisSession);
+    }
+
+    // A telnets:// link's TLS is for the address the player agreed to, not one a script dials afterwards
+    void test_aScriptsConnectionAfterAGameLinkDoesNotInheritItsTls()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        const int disconnectsBefore = countLines(host, qsl("Socket got disconnected"));
+        mpServer->setGreeting(QByteArray("Welcome to the game.\r\n"));
+
+        mudlet::self()->mConfirmGameLink = [](const QString&) {
+            return true;
+        };
+        const auto unhook = qScopeGuard([] {
+            mudlet::self()->mConfirmGameLink = nullptr;
+        });
+        mudlet::self()->connectFromGameLink(qsl("telnets://%1:%2").arg(mLocalhost).arg(mPort));
+        QVERIFY(host->mUseTlsThisSession);
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
+                         },
+                         20s),
+                 "the telnets:// link did not connect with TLS");
+
+        QSignalSpy connected(&host->mTelnet, &cTelnet::signal_connected);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("connectToServer('%1', %2)").arg(mLocalhost).arg(mPort)));
+        QVERIFY2(connected.wait(3s), "the script's connection did not connect");
+        QVERIFY(!host->mUseTlsThisSession);
+    }
+#endif
+
 private:
     // Takes a port that nothing is listening on - by binding one and letting it go - and points
     // the profile at it. Answers the port, or 0 if one could not be had.

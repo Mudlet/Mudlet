@@ -92,6 +92,8 @@ int TLuaInterpreter::connectToServer(lua_State* L)
         }
     }
 
+    // A telnets:// link's TLS was for the address the player agreed to, not this one
+    host.mUseTlsThisSession = false;
     host.mTelnet.connectIt(url, port);
 
     lua_pushboolean(L, true);

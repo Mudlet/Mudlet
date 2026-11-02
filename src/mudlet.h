@@ -31,6 +31,7 @@
 #include "ShortcutsManager.h"
 #include "TAppFrontend.h"
 #include "utils.h"
+#include <functional>
 #include <memory>
 
 #if defined(INCLUDE_UPDATER)
@@ -92,6 +93,7 @@ class TMCPServer;
 #endif
 class MudletInstanceCoordinator;
 class ShortcutManager;
+struct TelnetUriData;
 class TConsole;
 class TDebugFilterBar;
 class TDetachedWindow;
@@ -158,7 +160,7 @@ public:
     void growDockToSizeHintWhenShown(QDockWidget*);
     void deleteProfileData(const QString& profile, const QString& item);
     void disableToolbarButtons();
-    void doAutoLogin(const QString&, bool offline);
+    void doAutoLogin(const QString&, bool offline, bool useTlsThisSession = false);
     void enableToolbarButtons();
     void updateMainWindowToolbarState();
     void updateMapActionAvailability() override;
@@ -334,6 +336,9 @@ public:
 
     // Telnet URI handling
     void handleTelnetUri(const QString& uri) override;
+    void connectFromGameLink(const QString& uri) override;
+    // Answers the question connectFromGameLink() asks, in place of the dialog; set by tests
+    std::function<bool(const QString& question)> mConfirmGameLink;
 
     enums::Appearance mAppearance = enums::Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
@@ -370,6 +375,7 @@ public:
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     // Flag to prevent connection dialog from opening during telnet:// URI processing
     bool mProcessingTelnetUri = false;
+    bool mGameLinkQuestionOpen = false;
     QToolBar* mpMainToolBar = nullptr;
     QPointer<ShortcutsManager> mpShortcutsManager;
     TTabBar* mpTabBar = nullptr;
@@ -871,16 +877,7 @@ private:
     static constexpr int mCharacterModeWarningsMax = 3;     // Character mode
     static constexpr int mCompactInputLineTutorialsMax = 3; // Compact input line
 
-    // Telnet URI handling structures and methods
-    struct TelnetUriData
-    {
-        QString host;
-        int port = 23;
-        QString username;
-        bool useTls = false;
-    };
-
-    std::optional<TelnetUriData> parseTelnetUri(const QString& uri);
+    // Telnet URI handling methods
     QString findMatchingProfile(const QString& host, int port);
     QString createProfileForUri(const TelnetUriData& uriData);
 

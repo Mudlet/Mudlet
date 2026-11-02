@@ -37,6 +37,7 @@
 #include "TStringUtils.h"
 #include "UntrustedText.h"
 #include "TTextProperties.h"
+#include "TelnetUri.h"
 #include "widechar_width.h"
 #include "TEncodingHelper.h"
 #include "SentryWrapper.h"
@@ -5072,6 +5073,10 @@ void TBuffer::decodeOSC(const QString& sequence)
                     mCurrentHyperlinkStyling.baseCommand = baseUrl;
                     command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
                     hint = {qsl("%1: %2").arg(QObject::tr("Open browser to"), UntrustedText::forTarget(baseUrl))};
+                } else if ((scheme == qsl("telnet") || scheme == qsl("telnets")) && parseTelnetUri(baseUrl)) {
+                    command = {qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(baseUrl))};
+                    //: Start of the tooltip on a link from the game to a game's address, which may be the game being played, followed by a colon and that address
+                    hint = {qsl("%1: %2").arg(QObject::tr("Connect to"), UntrustedText::forTarget(baseUrl))};
                 } else {
                     qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
                     return;
@@ -5117,6 +5122,10 @@ void TBuffer::decodeOSC(const QString& sequence)
                         menuHints.append(QString());
                     } else if (systemMayOpenUrl(QUrl(menuCommand))) {
                         menuCommands.append(qsl("openUrl(%1)").arg(LuaLiteral::quote(menuCommand)));
+                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+                    } else if (const QString menuScheme = QUrl(menuCommand).scheme().toLower(); menuScheme == qsl("telnet") || menuScheme == qsl("telnets")) {
+                        // One Mudlet could not connect to stays in the menu with nothing to run, so it shows greyed out
+                        menuCommands.append(parseTelnetUri(menuCommand) ? qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(menuCommand)) : QString());
                         menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     } else {
                         // Treat as direct command
