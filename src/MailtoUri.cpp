@@ -31,10 +31,23 @@ QString MailtoUri::withOnlyMessageFields(const QString& uri)
         return uri;
     }
 
+    // Decoded, an address like x%3Fattach=/etc/hostname%26@b.com reaches the handler as x?attach=/etc/hostname&@b.com
+    const auto hidesAField = [](const QString& recipients) {
+        return recipients.contains(QLatin1Char('?')) || recipients.contains(QLatin1Char('&')) || recipients.contains(QLatin1Char('#'));
+    };
+    if (hidesAField(url.path(QUrl::FullyDecoded))) {
+        return QString();
+    }
+
     QStringList kept;
     for (const QString& field : url.query(QUrl::FullyEncoded).split(QLatin1Char('&'))) {
-        const QString name = QUrl::fromPercentEncoding(field.left(field.indexOf(QLatin1Char('='))).toUtf8()).trimmed().toLower();
-        if (name == qsl("subject") || name == qsl("body")) {
+        const int separator = field.indexOf(QLatin1Char('='));
+        const QString name = QUrl::fromPercentEncoding(field.left(separator).toUtf8()).trimmed().toLower();
+        const bool recipients = name == qsl("to") || name == qsl("cc") || name == qsl("bcc");
+        if (recipients && separator >= 0 && hidesAField(QUrl::fromPercentEncoding(field.mid(separator + 1).toUtf8()))) {
+            return QString();
+        }
+        if (recipients || name == qsl("subject") || name == qsl("body")) {
             // Some handlers also split a query on these
             QString value = field;
             kept.append(value.replace(QLatin1Char(';'), qsl("%3B")).replace(QLatin1Char('?'), qsl("%3F")));

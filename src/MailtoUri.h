@@ -26,7 +26,7 @@ class MailtoUri
 {
 public:
     // A game chooses its link addresses, and mail apps act on more than the message: attach=/etc/hostname
-    // attaches a local file, and cc or bcc would add recipients. Any other URI comes back as it is.
+    // attaches a local file. Comes back empty when a recipient hides such a field. Any other URI comes back as it is.
     static QString withOnlyMessageFields(const QString& uri);
 };
 

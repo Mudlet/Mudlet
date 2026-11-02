@@ -5073,6 +5073,10 @@ void TBuffer::decodeOSC(const QString& sequence)
 
                 if (systemMayOpenUrl(qurl)) {
                     baseUrl = MailtoUri::withOnlyMessageFields(baseUrl);
+                    if (baseUrl.isEmpty()) {
+                        qWarning().noquote() << "TBuffer::decodeOSC(...) - Ignored a mailto link with a field hidden in a recipient";
+                        return;
+                    }
                     mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionOpenUrl;
                     mCurrentHyperlinkStyling.baseCommand = baseUrl;
                     command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
@@ -5125,8 +5129,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                         // Special case: "-" creates a menu separator
                         menuCommands.append(QString());
                         menuHints.append(QString());
-                    } else if (systemMayOpenUrl(QUrl(menuCommand))) {
-                        menuCommands.append(qsl("openUrl(%1)").arg(LuaLiteral::quote(MailtoUri::withOnlyMessageFields(menuCommand))));
+                    } else if (const QString address = MailtoUri::withOnlyMessageFields(menuCommand); systemMayOpenUrl(QUrl(address))) {
+                        menuCommands.append(qsl("openUrl(%1)").arg(LuaLiteral::quote(address)));
                         menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     } else {
                         // Treat as direct command

@@ -710,6 +710,9 @@ private slots:
       return qsl("send(%1, false)").arg(LuaLiteral::quote(command));
     };
 
+    QTest::newRow("a mailto with a field hidden in its address")
+        << qsl("mailto:x%253Fattachment=/etc/hostname%2526@b.com")
+        << sends(qsl("mailto:x%3Fattachment=/etc/hostname%26@b.com"));
     QTest::newRow("https") << qsl("https://wiki.mudlet.org/w/Main_Page")
                            << opens(qsl("https://wiki.mudlet.org/w/Main_Page"));
     QTest::newRow("http") << qsl("http://example.com/")
@@ -968,10 +971,14 @@ private slots:
         << qsl("mailto:admin@example.com?subject=Hello")
         << qsl("mailto:admin@example.com?subject=Hello")
         << qsl("Write an email to: mailto:admin@example.com?subject=Hello");
-    QTest::newRow("only the message fields survive")
+    QTest::newRow("only the recipients and message fields survive")
         << qsl("mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text&attach=/etc/hostname&attachment=/etc/passwd&X-Other=1")
-        << qsl("mailto:admin@example.com?subject=Hi&body=Text")
-        << qsl("Write an email to: mailto:admin@example.com?subject=Hi&body=Text");
+        << qsl("mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text")
+        << qsl("Write an email to: mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text");
+    QTest::newRow("recipients only in the query")
+        << qsl("mailto:?to=c@example.com")
+        << qsl("mailto:?to=c@example.com")
+        << qsl("Write an email to: mailto:?to=c@example.com");
     QTest::newRow("field names in capitals")
         << qsl("MAILTO:admin@example.com?SUBJECT=Hi&ATTACH=/etc/hostname")
         << qsl("mailto:admin@example.com?SUBJECT=Hi")
@@ -1012,6 +1019,28 @@ private slots:
     QCOMPARE(console->getLinkStore().getLinksConst(linkId),
              QStringList(qsl("openUrl(%1)").arg(LuaLiteral::quote(expectedUrl))));
     QCOMPARE(console->buffer.getLinkTooltip(linkId), expectedTooltip);
+  }
+
+  void test_Osc8MailtoWithAFieldHiddenInARecipientIsRefused_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::newRow("in the address") << qsl("mailto:x%3Fattachment=/etc/hostname%26@b.com");
+    QTest::newRow("a fragment in the address") << qsl("mailto:x%23y@b.com");
+    QTest::newRow("in a to field") << qsl("mailto:?to=x%3Fattachment=/etc/hostname%26@b.com");
+    QTest::newRow("in a bcc field") << qsl("mailto:a@b.com?bcc=x%26attachment=/etc/hostname@b.com");
+  }
+
+  void test_Osc8MailtoWithAFieldHiddenInARecipientIsRefused() {
+    QFETCH(QString, uri);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Email\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int line = console->buffer.getLastLineNumber();
+    while (line >= 0 && !console->buffer.lineBuffer.at(line).contains(qsl("Email"))) {
+      --line;
+    }
+    QVERIFY2(line >= 0, "the link's text was not printed");
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 0), 0);
   }
 
   // A "config" parameter carrying something that is not an object is not a
