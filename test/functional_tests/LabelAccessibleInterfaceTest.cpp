@@ -404,9 +404,6 @@ private:
             qWarning() << "the main window never became active";
             return false;
         }
-        // Handing the focus to the command line retries on timers up to 50ms long, which would take it back,
-        // and a loaded CI runner fires them late
-        QTest::qWait(300ms);
         mpHost->setCaretEnabled(true);
         return QTest::qWaitFor(
                 [this]() {
@@ -807,6 +804,51 @@ private slots:
         key(Qt::Key_F6);
         QTRY_VERIFY(mpHost->caretEnabled());
         QTRY_COMPARE(QApplication::focusWidget(), pane());
+    }
+
+    // A keybinding pressed on a button sends the keyboard to the command line, which goes on reclaiming it for a
+    // moment afterwards; the caret shortcut pressed straight after has to keep it
+    void test_theCaretShortcutRightAfterAKeybindingStays()
+    {
+        auto restore = qScopeGuard([this]() {
+            runLua(qsl("killKey(accessibleF5Key)"));
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        QVERIFY(runLua(qsl("accessibleF5Key = tempKey(mudlet.key.F5, [[accessibleF5 = true]])")));
+        mpHost->mCaretShortcut = Host::CaretShortcut::F6;
+
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        key(Qt::Key_F5);
+        QVERIFY(luaHolds(qsl("accessibleF5")));
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(mpHost->mainConsoleView()->mpCommandLine));
+        key(Qt::Key_F6);
+        QVERIFY(mpHost->caretEnabled());
+        QTest::qWait(100ms);
+        QVERIFY2(mpHost->caretEnabled(), "the command line took the keyboard back out of caret mode");
+        QCOMPARE(QApplication::focusWidget(), pane());
+    }
+
+    // A busy main thread handles both key presses before the keybinding's hand-off to the command line runs
+    void test_theCaretShortcutAheadOfAKeybindingsHandOffStays()
+    {
+        auto restore = qScopeGuard([this]() {
+            runLua(qsl("killKey(accessibleF5Key)"));
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        QVERIFY(runLua(qsl("accessibleF5Key = tempKey(mudlet.key.F5, [[accessibleF5 = true]])")));
+        mpHost->mCaretShortcut = Host::CaretShortcut::F6;
+
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        QCoreApplication::postEvent(label(), new QKeyEvent(QEvent::KeyPress, Qt::Key_F5, Qt::NoModifier));
+        QCoreApplication::postEvent(label(), new QKeyEvent(QEvent::KeyPress, Qt::Key_F6, Qt::NoModifier));
+        QTest::qWait(100ms);
+        QVERIFY(luaHolds(qsl("accessibleF5")));
+        QVERIFY2(mpHost->caretEnabled(), "the keybinding's hand-off took the keyboard back out of caret mode");
+        QCOMPARE(QApplication::focusWidget(), pane());
     }
 
     // Without caret mode to go back to, the way out of the buttons is the command line

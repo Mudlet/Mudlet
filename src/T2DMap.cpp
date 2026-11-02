@@ -4231,14 +4231,25 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
     event->accept();
 }
 
+// In a window without the command line the focus would fall to a panel button instead, which keeps arrows and Space
+// for itself; the map handles no keys, so they go on to the mapper around it, which hands them to the command line
+void T2DMap::takeFocusAwayFromTheCommandLine(const Qt::FocusReason reason)
+{
+    TMainConsole* pConsole = mpHost ? mpHost->mainConsoleView() : nullptr;
+    if (pConsole && window() != pConsole->window()) {
+        setFocus(reason);
+    }
+}
+
 bool T2DMap::event(QEvent* event)
 {
-    // NOTE: key events aren't being forwarded to T2DMap because the widget
-    // currently never has focus because it's more comfortable for the user
-    // to always have focus on the command line. If this were to be changed some
-    // day the setFocusPolicy() calls in the constructor need to be uncommented
+    // NOTE: the widget has the focus only in a window without the command line,
+    // as it is more comfortable for the user to always have focus on the command
+    // line, and it handles no key events itself
 
-    if (event->type() == QEvent::KeyPress) {
+    if (event->type() == QEvent::WindowActivate && !window()->focusWidget()) {
+        takeFocusAwayFromTheCommandLine(Qt::ActiveWindowFocusReason);
+    } else if (event->type() == QEvent::KeyPress) {
         //        auto* ke = static_cast<QKeyEvent*>(event);
         //        if (ke->key() == Qt::Key_Delete ) {
         //            if (mCustomLineSelectedRoom != 0  ) {
@@ -4277,6 +4288,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
     sysMapWindowMousePressEvent.mArgumentList.append(QLatin1String("sysMapWindowMousePressEvent"));
     sysMapWindowMousePressEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(sysMapWindowMousePressEvent);
+    takeFocusAwayFromTheCommandLine(Qt::MouseFocusReason);
 
     updateSelectionWidget();
     update();
@@ -4822,39 +4834,41 @@ void T2DMap::populateUserContextMenus(QMenu& menu)
     if (!mpMap) {
         return;
     }
+    struct UserEntry
+    {
+        int priority;
+        bool menu;
+        QString uniqueName;
+        QString parent;
+    };
     QMap<QString, QMenu*> userMenus;
-    QMapIterator<QString, QStringList> menuIterator(mpMap->mUserMenus);
-
-    while (menuIterator.hasNext()) {
-        menuIterator.next();
-        const QStringList menuInfo = menuIterator.value();
-        const QString displayName = menuInfo.value(1);
-        auto* userMenu = new QMenu(displayName, &menu);
-        userMenus.insert(menuIterator.key(), userMenu);
+    QList<UserEntry> entries;
+    for (const auto& [uniqueName, menuInfo] : std::as_const(mpMap->mUserMenus).asKeyValueRange()) {
+        userMenus.insert(uniqueName, new QMenu(menuInfo.value(1), &menu));
+        entries.append({mpMap->mUserMenuPriorities.value(uniqueName), true, uniqueName, menuInfo.value(0)});
     }
+    for (const auto& [uniqueName, actionInfo] : std::as_const(mpMap->mUserActions).asKeyValueRange()) {
+        entries.append({mpMap->mUserMenuPriorities.value(uniqueName), false, uniqueName, actionInfo.value(1)});
+    }
+    // Stable: ties keep the default order of menus, then events, each by unique name
+    std::stable_sort(entries.begin(), entries.end(), [](const UserEntry& a, const UserEntry& b) {
+        return a.priority < b.priority;
+    });
 
-    menuIterator.toFront();
-    while (menuIterator.hasNext()) {
-        menuIterator.next();
-        const QStringList menuInfo = menuIterator.value();
-        const QString menuParent = menuInfo.value(0);
-
-        if (auto* childMenu = userMenus.value(menuIterator.key(), nullptr)) {
-            if (menuParent.isEmpty()) {
+    for (const UserEntry& entry : std::as_const(entries)) {
+        const QString& uniqueName = entry.uniqueName;
+        const QString& menuParentKey = entry.parent;
+        if (entry.menu) {
+            QMenu* childMenu = userMenus.value(uniqueName);
+            if (menuParentKey.isEmpty()) {
                 menu.addMenu(childMenu);
-            } else if (auto* parentMenu = userMenus.value(menuParent, nullptr)) {
+            } else if (auto* parentMenu = userMenus.value(menuParentKey, nullptr)) {
                 parentMenu->addMenu(childMenu);
             }
+            continue;
         }
-    }
 
-    QMapIterator<QString, QStringList> actionIterator(mpMap->mUserActions);
-    while (actionIterator.hasNext()) {
-        actionIterator.next();
-        const QString uniqueName = actionIterator.key();
-        const QStringList actionInfo = actionIterator.value();
-        const QString menuParentKey = actionInfo.value(1);
-        const QString displayText = actionInfo.value(2);
+        const QString displayText = mpMap->mUserActions.value(uniqueName).value(2);
 
         auto* action = new QAction(displayText, &menu);
         if (menuParentKey.isEmpty()) {

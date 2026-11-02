@@ -5778,6 +5778,7 @@ void mudlet::slot_assignShortcutsFromProfile(Host* pHost)
         }
     }
     assignKeySequences();
+    emit signal_shortcutsChanged();
 }
 
 void mudlet::slot_updateShortcuts()

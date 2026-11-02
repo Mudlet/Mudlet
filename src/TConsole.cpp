@@ -733,6 +733,20 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         auto* pShortcut_find = new QShortcut(QKeySequence::Find, this);
         pShortcut_find->setContext(Qt::WindowShortcut);
         connect(pShortcut_find, &QShortcut::activated, this, &TConsole::showSearchBar);
+
+        // No command line here to take the key and copy for the panes, as the main console's does
+        mUpperPane->setFocusPolicy(Qt::ClickFocus);
+        mLowerPane->setFocusPolicy(Qt::ClickFocus);
+        auto* pShortcut_copy = new QShortcut(QKeySequence::Copy, this);
+        pShortcut_copy->setContext(Qt::WidgetWithChildrenShortcut);
+        connect(pShortcut_copy, &QShortcut::activated, this, [this]() {
+            // Selecting in one pane leaves the other's selection behind, so the clicked one goes first
+            TTextEdit* pPane = mLowerPane->hasFocus() ? mLowerPane : mUpperPane;
+            if (pPane->mSelectedRegion.isEmpty()) {
+                pPane = (pPane == mUpperPane) ? mLowerPane : mUpperPane;
+            }
+            pPane->slot_copySelectionToClipboard();
+        });
     }
 
     if (mType == MainConsole) {
@@ -3014,20 +3028,22 @@ void TConsole::applyTimeStamps()
 
 void TConsole::slot_saveCommandSearchSettings()
 {
-    QSettings* pQSettings = MudletApp::getQSettings();
-    if (!pQSettings) {
-        return;
-    }
-
-    pQSettings->setValue("commandSearchSplitterState", commandSplitter->saveState());
+    mpHost->writeProfileIniData(qsl("MainConsole/CommandSearchSplitterState"), QString::fromLatin1(commandSplitter->saveState().toBase64()));
 }
 
 void TConsole::restoreCommandSearchSettings()
 {
+    const QString profileState = mpHost->readProfileIniData(qsl("MainConsole/CommandSearchSplitterState"));
+    if (!profileState.isEmpty()) {
+        commandSplitter->restoreState(QByteArray::fromBase64(profileState.toLatin1()));
+        return;
+    }
+
+    // Mudlet once kept one position for every profile; it is the best guess for a profile yet to have its own
     QSettings* pQSettings = MudletApp::getQSettings();
     if (!pQSettings) {
         return;
     }
 
-    commandSplitter->restoreState(pQSettings->value("commandSearchSplitterState").toByteArray());
+    commandSplitter->restoreState(pQSettings->value(qsl("commandSearchSplitterState")).toByteArray());
 }
