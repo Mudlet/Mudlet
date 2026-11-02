@@ -46,6 +46,7 @@
 #include <QRegularExpression>
 #include <QResizeEvent>
 #include <QScrollBar>
+#include <QStyleOptionFrame>
 #include <QtMath>
 #include <QTextBlock>
 #include <algorithm>
@@ -229,6 +230,32 @@ bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
     }
 
     return false;
+}
+
+bool TCommandLine::takeKeyPress(QKeyEvent* event)
+{
+    if (!mpHost || mpHost->isClosingDown()) {
+        return false;
+    }
+
+    switch (event->key()) {
+    case Qt::Key_Shift:
+    case Qt::Key_Control:
+    case Qt::Key_Alt:
+    case Qt::Key_AltGr:
+    case Qt::Key_Meta:
+        // Taken alone, it would move focus here ahead of the key it goes with, such as the Tab of Shift+Tab
+        return false;
+    default:
+        break;
+    }
+
+    // Focus in an inactive window waits for it to be activated
+    activateWindow();
+    setFocus(Qt::OtherFocusReason);
+    QCoreApplication::sendEvent(this, event);
+    event->accept();
+    return true;
 }
 
 bool TCommandLine::keybindingWouldMatchProfileSwitchShortcut(const QKeyEvent* keyEvent) const
@@ -754,7 +781,27 @@ int TCommandLine::heightForRows(const int rows) const
     const QTextLayout* layout = firstBlock.layout();
     const int rowsInFirstBlock = (layout && layout->lineCount() > 0) ? layout->lineCount() : 1;
     // a viewport that merely matches the text still keeps a row of range, so clear it by one
-    return qCeil(blockHeight / rowsInFirstBlock * rows + 2 * documentMargin) + 1 + 2 * frameWidth();
+    const QMargins frame = frameSides();
+    return qCeil(blockHeight / rowsInFirstBlock * rows + 2 * documentMargin) + 1 + frame.top() + frame.bottom();
+}
+
+// What QFrame derives its frame from, asked of the style: contentsMargins() reads zero until the widget is first shown.
+QMargins TCommandLine::frameSides() const
+{
+    QStyleOptionFrame option;
+    initStyleOption(&option);
+    const QRect contents = style()->subElementRect(QStyle::SE_ShapedFrameContents, &option, this);
+    return {contents.left() - option.rect.left(), contents.top() - option.rect.top(), option.rect.right() - contents.right(), option.rect.bottom() - contents.bottom()};
+}
+
+// QAbstractScrollArea adds twice frameWidth(), its widest side, to both axes, and a style sheet's
+// padding counts as frame - so padding-left: 1000px alone would demand over 2000px each way.
+QSize TCommandLine::minimumSizeHint() const
+{
+    const QSize hint = QPlainTextEdit::minimumSizeHint();
+    const QMargins frame = frameSides();
+    const int assumedFrame = 2 * frameWidth();
+    return {hint.width() - assumedFrame + frame.left() + frame.right(), hint.height() - assumedFrame + frame.top() + frame.bottom()};
 }
 
 void TCommandLine::adjustHeight()

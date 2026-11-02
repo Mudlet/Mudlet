@@ -19,6 +19,7 @@
 
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QDragEnterEvent>
 #include <QElapsedTimer>
 #include <QFileDialog>
 #include <QFutureWatcher>
@@ -28,6 +29,7 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
+#include <QMimeData>
 #include <QPushButton>
 #include <QStandardPaths>
 #include <QTemporaryDir>
@@ -899,6 +901,60 @@ private slots:
         auto [installed, reason] = mpHost->installPackage(packagePath(packageName), enums::PackageModuleType::Package);
         QVERIFY2(installed, qPrintable(reason));
         QCOMPARE(mpHost->mPackageInfo.value(packageName).value(qsl("description")), typed);
+    }
+
+    // An image dropped onto the unfocused description, which shows rendered
+    // markdown, has to land where it was dropped rather than at the end.
+    void test_anImageDroppedOnTheDescriptionLandsWhereItWasDropped_5196()
+    {
+        const QString imagePath = qsl("%1/dropped.png").arg(mExportDir);
+        QVERIFY(writeImage(imagePath));
+
+        openExporter();
+        mpExporter->show();
+        QVERIFY(QTest::qWaitForWindowExposed(mpExporter));
+        buttonNamed(qsl("pushButton_openInfos"))->click();
+        auto* description = mpExporter->findChild<QTextEdit*>(qsl("textEdit_description"));
+        QVERIFY(description);
+        QVERIFY(description->isVisible());
+        nameField()->setFocus();
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return nameField()->hasFocus();
+                         },
+                         2s),
+                 "the package name field never took focus");
+        QVERIFY(!description->hasFocus());
+        mpExporter->mPlainDescription = qsl("First **paragraph**.\n\nSecond paragraph.");
+        mpExporter->showRenderedDescription();
+
+        QMimeData mimeData;
+        mimeData.setUrls({QUrl::fromLocalFile(imagePath)});
+        QWidget* viewport = description->viewport();
+        const QPoint start = viewport->rect().center();
+        QDragEnterEvent enter(start, Qt::CopyAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(viewport, &enter);
+        QVERIFY(enter.isAccepted());
+
+        QTextCursor target(description->document());
+        target.setPosition(description->toPlainText().indexOf(qsl("Second")));
+        const QRect targetRect = description->cursorRect(target);
+        const QPoint dropPoint(targetRect.left() + 1, targetRect.center().y());
+        QDragMoveEvent move(dropPoint, Qt::CopyAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(viewport, &move);
+        QDropEvent drop(dropPoint, Qt::CopyAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(viewport, &drop);
+
+        const QString expected = qsl("First **paragraph**.\n\n![Image]($dropped.png)Second paragraph.");
+        QCOMPARE(mpExporter->mPlainDescription, expected);
+        QVERIFY2(!description->toPlainText().contains(qsl("**")), "the editor was left showing the markdown source after the drop");
+
+        QDragEnterEvent reenter(start, Qt::CopyAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(viewport, &reenter);
+        QDragLeaveEvent leave;
+        QApplication::sendEvent(viewport, &leave);
+        QVERIFY2(!description->toPlainText().contains(qsl("**")), "the editor was left showing the markdown source after the drag left it");
+        QCOMPARE(mpExporter->mPlainDescription, expected);
     }
 
     // Assets ride along in the archive and are unpacked into the profile with

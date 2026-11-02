@@ -1334,6 +1334,9 @@ public:
     Q_ENUM(CaretShortcut)
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
+    // Bumped each time TMainConsole::focusActiveCommandLine() or caret mode takes the keyboard, so that function's
+    // retries stand down for a later one
+    quint64 mKeyboardHandOffs = 0;
 
     // stops all triggers/aliases/everything from running
     bool mEmergencyStop = false;
@@ -1724,10 +1727,8 @@ private:
     bool mPasswordEntryOpensWithThePrompt = false;
     bool mPasswordEntryClosedByTheGame = false;
 
-    // ensures that only one "zero-time" timer is created by the lambda in
-    // setFocusOnHostActiveCommandLine(), even when it is called multiple
-    // times:
-    bool mFocusTimerRunning = false;
+    // Set while setFocusOnHostActiveCommandLine() has a hand-off queued; caret mode coming on clears it to cancel that hand-off
+    bool mFocusHandOffPending = false;
 
     QMargins mBorders;
     QMargins mUserBorders;

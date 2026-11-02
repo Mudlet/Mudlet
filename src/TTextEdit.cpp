@@ -296,12 +296,14 @@ void TTextEdit::focusOutEvent(QFocusEvent* event)
     // rather than forcing focus to the command line. This pane's own menus only
     // borrow the focus and hand it back on closing, so caret mode stays on; a menu bar's may open a dialog.
     const QWidget* popup = QApplication::activePopupWidget();
+    // The central debug console shares its Host's caret mode without driving it.
+    const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
     if (event->reason() == Qt::PopupFocusReason && popup && popup->parentWidget() == this) {
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
         // Caret mode's keyboard grab would otherwise beat the popup to every key
         releaseKeyboard();
 #endif
-    } else if (mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
+    } else if (!centralDebug && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
         mpHost->setCaretEnabled(false);
     }
 
@@ -370,8 +372,7 @@ void TTextEdit::calculateHMaxRange()
         return;
     }
 
-    int columnCount = getColumnCount();
-    mMaxHRange = mScreenOffset - columnCount;
+    mMaxHRange = mScreenOffset - drawnColumnCount();
 
     if (mMaxHRange < 1) {
         mCursorX = 0;
@@ -389,8 +390,6 @@ void TTextEdit::updateHorizontalScrollBar()
         return;
     }
 
-    int columnCount = getColumnCount();
-
     if (mMaxHRange < 1 && mpConsole->mpHScrollBar->isVisible()) {
         mpConsole->mpHScrollBar->hide();
     }
@@ -402,7 +401,7 @@ void TTextEdit::updateHorizontalScrollBar()
     disconnect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
     mpConsole->mpHScrollBar->setRange(0, mMaxHRange);
     mpConsole->mpHScrollBar->setSingleStep(1);
-    mpConsole->mpHScrollBar->setPageStep(columnCount);
+    mpConsole->mpHScrollBar->setPageStep(drawnColumnCount());
     mpConsole->mpHScrollBar->setValue(mCursorX);
     connect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
 }
@@ -3447,6 +3446,13 @@ int TTextEdit::bufferScrollDown(int lines)
 int TTextEdit::getColumnCount() const
 {
     return qRound(width() / QFontMetricsF(font()).averageCharWidth());
+}
+
+// Cells are whole pixels wide, so getColumnCount()'s fractional width can
+// differ from it by several columns across a wide console
+int TTextEdit::drawnColumnCount() const
+{
+    return mFontWidth > 0 ? width() / mFontWidth : 0;
 }
 
 int TTextEdit::getRowCount() const

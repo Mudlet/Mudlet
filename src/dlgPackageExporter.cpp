@@ -712,6 +712,29 @@ void dlgPackageExporter::slot_removeIcon()
     ui->pushButton_removeIcon->hide();
 }
 
+void dlgPackageExporter::showRenderedDescription()
+{
+    //$packagePath allows to put images in a package which will then be displayed in the description
+    //during package creation it uses the profile folder. But once the package is created it will use
+    //profile folder/packagename
+    QString plainText{mPlainDescription};
+    const QString profilePath{MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())};
+    //$packagePath will be replaced by the resource path if an existing package is selected
+    if (ui->packageList->currentIndex() != 0) {
+        const QString packageName = ui->packageList->currentText();
+        plainText.replace(QLatin1String("$packagePath"), qsl("%1/%2").arg(profilePath, packageName));
+    } else {
+        plainText.replace(QLatin1String("$packagePath"), profilePath);
+    }
+    for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
+        QString fname = mDescriptionImages.at(i);
+        const QFileInfo info(fname);
+        fname = QUrl::toPercentEncoding(fname).constData();
+        plainText.replace(qsl("$%1").arg(info.fileName()), fname);
+    }
+    ui->textEdit_description->setMarkdown(plainText);
+}
+
 bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
 {
     if (evt->type() == QEvent::KeyPress) {
@@ -737,25 +760,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
 
         if (evt->type() == QEvent::FocusOut) {
             mPlainDescription = ui->textEdit_description->toPlainText();
-            //$packagePath allows to put images in a package which will then be displayed in the description
-            //during package creation it uses the profile folder. But once the package is created it will use
-            //profile folder/packagename
-            QString plainText{mPlainDescription};
-            const QString profilePath{MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())};
-            //$packagePath will be replaced by the resource path if an existing package is selected
-            if (ui->packageList->currentIndex() != 0) {
-                const QString packageName = ui->packageList->currentText();
-                plainText.replace(QLatin1String("$packagePath"), qsl("%1/%2").arg(profilePath, packageName));
-            } else {
-                plainText.replace(QLatin1String("$packagePath"), profilePath);
-            }
-            for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
-                QString fname = mDescriptionImages.at(i);
-                const QFileInfo info(fname);
-                fname = QUrl::toPercentEncoding(fname).constData();
-                plainText.replace(qsl("$%1").arg(info.fileName()), fname);
-            }
-            ui->textEdit_description->setMarkdown(plainText);
+            showRenderedDescription();
             return false;
         }
     }
@@ -2222,13 +2227,6 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
     dlgPackageExporter* my_parent = static_cast<dlgPackageExporter*>(topLevelWidget());
     if (source->hasUrls()) {
         QTextCursor myCursor = textCursor();
-        const int oldPos = myCursor.position();
-        // Allows to insert image at cursor position if using copy/paste
-        if (hasFocus()) {
-            myCursor.setPosition(oldPos);
-        } else {
-            setPlainText(my_parent->mPlainDescription);
-        }
         QStringList accepted_types;
         accepted_types << "jpeg" << "jpg" << "png" << "gif" << "bmp" << "svg";
         for (const auto& url : source->urls()) {
@@ -2243,19 +2241,42 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
             }
         }
         my_parent->mPlainDescription = toPlainText();
-        //setMarkdown so images can be seen as they will appear in the description
-        if (!hasFocus()) {
-            QString plainText = my_parent->mPlainDescription;
-            for (int i = my_parent->mDescriptionImages.size() - 1; i >= 0; i--) {
-                QString fname = my_parent->mDescriptionImages.at(i);
-                const QFileInfo info(fname);
-                fname = QUrl::toPercentEncoding(fname).constData();
-                plainText.replace(qsl("$%1").arg(info.fileName()), fname);
-            }
-            setMarkdown(plainText);
-        }
     } else {
         QTextEdit::insertFromMimeData(source);
+    }
+}
+
+// Unfocused, the editor shows rendered markdown whose positions don't map back onto the
+// markdown source, so show the source while files are dragged over it and drop into that
+void dlgPackageExporterDescription::dragEnterEvent(QDragEnterEvent* event)
+{
+    if (!hasFocus() && event->mimeData()->hasUrls()) {
+        mShowingSourceForDrop = true;
+        setPlainText(static_cast<dlgPackageExporter*>(topLevelWidget())->mPlainDescription);
+    }
+    QTextEdit::dragEnterEvent(event);
+}
+
+void dlgPackageExporterDescription::dragLeaveEvent(QDragLeaveEvent* event)
+{
+    QTextEdit::dragLeaveEvent(event);
+    restoreRenderedDescription();
+}
+
+void dlgPackageExporterDescription::dropEvent(QDropEvent* event)
+{
+    QTextEdit::dropEvent(event);
+    restoreRenderedDescription();
+}
+
+void dlgPackageExporterDescription::restoreRenderedDescription()
+{
+    if (!mShowingSourceForDrop) {
+        return;
+    }
+    mShowingSourceForDrop = false;
+    if (!hasFocus()) {
+        static_cast<dlgPackageExporter*>(topLevelWidget())->showRenderedDescription();
     }
 }
 

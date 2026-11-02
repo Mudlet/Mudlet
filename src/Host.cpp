@@ -536,6 +536,11 @@ Host::~Host()
 
     mStopWatchMap.clear();
 
+    // No line will now arrive to let out the one log() holds back, nor appendLog() text queued behind it
+    if (mpMainConsoleModel) {
+        mpMainConsoleModel->buffer.logRemainingOutput();
+    }
+
     mErrorLogStream.flush();
     mErrorLogFile.close();
     // Since this is a destructor, it's risky to rely on member variables within the destructor itself.
@@ -3186,8 +3191,8 @@ void Host::runTriggers(int line)
 
     if (nested) {
         // Only a nested pass restores: at the top level a script's moveCursor()
-        // is meant to outlive the line. shrinkBuffer() adjusts neither cursor, so
-        // a saved index can by now point past the end.
+        // is meant to outlive the line. shrinkBuffer() cannot adjust the saved
+        // copies, so a saved index can by now point past the end.
         const int lastLine = consoleModel.buffer.getLastLineNumber();
         consoleModel.mUserCursor = QPoint(previousUserCursor.x(), qMin(previousUserCursor.y(), lastLine));
         consoleModel.mEngineCursor = qMin(previousEngineCursor, lastLine);
@@ -7627,6 +7632,11 @@ bool Host::caretEnabled() const
 void Host::setCaretEnabled(bool enabled)
 {
     mCaretEnabled = enabled;
+    if (enabled) {
+        // Stands down any hand-off to the command line still queued or retrying
+        mFocusHandOffPending = false;
+        ++mKeyboardHandOffs;
+    }
     consoleFrontend()->setCaretMode(enabled);
 }
 
@@ -7652,20 +7662,16 @@ bool Host::caretShortcutMatches(const QKeyEvent* ke) const
 
 void Host::setFocusOnHostActiveCommandLine()
 {
-    if (mFocusTimerRunning) {
+    if (std::exchange(mFocusHandOffPending, true)) {
         return;
     }
 
-    mFocusTimerRunning = true;
-
-    // Lambda to set focus on command line
-    auto setCommandLineFocus = [this]() {
-        consoleFrontend()->focusActiveCommandLine();
-
-        mFocusTimerRunning = false;
-    };
-
-    QTimer::singleShot(0ms, this, setCommandLineFocus);
+    QTimer::singleShot(0ms, this, [this]() {
+        if (mFocusHandOffPending) {
+            consoleFrontend()->focusActiveCommandLine();
+            mFocusHandOffPending = false;
+        }
+    });
 }
 
 void Host::setBorders(QMargins borders)

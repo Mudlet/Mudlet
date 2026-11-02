@@ -184,6 +184,30 @@ QPointer<TConsole> parentTConsole(QObject* start)
     }
     return qobject_cast<TConsole*>(ptr);
 }
+
+// Under an app style sheet QStyleSheetStyle pins a copy of each polished widget's palette onto it and
+// restores that copy on unpolish, so a palette set while polished is undone by the next setAppStyleSheet()
+void setPaletteWhileUnpolished(QWidget* pWidget, const QPalette& palette)
+{
+    QStyle* pStyle = pWidget->style();
+    pStyle->unpolish(pWidget);
+    pWidget->setPalette(palette);
+    pStyle->polish(pWidget);
+}
+
+// The viewport paints the background, but a child of a polished widget does not inherit its palette,
+// so the viewport is let go of its pinned copy while both are unpolished
+void setCommandLinePalette(TCommandLine* pCommandLine, const QPalette& palette)
+{
+    QStyle* pStyle = pCommandLine->style();
+    QWidget* pViewport = pCommandLine->viewport();
+    pStyle->unpolish(pViewport);
+    pStyle->unpolish(pCommandLine);
+    pCommandLine->setPalette(palette);
+    pViewport->setPalette(QPalette());
+    pStyle->polish(pCommandLine);
+    pStyle->polish(pViewport);
+}
 } // namespace
 
 // A high-performance text widget with split screen ability for scrolling back
@@ -709,6 +733,20 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         auto* pShortcut_find = new QShortcut(QKeySequence::Find, this);
         pShortcut_find->setContext(Qt::WindowShortcut);
         connect(pShortcut_find, &QShortcut::activated, this, &TConsole::showSearchBar);
+
+        // No command line here to take the key and copy for the panes, as the main console's does
+        mUpperPane->setFocusPolicy(Qt::ClickFocus);
+        mLowerPane->setFocusPolicy(Qt::ClickFocus);
+        auto* pShortcut_copy = new QShortcut(QKeySequence::Copy, this);
+        pShortcut_copy->setContext(Qt::WidgetWithChildrenShortcut);
+        connect(pShortcut_copy, &QShortcut::activated, this, [this]() {
+            // Selecting in one pane leaves the other's selection behind, so the clicked one goes first
+            TTextEdit* pPane = mLowerPane->hasFocus() ? mLowerPane : mUpperPane;
+            if (pPane->mSelectedRegion.isEmpty()) {
+                pPane = (pPane == mUpperPane) ? mLowerPane : mUpperPane;
+            }
+            pPane->slot_copySelectionToClipboard();
+        });
     }
 
     if (mType == MainConsole) {
@@ -1275,8 +1313,8 @@ void TConsole::changeColors()
             commandLinePalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
             commandLinePalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
             commandLinePalette.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
-            mpCommandLine->setPalette(commandLinePalette);
-            mpButtonMainLayer->setPalette(commandLinePalette);
+            setCommandLinePalette(mpCommandLine, commandLinePalette);
+            setPaletteWhileUnpolished(mpButtonMainLayer, commandLinePalette);
             mpCommandLine->mRegularPalette = commandLinePalette;
             mpCommandLine->setStyleSheet(styleSheet);
         }
