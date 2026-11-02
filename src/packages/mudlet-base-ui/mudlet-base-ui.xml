@@ -2262,16 +2262,15 @@ function BaseUI.checkMapData(event)
   BaseUI.createMapper()
 end
 
--- Games lay their text out for 80 columns, and the main console cuts off what does
--- not fit, so the dock gives way to keep that many - down to the width its chat tabs
--- still read at, and never wider than the quarter of the window it always had
+-- Games lay their text out for 80 columns and the main console cuts off the rest, so
+-- the dock gives way to keep that many - down to the width its chat tabs still read at
 local consoleColumns = 80
 local narrowestDock = 200
 -- the console's scroll bar and margins, which Lua cannot measure
 local consoleChrome = 32
 
 -- calcFontSize() rounds the width getColumnCount() divides by to a whole pixel, so
--- each column is allowed the half pixel that can lose
+-- each column is allowed the half pixel that rounding can lose
 local function dockWidth(windowWidth, margin)
   local console = consoleColumns * (calcFontSize("main") + 0.5) + consoleChrome
   local room = windowWidth - getBorderLeft() - margin - console
