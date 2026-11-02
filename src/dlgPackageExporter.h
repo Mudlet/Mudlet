@@ -96,6 +96,7 @@ public:
     TScript* scriptOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
     TKey* keyOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
     static void copy_directory(const QString& fromDir, const QString& toDir, bool overwrite);
+    void showRenderedDescription();
     QMap<QTreeWidgetItem*, int> triggerMap;
     QMap<QTreeWidgetItem*, int> modTriggerMap;
     QMap<QTreeWidgetItem*, int> aliasMap;
@@ -224,6 +225,16 @@ public:
     ~dlgPackageExporterDescription();
     bool canInsertFromMimeData(const QMimeData* source) const override;
     void insertFromMimeData(const QMimeData* source) override;
+
+protected:
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dragLeaveEvent(QDragLeaveEvent* event) override;
+    void dropEvent(QDropEvent* event) override;
+
+private:
+    void restoreRenderedDescription();
+
+    bool mShowingSourceForDrop = false;
 };
 
 #endif // MUDLET_DLGPACKAGEEXPORTER_H

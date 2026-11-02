@@ -117,6 +117,26 @@ describe("Tests how a console wraps the lines it is given", function()
       assert.are.equal("bbbb cccc ", out[2])
     end)
 
+    -- what getLines() reads back already carries the indents, and fits
+    it("echoes the lines of a wrapped line back unchanged", function()
+      for _, text in ipairs({"the quick brown fox jumps over the lazy dog", "thé quick brown fox jumps over the lazy dog"}) do
+        local first = wrapped(20, text, 4, 2)
+        clearWindow(win)
+        for _, line in ipairs(first) do
+          echo(win, line .. "\n")
+        end
+        assert.are.same(first, lines())
+      end
+    end)
+
+    it("breaks a line whose spaces run on past the room left beside the indent", function()
+      assert.are.same({"    aaaaaaaaaaaaaaaa", "b"}, wrapped(20, "aaaaaaaaaaaaaaaa     b", 4, 0))
+    end)
+
+    it("leaves a line that fits the width but for its trailing spaces alone", function()
+      assert.are.same({"aaaaaaaaaaaaaaaaaaaa   "}, wrapped(20, "aaaaaaaaaaaaaaaaaaaa   ", 4, 0))
+    end)
+
     it("ignores a wrap indent as wide as the window", function()
       -- an indent with no room left for text would wrap a line into single
       -- characters, so it is dropped instead
@@ -345,11 +365,18 @@ describe("Tests how a console wraps the lines it is given", function()
       return out
     end
 
-    it("wraps a line that fits the width but not the width less the indent", function()
+    it("leaves a line that fits the width but not the width less the indent alone", function()
       setWindowWrap("main", 20)
       setWindowWrapIndent("main", 4)
       feedTriggers("\naaaaaaaaaaaaaa bbbbb\n")
-      assert.are.same({"    aaaaaaaaaaaaaa ", "bbbbb"}, lastLines(2))
+      assert.are.same({"aaaaaaaaaaaaaa bbbbb"}, lastLines(1))
+    end)
+
+    it("indents a line one column wider than the width", function()
+      setWindowWrap("main", 20)
+      setWindowWrapIndent("main", 4)
+      feedTriggers("\naaaaaaaaaaaaaa bbbbbb\n")
+      assert.are.same({"    aaaaaaaaaaaaaa ", "bbbbbb"}, lastLines(2))
     end)
 
     it("leaves a line that fits the width less the indent alone", function()

@@ -54,6 +54,7 @@ public:
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
     void hideEvent(QHideEvent*) override;
+    QSize minimumSizeHint() const override;
     void recheckWholeLine();
     void clearMarksOnWholeLine();
     void setAction(const int);
@@ -76,6 +77,8 @@ public:
     void restorePlayerTypedLine(const QString& text);
     // So the hidden-input box can make the same claims
     bool claimsShortcutOverride(const QKeyEvent*) const;
+    // For a key pressed in another window of the profile's, such as a floating map, that nothing there used
+    bool takeKeyPress(QKeyEvent*);
 
     int mActionFunction = 0;
     QPalette mRegularPalette;
@@ -121,6 +124,7 @@ private:
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
     void restoreHistory();
     int heightForRows(const int) const;
+    QMargins frameSides() const;
 
     QPointer<Host> mpHost;
     enums::CommandLineType mType = enums::UnknownCommandLine;

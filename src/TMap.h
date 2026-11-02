@@ -303,6 +303,11 @@ public:
     static constexpr qreal scmMinXYZoom = 3.0;
     // Why a script's 2D zoom can't be used, or empty when it can
     static QString zoomError(qreal zoom);
+    // What an image export to the file is written as, from its suffix
+    static QString exportImageFormat(const QString& filePath);
+    // Why an image export of the area would be refused before it is drawn, or empty when it would not;
+    // for every z level, levelExports takes each level and the file it is written to
+    QString areaExportProblem(int areaId, const QString& filePath, qreal zoom, bool exportAllZLevels, QList<std::pair<int, QString>>& levelExports) const;
     // Which of the symbols in use would be drawn as the replacement character
     // if the given font were the symbol font:
     QStringList symbolsNotInFont(const QFont&);
@@ -416,10 +421,15 @@ public:
     QMap<QString, QStringList> mUserActions;
     // unique name, List:parent name ("" if null), display name
     QMap<QString, QStringList> mUserMenus;
+    // setMapMenuPriority() values by unique name, shared by a menu and an event of the same name; session-only
+    // like the above, and kept when the entry is removed so that re-adding it puts it back in place.
+    QHash<QString, int> mUserMenuPriorities;
     // Built-in context menu items hidden with hideMapMenuItem(); session-only like the above.
     QSet<QString> mHiddenMenuItems;
     static const QStringList& builtInMenuItemNames();
     bool menuItemShown(const QString& itemName) const;
+    // The area of the player's room, which a map view opened on no area shows
+    std::optional<int> playerAreaId() const;
 
     typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
     typedef boost::property_map<mygraph_t, boost::edge_weight_t>::type WeightMap;

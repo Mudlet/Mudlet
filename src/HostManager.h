@@ -90,7 +90,7 @@ public:
     // replaces the hook set before. The pool may outlive whoever set it, so the hook must capture no raw
     // pointer to its setter.
     void setProfileOpenedHook(std::function<void(Host*)> hook) { mProfileOpenedHook = std::move(hook); }
-    static QStringList defaultPackages(const QString& gameUrl, const QString& profileName, bool serverGuiAccepted);
+    static QStringList defaultPackages(const QString& address, const QString& profileName, bool serverGuiAccepted);
     // A profile tab's close button, with no window: sysExitEvent and the save now, out of the pool once
     // no script of its own is running. False if no such profile is open.
     bool requestProfileClose(const QString& name);

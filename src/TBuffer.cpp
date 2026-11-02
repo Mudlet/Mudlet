@@ -66,6 +66,7 @@
 #include <algorithm>
 #include <cstring>
 #include <span>
+#include <string_view>
 #include <iterator>
 #include <limits>
 #include <optional>
@@ -390,11 +391,29 @@ constexpr size_t MAX_CSI_SEQUENCE_LENGTH = 4096;
 // Inline room for any SGR parameter string a game actually sends, avoiding the heap:
 constexpr qsizetype SGR_INLINE_CHARS = 64;
 
-// Helper to interpret JSON values as boolean
-// Accepts both boolean true and numeric non-zero values (servers may send 1 instead of true)
-bool jsonBoolValue(const QJsonValue& val)
+// Some MUD drivers have no JSON boolean to send, so the forms Char.Login 2 accepts count too: "true"/"false"
+// and "1"/"0" in any letter case, ignoring surrounding whitespace, and the numbers 1/0. Anything else is nullopt.
+std::optional<bool> jsonBoolValue(const QJsonValue& val)
 {
-    return val.toBool() || (val.isDouble() && val.toDouble() != 0);
+    if (val.isBool()) {
+        return val.toBool();
+    }
+    if (val.isDouble()) {
+        const double number = val.toDouble();
+        if (number == 0 || number == 1) {
+            return number == 1;
+        }
+    }
+    if (val.isString()) {
+        const QString text = val.toString().trimmed().toLower();
+        if (text == qsl("true") || text == qsl("1")) {
+            return true;
+        }
+        if (text == qsl("false") || text == qsl("0")) {
+            return false;
+        }
+    }
+    return std::nullopt;
 }
 
 // One parameter of an OSC 8 URI query, kept exactly as it arrived. The styling parser decodes
@@ -889,6 +908,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , lastLoggedFromLine(other.lastLoggedFromLine)
 , lastloggedToLine(other.lastloggedToLine)
 , lastTextToLog(other.lastTextToLog)
+, mTextAppendedToLog(other.mTextAppendedToLog)
 , mEncoding(other.mEncoding)
 , mDecoder(other.mDecoder)
 , mMultibyteDecoder(multibyteDecoderFor(other.mDecoder, other.mEncoding))
@@ -998,6 +1018,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         lastLoggedFromLine = other.lastLoggedFromLine;
         lastloggedToLine = other.lastloggedToLine;
         lastTextToLog = other.lastTextToLog;
+        mTextAppendedToLog = other.mTextAppendedToLog;
         mEncoding = other.mEncoding;
         mDecoder = other.mDecoder;
         mMultibyteDecoder = multibyteDecoderFor(mDecoder, mEncoding);
@@ -2083,6 +2104,19 @@ void TBuffer::parseChunk(
                     // the cap is ordinary - a Sixel image or a Kitty graphic
                     // legitimately runs to many times it:
                     warnAboutDiscardedStringSequence(qsl("passed %1 bytes, so its command will be ignored").arg(MAX_OSC_SEQUENCE_LENGTH), localBuffer, spanStart, spanEnd);
+                    // An OSC 8 link start ends the open link even when it is dropped, as decodeOSC() does for
+                    // one it rejects: a URI too long for the cap is only ever seen here
+                    const std::string_view payload = std::string_view(localBuffer).substr(spanStart, spanEnd - spanStart);
+                    if (mHyperlinkActive && mpHost && mpHost->mEnableOSC8Hyperlinks && payload.starts_with("8;")) {
+                        const size_t uriStart = payload.find(';', 2);
+                        // Parameters that run past the cap hide the URI, so it is taken for a link start like any other
+                        const std::string_view uri = uriStart == std::string_view::npos ? std::string_view() : payload.substr(uriStart + 1);
+                        const std::string_view preset = "preset:";
+                        // A URI cut off part way through "preset:" may still be one
+                        if (uri.empty() || uri.substr(0, preset.size()) != preset.substr(0, uri.size())) {
+                            finaliseActiveHyperlink();
+                        }
+                    }
                 }
                 // Stay in the sequence and consume the rest as it arrives, but
                 // what is left is no longer the whole payload so it must not
@@ -2935,7 +2969,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
     }
     mCommitLineIndices.append(lineIndex);
     // A line committed from inside a pass (feedTriggers()) can delete, rewrap or trim lines above
-    // that pass's line; neither deleteLines() nor shrinkBuffer() moves a cursor, so one a script
+    // that pass's line; deleteLines() moves no cursor, so one a script
     // still has on that line is moved with it below
     const int enclosingPassLine = mPreTriggerPassLineNumber;
     const bool userCursorOnEnclosingPassLine = mpModel && enclosingPassLine >= 0 && mpModel->mUserCursor.y() == enclosingPassLine;
@@ -3014,6 +3048,8 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
     // deleteLines() has already adjusted the deferred logging state
     if (mCommitLineIndices.takeLast() >= 0) {
         log(lineBuffer.size() - 1, lineBuffer.size() - 1);
+    } else {
+        logTextAppendedBehindPendingLine();
     }
 
     // Suppress new empty line IFF echoes already created a new empty line
@@ -4911,11 +4947,6 @@ void TBuffer::decodeOSC(const QString& sequence)
                 finaliseActiveHyperlink();
             }
 
-            if (rawUrl.length() > static_cast<int>(MAX_OSC_SEQUENCE_LENGTH)) {
-                qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << rawUrl;
-                return;
-            }
-
             if (rawUrl.startsWith(qsl("preset:"))) {
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC] Detected preset: URL:" << rawUrl;
@@ -4968,28 +4999,13 @@ void TBuffer::decodeOSC(const QString& sequence)
 #endif
             // Reset styling to defaults before parsing
             mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
+            mCurrentHyperlinkMenu.clear();
             QMap<QString, QString> queryParams;
             parseUriQueryParameters(rawUrl, mCurrentHyperlinkStyling, queryParams);
 
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug() << "[OSC] Styling parsed directly from JSON (isUnderlined=" << mCurrentHyperlinkStyling.isUnderlined << ")";
 #endif
-
-            // Extract menu parameters
-            if (queryParams.contains(qsl("menu"))) {
-                QString menuString = queryParams.value(qsl("menu"));
-                mCurrentHyperlinkMenu = menuString.split('|', Qt::SkipEmptyParts);
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] Menu parameter found:" << menuString;
-                qDebug() << "[OSC] Menu items parsed:" << mCurrentHyperlinkMenu;
-                qDebug() << "[OSC] Menu items count:" << mCurrentHyperlinkMenu.size();
-#endif
-            } else {
-                mCurrentHyperlinkMenu.clear();
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] No menu parameter found";
-#endif
-            }
 
             // Extract custom tooltip parameter
             QString customTooltip;
@@ -5437,13 +5453,12 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
 
     if (root.contains(qsl("menu")) && root[qsl("menu")].isArray()) {
         QJsonArray menuArray = root[qsl("menu")].toArray();
-        QString menuString = jsonMenuArrayToString(menuArray);
-        if (!menuString.isEmpty()) {
-            parameters.insert(qsl("menu"), menuString);
+        mCurrentHyperlinkMenu = jsonMenuArrayToList(menuArray);
+        if (!mCurrentHyperlinkMenu.isEmpty()) {
             // Enable custom styling for links with menus
             styling.hasCustomStyling = true;
 #if defined(DEBUG_OSC_PROCESSING)
-            qDebug() << "[OSC] Menu parameter added:" << menuString;
+            qDebug() << "[OSC] Menu items:" << mCurrentHyperlinkMenu;
 #endif
         }
     }
@@ -5498,7 +5513,7 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
     }
 
     if (root.contains(qsl("spoiler"))) {
-        styling.isSpoiler = jsonBoolValue(root[qsl("spoiler")]);
+        styling.isSpoiler = jsonBoolValue(root[qsl("spoiler")]).value_or(styling.isSpoiler);
         if (styling.isSpoiler) {
             styling.hasCustomStyling = true;
 
@@ -5533,7 +5548,7 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
     }
 
     if (root.contains(qsl("disabled"))) {
-        styling.selection.disabled = jsonBoolValue(root[qsl("disabled")]);
+        styling.selection.disabled = jsonBoolValue(root[qsl("disabled")]).value_or(styling.selection.disabled);
         if (styling.selection.disabled) {
             styling.hasCustomStyling = true;
         }
@@ -5565,26 +5580,27 @@ bool TBuffer::parseJsonHyperlinkConfig(const QString& jsonString, QMap<QString, 
     return true;
 }
 
-QString TBuffer::jsonMenuArrayToString(const QJsonArray& menuArray)
+QStringList TBuffer::jsonMenuArrayToList(const QJsonArray& menuArray)
 {
     QStringList menuItems;
 
     for (const QJsonValue& item : menuArray) {
         if (item.isString() && item.toString() == qsl("-")) {
             // Separator
-            menuItems << qsl("Separator|-");
+            menuItems << qsl("Separator") << qsl("-");
         } else if (item.isObject()) {
             QJsonObject menuObj = item.toObject();
             // Each menu object should have one key-value pair: label -> command
             for (auto it = menuObj.begin(); it != menuObj.end(); ++it) {
-                if (it.value().isString()) {
-                    menuItems << it.key() + qsl("|") + it.value().toString();
+                // An empty command would send a blank line, which a server writes as send:
+                if (it.value().isString() && !it.value().toString().isEmpty()) {
+                    menuItems << it.key() << it.value().toString();
                 }
             }
         }
     }
 
-    return menuItems.join(qsl("|"));
+    return menuItems;
 }
 
 void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::HyperlinkStyling::StateStyle& stateStyle)
@@ -5619,20 +5635,20 @@ void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::Hyperlink
         }
     }
 
-    if (stateObj.contains(qsl("bold"))) {
-        stateStyle.isBold = jsonBoolValue(stateObj[qsl("bold")]);
+    if (const auto bold = jsonBoolValue(stateObj[qsl("bold")])) {
+        stateStyle.isBold = *bold;
         hasAnyCustomStyling = true;
     }
 
-    if (stateObj.contains(qsl("italic"))) {
-        stateStyle.isItalic = jsonBoolValue(stateObj[qsl("italic")]);
+    if (const auto italic = jsonBoolValue(stateObj[qsl("italic")])) {
+        stateStyle.isItalic = *italic;
         hasAnyCustomStyling = true;
     }
 
     if (stateObj.contains(qsl("underline"))) {
         QJsonValue underlineVal = stateObj[qsl("underline")];
-        if (underlineVal.isBool() || underlineVal.isDouble()) {
-            stateStyle.isUnderlined = jsonBoolValue(underlineVal);
+        if (const auto underlined = jsonBoolValue(underlineVal)) {
+            stateStyle.isUnderlined = *underlined;
             if (stateStyle.isUnderlined) {
                 stateStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
             }
@@ -5655,8 +5671,8 @@ void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::Hyperlink
 
     if (stateObj.contains(qsl("overline"))) {
         QJsonValue overlineVal = stateObj[qsl("overline")];
-        if (overlineVal.isBool() || overlineVal.isDouble()) {
-            stateStyle.isOverlined = jsonBoolValue(overlineVal);
+        if (const auto overlined = jsonBoolValue(overlineVal)) {
+            stateStyle.isOverlined = *overlined;
             hasAnyCustomStyling = true;
         } else if (overlineVal.isString()) {
             stateStyle.isOverlined = true;
@@ -5666,8 +5682,8 @@ void TBuffer::parseJsonStateStyle(const QJsonObject& stateObj, Mudlet::Hyperlink
 
     if (stateObj.contains(qsl("strikethrough"))) {
         QJsonValue strikeVal = stateObj[qsl("strikethrough")];
-        if (strikeVal.isBool() || strikeVal.isDouble()) {
-            stateStyle.isStrikeOut = jsonBoolValue(strikeVal);
+        if (const auto struckOut = jsonBoolValue(strikeVal)) {
+            stateStyle.isStrikeOut = *struckOut;
             hasAnyCustomStyling = true;
         } else if (strikeVal.isString()) {
             stateStyle.isStrikeOut = true;
@@ -5703,15 +5719,15 @@ void TBuffer::parseJsonSelectionConfig(const QJsonObject& selectionObj, Mudlet::
     }
 
     if (selectionObj.contains(qsl("toggle"))) {
-        settings.toggle = jsonBoolValue(selectionObj[qsl("toggle")]);
+        settings.toggle = jsonBoolValue(selectionObj[qsl("toggle")]).value_or(settings.toggle);
     }
 
     if (selectionObj.contains(qsl("selected"))) {
-        settings.selected = jsonBoolValue(selectionObj[qsl("selected")]);
+        settings.selected = jsonBoolValue(selectionObj[qsl("selected")]).value_or(settings.selected);
     }
 
     if (selectionObj.contains(qsl("exclusive"))) {
-        settings.exclusive = jsonBoolValue(selectionObj[qsl("exclusive")]);
+        settings.exclusive = jsonBoolValue(selectionObj[qsl("exclusive")]).value_or(settings.exclusive);
     }
 }
 
@@ -5790,7 +5806,7 @@ bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
 
     // Parse wholeline (optional)
     if (visibilityObj.contains(qsl("wholeline"))) {
-        settings.deletesEntireLine = jsonBoolValue(visibilityObj[qsl("wholeline")]);
+        settings.deletesEntireLine = jsonBoolValue(visibilityObj[qsl("wholeline")]).value_or(settings.deletesEntireLine);
     }
 
     // Parse expire triggers (optional)
@@ -5798,15 +5814,15 @@ bool TBuffer::parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::
         QJsonObject expireObj = visibilityObj[qsl("expire")].toObject();
 
         if (expireObj.contains(qsl("input"))) {
-            settings.expireOnInput = jsonBoolValue(expireObj[qsl("input")]);
+            settings.expireOnInput = jsonBoolValue(expireObj[qsl("input")]).value_or(settings.expireOnInput);
         }
 
         if (expireObj.contains(qsl("prompt"))) {
-            settings.expireOnPrompt = jsonBoolValue(expireObj[qsl("prompt")]);
+            settings.expireOnPrompt = jsonBoolValue(expireObj[qsl("prompt")]).value_or(settings.expireOnPrompt);
         }
 
         if (expireObj.contains(qsl("output"))) {
-            settings.expireOnOutput = jsonBoolValue(expireObj[qsl("output")]);
+            settings.expireOnOutput = jsonBoolValue(expireObj[qsl("output")]).value_or(settings.expireOnOutput);
         }
 
         if (expireObj.contains(qsl("outputDelay"))) {
@@ -6624,7 +6640,6 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         return previous;
     };
     int xPos = 0;
-    int totalWidth = 0;
     int firstChar = 0;
     bool needsIndent = indentToCome;
     bool hasNewline = false;
@@ -6685,7 +6700,6 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
                 // line to guarantee the scan moves on
                 indexOfChar = (nextBoundary > firstChar) ? nextBoundary : firstChar + 1;
                 setGraphemePosition(indexOfChar);
-                totalWidth += charWidth;
             }
             output.append(WrapInfo(isNewline, needsIndent, firstChar, indexOfChar));
             isNewline = false;
@@ -6695,7 +6709,6 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             continue;
         }
         xPos += charWidth;
-        totalWidth += charWidth;
         indexOfChar = nextBoundary;
         if (plainAscii) {
             // Plain ASCII has no line feeds and skips spaces only at a segment's first column, so every
@@ -6703,15 +6716,33 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             const int run = std::min(maxWidth - (needsIndent ? indentationHere : 0) - xPos, total - indexOfChar);
             if (run > 0) {
                 xPos += run;
-                totalWidth += run;
                 indexOfChar += run;
             }
         }
     }
-    // it's possible that no wrapping is needed
-    if (totalWidth <= mWrapAt && !hasNewline) {
-        output.clear();
-        return output;
+    // A line that already fits is not broken to make room for the indent, so one read back out of the
+    // buffer, indent and all, echoes back unchanged. Trailing spaces don't count: a break drops them.
+    if (!hasNewline && !output.isEmpty()) {
+        qsizetype textEnd = lineText.size();
+        while (textEnd > 0 && lineText.at(textEnd - 1) == QChar::Space) {
+            --textEnd;
+        }
+        int width = 0;
+        if (plainAscii) {
+            width = static_cast<int>(textEnd);
+        } else {
+            graphemeFinder->toStart();
+            const bool wideAmbiguous = mpHost->wideAmbiguousEAsianGlyphs();
+            for (int position = 0; position < textEnd && width <= mWrapAt;) {
+                const int next = graphemeFinder->toNextBoundary();
+                width += graphemeInfo::getWidth(graphemeInfo::getBaseCharacter(QStringView(lineText).mid(position, next - position)), wideAmbiguous);
+                position = next;
+            }
+        }
+        if (width <= mWrapAt) {
+            output.clear();
+            return output;
+        }
     }
     // if the line has been wrapped, append last remaining bit
     if (!output.isEmpty()) {
@@ -6746,7 +6777,8 @@ void TBuffer::log(int fromLine, int toLine)
     // if we've been called to log the same line - which can happen when the user
     // enters a command after in-game text - then skip recording the last line
     if (fromLine != lastLoggedFromLine && toLine != lastloggedToLine) {
-        pModel->mLogStream << lastTextToLog;
+        pModel->mLogStream << lastTextToLog << mTextAppendedToLog;
+        mTextAppendedToLog.clear();
         pModel->scheduleLogFlush();
     }
 
@@ -6791,14 +6823,15 @@ void TBuffer::logRemainingOutput()
     // buffer state and needs no view, and leaving it behind would let a
     // successor view replay this pending line and let the stale line indexes
     // suppress a real flush in log()
-    const QString pendingText = lastTextToLog;
+    const QString pendingText = lastTextToLog + mTextAppendedToLog;
     lastTextToLog.clear();
+    mTextAppendedToLog.clear();
     lastLoggedFromLine = -1;
     lastloggedToLine = -1;
 
-    // No mLogToLogFile test on purpose: both callers have already decided the
+    // No mLogToLogFile test on purpose: every caller has already decided the
     // pending line must be flushed - toggleLogging() once it has cleared the
-    // flag, clear() while it is still set. The file being open is tested
+    // flag, clear() while it is still set, ~Host() either way. The file being open is tested
     // instead, because a QTextStream written to after its device closed latches
     // WriteFailed and then silently keeps every later write in its own buffer,
     // to be replayed into the next log file the moment setDevice() rearms it.
@@ -6811,6 +6844,31 @@ void TBuffer::logRemainingOutput()
     pModel->mLogStream.flush();
 }
 
+// A gagged line never reaches log(), so without this a run of them would hold
+// their appendLog() text in memory until a line that is not gagged arrives.
+// Once the gagged line is gone the pending one is last again, so a prompt there
+// is held: the command echo still lands on it and logs it again.
+void TBuffer::logTextAppendedBehindPendingLine()
+{
+    if (mTextAppendedToLog.isEmpty()) {
+        return;
+    }
+    if (lastloggedToLine >= 0 && lastloggedToLine < promptBuffer.size() && promptBuffer.at(lastloggedToLine)) {
+        return;
+    }
+    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (!pModel || this != &pModel->buffer || !pModel->mLogToLogFile) {
+        return;
+    }
+
+    pModel->mLogStream << lastTextToLog << mTextAppendedToLog;
+    lastTextToLog.clear();
+    mTextAppendedToLog.clear();
+    lastLoggedFromLine = -1;
+    lastloggedToLine = -1;
+    pModel->scheduleLogFlush();
+}
+
 // logs a string directly to the log file
 void TBuffer::appendLog(const QString& text)
 {
@@ -6820,6 +6878,11 @@ void TBuffer::appendLog(const QString& text)
         return;
     }
 
+    // Held behind the line log() is still deferring, which arrived first
+    if (!lastTextToLog.isEmpty() || !mTextAppendedToLog.isEmpty()) {
+        mTextAppendedToLog.append(text);
+        return;
+    }
     pModel->mLogStream << text;
 }
 
@@ -7588,6 +7651,18 @@ void TBuffer::shrinkBuffer()
         // As mCursorY above, which a real view's upper pane takes its line from as it repaints
         if (mpModel->mScrolledBackTo) {
             mpModel->mScrolledBackTo = std::max(0, *mpModel->mScrolledBackTo - mBatchDeleteSize);
+        }
+        // A script's cursor and selection name their line by number, so they move up with it, or to the top when it went
+        QPoint& userCursor = mpModel->mUserCursor;
+        userCursor = (userCursor.y() < mBatchDeleteSize) ? QPoint() : QPoint(userCursor.x(), userCursor.y() - mBatchDeleteSize);
+        if (mpModel->mEngineCursor >= 0) {
+            mpModel->mEngineCursor = std::max(0, mpModel->mEngineCursor - mBatchDeleteSize);
+        }
+        if (mpModel->P_begin.y() < mBatchDeleteSize) {
+            mpModel->deselect();
+        } else {
+            mpModel->P_begin.ry() -= mBatchDeleteSize;
+            mpModel->P_end.ry() -= mBatchDeleteSize;
         }
     }
     if (mLastFoundLine >= mBatchDeleteSize) {
