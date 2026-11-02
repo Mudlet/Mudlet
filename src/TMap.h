@@ -416,6 +416,9 @@ public:
     QMap<QString, QStringList> mUserActions;
     // unique name, List:parent name ("" if null), display name
     QMap<QString, QStringList> mUserMenus;
+    // setMapMenuPriority() values by unique name, shared by a menu and an event of the same name; session-only
+    // like the above, and kept when the entry is removed so that re-adding it puts it back in place.
+    QHash<QString, int> mUserMenuPriorities;
     // Built-in context menu items hidden with hideMapMenuItem(); session-only like the above.
     QSet<QString> mHiddenMenuItems;
     static const QStringList& builtInMenuItemNames();

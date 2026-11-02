@@ -341,7 +341,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                         Qt::QueuedConnection);
             },
             [&options, tls, profile = mProfileName](Host* pNewHost) {
-                // As the dialog: stored details over the game's own, which the load just set, then what was given
+                // As the dialog: stored details over the game's own, then what was given
                 const QString storedUrl = MudletApp::readProfileData(profile, qsl("url")).trimmed();
                 const QString storedPort = MudletApp::readProfileData(profile, qsl("port")).trimmed();
                 if (!storedUrl.isEmpty()) {
