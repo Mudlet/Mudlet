@@ -2961,7 +2961,11 @@ int TLuaInterpreter::setActiveProfile(lua_State* L)
         return 2;
     }
 
-    TAppFrontend::instance()->setActiveProfileTab(profileName);
+    if (!TAppFrontend::instance()->setActiveProfileTab(profileName)) {
+        lua_pushboolean(L, false);
+        lua_pushfstring(L, "setActiveProfile: profile '%s' is closing", profileName.toUtf8().constData());
+        return 2;
+    }
     lua_pushboolean(L, true);
     return 1;
 }

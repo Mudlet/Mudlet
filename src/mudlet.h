@@ -243,7 +243,7 @@ public:
     void setInvertMapZoom(const bool);
     void setShowTabConnectionIndicators(const bool) override;
     int profileTabIndex(const QString& profileName) const override;
-    void setActiveProfileTab(const QString& profileName) override;
+    bool setActiveProfileTab(const QString& profileName) override;
     bool resizeMainWindow(int width, int height) override
     {
         resize(width, height);

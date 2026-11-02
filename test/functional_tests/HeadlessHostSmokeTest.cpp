@@ -10801,6 +10801,24 @@ fbYT0tapBHTFGBkf6NgxBGenwL5TDeL9g3w57+FWiHtIKUylQhCoNb20
         }
     }
 
+    void test_aProfileNameNotInThePoolLeavesTheFrontAsItWasWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        TAppFrontend* app = TAppFrontend::instance();
+        const QString hostname = qsl("Test-Headless-Host-Front-Kept");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(app->setActiveProfileTab(hostname));
+        QCOMPARE(app->getActiveHost(), host);
+
+        QVERIFY(!app->setActiveProfileTab(qsl("Test-Headless-Host-Not-In-The-Pool")));
+        QCOMPARE(app->getActiveHost(), host);
+
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(!app->getActiveHost());
+    }
+
     void test_profileGetsNullAppViewWithNoMainWindow()
     {
         QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");

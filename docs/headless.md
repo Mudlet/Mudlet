@@ -146,6 +146,12 @@ does not cover, such as settings and the map, and goes null once the profile clo
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.
 
+A script's `loadProfile()` opens more profiles in the same run. With no window, none of them is in
+front, as a tab is in the GUI, until a script names one with `setActiveProfile()`. As a tab change
+does, that raises `sysProfileFocusChangeEvent` with `false` in the profile it leaves and `true` in the
+one it brings forward. A profile whose close has started is refused with `false` and a message, and the
+front stays where it was.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,
