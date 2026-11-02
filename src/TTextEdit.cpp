@@ -280,7 +280,9 @@ void TTextEdit::needUpdate(int y1, int y2)
 void TTextEdit::focusInEvent(QFocusEvent* event)
 {
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
-    if (mpHost->caretEnabled() && event->reason() == Qt::PopupFocusReason) {
+    // The central debug console's menus never took the grab from the profile's own console
+    const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
+    if (!centralDebug && mpHost->caretEnabled() && event->reason() == Qt::PopupFocusReason) {
         grabKeyboard();
     }
 #endif
