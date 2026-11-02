@@ -3694,6 +3694,29 @@ bool SettingsSnapshot::edited(const QObject* pControl) const
     return beingTypedInto(pControl) || dirty(pControl);
 }
 
+void SettingsSnapshot::takeWithParts(const QWidget* pControl)
+{
+    take(pControl);
+    for (const auto* pPart : pControl->findChildren<QWidget*>()) {
+        if (carriesValue(pPart)) {
+            take(pPart);
+        }
+    }
+}
+
+bool SettingsSnapshot::editedWithParts(const QWidget* pControl) const
+{
+    if (edited(pControl)) {
+        return true;
+    }
+    for (const auto* pPart : pControl->findChildren<QWidget*>()) {
+        if (carriesValue(pPart) && edited(pPart)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // For a setting spread over several controls (borders, Discord privacy flags), any one changing triggers the
 // write, still composed per control: a clean control contributes the Host's current value, not what it
 // shows, which a script may have changed since. Members that are separate settings take their own guard.
@@ -5546,7 +5569,7 @@ void dlgProfilePreferences::loadEditorTab()
     checkBox_editorFontFollowsDisplay->setChecked(pHost->editorFontFollowsDisplay());
     showEditorFont(pHost->getEditorFont());
     connect(checkBox_editorFontFollowsDisplay, &QCheckBox::toggled, this, &dlgProfilePreferences::reflectEditorFontControls, Qt::UniqueConnection);
-    connect(fontComboBox_editorFont, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::reflectEditorFontControls, Qt::UniqueConnection);
+    connect(fontComboBox_editorFont, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_editorFontFamilyChanged, Qt::UniqueConnection);
     connect(spinBox_editorFontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::reflectEditorFontControls, Qt::UniqueConnection);
     connect(pHost, &Host::signal_editorFontChanged, this, &dlgProfilePreferences::slot_hostEditorFontChanged, Qt::UniqueConnection);
 
@@ -7138,6 +7161,9 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(comboBox_logFileNameFormat)) {
             pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
         }
+        if (mSnapshot.dirty(checkBox_antiAlias)) {
+            pHost->setFontsAntiAlias(checkBox_antiAlias->isChecked());
+        }
         if (mSnapshot.dirty(mAlertOnNewData)) {
             pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
         }
@@ -7255,10 +7281,6 @@ void dlgProfilePreferences::applyAll()
             // A pick stored above sits on top of the font on show, so the earlier choice keeps it; a refused
             // pick stored nothing, and the font on show is what the player leaves from
             pHost->setEditorFontFollowsDisplay(checkBox_editorFontFollowsDisplay->isChecked(), ownFontStored ? Host::EditorFontStart::EarlierChoice : Host::EditorFontStart::FontOnShow);
-        }
-        // Last of the font writes, so what this reports to the editor is the font the apply has just stored
-        if (mSnapshot.dirty(checkBox_antiAlias)) {
-            pHost->setFontsAntiAlias(checkBox_antiAlias->isChecked());
         }
         // Re-theming an open script editor fully reconfigures edbee, so only when one of these changed
         auto* pDialogs = HostDialogs::find(pHost);
@@ -9669,14 +9691,8 @@ void dlgProfilePreferences::slot_hostDisplayFontChanged(const QFont& font)
     // Not the user's edits, so they must not keep refreshFromSettings() from re-reading the rest - nor
     // the line edits inside the list and the spin box, which the snapshot holds as well. The anti-alias
     // box stays dirty, as this runs for the dialog's own toggle too and applyAll() must still store it
-    for (QWidget* pControl : {static_cast<QWidget*>(fontComboBox_displayFont), static_cast<QWidget*>(spinBox_displayFontSize)}) {
-        mSnapshot.take(pControl);
-        for (const auto* pPart : pControl->findChildren<QWidget*>()) {
-            if (SettingsSnapshot::carriesValue(pPart)) {
-                mSnapshot.take(pPart);
-            }
-        }
-    }
+    mSnapshot.takeWithParts(fontComboBox_displayFont);
+    mSnapshot.takeWithParts(spinBox_displayFontSize);
 }
 
 void dlgProfilePreferences::slot_displayFontAliasingChanged()
@@ -9698,6 +9714,10 @@ void dlgProfilePreferences::showEditorFont(const QFont& font, const bool showFam
             spinBox_editorFontSize->setValue(std::max(1, font.pointSize()));
         }
     }
+    if (showFamily) {
+        // The blocker kept slot_editorFontFamilyChanged() from doing this
+        rememberEditorFontFamilyShown();
+    }
     reflectEditorFontControls();
 }
 
@@ -9718,6 +9738,24 @@ void dlgProfilePreferences::reflectEditorFontControls()
     showFontWarnings(font, label_editorFontInvalid, label_editorFontVariableWidth);
 }
 
+void dlgProfilePreferences::rememberEditorFontFamilyShown()
+{
+    const QString family = fontComboBox_editorFont->currentFont().family();
+    mEditorFontFamilyShown = (mpHost && mpHost->resolveFontFamily(family).available) ? family : QString();
+}
+
+void dlgProfilePreferences::slot_editorFontFamilyChanged()
+{
+    // As in slot_displayFontChanged(): the list moves off a family by itself as its package is uninstalled
+    const QString shownBefore = mEditorFontFamilyShown;
+    rememberEditorFontFamilyShown();
+    if (mpHost && !shownBefore.isEmpty() && !mpHost->resolveFontFamily(shownBefore).available) {
+        // Clean, so the apply this move scheduled stores nothing and the Host's own stand-in, reported next, takes its place
+        mSnapshot.takeWithParts(fontComboBox_editorFont);
+    }
+    reflectEditorFontControls();
+}
+
 // A script, or the display font moving while the editor follows it. It also fires inside applyAll() and on a click
 // of the anti-alias box, so a control holding an edit keeps it, still dirty, for applyAll() to write
 void dlgProfilePreferences::slot_hostEditorFontChanged(const QFont& font)
@@ -9725,42 +9763,21 @@ void dlgProfilePreferences::slot_hostEditorFontChanged(const QFont& font)
     if (mpHost.isNull()) {
         return;
     }
-    // The control, or the line edit inside it, which the snapshot holds apart
-    const auto editPending = [this](const QWidget* pControl) {
-        if (mSnapshot.edited(pControl)) {
-            return true;
-        }
-        for (const auto* pPart : pControl->findChildren<QWidget*>()) {
-            if (SettingsSnapshot::carriesValue(pPart) && mSnapshot.edited(pPart)) {
-                return true;
-            }
-        }
-        return false;
-    };
+    const bool showFollow = !mSnapshot.editedWithParts(checkBox_editorFontFollowsDisplay);
+    const bool showFamily = !mSnapshot.editedWithParts(fontComboBox_editorFont);
+    const bool showSize = !mSnapshot.editedWithParts(spinBox_editorFontSize);
     // As in slot_hostDisplayFontChanged(): what is refreshed from the Host is not the user's edit
-    const auto markClean = [this](const QWidget* pControl) {
-        mSnapshot.take(pControl);
-        for (const auto* pPart : pControl->findChildren<QWidget*>()) {
-            if (SettingsSnapshot::carriesValue(pPart)) {
-                mSnapshot.take(pPart);
-            }
-        }
-    };
-
-    const bool showFollow = !editPending(checkBox_editorFontFollowsDisplay);
-    const bool showFamily = !editPending(fontComboBox_editorFont);
-    const bool showSize = !editPending(spinBox_editorFontSize);
     if (showFollow) {
         const QSignalBlocker followBlocker(checkBox_editorFontFollowsDisplay);
         checkBox_editorFontFollowsDisplay->setChecked(mpHost->editorFontFollowsDisplay());
-        markClean(checkBox_editorFontFollowsDisplay);
+        mSnapshot.takeWithParts(checkBox_editorFontFollowsDisplay);
     }
     showEditorFont(font, showFamily, showSize);
     if (showFamily) {
-        markClean(fontComboBox_editorFont);
+        mSnapshot.takeWithParts(fontComboBox_editorFont);
     }
     if (showSize) {
-        markClean(spinBox_editorFontSize);
+        mSnapshot.takeWithParts(spinBox_editorFontSize);
     }
     auto config = edbeePreviewWidget->config();
     config->beginChanges();
