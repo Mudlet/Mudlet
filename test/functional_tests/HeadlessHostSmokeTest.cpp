@@ -9961,6 +9961,40 @@ headlessDiscord = ok and 'ok' or tostring(err)
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Driving Discord over GMCP created a widget.");
     }
 
+
+    // As a tab change does, bringing a profile forward publishes its presence, without waiting for the next change to it
+    void test_aProfileBroughtForwardStartsItsDiscordPresenceWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        Discord* discord = Discord::self();
+        QVERIFY2(discord, "The profile pool has no Discord presence.");
+        if (!discord->libraryLoaded()) {
+            QSKIP("Publishing a presence needs the Discord library");
+        }
+        // Somewhere no Discord listens, so a Discord running here is not sent this test's presence
+        QTemporaryDir runtimeDir;
+        QVERIFY2(runtimeDir.isValid(), "Could not make a folder for the Discord connection.");
+        const QByteArray savedRuntimeDir = qgetenv("XDG_RUNTIME_DIR");
+        const auto restoreRuntimeDir = qScopeGuard([&savedRuntimeDir]() {
+            savedRuntimeDir.isNull() ? qunsetenv("XDG_RUNTIME_DIR") : qputenv("XDG_RUNTIME_DIR", savedRuntimeDir);
+        });
+        qputenv("XDG_RUNTIME_DIR", runtimeDir.path().toLocal8Bit());
+
+        const QString hostname = qsl("Test-Headless-Host-Discord-Front");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QCOMPARE(host->mDiscordMode, Host::DiscordShowGameDetails);
+        QVERIFY2(!discord->mRpcActive, "Discord was connected before any profile was in front.");
+
+        QVERIFY(TAppFrontend::instance()->setActiveProfileTab(hostname));
+        QCOMPARE(TAppFrontend::instance()->getActiveHost(), host);
+        QVERIFY2(discord->mRpcActive, "Bringing the profile forward did not start its presence.");
+
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY(!TAppFrontend::instance()->getActiveHost());
+        QVERIFY2(!discord->mRpcActive, "The presence outlived the profile in front.");
+    }
+
     // Its profiles keep their presence in the first pool's Discord, so have to clear it from there
     void test_aSecondPoolLeavesNoDiscordDataBehind()
     {
