@@ -426,6 +426,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         if (getForceMXPProcessorOn()) {
             mMxpProcessor.disable();
         }
+
+        // A game defines its OSC 8 presets again on each connection
+        mpMainConsoleModel->mHyperlinkCompactManager.clearPresets();
     });
     connect(&mTelnet, &cTelnet::signal_connected, this, [this]() {
         purgeTimer.stop();
