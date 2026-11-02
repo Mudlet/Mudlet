@@ -2311,11 +2311,21 @@ void TTextEdit::slot_popupMenu()
             mpBuffer->markLinkAsVisited(mPopupLinkIndex);
         }
 
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+        // The item may open a dialog, whose keys caret mode's keyboard grab would keep for this pane
+        releaseKeyboard();
+#endif
         if (!luaReference) {
             mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
         } else {
             mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, qsl("echoPopup"));
         }
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+        const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
+        if (!centralDebug && mpHost->caretEnabled() && hasFocus()) {
+            grabKeyboard();
+        }
+#endif
     }
     mPopupLinkIndex = 0;
 }

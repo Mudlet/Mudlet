@@ -1825,6 +1825,12 @@ private slots:
     QTRY_VERIFY(!pane->findChild<QMenu *>());
     QVERIFY2(mpHost->caretEnabled(), "closing the menu took the player out of caret mode");
     QVERIFY2(pane->hasFocus() || !QApplication::activeWindow(), "the pane did not get the focus back");
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+    // The test platform leaves the window inactive when a popup closes, so never hands the focus back itself
+    QFocusEvent focusBack(QEvent::FocusIn, Qt::PopupFocusReason);
+    QApplication::sendEvent(pane, &focusBack);
+    QCOMPARE(QWidget::keyboardGrabber(), pane);
+#endif
   }
 
   // A menu that isn't the pane's, such as the menu bar's, may open a dialog, which the keyboard grab would keep keys from
