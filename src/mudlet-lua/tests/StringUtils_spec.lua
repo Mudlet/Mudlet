@@ -557,6 +557,34 @@ describe("Tests StringUtils.lua functions", function()
       end
     end)
 
+    it("should interpolate a local redeclared with the same name as its newest value", function()
+      local x = true
+      local x = false
+      assert.equals("false", f("{x}"))
+      assert.equals("false/false", f("{x}/{x}"))
+      assert.equals("false", f("{tostring(x)}"))
+    end)
+
+    it("should interpolate a local that shadows an outer one in a block or loop", function()
+      local x = "outer"
+      if x then
+        local x = "inner"
+        assert.equals("inner", f("{x}"))
+        assert.equals("inner inner", f("{x} {x}"))
+        assert.equals("inner", f("{x .. ''}"))
+      end
+      assert.equals("outer", f("{x}"))
+
+      local c = { a = { name = "hi" } }
+      for _, v in pairs(c) do
+        local v = v.name
+        local c = "there"
+        assert.equals("hi", f("{v}"))
+        assert.equals("hi there", f("{v} {c}"))
+        assert.equals("hi there", f("{v .. ' ' .. c}"))
+      end
+    end)
+
     it("should give a nested f the locals in scope where it runs", function()
       local outerName = "outer"
       local function inner()
