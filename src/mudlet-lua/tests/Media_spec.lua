@@ -401,7 +401,9 @@ describe("Media functions refuse a wrongly typed value in every position", funct
     getPlayingSounds = {name = text, key = text, tag = text, priority = number},
     getPlayingMusic = {name = text, key = text, tag = text},
     getPlayingVideos = {name = text, key = text, tag = text},
-    getPausedSounds = {name = text, key = text, tag = text},
+    getPausedSounds = {name = text, key = text, tag = text, priority = number},
+    updateSounds = {name = text, key = text, tag = text, volume = number, duration = number, pan = number},
+    updateMusic = {name = text, key = text, tag = text, volume = number, duration = number},
     getPausedMusic = {name = text, key = text, tag = text},
     getPausedVideos = {name = text, key = text, tag = text},
     pauseSounds = {name = text, key = text, tag = text},
@@ -3934,6 +3936,71 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(stopSounds())
   end)
 
+  it("updateMusic changes the volume of the music it names, and updateSounds leaves that music alone", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    local started = {}
+    collect("sysMediaStarted", started)
+    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-update-music", volume = 60}))
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-update-music", volume = 60}))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started)
+
+    assert.is_true(updateMusic({key = "busted-update-music", volume = 20}))
+    local music = getPlayingMusic({key = "busted-update-music"})
+    assert.equals(1, #music)
+    assert.equals(20, music[1].volume)
+    assert.equals(60, getPlayingSounds({key = "busted-update-music"})[1].volume, "updating the music by key changed a sound")
+
+    assert.is_true(updateMusic({name = longSoundFile, volume = 30}))
+    assert.equals(30, getPlayingMusic({key = "busted-update-music"})[1].volume, "updating the music by name left it where it was")
+    assert.equals(60, getPlayingSounds({key = "busted-update-music"})[1].volume, "updating the music by name changed a sound")
+
+    assert.is_true(updateSounds({key = "busted-update-music", volume = 40}))
+    assert.equals(40, getPlayingSounds({key = "busted-update-music"})[1].volume)
+    assert.equals(30, getPlayingMusic({key = "busted-update-music"})[1].volume, "updating the sound changed the music")
+    assert.is_true(stopMusic())
+    assert.is_true(stopSounds())
+  end)
+
+  it("getPausedSounds takes the priority filter that getPlayingSounds takes", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    local started = {}
+    collect("sysMediaStarted", started)
+    -- Starting a sound ends any paused one, and a prioritised sound stops the lower ones playing,
+    -- so a sound with a priority and one with none are the most that can be paused together
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-paused-prioritised", priority = 30}))
+    assert.is_true(playSoundFile({name = otherLongSoundFile, key = "busted-paused-unset"}))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started)
+    assert.is_true(pauseSounds())
+    pumpEvents(250)
+    assert.equals(2, #getPausedSounds())
+
+    local function pausedKeys(filter)
+      local keys = {}
+      for _, sound in ipairs(getPausedSounds(filter)) do
+        keys[sound.key] = true
+      end
+      return keys
+    end
+    -- a ceiling, as for the playing sounds: a sound played with no priority is under any
+    local belowIt = pausedKeys({priority = 20})
+    assert.is_nil(belowIt["busted-paused-prioritised"])
+    assert.is_true(belowIt["busted-paused-unset"])
+    -- the ceiling itself is under it, as for the playing sounds
+    assert.is_true(pausedKeys({priority = 30})["busted-paused-prioritised"])
+    local aboveIt = pausedKeys({priority = 50})
+    assert.is_true(aboveIt["busted-paused-prioritised"])
+    assert.is_true(aboveIt["busted-paused-unset"])
+    assert.is_true(stopSounds())
+  end)
+
   it("a paused placed sound reports where it was placed, and can still be moved", function()
     if mediaPlaybackUnavailable() then
       return
@@ -4038,6 +4105,25 @@ describe("Client.Media 2 functions validate their parameters", function()
     assertArgError(function() playSoundFile({name = "x.wav", pan = 0/0}) end, "playSoundFile: bad argument value for pan")
     -- nothing to update is not an error, as stopping nothing is not
     assert.is_true(updateSounds({key = "busted-nothing-playing", pan = 20}))
+  end)
+
+  it("updateMusic needs a table and a name, key or tag, and refuses a negative duration", function()
+    assertArgError(function() updateMusic() end, "updateMusic: needs to be a table")
+    assertArgError(function() updateMusic({key = "busted-nothing-playing", duration = -1}) end, "updateMusic: bad argument range for duration")
+    local ok, err = updateMusic({volume = 10})
+    assert.is_nil(ok)
+    assert.equals("no key, name or tag to choose the music to update by", err)
+    -- nothing to update is not an error, as stopping nothing is not
+    assert.is_true(updateMusic({key = "busted-nothing-playing", volume = 20}))
+    -- music is never placed, so a pan or direction is a key it does not take and is not checked; given
+    -- alone, as a call copied from updateSounds would be, there is nothing to change and it says so
+    assert.is_true(updateMusic({key = "busted-nothing-playing", volume = 20, pan = "left", direction = "sideways"}))
+    ok, err = updateMusic({key = "busted-nothing-playing", pan = 40})
+    assert.is_nil(ok)
+    assert.equals("nothing to change (give a volume)", err)
+    ok, err = updateSounds({key = "busted-nothing-playing", duration = 500})
+    assert.is_nil(ok)
+    assert.equals("nothing to change (give a volume, pan or direction)", err)
   end)
 
   it("setMediaListener turns to a compass direction or degrees and refuses anything else", function()
