@@ -37,6 +37,8 @@ Commands:
 > baseui background off     -- take it away again
 ```
 
+The x in the dock's title bar hides it the same way as `baseui hide`.
+
 The ▣ beside the ◐ picks a background picture too; right-click it to
 remove the picture. While a picture is up, the game's text, chat and
 docked sections let it show through; sections dragged out of the dock
@@ -45,5 +47,5 @@ stay solid.
 When a game installs an interface of its own, this one quietly stands
 aside - `baseui show` brings it back if you prefer it.
 ]]
-version = [[1.9.3]]
+version = [[1.9.4]]
 created = "2026-07-25T12:00:00+00:00"
