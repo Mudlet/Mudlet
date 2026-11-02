@@ -2262,35 +2262,41 @@ function BaseUI.checkMapData(event)
   BaseUI.createMapper()
 end
 
--- Games lay their text out for 80 columns, and the main window cuts off what
--- does not fit, so the dock gives way to keep that many - down to the width its
--- chat tabs still read at
+-- Games lay their text out for 80 columns, and the main console cuts off what does
+-- not fit, so the dock gives way to keep that many - down to the width its chat tabs
+-- still read at, and never wider than the quarter of the window it always had
 local consoleColumns = 80
 local narrowestDock = 200
+-- the console's scroll bar and margins, which Lua cannot measure
+local consoleChrome = 32
 
--- five columns more: calcFontSize() rounds down the width getColumnCount() divides
--- by, and the console's scroll bar and margins take about three columns of their own
-local function dockWidth(margin)
-  local windowWidth = getMainWindowSize()
-  local room = windowWidth - margin - (consoleColumns + 5) * calcFontSize("main")
+-- calcFontSize() rounds the width getColumnCount() divides by to a whole pixel, so
+-- each column is allowed the half pixel that can lose
+local function dockWidth(windowWidth, margin)
+  local console = consoleColumns * (calcFontSize("main") + 0.5) + consoleChrome
+  local room = windowWidth - getBorderLeft() - margin - console
   return math.floor(math.min(windowWidth / 4, math.max(narrowestDock, room)))
 end
 
--- A width the player gave the dock by dragging its edge is theirs to keep
+-- A width the player gave the dock by dragging its edge is left alone for the session
 function BaseUI.fitDock()
   local dock = BaseUI.container
-  if not dock or (dock.attached or dock.hiddenAttached) ~= "right"
+  local windowWidth = getMainWindowSize()
+  if not dock or windowWidth &lt;= 0 or (dock.attached or dock.hiddenAttached) ~= "right"
     or (BaseUI.fittedWidth and dock.width ~= BaseUI.fittedWidth) then
     return
   end
-  local width = dockWidth(dock.attachedMargin)
-  local constraint = width .. "px"
+  local constraint = dockWidth(windowWidth, dock.attachedMargin) .. "px"
+  BaseUI.fittedWidth = constraint
   if dock.width == constraint then
     return
   end
-  dock:resize(constraint)
-  dock:move("-" .. constraint)
-  BaseUI.fittedWidth = constraint
+  -- both edges at once: moved one at a time, a dock that shrank can sit too far
+  -- from the border for Adjustable to keep it attached
+  dock.x, dock.width = "-" .. constraint, constraint
+  dock:set_constraints(dock)
+  -- Mudlet 5.0 does not move the border on set_constraints()
+  dock:adjustBorder()
 end
 
 function BaseUI.build()
@@ -2314,8 +2320,8 @@ function BaseUI.build()
   })
   -- Adjustable's own close hides the dock for this session only; the next one
   -- would build it again
-  BaseUI.container.exitLabel:setClickCallback(BaseUI.hide)
-  -- before anything is put in it: the chat panes wrap their text at the width they had
+  BaseUI.container.exitLabel:setClickCallback("BaseUI.hide")
+  -- before the chat panes print anything: printed lines keep the wrap they had
   BaseUI.fitDock()
   -- Sits in the dock's title bar beside the minimize and close buttons Adjustable
   -- puts there, one slot further in - 3.8 continues its own 1.4/2.6 spacing, so this

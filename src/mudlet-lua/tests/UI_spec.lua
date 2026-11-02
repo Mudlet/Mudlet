@@ -3354,10 +3354,10 @@ describe("Tests UI functions", function()
 
     local testMode = os.getenv("MUDLET_TEST_MODE") ~= nil
     local resizeRequired = os.getenv("MUDLET_TEST_REQUIRE_WINDOW_RESIZE") ~= nil
-    local savedSettings, savedWidth, savedX, savedFitted, dockWasShowing, originalBorders
+    local savedSettings, savedTheme, savedMain, savedWidth, savedX, savedY, savedFitted, dockWasShowing, originalBorders
     local originalWidth, originalHeight
 
-    -- what Mudlet does with a label click: the label's own callback, with its own arguments
+    -- runs the click callback as Mudlet would, minus the mouse event it adds
     local function clickClose()
       local label = BaseUI.container.exitLabel
       local callback = label.clickCallback
@@ -3388,7 +3388,12 @@ describe("Tests UI functions", function()
         pending("resizing the window needs pumpEvents(), which needs test mode")
         return false
       end
+      -- so the dock is fitted by a resize, not by whatever it was before
+      if getMainWindowSize() == width then
+        sizeConsole(width - 50, originalHeight)
+      end
       if sizeConsole(width, originalHeight) then
+        pumpEvents(100)
         return true
       end
       assert.is_false(resizeRequired,
@@ -3397,12 +3402,26 @@ describe("Tests UI functions", function()
       return false
     end
 
+    -- the console width the dock leaves room for, worked out as the package does
+    local function roomFor80Columns()
+      return 80 * (calcFontSize("main") + 0.5) + 32 + BaseUI.container.attachedMargin + getBorderLeft()
+    end
+
+    local function assertOnRightBorder()
+      local dock = BaseUI.container
+      assert.are.equal("right", dock.attached)
+      assert.is_true(math.abs(getMainWindowSize() - dock:get_x() - dock:get_width()) <= 1, "not flush with the right edge")
+      assert.are.equal(math.floor(dock:get_width() + 0.5) + dock.attachedMargin, getBorderRight())
+    end
+
     setup(function()
       originalWidth, originalHeight = getMainWindowSize()
     end)
 
     before_each(function()
       savedSettings = table.deepcopy(BaseUI.settings)
+      savedTheme = BaseUI.themeName
+      savedMain = { getBackgroundColor("main") }
       dockWasShowing = BaseUI.container ~= nil and not BaseUI.container.hidden
       originalBorders = getBorderSizes()
       BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
@@ -3411,17 +3430,26 @@ describe("Tests UI functions", function()
         BaseUI.container:show()
         BaseUI.layoutDock()
       end
-      savedWidth, savedX, savedFitted = BaseUI.container.width, BaseUI.container.x, BaseUI.fittedWidth
+      savedWidth, savedX, savedY = BaseUI.container.width, BaseUI.container.x, BaseUI.container.y
+      savedFitted = BaseUI.fittedWidth
+      -- what the earlier specs left is not a width the player chose
+      BaseUI.fittedWidth = nil
+      BaseUI.fitDock()
     end)
 
     after_each(function()
+      BaseUI.container:move(savedX, savedY)
       BaseUI.container:resize(savedWidth)
-      BaseUI.container:move(savedX)
+      if not BaseUI.container.attached and not BaseUI.container.hidden then
+        BaseUI.container:attachToBorder("right")
+      end
       BaseUI.fittedWidth = savedFitted
       if testMode then
-        sizeConsole(originalWidth, originalHeight)
+        assert.is_true(sizeConsole(originalWidth, originalHeight), "the window was not put back to its size")
       end
+      setBackgroundColor("main", unpack(savedMain))
       BaseUI.settings = savedSettings
+      BaseUI.setTheme(savedTheme or "midnight", true)
       BaseUI.saveSettings()
       BaseUI.armChatTriggers()
       BaseUI.createVitalsTriggers()
@@ -3445,14 +3473,13 @@ describe("Tests UI functions", function()
       assert.truthy(told:find("baseui show", 1, true), told)
       BaseUI.loadSettings()
       assert.is_true(BaseUI.settings.hidden)
-      assert.is_true(BaseUI.dormant())
     end)
 
     it("should come back with baseui show once the x in its title bar is clicked", function()
       clickClose()
       expandAlias("baseui show", false)
       assert.is_false(BaseUI.container.hidden)
-      assert.are.equal("right", BaseUI.container.attached)
+      assertOnRightBorder()
       assert.is_false(BaseUI.dormant())
     end)
 
@@ -3461,27 +3488,54 @@ describe("Tests UI functions", function()
         return
       end
       assert.is_true(math.abs(BaseUI.container:get_width() - 400) <= 1, BaseUI.container:get_width())
+      assertOnRightBorder()
     end)
 
     it("should give way to leave the main console 80 columns", function()
-      -- between the narrowest window that has room for 80 columns beside the narrowest
-      -- dock, and the widest that has not beside a quarter of it
-      local fontWidth = calcFontSize("main")
-      local console = (80 + 5) * fontWidth + BaseUI.container.attachedMargin
+      -- midway between the window that fits a 200px dock beside 80 columns and the one
+      -- where a dock a quarter of the window wide would not leave 80
+      local console = roomFor80Columns()
       local width = math.floor((console + 200 + console / 0.75) / 2)
       if not windowSizedTo(width) then
         return
       end
-      pumpEvents(100)
       assert.is_true(BaseUI.container:get_width() < width / 4, BaseUI.container:get_width())
       assert.is_true(getColumnCount("main") >= 80, getColumnCount("main"))
+      assertOnRightBorder()
     end)
 
     it("should not shrink below the width its chat tabs read at", function()
-      if not windowSizedTo(960) then
+      -- between the window where a quarter is 200px and the one that fits 200px beside 80 columns
+      local widest = roomFor80Columns() + 200
+      if widest <= 801 then
+        pending("this font fits 80 columns beside the dock wherever a quarter of the window is more than 200px")
+        return
+      end
+      if not windowSizedTo(math.floor((800 + widest) / 2)) then
         return
       end
       assert.are.equal(200, BaseUI.container:get_width())
+      assertOnRightBorder()
+    end)
+
+    it("should stay on the right border when the window halves", function()
+      if not windowSizedTo(1600) or not windowSizedTo(800) then
+        return
+      end
+      assertOnRightBorder()
+    end)
+
+    it("should fit the window it comes back to after being hidden", function()
+      clickClose()
+      local console = roomFor80Columns()
+      local width = math.floor((console + 200 + console / 0.75) / 2)
+      if not windowSizedTo(width) then
+        return
+      end
+      expandAlias("baseui show", false)
+      pumpEvents(100)
+      assert.is_true(getColumnCount("main") >= 80, getColumnCount("main"))
+      assertOnRightBorder()
     end)
 
     it("should keep a width the player gave it", function()
@@ -3492,6 +3546,18 @@ describe("Tests UI functions", function()
       end
       assert.are.equal("30%", BaseUI.container.width)
       assert.are.equal(480, BaseUI.container:get_width())
+    end)
+
+    it("should leave a dock the player took off the border where they put it", function()
+      BaseUI.container:detach()
+      BaseUI.container:move("10%", "10%")
+      local width = BaseUI.container.width
+      if not windowSizedTo(1600) then
+        return
+      end
+      assert.is_falsy(BaseUI.container.attached)
+      assert.are.equal("10%", BaseUI.container.x)
+      assert.are.equal(width, BaseUI.container.width)
     end)
   end)
 
