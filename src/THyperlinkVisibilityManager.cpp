@@ -219,6 +219,11 @@ void THyperlinkVisibilityManager::onPromptReceived()
 
 void THyperlinkVisibilityManager::onDataReceived()
 {
+    // A link printed later measures its gap from its own creation, so nothing here needs keeping
+    if (mTrackedLinks.isEmpty()) {
+        return;
+    }
+
     // Sammer's "batch" approach: links expire when a new batch of output begins, not
     // during the idle period. Before the stamp below, as the gap is measured from the previous one.
     processExpireTriggeredLinks(false, false, true);

@@ -2140,6 +2140,34 @@ private slots:
     QVERIFY2(!bufferShows(qsl("Hint")), "the next prompt did not hide it");
   }
 
+  // A trigger reading gmcp has to see the GMCP that came in the same read, as it always has
+  void test_ForcedOffGoAheadLeavesScriptsTheirOrder() {
+    const bool wasForceGaOff = mpHost->mTelnet.mFORCE_GA_OFF;
+    const bool wasGmcpEnabled = mpHost->mEnableGMCP;
+    const auto restoreFlags = qScopeGuard([this, wasForceGaOff, wasGmcpEnabled] {
+      mpHost->mTelnet.mFORCE_GA_OFF = wasForceGaOff;
+      mpHost->mEnableGMCP = wasGmcpEnabled;
+    });
+    mpHost->mTelnet.mFORCE_GA_OFF = true;
+    mpHost->mEnableGMCP = true;
+
+    TLuaInterpreter &lua = mpHost->mLuaInterpreter;
+    lua.compileAndExecuteScript(qsl(R"(
+      forcedOffOrder = ""
+      forcedOffHandler = registerAnonymousEventHandler("gmcp.ForcedOffOrder", function() forcedOffOrder = forcedOffOrder .. "gmcp," end)
+      forcedOffTrigger = tempRegexTrigger("^forcedofftext", function() forcedOffOrder = forcedOffOrder .. "trigger," end)
+    )"));
+    const auto removeHandlers = qScopeGuard([&lua] {
+      lua.compileAndExecuteScript(qsl("killAnonymousEventHandler(forcedOffHandler); killTrigger(forcedOffTrigger)"));
+    });
+
+    QByteArray read = QByteArray("forcedofftext") + QByteArray("\xff\xf9", 2) + QByteArray("\xff\xfa\xc9", 3) + QByteArray("ForcedOffOrder 1") + QByteArray("\xff\xf0", 2);
+    mpHost->mTelnet.loopbackTest(read);
+    QTest::qWait(50ms);
+
+    QCOMPARE(lua.getLuaString(qsl("forcedOffOrder")), qsl("gmcp,trigger,"));
+  }
+
   void test_Osc8OutputExpiryWaitsForAQuietGap() {
     // Wide enough that a stalled machine can't turn the burst into a gap
     feedFromServer(expireLink(qsl("conceal"), qsl("\"expire\":{\"output\":true,\"outputDelay\":1000}")) + qsl("\n"));
