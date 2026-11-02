@@ -24,7 +24,6 @@
 #include "T2DMap.h"
 #include "TMap.h"
 #include "TMapView.h"
-#include "TRoom.h"
 #include "TRoomDB.h"
 #include "utils.h"
 
@@ -79,9 +78,9 @@ std::pair<int, QString> TMapViewManager::createView(int initialAreaId)
 
     if (initialAreaId > 0) {
         mapView->setArea(initialAreaId);
-    } else if (initialAreaId == 0 && mpMap->mpRoomDB) {
-        if (const TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName))) {
-            mapView->setArea(pPlayerRoom->getArea());
+    } else if (initialAreaId == 0) {
+        if (const auto playerAreaId = mpMap->playerAreaId()) {
+            mapView->setArea(*playerAreaId);
         }
     }
 
