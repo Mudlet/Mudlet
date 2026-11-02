@@ -30,6 +30,7 @@
 #include "TLuaInterpreter.h"
 #include "TNullConsoleFrontend.h"
 #include "TWindowRegistry.h"
+#include "discord.h"
 
 #include <QColor>
 #include <QCoreApplication>
@@ -589,6 +590,9 @@ bool TNullAppFrontend::setActiveProfileTab(const QString& profileName)
     }
     mpActiveHost = pHost;
     raiseProfileFocusChange(pHost, true);
+    if (Discord* discord = Discord::self()) {
+        discord->UpdatePresence();
+    }
     return true;
 }
 
