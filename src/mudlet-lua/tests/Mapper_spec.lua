@@ -3654,6 +3654,16 @@ describe("Tests mapper functions against a shared fixture", function()
       return getMudletHomeDir() .. "/" .. name
     end
 
+    -- getMousePosition() has no answer only when there is no main window to draw the map in
+    local function noMainWindow()
+      return not getMousePosition()
+    end
+
+    -- Only a target the checks made before drawing accept gets as far as wanting a main window
+    local function assertAcceptedButNotDrawn(...)
+      assert.are.same({false, "there is no main window to draw the map in"}, {exportAreaImage(...)})
+    end
+
     -- Windows has no chmod to hand
     local function chmod(mode, path)
       if getOS() ~= "windows" then
@@ -3716,6 +3726,10 @@ describe("Tests mapper functions against a shared fixture", function()
     it("exportAreaImage returns true for a valid area (the file is written asynchronously)", function()
       local written, removeAll = expectExports({"mapper_spec_export.png"})
       finally(removeAll)
+      if noMainWindow() then
+        assertAcceptedButNotDrawn(areaAlpha, exportPath("mapper_spec_export.png"))
+        return
+      end
       assert.is_true(exportAreaImage(areaAlpha, exportPath("mapper_spec_export.png")))
       assert.is_true(waitUntil(written, 5000))
     end)
@@ -3730,6 +3744,10 @@ describe("Tests mapper functions against a shared fixture", function()
       local written, removeAll = expectExports({"mapper_spec_export_player.png"})
       finally(removeAll)
       assert.is_true(centerview(rA1))
+      if noMainWindow() then
+        assertAcceptedButNotDrawn(nil, exportPath("mapper_spec_export_player.png"))
+        return
+      end
       assert.is_true(exportAreaImage(nil, exportPath("mapper_spec_export_player.png")))
       assert.is_true(waitUntil(written, 5000))
     end)
@@ -3737,6 +3755,10 @@ describe("Tests mapper functions against a shared fixture", function()
     it("exportAreaImage takes a single z level", function()
       local written, removeAll = expectExports({"mapper_spec_export_z0.png"})
       finally(removeAll)
+      if noMainWindow() then
+        assertAcceptedButNotDrawn(areaAlpha, exportPath("mapper_spec_export_z0.png"), 0)
+        return
+      end
       assert.is_true(exportAreaImage(areaAlpha, exportPath("mapper_spec_export_z0.png"), 0))
       assert.is_true(waitUntil(written, 5000))
     end)
@@ -3760,6 +3782,10 @@ describe("Tests mapper functions against a shared fixture", function()
         setRoomArea(id, area)
         setRoomCoordinates(id, 0, 0, z)
       end
+      if noMainWindow() then
+        assertAcceptedButNotDrawn(area, exportPath("mapper_spec_export_levels.png"), true)
+        return
+      end
       assert.is_true(exportAreaImage(area, exportPath("mapper_spec_export_levels.png"), true))
       assert.is_true(waitUntil(written, 5000))
     end)
@@ -3769,6 +3795,11 @@ describe("Tests mapper functions against a shared fixture", function()
     it("exportAreaImage can be called twice in a row", function()
       local written, removeAll = expectExports({"mapper_spec_export_a.png", "mapper_spec_export_b.png"})
       finally(removeAll)
+      if noMainWindow() then
+        assertAcceptedButNotDrawn(areaAlpha, exportPath("mapper_spec_export_a.png"))
+        assertAcceptedButNotDrawn(areaAlpha, exportPath("mapper_spec_export_b.png"))
+        return
+      end
       assert.is_true(exportAreaImage(areaAlpha, exportPath("mapper_spec_export_a.png")))
       assert.is_true(exportAreaImage(areaAlpha, exportPath("mapper_spec_export_b.png")))
       assert.is_true(waitUntil(written, 5000))
@@ -3779,6 +3810,11 @@ describe("Tests mapper functions against a shared fixture", function()
       finally(removeAll)
       -- a name longer than file systems allow passes the checks made before the save
       local badPath = exportPath(string.rep("n", 300) .. ".png")
+      if noMainWindow() then
+        assertAcceptedButNotDrawn(areaAlpha, badPath)
+        assertAcceptedButNotDrawn(areaAlpha, exportPath("mapper_spec_export_ok.png"))
+        return
+      end
       -- Not the last few lines: the generic mapper prints its help on a timer
       -- after the map opens, which can push the report out of them
       local marker = "mapper spec failed-save marker " .. tostring({})
@@ -3871,6 +3907,11 @@ describe("Tests mapper functions against a shared fixture", function()
       chmod("0644", file)
       io.open(file, "w"):close()
       chmod("0444", file)
+      if noMainWindow() then
+        assertAcceptedButNotDrawn(area, directory, true)
+        assertAcceptedButNotDrawn(area, file, true)
+        return
+      end
       assert.is_true(exportAreaImage(area, directory, true))
       assert.is_true(exportAreaImage(area, file, true))
       assert.is_true(waitUntil(written, 5000))
@@ -4007,6 +4048,10 @@ describe("Tests mapper functions against a shared fixture", function()
       addRoom(room)
       setRoomArea(room, area)
       setRoomCoordinates(room, 0, 0, 0)
+      if noMainWindow() then
+        assertAcceptedButNotDrawn(area, exportPath(names[1]))
+        return
+      end
 
       local function export(name)
         local written = expectExports({name})
