@@ -2262,6 +2262,37 @@ function BaseUI.checkMapData(event)
   BaseUI.createMapper()
 end
 
+-- Games lay their text out for 80 columns, and the main window cuts off what
+-- does not fit, so the dock gives way to keep that many - down to the width its
+-- chat tabs still read at
+local consoleColumns = 80
+local narrowestDock = 200
+
+-- five columns more: calcFontSize() rounds down the width getColumnCount() divides
+-- by, and the console's scroll bar and margins take about three columns of their own
+local function dockWidth(margin)
+  local windowWidth = getMainWindowSize()
+  local room = windowWidth - margin - (consoleColumns + 5) * calcFontSize("main")
+  return math.floor(math.min(windowWidth / 4, math.max(narrowestDock, room)))
+end
+
+-- A width the player gave the dock by dragging its edge is theirs to keep
+function BaseUI.fitDock()
+  local dock = BaseUI.container
+  if not dock or (dock.attached or dock.hiddenAttached) ~= "right"
+    or (BaseUI.fittedWidth and dock.width ~= BaseUI.fittedWidth) then
+    return
+  end
+  local width = dockWidth(dock.attachedMargin)
+  local constraint = width .. "px"
+  if dock.width == constraint then
+    return
+  end
+  dock:resize(constraint)
+  dock:move("-" .. constraint)
+  BaseUI.fittedWidth = constraint
+end
+
 function BaseUI.build()
   if BaseUI.container then
     return
@@ -2281,6 +2312,11 @@ function BaseUI.build()
     autoLoad = false,
     autoSave = false,
   })
+  -- Adjustable's own close hides the dock for this session only; the next one
+  -- would build it again
+  BaseUI.container.exitLabel:setClickCallback(BaseUI.hide)
+  -- before anything is put in it: the chat panes wrap their text at the width they had
+  BaseUI.fitDock()
   -- Sits in the dock's title bar beside the minimize and close buttons Adjustable
   -- puts there, one slot further in - 3.8 continues its own 1.4/2.6 spacing, so this
   -- tracks whatever it does. Like those two it has to be a direct child rather than
@@ -3279,7 +3315,7 @@ function BaseUI.alias(input, argument)
       state = "waiting for game data"
     end
     cecho("\n&lt;cyan&gt;[ Mudlet UI ] A starter interface built from your game's data (currently " .. state .. ").\n")
-    cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui hide&lt;cyan&gt; - hide it (remembered between sessions)\n")
+    cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui hide&lt;cyan&gt; - hide it, as the &lt;yellow&gt;x&lt;cyan&gt; in its title bar does (remembered between sessions)\n")
     cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui show&lt;cyan&gt; - bring it back\n")
     cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui dock&lt;cyan&gt; - put every section back in the dock, if you dragged any out\n")
     cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui background (file)&lt;cyan&gt; - put a picture behind the whole window, or click the &lt;yellow&gt;" .. pictureGlyph .. "&lt;cyan&gt; in its title bar\n")
@@ -3337,6 +3373,7 @@ onEvent("sysProtocolEnabled", "BaseUI.enableMsdpVitals")
 onEvent("sysDisconnectionEvent", "BaseUI.handleDisconnect")
 onEvent("sysDataSendRequest", "BaseUI.noteCommandSent")
 onEvent("AdjustableContainerRepositionFinish", "BaseUI.sectionDropped")
+onEvent("sysWindowResizeEvent", "BaseUI.fitDock")
 onEvent("sysServerGuiInstalled", "BaseUI.standAside")
 onEvent("sysUninstallPackage", "BaseUI.packageRemoved")
 for _, stat in ipairs(msdpStats) do

@@ -3344,6 +3344,157 @@ describe("Tests UI functions", function()
     end)
   end)
 
+  describe("Test the starter UI's dock", function()
+    if not (type(BaseUI) == "table" and type(BaseUI.build) == "function") then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.build is unavailable in this profile")
+      end)
+      return
+    end
+
+    local testMode = os.getenv("MUDLET_TEST_MODE") ~= nil
+    local resizeRequired = os.getenv("MUDLET_TEST_REQUIRE_WINDOW_RESIZE") ~= nil
+    local savedSettings, savedWidth, savedX, savedFitted, dockWasShowing, originalBorders
+    local originalWidth, originalHeight
+
+    -- what Mudlet does with a label click: the label's own callback, with its own arguments
+    local function clickClose()
+      local label = BaseUI.container.exitLabel
+      local callback = label.clickCallback
+      if type(callback) == "string" then
+        callback = loadstring("return " .. callback)()
+      end
+      callback(unpack(label.clickArgs))
+    end
+
+    -- setMainWindowSize sizes the whole window and getMainWindowSize reports the console
+    -- area inside it, so ask again by however much the console came back short
+    local function sizeConsole(width, height)
+      local askWidth, askHeight = width, height
+      for _ = 1, 4 do
+        setMainWindowSize(askWidth, askHeight)
+        pumpEvents(100)
+        local gotWidth, gotHeight = getMainWindowSize()
+        if gotWidth == width and gotHeight == height then
+          return true
+        end
+        askWidth, askHeight = askWidth + width - gotWidth, askHeight + height - gotHeight
+      end
+      return false
+    end
+
+    local function windowSizedTo(width)
+      if not testMode then
+        pending("resizing the window needs pumpEvents(), which needs test mode")
+        return false
+      end
+      if sizeConsole(width, originalHeight) then
+        return true
+      end
+      assert.is_false(resizeRequired,
+        "MUDLET_TEST_REQUIRE_WINDOW_RESIZE is set, but this display did not honour a resize request")
+      pending("this display does not honour a resize request")
+      return false
+    end
+
+    setup(function()
+      originalWidth, originalHeight = getMainWindowSize()
+    end)
+
+    before_each(function()
+      savedSettings = table.deepcopy(BaseUI.settings)
+      dockWasShowing = BaseUI.container ~= nil and not BaseUI.container.hidden
+      originalBorders = getBorderSizes()
+      BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
+      BaseUI.build()
+      if BaseUI.container.hidden then
+        BaseUI.container:show()
+        BaseUI.layoutDock()
+      end
+      savedWidth, savedX, savedFitted = BaseUI.container.width, BaseUI.container.x, BaseUI.fittedWidth
+    end)
+
+    after_each(function()
+      BaseUI.container:resize(savedWidth)
+      BaseUI.container:move(savedX)
+      BaseUI.fittedWidth = savedFitted
+      if testMode then
+        sizeConsole(originalWidth, originalHeight)
+      end
+      BaseUI.settings = savedSettings
+      BaseUI.saveSettings()
+      BaseUI.armChatTriggers()
+      BaseUI.createVitalsTriggers()
+      BaseUI.createConditionTrigger()
+      if dockWasShowing and BaseUI.container.hidden then
+        BaseUI.container:show()
+      elseif not dockWasShowing and not BaseUI.container.hidden then
+        BaseUI.container:hide()
+        BaseUI.container:adjustBorder()
+      end
+      BaseUI.layoutDock()
+      assert.are.same(originalBorders, getBorderSizes())
+    end)
+
+    it("should stay hidden in the next session once the x in its title bar is clicked", function()
+      local mark = getLastLineNumber("main")
+      clickClose()
+      assert.is_true(BaseUI.container.hidden)
+      assert.is_true(BaseUI.settings.hidden)
+      local told = table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n")
+      assert.truthy(told:find("baseui show", 1, true), told)
+      BaseUI.loadSettings()
+      assert.is_true(BaseUI.settings.hidden)
+      assert.is_true(BaseUI.dormant())
+    end)
+
+    it("should come back with baseui show once the x in its title bar is clicked", function()
+      clickClose()
+      expandAlias("baseui show", false)
+      assert.is_false(BaseUI.container.hidden)
+      assert.are.equal("right", BaseUI.container.attached)
+      assert.is_false(BaseUI.dormant())
+    end)
+
+    it("should take a quarter of a wide window", function()
+      if not windowSizedTo(1600) then
+        return
+      end
+      assert.is_true(math.abs(BaseUI.container:get_width() - 400) <= 1, BaseUI.container:get_width())
+    end)
+
+    it("should give way to leave the main console 80 columns", function()
+      -- between the narrowest window that has room for 80 columns beside the narrowest
+      -- dock, and the widest that has not beside a quarter of it
+      local fontWidth = calcFontSize("main")
+      local console = (80 + 5) * fontWidth + BaseUI.container.attachedMargin
+      local width = math.floor((console + 200 + console / 0.75) / 2)
+      if not windowSizedTo(width) then
+        return
+      end
+      pumpEvents(100)
+      assert.is_true(BaseUI.container:get_width() < width / 4, BaseUI.container:get_width())
+      assert.is_true(getColumnCount("main") >= 80, getColumnCount("main"))
+    end)
+
+    it("should not shrink below the width its chat tabs read at", function()
+      if not windowSizedTo(960) then
+        return
+      end
+      assert.are.equal(200, BaseUI.container:get_width())
+    end)
+
+    it("should keep a width the player gave it", function()
+      BaseUI.container:resize("30%")
+      BaseUI.container:move("70%")
+      if not windowSizedTo(1600) then
+        return
+      end
+      assert.are.equal("30%", BaseUI.container.width)
+      assert.are.equal(480, BaseUI.container:get_width())
+    end)
+  end)
+
   describe("tempButtonToolbar and tempButton return values", function()
     -- unique names as the items cannot be deleted, and would collide on re-runs
     -- against the same profile otherwise
