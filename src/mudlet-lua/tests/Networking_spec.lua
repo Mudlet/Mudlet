@@ -1736,8 +1736,20 @@ describe("MMCP effects against a scripted chat peer", function()
       if peerUnavailable() then return end
       ensurePeer()
       assert.is_true(mmcp.ignore(PEER_NAME))
-      peerSends(4, PEER_NAME .. " chats to everybody, 'ignored line'\n")
-      assert.is_nil(waitForEvent("sysMMCPChatMessage", 500))
+      -- No message within a fixed wait proves nothing: a slow peer's line can
+      -- land after the un-ignore below. Mudlet handles a peer's commands in the
+      -- order they arrive, so its answer to a ping sent after the line means
+      -- the line has been dealt with.
+      local mark = captureSeq()
+      local dropped = collectEvents("sysMMCPChatMessage", function()
+        peerSends(4, PEER_NAME .. " chats to everybody, 'ignored line'\n")
+        peerSends(26, "after the ignored line")
+        assert.is_table(waitForPeerEvent(mark, function(event)
+          return event.type == "command" and event.name == "PingResponse"
+                 and event.text == "after the ignored line"
+        end, 5000))
+      end)
+      assert.equals(0, #dropped, tostring(dropped[1] and dropped[1][2]))
 
       assert.is_true(mmcp.ignore(PEER_NAME))
       peerSends(4, PEER_NAME .. " chats to everybody, 'heard line'\n")

@@ -409,6 +409,26 @@ private slots:
         }
     }
 
+    // A special exit can share its name with a normal exit; with no normal exit that way, the line is the special exit's
+    void test_aCustomLineOfASpecialExitNamedLikeANormalOneDropsToItsDestination()
+    {
+        const QColor cyan(Qt::cyan);
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0);
+        QVERIFY(pRoom && addRoomAt(2, mAreaId, 0, 1, 1));
+        pRoom->setSpecialExit(2, qsl("n"));
+        QVERIFY(!pRoom->hasExit(DIR_NORTH));
+        pRoom->customLines.insert(qsl("n"), {QPointF(0.0, 1.0)});
+        pRoom->customLinesColor.insert(qsl("n"), cyan);
+        pRoom->customLinesStyle.insert(qsl("n"), Qt::SolidLine);
+
+        bool dropsALevel = false;
+        for (const ExitScene::Segment& piece : segmentsIn(build(), cyan)) {
+            QCOMPARE(piece.toRoomId, 2);
+            dropsALevel |= !qFuzzyCompare(piece.from.z(), piece.to.z());
+        }
+        QVERIFY2(dropsALevel, "the line does not go on to its destination on the level above");
+    }
+
     void test_oneWayExitIsDottedWithAnArrowInTheMiddle()
     {
         TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);

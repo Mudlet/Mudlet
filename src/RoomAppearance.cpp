@@ -32,7 +32,9 @@
 #include <QStringList>
 #include <QTextLayout>
 
+#include <array>
 #include <cmath>
+#include <utility>
 
 namespace RoomAppearance {
 
@@ -381,6 +383,32 @@ QColor nameColor(const QString& colorData, const QColor& background)
     return ExitAppearance::contrastColor(background);
 }
 
+bool symbolCodePointNeedsGlyph(const char32_t codePoint)
+{
+    // The Default_Ignorable_Code_Point ranges that HarfBuzz, which Qt shapes
+    // text with, hides rather than draws. Not every format character is here:
+    // some, like U+06DD, are visible marks.
+    static constexpr std::array<std::pair<char32_t, char32_t>, 13> ignorable{{{0x00AD, 0x00AD},
+                                                                              {0x034F, 0x034F},
+                                                                              {0x061C, 0x061C},
+                                                                              {0x17B4, 0x17B5},
+                                                                              {0x180B, 0x180F},
+                                                                              {0x200B, 0x200F},
+                                                                              {0x202A, 0x202E},
+                                                                              {0x2060, 0x206F},
+                                                                              {0xFE00, 0xFE0F},
+                                                                              {0xFEFF, 0xFEFF},
+                                                                              {0xFFF0, 0xFFF8},
+                                                                              {0x1D173, 0x1D17A},
+                                                                              {0xE0000, 0xE0FFF}}};
+    for (const auto& [first, last] : ignorable) {
+        if (codePoint >= first && codePoint <= last) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void paintSymbol(QPainter& painter, const QRect& rect, const QString& text, const QColor& color, const QFont& font, const qreal fontFudgeFactor, ushort& fontSize)
 {
     static const unsigned int minimumUsableFontSize = 4;
@@ -393,7 +421,7 @@ void paintSymbol(QPainter& painter, const QRect& rect, const QString& text, cons
     const QFontMetrics mapSymbolFontMetrics = painter.fontMetrics();
     QVector<bool> isUsable;
     for (const quint32 codePoint : symbolString.toUcs4()) {
-        isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoint));
+        isUsable.append(!symbolCodePointNeedsGlyph(codePoint) || mapSymbolFontMetrics.inFontUcs4(codePoint));
     }
 
     QFont fontForThisSymbol = font;

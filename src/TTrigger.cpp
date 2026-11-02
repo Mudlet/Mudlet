@@ -2047,6 +2047,7 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
             }
         }
 
+        const quint32 stayOpenSetsBefore = mStayOpenSetsByScript;
         const int size = mPatternKinds.size();
         for (int patternNumber = 0;; patternNumber++) {
             if (patternNumber >= size) {
@@ -2091,14 +2092,17 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
             if (!mIsMultiline) {
                 if (ret) {
                     conditionMet = true;
-                    const bool wasOpen = mKeepFiring > 0;
-                    mKeepFiring = mStayOpen;
-                    const bool nowOpen = mKeepFiring > 0;
-                    if (nowOpen) {
-                        noteOpen();
-                    }
-                    if (wasOpen != nowOpen) {
-                        refile(nowOpen ? TriggerRefile::OpenedByMatch : TriggerRefile::Shut);
+                    // The script has already run: a setTriggerStayOpen() it made must not be undone here
+                    if (mStayOpenSetsByScript == stayOpenSetsBefore) {
+                        const bool wasOpen = mKeepFiring > 0;
+                        mKeepFiring = mStayOpen;
+                        const bool nowOpen = mKeepFiring > 0;
+                        if (nowOpen) {
+                            noteOpen();
+                        }
+                        if (wasOpen != nowOpen) {
+                            refile(nowOpen ? TriggerRefile::OpenedByMatch : TriggerRefile::Shut);
+                        }
                     }
                     break;
                 }
