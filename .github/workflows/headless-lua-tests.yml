@@ -1,0 +1,216 @@
+# The Lua specs with no main window, as a phone app or the terminal runner has them.
+# Many still need one, so this fails unless exactly the failures
+# CI/headless-lua-known-failures.txt lists fail, or on a run that does not finish or
+# exits with an error. It runs nightly and on the changes most likely to move that list,
+# rather than on every pull request, as a second full spec run would double the PR job's.
+# The build steps follow build-mudlet-pr.yml's Linux AddressSanitizer job, so its ccache
+# restores here; see "The Lua specs with no main window" in docs/platform-builds.md.
+name: Lua tests with no main window
+
+on:
+  schedule:
+    - cron: '37 3 * * *'
+  workflow_dispatch:
+  push:
+    branches: [development]
+    paths:
+      - 'src/headless/**'
+      - 'src/TNull*'
+      - 'CI/headless-lua-known-failures.txt'
+      - 'CI/check-headless-lua-failures.py'
+      - 'CI/test-check-headless-lua-failures.py'
+      - '.github/workflows/headless-lua-tests.yml'
+  pull_request:
+    paths:
+      - 'src/headless/**'
+      - 'src/TNull*'
+      - 'CI/headless-lua-known-failures.txt'
+      - 'CI/check-headless-lua-failures.py'
+      - 'CI/test-check-headless-lua-failures.py'
+      - '.github/workflows/headless-lua-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  headless-lua-tests:
+    name: ubuntu / gcc / lua tests with no main window
+    runs-on: ubuntu-22.04
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    env:
+      LUA_VERSION: '5.1.5'
+      CCACHE_MAXSIZE: 2G
+      CCACHE_COMPRESSLEVEL: 1
+      GCC_VERSION: 12
+    steps:
+    - name: Checkout Mudlet source code
+      uses: actions/checkout@v7
+      with:
+        submodules: recursive
+        # CI/set-build-info.sh reads the PR head as the merge commit's second parent
+        fetch-depth: 2
+
+    # A checker that has quietly stopped reading the log passes a broken run
+    - name: Self-test the known failures checker
+      run: python3 -I CI/test-check-headless-lua-failures.py
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.11.3'
+        dir: ${{runner.workspace}}
+        # Uncached for the reason build-mudlet-pr.yml gives
+        cache: false
+        modules: qt5compat qtmultimedia qtspeech qtwebsockets qthttpserver
+
+    - name: Restore Lua build cache
+      uses: actions/cache/restore@v6
+      with:
+        path: .lua
+        key: lua-${{ env.LUA_VERSION }}-ubuntu-22.04-${{ runner.arch }}
+
+    - name: Install Lua via GitHub Actions
+      uses: leafo/gh-actions-lua@v13
+      with:
+        luaVersion: ${{ env.LUA_VERSION }}
+        buildCache: false
+
+    - name: Install Luarocks via GitHub Actions
+      uses: leafo/gh-actions-luarocks@v6
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install \
+          ccache \
+          g++-${GCC_VERSION} \
+          libassimp-dev \
+          libboost-dev \
+          libcurl4-openssl-dev \
+          libglu1-mesa-dev \
+          libhunspell-dev \
+          liblua5.1-0-dev \
+          libonig-dev \
+          libpcre2-dev \
+          libpulse-dev \
+          libpugixml-dev \
+          libsecret-1-dev \
+          libspeechd-dev \
+          libsqlite3-dev \
+          libssl-dev \
+          libxkbcommon-x11-0 \
+          libxcb-render-util0-dev \
+          libxcb-image0-dev \
+          libyajl-dev \
+          libzip-dev \
+          qtkeychain-qt6-dev \
+          pcre2-utils \
+          pkg-config \
+          openssl \
+          ca-certificates \
+          -y
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_VERSION} ${GCC_VERSION}
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${GCC_VERSION} ${GCC_VERSION}
+        sudo update-alternatives --set gcc /usr/bin/gcc-${GCC_VERSION}
+        sudo update-alternatives --set g++ /usr/bin/g++-${GCC_VERSION}
+
+        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+
+        # lua-yajl generates the translation statistics during the build
+        ${{github.workspace}}/CI/install-lua-rocks.sh lua-yajl
+        eval "$(luarocks path --local --lua-version "5.1")"
+        echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
+        echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
+
+    - name: Install mold linker
+      timeout-minutes: 5
+      env:
+        MOLD_VERSION: '2.41.0'
+        # Kept in step with build-mudlet-pr.yml, which says how it was taken
+        MOLD_SHA256: 'a3696680d99e692970590a178bc3a33d78d60d1c6dc9db7a11b557b02b751f5d'
+      run: |
+        curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 10 --max-time 120 -o mold.tar.gz \
+          "https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz"
+        echo "${MOLD_SHA256}  mold.tar.gz" | sha256sum -c
+        sudo tar xf mold.tar.gz -C /usr/local --strip-components=1
+        rm mold.tar.gz
+        /usr/local/libexec/mold/ld --version
+
+    # Read-only: only build-mudlet.yml's builds of development write this cache
+    - name: Restore ccache
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{runner.workspace}}/ccache
+        key: ccache-ubuntu-gcc-asan-sha-
+        restore-keys: ccache-ubuntu-gcc-asan-sha-
+
+    - name: Set build info
+      run: |
+        ${{github.workspace}}/CI/validate_deployment.sh
+        ${{github.workspace}}/CI/set-build-info.sh
+
+    - name: Build mudlet-headless
+      run: |
+        ccache --zero-stats
+        cmake --preset ci-linux
+        cmake --build --preset ci-linux --target mudlet_headless_executable
+        ccache --show-stats
+      env:
+        NINJA_STATUS: '[%f/%t %o/sec] '
+        # As build-mudlet-pr.yml's Linux job configures, so its objects are found in the cache
+        CMAKE_BUILD_TYPE: ''
+        USE_SANITIZER: 'Address'
+        WITH_SENTRY: 'ON'
+        SENTRY_SEND_DEBUG: '0'
+        MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
+        WITH_MCPSERVER: 'ON'
+
+    - name: Install the Lua rocks the specs use
+      run: ${{github.workspace}}/CI/install-lua-rocks.sh
+
+    # Without the fixtures, so their specs pend as in a local run, and in a home of its own.
+    # Leaks are the PR job's to report.
+    - name: Run Lua tests with no main window
+      id: headless-lua-tests
+      timeout-minutes: 12
+      shell: bash
+      run: |
+        log="${{runner.temp}}/headless-lua-tests.log"
+        mkdir -p "${XDG_CONFIG_HOME}/mudlet/profiles"
+        cp ${{runner.workspace}}/b/ninja/src/mudlet-headless ${{github.workspace}}/src
+        status=0
+        ${{github.workspace}}/src/mudlet-headless -p "Mudlet self-test" --host mudlet.org --port 23 --offline --no-stdin \
+          2>&1 | tee "${log}" || status=$?
+        checked=0
+        python3 ${{github.workspace}}/CI/check-headless-lua-failures.py "${log}" ${{github.workspace}}/CI/headless-lua-known-failures.txt || checked=$?
+        if [ "${status}" -ne 0 ]; then
+          echo "::error::mudlet-headless exited with status ${status}"
+          exit 1
+        fi
+        exit "${checked}"
+      env:
+        AUTORUN_BUSTED_TESTS: 'true'
+        MUDLET_MATCH_THREADS: 2
+        MUDLET_MATCH_SAMPLE_EVERY: 0
+        MUDLET_TEST_MODE: 1
+        MUDLET_TEST_FAILURE_MARKER: ${{runner.temp}}/headless-busted-tests-failed
+        # Both, as with an empty $XDG_CONFIG_HOME/mudlet Mudlet goes on using ~/.config/mudlet
+        HOME: ${{runner.temp}}/headless-home
+        XDG_CONFIG_HOME: ${{runner.temp}}/headless-home/.config
+        QT_QPA_PLATFORM: offscreen
+        DBUS_SESSION_BUS_ADDRESS: 'disabled:'
+        TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
+        QUIT_MUDLET_AFTER_TESTS: 'true'
+        ASAN_OPTIONS: 'detect_leaks=0:intercept_tls_get_addr=0'
+
+    # check-headless-lua-failures.py --write takes this log to bring the list up to date
+    - name: Upload the log of the Lua tests with no main window
+      if: ${{ !cancelled() && steps.headless-lua-tests.outcome != 'skipped' }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: headless-lua-tests
+        path: ${{runner.temp}}/headless-lua-tests.log
+        if-no-files-found: ignore

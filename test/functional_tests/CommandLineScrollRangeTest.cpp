@@ -270,6 +270,42 @@ private slots:
         auto [deleted, deleteMsg] = mpHost->deleteMiniConsole(name);
         QVERIFY2(deleted, qPrintable(deleteMsg));
     }
+
+    // Padding one side of the command line, the way the manual moves its text over,
+    // must cost that side its padding and nothing more: not twice over, nor any height.
+    void test_sidePaddingCostsOnlyThePaddingItself()
+    {
+        TMainConsole* pConsole = mpHost->mainConsoleView();
+        TCommandLine* pCommandLine = pConsole->mpCommandLine;
+        const QString savedStyleSheet = pCommandLine->styleSheet();
+
+        fill(pCommandLine, rowsOfText(1));
+        const QSize unpaddedHint = pCommandLine->minimumSizeHint();
+        const int unpaddedHeight = pCommandLine->height();
+
+        auto [applied, message] = pConsole->setCmdLineStyleSheet(qsl("main"), qsl("QPlainTextEdit {padding-left: 1000px;}"));
+        QVERIFY2(applied, qPrintable(message));
+        fill(pCommandLine, rowsOfText(1));
+        const QSize paddedHint = pCommandLine->minimumSizeHint();
+        const int paddedLayerHint = pConsole->layerCommandLine->minimumSizeHint().width();
+        const int paddedHeight = pCommandLine->height();
+
+        pConsole->setCmdLineStyleSheet(qsl("main"), savedStyleSheet);
+        fill(pCommandLine, QString());
+
+        // A style sheet swaps the native frame for its own border, so allow a few pixels either way
+        const auto report = qsl("minimum %1x%2 unpadded, %3x%4 padded; height %5 unpadded, %6 padded")
+                                    .arg(unpaddedHint.width())
+                                    .arg(unpaddedHint.height())
+                                    .arg(paddedHint.width())
+                                    .arg(paddedHint.height())
+                                    .arg(unpaddedHeight)
+                                    .arg(paddedHeight);
+        QVERIFY2(qAbs(paddedHint.width() - unpaddedHint.width() - 1000) <= 4, qPrintable(report));
+        QVERIFY2(qAbs(paddedHint.height() - unpaddedHint.height()) <= 4, qPrintable(report));
+        QVERIFY2(qAbs(paddedHeight - unpaddedHeight) <= 4, qPrintable(report));
+        QCOMPARE(paddedLayerHint, paddedHint.width());
+    }
 };
 
 #include "CommandLineScrollRangeTest.moc"

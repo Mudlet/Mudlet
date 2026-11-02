@@ -19,6 +19,7 @@
 
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QDragEnterEvent>
 #include <QElapsedTimer>
 #include <QFileDialog>
 #include <QFutureWatcher>
@@ -28,6 +29,7 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
+#include <QMimeData>
 #include <QPushButton>
 #include <QStandardPaths>
 #include <QTemporaryDir>
@@ -361,6 +363,49 @@ private:
         });
         timer->start();
         locationButton->click();
+        timer->stop();
+        timer->deleteLater();
+        return mAnsweredPicker;
+    }
+
+    // Picks a new icon the way the "add icon" button does, answering the file
+    // picker from a timer armed beforehand as chooseSaveLocation() does. The
+    // name is typed rather than selected, as the picker's model fills in too
+    // late for selectFile() to find it.
+    [[nodiscard]] bool chooseIcon(const QString& iconPath)
+    {
+        auto* iconButton = buttonNamed(qsl("pushButton_addIcon"));
+        if (!iconButton) {
+            return false;
+        }
+        mAnsweredPicker = false;
+        QElapsedTimer sinceArmed;
+        sinceArmed.start();
+        auto* timer = new QTimer(this);
+        timer->setInterval(20ms);
+        connect(timer, &QTimer::timeout, this, [this, iconPath, sinceArmed]() {
+            auto* modal = QApplication::activeModalWidget();
+            auto* picker = qobject_cast<QFileDialog*>(modal);
+            if (!picker) {
+                if (modal && sinceArmed.durationElapsed() > 10s) {
+                    modal->close();
+                }
+                return;
+            }
+            QDialog* answerable = picker;
+            picker->setDirectory(QFileInfo(iconPath).absolutePath());
+            if (auto* nameEdit = picker->findChild<QLineEdit*>(qsl("fileNameEdit"))) {
+                nameEdit->setText(QFileInfo(iconPath).fileName());
+            }
+            answerable->accept();
+            if (picker->isVisible()) {
+                answerable->reject();
+                return;
+            }
+            mAnsweredPicker = true;
+        });
+        timer->start();
+        iconButton->click();
         timer->stop();
         timer->deleteLater();
         return mAnsweredPicker;
@@ -858,6 +903,60 @@ private slots:
         QCOMPARE(mpHost->mPackageInfo.value(packageName).value(qsl("description")), typed);
     }
 
+    // An image dropped onto the unfocused description, which shows rendered
+    // markdown, has to land where it was dropped rather than at the end.
+    void test_anImageDroppedOnTheDescriptionLandsWhereItWasDropped_5196()
+    {
+        const QString imagePath = qsl("%1/dropped.png").arg(mExportDir);
+        QVERIFY(writeImage(imagePath));
+
+        openExporter();
+        mpExporter->show();
+        QVERIFY(QTest::qWaitForWindowExposed(mpExporter));
+        buttonNamed(qsl("pushButton_openInfos"))->click();
+        auto* description = mpExporter->findChild<QTextEdit*>(qsl("textEdit_description"));
+        QVERIFY(description);
+        QVERIFY(description->isVisible());
+        nameField()->setFocus();
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return nameField()->hasFocus();
+                         },
+                         2s),
+                 "the package name field never took focus");
+        QVERIFY(!description->hasFocus());
+        mpExporter->mPlainDescription = qsl("First **paragraph**.\n\nSecond paragraph.");
+        mpExporter->showRenderedDescription();
+
+        QMimeData mimeData;
+        mimeData.setUrls({QUrl::fromLocalFile(imagePath)});
+        QWidget* viewport = description->viewport();
+        const QPoint start = viewport->rect().center();
+        QDragEnterEvent enter(start, Qt::CopyAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(viewport, &enter);
+        QVERIFY(enter.isAccepted());
+
+        QTextCursor target(description->document());
+        target.setPosition(description->toPlainText().indexOf(qsl("Second")));
+        const QRect targetRect = description->cursorRect(target);
+        const QPoint dropPoint(targetRect.left() + 1, targetRect.center().y());
+        QDragMoveEvent move(dropPoint, Qt::CopyAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(viewport, &move);
+        QDropEvent drop(dropPoint, Qt::CopyAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(viewport, &drop);
+
+        const QString expected = qsl("First **paragraph**.\n\n![Image]($dropped.png)Second paragraph.");
+        QCOMPARE(mpExporter->mPlainDescription, expected);
+        QVERIFY2(!description->toPlainText().contains(qsl("**")), "the editor was left showing the markdown source after the drop");
+
+        QDragEnterEvent reenter(start, Qt::CopyAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(viewport, &reenter);
+        QDragLeaveEvent leave;
+        QApplication::sendEvent(viewport, &leave);
+        QVERIFY2(!description->toPlainText().contains(qsl("**")), "the editor was left showing the markdown source after the drag left it");
+        QCOMPARE(mpExporter->mPlainDescription, expected);
+    }
+
     // Assets ride along in the archive and are unpacked into the profile with
     // the package - a folder of them keeps its shape.
     void test_assetFilesAndFoldersAreCarriedIntoThePackage()
@@ -1340,6 +1439,70 @@ private slots:
 
         packageList->setCurrentIndex(withoutIconIndex);
         QVERIFY2(iconLabel->isHidden(), "the icon label was left showing for a package that has no icon");
+    }
+
+    // Re-exporting an installed package with a new icon has to ship that icon
+    // alone, without listing the package's own .mudlet folder as an asset, while
+    // the images its description already uses still come along.
+    void test_aNewIconReplacesTheOldOneWhenReExporting_5254()
+    {
+        const QString existingPackage = packageNamed(qsl("exporter-reiconed"));
+        const QString dataDirectory = qsl("%1/%2/.mudlet").arg(profileHome(), existingPackage);
+        QVERIFY(QDir().mkpath(qsl("%1/Icon").arg(dataDirectory)));
+        QVERIFY(QDir().mkpath(qsl("%1/description_images").arg(dataDirectory)));
+        QVERIFY(writeImage(qsl("%1/Icon/old-icon.png").arg(dataDirectory)));
+        QVERIFY(writeImage(qsl("%1/description_images/shot.png").arg(dataDirectory)));
+        const QString newIcon = qsl("%1/new-icon.png").arg(mExportDir);
+        QVERIFY(writeImage(newIcon));
+
+        auto* member = makeTrigger(qsl("exporter reiconed member"), nullptr);
+        member->mPackageName = existingPackage;
+        mpHost->mInstalledPackages << existingPackage;
+        mpHost->mPackageInfo[existingPackage] = QMap<QString, QString>{
+                {qsl("mpackage"), existingPackage}, {qsl("icon"), qsl("old-icon.png")}, {qsl("description"), qsl("![shot](<$packagePath/.mudlet/description_images/shot.png>)")}};
+
+        openExporter();
+        auto* packageList = comboNamed(qsl("packageList"));
+        const int index = packageList->findText(existingPackage);
+        QVERIFY2(index > 0, "the installed package was not offered in the dropdown");
+        packageList->setCurrentIndex(index);
+        QCOMPARE(addedFiles()->count(), 0);
+
+        QVERIFY2(chooseIcon(newIcon), "the icon picker was never answered");
+        QVERIFY2(runExport(existingPackage), "the export never finished");
+        QVERIFY2(QFileInfo::exists(packagePath(existingPackage)), qPrintable(qsl("No package was written. The dialog said: \"%1\"").arg(infoLabel()->text())));
+
+        const QString staging = stagingPath(existingPackage);
+        QCOMPARE(QDir(qsl("%1/.mudlet/Icon").arg(staging)).entryList(QDir::Files), QStringList{qsl("new-icon.png")});
+        QVERIFY2(QFileInfo::exists(stagedDescriptionImage(existingPackage, qsl("shot.png"))), "the image the description already used was left out");
+    }
+
+    // Going back to the first dropdown entry keeps the description, so it has to
+    // keep the images that description uses as well
+    void test_theFirstEntryKeepsTheDescriptionImagesOfThePackageBefore_5254()
+    {
+        const QString existingPackage = packageNamed(qsl("exporter-backtofirst"));
+        const QString dataDirectory = qsl("%1/%2/.mudlet").arg(profileHome(), existingPackage);
+        QVERIFY(QDir().mkpath(qsl("%1/description_images").arg(dataDirectory)));
+        QVERIFY(writeImage(qsl("%1/description_images/shot.png").arg(dataDirectory)));
+
+        auto* member = makeTrigger(qsl("exporter backtofirst member"), nullptr);
+        member->mPackageName = existingPackage;
+        mpHost->mInstalledPackages << existingPackage;
+        mpHost->mPackageInfo[existingPackage] = QMap<QString, QString>{{qsl("mpackage"), existingPackage}, {qsl("description"), qsl("![shot](<$packagePath/.mudlet/description_images/shot.png>)")}};
+
+        openExporter();
+        auto* packageList = comboNamed(qsl("packageList"));
+        const int index = packageList->findText(existingPackage);
+        QVERIFY2(index > 0, "the installed package was not offered in the dropdown");
+        packageList->setCurrentIndex(index);
+        packageList->setCurrentIndex(0);
+        QVERIFY(checkItem(triggersTop(), qsl("exporter backtofirst member")));
+
+        const QString newPackage = packageNamed(qsl("exporter-backtofirst-copy"));
+        QVERIFY2(runExport(newPackage), "the export never finished");
+        QVERIFY2(QFileInfo::exists(packagePath(newPackage)), qPrintable(qsl("No package was written. The dialog said: \"%1\"").arg(infoLabel()->text())));
+        QVERIFY2(QFileInfo::exists(stagedDescriptionImage(newPackage, qsl("shot.png"))), "the image the kept description uses was left out");
     }
 
     // The zip's finished handler dies with the dialog, so the dialog's destructor

@@ -482,7 +482,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // be initialised first. The view subscribes to the model's notifier when
     // it attaches (TConsole::TConsole) and unsubscribes when it goes away, and
     // TConsole::changeColors() refreshes the snapshot as it does so.
-    mpMainConsoleModel = std::make_shared<TConsoleModel>(this);
+    mpMainConsoleModel = std::make_unique<TConsoleModel>(this);
     mpMainConsoleModel->mConsoleName = qsl("main");
     mpMainConsoleModel->mScriptAddressable = true;
     refreshMainConsoleColors();
@@ -519,6 +519,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
 Host::~Host()
 {
+    Q_ASSERT_X(mpConsole.isNull(), "Host::~Host()", "the main console view would outlive the model it refers to");
     // Mark the host as closing down to prevent keybinding processing during destruction
     mIsClosingDown = true;
 
@@ -534,6 +535,11 @@ Host::~Host()
     mpNullConsoleFrontend->releaseRetired();
 
     mStopWatchMap.clear();
+
+    // No line will now arrive to let out the one log() holds back, nor appendLog() text queued behind it
+    if (mpMainConsoleModel) {
+        mpMainConsoleModel->buffer.logRemainingOutput();
+    }
 
     mErrorLogStream.flush();
     mErrorLogFile.close();
@@ -792,12 +798,19 @@ void Host::startProfileScripts()
         moduleOrder[it.value()] = moduleEntry;
     }
 
+    std::vector<int> profileRootScriptIds;
+    for (auto* pScript : getScriptUnit()->getScriptRootNodeList()) {
+        profileRootScriptIds.push_back(pScript->getID());
+    }
+
     //First load modules with negative number priority
     QMapIterator<int, QStringList> it2(moduleOrder);
     while (it2.hasNext() && it2.peekNext().key() < 0) {
         it2.next();
         installModulesList(it2.value());
     }
+    // The profile's own scripts were read in before these modules, but run after them
+    getScriptUnit()->moveRootNodesToEnd(profileRootScriptIds);
 
     mBlockStopWatchCreation = false;
     // This will build all the scripts in the collection of script items (but
@@ -2767,11 +2780,6 @@ void Host::setF3SearchEnabled(const bool enabled)
     consoleFrontend()->setF3SearchEnabled(enabled);
 }
 
-std::shared_ptr<TConsoleModel> Host::sharedMainConsoleModel()
-{
-    return mpMainConsoleModel;
-}
-
 void Host::deselectMainConsole()
 {
     mpMainConsoleModel->deselect();
@@ -3188,8 +3196,8 @@ void Host::runTriggers(int line)
 
     if (nested) {
         // Only a nested pass restores: at the top level a script's moveCursor()
-        // is meant to outlive the line. shrinkBuffer() adjusts neither cursor, so
-        // a saved index can by now point past the end.
+        // is meant to outlive the line. shrinkBuffer() cannot adjust the saved
+        // copies, so a saved index can by now point past the end.
         const int lastLine = consoleModel.buffer.getLastLineNumber();
         consoleModel.mUserCursor = QPoint(previousUserCursor.x(), qMin(previousUserCursor.y(), lastLine));
         consoleModel.mEngineCursor = qMin(previousEngineCursor, lastLine);
@@ -7632,6 +7640,11 @@ bool Host::caretEnabled() const
 void Host::setCaretEnabled(bool enabled)
 {
     mCaretEnabled = enabled;
+    if (enabled) {
+        // Stands down any hand-off to the command line still queued or retrying
+        mFocusHandOffPending = false;
+        ++mKeyboardHandOffs;
+    }
     consoleFrontend()->setCaretMode(enabled);
 }
 
@@ -7657,20 +7670,16 @@ bool Host::caretShortcutMatches(const QKeyEvent* ke) const
 
 void Host::setFocusOnHostActiveCommandLine()
 {
-    if (mFocusTimerRunning) {
+    if (std::exchange(mFocusHandOffPending, true)) {
         return;
     }
 
-    mFocusTimerRunning = true;
-
-    // Lambda to set focus on command line
-    auto setCommandLineFocus = [this]() {
-        consoleFrontend()->focusActiveCommandLine();
-
-        mFocusTimerRunning = false;
-    };
-
-    QTimer::singleShot(0ms, this, setCommandLineFocus);
+    QTimer::singleShot(0ms, this, [this]() {
+        if (mFocusHandOffPending) {
+            consoleFrontend()->focusActiveCommandLine();
+            mFocusHandOffPending = false;
+        }
+    });
 }
 
 void Host::setBorders(QMargins borders)

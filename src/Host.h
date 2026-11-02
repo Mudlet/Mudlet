@@ -355,7 +355,7 @@ public:
     LuaInterface* getLuaInterface() { return mLuaInterface.data(); }
 
     void incomingStreamProcessor(const QString& paragraph, int line);
-    // The main console's data model lives in core, co-owned by Host so the
+    // The main console's data model lives in core, owned by Host so the
     // per-line trigger pipeline (runTriggers) can drive it without a view. The
     // view reaches the same instance via TConsole::model().
     TConsoleModel& mainConsoleModel();
@@ -380,7 +380,6 @@ public:
     void setMainConsoleView(TMainConsole* view);
     // Keeps TMainConsole's translation context, so the existing translations still apply.
     static QString loggingAnnouncementText(const bool isLogging, const QString& logFileName);
-    std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
     // Colorizer triggers: select a run of the current line, paint it, restore the format. Model state
     // only, so these run with no view; the two colour ones repaint the
     // lines they touched when there is one.
@@ -920,11 +919,9 @@ private:
     // What the editor's listeners were last given: getEditorFont() resolves the family on every read,
     // so a package bringing or taking it away changes the font without anything being set
     std::optional<TFontAttributes> mEditorFontReported;
-    // Co-owned with the main-console view rather than owned outright: mudlet
-    // destroys the Host before the lingering console widget, so a Host-owned
-    // model would leave the view's aliasing references dangling. Reached
-    // through mainConsoleModel()/sharedMainConsoleModel().
-    std::shared_ptr<TConsoleModel> mpMainConsoleModel;
+    // The main console view aliases it by reference, which is safe as every frontend destroys the view before
+    // the Host (mudlet::profileClosing()).
+    std::unique_ptr<TConsoleModel> mpMainConsoleModel;
     // Non-owning: the views own the models it indexes and keep it in step.
     TWindowRegistry mWindowRegistry;
     // Built at the end of the constructor, as the main console's model is,
@@ -1313,6 +1310,8 @@ public:
     QMap<QString, QStringList> mConsoleActions;
 
     std::map<QString, std::unique_ptr<QKeySequence>> profileShortcuts;
+    // Filled only with no ShortcutsManager, which only the main window makes; a save then writes them back as read
+    QMap<QString, QString> mProfileShortcutsAsRead;
 
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;
@@ -1335,6 +1334,9 @@ public:
     Q_ENUM(CaretShortcut)
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
+    // Bumped each time TMainConsole::focusActiveCommandLine() or caret mode takes the keyboard, so that function's
+    // retries stand down for a later one
+    quint64 mKeyboardHandOffs = 0;
 
     // stops all triggers/aliases/everything from running
     bool mEmergencyStop = false;
@@ -1725,10 +1727,8 @@ private:
     bool mPasswordEntryOpensWithThePrompt = false;
     bool mPasswordEntryClosedByTheGame = false;
 
-    // ensures that only one "zero-time" timer is created by the lambda in
-    // setFocusOnHostActiveCommandLine(), even when it is called multiple
-    // times:
-    bool mFocusTimerRunning = false;
+    // Set while setFocusOnHostActiveCommandLine() has a hand-off queued; caret mode coming on clears it to cancel that hand-off
+    bool mFocusHandOffPending = false;
 
     QMargins mBorders;
     QMargins mUserBorders;

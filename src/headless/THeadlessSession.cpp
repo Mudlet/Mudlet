@@ -29,6 +29,7 @@
 #include "TEvent.h"
 #include "TGameDetails.h"
 #include "TLuaInterpreter.h"
+#include "TNullConsoleFrontend.h"
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -429,7 +430,8 @@ bool THeadlessSession::submit(const QString& line)
     const QPointer<THeadlessSession> self(this);
     // As the GUI's command line, each line of a paste is a command of its own; unlike there, it is checked as a
     // call, so one that a close in an earlier line's alias leaves nowhere to go ends the paste with the reason
-    for (QString command : line.split(QChar::LineFeed)) {
+    QStringList commands = line.split(QChar::LineFeed);
+    for (QString& command : commands) {
         if (!usable()) {
             return false;
         }
@@ -444,6 +446,12 @@ bool THeadlessSession::submit(const QString& line)
         }
         if (!self) {
             return true;
+        }
+    }
+    // The whole paste is one entry, as the GUI's command line keeps it once every line is sent
+    if (mpHost) {
+        if (auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend())) {
+            pView->addMainCommandLineHistory(commands.join(QChar::LineFeed));
         }
     }
     return true;
