@@ -60,6 +60,7 @@
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDockWidget.h"
+#include "TLabel.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -447,6 +448,63 @@ private slots:
         mpHost->setFocusOnHostActiveCommandLine();
 
         QTRY_VERIFY2(survivor->hasFocus(), "the focus did not go to the command line used before the destroyed one");
+    }
+
+    // A tabbed chat window, as EMCO makes: clicking a tab hides the miniconsole whose command
+    // line was used last, and the click then hands the keyboard back, which must not bring
+    // that tab straight back over the one picked (#6676)
+    void test_clickingATabLeavesTheTabItHidHidden()
+    {
+        TMainConsole* console = mpHost->mainConsoleView();
+        const QString tabName = qsl("qaTabConsole");
+        const QString labelName = qsl("qaTabLabel");
+
+        // The window stays up for the next test to take down: focus given after
+        // a hide() and a fresh show() never lands under the offscreen platform.
+        // The wait outlasts the delayed focus retries.
+        const auto tidyUp = qScopeGuard([this, console, tabName, labelName]() {
+            QTest::qWait(100ms);
+            console->forgetCommandLine(console->subCommandLineWidget(tabName));
+            mpHost->deleteLabel(labelName);
+            mpHost->deleteMiniConsole(tabName);
+            mpHost->deleteMiniConsole(qsl("qaTabWindow"));
+            runDeferredDeletes();
+        });
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('qaTabWindow') "
+                                                                         "createMiniConsole('qaTabWindow', '%1', 0, 0, 200, 100) enableCommandLine('%1') "
+                                                                         "createLabel('qaTabWindow', '%2', 0, 120, 100, 30, 1) "
+                                                                         "setLabelClickCallback('%2', function() hideWindow('%1') end)")
+                                                                             .arg(tabName, labelName)));
+        TConsole* tab = console->subConsoleWidget(tabName);
+        QVERIFY(tab);
+        TCommandLine* tabCommandLine = console->subCommandLineWidget(tabName);
+        QVERIFY(tabCommandLine);
+        TLabel* label = console->labelWidget(labelName);
+        QVERIFY(label);
+        TConsole* userWindow = console->subConsoleWidget(qsl("qaTabWindow"));
+        QVERIFY(userWindow && userWindow->mpDockWidget);
+        // Floating, so that hiding the tab cannot pass the keyboard to the main command line: the
+        // tab's stays the last one used, as when a docked one passes it to a widget that is not one
+        userWindow->mpDockWidget->setFloating(true);
+
+        mudlet::self()->show();
+        mudlet::self()->activateWindow();
+        QVERIFY2(QTest::qWaitForWindowActive(mudlet::self()), "the main window never became active");
+        QVERIFY2(QTest::qWaitForWindowExposed(label->window()), "the user window never came up");
+        QVERIFY2(label->window() == userWindow->mpDockWidget, "SETUP: the user window is not floating");
+        label->window()->activateWindow();
+        QVERIFY2(QTest::qWaitForWindowActive(label->window()), "the user window never became active");
+        tabCommandLine->setFocus(Qt::MouseFocusReason);
+        QTRY_VERIFY2(tabCommandLine->hasFocus(), "SETUP: the tab's command line never took the keyboard focus");
+        // As clicking into it does, which the window's activation above may already have pre-empted
+        console->recordActiveCommandLine(tabCommandLine);
+
+        QTest::mouseClick(label, Qt::LeftButton);
+        QVERIFY2(tab->isHidden(), "SETUP: the tab's click callback did not hide the tab");
+        QTest::qWait(100ms);
+
+        QVERIFY2(tab->isHidden(), "handing back the keyboard showed the tab the click had hidden");
     }
 
     // A sub command line that is hiding while it holds the keyboard focus has to

@@ -553,6 +553,8 @@ public:
     int mColorTriggerFgAnsi = scmIgnored;
     int mColorTriggerBgAnsi = scmIgnored;
     int mKeepFiring = 0;
+    // Bumped by setTriggerStayOpen(), so match() can tell its own script changed mKeepFiring
+    quint32 mStayOpenSetsByScript = 0;
     // Written by TriggerUnit's tree index - see skippableForLine(); the slot is -1 while unfiled
     quint32 mLineStamp = 0;
     int mTreeIndexPosition = -1;

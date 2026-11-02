@@ -2096,14 +2096,26 @@ void TMainConsole::focusActiveCommandLine()
     focusActiveCommandLine(nullptr);
 }
 
+// A script hid it or something holding it, as switching between tabs of miniconsoles
+// does: showing its console again to give it the keyboard would undo that
+static bool hiddenWithin(const QWidget* pWidget, const QWidget* pMainConsole)
+{
+    for (; pWidget && pWidget != pMainConsole && !pWidget->isWindow(); pWidget = pWidget->parentWidget()) {
+        if (pWidget->isHidden()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void TMainConsole::focusActiveCommandLine(const QWidget* pWindow)
 {
     using namespace std::chrono_literals;
 
     TCommandLine* pCommandLine = activeCommandLine();
-    if (pCommandLine && pWindow && pCommandLine->window() != pWindow) {
+    if (pCommandLine && (hiddenWithin(pCommandLine, this) || (pWindow && pCommandLine->window() != pWindow))) {
         pCommandLine = nullptr;
-        // The setFocus() below can land only once pWindow activates, as a Qt::ActiveWindowFocusReason
+        // The setFocus() below may land only once the window activates, as a Qt::ActiveWindowFocusReason
         // focus-in that TCommandLine does not record, so record the line it gives the keyboard here
         recordActiveCommandLine(mpCommandLine);
     }
@@ -2125,18 +2137,17 @@ void TMainConsole::focusActiveCommandLine(const QWidget* pWindow)
     // view going down while the Host stays - and a raw pointer would then
     // be read off freed memory, so they hold it by QPointer. They are timed
     // against the Host so that they end with the profile, not with this console.
+    // A later hand-off, such as the player turning caret mode on, stands them down.
     const QPointer<TCommandLine> pTarget(targetCommandLine);
-    QTimer::singleShot(10ms, mpHost, [pTarget]() {
-        if (pTarget && !pTarget->hasFocus()) {
+    Host* pHost = mpHost;
+    const quint64 handOff = ++pHost->mKeyboardHandOffs;
+    const auto retry = [pTarget, pHost, handOff]() {
+        if (pTarget && pHost->mKeyboardHandOffs == handOff && !pTarget->hasFocus()) {
             pTarget->setFocus(Qt::OtherFocusReason);
         }
-    });
-
-    QTimer::singleShot(50ms, mpHost, [pTarget]() {
-        if (pTarget && !pTarget->hasFocus()) {
-            pTarget->setFocus(Qt::OtherFocusReason);
-        }
-    });
+    };
+    QTimer::singleShot(10ms, pHost, retry);
+    QTimer::singleShot(50ms, pHost, retry);
 }
 
 TCommandLine* TMainConsole::commandLineNamed(const QString& name) const

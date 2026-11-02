@@ -3241,3 +3241,119 @@ describe("Tests game text the ingest worker parses ahead", function()
     requireWorker(before)
   end)
 end)
+
+-- A game that sends no IAC GA or EOR has a part line flushed to the screen once
+-- it falls quiet for the network packet timeout (300ms by default)
+describe("Tests the posting timer of a game that sends no GA", function()
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  local function quietFor(milliseconds)
+    for _ = 1, milliseconds / 50 do
+      assert.is_true(pumpEvents(50), "pumpEvents needs MUDLET_TEST_MODE set, see the tests README")
+    end
+  end
+
+  -- an IAC GA from an earlier spec stops the posting timer until cTelnet is
+  -- reset, which a connection coming and going does
+  local function forgetGA()
+    local telnetDirectory = os.getenv("MUDLET_TEST_TELNET_DIR")
+    local handle = telnetDirectory and io.open(telnetDirectory .. "/port", "r")
+    local port = handle and tonumber((handle:read("*a") or ""):match("%d+") or "")
+    if handle then
+      handle:close()
+    end
+    if not port then
+      local reason = "needs the telnet fixture (run CI/telnet-fixture-server.py with MUDLET_TEST_TELNET_DIR set)"
+      assert.is_nil(os.getenv("MUDLET_TEST_REQUIRE_TELNET_FIXTURE"), "MUDLET_TEST_REQUIRE_TELNET_FIXTURE is set but this " .. reason)
+      return false, reason
+    end
+    local function connected()
+      local _, _, isConnected = getConnectionInfo()
+      return isConnected
+    end
+    local function waitFor(predicate)
+      for _ = 1, 100 do
+        if predicate() then
+          return true
+        end
+        pumpEvents(50)
+      end
+      return predicate()
+    end
+    connectToServer("127.0.0.1", port)
+    assert.is_true(waitFor(connected), "never connected to the telnet fixture on port " .. port)
+    disconnect()
+    assert.is_true(waitFor(function() return not connected() end), "the telnet fixture connection outlived the disconnect")
+    return true
+  end
+
+  -- #8118: the timeout counts from a line's last read, not its first, so a line
+  -- trickling in for longer than that stays whole while its reads come sooner
+  it("does not break up a line whose reads each come sooner than the timeout", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waiting out the posting timeout needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+      return
+    end
+    local ok, reason = forgetGA()
+    if not ok then
+      pending(reason)
+      return
+    end
+    local line = "TrickleStart \27[48;5;93mcoloured\27[0m and \27[38;5;21mmore\27[0m text TrickleEnd"
+    -- A runner stalled for a whole timeout between two reads rightly breaks the
+    -- line, so only an attempt whose reads really did come sooner counts
+    local flushed
+    for _ = 1, 5 do
+      local mark = getLastLineNumber("main")
+      local longestGap, lastRead = 0, getEpoch()
+      for i = 1, #line, 6 do
+        feed(line:sub(i, i + 5))
+        local now = getEpoch()
+        longestGap = math.max(longestGap, now - lastRead)
+        lastRead = now
+        quietFor(50)
+      end
+      -- and the timer still flushes the line once the game does fall quiet
+      quietFor(600)
+      local lines = getLines("main", mark, getLastLineNumber("main") + 1)
+      feed("\r\n")
+      if longestGap < 0.25 then
+        flushed = lines
+        break
+      end
+    end
+    if not flushed then
+      pending("every attempt had a gap between reads as long as the timeout")
+      return
+    end
+    assert.is_true(table.contains(flushed, "TrickleStart coloured and more text TrickleEnd"),
+      "the line was broken up into: " .. table.concat(flushed, " | "))
+  end)
+
+  -- a game streaming text that never has a newline still has it shown, once
+  -- the part line has been held for ten timeouts (or three seconds)
+  it("shows a part line that keeps growing past the hold cap", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waiting out the posting timeout needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+      return
+    end
+    local ok, reason = forgetGA()
+    if not ok then
+      pending(reason)
+      return
+    end
+    local mark = getLastLineNumber("main")
+    feed("EndlessStart ")
+    for _ = 1, 100 do
+      feed("more ")
+      quietFor(50)
+    end
+    local shown = table.concat(getLines("main", mark, getLastLineNumber("main") + 1), " | ")
+    feed("\r\n")
+    assert.is_truthy(shown:find("EndlessStart", 1, true), "still held after 5s of reads: " .. shown)
+  end)
+end)
