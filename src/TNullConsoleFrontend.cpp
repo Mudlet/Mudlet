@@ -1714,6 +1714,9 @@ std::pair<bool, QString> TNullConsoleFrontend::createCommandLine(const QString& 
     if (mpHost->parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
+    if (mpHost->windowRegistry().hasLabel(name)) {
+        return {false, qsl("label with the name '%1' already exists").arg(name)};
+    }
     if (!ownsContainer(windowname)) {
         return noView();
     }
@@ -2058,6 +2061,9 @@ std::pair<bool, QString> TNullConsoleFrontend::createTextBox(const QString& wind
     }
     if (mpHost->parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+    if (mpHost->windowRegistry().hasLabel(name)) {
+        return {false, qsl("label with the name '%1' already exists").arg(name)};
     }
     if (!ownsContainer(windowname)) {
         return noView();
