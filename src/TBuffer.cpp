@@ -7286,11 +7286,8 @@ void TBuffer::finaliseActiveHyperlink()
                  << "disabled:" << mCurrentHyperlinkStyling.selection.disabled << "selectedStyle.hasCustomStyling:" << mCurrentHyperlinkStyling.selectedStyle.hasCustomStyling;
 #endif
         if (mCurrentHyperlinkStyling.selection.disabled) {
+            // Not queued for restyling: its characters were built in this state, and that would clear the game's own formatting
             setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
-            // Its characters were built in this state, and restyling them would clear the game's own formatting
-            if (mCurrentHyperlinkStyling.selection.hasSelectionSettings) {
-                mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
-            }
         } else if (mCurrentHyperlinkStyling.selection.selected) {
             setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
             mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
@@ -9986,6 +9983,11 @@ void TBuffer::setHoveredLink(int linkIndex)
 
 void TBuffer::setActiveLink(int linkIndex)
 {
+    // Restyling a disabled link to show it pressed would clear the game's own formatting
+    if (linkIndex > 0 && getEffectiveHyperlinkStyling(linkIndex).selection.disabled) {
+        return;
+    }
+
     int previousActiveLink = mCurrentActiveLinkIndex;
     mCurrentActiveLinkIndex = linkIndex;
 
