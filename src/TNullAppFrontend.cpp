@@ -555,10 +555,41 @@ Host* TNullAppFrontend::getActiveHost()
     return mpActiveHost.data();
 }
 
-void TNullAppFrontend::setActiveProfileTab(const QString& profileName)
+static void raiseProfileFocusChange(Host* pHost, const bool gained)
+{
+    TEvent event{};
+    event.mArgumentList << QLatin1String("sysProfileFocusChangeEvent") << (gained ? QLatin1String("1") : QLatin1String("0"));
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_BOOLEAN;
+    pHost->raiseEvent(event);
+}
+
+bool TNullAppFrontend::setActiveProfileTab(const QString& profileName)
 {
     HostManager* pool = HostManager::self();
-    mpActiveHost = pool ? pool->getHost(profileName) : nullptr;
+    const QPointer<Host> pHost = pool ? pool->getHost(profileName) : nullptr;
+    if (!pHost || pHost->closeStarted()) {
+        return false;
+    }
+    // As a second setCurrentIndex() to the tab already chosen: a handler asking for this switch again changes nothing
+    if (pHost == mpActiveHost || pHost == mpActivatingHost) {
+        return true;
+    }
+    const QScopedValueRollback<QPointer<Host>> activating(mpActivatingHost, pHost);
+    // As the main window's tab change: the one left behind hears first, then the one brought forward
+    const QPointer<Host> pPrevious = mpActiveHost;
+    if (pPrevious) {
+        raiseProfileFocusChange(pPrevious, false);
+    }
+    // A handler in the profile left behind may have closed this one, which then stays behind it
+    if (!pHost || pHost->closeStarted()) {
+        if (pPrevious && !pPrevious->closeStarted() && mpActiveHost == pPrevious) {
+            raiseProfileFocusChange(pPrevious, true);
+        }
+        return false;
+    }
+    mpActiveHost = pHost;
+    raiseProfileFocusChange(pHost, true);
+    return true;
 }
 
 bool TNullAppFrontend::openProfile(const QString& profileName, const bool connect)
