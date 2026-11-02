@@ -1034,6 +1034,20 @@ private slots:
     QCOMPARE(console->getLinkStore().getCurrentLinkID(), linksBefore);
   }
 
+  void test_Osc8TelnetsLinkToARawAddressIsNotMade_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::newRow("IPv4") << qsl("telnets://127.0.0.1:4000");
+    QTest::newRow("IPv6") << qsl("telnets://[::1]:4000");
+  }
+
+  void test_Osc8TelnetsLinkToARawAddressIsNotMade() {
+    QFETCH(QString, uri);
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int linksBefore = console->getLinkStore().getCurrentLinkID();
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Visit\x1b]8;;\x1b\\"));
+    QCOMPARE(console->getLinkStore().getCurrentLinkID(), linksBefore);
+  }
+
   // A profile already connected is only brought forward, so the link cannot
   // set TLS for some later reconnection the player never asked for
   void test_AGameLinkToAConnectedProfileLeavesItsTlsAlone() {

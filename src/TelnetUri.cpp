@@ -22,6 +22,7 @@
 #include "utils.h"
 
 #include <QDebug>
+#include <QHostAddress>
 #include <QUrl>
 
 std::optional<TelnetUriData> parseTelnetUri(const QString& uri)
@@ -45,6 +46,13 @@ std::optional<TelnetUriData> parseTelnetUri(const QString& uri)
     data.host = url.host();
     if (data.host.isEmpty()) {
         qWarning() << "parseTelnetUri() - URI missing host";
+        return std::nullopt;
+    }
+
+    // TLS checks a certificate against a name, and the socket looks one up from an IP that the player never agreed to.
+    // QHostAddress, as cTelnet::isRawIPv6Address() would also match a host named "cafe".
+    if (data.useTls && QHostAddress().setAddress(data.host)) {
+        qWarning() << "parseTelnetUri() - TLS needs a host name rather than an IP address";
         return std::nullopt;
     }
 

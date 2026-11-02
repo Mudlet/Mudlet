@@ -137,6 +137,36 @@ private slots:
     QCOMPARE(stub.mHints, QStringList(qsl("Connect to: telnets://games.example:4000")));
   }
 
+  void testTelnetsLinkToARawAddressIsRefused_data() {
+    QTest::addColumn<QString>("href");
+    QTest::newRow("IPv4") << qsl("telnets://127.0.0.1:4000");
+    QTest::newRow("IPv6") << qsl("telnets://[::1]:4000");
+  }
+
+  void testTelnetsLinkToARawAddressIsRefused() {
+    QFETCH(QString, href);
+    TMxpStubClient stub;
+    feed(stub, qsl("<A href=\"%1\">Visit</A>").arg(href).toUtf8().constData());
+
+    QCOMPARE(stub.mHrefs, QStringList(QString()));
+    QCOMPARE(stub.mHints, QStringList(refusal(href)));
+  }
+
+  void testRawAddressesOnlyFailWithTls_data() {
+    QTest::addColumn<QString>("href");
+    QTest::newRow("plain telnet to IPv4") << qsl("telnet://127.0.0.1:4000");
+    QTest::newRow("plain telnet to IPv6") << qsl("telnet://[::1]:4000");
+    QTest::newRow("TLS to a name made of hex digits") << qsl("telnets://cafe:4000");
+  }
+
+  void testRawAddressesOnlyFailWithTls() {
+    QFETCH(QString, href);
+    TMxpStubClient stub;
+    feed(stub, qsl("<A href=\"%1\">Visit</A>").arg(href).toUtf8().constData());
+
+    QCOMPARE(stub.mHrefs, QStringList(connects(href)));
+  }
+
   void testTelnetLinkKeepsTheGamesHint() {
     TMxpStubClient stub;
     feed(stub, "<A href=\"telnet://games.example:4000\" hint=\"Our sister game\">Visit</A>");
