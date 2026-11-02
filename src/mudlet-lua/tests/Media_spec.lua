@@ -3974,9 +3974,8 @@ describe("Client.Media 2 functions validate their parameters", function()
     ok, err = updateMusic({key = "busted-nothing-playing", pan = 40})
     assert.is_nil(ok)
     assert.equals("nothing to change (give a volume)", err)
-    ok, err = updateSounds({key = "busted-nothing-playing", duration = 500})
-    assert.is_nil(ok)
-    assert.equals("nothing to change (give a volume, pan or direction)", err)
+    -- updateSounds shipped returning true for a call that changes nothing
+    assert.is_true(updateSounds({key = "busted-nothing-playing", duration = 500}))
   end)
 
   it("setMediaListener turns to a compass direction or degrees and refuses anything else", function()

@@ -1280,8 +1280,9 @@ int TLuaInterpreter::updateMediaAsTableArgument(lua_State* L, const char* func, 
             }
 
             // Music takes no pan or direction, so a call copied from updateSounds would otherwise change nothing and say nothing
-            if (!volume && !pan && direction.isEmpty()) {
-                return warnArgumentValue(L, func, mediaType == TMediaData::MediaTypeSound ? qsl("nothing to change (give a volume, pan or direction)") : qsl("nothing to change (give a volume)"));
+            // updateSounds shipped in 5.1.0 returning true for such a call, so scripts may rely on it
+            if (mediaType == TMediaData::MediaTypeMusic && !volume) {
+                return warnArgumentValue(L, func, qsl("nothing to change (give a volume)"));
             }
 
             mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
