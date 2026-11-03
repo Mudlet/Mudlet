@@ -20,20 +20,16 @@ end
 
 local parser = argparse("generate-changelog.lua", "Generate a changelog from the HEAD until the most recent published commit.")
 -- see https://argparse.readthedocs.io/en/stable/index.html
-parser:option("-m --mode", 'mode to run in'):choices({"ptb", "release"}):count("1")
-parser:option("-r --releasefile", "downloaded DBLSQD release feed file")
+parser:option("-m --mode", 'mode to run in'):choices({"release"}):count("1")
 parser:option("-s --start-commit", "start commit to generate changelog from")
 parser:option("-e --end-commit", "end commit to generate changelog to")
 parser:option("-f --format", "output format", "html"):choices({"html", "md"}):count(1)
 local args = parser:parse()
 
-if (args.mode == "ptb" and not args.releasefile) then
-  error("-r or --releasefile is required for ptb mode")
-elseif (args.mode == "release" and not (args.start_commit and args.end_commit)) then
-  error("--start-commit and --end-commit are required for release mode")
+if not (args.start_commit and args.end_commit) then
+  error("--start-commit and --end-commit are required")
 end
 
-local MAX_COMMITS_PER_CHANGELOG = 100
 
 
 function escape_for_html(text)
@@ -82,14 +78,6 @@ local mdBuilder = {
 }
 
 local builder = args.format == "md" and mdBuilder or htmlBuilder
-
--- Basic algorithm for the PTB mode is as follows:
---   retrieve last MAX_COMMITS_PER_CHANGELOG commit hashes from current branch
---   retrieve list of PTB releases and the hashes at the end of them (ie 4.14.1-ptb-2022-01-29-e8084)
---   go through the list of commits, collecting hashes not present in releases
---   then get the changelog for the range of hashes
---   then sort the changelog into categories
---   html-ize and print the results.
 
 -- credit: https://stackoverflow.com/a/326715/72944
 function os.capture(cmd, raw)
@@ -152,58 +140,6 @@ function link_functions_md(text)
     text = text:gsub(pattern, replacement)
   end
   return text
-end
-
-function extract_released_sha1s(input)
-  local decoded = lunajson.decode(input)
-
-  local t = {}
-  for _, release in ipairs(decoded.releases) do
-    t[#t+1] = release.version:match(".+%-(.-)$")
-  end
-
-  return t
-end
-
-function extract_historical_sha1s()
-  local history, command
-  if github_workspace then
-    command = string.format("git log --pretty=%%H -n %d %s", MAX_COMMITS_PER_CHANGELOG, os.getenv("GITHUB_SHA"))
-    history = string.split(os.capture(command))
-  else
-    command = "git log --pretty=%H -n "..MAX_COMMITS_PER_CHANGELOG
-    history = string.split(os.capture(command))
-  end
-
-  local t = {}
-  for _, sha1 in ipairs(history) do
-    t[#t+1] = sha1:match("^(........)")
-  end
-
-  return t
-end
-
-function get_releases(location)
-  return read_file(location)
-end
-
--- returns a list of commits that have been added since the last release
-function scan_commits(historical_commits, released_commits)
-  local commits_added_since = {}
-
-  local released_commits_length = #released_commits[1]
-  for i, commit in ipairs(historical_commits) do historical_commits[i] = string.cut(commit, released_commits_length) end
-
-  for i, v in ipairs(historical_commits) do
-    if table.contains(released_commits, v) then
-      commits_added_since[#commits_added_since + 1] = v
-      return commits_added_since
-    end
-    commits_added_since[#commits_added_since + 1] = v
-  end
-
-  print("(hit the "..MAX_COMMITS_PER_CHANGELOG.." commit limit - couldn't find the latest published PTB release)")
-  return {}
 end
 
 function get_changelog(commit1, commit2)
@@ -270,18 +206,6 @@ function lines_to_output(lines)
   return builder.converter(lines)
 end
 
-local start_commit, end_commit
-if (args.mode == "ptb") then
-  local historical_commits = extract_historical_sha1s()
-  local released_commits = extract_released_sha1s(get_releases(args.releasefile))
-  local unpublished_commits = scan_commits(historical_commits, released_commits)
-
-  if table.is_empty(unpublished_commits) then print("(changelog couldn't be generated)") os.exit() end
-  start_commit, end_commit = unpublished_commits[#unpublished_commits], unpublished_commits[1]
-else
-  start_commit, end_commit = args.start_commit, args.end_commit
-end
-
-local changelog = get_changelog(start_commit, end_commit)
+local changelog = get_changelog(args.start_commit, args.end_commit)
 
 print_sorted_changelog(changelog)

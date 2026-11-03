@@ -50,6 +50,7 @@
 #include "dlgMapper.h"
 #include "mudlet.h"
 #include "GifTracker.h"
+#include "TriggerMatchPool.h"
 
 #include <QCursor>
 #include <QDataStream>
@@ -289,9 +290,7 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
             &mudlet::signal_profileLoaded,
             this,
             [this]() {
-                if (mpHost) {
-                    mpHost->spellChecker().warmDictionaries();
-                }
+                mpHost->spellChecker().warmDictionaries();
             },
             Qt::QueuedConnection);
     // ...or when spell check is turned on mid-session:
@@ -300,9 +299,7 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
             &Host::signal_spellCheckEnabled,
             this,
             [this]() {
-                if (mpHost) {
-                    mpHost->spellChecker().warmDictionaries();
-                }
+                mpHost->spellChecker().warmDictionaries();
             },
             Qt::QueuedConnection);
 
@@ -325,6 +322,9 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
 TMainConsole::~TMainConsole()
 {
+    // Before any of the teardown, so nothing it reaches through Host::consoleFrontend() meets a half-destroyed view
+    mpHost->setMainConsoleView(nullptr);
+
     // These widgets' destroyed() handlers would write to maps already destroyed if they ran after this
     // console's members go but before ~QObject severs connections. Only our own children, deleted by
     // ~QWidget, die in that window (a user window's belong to its TDockWidget), so sweep children - not map
@@ -345,21 +345,18 @@ TMainConsole::~TMainConsole()
 
     // Unlike labels and sub-consoles, these kinds don't deregister in their destructors, and their
     // destroyed() handlers are disconnected above or die with ~QObject. Docks need no sweep: closing the
-    // profile closes every sub-console first, taking its dock via TConsole::closeEvent(). Quitting destroys
-    // every Host before the console, so there may be no registry.
-    if (mpHost) {
-        const QStringList scrollBoxNames = mScrollBoxMap.keys();
-        for (const QString& scrollBoxName : scrollBoxNames) {
-            mpHost->windowRegistry().deregisterScrollBox(scrollBoxName);
-        }
-        const QStringList textBoxNames = mTextBoxMap.keys();
-        for (const QString& textBoxName : textBoxNames) {
-            mpHost->windowRegistry().deregisterTextBox(textBoxName);
-        }
-        const QStringList commandLineNames = mSubCommandLineMap.keys();
-        for (const QString& commandLineName : commandLineNames) {
-            mpHost->windowRegistry().deregisterCommandLine(commandLineName);
-        }
+    // profile closes every sub-console first, taking its dock via TConsole::closeEvent().
+    const QStringList scrollBoxNames = mScrollBoxMap.keys();
+    for (const QString& scrollBoxName : scrollBoxNames) {
+        mpHost->windowRegistry().deregisterScrollBox(scrollBoxName);
+    }
+    const QStringList textBoxNames = mTextBoxMap.keys();
+    for (const QString& textBoxName : textBoxNames) {
+        mpHost->windowRegistry().deregisterTextBox(textBoxName);
+    }
+    const QStringList commandLineNames = mSubCommandLineMap.keys();
+    for (const QString& commandLineName : commandLineNames) {
+        mpHost->windowRegistry().deregisterCommandLine(commandLineName);
     }
 
     mSubCommandLineMap.clear();
@@ -384,8 +381,7 @@ TMainConsole::~TMainConsole()
     for (TAction* pAction : actionsWithBars) {
         disconnect(pAction, &QObject::destroyed, this, nullptr);
     }
-    // Normally the Host has deleted these already; a Host whose console goes first
-    // would otherwise leave them on the main window pointing at its actions.
+    // They sit on the main window, so would otherwise outlive this console pointing at its Host's actions
     deleteActionToolBars();
 }
 
@@ -469,6 +465,13 @@ void Host::setMainConsoleView(TMainConsole* view)
     if (view) {
         mpNullConsoleFrontend->dropWindows();
         mExitEventOwed = false;
+        // What scripts set on the main command line with no view was never the view's
+        mWindowRegistry.setMainCommandLineText(view->mpCommandLine->toPlainText());
+        mWindowRegistry.setMainCommandLineStyleSheet(view->mpCommandLine->styleSheet());
+        mWindowRegistry.setMainCommandLineSavesHistory(view->mpCommandLine->mSaveCommands);
+        mpNullConsoleFrontend->followView(view);
+    } else if (mpConsole) {
+        mpNullConsoleFrontend->resumeMainCommandLine();
     }
     mpConsole = view;
     mpConsoleFrontend = view;
@@ -500,10 +503,6 @@ void TMainConsole::watchWindowState(const QString& name, QWidget* pWidget)
 
 void TMainConsole::reportGeometry(const QString& name)
 {
-    if (!mpHost) {
-        return;
-    }
-
     // pos()/size() rather than geometry(): for a floating dock move() targets the
     // frame origin while geometry() would report the client area.
     if (auto pL = mLabelMap.value(name)) {
@@ -527,17 +526,11 @@ void TMainConsole::reportGeometry(const QString& name)
 
 void TMainConsole::reportMainWindowSize()
 {
-    if (mpHost) {
-        mpHost->windowRegistry().setMainWindowSize(getMainWindowSize());
-    }
+    mpHost->windowRegistry().setMainWindowSize(getMainWindowSize());
 }
 
 void TMainConsole::reportVisibility(const QString& name)
 {
-    if (!mpHost) {
-        return;
-    }
-
     if (auto pL = mLabelMap.value(name)) {
         pL->model().mVisible = pL->isVisibleTo(this);
     }
@@ -637,54 +630,64 @@ TDockWidget* TMainConsole::createUserWindow(const QString& name)
     return dockwidget;
 }
 
-void TMainConsole::openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
+bool TMainConsole::openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
 {
-    placeUserWindow(name, loadLayout, autoDock, area);
+    if (!placeUserWindow(name, loadLayout, autoDock, area)) {
+        return false;
+    }
     reportGeometry(name);
+    return true;
 }
 
-void TMainConsole::placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
+bool TMainConsole::placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
 {
     // Host::openWindow() has refused a name holding a console or a dock but not both
-    auto dockwidget = dockWidget(name);
+    QPointer<TDockWidget> dockwidget = dockWidget(name);
+    // A handler run as it is made, as the layout loads, as it shows or as it docks can delete it, leaving the dock only to
+    // its deleteLater(), or put another in its place
+    const auto gone = [this, &name, &dockwidget]() {
+        return !dockwidget || dockWidget(name) != dockwidget;
+    };
     if (!dockwidget) {
         dockwidget = createUserWindow(name);
+        if (gone()) {
+            return false;
+        }
         shareDockAreaIfSqueezed(dockwidget);
     }
     dockwidget->update();
 
     if (loadLayout && !dockwidget->hasLayoutAlready) {
         mudlet::self()->loadWindowLayout();
+        if (gone()) {
+            return false;
+        }
         dockwidget->hasLayoutAlready = true;
     }
     dockwidget->show();
+    if (gone()) {
+        return false;
+    }
     dockwidget->setAllowedAreas(autoDock ? Qt::AllDockWidgetAreas : Qt::NoDockWidgetArea);
 
     if (area == QLatin1String("f") || area == QLatin1String("floating")) {
         if (!dockwidget->isFloating()) {
             dockwidget->setFloating(true);
         }
-        return;
-    }
-    if (area == QLatin1String("r") || area == QLatin1String("right")) {
+    } else if (area == QLatin1String("r") || area == QLatin1String("right")) {
         dockwidget->setFloating(false);
         mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
-        return;
-    }
-    if (area == QLatin1String("l") || area == QLatin1String("left")) {
+    } else if (area == QLatin1String("l") || area == QLatin1String("left")) {
         dockwidget->setFloating(false);
         mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, dockwidget);
-        return;
-    }
-    if (area == QLatin1String("t") || area == QLatin1String("top")) {
+    } else if (area == QLatin1String("t") || area == QLatin1String("top")) {
         dockwidget->setFloating(false);
         mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, dockwidget);
-        return;
-    }
-    if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+    } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
         dockwidget->setFloating(false);
         mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, dockwidget);
     }
+    return !gone();
 }
 
 void TMainConsole::registerScrollBox(const QString& name, TScrollBox* pScrollBox)
@@ -711,11 +714,7 @@ void TMainConsole::deregisterScrollBox(TScrollBox* pScrollBox)
         if (it.value() != pScrollBox) {
             return false;
         }
-        // Quitting destroys every Host before the deferred deletes of the widgets
-        // a user window holds, leaving no registry to take the name out of
-        if (mpHost) {
-            mpHost->windowRegistry().deregisterScrollBox(it.key());
-        }
+        mpHost->windowRegistry().deregisterScrollBox(it.key());
         released.append(it.key());
         return true;
     });
@@ -756,9 +755,7 @@ void TMainConsole::deregisterTextBox(TTextBox* pTextBox)
         if (it.value() != pTextBox) {
             return false;
         }
-        if (mpHost) {
-            mpHost->windowRegistry().deregisterTextBox(it.key());
-        }
+        mpHost->windowRegistry().deregisterTextBox(it.key());
         released.append(it.key());
         return true;
     });
@@ -1895,11 +1892,7 @@ void TMainConsole::deregisterSubCommandLine(TCommandLine* pCommandLine)
         if (it.value() != pCommandLine) {
             return false;
         }
-        // Quitting destroys every Host before a user window's widgets' deferred deletes, so there
-        // may be no registry.
-        if (mpHost) {
-            mpHost->windowRegistry().deregisterCommandLine(it.key());
-        }
+        mpHost->windowRegistry().deregisterCommandLine(it.key());
         released.append(it.key());
         return true;
     });
@@ -1957,7 +1950,7 @@ TPasswordEntry* TMainConsole::passwordEntry() const
 
 void TMainConsole::slot_passwordEntryWanted(const bool wanted)
 {
-    if (!mpCommandLine || !mpHost || mpHost->isClosingDown()) {
+    if (!mpCommandLine || mpHost->isClosingDown()) {
         return;
     }
     if (wanted && !mpPasswordEntry) {
@@ -2053,7 +2046,7 @@ bool TMainConsole::eventFilter(QObject* watched, QEvent* event)
         QTimer::singleShot(0ms, this, [this]() {
             mMainDisplayLayoutPending = false;
             // a console a tab switch has made zero wide is left alone, as resizeEvent() leaves it
-            if (width() && mpHost && mpCommandLine && !mpCommandLine->isHidden()) {
+            if (width() && mpCommandLine && !mpCommandLine->isHidden()) {
                 mBorders = mpHost->borders();
                 layoutMainDisplay();
             }
@@ -2067,7 +2060,7 @@ bool TMainConsole::eventFilter(QObject* watched, QEvent* event)
 
 void TMainConsole::recordActiveCommandLine(TCommandLine* pCommandLine)
 {
-    if (!pCommandLine || (mpHost && mpHost->isClosingDown())) {
+    if (!pCommandLine || mpHost->isClosingDown()) {
         return;
     }
     mLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
@@ -2076,7 +2069,7 @@ void TMainConsole::recordActiveCommandLine(TCommandLine* pCommandLine)
 
 void TMainConsole::forgetCommandLine(TCommandLine* pCommandLine)
 {
-    if (pCommandLine && !(mpHost && mpHost->isClosingDown())) {
+    if (pCommandLine && !mpHost->isClosingDown()) {
         mLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
     }
 }
@@ -2084,7 +2077,7 @@ void TMainConsole::forgetCommandLine(TCommandLine* pCommandLine)
 TCommandLine* TMainConsole::activeCommandLine()
 {
     TCommandLine* pCommandLine = nullptr;
-    if ((mpHost && mpHost->isClosingDown()) || mLastCommandLineUsed.isEmpty()) {
+    if (mpHost->isClosingDown() || mLastCommandLineUsed.isEmpty()) {
         return nullptr;
     }
 
@@ -2103,14 +2096,26 @@ void TMainConsole::focusActiveCommandLine()
     focusActiveCommandLine(nullptr);
 }
 
+// A script hid it or something holding it, as switching between tabs of miniconsoles
+// does: showing its console again to give it the keyboard would undo that
+static bool hiddenWithin(const QWidget* pWidget, const QWidget* pMainConsole)
+{
+    for (; pWidget && pWidget != pMainConsole && !pWidget->isWindow(); pWidget = pWidget->parentWidget()) {
+        if (pWidget->isHidden()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void TMainConsole::focusActiveCommandLine(const QWidget* pWindow)
 {
     using namespace std::chrono_literals;
 
     TCommandLine* pCommandLine = activeCommandLine();
-    if (pCommandLine && pWindow && pCommandLine->window() != pWindow) {
+    if (pCommandLine && (hiddenWithin(pCommandLine, this) || (pWindow && pCommandLine->window() != pWindow))) {
         pCommandLine = nullptr;
-        // The setFocus() below can land only once pWindow activates, as a Qt::ActiveWindowFocusReason
+        // The setFocus() below may land only once the window activates, as a Qt::ActiveWindowFocusReason
         // focus-in that TCommandLine does not record, so record the line it gives the keyboard here
         recordActiveCommandLine(mpCommandLine);
     }
@@ -2132,18 +2137,17 @@ void TMainConsole::focusActiveCommandLine(const QWidget* pWindow)
     // view going down while the Host stays - and a raw pointer would then
     // be read off freed memory, so they hold it by QPointer. They are timed
     // against the Host so that they end with the profile, not with this console.
+    // A later hand-off, such as the player turning caret mode on, stands them down.
     const QPointer<TCommandLine> pTarget(targetCommandLine);
-    QTimer::singleShot(10ms, mpHost, [pTarget]() {
-        if (pTarget && !pTarget->hasFocus()) {
+    Host* pHost = mpHost;
+    const quint64 handOff = ++pHost->mKeyboardHandOffs;
+    const auto retry = [pTarget, pHost, handOff]() {
+        if (pTarget && pHost->mKeyboardHandOffs == handOff && !pTarget->hasFocus()) {
             pTarget->setFocus(Qt::OtherFocusReason);
         }
-    });
-
-    QTimer::singleShot(50ms, mpHost, [pTarget]() {
-        if (pTarget && !pTarget->hasFocus()) {
-            pTarget->setFocus(Qt::OtherFocusReason);
-        }
-    });
+    };
+    QTimer::singleShot(10ms, pHost, retry);
+    QTimer::singleShot(50ms, pHost, retry);
 }
 
 TCommandLine* TMainConsole::commandLineNamed(const QString& name) const
@@ -3461,7 +3465,7 @@ void TMainConsole::finishIncomingText(const bool carriesText)
 
 void TMainConsole::slot_refreshLatencyBox()
 {
-    if (!mpHost || !mpLineEdit_networkLatency) {
+    if (!mpLineEdit_networkLatency) {
         return;
     }
 
@@ -4215,6 +4219,10 @@ void TMainConsole::showStatistics()
     QString itemMsg = std::get<0>(mpHost->getTriggerUnit()->assembleReport());
     print(itemMsg, QColor(150, 120, 0), Qt::black);
 
+    //: Heading for the system's statistics information displayed in the console, about matching triggers on several threads during a flood of text
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Trigger Match Pool:")));
+    print(assembleTriggerMatchPoolReport(), QColor(150, 120, 0), Qt::black);
+
     //: Heading for the system's statistics information displayed in the console
     mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Timer Report:")));
     itemMsg = std::get<0>(mpHost->getTimerUnit()->assembleReport());
@@ -4248,6 +4256,46 @@ void TMainConsole::showStatistics()
     mpHost->mLuaInterpreter.compileAndExecuteScript(QLatin1String("resetFormat();"));
 
     mpHost->mainConsoleView()->raise();
+}
+
+QString TMainConsole::assembleTriggerMatchPoolReport() const
+{
+    const TriggerMatchPool& pool = TriggerMatchPool::instance();
+    if (pool.workerCount() == 0) {
+        //: Shown in the statistics report when matching triggers on several threads is switched off
+        return tr("off - switch it on under Preferences, Advanced, Performance to find out whether it speeds up this profile during floods of text.\n");
+    }
+    const TriggerMatchPool::Report& report = pool.report();
+    const auto microseconds = [](const qint64 nanoseconds) {
+        return QString::number(static_cast<double>(nanoseconds) / 1000.0, 'f', 1);
+    };
+    QString text;
+    //: Statistics report line; %n is the number of threads matching triggers, the main thread included
+    text += tr("on, with %n thread(s); the figures below cover every profile since it was last switched on or changed\n", nullptr, pool.workerCount());
+    //: Statistics report line; %1 is a number of lines of game text, %2 an average time in microseconds
+    text += tr("lines it matched: %1, taking %2 µs each on average\n").arg(QString::number(report.pooledLines), microseconds(report.averagePooledNanoseconds()));
+    //: Statistics report line; %1 is a number of lines of game text, %2 an average time in microseconds
+    text += tr("lines like those matched without it, for comparison: %1, taking %2 µs each on average\n").arg(QString::number(report.sampledLines), microseconds(report.averageSampledNanoseconds()));
+    switch (report.verdict()) {
+    case TriggerMatchPool::Report::Verdict::NotEnoughData:
+        //: Statistics report line; %1 is the number of comparison lines needed. Lines are only compared during a flood of game text that triggers with regular expressions have to search
+        text += tr("verdict: not enough data yet - it needs %1 comparison lines, which come from floods of text that many regex triggers search\n")
+                        .arg(TriggerMatchPool::Report::scmSampledLinesForVerdict);
+        break;
+    case TriggerMatchPool::Report::Verdict::WorthIt:
+        //: Statistics report line; %1 is a time in milliseconds
+        text += tr("verdict: worth it on this workload so far, saving about %1 ms\n").arg(QString::number(report.savedNanoseconds() / 1000000));
+        break;
+    case TriggerMatchPool::Report::Verdict::AboutEven:
+        //: Statistics report line
+        text += tr("verdict: about even on this workload so far - it is no faster, and uses more CPU\n");
+        break;
+    case TriggerMatchPool::Report::Verdict::NotWorthIt:
+        //: Statistics report line; %1 is a time in milliseconds
+        text += tr("verdict: not worth it on this workload so far, costing about %1 ms - consider switching it off\n").arg(QString::number(-report.savedNanoseconds() / 1000000));
+        break;
+    }
+    return text;
 }
 
 void TMainConsole::closeEvent(QCloseEvent* event)
@@ -4284,20 +4332,9 @@ void TMainConsole::closeEvent(QCloseEvent* event)
 
     if (mpHost->mFORCE_SAVE_ON_EXIT || mpHost->isClosingForced()) {
         mudlet::self()->saveWindowLayout();
-        mpHost->modulesToWrite.clear();
-        // A save still running would turn this one away, and it may predate the session's last changes
-        mpHost->waitForProfileSave();
-        mpHost->saveProfileReportingFailure();
-        // Other profiles can keep Mudlet running long after this one closes
-        mudlet::self()->writeSettings();
-
-        if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
-            // There is a map loaded - but it *could* have no rooms at all!
-            if (!mpHost->saveMapFile(QString())) {
-                qWarning() << "TMainConsole::closeEvent(...) WARNING - forced close map save failed";
-            }
+        if (!mpHost->saveForClose()) {
+            qWarning() << "TMainConsole::closeEvent(...) WARNING - forced close save failed";
         }
-        mpHost->waitForProfileSave();
         mEnableClose = true;
         event->accept();
         return;

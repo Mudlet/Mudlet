@@ -620,12 +620,13 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       finally(function() os.remove(target) end)
       assert.is_true(downloadFile(target, fixtureUrl("/no-such-fixture.txt")))
 
-      local event, message, localFile, url, response = waitForEvent("sysDownloadError", 2000)
+      local event, message, localFile, url, response, body = waitForEvent("sysDownloadError", 2000)
       assert.equals("sysDownloadError", event)
       assert.is_string(message)
       assert.equals(target, localFile)
       assert.equals(fixtureUrl("/no-such-fixture.txt"), url)
       assertFixtureResponse(response)
+      assert.is_true(contains(body, "File not found"), body)
       assert.is_nil(readFile(target))
     end)
 
@@ -682,11 +683,12 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       end
       assert.is_true(getHTTP(fixtureUrl("/no-such-fixture.txt")))
 
-      local event, message, url, response = waitForEvent("sysGetHttpError", 2000)
+      local event, message, url, response, body = waitForEvent("sysGetHttpError", 2000)
       assert.equals("sysGetHttpError", event)
       assert.is_string(message)
       assert.equals(fixtureUrl("/no-such-fixture.txt"), url)
       assertFixtureResponse(response)
+      assert.is_true(contains(body, "File not found"), body)
     end)
   end)
 
@@ -745,11 +747,12 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       -- Only /echo accepts a POST; the static fixture path answers 404.
       assert.is_true(postHTTP("payload", fixtureUrl("/fixture.txt")))
 
-      local event, message, url, response = waitForEvent("sysPostHttpError", 2000)
+      local event, message, url, response, body = waitForEvent("sysPostHttpError", 2000)
       assert.equals("sysPostHttpError", event)
       assert.is_string(message)
       assert.equals(fixtureUrl("/fixture.txt"), url)
       assertFixtureResponse(response)
+      assert.is_true(contains(body, "only /echo answers this method"), body)
     end)
   end)
 
@@ -776,10 +779,12 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       end
       assert.is_true(putHTTP("payload", fixtureUrl("/fixture.txt")))
 
-      local event, message, url = waitForEvent("sysPutHttpError", 2000)
+      local event, message, url, response, body = waitForEvent("sysPutHttpError", 2000)
       assert.equals("sysPutHttpError", event)
       assert.is_string(message)
       assert.equals(fixtureUrl("/fixture.txt"), url)
+      assertFixtureResponse(response)
+      assert.is_true(contains(body, "only /echo answers this method"), body)
     end)
   end)
 
@@ -805,10 +810,12 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       end
       assert.is_true(deleteHTTP(fixtureUrl("/fixture.txt")))
 
-      local event, message, url = waitForEvent("sysDeleteHttpError", 2000)
+      local event, message, url, response, body = waitForEvent("sysDeleteHttpError", 2000)
       assert.equals("sysDeleteHttpError", event)
       assert.is_string(message)
       assert.equals(fixtureUrl("/fixture.txt"), url)
+      assertFixtureResponse(response)
+      assert.is_true(contains(body, "only /echo answers this method"), body)
     end)
   end)
 
@@ -836,11 +843,13 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       end
       assert.is_true(customHTTP("REPORT", "payload", fixtureUrl("/fixture.txt")))
 
-      local event, message, url, method = waitForEvent("sysCustomHttpError", 2000)
+      local event, message, url, method, response, body = waitForEvent("sysCustomHttpError", 2000)
       assert.equals("sysCustomHttpError", event)
       assert.is_string(message)
       assert.equals(fixtureUrl("/fixture.txt"), url)
       assert.equals("REPORT", method)
+      assertFixtureResponse(response)
+      assert.is_true(contains(body, "only /echo answers this method"), body)
     end)
   end)
 end)
@@ -1298,6 +1307,12 @@ describe("MMCP effects against a scripted chat peer", function()
     return seen
   end
 
+  -- Waits for `count` events, then a little longer so that one too many still shows
+  local function settleOn(seen, count)
+    waitUntil(function() return #seen >= count end, 2000)
+    pump(100)
+  end
+
   -- Every spec below leaves the peer's flags as it found them, so this does
   -- nothing on a passing run. It matters when one does fail: an assertion that
   -- stops a spec halfway through a toggle would otherwise leave the peer
@@ -1525,9 +1540,9 @@ describe("MMCP effects against a scripted chat peer", function()
       -- Hand Mudlet's own bytes straight back: sender and parser have to agree
       -- about where the 15 character group field ends, or a Mudlet peer would
       -- render another Mudlet's group chat wrongly.
-      local received = collectEvents("sysMMCPChatMessage", function()
+      local received = collectEvents("sysMMCPChatMessage", function(seen)
         peerSendsRaw(string.char(6) .. sent.text .. string.char(255))
-        pump(500)
+        settleOn(seen, 1)
       end)
       assert.equals(1, #received)
       assert.equals(PEER_NAME, received[1][1])
@@ -1673,10 +1688,10 @@ describe("MMCP effects against a scripted chat peer", function()
       ensurePeer()
       -- The parser walks the buffer command by command, so a write carrying
       -- two of them has to produce two messages rather than one or none.
-      local received = collectEvents("sysMMCPChatMessage", function()
+      local received = collectEvents("sysMMCPChatMessage", function(seen)
         peerSendsRaw(string.char(7) .. "<CHAT> first of two" .. string.char(255)
                      .. string.char(7) .. "<CHAT> second of two" .. string.char(255))
-        pump(500)
+        settleOn(seen, 2)
       end)
       assert.equals(2, #received)
       assert.is_true(contains(received[1][2], "first of two"), tostring(received[1][2]))
@@ -1688,16 +1703,16 @@ describe("MMCP effects against a scripted chat peer", function()
       ensurePeer()
       -- The complete command must not wait for the next one to finish, and the
       -- start of the next one must be kept for when the rest of it arrives.
-      local received = collectEvents("sysMMCPChatMessage", function()
+      local received = collectEvents("sysMMCPChatMessage", function(seen)
         peerSendsRaw(string.char(7) .. "<CHAT> whole one" .. string.char(255)
                      .. string.char(7) .. "<CHAT> started ")
-        pump(500)
+        settleOn(seen, 1)
       end)
       assert.equals(1, #received)
       assert.is_true(contains(received[1][2], "whole one"), tostring(received[1][2]))
-      received = collectEvents("sysMMCPChatMessage", function()
+      received = collectEvents("sysMMCPChatMessage", function(seen)
         peerSendsRaw("and finished" .. string.char(255))
-        pump(500)
+        settleOn(seen, 1)
       end)
       assert.equals(1, #received)
       assert.is_true(contains(received[1][2], "started and finished"), tostring(received[1][2]))
@@ -1708,10 +1723,10 @@ describe("MMCP effects against a scripted chat peer", function()
       ensurePeer()
       -- An unknown command byte must be skipped up to its terminator; consuming
       -- the wrong number of bytes would swallow whatever followed it.
-      local received = collectEvents("sysMMCPChatMessage", function()
+      local received = collectEvents("sysMMCPChatMessage", function(seen)
         peerSendsRaw(string.char(99) .. "nonsense" .. string.char(255)
                      .. string.char(7) .. "<CHAT> after the unknown" .. string.char(255))
-        pump(500)
+        settleOn(seen, 1)
       end)
       assert.equals(1, #received)
       assert.is_true(contains(received[1][2], "after the unknown"), tostring(received[1][2]))
@@ -1721,8 +1736,20 @@ describe("MMCP effects against a scripted chat peer", function()
       if peerUnavailable() then return end
       ensurePeer()
       assert.is_true(mmcp.ignore(PEER_NAME))
-      peerSends(4, PEER_NAME .. " chats to everybody, 'ignored line'\n")
-      assert.is_nil(waitForEvent("sysMMCPChatMessage", 500))
+      -- No message within a fixed wait proves nothing: a slow peer's line can
+      -- land after the un-ignore below. Mudlet handles a peer's commands in the
+      -- order they arrive, so its answer to a ping sent after the line means
+      -- the line has been dealt with.
+      local mark = captureSeq()
+      local dropped = collectEvents("sysMMCPChatMessage", function()
+        peerSends(4, PEER_NAME .. " chats to everybody, 'ignored line'\n")
+        peerSends(26, "after the ignored line")
+        assert.is_table(waitForPeerEvent(mark, function(event)
+          return event.type == "command" and event.name == "PingResponse"
+                 and event.text == "after the ignored line"
+        end, 5000))
+      end)
+      assert.equals(0, #dropped, tostring(dropped[1] and dropped[1][2]))
 
       assert.is_true(mmcp.ignore(PEER_NAME))
       peerSends(4, PEER_NAME .. " chats to everybody, 'heard line'\n")
@@ -3237,6 +3264,77 @@ describe("sending protocol data to a game server that has not negotiated", funct
       local seen = capture()
       return seen ~= nil and seen.connections > before and contains(seen.received, wanted)
     end, 2000), "the bytes after the NUL never reached the wire, saw: " .. tostring(wireHex()))
+  end)
+
+  local function hex(text)
+    return (text:gsub(".", function(c) return string.format("%02x", c:byte()) end))
+  end
+
+  -- sendData() keeps its converters from one command to the next, so a change
+  -- of encoding part way through a session must still reach the wire
+  it("encodes each command sent in the server encoding in force at the time", function()
+    if serverUnavailable() then return end
+    local original = getServerEncoding()
+    finally(function() setServerEncoding(original) end)
+    local before = connectionCount()
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local privet = "\208\191\209\128\208\184\208\178\208\181\209\130"
+    local expected = {
+      {"UTF-8", "SendEncUtf8 ", privet},
+      {"WINDOWS-1251", "SendEnc1251 ", "\239\240\232\226\229\242"},
+      {"KOI8-R", "SendEncKoi8 ", "\208\210\201\215\197\212"},
+      -- Mudlet's own CP437 codec, which marks what it cannot carry with '?' where ICU's uses a control byte
+      {"CP437", "SendEnc437 ", "??????"},
+      {"ASCII", "SendEncAscii ", privet},
+      {"WINDOWS-1251", "SendEnc1251Again ", "\239\240\232\226\229\242"},
+      {"UTF-8", "SendEncUtf8Again ", privet},
+    }
+    for _, case in ipairs(expected) do
+      assert.is_true(setServerEncoding(case[1]))
+      send(case[2] .. privet, false)
+    end
+    for _, case in ipairs(expected) do
+      local wanted = hex(case[2] .. case[3])
+      assert.is_true(waitUntil(function()
+        local seen = capture()
+        return seen ~= nil and seen.connections > before and contains(seen.received, wanted)
+      end, 2000), case[1] .. " did not put " .. wanted .. " on the wire, saw: " .. tostring(wireHex()))
+    end
+  end)
+
+  it("warns once about a command the encoding cannot carry, and again once the encoding is chosen anew", function()
+    local original = getServerEncoding()
+    finally(function() setServerEncoding(original) end)
+    local hangul = "\237\149\156\234\181\173\236\150\180"
+    local function warningsSince(mark)
+      local count = 0
+      for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+        if line:find("unlikely to understand it", 1, true) then
+          count = count + 1
+        end
+      end
+      return count
+    end
+
+    assert.is_true(setServerEncoding("UTF-8"))
+    assert.is_true(setServerEncoding("WINDOWS-1251"))
+    local mark = getLastLineNumber("main")
+    send("SendWarnFirst " .. hangul, false)
+    assert.equals(1, warningsSince(mark), "Hangul cannot be sent in WINDOWS-1251")
+    send("SendWarnRepeat " .. hangul, false)
+    send("n", false)
+    assert.equals(1, warningsSince(mark), "the warning is only given once per encoding")
+
+    -- coming back from ASCII is choosing the encoding anew, which re-arms the warning
+    assert.is_true(setServerEncoding("ASCII"))
+    assert.is_true(setServerEncoding("WINDOWS-1251"))
+    mark = getLastLineNumber("main")
+    send("n", false)
+    assert.equals(0, warningsSince(mark), "a command WINDOWS-1251 can carry was warned about")
+    send("SendWarnAgain " .. hangul, false)
+    assert.equals(1, warningsSince(mark), "the re-armed warning was not given")
   end)
 
   -- The profile is written before the connection is started, so it can be read

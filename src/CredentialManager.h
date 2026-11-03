@@ -67,6 +67,10 @@ class CredentialManager : public QObject
     friend class CredentialManagerKeychainTest;
     // Stalls the keychain behind a profile's own password lookup
     friend class TelnetLatePasswordTest;
+    // Reads the storage preference with no main window
+    friend class HeadlessHostSmokeTest;
+    // Answers the keychain for the managers a profile with no main window makes itself
+    friend class HeadlessSessionTest;
 
 public:
     explicit CredentialManager(QObject* parent = nullptr);
@@ -256,10 +260,9 @@ private:
     static void forgetStoreRefusal();
 
     // Whether the player asked for passwords to be kept in the profile rather than in secure
-    // storage. Empty when there is nothing to ask - a unit test with no mudlet instance - so the
-    // caller keeps its own default.
-    static std::optional<bool> profileStoragePreferred();
-    // Test-only: stands in for that preference where there is no mudlet to read it from.
+    // storage.
+    static bool profileStoragePreferred();
+    // Test-only: stands in for that preference.
     static std::optional<bool>& profileStorageOverrideForTesting();
     // Whether the preference alone is what keeps this manager off the keychain, so a copy stored
     // there before the player chose the profile may remain. Never for a portable install or a test
@@ -301,6 +304,8 @@ private:
     // Returning false leaves the job unstarted for the hook to answer. A job that has reached the store
     // can't be cancelled and the store keeps a pointer to it, so only the store may answer that one.
     std::function<bool(QKeychain::Job*)> mJobStartHook;
+    // Test-only: the hook every manager made from then on starts with, for one the code under test makes itself
+    static std::function<bool(QKeychain::Job*)>& jobStartHookForTesting();
 
     // Destruction flag to prevent operations during cleanup
     bool mShuttingDown = false;

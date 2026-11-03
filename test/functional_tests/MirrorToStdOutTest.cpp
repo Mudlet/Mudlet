@@ -276,7 +276,12 @@ private slots:
         // and cTelnet only picks the shortened timeout up once it has.
         MudletApp::smMirrorToStdOut = false;
         mpHost->mTelnet.setPostingTimeout(csmPostingTimeoutMs);
-        QTest::qWait(350ms);
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !mpHost->mTelnet.mIsTimerPosting;
+                         },
+                         5s),
+                 "The posting timer an earlier case armed never fired.");
         mpHost->mBlankLineBehaviour = Host::BlankLineBehaviour::Show;
         mpHost->mainConsoleView()->buffer.clear();
         mCapturedOutput.clear();

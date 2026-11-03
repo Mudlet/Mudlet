@@ -2496,12 +2496,33 @@ void TDetachedWindow::closeProfileByIndex(int index)
         return;
     }
 
-    // Close the specific profile
+    closeProfileByName(profileName);
+}
+
+void TDetachedWindow::closeProfileByName(const QString& profileName)
+{
+    // The save question runs the event loop, so the Host may be gone by the time it is answered
+    const QPointer<Host> pHost = HostManager::self() ? HostManager::self()->getHost(profileName) : nullptr;
+    // Waited out here, not in mudlet::slot_closeProfileByName(): its retry closes the profile without this window
+    // being told, which would leave a tab with no console behind
+    if (pHost && pHost->waitingForProfileSave()) {
+        QTimer::singleShot(50ms, this, [this, profileName, pHost]() {
+            if (pHost && mProfileConsoleMap.contains(profileName)) {
+                closeProfileByName(profileName);
+            }
+        });
+        return;
+    }
+
     if (auto pMudlet = mudlet::self()) {
         pMudlet->slot_closeProfileByName(profileName);
     }
 
-    // Remove the profile from this detached window
+    // Held off by a nested event loop, or the user cancelled the save question: the profile stays open, and here
+    if (pHost && !pHost->isClosingDown()) {
+        return;
+    }
+
     removeProfile(profileName);
 
     // If this was the last profile, close the detached window

@@ -774,6 +774,20 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     end
   end
 
+  -- The flush commits the line holding the text fed ahead of the pause, so this
+  -- ends as soon as that lands. A pause with no text ahead commits nothing
+  -- visible and has to be sat out with beQuiet().
+  local function awaitFlush()
+    local before = getLastLineNumber("main")
+    for _ = 1, 300 do
+      if getLastLineNumber("main") > before then
+        return
+      end
+      assert.is_true(pumpEvents(10), "pumpEvents needs MUDLET_TEST_MODE set, see the tests README")
+    end
+    assert.is_true(false, "the posting timer never committed the text it was holding")
+  end
+
   local function connected()
     local _, _, isConnected = getConnectionInfo()
     return isConnected
@@ -859,6 +873,14 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     unavailable = restorePostingTimer()
   end)
 
+  -- A feed ending in a newline leaves the posting timer running: the next case's
+  -- held feed is flushed by it, but the last case's would fire into the next file.
+  teardown(function()
+    if not unavailable then
+      beQuiet()
+    end
+  end)
+
   local function timerUnavailable()
     if not unavailable then
       return false
@@ -882,7 +904,7 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     return nil
   end
 
-  -- Hands the pieces over with a quiet gap longer than the timeout between each,
+  -- Hands the pieces over with a posting-timer flush between each,
   -- so the flush marker lands between them, and answers what reached the buffer:
   -- the text after the mark, and how many buffer lines it took. The marker ends
   -- a line, so a feed the timer really did interrupt spans more than one - every
@@ -893,10 +915,13 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     local mark = getLastLineNumber("main")
     feed("split:" .. pieces[1])
     for i = 2, #pieces do
-      beQuiet()
+      if i == 2 then
+        awaitFlush()
+      else
+        beQuiet()
+      end
       feed(i == #pieces and (pieces[i] .. ":end\n") or pieces[i])
     end
-    beQuiet()
 
     local payload = {}
     for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
@@ -927,7 +952,6 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
   local function expectRedSurvivesSplit(...)
     local plainMark = getLastLineNumber("main")
     feed("plain:RED\n")
-    beQuiet()
 
     local splitMark = getLastLineNumber("main")
     local text, lines, perLine = splitAcrossTimeout(...)
@@ -939,7 +963,6 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     assert.is_not_nil(splitColour, "no coloured text to read a colour from")
     local wholeMark = getLastLineNumber("main")
     feed("whole:\27[31mRED\27[m\n")
-    beQuiet()
     assert.same(redForegroundFrom(wholeMark), splitColour)
     assert.are_not.same(redForegroundFrom(plainMark), splitColour)
   end
@@ -1216,10 +1239,9 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     -- not take the game's lead byte, still waiting for its trail, with it
     local mark = getLastLineNumber("main")
     feed("split:" .. bytes(0xA4) .. "\27[31m")
-    beQuiet()
+    awaitFlush()
     assert.is_true(feedTriggers("interleaved\n", false))
     feed(bytes(0xA4) .. ":end\n")
-    beQuiet()
     assert.same({"split:", "interleaved", "\228\184\173:end"}, shownSince(mark))
   end)
 
@@ -1232,12 +1254,11 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     -- split colour sequence
     local mark = getLastLineNumber("main")
     feed("split:HP:100 > \27]0;title")
-    beQuiet()
+    awaitFlush()
     -- read now, but asserted once the sequence is over, so a failure does not
     -- leave it open for the cases after this one
     local duringPause = shownSince(mark)
     feed("\27\\:end\n")
-    beQuiet()
     assert.same({"split:HP:100 > "}, duringPause, "the prompt was not shown during the pause")
     assert.same({"split:HP:100 > ", ":end"}, shownSince(mark))
   end)
@@ -1250,10 +1271,9 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     -- bytes: the marker is not payload, so this one is under the cap
     local mark = getLastLineNumber("main")
     feed("split:HP:100 > \27]0;" .. string.rep("a", 4093))
-    beQuiet()
+    awaitFlush()
     local duringPause = shownSince(mark)
     feed("\27\\:end\n")
-    beQuiet()
     assert.same({"split:HP:100 > "}, duringPause, "the prompt was not shown during the pause")
     assert.same({"split:HP:100 > ", ":end"}, shownSince(mark))
   end)
@@ -1271,7 +1291,7 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
       fires = 0
       local mark = getLastLineNumber("main")
       feed("split:HP > " .. pieces[1])
-      beQuiet()
+      awaitFlush()
       local duringPause, firesAtPause = shownSince(mark), fires
       feed(pieces[2] .. ":end\n")
       beQuiet()
@@ -1295,9 +1315,8 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     local mark = getLastLineNumber("main")
     local opening = concealedLink .. "\27\\"
     feed("split:" .. opening:sub(1, 30))
-    beQuiet()
+    awaitFlush()
     feed(opening:sub(31) .. "LOOK\27]8;;\27\\\n")
-    beQuiet()
     assert.same({"split:", "    "}, shownSince(mark))
   end)
 
@@ -1309,7 +1328,6 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     feed("split:" .. concealedLink .. "\27\\LOOK\27]8;;")
     beQuiet()
     feed("\27\\\n")
-    beQuiet()
     assert.same({"split:    "}, shownSince(mark))
   end)
 
@@ -1346,7 +1364,7 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     feed("blank:one\n")
     beQuiet()
     feed("blank:part")
-    beQuiet()
+    awaitFlush()
     feed("two\n\n")
     beQuiet()
     assert.same({"blank:one", "blank:part", "two", " ", ""}, getLines("main", mark, getLastLineNumber("main") + 1))
@@ -1401,10 +1419,9 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     -- has to leave the game's alone
     local mark = getLastLineNumber("main")
     feed("split:\27")
-    beQuiet()
+    awaitFlush()
     feedTriggers("interleaved\n")
     feed("[31mRED\27[m:end\n")
-    beQuiet()
 
     local seen = {}
     for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do

@@ -19,11 +19,12 @@ end
 Adjustable.Container.guiDropOriginalAdd = add
 function Adjustable.Container:add(window, cons)
   add(self, window, cons)
+  -- asked again when the timer fires, as whoever hid it may have shown it again by then
   if self.hidden then
-    tempTimer(0, function() self:hide() end)
+    tempTimer(0, function() if self.hidden then self:hide() end end)
   end
   if self.auto_hidden then
-    tempTimer(0, function() self:hide(true) end)
+    tempTimer(0, function() if self.auto_hidden then self:hide(true) end end)
   end
 end</script>
 			<eventHandlerList />

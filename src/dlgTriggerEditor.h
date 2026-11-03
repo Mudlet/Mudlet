@@ -116,6 +116,9 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class EditorClipboardXmlTest;
     friend class EditorEmptySelectionTest;
     friend class EditorFolderViewTest;
+    friend class EditorFontTest;
+    friend class EditorModuleFolderTest;
+    friend class EditorReshowTest;
     friend class EditorSearchTest;
     friend class HostWidgetDecouplingTest;
     friend class ScriptEventHandlerLifetimeTest;
@@ -262,7 +265,7 @@ public:
     void showCurrentTriggerItem();
     void hideSystemMessageArea();
     void showIDLabels(const bool);
-    void setDisplayFont(const QFont&);
+    void setEditorFont(const QFont&);
 
 signals:
     void editorClosing();
@@ -294,6 +297,7 @@ public slots:
     void slot_showKeys();
     void slot_showFolders();
     void slot_activateMainWindow();
+    void slot_updateActivateMainWindowShortcut();
     void slot_treeSelectionChanged();
     void slot_triggerSelected(QTreeWidgetItem* pItem);
     void slot_timerSelected(QTreeWidgetItem* pItem);
@@ -440,6 +444,8 @@ private:
     void leaveFolderView();
     void setFolderViewAvailable(const bool);
     bool folderItem(const EditorViewType view, const int id);
+    QString moduleOfMasterFolder(const EditorViewType view, const int id) const;
+    void offerToUninstallModule(const QString& moduleName);
     QTreeWidget* treeForView(const EditorViewType view) const;
     void selectItemInView(const EditorViewType view, QTreeWidgetItem* pItem);
     QByteArray* splitterStateForView(const EditorViewType view);
@@ -612,6 +618,8 @@ private:
     bool containsSearchMatch(const QString& haystack, const QString& needle) const;
     void clearEditorNotification();
     void runScheduledCleanReset();
+    void resetTrees();
+    void buildDeferredTrees(const bool asAtLoad);
     void autoSave();
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
     void createPatternItem(int index);
@@ -667,6 +675,8 @@ private:
                                                              {tr("Debug"), qsl("Ctrl+0")}};
 
     std::unordered_map<SingleLineTextEdit*, bool> lineEditShouldMarkSpaces;
+    // Toolbar shortcuts held aside while a key is being grabbed, so all of them come back afterwards
+    QHash<QAction*, QList<QKeySequence>> mSuspendedShortcuts;
 
     QToolBar* toolBar = nullptr;
     QToolBar* toolBar2 = nullptr;
@@ -718,6 +728,7 @@ private:
     QStringList mPatternList;
     QVector<QIcon> mPatternIcons;
 
+    QShortcut* mpShortcutActivateMainWindow = nullptr;
     QShortcut* mFirstPatternShortcut = nullptr;
     QShortcut* mLastPatternShortcut = nullptr;
     QVector<QShortcut*> mPatternNavigationShortcuts;
@@ -799,6 +810,8 @@ private:
 
     // keeps track of the dialog reset being queued
     bool mCleanResetQueued = false;
+    // A reset that arrived before the editor was ever shown, run on first show unless a view switch populated the trees first
+    bool mCleanResetDeferred = false;
     // Trigger IDs whose tree icon is stale; painted in one tree walk on the
     // next event-loop turn, or when the editor is next shown, rather than one
     // O(tree) lookup per Lua toggle.

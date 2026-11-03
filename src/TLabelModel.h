@@ -106,8 +106,6 @@ struct TLabelModel
     // What the label shows for its text once the link style or the visited links change
     QString restyledText();
 
-    // A QPointer because Host and view are torn down in either order: quitting
-    // destroys every Host before the labels' deferred deletes run.
     QPointer<Host> mpHost;
     QString mName;
     int mClickFunction = 0;

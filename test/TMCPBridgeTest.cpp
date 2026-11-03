@@ -127,6 +127,7 @@ private slots:
     void codexRemoveUndoesConnect();
 
     void bridgeAnswersOverPipes();
+    void bridgeAnswersRequestsStillInFlightWhenStdinCloses();
     void bridgeReportsMudletGone();
     void wrongTokenSurfacesAsError();
 };
@@ -1244,6 +1245,50 @@ void TMCPBridgeTest::bridgeAnswersOverPipes()
     QVERIFY(bridge.process.waitForFinished(10000));
     QCOMPARE(bridge.process.exitStatus(), QProcess::NormalExit);
     QCOMPARE(bridge.process.exitCode(), 0);
+}
+
+void TMCPBridgeTest::bridgeAnswersRequestsStillInFlightWhenStdinCloses()
+{
+    TMCPServer server;
+    const MCPStartResult start = server.startServer(0);
+    QVERIFY2(start.started, qPrintable(start.error));
+
+    BridgeProcess bridge;
+    QVERIFY(bridge.start());
+    QVERIFY(TMCPBridge::writeDiscoveryFile(bridge.configDir(), server.getPort(), server.authToken()));
+
+    // A one-shot client: every request written, then stdin closed before any answer.
+    bridge.process.write(R"({"jsonrpc":"2.0","id":1,"method":"tools/list"})"
+                         "\n"
+                         R"({"jsonrpc":"2.0","id":2,"method":"tools/list"})"
+                         "\n"
+                         R"({"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"no_such_tool","arguments":{}}})"
+                         "\n");
+    bridge.process.closeWriteChannel();
+
+    // Not waitForFinished: the in-process server needs this event loop to answer.
+    QElapsedTimer timer;
+    timer.start();
+    while (bridge.process.state() != QProcess::NotRunning && timer.elapsed() < 15000) {
+        QTest::qWait(25ms);
+    }
+    QCOMPARE(bridge.process.state(), QProcess::NotRunning);
+    QCOMPARE(bridge.process.exitCode(), 0);
+
+    QList<QJsonObject> replies;
+    QMap<int, QJsonObject> answered;
+    while (bridge.process.canReadLine()) {
+        const QJsonObject reply = QJsonDocument::fromJson(bridge.process.readLine()).object();
+        replies.append(reply);
+        answered.insert(reply.value(qsl("id")).toInt(), reply);
+    }
+    QCOMPARE(replies.size(), 3);
+    QCOMPARE(answered.keys(), (QList<int>{1, 2, 3}));
+    // Answers only the server can give, so a bridge that never forwarded (and so had
+    // nothing in flight) cannot pass on errors of its own made under the same ids.
+    QVERIFY(!answered.value(1).value(qsl("result")).toObject().value(qsl("tools")).toArray().isEmpty());
+    QVERIFY(!answered.value(2).value(qsl("result")).toObject().value(qsl("tools")).toArray().isEmpty());
+    QVERIFY2(answered.value(3).value(qsl("error")).toObject().value(qsl("message")).toString().contains(qsl("Unknown tool")), qPrintable(QString::fromUtf8(QJsonDocument(answered.value(3)).toJson())));
 }
 
 void TMCPBridgeTest::bridgeReportsMudletGone()

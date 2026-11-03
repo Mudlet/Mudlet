@@ -216,9 +216,10 @@ public:
     // The Central Debug Console's find bar, floating over its bottom right.
     QPointer<QWidget> mpFindBar;
 
-    // The main console co-owns its model with Host, which runs triggers through it; sub-consoles own theirs.
-    // The members below alias the model, so it must be declared first.
-    std::shared_ptr<TConsoleModel> mpModel;
+    // Empty for the main console, whose model is its Host's, as Host runs triggers through it; other consoles own theirs.
+    // The members below alias the model, so these must be declared first.
+    std::unique_ptr<TConsoleModel> mpOwnModel;
+    TConsoleModel* mpModel = nullptr;
     TBuffer& buffer;
     TTextEdit* mUpperPane = nullptr;
     TTextEdit* mLowerPane = nullptr;

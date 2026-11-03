@@ -177,30 +177,37 @@ private slots:
         QCOMPARE(character.rightHalf().foreground(), mpHost->mGreen);
     }
 
+    // Read afresh after each write: restyling a line stored as one shared TChar moves its characters
     void recolouringAppliesToBothHalves()
     {
-        const TChar& character = splitCharacterOnNewLine();
+        splitCharacterOnNewLine();
         const int line = lastTextLine();
+        const auto character = [this, line]() -> const TChar& {
+            return buffer().buffer.at(line).front();
+        };
         QVERIFY(buffer().applyAttribute(QPoint(0, line), QPoint(1, line), TChar::Bold, true));
-        QVERIFY(character.isBold());
-        QVERIFY(character.rightHalf().isBold());
+        QVERIFY(character().isBold());
+        QVERIFY(character().rightHalf().isBold());
         QVERIFY(buffer().applyFgColor(QPoint(0, line), QPoint(1, line), Qt::white));
-        QCOMPARE(character.rightHalf().foreground(), QColor(Qt::white));
-        QVERIFY2(character.hasSplitFormat(), "the backgrounds still differ");
+        QCOMPARE(character().rightHalf().foreground(), QColor(Qt::white));
+        QVERIFY2(character().hasSplitFormat(), "the backgrounds still differ");
         QVERIFY(buffer().applyBgColor(QPoint(0, line), QPoint(1, line), Qt::black));
-        QVERIFY2(!character.hasSplitFormat(), "both halves are now alike");
+        QVERIFY2(!character().hasSplitFormat(), "both halves are now alike");
     }
 
     void searchHighlightClearsFromBothHalves()
     {
-        const TChar& character = splitCharacterOnNewLine();
+        splitCharacterOnNewLine();
         const int line = lastTextLine();
+        const auto character = [this, line]() -> const TChar& {
+            return buffer().buffer.at(line).front();
+        };
         QVERIFY(buffer().applyAttribute(QPoint(0, line), QPoint(1, line), TChar::Found, true));
-        QVERIFY(character.rightHalf().isFound());
+        QVERIFY(character().rightHalf().isFound());
         buffer().clearSearchHighlights();
-        QVERIFY(!character.isFound());
-        QVERIFY(!character.rightHalf().isFound());
-        QVERIFY(character.hasSplitFormat());
+        QVERIFY(!character().isFound());
+        QVERIFY(!character().rightHalf().isFound());
+        QVERIFY(character().hasSplitFormat());
     }
 
     void selectionCoversBothHalves()

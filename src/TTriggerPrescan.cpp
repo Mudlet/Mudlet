@@ -19,9 +19,8 @@
 
 #include "TTriggerPrescan.h"
 
-#include "TTrigger.h"
-
 #include <algorithm>
+#include <bit>
 #include <limits>
 
 // Length in the high half, so the same characters at two lengths are different grams and 0 stays
@@ -83,42 +82,81 @@ quint64 TTriggerPrescan::patternGram(const QString& pattern)
     return gramHash(data + bestPosition, length);
 }
 
-void TTriggerPrescan::fileSlot(const int position, const std::vector<quint64>& grams)
+int TTriggerPrescan::fileSlot(const std::vector<quint64>& grams)
 {
-    GramRange range;
-    range.mCount = static_cast<int>(grams.size());
-    if (grams.empty()) {
-        const auto at = std::lower_bound(mUnfiltered.begin(), mUnfiltered.end(), position);
-        mUnfiltered.insert(at, position);
+    int slot;
+    if (mFreeSlots.empty()) {
+        slot = static_cast<int>(mSlotGrams.size());
+        mSlotGrams.emplace_back();
+        mSeen.push_back(0);
     } else {
-        range.mOffset = static_cast<int>(mGramPool.size());
-        mGramPool.insert(mGramPool.end(), grams.cbegin(), grams.cend());
-        for (const quint64 gram : grams) {
-            ++mLengthUse[gramLength(gram)];
-            std::vector<int>& bucket = mIndex[gram];
-            const auto at = std::lower_bound(bucket.begin(), bucket.end(), position);
-            bucket.insert(at, position);
-            const quint32 bit = gramBit(gram);
-            mGramBits[bit >> 6] |= (1ULL << (bit & 63));
-        }
-        ++mIndexedSlots;
+        slot = mFreeSlots.back();
+        mFreeSlots.pop_back();
     }
-    mSlotGrams[position] = range;
+    fileGrams(slot, grams);
+    return slot;
 }
 
-void TTriggerPrescan::unfileSlot(const int position)
+void TTriggerPrescan::removeSlot(const int slot)
 {
-    const GramRange range = mSlotGrams[position];
-    if (range.mCount == scmRemovedSlot) {
-        return;
-    }
-    if (range.mCount == 0) {
-        const auto at = std::lower_bound(mUnfiltered.begin(), mUnfiltered.end(), position);
-        if (at != mUnfiltered.end() && *at == position) {
-            mUnfiltered.erase(at);
+    unfileGrams(slot);
+    mFreeSlots.push_back(slot);
+    compactIfWasteful();
+}
+
+void TTriggerPrescan::removeSlots(const std::vector<int>& freed)
+{
+    const bool reindexing = freed.size() * 2 >= mSlotGrams.size() - mFreeSlots.size();
+    for (const int slot : freed) {
+        if (reindexing) {
+            GramRange& range = mSlotGrams[slot];
+            mFiledGrams -= range.mCount;
+            range = GramRange{};
+        } else {
+            unfileGrams(slot);
         }
+        mFreeSlots.push_back(slot);
+    }
+    if (reindexing) {
+        reindex();
+    } else {
+        compactIfWasteful();
+    }
+}
+
+void TTriggerPrescan::refileSlot(const int slot, const std::vector<quint64>& grams)
+{
+    const GramRange range = mSlotGrams[slot];
+    if (range.mCount == static_cast<int>(grams.size()) && std::equal(grams.cbegin(), grams.cend(), mGramPool.cbegin() + range.mOffset)) {
         return;
     }
+    unfileGrams(slot);
+    fileGrams(slot, grams);
+    compactIfWasteful();
+}
+
+void TTriggerPrescan::fileGrams(const int slot, const std::vector<quint64>& grams)
+{
+    if (mGramBits.empty()) {
+        mGramBits.assign((1u << scmGramBitsLog) / 64, 0);
+    }
+    GramRange& range = mSlotGrams[slot];
+    range.mOffset = static_cast<int>(mGramPool.size());
+    range.mCount = static_cast<int>(grams.size());
+    mGramPool.insert(mGramPool.end(), grams.cbegin(), grams.cend());
+    mFiledGrams += range.mCount;
+    for (const quint64 gram : grams) {
+        ++mLengthUse[gramLength(gram)];
+        std::vector<int>& bucket = mIndex[gram];
+        bucket.insert(std::upper_bound(bucket.begin(), bucket.end(), slot), slot);
+        const quint32 bit = gramBit(gram);
+        mGramBits[bit >> 6] |= (1ULL << (bit & 63));
+    }
+}
+
+void TTriggerPrescan::unfileGrams(const int slot)
+{
+    GramRange& range = mSlotGrams[slot];
     for (int i = 0; i < range.mCount; ++i) {
         const quint64 gram = mGramPool[range.mOffset + i];
         --mLengthUse[gramLength(gram)];
@@ -126,76 +164,59 @@ void TTriggerPrescan::unfileSlot(const int position)
         if (bucket == mIndex.end()) {
             continue;
         }
-        std::vector<int>& positions = bucket->second;
-        const auto at = std::lower_bound(positions.begin(), positions.end(), position);
-        if (at != positions.end() && *at == position) {
-            positions.erase(at);
+        std::vector<int>& filed = bucket->second;
+        const auto at = std::lower_bound(filed.begin(), filed.end(), slot);
+        if (at != filed.end() && *at == slot) {
+            filed.erase(at);
         }
     }
-    --mIndexedSlots;
-    // Bits are shared between grams, so the bit stays set; that costs only an empty-bucket lookup
-    // until the next rebuild.
+    mFiledGrams -= range.mCount;
+    range = GramRange{};
 }
 
-void TTriggerPrescan::rebuild(const std::vector<TTrigger*>& roots)
+void TTriggerPrescan::compactIfWasteful()
 {
-    mIndex.clear();
-    mUnfiltered.clear();
-    mGramPool.clear();
-    mSlotGrams.assign(roots.size(), GramRange{});
+    if (static_cast<int>(mGramPool.size()) - mFiledGrams > std::max(mFiledGrams, scmMinimumWaste)) {
+        reindex();
+    }
+}
+
+void TTriggerPrescan::reindex()
+{
+    ++mReindexes;
+    for (auto& entry : mIndex) {
+        entry.second.clear();
+    }
     mGramBits.assign((1u << scmGramBitsLog) / 64, 0);
     mLengthUse.fill(0);
-    mSeen.assign(roots.size(), 0);
-    mGeneration = 0;
-    mIndexedSlots = 0;
-    mLiveSlots = static_cast<int>(roots.size());
-    mMutations = 0;
-
-    const int rootCount = static_cast<int>(roots.size());
-    for (int position = 0; position < rootCount; ++position) {
-        fileSlot(position, roots[position]->prescanGrams());
+    std::vector<quint64> pool;
+    pool.reserve(mFiledGrams);
+    const int slotCount = static_cast<int>(mSlotGrams.size());
+    for (int slot = 0; slot < slotCount; ++slot) {
+        GramRange& range = mSlotGrams[slot];
+        const int offset = static_cast<int>(pool.size());
+        for (int i = 0; i < range.mCount; ++i) {
+            const quint64 gram = mGramPool[range.mOffset + i];
+            pool.push_back(gram);
+            ++mLengthUse[gramLength(gram)];
+            mIndex[gram].push_back(slot);
+            const quint32 bit = gramBit(gram);
+            mGramBits[bit >> 6] |= (1ULL << (bit & 63));
+        }
+        range.mOffset = offset;
     }
-    mActive = mIndexedSlots >= scmMinimumIndexedTriggers;
-}
-
-void TTriggerPrescan::appendSlot(const std::vector<quint64>& grams)
-{
-    mSlotGrams.emplace_back();
-    mSeen.push_back(0);
-    fileSlot(static_cast<int>(mSlotGrams.size()) - 1, grams);
-    ++mLiveSlots;
-    ++mMutations;
-    mActive = mIndexedSlots >= scmMinimumIndexedTriggers;
-}
-
-void TTriggerPrescan::removeSlot(const int position)
-{
-    unfileSlot(position);
-    mSlotGrams[position].mCount = scmRemovedSlot;
-    --mLiveSlots;
-    ++mMutations;
-    mActive = mIndexedSlots >= scmMinimumIndexedTriggers;
-}
-
-void TTriggerPrescan::refileSlot(const int position, const std::vector<quint64>& grams)
-{
-    unfileSlot(position);
-    fileSlot(position, grams);
-    ++mMutations;
-    mActive = mIndexedSlots >= scmMinimumIndexedTriggers;
-}
-
-void TTriggerPrescan::candidates(const QString& line, std::vector<int>& scratch, std::vector<int>& out) const
-{
-    hits(line, scratch);
-    std::sort(scratch.begin(), scratch.end());
-    out.resize(scratch.size() + mUnfiltered.size());
-    std::merge(mUnfiltered.cbegin(), mUnfiltered.cend(), scratch.cbegin(), scratch.cend(), out.begin());
+    mGramPool = std::move(pool);
+    std::erase_if(mIndex, [](const auto& entry) {
+        return entry.second.empty();
+    });
 }
 
 void TTriggerPrescan::hits(const QString& line, std::vector<int>& out) const
 {
     out.clear();
+    if (!mFiledGrams) {
+        return;
+    }
     if (++mGeneration == 0) {
         // Wrapped: old stamps would otherwise read as "this line"
         std::fill(mSeen.begin(), mSeen.end(), 0);
@@ -218,13 +239,61 @@ void TTriggerPrescan::hits(const QString& line, std::vector<int>& out) const
             if (bucket == mIndex.end()) {
                 continue;
             }
-            for (const int position : bucket->second) {
-                if (mSeen[position] == mGeneration) {
+            for (const int slot : bucket->second) {
+                if (mSeen[slot] == mGeneration) {
                     continue;
                 }
-                mSeen[position] = mGeneration;
-                out.push_back(position);
+                mSeen[slot] = mGeneration;
+                out.push_back(slot);
             }
         }
+    }
+}
+
+int TChildWalk::nextToEnter(const int position, const quint32 lineStamp) const
+{
+    const int words = static_cast<int>(mAlways.size());
+    int word = position / 64;
+    if (word >= words) {
+        return std::numeric_limits<int>::max();
+    }
+    const bool marked = mMarkedStamp == lineStamp;
+    quint64 bits = (mAlways[word] | (marked ? mMarked[word] : 0)) & (~quint64(0) << (position % 64));
+    while (!bits) {
+        if (++word >= words) {
+            return std::numeric_limits<int>::max();
+        }
+        bits = mAlways[word] | (marked ? mMarked[word] : 0);
+    }
+    return word * 64 + std::countr_zero(bits);
+}
+
+bool TChildWalk::mark(const int position, const quint32 lineStamp)
+{
+    if (mMarkedStamp != lineStamp) {
+        std::fill(mMarked.begin(), mMarked.end(), 0);
+        mMarkedStamp = lineStamp;
+    }
+    quint64& word = mMarked[position / 64];
+    const quint64 bit = quint64(1) << (position % 64);
+    if (word & bit) {
+        return false;
+    }
+    word |= bit;
+    return true;
+}
+
+void TChildWalk::setAlways(const int position, const bool always)
+{
+    const size_t words = static_cast<size_t>(position) / 64 + 1;
+    if (mAlways.size() < words) {
+        mAlways.resize(words, 0);
+        mMarked.resize(words, 0);
+    }
+    const quint64 bit = quint64(1) << (position % 64);
+    if (always) {
+        mAlways[position / 64] |= bit;
+    } else {
+        mAlways[position / 64] &= ~bit;
     }
 }

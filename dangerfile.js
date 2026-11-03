@@ -37,3 +37,19 @@ const title_wordcount = pr_title.split(" ").length
 if (title_wordcount > 25) {
   warn(`PR title is ${title_wordcount} words long, double check it will make a good changelog line`)
 }
+
+// Warns if a PR edits a path that .github/workflows/update-3rdparty.yml syncs from another project.
+// Not a failure, as a maintainer may need to hotfix a synced file on purpose.
+const SYNCED_PATHS = new Map([
+  ["src/packages/mpkg/mpkg.mpackage", "https://github.com/Mudlet/mudlet-package-repository"],
+  ["src/mudlet-mapper.xml", "https://github.com/IRE-Mudlet-Mapping/ire-mapping-script"],
+  ["3rdparty/lcf", "https://github.com/martin-eden/lua_code_formatter/tree/5.1-syntax_5.1"],
+  ["src/widechar_width.h", "https://github.com/ridiculousfish/widecharwidth"],
+  ["3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h", "https://github.com/KDABLabs/KDToolBox"],
+  ["3rdparty/cmake-scripts/sanitizers.cmake", "https://github.com/StableCoder/cmake-scripts"],
+])
+if (danger.github.pr.user.login !== "mudlet-machine-account") {
+  touched_files.filter(file => SYNCED_PATHS.has(file)).forEach(file => {
+    warn(`\`${file}\` is synced from ${SYNCED_PATHS.get(file)} by \`.github/workflows/update-3rdparty.yml\`. The next sync PR will revert this edit unless the change lands upstream first.`)
+  })
+}

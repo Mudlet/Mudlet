@@ -37,9 +37,22 @@ public:
     // destructor, this is a null view whose answers are all "not there".
     static TAppFrontend* instance() { return smpInstance ? smpInstance : nullView(); }
     static bool hasView() { return smpInstance != nullptr; }
-    static void setInstance(TAppFrontend* frontend) { smpInstance = frontend; }
+    // From viewDestroyed() until another view is set
+    static bool viewGone() { return smViewGone; }
+    static void setInstance(TAppFrontend* frontend)
+    {
+        smpInstance = frontend;
+        smViewGone = smViewGone && !frontend;
+    }
+    // For the end of the view's destructor, unlike setInstance(nullptr), which a run with no view at all may also do
+    static void viewDestroyed()
+    {
+        smpInstance = nullptr;
+        smViewGone = true;
+    }
 
-    // The profile in the active tab, or nullptr if there is none or it has no console yet.
+    // The profile in the active tab, or nullptr if there is none or it has no console yet. With no main window, the open
+    // profile setActiveProfileTab() last named.
     virtual Host* getActiveHost() = 0;
     virtual void announce(const QString& text, const QString& processing, bool isPlain) = 0;
     virtual void showOptionsDialog(const QString& tab, Host* pHost) = 0;
@@ -47,11 +60,13 @@ public:
     virtual void handleTelnetUri(const QString& uri) = 0;
     // Only the profile in the active tab drives the menu's checkbox.
     virtual void setCompactInputLineChecked(Host* pHost, bool checked) = 0;
+    // closeMudlet(): asks, from the event loop, for every profile to close and save and then the application to quit
     virtual void armForceClose() = 0;
     virtual void writeSettings() = 0;
     virtual bool openWebPage(const QString& url) = 0;
     // Without msecs, the frontend picks how long the notification stays up.
-    virtual void showNotification(const QString& title, const QString& text, std::optional<int> msecs) = 0;
+    // false when there is no window to show it from
+    virtual bool showNotification(const QString& title, const QString& text, std::optional<int> msecs) = 0;
     virtual bool drawUpperLowerLevels() const = 0;
     virtual void setDrawUpperLowerLevels(bool draw) = 0;
     virtual void updateMapActionAvailability() = 0;
@@ -63,15 +78,26 @@ public:
     virtual int profileTabIndex(const QString& profileName) const = 0;
     virtual void setActiveProfileTab(const QString& profileName) = 0;
     virtual void setAppStyleSheet(const QString& styleSheet) = 0;
-    virtual void resizeMainWindow(int width, int height) = 0;
+    // false when there is no window to resize
+    virtual bool resizeMainWindow(int width, int height) = 0;
     virtual bool loadWindowLayout() = 0;
+    virtual bool layoutLoading() const = 0;
     // Saves even if quitting already saved the layout; if this save fails, quitting saves it again.
     virtual bool saveWindowLayoutForScript() = 0;
+    // For a frontend keeping the layout of profiles with no console view: a script or a profile reset deleting a user
+    // window, an embedded mapper replacing a map widget, a profile closing, and its pool ending.
+    // Called while the window or map widget is still there.
+    virtual void userWindowRemoved(Host*, const QString&) {}
+    virtual void mapWidgetRemoved(Host*) {}
+    // At most once per Host, after HostManager raises any sysExitEvent it still owes, while its windows are still there.
+    virtual void profileClosing(Host*) {}
+    // By self()'s pool as it ends, and by any pool ending while self() answers with none, once its Hosts are gone.
+    virtual void profilesClosed() {}
     virtual bool quitting() const = 0;
-    // Loads the profile into a new tab and, if connect, connects it; false if it could not be loaded.
+    // Loads and starts the profile and, if connect, connects it; false if it could not be loaded.
     virtual bool openProfile(const QString& profileName, bool connect) = 0;
-    // Asks the profile's tab to close, as its close button does; false if it has no tab.
-    virtual bool requestProfileTabClose(const QString& profileName) = 0;
+    // Asks the profile to close, as its tab's close button does; false if it is not open here.
+    virtual bool requestProfileClose(const QString& profileName) = 0;
     // Re-lays out the active profile's console from a short timer, e.g. after a toolbar is shown or hidden.
     virtual void processEventLoopHack() = 0;
     // Puts up the profile's composer showing title and text; the window deletes itself once closed.
@@ -114,6 +140,7 @@ private:
     static TAppFrontend* nullView();
 
     inline static TAppFrontend* smpInstance = nullptr;
+    inline static bool smViewGone = false;
 };
 
 #endif // MUDLET_TAPPFRONTEND_H
