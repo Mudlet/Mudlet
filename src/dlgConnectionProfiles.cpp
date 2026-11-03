@@ -41,6 +41,7 @@
 #include "widgetutils.h"
 #include "utils.h"
 
+#include <QRegularExpression>
 #include <QDataStream>
 #include <QSaveFile>
 #include <QtConcurrentRun>
@@ -48,7 +49,9 @@
 #include <QtUiTools>
 #include <QApplication>
 #include <QColorDialog>
+#include <QDateTime>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QPointer>
 #include <QRandomGenerator>
@@ -56,36 +59,11 @@
 #include <QSignalBlocker>
 #include <QTabBar>
 #include <QTime>
+#include <QTimeZone>
 #include <array>
 #include <chrono>
 
 using namespace std::chrono_literals;
-
-// Kept to a sub-set of ASCII because the profile name is also used as a
-// directory name on all supported OSes; parentheses are included so that
-// folders duplicated by a file manager (e.g. "profile (2)") work as-is:
-const QString dlgConnectionProfiles::scmAllowedProfileNameChars = qsl(". _()0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
-
-// Returns the first character not permitted in a (new) profile name, or a
-// null QChar if all of them are acceptable. An embedded U+0000 is
-// indistinguishable from the all-clear sentinel, but a QLineEdit never lets
-// one through:
-QChar dlgConnectionProfiles::firstInvalidProfileNameChar(const QString& name)
-{
-    for (const QChar& c : name) {
-        if (!scmAllowedProfileNameChars.contains(c)) {
-            return c;
-        }
-    }
-    return {};
-}
-
-// Characters that make a name unusable no matter where it came from:
-// MudletApp::sanitizeForPath() silently rewrites them out of any path built from
-// the profile name, and CredentialManager::generateFilePath() refuses to
-// produce a path at all - so a profile named this way could never store or
-// retrieve its password. Mirrors the pattern used there:
-const QRegularExpression dlgConnectionProfiles::scmUnusableProfileNameChars{qsl(R"REGEX(\.\.|[/\\<>:"|?*\x00-\x1f])REGEX")};
 
 // Listing what is expected rather than what to watch out for keeps an
 // unrecognised file - a stored password, a character name the user typed - on
@@ -96,14 +74,6 @@ const QStringList dlgConnectionProfiles::scmConnectionDetailFiles{qsl("url"), qs
 const QString dlgConnectionProfiles::scmSelfTestProfile = qsl("Mudlet self-test");
 
 std::optional<QColor> getCustomColor(const QString& profileName);
-
-// A lone "." is made entirely of permitted characters, yet every path built
-// from it addresses the profiles directory rather than a profile of its own -
-// as does "..", which scmUnusableProfileNameChars already covers:
-bool dlgConnectionProfiles::profileNameUsableAsIs(const QString& name)
-{
-    return !name.isEmpty() && name != qsl(".") && !name.contains(scmUnusableProfileNameChars);
-}
 
 // Resolved textually rather than with QDir::canonicalPath() so that the answer
 // does not depend on the folder existing - a predefined game has none until it
@@ -1512,9 +1482,13 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     slot_togglePasswordVisibility(false);
 
-    welcome_message->hide();
-    tabWidget_connectionInfo->show();
-    informationArea->show();
+    // The dialog re-picking a game for itself (e.g. after the startup password migration) must leave the
+    // first-launch tutorial invitation up: it hides the games list, so the player could not get back to it
+    if (!mProgrammaticProfileSelection || !widget_topLeft->isHidden()) {
+        welcome_message->hide();
+        tabWidget_connectionInfo->show();
+        informationArea->show();
+    }
 
     profile_name_entry->setText(profile_name);
 
@@ -2627,17 +2601,18 @@ bool dlgConnectionProfiles::validateProfile()
         const QString selectedName = pItem->data(csmNameRole).toString();
         const QString selectedFolder = profileFolderPath(MudletApp::getMudletPath(enums::profilesPath), selectedName);
         const bool nameIsFolderOnDisk = (name == selectedName.trimmed()) && !selectedFolder.isEmpty() && QDir(selectedFolder).exists();
-        const bool nameUnchangedAndOnDisk = nameIsFolderOnDisk && profileNameUsableAsIs(name);
-        const QChar invalidChar = nameUnchangedAndOnDisk ? QChar() : firstInvalidProfileNameChar(name);
+        const bool nameUnchangedAndOnDisk = nameIsFolderOnDisk && MudletApp::profileNameUsableAsIs(name);
+        const QChar invalidChar = nameUnchangedAndOnDisk ? QChar() : MudletApp::firstInvalidProfileNameChar(name);
         if (!invalidChar.isNull()) {
             notificationAreaIconLabelWarning->show();
             notificationAreaMessageBox->setText(
-                    qsl("%1\n%2\n%3\n").arg(notificationAreaMessageBox->text(), tr("The %1 character is not permitted. Use one of the following:").arg(invalidChar), scmAllowedProfileNameChars));
+                    qsl("%1\n%2\n%3\n")
+                            .arg(notificationAreaMessageBox->text(), tr("The %1 character is not permitted. Use one of the following:").arg(invalidChar), MudletApp::scmAllowedProfileNameChars));
             name.remove(invalidChar);
             profile_name_entry->setText(name);
             validName = false;
             valid = false;
-        } else if (!nameIsFolderOnDisk && !name.isEmpty() && !profileNameUsableAsIs(name)) {
+        } else if (!nameIsFolderOnDisk && !name.isEmpty() && !MudletApp::profileNameUsableAsIs(name)) {
             // Nothing to strip here, unlike the branch above: the characters
             // are all permitted, it is the whole name that cannot be a folder
             notificationAreaIconLabelWarning->show();
@@ -2669,7 +2644,8 @@ bool dlgConnectionProfiles::validateProfile()
         }
 
         const QString port = port_entry->text().trimmed();
-        if (!port.isEmpty() && (port.indexOf(QRegularExpression(qsl("^\\d+$")), 0) == -1)) {
+        const bool portIsDigits = port.indexOf(QRegularExpression(qsl("^\\d+$")), 0) != -1;
+        if (!port.isEmpty() && !portIsDigits) {
             QString val = port;
             val.chop(1);
             port_entry->setText(val);
@@ -2682,9 +2658,13 @@ bool dlgConnectionProfiles::validateProfile()
 
         bool ok;
         const int num = port.trimmed().toInt(&ok);
-        if (!port.isEmpty() && (num > 65536 && ok)) {
+        // Digits that do not fit an int are too high as well; not 0, which the tutorial's profile is given
+        if (portIsDigits && (!ok || (num > 0 && !MudletApp::gamePortUsable(num)))) {
             notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(qsl("%1\n%2\n\n").arg(notificationAreaMessageBox->text(), tr("Port number must be above zero and below 65535.")));
+            notificationAreaMessageBox->setText(qsl("%1\n%2\n\n")
+                                                        .arg(notificationAreaMessageBox->text(),
+                                                             //: Shown in the connection dialog when the port typed is too high for one a game server can use
+                                                             tr("Port number must be 65535 or less.")));
             port_entry->setPalette(mErrorPalette);
             validPort = false;
             valid = false;
@@ -2808,6 +2788,18 @@ bool dlgConnectionProfiles::validateProfile()
     return false;
 }
 
+// QFile::copy() dates a copy by when it was made on some platforms, and loading a profile or its
+// map picks the newest save by that date, which would then be whichever was copied last
+static void keepModificationTime(const QString& source, const QString& copy)
+{
+    const QDateTime modified = QFileInfo(source).lastModified(QTimeZone::UTC);
+    QFile file(copy);
+    // Not WriteOnly, which would truncate the copy
+    if (!file.open(QIODevice::ReadWrite) || !file.setFileTime(modified, QFileDevice::FileModificationTime)) {
+        qWarning().noquote() << "dlgConnectionProfiles::copyFolder(...) WARNING - could not give" << copy << "the modification time of" << source << "-" << file.errorString();
+    }
+}
+
 // credit: http://www.qtcentre.org/archive/index.php/t-23469.html
 bool dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QString& destFolder)
 {
@@ -2825,7 +2817,11 @@ bool dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QStrin
     for (const QString& file : std::as_const(files)) {
         const QString srcName = sourceFolder + QDir::separator() + file;
         const QString destName = destFolder + QDir::separator() + file;
-        copiedAll = QFile::copy(srcName, destName) && copiedAll;
+        if (QFile::copy(srcName, destName)) {
+            keepModificationTime(srcName, destName);
+        } else {
+            copiedAll = false;
+        }
     }
     files.clear();
     files = sourceDir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot);

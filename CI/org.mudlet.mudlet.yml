@@ -180,6 +180,18 @@ modules:
       - /lib/*.la
       - /lib/pkgconfig
 
+  # The KDE runtime ships Qt WebSockets but not Qt HttpServer, which the MCP server needs
+  - name: qt6-qthttpserver
+    buildsystem: cmake-ninja
+    sources:
+      - type: archive
+        url: https://download.qt.io/archive/qt/6.8/6.8.3/submodules/qthttpserver-everywhere-src-6.8.3.tar.xz
+        sha256: 792be98dd979a3f1cf42477139321a8999a648b7e7ad041ae133965c3cc35f65
+    # Qt installs to /app/lib/<triplet>, which is not on the sandbox's loader path
+    post-install:
+      - mkdir -p ${FLATPAK_DEST}/etc
+      - for dir in ${FLATPAK_DEST}/lib/*-linux-gnu; do echo "$dir" >> ${FLATPAK_DEST}/etc/ld.so.conf; done
+
   - name: mudlet
     buildsystem: cmake-ninja
     config-opts:

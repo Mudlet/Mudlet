@@ -41,7 +41,9 @@
 #include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
+#if defined(INCLUDE_SPAWN)
 #include "TForkedProcess.h"
+#endif
 #include "TGameDetails.h"
 #include "TKey.h"
 #include "TMap.h"
@@ -656,6 +658,10 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
 
         event.mArgumentList << QString::number(createHttpResponseTable(reply));
         event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
+        // Last, after the response table, so handlers written for the
+        // earlier argument positions keep working
+        event.mArgumentList << QString(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
         reply->deleteLater();
         downloadMap.remove(reply);
@@ -815,11 +821,8 @@ void TLuaInterpreter::slot_pathChanged(const QString& path)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::slot_deleteSender(int exitCode, QProcess::ExitStatus exitStatus)
+void TLuaInterpreter::slot_deleteSender()
 {
-    Q_UNUSED(exitCode)
-    Q_UNUSED(exitStatus)
-
     objectsToDelete.append(sender());
 }
 
@@ -839,7 +842,9 @@ void TLuaInterpreter::slot_purge()
 void TLuaInterpreter::stopSpawnedProcesses()
 {
     slot_purge();
+#if defined(INCLUDE_SPAWN)
     qDeleteAll(findChildren<TForkedProcess*>(Qt::FindDirectChildrenOnly));
+#endif
 }
 
 // No documentation available in wiki - internal function
@@ -1042,6 +1047,11 @@ int TLuaInterpreter::getWindowsCodepage(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#spawn
 int TLuaInterpreter::spawn(lua_State* L)
 {
+#if !defined(INCLUDE_SPAWN)
+    // Raised, as a process that fails to start is
+    lua_pushstring(L, "spawn: starting processes is not available in this build of Mudlet");
+    return lua_error(L);
+#else
     Host& host = getHostFromLua(L);
     TLuaInterpreter* interpreter = host.getLuaInterpreter();
     if (interpreter->mClosingGlobalLua) {
@@ -1050,6 +1060,7 @@ int TLuaInterpreter::spawn(lua_State* L)
         return 2;
     }
     return TForkedProcess::startProcess(interpreter, L);
+#endif
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadReplay
@@ -1072,9 +1083,14 @@ int TLuaInterpreter::loadReplayFile(lua_State* L, const char* functionName)
         return warnArgumentValue(L, functionName, "a blank string is not a valid replay file name");
     }
 
+    auto* replay = MudletReplay::self();
+    if (!replay) {
+        return warnArgumentValue(L, functionName, "replays are not available, as no profile pool is running");
+    }
+
     Host& host = getHostFromLua(L);
     QString errMsg;
-    if (MudletReplay::self()->load(&host, replayFileName, &errMsg)) {
+    if (replay->load(&host, replayFileName, &errMsg)) {
         lua_pushboolean(L, true);
         return 1;
     }
@@ -3798,55 +3814,19 @@ std::pair<bool, QString> TLuaInterpreter::validLuaCode(const QString& code)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList, QVector<QVector<QPair<QString, QString>>>& nameGroups)
+void TLuaInterpreter::setMultiCaptureGroups(const TMultiCaptureGroups& captures)
 {
-    mMultiCaptureGroupList = captureList;
-    mMultiCaptureGroupPosList = posList;
-    mMultiCaptureNameGroups = nameGroups;
+    // Assigned over, so storage an earlier fire grew is reused
+    mMultiCaptureGroups = captures;
     mCaptureScopeOpen = true;
-
-    /*
-     * std::list< std::list<string> >::const_iterator mit = mMultiCaptureGroupList.begin();
-     *
-     * int k=1;
-     * for ( ; mit!=mMultiCaptureGroupList.end(); mit++, k++) {
-     *     cout << "regex#"<<k<<" got:"<<endl;
-     *     std::list<string>::const_iterator it = (*mit).begin();
-     *     for ( int i=1; it!=(*mit).end(); it++, i++ ) {
-     *         cout << i<<"#"<<"<"<<*it<<">"<<endl;
-     *     }
-     *     cout << "-----------------------------"<<endl;
-     * }
-     */
-}
-
-// No documentation available in wiki - internal function
-void TLuaInterpreter::setMultiCaptureGroups(std::list<std::list<std::string>>&& captureList, std::list<std::list<int>>&& posList, QVector<NameGroupMatches>&& nameGroups)
-{
-    mMultiCaptureGroupList = std::move(captureList);
-    mMultiCaptureGroupPosList = std::move(posList);
-    mMultiCaptureNameGroups = std::move(nameGroups);
-    mCaptureScopeOpen = true;
-}
-
-// No documentation available in wiki - internal function
-// Returns what a move into setMultiCaptureGroups() handed over, so the nodes
-// go back to their pool instead of the allocator
-void TLuaInterpreter::takeBackMultiCaptureGroups(std::list<std::list<std::string>>& captureList, std::list<std::list<int>>& posList)
-{
-    // Before the lists go, as a globals table setfenv(0, ...) took away is owed
-    // what they hold
-    lazyGlobalsUsable(pGlobalLua);
-    captureList = std::move(mMultiCaptureGroupList);
-    posList = std::move(mMultiCaptureGroupPosList);
-    mMultiCaptureGroupList.clear();
-    mMultiCaptureGroupPosList.clear();
 }
 
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList, const std::list<int>& posList)
 {
-    mCaptureGroups.clear();
+    // Trimmed here as well: a command trigger's alias sets these over a fire that
+    // clearCaptureGroups() would only see emptied
+    mCaptureGroups.clearAndTrim();
     for (const auto& capture : captureList) {
         mCaptureGroups.append(capture);
     }
@@ -3944,7 +3924,7 @@ void TLuaInterpreter::clearCaptureGroups()
 {
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
-    // Before the lists go, as a globals table setfenv(0, ...) took away is owed
+    // Before the captures go, as a globals table setfenv(0, ...) took away is owed
     // what they hold
     const bool lazy = lazyGlobalsUsable(L);
 
@@ -3958,11 +3938,9 @@ void TLuaInterpreter::clearCaptureGroups()
         std::vector<int>().swap(mCaptureGroupPosList);
     }
     mCaptureGroupLengthList.clear();
-    mMultiCaptureGroupList.clear();
-    mMultiCaptureGroupPosList.clear();
+    mMultiCaptureGroups.clearAndTrim();
     mCapturedNameGroups.clear();
     mCapturedNameGroupsPosList.clear();
-    mMultiCaptureNameGroups.clear();
 
     mCaptureScopeOpen = false;
     if (lazy) {
@@ -4031,11 +4009,9 @@ int TLuaInterpreter::pushNestedDispatchState(const bool parkCommand)
     saved.captureGroups = mCaptureGroups;
     saved.captureGroupPosList = mCaptureGroupPosList;
     saved.captureGroupLengthList = mCaptureGroupLengthList;
-    saved.multiCaptureGroupList = mMultiCaptureGroupList;
-    saved.multiCaptureGroupPosList = mMultiCaptureGroupPosList;
+    saved.multiCaptureGroups = mMultiCaptureGroups;
     saved.capturedNameGroups = mCapturedNameGroups;
     saved.capturedNameGroupsPosList = mCapturedNameGroupsPosList;
-    saved.multiCaptureNameGroups = mMultiCaptureNameGroups;
 
     return static_cast<int>(mNestedDispatchStates.size()) - 1;
 }
@@ -4081,11 +4057,9 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
     mCaptureGroups = std::move(saved.captureGroups);
     mCaptureGroupPosList = std::move(saved.captureGroupPosList);
     mCaptureGroupLengthList = std::move(saved.captureGroupLengthList);
-    mMultiCaptureGroupList = std::move(saved.multiCaptureGroupList);
-    mMultiCaptureGroupPosList = std::move(saved.multiCaptureGroupPosList);
+    mMultiCaptureGroups = std::move(saved.multiCaptureGroups);
     mCapturedNameGroups = std::move(saved.capturedNameGroups);
     mCapturedNameGroupsPosList = std::move(saved.capturedNameGroupsPosList);
-    mMultiCaptureNameGroups = std::move(saved.multiCaptureNameGroups);
     mCaptureScopeOpen = saved.captureScopeOpen;
 
     // Raw again, and for the same reason: a reference to a global that was nil
@@ -4946,7 +4920,7 @@ bool TLuaInterpreter::buildingCaptureTables()
 void TLuaInterpreter::pushMatchesTable(lua_State* L)
 {
     // Every push below can run a __gc finaliser, and one that starts a trigger or
-    // alias pass would replace the lists this walk holds iterators into, so passes
+    // alias pass would replace the captures this walk is reading, so passes
     // are refused until it ends
     ++mCaptureBuildDepth;
     // presized, so filling it in does not rehash the table on the way up
@@ -4972,21 +4946,26 @@ void TLuaInterpreter::pushMultimatchesTable(lua_State* L)
 {
     // Passes are refused for the same reason pushMatchesTable() gives
     ++mCaptureBuildDepth;
-    int k = 1;
+    // Cut at the first NUL, as scripts expect
+    auto pushCapture = [L](const std::string_view capture) {
+        lua_pushlstring(L, capture.data(), qstrnlen(capture.data(), capture.size()));
+    };
+    const TCaptureGroups& captures = mMultiCaptureGroups.captures();
+    const TCaptureGroups& namedCaptures = mMultiCaptureGroups.namedCaptures();
     lua_newtable(L);
-    for (auto mit = mMultiCaptureGroupList.begin(); mit != mMultiCaptureGroupList.end(); mit++, k++) {
+    for (std::size_t condition = 0; condition < mMultiCaptureGroups.conditions(); ++condition) {
         // multimatches{ trigger_idx{ table_matches{ ... } } }
-        lua_pushnumber(L, k);
+        lua_pushnumber(L, static_cast<lua_Number>(condition + 1));
         lua_newtable(L);
-        int i = 1;
-        for (auto it = (*mit).begin(); it != (*mit).end(); it++, i++) {
-            lua_pushnumber(L, i);
-            lua_pushstring(L, (*it).c_str());
+        const std::size_t first = mMultiCaptureGroups.capturesBegin(condition);
+        for (std::size_t capture = first; capture < mMultiCaptureGroups.capturesEnd(condition); ++capture) {
+            lua_pushnumber(L, static_cast<lua_Number>(capture - first + 1));
+            pushCapture(captures[capture]);
             lua_settable(L, -3);
         }
-        for (const auto& [name, capture] : mMultiCaptureNameGroups.value(k - 1)) {
-            lua_pushstring(L, name.toUtf8().constData());
-            lua_pushstring(L, capture.toUtf8().constData());
+        for (std::size_t named = mMultiCaptureGroups.namedBegin(condition); named < mMultiCaptureGroups.namedEnd(condition); named += 2) {
+            pushCapture(namedCaptures[named]);
+            pushCapture(namedCaptures[named + 1]);
             lua_settable(L, -3);
         }
         lua_settable(L, -3);
@@ -5790,7 +5769,7 @@ bool TLuaInterpreter::call_luafunction(const int functionRef, const QString& ite
     if (lua_isfunction(L, -1)) {
         setMatches(L);
         // A multiline trigger's Lua function gets multimatches just as its script would
-        if (!mMultiCaptureGroupList.empty()) {
+        if (!mMultiCaptureGroups.empty()) {
             setMatches(L, MultimatchesSource::Captures);
         }
         const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
@@ -5872,7 +5851,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(const int funct
 
     if (lua_isfunction(L, -1)) {
         setMatches(L);
-        if (!mMultiCaptureGroupList.empty()) {
+        if (!mMultiCaptureGroups.empty()) {
             setMatches(L, MultimatchesSource::Captures);
         }
         const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
@@ -6114,7 +6093,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
 
-    if (!mMultiCaptureGroupList.empty()) {
+    if (!mMultiCaptureGroups.empty()) {
         setMatches(L, MultimatchesSource::Captures);
     }
 
@@ -6157,7 +6136,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
 
     bool returnValue = false;
 
-    if (!mMultiCaptureGroupList.empty()) {
+    if (!mMultiCaptureGroups.empty()) {
         setMatches(L, MultimatchesSource::Captures);
     }
 
@@ -7537,6 +7516,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addMapMenu", TLuaInterpreter::addMapMenu);
     lua_register(pGlobalLua, "removeMapMenu", TLuaInterpreter::removeMapMenu);
     lua_register(pGlobalLua, "getMapMenus", TLuaInterpreter::getMapMenus);
+    lua_register(pGlobalLua, "getMapMenuPriority", TLuaInterpreter::getMapMenuPriority);
+    lua_register(pGlobalLua, "setMapMenuPriority", TLuaInterpreter::setMapMenuPriority);
     lua_register(pGlobalLua, "hideMapMenuItem", TLuaInterpreter::hideMapMenuItem);
     lua_register(pGlobalLua, "showMapMenuItem", TLuaInterpreter::showMapMenuItem);
     lua_register(pGlobalLua, "getHiddenMapMenuItems", TLuaInterpreter::getHiddenMapMenuItems);
@@ -9623,7 +9604,9 @@ int TLuaInterpreter::showNotification(lua_State* L)
     const QString title{lua_tostring(L, 1)};
     const QString text = (n >= 2) ? QString{lua_tostring(L, 2)} : title;
 
-    TAppFrontend::instance()->showNotification(title, text, notificationExpirationTime);
+    if (!TAppFrontend::instance()->showNotification(title, text, notificationExpirationTime)) {
+        return warnArgumentValue(L, __func__, "the profile has no main window");
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -9747,11 +9730,13 @@ int TLuaInterpreter::setConfig(lua_State* L)
 #if defined(INCLUDE_3DMAPPER)
         if (key == qsl("show3dMapView")) {
             const bool show = getVerifiedBool(L, __func__, 2, "value");
+            if (auto* mapper = host.mapViewFrontend()) {
+                if (auto [shown, refusal] = mapper->show3DView(show); !shown) {
+                    return warnArgumentValue(L, __func__, refusal);
+                }
+            }
             // getConfig reads this back while the mapper is hidden, whichever frontend shows it
             host.mShow3DView = show;
-            if (auto* mapper = host.mpMap->mapViewFrontend()) {
-                mapper->show3DView(show);
-            }
             return success();
         }
 #endif
@@ -10064,6 +10049,42 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.mEditorAutoComplete = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    // A family or size asked for is one of the editor's own, so the editor stops following the display
+    // font - unless it is the one in use already, so that a getConfig() table handed back changes nothing
+    if (key == qsl("editorFont")) {
+        const QString fontName = getVerifiedString(L, __func__, 2, "value");
+        if (fontName.trimmed().isEmpty()) {
+            return warnArgumentValue(L, __func__, "editorFont must not be empty");
+        }
+        const auto resolved = host.resolveFontFamily(fontName);
+        if (!resolved.available) {
+            return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
+        }
+        if (host.getEditorFont().family().compare(resolved.family, Qt::CaseInsensitive) != 0) {
+            QFont font = host.editorFontBase();
+            font.setFamily(resolved.family);
+            host.setEditorFont(font);
+            host.setEditorFontFollowsDisplay(false);
+        }
+        return success();
+    }
+    if (key == qsl("editorFontSize")) {
+        const int size = getVerifiedInt(L, __func__, 2, "value");
+        if (size < 1 || size > Host::scmMaxFontSize) {
+            return warnArgumentValue(L, __func__, qsl("editorFontSize %1 is out of range, it must be between 1 and %2").arg(QString::number(size), QString::number(Host::scmMaxFontSize)));
+        }
+        if (host.getEditorFont().pointSize() != size) {
+            QFont font = host.editorFontBase();
+            font.setPointSize(size);
+            host.setEditorFont(font);
+            host.setEditorFontFollowsDisplay(false);
+        }
+        return success();
+    }
+    if (key == qsl("editorFontFollowsDisplay")) {
+        host.setEditorFontFollowsDisplay(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
     if (key == qsl("mapperPanelVisible")) {
         host.setMapperPanelVisible(getVerifiedBool(L, __func__, 2, "value"));
         return success();
@@ -10332,8 +10353,8 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("show3dMapView"),
              [&]() {
 #if defined(INCLUDE_3DMAPPER)
-                 // A mapper hidden by closeMapWidget() shows no 3D view, but reopens in the stored mode
-                 if (auto* mapper = host.mpMap ? host.mpMap->mapViewFrontend() : nullptr; mapper && mapper->onScreen()) {
+                 // A mapper hidden by closeMapWidget() shows no 3D view, but reopens in the stored mode; the null view never has one
+                 if (auto* mapper = host.mpMap ? host.mapViewFrontend() : nullptr; mapper && (mapper->onScreen() || !host.hasConsoleView())) {
                      lua_pushboolean(L, mapper->showing3DView());
                      return;
                  }
@@ -10373,6 +10394,18 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("editorAutoComplete"),
              [&]() {
                  lua_pushboolean(L, host.mEditorAutoComplete);
+             }},
+            {qsl("editorFont"),
+             [&]() {
+                 lua_pushstring(L, host.getEditorFont().family().toUtf8().constData());
+             }},
+            {qsl("editorFontSize"),
+             [&]() {
+                 lua_pushinteger(L, host.getEditorFont().pointSize());
+             }},
+            {qsl("editorFontFollowsDisplay"),
+             [&]() {
+                 lua_pushboolean(L, host.editorFontFollowsDisplay());
              }},
             {qsl("enableGMCP"),
              [&]() {

@@ -28,6 +28,7 @@
 #include "CredentialManager.h"
 #include "Host.h"
 #include "SecureStringUtils.h"
+#include "ShortcutsManager.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
@@ -1246,6 +1247,10 @@ void XMLimport::readHost(Host* pHost)
 #endif
                 // For Qt 6.9+, emoji font support is handled globally in FontManager::addEmojiFont()
 #endif
+            } else if (name() == qsl("mEditorFont")) {
+                pHost->setEditorFontFromString(readElementText());
+            } else if (name() == qsl("mEditorFontFollowsDisplay")) {
+                pHost->setEditorFontFollowsDisplay(readElementText() == YES);
             } else if (name() == qsl("mCommandLineFont")) {
                 // We use the same font as the main console now so discard this
                 // one silently:
@@ -2272,6 +2277,10 @@ void XMLimport::readProfileShortcut()
     // Copied, as reading the text moves the reader on from the attribute
     const QString key = attributes().value(qsl("key")).toString();
     auto sequenceString = readElementText();
+    if (!ShortcutsManager::self()) {
+        mpHost->mProfileShortcutsAsRead.insert(key, sequenceString);
+        return;
+    }
     if (auto it = mpHost->profileShortcuts.find(key); it != mpHost->profileShortcuts.end()) {
         QKeySequence sequence = !sequenceString.isEmpty() ? QKeySequence(sequenceString) : QKeySequence();
         it->second->swap(sequence);

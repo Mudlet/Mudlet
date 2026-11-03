@@ -117,10 +117,14 @@ describe("window sizes", function()
   -- without the window changing size has to resize it as well as move it
   describe("getRowCount", function()
     local restoreWidth, restoreHeight
+    local sized
 
     setup(function()
       local width, height = getMainWindowSize()
-      setMainWindowSize(1000, 1400)
+      sized = setMainWindowSize(1000, 1400)
+      if not sized then
+        return
+      end
       pumpEvents(100)
       local innerWidth, innerHeight = getMainWindowSize()
       restoreWidth, restoreHeight = width + 1000 - innerWidth, height + 1400 - innerHeight
@@ -128,8 +132,10 @@ describe("window sizes", function()
     end)
 
     teardown(function()
-      setMainWindowSize(restoreWidth, restoreHeight)
-      pumpEvents(100)
+      if sized then
+        setMainWindowSize(restoreWidth, restoreHeight)
+        pumpEvents(100)
+      end
     end)
 
     -- Late in the full suite one pass of the event loop can take a few hundred
@@ -152,6 +158,9 @@ describe("window sizes", function()
     -- Unlike showToolBar(), neither a new bar nor a restyled button has the
     -- console refreshed afterwards
     it("gives up the rows a button bar made along the top takes", function()
+      if not sized then
+        pending("there is no main window to size")
+      end
       local toolbar = uniqueName("wsRowsToolbar")
       local button = uniqueName("wsRowsButton")
       finally(function()

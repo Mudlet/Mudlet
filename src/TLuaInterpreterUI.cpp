@@ -2794,6 +2794,10 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#saveWindowLayout
 int TLuaInterpreter::saveWindowLayout(lua_State* L)
 {
+    // Mid-load, the GUI's saveState() writes the windows the load has yet to reach where they were, and stops it moving them
+    if (TAppFrontend::instance()->layoutLoading()) {
+        return warnArgumentValue(L, __func__, qsl("cannot save the window layout while it is being loaded"));
+    }
     lua_pushboolean(L, TAppFrontend::instance()->saveWindowLayoutForScript());
     return 1;
 }
@@ -3439,9 +3443,6 @@ int TLuaInterpreter::setCmdLineStyleSheet(lua_State* L)
     const QString styleSheet{lua_tostring(L, styleSheetIndex)};
     const Host& host = getHostFromLua(L);
 
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto [success, message] = host.consoleFrontend()->setCmdLineStyleSheet(name, styleSheet); !success) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -3595,9 +3596,6 @@ int TLuaInterpreter::setLabelAccessibleName(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (!host.setLabelAccessibleName(labelName, accessibleName)) {
         return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
     }
@@ -3615,9 +3613,6 @@ int TLuaInterpreter::getLabelAccessibleName(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto accessibleName = host.labelAccessibleName(labelName)) {
         lua_pushstring(L, accessibleName->toUtf8().constData());
         return 1;
@@ -3648,9 +3643,6 @@ int TLuaInterpreter::setLabelAccessibleRole(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (!host.setLabelAccessibleButton(labelName, button)) {
         return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
     }
@@ -3683,9 +3675,6 @@ int TLuaInterpreter::setLabelLiveRegion(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (!host.setLabelLiveRegion(labelName, liveRegion)) {
         return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
     }
@@ -3703,9 +3692,6 @@ int TLuaInterpreter::getLabelLiveRegion(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto liveRegion = host.labelLiveRegion(labelName)) {
         switch (*liveRegion) {
         case TLabelLiveRegion::Polite:
@@ -3733,9 +3719,6 @@ int TLuaInterpreter::getLabelAccessibleRole(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto role = host.labelAccessibleRole(labelName)) {
         lua_pushstring(L, role->toUtf8().constData());
         return 1;
@@ -4084,8 +4067,11 @@ int TLuaInterpreter::setMainWindowSize(lua_State* L)
 {
     const int x1 = getVerifiedInt(L, __func__, 1, "mainWidth");
     const int y1 = getVerifiedInt(L, __func__, 2, "mainHeight");
-    TAppFrontend::instance()->resizeMainWindow(x1, y1);
-    return 0;
+    if (!TAppFrontend::instance()->resizeMainWindow(x1, y1)) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapWindowTitle
@@ -5269,10 +5255,6 @@ int TLuaInterpreter::removeCommand(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->removeAddonCommand(commandId, &host));
     return 1;
@@ -5285,10 +5267,6 @@ int TLuaInterpreter::enableCommand(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandEnabled(commandId, true, &host));
     return 1;
@@ -5301,10 +5279,6 @@ int TLuaInterpreter::disableCommand(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandEnabled(commandId, false, &host));
     return 1;
@@ -5318,10 +5292,6 @@ int TLuaInterpreter::setCommandChecked(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandChecked(commandId, checked, &host));
     return 1;
@@ -5335,10 +5305,6 @@ int TLuaInterpreter::setCommandPinned(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandPinned(commandId, pinned, &host));
     return 1;
@@ -5352,10 +5318,6 @@ int TLuaInterpreter::setCommandIcon(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandIcon(commandId, icon, &host));
     return 1;
@@ -5369,10 +5331,6 @@ int TLuaInterpreter::setCommandTooltip(lua_State* L)
 
     auto& host = getHostFromLua(L);
     auto pFrontend = TAppFrontend::instance();
-    // The null view would answer a bare false; a script is better told why
-    if (!TAppFrontend::hasView()) {
-        return warnArgumentValue(L, __func__, "mudlet instance not available");
-    }
 
     lua_pushboolean(L, pFrontend->setAddonCommandTooltip(commandId, tooltip, &host));
     return 1;

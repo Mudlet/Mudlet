@@ -96,6 +96,7 @@ public:
     TScript* scriptOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
     TKey* keyOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
     static void copy_directory(const QString& fromDir, const QString& toDir, bool overwrite);
+    void showRenderedDescription();
     QMap<QTreeWidgetItem*, int> triggerMap;
     QMap<QTreeWidgetItem*, int> modTriggerMap;
     QMap<QTreeWidgetItem*, int> aliasMap;
@@ -155,6 +156,7 @@ private:
                                                std::shared_ptr<std::atomic<bool>> cancelled);
     static std::pair<bool, QString> copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath);
     QFileInfo copyIconToTmp(const QString& tempPath) const;
+    void copyPackageDataToTmp(const QString& tempPath) const;
     QString normalizedHelpUrl() const;
     void writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile, const QString& packageDescription);
     void exportXml(bool& isOk,
@@ -192,6 +194,8 @@ private:
     QString mPackagePath;
     QString mPackagePathFileName;
     QString mPackageIconPath;
+    // The .mudlet folder of the installed package being re-exported, if any
+    QString mPackageDataPath;
     QString mPackageConfig;
     QString mPackageComment;
     bool mCheckChildren = true;
@@ -221,6 +225,16 @@ public:
     ~dlgPackageExporterDescription();
     bool canInsertFromMimeData(const QMimeData* source) const override;
     void insertFromMimeData(const QMimeData* source) override;
+
+protected:
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dragLeaveEvent(QDragLeaveEvent* event) override;
+    void dropEvent(QDropEvent* event) override;
+
+private:
+    void restoreRenderedDescription();
+
+    bool mShowingSourceForDrop = false;
 };
 
 #endif // MUDLET_DLGPACKAGEEXPORTER_H

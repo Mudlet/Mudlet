@@ -375,6 +375,8 @@ public:
 #endif
 
     void playMedia(TMediaData& mediaData);
+    // Only the main window takes video output
+    bool canShowVideo() const;
     QList<TMediaData> playingMedia(TMediaData& mediaData);
     QList<TMediaData> pausedMedia(TMediaData& mediaData);
     void pauseMedia(TMediaData& mediaData);

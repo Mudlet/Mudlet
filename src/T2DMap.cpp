@@ -63,7 +63,6 @@
 #include <QCoreApplication>
 #include <QCursor>
 #include <QFutureWatcher>
-#include <QImageWriter>
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
 /* The Devuan package for qt6-base-dev (for Qt 6.8.2) - and presumably
  * Debian and Ubuntu are missing the
@@ -148,6 +147,22 @@ const QString& key_in = qsl("in");
 const QString& key_out = qsl("out");
 
 namespace {
+// A special exit can be named like a normal one ("n", "up"...); a custom line by
+// that name is the special exit's when the room has no such normal exit.
+int customLineDestination(const TRoom& room, const QString& key)
+{
+    for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
+        if (TRoom::dirCodeToShortString(direction) == key) {
+            const int destination = room.getExit(direction);
+            if (destination > 0 || !room.getSpecialExits().contains(key)) {
+                return destination;
+            }
+            break;
+        }
+    }
+    return room.getSpecialExits().value(key);
+}
+
 // The room an XY-plane exit leads to, or 0 for any other exit.
 int xyExitFor(const TRoom& room, const QString& key)
 {
@@ -3426,33 +3441,7 @@ void T2DMap::paintRoomExits(QPainter& painter,
     } else if (mCustomLineSelectedRoom > 0 && !mCustomLineSelectedExit.isEmpty()) {
         TRoom* pSR = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
         if (pSR) {
-            if (mCustomLineSelectedExit == key_nw) {
-                customLineDestinationTarget = pSR->getNorthwest();
-            } else if (mCustomLineSelectedExit == key_n) {
-                customLineDestinationTarget = pSR->getNorth();
-            } else if (mCustomLineSelectedExit == key_ne) {
-                customLineDestinationTarget = pSR->getNortheast();
-            } else if (mCustomLineSelectedExit == key_up) {
-                customLineDestinationTarget = pSR->getUp();
-            } else if (mCustomLineSelectedExit == key_w) {
-                customLineDestinationTarget = pSR->getWest();
-            } else if (mCustomLineSelectedExit == key_e) {
-                customLineDestinationTarget = pSR->getEast();
-            } else if (mCustomLineSelectedExit == key_down) {
-                customLineDestinationTarget = pSR->getDown();
-            } else if (mCustomLineSelectedExit == key_sw) {
-                customLineDestinationTarget = pSR->getSouthwest();
-            } else if (mCustomLineSelectedExit == key_s) {
-                customLineDestinationTarget = pSR->getSouth();
-            } else if (mCustomLineSelectedExit == key_se) {
-                customLineDestinationTarget = pSR->getSoutheast();
-            } else if (mCustomLineSelectedExit == key_in) {
-                customLineDestinationTarget = pSR->getIn();
-            } else if (mCustomLineSelectedExit == key_out) {
-                customLineDestinationTarget = pSR->getOut();
-            } else {
-                customLineDestinationTarget = pSR->getSpecialExits().value(mCustomLineSelectedExit);
-            }
+            customLineDestinationTarget = customLineDestination(*pSR, mCustomLineSelectedExit);
         }
     }
     // Viewport rooms plus every custom-line room on the level, as such a line can cross the whole level.
@@ -4241,14 +4230,25 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
     event->accept();
 }
 
+// In a window without the command line the focus would fall to a panel button instead, which keeps arrows and Space
+// for itself; the map handles no keys, so they go on to the mapper around it, which hands them to the command line
+void T2DMap::takeFocusAwayFromTheCommandLine(const Qt::FocusReason reason)
+{
+    TMainConsole* pConsole = mpHost ? mpHost->mainConsoleView() : nullptr;
+    if (pConsole && window() != pConsole->window()) {
+        setFocus(reason);
+    }
+}
+
 bool T2DMap::event(QEvent* event)
 {
-    // NOTE: key events aren't being forwarded to T2DMap because the widget
-    // currently never has focus because it's more comfortable for the user
-    // to always have focus on the command line. If this were to be changed some
-    // day the setFocusPolicy() calls in the constructor need to be uncommented
+    // NOTE: the widget has the focus only in a window without the command line,
+    // as it is more comfortable for the user to always have focus on the command
+    // line, and it handles no key events itself
 
-    if (event->type() == QEvent::KeyPress) {
+    if (event->type() == QEvent::WindowActivate && !window()->focusWidget()) {
+        takeFocusAwayFromTheCommandLine(Qt::ActiveWindowFocusReason);
+    } else if (event->type() == QEvent::KeyPress) {
         //        auto* ke = static_cast<QKeyEvent*>(event);
         //        if (ke->key() == Qt::Key_Delete ) {
         //            if (mCustomLineSelectedRoom != 0  ) {
@@ -4287,6 +4287,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
     sysMapWindowMousePressEvent.mArgumentList.append(QLatin1String("sysMapWindowMousePressEvent"));
     sysMapWindowMousePressEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(sysMapWindowMousePressEvent);
+    takeFocusAwayFromTheCommandLine(Qt::MouseFocusReason);
 
     updateSelectionWidget();
     update();
@@ -4479,32 +4480,8 @@ void T2DMap::slot_customLineProperties()
             }
             le_cmd->setText(exit);
             le_fromId->setText(QString::number(room->getId()));
-            if (exit == key_nw) {
-                le_toId->setText(QString::number(room->getNorthwest()));
-            } else if (exit == key_n) {
-                le_toId->setText(QString::number(room->getNorth()));
-            } else if (exit == key_ne) {
-                le_toId->setText(QString::number(room->getNortheast()));
-            } else if (exit == key_up) {
-                le_toId->setText(QString::number(room->getUp()));
-            } else if (exit == key_w) {
-                le_toId->setText(QString::number(room->getWest()));
-            } else if (exit == key_e) {
-                le_toId->setText(QString::number(room->getEast()));
-            } else if (exit == key_down) {
-                le_toId->setText(QString::number(room->getDown()));
-            } else if (exit == key_sw) {
-                le_toId->setText(QString::number(room->getSouthwest()));
-            } else if (exit == key_s) {
-                le_toId->setText(QString::number(room->getSouth()));
-            } else if (exit == key_se) {
-                le_toId->setText(QString::number(room->getSoutheast()));
-            } else if (exit == key_in) {
-                le_toId->setText(QString::number(room->getIn()));
-            } else if (exit == key_out) {
-                le_toId->setText(QString::number(room->getOut()));
-            } else if (room->getSpecialExits().contains(exit)) {
-                le_toId->setText(QString::number(room->getSpecialExits().value(exit)));
+            if (const int destination = customLineDestination(*room, exit); destination || room->getSpecialExits().contains(exit)) {
+                le_toId->setText(QString::number(destination));
             } else {
                 qWarning().noquote().nospace() << "T2DMap::slot_customLineProperties() WARNING - missing no exit \"" << exit
                                                << "\" to be associated with a custom exit line with that designation in room id " << room->getId();
@@ -4856,39 +4833,41 @@ void T2DMap::populateUserContextMenus(QMenu& menu)
     if (!mpMap) {
         return;
     }
+    struct UserEntry
+    {
+        int priority;
+        bool menu;
+        QString uniqueName;
+        QString parent;
+    };
     QMap<QString, QMenu*> userMenus;
-    QMapIterator<QString, QStringList> menuIterator(mpMap->mUserMenus);
-
-    while (menuIterator.hasNext()) {
-        menuIterator.next();
-        const QStringList menuInfo = menuIterator.value();
-        const QString displayName = menuInfo.value(1);
-        auto* userMenu = new QMenu(displayName, &menu);
-        userMenus.insert(menuIterator.key(), userMenu);
+    QList<UserEntry> entries;
+    for (const auto& [uniqueName, menuInfo] : std::as_const(mpMap->mUserMenus).asKeyValueRange()) {
+        userMenus.insert(uniqueName, new QMenu(menuInfo.value(1), &menu));
+        entries.append({mpMap->mUserMenuPriorities.value(uniqueName), true, uniqueName, menuInfo.value(0)});
     }
+    for (const auto& [uniqueName, actionInfo] : std::as_const(mpMap->mUserActions).asKeyValueRange()) {
+        entries.append({mpMap->mUserMenuPriorities.value(uniqueName), false, uniqueName, actionInfo.value(1)});
+    }
+    // Stable: ties keep the default order of menus, then events, each by unique name
+    std::stable_sort(entries.begin(), entries.end(), [](const UserEntry& a, const UserEntry& b) {
+        return a.priority < b.priority;
+    });
 
-    menuIterator.toFront();
-    while (menuIterator.hasNext()) {
-        menuIterator.next();
-        const QStringList menuInfo = menuIterator.value();
-        const QString menuParent = menuInfo.value(0);
-
-        if (auto* childMenu = userMenus.value(menuIterator.key(), nullptr)) {
-            if (menuParent.isEmpty()) {
+    for (const UserEntry& entry : std::as_const(entries)) {
+        const QString& uniqueName = entry.uniqueName;
+        const QString& menuParentKey = entry.parent;
+        if (entry.menu) {
+            QMenu* childMenu = userMenus.value(uniqueName);
+            if (menuParentKey.isEmpty()) {
                 menu.addMenu(childMenu);
-            } else if (auto* parentMenu = userMenus.value(menuParent, nullptr)) {
+            } else if (auto* parentMenu = userMenus.value(menuParentKey, nullptr)) {
                 parentMenu->addMenu(childMenu);
             }
+            continue;
         }
-    }
 
-    QMapIterator<QString, QStringList> actionIterator(mpMap->mUserActions);
-    while (actionIterator.hasNext()) {
-        actionIterator.next();
-        const QString uniqueName = actionIterator.key();
-        const QStringList actionInfo = actionIterator.value();
-        const QString menuParentKey = actionInfo.value(1);
-        const QString displayText = actionInfo.value(2);
+        const QString displayText = mpMap->mUserActions.value(uniqueName).value(2);
 
         auto* action = new QAction(displayText, &menu);
         if (menuParentKey.isEmpty()) {
@@ -6715,105 +6694,19 @@ void T2DMap::pruneRoomSelectionToArea(const int areaId)
     hideSelectionWidget();
 }
 
-namespace {
-QString exportImageFormat(const QString& filePath)
-{
-    const QString suffix = QFileInfo(filePath).suffix();
-    return suffix.isEmpty() ? qsl("png") : suffix.toLower();
-}
-
-// The image is written on another thread, too late for the caller to hear of a
-// failure, so the likely causes are checked first; others (a full disk, a name
-// the file system refuses) still only show on the console. A name template for
-// every z level is never written itself, so only what its level files share is
-// checked against it. Returns an empty string when nothing is wrong.
-QString exportTargetProblem(const QString& filePath, const bool nameTemplate)
-{
-    if (filePath.isEmpty()) {
-        return qsl("No file name given");
-    }
-    const QFileInfo targetFileInfo(filePath);
-    if (targetFileInfo.isDir() && (!nameTemplate || targetFileInfo.fileName().isEmpty())) {
-        return qsl("%1 is a directory").arg(targetFileInfo.absoluteFilePath());
-    }
-    const QString directory = targetFileInfo.absolutePath();
-    const QFileInfo directoryInfo(directory);
-    if (!directoryInfo.exists()) {
-        return qsl("Directory %1 does not exist").arg(directory);
-    }
-    if (!directoryInfo.isDir()) {
-        return qsl("%1 is not a directory").arg(directory);
-    }
-    if (targetFileInfo.fileName().isEmpty()) {
-        return qsl("No file name given");
-    }
-    if (!nameTemplate) {
-        if (targetFileInfo.exists() && !targetFileInfo.isWritable()) {
-            return qsl("File %1 is not writable").arg(targetFileInfo.absoluteFilePath());
-        }
-#if !defined(Q_OS_WIN)
-        // Not on Windows: there isWritable() reads a directory's read-only attribute,
-        // which shell folders such as Documents carry and which does not stop a write
-        if (!targetFileInfo.exists() && !directoryInfo.isWritable()) {
-            return qsl("Directory %1 is not writable").arg(directory);
-        }
-#endif
-    }
-    const QString format = exportImageFormat(filePath);
-    if (!QImageWriter::supportedImageFormats().contains(format.toLatin1())) {
-        return qsl("Image format \"%1\" is not supported").arg(format);
-    }
-    return {};
-}
-} // namespace
-
 std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels)
 {
-    // Validate zoom parameter
-    if (zoom <= 0.0 || zoom > 10.0) {
-        return {false, qsl("Zoom must be between 0.1 and 10.0")};
-    }
-
     if (!mpMap || mpHost.isNull()) {
         return {false, qsl("Map not initialized")};
     }
 
-    if (const QString problem = exportTargetProblem(filePath, exportAllZLevels); !problem.isEmpty()) {
+    QList<std::pair<int, QString>> levelExports;
+    if (const QString problem = mpMap->areaExportProblem(areaId, filePath, zoom, exportAllZLevels, levelExports); !problem.isEmpty()) {
         return {false, problem};
-    }
-
-    TArea* pArea = mpMap->mpRoomDB->getArea(areaId);
-    if (!pArea) {
-        return {false, qsl("Area %1 not found").arg(areaId)};
-    }
-
-    if (pArea->rooms.isEmpty()) {
-        return {false, qsl("Area %1 contains no rooms").arg(areaId)};
     }
 
     // Handle exporting all Z levels if requested
     if (exportAllZLevels) {
-        if (pArea->zLevels.isEmpty()) {
-            return {false, qsl("Area %1 has no Z levels").arg(areaId)};
-        }
-
-        // Generate filename for each Z level
-        QFileInfo fileInfo(filePath);
-        QString baseFileName = fileInfo.completeBaseName();
-        QString extension = fileInfo.suffix();
-        QString basePath = fileInfo.absolutePath();
-
-        // Collected before any export runs: each export's calcSpan() replaces
-        // zLevels, which would free the list under a loop over it
-        QList<std::pair<int, QString>> levelExports;
-        for (const int currentZLevel : std::as_const(pArea->zLevels)) {
-            const QString levelFileName = qsl("%1/%2_level_%3.%4").arg(basePath, baseFileName, QString::number(currentZLevel), extension.isEmpty() ? "png" : extension);
-            // Every level is checked before any is queued, so a refusal leaves nothing written
-            if (const QString problem = exportTargetProblem(levelFileName, false); !problem.isEmpty()) {
-                return {false, qsl("Failed to export Z level %1: %2").arg(currentZLevel).arg(problem)};
-            }
-            levelExports.append({currentZLevel, levelFileName});
-        }
         for (const auto& [currentZLevel, levelFileName] : levelExports) {
             // Recursively call this function for each Z level (without exportAllZLevels flag)
             auto [success, message] = exportAreaToImage(areaId, levelFileName, currentZLevel, zoom, false);
@@ -6825,6 +6718,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         return {true, {}};
     }
 
+    TArea* pArea = mpMap->mpRoomDB->getArea(areaId);
     // Calculate area bounds
     pArea->calcSpan();
 
@@ -7540,7 +7434,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         pWatcher->deleteLater();
     });
 
-    auto future = QtConcurrent::task(&T2DMap::performImageSave).withArguments(this, pixmap, filePath, exportImageFormat(filePath)).spawn();
+    auto future = QtConcurrent::task(&T2DMap::performImageSave).withArguments(this, pixmap, filePath, TMap::exportImageFormat(filePath)).spawn();
     pWatcher->setFuture(future);
 
     return {true, {}};

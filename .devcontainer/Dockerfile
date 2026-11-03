@@ -19,6 +19,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
         lua-filesystem lua-zip lua-sql-sqlite3 libxkbcommon-dev libonig-dev qmake6-bin \
         qt6-base-dev libqt6opengl6-dev qt6-multimedia-dev qt6-tools-dev qtkeychain-qt6-dev \
         luarocks ccache libpugixml-dev libqt6core5compat6-dev qt6-speech-dev ninja-build cmake \
+        qt6-httpserver-dev qt6-websockets-dev \
         libzstd-dev libsqlite3-dev libassimp-dev firefox-esr \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*

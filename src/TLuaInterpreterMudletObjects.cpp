@@ -42,7 +42,6 @@
 #include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TForkedProcess.h"
 #include "TKey.h"
 #include "TMap.h"
 #include "TMapLabel.h"
@@ -786,6 +785,10 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 
         lua_pushstring(L, "rootFilterEpoch");
         lua_pushnumber(L, static_cast<double>(host.getTriggerUnit()->rootFilterEpoch()));
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "unfilterableEpoch");
+        lua_pushnumber(L, static_cast<double>(host.getTriggerUnit()->unfilterableEpoch()));
         lua_settable(L, -3);
 
         if (TriggerUnit::treeIndexMode() != TriggerUnit::TreeIndexMode::Off) {
@@ -1678,12 +1681,14 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
     return 1;
 }
 
-// A gone Host, or no main window (as once mudlet is past its destructor), is
-// further along than the flags rather than healthier, so both count as
-// shutting down too.
+// A gone Host, a main window that has gone (as once mudlet is past its
+// destructor) or a pool being destroyed is further along than the flags rather
+// than healthier, so each counts as shutting down too. A run that never had a
+// main window is not.
 static bool shuttingDown(const QPointer<Host>& pHost)
 {
-    return !pHost || pHost->isClosingDown() || !TAppFrontend::hasView() || TAppFrontend::instance()->quitting();
+    const HostManager* pool = HostManager::self();
+    return !pHost || pHost->isClosingDown() || TAppFrontend::viewGone() || (pool && pool->goingDown()) || TAppFrontend::instance()->quitting();
 }
 
 // No documentation available in wiki - internal, test-only function
@@ -3328,7 +3333,7 @@ int TLuaInterpreter::closeProfile(lua_State* L)
         return 2;
     }
 
-    if (!TAppFrontend::instance()->requestProfileTabClose(profileName)) {
+    if (!TAppFrontend::instance()->requestProfileClose(profileName)) {
         return 0;
     }
     lua_pushboolean(L, true);

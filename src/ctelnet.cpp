@@ -51,6 +51,7 @@
 
 #include <QCoreApplication>
 #include <QDataStream>
+#include <QDeadlineTimer>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -82,10 +83,8 @@ constexpr std::chrono::milliseconds AUTO_LOGIN_LATE_PASSWORD_WINDOW = 5min;
 
 static std::chrono::milliseconds autoLoginDelay(const QString& iniKey, const int fallback)
 {
-    // Null until mudlet::setupConfig() runs, which a profile made with no main window never waits for
-    const QSettings* settings = MudletApp::getQSettings();
     bool parsed = false;
-    const int raw = settings ? settings->value(iniKey, fallback).toInt(&parsed) : fallback;
+    const int raw = MudletApp::getQSettings()->value(iniKey, fallback).toInt(&parsed);
     return std::chrono::milliseconds(qBound(0, parsed ? raw : fallback, AUTO_LOGIN_MAX_DELAY_MS));
 }
 
@@ -110,11 +109,7 @@ constexpr auto PASSWORD_MASK_TIMEOUT = 60s;
 // re-reserve their borders, the longest step of a resize:
 constexpr auto NAWS_SETTLE_TIME = 300ms;
 
-// How long to leave a game alone after a connection attempt to it failed, before
-// trying again for a profile that reconnects automatically. A refused connection
-// comes back at once, so without a wait here the retries are a tight loop. The
-// wait doubles with each failure in a row up to the maximum:
-constexpr auto FAILED_CONNECTION_RETRY_DELAY = 5s;
+// Cap on cTelnet::mFailedConnectionRetryDelay as it doubles
 constexpr auto FAILED_CONNECTION_RETRY_MAX_DELAY = 60s;
 
 // A latency reading is the wall time between writing a command and reading the
@@ -131,12 +126,6 @@ constexpr auto NETWORK_LATENCY_BEAT = 100ms;
 // freeze anyone would notice.
 constexpr auto NETWORK_LATENCY_MAX_STALL = 250ms;
 static_assert(NETWORK_LATENCY_MAX_STALL > NETWORK_LATENCY_BEAT, "a reading has to survive beats that arrive on time");
-// A command the game never answers would otherwise leave the next unrelated
-// line it sends - minutes later - being timed as that command's reply, so a
-// measurement unanswered this long is abandoned and nothing is published for
-// it. Set well past any wait still worth calling a ping rather than tight, so
-// that a game which is merely lagging badly still has its lag reported.
-constexpr auto NETWORK_LATENCY_TIMEOUT = 10s;
 
 constexpr size_t BUFFER_SIZE = 100000L;
 
@@ -358,6 +347,8 @@ cTelnet::~cTelnet()
     if (mpSocket && mpSocket->state() != QAbstractSocket::UnconnectedState) {
         // Block all signals from the socket first
         mpSocket->blockSignals(true);
+        // What was sent last, as from sysExitEvent, waits for the event loop, which may not run again first
+        mpSocket->flush();
         mpSocket->disconnectFromHost();
         // Force immediate closure without waiting
         mpSocket->abort();
@@ -878,14 +869,44 @@ void cTelnet::abortConnection()
     }
 }
 
+// Natively, as Qt cannot half-close a socket
+static void stopSending(const qintptr socketDescriptor)
+{
+#if defined(Q_OS_WINDOWS)
+    ::shutdown(static_cast<SOCKET>(socketDescriptor), SD_SEND);
+#else
+    ::shutdown(static_cast<int>(socketDescriptor), SHUT_WR);
+#endif
+}
+
 //The Host class wants us to end the connection (Profile is closing)
-void cTelnet::terminateConnection()
+void cTelnet::terminateConnection(const bool waitForTheGameToClose)
 {
 #if !defined(QT_NO_SSL)
     if (mCurrent_sslTsl) {
         abortConnection();
     } else {
 #endif
+        // The reads below re-enter the socket's slots, which return early once the profile is closing down
+        Q_ASSERT(!mpHost || mpHost->isClosingDown());
+        // ConnectedState only: Qt reads nothing from a closing socket
+        if (mpSocket && mpSocket->state() == QAbstractSocket::ConnectedState) {
+            // What was sent last, as from sysExitEvent, waits for the event loop, which may not run again first
+            mpSocket->flush();
+            // Unread incoming data makes our close a reset, as does data the game sends after it, and a Windows
+            // peer then discards what it has received but not read, the line just sent included. Bounded, as a
+            // game may never stop sending, nor close.
+            if (waitForTheGameToClose && mpSocket->bytesToWrite() == 0) {
+                stopSending(mpSocket->socketDescriptor());
+                const QDeadlineTimer deadline(1s);
+                while (!deadline.hasExpired() && mpSocket->state() == QAbstractSocket::ConnectedState && mpSocket->waitForReadyRead(static_cast<int>(deadline.remainingTime()))) {
+                    mpSocket->readAll();
+                }
+            }
+            for (int reads = 0; reads < 16 && mpSocket->state() == QAbstractSocket::ConnectedState && (mpSocket->bytesAvailable() > 0 || mpSocket->waitForReadyRead(0)); ++reads) {
+                mpSocket->readAll();
+            }
+        }
         disconnectIt();
 #if !defined(QT_NO_SSL)
     }
@@ -978,12 +999,12 @@ void cTelnet::handleFailedConnection()
     // Doubling for each failure in a row, because a game that is down tends to stay down for a
     // while and a fixed wait would spend the evening announcing that in the middle of whatever
     // else the player is reading:
-    const auto delay = std::min(FAILED_CONNECTION_RETRY_DELAY * (1 << std::min(mFailedConnectionCount - 1, 5)), FAILED_CONNECTION_RETRY_MAX_DELAY);
+    const std::chrono::milliseconds delay = std::min<std::chrono::milliseconds>(mFailedConnectionRetryDelay * (1 << std::min(mFailedConnectionCount - 1, 5)), FAILED_CONNECTION_RETRY_MAX_DELAY);
     //: %n is the number of seconds before Mudlet tries the connection again.
     postMessage(tr("[ INFO ]  - Trying again in %n second(s)...",
                    // Intentional comment to separate arguments
                    "",
-                   static_cast<int>(delay.count())));
+                   static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(delay).count())));
     mTimerFailedConnectionRetry->start(delay);
 }
 
@@ -1951,6 +1972,9 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         const bool armCharacterModeDetection = isGameCommand && !mCharacterModeDetected && mServerRequestedSGA && mpHost->isRemoteEchoingActive();
 
         const bool sent = socketOutRaw(outData);
+        if (!sent && isGameCommand) {
+            ++mGameCommandsNotWritten;
+        }
 
         if (sent && armCharacterModeDetection) {
             if (!mTimerCharacterModeDetect) {
@@ -2051,7 +2075,7 @@ void cTelnet::slot_networkLatencyBeat()
     mNetworkLatencyWorstStallNs = std::max(mNetworkLatencyWorstStallNs, nowNs - mNetworkLatencyLastBeatNs);
     mNetworkLatencyLastBeatNs = nowNs;
 
-    if (std::chrono::nanoseconds(nowNs) >= NETWORK_LATENCY_TIMEOUT) {
+    if (std::chrono::nanoseconds(nowNs) >= mNetworkLatencyTimeout) {
         abandonNetworkLatencyMeasurement();
     }
 }
@@ -5542,7 +5566,7 @@ void cTelnet::gotRest(std::string& mud_data)
             mMudData.append(mud_data, 0, i + 1);
             postKeepingDetectionTail();
 
-            if (!mIsTimerPosting && (mpPostingTimer->interval() != mTimeOut)) {
+            if (mpPostingTimer->interval() != mTimeOut) {
                 mpPostingTimer->setInterval(mTimeOut);
             }
 
@@ -5550,17 +5574,24 @@ void cTelnet::gotRest(std::string& mud_data)
             mIsTimerPosting = true;
 
             mMudData.assign(mud_data, i + 1, std::string::npos);
+            mPartialLineHeldSince.start();
         } else {
+            if (mMudData.empty()) {
+                mPartialLineHeldSince.start();
+            }
             mMudData += mud_data;
 
-            if (!mIsTimerPosting) {
-                if (mpPostingTimer->interval() != mTimeOut) {
-                    mpPostingTimer->setInterval(mTimeOut);
-                }
-
-                mpPostingTimer->start();
-                mIsTimerPosting = true;
+            if (mpPostingTimer->interval() != mTimeOut) {
+                mpPostingTimer->setInterval(mTimeOut);
             }
+
+            // Restarted by every read, not just the first: the timeout is how long the game has to fall quiet, so a
+            // line trickling in, in pieces each sooner than that but slower overall, must not be broken up mid-way.
+            // Capped, so a game that streams text without a newline still has it shown.
+            if (!mpPostingTimer->isActive() || mPartialLineHeldSince.elapsed() < std::max(10 * mTimeOut, 3000)) {
+                mpPostingTimer->start();
+            }
+            mIsTimerPosting = true;
         }
     } else {
         mMudData += mud_data;
@@ -6585,7 +6616,7 @@ void cTelnet::setKeepAlive(int socketHandle)
 
 #else // For OSes other than Windows:
 
-#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS) || defined(Q_OS_OPENBSD)
+#if defined(Q_OS_LINUX) || defined(Q_OS_DARWIN) || defined(Q_OS_OPENBSD)
     setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on));
 #else
     // FreeBSD always has the Keep-alive option enabled, so the above is not
@@ -6610,8 +6641,8 @@ void cTelnet::setKeepAlive(int socketHandle)
 #endif
 
     // Start keepalives after this interval of idleness, in seconds:
-#if defined(Q_OS_MACOS)
-    // TCP_KEEPIDLE is TCP_KEEPALIVE on MacOs
+#if defined(Q_OS_DARWIN)
+    // TCP_KEEPIDLE is TCP_KEEPALIVE on macOS and iOS
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPALIVE, &timeout, sizeof(timeout));
 #elif defined(Q_OS_OPENBSD)
     // There does not appear to be a per-socket option for TCP_KEEPALIVE on OpenBSD

@@ -26,6 +26,7 @@
 
 #include "Host.h"
 #include "MudletApp.h"
+#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -40,6 +41,7 @@
 #include <QFileInfo>
 #include <QFontMetrics>
 #include <QFrame>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QListWidget>
 #include <QMenu>
@@ -500,9 +502,6 @@ bool dlgMapper::isMapProgressVisible() const
 
 void dlgMapper::loadMapFromFile()
 {
-    if (!mpHost) {
-        return;
-    }
     //: File dialog filter. Keep the extensions (in braces) unchanged - they are used programmatically.
     auto filters = QStringList() << tr("Any map file (*.dat *.json *.xml)") << tr("Mudlet binary map (*.dat)") << tr("Mudlet JSON map (*.json)") << tr("Mudlet XML map (*.xml)") << tr("Any file (*)");
 
@@ -594,6 +593,15 @@ bool dlgMapper::eventFilter(QObject* watched, QEvent* event)
         }
     }
     return QWidget::eventFilter(watched, event);
+}
+
+// A floating map is a window of its own, where a key none of its widgets used would go no further
+void dlgMapper::keyPressEvent(QKeyEvent* event)
+{
+    TMainConsole* pConsole = mpHost ? mpHost->mainConsoleView() : nullptr;
+    if (!pConsole || !pConsole->mpCommandLine || !pConsole->mpCommandLine->takeKeyPress(event)) {
+        QWidget::keyPressEvent(event);
+    }
 }
 
 int dlgMapper::getCurrentShownAreaIndex()
@@ -981,7 +989,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
     glWidget->setVisible(is3DMode);
     if (glWidget->isVisible()) {
         widget_3DControls->setVisible(true);
-        widget_playerIconControls->setVisible(mpHost && mpHost->experimentEnabled("experiment.3d-player-icon")
+        widget_playerIconControls->setVisible(mpHost->experimentEnabled("experiment.3d-player-icon")
 #ifdef DEBUG_PLAYER_ICON_CONTROLS
                                               && true
 #else
@@ -1391,7 +1399,7 @@ void dlgMapper::slot_showSaveWarningMenu()
 
     auto* retryAction = new QAction(tr("Retry save"), this);
     connect(retryAction, &QAction::triggered, this, [this]() {
-        if (mpHost && mpHost->saveMapFile(QString())) {
+        if (mpHost->saveMapFile(QString())) {
             mpMap->setSaveError(false);
         }
     });

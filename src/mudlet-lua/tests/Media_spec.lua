@@ -120,6 +120,17 @@ describe("Media playback functions validate their parameters", function()
       assertArgError(function() playVideoFile({name = "x.mp4", volume = "loud"}) end, "value for volume as number expected, got string!")
       assertArgError(function() playVideoFile({name = "x.mp4", loops = {}}) end, "value for loops as number expected, got table!")
     end)
+
+    -- After the arguments are checked, so a mistake in them still raises
+    it("says so when there is no main window to play a video in", function()
+      -- getMousePosition() has no answer only when there is no main window
+      if getMousePosition() then
+        pending("there is a main window")
+      end
+      local played, err = playVideoFile({name = "x.mp4"})
+      assert.is_nil(played)
+      assert.are.equal("the profile has no main window", err)
+    end)
   end)
 
   describe("getPlayingSounds", function()

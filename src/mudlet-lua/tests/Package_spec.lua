@@ -4908,6 +4908,12 @@ describe("Tests installing an archive named after one of the profile's own folde
       pending("builds its archive with the zip command")
       return
     end
+    -- getMousePosition() has no answer only when there is no main window, which puts up no dialog;
+    -- the other install would then start in whichever spec runs next
+    if not getMousePosition() then
+      pending("there is no main window to put up an unpacking dialog")
+      return
+    end
     local renamed = "mudlet-spec-reentrant"
     local big = scratchDirectory .. "/big"
     local small = scratchDirectory .. "/small"
@@ -6753,6 +6759,30 @@ describe("Tests uninstalling the gui-drop package", function()
     assert.is_true(ok, tostring(err))
     return timers
   end
+
+  -- the starter UI builds its sections hidden and shows them once their contents are in
+  it("leaves a container shown that was shown again right after something was added to it while hidden", function()
+    if not packageInstalled(name) then
+      pending("gui-drop is not installed in this profile")
+      return
+    end
+    local container = Adjustable.Container:new({name = "packageSpecShownAgain", x = 0, y = 0, width = 50, height = 50, autoLoad = false, autoSave = false})
+    defer(function()
+      container:delete()
+      Adjustable.Container.all[container.name] = nil
+      local index = table.index_of(Adjustable.Container.all_windows, container.name)
+      if index then
+        table.remove(Adjustable.Container.all_windows, index)
+      end
+    end)
+    container:hide()
+    Geyser.Label:new({name = "packageSpecShownAgainChild", x = 0, y = 0, width = 10, height = 10}, container)
+    container:show()
+
+    pumpEvents(100)
+
+    assert.is_false(container.hidden)
+  end)
 
   it("stops taking dropped images but keeps the ones already dropped working", function()
     if not packageInstalled(name) then

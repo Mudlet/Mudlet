@@ -29,7 +29,9 @@
 #include <QDebug>
 #include <QTimer>
 #include <QTimerEvent>
+#if defined(INCLUDE_DISCORD_RPC)
 #include <QLibrary>
+#endif
 #include "../3rdparty/discord/rpc/include/discord_register.h"
 #include "../3rdparty/discord/rpc/include/discord_rpc.h"
 
@@ -264,7 +266,9 @@ private:
     // Mudlet:
     QMap<Host*, QString>mHostApplicationIDs;
 
+#if defined(INCLUDE_DISCORD_RPC)
     QScopedPointer<QLibrary> mpLibrary;
+#endif
 
     // Used to hold the per profile data independently of whichever application id
     // it will be used with:

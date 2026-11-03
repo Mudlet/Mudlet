@@ -99,6 +99,23 @@ private slots:
     QCOMPARE(stub.mHrefs, QStringList(opens(qsl("https://wiki.example/Page"))));
     QCOMPARE(stub.mHints, QStringList(qsl("Wiki page")));
   }
+
+  // The tooltip must show the mail address that will open, not the attachment the game asked for
+  void testMailHintShowsTheAddressThatOpens() {
+    TMxpStubClient stub;
+    feed(stub, "<A href=\"mailto:x@example.invalid?attachment=/etc/hostname\">Mail</A>");
+
+    QCOMPARE(stub.mHrefs, QStringList(opens(qsl("mailto:x@example.invalid"))));
+    QCOMPARE(stub.mHints, QStringList(UntrustedText::forTarget(qsl("mailto:x@example.invalid"))));
+  }
+
+  void testBareMailAShowsTheAddressThatOpens() {
+    TMxpStubClient stub;
+    feed(stub, "<A>mailto:x@example.invalid?attachment=/etc/hostname</A>");
+
+    QCOMPARE(stub.mHrefs, QStringList(opens(qsl("mailto:x@example.invalid"))));
+    QCOMPARE(stub.mHints, QStringList(UntrustedText::forTarget(qsl("mailto:x@example.invalid"))));
+  }
 };
 
 #include "TMxpLinkTagHandlerTest.moc"

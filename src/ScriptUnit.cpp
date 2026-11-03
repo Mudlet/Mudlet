@@ -33,6 +33,7 @@
 #include <QSet>
 #include <QStringList>
 
+#include <algorithm>
 #include <functional>
 #include <utility>
 
@@ -139,6 +140,13 @@ void ScriptUnit::stopAllTriggers()
     for (auto script : mScriptRootNodeList) {
         script->setIsActive(false);
     }
+}
+
+void ScriptUnit::moveRootNodesToEnd(const std::vector<int>& ids)
+{
+    std::stable_partition(mScriptRootNodeList.begin(), mScriptRootNodeList.end(), [&ids](TScript* pScript) {
+        return std::ranges::find(ids, pScript->getID()) == ids.end();
+    });
 }
 
 void ScriptUnit::addScriptRootNode(TScript* pT, int parentPosition, int childPosition)

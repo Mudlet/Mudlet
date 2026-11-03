@@ -2375,6 +2375,11 @@ void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QStr
     }
 }
 
+bool TMedia::canShowVideo() const
+{
+    return isSignalConnected(QMetaMethod::fromSignal(&TMedia::signal_setupVideoOutput));
+}
+
 bool TMedia::setupVideo(const std::shared_ptr<TMediaPlayer>& player)
 {
     if (!player) {

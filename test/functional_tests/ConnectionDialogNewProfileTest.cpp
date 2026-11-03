@@ -116,6 +116,39 @@ private slots:
         QCOMPARE(pDialog->readProfileData(mProfileName, qsl("port")), mProfilePort);
         QCOMPARE(pDialog->readProfileData(mProfileName, qsl("ssl_tsl")), qsl("0"));
     }
+
+    void test_thePortMustBeOneAGameServerCanUse_data()
+    {
+        QTest::addColumn<QString>("port");
+        QTest::addColumn<QString>("refusal");
+        QTest::newRow("1") << qsl("1") << QString();
+        QTest::newRow("65535") << qsl("65535") << QString();
+        QTest::newRow("65536") << qsl("65536") << qsl("Port number must be 65535 or less.");
+        // Past INT_MAX, so they do not convert to an int at all
+        QTest::newRow("2147483648") << qsl("2147483648") << qsl("Port number must be 65535 or less.");
+        QTest::newRow("99999999999") << qsl("99999999999") << qsl("Port number must be 65535 or less.");
+        QTest::newRow("-1") << qsl("-1") << qsl("You have to enter a number. Other characters are not permitted.");
+        // The tutorial's profile is given 0
+        QTest::newRow("0") << qsl("0") << QString();
+    }
+
+    void test_thePortMustBeOneAGameServerCanUse()
+    {
+        QFETCH(QString, port);
+        QFETCH(QString, refusal);
+        auto* pDialog = dialog();
+        QVERIFY2(pDialog, "No connection dialog to test against");
+        pDialog->slot_addProfile();
+        pDialog->host_name_entry->setText(mProfileUrl);
+        pDialog->port_entry->setText(port);
+        const QString shown = pDialog->notificationAreaMessageBox->text();
+        if (refusal.isEmpty()) {
+            QVERIFY2(!shown.contains(qsl("Port number")) && !shown.contains(qsl("enter a number")), qPrintable(shown));
+        } else {
+            QVERIFY2(shown.contains(refusal), qPrintable(shown));
+            QVERIFY2(refusal.startsWith(qsl("Port number")) || !shown.contains(qsl("Port number")), qPrintable(shown));
+        }
+    }
 };
 
 #include "ConnectionDialogNewProfileTest.moc"

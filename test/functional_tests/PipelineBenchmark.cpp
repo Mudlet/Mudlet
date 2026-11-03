@@ -1399,6 +1399,89 @@ private slots:
         emitMetric("display_overlay_cache_reused", static_cast<qint64>((small.cacheReused && large.cacheReused) ? 1 : 0));
     }
 
+    // A real package's triggers - both those in its XML and the temporary ones its
+    // scripts make at load - against a corpus written for it, so the trigger
+    // engine is timed on a system players run rather than on a synthetic set.
+    // Opt-in: MUDLET_BENCH_PACKAGE names the package and
+    // MUDLET_BENCH_PACKAGE_CORPUS the bytes to feed, split into one read per
+    // IAC GA the way a game sends a prompt-terminated packet.
+    void benchPackage()
+    {
+        const QString packagePath = qEnvironmentVariable("MUDLET_BENCH_PACKAGE");
+        const QString corpusPath = qEnvironmentVariable("MUDLET_BENCH_PACKAGE_CORPUS");
+        if (packagePath.isEmpty() || corpusPath.isEmpty()) {
+            QSKIP("set MUDLET_BENCH_PACKAGE and MUDLET_BENCH_PACKAGE_CORPUS to time a package's triggers");
+        }
+        QFile corpusFile(corpusPath);
+        QVERIFY2(corpusFile.open(QIODevice::ReadOnly), qPrintable(qsl("cannot read %1").arg(corpusPath)));
+        const QByteArray corpus = corpusFile.readAll();
+        QVERIFY2(!corpus.isEmpty(), qPrintable(qsl("%1 is empty").arg(corpusPath)));
+        QByteArrayList packets;
+        const QByteArray goAhead("\xff\xf9");
+        qsizetype start = 0;
+        while (start < corpus.size()) {
+            const qsizetype ga = corpus.indexOf(goAhead, start);
+            const qsizetype end = ga < 0 ? corpus.size() : ga + goAhead.size();
+            packets << corpus.mid(start, end - start);
+            start = end;
+        }
+        // One packet would be the flood path, the opposite of what a prompt-driven game sends
+        QVERIFY2(packets.size() > 1, "the corpus has no IAC GA to split it into packets at");
+        const int corpusLines = static_cast<int>(corpus.count('\n'));
+
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY(noTriggersAreRunningYet(host));
+
+        auto feedBestPass = [&](int passes) {
+            double best = std::numeric_limits<double>::max();
+            for (int i = 0; i < passes; ++i) {
+                QElapsedTimer timer;
+                timer.start();
+                for (QByteArray packet : packets) {
+                    host->mTelnet.loopbackTest(packet);
+                }
+                best = std::min(best, timer.nsecsElapsed() / 1.0e9);
+            }
+            return best;
+        };
+
+        const double textSeconds = feedBestPass(kFeedPasses);
+
+        const auto [installed, message] = host->installPackage(packagePath, enums::PackageModuleType::Package, true);
+        QVERIFY2(installed, qPrintable(message));
+        // sysInstall and sysInstallPackage are queued for a later turn of the event loop, and the
+        // package's handlers for them may make triggers of their own; zero timers run in queue order
+        bool installEventsRaised = false;
+        QTimer::singleShot(0ms, host, [&installEventsRaised] {
+            installEventsRaised = true;
+        });
+        QTRY_VERIFY(installEventsRaised);
+        // The install also queues a profile save, which would otherwise write through the timed passes
+        host->waitForProfileSave();
+        const auto [report, total, patterns, temporary, active, activePatterns] = host->getTriggerUnit()->assembleReport();
+        Q_UNUSED(report)
+        QVERIFY2(temporary > 0, "the package made no temporary triggers - its scripts did not run, so only half of it would be timed");
+        QVERIFY2(activePatterns > 0, "none of the package's triggers is active, so nothing would be matched");
+
+        const double triggerSeconds = feedBestPass(kFeedPasses);
+        TBuffer& buffer = host->mainConsoleView()->buffer;
+        const int bufferedLines = buffer.getLastLineNumber();
+        // A full scrollback drops a batch of its oldest lines, so a longer capture cannot all stay in it
+        const int expectedLines = std::min(corpusLines, buffer.mLinesLimit - buffer.mBatchDeleteSize);
+        QVERIFY2(bufferedLines >= expectedLines, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
+
+        emitMetric("pkg_corpus_lines", static_cast<qint64>(corpusLines));
+        emitMetric("pkg_corpus_packets", static_cast<qint64>(packets.size()));
+        emitMetric("pkg_triggers_total", static_cast<qint64>(total));
+        emitMetric("pkg_triggers_temporary", static_cast<qint64>(temporary));
+        emitMetric("pkg_triggers_active", static_cast<qint64>(active));
+        emitMetric("pkg_patterns_total", static_cast<qint64>(patterns));
+        emitMetric("pkg_text_best_pass_ms", textSeconds * 1000.0);
+        emitMetric("pkg_trigger_best_pass_ms", triggerSeconds * 1000.0);
+        emitMetric("pkg_trigger_overhead_ms", (triggerSeconds - textSeconds) * 1000.0);
+    }
+
 private:
     enum class DefaultPackages { Skip, Install };
 
