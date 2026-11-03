@@ -2902,18 +2902,27 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
                         bgColor = lua_tostring(L, -1);
                     }
                 } else if (!key.compare(QLatin1String("filter"), Qt::CaseInsensitive)) {
-                    if (!checkBoolArg(L, __func__, -1, qPrintable(key))) {
-                        errorPushed = true;
-                        break;
+                    // as multiline: the positional form reads a number
+                    if (lua_isnumber(L, -1)) {
+                        filter = lua_tonumber(L, -1) != 0;
+                    } else {
+                        if (!checkBoolArg(L, __func__, -1, qPrintable(key))) {
+                            errorPushed = true;
+                            break;
+                        }
+                        filter = lua_toboolean(L, -1);
                     }
-                    filter = lua_toboolean(L, -1);
                     hasFilter = true;
                 } else if (!key.compare(QLatin1String("matchAll"), Qt::CaseInsensitive)) {
-                    if (!checkBoolArg(L, __func__, -1, qPrintable(key))) {
-                        errorPushed = true;
-                        break;
+                    if (lua_isnumber(L, -1)) {
+                        matchAll = lua_tonumber(L, -1) != 0;
+                    } else {
+                        if (!checkBoolArg(L, __func__, -1, qPrintable(key))) {
+                            errorPushed = true;
+                            break;
+                        }
+                        matchAll = lua_toboolean(L, -1);
                     }
-                    matchAll = lua_toboolean(L, -1);
                     hasMatchAll = true;
                 } else if (!key.compare(QLatin1String("highlightFgColor"), Qt::CaseInsensitive) || !key.compare(QLatin1String("highlightForegroundColor"), Qt::CaseInsensitive)) {
                     if (lua_isnumber(L, -1)) {

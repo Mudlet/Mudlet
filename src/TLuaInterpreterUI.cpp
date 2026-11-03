@@ -741,18 +741,21 @@ int TLuaInterpreter::createLabel(lua_State* L)
                     height = static_cast<int>(lua_tointeger(L, -1));
                     hasHeight = true;
                 } else if (!key.compare(QLatin1String("fillBackground"), Qt::CaseInsensitive)) {
-                    if (!checkBoolArg(L, __func__, -1, "fillBackground")) {
+                    // the positional form takes 0/1 as well as a boolean
+                    if (!lua_isboolean(L, -1) && !lua_isnumber(L, -1)) {
+                        errorArgumentType(L, __func__, -1, "fillBackground", "boolean/number (0/1)");
                         errorPushed = true;
                         break;
                     }
-                    fillBackground = lua_toboolean(L, -1);
+                    fillBackground = lua_isboolean(L, -1) ? lua_toboolean(L, -1) : lua_tointeger(L, -1) != 0;
                     hasFillBackground = true;
                 } else if (!key.compare(QLatin1String("clickthrough"), Qt::CaseInsensitive) || !key.compare(QLatin1String("enableClickthrough"), Qt::CaseInsensitive)) {
-                    if (!checkBoolArg(L, __func__, -1, "clickthrough")) {
+                    if (!lua_isboolean(L, -1) && !lua_isnumber(L, -1)) {
+                        errorArgumentType(L, __func__, -1, "clickthrough", "boolean/number (0/1)");
                         errorPushed = true;
                         break;
                     }
-                    clickthrough = lua_toboolean(L, -1);
+                    clickthrough = lua_isboolean(L, -1) ? lua_toboolean(L, -1) : lua_tointeger(L, -1) != 0;
                 }
 
                 lua_pop(L, 1); // Remove value, keep key for next iteration
