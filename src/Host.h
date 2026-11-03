@@ -309,6 +309,10 @@ public:
     bool isClosingDown() const { return mIsClosingDown; }
     // Also true while a close with no view runs sysExitEvent and its save, before isClosingDown()
     bool closeStarted() const { return mIsClosingDown || mClosingWithNoView; }
+    // For a profile whose deletion is decided but waits, as a deleted session's pool does, so that it does not
+    // dial the game meanwhile; a dial already under way is called off with it
+    void markDeletionPending();
+    bool deletionPending() const { return mDeletionPending; }
     bool isClosingForced() const { return mForcedClose; }
     bool requestClose();
     // A main console raises sysExitEvent as it closes; a profile that never had one gets it from this.
@@ -321,6 +325,9 @@ public:
     bool deletionMustWait();
     // What deletionMustWait() answers, without asking anything to stop
     bool deletionWouldWait() const;
+    // A script, nested event loop, map operation or profile save: what deletionWouldWait() waits for, bar a
+    // reconnect's event loop, which only a deletion must outwait
+    bool busyRunning() const;
 
     // The profile load, in this order, as the GUI and HostManager::openProfile() run it, the GUI doing its
     // window work between the steps. The first returns true when the profile has no save of its own yet,
@@ -950,6 +957,7 @@ private:
     std::unique_ptr<TNullConsoleFrontend> mpNullConsoleFrontend;
     bool mExitEventOwed = true;
     bool mClosingWithNoView = false;
+    bool mDeletionPending = false;
 
 public:
     cTelnet mTelnet;

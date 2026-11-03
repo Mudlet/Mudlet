@@ -49,14 +49,26 @@ using namespace std::chrono_literals;
 namespace {
 
 // TNullAppFrontend's close waits only for a load, a nested event loop and a save wait, and leaves a running
-// script or map operation to deletionMustWait(); deleting the whole pool cannot wait that way, so all count here
-bool poolBusy(const HostManager& pool)
+// script or map operation to deletionMustWait(); deleting the whole pool cannot wait that way, so all count here.
+// A save deletes nothing, so a reconnect's event loop holds up only a deletion.
+bool poolBusy(const HostManager& pool, const bool forDeletion)
 {
     if (pool.loadingProfile()) {
         return true;
     }
     for (const auto& pHost : pool.hostList()) {
-        if (pHost->deletionWouldWait()) {
+        if (forDeletion ? pHost->deletionWouldWait() : pHost->busyRunning()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Told apart from poolBusy(), whose refusals name a script or a save
+bool poolReconnecting(const HostManager& pool)
+{
+    for (const auto& pHost : pool.hostList()) {
+        if (pHost->mTelnet.connectRunningEventLoop()) {
             return true;
         }
     }
@@ -86,7 +98,8 @@ int gSignalsBeingHandedOut = 0;
 void deletePoolOnceIdle(HostManager* pPool)
 {
     gpClosingPool = pPool;
-    if (gSignalsBeingHandedOut || poolBusy(*pPool) || resetPending(*pPool) || HostManager::releasingProfile()) {
+    if (gSignalsBeingHandedOut || poolBusy(*pPool, true) || resetPending(*pPool) || HostManager::releasingProfile()) {
+        pPool->markDeletionPending();
         QTimer::singleShot(50ms, QCoreApplication::instance(), [pPool]() {
             deletePoolOnceIdle(pPool);
         });
@@ -680,7 +693,13 @@ bool THeadlessSession::shutdown(const bool save)
     if (!mpPool) {
         return true;
     }
-    if (poolBusy(*mpPool)) {
+    if (poolReconnecting(*mpPool)) {
+        qWarning() << "THeadlessSession: shutdown() while a profile reconnects is refused; call it once the reconnect has returned";
+        //: Error from a frontend with no window that was asked to close its profiles while one was in the middle of reconnecting to its game
+        mErrorString = tr("A profile is reconnecting, so its profiles cannot close until that has returned.");
+        return false;
+    }
+    if (poolBusy(*mpPool, true)) {
         qWarning() << "THeadlessSession: shutdown() while a profile runs a script or waits for its save is refused; call it once that has returned";
         //: Error from a frontend with no window that was asked to close its profiles while one ran a script or waited for its save to be written
         mErrorString = tr("A profile is running a script or waiting for its save, so its profiles cannot close until that has ended.");
@@ -691,6 +710,7 @@ bool THeadlessSession::shutdown(const bool save)
     const QPointer<THeadlessSession> self(this);
     mShuttingDown = true;
     gpClosingPool = mpPool.get();
+    mpPool->markDeletionPending();
     while (self && resetPending(*mpPool)) {
         QCoreApplication::processEvents(QEventLoop::WaitForMoreEvents);
     }
@@ -740,7 +760,7 @@ bool THeadlessSession::save()
         mErrorString = tr("No profile is open.");
         return false;
     }
-    if (poolBusy(*mpPool)) {
+    if (poolBusy(*mpPool, false)) {
         qWarning() << "THeadlessSession: save() while a profile runs a script or waits for its save is refused; call it once that has returned";
         //: Error from a frontend with no window that was asked to save its profiles while one ran a script or waited for its save to be written
         mErrorString = tr("A profile is running a script or waiting for its save, so its profiles cannot be saved until that has ended.");
