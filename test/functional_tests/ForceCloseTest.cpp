@@ -28,6 +28,7 @@
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
+#include "TLuaInterpreter.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -156,6 +157,37 @@ private slots:
         QVERIFY2(askedTitle.isEmpty(), qPrintable(qsl("forceClose() asked \"%1\" about a profile it should have forced closed").arg(askedTitle)));
         QVERIFY2(mWindow.isNull(), "forceClose() did not close the window");
         QVERIFY2(lateHost.isNull(), "the window closed but left the late profile loaded");
+    }
+
+    // A save still running when the close comes would turn the close's own save away, losing whatever changed after it began
+    void test_aSaveRunningAtTheCloseDoesNotLoseTheLastChanges()
+    {
+        const QString name = mProfileNames.first();
+        QVERIFY(provisionProfileOnDisk(name));
+        mWindow->startAutoLogin({name}, true);
+        QPointer<Host> host = HostManager::self()->getHost(name);
+        QVERIFY2(host, "the profile did not load");
+        host->waitForProfileSave();
+        const QString lateChange = qsl("forceclose-late-change");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("registerAnonymousEventHandler('sysExitEvent', function()\n"
+                                                                       "  assert(saveProfile(getMudletHomeDir() .. '/current', 'forceclose-inflight'))\n"
+                                                                       "  permAlias('%1', '', '^%1$', '')\n"
+                                                                       "end)")
+                                                                           .arg(lateChange)));
+
+        mWindow->forceClose();
+
+        QTRY_VERIFY2_WITH_TIMEOUT(mWindow.isNull(), "forceClose() never closed the window", 30s);
+        const QDir current(MudletApp::getMudletPath(enums::profileXmlFilesPath, name));
+        QVERIFY2(current.exists(qsl("forceclose-inflight.xml")), "SETUP: the sysExitEvent handler's save was not made, so no save was running at the close");
+        bool saved = false;
+        for (const auto& entry : current.entryList(QStringList{qsl("*.xml")}, QDir::Files)) {
+            QFile file(current.absoluteFilePath(entry));
+            if (entry != qsl("forceclose-inflight.xml") && file.open(QFile::ReadOnly | QFile::Text) && QString::fromUtf8(file.readAll()).contains(lateChange)) {
+                saved = true;
+            }
+        }
+        QVERIFY2(saved, "the close did not save the change made after the running save began");
     }
 };
 

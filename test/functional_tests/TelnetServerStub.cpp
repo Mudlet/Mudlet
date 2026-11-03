@@ -85,7 +85,6 @@ void TelnetServerStub::onNewConnection()
     mpClient = client;
     mHadClient = true;
     mReceived.clear();
-    mReceivedData.clear();
     qInfo().noquote() << qsl("🔌 Client connected: %1").arg(client->peerAddress().toString());
 
     if (!mPendingData.isEmpty()) {
@@ -133,8 +132,8 @@ void TelnetServerStub::collectNawsUpdates(QTcpSocket* socket)
         return;
     }
     const QByteArray incoming = socket->readAll();
+    mReceivedSoFar.append(incoming);
     mReceived.append(incoming);
-    mReceivedData.append(incoming);
 
     // IAC SB NAWS <width hi> <width lo> <height hi> <height lo> IAC SE, with any
     // of those four bytes sent twice when it is 0xFF - which a width or height

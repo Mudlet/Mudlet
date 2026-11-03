@@ -118,8 +118,19 @@ void TimerUnit::uninstall(const QString& packageName)
 
 void TimerUnit::stopAllTriggers()
 {
+    QList<TTimer*> armedWithBrokenScript;
+    for (auto* pT : std::as_const(mTimerMap)) {
+        if (!pT->mOK_code && pT->mpQTimer->isActive()) {
+            armedWithBrokenScript << pT;
+        }
+    }
     for (auto timer : mTimerRootNodeList) {
         timer->disableTimer(timer->getID());
+    }
+    for (auto* pT : std::as_const(armedWithBrokenScript)) {
+        if (!pT->mpQTimer->isActive()) {
+            mBrokenScriptTimersStopped.insert(pT->getID());
+        }
     }
 }
 
@@ -145,6 +156,13 @@ void TimerUnit::reenableAllTriggers()
         }
         timer->enableTimer(timer->getID());
     }
+    for (const int id : std::as_const(mBrokenScriptTimersStopped)) {
+        TTimer* pT = getTimerPrivate(id);
+        if (pT && !mCleanupSet.contains(pT) && !uninstallList.contains(pT) && pT->canBeUnlocked() && pT->keepArmedWithBrokenScript()) {
+            pT->mpQTimer->start();
+        }
+    }
+    mBrokenScriptTimersStopped.clear();
 }
 
 
@@ -184,6 +202,7 @@ void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int
         return;
     }
 
+    const bool armedOffsetTimer = pChild->isOffsetTimer() && pChild->mpQTimer->isActive();
     pChild->disableTimer(childID);
 
     if (pOldParent) {
@@ -203,7 +222,10 @@ void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int
     // enableTimer() skips a timer that is switched off, and whether a zero time
     // is allowed depends on the parent
     pChild->validateTime();
-    pChild->enableTimer(childID);
+    // An offset timer is armed by its parent firing, not by being moved under it
+    if (!pChild->isOffsetTimer() || pChild->isFolder() || armedOffsetTimer) {
+        pChild->enableTimer(childID);
+    }
 }
 
 void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
@@ -418,7 +440,9 @@ bool TimerUnit::enableTimer(const QString& name)
         }
 
         found = true;
-        emit mpHost->signal_timerToggled(pT->getID());
+        if (!pT->isTemporary() || pT->getParent()) {
+            emit mpHost->signal_timerToggled(pT->getID());
+        }
     }
     return found;
 }
@@ -439,7 +463,9 @@ bool TimerUnit::disableTimer(const QString& name)
 
         pT->disableTimer();
         found = true;
-        emit mpHost->signal_timerToggled(pT->getID());
+        if (!pT->isTemporary() || pT->getParent()) {
+            emit mpHost->signal_timerToggled(pT->getID());
+        }
     }
     return found;
 }
@@ -469,6 +495,19 @@ std::vector<int> TimerUnit::findItems(const QString& name, const bool exactMatch
         }
     }
     return ids;
+}
+
+bool TimerUnit::pendingDeletion(TTimer* pItem) const
+{
+    if (!hasPendingDeletes()) {
+        return false;
+    }
+    for (auto* pAncestor = pItem; pAncestor; pAncestor = pAncestor->getParent()) {
+        if (mCleanupSet.contains(pAncestor) || uninstallList.contains(pAncestor)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool TimerUnit::killTimer(const QString& name)

@@ -137,7 +137,7 @@ else()
 endif()
 
 # Set APP_VERSION
-set(APP_VERSION 5.0.0)
+set(APP_VERSION 5.1.0)
 
 # Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD. An explicitly
 # empty value must be distinguished from an unset one so release builds (CI exports
@@ -161,12 +161,17 @@ message(STATUS "Value written to app-build.txt file: ${BUILD_VALUE}")
 set(APP_BUILD ${BUILD_VALUE} CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 set(LIB_MUDLET_TARGET "mudlet_core")
+set(LIB_MUDLET_APP_TARGET "mudlet_app")
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 # Static analysis support - always included, but only active when configured with
 # -DENABLE_STATIC_ANALYSIS=ON (see cmake/StaticAnalysis.cmake for details)
 include(StaticAnalysis)
+
+# Profile-guided optimisation - inactive unless configured with -DMUDLET_PGO=GENERATE
+# or USE (see cmake/ProfileGuidedOptimization.cmake for the steps)
+include(ProfileGuidedOptimization)
 
 include(IncludeOptionalModule)
 
@@ -183,6 +188,9 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS
 include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER
                         OPTION_VARIABLE USE_3DMAPPER
                         READABLE_NAME "3D mapper")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_MCPSERVER
+                        OPTION_VARIABLE USE_MCPSERVER
+                        READABLE_NAME "MCP server")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_SHADER_HOT_RELOAD
                         OPTION_VARIABLE USE_SHADER_HOT_RELOAD
                         READABLE_NAME "shader hot-reloading"
@@ -191,9 +199,36 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_MEMORY_TRACKING
                         OPTION_VARIABLE USE_MEMORY_TRACKING
                         READABLE_NAME "memory tracking"
                         DEFAULT OFF)
+# Off by default on a Linux without Debian's multiarch layout, whose Lua modules
+# live where 3rdparty/lua51 does not look
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT CMAKE_LIBRARY_ARCHITECTURE)
+  set(BUNDLED_LUA_DEFAULT OFF)
+else()
+  set(BUNDLED_LUA_DEFAULT ON)
+endif()
+include_optional_module(ENVIRONMENT_VARIABLE WITH_BUNDLED_LUA
+                        OPTION_VARIABLE USE_BUNDLED_LUA
+                        READABLE_NAME "bundled Lua 5.1"
+                        DEFAULT ${BUNDLED_LUA_DEFAULT})
+# On by default: it links mudlet_core alone, so building it is what proves the core still runs without
+# Qt Widgets, and the teardown tests run it
+include_optional_module(ENVIRONMENT_VARIABLE WITH_HEADLESS
+                        OPTION_VARIABLE USE_HEADLESS
+                        READABLE_NAME "headless runner")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
+# Each of these uses something an Android or iOS build of mudlet_core cannot have; see
+# "Leaving out what a mobile build cannot use" in docs/platform-builds.md
+include_optional_module(ENVIRONMENT_VARIABLE WITH_SPAWN
+                        OPTION_VARIABLE USE_SPAWN
+                        READABLE_NAME "spawn() of processes")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_DISCORD_RPC
+                        OPTION_VARIABLE USE_DISCORD_RPC
+                        READABLE_NAME "Discord RPC library loading")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_SPEECH_ENGINES
+                        OPTION_VARIABLE USE_SPEECH_ENGINES
+                        READABLE_NAME "Vosk and sherpa-onnx speech engine loading")
 
 find_package(Qt6 6.8.2 REQUIRED)
 
@@ -212,9 +247,9 @@ git_submodule_init(
   CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
-  git_submodule_init(
-    CHECK_FILE "3rdparty/qt-tags-widget/CMakeLists.txt" SUBMODULE_PATH
-    "3rdparty/qt-tags-widget" READABLE_NAME "qt-tags-widget widget")
+git_submodule_init(
+  CHECK_FILE "3rdparty/qt-tags-widget/src/qtagedit.cpp" SUBMODULE_PATH
+  "3rdparty/qt-tags-widget" READABLE_NAME "qt-tags-widget widget")
 
 # TODO: On macOS, we need to build qtkeychain from source because Homebrew's
 # qtkeychain package is built against Homebrew's Qt, which is incompatible with
@@ -327,10 +362,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_compile_options(edbee-lib PRIVATE -Wno-sfinae-incomplete)
 endif()
 add_subdirectory(3rdparty/communi)
-# Upstream ships a standalone library, so add_subdirectory() would adopt its install() rules and
-# put its dev files into every package. EXCLUDE_FROM_ALL keeps them out (observed, not documented
-# CMake behaviour, so the packaging scripts check the staged tree); mudlet_core still links it.
-add_subdirectory(3rdparty/qt-tags-widget EXCLUDE_FROM_ALL)
+if(USE_BUNDLED_LUA)
+  add_subdirectory(3rdparty/lua51)
+endif()
 add_subdirectory(translations/translated)
 add_subdirectory(src)
 

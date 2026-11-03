@@ -1,7 +1,25 @@
 describe("PCRE regex cases with tempRegexTrigger", function()
+    local dockWasShowing
+    local originalBorders
+
+    setup(function()
+        dockWasShowing = BaseUI ~= nil and BaseUI.container ~= nil and not BaseUI.container.hidden
+        originalBorders = getBorderSizes()
+    end)
 
     before_each(function()
     _G.matches = nil
+    end)
+
+    -- Lines such as "Bob tells you 'hi'" match the base UI's chat capture
+    -- triggers, which dock its chat window on the right border and keep it there,
+    -- leaving the main console narrower for every later spec; BaseUI.hide() is
+    -- how the base UI itself gives that border back
+    after_each(function()
+        if not dockWasShowing and BaseUI and BaseUI.container and not BaseUI.container.hidden then
+            BaseUI.container:hide()
+            BaseUI.container:adjustBorder()
+        end
     end)
 
     -- start/end anchors (^ and $)
@@ -467,6 +485,44 @@ describe("PCRE regex cases with tempRegexTrigger", function()
             assert.are.equal(1, result.selected)
             assert.are.equal("beta", result.selection)
         end)
+
+        -- scripts blank a capture and rebuild it from matches, which they may
+        -- read for the first time only after the replace(); busted hands out
+        -- the globals metatable, which builds matches up front until rearmed
+        it("keeps what the game sent in matches when first read after replace()", function()
+            rearmLazyGlobals()
+            local captured
+            local id = tempRegexTrigger("^cgReplace (\\w+) (\\w+)$", function()
+                selectCaptureGroup(2)
+                replace("")
+                captured = matches[2]
+            end, 1)
+            finally(function() killTrigger(id) end)
+            feedTriggers("\ncgReplace alpha beta\n")
+            assert.are.equal("alpha", captured)
+        end)
+
+        it("selects the latest replacement after replacing a group twice", function()
+            rearmLazyGlobals()
+            local result = {}
+            local id = tempRegexTrigger("^cgReplace (\\w+) (\\w+)$", function()
+                selectCaptureGroup(2)
+                replace("x")
+                selectCaptureGroup(2)
+                replace("yyy")
+                result.selected = selectCaptureGroup(2)
+                result.selection = getSelection()
+                deselect()
+                result.line = getCurrentLine()
+                result.captured = matches[2]
+            end, 1)
+            finally(function() killTrigger(id) end)
+            feedTriggers("\ncgReplace alpha beta\n")
+            assert.are.equal("cgReplace yyy beta", result.line)
+            assert.are.equal(1, result.selected)
+            assert.are.equal("yyy", result.selection)
+            assert.are.equal("alpha", result.captured)
+        end)
     end)
 
     -- selecting a later group must leave the stored full match untouched
@@ -846,6 +902,15 @@ describe("PCRE regex cases with tempRegexTrigger", function()
 
             assert.are.same({"1", "2"}, seen)
         end)
+    end)
+
+    -- runs after the after_each of every spec above it
+    it("leaves the main console's borders as it found them", function()
+        if dockWasShowing then
+            pending("the base UI dock was already showing, so its border is not this block's to check")
+            return
+        end
+        assert.are.same(originalBorders, getBorderSizes())
     end)
 end)
 

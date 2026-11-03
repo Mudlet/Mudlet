@@ -36,6 +36,7 @@
 
 #include <QRegularExpression>
 #include <QTemporaryDir>
+#include <QTemporaryFile>
 
 #include <functional>
 
@@ -50,6 +51,7 @@
 #include "ScriptUnit.h"
 #include "TAlias.h"
 #include "TKey.h"
+#include "TMap.h"
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
@@ -60,6 +62,15 @@
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
+
+#ifdef INCLUDE_MCPSERVER
+#include "TLuaInterpreter.h"
+#include "TMCPLuaBridge.h"
+#include "TMCPServer.h"
+
+#include <QHttpHeaders>
+#include <QJsonArray>
+#endif
 
 #include "GroupedTest.h"
 
@@ -83,6 +94,9 @@ const QString scmHostileScript = qsl("-- 特殊 characters: <tag> & \"double\" '
                                      "end\n");
 
 const QString scmHostileCommand = qsl("say <hi> & \"there\" 'pal' ]]>");
+
+// A NUL inside a Lua string still compiles, but pugixml ends the text it stores at one (issue #10385)
+const QString scmNulScript = qsl("local nul = \"before") + QChar(u'\0') + qsl("after\"\n-- twin ]]> script\n");
 } // namespace
 
 // Compares one field of the pair of tree nodes held in the local variables
@@ -112,9 +126,11 @@ private:
     const QString mSourceName = qsl("ProfileRoundTrip-Test");
     const QString mTargetName = qsl("ProfileRoundTripTarget-Test");
     const QString mLegacyTargetName = qsl("ProfileRoundTripLegacyTarget-Test");
+    const QString mHistorySizeTargetName = qsl("ProfileRoundTripHistorySizeTarget-Test");
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
     QTemporaryDir mSaveDir;
+    QString mSavedXmlPath;
     QString mExportedXml; // raw text of the saved profile XML, for format assertions
 
     // Expected item totals, kept explicit so an "everything got lost and both
@@ -137,6 +153,27 @@ private:
     // apart from blanking it.
     inline static const QString scmTargetUrl = qsl("target.example.org");
     static const int scmTargetPort = 4321;
+
+    // In the order TMap::restore16ColorSet() files them as environments 257 to 272
+    inline static const QList<QColor Host::*> scmMapAnsiColors{&Host::mRed_2,
+                                                               &Host::mGreen_2,
+                                                               &Host::mYellow_2,
+                                                               &Host::mBlue_2,
+                                                               &Host::mMagenta_2,
+                                                               &Host::mCyan_2,
+                                                               &Host::mWhite_2,
+                                                               &Host::mBlack_2,
+                                                               &Host::mLightRed_2,
+                                                               &Host::mLightGreen_2,
+                                                               &Host::mLightYellow_2,
+                                                               &Host::mLightBlue_2,
+                                                               &Host::mLightMagenta_2,
+                                                               &Host::mLightCyan_2,
+                                                               &Host::mLightWhite_2,
+                                                               &Host::mLightBlack_2};
+
+    // Off every default and unlike each other, so a map left with the constructor's palette cannot pass
+    static QColor mapAnsiColor(int index) { return QColor(16 * index + 3, 200 - 9 * index, 40 + 11 * index); }
 
     // -----------------------------------------------------------------------
     // Tree builders - these mirror the construction order XMLimport uses
@@ -264,7 +301,7 @@ private:
         // Scripts, with event handler registrations:
         auto scGroup = addScript(nullptr, qsl("脚本组"), true, true, {}, QString());
         addScript(scGroup, qsl("dup script"), false, true, {qsl("sysDataEvent"), qsl("custom<>&\"'Event"), qsl("日本語イベント")}, scmHostileScript);
-        addScript(scGroup, qsl("dup script"), false, false, {}, qsl("-- twin ]]> script\n"));
+        addScript(scGroup, qsl("dup script"), false, false, {}, scmNulScript);
         auto scInner = addScript(scGroup, qsl("scripts <sub> & 'group'"), true, true, {}, QString());
         addScript(scInner, qsl("émoji🎉 script"), false, true, {qsl("emojiEvent🎉")}, qsl("-- emoji script\n"));
         addScript(nullptr, qsl("lone script"), false, false, {}, QString());
@@ -529,6 +566,7 @@ private slots:
         // an import that leaves them alone cannot pass.
         mpSource->setSearchOptions(enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord);
         mpSource->setShowIdsInEditor(true);
+        mpSource->setFolderViewInEditor(true);
         mpSource->mMapInfoContributors.insert(scmContributorName);
         // Every one of these is off its default, and the legacy copy below
         // moves each enumerated one to a second value, so both reads count.
@@ -537,8 +575,12 @@ private slots:
         mpSource->setControlCharacterMode(ControlCharacterMode::Picture);
         mpSource->setWideAmbiguousEAsianGlyphs(Qt::Checked);
         mpSource->setLargeAreaExitArrows(true);
+        QVERIFY(mpSource->setMapStyle(qsl("blueprint")));
         const auto [experimentSet, experimentError] = mpSource->setExperimentEnabled(scmExperiment, true);
         QVERIFY2(experimentSet, qPrintable(experimentError));
+        for (int i = 0; i < scmMapAnsiColors.size(); ++i) {
+            mpSource->*scmMapAnsiColors.at(i) = mapAnsiColor(i);
+        }
 
         const int runningWatch = mpSource->createStopWatch(scmRunningStopWatch).first;
         const int stoppedWatch = mpSource->createStopWatch(scmStoppedStopWatch).first;
@@ -552,6 +594,7 @@ private slots:
 
         auto [saved, xmlPath, saveError] = mpSource->saveProfile(mSaveDir.path(), qsl("roundtrip"));
         QVERIFY2(saved, qPrintable(saveError));
+        mSavedXmlPath = xmlPath;
         mpSource->waitForProfileSave();
         QVERIFY2(QFileInfo::exists(xmlPath), qPrintable(qsl("profile XML was not written to %1").arg(xmlPath)));
 
@@ -598,7 +641,8 @@ private slots:
                                        std::pair{qsl("blankLineBehaviour=\"Hide\""), qsl("blankLineBehaviour=\"ReplaceWithSpace\"")},
                                        std::pair{qsl("ControlCharacterHandling=\"1\""), qsl("ControlCharacterHandling=\"2\"")},
                                        std::pair{qsl("AmbigousWidthGlyphsToBeWide=\"yes\""), qsl("AmbigousWidthGlyphsToBeWide=\"no\"")},
-                                       std::pair{qsl("Large2DMapAreaExitArrows=\"yes\""), qsl("Large2DMapAreaExitArrows=\"no\"")}}) {
+                                       std::pair{qsl("Large2DMapAreaExitArrows=\"yes\""), qsl("Large2DMapAreaExitArrows=\"no\"")},
+                                       std::pair{qsl("mapStyle=\"blueprint\""), qsl("mapStyle=\"no-such-style\"")}}) {
             QVERIFY2(legacyXml.count(from) == 1, qPrintable(qsl("the export does not hold %1 exactly once").arg(from)));
             legacyXml.replace(from, to);
         }
@@ -613,6 +657,8 @@ private slots:
 
         QFile legacyReadFile(legacyPath);
         QVERIFY2(legacyReadFile.open(QFile::ReadOnly | QFile::Text), qPrintable(legacyReadFile.errorString()));
+        // Off the default first, so only falling back to it can pass
+        QVERIFY(mpLegacyTarget->setMapStyle(qsl("blueprint")));
         XMLimport legacyImporter(mpLegacyTarget);
         auto [legacyImported, legacyImportError] = legacyImporter.importPackage(&legacyReadFile);
         QVERIFY2(legacyImported, qPrintable(legacyImportError));
@@ -630,6 +676,7 @@ private slots:
             deleteProfileDirectory(mSourceName);
             deleteProfileDirectory(mTargetName);
             deleteProfileDirectory(mLegacyTargetName);
+            deleteProfileDirectory(mHistorySizeTargetName);
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
@@ -641,6 +688,7 @@ private slots:
     {
         QCOMPARE(mpTarget->mSearchOptions, enums::EditorSearchOptions(enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord));
         QVERIFY(mpTarget->showIdsInEditor());
+        QVERIFY(mpTarget->folderViewInEditor());
     }
 
     void test_triggersRoundTrip()
@@ -763,6 +811,19 @@ private slots:
         QCOMPARE(mpLegacyTarget->mUpperLevelColor, QColor(200, 150, 100, 255));
     }
 
+    // The map's environments 257 to 272 are its own copy of the profile's ANSI colours, so they must be
+    // refreshed from the ones the import read, not left as the defaults the Host was built with
+    void test_mapAnsiColorsReachTheMapOnImport_10679()
+    {
+        QCOMPARE(scmMapAnsiColors.size(), qsizetype{16});
+        for (int i = 0; i < scmMapAnsiColors.size(); ++i) {
+            const int env = 257 + i;
+            QCOMPARE(mpTarget->*scmMapAnsiColors.at(i), mapAnsiColor(i));
+            QVERIFY2(mpTarget->mpMap->mCustomEnvColors.value(env) == mapAnsiColor(i),
+                     qPrintable(qsl("environment %1 is %2, not the imported %3").arg(QString::number(env), mpTarget->mpMap->mCustomEnvColors.value(env).name(), mapAnsiColor(i).name())));
+        }
+    }
+
     // Map info contributors are written one per element straight into <Host>
     // rather than wrapped in a container of their own (#5911). The container
     // still has to be read on the way in, for profiles saved while it was in
@@ -800,12 +861,63 @@ private slots:
         QCOMPARE(mpTarget->getWideAmbiguousEAsianGlyphsControlState(), Qt::Checked);
         QVERIFY(mpTarget->getLargeAreaExitArrows());
         QVERIFY(mpTarget->experimentEnabled(scmExperiment));
+        QCOMPARE(mpTarget->mapStyle(), qsl("blueprint"));
 
         QCOMPARE(mpLegacyTarget->mCaretShortcut, Host::CaretShortcut::CtrlTab);
         QCOMPARE(mpLegacyTarget->mBlankLineBehaviour, Host::BlankLineBehaviour::ReplaceWithSpace);
         QCOMPARE(mpLegacyTarget->getControlCharacterMode(), ControlCharacterMode::OEM);
         QCOMPARE(mpLegacyTarget->getWideAmbiguousEAsianGlyphsControlState(), Qt::Unchecked);
         QVERIFY(!mpLegacyTarget->getLargeAreaExitArrows());
+        // A style this version does not know falls back to the default one
+        QCOMPARE(mpLegacyTarget->mapStyle(), qsl("tiles"));
+    }
+
+    void test_commandLineHistorySaveSizeOnImport_data()
+    {
+        QTest::addColumn<QString>("stored");
+        QTest::addColumn<int>("expected");
+        QTest::newRow("in range") << qsl("500") << 500;
+        QTest::newRow("off") << qsl("0") << 0;
+        QTest::newRow("largest") << qsl("1000000") << Host::scmMaxCommandLineHistorySaveSize;
+        QTest::newRow("INT_MAX") << qsl("2147483647") << Host::scmMaxCommandLineHistorySaveSize;
+        // 0 would turn saving off for a profile that holds a negative size
+        QTest::newRow("negative") << qsl("-5") << Host::scmMaxCommandLineHistorySaveSize;
+        QTest::newRow("minus one") << qsl("-1") << Host::scmMaxCommandLineHistorySaveSize;
+        QTest::newRow("beyond int") << qsl("99999999999") << 500;
+        QTest::newRow("not a number") << qsl("abc") << 500;
+    }
+
+    // A profile file can hold a size setConfig() refuses, or no number at all
+    void test_commandLineHistorySaveSizeOnImport()
+    {
+        QFETCH(QString, stored);
+        QFETCH(int, expected);
+        QString xml = mExportedXml;
+        QCOMPARE(xml.count(qsl("CommandLineHistorySaveSize=\"500\"")), 1);
+        xml.replace(qsl("CommandLineHistorySaveSize=\"500\""), qsl("CommandLineHistorySaveSize=\"%1\"").arg(stored));
+
+        auto* hostManager = HostManager::self();
+        Host* target = hostManager->getHost(mHistorySizeTargetName);
+        if (!target) {
+            deleteProfileDirectory(mHistorySizeTargetName);
+            QVERIFY2(hostManager->addHost(mHistorySizeTargetName, mPort, QString(), QString()), "failed to create the history size target Host");
+            target = hostManager->getHost(mHistorySizeTargetName);
+            QVERIFY(target);
+        }
+        target->setCommandLineHistorySaveSize(42);
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        QFile file(qsl("%1/history-size.xml").arg(dir.path()));
+        QVERIFY2(file.open(QFile::WriteOnly | QFile::Text), qPrintable(file.errorString()));
+        QVERIFY(file.write(xml.toUtf8()) != -1);
+        file.close();
+        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
+        XMLimport importer(target);
+        auto [imported, importError] = importer.importPackage(&file);
+        QVERIFY2(imported, qPrintable(importError));
+
+        QCOMPARE(target->getCommandLineHistorySaveSize(), expected);
     }
 
     // A persistent stopwatch comes back under its own name, still running or
@@ -841,6 +953,125 @@ private slots:
         QVERIFY(mpTarget->mEventHandlerMap.contains(qsl("custom<>&\"'Event")));
         QVERIFY(mpTarget->mEventHandlerMap.contains(qsl("日本語イベント")));
         QVERIFY(mpTarget->mEventHandlerMap.contains(qsl("emojiEvent🎉")));
+    }
+
+#ifdef INCLUDE_MCPSERVER
+    void test_theMcpServerIsNotAProfileSetting()
+    {
+        // There is one MCP server for the whole application and it runs arbitrary Lua, so
+        // its switch lives in the application settings rather than in a profile. That is
+        // load-bearing: readHost() runs for the <Host> element of an installed package as
+        // well as for the profile's own file, so a profile attribute would let any
+        // downloaded .mpackage open a code execution endpoint without ever asking.
+        QVERIFY(!mudlet::self()->mcpEnabled());
+
+        QFile savedXml(mSavedXmlPath);
+        QVERIFY2(savedXml.open(QFile::ReadOnly), qPrintable(savedXml.errorString()));
+        const QByteArray savedProfile = savedXml.readAll();
+        QVERIFY2(!savedProfile.contains("mEnableMCP"), "the saved profile carries an MCP switch");
+        QVERIFY2(!savedProfile.contains("mMCPServerPort"), "the saved profile carries an MCP port");
+
+        const QByteArray packageXml = "<?xml version=\"1.0\"?><MudletPackage version=\"1.001\"><HostPackage>"
+                                      "<Host mEnableMCP=\"yes\" mMCPServerPort=\"11299\"></Host>"
+                                      "</HostPackage></MudletPackage>";
+
+        QTemporaryFile packageFile;
+        QVERIFY(packageFile.open());
+        QCOMPARE(packageFile.write(packageXml), static_cast<qint64>(packageXml.size()));
+        packageFile.close();
+
+        QFile file(packageFile.fileName());
+        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
+        XMLimport importer(mpTarget);
+        auto [imported, importError] = importer.importPackage(&file, qsl("hostilePackage"));
+        QVERIFY2(imported, qPrintable(importError));
+
+        QVERIFY2(!mudlet::self()->mcpEnabled(), "an installed package switched the MCP server on");
+        QVERIFY2(mudlet::self()->mcpEndpoint().isEmpty(), "an installed package started the MCP server");
+    }
+
+    void test_aToolCallRunsInTheProfileItNames()
+    {
+        // The unit tests reach handleMessage() without a profile, so this is the only place
+        // a tools/call can be taken all the way through to an interpreter and back.
+        TMCPServer mcpServer;
+
+        QJsonObject meta;
+        meta[QString::fromLatin1(TMCPServer::META_PROTOCOL_VERSION)] = QString::fromLatin1(TMCPServer::MCP_PROTOCOL_VERSION);
+        meta[QString::fromLatin1(TMCPServer::META_CLIENT_CAPABILITIES)] = QJsonObject();
+
+        QJsonObject arguments;
+        arguments[qsl("code")] = qsl("mcpProbe = 'ran here' return 6 * 7");
+        arguments[qsl("profile")] = mTargetName;
+
+        QJsonObject params;
+        params[qsl("name")] = QString::fromLatin1(TMCPLuaBridge::MCP_LUA_TOOL);
+        params[qsl("arguments")] = arguments;
+        params[qsl("_meta")] = meta;
+
+        QJsonObject message;
+        message[qsl("jsonrpc")] = qsl("2.0");
+        message[qsl("id")] = 1;
+        message[qsl("method")] = qsl("tools/call");
+        message[qsl("params")] = params;
+
+        QHttpHeaders headers;
+        headers.append("MCP-Protocol-Version", QString::fromLatin1(TMCPServer::MCP_PROTOCOL_VERSION));
+        headers.append("Mcp-Method", qsl("tools/call"));
+        headers.append("Mcp-Name", QString::fromLatin1(TMCPLuaBridge::MCP_LUA_TOOL));
+        headers.append("Authorization", qsl("Bearer %1").arg(mcpServer.authToken()).toUtf8());
+
+        const MCPReply reply = mcpServer.handleMessage(QJsonDocument(message).toJson(QJsonDocument::Compact), headers);
+        const QJsonObject result = reply.body.value(qsl("result")).toObject();
+        const QString text = result.value(qsl("content")).toArray().first().toObject().value(qsl("text")).toString();
+
+        QVERIFY2(result.value(qsl("isError")).toBool() == false, qPrintable(text));
+        QCOMPARE(text, qsl("42"));
+
+        // ...and it ran in the profile the call named, not in the foreground one.
+        const MCPToolResult onTarget = TMCPLuaBridge::runLua(mpTarget->getLuaInterpreter()->getLuaGlobalState(), qsl("return mcpProbe"));
+        QCOMPARE(onTarget.text, qsl("ran here"));
+        const MCPToolResult onSource = TMCPLuaBridge::runLua(mpSource->getLuaInterpreter()->getLuaGlobalState(), qsl("return mcpProbe"));
+        QVERIFY2(onSource.text != qsl("ran here"), qPrintable(onSource.text));
+    }
+#endif
+
+    // Last, as a package's bare <Host> resets every profile setting it leaves out. Nothing but
+    // signal_areaChanged prompts a mapper already on screen to repaint, so without it the
+    // mapper keeps the old colours (#10679)
+    void test_aHostPackageRepaintsTheMapWithItsAnsiColors_10679()
+    {
+        const QByteArray packageXml = "<?xml version=\"1.0\"?><MudletPackage version=\"1.001\"><HostPackage>"
+                                      "<Host><mRed2>#00ff00</mRed2></Host>"
+                                      "</HostPackage></MudletPackage>";
+        QTemporaryFile packageFile;
+        QVERIFY(packageFile.open());
+        QCOMPARE(packageFile.write(packageXml), static_cast<qint64>(packageXml.size()));
+        packageFile.close();
+        const auto importPackage = [this, &packageFile]() {
+            QFile file(packageFile.fileName());
+            if (!file.open(QFile::ReadOnly | QFile::Text)) {
+                return std::make_pair(false, file.errorString());
+            }
+            XMLimport importer(mpTarget);
+            return importer.importPackage(&file, qsl("ansiMapColorPackage"));
+        };
+
+        QCoreApplication::processEvents();
+        QSignalSpy areaChanged(mpTarget->mpMap.data(), &TMap::signal_areaChanged);
+        auto [imported, importError] = importPackage();
+        QVERIFY2(imported, qPrintable(importError));
+
+        QCOMPARE(mpTarget->mpMap->mCustomEnvColors.value(257), QColor(0, 255, 0));
+        QVERIFY2(areaChanged.count() || areaChanged.wait(1000), "the map was never told to repaint with the package's colours");
+        QCOMPARE(areaChanged.takeFirst().first().toInt(), -1);
+
+        // A view showing another area than the one already queued must repaint as well
+        mpTarget->mpMap->updateArea(5);
+        std::tie(imported, importError) = importPackage();
+        QVERIFY2(imported, qPrintable(importError));
+        QVERIFY2(areaChanged.count() || areaChanged.wait(1000), "the map was never told to repaint with the package's colours");
+        QCOMPARE(areaChanged.takeFirst().first().toInt(), -1);
     }
 };
 

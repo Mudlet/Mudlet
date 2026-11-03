@@ -93,8 +93,8 @@ private:
         // unreadable never widens a stored token's exposure.
         bool secureOnly = true;
         QString token;
-        // The metadata named an account but its token could not be read - most often because a resume
-        // hint has none, but indistinguishably a store that failed to answer.
+        // The metadata named an account but the store would not answer for its token - locked, denied or
+        // timed out. A resume hint with no token reads as an empty token, not this.
         bool tokenUnreadable = false;
     };
     // Reads the stored sign-in as one entry, following the token wherever it lives: inline in the
@@ -109,6 +109,8 @@ private:
     using StoreReadDone = std::function<void(bool success, QString value, const QString& errorMessage)>;
     // Reads one credential key; what mStoreReader does unless a test replaces it.
     void readStoreKey(const QString& key, StoreReadDone done);
+    // Warns once until the store next answers, then logs at debug level; see mWarnedStoreUnreadable.
+    void reportStoreUnreadable(const QString& what, const QString& error);
 
 public:
     // Where a profile's saved sign-in record is filed, for the preferences deciding whether there is
@@ -116,6 +118,10 @@ public:
     // place for the reason metadataKey() gives, and a second spelling of it would read a file that
     // is never written.
     static QString savedSignInRecordPath(const QString& profileName);
+    // The credential store is keyed by name and outlives the profile's folder, so a new profile of the
+    // same name would otherwise find this sign-in and send its token to whatever game it connects to.
+    // done runs once both removals have answered, saying whether both succeeded.
+    static void forgetSavedSignInOfRemovedProfile(const QString& profileName, std::function<void(bool removed)> done = {});
 
 private:
     // Reads the stored sign-in - the {account, provider?, secure_only} metadata plus the token from
@@ -174,6 +180,9 @@ private:
     void addCommonFields(QJsonObject& payload) const;
 
     bool clientDrivenOAuthAvailable() const;
+    // A saved character name and password, for a game that takes them, sign the player in ahead of
+    // any saved token. Shared by the replay and the promise of it, so the two cannot disagree.
+    bool savedCredentialsOutrankToken() const;
 
     Host* mpHost;
     // Every mutation of the stored sign-in goes through here, so only one sequence of store
@@ -257,6 +266,9 @@ private:
     // then the superseding Default has already consumed the latch, so without re-arming it the Default
     // after that could replay the dead token.
     bool mReconnectRejected = false;
+    // A store that cannot be asked at all - no Secret Service, a disabled wallet - fails every read, so
+    // its warning is given once rather than on every connect, and again only after a read has worked.
+    bool mWarnedStoreUnreadable = false;
     // Incremented on every per-connection auth reset - each Char.Login.Default, and each socket connect
     // or disconnect. The asynchronous reconnect-token keychain read captures the value current when it
     // started and re-checks it in its callback, so a result arriving after a newer connection began is
@@ -286,6 +298,12 @@ private:
     // just removed, and a rotation re-saves it under a fresh value - leaving Forget with nothing to show
     // for itself. Not part of mConn: it must monotonically increase, never reset.
     unsigned int mForgetGeneration = 0;
+    // Whether any Char.Login.Default on this connection named a way to sign in. A token arriving without
+    // one was minted by a game that never offered Char.Login here, so it is not kept: nothing would replay
+    // it. A later Default naming none does not withdraw it: token_storage was already promised. Per
+    // socket rather than in mConn, which a later Default resets; mSupportedAuthTypes cannot answer it
+    // either, as it outlives the connection that set it.
+    bool mSignInOffered = false;
     // The credential store holds the sign-in's record in the format from before the token had a key of
     // its own, with the token inside it - which a read leaves where it is, since the profile is no place
     // for a secret. Cleared once a save or a removal has dealt with that record - by a store job's
@@ -296,6 +314,7 @@ private:
     // attempt reads the credential store. Throttling bounds that cost by wall clock rather than by how
     // much the server sent, and unlike a hard per-connection cap never refuses a legitimate re-offer.
     inline static constexpr std::chrono::milliseconds scmSignInAttemptInterval = std::chrono::seconds(1);
+    std::chrono::milliseconds mSignInAttemptInterval = scmSignInAttemptInterval;
     QElapsedTimer mLastSignInAttempt;
     bool mSignInAttemptPending = false;
     // Bumped whenever a connection begins or ends, so a deferred attempt from a previous one is dropped.

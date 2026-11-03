@@ -122,6 +122,17 @@ private:
         return pane()->findChild<QMenu*>();
     }
 
+    // A printable key in caret mode goes to the command line of the console it
+    // was pressed in, so a mini console needs one for that to be seen
+    TConsole* miniConsoleWithCommandLine(const QString& name)
+    {
+        if (!runLua(qsl("createMiniConsole('%1', 0, 0, 300, 100)\nenableCommandLine('%1')").arg(name))) {
+            return nullptr;
+        }
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(name);
+        return pMini && pMini->mpCommandLine ? pMini : nullptr;
+    }
+
     QString luaGlobal(const char* name) const
     {
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
@@ -547,6 +558,112 @@ private slots:
         press(pane(), Qt::Key_Return);
 
         QCOMPARE(luaGlobal("caretLinkOne"), qsl("ran"));
+    }
+
+    // Space is the other activation key: being printable, it must not be handed
+    // to the command line while a link is focused
+    void test_spaceActivatesTheLinkUnderTheCaret()
+    {
+        QVERIFY(runLua(qsl("caretLinkOne = ''")));
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pCommandLine);
+        pCommandLine->clear();
+        pane()->setCaretPosition(mLastLineNumber, 0);
+        press(pane(), Qt::Key_Tab);
+        QVERIFY2(consoleBuffer().getFocusedLink() > 0, "no link is focused, so Space has nothing to activate");
+
+        press(pane(), Qt::Key_Space);
+
+        QCOMPARE(luaGlobal("caretLinkOne"), qsl("ran"));
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+        QVERIFY2(mpHost->caretEnabled(), "activating the link took the keyboard away from the caret");
+    }
+
+    // Off a link, Space is just the first character of a command
+    void test_spaceOffALinkGoesToTheCommandLine()
+    {
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pCommandLine);
+        pCommandLine->clear();
+        pane()->setCaretPosition(mLongLineNumber, 0);
+        QCOMPARE(consoleBuffer().getFocusedLink(), 0);
+
+        press(pane(), Qt::Key_Space);
+
+        QVERIFY2(!mpHost->caretEnabled(), "caret mode is still on, so the console kept the keyboard");
+        QCOMPARE(pCommandLine->toPlainText(), qsl(" "));
+        pCommandLine->clear();
+        drainDeferredFocusChange();
+    }
+
+    // The focused link is only updated when the caret moves, so once deleteLine()
+    // has taken the caret's line it names a link that is gone
+    void test_spaceAfterDeleteLineTookTheFocusedLinkGoesToTheCommandLine()
+    {
+        TConsole* pMini = miniConsoleWithCommandLine(qsl("caretSpaceDeleted"));
+        QVERIFY(pMini);
+        QVERIFY(runLua(qsl("caretSpaceRan = ''\n"
+                           "for i = 1, 8 do echo('caretSpaceDeleted', 'line ' .. i .. '\\n') end\n"
+                           "echoLink('caretSpaceDeleted', 'GONE', [[caretSpaceRan = 'gone']], '')\necho('caretSpaceDeleted', '\\n')\n"
+                           "echoLink('caretSpaceDeleted', 'KEPT', [[caretSpaceRan = 'kept']], '')\necho('caretSpaceDeleted', '\\n')")));
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+        pMiniPane->setCaretPosition(8, 0);
+        QVERIFY(pMini->buffer.getFocusedLink() > 0);
+        QVERIFY(runLua(qsl("for i = 1, 8 do moveCursor('caretSpaceDeleted', 0, 1) deleteLine('caretSpaceDeleted') end")));
+        QCOMPARE(pMini->buffer.lineBuffer, QStringList({qsl("line 1"), qsl("KEPT"), QString()}));
+        QVERIFY2(pMini->buffer.getFocusedLink() > 0, "deleteLine() cleared the focused link, so Space never meets a stale one");
+
+        press(pMiniPane, Qt::Key_Space);
+
+        QCOMPARE(luaGlobal("caretSpaceRan"), QString());
+        QCOMPARE(pMini->mpCommandLine->toPlainText(), qsl(" "));
+        pMini->mpCommandLine->clear();
+        drainDeferredFocusChange();
+    }
+
+    // Trimming the buffer to its limit moves the text up under a caret that stays put
+    void test_spaceAfterTheBufferTrimMovedTheLinkAwayGoesToTheCommandLine()
+    {
+        TConsole* pMini = miniConsoleWithCommandLine(qsl("caretSpaceTrimmed"));
+        QVERIFY(pMini);
+        QVERIFY(runLua(qsl("caretSpaceRan = ''\n"
+                           "setConsoleBufferSize('caretSpaceTrimmed', 100, 10)\n"
+                           "for i = 1, 90 do echo('caretSpaceTrimmed', 'line ' .. i .. '\\n') end\n"
+                           "echoLink('caretSpaceTrimmed', 'MOVED', [[caretSpaceRan = 'moved']], '')\necho('caretSpaceTrimmed', '\\n')")));
+        const int linkLine = pMini->buffer.lineBuffer.indexOf(qsl("MOVED"));
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+        pMiniPane->setCaretPosition(linkLine, 0);
+        QVERIFY(pMini->buffer.getFocusedLink() > 0);
+        QVERIFY(runLua(qsl("for i = 1, 40 do echo('caretSpaceTrimmed', 'more ' .. i .. '\\n') end")));
+        QVERIFY2(pMini->buffer.lineBuffer.indexOf(qsl("MOVED")) < linkLine, "the buffer was never trimmed, so the link is still under the caret");
+        QCOMPARE(pMini->buffer.getLinkIndexAt(pMiniPane->mCaretLine, pMiniPane->mCaretColumn), 0);
+        QVERIFY2(pMini->buffer.getFocusedLink() > 0, "the trim cleared the focused link, so Space never meets a stale one");
+
+        press(pMiniPane, Qt::Key_Space);
+
+        QCOMPARE(luaGlobal("caretSpaceRan"), QString());
+        QCOMPARE(pMini->mpCommandLine->toPlainText(), qsl(" "));
+        pMini->mpCommandLine->clear();
+        drainDeferredFocusChange();
+    }
+
+    // A link with no command has nothing to activate, and Return ignores it
+    void test_spaceOnALinkWithNoCommandGoesToTheCommandLine()
+    {
+        TConsole* pMini = miniConsoleWithCommandLine(qsl("caretSpaceNoCommand"));
+        QVERIFY(pMini);
+        QVERIFY(runLua(qsl("echoLink('caretSpaceNoCommand', 'EMPTY', '', '')\necho('caretSpaceNoCommand', '\\n')")));
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+        pMiniPane->setCaretPosition(pMini->buffer.lineBuffer.indexOf(qsl("EMPTY")), 0);
+        const int focusedLink = pMini->buffer.getFocusedLink();
+        QVERIFY(focusedLink > 0);
+        pMini->buffer.mLinkStore.getLinks(focusedLink).clear();
+
+        press(pMiniPane, Qt::Key_Space);
+
+        QCOMPARE(pMini->mpCommandLine->toPlainText(), qsl(" "));
+        pMini->mpCommandLine->clear();
+        drainDeferredFocusChange();
     }
 
     // With no link under it, Return is not an activation and must not run the

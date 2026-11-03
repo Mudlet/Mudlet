@@ -13,6 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # dangerfile.js warns on PRs that edit these paths, so add a new one to its SYNCED_PATHS too
         include:
           - name: mpkg-mpackage
             type: download

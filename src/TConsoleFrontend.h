@@ -36,14 +36,19 @@ class QString;
 class TAction;
 class TMxpFrameFrontend;
 
-// A profile's main console as core code sees it. TMainConsole implements it; core code
-// reaches it through Host::consoleFrontend() and names windows, never widgets.
+// A profile's main console as core code sees it. TMainConsole implements it, and TNullConsoleFrontend
+// stands in while there is none; core code reaches it through Host::consoleFrontend() and names
+// windows, never widgets.
 class TConsoleFrontend
 {
 public:
-    virtual bool createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough) = 0;
+    // Host decides every create and delete of a label, mini console, buffer or user window from the window
+    // registry before calling these, so they answer nothing, but the named window must be in or out of the
+    // registry by the time each returns; what a user window holds may follow when its widgets go. Bar
+    // openUserWindow(), Host calls no create for a name already taken, and no delete for a missing one.
+    virtual void createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough) = 0;
+    virtual void deleteLabel(const QString& name) = 0;
     // These fail for a name that is not a label's.
-    virtual std::pair<bool, QString> deleteLabel(const QString& name) = 0;
     virtual std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet) = 0;
     virtual std::optional<QSize> getLabelSizeHint(const QString& name) const = 0;
     virtual std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration) = 0;
@@ -127,13 +132,14 @@ public:
     virtual bool setTextBoxFont(const QString& name, const QFont& font) = 0;
     virtual bool setTextBoxTabMovesFocus(const QString& name, bool tabMovesFocus) = 0;
 
-    // A sub-console is a mini console, user window or buffer. createBuffer() fails for a name already a
-    // sub-console's, the others for a name that is not one; they act on a user window's dock with it.
-    virtual bool createBuffer(const QString& name) = 0;
-    // Fails for a name already a sub-console's. Puts the mini console in the scroll box or user window
-    // named windowname, else on the main window, at font size 12, shown.
-    virtual bool addMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height) = 0;
-    virtual std::pair<bool, QString> deleteMiniConsole(const QString& name) = 0;
+    // A sub-console is a mini console, user window or buffer. The operations after the creates and delete
+    // fail for a name that is not one; they act on a user window's dock with it.
+    virtual void createBuffer(const QString& name) = 0;
+    // Puts the mini console in the scroll box or user window named windowname, else on the main window, at
+    // font size 12, shown.
+    virtual void addMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height) = 0;
+    // Any sub-console, a user window's dock with it.
+    virtual void deleteMiniConsole(const QString& name) = 0;
     virtual bool showSubConsole(const QString& name) = 0;
     virtual bool hideSubConsole(const QString& name) = 0;
     // Resizing or moving a docked user window floats it first.
@@ -145,10 +151,10 @@ public:
     virtual void closeSubConsole(const QString& name) = 0;
 
     // Makes the user window unless one has that name and shows it, then floats it ("f") or docks it
-    // ("r", "l", "t", "b"), each also accepted as the word it stands for; an empty area leaves it where
-    // it is. An unknown area fails with the window already showing. No name is refused: a mini console's
-    // gets a new user window that takes the name over.
-    virtual std::pair<bool, QString> openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) = 0;
+    // ("r", "l", "t", "b"), each also accepted as the word it stands for; an empty or unknown area leaves
+    // it where it is. Host refuses a name that is some other window's. False when a handler it runs deletes the window
+    // or puts another in its place, so the call goes no further.
+    virtual bool openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) = 0;
     // These fail for a name that is not a user window's; an empty text restores the default title.
     virtual std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet) = 0;
     virtual std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text) = 0;
@@ -180,6 +186,8 @@ public:
     // A negative line counts back from the end. One at or past the end, or toEnd, puts the console back
     // to following new lines.
     virtual bool scrollWindowTo(const QString& name, int line, bool toEnd) = 0;
+    // False for a name that is no console
+    virtual bool windowFollowsNewLines(const QString& name) = 0;
 
     // These name a console as the scroll bar ones do; for a name that is none of those, setWindowFontSize()
     // fails and the others have no value. This console's font is the profile's display font, which Host
@@ -189,6 +197,8 @@ public:
     virtual bool setWindowFontSize(const QString& name, int size) = 0;
     // The width of a 'W' and the height of a line in that console's font.
     virtual std::optional<QSize> consoleFontSize(const QString& name) const = 0;
+    // The width TTextEdit draws each of that console's columns in.
+    virtual std::optional<int> consoleColumnWidth(const QString& name) const = 0;
 
     // This console's own appearance. The image modes are 1 border, 2 center, 3 tile and 4 style, whose
     // path is a style sheet fragment instead; the window background also takes 5, cover, which fails for
@@ -265,8 +275,10 @@ public:
     virtual void regenerateToolBars(const std::list<TAction*>& rootActions) = 0;
     virtual void regenerateEasyButtonBars(const std::list<TAction*>& rootActions) = 0;
     // Takes an action's bars out of the window without destroying them, for an action that is being
-    // removed or has stopped being a root one.
+    // removed.
     virtual void detachActionBars(TAction* pAction) = 0;
+    // Destroys an action's own bars, for one that is now a menu on another's.
+    virtual void disposeActionBars(TAction* pAction) = 0;
     virtual bool hasEasyButtonBar(TAction* pAction) const = 0;
     // Checks or unchecks the action's button and its entry in a bar's menu, where it has them.
     virtual void setActionButtonChecked(TAction* pAction, bool checked) = 0;
@@ -335,7 +347,8 @@ public:
     // Caret navigation of the text: on moves keyboard focus to it, grabbing the keyboard on Windows and Linux;
     // off releases that and makes the command line its focus proxy again.
     virtual void setCaretMode(bool enabled) = 0;
-    // The mouse pointer's position relative to this console's top-left corner, so it can lie outside it.
+    // The mouse pointer's position relative to the frame labels are placed in, below and right of any button
+    // bars; it can lie outside that frame.
     virtual QPoint mousePosition() const = 0;
     // True while keyboard focus is on this console's focus proxy, normally its own command line, so false
     // while it is on the text, as in caret navigation, or in another window.

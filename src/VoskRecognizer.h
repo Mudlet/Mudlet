@@ -23,7 +23,9 @@
 #include "SpeechRecognizer.h"
 #include "utils.h"
 
+#if defined(INCLUDE_SPEECH_ENGINES)
 #include <QLibrary>
+#endif
 #include <QPointer>
 #include <QString>
 #include <QVariantList>
@@ -250,7 +252,9 @@ private:
     QString mLastPartialResult;                   // Track last partial to detect stuck hallucinations
 
     // Vosk library and function pointers (for dynamic loading)
+#if defined(INCLUDE_SPEECH_ENGINES)
     static QLibrary sVoskLibrary;
+#endif
     static bool sLibraryLoaded;
     static QString sLibraryLoadError;
     static bool sLibraryLoadAttempted;

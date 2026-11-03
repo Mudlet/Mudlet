@@ -179,6 +179,14 @@ public:
 
         dialog->move(constrainedPos);
     }
+
+    // Qt reports a widget's tooltip as its accessible description when it has
+    // none, markup included, so screen readers read the HTML tags of a rich
+    // tooltip aloud. After this call every rich tooltip, whenever it is set,
+    // also becomes the widget's description as plain text. A plain tooltip is
+    // left to Qt, and so is a description that other code set. Needs the
+    // QApplication to exist, and only affects tooltips set after it is called.
+    static void syncAccessibleDescriptionsWithToolTips();
 };
 
 #endif // MUDLET_WIDGETUTILS_H

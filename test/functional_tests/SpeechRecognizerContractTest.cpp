@@ -507,6 +507,9 @@ private slots:
     // already run by the time this code gets to decide anything.
     void aModelLoadedWhileAFailedStartIsReportedIsNotMarkedFaulty()
     {
+#if !defined(INCLUDE_SPEECH_ENGINES)
+        QSKIP("this build of Mudlet cannot load a speech engine library");
+#endif
         if (mSystemEngineWins) {
             QSKIP("libvosk answers the bare name here, so the loader would reach it before the stand-in this case installs");
         }
@@ -1287,6 +1290,9 @@ private slots:
     // stt.init(): asking must not have settled detection on "not installed"
     void askingForTheInstallPathsDoesNotSettleDetection()
     {
+#if !defined(INCLUDE_SPEECH_ENGINES)
+        QSKIP("this build of Mudlet cannot load a speech engine library");
+#endif
         if (VoskRecognizer::libraryAvailable() || SherpaRecognizer::sherpaAvailable()) {
             QSKIP("a model-based engine is installed here, so there is nothing for this case to install");
         }

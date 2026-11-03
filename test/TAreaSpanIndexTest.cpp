@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <TAreaSpanIndex.h>
 
 #include <QtTest/QtTest>
@@ -253,4 +254,4 @@ private slots:
 };
 
 #include "TAreaSpanIndexTest.moc"
-QTEST_MAIN(TAreaSpanIndexTest)
+MUDLET_GROUPED_TEST_MAIN(TAreaSpanIndexTest)

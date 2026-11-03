@@ -1,3 +1,4 @@
+#include "GroupedTest.h"
 #include <TEntityHandler.h>
 #include <QtTest/QtTest>
 
@@ -82,4 +83,4 @@ private slots:
     }
 };
 #include "TEntityHandlerTest.moc"
-QTEST_MAIN(TEntityHandlerTest)
+MUDLET_GROUPED_TEST_MAIN(TEntityHandlerTest)

@@ -539,11 +539,11 @@ private slots:
     {
         const QString tableError = runLua(mpFirstHost, qsl("raiseGlobalEvent({})"));
         QVERIFY2(!tableError.isNull(), "raiseGlobalEvent() accepted a table");
-        QVERIFY2(tableError.contains(qsl("bad argument type #1")), qPrintable(tableError));
+        QVERIFY2(tableError.contains(qsl("bad argument #1 type")), qPrintable(tableError));
 
         const QString lateTableError = runLua(mpFirstHost, qsl("raiseGlobalEvent('lifecycleUncarryable', 'text', {})"));
         QVERIFY2(!lateTableError.isNull(), "raiseGlobalEvent() accepted a table after the event name");
-        QVERIFY2(lateTableError.contains(qsl("bad argument type #3")), qPrintable(lateTableError));
+        QVERIFY2(lateTableError.contains(qsl("bad argument #3 type")), qPrintable(lateTableError));
 
         const QString noNameError = runLua(mpFirstHost, qsl("raiseGlobalEvent()"));
         QVERIFY2(!noNameError.isNull(), "raiseGlobalEvent() accepted a call with no event name");

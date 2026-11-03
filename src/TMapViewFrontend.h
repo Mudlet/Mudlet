@@ -27,7 +27,7 @@
 #include <utility>
 
 // What core code asks of the mapper drawing a profile's map. dlgMapper implements it; core code
-// reaches it through TMap::mapViewFrontend().
+// reaches it through TMap::mapViewFrontend(), or Host::mapViewFrontend() for one the null view stands in for.
 class TMapViewFrontend
 {
 public:
@@ -53,14 +53,16 @@ public:
     virtual std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) = 0;
     virtual std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) = 0;
 
-    // Without the 3D mapper compiled in there is no 3D view to show.
-    virtual void show3DView(bool shown) = 0;
+    // Without the 3D mapper compiled in there is no 3D view to show. The null view never has one, so it refuses a show with why.
+    virtual std::pair<bool, QString> show3DView(bool shown) = 0;
     virtual bool showing3DView() const = 0;
     // Builds the 3D view afresh, for a change of 3D renderer to take effect.
     virtual void recreate3DView() = 0;
-    // Only the modern 3D renderer has a camera to move; with the legacy one these do nothing.
-    virtual void shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle) = 0;
-    virtual void set3DViewCameraPosition(float r, float theta, float phi) = 0;
+    // Only the modern 3D view has a camera to move, and only while it is showing, started and not drawing a
+    // grid-mode area, which it always looks at straight down; otherwise these answer false and the reason.
+    // In grid mode set3DViewCameraPosition still applies the distance.
+    virtual std::pair<bool, QString> shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle) = 0;
+    virtual std::pair<bool, QString> set3DViewCameraPosition(float r, float theta, float phi) = 0;
 
 protected:
     // The mapper is a widget whose Qt parent deletes it, so nothing deletes it through this interface.

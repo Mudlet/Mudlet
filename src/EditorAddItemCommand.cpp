@@ -20,6 +20,7 @@
 #include "EditorAddItemCommand.h"
 
 #include "EditorItemXMLHelpers.h"
+#include "EditorModifyPropertyCommand.h"
 #include "Host.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -633,5 +634,38 @@ QString EditorAddItemCommand::generateText(EditorViewType viewType, const QStrin
         }
         //: Undo/redo menu text for adding an unknown item type
         return QObject::tr("add item \"%1\"").arg(itemName);
+    }
+}
+
+int EditorAddItemCommand::id() const
+{
+    return EditorModifyPropertyCommand::CommandId;
+}
+
+// Modifies of the new item pushed straight onto this add, per-property ones and the first full save,
+// are part of adding it; a command in between, such as a toggle, keeps the save a step of its own.
+// Undo snapshots the item as it then stands, so absorbing them loses nothing.
+bool EditorAddItemCommand::mergeWith(const QUndoCommand* other)
+{
+    if (mAddFinished) {
+        return false;
+    }
+
+    const auto* pModify = dynamic_cast<const EditorModifyPropertyCommand*>(other);
+    if (!pModify || pModify->mViewType != mViewType || pModify->mItemID != mItemID) {
+        return false;
+    }
+
+    // A snapshot an earlier undo took would not hold this edit, so the next undo has to take a new one
+    mItemSnapshot.clear();
+    mItemName = pModify->mItemName;
+    setText(generateText(mViewType, mItemName, mIsFolder));
+    return true;
+}
+
+void EditorAddItemCommand::finishAdding(EditorViewType viewType, int itemID) const
+{
+    if (viewType == mViewType && itemID == mItemID) {
+        mAddFinished = true;
     }
 }

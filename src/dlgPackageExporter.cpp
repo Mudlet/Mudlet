@@ -157,7 +157,52 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
     connect(mpHost, &QObject::destroyed, this, &dlgPackageExporter::close);
 }
 
-dlgPackageExporter::~dlgPackageExporter() = default;
+dlgPackageExporter::~dlgPackageExporter()
+{
+    // An export still in flight loses its finished handler along with this dialog
+    if (!mExportRunning) {
+        return;
+    }
+    QApplication::restoreOverrideCursor();
+    if (!mpZipWatcher) {
+        releaseExportLock();
+        return;
+    }
+    // Cancelled or not, the zip may still be reading its staging folder, so the lock is held until it ends
+    auto* watcher = mpZipWatcher;
+    watcher->setParent(qApp);
+    connect(watcher,
+            &QFutureWatcherBase::finished,
+            qApp,
+            [watcher, cancelled = mpZipCancelled, isModule = mIsModuleCreationMode, packageName = mPackageName, packagePathFileName = mPackagePathFileName]() {
+                releaseExportLock();
+                if (auto [isOk, errorMsg] = watcher->result(); !isOk) {
+                    if (!cancelled->load()) {
+                        qWarning().noquote().nospace() << "dlgPackageExporter WARNING - exporting \"" << packageName << "\" failed after its dialog was closed: " << errorMsg;
+                    }
+                } else if (isModule) {
+                    qWarning().noquote().nospace() << "dlgPackageExporter WARNING - module \"" << packageName << "\" was written to \"" << packagePathFileName
+                                                   << "\" but not installed, as its dialog was closed before the export finished";
+                }
+                watcher->deleteLater();
+            });
+}
+
+void dlgPackageExporter::releaseExportLock()
+{
+    mExportingPackage = false;
+    recheckEveryExportButton();
+}
+
+// Every open exporter's Export button follows the shared lock, not only the one that took or released it
+void dlgPackageExporter::recheckEveryExportButton()
+{
+    for (auto* widget : QApplication::topLevelWidgets()) {
+        if (auto* exporter = qobject_cast<dlgPackageExporter*>(widget)) {
+            exporter->checkToEnableExportButton();
+        }
+    }
+}
 
 void dlgPackageExporter::setModuleCreationMode(bool isModule)
 {
@@ -538,6 +583,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
     const QString packagePath{MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())};
     //fill package metadata
     mPackageIconPath.clear();
+    mPackageDataPath.clear();
     QMap<QString, QString> const packageInfo = mpHost->mPackageInfo.value(packageName);
     ui->lineEdit_author->setText(packageInfo.value(qsl("author")));
     const QString icon{packageInfo.value(qsl("icon"))};
@@ -572,9 +618,11 @@ void dlgPackageExporter::slot_packageChanged(int index)
     if (!info.exists()) {
         return;
     }
+    mPackageDataPath = qsl("%1/%2/.mudlet").arg(packagePath, packageName);
     QDirIterator it(info.absoluteFilePath(), QDir::NoDotAndDotDot | QDir::Hidden | QDir::AllEntries);
     QStringList ignore;
-    ignore << QLatin1String("config.lua") << qsl("%1.xml").arg(packageName);
+    // .mudlet is rebuilt on export from the icon and description, see copyPackageDataToTmp()
+    ignore << QLatin1String("config.lua") << qsl("%1.xml").arg(packageName) << qsl(".mudlet");
     while (it.hasNext()) {
         const QFileInfo f(it.next());
         if (ignore.contains(f.fileName(), Qt::CaseInsensitive)) {
@@ -664,6 +712,29 @@ void dlgPackageExporter::slot_removeIcon()
     ui->pushButton_removeIcon->hide();
 }
 
+void dlgPackageExporter::showRenderedDescription()
+{
+    //$packagePath allows to put images in a package which will then be displayed in the description
+    //during package creation it uses the profile folder. But once the package is created it will use
+    //profile folder/packagename
+    QString plainText{mPlainDescription};
+    const QString profilePath{MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())};
+    //$packagePath will be replaced by the resource path if an existing package is selected
+    if (ui->packageList->currentIndex() != 0) {
+        const QString packageName = ui->packageList->currentText();
+        plainText.replace(QLatin1String("$packagePath"), qsl("%1/%2").arg(profilePath, packageName));
+    } else {
+        plainText.replace(QLatin1String("$packagePath"), profilePath);
+    }
+    for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
+        QString fname = mDescriptionImages.at(i);
+        const QFileInfo info(fname);
+        fname = QUrl::toPercentEncoding(fname).constData();
+        plainText.replace(qsl("$%1").arg(info.fileName()), fname);
+    }
+    ui->textEdit_description->setMarkdown(plainText);
+}
+
 bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
 {
     if (evt->type() == QEvent::KeyPress) {
@@ -689,25 +760,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
 
         if (evt->type() == QEvent::FocusOut) {
             mPlainDescription = ui->textEdit_description->toPlainText();
-            //$packagePath allows to put images in a package which will then be displayed in the description
-            //during package creation it uses the profile folder. But once the package is created it will use
-            //profile folder/packagename
-            QString plainText{mPlainDescription};
-            const QString profilePath{MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())};
-            //$packagePath will be replaced by the resource path if an existing package is selected
-            if (ui->packageList->currentIndex() != 0) {
-                const QString packageName = ui->packageList->currentText();
-                plainText.replace(QLatin1String("$packagePath"), qsl("%1/%2").arg(profilePath, packageName));
-            } else {
-                plainText.replace(QLatin1String("$packagePath"), profilePath);
-            }
-            for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
-                QString fname = mDescriptionImages.at(i);
-                const QFileInfo info(fname);
-                fname = QUrl::toPercentEncoding(fname).constData();
-                plainText.replace(qsl("$%1").arg(info.fileName()), fname);
-            }
-            ui->textEdit_description->setMarkdown(plainText);
+            showRenderedDescription();
             return false;
         }
     }
@@ -873,6 +926,18 @@ void dlgPackageExporter::slot_exportPackage()
         mPackagePathFileName = qsl("%1/%2.mpackage").arg(getActualPath(), mPackageName);
     }
 
+    const auto anotherExportRunning = [this]() {
+        if (!mExportingPackage) {
+            return false;
+        }
+        //: Shown in the package exporter when an export is asked for while another package or module is still being exported
+        displayResultMessage(tr("Another package is still being exported. Please wait for it to finish."), false);
+        return true;
+    };
+    if (anotherExportRunning()) {
+        return;
+    }
+
     // Confirm any overwrite BEFORE we create or truncate anything. Previously
     // the destination file was clobbered by the zip step regardless of the
     // user's answer, so declining still destroyed the existing file. Asking
@@ -903,6 +968,11 @@ void dlgPackageExporter::slot_exportPackage()
         }
     }
 
+    // The overwrite prompt above runs an event loop, in which another exporter may have started
+    if (anotherExportRunning()) {
+        return;
+    }
+
     // QT Docs say that QStandardPaths::writableLocation(QStandardPaths::TempLocation)
     // "Returns a directory where temporary files can be stored. The returned
     // value might be application-specific, shared among other applications for
@@ -925,9 +995,12 @@ void dlgPackageExporter::slot_exportPackage()
 
     const QString tempPath = qsl("%1/").arg(stagingDirName);
 
+    // Made before Cancel is shown and the event loop runs, so that an early Cancel reaches the zip
+    mpZipCancelled = std::make_shared<std::atomic<bool>>(false);
     mExportingPackage = true;
+    mExportRunning = true;
     QApplication::setOverrideCursor(Qt::BusyCursor);
-    checkToEnableExportButton();
+    recheckEveryExportButton();
 
 #if defined(LIBZIP_SUPPORTS_CANCELLING)
     mCancelButton->setVisible(true);
@@ -935,9 +1008,14 @@ void dlgPackageExporter::slot_exportPackage()
 
     mCloseButton->setVisible(false);
     displayResultMessage(tr("Exporting package..."), true);
+    const QPointer<dlgPackageExporter> self(this);
     qApp->processEvents();
+    if (!self) {
+        return;
+    }
 
     auto plainDescription = copyNewImagesToTmp(tempPath);
+    copyPackageDataToTmp(tempPath);
 
     QStringList assetPaths;
     for (int i = 0; i < ui->listWidget_addedFiles->count(); ++i) {
@@ -958,8 +1036,8 @@ void dlgPackageExporter::slot_exportPackage()
                                      .arg(mXmlPathFileName.toHtmlEscaped()),
                              false);
         assetsFuture.cancel();
-        mExportingPackage = false;
-        checkToEnableExportButton();
+        releaseExportLock();
+        mExportRunning = false;
         QApplication::restoreOverrideCursor();
         return;
     }
@@ -988,11 +1066,11 @@ void dlgPackageExporter::slot_exportPackage()
             displayResultMessage(message, false);
             isOk = false;
         } else {
-            auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageComment);
-            auto watcher = new QFutureWatcher<std::pair<bool, QString>>;
+            auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageComment, mpZipCancelled);
+            auto watcher = new QFutureWatcher<std::pair<bool, QString>>(this);
+            mpZipWatcher = watcher;
             connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [=, this]() {
-                mExportingPackage = false;
-                checkToEnableExportButton();
+                releaseExportLock();
 
                 if (auto [isOk, errorMsg] = future.result(); !isOk) {
                     displayResultMessage(errorMsg, false);
@@ -1016,7 +1094,10 @@ void dlgPackageExporter::slot_exportPackage()
                                 displayResultMessage(tr("Module \"%1\" exported but failed to uninstall existing version").arg(mPackageName.toHtmlEscaped()), false);
                                 mCancelButton->setVisible(false);
                                 mCloseButton->setVisible(true);
+                                mExportRunning = false;
                                 QApplication::restoreOverrideCursor();
+                                mpZipWatcher = nullptr;
+                                watcher->deleteLater();
                                 return;
                             }
                         }
@@ -1044,9 +1125,11 @@ void dlgPackageExporter::slot_exportPackage()
                 }
                 mCancelButton->setVisible(false);
                 mCloseButton->setVisible(true);
+                mExportRunning = false;
                 QApplication::restoreOverrideCursor();
 
                 // Clean up the watcher
+                mpZipWatcher = nullptr;
                 watcher->deleteLater();
             });
             watcher->setFuture(future);
@@ -1056,10 +1139,10 @@ void dlgPackageExporter::slot_exportPackage()
     if (isOk) {
         displayResultMessage(tr("Exporting package..."), true);
     } else {
-        mExportingPackage = false;
-        checkToEnableExportButton();
+        releaseExportLock();
         mCancelButton->setVisible(false);
         mCloseButton->setVisible(true);
+        mExportRunning = false;
         QApplication::restoreOverrideCursor();
     }
 
@@ -1357,6 +1440,30 @@ QFileInfo dlgPackageExporter::copyIconToTmp(const QString& tempPath) const
     return iconFile;
 }
 
+// Leaves the old icon behind, as copyIconToTmp() supplies the one the package has now;
+// description images the description no longer uses are dropped by cleanupUnusedImages()
+void dlgPackageExporter::copyPackageDataToTmp(const QString& tempPath) const
+{
+    if (mPackageDataPath.isEmpty() || !QFileInfo(mPackageDataPath).isDir()) {
+        return;
+    }
+    const QString stagedDataPath = qsl("%1.mudlet").arg(tempPath);
+    QDir().mkpath(stagedDataPath);
+    QDirIterator it(mPackageDataPath, QDir::NoDotAndDotDot | QDir::Hidden | QDir::AllEntries);
+    while (it.hasNext()) {
+        const QFileInfo entry(it.next());
+        if (entry.isSymLink() || entry.fileName() == QLatin1String("Icon")) {
+            continue;
+        }
+        const QString target = qsl("%1/%2").arg(stagedDataPath, entry.fileName());
+        if (entry.isDir()) {
+            copy_directory(entry.absoluteFilePath(), target, false);
+        } else {
+            QFile::copy(entry.absoluteFilePath(), target);
+        }
+    }
+}
+
 std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath)
 {
     for (const auto& assetPath : assetPaths) {
@@ -1379,8 +1486,12 @@ std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& 
     return {true, QString{}};
 }
 
-std::pair<bool, QString>
-dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageComment)
+std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDirName,
+                                                        const QString& packagePathFileName,
+                                                        const QString& xmlPathFileName,
+                                                        const QString& packageName,
+                                                        const QString& packageComment,
+                                                        [[maybe_unused]] std::shared_ptr<std::atomic<bool>> cancelled)
 {
     bool isOk = true;
     QString error;
@@ -1542,10 +1653,10 @@ dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& pac
         zip_set_archive_comment(archive, packageComment.toUtf8().constData(), static_cast<zip_uint16_t>(packageComment.toUtf8().length()));
 
 #if defined(LIBZIP_SUPPORTS_CANCELLING)
-        auto cancel_callback = [](zip*, void*) -> int {
-            return !mExportingPackage;
+        auto cancel_callback = [](zip*, void* state) -> int {
+            return static_cast<std::atomic<bool>*>(state)->load();
         };
-        zip_register_cancel_callback_with_state(archive, cancel_callback, nullptr, nullptr);
+        zip_register_cancel_callback_with_state(archive, cancel_callback, nullptr, cancelled.get());
 #endif
 
         // THIS is the point that the archive gets created from the
@@ -2043,11 +2154,10 @@ void dlgPackageExporter::displayResultMessage(const QString& html, const bool is
 void dlgPackageExporter::slot_recountItems(QTreeWidgetItem* item)
 {
     checkChildren(item);
-    static bool debounce;
-    if (!debounce) {
-        debounce = true;
+    if (!mRecountPending) {
+        mRecountPending = true;
         QTimer::singleShot(0ms, this, [this]() {
-            debounce = false;
+            mRecountPending = false;
 
             const int itemsToExport = countCheckedItems();
             if (itemsToExport) {
@@ -2088,8 +2198,9 @@ QString dlgPackageExporter::getActualPath() const
 
 void dlgPackageExporter::slot_cancelExport()
 {
-    mExportingPackage = false;
-    checkToEnableExportButton();
+    if (mpZipCancelled) {
+        mpZipCancelled->store(true);
+    }
 
     mCancelButton->setVisible(false);
     mCloseButton->setVisible(true);
@@ -2116,13 +2227,6 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
     dlgPackageExporter* my_parent = static_cast<dlgPackageExporter*>(topLevelWidget());
     if (source->hasUrls()) {
         QTextCursor myCursor = textCursor();
-        const int oldPos = myCursor.position();
-        // Allows to insert image at cursor position if using copy/paste
-        if (hasFocus()) {
-            myCursor.setPosition(oldPos);
-        } else {
-            setPlainText(my_parent->mPlainDescription);
-        }
         QStringList accepted_types;
         accepted_types << "jpeg" << "jpg" << "png" << "gif" << "bmp" << "svg";
         for (const auto& url : source->urls()) {
@@ -2137,19 +2241,42 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
             }
         }
         my_parent->mPlainDescription = toPlainText();
-        //setMarkdown so images can be seen as they will appear in the description
-        if (!hasFocus()) {
-            QString plainText = my_parent->mPlainDescription;
-            for (int i = my_parent->mDescriptionImages.size() - 1; i >= 0; i--) {
-                QString fname = my_parent->mDescriptionImages.at(i);
-                const QFileInfo info(fname);
-                fname = QUrl::toPercentEncoding(fname).constData();
-                plainText.replace(qsl("$%1").arg(info.fileName()), fname);
-            }
-            setMarkdown(plainText);
-        }
     } else {
         QTextEdit::insertFromMimeData(source);
+    }
+}
+
+// Unfocused, the editor shows rendered markdown whose positions don't map back onto the
+// markdown source, so show the source while files are dragged over it and drop into that
+void dlgPackageExporterDescription::dragEnterEvent(QDragEnterEvent* event)
+{
+    if (!hasFocus() && event->mimeData()->hasUrls()) {
+        mShowingSourceForDrop = true;
+        setPlainText(static_cast<dlgPackageExporter*>(topLevelWidget())->mPlainDescription);
+    }
+    QTextEdit::dragEnterEvent(event);
+}
+
+void dlgPackageExporterDescription::dragLeaveEvent(QDragLeaveEvent* event)
+{
+    QTextEdit::dragLeaveEvent(event);
+    restoreRenderedDescription();
+}
+
+void dlgPackageExporterDescription::dropEvent(QDropEvent* event)
+{
+    QTextEdit::dropEvent(event);
+    restoreRenderedDescription();
+}
+
+void dlgPackageExporterDescription::restoreRenderedDescription()
+{
+    if (!mShowingSourceForDrop) {
+        return;
+    }
+    mShowingSourceForDrop = false;
+    if (!hasFocus()) {
+        static_cast<dlgPackageExporter*>(topLevelWidget())->showRenderedDescription();
     }
 }
 

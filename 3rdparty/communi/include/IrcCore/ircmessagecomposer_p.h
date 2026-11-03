@@ -30,13 +30,13 @@
 #define IRCMESSAGECOMPOSER_P_H
 
 #include <IrcGlobal>
+#include <IrcMessage>
 #include <QtCore/qstack.h>
 #include <QtCore/qobject.h>
 #include <QtCore/qstringlist.h>
 
 IRC_BEGIN_NAMESPACE
 
-class IrcMessage;
 class IrcConnection;
 class IrcNumericMessage;
 
@@ -55,7 +55,10 @@ Q_SIGNALS:
     void messageComposed(IrcMessage* message);
 
 private:
-    void finishCompose(IrcMessage* message);
+    qsizetype indexOf(IrcMessage::Type type) const;
+    void deliver(qsizetype index, IrcMessage* message);
+    void startCompose(IrcMessage* composed, IrcMessage* message);
+    void finishCompose(IrcMessage* message, IrcMessage::Type type, const QString& targets = QString());
     void replaceParam(int index, const QString& param);
 
     struct Data {

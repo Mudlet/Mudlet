@@ -1,7 +1,7 @@
 -- clearWindow() finds its console by name: none, an empty name or "main" is
 -- the main console, and any other is a mini console, user window or buffer.
--- It answers nothing whether or not it found one, so that clearing the main
--- console from the command line does not print a result onto it.
+-- It answers nothing when it found one, so that clearing the main console from
+-- the command line does not print a result onto it.
 describe("Tests that clearWindow() finds its console by name", function()
   local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
   local unknown = "specClearByNameNoSuchWindow" .. suffix
@@ -16,29 +16,6 @@ describe("Tests that clearWindow() finds its console by name", function()
   local function assertCleared(window)
     assert.are.equal(0, getLastLineNumber(window))
     assert.are.same({""}, getLines(window, 0, 1))
-  end
-
-  -- getScroll() is copied out of the buffer as the pane repaints, and the first
-  -- scroll of a console waits a turn for its lower pane to appear, so a new
-  -- position needs the event loop to run before it can be read back
-  local function pumpEventLoop()
-    tempTimer(0, function() raiseEvent("specClearByNamePump") end)
-    waitForEvent("specClearByNamePump", 2000)
-  end
-
-  -- scrollTo() scrolls by the distance from where the pane last painted, so it
-  -- can land short until the pane catches up; repeating it settles it
-  local function parkAt(window, line)
-    for _ = 1, 10 do
-      scrollTo(window, line)
-      for _ = 1, 20 do
-        if getScroll(window) == line then
-          return line
-        end
-        pumpEventLoop()
-      end
-    end
-    return getScroll(window)
   end
 
   setup(function()
@@ -59,10 +36,10 @@ describe("Tests that clearWindow() finds its console by name", function()
     assert.has_error(function() clearWindow(true) end)
   end)
 
-  it("answers nothing and clears nothing for a name that is no window at all", function()
+  it("refuses and clears nothing for a name that is no window at all", function()
     local mainLast = getLastLineNumber("main")
     local siblingLast = getLastLineNumber(sibling)
-    assert.are.equal(0, select("#", clearWindow(unknown)))
+    assert.are.same({nil, ('window "%s" not found'):format(unknown)}, {clearWindow(unknown)})
     assert.are.equal(mainLast, getLastLineNumber("main"))
     assert.are.equal(siblingLast, getLastLineNumber(sibling))
   end)
@@ -78,18 +55,19 @@ describe("Tests that clearWindow() finds its console by name", function()
     end)
 
     local kinds = {
-      {"label", function() return createLabel(otherName, 0, 0, 50, 20, 1) end},
-      {"scroll box", function() return createScrollBox(otherName, 0, 0, 50, 20) end},
-      {"text edit", function() return createTextEdit("main", otherName, 0, 0, 50, 20) end},
-      {"command line", function() return createCommandLine(otherName, 0, 0, 50, 20) end},
+      {"label", function() return createLabel(otherName, 0, 0, 50, 20, 1) end, "label"},
+      {"scroll box", function() return createScrollBox(otherName, 0, 0, 50, 20) end, "scrollbox"},
+      {"text edit", function() return createTextEdit("main", otherName, 0, 0, 50, 20) end, "textedit"},
+      {"command line", function() return createCommandLine(otherName, 0, 0, 50, 20) end, "commandline"},
     }
 
     for _, kind in ipairs(kinds) do
-      it("answers nothing and clears nothing for a " .. kind[1], function()
+      it("refuses and clears nothing for a " .. kind[1], function()
         assert.is_true(kind[2]())
         local mainLast = getLastLineNumber("main")
         local siblingLast = getLastLineNumber(sibling)
-        assert.are.equal(0, select("#", clearWindow(otherName)))
+        local refusal = ('window "%s" is of type "%s", which this function cannot use'):format(otherName, kind[3])
+        assert.are.same({nil, refusal}, {clearWindow(otherName)})
         assert.are.equal(mainLast, getLastLineNumber("main"))
         assert.are.equal(siblingLast, getLastLineNumber(sibling))
       end)
@@ -153,16 +131,13 @@ describe("Tests that clearWindow() finds its console by name", function()
           assert.are.equal(1, selectString(window, "fter", 1))
         end)
 
-        if isBuffer then
-          -- a buffer has no pane to scroll
-        elseif not os.getenv("MUDLET_TEST_MODE") then
-          pending("follows new text again after being scrolled back - needs MUDLET_TEST_MODE for waitForEvent")
-        else
+        if not isBuffer then
           it("follows new text again after being scrolled back", function()
             assert.is_true(getRowCount(window) > 0, kind[1] .. " came up with no visible rows")
             clearWindow(window)
             fill(window, 200)
-            assert.are.equal(150, parkAt(window, 150))
+            scrollTo(window, 150)
+            assert.are.equal(150, getScroll(window))
             clearWindow(window)
             fill(window, 200)
             assert.are.equal(getLastLineNumber(window), getScroll(window))
@@ -183,17 +158,14 @@ describe("Tests that clearWindow() finds its console by name", function()
       end)
     end
 
-    if not os.getenv("MUDLET_TEST_MODE") then
-      pending("follows new text again after being scrolled back - needs MUDLET_TEST_MODE for waitForEvent")
-    else
-      it("follows new text again after being scrolled back", function()
-        clearWindow()
-        fill("main", 200)
-        assert.are.equal(150, parkAt("main", 150))
-        clearWindow()
-        fill("main", 200)
-        assert.are.equal(getLastLineNumber("main"), getScroll("main"))
-      end)
-    end
+    it("follows new text again after being scrolled back", function()
+      clearWindow()
+      fill("main", 200)
+      scrollTo("main", 150)
+      assert.are.equal(150, getScroll("main"))
+      clearWindow()
+      fill("main", 200)
+      assert.are.equal(getLastLineNumber("main"), getScroll("main"))
+    end)
   end)
 end)

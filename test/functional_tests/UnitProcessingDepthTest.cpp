@@ -59,9 +59,6 @@ private:
     QByteArray mSavedXdg;
     Host* mpHost = nullptr;
 
-    // Reads back Lua state through the return value rather than getLuaString(),
-    // which reports an absolute stack slot and so only answers correctly for the
-    // first call in a process.
     bool luaHolds(const QString& condition) { return mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("assert(%1)").arg(condition)); }
 
 private slots:

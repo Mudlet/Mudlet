@@ -106,9 +106,7 @@ static QString messageTarget(IrcMessage* msg, const QString& bufferName)
         break;
     }
     default:
-        // Other message types are not expected - I hope - SlySven
-        qWarning().noquote().nospace() << "TIrcClient messageTarget(..., \"" << bufferName << "\") WARNING - message of type: " << msg->type()
-                                       << " not explicitly handled, this needs fixing by Mudlet Makers...";
+        break;
     }
     return target;
 }
@@ -377,7 +375,8 @@ void TIrcClient::slot_receiveNumericMessage(IrcNumericMessage* message)
 QString TIrcClient::readIrcHostName(Host* pH)
 {
     QString hostname = pH->readProfileData(TIrcClient::HostNameCfgItem);
-    if (hostname.isEmpty()) {
+    // a profile saved before writeIrcHostName() refused them can still hold an unusable name
+    if (hostname.isEmpty() || textHasSpace(hostname) || textBreaksIrcLine(hostname)) {
         hostname = TIrcClient::DefaultHostName;
     }
     return hostname;
@@ -457,18 +456,39 @@ QStringList TIrcClient::readIrcChannels(Host* pH)
     if (channelstr.isEmpty()) {
         channels << TIrcClient::DefaultChannels;
     } else {
-        channels = channelstr.split(qsl(" "), Qt::SkipEmptyParts);
+        // a profile saved before writeIrcChannels() refused them can still hold unusable names
+        for (const QString& channel : channelstr.split(qsl(" "), Qt::SkipEmptyParts)) {
+            if (validIrcChannelName(channel)) {
+                channels << channel;
+            }
+        }
+        if (channels.isEmpty()) {
+            channels << TIrcClient::DefaultChannels;
+        }
     }
     return channels;
 }
 
+// The writers below refuse a value that would never be used - one the reader replaces with a
+// default or skips, or one that cannot go on an IRC line - rather than report it as saved.
 QPair<bool, QString> TIrcClient::writeIrcHostName(Host* pH, const QString& hostname)
 {
+    if (hostname.isEmpty()) {
+        return {false, qsl("hostname must not be empty")};
+    }
+    if (textHasSpace(hostname) || textBreaksIrcLine(hostname)) {
+        return {false, qsl("hostname \"%1\" must not hold a space or a line break").arg(escapedForError(hostname))};
+    }
+
     return pH->writeProfileData(TIrcClient::HostNameCfgItem, hostname);
 }
 
 QPair<bool, QString> TIrcClient::writeIrcHostPort(Host* pH, int port)
 {
+    if (port < 1 || port > 65535) {
+        return {false, qsl("invalid port number %1 given, it must be in range 1 to 65535").arg(port)};
+    }
+
     return pH->writeProfileData(TIrcClient::HostPortCfgItem, QString::number(port));
 }
 
@@ -479,6 +499,9 @@ QPair<bool, QString> TIrcClient::writeIrcHostSecure(Host* pH, bool secure)
 
 QPair<bool, QString> TIrcClient::writeIrcNickName(Host* pH, const QString& nickname)
 {
+    if (nickname.isEmpty()) {
+        return {false, qsl("nick must not be empty")};
+    }
     // Sent as "NICK <nickname>" at registration, bypassing validateMsgArguments(); IrcConnection
     // takes only the first word, but a line break within it would start an injected command.
     if (textBreaksIrcLine(nickname) || textHasSpace(nickname)) {
@@ -512,7 +535,26 @@ QPair<bool, QString> TIrcClient::writeIrcPassword(Host* pH, const QString& passw
     return pH->writeProfileData(TIrcClient::PasswordCfgItem, password);
 }
 
+// RFC 2811 channel prefixes only. The stored list is space-joined and JOIN comma-joined, so
+// whitespace or a comma would split a name, and a line break or NUL would end the command.
+bool TIrcClient::validIrcChannelName(const QString& channel)
+{
+    if (!channel.startsWith(QLatin1Char('#')) && !channel.startsWith(QLatin1Char('&')) && !channel.startsWith(QLatin1Char('+')) && !channel.startsWith(QLatin1Char('!'))) {
+        return false;
+    }
+    return !textHasSpace(channel) && !textBreaksIrcLine(channel) && !channel.contains(QLatin1Char(','));
+}
+
 QPair<bool, QString> TIrcClient::writeIrcChannels(Host* pH, const QStringList& channels)
 {
+    if (channels.isEmpty()) {
+        return {false, qsl("no (valid) channel names provided")};
+    }
+    for (const QString& channel : channels) {
+        if (!validIrcChannelName(channel)) {
+            return {false, qsl("channel name \"%1\" must start with #, &, + or ! and hold no space or comma").arg(escapedForError(channel))};
+        }
+    }
+
     return pH->writeProfileData(TIrcClient::ChannelsCfgItem, channels.join(qsl(" ")));
 }

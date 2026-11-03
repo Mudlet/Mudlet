@@ -15,6 +15,8 @@ setConfig("showSentText", false)
 echo("Text sent to the game will not appear in the main window ✓\n")
 setConfig("advertiseScreenReader", true)
 echo("Advertising screen reader use to games supporting Mud Terminal Type Standard (MTTS) ✓\n")
+setConfig("accessibleLabels", true)
+echo("Buttons made by scripts and packages can be reached with Tab and pressed with Space or Enter ✓\n")
 setConfig("editorAutoComplete", true)
 echo("Disabling visual auto complete in the code editor ✓\n")
 

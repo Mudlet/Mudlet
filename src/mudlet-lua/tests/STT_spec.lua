@@ -12,6 +12,9 @@
 
 describe("stt bridge", function()
 
+  -- How a build left without Vosk and sherpa-onnx (USE_SPEECH_ENGINES=OFF) refuses
+  local cannotLoadEngines = "this build of Mudlet cannot load a speech engine library"
+
   describe("API surface", function()
 
     it("registers the stt table whether or not an engine is installed", function()
@@ -561,6 +564,9 @@ describe("stt bridge", function()
       finally(function() stt.reloadLibrary() end)
 
       local unloaded, unloadError = stt.unloadLibrary()
+      if not unloaded and tostring(unloadError):find(cannotLoadEngines, 1, true) then
+        return -- nothing could have been loaded, so there is nothing to unload
+      end
       assert.is_true(unloaded, "unloading with nothing in use should succeed, got: " .. tostring(unloadError))
       -- The latch is about the library. Availability is not only about the
       -- library on a Mac, where the built-in backend needs none and keeps
@@ -609,6 +615,14 @@ describe("stt bridge", function()
       assert.is_table(keys, "this spec does not know the keys for " .. tostring(getOS()))
       if getOS() == "windows" and key == nil then
         return -- ARM64 Windows, which ships no engine build
+      end
+      if key == nil then
+        local unloaded, unloadError = stt.unloadLibrary()
+        if unloaded then
+          stt.reloadLibrary()
+        elseif tostring(unloadError):find(cannotLoadEngines, 1, true) then
+          return -- no downloaded engine could be loaded, so there is nothing to pick
+        end
       end
       assert.is_string(key, "a platform with a build should name its key")
       assert.is_true(keys[key] == true, "unexpected platform key: " .. tostring(key))

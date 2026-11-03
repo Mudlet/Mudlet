@@ -36,7 +36,7 @@
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
-#include <QScopeGuard>
+#include <QStringConverter>
 #include <QStringList>
 #if defined(QT_NO_SSL)
 #include <QTcpSocket>
@@ -50,6 +50,7 @@
 #include <zstd.h>
 
 #include <bitset>
+#include <chrono>
 #include <iostream>
 #include <memory>
 #include <queue>
@@ -195,13 +196,14 @@ public:
     // auto-login credentials, so only game commands can arm character-at-a-time
     // detection:
     bool sendData(QString& data, bool permitDataSendRequestEvent = true, bool isGameCommand = false);
+    bool dispatchingSendRequest() const { return mSendRequestDispatchDepth > 0; }
     QMap<QString, QPair<bool, QString>> getNewEnvironDataMap();
     bool isMNESVariable(const QString&);
     void sendInfoNewEnvironValue(const QString&);
     void sendInfoNewEnvironValues(const QStringList&);
     void sendInfoNewEnvironOSCHyperlinks();
     void setATCPVariables(const QByteArray&);
-    void setGMCPVariables(const QByteArray&);
+    void setGMCPVariables(QByteArrayView);
     void setMSSPVariables(const QByteArray&);
     void setMSPVariables(const QByteArray&);
     bool isIPAddress(const QString&);
@@ -210,7 +212,6 @@ public:
     void atcpComposerSave(QString);
     void checkNAWS();
     void setAutoReconnect(bool status);
-    void encodingChanged(const QByteArray&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
     void cacheHostSettings();
     void setDontReconnect(bool b) { mDontReconnect = b; }
@@ -265,17 +266,12 @@ public:
     QString decodeOption(const unsigned char) const;
     QString formatShortTelnetCommand(const std::string& telnetCommand, const QString& commandName) const;
     QAbstractSocket::SocketState getConnectionState() const;
+    // Game commands sendData() could not write, as with no connection, over the profile's life
+    int gameCommandsNotWritten() const { return mGameCommandsNotWritten; }
     std::tuple<QString, int, bool> getConnectionInfo() const;
     void setPostingTimeout(const int);
     int getPostingTimeout() const { return mTimeOut; }
-    void loopbackTest(QByteArray& data)
-    {
-        ++mLoopbackProcessingDepth;
-        const auto loopbackGuard = qScopeGuard([this] {
-            --mLoopbackProcessingDepth;
-        });
-        processSocketData(data.data(), data.size(), true);
-    }
+    void loopbackTest(QByteArray& data);
     int loopbackProcessingDepth() const { return mLoopbackProcessingDepth; }
     // Every feedTelnet() level nests inside processSocketData(), so it also
     // counts against scmMaxDecompressionRecursion; keep this below it, or a
@@ -284,16 +280,21 @@ public:
     // How deep processSocketData() may nest (the outermost call counts as one)
     // while draining data left over after a decompression pass (compressed input that did not fit in one
     // output buffer, or plain data following the compressed stream). Each level
-    // inflates at most one output buffer, so this caps decompressed output at
-    // ~scmMaxDecompressionRecursion * BUFFER_SIZE per socket read, which bounds
-    // a decompression bomb.
+    // inflates at most one output buffer; what is left at the deepest level waits
+    // in mDeferredInput, so a socket's decompression bomb is worked through
+    // ~scmMaxDecompressionRecursion * BUFFER_SIZE per event-loop turn.
     inline static const int scmMaxDecompressionRecursion = 8;
     void cancelLoginTimers();
+    // A flag rather than a timer query, so every transition makes the Host
+    // recompute its hidden-input policy
+    bool autoLoginPending() const { return mAutoLoginPending; }
+    bool autoLoginTimersRunning() const;
     // Called when a password turns up after the auto-login already reached the password step -
     // a keychain read the user only answered by then. Sends it only while the game is provably
     // still waiting at that prompt, see the definition.
     void sendOutstandingAutoLoginPassword();
-    void terminateConnection();
+    // The wait blocks, so is only for a profile with no window to freeze
+    void terminateConnection(bool waitForTheGameToClose);
     bool currentlySecure() const
     {
 #if defined(QT_NO_SSL)
@@ -320,6 +321,8 @@ public:
     QPointer<QObject> mpComposer;
     QNetworkAccessManager* mpDownloader = nullptr;
     QString mServerPackage;
+    // recorded as Host::mServerGUI_Package_version only once the download installs
+    QString mServerPackageVersion;
     QString mProfileName;
 
 
@@ -381,14 +384,24 @@ private:
 
     // Needs to call processSocketData() with a buffer it laid out itself, which
     // the public loopbackTest() cannot express - see issue #1065 - and to seed
-    // mDecompressionRecursionDepth so the over-limit refusal can be reached
-    // without a real decompression bomb.
+    // mDecompressionRecursionDepth so the over-limit refusal, which a drain
+    // never reaches itself, can be tested.
     friend class cTelnetBufferTest;
 
     // Reads the password-mode safety timer, the connection clock and the
     // character-at-a-time detection timer and flags, which have no public face,
     // and fires those timers early rather than waiting them out.
     friend class TelnetPasswordMaskTimeoutTest;
+    friend class PasswordEntryPolicyTest;
+    friend class PasswordEntryTest;
+
+    // Wait on the posting and NAWS settle timers rather than sleeping past them
+    friend class MirrorToStdOutTest;
+    friend class NawsWidthReportTest;
+
+    // Shorten mFailedConnectionRetryDelay and mNetworkLatencyTimeout rather than sitting them out
+    friend class TelnetConnectFailureTest;
+    friend class TelnetLatencyMeasurementTest;
 
     // Host calls reset(), not cTelnet's constructor: it clears Host members declared after
     // cTelnet, which don't exist yet while cTelnet is constructed.
@@ -468,6 +481,10 @@ private:
     void gotRest(std::string&);
     void gotPrompt(std::string&);
     void postData(bool endsWithPromptMarker = false);
+    void postHeldDataBeforeEncodingChange();
+    void processSubnegotiation(const std::string& subnegotiation, std::string& textAhead);
+    void encodingChanged(const QByteArray&);
+    void openSendConverters();
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void beginNetworkLatencyMeasurement();
     void finishNetworkLatencyMeasurement();
@@ -477,25 +494,33 @@ private:
 
 private slots:
     void slot_networkLatencyBeat();
+    void slot_replaySpeedChanged();
     void slot_passwordMaskTimeout();
 
 private:
 #if !defined(QT_NO_SSL)
     void promptTlsConnectionAvailable();
 #endif
+    void armReplayChunkTimer();
+    void stopReplayChunkTimer();
     void sendNAWS(int width, int height);
     void sendCurrentNAWS();
     void readPendingSocketData();
+    bool readSocketDataOnce();
+    void drainBeforeDisconnection();
+    void finishDisconnection();
     QString parseGUIVersionFromJSON(const QJsonObject& json);
     QString parseGUIUrlFromJSON(const QJsonObject& json);
     bool parseGUIBaseUiDeclinedFromJSON(const QJsonObject& json);
     void downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url);
+    void installDownloadedGUIPackage(const QString& packagePath, const QString& packageVersion);
     void handleGUIPackageInstallationAndUpgrade(QJsonDocument document);
 
     static std::pair<bool, bool> testReadReplayFile();
 
     void trackKaVirNegotiation(unsigned char option);
     void autoEnableMXPProcessor();
+    void switchMxpOn();
     void autoEnableTTYPEVersion();
     QByteArray encodingForCharacterSet(const QByteArray& characterSet) const;
 
@@ -575,9 +600,16 @@ private:
     // Whether mUninflatedInput still holds every byte the stream has taken
     bool mUninflatedInputComplete = true;
     // Re-entry depth of processSocketData() while draining leftover
-    // (de)compressed data; bounds stack use and decompression-bomb output.
+    // (de)compressed data; bounds stack use.
     int mDecompressionRecursionDepth = 0;
+    // Input left over once a drain reached scmMaxDecompressionRecursion, processed
+    // ahead of anything read after it
+    QByteArray mDeferredInput;
     std::string command;
+    // The text of the read being parsed that is still ahead of the subnegotiation being handled
+    std::string* mpTextAheadOfSubnegotiation = nullptr;
+    // Whether the start of the prompt being received was posted ahead of an encoding change
+    bool mPromptStartPosted = false;
     bool iac = false;
     bool iac2 = false;
     bool insb = false;
@@ -603,6 +635,11 @@ private:
 
     QString termType;
     QByteArray mEncoding;
+    // Opened once per encoding, as each ICU converter takes most of a microsecond to open
+    QByteArray mSendConvertersEncoding;
+    bool mSendEncodingAvailable = false;
+    QStringEncoder mSendEncoder;
+    QStringDecoder mSendRoundTripDecoder;
     QTimer* mpPostingTimer = nullptr;
     // We do not directly adjust the interval for the above because doing so
     // while it is active changes the timerId which might have unforeseen
@@ -621,6 +658,9 @@ private:
 
     std::string mMudData;
     bool mIsTimerPosting = false;
+    QElapsedTimer mPartialLineHeldSince;
+    // The last bytes trackMXPElementDetection() saw, so an ESC[#z split between two reads is found
+    std::string mMxpDetectionTail;
     // Beats while a write waits on its reply - see NETWORK_LATENCY_BEAT in
     // ctelnet.cpp:
     QTimer* mpNetworkLatencyBeatTimer = nullptr;
@@ -631,6 +671,8 @@ private:
 
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
+    bool mAutoLoginPending = false;
+    void setAutoLoginPending(const bool pending);
     // Set when the auto-login reached the password step with no password in hand, which is where
     // an unanswered keychain prompt leaves it. It is the record of the game sitting at its
     // password prompt that sendOutstandingAutoLoginPassword() needs to decide whether a password
@@ -643,6 +685,17 @@ private:
     bool mAutoLoginPasswordMaskWithdrawn = false;
     QTimer* mTimerPasswordModeTimeout = nullptr;
     QTimer* mTimerFailedConnectionRetry = nullptr;
+    // How long to leave a game alone after a connection attempt to it failed, before
+    // trying again for a profile that reconnects automatically. A refused connection
+    // comes back at once, so without a wait here the retries are a tight loop. The
+    // wait doubles with each failure in a row up to FAILED_CONNECTION_RETRY_MAX_DELAY.
+    std::chrono::milliseconds mFailedConnectionRetryDelay = std::chrono::seconds(5);
+    // A command the game never answers would otherwise leave the next unrelated
+    // line it sends - minutes later - being timed as that command's reply, so a
+    // measurement unanswered this long is abandoned and nothing is published for
+    // it. Set well past any wait still worth calling a ping rather than tight, so
+    // that a game which is merely lagging badly still has its lag reported.
+    std::chrono::milliseconds mNetworkLatencyTimeout = std::chrono::seconds(10);
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;
@@ -661,10 +714,20 @@ private:
     bool enableMSDP = false;
     bool enableMSP = false;
     bool enableMXP = false;
+    // enableMXP was set by autoEnableMXPProcessor() rather than by the game switching MXP on
+    bool mMxpAutoEnabled = false;
     bool enableChannel102 = false;
     // Inhibit mAutoReconnect from taking effect for one connection cycle,
     // either because the user wanted to disconnect or an SSL/TLS error occurred:
     bool mDontReconnect = false;
+    // Set by disconnectIt() and abortConnection(): what the game sent after that
+    // is not wanted. Unlike mDontReconnect, nothing else sets it while connected.
+    bool mDisconnectRequested = false;
+    // Set while what the game sent before closing is still being taken in, one
+    // read per event-loop turn; the disconnect is finished once it is all in.
+    bool mDisconnectionPending = false;
+    // A readPendingSocketData() is queued for the rest of a burst; only Windows acts on it
+    bool mReadPending = false;
     bool mAutoReconnect = false;
     QStringList messageStack;
     // True if THIS profile is playing a replay, does not know about any OTHER
@@ -675,19 +738,25 @@ private:
     // A chunk is in ctelnet.cpp's global buffer but not yet parsed. Defensive: stops resumeReplay()
     // re-arming when a pause AND resume land inside one chunk's processing via a nested event loop.
     bool mReplayChunkPending = false;
-    // The gap scaled by replay speed, or what was left of it when paused mid-wait.
-    int mReplayChunkDelay = 0;
+    // What is left of the recorded gap before the pending chunk, in the recording's own
+    // milliseconds: a wait scaled to one speed and rescaled to another loses to truncation.
+    qint64 mReplayChunkOwedMsec = 0;
+    // The speed the running wait was armed at, and when.
+    int mReplayChunkSpeed = 1;
+    QElapsedTimer mReplayChunkArmedAt;
     // Not QTimer::singleShot, so pausing can stop it and keep the remaining time.
     QTimer* mpReplayChunkTimer = nullptr;
     // Used to disable the TConsole ending messages if run from lua:
     bool mIsReplayRunFromLua = false;
     QByteArrayList mAcceptableEncodings;
+    int mSendRequestDispatchDepth = 0;
     // Used to prevent more than one warning being shown in the event of a bad
     // encoding (when the user wants to use characters that cannot be encoded in
     // the current Server Encoding) - gets reset when the encoding is changed:
     bool mEncodingWarningIssued = false;
     // Same sort of thing if an encoder fails to be found/loaded:
     bool mEncoderFailureNoticeIssued = false;
+    int mGameCommandsNotWritten = 0;
 
     // Set if the current connection is via a proxy
     bool mConnectViaProxy = false;

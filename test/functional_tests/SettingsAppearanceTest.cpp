@@ -167,6 +167,26 @@ private:
                 .arg(surface.name(), QString::number(surface.lightness()), applicationIsLight() ? qsl("light") : qsl("dark"), QApplication::palette().color(QPalette::Base).name());
     }
 
+    // A theme stylesheet that paints every widget, as dark-theme packages do, decides the shell's colours as
+    // it did before the shell drew its own surfaces: otherwise each control the theme paints sits in a dark
+    // box on a light card (#11839)
+    void checkTheShellFollowsTheThemeStyleSheet()
+    {
+        const QColor themeFill(qsl("#181818"));
+        const QColor surface = paintedSurface();
+        QVERIFY2(surface == themeFill, qPrintable(qsl("the theme paints every widget %1, yet the shell is %2").arg(themeFill.name(), surface.name())));
+
+        auto* pCard = mpPreferences->findChild<QGroupBox*>(qsl("card_theme"));
+        QVERIFY2(pCard, "the Appearance card this case reads its colours off is not there any more");
+        const QColor cardFill = pixelOf(pCard, QPoint(pCard->width() / 2, pCard->height() - 4));
+        const QColor labelFill = pixelOf(mpPreferences->label_appearance, QPoint(1, 1));
+        QVERIFY2(cardFill == labelFill, qPrintable(qsl("a label is painted %1 on a card painted %2").arg(labelFill.name(), cardFill.name())));
+
+        const QColor ink = mpPreferences->label_appearance->palette().color(mpPreferences->label_appearance->foregroundRole());
+        const qreal ratio = contrastRatio(cardFill, ink);
+        QVERIFY2(ratio >= 4.5, qPrintable(qsl("a card is painted %1 under %2 text, a contrast of %3:1").arg(cardFill.name(), ink.name(), QString::number(ratio, 'f', 2))));
+    }
+
 private slots:
     void initTestCase()
     {
@@ -217,6 +237,7 @@ private slots:
     {
         delete mpPreferences;
         mpPreferences = nullptr;
+        mudlet::self()->setAppStyleSheet(QString());
         mudlet::self()->setAppearance(enums::Appearance::systemSetting);
     }
 
@@ -265,22 +286,61 @@ private slots:
         QVERIFY2(ratio >= 4.5, qPrintable(qsl("a card is painted %1 under %2 text, a contrast of %3:1").arg(fill.name(), ink.name(), QString::number(ratio, 'f', 2))));
     }
 
-    // The shell's surfaces are its own, and a profile's Lua stylesheet is
-    // applied to the whole dialog - so the one must not be able to repaint the
-    // other, before a theme change or after one.
-    void test_aProfileStyleSheetDoesNotTakeOverTheShellsSurfaces()
+    void test_aProfileStyleSheetThemeDecidesTheShellsColours()
     {
-        setAppearance(enums::Appearance::dark);
-        mpPreferences->setStyleSheet(qsl("QWidget { background-color: rgb(255, 0, 0); }"));
+        setAppearance(enums::Appearance::light);
+        mpPreferences->setStyleSheet(qsl("QWidget { background-color: #181818; color: #a0a0a0; }"));
         QCoreApplication::processEvents();
-        const QColor beforeTheFlip = paintedSurface();
-        QVERIFY2(!(beforeTheFlip.red() > 200 && beforeTheFlip.green() < 60), qPrintable(qsl("the profile stylesheet painted the shell %1 before any theme change").arg(beforeTheFlip.name())));
+        checkTheShellFollowsTheThemeStyleSheet();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        // A theme change has to leave the theme stylesheet in charge
+        setAppearance(enums::Appearance::dark);
+        checkTheShellFollowsTheThemeStyleSheet();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
 
         setAppearance(enums::Appearance::light);
-        QVERIFY2(applicationIsLight(), "the application did not go light, so this is not the mid-life flip");
-        const QColor surface = paintedSurface();
-        QVERIFY2(!(surface.red() > 200 && surface.green() < 60), qPrintable(qsl("the profile stylesheet painted the shell %1 after the theme change").arg(surface.name())));
-        QVERIFY2(surface.lightness() >= 128, qPrintable(describe(surface)));
+        checkTheShellFollowsTheThemeStyleSheet();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        // Cleared with no theme change after it, which would restyle the shell anyway
+        mpPreferences->setStyleSheet(QString());
+        QCoreApplication::processEvents();
+        mpPreferences->grab();
+        QVERIFY2(paintedSurface().lightness() >= 128, qPrintable(describe(paintedSurface())));
+    }
+
+    // A see-through theme background is no colour to draw cards in
+    void test_aTransparentThemeBackgroundLeavesTheShellItsOwnColours()
+    {
+        setAppearance(enums::Appearance::light);
+        mpPreferences->setStyleSheet(qsl("QWidget { background-color: transparent; }"));
+        QCoreApplication::processEvents();
+        mpPreferences->grab();
+        QVERIFY2(paintedSurface().lightness() >= 128, qPrintable(describe(paintedSurface())));
+    }
+
+    void test_anAppStyleSheetThemeDecidesTheShellsColours()
+    {
+        setAppearance(enums::Appearance::light);
+        mudlet::self()->setAppStyleSheet(qsl("QWidget { background-color: #181818; color: #a0a0a0; }"));
+        QCoreApplication::processEvents();
+        mpPreferences->grab();
+        checkTheShellFollowsTheThemeStyleSheet();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        mudlet::self()->setAppStyleSheet(QString());
+        QCoreApplication::processEvents();
+        mpPreferences->grab();
+        QVERIFY2(paintedSurface().lightness() >= 128, qPrintable(describe(paintedSurface())));
     }
 
     // The certificate warnings carry their colours in a stylesheet rather than

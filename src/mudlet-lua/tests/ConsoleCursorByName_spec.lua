@@ -155,7 +155,7 @@ describe("Tests that the cursor and line functions find their console by name", 
           local mainLines = getLineCount("main")
 
           assert.is_true(moveCursor(window, 0, 1))
-          assert.are.equal(0, select("#", deleteLine(window)))
+          assert.are.same({true}, {deleteLine(window)})
           assert.are.equal(1, getLineCount(window))
           assert.are.same({"first line", "third line"}, getLines(window, 0, 2))
           assert.are.equal(mainLines, getLineCount("main"))
@@ -267,7 +267,7 @@ describe("Tests that the cursor and line functions find their console by name", 
         local last = getLastLineNumber("main")
 
         assert.is_true(moveCursor("main", 0, line))
-        assert.are.equal(0, select("#", deleteLine(name)))
+        assert.are.same({true}, {deleteLine(name)})
         assert.are.equal(last - 1, getLastLineNumber("main"))
         assert.is_nil(findRecentMainLine(doomed))
       end)

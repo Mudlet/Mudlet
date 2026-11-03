@@ -105,6 +105,8 @@ void EditorMoveItemCommand::moveItem(int fromParentID, int toParentID, int posit
     }
     case EditorViewType::cmActionView: {
         mpHost->getActionUnit()->reParentAction(mItemID, fromParentID, toParentID, TreeItemInsertMode::AtPosition, position);
+        // TTreeWidget's drop rebuilds the bars after reparenting; without this a bar moved back out stays missing
+        mpHost->getActionUnit()->updateAllToolbars();
         break;
     }
     default:

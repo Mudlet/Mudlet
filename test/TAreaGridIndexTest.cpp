@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <TAreaGridIndex.h>
 
 #include <QtTest/QtTest>
@@ -681,6 +682,6 @@ private slots:
     }
 };
 
-QTEST_GUILESS_MAIN(TAreaGridIndexTest)
+MUDLET_GROUPED_TEST_GUILESS_MAIN(TAreaGridIndexTest)
 
 #include "TAreaGridIndexTest.moc"

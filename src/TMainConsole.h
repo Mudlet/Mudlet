@@ -45,6 +45,7 @@ class TEasyButtonBar;
 class TFlipButton;
 class TMediaPlayer;
 class TMxpFrameWidgets;
+class TPasswordEntry;
 class TScrollBox;
 class TTextBox;
 class TToolBar;
@@ -57,6 +58,9 @@ class TMainConsole : public TConsole, public TConsoleFrontend
 {
     Q_OBJECT
 
+    friend class PasswordEntryTest;
+    friend class HostChildTeardownTest;
+
 public:
     explicit TMainConsole(Host*, QWidget* parent = nullptr);
     ~TMainConsole();
@@ -65,7 +69,7 @@ public:
     void resetMainConsole() override;
     void closeEvent(QCloseEvent*) override;
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
-    bool addMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height) override { return createMiniConsole(windowname, name, x, y, width, height) != nullptr; }
+    void addMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height) override { createMiniConsole(windowname, name, x, y, width, height); }
     TConsole* createSubConsole(const QString& name, QWidget* parent);
     TMxpFrameWidgets& mxpFrameWidgets() { return *mpMxpFrameWidgets; }
     const TMxpFrameWidgets& mxpFrameWidgets() const { return *mpMxpFrameWidgets; }
@@ -103,10 +107,10 @@ public:
     void markSelectionDirty() override { TConsole::markSelectionDirty(); }
     void refreshView() const override { TConsole::refreshView(); }
     void restoreOwnMapper() override;
-    bool createBuffer(const QString& name) override;
+    void createBuffer(const QString& name) override;
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet) override;
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text) override;
-    bool createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough) override;
+    void createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough) override;
     std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int) override;
     std::pair<bool, QString> createCommandLine(const QString& windowname, const QString& name, int, int, int, int) override;
     void registerSubCommandLine(const QString& name, TCommandLine* pCommandLine);
@@ -115,8 +119,8 @@ public:
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet) override;
     std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet) override;
     std::optional<QSize> getLabelSizeHint(const QString& name) const override;
-    std::pair<bool, QString> deleteLabel(const QString& name) override;
-    std::pair<bool, QString> deleteMiniConsole(const QString&) override;
+    void deleteLabel(const QString& name) override;
+    void deleteMiniConsole(const QString&) override;
     std::pair<bool, QString> deleteCommandLine(const QString&) override;
     std::pair<bool, QString> deleteTextBox(const QString&) override;
     std::pair<bool, QString> deleteScrollBox(const QString&) override;
@@ -154,6 +158,17 @@ public:
     bool scaleLabelMovie(const QString& name, bool followLabelSize) override;
     // Not the open map, so map changes stay in this class, in step with the window registry.
     TLabel* labelWidget(const QString& name) const { return mLabelMap.value(name); }
+    // The enabled labels in this window Tab stops on - buttons, and labels with links - top to bottom then left to right
+    QList<TLabel*> keyboardButtons() const;
+    // From the main window's links: focuses the first, or going backwards the last, button; false when there are none
+    bool focusKeyboardButton(bool forward);
+    // Moves the focus from a label, focused or losing its focus as it goes, to the next or previous button by its
+    // place on screen, else out of the buttons
+    void focusButtonAfter(const TLabel* pLabel, bool next);
+    // To the first or last link when the player came from caret mode, else to the command line
+    void leaveKeyboardButtons(bool next);
+    // So that leaving the buttons later goes to the command line, not back to caret mode
+    void forgetCaretOrigin() { mKeyboardButtonsFromCaret = false; }
     // Copies a named window's current pos() and size() into Host's window registry (a label's into
     // its model), where Host::windowGeometry() reads them. Every view op that moves or resizes a
     // widget calls it, as a hidden widget gets no events to report its own.
@@ -173,7 +188,7 @@ public:
     TConsole* deregisterSubConsole(const QString& name);
     void registerDockWidget(const QString& name, TDockWidget* pDockWidget);
     TDockWidget* deregisterDockWidget(const QString& name);
-    std::pair<bool, QString> openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) override;
+    bool openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) override;
     TConsole* subConsoleWidget(const QString& name) const { return mSubConsoleMap.value(name); }
     QString subConsoleName(TConsole* pConsole) const { return mSubConsoleMap.key(pConsole); }
     TDockWidget* dockWidget(const QString& name) const { return mDockWidgetMap.value(name); }
@@ -187,6 +202,7 @@ public:
     bool moveSubConsole(const QString& name, int x, int y) override;
     std::pair<bool, QString> reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show) override;
     std::optional<QSize> consoleFontSize(const QString& name) const override;
+    std::optional<int> consoleColumnWidth(const QString& name) const override;
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color) override;
     bool setSubConsoleBackgroundImage(const QString& name, const QString& path, int mode) override;
     bool resetSubConsoleBackgroundImage(const QString& name) override;
@@ -198,12 +214,19 @@ public:
     QList<TCommandLine*> subCommandLineWidgets() const { return mSubCommandLineMap.values(); }
     void setCommandLinePlaceholderText(const QString& text) override;
     void updateCommandLineSpellCheck(bool enabled) override;
+    // While the hidden-input box is up these, and the writers by name below on
+    // the main command line, write into it, so a script pre-filling a password
+    // lands it masked. Reads never see the box.
     void setCommandLineText(const QString& text) override;
+    void printToCommandLine(const QString& text);
     // The command line the player used last for this profile, so the focus can
     // go back to it on returning to the profile.
     void recordActiveCommandLine(TCommandLine*);
     void forgetCommandLine(TCommandLine*);
     void focusActiveCommandLine() override;
+    // Raises and focuses that command line, or this console's own when none is on record or when the one
+    // on record is outside pWindow; in that last case this console's own also becomes the one on record.
+    void focusActiveCommandLine(const QWidget* pWindow);
     bool replaceCommandLineText(const QString& name, const QString& text) override;
     bool appendCommandLineText(const QString& name, const QString& text) override;
     bool clearCommandLine(const QString& name) override;
@@ -222,6 +245,7 @@ public:
     bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible) override;
     bool setWindowScrolling(const QString& name, bool enabled) override;
     bool scrollWindowTo(const QString& name, int line, bool toEnd) override;
+    bool windowFollowsNewLines(const QString& name) override;
     std::optional<std::pair<bool, QString>> setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight) override;
     bool setWindowFontSize(const QString& name, int size) override;
     bool setWindowCommandLineVisible(const QString& name, bool visible) override;
@@ -272,6 +296,7 @@ public:
     void regenerateToolBars(const std::list<TAction*>& rootActions) override;
     void regenerateEasyButtonBars(const std::list<TAction*>& rootActions) override;
     void detachActionBars(TAction* pAction) override;
+    void disposeActionBars(TAction* pAction) override;
     // Each action's bars, looked up by the action. An action shown as a menu on
     // another's bar (on a floating toolbar, any entry of such a menu) is
     // recorded against that bar too, so what is asked of its bar here is done
@@ -348,6 +373,7 @@ private slots:
     // owns everything else about it.
     void slot_loggingAnnouncement(const bool isLogging, const QString& logFileName);
     void slot_loggingStateChanged(const bool isLogging);
+    void slot_passwordEntryWanted(const bool wanted);
     void slot_refreshLatencyBox();
 
 
@@ -359,8 +385,14 @@ signals:
 
 
 private:
+    QString assembleTriggerMatchPoolReport() const;
+    bool eventFilter(QObject* watched, QEvent* event) override;
+    void openPasswordEntry();
+    void closePasswordEntry();
+    TPasswordEntry* passwordEntry() const;
     dlgMapper* dockedMapper() const;
     void dockMapWidget(Qt::DockWidgetArea area);
+    void redockMapWidget(Qt::DockWidgetArea area);
     TDockWidget* createUserWindow(const QString& name);
     TToolBar* createToolBar(TAction* pAction, const QString& name);
     TEasyButtonBar* createEasyButtonBar(TAction* pRootAction, const QString& name);
@@ -394,7 +426,7 @@ private:
     QWidget* plainWindowWidget(const QString& name) const;
     void watchWindowState(const QString& name, QWidget* pWidget);
     void reportWindowState(const QStringList& names);
-    std::pair<bool, QString> placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
+    bool placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
     TCommandLine* commandLineNamed(const QString& name) const;
     TConsole* consoleNamed(const QString& name);
     // The single answer to "does this profile have a map widget on screen right
@@ -416,6 +448,8 @@ private:
     void registerTextBox(const QString& name, TTextBox* pTextBox);
     void deregisterTextBox(TTextBox* pTextBox);
 
+    // Leaving the main window for the buttons turns caret mode off, so this remembers to turn it back on
+    bool mKeyboardButtonsFromCaret = false;
     // Private so Host's window registry stays in step with them; use the *Widget() accessors.
     QMap<QString, TLabel*> mLabelMap;
     // QPointer: a miniconsole in a user window dies with that dock unannounced, and a null entry
@@ -434,7 +468,12 @@ private:
     std::list<QPointer<TEasyButtonBar>> mEasyButtonBarList;
     QList<QPointer<TToolBar>> mToolBarLayoutChanges;
 
+    QPointer<TPasswordEntry> mpPasswordEntry;
+    // What the open box took from the command line, not yet the player's hidden input
+    QString mPasswordEntryTypedAhead;
+
     bool mEnableClose = false;
+    bool mMainDisplayLayoutPending = false;
     std::unique_ptr<TMxpFrameWidgets> mpMxpFrameWidgets;
 };
 

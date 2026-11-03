@@ -271,6 +271,30 @@ private slots:
         assertReading(seen, qsl("disconnected"), 2, TabConnectionIndicator::Disconnected);
     }
 
+    // A style sheet a script sets reaches the tab bar only through
+    // TAppFrontend::setAppStyleSheet()'s tab bar refresh: TTabBar installs its
+    // own style, so Qt's StyleChange broadcast skips it and it keeps tab sizes
+    // laid out against the previous style.
+    void test_aScriptsAppStyleSheetReachesTheTabBar()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TTabBar* tabBar = mudlet::self()->mpTabBar;
+        QVERIFY(tabBar);
+        const int index = tabBar->tabIndex(mHostname);
+        QVERIFY2(index >= 0, "the profile got no tab of its own, so there is no tab size to assert on");
+        auto restoreStyleSheet = qScopeGuard([host]() {
+            host->getLuaInterpreter()->compileAndExecuteScript(qsl("setAppStyleSheet('')"));
+        });
+
+        for (const int minimumWidth : {tabBar->tabRect(index).width() + 150, tabBar->tabRect(index).width() + 300}) {
+            const QString script = qsl("setAppStyleSheet[[QTabBar::tab { min-width: %1px; }]]").arg(minimumWidth);
+            QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(script), qPrintable(script));
+            QVERIFY2(tabBar->tabRect(index).width() >= minimumWidth,
+                     qPrintable(qsl("the tab is %1px wide after a style sheet asking for at least %2px").arg(tabBar->tabRect(index).width()).arg(minimumWidth)));
+        }
+    }
+
     // The repaint half of the OSC 8 visibility seam. TBufferOSC_spec.lua drives
     // the same delayed reveal but reads back only the line text, which
     // performReveal() restores before it emits, so the whole spec suite stays
@@ -289,7 +313,7 @@ private slots:
         // Of the three visibility actions, a delayed reveal is the only one that
         // completes without a click. The delay runs from the moment the link is
         // registered inside feedTriggers(), and the observer below goes on a
-        // few statements later, so three seconds is budget for a loaded
+        // few statements later, so one second is budget for a loaded
         // sanitiser runner rather than a figure the reveal needs.
         //
         // Real escape bytes inside a Lua long-bracket string, rather than Lua's
@@ -298,7 +322,7 @@ private slots:
         // meta-object for whatever follows, which links as an undefined vtable.
         const QString esc = QString(QChar(0x1B));
         const QString stringTerminator = esc + QLatin1Char('\\');
-        const QString link = qsl("%1]8;;send:osc8seam?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}%2HIDDENWORD%1]8;;%2").arg(esc, stringTerminator);
+        const QString link = qsl("%1]8;;send:osc8seam?config={\"visibility\":{\"action\":\"reveal\",\"delay\":1000}}%2HIDDENWORD%1]8;;%2").arg(esc, stringTerminator);
         const QString feed = qsl("feedTriggers([==[OSCSEAM1(%1)OSCSEAM1\n]==])").arg(link);
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(feed), "feedTriggers() did not run, so no hyperlink was ever registered");
 

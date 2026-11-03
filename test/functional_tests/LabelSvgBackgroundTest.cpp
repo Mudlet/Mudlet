@@ -241,7 +241,7 @@ private slots:
     void cleanup()
     {
         for (const auto& name : {qsl("svgTarget"), qsl("svgBackdrop")}) {
-            mpHost->mainConsoleView()->deleteLabel(name);
+            mpHost->deleteLabel(name);
         }
     }
 

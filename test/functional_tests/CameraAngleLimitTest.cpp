@@ -20,8 +20,8 @@
 /*
  * setPosition() clamps the vertical angle it is handed, so a camera placed
  * from a saved view or a keyboard shortcut cannot end up under the map with
- * the rooms seen from underneath (#8189). shiftPerspective(), which drags the
- * camera round, carries no such clamp.
+ * the rooms seen from underneath (#8189). CameraViewTest covers the same
+ * limit for shiftPerspective(), which drags the camera round.
  *
  * Run with: ctest -R CameraAngleLimitTest -V
  */

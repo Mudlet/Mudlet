@@ -27,10 +27,7 @@
  ***************************************************************************/
 
 #include "discord.h"
-#include "FontManager.h"
 #include "HostManager.h"
-#include "MudletMedia.h"
-#include "MudletReplay.h"
 #include "ShortcutsManager.h"
 #include "TAppFrontend.h"
 #include "utils.h"
@@ -47,6 +44,7 @@
 #include <QMainWindow>
 #include <QMap>
 #include <QPointer>
+#include <QScopedPointer>
 #include <QSystemTrayIcon>
 #include <QTextOption>
 
@@ -89,6 +87,9 @@ class dlgPackageExporter;
 class dlgProfilePreferences;
 class dlgTriggerEditor;
 class Host;
+#ifdef INCLUDE_MCPSERVER
+class TMCPServer;
+#endif
 class MudletInstanceCoordinator;
 class ShortcutManager;
 class TConsole;
@@ -99,7 +100,6 @@ class TEvent;
 class TLabel;
 class translation;
 class TScrollBox;
-class TSpeechBridge;
 class TTabBar;
 class TToolBar;
 class TUiTour;
@@ -107,6 +107,8 @@ class TUiTour;
 class mudlet : public QMainWindow, public Ui::main_window, public TAppFrontend
 {
     Q_OBJECT
+    friend class ConnectionDialogOfflineProfileTest;
+    friend class ConsoleSearchBarTest;
 
 public:
     Q_DISABLE_COPY(mudlet)
@@ -114,16 +116,12 @@ public:
     ~mudlet() override;
 
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
-    static bool loadLuaFunctionList();
+    static bool loadLuaFunctionList(const QString& fileName = qsl(":/lua-function-list.json"));
     static mudlet* self();
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
     static QImage getSplashScreen(bool releaseVersion, bool testVersion);
 
-
-    // translations done high enough will get a gold star to hide the last few percent
-    // as well as encourage translators to maintain it
-    static const int scmTranslationGoldStar = 95;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static QVariantHash smLuaFunctionNames;
     inline static QPointer<TConsole> smpDebugConsole;
@@ -156,6 +154,8 @@ public:
     void commitLayoutUpdates(bool flush = false);
     bool saveFloatingDockGeometries();
     void restoreFloatingDockGeometries();
+    void growDockToSizeHint(QDockWidget*, bool onlyFromMinimum);
+    void growDockToSizeHintWhenShown(QDockWidget*);
     void deleteProfileData(const QString& profile, const QString& item);
     void disableToolbarButtons();
     void doAutoLogin(const QString&, bool offline);
@@ -195,9 +195,12 @@ public:
     bool closeHeldOffByEventPump(Host*) const;
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
     bool loadWindowLayout() override;
+    bool layoutLoading() const override { return mIsLoadingLayout; }
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
     bool migratePasswordsToProfileStorage();
+    // Profiles whose password the last migration to profile storage could not save there, so it stays where it was
+    const QStringList& passwordsNotMigratedToProfiles() const { return mPasswordsNotMigratedToProfiles; }
     bool migratePasswordsToSecureStorage();
     // Helper function to check if current version is >= specified version for backward compatibility
     bool isVersionAtLeast(const QString& minVersion);
@@ -205,7 +208,6 @@ public:
     bool openWebPage(const QString&) override;
 
     // Profile validation and orphan detection
-    bool hasOrphanedProfiles();
     QStringList getOrphanedProfiles();
     void reattachOrphanedProfiles();
     void processEventLoopHack() override;
@@ -216,7 +218,7 @@ public:
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
     void refreshTabBar();
-    void refreshTabBarsAfterStyleChange() override;
+    void refreshTabBarsAfterStyleChange();
     // Used by a profile to tell the mudlet class
     // to tell other profiles to reload the updated
     // maps (via signal_profileMapReloadRequested(...))
@@ -224,10 +226,13 @@ public:
     bool saveWindowLayout();
     bool saveWindowLayoutForScript() override;
     bool openProfile(const QString& profileName, bool connect) override;
-    bool requestProfileTabClose(const QString& profileName) override;
+    bool requestProfileClose(const QString& profileName) override;
+    // Destroys the profile's windows, so that none of them outlives its Host
+    void profileClosing(Host* pHost) override;
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
     void setAppearance(enums::Appearance, const bool& loading = false);
+    void setAppStyleSheet(const QString& styleSheet) override;
     bool setClickthrough(Host*, const QString&, bool);
     void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
     void setEditorTreeWidgetIconSize(int);
@@ -239,7 +244,11 @@ public:
     void setShowTabConnectionIndicators(const bool) override;
     int profileTabIndex(const QString& profileName) const override;
     void setActiveProfileTab(const QString& profileName) override;
-    void resizeMainWindow(int width, int height) override { resize(width, height); }
+    bool resizeMainWindow(int width, int height) override
+    {
+        resize(width, height);
+        return true;
+    }
     void setupPreInstallPackages(const QString&, const QString&, const bool);
     void setToolBarIconSize(int);
     void setToolBarVisibility(enums::controlsVisibility);
@@ -249,9 +258,9 @@ public:
     void setCompactInputLineChecked(Host* pHost, bool checked) override;
     bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const override { return mShowTabConnectionIndicators; }
-    void showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
+    bool showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
-    void setDrawUpperLowerLevels(bool draw) override { mDrawUpperLowerLevels = draw; }
+    void setDrawUpperLowerLevels(bool draw) override;
     // Addon toolbar button management
     int addAddonCommand(const CommandRequest& request, Host* pHost, const QString& package, QString& error) override;
     bool removeAddonCommand(int commandId, Host* pHost) override;
@@ -292,7 +301,21 @@ public:
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
-    void writeSettings();
+    void writeSettings() override;
+#ifdef INCLUDE_MCPSERVER
+    bool mcpEnabled() const { return mEnableMCP; }
+    quint16 mcpServerPort() const { return mMCPServerPort; }
+    // The URL to paste into an MCP client, or an empty string while the server is down.
+    QString mcpEndpoint() const;
+    // The last thing that went wrong, ready to show, or an empty string when the server
+    // is doing what was asked. Outlives the call that failed, so a start refused at
+    // launch - when no dialog is open to be told - is still explainable afterwards.
+    QString mcpLastError() const { return mMCPLastError; }
+    // Starts or stops the one application-wide MCP server. Returns false and fills error
+    // with a message ready to show when the assistant will not be able to reach Mudlet;
+    // the caller has to show it, because every reason is one the user can act on.
+    bool setMCPEnabled(bool enabled, quint16 port, QString& error);
+#endif
     bool profileExists(const QString& profileName);
     bool showSplitscreenTutorial();
     void showedSplitscreenTutorial();
@@ -327,14 +350,12 @@ public:
     // reported in the dictionary selection as the hunspell dictionary/affix
     // filename (e.g. a "xx" or "xx_YY" form rather than "words"):
     QHash<QString, QString> mDictionaryLanguageCodeMap;
-    Discord mDiscord;
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
     // and ::ShowLineAndParagraphSeparators
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions = QTextOption::Flags();
     int mEditorTreeWidgetIconSize = 0;
-    FontManager mFontManager;
     bool mHasSavedLayout = false;
     bool mIsLoadingLayout = false;
     QStringList mOnlyShownPredefinedProfiles;
@@ -545,21 +566,25 @@ private slots:
 
 private:
     void assignKeySequences();
-    QString autodetectPreferredLanguage();
+    void keepFloatingDocksOnScreen();
+#ifdef INCLUDE_MCPSERVER
+    // Everything setMCPEnabled() does bar the discovery file, which has to be squared
+    // with whatever this leaves behind whichever way it goes
+    bool startMCPServer(bool enabled, quint16 port, QString& error);
+#endif
     void showUiTour(const bool skipIntroStep);
     static bool needsCustomDarkTheme();
     void closeHost(const QString&);
     void goingDown() { mIsGoingDown = true; }
     void endProfileLoad();
     void initEdbee();
-    void installModulesList(Host*, QStringList);
     void loadMaps();
     void loadTranslators(const QString&);
     void migrateDebugConsole(Host*);
     void setupTrayIcon();
     void setGlobalStyleSheet(const QString&);
-    // Not const: HostManager::getHostCount() is not
-    bool toolBarShouldBeVisible();
+    // For the menu bar or toolbar setting. Not const: HostManager::getHostCount() is not
+    bool controlShouldBeVisible(enums::controlsVisibility);
     void reshowRequiredMainConsoles();
     void updateReplayTimeLabel();
     QString replayTimeLabelText(const QString& time, const bool paused) const;
@@ -573,6 +598,8 @@ private:
     void moveProfileFromDetachedToMainWindow(const QString& profileName, TDetachedWindow* sourceWindow);
     int findTabIndex(const QString& profileName) const;
     void cleanupDetachedWindowsMap(); // Remove null pointers from the map
+    void syncMainTabOrder();
+    int mainTabSlotFor(const QString& profileName);
 
 
     inline static QPointer<mudlet> smpSelf = nullptr;
@@ -586,11 +613,7 @@ private:
     // Stores the translated names for the Encodings for the static and thus
     // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
-    // Before mHostManager, so it is destroyed after the profiles that reach it
-    MudletMedia mMedia;
     HostManager mHostManager;
-    // After mHostManager, so it is gone before the profiles that reach it are
-    MudletReplay mReplay;
     QKeySequence mKeySequenceCloseProfile;
     QKeySequence mKeySequenceConnect;
     QKeySequence mKeySequenceDisconnect;
@@ -625,8 +648,17 @@ private:
     std::optional<bool> mMenuVisibleState;
     QString mMudletDiscordInvite = qsl("https://www.mudlet.org/chat");
     bool mMultiView = false;
+#ifdef INCLUDE_MCPSERVER
+    bool mEnableMCP = false;
+    quint16 mMCPServerPort = 11235;
+    QString mMCPLastError;
+    QScopedPointer<TMCPServer> mpMCPServer;
+#endif
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;
+#if defined(INCLUDE_UPDATER)
+    bool mUpdateInstalled = false;
+#endif
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;
     QPointer<QAction> mpActionCloseProfile;
@@ -671,7 +703,6 @@ private:
     QPointer<QToolButton> mpButtonConnect;
     QPointer<QToolButton> mpButtonDiscord;
     QPointer<QToolButton> mpButtonMute;
-    QPointer<TSpeechBridge> mpSpeechBridge;
     void refreshMicrophoneMarkers();
     QPointer<QToolButton> mpButtonPackageManagers;
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
@@ -680,6 +711,7 @@ private:
     QPointer<QWidget> mpFocusWidgetBeforeDeactivate;
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate;
+    QStringList mPasswordsNotMigratedToProfiles;
     // a list of character passwords currently being migrated to secure storage
     QList<QPair<QString, QString>> mCharacterPasswordsToMigrate;
     QPointer<QShortcut> mpShortcutCloseProfile;
@@ -857,6 +889,9 @@ private:
 
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
+    // Every profile in main tab bar order, with each detached one kept behind
+    // the tab it followed, so that a reattach can put it back there
+    QStringList mMainTabOrder;
 
     // The map actions' enabled state before the active profile's
     // "mapperButton" setConfig mode is applied on top - the last baseline the

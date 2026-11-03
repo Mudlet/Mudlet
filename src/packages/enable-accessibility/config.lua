@@ -18,6 +18,7 @@ Configures the following settings;
 - clears the command line after sending the command to the game
 - does not echo the commands sent on the main screen
 - adds a shortcut to switch between input line and main window, default Ctrl+Tab
+- lets Tab reach buttons made by scripts and packages, pressed with Space or Enter
 - removes blank lines on Windows OS
 
 ## mudlet access reader
@@ -28,5 +29,5 @@ This command configures a third-party TTS plugin called [mudlet-reader](https://
 
 See [Accessibility on OSX](https://wiki.mudlet.org/w/Accessibility_on_OSX) for more information.
 ]]
-version = [[3]]
+version = [[4]]
 created = "2025-06-07T20:44:12-04:00"

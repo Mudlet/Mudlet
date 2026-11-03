@@ -345,28 +345,6 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     fi
 
-    # install dblsqd. NPM must be available here because we use it to install the tool that creates the dmg
-    npm install -g dblsqd-cli
-    dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
-
-    if [ "${public_test_build}" == "true" ]; then
-      echo "=== Downloading release feed ==="
-      downloadedfeed=$(mktemp)
-      wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/mac/${ARCH_DBLSQD}" --output-document="$downloadedfeed"
-      echo "=== Generating a changelog ==="
-      cd "${SOURCE_DIR}" || exit
-      changelog=$(lua "${SOURCE_DIR}/CI/generate-changelog.lua" --mode ptb --releasefile "${downloadedfeed}")
-
-      echo "=== Creating release in Dblsqd ==="
-      dblsqd release -a mudlet -c public-test-build -m "${changelog}" "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}" || true
-
-      # release registration and uploading will be manual for the time being
-    else
-      echo "=== Registering release with Dblsqd ==="
-      # Non-fatal: dblsqd is legacy (GitHub releases are the primary distribution now),
-      # and the dblsqd release may not be pre-created. Do not let it block the build.
-      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:${ARCH_DBLSQD} "${DEPLOY_URL}" || echo "::warning::dblsqd push failed for mac:${ARCH_DBLSQD} - continuing (GitHub release is the primary distribution)"
-    fi
   fi
 
   # delete keychain just in case

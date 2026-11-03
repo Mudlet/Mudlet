@@ -153,7 +153,7 @@ describe("Tests that the selection and format functions find their console by na
           assert.is_true(setReverse(window, true))
           assert.is_true(setStrikeOut(window, true))
           assert.is_true(setUnderline(window, true))
-          assert.are.equal(0, select("#", setFgColor(window, 10, 20, 30)))
+          assert.is_true(setFgColor(window, 10, 20, 30))
           assert.is_true(setBgColor(window, 40, 50, 60))
 
           local after = getTextFormat(window)
@@ -183,6 +183,19 @@ describe("Tests that the selection and format functions find their console by na
           assert.is_true(getTextFormat(window).bold)
           moveCursor(window, 0, 2)
           assert.is_false(getTextFormat(window).bold)
+        end)
+
+        it("names that console in getTextFormat()'s refusals", function()
+          assert.is_true(moveCursor(window, 19, 0))
+          local ok, err = getTextFormat(window)
+          assert.is_nil(ok)
+          assert.are.equal(("no character under cursor or selection in window '%s'"):format(window), err)
+
+          assert.are.equal(12, selectString(window, "charlie", 1))
+          replace(window, "")
+          ok, err = getTextFormat(window)
+          assert.is_nil(ok)
+          assert.are.equal(("current selection invalid in window '%s'"):format(window), err)
         end)
       end)
     end
@@ -242,7 +255,7 @@ describe("Tests that the selection and format functions find their console by na
         assert.are.same({marker, 0, #marker}, {getSelection(other)})
 
         assert.is_true(setBold(name, true))
-        assert.are.equal(0, select("#", setFgColor(name, 10, 20, 30)))
+        assert.is_true(setFgColor(name, 10, 20, 30))
         assert.is_true(setBgColor(name, 40, 50, 60))
         local format = getTextFormat(other)
         assert.is_true(format.bold)
@@ -258,6 +271,31 @@ describe("Tests that the selection and format functions find their console by na
         assert.is_true(resetFormat(name))
       end)
     end
+
+    it("names the main console in getTextFormat()'s refusals however it was named", function()
+      local line = markerLine()
+      local lineEnd = #marker + 12
+      deselect("main")
+      assert.is_true(moveCursor("main", lineEnd - 1, line))
+      assert.is_table(getTextFormat("main"))
+      -- the end of a line is a cursor position with no character under it
+      assert.is_true(moveCursor("main", lineEnd, line))
+      for _, args in ipairs({{}, {""}, {"main"}}) do
+        local ok, err = getTextFormat(unpack(args))
+        assert.is_nil(ok)
+        assert.are.equal("no character under cursor or selection in window 'main'", err)
+      end
+
+      -- replacing the selected text leaves the selection past the end of its line
+      assert.is_true(moveCursor("main", 0, line))
+      assert.are.equal(#marker + 7, selectString("main", "bravo", 1))
+      replace("main", "")
+      for _, args in ipairs({{}, {""}, {"main"}}) do
+        local ok, err = getTextFormat(unpack(args))
+        assert.is_nil(ok)
+        assert.are.equal("current selection invalid in window 'main'", err)
+      end
+    end)
   end)
 end)
 

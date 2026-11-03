@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QCheckBox>
+#include <QMenuBar>
 #include <QPushButton>
 #include <QtTest/QtTest>
 
@@ -59,6 +60,17 @@ private:
 
     int shownCount() const { return MudletApp::getQSettings()->value(shownCountKey(), 0).toInt(); }
 
+    QList<TFeatureCallout*> visibleCallouts() const
+    {
+        QList<TFeatureCallout*> result;
+        for (auto* callout : mpWindow->findChildren<TFeatureCallout*>(Qt::FindDirectChildrenOnly)) {
+            if (callout->isVisible()) {
+                result.append(callout);
+            }
+        }
+        return result;
+    }
+
     int anchorCentre() const { return mpAnchor->mapToGlobal(QPoint(mpAnchor->width() / 2, 0)).x(); }
 
     // Whichever application state this platform happens to report is not the
@@ -98,6 +110,7 @@ private slots:
     {
         MudletApp::getQSettings()->remove(dismissedKey());
         MudletApp::getQSettings()->remove(shownCountKey());
+        TFeatureCallout::smSessionShown.clear();
         mpWindow = new QWidget;
         mpWindow->resize(400, 300);
         mpWindow->move(80, 80);
@@ -220,6 +233,154 @@ private slots:
         QTest::mouseClick(gotItButton, Qt::LeftButton);
 
         QVERIFY2(dismissed(), "clicking \"Got it\" no longer retires the callout");
+    }
+
+    void test_pointsAtOneMenuOfAMenuBar()
+    {
+        auto* menuBar = new QMenuBar(mpWindow);
+        menuBar->addMenu(qsl("Games"));
+        QAction* optionsMenu = menuBar->addMenu(qsl("Options"))->menuAction();
+        menuBar->move(0, 0);
+        menuBar->resize(mpWindow->width(), menuBar->sizeHint().height());
+        menuBar->show();
+        const QRect optionsRect = menuBar->actionGeometry(optionsMenu);
+        QVERIFY(!optionsRect.isEmpty());
+
+        auto* callout = new TFeatureCallout(mFeatureId, menuBar, qsl("Title"), qsl("Body"), optionsMenu);
+        callout->showAnchored();
+        callout->slot_applicationStateChanged(Qt::ApplicationActive);
+        QCOMPARE(callout->x() + callout->width() / 2, menuBar->mapToGlobal(QPoint(optionsRect.left() + optionsRect.width() / 2, 0)).x());
+
+        QTest::mousePress(menuBar, Qt::LeftButton, {}, menuBar->actionGeometry(menuBar->actions().constFirst()).center());
+        QVERIFY2(!dismissed(), "opening a different menu was taken as the player having found the feature");
+
+        QTest::mousePress(menuBar, Qt::LeftButton, {}, optionsRect.center());
+        QVERIFY2(dismissed(), "opening the menu the callout points at did not retire it");
+        if (auto* popup = QApplication::activePopupWidget()) {
+            popup->close();
+        }
+    }
+
+    void test_staysAwayWhileItsMenuIsFoldedIntoTheOverflow()
+    {
+        auto* menuBar = new QMenuBar(mpWindow);
+        menuBar->addMenu(qsl("Games"));
+        menuBar->addMenu(qsl("Toolbox"));
+        QAction* optionsMenu = menuBar->addMenu(qsl("Options"))->menuAction();
+        menuBar->resize(menuBar->actionGeometry(menuBar->actions().constFirst()).width() + 30, menuBar->sizeHint().height());
+        menuBar->show();
+        QVERIFY2(!menuBar->rect().contains(menuBar->actionGeometry(optionsMenu)), "the menu bar is not narrow enough to fold the menu away");
+
+        auto* callout = new TFeatureCallout(mFeatureId, menuBar, qsl("Title"), qsl("Body"), optionsMenu);
+        callout->showAnchored();
+        callout->slot_applicationStateChanged(Qt::ApplicationActive);
+
+        QVERIFY2(!callout->isVisible(), "the callout pointed at a menu that is folded out of sight");
+        QCOMPARE(shownCount(), 0);
+    }
+
+    void test_retiresWhenItsMenuFoldsAwayAfterAppearing()
+    {
+        auto* menuBar = new QMenuBar(mpWindow);
+        menuBar->addMenu(qsl("Games"));
+        menuBar->addMenu(qsl("Toolbox"));
+        QAction* optionsMenu = menuBar->addMenu(qsl("Options"))->menuAction();
+        menuBar->resize(mpWindow->width(), menuBar->sizeHint().height());
+        menuBar->show();
+
+        auto* callout = new TFeatureCallout(mFeatureId, menuBar, qsl("Title"), qsl("Body"), optionsMenu);
+        callout->showAnchored();
+        callout->slot_applicationStateChanged(Qt::ApplicationActive);
+        QVERIFY(callout->isVisible());
+
+        menuBar->resize(menuBar->actionGeometry(menuBar->actions().constFirst()).width() + 30, menuBar->sizeHint().height());
+        QVERIFY2(!menuBar->rect().contains(menuBar->actionGeometry(optionsMenu)), "the menu bar is not narrow enough to fold the menu away");
+
+        QVERIFY2(visibleCallouts().isEmpty(), "the callout kept pointing at a menu folded out of sight");
+        QVERIFY(!dismissed());
+    }
+
+    void test_offeredAtTwoAnchorsShowsOneBalloon()
+    {
+        const bool firstLaunch = MudletApp::firstLaunch();
+        MudletApp::setFirstLaunch(false);
+        auto* menuBar = new QMenuBar(mpWindow);
+        QAction* optionsMenu = menuBar->addMenu(qsl("Options"))->menuAction();
+        menuBar->resize(mpWindow->width(), menuBar->sizeHint().height());
+        menuBar->show();
+        mpAnchor->hide();
+
+        TFeatureCallout::maybeShow(mFeatureId, mpAnchor, qsl("Title"), qsl("Body"));
+        TFeatureCallout::maybeShow(mFeatureId, menuBar, optionsMenu, qsl("Title"), qsl("Body"));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !visibleCallouts().isEmpty();
+                         },
+                         3s),
+                 "neither anchor got a balloon, though the menu bar was on screen");
+        QTest::qWait(200ms);
+        MudletApp::setFirstLaunch(firstLaunch);
+
+        const QList<TFeatureCallout*> callouts = visibleCallouts();
+        QCOMPARE(callouts.size(), 1);
+        const QRect optionsRect = menuBar->actionGeometry(optionsMenu);
+        QCOMPARE(callouts.constFirst()->x() + callouts.constFirst()->width() / 2, menuBar->mapToGlobal(QPoint(optionsRect.left() + optionsRect.width() / 2, 0)).x());
+    }
+
+    void test_bothAnchorsOnScreenStillShowsOneBalloon()
+    {
+        const QString featureId = qsl("two-anchors-callout");
+        MudletApp::getQSettings()->remove(qsl("whatsNew/%1/dismissed").arg(featureId));
+        const bool firstLaunch = MudletApp::firstLaunch();
+        MudletApp::setFirstLaunch(false);
+        auto* menuBar = new QMenuBar(mpWindow);
+        QAction* optionsMenu = menuBar->addMenu(qsl("Options"))->menuAction();
+        menuBar->resize(mpWindow->width(), menuBar->sizeHint().height());
+        menuBar->show();
+
+        TFeatureCallout::maybeShow(featureId, mpAnchor, qsl("Title"), qsl("Body"));
+        TFeatureCallout::maybeShow(featureId, menuBar, optionsMenu, qsl("Title"), qsl("Body"));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !visibleCallouts().isEmpty();
+                         },
+                         3s),
+                 "neither anchor got a balloon");
+        QTest::qWait(200ms);
+        MudletApp::setFirstLaunch(firstLaunch);
+
+        QCOMPARE(visibleCallouts().size(), 1);
+    }
+
+    void test_reachedBeforeItsDelayShowsNothing()
+    {
+        const QString featureId = qsl("reached-early-callout");
+        MudletApp::getQSettings()->remove(qsl("whatsNew/%1/dismissed").arg(featureId));
+        const bool firstLaunch = MudletApp::firstLaunch();
+        MudletApp::setFirstLaunch(false);
+
+        TFeatureCallout::maybeShow(featureId, mpAnchor, qsl("Title"), qsl("Body"));
+        TFeatureCallout::dismiss(featureId);
+        QTest::qWait(1500ms);
+        MudletApp::setFirstLaunch(firstLaunch);
+
+        QVERIFY2(visibleCallouts().isEmpty(), "the balloon appeared after the player had already reached the feature");
+    }
+
+    void test_reachingTheFeatureElsewhereRetiresOnlyItsOwnCallout()
+    {
+        QPointer<TFeatureCallout> callout = shownCallout();
+        QPointer<TFeatureCallout> otherCallout = new TFeatureCallout(qsl("other-callout"), mpAnchor, qsl("Title"), qsl("Body"));
+        otherCallout->showAnchored();
+        otherCallout->slot_applicationStateChanged(Qt::ApplicationActive);
+
+        TFeatureCallout::dismiss(mFeatureId);
+        QTest::qWait(50ms);
+
+        QVERIFY2(dismissed(), "reaching the feature without using the callout did not retire it");
+        QVERIFY2(!callout || !callout->isVisible(), "the callout stayed on screen after the player reached the feature another way");
+        QVERIFY2(otherCallout && otherCallout->isVisible(), "dismissing one feature also took down the callout for another");
+        QVERIFY(!MudletApp::getQSettings()->value(qsl("whatsNew/other-callout/dismissed"), false).toBool());
     }
 };
 

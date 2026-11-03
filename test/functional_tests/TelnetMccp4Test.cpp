@@ -106,7 +106,7 @@ private slots:
         auto* host = connectedHost();
         QVERIFY2(host, "No active host available for the test.");
 
-        mpServer->clearReceivedData();
+        mpServer->clearReceivedSoFar();
         offerCompress4(host);
 
         QByteArray expectedDo;
@@ -124,7 +124,7 @@ private slots:
         expectedOffer.append(TN_SE);
 
         QVERIFY2(waitForServerToReceive(expectedDo), "Client did not answer IAC WILL COMPRESS4 with IAC DO COMPRESS4.");
-        QVERIFY2(waitForServerToReceive(expectedOffer), qPrintable(qsl("Client did not offer its supported MCCP4 encodings. It sent: %1").arg(QString(mpServer->receivedData().toHex(' ')))));
+        QVERIFY2(waitForServerToReceive(expectedOffer), qPrintable(qsl("Client did not offer its supported MCCP4 encodings. It sent: %1").arg(QString(mpServer->receivedSoFar().toHex(' ')))));
     }
 
     // BEGIN_ENCODING arriving on its own, with the compressed bytes in a later
@@ -225,7 +225,7 @@ private slots:
         acceptCompress2.append(OPT_COMPRESS2);
 
         // Control: before any frame has run, the offer is refused
-        mpServer->clearReceivedData();
+        mpServer->clearReceivedSoFar();
         offerCompress2(host);
         QVERIFY2(waitForServerToReceive(refuseCompress2), "MCCP2 was not refused even before an MCCP4 frame ran, so this test cannot tell the two states apart.");
 
@@ -236,10 +236,10 @@ private slots:
         QVERIFY2(waitForBufferToContain("MCCP4_FRAME_COMPLETE"), "The zstd frame was not decompressed, so the frame-end state was never reached.");
 
         // The identical offer must still be refused
-        mpServer->clearReceivedData();
+        mpServer->clearReceivedSoFar();
         offerCompress2(host);
         QVERIFY2(waitForServerToReceive(refuseCompress2), "MCCP2 was accepted after an MCCP4 zstd frame ended - the completed frame wrongly un-negotiated MCCP4.");
-        QVERIFY2(!mpServer->receivedData().contains(acceptCompress2), "Client sent IAC DO COMPRESS2 after an MCCP4 zstd frame ended - the completed frame wrongly un-negotiated MCCP4.");
+        QVERIFY2(!mpServer->receivedSoFar().contains(acceptCompress2), "Client sent IAC DO COMPRESS2 after an MCCP4 zstd frame ended - the completed frame wrongly un-negotiated MCCP4.");
     }
 
     // A server may negotiate MCCP2 before it offers MCCP4, which leaves both
@@ -258,7 +258,7 @@ private slots:
         feed(host, data);
         QVERIFY2(waitForBufferToContain("MCCP4_FRAME_BEFORE_PLAIN"), "The zstd frame was not decompressed, so the frame-end state was never reached.");
 
-        mpServer->clearReceivedData();
+        mpServer->clearReceivedSoFar();
         QByteArray plain("MCCP4_PLAIN_AFTER_FRAME\r\n");
         feed(host, plain);
         QVERIFY2(waitForBufferToContain("MCCP4_PLAIN_AFTER_FRAME"),
@@ -272,7 +272,7 @@ private slots:
         refuseCompress2.append(TN_IAC);
         refuseCompress2.append(TN_DONT);
         refuseCompress2.append(OPT_COMPRESS2);
-        QVERIFY2(!mpServer->receivedData().contains(refuseCompress2), "Client dropped MCCP2 over a zlib error that plain telnet after a finished zstd frame should never have caused.");
+        QVERIFY2(!mpServer->receivedSoFar().contains(refuseCompress2), "Client dropped MCCP2 over a zlib error that plain telnet after a finished zstd frame should never have caused.");
     }
 
     // A broken run is refused as the option that began it. With MCCP2 negotiated
@@ -293,7 +293,7 @@ private slots:
         offerCompress2(host);
         offerCompress4(host);
 
-        mpServer->clearReceivedData();
+        mpServer->clearReceivedSoFar();
         QByteArray data = beginEncoding(encoding);
         data.append("MCCP4_NOT_COMPRESSED\r\n");
         feed(host, data);
@@ -306,8 +306,8 @@ private slots:
         refuseCompress2.append(TN_IAC);
         refuseCompress2.append(TN_DONT);
         refuseCompress2.append(OPT_COMPRESS2);
-        QVERIFY2(waitForServerToReceive(refuseCompress4), qPrintable(qsl("A broken MCCP4 run was not refused with DONT COMPRESS4. Client sent: %1").arg(QString(mpServer->receivedData().toHex(' ')))));
-        QVERIFY2(!mpServer->receivedData().contains(refuseCompress2), "A broken MCCP4 run refused MCCP2, which was not the one compressing.");
+        QVERIFY2(waitForServerToReceive(refuseCompress4), qPrintable(qsl("A broken MCCP4 run was not refused with DONT COMPRESS4. Client sent: %1").arg(QString(mpServer->receivedSoFar().toHex(' ')))));
+        QVERIFY2(!mpServer->receivedSoFar().contains(refuseCompress2), "A broken MCCP4 run refused MCCP2, which was not the one compressing.");
         QVERIFY2(bufferContents().contains(qsl("MCCP4_NOT_COMPRESSED")), qPrintable(qsl("Text sent instead of the run was lost. Buffer holds:\n%1").arg(bufferContents())));
     }
 
@@ -319,7 +319,7 @@ private slots:
         auto* host = connectedHost();
         QVERIFY2(host, "No active host available for the test.");
 
-        mpServer->clearReceivedData();
+        mpServer->clearReceivedSoFar();
         QByteArray data = beginEncoding("zstd");
         data.append("MCCP4_PLAIN_NO_NEGOTIATION\r\n");
         feed(host, data);
@@ -531,7 +531,7 @@ private:
     {
         return QTest::qWaitFor(
                 [&]() {
-                    return mpServer->receivedData().contains(needle);
+                    return mpServer->receivedSoFar().contains(needle);
                 },
                 timeoutMs);
     }

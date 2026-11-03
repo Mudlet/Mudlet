@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-twobrokenxml]]
+author = [[Mudlet test suite]]
+title = [[Fixture with two package XML files that each stop part-way, for Package_spec.lua]]
+version = [[1.0]]
+description = [[Two XML files, each complete up to one alias and then broken in its own way, so both load errors have to be reported.]]

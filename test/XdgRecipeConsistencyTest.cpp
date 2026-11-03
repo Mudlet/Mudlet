@@ -41,7 +41,8 @@
  * one then collide on a profile name - the second is told the name is in use,
  * its Connect button never enables and it times out (#9999, which found 49 such
  * tests). So a file calling setupConfig() has to qputenv() XDG_CONFIG_HOME and
- * create the opt-in as well.
+ * create the opt-in as well. So does a file making a HostManager, which settles
+ * the config root itself when there is no main window to.
  *
  * The path has to be spelled out in the call. A file that builds the config
  * root through a helper or a local first is out of range; ConfigDirOverrideTest
@@ -291,9 +292,10 @@ class XdgRecipeConsistencyTest : public QObject
         return problems;
     }
 
-    static bool callsSetupConfig(const QString& code)
+    // setupConfig(), or a HostManager made by value, with make_unique or with new
+    static bool settlesConfigRoot(const QString& code)
     {
-        static const QRegularExpression call(QStringLiteral("\\bsetupConfig\\s*\\("));
+        static const QRegularExpression call(QStringLiteral("\\bsetupConfig\\s*\\(|\\bmake_unique\\s*<\\s*HostManager\\s*>|\\bnew\\s+HostManager\\b|\\bHostManager\\s+[A-Za-z_]\\w*\\s*[;({]"));
         return code.contains(call);
     }
 
@@ -342,10 +344,10 @@ class XdgRecipeConsistencyTest : public QObject
         return false;
     }
 
-    static bool drivesSetupConfig(const QString& source)
+    static bool settlesConfigRootIn(const QString& source)
     {
         QSet<int> allowedLines;
-        return callsSetupConfig(withoutComments(source, allowedLines));
+        return settlesConfigRoot(withoutComments(source, allowedLines));
     }
 
     // Both halves of getting a config root of one's own, for a file that drives
@@ -356,16 +358,16 @@ class XdgRecipeConsistencyTest : public QObject
     {
         QSet<int> allowedLines;
         const QString code = withoutComments(source, allowedLines);
-        if (!callsSetupConfig(code)) {
+        if (!settlesConfigRoot(code)) {
             return {};
         }
 
         QStringList problems;
         if (!redirectsConfigHome(code)) {
-            problems.append(QStringLiteral("drives setupConfig() without qputenv(\"XDG_CONFIG_HOME\", ...), so it shares the developer's own config directory"));
+            problems.append(QStringLiteral("settles the config root without qputenv(\"XDG_CONFIG_HOME\", ...), so it shares the developer's own config directory"));
         }
         if (!createsProfilesDirectory(code)) {
-            problems.append(QStringLiteral("drives setupConfig() without creating a profiles/ directory, and since #9712 that is the opt-in a redirected config root needs"));
+            problems.append(QStringLiteral("settles the config root without creating a profiles/ directory, and since #9712 that is the opt-in a redirected config root needs"));
         }
         return problems;
     }
@@ -501,6 +503,22 @@ private slots:
         QCOMPARE(problems.size(), 2);
         QVERIFY2(problems.first().contains(QStringLiteral("qputenv")), qPrintable(problems.first()));
         QVERIFY2(problems.last().contains(QStringLiteral("profiles/")), qPrintable(problems.last()));
+    }
+
+    // A pool made with no main window settles the root as setupConfig() does, and only the pool itself counts
+    void test_aTestMakingAHostManagerWithNoConfigRootOfItsOwnIsFlagged()
+    {
+        for (const QString& making : {QStringLiteral("HostManager pool;"),
+                                      QStringLiteral("HostManager manager(HostManager::ConfigRoot::settledHere);"),
+                                      QStringLiteral("mpHostManager = std::make_unique<HostManager>();"),
+                                      QStringLiteral("auto* pool = new HostManager;")}) {
+            const QStringList problems = missingIsolation(QStringLiteral("void init()\n{\n    %1\n}\n").arg(making));
+            QVERIFY2(problems.size() == 2, qPrintable(making));
+        }
+        for (const QString& use :
+             {QStringLiteral("QVERIFY(!HostManager::self());"), QStringLiteral("HostManager* pool = HostManager::self();"), QStringLiteral("// a HostManager pool; is made here")}) {
+            QVERIFY2(missingIsolation(QStringLiteral("void test()\n{\n    %1\n}\n").arg(use)).isEmpty(), qPrintable(use));
+        }
     }
 
     void test_theIsolationRecipeIsAccepted()
@@ -649,7 +667,7 @@ private slots:
             // written in: the fixtures below quote setupConfig() as ordinary
             // text while the recipes beside them are escaped, which the argument
             // scan reads straight past - and this file links no Mudlet to drive.
-            if (source.name == QStringLiteral("XdgRecipeConsistencyTest.cpp") || !drivesSetupConfig(source.text)) {
+            if (source.name == QStringLiteral("XdgRecipeConsistencyTest.cpp") || !settlesConfigRootIn(source.text)) {
                 continue;
             }
             ++drivers;

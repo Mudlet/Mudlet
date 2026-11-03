@@ -327,7 +327,7 @@ bool AliasUnit::processDataStream(const QString& data)
                              << " as a garbage collection finaliser sent it while the capture tables were being built; it goes to the game unexpanded.";
         return false;
     }
-    Lua->set_lua_string(qsl("command"), data);
+    Lua->setExpandedCommand(data);
     bool state = false;
     //Using copy fixes https://github.com/Mudlet/Mudlet/issues/4297
     const std::vector<TAlias*> copyOfNodeList(mAliasRootNodeList.cbegin(), mAliasRootNodeList.cend());
@@ -336,12 +336,13 @@ bool AliasUnit::processDataStream(const QString& data)
     haystack.truncate(qstrlen(haystack.constData()));
 
     mProcessingDepth++;
-    const auto processingGuard = qScopeGuard([this] {
+    const auto processingGuard = qScopeGuard([this, Lua] {
         mProcessingDepth--;
         Q_ASSERT(mProcessingDepth >= 0);
         if (mProcessingDepth <= 1) {
             mRunawayExpansionStopped = false;
         }
+        Lua->settleCommandAfterAliasPass();
         if (mProcessingDepth == 0) {
             doCleanup();
         }
@@ -409,6 +410,19 @@ std::vector<int> AliasUnit::findItems(const QString& name, const bool exactMatch
     return ids;
 }
 
+bool AliasUnit::pendingDeletion(TAlias* pItem) const
+{
+    if (!hasPendingDeletes()) {
+        return false;
+    }
+    for (auto* pAncestor = pItem; pAncestor; pAncestor = pAncestor->getParent()) {
+        if (mCleanupSet.contains(pAncestor) || uninstallList.contains(pAncestor)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool AliasUnit::enableAlias(const QString& name)
 {
     bool found = false;
@@ -426,7 +440,9 @@ bool AliasUnit::enableAlias(const QString& name)
         }
         pT->setIsActive(true);
         found = true;
-        emit mpHost->signal_aliasToggled(pT->getID());
+        if (!pT->isTemporary() || pT->getParent()) {
+            emit mpHost->signal_aliasToggled(pT->getID());
+        }
     }
     return found;
 }
@@ -440,7 +456,9 @@ bool AliasUnit::disableAlias(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
-        emit mpHost->signal_aliasToggled(it.value()->getID());
+        if (!it.value()->isTemporary() || it.value()->getParent()) {
+            emit mpHost->signal_aliasToggled(it.value()->getID());
+        }
     }
     return found;
 }

@@ -40,7 +40,7 @@ class TelnetServerStub : public QTcpServer
     // mReceived is the NAWS scanner's working buffer and is trimmed as frames are
     // recognised, so the verbatim transcript tests assert on is kept separately.
     QByteArray mReceived;
-    QByteArray mReceivedData;
+    QByteArray mReceivedSoFar;
     QVector<QSize> mNawsUpdates;
 
 public:
@@ -59,10 +59,16 @@ public:
     // bytes like IAC GA to be included:
     void sendRaw(const QByteArray& data);
     bool clientConnected() const { return !mpClient.isNull(); }
-    // Everything the client has sent so far, so a test can assert on what
-    // Mudlet put on the wire (telnet negotiation replies, for instance):
-    QByteArray receivedData() const { return mReceivedData; }
-    void clearReceivedData() { mReceivedData.clear(); }
+    // Everything the clients have sent, across connections
+    const QByteArray& receivedSoFar() const { return mReceivedSoFar; }
+    void clearReceivedSoFar() { mReceivedSoFar.clear(); }
+    // Closes the connection gracefully, once everything sent has gone out
+    void closeClient()
+    {
+        if (mpClient) {
+            mpClient->disconnectFromHost();
+        }
+    }
 
     // Every NAWS subnegotiation the client has sent since the last
     // clearNawsUpdates(), in the order they arrived. Tests that care about what

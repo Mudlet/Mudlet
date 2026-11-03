@@ -36,7 +36,6 @@
 #include "TArea.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TForkedProcess.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
@@ -208,7 +207,7 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         // is never coming waits forever. Look again once the engine has had its
         // chance to start speaking - if it is still idle, that Ready did mean
         // idle and the queue is free to go.
-        QTimer::singleShot(scmInterruptedSpeechGrace, qApp, []() {
+        QTimer::singleShot(scmInterruptedSpeechGrace, QCoreApplication::instance(), []() {
             if (!speechUnit.isNull() && speechUnit->state() == QTextToSpeech::State::Ready && !speechQueue.isEmpty()) {
                 TLuaInterpreter::ttsStateChanged(QTextToSpeech::State::Ready);
             }
@@ -507,6 +506,9 @@ int TLuaInterpreter::ttsSetPitch(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
     double pitch = getVerifiedDouble(L, __func__, 1, "pitch");
+    if (qIsNaN(pitch)) {
+        return warnArgumentValue(L, __func__, "pitch as a number from -1 to 1 expected, got nan");
+    }
 
     if (pitch > 1.0) {
         pitch = 1.0;
@@ -525,7 +527,8 @@ int TLuaInterpreter::ttsSetPitch(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     HostManager::self()->postInterHostEvent(NULL, event, true);
 
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetRate
@@ -533,6 +536,9 @@ int TLuaInterpreter::ttsSetRate(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
     double rate = getVerifiedDouble(L, __func__, 1, "rate");
+    if (qIsNaN(rate)) {
+        return warnArgumentValue(L, __func__, "rate as a number from -1 to 1 expected, got nan");
+    }
 
     if (rate > 1.0) {
         rate = 1.0;
@@ -551,7 +557,8 @@ int TLuaInterpreter::ttsSetRate(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     HostManager::self()->postInterHostEvent(NULL, event, true);
 
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetVolume
@@ -559,6 +566,9 @@ int TLuaInterpreter::ttsSetVolume(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
     double volume = getVerifiedDouble(L, __func__, 1, "volume");
+    if (qIsNaN(volume)) {
+        return warnArgumentValue(L, __func__, "volume as a number from 0 to 1 expected, got nan");
+    }
 
     if (volume > 1.0) {
         volume = 1.0;
@@ -577,7 +587,8 @@ int TLuaInterpreter::ttsSetVolume(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     HostManager::self()->postInterHostEvent(NULL, event, true);
 
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetVoiceByIndex

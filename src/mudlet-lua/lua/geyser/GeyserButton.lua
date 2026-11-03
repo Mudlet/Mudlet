@@ -49,7 +49,10 @@ function Geyser.Button:new(cons, container)
     printError(f"bad argument #1 type (cons as table expects, got {consType})", true, true)
   end
   cons.name = cons.name or Geyser.nameGen("button")
-  local me = self.parent:new(cons, container)
+  local me, taken = self.parent:new(cons, container)
+  if not me then
+    return nil, taken
+  end
   setmetatable(me, self)
   me:setClickCallback(function() me:press() end)
   -- an unusable state constraint would otherwise leave the button holding it

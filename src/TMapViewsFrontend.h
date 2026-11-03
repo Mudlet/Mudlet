@@ -26,7 +26,7 @@
 #include <utility>
 
 // One of the view-only map windows a profile can open beside its mapper, as core code drives it.
-// TMapView implements it.
+// TMapView implements it, and TNullSecondaryMapView for a profile with no main window.
 class TSecondaryMapViewFrontend
 {
 public:
@@ -38,12 +38,12 @@ public:
     virtual int getZLevel() const = 0;
 
 protected:
-    // A view is a widget its dock deletes, so nothing deletes it through this interface.
+    // Its manager deletes it, through the dock or as a QObject child, never through this interface.
     ~TSecondaryMapViewFrontend() = default;
 };
 
-// The secondary map views as core code drives them. TMapViewManager implements it; core code
-// reaches it through TMap::mapViewsFrontend().
+// The secondary map views as core code drives them. TMapViewManager implements it, and
+// TNullMapViews for a profile with no main window; core code reaches it through TMap::mapViewsFrontend().
 class TMapViewsFrontend
 {
 public:
@@ -57,6 +57,8 @@ public:
     virtual void updateAllViews() = 0;
     // Moves every view still showing areaId to another area, for after that area is deleted.
     virtual void switchViewsShowingArea(int areaId) = 0;
+    // For after the profile changes which 3D renderer it uses
+    virtual void update3DViewAvailability() = 0;
 
 protected:
     // The manager is a child of its TMap, which deletes it, so nothing deletes it through this interface.

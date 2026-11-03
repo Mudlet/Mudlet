@@ -697,7 +697,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
         // the update was installed to in slot_updateLinuxBinary().
         const auto systemEnvironment = QProcessEnvironment::systemEnvironment();
         const QString restartBinary = systemEnvironment.contains(qsl("APPIMAGE")) ? systemEnvironment.value(qsl("APPIMAGE"), QString()) : QCoreApplication::applicationFilePath();
-        if (!QProcess::startDetached(restartBinary, qApp->arguments().mid(1))) {
+        if (!QProcess::startDetached(restartBinary, QCoreApplication::arguments().mid(1))) {
             qWarning() << "Failed to restart Mudlet after update";
             //: Error title for dialog shown when Mudlet fails to restart after updating
             QMessageBox::critical(nullptr,

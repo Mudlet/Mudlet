@@ -47,12 +47,10 @@
 // old, which is past that window and far inside the intended 5 minutes, and the
 // interval being pinned at exactly 60000 rather than merely non-zero.
 //
-// Budget: cTelnet::checkEchoAnomalyPattern() counts every WILL and every WONT
-// ECHO that cTelnet acts on, and 5 toggles inside a 5 second window latch an
-// anomaly that makes the process refuse ECHO for good. A grouped ctest case runs
-// this whole class in one process, so init() clears that window before every
-// test function and each function may make at most 4 toggles of its own. The seven
-// below spend 2, 3, 1, 2, 2, 2 and 2.
+// cTelnet::checkEchoAnomalyPattern() counts every WILL and every WONT ECHO that
+// cTelnet acts on, and a grouped ctest case runs this whole class in one
+// process, so init() clears that count before every test function and no case's
+// toggles count against the next.
 
 #include <QTemporaryDir>
 #include <QTimer>
@@ -199,7 +197,7 @@ private slots:
         if (!mpHost->mTelnet.mConnectionTimer.isValid()) {
             mpHost->mTelnet.mConnectionTimer.restart();
         }
-        mpHost->mDisablePasswordMasking = false;
+        mpHost->setDisablePasswordMasking(false);
         mpHost->mTelnet.mCharacterModeDetected = false;
         mpHost->mTelnet.mServerRequestedSGA = false;
         mpHost->setLogin(QString());
@@ -216,7 +214,7 @@ private slots:
     {
         QVERIFY(mpHost);
 
-        QVERIFY2(!mpHost->mDisablePasswordMasking, "the profile has password masking switched off, so no timeout would ever be armed");
+        QVERIFY2(!mpHost->disablePasswordMasking(), "the profile has password masking switched off, so no timeout would ever be armed");
         QVERIFY2(!mpHost->isRemoteEchoingActive(), "masking was already on before this test announced any ECHO");
         QVERIFY2(!echoNegotiatedByServer(), "ECHO was already negotiated, so the WILL below would be ignored as a repeat");
         QTimer* timer = mpHost->mTelnet.mTimerPasswordModeTimeout;
@@ -383,7 +381,7 @@ private slots:
         QVERIFY2(!mpHost->isRemoteEchoingActive(), "masking was still on when this test started");
         QVERIFY2(!echoNegotiatedByServer(), "ECHO was still negotiated, so the WILL below would be ignored as a repeat");
 
-        mpHost->mDisablePasswordMasking = true;
+        mpHost->setDisablePasswordMasking(true);
 
         serverSaysEcho(TN_WILL);
 

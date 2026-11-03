@@ -28,11 +28,9 @@
 
 #include <QKeySequence>
 #include <QMouseEvent>
-#include <QRect>
 #include <QRectF>
 #include <QSet>
 #include <QtGlobal>
-#include <QTreeWidgetItem>
 
 SelectionRectangleHandler::SelectionRectangleHandler(T2DMap& mapWidget)
 : mMapWidget(mapWidget)
@@ -212,45 +210,7 @@ bool SelectionRectangleHandler::handleMouseMove(T2DMap::MapInteractionContext& c
             }
         }
 
-        const QSet<int> previousSelection = mMapWidget.mMultiSelectionSet;
-        if (hasShift) {
-            mMapWidget.mMultiSelectionSet = mMapWidget.mMultiSelectionAnchorSet;
-            mMapWidget.mMultiSelectionSet.unite(rectangleSelection);
-        } else if (hasCtrl) {
-            QSet<int> toggledSelection = mMapWidget.mMultiSelectionBaseSet;
-            for (const int roomId : std::as_const(rectangleSelection)) {
-                if (toggledSelection.contains(roomId)) {
-                    toggledSelection.remove(roomId);
-                } else {
-                    toggledSelection.insert(roomId);
-                }
-            }
-            mMapWidget.mMultiSelectionSet = toggledSelection;
-        } else {
-            mMapWidget.mMultiSelectionSet = rectangleSelection;
-        }
-
-        switch (mMapWidget.mMultiSelectionSet.size()) {
-        case 0:
-            mMapWidget.mMultiSelectionHighlightRoomId = 0;
-            break;
-        case 1:
-            mMapWidget.mMultiSelectionHighlightRoomId = *(mMapWidget.mMultiSelectionSet.begin());
-            break;
-        default:
-            mMapWidget.getCenterSelection();
-            break;
-        }
-
-        if (mMapWidget.mMultiSelectionSet.size() > 1) {
-            // Most moves leave the selection as it was, and rebuilding the list
-            // for thousands of rooms takes longer than a mouse move's interval
-            if (mMapWidget.mMultiSelectionSet != previousSelection || mMapWidget.mMultiSelectionListWidget.isHidden()) {
-                populateMultiSelectionWidget();
-            }
-        } else {
-            mMapWidget.mMultiSelectionListWidget.hide();
-        }
+        mMapWidget.applyRectangleSelection(rectangleSelection, context.modifiers);
     }
 
     mMapWidget.update();
@@ -266,8 +226,6 @@ bool SelectionRectangleHandler::handleMouseRelease(T2DMap::MapInteractionContext
 
     mMapWidget.mMultiSelection = false;
     mMapWidget.mHelpMsg.clear();
-    mMapWidget.mMultiSelectionAnchorSet.clear();
-    mMapWidget.mMultiSelectionBaseSet.clear();
 
     if (mMapWidget.mSizeLabel) {
         mMapWidget.mSizeLabel = false;
@@ -277,47 +235,8 @@ bool SelectionRectangleHandler::handleMouseRelease(T2DMap::MapInteractionContext
         }
     }
 
-    mMapWidget.mMultiRect = QRect(0, 0, 0, 0);
-    mMapWidget.updateSelectionWidget();
+    mMapWidget.endRectangleSelection();
     mMapWidget.update();
 
     return true;
-}
-
-void SelectionRectangleHandler::populateMultiSelectionWidget() const
-{
-    mMapWidget.mMultiSelectionListWidget.blockSignals(true);
-    mMapWidget.mIsSelectionSorting = mMapWidget.mMultiSelectionListWidget.isSortingEnabled();
-    mMapWidget.mIsSelectionSortByNames = (mMapWidget.mMultiSelectionListWidget.sortColumn() == 1);
-    mMapWidget.mMultiSelectionListWidget.clear();
-    mMapWidget.mMultiSelectionListWidget.setSortingEnabled(false);
-    QSetIterator<int> itRoom = mMapWidget.mMultiSelectionSet;
-    mMapWidget.mIsSelectionUsingNames = false;
-    while (itRoom.hasNext()) {
-        auto item = new QTreeWidgetItem;
-        const int multiSelectionRoomId = itRoom.next();
-        item->setText(0, qsl("%1").arg(multiSelectionRoomId, mMapWidget.mMaxRoomIdDigits));
-        item->setTextAlignment(0, Qt::AlignRight);
-        TRoom* room = mMapWidget.mpMap->mpRoomDB->getRoom(multiSelectionRoomId);
-        if (room) {
-            const QString roomName = room->name;
-            if (!roomName.isEmpty()) {
-                item->setText(1, roomName);
-                item->setTextAlignment(1, Qt::AlignLeft);
-                mMapWidget.mIsSelectionUsingNames = true;
-            }
-        }
-        mMapWidget.mMultiSelectionListWidget.addTopLevelItem(item);
-    }
-
-    mMapWidget.mMultiSelectionListWidget.setColumnHidden(1, !mMapWidget.mIsSelectionUsingNames);
-    if ((!mMapWidget.mIsSelectionUsingNames) && mMapWidget.mIsSelectionSortByNames && mMapWidget.mIsSelectionSorting) {
-        mMapWidget.mIsSelectionSortByNames = false;
-    }
-    mMapWidget.mMultiSelectionListWidget.sortByColumn(mMapWidget.mIsSelectionSortByNames ? 1 : 0, Qt::AscendingOrder);
-    mMapWidget.mMultiSelectionListWidget.setSortingEnabled(mMapWidget.mIsSelectionSorting);
-    mMapWidget.resizeMultiSelectionWidget();
-    mMapWidget.mMultiSelectionListWidget.selectAll();
-    mMapWidget.mMultiSelectionListWidget.blockSignals(false);
-    mMapWidget.mMultiSelectionListWidget.show();
 }

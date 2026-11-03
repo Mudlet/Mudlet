@@ -319,10 +319,8 @@ private slots:
         // that fell out of step with the pattern list - or was indexed by
         // anything other than the pattern's own index - reaches the wrong entry
         // here rather than the one this pattern owns.
-        QVERIFY2(matches(pMissingKinds, qsl("before ^the pattern without one$ after")),
-                 "the substring pattern the repair defaulted, at index 1 of a mixed-kind trigger, stopped matching");
-        QVERIFY2(!matches(pMissingKinds, qsl("nothing either pattern of this trigger asks for")),
-                 "a mixed-kind trigger matched a line holding neither of its patterns");
+        QVERIFY2(matches(pMissingKinds, qsl("before ^the pattern without one$ after")), "the substring pattern the repair defaulted, at index 1 of a mixed-kind trigger, stopped matching");
+        QVERIFY2(!matches(pMissingKinds, qsl("nothing either pattern of this trigger asks for")), "a mixed-kind trigger matched a line holding neither of its patterns");
 
         // The undamaged neighbour is a perl pattern at index 0, so it pins that
         // the substring path above did not simply match everything.
@@ -390,25 +388,25 @@ private:
         return pTrigger->match(subject, line, -1);
     }
 
-    // match_substring() indexes mSubstringPatterns by pattern number and
-    // dereferences the entry without a bounds or null check, so it relies on one
-    // entry per pattern, holding a matcher for exactly the substring kinds.
+    // match_substring() indexes mPatternLiterals by pattern number and
+    // dereferences the entry's matcher without a bounds or null check, so it
+    // relies on one entry per pattern, holding a matcher for every
+    // REGEX_SUBSTRING pattern; only a perl pattern's required text is searched
+    // for besides.
     // Answers rather than asserting: a QVERIFY here would return from this
     // helper and let the slot run on, burying the failure.
     static QString matcherInvariantViolation(TTrigger* pTrigger)
     {
         const QStringList patterns = pTrigger->getPatternsList();
         const QList<int> kinds = pTrigger->getRegexCodePropertyList();
-        if (static_cast<int>(pTrigger->mSubstringPatterns.size()) != patterns.size()) {
-            return qsl("trigger '%1' holds %2 pattern(s) but %3 matcher slot(s)")
-                    .arg(pTrigger->getName(), QString::number(patterns.size()), QString::number(pTrigger->mSubstringPatterns.size()));
+        if (static_cast<int>(pTrigger->mPatternLiterals.size()) != patterns.size()) {
+            return qsl("trigger '%1' holds %2 pattern(s) but %3 literal slot(s)").arg(pTrigger->getName(), QString::number(patterns.size()), QString::number(pTrigger->mPatternLiterals.size()));
         }
         for (int i = 0; i < patterns.size(); ++i) {
-            const bool wantMatcher = kinds.at(i) == REGEX_SUBSTRING;
-            const bool haveMatcher = pTrigger->mSubstringPatterns[i].matcher != nullptr;
+            const bool haveMatcher = pTrigger->mPatternLiterals[i].matcher != nullptr;
+            const bool wantMatcher = kinds.at(i) == REGEX_SUBSTRING || (kinds.at(i) == REGEX_PERL && pTrigger->mPatternLiterals[i].gram != 0);
             if (haveMatcher != wantMatcher) {
-                return qsl("trigger '%1' pattern %2 is kind %3 but %4 a matcher")
-                        .arg(pTrigger->getName(), QString::number(i), QString::number(kinds.at(i)), haveMatcher ? qsl("has") : qsl("lacks"));
+                return qsl("trigger '%1' pattern %2 is kind %3 but %4 a matcher").arg(pTrigger->getName(), QString::number(i), QString::number(kinds.at(i)), haveMatcher ? qsl("has") : qsl("lacks"));
             }
         }
         return {};

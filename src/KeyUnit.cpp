@@ -238,6 +238,19 @@ std::vector<int> KeyUnit::findItems(const QString& name, const bool exactMatch, 
     return ids;
 }
 
+bool KeyUnit::pendingDeletion(TKey* pItem) const
+{
+    if (!hasPendingDeletes()) {
+        return false;
+    }
+    for (auto* pAncestor = pItem; pAncestor; pAncestor = pAncestor->getParent()) {
+        if (mCleanupSet.contains(pAncestor) || uninstallList.contains(pAncestor)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool KeyUnit::enableKey(const QString& name)
 {
     bool found = false;
@@ -260,7 +273,9 @@ bool KeyUnit::enableKey(const QString& name)
         // whole subtrees, so a corpse never sits under a parent this loop keeps.
         pT->enableKey(name);
         found = true;
-        emit mpHost->signal_keyToggled(pT->getID());
+        if (!pT->isTemporary() || pT->getParent()) {
+            emit mpHost->signal_keyToggled(pT->getID());
+        }
     }
     return found;
 }
@@ -276,7 +291,9 @@ bool KeyUnit::disableKey(const QString& name)
         // Walks pT's children for the same name as well - see enableKey()
         pT->disableKey(name);
         found = true;
-        emit mpHost->signal_keyToggled(pT->getID());
+        if (!pT->isTemporary() || pT->getParent()) {
+            emit mpHost->signal_keyToggled(pT->getID());
+        }
     }
     return found;
 }

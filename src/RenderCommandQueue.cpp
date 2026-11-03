@@ -49,7 +49,18 @@ void RenderCommandQueue::addCommand(std::unique_ptr<RenderCommand> command)
 {
     if (command) {
         mCommands.push_back(std::move(command));
+        mDeferred.push_back(mDeferring);
     }
+}
+
+void RenderCommandQueue::setDeferring(const bool deferring)
+{
+    mDeferring = deferring;
+}
+
+bool RenderCommandQueue::deferred(const size_t index) const
+{
+    return index < mDeferred.size() && mDeferred[index];
 }
 
 void RenderCommandQueue::executeAll(QOpenGLShaderProgram* shader,
@@ -62,8 +73,52 @@ void RenderCommandQueue::executeAll(QOpenGLShaderProgram* shader,
                                     QOpenGLBuffer& indexBuffer,
                                     QOpenGLBuffer& texCoordBuffer)
 {
+    execute(false, shader, geometryManager, resourceManager, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, texCoordBuffer);
+    std::vector<std::unique_ptr<RenderCommand>> deferred;
+    size_t index = 0;
+    for (auto& command : mCommands) {
+        if (mDeferred[index++]) {
+            deferred.push_back(std::move(command));
+        }
+    }
+    const bool deferring = mDeferring;
+    clear();
+    mCommands = std::move(deferred);
+    mDeferred.assign(mCommands.size(), true);
+    mDeferring = deferring;
+}
+
+void RenderCommandQueue::executeDeferred(QOpenGLShaderProgram* shader,
+                                         GeometryManager* geometryManager,
+                                         ResourceManager* resourceManager,
+                                         QOpenGLVertexArrayObject& vao,
+                                         QOpenGLBuffer& vertexBuffer,
+                                         QOpenGLBuffer& colorBuffer,
+                                         QOpenGLBuffer& normalBuffer,
+                                         QOpenGLBuffer& indexBuffer,
+                                         QOpenGLBuffer& texCoordBuffer)
+{
+    if (!mCommands.empty()) {
+        execute(true, shader, geometryManager, resourceManager, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, texCoordBuffer);
+    }
+    clear();
+}
+
+void RenderCommandQueue::execute(const bool deferredOnes,
+                                 QOpenGLShaderProgram* shader,
+                                 GeometryManager* geometryManager,
+                                 ResourceManager* resourceManager,
+                                 QOpenGLVertexArrayObject& vao,
+                                 QOpenGLBuffer& vertexBuffer,
+                                 QOpenGLBuffer& colorBuffer,
+                                 QOpenGLBuffer& normalBuffer,
+                                 QOpenGLBuffer& indexBuffer,
+                                 QOpenGLBuffer& texCoordBuffer)
+{
     if (!mInitialized) {
         qWarning() << "RenderCommandQueue: Not initialized";
+        // Dropped with the rest, so that the deferred ones do not warn again
+        clear();
         return;
     }
     if (!shader) {
@@ -79,8 +134,9 @@ void RenderCommandQueue::executeAll(QOpenGLShaderProgram* shader,
         return;
     }
 
-    for (const auto& command : mCommands) {
-        if (command) {
+    for (size_t index = 0; index < mCommands.size(); ++index) {
+        const auto& command = mCommands[index];
+        if (command && mDeferred[index] == deferredOnes) {
             command->execute(this, shader, geometryManager, resourceManager, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, texCoordBuffer);
 
             // Update statistics
@@ -97,14 +153,13 @@ void RenderCommandQueue::executeAll(QOpenGLShaderProgram* shader,
             }
         }
     }
-
-    // Clear the queue after execution
-    clear();
 }
 
 void RenderCommandQueue::clear()
 {
     mCommands.clear();
+    mDeferred.clear();
+    mDeferring = false;
 }
 
 size_t RenderCommandQueue::getCommandCount() const

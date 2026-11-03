@@ -1,0 +1,5 @@
+mpackage = [[media]]
+author = [[Mudlet test suite]]
+title = [[Fixture that asks for the profile's media folder in config.lua, for Package_spec.lua]]
+version = [[1.0]]
+description = [[Asks to be installed under the name of the folder the profile keeps downloaded sounds in, which only exists after the first download, so the install is refused that name whether the folder is there yet or not.]]

@@ -39,12 +39,12 @@ class Host;
 
 struct TDebugMessage
 {
-    TDebugMessage(const QString& text, const QString& profileTag, const QColor& foreground, const QColor& background, const QString& timeStamp = QString())
+    TDebugMessage(const QString& text, const QString& profileTag, const QColor& foreground, const QColor& background, const qint64 arrivalMSecs)
     : mMessage(text)
     , mProfileTag(profileTag)
     , mForeground(foreground)
     , mBackground(background)
-    , mTimeStamp(timeStamp)
+    , mArrivalMSecs(arrivalMSecs)
     {
     }
 
@@ -53,8 +53,8 @@ struct TDebugMessage
     QString mProfileTag;
     QColor mForeground;
     QColor mBackground;
-    // Arrival time, so a message held while paused isn't stamped with when it was shown:
-    QString mTimeStamp;
+    // A message held back (paused, or before the console opened) is stamped with this, not with when it is shown:
+    qint64 mArrivalMSecs;
 };
 
 class TDebug
@@ -96,9 +96,8 @@ public:
     class Sink
     {
     public:
-        // timeStamp is empty for a line shown as it arrives, and the arrival
-        // time for one replayed after being held back:
-        virtual void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) = 0;
+        // When the line arrived, which for one held back and replayed is not now:
+        virtual void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, qint64 arrivalMSecs) = 0;
 
     protected:
         // Nothing owns a sink through this interface (the console belongs to its widget parent), so deleting

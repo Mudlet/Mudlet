@@ -182,6 +182,86 @@ private slots:
                  "is missing from the pane until something unrelated forces a full repaint");
     }
 
+    // A full buffer that takes in as many lines as it trims ends on the same
+    // offset it started on, while every line on screen has moved up.
+    void test_aFullBufferTrimmingAsManyLinesAsItTakesIn()
+    {
+        mpServer->setSendsWelcome(false);
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
+        QVERIFY(pane);
+        TBuffer& buffer = host->mainConsoleView()->buffer;
+        auto* lua = host->getLuaInterpreter();
+
+        constexpr int batch = 100;
+        lua->compileAndExecuteScript(qsl("setConsoleBufferSize('main', 1000, %1)\n").arg(batch));
+        lua->compileAndExecuteScript(qsl("for i = 1, 1100 do echo('OLD LINE ' .. i .. '\\n') end\n"));
+        QVERIFY2(buffer.linesTrimmedTotal() > 0, "the buffer never reached its limit");
+        qApp->processEvents();
+        pane->forceUpdate();
+        pane->repaint();
+        const int offsetBefore = pane->imageTopLine();
+        const qint64 trimmedBefore = buffer.linesTrimmedTotal();
+
+        lua->compileAndExecuteScript(qsl("for i = 1, %1 do echo('NEW LINE ' .. i .. '\\n') end\n").arg(batch));
+        QCOMPARE(buffer.linesTrimmedTotal(), trimmedBefore + batch);
+        QCOMPARE(pane->imageTopLine(), offsetBefore);
+
+        pane->repaint();
+        const QImage afterIncremental = pane->cachedScreen().copy();
+
+        pane->forceUpdate();
+        pane->repaint();
+        const QImage authoritative = pane->cachedScreen().copy();
+
+        QVERIFY2(!afterIncremental.isNull() && !authoritative.isNull(), "no cached screen to compare");
+        QCOMPARE(afterIncremental.size(), authoritative.size());
+        QVERIFY2(afterIncremental == authoritative,
+                 "a trim that left the view's offset where it was read as no scroll at all, so only the bottom row was redrawn and the rest "
+                 "kept the text from before the new lines arrived");
+    }
+
+    // Scrolled back, the view follows its lines up as the buffer trims, so its
+    // offset drops by the trim while what it shows stays put.
+    void test_aTrimUnderAScrolledBackView()
+    {
+        mpServer->setSendsWelcome(false);
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
+        QVERIFY(pane);
+        TBuffer& buffer = host->mainConsoleView()->buffer;
+        auto* lua = host->getLuaInterpreter();
+
+        constexpr int batch = 100;
+        lua->compileAndExecuteScript(qsl("setConsoleBufferSize('main', 1000, %1)\n").arg(batch));
+        lua->compileAndExecuteScript(qsl("for i = 1, 1100 do echo(string.format('OLD LINE %04d %s\\n', i, string.rep('#', i % 37))) end\n"));
+        qApp->processEvents();
+        pane->scrollUp(300);
+        qApp->processEvents();
+        pane->forceUpdate();
+        pane->repaint();
+        const int offsetBefore = pane->imageTopLine();
+        const qint64 trimmedBefore = buffer.linesTrimmedTotal();
+
+        // A line on screen changes in place before the trim renumbers it
+        lua->compileAndExecuteScript(qsl("moveCursor('main', 0, %1) selectCurrentLine('main') fg('main', 'red') deselect('main') moveCursorEnd('main')\n").arg(offsetBefore + 5));
+        QVERIFY2(pane->mDirtyFirstLine >= 0, "recolouring the line did not leave it pending for the next paint");
+        lua->compileAndExecuteScript(qsl("for i = 1, %1 do echo('NEW LINE ' .. i .. '\\n') end\n").arg(batch));
+        QCOMPARE(buffer.linesTrimmedTotal(), trimmedBefore + batch);
+        QCOMPARE(pane->imageTopLine(), offsetBefore - batch);
+
+        pane->repaint();
+        const QImage afterIncremental = pane->cachedScreen().copy();
+        pane->forceUpdate();
+        pane->repaint();
+        const QImage authoritative = pane->cachedScreen().copy();
+        QVERIFY2(!afterIncremental.isNull() && afterIncremental == authoritative, "a trim under a scrolled back view left it showing something other than a full redraw");
+    }
+
     // The cached screen slides over a buffer twice its height and moves the rows
     // it keeps back to the far end whenever it reaches an end, so each direction
     // scrolls more than a screen's worth to cross both ends at least once.
@@ -250,8 +330,8 @@ private slots:
     // pacer, and a full repaint landing first must not take that with it
     void test_aRepaintBeforeThePacerFiresLeavesTheScrollBarCurrent()
     {
-        // the welcome lands 100ms after connecting, and output arriving during
-        // the wait below refreshes the scrollbar and hides the loss
+        // the welcome would land mid-case, and its output arms the pacer and
+        // refreshes the scrollbar too
         mpServer->setSendsWelcome(false);
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
@@ -263,31 +343,29 @@ private slots:
         auto* lua = host->getLuaInterpreter();
 
         lua->compileAndExecuteScript(qsl("for i = 1, 200 do echo('FILLER ' .. i .. '\\n') end\n"));
-        qApp->processEvents();
-        pane->repaint();
-        // The paint window runs from the start of a paint, so on a loaded runner
-        // the paint alone could use it up; time it from the end instead
-        pane->mSincePaint.restart();
-        lua->compileAndExecuteScript(qsl("echo('PACED_LINE\\n')\n"));
-        // Only the paint window starts the pacer with an interval; a late echo
-        // can still start it at 0 through the whole-pane path, which is not the
-        // case under test
-        const bool paced = pane->mpPaintPacer->isActive() && pane->mpPaintPacer->interval() > 0;
-        // As in FramePacingTest: an echo that took the whole window means the
-        // runner stalled mid-echo, and the case under test never arose
-        const qint64 sincePaintMs = pane->mSincePaint.elapsed();
-        if (!paced && sincePaintMs >= TTextEdit::csmPaintPaceMs) {
-            QSKIP(qPrintable(qsl("the echo took %1ms, past the %2ms paint window it had to land inside - the runner stalled mid-echo, so the pacer was not exercised")
-                                     .arg(sincePaintMs)
-                                     .arg(TTextEdit::csmPaintPaceMs)));
+        // the filler can leave the pacer running, and the one below has to be the echo's
+        QTRY_VERIFY(!pane->mpPaintPacer->isActive());
+
+        // The paint window is wall-clock time, so a runner that stalls mid-echo
+        // closes it first; each attempt paints again to open a new one
+        bool paced = false;
+        for (int attempt = 0; attempt < 20 && !paced; ++attempt) {
+            pane->repaint();
+            // timed from the end of the paint, which on a loaded runner can use
+            // the whole window by itself
+            pane->mSincePaint.restart();
+            lua->compileAndExecuteScript(qsl("echo('PACED_LINE\\n')\n"));
+            // the whole-pane path arms it at 0 and leaves no region for a paint to cover
+            paced = pane->mpPaintPacer->isActive() && pane->mpPaintPacer->interval() > 0;
         }
-        QVERIFY2(paced, "the line arrived inside the paint window but the pacer never started");
+        QVERIFY2(paced, "twenty lines in a row arrived after their paint window closed, so the pacer never started");
         pane->forceUpdate();
         pane->repaint();
 
-        // not QTRY: a refresh from anywhere within its retry window would hide
-        // the loss
-        QTest::qWait(100ms);
+        // A stalled runner can outlast any fixed wait before the timer gets its
+        // turn. Not a QTRY on the scrollbar, as a refresh from anywhere within
+        // its retry window would hide the loss.
+        QTRY_VERIFY(!pane->mpPaintPacer->isActive());
         QCOMPARE(scrollBar->maximum(), host->mainConsoleView()->buffer.getLastLineNumber() + 1);
     }
 

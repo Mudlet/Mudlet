@@ -27,11 +27,14 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "ActionUnit.h"
+#include "EditorMoveItemCommand.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TAction.h"
+#include "TCommandLine.h"
 #include "TEasyButtonBar.h"
 #include "TMainConsole.h"
+#include "TTextEdit.h"
 #include "TToolBar.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -237,6 +240,101 @@ private:
         QVERIFY2(styled, "the menu should have taken the stylesheet typed in the editor");
     }
 
+    static void addBarLocations()
+    {
+        QTest::addColumn<int>("location");
+        QTest::newRow("top") << 0;
+        QTest::newRow("left") << 1;
+        QTest::newRow("right") << 2;
+    }
+
+    static void addBarLocationsAndToggles()
+    {
+        QTest::addColumn<int>("location");
+        QTest::addColumn<bool>("show");
+        for (const auto& [location, name] : {std::pair{0, "top"}, std::pair{1, "left"}, std::pair{2, "right"}}) {
+            QTest::newRow(qPrintable(qsl("hide %1").arg(QLatin1String(name)))) << location << false;
+            QTest::newRow(qPrintable(qsl("show %1").arg(QLatin1String(name)))) << location << true;
+        }
+    }
+
+    // Borders on all four sides, as a Geyser UI has, in a window wide enough that the
+    // console is not held at the 40 columns it never goes under
+    Host* startBorderedProfileWithABar(const int location)
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        if (!host) {
+            return nullptr;
+        }
+        mudlet::self()->resize(1000, 700);
+        auto* lua = host->getLuaInterpreter();
+        if (!lua->compileAndExecuteScript(qsl("setBorderTop(20) setBorderRight(25) setBorderBottom(10) setBorderLeft(15)"))
+            || !lua->compileAndExecuteScript(qsl("tempButtonToolbar('placementSized', %1, 0) tempButton('placementSized', 'sized', 0)").arg(location))) {
+            return nullptr;
+        }
+        return host;
+    }
+
+    // Its location as tempButtonToolbar() takes it
+    static QWidget* stripAt(const TMainConsole* console, const int location) { return location == 0 ? console->mpTopToolBar : location == 1 ? console->mpLeftToolBar : console->mpRightToolBar; }
+
+    static bool takesRoom(const QWidget* strip, const int location) { return location == 0 ? strip->height() > 0 : strip->width() > 0; }
+
+    // How the output area misses the room the bars, the command line and the
+    // borders leave it, and the rows and columns the game is told miss what it
+    // holds; empty when it all fits
+    static QString misfit(const Host* host)
+    {
+        const TMainConsole* console = host->mainConsoleView();
+        const QWidget* display = console->mpMainDisplay;
+        const QMargins borders = host->borders();
+        QStringList misses;
+        if (display->pos() != QPoint(borders.left(), borders.top())) {
+            misses << qsl("placed at %1,%2").arg(display->x()).arg(display->y());
+        }
+        const int overhang = display->mapTo(console, QPoint(0, display->height() + borders.bottom())).y() - console->mpCommandLine->mapTo(console, QPoint(0, 0)).y();
+        if (overhang) {
+            misses << qsl("%1px over the command line").arg(overhang);
+        }
+        const int shortfall = console->mpRightToolBar->mapTo(console, QPoint(0, 0)).x() - display->mapTo(console, QPoint(display->width() + borders.right(), 0)).x();
+        if (shortfall) {
+            misses << qsl("%1px short of the right-hand bars").arg(shortfall);
+        }
+        const TTextEdit* pane = console->mUpperPane;
+        const int rows = pane->height() / QFontMetrics(pane->font()).height();
+        if (rows != host->mScreenHeight) {
+            misses << qsl("%1 rows told for %2").arg(host->mScreenHeight).arg(rows);
+        }
+        const int columns = pane->width() / QFontMetrics(pane->font()).averageCharWidth();
+        if (columns != host->mScreenWidth) {
+            misses << qsl("%1 columns told for %2").arg(host->mScreenWidth).arg(columns);
+        }
+        return misses.join(qsl(", "));
+    }
+
+    // processEventLoopHack() ends showToolBar() and the editor's save, and its
+    // refresh() sized the output area right even before bars resized it
+    static void fitTheOldWay(const Host* host)
+    {
+        mudlet::self()->processEventLoopHack();
+        // Neither that refresh() nor the window's resize may still be pending
+        // when the bar is toggled, or they would fit the area for it
+        QTest::qWait(300ms);
+        QCOMPARE(misfit(host), QString());
+    }
+
+    // Nothing that comes later, such as that refresh(), may tell the game another size
+    static void fitsForGood(const Host* host)
+    {
+        const QSize told(host->mScreenWidth, host->mScreenHeight);
+        QVERIFY2(told.width() > 40, "the window is too narrow for the column count to show anything");
+        mudlet::self()->processEventLoopHack();
+        QTest::qWait(200ms);
+        QCOMPARE(misfit(host), QString());
+        QCOMPARE(QSize(host->mScreenWidth, host->mScreenHeight), told);
+    }
+
 private slots:
     void initTestCase()
     {
@@ -363,6 +461,122 @@ private slots:
         QCOMPARE(mudlet::self()->dockWidgetArea(toolBar), Qt::NoDockWidgetArea);
     }
 
+    // It is drawn as a menu on its new parent's bar from then on, so its own
+    // bar must not stay where it was
+    void test_aButtonBarMovedIntoAnotherBarIsTakenOffTheWindow()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mainConsoleView();
+        QVERIFY(console);
+
+        auto* moved = makeRootBar(host, qsl("placementGhost"), 0);
+        auto* newParent = makeRootBar(host, qsl("placementGhostParent"), 0);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TEasyButtonBar> bar = console->actionEasyButtonBar(moved);
+        QVERIFY(bar && !bar->isHidden());
+
+        // As the editor's drop does
+        host->getActionUnit()->reParentAction(moved->getID(), 0, newParent->getID(), -1, -1);
+        host->getActionUnit()->updateAllToolbars();
+
+        QVERIFY2(!bar || bar->isHidden(), "the moved bar's old bar is still showing");
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(!bar, "the moved bar's old bar was kept");
+        QVERIFY(console->actionEasyButtonBar(newParent) && !console->actionEasyButtonBar(newParent)->isHidden());
+    }
+
+    void test_undoingAMoveIntoAnotherBarBringsTheBarBack()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mainConsoleView();
+        QVERIFY(console);
+
+        auto* moved = makeRootBar(host, qsl("placementUndoneMove"), 0);
+        auto* newParent = makeRootBar(host, qsl("placementUndoneMoveParent"), 0);
+        host->getActionUnit()->updateAllToolbars();
+        QVERIFY(console->actionEasyButtonBar(moved) && !console->actionEasyButtonBar(moved)->isHidden());
+
+        host->getActionUnit()->reParentAction(moved->getID(), 0, newParent->getID(), -1, -1);
+        host->getActionUnit()->updateAllToolbars();
+        EditorMoveItemCommand move(EditorViewType::cmActionView, moved->getID(), 0, newParent->getID(), 0, 0, moved->getName(), host);
+        // The first redo() is QUndoStack::push()'s, made after the drop has already moved it
+        move.redo();
+        move.undo();
+
+        QVERIFY(!moved->getParent());
+        TEasyButtonBar* bar = console->actionEasyButtonBar(moved);
+        QVERIFY2(bar && !bar->isHidden(), "the bar moved back out by undo is not showing");
+        QVERIFY(laidOutIn(console->mpTopToolBar, bar));
+    }
+
+    void test_aButtonBarMovedOutOfAPackageIntoAnotherBarIsTakenOffTheWindow()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mainConsoleView();
+        QVERIFY(console);
+
+        auto* package = makeRootBar(host, qsl("placementGhostPackage"), 0, false);
+        package->mPackageName = qsl("placementGhostPackage");
+        auto* moved = new TAction(package, host);
+        moved->setName(qsl("placementPackagedGhost"));
+        moved->setIsFolder(true);
+        moved->setIsActive(true);
+        host->getActionUnit()->registerAction(moved);
+        auto* button = new TAction(moved, host);
+        button->setName(qsl("placementPackagedGhost button"));
+        button->setIsActive(true);
+        host->getActionUnit()->registerAction(button);
+        auto* newParent = makeRootBar(host, qsl("placementPackagedGhostParent"), 0);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TEasyButtonBar> bar = console->actionEasyButtonBar(moved);
+        QVERIFY2(bar && !bar->isHidden(), "a bar directly in a package has to be showing first, or moving it proves nothing");
+        QVERIFY(laidOutIn(console->mpTopToolBar, bar));
+
+        host->getActionUnit()->reParentAction(moved->getID(), package->getID(), newParent->getID(), -1, -1);
+        host->getActionUnit()->updateAllToolbars();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QVERIFY2(!bar, "the bar it had in the package was kept");
+        QVERIFY(console->actionEasyButtonBar(newParent) && !console->actionEasyButtonBar(newParent)->isHidden());
+    }
+
+    void test_aPackageMovedIntoABarTakesItsBarsOffTheWindow()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mainConsoleView();
+        QVERIFY(console);
+
+        auto* package = makeRootBar(host, qsl("placementMovedPackage"), 0, false);
+        package->mPackageName = qsl("placementMovedPackage");
+        auto* packaged = new TAction(package, host);
+        packaged->setName(qsl("placementMovedPackageBar"));
+        packaged->setIsFolder(true);
+        packaged->setIsActive(true);
+        host->getActionUnit()->registerAction(packaged);
+        auto* button = new TAction(packaged, host);
+        button->setName(qsl("placementMovedPackageBar button"));
+        button->setIsActive(true);
+        host->getActionUnit()->registerAction(button);
+        auto* newParent = makeRootBar(host, qsl("placementMovedPackageParent"), 0);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TEasyButtonBar> bar = console->actionEasyButtonBar(packaged);
+        QVERIFY2(bar && !bar->isHidden(), "a bar directly in a package has to be showing first, or moving the package proves nothing");
+
+        host->getActionUnit()->reParentAction(package->getID(), 0, newParent->getID(), -1, -1);
+        host->getActionUnit()->updateAllToolbars();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QVERIFY2(!bar, "the bar the package's toolbar had was kept");
+    }
+
     void test_aRemovedButtonBarLeavesItsStrip()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
@@ -430,6 +644,59 @@ private slots:
 
         console->setActionToolBarVisible(floating, true);
         QVERIFY(!toolBar->isHidden());
+    }
+
+    // The output area is sized by hand, not by a layout, so a bar coming or going
+    // has to resize it as well as move it. Toggled the way the editor's activate
+    // button does, which has nothing else to resize it afterwards.
+    void test_aBarShownOrHiddenResizesTheOutputArea_data() { addBarLocationsAndToggles(); }
+    void test_aBarShownOrHiddenResizesTheOutputArea()
+    {
+        QFETCH(int, location);
+        QFETCH(bool, show);
+        auto* host = startBorderedProfileWithABar(location);
+        QVERIFY(host);
+        const QWidget* strip = stripAt(host->mainConsoleView(), location);
+        QTRY_VERIFY2(takesRoom(strip, location), "the bar has to take up room, or hiding it proves nothing");
+        auto toggle = [host](const bool active) {
+            host->getActionUnit()->findAction(qsl("placementSized"))->setIsActive(active);
+            host->getActionUnit()->updateAllToolbars();
+        };
+        if (show) {
+            toggle(false);
+            QTRY_VERIFY(!takesRoom(strip, location));
+        }
+        fitTheOldWay(host);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        toggle(show);
+
+        QTRY_COMPARE(takesRoom(strip, location), show);
+        QTRY_COMPARE(misfit(host), QString());
+        fitsForGood(host);
+    }
+
+    // Removed from the editor; no Lua function removes a bar
+    void test_aBarRemovedResizesTheOutputArea_data() { addBarLocations(); }
+    void test_aBarRemovedResizesTheOutputArea()
+    {
+        QFETCH(int, location);
+        auto* host = startBorderedProfileWithABar(location);
+        QVERIFY(host);
+        const QWidget* strip = stripAt(host->mainConsoleView(), location);
+        QTRY_VERIFY2(takesRoom(strip, location), "the bar has to take up room, or removing it proves nothing");
+        fitTheOldWay(host);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        delete host->getActionUnit()->findAction(qsl("placementSized"));
+
+        QTRY_VERIFY(!takesRoom(strip, location));
+        QTRY_COMPARE(misfit(host), QString());
+        fitsForGood(host);
     }
 
     // The console keeps an action's bars by the action's address, which a later
@@ -878,6 +1145,76 @@ private slots:
     void test_restylingAMenuToTheStylesheetTypedInTheEditorRestylesIt() { restyleAMenuToTheStylesheetTypedInTheEditorOn(0); }
 
     void test_restylingAMenuOnAFloatingToolbarToTheStylesheetTypedInTheEditorRestylesIt() { restyleAMenuToTheStylesheetTypedInTheEditorOn(4); }
+
+    // Its settings are its own, not those of the package it sits in
+    void test_aButtonBarInAPackageTakesItsOwnStyleSheetAndLayout()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mainConsoleView();
+        QVERIFY(console);
+
+        auto* package = makeRootBar(host, qsl("placementStyledPackage"), 0, false);
+        package->mPackageName = qsl("placementStyledPackage");
+        auto* packaged = new TAction(package, host);
+        packaged->setName(qsl("placementStyledBar"));
+        packaged->setIsFolder(true);
+        packaged->setIsActive(true);
+        packaged->css = qsl("background-color: red;");
+        packaged->mUseCustomLayout = true;
+        packaged->setSizeX(200);
+        packaged->setSizeY(40);
+        host->getActionUnit()->registerAction(packaged);
+        auto* button = new TAction(packaged, host);
+        button->setName(qsl("placementStyledBar button"));
+        button->setIsActive(true);
+        host->getActionUnit()->registerAction(button);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TEasyButtonBar> bar = console->actionEasyButtonBar(packaged);
+        QVERIFY2(bar, "a bar directly in a package should have been given a button bar");
+        QCOMPARE(bar->styleSheet(), qsl("background-color: red;"));
+        auto* buttonArea = bar->findChild<QWidget*>(qsl("easyButtonBar_Widget_%1_placementStyledBar").arg(host->getName()));
+        QVERIFY(buttonArea);
+        QCOMPARE(buttonArea->minimumSize(), QSize(200, 40));
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementStyledBar', 'background-color: blue;')")));
+        QCOMPARE(console->actionEasyButtonBar(packaged), bar.data());
+        QCOMPARE(bar->styleSheet(), qsl("background-color: blue;"));
+    }
+
+    // A button bar takes its size from its own action, so a stray one made
+    // for a floating toolbar in a package would widen the top strip
+    void test_aFloatingToolbarInAPackageIsGivenNoButtonBar()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mainConsoleView();
+        QVERIFY(console);
+
+        auto* package = makeRootBar(host, qsl("placementFloatingPackage"), 0, false);
+        package->mPackageName = qsl("placementFloatingPackage");
+        auto* floating = new TAction(package, host);
+        floating->setName(qsl("placementFloatingInPackage"));
+        floating->setIsFolder(true);
+        floating->setIsActive(true);
+        floating->mLocation = 4;
+        floating->mUseCustomLayout = true;
+        floating->setSizeX(200);
+        floating->setSizeY(80);
+        host->getActionUnit()->registerAction(floating);
+        auto* button = new TAction(floating, host);
+        button->setName(qsl("placementFloatingInPackage button"));
+        button->setIsActive(true);
+        host->getActionUnit()->registerAction(button);
+        host->getActionUnit()->updateAllToolbars();
+        host->getActionUnit()->updateAllToolbars();
+
+        QVERIFY(!console->hasEasyButtonBar(floating));
+        const auto strays = console->findChildren<TEasyButtonBar*>(qsl("easyButtonBar_%1_placementFloatingInPackage").arg(host->getName()));
+        QCOMPARE(strays.size(), 0);
+    }
 
     void cleanup()
     {

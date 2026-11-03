@@ -43,8 +43,8 @@
 #   --src DIR          Mudlet src/ dir (default: derived from this script's location).
 #   -h, --help         show this help.
 #
-# No CI job runs --enforce until the count reaches 0 (#9516): refactor steps may legitimately raise it.
-# A person reading the count is the only check, so the script must never report a wrong one quietly.
+# CI runs --enforce against a baseline of 0 (.github/workflows/core-widgets-audit.yml): a file that needs
+# Qt Widgets belongs in mudlet_app. A wrong count would pass silently, so the script must never report one.
 #
 # The report is not committed, as concurrent PRs would always conflict on its totals. Run on demand:
 #   bash cmake/audit-core-widgets.sh
@@ -440,9 +440,8 @@ case "$MODE" in
 
 Measures how many source files in the \`mudlet_core\` static-library target
 (\`src/CMakeLists.txt\`) still depend on Qt Widgets. Part of the libmudlet
-refactor (#8681, #9011): the goal is to drive this count to **0** so \`mudlet_core\`
-can build with Qt Widgets absent, after which this audit becomes an enforcing CI
-guard (\`--enforce\`).
+refactor (#8681, #9011): the count is **0**, \`mudlet_core\` builds with Qt Widgets
+absent, and CI runs this audit with \`--enforce\` so it stays that way.
 
 A file is counted as depending on Qt Widgets if it either:
 
@@ -457,10 +456,9 @@ layout (headers in \`QtWidgets/\` that are not also in \`QtGui/\`/\`QtCore/\`), 
 Qt6 relocations such as \`QAction\`/\`QShortcut\` -> QtGui are excluded
 automatically. The offending-file count is stable across Qt 6.x releases.
 
-Genuine widget classes (the \`dlg*\`, \`T*\`-widget, and \`mudlet\` UI files) are
-included in the count; the refactor plan moves those wholesale to a future
-\`mudlet_app\` target rather than de-widgeting them, so the count drops through a
-mix of moving and refactoring.
+Widget classes (the \`dlg*\`, \`T*\`-widget and \`mudlet\` UI files) live in the
+\`mudlet_app\` target, whose \`mudlet_app_SRCS\` / \`mudlet_app_HDRS\` lists this
+audit does not scan. A new file that needs Qt Widgets goes there.
 
 **This report is not committed** - it is a global counter over the whole target, so
 two concurrent libmudlet PRs conflict on the summary table below even when they touch
@@ -479,9 +477,8 @@ leave the baseline empty and every later run would abort on it.
 bash cmake/audit-core-widgets.sh --count > baseline.tmp && mv baseline.tmp cmake/core-widgets-baseline.txt
 \`\`\`
 
-Nothing gates on this count yet: steps 3-10 of the refactor legitimately move files
-between the core and app targets, so an intermediate step can correctly raise it.
-\`--enforce\` works, but no CI job runs it; it becomes a gate once the count reaches **0**.
+CI fails a pull request whose count is above the baseline
+(\`.github/workflows/core-widgets-audit.yml\`).
 
 ## Summary
 
