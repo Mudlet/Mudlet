@@ -5388,7 +5388,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
     const int n = lua_gettop(L);
 
     // Check if first argument is a table for named-key format
-    if (lua_istable(L, 1)) {
+    if (n == 1 && lua_istable(L, 1)) {
         // lua_error() longjmps past C++ destructors, so every QString below has
         // to be out of scope before the raise at the end - see checkStringArg()
         bool errorPushed = false;
