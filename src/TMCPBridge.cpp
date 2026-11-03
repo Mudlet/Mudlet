@@ -121,7 +121,6 @@ int TMCPBridge::exec(const QString& configDir)
             std::freopen("CONOUT$", "w", stderr);
         }
     }
-    // Also keeps startStdinReader()'s _setmode() off an unopened fd, which ends the process.
     if (_fileno(stdin) < 0 || _fileno(stdout) < 0) {
         noteOnStderr(qsl("mudlet --mcp-bridge: there is no stdin or stdout to speak JSON-RPC over - this is for an MCP client such as Claude Desktop to start"));
         return 1;
@@ -479,6 +478,7 @@ QString TMCPBridge::claudeDesktopConfigDirOnWindows(const QString& localAppData,
 {
     // Packaged (MSIX) Claude Desktop moves its data to Claude-Data\<lowercased package family>
     // and prefers it over %APPDATA%\Claude. Uninstalling leaves that but removes Packages\<family>.
+    // Of two installed packages, the more recently modified is taken to be the one in use.
     if (!localAppData.isEmpty()) {
         const QFileInfoList packaged = QDir(qsl("%1/Claude-Data").arg(localAppData)).entryInfoList({qsl("claude_*"), qsl("anthropicpbc.claude_*")}, QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time);
         for (const QFileInfo& dir : packaged) {
