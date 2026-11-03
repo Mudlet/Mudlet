@@ -1,7 +1,5 @@
 # Specs that fail in mudlet-headless, which has no main window, read by
 # CI/check-headless-lua-failures.py, which says what each line means.
-minimum successes: 7827
-maximum pending: 265
 
 # Need a main window
 Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour hands out a key as soon as whatever held it is switched off
