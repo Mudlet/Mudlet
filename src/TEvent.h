@@ -33,6 +33,8 @@
 #define ARGUMENT_TYPE_NIL 3
 #define ARGUMENT_TYPE_TABLE 4
 #define ARGUMENT_TYPE_FUNCTION 5
+// A byte string carried one byte per QChar (QString::fromLatin1()), handed to Lua byte for byte
+#define ARGUMENT_TYPE_BYTES 6
 
 class TEvent
 {

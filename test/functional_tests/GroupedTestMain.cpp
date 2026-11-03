@@ -17,7 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// main() for every grouped functional test binary - see GroupedTest.h for the
+// main() for every grouped test binary, unit_tests included - see GroupedTest.h for the
 // shape and why it exists.
 
 #include "GroupedTest.h"

@@ -105,6 +105,8 @@ private:
 
     void startDownload();
     void startUpdate();
+    // Ends the install the user asked for, then tells them why
+    void reportError(const QString& title, const QString& text);
 
     bool mAccepted{false};
     bool mIsDownloadFinished{false};
@@ -114,7 +116,7 @@ private:
     QList<Release> mUpdates;
     Release mLatestRelease;
     QList<QAbstractButton*> mInstallButtons;
-    QAbstractButton* mAcceptedInstallButton;
+    QAbstractButton* mAcceptedInstallButton{nullptr};
     bool mOpenExternalLinks{true};
     QString mMinVersion;
     QString mMaxVersion;

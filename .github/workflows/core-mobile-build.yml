@@ -1,0 +1,83 @@
+# Android and iOS builds of mudlet_core have to leave out spawn(), Discord, the
+# Vosk and sherpa-onnx engines, the MCP server, the updater, the 3D mapper and
+# Sentry (#9011). Nothing else builds with all of those off, so this does, to
+# keep the options that leave them out from rotting. See "Leaving out what a
+# mobile build cannot use" in docs/platform-builds.md.
+name: Build mudlet_core without its desktop-only parts
+
+on:
+  push:
+    branches: [development]
+  pull_request:
+    paths:
+      - 'src/**'
+      - '3rdparty/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - '.github/workflows/core-mobile-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  core-minimal:
+    name: Build mudlet-headless with the mobile options off
+    runs-on: ubuntu-22.04
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.11.3'
+          dir: ${{ runner.workspace }}
+          cache: false
+          modules: qt5compat qtmultimedia qtspeech
+
+      - name: Install dependencies
+        # lua5.1 writes the translation statistics that mudlet.qrc embeds
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            g++-12 \
+            libboost-dev \
+            libglu1-mesa-dev \
+            libhunspell-dev \
+            libpcre2-dev \
+            libpugixml-dev \
+            libpulse-dev \
+            libzip-dev \
+            lua5.1 \
+            ninja-build \
+            qtkeychain-qt6-dev \
+            zlib1g-dev
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 12
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 12
+
+      - name: Configure
+        run: cmake --preset linux-core-minimal
+
+      - name: Build
+        run: cmake --build --preset linux-core-minimal
+
+      - name: Check mudlet_core uses none of what was left out
+        # Undefined symbols are what the library calls into, so this cannot be
+        # fooled by code that only sits behind an #if. nm runs on its own so that
+        # an archive it cannot read fails the step instead of matching nothing.
+        run: |
+          nm -C --undefined-only build-linux-core-minimal/src/libmudlet_core.a > "$RUNNER_TEMP/core-undefined.txt"
+          if grep -E 'QProcess::|QLibrary::|QLocalServer::|QLocalSocket::|QHttpServer|sentry_' "$RUNNER_TEMP/core-undefined.txt"; then
+            echo "::error::mudlet_core still uses one of the above with the mobile options off"
+            exit 1
+          fi
+
+      - name: Run mudlet-headless
+        run: build-linux-core-minimal/src/mudlet-headless --version

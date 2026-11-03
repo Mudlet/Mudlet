@@ -9,13 +9,41 @@ Geyser.ScrollBox = Geyser.Window:new({
     name = "ScrollBoxClass"
 })
 
+-- Internal function: children are laid out inside the box's own widget, so from
+-- its origin and at the whole pixel size the widget gets, not its fractional one.
+-- The size still follows the box's constraints, which a parent HBox or VBox reads
+-- and rewrites before it repositions the box.
+local function frameChildren(box)
+    local own = {get_x = box.get_x, get_y = box.get_y, get_width = box.get_width, get_height = box.get_height}
+    local zero = function() return 0 end
+    local across = {get_x = own.get_x, get_y = zero, get_width = own.get_width, get_height = zero}
+    local down = {get_x = zero, get_y = own.get_y, get_width = zero, get_height = own.get_height}
+    -- a negative width or height is compiled as the far edge less the box's own
+    -- get_x or get_y, so those must give the box's real origin while it measures itself
+    local measuring = false
+    box.get_x = function() return measuring and own.get_x() or 0 end
+    box.get_y = function() return measuring and own.get_y() or 0 end
+    box.get_width = function()
+        measuring = true
+        local _, _, width = Geyser.Container.pixel_geometry(across)
+        measuring = false
+        return width
+    end
+    box.get_height = function()
+        measuring = true
+        local _, _, _, height = Geyser.Container.pixel_geometry(down)
+        measuring = false
+        return height
+    end
+end
+
 -- Overridden reposition for special coordination handling
 function Geyser.ScrollBox:reposition(skipChildren)
     Geyser.calc_constraints(self, self, self.container)
-    moveWindow(self.name, self:get_x(), self:get_y())
-    resizeWindow(self.name, self:get_width(), self:get_height())
-    self.get_x = function() return 0 end
-    self.get_y = function() return 0 end
+    local x, y, width, height = self:pixel_geometry()
+    moveWindow(self.name, x, y)
+    resizeWindow(self.name, width, height)
+    frameChildren(self)
       -- deal with all children of this container
     if not skipChildren then
         for k, v in pairs(self.windowList) do
@@ -42,6 +70,11 @@ Geyser.ScrollBox.parent = Geyser.Window
 function Geyser.ScrollBox:new (cons, container)
     cons = cons or {}
     cons.type = cons.type or "scrollBox"
+    local taken = mudlet.nameTakenByOtherKind(cons.name, "scrollbox", cons.windowname or (container or Geyser).windowname)
+    if taken then
+        printError(string.format("Geyser.ScrollBox '%s' was not created: %s", cons.name, taken), false, false)
+        return nil, taken
+    end
     
     -- Call parent's constructor
     local me = self.parent:new(cons, container)
@@ -51,9 +84,10 @@ function Geyser.ScrollBox:new (cons, container)
     setmetatable(me, self)
     self.__index = self
     
-    local ok, err = createScrollBox(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
+    local x, y, width, height = me:pixel_geometry()
+    local ok, err = createScrollBox(me.windowname, me.name, x, y, width, height)
     -- the object is returned and registered as a parent window either way, so report a failed creation
-    if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
+    if not mudlet.elementCreated(me.windowname, me.name, ok, err, "scrollbox") then
         printError(string.format("Geyser.ScrollBox '%s' was not created: %s", me.name, err or "unknown error"), false, false)
     end
 
@@ -70,8 +104,7 @@ function Geyser.ScrollBox:new (cons, container)
     Geyser.parentWindows[me.name] = me
 
     --ScrollBox needs special coordinate handling for the children in it
-    me.get_x = function() return 0 end
-    me.get_y = function() return 0 end
+    frameChildren(me)
     
     -- if me.stylesheet then 
     --     me:setStyleSheet()
@@ -89,6 +122,5 @@ end
 function Geyser.ScrollBox:new2 (cons, container)
     cons = cons or {}
     cons.useAdd2 = true
-    local me = self:new(cons, container)
-    return me
+    return self:new(cons, container)
 end

@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include "TMedia.h"
 
 #include <QtTest/QtTest>
@@ -52,6 +53,10 @@ class TMediaPathTraversalTest : public QObject
     static QString mediaRoot() { return QStringLiteral("/home/user/.config/mudlet/profiles/Default/media"); }
 
     static bool escapes(const QString& fileName) { return TMedia::mediaFilePathEscapesMediaDir(mediaRoot(), fileName); }
+
+    static QString profileHome() { return QStringLiteral("/home/user/.config/mudlet/profiles/Default"); }
+
+    static QString cacheName(const QString& absolutePath) { return TMedia::mediaCacheFileName(profileHome(), mediaRoot(), absolutePath); }
 
 private slots:
 
@@ -141,8 +146,123 @@ private slots:
         // A genuine sub-directory of the media root must remain permitted.
         QVERIFY(!TMedia::mediaFilePathEscapesMediaDir(root, QStringLiteral("sounds/ok.wav")));
     }
+
+    // A drive that is not there has no parent to walk on to; the walk must end, not spin on "Z:/"
+    void resolve_missingDrive_ends()
+    {
+        QCOMPARE(TMedia::resolvedMediaPath(QStringLiteral("Z:/no-such-drive/tone.wav")), QStringLiteral("Z:/no-such-drive/tone.wav"));
+        // On Windows "/" is the current drive's root, so the drive is named in the answer
+        QCOMPARE(TMedia::resolvedMediaPath(QStringLiteral("/no-such-folder/tone.wav")), QDir(QFileInfo(QStringLiteral("/")).canonicalFilePath()).filePath(QStringLiteral("no-such-folder/tone.wav")));
+    }
+
+    // A share that is offline is a root too, not a folder of the current drive's root
+    void resolve_missingShare_ends()
+    {
+        const QString share = QStringLiteral("//no-such-server/share/tone.wav");
+        QCOMPARE(TMedia::resolvedMediaPath(share), QDir::cleanPath(share));
+    }
+
+    // Only a drive letter makes a drive: a folder whose name ends in ':' is walked up like any other
+    void resolve_folderEndingInColon_isAFolder()
+    {
+        QTemporaryDir base;
+        QVERIFY(base.isValid());
+        const QString real = base.filePath(QStringLiteral("real"));
+        QVERIFY(QDir().mkpath(real));
+
+        QCOMPARE(TMedia::resolvedMediaPath(real + QStringLiteral("/snd:/gone.wav")), QFileInfo(real).canonicalFilePath() + QStringLiteral("/snd:/gone.wav"));
+    }
+
+    // A file that has gone resolves through the folders that remain, symlinks among them
+    void resolve_missingFileUnderSymlink_realFolder()
+    {
+        QTemporaryDir base;
+        QVERIFY(base.isValid());
+        const QString real = base.filePath(QStringLiteral("real"));
+        QVERIFY(QDir().mkpath(real));
+        const QString link = base.filePath(QStringLiteral("link"));
+        if (!QFile::link(real, link) || QFileInfo(link).canonicalFilePath() != QFileInfo(real).canonicalFilePath()) {
+            QSKIP("Filesystem did not create a followed symlink");
+        }
+
+        QCOMPARE(TMedia::resolvedMediaPath(link + QStringLiteral("/gone.wav")), QFileInfo(real).canonicalFilePath() + QStringLiteral("/gone.wav"));
+    }
+
+    // ".." after a symlink leads out of the folder the link points to, not back out of the link
+    void resolve_dotDotAfterSymlink_followsTheLink()
+    {
+        QTemporaryDir base;
+        QVERIFY(base.isValid());
+        const QString sub = base.filePath(QStringLiteral("other/sub"));
+        QVERIFY(QDir().mkpath(sub));
+        QVERIFY(QDir().mkpath(base.filePath(QStringLiteral("pack"))));
+        QFile tone(base.filePath(QStringLiteral("other/tone.wav")));
+        QVERIFY(tone.open(QIODevice::WriteOnly));
+        tone.close();
+        const QString link = base.filePath(QStringLiteral("pack/link"));
+        if (!QFile::link(sub, link) || QFileInfo(link).canonicalFilePath() != QFileInfo(sub).canonicalFilePath()) {
+            QSKIP("Filesystem did not create a followed symlink");
+        }
+        const QString other = QFileInfo(base.filePath(QStringLiteral("other"))).canonicalFilePath();
+
+        QCOMPARE(TMedia::resolvedMediaPath(link + QStringLiteral("/../tone.wav")), other + QStringLiteral("/tone.wav"));
+        QCOMPARE(TMedia::resolvedMediaPath(link + QStringLiteral("/../gone.wav")), other + QStringLiteral("/gone.wav"));
+    }
+
+    void cache_sameNameInTwoFolders_twoCopies()
+    {
+        QCOMPARE(cacheName(profileHome() + QStringLiteral("/sounds/steps/sand/3.ogg")), QStringLiteral("_profile/sounds/steps/sand/3.ogg"));
+        QCOMPARE(cacheName(profileHome() + QStringLiteral("/sounds/combat/sword/3.ogg")), QStringLiteral("_profile/sounds/combat/sword/3.ogg"));
+    }
+
+    void cache_fileAlreadyInMedia_playedWhereItIs() { QCOMPARE(cacheName(mediaRoot() + QStringLiteral("/weather/rain.wav")), QStringLiteral("weather/rain.wav")); }
+
+    void cache_fileOutsideTheProfile_mirroredUnderItsOwnFolder() { QCOMPARE(cacheName(QStringLiteral("/home/user/packs/steps/3.ogg")), QStringLiteral("_absolute/home/user/packs/steps/3.ogg")); }
+
+    // A profile whose name starts with this one's is not inside it
+    void cache_siblingProfile_notTakenForThisOne()
+    {
+        QCOMPARE(cacheName(profileHome() + QStringLiteral("2/sounds/3.ogg")), QStringLiteral("_absolute/home/user/.config/mudlet/profiles/Default2/sounds/3.ogg"));
+    }
+
+    void cache_dotDotSegments_resolvedFirst()
+    {
+        QCOMPARE(cacheName(profileHome() + QStringLiteral("/sounds/../music/a.ogg")), QStringLiteral("_profile/music/a.ogg"));
+        QCOMPARE(cacheName(profileHome() + QStringLiteral("/../Other/a.ogg")), QStringLiteral("_absolute/home/user/.config/mudlet/profiles/Other/a.ogg"));
+    }
+
+#if defined(Q_OS_WINDOWS)
+    void cache_driveLetter_becomesAFolder()
+    {
+        const QString home = QStringLiteral("C:/Users/me/mudlet/profiles/Default");
+        QCOMPARE(TMedia::mediaCacheFileName(home, home + QStringLiteral("/media"), QStringLiteral("D:/packs/3.ogg")), QStringLiteral("_absolute/D/packs/3.ogg"));
+        QCOMPARE(TMedia::mediaCacheFileName(home, home + QStringLiteral("/media"), QStringLiteral("d:/packs/3.ogg")), QStringLiteral("_absolute/D/packs/3.ogg"));
+    }
+
+    // A server named D is not drive D
+    void cache_networkShare_apartFromDrives()
+    {
+        const QString home = QStringLiteral("C:/Users/me/mudlet/profiles/Default");
+        QCOMPARE(TMedia::mediaCacheFileName(home, home + QStringLiteral("/media"), QStringLiteral("//D/packs/3.ogg")), QStringLiteral("_absolute/UNC/D/packs/3.ogg"));
+    }
+#endif
+
+    void reserved_copyFolders_refusedInAnyCase()
+    {
+        QVERIFY(TMedia::mediaFileNameReservedForCopies(QStringLiteral("_profile/sounds/3.ogg")));
+        QVERIFY(TMedia::mediaFileNameReservedForCopies(QStringLiteral("_absolute/home/3.ogg")));
+        QVERIFY(TMedia::mediaFileNameReservedForCopies(QStringLiteral("./_PROFILE/3.ogg")));
+        QVERIFY(TMedia::mediaFileNameReservedForCopies(QStringLiteral("_profile")));
+    }
+
+    void reserved_otherFolders_allowed()
+    {
+        QVERIFY(!TMedia::mediaFileNameReservedForCopies(QStringLiteral("sounds/_profile/3.ogg")));
+        QVERIFY(!TMedia::mediaFileNameReservedForCopies(QStringLiteral("_profiles/3.ogg")));
+        QVERIFY(!TMedia::mediaFileNameReservedForCopies(QStringLiteral("3.ogg")));
+    }
 };
 
-QTEST_GUILESS_MAIN(TMediaPathTraversalTest)
+MUDLET_GROUPED_TEST_GUILESS_MAIN(TMediaPathTraversalTest)
 
 #include "TMediaPathTraversalTest.moc"

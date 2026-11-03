@@ -58,7 +58,8 @@ if ! dpkg -s qtkeychain-qt6-dev >/dev/null 2>&1; then
     qtkeychain-qt6-dev
 fi
 
-if [ ! -d "${QT_DIR}" ]; then
+# Checks for HttpServer, the newest module, so an older install picks it up
+if [ ! -d "${QT_DIR}/lib/cmake/Qt6HttpServer" ]; then
   echo "Installing Qt ${QT_VERSION} via aqtinstall..."
   if [ ! -x /opt/aqt-venv/bin/aqt ]; then
     ${SUDO} mkdir -p /opt/aqt-venv /opt/qt
@@ -68,7 +69,7 @@ if [ ! -d "${QT_DIR}" ]; then
   fi
   # aqt drops aqtinstall.log in the current directory - keep it out of the repo
   (cd /opt/qt && /opt/aqt-venv/bin/aqt install-qt linux desktop "${QT_VERSION}" \
-    linux_gcc_64 -O /opt/qt -m qt5compat qtmultimedia qtspeech)
+    linux_gcc_64 -O /opt/qt -m qt5compat qtmultimedia qtspeech qtwebsockets qthttpserver)
 fi
 
 # rcc stamps every resource with its file's mtime, which differs between

@@ -27,8 +27,12 @@
 #      ENVIRONMENT_VARIABLE ENVIRONMENT_VARIABLE
 #      OPTION_VARIABLE OPTION_VARIABLE
 #      READABLE_NAME "option name"
+#      [ DEFAULT ON|OFF ]
 #      [ SUPPORTED_SYSTEMS "List" "Of" "Systems"]
 #    )
+#
+#  A cached OPTION_VARIABLE (from -D or an earlier configure) wins over
+#  ENVIRONMENT_VARIABLE, which wins over DEFAULT.
 ###########################################################################
 
 macro(include_optional_module)
@@ -66,7 +70,21 @@ macro(include_optional_module)
   set(OPTIONAL_MODULE_TEST $ENV{${OPTIONAL_MODULE_ENVIRONMENT_VARIABLE}})
   if((NOT OPTIONAL_MODULE_SUPPORTED_SYSTEMS)
      OR (CMAKE_SYSTEM_NAME IN_LIST OPTIONAL_MODULE_SUPPORTED_SYSTEMS))
-    if(DEFINED OPTIONAL_MODULE_TEST)
+    if(DEFINED CACHE{${OPTIONAL_MODULE_OPTION_VARIABLE}})
+      # Set with -D or by an earlier configure: option() below keeps a cached
+      # value whatever the environment says, so report that value
+      if(${OPTIONAL_MODULE_OPTION_VARIABLE})
+        message(
+          STATUS
+            "Including optional ${OPTIONAL_MODULE_READABLE_NAME} (${OPTIONAL_MODULE_OPTION_VARIABLE}=ON)"
+        )
+      else()
+        message(
+          STATUS
+            "Excluding optional ${OPTIONAL_MODULE_READABLE_NAME} (${OPTIONAL_MODULE_OPTION_VARIABLE}=OFF)"
+        )
+      endif()
+    elseif(DEFINED OPTIONAL_MODULE_TEST)
       string(TOUPPER ${OPTIONAL_MODULE_TEST} OPTIONAL_MODULE_TEST)
       if(OPTIONAL_MODULE_TEST STREQUAL "NO")
         # The specific tested for value was seen so set the option "no don't

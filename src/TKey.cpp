@@ -59,7 +59,7 @@ TKey::~TKey()
 
         if (isTemporary()) {
             if (mScript.isEmpty()) {
-                mpHost->mLuaInterpreter.delete_luafunction(this);
+                mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
             } else {
                 mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
             }
@@ -234,7 +234,7 @@ bool TKey::setScript(const QString& script)
     // destructor would take its mScript-based branch and delete the compiled function.
     if (mRegisteredAnonymousLuaFunction) {
         if (mpHost) {
-            mpHost->mLuaInterpreter.delete_luafunction(this);
+            mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
         }
         mRegisteredAnonymousLuaFunction = false;
     }
@@ -282,7 +282,7 @@ void TKey::execute()
     }
 
     if (mRegisteredAnonymousLuaFunction) {
-        mpHost->mLuaInterpreter.call_luafunction(this, mName);
+        mpHost->mLuaInterpreter.call_luafunction(mLuaFunctionRef, mName);
         return;
     }
 

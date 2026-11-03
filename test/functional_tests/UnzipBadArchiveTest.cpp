@@ -46,6 +46,7 @@
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QFileInfo>
 #include <QTemporaryDir>
 
 #include "utils.h"
@@ -171,8 +172,6 @@ private:
         return path;
     }
 
-    // utils::unzip() writes to destination + the entry's name, so the
-    // destination it is given has to carry the separator
     QString destination() const { return qsl("%1/").arg(mDestinationDir.path()); }
 
 private slots:
@@ -241,6 +240,17 @@ private slots:
         timer.start();
         QVERIFY2(!utils::unzip(path, destination(), QDir(mDestinationDir.path())), "an entry declaring more data than it carries was extracted as if it were whole");
         QVERIFY2(timer.elapsed() < scmMaxUnzipMilliseconds, "extraction did not give up on an entry that had no more data to give");
+    }
+
+    // "sub/.." names the destination itself, so as a file it would be made in the folder's place
+    void test_aFileNamingTheDestinationItselfIsRefused()
+    {
+        const QString path = writeArchive(qsl("itself.zip"), buildArchive({storedEntry("sub/..", QByteArray())}));
+        QVERIFY(!path.isEmpty());
+        const QString notYetMade = qsl("%1/not-yet-made").arg(mDestinationDir.path());
+
+        QVERIFY2(!utils::unzip(path, notYetMade, QDir(mDestinationDir.path())), "a file entry naming the destination itself was accepted");
+        QVERIFY2(!QFileInfo(notYetMade).isFile(), "a file was made in place of the destination folder");
     }
 };
 

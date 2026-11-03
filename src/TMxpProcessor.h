@@ -114,6 +114,7 @@ private:
     bool mMXP = false;
     TMXPMode mMXP_MODE = MXP_MODE_OPEN;
     TMXPMode mMXP_DEFAULT = MXP_MODE_OPEN;
+    TMXPMode mModeBeforeTempSecure = MXP_MODE_OPEN;
 
     // MXP delegated handlers
     TMxpNodeBuilder mMxpTagBuilder;

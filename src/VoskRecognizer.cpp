@@ -40,7 +40,9 @@
 #include "MacMicrophonePermission.h"
 #endif
 
+#if defined(INCLUDE_SPEECH_ENGINES)
 QLibrary VoskRecognizer::sVoskLibrary;
+#endif
 bool VoskRecognizer::sLibraryLoaded = false;
 QString VoskRecognizer::sLibraryLoadError;
 bool VoskRecognizer::sLibraryLoadAttempted = false;
@@ -192,6 +194,9 @@ bool VoskRecognizer::loadVoskLibrary()
 
     sLibraryLoadAttempted = true;
 
+#if !defined(INCLUDE_SPEECH_ENGINES)
+    return false;
+#else
     // Determine library name based on platform
     // QLibrary automatically adds platform-specific prefix/suffix:
     // - On macOS: adds "lib" prefix and ".dylib" suffix -> "vosk" becomes "libvosk.dylib"
@@ -276,6 +281,7 @@ bool VoskRecognizer::loadVoskLibrary()
     }
 
     return true;
+#endif
 }
 
 bool VoskRecognizer::libraryAvailable()
@@ -297,9 +303,11 @@ bool VoskRecognizer::resetLibraryLoadState()
     // anything still holds it mapped, and reporting success then is how a
     // caller comes to delete a file the loader has not let go of - the exact
     // failure on Windows that stt.unloadLibrary() exists to avoid.
+#if defined(INCLUDE_SPEECH_ENGINES)
     if (sVoskLibrary.isLoaded() && !sVoskLibrary.unload()) {
         return false;
     }
+#endif
 
     // Reset state flags to allow fresh detection
     sLibraryLoaded = false;

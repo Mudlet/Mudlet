@@ -296,6 +296,23 @@ private slots:
         QVERIFY2(paintRequested(), "the mapper was not repainted after a move");
     }
 
+    void test_changesToTwoAreasAtOnceAreAnnouncedForEveryArea()
+    {
+        QSignalSpy announced(map(), &TMap::signal_areaChanged);
+        map()->updatePlayerArea(1);
+        map()->updateArea(2);
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QCOMPARE(announced.size(), 1);
+        QCOMPARE(announced.first().first().toInt(), -1);
+
+        announced.clear();
+        map()->updateArea(3);
+        map()->updateArea(3);
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QCOMPARE(announced.size(), 1);
+        QCOMPARE(announced.first().first().toInt(), 3);
+    }
+
     void test_addingAndDeletingALabelRepaintsTheDrawingMapper()
     {
         const int areaId = map()->mpRoomDB->getAreaNamesMap().key(qsl("Ground"));

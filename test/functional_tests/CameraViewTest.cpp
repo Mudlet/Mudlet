@@ -213,8 +213,9 @@ private slots:
         CameraController camera;
         camera.zoomBy(1000.0f);
         QCOMPARE(camera.getScale(), CameraController::scmMinDistance);
+        // Out past the furthest framing, to the world view
         camera.zoomBy(-1000.0f);
-        QCOMPARE(camera.getScale(), CameraController::scmMaxDistance);
+        QCOMPARE(camera.getScale(), CameraController::scmMaxWorldDistance);
         camera.setPosition(0.0f, 45.0f, 270.0f);
         QCOMPARE(camera.getScale(), CameraController::scmMinDistance);
         camera.setPosition(-5.0f, 45.0f, 270.0f);

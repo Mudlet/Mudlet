@@ -49,14 +49,16 @@ describe("Tests that the link and text functions find their console by name", fu
     {"setPopup", function(n, fn) return setPopup(n, {anyFunction(fn), "cmd"}, {"one", "two"}) end},
   }
 
-  local function assertRefuses(windowName, entries)
-    local notFound = ('window "%s" not found'):format(windowName)
+  local function assertRefuses(windowName, entries, windowKind)
+    local refusal = windowKind
+      and ('window "%s" is of type "%s", which this function cannot use'):format(windowName, windowKind)
+      or ('window "%s" not found'):format(windowName)
     for _, entry in ipairs(entries) do
       local functionName, call = entry[1], entry[2]
       assert.are.equal(2, select("#", call(windowName)), functionName)
       local ok, err = call(windowName)
       assert.is_nil(ok, functionName)
-      assert.are.equal(notFound, err, functionName)
+      assert.are.equal(refusal, err, functionName)
     end
   end
 
@@ -132,17 +134,17 @@ describe("Tests that the link and text functions find their console by name", fu
     end)
 
     local kinds = {
-      {"label", function() return createLabel(otherName, 0, 0, 50, 20, 1) end},
-      {"scroll box", function() return createScrollBox(otherName, 0, 0, 50, 20) end},
-      {"text edit", function() return createTextEdit("main", otherName, 0, 0, 50, 20) end},
-      {"command line", function() return createCommandLine(otherName, 0, 0, 50, 20) end},
+      {"label", function() return createLabel(otherName, 0, 0, 50, 20, 1) end, "label"},
+      {"scroll box", function() return createScrollBox(otherName, 0, 0, 50, 20) end, "scrollbox"},
+      {"text edit", function() return createTextEdit("main", otherName, 0, 0, 50, 20) end, "textedit"},
+      {"command line", function() return createCommandLine(otherName, 0, 0, 50, 20) end, "commandline"},
     }
 
     for _, kind in ipairs(kinds) do
       it("refuses every link and text function for a " .. kind[1], function()
         assert.is_true(kind[2]())
-        assertRefuses(otherName, calls)
-        assertRefuses(otherName, functionCalls)
+        assertRefuses(otherName, calls, kind[3])
+        assertRefuses(otherName, functionCalls, kind[3])
       end)
     end
   end)
@@ -274,11 +276,11 @@ describe("Tests that the link and text functions find their console by name", fu
           assert.are.equal("Hello-popup--link-!World", lineOf(0))
         end)
 
-        it("replaces that console's selection and answers nothing", function()
+        it("replaces that console's selection and answers true", function()
           echo(window, "replace me\n")
           moveCursor(window, 0, 0)
           assert.are.equal(8, selectString(window, "me", 1))
-          assert.are.equal(0, select("#", rawReplace(window, "you")))
+          assert.are.same({true}, {rawReplace(window, "you")})
           assert.are.equal("replace you", lineOf(0))
         end)
 
@@ -314,6 +316,120 @@ describe("Tests that the link and text functions find their console by name", fu
               call(function() end)
             end))
           end
+          assertFreeListWhole()
+        end)
+
+        it("refuses to link no selection or no text, keeping no function", function()
+          echo(window, "nothing selected\n")
+          moveCursor(window, 1, 0)
+          for _, entry in ipairs({
+            {"no text is selected - cannot create link", function(fn) return setLink(window, fn, "hint") end},
+            {"no text is selected - cannot create popup", function(fn) return setPopup(window, {fn}, {"hint"}) end},
+            {"text is empty - cannot create link", function(fn) return insertLink(window, "", fn, "hint") end},
+            {"text is empty - cannot create popup", function(fn) return insertPopup(window, "", {fn}, {"hint"}) end},
+            -- text that starts with a NUL byte is empty once it is a QString
+            {"text is empty - cannot create link", function(fn) return insertLink(window, "\0hidden", fn, "hint") end},
+            {"text is empty - cannot create popup", function(fn) return insertPopup(window, "\0hidden", {fn}, {"hint"}) end},
+          }) do
+            local refusal, call = entry[1], entry[2]
+            assert.are.same({nil, refusal}, {call(function() end)})
+            assert.is_false(keptAfter(call))
+            assert.are.equal(0, registryGrowthOver(function()
+              call(function() end)
+            end))
+          end
+          assertFreeListWhole()
+        end)
+
+        it("refuses to link a selection that covers no text, keeping no function", function()
+          echo(window, "abc\n")
+          -- empty, once at the line's end and once inside it
+          for _, from in ipairs({3, 1}) do
+            for _, entry in ipairs({
+              {"no text is selected - cannot create link", function(fn) return setLink(window, fn, "hint") end},
+              {"no text is selected - cannot create popup", function(fn) return setPopup(window, {fn, "cmd"}, {"one", "two"}) end},
+            }) do
+              local refusal, call = entry[1], entry[2]
+              local function selectNothing(fn)
+                assert.is_true(selectSection(window, from, 0))
+                return call(fn)
+              end
+              assert.are.same({nil, refusal}, {selectNothing(function() end)})
+              assert.is_false(keptAfter(selectNothing))
+              assert.are.equal(0, registryGrowthOver(function()
+                selectNothing(function() end)
+              end))
+            end
+          end
+          assertFreeListWhole()
+        end)
+
+        it("refuses to insert a link where the cursor is outside the text, keeping no function", function()
+          local places = {
+            function()
+              echo(window, "hello\n")
+              moveCursor(window, -1, 0)
+            end,
+            -- the line the cursor was on is deleted, leaving it past the last line
+            function()
+              echo(window, "hello\nworld")
+              moveCursor(window, 0, getLastLineNumber(window))
+              deleteLine(window)
+            end,
+          }
+          for _, place in ipairs(places) do
+            for _, entry in ipairs({
+              {"the cursor is outside the text - cannot create link", function(fn) return insertLink(window, "text", fn, "hint") end},
+              {"the cursor is outside the text - cannot create popup", function(fn) return insertPopup(window, "text", {fn, "cmd"}, {"one", "two"}) end},
+            }) do
+              local refusal, call = entry[1], entry[2]
+              local function insertThere(fn)
+                place()
+                return call(fn)
+              end
+              place()
+              local text = getLines(window, 0, getLastLineNumber(window) + 1)
+              local cursor = {getColumnNumber(window), getLineNumber(window)}
+              assert.are.same({nil, refusal}, {call(function() end)})
+              assert.are.same(text, getLines(window, 0, getLastLineNumber(window) + 1), "a refused insert changed the text")
+              assert.are.same(cursor, {getColumnNumber(window), getLineNumber(window)}, "a refused insert moved the cursor")
+              assert.are.same({nil, refusal}, {insertThere(function() end)})
+              assert.is_false(keptAfter(insertThere))
+              assert.are.equal(0, registryGrowthOver(function()
+                insertThere(function() end)
+              end))
+            end
+          end
+          assertFreeListWhole()
+        end)
+
+        it("inserts a coloured link that starts with a tag, keeping its function only while its text is shown", function()
+          for _, call in ipairs({
+            function(fn) return cinsertLink(window, "<red>X", fn, "hint") end,
+            function(fn) return cinsertPopup(window, "<red>X", {fn}, {"hint"}) end,
+          }) do
+            local function insertThenClear(fn)
+              echo(window, "hello\n")
+              moveCursor(window, 1, 0)
+              call(fn)
+              assert.are.equal("hXello", lineOf(0))
+              clearWindow(window)
+            end
+            assert.is_false(keptAfter(insertThenClear))
+          end
+          -- each coloured run is an insert of its own, so the empty run before the tag must not become one
+          local insertLinkWas = _G.insertLink
+          local texts = {}
+          _G.insertLink = function(name, text, ...)
+            texts[#texts + 1] = text
+            return insertLinkWas(name, text, ...)
+          end
+          echo(window, "hello\n")
+          moveCursor(window, 1, 0)
+          local ok, err = pcall(cinsertLink, window, "<red>A<blue>B", "cmd", "hint")
+          _G.insertLink = insertLinkWas
+          assert.is_true(ok, err)
+          assert.are.same({"A", "B"}, texts)
           assertFreeListWhole()
         end)
       end)
@@ -354,8 +470,16 @@ describe("Tests that the link and text functions find their console by name", fu
       assert.are.same({true}, {echoLink(marker .. "-link", "cmd", "hint")})
       assert.are.same({true}, {echoPopup(marker .. "-popup", {"cmd"}, {"hint"})})
       assert.is_true(recentLinesHave(marker .. "-link" .. marker .. "-popup"))
+      moveCursorEnd("main")
+      assert.is_true(selectString(marker .. "-link", 1) > -1)
       assert.are.same({true}, {setLink("cmd", "hint")})
       assert.are.same({true}, {setPopup({"cmd"}, {"hint"})})
+    end)
+
+    it("refuses to link no selection on the main console", function()
+      deselect("main")
+      assert.are.same({nil, "no text is selected - cannot create link"}, {setLink("cmd", "hint")})
+      assert.are.same({nil, "no text is selected - cannot create popup"}, {setPopup({"cmd"}, {"hint"})})
     end)
 
     -- Text put into the line a trigger is running over moves every capture
@@ -393,6 +517,40 @@ describe("Tests that the link and text functions find their console by name", fu
           local selection, line = captureAfter("Insert" .. index, insert[2])
           assert.are.equal("payload", selection)
           assert.are.equal("ZZZZSpecLinksByNameInsert" .. index .. " Marker payload", line)
+        end)
+      end
+
+      local refusedInserts = {
+        {"the cursor is outside the text - cannot create link", function(fn) return insertLink("main", "Refused" .. suffix, fn, "hint") end},
+        {"the cursor is outside the text - cannot create popup", function(fn) return insertPopup("main", "Refused" .. suffix, {fn}, {"hint"}) end},
+      }
+
+      for index, insert in ipairs(refusedInserts) do
+        it("refuses " .. insert[1]:match("create (%w+)$") .. " left of its line, leaving the line and its captures alone", function()
+          local answer, kept
+          local selection, line = captureAfter("LeftOf" .. index, function()
+            moveCursor(-1, getLineNumber())
+            answer = {insert[2](function() end)}
+            kept = keptAfter(insert[2])
+          end)
+          assert.are.same({nil, insert[1]}, answer)
+          assert.is_false(kept)
+          assert.are.equal("payload", selection)
+          assert.are.equal("SpecLinksByNameLeftOf" .. index .. " Marker payload", line)
+        end)
+
+        it("refuses " .. insert[1]:match("create (%w+)$") .. " once its line is deleted, writing nothing", function()
+          local answer, kept
+          local trigger = tempRegexTrigger("^SpecLinksByNameDeleted" .. index .. " Marker$", function()
+            deleteLine()
+            answer = {insert[2](function() end)}
+            kept = keptAfter(insert[2])
+          end)
+          feedTriggers("\nSpecLinksByNameDeleted" .. index .. " Marker\n")
+          killTrigger(trigger)
+          assert.are.same({nil, insert[1]}, answer)
+          assert.is_false(kept)
+          assert.is_false(recentLinesHave("Refused" .. suffix))
         end)
       end
 

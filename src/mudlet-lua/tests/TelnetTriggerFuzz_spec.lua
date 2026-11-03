@@ -143,11 +143,10 @@ local NENV_IS, NENV_SEND, NENV_INFO = 0, 1, 2
 local NENV_VAR, NENV_VALUE, NENV_ESC, NENV_USERVAR = 0, 1, 2, 3
 
 -- Turn a list of byte values (0-255) into a string suitable for feedTelnet.
--- feedTelnet takes the argument as a C string (a raw NUL would truncate it) and
--- then runs parseTelnetCodes over it, which treats <...> as escape tags. So a
--- NUL is emitted as the <00> tag and a literal '<'/'>' is doubled; every other
--- byte is passed through verbatim. The parser therefore receives exactly the
--- bytes in the list.
+-- feedTelnet runs parseTelnetCodes over its argument, which treats <...> as
+-- escape tags. So a literal '<'/'>' is doubled and a NUL is emitted as the <00>
+-- tag (a raw one would arrive the same); every other byte is passed through
+-- verbatim. The parser therefore receives exactly the bytes in the list.
 local function bytesToTelnet(bytes)
     local out = {}
     for i = 1, #bytes do
@@ -384,8 +383,8 @@ local function genPattern()
     return pat
 end
 
--- A random subject line. Never contains a NUL (feedTriggers takes the argument
--- as a C string); high bytes and control characters are used directly.
+-- A random subject line. Never contains a NUL (feedTriggers drops it, as it does
+-- from a game); high bytes and control characters are used directly.
 local function genSubject()
     local bytes = {}
     for _ = 1, rrange(0, 40) do

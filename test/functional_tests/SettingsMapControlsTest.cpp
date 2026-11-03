@@ -164,6 +164,29 @@ private slots:
         QVERIFY2(pWhite->styleSheet().contains(QColor(QColorConstants::White).name()), qPrintable(qsl("the reset left the map colour button showing the old colour: '%1'").arg(pWhite->styleSheet())));
     }
 
+    // The map draws environments 257 to 272 from its own copy of the sixteen
+    // ANSI map colours, so a reset that skips that copy leaves the rooms drawn
+    // in the old colours while the buttons show the defaults (#10679).
+    void test_resettingTheMapColoursReachesTheMapEnvironments()
+    {
+        const QColor priorRed = mpHost->mRed_2;
+        const auto restoreColours = qScopeGuard([this, priorRed]() {
+            mpHost->mRed_2 = priorRed;
+            mpHost->mpMap->restore16ColorSet();
+        });
+
+        const QColor pickedRed(10, 20, 30);
+        mpHost->mRed_2 = pickedRed;
+        mpHost->mpMap->restore16ColorSet();
+        QCOMPARE(mpHost->mpMap->mCustomEnvColors.value(257), pickedRed);
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+
+        mpPreferences->reset_colors_button_2->click();
+
+        QCOMPARE(mpHost->mRed_2, QColor(QColorConstants::DarkRed));
+        QCOMPARE(mpHost->mpMap->mCustomEnvColors.value(257), QColor(QColorConstants::DarkRed));
+    }
+
     // The spin box counts in tenths of a room, and the profile and the 2D map
     // have to end up holding the same size - the widget was once handed the
     // spin box's own number, so the map drew rooms ten times too big (#8513).

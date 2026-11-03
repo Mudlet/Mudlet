@@ -36,7 +36,7 @@ CameraController::~CameraController() = default;
 void CameraController::setPosition(float r, float theta, float phi)
 {
     theta = qBound(scmMinTilt, theta, scmMaxTilt);
-    mDistance = qBound(scmMinDistance, r, scmMaxDistance);
+    mDistance = qBound(scmMinDistance, r, scmMaxWorldDistance);
     const float thetaRadians = qDegreesToRadians(theta);
     const float phiRadians = qDegreesToRadians(phi);
     mPositionVector = QVector3D(std::sin(thetaRadians) * std::cos(phiRadians), std::sin(thetaRadians) * std::sin(phiRadians), std::cos(thetaRadians));
@@ -109,7 +109,7 @@ void CameraController::snapTargetToGrid()
 
 void CameraController::setScale(float scale)
 {
-    mDistance = qBound(scmMinDistance, scale, scmMaxDistance);
+    mDistance = qBound(scmMinDistance, scale, scmMaxWorldDistance);
 }
 
 void CameraController::zoomBy(float steps)

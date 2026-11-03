@@ -31,6 +31,7 @@
 // 3. If the CredentialManager has no password, the portable file is still
 //    a valid source of truth (simulating the fallback path).
 
+#include "GroupedTest.h"
 #include <CredentialManager.h>
 #include <QDataStream>
 #include <QDir>
@@ -248,4 +249,4 @@ private slots:
 };
 
 #include "PasswordMigrationTest.moc"
-QTEST_MAIN(PasswordMigrationTest)
+MUDLET_GROUPED_TEST_MAIN(PasswordMigrationTest)

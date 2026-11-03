@@ -67,6 +67,8 @@ public:
     ~TTextEdit();
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
+    // The console's own menu, without anything for a link at that position
+    void showContextMenu(const QPoint& globalPosition);
     void drawForeground(QPainter&, const QRect&);
     void showNewLines();
     void forceUpdate();
@@ -105,9 +107,11 @@ public:
         mMaxHRange = 0;
     }
     int getScreenHeight() const { return mScreenHeight; }
+    QSize drawableSize() const;
     void searchSelectionOnline();
     int getColumnCount() const;
     int getRowCount() const;
+    int drawnColumnCount() const;
     // Upper pane only: its grid is what Host::windowGridSize() answers for the console.
     void reportGridSize();
     void toggleTimeStamps(const bool);
@@ -118,6 +122,8 @@ public:
 
     void initializeCaret();
     void setCaretPosition(int line, int column);
+    // Onto the first or the last link, where Tab leaving the script buttons lands; nowhere new with no links
+    void moveCaretToLink(bool first);
     void updateCaret();
     void showLinkContextMenu();
     void announceLinkFocus(int linkIndex);
@@ -142,10 +148,13 @@ public:
     friend class FramePacingTest;
     friend class FrontendRefreshSeamTest;
     friend class MainConsoleSelectionTest;
+    friend class TextEditAccessibleInterfaceTest;
     friend class OpaqueConsolePaintTest;
     friend class ScrollLostOnPartialRepaintTest;
     friend class TTextEditBlinkTest;
+    friend class BlinkRowRepaintTest;
     friend class PipelineBenchmark;
+    friend class NawsWidthReportTest;
     static bool shouldRegisterBlinkClient(bool enableBlinkText, bool hasBlinkingContentInRedrawnRegion, bool isBlinkClientRegistered, bool reusedCachedScreenContent);
     static QSize smallestEnclosingSurfaceSize(int screenWidth, int fontWidth, int pixmapHeight, qreal devicePixelRatio);
 
@@ -201,6 +210,7 @@ private slots:
 
 private:
     void applyPendingScrollBarUpdate();
+    void followTrimsWithDirtyLines();
     QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false);
     inline static QString htmlCenter(const QString&);
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
@@ -216,7 +226,7 @@ private:
     void paintNothing(const QRect&);
     // Coalescing replacement for update() on the paths that new output drives.
     // Those paints run inside the receive loop, so one per network packet
-    // delays the next packet; capping them at one per csmPaintPaceMs lets a
+    // delays the next packet; capping them at one per paintPaceMs() lets a
     // flood put several packets' worth of text into a single frame. An
     // invalid rect means the whole widget.
     void scheduleUpdate(const QRect& rect = QRect());
@@ -229,7 +239,12 @@ private:
     inline void replaceControlCharacterWith_Picture(const uint, QStringView, const int, QStringView&, int&) const;
     inline void replaceControlCharacterWith_OEMFont(const uint, QStringView, const int, QStringView&, int&) const;
     int offsetForPosition(int line, int column) const;
+    int selectionLinesTrimmed() const;
+    int accessibleSelectionLength() const;
+    std::pair<int, int> accessibleSelection() const;
     bool hasBufferLine(int lineNumber) const;
+    bool lineShowsBlinkingText(int lineNumber) const;
+    static bool hasStackedMarks(const QString&);
     static int overflowRowsUsed(const QImage& image, const int fromRow, const QColor& background);
     TChar timeStampCharStyle() const;
 
@@ -274,6 +289,9 @@ private:
     mutable LineLayout mPreviousLineLayout;
     mutable LineLayout mCurrentLineLayout;
     mutable LineLayout mOverflowLineLayout;
+    // Owns the timestamp text the layouts' graphemes view; formatTimeStamp()
+    // keeps only its latest result, and the line text itself lives in TBuffer.
+    mutable std::vector<QString> mLaidOutTimeStamps;
     std::unique_ptr<TGlyphCache> mpGlyphCache;
     int mFontHeight;
     int mFontWidth;
@@ -290,6 +308,8 @@ private:
     int mLowerPaneCursorY = 0;
     // last line offset rendered
     int mLastRenderedOffset = 0;
+    // The buffer's linesTrimmedTotal() as of that render
+    qint64 mLinesTrimmedAtRender = 0;
     bool mMouseTracking = false;
     // 1/2/3 for single/double/triple click seen so far
     int mMouseTrackLevel = 0;
@@ -303,6 +323,10 @@ private:
     QPoint mPA;
     // bottom-right point of the selection
     QPoint mPB;
+    // Equal to mPB while the selection includes the newline after mPB's line: an
+    // accessibility range ending there leaves mPB where a whole-line selection without
+    // the newline does. Meaningful only while it equals mPB; unHighlight() resets it to (-1, -1).
+    QPoint mPBTakingNewline{-1, -1};
     TBuffer* mpBuffer;
     // Needs to be a QPointer as is used in a couple of lambda functions:
     QPointer<TConsole> mpConsole;
@@ -328,6 +352,8 @@ private:
     // cannot be trusted for the rows they land on. -1 for "none pending".
     int mDirtyFirstLine = -1;
     int mDirtyLastLine = -1;
+    // The buffer's linesTrimmedTotal() that the dirty lines are numbered against
+    qint64 mDirtyLinesTrimmedAt = 0;
     int mScreenWidth = 100;
     int mScreenOffset = 0;
     int mMaxHRange = 0;
@@ -338,12 +364,17 @@ private:
     mutable bool mHasBlinkingContent = false;
     mutable bool mIsBlinkClientRegistered = false;
     QPointer<QTimer> mpScrollStoppedTimer;
-    // Maximum of one repaint per csmPaintPaceMs is allowed via scheduleUpdate().
+    // Maximum of one repaint per paintPaceMs() is allowed via scheduleUpdate().
     static constexpr int csmPaintPaceMs = 16; // ~60 fps cap
+    // The cap instead while more than a screen of lines arrives between frames.
+    static constexpr int csmFloodPaintPaceMs = 33;
+    int paintPaceMs() const;
     QTimer* mpPaintPacer = nullptr;
+    bool mPaintPacerStretched = false;
     // Restarted by each paintEvent(), so scheduleUpdate() can tell how much of
     // the current frame's window is left.
     QElapsedTimer mSincePaint;
+    qint64 mLinesAddedAtPaint = 0;
     // What the deferred repaint has to cover once the pacer fires.
     QRegion mPendingPaintRegion;
     // The whole pane went to update() since the last paint, so asking again only costs time.

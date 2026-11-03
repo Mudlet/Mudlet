@@ -228,6 +228,15 @@ private slots:
         QVERIFY2(mpPreferences->findChild<QLabel*>(qsl("settingsSearchEmpty"))->isHidden(), "a search that matched showed the empty state as well");
     }
 
+    // Both cards are titled "Font", so the words that tell them apart are the editor's
+    void test_editorFontFindsTheEditorsFontCardAndNotTheDisplays()
+    {
+        search(qsl("editor font"));
+
+        QCOMPARE(mpPreferences->groupBox_editorFont->parentWidget(), resultsColumn());
+        QVERIFY2(mpPreferences->groupBox_font->parentWidget() != resultsColumn(), "the display font's card answered a search for the editor's font");
+    }
+
     // The protocol names only exist inside the menu that button pops up, where
     // a walk over the widget tree cannot see them, so the button carries them
     // as invisible synonyms - and is what gets highlighted for them

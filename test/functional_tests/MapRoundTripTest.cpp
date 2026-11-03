@@ -131,13 +131,9 @@ private:
 
     static QMap<QString, QString> expectedRoom1UserData() { return {{qsl("quest.stage 日本語"), qsl("величина <>&\"' ]]>")}, {qsl("plain"), qsl("value")}}; }
 
-    static QMap<QString, QString> expectedRoom2UserData()
-    {
-        // The border presentation properties travel inside userData (see
-        // TMap::serialize()/TRoom::restore()) so they are part of the
-        // expected representation on both sides of the round trip:
-        return {{qsl("note"), qsl("second <room> & 'data'")}, {ROOM_UI_BORDERCOLOR, scmBorderColor.name(QColor::HexArgb)}, {ROOM_UI_BORDERTHICKNESS, qsl("4")}};
-    }
+    // The border properties travel in the file's copy of the user data (see
+    // TMap::serialize()/TRoom::restore()), never in the live room's:
+    static QMap<QString, QString> expectedRoom2UserData() { return {{qsl("note"), qsl("second <room> & 'data'")}}; }
 
     static AreaBounds captureBounds(TArea* pArea)
     {
@@ -466,7 +462,9 @@ private:
         // a symbol color, room 3 is hidden:
         QCOMPARE(mpSource->mpMap->mUserData, expectedMapUserData());
         QCOMPARE(mpSource->mpMap->mpRoomDB->getRoom(scmRoom1)->userData, expectedRoom1UserData());
+        QCOMPARE(mpSource->mpMap->mpRoomDB->getRoom(scmRoom2)->userData, expectedRoom2UserData());
         QVERIFY(mpSource->mpMap->mpRoomDB->getRoom(scmRoom3)->userData.isEmpty());
+        QCOMPARE(mpSource->mpMap->mpRoomDB->getArea(mAreaA)->mUserData, expectedAreaAUserData());
 
         TMap* pTargetMap = mpTarget->mpMap.data();
         pTargetMap->mapClear();
@@ -643,6 +641,56 @@ private slots:
         QVERIFY2(pRoom1, "the room that was already there was evicted by the room refused for its id");
         QCOMPARE(pRoom1->mSymbol, qsl("⚔"));
         QCOMPARE(pRoom1->userData, expectedRoom1UserData());
+    }
+
+    // A load moves the map generation on, which is how holders of room, area
+    // and label ids (T2DMap's label dialog) tell theirs are stale; a binary
+    // file refused part way leaves that and the rest of the map as they were
+    void test_aRefusedLoadKeepsTheMapAndItsGeneration()
+    {
+        TMap* pSourceMap = mpSource->mpMap.data();
+        const QString fileName = qsl("%1/map_generation.dat").arg(mSaveDir.path());
+        const QString jsonFileName = qsl("%1/map_generation.json").arg(mSaveDir.path());
+        const QString cutFileName = qsl("%1/map_generation_cut.dat").arg(mSaveDir.path());
+        QVERIFY(saveMapToFile(pSourceMap, fileName, pSourceMap->mDefaultVersion));
+        const auto [wrote, writeMessage] = pSourceMap->writeJsonMapFile(jsonFileName);
+        QVERIFY2(wrote, qPrintable(writeMessage));
+        QFile whole(fileName);
+        QVERIFY(whole.open(QIODevice::ReadOnly));
+        const QByteArray data = whole.readAll();
+        QFile cut(cutFileName);
+        QVERIFY(cut.open(QIODevice::WriteOnly));
+        QCOMPARE(cut.write(data.left(data.size() - 3)), data.size() - 3);
+        cut.close();
+
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        pTargetMap->mapClear();
+        unsigned int generation = pTargetMap->mpRoomDB->mapGeneration();
+        QVERIFY(pTargetMap->restore(fileName));
+        QVERIFY2(pTargetMap->mpRoomDB->mapGeneration() > generation, "loading a binary map file did not move the map generation on");
+        generation = pTargetMap->mpRoomDB->mapGeneration();
+        const auto [read, readMessage] = pTargetMap->readJsonMapFile(jsonFileName);
+        QVERIFY2(read, qPrintable(readMessage));
+        QVERIFY2(pTargetMap->mpRoomDB->mapGeneration() > generation, "loading a JSON map file did not move the map generation on");
+        generation = pTargetMap->mpRoomDB->mapGeneration();
+
+        // None of these is what the file holds
+        const TRoomDB* pRoomDB = pTargetMap->mpRoomDB.get();
+        pTargetMap->mMapSymbolFont = QFont(qsl("Bitstream Vera Sans Mono"), 9);
+        pTargetMap->mMapSymbolFontFudgeFactor = 0.75;
+        pTargetMap->mIsOnlyMapSymbolFontToBeUsed = false;
+        pTargetMap->mVersion = 18;
+        pTargetMap->mSaveVersion = 19;
+        QVERIFY2(!pTargetMap->restore(cutFileName), "a binary map file cut short was not refused");
+
+        QCOMPARE(pTargetMap->mpRoomDB.get(), pRoomDB);
+        QCOMPARE(pTargetMap->mpRoomDB->mapGeneration(), generation);
+        QCOMPARE(pTargetMap->mMapSymbolFont.family(), qsl("Bitstream Vera Sans Mono"));
+        QCOMPARE(pTargetMap->mMapSymbolFont.pointSize(), 9);
+        QCOMPARE(pTargetMap->mMapSymbolFontFudgeFactor, 0.75);
+        QVERIFY(!pTargetMap->mIsOnlyMapSymbolFontToBeUsed);
+        QCOMPARE(pTargetMap->mVersion, 18);
+        QCOMPARE(pTargetMap->mSaveVersion, 19);
     }
 
     // Maps written before the special exit command gained a '0'/'1' lock flag

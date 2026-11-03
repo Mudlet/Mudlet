@@ -127,6 +127,8 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("BaseUI.gauges.hp ~= nil and BaseUI.gauges.mp ~= nil")), "the gauges the vitals already describe were not created");
         QVERIFY2(luaTrue(host, qsl("BaseUI.sawGmcpVitals == true")),
                  "the package did not record that it has GMCP vitals, so the prompt-scraping ladder is still armed against a game that speaks GMCP");
+        QVERIFY2(luaTrue(host, qsl("(function() local saved = {} table.load(getMudletHomeDir() .. '/base_ui_settings.lua', saved) return saved.built == true end)()")),
+                 "building the dock did not record it, so the next load leaves its border empty");
     }
 
     // The counterpart, and the reason the catch-up can sit unconditionally at
@@ -166,6 +168,50 @@ private slots:
 
         QVERIFY2(luaTrue(host, qsl("BaseUI.container == nil")), "the dock was built out of vitals the ended connection left behind");
         QVERIFY2(luaTrue(host, qsl("not BaseUI.sawGmcpVitals")), "vitals from an ended connection were recorded as this connection's");
+    }
+
+    // The profile saves the border the dock was attached to and restores it at
+    // load, before the game has said anything, so a dock this profile has had
+    // before must be rebuilt then or that border is an empty strip. Installing
+    // over saved settings runs the package script the way a load does.
+    void test_loadingAProfileThatHadTheDockBuildsItBeforeTheGameSpeaks()
+    {
+        Host* host = startProfileWithoutTheStarterUi();
+        QVERIFY(host);
+        QVERIFY2(luaTrue(host, qsl("next(gmcp) == nil")), "precondition: this game has sent no GMCP at all");
+        QVERIFY(runLua(host, qsl("table.save(getMudletHomeDir() .. '/base_ui_settings.lua', { built = true, announced = true })")));
+
+        QVERIFY(installTheStarterUi(host));
+
+        QVERIFY2(luaTrue(host, qsl("BaseUI.container ~= nil and not BaseUI.container.hidden")), "the dock this profile had last session was not rebuilt at load");
+        QVERIFY2(luaTrue(host, qsl("getBorderRight() > 0")), "the rebuilt dock does not hold the border it sits in");
+
+        // the saved map is loaded after the package script has run
+        QVERIFY(runLua(host, qsl("addRoom(1)")));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.map == nil")), "precondition: nothing has swapped the map in yet");
+        QVERIFY(runLua(host, qsl("raiseEvent('sysLoadEvent')")));
+        // swapped in on the next turn of the event loop, so a game interface installing at the time can take the map first
+        QVERIFY2(QTest::qWaitFor(
+                         [this, host]() {
+                             return luaTrue(host, qsl("BaseUI.map ~= nil"));
+                         },
+                         3s),
+                 "the map loaded after the dock was rebuilt stays behind its placeholder");
+    }
+
+    void test_loadingAProfileThatHidTheDockLeavesItUnbuiltUntilShown()
+    {
+        Host* host = startProfileWithoutTheStarterUi();
+        QVERIFY(host);
+        QVERIFY(runLua(host, qsl("table.save(getMudletHomeDir() .. '/base_ui_settings.lua', { built = true, announced = true, hidden = true })")));
+
+        QVERIFY(installTheStarterUi(host));
+
+        QVERIFY2(luaTrue(host, qsl("BaseUI.container == nil")), "a dock the player hid was built again at load");
+        QVERIFY2(luaTrue(host, qsl("getBorderRight() == 0")), "a hidden dock took a border at load");
+
+        QVERIFY(runLua(host, qsl("BaseUI.show()")));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.container ~= nil and not BaseUI.container.hidden and getBorderRight() > 0")), "showing a dock this profile has had waits for the game to speak");
     }
 
 private:

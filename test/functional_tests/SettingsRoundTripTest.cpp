@@ -35,14 +35,18 @@
 #include <QCheckBox>
 #include <QColorDialog>
 #include <QComboBox>
+#include <QFontComboBox>
+#include <QFontDatabase>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPointer>
 #include <QPushButton>
+#include <QSettings>
 #include <QSignalSpy>
 #include <QSpinBox>
 #include <QStandardItemModel>
 #include <QTimeEdit>
+#include <QThread>
 #include <QTimer>
 
 #include "PortableModeTestHelper.h"
@@ -57,6 +61,8 @@
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TelnetServerStub.h"
+#include "TriggerMatchPool.h"
+#include "XMLimport.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
 
@@ -81,6 +87,10 @@ private:
     // cleanup() - which runs whether or not the case reached its own end
     QList<std::function<void()>> mRestorers;
     QPointer<QTimer> mpColorDialogTimer;
+#ifdef INCLUDE_FONTS
+    // Bundled, so on every machine, and not the display font a new profile starts with
+    const QString mEditorOwnFamily = qsl("Ubuntu Mono");
+#endif
 
     void restoreLater(std::function<void()> restorer) { mRestorers.append(std::move(restorer)); }
 
@@ -126,6 +136,21 @@ private:
         pTimer->start(20ms);
     }
 
+#ifdef INCLUDE_FONTS
+    QList<int> mApplicationFontIds;
+
+    // A test binary never copies the bundled fonts out of the resources the way main.cpp does, so
+    // without this the editor font cases would pick from families that are not there
+    void registerBundledFonts()
+    {
+        for (const QString& resourcePath : {qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"), qsl(":/fonts/ubuntu-font-family-0.83/UbuntuMono-R.ttf")}) {
+            const int id = QFontDatabase::addApplicationFont(resourcePath);
+            QVERIFY2(id != -1, qPrintable(qsl("could not register the bundled font \"%1\"").arg(resourcePath)));
+            mApplicationFontIds.append(id);
+        }
+    }
+#endif
+
     bool runLua(const QString& code) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(code); }
 
     int settingChangedCount(const char* key) const
@@ -164,6 +189,9 @@ private slots:
             QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
         }
 
+#ifdef INCLUDE_FONTS
+        registerBundledFonts();
+#endif
         QVERIFY(mConfigDir.isValid());
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
@@ -195,6 +223,11 @@ private slots:
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+#ifdef INCLUDE_FONTS
+        for (const int id : std::as_const(mApplicationFontIds)) {
+            QFontDatabase::removeApplicationFont(id);
+        }
+#endif
     }
 
     void cleanup()
@@ -1035,6 +1068,113 @@ private slots:
         QVERIFY2(settingChangedCount("advertiseScreenReader") == 1, "the apply raised advertiseScreenReader again for a value the live slot had already stored");
     }
 
+    // App-wide rather than the profile's: read from and written to Mudlet.ini, and the running pool is
+    // reconfigured at once rather than at the next start
+    void test_theTriggerMatchPoolSettingsAreReadFromMudletIniAndAppliedAtOnce()
+    {
+        if (QThread::idealThreadCount() < 2) {
+            QSKIP("the pool needs a second core before it starts a helper");
+        }
+        for (const char* name : {"MUDLET_MATCH_THREADS", "MUDLET_MATCH_THRESHOLD", "MUDLET_MATCH_MISSES_PER_MATCH", "MUDLET_MATCH_FLOOD_LINES", "MUDLET_MATCH_SPIN_US"}) {
+            if (qEnvironmentVariableIsSet(name)) {
+                QSKIP("a MUDLET_MATCH_* environment variable overrides the setting under test");
+            }
+        }
+        QSettings* settings = MudletApp::getQSettings();
+        QVERIFY(settings);
+        const QStringList keys{qsl("triggerMatchThreads"), qsl("triggerMatchThreshold"), qsl("triggerMatchMissesPerMatch"), qsl("triggerMatchFloodLines"), qsl("triggerMatchSpinMicroseconds")};
+        QMap<QString, QVariant> prior;
+        for (const auto& key : keys) {
+            prior.insert(key, settings->value(key));
+        }
+        restoreLater([settings, prior]() {
+            qunsetenv("MUDLET_MATCH_THRESHOLD");
+            for (auto it = prior.cbegin(); it != prior.cend(); ++it) {
+                it.value().isValid() ? settings->setValue(it.key(), it.value()) : settings->remove(it.key());
+            }
+            TriggerMatchPool::instance().configure(TriggerMatchPool::settingsFromConfig());
+        });
+        TriggerMatchPool& pool = TriggerMatchPool::instance();
+        for (const auto& key : keys) {
+            settings->remove(key);
+        }
+        pool.configure(TriggerMatchPool::settingsFromConfig());
+        QVERIFY2(pool.workerCount() == 0, "the pool should be off until the player switches it on");
+
+        settings->setValue(qsl("triggerMatchThreshold"), 77);
+        // Below its minimum, so the pool uses the default and the dialog has to show that
+        settings->setValue(qsl("triggerMatchFloodLines"), 0);
+        openPreferences();
+        auto* pEnable = mpPreferences->findChild<QCheckBox*>(qsl("checkBox_triggerMatchPool"));
+        auto* pThreads = mpPreferences->findChild<QSpinBox*>(qsl("spinBox_triggerMatchThreads"));
+        auto* pThreshold = mpPreferences->findChild<QSpinBox*>(qsl("spinBox_triggerMatchThreshold"));
+        auto* pMissesPerMatch = mpPreferences->findChild<QSpinBox*>(qsl("spinBox_triggerMatchMissesPerMatch"));
+        auto* pFloodLines = mpPreferences->findChild<QSpinBox*>(qsl("spinBox_triggerMatchFloodLines"));
+        auto* pSpin = mpPreferences->findChild<QSpinBox*>(qsl("spinBox_triggerMatchSpinMicroseconds"));
+        QVERIFY(pEnable && pThreads && pThreshold && pMissesPerMatch && pFloodLines && pSpin);
+        QVERIFY(!pEnable->isChecked());
+        QVERIFY2(!pThreshold->isEnabled(), "tuning a pool that is off should not be offered");
+        QCOMPARE(pThreshold->value(), 77);
+        QCOMPARE(pThreads->value(), TriggerMatchPool::automaticThreads() - 1);
+        const TriggerMatchPool::Settings defaults;
+        QCOMPARE(pMissesPerMatch->value(), defaults.missesPerMatch);
+        QCOMPARE(pFloodLines->value(), defaults.floodChunkLines);
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pEnable->setChecked(true);
+        QVERIFY(pThreshold->isEnabled());
+        QVERIFY(applyAndWait(applySpy));
+        QCOMPARE(settings->value(qsl("triggerMatchThreads")).toInt(), TriggerMatchPool::automaticThreads());
+        QCOMPARE(pool.workerCount(), TriggerMatchPool::automaticThreads());
+        QCOMPARE(pool.threshold(), 77);
+        for (const auto& key : {qsl("triggerMatchMissesPerMatch"), qsl("triggerMatchSpinMicroseconds")}) {
+            QVERIFY2(!settings->contains(key), qPrintable(qsl("%1 was written although the player never changed it").arg(key)));
+        }
+        QCOMPARE(settings->value(qsl("triggerMatchFloodLines")).toInt(), 0);
+        QCOMPARE(pool.floodChunkLines(), defaults.floodChunkLines);
+
+        // The field counts the helpers; the setting counts the main thread too. The default can sit at
+        // either end of the range, depending on the machine's cores.
+        if (pThreads->maximum() > pThreads->minimum()) {
+            const int helpers = pThreads->value() == pThreads->minimum() ? pThreads->maximum() : pThreads->minimum();
+            applySpy.clear();
+            pThreads->setValue(helpers);
+            QVERIFY(applyAndWait(applySpy));
+            QCOMPARE(settings->value(qsl("triggerMatchThreads")).toInt(), helpers + 1);
+            QCOMPARE(pool.workerCount(), helpers + 1);
+        }
+
+        applySpy.clear();
+        pThreshold->setValue(64);
+        pMissesPerMatch->setValue(5);
+        pFloodLines->setValue(9);
+        pSpin->setValue(33);
+        QVERIFY(applyAndWait(applySpy));
+        QCOMPARE(settings->value(qsl("triggerMatchThreshold")).toInt(), 64);
+        QCOMPARE(settings->value(qsl("triggerMatchMissesPerMatch")).toInt(), 5);
+        QCOMPARE(settings->value(qsl("triggerMatchFloodLines")).toInt(), 9);
+        QCOMPARE(settings->value(qsl("triggerMatchSpinMicroseconds")).toInt(), 33);
+        QCOMPARE(pool.threshold(), 64);
+        QCOMPARE(pool.missesPerMatch(), 5);
+        QCOMPARE(pool.floodChunkLines(), 9);
+        QCOMPARE(pool.settings().spinMicroseconds, 33);
+
+        // An environment variable still beats what the dialog wrote
+        qputenv("MUDLET_MATCH_THRESHOLD", "200");
+        applySpy.clear();
+        pThreshold->setValue(65);
+        QVERIFY(applyAndWait(applySpy));
+        QCOMPARE(settings->value(qsl("triggerMatchThreshold")).toInt(), 65);
+        QCOMPARE(pool.threshold(), 200);
+        qunsetenv("MUDLET_MATCH_THRESHOLD");
+
+        applySpy.clear();
+        pEnable->setChecked(false);
+        QVERIFY(applyAndWait(applySpy));
+        QCOMPARE(settings->value(qsl("triggerMatchThreads")).toInt(), 0);
+        QCOMPARE(pool.workerCount(), 0);
+    }
+
     // The box is tri-state, and what the apply has to write is the box's own
     // state rather than the profile's. While the setting was reachable only
     // from setConfig() the apply read the profile and wrote it straight back,
@@ -1065,6 +1205,117 @@ private slots:
         pBox->setCheckState(Qt::PartiallyChecked);
         QVERIFY2(applyAndWait(backSpy), "the debounce never wrote the settings back");
         QCOMPARE(mpHost->getWideAmbiguousEAsianGlyphsControlState(), Qt::PartiallyChecked);
+    }
+
+    // The script editor reads code in the display font until the box is unticked; the two controls
+    // under it show what following gives, greyed out, and pick the editor's own font once it is
+    void test_theEditorFontIsTheDisplayFontUntilTheBoxIsUnticked()
+    {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so the bundled \"Ubuntu Mono\" this gives the editor as a font of its own is not in the resources");
+#else
+        QVERIFY(mpHost->editorFontFollowsDisplay());
+        restoreLater([this]() {
+            mpHost->setEditorFontFollowsDisplay(true);
+        });
+        const QFont display = mpHost->getDisplayFont();
+        QVERIFY(display.family() != mEditorOwnFamily);
+
+        openPreferences();
+        QCheckBox* pFollow = mpPreferences->checkBox_editorFontFollowsDisplay;
+        QFontComboBox* pFamily = mpPreferences->fontComboBox_editorFont;
+        QSpinBox* pSize = mpPreferences->spinBox_editorFontSize;
+        QVERIFY(pFollow->isChecked());
+        QVERIFY2(!pFamily->isEnabled() && !pSize->isEnabled(), "the editor font can be picked while it follows the display font");
+        QCOMPARE(pFamily->currentFont().family(), display.family());
+        QCOMPARE(pSize->value(), display.pointSize());
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pFollow->click();
+        QVERIFY2(pFamily->isEnabled() && pSize->isEnabled(), "unticking the box left the editor font greyed out");
+        QVERIFY2(applyAndWait(applySpy), "the debounce never wrote the settings back");
+        QVERIFY(!mpHost->editorFontFollowsDisplay());
+        // ...starting from what it showed
+        QCOMPARE(mpHost->getEditorFont().family(), display.family());
+        QCOMPARE(mpHost->getEditorFont().pointSize(), display.pointSize());
+
+        applySpy.clear();
+        pFamily->setCurrentFont(QFont(mEditorOwnFamily));
+        QVERIFY2(applyAndWait(applySpy), "picking a family never wrote the settings back");
+        QCOMPARE(mpHost->getEditorFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), display.pointSize());
+
+        applySpy.clear();
+        pSize->stepBy(1);
+        QVERIFY2(applyAndWait(applySpy), "stepping the size never wrote the settings back");
+        QCOMPARE(mpHost->getEditorFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), display.pointSize() + 1);
+        QVERIFY2(TFontAttributes(mpHost->getDisplayFont()) == TFontAttributes(display), "the editor's own font reached the display font");
+
+        applySpy.clear();
+        pFollow->click();
+        QVERIFY2(applyAndWait(applySpy), "ticking the box never wrote the settings back");
+        QVERIFY(mpHost->editorFontFollowsDisplay());
+        QCOMPARE(mpHost->getEditorFont().family(), display.family());
+        QVERIFY2(!pFamily->isEnabled() && !pSize->isEnabled(), "ticking the box again left the editor font open to picking");
+        QCOMPARE(pFamily->currentFont().family(), display.family());
+        QCOMPARE(pSize->value(), display.pointSize());
+#endif
+    }
+
+    // Both are the profile's, so they outlast the session
+    void test_theEditorFontIsSavedWithTheProfileAndReadBack()
+    {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so the bundled \"Ubuntu Mono\" this gives the editor as a font of its own is not in the resources");
+#else
+        restoreLater([this]() {
+            mpHost->setEditorFontFollowsDisplay(true);
+        });
+        const int ownSize = 17;
+        QVERIFY(mpHost->getDisplayFont().pointSize() != ownSize);
+
+        openPreferences();
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_editorFontFollowsDisplay->click();
+        mpPreferences->fontComboBox_editorFont->setCurrentFont(QFont(mEditorOwnFamily));
+        mpPreferences->spinBox_editorFontSize->setValue(ownSize);
+        QVERIFY2(applyAndWait(applySpy), "the debounce never wrote the settings back");
+        QVERIFY(!mpHost->editorFontFollowsDisplay());
+        QCOMPARE(mpHost->getEditorFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), ownSize);
+
+        QTemporaryDir saveDir;
+        QVERIFY(saveDir.isValid());
+        mpHost->waitForProfileSave();
+        const auto [saved, xmlPath, saveError] = mpHost->saveProfile(saveDir.path(), qsl("editorFont"));
+        QVERIFY2(saved, qPrintable(saveError));
+        mpHost->waitForProfileSave();
+
+        QFile file(xmlPath);
+        QVERIFY(file.open(QFile::ReadOnly | QFile::Text));
+        const QString xml = QString::fromUtf8(file.readAll());
+        QVERIFY2(xml.contains(qsl("<mEditorFont>%1,%2,").arg(mEditorOwnFamily).arg(ownSize)), "the editor's own font is not in the profile's save");
+        QVERIFY2(xml.contains(qsl("<mEditorFontFollowsDisplay>no</mEditorFontFollowsDisplay>")), "the save says the editor follows the display font");
+
+        // Moved off both, or reading the save back would prove nothing
+        mpHost->setEditorFont(QFont(Host::scmDefaultFontFamily, ownSize + 4));
+        mpHost->setEditorFontFollowsDisplay(true);
+        QVERIFY2(mpPreferences->checkBox_editorFontFollowsDisplay->isChecked() && mpPreferences->spinBox_editorFontSize->value() != ownSize, "the dialog did not hear the editor font move behind it");
+        file.seek(0);
+        XMLimport importer(mpHost);
+        const auto [imported, importMessage] = importer.importPackage(&file);
+        QVERIFY2(imported, qPrintable(importMessage));
+        QVERIFY2(!mpHost->editorFontFollowsDisplay(), "reading the save back left the editor following the display font");
+        QCOMPARE(mpHost->getEditorFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), ownSize);
+
+        // ...and the dialog, still open, shows what was read
+        QVERIFY(!mpPreferences->checkBox_editorFontFollowsDisplay->isChecked());
+        QVERIFY(mpPreferences->fontComboBox_editorFont->isEnabled());
+        QCOMPARE(mpPreferences->fontComboBox_editorFont->currentFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpPreferences->spinBox_editorFontSize->value(), ownSize);
+#endif
     }
 };
 

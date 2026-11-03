@@ -10,17 +10,21 @@ permissions:
   contents: write
   actions: write
 
-# Both build workflows trigger this; don't cancel the first - the second trigger completes the release
-concurrency:
-  group: create-github-release-${{ github.event.workflow_run.head_sha }}
-  cancel-in-progress: false
-
 jobs:
   create-release:
     runs-on: ubuntu-latest
     if: >
       github.repository_owner == 'Mudlet' &&
       github.event.workflow_run.conclusion == 'success'
+    # Both build workflows trigger this; don't cancel the first - the second completes the release. Held by this
+    # job, not the run: the package build's attach job takes this group while linux-packages waits on that build.
+    concurrency:
+      group: create-github-release-${{ github.event.workflow_run.head_sha }}
+      cancel-in-progress: false
+    outputs:
+      type: ${{ steps.release-type.outputs.type }}
+      tag: ${{ steps.release-type.outputs.tag }}
+      published: ${{ steps.verify.outputs.published }}
 
     steps:
       - name: Check if platform builds completed
@@ -270,17 +274,37 @@ jobs:
           RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
           RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
         run: |
+          # GitHub refuses a release body over 125000 characters, and then publishes
+          # nothing at all; the margin below that is headroom
+          NOTES_LIMIT=120000
+          fit_notes() {
+            bash release-scripts/CI/fit-release-notes.sh "$@"
+          }
+          # By merge date from the range's oldest commit, as a compare link lists only 250
+          # commits; a failure falls back to every merged PR rather than cost the release
+          merged_prs_url() {
+            local search="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/pulls?q=is%3Apr+is%3Amerged" from to
+            from=$(TZ=UTC git log --date=format-local:%Y-%m-%dT%H:%M:%SZ --format=%cd "$1..$2" | sort | head -1)
+            if [[ -n "${from}" ]] && to=$(TZ=UTC git log -1 --date=format-local:%Y-%m-%d --format=%cd "$2"); then
+              echo "${search}+merged%3A%3E%3D${from//:/%3A}+merged%3A%3C%3D${to}"
+            else
+              echo "::warning::Could not date $1..$2, so cut release notes link to every merged pull request" >&2
+              echo "${search}"
+            fi
+          }
+
           if [[ "${RELEASE_TYPE}" == "release" ]]; then
             # For release: changelog from previous stable release tag to this tag
             PREV_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -v -- '-ptb' | grep -v "^${RELEASE_TAG}$" | head -1)
 
             echo "Generating changelog from ${PREV_TAG} to ${RELEASE_TAG}"
             if [[ -n "${PREV_TAG}" ]]; then
-              if ! lua CI/generate-changelog.lua -f md -m release \
-                   --start-commit "${PREV_TAG}" --end-commit "${RELEASE_TAG}" > changelog.md; then
+              if ! RELEASE_CHANGELOG=$(lua CI/generate-changelog.lua -f md -m release \
+                   --start-commit "${PREV_TAG}" --end-commit "${RELEASE_TAG}"); then
                 echo "::error::Changelog generation failed for stable release"
                 exit 1
               fi
+              echo "${RELEASE_CHANGELOG}" | fit_notes "${NOTES_LIMIT}" "$(merged_prs_url "${PREV_TAG}" "${RELEASE_TAG}")" > changelog.md
             else
               echo "::error::No previous release tag found - cannot generate changelog for stable release"
               exit 1
@@ -320,21 +344,26 @@ jobs:
 
             # Assemble the combined changelog
             if [[ -n "${PTB_CHANGELOG}" && -n "${FULL_CHANGELOG}" ]]; then
+              # The PTB's own changes come first, the full changelog gets what is left.
+              # 2000 bytes keeps room for the wrapper and the full changelog's closing line
               {
                 echo "#### Changes in this build since the previous PTB (${PTB_TAG})"
                 echo ""
-                echo "${PTB_CHANGELOG}"
+                echo "${PTB_CHANGELOG}" | fit_notes "$((NOTES_LIMIT - 2000))" "$(merged_prs_url "${PTB_TAG}" HEAD)"
                 echo ""
                 echo "<details>"
                 echo "<summary>Full changelog since last release (${STABLE_TAG})</summary>"
                 echo ""
-                echo "${FULL_CHANGELOG}"
-                echo ""
-                echo "</details>"
               } > changelog.md
+              CLOSING=$'\n</details>\n'
+              FULL_BUDGET=$((NOTES_LIMIT - $(wc -c < changelog.md) - ${#CLOSING}))
+              {
+                echo "${FULL_CHANGELOG}" | fit_notes "${FULL_BUDGET}" "$(merged_prs_url "${STABLE_TAG}" HEAD)"
+                printf '%s' "${CLOSING}"
+              } >> changelog.md
             elif [[ -n "${FULL_CHANGELOG}" ]]; then
               # No previous PTB or first PTB after a release - just show full changelog
-              echo "${FULL_CHANGELOG}" > changelog.md
+              echo "${FULL_CHANGELOG}" | fit_notes "${NOTES_LIMIT}" "$(merged_prs_url "${STABLE_TAG}" HEAD)" > changelog.md
             else
               echo "::warning::Changelog generation failed, using placeholder"
               echo "See commit history for changes." > changelog.md
@@ -430,6 +459,7 @@ jobs:
 
       # Confirm against the live release, not just the files we meant to upload
       - name: Verify published release checksums
+        id: verify
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
         env:
           RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
@@ -455,15 +485,7 @@ jobs:
           echo "Published assets:"
           cat published-final/assets.txt
           bash release-scripts/CI/verify-release-checksums.sh published-final/SHA256SUMS.txt published-final/assets.txt
-
-      # A GITHUB_TOKEN release fires no release event, so start the package build here, best-effort.
-      - name: Start the Linux package build
-        if: steps.release-type.outputs.type == 'release' && vars.LINUX_PACKAGES_BASE_URL != ''
-        continue-on-error: true
-        env:
-          RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh workflow run build-linux-packages.yml --repo "${GITHUB_REPOSITORY}" -f tag="${RELEASE_TAG}" -f publish=true
+          echo "published=true" >> "$GITHUB_OUTPUT"
 
       # Generate and upload Sparkle appcast XML for macOS updates
       - name: Add SSH agent for appcast upload
@@ -486,8 +508,9 @@ jobs:
           export BUNDLE_VERSION="${RELEASE_TAG#Mudlet-}"
           export RELEASE_VERSION
 
-          # Convert changelog to HTML for Sparkle's description field
-          export CHANGELOG_HTML=""
+          # Convert changelog to HTML for Sparkle's description field. Not exported:
+          # one environment variable over 128KB makes every later command fail
+          CHANGELOG_HTML=""
           if [[ -f changelog.md ]]; then
             CHANGELOG_HTML=$(pandoc changelog.md -f markdown -t html --no-highlight 2>/dev/null || true)
           fi
@@ -521,9 +544,9 @@ jobs:
               continue
             fi
 
-            # Use envsubst with quoted heredoc to safely handle special characters in changelog HTML
-            envsubst '$RELEASE_VERSION $BUNDLE_VERSION $PUB_DATE $DOWNLOAD_URL $FILE_SIZE $CHANGELOG_HTML' \
-              > "appcast/${CHANNEL}-${ARCH}.xml" << 'APPCAST_EOF'
+            # Unquoted: the values of the variables below are not expanded again, so the
+            # HTML is safe, but a literal $, ` or \ added to the template would be
+            cat > "appcast/${CHANNEL}-${ARCH}.xml" << APPCAST_EOF
           <?xml version="1.0" encoding="utf-8"?>
           <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
             <channel>
@@ -591,3 +614,62 @@ jobs:
               echo "::warning::Appcast not yet accessible at ${url}"
             fi
           done
+
+  # A GITHUB_TOKEN release fires no release event, so start the package build here. A job of its own so
+  # waiting on it holds up nothing else, and so a failed package build turns this run red.
+  linux-packages:
+    name: Build the Linux packages
+    needs: create-release
+    # once the release is verified, even if a later step such as the appcast upload then fails
+    if: >
+      needs.create-release.outputs.published == 'true' &&
+      !cancelled() &&
+      needs.create-release.outputs.type == 'release' &&
+      vars.LINUX_PACKAGES_BASE_URL != ''
+    runs-on: ubuntu-latest
+    # room for the package build's queueing, its 120-minute matrix jobs, and its attach and publish jobs
+    timeout-minutes: 240
+    steps:
+      - name: Start the Linux package build and wait for it
+        env:
+          RELEASE_TAG: ${{ needs.create-release.outputs.tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          runs_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/workflows/build-linux-packages.yml"
+          # not retried: a request that failed may still have started a build
+          if ! started=$(gh workflow run build-linux-packages.yml --repo "${GITHUB_REPOSITORY}" -f tag="${RELEASE_TAG}" -f publish=true); then
+            echo "::error::Could not start the Linux package build for ${RELEASE_TAG}, check ${runs_url} before starting one by hand"
+            exit 1
+          fi
+          run_id=$(grep -oE '/actions/runs/[0-9]+' <<< "${started}" | grep -oE '[0-9]+$' || true)
+          if [[ -z "${run_id}" ]]; then
+            echo "::error::Started the Linux package build for ${RELEASE_TAG} but GitHub did not say which run it is, check ${runs_url}"
+            exit 1
+          fi
+
+          url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${run_id}"
+          echo "Linux package build for ${RELEASE_TAG}: ${url}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Waiting for the Linux package build at ${url}"
+          # polled rather than gh run watch, which spends several requests a minute and gives up on one failed
+          # request; 46 polls 5 minutes apart end before timeout-minutes, so the error below still names the build
+          result=""
+          for _ in $(seq 1 46); do
+            sleep 300
+            result=$(gh run view "${run_id}" --repo "${GITHUB_REPOSITORY}" --json status,conclusion \
+              --jq '.status + " " + .conclusion') || result=""
+            if [[ "${result}" == completed* ]]; then
+              break
+            fi
+          done
+          case "${result}" in
+            "completed success")
+              ;;
+            completed*)
+              echo "::error::The Linux package build for ${RELEASE_TAG} ended '${result#completed }': ${url}"
+              exit 1
+              ;;
+            *)
+              echo "::error::The Linux package build for ${RELEASE_TAG} had not finished after 230 minutes (last status: '${result:-unknown}'), it may still be running: ${url}"
+              exit 1
+              ;;
+          esac

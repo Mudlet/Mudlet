@@ -29,6 +29,7 @@
 #include <QImage>
 #include <QPainter>
 
+#include "ExitAppearance.h"
 #include "RoomAppearance.h"
 
 #include "GroupedTest.h"
@@ -167,6 +168,58 @@ private slots:
             }
         }
         QVERIFY(foundOpaque);
+    }
+
+    void test_terminalLineGlyphReadsAsTheLineRuns_data()
+    {
+        QTest::addColumn<qreal>("degrees");
+        QTest::addColumn<QChar>("expected");
+        QTest::newRow("rightward") << 0.0 << RoomAppearance::terminalExitDot;
+        QTest::newRow("leftward") << 180.0 << RoomAppearance::terminalExitDot;
+        QTest::newRow("just short of diagonal") << 22.0 << RoomAppearance::terminalExitDot;
+        QTest::newRow("up and right") << 45.0 << QChar(u'/');
+        QTest::newRow("down and left") << -135.0 << QChar(u'/');
+        QTest::newRow("upward") << 90.0 << RoomAppearance::terminalExitDot;
+        QTest::newRow("downward") << -90.0 << RoomAppearance::terminalExitDot;
+        QTest::newRow("up and left") << 135.0 << QChar(u'\\');
+        QTest::newRow("down and right") << -45.0 << QChar(u'\\');
+        QTest::newRow("nearly a full turn") << 350.0 << RoomAppearance::terminalExitDot;
+    }
+
+    void test_terminalLineGlyphReadsAsTheLineRuns()
+    {
+        QFETCH(qreal, degrees);
+        QFETCH(QChar, expected);
+        QCOMPARE(RoomAppearance::terminalLineGlyph(degrees), expected);
+    }
+
+    void test_standOutColorKeepsItsHueButLeavesTheBackground_data()
+    {
+        QTest::addColumn<QColor>("color");
+        QTest::addColumn<QColor>("background");
+        QTest::newRow("navy on paper") << QColor(20, 40, 160) << QColor(245, 243, 236);
+        QTest::newRow("pale yellow on paper") << QColor(250, 240, 150) << QColor(245, 243, 236);
+        QTest::newRow("yellow on paper") << QColor(255, 255, 0) << QColor(245, 243, 236);
+        QTest::newRow("cyan on paper") << QColor(0, 255, 255) << QColor(245, 243, 236);
+        QTest::newRow("navy on black") << QColor(20, 40, 160) << QColor(Qt::black);
+        QTest::newRow("white on white") << QColor(Qt::white) << QColor(Qt::white);
+    }
+
+    void test_standOutColorKeepsItsHueButLeavesTheBackground()
+    {
+        QFETCH(QColor, color);
+        QFETCH(QColor, background);
+        const QColor result = ExitAppearance::standOutColor(color, background);
+        const int gap = qAbs(ExitAppearance::brightness(result) - ExitAppearance::brightness(background));
+        QVERIFY2(gap >= 75, qPrintable(qsl("%1 is %2 from the background's brightness").arg(result.name()).arg(gap)));
+        QCOMPARE(result.hslHue(), color.hslHue());
+        if (qAbs(ExitAppearance::brightness(color) - ExitAppearance::brightness(background)) >= 75) {
+            QCOMPARE(result, color);
+        } else {
+            // No further from the color than it has to be
+            const QColor nearer = QColor::fromHsl(color.hslHue(), color.hslSaturation(), result.lightness() + (ExitAppearance::brightness(background) > 127 ? 2 : -2));
+            QVERIFY(qAbs(ExitAppearance::brightness(nearer) - ExitAppearance::brightness(background)) < 75);
+        }
     }
 
     void test_symbolTooLongToFitDrawsNothing()

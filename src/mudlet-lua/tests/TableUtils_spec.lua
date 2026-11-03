@@ -1174,8 +1174,161 @@ describe("Tests TableUtils.lua functions", function()
       assert.equals("inherited", copy.inner.anything)
     end)
 
-    -- table._contains guards against this with a "seen" set; deepcopy has none
-    pending("table.deepcopy copies a table that reaches itself - it recurses until the Lua stack overflows - issue #10414")
+    it("should copy a table that reaches itself, directly or through another", function()
+      local original = { name = "root", child = {} }
+      original.me = original
+      original.child.parent = original
+
+      local copy = table.deepcopy(original)
+
+      assert.are_not.equal(original, copy)
+      assert.equals(copy, copy.me)
+      assert.are_not.equal(original.child, copy.child)
+      assert.equals(copy, copy.child.parent)
+      assert.equals("root", copy.name)
+    end)
+
+    it("should copy each table in a cycle once, keeping references between siblings", function()
+      local first, second = { name = "first" }, { name = "second" }
+      local parent = { children = { first, second } }
+      first.parent, second.parent = parent, parent
+      first.sibling, second.sibling = second, first
+
+      local copy = table.deepcopy(parent)
+
+      local copyFirst, copySecond = copy.children[1], copy.children[2]
+      assert.are_not.equal(first, copyFirst)
+      assert.equals(copySecond, copyFirst.sibling)
+      assert.equals(copyFirst, copySecond.sibling)
+      assert.equals(copy, copyFirst.parent)
+      copySecond.name = "renamed"
+      assert.equals("renamed", copyFirst.sibling.name)
+      assert.equals("second", second.name)
+    end)
+
+    it("should copy a grid of rooms linked both ways once per room", function()
+      local size = 4
+      local rooms = {}
+      for i = 1, size * size do
+        rooms[i] = { id = i, exits = {} }
+      end
+      for i = 1, size * size do
+        local exits = rooms[i].exits
+        if i % size ~= 0 then exits.east = rooms[i + 1] end
+        if i % size ~= 1 then exits.west = rooms[i - 1] end
+        if i + size <= size * size then exits.south = rooms[i + size] end
+        if i > size then exits.north = rooms[i - size] end
+      end
+
+      local copy = table.deepcopy(rooms[1])
+
+      local seen, count, todo = {}, 0, { copy }
+      while #todo > 0 do
+        local t = table.remove(todo)
+        if not seen[t] then
+          seen[t], count = true, count + 1
+          for _, v in pairs(t) do
+            if type(v) == "table" then todo[#todo + 1] = v end
+          end
+        end
+      end
+      assert.equals(2 * size * size, count)
+      assert.equals(copy, copy.exits.east.exits.west)
+      assert.equals(copy.exits.east.exits.south, copy.exits.south.exits.east)
+    end)
+
+    it("should keep the metatables in a cycle and leave the original as it was", function()
+      local mt = { __index = { inherited = "yes" } }
+      local original = setmetatable({ child = setmetatable({}, mt) }, mt)
+      original.me = original
+      original.child.parent = original
+
+      local copy = table.deepcopy(original)
+
+      assert.equals(mt, getmetatable(copy))
+      assert.equals(mt, getmetatable(copy.child))
+      assert.equals("yes", copy.child.parent.inherited)
+      assert.equals(original, original.me)
+      assert.equals(original, original.child.parent)
+    end)
+
+    it("should copy a doubly linked list too long to copy by recursing", function()
+      local head = { index = 1 }
+      local tail = head
+      for i = 2, 30000 do
+        tail.next = { index = i, prev = tail }
+        tail = tail.next
+      end
+
+      local copy = table.deepcopy(head)
+
+      local node, count = copy, 1
+      while node.next do
+        assert.equals(node, node.next.prev)
+        node, count = node.next, count + 1
+      end
+      assert.equals(30000, count)
+      assert.equals(30000, node.index)
+    end)
+
+    it("should copy a chain without a cycle too long to copy by recursing", function()
+      local head = { index = 1 }
+      local tail = head
+      for i = 2, 30000 do
+        tail.next = { index = i }
+        tail = tail.next
+      end
+
+      local copy = table.deepcopy(head)
+
+      local node, count = copy, 1
+      while node.next do
+        node, count = node.next, count + 1
+      end
+      assert.equals(30000, count)
+      assert.equals(30000, node.index)
+    end)
+
+    it("should set the metatable after the fields, so a read-only __newindex never fires", function()
+      local mt = { __newindex = function() error("read-only") end }
+      local original = setmetatable({}, mt)
+      rawset(original, "a", 1)
+      rawset(original, "child", setmetatable({}, mt))
+      rawset(original.child, "parent", original)
+
+      local copy = table.deepcopy(original)
+
+      assert.equals(1, rawget(copy, "a"))
+      assert.equals(copy, rawget(copy.child, "parent"))
+      assert.equals(mt, getmetatable(copy.child))
+    end)
+
+    it("should copy a table after a script removes the debug library", function()
+      local saved = _G.debug
+      _G.debug = nil
+      local ok, result = pcall(table.deepcopy, setmetatable({ inner = { value = 1 } }, { __index = { z = 9 } }))
+      _G.debug = saved
+
+      assert.is_true(ok, tostring(result))
+      assert.equals(1, result.inner.value)
+      assert.equals(9, result.z)
+    end)
+
+    it("should copy a table with a protected metatable", function()
+      local mt = { __index = function() return 1 end, __metatable = "locked" }
+      local copy = table.deepcopy(setmetatable({}, mt))
+      assert.equals(1, copy.anything)
+      assert.equals("locked", getmetatable(copy))
+    end)
+
+    it("should copy a table shared without a cycle once for each place it is reached", function()
+      local shared = { value = 1 }
+      local copy = table.deepcopy({ first = shared, second = shared })
+      assert.are_not.equal(shared, copy.first)
+      assert.are_not.equal(copy.first, copy.second)
+      copy.first.value = 2
+      assert.equals(1, copy.second.value)
+    end)
   end)
 
   describe("Tests the functionality of spairs on an empty table", function()

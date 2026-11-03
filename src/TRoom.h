@@ -129,6 +129,7 @@ public:
                    QMap<QString, QColor>&,
                    QMap<QString, Qt::PenStyle>&,
                    QMap<QString, bool>&,
+                   bool,
                    const QHash<int, int>&);
     QString dirCodeToDisplayName(int) const;
     // As above but for auditExit()'s messages specifically, which predate

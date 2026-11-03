@@ -38,10 +38,15 @@
 #include <QDialog>
 #include <QElapsedTimer>
 #include <QFileInfo>
+#include <QFontMetrics>
+#include <QImage>
+#include <QLabel>
+#include <QLine>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMenu>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QSpinBox>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -61,6 +66,7 @@
 #include "GroupedTest.h"
 
 #include <algorithm>
+#include <cstdlib>
 
 // What the dialog shows in place of a value the selection does not agree on.
 // dlgRoomProperties keeps it as a private tr() string, and no translator is
@@ -293,6 +299,40 @@ private:
         selectorDriver->stop();
         delete selectorDriver;
         delete menuAnswerer;
+    }
+
+    // In the grabbed image's pixels, which outnumber the label's on a high-DPI screen
+    struct PreviewInk
+    {
+        QRect contents;
+        // Where the symbol was drawn, invalid when nothing of it was
+        QRect ink;
+    };
+
+    // insideCircle counts only what is inside the circle a round room fills,
+    // as outside it a round preview shows the dialog's background
+    static PreviewInk symbolInk(QLabel* preview, const bool insideCircle = false)
+    {
+        const QImage shown = preview->grab().toImage();
+        const qreal ratio = shown.devicePixelRatio();
+        const QRect logical = preview->contentsRect();
+        PreviewInk result;
+        result.contents = QRect(qRound(logical.x() * ratio), qRound(logical.y() * ratio), qRound(logical.width() * ratio), qRound(logical.height() * ratio));
+        const QPointF center = QRectF(result.contents).center();
+        const qreal radius = result.contents.width() / 2.0 - 2 * ratio;
+        const QColor background = shown.pixelColor(qRound(center.x()), result.contents.top() + qRound(2 * ratio));
+        for (int y = result.contents.top(); y <= result.contents.bottom(); ++y) {
+            for (int x = result.contents.left(); x <= result.contents.right(); ++x) {
+                if (insideCircle && QLineF(center, QPointF(x + 0.5, y + 0.5)).length() > radius) {
+                    continue;
+                }
+                const QColor pixel = shown.pixelColor(x, y);
+                if (std::abs(pixel.red() - background.red()) + std::abs(pixel.green() - background.green()) + std::abs(pixel.blue() - background.blue()) > 48) {
+                    result.ink |= QRect(x, y, 1, 1);
+                }
+            }
+        }
+        return result;
     }
 
 private slots:
@@ -779,6 +819,119 @@ private slots:
         QCOMPARE(mColorSelectorOutcome.colorsLeftInList, 1);
         QVERIFY(map()->mCustomEnvColors.contains(257));
         QVERIFY2(!map()->mCustomEnvColors.contains(258), "the right-clicked color was not deleted");
+    }
+
+    // The preview is a sample of the room as the map draws it, where a symbol
+    // of several characters is shrunk to fit the room rather than cut off
+    void aSymbolOfSeveralCharactersFitsInsideThePreview()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->lineEdit_roomSymbol->setText(qsl("ABCDE"));
+
+        const auto [contents, ink] = symbolInk(pDlg->label_preview);
+        QVERIFY2(ink.isValid(), "nothing of the symbol was drawn");
+        QVERIFY2(ink.left() > contents.left() && ink.right() < contents.right(),
+                 qPrintable(qsl("the symbol, drawn across x %1 to %2, is cut off by the preview's edges at %3 and %4").arg(ink.left()).arg(ink.right()).arg(contents.left()).arg(contents.right())));
+    }
+
+    // Round rooms draw their symbol in the square inside the circle, smaller
+    // than in a square room of the same size
+    void aSymbolInARoundRoomIsDrawnSmallerThanInASquareOne()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->lineEdit_roomSymbol->setText(qsl("ABCDE"));
+        // Measured over the same circle as the round room, so only the size differs
+        const QRect squareInk = symbolInk(pDlg->label_preview, true).ink;
+
+        mpHost->mBubbleMode = true;
+        auto restoreSquareRooms = qScopeGuard([this]() {
+            mpHost->mBubbleMode = false;
+        });
+        pDlg->lineEdit_roomSymbol->clear();
+        pDlg->lineEdit_roomSymbol->setText(qsl("ABCDE"));
+        const QRect roundInk = symbolInk(pDlg->label_preview, true).ink;
+
+        QVERIFY2(squareInk.isValid() && roundInk.isValid(), "nothing of the symbol was drawn");
+        QVERIFY2(roundInk.width() < squareInk.width(), qPrintable(qsl("the symbol is %1 pixels wide in a round room and %2 in a square one").arg(roundInk.width()).arg(squareInk.width())));
+    }
+
+    // The map fits a symbol to the room whatever point size the symbol font
+    // was given, so the preview must not follow that size either
+    void theSymbolFontPointSizeDoesNotChangeThePreview()
+    {
+        buildMap();
+        const QFont originalFont = map()->mMapSymbolFont;
+        auto restoreFont = qScopeGuard([this, originalFont]() {
+            map()->mMapSymbolFont = originalFont;
+        });
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->lineEdit_roomSymbol->setText(qsl("W"));
+        const QImage atOriginalSize = pDlg->label_preview->grab().toImage();
+        QVERIFY2(symbolInk(pDlg->label_preview).ink.isValid(), "nothing of the symbol was drawn");
+
+        for (const int pointSize : {6, 40}) {
+            map()->mMapSymbolFont.setPointSize(pointSize);
+            pDlg->lineEdit_roomSymbol->clear();
+            pDlg->lineEdit_roomSymbol->setText(qsl("W"));
+            QVERIFY2(pDlg->label_preview->grab().toImage() == atOriginalSize, qPrintable(qsl("the preview changed when the symbol font was set to %1pt").arg(pointSize)));
+        }
+    }
+
+    // Removing the symbol must not leave the last one showing, as OK would then
+    // save a room without the symbol the preview shows
+    void clearingTheSymbolClearsThePreview()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->lineEdit_roomSymbol->setText(qsl("ABCDE"));
+        QVERIFY2(symbolInk(pDlg->label_preview).ink.isValid(), "nothing of the symbol was drawn");
+
+        pDlg->lineEdit_roomSymbol->clear();
+
+        QVERIFY2(!symbolInk(pDlg->label_preview).ink.isValid(), "the preview still shows the removed symbol");
+        QVERIFY(pDlg->label_preview->pixmap().isNull());
+    }
+
+    // The "(Multiple values...)" entry decides no symbol, so it shows none
+    void pickingTheMultipleValuesEntryClearsThePreview()
+    {
+        buildMap();
+        room(scmFirstRoom)->mSymbol = qsl("!");
+        room(scmSecondRoom)->mSymbol = qsl("?");
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        QCOMPARE(pDlg->comboBox_roomSymbol->itemText(0), scmMultipleValues);
+        pDlg->comboBox_roomSymbol->setCurrentIndex(1);
+        QVERIFY2(symbolInk(pDlg->label_preview).ink.isValid(), "nothing of the picked symbol was drawn");
+
+        pDlg->comboBox_roomSymbol->setCurrentIndex(0);
+
+        QVERIFY2(!symbolInk(pDlg->label_preview).ink.isValid(), "the preview still shows the previously picked symbol");
+        QVERIFY(pDlg->label_preview->pixmap().isNull());
+    }
+
+    // With only the symbol font allowed, the map draws a character that font
+    // cannot show as the replacement character, and the preview has to too
+    void aCharacterTheFontLacksIsPreviewedAsTheReplacementCharacter()
+    {
+        buildMap();
+        map()->setOnlySymbolFontUsed(true);
+        auto restoreFontMerging = qScopeGuard([this]() {
+            map()->setOnlySymbolFontUsed(false);
+        });
+        // Unassigned in Unicode, so the symbol font has no glyph for it
+        const QChar unassigned(0x0378);
+        QVERIFY(!QFontMetrics(map()->mMapSymbolFont).inFontUcs4(unassigned.unicode()));
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->lineEdit_roomSymbol->setText(QString(QChar::ReplacementCharacter));
+        const QImage replacement = pDlg->label_preview->grab().toImage();
+        pDlg->lineEdit_roomSymbol->setText(QString(unassigned));
+        const QImage missing = pDlg->label_preview->grab().toImage();
+
+        QVERIFY2(symbolInk(pDlg->label_preview).ink.isValid(), "nothing was drawn for the missing character");
+        QVERIFY2(missing == replacement, "the missing character was not previewed as the replacement character");
     }
 };
 

@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <discord.h>
 #include <Host.h>
 #include <utils.h>
@@ -297,8 +298,37 @@ private slots:
         QVERIFY2(checked >= 22, qPrintable(qsl("only categorised %1 Discord Lua functions - has the source moved?").arg(checked)));
     }
 
+    // Only a known game key or an exact known URL may match: a fragment of a
+    // longer known URL would advertise an arbitrary game.
+    void testGameIntegrationNeedsAKnownAddress()
+    {
+        Discord discord;
+
+        QCOMPARE(discord.gameIntegrationSupported(QString()), qMakePair(false, QString()));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("mud.com")), qMakePair(false, qsl("mud")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("realms.com")), qMakePair(false, qsl("realms")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("ironrealms.com")), qMakePair(false, qsl("ironrealms")));
+
+        QCOMPARE(discord.gameIntegrationSupported(qsl("achaea.com")), qMakePair(true, qsl("achaea")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("iron-ach.ironrealms.com")), qMakePair(true, qsl("achaea")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("mud.clessidra.it")), qMakePair(true, qsl("clessidra")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("game.wotmud.org")), qMakePair(true, qsl("wotmud")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("wotmud.org")), qMakePair(true, qsl("wotmud")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("localhost")), qMakePair(true, qsl("localhost")));
+    }
+
+    void testGameIntegrationIgnoresAddressCase()
+    {
+        Discord discord;
+
+        QCOMPARE(discord.gameIntegrationSupported(qsl("IRON-ACH.IRONREALMS.COM")), qMakePair(true, qsl("achaea")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("Achaea")), qMakePair(true, qsl("achaea")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("WOTMUD.ORG")), qMakePair(true, qsl("wotmud")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("LOCALHOST")), qMakePair(true, qsl("localhost")));
+    }
+
     void cleanupTestCase() {}
 };
 
 #include "DiscordTest.moc"
-QTEST_MAIN(DiscordTest)
+MUDLET_GROUPED_TEST_MAIN(DiscordTest)

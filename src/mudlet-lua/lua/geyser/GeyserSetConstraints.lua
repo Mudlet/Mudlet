@@ -30,6 +30,86 @@ local function unchanged(window, cons, container)
     and window.get_width == last.get_width and window.get_height == last.get_height
 end
 
+-- how both parseable() and the parser read a percentage
+local percentPattern = "([%+%-%d%p]+)%%%s*([%+%-%d%p]*)"
+
+-- Internal function: the number in a pixel or character constraint
+local function absolute(value)
+  return tonumber((string.gsub(value, "%a", "")))
+end
+
+-- Internal function: whether the parser below can read a constraint; tonumber()
+-- follows the numeric locale, so this must run under the "C" one
+local function parseable(value)
+  local kind = type(value)
+  if kind == "number" then
+    -- widget geometry is a 32-bit int, which createLabel() holds to; also refuses NaN
+    return math.abs(value) <= 2147483647
+  end
+  if kind == "function" then
+    return true
+  end
+  if kind ~= "string" then
+    return false
+  end
+  if string.find(value, "%%") then
+    return tonumber((string.match(value, percentPattern))) ~= nil
+  end
+  return absolute(value) ~= nil
+end
+
+-- Internal function: how an error shows a constraint: text quoted, a number by
+-- its value, and anything else by its type, so that true is not mistaken for "true"
+local function shown(value)
+  if type(value) == "string" then
+    return string.format("%q", value)
+  elseif type(value) == "number" then
+    return tostring(value)
+  end
+  return "(" .. type(value) .. ")"
+end
+
+-- Internal function: why a window cannot take these constraints, or nil if it
+-- can, and the font size it read to tell; runs under the "C" numeric locale
+local function refusal(window, cons)
+  local fontChecked = false
+  local charWidth, charHeight
+  for _, v in ipairs { "x", "y", "width", "height" } do
+    local value = cons[v]
+    if not parseable(value) then
+      return string.format("has an invalid %s constraint %s", v, shown(value))
+    end
+    if type(value) == "string" and not string.find(value, "%%") and string.find(value, "c") and not fontChecked then
+      fontChecked = true
+      local fontSize = window.fontSize
+      local kind = type(fontSize)
+      -- calcFontSize() sizes any number and reads text or nil as a window name; it raises
+      -- on a table and takes a boolean for its average-width flag, so neither is a size
+      if kind == "string" or kind == "nil" then
+        charWidth, charHeight = calcFontSize(fontSize)
+      end
+      if not charWidth and kind ~= "number" then
+        return string.format("has a character %s constraint, but no font size could be read from fontSize %s", v, shown(fontSize))
+      end
+    end
+  end
+  return nil, charWidth, charHeight
+end
+
+--- Raises an error naming the window if it cannot take these constraints, and
+-- changes nothing either way.
+-- @param window The window the constraints are for.
+-- @param cons A table that holds the constraints.
+function Geyser.check_constraints (window, cons)
+  local oldlocale = os.setlocale(nil, "numeric")
+  os.setlocale("C", "numeric")
+  local problem = refusal(window, cons)
+  os.setlocale(oldlocale, "numeric")
+  if problem then
+    error(string.format("Geyser: element '%s' %s", tostring(window.name), problem), 0)
+  end
+end
+
 function Geyser.calc_constraints (window, cons, container)
   -- If container is nil then by default it is the dimensions of the main window
   container = container or Geyser
@@ -43,6 +123,12 @@ function Geyser.calc_constraints (window, cons, container)
   -- a character constraint reads the font size as it is parsed, so its getters
   -- are not kept for next time
   local readsFontSize = false
+  -- all four are checked before any getter is replaced, so a refused set leaves the window as it was
+  local problem, charWidth, charHeight = refusal(window, cons)
+  if problem then
+    os.setlocale(oldlocale, "numeric")
+    error(string.format("Geyser: element '%s' %s", tostring(window.name), problem), 0)
+  end
   
   -- GENERATE CONSTRAINT AWARE POSITIONING FUNCTIONS
   -- Parse the position constraints to generate functions that will get
@@ -73,7 +159,7 @@ function Geyser.calc_constraints (window, cons, container)
       
       -- scale is a value between 0 and 1
       -- offset is always in pixel
-      local scale, offset = string.match(num,"([%+%-%d%p]+)%%%s*([%+%-%d%p]*)")
+      local scale, offset = string.match(num, percentPattern)
       local negative = string.find(scale, "-") or false -- detect "negative" 0
       scale = tonumber(scale) / 100.0
       offset = tonumber(offset) or 0
@@ -139,7 +225,10 @@ function Geyser.calc_constraints (window, cons, container)
       
       -- As is, font size is considered a constraint
       if string.find(num, "c") then
-        x_mult, y_mult = calcFontSize(window.fontSize)
+        if not charWidth then
+          charWidth, charHeight = calcFontSize(window.fontSize)
+        end
+        x_mult, y_mult = charWidth, charHeight
         readsFontSize = true
       end
       
@@ -147,7 +236,7 @@ function Geyser.calc_constraints (window, cons, container)
       local max = "return_zero"
       local min = "return_zero"
       local func = return_zero
-      local pos = tonumber((string.gsub(num, "%a", "")))
+      local pos = absolute(num)
       
       -- give func the function value if a function is given
       if type(cons[v]) == "function" then

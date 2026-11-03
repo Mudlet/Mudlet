@@ -26,6 +26,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "TAppFrontend.h"
 #include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "TCommandLine.h"
@@ -61,6 +62,20 @@
 #include <QTemporaryDir>
 
 #include <zip.h>
+
+#if defined(Q_OS_LINUX)
+#include <arpa/inet.h>
+#include <cerrno>
+#include <cstring>
+#include <fcntl.h>
+#include <linux/sockios.h>
+#include <netinet/in.h>
+#include <poll.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <thread>
+#include <unistd.h>
+#endif
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -321,6 +336,48 @@ private slots:
         QVERIFY(host->hasConsoleView());
     }
 
+    // An embedder with no main window, which the null frontend stands in for here: when a profile a view took over
+    // closes (the direct profileClosing() stands in for the close), a user window a script deleted before the view keeps
+    // its placement through a load and the next save
+    void test_viewedProfileClosingKeepsWindowsDeletedBeforeTheView()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
+        const QString layoutPath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        QFile::remove(layoutPath);
+
+        // Checked only once mudlet is the frontend again, so a failure cannot leave the fixture without it
+        TAppFrontend::setInstance(nullptr);
+        TAppFrontend* pNullFrontend = TAppFrontend::instance();
+        const bool firstSaved = pNullFrontend->saveWindowLayoutForScript();
+        host->setMainConsoleView(nullptr);
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('wlB', false, false, 'f'); resizeWindow('wlB', 222, 111); assert(deleteMiniConsole('wlB'))"));
+        host->setMainConsoleView(console);
+        pNullFrontend->profileClosing(host);
+        const bool loaded = pNullFrontend->loadWindowLayout();
+        const bool saved = pNullFrontend->saveWindowLayoutForScript();
+        TAppFrontend::setInstance(mudlet::self());
+
+        QVERIFY(firstSaved);
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QVERIFY(loaded);
+        QVERIFY(saved);
+        QMap<QString, std::pair<QRect, bool>> placements;
+        QFile layoutFile(layoutPath);
+        QVERIFY(layoutFile.open(QIODevice::ReadOnly));
+        QDataStream ifs(&layoutFile);
+        ifs.setVersion(QDataStream::Qt_5_12);
+        quint32 magic = 0;
+        quint32 version = 0;
+        ifs >> magic >> version >> placements;
+        layoutFile.close();
+        QCOMPARE(placements.value(mHostname + qsl("/wlB")).first, QRect(0, 0, 222, 111));
+        QVERIFY(QFile::remove(layoutPath));
+    }
+
     // With the console detached, each call answers as for a missing window, even for a label and a user
     // window the registry still holds.
     void test_callsWithoutConsoleAnswerAsMissing()
@@ -353,8 +410,7 @@ private slots:
         const bool layoutCommitted = host->commitLayoutUpdates();
         host->printToMainConsole(qsl("null view probe line\n"));
         const bool printed = host->mainConsoleModel().buffer.lineBuffer.join(QChar::LineFeed).contains(qsl("null view probe line"));
-        const bool luaAnswered =
-                host->getLuaInterpreter()->compileAndExecuteScript(qsl("local ok, msg = clearCmdLine('main') assert(ok == nil and msg) assert(raiseWindow('nullViewProbe') == false)"));
+        const bool luaAnswered = host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(raiseWindow('nullViewProbe') == false)"));
         host->setMainConsoleView(console);
 
         QVERIFY(labelStillRegistered);
@@ -372,6 +428,85 @@ private slots:
         QVERIFY(!layoutCommitted);
         QVERIFY(printed);
         QVERIFY(luaAnswered);
+    }
+
+    // A window the registry still holds is no reason to blame its type, or "not found", once the console is gone.
+    void test_backgroundAndActionRefusalsWithoutConsole()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+            assert(createLabel("nullViewBgLabel", 0, 0, 10, 10, 1))
+            assert(createTextEdit("nullViewBgText", 0, 20, 10, 10))
+            assert(createCommandLine("nullViewBgCmd", 0, 40, 10, 10))
+            assert(createScrollBox("nullViewBgBox", 0, 60, 10, 10))
+        )lua")));
+
+        host->setMainConsoleView(nullptr);
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+            nullViewRefusals = table.concat({
+              select(2, setBackgroundColor("nullViewBgLabel", 1, 2, 3)),
+              select(2, setBackgroundColor("nullViewBgText", 1, 2, 3)),
+              select(2, setCmdLineAction("nullViewBgCmd", function() end)),
+              select(2, setCmdLineAction("main", function() end)),
+              select(2, resetCmdLineAction("main")),
+              select(2, getBackgroundColor("nullViewBgLabel")),
+              select(2, getBackgroundColor("nullViewBgText")),
+              select(2, getBackgroundColor("nullViewBgBox")),
+              select(2, setBackgroundColor("nullViewBgBox", 1, 2, 3)),
+            }, "\n")
+        )lua"));
+        host->setMainConsoleView(console);
+
+        QVERIFY(ran);
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "nullViewRefusals");
+        const QString refusals = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        const QString noWindow = qsl("the profile has no main window");
+        QCOMPARE(refusals, QStringList(9, noWindow).join(QChar::LineFeed));
+    }
+
+    // The null view drives the windows it makes after the close, so their refusals are the ones a headless profile gives
+    void test_refusalsForWindowsMadeAfterTheClose()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
+        host->setMainConsoleView(nullptr);
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+            assert(createTextEdit("lateText", 0, 0, 10, 10))
+            assert(createScrollBox("lateBox", 0, 20, 10, 10))
+            assert(createCommandLine("lateCmd", 0, 40, 10, 10))
+            assert(setCmdLineAction("lateCmd", function() end))
+            lateRefusals = table.concat({
+              select(2, setBackgroundColor("lateText", 1, 2, 3)),
+              select(2, getBackgroundColor("lateBox")),
+              select(2, setBackgroundColor("noSuchWindow", 1, 2, 3)),
+              select(2, setCmdLineAction("noSuchCmd", function() end)),
+              select(2, resetCmdLineAction("noSuchCmd")),
+            }, "\n")
+        )lua"));
+        host->setMainConsoleView(console);
+
+        QVERIFY(ran);
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "lateRefusals");
+        const QString refusals = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        const QStringList expected{qsl("'lateText' is a text edit, use setTextEditStyleSheet() to set its background"),
+                                   qsl("'lateBox' is a scroll box, whose background color cannot be read back"),
+                                   qsl("window/label 'noSuchWindow' not found"),
+                                   qsl("command line name 'noSuchCmd' not found"),
+                                   qsl("command line name 'noSuchCmd' not found")};
+        QCOMPARE(refusals, expected.join(QChar::LineFeed));
     }
 
     // Each view keeps only the windows it made: the null view leaves a detached view's windows alone, and
@@ -534,6 +669,79 @@ nullViewActionKept = next(nullViewActions) ~= nil
         QVERIFY2(remadeRegistered, "The real view did not register a widget of its own for a name the null view had used.");
     }
 
+    // The null view's command lines go as a view takes the profile back, so write no history setting again
+    void test_nullViewCommandLineSettingsGoWithItsWindows()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
+
+        host->setMainConsoleView(nullptr);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("createCommandLine('nullViewHistoryLine', 0, 0, 50, 20) setSaveCommandHistory('nullViewHistoryLine', false)")));
+        host->setMainConsoleView(console);
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("createCommandLine('realViewHistoryLine', 0, 0, 50, 20) setSaveCommandHistory('realViewHistoryLine', false) assert(saveProfile())")));
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QCOMPARE(host->readProfileIniData(qsl("CommandLines/SaveHistory/nullViewHistoryLine")), qsl("true"));
+        QCOMPARE(host->readProfileIniData(qsl("CommandLines/SaveHistory/realViewHistoryLine")), qsl("false"));
+        console->deleteCommandLine(qsl("realViewHistoryLine"));
+    }
+
+    // What scripts set on the main command line while the profile had no view never reached the view's. While
+    // detached the null view's setting is the one a save writes, after the view's own TCommandLine has written.
+    void test_viewTakingTheProfileBackAnswersForItsMainCommandLine()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
+        const QString key = qsl("CommandLines/SaveHistory/main");
+
+        host->setMainConsoleView(nullptr);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+printCmdLine("null view text")
+setCmdLineStyleSheet("color: red;")
+setSaveCommandHistory(false)
+addCommandLineMenuEvent("main", "nullViewItem", "nullViewEvent")
+nullViewMainLine = getCmdLine() .. "|" .. getCmdLineStyleSheet() .. "|" .. tostring(getSaveCommandHistory())
+)lua")));
+        host->writeProfileIniData(key, qsl("true"));
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QVERIFY(std::get<0>(host->saveProfile()));
+        const QString detachedSaved = host->readProfileIniData(key);
+        QTRY_VERIFY(!host->currentlySavingProfile());
+
+        host->setMainConsoleView(console);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+viewMainLine = getCmdLine() .. "|" .. getCmdLineStyleSheet() .. "|" .. tostring(getSaveCommandHistory())
+)lua")));
+        // The null view's menu item was never the view's, and does not come back once the view has gone
+        host->setMainConsoleView(nullptr);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
+)lua")));
+        host->setMainConsoleView(console);
+
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "nullViewMainLine");
+        const QString nullViewMainLine = QString::fromUtf8(lua_tostring(L, -1));
+        lua_getglobal(L, "viewMainLine");
+        const QString viewMainLine = QString::fromUtf8(lua_tostring(L, -1));
+        lua_getglobal(L, "nullViewItemAfter");
+        const QString nullViewItemAfter = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 3);
+        QCOMPARE(nullViewMainLine, qsl("null view text|color: red;|false"));
+        QCOMPARE(detachedSaved, qsl("false"));
+        const TCommandLine* pCommandLine = console->mpCommandLine;
+        QCOMPARE(viewMainLine, qsl("%1|%2|%3").arg(pCommandLine->toPlainText(), pCommandLine->styleSheet(), pCommandLine->mSaveCommands ? qsl("true") : qsl("false")));
+        QCOMPARE(viewMainLine, qsl("||true"));
+        QCOMPARE(nullViewItemAfter, qsl("nil"));
+    }
+
     // What scripts are told while the profile has no view. The label is made first, so that its answers
     // come from the missing view rather than a missing label.
     void test_luaCallsWithNoConsoleSayWhy()
@@ -544,13 +752,15 @@ nullViewActionKept = next(nullViewActions) ~= nil
 
         QPointer<TMainConsole> console = host->mainConsoleView();
         QVERIFY2(console, "The active host has no main console.");
-        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(createLabel('nullViewLabel', 0, 0, 10, 10, 1))")));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(createLabel('nullViewLabel', 0, 0, 10, 10, 1)); openUserWindow('nullViewViewWindow'); assert(openMapWidget())")));
 
         host->setMainConsoleView(nullptr);
         const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
             local results = {}
             for _, call in ipairs({
+                function() return createMapper("nullViewViewWindow", 0, 0, 100, 100) end,
                 function() return createMapper(0, 0, 100, 100) end,
+                function() return createMapper("nullViewViewWindow", 0, 0, 100, 100) end,
                 function() return getLabelSizeHint("nullViewLabel") end,
                 function() return startMovie("nullViewLabel") end,
                 function() return clearCmdLine("main") end,
@@ -577,11 +787,13 @@ nullViewActionKept = next(nullViewActions) ~= nil
         const QString results = QString::fromUtf8(lua_tostring(L, -1));
         lua_pop(L, 1);
         QCOMPARE(results,
-                 qsl("nil:the profile has no main window"
+                 qsl("false:the profile has no main window"
+                     "|true:nil"
+                     "|true:nil"
                      "|nil:label 'nullViewLabel' does not exist"
                      "|nil:label \"nullViewLabel\" not found"
-                     "|nil:command line \"main\" not found"
-                     "|nil:command line \"main\" not found"
+                     "|nil:nil"
+                     "|nil:cannot remove 'nullViewItem', menu item does not exist"
                      "|nil:command line \"nullViewCommandLine\" not found"
                      "|nil:text edit name 'nullViewTextEdit' not found"
                      "|true:nil"
@@ -590,6 +802,22 @@ nullViewActionKept = next(nullViewActions) ~= nil
                      "|true:nil"
                      "|nil:the profile has no main window"
                      "|nil:the profile has no main window"));
+
+        // The null view's mapper and map widget go as the view takes the profile back, and the view's own map
+        // widget, still drawing the map, counts for nothing while the view is detached
+        host->setMainConsoleView(nullptr);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+            local path = getMudletHomeDir() .. "/null view map.dat"
+            nullViewMapStates = tostring(raiseWindow("mapper")) .. "|" .. tostring(saveMap(path)) .. "|" .. tostring(loadMap(path))
+                .. "|" .. tostring(openMapWidget())
+        )lua")));
+        host->setMainConsoleView(console);
+        host->setMainConsoleView(nullptr);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("nullViewMapStates = nullViewMapStates .. '|' .. select(2, closeMapWidget())")));
+        host->setMainConsoleView(console);
+        lua_getglobal(L, "nullViewMapStates");
+        QCOMPARE(QString::fromUtf8(lua_tostring(L, -1)), qsl("false|true|true|true|no map widget found to close"));
+        lua_pop(L, 1);
     }
 
     // The mapping-script reminder used to be a QDialog built inside Host; it is
@@ -627,7 +855,7 @@ nullViewActionKept = next(nullViewActions) ~= nil
 
         // A profile made the ordinary way comes with a mapping script already
         // installed - the generic mapper, or the one the games listed in
-        // mudlet::setupPreInstallPackages() use - so the state the reminder
+        // HostManager::defaultPackages() use - so the state the reminder
         // exists for has to be arranged. What the engine reads is a boolean flag
         // those scripts set in the profile's own Lua state, and only a boolean
         // counts: check_for_mappingscript() ignores any other type.
@@ -843,6 +1071,67 @@ nullViewActionKept = next(nullViewActions) ~= nil
         QVERIFY2(dock.isNull(), "Closing the profile must destroy the map dock the console owns.");
     }
 
+    // Once a closing profile's console has gone, its map calls answer from the null view, as its other window calls
+    // do, without reading the saved map back in. They leave the map files alone, and the stopped profile hears no event.
+    void test_mapCallsWhileTheProfileCloses()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+            assert(openMapWidget())
+            closingRoom = createRoomID()
+            addRoom(closingRoom)
+            closingMapFile = getMudletHomeDir() .. "/closing map.dat"
+            assert(saveMap(closingMapFile))
+        )lua")));
+        const auto mapFiles = [host]() {
+            QStringList files;
+            const QDir mapsDir(MudletApp::getMudletPath(enums::profileMapsPath, host->getName()));
+            for (const QFileInfo& info : mapsDir.entryInfoList(QDir::Files, QDir::Name)) {
+                files << qsl("%1 %2 %3").arg(info.fileName(), QString::number(info.size()), info.lastModified().toString(Qt::ISODateWithMs));
+            }
+            return files;
+        };
+
+        // As test_mapDockDestroyedOnProfileClose() closes it. A forced close saves the map, room and all.
+        host->forceClose();
+        QVERIFY2(host->requestClose(), "Closing the profile was refused.");
+        QTRY_VERIFY_WITH_TIMEOUT(!host->mainConsoleView(), 5000);
+        QVERIFY(host->isClosingDown());
+        const QStringList filesBefore = mapFiles();
+        QVERIFY2(!filesBefore.isEmpty(), "SETUP: the close saved no map, so a restore could not be seen.");
+
+        host->registerAnonymousEventHandler(qsl("mapOpenEvent"), qsl("onClosingMapOpened"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+            closingMapOpens = 0
+            function onClosingMapOpened() closingMapOpens = closingMapOpens + 1 end
+            local answers = {}
+            local function add(first, second) answers[#answers + 1] = tostring(first) .. ":" .. tostring(second) end
+            deleteRoom(closingRoom)
+            assert(next(getRooms()) == nil, "SETUP: the map still has rooms, so no restore would be tried")
+            add(openMapWidget())
+            add(roomExists(closingRoom))
+            add(getMapWindowTitle() == "Map - " .. getProfileName())
+            add(closeMapWidget())
+            add(createMapper(0, 0, 10, 10))
+            add(roomExists(closingRoom))
+            add(raiseWindow("mapper"))
+            add(openUserWindow("closingWindow"))
+            add(loadMap(closingMapFile))
+            add(roomExists(closingRoom))
+            add(closingMapOpens)
+            closingMapAnswers = table.concat(answers, "|")
+        )lua")));
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "closingMapAnswers");
+        const QString answers = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(answers, qsl("true:nil|false:nil|true:nil|true:nil|true:nil|false:nil|true:nil|true:nil|true:nil|true:nil|0:nil"));
+        QCOMPARE(mapFiles(), filesBefore);
+    }
+
     // Host::setProfileStyleSheet() no longer restyles the editor, the
     // preferences and the notepad by name: each dialog hears about the change
     // over signal_profileStyleSheetChanged, connected in its own constructor.
@@ -1050,6 +1339,8 @@ nullViewActionKept = next(nullViewActions) ~= nil
         QVERIFY2(host, "No active host available for the test.");
         auto* editor = HostDialogs::of(host).mpEditorDialog.data();
         QVERIFY2(editor, "The profile came up without its editor dialog.");
+        // One nobody has opened puts the rebuild off until it is
+        editor->show();
         QVERIFY2(editor->mpTriggerBaseItem, "The editor has no trigger tree root.");
         const int shown = editor->mpTriggerBaseItem->childCount();
 
@@ -1113,8 +1404,7 @@ nullViewActionKept = next(nullViewActions) ~= nil
         QCOMPARE(notepad->styleSheet(), heldStyleSheet);
         QVERIFY2(!editor->mCleanResetQueued, "A released editor was still asked to rebuild its trees.");
         QVERIFY2(!editor->mNeedUpdateData, "A released editor was still told scripts changed its items.");
-        QVERIFY2(!editor->mpErrorConsole->model().buffer.lineBuffer.join(QChar::LineFeed).contains(qsl("released editor probe")),
-                 "A released editor still printed to its error console.");
+        QVERIFY2(!editor->mpErrorConsole->model().buffer.lineBuffer.join(QChar::LineFeed).contains(qsl("released editor probe")), "A released editor still printed to its error console.");
     }
 
     // The toolbar's first map button press makes the profile's map dock,
@@ -1239,8 +1529,8 @@ nullViewActionKept = next(nullViewActions) ~= nil
 
     // Loading a map redraws the mapper from the profile's settings, shows it
     // and moves it to the player's area; a load that fails leaves the mapper
-    // showing what is left, which is an empty map. loadMapFile() makes the
-    // mapper itself when there is none.
+    // showing the map that was already loaded. loadMapFile() makes the mapper
+    // itself when there is none.
     void test_loadingAMapRedrawsAndShowsTheMapper()
     {
         startProfile(mHostname, mLocalhost, mPort);
@@ -1274,14 +1564,15 @@ nullViewActionKept = next(nullViewActions) ~= nil
         host->mRoomSize = 5.5;
         mapper->hide();
         QVERIFY2(!host->loadMapFile(qsl("noSuchMap.dat")), "Loading a map that does not exist succeeded.");
-        QVERIFY(host->mpMap->mpRoomDB->isEmpty());
+        QVERIFY2(!host->mpMap->mpRoomDB->isEmpty(), "A failed load lost the map that was loaded.");
         QCOMPARE(mapper->mp2dMap->rSize, 5.5);
         QVERIFY2(!mapper->isHidden(), "A failed load left the mapper hidden.");
-        QCOMPARE(mapper->comboBox_showArea->findText(mPlayerAreaName), -1);
+        QVERIFY(mapper->comboBox_showArea->findText(mPlayerAreaName) != -1);
 
         // Host::loadMap() is what a profile runs as it starts
         host->mRoomSize = 6.5;
         mapper->hide();
+        host->mpMap->mapClear();
         host->loadMap();
         QVERIFY2(!host->mpMap->mpRoomDB->isEmpty(), "loadMap() did not restore the profile's latest map.");
         QCOMPARE(mapper->comboBox_showArea->currentText(), mPlayerAreaName);
@@ -1316,6 +1607,97 @@ nullViewActionKept = next(nullViewActions) ~= nil
         QVERIFY2(!mapper->widget_panel->isHidden(), "Showing the mapper panel did not reach the mapper drawing the map.");
         host->setMapperPanelVisible(false);
         QVERIFY2(mapper->widget_panel->isHidden(), "Hiding the mapper panel did not reach the mapper drawing the map.");
+    }
+
+    // What the game sent that the closing profile never read would make its close a reset, which on Windows
+    // loses the line sent just before it. Linux still delivers that line, so what is checked is how the
+    // connection ends, and that the line is on the wire (written by the drain or the flush) before the event
+    // loop could write it. A raw listener, as Qt reports a reset as the same RemoteHostClosedError as a clean
+    // close.
+    void test_closingAPlainConnectionWithUnreadDataEndsItCleanly()
+    {
+#if !defined(Q_OS_LINUX)
+        QSKIP("needs Linux: SIOCOUTQ, and telling a reset from a clean close on a raw socket");
+#else
+        const int listener = ::socket(AF_INET, SOCK_STREAM, 0);
+        QVERIFY(listener != -1);
+        int game = -1;
+        const auto closeSockets = qScopeGuard([&listener, &game]() {
+            ::close(listener);
+            if (game != -1) {
+                ::close(game);
+            }
+        });
+        sockaddr_in address{};
+        address.sin_family = AF_INET;
+        address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        socklen_t addressLength = sizeof(address);
+        QVERIFY(::bind(listener, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0);
+        QVERIFY(::listen(listener, 1) == 0);
+        QVERIFY(::getsockname(listener, reinterpret_cast<sockaddr*>(&address), &addressLength) == 0);
+
+        startProfile(mHostname, qsl("127.0.0.1"), QString::number(ntohs(address.sin_port)));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        Host* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        pollfd pending{listener, POLLIN, 0};
+        QVERIFY2(::poll(&pending, 1, 5000) == 1, "The profile's connection never reached the listener.");
+        game = ::accept(listener, nullptr, nullptr);
+        QVERIFY(game != -1);
+        QVERIFY(::fcntl(game, F_SETFL, ::fcntl(game, F_GETFL) | O_NONBLOCK) == 0);
+
+        // From here until the close, no event loop turn, so that the profile has not read this
+        const QByteArray welcome("Welcome, unread.\n");
+        QCOMPARE(::send(game, welcome.constData(), welcome.size(), 0), static_cast<ssize_t>(welcome.size()));
+        // Acknowledged, so in the profile's receive buffer
+        int unacknowledged = -1;
+        int queryError = 0;
+        for (const QDeadlineTimer deadline(5000); !deadline.hasExpired();) {
+            if (::ioctl(game, SIOCOUTQ, &unacknowledged) != 0) {
+                queryError = errno;
+                break;
+            }
+            if (unacknowledged == 0) {
+                break;
+            }
+            std::this_thread::sleep_for(1ms);
+        }
+        QVERIFY2(queryError == 0, qPrintable(qsl("SIOCOUTQ failed: %1").arg(QString::fromLatin1(::strerror(queryError)))));
+        QVERIFY2(unacknowledged == 0, qPrintable(qsl("The welcome never reached the profile: %1 bytes still unacknowledged.").arg(unacknowledged)));
+        QVERIFY2(!host->mainConsoleModel().buffer.lineBuffer.join(QChar::LineFeed).contains(qsl("Welcome, unread")),
+                 "The profile read the welcome before the close, so nothing was left unread for it to drain.");
+        host->send(qsl("last"), false, true);
+        host->closeChildren();
+
+        // Still no event loop turn: it would write anything the close left buffered and finish a pending close,
+        // hiding a missing write
+        QByteArray received;
+        int endedWith = -1;
+        char chunk[4096];
+        pollfd readable{game, POLLIN, 0};
+        for (const QDeadlineTimer deadline(5000); endedWith == -1 && !deadline.hasExpired();) {
+            const int ready = ::poll(&readable, 1, static_cast<int>(deadline.remainingTime()));
+            if (ready < 0 && errno != EINTR) {
+                endedWith = errno;
+            } else if (ready > 0) {
+                const ssize_t got = ::recv(game, chunk, sizeof(chunk), 0);
+                if (got > 0) {
+                    received.append(chunk, got);
+                } else if (got == 0 || (errno != EAGAIN && errno != EINTR)) {
+                    endedWith = got == 0 ? 0 : errno;
+                }
+            }
+        }
+        const QString outcome = qsl("the connection %1; the game got: %2")
+                                        .arg(endedWith == -1  ? qsl("was still open")
+                                             : endedWith == 0 ? qsl("ended cleanly")
+                                                              : qsl("ended with %1").arg(QString::fromLatin1(::strerror(endedWith))),
+                                             QString::fromLatin1(received.toHex(' ')));
+        QVERIFY2(endedWith == 0, qPrintable(qsl("Not a clean close: %1").arg(outcome)));
+        QVERIFY2(received.contains("last"), qPrintable(qsl("The line sent before the close never arrived: %1").arg(outcome)));
+#endif
     }
 
     void cleanup()
