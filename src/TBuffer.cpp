@@ -917,6 +917,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mCurrentHyperlinkHint(other.mCurrentHyperlinkHint)
 , mCurrentHyperlinkLinkId(other.mCurrentHyperlinkLinkId)
 , mHyperlinkActive(other.mHyperlinkActive)
+, mHyperlinkEnclosingMxpLinkId(other.mHyperlinkEnclosingMxpLinkId)
 , mWatchdogPhase(other.mWatchdogPhase)
 , mTagWatchdog(std::make_unique<QTimer>())
 , mWatchdogTagSnapshot(other.mWatchdogTagSnapshot)
@@ -1028,6 +1029,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mCurrentHyperlinkHint = other.mCurrentHyperlinkHint;
         mCurrentHyperlinkLinkId = other.mCurrentHyperlinkLinkId;
         mHyperlinkActive = other.mHyperlinkActive;
+        mHyperlinkEnclosingMxpLinkId = other.mHyperlinkEnclosingMxpLinkId;
         mWatchdogPhase = other.mWatchdogPhase;
         mWatchdogTagSnapshot = other.mWatchdogTagSnapshot;
         mCurrentHyperlinkStyling = other.mCurrentHyperlinkStyling;
@@ -5202,6 +5204,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             qDebug().noquote() << "[OSC] Hyperlink activated:" << rawUrl.left(50) + (rawUrl.length() > 50 ? "..." : "");
 #endif
             mHyperlinkActive = true;
+            mHyperlinkEnclosingMxpLinkId = (!mpParseConfig && mpHost->mMxpClient.isInLinkMode()) ? mpHost->mMxpClient.linkId() : 0;
 
             // Record start position for visibility manager registration
             // Use mMudLine.length() since that's where link text will be added
@@ -7342,6 +7345,7 @@ void TBuffer::finaliseActiveHyperlink()
     mCurrentHyperlinkHint.clear();
     mCurrentHyperlinkLinkId = 0;
     mHyperlinkActive = false;
+    mHyperlinkEnclosingMxpLinkId = 0;
     // Reset enhanced styling
     mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
     mCurrentHyperlinkMenu.clear();
@@ -7471,6 +7475,7 @@ void TBuffer::clear()
     mCurrentHyperlinkHint.clear();
     mCurrentHyperlinkLinkId = 0;
     mHyperlinkActive = false;
+    mHyperlinkEnclosingMxpLinkId = 0;
 
     // every line is about to go, so the tracked links and any announcement queued for them go with it
     if (auto* pHyperlinkManager = hyperlinkVisibilityManagerOrNull()) {
@@ -9333,7 +9338,10 @@ void TBuffer::styleForCurrentLink(TChar& c)
     }
 
     if (mpHost->mMxpClient.isInLinkMode()) {
-        c.mLinkIndex = mLinkStore.getCurrentLinkID();
+        // Whichever link opened inside the other is the one the text belongs to
+        if (!mHyperlinkActive || mHyperlinkEnclosingMxpLinkId != mpHost->mMxpClient.linkId()) {
+            c.mLinkIndex = mpHost->mMxpClient.linkId();
+        }
         c.setAttributes(TChar::Underline, true);
     }
 
