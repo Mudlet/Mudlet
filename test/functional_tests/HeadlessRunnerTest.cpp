@@ -298,6 +298,8 @@ private slots:
         QTest::newRow("an empty config dir") << QStringList{qsl("-p"), qsl("a"), qsl("--config-dir"), QString()} << 2 << QString() << qsl("--config-dir was given nothing");
         QTest::newRow("--config-dir twice") << QStringList{qsl("-p"), qsl("a"), qsl("--config-dir"), qsl("/one"), qsl("--config-dir"), qsl("/two")} << 2 << QString()
                                             << qsl("--config-dir was given more than once");
+        QTest::newRow("an unknown --color") << QStringList{qsl("-p"), qsl("a"), qsl("--color"), qsl("sometimes")} << 2 << QString() << qsl("--color takes auto, always or never, not 'sometimes'");
+        QTest::newRow("--color twice") << QStringList{qsl("-p"), qsl("a"), qsl("--color"), qsl("always"), qsl("--color"), qsl("never")} << 2 << QString() << qsl("--color was given more than once");
         QTest::newRow("--password-env twice") << QStringList{qsl("-p"), qsl("a"), qsl("--password-env"), qsl("ONE"), qsl("--password-env"), qsl("TWO")} << 2 << QString()
                                               << qsl("--password-env was given more than once");
     }
@@ -403,6 +405,45 @@ private slots:
         QCOMPARE(child.exitStatus(), QProcess::NormalExit);
         QVERIFY2(child.exitCode() == 0, qPrintable(standardError));
         QVERIFY2(lines.contains(qsl("Welcome to the headless runner test.")), qPrintable(lines.join(QLatin1Char('\n'))));
+    }
+
+    void test_colorShowsTheGamesColours_data()
+    {
+        QTest::addColumn<QStringList>("options");
+        QTest::addColumn<QStringList>("variables");
+        QTest::addColumn<QByteArray>("firstLine");
+
+        const QByteArray plain = QByteArrayLiteral("red plain bold");
+        // The profile's dark red, as 24-bit colour or the nearest of 256; the profile's own colours are left out
+        QTest::newRow("always, 256 colours") << QStringList{qsl("--color"), qsl("always")} << QStringList{qsl("COLORTERM=")}
+                                             << QByteArrayLiteral("\x1b[0;38;5;88mred\x1b[0m plain\x1b[0;1;4m bold\x1b[0m");
+        QTest::newRow("always, 24-bit colour") << QStringList{qsl("--color"), qsl("always")} << QStringList{qsl("COLORTERM=truecolor")}
+                                               << QByteArrayLiteral("\x1b[0;38;2;128;0;0mred\x1b[0m plain\x1b[0;1;4m bold\x1b[0m");
+        QTest::newRow("never") << QStringList{qsl("--color"), qsl("never")} << QStringList{qsl("COLORTERM=truecolor")} << plain;
+        QTest::newRow("auto, to a pipe") << QStringList() << QStringList{qsl("COLORTERM=truecolor")} << plain;
+    }
+
+    void test_colorShowsTheGamesColours()
+    {
+        QFETCH(QStringList, options);
+        QFETCH(QStringList, variables);
+        QFETCH(QByteArray, firstLine);
+
+        const QString name = qsl("Headless Runner Colours");
+        QVERIFY(writeProfile(name, QString()));
+        QProcess child;
+        startChild(child,
+                   QStringList{qsl("-p"), name, qsl("--offline"), qsl("--no-stdin"), qsl("-e"), qsl("feedTriggers('\\27[31mred\\27[0m plain\\27[1;4m bold\\27[0m\\nplain\\n') closeMudlet()")}
+                           + options,
+                   QString(),
+                   QString(),
+                   variables);
+        QTRY_COMPARE_WITH_TIMEOUT(child.state(), QProcess::NotRunning, scmFinishTimeoutMs);
+        const QString standardError = textOf(child.readAllStandardError());
+        QCOMPARE(child.exitStatus(), QProcess::NormalExit);
+        QVERIFY2(child.exitCode() == 0, qPrintable(standardError));
+        const QList<QByteArray> lines = child.readAllStandardOutput().replace('\r', QByteArray()).split('\n');
+        QCOMPARE(lines.mid(0, 2), (QList<QByteArray>{firstLine, QByteArrayLiteral("plain")}));
     }
 
     void test_closeMudletSavesAndExits_data()
