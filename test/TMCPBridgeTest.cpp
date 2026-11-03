@@ -32,7 +32,7 @@
 #include <QTcpServer>
 #include <QTemporaryDir>
 
-#include <filesystem>
+#include <filesystem> // NOLINT(build/c++17) - Qt cannot set the time of a directory, see ageDirectory() below
 
 #if defined(Q_OS_WIN32)
 #ifndef NOMINMAX
