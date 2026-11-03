@@ -2375,6 +2375,11 @@ void cTelnet::slot_setDownloadProgress(qint64 got, qint64 tot)
     emit signal_packageDownloadProgress(got, tot);
 }
 
+bool cTelnet::packageDownloadRunning() const
+{
+    return mpPackageDownloadReply && !mpPackageDownloadReply->isFinished();
+}
+
 void cTelnet::slot_cancelPackageDownload()
 {
     // Closing the progress dialog when the download finishes emits canceled() too,

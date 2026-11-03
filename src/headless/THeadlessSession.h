@@ -157,6 +157,9 @@ public:
     // taken back its secure port, and where submit() is refused. It may run the event loop, where shutdown() and
     // save() are refused and a session deleted waits for it to return before its profiles close.
     bool answerSecureConnectionOffer(bool accept);
+    // As the Cancel of the GUI's progress dialog: packageDownloadFinished follows. False with no download
+    // running, and where submit() is refused.
+    bool cancelPackageDownload();
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -208,6 +211,12 @@ signals:
     // in informativeText, for answerSecureConnectionOffer(). From the event loop, so a handler may answer at
     // once. It lapses when its connection ends; until then, or an answer, the profile offers nothing more.
     void secureConnectionOffered(const QString& profile, const QString& text, const QString& informativeText);
+    // A game's GUI package downloading, as the GUI's progress dialog shows it: its title, then bytes got of
+    // total, total -1 while unknown, then the end, whether it arrived, failed or was cancelled. From the
+    // event loop, so a handler may cancel it at once.
+    void packageDownloadStarted(const QString& profile, const QString& title);
+    void packageDownloadProgress(const QString& profile, qint64 got, qint64 total);
+    void packageDownloadFinished(const QString& profile);
     // The connection was made; from the event loop
     void connected(const QString& profile);
     // The connection ended, or could not be made; from the event loop

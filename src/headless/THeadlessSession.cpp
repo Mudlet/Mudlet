@@ -442,6 +442,40 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                 });
                 connect(&pNewHost->mTelnet, &cTelnet::signal_disconnected, this, &THeadlessSession::withdrawSecureConnectionOffer);
 #endif
+                // Queued, as the start is sent while the game's message that asked for it is being read
+                connect(
+                        &pNewHost->mTelnet,
+                        &cTelnet::signal_packageDownloadStarted,
+                        this,
+                        [this, run](const QString& title) {
+                            if (run == mRun) {
+                                const QString profile = mProfileName;
+                                emit packageDownloadStarted(profile, title);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                connect(
+                        &pNewHost->mTelnet,
+                        &cTelnet::signal_packageDownloadProgress,
+                        this,
+                        [this, run](const qint64 got, const qint64 total) {
+                            if (run == mRun) {
+                                const QString profile = mProfileName;
+                                emit packageDownloadProgress(profile, got, total);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                connect(
+                        &pNewHost->mTelnet,
+                        &cTelnet::signal_packageDownloadFinished,
+                        this,
+                        [this, run]() {
+                            if (run == mRun) {
+                                const QString profile = mProfileName;
+                                emit packageDownloadFinished(profile);
+                            }
+                        },
+                        Qt::QueuedConnection);
                 connect(
                         &pNewHost->mTelnet,
                         &cTelnet::signal_connected,
@@ -758,6 +792,21 @@ bool THeadlessSession::answerSecureConnectionOffer(const bool accept)
     //: Error from a frontend with no window that was asked to answer the game's offer of a secure, encrypted port when the game has made no such offer
     mErrorString = tr("The game has offered no secure port to answer.");
     return false;
+}
+
+bool THeadlessSession::cancelPackageDownload()
+{
+    if (!usable()) {
+        return false;
+    }
+    // Not from the signals, which reach the frontend queued, so after the download has started or ended
+    if (!mpHost->mTelnet.packageDownloadRunning()) {
+        //: Error from a frontend with no window that was asked to cancel the download of a game's GUI package when none is downloading
+        mErrorString = tr("No package is downloading.");
+        return false;
+    }
+    mpHost->mTelnet.slot_cancelPackageDownload();
+    return true;
 }
 
 void THeadlessSession::noteAlreadyInstalled(const QString& path, const QString& name)
