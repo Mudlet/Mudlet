@@ -180,6 +180,13 @@ A web page a script opens with `openWebPage()` or `openUrl()`, and a game's sign
 `QDesktopServices::openUrl()` as in the GUI, so the system's browser opens them unless the app takes
 their scheme first with `QDesktopServices::setUrlHandler()`, as a phone app might to show them itself.
 
+`notificationRequested` carries a script's `showNotification()`, which answers `true` only while
+something is connected to it, so an app that connects it and drops what it gets tells scripts their
+notifications were shown. `attentionRequested` carries a script's `alert()` and the game's bell, with
+how long to ask for the player's attention: 0 until they come back, and 3 seconds for a bell, as the
+GUI asks. That is the GUI's flash of its window, not its beep, which it leaves out for a bell while the
+game's sounds are muted. The session shows, flashes and beeps nothing itself.
+
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.
 

@@ -9604,7 +9604,7 @@ int TLuaInterpreter::showNotification(lua_State* L)
     const QString title{lua_tostring(L, 1)};
     const QString text = (n >= 2) ? QString{lua_tostring(L, 2)} : title;
 
-    if (!TAppFrontend::instance()->showNotification(title, text, notificationExpirationTime)) {
+    if (!TAppFrontend::instance()->showNotification(title, text, notificationExpirationTime) && !getHostFromLua(L).requestNotification(title, text, notificationExpirationTime)) {
         return warnArgumentValue(L, __func__, "the profile has no main window");
     }
     lua_pushboolean(L, true);

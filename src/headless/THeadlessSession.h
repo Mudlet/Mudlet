@@ -125,15 +125,15 @@ public:
     // Why the last call that failed did
     QString errorString() const { return mErrorString; }
     // For what the session does not cover, such as settings and the map. Null once the profile closes, so
-    // hold it in a QPointer. Not from a handler of outputLine, localText or errorConsoleText: a line it fed
-    // would be committed in the middle of a write, which TBuffer does not allow.
+    // hold it in a QPointer. Not from a handler of outputLine, localText, errorConsoleText or a ...Requested
+    // signal: a line it fed would be committed in the middle of a write, which TBuffer does not allow.
     Host* host() const;
 
     // As typed on the command line: its aliases run, and what is sent while not connected is echoed and dropped
     // with nothing said, as in the GUI, so a frontend that types ahead waits for connected(). These, and
     // installPackage(), are refused while a profile loads or shutdown() runs, and from a handler of
-    // outputLine, localText or errorConsoleText, which run mid-write, and fail once a close of the profile has
-    // begun; submit() checks each line of a paste as a call.
+    // outputLine, localText, errorConsoleText or a ...Requested signal, which run mid-write, and fail once a
+    // close of the profile has begun; submit() checks each line of a paste as a call.
     bool submit(const QString& line);
     bool runLua(const QString& code);
     // As the GUI installs a package given on its command line, but quietly: a refusal is errorString()'s alone
@@ -186,6 +186,13 @@ signals:
     // run the event loop.
     void localText(const QString& profile, const QString& text);
     void errorConsoleText(const QString& profile, const QString& text);
+    // What the GUI shows outside the profile's screen: a script's showNotification(), which answers true only
+    // when this signal is connected and not blocked, with no milliseconds for the system's own time; and a
+    // script's alert() or the game's bell, asking for the player's attention for that long, 0 until they come
+    // back to the app.
+    // Sent as asked, so a handler may neither call the session nor run the event loop.
+    void notificationRequested(const QString& profile, const QString& title, const QString& text, std::optional<int> milliseconds);
+    void attentionRequested(const QString& profile, int milliseconds);
     // The connection was made; from the event loop
     void connected(const QString& profile);
     // The connection ended, or could not be made; from the event loop
