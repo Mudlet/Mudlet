@@ -150,6 +150,13 @@ public:
     // size in pixels. As in the GUI, a width below 40 is taken as 40 and the game is told no more than the
     // profile's wrap width. Refused below 1 or above 65535, which NAWS cannot carry, and where submit() is.
     bool setScreenSize(int columns, int rows);
+    // Answers the game's offer of a secure port, as the GUI's Yes and No do: true stores that port with TLS on,
+    // as the connection dialog would, and connects there, so a frontend that passes its own port to a later
+    // start() passes tls with it; false reconnects where it was and stops the profile asking again. False, with
+    // errorString() saying why, if no offer is waiting, as once its connection has ended, if the game has since
+    // taken back its secure port, and where submit() is refused. It may run the event loop, where shutdown() and
+    // save() are refused and a session deleted waits for it to return before its profiles close.
+    bool answerSecureConnectionOffer(bool accept);
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -197,6 +204,10 @@ signals:
     // for the "importantall" and "importantmostrecent" styles, as the GUI makes them, polite otherwise. Sent
     // as asked, so a handler may neither call the session nor run the event loop.
     void announcementRequested(const QString& profile, const QString& text, bool assertive);
+    // The game offers a secure port while the connection is not encrypted, worded as the GUI asks, the port
+    // in informativeText, for answerSecureConnectionOffer(). From the event loop, so a handler may answer at
+    // once. It lapses when its connection ends; until then, or an answer, the profile offers nothing more.
+    void secureConnectionOffered(const QString& profile, const QString& text, const QString& informativeText);
     // The connection was made; from the event loop
     void connected(const QString& profile);
     // The connection ended, or could not be made; from the event loop
@@ -207,6 +218,7 @@ signals:
 private:
     bool storeConnectionDetails(const Options&, std::optional<bool> tls);
     void detachFromHost();
+    void withdrawSecureConnectionOffer();
     void lineCommitted(int lineIndex);
     bool refused();
     bool usable();
@@ -218,6 +230,9 @@ private:
     bool mShuttingDown = false;
     bool mLoadFailed = false;
     bool mRemovingStalePasswords = false;
+    bool mSecureConnectionOffered = false;
+    // Bumped by each offer, to drop one still queued for the frontend once a later one is made
+    unsigned int mSecureConnectionOffer = 0;
     QStringList mUnsavedProfiles;
     // Bumped by each start(), and by a shutdown() that closes the profile, to drop a queued quitRequested
     // owed to the one before

@@ -190,6 +190,11 @@ carries what a script's `announce()`, Mudlet when it opens a sign-in page, or a 
 hidden or revealed asks screen readers to say, and whether the GUI would make it assertive, for an app to
 hand to the platform's own accessibility service.
 
+`secureConnectionOffered` carries a game's offer of its secure port, worded as the GUI's question, for
+the player to answer with `answerSecureConnectionOffer()`. The offer lapses when its connection ends;
+until then, or an answer, the profile offers nothing more. A yes stores the secure port with TLS on, as
+the GUI does, so an app that passes its own port to a later `start()` passes `tls` with it.
+
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.
 
