@@ -672,14 +672,17 @@ find_package(Qt6 6.8.2 REQUIRED
                Core5Compat
                Gui
                Multimedia
-               MultimediaWidgets
                Network
                OpenGL
-               OpenGLWidgets
                Svg
-               UiTools
-               Widgets
                Concurrent)
+if(USE_GUI)
+  find_package(Qt6 6.8.2 REQUIRED
+      COMPONENTS MultimediaWidgets
+                 OpenGLWidgets
+                 UiTools
+                 Widgets)
+endif()
 
 if(USE_MCPSERVER)
   find_package(Qt6 COMPONENTS HttpServer REQUIRED)
@@ -714,7 +717,7 @@ if(Qt6TextToSpeech_FOUND)
 endif()
 
 # MudletProxyStyle reads the AT-SPI screen reader status over D-Bus
-if(UNIX AND NOT APPLE)
+if(USE_GUI AND UNIX AND NOT APPLE)
   find_package(Qt6 COMPONENTS DBus REQUIRED)
   list(APPEND QT_APP_LIBS Qt6::DBus)
 endif()
@@ -1044,59 +1047,65 @@ target_compile_options(${LIB_MUDLET_TARGET} PUBLIC -Wno-deprecated)
 
 # The widgets: main window, dialogs, consoles, map views and editors.
 # ${LIB_MUDLET_TARGET} must not depend on anything here, nor link Qt Widgets.
-add_library(${LIB_MUDLET_APP_TARGET} STATIC
-    ${mudlet_app_SRCS}
-    ${mudlet_app_HDRS}
-    ${mudlet_UIS}
-)
-mudlet_precompile_headers(${LIB_MUDLET_APP_TARGET} ${MUDLET_PRECOMPILED_WIDGET_HEADERS})
-set_target_properties(${LIB_MUDLET_APP_TARGET} PROPERTIES
-  AUTOUIC ON AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
-  AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
-  AUTOGEN_ORIGIN_DEPENDS OFF)
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_APP_TARGET}_autogen/mocs_compilation.cpp"
-               APPEND PROPERTY COMPILE_OPTIONS -Wno-sfinae-incomplete)
+if(USE_GUI)
+  add_library(${LIB_MUDLET_APP_TARGET} STATIC
+      ${mudlet_app_SRCS}
+      ${mudlet_app_HDRS}
+      ${mudlet_UIS}
+  )
+  mudlet_precompile_headers(${LIB_MUDLET_APP_TARGET} ${MUDLET_PRECOMPILED_WIDGET_HEADERS})
+  set_target_properties(${LIB_MUDLET_APP_TARGET} PROPERTIES
+    AUTOUIC ON AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
+    AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
+    AUTOGEN_ORIGIN_DEPENDS OFF)
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_APP_TARGET}_autogen/mocs_compilation.cpp"
+                 APPEND PROPERTY COMPILE_OPTIONS -Wno-sfinae-incomplete)
+  endif()
+  # The ui_*.h headers, for the tests that reach into a dialog's widgets
+  target_include_directories(${LIB_MUDLET_APP_TARGET} INTERFACE
+      ${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_APP_TARGET}_autogen/include
+  )
+  # Qt Widgets ahead of ${LIB_MUDLET_TARGET}, so the linker records Qt's own
+  # libraries before a distribution's qt6keychain: that one needs Qt6DBus, which
+  # would otherwise be found in the system Qt rather than beside Qt6Gui.
+  target_link_libraries(${LIB_MUDLET_APP_TARGET} PUBLIC
+      edbee-lib
+      ${QT_APP_LIBS}
+      ${LIB_MUDLET_TARGET})
+
+  # qt-tags-widget is listed in mudlet_app_SRCS/HDRS, not add_subdirectory()'d, as its own
+  # project has install() rules; a file upstream adds or renames has to be listed there too.
+  set_property(SOURCE ../3rdparty/qt-tags-widget/src/qtagedit.cpp APPEND PROPERTY
+    INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/qt-tags-widget/include/QTagEdit)
+
+  # main() stays out of the libraries: a test that links them brings its own, and
+  # the linker can pull main.cpp's object in for any inline function it defines.
+  add_executable(${EXE_MUDLET_TARGET} main.cpp)
+  target_compile_definitions(${EXE_MUDLET_TARGET} PRIVATE APP_TARGET="${APP_TARGET}")
+  set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_NAME})
+  target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_APP_TARGET} mudlet_lsan_hooks)
+
+  # Enable symbol exports from the main executable so that dynamically loaded Lua modules
+  # can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
+  # will fail to load with "undefined symbol" errors.
+  set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES ENABLE_EXPORTS ON)
 endif()
-# The ui_*.h headers, for the tests that reach into a dialog's widgets
-target_include_directories(${LIB_MUDLET_APP_TARGET} INTERFACE
-    ${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_APP_TARGET}_autogen/include
-)
-# Qt Widgets ahead of ${LIB_MUDLET_TARGET}, so the linker records Qt's own
-# libraries before a distribution's qt6keychain: that one needs Qt6DBus, which
-# would otherwise be found in the system Qt rather than beside Qt6Gui.
-target_link_libraries(${LIB_MUDLET_APP_TARGET} PUBLIC
-    edbee-lib
-    ${QT_APP_LIBS}
-    ${LIB_MUDLET_TARGET})
-
-# qt-tags-widget is listed in mudlet_app_SRCS/HDRS, not add_subdirectory()'d, as its own
-# project has install() rules; a file upstream adds or renames has to be listed there too.
-set_property(SOURCE ../3rdparty/qt-tags-widget/src/qtagedit.cpp APPEND PROPERTY
-  INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/qt-tags-widget/include/QTagEdit)
-
-# main() stays out of the libraries: a test that links them brings its own, and
-# the linker can pull main.cpp's object in for any inline function it defines.
-add_executable(${EXE_MUDLET_TARGET} main.cpp)
-target_compile_definitions(${EXE_MUDLET_TARGET} PRIVATE APP_TARGET="${APP_TARGET}")
-set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_NAME})
-target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_APP_TARGET} mudlet_lsan_hooks)
-
-# Enable symbol exports from the main executable so that dynamically loaded Lua modules
-# can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
-# will fail to load with "undefined symbol" errors.
-set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES ENABLE_EXPORTS ON)
 
 if(USE_HEADLESS)
   add_subdirectory(headless)
 endif()
 
 if (WITH_SENTRY)
+  # Its crash reporter and its upload hooks are the desktop GUI's
+  if(NOT USE_GUI)
+    message(FATAL_ERROR "WITH_SENTRY needs USE_GUI")
+  endif()
   include(cmake/WithSentry.cmake)
   add_subdirectory(crash_reporter)
 endif()
 
-if(WIN32)
+if(WIN32 AND USE_GUI)
   target_link_libraries(${EXE_MUDLET_TARGET} ws2_32)
   set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES WIN32_EXECUTABLE ON)
   if(MINGW)
@@ -1134,16 +1143,18 @@ if(WIN32)
 endif()
 
 if(APPLE)
+  # Microphone permission and speech recognition sources are already added via
+  # mudlet_SRCS/mudlet_HDRS
+  target_link_libraries(${LIB_MUDLET_TARGET} "-framework AVFoundation")
+  target_link_libraries(${LIB_MUDLET_TARGET} "-framework Speech")
+endif()
+
+if(APPLE AND USE_GUI)
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AppKit")
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AVFoundation")
   # A normal link, not a weak one: Speech.framework has shipped with every
   # macOS Mudlet supports
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework Speech")
-
-  # Microphone permission and speech recognition sources are already added via
-  # mudlet_SRCS/mudlet_HDRS
-  target_link_libraries(${LIB_MUDLET_TARGET} "-framework AVFoundation")
-  target_link_libraries(${LIB_MUDLET_TARGET} "-framework Speech")
 
   if(USE_UPDATER)
     # need to specifically call out Objective-C sources so that automoc builds them.
@@ -1280,31 +1291,33 @@ if(UNIX AND NOT APPLE)
     endforeach()
   ]])
 
-  install(
-    FILES "../mudlet.desktop"
-    DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+  if(USE_GUI)
+    install(
+      FILES "../mudlet.desktop"
+      DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+        WORLD_READ)
+    install(
+      FILES "../mudlet.svg"
+      DESTINATION "share/icons/hicolor/scalable/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
       WORLD_READ)
-  install(
-    FILES "../mudlet.svg"
-    DESTINATION "share/icons/hicolor/scalable/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
-    WORLD_READ)
-  install(
-    FILES "../mudlet.png"
-    DESTINATION "share/icons/hicolor/512x512/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
-    WORLD_READ)
+    install(
+      FILES "../mudlet.png"
+      DESTINATION "share/icons/hicolor/512x512/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+      WORLD_READ)
 
-  install(
-    TARGETS ${EXE_MUDLET_TARGET}
-    RUNTIME
-      DESTINATION "bin"
-      PERMISSIONS
-        OWNER_READ
-        OWNER_WRITE
-        OWNER_EXECUTE
-        GROUP_READ
-        GROUP_EXECUTE
-        WORLD_READ
-        WORLD_EXECUTE)
+    install(
+      TARGETS ${EXE_MUDLET_TARGET}
+      RUNTIME
+        DESTINATION "bin"
+        PERMISSIONS
+          OWNER_READ
+          OWNER_WRITE
+          OWNER_EXECUTE
+          GROUP_READ
+          GROUP_EXECUTE
+          WORLD_READ
+          WORLD_EXECUTE)
+  endif()
 endif()
 
 # `cmake --build <dir> --target run-mudlet` - build if needed, then launch.
@@ -1326,7 +1339,7 @@ endif()
 # for it - and report to a terminal nothing is reading. That backend declines to
 # ask for permission rather than dying when it finds itself started this way, so
 # the trade is a message instead of a crash.
-if(APPLE AND NOT USE_SANITIZER)
+if(USE_GUI AND APPLE AND NOT USE_SANITIZER)
   add_custom_target(run-mudlet
     # -n so a rebuild is actually what starts, rather than the running copy
     # being brought to the front
@@ -1337,7 +1350,7 @@ if(APPLE AND NOT USE_SANITIZER)
     DEPENDS ${EXE_MUDLET_TARGET}
     USES_TERMINAL
     COMMENT "Launching Mudlet as an application")
-else()
+elseif(USE_GUI)
   add_custom_target(run-mudlet
     COMMAND "$<TARGET_FILE:${EXE_MUDLET_TARGET}>"
     DEPENDS ${EXE_MUDLET_TARGET}
