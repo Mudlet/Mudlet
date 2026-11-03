@@ -38,7 +38,10 @@
  * Run with: ctest -R ConfigDirOverrideTest -V
  */
 
+#include <QScopeGuard>
 #include <QtTest/QtTest>
+
+#include <filesystem> // NOLINT(build/c++17) - QFile::link() cannot make a symlink on Windows, see linkDirectory() below
 
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -68,6 +71,16 @@ private:
     {
         QFile marker(qsl("%1/portable.txt").arg(dir));
         return marker.open(QIODevice::WriteOnly) && marker.write(content) == content.size();
+    }
+
+    // QFile::link() writes a .lnk shortcut on Windows, a plain file that no path passes through, so it cannot
+    // stand in for a dotfile manager's link there. Windows makes a real one only with Developer Mode or elevation.
+    static bool linkDirectory(const QString& target, const QString& link)
+    {
+        std::error_code error;
+        std::filesystem::create_directory_symlink(
+                std::filesystem::path(QDir::toNativeSeparators(target).toStdU16String()), std::filesystem::path(QDir::toNativeSeparators(link).toStdU16String()), error);
+        return !error;
     }
 
     bool makeFile(const QString& path) const
@@ -846,6 +859,99 @@ private slots:
 
         QCOMPARE(MudletApp::getMudletPath(enums::mainPath), configDir);
         QCOMPARE(settingsFileName(), qsl("%1/Mudlet.ini").arg(configDir));
+    }
+
+    // --- MudletApp::sameFolder() and configRootCandidates() ------------------------
+
+    // Asked for each case sensitivity, so that what Windows and macOS do is checked wherever this runs
+    void test_sameFolderFoldsCaseOnlyWhereTheFileSystemDoes()
+    {
+        QTemporaryDir parent;
+        QVERIFY(parent.isValid());
+        const QString made = parent.filePath(qsl("made/mudlet"));
+        QVERIFY(QDir().mkpath(made));
+        QVERIFY(MudletApp::sameFolder(made, parent.filePath(qsl("made/Mudlet")), Qt::CaseInsensitive));
+        const QString notMade = parent.filePath(qsl("not made/mudlet"));
+        QVERIFY(MudletApp::sameFolder(notMade, parent.filePath(qsl("not made/MUDLET")), Qt::CaseInsensitive));
+        QVERIFY(MudletApp::sameFolder(notMade, parent.filePath(qsl("NOT MADE/mudlet")), Qt::CaseInsensitive));
+        QVERIFY(!MudletApp::sameFolder(notMade, parent.filePath(qsl("not made/MUDLET")), Qt::CaseSensitive));
+        QVERIFY(!MudletApp::sameFolder(notMade, parent.filePath(qsl("not made/mudlet2")), Qt::CaseInsensitive));
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
+        QCOMPARE(MudletApp::fileNameCaseSensitivity(), Qt::CaseInsensitive);
+#else
+        QCOMPARE(MudletApp::fileNameCaseSensitivity(), Qt::CaseSensitive);
+#endif
+    }
+
+    // A dotfile manager can leave ~/.config linked to a folder not there yet
+    void test_sameFolderFollowsALinkToNowhere()
+    {
+        QTemporaryDir sandbox;
+        QVERIFY(sandbox.isValid());
+        QVERIFY(QDir().mkpath(sandbox.filePath(qsl("home"))));
+        const QString target = sandbox.filePath(qsl("dots/config"));
+        const QString linked = sandbox.filePath(qsl("home/.config"));
+        if (!linkDirectory(target, linked)) {
+            QSKIP("symlinks are not available here");
+        }
+        // Not QFileInfo::exists(linked), which Qt answers for the link itself on Windows
+        QVERIFY(QFileInfo(linked).isSymLink());
+        QVERIFY(!QFileInfo::exists(target));
+        QVERIFY(MudletApp::sameFolder(qsl("%1/mudlet").arg(linked), qsl("%1/mudlet").arg(target)));
+        QVERIFY(linkDirectory(qsl("../elsewhere/config"), sandbox.filePath(qsl("home/relative"))));
+        QVERIFY(MudletApp::sameFolder(sandbox.filePath(qsl("home/relative/mudlet")), sandbox.filePath(qsl("elsewhere/config/mudlet"))));
+
+        // Its identity does not change once the folder is made through it
+        const QString before = MudletApp::folderIdentity(qsl("%1/mudlet").arg(linked));
+        // xdg-recipe-guard: allow, a folder for sameFolder() to compare and never a config root
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet").arg(target)));
+        QCOMPARE(MudletApp::folderIdentity(qsl("%1/mudlet").arg(linked)), before);
+
+        // A loop of them ends
+        QVERIFY(linkDirectory(sandbox.filePath(qsl("loop-b")), sandbox.filePath(qsl("loop-a"))));
+        QVERIFY(linkDirectory(sandbox.filePath(qsl("loop-a")), sandbox.filePath(qsl("loop-b"))));
+        QVERIFY(!MudletApp::folderIdentity(sandbox.filePath(qsl("loop-a/mudlet"))).isEmpty());
+    }
+
+    // Whatever resolveConfigRoot() picks, or refuses, as the folders change is one of them
+    void test_configRootCandidatesNameEveryRootTheResolutionCanPick()
+    {
+        QTemporaryDir exec;
+        QTemporaryDir config;
+        QTemporaryDir data;
+        QVERIFY(exec.isValid() && config.isValid() && data.isValid());
+        const auto restore = qScopeGuard([this]() {
+            mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+        });
+        qunsetenv("XDG_CONFIG_HOME");
+        QCOMPARE(MudletApp::configRootCandidates(exec.path(), config.path()), QStringList{config.path()});
+        const QString xdgHome = data.filePath(qsl("xdg"));
+        qputenv("XDG_CONFIG_HOME", xdgHome.toUtf8());
+        const QString xdg = mudletUnder(xdgHome);
+        QCOMPARE(MudletApp::configRootCandidates(exec.path(), config.path()), (QStringList{xdg, config.path()}));
+        QVERIFY(MudletApp::configRootCandidates(exec.path(), config.path()).contains(MudletApp::resolveConfigRoot(exec.path(), config.path()).path));
+
+        // The marker beside the executable outranks the config dir's only while it is there, and the config
+        // dir's names a root that cannot be used today, one whose parent is missing
+        QVERIFY(writeMarker(exec.path(), ""));
+        const QString unusable = data.filePath(qsl("missing/root"));
+        QVERIFY(writeMarker(config.path(), unusable.toUtf8()));
+        const QString besideExec = QDir::cleanPath(qsl("%1/portable").arg(exec.path()));
+        const QStringList candidates = MudletApp::configRootCandidates(exec.path(), config.path());
+        QCOMPARE(candidates, (QStringList{besideExec, unusable, xdg, config.path()}));
+        QCOMPARE(MudletApp::resolveConfigRoot(exec.path(), config.path()).path, besideExec);
+        QVERIFY(QFile::remove(qsl("%1/portable.txt").arg(exec.path())));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("cannot be created, because its parent")));
+        const auto refused = MudletApp::resolveConfigRoot(exec.path(), config.path());
+        QVERIFY(refused.portableRootRejected);
+        QCOMPARE(refused.rejectedRoot, unusable);
+        QVERIFY(candidates.contains(refused.path));
+
+        // A relative one is taken from the executable's folder, as the resolution takes it
+        QVERIFY(writeMarker(config.path(), "../data"));
+        const QString relative = QDir::cleanPath(qsl("%1/../data").arg(exec.path()));
+        QCOMPARE(MudletApp::configRootCandidates(exec.path(), config.path()), (QStringList{relative, xdg, config.path()}));
+        QCOMPARE(MudletApp::resolveConfigRoot(exec.path(), config.path()).path, relative);
     }
 };
 
