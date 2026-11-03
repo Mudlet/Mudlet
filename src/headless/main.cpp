@@ -28,6 +28,8 @@
 #include "utils.h"
 
 #include <QCommandLineParser>
+#include <QDir>
+#include <QFileInfo>
 #include <QGuiApplication>
 #include <QMutex>
 #include <QPointer>
@@ -573,6 +575,9 @@ QString helpText()
                                        "  --password-env <var>     the environment variable holding the character's\n"
                                        "                           password, for this run only; it is not stored. One\n"
                                        "                           that is not set or is empty is a command line error.\n"
+                                       "  --config-dir <folder>    keeps the profiles, Mudlet.ini and the passwords\n"
+                                       "                           stored for them in this folder, made if need be,\n"
+                                       "                           instead of the GUI's folder and the keychain.\n"
                                        "  --offline                opens the profile without connecting, as the dialog's\n"
                                        "                           Offline button does.\n"
                                        "  --package <file>         installs a package once the profile has loaded; give\n"
@@ -610,7 +615,8 @@ QString helpText()
                                        "         while another profile loaded or, without --offline, sent the game\n"
                                        "         something while there was no connection.\n"
                                        "  2      the command line was wrong, such as a new profile's name, or\n"
-                                       "         connection details, the connection dialog would not take.\n"
+                                       "         connection details, the connection dialog would not take, or a\n"
+                                       "         --config-dir that cannot be used.\n"
                                        "  3      standard output was closed when the run began, or could not be\n"
                                        "         written, other than by its reader going away, as `| head` does.\n"
                                        "  4      the connection ended or could not be made, with --exit-on-disconnect;\n"
@@ -713,6 +719,8 @@ int main(int argc, char* argv[])
     parser.addOption(offlineOption);
     const QCommandLineOption packageOption(qsl("package"), qsl("Package to install once the profile has loaded"), qsl("file"));
     parser.addOption(packageOption);
+    const QCommandLineOption configDirOption(qsl("config-dir"), qsl("Folder to keep the profiles and settings in"), qsl("folder"));
+    parser.addOption(configDirOption);
 
     // Help and version need no platform plugin, so they are answered before there is one. Qt's own options
     // are still in this list, so it is read leniently, and single-dash words whole, as the GUI's src/main.cpp
@@ -724,6 +732,8 @@ int main(int argc, char* argv[])
     }
     parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
     parser.parse(rawArguments);
+    // Read before anything reads Mudlet.ini, which is the one in it; checked once the run is set up
+    const QString configDir = parser.value(configDirOption).isEmpty() ? QString() : QDir::cleanPath(QFileInfo(parser.value(configDirOption)).absoluteFilePath());
 #if !defined(Q_OS_WINDOWS)
     // A reader that goes away (`mudlet-headless -p x | head`) would otherwise kill the profile mid-session.
     // Caught, not ignored: an ignored signal stays ignored in every program a script starts.
@@ -733,7 +743,7 @@ int main(int argc, char* argv[])
         // Only for the translation, as in the GUI
         QCoreApplication printApp(argc, argv);
         setApplicationNames();
-        MudletApp::loadTranslationsForCommandLine(true);
+        MudletApp::loadTranslationsForCommandLine(true, configDir);
         if (const int error = standardOutputClosed ? EBADF : writeLine(stdout, parser.isSet(helpOption) ? helpText() : versionText()); error && error != EPIPE) {
             writeLine(stderr, outputErrorMessage(error));
             return exitOutputFailed;
@@ -755,7 +765,7 @@ int main(int argc, char* argv[])
     }
     setApplicationNames();
     // Kept for the whole run: with no mudlet object, nothing loads the interface's translations later
-    MudletApp::loadTranslationsForRun();
+    MudletApp::loadTranslationsForRun(configDir);
     MudletApp::setDefaultMediaBackend();
 
     // Strict this time: the application object has taken out the options that were Qt's
@@ -774,7 +784,7 @@ int main(int argc, char* argv[])
         exitCode = usageError(QCoreApplication::translate("headless", "--tls and --no-tls cannot both be given."));
     }
     // Last-wins would quietly drop one; for -p the GUI would open each
-    for (const QCommandLineOption* option : {&profileOption, &hostOption, &portOption, &loginOption, &passwordEnvOption}) {
+    for (const QCommandLineOption* option : {&profileOption, &hostOption, &portOption, &loginOption, &passwordEnvOption, &configDirOption}) {
         if (exitCode == exitOk && parser.values(*option).size() > 1) {
             //: Command line error of the headless runner; %1 is an option, such as --host
             exitCode = usageError(QCoreApplication::translate("headless", "%1 was given more than once.").arg(qsl("--") + option->names().constLast()));
@@ -797,6 +807,14 @@ int main(int argc, char* argv[])
         if (!isNumber || !options.port) {
             //: Command line error of the headless runner; %1 is what was given as the port
             exitCode = usageError(QCoreApplication::translate("headless", "The port must be a number from 1 to 65535, not '%1'.").arg(parser.value(portOption)));
+        }
+    }
+    if (exitCode == exitOk && parser.isSet(configDirOption)) {
+        if (parser.value(configDirOption).isEmpty()) {
+            //: Command line error of the headless runner; --config-dir names the folder to keep the profiles in
+            exitCode = usageError(QCoreApplication::translate("headless", "--config-dir was given nothing; leave it out to keep the profiles where the GUI keeps them."));
+        } else {
+            options.configDir = configDir;
         }
     }
     if (exitCode == exitOk && parser.isSet(passwordEnvOption)) {
@@ -1098,9 +1116,11 @@ int main(int argc, char* argv[])
             exitCode = exitFailed;
         }
     } else {
-        // A new profile's name, or connection details, that the connection dialog would not take came from the
-        // command line
-        exitCode = started == THeadlessSession::StartResult::invalidName || started == THeadlessSession::StartResult::invalidConnectionDetails ? usageError(session->errorString()) : exitFailed;
+        // A new profile's name, connection details that the connection dialog would not take, or the config
+        // folder came from the command line
+        const bool fromTheCommandLine = started == THeadlessSession::StartResult::invalidName || started == THeadlessSession::StartResult::invalidConnectionDetails
+                                        || started == THeadlessSession::StartResult::invalidConfigDir;
+        exitCode = fromTheCommandLine ? usageError(session->errorString()) : exitFailed;
         if (exitCode == exitFailed) {
             errors.report(session->errorString());
         }
