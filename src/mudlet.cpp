@@ -4474,9 +4474,10 @@ int mudlet::profileTabIndex(const QString& profileName) const
     return mpTabBar->tabIndex(profileName);
 }
 
-void mudlet::setActiveProfileTab(const QString& profileName)
+bool mudlet::setActiveProfileTab(const QString& profileName)
 {
     mpTabBar->setCurrentIndex(mpTabBar->tabIndex(profileName));
+    return true;
 }
 
 QObject* mudlet::openComposer(Host* pHost, const QString& title, const QString& text)

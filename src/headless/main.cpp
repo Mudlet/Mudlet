@@ -27,7 +27,11 @@
 #include "TriggerMatchPool.h"
 #include "utils.h"
 
+#include <QByteArrayList>
+#include <QColor>
 #include <QCommandLineParser>
+#include <QDir>
+#include <QFileInfo>
 #include <QGuiApplication>
 #include <QMutex>
 #include <QPointer>
@@ -35,6 +39,7 @@
 #include <QWaitCondition>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cerrno>
 #include <chrono>
@@ -213,6 +218,86 @@ int writeBytes(FILE* stream, const QByteArray& bytes)
 int writeLine(FILE* stream, const QString& text)
 {
     return writeBytes(stream, text.toUtf8() + '\n');
+}
+
+using TextRuns = QList<THeadlessSession::TextRun>;
+
+// The nearest of xterm's 256 colours past the first 16, which terminal themes change
+int xterm256Colour(const QColor& colour)
+{
+    static constexpr std::array<int, 6> levels{0, 95, 135, 175, 215, 255};
+    const auto level = [](const int value) {
+        return value < 48 ? 0 : (value < 115 ? 1 : (value - 35) / 40);
+    };
+    const auto distance = [&colour](const int red, const int green, const int blue) {
+        return (colour.red() - red) * (colour.red() - red) + (colour.green() - green) * (colour.green() - green) + (colour.blue() - blue) * (colour.blue() - blue);
+    };
+    const int red = level(colour.red());
+    const int green = level(colour.green());
+    const int blue = level(colour.blue());
+    const int grey = std::clamp(((colour.red() + colour.green() + colour.blue()) / 3 - 3) / 10, 0, 23);
+    const int greyValue = 8 + 10 * grey;
+    if (distance(greyValue, greyValue, greyValue) < distance(levels[red], levels[green], levels[blue])) {
+        return 232 + grey;
+    }
+    return 16 + 36 * red + 6 * green + blue;
+}
+
+QByteArray sgrCodes(const THeadlessSession::TextRun& run, const bool trueColour)
+{
+    using Style = THeadlessSession::TextStyle;
+    static constexpr std::array<std::pair<Style, const char*>, 9> styleCodes{{{Style::Bold, "1"},
+                                                                              {Style::Italic, "3"},
+                                                                              {Style::Underline, "4"},
+                                                                              {Style::Blink, "5"},
+                                                                              {Style::FastBlink, "6"},
+                                                                              {Style::Reverse, "7"},
+                                                                              {Style::Concealed, "8"},
+                                                                              {Style::StrikeOut, "9"},
+                                                                              {Style::Overline, "53"}}};
+    QByteArrayList codes;
+    for (const auto& [style, code] : styleCodes) {
+        if (run.styles.testFlag(style)) {
+            codes << code;
+        }
+    }
+    const auto colourCode = [trueColour](const QByteArray& layer, const QColor& colour) {
+        if (trueColour) {
+            return layer + ";2;" + QByteArray::number(colour.red()) + ';' + QByteArray::number(colour.green()) + ';' + QByteArray::number(colour.blue());
+        }
+        return layer + ";5;" + QByteArray::number(xterm256Colour(colour));
+    };
+    // The profile's own colours are left to the terminal's theme
+    if (!run.defaultForeground) {
+        codes << colourCode("38", run.foreground);
+    }
+    if (!run.defaultBackground) {
+        codes << colourCode("48", run.background);
+    }
+    return codes.join(';');
+}
+
+// Each run starts from no style, so a terminal that missed a code is put right by the next
+QByteArray colouredLine(const QString& text, const TextRuns& runs, const bool trueColour)
+{
+    QByteArray line;
+    bool styled = false;
+    qsizetype end = 0;
+    for (const THeadlessSession::TextRun& run : runs) {
+        const QByteArray codes = sgrCodes(run, trueColour);
+        if (!codes.isEmpty()) {
+            line += "\x1b[0;" + codes + 'm';
+        } else if (styled) {
+            line += "\x1b[0m";
+        }
+        styled = !codes.isEmpty();
+        line += text.mid(run.start, run.length).toUtf8();
+        end = run.start + run.length;
+    }
+    if (styled) {
+        line += "\x1b[0m";
+    }
+    return line + text.mid(end).toUtf8() + '\n';
 }
 
 QString outputErrorMessage(const int error)
@@ -573,6 +658,15 @@ QString helpText()
                                        "  --password-env <var>     the environment variable holding the character's\n"
                                        "                           password, for this run only; it is not stored. One\n"
                                        "                           that is not set or is empty is a command line error.\n"
+                                       "  --config-dir <folder>    keeps the profiles, Mudlet.ini and the passwords\n"
+                                       "                           stored for them in this folder, made if need be,\n"
+                                       "                           instead of the GUI's folder and the keychain.\n"
+                                       "  --color <when>           colours the game's lines as the game asked: always,\n"
+                                       "                           never, or auto, the default, which colours them for\n"
+                                       "                           a terminal only, unless NO_COLOR is set or TERM is\n"
+                                       "                           dumb, and never on Windows. 24-bit colour is used\n"
+                                       "                           when COLORTERM is truecolor or 24bit, else the\n"
+                                       "                           nearest of 256.\n"
                                        "  --offline                opens the profile without connecting, as the dialog's\n"
                                        "                           Offline button does.\n"
                                        "  --package <file>         installs a package once the profile has loaded; give\n"
@@ -610,7 +704,8 @@ QString helpText()
                                        "         while another profile loaded or, without --offline, sent the game\n"
                                        "         something while there was no connection.\n"
                                        "  2      the command line was wrong, such as a new profile's name, or\n"
-                                       "         connection details, the connection dialog would not take.\n"
+                                       "         connection details, the connection dialog would not take, or a\n"
+                                       "         --config-dir that cannot be used.\n"
                                        "  3      standard output was closed when the run began, or could not be\n"
                                        "         written, other than by its reader going away, as `| head` does.\n"
                                        "  4      the connection ended or could not be made, with --exit-on-disconnect;\n"
@@ -713,6 +808,10 @@ int main(int argc, char* argv[])
     parser.addOption(offlineOption);
     const QCommandLineOption packageOption(qsl("package"), qsl("Package to install once the profile has loaded"), qsl("file"));
     parser.addOption(packageOption);
+    const QCommandLineOption configDirOption(qsl("config-dir"), qsl("Folder to keep the profiles and settings in"), qsl("folder"));
+    parser.addOption(configDirOption);
+    const QCommandLineOption colorOption(qsl("color"), qsl("When to colour the game's lines: auto, always or never"), qsl("when"), qsl("auto"));
+    parser.addOption(colorOption);
 
     // Help and version need no platform plugin, so they are answered before there is one. Qt's own options
     // are still in this list, so it is read leniently, and single-dash words whole, as the GUI's src/main.cpp
@@ -724,6 +823,8 @@ int main(int argc, char* argv[])
     }
     parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
     parser.parse(rawArguments);
+    // Read before anything reads Mudlet.ini, which is the one in it; checked once the run is set up
+    const QString configDir = parser.value(configDirOption).isEmpty() ? QString() : QDir::cleanPath(QFileInfo(parser.value(configDirOption)).absoluteFilePath());
 #if !defined(Q_OS_WINDOWS)
     // A reader that goes away (`mudlet-headless -p x | head`) would otherwise kill the profile mid-session.
     // Caught, not ignored: an ignored signal stays ignored in every program a script starts.
@@ -733,7 +834,7 @@ int main(int argc, char* argv[])
         // Only for the translation, as in the GUI
         QCoreApplication printApp(argc, argv);
         setApplicationNames();
-        MudletApp::loadTranslationsForCommandLine(true);
+        MudletApp::loadTranslationsForCommandLine(true, configDir);
         if (const int error = standardOutputClosed ? EBADF : writeLine(stdout, parser.isSet(helpOption) ? helpText() : versionText()); error && error != EPIPE) {
             writeLine(stderr, outputErrorMessage(error));
             return exitOutputFailed;
@@ -755,7 +856,7 @@ int main(int argc, char* argv[])
     }
     setApplicationNames();
     // Kept for the whole run: with no mudlet object, nothing loads the interface's translations later
-    MudletApp::loadTranslationsForRun();
+    MudletApp::loadTranslationsForRun(configDir);
     MudletApp::setDefaultMediaBackend();
 
     // Strict this time: the application object has taken out the options that were Qt's
@@ -774,7 +875,7 @@ int main(int argc, char* argv[])
         exitCode = usageError(QCoreApplication::translate("headless", "--tls and --no-tls cannot both be given."));
     }
     // Last-wins would quietly drop one; for -p the GUI would open each
-    for (const QCommandLineOption* option : {&profileOption, &hostOption, &portOption, &loginOption, &passwordEnvOption}) {
+    for (const QCommandLineOption* option : {&profileOption, &hostOption, &portOption, &loginOption, &passwordEnvOption, &configDirOption, &colorOption}) {
         if (exitCode == exitOk && parser.values(*option).size() > 1) {
             //: Command line error of the headless runner; %1 is an option, such as --host
             exitCode = usageError(QCoreApplication::translate("headless", "%1 was given more than once.").arg(qsl("--") + option->names().constLast()));
@@ -799,6 +900,14 @@ int main(int argc, char* argv[])
             exitCode = usageError(QCoreApplication::translate("headless", "The port must be a number from 1 to 65535, not '%1'.").arg(parser.value(portOption)));
         }
     }
+    if (exitCode == exitOk && parser.isSet(configDirOption)) {
+        if (parser.value(configDirOption).isEmpty()) {
+            //: Command line error of the headless runner; --config-dir names the folder to keep the profiles in
+            exitCode = usageError(QCoreApplication::translate("headless", "--config-dir was given nothing; leave it out to keep the profiles where the GUI keeps them."));
+        } else {
+            options.configDir = configDir;
+        }
+    }
     if (exitCode == exitOk && parser.isSet(passwordEnvOption)) {
         // Read, never shown: the variable's name is all that is ever reported
         const QByteArray variable = parser.value(passwordEnvOption).toLocal8Bit();
@@ -811,6 +920,23 @@ int main(int argc, char* argv[])
                     QCoreApplication::translate("headless", "The environment variable %1 is not set or is empty, so there is no password to log in with.").arg(parser.value(passwordEnvOption)));
         }
     }
+    bool coloured = false;
+    if (const QString when = parser.value(colorOption); exitCode == exitOk) {
+        if (when == qsl("always")) {
+            coloured = true;
+        } else if (when == qsl("auto")) {
+#if !defined(Q_OS_WINDOWS)
+            // Not on Windows, whose console shows the codes as text unless told otherwise. NO_COLOR as
+            // https://no-color.org/ asks.
+            coloured = ::isatty(STDOUT_FILENO) && qEnvironmentVariableIsEmpty("NO_COLOR") && qgetenv("TERM") != "dumb";
+#endif
+        } else if (when != qsl("never")) {
+            //: Command line error of the headless runner; %1 is what was given; auto, always and never are not to be translated
+            exitCode = usageError(QCoreApplication::translate("headless", "--color takes auto, always or never, not '%1'.").arg(when));
+        }
+    }
+    const QByteArray colourTerm = qgetenv("COLORTERM").toLower();
+    const bool trueColour = colourTerm == "truecolor" || colourTerm == "24bit";
     if (exitCode == exitOk && standardOutputClosed) {
         writeLine(stderr, outputErrorMessage(EBADF));
         exitCode = exitOutputFailed;
@@ -830,11 +956,11 @@ int main(int argc, char* argv[])
     ErrorStream& errors = errorStream();
     const QtMessageHandler previousMessageHandler = qInstallMessageHandler(logThroughErrorStream);
     int outputError = 0;
-    QObject::connect(session.get(), &THeadlessSession::outputLine, [quit, &outputError, &errors](const QString&, const QString& text, bool) {
+    QObject::connect(session.get(), &THeadlessSession::outputLine, [quit, &outputError, &errors, coloured, trueColour](const QString&, const QString& text, bool, const TextRuns& runs) {
         if (outputError) {
             return;
         }
-        outputError = writeLine(stdout, text);
+        outputError = coloured ? writeBytes(stdout, colouredLine(text, runs, trueColour)) : writeLine(stdout, text);
         if (!outputError) {
             return;
         }
@@ -1098,9 +1224,11 @@ int main(int argc, char* argv[])
             exitCode = exitFailed;
         }
     } else {
-        // A new profile's name, or connection details, that the connection dialog would not take came from the
-        // command line
-        exitCode = started == THeadlessSession::StartResult::invalidName || started == THeadlessSession::StartResult::invalidConnectionDetails ? usageError(session->errorString()) : exitFailed;
+        // A new profile's name, connection details that the connection dialog would not take, or the config
+        // folder came from the command line
+        const bool fromTheCommandLine = started == THeadlessSession::StartResult::invalidName || started == THeadlessSession::StartResult::invalidConnectionDetails
+                                        || started == THeadlessSession::StartResult::invalidConfigDir;
+        exitCode = fromTheCommandLine ? usageError(session->errorString()) : exitFailed;
         if (exitCode == exitFailed) {
             errors.report(session->errorString());
         }
