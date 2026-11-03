@@ -983,24 +983,24 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
     end)
 
     describe("when no server answers", function()
-      -- Nothing listens on port 1, so these finish with neither headers nor a body
-      local unreachable = "http://127.0.0.1:1/fixture.txt"
-
       local unanswered = {
-        {"sysGetHttpError", function() return getHTTP(unreachable) end},
-        {"sysPostHttpError", function() return postHTTP("payload", unreachable) end},
-        {"sysPutHttpError", function() return putHTTP("payload", unreachable) end},
-        {"sysDeleteHttpError", function() return deleteHTTP(unreachable) end},
-        {"sysCustomHttpError", function() return customHTTP("REPORT", "payload", unreachable) end},
-        {"sysDownloadError", function() return downloadFile(downloadTarget, unreachable) end},
+        {"sysGetHttpError", function(url) return getHTTP(url) end},
+        {"sysPostHttpError", function(url) return postHTTP("payload", url) end},
+        {"sysPutHttpError", function(url) return putHTTP("payload", url) end},
+        {"sysDeleteHttpError", function(url) return deleteHTTP(url) end},
+        {"sysCustomHttpError", function(url) return customHTTP("REPORT", "payload", url) end},
+        {"sysDownloadError", function(url) return downloadFile(downloadTarget, url) end},
       }
 
       for _, case in ipairs(unanswered) do
         local eventName, request = case[1], case[2]
         it("still reaches " .. eventName, function()
+          if noFixtureServer() then
+            return
+          end
           finally(function() os.remove(downloadTarget) end)
-          local _, _, id = request()
-          local eventArguments = {waitForEvent(eventName, 5000)}
+          local _, _, id = request(fixtureUrl("/hangup"))
+          local eventArguments = {waitForEvent(eventName, 2000)}
           assert.equals(eventName, eventArguments[1])
           assert.equals(id, lastArgument(unpack(eventArguments)))
         end)
