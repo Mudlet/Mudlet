@@ -21,6 +21,10 @@ Requests below ``/redirect/`` are redirected, whatever their verb except HEAD:
 ``/redirect/307/echo`` answers 307 pointing at ``/echo``, and targets can nest to
 make a chain. ``/redirect/loop`` redirects to itself.
 
+Requests to ``/hangup`` get no response at all, whatever their verb except HEAD:
+the connection just closes. A closed port would show the same failure, but
+Windows retries the connect for seconds before giving up on one.
+
 An OS-assigned (ephemeral) port is used rather than a fixed one: Mudlet CI may
 run several jobs on the same machine, and a hard-coded port would risk
 collisions there. The chosen port is written to the file named by the
@@ -40,6 +44,8 @@ ECHO_PATH = "/echo"
 MEDIA_PATH = "/media/"
 
 REDIRECT_PATH = "/redirect/"
+
+HANGUP_PATH = "/hangup"
 
 # Long enough that a spec which starts playback still has it running when it
 # asks what is playing, and that one which expects no playback would have seen
@@ -76,6 +82,9 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_GET(self):
+        if self.path == HANGUP_PATH:
+            self.hang_up()
+            return
         if self.redirect_requested():
             self.redirect()
             return
@@ -135,7 +144,14 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Content-Length", "0")
         self.end_headers()
 
+    def hang_up(self):
+        self.read_body()
+        self.close_connection = True
+
     def echo(self):
+        if self.path == HANGUP_PATH:
+            self.hang_up()
+            return
         if self.redirect_requested():
             self.redirect()
             return
