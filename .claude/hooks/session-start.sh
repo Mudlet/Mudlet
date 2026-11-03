@@ -50,6 +50,7 @@ if ! dpkg -s qtkeychain-qt6-dev >/dev/null 2>&1; then
     libxkbcommon-x11-0 \
     libyajl-dev \
     libzip-dev \
+    libzstd-dev \
     lua5.1 \
     luarocks \
     mesa-common-dev \

@@ -55,6 +55,7 @@ jobs:
             libpugixml-dev \
             libpulse-dev \
             libzip-dev \
+            libzstd-dev \
             lua5.1 \
             ninja-build \
             qtkeychain-qt6-dev \
