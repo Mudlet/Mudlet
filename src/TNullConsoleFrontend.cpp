@@ -43,6 +43,7 @@
 #include <QTextDocument>
 #include <QTextDocumentFragment>
 #include <QTextFrame>
+#include <QTimer>
 #include <QtMath>
 
 #include <algorithm>
@@ -575,36 +576,145 @@ QSize TNullMxpFrameFrontend::consoleSize(const QString& name, const QSize& frame
     return QSize(frameSize.width(), frameSize.height() - header).expandedTo(QSize(0, 0));
 }
 
+// As TMxpFrameWidgets::reportTabAreaSize(), deferred as a page is resized from inside the relayout that moves its header
+void TNullMxpFrameFrontend::reportTabArea(const QString& name, const QSize& size)
+{
+    Host* pHost = mView.mpHost;
+    if (!pHost->mMxpFrameManager.setTabAreaSize(name, size)) {
+        return;
+    }
+    QTimer::singleShot(0, pHost, [pHost]() {
+        pHost->consoleFrontend()->mxpFrames().reportSize();
+        pHost->mMxpFrameManager.relayoutFrames();
+    });
+}
+
 void TNullMxpFrameFrontend::createInternalFrame(const QString& name, const QString& hostName, const QString&, const QRect& geometry, const bool showHeader, bool)
 {
+    mHeaders.erase(name);
     if (showHeader) {
-        mHeaders.insert(name);
-    } else {
-        mHeaders.remove(name);
+        mHeaders[name].pages.push_back(name);
     }
+    mHosts[name] = hostName;
     const QSize size = consoleSize(name, geometry.size());
+    if (showHeader) {
+        mHeaders[name].area = size;
+    }
     mConsoleSizes[name] = size;
     mView.addFrameConsole(name, size, false, hostName);
+    if (!showHeader) {
+        return;
+    }
+    // TMxpFrameWidgets builds no header in a frame that has no widget
+    if (!hasFrameWidget(name)) {
+        mHeaders.erase(name);
+        return;
+    }
+    reportTabArea(name, size);
 }
 
 std::optional<QSize> TNullMxpFrameFrontend::createExternalFrame(const QString& name, const QString&, const QSize& size, bool)
 {
-    mHeaders.remove(name);
+    mHeaders.erase(name);
+    mHosts[name] = QString();
     mView.addFrameConsole(name, size, true);
     return size;
 }
 
-void TNullMxpFrameFrontend::createTabFrame(const QString& name, const QString&, const QString& parentName, const QSize& size, bool, bool)
+void TNullMxpFrameFrontend::createTabFrame(const QString& name, const QString&, const QString& parentName, const QSize& size, bool, const bool select)
 {
-    mHeaders.remove(name);
-    mView.addFrameConsole(name, size, false, parentName);
+    const auto header = mHeaders.find(parentName);
+    if (header == mHeaders.end()) {
+        return;
+    }
+    header->second.pages.push_back(name);
+    if (select) {
+        header->second.current = header->second.pages.size() - 1;
+    }
+    // A page is in its header's container, wherever that is
+    const auto parentHost = mHosts.find(parentName);
+    mHosts[name] = parentHost != mHosts.end() ? parentHost->second : QString();
+    mView.addFrameConsole(name, select ? header->second.area : size, false, parentName);
+    reportPages();
+}
+
+bool TNullMxpFrameFrontend::removeFromParentTabs(const QString& name, const QString& parentName)
+{
+    const auto header = mHeaders.find(parentName);
+    if (header == mHeaders.end()) {
+        return false;
+    }
+    const std::vector<QString>& pages = header->second.pages;
+    const auto page = std::find(pages.cbegin(), pages.cend(), name);
+    if (page == pages.cend()) {
+        return false;
+    }
+    removePage(header->second, static_cast<size_t>(page - pages.cbegin()));
+    reportPages();
+    return true;
+}
+
+// QTabBar::removeTab() brings forward the tab to the right of the one in front, else the one to its left
+void TNullMxpFrameFrontend::removePage(Header& header, const size_t index)
+{
+    const bool front = index == header.current;
+    header.pages.erase(header.pages.begin() + static_cast<std::ptrdiff_t>(index));
+    if (index < header.current) {
+        --header.current;
+    } else if (front && header.current >= header.pages.size()) {
+        header.current = header.pages.empty() ? 0 : header.pages.size() - 1;
+    }
+    if (front && !header.pages.empty()) {
+        mView.sizeFrameConsole(header.pages[header.current], header.area);
+    }
+}
+
+void TNullMxpFrameFrontend::reportPages()
+{
+    QStringList names;
+    for (const auto& [name, host] : mHosts) {
+        names << name;
+    }
+    for (const QString& name : names) {
+        mView.reportWindowVisibility(name);
+    }
+}
+
+bool TNullMxpFrameFrontend::pageShown(const QString& name) const
+{
+    QString frame = name;
+    // Bounded, so that a host recorded for a name that was since reused cannot loop
+    for (size_t depth = 0; !frame.isEmpty() && depth <= mHosts.size(); ++depth) {
+        for (const auto& [headerName, header] : mHeaders) {
+            const auto page = std::find(header.pages.cbegin(), header.pages.cend(), frame);
+            if (page != header.pages.cend() && static_cast<size_t>(page - header.pages.cbegin()) != header.current) {
+                return false;
+            }
+        }
+        const auto host = mHosts.find(frame);
+        frame = host != mHosts.end() ? host->second : QString();
+    }
+    return true;
 }
 
 void TNullMxpFrameFrontend::destroyFrame(const QString& name)
 {
-    mHeaders.remove(name);
+    mHeaders.erase(name);
+    mHosts.erase(name);
     mConsoleSizes.erase(name);
+    // QTabWidget takes a deleted page out of its header
+    bool removed = false;
+    for (auto& [headerName, header] : mHeaders) {
+        const auto page = std::find(header.pages.cbegin(), header.pages.cend(), name);
+        if (page != header.pages.cend()) {
+            removePage(header, static_cast<size_t>(page - header.pages.cbegin()));
+            removed = true;
+        }
+    }
     mView.removeFrameConsole(name);
+    if (removed) {
+        reportPages();
+    }
 }
 
 // Only a container that changes size lays its console out again, so one a script resized keeps that size till then
@@ -615,7 +725,22 @@ void TNullMxpFrameFrontend::setGeometry(const QString& name, const QRect& geomet
         return;
     }
     mConsoleSizes[name] = size;
-    mView.sizeFrameConsole(name, size);
+    const auto header = mHeaders.find(name);
+    if (header == mHeaders.end()) {
+        mView.sizeFrameConsole(name, size);
+        return;
+    }
+    header->second.area = size;
+    mView.sizeFrameConsole(header->second.pages[header->second.current], size);
+    reportTabArea(name, size);
+}
+
+// A view that attaches drops every frame console and makes its own frames
+void TNullMxpFrameFrontend::clear()
+{
+    mHeaders.clear();
+    mHosts.clear();
+    mConsoleSizes.clear();
 }
 
 // Nothing lays the main console out, so the main window is all of it
@@ -658,6 +783,7 @@ void TNullConsoleFrontend::dropWindows()
     }
     mpMainHolder = std::make_unique<QObject>();
     mFrameHolders.clear();
+    mMxpFrames.clear();
     // The view's TCommandLine has its own menu items, which go with it
     mMainCommandLine.menuItems.clear();
     // The view has its own map widget, if any. An embedded mapper went with the main window's stand-in.
@@ -1127,16 +1253,21 @@ void TNullConsoleFrontend::addFrameConsole(const QString& name, const QSize& siz
 // As TMxpFrameWidgets lays a frame's console out in its container, which a console a script moved out has left
 void TNullConsoleFrontend::sizeFrameConsole(const QString& name, const QSize& size)
 {
-    const auto frame = mFrameHolders.find(name);
-    if (!frameSink(name) || frame == mFrameHolders.end() || !frame->second) {
-        return;
-    }
-    const QObject* pHolder = mSubConsoles.at(name).holder;
-    if (!pHolder || (pHolder != frame->second && pHolder->parent() != frame->second)) {
+    if (!inOwnFrame(name)) {
         return;
     }
     mpHost->windowRegistry().setSubConsoleGeometry(name, QRect(QPoint(0, 0), size));
     reportGridSize(name);
+}
+
+bool TNullConsoleFrontend::inOwnFrame(const QString& name) const
+{
+    const auto frame = mFrameHolders.find(name);
+    if (!frameSink(name) || frame == mFrameHolders.end() || !frame->second) {
+        return false;
+    }
+    const QObject* pHolder = mSubConsoles.at(name).holder;
+    return pHolder && (pHolder == frame->second || pHolder->parent() == frame->second);
 }
 
 // TMxpFrameWidgets::destroyFrame() deletes the frame's widgets at once, but a console a script moved out of a frame
@@ -1543,7 +1674,8 @@ void TNullConsoleFrontend::reportWindowVisibility(const QString& name)
         setLabelVisible(it->second, it->second.shown && shownWithin(it->second.userWindow, it->second.box.get()));
     }
     if (const auto it = mSubConsoles.find(name); it != mSubConsoles.end()) {
-        registry.setSubConsoleVisible(name, it->second.shown && shownWithin(it->second.userWindow, it->second.box.get()));
+        const bool onPageShown = !inOwnFrame(name) || mMxpFrames.pageShown(name);
+        registry.setSubConsoleVisible(name, it->second.shown && onPageShown && shownWithin(it->second.userWindow, it->second.box.get()));
     }
     if (const auto it = mScrollBoxes.find(name); it != mScrollBoxes.end()) {
         registry.setPlainWindowVisible(name, it->second->shown && shownWithin(it->second->userWindow, it->second->box.get()));

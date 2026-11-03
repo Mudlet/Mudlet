@@ -675,6 +675,32 @@ describe("Tests MXP handling", function()
       assert.is_false(windowVisible("mxpSpecNestHost"), "the frame did not dock into the host as a tab")
     end)
 
+    -- a tab's page lays its console out over all the space under the tabs, whatever size the tag asked for
+    it("gives the tab in front all the space under its frame's tabs as that changes", function()
+      finally(function()
+        closeFrame("mxpSpecAreaSecond")
+        closeFrame("mxpSpecAreaFirst")
+        closeFrame("mxpSpecAreaHost")
+        closeFrame("mxpSpecAreaLeft")
+      end)
+      openFrame("mxpSpecAreaLeft", 'Align="left" Width="20%" Height="50%"')
+      openFrame("mxpSpecAreaHost", 'Align="right" Width="30%" Height="50%" TITLE="Host"')
+      local _, _, areaWidth, areaHeight = getWindowGeometry("mxpSpecAreaHost")
+      openFrame("mxpSpecAreaFirst", 'DOCK="mxpSpecAreaHost" Align="client" TITLE="First"')
+      openFrame("mxpSpecAreaSecond", 'DOCK="mxpSpecAreaHost" Align="client" Width="10%" Height="10%" TITLE="Second"')
+      local _, _, width, height = getWindowGeometry("mxpSpecAreaFirst")
+      assert.are.same({areaWidth, areaHeight}, {width, height}, "the tab in front does not fill the space under the tabs")
+
+      -- the host widens into the space the left frame gave up
+      closeFrame("mxpSpecAreaLeft")
+      local _, _, widerWidth, widerHeight = getWindowGeometry("mxpSpecAreaFirst")
+      assert.is_true(widerWidth > width, "the tab in front did not follow its frame")
+
+      closeFrame("mxpSpecAreaFirst")
+      local _, _, shownWidth, shownHeight = getWindowGeometry("mxpSpecAreaSecond")
+      assert.are.same({widerWidth, widerHeight}, {shownWidth, shownHeight}, "the tab brought to the front does not fill the space")
+    end)
+
     it("shows the tag as text when the frame it names is not there", function()
       finally(function() closeFrame("mxpSpecFocusFrame") end)
       openFrame("mxpSpecFocusFrame", 'Align="left" Width="25%" Height="50%"')

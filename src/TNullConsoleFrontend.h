@@ -32,7 +32,6 @@
 #include <QPoint>
 #include <QPointer>
 #include <QRect>
-#include <QSet>
 #include <QSize>
 #include <QString>
 
@@ -65,8 +64,8 @@ private:
 };
 
 // Each frame gets a mini console model of the null view's under the frame's name, as a real frame gets a
-// mini console, so <DEST> text lands where scripts can read it. A frame has no tab header here, so one
-// docked into another is opened as a frame of its own.
+// mini console, so <DEST> text lands where scripts can read it. A frame with a header keeps its tabs as
+// TMxpFrameWidgets' QTabWidget does, and only the page in front of each header shows.
 class TNullMxpFrameFrontend final : public TMxpFrameFrontend
 {
 public:
@@ -77,8 +76,8 @@ public:
 
     void createInternalFrame(const QString& name, const QString& hostName, const QString&, const QRect& geometry, bool showHeader, bool) override;
     std::optional<QSize> createExternalFrame(const QString& name, const QString&, const QSize& size, bool) override;
-    void createTabFrame(const QString& name, const QString&, const QString& parentName, const QSize& size, bool, bool) override;
-    bool removeFromParentTabs(const QString&, const QString&) override { return false; }
+    void createTabFrame(const QString& name, const QString&, const QString& parentName, const QSize& size, bool, bool select) override;
+    bool removeFromParentTabs(const QString& name, const QString& parentName) override;
     void destroyFrame(const QString& name) override;
     void showFrame(const QString&) override {}
     void focusFrame(const QString&) override {}
@@ -86,13 +85,29 @@ public:
     void reportSize() override;
     TPrintSink* sink(const QString& name) const override;
     bool hasFrameWidget(const QString& name) const override;
+    // False for a frame on a tab page behind another, or inside a frame on one
+    bool pageShown(const QString& name) const;
+    void clear();
 
 private:
+    // A QTabWidget's pages by frame name, the first being the header frame's own console
+    struct Header
+    {
+        std::vector<QString> pages;
+        size_t current = 0;
+        // QStackedLayout gives the page in front all of it, and leaves the others at the size they had
+        QSize area;
+    };
+
     QSize consoleSize(const QString& name, const QSize& frameSize) const;
+    void reportTabArea(const QString& name, const QSize& size);
+    void removePage(Header& header, size_t index);
+    void reportPages();
 
     TNullConsoleFrontend& mView;
-    // The frames shown with a tab header, which takes its height off the frame's console
-    QSet<QString> mHeaders;
+    std::map<QString, Header> mHeaders;
+    // The frame whose widget each frame is built inside, as TMxpFrameWidgets builds it, empty for the main window
+    std::map<QString, QString> mHosts;
     // The size each frame's container last laid its console out at
     std::map<QString, QSize> mConsoleSizes;
 };
@@ -474,6 +489,8 @@ private:
     void removeSubConsole(const QString& name, bool keepWidget = false);
     void addFrameConsole(const QString& name, const QSize& size, bool external = false, const QString& hostFrame = QString());
     void sizeFrameConsole(const QString& name, const QSize& size);
+    // False for a frame's console a script has moved out of the frame
+    bool inOwnFrame(const QString& name) const;
     void removeFrameConsole(const QString& name);
     TConsoleModelSink* frameSink(const QString& name) const;
     void removeLabel(const QString& name);

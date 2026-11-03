@@ -192,8 +192,7 @@ or answers as the GUI would with no window open. `CI/headless-lua-known-failures
 Lua specs that fail with no window, so it is the up-to-date list; the main gaps are:
 
 - the 2D and 3D mappers' views, and map symbols drawn with a font's Private Use Area;
-- MXP frames docked into another as its tabs, and the space an internal frame takes from the main
-  console;
+- the space an internal MXP frame takes from the main console;
 - layout that follows the main window, such as `Adjustable.Container` borders, docked user
   windows, and the command line a mini console or user window can show;
 - keyboard shortcuts for addon commands, which the main window's menus hold.
