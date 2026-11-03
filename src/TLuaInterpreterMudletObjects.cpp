@@ -1520,7 +1520,7 @@ int TLuaInterpreter::permTimer(lua_State* L)
 int TLuaInterpreter::permKey(lua_State* L)
 {
     // Support table argument format
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         // lua_error() longjmps past C++ destructors, so every QString below has
         // to be out of scope before the raise at the end - see checkStringArg()
         bool errorPushed = false;
@@ -2805,7 +2805,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     Host& host = getHostFromLua(L);
 
     // Check if first argument is a table for named-key format
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         // Reference to store the function in the registry - kept outside the
         // scope below so it can still be released on the deferred raise
         int codeFunctionRef = LUA_NOREF;

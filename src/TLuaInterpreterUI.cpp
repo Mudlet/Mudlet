@@ -521,7 +521,7 @@ int TLuaInterpreter::createBuffer(lua_State* L)
 int TLuaInterpreter::createCommandLine(lua_State* L)
 {
     // Table argument support
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         // lua_error() longjmps past C++ destructors, so every QString below has
         // to be out of scope before the raise at the end - see checkStringArg()
         bool errorPushed = false;
@@ -673,7 +673,7 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
 int TLuaInterpreter::createLabel(lua_State* L)
 {
     // Support both table and ordered arguments
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         // Table argument format: {windowName="name", name="labelName", x=x, y=y, width=w, height=h, fillBackground=bool, clickthrough=bool}
         // lua_error() longjmps past C++ destructors, so every QString below has
         // to be out of scope before the raise at the end - see checkStringArg()
@@ -816,7 +816,7 @@ int TLuaInterpreter::createLabel(lua_State* L)
 int TLuaInterpreter::createMiniConsole(lua_State* L)
 {
     // Table argument support
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         // lua_error() longjmps past C++ destructors, so every QString below has
         // to be out of scope before the raise at the end - see checkStringArg()
         bool errorPushed = false;
@@ -972,7 +972,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
 int TLuaInterpreter::createScrollBox(lua_State* L)
 {
     // Table argument support
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         // lua_error() longjmps past C++ destructors, so every QString below has
         // to be out of scope before the raise at the end - see checkStringArg()
         bool errorPushed = false;
@@ -1574,7 +1574,7 @@ int TLuaInterpreter::echo(lua_State* L)
 int TLuaInterpreter::echoLink(lua_State* L)
 {
     // Check if first argument is a table for named-key format
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         // lua_error() longjmps past C++ destructors, so every QString and
         // QStringList below has to be out of scope before the raise at the end
         // - see checkStringArg()
@@ -2734,7 +2734,7 @@ int TLuaInterpreter::hideWindow(lua_State* L)
 int TLuaInterpreter::insertLink(lua_State* L)
 {
     // Table argument support
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         // lua_error() longjmps past C++ destructors, so every QString and
         // QStringList below has to be out of scope before the raise at the end
         // - see checkStringArg()
@@ -2927,7 +2927,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     // nothing else. Deciding that from a case-sensitive probe for a "text" key
     // sent a table keyed TEXT, or one with no text at all, down the positional
     // path to be reported as a bad argument #1.
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         {
             // lua_error() longjmps past C++ destructors, so every QString and
             // QStringList below has to be out of scope before the raise at the
@@ -5927,7 +5927,7 @@ int TLuaInterpreter::setCommandBackgroundColor(lua_State* L)
     };
 
     // Check if first argument is a table for named-key format
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         // lua_error() longjmps past C++ destructors, so every QString below has
         // to be out of scope before the raise at the end - see checkStringArg()
         bool errorPushed = false;
@@ -6089,7 +6089,7 @@ int TLuaInterpreter::setCommandForegroundColor(lua_State* L)
     };
 
     // Check if first argument is a table for named-key format
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         // lua_error() longjmps past C++ destructors, so every QString below has
         // to be out of scope before the raise at the end - see checkStringArg()
         bool errorPushed = false;

@@ -339,7 +339,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     int b = 0;
     Qt::PenStyle line_style(Qt::SolidLine);
     // Table argument support
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         // lua_error() longjmps past C++ destructors, so every QString below has
         // to be out of scope before the raise at the end - see checkStringArg()
         bool errorPushed = false;
@@ -841,7 +841,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
 int TLuaInterpreter::addMapEvent(lua_State* L)
 {
     // Table argument support
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         // lua_error() longjmps past C++ destructors, so every QString below has
         // to be out of scope before the raise at the end - see checkStringArg()
         bool errorPushed = false;
@@ -1483,7 +1483,7 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     const int args = lua_gettop(L);
 
     // Check if first argument is a table for named-key format
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         // lua_error() longjmps past C++ destructors, so every QString below has
         // to be out of scope before the raise at the end - see checkStringArg()
         bool errorPushed = false;
@@ -1805,7 +1805,7 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
 int TLuaInterpreter::createMapImageLabel(lua_State* L)
 {
     // Support both table and ordered arguments
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         // Table argument format: {areaID=id, imagePath="path", x=x, y=y, z=z, width=w, height=h, zoom=z, showOnTop=bool, temporary=bool}
         // lua_error() longjmps past C++ destructors, so the QString below has to
         // be out of scope before the raise at the end - see checkStringArg()
@@ -1985,7 +1985,7 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
 int TLuaInterpreter::createMapper(lua_State* L)
 {
     // Table argument support
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         // lua_error() longjmps past C++ destructors, so every QString below has
         // to be out of scope before the raise at the end - see checkStringArg()
         bool errorPushed = false;
@@ -3724,7 +3724,7 @@ int TLuaInterpreter::highlightRoom(lua_State* L)
     float radius;
 
     // Support both table and ordered arguments
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         // Table argument format: {roomID=id, fgr=N, fgg=N, fgb=N, bgr=N, bgg=N, bgb=N, radius=r, alpha1=N, alpha2=N}
         // lua_error() longjmps past C++ destructors, so the QString key below has
         // to be out of scope before the raise - see checkStringArg()
@@ -4824,7 +4824,7 @@ int TLuaInterpreter::setCustomEnvColor(lua_State* L)
     int id, r, g, b, alpha;
 
     // Support both table and ordered arguments
-    if (lua_istable(L, 1)) {
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
         // Table argument format: {environmentID=id, r=N, g=N, b=N, a=N}
         // lua_error() longjmps past C++ destructors, so the QString key below has
         // to be out of scope before the raise - see checkStringArg()
