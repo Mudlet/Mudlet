@@ -193,6 +193,39 @@ describe("Tests that the table form of a function does what its positional form 
       assert.are.same(format, formatted(b))
     end)
 
+    it("setTextFormat sets the same blink mode", function()
+      assert.are.same(
+        pack(setTextFormat(a, 10, 20, 30, 40, 50, 60, false, false, false, false, false, false, "slow")),
+        pack(setTextFormat({windowName = b, bgR = 10, bgG = 20, bgB = 30, fgR = 40, fgG = 50, fgB = 60,
+          bold = false, underline = false, italics = false, blink = "slow"})))
+      local function formatted(name)
+        echo(name, "blinking")
+        selectString(name, "blinking", 1)
+        return getTextFormat(name)
+      end
+      local format = formatted(a)
+      assert.are.equal("slow", format.blinking)
+      assert.are.same(format, formatted(b))
+    end)
+
+    it("setTextFormat refuses a format flag that is neither a boolean nor a number", function()
+      assert.is_false(pcall(setTextFormat, a, 10, 20, 30, 40, 50, 60, "yes", false, false))
+      assert.is_false(pcall(setTextFormat, {windowName = b, bgR = 10, bgG = 20, bgB = 30, fgR = 40, fgG = 50, fgB = 60,
+        bold = "yes", underline = false, italics = false}))
+    end)
+
+    it("insertLink refuses a useCurrentFormat that is not a boolean", function()
+      assert.is_false(pcall(insertLink, a, "linked", "send('x')", "hint", 1))
+      assert.is_false(pcall(insertLink, {windowName = b, text = "linked", command = "send('x')", hint = "hint", useCurrentFormat = 1}))
+      assert.are.equal(getCurrentLine(a), getCurrentLine(b))
+    end)
+
+    it("insertPopup refuses a useCurrentFormat that is not a boolean", function()
+      assert.is_false(pcall(insertPopup, a, "linked", {"send('x')"}, {"one"}, 1))
+      assert.is_false(pcall(insertPopup, {windowName = b, text = "linked", commands = {"send('x')"}, hints = {"one"}, useCurrentFormat = 1}))
+      assert.are.equal(getCurrentLine(a), getCurrentLine(b))
+    end)
+
     it("setBackgroundColor sets the same colour", function()
       assert.are.same(pack(setBackgroundColor(a, 11, 22, 33, 200)), pack(setBackgroundColor({windowName = b, r = 11, g = 22, b = 33, alpha = 200})))
       assert.are.same({11, 22, 33, 200}, {getBackgroundColor(a)})
@@ -291,6 +324,50 @@ describe("Tests that the table form of a function does what its positional form 
       assert.are.same(line, getCustomLines(roomB))
     end)
 
+    it("createMapLabel wants all three outline colours or none", function()
+      local font = getFont()
+      local positional = pack(pcall(createMapLabel, area, "label", 1, 2, 0, 10, 20, 30, 40, 50, 60, 2, 14, true, true, font, 100, 150, false, 70))
+      local fromTable = pack(pcall(createMapLabel, {area = area, text = "label", x = 1, y = 2, z = 0, fgRed = 10, fgGreen = 20, fgBlue = 30,
+        bgRed = 40, bgGreen = 50, bgBlue = 60, outlineRed = 70}))
+      assert.is_false(positional[1])
+      assert.is_false(fromTable[1])
+      assert.are.same({}, getMapLabels(area))
+    end)
+
+    local function customLineCall(key, value)
+      local positional = {roomA, {{0, 1, 0}}, "n", "dot line", {10, 20, 30}, false}
+      positional[({coordinates = 2, direction = 3, color = 5, arrow = 6})[key]] = value
+      local named = {roomID = roomB, coordinates = {{0, 1, 0}}, direction = "n", style = "dot line", color = {10, 20, 30}, arrow = false}
+      named[key] = value
+      return pack(pcall(addCustomLine, unpack(positional, 1, 6))), pack(pcall(addCustomLine, named))
+    end
+
+    local badCustomLines = {
+      {"a coordinate list that is not a table", "coordinates", "points"},
+      {"a point that is not a table", "coordinates", {"point"}},
+      {"a coordinate that is not a number", "coordinates", {{0, "y", 0}}},
+      {"a direction that is out of range", "direction", 13},
+      {"a colour that is not a table", "color", "red"},
+      {"a colour component that is not a number", "color", {10, "green", 30}},
+      {"an arrow flag that is not a boolean", "arrow", 1},
+    }
+    for _, case in ipairs(badCustomLines) do
+      local what, key, value = unpack(case)
+      it("addCustomLine raises on " .. what, function()
+        local positional, fromTable = customLineCall(key, value)
+        assert.is_false(positional[1])
+        assert.is_false(fromTable[1])
+      end)
+    end
+
+    it("addCustomLine refuses a point without all three coordinates", function()
+      local positional, fromTable = customLineCall("coordinates", {{0, 1}})
+      assert.are.same({true, nil}, {positional[1], positional[2]})
+      assert.are.same({positional[1], positional[2]}, {fromTable[1], fromTable[2]})
+      assert.is_nil(getCustomLines(roomA).n)
+      assert.is_nil(getCustomLines(roomB).n)
+    end)
+
     it("highlightRoom answers the same", function()
       assert.are.same(pack(highlightRoom(roomA, 10, 20, 30, 40, 50, 60, 2, 100, 200)),
         pack(highlightRoom({roomID = roomB, fgr = 10, fgg = 20, fgb = 30, bgr = 40, bgg = 50, bgb = 60, radius = 2, alpha1 = 100, alpha2 = 200})))
@@ -316,6 +393,35 @@ describe("Tests that the table form of a function does what its positional form 
         pack(addMapEvent({uniquename = b, eventname = "tableArgsEvent", parent = "", displayname = "Display", arguments = {1, "two"}})))
       local events = getMapEvents()
       assert.is_table(events[a])
+      assert.are.same(events[a], events[b])
+    end)
+
+    it("addMapEvent reads a parent, display name and arguments that are not strings the same way", function()
+      local a, b = "tableArgsEventA" .. tag, "tableArgsEventB" .. tag
+      finally(function()
+        removeMapEvent(a)
+        removeMapEvent(b)
+      end)
+      assert.are.same(pack(addMapEvent(a, "tableArgsEvent", false, false, "one", false, 3)),
+        pack(addMapEvent({uniquename = b, eventname = "tableArgsEvent", parent = false, displayname = false, arguments = {"one", false, 3}})))
+      local events = getMapEvents()
+      assert.are.equal(a, events[a]["display name"])
+      assert.are.equal(b, events[b]["display name"])
+      events[a]["display name"], events[b]["display name"] = nil, nil
+      assert.are.same({["event name"] = "tableArgsEvent", parent = "", arguments = {"one", "", "3"}}, events[a])
+      assert.are.same(events[a], events[b])
+    end)
+
+    it("addMapEvent keeps an empty display name", function()
+      local a, b = "tableArgsEventA" .. tag, "tableArgsEventB" .. tag
+      finally(function()
+        removeMapEvent(a)
+        removeMapEvent(b)
+      end)
+      addMapEvent(a, "tableArgsEvent", "", "")
+      addMapEvent({uniquename = b, eventname = "tableArgsEvent", parent = "", displayname = ""})
+      local events = getMapEvents()
+      assert.are.equal("", events[a]["display name"])
       assert.are.same(events[a], events[b])
     end)
   end)
@@ -376,6 +482,69 @@ describe("Tests that the table form of a function does what its positional form 
         assert.are.equal(4, count.a)
         assert.are.same(count.a, count.b)
       end)
+
+      -- the colour of the start of a line fed in after these triggers are made
+      local function colourOf(line)
+        local mark = getLastLineNumber("main")
+        feedTriggers("\n" .. line .. "\n")
+        local row
+        for candidate = mark, getLastLineNumber("main") do
+          if getLines("main", candidate, candidate + 1)[1] == line then
+            row = candidate
+          end
+        end
+        assert.is_number(row, "the fed line never reached the main window")
+        moveCursor("main", 0, row)
+        selectSection("main", 0, 1)
+        local colour = {fg = pack(getFgColor("main")), bg = pack(getBgColor("main"))}
+        deselect("main")
+        moveCursorEnd("main")
+        return colour
+      end
+
+      local highlights = {
+        {"only a foreground", "red", 0},
+        {"only a background", 0, "blue"},
+        {"both colours", "red", "blue"},
+      }
+      for _, case in ipairs(highlights) do
+        local what, fg, bg = unpack(case)
+        it("highlights the same given " .. what, function()
+          tempComplexRegexTrigger(a, "^tableArgsHighlightA$", "", 0, 0, 0, 0, 0, fg, bg, "", 0, 0)
+          tempComplexRegexTrigger({name = b, regex = "^tableArgsHighlightB$", code = "",
+            multiline = false, fgColor = 0, bgColor = 0, filter = false, matchAll = false, highlightFgColor = fg, highlightBgColor = bg,
+            soundFile = "", fireLength = 0, lineDelta = 0})
+          assert.are.same(colourOf("tableArgsHighlightA"), colourOf("tableArgsHighlightB"))
+        end)
+      end
+
+      it("takes a regex as a regex unless both line colours are given", function()
+        local count = {a = 0, b = 0}
+        tempComplexRegexTrigger(a, pattern, function() count.a = count.a + 1 end, 0, "white", 0, 0, 0, 0, 0, "", 0, 0)
+        tempComplexRegexTrigger({name = b, regex = pattern, code = function() count.b = count.b + 1 end,
+          multiline = false, fgColor = "white", bgColor = 0, filter = false, matchAll = false, highlightFgColor = 0, highlightBgColor = 0,
+          soundFile = "", fireLength = 0, lineDelta = 0})
+        feedTriggers("tableArgsTrigger colour\n")
+        assert.are.same({a = 1, b = 1}, count)
+      end)
+
+      local badTriggerArguments = {
+        {"code that is neither a string nor a function", 3, "code", true},
+        {"an expiry count that is not a number", 14, "expireAfter", "twice"},
+      }
+      for _, case in ipairs(badTriggerArguments) do
+        local what, position, key, value = unpack(case)
+        it("raises on " .. what, function()
+          local positional = {a, pattern, "", 0, 0, 0, 0, 0, 0, 0, "", 0, 0}
+          positional[position] = value
+          local named = {name = b, regex = pattern, code = "", multiline = false, fgColor = 0, bgColor = 0, filter = false, matchAll = false,
+            highlightFgColor = 0, highlightBgColor = 0, soundFile = "", fireLength = 0, lineDelta = 0}
+          named[key] = value
+          assert.is_false(pcall(tempComplexRegexTrigger, unpack(positional, 1, 14)))
+          assert.is_false(pcall(tempComplexRegexTrigger, named))
+          assert.are.equal(0, isActive(b, "trigger"))
+        end)
+      end
 
       it("expires after the same number of matches", function()
         local count = {a = 0, b = 0}
@@ -438,12 +607,19 @@ describe("Tests that the table form of a function does what its positional form 
       end)
     end
 
+    it("registerNamedTimer refuses a oneShot that is not a boolean, as it does repeating", function()
+      local fn = function() end
+      assert.is_false(pcall(registerNamedTimer, user, "a", 5, fn, 0))
+      assert.is_false(pcall(registerNamedTimer, {user = user, name = "b", time = 5, handler = fn, repeating = 0}))
+      assert.is_false(pcall(registerNamedTimer, {user = user, name = "c", time = 5, handler = fn, oneShot = 0}))
+    end)
+
     it("timeframe sets the variable to the same values", function()
       local function valuesOver(start)
         local timers = {}
         local realTempTimer, realKillTimer = _G.tempTimer, _G.killTimer
         _G.tempTimer = function(time, fn)
-          timers[#timers + 1] = {time, fn}
+          timers[#timers + 1] = {time, fn, #timers + 1}
           return #timers
         end
         _G.killTimer = function() return true end
@@ -451,7 +627,8 @@ describe("Tests that the table form of a function does what its positional form 
         local ok, err = pcall(function()
           start()
           values[1] = tostring(_G.tableArgsSpecTimeframe)
-          table.sort(timers, function(one, two) return one[1] < two[1] end)
+          -- table.sort() is not stable, and equal times fire in the order they were made
+          table.sort(timers, function(one, two) return one[1] < two[1] or (one[1] == two[1] and one[3] < two[3]) end)
           for _, timer in ipairs(timers) do
             timer[2]()
             values[#values + 1] = timer[1] .. "=" .. tostring(_G.tableArgsSpecTimeframe)
@@ -467,6 +644,13 @@ describe("Tests that the table form of a function does what its positional form 
       assert.are.same({"nil", "1=true", "2=two", "3=3", "4=nil", "4.1=nil"}, positional)
       assert.are.same(positional, valuesOver(function()
         timeframe({vname = "tableArgsSpecTimeframe", true_time = 1, nil_time = 4, timerlist = {{2, "two"}, {3, 3}}})
+      end))
+
+      -- equal times run in the order they were made, so this is where the order shows
+      positional = valuesOver(function() timeframe("tableArgsSpecTimeframe", 1, 2, {2, "two"}) end)
+      assert.are.same({"nil", "1=true", "2=two", "2=nil", "2.1=nil"}, positional)
+      assert.are.same(positional, valuesOver(function()
+        timeframe({vname = "tableArgsSpecTimeframe", true_time = 1, nil_time = 2, timerlist = {{2, "two"}}})
       end))
     end)
   end)

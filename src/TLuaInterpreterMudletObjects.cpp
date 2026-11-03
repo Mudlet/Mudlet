@@ -2819,9 +2819,9 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
             int fireLength = 0, lineDelta = 0, expiryCount = -1;
             bool hasName = false, hasPattern = false, hasCode = false, hasMultiline = false;
             bool hasFilter = false, hasMatchAll = false, hasFireLength = false, hasLineDelta = false;
-            bool colorTrigger = false, highlight = false;
-            QString fgColor, bgColor, soundFile;
-            QColor hlFgColor, hlBgColor;
+            // an absent colour key reads as the 0 the positional form takes for "unused"
+            bool fgColorIsNumber = true, bgColorIsNumber = true, hlFgColorIsNumber = true, hlBgColorIsNumber = true;
+            QString soundFile, hlFgColorName, hlBgColorName;
             bool isCodeFunction = false;
             QString codeString;
 
@@ -2854,20 +2854,22 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
                     pattern = lua_tostring(L, -1);
                     hasPattern = true;
                 } else if (!key.compare(QLatin1String("code"), Qt::CaseInsensitive) || !key.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
-                    if (lua_isfunction(L, -1)) {
-                        isCodeFunction = true;
+                    if (!lua_isstring(L, -1) && !lua_isfunction(L, -1)) {
+                        errorArgumentType(L, __func__, -1, qPrintable(key), "string or function");
+                        errorPushed = true;
+                        break;
+                    }
+                    luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
+                    codeFunctionRef = LUA_NOREF;
+                    isCodeFunction = lua_isfunction(L, -1);
+                    if (isCodeFunction) {
                         // Store a reference to the function in the registry (luaL_ref pops the value)
                         lua_pushvalue(L, -1);
                         codeFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
-                        hasCode = true;
-                    } else if (lua_isstring(L, -1)) {
-                        codeString = QString::fromUtf8(lua_tostring(L, -1));
-                        hasCode = true;
                     } else {
-                        lua_pop(L, 2);
-                        luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
-                        return warnArgumentValue(L, __func__, "code must be a string or function");
+                        codeString = QString::fromUtf8(lua_tostring(L, -1));
                     }
+                    hasCode = true;
                 } else if (!key.compare(QLatin1String("multiline"), Qt::CaseInsensitive) || !key.compare(QLatin1String("multiLine"), Qt::CaseInsensitive)) {
                     // the positional form reads this one with lua_tonumber, so
                     // a number is what callers of this function already pass:
@@ -2883,24 +2885,9 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
                     }
                     hasMultiline = true;
                 } else if (!key.compare(QLatin1String("fgColor"), Qt::CaseInsensitive) || !key.compare(QLatin1String("foregroundColor"), Qt::CaseInsensitive)) {
-                    if (lua_isnumber(L, -1)) {
-                        colorTrigger = false;
-                    } else {
-                        colorTrigger = true;
-                        if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
-                            errorPushed = true;
-                            break;
-                        }
-                        fgColor = lua_tostring(L, -1);
-                    }
+                    fgColorIsNumber = lua_isnumber(L, -1);
                 } else if (!key.compare(QLatin1String("bgColor"), Qt::CaseInsensitive) || !key.compare(QLatin1String("backgroundColor"), Qt::CaseInsensitive)) {
-                    if (!lua_isnumber(L, -1)) {
-                        if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
-                            errorPushed = true;
-                            break;
-                        }
-                        bgColor = lua_tostring(L, -1);
-                    }
+                    bgColorIsNumber = lua_isnumber(L, -1);
                 } else if (!key.compare(QLatin1String("filter"), Qt::CaseInsensitive)) {
                     // as multiline: the positional form reads a number
                     if (lua_isnumber(L, -1)) {
@@ -2925,35 +2912,11 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
                     }
                     hasMatchAll = true;
                 } else if (!key.compare(QLatin1String("highlightFgColor"), Qt::CaseInsensitive) || !key.compare(QLatin1String("highlightForegroundColor"), Qt::CaseInsensitive)) {
-                    if (lua_isnumber(L, -1)) {
-                        highlight = false;
-                    } else {
-                        highlight = true;
-                        if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
-                            errorPushed = true;
-                            break;
-                        }
-                        const QString color{lua_tostring(L, -1)};
-#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
-                        hlFgColor.setNamedColor(color);
-#else
-                        hlFgColor = QColor::fromString(color);
-#endif
-                    }
+                    hlFgColorIsNumber = lua_isnumber(L, -1);
+                    hlFgColorName = lua_tostring(L, -1);
                 } else if (!key.compare(QLatin1String("highlightBgColor"), Qt::CaseInsensitive) || !key.compare(QLatin1String("highlightBackgroundColor"), Qt::CaseInsensitive)) {
-                    if (!lua_isnumber(L, -1)) {
-                        highlight = true;
-                        if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
-                            errorPushed = true;
-                            break;
-                        }
-                        const QString color{lua_tostring(L, -1)};
-#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
-                        hlBgColor.setNamedColor(color);
-#else
-                        hlBgColor = QColor::fromString(color);
-#endif
-                    }
+                    hlBgColorIsNumber = lua_isnumber(L, -1);
+                    hlBgColorName = lua_tostring(L, -1);
                 } else if (!key.compare(QLatin1String("soundFile"), Qt::CaseInsensitive) || !key.compare(QLatin1String("playSoundFile"), Qt::CaseInsensitive)) {
                     if (lua_type(L, -1) == LUA_TSTRING) {
                         soundFile = lua_tostring(L, -1);
@@ -2973,13 +2936,16 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
                     lineDelta = static_cast<int>(lua_tointeger(L, -1));
                     hasLineDelta = true;
                 } else if (!key.compare(QLatin1String("expireAfter"), Qt::CaseInsensitive) || !key.compare(QLatin1String("expiryCount"), Qt::CaseInsensitive)) {
-                    if (lua_isnumber(L, -1)) {
-                        expiryCount = lua_tonumber(L, -1);
-                        if (expiryCount < 1) {
-                            lua_pop(L, 2);
-                            luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
-                            return warnArgumentValue(L, __func__, qsl("trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
-                        }
+                    if (!lua_isnumber(L, -1)) {
+                        errorArgumentType(L, __func__, -1, qPrintable(key), "number", true);
+                        errorPushed = true;
+                        break;
+                    }
+                    expiryCount = static_cast<int>(lua_tonumber(L, -1));
+                    if (expiryCount < 1) {
+                        lua_pop(L, 2);
+                        luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);
+                        return warnArgumentValue(L, __func__, qsl("trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
                     }
                 }
 
@@ -3012,6 +2978,25 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
                     lua_pushfstring(L, "tempComplexRegexTrigger: bad argument, missing 'lineDelta' in table");
                     errorPushed = true;
                 } else {
+                    const bool colorTrigger = !fgColorIsNumber && !bgColorIsNumber;
+                    // as positionally, the highlight background alone decides whether there is a highlight
+                    const bool highlight = !hlBgColorIsNumber;
+                    QColor hlFgColor, hlBgColor;
+#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
+                    if (!hlFgColorIsNumber) {
+                        hlFgColor.setNamedColor(hlFgColorName);
+                    }
+                    if (!hlBgColorIsNumber) {
+                        hlBgColor.setNamedColor(hlBgColorName);
+                    }
+#else
+                    if (!hlFgColorIsNumber) {
+                        hlFgColor = QColor::fromString(hlFgColorName);
+                    }
+                    if (!hlBgColorIsNumber) {
+                        hlBgColor = QColor::fromString(hlBgColorName);
+                    }
+#endif
                     if (!colorTrigger) {
                         if (const QString error = triggerRegexCompileError(pattern); !error.isEmpty()) {
                             luaL_unref(L, LUA_REGISTRYINDEX, codeFunctionRef);

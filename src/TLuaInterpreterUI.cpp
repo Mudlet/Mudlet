@@ -2797,9 +2797,11 @@ int TLuaInterpreter::insertLink(lua_State* L)
                     hint = lua_tostring(L, -1);
                     hasHint = true;
                 } else if (!key.compare(QLatin1String("useCurrentFormat"), Qt::CaseInsensitive)) {
-                    if (lua_isboolean(L, -1)) {
-                        useCurrentFormat = lua_toboolean(L, -1);
+                    if (!checkBoolArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
                     }
+                    useCurrentFormat = lua_toboolean(L, -1);
                 }
 
                 lua_pop(L, 1);
@@ -3001,9 +3003,11 @@ int TLuaInterpreter::insertPopup(lua_State* L)
                         parseHintsTable(L, __func__, valueIndex, hintList);
                         hasHints = true;
                     } else if (!key.compare(QLatin1String("useCurrentFormat"), Qt::CaseInsensitive)) {
-                        if (lua_isboolean(L, -1)) {
-                            useCurrentFormat = lua_toboolean(L, -1);
+                        if (!checkBoolArg(L, __func__, -1, qPrintable(key))) {
+                            errorPushed = true;
+                            break;
                         }
+                        useCurrentFormat = lua_toboolean(L, -1);
                     }
 
                     lua_pop(L, 1);
@@ -5403,6 +5407,18 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
             bool hasBgR = false, hasBgG = false, hasBgB = false;
             bool hasFgR = false, hasFgG = false, hasFgB = false;
             bool hasBold = false, hasUnderline = false, hasItalics = false;
+            QString blinkMode = qsl("none");
+            auto readFlag = [L](const QString& key, bool& flag) {
+                if (lua_isboolean(L, -1)) {
+                    flag = lua_toboolean(L, -1);
+                } else if (lua_isnumber(L, -1)) {
+                    flag = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                } else {
+                    errorArgumentType(L, "setTextFormat", -1, qPrintable(key), "boolean or number {true/non-zero to enable}");
+                    return false;
+                }
+                return true;
+            };
 
             lua_pushnil(L);
             while (lua_next(L, 1) != 0) {
@@ -5473,44 +5489,44 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
                     fgB = qRound(qBound(0.0, lua_tonumber(L, -1), 255.0));
                     hasFgB = true;
                 } else if (!key.compare(QLatin1String("bold"), Qt::CaseInsensitive)) {
-                    if (lua_isboolean(L, -1)) {
-                        bold = lua_toboolean(L, -1);
-                    } else if (lua_isnumber(L, -1)) {
-                        bold = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                    if (!readFlag(key, bold)) {
+                        errorPushed = true;
+                        break;
                     }
                     hasBold = true;
                 } else if (!key.compare(QLatin1String("underline"), Qt::CaseInsensitive)) {
-                    if (lua_isboolean(L, -1)) {
-                        underline = lua_toboolean(L, -1);
-                    } else if (lua_isnumber(L, -1)) {
-                        underline = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                    if (!readFlag(key, underline)) {
+                        errorPushed = true;
+                        break;
                     }
                     hasUnderline = true;
                 } else if (!key.compare(QLatin1String("italics"), Qt::CaseInsensitive) || !key.compare(QLatin1String("italic"), Qt::CaseInsensitive)) {
-                    if (lua_isboolean(L, -1)) {
-                        italics = lua_toboolean(L, -1);
-                    } else if (lua_isnumber(L, -1)) {
-                        italics = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                    if (!readFlag(key, italics)) {
+                        errorPushed = true;
+                        break;
                     }
                     hasItalics = true;
                 } else if (!key.compare(QLatin1String("strikeout"), Qt::CaseInsensitive) || !key.compare(QLatin1String("strikeOut"), Qt::CaseInsensitive)) {
-                    if (lua_isboolean(L, -1)) {
-                        strikeout = lua_toboolean(L, -1);
-                    } else if (lua_isnumber(L, -1)) {
-                        strikeout = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                    if (!readFlag(key, strikeout)) {
+                        errorPushed = true;
+                        break;
                     }
                 } else if (!key.compare(QLatin1String("overline"), Qt::CaseInsensitive)) {
-                    if (lua_isboolean(L, -1)) {
-                        overline = lua_toboolean(L, -1);
-                    } else if (lua_isnumber(L, -1)) {
-                        overline = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                    if (!readFlag(key, overline)) {
+                        errorPushed = true;
+                        break;
                     }
                 } else if (!key.compare(QLatin1String("reverse"), Qt::CaseInsensitive)) {
-                    if (lua_isboolean(L, -1)) {
-                        reverse = lua_toboolean(L, -1);
-                    } else if (lua_isnumber(L, -1)) {
-                        reverse = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, -1));
+                    if (!readFlag(key, reverse)) {
+                        errorPushed = true;
+                        break;
                     }
+                } else if (!key.compare(QLatin1String("blink"), Qt::CaseInsensitive) || !key.compare(QLatin1String("blinkMode"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    blinkMode = lua_tostring(L, -1);
                 }
 
                 lua_pop(L, 1);
@@ -5545,8 +5561,12 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
                     lua_pushfstring(L, "setTextFormat: bad argument, missing 'italics' or 'italic' in table");
                     errorPushed = true;
                 } else {
+                    if (blinkMode != qsl("none") && blinkMode != qsl("slow") && blinkMode != qsl("fast")) {
+                        return warnArgumentChoice(L, __func__, qsl("blink mode"), {qsl("none"), qsl("slow"), qsl("fast")}, blinkMode);
+                    }
                     TChar::AttributeFlags const flags = (bold ? TChar::Bold : TChar::None) | (italics ? TChar::Italic : TChar::None) | (overline ? TChar::Overline : TChar::None)
-                                                        | (reverse ? TChar::Reverse : TChar::None) | (strikeout ? TChar::StrikeOut : TChar::None) | (underline ? TChar::Underline : TChar::None);
+                                                        | (reverse ? TChar::Reverse : TChar::None) | (strikeout ? TChar::StrikeOut : TChar::None) | (underline ? TChar::Underline : TChar::None)
+                                                        | (blinkMode == qsl("fast") ? TChar::FastBlink : (blinkMode == qsl("slow") ? TChar::Blink : TChar::None));
 
                     auto pModel = host.consoleModelNamed(windowName);
                     if (!pModel) {

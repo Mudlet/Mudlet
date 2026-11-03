@@ -426,8 +426,11 @@ function registerNamedTimer(user,name, time, handler, oneShot)
     -- for timers, the positional oneShot argument is tempTimer()'s repeating flag
     if args.repeating ~= nil then
       oneShot = args.repeating
-    elseif args.oneShot ~= nil then
+    elseif type(args.oneShot) == "boolean" then
       oneShot = not args.oneShot
+    else
+      -- pass anything else through for tempTimer() to reject
+      oneShot = args.oneShot
     end
   end
 

@@ -384,28 +384,36 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                     hasToRoomIDOrCoords = true;
                 } else if (!key.compare(QLatin1String("coordinates"), Qt::CaseInsensitive)) {
                     if (!lua_istable(L, -1)) {
-                        lua_pop(L, 2);
-                        return warnArgumentValue(L, __func__, "coordinates must be a table");
+                        errorArgumentType(L, __func__, -1, qPrintable(key), "table of tables of three coordinates");
+                        errorPushed = true;
+                        break;
                     }
-                    // Process coordinates table
+                    x.clear();
+                    y.clear();
+                    z.clear();
                     lua_pushnil(L);
                     int i = 0;
-                    while (lua_next(L, -2) != 0) {
+                    while (!errorPushed && lua_next(L, -2) != 0) {
                         ++i;
                         if (lua_type(L, -1) != LUA_TTABLE) {
-                            lua_pop(L, 4);
-                            return warnArgumentValue(L, __func__, qsl("coordinates table item #%1 must be a table of {x,y,z}").arg(i));
+                            lua_pushfstring(L, "addCustomLine: bad 'coordinates' item #%d type (a table of three coordinates expected, got %s!)", i, luaL_typename(L, -1));
+                            errorPushed = true;
+                            break;
                         }
                         lua_pushnil(L);
                         int j = 0;
-                        qreal tx = 0, ty = 0;
-                        int tz = 0;
                         while (lua_next(L, -2) != 0) {
                             ++j;
                             if (j <= 3) {
                                 if (lua_type(L, -1) != LUA_TNUMBER) {
-                                    lua_pop(L, 6);
-                                    return warnArgumentValue(L, __func__, qsl("coordinates table item #%1 inner item #%2 must be a number").arg(i).arg(j));
+                                    lua_pushfstring(L,
+                                                    "addCustomLine: bad 'coordinates' item #%d inner item #%d type (the %c-coordinate as a number expected, got %s!)",
+                                                    i,
+                                                    j,
+                                                    "xyz"[j - 1],
+                                                    luaL_typename(L, -1));
+                                    errorPushed = true;
+                                    break;
                                 }
                                 if (const lua_Number value = lua_tonumber(L, -1); !(value >= std::numeric_limits<int>::min() && value <= std::numeric_limits<int>::max())) {
                                     lua_pop(L, 6);
@@ -413,27 +421,45 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                                 }
                                 switch (j) {
                                 case 1:
-                                    tx = lua_tonumber(L, -1);
+                                    x.append(lua_tonumber(L, -1));
                                     break;
                                 case 2:
-                                    ty = lua_tonumber(L, -1);
+                                    y.append(lua_tonumber(L, -1));
                                     break;
                                 case 3:
-                                    tz = static_cast<int>(lua_tonumber(L, -1));
+                                    z.append(static_cast<int>(lua_tonumber(L, -1)));
                                     break;
                                 }
                             }
                             lua_pop(L, 1);
                         }
-                        x.append(tx);
-                        y.append(ty);
-                        z.append(tz);
-                        lua_pop(L, 1);
+                        if (!errorPushed) {
+                            lua_pop(L, 1);
+                        }
+                    }
+                    if (errorPushed) {
+                        break;
+                    }
+                    if (x.isEmpty()) {
+                        lua_pop(L, 2);
+                        return warnArgumentValue(L, __func__, "missing coordinates to create the line to");
+                    }
+                    if (x.count() != y.count() || x.count() != z.count()) {
+                        lua_pop(L, 2);
+                        return warnArgumentValue(L,
+                                                 __func__,
+                                                 "mismatch in numbers of coordinates for the points for the custom line given in the coordinates table; each must contain three coordinates, "
+                                                 "i.e. x, y AND z numeric values as a sub-table");
                     }
                     hasToRoomIDOrCoords = true;
                 } else if (!key.compare(QLatin1String("direction"), Qt::CaseInsensitive)) {
                     direction = dirToString(L, -1);
-                    hasDirection = !direction.isEmpty();
+                    if (direction.isEmpty()) {
+                        errorArgumentType(L, __func__, -1, qPrintable(key), "string or number (between 1 and 12 inclusive)");
+                        errorPushed = true;
+                        break;
+                    }
+                    hasDirection = true;
                 } else if (!key.compare(QLatin1String("style"), Qt::CaseInsensitive) || !key.compare(QLatin1String("lineStyle"), Qt::CaseInsensitive)) {
                     if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
                         errorPushed = true;
@@ -457,8 +483,9 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                     hasStyle = true;
                 } else if (!key.compare(QLatin1String("color"), Qt::CaseInsensitive) || !key.compare(QLatin1String("lineColor"), Qt::CaseInsensitive)) {
                     if (!lua_istable(L, -1)) {
-                        lua_pop(L, 2);
-                        return warnArgumentValue(L, __func__, "color must be a table with {r, g, b} values");
+                        errorArgumentType(L, __func__, -1, qPrintable(key), "RGB color components as a table");
+                        errorPushed = true;
+                        break;
                     }
                     // Read by index: lua_next() visits keys in no defined order and counts any extra keys too
                     for (int colorIndex = 1; colorIndex <= 3; ++colorIndex) {
@@ -468,8 +495,9 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                             return warnArgumentValue(L, __func__, qsl("color table has no item #%1 but red, green and blue are all needed").arg(colorIndex));
                         }
                         if (lua_type(L, -1) != LUA_TNUMBER) {
-                            lua_pop(L, 3);
-                            return warnArgumentValue(L, __func__, qsl("color table item #%1 must be a number").arg(colorIndex));
+                            lua_pushfstring(L, "addCustomLine: bad 'color' item #%d type (color component as a number between 0 and 255 expected, got %s!)", colorIndex, luaL_typename(L, -1));
+                            errorPushed = true;
+                            break;
                         }
                         const qint64 component = lua_tointeger(L, -1);
                         lua_pop(L, 1);
@@ -491,11 +519,14 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                             Q_UNREACHABLE();
                         }
                     }
+                    if (errorPushed) {
+                        break;
+                    }
                     hasColor = true;
                 } else if (!key.compare(QLatin1String("arrow"), Qt::CaseInsensitive) || !key.compare(QLatin1String("endWithArrow"), Qt::CaseInsensitive)) {
-                    if (!lua_isboolean(L, -1)) {
-                        lua_pop(L, 2);
-                        return warnArgumentValue(L, __func__, "arrow must be a boolean");
+                    if (!checkBoolArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
                     }
                     arrow = lua_toboolean(L, -1);
                     hasArrow = true;
@@ -564,9 +595,6 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                     return warnArgumentValue(L, __func__, "mismatch in numbers of coordinates");
                 }
 
-                if (direction.isEmpty()) {
-                    return warnArgumentValue(L, __func__, "invalid direction");
-                }
                 if (!pR->hasExitOrSpecialExit(direction)) {
                     return warnArgumentValue(L, __func__, qsl("roomID %1 does not have an exit in direction '%2'").arg(id_from).arg(direction));
                 }
@@ -851,7 +879,7 @@ int TLuaInterpreter::addMapEvent(lua_State* L)
             QString parent;
             QString displayName;
             QStringList arguments;
-            bool hasUniqueName = false, hasEventName = false;
+            bool hasUniqueName = false, hasEventName = false, hasDisplayName = false;
 
             lua_pushnil(L);
             while (lua_next(L, 1) != 0) {
@@ -883,29 +911,20 @@ int TLuaInterpreter::addMapEvent(lua_State* L)
                     eventName = lua_tostring(L, -1);
                     hasEventName = true;
                 } else if (!key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
-                    // uniqueName and eventName above reject a value that is not
-                    // a string, so these have to as well: dropping a bad one
-                    // registered the event anyway, under a name nobody asked for
-                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
-                        errorPushed = true;
-                        break;
-                    }
-                    parent = QString::fromUtf8(lua_tostring(L, -1));
+                    parent = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
                 } else if (!key.compare(QLatin1String("displayname"), Qt::CaseInsensitive) || !key.compare(QLatin1String("displayName"), Qt::CaseInsensitive)) {
-                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
-                        errorPushed = true;
-                        break;
-                    }
-                    displayName = QString::fromUtf8(lua_tostring(L, -1));
+                    hasDisplayName = lua_isstring(L, -1);
+                    displayName = hasDisplayName ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
                 } else if (!key.compare(QLatin1String("arguments"), Qt::CaseInsensitive) || !key.compare(QLatin1String("args"), Qt::CaseInsensitive)) {
+                    arguments.clear();
                     if (lua_istable(L, -1)) {
-                        lua_pushnil(L);
-                        while (lua_next(L, -2) != 0) {
-                            if (lua_isstring(L, -1)) {
-                                arguments << QString::fromUtf8(lua_tostring(L, -1));
-                            }
+                        for (int index = 1, total = static_cast<int>(lua_objlen(L, -1)); index <= total; ++index) {
+                            lua_rawgeti(L, -1, index);
+                            arguments << QString::fromUtf8(lua_tostring(L, -1));
                             lua_pop(L, 1);
                         }
+                    } else {
+                        arguments << QString::fromUtf8(lua_tostring(L, -1));
                     }
                 }
 
@@ -924,7 +943,7 @@ int TLuaInterpreter::addMapEvent(lua_State* L)
                 QStringList actionInfo;
                 actionInfo << eventName;
                 actionInfo << parent;
-                actionInfo << (displayName.isEmpty() ? uniqueName : displayName);
+                actionInfo << (hasDisplayName ? displayName : uniqueName);
                 actionInfo << arguments;
 
                 const Host& host = getHostFromLua(L);
@@ -1496,7 +1515,7 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
             bool hasArea = false, hasText = false, hasPosX = false, hasPosY = false, hasPosZ = false;
             bool hasFgR = false, hasFgG = false, hasFgB = false;
             bool hasBgR = false, hasBgG = false, hasBgB = false;
-            bool hasOutlineColor = false;
+            bool hasOlR = false, hasOlG = false, hasOlB = false;
 
             lua_pushnil(L);
             while (lua_next(L, 1) != 0) {
@@ -1643,21 +1662,21 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
                         break;
                     }
                     olr = static_cast<int>(lua_tointeger(L, -1));
-                    hasOutlineColor = true;
+                    hasOlR = true;
                 } else if (!key.compare(QLatin1String("outlineGreen"), Qt::CaseInsensitive) || !key.compare(QLatin1String("olG"), Qt::CaseInsensitive)) {
                     if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
                         errorPushed = true;
                         break;
                     }
                     olg = static_cast<int>(lua_tointeger(L, -1));
-                    hasOutlineColor = true;
+                    hasOlG = true;
                 } else if (!key.compare(QLatin1String("outlineBlue"), Qt::CaseInsensitive) || !key.compare(QLatin1String("olB"), Qt::CaseInsensitive)) {
                     if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
                         errorPushed = true;
                         break;
                     }
                     olb = static_cast<int>(lua_tointeger(L, -1));
-                    hasOutlineColor = true;
+                    hasOlB = true;
                 }
 
                 lua_pop(L, 1);
@@ -1697,9 +1716,18 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
                 } else if (!hasBgB) {
                     lua_pushfstring(L, "createMapLabel: bad argument, missing 'bgBlue' or 'bgB' in table");
                     errorPushed = true;
+                } else if ((hasOlR || hasOlG || hasOlB) && !hasOlR) {
+                    lua_pushfstring(L, "createMapLabel: bad argument, missing 'outlineRed' or 'olR' in table");
+                    errorPushed = true;
+                } else if ((hasOlR || hasOlG || hasOlB) && !hasOlG) {
+                    lua_pushfstring(L, "createMapLabel: bad argument, missing 'outlineGreen' or 'olG' in table");
+                    errorPushed = true;
+                } else if ((hasOlR || hasOlG || hasOlB) && !hasOlB) {
+                    lua_pushfstring(L, "createMapLabel: bad argument, missing 'outlineBlue' or 'olB' in table");
+                    errorPushed = true;
                 } else {
                     // If outline color not specified, default to foreground color
-                    if (!hasOutlineColor) {
+                    if (!hasOlR) {
                         olr = fgr;
                         olg = fgg;
                         olb = fgb;
