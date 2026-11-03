@@ -659,10 +659,9 @@ jobs:
       if: >-
         !cancelled() && steps.build.outcome == 'success'
         && matrix.run_tests == 'true' && runner.os == 'macOS'
-      # Covers both suites: on the 3-core arm64 runner ctest takes ~215s on its own, and the
-      # Lua suite stretches from ~170s to ~240s while sharing the runner with it. The Lua
-      # run has its own, shorter limit below.
-      timeout-minutes: 15
+      # Covers both suites, side by side on the 3-core arm64 runner: ctest 440-690s, Lua 550-710s.
+      # The Lua run has its own, shorter limit below.
+      timeout-minutes: 20
       run: |
         # Given to the Lua run only: AppStartupTeardownTest and HeadlessVersionTest pass
         # their own environment on to the app they launch
@@ -685,9 +684,9 @@ jobs:
         )
         lua_log="${{runner.temp}}/lua-tests.log"
         lua_tests=""
-        # As long as the Linux and build-mudlet.yml Lua steps get, and short enough of
-        # timeout-minutes to leave stopping the run and reporting on it inside the step
-        lua_budget=720
+        # Half again the slowest green run, and short enough of timeout-minutes to leave
+        # stopping the run and reporting on it inside the step
+        lua_budget=1080
         lua_deadline=$(( SECONDS + lua_budget ))
         if [ -x ~/Desktop/Mudlet.app/Contents/MacOS/mudlet ]; then
           env "${lua_tests_env[@]}" ~/Desktop/Mudlet.app/Contents/MacOS/mudlet \
@@ -730,7 +729,7 @@ jobs:
           echo "::error::Lua specs failed - see the Lua tests group above"
           lua_status=1
         elif ! grep -Eq '[0-9]+ success(es)? / [0-9]+ failures? / [0-9]+ errors?' "${lua_log}"; then
-          echo "::error::The Lua specs never ran - see the Lua tests group above"
+          echo "::error::The Lua run ended before its summary line - see the Lua tests group above"
           [ "${lua_status}" -ne 0 ] || lua_status=1
         fi
         echo "C++ tests exited with ${ctest_status}, the Lua run with ${lua_status}"
