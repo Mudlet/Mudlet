@@ -185,7 +185,9 @@ something is connected to it, so an app that connects it and drops what it gets 
 notifications were shown. `attentionRequested` carries a script's `alert()` and the game's bell, with
 how long to ask for the player's attention: 0 until they come back, and 3 seconds for a bell, as the
 GUI asks. That is the GUI's flash of its window, not its beep, which it leaves out for a bell while the
-game's sounds are muted. The session shows, flashes and beeps nothing itself.
+game's sounds are muted. The session shows, flashes and beeps nothing itself. `announcementRequested`
+carries what a script's `announce()`, or Mudlet when it opens a sign-in page, asks screen readers to say,
+and whether the GUI would make it assertive, for an app to hand to the platform's own accessibility service.
 
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.

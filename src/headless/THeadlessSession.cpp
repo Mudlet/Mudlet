@@ -406,6 +406,13 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     emit attentionRequested(profile, milliseconds);
                     --gSignalsBeingHandedOut;
                 });
+                connect(pNewHost, &Host::signal_announcementRequested, this, [this](const QString& text, const QString& processing) {
+                    const QString profile = mProfileName;
+                    const bool assertive = processing == QLatin1String("importantall") || processing == QLatin1String("importantmostrecent");
+                    ++gSignalsBeingHandedOut;
+                    emit announcementRequested(profile, text, assertive);
+                    --gSignalsBeingHandedOut;
+                });
                 // For as long as the main window asks for it
                 connect(&pNewHost->mTelnet, &cTelnet::signal_bell, this, [this]() {
                     const QString profile = mProfileName;

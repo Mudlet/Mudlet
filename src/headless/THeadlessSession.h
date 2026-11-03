@@ -193,6 +193,10 @@ signals:
     // Sent as asked, so a handler may neither call the session nor run the event loop.
     void notificationRequested(const QString& profile, const QString& title, const QString& text, std::optional<int> milliseconds);
     void attentionRequested(const QString& profile, int milliseconds);
+    // What a script's announce(), or Mudlet on its behalf, asks screen readers to say, as plain text; assertive
+    // for the "importantall" and "importantmostrecent" styles, as the GUI makes them, polite otherwise. Sent
+    // as asked, so a handler may neither call the session nor run the event loop.
+    void announcementRequested(const QString& profile, const QString& text, bool assertive);
     // The connection was made; from the event loop
     void connected(const QString& profile);
     // The connection ended, or could not be made; from the event loop

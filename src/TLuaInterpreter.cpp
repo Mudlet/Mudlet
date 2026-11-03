@@ -10279,7 +10279,10 @@ int TLuaInterpreter::announce(lua_State* L)
         return lua_error(L);
     }
 
-    TAppFrontend::instance()->announce(QString{lua_tostring(L, 1)}, (n > 1) ? QString{lua_tostring(L, 2)} : QString(), true);
+    const QString text{lua_tostring(L, 1)};
+    const QString processing = (n > 1) ? QString{lua_tostring(L, 2)} : QString();
+    TAppFrontend::instance()->announce(text, processing, true);
+    emit getHostFromLua(L).signal_announcementRequested(text, processing);
     return 0;
 }
 
