@@ -1,0 +1,38 @@
+name: 📦 Build Mudlet Flatpak
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'CI/org.mudlet.mudlet.yml'
+      - 'CI/lua-5.1.5-so.patch'
+      - 'CI/yajl-cmake-fix.patch'
+      - 'org.mudlet.mudlet.metainfo.xml'
+      - '.github/workflows/build-mudlet-flatpak.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  flatpak:
+    name: Flatpak
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    timeout-minutes: 120
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.10
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6.8
+        with:
+          manifest-path: CI/org.mudlet.mudlet.yml
+          cache-key: flatpak-builder-${{ github.sha }}
