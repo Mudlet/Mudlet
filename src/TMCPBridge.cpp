@@ -46,6 +46,10 @@
 #if defined(Q_OS_WIN32)
 #include <fcntl.h>
 #include <io.h>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #endif
 
 namespace {
@@ -106,6 +110,22 @@ TMCPBridge::TMCPBridge(const QString& configDir)
 
 int TMCPBridge::exec(const QString& configDir)
 {
+#if defined(Q_OS_WIN32)
+    // A GUI-subsystem exe run from a console without redirection has no stdout or stderr
+    // (fd -2). Reopen only those: attaching succeeds under a client's pipes too.
+    if ((_fileno(stdout) < 0 || _fileno(stderr) < 0) && AttachConsole(ATTACH_PARENT_PROCESS)) {
+        if (_fileno(stdout) < 0) {
+            std::freopen("CONOUT$", "w", stdout);
+        }
+        if (_fileno(stderr) < 0) {
+            std::freopen("CONOUT$", "w", stderr);
+        }
+    }
+    if (_fileno(stdin) < 0 || _fileno(stdout) < 0) {
+        noteOnStderr(qsl("mudlet --mcp-bridge: there is no stdin or stdout to speak JSON-RPC over - this is for an MCP client such as Claude Desktop to start"));
+        return 1;
+    }
+#endif
     TMCPBridge bridge(configDir);
     bridge.startStdinReader();
     return QCoreApplication::exec();
@@ -446,13 +466,28 @@ QString TMCPBridge::claudeDesktopConfigDir()
 #if defined(Q_OS_MACOS)
     return qsl("%1/Library/Application Support/Claude").arg(QDir::homePath());
 #elif defined(Q_OS_WIN32)
-    const QString appData = qEnvironmentVariable("APPDATA");
-    return appData.isEmpty() ? QString() : qsl("%1/Claude").arg(appData);
+    return claudeDesktopConfigDirOnWindows(qEnvironmentVariable("LOCALAPPDATA"), qEnvironmentVariable("APPDATA"));
 #else
     // GenericConfigLocation honours XDG_CONFIG_HOME the way Claude Desktop's Linux
     // builds do. On macOS it would give ~/Library/Preferences - hence the branch above.
     return qsl("%1/Claude").arg(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation));
 #endif
+}
+
+QString TMCPBridge::claudeDesktopConfigDirOnWindows(const QString& localAppData, const QString& appData)
+{
+    // Packaged (MSIX) Claude Desktop moves its data to Claude-Data\<lowercased package family>
+    // and prefers it over %APPDATA%\Claude. Uninstalling leaves that but removes Packages\<family>.
+    // Of two installed packages, the more recently modified is taken to be the one in use.
+    if (!localAppData.isEmpty()) {
+        const QFileInfoList packaged = QDir(qsl("%1/Claude-Data").arg(localAppData)).entryInfoList({qsl("claude_*"), qsl("anthropicpbc.claude_*")}, QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time);
+        for (const QFileInfo& dir : packaged) {
+            if (QFileInfo(qsl("%1/Packages/%2").arg(localAppData, dir.fileName())).isDir()) {
+                return dir.filePath();
+            }
+        }
+    }
+    return appData.isEmpty() ? QString() : qsl("%1/Claude").arg(appData);
 }
 
 QString TMCPBridge::claudeDesktopConfigFilePath()
