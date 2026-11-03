@@ -32,6 +32,7 @@
 #include <QPoint>
 #include <QPointer>
 #include <QRect>
+#include <QSet>
 #include <QSize>
 #include <QString>
 
@@ -74,20 +75,26 @@ public:
     {
     }
 
-    void createInternalFrame(const QString& name, const QString&, const QString&, const QRect&, bool, bool) override;
+    void createInternalFrame(const QString& name, const QString& hostName, const QString&, const QRect& geometry, bool showHeader, bool) override;
     std::optional<QSize> createExternalFrame(const QString& name, const QString&, const QSize& size, bool) override;
-    void createTabFrame(const QString& name, const QString&, const QString&, const QSize&, bool, bool) override;
+    void createTabFrame(const QString& name, const QString&, const QString& parentName, const QSize& size, bool, bool) override;
     bool removeFromParentTabs(const QString&, const QString&) override { return false; }
     void destroyFrame(const QString& name) override;
     void showFrame(const QString&) override {}
     void focusFrame(const QString&) override {}
-    void setGeometry(const QString&, const QRect&) override {}
-    void reportSize() override {}
+    void setGeometry(const QString& name, const QRect& geometry) override;
+    void reportSize() override;
     TPrintSink* sink(const QString& name) const override;
     bool hasFrameWidget(const QString& name) const override;
 
 private:
+    QSize consoleSize(const QString& name, const QSize& frameSize) const;
+
     TNullConsoleFrontend& mView;
+    // The frames shown with a tab header, which takes its height off the frame's console
+    QSet<QString> mHeaders;
+    // The size each frame's container last laid its console out at
+    std::map<QString, QSize> mConsoleSizes;
 };
 
 // The view a Host has while no real one is attached: before its console is made, after that has
@@ -465,7 +472,8 @@ private:
     TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);
     // keepWidget for a console whose widget outlives its place in the registry, with its own command line
     void removeSubConsole(const QString& name, bool keepWidget = false);
-    void addFrameConsole(const QString& name, bool external = false, const QString& hostFrame = QString());
+    void addFrameConsole(const QString& name, const QSize& size, bool external = false, const QString& hostFrame = QString());
+    void sizeFrameConsole(const QString& name, const QSize& size);
     void removeFrameConsole(const QString& name);
     TConsoleModelSink* frameSink(const QString& name) const;
     void removeLabel(const QString& name);
