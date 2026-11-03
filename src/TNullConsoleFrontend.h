@@ -74,9 +74,9 @@ public:
     {
     }
 
-    void createInternalFrame(const QString& name, const QString& hostName, const QString&, const QRect& geometry, bool showHeader, bool) override;
-    std::optional<QSize> createExternalFrame(const QString& name, const QString&, const QSize& size, bool) override;
-    void createTabFrame(const QString& name, const QString&, const QString& parentName, const QSize& size, bool, bool select) override;
+    void createInternalFrame(const QString& name, const QString& hostName, const QString&, const QRect& geometry, bool showHeader, bool scrolling) override;
+    std::optional<QSize> createExternalFrame(const QString& name, const QString&, const QSize& size, bool scrolling) override;
+    void createTabFrame(const QString& name, const QString&, const QString& parentName, const QSize& size, bool scrolling, bool select) override;
     bool removeFromParentTabs(const QString& name, const QString& parentName) override;
     void destroyFrame(const QString& name) override;
     void showFrame(const QString&) override {}
@@ -487,7 +487,7 @@ private:
     TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);
     // keepWidget for a console whose widget outlives its place in the registry, with its own command line
     void removeSubConsole(const QString& name, bool keepWidget = false);
-    void addFrameConsole(const QString& name, const QSize& size, bool external = false, const QString& hostFrame = QString());
+    void addFrameConsole(const QString& name, const QSize& size, bool external, const QString& hostFrame, bool scrolling);
     void sizeFrameConsole(const QString& name, const QSize& size);
     // False for a frame's console a script has moved out of the frame
     bool inOwnFrame(const QString& name) const;
