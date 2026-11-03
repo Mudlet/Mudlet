@@ -33,6 +33,9 @@ public:
         dark = 2
     };
 
+    // Whether pressing and releasing Alt on its own moves focus to the menu bar
+    enum class MenuBarAltKeyNavigation { WhenScreenReaderRunning = 0, Always = 1, Never = 2 };
+
     enum controlsVisibilityFlag {
         visibleNever = 0,
         visibleOnlyWithoutLoadedProfile = 0x1,

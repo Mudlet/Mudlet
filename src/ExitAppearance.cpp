@@ -49,6 +49,36 @@ QColor contrastColor(const QColor& background)
     return background.lightness() > 127 ? QColor(Qt::black) : QColor(Qt::white);
 }
 
+int brightness(const QColor& color)
+{
+    return (299 * color.red() + 587 * color.green() + 114 * color.blue()) / 1000;
+}
+
+QColor standOutColor(const QColor& color, const QColor& background)
+{
+    // By brightness rather than HSL lightness, which rates a saturated yellow no lighter than a mid gray
+    constexpr int minimumDifference = 75;
+    const int backgroundBrightness = brightness(background);
+    if (qAbs(brightness(color) - backgroundBrightness) >= minimumDifference) {
+        return color;
+    }
+    const bool darken = backgroundBrightness > 127;
+    const auto atLightness = [&color](const int lightness) {
+        return QColor::fromHsl(color.hslHue(), color.hslSaturation(), lightness, color.alpha());
+    };
+    const auto standsOut = [&](const int lightness) {
+        return qAbs(brightness(atLightness(lightness)) - backgroundBrightness) >= minimumDifference;
+    };
+    // Brightness rises with lightness, so a binary search finds the nearest lightness that stands out
+    int near = color.lightness();
+    int far = darken ? 0 : 255;
+    while (qAbs(far - near) > 1) {
+        const int middle = (near + far) / 2;
+        (standsOut(middle) ? far : near) = middle;
+    }
+    return atLightness(far);
+}
+
 std::pair<QLineF, QLineF> doorStrokes(const QLineF& exitLine, const qreal roomSpan)
 {
     // A set of numbers that can be converted to "static" type and be frobbed

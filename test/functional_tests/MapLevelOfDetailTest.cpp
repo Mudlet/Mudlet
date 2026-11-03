@@ -56,10 +56,12 @@
  */
 
 #include <QPixmap>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "ExitAppearance.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
@@ -67,6 +69,7 @@
 #include "ProfileTestHelper.h"
 #include "T2DMap.h"
 #include "TArea.h"
+#include "TLuaInterpreter.h"
 #include "TAreaGridIndex.h"
 #include "TMap.h"
 #include "TRoom.h"
@@ -294,15 +297,15 @@ private:
         return areaId;
     }
 
-    // Antialiasing is off so that a pen thinner than a pixel lands as a solid
+    // Antialiasing is off by default so that a pen thinner than a pixel lands as a solid
     // hairline of its own colour rather than a few per cent of it, which no
     // channel-order test could tell from the background.
-    T2DMap* prepareWidget(const int areaId, const double zoom, const double roomSize, const double borderSize, const double lineSize = 10.0)
+    T2DMap* prepareWidget(const int areaId, const double zoom, const double roomSize, const double borderSize, const double lineSize = 10.0, const bool antialias = false)
     {
         mpHost->mRoomSize = roomSize;
         mpHost->mRoomBorderSize = borderSize;
         mpHost->mLineSize = lineSize;
-        mpHost->mMapperUseAntiAlias = false;
+        mpHost->mMapperUseAntiAlias = antialias;
         mpHost->mMapperShowGrid = false;
         mpHost->mMapperShowRoomBorders = false;
         mpHost->mMapperCenterSmallAreas = false;
@@ -362,9 +365,10 @@ private:
         return false;
     }
 
-    static QImage renderFrame(T2DMap* p2dMap)
+    static QImage renderFrame(T2DMap* p2dMap, const qreal devicePixelRatio = 1.0)
     {
-        QPixmap target(kWidgetWidth, kWidgetHeight);
+        QPixmap target(qRound(kWidgetWidth * devicePixelRatio), qRound(kWidgetHeight * devicePixelRatio));
+        target.setDevicePixelRatio(devicePixelRatio);
         target.fill(Qt::black);
         p2dMap->render(&target, QPoint(), QRegion(), QWidget::DrawWindowBackground);
         return target.toImage();
@@ -1125,6 +1129,390 @@ private slots:
         }
     }
 
+    // Two highlighted rooms side by side, each highlight clear at its own centre
+    // and solid over its neighbour's: whichever room the loop draws second, its
+    // highlight has to stay on top of the room drawn first, and the other way round (#7206)
+    void test_aHighlightIsDrawnOverTheRoomsAroundIt()
+    {
+        const int areaId = freshArea(qsl("Highlight Neighbours Area"));
+        QVERIFY(areaId > 0);
+        const QList<QPair<QPoint, QColor>> rooms{{QPoint(0, 0), QColor(255, 255, 0)}, {QPoint(1, 0), QColor(255, 0, 255)}};
+        int roomId = 1;
+        for (const auto& [position, colour] : rooms) {
+            QVERIFY(addRoomAt(roomId, areaId, position.x(), position.y(), kEnvRoom));
+            TRoom* pRoom = map()->mpRoomDB->getRoom(roomId);
+            QVERIFY(pRoom);
+            pRoom->highlight = true;
+            pRoom->highlightColor = colour;
+            pRoom->highlightColor2 = QColor(0, 0, 0, 0);
+            // Its edge colour starts at 85% of the radius, short of the room next door one room away
+            pRoom->highlightRadius = 2.3f;
+            ++roomId;
+        }
+
+        T2DMap* p2dMap = prepareWidget(areaId, kZoomFortyPixelRooms, 1.0, 10.0);
+        QVERIFY(p2dMap);
+        p2dMap->mShowRoomID = false;
+        const QImage frame = renderFrame(p2dMap);
+        QCOMPARE(p2dMap->mRoomWidth, 40.0f);
+
+        const auto centreOf = [&](const QPoint& position) {
+            return QPoint(qRound(p2dMap->mRX + position.x() * p2dMap->mRoomWidth), qRound(p2dMap->mRY - position.y() * p2dMap->mRoomHeight));
+        };
+        const QColor overFirst = frame.pixelColor(centreOf(rooms.at(0).first));
+        const QColor overSecond = frame.pixelColor(centreOf(rooms.at(1).first));
+        // A room's own highlight is all but transparent at its centre, not quite
+        if (!coloursMatch(overFirst, rooms.at(1).second, 8) || !coloursMatch(overSecond, rooms.at(0).second, 8)) {
+            QFAIL(qPrintable(qsl("a room was drawn over its neighbour's highlight: its centre is %1 and %2 rather than each other's highlight, frame saved at %3")
+                                     .arg(overFirst.name(), overSecond.name(), saveFrame(frame, qsl("highlight-neighbours")))));
+        }
+    }
+
+    void test_roomLabelsStayOnTopOfAHighlight_data()
+    {
+        QTest::addColumn<QString>("label");
+        QTest::newRow("room ids") << qsl("id");
+        QTest::newRow("room symbols") << qsl("symbol");
+        QTest::newRow("room names") << qsl("name");
+        QTest::newRow("exit markers") << qsl("exit marker");
+    }
+
+    // A highlight goes over the rooms around it but under every room's id,
+    // symbol, name or exit markers, its own room's included, as the grid mode loop draws it
+    void test_roomLabelsStayOnTopOfAHighlight()
+    {
+        QFETCH(QString, label);
+        const bool showRoomIds = label == qsl("id");
+        const bool showRoomNames = label == qsl("name");
+        const int areaId = freshArea(qsl("Highlight Id Area"));
+        QVERIFY(areaId > 0);
+        // A dark room gets a white id, and the symbols are white too: the one colour here with any blue in it
+        const QList<QPoint> positions{{0, 0}, {1, 0}};
+        int roomId = 1;
+        for (const QPoint& position : positions) {
+            QVERIFY(addRoomAt(roomId, areaId, position.x(), position.y(), kEnvDark));
+            TRoom* pRoom = map()->mpRoomDB->getRoom(roomId);
+            QVERIFY(pRoom);
+            if (label == qsl("symbol")) {
+                pRoom->mSymbol = qsl("W");
+                pRoom->mSymbolColor = QColor(Qt::white);
+            }
+            if (showRoomNames) {
+                pRoom->name = qsl("WW");
+                setUserDataBool(pRoom->userData, ROOM_UI_SHOWNAME, true);
+            }
+            if (label == qsl("exit marker")) {
+                for (const int direction : {DIR_UP, DIR_DOWN, DIR_IN, DIR_OUT}) {
+                    pRoom->setExitStub(direction, true);
+                }
+            }
+            ++roomId;
+        }
+        const QColor highlightColour(255, 255, 0);
+        // Both, so whichever room is drawn first has the other's highlight reach over its label
+        for (const int highlightedRoomId : {1, 2}) {
+            TRoom* pHighlighted = map()->mpRoomDB->getRoom(highlightedRoomId);
+            QVERIFY(pHighlighted);
+            pHighlighted->highlight = true;
+            pHighlighted->highlightColor = highlightColour;
+            pHighlighted->highlightColor2 = highlightColour;
+            // Covers the whole of the room next door and the name below it
+            pHighlighted->highlightRadius = 4.0f;
+        }
+
+        T2DMap* p2dMap = prepareWidget(areaId, kZoomFortyPixelRooms, 1.0, 10.0);
+        QVERIFY(p2dMap);
+        p2dMap->mShowRoomID = showRoomIds;
+        map()->setRoomNamesShown(showRoomNames);
+        const QImage frame = renderFrame(p2dMap);
+        p2dMap->mShowRoomID = false;
+        map()->setRoomNamesShown(false);
+        QCOMPARE(p2dMap->mRoomWidth, 40.0f);
+
+        for (const QPoint& position : positions) {
+            // A name is drawn in the room's height below it
+            const float labelY = showRoomNames ? position.y() - 1 : position.y();
+            const QRect roomRect(qRound(p2dMap->mRX + (position.x() - 0.5f) * p2dMap->mRoomWidth),
+                                 qRound(p2dMap->mRY - (labelY + 0.5f) * p2dMap->mRoomHeight),
+                                 qRound(p2dMap->mRoomWidth),
+                                 qRound(p2dMap->mRoomHeight));
+            const QImage room = frame.copy(roomRect);
+            int highlightPixels = 0;
+            int labelPixels = 0;
+            for (int y = 0; y < room.height(); ++y) {
+                for (int x = 0; x < room.width(); ++x) {
+                    const QColor pixel = room.pixelColor(x, y);
+                    if (pixel == highlightColour) {
+                        ++highlightPixels;
+                    } else if (pixel.blue() > 128) {
+                        ++labelPixels;
+                    }
+                }
+            }
+            if (highlightPixels < 100 || labelPixels < 5) {
+                QFAIL(qPrintable(qsl("expected the %1 of the room at %2,%3 on top of the highlight, found %4 highlight and %5 of its pixels in it, frame saved at %6")
+                                         .arg(label,
+                                              QString::number(position.x()),
+                                              QString::number(position.y()),
+                                              QString::number(highlightPixels),
+                                              QString::number(labelPixels),
+                                              saveFrame(frame, qsl("highlight-label")))));
+            }
+        }
+    }
+
+    void test_aHighlightIsDrawnOverThePlayersRoom_data()
+    {
+        QTest::addColumn<bool>("gridMode");
+        QTest::addColumn<double>("zoom");
+        QTest::addColumn<float>("roomWidth");
+        QTest::addColumn<int>("probeInset");
+        QTest::newRow("full detail") << false << kZoomFortyPixelRooms << 40.0f << 10;
+        QTest::newRow("grid") << true << kZoomFortyPixelRooms << 40.0f << 10;
+        QTest::newRow("reduced tier") << false << kZoomThreePixelRooms << 3.0f << 1;
+    }
+
+    // The player's room is drawn after the others, but not over the highlight
+    // of the room next to it
+    void test_aHighlightIsDrawnOverThePlayersRoom()
+    {
+        QFETCH(bool, gridMode);
+        QFETCH(double, zoom);
+        QFETCH(float, roomWidth);
+        QFETCH(int, probeInset);
+
+        const int areaId = freshArea(qsl("Highlight Player Area"));
+        QVERIFY(areaId > 0);
+        constexpr int highlightedRoomId = 1;
+        constexpr int playerRoomId = 2;
+        QVERIFY(addRoomAt(highlightedRoomId, areaId, 0, 0, kEnvRoom));
+        QVERIFY(addRoomAt(playerRoomId, areaId, 1, 0, kEnvRoom));
+        TArea* pArea = map()->mpRoomDB->getArea(areaId);
+        QVERIFY(pArea);
+        pArea->gridMode = gridMode;
+        const QColor highlightColour(255, 255, 0);
+        TRoom* pHighlighted = map()->mpRoomDB->getRoom(highlightedRoomId);
+        QVERIFY(pHighlighted);
+        pHighlighted->highlight = true;
+        pHighlighted->highlightColor = highlightColour;
+        pHighlighted->highlightColor2 = highlightColour;
+        pHighlighted->highlightRadius = 2.3f;
+        // Shrinks the player's marker to a dot, clear of the pixel looked at below
+        const quint8 savedMarkerPercentage = map()->mPlayerRoomOuterDiameterPercentage;
+        map()->mPlayerRoomOuterDiameterPercentage = 10;
+        auto restoreMarker = qScopeGuard([this, savedMarkerPercentage] {
+            map()->mPlayerRoomOuterDiameterPercentage = savedMarkerPercentage;
+        });
+
+        T2DMap* p2dMap = prepareWidget(areaId, zoom, 1.0, 10.0);
+        QVERIFY(p2dMap);
+        map()->mRoomIdHash[map()->mProfileName] = playerRoomId;
+        p2dMap->mRoomID = playerRoomId;
+        p2dMap->mMapCenterX = 1;
+        p2dMap->mShowRoomID = false;
+        const QImage frame = renderFrame(p2dMap);
+        QCOMPARE(p2dMap->mRoomWidth, roomWidth);
+
+        // Inside the player's room, off its centre towards the highlighted room
+        const QPoint probe(qRound(p2dMap->mRX + p2dMap->mRoomWidth) - probeInset, p2dMap->mRY);
+        if (frame.pixelColor(probe) != highlightColour) {
+            QFAIL(qPrintable(qsl("the player's room was drawn over the highlight of the room next to it, %1 at %2,%3, frame saved at %4")
+                                     .arg(frame.pixelColor(probe).name(), QString::number(probe.x()), QString::number(probe.y()), saveFrame(frame, qsl("highlight-player")))));
+        }
+    }
+
+    void test_thePlayersRoomKeepsItsOwnHighlightAndSymbolBesideAnotherHighlight_data()
+    {
+        QTest::addColumn<bool>("gridMode");
+        QTest::addColumn<double>("zoom");
+        QTest::addColumn<bool>("symbolLegible");
+        QTest::newRow("full detail") << false << kZoomFortyPixelRooms << true;
+        QTest::newRow("grid") << true << kZoomFortyPixelRooms << true;
+        QTest::newRow("reduced tier") << false << kZoomThreePixelRooms << false;
+    }
+
+    // With another room's highlight in view the player's room is drawn in
+    // separate passes, which must still draw its own highlight and symbol
+    void test_thePlayersRoomKeepsItsOwnHighlightAndSymbolBesideAnotherHighlight()
+    {
+        QFETCH(bool, gridMode);
+        QFETCH(double, zoom);
+        QFETCH(bool, symbolLegible);
+
+        const int areaId = freshArea(qsl("Highlighted Player Area"));
+        QVERIFY(areaId > 0);
+        constexpr int highlightedRoomId = 1;
+        constexpr int playerRoomId = 2;
+        QVERIFY(addRoomAt(highlightedRoomId, areaId, 0, 0, kEnvRoom));
+        QVERIFY(addRoomAt(playerRoomId, areaId, 1, 0, kEnvRoom));
+        TArea* pArea = map()->mpRoomDB->getArea(areaId);
+        QVERIFY(pArea);
+        pArea->gridMode = gridMode;
+        TRoom* pHighlighted = map()->mpRoomDB->getRoom(highlightedRoomId);
+        QVERIFY(pHighlighted);
+        pHighlighted->highlight = true;
+        pHighlighted->highlightColor = QColor(255, 255, 0);
+        pHighlighted->highlightColor2 = QColor(255, 255, 0);
+        pHighlighted->highlightRadius = 2.3f;
+        // Green, so that only the white symbol has any blue in the player's room
+        const QColor playerHighlightColour(0, 255, 0);
+        TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(playerRoomId);
+        QVERIFY(pPlayerRoom);
+        pPlayerRoom->highlight = true;
+        pPlayerRoom->highlightColor = playerHighlightColour;
+        pPlayerRoom->highlightColor2 = playerHighlightColour;
+        pPlayerRoom->highlightRadius = 4.0f;
+        pPlayerRoom->mSymbolColor = QColor(Qt::white);
+        const quint8 savedMarkerPercentage = map()->mPlayerRoomOuterDiameterPercentage;
+        map()->mPlayerRoomOuterDiameterPercentage = 10;
+        auto restoreMarker = qScopeGuard([this, savedMarkerPercentage] {
+            map()->mPlayerRoomOuterDiameterPercentage = savedMarkerPercentage;
+        });
+
+        T2DMap* p2dMap = prepareWidget(areaId, zoom, 1.0, 10.0);
+        QVERIFY(p2dMap);
+        map()->mRoomIdHash[map()->mProfileName] = playerRoomId;
+        p2dMap->mRoomID = playerRoomId;
+        p2dMap->mMapCenterX = 1;
+        p2dMap->mShowRoomID = false;
+        const auto bluePixelsInThePlayersRoom = [p2dMap](const QImage& frame) {
+            const QRect roomRect(qRound(p2dMap->mRX + 0.5f * p2dMap->mRoomWidth), qRound(p2dMap->mRY - 0.5f * p2dMap->mRoomHeight), qRound(p2dMap->mRoomWidth), qRound(p2dMap->mRoomHeight));
+            const QImage room = frame.copy(roomRect);
+            int count = 0;
+            for (int y = 0; y < room.height(); ++y) {
+                for (int x = 0; x < room.width(); ++x) {
+                    count += room.pixelColor(x, y).blue() > 128 ? 1 : 0;
+                }
+            }
+            return count;
+        };
+        const int bluePixelsWithoutSymbol = bluePixelsInThePlayersRoom(renderFrame(p2dMap));
+        pPlayerRoom->mSymbol = qsl("W");
+        const QImage frame = renderFrame(p2dMap);
+
+        // Half a room past the reach of the other highlight, inside the player's own
+        const QPoint probe(qRound(p2dMap->mRX + 2.5f * p2dMap->mRoomWidth), p2dMap->mRY);
+        if (frame.pixelColor(probe) != playerHighlightColour) {
+            QFAIL(qPrintable(qsl("the player's room lost its own highlight: %1 at %2,%3, frame saved at %4")
+                                     .arg(frame.pixelColor(probe).name(), QString::number(probe.x()), QString::number(probe.y()), saveFrame(frame, qsl("highlight-player-own")))));
+        }
+        if (symbolLegible) {
+            const int symbolPixels = bluePixelsInThePlayersRoom(frame) - bluePixelsWithoutSymbol;
+            if (symbolPixels < 5) {
+                QFAIL(qPrintable(qsl("the player's room lost its symbol: %1 symbol pixels, frame saved at %2").arg(QString::number(symbolPixels), saveFrame(frame, qsl("highlight-player-own")))));
+            }
+        }
+    }
+
+    // A speedwalk's Lua may delete rooms; the map must not then draw from them
+    void test_aSpeedwalkScriptThatDeletesRoomsIsNotDrawnFrom_data()
+    {
+        QTest::addColumn<bool>("highlighted");
+        QTest::newRow("no highlight") << false;
+        QTest::newRow("highlight in view") << true;
+    }
+
+    void test_aSpeedwalkScriptThatDeletesRoomsIsNotDrawnFrom()
+    {
+        QFETCH(bool, highlighted);
+
+        const int areaId = freshArea(qsl("Speedwalk Deletion Area"));
+        QVERIFY(areaId > 0);
+        for (int roomId = 1; roomId <= 9; ++roomId) {
+            QVERIFY(addRoomAt(roomId, areaId, roomId - 5, 0, kEnvRoom));
+            TRoom* pRoom = map()->mpRoomDB->getRoom(roomId);
+            QVERIFY(pRoom);
+            pRoom->name = qsl("room %1").arg(roomId);
+            pRoom->highlight = highlighted;
+            pRoom->highlightColor = QColor(255, 255, 0);
+            pRoom->highlightColor2 = QColor(255, 255, 0);
+            pRoom->highlightRadius = 1.5f;
+        }
+        constexpr int clickedRoomId = 5;
+        TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
+        QVERIFY(pLua->compileAndExecuteScript(qsl("mudlet = mudlet or {}; mudlet.custom_speedwalk = true; "
+                                                  "function doSpeedWalk() for id = 1, 9 do if id ~= %1 then deleteRoom(id) end end end")
+                                                      .arg(clickedRoomId)));
+        auto restoreSpeedwalk = qScopeGuard([pLua] {
+            pLua->compileAndExecuteScript(qsl("mudlet.custom_speedwalk = nil; doSpeedWalk = nil"));
+        });
+
+        T2DMap* p2dMap = prepareWidget(areaId, kZoomFortyPixelRooms, 1.0, 10.0);
+        QVERIFY(p2dMap);
+        renderFrame(p2dMap);
+        p2dMap->mPick = true;
+        p2dMap->mStartSpeedWalk = true;
+        p2dMap->mPHighlight = QPoint(p2dMap->mRX, p2dMap->mRY);
+        renderFrame(p2dMap);
+
+        QCOMPARE(p2dMap->mTargetRoomId, clickedRoomId);
+        for (int roomId = 1; roomId <= 9; ++roomId) {
+            QCOMPARE(map()->mpRoomDB->getRoom(roomId) != nullptr, roomId == clickedRoomId);
+        }
+        renderFrame(p2dMap);
+    }
+
+    void test_aHighlightDoesNotChangeWhichStackedRoomADoubleClickPicks_data()
+    {
+        QTest::addColumn<bool>("gridMode");
+        QTest::addColumn<double>("zoom");
+        QTest::newRow("full detail") << false << kZoomFortyPixelRooms;
+        QTest::newRow("grid") << true << kZoomFortyPixelRooms;
+        QTest::newRow("reduced tier") << false << kZoomThreePixelRooms;
+    }
+
+    // The grid and reduced-detail loops pick a room out of the clicked cell
+    // themselves; the player's room, whichever of the stack it is, must not
+    // take the click first. The first press of a double-click selects the stack.
+    void test_aHighlightDoesNotChangeWhichStackedRoomADoubleClickPicks()
+    {
+        QFETCH(bool, gridMode);
+        QFETCH(double, zoom);
+
+        const int areaId = freshArea(qsl("Highlight Click Area"));
+        QVERIFY(areaId > 0);
+        TArea* pArea = map()->mpRoomDB->getArea(areaId);
+        QVERIFY(pArea);
+        pArea->gridMode = gridMode;
+        QVERIFY(addRoomAt(1, areaId, 0, 0, kEnvRoom));
+        const QList<int> stackedRoomIds{2, 3, 4};
+        for (const int roomId : stackedRoomIds) {
+            QVERIFY(addRoomAt(roomId, areaId, 1, 0, kEnvRoom));
+        }
+        TRoom* pHighlighted = map()->mpRoomDB->getRoom(1);
+        QVERIFY(pHighlighted);
+        pHighlighted->highlightColor = QColor(255, 255, 0);
+        pHighlighted->highlightColor2 = QColor(255, 255, 0);
+        pHighlighted->highlightRadius = 2.3f;
+        auto clearHighlight = qScopeGuard([pHighlighted] {
+            pHighlighted->highlight = false;
+        });
+
+        T2DMap* p2dMap = prepareWidget(areaId, zoom, 1.0, 10.0);
+        QVERIFY(p2dMap);
+        auto doubleClickTheStack = [this, p2dMap](const int playerRoomId, const bool highlighted) {
+            map()->mpRoomDB->getRoom(1)->highlight = highlighted;
+            map()->mRoomIdHash[map()->mProfileName] = playerRoomId;
+            p2dMap->mRoomID = playerRoomId;
+            p2dMap->mMapCenterX = 1;
+            renderFrame(p2dMap);
+            p2dMap->mPick = true;
+            p2dMap->mStartSpeedWalk = true;
+            p2dMap->mTargetRoomId = 0;
+            p2dMap->mPHighlight = QPoint(qRound(p2dMap->mRX + p2dMap->mRoomWidth), p2dMap->mRY);
+            p2dMap->mMultiSelectionSet = QSet<int>{2, 3, 4};
+            renderFrame(p2dMap);
+            p2dMap->mMultiSelectionSet.clear();
+            return p2dMap->mTargetRoomId;
+        };
+
+        for (const int playerRoomId : stackedRoomIds) {
+            const int pickedWithoutHighlight = doubleClickTheStack(playerRoomId, false);
+            QVERIFY(stackedRoomIds.contains(pickedWithoutHighlight));
+            QCOMPARE(doubleClickTheStack(playerRoomId, true), pickedWithoutHighlight);
+        }
+    }
+
     // The tier starts below four pixels a room, not at it. A room drawn
     // exactly four pixels across keeps its border; the next zoom out loses it.
     void test_fullDetailIsKeptAtTheThresholdAndDroppedBelowIt()
@@ -1169,6 +1557,125 @@ private slots:
         if (borderPixelsInsideTier != 0) {
             QFAIL(qPrintable(qsl("a room drawn inside the reduced tier still had its border, so the tier was never entered - %1 pixels of the border colour, frame at %2")
                                      .arg(QString::number(borderPixelsInsideTier), saveFrame(insideTier, qsl("inside-tier")))));
+        }
+    }
+
+    // Exit markers take their outline pen from the painter as the room left
+    // it, so a room drawn with a border has to hand its pen back afterwards.
+    void test_aBorderedRoomKeepsTheOutlineOfItsExitMarker()
+    {
+        const int areaId = freshArea(qsl("Bordered Marker Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(1, areaId, 0, 0, kEnvRoom));
+        TRoom* pRoom = map()->mpRoomDB->getRoom(1);
+        QVERIFY(pRoom);
+        pRoom->mBorderColor = borderColour();
+        pRoom->setExitStub(DIR_UP, true);
+
+        T2DMap* p2dMap = prepareWidget(areaId, kZoomFortyPixelRooms, 1.0, 10.0);
+        QVERIFY(p2dMap);
+        const QImage frame = renderFrame(p2dMap);
+
+        QRect room;
+        for (int y = 0; y < frame.height(); ++y) {
+            for (int x = 0; x < frame.width(); ++x) {
+                if (frame.pixel(x, y) == roomColour().rgb()) {
+                    room |= QRect(x, y, 1, 1);
+                }
+            }
+        }
+        QVERIFY2(room.width() > 20, qPrintable(qsl("the room was not drawn at full detail, frame saved at %1").arg(saveFrame(frame, qsl("bordered-marker")))));
+
+        // A stub is filled with a cross-hatch, which never runs more than a
+        // couple of pixels along a row; the outline of its base runs across
+        // most of the marker.
+        const QRgb markerColour = ExitAppearance::contrastColor(roomColour()).rgb();
+        int longestRun = 0;
+        for (int y = room.top(); y <= room.bottom(); ++y) {
+            int run = 0;
+            for (int x = room.left(); x <= room.right(); ++x) {
+                run = (frame.pixel(x, y) == markerColour) ? run + 1 : 0;
+                longestRun = qMax(longestRun, run);
+            }
+        }
+        if (longestRun < room.width() / 3) {
+            QFAIL(qPrintable(qsl("the up marker lost its outline - its longest run along a row is %1 pixels in a room %2 across, frame saved at %3")
+                                     .arg(QString::number(longestRun), QString::number(room.width()), saveFrame(frame, qsl("bordered-marker")))));
+        }
+    }
+
+    void test_aRoomBorderRunsUnbrokenRoundTheRoom_data()
+    {
+        QTest::addColumn<bool>("antialias");
+        QTest::addColumn<double>("borderSize");
+        QTest::addColumn<qreal>("devicePixelRatio");
+
+        // A room 21.2 pixels across, so its edges fall between pixels
+        QTest::newRow("one pixel, antialiased") << true << 40.0 << 1.0;
+        QTest::newRow("four pixels, antialiased") << true << 5.0 << 1.0;
+        QTest::newRow("one pixel, aliased") << false << 40.0 << 1.0;
+        QTest::newRow("four pixels, aliased") << false << 5.0 << 1.0;
+        // One logical pixel, but two on the device, as on a HiDPI screen
+        QTest::newRow("one pixel, antialiased, double density") << true << 40.0 << 2.0;
+    }
+
+    void test_aRoomBorderRunsUnbrokenRoundTheRoom()
+    {
+        QFETCH(bool, antialias);
+        QFETCH(double, borderSize);
+        QFETCH(qreal, devicePixelRatio);
+        const int areaId = freshArea(qsl("Bordered Room Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(1, areaId, 0, 0, kEnvRoom));
+        TRoom* pRoom = map()->mpRoomDB->getRoom(1);
+        QVERIFY(pRoom);
+        pRoom->mBorderColor = borderColour();
+
+        T2DMap* p2dMap = prepareWidget(areaId, kZoomFortyPixelRooms, 0.53, borderSize, 10.0, antialias);
+        QVERIFY(p2dMap);
+        const QImage frame = renderFrame(p2dMap, devicePixelRatio);
+
+        QRect room;
+        for (int y = 0; y < frame.height(); ++y) {
+            for (int x = 0; x < frame.width(); ++x) {
+                if (frame.pixel(x, y) == roomColour().rgb()) {
+                    room |= QRect(x, y, 1, 1);
+                }
+            }
+        }
+        QVERIFY2(room.width() > 15, qPrintable(qsl("the room was not drawn at full detail, frame saved at %1").arg(saveFrame(frame, qsl("bordered-room")))));
+
+        const auto borderPixels = [&frame](const QRect& band) {
+            int count = 0;
+            for (int y = band.top(); y <= band.bottom(); ++y) {
+                for (int x = band.left(); x <= band.right(); ++x) {
+                    count += isScaledFrom(frame.pixelColor(x, y), borderColour()) ? 1 : 0;
+                }
+            }
+            return count;
+        };
+        const QRect sides[] = {QRect(room.left(), room.top() - 6, room.width(), 6),
+                               QRect(room.left(), room.bottom() + 1, room.width(), 6),
+                               QRect(room.left() - 6, room.top(), 6, room.height()),
+                               QRect(room.right() + 1, room.top(), 6, room.height())};
+        for (const QRect& side : sides) {
+            if (borderPixels(side) < room.width() - 2) {
+                QFAIL(qPrintable(qsl("a side of the border is missing - %1 border pixels beside a room %2 across, frame saved at %3")
+                                         .arg(QString::number(borderPixels(side)), QString::number(room.width()), saveFrame(frame, qsl("bordered-room")))));
+            }
+        }
+
+        if (borderSize < 10.0 || devicePixelRatio > 1.0) {
+            // Two columns in from the room, every pixel down the side is wholly
+            // border, the corners included: a fill split into pieces that meet
+            // between pixels lets the background through where they join.
+            const int x = room.left() - 2;
+            for (int y = room.top() - 2; y <= room.bottom() + 2; ++y) {
+                if (frame.pixel(x, y) != borderColour().rgb()) {
+                    QFAIL(qPrintable(qsl("the border is broken at %1,%2 by %3, frame saved at %4")
+                                             .arg(QString::number(x), QString::number(y), frame.pixelColor(x, y).name(), saveFrame(frame, qsl("bordered-room")))));
+                }
+            }
         }
     }
 

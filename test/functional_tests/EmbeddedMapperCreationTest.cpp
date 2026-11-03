@@ -234,9 +234,9 @@ private slots:
         QVERIFY2(mapOpenEventCountIs(1), "a repeat createMapper() raised mapOpenEvent again");
     }
 
-    // Destroying the main window hides the still-open map dock, which emits
-    // visibilityChanged after mudlet's members are gone: without the disconnect
-    // in ~mudlet that is heap corruption, or a use-after-free under ASan (#11020)
+    // A map dock still open as the main window goes must go with its profile:
+    // hidden any later, it emits visibilityChanged after mudlet's members are
+    // gone, which is heap corruption, or a use-after-free under ASan (#11020)
     void test_theMainWindowCanBeDestroyedWithItsMapDockOpen()
     {
         mudlet::self()->slot_showMapperDialog();
@@ -244,11 +244,15 @@ private slots:
         QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
         QVERIFY2(pDock, "slot_showMapperDialog() created no map dock, so this case covers nothing");
         QVERIFY2(pDock->isVisible(), "a hidden dock emits nothing when the window closes, so this case would cover nothing");
-        QSignalSpy hiddenSpy(pDock, &QDockWidget::visibilityChanged);
+        const QPointer<Host> host = mpHost;
+        bool hostOutlivedDock = false;
+        connect(pDock, &QObject::destroyed, this, [&host, &hostOutlivedDock] {
+            hostOutlivedDock = !host.isNull();
+        });
 
         mpHost = nullptr;
         delete mudlet::self();
-        QVERIFY2(!hiddenSpy.isEmpty() && !hiddenSpy.last().at(0).toBool(), "the dock was not hidden as the window went, so this case covers nothing");
+        QVERIFY2(hostOutlivedDock, "the map dock outlived its profile, so went after the main window's members");
     }
 
     // Qt only hands native children to a top-level it recreates, so any other child window
@@ -301,6 +305,27 @@ private slots:
         pDock->setFloating(false);
         qApp->processEvents();
         QCOMPARE(pDialog->windowHandle()->transientParent(), mudlet::self()->windowHandle());
+    }
+
+    // Qt 6.12 passes over a floating dock to the main window when a dialog in it is shown; the
+    // dialog's transient parent is set to the main window by hand here to stand in for that
+    void test_aDialogShownFromAFloatingMapBelongsToTheMap()
+    {
+        mudlet::self()->show();
+        mudlet::self()->slot_showMapperDialog();
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
+        QVERIFY2(pDock, "slot_showMapperDialog() created no map dock, so this case covers nothing");
+        pDock->setFloating(true);
+        qApp->processEvents();
+        auto* pDialog = new QDialog(pDock->widget());
+        pDialog->show();
+        qApp->processEvents();
+        pDialog->hide();
+        pDialog->windowHandle()->setTransientParent(mudlet::self()->windowHandle());
+
+        pDialog->show();
+        qApp->processEvents();
+        QCOMPARE(pDialog->windowHandle()->transientParent(), pDock->windowHandle());
     }
 
     // Whatever route leaves a dialog without a transient parent, closing the main window must still quit
@@ -487,7 +512,7 @@ private slots:
         QVERIFY2(!pSized->size().isEmpty(), "the 3D view had no size, so this case covers nothing");
         QVERIFY2(smModernViewWarnings.size() == 1 && smModernViewWarnings.filter(smFalseFailure).isEmpty(), warningsSoFar().constData());
         // Qt refuses the classic 3D view in this window too
-        const QString classicAdvice = qsl("experiment.3dmap.modernmapper");
+        const QString classicAdvice = qsl("href=\"settings\"");
         QVERIFY2(!pSized->findChild<QLabel*>()->text().contains(classicAdvice), qPrintable(pSized->findChild<QLabel*>()->text()));
 
         // Lets the deferred show checks run, as the notice above may have come from the resize that showing sends first

@@ -26,6 +26,8 @@
 #include <QRect>
 #include <QTextLayout>
 
+#include <algorithm>
+
 namespace {
 // At this size Qt stops blitting glyphs one by one from its glyph cache and
 // fills all of a call's glyphs as one path (QPaintEngineEx::shouldDrawCachedGlyphs),
@@ -149,13 +151,33 @@ const TGlyphCache::Entry& TGlyphCache::lookup(QStringView grapheme, const Style 
 {
     // Borrowing the caller's characters keeps a cache hit free of allocations.
     const Key probe{QString::fromRawData(grapheme.data(), grapheme.size()), style};
-    if (const auto it = mEntries.constFind(probe); it != mEntries.cend()) {
+    if (const auto it = mEntries.find(probe); it != mEntries.end()) {
+        it->lastUse = ++mUses;
         return *it;
     }
     if (mEntries.size() >= csmMaxEntries) {
-        mEntries.clear();
+        evictLeastRecentlyUsed();
     }
-    return *mEntries.insert(Key{grapheme.toString(), style}, shape(grapheme, style));
+    Entry entry = shape(grapheme, style);
+    entry.lastUse = ++mUses;
+    return *mEntries.insert(Key{grapheme.toString(), style}, std::move(entry));
+}
+
+void TGlyphCache::evictLeastRecentlyUsed()
+{
+    // Clearing everything instead would make a repertoire larger than the
+    // cache, as CJK text easily has, shape its common characters over and over.
+    QList<quint64> uses;
+    uses.reserve(mEntries.size());
+    for (const Entry& entry : std::as_const(mEntries)) {
+        uses.append(entry.lastUse);
+    }
+    const auto cut = uses.begin() + uses.size() / 4;
+    std::nth_element(uses.begin(), cut, uses.end());
+    const quint64 oldestKept = *cut;
+    mEntries.removeIf([oldestKept](const auto& it) {
+        return it.value().lastUse < oldestKept;
+    });
 }
 
 QFont TGlyphCache::styled(QFont font, const Style style)

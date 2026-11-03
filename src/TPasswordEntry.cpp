@@ -59,6 +59,9 @@ TPasswordEntry::TPasswordEntry(Host* pHost, TCommandLine* pCommandLine, QWidget*
         setRevealed(echoMode() != QLineEdit::Normal);
     });
     setRevealed(false);
+    connect(this, &QLineEdit::textChanged, this, [this]() {
+        mHoldsOnlyTypedAhead = false;
+    });
 
     //: Placeholder text of the box the game's request for hidden input is answered with
     setPlaceholderText(tr("Enter password"));
@@ -108,11 +111,19 @@ void TPasswordEntry::setRevealed(const bool revealed)
     mpRevealAction->setToolTip(mpRevealAction->text());
 }
 
+void TPasswordEntry::takeTypedAhead(const QString& typedAhead)
+{
+    setText(typedAhead);
+    mHoldsOnlyTypedAhead = true;
+}
+
 void TPasswordEntry::setReopened()
 {
     mReopened = true;
-    //: Placeholder text of the hidden-input box when it opens again after the player pressed Esc on an empty one and their next line did not make the game stop hiding input
-    setPlaceholderText(tr("Still hidden - Esc again to stop hiding input until the game says otherwise"));
+    //: Placeholder text of the hidden-input box when it opens again after the player pressed Esc on an empty one and their next line did not make the game stop hiding input. Keep it short: the box is only as wide as the command line, and the tooltip below carries the full instruction
+    setPlaceholderText(tr("Esc stops hiding input"));
+    //: Tooltip of the hidden-input box when it opens again after the player pressed Esc on an empty one and their next line did not make the game stop hiding input
+    setToolTip(tr("Still hidden - Esc on the empty box stops hiding input until the game says otherwise"));
     slot_adjustAccessibleNames();
 }
 

@@ -92,12 +92,30 @@ describe("Tests functionality of Geyser.VBox", function()
       track(Geyser.Label:new({name = "gvbThreeB"}, box))
       assert.are.equal(50, geometry("gvbThreeA").height)
       track(Geyser.Label:new({name = "gvbThreeC"}, box))
-      -- a third of the box does not divide into whole pixels, and Mudlet
-      -- truncates the pixel values it is handed
+      -- a third of the box does not divide into whole pixels, so each edge is
+      -- rounded and the children still tile the box from top to bottom
+      local expectedY = 60
       for index, name in ipairs({"gvbThreeA", "gvbThreeB", "gvbThreeC"}) do
-        local expectedY = math.floor(60 + (index - 1) * 100 / 3)
-        assert.are.same({x = 50, y = expectedY, width = 100, height = 33}, geometry(name))
+        local expectedBottom = math.floor(60 + index * 100 / 3 + 0.5)
+        assert.are.same({x = 50, y = expectedY, width = 100, height = expectedBottom - expectedY}, geometry(name))
+        expectedY = expectedBottom
       end
+      assert.are.equal(160, expectedY)
+    end)
+
+    it("tiles children whose shared edges fall on a half pixel", function()
+      -- sixths of 105px meet at 17.5, 35, 52.5, 70 and 87.5
+      local box = track(Geyser.VBox:new({name = "gvbHalf", x = 0, y = 0, width = 50, height = 105}))
+      for index = 1, 6 do
+        track(Geyser.Label:new({name = "gvbHalf" .. index}, box))
+      end
+      local edge = 0
+      for index = 1, 6 do
+        local child = geometry("gvbHalf" .. index)
+        assert.are.equal(edge, child.y, "gvbHalf" .. index .. " starts where the one before it ends")
+        edge = child.y + child.height
+      end
+      assert.are.equal(105, edge)
     end)
 
     it("stretches children over the full width of the box", function()

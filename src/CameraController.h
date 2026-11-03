@@ -34,7 +34,10 @@ class CameraController
 public:
     // One unit of distance shows about 5.8 rooms either side of the target vertically
     static constexpr float scmMinDistance = 0.05f;
+    // The furthest that framing rooms, or the zoom slider, takes the camera
     static constexpr float scmMaxDistance = 100.0f;
+    // The furthest zooming out goes, far enough for the world view of a map of many areas
+    static constexpr float scmMaxWorldDistance = 5000.0f;
     // Degrees from straight down; the limits keep the camera above the map's plane.
     // Not quite 0: straight down, turning and rolling are the same rotation and could not be told apart.
     static constexpr float scmMinTilt = 0.01f;

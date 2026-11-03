@@ -23,7 +23,9 @@
 #include "SpeechRecognizer.h"
 #include "utils.h"
 
+#if defined(INCLUDE_SPEECH_ENGINES)
 #include <QLibrary>
+#endif
 #include <QString>
 
 class SpeechAudioCapture;
@@ -260,7 +262,9 @@ private:
     SpeechAudioCapture* mpCapture = nullptr;
 
     // sherpa-onnx library and function pointers (for dynamic loading)
+#if defined(INCLUDE_SPEECH_ENGINES)
     static QLibrary sSherpaLibrary;
+#endif
     static bool sLibraryLoaded;
     static bool sLibraryLoadAttempted;
     static QString sLibraryLoadError;

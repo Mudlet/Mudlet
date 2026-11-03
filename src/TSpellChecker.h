@@ -49,6 +49,14 @@ public:
     TSpellChecker& operator=(const TSpellChecker&) = delete;
 
     void setSystemDictionary(const QString&);
+    bool systemDictionaryMissing() const { return mSystemDictionaryMissing; }
+    // Whether loadSystemDictionary() would find both files usable, short of the
+    // Windows build's sanitizeUtf8Path() rewrite of non-ASCII paths
+    static bool systemDictionaryFound(const QString&);
+    static bool dictionaryUsable(const QString& folder, const QString& name);
+    // Where the dictionaries to pick from are, which for a name that is nowhere is
+    // not the fallback folder getMudletPath() gives it
+    static QString dictionaryFolderToList(const QString& currentDictionary);
     // Builds the system handle (when spell check is on) and prepares the user
     // dictionary. Only a view schedules it (TMainConsole ctor), so a profile
     // without one builds both lazily on first use.
@@ -76,6 +84,7 @@ private:
     friend class ProfileDictionaryTest;
 
     void loadSystemDictionary();
+    static bool dictionaryFileUsable(const QString&);
     // Reads profile.dic in the first time it is asked for, and remembers a
     // failure rather than reading it again.
     Hunhandle* profileHandle();
@@ -86,11 +95,13 @@ private:
     // The paths are taken by value because the Windows build rewrites them to an
     // ASCII-only copy before handing them to Hunspell.
     static Hunhandle* openDictionary(QString dictionaryPath, QString affixPath, QSet<QString>&);
-    // This will save and replace the .dic file with just the words in the
-    // supplied second argument and update the .aff file as appropriate. It is
-    // to be used at the end of a session to store away the user's changes:
+    // This replaces the .dic file with the words in the second argument, plus
+    // those of a .dic with no count, which only a hand edit since the load leaves,
+    // and updates the .aff file to match. A word removed this session that such a
+    // file still lists is kept, as nothing tells it from one typed in by hand. It
+    // is to be used at the end of a session to store away the user's changes:
     static bool saveDictionary(const QString&, QSet<QString>&);
-    static int getDictionaryWordCount(const QString& dictionaryPath);
+    static int getDictionaryWordCount(const QString& dictionaryPath, QStringList& uncountedWords);
     static bool overwriteAffixFile(const QString& affixPath, const QHash<QString, unsigned int>&);
     static bool overwriteDictionaryFile(const QString& dictionaryPath, const QStringList&);
     static bool scanDictionaryFile(const QString& dictionaryPath, int&, QHash<QString, unsigned int>&, QStringList&);
@@ -117,6 +128,10 @@ private:
     // front of every keystroke. Cleared, with smSharedDictionaryFailed, by
     // applyUserDictionaryOptions().
     bool mProfileDictionaryFailed = false;
+    // systemHandle() runs for every word checked, so a dictionary that is not
+    // there is looked for, and reported, once - until setSystemDictionary() is
+    // given a name again
+    bool mSystemDictionaryMissing = false;
     QByteArray mHunspellCodecName_system;
     // To update the profile dictionary we actually have to track all the words
     // in it so we load the contents into this on startup and adjust it as we

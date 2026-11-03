@@ -407,6 +407,31 @@ private slots:
             QVERIFY(cache.size() <= TGlyphCache::csmMaxEntries);
         }
     }
+
+    // CJK text easily uses more distinct characters than the cache holds, and
+    // the ones it keeps using must not be shaped again each time it fills up.
+    void keepsRecentlyUsedGlyphsWhenFull()
+    {
+        QImage device(64, 64, QImage::Format_ARGB32_Premultiplied);
+        QPainter painter(&device);
+        painter.setFont(testFont(10));
+        TGlyphCache cache;
+        cache.setFont(painter.font(), *painter.device());
+        const QRect cell(0, 0, 32, 32);
+        const QString frequent = qsl("A");
+        char32_t codepoint = 0x4E00;
+        while (cache.size() < TGlyphCache::csmMaxEntries) {
+            cache.inkBottom(cell, frequent, TGlyphCache::Plain);
+            cache.inkBottom(cell, QString::fromUcs4(&codepoint, 1), TGlyphCache::Plain);
+            ++codepoint;
+        }
+
+        cache.inkBottom(cell, QString::fromUcs4(&codepoint, 1), TGlyphCache::Plain);
+        const qsizetype afterEviction = cache.size();
+        QVERIFY2(afterEviction > TGlyphCache::csmMaxEntries / 2, "filling up should only drop the least recently used glyphs");
+        cache.inkBottom(cell, frequent, TGlyphCache::Plain);
+        QCOMPARE(cache.size(), afterEviction);
+    }
 };
 
 #include "GlyphCacheTest.moc"

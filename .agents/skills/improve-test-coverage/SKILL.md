@@ -64,8 +64,9 @@ cmake --build build-coverage
 (cd build-coverage && ctest --output-on-failure)
 
 # Restrict the search paths as below: pointed at the whole build tree, gcovr
-# trips over oniguruma's gperf-generated sources and aborts.
-gcovr -r . build-coverage/src/CMakeFiles/mudlet_core.dir \
+# trips over oniguruma's gperf-generated sources and aborts. mudlet_app also
+# compiles vendored code (qt-tags-widget), which -e keeps out of the totals.
+gcovr -r . -e '3rdparty/' build-coverage/src/CMakeFiles/mudlet_core.dir \
            build-coverage/src/CMakeFiles/mudlet_app.dir \
            build-coverage/src/CMakeFiles/mudlet_executable.dir \
       --csv coverage.csv --json coverage.json

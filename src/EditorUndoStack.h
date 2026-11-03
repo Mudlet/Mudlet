@@ -72,6 +72,9 @@ public:
     //   }
     const QUndoCommand* getLastExecutedCommand() const;
 
+    // Called after every save, including one that pushed nothing because nothing changed
+    void finishAddingItem(EditorViewTypes::EditorViewType viewType, int itemID);
+
 signals:
     // Emitted when items are modified by undo/redo (allows targeted UI updates instead of full refresh)
     void itemsChanged(EditorViewTypes::EditorViewType viewType, QList<int> affectedItemIDs);

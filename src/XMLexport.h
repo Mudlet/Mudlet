@@ -67,7 +67,7 @@ public:
     void writeVariable(TVar*, VarUnit*, pugi::xml_node xmlParent, bool insideSavedTable = false, bool rideAlongAllowed = true);
     void writeModuleXML(const QString& moduleName);
     std::shared_ptr<pugi::xml_document> takeExportDocument();
-    static bool saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc);
+    static bool saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc, QString* errorString = nullptr);
 
     bool exportHost(const QString& filename_pugi_xml);
     bool writeGenericPackage(Host* pHost, pugi::xml_node& mMudletPackage, bool ignoreModuleMember = true, bool ignoreVariables = false);

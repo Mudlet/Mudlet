@@ -32,8 +32,7 @@
 
 // A skip is how the media tests stay honest on a backend that cannot stage what they need. It is
 // also how they could all go green everywhere and mean nothing, if a CI image lost its
-// codecs or swapped its default backend - macOS already skips most of them by design, so a
-// second platform quietly joining it would look no different. Runners known to carry a backend
+// codecs or swapped its default backend. Runners known to carry a backend
 // that can demonstrate everything here set MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK, which turns
 // every capability skip into a failure and makes that loss a red build instead of silence.
 #define SKIP_OR_FAIL_WITHOUT(reason)                                                                                                                                                                   \

@@ -44,6 +44,8 @@ private:
     void populateRoomActions(QMenu* menu, TArea* area, bool includePointerActions) const;
     void populateEditModeActions(QMenu* menu, int selectionSize, TArea* area, bool includePointerActions) const;
     void populateViewModeActions(QMenu* menu, int selectionSize) const;
+    void populateBelowRoomsLabelActions(QMenu* menu, const TArea& area, const QPoint& widgetPosition) const;
+    void addLabelActions(QMenu* menu, int labelId, const QString& moveText, const QString& deleteText) const;
     void showPopup(QMenu* popup, const T2DMap::MapInteractionContext& context) const;
     bool hasCustomLineSelection(const T2DMap::MapInteractionContext& context) const;
 

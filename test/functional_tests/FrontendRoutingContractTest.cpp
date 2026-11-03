@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QDir>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtNetwork/QTcpServer>
@@ -264,9 +265,10 @@ public:
         mCalls << call("openWebPage", {path});
         return true;
     }
-    void showNotification(const QString& title, const QString& text, std::optional<int> expiryMs) override
+    bool showNotification(const QString& title, const QString& text, std::optional<int> expiryMs) override
     {
         mCalls << call("showNotification", {title, text, expiryMs ? QString::number(*expiryMs) : qsl("none")});
+        return true;
     }
     int profileTabIndex(const QString& name) const override
     {
@@ -286,13 +288,14 @@ public:
     bool mSelecting = false;
     int mShownAreaId = 0;
     bool mShowing3D = false;
+    bool mOnScreen = true;
     bool mProgressShown = false;
     int mProgressMaximum = 0;
 
     bool onScreen() const override
     {
         mCalls << call("onScreen");
-        return true;
+        return mOnScreen;
     }
     void showMapProgress(const QString& label, bool cancelable) override
     {
@@ -361,10 +364,11 @@ public:
         return exportAllZLevels ? std::pair{true, QString()} : std::pair{false, qsl("routed export refusal")};
     }
 
-    void show3DView(bool shown) override
+    std::pair<bool, QString> show3DView(bool shown) override
     {
         mCalls << call("show3DView", {flag(shown)});
         mShowing3D = shown;
+        return {true, QString()};
     }
     bool showing3DView() const override
     {
@@ -488,6 +492,21 @@ private:
     int mAreaId = 0;
     int mShownAreaId = 0;
 
+    // pumpEvents() and waitForEvent() answer only in test mode
+    static auto inTestMode()
+    {
+        const bool wasSet = qEnvironmentVariableIsSet("MUDLET_TEST_MODE");
+        const QByteArray value = qgetenv("MUDLET_TEST_MODE");
+        qputenv("MUDLET_TEST_MODE", "1");
+        return qScopeGuard([wasSet, value]() {
+            if (wasSet) {
+                qputenv("MUDLET_TEST_MODE", value);
+            } else {
+                qunsetenv("MUDLET_TEST_MODE");
+            }
+        });
+    }
+
     QString runLua(const QString& chunk)
     {
         const QString wrapped = qsl("routingResult = 'not run'\nlocal ok, err = pcall(function()\n%1\nend)\nroutingResult = ok and 'ok' or tostring(err)\n").arg(chunk);
@@ -595,6 +614,7 @@ private slots:
         mMapView.mCalls.clear();
         mMapView.mSelection.clear();
         mMapView.mSelecting = false;
+        mMapView.mOnScreen = true;
         mMapViews.mCalls.clear();
     }
 
@@ -793,6 +813,35 @@ assert(getProfileTabNumber() == 3, "getProfileTabNumber did not count from one")
         QCOMPARE(app.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
     }
 
+    // Only the view's destruction counts: a view a run sets and clears again, as this file's do, leaves waits running
+    void test_onlyTheViewGoingCountsAsShuttingDown()
+    {
+        const auto restore = inTestMode();
+        const auto noView = qScopeGuard([]() {
+            TAppFrontend::setInstance(nullptr);
+        });
+        RecordingAppFrontend app;
+        TAppFrontend::setInstance(&app);
+        TAppFrontend::setInstance(nullptr);
+        QVERIFY(!TAppFrontend::viewGone());
+        QCOMPARE(runLua(qsl("assert(pumpEvents(1) == true)")), qsl("ok"));
+
+        TAppFrontend::setInstance(&app);
+        TAppFrontend::viewDestroyed();
+        QVERIFY(TAppFrontend::viewGone());
+        QVERIFY(!TAppFrontend::hasView());
+        QCOMPARE(runLua(qsl(R"(
+local ok, err = pumpEvents(1)
+assert(ok == nil and err:find("shutting down", 1, true), tostring(err))
+local event, waitError = waitForEvent("neverRaised", 1000)
+assert(event == nil and waitError:find("shutting down", 1, true), tostring(waitError))
+)")),
+                 qsl("ok"));
+
+        TAppFrontend::setInstance(&app);
+        QVERIFY(!TAppFrontend::viewGone());
+    }
+
     void test_mapZoomReachesTheMapView()
     {
         const QString result = runMapLua(qsl(R"lua(
@@ -862,13 +911,35 @@ setConfig("experiment.3dmap.modernmapper", false)
         const QStringList expected{
                 qsl("shift3DViewCamera(10, 20, 30)"),
                 qsl("set3DViewCameraPosition(400, 50, 60)"),
+                call("onScreen"),
                 call("showing3DView"),
                 qsl("show3DView(true)"),
+                call("onScreen"),
                 call("showing3DView"),
                 call("recreate3DView"),
                 call("recreate3DView"),
         };
         QCOMPARE(mMapView.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
+#else
+        QSKIP("Built without the 3D mapper, so there is no 3D view to drive.");
+#endif
+    }
+
+    void test_hiddenMapViewKeeps3DViewChoice()
+    {
+#if defined(INCLUDE_3DMAPPER)
+        mMapView.mOnScreen = false;
+        mMapView.mShowing3D = false;
+        mpHost->mShow3DView = false;
+        const QString result = runMapLua(qsl(R"lua(
+assert(setConfig("show3dMapView", true) == true, "setConfig refused to show the 3D view")
+assert(getConfig("show3dMapView") == true, "getConfig did not keep the 3D view choice of a hidden map view")
+assert(setConfig("show3dMapView", false) == true, "setConfig refused to hide the 3D view")
+assert(getConfig("show3dMapView") == false, "getConfig did not keep the 2D view choice of a hidden map view")
+)lua"));
+        mMapView.mShowing3D = false;
+        mpHost->mShow3DView = false;
+        QCOMPARE(result, qsl("ok"));
 #else
         QSKIP("Built without the 3D mapper, so there is no 3D view to drive.");
 #endif

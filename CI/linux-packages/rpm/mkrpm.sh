@@ -23,24 +23,23 @@ echo "==> packaging ${PACKAGE} ${PKG_VERSION}-${RELEASE} ($(uname -m))"
 
 cmake --install "$SRC/build" --prefix "$STAGE/usr"
 
-# add_subdirectory() adopts vendored projects' install() rules, which would ship their dev files (#10871).
-# EXCLUDE_FROM_ALL keeps them out, but that is undocumented CMake behaviour, so check the staged tree.
-# Drop rather than refuse: this also packages tags that predate that CMake fix.
+# add_subdirectory() adopts vendored projects' install() rules, which would ship their dev files (#10871),
+# so check the staged tree. Drop rather than refuse: this also packages tags that predate that CMake fix.
 mapfile -d '' -t DEVELOPMENT_FILES < <(cd "$STAGE" && find . \( -path './usr/include' \
   -o -name '*.a' -o -name '*.cmake' -o -name '*.h' -o -name '*.hpp' -o -name '*.la' \
   -o -name '*.pc' -o -path '*/cmake/*' -o \( -type l -name '*.so' \) \) -prune -print0)
 if [[ ${#DEVELOPMENT_FILES[@]} -gt 0 ]]; then
   echo "==> dropping development files staged into the package:" >&2
   printf '      %s\n' "${DEVELOPMENT_FILES[@]}" >&2
-  echo "    a vendored project's install() rules reached this tree - add EXCLUDE_FROM_ALL to" >&2
-  echo "    its add_subdirectory() in CMakeLists.txt, as 3rdparty/qt-tags-widget has" >&2
+  echo "    a vendored project's install() rules reached this tree - list its sources in" >&2
+  echo "    src/CMakeLists.txt instead of add_subdirectory(), as 3rdparty/qt-tags-widget is" >&2
   (cd "$STAGE" && rm -rf -- "${DEVELOPMENT_FILES[@]}")
   find "$STAGE" -mindepth 1 -type d -empty -delete
 else
   echo "==> no development files staged"
 fi
 
-# EXCLUDE_FROM_ALL fails by silently dropping files, so also check what the install must produce.
+# Neither the drop above nor a broken install() rule fails the install, so check what it must produce.
 mapfile -t STAGED_TOP < <(cd "$STAGE/usr" && find . -mindepth 1 -maxdepth 1 -printf '%f\n' | sort)
 if [[ "${STAGED_TOP[*]}" != "bin share" || ! -x "$STAGE/usr/bin/mudlet" || ! -d "$STAGE/usr/share/mudlet/lua" ]]; then
   echo "the install staged no usable Mudlet: expected bin/mudlet and share/mudlet/lua below" >&2

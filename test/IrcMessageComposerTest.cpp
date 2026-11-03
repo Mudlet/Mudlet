@@ -36,7 +36,7 @@ using namespace std::chrono_literals;
  * the numeric belongs to.
  *
  * These cases drive a real IrcConnection against a loopback server that says
- * exactly what the case wants said, which is the path in #10769's backtrace:
+ * exactly what the case wants said, down the path every server reply takes:
  * IrcProtocol::read() -> readLines() -> composeMessage().
  *
  * The composer only depends on communi, so this needs neither a Host nor the
@@ -111,6 +111,8 @@ struct SeenMessage
     IrcMessage::Type type = IrcMessage::Unknown;
     int code = 0;
     QStringList parameters;
+    QDateTime timeStamp;
+    bool implicit = false;
 };
 
 class IrcMessageComposerTest : public QObject
@@ -180,6 +182,8 @@ private slots:
             SeenMessage seen;
             seen.type = message->type();
             seen.parameters = message->parameters();
+            seen.timeStamp = message->timeStamp();
+            seen.implicit = message->testFlag(IrcMessage::Implicit);
             if (message->type() == IrcMessage::Numeric) {
                 seen.code = static_cast<IrcNumericMessage*>(message)->code();
             }
@@ -304,6 +308,273 @@ private slots:
         const QList<SeenMessage> whowases = ofType(IrcMessage::Whowas);
         QCOMPARE(whowases.count(), 1);
         QVERIFY2(whowases.constFirst().parameters.contains(QStringLiteral("other.example")), qPrintable(whowases.constFirst().parameters.join(QLatin1Char('|'))));
+    }
+
+    // An "end of" numeric for a different block must not emit the WHOIS
+    // half-built, which would leave the rest of it with nothing to fill in
+    void strayEndOfMotd_duringAWhois_leavesTheWhoisOpen()
+    {
+        say({":qa.irc.test 311 QAtester bob ident host.example * :Bob Example",
+             ":qa.irc.test 376 QAtester :End of /MOTD command.",
+             ":qa.irc.test 312 QAtester bob other.example :Some other server",
+             ":qa.irc.test 318 QAtester bob :End of /WHOIS list."});
+
+        const QList<SeenMessage> whoises = ofType(IrcMessage::Whois);
+        QCOMPARE(whoises.count(), 1);
+        QVERIFY2(whoises.constFirst().parameters.contains(QStringLiteral("other.example")), qPrintable(whoises.constFirst().parameters.join(QLatin1Char('|'))));
+        QCOMPARE(ofType(IrcMessage::Motd).count(), 0);
+    }
+
+    // The same for a MOTD and a stray end of a names list
+    void strayEndOfNames_duringAMotd_leavesTheMotdOpen()
+    {
+        say({":qa.irc.test 375 QAtester :- qa.irc.test Message of the Day -",
+             ":qa.irc.test 372 QAtester :- first line",
+             ":qa.irc.test 366 QAtester #qa :End of /NAMES list.",
+             ":qa.irc.test 372 QAtester :- second line",
+             ":qa.irc.test 376 QAtester :End of /MOTD command."});
+
+        const QList<SeenMessage> motds = ofType(IrcMessage::Motd);
+        QCOMPARE(motds.count(), 1);
+        QVERIFY2(motds.constFirst().parameters.contains(QStringLiteral("- first line")), qPrintable(motds.constFirst().parameters.join(QLatin1Char('|'))));
+        QVERIFY2(motds.constFirst().parameters.contains(QStringLiteral("- second line")), qPrintable(motds.constFirst().parameters.join(QLatin1Char('|'))));
+        QCOMPARE(ofType(IrcMessage::Names).count(), 0);
+    }
+
+    // A MOTD that ends while a names list opened inside it is still being sent closes
+    // from under it, and the names list keeps collecting until its own end
+    void motdEndingInsideANamesList_bothComplete()
+    {
+        say({":qa.irc.test 375 QAtester :- qa.irc.test Message of the Day -",
+             ":qa.irc.test 372 QAtester :- first line",
+             ":qa.irc.test 353 QAtester = #qa :alice bob",
+             ":qa.irc.test 376 QAtester :End of /MOTD command.",
+             ":qa.irc.test 353 QAtester = #qa :carol",
+             ":qa.irc.test 366 QAtester #qa :End of /NAMES list."});
+
+        const QList<SeenMessage> motds = ofType(IrcMessage::Motd);
+        QCOMPARE(motds.count(), 1);
+        QVERIFY2(motds.constFirst().parameters.contains(QStringLiteral("- first line")), qPrintable(motds.constFirst().parameters.join(QLatin1Char('|'))));
+        const QList<SeenMessage> names = ofType(IrcMessage::Names);
+        QCOMPARE(names.count(), 1);
+        QVERIFY2(names.constFirst().parameters.contains(QStringLiteral("alice")), qPrintable(names.constFirst().parameters.join(QLatin1Char('|'))));
+        QVERIFY2(names.constFirst().parameters.contains(QStringLiteral("carol")), qPrintable(names.constFirst().parameters.join(QLatin1Char('|'))));
+    }
+
+    // A WHOIS whose end never arrives must not swallow the away replies that
+    // follow it for other nicks, nor stay open forever under later ones
+    void unfinishedWhois_doesNotSwallowLaterReplies()
+    {
+        say({":qa.irc.test 311 QAtester bob ident host.example * :Bob Example", ":qa.irc.test 301 QAtester alice :gone fishing"});
+
+        const QList<SeenMessage> aways = ofType(IrcMessage::Away);
+        QCOMPARE(aways.count(), 1);
+        QVERIFY2(aways.constFirst().parameters.contains(QStringLiteral("gone fishing")), qPrintable(aways.constFirst().parameters.join(QLatin1Char('|'))));
+
+        say({":qa.irc.test 311 QAtester carol ident host.example * :Carol Example",
+             ":qa.irc.test 312 QAtester carol other.example :Some other server",
+             ":qa.irc.test 318 QAtester carol :End of /WHOIS list."});
+
+        const QList<SeenMessage> whoises = ofType(IrcMessage::Whois);
+        QCOMPARE(whoises.count(), 2);
+        QVERIFY2(whoises.constLast().parameters.contains(QStringLiteral("Carol Example")), qPrintable(whoises.constLast().parameters.join(QLatin1Char('|'))));
+        QVERIFY2(whoises.constLast().parameters.contains(QStringLiteral("other.example")), qPrintable(whoises.constLast().parameters.join(QLatin1Char('|'))));
+    }
+
+    // A names list whose end never arrives must not lend its nicks to the next
+    // channel's list
+    void unfinishedNamesList_isNotMergedIntoTheNextChannels()
+    {
+        say({":qa.irc.test 353 QAtester = #first :alice", ":qa.irc.test 353 QAtester = #second :bob", ":qa.irc.test 366 QAtester #second :End of /NAMES list."});
+
+        const QList<SeenMessage> names = ofType(IrcMessage::Names);
+        QCOMPARE(names.count(), 2);
+        QCOMPARE(names.constFirst().parameters, QStringList({QStringLiteral("#first"), QStringLiteral("alice")}));
+        QCOMPARE(names.constLast().parameters, QStringList({QStringLiteral("#second"), QStringLiteral("bob")}));
+    }
+
+    // A continuation numeric belongs to the block it continues even when another
+    // block has been opened above it
+    void motdLine_underAnotherBlock_joinsTheOpenMotd()
+    {
+        say({":qa.irc.test 375 QAtester :- qa.irc.test Message of the Day -",
+             ":qa.irc.test 372 QAtester :- first line",
+             ":qa.irc.test 353 QAtester = #qa :alice",
+             ":qa.irc.test 372 QAtester :- second line",
+             ":qa.irc.test 376 QAtester :End of /MOTD command.",
+             ":qa.irc.test 366 QAtester #qa :End of /NAMES list."});
+
+        const QList<SeenMessage> motds = ofType(IrcMessage::Motd);
+        QCOMPARE(motds.count(), 1);
+        QVERIFY2(motds.constFirst().parameters.contains(QStringLiteral("- first line")), qPrintable(motds.constFirst().parameters.join(QLatin1Char('|'))));
+        QVERIFY2(motds.constFirst().parameters.contains(QStringLiteral("- second line")), qPrintable(motds.constFirst().parameters.join(QLatin1Char('|'))));
+        QCOMPARE(ofType(IrcMessage::Names).count(), 1);
+    }
+
+    void whoisField_underANamesList_stillFillsTheWhois()
+    {
+        say({":qa.irc.test 311 QAtester bob ident host.example * :Bob Example",
+             ":qa.irc.test 353 QAtester = #qa :alice",
+             ":qa.irc.test 312 QAtester bob other.example :Some other server",
+             ":qa.irc.test 318 QAtester bob :End of /WHOIS list.",
+             ":qa.irc.test 366 QAtester #qa :End of /NAMES list."});
+
+        const QList<SeenMessage> whoises = ofType(IrcMessage::Whois);
+        QCOMPARE(whoises.count(), 1);
+        QVERIFY2(whoises.constFirst().parameters.contains(QStringLiteral("other.example")), qPrintable(whoises.constFirst().parameters.join(QLatin1Char('|'))));
+    }
+
+    // IrcChannel replaces its user list with each names message, so a list
+    // delivered in two halves leaves the channel with only the second
+    void namesContinuation_underAWhois_joinsItsList()
+    {
+        say({":qa.irc.test 353 QAtester = #qa :alice",
+             ":qa.irc.test 311 QAtester bob ident host.example * :Bob Example",
+             ":qa.irc.test 353 QAtester = #qa :carol",
+             ":qa.irc.test 366 QAtester #qa :End of /NAMES list.",
+             ":qa.irc.test 318 QAtester bob :End of /WHOIS list."});
+
+        const QList<SeenMessage> names = ofType(IrcMessage::Names);
+        QCOMPARE(names.count(), 1);
+        QVERIFY2(names.constFirst().parameters.contains(QStringLiteral("alice")), qPrintable(names.constFirst().parameters.join(QLatin1Char('|'))));
+        QVERIFY2(names.constFirst().parameters.contains(QStringLiteral("carol")), qPrintable(names.constFirst().parameters.join(QLatin1Char('|'))));
+    }
+
+    void strayEndOfNames_forAnotherChannel_leavesTheListOpen()
+    {
+        say({":qa.irc.test 353 QAtester = #a :alice", ":qa.irc.test 366 QAtester #b :End of /NAMES list.", ":qa.irc.test 353 QAtester = #a :bob", ":qa.irc.test 366 QAtester #a :End of /NAMES list."});
+
+        const QList<SeenMessage> names = ofType(IrcMessage::Names);
+        QCOMPARE(names.count(), 1);
+        QCOMPARE(names.constFirst().parameters, QStringList({QStringLiteral("#a"), QStringLiteral("alice"), QStringLiteral("bob")}));
+    }
+
+    // A NAMES of every channel ends with a single 366 for "*"
+    void endOfNamesForEveryChannel_closesTheLastList()
+    {
+        say({":qa.irc.test 353 QAtester = #a :alice", ":qa.irc.test 353 QAtester = #b :bob", ":qa.irc.test 366 QAtester * :End of /NAMES list."});
+
+        const QList<SeenMessage> names = ofType(IrcMessage::Names);
+        QCOMPARE(names.count(), 2);
+        QCOMPARE(names.constFirst().parameters, QStringList({QStringLiteral("#a"), QStringLiteral("alice")}));
+        QCOMPARE(names.constLast().parameters, QStringList({QStringLiteral("#b"), QStringLiteral("bob")}));
+    }
+
+    void strayEndOfWhois_forAnotherNick_leavesTheWhoisOpen()
+    {
+        say({":qa.irc.test 311 QAtester bob ident host.example * :Bob Example",
+             ":qa.irc.test 318 QAtester alice :End of /WHOIS list.",
+             ":qa.irc.test 312 QAtester bob other.example :Some other server",
+             ":qa.irc.test 318 QAtester bob :End of /WHOIS list."});
+
+        const QList<SeenMessage> whoises = ofType(IrcMessage::Whois);
+        QCOMPARE(whoises.count(), 1);
+        QVERIFY2(whoises.constFirst().parameters.contains(QStringLiteral("other.example")), qPrintable(whoises.constFirst().parameters.join(QLatin1Char('|'))));
+    }
+
+    // A WHOIS of several nicks ends with one 318 naming them all
+    void endOfWhoisForSeveralNicks_closesTheOpenWhois()
+    {
+        say({":qa.irc.test 311 QAtester bob ident host.example * :Bob Example",
+             ":qa.irc.test 312 QAtester bob a.example :Some server",
+             ":qa.irc.test 311 QAtester carol ident host.example * :Carol Example",
+             ":qa.irc.test 312 QAtester carol b.example :Some other server",
+             ":qa.irc.test 318 QAtester bob,carol :End of /WHOIS list."});
+
+        const QList<SeenMessage> whoises = ofType(IrcMessage::Whois);
+        QCOMPARE(whoises.count(), 2);
+        QVERIFY2(whoises.constFirst().parameters.contains(QStringLiteral("a.example")), qPrintable(whoises.constFirst().parameters.join(QLatin1Char('|'))));
+        QVERIFY2(whoises.constLast().parameters.contains(QStringLiteral("b.example")), qPrintable(whoises.constLast().parameters.join(QLatin1Char('|'))));
+    }
+
+    // ...and a WHOIS of a mask with one 318 naming the mask
+    void endOfWhoisForAMask_closesTheOpenWhois()
+    {
+        say({":qa.irc.test 311 QAtester bob ident host.example * :Bob Example", ":qa.irc.test 318 QAtester B* :End of /WHOIS list."});
+
+        QCOMPARE(ofType(IrcMessage::Whois).count(), 1);
+    }
+
+    void whoisAway_forTheNickBeingWhoised_fillsTheWhois()
+    {
+        say({":qa.irc.test 311 QAtester bob ident host.example * :Bob Example", ":qa.irc.test 301 QAtester bob :gone fishing", ":qa.irc.test 318 QAtester bob :End of /WHOIS list."});
+
+        QCOMPARE(ofType(IrcMessage::Away).count(), 0);
+        const QList<SeenMessage> whoises = ofType(IrcMessage::Whois);
+        QCOMPARE(whoises.count(), 1);
+        QCOMPARE(whoises.constFirst().parameters.value(9), QStringLiteral("gone fishing"));
+    }
+
+    // IRC nicks are case-insensitive, and a server may echo the nick as typed
+    void whoisAway_inADifferentCase_staysInTheWhois()
+    {
+        say({":qa.irc.test 311 QAtester Bob ident host.example * :Bob Example", ":qa.irc.test 301 QAtester bob :gone fishing", ":qa.irc.test 318 QAtester Bob :End of /WHOIS list."});
+
+        QCOMPARE(ofType(IrcMessage::Away).count(), 0);
+        const QList<SeenMessage> whoises = ofType(IrcMessage::Whois);
+        QCOMPARE(whoises.count(), 1);
+        QCOMPARE(whoises.constFirst().parameters.value(9), QStringLiteral("gone fishing"));
+    }
+
+    // A block delivered unfinished is stamped by the numeric that displaced it, as a
+    // finished one is by its end numeric, so server-time ordering and implicit join
+    // replies hold for it too
+    void displacedNamesList_takesTheDisplacingNumericsTimeAndFlag()
+    {
+        say({":QAtester!qatester@host.example JOIN #a",
+             "@time=2020-01-01T00:00:00.000Z :qa.irc.test 353 QAtester = #a :alice",
+             "@time=2020-01-01T00:00:01.000Z :qa.irc.test 353 QAtester = #b :bob",
+             "@time=2020-01-01T00:00:05.000Z :qa.irc.test 366 QAtester #b :End of /NAMES list."});
+
+        const QList<SeenMessage> names = ofType(IrcMessage::Names);
+        QCOMPARE(names.count(), 2);
+        QCOMPARE(names.constFirst().parameters.value(0), QStringLiteral("#a"));
+        QCOMPARE(names.constFirst().timeStamp.toUTC(), QDateTime::fromString(QStringLiteral("2020-01-01T00:00:01Z"), Qt::ISODate).toUTC());
+        QVERIFY(names.constFirst().implicit);
+        QCOMPARE(names.constLast().timeStamp.toUTC(), QDateTime::fromString(QStringLiteral("2020-01-01T00:00:05Z"), Qt::ISODate).toUTC());
+        QVERIFY(names.constLast().implicit);
+    }
+    // A WHOWAS answers with one record per earlier user of the nick and a single end
+    void whowasOfSeveralRecords_deliversEachWithItsOwnServer()
+    {
+        say({":qa.irc.test 314 QAtester bob ident host.example * :Bob Example",
+             ":qa.irc.test 312 QAtester bob a.example :Some server",
+             ":qa.irc.test 314 QAtester bob ident2 host2.example * :Bob Example",
+             ":qa.irc.test 312 QAtester bob b.example :Some other server",
+             ":qa.irc.test 369 QAtester bob :End of WHOWAS"});
+
+        const QList<SeenMessage> whowases = ofType(IrcMessage::Whowas);
+        QCOMPARE(whowases.count(), 2);
+        QCOMPARE(whowases.constFirst().parameters.value(1), QStringLiteral("a.example"));
+        QCOMPARE(whowases.constLast().parameters.value(1), QStringLiteral("b.example"));
+    }
+
+    void strayEndOfWhois_duringAWhowas_leavesTheWhowasOpen()
+    {
+        say({":qa.irc.test 314 QAtester bob ident host.example * :Bob Example",
+             ":qa.irc.test 318 QAtester bob :End of /WHOIS list.",
+             ":qa.irc.test 312 QAtester bob other.example :Some other server",
+             ":qa.irc.test 369 QAtester bob :End of WHOWAS"});
+
+        const QList<SeenMessage> whowases = ofType(IrcMessage::Whowas);
+        QCOMPARE(whowases.count(), 1);
+        QCOMPARE(whowases.constFirst().parameters.value(1), QStringLiteral("other.example"));
+    }
+
+    // A MOTD restarted before its end is delivered as far as it got, and the new one
+    // takes the end
+    void motdStart_insideAnOpenMotd_deliversBothSeparately()
+    {
+        say({":qa.irc.test 375 QAtester :- one -",
+             ":qa.irc.test 372 QAtester :- a",
+             ":qa.irc.test 375 QAtester :- two -",
+             ":qa.irc.test 372 QAtester :- b",
+             ":qa.irc.test 376 QAtester :End of /MOTD command."});
+
+        const QList<SeenMessage> motds = ofType(IrcMessage::Motd);
+        QCOMPARE(motds.count(), 2);
+        QCOMPARE(motds.constFirst().parameters, QStringList({QStringLiteral("QAtester"), QStringLiteral("- a")}));
+        QCOMPARE(motds.constLast().parameters, QStringList({QStringLiteral("QAtester"), QStringLiteral("- b")}));
     }
 };
 

@@ -18,13 +18,13 @@
  ***************************************************************************/
 
 /*
- * Why not a spec: viewportRoomBounds() has to be asked directly, because at the
+ * Why not specs: viewportRoomBounds() has to be asked directly, because at the
  * zoom these cases cover the whole map is one pixel and nothing drawn differs
- * between the right answer and the wrong one; and loading a map file replaces
- * the map of the profile the specs share.
+ * between the right answer and the wrong one; loading a map file replaces the
+ * map of the profile the specs share; and no Lua function reads an area's extent.
  *
- * Both cases hang rather than fail when they regress, so what reports them is
- * the 60 second cap every functional test carries rather than an assertion.
+ * A paint whose scan never returns reports nothing, so what reports that
+ * regression is the 60 second cap every functional test carries.
  *
  * Run with: ctest -R MapCoordinateLimitTest -V
  */
@@ -277,6 +277,44 @@ private slots:
         renderFrame(p2dMap);
 
         QCOMPARE(p2dMap->mRY, INT_MAX);
+    }
+
+    // The span index files y negated, and INT_MIN has no negation in an int; where
+    // the overflow wraps, the room lands at the opposite end of its area's extent.
+    // No Lua function reads an area's extent, so a spec cannot see this.
+    void test_aRoomAtTheLowestYIsFiledAtTheBottomOfItsArea()
+    {
+        TMap* pMap = map();
+        pMap->mapClear();
+        const int areaId = pMap->mpRoomDB->addArea(qsl("Lowest Y Area"));
+        const int otherAreaId = pMap->mpRoomDB->addArea(qsl("Other Area"));
+        QVERIFY2(areaId > 0 && otherAreaId > 0, "the areas under test could not be built");
+        TArea* pArea = pMap->mpRoomDB->getArea(areaId);
+        QVERIFY(pArea);
+        QVERIFY(addRoomAt(1, areaId, 0, 0));
+
+        // Area first, then coordinates: TArea::moveRoom() files it
+        QVERIFY(addRoomAt(2, areaId, 0, INT_MIN));
+        QCOMPARE(pArea->max_y, INT_MAX);
+        QCOMPARE(pArea->ymaxForZ.value(0), INT_MAX);
+        QCOMPARE(pArea->min_y, 0);
+
+        // Coordinates first, then area: TArea::addRoom() files it
+        QVERIFY(pMap->addRoom(3) && pMap->setRoomCoordinates(3, 1, INT_MIN, 0) && pMap->setRoomArea(3, areaId));
+        QCOMPARE(pArea->max_y, INT_MAX);
+        QCOMPARE(pArea->min_y, 0);
+
+        pArea->calcSpan();
+        QCOMPARE(pArea->max_y, INT_MAX);
+        QCOMPARE(pArea->ymaxForZ.value(0), INT_MAX);
+        QCOMPARE(pArea->min_y, 0);
+
+        // Taken out by TArea::removeRoom(), which must find them where they were filed
+        QVERIFY(pMap->setRoomArea(2, otherAreaId));
+        QVERIFY(pMap->mpRoomDB->removeRoom(3));
+        QCOMPARE(pArea->max_y, 0);
+        QCOMPARE(pArea->ymaxForZ.value(0), 0);
+        QCOMPARE(pArea->min_y, 0);
     }
 };
 

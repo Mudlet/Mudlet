@@ -21,6 +21,7 @@
 
 #include "Host.h"
 #include "HostManager.h"
+#include "TAudioMixer.h"
 #include "TMedia.h"
 
 #include <QDebug>
@@ -131,6 +132,7 @@ void MudletMedia::watchAudioOutputDevices()
 
 void MudletMedia::refreshAudioDevices()
 {
+    TAudioMixer::self()->refreshDevice();
     auto* hostManager = HostManager::self();
     if (!hostManager) {
         return;

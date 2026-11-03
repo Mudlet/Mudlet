@@ -45,6 +45,10 @@ public:
 
     // For a box that follows an Esc in the same ECHO hold
     void setReopened();
+    // What the player had typed into the command line when the box opened: a command until they
+    // change it here, so it may go back to the command line if the box closes untouched
+    void takeTypedAhead(const QString& typedAhead);
+    bool holdsOnlyTypedAhead() const { return mHoldsOnlyTypedAhead; }
 
 signals:
     void submitted();
@@ -72,6 +76,7 @@ private:
     QPointer<TCommandLine> mpCommandLine;
     QAction* mpRevealAction = nullptr;
     bool mReopened = false;
+    bool mHoldsOnlyTypedAhead = false;
 };
 
 #endif // MUDLET_TPASSWORDENTRY_H

@@ -387,7 +387,7 @@ void TMxpFrameWidgets::reportSize()
 
 void TMxpFrameWidgets::reportTabAreaSize(const QString& headerName, const QSize& size)
 {
-    if (mpMainConsole->mpHost && mpMainConsole->mpHost->mMxpFrameManager.setTabAreaSize(headerName, size)) {
+    if (mpMainConsole->mpHost->mMxpFrameManager.setTabAreaSize(headerName, size)) {
         // Deferred, as a page is resized from inside the relayout that moves its header
         scheduleSizeReport(true);
     }

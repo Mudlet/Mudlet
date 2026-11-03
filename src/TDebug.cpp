@@ -25,9 +25,8 @@
 #include "TDebug.h"
 
 #include "Host.h"
-#include "TBuffer.h"
 
-#include <QTime>
+#include <QDateTime>
 
 /* static */ const TDebug::Categories TDebug::csmNoisyCategories = {Category::GameLine, Category::TriggerDetail, Category::LuaSuccess, Category::Selection};
 
@@ -119,12 +118,16 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
     const int hidden = hiddenCategoryCount();
     if (hidden) {
         //: Shown in the Central Debug Console when it opens with some kinds of message hidden. %n is how many.
-        smpSink->printDebugLine(csmTagSystemMessage % tr("%n kind(s) of message are hidden - use the controls below to change that.\n", "", hidden), Qt::white, Qt::darkBlue, QString());
+        smpSink->printDebugLine(
+                csmTagSystemMessage % tr("%n kind(s) of message are hidden - use the controls below to change that.\n", "", hidden), Qt::white, Qt::darkBlue, QDateTime::currentMSecsSinceEpoch());
     }
 
     if (!smItemFilter.isEmpty()) {
         //: Shown in the Central Debug Console when it opens narrowed to a single trigger, alias, timer and so on. %1 is that item's name.
-        smpSink->printDebugLine(csmTagSystemMessage % tr("Showing only messages about \"%1\" - use the controls below to change that.\n").arg(smItemFilter), Qt::white, Qt::darkBlue, QString());
+        smpSink->printDebugLine(csmTagSystemMessage % tr("Showing only messages about \"%1\" - use the controls below to change that.\n").arg(smItemFilter),
+                                Qt::white,
+                                Qt::darkBlue,
+                                QDateTime::currentMSecsSinceEpoch());
     }
 }
 
@@ -159,14 +162,14 @@ TDebug::TDebug(const QColor& c, const QColor& d, const Category category, const 
         }
         const auto message = smPausedQueue.dequeue();
         // Already composed when it arrived, profile marking and all:
-        smpSink->printDebugLine(message.mMessage, message.mForeground, message.mBackground, message.mTimeStamp);
+        smpSink->printDebugLine(message.mMessage, message.mForeground, message.mBackground, message.mArrivalMSecs);
     }
 
     if (smPausedDroppedCount && smpSink) {
         // After the replay, not ahead of it: a full queue is as many lines as the console
         // keeps, so its own trimming would take a notice printed first straight back out:
         //: Shown in the Central Debug Console on resuming, when more messages arrived while paused than could be held back.
-        smpSink->printDebugLine(csmTagSystemMessage % tr("%n message(s) dropped while paused.\n", "", smPausedDroppedCount), Qt::white, Qt::darkRed, QString());
+        smpSink->printDebugLine(csmTagSystemMessage % tr("%n message(s) dropped while paused.\n", "", smPausedDroppedCount), Qt::white, Qt::darkRed, QDateTime::currentMSecsSinceEpoch());
         smPausedDroppedCount = 0;
     }
 }
@@ -255,7 +258,7 @@ bool TDebug::passesFilters(const Host* pHost)
             smPausedQueue.dequeue();
             ++smPausedDroppedCount;
         }
-        smPausedQueue.enqueue(TDebugMessage(line, QString(), foreground, background, QTime::currentTime().toString(TBuffer::smTimeStampFormat)));
+        smPausedQueue.enqueue(TDebugMessage(line, QString(), foreground, background, QDateTime::currentMSecsSinceEpoch()));
         return;
     }
 
@@ -268,7 +271,7 @@ bool TDebug::passesFilters(const Host* pHost)
             }
             // Stamped here rather than when the sink turns up, so that a
             // backlog replayed minutes later still reads as when it happened:
-            smMessageQueue.enqueue(TDebugMessage(line, QString(), foreground, background, QTime::currentTime().toString(TBuffer::smTimeStampFormat)));
+            smMessageQueue.enqueue(TDebugMessage(line, QString(), foreground, background, QDateTime::currentMSecsSinceEpoch()));
         }
         return;
     }
@@ -278,14 +281,16 @@ bool TDebug::passesFilters(const Host* pHost)
         // stacked up while there was none:
         while (!smMessageQueue.isEmpty() && smpSink) {
             const auto message = smMessageQueue.dequeue();
-            smpSink->printDebugLine(message.mMessage, message.mForeground, message.mBackground, message.mTimeStamp);
+            smpSink->printDebugLine(message.mMessage, message.mForeground, message.mBackground, message.mArrivalMSecs);
         }
         if (smMessageQueueDroppedCount && smpSink) {
             // After the backlog, not ahead of it: a full backlog is as many lines as the console
             // keeps, so its own trimming would take a notice printed first straight back out:
             //: Shown in the Central Debug Console when it opens, after the messages kept for it, if more arrived while it was closed than could be kept.
-            smpSink->printDebugLine(
-                    csmTagSystemMessage % tr("%n older message(s) were dropped while the Central Debug Console was closed.\n", "", smMessageQueueDroppedCount), Qt::white, Qt::darkRed, QString());
+            smpSink->printDebugLine(csmTagSystemMessage % tr("%n older message(s) were dropped while the Central Debug Console was closed.\n", "", smMessageQueueDroppedCount),
+                                    Qt::white,
+                                    Qt::darkRed,
+                                    QDateTime::currentMSecsSinceEpoch());
             smMessageQueueDroppedCount = 0;
         }
     }
@@ -296,7 +301,7 @@ bool TDebug::passesFilters(const Host* pHost)
     }
 
     if (smpSink) {
-        smpSink->printDebugLine(line, foreground, background, QString());
+        smpSink->printDebugLine(line, foreground, background, QDateTime::currentMSecsSinceEpoch());
     }
 }
 

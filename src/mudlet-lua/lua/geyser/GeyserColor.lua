@@ -8,8 +8,34 @@ Geyser.Color = {}
 -- to is kept - every label echo parses its colour again. Bounded, as a script
 -- can make up any number of them. Each is { r, g, b, a, hex }, hex filled in
 -- the first time it is asked for.
+-- Full, it becomes the previous generation rather than being emptied, so a
+-- script cycling through just over the limit keeps hitting instead of always
+-- missing.
 local parsedColorStrings = {}
 local parsedColorStringCount = 0
+local previousParsedColorStrings = {}
+
+local function rememberParsedColorString(str, parsed)
+  if parsedColorStringCount >= 1000 then
+    previousParsedColorStrings = parsedColorStrings
+    parsedColorStrings = {}
+    parsedColorStringCount = 0
+  end
+  parsedColorStrings[str] = parsed
+  parsedColorStringCount = parsedColorStringCount + 1
+end
+
+local function parsedColorString(str)
+  local parsed = parsedColorStrings[str]
+  if parsed then
+    return parsed
+  end
+  parsed = previousParsedColorStrings[str]
+  if parsed then
+    rememberParsedColorString(str, parsed)
+  end
+  return parsed
+end
 
 -- Lower cased name -> the name as color_table spells it, rebuilt rather than
 -- changed, see find_color_name()
@@ -38,41 +64,67 @@ local function rememberedName(name)
   return known
 end
 
-local parse
+local parse, numericColorString
+
+local componentNames = {"red", "green", "blue", "alpha"}
+
+-- %02x of an out of range component is more than two digits
+local function hexByte(value, component, caller)
+  if not tonumber(value) then
+    error(string.format("%s: bad %s component (number expected, got %s!)", caller, componentNames[component], type(value)), 3)
+  end
+  return math.min(255, math.max(0, math.floor(value)))
+end
 
 --- Converts color to 3 hex values as a string, no alpha, css style
+-- Components are rounded down and clamped to 0-255.
 -- @return The color formatted as a hex string, as accepted by html/css
 function Geyser.Color.hex (r, g, b)
   -- the caches are what parse() made of the string, so not for a parse()
   -- a script has put in its place
-  local known = not g and Geyser.Color.parse == parse and (parsedColorStrings[r] or rememberedName(r))
+  local known = not g and type(r) == "string" and Geyser.Color.parse == parse
+                and (parsedColorString(r) or rememberedName(r) or numericColorString(r))
   if known then
     local hex = known[5]
     if not hex then
-      hex = string.format("#%02x%02x%02x", known[1], known[2], known[3])
+      local red, green, blue = known[1], known[2], known[3]
+      -- hexByte() three times costs a script cycling through colours as much as the parse
+      if not (type(red) == "number" and type(green) == "number" and type(blue) == "number"
+              and red >= 0 and red <= 255 and red % 1 == 0 and green >= 0 and green <= 255 and green % 1 == 0
+              and blue >= 0 and blue <= 255 and blue % 1 == 0) then
+        red, green, blue = hexByte(red, 1, "Geyser.Color.hex"), hexByte(green, 2, "Geyser.Color.hex"), hexByte(blue, 3, "Geyser.Color.hex")
+      end
+      hex = string.format("#%02x%02x%02x", red, green, blue)
       known[5] = hex
     end
     return hex
   end
-  return string.format("#%02x%02x%02x", Geyser.Color.parse(r, g, b))
+  local red, green, blue = Geyser.Color.parse(r, g, b)
+  return string.format("#%02x%02x%02x", hexByte(red, 1, "Geyser.Color.hex"), hexByte(green, 2, "Geyser.Color.hex"), hexByte(blue, 3, "Geyser.Color.hex"))
 end
 
 --- Converts color to 4 hex values as a string, with alpha, css style
+-- Components are rounded down and clamped to 0-255.
 -- @return The color formatted as a hex string, as accepted by html/css
 function Geyser.Color.hexa (r, g, b, a)
-  return string.format("#%02x%02x%02x%02x", Geyser.Color.parse(r, g, b, a))
+  local red, green, blue, alpha = Geyser.Color.parse(r, g, b, a)
+  return string.format("#%02x%02x%02x%02x", hexByte(red, 1, "Geyser.Color.hexa"), hexByte(green, 2, "Geyser.Color.hexa"), hexByte(blue, 3, "Geyser.Color.hexa"), hexByte(alpha, 4, "Geyser.Color.hexa"))
 end
 
 --- Converts color to 3 hex values as a string, no alpha, hecho style
+-- Components are rounded down and clamped to 0-255.
 -- @return The color formatted as a hex string, as accepted by hecho
 function Geyser.Color.hhex (r, g, b)
-  return string.format("|c%02x%02x%02x", Geyser.Color.parse(r, g, b))
+  local red, green, blue = Geyser.Color.parse(r, g, b)
+  return string.format("|c%02x%02x%02x", hexByte(red, 1, "Geyser.Color.hhex"), hexByte(green, 2, "Geyser.Color.hhex"), hexByte(blue, 3, "Geyser.Color.hhex"))
 end
 
 --- Converts color to 4 hex values as a string, with alpha, hecho style
+-- Components are rounded down and clamped to 0-255.
 -- @return The color formatted as a hex string, as accepted by hecho
 function Geyser.Color.hhexa (r, g, b, a)
-  return string.format("|c%02x%02x%02x%02x", Geyser.Color.parse(r, g, b, a))
+  local red, green, blue, alpha = Geyser.Color.parse(r, g, b, a)
+  return string.format("|c%02x%02x%02x%02x", hexByte(red, 1, "Geyser.Color.hhexa"), hexByte(green, 2, "Geyser.Color.hhexa"), hexByte(blue, 3, "Geyser.Color.hhexa"), hexByte(alpha, 4, "Geyser.Color.hhexa"))
 end
 
 --- Converts color to 3 decimal values as a string, no alpha, decho style
@@ -182,6 +234,35 @@ local function parseAnyColor(red, green, blue, alpha)
   return r, g, b, a
 end
 
+-- What parse() makes of a hex or decimal colour string, remembered; nil for
+-- any other string. The shapes nearly every one takes are read straight off,
+-- as a miss must cost no more than parseAnyColor() alone; it reads the rest,
+-- and gives these the same answers.
+function numericColorString(str)
+  local hexStart = string.find(str, "^#") and 2 or string.find(str, "^[|0][cx]") and 3
+  local base, r, g, b, a = 16
+  if hexStart then
+    local length = #str - hexStart + 1
+    if length == 6 or length == 8 then
+      r, g, b, a = string.match(str, "^(%x%x)(%x%x)(%x%x)(%x?%x?)$", hexStart)
+    end
+  elseif string.find(str, "^<") then
+    base = 10
+    r, g, b, a = string.match(str, "^<(%d+),(%d+),(%d+),?(%d*)>$")
+  else
+    return nil
+  end
+  local parsed
+  if r then
+    parsed = { tonumber(r, base), tonumber(g, base), tonumber(b, base), a == "" and 255 or tonumber(a, base), false }
+  else
+    r, g, b, a = parseAnyColor(str)
+    parsed = { r, g, b, a, false }
+  end
+  rememberParsedColorString(str, parsed)
+  return parsed
+end
+
 --- Returns 4 color components from (nearly any) acceptable format.  Colors can be
 -- specified in two ways.  First: as a single word in english ("purple") or
 -- hex ("#AA00FF", "|cAA00FF", or "0xAA00FF") or decimal ("<190,0,255>"). If
@@ -211,23 +292,9 @@ function Geyser.Color.parse(red, green, blue, alpha)
   if type(red) ~= "string" then
     return parseAnyColor(red, green, blue, alpha)
   end
-  local parsed = parsedColorStrings[red]
-  if parsed then
-    return parsed[1], parsed[2], parsed[3], parsed[4]
-  end
-  local known = rememberedName(red)
+  local known = parsedColorString(red) or rememberedName(red) or numericColorString(red)
   if known then
     return known[1], known[2], known[3], known[4]
-  end
-  if string.find(red, "^#") or string.find(red, "^[|0][cx]") or string.find(red, "^<") then
-    local r, g, b, a = parseAnyColor(red, green, blue, alpha)
-    if parsedColorStringCount >= 1000 then
-      parsedColorStrings = {}
-      parsedColorStringCount = 0
-    end
-    parsedColorStrings[red] = { r, g, b, a }
-    parsedColorStringCount = parsedColorStringCount + 1
-    return r, g, b, a
   end
   local col = Geyser.Color.find_color_name(red)
   if not col then

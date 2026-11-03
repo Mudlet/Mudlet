@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include "TMxpElementRegistry.h"
 #include "TMxpProcessor.h"
 #include "TMxpStubClient.h"
@@ -24,8 +25,9 @@
 #include <QStringList>
 #include <QtTest/QtTest>
 
-class TmxpElementDefinitionHandlerTest : public QObject {
-  Q_OBJECT
+class TMxpElementDefinitionHandlerTest : public QObject
+{
+    Q_OBJECT
 
 private slots:
   void testMxpElementRegistration_data() {
@@ -183,4 +185,4 @@ private slots:
 };
 
 #include "TMxpElementDefinitionHandlerTest.moc"
-QTEST_MAIN(TmxpElementDefinitionHandlerTest)
+MUDLET_GROUPED_TEST_MAIN(TMxpElementDefinitionHandlerTest)

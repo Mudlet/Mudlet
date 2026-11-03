@@ -227,6 +227,32 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "Dark Mists."),
              GameDetail::OwnUi::ClientGui},
 
+            {qsl("DreamLand"),
+             qsl("dreamland.rocks"),
+             9000,
+             false,
+             qsl("<a href='https://dreamland.rocks'>Website</a><br>"
+                 "<a href='https://discord.gg/Ds46EpdKaF'>Discord</a>"),
+             qsl(":/icons/banner_dreamland.png"),
+             qsl("Two gods built Thera as a mirror copy of someone else's world. Several "
+                 "epochs and a great many funerals later, the copy has stopped taking notes "
+                 "and started taking lives."
+                 "\n\n"
+                 "23 races, 13 classes, alignment, ethos and 44 gods and cults add up to "
+                 "over 30,000 builds, and each one plays differently. Every random drop, "
+                 "quest reward and crafted piece sits on one power scale. Forge your own "
+                 "blades, cut gems, ink tattoos. Endless personal quests, 56 area quests, "
+                 "tiered mobs that call their friends and cast at you from the next room, "
+                 "remort, and ten clans, most with skills nobody else gets."
+                 "\n\n"
+                 "The whole game is in English, Ukrainian and Russian: one world, and every "
+                 "player sees it in their own language. Many of our regulars are blind, so "
+                 "everything works with a screen reader. Mudlet gets our own interface on "
+                 "connect: bars, chat tabs and the panels from our web client."
+                 "\n\n"
+                 "Dying is part of the tutorial."),
+             GameDetail::OwnUi::ClientGui},
+
             {qsl("God Wars II"),
              qsl("godwars2.org"),
              3000,

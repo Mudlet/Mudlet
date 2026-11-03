@@ -43,7 +43,7 @@ Qt Creator provides excellent integration for running and debugging Qt tests:
 All Qt tests in Mudlet follow this basic structure:
 
 ```cpp
-#include <QtTest/QtTest>
+#include "GroupedTest.h"
 #include <SourceFileToTest.h>
 
 class MyComponentTest : public QObject {
@@ -73,7 +73,7 @@ private slots:
     }
 };
 
-QTEST_MAIN(MyComponentTest)
+MUDLET_GROUPED_TEST_MAIN(MyComponentTest)
 #include "MyComponentTest.moc"
 ```
 
@@ -81,20 +81,11 @@ QTEST_MAIN(MyComponentTest)
 
 1. **Create Test File**: Create `YourTestName.cpp` in the `test/` directory. Keep the words `install`, `uninstall`, `setup`, `update` and `patch` out of the name: Windows takes an unsigned executable named that way for an installer and will not start it from an ordinary, non-elevated Windows shell. CMake rejects such a name at configure time.
 
-2. **Implement Test Class**: Follow the structure above, inheriting from `QObject` and using `Q_OBJECT` macro
+2. **Implement Test Class**: Follow the structure above, inheriting from `QObject` and using `Q_OBJECT` macro. Name the class after the file: ctest runs it by that name.
 
-3. **Add to CMakeLists.txt**: Edit `test/CMakeLists.txt` and add:
-   ```cmake
-   add_executable(YourTestName YourTestName.cpp ../src/SourceFileToTest.cpp)
-   add_test(NAME YourTestName COMMAND YourTestName)
-   ```
+3. **Add to CMakeLists.txt**: Add `YourTestName` to the `UNIT_TESTS` list in `test/CMakeLists.txt`. Every test in that list is compiled into one `unit_tests` executable linked against the Mudlet library, so `MUDLET_GROUPED_TEST_MAIN()` (or `MUDLET_GROUPED_TEST_GUILESS_MAIN()` for a test that needs no display) takes the place of `QTEST_MAIN()`. Each test is still its own ctest case and runs in its own process; to run one by hand, name it: `./unit_tests YourTestName`.
 
-4. **Link Dependencies**: Add any required libraries:
-   ```cmake
-   target_link_libraries(YourTestName Qt6::Core Qt6::Test)
-   ```
-
-5. **Include Source Files**: Include the source files you're testing (see existing examples)
+A test that needs only a source file or two and not the whole Mudlet library gets an `add_executable()` of its own instead - see `SemVerTest` in `test/CMakeLists.txt`.
 
 ### Best Practices
 
@@ -110,7 +101,7 @@ QTEST_MAIN(MyComponentTest)
 ### Example: Simple Test Implementation
 
 ```cpp
-#include <QtTest/QtTest>
+#include "GroupedTest.h"
 #include <TEntityResolver.h>
 
 class TEntityResolverTest : public QObject {
@@ -127,6 +118,6 @@ private slots:
     }
 };
 
-QTEST_MAIN(TEntityResolverTest)
+MUDLET_GROUPED_TEST_MAIN(TEntityResolverTest)
 #include "TEntityResolverTest.moc"
 ```

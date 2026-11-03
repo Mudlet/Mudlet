@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include "TMxpProcessor.h"
 #include "TMxpStatTagHandler.h"
 #include "TMxpStubClient.h"
@@ -397,5 +398,5 @@ private slots:
   }
 };
 
-QTEST_MAIN(TMxpEdgeCasesTest)
+MUDLET_GROUPED_TEST_MAIN(TMxpEdgeCasesTest)
 #include "TMxpEdgeCasesTest.moc"

@@ -29,7 +29,9 @@
 #include <QDebug>
 #include <QTimer>
 #include <QTimerEvent>
+#if defined(INCLUDE_DISCORD_RPC)
 #include <QLibrary>
+#endif
 #include "../3rdparty/discord/rpc/include/discord_register.h"
 #include "../3rdparty/discord/rpc/include/discord_rpc.h"
 
@@ -92,9 +94,6 @@ public:
     void setLargeImageText(const QString&);
     void setSmallImageKey(const QString&);
     void setSmallImageText(const QString&);
-    void setJoinSecret(const QString&);
-    void setMatchSecret(const QString&);
-    void setSpectateSecret(const QString&);
     void setPartySize(const int size) { mPartySize = size; }
     void setPartyMax(const int maximum) { mPartyMax = maximum; }
     DiscordRichPresence convert() const;
@@ -267,7 +266,9 @@ private:
     // Mudlet:
     QMap<Host*, QString>mHostApplicationIDs;
 
+#if defined(INCLUDE_DISCORD_RPC)
     QScopedPointer<QLibrary> mpLibrary;
+#endif
 
     // Used to hold the per profile data independently of whichever application id
     // it will be used with:

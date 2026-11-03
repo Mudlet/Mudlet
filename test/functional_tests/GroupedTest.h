@@ -24,7 +24,7 @@
 
 #include "utils.h"
 
-// Every functional test executable statically links mudlet_core, which costs a
+// Every test executable that statically links mudlet_core costs a
 // build tree ~250MB and a link step each. Tests that can share one binary use
 // MUDLET_GROUPED_TEST_MAIN() in place of QTEST_MAIN(): instead of defining
 // main() it hands GroupedTestMain.cpp's main() a function that runs this one
@@ -66,11 +66,11 @@ struct Registrar
 // QStandardPaths::AppConfigLocation is built from it, and Mudlet keeps profile
 // encryption keys and passwords under there, so leaving it at the executable's
 // name would give a whole group one store instead of a test each.
-#define MUDLET_GROUPED_TEST_MAIN(TestObject)                                                                                                                                                           \
+#define MUDLET_GROUPED_TEST_MAIN_WRAPPER(TestObject, ...)                                                                                                                                              \
     static int run##TestObject(int argc, char* argv[])                                                                                                                                                 \
     {                                                                                                                                                                                                  \
         QT_PREPEND_NAMESPACE(QTest::Internal::callInitMain)<TestObject>();                                                                                                                             \
-        QTEST_MAIN_SETUP()                                                                                                                                                                             \
+        __VA_ARGS__                                                                                                                                                                                    \
         app.setApplicationName(qsl(#TestObject));                                                                                                                                                      \
         TestObject tc;                                                                                                                                                                                 \
         QTEST_SET_MAIN_SOURCE_PATH                                                                                                                                                                     \
@@ -79,5 +79,10 @@ struct Registrar
         return result;                                                                                                                                                                                 \
     }                                                                                                                                                                                                  \
     static const GroupedTest::Registrar registrar##TestObject(#TestObject, &run##TestObject);
+
+#define MUDLET_GROUPED_TEST_MAIN(TestObject) MUDLET_GROUPED_TEST_MAIN_WRAPPER(TestObject, QTEST_MAIN_SETUP())
+
+// QTEST_GUILESS_MAIN's counterpart: a QCoreApplication, so the case needs no display
+#define MUDLET_GROUPED_TEST_GUILESS_MAIN(TestObject) MUDLET_GROUPED_TEST_MAIN_WRAPPER(TestObject, QTEST_QAPP_SETUP(QCoreApplication))
 
 #endif // MUDLET_GROUPEDTEST_H

@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <TMCPLuaBridge.h>
 #include <TMCPServer.h>
 #include <utils.h>
@@ -35,6 +36,8 @@
 #include <QTcpSocket>
 #include <QJsonDocument>
 #include <QJsonObject>
+
+#include <limits>
 
 using namespace std::chrono_literals;
 using StatusCode = QHttpServerResponse::StatusCode;
@@ -118,25 +121,33 @@ private:
         return names;
     }
 
-    struct WalkTiming
+    struct WalkTimings
     {
         bool ok = false;
-        qint64 addedMs = 0;
+        qint64 smallerMs = 0;
+        qint64 largerMs = 0;
     };
 
-    // How long converting a table cost, with the loop that built it outside the timed
-    // region: timing the snippet as a whole would mostly measure how fast this machine
-    // runs a Lua loop of that many iterations, which says nothing about the walk. The
-    // build leaves the table in a global so the second call only has to return it -
-    // timing both calls and subtracting put the difference of two large numbers where a
-    // small one belongs, which on a loaded machine came out as noise either way round.
-    WalkTiming timeWalk(const QString& build) const
+    // Fastest of three interleaved walks, both tables built before either is timed: one
+    // wall-clock sample on a shared CI runner can absorb a stall several times the walk,
+    // and one landing on the larger walk alone trips a ratio bound.
+    WalkTimings compareWalks(const QString& buildSmaller, const QString& buildLarger) const
     {
-        const bool builtOk = TMCPLuaBridge::runLua(L, build + qsl("collectgarbage('collect') return #t"), 60000).success;
-        QElapsedTimer elapsed;
-        elapsed.start();
-        const bool walkedOk = TMCPLuaBridge::runLua(L, qsl("return t"), 60000).success;
-        return {builtOk && walkedOk, elapsed.elapsed()};
+        WalkTimings timings{TMCPLuaBridge::runLua(L, buildSmaller + qsl("smaller = t"), 60000).success
+                                    && TMCPLuaBridge::runLua(L, buildLarger + qsl("larger = t t = nil collectgarbage('collect')"), 60000).success,
+                            std::numeric_limits<qint64>::max(),
+                            std::numeric_limits<qint64>::max()};
+        for (int round = 0; round < 3; ++round) {
+            QElapsedTimer elapsed;
+            elapsed.start();
+            const bool smallerOk = TMCPLuaBridge::runLua(L, qsl("return smaller"), 60000).success;
+            timings.smallerMs = qMin(timings.smallerMs, elapsed.restart());
+            const bool largerOk = TMCPLuaBridge::runLua(L, qsl("return larger"), 60000).success;
+            timings.largerMs = qMin(timings.largerMs, elapsed.elapsed());
+            timings.ok = timings.ok && smallerOk && largerOk;
+        }
+        TMCPLuaBridge::runLua(L, qsl("smaller = nil larger = nil collectgarbage('collect')"), 60000);
+        return timings;
     }
 
     const void* globalPrint() const
@@ -1004,12 +1015,10 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         // live nodes scattered over a ten times larger table misses cache that much more
         // often, so the bound has to clear 2x rather than sit at 1x. Measured with the
         // caps lifted the same ratio is 110x, which is the margin this is really weighing.
-        const WalkTiming capped = timeWalk(qsl("t = {} for i = 1, 40000 do t['key'..i] = i end "));
-        const WalkTiming tenTimesWider = timeWalk(qsl("t = {} for i = 1, 400000 do t['key'..i] = i end "));
+        const WalkTimings walks = compareWalks(qsl("t = {} for i = 1, 40000 do t['key'..i] = i end "), qsl("t = {} for i = 1, 400000 do t['key'..i] = i end "));
 
-        QVERIFY(capped.ok);
-        QVERIFY(tenTimesWider.ok);
-        QVERIFY2(tenTimesWider.addedMs < 10 * capped.addedMs, qPrintable(qsl("ten times the keys took %1ms to walk against %2ms").arg(tenTimesWider.addedMs).arg(capped.addedMs)));
+        QVERIFY(walks.ok);
+        QVERIFY2(walks.largerMs < 10 * walks.smallerMs, qPrintable(qsl("ten times the keys took %1ms to walk against %2ms").arg(walks.largerMs).arg(walks.smallerMs)));
     }
 
     void testALongArrayIsCutShortQuicklyAndIsStillAnArray()
@@ -1020,12 +1029,10 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         // appended to rather than inserted into in sorted order, so it has none of that
         // case's scattered-node penalty and does sit at 1x; the bound stays tight because
         // with the cap lifted this ratio is only 6x, not that case's 110x.
-        const WalkTiming capped = timeWalk(qsl("t = {} for i = 1, 400000 do t[i] = i end "));
-        const WalkTiming fiveTimesLonger = timeWalk(qsl("t = {} for i = 1, 2000000 do t[i] = i end "));
+        const WalkTimings walks = compareWalks(qsl("t = {} for i = 1, 400000 do t[i] = i end "), qsl("t = {} for i = 1, 2000000 do t[i] = i end "));
 
-        QVERIFY(capped.ok);
-        QVERIFY(fiveTimesLonger.ok);
-        QVERIFY2(fiveTimesLonger.addedMs < 3 * capped.addedMs + 100, qPrintable(qsl("five times the entries took %1ms to walk against %2ms").arg(fiveTimesLonger.addedMs).arg(capped.addedMs)));
+        QVERIFY(walks.ok);
+        QVERIFY2(walks.largerMs < 3 * walks.smallerMs + 100, qPrintable(qsl("five times the entries took %1ms to walk against %2ms").arg(walks.largerMs).arg(walks.smallerMs)));
 
         // A table too big to walk through in full is still a list. Giving up on that and
         // rendering it as {"1":1, "10":10, "100":100} both reads wrong to a model and,
@@ -1113,5 +1120,5 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
     }
 };
 
-QTEST_MAIN(TMCPServerTest) // NOLINT(misc-use-anonymous-namespace)
+MUDLET_GROUPED_TEST_MAIN(TMCPServerTest) // NOLINT(misc-use-anonymous-namespace)
 #include "TMCPServerTest.moc"

@@ -42,6 +42,12 @@ QColor oneWayArrowColor();
 // Black or white, whichever stands out on background
 QColor contrastColor(const QColor& background);
 
+// How bright color looks, 0 to 255, weighting green over red over blue as the eye does
+int brightness(const QColor& color);
+
+// color, made darker on a light background or lighter on a dark one where it is too near background's brightness to stand out
+QColor standOutColor(const QColor& color, const QColor& background);
+
 // The two strokes of a door on exitLine, which starts at the room's center;
 // roomSpan is a room's spacing across plus its spacing down
 std::pair<QLineF, QLineF> doorStrokes(const QLineF& exitLine, qreal roomSpan);

@@ -49,6 +49,7 @@ class dlgMapper : public QWidget, public Ui::mapper, public TMapViewFrontend
 public:
     Q_DISABLE_COPY(dlgMapper)
     dlgMapper(QWidget*, Host*, TMap*);
+    Host* getHost() const { return mpHost; }
 #if defined(INCLUDE_3DMAPPER)
     QOpenGLWidget* glWidget = nullptr;
 #endif
@@ -74,7 +75,11 @@ public:
     void setMapProgressCancelable(bool cancelable) override;
     void hideMapProgress() override;
     bool isMapProgressVisible() const override;
-    void show3DView(bool shown) override { slot_toggle3DView(shown); }
+    std::pair<bool, QString> show3DView(bool shown) override
+    {
+        slot_toggle3DView(shown);
+        return {true, QString()};
+    }
     bool showing3DView() const override;
     void recreate3DView() override { recreate3DWidget(); }
     std::pair<bool, QString> shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle) override;
@@ -114,22 +119,28 @@ public slots:
     void slot_showSaveWarningMenu();
     void slot_saveErrorChanged(bool hasError);
 
-    static void paintMapInfo(const QElapsedTimer& renderTimer,
-                             QPainter& painter,
-                             Host* pHost,
-                             TMap* pMap,
-                             int roomID,
-                             int displayAreaId,
-                             int selectionSize,
-                             QColor& infoColor,
-                             int xOffset,
-                             int yOffset,
-                             int widgetWidth,
-                             int fontHeight);
+    // Returns where the box ends, down from the top
+    static int paintMapInfo(const QElapsedTimer& renderTimer,
+                            QPainter& painter,
+                            Host* pHost,
+                            TMap* pMap,
+                            int roomID,
+                            int displayAreaId,
+                            int selectionSize,
+                            QColor& infoColor,
+                            int xOffset,
+                            int yOffset,
+                            int widgetWidth,
+                            int fontHeight,
+                            // Invalid for the profile's info box background
+                            const QColor& background = QColor(),
+                            // Empty for the profile's display font's
+                            const QString& fontFamily = QString());
     static int paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties, QColor bgColor, int fontHeight, int widgetWidth);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
+    void keyPressEvent(QKeyEvent*) override;
 
 private:
     // Only the mapper TMap::mpMapper names acts on the map's cues, as other

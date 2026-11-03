@@ -126,6 +126,22 @@
       }
     },
     {
+      "name": "linux-core-minimal",
+      "displayName": "Linux mudlet_core and mudlet-headless only, without what an Android or iOS build must leave out",
+      "inherits": ["variant", "linux-debug"],
+      "cacheVariables": {
+        "USE_SANITIZER": "",
+        "BUILD_TESTING": "OFF",
+        "USE_SPAWN": "OFF",
+        "USE_DISCORD_RPC": "OFF",
+        "USE_SPEECH_ENGINES": "OFF",
+        "USE_MCPSERVER": "OFF",
+        "USE_UPDATER": "OFF",
+        "USE_3DMAPPER": "OFF",
+        "WITH_SENTRY": "OFF"
+      }
+    },
+    {
       "name": "linux-release",
       "displayName": "Linux Release, no sanitizers (what CI ships to players)",
       "inherits": ["variant", "linux-debug"],
@@ -169,13 +185,14 @@
     {
       "name": "ci-shipping",
       "hidden": true,
-      "description": "Adds what a build that produces an artifact needs. The values come from the environment because a run varies them by tag and by matrix entry; an empty USE_SANITIZER is deliberate, as leaving it unset would default to address instead.",
+      "description": "Adds what a build that produces an artifact needs. The values come from the environment because a run varies them by tag and by matrix entry; an empty USE_SANITIZER is deliberate, as leaving it unset would default to address instead. MUDLET_PGO is GENERATE for the first pass of a profile-guided build on macOS and Linux, empty otherwise.",
       "inherits": "ci",
       "cacheVariables": {
         "USE_SANITIZER": "$env{USE_SANITIZER}",
         "WITH_SENTRY": "$env{WITH_SENTRY}",
         "SENTRY_DSN": "$env{SENTRY_DSN}",
-        "SENTRY_SEND_DEBUG": "$env{SENTRY_SEND_DEBUG}"
+        "SENTRY_SEND_DEBUG": "$env{SENTRY_SEND_DEBUG}",
+        "MUDLET_PGO": "$env{MUDLET_PGO}"
       }
     },
     {
@@ -278,6 +295,12 @@
       "inherits": "on-linux",
       "configurePreset": "linux-lowspec",
       "jobs": 2
+    },
+    {
+      "name": "linux-core-minimal",
+      "inherits": "on-linux",
+      "configurePreset": "linux-core-minimal",
+      "targets": ["mudlet_headless_executable"]
     },
     { "name": "linux-release", "inherits": "on-linux", "configurePreset": "linux-release" },
     {

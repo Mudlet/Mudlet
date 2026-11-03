@@ -5,6 +5,7 @@ endif()
 # Defined in the parent test/CMakeLists.txt; TESTS is per-directory, so call it here too.
 cmake_language(DEFER CALL restore_windows_test_output)
 cmake_language(DEFER CALL sandbox_test_config_dirs)
+cmake_language(DEFER CALL add_luarocks_paths_to_tests)
 
 set(FUNCTIONAL_TEST_SOURCES
 )
@@ -36,6 +37,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     AccessibleToolTipTest.cpp
     AddonControlsTest.cpp
     AsciiLineBreakTest.cpp
+    BlinkRowRepaintTest.cpp
     ConsoleModelExtractionTest.cpp
     ConsoleTextStyleTest.cpp
     CopyAsImageTest.cpp
@@ -53,6 +55,8 @@ set(WINDOW_GROUP_TEST_SOURCES
     HostConsolePrintTest.cpp
     DetachedWindowTabActivityTest.cpp
     AboutDialogLicencesTest.cpp
+    AboutMenuReleaseNoticeTest.cpp
+    LabelAccessibleInterfaceTest.cpp
     LabelAnchorInteractionTest.cpp
     MainWindowTitleTest.cpp
     LabelMovieRefusalTest.cpp
@@ -65,8 +69,10 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowDiscordButtonTest.cpp
     MainWindowSizeReportTest.cpp
     CommandLineScrollRangeTest.cpp
+    CommandLineColorTest.cpp
     DetachedWindowOwnershipTest.cpp
     SpeechAcrossProfilesTest.cpp
+    MudletProxyStyleTest.cpp
     MxpFramePlacementTest.cpp
     MxpDestFrameClearTest.cpp
     LabelBackgroundPaintTest.cpp
@@ -79,6 +85,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowToolBarIconSizeTest.cpp
     DetachedWindowToolBarVisibilityTest.cpp
     DetachedWindowMuteStateTest.cpp
+    GlobalSettingsFlushTest.cpp
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
     RecolouredLineCacheTest.cpp
@@ -109,13 +116,16 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConnectionDialogNewProfileTest.cpp
     ConnectionDialogOfflineProfileTest.cpp
     ConnectionDialogOpenProfileTest.cpp
+    ConnectionDialogSecureSettingTest.cpp
     CredentialFilePermissionsTest.cpp
     DefaultGameDeleteTest.cpp
     DictionaryRoundTripTest.cpp
     ForceCloseTest.cpp
     ProfileCloseGuardTest.cpp
     MissingDisplayFontTest.cpp
+    MudletIniLateSettingsTest.cpp
     PortableRootNoticeTest.cpp
+    ProfileDataWriteTest.cpp
     ProfileDeletionSafetyTest.cpp
     ProfileDictionaryTest.cpp
     ProfileFolderNameTest.cpp
@@ -128,7 +138,9 @@ set(PROFILE_GROUP_TEST_SOURCES
     SavedVariableFenceTest.cpp
     SelfTestProfileIconTest.cpp
     SpellDictionaryFailureTest.cpp
+    TestProfileFirstRunTourTest.cpp
     XMLexportVariablesTest.cpp
+    XmlImportStateTest.cpp
 )
 
 # Telnet and the other network protocols Mudlet speaks, the escape sequences
@@ -172,14 +184,18 @@ set(TELNET_GROUP_TEST_SOURCES
 set(TRIGGER_GROUP_TEST_SOURCES
     CaptureGroupParkingTest.cpp
     BigramFilterTest.cpp
+    CompileErrorLabelTest.cpp
     CorruptTriggerPatternsTest.cpp
     EmergencyStopResumeTest.cpp
+    GetLuaStringTest.cpp
+    LazyGlobalsCacheTest.cpp
     MultilineTriggerReentrancyTest.cpp
     PrescanStayOpenRefileTest.cpp
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerMatchPoolTest.cpp
     TreeChildTeardownTest.cpp
+    TriggerSoundArgumentTest.cpp
     UnitDeferredDeleteTest.cpp
     UnitProcessingDepthTest.cpp
     UnitsReachHostTest.cpp
@@ -192,17 +208,23 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorAutoCompleteFocusTest.cpp
     EditorClipboardXmlTest.cpp
     EditorBannerViewSwitchTest.cpp
+    EditorEmptySelectionTest.cpp
     EditorItemXMLHelpersTest.cpp
     ColorTriggerDialogTest.cpp
     EditorReshowTest.cpp
     PackageExporterTest.cpp
     EditorWindowPositionTest.cpp
+    LuaFunctionListLoadTest.cpp
     MissingEditorThemeTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     EditorAddItemTest.cpp
+    EditorFolderViewTest.cpp
+    EditorFontTest.cpp
+    EditorModuleFolderTest.cpp
     EditorSearchTest.cpp
     TreeWidgetItemMoveTest.cpp
     TriggerEditorDisclosureTest.cpp
+    TimerEditorCountdownTest.cpp
     TriggerEditorTest.cpp
     TriggerPatternListLayoutTest.cpp
     VariableEditorWriteBackTest.cpp
@@ -211,6 +233,7 @@ set(EDITOR_GROUP_TEST_SOURCES
 # The map: its rooms and areas, its file format, and the mapper widget
 set(MAP_GROUP_TEST_SOURCES
     EmbeddedMapperCreationTest.cpp
+    FloatingMapKeyBindingTest.cpp
     ExitAppearanceTest.cpp
     MapAreaReassignmentTest.cpp
     MapAreaSelectionTest.cpp
@@ -223,13 +246,18 @@ set(MAP_GROUP_TEST_SOURCES
     MapLevelOfDetailTest.cpp
     MapMouseInteractionTest.cpp
     MapOffscreenCustomLineTest.cpp
+    MapRoomNameVisibilityTest.cpp
     MapFileStatsTest.cpp
     MapTextLabelCacheTest.cpp
     MapViewAreaListTest.cpp
+    MapViewTeardownTest.cpp
     MapLabelRenderTest.cpp
+    MapDecalsTest.cpp
     MapViewCueTest.cpp
     LuaMapperCueTest.cpp
     MapLockNoOpTest.cpp
+    MapLabelDeleteTest.cpp
+    MapRevisionTest.cpp
     RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
     MapperPanelTest.cpp
@@ -238,13 +266,14 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaImageExportTest.cpp
     MapRoundTripTest.cpp
     MapSymbolFontTest.cpp
+    DioramaLayoutTest.cpp
     RoomAppearanceTest.cpp
     RoomExitsDeletedEditItemTest.cpp
 )
 
 # CameraController and GeometryManager are only compiled into the library with the 3D mapper
 if(USE_3DMAPPER)
-    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp Map3DViewEditingTest.cpp Map3DViewInteractionTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp ModernMapperRenderTest.cpp ModernRoomTextureTest.cpp)
+    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp Map3DViewEditingTest.cpp Map3DViewInteractionTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp ModernMapperRenderTest.cpp ModernMapperSceneTest.cpp ModernRoomTextureTest.cpp)
 endif()
 
 # Packages and modules: installing them, saving them and removing them
@@ -257,11 +286,15 @@ set(PACKAGE_GROUP_TEST_SOURCES
     DualPackageModuleTest.cpp
     ModuleManagerListingTest.cpp
     ModuleSaveTeardownTest.cpp
+    ModuleSyncReloadTest.cpp
+    ModuleSyncSaveReentryTest.cpp
     PackageDownloadDialogRestyleTest.cpp
     PackageExporterDialogTest.cpp
+    PackageFolderRemovalTest.cpp
     PackageFontsOnRefusedArchiveTest.cpp
     PackageManagerHeadingTest.cpp
     PackageManagerRemovalTest.cpp
+    PackageManagerRepositoryLinksTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     PackageRepositoryDownloadTest.cpp
     PackageSelfRemovalTest.cpp
@@ -290,6 +323,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsBannerTest.cpp
     SettingsDeepLinkTest.cpp
     SettingsDirtyApplyTest.cpp
+    SettingsExperimentsTest.cpp
     SettingsHostLifecycleTest.cpp
     SettingsInstantApplyTest.cpp
     SettingsLiveSyncTest.cpp
@@ -313,7 +347,11 @@ set(TEARDOWN_GROUP_TEST_SOURCES
     HostChildTeardownTest.cpp
     HostManagerAccessorTest.cpp
     HostWidgetDecouplingTest.cpp
+    InstanceForwardTest.cpp
 )
+if(USE_HEADLESS)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessRunnerTest.cpp HeadlessSessionTest.cpp)
+endif()
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
 set(MEDIA_GROUP_TEST_SOURCES
@@ -325,6 +363,8 @@ set(MEDIA_GROUP_TEST_SOURCES
     TDiscordModeTest.cpp
     VideoOutputHideTest.cpp
     TMediaLoopTest.cpp
+    TAudioMixerTest.cpp
+    TMediaPanTest.cpp
     TtsInterruptingSpeakTest.cpp
     HeadlessMediaDebugTest.cpp
 )
@@ -335,6 +375,9 @@ set(FUNCTIONAL_TEST_UTILS
 )
 
 mudlet_add_test_pch_provider(mudlet_functional_test_pch)
+
+# XmlImportStateTest imports every package, profile and map XML in the source tree
+set_property(SOURCE XmlImportStateTest.cpp APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 
 # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
 macro(add_functional_test_binary target)
@@ -439,6 +482,23 @@ add_grouped_test_binary(functional_package_tests ${PACKAGE_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_settings_tests ${SETTINGS_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
+# HeadlessHostSmokeTest is not given the Discord library, as most headless embedders
+# will not have one; its Discord cases run again with the bundled one, given it below
+add_test(NAME HeadlessHostSmokeTestWithDiscordLibrary
+    COMMAND $<TARGET_FILE:functional_teardown_tests> HeadlessHostSmokeTest
+        test_gameReachesDiscordOverGmcpWithNoMainWindow
+        test_aSecondPoolLeavesNoDiscordDataBehind
+        test_aSecondPoolForgetsDiscordDataAfterEveryExitEvent
+        test_deleteHostForgetsDiscordDataOfAProfileReopenedUnderItsExitHandler
+        test_aSecondPoolForgetsDiscordDataOfAProfileReopenedUnderItsExitHandler)
+list(APPEND allFunctionalTestNames HeadlessHostSmokeTestWithDiscordLibrary)
+# HeadlessHostSmokeTest runs with no Mudlet.ini, so its tests see the defaults. Its Mudlet.ini case runs
+# again in a process of its own, where one is written before anything reads it: the trigger match pool
+# reads it once, and no other test there runs on its values.
+add_test(NAME HeadlessHostSmokeTestWithMudletIni
+    COMMAND $<TARGET_FILE:functional_teardown_tests> HeadlessHostSmokeTest
+        test_profileWithNoMainWindowTakesItsSettingsFromMudletIni)
+list(APPEND allFunctionalTestNames HeadlessHostSmokeTestWithMudletIni)
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
 
 # On macOS the app reads its dictionaries from the bundle's Resources folder,
@@ -506,6 +566,14 @@ set_property(SOURCE SpeechAcrossProfilesTest.cpp SpeechBridgeLuaTest.cpp SpeechR
 add_dependencies(functional_teardown_tests mudlet_executable)
 set_property(SOURCE AppStartupTeardownTest.cpp HeadlessVersionTest.cpp
     APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_APP_BINARY="$<TARGET_FILE:mudlet_executable>")
+# The same for HeadlessRunnerTest and the mudlet-headless runner, and HeadlessSessionTest links the
+# library the runner is built on
+if(USE_HEADLESS)
+    target_link_libraries(functional_teardown_tests PRIVATE mudlet_headless)
+    add_dependencies(functional_teardown_tests mudlet_headless_executable)
+    set_property(SOURCE HeadlessRunnerTest.cpp
+        APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_HEADLESS_BINARY="$<TARGET_FILE:mudlet_headless_executable>")
+endif()
 
 # Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
@@ -540,8 +608,8 @@ foreach(test_name ${allFunctionalTestNames})
     # MUDLET_TEST_MODE is the variable the code already keys "don't touch the real
     # machine" off - the keychain, the update check and the real speech engine all
     # consult it. What it changes for a functional test specifically is smaller: mpkg
-    # stays out of the profiles they build (see setupPreInstallPackages() in
-    # src/mudlet.cpp), and waitForEvent()/pumpEvents() become callable from Lua.
+    # stays out of the profiles they build (see HostManager::defaultPackages() in
+    # src/HostManager.cpp), and waitForEvent()/pumpEvents() become callable from Lua.
     # Set here rather than in the workflows, which only ever set it for the Lua steps,
     # so ctest behaves the same locally and in CI. A test that needs it unset has to
     # unset it itself - nothing here checks that, so see DefaultPackagesTest, which
@@ -580,6 +648,9 @@ set_tests_properties(AppStartupTeardownTest PROPERTIES TIMEOUT 300)
 # HeadlessVersionTest runs the application once per row of its matrix, for the
 # same reason
 set_tests_properties(HeadlessVersionTest PROPERTIES TIMEOUT 300)
+if(TEST HeadlessRunnerTest)
+    set_tests_properties(HeadlessRunnerTest PROPERTIES TIMEOUT 300)
+endif()
 
 # Undo/redo tests need a longer timeout due to large batch operations
 set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
@@ -661,20 +732,18 @@ endif()
 # and each clip has to be waited out in real time, so it needs a longer timeout.
 # VideoOutputHideTest boots one profile for the whole class and waits two of its three endings
 # out in real time, and takes the same headroom.
-# No test binary runs src/main.cpp, so pin QT_MEDIA_BACKEND for both, and for HeadlessMediaDebugTest,
+# No test binary runs src/main.cpp, so pin QT_MEDIA_BACKEND for both, and for HeadlessMediaDebugTest, TAudioMixerTest and TMediaPanTest,
 # to what main.cpp picks for the shipped application - otherwise the tests silently exercise Qt's default backend for
 # the platform rather than the one users actually get. It is empty, and so a no-op, on Linux.
-if(APPLE)
-    set(mediaLoopTestBackend "darwin")
-elseif(WIN32)
+if(APPLE OR WIN32)
     set(mediaLoopTestBackend "ffmpeg")
 else()
     set(mediaLoopTestBackend "")
 endif()
-set_tests_properties(TMediaLoopTest VideoOutputHideTest PROPERTIES TIMEOUT 300)
+set_tests_properties(TMediaLoopTest VideoOutputHideTest TAudioMixerTest TMediaPanTest PROPERTIES TIMEOUT 300)
 if(mediaLoopTestBackend)
     # APPEND, so the environment set by the loop above stays in force rather than being replaced
-    set_property(TEST TMediaLoopTest VideoOutputHideTest HeadlessMediaDebugTest APPEND PROPERTY ENVIRONMENT "QT_MEDIA_BACKEND=${mediaLoopTestBackend}")
+    set_property(TEST TMediaLoopTest VideoOutputHideTest HeadlessMediaDebugTest TAudioMixerTest TMediaPanTest APPEND PROPERTY ENVIRONMENT "QT_MEDIA_BACKEND=${mediaLoopTestBackend}")
 endif()
 
 # StarterUiSectionsTest creates a fresh profile per test method and one of them
@@ -772,7 +841,8 @@ set_tests_properties(CopyAsImageTest MainConsoleSelectionTest OpaqueConsolePaint
 set_tests_properties(TDiscordModeTest PROPERTIES TIMEOUT 300)
 
 # Let TDiscordModeTest find the bundled discord-rpc library so the Lua API
-# permission gating tests can run (they skip when it is unavailable)
+# permission gating tests can run (they skip when it is unavailable), and
+# HeadlessHostSmokeTestWithDiscordLibrary drive Discord with it and no main window
 if(WIN32)
     set(DISCORD_RPC_PATH_VARIABLE "PATH")
 elseif(APPLE)
@@ -780,8 +850,18 @@ elseif(APPLE)
 else()
     set(DISCORD_RPC_PATH_VARIABLE "LD_LIBRARY_PATH")
 endif()
-set_property(TEST TDiscordModeTest APPEND PROPERTY
+set_property(TEST TDiscordModeTest HeadlessHostSmokeTestWithDiscordLibrary APPEND PROPERTY
     ENVIRONMENT_MODIFICATION "${DISCORD_RPC_PATH_VARIABLE}=path_list_prepend:${CMAKE_SOURCE_DIR}/3rdparty/discord/rpc/lib")
+# Each says which way it runs: the one with the library is skipped where it cannot
+# load, and the one without warns where a library is found anyway
+set_property(TEST HeadlessHostSmokeTest APPEND PROPERTY ENVIRONMENT "MUDLET_TEST_DISCORD_LIBRARY=absent")
+set_property(TEST HeadlessHostSmokeTestWithDiscordLibrary APPEND PROPERTY ENVIRONMENT "MUDLET_TEST_DISCORD_LIBRARY=present")
+set_tests_properties(HeadlessHostSmokeTestWithDiscordLibrary PROPERTIES SKIP_REGULAR_EXPRESSION "SKIP   : HeadlessHostSmokeTest::initTestCase")
+set_property(TEST HeadlessHostSmokeTestWithMudletIni APPEND PROPERTY ENVIRONMENT "MUDLET_TEST_MUDLET_INI=present")
+# The environment outranks Mudlet.ini for the trigger match pool, and the pool is what only this run can check
+set_property(TEST HeadlessHostSmokeTestWithMudletIni APPEND PROPERTY
+    ENVIRONMENT_MODIFICATION "MUDLET_MATCH_THREADS=unset:" "MUDLET_MATCH_THRESHOLD=unset:")
+set_tests_properties(HeadlessHostSmokeTestWithMudletIni PROPERTIES SKIP_REGULAR_EXPRESSION "SKIP   : HeadlessHostSmokeTest::initTestCase")
 # Report-only: what a Lua enableTrigger()/disableTrigger() call costs on a large
 # trigger tree with the script editor closed and open. Never registered with
 # ctest; run it directly and read the METRIC lines.
