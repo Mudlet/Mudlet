@@ -603,6 +603,7 @@ bool MudletApp::profileDataItemHoldsSecret(const QString& item)
 }
 
 const QString MudletApp::scmAllowedProfileNameChars = qsl(". _()0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
+const QRegularExpression MudletApp::scmUnusableProfileNameChars{qsl(R"REGEX(\.\.|[/\\<>:"|?*\x00-\x1f])REGEX")};
 
 // An embedded U+0000 is indistinguishable from the all-clear sentinel; profileNameUsableAsIs(), which every
 // caller also applies, refuses it
@@ -620,8 +621,7 @@ QChar MudletApp::firstInvalidProfileNameChar(const QString& name)
 // directory rather than a profile of its own, as does ".."
 bool MudletApp::profileNameUsableAsIs(const QString& name)
 {
-    static const QRegularExpression unusableChars{qsl(R"REGEX(\.\.|[/\\<>:"|?*\x00-\x1f])REGEX")};
-    return !name.isEmpty() && name != qsl(".") && !name.contains(unusableChars);
+    return !name.isEmpty() && name != qsl(".") && !name.contains(scmUnusableProfileNameChars);
 }
 
 QString MudletApp::connectionDetailsProblem(const QString& givenHost, const int port, const bool tls)

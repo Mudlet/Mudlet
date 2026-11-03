@@ -19,7 +19,7 @@
 
 #include "MudletWebImport.h"
 
-#include "dlgConnectionProfiles.h"
+#include "MudletApp.h"
 #include "utils.h"
 
 #include <QDataStream>
@@ -70,7 +70,7 @@ bool isSave(const QString& name)
 
 QString usableProfileName(QString name)
 {
-    name.replace(dlgConnectionProfiles::scmUnusableProfileNameChars, qsl("_"));
+    name.replace(MudletApp::scmUnusableProfileNameChars, qsl("_"));
     name = name.trimmed();
     // Windows drops a folder name's trailing dots, which would part the profile from its name
     while (name.endsWith(QLatin1Char('.'))) {
