@@ -1203,14 +1203,24 @@ describe("Tests DB.lua functions", function()
   end)
 
   describe("Tests createMapLabel() table argument support", function()
+    local area
+
+    before_each(function()
+      area = assert(addAreaName("dbSpecMapLabelArea" .. os.time()))
+    end)
+
+    after_each(function()
+      deleteArea(area)
+    end)
+
     it("should accept minimum positional arguments (11 required)", function()
-      local result = pcall(createMapLabel, 1, "Test Label", 0, 0, 0, 255, 255, 255, 0, 0, 0)
+      local result = pcall(createMapLabel, area, "Test Label", 0, 0, 0, 255, 255, 255, 0, 0, 0)
       assert.is_true(result)
     end)
 
     it("should accept table arguments with required parameters", function()
       local result = pcall(createMapLabel, {
-        area = 1,
+        area = area,
         text = "Table Label",
         posX = 0,
         posY = 0,
@@ -1227,7 +1237,7 @@ describe("Tests DB.lua functions", function()
 
     it("should accept table arguments with optional parameters", function()
       local result = pcall(createMapLabel, {
-        areaID = 1,
+        areaID = area,
         text = "Full Label",
         x = 0,
         y = 0,
@@ -1250,14 +1260,28 @@ describe("Tests DB.lua functions", function()
   end)
 
   describe("Tests highlightRoom() table argument support", function()
+    local area, room
+
+    before_each(function()
+      area = assert(addAreaName("dbSpecHighlightArea" .. os.time()))
+      room = createRoomID()
+      addRoom(room)
+      setRoomArea(room, area)
+    end)
+
+    after_each(function()
+      unHighlightRoom(room)
+      deleteArea(area)
+    end)
+
     it("should accept positional arguments", function()
-      local result = pcall(highlightRoom, 1, 255, 0, 0, 128, 0, 0, 1.0, 255, 128)
+      local result = pcall(highlightRoom, room, 255, 0, 0, 128, 0, 0, 1.0, 255, 128)
       assert.is_true(result)
     end)
 
     it("should accept table arguments", function()
       local result = pcall(highlightRoom, {
-        roomID = 1,
+        roomID = room,
         color1Red = 255,
         color1Green = 0,
         color1Blue = 0,
@@ -1273,6 +1297,16 @@ describe("Tests DB.lua functions", function()
   end)
 
   describe("Tests createMapImageLabel() table argument support", function()
+    local area
+
+    before_each(function()
+      area = assert(addAreaName("dbSpecImageLabelArea" .. os.time()))
+    end)
+
+    after_each(function()
+      deleteArea(area)
+    end)
+
     it("should accept positional arguments", function()
       -- Create a temp image file for testing
       local tmpfile = "/tmp/mudlet_test_" .. os.time() .. ".png"
@@ -1280,7 +1314,7 @@ describe("Tests DB.lua functions", function()
       if f then
         f:write("dummy")
         f:close()
-        local result = pcall(createMapImageLabel, 1, tmpfile, 0, 0, 0, 100, 100, 30.0, true)
+        local result = pcall(createMapImageLabel, area, tmpfile, 0, 0, 0, 100, 100, 30.0, true)
         os.remove(tmpfile)
         assert.is_true(result)
       else
@@ -1295,7 +1329,7 @@ describe("Tests DB.lua functions", function()
         f:write("dummy")
         f:close()
         local result = pcall(createMapImageLabel, {
-          areaID = 1,
+          areaID = area,
           imagePath = tmpfile,
           posX = 0,
           posY = 0,
@@ -1314,15 +1348,34 @@ describe("Tests DB.lua functions", function()
   end)
 
   describe("Tests addCustomLine() table argument support", function()
+    local area, from, to
+
+    before_each(function()
+      area = assert(addAreaName("dbSpecCustomLineArea" .. os.time()))
+      from = createRoomID()
+      addRoom(from)
+      to = createRoomID()
+      addRoom(to)
+      for index, room in ipairs({from, to}) do
+        setRoomArea(room, area)
+        setRoomCoordinates(room, 0, index, 0)
+      end
+      setExit(from, to, "n")
+    end)
+
+    after_each(function()
+      deleteArea(area)
+    end)
+
     it("should accept positional arguments", function()
-      local result = pcall(addCustomLine, 1, 2, "north", "solid line", {255, 0, 0}, true)
+      local result = pcall(addCustomLine, from, to, "north", "solid line", {255, 0, 0}, true)
       assert.is_true(result)
     end)
 
     it("should accept table arguments", function()
       local result = pcall(addCustomLine, {
-        roomID = 1,
-        toRoomID = 2,
+        roomID = from,
+        toRoomID = to,
         direction = "north",
         style = "solid line",
         color = {255, 0, 0},
@@ -1333,6 +1386,19 @@ describe("Tests DB.lua functions", function()
   end)
 
   describe("Tests setCustomEnvColor() table argument support", function()
+    -- there is no way to remove a custom environment colour, only to put back one that was there
+    local previous
+
+    setup(function()
+      previous = getCustomEnvColorTable()[255]
+    end)
+
+    teardown(function()
+      if previous then
+        setCustomEnvColor(255, unpack(previous))
+      end
+    end)
+
     it("should accept positional arguments", function()
       local result = pcall(setCustomEnvColor, 255, 255, 128, 64, 200)
       assert.is_true(result)

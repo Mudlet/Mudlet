@@ -1450,15 +1450,27 @@ describe("Tests UI functions", function()
     end)
   end)
 
+  -- a scratch window, as on "main" these setters would recolour the profile for every later spec
+  local tableArgsScratch = "uiSpecTableArgsScratch"
+
   describe("Tests setCommandBackgroundColor() table argument support", function()
+    before_each(function()
+      createMiniConsole(tableArgsScratch, 0, 0, 300, 100)
+      enableCommandLine(tableArgsScratch)
+    end)
+
+    after_each(function()
+      deleteMiniConsole(tableArgsScratch)
+    end)
+
     it("should accept positional arguments", function()
-      local result = pcall(setCommandBackgroundColor, "main", 255, 128, 64, 200)
+      local result = pcall(setCommandBackgroundColor, tableArgsScratch, 255, 128, 64, 200)
       assert.is_true(result)
     end)
 
     it("should accept table arguments", function()
       local result = pcall(setCommandBackgroundColor, {
-        windowName = "main",
+        windowName = tableArgsScratch,
         r = 255,
         g = 128,
         b = 64,
@@ -1469,14 +1481,23 @@ describe("Tests UI functions", function()
   end)
 
   describe("Tests setCommandForegroundColor() table argument support", function()
+    before_each(function()
+      createMiniConsole(tableArgsScratch, 0, 0, 300, 100)
+      enableCommandLine(tableArgsScratch)
+    end)
+
+    after_each(function()
+      deleteMiniConsole(tableArgsScratch)
+    end)
+
     it("should accept positional arguments", function()
-      local result = pcall(setCommandForegroundColor, "main", 255, 128, 64, 200)
+      local result = pcall(setCommandForegroundColor, tableArgsScratch, 255, 128, 64, 200)
       assert.is_true(result)
     end)
 
     it("should accept table arguments", function()
       local result = pcall(setCommandForegroundColor, {
-        windowName = "main",
+        windowName = tableArgsScratch,
         r = 255,
         g = 128,
         b = 64,
@@ -1487,14 +1508,22 @@ describe("Tests UI functions", function()
   end)
 
   describe("Tests setBackgroundColor() table argument support", function()
+    before_each(function()
+      createMiniConsole(tableArgsScratch, 0, 0, 300, 100)
+    end)
+
+    after_each(function()
+      deleteMiniConsole(tableArgsScratch)
+    end)
+
     it("should accept positional arguments", function()
-      local result = pcall(setBackgroundColor, "main", 50, 50, 50, 255)
+      local result = pcall(setBackgroundColor, tableArgsScratch, 50, 50, 50, 255)
       assert.is_true(result)
     end)
 
     it("should accept table arguments", function()
       local result = pcall(setBackgroundColor, {
-        windowName = "main",
+        windowName = tableArgsScratch,
         r = 50,
         g = 50,
         b = 50,
@@ -1505,14 +1534,22 @@ describe("Tests UI functions", function()
   end)
 
   describe("Tests setBgColor() table argument support", function()
+    before_each(function()
+      createMiniConsole(tableArgsScratch, 0, 0, 300, 100)
+    end)
+
+    after_each(function()
+      deleteMiniConsole(tableArgsScratch)
+    end)
+
     it("should accept positional arguments", function()
-      local result = pcall(setBgColor, "main", 50, 50, 50, 255)
+      local result = pcall(setBgColor, tableArgsScratch, 50, 50, 50, 255)
       assert.is_true(result)
     end)
 
     it("should accept table arguments", function()
       local result = pcall(setBgColor, {
-        windowName = "main",
+        windowName = tableArgsScratch,
         r = 50,
         g = 50,
         b = 50,
@@ -1523,14 +1560,22 @@ describe("Tests UI functions", function()
   end)
 
   describe("Tests setTextFormat() table argument support", function()
+    before_each(function()
+      createMiniConsole(tableArgsScratch, 0, 0, 300, 100)
+    end)
+
+    after_each(function()
+      deleteMiniConsole(tableArgsScratch)
+    end)
+
     it("should accept positional arguments", function()
-      local result = pcall(setTextFormat, "main", 255, 255, 255, 0, 0, 0, true, false, false, false, false, false)
+      local result = pcall(setTextFormat, tableArgsScratch, 255, 255, 255, 0, 0, 0, true, false, false, false, false, false)
       assert.is_true(result)
     end)
 
     it("should accept table arguments", function()
       local result = pcall(setTextFormat, {
-        windowName = "main",
+        windowName = tableArgsScratch,
         fgRed = 255,
         fgGreen = 255,
         fgBlue = 255,
@@ -1549,14 +1594,21 @@ describe("Tests UI functions", function()
   end)
 
   describe("Tests createLabel() table argument support", function()
+    local positionalName, tableName = "testLabel" .. os.time(), "testLabel2" .. os.time()
+
+    after_each(function()
+      deleteLabel(positionalName)
+      deleteLabel(tableName)
+    end)
+
     it("should accept positional arguments", function()
-      local result = pcall(createLabel, "main", "testLabel" .. os.time(), 0, 0, 100, 50, true, false)
+      local result = pcall(createLabel, "main", positionalName, 0, 0, 100, 50, true, false)
       assert.is_true(result)
     end)
 
     it("should accept table arguments", function()
       local result = pcall(createLabel, {
-        name = "testLabel2" .. os.time(),
+        name = tableName,
         x = 0,
         y = 0,
         width = 100,
@@ -1569,14 +1621,21 @@ describe("Tests UI functions", function()
   end)
 
   describe("Tests createMiniConsole() table argument support", function()
+    local positionalName, tableName = "testMini" .. os.time(), "testMini2" .. os.time()
+
+    after_each(function()
+      deleteMiniConsole(positionalName)
+      deleteMiniConsole(tableName)
+    end)
+
     it("should accept positional arguments", function()
-      local result = pcall(createMiniConsole, "main", "testMini" .. os.time(), 0, 0, 300, 200)
+      local result = pcall(createMiniConsole, "main", positionalName, 0, 0, 300, 200)
       assert.is_true(result)
     end)
 
     it("should accept table arguments", function()
       local result = pcall(createMiniConsole, {
-        name = "testMini2" .. os.time(),
+        name = tableName,
         x = 0,
         y = 0,
         width = 300,
@@ -1587,14 +1646,21 @@ describe("Tests UI functions", function()
   end)
 
   describe("Tests createCommandLine() table argument support", function()
+    local positionalName, tableName = "testCmd" .. os.time(), "testCmd2" .. os.time()
+
+    after_each(function()
+      deleteCommandLine(positionalName)
+      deleteCommandLine(tableName)
+    end)
+
     it("should accept positional arguments", function()
-      local result = pcall(createCommandLine, "main", "testCmd" .. os.time(), 0, 0, 300, 30)
+      local result = pcall(createCommandLine, "main", positionalName, 0, 0, 300, 30)
       assert.is_true(result)
     end)
 
     it("should accept table arguments", function()
       local result = pcall(createCommandLine, {
-        name = "testCmd2" .. os.time(),
+        name = tableName,
         x = 0,
         y = 0,
         width = 300,
@@ -1605,14 +1671,21 @@ describe("Tests UI functions", function()
   end)
 
   describe("Tests createScrollBox() table argument support", function()
+    local positionalName, tableName = "testScroll" .. os.time(), "testScroll2" .. os.time()
+
+    after_each(function()
+      deleteScrollBox(positionalName)
+      deleteScrollBox(tableName)
+    end)
+
     it("should accept positional arguments", function()
-      local result = pcall(createScrollBox, "main", "testScroll" .. os.time(), 0, 0, 300, 200)
+      local result = pcall(createScrollBox, "main", positionalName, 0, 0, 300, 200)
       assert.is_true(result)
     end)
 
     it("should accept table arguments", function()
       local result = pcall(createScrollBox, {
-        name = "testScroll2" .. os.time(),
+        name = tableName,
         x = 0,
         y = 0,
         width = 300,

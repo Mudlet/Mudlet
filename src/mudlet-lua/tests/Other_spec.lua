@@ -1085,24 +1085,33 @@ describe("Tests Other.lua functions", function()
 
   describe("Tests permKey() table argument support", function()
     local testGroupName = "testGroup" .. os.time()
+    local keyNames = {"testKey" .. os.time(), "testKey2" .. os.time(), "testKey3" .. os.time(), "testKey4" .. os.time()}
 
     setup(function()
       permGroup(testGroupName, "key")
     end)
 
+    -- a permanent key cannot be killed from Lua, so disabling is as far as cleaning up goes
+    teardown(function()
+      for _, name in ipairs(keyNames) do
+        disableKey(name)
+      end
+      disableKey(testGroupName)
+    end)
+
     it("should accept positional arguments without modifier (4 params)", function()
-      local result = pcall(permKey, "testKey" .. os.time(), testGroupName, string.byte('a'), "echo('test')")
+      local result = pcall(permKey, keyNames[1], testGroupName, string.byte('a'), "echo('test')")
       assert.is_true(result)
     end)
 
     it("should accept positional arguments with modifier (5 params)", function()
-      local result = pcall(permKey, "testKey2" .. os.time(), testGroupName, 0x02000000, string.byte('b'), "echo('test2')")
+      local result = pcall(permKey, keyNames[2], testGroupName, 0x02000000, string.byte('b'), "echo('test2')")
       assert.is_true(result)
     end)
 
     it("should accept table arguments without modifier", function()
       local result = pcall(permKey, {
-        name = "testKey3" .. os.time(),
+        name = keyNames[3],
         parent = testGroupName,
         keyCode = string.byte('c'),
         code = "echo('test3')"
@@ -1112,7 +1121,7 @@ describe("Tests Other.lua functions", function()
 
     it("should accept table arguments with modifier", function()
       local result = pcall(permKey, {
-        name = "testKey4" .. os.time(),
+        name = keyNames[4],
         parentGroup = testGroupName,
         modifier = 0x02000000,
         key = string.byte('d'),
@@ -1137,6 +1146,7 @@ describe("Tests Other.lua functions", function()
         pcall(killTrigger, name)
       end
       created = {}
+      disableTrigger(testGroupName)
     end)
 
     it("should accept positional arguments with string code", function()
