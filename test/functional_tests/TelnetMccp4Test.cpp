@@ -306,7 +306,8 @@ private slots:
         refuseCompress2.append(TN_IAC);
         refuseCompress2.append(TN_DONT);
         refuseCompress2.append(OPT_COMPRESS2);
-        QVERIFY2(waitForServerToReceive(refuseCompress4), qPrintable(qsl("A broken MCCP4 run was not refused with DONT COMPRESS4. Client sent: %1").arg(QString(mpServer->receivedSoFar().toHex(' ')))));
+        QVERIFY2(waitForServerToReceive(refuseCompress4),
+                 qPrintable(qsl("A broken MCCP4 run was not refused with DONT COMPRESS4. Client sent: %1").arg(QString(mpServer->receivedSoFar().toHex(' ')))));
         QVERIFY2(!mpServer->receivedSoFar().contains(refuseCompress2), "A broken MCCP4 run refused MCCP2, which was not the one compressing.");
         QVERIFY2(bufferContents().contains(qsl("MCCP4_NOT_COMPRESSED")), qPrintable(qsl("Text sent instead of the run was lost. Buffer holds:\n%1").arg(bufferContents())));
     }
