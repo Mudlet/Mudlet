@@ -49,7 +49,7 @@ public:
     TMxpTagProcessor();
 
     TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override;
-    void handleContent(char ch) override;
+    void handleContentBytes(QByteArrayView bytes) override;
 
     void registerHandler(const TMxpFeatureOptions& supports, TMxpTagHandler* handler);
     void registerHandler(TMxpTagHandler* handler);

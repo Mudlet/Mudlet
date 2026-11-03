@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <OAuthClientFlow.h>
 #include <QtTest/QtTest>
 #include <QJsonDocument>
@@ -25,6 +26,8 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QUrlQuery>
+
+using namespace std::chrono_literals;
 
 // Serves a static OpenID Connect discovery document over loopback HTTP so the
 // flow's QNetworkAccessManager fetch has something real to talk to.
@@ -291,7 +294,7 @@ void OAuthClientFlowTest::testDiscoveryFetchFailureFailsFlow()
     // fetch fails deterministically, rather than relying on a host refusing a particular port.
     MiniClosingServer discovery;
     flow.start(discovery.discoveryUrl(), QStringLiteral("test-client"), {QStringLiteral("openid")}, false);
-    QTRY_COMPARE_WITH_TIMEOUT(failedSpy.count(), 1, 15000);
+    QTRY_COMPARE_WITH_TIMEOUT(failedSpy.count(), 1, 15s);
     // A failed discovery fetch must not have produced an authorization URL.
     QVERIFY(mAuthorizationUrl.isEmpty());
 }
@@ -358,4 +361,4 @@ void OAuthClientFlowTest::testEmptyCodeFailsFlow()
 }
 
 #include "OAuthClientFlowTest.moc"
-QTEST_MAIN(OAuthClientFlowTest)
+MUDLET_GROUPED_TEST_MAIN(OAuthClientFlowTest)

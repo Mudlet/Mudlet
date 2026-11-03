@@ -13,7 +13,8 @@ desktop Mudlet. "Here is a command" maps onto whatever chrome a client has;
 
 Commands are identified by the numeric id returned at creation - names and
 labels carry no identity and may repeat freely. Every command belongs to the
-profile that created it and is removed when that profile closes or resets.
+profile that created it and is removed when that profile closes or resets,
+or when the package or module whose code created it is uninstalled.
 
 ## Placing a command
 
@@ -46,13 +47,39 @@ not be placed. The reasons are:
   where there is no menu item for either to attach to
 - a `shortcut` was given while the menu bar is hidden, so it could never fire
 - the `shortcut` is not a key sequence Qt understands, is longer than the four
-  steps Qt can hold, or is one already taken - by Mudlet, or by a command of
-  this or another profile
+  steps Qt can hold, or is one already taken - by Mudlet, by a command of
+  this or another profile, or by one of this profile's key bindings, including
+  one that is switched off
 - a `menuPath` part names an existing command of this profile's, or the
   command's own name is already a submenu of this profile's in the menu it
   would land in
 - `surfaces` names something other than `"menu"` or `"toolbar"`, or is an
   empty list - which asks for the command to go nowhere
+
+## Where a command appears
+
+A command appears in the window holding the profile that created it, and only
+while that window is showing that profile. A window holds several profiles as
+tabs and shows one of them; switching tabs swaps their commands over. A profile
+dragged out into its own window takes its commands with it, and brings them
+back when it is put away.
+
+So the count is one set of commands per window, not one per profile. Four
+profiles as tabs in one window give that window one set - the set belonging to
+the profile it is showing. Two games open no longer means two identical buttons
+side by side.
+
+A command that is not being shown is hidden rather than removed, and its
+keyboard shortcut goes quiet with it. That is deliberate: a key that raises
+another profile's event while you are looking at this one is the same mistake
+as a button that does.
+
+The exception is a **pinned** command - see `setCommandPinned` below - which is
+shown in whichever window the player is in, whatever profile that window is
+showing, and follows them from window to window. Pin a command only while it is
+doing something the player must be able to stop from wherever they are; a
+microphone that is open is the case it was built for. Nothing is pinned by
+default.
 
 | Function | Returns | Behaviour |
 | --- | --- | --- |
@@ -61,6 +88,7 @@ not be placed. The reasons are:
 | `enableCommand(id)` | boolean | Enables it on every surface. |
 | `disableCommand(id)` | boolean | Disables it on every surface. |
 | `setCommandChecked(id, checked)` | boolean | Sets a checkmark (the command becomes checkable on first use), on every surface. A checkable command activated by the user stays in step across surfaces: the state the pressed surface reached is the state the others take, before `sysCommandClicked` is raised. |
+| `setCommandPinned(id, pinned)` | boolean | Shows the command in whichever window the player is in, whatever profile that window is showing, until unpinned. For a control that must stay reachable while it is running - an open microphone. It follows the last window of this client the player was in, so it stays put when they move to something else entirely rather than retreating to its own profile's window. Unpinning returns it there. |
 | `setCommandIcon(id, icon)` | boolean | Replaces the icon; path rules as above. |
 | `setCommandTooltip(id, tooltip)` | boolean | Replaces the tooltip; an empty string takes it away, leaving the menu item to fall back on its own label as every other menu item does. Package text is escaped, so `<` and `&` show as typed - in labels too, where a bare `&` would otherwise be read as a keyboard mnemonic and vanish from the text. |
 | `setCommandPulse(id, enabled[, color1, color2, interval])` | boolean \| `nil, error` | Toolbar-only refinement: a two-colour background pulse (defaults `#ff4444`/`#cc0000`, 500ms). Refuses a colour the client cannot parse, and an `interval` below 1ms. |
@@ -81,13 +109,14 @@ above are decided by the calling profile's own commands. Two profiles may use
 the same path or the same label, and neither can see or clear the other's -
 which is why a refusal never names one.
 
-Shortcuts are the exception: a key sequence belongs to the window, so two
-profiles cannot hold the same one at once. The second is refused, without
-being told whose command has it.
+Shortcuts are the exception: a key sequence is checked against every window, so
+two profiles cannot hold the same one at once even when their profiles are in
+different windows. The second is refused, without being told whose command has
+it.
 
 **Detached profiles keep their own chrome.** A profile detached into its own
-window builds its own menu bar and toolbar, and commands are not mirrored into
-them; they stay reachable from the main window.
+window builds its own menu bar and toolbar, and its commands move into them
+with it - see *Where a command appears* above.
 
 ## Events
 
@@ -125,21 +154,45 @@ end)
    `removeCommand` is a Lua handler running from that very command's event;
    implementations must tolerate this (desktop Mudlet defers destruction past
    the event loop turn for exactly this reason).
-4. **Profile close and profile reset clean up.** Every command created by a
+4. **Profile close, profile reset and uninstalling clean up.** Every command created by a
    profile is removed when that profile closes *or* resets, without the
    package's involvement - a reset takes the Lua state with it, so the ids
    the package was holding die there and the commands must not outlive them.
+   Uninstalling a package or module removes the commands its code created:
+   the code that held their ids and answered their clicks is gone, and
+   nothing else knows to remove them. Reloading a module does not, since it
+   comes straight back with its Lua state, ids included - but updating a
+   package uninstalls it first, so a package must not keep a command's id
+   across its own uninstall and skip `addCommand` when installed again. The Lua that called
+   `addCommand` decides: one of the package's items, a function one of them
+   defined (an event handler, a timer closure), or a file in the folder
+   Mudlet unpacked the package into. Commands made from the command line, a profile's own items, code
+   compiled from a string (a string-code `tempTimer`, `loadstring`), or a
+   function whose item shares its name with another package's item or
+   one of the profile's belong to no package and stay - unless it is a
+   script's own body, or a function that body calls directly while it runs. A library package's helper
+   that calls `addCommand` for its callers makes commands that are the
+   library's.
 5. **Cycles leave no residue.** Repeated add/remove must not accumulate
    toolbar spacing, separators, or menu entries; emptied `menuPath` submenus
    disappear.
 6. **A command that cannot be placed says so.** Returning an id for something
    the user cannot see or reach is worse than refusing, because the package
    has no way to find out.
-7. **Package text is data, not markup.** Labels, tooltips and colours come
+7. **A command appears with its profile.** A client that has more than one
+   window puts a command in the one holding the profile that created it, and
+   shows it there only while that window is showing that profile - so a player
+   sees one set of commands per window rather than one set per open profile.
+   Everything a package has set - enabled, checked, icon, tooltip, and any
+   client-specific refinement - survives the profile being moved between
+   windows, because the state belongs to the command and not to whatever the
+   client drew for it. A pinned command is the deliberate exception, and a
+   client with only one window can treat pinning as a no-op that answers `true`.
+8. **Package text is data, not markup.** Labels, tooltips and colours come
    from a package and are escaped or validated before they reach the client's
    chrome - a `<` must not eat the rest of a tooltip, an `&` must not become a
    mnemonic, and a colour must not be able to carry styling of its own.
-8. **A checkable command holds one state.** Where a client shows a command on
+9. **A checkable command holds one state.** Where a client shows a command on
    more than one surface and the user can toggle it, activating one surface
    carries the others with it. Two representations of one command must never
    disagree about whether it is checked.

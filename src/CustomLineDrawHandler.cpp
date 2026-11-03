@@ -83,6 +83,7 @@ bool CustomLineDrawHandler::handle(T2DMap::MapInteractionContext& context)
 
     room->customLines[context.customLinesRoomExit].push_back(newPoint);
     room->calcRoomDimensions();
+    mMapWidget.mpMap->setUnsaved(__func__);
     mMapWidget.repaint();
 
     return true;

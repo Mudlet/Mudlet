@@ -20,7 +20,7 @@
 // The three OSC 8 hyperlink managers were fields of the TConsole widget, and
 // THyperlinkVisibilityManager reached back through it fourteen times: twice for
 // the text buffer it conceals and reveals in, and twelve times to repaint the
-// two panes. They are now fields of the core TConsoleModel, which Host co-owns
+// two panes. They are now fields of the core TConsoleModel, which Host owns
 // for the main console, and the repaint is the view's alone - the manager emits
 // visibilityChanged() and TConsole::slot_hyperlinkVisibilityChanged() forces
 // both panes to redraw (#8681).
@@ -43,6 +43,7 @@
 #include <chrono>
 #include <memory>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -110,7 +111,7 @@ private slots:
         mudlet::self()->setupConfig();
         // QtTest does not run cleanup() when init() fails, so a bare QCOMPARE
         // here would strand the singleton.
-        if (mudlet::getMudletPath(enums::mainPath) != qsl("%1/mudlet").arg(mConfigDir.path())) {
+        if (MudletApp::getMudletPath(enums::mainPath) != qsl("%1/mudlet").arg(mConfigDir.path())) {
             delete mudlet::self();
             delete mpServer;
             mpServer = nullptr;
@@ -128,10 +129,8 @@ private slots:
         mpServer = nullptr;
         if (mudlet::self()) {
             // Mudlet writes the profile out as it shuts down, so removing the
-            // directory first only has it recreated. The path has to be read
-            // while the singleton is alive though - getMudletPath() reaches
-            // through self() without checking it.
-            const QString profileDir = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+            // directory first only has it recreated.
+            const QString profileDir = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
             delete mudlet::self();
             QDir(profileDir).removeRecursively();
         }
@@ -145,7 +144,7 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         QVERIFY(console);
 
         TConsoleModel& model = host->mainConsoleModel();
@@ -156,8 +155,7 @@ private slots:
         // Written through the model, read back through the view: the same
         // object, not two that happen to agree.
         model.mHyperlinkSelectionManager.setSelected(qsl("splitgroup"), qsl("splitvalue"), true);
-        QVERIFY2(console->getHyperlinkSelectionManager().isSelected(qsl("splitgroup"), qsl("splitvalue")),
-                 "the view and the model are answering from separate selection managers");
+        QVERIFY2(console->getHyperlinkSelectionManager().isSelected(qsl("splitgroup"), qsl("splitvalue")), "the view and the model are answering from separate selection managers");
 
         // A user window carries a model of its own, so its managers have to be
         // its own too - Host's belong to the main console alone.
@@ -166,6 +164,64 @@ private slots:
         QVERIFY2(subConsole, "the user window was not created");
         QVERIFY2(&subConsole->getHyperlinkVisibilityManager() != &model.mHyperlinkVisibilityManager, "a user window must not share the main console's tracked hyperlinks");
         QVERIFY2(!subConsole->getHyperlinkSelectionManager().isSelected(qsl("splitgroup"), qsl("splitvalue")), "a user window must not share the main console's selection state");
+    }
+
+    // The MXP client takes its link store off the model's buffer, so a <SEND>
+    // lands on the characters that buffer wrote. A store of the client's own
+    // would still answer the client's own reads - the caption, the actions on
+    // the queued event - so the proof is taken off the buffer instead: the
+    // character's link index, and the command that index resolves to. Nothing
+    // in Lua reads a stored link command back, which is why this is here rather
+    // than in MXP_spec.
+    void test_anMxpSendLinkIsStoredOnTheModelsBuffer()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TConsoleModel& model = host->mainConsoleModel();
+
+        // feedTriggers() is not server data, so the ESC[1z a game would send to
+        // open secure mode is inert here; forcing the processor on is what makes
+        // the tag below a tag at all.
+        host->setForceMXPProcessorOn(true);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTriggers([[MXPSEND1 <SEND \"north\">go north</SEND>]] .. \"\\n\")")),
+                 "feedTriggers() did not run, so no MXP link was ever registered");
+
+        const int lineNumber = lineHolding(model.buffer, qsl("MXPSEND1"));
+        QVERIFY2(lineNumber >= 0, "the line carrying the MXP link never reached the buffer");
+        const QString line = lineTextAt(model.buffer, lineNumber);
+        QCOMPARE(line, qsl("MXPSEND1 go north"));
+
+        const int linkIndex = model.buffer.getLinkIndexAt(lineNumber, line.indexOf(qsl("go north")));
+        QVERIFY2(linkIndex > 0, "the linked characters carry no link index, so the MXP link is not clickable");
+        QCOMPARE(model.buffer.mLinkStore.getLinksConst(linkIndex), QStringList{qsl("send([[\nnorth]])")});
+    }
+
+    // The case above cannot tell the model's buffer from the view's, because
+    // TConsole::buffer is a reference bound to the model's - they are one
+    // object whenever a view exists. This is the half that is only the model's:
+    // the MXP client writing text, resolving its link store and ending a
+    // redirect for a profile whose view has gone, which is what a headless one
+    // never had. Driven straight at Host::mMxpClient rather than through
+    // feedTriggers(), which still goes through the console widget.
+    void test_theMxpClientReachesTheModelsBufferWithNoView()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TConsoleModel* model = &host->mainConsoleModel();
+
+        destroyTheView(host);
+        QCOMPARE(&host->mainConsoleModel(), model);
+
+        host->mMxpClient.insertText(qsl("MXPNOVIEW1 written with no view\n"));
+        const int lineNumber = lineHolding(model->buffer, qsl("MXPNOVIEW1"));
+        QVERIFY2(lineNumber >= 0, "insertText() never reached the model's buffer");
+        QCOMPARE(lineTextAt(model->buffer, lineNumber), qsl("MXPNOVIEW1 written with no view"));
+
+        QCOMPARE(&host->mMxpClient.getLinkStore(), &model->buffer.mLinkStore);
+
+        // Nothing to read back - the point is that it runs at all, on the
+        // buffer the model owns rather than through a console that has gone.
+        host->mMxpClient.clearMxpDestination();
     }
 
     // Concealing rewrites the buffer, and the buffer is the model's. This drives
@@ -247,7 +303,7 @@ private slots:
 
     // The end of it, through the real pipeline: a link registered by feeding an
     // OSC 8 sequence, revealed by the manager's own 100ms timer, with the widget
-    // that used to own that timer already destroyed. Host co-owns the model, so
+    // that used to own that timer already destroyed. Host owns the model, so
     // the reveal has a buffer to write into and a timer to run on long after the
     // view is gone.
     void test_aDelayedRevealCompletesAfterTheViewIsDestroyed()
@@ -255,7 +311,7 @@ private slots:
         Host* host = startProfile();
         QVERIFY(host);
         host->mEnableOSC8Hyperlinks = true;
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         QVERIFY(console);
 
         // Long enough that closing the profile below cannot eat the whole delay
@@ -272,7 +328,7 @@ private slots:
         const QString feed = qsl("feedTriggers([==[OSCSPLIT1(%1)OSCSPLIT1\n]==])").arg(link);
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(feed), "feedTriggers() did not run, so no hyperlink was ever registered");
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         // feedTriggers() runs synchronously inside compileAndExecuteScript(), so
         // the line is normally already there; this only covers a loaded runner.
         int lineNumber = -1;
@@ -281,7 +337,7 @@ private slots:
                              lineNumber = lineHolding(model->buffer, qsl("OSCSPLIT1"));
                              return lineNumber >= 0;
                          },
-                         2000),
+                         2s),
                  "the line carrying the link never reached the buffer");
         QCOMPARE(lineTextAt(model->buffer, lineNumber), qsl("OSCSPLIT1(          )OSCSPLIT1"));
 
@@ -289,14 +345,23 @@ private slots:
         // preinstalled packages out, which is why the reveal delay above is set
         // far past anything that save can cost.
         destroyTheView(host);
-        QCOMPARE(&host->mainConsoleModel(), model.get());
+        QCOMPARE(&host->mainConsoleModel(), model);
         QVERIFY2(lineTextAt(model->buffer, lineNumber) == qsl("OSCSPLIT1(          )OSCSPLIT1"), "the reveal had already run before the view was destroyed, so this case proves nothing");
 
+        // The delay only had to outlast the close, so with the view gone it is
+        // brought forward rather than waited out. The manager's own timer still
+        // has to notice and perform the reveal, which is what this case is about.
+        auto& trackedLinks = model->mHyperlinkVisibilityManager.mTrackedLinks;
+        QCOMPARE(trackedLinks.size(), 1);
+        for (auto& tracked : trackedLinks) {
+            tracked.creationTimeMs -= tracked.delayMs;
+        }
+        // Well short of the 20s delay, so only the reveal brought forward can pass this
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
                              return lineTextAt(model->buffer, lineNumber) == qsl("OSCSPLIT1(HIDDENWORD)OSCSPLIT1");
                          },
-                         60000),
+                         5s),
                  "the concealed link never revealed itself once its view had gone");
     }
 
@@ -311,18 +376,18 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&host->mTelnet, &cTelnet::signal_connected);
-        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !connected.wait(8000)) {
+        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !connected.wait(8s)) {
             qWarning("could not connect to the stub");
             return nullptr;
         }
         return host;
     }
 
-    // Destroys the main console widget while Host - and the model it co-owns -
+    // Destroys the main console widget while Host - and the model it owns -
     // live on, which is the window the delayed-reveal case needs.
     void destroyTheView(Host* host)
     {
-        QPointer<TMainConsole> console = host->mpConsole;
+        QPointer<TMainConsole> console = host->mainConsoleView();
         // Forcing the close stops TMainConsole::closeEvent() asking whether the
         // profile should be saved, which would block on a modal dialog here.
         host->forceClose();
@@ -330,7 +395,7 @@ private:
         QTest::qWait(500ms); // the console carries WA_DeleteOnClose
 
         QVERIFY2(console.isNull(), "the main console view was not destroyed by closing the profile");
-        QVERIFY2(host->mpConsole.isNull(), "the host still points at a main console");
+        QVERIFY2(!host->mainConsoleView(), "the host still points at a main console");
     }
 
     // The buffer can be trimmed under a poll that runs for a minute, so an
@@ -356,7 +421,7 @@ private:
 
     void deleteProfileDirectory()
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, mHostname));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mHostname));
         if (dir.exists()) {
             dir.removeRecursively();
         }

@@ -167,14 +167,72 @@ describe("Tests functionality of Geyser.Gauge", function()
       local resize = spy.on(_G, "resizeWindow")
       finally(function() move:revert() resize:revert() end)
       gauge:setValue(60)
-      assert.spy(move).was.called(1)
+      assert.spy(move).was_not.called()
       assert.spy(resize).was.called(1)
       gauge:setValue(60)
       gauge:setValue(60)
-      assert.spy(move).was.called(1)
+      assert.spy(move).was_not.called()
       assert.spy(resize).was.called(1)
       -- and the skipped repeats left it where the update put it
       assert.are.equal(120, geometry("ggsValue_front").width)
+    end)
+
+    it("moves a fill that starts from the far edge as well as resizing it", function()
+      local vertical = track(Geyser.Gauge:new({name = "ggsMovesvertical", x = 0, y = 0, width = 200, height = 200, orientation = "vertical"}))
+      local goofy = track(Geyser.Gauge:new({name = "ggsMovesgoofy", x = 0, y = 0, width = 200, height = 200, orientation = "goofy"}))
+      vertical:setValue(50)
+      goofy:setValue(50)
+      local move = spy.on(_G, "moveWindow")
+      finally(function() move:revert() end)
+      vertical:setValue(25)
+      goofy:setValue(25)
+      assert.spy(move).was.called(2)
+      assert.are.same({x = 0, y = 150, width = 200, height = 50}, geometry("ggsMovesvertical_front"))
+      assert.are.same({x = 150, y = 0, width = 50, height = 200}, geometry("ggsMovesgoofy_front"))
+    end)
+
+    it("lays out what a script put inside the fill along with it", function()
+      gauge:setValue(50)
+      local marker = track(Geyser.Label:new({name = "ggsFillMarker", x = "50%", y = 0, width = "50%", height = "100%"}, gauge.front))
+      gauge:setValue(80)
+      assert.are.same({x = 80, y = 0, width = 80, height = 40}, geometry("ggsFillMarker"))
+    end)
+
+    it("still runs a reposition a script put on the fill", function()
+      gauge:setValue(50)
+      local repositioned = 0
+      gauge.front.reposition = function(self, ...)
+        repositioned = repositioned + 1
+        return Geyser.Container.reposition(self, ...)
+      end
+      finally(function() gauge.front.reposition = nil end)
+      gauge:setValue(70)
+      assert.are.equal(1, repositioned)
+      assert.are.equal(140, geometry("ggsValue_front").width)
+    end)
+
+    it("still runs a reposition a script wrapped around Geyser's own", function()
+      gauge:setValue(50)
+      local stock = Geyser.Container.reposition
+      local repositioned = 0
+      Geyser.Container.reposition = function(self, ...)
+        if self == gauge.front then
+          repositioned = repositioned + 1
+        end
+        return stock(self, ...)
+      end
+      finally(function() Geyser.Container.reposition = stock end)
+      gauge:setValue(70)
+      assert.are.equal(1, repositioned)
+    end)
+
+    it("still redraws a fill that asks to be redrawn", function()
+      gauge:setValue(50)
+      local redrawn = 0
+      gauge.front.redraw = function() redrawn = redrawn + 1 end
+      finally(function() gauge.front.redraw = nil end)
+      gauge:setValue(70)
+      assert.are.equal(1, redrawn)
     end)
 
     -- the geometry is the gauge's answer, not something a later event-loop turn
@@ -302,10 +360,12 @@ describe("Tests functionality of Geyser.Gauge", function()
       assert.are.same({x = 5, y = 5, width = 48, height = 90}, geometry("ggsTurn_front"))
       gauge.orientation = "vertical"
       gauge:setValue(25)
-      assert.are.same({x = 5, y = 73, width = 190, height = 23}, geometry("ggsTurn_front"))
+      -- 72.5 down to 95, where the bottom margin starts
+      assert.are.same({x = 5, y = 73, width = 190, height = 22}, geometry("ggsTurn_front"))
       gauge.orientation = "goofy"
       gauge:setValue(25)
-      assert.are.same({x = 148, y = 5, width = 48, height = 90}, geometry("ggsTurn_front"))
+      -- 147.5 across to 195, where the right margin starts
+      assert.are.same({x = 148, y = 5, width = 47, height = 90}, geometry("ggsTurn_front"))
       gauge.orientation = "batty"
       gauge:setValue(25)
       assert.are.same({x = 5, y = 5, width = 190, height = 23}, geometry("ggsTurn_front"))
@@ -345,6 +405,43 @@ describe("Tests functionality of Geyser.Gauge", function()
       local gauge = track(Geyser.Gauge:new({name = "ggsBatty", x = 0, y = 0, width = 100, height = 200, orientation = "batty"}))
       gauge:setValue(25)
       assert.are.same({x = 0, y = 0, width = 100, height = 50}, geometry("ggsBatty_front"))
+    end)
+
+    -- the middle third of a 100px box runs from 33.33 to 66.67, whose edges round
+    -- to a 34px back, which a full front has to cover to the pixel
+    for _, orientation in ipairs({"horizontal", "vertical", "goofy", "batty"}) do
+      it("covers the whole back when a " .. orientation .. " gauge sits at a fractional position", function()
+        local box = track(Geyser.HBox:new({name = "ggsThirds", x = 0, y = 0, width = 100, height = 100}))
+        local gauges = {}
+        for index = 1, 3 do
+          gauges[index] = Geyser.Gauge:new({name = "ggsThird" .. index, orientation = orientation}, box)
+        end
+        gauges[2]:setValue(100)
+        assert.are.same({x = 33, y = 0, width = 34, height = 100}, geometry("ggsThird2_back"))
+        assert.are.same(geometry("ggsThird2_back"), geometry("ggsThird2_front"))
+        gauges[2]:setValue(50)
+        gauges[2]:setValue(100)
+        assert.are.same(geometry("ggsThird2_back"), geometry("ggsThird2_front"))
+      end)
+    end
+
+    it("covers the whole back of a gauge stacked at a fractional height", function()
+      local box = track(Geyser.VBox:new({name = "ggsRows", x = 0, y = 0, width = 100, height = 100}))
+      local gauges = {}
+      for index = 1, 3 do
+        gauges[index] = Geyser.Gauge:new({name = "ggsRow" .. index}, box)
+      end
+      gauges[2]:setValue(100)
+      assert.are.same({x = 0, y = 33, width = 100, height = 34}, geometry("ggsRow2_back"))
+      assert.are.same(geometry("ggsRow2_back"), geometry("ggsRow2_front"))
+    end)
+
+    it("keeps a full front inside its back when the gauge ends on a half pixel", function()
+      local box = track(Geyser.HBox:new({name = "ggsHalves", x = 0, y = 0, width = 301, height = 20}))
+      Geyser.Gauge:new({name = "ggsHalf1"}, box)
+      local second = Geyser.Gauge:new({name = "ggsHalf2"}, box)
+      second:setValue(100)
+      assert.are.same(geometry("ggsHalf2_back"), geometry("ggsHalf2_front"))
     end)
   end)
 
@@ -477,9 +574,10 @@ describe("Tests functionality of Geyser.Gauge", function()
     it("reads a length written without a leading digit", function()
       local gauge = track(Geyser.Gauge:new({name = "ggsLeadingDot", x = 0, y = 0, width = 200, height = 100}))
       gauge:setStyleSheet("margin: .5px;", "margin: .5px;")
-      -- .5px used to match the "5px" inside it and inset the gauge tenfold; half
-      -- a pixel each side comes off the size and rounds away on the position
-      assert.are.same({x = 0, y = 0, width = 199, height = 99}, geometry("ggsLeadingDot_front"))
+      -- .5px, not the "5px" inside it: each edge moves in half a pixel and a half
+      -- rounds up, so the front is inset a pixel at the top left and flush at the
+      -- bottom right
+      assert.are.same({x = 1, y = 1, width = 199, height = 99}, geometry("ggsLeadingDot_front"))
     end)
 
     it("reads border longhands", function()

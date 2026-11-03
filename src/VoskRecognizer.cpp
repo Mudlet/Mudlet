@@ -19,10 +19,12 @@
 
 #include "VoskRecognizer.h"
 
+#include "MudletApp.h"
 #include "SpeechAudioCapture.h"
-#include "mudlet.h"
+#include "utils.h"
 
 #include <QDir>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -31,14 +33,18 @@
 #include <QSettings>
 #include <QtMath>
 
+#include <algorithm>
 #include <optional>
 
 #if defined(Q_OS_MACOS)
 #include "MacMicrophonePermission.h"
 #endif
 
+#if defined(INCLUDE_SPEECH_ENGINES)
 QLibrary VoskRecognizer::sVoskLibrary;
+#endif
 bool VoskRecognizer::sLibraryLoaded = false;
+QString VoskRecognizer::sLibraryLoadError;
 bool VoskRecognizer::sLibraryLoadAttempted = false;
 bool VoskRecognizer::sLibraryUnloadedByRequest = false;
 
@@ -150,6 +156,9 @@ VoskRecognizer::VoskRecognizer(QObject* parent)
 : SpeechRecognizer(parent)
 , mpCapture(new SpeechAudioCapture(this))
 {
+    // While this engine still holds nothing, so the first real change is a
+    // change from here rather than from the base's all-false default
+    seedAnnouncedCapabilities();
     connect(mpCapture, &SpeechAudioCapture::pcm, this, &VoskRecognizer::slot_pcmReady);
     connect(mpCapture, &SpeechAudioCapture::captureError, this, &VoskRecognizer::slot_captureError);
     // A silence timeout ends the utterance the way the user stopping would:
@@ -185,6 +194,9 @@ bool VoskRecognizer::loadVoskLibrary()
 
     sLibraryLoadAttempted = true;
 
+#if !defined(INCLUDE_SPEECH_ENGINES)
+    return false;
+#else
     // Determine library name based on platform
     // QLibrary automatically adds platform-specific prefix/suffix:
     // - On macOS: adds "lib" prefix and ".dylib" suffix -> "vosk" becomes "libvosk.dylib"
@@ -194,16 +206,32 @@ bool VoskRecognizer::loadVoskLibrary()
 
     sVoskLibrary.setFileName(libName);
 
+    // Kept as each path is tried, from the ones that are actually there: the
+    // reason a file that exists would not load is the only sentence that says
+    // what is wrong, and it is gone the moment the next path is set on the same
+    // QLibrary. Reporting whatever the last attempt left behind named a path
+    // the player does not have a file at, with "No such file" against it, for a
+    // library sitting broken in the folder Mudlet told them to install into.
+    QString existingFileError;
+
     if (!sVoskLibrary.load()) {
         for (const QString& path : librarySearchPaths()) {
+            const bool fileIsThere = QFileInfo::exists(path);
             sVoskLibrary.setFileName(path);
             if (sVoskLibrary.load()) {
                 break;
+            }
+            if (fileIsThere && existingFileError.isEmpty()) {
+                existingFileError = sVoskLibrary.errorString();
             }
         }
     }
 
     if (!sVoskLibrary.isLoaded()) {
+        // Only when a file was actually found: QLibrary reports a failure for a
+        // name that matched nothing at all, and calling that "installed but
+        // broken" sends the reader after a file they do not have.
+        sLibraryLoadError = existingFileError;
         qWarning() << "VoskRecognizer: Failed to load Vosk library:" << sVoskLibrary.errorString();
         return false;
     }
@@ -232,10 +260,18 @@ bool VoskRecognizer::loadVoskLibrary()
         // resetLibraryLoadState() clears this to allow a fresh probe; a library
         // whose symbols are missing is not worth re-probing on every call
         sLibraryLoadAttempted = true;
+        // And it clears the reason with it, so this is set after rather than
+        // before - the same ordering SherpaRecognizer uses, and for the same
+        // reason: set first, it is wiped and a library that is present but
+        // unusable falls through to "not installed", naming the very file the
+        // player is looking at.
+        //: Shown when a speech engine library was found but is too old or incomplete to use; the player needs a different build rather than an install
+        sLibraryLoadError = tr("the library was found but does not export the functions this version of Mudlet needs");
         return false;
     }
 
     sLibraryLoaded = true;
+    sLibraryLoadError.clear();
 
     // Vosk is silenced because it writes Kaldi's decoding chatter to stderr on
     // every utterance, which is not Mudlet's output to spend. MUDLET_STT_VOSK_LOG
@@ -245,6 +281,7 @@ bool VoskRecognizer::loadVoskLibrary()
     }
 
     return true;
+#endif
 }
 
 bool VoskRecognizer::libraryAvailable()
@@ -259,13 +296,6 @@ bool VoskRecognizer::libraryAvailable()
     return sLibraryLoaded;
 }
 
-void VoskRecognizer::announceCapabilitiesIfChanged()
-{
-    if (const Capabilities current = capabilities(); !(current == mAnnouncedCapabilities)) {
-        mAnnouncedCapabilities = current;
-        emit capabilitiesChanged(current);
-    }
-}
 
 bool VoskRecognizer::resetLibraryLoadState()
 {
@@ -273,12 +303,15 @@ bool VoskRecognizer::resetLibraryLoadState()
     // anything still holds it mapped, and reporting success then is how a
     // caller comes to delete a file the loader has not let go of - the exact
     // failure on Windows that stt.unloadLibrary() exists to avoid.
+#if defined(INCLUDE_SPEECH_ENGINES)
     if (sVoskLibrary.isLoaded() && !sVoskLibrary.unload()) {
         return false;
     }
+#endif
 
     // Reset state flags to allow fresh detection
     sLibraryLoaded = false;
+    sLibraryLoadError.clear();
     sLibraryLoadAttempted = false;
 
     s_vosk_model_new = nullptr;
@@ -298,7 +331,7 @@ bool VoskRecognizer::resetLibraryLoadState()
 
 QString VoskRecognizer::userLibraryPath()
 {
-    return mudlet::getMudletPath(enums::mainDataItemPath, qsl("vosk-lib"));
+    return MudletApp::getMudletPath(enums::mainDataItemPath, qsl("vosk-lib"));
 }
 
 QStringList VoskRecognizer::librarySearchPaths()
@@ -328,6 +361,13 @@ QString VoskRecognizer::backendVersion() const
 
 bool VoskRecognizer::initialize(const QString& modelPath)
 {
+    ++mLoadGeneration;
+    const unsigned int loadGeneration = modelLoadGeneration();
+    // Read at the top, because mModelPath is cleared further down before the
+    // native model is built. A load that puts back the model already in place
+    // replaces nothing, and counting it would make a load it interrupted stand
+    // down for a replacement that never happened - see noteModelLoaded().
+    const bool reloadingTheModelInPlace = (mVoskModel != nullptr) && (mModelPath == modelPath);
     // Its own guard, ahead of the availability check and not folded into it:
     // loading a model is a write, and going through loadVoskLibrary() mapped
     // the library back in regardless of the latch stt.unloadLibrary() set - so
@@ -353,6 +393,19 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     // again because both check listening() first. The recording light stayed
     // on for the rest of the session.
     mpCapture->stop();
+    // The caller asked to load a model, not to end a session; the phrase in
+    // flight goes with the decoder freed below, and the player is told so.
+    endSessionForModelLoad();
+
+    // A handler reached from the report above loaded a model of its own, and was
+    // told it succeeded - it did. Carrying on here would free that model and put
+    // this call's own in its place, leaving both callers told they had won. So
+    // this load stands down and leaves the handler's model standing; sttInit()
+    // sees a model other than the one it asked for and refuses with the same
+    // words sttInit() uses for the same standing-down anywhere else.
+    if (modelLoadGeneration() != loadGeneration) {
+        return true;
+    }
 
     releaseVoskResources();
     // Both describe a model that has just been freed. Leaving them standing
@@ -393,11 +446,7 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     // Only now is there a model loaded for modelPath() to name; the failure
     // paths above leave it empty, which is what getInfo() promises
     mModelPath = modelPath;
-
-    // wordResults is derived from a symbol that resolves when the library
-    // loads, so what this backend can do has just changed. The header promises
-    // consumers hear about that rather than having to re-read on spec.
-    announceCapabilitiesIfChanged();
+    noteModelLoaded(!reloadingTheModelInPlace);
 
     if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != EndpointerMode::Default) {
         s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
@@ -428,32 +477,29 @@ bool VoskRecognizer::initialize(const QString& modelPath)
         mCurrentLanguage = qsl("unknown");
     }
 
-    setState(State::Ready);
+    settleAfterModelLoad();
+
+    // Announced last, and after the state is settled, because both this and
+    // setState() reach Lua synchronously. A handler may call stt.close(), which
+    // frees the very handles configured above:
+    //
+    //  - announcing before the configuration handed a null recognizer handle to
+    //    vosk_recognizer_set_words(), which real libvosk is expected to
+    //    dereference (inferred from libvosk's sources, not observed directly);
+    //  - announcing before setState(Ready) meant Ready was written *after* the
+    //    close, leaving initialized() true and state "ready" with no model.
+    announceCapabilitiesIfChanged();
+
+    // A handler for either event may have undone this load, but that is not
+    // answered here: the hazard belongs to every backend, because it comes from
+    // the events the bridge raises rather than from anything Vosk does, so
+    // stt.init() asks once for all three rather than each backend asking for
+    // itself and two of them forgetting to (#10759).
     return true;
 }
 
-void VoskRecognizer::startListening()
+void VoskRecognizer::doStartListening()
 {
-    if (state() != State::Ready) {
-        // Every refusal but "already listening" reports why: startListening()
-        // returns void, so silence here reads to the caller as a successful start
-        if (state() == State::Uninitialized) {
-            setState(State::Error);
-            // the setState() call has to stay above this: lupdate drops a
-            // pending //: comment at the next semicolon, so between the two
-            // the note never reaches the translator
-            //: Shown when speech recognition is asked to listen before a language model is loaded
-            emit errorOccurred(tr("Recognizer not initialized. Call initialize() first."));
-        } else if (state() == State::Error) {
-            //: Shown when speech recognition is asked to listen while it is in an error state
-            emit errorOccurred(tr("Speech recognition is in an error state - reload the model before listening again."));
-        } else if (state() == State::Processing) {
-            //: Shown when speech recognition is asked to listen while still transcribing the previous phrase
-            emit errorOccurred(tr("Speech recognition is still processing the previous phrase."));
-        }
-        return;
-    }
-
     // Check microphone permission on macOS using native API
     // Qt's permission API requires proper app signing with entitlements,
     // which development builds don't have, so we use AVFoundation directly.
@@ -466,7 +512,7 @@ void VoskRecognizer::startListening()
         // on the main thread already. Use QPointer to safely handle the case where
         // VoskRecognizer is destroyed before the permission callback arrives.
         //
-        // Starting first, so the guard at the top of this function refuses a
+        // Starting first, so SpeechRecognizer::startListening() refuses a
         // second request while the player is still looking at the first one -
         // two dialogs, then two callbacks, the later of which would rebuild
         // the recognizer and restart capture underneath the earlier.
@@ -492,9 +538,9 @@ void VoskRecognizer::startListening()
                 // VoskRecognizer::tr, not QObject::tr: the lambda is not a member, and
                 // the default context would file this identical string a second
                 // time for translators to translate twice
+                weakThis->setState(State::Error);
                 //: Shown when the player refuses Mudlet access to the microphone; the path names the macOS setting that grants it
                 emit weakThis->errorOccurred(VoskRecognizer::tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
-                weakThis->setState(State::Error);
             }
         });
         return;
@@ -502,12 +548,12 @@ void VoskRecognizer::startListening()
     case MacMicrophonePermission::AuthorizationStatus::Denied:
     case MacMicrophonePermission::AuthorizationStatus::Restricted:
         qWarning() << "VoskRecognizer: Microphone permission denied or restricted";
-        //: Shown when microphone access was refused earlier and has to be granted in system settings before speech will work
-        emit errorOccurred(tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
         // The same state a denial reaches when the dialog is answered now, as
         // docs/stt-api.md requires: a package driving its controls from state
         // would otherwise keep offering to listen on a machine that cannot
         setState(State::Error);
+        //: Shown when microphone access was refused earlier and has to be granted in system settings before speech will work
+        emit errorOccurred(tr("Microphone permission denied. Please grant microphone access in System Settings > Privacy & Security > Microphone."));
         return;
     case MacMicrophonePermission::AuthorizationStatus::Authorized:
         break;
@@ -561,9 +607,13 @@ void VoskRecognizer::startListeningInternal()
 
     // mpCapture emits its own translated captureError before returning false,
     // which slot_captureError() has already turned into errorOccurred - only
-    // the state transition is left to do here
+    // the state transition is left to do here, and not even that when a handler
+    // for the report loaded a model: that load has settled the state already.
+    const unsigned int loadGeneration = mLoadGeneration;
     if (!mpCapture->start()) {
-        setState(State::Error);
+        if (mLoadGeneration == loadGeneration) {
+            setState(State::Error);
+        }
         return;
     }
 
@@ -638,12 +688,8 @@ bool VoskRecognizer::decodedResult(const char* json, QJsonObject& result)
     return false;
 }
 
-void VoskRecognizer::stopListening()
+void VoskRecognizer::doStopListening()
 {
-    if (state() != State::Listening) {
-        return;
-    }
-
     setState(State::Processing);
 
     mpCapture->stop();
@@ -675,21 +721,8 @@ void VoskRecognizer::stopListening()
     }
 }
 
-void VoskRecognizer::cancel()
+void VoskRecognizer::doCancel()
 {
-    // Starting counts: a request waiting on the macOS permission dialog has no
-    // audio to abandon, but leaving it there means the callback still finds
-    // Starting when the player finally answers and opens the microphone after
-    // they asked to stop. Dropping to Ready is what makes that guard refuse.
-    if (state() == State::Starting) {
-        setState(State::Ready);
-        return;
-    }
-
-    if (state() != State::Listening && state() != State::Processing) {
-        return;
-    }
-
     // Stop audio capture without processing the remainder
     mpCapture->stop();
 
@@ -836,14 +869,14 @@ void VoskRecognizer::releaseVoskResources()
     }
 }
 
-void VoskRecognizer::releaseResources()
+void VoskRecognizer::doReleaseResources()
 {
+    ++mLoadGeneration;
     // Same reason as initialize(): the device has to go before the decoder,
     // or a caller is left with a live microphone it has no call to close
     mpCapture->stop();
     releaseVoskResources();
     mModelPath.clear();
-    setState(State::Uninitialized);
 }
 
 bool VoskRecognizer::setLanguage(const QString& languageCode)
@@ -926,7 +959,7 @@ QString VoskRecognizer::defaultModelPath()
 
 QString VoskRecognizer::modelsDirectoryPath()
 {
-    return mudlet::getMudletPath(enums::mainDataItemPath, qsl("vosk-models"));
+    return MudletApp::getMudletPath(enums::mainDataItemPath, qsl("vosk-models"));
 }
 
 QStringList VoskRecognizer::getInstalledModels()
@@ -994,7 +1027,7 @@ QString VoskRecognizer::getBestAvailableModel()
     return bestModel;
 }
 
-// Every other setting Mudlet keeps goes through mudlet::getQSettings(), which
+// Every other setting Mudlet keeps goes through MudletApp::getQSettings(), which
 // is the located Mudlet.ini inside the config directory. A default-constructed
 // QSettings is a different store entirely - native format under the
 // organisation and application names, so ~/.config/Mudlet/Mudlet.conf on Linux
@@ -1004,7 +1037,7 @@ QString VoskRecognizer::getBestAvailableModel()
 // each other's choice of model.
 static QString selectedModelName()
 {
-    QSettings* pSettings = mudlet::self() ? mudlet::getQSettings() : nullptr;
+    QSettings* pSettings = MudletApp::getQSettings();
     if (!pSettings) {
         return QString();
     }

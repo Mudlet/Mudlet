@@ -56,6 +56,9 @@ end
 function Geyser:base_add (window, cons)
   cons = cons or window -- 'cons' is optional
 
+  -- checked before the window changes containers, so one whose constraints are refused stays where it was
+  Geyser.check_constraints(window, cons)
+
   -- Stop other container from controlling this window
   if window.container then
     window.container:remove(window)
@@ -206,6 +209,13 @@ function Geyser:changeContainer (container)
   if not container or not container.windowList or self == container then
     return nil, "didn't get a valid container"
   end
+  local ancestor = container.container
+  while ancestor do
+    if ancestor == self then
+      return nil, "can't move "..self.name.." into one of its own children"
+    end
+    ancestor = ancestor.container
+  end
   --Nothing to change
   if self.container == container then
     return nil, "nothing to change. "..self.name.." is already in this container"
@@ -214,11 +224,13 @@ function Geyser:changeContainer (container)
   local windowname = container.windowname
   windowname = windowname or "main"
 
+  -- before it leaves its container, so one the new container refuses stays where it was
+  Geyser.check_constraints(self, self)
   self.container:remove(self)
   if self.windowname ~= windowname then
     setMyWindow(self, windowname)
     setContainerWindow(self, windowname)
   end
   -- use add2 without overwriting childrens' add functions
-  container:add2(self, cons, false)
+  container:add2(self, self, false)
 end

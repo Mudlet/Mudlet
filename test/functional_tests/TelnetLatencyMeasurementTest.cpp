@@ -38,6 +38,7 @@
  */
 
 #include <QEventLoop>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QThread>
 #include <QTimer>
@@ -46,6 +47,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TelnetServerStub.h"
@@ -111,6 +113,19 @@ private:
         runEventLoop(flightTime + 400ms);
     }
 
+    // A ~0.3s quiet round trip, for a method to start from or to check. A reading
+    // is dropped when the event loop misses a beat, and an oversubscribed runner
+    // can delay one on its own; that is worth a retry, not a failure.
+    double measureRoughlyAThirdOfASecond()
+    {
+        double measured = 0.0;
+        for (int attempt = 0; attempt < 3 && !(measured > 0.2 && measured < 0.6); ++attempt) {
+            measureQuietRoundTrip(300ms);
+            measured = latency();
+        }
+        return measured;
+    }
+
 private slots:
     void initTestCase()
     {
@@ -132,12 +147,12 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         QDir(path).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
@@ -146,7 +161,7 @@ private slots:
         }
 
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connectedSpy.wait(2000)) {
+        if (!connectedSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -157,7 +172,7 @@ private slots:
                          [this]() {
                              return mpHost->mTelnet.mGA_Driver;
                          },
-                         5000),
+                         5s),
                  "The stub's GA never reached cTelnet, so no latency would ever be measured");
     }
 
@@ -174,14 +189,7 @@ private slots:
     // pass the rest of the file by never publishing a reading at all.
     void reportsRoundTripMeasuredWhileResponsive()
     {
-        // A reading is dropped when the event loop misses a beat, and an
-        // oversubscribed runner can delay one on its own; that is worth a
-        // retry, not a failure.
-        double measured = 0.0;
-        for (int attempt = 0; attempt < 3 && !(measured > 0.2 && measured < 0.6); ++attempt) {
-            measureQuietRoundTrip(300ms);
-            measured = latency();
-        }
+        const double measured = measureRoughlyAThirdOfASecond();
         QVERIFY2(measured > 0.2 && measured < 0.6, qPrintable(qsl("A 0.3s round trip taken with the event loop running should be reported as roughly that, got %1s").arg(measured)));
     }
 
@@ -190,8 +198,7 @@ private slots:
     // network's, and must not be published as the ping.
     void dropsRoundTripMeasuredAcrossAStall()
     {
-        measureQuietRoundTrip(300ms);
-        const double beforeStall = latency();
+        const double beforeStall = measureRoughlyAThirdOfASecond();
         QVERIFY2(beforeStall > 0.2 && beforeStall < 0.6, qPrintable(qsl("Setup failed: expected a ~0.3s reading to start from, got %1s").arg(beforeStall)));
 
         sendCommand();
@@ -213,12 +220,17 @@ private slots:
     // however long afterwards - being timed as that command's reply.
     void abandonsAMeasurementTheGameNeverAnswers()
     {
-        measureQuietRoundTrip(300ms);
-        const double beforeSilence = latency();
+        const double beforeSilence = measureRoughlyAThirdOfASecond();
         QVERIFY2(beforeSilence > 0.2 && beforeSilence < 0.6, qPrintable(qsl("Setup failed: expected a ~0.3s reading to start from, got %1s").arg(beforeSilence)));
 
+        QVERIFY2(mpHost->mTelnet.mNetworkLatencyTimeout == 10s, "an unanswered command is no longer given 10s before its measurement is abandoned");
+        // Well past the 0.7s round trip measured below
+        const auto restoreTimeout = qScopeGuard([this, timeout = mpHost->mTelnet.mNetworkLatencyTimeout]() {
+            mpHost->mTelnet.mNetworkLatencyTimeout = timeout;
+        });
+        mpHost->mTelnet.mNetworkLatencyTimeout = 1500ms;
         sendCommand();
-        runEventLoop(11s); // past NETWORK_LATENCY_TIMEOUT, so the measurement is abandoned
+        runEventLoop(mpHost->mTelnet.mNetworkLatencyTimeout + 500ms);
         replyFromServer(); // so this is a line of its own, not that command's reply
         runEventLoop(400ms);
 
@@ -252,8 +264,7 @@ private slots:
     // connection: the next one's first packet is not its reply.
     void abandonsAMeasurementWhenTheConnectionGoesAway()
     {
-        measureQuietRoundTrip(300ms);
-        const double beforeReconnect = latency();
+        const double beforeReconnect = measureRoughlyAThirdOfASecond();
         QVERIFY2(beforeReconnect > 0.2 && beforeReconnect < 0.6, qPrintable(qsl("Setup failed: expected a ~0.3s reading to start from, got %1s").arg(beforeReconnect)));
 
         sendCommand();
@@ -263,11 +274,11 @@ private slots:
                 [this]() {
                     return mpHost->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
                 },
-                5000));
+                5s));
 
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
         mpHost->mTelnet.connectIt(mLocalhost, mPort.toInt());
-        QVERIFY2(connectedSpy.wait(5000), "The profile did not reconnect to the stub");
+        QVERIFY2(connectedSpy.wait(5s), "The profile did not reconnect to the stub");
         // Long enough that finishing the old connection's measurement here would
         // read as a round trip several times the one before it
         runEventLoop(800ms);
@@ -282,10 +293,9 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+            const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
             QDir(path).removeRecursively();
             delete mudlet::self();
         }

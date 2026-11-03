@@ -24,7 +24,7 @@
  * action rather than merely one of its actions. Without that the button falls
  * back to its own bare "Discord" text with no icon and swallows clicks.
  *
- * The last two cases cover the other half: each detached window owns its own copy
+ * The last three cases cover the other half: each detached window owns its own copy
  * of the Discord actions, so an update that only refreshes the main window's pair
  * leaves the detached button showing the name the game had at detach time.
  *
@@ -39,8 +39,10 @@
 #include <QToolButton>
 #include <QtTest/QtTest>
 
+#include "MudletApp.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TDetachedWindow.h"
 #include "TLuaInterpreter.h"
@@ -49,6 +51,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 // Stands in for the web browser: openWebPage() ends in QDesktopServices::openUrl(),
 // which would otherwise launch one on the test machine
@@ -107,7 +111,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -130,8 +134,7 @@ private slots:
         QDesktopServices::unsetUrlHandler(qsl("https"));
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mFirstHostname);
             deleteProfileDirectory(mSecondHostname);
@@ -144,7 +147,7 @@ private slots:
     // place before the detach builds that window's toolbar
     void init()
     {
-        Host* pHost = mudlet::self()->getHostManager().getHost(mSecondHostname);
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
         QVERIFY(pHost);
         pHost->setDiscordGameName(mGameName);
         pHost->setDiscordInviteURL(mInviteUrl);
@@ -182,7 +185,7 @@ private slots:
         QToolButton* pButton = discordButton();
         QVERIFY(pButton);
 
-        Host* pHost = mudlet::self()->getHostManager().getHost(mSecondHostname);
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
         QVERIFY(pHost);
         pHost->setDiscordInviteURL(QString());
         mudlet::self()->updateDiscordNamedIcon();
@@ -214,12 +217,30 @@ private slots:
         QToolButton* pButton = discordButton();
         QVERIFY(pButton);
 
-        Host* pHost = mudlet::self()->getHostManager().getHost(mSecondHostname);
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
         QVERIFY(pHost);
         pHost->processDiscordGMCP(qsl("External.Discord.Status"), qsl(R"({"game":"Avalon"})"));
 
         QCOMPARE(pHost->getDiscordGameName(), qsl("Avalon"));
         QCOMPARE(pButton->text(), qsl("Avalon"));
+    }
+
+    // The invite a game announces later takes the same path: with one of its own
+    // the game's button sits beside a separate Mudlet chat button
+    void test_theMudletChatButtonFollowsALaterInvite()
+    {
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
+        QVERIFY(pHost);
+        pHost->setDiscordInviteURL(QString());
+        mudlet::self()->updateDiscordNamedIcon();
+        QAction* pMudletChat = mudletChatAction();
+        QVERIFY(pMudletChat);
+        QVERIFY2(!pMudletChat->isVisible(), "SETUP: the Mudlet chat button shows with no invite, so the assertion below cannot fail");
+
+        pHost->processDiscordGMCP(qsl("External.Discord.Info"), qsl(R"({"inviteurl":"%1"})").arg(mInviteUrl));
+
+        QCOMPARE(pHost->getDiscordInviteURL(), mInviteUrl);
+        QVERIFY2(pMudletChat->isVisible(), "the game's invite did not bring up the separate Mudlet chat button");
     }
 
     // The same refresh reached from Lua, which a detached profile's own scripts use
@@ -228,7 +249,7 @@ private slots:
         QToolButton* pButton = discordButton();
         QVERIFY(pButton);
 
-        Host* pHost = mudlet::self()->getHostManager().getHost(mSecondHostname);
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
         QVERIFY(pHost);
 
         QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setDiscordGameUrl('https://discord.gg/lusternia', 'Lusternia')")));
@@ -303,14 +324,14 @@ private:
         }
 
         QSignalSpy connectionSpy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connectionSpy.wait(2000)) {
+        if (!connectionSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }

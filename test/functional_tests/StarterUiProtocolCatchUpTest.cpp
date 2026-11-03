@@ -33,9 +33,11 @@
 // of this waits on a clock.
 
 #include <QTemporaryDir>
+#include <QThreadPool>
 #include <tuple>
 #include <QtTest/QtTest>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -47,6 +49,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class StarterUiProtocolCatchUpTest : public QObject
 {
     Q_OBJECT
@@ -55,7 +59,8 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
-    const QString mHostname = qsl("Test-StarterUiProtocolCatchUp");
+    QString mHostname;
+    int mProfilesMade = 0;
     const QString mLocalhost = qsl("localhost");
     quint16 mPort = 0;
 
@@ -76,24 +81,32 @@ private slots:
 
     void init()
     {
+        // A folder left by an earlier test function under the same name makes the
+        // connection dialog refuse the new profile as one that already exists
+        mHostname = qsl("Test-StarterUiProtocolCatchUp-%1").arg(++mProfilesMade);
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0);
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        deleteProfileDirectory(mHostname);
     }
 
     void cleanup()
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
+        // The profile has to close before its folder can go: closing it writes
+        // profile.ini back into the folder, and Windows cannot delete a file that
+        // is still open - the error log until the profile closes, or the save the
+        // package install queued on a pool thread closing the profile does not
+        // wait for.
         delete mudlet::self();
+        QThreadPool::globalInstance()->waitForDone();
+        deleteProfileDirectory(mHostname);
     }
 
     void test_installingOnAGameThatAlreadySentVitalsBuildsTheDockAtOnce()
@@ -114,6 +127,8 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("BaseUI.gauges.hp ~= nil and BaseUI.gauges.mp ~= nil")), "the gauges the vitals already describe were not created");
         QVERIFY2(luaTrue(host, qsl("BaseUI.sawGmcpVitals == true")),
                  "the package did not record that it has GMCP vitals, so the prompt-scraping ladder is still armed against a game that speaks GMCP");
+        QVERIFY2(luaTrue(host, qsl("(function() local saved = {} table.load(getMudletHomeDir() .. '/base_ui_settings.lua', saved) return saved.built == true end)()")),
+                 "building the dock did not record it, so the next load leaves its border empty");
     }
 
     // The counterpart, and the reason the catch-up can sit unconditionally at
@@ -146,13 +161,57 @@ private slots:
                          [host]() {
                              return !std::get<2>(host->mTelnet.getConnectionInfo());
                          },
-                         3000),
+                         3s),
                  "the connection to the stub never went down, so this says nothing about a disconnected profile");
 
         QVERIFY(installTheStarterUi(host));
 
         QVERIFY2(luaTrue(host, qsl("BaseUI.container == nil")), "the dock was built out of vitals the ended connection left behind");
         QVERIFY2(luaTrue(host, qsl("not BaseUI.sawGmcpVitals")), "vitals from an ended connection were recorded as this connection's");
+    }
+
+    // The profile saves the border the dock was attached to and restores it at
+    // load, before the game has said anything, so a dock this profile has had
+    // before must be rebuilt then or that border is an empty strip. Installing
+    // over saved settings runs the package script the way a load does.
+    void test_loadingAProfileThatHadTheDockBuildsItBeforeTheGameSpeaks()
+    {
+        Host* host = startProfileWithoutTheStarterUi();
+        QVERIFY(host);
+        QVERIFY2(luaTrue(host, qsl("next(gmcp) == nil")), "precondition: this game has sent no GMCP at all");
+        QVERIFY(runLua(host, qsl("table.save(getMudletHomeDir() .. '/base_ui_settings.lua', { built = true, announced = true })")));
+
+        QVERIFY(installTheStarterUi(host));
+
+        QVERIFY2(luaTrue(host, qsl("BaseUI.container ~= nil and not BaseUI.container.hidden")), "the dock this profile had last session was not rebuilt at load");
+        QVERIFY2(luaTrue(host, qsl("getBorderRight() > 0")), "the rebuilt dock does not hold the border it sits in");
+
+        // the saved map is loaded after the package script has run
+        QVERIFY(runLua(host, qsl("addRoom(1)")));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.map == nil")), "precondition: nothing has swapped the map in yet");
+        QVERIFY(runLua(host, qsl("raiseEvent('sysLoadEvent')")));
+        // swapped in on the next turn of the event loop, so a game interface installing at the time can take the map first
+        QVERIFY2(QTest::qWaitFor(
+                         [this, host]() {
+                             return luaTrue(host, qsl("BaseUI.map ~= nil"));
+                         },
+                         3s),
+                 "the map loaded after the dock was rebuilt stays behind its placeholder");
+    }
+
+    void test_loadingAProfileThatHidTheDockLeavesItUnbuiltUntilShown()
+    {
+        Host* host = startProfileWithoutTheStarterUi();
+        QVERIFY(host);
+        QVERIFY(runLua(host, qsl("table.save(getMudletHomeDir() .. '/base_ui_settings.lua', { built = true, announced = true, hidden = true })")));
+
+        QVERIFY(installTheStarterUi(host));
+
+        QVERIFY2(luaTrue(host, qsl("BaseUI.container == nil")), "a dock the player hid was built again at load");
+        QVERIFY2(luaTrue(host, qsl("getBorderRight() == 0")), "a hidden dock took a border at load");
+
+        QVERIFY(runLua(host, qsl("BaseUI.show()")));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.container ~= nil and not BaseUI.container.hidden and getBorderRight() > 0")), "showing a dock this profile has had waits for the game to speak");
     }
 
 private:
@@ -168,7 +227,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             QTest::qFail("Could not connect to the stub.", __FILE__, __LINE__);
             return nullptr;
         }
@@ -210,9 +269,9 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
+        if (dir.exists() && !dir.removeRecursively()) {
+            qWarning() << "could not remove the profile folder" << dir.path();
         }
     }
 };

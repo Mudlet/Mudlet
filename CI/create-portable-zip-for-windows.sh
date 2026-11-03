@@ -18,11 +18,8 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Zips up the assembled package directory as the portable build.
-#
-# To be used AFTER package-mudlet-for-windows.sh has been run, and after the
-# SignPath signing steps, so the portable ships the same signed binaries the
-# installer does.
+# Zips the assembled package directory as the portable build. Run AFTER
+# package-mudlet-for-windows.sh and the SignPath signing steps, so it ships signed binaries.
 
 # Exit codes:
 # 0 - Everything is fine. 8-)

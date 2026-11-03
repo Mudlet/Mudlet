@@ -37,11 +37,15 @@
  */
 
 #include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QtTest/QtTest>
 
 #include <QSignalSpy>
 #include <QTemporaryDir>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -85,11 +89,22 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists()) {
             dir.removeRecursively();
         }
+    }
+
+    QString lastReportTitled(const QString& title) const
+    {
+        QFile log(MudletApp::getMudletPath(enums::profileLogErrorsFilePath, mTargetName));
+        if (!log.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            return QString();
+        }
+        const QString logText = QString::fromUtf8(log.readAll());
+        const qsizetype start = logText.lastIndexOf(title);
+        return start < 0 ? QString() : logText.mid(start);
     }
 
 private slots:
@@ -112,7 +127,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -121,12 +136,12 @@ private slots:
 
         QVERIFY(mSaveDir.isValid());
 
-        auto& hostManager = mudlet::self()->getHostManager();
-        QVERIFY2(hostManager.addHost(mSourceName, qsl("23"), QString(), QString()), "failed to create the source Host");
-        mpSource = hostManager.getHost(mSourceName);
+        auto* hostManager = HostManager::self();
+        QVERIFY2(hostManager->addHost(mSourceName, qsl("23"), QString(), QString()), "failed to create the source Host");
+        mpSource = hostManager->getHost(mSourceName);
         QVERIFY(mpSource);
-        QVERIFY2(hostManager.addHost(mTargetName, qsl("23"), QString(), QString()), "failed to create the target Host");
-        mpTarget = hostManager.getHost(mTargetName);
+        QVERIFY2(hostManager->addHost(mTargetName, qsl("23"), QString(), QString()), "failed to create the target Host");
+        mpTarget = hostManager->getHost(mTargetName);
         QVERIFY(mpTarget);
 
         buildSmallMap(mpSource);
@@ -139,8 +154,7 @@ private slots:
     {
         mpSource = nullptr;
         mpTarget = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mSourceName);
             deleteProfileDirectory(mTargetName);
@@ -236,12 +250,20 @@ private slots:
         // frontend, so the engine's "nobody is showing this" warning stays quiet:
         QSignalSpy exportStartSpy(pSourceMap, &TMap::signal_mapJsonProgressStart);
         QSignalSpy exportCloseSpy(pSourceMap, &TMap::signal_mapProgressClose);
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        // Both hosts are shared by every later test function:
+        const auto clearUserData = qScopeGuard([pSourceMap, pTargetMap]() {
+            pSourceMap->mUserData.clear();
+            pTargetMap->mUserData.clear();
+        });
+        pSourceMap->mUserData = {{qsl("incoming"), qsl("2")}};
         const auto [wrote, writeMsg] = pSourceMap->writeJsonMapFile(file);
         QVERIFY2(wrote, qPrintable(writeMsg));
         QCOMPARE(exportStartSpy.count(), 1);
         QCOMPARE(exportCloseSpy.count(), 1);
 
-        TMap* pTargetMap = mpTarget->mpMap.data();
+        const QMap<QString, QString> targetUserData{{qsl("keep"), qsl("1")}};
+        pTargetMap->mUserData = targetUserData;
         QSignalSpy importCloseSpy(pTargetMap, &TMap::signal_mapProgressClose);
         const QMetaObject::Connection cancelOnStart = connect(pTargetMap, &TMap::signal_mapJsonProgressStart, pTargetMap, [pTargetMap]() {
             pTargetMap->slot_mapProgressDialogCancelled();
@@ -251,6 +273,7 @@ private slots:
 
         QVERIFY(!read);
         QCOMPARE(readMsg, qsl("aborted by user"));
+        QCOMPARE(pTargetMap->mUserData, targetUserData);
         // An aborted import must still take its progress dialog down with it:
         QCOMPARE(importCloseSpy.count(), 1);
         QVERIFY(!pTargetMap->hasActiveTransferProgress());
@@ -293,6 +316,69 @@ private slots:
         QVERIFY2(read, qPrintable(readMsg));
         QCOMPARE(importCloseSpy.count(), 1);
         QVERIFY(!pTargetMap->hasActiveTransferProgress());
+    }
+    // A room dropped for a duplicate id is only news once the import replaces
+    // the map: an aborted one keeps the old map, so nothing may be reported.
+    void test_cancelledJsonImportReportsNoDroppedRoom()
+    {
+        TMap* pSourceMap = mpSource->mpMap.data();
+        const QString file = qsl("%1/cancel-duplicate.json").arg(mSaveDir.path());
+        QSignalSpy exportStartSpy(pSourceMap, &TMap::signal_mapJsonProgressStart);
+        QSignalSpy exportCloseSpy(pSourceMap, &TMap::signal_mapProgressClose);
+        const auto [wrote, writeMsg] = pSourceMap->writeJsonMapFile(file);
+        QVERIFY2(wrote, qPrintable(writeMsg));
+        QCOMPARE(exportStartSpy.count(), 1);
+        QCOMPARE(exportCloseSpy.count(), 1);
+
+        QFile jsonFile(file);
+        QVERIFY(jsonFile.open(QIODevice::ReadOnly));
+        QJsonObject mapObj = QJsonDocument::fromJson(jsonFile.readAll()).object();
+        jsonFile.close();
+        QJsonArray areas = mapObj.value(qsl("areas")).toArray();
+        qsizetype areaIndex = 0;
+        while (areaIndex < areas.size() && areas.at(areaIndex).toObject().value(qsl("rooms")).toArray().size() < 2) {
+            ++areaIndex;
+        }
+        QVERIFY(areaIndex < areas.size());
+        QJsonObject firstArea = areas.at(areaIndex).toObject();
+        QJsonArray rooms = firstArea.value(qsl("rooms")).toArray();
+        QJsonObject secondRoom = rooms.at(1).toObject();
+        secondRoom.insert(qsl("id"), rooms.at(0).toObject().value(qsl("id")));
+        rooms.replace(1, secondRoom);
+        firstArea.insert(qsl("rooms"), rooms);
+        // The abort comes at the end of the first area read, so that has to be this one:
+        areas.removeAt(areaIndex);
+        areas.prepend(firstArea);
+        mapObj.insert(qsl("areas"), areas);
+        QVERIFY(jsonFile.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        jsonFile.write(QJsonDocument(mapObj).toJson());
+        jsonFile.close();
+
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        QSignalSpy importCloseSpy(pTargetMap, &TMap::signal_mapProgressClose);
+        const QMetaObject::Connection cancelOnStart = connect(pTargetMap, &TMap::signal_mapJsonProgressStart, pTargetMap, [pTargetMap]() {
+            pTargetMap->slot_mapProgressDialogCancelled();
+        });
+        const auto [read, readMsg] = pTargetMap->readJsonMapFile(file);
+        disconnect(cancelOnStart);
+        QVERIFY(!read);
+        QCOMPARE(readMsg, qsl("aborted by user"));
+        QCOMPARE(importCloseSpy.count(), 1);
+
+        const QString reportTitle = qsl("MapProgressSeam later report");
+        pTargetMap->pushErrorMessagesToFile(reportTitle, false);
+        const QString laterReport = lastReportTitled(reportTitle);
+        QVERIFY(!laterReport.isEmpty());
+        QVERIFY2(!laterReport.contains(qsl("more than one room")), qPrintable(laterReport));
+
+        // The control: the same file read to the end does report the room, so
+        // the check above is not passing for want of the warning it looks for
+        const auto [reread, rereadMsg] = pTargetMap->readJsonMapFile(file);
+        QVERIFY2(reread, qPrintable(rereadMsg));
+        const QString controlTitle = qsl("MapProgressSeam completed import report");
+        pTargetMap->pushErrorMessagesToFile(controlTitle, false);
+        const QString controlReport = lastReportTitled(controlTitle);
+        QVERIFY2(controlReport.contains(qsl("more than one room with id")), qPrintable(controlReport));
     }
 };
 

@@ -33,6 +33,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TTrigger.h"
@@ -43,6 +44,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class ColorTriggerDialogTest : public QObject
 {
@@ -59,7 +62,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -99,7 +102,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "No active host available for the test.");
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connectedSpy.wait(1000), "Could not connect with the host.");
+        QVERIFY2(connectedSpy.wait(1s), "Could not connect with the host.");
 
         mpTrigger = new TTrigger(nullptr, mpHost);
         mpTrigger->setRegexCodeList({qsl("^colour$")}, {REGEX_PERL});

@@ -19,26 +19,34 @@
 
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QDragEnterEvent>
+#include <QElapsedTimer>
+#include <QFileDialog>
+#include <QFutureWatcher>
 #include <QGroupBox>
 #include <QImage>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
+#include <QMimeData>
 #include <QPushButton>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTextEdit>
+#include <QThreadPool>
 #include <QTimer>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
 
 #include <chrono>
+#include <memory>
 
 #include "ActionUnit.h"
 #include "AliasUnit.h"
 #include "Host.h"
 #include "KeyUnit.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -89,9 +97,11 @@ private:
     Host* mpHost = nullptr;
     dlgPackageExporter* mpExporter = nullptr;
     QTimer* mpModalAnswerTimer = nullptr;
+    int mAnsweredMessageBoxes = 0;
+    bool mAnsweredPicker = false;
     QStringList mStagedPackageNames;
 
-    QString profileHome() const { return mudlet::getMudletPath(enums::profileHomePath, mProfileName); }
+    QString profileHome() const { return MudletApp::getMudletPath(enums::profileHomePath, mProfileName); }
 
     QString packagePath(const QString& packageName) const { return qsl("%1/%2.mpackage").arg(mExportDir, packageName); }
 
@@ -126,10 +136,36 @@ private:
     QListWidget* addedFiles() const { return mpExporter->findChild<QListWidget*>(qsl("listWidget_addedFiles")); }
     QLineEdit* nameField() const { return lineEditNamed(qsl("lineEdit_packageName")); }
     QString selectionTitle() const { return mpExporter->findChild<QGroupBox*>(qsl("groupBox_exportSelection"))->title(); }
+    static QString countedTitle(int items) { return dlgPackageExporter::tr("Select what to export (%n item(s))", nullptr, items); }
 
     // The Export button carries the ApplyRole so that pressing it does not close
     // the dialog, which is also how it is told apart from Close and Cancel.
     QPushButton* exportButton() const { return mpExporter->findChild<QDialogButtonBox*>(qsl("buttonBox"))->button(QDialogButtonBox::Apply); }
+    static QPushButton* exportButtonOf(dlgPackageExporter* exporter) { return exporter->findChild<QDialogButtonBox*>(qsl("buttonBox"))->button(QDialogButtonBox::Apply); }
+
+    // Cancel has the ResetRole, and is only shown while an export can still be stopped
+    bool clickCancel()
+    {
+        auto* box = mpExporter->findChild<QDialogButtonBox*>(qsl("buttonBox"));
+        for (auto* button : box->buttons()) {
+            if (box->buttonRole(button) == QDialogButtonBox::ResetRole && !button->isHidden()) {
+                button->click();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // A second exporter, open alongside mpExporter, with the named trigger ticked
+    std::unique_ptr<dlgPackageExporter> openAnotherExporter(const QString& packageName, const QString& triggerName)
+    {
+        auto other = std::make_unique<dlgPackageExporter>(nullptr, mpHost);
+        if (auto* item = itemNamed(other->findChild<QTreeWidget*>(qsl("treeWidget_exportSelection"))->topLevelItem(0), triggerName)) {
+            item->setCheckState(0, Qt::Checked);
+        }
+        other->findChild<QLineEdit*>(qsl("lineEdit_packageName"))->setText(packageName);
+        return other;
+    }
 
     QTreeWidgetItem* triggersTop() const { return tree()->topLevelItem(0); }
     QTreeWidgetItem* aliasesTop() const { return tree()->topLevelItem(1); }
@@ -221,7 +257,7 @@ private:
     void settleSaves()
     {
         for (int i = 0; i < 200 && (mpHost->hasPendingProfileSave() || mpHost->currentlySavingProfile()); ++i) {
-            QTest::qWait(20);
+            QTest::qWait(20ms);
             mpHost->waitForProfileSave();
         }
     }
@@ -252,13 +288,14 @@ private:
     {
         stopAnsweringMessageBoxes();
         mpModalAnswerTimer = new QTimer(this);
-        mpModalAnswerTimer->setInterval(20);
+        mpModalAnswerTimer->setInterval(20ms);
         connect(mpModalAnswerTimer, &QTimer::timeout, this, [this, answer]() {
             auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget());
             if (!box) {
                 return;
             }
             if (auto* button = box->button(answer)) {
+                ++mAnsweredMessageBoxes;
                 button->click();
             }
             stopAnsweringMessageBoxes();
@@ -275,6 +312,122 @@ private:
         mpModalAnswerTimer->deleteLater();
         mpModalAnswerTimer = nullptr;
     }
+
+    // Picks the export location the way the button beside the path field does.
+    // The picker execs, so the answer comes from a timer armed beforehand; an
+    // empty path stands for cancelling it. False means no picker was ever
+    // answered, so that a call which quietly did nothing cannot pass for a
+    // folder having been chosen.
+    [[nodiscard]] bool chooseSaveLocation(const QString& chosenPath)
+    {
+        auto* locationButton = buttonNamed(qsl("pushButton_packageLocation"));
+        if (!locationButton) {
+            return false;
+        }
+        mAnsweredPicker = false;
+        QElapsedTimer sinceArmed;
+        sinceArmed.start();
+        auto* timer = new QTimer(this);
+        timer->setInterval(20ms);
+        connect(timer, &QTimer::timeout, this, [this, chosenPath, sinceArmed]() {
+            auto* modal = QApplication::activeModalWidget();
+            auto* picker = qobject_cast<QFileDialog*>(modal);
+            if (!picker) {
+                // Only the picker's own exec() can be ended from here, so a
+                // modal that never turns out to be one has to be closed on a
+                // deadline - otherwise the click below waits out ctest's
+                if (modal && sinceArmed.durationElapsed() > 10s) {
+                    modal->close();
+                }
+                return;
+            }
+            // QFileDialog makes accept() protected, so it is reached through
+            // QDialog, where it is a public slot - still a virtual call, so
+            // QFileDialog's own accept() is what runs
+            QDialog* answerable = picker;
+            if (!chosenPath.isEmpty()) {
+                // selectFile() would move the picker to the parent folder, and
+                // a directory picker with nothing selected answers with the
+                // folder it is showing
+                picker->setDirectory(chosenPath);
+                answerable->accept();
+            }
+            if (picker->isVisible()) {
+                // accept() refuses a path it cannot resolve, and nothing else
+                // would end the exec() the click below is waiting on
+                answerable->reject();
+                mAnsweredPicker = chosenPath.isEmpty();
+                return;
+            }
+            mAnsweredPicker = true;
+        });
+        timer->start();
+        locationButton->click();
+        timer->stop();
+        timer->deleteLater();
+        return mAnsweredPicker;
+    }
+
+    // Picks a new icon the way the "add icon" button does, answering the file
+    // picker from a timer armed beforehand as chooseSaveLocation() does. The
+    // name is typed rather than selected, as the picker's model fills in too
+    // late for selectFile() to find it.
+    [[nodiscard]] bool chooseIcon(const QString& iconPath)
+    {
+        auto* iconButton = buttonNamed(qsl("pushButton_addIcon"));
+        if (!iconButton) {
+            return false;
+        }
+        mAnsweredPicker = false;
+        QElapsedTimer sinceArmed;
+        sinceArmed.start();
+        auto* timer = new QTimer(this);
+        timer->setInterval(20ms);
+        connect(timer, &QTimer::timeout, this, [this, iconPath, sinceArmed]() {
+            auto* modal = QApplication::activeModalWidget();
+            auto* picker = qobject_cast<QFileDialog*>(modal);
+            if (!picker) {
+                if (modal && sinceArmed.durationElapsed() > 10s) {
+                    modal->close();
+                }
+                return;
+            }
+            QDialog* answerable = picker;
+            picker->setDirectory(QFileInfo(iconPath).absolutePath());
+            if (auto* nameEdit = picker->findChild<QLineEdit*>(qsl("fileNameEdit"))) {
+                nameEdit->setText(QFileInfo(iconPath).fileName());
+            }
+            answerable->accept();
+            if (picker->isVisible()) {
+                answerable->reject();
+                return;
+            }
+            mAnsweredPicker = true;
+        });
+        timer->start();
+        iconButton->click();
+        timer->stop();
+        timer->deleteLater();
+        return mAnsweredPicker;
+    }
+
+    static bool writeImage(const QString& path)
+    {
+        QImage image(4, 4, QImage::Format_ARGB32);
+        image.fill(Qt::magenta);
+        return image.save(path);
+    }
+
+    // What pasting an image into the description editor leaves behind: the file
+    // it came from, and a $<file name> marker where the image goes, which the
+    // export rewrites into a $packagePath link once the file has been copied.
+    void useDescriptionImage(const QString& imagePath)
+    {
+        mpExporter->mDescriptionImages << imagePath;
+        mpExporter->mPlainDescription = qsl("![the badge]($%1)").arg(QFileInfo(imagePath).fileName());
+    }
+
+    static QString stagedDescriptionImage(const QString& packageName, const QString& imageName) { return qsl("%1/.mudlet/description_images/%2").arg(stagingPath(packageName), imageName); }
 
     static bool writeTextFile(const QString& path, const QString& contents)
     {
@@ -298,13 +451,7 @@ private:
         return file.readAll();
     }
 
-    void deleteProfileDirectory()
-    {
-        QDir dir(profileHome());
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
-    }
+    void deleteProfileDirectory() { TestProfile::removeProfileDirectory(mProfileName); }
 
 private slots:
     void initTestCase()
@@ -328,7 +475,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -337,7 +484,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY2(mpHost, "the test profile never finished loading");
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(!connected.isEmpty() || connected.wait(2000), "the test profile never connected to the stub server");
+        QVERIFY2(!connected.isEmpty() || connected.wait(2s), "the test profile never connected to the stub server");
         // a new profile is given packages of its own on connect, and each of
         // those arms a save that would otherwise land mid-export
         settleSaves();
@@ -346,29 +493,27 @@ private slots:
         // another one finds. getActualPath() falls back to this setting, which
         // is the same one the "where do you want to save it" picker writes, so
         // pointing it here is how the export is aimed without a file dialog.
+        mAnsweredMessageBoxes = 0;
         mExportDir = qsl("%1/%2").arg(mExportRoot.path(), QString::fromUtf8(QTest::currentTestFunction()));
         QVERIFY(QDir().mkpath(mExportDir));
-        mudlet::getQSettings()->setValue(qsl("lastFileDialogLocation"), mExportDir);
+        MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), mExportDir);
     }
 
     void cleanup()
     {
         stopAnsweringMessageBoxes();
-        // slot_recountItems() arms a zero timer and holds a static flag until it
-        // runs, so let it run before the dialog that owns it goes away
-        QApplication::processEvents();
         delete mpExporter;
         mpExporter = nullptr;
         if (auto* self = mudlet::self()) {
             if (auto* host = self->getActiveHost()) {
-                QTest::qWait(50);
+                QTest::qWait(50ms);
                 host->waitForProfileSave();
             }
         }
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory();
         delete mudlet::self();
+        deleteProfileDirectory();
         mpHost = nullptr;
 
         for (const auto& packageName : std::as_const(mStagedPackageNames)) {
@@ -443,7 +588,7 @@ private slots:
         QCOMPARE(groupItem->childCount(), 2);
 
         const QString emptyTitle = selectionTitle();
-        QVERIFY2(!emptyTitle.contains(QChar('3')), "the title already showed the count this test is about to produce");
+        QVERIFY2(emptyTitle != countedTitle(3), "the title already showed the count this test is about to produce");
         QCOMPARE(groupItem->child(0)->checkState(0), Qt::Unchecked);
         QCOMPARE(groupItem->child(1)->checkState(0), Qt::Unchecked);
 
@@ -460,7 +605,7 @@ private slots:
         QCOMPARE(itemNamed(triggersTop(), qsl("exporter loner"))->checkState(0), Qt::Unchecked);
         // three: the folder and both of its children, so counting only the
         // leaves or only the folder would each give a different answer
-        QVERIFY2(selectionTitle().contains(QChar('3')), qPrintable(qsl("The title has to count all three checked items, but said: \"%1\"").arg(selectionTitle())));
+        QCOMPARE(selectionTitle(), countedTitle(3));
     }
 
     // Right-clicking an item is the way to take a folder without its contents,
@@ -698,7 +843,7 @@ private slots:
         QVERIFY2(!info.value(qsl("created")).isEmpty(), "the package was not stamped with when it was made");
 
         // the author is the one field offered back the next time round
-        QCOMPARE(mudlet::getQSettings()->value(qsl("packageAuthor")).toString(), qsl("A Test Author"));
+        QCOMPARE(MudletApp::getQSettings()->value(qsl("packageAuthor")).toString(), qsl("A Test Author"));
     }
 
     // A help URL that already names a scheme is left exactly as it is, so the
@@ -756,6 +901,60 @@ private slots:
         auto [installed, reason] = mpHost->installPackage(packagePath(packageName), enums::PackageModuleType::Package);
         QVERIFY2(installed, qPrintable(reason));
         QCOMPARE(mpHost->mPackageInfo.value(packageName).value(qsl("description")), typed);
+    }
+
+    // An image dropped onto the unfocused description, which shows rendered
+    // markdown, has to land where it was dropped rather than at the end.
+    void test_anImageDroppedOnTheDescriptionLandsWhereItWasDropped_5196()
+    {
+        const QString imagePath = qsl("%1/dropped.png").arg(mExportDir);
+        QVERIFY(writeImage(imagePath));
+
+        openExporter();
+        mpExporter->show();
+        QVERIFY(QTest::qWaitForWindowExposed(mpExporter));
+        buttonNamed(qsl("pushButton_openInfos"))->click();
+        auto* description = mpExporter->findChild<QTextEdit*>(qsl("textEdit_description"));
+        QVERIFY(description);
+        QVERIFY(description->isVisible());
+        nameField()->setFocus();
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return nameField()->hasFocus();
+                         },
+                         2s),
+                 "the package name field never took focus");
+        QVERIFY(!description->hasFocus());
+        mpExporter->mPlainDescription = qsl("First **paragraph**.\n\nSecond paragraph.");
+        mpExporter->showRenderedDescription();
+
+        QMimeData mimeData;
+        mimeData.setUrls({QUrl::fromLocalFile(imagePath)});
+        QWidget* viewport = description->viewport();
+        const QPoint start = viewport->rect().center();
+        QDragEnterEvent enter(start, Qt::CopyAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(viewport, &enter);
+        QVERIFY(enter.isAccepted());
+
+        QTextCursor target(description->document());
+        target.setPosition(description->toPlainText().indexOf(qsl("Second")));
+        const QRect targetRect = description->cursorRect(target);
+        const QPoint dropPoint(targetRect.left() + 1, targetRect.center().y());
+        QDragMoveEvent move(dropPoint, Qt::CopyAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(viewport, &move);
+        QDropEvent drop(dropPoint, Qt::CopyAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(viewport, &drop);
+
+        const QString expected = qsl("First **paragraph**.\n\n![Image]($dropped.png)Second paragraph.");
+        QCOMPARE(mpExporter->mPlainDescription, expected);
+        QVERIFY2(!description->toPlainText().contains(qsl("**")), "the editor was left showing the markdown source after the drop");
+
+        QDragEnterEvent reenter(start, Qt::CopyAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(viewport, &reenter);
+        QDragLeaveEvent leave;
+        QApplication::sendEvent(viewport, &leave);
+        QVERIFY2(!description->toPlainText().contains(qsl("**")), "the editor was left showing the markdown source after the drag left it");
+        QCOMPARE(mpExporter->mPlainDescription, expected);
     }
 
     // Assets ride along in the archive and are unpacked into the profile with
@@ -891,6 +1090,60 @@ private slots:
         QVERIFY2(QFileInfo::exists(qsl("%1/%2/.mudlet/Icon/badge.png").arg(profileHome(), rebuiltName)), "the icon file did not survive the round trip");
     }
 
+    // The dialog is not modal, so the editor or a script can delete an item it
+    // lists while it is open; that item is then simply not there to export.
+    void test_itemsDeletedWhileTheDialogIsOpenAreLeftOutOfTheExport()
+    {
+        const QString packageName = packageNamed(qsl("exporter-deleted-items"));
+        makeTrigger(qsl("exporter surviving trigger"), nullptr);
+        auto* checkedTrigger = makeTrigger(qsl("exporter checked then deleted"), nullptr);
+        auto* uncheckedTrigger = makeTrigger(qsl("exporter unchecked then deleted"), nullptr);
+        auto* checkedAlias = makeAlias(qsl("exporter alias checked then deleted"));
+
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter surviving trigger")));
+        QVERIFY(checkItem(triggersTop(), qsl("exporter checked then deleted")));
+        QVERIFY(checkItem(aliasesTop(), qsl("exporter alias checked then deleted")));
+        delete checkedTrigger;
+        delete uncheckedTrigger;
+        delete checkedAlias;
+
+        QVERIFY2(runExport(packageName), "the export never finished");
+        QVERIFY2(QFileInfo::exists(packagePath(packageName)), qPrintable(qsl("No package file was written. The dialog said: \"%1\"").arg(infoLabel()->text())));
+        settleSaves();
+        auto [installed, reason] = mpHost->installPackage(packagePath(packageName), enums::PackageModuleType::Package);
+        QVERIFY2(installed, qPrintable(reason));
+        QCOMPARE(triggerCount(qsl("exporter surviving trigger")), 2);
+        QCOMPARE(triggerCount(qsl("exporter checked then deleted")), 0);
+        QCOMPARE(aliasCount(qsl("exporter alias checked then deleted")), 0);
+    }
+
+    void test_choosingAnInstalledPackageAfterOneOfItsItemsWasDeletedChecksTheRest()
+    {
+        const QString existingPackage = qsl("exporter-shrunk");
+        auto* master = makeTrigger(existingPackage, nullptr, true);
+        master->mPackageName = existingPackage;
+        auto* remaining = makeTrigger(qsl("exporter remaining member"), master);
+        remaining->mPackageName = existingPackage;
+        // Outside the master folder, so checking the folder does not check it too
+        auto* deleted = makeTrigger(qsl("exporter deleted member"), nullptr);
+        deleted->mPackageName = existingPackage;
+        mpHost->mInstalledPackages << existingPackage;
+        mpHost->mPackageInfo[existingPackage] = QMap<QString, QString>{{qsl("mpackage"), existingPackage}};
+
+        openExporter();
+        delete deleted;
+        auto* packageList = comboNamed(qsl("packageList"));
+        const int index = packageList->findText(existingPackage);
+        QVERIFY2(index > 0, "the installed package was not offered in the dropdown");
+        packageList->setCurrentIndex(index);
+
+        auto* masterItem = itemNamed(triggersTop(), existingPackage);
+        QVERIFY(masterItem);
+        QCOMPARE(itemNamed(masterItem, qsl("exporter remaining member"))->checkState(0), Qt::Checked);
+        QCOMPARE(itemNamed(triggersTop(), qsl("exporter deleted member"))->checkState(0), Qt::Unchecked);
+    }
+
     // Dependencies are moved between the list of what is available and the list
     // of what this package needs, and the Delete key is the way back.
     void test_dependenciesMoveBetweenTheAvailableAndRequiredLists()
@@ -951,6 +1204,574 @@ private slots:
         QVERIFY2(infoLabel()->text().contains(qsl("created and installed successfully")), qPrintable(qsl("The label held: \"%1\"").arg(infoLabel()->text())));
         // the name is cleared so that another module can be made straight away
         QVERIFY2(nameField()->text().isEmpty(), "the module name was left in the field afterwards");
+    }
+
+    // An item whose Lua does not work is the one thing the person at this dialog
+    // already knows about: it is the item they picked to export, the editor
+    // behind the dialog is showing it with an error against it, and nothing here
+    // went wrong - the module file is written and holds exactly the Lua the
+    // profile has. So the export is reported as what it is, and the broken item
+    // is left to the editor rather than restated in red over a good export.
+    void test_moduleCreationModeLeavesABrokenItemToTheEditor()
+    {
+        const QString moduleName = packageNamed(qsl("exporter-broken-module"));
+        makeScript(qsl("exporter module broken script"))->setScript(qsl("exporterModuleMissingFunction()"));
+
+        openExporter();
+        mpExporter->setModuleCreationMode(true);
+        QVERIFY(checkItem(scriptsTop(), qsl("exporter module broken script")));
+        settleSaves();
+        nameField()->setText(moduleName);
+        mpExporter->slot_exportPackage();
+        QVERIFY(waitForExportToSettle());
+
+        const QString said = infoLabel()->text();
+        QVERIFY2(mpHost->mInstalledModules.contains(moduleName), qPrintable(qsl("The module it made was not installed. The dialog said: \"%1\"").arg(said)));
+        QVERIFY2(said.contains(qsl("created and installed successfully")), qPrintable(qsl("An export that worked was not reported as one: \"%1\"").arg(said)));
+        QVERIFY2(!said.contains(qsl("exporterModuleMissingFunction")), qPrintable(qsl("The dialog repeated the Lua error the editor already shows: \"%1\"").arg(said)));
+    }
+
+    // The overwrite is agreed to before anything is written, and the copy
+    // already installed is taken away first - an install onto a name a module
+    // still holds is refused, so the freshly written file would never load.
+    void test_remakingAnInstalledModuleReplacesIt_9495()
+    {
+        const QString moduleName = packageNamed(qsl("exporter-module-again"));
+        makeTrigger(qsl("exporter module again trigger"), nullptr);
+
+        openExporter();
+        mpExporter->setModuleCreationMode(true);
+        QVERIFY(checkItem(triggersTop(), qsl("exporter module again trigger")));
+        settleSaves();
+        nameField()->setText(moduleName);
+        mpExporter->slot_exportPackage();
+        QVERIFY(waitForExportToSettle());
+        QVERIFY2(mpHost->mInstalledModules.contains(moduleName), qPrintable(qsl("The module was not installed the first time round: \"%1\"").arg(infoLabel()->text())));
+
+        settleSaves();
+        nameField()->setText(moduleName);
+        answerNextMessageBox(QMessageBox::Yes);
+        mpExporter->slot_exportPackage();
+        QVERIFY(waitForExportToSettle());
+
+        const QString said = infoLabel()->text();
+        QCOMPARE(mAnsweredMessageBoxes, 1);
+        QVERIFY2(said.contains(qsl("created and installed successfully")), qPrintable(qsl("Remaking the module has to install it again, but the dialog said: \"%1\"").arg(said)));
+        QVERIFY2(mpHost->mInstalledModules.contains(moduleName), "the module was not installed the second time round");
+        QCOMPARE(triggerCount(moduleName), 1);
+    }
+
+    // The "Create Module" dialog invites a save location to be picked, and
+    // used to write the module to the profile folder whatever was chosen.
+    void test_aModuleIsSavedInTheFolderChosenForIt_9424()
+    {
+        const QString moduleName = packageNamed(qsl("exporter-module-elsewhere"));
+        const QString chosenDir = qsl("%1/module-home").arg(mExportDir);
+        QVERIFY(QDir().mkpath(chosenDir));
+        makeTrigger(qsl("exporter module location trigger"), nullptr);
+
+        openExporter();
+        mpExporter->setModuleCreationMode(true);
+        QVERIFY(checkItem(triggersTop(), qsl("exporter module location trigger")));
+        QVERIFY2(chooseSaveLocation(chosenDir), "the save location picker was never answered");
+        settleSaves();
+        nameField()->setText(moduleName);
+        mpExporter->slot_exportPackage();
+        QVERIFY(waitForExportToSettle());
+
+        QVERIFY2(QFileInfo::exists(qsl("%1/%2.mpackage").arg(chosenDir, moduleName)),
+                 qPrintable(qsl("The module was not saved where it was told to. The dialog said: \"%1\"").arg(infoLabel()->text())));
+        QVERIFY2(!QFileInfo::exists(qsl("%1/%2.mpackage").arg(profileHome(), moduleName)), "the module was written into the profile folder as well");
+    }
+
+    // Cancelling the picker used to hand the empty string it answers with
+    // straight to the export location, quietly undoing the folder already
+    // chosen and sending the module back to the profile folder.
+    void test_cancellingTheSaveLocationPickerKeepsTheFolderAlreadyChosen_9495()
+    {
+        const QString moduleName = packageNamed(qsl("exporter-module-picker-cancel"));
+        const QString chosenDir = qsl("%1/module-home").arg(mExportDir);
+        QVERIFY(QDir().mkpath(chosenDir));
+        makeTrigger(qsl("exporter picker cancel trigger"), nullptr);
+
+        openExporter();
+        mpExporter->setModuleCreationMode(true);
+        QVERIFY(checkItem(triggersTop(), qsl("exporter picker cancel trigger")));
+        QVERIFY2(chooseSaveLocation(chosenDir), "the save location picker was never answered");
+        QVERIFY2(chooseSaveLocation(QString()), "the picker that was to be cancelled never came up");
+        settleSaves();
+        nameField()->setText(moduleName);
+        mpExporter->slot_exportPackage();
+        QVERIFY(waitForExportToSettle());
+
+        QVERIFY2(QFileInfo::exists(qsl("%1/%2.mpackage").arg(chosenDir, moduleName)),
+                 qPrintable(qsl("Cancelling the picker has to leave the module going where it already was. The dialog said: \"%1\"").arg(infoLabel()->text())));
+    }
+
+    // The folder chosen is what every later file dialog opens at. That was
+    // remembered as the folder's parent, so the next dialog opened a level up.
+    void test_choosingASaveLocationRemembersThatFolderNotItsParent_8309()
+    {
+        const QString chosenDir = qsl("%1/remembered").arg(mExportDir);
+        QVERIFY(QDir().mkpath(chosenDir));
+
+        openExporter();
+        QVERIFY2(chooseSaveLocation(chosenDir), "the save location picker was never answered");
+
+        QCOMPARE(MudletApp::getQSettings()->value(qsl("lastFileDialogLocation")).toString(), chosenDir);
+    }
+
+    // An asset that is there but cannot be read used to be skipped without a
+    // word, shipping a package missing a file it was told to carry.
+    void test_anAssetThatCannotBeCopiedStopsTheExport_6828()
+    {
+        const QString unreadable = qsl("%1/unreadable.txt").arg(mExportDir);
+        QVERIFY(writeTextFile(unreadable, qsl("an asset nobody may read")));
+        // Windows has no permission bits to clear, so setPermissions() refuses
+        // an empty set outright rather than leaving the file unreadable
+        if (!QFile::setPermissions(unreadable, QFileDevice::Permissions()) || QFileInfo(unreadable).isReadable()) {
+            QSKIP("a file with no permissions set is still readable here, so a copy of one cannot be made to fail");
+        }
+
+        const QString packageName = packageNamed(qsl("exporter-unreadable-asset"));
+        makeTrigger(qsl("exporter unreadable asset trigger"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter unreadable asset trigger")));
+        addedFiles()->addItem(unreadable);
+
+        nameField()->setText(packageName);
+        mpExporter->slot_exportPackage();
+        QVERIFY(waitForExportToSettle());
+
+        QVERIFY2(infoLabel()->text().contains(qsl("cannot copy")), qPrintable(qsl("The asset that could not be copied has to be reported, but the label held: \"%1\"").arg(infoLabel()->text())));
+        QVERIFY2(!QFileInfo::exists(packagePath(packageName)), "a package file was written even though one of its assets could not be copied");
+    }
+
+    // The description's images are copied into the staging tree and then the
+    // ones the description no longer mentions are purged. The description is
+    // Markdown, and the pattern that read the images out of it was still
+    // looking for the closing quote of an HTML attribute, so it found none of
+    // them and the purge took every image with it.
+    void test_anImageTheDescriptionUsesIsNotPurgedBeforeZipping_5377()
+    {
+        const QString packageName = packageNamed(qsl("exporter-description-image"));
+        const QString imagePath = qsl("%1/badge.png").arg(mExportDir);
+        QVERIFY(writeImage(imagePath));
+        makeTrigger(qsl("exporter description image trigger"), nullptr);
+
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter description image trigger")));
+        useDescriptionImage(imagePath);
+
+        QVERIFY2(runExport(packageName), "the export never finished");
+        QVERIFY2(QFileInfo::exists(packagePath(packageName)), qPrintable(qsl("No package was written. The dialog said: \"%1\"").arg(infoLabel()->text())));
+        QVERIFY2(QFileInfo::exists(stagedDescriptionImage(packageName, qsl("badge.png"))), "the image the description uses was purged before zipping");
+    }
+
+    // A name with a space in it looked to the purge like an image the
+    // description had stopped using - see cleanupUnusedImages().
+    void test_anImageWhoseNameHasASpaceIsNotPurgedBeforeZipping_9495()
+    {
+        const QString packageName = packageNamed(qsl("exporter-spaced-image"));
+        const QString imagePath = qsl("%1/my badge.png").arg(mExportDir);
+        QVERIFY(writeImage(imagePath));
+        makeTrigger(qsl("exporter spaced image trigger"), nullptr);
+
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter spaced image trigger")));
+        useDescriptionImage(imagePath);
+
+        QVERIFY2(runExport(packageName), "the export never finished");
+        QVERIFY2(QFileInfo::exists(packagePath(packageName)), qPrintable(qsl("No package was written. The dialog said: \"%1\"").arg(infoLabel()->text())));
+        QVERIFY2(QFileInfo::exists(stagedDescriptionImage(packageName, qsl("my badge.png"))), "the image with a space in its name was purged before zipping");
+    }
+
+    // The description's image has to travel inside the package, and the link to
+    // it is written in angle brackets so that it survives $packagePath expanding
+    // to a path with spaces in it.
+    void test_theDescriptionImageShipsInsideThePackage_9431()
+    {
+        const QString packageName = packageNamed(qsl("exporter-shipped-image"));
+        const QString imagePath = qsl("%1/badge.png").arg(mExportDir);
+        QVERIFY(writeImage(imagePath));
+        makeTrigger(qsl("exporter shipped image trigger"), nullptr);
+
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter shipped image trigger")));
+        useDescriptionImage(imagePath);
+
+        QVERIFY2(runExport(packageName), "the export never finished");
+        settleSaves();
+        auto [installed, reason] = mpHost->installPackage(packagePath(packageName), enums::PackageModuleType::Package);
+        QVERIFY2(installed, qPrintable(reason));
+
+        QVERIFY2(QFileInfo::exists(qsl("%1/%2/.mudlet/description_images/badge.png").arg(profileHome(), packageName)), "the description image was not inside the package");
+        const QString description = mpHost->mPackageInfo.value(packageName).value(qsl("description"));
+        QVERIFY2(description.contains(qsl("<$packagePath/.mudlet/description_images/badge.png>")), qPrintable(qsl("The description held: \"%1\"").arg(description)));
+    }
+
+    // The icon of the package being updated is drawn as a pixmap in a label
+    // rather than as a stylesheet border image, and the label is shown only
+    // when there is an icon to put in it.
+    void test_theIconPreviewIsShownOnlyForAPackageThatHasOne_5028()
+    {
+        const QString withIcon = qsl("exporter-with-icon");
+        const QString withoutIcon = qsl("exporter-without-icon");
+        const QString iconDirectory = qsl("%1/%2/.mudlet/Icon").arg(profileHome(), withIcon);
+        QVERIFY(QDir().mkpath(iconDirectory));
+        QVERIFY(writeImage(qsl("%1/badge.png").arg(iconDirectory)));
+
+        mpHost->mInstalledPackages << withIcon << withoutIcon;
+        mpHost->mPackageInfo[withIcon] = QMap<QString, QString>{{qsl("mpackage"), withIcon}, {qsl("icon"), qsl("badge.png")}};
+        mpHost->mPackageInfo[withoutIcon] = QMap<QString, QString>{{qsl("mpackage"), withoutIcon}};
+
+        openExporter();
+        auto* iconLabel = mpExporter->findChild<QLabel*>(qsl("Icon"));
+        QVERIFY(iconLabel);
+        auto* packageList = comboNamed(qsl("packageList"));
+        const int withIconIndex = packageList->findText(withIcon);
+        const int withoutIconIndex = packageList->findText(withoutIcon);
+        QVERIFY2(withIconIndex > 0 && withoutIconIndex > 0, "the installed packages were not offered in the dropdown");
+
+        packageList->setCurrentIndex(withIconIndex);
+        QVERIFY2(!iconLabel->isHidden(), "the icon of the package being updated was not shown");
+        QVERIFY2(!iconLabel->pixmap().isNull(), "the icon label was left with nothing to draw");
+
+        packageList->setCurrentIndex(withoutIconIndex);
+        QVERIFY2(iconLabel->isHidden(), "the icon label was left showing for a package that has no icon");
+    }
+
+    // Re-exporting an installed package with a new icon has to ship that icon
+    // alone, without listing the package's own .mudlet folder as an asset, while
+    // the images its description already uses still come along.
+    void test_aNewIconReplacesTheOldOneWhenReExporting_5254()
+    {
+        const QString existingPackage = packageNamed(qsl("exporter-reiconed"));
+        const QString dataDirectory = qsl("%1/%2/.mudlet").arg(profileHome(), existingPackage);
+        QVERIFY(QDir().mkpath(qsl("%1/Icon").arg(dataDirectory)));
+        QVERIFY(QDir().mkpath(qsl("%1/description_images").arg(dataDirectory)));
+        QVERIFY(writeImage(qsl("%1/Icon/old-icon.png").arg(dataDirectory)));
+        QVERIFY(writeImage(qsl("%1/description_images/shot.png").arg(dataDirectory)));
+        const QString newIcon = qsl("%1/new-icon.png").arg(mExportDir);
+        QVERIFY(writeImage(newIcon));
+
+        auto* member = makeTrigger(qsl("exporter reiconed member"), nullptr);
+        member->mPackageName = existingPackage;
+        mpHost->mInstalledPackages << existingPackage;
+        mpHost->mPackageInfo[existingPackage] = QMap<QString, QString>{
+                {qsl("mpackage"), existingPackage}, {qsl("icon"), qsl("old-icon.png")}, {qsl("description"), qsl("![shot](<$packagePath/.mudlet/description_images/shot.png>)")}};
+
+        openExporter();
+        auto* packageList = comboNamed(qsl("packageList"));
+        const int index = packageList->findText(existingPackage);
+        QVERIFY2(index > 0, "the installed package was not offered in the dropdown");
+        packageList->setCurrentIndex(index);
+        QCOMPARE(addedFiles()->count(), 0);
+
+        QVERIFY2(chooseIcon(newIcon), "the icon picker was never answered");
+        QVERIFY2(runExport(existingPackage), "the export never finished");
+        QVERIFY2(QFileInfo::exists(packagePath(existingPackage)), qPrintable(qsl("No package was written. The dialog said: \"%1\"").arg(infoLabel()->text())));
+
+        const QString staging = stagingPath(existingPackage);
+        QCOMPARE(QDir(qsl("%1/.mudlet/Icon").arg(staging)).entryList(QDir::Files), QStringList{qsl("new-icon.png")});
+        QVERIFY2(QFileInfo::exists(stagedDescriptionImage(existingPackage, qsl("shot.png"))), "the image the description already used was left out");
+    }
+
+    // Going back to the first dropdown entry keeps the description, so it has to
+    // keep the images that description uses as well
+    void test_theFirstEntryKeepsTheDescriptionImagesOfThePackageBefore_5254()
+    {
+        const QString existingPackage = packageNamed(qsl("exporter-backtofirst"));
+        const QString dataDirectory = qsl("%1/%2/.mudlet").arg(profileHome(), existingPackage);
+        QVERIFY(QDir().mkpath(qsl("%1/description_images").arg(dataDirectory)));
+        QVERIFY(writeImage(qsl("%1/description_images/shot.png").arg(dataDirectory)));
+
+        auto* member = makeTrigger(qsl("exporter backtofirst member"), nullptr);
+        member->mPackageName = existingPackage;
+        mpHost->mInstalledPackages << existingPackage;
+        mpHost->mPackageInfo[existingPackage] = QMap<QString, QString>{{qsl("mpackage"), existingPackage}, {qsl("description"), qsl("![shot](<$packagePath/.mudlet/description_images/shot.png>)")}};
+
+        openExporter();
+        auto* packageList = comboNamed(qsl("packageList"));
+        const int index = packageList->findText(existingPackage);
+        QVERIFY2(index > 0, "the installed package was not offered in the dropdown");
+        packageList->setCurrentIndex(index);
+        packageList->setCurrentIndex(0);
+        QVERIFY(checkItem(triggersTop(), qsl("exporter backtofirst member")));
+
+        const QString newPackage = packageNamed(qsl("exporter-backtofirst-copy"));
+        QVERIFY2(runExport(newPackage), "the export never finished");
+        QVERIFY2(QFileInfo::exists(packagePath(newPackage)), qPrintable(qsl("No package was written. The dialog said: \"%1\"").arg(infoLabel()->text())));
+        QVERIFY2(QFileInfo::exists(stagedDescriptionImage(newPackage, qsl("shot.png"))), "the image the kept description uses was left out");
+    }
+
+    // The zip's finished handler dies with the dialog, so the dialog's destructor
+    // has to wind the export up: cursor, lock and watcher
+    void test_closingTheDialogMidExportLeavesExportingPossible_10441()
+    {
+        const QString packageName = packageNamed(qsl("exporter-closed-mid-export"));
+        makeTrigger(qsl("exporter mid-export trigger"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter mid-export trigger")));
+        nameField()->setText(packageName);
+        QVERIFY2(!QApplication::overrideCursor(), "a cursor was already overridden before the export began");
+
+        mpExporter->slot_exportPackage();
+        QVERIFY2(infoLabel()->text().contains(qsl("Exporting package...")), qPrintable(qsl("The zip was never started; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        // no event loop has run since, so the export's finished handler cannot have
+        delete mpExporter;
+        mpExporter = nullptr;
+        QVERIFY2(!QApplication::overrideCursor(), "the busy cursor was left up after the exporting dialog went away");
+
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter mid-export trigger")));
+        nameField()->setText(packageNamed(qsl("exporter-after-closed-export")));
+        QVERIFY2(!exportButton()->isEnabled(), "another export was offered while the closed dialog's zip could still be reading its staging folder");
+        QVERIFY2(QThreadPool::globalInstance()->waitForDone(30000), "the zip was still running after 30 seconds");
+        QVERIFY2(QFileInfo::exists(packagePath(packageName)), "closing the dialog stopped its package from being written");
+        // the zip's end is reported through the event loop, and no field is touched to re-check the button
+        QTRY_VERIFY2(exportButton()->isEnabled(), qPrintable(qsl("Exporting stayed blocked after the dialog that was exporting went away; the button said: \"%1\"").arg(exportButton()->toolTip())));
+        QTRY_VERIFY2(qApp->findChildren<QFutureWatcherBase*>(Qt::FindDirectChildrenOnly).isEmpty(), "the closed dialog's zip watcher was never deleted");
+    }
+
+    void test_aZipThatFailsAfterItsDialogClosedIsLogged()
+    {
+        const QString packageName = packageNamed(qsl("exporter-fails-after-close"));
+        makeTrigger(qsl("exporter fails after close trigger"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter fails after close trigger")));
+        nameField()->setText(packageName);
+        // a folder where the package file goes makes the zip fail; permissions would not stop root
+        QVERIFY(QDir().mkpath(packagePath(packageName)));
+        answerNextMessageBox(QMessageBox::Yes);
+
+        mpExporter->slot_exportPackage();
+        QVERIFY2(infoLabel()->text().contains(qsl("Exporting package...")), qPrintable(qsl("The zip was never started; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        delete mpExporter;
+        mpExporter = nullptr;
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("exporting \"%1\" failed after its dialog was closed").arg(packageName)));
+        QVERIFY2(QThreadPool::globalInstance()->waitForDone(30000), "the zip was still running after 30 seconds");
+        QTRY_VERIFY2(qApp->findChildren<QFutureWatcherBase*>(Qt::FindDirectChildrenOnly).isEmpty(), "the closed dialog's zip watcher was never deleted");
+    }
+
+    // Cancel only asks the zip to stop; until it has, its staging folder may still be read
+    void test_cancellingHoldsEveryExportOffUntilTheZipHasStopped()
+    {
+#if !defined(LIBZIP_SUPPORTS_CANCELLING)
+        QSKIP("this libzip cannot cancel an export");
+#endif
+        const QString packageName = packageNamed(qsl("exporter-cancelled-mid-zip"));
+        makeTrigger(qsl("exporter mid-zip cancel trigger"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter mid-zip cancel trigger")));
+        nameField()->setText(packageName);
+
+        mpExporter->slot_exportPackage();
+        QVERIFY2(clickCancel(), "the Cancel button was not showing during the export");
+        QVERIFY2(!exportButton()->isEnabled(), "Export was offered again before the cancelled zip had stopped");
+        auto other = openAnotherExporter(packageNamed(qsl("exporter-while-cancelling")), qsl("exporter mid-zip cancel trigger"));
+        QVERIFY2(!exportButtonOf(other.get())->isEnabled(), "another exporter offered Export while the cancelled zip was still running");
+        other->slot_exportPackage();
+        const QString otherSaid = other->findChild<QLabel*>(qsl("infoLabel"))->text();
+        QVERIFY2(otherSaid.contains(qsl("still being exported")), qPrintable(qsl("A second export was started alongside the cancelled one; it said: \"%1\"").arg(otherSaid)));
+
+        QVERIFY(waitForExportToSettle());
+        QTRY_VERIFY2(exportButton()->isEnabled(), "Export stayed off after the cancelled zip had stopped");
+        QVERIFY2(exportButtonOf(other.get())->isEnabled(), "the other exporter was not told the cancelled zip had stopped");
+        QVERIFY2(!QApplication::overrideCursor(), "the busy cursor was left up");
+    }
+
+    // The lock is shared, so an exporter that was open before the export began is held off too
+    void test_anExporterAlreadyOpenIsHeldOffWhileAnotherExports()
+    {
+        makeTrigger(qsl("exporter already open trigger"), nullptr);
+        const QString otherName = packageNamed(qsl("exporter-already-open"));
+        {
+            QFile existing(packagePath(otherName));
+            QVERIFY(existing.open(QIODevice::WriteOnly));
+        }
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter already open trigger")));
+        nameField()->setText(packageNamed(qsl("exporter-opened-first")));
+        auto other = openAnotherExporter(otherName, qsl("exporter already open trigger"));
+        QVERIFY2(exportButtonOf(other.get())->isEnabled(), "the other exporter did not offer Export before any export began");
+
+        mpExporter->slot_exportPackage();
+        QVERIFY2(infoLabel()->text().contains(qsl("Exporting package...")), qPrintable(qsl("The zip was never started; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        QVERIFY2(!exportButtonOf(other.get())->isEnabled(), "an exporter that was already open still offered Export while another export ran");
+        // answered so that a prompt shown in error cannot hang the test
+        answerNextMessageBox(QMessageBox::Yes);
+        other->slot_exportPackage();
+        QVERIFY2(mAnsweredMessageBoxes == 0, "the user was asked to overwrite a package that could not be exported yet");
+        const QString otherSaid = other->findChild<QLabel*>(qsl("infoLabel"))->text();
+        QVERIFY2(otherSaid.contains(qsl("still being exported")), qPrintable(qsl("A second export was started alongside the first; it said: \"%1\"").arg(otherSaid)));
+
+        QVERIFY(waitForExportToSettle());
+        QTRY_VERIFY2(exportButtonOf(other.get())->isEnabled(), "the other exporter was not told the export had ended");
+    }
+
+    // An uninstall refused while a profile save runs is one of the export's exits
+    void test_aModuleWhoseOldCopyCannotBeRemovedLetsGoOfItsExport()
+    {
+        const QString moduleName = packageNamed(qsl("exporter-module-not-removed"));
+        makeTrigger(qsl("exporter module not removed trigger"), nullptr);
+        openExporter();
+        mpExporter->setModuleCreationMode(true);
+        QVERIFY(checkItem(triggersTop(), qsl("exporter module not removed trigger")));
+        settleSaves();
+        nameField()->setText(moduleName);
+        mpExporter->slot_exportPackage();
+        QVERIFY(waitForExportToSettle());
+        QVERIFY2(mpHost->mInstalledModules.contains(moduleName), qPrintable(qsl("The module was not installed the first time round: \"%1\"").arg(infoLabel()->text())));
+        QTRY_VERIFY(mpExporter->findChildren<QFutureWatcherBase*>().isEmpty());
+
+        settleSaves();
+        nameField()->setText(moduleName);
+        answerNextMessageBox(QMessageBox::Yes);
+        mpExporter->slot_exportPackage();
+        mpHost->mWritingHostAndModules = true;
+        const bool settled = waitForExportToSettle();
+        mpHost->mWritingHostAndModules = false;
+        QVERIFY(settled);
+
+        QVERIFY2(infoLabel()->text().contains(qsl("failed to uninstall existing version")), qPrintable(qsl("The uninstall was not refused; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        QTRY_VERIFY2(mpExporter->findChildren<QFutureWatcherBase*>().isEmpty(), "the export's zip watcher was left behind");
+        QVERIFY2(!QApplication::overrideCursor(), "the busy cursor was left up");
+    }
+
+    // processEvents() inside the export can run whatever deletes the dialog
+    void test_deletingTheDialogWhileTheExportGetsReadyEndsIt()
+    {
+        makeTrigger(qsl("exporter deleted early trigger"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter deleted early trigger")));
+        nameField()->setText(packageNamed(qsl("exporter-deleted-early")));
+        dlgPackageExporter* exporter = mpExporter;
+        QMetaObject::invokeMethod(
+                this,
+                [this]() {
+                    delete mpExporter;
+                    mpExporter = nullptr;
+                },
+                Qt::QueuedConnection);
+
+        exporter->slot_exportPackage();
+        QVERIFY2(!mpExporter, "the dialog was not deleted while the export got ready");
+        QVERIFY2(!QApplication::overrideCursor(), "the busy cursor was left up");
+        auto other = openAnotherExporter(packageNamed(qsl("exporter-after-deleted-early")), qsl("exporter deleted early trigger"));
+        QVERIFY2(exportButtonOf(other.get())->isEnabled(), "exporting stayed blocked after the dialog was deleted");
+    }
+
+    // Cancel is shown, and the event loop runs, before the zip is started
+    void test_cancellingBeforeTheZipStartsStopsThePackageBeingWritten()
+    {
+#if !defined(LIBZIP_SUPPORTS_CANCELLING)
+        QSKIP("this libzip cannot cancel an export");
+#endif
+        const QString packageName = packageNamed(qsl("exporter-cancelled-early"));
+        makeTrigger(qsl("exporter early cancel trigger"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter early cancel trigger")));
+        nameField()->setText(packageName);
+
+        bool cancelClicked = false;
+        QMetaObject::invokeMethod(
+                this,
+                [this, &cancelClicked]() {
+                    auto* box = mpExporter->findChild<QDialogButtonBox*>(qsl("buttonBox"));
+                    for (auto* button : box->buttons()) {
+                        if (box->buttonRole(button) == QDialogButtonBox::ResetRole && !button->isHidden()) {
+                            button->click();
+                            cancelClicked = true;
+                        }
+                    }
+                },
+                Qt::QueuedConnection);
+        mpExporter->slot_exportPackage();
+        QVERIFY2(cancelClicked, "the Cancel button was not showing while the export was getting ready");
+        QVERIFY(waitForExportToSettle());
+        QVERIFY2(infoLabel()->text().contains(qsl("Export cancelled.")), qPrintable(qsl("Cancelling did not stop the export; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        QVERIFY2(!QFileInfo::exists(packagePath(packageName)), "the package was written although the export was cancelled");
+    }
+
+    // The recount waits for a zero timer and only one is armed at a time, so a
+    // dialog gone before its timer ran must not stop the next one from counting.
+    void test_theCountKeepsUpAfterADialogClosedBeforeItCounted_10442()
+    {
+        makeTrigger(qsl("exporter early-closed count"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter early-closed count")));
+        // replaced with no event loop run in between, so its recount is still pending
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter early-closed count")));
+
+        const QString expected = countedTitle(1);
+        QVERIFY2(QTest::qWaitFor(
+                         [this, expected]() {
+                             return selectionTitle() == expected;
+                         },
+                         2s),
+                 qPrintable(qsl("The title never took the count, and said: \"%1\"").arg(selectionTitle())));
+    }
+
+    // Each dialog has its own pending recount, so one exporter's pending
+    // recount must not hold back another dialog's checked in the same pass.
+    void test_twoOpenExportersEachKeepTheirOwnCount_10442()
+    {
+        makeTrigger(qsl("exporter twin count"), nullptr);
+        openExporter();
+        auto other = std::make_unique<dlgPackageExporter>(nullptr, mpHost);
+        auto* otherTree = other->findChild<QTreeWidget*>(qsl("treeWidget_exportSelection"));
+        auto* otherBox = other->findChild<QGroupBox*>(qsl("groupBox_exportSelection"));
+        QVERIFY(otherTree && otherBox);
+
+        QVERIFY(checkItem(triggersTop(), qsl("exporter twin count")));
+        QVERIFY(checkItem(otherTree->topLevelItem(0), qsl("exporter twin count")));
+
+        const QString expected = countedTitle(1);
+        QVERIFY2(QTest::qWaitFor(
+                         [this, expected, otherBox]() {
+                             return selectionTitle() == expected && otherBox->title() == expected;
+                         },
+                         2s),
+                 qPrintable(qsl("The titles said \"%1\" and \"%2\"").arg(selectionTitle(), otherBox->title())));
+    }
+
+    // Checking a folder changes every item under it, and those changes are
+    // folded into one recount rather than a tree walk for each of them.
+    void test_checkingAFolderRecountsOnce()
+    {
+        auto* folder = makeTrigger(qsl("exporter recount group"), nullptr, true);
+        makeTrigger(qsl("exporter recount one"), folder);
+        makeTrigger(qsl("exporter recount two"), folder);
+        makeTrigger(qsl("exporter recount three"), folder);
+        openExporter();
+
+        // The recount is a zero timer, which Qt posts to the dialog as a queued
+        // call; a recount delivered any other way would count 0 here, so expect 1
+        class QueuedCallCounter : public QObject
+        {
+        public:
+            int mCount = 0;
+            bool eventFilter(QObject*, QEvent* event) override
+            {
+                if (event->type() == QEvent::MetaCall) {
+                    ++mCount;
+                }
+                return false;
+            }
+        } counter;
+        mpExporter->installEventFilter(&counter);
+        itemNamed(triggersTop(), qsl("exporter recount group"))->setCheckState(0, Qt::Checked);
+        const QString expected = countedTitle(4);
+        QVERIFY2(QTest::qWaitFor(
+                         [this, expected]() {
+                             return selectionTitle() == expected;
+                         },
+                         2s),
+                 qPrintable(qsl("The title never took the count, and said: \"%1\"").arg(selectionTitle())));
+        mpExporter->removeEventFilter(&counter);
+        QVERIFY2(counter.mCount == 1, qPrintable(qsl("checking one folder queued %1 recounts to the dialog").arg(counter.mCount)));
     }
 };
 

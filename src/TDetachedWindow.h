@@ -33,6 +33,7 @@
 #include <QDockWidget>
 #include <functional>
 
+class QMenu;
 class TMainConsole;
 class Host;
 class TTabBar;
@@ -57,11 +58,20 @@ public:
     int getProfileCount() const { return mProfileConsoleMap.size(); }
 
     void updateToolbarForProfile(Host* pHost);
+    // Public because mudlet refreshes every window's title when the microphone
+    // moves, and the marker it carries lives in the title
+    void updateWindowTitle();
+    // The chrome add-on commands are placed into for the profile this window is
+    // showing. mudlet reaches these through addonToolBarFor()/addonOptionsMenuFor().
+    QToolBar* toolBar() const { return mpToolBar; }
+    QMenu* optionsMenu() const { return mpOptionsMenu; }
+    QMenu* createPopupMenu() override;
     void updateDiscordNamedIcon();
     void setReattaching(bool reattaching) { mIsReattaching = reattaching; }
     void refreshTabBar();                             // Update tab text to account for CDC identifiers
     void updateWindowMenu();                          // Update the window menu with current window list
     void switchToProfile(const QString& profileName); // Switch to a specific profile tab
+    void markTabActivity(const QString& profileName, bool isLowerPriorityChange);
     void refreshAfterApplicationStyleChange();
 
     // Dock widget management methods
@@ -84,6 +94,7 @@ public:
 
     // Toolbar synchronization methods
     void setToolBarVisibility(bool visible);
+    void setMenuBarVisibility(bool visible);
     bool isToolBarVisible() const;
     bool canHideToolBar() const;
 
@@ -176,9 +187,10 @@ private slots:
 private:
     void setupUI();
     void createMenus();
+    void showMuteState();
     void createToolBar();
     void connectToolBarActions();
-    void updateWindowTitle();
+    void closeProfileByName(const QString& profileName);
     void updateTabIndicator(int tabIndex = -1);                            // -1 means current tab
     void updateDockWidgetVisibilityForProfile(const QString& profileName); // Show/hide docked widgets based on active profile
     void restoreWindowGeometry();
@@ -201,6 +213,7 @@ private:
     QVBoxLayout* mpMainLayout{nullptr};
     TTabBar* mpTabBar{nullptr};
     QToolBar* mpToolBar{nullptr};
+    QMenu* mpOptionsMenu{nullptr};
 
     // Toolbar actions - mirroring main window
     QAction* mpActionConnect{nullptr};
@@ -252,6 +265,8 @@ private:
     QAction* mpMenuPreferencesAction{nullptr};
     QAction* mpMenuToggleTimeStampAction{nullptr};
     QAction* mpMenuMuteMediaAction{nullptr};
+    QAction* mpMenuMuteAPIAction{nullptr};
+    QAction* mpMenuMuteGameAction{nullptr};
     QAction* mpMenuMultiViewAction{nullptr};
 
     // Toolbar buttons
@@ -290,7 +305,8 @@ private:
     // Docked widgets management
     QMap<QString, QPointer<QDockWidget>> mDockWidgetMap;
     QMap<QString, bool> mDockWidgetUserPreference; // User's show/hide preference for dock widgets
-    QDockWidget* mpMapDockWidget{nullptr};
+    // A closing profile's map dock goes without the window being told
+    QPointer<QDockWidget> mpMapDockWidget;
 };
 
 #endif // TDETACHEDWINDOW_H

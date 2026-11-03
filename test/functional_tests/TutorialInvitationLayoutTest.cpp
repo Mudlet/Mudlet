@@ -35,6 +35,7 @@
 #include <QPushButton>
 #include <QScrollBar>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
@@ -66,8 +67,8 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
-        QVERIFY2(mudlet::getQSettings()->allKeys().isEmpty(), "a fresh config dir must start out with an empty Mudlet.ini - something wrote settings before init()");
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QVERIFY2(MudletApp::getQSettings()->allKeys().isEmpty(), "a fresh config dir must start out with an empty Mudlet.ini - something wrote settings before init()");
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -100,6 +101,30 @@ private slots:
         // path, which measures inline instead of waiting for showEvent()
         dlg->fillout_form();
         verifyInvitationFits(dlg);
+
+        dlg->deleteLater();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
+    // Every start-up runs the password migration, whose completion signals make the dialog refresh its
+    // current game a moment after the invitation went up
+    void test_passwordMigrationLeavesTheInvitationUp()
+    {
+        auto* dlg = new dlgConnectionProfiles();
+        dlg->fillout_form();
+        dlg->show();
+        QVERIFY2(dlg->welcome_message->isVisibleTo(dlg), "a fresh install has to start out with the invitation up");
+        QVERIFY2(dlg->listWidget_profiles->currentItem(), "the refresh only reaches the form with a game picked");
+
+        mudlet::self()->signal_passwordsMigratedToSecure();
+        mudlet::self()->signal_characterPasswordsMigrated();
+
+        auto* skipButton = dlg->findChild<QPushButton*>(qsl("skipToGamesButton"));
+        QVERIFY(skipButton);
+        QVERIFY2(skipButton->isVisibleTo(dlg), "the refresh must not end the invitation");
+        QVERIFY2(dlg->welcome_message->isVisibleTo(dlg), "the refresh swapped the invitation, and its Start Tutorial link, for connection details with no Connect button");
+        QVERIFY2(!dlg->tabWidget_connectionInfo->isVisibleTo(dlg), "the connection details must stay hidden behind the invitation");
+        QVERIFY2(!dlg->informationArea->isVisibleTo(dlg), "the game's information must stay hidden behind the invitation");
 
         dlg->deleteLater();
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);

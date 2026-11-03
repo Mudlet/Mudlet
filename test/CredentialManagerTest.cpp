@@ -17,16 +17,24 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <CredentialManager.h>
+#include <MudletApp.h>
 #include <SecureStringUtils.h>
 #include <utils.h>
 
 #include <QtTest/QtTest>
 
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
+#include <QScopeGuard>
 #include <QStandardPaths>
+#include <QScopeGuard>
 #include <QTemporaryDir>
+
+#include <optional>
 
 // Hermetic unit tests: MUDLET_TEST_MODE forces encrypted file storage so these run
 // deterministically on every platform without touching a system keychain. The real
@@ -38,6 +46,70 @@
 // async one is what dlgConnectionProfiles and dlgProfilePreferences actually call,
 // and MUDLET_TEST_MODE routes it down the same file storage, so its callbacks are
 // delivered synchronously and need no event loop.
+
+namespace {
+// Where a credential sits for a given path component - for a truncated long name, where a
+// Mudlet from before the rename still looks
+QString credentialPath(const QString& profileComponent, const QString& key)
+{
+    return qsl("%1/profiles/%2/passwords/%3").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), profileComponent, key);
+}
+
+// Writes a credential the way an older Mudlet's own store leaves it behind
+bool plantCredential(const QString& path, const QString& profileName, const QString& credential)
+{
+    if (!QDir().mkpath(QFileInfo(path).absolutePath())) {
+        return false;
+    }
+
+    const QString encrypted = SecureStringUtils::encryptStringForProfile(credential, profileName);
+    QFile file(path);
+
+    if (encrypted.isEmpty() || !file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        return false;
+    }
+
+    return file.write(encrypted.toUtf8()) != -1;
+}
+
+QString plantedCredential(const QString& path, const QString& profileName)
+{
+    QFile file(path);
+
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return QString();
+    }
+
+    return SecureStringUtils::decryptStringForProfile(QString::fromUtf8(file.readAll()), profileName);
+}
+
+// The first 50 characters of a long name are the path component a Mudlet that shortened
+// names by truncation alone filed its credential under, so each case needs both halves of
+// its profile name - and two names sharing that prefix are a colliding pair.
+const QString scmKeptPrefix(50, QChar('k'));
+const QString scmKeptProfile = scmKeptPrefix + qsl("KeptForAnOlderMudlet");
+const QString scmNewerCopyPrefix(50, QChar('n'));
+const QString scmNewerCopyProfile = scmNewerCopyPrefix + qsl("NewerCopyIsTheOneHandedBack");
+const QString scmWrittenThroughPrefix(50, QChar('w'));
+const QString scmWrittenThroughProfile = scmWrittenThroughPrefix + qsl("WrittenThroughToTheOlderPath");
+const QString scmEmptyCredentialPrefix(50, QChar('e'));
+const QString scmEmptyCredentialProfile = scmEmptyCredentialPrefix + qsl("EmptyCredentialSavedHere");
+const QString scmCollidingPrefix(50, QChar('c'));
+const QString scmFirstCollidingProfile = scmCollidingPrefix + qsl("FirstOfTwoCollidingNames");
+const QString scmSecondCollidingProfile = scmCollidingPrefix + qsl("SecondOfTwoCollidingNames");
+const QString scmNeverFiledPrefix(50, QChar('f'));
+const QString scmNeverFiledProfile = scmNeverFiledPrefix + qsl("NeverFiledUnderTheTruncatedPath");
+const QString scmFailedStorePrefix(50, QChar('x'));
+const QString scmFailedStoreProfile = scmFailedStorePrefix + qsl("StoreThatCannotReachItsOwnFile");
+
+// Modification time decides between two copies of one credential, and a filesystem's
+// timestamp resolution cannot be trusted to separate two writes made a moment apart
+bool setModificationTime(const QString& path, const int secondsFromNow)
+{
+    QFile file(path);
+    return file.open(QIODevice::ReadWrite) && file.setFileTime(QDateTime::currentDateTime().addSecs(secondsFromNow), QFileDevice::FileModificationTime);
+}
+} // namespace
 
 class CredentialManagerTest : public QObject
 {
@@ -58,14 +130,27 @@ private slots:
     void testCredentialsFiledUnderTheTruncatedPathSurvive();
     void testLegacySharedKeyPathOwnershipIsUndecidable();
     void testLegacyKeyAtTheLengthCapClaimsNoLongerKeysCredential();
+    void testTheTruncatedPathKeepsItsCopyForAnOlderMudlet();
+    void testTheNewerOfTheTwoCopiesIsTheOneHandedBack();
+    void testAPasswordSavedHereReachesTheTruncatedPathToo();
+    void testAnEmptyCredentialTakesTheTruncatedPathAwayRatherThanEmptyingIt();
+    void testTheTruncatedPathIsNeverCreatedNorTakenOver();
+    void testAStoreThatFailsLeavesTheTruncatedPathAlone();
     void testPathTraversalPrevention();
     void testConcurrentAccess();
     void testAsyncStoreAndRetrieve();
     void testAsyncApiSharesTheStoreWithTheStaticOne();
+    void testAnUndecryptableFileIsNotReportedAsNothingStored();
+    void testAFileHiddenByItsFolderIsNotReportedAsNothingStored();
+    void testANewerOlderNamedFileThatWontOpenIsNotReportedAsNothingStored();
+    void testANameNoFileCanBeMadeForIsNotReportedAsRefused();
+    void testTheStaticReadSaysWhyNothingCameBack();
     void testAsyncRemovePassword();
     void testCredentialExistsWithoutHandingOverTheSecret();
     void testAsyncEmptyArgumentsAreReportedThroughTheCallback();
     void testAsyncApiRefusesTheKeysTheStaticApiRefuses();
+    void testAStoreWithNowhereToKeepTheKeyFails();
+    void testAnUndecryptableFileIsNotReportedAsNoPassword();
     void cleanupTestCase();
 
 private:
@@ -409,6 +494,185 @@ void CredentialManagerTest::testLegacyKeyAtTheLengthCapClaimsNoLongerKeysCredent
     CredentialManager::removeCredential(profile, longerKey);
 }
 
+// Configuration directories are shared between installed Mudlets, so the file the earlier
+// naming scheme left has to be copied across rather than moved.
+void CredentialManagerTest::testTheTruncatedPathKeepsItsCopyForAnOlderMudlet()
+{
+    const QString profile = scmKeptProfile;
+    const QString key = "character";
+    const QString legacyPath = credentialPath(scmKeptPrefix, key);
+
+    QVERIFY(plantCredential(legacyPath, profile, "saved_by_the_older_mudlet"));
+
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("saved_by_the_older_mudlet"));
+
+    QVERIFY2(QFile::exists(legacyPath), "reading the credential once took away the only copy an older Mudlet can find");
+    QCOMPARE(plantedCredential(legacyPath, profile), QString("saved_by_the_older_mudlet"));
+
+    QVERIFY(QFile::exists(credentialPath(MudletApp::sanitizeForPath(profile), key)));
+
+    CredentialManager::removeCredential(profile, key);
+}
+
+// Only the older of the two Mudlets writes the truncated path, so whichever file was written
+// last holds the password the user set last.
+void CredentialManagerTest::testTheNewerOfTheTwoCopiesIsTheOneHandedBack()
+{
+    const QString profile = scmNewerCopyProfile;
+    const QString key = "character";
+    const QString legacyPath = credentialPath(scmNewerCopyPrefix, key);
+    const QString currentPath = credentialPath(MudletApp::sanitizeForPath(profile), key);
+
+    QVERIFY(CredentialManager::storeCredential(profile, key, "the_password_this_mudlet_knows"));
+    QVERIFY(QFile::exists(currentPath));
+
+    QVERIFY(plantCredential(legacyPath, profile, "re_entered_in_the_older_mudlet"));
+    QVERIFY(setModificationTime(legacyPath, 30));
+
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("re_entered_in_the_older_mudlet"));
+
+    // Taken over rather than only read: with the legacy copy no longer the newer of the two,
+    // the answer has to come from the file under the current naming
+    QVERIFY(setModificationTime(legacyPath, -30));
+    QCOMPARE(plantedCredential(currentPath, profile), QString("re_entered_in_the_older_mudlet"));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("re_entered_in_the_older_mudlet"));
+
+    CredentialManager::removeCredential(profile, key);
+}
+
+// A password changed here has to reach the file the older Mudlet reads as well, or that
+// Mudlet goes on offering the one it was changed from.
+void CredentialManagerTest::testAPasswordSavedHereReachesTheTruncatedPathToo()
+{
+    const QString profile = scmWrittenThroughProfile;
+    const QString key = "character";
+    const QString legacyPath = credentialPath(scmWrittenThroughPrefix, key);
+    const QString currentPath = credentialPath(MudletApp::sanitizeForPath(profile), key);
+
+    QVERIFY(plantCredential(legacyPath, profile, "the_password_both_started_with"));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("the_password_both_started_with"));
+
+    QVERIFY(CredentialManager::storeCredential(profile, key, "the_password_changed_here"));
+
+    QCOMPARE(plantedCredential(legacyPath, profile), QString("the_password_changed_here"));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("the_password_changed_here"));
+
+    // Which of the two a later read prefers is deliberately not pinned: the copy for the
+    // older Mudlet is written last, so it is either the newer of the two or - within the one
+    // millisecond QFileInfo::lastModified() can tell apart - a tie, which answers for the
+    // file under the current naming.
+    QCOMPARE(plantedCredential(currentPath, profile), QString("the_password_changed_here"));
+
+    // Either way a read settles it: where the copy for the older Mudlet is the newer, that
+    // read takes it and copies it across once, leaving the file under the current naming the
+    // newer again rather than every read going back to the older path
+    QVERIFY(setModificationTime(currentPath, -30));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("the_password_changed_here"));
+    QVERIFY2(QFileInfo(currentPath).lastModified() >= QFileInfo(legacyPath).lastModified(), "the copy under the current naming was not brought up to date by the read that took the older path");
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("the_password_changed_here"));
+    QCOMPARE(plantedCredential(legacyPath, profile), QString("the_password_changed_here"));
+
+    // Removing the password takes both copies with it in file storage, which is what these
+    // cases run on; a removal that goes to a system keychain leaves both files where they are
+    QVERIFY(CredentialManager::removeCredential(profile, key));
+    QVERIFY2(!QFile::exists(legacyPath), "the copy an older Mudlet reads outlived the removal of the password");
+    QVERIFY(CredentialManager::retrieveCredential(profile, key).isEmpty());
+}
+
+// An empty credential stands for "no password", and an empty file decrypts to nothing -
+// exactly how a file belonging to a profile this one used to collide with reads - so a
+// profile that wrote one could never recognise that file as its own again.
+void CredentialManagerTest::testAnEmptyCredentialTakesTheTruncatedPathAwayRatherThanEmptyingIt()
+{
+    const QString profile = scmEmptyCredentialProfile;
+    const QString key = "character";
+    const QString legacyPath = credentialPath(scmEmptyCredentialPrefix, key);
+
+    QVERIFY(plantCredential(legacyPath, profile, "the_password_both_started_with"));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("the_password_both_started_with"));
+
+    // what clearing the password field stores
+    QVERIFY(CredentialManager::storeCredential(profile, key, QString("")));
+
+    QVERIFY2(!QFile::exists(legacyPath), "an empty credential left a file at the truncated path that no profile can claim, refresh or remove again");
+
+    // The profile can still be given that path back, so a password set in the older Mudlet
+    // afterwards is kept in step again rather than the two being locked apart
+    QVERIFY(plantCredential(legacyPath, profile, "set_again_in_the_older_mudlet"));
+    QVERIFY(CredentialManager::storeCredential(profile, key, "set_again_here"));
+    QCOMPARE(plantedCredential(legacyPath, profile), QString("set_again_here"));
+
+    CredentialManager::removeCredential(profile, key);
+}
+
+// Two profiles whose names share their first 50 characters share the truncated path, so
+// keeping that file in step is only safe where it is already this profile's own.
+void CredentialManagerTest::testTheTruncatedPathIsNeverCreatedNorTakenOver()
+{
+    const QString first = scmFirstCollidingProfile;
+    const QString second = scmSecondCollidingProfile;
+    const QString key = "character";
+    const QString legacyPath = credentialPath(scmCollidingPrefix, key);
+
+    QVERIFY(plantCredential(legacyPath, first, "the_first_profiles_password"));
+    QCOMPARE(CredentialManager::retrieveCredential(first, key), QString("the_first_profiles_password"));
+
+    QVERIFY(CredentialManager::storeCredential(second, key, "the_second_profiles_password"));
+    QVERIFY(CredentialManager::storeCredential(second, key, "the_second_profiles_password_changed"));
+    QCOMPARE(plantedCredential(legacyPath, first), QString("the_first_profiles_password"));
+
+    QCOMPARE(CredentialManager::retrieveCredential(first, key), QString("the_first_profiles_password"));
+    QCOMPARE(CredentialManager::retrieveCredential(second, key), QString("the_second_profiles_password_changed"));
+
+    // Modification time decides which file a read prefers, but only decrypting it decides
+    // whose credential it holds
+    QVERIFY(setModificationTime(legacyPath, 30));
+    QCOMPARE(CredentialManager::retrieveCredential(second, key), QString("the_second_profiles_password_changed"));
+    QCOMPARE(plantedCredential(legacyPath, first), QString("the_first_profiles_password"));
+
+    const QString neverFiledThere = scmNeverFiledProfile;
+    QVERIFY(CredentialManager::storeCredential(neverFiledThere, key, "a_password_saved_only_here"));
+    QVERIFY2(!QFile::exists(credentialPath(scmNeverFiledPrefix, key)), "a credential was created at the path two long names would share");
+
+    CredentialManager::removeCredential(first, key);
+    CredentialManager::removeCredential(second, key);
+    CredentialManager::removeCredential(neverFiledThere, key);
+}
+
+// The two files sit in directories of their own, so the copy an older Mudlet reads can be
+// written even where the file under the current naming cannot be. A store that reports
+// failure has to leave that copy as it found it, or the two Mudlets are left holding
+// different passwords for the same profile.
+void CredentialManagerTest::testAStoreThatFailsLeavesTheTruncatedPathAlone()
+{
+    const QString profile = scmFailedStoreProfile;
+    const QString key = "character";
+    const QString legacyPath = credentialPath(scmFailedStorePrefix, key);
+    const QString currentPath = credentialPath(MudletApp::sanitizeForPath(profile), key);
+
+    QVERIFY(plantCredential(legacyPath, profile, "the_password_both_started_with"));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, key), QString("the_password_both_started_with"));
+    QVERIFY(QFile::exists(currentPath));
+
+    // A directory where the credential file belongs: QSaveFile writes beside it and renames,
+    // and a rename onto a directory is refused whoever is running - a read-only directory
+    // would not be, since these cases can run as root
+    QVERIFY(QFile::remove(currentPath));
+    QVERIFY(QDir().mkpath(currentPath));
+
+    QVERIFY2(!CredentialManager::storeCredential(profile, key, "the_password_that_never_landed"), "a store that could not write its own file reported success");
+    QCOMPARE(plantedCredential(legacyPath, profile), QString("the_password_both_started_with"));
+
+    // and the same for the empty credential that clearing the password field stores, which
+    // takes the older Mudlet's copy away rather than emptying it
+    QVERIFY2(!CredentialManager::storeCredential(profile, key, QString("")), "a store that could not write its own file reported success");
+    QVERIFY2(QFile::exists(legacyPath), "a store that failed still took away the copy an older Mudlet reads");
+    QCOMPARE(plantedCredential(legacyPath, profile), QString("the_password_both_started_with"));
+
+    QVERIFY(QDir().rmdir(currentPath));
+    CredentialManager::removeCredential(profile, key);
+}
+
 void CredentialManagerTest::testPathTraversalPrevention()
 {
     QString profile = "PathTraversalTestProfile";
@@ -502,6 +766,163 @@ void CredentialManagerTest::testAsyncStoreAndRetrieve()
     QVERIFY2(retrieved, qPrintable(retrieveError));
     QCOMPARE(password, QString("async_secret"));
     QVERIFY(retrieveError.isEmpty());
+}
+
+// A caller that would remove what it cannot read back - the sign-in's rotated-token check - has to
+// tell a file that is not there from one that is there but cannot be read
+void CredentialManagerTest::testAnUndecryptableFileIsNotReportedAsNothingStored()
+{
+    CredentialManager manager;
+    const QString profile = "UndecryptableFileProfile";
+    const QString key = "password";
+    const auto outcome = [&manager, &profile, &key]() {
+        std::optional<CredentialManager::ReadOutcome> answer;
+        manager.retrievePassword(
+                profile,
+                key,
+                [&answer](bool, QString, const QString&, CredentialManager::ReadOutcome readOutcome) {
+                    answer = readOutcome;
+                },
+                nullptr,
+                nullptr);
+        return answer;
+    };
+
+    CredentialManager::removeCredential(profile, key);
+    QCOMPARE(outcome(), std::optional(CredentialManager::ReadOutcome::NothingStored));
+
+    QVERIFY(CredentialManager::storeCredential(profile, key, "soon_garbled"));
+    QFile file(credentialPath(profile, key));
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    file.write("not an encrypted credential");
+    file.close();
+    QCOMPARE(outcome(), std::optional(CredentialManager::ReadOutcome::Unreadable));
+
+    QVERIFY(CredentialManager::removeCredential(profile, key));
+}
+
+namespace {
+std::optional<CredentialManager::ReadOutcome> readOutcome(CredentialManager& manager, const QString& profile, const QString& key)
+{
+    std::optional<CredentialManager::ReadOutcome> answer;
+    manager.retrievePassword(
+            profile,
+            key,
+            [&answer](bool, QString, const QString&, CredentialManager::ReadOutcome outcome) {
+                answer = outcome;
+            },
+            nullptr,
+            nullptr);
+    return answer;
+}
+
+// Permissions do not stop root, and Windows has no search bit on a folder
+bool permissionsCanHideAFile()
+{
+#if defined(Q_OS_WIN)
+    return false;
+#else
+    QTemporaryDir probe;
+    if (!probe.isValid() || !QFile::setPermissions(probe.path(), QFileDevice::Permissions())) {
+        return false;
+    }
+    const bool hidden = !QFileInfo(qsl("%1/x").arg(probe.path())).isReadable() && !QDir(probe.path()).isReadable();
+    QFile::setPermissions(probe.path(), QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    return hidden;
+#endif
+}
+} // namespace
+
+void CredentialManagerTest::testAFileHiddenByItsFolderIsNotReportedAsNothingStored()
+{
+    if (!permissionsCanHideAFile()) {
+        QSKIP("folder permissions cannot hide a file here (Windows, or running as root)");
+    }
+    CredentialManager manager;
+    const QString profile = "HiddenByItsFolderProfile";
+    const QString key = "password";
+    QVERIFY(CredentialManager::storeCredential(profile, key, "behind_a_locked_folder"));
+    const QString folder = QFileInfo(credentialPath(profile, key)).absolutePath();
+    const QString profileFolder = QFileInfo(folder).absolutePath();
+    const auto unlock = qScopeGuard([&folder, &profileFolder, &profile, &key] {
+        const auto open = QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner;
+        QFile::setPermissions(profileFolder, open);
+        QFile::setPermissions(folder, open);
+        CredentialManager::removeCredential(profile, key);
+    });
+
+    QVERIFY(QFile::setPermissions(folder, QFileDevice::Permissions()));
+    QCOMPARE(readOutcome(manager, profile, key), std::optional(CredentialManager::ReadOutcome::Unreadable));
+
+    // A folder further up hides it just the same
+    QVERIFY(QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner));
+    QVERIFY(QFile::setPermissions(profileFolder, QFileDevice::Permissions()));
+    QCOMPARE(readOutcome(manager, profile, key), std::optional(CredentialManager::ReadOutcome::Unreadable));
+}
+
+void CredentialManagerTest::testANewerOlderNamedFileThatWontOpenIsNotReportedAsNothingStored()
+{
+    if (!permissionsCanHideAFile()) {
+        QSKIP("file permissions cannot stop a read here (Windows, or running as root)");
+    }
+    CredentialManager manager;
+    const QString sharedPrefix(50, QChar('u'));
+    const QString profile = sharedPrefix + "OlderCopyLockedAway";
+    const QString key = "character";
+    const QString legacyDir = qsl("%1/profiles/%2/passwords").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), sharedPrefix);
+    QVERIFY(QDir().mkpath(legacyDir));
+    QFile legacyFile(qsl("%1/%2").arg(legacyDir, key));
+    const auto cleanUp = qScopeGuard([&legacyFile, &profile, &key] {
+        legacyFile.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+        legacyFile.remove();
+        CredentialManager::removeCredential(profile, key);
+    });
+    // An older copy under the current name that can be read: it is stale, so it must not be handed back
+    QVERIFY(CredentialManager::storeCredential(profile, key, "stale_current_copy"));
+    QVERIFY(legacyFile.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate));
+    QVERIFY(legacyFile.write(SecureStringUtils::encryptStringForProfile("saved_long_ago", profile).toUtf8()) != -1);
+    legacyFile.close();
+    QVERIFY(setModificationTime(legacyFile.fileName(), 60));
+
+    QVERIFY(legacyFile.setPermissions(QFileDevice::Permissions()));
+    QCOMPARE(readOutcome(manager, profile, key), std::optional(CredentialManager::ReadOutcome::Unreadable));
+}
+
+// The password migration and the proxy password read through this, and must not take an unreadable file for none
+void CredentialManagerTest::testTheStaticReadSaysWhyNothingCameBack()
+{
+    const QString profile = "StaticReadOutcomeProfile";
+    const QString key = "character";
+    auto outcome = CredentialManager::ReadOutcome::Found;
+
+    QVERIFY(CredentialManager::retrieveCredential(profile, key, &outcome).isEmpty());
+    QCOMPARE(outcome, CredentialManager::ReadOutcome::NothingStored);
+
+    outcome = CredentialManager::ReadOutcome::Found;
+    QVERIFY(CredentialManager::retrieveCredential(profile, qsl("../escape"), &outcome).isEmpty());
+    QCOMPARE(outcome, CredentialManager::ReadOutcome::Unavailable);
+
+    if (!permissionsCanHideAFile()) {
+        QSKIP("folder permissions cannot hide a file here (Windows, or running as root)");
+    }
+    QVERIFY(CredentialManager::storeCredential(profile, key, "behind_a_locked_folder"));
+    const QString folder = QFileInfo(credentialPath(profile, key)).absolutePath();
+    const auto unlock = qScopeGuard([&folder, &profile, &key] {
+        QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+        CredentialManager::removeCredential(profile, key);
+    });
+
+    QVERIFY(QFile::setPermissions(folder, QFileDevice::Permissions()));
+    outcome = CredentialManager::ReadOutcome::Found;
+    QVERIFY(CredentialManager::retrieveCredential(profile, key, &outcome).isEmpty());
+    QCOMPARE(outcome, CredentialManager::ReadOutcome::Unreadable);
+}
+
+// No file can hold a password for such a name, so the profile must not be told one could not be read
+void CredentialManagerTest::testANameNoFileCanBeMadeForIsNotReportedAsRefused()
+{
+    CredentialManager manager;
+    QCOMPARE(readOutcome(manager, qsl("Realm..."), qsl("character")), std::optional(CredentialManager::ReadOutcome::Unavailable));
 }
 
 // The static API is the migration and cleanup path for credentials the async API
@@ -737,6 +1158,93 @@ void CredentialManagerTest::testAsyncApiRefusesTheKeysTheStaticApiRefuses()
     CredentialManager::removeCredential(profile, accepted);
 }
 
+// With no encryption key that can be stored, the password is not saved, and the callback the
+// connection dialog waits on has to say so
+void CredentialManagerTest::testAStoreWithNowhereToKeepTheKeyFails()
+{
+    CredentialManager manager;
+    const QString profile = qsl("NowhereToKeepTheKey");
+    const QString profileDir = qsl("%1/profiles/%2").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), profile);
+    QVERIFY(QDir(profileDir).removeRecursively());
+    // Where XDG_CONFIG_HOME is not honoured this is the real config folder, so it goes whatever the outcome
+    auto cleanup = qScopeGuard([&profileDir] {
+        QDir(profileDir).removeRecursively();
+    });
+    // A directory where the key file belongs makes it impossible to write
+    QVERIFY(QDir().mkpath(profileDir + qsl("/encryption_key")));
+
+    bool answered = false;
+    bool stored = true;
+    manager.storePassword(profile, qsl("character"), qsl("cannot_be_protected"), [&](bool success, const QString&) {
+        answered = true;
+        stored = success;
+    });
+    QVERIFY2(answered, "the file store answered later than it returned, which MUDLET_TEST_MODE should never let it do");
+    QVERIFY2(!stored, "the store reported a password saved that it had no key to protect");
+    QVERIFY(CredentialManager::retrieveCredential(profile, qsl("character")).isEmpty());
+}
+
+// The dialog has to be able to tell the player a saved password is unreadable, rather than leave
+// them looking at an empty field as if none had been saved
+void CredentialManagerTest::testAnUndecryptableFileIsNotReportedAsNoPassword()
+{
+    CredentialManager manager;
+    const QString profile = qsl("UndecryptableProfile");
+    const QString key = qsl("character");
+
+    bool stored = false;
+    manager.storePassword(profile, key, qsl("soon_unreadable"), [&](bool success, const QString&) {
+        stored = success;
+    });
+    QVERIFY(stored);
+
+    QFile file(credentialPath(profile, key));
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    const QByteArray saved = file.readAll();
+    file.close();
+    // One byte changed in a file that is otherwise well formed gets as far as the HMAC check, as a
+    // regenerated profile key does; text that is not Mudlet's at all is turned away before that
+    QByteArray flipped = QByteArray::fromBase64(saved.trimmed());
+    QVERIFY2(flipped.size() > 64, "the saved file is too short to get past the size check once a byte is flipped");
+    flipped[flipped.size() / 2] = static_cast<char>(flipped.at(flipped.size() / 2) ^ 0x01);
+    const QList<QPair<const char*, QByteArray>> damage = {{"one byte changed", flipped.toBase64()}, {"not Mudlet's at all", QByteArrayLiteral("this is not anything Mudlet encrypted")}};
+
+    for (const auto& [what, content] : damage) {
+        QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        QVERIFY(file.write(content) > 0);
+        file.close();
+
+        bool retrieved = true;
+        QString retrieveError;
+        manager.retrievePassword(profile, key, [&](bool success, QString, const QString& error) {
+            retrieved = success;
+            retrieveError = error;
+        });
+        QVERIFY2(!retrieved, what);
+        QCOMPARE(retrieveError, CredentialManager::unreadableFileError(profile));
+    }
+
+    // ...while a profile that never had one saved still says so
+    bool retrieved = true;
+    QString retrieveError;
+    manager.retrievePassword(qsl("NeverSavedAnything"), key, [&](bool success, QString, const QString& error) {
+        retrieved = success;
+        retrieveError = error;
+    });
+    QVERIFY(!retrieved);
+    QCOMPARE(retrieveError, qsl("No password stored in encrypted file storage"));
+
+    // ...and so does one no file can be made for, with no saved password to ask for again
+    retrieveError.clear();
+    manager.retrievePassword(qsl("Realm..."), key, [&](bool, QString, const QString& error) {
+        retrieveError = error;
+    });
+    QVERIFY(!retrieveError.isEmpty());
+    QVERIFY2(retrieveError != CredentialManager::unreadableFileError(qsl("Realm...")), qPrintable(retrieveError));
+
+    CredentialManager::removeCredential(profile, key);
+}
+
 void CredentialManagerTest::cleanupTestCase()
 {
     // Clean up test passwords
@@ -777,7 +1285,12 @@ void CredentialManagerTest::cleanupTestCase()
     const QString truncatedPrefix(50, QChar('t'));
     CredentialManager::removeCredential(truncatedPrefix + "FiledBeforeTheRename", "character");
     CredentialManager::removeCredential(truncatedPrefix + "StoredAfterwards", "character");
+
+    for (const QString& profile :
+         {scmKeptProfile, scmNewerCopyProfile, scmWrittenThroughProfile, scmEmptyCredentialProfile, scmFirstCollidingProfile, scmSecondCollidingProfile, scmNeverFiledProfile, scmFailedStoreProfile}) {
+        CredentialManager::removeCredential(profile, "character");
+    }
 }
 
 #include "CredentialManagerTest.moc"
-QTEST_MAIN(CredentialManagerTest)
+MUDLET_GROUPED_TEST_MAIN(CredentialManagerTest)

@@ -32,6 +32,7 @@
 #include <chrono>
 
 #include "GifTestHelper.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
@@ -97,14 +98,14 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
-        mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
-        mudlet::getQSettings()->sync();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        MudletApp::getQSettings()->setValue(qsl("uiTourShown"), true);
+        MudletApp::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         QDir(path).removeRecursively();
 
         QTimer::singleShot(0ms, qApp, [this]() {
@@ -126,7 +127,7 @@ private slots:
         });
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(1000)) {
+        if (!spy.wait(1s)) {
             QFAIL("Profile took too long to load.");
         }
         mpHost = mudlet::self()->getActiveHost();
@@ -140,10 +141,9 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+            const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
             QDir(path).removeRecursively();
             delete mudlet::self();
         }
@@ -162,7 +162,7 @@ private slots:
         auto [loaded, loadMessage] = mpHost->setMovie(mLabelName, mGifPath);
         QVERIFY2(loaded, qPrintable(loadMessage));
 
-        TLabel* pLabel = mpHost->mpConsole->labelWidget(mLabelName);
+        TLabel* pLabel = mpHost->mainConsoleView()->labelWidget(mLabelName);
         QVERIFY(pLabel);
         QVERIFY(pLabel->mpMovie);
         QVERIFY2(pLabel->mpMovie->isValid(), "the label did not end up with a movie it can play");
@@ -184,7 +184,7 @@ private slots:
         // is not one also reports, so this only holds the line
         QCOMPARE(pLabel->mpMovie->state(), QMovie::Running);
 
-        mpHost->mpConsole->deleteLabel(mLabelName);
+        mpHost->deleteLabel(mLabelName);
     }
 };
 

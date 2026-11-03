@@ -22,6 +22,10 @@
 
 #include "TVar.h"
 
+#include <algorithm>
+#include <utility>
+#include <vector>
+
 /*
  * LUA type values from lua.h for lua 5.1:
  * LUA_TNONE          (-1)
@@ -81,39 +85,69 @@ QString TVar::getName() const
 // that is no number at all both convert to zero. Deciding it by the value put
 // the names into groups that contradicted each other - "2" < "10" < "11a" <
 // "2" was a cycle a table of mixed names really produced (#9956).
-bool TVarLessThan(TVar* varA, TVar* varB)
+namespace {
+struct TVarSortKey
 {
-    const QString a = varA->getName();
-    const QString b = varB->getName();
-    bool isANumber = false;
-    bool isBNumber = false;
-    const int aNumber = a.toInt(&isANumber);
-    const int bNumber = b.toInt(&isBNumber);
+    TVar* var = nullptr;
+    QString name;
+    QString folded;
+    int number = 0;
+    bool isNumber = false;
+};
 
-    if (isANumber != isBNumber) {
+TVarSortKey sortKeyFor(TVar* var)
+{
+    TVarSortKey key;
+    key.var = var;
+    key.name = var->getName();
+    key.number = key.name.toInt(&key.isNumber);
+    if (!key.isNumber) {
+        key.folded = key.name.toLower();
+    }
+    return key;
+}
+
+bool sortKeyLessThan(const TVarSortKey& a, const TVarSortKey& b)
+{
+    if (a.isNumber != b.isNumber) {
         // Numbers ahead of names. Which way round is arbitrary - what matters
         // is that it is the same way round for every such pair, so that the two
         // kinds of name form two blocks rather than interleaving by whatever
         // else is in the table.
-        return isANumber;
+        return a.isNumber;
     }
-    if (isANumber) {
-        return aNumber < bNumber;
+    if (a.isNumber) {
+        return a.number < b.number;
     }
-    const QString aFolded = a.toLower();
-    const QString bFolded = b.toLower();
-    if (aFolded != bFolded) {
-        return aFolded < bFolded;
+    if (a.folded != b.folded) {
+        return a.folded < b.folded;
     }
     // "A" and "a" fold together, and leaving them equivalent would leave their
     // order down to whatever the sort happened to do with them
-    return a < b;
+    return a.name < b.name;
+}
+} // namespace
+
+bool TVarLessThan(TVar* varA, TVar* varB)
+{
+    return sortKeyLessThan(sortKeyFor(varA), sortKeyFor(varB));
 }
 
 QList<TVar*> TVar::getChildren(const bool isToSort)
 {
     if (isToSort && children.count() > 1) {
-        std::sort(children.begin(), children.end(), TVarLessThan);
+        // Keyed once per member rather than once per comparison: folding a name
+        // allocates, and a big table is compared n log n times
+        std::vector<TVarSortKey> keys;
+        keys.reserve(children.size());
+        for (TVar* child : std::as_const(children)) {
+            keys.push_back(sortKeyFor(child));
+        }
+        std::sort(keys.begin(), keys.end(), sortKeyLessThan);
+        children.clear();
+        for (const TVarSortKey& key : keys) {
+            children.append(key.var);
+        }
     }
     return children;
 }

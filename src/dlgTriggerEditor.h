@@ -30,6 +30,7 @@
 #include "ui_trigger_editor.h"
 
 #include <QPointer>
+#include <QRegularExpression>
 #include <unordered_map>
 
 #include "TAction.h"
@@ -46,6 +47,7 @@
 #include "dlgTimersMainArea.h"
 #include "dlgTriggersMainArea.h"
 #include "dlgVarsMainArea.h"
+#include "enums.h"
 #include "SingleLineTextEdit.h"
 #include "EditorUndoStack.h"
 
@@ -107,13 +109,23 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     Q_OBJECT
 
     // Allow QTest-based test classes to access private members
+    friend class AddonControlsTest;
     friend class dlgTriggerEditorUndoRedoTest;
+    friend class EditorAddItemTest;
     friend class EditorBannerViewSwitchTest;
     friend class EditorClipboardXmlTest;
+    friend class EditorEmptySelectionTest;
+    friend class EditorFolderViewTest;
+    friend class EditorFontTest;
+    friend class EditorModuleFolderTest;
+    friend class EditorReshowTest;
     friend class EditorSearchTest;
+    friend class HostWidgetDecouplingTest;
     friend class ScriptEventHandlerLifetimeTest;
     friend class TreeWidgetItemMoveTest;
     friend class TriggerEditorDisclosureTest;
+    friend class TriggerEditorTest;
+    friend class TriggerPatternListLayoutTest;
     friend class VariableEditorWriteBackTest;
 
     enum SearchDataRole {
@@ -141,7 +153,12 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
         // Value is the index (starting at 0) of the particular find used to
         // disambiguate multiple finds in the same "thing" (so we know which one
         // to jump to) - may not be as much use as it seems...
-        IndexRole = Qt::UserRole + 6
+        IndexRole = Qt::UserRole + 6,
+        // Folders view only - the node's identity, stable across rebuilds of that tree:
+        FolderKeyRole = Qt::UserRole + 7,
+        // Folders view only - the "view:id" keys of the real items a node stands for;
+        // more than one when same-named folders of different item types were merged:
+        FolderPartsRole = Qt::UserRole + 8
     };
 
     // Classify the search result - so we know where to position the cursor as
@@ -169,21 +186,9 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     };
 
 public:
-    // This needs to be public so that the options can be used from the Host class:
-    enum SearchOption {
-        // Unset:
-        SearchOptionNone = 0x0,
-        SearchOptionCaseSensitive = 0x1,
-        SearchOptionIncludeVariables = 0x2,
-        SearchOptionWholeWord = 0x4 /*,
-        SearchOptionRegExp = 0x8 */
-    };
-
     Q_DISABLE_COPY(dlgTriggerEditor)
     dlgTriggerEditor(Host*);
     ~dlgTriggerEditor();
-
-    Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
     void closeEvent(QCloseEvent* event) override;
     void focusInEvent(QFocusEvent*) override;
@@ -199,17 +204,32 @@ public:
     void showError(const QString&);
     void showWarning(const QString&, bool announce = true);
     void showInfo(const QString&);
-    void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent);
-    void children_icon_alias(QTreeWidgetItem* pWidgetItemParent);
-    void children_icon_key(QTreeWidgetItem* pWidgetItemParent);
-    void children_icon_timer(QTreeWidgetItem* pWidgetItemParent);
-    void children_icon_script(QTreeWidgetItem* pWidgetItemParent);
+    // touchNotification: whether an errored descendant may show its error on the
+    // shared editor-wide notification banner. The GUI toggle paths default this
+    // true - the user is looking at the tree they just clicked in - while the
+    // Lua-triggered refreshXIcon() paths pass whether the recursing item is the
+    // one currently open, so a background toggle cannot clobber an unrelated
+    // diagnostic the user is actually reading.
+    void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent, bool touchNotification = true);
+    void children_icon_alias(QTreeWidgetItem* pWidgetItemParent, bool touchNotification = true);
+    void children_icon_key(QTreeWidgetItem* pWidgetItemParent, bool touchNotification = true);
+    void children_icon_timer(QTreeWidgetItem* pWidgetItemParent, bool touchNotification = true);
+    void children_icon_script(QTreeWidgetItem* pWidgetItemParent, bool touchNotification = true);
     void children_icon_action(QTreeWidgetItem* pWidgetItemParent);
+    // Repaints a single item's icon/description from its current TX::isActive()
+    // state, without a full tree rebuild - for GUI-external state changes such
+    // as the enableTrigger()/disableTrigger() family of Lua functions.
+    void refreshTriggerIcon(int triggerID);
+    void refreshAliasIcon(int aliasID);
+    void refreshScriptIcon(int scriptID);
+    void refreshTimerIcon(int timerID);
+    void refreshKeyIcon(int keyID);
     void doCleanReset();
     void writeScript(int id);
     void addVar(bool);
     int canRecast(QTreeWidgetItem*, int newNameType, int newValueType);
     void saveVar();
+    void moveVariableRowToSortedPlace(QTreeWidgetItem*, TVar*);
     void showVariableRenameRefused(TVar*);
     void repopulateVars();
     void changeView(EditorViewType);
@@ -240,12 +260,12 @@ public:
     void delete_timer();
     void delete_trigger();
     void delete_variable();
-    void setSearchOptions(const SearchOptions);
+    void setSearchOptions(const enums::EditorSearchOptions);
     void setEditorShowBidi(const bool);
     void showCurrentTriggerItem();
     void hideSystemMessageArea();
     void showIDLabels(const bool);
-    void setDisplayFont(const QFont&);
+    void setEditorFont(const QFont&);
 
 signals:
     void editorClosing();
@@ -275,7 +295,9 @@ public slots:
     void slot_showAliases();
     void slot_showActions();
     void slot_showKeys();
+    void slot_showFolders();
     void slot_activateMainWindow();
+    void slot_updateActivateMainWindowShortcut();
     void slot_treeSelectionChanged();
     void slot_triggerSelected(QTreeWidgetItem* pItem);
     void slot_timerSelected(QTreeWidgetItem* pItem);
@@ -404,13 +426,49 @@ private:
     void saveOpenChanges();
     EditorViewType determineViewFromVisibleTree();
     EditorViewType resolveCurrentView();
+    void rebuildStaleTrees();
+    void populateFolderTree();
+    void addFolderTreeNode(QTreeWidgetItem* pSource, const EditorViewType view, QTreeWidgetItem* pParent, QTreeWidgetItem* pLooseItems, QHash<QString, int>& folderCounts);
+    void refreshFolderTreeRows(const EditorViewType view, const QModelIndex& topLeft, const QModelIndex& bottomRight);
+    void scheduleFolderTreeRefresh();
+    void showView(const EditorViewType view);
+    void focusItemTree(QTreeWidget* pTypeTree);
+    QTreeWidget* sectionTree(QTreeWidget* pTypeTree) const;
+    void syncFolderTreeSelection(const QString& fallbackKey);
+    void selectFolderTreeNode(QTreeWidgetItem* pNode);
+    void slot_folderTreeItemChanged(QTreeWidgetItem* pItem);
+    void openItemFromFolderTree(const EditorViewType view, const int id);
+    void showFolderGroup(QTreeWidgetItem* pNode);
+    void hideFolderGroup();
+    void collapseHiddenSelections();
+    void leaveFolderView();
+    void setFolderViewAvailable(const bool);
+    bool folderItem(const EditorViewType view, const int id);
+    QString moduleOfMasterFolder(const EditorViewType view, const int id) const;
+    void offerToUninstallModule(const QString& moduleName);
+    QTreeWidget* treeForView(const EditorViewType view) const;
+    void selectItemInView(const EditorViewType view, QTreeWidgetItem* pItem);
+    QByteArray* splitterStateForView(const EditorViewType view);
+    static QTreeWidgetItem* findItemById(QTreeWidget* pTree, const int id);
+    static QString folderTreeItemKey(const EditorViewType view, const int id);
+    static QString folderTreeTypeName(const EditorViewType view, const bool plural);
     void saveTrigger();
     void saveAlias();
     void computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDescription) const;
-    void setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT);
-    void showAliasError(QTreeWidgetItem* pItem, const QString& name, const QString& error);
+    void computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& itemDescription) const;
+    void computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDescription) const;
+    void computeScriptIcon(TScript* pT, QIcon& icon, QString& itemDescription) const;
+    void computeKeyIcon(TKey* pT, QIcon& icon, QString& itemDescription) const;
+    // respectNewState: a freshly-added, not-yet-saved alias keeps its "unsaved"
+    // icon rather than an active/inactive one - true for every GUI-driven path,
+    // since TAlias::mIsNew only ever clears via an explicit Save. The
+    // Lua-triggered refreshAliasIcon() passes false: a profile's aliases are
+    // still "new" until manually saved, so respecting it there painted every
+    // Lua-toggled alias with the save-as icon instead of reporting its state.
+    void setAliasNormalIcon(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification = true, bool respectNewState = true);
+    void showAliasError(QTreeWidgetItem* pItem, const QString& name, const QString& error, bool touchNotification = true);
     void showAliasLoopWarning(QTreeWidgetItem* pItem, const QString& name);
-    void applyAliasState(QTreeWidgetItem* pItem, TAlias* pT);
+    void applyAliasState(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification = true, bool respectNewState = true);
     bool aliasSubstitutionLoops(const QString& regex, const QString& substitution) const;
     void saveTimer();
     void saveKey();
@@ -442,6 +500,9 @@ private:
     void clearVarForm();
 
     void updatePackageItemAccessibility(QTreeWidgetItem* pItem, const QString& currentDescription);
+    QString takenKeyWarning(const TKey* pKey) const;
+    void showKeyTakenWarning(QTreeWidgetItem* pItem, const QString& warning, bool announce);
+    void rewarnAboutCurrentKey();
 
     void expand_child_triggers(TTrigger* pTriggerParent, QTreeWidgetItem* pItem);
     void expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem* pWidgetItemParent);
@@ -557,6 +618,8 @@ private:
     bool containsSearchMatch(const QString& haystack, const QString& needle) const;
     void clearEditorNotification();
     void runScheduledCleanReset();
+    void resetTrees();
+    void buildDeferredTrees(const bool asAtLoad);
     void autoSave();
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
     void createPatternItem(int index);
@@ -612,6 +675,8 @@ private:
                                                              {tr("Debug"), qsl("Ctrl+0")}};
 
     std::unordered_map<SingleLineTextEdit*, bool> lineEditShouldMarkSpaces;
+    // Toolbar shortcuts held aside while a key is being grabbed, so all of them come back afterwards
+    QHash<QAction*, QList<QKeySequence>> mSuspendedShortcuts;
 
     QToolBar* toolBar = nullptr;
     QToolBar* toolBar2 = nullptr;
@@ -663,6 +728,7 @@ private:
     QStringList mPatternList;
     QVector<QIcon> mPatternIcons;
 
+    QShortcut* mpShortcutActivateMainWindow = nullptr;
     QShortcut* mFirstPatternShortcut = nullptr;
     QShortcut* mLastPatternShortcut = nullptr;
     QVector<QShortcut*> mPatternNavigationShortcuts;
@@ -675,12 +741,21 @@ private:
 
     inline static const QRegularExpression csmSimplifyStatusBarRegex{qsl(R"(^(?:\[\*\] )?(.+?) \|)")};
 
+    // Pattern rows the list shows in full however the splitter and advanced options are arranged (#2548)
+    static constexpr int csmMinimumVisiblePatternRows = 5;
+
+    // Row height once the list overflows: the tallest control any pattern type puts in a row (see createPatternItem())
+    int mPatternRowHeight = 0;
+
     QAction* mAddItem = nullptr;
     QAction* mDeleteItem = nullptr;
     QAction* mAddGroup = nullptr;
     QAction* mSaveItem = nullptr;
 
-    SearchOptions mSearchOptions = SearchOptionNone;
+    enums::EditorSearchOptions mSearchOptions = enums::EditorSearchOptionNone;
+    // Reused for every field a whole-word search looks at, as each new QRegularExpression is JIT-compiled anew
+    mutable QString mWholeWordSearchNeedle;
+    mutable QRegularExpression mWholeWordSearchRegex;
     QSplitter* searchSplitter;
 
     // This has a menu which the following QActions are inserted into:
@@ -704,6 +779,16 @@ private:
     // for the "Variables" view:
     QAction* mpAction_toggleActive = nullptr;
     QAction* mpExportAction = nullptr;
+    QAction* mpViewFoldersAction = nullptr;
+    // Every item type at once, grouped by folder - built from the type trees, never edited directly
+    QTreeWidget* mpFolderTree = nullptr;
+    QTimer* mpFolderTreeRefreshTimer = nullptr;
+    // FolderKeyRole of a folder node, or "view:id" of a real item -> its Folders view node
+    QHash<QString, QTreeWidgetItem*> mFolderTreeNodes;
+    // FolderKeyRole of the current Folders view node when it is not one item - a merged folder or "Not in a folder" - and no form shows
+    QString mFolderGroupKey;
+    bool mFolderViewActive = false;
+    bool mFolderTreeStale = true;
     QAction* mpCreateModuleAction = nullptr;
 
     // Smart undo/redo actions (route based on focus):
@@ -725,9 +810,55 @@ private:
 
     // keeps track of the dialog reset being queued
     bool mCleanResetQueued = false;
+    // A reset that arrived before the editor was ever shown, run on first show unless a view switch populated the trees first
+    bool mCleanResetDeferred = false;
+    // Trigger IDs whose tree icon is stale; painted in one tree walk on the
+    // next event-loop turn, or when the editor is next shown, rather than one
+    // O(tree) lookup per Lua toggle.
+    QSet<int> mPendingTriggerIconRefresh;
+    bool mTriggerIconRefreshQueued = false;
+    void flushPendingTriggerIconRefresh();
+    void refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT, bool touchNotification);
 
-    // One QIcon per resource path: a tree of thousands of items would otherwise
-    // decode the same handful of PNGs once per item, every time it is rebuilt
+    // Same coalescing as mPendingTriggerIconRefresh, for the other four unit
+    // types refreshXIcon() covers. The Flush/Paint counters exist only for
+    // TriggerEditorTest, to prove the queue collapses N pending toggles into
+    // one flush and that paintXItem() skips a setIcon() the cacheKey() guard
+    // finds unchanged, rather than just the end state those produce either way.
+    QSet<int> mPendingAliasIconRefresh;
+    bool mAliasIconRefreshQueued = false;
+    int mAliasIconFlushCount = 0;
+    int mAliasIconPaintCount = 0;
+    void flushPendingAliasIconRefresh();
+    void refreshAliasIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintAliasItem(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification);
+
+    QSet<int> mPendingTimerIconRefresh;
+    bool mTimerIconRefreshQueued = false;
+    int mTimerIconFlushCount = 0;
+    int mTimerIconPaintCount = 0;
+    void flushPendingTimerIconRefresh();
+    void refreshTimerIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintTimerItem(QTreeWidgetItem* pItem, TTimer* pT, bool touchNotification);
+
+    QSet<int> mPendingScriptIconRefresh;
+    bool mScriptIconRefreshQueued = false;
+    int mScriptIconFlushCount = 0;
+    int mScriptIconPaintCount = 0;
+    void flushPendingScriptIconRefresh();
+    void refreshScriptIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintScriptItem(QTreeWidgetItem* pItem, TScript* pT, bool touchNotification);
+
+    QSet<int> mPendingKeyIconRefresh;
+    bool mKeyIconRefreshQueued = false;
+    int mKeyIconFlushCount = 0;
+    int mKeyIconPaintCount = 0;
+    void flushPendingKeyIconRefresh();
+    void refreshKeyIconsIn(QTreeWidgetItem* pParent, bool ancestorDirty, bool ancestorTouchNotification, int& remaining);
+    void paintKeyItem(QTreeWidgetItem* pItem, TKey* pT, bool touchNotification);
+
+    // A tree of thousands of items would otherwise decode the same few PNGs per item on every rebuild
     const QIcon& cachedIcon(const QString& path) const;
     mutable QHash<QString, QIcon> mIconCache;
 
@@ -751,8 +882,8 @@ private:
     // space-driven auto-collapse:
     bool mShowAllTriggerControls = false;
 
-    // Every profile builds an editor when it loads but they share one saved
-    // window position, so one that was never opened must not write over it:
+    // Every profile builds an editor on load but all share one saved window position, so one never
+    // opened must not overwrite it:
     bool mHasBeenShown = false;
 
     // tracks location of the splitter in the trigger editor for each tab
@@ -833,8 +964,7 @@ private:
     QString descNewFolder;
     QString descNewItem;
     QString descPackageItem;
+    QString descKeyTaken;
 };
-
-Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)
 
 #endif // MUDLET_DLGTRIGGEREDITOR_H

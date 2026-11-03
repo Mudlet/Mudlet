@@ -37,6 +37,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QMargins>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -49,6 +50,7 @@
 #include <QSpinBox>
 #include <QToolButton>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
@@ -103,7 +105,7 @@ private:
     // MUDLET_TEST_NO_THEME_DOWNLOAD rather than this file's freshness.
     static void writeEditorThemesFile(const QByteArray& contents)
     {
-        const QString file = mudlet::getMudletPath(enums::editorWidgetThemeJsonFile);
+        const QString file = MudletApp::getMudletPath(enums::editorWidgetThemeJsonFile);
         QVERIFY(QDir().mkpath(QFileInfo(file).absolutePath()));
         QFile themes(file);
         QVERIFY(themes.open(QIODevice::WriteOnly | QIODevice::Truncate));
@@ -157,7 +159,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -172,8 +174,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mProfileName);
             delete mudlet::self();
@@ -288,6 +289,23 @@ private slots:
         QCOMPARE(mpHost->userBorders().top(), typedIn);
     }
 
+    void test_theBorderSpinBoxesOfferTheRangeTheHostAccepts()
+    {
+        openPreferences();
+        for (const QSpinBox* pSpinBox : {mpPreferences->topBorderHeight, mpPreferences->rightBorderWidth, mpPreferences->bottomBorderHeight, mpPreferences->leftBorderWidth}) {
+            QCOMPARE(pSpinBox->minimum(), -Host::scmMaxBorderSize);
+            QCOMPARE(pSpinBox->maximum(), Host::scmMaxBorderSize);
+        }
+    }
+
+    // what an older build could have saved in a profile or package
+    void test_anOutOfRangeStoredBorderIsBoundedWithAWarning()
+    {
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("^Host::setUserBorders\\(.*\\) WARNING - .*outside of the supported range")));
+        mpHost->setUserBorders(QMargins(-2147483640, 2147483640, -1000000, 7));
+        QCOMPARE(mpHost->userBorders(), QMargins(-Host::scmMaxBorderSize, Host::scmMaxBorderSize, -1000000, 7));
+    }
+
     // A script's change is per component, so a guard that is only per group is
     // not enough: editing one border must not carry the other three's controls
     // - one of which is showing what a script has already moved on from - back
@@ -381,7 +399,7 @@ private slots:
     void test_aThemeListRefreshDoesNotWipeTheChosenTheme()
     {
         writeEditorThemesFile(R"([{"Title": "PhaseDProbe", "FileName": "PhaseDProbe.tmTheme"}])");
-        const bool dark = mudlet::self()->inDarkMode();
+        const bool dark = MudletApp::darkMode();
         // Host::getEditorTheme() only reads the dark name when the dark file is
         // set too, so a name on its own leaves the dialog on the light theme
         (dark ? mpHost->mEditorThemeDark : mpHost->mEditorTheme) = qsl("PhaseDProbe");
@@ -430,7 +448,7 @@ private slots:
     void test_anExternalGlobalSettingSurvivesAnUnrelatedEdit()
     {
         openPreferences();
-        QSettings* pSettings = mudlet::getQSettings();
+        QSettings* pSettings = MudletApp::getQSettings();
         const bool shown = mpPreferences->telnetHandlerEnabled->isChecked();
         // what another profile's settings dialog, or a hand-edited Mudlet.ini,
         // leaves behind
@@ -442,6 +460,42 @@ private slots:
 
         QCOMPARE(pSettings->value(qsl("telnetHandlerEnabled")).toBool(), !shown);
         pSettings->setValue(qsl("telnetHandlerEnabled"), shown);
+    }
+
+    // A choice that never reaches the ssl_tsl file is undone the next time the profile
+    // connects through the connection dialog, which seeds its Secure checkbox from that file
+    void test_theSecureConnectionChoiceReachesTheProfileFile()
+    {
+        const bool sslBefore = mpHost->mSslTsl;
+        const QString file = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("ssl_tsl"));
+        const bool fileExistedBefore = QFileInfo::exists(file);
+        const QString fileBefore = mpHost->readProfileData(qsl("ssl_tsl"));
+        auto restore = qScopeGuard([this, sslBefore, file, fileExistedBefore, fileBefore]() {
+            mpHost->mSslTsl = sslBefore;
+            if (fileExistedBefore) {
+                mpHost->writeProfileData(qsl("ssl_tsl"), fileBefore);
+            } else {
+                QFile::remove(file);
+            }
+        });
+        mpHost->mSslTsl = false;
+        QVERIFY(mpHost->writeProfileData(qsl("ssl_tsl"), QString::number(Qt::Unchecked)).first);
+        openPreferences();
+        QVERIFY2(!mpPreferences->groupBox_ssl->isChecked(), "the secure connection setting already showed as on, so turning it on proves nothing");
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->groupBox_ssl->setChecked(true);
+        QVERIFY2(TestSettings::waitForApply(applySpy), "turning on the secure connection never wrote the settings back");
+
+        QVERIFY(mpHost->mSslTsl);
+        QCOMPARE(mpHost->readProfileData(qsl("ssl_tsl")).toInt(), static_cast<int>(Qt::Checked));
+
+        applySpy.clear();
+        mpPreferences->groupBox_ssl->setChecked(false);
+        QVERIFY2(TestSettings::waitForApply(applySpy), "turning off the secure connection never wrote the settings back");
+
+        QVERIFY(!mpHost->mSslTsl);
+        QCOMPARE(mpHost->readProfileData(qsl("ssl_tsl")).toInt(), static_cast<int>(Qt::Unchecked));
     }
 };
 

@@ -34,6 +34,7 @@
  * Run with: ctest -R VideoOutputHideTest -V
  */
 
+#include <QDataStream>
 #include <QMediaPlayer>
 #include <QPointer>
 #include <QTemporaryDir>
@@ -44,6 +45,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TLabel.h"
@@ -150,17 +152,17 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
-        mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
-        mudlet::getQSettings()->sync();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        MudletApp::getQSettings()->setValue(qsl("uiTourShown"), true);
+        MudletApp::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        QDir(mudlet::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         QVERIFY2(mpHost, "the test profile did not load");
-        QVERIFY2(mpHost->mpConsole, "the profile loaded without a main console, so none of the video seam exists");
+        QVERIFY2(mpHost->mainConsoleView(), "the profile loaded without a main console, so none of the video seam exists");
         QVERIFY2(mpHost->mpMedia, "the profile loaded without a TMedia, so there is no emitter");
         QVERIFY2(writeClip(setupFailure), qPrintable(setupFailure));
     }
@@ -171,7 +173,7 @@ private slots:
         mpServer = nullptr;
         mpHost = nullptr;
         if (mudlet::self()) {
-            QDir(mudlet::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
             delete mudlet::self();
         }
         // Only if this process is the one that redirected it: an initTestCase that skipped
@@ -347,7 +349,7 @@ private:
             QTest::qFail(qPrintable(message), __FILE__, __LINE__);
             return false;
         }
-        pLabel = mpHost->mpConsole->labelWidget(name);
+        pLabel = mpHost->mainConsoleView()->labelWidget(name);
         if (!pLabel) {
             QTest::qFail(qPrintable(qsl("createLabel() reported success but no label called '%1' is in the console's label map").arg(name)), __FILE__, __LINE__);
             return false;
@@ -371,7 +373,7 @@ private:
 
     bool writeClip(QString& failure) const
     {
-        const QString mediaPath = mudlet::getMudletPath(enums::profileMediaPath, mHostname);
+        const QString mediaPath = MudletApp::getMudletPath(enums::profileMediaPath, mHostname);
         if (!QDir().mkpath(mediaPath)) {
             failure = qsl("could not create the profile media directory %1").arg(mediaPath);
             return false;

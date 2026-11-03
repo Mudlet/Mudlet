@@ -37,10 +37,12 @@
 #include <QtNetwork/QTcpSocket>
 #include <memory>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "TMainConsole.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -325,7 +327,7 @@ private slots:
         QVERIFY2(mpServer->start(), "KaVirServerStub failed to bind a loopback port");
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -336,8 +338,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory();
         delete mudlet::self();
+        deleteProfileDirectory();
     }
 
     // A game that lists several charsets it can speak must not pull a UTF-8
@@ -491,14 +493,14 @@ private:
     {
         return QTest::qWaitFor(
                 [host, &text]() {
-                    for (int i = 0; i <= host->mpConsole->buffer.getLastLineNumber(); ++i) {
-                        if (host->mpConsole->buffer.line(i).contains(text)) {
+                    for (int i = 0; i <= host->mainConsoleView()->buffer.getLastLineNumber(); ++i) {
+                        if (host->mainConsoleView()->buffer.line(i).contains(text)) {
                             return true;
                         }
                     }
                     return false;
                 },
-                5000);
+                5s);
     }
 
     // An RFC 2066 request for a charset Mudlet can use but is not using.
@@ -538,7 +540,7 @@ private:
                     [this]() {
                         return mpServer->connectionCount() >= 2 && mpServer->latestTtypeCycleFinished();
                     },
-                    15000)) {
+                    15s)) {
             qWarning("The client did not reconnect and complete its telnet negotiation");
             return nullptr;
         }
@@ -547,10 +549,7 @@ private:
 
     void deleteProfileDirectory()
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, mHostname));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(mHostname);
     }
 };
 

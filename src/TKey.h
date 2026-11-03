@@ -49,7 +49,9 @@ public:
     void setName(const QString& name);
     Qt::Key getKeyCode() const { return mKeyCode; }
     void setKeyCode(const Qt::Key code) { mKeyCode = code; }
-    void setKeyCode(const int codeNumber) { setKeyCode(static_cast<Qt::Key>(codeNumber)); }
+    // Groups pass -1, and profile or package XML can hold any number: casting a
+    // value outside Qt::Key's range (0 to Key_unknown) to it is undefined behaviour
+    void setKeyCode(const int codeNumber) { setKeyCode((codeNumber < 0 || codeNumber > Qt::Key_unknown) ? Qt::Key_unknown : static_cast<Qt::Key>(codeNumber)); }
     Qt::KeyboardModifiers getKeyModifiers() const { return mKeyModifier; }
     void setKeyModifiers(const Qt::KeyboardModifiers code) { mKeyModifier = code; }
     void setKeyModifiers(const int codeNumber) { setKeyModifiers(static_cast<Qt::KeyboardModifiers>(codeNumber)); }
@@ -69,12 +71,18 @@ public:
     bool match(const Qt::Key, const Qt::KeyboardModifiers, const bool);
     // Query-only counterpart to match(), which executes what it matches
     bool wouldMatch(const Qt::Key, const Qt::KeyboardModifiers) const;
+    // The binding wouldMatch() found
+    const TKey* firstMatch(const Qt::Key, const Qt::KeyboardModifiers) const;
+    // As firstMatch(), but switched off bindings count too
+    const TKey* firstBinding(const Qt::Key, const Qt::KeyboardModifiers) const;
     bool registerKey();
     void validateKeyBinding();
 
     bool exportItem = true;
     bool mModuleMasterFolder = false;
     bool mRegisteredAnonymousLuaFunction = false;
+    // 0 when no function is held; luaL_ref() never returns 0
+    int mLuaFunctionRef = 0;
     QPointer<Host> mpHost;
 
 private:

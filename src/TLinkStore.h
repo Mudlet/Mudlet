@@ -55,6 +55,7 @@ public:
     QString getExpireName(int id) const { return mExpireStore.value(id); }
 
     int getCurrentLinkID() const { return mLinkID; }
+    int nextLinkID() const { return mLinkID < mMaxLinks ? mLinkID + 1 : 1; }
 
     // true until a link is created since mLinkID never wraps back to zero
     bool pristine() const { return mLinkID == 0; }

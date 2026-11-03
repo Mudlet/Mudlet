@@ -21,6 +21,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -35,13 +36,16 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // TBuffer::wrapLine() rebuilds every line from its start line to the end of the
 // buffer, and its callers rely on more than the text coming back out intact:
 // the count it returns positions the user cursor and the repaint range, and the
 // timestamps and prompt flags it carries over decide what the timestamp column
 // and TConsole::printCommand() do next. These lock all of that down, along with
 // the one thing about the server-wrap flush that a spec cannot sample in time:
-// that the line it commits is painted rather than appended.
+// that the line it commits is painted rather than appended, and that
+// deleteLines() keeps those per-line lists and wrap markers in step.
 class WrapLineRewrapTest : public QObject
 {
     Q_OBJECT
@@ -88,7 +92,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -97,7 +101,7 @@ private slots:
 
     void cleanup()
     {
-        const QString profilePath = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        const QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;
@@ -105,7 +109,7 @@ private slots:
     }
 
     // The count is not "lines added": it is every line in the rewrapped range
-    // bar one, whether that line was split or not. TConsole::insertLink() moves
+    // bar one, whether that line was split or not. TConsoleModel::insertLink() moves
     // the user cursor down by it, so a line that needed no wrapping still has
     // to be counted.
     void test_rewrapCountsEveryLineInItsRange()
@@ -139,18 +143,18 @@ private slots:
         echo(qsl("a line that fits\\n"));
         QCOMPARE(console->buffer.lineBuffer.size(), 2);
 
-        console->buffer.timeBuffer[0] = qsl("11:22:33.444");
+        console->buffer.timeBuffer[0] = 1234567890123;
         console->buffer.promptBuffer[0] = true;
 
         console->buffer.wrapLine(0, 200, 0, 0);
 
         QCOMPARE(console->buffer.line(0), qsl("a line that fits"));
-        QCOMPARE(console->buffer.timeBuffer.at(0), qsl("11:22:33.444"));
+        QCOMPARE(console->buffer.timeBuffer.at(0), 1234567890123);
         QVERIFY(console->buffer.promptBuffer.at(0));
     }
 
-    // Continuation lines are marked by a blank timestamp, which is what tells a
-    // later rewrap not to indent them as though they started a line.
+    // Continuation lines are marked csmWrappedLineTimeStamp, which is what tells
+    // a later rewrap not to indent them as though they started a line.
     void test_aWrappedLineIsSplitAndItsContinuationsAreBlankStamped()
     {
         auto* console = consoleWithWrapWidth(10);
@@ -160,9 +164,9 @@ private slots:
         QCOMPARE(joinedText(console), qsl("abcdefghijklmnopqrstuvwxyz"));
         QCOMPARE(nonEmptyLineCount(console), 3);
         QCOMPARE(console->buffer.line(0), qsl("abcdefghij"));
-        QVERIFY2(console->buffer.timeBuffer.at(0) != TBuffer::smBlankTimeStamp, "the line that starts the paragraph lost its timestamp");
-        QCOMPARE(console->buffer.timeBuffer.at(1), TBuffer::smBlankTimeStamp);
-        QCOMPARE(console->buffer.timeBuffer.at(2), TBuffer::smBlankTimeStamp);
+        QVERIFY2(console->buffer.timeBuffer.at(0) != TBuffer::csmWrappedLineTimeStamp, "the line that starts the paragraph lost its timestamp");
+        QCOMPARE(console->buffer.timeBuffer.at(1), TBuffer::csmWrappedLineTimeStamp);
+        QCOMPARE(console->buffer.timeBuffer.at(2), TBuffer::csmWrappedLineTimeStamp);
     }
 
     // The shortcut stops at a blank line rather than keeping it: the rewrap
@@ -179,7 +183,7 @@ private slots:
         QCOMPARE(console->buffer.line(2), qsl("below"));
 
         console->buffer.promptBuffer[1] = true;
-        console->buffer.timeBuffer[1] = qsl("sentinel");
+        console->buffer.timeBuffer[1] = 42;
 
         QCOMPARE(console->buffer.wrapLine(0, 200, 0, 0), 3);
 
@@ -187,7 +191,7 @@ private slots:
         QVERIFY(console->buffer.line(1).isEmpty());
         QCOMPARE(console->buffer.line(2), qsl("below"));
         QVERIFY2(!console->buffer.promptBuffer.at(1), "the replacement blank line kept the old one's prompt flag");
-        QVERIFY2(console->buffer.timeBuffer.at(1) != qsl("sentinel"), "the replacement blank line kept the old one's timestamp");
+        QVERIFY2(console->buffer.timeBuffer.at(1) != 42, "the replacement blank line kept the old one's timestamp");
     }
 
     // A line whose text has gone but whose formatting has not is replaced by an
@@ -265,7 +269,7 @@ private slots:
                 continue;
             }
 
-            const std::vector<TChar>& chars = console->buffer.buffer.at(i);
+            const TLineFormat& chars = console->buffer.buffer.at(i);
             QCOMPARE(static_cast<int>(chars.size()), line.size());
             const QColor& textColour = chars.at(firstTextChar).background();
             sawFirstHalf = sawFirstHalf || textColour == firstHalf;
@@ -321,7 +325,7 @@ private slots:
             if (line.isEmpty()) {
                 continue;
             }
-            const std::vector<TChar>& chars = console->buffer.buffer.at(i);
+            const TLineFormat& chars = console->buffer.buffer.at(i);
             QCOMPARE(static_cast<int>(chars.size()), line.size());
             for (int j = 0; j < line.size(); ++j) {
                 const QChar letter = line.at(j);
@@ -346,7 +350,7 @@ private slots:
         const int linesAt30 = nonEmptyLineCount(console);
 
         console->setWrapAt(8);
-        // TConsole::luaWrapLine() is the only production path that rewraps a
+        // wrapLine() is the only production path that rewraps a
         // scrollback at a new width - resizing the window does not
         runLua(qsl("wrapLine('%1', 0)").arg(mMiniConsole));
 
@@ -355,6 +359,44 @@ private slots:
         for (int i = 0, total = console->buffer.getLastLineNumber(); i <= total; ++i) {
             QVERIFY2(console->buffer.line(i).size() <= 8, qPrintable(qsl("line %1 is wider than the wrap width: '%2'").arg(QString::number(i), console->buffer.line(i))));
         }
+    }
+
+    // The main console's wrap settings are the profile's. Loading a profile and
+    // applying the preferences both hand them over through changeColors()
+    // rather than setWindowWrap(), and wrapLine('main') has to honour them
+    // just the same.
+    void test_wrapLineOnMainUsesTheProfilesWrapSettings()
+    {
+        startProfile();
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        TMainConsole* console = host->mainConsoleView();
+        QVERIFY(console);
+
+        const QString token = qsl("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+        QVERIFY2(host->mWrapAt > token.size(), "the profile already wraps narrower than the test line");
+        runLua(qsl("echo('main', '\\n%1\\n')").arg(token));
+        int tokenLine = -1;
+        for (int i = 0, total = console->buffer.getLastLineNumber(); i <= total; ++i) {
+            if (console->buffer.line(i) == token) {
+                tokenLine = i;
+            }
+        }
+        QVERIFY2(tokenLine >= 0, "the test line was not echoed whole onto the main console");
+
+        host->mWrapAt = 20;
+        host->mWrapIndentCount = 2;
+        host->mWrapHangingIndentCount = 4;
+        console->changeColors();
+        QCOMPARE(console->getWrapAt(), 20);
+
+        runLua(qsl("wrapLine('main', %1)").arg(tokenLine));
+
+        const QString firstLine = console->buffer.line(tokenLine);
+        const QString secondLine = console->buffer.line(tokenLine + 1);
+        QVERIFY2(firstLine.size() <= 20, qPrintable(qsl("the line was not rewrapped to the profile's width: '%1'").arg(firstLine)));
+        QVERIFY2(firstLine.startsWith(qsl("  a")), qPrintable(qsl("the first line did not get the profile's indent: '%1'").arg(firstLine)));
+        QVERIFY2(secondLine.startsWith(qsl("    ")), qPrintable(qsl("the second line did not get the profile's hanging indent: '%1'").arg(secondLine)));
     }
 
     // East Asian Wide glyphs take two columns each, so the split points come
@@ -417,7 +459,7 @@ private slots:
     {
         auto* host = startLoggingProfile();
         QVERIFY(host);
-        host->mpConsole->setWrapAt(20);
+        host->mainConsoleView()->setWrapAt(20);
 
         // one unbroken token, so no wrap point can swallow a space, and long
         // enough to be split into more than two lines
@@ -445,7 +487,7 @@ private slots:
         QVERIFY(host);
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         // keep Mudlet's own display wrap out of the way, so the held line is
         // one buffer line to look for
         console->setWrapAt(500);
@@ -456,8 +498,8 @@ private slots:
         const QString heldLine = QString(64, QChar('x')) + qsl(" alpha");
         runLua(qsl("feedTelnet('%1\\n')").arg(heldLine));
 
-        auto* flushTimer = console->findChild<QTimer*>(qsl("serverWrapFlushTimer"));
-        QVERIFY2(flushTimer && flushTimer->isActive(), "the full-width line was not held back for a continuation");
+        QTimer* flushTimer = &host->mServerWrapFlushTimer;
+        QVERIFY2(flushTimer->isActive(), "the full-width line was not held back for a continuation");
 
         int sizeAtFlush = -1;
         int cursorAtFlush = -1;
@@ -470,7 +512,7 @@ private slots:
                          [&]() {
                              return bufferHasLine(console, heldLine);
                          },
-                         5000),
+                         5s),
                  "held full-width line was not flushed after the game went quiet");
         QVERIFY2(sizeAtFlush > 0, "the flush timer never fired, so the line was committed by some other path");
         QCOMPARE(cursorAtFlush, sizeAtFlush);
@@ -512,6 +554,118 @@ private slots:
         QVERIFY(console->buffer.lineBuffer.constLast().isEmpty());
     }
 
+    // deleteLines() has to drop the same rows from every per-line list and line
+    // marker as from the TChar grid, or what is below lands on other lines.
+    void test_deletingARangeOfLinesKeepsEveryLineListInStep()
+    {
+        auto* console = consoleWithWrapWidth(200);
+        QVERIFY(console);
+        echo(qsl("line one\\nline two\\nline three\\nline four\\nline five\\n"));
+        TBuffer& buffer = console->buffer;
+        QCOMPARE(buffer.lineBuffer.size(), 6);
+        buffer.timeBuffer[3] = 424242;
+        buffer.promptBuffer[3] = true;
+        buffer.wrapGapBuffer[3] = 7;
+        QVERIFY(buffer.applyAttribute(QPoint(0, 3), QPoint(buffer.line(4).size(), 4), TChar::Found, true));
+
+        QVERIFY(buffer.deleteLines(0, 2));
+
+        QCOMPARE(buffer.lineBuffer.size(), 3);
+        QCOMPARE(static_cast<qsizetype>(buffer.buffer.size()), buffer.lineBuffer.size());
+        QCOMPARE(buffer.timeBuffer.size(), buffer.lineBuffer.size());
+        QCOMPARE(buffer.promptBuffer.size(), buffer.lineBuffer.size());
+        QCOMPARE(buffer.wrapGapBuffer.size(), buffer.lineBuffer.size());
+        QCOMPARE(buffer.line(0), qsl("line four"));
+        QCOMPARE(buffer.line(1), qsl("line five"));
+        QCOMPARE(static_cast<qsizetype>(buffer.buffer.at(0).size()), buffer.line(0).size());
+        QCOMPARE(buffer.timeBuffer.at(0), qint64(424242));
+        QVERIFY(buffer.promptBuffer.at(0));
+        QVERIFY(!buffer.promptBuffer.at(1));
+        QCOMPARE(buffer.wrapGapBuffer.at(0), 7);
+        buffer.clearSearchHighlights();
+        for (int y = 0; y < buffer.lineBuffer.size(); ++y) {
+            for (const auto& character : buffer.buffer.at(y)) {
+                QVERIFY2(!character.isFound(), qPrintable(qsl("line %1 kept its search highlight").arg(y)));
+            }
+        }
+    }
+
+    // A line wrapped off one in a deleted range takes the timestamp of the start
+    // of its logical line; with no start in the range it still continues the line above.
+    void test_deletingARangeOfWrappedLinesKeepsTheLogicalLinesApart()
+    {
+        auto* console = consoleWithWrapWidth(200);
+        QVERIFY(console);
+        echo(qsl("X\\nY\\nZ\\nW\\nV\\nU\\n"));
+        TBuffer& buffer = console->buffer;
+        QCOMPARE(buffer.lineBuffer.size(), 7);
+        const QList<qint64> stamps{1000, TBuffer::csmWrappedLineTimeStamp, 3000, TBuffer::csmWrappedLineTimeStamp, TBuffer::csmWrappedLineTimeStamp, TBuffer::csmWrappedLineTimeStamp};
+        for (int i = 0; i < stamps.size(); ++i) {
+            buffer.timeBuffer[i] = stamps.at(i);
+        }
+
+        QVERIFY(buffer.deleteLines(4, 4));
+        QCOMPARE(buffer.line(4), qsl("U"));
+        QCOMPARE(buffer.timeBuffer.at(4), TBuffer::csmWrappedLineTimeStamp);
+
+        QVERIFY(buffer.deleteLines(1, 2));
+        QCOMPARE(buffer.line(1), qsl("W"));
+        QCOMPARE(buffer.timeBuffer.at(1), qint64(3000));
+        QCOMPARE(buffer.timeBuffer.at(2), TBuffer::csmWrappedLineTimeStamp);
+    }
+
+    // Only the last start in the range counts, wherever it sits in it, and a range
+    // of continuation lines alone gives the line below no timestamp of its own.
+    void test_deletingARangeOfWrappedLinesTakesTheLastStartInIt()
+    {
+        auto* console = consoleWithWrapWidth(200);
+        QVERIFY(console);
+        TBuffer& buffer = console->buffer;
+        const QList<qint64> stamps{1000, TBuffer::csmWrappedLineTimeStamp, 3000, TBuffer::csmWrappedLineTimeStamp, TBuffer::csmWrappedLineTimeStamp, TBuffer::csmWrappedLineTimeStamp};
+        const auto echoStampedLines = [&]() {
+            const int first = buffer.lineBuffer.size() - 1;
+            echo(qsl("X\\nY\\nZ\\nW\\nV\\nU\\n"));
+            for (int i = 0; i < stamps.size(); ++i) {
+                buffer.timeBuffer[first + i] = stamps.at(i);
+            }
+            return first;
+        };
+
+        int first = echoStampedLines();
+        QCOMPARE(first, 0);
+        QVERIFY(buffer.deleteLines(0, 3));
+        QCOMPARE(buffer.line(0), qsl("V"));
+        QCOMPARE(buffer.timeBuffer.at(0), qint64(3000));
+        QCOMPARE(buffer.timeBuffer.at(1), TBuffer::csmWrappedLineTimeStamp);
+
+        first = echoStampedLines();
+        QVERIFY(buffer.deleteLines(first + 2, first + 3));
+        QCOMPARE(buffer.line(first + 2), qsl("V"));
+        QCOMPARE(buffer.timeBuffer.at(first + 2), qint64(3000));
+
+        first = echoStampedLines();
+        QVERIFY(buffer.deleteLines(first + 3, first + 4));
+        QCOMPARE(buffer.line(first + 3), qsl("U"));
+        QCOMPARE(buffer.timeBuffer.at(first + 3), TBuffer::csmWrappedLineTimeStamp);
+    }
+
+    // Declared last: without the clamp this aborts, taking the rest of the run
+    // with it. The Lua setter refuses a negative now, so the indent is written
+    // from C++ to reach wrapLine()'s clamp at all.
+    void test_aNegativeIndentIndentsByNothing()
+    {
+        auto* console = consoleWithWrapWidth(4);
+        QVERIFY(console);
+        console->setIndentCount(-2);
+        console->setHangingIndentCount(-3);
+
+        echo(qsl("abcdefghijklmnopqrstuvwxyz\\n"));
+
+        QCOMPARE(textIgnoringIndentation(console), qsl("abcdefghijklmnopqrstuvwxyz"));
+        const QString firstLine = console->buffer.line(0);
+        QVERIFY2(!firstLine.startsWith(qsl(" ")), qPrintable(qsl("a negative indent padded the line: '%1'").arg(firstLine)));
+    }
+
 private:
     void runLua(const QString& script)
     {
@@ -528,7 +682,7 @@ private:
     {
         startProfile();
         runLua(qsl("createMiniConsole('%1', 0, 0, 600, 600)").arg(mMiniConsole));
-        auto* console = mudlet::self()->getActiveHost()->mpConsole->subConsoleWidget(mMiniConsole);
+        auto* console = mudlet::self()->getActiveHost()->mainConsoleView()->subConsoleWidget(mMiniConsole);
         if (console) {
             console->setWrapAt(width);
         }
@@ -543,7 +697,7 @@ private:
         }
 
         QSignalSpy connectedSpy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connectedSpy.wait(2000)) {
+        if (!connectedSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -600,7 +754,7 @@ private:
                     [host]() {
                         return host->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
                     },
-                    5000)) {
+                    5s)) {
             qWarning() << "Profile did not go offline in time; feedTelnet() calls will fail";
         }
         return host;
@@ -620,14 +774,14 @@ private:
         host->mLogFileName = qsl("wrapline-rewrap-test");
         host->mIsNextLogFileInHtmlFormat = false;
         host->mIsLoggingTimestamps = false;
-        host->mpConsole->toggleLogging(false);
+        host->mainConsoleView()->toggleLogging(false);
         return host;
     }
 
     QString stopLoggingAndReadLog(Host* host)
     {
-        const QString logFileName = host->mpConsole->mLogFileName;
-        host->mpConsole->toggleLogging(false);
+        const QString logFileName = host->mainConsoleView()->mLogFileName;
+        host->mainConsoleView()->toggleLogging(false);
 
         QFile logFile(logFileName);
         if (!logFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -636,7 +790,7 @@ private:
         return QString::fromUtf8(logFile.readAll());
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(mudlet::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletApp::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {

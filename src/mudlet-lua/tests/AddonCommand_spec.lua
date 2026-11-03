@@ -222,6 +222,79 @@ describe("addon commands", function()
         "the search took F3 from a command without saying so: " .. text)
     end)
 
+    -- A key binding is neither a QAction nor a QShortcut: it lives in the
+    -- profile's own key unit and is matched from the command line's key
+    -- handling, so none of the scans above can see one. A command placed on a
+    -- binding's key gets the key event first and the binding simply stops
+    -- firing - and the package was told its command went on fine.
+    it("refuses one a key binding of this profile already has, and names it", function()
+      permKey("SpecKeyClashBinding", "", mudlet.keymodifier.Alt, mudlet.key.F9, [[echo("bound")]])
+
+      local id, why = place{name = "KeyBindingClashSpec", shortcut = "Alt+F9"}
+      disableKey("SpecKeyClashBinding")
+
+      assert.is_nil(id, "a command took a key binding's key, which stops the binding firing")
+      assert.is_truthy(why:find("SpecKeyClashBinding", 1, true),
+        "the refusal does not name the key binding holding the key: " .. tostring(why))
+    end)
+
+    -- A temporary binding is named after its own id, which names nothing the
+    -- player could go and look for, so the refusal says what holds the key
+    -- rather than quoting a label that appears nowhere on screen.
+    it("refuses one a temporary key binding holds, without quoting its id as a name", function()
+      local key = tempKey(mudlet.keymodifier.Alt, mudlet.key.F8, [[echo("bound")]])
+
+      local id, why = place{name = "TempKeyClashSpec", shortcut = "Alt+F8"}
+      killKey(key)
+
+      assert.is_nil(id, "a command took a temporary key binding's key")
+      assert.is_falsy(why:find('"' .. tostring(key) .. '"', 1, true),
+        "the refusal quotes the binding's id as though it were a name: " .. tostring(why))
+    end)
+
+    -- enableKey() does not look for commands, and scripts commonly switch groups
+    -- of bindings on and off, so a switched off binding still holds its key
+    it("refuses one a switched off key binding has", function()
+      local key = tempKey(mudlet.keymodifier.Alt, mudlet.key.F7, [[echo("bound")]])
+      disableKey(tostring(key))
+
+      local id = place{name = "DisabledKeyClashSpec", shortcut = "Alt+F7"}
+      killKey(tostring(key))
+      -- so the binding, and nothing else holding Alt+F7, was the reason
+      local afterKill, why = place{name = "DisabledKeyClashSpecAfterKill", shortcut = "Alt+F7"}
+
+      assert.is_nil(id, "a command took the key of a switched off binding, which then never fires once switched on")
+      assert.is_number(afterKill, "the key was refused for some other reason: " .. tostring(why))
+    end)
+
+    it("refuses one a binding in a switched off group has, and names it", function()
+      permGroup("SpecDisabledKeyGroup", "key")
+      permKey("SpecDisabledKeyGroupChild", "SpecDisabledKeyGroup", mudlet.keymodifier.Alt, mudlet.key.F5, [[echo("bound")]])
+      disableKey("SpecDisabledKeyGroup")
+
+      local id, why = place{name = "DisabledGroupKeyClashSpec", shortcut = "Alt+F5"}
+
+      assert.is_nil(id, "a command took the key of a binding whose group was switched off")
+      assert.is_truthy(why:find("SpecDisabledKeyGroupChild", 1, true),
+        "the refusal does not name the key binding holding the key: " .. tostring(why))
+    end)
+
+    -- A killed binding lingers until the key unit next tidies up, but can never fire again
+    it("hands out the key of a killed binding", function()
+      local key = tempKey(mudlet.keymodifier.Alt, mudlet.key.F6, [[echo("bound")]])
+      killKey(tostring(key))
+
+      local id, why = place{name = "KilledKeySpec", shortcut = "Alt+F6"}
+      assert.is_number(id, "a killed binding still held its key: " .. tostring(why))
+    end)
+
+    -- The other direction - a binding made over a command's key - is warned
+    -- about rather than refused, since the binding is the player's own item.
+    -- That warning is shown in the editor rather than on the main screen, so
+    -- it cannot be read from here: Lua can make the clash but not open the
+    -- window that reports it. AddonControlsTest's
+    -- aProfileIsToldInItsEditorWhenACommandHoldsItsNewBindingsKey covers it.
+
     -- Qt keeps the first four chunks of a longer sequence and drops the rest,
     -- so the command went onto a key nobody had asked for
     it("refuses one of more steps than Qt can hold", function()
@@ -334,6 +407,7 @@ describe("addon commands", function()
       assert.is_false(setCommandChecked(unknown, true))
       assert.is_false(setCommandIcon(unknown, ""))
       assert.is_false(setCommandTooltip(unknown, "nothing"))
+      assert.is_false(setCommandPinned(unknown, true))
     end)
 
     it("is what an id becomes once its command is removed", function()
@@ -368,6 +442,15 @@ describe("addon commands", function()
     it("takes a new icon, including one that resolves to nothing", function()
       assert.is_true(setCommandIcon(id, ""))
       assert.is_true(setCommandIcon(id, "/no/such/icon.png"))
+    end)
+
+    -- Where a pinned command actually appears needs a second profile and a
+    -- second window to see, which a spec has neither of; that is pinned by
+    -- SpeechAcrossProfilesTest. What belongs here is that the call exists and
+    -- answers, so a package can set it without checking the Mudlet version.
+    it("takes being pinned and unpinned", function()
+      assert.is_true(setCommandPinned(id, true))
+      assert.is_true(setCommandPinned(id, false))
     end)
   end)
 

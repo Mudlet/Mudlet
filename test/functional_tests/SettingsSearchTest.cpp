@@ -45,6 +45,7 @@
 #include <QTimer>
 #include <QToolButton>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
@@ -55,6 +56,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class SettingsSearchTest : public QObject
 {
@@ -164,7 +167,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -179,8 +182,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mProfileName);
             delete mudlet::self();
@@ -226,6 +228,15 @@ private slots:
         QVERIFY2(mpPreferences->findChild<QLabel*>(qsl("settingsSearchEmpty"))->isHidden(), "a search that matched showed the empty state as well");
     }
 
+    // Both cards are titled "Font", so the words that tell them apart are the editor's
+    void test_editorFontFindsTheEditorsFontCardAndNotTheDisplays()
+    {
+        search(qsl("editor font"));
+
+        QCOMPARE(mpPreferences->groupBox_editorFont->parentWidget(), resultsColumn());
+        QVERIFY2(mpPreferences->groupBox_font->parentWidget() != resultsColumn(), "the display font's card answered a search for the editor's font");
+    }
+
     // The protocol names only exist inside the menu that button pops up, where
     // a walk over the widget tree cannot see them, so the button carries them
     // as invisible synonyms - and is what gets highlighted for them
@@ -235,6 +246,31 @@ private slots:
 
         QCOMPARE(mpPreferences->groupBox_protocols->parentWidget(), resultsColumn());
         QVERIFY2(mpPreferences->pushButton_chooseProtocols->property("searchMatch").toBool(), "the button carrying the protocol keywords was not highlighted");
+    }
+
+    // Players who remember the old "Special options" tab look for it by that
+    // name, and the two cards that carried it now live on different pages
+    void test_theOldSpecialOptionsNameFindsBothOfItsSuccessors()
+    {
+        search(qsl("special"));
+
+        QCOMPARE(mpPreferences->groupBox_specialOptions->parentWidget(), resultsColumn());
+        QCOMPARE(mpPreferences->groupBox_debug->parentWidget(), resultsColumn());
+        // "special" is a common enough word that some tooltip on either card
+        // could carry it, which would find the card without the synonym
+        QVERIFY2(mpPreferences->groupBox_specialOptions->property("searchMatch").toBool(), "the Compatibility card was not found by its own synonym");
+        QVERIFY2(mpPreferences->groupBox_debug->property("searchMatch").toBool(), "the Developer card was not found by its own synonym");
+    }
+
+    // A game workaround, so it is with the others rather than among the
+    // script-writing tools
+    void test_theColourSpaceWorkaroundIsOnTheCompatibilityCard()
+    {
+        search(qsl("SGR"));
+
+        QCOMPARE(mpPreferences->groupBox_specialOptions->parentWidget(), resultsColumn());
+        QVERIFY2(mpPreferences->groupBox_debug->parentWidget() != resultsColumn(), "the Developer card still holds the colour space workaround");
+        QVERIFY2(mpPreferences->checkBox_expectCSpaceIdInColonLessMColorCode->isVisible(), "the workaround was moved onto the card but left out of its layout");
     }
 
     // A lone Latin letter matches most of the dialog, and answering it means
@@ -291,6 +327,28 @@ private slots:
 
         QVERIFY2(searchField()->text().isEmpty(), "the search field still holds the query after a category was chosen");
         QCOMPARE(stack()->currentWidget(), pageOf(qsl("mapper")));
+        QCOMPARE(cardPlacements(), before);
+    }
+
+    // A search keeps the sidebar's current row, so clicking the category it was
+    // started from changes no row: the click itself has to end the search
+    void test_clickingTheCategoryTheSearchStartedFromLeavesSearchMode()
+    {
+        const QStringList before = cardPlacements();
+        const int displayRow = TestSettings::rowOf(mpPreferences, qsl("mainDisplay"));
+        QVERIFY(displayRow >= 0);
+        sidebar()->setCurrentRow(displayRow);
+        QCoreApplication::processEvents();
+        search(qsl("wrap"));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("searchResults")));
+
+        QListWidgetItem* pItem = sidebar()->item(displayRow);
+        QTest::mouseClick(sidebar()->viewport(), Qt::LeftButton, Qt::NoModifier, sidebar()->visualItemRect(pItem).center());
+        QCoreApplication::processEvents();
+
+        QVERIFY2(searchField()->text().isEmpty(), "the search field still holds the query after its own category was clicked");
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("mainDisplay")));
+        QVERIFY(pItem->isSelected());
         QCOMPARE(cardPlacements(), before);
     }
 
@@ -430,6 +488,15 @@ private slots:
         QCOMPARE(mpPreferences->groupBox_accessibility->parentWidget(), resultsColumn());
     }
 
+    void test_theBritishSpellingFindsTheColourCards()
+    {
+        for (const QString& query : {qsl("colour"), qsl("colours")}) {
+            search(query);
+            QVERIFY2(mpPreferences->groupBox_displayColors->parentWidget() == resultsColumn(), qPrintable(query));
+            QVERIFY2(mpPreferences->groupBox_mapperColors->parentWidget() == resultsColumn(), qPrintable(query));
+        }
+    }
+
     // Accents and keyboard accelerators are folded out of both sides of the
     // comparison, so a query typed without either still finds what carries them
     void test_aQueryWithoutAccentsFindsACardThatHasThem()
@@ -475,7 +542,7 @@ private slots:
                          [this]() {
                              return mpPreferences->findChild<QWidget*>(qsl("settingsSpotlight")) != nullptr;
                          },
-                         5000),
+                         5s),
                  "following a subpage result drew no spotlight over the card it found");
     }
 

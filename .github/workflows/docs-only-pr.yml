@@ -1,0 +1,68 @@
+# The PR build workflows skip pull requests that change nothing but documentation
+# (their paths-ignore), which would leave the checks branch protection requires
+# waiting forever. This reports those checks instead, for exactly those pull requests.
+name: 🔨 Build Mudlet - PR (documentation only)
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '**.md'
+
+permissions:
+  pull-requests: read
+
+jobs:
+  changes:
+    name: detect documentation-only changes
+    runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{steps.filter.outputs.docs_only}}
+    steps:
+    - name: Check whether only documentation changed
+      id: filter
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        pulls=$(gh api --paginate --slurp \
+          "/repos/${{github.repository}}/pulls/${{github.event.pull_request.number}}/files")
+        # The endpoint lists at most 3000 files, so a longer list could be hiding
+        # code; anything short of the whole list counts as a code change
+        listed=$(jq '[.[][]] | length' <<< "$pulls")
+        changed=${{ github.event.pull_request.changed_files }}
+        # A renamed file counts under its old name too, so moving code into docs/
+        # still reads as a code change - as it does to the build workflows' filter
+        files=$(jq -r '.[][] | .filename, (.previous_filename // empty)' <<< "$pulls")
+        echo "Changed files (${listed} of ${changed} listed):"
+        printf '%s\n' "$files"
+
+        # grep reads a here-string rather than a pipe: it exits at the first match,
+        # and a writer killed by SIGPIPE would turn into a false "docs only" under
+        # pipefail
+        if [ -z "$files" ] || grep -qvE '(^docs/|^\.github/ISSUE_TEMPLATE/|\.md$)' <<< "$files"; then
+          echo "docs_only=false" >> "$GITHUB_OUTPUT"
+        elif [ "$listed" -eq "$changed" ] && [ "$listed" -lt 3000 ]; then
+          echo "docs_only=true" >> "$GITHUB_OUTPUT"
+        else
+          # The build workflows' path filter also stops at 3000 files, so it has
+          # skipped them, and nothing here can say the rest is documentation
+          echo "::error::This pull request changes ${changed} files. GitHub checks only the first 3000 to decide whether to build, and those are all documentation, so the required build checks cannot run. Split it into pull requests of fewer than 3000 files each."
+          exit 1
+        fi
+
+  report:
+    # A skipped matrix job reports under its unexpanded name, so these only take the
+    # build checks' names when they run, and cannot stand in for a real build.
+    name: ${{matrix.buildname}}
+    needs: changes
+    if: needs.changes.outputs.docs_only == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Every buildname in build-mudlet-pr.yml and build-mudlet-win-pr.yml
+        buildname:
+          - 'ubuntu / gcc / lua tests + leak detection'
+          - 'macos (arm64) / c++, lua tests'
+          - 'windows64'
+    steps:
+    - run: echo "::notice::Documentation-only change - nothing to build"

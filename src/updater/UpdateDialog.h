@@ -105,6 +105,8 @@ private:
 
     void startDownload();
     void startUpdate();
+    // Ends the install the user asked for, then tells them why
+    void reportError(const QString& title, const QString& text);
 
     bool mAccepted{false};
     bool mIsDownloadFinished{false};
@@ -114,14 +116,13 @@ private:
     QList<Release> mUpdates;
     Release mLatestRelease;
     QList<QAbstractButton*> mInstallButtons;
-    QAbstractButton* mAcceptedInstallButton;
+    QAbstractButton* mAcceptedInstallButton{nullptr};
     bool mOpenExternalLinks{true};
     QString mMinVersion;
     QString mMaxVersion;
     QString mPreviousVersion;
-    // The %APPNAME%/%UPDATE_VERSION%/%CURRENT_VERSION% text update_dialog.ui
-    // starts out with, kept because substituting into the widget itself would
-    // consume the placeholders and freeze what the next check can say
+    // Labels' original %APPNAME%/%UPDATE_VERSION%/%CURRENT_VERSION% text: substituting in place would
+    // consume the placeholders, freezing what the next check can say
     QHash<QLabel*, QString> mLabelTemplates;
     QString mWindowTitleTemplate;
 

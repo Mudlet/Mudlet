@@ -26,8 +26,15 @@
 #include "dlgProfilePreferences.h"
 
 #include "CredentialManager.h"
+#include "EditorAutoCompleteFocusHandler.h"
 #include "GMCPAuthenticator.h"
 #include "Host.h"
+#include "HostDialogs.h"
+#include "HostManager.h"
+#include "MapStyle.h"
+#include "MudletApp.h"
+#include "MudletProxyStyle.h"
+#include "RoomAppearance.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
@@ -40,16 +47,23 @@
 #include "TScript.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
+#include "TriggerMatchPool.h"
 #include "TTrigger.h"
 #include "ctelnet.h"
 #include "discord.h"
-#include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "edbee/views/texteditorscrollarea.h"
 #include "MMCP.h"
 #include "widgetutils.h"
 #include "utils.h"
+
+#ifdef INCLUDE_MCPSERVER
+#include "TMCPBridge.h"
+#include "TMCPServer.h"
+#include <QClipboard>
+#include <QGuiApplication>
+#endif
 
 #include <chrono>
 #include <vector>
@@ -65,11 +79,14 @@
 #include <QDir>
 #include <QDoubleSpinBox>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QFontDialog>
+#include <QFutureWatcher>
 #include <QIcon>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonParseError>
+#include <QMenu>
 #include <QMessageBox>
 #include <QNetworkDiskCache>
 #include <QPainter>
@@ -81,6 +98,7 @@
 #include <QTableWidget>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
+#include <QThread>
 #include <QToolBar>
 #include <QtMath>
 #include <QUiLoader>
@@ -104,21 +122,17 @@
 
 using namespace std::chrono_literals;
 
-// A reading width: whitespace absorbs a wide window rather than the controls
-// stretching across it
+// A reading width: a wide window gains whitespace rather than stretching the controls
 static constexpr int scmContentColumnWidth = 640;
 
-// Known as numbers rather than left to the stylesheet: the selected item's
-// accent bar is a gradient stop, and a gradient stop is a fraction of the item
-// rather than a length.
+// Numbers rather than stylesheet lengths: the selected item's accent bar is a gradient stop, which is a
+// fraction of the item rather than a length.
 static constexpr int scmSidebarWidth = 232;
 static constexpr int scmSidebarPadding = 12;
 static constexpr int scmSidebarAccentBarWidth = 3;
 static constexpr int scmSidebarRailWidth = 48;
 static constexpr int scmSidebarRailPadding = 6;
-// How far right of the frame edge this leaves a card's title is not a constant
-// to go with it: styles disagree on the room after the indicator, so
-// measuredCardTitleInset() measures it.
+// The title inset this leads to varies by style, so measuredCardTitleInset() measures it
 static constexpr int scmCardIndicatorSize = 13;
 
 static const QString scmCategory_general = qsl("general");
@@ -137,14 +151,11 @@ static const QString scmCategory_advanced = qsl("advanced");
 static constexpr int scmRole_categoryKey = Qt::UserRole;
 static constexpr int scmRole_externalUrl = Qt::UserRole + 1;
 
-// How long the search field waits for the typing to stop. Long enough that a
-// burst of keystrokes costs one search rather than one each, short enough that
-// the pause at the end of a word is not a wait.
+// Long enough that a burst of keystrokes costs one search, short enough not to lag at the end of a word
 static constexpr auto scmSearchDebounce = 150ms;
 
-// Synonyms a control is searchable by that it does not show anywhere. The
-// property names the shell stylesheet selects on stay literals beside it: a
-// constant cannot be interpolated into a QStringLiteral.
+// Search synonyms a control does not show. The property names the shell stylesheet selects on stay
+// literals: a constant cannot be interpolated into a QStringLiteral.
 static constexpr char scmProp_searchKeywords[] = "searchKeywords";
 
 // A QDoubleSpinBox rounds whatever it is given to the number of decimals it
@@ -167,6 +178,13 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // init generated dialog
     setupUi(this);
     buildShell();
+
+    // The theme/font preview below has autocomplete switched on like the script
+    // editor's own widget, so it needs the same treatment: without it edbee's
+    // completion list takes the keyboard focus while its popup is open
+    // (see #5310). Done here rather than in loadEditorTab() so it holds even
+    // when that returns early for want of a profile.
+    new EditorAutoCompleteFocusHandler(edbeePreviewWidget, this);
 
     mpTimer_apply = new QTimer(this);
     mpTimer_apply->setSingleShot(true);
@@ -222,6 +240,28 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     connect(radioButton_discordMudletOnly, &QRadioButton::toggled, this, updateDiscordPrivacyControls);
     connect(radioButton_discordDisabled, &QRadioButton::toggled, this, updateDiscordPrivacyControls);
 
+#ifdef INCLUDE_MCPSERVER
+    connect(checkBox_enableMCPServer, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_updateMCPServerEndpoint);
+    connect(spinBox_mcpServerPort, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_updateMCPServerEndpoint);
+    connect(pushButton_connectClaudeDesktop, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_connectClaudeDesktop);
+    connect(pushButton_connectChatGpt, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_connectChatGpt);
+    // With Mudlet registered a button opens this menu instead of emitting clicked()
+    auto* pMenu_claudeDesktop = new QMenu(pushButton_connectClaudeDesktop);
+    pMenu_claudeDesktop->setObjectName(qsl("menu_claudeDesktop"));
+    connect(pMenu_claudeDesktop->addAction(QString()), &QAction::triggered, this, &dlgProfilePreferences::slot_removeClaudeDesktop);
+    auto* pMenu_chatGpt = new QMenu(pushButton_connectChatGpt);
+    pMenu_chatGpt->setObjectName(qsl("menu_chatGpt"));
+    connect(pMenu_chatGpt->addAction(QString()), &QAction::triggered, this, &dlgProfilePreferences::slot_removeChatGpt);
+    connect(pushButton_copyMCPServerAddress, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_copyMCPServerAddress);
+    connect(pushButton_mcpConnectManually, &QAbstractButton::toggled, widget_mcpManualConnect, &QWidget::setVisible);
+    connect(pushButton_mcpAdvanced, &QAbstractButton::toggled, this, [this](const bool revealed) {
+        widget_mcpAdvanced->setVisible(revealed);
+        pushButton_mcpAdvanced->setArrowType(revealed ? Qt::DownArrow : Qt::RightArrow);
+    });
+#else
+    groupBox_mcpServer->hide();
+#endif
+
     // As we demonstrate the options that these next two checkboxes control in
     // the editor "preview" widget (on another tab) we will need to track
     // changes and update the edbee widget straight away. As we can have
@@ -263,6 +303,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
 
     mPopulating = true;
     if (pHost) {
+        connect(pHost, &Host::signal_profileStyleSheetChanged, this, &dlgProfilePreferences::setStyleSheet);
         initWithHost(pHost);
     } else {
         disableHostDetails();
@@ -271,7 +312,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     mPopulating = false;
 
 #if defined(INCLUDE_UPDATER)
-    if (mudlet::self()->developmentVersion && !qEnvironmentVariableIsSet("DEV_UPDATER")) {
+    if (MudletApp::development() && !qEnvironmentVariableIsSet("DEV_UPDATER")) {
         // tick the box and make it be "un-untickable" as automatic updates are
         // disabled in dev builds
         checkbox_noAutomaticUpdates->setChecked(true);
@@ -368,6 +409,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     label_languageChangeWarning->hide();
     label_invalidFontError->hide();
     label_variableWidthFontWarning->hide();
+    label_editorFontInvalid->hide();
+    label_editorFontVariableWidth->hide();
 
     comboBox_guiLanguage->clear();
     for (auto& code : pMudlet->getAvailableTranslationCodes()) {
@@ -375,7 +418,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         auto& nativeName = translation.getNativeName();
         if (translation.fromResourceFile()) {
             auto& translatedPc = translation.getTranslatedPercentage();
-            if (translatedPc >= pMudlet->scmTranslationGoldStar) {
+            if (translatedPc >= MudletApp::scmTranslationGoldStar) {
                 comboBox_guiLanguage->addItem(QIcon(":/icons/rating.png"), nativeName, code);
             } else {
                 // This will also be used if the percentage is set to zero
@@ -396,9 +439,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         }
     }
     comboBox_guiLanguage->model()->sort(0);
-    // Every entry is named in its own language, which is what someone who reads
-    // it would look for - but a search for one they do not read is typed in the
-    // language they do, and no English name for any of them is on the card
+    // Entries are named in their own language, but a search for a language the user does not read is typed
+    // in one they do, and the card shows no English names
     QStringList languageSearchNames;
     for (int i = 0, total = comboBox_guiLanguage->count(); i < total; ++i) {
         const QLocale locale(comboBox_guiLanguage->itemData(i).toString());
@@ -407,7 +449,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     languageSearchNames.removeDuplicates();
     comboBox_guiLanguage->setProperty(scmProp_searchKeywords, languageSearchNames.join(qsl(", ")));
 
-    auto currentLanguage = pMudlet->getInterfaceLanguage();
+    auto currentLanguage = MudletApp::getInterfaceLanguage();
     int currentIndex = comboBox_guiLanguage->findData(currentLanguage);
     if (Q_LIKELY(currentIndex != -1)) {
         // The language code has been found in the UserData role for one of the
@@ -446,21 +488,18 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
 
     applyShellStyle();
 
-    // After the stylesheet, not before it: a card's padding and the weight of
-    // its text both arrive with that stylesheet, and a cap measured without
-    // them is a cap of a page nobody will ever see. It is also the first moment
-    // every control is on the card it belongs on, which the wrapping waits for.
+    // After the stylesheet, which brings the card padding and text weight the caps must measure. It is also
+    // the first point every control is on its final card, which the wrapping waits for.
     mShellReady = true;
     updateColumnWidthCaps();
     rebuildTabOrder();
 
     setMinimumSize(780, 560);
-    const auto geometry = mudlet::getQSettings()->value(qsl("profilePreferencesGeometry")).toByteArray();
+    const auto geometry = MudletApp::getQSettings()->value(qsl("profilePreferencesGeometry")).toByteArray();
     if (geometry.isEmpty() || !restoreGeometry(geometry)) {
         resize(1060, 760);
     }
-    // resize() on a dialog that has never been shown does not always deliver a
-    // resize event to read the width from
+    // resize() on a never-shown dialog does not always deliver a resize event
     updateSidebarMode();
 }
 
@@ -473,8 +512,7 @@ dlgProfilePreferences::~dlgProfilePreferences()
     widgetutils::disconnectChildSignals(this);
 }
 
-// QLayout::setAlignment() is documented not to look in child layouts, and a
-// card's controls are nested in them
+// QLayout::setAlignment() does not look in child layouts, and cards nest controls in them
 static bool alignInLayoutTree(QLayout* pLayout, const QWidget* pWidget, const Qt::Alignment alignment)
 {
     for (int i = 0, total = pLayout->count(); i < total; ++i) {
@@ -490,10 +528,8 @@ static bool alignInLayoutTree(QLayout* pLayout, const QWidget* pWidget, const Qt
     return false;
 }
 
-// QLayout::removeWidget() only looks at its own items, and the .ui file nests
-// controls several layouts deep. Qt would find it from QLayout::addWidget()
-// instead, but warns once per widget - which for a dialog's worth of moves
-// buries anything else on the console.
+// QLayout::removeWidget() only looks at its own items, and the .ui file nests controls deeply.
+// QLayout::addWidget() would find them, but warns once per widget, flooding the console.
 static bool removeFromLayoutTree(QLayout* pLayout, QWidget* pWidget)
 {
     for (int i = 0, total = pLayout->count(); i < total; ++i) {
@@ -518,9 +554,8 @@ static void detachFromLayout(QWidget* pWidget)
     }
 }
 
-// A profile's Lua stylesheet is applied to the whole dialog and reaches every
-// widget it does not name, so the shell's own scaffolding carries a property
-// the shell stylesheet keeps it transparent by.
+// A profile's Lua stylesheet reaches every widget in the dialog it does not name, so the shell's
+// scaffolding carries a property the shell stylesheet uses to keep it transparent.
 static void markAsShellSurface(QWidget* pWidget)
 {
     pWidget->setProperty("settingsSurface", true);
@@ -535,16 +570,15 @@ static QLabel* wrapLabelOf(const QCheckBox* pCheckBox)
     return pContainer->findChild<QLabel*>(QString(), Qt::FindDirectChildrenOnly);
 }
 
-// A column narrower than its contents clips them rather than scrolling, so the
-// cap is the reading width or whatever the widest card needs. The page is held
-// to the column plus its scrollbar, so the bar stays beside what it scrolls.
+// A column narrower than its contents clips rather than scrolls, so cap it at the reading width or the
+// widest card. The page is capped to column plus scrollbar so the bar stays beside the content.
 void dlgProfilePreferences::capColumnWidth(QScrollArea* pScrollArea)
 {
     QWidget* pColumn = pScrollArea ? pScrollArea->widget() : nullptr;
     if (!pColumn || !pColumn->layout()) {
         return;
     }
-    // Lifted first, so what is measured is the cards rather than the last cap:
+    // Lift the old cap first, so the cards are measured rather than the cap
     pColumn->setMaximumWidth(QWIDGETSIZE_MAX);
     pColumn->layout()->activate();
     fitCheckBoxesToColumn(pColumn);
@@ -553,12 +587,8 @@ void dlgProfilePreferences::capColumnWidth(QScrollArea* pScrollArea)
     pScrollArea->setMaximumWidth(cap + pScrollArea->verticalScrollBar()->sizeHint().width());
 }
 
-// A layout tells the layouts above it that it has changed by *posting* a layout
-// request, and nothing between a wrap and the measurement that judges it runs an
-// event loop to deliver one. Both halves below are needed: invalidate() drops
-// what a layout worked out about its items, while what it caches about a
-// *widget* - the size hints, in the layout item it made for it - goes only with
-// updateGeometry() on that widget.
+// Layout changes are posted, and no event loop runs before we measure, so flush by hand:
+// invalidate() drops the layout's cache, updateGeometry() the widget's size hints.
 static void invalidateLayoutsUpTo(QWidget* pWidget, const QWidget* pColumn)
 {
     for (QWidget* pAncestor = pWidget; pAncestor; pAncestor = pAncestor->parentWidget()) {
@@ -572,13 +602,11 @@ static void invalidateLayoutsUpTo(QWidget* pWidget, const QWidget* pColumn)
     }
 }
 
-// The pass starts by giving every text back to the checkbox it came from, so
-// what it measures is the language on show now.
+// Unwraps everything first, so the language now showing is what gets measured
 void dlgProfilePreferences::fitCheckBoxesToColumn(QWidget* pColumn)
 {
-    // While the shell is being put together the constructor is still moving
-    // controls between cards, and a control moved out of a wrap it was given a
-    // moment ago would leave that wrap behind, empty, on the page it left.
+    // The constructor is still moving controls between cards, and one moved out of a fresh wrap would
+    // leave the empty wrap behind
     if (!mShellReady) {
         return;
     }
@@ -611,9 +639,8 @@ void dlgProfilePreferences::fitCheckBoxesToColumn(QWidget* pColumn)
     }
 }
 
-// The QCheckBox stays the control of record - the object the apply triggers,
-// the snapshot and the tests know - and gives up only its text, which a QLabel
-// can wrap and it cannot. Its accessible name keeps that text.
+// The QCheckBox stays the control the apply triggers, snapshot and tests know, and only hands its text
+// to a QLabel, which can wrap. Its accessible name keeps the text.
 void dlgProfilePreferences::wrapCheckBox(QCheckBox* pCheckBox)
 {
     QLabel* pLabel = wrapLabelOf(pCheckBox);
@@ -625,8 +652,7 @@ void dlgProfilePreferences::wrapCheckBox(QCheckBox* pCheckBox)
         }
         auto* pContainer = new QWidget(pParent);
         pContainer->setObjectName(qsl("settingsCheckBoxWrap"));
-        // Without this the label's height-for-width stops at the container, and
-        // the row is given one line's worth of room whatever it has to say
+        // Otherwise the label's height-for-width stops at the container and the row gets one line of height
         QSizePolicy policy = pContainer->sizePolicy();
         policy.setHeightForWidth(true);
         pContainer->setSizePolicy(policy);
@@ -636,11 +662,8 @@ void dlgProfilePreferences::wrapCheckBox(QCheckBox* pCheckBox)
             return;
         }
         delete pTakenOut;
-        // Without an alignment the container is stretched to whatever the
-        // tallest control on the row is, and the checkbox - held against the
-        // label's first line below - floats to the top of that instead of
-        // sitting level with what it shares the row with. Only the vertical
-        // half is given, so the words still have the whole row to wrap in.
+        // Otherwise the container stretches to the row's tallest control and the top-aligned checkbox floats
+        // above its neighbours. Vertical only, so the label keeps the whole row width to wrap in.
         alignInLayoutTree(pParentLayout, pContainer, Qt::AlignVCenter);
         auto* pRowLayout = new QHBoxLayout(pContainer);
         pRowLayout->setContentsMargins(0, 0, 0, 0);
@@ -648,14 +671,12 @@ void dlgProfilePreferences::wrapCheckBox(QCheckBox* pCheckBox)
         pLabel = new QLabel(pContainer);
         pLabel->setObjectName(qsl("settingsWrappedLabel"));
         pLabel->setWordWrap(true);
-        // Clicking the words is how a checkbox is used - see eventFilter()
+        // Clicking the label toggles the checkbox - see eventFilter()
         pLabel->installEventFilter(this);
         pLabel->setBuddy(pCheckBox);
-        // The host enable/disable lists name the checkbox, which no longer draws
-        // the words that would have greyed out with it - so the label follows
-        // the checkbox's enabled state instead
+        // The host enable/disable lists name the checkbox, so the label follows its enabled state
         pCheckBox->installEventFilter(this);
-        // Against the first line, not the middle of however many the label needs
+        // Level with the label's first line, not its middle
         pRowLayout->addWidget(pCheckBox, 0, Qt::AlignTop);
         pRowLayout->addWidget(pLabel, 1);
     }
@@ -672,18 +693,15 @@ void dlgProfilePreferences::wrapCheckBox(QCheckBox* pCheckBox)
     pCheckBox->setText(QString());
 }
 
-// The container is left in place: a checkbox that fits one language may not fit
-// the next. An unwrapped one is a checkbox with its text again and an empty
-// label beside it.
+// The container stays, as a checkbox that fits one language may not fit the next
 void dlgProfilePreferences::unwrapCheckBox(QCheckBox* pCheckBox)
 {
     QLabel* pLabel = wrapLabelOf(pCheckBox);
     if (!pLabel || pLabel->text().isEmpty()) {
         return;
     }
-    // Handed back only where the checkbox has nothing of its own to say: a
-    // language change writes the new words straight onto it, and the label is
-    // holding the *previous* language by then.
+    // Only if the checkbox has no text: a language change writes the new text straight onto it, while the
+    // label still holds the previous language
     if (pCheckBox->text().isEmpty()) {
         pCheckBox->setText(pLabel->text());
     }
@@ -697,9 +715,8 @@ void dlgProfilePreferences::unwrapCheckBox(QCheckBox* pCheckBox)
     pLabel->hide();
 }
 
-// Every control setupUi() made is *moved* onto the shell rather than recreated:
-// the host enable/disable lists, the translations and the tests hold pointers
-// to those widgets.
+// setupUi()'s controls are moved into the shell, not recreated: the host enable/disable lists,
+// translations and tests hold pointers to them.
 void dlgProfilePreferences::buildShell()
 {
     while (tabWidget->count()) {
@@ -740,13 +757,13 @@ void dlgProfilePreferences::buildShell()
     auto* pTitleRowLayout = new QHBoxLayout(pTitleRow);
     pTitleRowLayout->setContentsMargins(0, 0, 0, 0);
     pTitleRowLayout->setSpacing(10);
-    // Hidden on a category page, where it would push that page's title sideways
+    // Hidden on a category page, where it would push the title sideways
     mpButton_searchBack = new QToolButton(pTitleRow);
     mpButton_searchBack->setObjectName(qsl("settingsSearchBack"));
     mpButton_searchBack->setArrowType(Qt::LeftArrow);
     mpButton_searchBack->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     mpButton_searchBack->setAutoRaise(true);
-    // ...and reachable by keyboard, which a tool button is not by default
+    // A tool button is not keyboard-focusable by default
     mpButton_searchBack->setFocusPolicy(Qt::StrongFocus);
     mpButton_searchBack->hide();
     connect(mpButton_searchBack, &QAbstractButton::clicked, this, [this]() {
@@ -767,8 +784,7 @@ void dlgProfilePreferences::buildShell()
     pTitleRowLayout->addWidget(mpButton_subpageBack);
     mpLabel_pageTitleIcon = new QLabel(pTitleRow);
     mpLabel_pageTitleIcon->setObjectName(qsl("settingsPageTitleIcon"));
-    // Fixed, so the title starts at the same x on every category page whatever
-    // the shape of that category's icon
+    // Fixed, so the title starts at the same x whatever the icon's shape
     mpLabel_pageTitleIcon->setFixedWidth(20);
     pTitleRowLayout->addWidget(mpLabel_pageTitleIcon);
     mpLabel_pageTitle = new QLabel(pTitleRow);
@@ -776,6 +792,16 @@ void dlgProfilePreferences::buildShell()
     pTitleRowLayout->addWidget(mpLabel_pageTitle);
     pTitleRowLayout->addStretch(1);
     pContentLayout->addWidget(pTitleRow);
+
+    // Tab skips disabled controls and screen readers only call them unavailable, so with no profile the
+    // explanation has to be a Tab stop itself
+    mpLabel_noProfileNotice = new QLabel(pContent);
+    mpLabel_noProfileNotice->setObjectName(qsl("settingsNoProfileNotice"));
+    mpLabel_noProfileNotice->setWordWrap(true);
+    mpLabel_noProfileNotice->setMaximumWidth(scmContentColumnWidth);
+    mpLabel_noProfileNotice->setFocusPolicy(Qt::TabFocus);
+    mpLabel_noProfileNotice->hide();
+    pContentLayout->addWidget(mpLabel_noProfileNotice);
 
     mpStackedWidget_categories = new QStackedWidget(pContent);
     mpStackedWidget_categories->setObjectName(qsl("settingsStack"));
@@ -793,7 +819,15 @@ void dlgProfilePreferences::buildShell()
     auto* pCard_systemIntegration = createCard(qsl("card_systemIntegration"));
     moveIntoCard(pCard_systemIntegration, {telnetHandlerEnabled, checkBox_showIconsOnMenus});
     buildMigrationBanner();
-    buildCategoryPage(scmCategory_general, {groupBox_miscellaneous, groupBox_encoding, groupBox_logOptions, groupbox_searchEngineSelection, groupBox_updates, pCard_systemIntegration});
+    QList<QWidget*> generalCards{groupBox_miscellaneous, groupBox_encoding, groupBox_logOptions, groupbox_searchEngineSelection, groupBox_updates, pCard_systemIntegration};
+#ifdef INCLUDE_MCPSERVER
+    buildMcpSummaryCard();
+    generalCards.insert(generalCards.indexOf(pCard_systemIntegration), mpCard_mcpAssistant);
+#endif
+    buildCategoryPage(scmCategory_general, generalCards);
+#ifdef INCLUDE_MCPSERVER
+    addSubpage(scmCategory_general, qsl("mcp"), mpCard_mcpAssistant, {groupBox_mcpServer});
+#endif
 
     auto* pCard_theme = createCard(qsl("card_theme"));
     addCardRow(pCard_theme, label_appearance, comboBox_appearance);
@@ -801,7 +835,7 @@ void dlgProfilePreferences::buildShell()
     moveIntoCard(pCard_profileTabs, {checkBox_showTabConnectionIndicators});
     buildCategoryPage(scmCategory_appearance, {pCard_theme, groupBox_iconsAndToolbars, pCard_profileTabs});
 
-    // Its two controls read as one more display option rather than a card of their own
+    // groupBox_doubleClick's two controls read better as one more display option than as a card
     moveIntoCard(groupBox_displayOptions, {doubleclick_ignore_label, doubleclick_ignore_lineedit, checkBox_enableOSC8Hyperlinks});
     groupBox_doubleClick->hide();
     reflowDisplayOptionsCard();
@@ -810,7 +844,7 @@ void dlgProfilePreferences::buildShell()
     buildCategoryPage(scmCategory_inputLine, {groupBox_input, groupBox_spellCheck});
 
     moveIntoCard(groupBox_autoComplete, {checkBox_echoLuaErrors});
-    buildCategoryPage(scmCategory_editor, {groupbox_codeEditorThemeSelection, groupBox_autoComplete, groupBox_editorDisplayOptions});
+    buildCategoryPage(scmCategory_editor, {groupbox_codeEditorThemeSelection, groupBox_editorFont, groupBox_autoComplete, groupBox_editorDisplayOptions});
 
     buildCategoryPage(scmCategory_mapper, {groupBox_mapFiles, groupBox_downloadMapOptions, groupBox_mapViewOptions, groupBox_mapperColors, groupBox_playerRoomStyle});
 
@@ -820,7 +854,7 @@ void dlgProfilePreferences::buildShell()
 
     auto* pCard_dataEncoding = createCard(qsl("card_dataEncoding"));
     addCardRow(pCard_dataEncoding, label_encoding, comboBox_encoding);
-    moveIntoCard(groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX});
+    moveIntoCard(groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX, checkBox_expectCSpaceIdInColonLessMColorCode});
     reflowCompatibilityCard();
     auto* pCard_network = createCard(qsl("card_network"));
     addCardRow(pCard_network, label_networkPacketTimeout, doubleSpinBox_networkPacketTimeout);
@@ -835,9 +869,8 @@ void dlgProfilePreferences::buildShell()
     moveIntoCard(pCard_serverPermissions, {acceptServerGUI, acceptServerMedia});
     auto* pCard_crashReports = createCard(qsl("card_crashReports"));
     addCardRow(pCard_crashReports, label_crashReportPolicy, comboBox_crashReportPolicy);
-    // Beside groupBox_ssl rather than inside it: a checkable group box disables
-    // its children when unchecked, and asking about an available secure
-    // connection is exactly what someone with TLS switched off wants.
+    // Not inside groupBox_ssl: a checkable group box disables its children when unchecked, and this
+    // reminder matters most with TLS off
     auto* pCard_secureReminder = createCard(qsl("card_secureConnectionReminder"));
     pCard_secureReminder->setProperty("settingsCardPlain", true);
     moveIntoCard(pCard_secureReminder, {checkBox_askTlsAvailable});
@@ -850,21 +883,30 @@ void dlgProfilePreferences::buildShell()
     moveIntoCard(pCard_captions, {checkBox_enableBlinkText, checkBox_enableClosedCaption});
     auto* pCard_keyboard = createCard(qsl("card_accessibilityKeyboard"));
     addCardRow(pCard_keyboard, label_caretModeKey, comboBox_caretModeKey);
+    addCardRow(pCard_keyboard, label_menuBarAltKeyNavigation, comboBox_menuBarAltKeyNavigation);
+#if defined(Q_OS_MACOS)
+    // The native menu bar takes no part in Alt key navigation
+    label_menuBarAltKeyNavigation->hide();
+    comboBox_menuBarAltKeyNavigation->hide();
+#endif
     moveIntoCard(pCard_keyboard, {checkBox_f3SearchEnabled});
     buildCategoryPage(scmCategory_accessibility, {groupBox_accessibility, pCard_captions, pCard_keyboard});
 
     buildCategoryPage(scmCategory_shortcuts, {groupBox_main_window_shortcuts});
 
-    buildCategoryPage(scmCategory_advanced, {groupBox_debug});
+    auto* pCard_performance = createCard(qsl("card_performance"));
+    moveIntoCard(pCard_performance, {checkBox_lazyCaptureGlobals});
+    createTriggerMatchPoolControls(pCard_performance);
+    buildExperimentsCard();
+    buildCategoryPage(scmCategory_advanced, {pCard_performance, groupBox_debug, mpCard_experiments});
 
     buildSearchResultsPage();
 
     connect(mpListWidget_categories, &QListWidget::currentRowChanged, this, &dlgProfilePreferences::slot_categorySelected);
-    // Return on the support link is how a keyboard user follows it
+    // Lets a keyboard user follow the support link with Return
     connect(mpListWidget_categories, &QListWidget::itemActivated, this, &dlgProfilePreferences::slot_sidebarItemClicked);
     connect(mpListWidget_categories, &QListWidget::itemClicked, this, [this](QListWidgetItem* pItem) {
-        // Where the style counts a single click as an activation, the connection
-        // above has already opened the browser
+        // Where a single click activates, the connection above has already opened the browser
         if (!mpListWidget_categories->style()->styleHint(QStyle::SH_ItemView_ActivateItemOnSingleClick, nullptr, mpListWidget_categories)) {
             slot_sidebarItemClicked(pItem);
         }
@@ -873,15 +915,14 @@ void dlgProfilePreferences::buildShell()
 
     retranslateShell();
 
-    // Otherwise the stack shows its first page with nothing selected over it;
-    // setTab() overrides this for a deep link
+    // Otherwise the first page shows with nothing selected; setTab() overrides this for a deep link
     showCategory(scmCategory_general);
 }
 
-// Left null once dismissed, which every page takes in its stride
+// mpFrame_migrationBanner stays null once dismissed
 void dlgProfilePreferences::buildMigrationBanner()
 {
-    if (mudlet::getQSettings()->value(qsl("settingsRedesignBannerSeen"), false).toBool()) {
+    if (MudletApp::getQSettings()->value(qsl("settingsRedesignBannerSeen"), false).toBool()) {
         return;
     }
 
@@ -890,8 +931,7 @@ void dlgProfilePreferences::buildMigrationBanner()
     mpFrame_migrationBanner->hide();
     auto* pBannerLayout = new QVBoxLayout(mpFrame_migrationBanner);
     pBannerLayout->setSpacing(8);
-    // Lines the banner's text up with the text inside the cards below it: a
-    // card is inset by the stylesheet's padding plus its own layout's margins
+    // Aligns with the cards' text, which is inset by stylesheet padding plus layout margins
     pBannerLayout->setContentsMargins(28, 16, 28, 16);
 
     auto* pTitle = new QLabel(mpFrame_migrationBanner);
@@ -911,18 +951,16 @@ void dlgProfilePreferences::buildMigrationBanner()
     pBannerLayout->addLayout(pButtonRow);
 
     connect(pDismissButton, &QAbstractButton::clicked, this, [this]() {
-        mudlet::getQSettings()->setValue(qsl("settingsRedesignBannerSeen"), true);
-        // Off the page and out of the member, so no later page switch brings it
-        // back. Alive rather than deleted: the click is still being delivered.
+        MudletApp::getQSettings()->setValue(qsl("settingsRedesignBannerSeen"), true);
+        // Cleared so no later page switch brings it back. Not deleted: the click is still being delivered.
         placeBannerOn(nullptr);
         mpFrame_migrationBanner = nullptr;
     });
 }
 
-// Pinned above the stack it would eat 130px of every page's height at the
-// 780x560 minimum, so it rides at the top of whichever page is showing. It
-// comes off while the search owns the stack, as a card's place in the index is
-// its position in its column and a banner above would make each one too low.
+// Pinned above the stack it would take 130px of every page at the 780x560 minimum, so it rides at the top
+// of the page showing. Removed while search owns the stack: the index records each card's column
+// position, which a banner above would offset.
 void dlgProfilePreferences::placeBannerOn(QWidget* pColumn)
 {
     QWidget* pDestination = pColumn ? pColumn : static_cast<QWidget*>(this);
@@ -937,8 +975,15 @@ void dlgProfilePreferences::placeBannerOn(QWidget* pColumn)
         return;
     }
     pColumnLayout->insertWidget(0, mpFrame_migrationBanner);
-    // Reparenting hides a widget, and the page may not be the one on show yet
+    // Reparenting hides a widget, and the page may not be showing yet
     mpFrame_migrationBanner->show();
+}
+
+void dlgProfilePreferences::updateNoProfileNotice()
+{
+    mpLabel_noProfileNotice->setVisible(!mpHost);
+    // Screen readers can read a dialog's description out as it opens, before Tab would reach the notice
+    setAccessibleDescription(mpHost ? QString() : mpLabel_noProfileNotice->text());
 }
 
 void dlgProfilePreferences::buildSearchResultsPage()
@@ -954,17 +999,15 @@ void dlgProfilePreferences::buildSearchResultsPage()
     mpLabel_searchEmpty->setTextFormat(Qt::RichText);
     mpLabel_searchEmpty->setOpenExternalLinks(true);
     mpLabel_searchEmpty->hide();
-    // Between two stretches so the empty state lands in the middle of the
-    // viewport; results are inserted between the label and the trailing stretch
+    // Stretches either side centre the empty state; results go between the label and the trailing stretch
     mpLayout_searchResults->addStretch(0);
     mpLayout_searchResults->addWidget(mpLabel_searchEmpty);
     mpLayout_searchResults->addStretch(1);
     mSearchResultsPageIndex = mpStackedWidget_categories->addWidget(mpScrollArea_searchResults);
 }
 
-// Collapsed, the sidebar shows a category as its icon alone. Emptying the item's
-// text would do that too, but the text is what a screen reader announces the row
-// as - so it is the drawing that leaves it out rather than the data.
+// Collapsed, the sidebar shows icons only. The delegate skips drawing the text rather than the item
+// losing it, since the text is what a screen reader announces.
 namespace {
 class SidebarItemDelegate : public QStyledItemDelegate
 {
@@ -1072,8 +1115,7 @@ QWidget* dlgProfilePreferences::buildSidebar()
 
 void dlgProfilePreferences::addCategory(const QString& key, const QString& iconFile)
 {
-    // No icon yet: the set is single-colour, so which colour is not known until
-    // applyShellStyle() has read the theme off the palette
+    // No icon yet: the single-colour set is tinted once applyShellStyle() reads the theme off the palette
     auto* pItem = new QListWidgetItem(QString(), mpListWidget_categories);
     pItem->setData(scmRole_categoryKey, key);
     pItem->setSizeHint(QSize(0, 36));
@@ -1131,6 +1173,10 @@ void dlgProfilePreferences::retranslateShell()
     cardTitles.append({qsl("card_serverPermissions"), tr("Server permissions")});
     //: Card title on the Privacy and security settings page, above the crash report sending policy
     cardTitles.append({qsl("card_crashReports"), tr("Crash reports")});
+    //: Card title on the Advanced settings page, above options that trade compatibility for speed
+    cardTitles.append({qsl("card_performance"), tr("Performance")});
+    //: Card title on the Advanced settings page, above the checkboxes that switch unfinished features on for this profile
+    cardTitles.append({qsl("card_experiments"), tr("Experiments (unsupported)")});
     //: Card title on the Chat and sharing settings page, above the row leading to the Discord Rich Presence settings
     cardTitles.append({qsl("card_discord"), tr("Discord Rich Presence")});
     //: Card title on the game protocols subpage, above the ten protocols Mudlet can offer the game
@@ -1139,6 +1185,10 @@ void dlgProfilePreferences::retranslateShell()
     cardTitles.append({qsl("card_accessibilityText"), tr("Text and media")});
     //: Card title on the Accessibility settings page, above the options for moving around Mudlet from the keyboard
     cardTitles.append({qsl("card_accessibilityKeyboard"), tr("Keyboard")});
+#ifdef INCLUDE_MCPSERVER
+    //: Card title on the General settings page, above the row leading to the AI assistant settings. MCP is the name of the Model Context Protocol standard, leave it as-is.
+    cardTitles.append({qsl("card_mcpAssistant"), tr("AI assistant access (MCP)")});
+#endif
     for (const auto& [objectName, title] : cardTitles) {
         if (auto* pCard = findChild<QGroupBox*>(objectName); pCard) {
             pCard->setTitle(title);
@@ -1149,6 +1199,10 @@ void dlgProfilePreferences::retranslateShell()
     mSubpageTitles.insert(qsl("connection/protocols"), tr("Game protocols"));
     //: Breadcrumb name of the subpage holding the Discord Rich Presence settings, reached from the Chat and sharing settings page
     mSubpageTitles.insert(qsl("chat/discord"), tr("Discord Rich Presence"));
+#ifdef INCLUDE_MCPSERVER
+    //: Breadcrumb name of the subpage holding the AI assistant settings, reached from the General settings page. MCP is the name of the Model Context Protocol standard, leave it as-is.
+    mSubpageTitles.insert(qsl("general/mcp"), tr("AI assistant access (MCP)"));
+#endif
 
     QList<std::tuple<QCheckBox*, QString, QString>> protocols;
     //: A telnet protocol on the game protocols subpage: its name, then one line of what it does for the player
@@ -1192,8 +1246,12 @@ void dlgProfilePreferences::retranslateShell()
             tr("NEW-ENVIRON uses the same telnet option as MNES, so only one can be active. NEW-ENVIRON sends extended variables including OSC link support, while MNES sends a minimal set."));
     updateProtocolSummary();
     updateDiscordSummary();
+#ifdef INCLUDE_MCPSERVER
+    updateMcpSummary();
+#endif
     updateSecurityStatus();
     setCardDescriptions();
+    retranslateExperiments();
 
     if (mpFrame_migrationBanner) {
         //: Title of the banner explaining that the settings dialog has been reorganised
@@ -1205,10 +1263,15 @@ void dlgProfilePreferences::retranslateShell()
         mpFrame_migrationBanner->findChild<QPushButton*>(qsl("settingsMigrationBannerDismiss"))->setText(tr("Got it"));
     }
 
+    //: Notice above the settings page when the dialog has no profile - it was opened before any was loaded, or its profile has since closed - explaining why most settings are greyed out. Screen readers may also read it out as the dialog opens.
+    mpLabel_noProfileNotice->setText(tr("These settings are not linked to an open profile, so the ones that belong to a profile are greyed out. "
+                                        "To change those, including the accessibility options, open Settings from a loaded profile."));
+    updateNoProfileNotice();
+
+    retranslateTriggerMatchPoolControls();
     setSearchKeywords();
 
-    // Nothing is current while the shell is being built, and the search's own
-    // title comes back with the next query
+    // Nothing is current while the shell is being built, and search sets its own title on the next query
     if (const QListWidgetItem* pCurrent = mpListWidget_categories->currentItem(); pCurrent && !mSearchActive) {
         if (mCurrentSubpage.isEmpty()) {
             mpLabel_pageTitle->setText(pCurrent->text());
@@ -1218,13 +1281,165 @@ void dlgProfilePreferences::retranslateShell()
     }
 }
 
-// What a player types when they do not know what Mudlet calls a setting: folded
-// into the text of the card the control sits on, and highlighting that control
+void dlgProfilePreferences::createTriggerMatchPoolControls(QGroupBox* pCard)
+{
+    mpCheckBox_triggerMatchPool = new QCheckBox(pCard);
+    mpCheckBox_triggerMatchPool->setObjectName(qsl("checkBox_triggerMatchPool"));
+    moveIntoCard(pCard, {mpCheckBox_triggerMatchPool});
+    auto* pCardLayout = qobject_cast<QVBoxLayout*>(pCard->layout());
+    Q_ASSERT_X(pCardLayout, "dlgProfilePreferences::createTriggerMatchPoolControls", "the controls can only be added to a card that createCard() made");
+    if (!pCardLayout) {
+        return;
+    }
+    // One grid so the fields line up, indented to the check box's text as they only apply while it is on
+    auto* pGrid = new QGridLayout();
+    pGrid->setContentsMargins(style()->pixelMetric(QStyle::PM_IndicatorWidth, nullptr, mpCheckBox_triggerMatchPool)
+                                      + style()->pixelMetric(QStyle::PM_CheckBoxLabelSpacing, nullptr, mpCheckBox_triggerMatchPool),
+                              0,
+                              0,
+                              0);
+    pGrid->setSpacing(8);
+    // A number field stretched to the card's width reads as a text field
+    pGrid->setColumnStretch(2, 1);
+    pCardLayout->addLayout(pGrid);
+    const auto addRow = [pCard, pGrid](QLabel*& pLabel, QSpinBox*& pSpinBox, const QString& name, const int minimum, const int maximum) {
+        pLabel = new QLabel(pCard);
+        pSpinBox = new QSpinBox(pCard);
+        pSpinBox->setObjectName(qsl("spinBox_%1").arg(name));
+        pSpinBox->setRange(minimum, maximum);
+        pLabel->setBuddy(pSpinBox);
+        const int row = pGrid->count() / 2;
+        pGrid->addWidget(pLabel, row, 0);
+        pGrid->addWidget(pSpinBox, row, 1);
+    };
+    addRow(mpLabel_triggerMatchThreads, mpSpinBox_triggerMatchThreads, qsl("triggerMatchThreads"), 1, std::max(1, QThread::idealThreadCount() - 1));
+    addRow(mpLabel_triggerMatchThreshold, mpSpinBox_triggerMatchThreshold, qsl("triggerMatchThreshold"), 1, 100000);
+    addRow(mpLabel_triggerMatchMissesPerMatch, mpSpinBox_triggerMatchMissesPerMatch, qsl("triggerMatchMissesPerMatch"), 0, 1000);
+    addRow(mpLabel_triggerMatchFloodLines, mpSpinBox_triggerMatchFloodLines, qsl("triggerMatchFloodLines"), 1, 100000);
+    addRow(mpLabel_triggerMatchSpin, mpSpinBox_triggerMatchSpin, qsl("triggerMatchSpinMicroseconds"), 0, 100000);
+    connect(mpCheckBox_triggerMatchPool, &QCheckBox::toggled, this, &dlgProfilePreferences::enableTriggerMatchPoolTuning);
+}
+
+void dlgProfilePreferences::enableTriggerMatchPoolTuning(const bool enabled)
+{
+    for (auto* pControl : std::initializer_list<QWidget*>{mpLabel_triggerMatchThreads,
+                                                          mpSpinBox_triggerMatchThreads,
+                                                          mpLabel_triggerMatchThreshold,
+                                                          mpSpinBox_triggerMatchThreshold,
+                                                          mpLabel_triggerMatchMissesPerMatch,
+                                                          mpSpinBox_triggerMatchMissesPerMatch,
+                                                          mpLabel_triggerMatchFloodLines,
+                                                          mpSpinBox_triggerMatchFloodLines,
+                                                          mpLabel_triggerMatchSpin,
+                                                          mpSpinBox_triggerMatchSpin}) {
+        pControl->setEnabled(enabled);
+    }
+}
+
+void dlgProfilePreferences::retranslateTriggerMatchPoolControls()
+{
+    //: Check box in the Performance settings; the triggers' regular expressions are then searched on several CPU cores while game text floods in
+    mpCheckBox_triggerMatchPool->setText(tr("Match triggers on several threads during floods of text (experimental)"));
+    //: Tooltip of the check box that matches triggers on several threads
+    mpCheckBox_triggerMatchPool->setToolTip(tr("<p>Mudlet checks each line of game text against your triggers one at a time. Regex triggers are the slow ones, and on a busy "
+                                               "profile most of them do not match most lines.</p>"
+                                               "<p>When the game sends many lines at once, this has other CPU cores check the regex triggers first and tell Mudlet which ones "
+                                               "cannot match, so it skips them. Your triggers still fire in the same order as before.</p>"
+                                               "<p>On most profiles it makes no difference and uses more CPU, so it is off unless you switch it on. Once it is on, the Statistics "
+                                               "report in the trigger editor (Ctrl+9) tells you whether it helps your profile.</p>"));
+    const TriggerMatchPool::Settings defaults;
+    //: Label of a number field in the Performance settings: how many threads help the main one match triggers
+    mpLabel_triggerMatchThreads->setText(tr("Extra threads helping the main one:"));
+    //: Tooltip of the number of extra threads that match triggers; %1 is the default number of them
+    mpSpinBox_triggerMatchThreads->setToolTip(tr("<p>How many other CPU cores help the main one check triggers. More than three rarely helps: they then spend longer "
+                                                 "waiting for each other than checking.</p><p>Default: %1</p>")
+                                                      .arg(TriggerMatchPool::automaticThreads() - 1));
+    //: Label of a number field in the Performance settings: how many regex searches that find nothing a line needs before other threads help with it
+    mpLabel_triggerMatchThreshold->setText(tr("Failed regex searches a line needs before the threads help:"));
+    //: Tooltip of the threshold of failed regex searches per line; %1 is the default
+    mpSpinBox_triggerMatchThreshold->setToolTip(tr("<p>The extra threads help only if the previous line had at least this many regex triggers that did not match. "
+                                                   "With fewer, handing the work out costs more than it saves.</p><p>Default: %1</p>")
+                                                        .arg(defaults.threshold));
+    //: Label of a number field in the Performance settings: how many failed regex searches a line needs for every one that matched
+    mpLabel_triggerMatchMissesPerMatch->setText(tr("Failed searches needed for each one that matched:"));
+    //: Tooltip of the failed searches per match ratio; %1 is the default
+    mpSpinBox_triggerMatchMissesPerMatch->setToolTip(tr("<p>The extra threads help only if, on the previous line, at least this many regex triggers did not match for "
+                                                        "each one that did. Lines where many triggers match are quicker on one thread. 0 turns this check off.</p>"
+                                                        "<p>Default: %1</p>")
+                                                             .arg(defaults.missesPerMatch));
+    //: Label of a number field in the Performance settings: how many lines must arrive at once to count as a flood
+    mpLabel_triggerMatchFloodLines->setText(tr("Lines arriving at once that make a flood:"));
+    //: Tooltip of the lines that make a flood; %1 is the default
+    mpSpinBox_triggerMatchFloodLines->setToolTip(tr("<p>The extra threads help only when the game sends at least this many lines at once. For a line or two at a time "
+                                                    "they would use CPU for nothing.</p><p>Default: %1</p>")
+                                                         .arg(defaults.floodChunkLines));
+    //: Label of a number field in the Performance settings: how long, in microseconds, the helper threads stay awake waiting for the next line
+    mpLabel_triggerMatchSpin->setText(tr("Microseconds the threads stay awake for the next line:"));
+    //: Tooltip of the helper threads' spin time; %1 is the default, in microseconds
+    mpSpinBox_triggerMatchSpin->setToolTip(tr("<p>After a line, the extra threads stay awake this long waiting for the next one before they go to sleep, because "
+                                              "waking a sleeping thread costs more than the work it is given.</p><p>Default: %1</p>")
+                                                   .arg(defaults.spinMicroseconds));
+    for (const auto& [pLabel, pSpinBox] : std::initializer_list<std::pair<QLabel*, QSpinBox*>>{{mpLabel_triggerMatchThreads, mpSpinBox_triggerMatchThreads},
+                                                                                               {mpLabel_triggerMatchThreshold, mpSpinBox_triggerMatchThreshold},
+                                                                                               {mpLabel_triggerMatchMissesPerMatch, mpSpinBox_triggerMatchMissesPerMatch},
+                                                                                               {mpLabel_triggerMatchFloodLines, mpSpinBox_triggerMatchFloodLines},
+                                                                                               {mpLabel_triggerMatchSpin, mpSpinBox_triggerMatchSpin}}) {
+        pLabel->setToolTip(pSpinBox->toolTip());
+    }
+}
+
+// App-wide like the pool, so read from Mudlet.ini with or without a profile
+void dlgProfilePreferences::populateTriggerMatchPoolSettings()
+{
+    // Validated as the pool validates them, so a field shows the value the pool would use
+    const TriggerMatchPool::Settings saved = TriggerMatchPool::savedSettings();
+    const bool enabled = saved.threads >= 2;
+    {
+        const QSignalBlocker blocker(mpCheckBox_triggerMatchPool);
+        mpCheckBox_triggerMatchPool->setChecked(enabled);
+    }
+    enableTriggerMatchPoolTuning(enabled);
+    // One core leaves no other thread to share the matching with
+    mpCheckBox_triggerMatchPool->setEnabled(QThread::idealThreadCount() >= 2 || enabled);
+    for (const auto& [pSpinBox, value] : std::initializer_list<std::pair<QSpinBox*, int>>{{mpSpinBox_triggerMatchThreads, (enabled ? saved.threads : TriggerMatchPool::automaticThreads()) - 1},
+                                                                                          {mpSpinBox_triggerMatchThreshold, saved.threshold},
+                                                                                          {mpSpinBox_triggerMatchMissesPerMatch, saved.missesPerMatch},
+                                                                                          {mpSpinBox_triggerMatchFloodLines, saved.floodChunkLines},
+                                                                                          {mpSpinBox_triggerMatchSpin, saved.spinMicroseconds}}) {
+        const QSignalBlocker spinBlocker(pSpinBox);
+        pSpinBox->setValue(value);
+    }
+}
+
+void dlgProfilePreferences::applyTriggerMatchPoolSettings()
+{
+    // Only what the player changed: a key left unwritten keeps following the defaults of later releases
+    QSettings* settings = MudletApp::getQSettings();
+    bool changed = false;
+    if (mSnapshot.anyDirty({mpCheckBox_triggerMatchPool, mpSpinBox_triggerMatchThreads})) {
+        settings->setValue(qsl("triggerMatchThreads"), mpCheckBox_triggerMatchPool->isChecked() ? mpSpinBox_triggerMatchThreads->value() + 1 : 0);
+        changed = true;
+    }
+    for (const auto& [pSpinBox, key] : std::initializer_list<std::pair<QSpinBox*, QString>>{{mpSpinBox_triggerMatchThreshold, qsl("triggerMatchThreshold")},
+                                                                                            {mpSpinBox_triggerMatchMissesPerMatch, qsl("triggerMatchMissesPerMatch")},
+                                                                                            {mpSpinBox_triggerMatchFloodLines, qsl("triggerMatchFloodLines")},
+                                                                                            {mpSpinBox_triggerMatchSpin, qsl("triggerMatchSpinMicroseconds")}}) {
+        if (mSnapshot.anyDirty({pSpinBox})) {
+            settings->setValue(key, pSpinBox->value());
+            changed = true;
+        }
+    }
+    if (changed) {
+        // Through settingsFromConfig() rather than from the controls, so an environment override still wins
+        TriggerMatchPool::instance().configure(TriggerMatchPool::settingsFromConfig());
+    }
+}
+
+// Folded into the text of the control's card; a match highlights that control
 void dlgProfilePreferences::setSearchKeywords()
 {
-    // The subpage this row leads to is indexed too, but a result there is a way
-    // in rather than the setting itself. Not translated: these are the protocol
-    // names as the games and their documentation spell them.
+    // The subpage is indexed too, but this row is a way in. Not translated: these are the protocol names
+    // as games and their documentation spell them.
     pushButton_chooseProtocols->setProperty(scmProp_searchKeywords, qsl("GMCP MSDP MSSP MSP MXP MTTS MNES NAWS CHARSET NEW-ENVIRON telnet"));
 
     QList<std::pair<QWidget*, QString>> synonyms;
@@ -1232,6 +1447,10 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_ssl, tr("TLS, SSL, secure connection, encryption, certificate")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the reminder offered when the game supports a secure connection.
     synonyms.append({checkBox_askTlsAvailable, tr("TLS, SSL, secure connection, reminder")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for preparing the matches, multimatches and line trigger variables only when a script reads them.
+    synonyms.append({checkBox_lazyCaptureGlobals, tr("performance, speed, fast, slow, lag, lazy, matches, multimatches, line, _G, global variables")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for matching triggers on several threads (CPU cores) during floods of game text.
+    synonyms.append({mpCheckBox_triggerMatchPool, tr("performance, speed, fast, slow, lag, threads, cores, CPU, multithreading, parallel, triggers, regex, flood, spam")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the proxy server settings.
     synonyms.append({groupBox_proxy, tr("proxy, SOCKS, tunnel, firewall")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for where game passwords are kept.
@@ -1240,8 +1459,12 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({disable_password_masking_checkbox, tr("password, masking, hidden characters")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for telling the game that a screen reader is in use.
     synonyms.append({checkBox_advertiseScreenReader, tr("screen reader, NVDA, JAWS, VoiceOver, Orca, accessibility")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for reaching buttons in scripts and packages with the keyboard.
+    synonyms.append({checkBox_accessibleLabels, tr("keyboard, tab, focus, buttons, labels, screen reader, accessibility")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for reading incoming text out loud.
     synonyms.append({checkBox_announceIncomingText, tr("text to speech, TTS, speech, spoken, screen reader")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for whether pressing Alt on its own moves focus to the menu bar.
+    synonyms.append({label_menuBarAltKeyNavigation, tr("Alt key, menu bar, menus, keyboard, screen reader")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for putting the time in front of each logged line.
     synonyms.append({mIsLoggingTimestamps, tr("timestamps, time, date, transcript")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the format logs are written in.
@@ -1282,10 +1505,26 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_main_window_shortcuts, tr("keyboard shortcuts, hotkeys, key bindings, accelerators")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for saving the profile when Mudlet is closed.
     synonyms.append({mFORCE_SAVE_ON_EXIT, tr("autosave, save on exit, backup")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the colours the game's text and background are drawn in.
+    synonyms.append({groupBox_displayColors, tr("colour, colours, palette, ANSI colours, background")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the colours the map is drawn in.
+    synonyms.append({groupBox_mapperColors, tr("colour, colours, map colours, palette, background")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the font the game's text is drawn in.
     synonyms.append({groupBox_font, tr("font, typeface, size, monospace, antialiasing")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the font the script editor's code is written in.
+    synonyms.append({groupBox_editorFont, tr("editor font, code font, script font, typeface, size, monospace")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for how long Mudlet waits for the game to answer.
     synonyms.append({label_networkPacketTimeout, tr("timeout, lag, latency, slow connection")});
+#ifdef INCLUDE_MCPSERVER
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for letting an AI assistant control Mudlet. Claude, ChatGPT and Codex are product names, leave them as-is.
+    synonyms.append({groupBox_mcpServer, tr("AI, assistant, MCP, Claude, ChatGPT, Codex, LLM, chatbot")});
+#endif
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for workarounds needed by some games, which used to be on a tab called "Special options".
+    synonyms.append({groupBox_specialOptions, tr("special options, workaround, old game, compatibility")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for script debugging options, which used to be on a tab called "Special options".
+    synonyms.append({groupBox_debug, tr("special options, advanced, debug, developer")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the unfinished features that can be switched on for a profile.
+    synonyms.append({mpCard_experiments.data(), tr("experiment, experimental, beta, preview, unsupported, 3D map, renderer")});
     for (const auto& [pControl, words] : synonyms) {
         pControl->setProperty(scmProp_searchKeywords, words);
     }
@@ -1317,8 +1556,7 @@ QScrollArea* dlgProfilePreferences::createScrollPage(const QString& objectSuffix
     pColumnLayout->setSpacing(16);
 
     pScrollArea->setWidget(pColumn);
-    // setWidget() turns the column into an opaque one filled from its own
-    // palette, and the page background belongs to the content area behind it
+    // setWidget() makes the column fill from its own palette; the page background belongs to the area behind
     pColumn->setAutoFillBackground(false);
     pScrollArea->viewport()->setAutoFillBackground(false);
     markAsShellSurface(pColumn);
@@ -1336,10 +1574,8 @@ QScrollArea* dlgProfilePreferences::buildPage(const QString& objectSuffix, const
         }
         detachFromLayout(pCard);
         pCard->setProperty("settingsCard", true);
-        // A checkable card's title starts after its check indicator, a plain
-        // one's at the frame edge - twenty-odd pixels apart, which reads as the
-        // titles of a page wandering. A property rather than a stylesheet rule,
-        // because a stylesheet cannot ask whether a group box is checkable.
+        // Plain cards' titles are inset to line up with checkable ones', which start after the indicator.
+        // A property because a stylesheet cannot select on checkability.
         auto* pGroupBox = qobject_cast<QGroupBox*>(pCard);
         pCard->setProperty("settingsCardTitleInset", pGroupBox && !pGroupBox->isCheckable());
         pColumnLayout->addWidget(pCard);
@@ -1354,8 +1590,7 @@ void dlgProfilePreferences::buildCategoryPage(const QString& key, const QList<QW
     mCategories[key].pageIndex = mpStackedWidget_categories->addWidget(buildPage(key, cards));
 }
 
-// An ordinary page of the same stack with no sidebar row: the ways in are the
-// card that opens it, a deep link naming "category/sub", and a search result.
+// A stack page with no sidebar row, reached by its opener card, a "category/sub" deep link, or search
 void dlgProfilePreferences::addSubpage(const QString& categoryKey, const QString& subKey, QWidget* pOpenerCard, const QList<QWidget*>& cards)
 {
     const QString key = qsl("%1/%2").arg(categoryKey, subKey);
@@ -1379,19 +1614,17 @@ void dlgProfilePreferences::showSubpage(const QString& categoryKey, const QStrin
 {
     const QString key = qsl("%1/%2").arg(categoryKey, subKey);
     if (!mSubpageIndexes.contains(key)) {
-        // Every way in is written in C++, so a name leading nowhere is a typo
+        // Every caller is C++, so an unknown key is a typo
         qWarning() << "dlgProfilePreferences::showSubpage(...) WARNING - there is no settings subpage" << key << "- showing the category instead.";
         showCategory(categoryKey, pSpotlightTarget);
         return;
     }
     if (mSearchActive) {
-        // Clearing the field is what sends every borrowed card home, and has to
-        // finish before the stack is pointed anywhere else
+        // Clearing the field sends borrowed cards home, which must finish before the stack switches
         mSubpageBeforeSearch.clear();
         mpLineEdit_search->clear();
     }
-    // Before the sidebar moves: the row-changed slot takes a sidebar move to
-    // mean a category page is what is being shown
+    // Before the sidebar moves: the row-changed slot takes that to mean a category page is showing
     mCurrentSubpage.clear();
     mpListWidget_categories->setCurrentRow(qMax(0, categoryRow(categoryKey)));
     mCurrentSubpage = key;
@@ -1400,7 +1633,7 @@ void dlgProfilePreferences::showSubpage(const QString& categoryKey, const QStrin
     mpStackedWidget_categories->setCurrentWidget(pPage);
     capColumnWidth(pPage);
     // As on a category page, the cap above measured cards without their padding
-    QTimer::singleShot(0, this, [this, pPage]() {
+    QTimer::singleShot(0ms, this, [this, pPage]() {
         if (pPage && mpStackedWidget_categories->currentWidget() == pPage) {
             capColumnWidth(pPage);
         }
@@ -1413,7 +1646,6 @@ void dlgProfilePreferences::showSubpage(const QString& categoryKey, const QStrin
     spotlight(pSpotlightTarget);
 }
 
-// The title row is measured against this as well as shown it - see sidebarWidths()
 QString dlgProfilePreferences::breadcrumbFor(const QString& subpageKey) const
 {
     const QString categoryKey = subpageKey.section(QLatin1Char('/'), 0, 0);
@@ -1428,8 +1660,7 @@ void dlgProfilePreferences::leaveSubpage()
         return;
     }
     const int row = qMax(0, categoryRow(mCurrentSubpage.section(QLatin1Char('/'), 0, 0)));
-    // The sidebar never left the parent category, so there is no row change to
-    // carry the page back and the slot one would have run is called outright
+    // The sidebar never left the parent category, so no row change fires; call the slot directly
     if (mpListWidget_categories->currentRow() == row) {
         slot_categorySelected(row);
         return;
@@ -1437,7 +1668,7 @@ void dlgProfilePreferences::leaveSubpage()
     mpListWidget_categories->setCurrentRow(row);
 }
 
-// Its title comes from retranslateShell(), by object name
+// Titled by retranslateShell(), via the object name
 QGroupBox* dlgProfilePreferences::createCard(const QString& objectName)
 {
     auto* pCard = new QGroupBox(this);
@@ -1460,8 +1691,7 @@ void dlgProfilePreferences::moveIntoCard(QGroupBox* pCard, const QList<QWidget*>
         if (auto* pGridLayout = qobject_cast<QGridLayout*>(pCard->layout()); pGridLayout) {
             pGridLayout->addWidget(pControl, pGridLayout->rowCount(), 0, 1, std::max(1, pGridLayout->columnCount()));
         } else {
-            // A card with a different layout would take the control in but lay
-            // it out nowhere, which shows up as a setting silently missing
+            // The control would be parented but never laid out - a setting silently missing
             Q_ASSERT_X(false, "dlgProfilePreferences::moveIntoCard", "card has neither a vertical nor a grid layout to take the control into");
             qWarning() << "dlgProfilePreferences::moveIntoCard(...) WARNING - the card" << pCard->objectName() << "has no layout that" << pControl->objectName()
                        << "can be added to, so it will not be shown.";
@@ -1494,9 +1724,8 @@ void dlgProfilePreferences::addCardRow(QGroupBox* pCard, QWidget* pLabel, QWidge
     pCardLayout->addLayout(pRowLayout);
 }
 
-// A grid has no notion of inserting a row, so every item is taken out and put
-// back one row lower, carrying its row properties. The columns are untouched,
-// which keeps a .ui file's column stretches meaning what they said.
+// QGridLayout cannot insert a row, so every item is re-added one row lower with its row properties.
+// Columns are untouched, so a .ui file's column stretches still apply.
 static void insertGridRowAtTop(QGridLayout* pGrid, QWidget* pWidget)
 {
     const int rows = pGrid->rowCount();
@@ -1530,8 +1759,7 @@ static void insertGridRowAtTop(QGridLayout* pGrid, QWidget* pWidget)
     }
 }
 
-// A row that leads somewhere rather than setting something; the chevron at its
-// right edge is drawn by the shell stylesheet from the property this puts on.
+// A row that navigates rather than sets something; the shell stylesheet draws its chevron from this property
 static void makeChevronRow(QAbstractButton* pButton)
 {
     pButton->setProperty("settingsChevronRow", true);
@@ -1539,8 +1767,7 @@ static void makeChevronRow(QAbstractButton* pButton)
     pButton->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
 }
 
-// Created on the first call and only re-worded afterwards, so that a language
-// change does not leave a page with two of them.
+// Created on the first call and only reworded afterwards, so a language change does not add a second line
 void dlgProfilePreferences::setCardDescription(QGroupBox* pCard, const QString& description, const QString& learnMoreUrl)
 {
     if (!pCard) {
@@ -1558,7 +1785,7 @@ void dlgProfilePreferences::setCardDescription(QGroupBox* pCard, const QString& 
             insertGridRowAtTop(pGrid, pLabel);
         } else if (auto* pBox = qobject_cast<QBoxLayout*>(pCard->layout()); pBox) {
             if (pBox->direction() == QBoxLayout::LeftToRight || pBox->direction() == QBoxLayout::RightToLeft) {
-                // A card laid out as one row has no above to put the line in
+                // A single-row card has nowhere above to put the line
                 auto* pRow = new QHBoxLayout();
                 pRow->setSpacing(pBox->spacing());
                 while (pBox->count()) {
@@ -1583,13 +1810,18 @@ void dlgProfilePreferences::setCardDescription(QGroupBox* pCard, const QString& 
     pLabel->setText(qsl("%1 <a href=\"%2\">%3</a>").arg(description.toHtmlEscaped(), learnMoreUrl, tr("Learn more").toHtmlEscaped()));
 }
 
-// Called from retranslateShell(), so a language change re-words them
 void dlgProfilePreferences::setCardDescriptions()
 {
     //: Description line under the "System integration" card title on the General settings page
     setCardDescription(findChild<QGroupBox*>(qsl("card_systemIntegration")), tr("How Mudlet fits in with the rest of your desktop."));
     //: Description line under the "Web search" card title on the General settings page
     setCardDescription(groupbox_searchEngineSelection, tr("The site Mudlet opens when you pick \"search on the web\" after selecting some text in the game."));
+#ifdef INCLUDE_MCPSERVER
+    //: Description line under the "AI assistant access (MCP)" card title on the General settings page, and again at the top of the subpage it leads to
+    const QString mcpDescription = tr("Lets an AI assistant run Lua inside Mudlet for you. Lua can reach the rest of this computer, so only connect an assistant you trust.");
+    setCardDescription(mpCard_mcpAssistant, mcpDescription);
+    setCardDescription(groupBox_mcpServer, mcpDescription);
+#endif
     //: Description line under the "Scrollback" card title on the Main display settings page
     setCardDescription(groupBox_consoleBuffer, tr("How much of what the game has already sent stays available to scroll back through."));
     //: Description line under the "Scripting" card title on the Editor settings page
@@ -1629,8 +1861,15 @@ void dlgProfilePreferences::setCardDescriptions()
     //: Description line under the "Crash reports" card title on the Privacy and security settings page
     setCardDescription(findChild<QGroupBox*>(qsl("card_crashReports")),
                        tr("If Mudlet stops unexpectedly it can tell the developers what went wrong. A report says where Mudlet was in its own code - never what you typed or what the game sent."));
+    //: Description line under the "Performance" card title on the Advanced settings page
+    setCardDescription(findChild<QGroupBox*>(qsl("card_performance")),
+                       tr("Ways Mudlet speeds up your scripts. Leave the first on unless a script or package misbehaves; matching on several threads is off unless you switch it on."));
     //: Description line under the "Developer" card title on the Advanced settings page
-    setCardDescription(groupBox_debug, tr("Diagnostics for people writing packages and scripts. Leave these off for ordinary play."));
+    setCardDescription(groupBox_debug, tr("How much Mudlet's debugging tools report while you work on scripts."));
+    //: Description line under the "Experiments (unsupported)" card title on the Advanced settings page
+    setCardDescription(mpCard_experiments,
+                       tr("Unfinished features that are still being tried out. They are not supported: they may misbehave, change or be removed in any release. "
+                          "Each one is switched for this profile only."));
 }
 
 void dlgProfilePreferences::buildProtocolsSubpage()
@@ -1665,8 +1904,7 @@ void dlgProfilePreferences::buildProtocolsSubpage()
     // The warning belongs on the page the change is made on
     moveIntoCard(mpCard_protocolList, {need_reconnect_for_data_protocol});
 
-    // Made once here rather than on each initWithHost(), which would stack a
-    // second copy of each every time a profile came and went
+    // Connected here rather than in initWithHost(), which would stack a copy every time a profile came and went
     for (auto* pCheckBox : {mEnableCHARSET.data(),
                             mEnableGMCP.data(),
                             mEnableMNES.data(),
@@ -1678,8 +1916,7 @@ void dlgProfilePreferences::buildProtocolsSubpage()
                             mEnableNAWS.data(),
                             mEnableNEWENVIRON.data()}) {
         connect(pCheckBox, &QAbstractButton::toggled, this, [this]() {
-            // Reading a profile's settings into the controls is not a change
-            // anyone has to reconnect for:
+            // Populating from a profile needs no reconnect
             if (!mPopulating) {
                 need_reconnect_for_data_protocol->show();
             }
@@ -1698,13 +1935,111 @@ void dlgProfilePreferences::buildProtocolsSubpage()
         }
     });
 
-    // The button keeps its object name, its tab stop and its place in the four
-    // host enable/disable lists: all that changes is where it leads
+    // The button keeps its object name, tab stop and place in the four host enable/disable lists;
+    // only where it leads changes
     pushButton_chooseProtocols->setMenu(nullptr);
     makeChevronRow(pushButton_chooseProtocols);
     connect(pushButton_chooseProtocols, &QAbstractButton::clicked, this, [this]() {
         showSubpage(scmCategory_connection, qsl("protocols"));
     });
+}
+
+void dlgProfilePreferences::buildExperimentsCard()
+{
+    mpCard_experiments = createCard(qsl("card_experiments"));
+    auto* pCardLayout = qobject_cast<QVBoxLayout*>(mpCard_experiments->layout());
+    pCardLayout->setSpacing(4);
+
+    for (const auto& key : Host::getValidExperiments()) {
+        auto* pCheckBox = new QCheckBox(mpCard_experiments);
+        pCheckBox->setObjectName(qsl("checkBox_%1").arg(key));
+        pCardLayout->addWidget(pCheckBox);
+        auto* pDescription = new QLabel(mpCard_experiments);
+        pDescription->setObjectName(qsl("checkBox_%1_description").arg(key));
+        pDescription->setProperty("settingsControlDescription", true);
+        pDescription->setWordWrap(true);
+        pCardLayout->addWidget(pDescription);
+        mExperimentCheckBoxes.insert(key, pCheckBox);
+    }
+#if !defined(INCLUDE_3DMAPPER)
+    // Every experiment so far only changes the 3D map, which this build leaves out
+    mpCard_experiments->hide();
+#endif
+
+    // Mirrors Host::setExperimentEnabled(), which switches the rest of a group off, so the
+    // dialog never shows two of one group ticked
+    for (const auto& [key, pCheckBox] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+        const QString group = Host::experimentGroup(key);
+        if (group.isEmpty()) {
+            continue;
+        }
+        connect(pCheckBox, &QAbstractButton::toggled, this, [this, ownKey = key, group](const bool checked) {
+            if (mPopulating || !checked) {
+                return;
+            }
+            for (const auto& [siblingKey, pSibling] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+                if (siblingKey != ownKey && pSibling && Host::experimentGroup(siblingKey) == group) {
+                    pSibling->setChecked(false);
+                }
+            }
+        });
+    }
+}
+
+void dlgProfilePreferences::retranslateExperiments()
+{
+    QHash<QString, QString> labels;
+    QHash<QString, QString> descriptions;
+    //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    labels.insert(qsl("experiment.3dmap.modernmapper"), tr("Modern 3D mapper"));
+    //: Description under the "Modern 3D mapper" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    descriptions.insert(qsl("experiment.3dmap.modernmapper"), tr("Draws the 3D map with the new renderer instead of the original one. The other 3D map experiments only work with it."));
+    //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    labels.insert(qsl("experiment.3d-player-icon"), tr("3D player marker"));
+    //: Description under the "3D player marker" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    descriptions.insert(qsl("experiment.3d-player-icon"), tr("Shows a marker above the room you are in on the modern 3D map."));
+    //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    labels.insert(qsl("experiment.render-in-out-exits"), tr("In and out exits on the 3D map"));
+    //: Description under the "In and out exits on the 3D map" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    descriptions.insert(qsl("experiment.render-in-out-exits"), tr("Draws in and out exits on the modern 3D map, and marks the rooms that have them with arrows."));
+    //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    labels.insert(qsl("experiment.rendering.more-transparent"), tr("Darken other levels"));
+    //: Description under the "Darken other levels" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    descriptions.insert(qsl("experiment.rendering.more-transparent"),
+                        tr("Draws rooms on the modern 3D map darker the further their level is from yours, instead of making the rooms above you see-through."));
+    //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    labels.insert(qsl("experiment.rendering.originalish"), tr("Original level shading"));
+    //: Description under the "Original level shading" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    descriptions.insert(qsl("experiment.rendering.originalish"), tr("Draws the rooms on other levels of the modern 3D map the usual way, with the rooms above you see-through."));
+
+    for (const auto& [key, pCheckBox] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+        if (!pCheckBox) {
+            continue;
+        }
+        pCheckBox->setText(labels.value(key, key));
+
+        QStringList siblings;
+        const QString group = Host::experimentGroup(key);
+        for (const auto& siblingKey : mExperimentCheckBoxes.keys()) {
+            if (!group.isEmpty() && siblingKey != key && Host::experimentGroup(siblingKey) == group) {
+                siblings << labels.value(siblingKey, siblingKey);
+            }
+        }
+        QString description = descriptions.value(key);
+        if (!siblings.isEmpty()) {
+            //: Added to the description of an experiment on the Advanced settings page that cannot be on together with others; %1 is the list of their names
+            const QString exclusive = tr("Turning this on turns off: %1.").arg(siblings.join(qsl(", ")));
+            description = description.isEmpty() ? exclusive : qsl("%1 %2").arg(description, exclusive);
+        }
+        if (auto* pDescription = findChild<QLabel*>(qsl("%1_description").arg(pCheckBox->objectName())); pDescription) {
+            pDescription->setText(description);
+            pDescription->setVisible(!description.isEmpty());
+        }
+        pCheckBox->setAccessibleDescription(description);
+        //: Tooltip line on an experiment's checkbox on the Advanced settings page; %1 is the name a script passes to setConfig() to switch it, which is not translated
+        const QString scriptName = tr("Name for scripts: %1").arg(qsl("<tt>%1</tt>").arg(key.toHtmlEscaped()));
+        pCheckBox->setToolTip(description.isEmpty() ? qsl("<p>%1</p>").arg(scriptName) : qsl("<p>%1</p><p>%2</p>").arg(description.toHtmlEscaped(), scriptName));
+    }
 }
 
 void dlgProfilePreferences::updateProtocolSummary()
@@ -1720,9 +2055,8 @@ void dlgProfilePreferences::updateProtocolSummary()
             ++enabled;
         }
     }
-    // Written as two numbers rather than as a plural form: an untranslated
-    // %n string still shows its "(s)" in English, and this row is too
-    // prominent to read as "9 protocol(s) on"
+    // Two numbers rather than a %n plural: an untranslated %n string shows "(s)" in English, and this row
+    // is too prominent to read "9 protocol(s) on"
     //: Text of the row on the Connection page's game protocols card that opens the list of protocols; %1 is how many are switched on, %2 how many there are
     pushButton_chooseProtocols->setText(tr("%1 of %2 turned on").arg(QString::number(enabled), QString::number(total)));
 }
@@ -1761,12 +2095,56 @@ void dlgProfilePreferences::updateDiscordSummary()
     mpButton_discordSubpage->setText(state);
 }
 
+#ifdef INCLUDE_MCPSERVER
+void dlgProfilePreferences::buildMcpSummaryCard()
+{
+    mpCard_mcpAssistant = createCard(qsl("card_mcpAssistant"));
+    mpButton_mcpSubpage = new QPushButton(mpCard_mcpAssistant);
+    mpButton_mcpSubpage->setObjectName(qsl("pushButton_mcpSettings"));
+    // The words on the row are a status, so the things a user would look for by
+    // name are only on the page it leads to
+    mpButton_mcpSubpage->setProperty(scmProp_searchKeywords, qsl("MCP AI assistant Claude ChatGPT Codex Lua port token"));
+    makeChevronRow(mpButton_mcpSubpage);
+    qobject_cast<QVBoxLayout*>(mpCard_mcpAssistant->layout())->addWidget(mpButton_mcpSubpage);
+    connect(mpButton_mcpSubpage, &QAbstractButton::clicked, this, [this]() {
+        showSubpage(scmCategory_general, qsl("mcp"));
+    });
+}
+
+// The same four states as the status line on the subpage, said in one line: the
+// checkbox rather than mcpEnabled(), so the row moves with the tick rather than
+// with the apply that follows it 400ms later
+void dlgProfilePreferences::updateMcpSummary()
+{
+    if (!mpButton_mcpSubpage) {
+        return;
+    }
+    mudlet* pMudlet = mudlet::self();
+    if (!checkBox_enableMCPServer->isChecked()) {
+        //: Summary on the General page's AI assistant card, on the row that opens the assistant settings
+        mpButton_mcpSubpage->setText(tr("Off - no assistant can reach Mudlet"));
+        return;
+    }
+    if (!pMudlet->mcpEndpoint().isEmpty()) {
+        //: Summary on the General page's AI assistant card while the server is running. %1 is a TCP port number.
+        mpButton_mcpSubpage->setText(tr("On - listening on port %1").arg(pMudlet->mcpServerPort()));
+        return;
+    }
+    if (!pMudlet->mcpLastError().isEmpty()) {
+        //: Summary on the General page's AI assistant card when the server was switched on but could not start
+        mpButton_mcpSubpage->setText(tr("On, but not running - open to see why"));
+        return;
+    }
+    //: Summary on the General page's AI assistant card in the moment between the server being switched on and it answering
+    mpButton_mcpSubpage->setText(tr("Starting..."));
+}
+#endif
+
 void dlgProfilePreferences::buildSecurityStatusCard()
 {
     mpCard_securityStatus = createCard(qsl("card_securityStatus"));
     mpCard_securityStatus->setProperty("settingsHero", true);
-    // It carries no setting, so it needs no title and no room above the frame
-    // for one either
+    // It carries no setting, so needs no title or room above the frame for one
     mpCard_securityStatus->setProperty("settingsCardPlain", true);
     auto* pLayout = qobject_cast<QVBoxLayout*>(mpCard_securityStatus->layout());
 
@@ -1783,7 +2161,7 @@ void dlgProfilePreferences::buildSecurityStatusCard()
     mpLabel_securityLink = new QLabel(mpCard_securityStatus);
     mpLabel_securityLink->setObjectName(qsl("settingsHeroLink"));
     mpLabel_securityLink->setTextFormat(Qt::RichText);
-    // The hero holds no setting of its own, so the link leads to the card that does
+    // The hero holds no setting, so the link leads to the card that does
     connect(mpLabel_securityLink, &QLabel::linkActivated, this, [this]() {
         showCategory(scmCategory_privacy, groupBox_ssl);
     });
@@ -1796,7 +2174,6 @@ void dlgProfilePreferences::updateSecurityStatus()
         return;
     }
     Host* pHost = mpHost;
-    // With no profile loaded there is no connection to report on
     mpCard_securityStatus->setVisible(pHost != nullptr);
     if (!pHost) {
         return;
@@ -1837,8 +2214,7 @@ void dlgProfilePreferences::updateSecurityStatus()
     mpLabel_securityLink->setText(qsl("<a href=\"#secureConnection\">%1</a>").arg(tr("Secure connection settings").toHtmlEscaped()));
 }
 
-// The .ui file titles these group boxes after the tab they sat on, and
-// retranslateUi() puts those titles back on every language change
+// The .ui titles these after their old tabs, and retranslateUi() restores those titles on every language change
 void dlgProfilePreferences::retitleCards()
 {
     //: Card title on the General settings page, above the "save profile on exit" and "notify on new data" options
@@ -1865,6 +2241,11 @@ void dlgProfilePreferences::retitleCards()
     groupBox_debug->setTitle(tr("Developer"));
     //: Card title on the Accessibility settings page, above the two options about what the system screen reader is told
     groupBox_accessibility->setTitle(tr("Screen reader"));
+#ifdef INCLUDE_MCPSERVER
+    // The only card on its subpage, whose breadcrumb already names it
+    groupBox_mcpServer->setTitle(QString());
+    groupBox_mcpServer->setProperty("settingsCardPlain", true);
+#endif
 }
 
 // A grid cell takes one widget, so a card is emptied before it is refilled
@@ -1875,29 +2256,37 @@ static void takeOutOfLayout(QLayout* pLayout, const QList<QWidget*>& widgets)
     }
 }
 
-// The .ui file laid these grids out across the full width of a tab, in rows of
-// three and four cells that do not fit the reading column the cards live in now
+// The .ui laid these grids across a tab's full width, in rows of three or four cells too wide for the reading column
 void dlgProfilePreferences::reflowWideCards()
 {
     takeOutOfLayout(horizontalLayout_groupBox_wrapping, {frame_wrap_at, frame_indent_wrapped, frame_hanging_indent_wrapped});
     int wrappingRow = 0;
     for (auto* pFrame : {frame_wrap_at, frame_indent_wrapped, frame_hanging_indent_wrapped}) {
-        // As wide as the card now, so without a trailing stretch the spin box grows to fill it
+        // Without a trailing stretch the spin box grows to the card's width
         qobject_cast<QHBoxLayout*>(pFrame->layout())->addStretch(1);
         verticalLayout_groupBox_wrapping->insertWidget(wrappingRow++, pFrame);
     }
 
     const QList<QWidget*> mapViewOptions{
             mMapperUseAntiAlias, checkBox_drawUpperLowerLevels, checkbox_mMapperShowRoomBorders, checkBox_invertMapZoom, checkBox_largeAreaExitArrows, checkBox_showDefaultArea};
-    takeOutOfLayout(gridLayout_groupBox_mapViewOptions, mapViewOptions + QList<QWidget*>{gridGroupBox, groupBox_mapSymbols});
+    takeOutOfLayout(gridLayout_groupBox_mapViewOptions, mapViewOptions + QList<QWidget*>{label_mapStyle, comboBox_mapStyle, gridGroupBox, groupBox_mapSymbols});
     for (int i = 0, total = mapViewOptions.size(); i < total; ++i) {
         gridLayout_groupBox_mapViewOptions->addWidget(mapViewOptions.at(i), i / 2, i % 2);
     }
-    gridLayout_groupBox_mapViewOptions->addWidget(gridGroupBox, 3, 0, 1, 2);
-    gridLayout_groupBox_mapViewOptions->addWidget(groupBox_mapSymbols, 4, 0, 1, 2);
+#if defined(INCLUDE_3DMAPPER)
+    auto* pMapStyleRow = new QHBoxLayout();
+    pMapStyleRow->addWidget(label_mapStyle);
+    pMapStyleRow->addWidget(comboBox_mapStyle);
+    pMapStyleRow->addStretch(1);
+    gridLayout_groupBox_mapViewOptions->addLayout(pMapStyleRow, 3, 0, 1, 2);
+#else
+    label_mapStyle->hide();
+    comboBox_mapStyle->hide();
+#endif
+    gridLayout_groupBox_mapViewOptions->addWidget(gridGroupBox, 4, 0, 1, 2);
+    gridLayout_groupBox_mapViewOptions->addWidget(groupBox_mapSymbols, 5, 0, 1, 2);
 
-    // A column of three, leaving the two cells initWithHost() appends the
-    // scaling factor to free
+    // A column of three, leaving free the two cells initWithHost() appends the scaling factor to
     const QList<QWidget*> mapSymbolRows{label_mapSymbolsFont, fontComboBox_mapSymbols, pushButton_showGlyphUsage, checkBox_isOnlyMapSymbolFontToBeUsed};
     takeOutOfLayout(gridLayout_groupBox_mapSymbols, mapSymbolRows);
     gridLayout_groupBox_mapSymbols->addWidget(label_mapSymbolsFont, 0, 0);
@@ -1907,15 +2296,13 @@ void dlgProfilePreferences::reflowWideCards()
 
     const QList<QWidget*> featureSizes{label_roomSize, spinBox_roomSize, label_exitSize, spinBox_exitSize, label_borderSize, spinBox_borderSize, label_gridSize, doubleSpinBox_gridSize};
     takeOutOfLayout(groupBox_sizing, featureSizes);
-    // Two pairs to a row, the second starting halfway across, so they line up
-    // with the two columns of checkboxes above instead of bunching to the left
+    // Two pairs per row, the second starting halfway across, to line up with the two checkbox columns above
     for (int i = 0, total = featureSizes.size(); i < total; ++i) {
         const int pair = i / 2;
         groupBox_sizing->addWidget(featureSizes.at(i), pair / 2, (pair % 2) * 3 + (i % 2));
     }
-    // The spin boxes ask to expand, and across a card's width that stretches
-    // four of them into text fields; the empty column ending each half takes
-    // the slack instead, and equal shares of it put the halves side by side
+    // Spin boxes expand, and across a card's width would read as text fields; the empty column ending each
+    // half takes the slack instead, and equal stretch keeps the halves side by side
     groupBox_sizing->setColumnStretch(2, 1);
     groupBox_sizing->setColumnStretch(5, 1);
 
@@ -1936,7 +2323,7 @@ void dlgProfilePreferences::reflowWideCards()
                                       checkBox_discordServerAccessToPartyInfo,
                                       checkBox_discordServerAccessToTimerInfo};
     takeOutOfLayout(gridLayout_groupBox_discordRichPresence, discordRows);
-    // Stacked rather than between two columns, so the divider lies across them
+    // The rows are stacked rather than in two columns, so the divider runs across them
     frame_discordDivider->setFrameShape(QFrame::HLine);
     int discordRow = 0;
     for (auto* pWidget : {radioButton_discordGameDetails, radioButton_discordMudletOnly, radioButton_discordDisabled}) {
@@ -1956,12 +2343,10 @@ void dlgProfilePreferences::reflowWideCards()
     }
     gridLayout_groupBox_discordRichPresence->setColumnStretch(1, 1);
 
-    // Framed like an input in the .ui file, but it only ever reports a name -
-    // and with no Discord user to report, an empty box on the card
+    // Framed like an input in the .ui, but it only shows a name, and with no Discord user is an empty box
     label_data_discordCurrentUser->setFrameShape(QFrame::NoFrame);
 
-    // Side by side these two filled the reading column in English and overran
-    // it by 200px in German
+    // Side by side these overran the reading column by 200px in German
     const QList<QWidget*> logOptionRows{mIsToLogInHtml,
                                         mIsLoggingTimestamps,
                                         label_whereToLog,
@@ -1986,8 +2371,7 @@ void dlgProfilePreferences::reflowWideCards()
     gridLayout_groupBox_logOptions->addWidget(lineEdit_logFileName, 4, 1, 1, 2);
     gridLayout_groupBox_logOptions->addWidget(label_logFileNameExtension, 4, 3);
 
-    // Two label-and-control pairs abreast, whose German labels are half again
-    // as long as the English ones, become four rows
+    // Two label-and-control pairs per row do not fit German labels, so each pair gets a row
     const QList<QPair<QWidget*, QWidget*>> iconRows{
             {label_mainIconSize, MainIconSize}, {label_33, TEFolderIconSize}, {label_menuBarVisiblity, comboBox_menuBarVisibility}, {label_toolBarVisibility, comboBox_toolBarVisibility}};
     for (const auto& [pLabel, pControl] : iconRows) {
@@ -2001,24 +2385,18 @@ void dlgProfilePreferences::reflowWideCards()
     }
     gridLayout_groupBox_iconsAndToolbars->setColumnStretch(2, 1);
 
-    // Alone on its row now, and adrift on the right unless it spans both columns
-    gridLayout_groupBox_debug->removeWidget(checkBox_expectCSpaceIdInColonLessMColorCode);
-    gridLayout_groupBox_debug->addWidget(checkBox_expectCSpaceIdInColonLessMColorCode, 0, 0, 1, 2);
-    // The time edit had the row's stretch, which put a four-field clock control
-    // across the whole card
+    // Otherwise the time edit takes the row's stretch and spans the whole card
     horizontalLayout_timerDebugOutputMinimumInterval->setStretch(1, 0);
     horizontalLayout_timerDebugOutputMinimumInterval->addStretch(1);
 
-    // Both report into a line of runtime text - a profile name, a file path -
-    // longer than any column; wrapped, they stop being a floor under its width
+    // Both show runtime text (a profile name, a file path) that can exceed any column; wrapping stops them
+    // setting the column's minimum width
     label_mapFileActionResult->setWordWrap(true);
     label_password_migration_notification->setWordWrap(true);
 }
 
-// Three of this card's checkboxes have gone to the pages they belong on and the
-// two double-click controls have arrived stacked, which between them left the
-// .ui grid holding lone widgets in half-empty rows. Laid out again as a pair of
-// checkboxes, then a row for each label-and-control.
+// Other pages took three of this card's checkboxes and the double-click controls joined it, leaving the .ui
+// grid with half-empty rows; re-laid as a checkbox pair, then one row per label-and-control.
 void dlgProfilePreferences::reflowDisplayOptionsCard()
 {
     const QList<QWidget*> displayOptions{checkBox_useWideAmbiguousEastAsianGlyphs,
@@ -2029,26 +2407,25 @@ void dlgProfilePreferences::reflowDisplayOptionsCard()
                                          doubleclick_ignore_label,
                                          doubleclick_ignore_lineedit};
     takeOutOfLayout(gridLayout_groupBox_displayOptions, displayOptions);
-    // Both are about which characters the display makes something of
     gridLayout_groupBox_displayOptions->addWidget(checkBox_useWideAmbiguousEastAsianGlyphs, 0, 0);
     gridLayout_groupBox_displayOptions->addWidget(checkBox_enableTextAnalyzer, 0, 1);
     gridLayout_groupBox_displayOptions->addWidget(checkBox_enableOSC8Hyperlinks, 1, 0, 1, 2);
     gridLayout_groupBox_displayOptions->addWidget(label_controlCharacterHandling, 2, 0);
     gridLayout_groupBox_displayOptions->addWidget(comboBox_controlCharacterHandling, 2, 1);
-    // Beside its field rather than over it, which is a row saved and puts the
-    // two settings that take an answer on matching lines
+    // Label beside its field rather than above, saving a row and lining up with the combo box above
     gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_label, 3, 0);
     gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_lineedit, 3, 1);
 }
 
-// The reconnect notice closes this card in the .ui, but the workaround moved
-// onto this page lands after it, which strands the notice between two
-// checkboxes now that it stays on screen long enough to be read.
+// The .ui ends this card with the reconnect notice, but the workarounds moved here land after it,
+// stranding the notice between checkboxes.
 void dlgProfilePreferences::reflowCompatibilityCard()
 {
-    takeOutOfLayout(gridLayout_groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX, need_reconnect_for_specialoption});
+    takeOutOfLayout(gridLayout_groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX, checkBox_expectCSpaceIdInColonLessMColorCode, need_reconnect_for_specialoption});
     gridLayout_groupBox_specialOptions->addWidget(checkBox_USE_IRE_DRIVER_BUGFIX, 2, 1);
-    gridLayout_groupBox_specialOptions->addWidget(need_reconnect_for_specialoption, 3, 0, 1, 2);
+    // Its label is too long to share a row
+    gridLayout_groupBox_specialOptions->addWidget(checkBox_expectCSpaceIdInColonLessMColorCode, 3, 0, 1, 2);
+    gridLayout_groupBox_specialOptions->addWidget(need_reconnect_for_specialoption, 4, 0, 1, 2);
 }
 
 void dlgProfilePreferences::updateColumnWidthCaps()
@@ -2056,20 +2433,18 @@ void dlgProfilePreferences::updateColumnWidthCaps()
     for (const auto& place : std::as_const(mCategories)) {
         capColumnWidth(qobject_cast<QScrollArea*>(mpStackedWidget_categories->widget(place.pageIndex)));
     }
-    // ...and the pages the sidebar never selects, which hold cards like any other
     for (const int page : std::as_const(mSubpageIndexes)) {
         capColumnWidth(qobject_cast<QScrollArea*>(mpStackedWidget_categories->widget(page)));
     }
     capColumnWidth(mpScrollArea_searchResults);
 }
 
-// Measured rather than a number in the source: an interface font, a platform's
-// scrollbar or a translation's longer category names all move it
+// Measured, not constant: the interface font, platform scrollbar and translated names all move it
 dlgProfilePreferences::SidebarWidths dlgProfilePreferences::sidebarWidths() const
 {
     SidebarWidths widths;
     QWidget* pContent = mpWidget_titleRow ? mpWidget_titleRow->parentWidget() : nullptr;
-    // Zero collapses nothing, which is the right answer for a half-built shell
+    // Zero collapses nothing, which is right for a half-built shell
     if (!pContent || !pContent->layout() || !mpLabel_pageTitle || !mpStackedWidget_categories) {
         return widths;
     }
@@ -2078,10 +2453,8 @@ dlgProfilePreferences::SidebarWidths dlgProfilePreferences::sidebarWidths() cons
     const auto* pPage = qobject_cast<const QScrollArea*>(mpStackedWidget_categories->currentWidget());
     const int scrollBarWidth = pPage ? pPage->verticalScrollBar()->sizeHint().width() : 0;
 
-    // Measured off the row itself - icon, spacings, margins - with the title it
-    // happens to be showing swapped for the widest one it could be asked for.
-    // Its chevrons are hidden most of the time and a hidden widget asks a layout
-    // for nothing, so the wider of the two is allowed for rather than read off.
+    // The row's own chrome (icon, spacings, margins) plus the widest title it could show. The chevrons are
+    // usually hidden, and a hidden widget reports no size, so the wider one is added explicitly.
     const QFontMetrics titleMetrics = mpLabel_pageTitle->fontMetrics();
     const int chevron = std::max(mpButton_searchBack->sizeHint().width(), mpButton_subpageBack->sizeHint().width()) + mpWidget_titleRow->layout()->spacing();
     const int titleRowChrome = mpWidget_titleRow->sizeHint().width() - titleMetrics.horizontalAdvance(mpLabel_pageTitle->text()) + chevron;
@@ -2093,10 +2466,8 @@ dlgProfilePreferences::SidebarWidths dlgProfilePreferences::sidebarWidths() cons
         widestTitle = std::max(widestTitle, titleMetrics.horizontalAdvance(breadcrumbFor(it.key())));
     }
 
-    // The reading column is a floor, not the answer: a page whose controls do
-    // not fit it is capped wider (capColumnWidth()). Taken over every page
-    // rather than the one on show, because a width moving with the category
-    // would resize the window on every click in the sidebar.
+    // The reading column is a floor; capColumnWidth() caps wider pages higher. Taken over every page, as a
+    // width that followed the category would resize the window on every sidebar click.
     int contentColumn = scmContentColumnWidth;
     int widestPageMinimum = 0;
     for (int page = 0, pages = mpStackedWidget_categories->count(); page < pages; ++page) {
@@ -2105,7 +2476,7 @@ dlgProfilePreferences::SidebarWidths dlgProfilePreferences::sidebarWidths() cons
         if (!pColumn) {
             continue;
         }
-        // An uncapped page still offers the default maximum, which nothing asked for
+        // QWIDGETSIZE_MAX means uncapped, not a width anything asked for
         if (pColumn->maximumWidth() < QWIDGETSIZE_MAX) {
             contentColumn = std::max(contentColumn, pColumn->maximumWidth());
         }
@@ -2114,14 +2485,9 @@ dlgProfilePreferences::SidebarWidths dlgProfilePreferences::sidebarWidths() cons
 
     const int sidebarAndMargins = scmSidebarWidth + contentMargins.left() + contentMargins.right();
     widths.fullyExpanded = sidebarAndMargins + std::max(contentColumn + scrollBarWidth, titleRowChrome + widestTitle);
-    // Deliberately not the same number as the width above: held equal, the
-    // sidebar had its names at exactly one window width and the first pixel of
-    // a drag inwards took them away, with no way back short of hitting that
-    // width again. It is instead the narrowest the widest page can be drawn at
-    // without scrolling sideways, and never more than the reading column - so a
-    // page that wants more than a comfortable line, or a re-measure after a
-    // change of language, moves what the window can grow to without moving the
-    // point at which the sidebar gives up its names.
+    // Must differ from fullyExpanded, the window's maximum: if equal, the names show at that one width only.
+    // It is the widest page's minimum, capped at the reading column, so a wide page or a language change
+    // moves the maximum without moving the collapse point.
     widths.collapseBelow = sidebarAndMargins + std::min(scmContentColumnWidth, widestPageMinimum) + scrollBarWidth;
     return widths;
 }
@@ -2131,20 +2497,16 @@ void dlgProfilePreferences::updateSidebarMode()
     if (!mpWidget_sidebar) {
         return;
     }
-    // Zero is neither a breakpoint to test against nor a width to hold a window to
+    // Zero means nothing has been measured yet
     const SidebarWidths widths = sidebarWidths();
     if (!widths.fullyExpanded) {
         return;
     }
-    // The window's width rather than the space left over: the threshold is what
-    // the *expanded* sidebar needs, so collapsing cannot flip the test that
-    // collapsed it and start it oscillating
+    // The window width, not the space left over: the threshold is what the expanded sidebar needs, so
+    // collapsing cannot flip the test and oscillate
     setSidebarCollapsed(width() < widths.collapseBelow);
-    // Nothing on a page grows past its column, so every pixel of window past
-    // fullyExpanded is empty strip, all of it on one side as a layout puts a
-    // widget narrower than its cell to the left. Refusing the width is what
-    // keeps it out: centring would strand the sidebar away from the settings it
-    // selects, and stretching the controls is the line length the column stops.
+    // Pages never grow past their column, so width beyond fullyExpanded is empty strip on one side. Refused,
+    // since centring would strand the sidebar from its settings and stretching defeats the column.
     setMaximumWidth(std::max(minimumWidth(), widths.fullyExpanded));
 }
 
@@ -2158,8 +2520,7 @@ void dlgProfilePreferences::setSidebarCollapsed(const bool collapsed)
     mpWidget_sidebar->setFixedWidth(collapsed ? scmSidebarRailWidth : scmSidebarWidth);
     mpWidget_sidebar->layout()->setContentsMargins(padding, 16, padding, 16);
     mpLabel_wordmark->setVisible(!collapsed);
-    // What the delegate leaves the names out by, and the stylesheet draws the
-    // narrower selection pill from
+    // The delegate hides the names by this, and the stylesheet draws the narrower selection pill from it
     mpListWidget_categories->setProperty("settingsRail", collapsed);
     mpListWidget_categories->style()->unpolish(mpListWidget_categories);
     mpListWidget_categories->style()->polish(mpListWidget_categories);
@@ -2168,8 +2529,7 @@ void dlgProfilePreferences::setSidebarCollapsed(const bool collapsed)
         pSeparator->style()->unpolish(pSeparator);
         pSeparator->style()->polish(pSeparator);
     }
-    // A name no longer drawn is still what the row is: the item keeps its text -
-    // its accessible name - and offers it as a tooltip while nothing shows it
+    // The item keeps its text as its accessible name, and offers it as a tooltip while it is not drawn
     for (int row = 0, rows = mpListWidget_categories->count(); row < rows; ++row) {
         QListWidgetItem* pItem = mpListWidget_categories->item(row);
         pItem->setToolTip(collapsed ? pItem->text() : QString());
@@ -2194,14 +2554,12 @@ static void collectFocusableInLayoutOrder(const QLayout* pLayout, QList<QWidget*
     }
 }
 
-// Qt appends a reparented widget to the end of the dialog's focus chain, so
-// after the moves the .ui file's ~190 tab stops describe the tabs the controls
-// came from. Only the widgets of the page on show take part in a traversal, so
-// one chain in sidebar order puts that right.
+// Qt appends a reparented widget to the end of the focus chain, leaving the .ui's ~190 tab stops in old tab
+// order. Only the showing page's widgets are traversed, so one chain in sidebar order fixes it.
 void dlgProfilePreferences::rebuildTabOrder()
 {
-    // A hidden chevron is skipped by a traversal rather than trapping it
-    QList<QWidget*> chain{mpLineEdit_search, mpButton_searchBack, mpButton_subpageBack, mpListWidget_categories};
+    // Traversal skips a hidden chevron or notice rather than getting trapped on it
+    QList<QWidget*> chain{mpLineEdit_search, mpButton_searchBack, mpButton_subpageBack, mpListWidget_categories, mpLabel_noProfileNotice};
     const auto collectPage = [&chain, this](const int pageIndex) {
         auto* pScrollArea = qobject_cast<QScrollArea*>(mpStackedWidget_categories->widget(pageIndex));
         QWidget* pColumn = pScrollArea ? pScrollArea->widget() : nullptr;
@@ -2212,7 +2570,6 @@ void dlgProfilePreferences::rebuildTabOrder()
     for (int row = 0, rows = mpListWidget_categories->count(); row < rows; ++row) {
         const QString key = mpListWidget_categories->item(row)->data(scmRole_categoryKey).toString();
         collectPage(mCategories.value(key).pageIndex);
-        // ...and each subpage right after the category it belongs to
         const QString prefix = key + QLatin1Char('/');
         for (auto it = mSubpageIndexes.constBegin(); it != mSubpageIndexes.constEnd(); ++it) {
             if (it.key().startsWith(prefix)) {
@@ -2225,9 +2582,8 @@ void dlgProfilePreferences::rebuildTabOrder()
     }
 }
 
-// Instant apply turns a wheel passing over a spin box or a combo box on the way
-// down a page into a silent change of that setting. Both stop answering the
-// wheel unless focused, and stop taking focus from a wheel - see eventFilter().
+// With instant apply, scrolling the page over a spin or combo box would silently change the setting.
+// Both ignore the wheel unless focused, and do not take focus from it - see eventFilter().
 void dlgProfilePreferences::guardScrollWheel()
 {
     for (auto* pSpinBox : findChildren<QAbstractSpinBox*>()) {
@@ -2240,29 +2596,33 @@ void dlgProfilePreferences::guardScrollWheel()
     }
 }
 
-// The one piece of shell state no preference decides: the sidebar is a rail
-// whenever the window is too narrow to hold it, and a list of names when not.
 void dlgProfilePreferences::resizeEvent(QResizeEvent* pEvent)
 {
     QDialog::resizeEvent(pEvent);
     updateSidebarMode();
 }
 
-// Coming back to the window is the moment the settings can be re-read without
-// interrupting anything - see refreshFromSettings()
+// Returning to the window is when settings can be re-read without interrupting anything - see
+// refreshFromSettings()
 bool dlgProfilePreferences::event(QEvent* pEvent)
 {
     const bool handled = QDialog::event(pEvent);
     if (pEvent->type() == QEvent::WindowActivate) {
         refreshFromSettings();
     }
+    // Sent when this dialog's stylesheet or the application's is replaced
+    if (pEvent->type() == QEvent::StyleChange && mpWidget_shell) {
+        bool themeSurface = false;
+        if (shellPalette(themeSurface) != mShellPalette) {
+            applyShellStyle();
+        }
+    }
     return handled;
 }
 
 bool dlgProfilePreferences::eventFilter(QObject* pObject, QEvent* pEvent)
 {
-    // A checkbox whose text was wrapped into a QLabel beside it keeps the whole
-    // of that label as its click target, as its own text would have been
+    // A wrapped checkbox's label greys out with it and toggles it when clicked, as its own text would
     if (pEvent->type() == QEvent::EnabledChange) {
         if (auto* pCheckBox = qobject_cast<QCheckBox*>(pObject); pCheckBox) {
             if (QLabel* pLabel = wrapLabelOf(pCheckBox); pLabel) {
@@ -2283,9 +2643,8 @@ bool dlgProfilePreferences::eventFilter(QObject* pObject, QEvent* pEvent)
     if (pEvent->type() == QEvent::Wheel) {
         auto* pControl = qobject_cast<QWidget*>(pObject);
         if (pControl && !pControl->hasFocus()) {
-            // QApplication carries an unaccepted wheel event up the parent
-            // chain only while nothing has *handled* it, and a filter answering
-            // true has - so without this the wheel would do nothing at all
+            // QApplication only propagates a wheel event no filter has handled, and returning true counts
+            // as handled, so without this the wheel would do nothing
             for (QWidget* pAncestor = pControl->parentWidget(); pAncestor; pAncestor = pAncestor->parentWidget()) {
                 if (auto* pScrollArea = qobject_cast<QAbstractScrollArea*>(pAncestor); pScrollArea) {
                     QCoreApplication::sendEvent(pScrollArea->viewport(), pEvent);
@@ -2295,9 +2654,8 @@ bool dlgProfilePreferences::eventFilter(QObject* pObject, QEvent* pEvent)
             return true;
         }
     }
-    // Styling the sidebar's items takes its native focus rectangle away with
-    // them; a property puts it back, since a QSS rule cannot ask whether the
-    // widget a subcontrol belongs to has the focus
+    // Styling the items removes the native focus rectangle; a property restores it, as QSS cannot select
+    // on whether a subcontrol's widget has focus
     if (pObject == mpListWidget_categories && (pEvent->type() == QEvent::FocusIn || pEvent->type() == QEvent::FocusOut)) {
         mpListWidget_categories->setProperty("settingsFocused", pEvent->type() == QEvent::FocusIn);
         mpListWidget_categories->style()->polish(mpListWidget_categories);
@@ -2307,15 +2665,15 @@ bool dlgProfilePreferences::eventFilter(QObject* pObject, QEvent* pEvent)
 
 void dlgProfilePreferences::showCategory(const QString& key, QWidget* pSpotlightTarget)
 {
-    // Leaving the results is carried out by the selection *changing*, and a deep
-    // link naming the category the sidebar is already on changes nothing
+    // Leaving the results is driven by the selection changing, which a deep link to the current category
+    // does not do
     if (mSearchActive) {
         mSubpageBeforeSearch.clear();
         mpLineEdit_search->clear();
     }
     QString category = key;
     if (!mCategories.contains(category)) {
-        // Every deep link is written in C++, so one naming nothing is a typo
+        // Every deep link is C++, so an unknown one is a typo
         qWarning() << "dlgProfilePreferences::showCategory(...) WARNING - there is no settings category" << key << "- showing General instead.";
         category = scmCategory_general;
     }
@@ -2329,14 +2687,13 @@ static QString spotlightStyleSheet(const QColor& accent, const qreal strength)
             .arg(QString::number(accent.red()), QString::number(accent.green()), QString::number(accent.blue()), QString::number(strength, 'f', 3), QString::number(strength * 0.08, 'f', 3));
 }
 
-// Deferred because setTab() runs before the dialog is shown, when nothing has
-// been laid out yet
+// Deferred because setTab() runs before the dialog is shown and laid out
 void dlgProfilePreferences::spotlight(QWidget* pTarget)
 {
     if (!pTarget) {
         return;
     }
-    QTimer::singleShot(0, this, [this, pTarget = QPointer<QWidget>(pTarget)]() {
+    QTimer::singleShot(0ms, this, [this, pTarget = QPointer<QWidget>(pTarget)]() {
         if (!pTarget) {
             return;
         }
@@ -2345,11 +2702,10 @@ void dlgProfilePreferences::spotlight(QWidget* pTarget)
         if (!pColumn || !pColumn->isAncestorOf(pTarget)) {
             return;
         }
-        // The y margin is the viewport to keep around the widget, so half of one
-        // is as close to centred as the page allows
+        // A y margin of half the viewport is as close to centred as the page allows
         pScrollArea->ensureWidgetVisible(pTarget, 0, pScrollArea->viewport()->height() / 2);
 
-        // A second deep link supersedes the first rather than fading on top of it
+        // A second deep link replaces the first's pulse rather than fading on top of it
         delete mpWidget_spotlight.data();
         const QColor accent = palette().color(QPalette::Highlight);
         auto* pPulse = new QWidget(pColumn);
@@ -2357,12 +2713,12 @@ void dlgProfilePreferences::spotlight(QWidget* pTarget)
         pPulse->setObjectName(qsl("settingsSpotlight"));
         pPulse->setAttribute(Qt::WA_TransparentForMouseEvents);
         pPulse->setAttribute(Qt::WA_StyledBackground);
-        // A card fills the column's width, so an outline drawn around one would
-        // be clipped on three sides - the intersection lands them on the card
+        // A card fills the column's width, so an outline around it would be clipped on three sides;
+        // the intersection keeps them on the card
         const QRect targetRect(pTarget->mapTo(pColumn, QPoint(0, 0)), pTarget->size());
         pPulse->setGeometry(targetRect.adjusted(-2, -2, 2, 2).intersected(pColumn->rect()));
-        // The animation only ever takes the pulse away, and its first tick can be
-        // a long time coming on a busy event loop - which is when a deep link opens
+        // Start at full strength: the animation only fades it, and its first tick can be slow on the busy
+        // event loop a deep link opens into
         pPulse->setStyleSheet(spotlightStyleSheet(accent, 1.0));
         pPulse->raise();
         pPulse->show();
@@ -2380,8 +2736,7 @@ void dlgProfilePreferences::spotlight(QWidget* pTarget)
     });
 }
 
-// Rich text, the & of keyboard accelerators, accents and case are all folded
-// away, so that "fonte" finds "Fonté" and "save" finds "&Save"
+// Folds away rich text, accelerator &s, accents and case, so "fonte" finds "Fonté" and "save" finds "&Save"
 static QString foldForSearch(const QString& text)
 {
     QString plain;
@@ -2408,8 +2763,7 @@ static QString foldForSearch(const QString& text)
     return folded.simplified().toCaseFolded();
 }
 
-// A combo box is not here: what it shows is one of its items, and the two
-// callers want its whole list or nothing at all
+// Not for combo boxes: they show one item, and callers want the whole list or nothing
 static QString visibleTextOf(const QWidget* pWidget)
 {
     if (const auto* pLabel = qobject_cast<const QLabel*>(pWidget); pLabel) {
@@ -2424,7 +2778,6 @@ static QString visibleTextOf(const QWidget* pWidget)
     return QString();
 }
 
-// What it shows, what its tooltip says, and any synonyms it was given
 static void collectSearchText(const QWidget* pWidget, QStringList& parts)
 {
     parts << pWidget->property(scmProp_searchKeywords).toString() << pWidget->toolTip();
@@ -2433,8 +2786,7 @@ static void collectSearchText(const QWidget* pWidget, QStringList& parts)
         parts << visibleTextOf(pWidget);
         return;
     }
-    // ...but not what a font picker lists: those are the fonts installed on this
-    // machine, and they make any card holding one a result for "color" or "mono"
+    // Not a font picker's items: they are the installed fonts, which would make its card match "color" or "mono"
     if (qobject_cast<const QFontComboBox*>(pWidget)) {
         return;
     }
@@ -2443,7 +2795,7 @@ static void collectSearchText(const QWidget* pWidget, QStringList& parts)
     }
 }
 
-// Synonyms count too: a card found by a keyword still shows which control carries it
+// Includes synonyms, so a keyword match still highlights the control carrying it
 static QString highlightTextOf(const QWidget* pWidget)
 {
     const QString text = visibleTextOf(pWidget);
@@ -2454,13 +2806,11 @@ static QString highlightTextOf(const QWidget* pWidget)
     return keywords.isEmpty() ? text : qsl("%1 %2").arg(text, keywords);
 }
 
-// Walked off the real widget tree rather than kept as a hand-written list, so
-// a control added to the .ui file later is searchable without anyone saying so
+// Walks the real widget tree rather than a hand-written list, so controls added to the .ui are searchable
 void dlgProfilePreferences::buildSearchIndex()
 {
     mSearchCards.clear();
-    // A category's own cards are indexed before its subpages', so a query
-    // matching both meets the card that leads in first
+    // A category's cards are indexed before its subpages', so a query matching both shows the opener first
     const auto indexPage = [this](const int pageIndex, const QString& categoryKey, const QString& subpageKey) {
         auto* pScrollArea = qobject_cast<QScrollArea*>(mpStackedWidget_categories->widget(pageIndex));
         auto* pColumnLayout = pScrollArea ? qobject_cast<QVBoxLayout*>(pScrollArea->widget()->layout()) : nullptr;
@@ -2505,16 +2855,12 @@ void dlgProfilePreferences::buildSearchIndex()
     }
 }
 
-// A search is answered by moving every matching card onto the results page and
-// every card already there back, which is most of the dialog while the query is
-// still one or two letters: measured on this page, "s" costs 63ms and "sh" 76ms
-// against the 6ms the finished "shortcuts" costs. Typing is a burst, so only the
-// pause at the end of one is worth answering.
+// A search moves every match onto the results page and the previous ones back - most of the dialog for a
+// one- or two-letter query ("s" 63ms, "sh" 76ms, "shortcuts" 6ms) - so only the pause after typing is answered.
 void dlgProfilePreferences::queueSearch(const QString& query)
 {
     mPendingSearch = query;
-    // Emptying the field is what hands the borrowed cards back, and a dialog
-    // that keeps them for another moment reads as one that has stuck
+    // Emptying the field returns the borrowed cards; any delay would read as the dialog sticking
     if (query.trimmed().isEmpty()) {
         mpTimer_search->stop();
         runSearch(query);
@@ -2523,8 +2869,7 @@ void dlgProfilePreferences::queueSearch(const QString& query)
     mpTimer_search->start();
 }
 
-// One ideograph is a word where one Latin letter is not, so it is a query worth
-// running; a lone letter matches most of the dialog and answers nothing.
+// One ideograph is a word, one Latin letter is not: a lone letter matches most of the dialog
 static bool wordEnoughToSearch(const QStringList& needles)
 {
     for (const QString& needle : needles) {
@@ -2560,27 +2905,22 @@ void dlgProfilePreferences::runSearch(const QString& query)
         mSearchActive = true;
         const QListWidgetItem* pCurrent = mpListWidget_categories->currentItem();
         mCategoryBeforeSearch = pCurrent ? pCurrent->data(scmRole_categoryKey).toString() : QString();
-        // A search started on a subpage comes back to that subpage
         mSubpageBeforeSearch = mCurrentSubpage;
         mCurrentSubpage.clear();
         mpButton_subpageBack->hide();
-        // Only the selection goes, never the current row: an item view answers a
-        // focus-in that finds no current index by taking the first one, which
-        // reads as choosing General and ends the search. That focus arrives
-        // whenever a borrowed card is handed back holding it, as reparenting a
-        // widget clears the focus it carries.
+        // Clear the selection, never the current row: an item view focused with no current index takes the
+        // first, which reads as choosing General and ends the search. Handing back a borrowed card that
+        // held focus does exactly that, as reparenting clears focus.
         const QSignalBlocker blocker(mpListWidget_categories);
         mpListWidget_categories->clearSelection();
     }
 
     setUpdatesEnabled(false);
-    // Every keystroke starts from the pages as they really are
     returnSearchedCardsHome();
     clearSearchHighlights();
 
-    // Moving a card fires no change signal, but the control that had the focus
-    // reports its editing finished as focus leaves it. Lowered by hand, because
-    // the tail below is deliberately outside the guard.
+    // Moving a card fires no change signal, but the focused control reports editingFinished as focus leaves.
+    // Restored by hand, because the tail below is deliberately outside the guard.
     const bool wasPopulating = mPopulating;
     mPopulating = true;
 
@@ -2589,7 +2929,7 @@ void dlgProfilePreferences::runSearch(const QString& query)
     QList<const QWidget*> matchedCards;
     QStringList linkedSubpages;
     for (auto& entry : mSearchCards) {
-        // A card the profile's state has hidden is no option, so no result either
+        // A card hidden by the profile's state is not an option, so not a result
         if (!entry.pCard || entry.pCard->isHidden()) {
             continue;
         }
@@ -2603,8 +2943,7 @@ void dlgProfilePreferences::runSearch(const QString& query)
         if (!matched) {
             continue;
         }
-        // Taking a subpage's card would leave the page behind the row that opens
-        // it empty, so the results offer that way in instead
+        // Taking a subpage's card would empty the page its opener leads to, so the results link in instead
         if (!entry.subpageKey.isEmpty()) {
             if (linkedSubpages.contains(entry.subpageKey) || matchedCards.contains(mSubpageOpeners.value(entry.subpageKey).data())) {
                 continue;
@@ -2630,8 +2969,7 @@ void dlgProfilePreferences::runSearch(const QString& query)
             mpLayout_searchResults->insertWidget(mpLayout_searchResults->count() - 1, pHeader);
             pHeader->show();
         }
-        // Not that it is still at homeIndex - taking an earlier card shifts the
-        // ones below - but that this is still the layout it goes back to
+        // Not that it is still at homeIndex (taking an earlier card shifts it), only that this is its home layout
         Q_ASSERT_X(entry.pHomeLayout->indexOf(entry.pCard) >= 0, "dlgProfilePreferences::runSearch", "a card is no longer in the layout the search index recorded it under");
         entry.pHomeLayout->removeWidget(entry.pCard);
         mpLayout_searchResults->insertWidget(mpLayout_searchResults->count() - 1, entry.pCard);
@@ -2644,7 +2982,7 @@ void dlgProfilePreferences::runSearch(const QString& query)
     mPopulating = wasPopulating;
 
     if (!matchCount) {
-        // Rich text, so the query has to be escaped before it can be pasted in
+        // Rich text, so the query must be escaped
         //: Empty state of the settings search; %1 is what the user typed
         const QString message = tr("No results in settings for \"%1\"").arg(query.trimmed().toHtmlEscaped());
         //: Offered under the settings search empty state; %1 is a link labelled "Mudlet support"
@@ -2655,17 +2993,16 @@ void dlgProfilePreferences::runSearch(const QString& query)
     mpLayout_searchResults->setStretch(0, matchCount ? 0 : 1);
     //: Title shown in place of a category name while the settings search is showing its results
     mpLabel_pageTitle->setText(tr("Search results"));
-    // The back chevron stands where the category icon does on every other page
+    // The back chevron takes the category icon's place
     mpLabel_pageTitleIcon->hide();
     mpButton_searchBack->show();
     mpStackedWidget_categories->setCurrentIndex(mSearchResultsPageIndex);
-    // As on a category page, a card needing more than the reading width gets it:
     capColumnWidth(mpScrollArea_searchResults);
     setUpdatesEnabled(true);
 }
 
-// The index is in ascending position order per page and the cards that never
-// left kept theirs, so re-inserting at the indexed position restores the page
+// The index is in ascending position per page and unmoved cards kept theirs, so re-inserting at the indexed
+// position restores each page
 void dlgProfilePreferences::returnSearchedCardsHome()
 {
     const QScopedValueRollback<bool> populating(mPopulating, true);
@@ -2691,8 +3028,7 @@ void dlgProfilePreferences::returnSearchedCardsHome()
     }
 }
 
-// The field is cleared before the index, because clearing it is what sends
-// every borrowed card home and that needs the index to say where home is
+// The field is cleared before the index: clearing it sends borrowed cards home, which needs the index
 void dlgProfilePreferences::invalidateSearch()
 {
     mpLineEdit_search->clear();
@@ -2714,16 +3050,14 @@ void dlgProfilePreferences::exitSearchMode()
 
     const int row = mpListWidget_categories->currentRow();
     if (row < 0) {
-        // The query was cleared rather than a category chosen, so the page the
-        // search interrupted comes back
+        // The query was cleared rather than a category chosen, so restore the page the search interrupted
         mpListWidget_categories->setCurrentRow(qMax(0, categoryRow(mCategoryBeforeSearch)));
     } else {
-        // Only the selection was taken away, so the row is still current and
-        // setCurrentRow() would report no change
+        // Only the selection was cleared, so the row is still current and setCurrentRow() would not signal
         mpListWidget_categories->item(row)->setSelected(true);
         slot_categorySelected(row);
     }
-    // ...and for a subpage, its category page is only half the way back
+    // For a subpage, its category page is only halfway back
     if (const QString subpage = mSubpageBeforeSearch; !subpage.isEmpty()) {
         mSubpageBeforeSearch.clear();
         showSubpage(subpage.section(QLatin1Char('/'), 0, 0), subpage.section(QLatin1Char('/'), 1));
@@ -2773,6 +3107,13 @@ void dlgProfilePreferences::highlightMatches(QWidget* pCard, const QStringList& 
         }
         setSearchMatch(pWidget, true);
         mHighlightedWidgets.append(pWidget);
+#ifdef INCLUDE_MCPSERVER
+        // The MCP port is the one setting this dialog folds out of sight, and a
+        // search result nobody can see answers nothing
+        if (pWidget == label_mcpServerPort) {
+            pushButton_mcpAdvanced->setChecked(true);
+        }
+#endif
     }
 }
 
@@ -2787,18 +3128,17 @@ QLabel* dlgProfilePreferences::searchCategoryHeader(const QString& key)
         pHeader->hide();
         mSearchCategoryHeaders.insert(key, pHeader);
     }
-    // Every time, as a language change replaces the name this map is holding
+    // On every call, as a language change renames the category
     const QListWidgetItem* pItem = mpListWidget_categories->item(categoryRow(key));
     const QString name = (pItem ? pItem->text() : key).toHtmlEscaped();
-    // The sidebar row's own icon, inline rather than by path because the colour
-    // is put on at runtime - see restyleSidebarIcons()
+    // Inline rather than by path because the colour is applied at runtime - see restyleSidebarIcons()
     const QString iconMarkup = mCategoryIconMarkup.value(key);
     pHeader->setText(iconMarkup.isEmpty() ? name : qsl("%1&nbsp;%2").arg(iconMarkup, name));
     return pHeader;
 }
 
-// Not the card - taking that empties the page behind the row that opens it -
-// but the way in, landing on the subpage with the card it found outlined
+// Not the card, as taking it would empty the page behind its opener, but a link to the subpage that
+// spotlights the matched card
 QPushButton* dlgProfilePreferences::searchSubpageLink(const QString& subpageKey, QWidget* pCard)
 {
     QPushButton* pLink = mSearchSubpageLinks.value(subpageKey, nullptr);
@@ -2809,9 +3149,9 @@ QPushButton* dlgProfilePreferences::searchSubpageLink(const QString& subpageKey,
         pLink->hide();
         mSearchSubpageLinks.insert(subpageKey, pLink);
     }
-    // Re-worded every time, for the language change
+    // Reworded on every call, for a language change
     pLink->setText(mSubpageTitles.value(subpageKey));
-    // ...and re-aimed, as which card matched is this query's answer
+    // Re-aimed at this query's matching card
     disconnect(pLink, &QAbstractButton::clicked, this, nullptr);
     connect(pLink, &QAbstractButton::clicked, this, [this, subpageKey, pCard = QPointer<QWidget>(pCard)]() {
         showSubpage(subpageKey.section(QLatin1Char('/'), 0, 0), subpageKey.section(QLatin1Char('/'), 1), pCard);
@@ -2830,17 +3170,14 @@ void dlgProfilePreferences::slot_categorySelected(const int row)
         return;
     }
     if (mSearchActive) {
-        // Clearing the field is what puts every borrowed card back, and whatever
-        // the query interrupted, this category is the one being asked for now
+        // Clearing the field returns borrowed cards; this category, not whatever the search interrupted, is wanted
         mSubpageBeforeSearch.clear();
         mpLineEdit_search->clear();
     }
-    // What comes out of this slot is a category page, so a subpage is being left
     mCurrentSubpage.clear();
     mpButton_subpageBack->hide();
-    // QStackedLayout hands the keyboard focus from the outgoing page to the
-    // incoming one, and taking it off a control scrolled out of sight scrolls
-    // that page back to the top on the way past
+    // QStackedLayout passes focus on from the outgoing page, and taking it off a control scrolled out of
+    // sight scrolls that page back to the top
     QWidget* pCurrentPage = mpStackedWidget_categories->currentWidget();
     if (QWidget* pFocus = QApplication::focusWidget(); pFocus && pCurrentPage && pCurrentPage->isAncestorOf(pFocus)) {
         mpListWidget_categories->setFocus(Qt::OtherFocusReason);
@@ -2850,14 +3187,13 @@ void dlgProfilePreferences::slot_categorySelected(const int row)
     // Before the width is capped, so the page is measured as it will be shown
     placeBannerOn(pShownPage ? pShownPage->widget() : nullptr);
     capColumnWidth(pShownPage);
-    // A card's padding arrives with the stylesheet, applied as the page is first
-    // shown - after the cap above measured it without. Left there, a page needing
-    // more than the reading width is capped 34px short and clips the difference.
-    QTimer::singleShot(0, this, [this, pShownPage]() {
+    // Card padding arrives with the stylesheet when the page is first shown, after the cap above. Without a
+    // re-cap, a page needing more than the reading width is capped 34px short and clips.
+    QTimer::singleShot(0ms, this, [this, pShownPage]() {
         if (pShownPage && mpStackedWidget_categories->currentWidget() == pShownPage) {
             capColumnWidth(pShownPage);
-            // A cap that grew moved both the sidebar's breakpoint and the width
-            // the window is held to, neither re-taken until the next resize
+            // A grown cap moves the sidebar breakpoint and the window's maximum width, otherwise not
+            // re-taken until the next resize
             updateSidebarMode();
         }
     });
@@ -2880,15 +3216,22 @@ void dlgProfilePreferences::slot_sidebarItemClicked(QListWidgetItem* pItem)
         QDesktopServices::openUrl(QUrl(url));
         return;
     }
-    // Choosing the category a subpage belongs to is no row change, so the
-    // row-changed slot never runs and the subpage would stay put
-    if (const QString key = pItem->data(scmRole_categoryKey).toString(); !key.isEmpty() && mCurrentSubpage.startsWith(key + QLatin1Char('/'))) {
+    const QString key = pItem->data(scmRole_categoryKey).toString();
+    if (key.isEmpty()) {
+        return;
+    }
+    // A search keeps the sidebar's current row, so choosing that category again is no row change either
+    if (mSearchActive) {
+        slot_categorySelected(mpListWidget_categories->row(pItem));
+        return;
+    }
+    // Choosing a subpage's own category is no row change, so the row-changed slot would not leave the subpage
+    if (mCurrentSubpage.startsWith(key + QLatin1Char('/'))) {
         leaveSubpage();
     }
 }
 
-// Every surface is blended from the palette rather than written out as hex, so
-// the shell follows whichever theme it is handed
+// Surfaces are blended from the palette rather than hard-coded, so the shell follows any theme
 static QColor blend(const QColor& from, const QColor& to, const qreal amount)
 {
     return QColor::fromRgbF(from.redF() + (to.redF() - from.redF()) * amount, from.greenF() + (to.greenF() - from.greenF()) * amount, from.blueF() + (to.blueF() - from.blueF()) * amount);
@@ -2899,8 +3242,7 @@ static QString rgba(const QColor& color, const qreal alpha)
     return qsl("rgba(%1, %2, %3, %4)").arg(QString::number(color.red()), QString::number(color.green()), QString::number(color.blue()), QString::number(alpha, 'f', 3));
 }
 
-// The shape lives in the alpha channel: filling through it keeps the
-// antialiased edges that recolouring the pixels would harden into a staircase
+// Fills through the alpha channel, keeping antialiased edges that recolouring pixels would harden
 static QPixmap tintedGlyph(const QPixmap& source, const QColor& color)
 {
     QPixmap glyph = source;
@@ -2911,18 +3253,17 @@ static QPixmap tintedGlyph(const QPixmap& source, const QColor& color)
     return glyph;
 }
 
-// Measured off a throwaway pair rather than added up from the indicator's
-// width, because what a style leaves after an indicator is the style's business:
-// Fusion allows 6px and the macOS style 8.
+// Measured rather than derived from the indicator width: the gap after it is up to the style
+// (Fusion 6px, macOS 8px).
 static int measuredCardTitleInset(QWidget* pParent, const QString& indicatorRules)
 {
     const auto titleLeft = [&](const bool checkable) {
         QGroupBox box(pParent);
         box.setProperty("settingsCard", true);
         box.setCheckable(checkable);
-        // Never shown or read, but a box with no title has no label to place
+        // Never shown, but a box with no title has no label to place
         box.setTitle(qsl("Aa"));
-        // Its own rather than the shell's, which is the string being built
+        // Not the shell's stylesheet, which is the string being built
         box.setStyleSheet(indicatorRules);
         QStyleOptionGroupBox option;
         option.initFrom(&box);
@@ -2940,8 +3281,7 @@ static int measuredCardTitleInset(QWidget* pParent, const QString& indicatorRule
     return qMax(0, titleLeft(true) - titleLeft(false));
 }
 
-// A QLabel's rich text reaches a picture only through a URL, and a glyph tinted
-// at runtime has no path - so it travels inline
+// QLabel rich text reaches images only by URL, and a glyph tinted at runtime has no path, so it is inlined
 static QString inlineGlyph(const QPixmap& glyph)
 {
     QByteArray png;
@@ -2951,8 +3291,7 @@ static QString inlineGlyph(const QPixmap& glyph)
     return qsl(R"(<img src="data:image/png;base64,%1" width="18" height="18">)").arg(QString::fromLatin1(png.toBase64()));
 }
 
-// Called from applyShellStyle() alone, which is both where the colours come
-// from and the one thing an appearance change runs again
+// Only called from applyShellStyle(), which supplies the colours and is what an appearance change reruns
 void dlgProfilePreferences::restyleSidebarIcons(const QColor& normal, const QColor& selected)
 {
     if (!mpListWidget_categories) {
@@ -2975,15 +3314,13 @@ void dlgProfilePreferences::restyleSidebarIcons(const QColor& normal, const QCol
     if (mpItem_support) {
         mpItem_support->setIcon(QIcon(tintedGlyph(QPixmap(qsl(":/icons/settings-support.png")), normal)));
     }
-    // A header built under the previous theme holds that theme's picture, and
-    // re-wording it is what puts the new one in
+    // Built headers hold the previous theme's icon; rewording them puts the new one in
     const QStringList builtHeaders = mSearchCategoryHeaders.keys();
     for (const QString& key : builtHeaders) {
         searchCategoryHeader(key);
     }
-    // The title over the page took a copy of the row's icon when the page was
-    // shown, which the first time round is before this has run at all. Hidden
-    // means a subpage or the search results, neither of which shows one.
+    // The title copied the row's icon when the page was shown, which the first time precedes this.
+    // Hidden means a subpage or the search results, which show none.
     if (mpLabel_pageTitleIcon && !mpLabel_pageTitleIcon->isHidden()) {
         if (const QListWidgetItem* pCurrent = mpListWidget_categories->currentItem()) {
             mpLabel_pageTitleIcon->setPixmap(pCurrent->icon().pixmap(QSize(20, 20), devicePixelRatioF()));
@@ -2991,41 +3328,65 @@ void dlgProfilePreferences::restyleSidebarIcons(const QColor& normal, const QCol
     }
 }
 
-// Kept on the shell widget rather than on the dialog, whose stylesheet
-// mudlet::showOptionsDialog() assigns the profile's Lua one to on every show.
-// Every selector is scoped by objectName or by the card property, so a profile
+// The application's palette, not the dialog's: a stylesheet freezes its widget's palette, and the dialog's is
+// still stale when signal_appearanceChanged() arrives. A stylesheet painting plain widgets paints the controls
+// on the cards, so it decides; read off an unparented probe, which starts from qApp's palette.
+QPalette dlgProfilePreferences::shellPalette(bool& themeSurface) const
+{
+    themeSurface = false;
+    if (qApp->styleSheet().isEmpty() && styleSheet().isEmpty()) {
+        return QApplication::palette();
+    }
+    QWidget probe;
+    probe.setStyleSheet(styleSheet());
+    probe.ensurePolished();
+    QPalette palette = probe.palette();
+    const QBrush window = palette.brush(QPalette::Active, QPalette::Window);
+    if (palette.isBrushSet(QPalette::Active, QPalette::Window) && window.style() == Qt::SolidPattern && window.color().alpha() == 255) {
+        palette.setColor(QPalette::Base, window.color());
+        themeSurface = true;
+        return palette;
+    }
+    // A gradient or translucent background is no colour to draw a surface in, and Qt copies it into Base too
+    const QPalette appPalette = QApplication::palette();
+    for (const auto group : {QPalette::Active, QPalette::Inactive, QPalette::Disabled}) {
+        for (const auto role : {QPalette::Window, QPalette::Base}) {
+            palette.setBrush(group, role, appPalette.brush(group, role));
+        }
+    }
+    return palette;
+}
+
+// On the shell widget, not the dialog, whose stylesheet mudlet::showOptionsDialog() replaces with the
+// profile's Lua one on every show. Selectors are scoped by objectName or the card property, so a profile
 // stylesheet still reaches the controls inside the pages.
 void dlgProfilePreferences::applyShellStyle()
 {
     if (!mpWidget_shell) {
         return;
     }
-    // The application's palette rather than this dialog's own: a stylesheet
-    // freezes the palette of the widget it is assigned to, so the profile's Lua
-    // stylesheet leaves the dialog holding the theme it was shown in - and even
-    // without one, the palette change is an event still undelivered when
-    // signal_appearanceChanged() arrives. qApp's palette is swapped
-    // synchronously by mudlet::setAppearance(), so it is already the new one.
-    const QPalette themePalette = QApplication::palette();
+    bool themeSurface = false;
+    const QPalette themePalette = shellPalette(themeSurface);
+    mShellPalette = themePalette;
     const QColor cardColor = themePalette.color(QPalette::Base);
     const QColor textColor = themePalette.color(QPalette::WindowText);
     const QColor accentColor = themePalette.color(QPalette::Highlight);
-    // Off the palette rather than mudlet::inDarkMode(), so a dark system theme
-    // under "follow the system" gets the dark treatment too
+    // From the palette rather than MudletApp::darkMode(), so a dark system theme under "follow the system" counts
     const bool darkPage = cardColor.lightness() < 128;
 
-    // Measured from the card and text colours, the one pair a palette must keep
-    // apart to be usable at all: Mudlet's light appearance has window, base and
-    // mid within three levels, so a border mixed from those is invisible
-    const QColor pageColor = blend(cardColor, QColor(Qt::black), darkPage ? 0.35 : 0.04);
+    // Mixed from card and text, the one pair a usable palette keeps apart: Mudlet's light appearance has
+    // window, base and mid within three levels, so a border mixed from those is invisible.
+    // A theme paints every label and control on the page as well, so a darker page would box each of them.
+    const QColor pageColor = themeSurface ? cardColor : blend(cardColor, QColor(Qt::black), darkPage ? 0.35 : 0.04);
     const QColor borderColor = blend(cardColor, textColor, darkPage ? 0.28 : 0.16);
     const QString hoverSoft = rgba(textColor, 0.07);
     const QString accentSoft = rgba(accentColor, 0.14);
+    // The theme paints the labels on a banner too, so a tint would leave each of them in a box
+    const QString bannerFill = themeSurface ? cardColor.name() : accentSoft;
     // A saturated highlight colour rarely holds its own against both pages
     const QColor accentText = darkPage ? blend(accentColor, QColor(Qt::white), 0.45) : blend(accentColor, QColor(Qt::black), 0.2);
     const QColor mutedText = blend(cardColor, textColor, 0.7);
-    // A marker pen whose lightness is chosen for the page it lies on: an opaque
-    // pale wash under dark text, a darker one light text still shows through
+    // Marker lightness suits the page: an opaque pale wash under dark text, a darker one light text shows through
     const QColor markerColor = QColor::fromHslF(0.13, 0.9, darkPage ? 0.34 : 0.72);
     const QString markerSoft = rgba(markerColor, darkPage ? 0.75 : 0.95);
     const QColor scrollHandle = blend(pageColor, textColor, 0.22);
@@ -3034,60 +3395,47 @@ void dlgProfilePreferences::applyShellStyle()
     if (mpAction_searchIcon) {
         mpAction_searchIcon->setIcon(QIcon(tintedGlyph(QPixmap(qsl(":/icons/settings-search.png")), mutedText)));
     }
-    // Quieter than the name beside them, and the accent under a selected one
     restyleSidebarIcons(mutedText, accentText);
 
-    // A border-left accent bar is drawn as an arc where the pill's corner radius
-    // is, pinching the bar to nothing at both ends. A gradient is clipped by the
-    // radius instead, so the bar keeps its width and the pill's rounded corners.
+    // A border-left accent bar is drawn as an arc at the pill's corner radius, pinching to nothing at both
+    // ends; a gradient is clipped by the radius instead, keeping the bar's width and the rounded corners.
     const qreal accentBarStop = static_cast<qreal>(scmSidebarAccentBarWidth) / (scmSidebarWidth - 2 * scmSidebarPadding);
-    // ...and the same bar on a collapsed sidebar's narrower item is a different
-    // fraction of a different width
+    // The rail's narrower item needs its own fraction
     const qreal railAccentBarStop = static_cast<qreal>(scmSidebarAccentBarWidth) / (scmSidebarRailWidth - 2 * scmSidebarRailPadding);
 
-    // Fusion draws a group box's check indicator from palette(window) darkened
-    // by 40%, which on a dark card is a 1.1:1 outline - and the palette pass
-    // below cannot rescue it, as that role also carries the card's title band.
-    // A styled indicator gets no check mark of its own, so the checked state
-    // has to be drawn out in full.
+    // Fusion draws a group box's indicator from palette(window) darkened 40%, a 1.1:1 outline on a dark card,
+    // and the palette pass below cannot fix it as that role also paints the title band. A styled indicator
+    // loses its check mark, so the checked state is drawn in full.
     const QColor indicatorOutline = blend(cardColor, textColor, darkPage ? 0.55 : 0.45);
     const QString cardIndicatorRules = qsl("QGroupBox[settingsCard=\"true\"]::indicator { width: %1px; height: %1px; border: 1px solid %2; border-radius: 3px; background-color: %3; }"
                                            "QGroupBox[settingsCard=\"true\"]::indicator:hover { border: 1px solid %4; }"
-                                           // A fixed green check mark, so the fill under it is the
-                                           // card rather than an accent that could be orange
+                                           // The check mark is a fixed green, so fill with the card, not a possibly orange accent
                                            "QGroupBox[settingsCard=\"true\"]::indicator:checked { border: 1px solid %4; image: url(:/icons/dialog-ok-apply_small.png); }")
                                                .arg(QString::number(scmCardIndicatorSize), indicatorOutline.name(), cardColor.name(), accentColor.name());
-    // Where a checkable card's title starts is only known once the rules above
-    // are the ones being laid out under
+    // A checkable card's title position is only known under the rules above
     const QString cardTitleRule = qsl("QGroupBox[settingsCardTitleInset=\"true\"]::title { left: %1px; }").arg(QString::number(measuredCardTitleInset(mpWidget_shell, cardIndicatorRules)));
 
     mpWidget_shell->setStyleSheet(qsl("#settingsShell, #settingsSidebar, #settingsContent { background-color: %1; }"
-                                      // Or the platform style draws its own selection as a square
-                                      // box inside the rounded pill the rules below draw
+                                      // Or the platform style draws a square selection inside the rounded pill
                                       "#settingsCategoryList { background: transparent; border: none; outline: none; show-decoration-selected: 1;"
                                       " selection-background-color: transparent; selection-color: %6; }"
-                                      // The transparent left border keeps a selected item's text
-                                      // from stepping sideways under its accent bar; outline:none
-                                      // drops a focus rectangle drawn square inside a round pill
+                                      // The transparent left border stops a selected item's text shifting under its accent bar;
+                                      // outline:none drops a square focus rectangle inside the round pill
                                       "#settingsCategoryList::item { border-radius: 8px; border-left: 3px solid transparent; padding-left: 7px; color: %2; outline: none; }"
                                       "#settingsCategoryList::item:hover { background-color: %3; }"
                                       "#settingsCategoryList::item:selected { color: %6; font-weight: bold; background: qlineargradient(x1:0, y1:0, x2:1, y2:0,"
                                       " stop:0 %5, stop:%11 %5, stop:%12 %4, stop:1 %4); }"
-                                      // Keyboard focus is otherwise indistinguishable from the
-                                      // selection; eventFilter() puts the property on
+                                      // Otherwise keyboard focus looks like selection; eventFilter() sets the property
                                       "#settingsCategoryList[settingsFocused=\"true\"]::item:selected { border: 1px solid %5; border-left: 3px solid %5; padding-left: 5px; }"
-                                      // On a rail the item is only as wide as its icon, so the
-                                      // padding goes and the bar is a different fraction
+                                      // On a rail the item is only as wide as its icon: no padding, and its own bar fraction
                                       "#settingsCategoryList[settingsRail=\"true\"]::item { padding-left: 0px; }"
                                       "#settingsCategoryList[settingsRail=\"true\"]::item:selected { background: qlineargradient(x1:0, y1:0, x2:1, y2:0,"
                                       " stop:0 %5, stop:%15 %5, stop:%16 %4, stop:1 %4); }"
                                       "#settingsSidebarSeparator { border: none; background-color: %7; margin: 8px 16px; }"
                                       "#settingsSidebarSeparator[settingsRail=\"true\"] { margin: 8px 2px; }"
                                       "#settingsStack { background: transparent; }"
-                                      // The shell's own surfaces keep the page colour even when a
-                                      // profile stylesheet paints every QWidget it can reach.
-                                      // Painted rather than left transparent, as a transparent
-                                      // surface falls back to the palette that stylesheet changed.
+                                      // Keeps shell surfaces page-coloured under a profile stylesheet painting every QWidget;
+                                      // painted, as a transparent one falls back to the palette that stylesheet changed
                                       "QWidget[settingsSurface=\"true\"] { background-color: %1; border: none; }"
                                       // A scroll area's bars answer only to a descendant selector
                                       "QScrollArea[settingsSurface=\"true\"] QScrollBar:vertical, #settingsCategoryList QScrollBar:vertical"
@@ -3110,58 +3458,51 @@ void dlgProfilePreferences::applyShellStyle()
                                       "#settingsPageTitle { font-weight: bold; font-size: 145%; }"
                                       "#settingsSearchField { border: 1px solid %7; border-radius: 8px; padding-left: 6px; background-color: %8; }"
                                       "#settingsSearchField:focus { border: 1px solid %5; }"
-                                      // The top margin lifts the title clear of the frame, rather
-                                      // than leaving it cutting through the card's border
+                                      // The top margin lifts the title clear of the frame instead of cutting through the border
                                       "QGroupBox[settingsCard=\"true\"] { background-color: %8; border: 1px solid %7; border-radius: 8px; margin-top: 24px; padding: 16px; font-weight: bold; }"
                                       "QGroupBox[settingsCard=\"true\"]::title { subcontrol-origin: margin; subcontrol-position: top left; left: 0px; padding: 0px; }"
-                                      // ...but only the title is bold, not everything the card holds:
+                                      // font-weight is inherited, so un-bold everything but the title
                                       "QGroupBox[settingsCard=\"true\"] > * { font-weight: normal; }"
-                                      // A card carrying a single option needs no heading, nor room above for one
+                                      // A single-option card needs no heading, nor room above for one
                                       "QGroupBox[settingsCardPlain=\"true\"] { margin-top: 0px; }"
-                                      // A group box the .ui file nests inside what is now a card
-                                      // would draw a second frame; a heading alone divides them
+                                      // A .ui group box nested in a card would draw a second frame; a heading alone divides them
                                       "QGroupBox[settingsCard=\"true\"] QGroupBox { border: none; background: transparent; margin-top: 20px; padding: 0px 0px 0px 8px; font-weight: bold; }"
                                       "QGroupBox[settingsCard=\"true\"] QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; left: 0px; padding: 0px; }"
-                                      "#settingsMigrationBanner { background-color: %4; border: 1px solid %7; border-radius: 8px; }"
+                                      "#settingsMigrationBanner { background-color: %17; border: 1px solid %7; border-radius: 8px; }"
                                       "#settingsMigrationBannerTitle { font-weight: bold; }"
+                                      "#settingsNoProfileNotice { background-color: %17; border: 1px solid %7; border-radius: 8px; padding: 12px 16px; }"
+                                      "#settingsNoProfileNotice:focus { border: 1px solid %5; }"
                                       "#settingsSearchHeader { font-weight: bold; font-size: 110%; color: %2; }"
                                       "#settingsSearchEmpty { padding: 32px; color: %9; }"
-                                      // The property is put on and taken off by the search itself:
                                       "QLabel[searchMatch=\"true\"], QCheckBox[searchMatch=\"true\"], QRadioButton[searchMatch=\"true\"], QPushButton[searchMatch=\"true\"]"
                                       " { background-color: %10; border-radius: 3px; }"
                                       "QGroupBox[searchMatch=\"true\"]::title { background-color: %10; border-radius: 3px; }"
-                                      // Drawn as a piece of the heading it sits beside, not a button
+                                      // Styled as part of the heading beside it, not as a button
                                       "#settingsSearchBack, #settingsSubpageBack { border: 1px solid transparent; border-radius: 6px; padding: 2px 6px; color: %2; background: transparent; }"
                                       "#settingsSearchBack:hover, #settingsSubpageBack:hover { background-color: %3; }"
                                       "#settingsSearchBack:focus, #settingsSubpageBack:focus { border: 1px solid %5; }"
-                                      // Quieter than what they describe, and indented under it
                                       "#settingsCardDescription { color: %9; }"
                                       "QLabel[settingsControlDescription=\"true\"] { color: %9; margin-left: 20px; margin-bottom: 6px; }"
-                                      // The wrap holder shows the card through it, named outright
-                                      // so a profile stylesheet cannot paint a band across it
+                                      // Named outright so a profile stylesheet cannot paint a band across the card
                                       "#settingsCheckBoxWrap { background: transparent; border: none; }"
-                                      // A row that leads somewhere, clickable across the card's width
                                       "QAbstractButton[settingsChevronRow=\"true\"] { text-align: left; padding: 8px 30px 8px 10px; border: 1px solid %7; border-radius: 6px;"
-                                      // Qt's stylesheets cannot scale a background image, so this
-                                      // is the 16px copy of the icon rather than the 48px one
+                                      // Qt stylesheets cannot scale a background image, hence the 16px icon rather than the 48px one
                                       " background-color: transparent; background-image: url(:/icons/arrow-right_grey-16x.png); background-repeat: no-repeat;"
                                       " background-position: right center; background-origin: padding; }"
                                       "QAbstractButton[settingsChevronRow=\"true\"]:hover { background-color: %3; }"
                                       "QAbstractButton[settingsChevronRow=\"true\"]:focus { border: 1px solid %5; }"
                                       // Carries no setting, so tinted rather than framed like a card
-                                      "QGroupBox[settingsHero=\"true\"] { background-color: %4; border: 1px solid %5; }"
+                                      "QGroupBox[settingsHero=\"true\"] { background-color: %17; border: 1px solid %5; }"
                                       "#settingsHeroHeadline { font-weight: bold; font-size: 115%; }"
                                       "#settingsHeroDetail { color: %9; }")
                                           .arg(pageColor.name(), textColor.name(), hoverSoft, accentSoft, accentColor.name(), accentText.name(), borderColor.name(), cardColor.name(), mutedText.name())
                                           .arg(markerSoft, QString::number(accentBarStop, 'f', 5), QString::number(accentBarStop + 0.0001, 'f', 5), scrollHandle.name(), scrollHandleHover.name())
-                                          .arg(QString::number(railAccentBarStop, 'f', 5), QString::number(railAccentBarStop + 0.0001, 'f', 5))
+                                          .arg(QString::number(railAccentBarStop, 'f', 5), QString::number(railAccentBarStop + 0.0001, 'f', 5), bannerFill)
                                   + cardIndicatorRules + cardTitleRule);
 
-    // Fusion draws every control outline - checkbox and radio indicators
-    // included - as palette(window) darkened by 40%, within 1.1:1 of a dark
-    // card. Nothing in the shell paints with that role, so raising it costs
-    // nothing. Per control, because a stylesheet freezes the palette of every
-    // widget it polishes - and after the stylesheet, because assigning one
+    // Fusion draws every control outline, indicators included, as palette(window) darkened 40%, within 1.1:1
+    // of a dark card; nothing in the shell paints with that role, so raising it is free. Per control, as a
+    // stylesheet freezes the palette of each widget it polishes, and after the stylesheet, as assigning one
     // re-polishes the subtree back to the palette it was first polished with.
     const QColor controlOutlineSource = darkPage ? blend(cardColor, textColor, 0.55) : themePalette.color(QPalette::Window);
     const QColor placeholderText = blend(cardColor, textColor, 0.45);
@@ -3171,14 +3512,13 @@ void dlgProfilePreferences::applyShellStyle()
         }
         QPalette controlPalette = pControl->palette();
         controlPalette.setColor(QPalette::Window, controlOutlineSource);
-        // The dark theme leaves PlaceholderText at the light default, which is
-        // all but black on a dark field
+        // The dark theme leaves PlaceholderText at the light default, nearly black on a dark field
         controlPalette.setColor(QPalette::PlaceholderText, placeholderText);
         pControl->setPalette(controlPalette);
     }
 
-    // A rich-text anchor takes its colour from the palette rather than the
-    // stylesheet, and the theme's default is not chosen against a card
+    // Rich-text anchors take their colour from the palette, not the stylesheet, and the default is not chosen
+    // for a card
     QList<QLabel*> linkLabels{mpLabel_searchEmpty, mpLabel_securityLink.data()};
     for (auto* pDescription : findChildren<QLabel*>(qsl("settingsCardDescription"))) {
         linkLabels.append(pDescription);
@@ -3193,10 +3533,8 @@ void dlgProfilePreferences::applyShellStyle()
     }
 }
 
-// Found by type rather than listed by hand, since a list would silently miss
-// whatever gets added to the .ui file next. Qt::UniqueConnection makes this
-// safe to call again once a profile brings its own controls with it. Push
-// buttons are left out: what they do, they already do for themselves.
+// Found by type, as a hand-written list would miss later .ui additions. Qt::UniqueConnection makes it safe to
+// rerun once a profile brings its own controls. Push buttons act for themselves, so are skipped.
 void dlgProfilePreferences::connectApplyTriggers()
 {
     for (auto* pButton : findChildren<QAbstractButton*>()) {
@@ -3207,8 +3545,7 @@ void dlgProfilePreferences::connectApplyTriggers()
         connect(pButton, &QAbstractButton::toggled, this, &dlgProfilePreferences::slot_scheduleApply, Qt::UniqueConnection);
     }
     for (auto* pCheckBox : findChildren<QCheckBox*>()) {
-        // toggled() says nothing about a tri-state box moving between its
-        // partially checked and checked states
+        // toggled() misses a tri-state box moving between partially checked and checked
         connect(pCheckBox, &QCheckBox::checkStateChanged, this, &dlgProfilePreferences::slot_scheduleApply, Qt::UniqueConnection);
     }
     for (auto* pGroupBox : findChildren<QGroupBox*>()) {
@@ -3228,6 +3565,10 @@ void dlgProfilePreferences::connectApplyTriggers()
     for (auto* pDateTimeEdit : findChildren<QDateTimeEdit*>()) {
         connect(pDateTimeEdit, &QDateTimeEdit::dateTimeChanged, this, &dlgProfilePreferences::slot_scheduleApply, Qt::UniqueConnection);
     }
+    for (auto* pAbstractSpinBox : findChildren<QAbstractSpinBox*>()) {
+        // Return on a QDateTimeEdit leaves its line edit modified and emits nothing from it
+        connect(pAbstractSpinBox, &QAbstractSpinBox::editingFinished, this, &dlgProfilePreferences::slot_lineEditFinished, Qt::UniqueConnection);
+    }
     for (auto* pLineEdit : findChildren<QLineEdit*>()) {
         if (pLineEdit == mpLineEdit_search) {
             continue;
@@ -3236,8 +3577,8 @@ void dlgProfilePreferences::connectApplyTriggers()
     }
 }
 
-// The types are the ones connectApplyTriggers() listens to, so everything able
-// to schedule an apply can also be told apart from how it was populated
+// Covers the types connectApplyTriggers() listens to, so anything that can schedule an apply can be
+// compared with its snapshot
 static QVariant controlValue(const QObject* pControl)
 {
     if (const auto* pGroupBox = qobject_cast<const QGroupBox*>(pControl)) {
@@ -3287,11 +3628,14 @@ static enums::controlsVisibility visibilityFromComboIndex(const int index)
     }
 }
 
-// Qt sets the modified flag on the first keystroke and slot_lineEditFinished()
-// clears it again, so until then the field holds half a word rather than a
-// setting - which neither the apply nor the snapshot below takes it for.
+// Qt sets the modified flag on the first keystroke and slot_lineEditFinished() clears it; until then the
+// field holds a half-typed word, which neither the apply nor the snapshot takes as a setting.
 static bool beingTypedInto(const QObject* pControl)
 {
+    // A spin box types into a line edit of its own, while emitting valueChanged() for each digit that makes a number
+    if (const auto* pSpinBox = qobject_cast<const QAbstractSpinBox*>(pControl)) {
+        pControl = pSpinBox->findChild<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly);
+    }
     const auto* pLineEdit = qobject_cast<const QLineEdit*>(pControl);
     return pLineEdit && pLineEdit->hasFocus() && pLineEdit->isModified();
 }
@@ -3316,8 +3660,7 @@ void SettingsSnapshot::take()
         if (!value.isValid()) {
             continue;
         }
-        // The apply this snapshot follows left a half-typed field alone, so what
-        // it was last populated with has to stand until that edit finishes
+        // The preceding apply skipped a half-typed field, so its last populated value stands until the edit finishes
         if (const auto it = previous.constFind(pWidget); beingTypedInto(pWidget) && it != previous.constEnd()) {
             mValues.insert(pWidget, *it);
             continue;
@@ -3334,24 +3677,21 @@ void SettingsSnapshot::take(const QObject* pControl)
 
 bool SettingsSnapshot::dirty(const QObject* pControl) const
 {
-    // The debounce is shared, so the apply about to read this was very likely
-    // started by another control's edit
+    // The debounce is shared, so the apply about to read this was likely started by another control's edit
     if (beingTypedInto(pControl)) {
         return false;
     }
     const auto it = mValues.constFind(pControl);
     if (it == mValues.constEnd()) {
-        // A control that came into being after the last snapshot:
+        // Created after the last snapshot
         return true;
     }
     return *it != controlValue(pControl);
 }
 
-// For a setting spread over several controls - the borders, the Discord privacy
-// flags - one of them changing means the write happens. What is written is
-// still composed control by control: an undirty control contributes the value
-// the Host holds now rather than what it shows, which a script may have moved
-// on from (#10165). Members that are separate settings take their own guard.
+// For a setting spread over several controls (borders, Discord privacy flags), any one changing triggers the
+// write, still composed per control: a clean control contributes the Host's current value, not what it
+// shows, which a script may have changed since. Members that are separate settings take their own guard.
 bool SettingsSnapshot::anyDirty(const QList<const QObject*>& controls) const
 {
     for (const auto* pControl : controls) {
@@ -3374,8 +3714,7 @@ bool SettingsSnapshot::shortcutDirty(const QString& key) const
 
 bool SettingsSnapshot::pendingEdits(const QTimer* pApplyTimer, const QLineEdit* pSearchField) const
 {
-    // Whatever the settings say, what the controls hold is the user's until the
-    // apply has run - and the refresh at the end of it re-reads them anyway
+    // Until the apply runs the controls hold the user's values, and its closing refresh re-reads them anyway
     if (pApplyTimer && pApplyTimer->isActive()) {
         return true;
     }
@@ -3383,8 +3722,7 @@ bool SettingsSnapshot::pendingEdits(const QTimer* pApplyTimer, const QLineEdit* 
         if (pWidget == pSearchField || !carriesValue(pWidget)) {
             continue;
         }
-        // dirty() answers false for a field being typed into, which is exactly
-        // the edit that must not be written over here - so it is asked separately
+        // dirty() is false for a field being typed into, exactly the edit that must not be overwritten here
         if (beingTypedInto(pWidget) || dirty(pWidget)) {
             return true;
         }
@@ -3392,8 +3730,7 @@ bool SettingsSnapshot::pendingEdits(const QTimer* pApplyTimer, const QLineEdit* 
     if (shortcutsDirty()) {
         return true;
     }
-    // A shortcut editor holds a capture until editingFinished, so one showing
-    // anything other than what it last committed is an edit in progress
+    // A shortcut editor holds a capture until editingFinished, so differing from its last commit is an edit
     for (auto it = mEditors.cbegin(), end = mEditors.cend(); it != end; ++it) {
         if (it.value() && it.value()->keySequence() != mCurrentShortcuts.value(it.key())) {
             return true;
@@ -3412,44 +3749,35 @@ void SettingsSnapshot::addEditor(const QString& key, TKeySequenceEdit* pEditor)
     mEditors.insert(key, pEditor);
 }
 
-// The dialog stays open for hours while scripts and other dialogs move the
-// settings on underneath it, so coming back to its window is when it re-reads
-// them. Re-reading is indistinguishable from discarding whatever was in the way
-// of it, so an edit anywhere in the dialog skips this run and the activation
-// after that edit is applied does the work instead.
+// The dialog stays open for hours while scripts and other dialogs change settings, so it re-reads them on
+// reactivation. Re-reading would discard an edit in progress, so any edit skips this run and the
+// activation after it is applied does the work.
 void dlgProfilePreferences::refreshFromSettings()
 {
-    // Activation arrives repeatedly - a dialog opened over this one and closed
-    // again is two of them - and the population below raises mPopulating
+    // Activation arrives repeatedly (a dialog opened over this one and closed is two), and the population
+    // below sets mPopulating
     if (mPopulating || mClosing || !mShellReady) {
         return;
     }
     if (mSearchActive) {
-        // Repopulating replaces the text the search index was built from, and
-        // the only way to fix that up is to clear the query, which is the user's
+        // Repopulating replaces the text the index was built from, and only clearing the user's query fixes that
         return;
     }
     if (mSnapshot.pendingEdits(mpTimer_apply, mpLineEdit_search)) {
         return;
     }
 
-    // Nothing is borrowed with no query standing, so this only throws the index
-    // away for the next query to rebuild
+    // With no query standing nothing is borrowed, so this only drops the index for the next query to rebuild
     invalidateSearch();
 
-    // Both notices say a change the player has just made will not reach the game
-    // until they reconnect, and both are hidden by initWithHost() below. That is
-    // right when a profile is being read in, but here the reading is Mudlet
-    // writing the controls back after an instant apply - which is the very
-    // change the notice is about, so it has to survive it.
+    // initWithHost() hides both reconnect notices, right when a profile is read in, but here it writes the
+    // controls back after an instant apply - the very change the notice is about, so it must survive.
     const bool reconnectForDataProtocol = !need_reconnect_for_data_protocol->isHidden();
     const bool reconnectForSpecialOption = !need_reconnect_for_specialoption->isHidden();
 
-    // On the two paths that build the dialog, population happens before the
-    // write-through connections are made; here they are already there. Written
-    // silently, or a setting that has moved travels straight back out of the
-    // control just told about it - and one whose control cannot hold it exactly
-    // (the room size is a 1-11 scale over a qreal) comes back rounded.
+    // Unlike when the dialog is built, the write-through connections already exist. Written silently, or a
+    // moved setting flows straight back out of its control, rounded where the control cannot hold it exactly
+    // (room size is a 1-11 scale over a qreal).
     std::vector<QSignalBlocker> blockers;
     const auto controls = findChildren<QWidget*>();
     blockers.reserve(controls.size());
@@ -3470,13 +3798,11 @@ void dlgProfilePreferences::refreshFromSettings()
     // Released before the re-measuring below, which moves checkboxes between parents
     blockers.clear();
 
-    // The pairing every population ends with: what the controls hold now is what
-    // the settings say, so only what changes after this is the user's next edit
+    // Every population ends with this pair: the controls now match the settings, so later changes are user edits
     connectApplyTriggers();
     mSnapshot.take();
-    // A label can have been replaced by a longer or shorter one, and a checkbox
-    // that needed wrapping may no longer. Caps after whatever wrote the
-    // controls, tab order after the caps, as a wrapped checkbox sits a widget deeper.
+    // Labels may have changed length, so checkboxes may need (un)wrapping. Caps after the controls are written,
+    // tab order after the caps, as a wrapped checkbox sits a widget deeper.
     updateColumnWidthCaps();
     rebuildTabOrder();
 }
@@ -3500,12 +3826,18 @@ void dlgProfilePreferences::setupPasswordsMigration()
     });
 
     connect(mudlet::self(), &mudlet::signal_passwordsMigratedToProfiles, this, [=, this]() {
-        label_password_migration_notification->setText(tr("Migrated all passwords to profile storage."));
         comboBox_store_passwords_in->setEnabled(true);
+        const QStringList notMigrated = mudlet::self()->passwordsNotMigratedToProfiles();
+        if (!notMigrated.isEmpty()) {
+            //: Shown in the preferences when some passwords could not be saved into their profiles while switching to profile storage; %1 is a list of profile names
+            label_password_migration_notification->setText(tr("Could not save the passwords of these profiles into them, so they are still in secure storage: %1").arg(notMigrated.join(qsl(", "))));
+            return;
+        }
+        label_password_migration_notification->setText(tr("Migrated all passwords to profile storage."));
         hidePasswordMigrationLabelTimer->start(10s);
     });
 
-    if (mudlet::self()->storingPasswordsSecurely()) {
+    if (MudletApp::storingPasswordsSecurely()) {
         comboBox_store_passwords_in->setCurrentIndex(0);
     } else {
         comboBox_store_passwords_in->setCurrentIndex(1);
@@ -3534,7 +3866,7 @@ void dlgProfilePreferences::disableHostDetails()
     // ----- groupBox_protocols -----
     groupBox_protocols->setEnabled(false);
     pushButton_chooseProtocols->setEnabled(false);
-    // The protocols themselves are on a page of their own, which this card only leads to
+    // The protocols themselves are on their own subpage
     mpCard_protocolList->setEnabled(false);
     need_reconnect_for_data_protocol->hide();
 
@@ -3576,6 +3908,7 @@ void dlgProfilePreferences::disableHostDetails()
     // ----- groupbox_codeEditorThemeSelection -----
     theme_download_label->hide();
 
+    groupBox_editorFont->setEnabled(false);
     groupBox_autoComplete->setEnabled(false);
     groupBox_editorDisplayOptions->setEnabled(false);
 
@@ -3625,6 +3958,7 @@ void dlgProfilePreferences::disableHostDetails()
     if (mpCard_discord) {
         mpCard_discord->hide();
     }
+    groupBox_MMCPOptions->setEnabled(false);
 
     // ===== tab_shortcuts =====
     groupBox_main_window_shortcuts->setEnabled(false);
@@ -3634,8 +3968,10 @@ void dlgProfilePreferences::disableHostDetails()
     label_caretModeKey->setEnabled(false);
     checkBox_announceIncomingText->setEnabled(false);
     checkBox_advertiseScreenReader->setEnabled(false);
+    checkBox_accessibleLabels->setEnabled(false);
     checkBox_enableClosedCaption->setEnabled(false);
     checkBox_enableBlinkText->setEnabled(false);
+    checkBox_f3SearchEnabled->setEnabled(false);
     comboBox_blankLinesBehaviour->setEnabled(false);
     comboBox_caretModeKey->setEnabled(false);
 
@@ -3644,16 +3980,19 @@ void dlgProfilePreferences::disableHostDetails()
     groupBox_purgeMediaCache->setEnabled(false);
     // ----- groupBox_specialOptions -----
     need_reconnect_for_specialoption->hide();
+    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(false);
 
     groupbox_searchEngineSelection->setEnabled(false);
-    // ----- groupBox_debug -----
-    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(false);
-    // This acts on a label within this groupBox:
     slot_hidePasswordMigrationLabel();
+    // ----- groupBox_debug -----
     checkBox_debugShowAllCodepointProblems->setEnabled(false);
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
+    checkBox_lazyCaptureGlobals->setEnabled(false);
+    mpCard_experiments->setEnabled(false);
     label_networkPacketTimeout->setEnabled(false);
     doubleSpinBox_networkPacketTimeout->setEnabled(false);
+
+    updateNoProfileNotice();
 }
 
 void dlgProfilePreferences::enableHostDetails()
@@ -3703,6 +4042,7 @@ void dlgProfilePreferences::enableHostDetails()
     // ===== tab_codeEditor =====
     groupbox_codeEditorThemeSelection->setEnabled(true);
 
+    groupBox_editorFont->setEnabled(true);
     groupBox_autoComplete->setEnabled(true);
     groupBox_editorDisplayOptions->setEnabled(true);
 
@@ -3743,8 +4083,11 @@ void dlgProfilePreferences::enableHostDetails()
 #endif
 
     // ===== tab_chat =====
-    groupBox_discordPrivacy->show();
-    mpCard_discord->show();
+    // initWithHost() only fills these in when the library loaded
+    const bool discordAvailable = Discord::self()->libraryLoaded();
+    groupBox_discordPrivacy->setVisible(discordAvailable);
+    mpCard_discord->setVisible(discordAvailable);
+    groupBox_MMCPOptions->setEnabled(true);
 
     // ===== tab_shortcuts =====
     groupBox_main_window_shortcuts->setEnabled(true);
@@ -3754,27 +4097,32 @@ void dlgProfilePreferences::enableHostDetails()
     label_caretModeKey->setEnabled(true);
     checkBox_announceIncomingText->setEnabled(true);
     checkBox_advertiseScreenReader->setEnabled(true);
+    checkBox_accessibleLabels->setEnabled(true);
     checkBox_enableClosedCaption->setEnabled(true);
     checkBox_enableBlinkText->setEnabled(true);
+    checkBox_f3SearchEnabled->setEnabled(true);
     comboBox_blankLinesBehaviour->setEnabled(true);
     comboBox_caretModeKey->setEnabled(true);
 
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(true);
     groupBox_purgeMediaCache->setEnabled(true);
+    // ----- groupBox_specialOptions -----
+    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(true);
     groupbox_searchEngineSelection->setEnabled(true);
     // ----- groupBox_debug -----
-    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(true);
     widget_timerDebugOutputMinimumInterval->setEnabled(true);
     checkBox_debugShowAllCodepointProblems->setEnabled(true);
+    checkBox_lazyCaptureGlobals->setEnabled(true);
+    mpCard_experiments->setEnabled(true);
     label_networkPacketTimeout->setEnabled(true);
     doubleSpinBox_networkPacketTimeout->setEnabled(true);
+
+    updateNoProfileNotice();
 }
 
-// Every write here is blocked from signalling, because this is the dialog
-// reading a setting: a control answering by writing the same value straight
-// back would, on a language or appearance setting, undo what another dialog
-// just did.
+// Every write is signal-blocked: a control writing the value straight back could undo a language or
+// appearance change another dialog just made.
 void dlgProfilePreferences::populateApplicationSettings()
 {
     mudlet* pMudlet = mudlet::self();
@@ -3832,6 +4180,12 @@ void dlgProfilePreferences::populateApplicationSettings()
         const QSignalBlocker blocker(comboBox_appearance);
         comboBox_appearance->setCurrentIndex(pMudlet->mAppearance);
     }
+    comboBox_menuBarAltKeyNavigation->setCurrentIndex(static_cast<int>(MudletProxyStyle::altKeyNavigation()));
+    {
+        const QSignalBlocker blocker(telnetHandlerEnabled);
+        telnetHandlerEnabled->setChecked(MudletApp::getQSettings()->value("telnetHandlerEnabled", false).toBool());
+    }
+    populateTriggerMatchPoolSettings();
     {
         // The one setting here that lives in its own QSettings group rather than
         // in the mudlet instance, so the only one with no change to announce
@@ -3840,6 +4194,22 @@ void dlgProfilePreferences::populateApplicationSettings()
         const QVariant storedOption = settings.value("autoSendCrashReports", QVariant());
         comboBox_crashReportPolicy->setCurrentIndex(storedOption.isValid() ? storedOption.toInt() - 1 : 2);
     }
+#ifdef INCLUDE_MCPSERVER
+    {
+        const QSignalBlocker enableBlocker(checkBox_enableMCPServer);
+        checkBox_enableMCPServer->setChecked(pMudlet->mcpEnabled());
+        const QSignalBlocker portBlocker(spinBox_mcpServerPort);
+        spinBox_mcpServerPort->setValue(pMudlet->mcpServerPort());
+    }
+    if (label_mcpConnectResult->text().isEmpty()) {
+        // A start refused at launch has no dialog open to report to, so the reason waits
+        // here for the first one. Anything already written is a fresher answer than this.
+        mMCPServerStateMessage = pMudlet->mcpLastError();
+        setMCPConnectResult(mMCPServerStateMessage);
+    }
+    slot_updateMCPServerEndpoint();
+    refreshMCPAppButtons();
+#endif
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
@@ -3847,17 +4217,23 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     loadEditorTab();
 
     fontComboBox_displayFont->setCurrentFont(pHost->getDisplayFont());
+    rememberDisplayFontFamilyShown();
     // Accommodate an initial font size being larger than expected - and ensure
     // it is a positive value:
     spinBox_displayFontSize->setMaximum(std::max(pHost->getDisplayFont().pointSize(), 40));
     spinBox_displayFontSize->setValue(std::max(1, pHost->getDisplayFont().pointSize()));
-    checkBox_antiAlias->setChecked(!pHost->mNoAntiAlias);
+    checkBox_antiAlias->setChecked(pHost->fontsAntiAlias());
 
     connect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_displayFontChanged, Qt::UniqueConnection);
+    connect(comboBox_dictionary, &QComboBox::activated, this, &dlgProfilePreferences::slot_dictionaryPicked, Qt::UniqueConnection);
+    // currentFontChanged is not emitted when the family already shown is picked again
+    connect(fontComboBox_displayFont, &QComboBox::activated, this, &dlgProfilePreferences::slot_displayFontChanged, Qt::UniqueConnection);
     connect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_displayFontSizeChanged, Qt::UniqueConnection);
     connect(checkBox_antiAlias, &QCheckBox::clicked, this, &dlgProfilePreferences::slot_displayFontAliasingChanged, Qt::UniqueConnection);
 
-    // search engine load - emptied first so a second run replaces the list
+    connect(pHost, &Host::signal_consoleFontChanged, this, &dlgProfilePreferences::slot_hostDisplayFontChanged, Qt::UniqueConnection);
+
+    // Emptied first so a second run replaces the list
     {
         const QSignalBlocker blocker(search_engine_combobox);
         search_engine_combobox->clear();
@@ -3878,7 +4254,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
 
     comboBox_dictionary->clear();
-    checkBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
+    checkBox_spellCheck->setChecked(pHost->getEnableSpellCheck());
     bool useUserDictionary = false;
     pHost->getUserDictionaryOptions(useUserDictionary, mUseSharedDictionary);
     // Always set the true radio button first - avoids any problems with
@@ -3898,11 +4274,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // Unfortunately OpenBSD does not ship a dictionary for THAT language which
     // prevents us using it to find any system ones
     const QString& currentDictionary = pHost->getSpellDic();
-    // This will also set mudlet::mUsingMudletDictionaries as appropriate:
-    const QString path = mudlet::getMudletPath(enums::hunspellDictionaryPath, currentDictionary);
+    const bool currentDictionaryFound = TSpellChecker::systemDictionaryFound(currentDictionary);
+    // Also settles MudletApp::usingMudletDictionaries(), read below
+    const QString path = TSpellChecker::dictionaryFolderToList(currentDictionary);
     // Tweak the label for the provided spelling dictionaries depending on where
     // they come from:
-    if (mudlet::self()->mUsingMudletDictionaries) {
+    if (MudletApp::usingMudletDictionaries()) {
         //: On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones
         checkBox_spellCheck->setText(tr("Enable spell check using Mudlet dictionary:"));
     } else {
@@ -3932,12 +4309,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             if (entries.at(i).endsWith(qsl("med"), Qt::CaseInsensitive)) {
                 continue;
             }
+            // Listed by the affix file, but only loaded when both files can be read
+            if (!TSpellChecker::dictionaryUsable(path, entries.at(i))) {
+                continue;
+            }
 
-            auto key = entries.at(i).toLower();
-            key.replace(QLatin1String("-"), QLatin1String("_"));
-
-            QString displayText = mudlet::self()->mDictionaryLanguageCodeMap.contains(key) ? mudlet::self()->mDictionaryLanguageCodeMap.value(key) : tr("%1 - not recognised").arg(entries.at(i));
-            translatedNameToEntriesMap.insert(displayText, i);
+            translatedNameToEntriesMap.insert(dictionaryDisplayName(entries.at(i)), i);
         }
 
         QMapIterator<QString, int> itTranslatedName(translatedNameToEntriesMap);
@@ -3962,6 +4339,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             }
         }
 
+        // Shown rather than left to fall back to the first entry, which would read as the profile's choice.
+        // Unlisted need not mean missing: "med" names are left out, and the file system may ignore case.
+        if (currentIndex < 0 && !currentDictionary.isEmpty()) {
+            //: %1 is the code of the spell-check dictionary the profile uses, such as "de_DE", when no dictionary file of that name is on this computer
+            comboBox_dictionary->addItem(currentDictionaryFound ? dictionaryDisplayName(currentDictionary) : tr("%1 - not available").arg(currentDictionary), currentDictionary);
+            currentIndex = comboBox_dictionary->count() - 1;
+        }
+
         if (currentIndex >= 0) {
             comboBox_dictionary->setCurrentIndex(currentIndex);
         }
@@ -3970,6 +4355,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_dictionary->setToolTip(utils::richText(tr("No Hunspell dictionary files found, spell-checking will not be available.")));
     }
     comboBox_dictionary->blockSignals(false);
+    // Installed since it was looked for, the dictionary is read now rather than shown as there while checking nothing
+    if (currentDictionaryFound && pHost->spellChecker().systemDictionaryMissing()) {
+        pHost->setSpellDic(currentDictionary);
+    }
 
     if (!pHost->getMmpMapLocation().isEmpty()) {
         groupBox_downloadMapOptions->setVisible(true);
@@ -3989,6 +4378,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_announceIncomingText->setChecked(pHost->mAnnounceIncomingText);
     checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
     connect(checkBox_advertiseScreenReader, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAdvertiseScreenReader, Qt::UniqueConnection);
+    checkBox_accessibleLabels->setChecked(pHost->mAccessibleLabels);
+    connect(checkBox_accessibleLabels, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAccessibleLabels, Qt::UniqueConnection);
     checkBox_enableOSC8Hyperlinks->setChecked(pHost->mEnableOSC8Hyperlinks);
     connect(checkBox_enableOSC8Hyperlinks, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks, Qt::UniqueConnection);
 
@@ -4019,11 +4410,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(checkBox_undoServerWrap, &QCheckBox::toggled, label_undo_server_wrap_experimental, &QWidget::setVisible, Qt::UniqueConnection);
 
     console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
+    mBufferSizeBeforeMax = pHost->getConsoleBufferSize();
     checkBox_useMaxBufferSize->setChecked(pHost->getUseMaxConsoleBufferSize());
 
     // Set maximum buffer size based on system capabilities and update tooltip
-    if (pHost->mpConsole) {
-        const int maxBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
+    if (pHost->mainConsoleView()) {
+        const int maxBufferSize = pHost->mainConsoleView()->buffer.getMaxBufferSize();
         console_buffer_size_spinBox->setMaximum(maxBufferSize);
         checkBox_useMaxBufferSize->setToolTip(tr("<p>Use the maximum buffer size your system can handle (%1 lines). This will be calculated based on available memory.</p>").arg(maxBufferSize));
 
@@ -4032,15 +4424,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             console_buffer_size_spinBox->setValue(maxBufferSize);
             console_buffer_size_spinBox->setEnabled(false);
         } else {
-            // ...and back on for a profile that has stopped using it, which the
-            // checkbox's own slot would otherwise be the only way to hear about
+            // A previous profile may have disabled it, and otherwise only the checkbox's slot re-enables it
             console_buffer_size_spinBox->setEnabled(true);
         }
     }
 
     show_sent_text_combobox->setCurrentIndex(static_cast<int>(pHost->mCommandEchoMode));
     auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
-    disable_password_masking_checkbox->setChecked(pHost->mDisablePasswordMasking);
+    disable_password_masking_checkbox->setChecked(pHost->disablePasswordMasking());
     checkBox_highlightHistory->setChecked(pHost->mHighlightHistory);
     command_separator_lineedit->setText(pHost->mCommandSeparator);
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
@@ -4095,7 +4486,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_discordServerAccessToState->setChecked(!(discordFlags & Host::DiscordSetState));
         checkBox_discordServerAccessToPartyInfo->setChecked(!(discordFlags & Host::DiscordSetPartyInfo));
         checkBox_discordServerAccessToTimerInfo->setChecked(!(discordFlags & Host::DiscordSetTimeInfo));
-        lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
+        lineEdit_discordUserName->setText(pHost->getRequiredDiscordUserName());
         lineEdit_discordUserName->setToolTip(utils::richText(tr("Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). "
                                                                 "Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted "
                                                                 "lowercase ASCII character set and not any \"Nickname\" that you may have set for a particular Server.")));
@@ -4121,8 +4512,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     lineEdit_mmcpChatMessagePrefix->setText(pHost->getMMCPChatPrefix());
 
     /* Possible inclusion in 4.20.1
-    checkBox_mmcpAutostartServer->setChecked(pHost->mMMCPAutostartServer);
-    checkBox_mmcpAllowPeekReq->setChecked(pHost->mMMCPAllowPeekRequests);
+    checkBox_mmcpAutostartServer->setChecked(pHost->getMMCPAutoStartServer());
+    checkBox_mmcpAllowPeekReq->setChecked(pHost->getMMCPAllowPeekRequests());
     checkBox_mmcpAutoAcceptCalls->setChecked(pHost->getMMCPAutoAcceptCalls());
     */
 
@@ -4131,6 +4522,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_mmcpSnoopInMainConsole->setChecked(pHost->getMMCPShowSnoopInMainConsole());
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
 
+    for (QSpinBox* pSpinBox : {topBorderHeight, bottomBorderHeight, leftBorderWidth, rightBorderWidth}) {
+        pSpinBox->setRange(-Host::scmMaxBorderSize, Host::scmMaxBorderSize);
+    }
     auto originalBorders = pHost->userBorders();
     topBorderHeight->setValue(originalBorders.top());
     bottomBorderHeight->setValue(originalBorders.bottom());
@@ -4149,8 +4543,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     label_logFileNameExtension->setText(logExtension);
 
     {
-        // Rebuilt rather than added to, and silently: the momentary empty list
-        // in the middle of it is not a log format anyone chose
+        // Rebuilt silently: the momentary empty list is not a log format anyone chose
         const QSignalBlocker blocker(comboBox_logFileNameFormat);
         comboBox_logFileNameFormat->clear();
         // This is the previous standard:
@@ -4158,8 +4551,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         // The ISO standard for this uses T as the date/time separator
         comboBox_logFileNameFormat->addItem(tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)").arg(logExtension), qsl("yyyy-MM-ddTHH-mm-ss"));
         comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)").arg(logExtension), qsl("yyyy-MM-dd"));
-        // It might be possible to use QDateTime::weekNumber but that number is
-        // not available from the QDateTime::toString(...) method
+        // No weekly option: QDateTime::toString() cannot format a week number
         comboBox_logFileNameFormat->addItem(tr("yyyy-MM (concatenate month logs in, e.g. 1970-01%1)").arg(logExtension), qsl("yyyy-MM"));
         comboBox_logFileNameFormat->addItem(tr("Named file (concatenate logs in one file)"), QString());
         comboBox_logFileNameFormat->setCurrentIndex(comboBox_logFileNameFormat->findData(pHost->mLogFileNameFormat));
@@ -4170,7 +4562,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // pHost->mLogDir should be empty for the default location:
     mLogDirPath = pHost->mLogDir;
     lineEdit_logFileFolder->setText(mLogDirPath);
-    lineEdit_logFileFolder->setPlaceholderText(mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName()));
+    lineEdit_logFileFolder->setPlaceholderText(MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName()));
     // set the cursor position to the end of the lineEdit's text property.
     lineEdit_logFileFolder->setCursorPosition(lineEdit_logFileFolder->text().length());
     // Enable the reset button if the current location is not the default one:
@@ -4181,7 +4573,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
     mFORCE_GA_OFF->setChecked(pHost->mFORCE_GA_OFF);
     mAlertOnNewData->setChecked(pHost->mAlertOnNewData);
-    telnetHandlerEnabled->setChecked(mudlet::getQSettings()->value("telnetHandlerEnabled", false).toBool());
     //encoding->setCurrentIndex( pHost->mEncoding );
     mFORCE_SAVE_ON_EXIT->setChecked(pHost->mFORCE_SAVE_ON_EXIT);
 
@@ -4203,13 +4594,20 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     // load profiles into mappers "copy map to profile" combobox
     // this feature should work seamlessly both for online and offline profiles
-    const QStringList profileList = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
+    const QStringList profileList = QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
     pushButton_chooseProfiles->setEnabled(false);
     pushButton_copyMap->setEnabled(false);
     if (!mpMenu) {
         mpMenu = new QMenu(tr("Other profiles to Map to:"), this);
     }
 
+    // Rebuilt on every refresh, which must not drop the destinations already ticked
+    QSet<QString> chosenProfiles;
+    for (const auto* pAction : mpMenu->actions()) {
+        if (pAction->isChecked()) {
+            chosenProfiles.insert(pAction->text());
+        }
+    }
     mpMenu->clear();
     for (unsigned int i = 0, total = profileList.size(); i < total; ++i) {
         const QString s = profileList.at(i);
@@ -4222,13 +4620,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         auto pItem = new QAction(s, mpMenu);
         pItem->setCheckable(true);
-        pItem->setChecked(false);
+        pItem->setChecked(chosenProfiles.contains(s));
         mpMenu->addAction(pItem);
         //Enable it as we now have at least one profile to copy to
         pushButton_chooseProfiles->setEnabled(true);
     }
 
     pushButton_chooseProfiles->setMenu(mpMenu);
+    slot_chosenProfilesChanged(nullptr);
 
     fillOutMapHistory();
 
@@ -4271,8 +4670,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             }
         }
 
-        // The one control on this page the .ui file does not carry, so built
-        // rather than filled - and built once, however many profiles come and go
+        // The one control here the .ui lacks, so built - once, however many profiles come and go
         if (!mpDoubleSpinBox_mapSymbolFontFudge) {
             QLabel* pLabel_mapSymbolFontFudge = new QLabel(tr("2D Map Room Symbol scaling factor:"), groupBox_mapSymbols);
             mpDoubleSpinBox_mapSymbolFontFudge = new QDoubleSpinBox(groupBox_mapSymbols);
@@ -4295,8 +4693,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             }
         }
         {
-            // Whether just built or left here by a previous profile, writing this
-            // is the dialog reading the map rather than the user turning a dial
+            // Whether new or left by a previous profile, this is the dialog reading the map, not a user edit
             const QSignalBlocker blocker(mpDoubleSpinBox_mapSymbolFontFudge);
             mpDoubleSpinBox_mapSymbolFontFudge->setValue(pHost->mpMap->getSymbolFontFudgeFactor());
         }
@@ -4317,6 +4714,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(fontComboBox_mapSymbols, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setMapSymbolFont, Qt::UniqueConnection);
         connect(checkBox_isOnlyMapSymbolFontToBeUsed, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapSymbolFontStrategy, Qt::UniqueConnection);
         connect(pHost->mpMap.data(), &TMap::signal_mapSymbolFontChanged, this, &dlgProfilePreferences::slot_mapSymbolFontChanged, Qt::UniqueConnection);
+        disconnect(mMapStyleConnection);
+        mMapStyleConnection = connect(pHost->mpMap.data(), &TMap::signal_mapperSettingChanged, this, [this](const TMap::MapperSetting setting) {
+            if (setting == TMap::MapperSetting::Style) {
+                followMapStyle();
+            }
+        });
 
         groupBox_playerRoomStyle->setEnabled(true);
         comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mPlayerRoomStyle);
@@ -4338,7 +4741,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomInnerDiameter, Qt::UniqueConnection);
 
         // Initialize room, exit, and border size controls
-        spinBox_roomSize->setValue(pHost->mRoomSize * 10);
+        spinBox_roomSize->setValue(qRound(pHost->mRoomSize * 10));
         // mLineSize/mRoomBorderSize are inversely proportional to thickness
         // (exitWidth = 1/eSize * ...), convert to a direct 1-11 scale
         // using a simple reciprocal: mLineSize = 50 / spinner, spinner = 50 / mLineSize
@@ -4363,7 +4766,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
 
     {
-        // Which encodings there are is the profile's connection talking
+        // The list of encodings comes from the profile's connection
         const QSignalBlocker blocker(comboBox_encoding);
         comboBox_encoding->clear();
         comboBox_encoding->addItem(mudlet::self()->getEncodingNamesMap().value(QByteArray("ASCII")), QByteArray("ASCII"));
@@ -4495,29 +4898,69 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_askTlsAvailable->setChecked(pHost->mAskTlsAvailable);
 
-    // The "forget saved sign-in" button is gated on a reconnect token actually existing, not on the
-    // sign-in-choice flag: an oauth-only game never sets that flag yet still mints tokens, and a token
-    // is the only thing the button acts on. The keychain check is asynchronous, so start hidden and
-    // reveal on a hit; the QPointer guards against the dialog closing before the store answers.
-    // credentialExists() collapses a read failure (locked/denied/timed-out keychain) to "no token", so
-    // the button deliberately stays hidden on any read failure - the only cost is not offering to forget
-    // a token that could not be read, and clicking would just yield a graceful "could not remove" warning.
+    // The "forget saved sign-in" button is gated on either of the stored sign-in's keys existing, not on
+    // the sign-in-choice flag: an oauth-only game never sets that flag yet still mints tokens. The
+    // metadata alone is not enough to test. Mudlet 5.0.1 keeps the whole sign-in under the
+    // metadata key, so forgetting it there leaves this build's token key behind with nothing to offer
+    // its removal. A token-less resume hint - {account, provider}, left behind when a rejected token was
+    // dropped - is still something the player may want to forget, too. The keychain check is
+    // asynchronous, so start hidden and reveal on a hit; the QPointer guards against the dialog closing
+    // before the store answers. credentialExists() collapses a read failure (locked/denied/timed-out
+    // keychain) to "nothing stored", so the button deliberately stays hidden on any read failure - the
+    // only cost is not offering to forget an entry that could not be read. Every store, because the
+    // forget clears every store: a token saved to the keychain before the player chose to keep
+    // passwords in the profile is still there, and offering nothing would leave it for good.
     pushButton_forgetSavedSignIn->setEnabled(mEnableGMCP->isChecked());
-    // Once per profile rather than once per run: reading the keychain can cost
-    // the user a prompt on some platforms, for an answer that hardly changes
+    // Once per profile, not per refresh: reading the keychain can prompt the user on some platforms
     if (mSignInTokenCheckedFor != pHost->getName()) {
         mSignInTokenCheckedFor = pHost->getName();
         pushButton_forgetSavedSignIn->setVisible(false);
         QPointer<dlgProfilePreferences> safeDialog = this;
-        QPointer<CredentialManager> credentialManager = new CredentialManager();
-        credentialManager->credentialExists(pHost->getName(), qsl("reconnect"), [safeDialog, credentialManager](bool exists) {
-            if (credentialManager) {
-                credentialManager->deleteLater();
-            }
-            if (safeDialog && exists) {
-                safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
-            }
-        });
+        const QString profileName = pHost->getName();
+
+        // The saved sign-in's own record lives in the profile rather than the credential store, so
+        // asking whether there is one to forget costs nothing - no keychain job, and on macOS no
+        // prompt for an entry whose access list does not name this build. Anything still in the
+        // store predates that move, and the read below is what finds those.
+        //
+        // Whether the file is there, rather than whether it reads back: one that cannot be read is
+        // still a sign-in the player has, and hiding the control would leave them no way to revoke
+        // a token that is live. It is also what the removal keys off, so the two agree.
+        const bool signInRecordedInProfile = QFileInfo::exists(GMCPAuthenticator::savedSignInRecordPath(profileName));
+        pushButton_forgetSavedSignIn->setVisible(signInRecordedInProfile);
+
+        QPointer<CredentialManager> credentialManager = signInRecordedInProfile ? nullptr : new CredentialManager();
+        if (credentialManager) {
+            credentialManager->credentialExists(
+                    profileName,
+                    qsl("reconnect"),
+                    [safeDialog, credentialManager, profileName](bool exists) {
+                        if (credentialManager) {
+                            credentialManager->deleteLater();
+                        }
+                        if (!safeDialog) {
+                            return;
+                        }
+                        if (exists) {
+                            safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+                            return;
+                        }
+                        QPointer<CredentialManager> tokenChecker = new CredentialManager();
+                        tokenChecker->credentialExists(
+                                profileName,
+                                qsl("reconnect-token"),
+                                [safeDialog, tokenChecker](bool tokenExists) {
+                                    if (tokenChecker) {
+                                        tokenChecker->deleteLater();
+                                    }
+                                    if (safeDialog && tokenExists) {
+                                        safeDialog->pushButton_forgetSavedSignIn->setVisible(true);
+                                    }
+                                },
+                                CredentialManager::StoreScope::EveryStore);
+                    },
+                    CredentialManager::StoreScope::EveryStore);
+        }
     }
 
     groupBox_proxy->setEnabled(true);
@@ -4530,6 +4973,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     lineEdit_proxyPassword->setText(pHost->mProxyPassword);
 
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
+    checkBox_lazyCaptureGlobals->setChecked(pHost->lazyCaptureGlobals());
+    for (const auto& [key, pCheckBox] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+        if (pCheckBox) {
+            pCheckBox->setChecked(pHost->experimentEnabled(key));
+        }
+    }
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
     doubleSpinBox_networkPacketTimeout->setValue(pHost->mTelnet.getPostingTimeout() / 1000.0);
     {
@@ -4537,6 +4986,21 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_caretModeKey->setCurrentIndex(static_cast<int>(pHost->mCaretShortcut));
     }
     checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
+    {
+        const QSignalBlocker blocker(comboBox_mapStyle);
+        // Kept from the last time round, as this runs again each time the dialog is activated and the pictures
+        // take a few milliseconds to paint; clearHostDetails() empties it
+        if (comboBox_mapStyle->count() != MapStyle::all().size()) {
+            comboBox_mapStyle->clear();
+            // Wider than tall, as the combo box has room across for the preview's rooms to show
+            const QSize previewSize(72, 48);
+            comboBox_mapStyle->setIconSize(previewSize);
+            for (const MapStyle& style : MapStyle::all()) {
+                comboBox_mapStyle->addItem(style.previewIcon(previewSize), style.displayName(), style.id);
+            }
+        }
+        comboBox_mapStyle->setCurrentIndex(comboBox_mapStyle->findData(pHost->mapStyle()));
+    }
     checkBox_invertMapZoom->setChecked(mudlet::self()->invertMapZoom());
     comboBox_blankLinesBehaviour->setCurrentIndex(static_cast<int>(pHost->mBlankLineBehaviour));
 
@@ -4614,7 +5078,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     connect(pushButton_forgetSavedSignIn, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_forgetSavedSignIn, Qt::UniqueConnection);
 
-    // The hero reports the connection as it is now, so it hears it come and go
     connect(&pHost->mTelnet, &cTelnet::signal_connecting, this, &dlgProfilePreferences::updateSecurityStatus, Qt::UniqueConnection);
     connect(&pHost->mTelnet, &cTelnet::signal_connected, this, &dlgProfilePreferences::updateSecurityStatus, Qt::UniqueConnection);
     connect(&pHost->mTelnet, &cTelnet::signal_disconnected, this, &dlgProfilePreferences::updateSecurityStatus, Qt::UniqueConnection);
@@ -4649,9 +5112,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         auto shortcutIt = pHost->profileShortcuts.find(key);
         QKeySequence currentSequence = (shortcutIt != pHost->profileShortcuts.end()) ? QKeySequence(*shortcutIt->second) : QKeySequence();
         currentShortcuts.insert(key, currentSequence);
-        // The editors outlive the profile that first filled them, so a second
-        // profile re-reads the ones already in this grid. Building them again
-        // would leave the first set below the second, still writing through.
+        // The editors outlive the profile that filled them; rebuilding them for a second profile would leave
+        // the first set below the second, still writing through
         if (auto* pExistingEdit = mSnapshot.editorFor(key); pExistingEdit) {
             const QSignalBlocker blocker(pExistingEdit);
             pExistingEdit->setKeySequence(currentSequence);
@@ -4675,12 +5137,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         mSnapshot.addEditor(key, sequenceEdit);
         shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
-            QKeySequence newSequence;
-            if (!sequenceEdit->keySequence().isEmpty() && !sequenceEdit->keySequence().matches(QKeySequence(Qt::Key_Escape))) {
-                newSequence = sequenceEdit->keySequence();
-            }
-            sequenceEdit->setKeySequence(newSequence);
-            currentShortcuts[key] = newSequence;
+            currentShortcuts[key] = sequenceEdit->keySequence();
             updateShortcutConflictWarning();
             slot_scheduleApply();
         });
@@ -4725,19 +5182,25 @@ void dlgProfilePreferences::updateShortcutConflictWarning()
                 reported.append(j);
             }
         }
-        if (labels.size() < 2) {
+        // addCommand() refuses a key Mudlet holds, but nothing stops a Mudlet shortcut moving onto a command's key
+        const QStringList holders = mudlet::self()->addonCommandsUsingShortcut(sequence, mpHost, true);
+        if (labels.size() + holders.size() < 2) {
             continue;
         }
         const QString sequenceText = sequence.toString(QKeySequence::NativeText);
-        if (labels.size() == 2) {
+        if (labels.size() == 2 && holders.isEmpty()) {
             //: Inline warning on the shortcuts preferences page when exactly two actions have been given the same shortcut. %1 and %2 are the action names, %3 is the shortcut itself.
             warnings.append(tr("Warning: '%1' and '%2' now share the shortcut %3 - neither will work until one of them is changed.").arg(labels.at(0), labels.at(1), sequenceText));
+        } else if (labels.size() == 1 && holders.size() == 1) {
+            //: Inline warning on the shortcuts preferences page when one of Mudlet's actions has been given a shortcut an add-on command already holds. %1 is the action name, %2 the shortcut itself, %3 a comma separated list of the commands holding it: each command's name in quotes, or "a command from another profile".
+            warnings.append(tr("Warning: '%1' now shares the shortcut %2 with %3 - neither will work until one of them is changed.").arg(labels.at(0), sequenceText, holders.join(qsl(", "))));
         } else {
             QStringList quotedLabels;
             for (const auto& label : labels) {
                 quotedLabels.append(qsl("'%1'").arg(label));
             }
-            //: Inline warning on the shortcuts preferences page when three or more actions have been given the same shortcut. %1 is the list of action names (each already quoted), %2 is the shortcut itself.
+            quotedLabels.append(holders);
+            //: Inline warning on the shortcuts preferences page when three or more actions or add-on commands have been given the same shortcut. %1 is the list of them, each already quoted (an add-on command from another profile appears as "a command from another profile"), %2 is the shortcut itself.
             warnings.append(tr("Warning: %1 now share the shortcut %2 - none of them will work until they are changed.").arg(quotedLabels.join(qsl(", ")), sequenceText));
         }
     }
@@ -4755,7 +5218,7 @@ void dlgProfilePreferences::updateShortcutConflictWarning()
         return;
     }
 
-    label_shortcutsConflictWarning->setStyleSheet(qsl("color: %1; font-weight: bold;").arg(mudlet::self()->inDarkMode() ? qsl("#ff8080") : qsl("#aa0000")));
+    label_shortcutsConflictWarning->setStyleSheet(qsl("color: %1; font-weight: bold;").arg(MudletApp::darkMode() ? qsl("#ff8080") : qsl("#aa0000")));
     if (!label_shortcutsConflictWarning->isHidden() && warningText == label_shortcutsConflictWarning->text()) {
         return;
     }
@@ -4773,8 +5236,13 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     // arguments to get the wanted wild-card behaviour for them:
 
     disconnect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, nullptr, nullptr);
+    disconnect(comboBox_dictionary, &QComboBox::activated, nullptr, nullptr);
+    disconnect(fontComboBox_displayFont, &QComboBox::activated, nullptr, nullptr);
     disconnect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(checkBox_antiAlias, &QCheckBox::clicked, nullptr, nullptr);
+    disconnect(checkBox_editorFontFollowsDisplay, &QCheckBox::toggled, nullptr, nullptr);
+    disconnect(fontComboBox_editorFont, &QFontComboBox::currentFontChanged, nullptr, nullptr);
+    disconnect(spinBox_editorFontSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
 
     disconnect(buttonDownloadMap, &QAbstractButton::clicked, nullptr, nullptr);
 
@@ -4830,8 +5298,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_mapInfoBg, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
 
-    // The protocol checkboxes are not in this list: what they are wired to says
-    // how the controls relate to each other rather than anything about a Host
+    // Not the protocol checkboxes: their wiring relates the controls to each other, not to a Host
 
     disconnect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mFORCE_GA_OFF, &QAbstractButton::clicked, nullptr, nullptr);
@@ -4924,6 +5391,11 @@ void dlgProfilePreferences::clearHostDetails()
     fontComboBox_displayFont->clear();
     spinBox_displayFontSize->setValue(14);
     checkBox_antiAlias->setChecked(false);
+    checkBox_editorFontFollowsDisplay->setChecked(true);
+    fontComboBox_editorFont->clear();
+    spinBox_editorFontSize->setValue(14);
+    label_editorFontInvalid->hide();
+    label_editorFontVariableWidth->hide();
     mFORCE_MCCP_OFF->setChecked(false);
     mFORCE_GA_OFF->setChecked(false);
     mAlertOnNewData->setChecked(false);
@@ -4944,6 +5416,8 @@ void dlgProfilePreferences::clearHostDetails()
 
     comboBox_mapFileSaveFormatVersion->clear();
     comboBox_mapFileSaveFormatVersion->setEnabled(true);
+    disconnect(mMapStyleConnection);
+    comboBox_mapStyle->clear();
     label_mapFileSaveFormatVersion->setEnabled(false);
     checkBox_showDefaultArea->setChecked(false);
     checkBox_showDefaultArea->hide();
@@ -4971,8 +5445,15 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_mmcpSnoopInMainConsole->setChecked(true);
 
     checkBox_debugShowAllCodepointProblems->setChecked(false);
+    checkBox_lazyCaptureGlobals->setChecked(true);
+    for (const auto& pCheckBox : std::as_const(mExperimentCheckBoxes)) {
+        if (pCheckBox) {
+            pCheckBox->setChecked(false);
+        }
+    }
     checkBox_announceIncomingText->setChecked(false);
     checkBox_advertiseScreenReader->setChecked(false);
+    checkBox_accessibleLabels->setChecked(false);
     checkBox_enableClosedCaption->setChecked(false);
     checkBox_enableBlinkText->setChecked(false);
     comboBox_blankLinesBehaviour->setCurrentIndex(0);
@@ -4982,10 +5463,10 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_askTlsAvailable->setChecked(false);
     pushButton_forgetSavedSignIn->setEnabled(false);
     pushButton_forgetSavedSignIn->setVisible(false);
-    // ...so the next profile to arrive asks the keychain again
+    // So the next profile asks the keychain again
     mSignInTokenCheckedFor.clear();
     groupBox_proxy->setDisabled(true);
-    // With no profile there is no connection for the hero to report on
+    // Hides the hero, as there is no connection to report on
     updateSecurityStatus();
 
     // Remove the reference to the Host/profile in the title:
@@ -5009,7 +5490,7 @@ void dlgProfilePreferences::loadEditorTab()
     config->setCaretWidth(1);
     config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces) ? edbee::TextEditorConfig::ShowWhitespaces : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
-    config->setFont(pHost->getDisplayFont());
+    config->setFont(pHost->getEditorFont());
     config->setAutocompleteAutoShow(pHost->mEditorAutoComplete);
     config->setRenderBidiContolCharacters(pHost->getEditorShowBidi());
     config->setAutocompleteMinimalCharacters(3);
@@ -5020,10 +5501,15 @@ void dlgProfilePreferences::loadEditorTab()
 
     populateThemesList();
     mudlet::loadEdbeeTheme(pHost->getEditorTheme(), pHost->getEditorThemeFile());
-    populateScriptsList();
+    // Walking every scripted item stalls a large profile, too long to repeat on every refresh; a profile
+    // change empties the list in clearHostDetails()
+    if (!script_preview_combobox->count()) {
+        populateScriptsList();
+    }
 
     // pre-select the current theme
-    code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(qsl("Select theme"));
+    //: Placeholder of the editor colour theme picker on the Editor page of the settings
+    code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(tr("Select theme"));
     auto themeIndex = code_editor_theme_selection_combobox->findText(pHost->getEditorTheme());
     code_editor_theme_selection_combobox->setCurrentIndex(themeIndex);
     slot_themeSelected(themeIndex);
@@ -5032,7 +5518,8 @@ void dlgProfilePreferences::loadEditorTab()
     code_editor_theme_selection_combobox->setMaxVisibleItems(20);
 
     // pre-select the last shown script to preview
-    script_preview_combobox->lineEdit()->setPlaceholderText(qsl("Select script to preview"));
+    //: Placeholder of the picker for the script shown as the theme preview on the Editor page of the settings
+    script_preview_combobox->lineEdit()->setPlaceholderText(tr("Select script to preview"));
     auto scriptIndex = script_preview_combobox->findData(QVariant::fromValue(QPair<QString, int>(pHost->mThemePreviewType, pHost->mThemePreviewItemID)));
     script_preview_combobox->setCurrentIndex(scriptIndex == -1 ? 1 : scriptIndex);
     slot_scriptSelected(scriptIndex == -1 ? 1 : scriptIndex);
@@ -5041,11 +5528,23 @@ void dlgProfilePreferences::loadEditorTab()
     script_preview_combobox->setMaxVisibleItems(20);
     script_preview_combobox->setDuplicatesEnabled(true);
 
-    theme_download_label->hide();
+    // Once fetched, the label reports how that went for as long as the dialog is open, and this runs again
+    // every time the dialog is reactivated
+    if (!mEditorThemesChecked) {
+        theme_download_label->hide();
+    }
 
     checkBox_autocompleteLuaCode->setChecked(pHost->mEditorAutoComplete);
     checkBox_showBidi->setChecked(pHost->getEditorShowBidi());
     checkBox_showIdNumbers->setChecked(pHost->showIdsInEditor());
+    checkBox_folderView->setChecked(pHost->folderViewInEditor());
+
+    checkBox_editorFontFollowsDisplay->setChecked(pHost->editorFontFollowsDisplay());
+    showEditorFont(pHost->getEditorFont());
+    connect(checkBox_editorFontFollowsDisplay, &QCheckBox::toggled, this, &dlgProfilePreferences::reflectEditorFontControls, Qt::UniqueConnection);
+    connect(fontComboBox_editorFont, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::reflectEditorFontControls, Qt::UniqueConnection);
+    connect(spinBox_editorFontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::reflectEditorFontControls, Qt::UniqueConnection);
+    connect(pHost, &Host::signal_editorFontChanged, this, &dlgProfilePreferences::slot_hostEditorFontChanged, Qt::UniqueConnection);
 
     // changes the theme being previewed
     connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_themeSelected, Qt::UniqueConnection);
@@ -5171,9 +5670,8 @@ void dlgProfilePreferences::setColors2()
     }
 }
 
-// The twelve tab objectNames callers may still pass are remapped onto the
-// categories holding their contents now. A new-style target is either a
-// category key or "category/cardObjectName".
+// The twelve legacy tab objectNames callers may still pass map onto categories; otherwise a target is a
+// category key or "category/cardObjectName"
 void dlgProfilePreferences::setTab(QString tab)
 {
     static const QHash<QString, QString> legacyTabs{{qsl("tab_general"), scmCategory_general},
@@ -5213,8 +5711,7 @@ void dlgProfilePreferences::setTab(QString tab)
         pSpotlightTarget = findChild<QWidget*>(target);
     }
 
-    // A card on a subpage is only reachable by going into it, so a link naming
-    // one takes that way in rather than landing on the category page
+    // A subpage card is only reachable through its subpage, so go there rather than to the category page
     if (const QString subpage = subpageHolding(pSpotlightTarget); !subpage.isEmpty()) {
         showSubpage(subpage.section(QLatin1Char('/'), 0, 0), subpage.section(QLatin1Char('/'), 1), pSpotlightTarget);
         return;
@@ -5272,9 +5769,9 @@ void dlgProfilePreferences::slot_resetColors()
     pHost->mLightWhite = Qt::white;
 
     setColors();
-    if (pHost->mpConsole) {
-        pHost->mpConsole->resetConsoleBackgroundImage();
-        pHost->mpConsole->changeColors();
+    if (pHost->mainConsoleView()) {
+        pHost->mainConsoleView()->resetConsoleBackgroundImage();
+        pHost->mainConsoleView()->changeColors();
     }
 
     // Copy across the colors to the Lua "color_table"
@@ -5292,9 +5789,9 @@ void dlgProfilePreferences::slot_resetMapColors()
     // As per values in Host.h:
     pHost->mFgColor_2 = QColorConstants::LightGray;
     pHost->mBgColor_2 = QColorConstants::Black;
-    pHost->mLowerLevelColor = QColorConstants::DarkGray;
-    pHost->mUpperLevelColor = QColorConstants::White;
-    pHost->mRoomBorderColor = QColorConstants::LightGray;
+    pHost->mLowerLevelColor = Host::scmDefaultLowerLevelColor;
+    pHost->mUpperLevelColor = Host::scmDefaultUpperLevelColor;
+    pHost->mRoomBorderColor = Host::scmDefaultRoomBorderColor;
     pHost->mRoomCollisionBorderColor = QColorConstants::Yellow;
     pHost->mBlack_2 = QColorConstants::Black;
     pHost->mLightBlack_2 = QColorConstants::DarkGray;
@@ -5312,13 +5809,14 @@ void dlgProfilePreferences::slot_resetMapColors()
     pHost->mLightMagenta_2 = QColorConstants::Magenta;
     pHost->mWhite_2 = QColorConstants::LightGray;
     pHost->mLightWhite_2 = QColorConstants::White;
-    pHost->mMapInfoBg = QColor(150, 150, 150, 120);
+    pHost->mMapInfoBg = Host::scmDefaultMapInfoBg;
     pHost->mMapGridColor = QColor(211, 211, 211, 64);
 
     // This aplies the above colors to the buttons on display:
     setColors2();
 
     if (pHost->mpMap) {
+        pHost->mpMap->restore16ColorSet();
         pHost->mpMap->updateArea(-1);
     }
 }
@@ -5335,7 +5833,7 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
     if (color.isValid()) {
         presentColor = color;
 
-        auto console = pHost->mpConsole;
+        QPointer<TMainConsole> console = pHost->mainConsoleView();
         if (console) {
             console->changeColors();
             // update the display properly when color selections change.
@@ -5360,7 +5858,7 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
                                      || button == pushButton_Lwhite_2);
 
         if (isAMapEnvColor || button == pushButton_foreground_color_2 || button == pushButton_background_color_2 || button == pushButton_lowerLevelColor || button == pushButton_upperLevelColor
-            || button == pushButton_mapInfoBg || button == pushButton_roomBorderColor || button == pushButton_roomCollisionBorderColor) {
+            || button == pushButton_mapInfoBg || button == pushButton_roomBorderColor || button == pushButton_roomCollisionBorderColor || button == pushButton_mapGridColor) {
             if (pHost->mpMap) {
                 // Update the custom environment (room colors)
                 if (isAMapEnvColor) {
@@ -5571,9 +6069,12 @@ void dlgProfilePreferences::slot_setMapBgColor()
         setButtonAndProfileColor(pushButton_background_color_2, pHost->mBgColor_2, true);
 // if 3D map, update transparency flags
 #if defined(INCLUDE_3DMAPPER)
-        if (pHost->mpMap->mpMapper->glWidget) {
-            QOpenGLWidget* map = pHost->mpMap->mpMapper->glWidget;
-            if (pHost->mBgColor_2.alpha() < 255) {
+        if (pHost->mpMap->mapper()->glWidget) {
+            QOpenGLWidget* map = pHost->mpMap->mapper()->glWidget;
+            if (auto* modernMap = qobject_cast<ModernGLWidget*>(map)) {
+                // Its style may paint its own background, whatever the profile's is
+                modernMap->applyStyle();
+            } else if (pHost->mBgColor_2.alpha() < 255) {
                 map->setAttribute(Qt::WA_OpaquePaintEvent, false);
                 map->setAttribute(Qt::WA_AlwaysStackOnTop, true);
             } else {
@@ -5649,6 +6150,13 @@ void dlgProfilePreferences::slot_forgetSavedSignIn()
         // host closing before the removal answers.
         QPointer<dlgProfilePreferences> safeDialog = this;
         QPointer<Host> safeHost = pHost;
+        // Disable for the duration, not only on success. The removal is asynchronous and can take tens
+        // of seconds behind a slow or prompting keychain, during which the button stayed live and a
+        // second click was easy. That second request supersedes the first, and a superseded forget
+        // reports failure - so the player got a "could not remove" warning for a forget that was about
+        // to succeed, immediately followed by the success. Re-enabled below on any outcome that leaves
+        // something still to forget.
+        pushButton_forgetSavedSignIn->setEnabled(false);
         pHost->mpAuth->forgetSavedSignIn([safeDialog, safeHost](bool success) {
             if (success) {
                 if (safeDialog) {
@@ -5663,6 +6171,8 @@ void dlgProfilePreferences::slot_forgetSavedSignIn()
                 }
             } else {
                 if (safeDialog) {
+                    // Something may still be stored, so let the player try again.
+                    safeDialog->pushButton_forgetSavedSignIn->setEnabled(true);
                     //: Shown when removing the saved sign-in failed, so it may still be present.
                     safeDialog->notificationAreaMessageBox->setText(dlgProfilePreferences::tr("Could not remove the saved sign-in; it may still be present."));
                 }
@@ -5822,7 +6332,7 @@ void dlgProfilePreferences::slot_downloadMap()
     if (!pHost) {
         return;
     }
-    if (!pHost->mpMap->mpMapper) {
+    if (!pHost->mpMap->mapper()) {
         // CHECK: What happens if we are NOT the current profile anymore?
         pHost->showHideOrCreateMapper(false);
     }
@@ -5837,8 +6347,10 @@ void dlgProfilePreferences::fillOutMapHistory()
         return;
     }
 
-    // What map files are on disk changes while the dialog is open, so this is a
-    // rebuild - and the enabled state goes back to where an empty list leaves it
+    // Map files change while the dialog is open, so rebuild, resetting the enabled state to an empty list's.
+    // The rebuild follows every change, so it keeps an older map that was picked to load; the newest entry
+    // is not kept, so a map saved since takes its place at the top.
+    const QVariant pickedMapFile = comboBox_mapHistory->currentIndex() > 0 ? comboBox_mapHistory->currentData() : QVariant();
     {
         const QSignalBlocker blocker(comboBox_mapHistory);
         comboBox_mapHistory->clear();
@@ -5866,7 +6378,7 @@ void dlgProfilePreferences::fillOutMapHistory()
         }
     }
     const QRegularExpression mapSaveRegularExpression{qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+)(?:map)?\\.(dat|xml|json)"), QRegularExpression::CaseInsensitiveOption};
-    QDir mapSaveDir(mudlet::getMudletPath(enums::profileMapsPath, profile_name).append(QLatin1Char('/')));
+    QDir mapSaveDir(MudletApp::getMudletPath(enums::profileMapsPath, profile_name).append(QLatin1Char('/')));
     mapSaveDir.setSorting(QDir::Time);
     const QStringList mapSaveEntries = mapSaveDir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (const auto& entry : mapSaveEntries) {
@@ -5922,6 +6434,10 @@ void dlgProfilePreferences::fillOutMapHistory()
             }
         }
     }
+    if (const int pickedIndex = comboBox_mapHistory->findData(pickedMapFile); pickedMapFile.isValid() && pickedIndex >= 0) {
+        const QSignalBlocker blocker(comboBox_mapHistory);
+        comboBox_mapHistory->setCurrentIndex(pickedIndex);
+    }
     if (comboBox_mapHistory->count()) {
         comboBox_mapHistory->setEnabled(true);
         pushButton_loadHistoricMap->setEnabled(true);
@@ -5937,21 +6453,22 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
     }
     label_mapFileActionResult->show();
 
-    // Ensure the setting is already made as the TConsole::loadMap(...) uses
+    // Ensure the setting is already made as the Host::loadMapFile(...) uses
     // the set value:
     const bool showAuditErrors = TMap::smShowMapAuditErrors;
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     bool success = false;
+    const bool isJson = fileName.endsWith(qsl(".json"), Qt::CaseInsensitive);
     label_mapFileActionResult->setText(tr("Loading map - please wait..."));
     qApp->processEvents(); // Needed to make the above message show up when loading big maps
     if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
         qApp->processEvents(); // Needed to make the above message show up when loading big maps
-        success = pHost->mpConsole->importMap(fileName);
+        success = pHost->importMapFile(fileName);
 
     } else {
-        if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
-            auto [localSuccess, errorMessage] = pHost->mpMap->readJsonMapFile(fileName);
+        if (isJson) {
+            auto [localSuccess, errorMessage] = pHost->mpMap->importJsonMapFile(fileName);
             success = localSuccess;
             if (!localSuccess) {
                 pHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\n"
@@ -5960,13 +6477,15 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
             }
 
         } else {
-            success = pHost->mpConsole->loadMap(fileName);
+            success = pHost->loadMapFile(fileName);
         }
     }
 
     if (success) {
         // TMap::audit() is what paints up the "[  OK  ]" message for the map load.
-        pHost->mpMap->audit();
+        if (!isJson) {
+            pHost->mpMap->audit();
+        }
         label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName.toHtmlEscaped()));
     } else {
         label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName.toHtmlEscaped()));
@@ -6003,8 +6522,8 @@ void dlgProfilePreferences::slot_loadMap()
 
     QFileDialog* dialog = new QFileDialog(this);
     dialog->setWindowTitle(tr("Load Mudlet map"));
-    QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
+    QSettings& settings = *MudletApp::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", MudletApp::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(loadExtensions.join(qsl(";;")));
     connect(dialog, &QDialog::finished, this, [=, this](int result) {
@@ -6014,7 +6533,7 @@ void dlgProfilePreferences::slot_loadMap()
 
         auto fileName = dialog->selectedFiles().constFirst();
         loadMap(fileName);
-        QSettings& settings = *mudlet::getQSettings();
+        QSettings& settings = *MudletApp::getQSettings();
         QString lastDir = QFileInfo(fileName).absolutePath();
         settings.setValue("lastFileDialogLocation", lastDir);
     });
@@ -6034,8 +6553,8 @@ void dlgProfilePreferences::slot_saveMap()
 
     QFileDialog* dialog = new QFileDialog(this);
     dialog->setWindowTitle(tr("Save Mudlet map"));
-    QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
+    QSettings& settings = *MudletApp::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", MudletApp::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(saveExtensions.join(qsl(";;")));
     dialog->setAcceptMode(QFileDialog::AcceptSave);
@@ -6056,7 +6575,7 @@ void dlgProfilePreferences::slot_saveMap()
 
         auto fileName = dialog->selectedFiles().constFirst();
 
-        QSettings& settings = *mudlet::getQSettings();
+        QSettings& settings = *MudletApp::getQSettings();
         QString lastDir = QFileInfo(fileName).absolutePath();
         settings.setValue("lastFileDialogLocation", lastDir);
 
@@ -6072,7 +6591,7 @@ void dlgProfilePreferences::slot_saveMap()
 
         bool success = false;
         if (!fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
-            success = pHost->mpConsole->saveMap(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt());
+            success = pHost->saveMapFile(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt());
         } else {
             success = pHost->mpMap->writeJsonMapFile(fileName).first;
         }
@@ -6091,9 +6610,9 @@ void dlgProfilePreferences::slot_saveMap()
 
 QString dlgProfilePreferences::mapSaveLoadDirectory(Host* pHost)
 {
-    const QString mapsPath = mudlet::getMudletPath(enums::profileMapsPath, pHost->getName());
+    const QString mapsPath = MudletApp::getMudletPath(enums::profileMapsPath, pHost->getName());
     const QDir mapsDir = QDir(mapsPath);
-    return mapsDir.exists() ? mapsPath : mudlet::getMudletPath(enums::profileHomePath, pHost->getName());
+    return mapsDir.exists() ? mapsPath : MudletApp::getMudletPath(enums::profileHomePath, pHost->getName());
 }
 
 void dlgProfilePreferences::slot_hideActionLabel()
@@ -6147,7 +6666,7 @@ void dlgProfilePreferences::slot_copyMap()
 
             // Check for the destination directory for the other profiles
             const QDir toProfileDir;
-            const QString toProfileDirPathString = mudlet::getMudletPath(enums::profileHomePath, pHost->getName());
+            const QString toProfileDirPathString = MudletApp::getMudletPath(enums::profileHomePath, pHost->getName());
             if (!toProfileDir.exists(toProfileDirPathString)) {
                 if (!toProfileDir.mkpath(toProfileDirPathString)) {
                     const QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map for other profile \"%1\".\n"
@@ -6166,8 +6685,8 @@ void dlgProfilePreferences::slot_copyMap()
 
     // Identify which, if any, of the toProfilesRoomIdMap is active and get the current room
     QMap<QString, QSharedPointer<Host>> activeOtherHostMap;
-    for (auto pOtherHost : mudlet::self()->getHostManager()) {
-        if (pOtherHost->mpConsole && (pOtherHost != pHost)) {
+    for (auto pOtherHost : *HostManager::self()) {
+        if (pOtherHost->mainConsoleView() && (pOtherHost != pHost)) {
             const auto& otherHostName = pOtherHost->getName();
             if (toProfilesRoomIdMap.contains(otherHostName)) {
                 activeOtherHostMap.insert(otherHostName, pOtherHost);
@@ -6235,7 +6754,7 @@ void dlgProfilePreferences::slot_copyMap()
     const int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
-    if (!pHost->mpConsole->saveMap(QString())) {
+    if (!pHost->saveMapFile(QString())) {
         label_mapFileActionResult->setText(tr("Could not backup the map - saving it failed."));
         QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
         return;
@@ -6248,7 +6767,7 @@ void dlgProfilePreferences::slot_copyMap()
     // we just saved!
     QString thisProfileLatestMapPathFileName;
     QFile thisProfileLatestMapFile;
-    const QString sourceMapFolder(mudlet::getMudletPath(enums::profileMapsPath, pHost->getName()));
+    const QString sourceMapFolder(MudletApp::getMudletPath(enums::profileMapsPath, pHost->getName()));
     const QStringList mProfileList = QDir(sourceMapFolder).entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (unsigned int i = 0, total = mProfileList.size(); i < total; ++i) {
         thisProfileLatestMapPathFileName = mProfileList.at(i);
@@ -6278,7 +6797,7 @@ void dlgProfilePreferences::slot_copyMap()
                                // Just in case is needed to make the above message
                                // show up when saving big maps
 
-        if (!thisProfileLatestMapFile.copy(mudlet::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
+        if (!thisProfileLatestMapFile.copy(MudletApp::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
             label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
             QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
             continue; // Try again with next profile
@@ -6309,8 +6828,8 @@ void dlgProfilePreferences::slot_setLogDir()
         return;
     }
 
-    QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
+    QSettings& settings = *MudletApp::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", MudletApp::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
 
     /*
      * To show the files even though we are looking for a directory so that the
@@ -6339,7 +6858,7 @@ void dlgProfilePreferences::slot_setLogDir()
         // Disable pushButton_resetLogDir and clear
         // lineEdit_logFileFolder if the directory is set to the
         // default path
-        if (currentLogDir == mudlet::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName())) {
+        if (currentLogDir == MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName())) {
             // clear mLogDirPath, which sets the directory where logs are saved
             // to Mudlet's default log path.
             mLogDirPath.clear();
@@ -6394,10 +6913,8 @@ void dlgProfilePreferences::slot_logFileNameFormatChange(const int index)
     label_logFileNameExtension->setVisible(isShown);
 }
 
-// Off a 400ms debounce after any control changes, and once more from
-// closeEvent(). Only the settings whose controls the user actually changed: the
-// dialog stays open while scripts run, and writing back a control merely
-// showing a stale value would revert what a script had just set (#10165).
+// Writes only settings whose controls the user changed: the dialog stays open while scripts run, and writing
+// back a control showing a stale value would revert what a script just set.
 void dlgProfilePreferences::applyAll()
 {
     if (mPopulating) {
@@ -6407,13 +6924,13 @@ void dlgProfilePreferences::applyAll()
     mudlet* pMudlet = mudlet::self();
     Host* pHost = mpHost;
     if (pHost) {
-        auto console = pHost->mpConsole;
+        QPointer<TMainConsole> console = pHost->mainConsoleView();
         if (mSnapshot.dirty(comboBox_dictionary) && comboBox_dictionary->isEnabled() && comboBox_dictionary->currentIndex() >= 0) {
             pHost->setSpellDic(comboBox_dictionary->currentData().toString());
         }
 
         if (mSnapshot.dirty(checkBox_spellCheck)) {
-            pHost->mEnableSpellCheck = checkBox_spellCheck->isChecked();
+            pHost->setEnableSpellCheck(checkBox_spellCheck->isChecked());
         }
         if (mSnapshot.anyDirty({radioButton_userDictionary_common, radioButton_userDictionary_profile})) {
             if (radioButton_userDictionary_common->isChecked()) {
@@ -6449,24 +6966,24 @@ void dlgProfilePreferences::applyAll()
         // Save console buffer settings and apply them
         if (mSnapshot.anyDirty({checkBox_useMaxBufferSize, console_buffer_size_spinBox})) {
             const bool useMaxBuffer = mSnapshot.dirty(checkBox_useMaxBufferSize) ? checkBox_useMaxBufferSize->isChecked() : pHost->getUseMaxConsoleBufferSize();
-            int newBufferSize;
-
-            if (useMaxBuffer && pHost->mpConsole) {
-                newBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
-            } else {
-                newBufferSize = mSnapshot.dirty(console_buffer_size_spinBox) ? console_buffer_size_spinBox->value() : pHost->getConsoleBufferSize();
+            // The profile keeps the size the user chose while the maximum is in
+            // charge, so unticking the maximum has a size to go back to
+            int chosenBufferSize = pHost->getConsoleBufferSize();
+            if (useMaxBuffer) {
+                chosenBufferSize = mBufferSizeBeforeMax;
+            } else if (mSnapshot.dirty(console_buffer_size_spinBox)) {
+                chosenBufferSize = console_buffer_size_spinBox->value();
             }
 
-            // Calculate batch delete size as 5% of buffer size (minimum 100)
-            const int newBatchDeleteSize = std::max(100, newBufferSize / 5);
-
-            if (pHost->getConsoleBufferSize() != newBufferSize || pHost->getUseMaxConsoleBufferSize() != useMaxBuffer) {
-                pHost->setConsoleBufferSize(newBufferSize);
+            if (pHost->getConsoleBufferSize() != chosenBufferSize || pHost->getUseMaxConsoleBufferSize() != useMaxBuffer) {
+                pHost->setConsoleBufferSize(chosenBufferSize);
                 pHost->setUseMaxConsoleBufferSize(useMaxBuffer);
 
-                // Apply the new buffer size to the main console
-                if (pHost->mpConsole) {
-                    pHost->mpConsole->buffer.setBufferSize(newBufferSize, newBatchDeleteSize);
+                if (pHost->mainConsoleView()) {
+                    const int newBufferSize = useMaxBuffer ? pHost->mainConsoleView()->buffer.getMaxBufferSize() : chosenBufferSize;
+                    // Calculate batch delete size as 5% of buffer size (minimum 100)
+                    const int newBatchDeleteSize = std::max(100, newBufferSize / 5);
+                    pHost->mainConsoleView()->buffer.setBufferSize(newBufferSize, newBatchDeleteSize);
                 }
             }
         }
@@ -6478,7 +6995,7 @@ void dlgProfilePreferences::applyAll()
             pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
         }
         if (mSnapshot.dirty(disable_password_masking_checkbox)) {
-            pHost->mDisablePasswordMasking = disable_password_masking_checkbox->isChecked();
+            pHost->setDisablePasswordMasking(disable_password_masking_checkbox->isChecked());
         }
         if (mSnapshot.dirty(checkBox_highlightHistory)) {
             pHost->mHighlightHistory = checkBox_highlightHistory->isChecked();
@@ -6553,7 +7070,7 @@ void dlgProfilePreferences::applyAll()
             pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
         }
         if (mSnapshot.dirty(checkBox_drawUpperLowerLevels)) {
-            pMudlet->mDrawUpperLowerLevels = checkBox_drawUpperLowerLevels->isChecked();
+            pMudlet->setDrawUpperLowerLevels(checkBox_drawUpperLowerLevels->isChecked());
         }
         if (pHost->mpMap) {
             if (mSnapshot.dirty(checkBox_showDefaultArea)) {
@@ -6561,14 +7078,14 @@ void dlgProfilePreferences::applyAll()
                 // following this one:
                 const bool defaultAreaWasNotShown = pHost->mpMap->getDefaultAreaShown();
                 pHost->mpMap->setDefaultAreaShown(checkBox_showDefaultArea->isChecked());
-                if (pHost->mpMap->mpMapper && !defaultAreaWasNotShown && checkBox_showDefaultArea->isChecked() && pHost->mpMap->mpMapper->mp2dMap->mAreaID == -1) {
+                if (pHost->mpMap->mapper() && !defaultAreaWasNotShown && checkBox_showDefaultArea->isChecked() && pHost->mpMap->mapper()->mp2dMap->mAreaID == -1) {
                     // Corner case fixup, user has asked for the default area
                     // to be shown and it wasn't - so it can now be:
-                    pHost->mpMap->mpMapper->comboBox_showArea->setCurrentText(pHost->mpMap->getDefaultAreaName());
+                    pHost->mpMap->mapper()->comboBox_showArea->setCurrentText(pHost->mpMap->getDefaultAreaName());
                 }
             }
-            if (mSnapshot.dirty(mMapperUseAntiAlias) && pHost->mpMap->mpMapper) {
-                pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
+            if (mSnapshot.dirty(mMapperUseAntiAlias) && pHost->mpMap->mapper()) {
+                pHost->mpMap->mapper()->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
             }
 
             // Only when the spin-box is what holds the newer value. It carries
@@ -6579,9 +7096,9 @@ void dlgProfilePreferences::applyAll()
                 pHost->mpMap->setSymbolFontFudgeFactor(mpDoubleSpinBox_mapSymbolFontFudge->value());
             }
 
-            if (pHost->mpMap->mpMapper) {
-                pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
-                pHost->mpMap->mpMapper->update();
+            if (pHost->mpMap->mapper()) {
+                pHost->mpMap->mapper()->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
+                pHost->mpMap->mapper()->update();
             }
         }
         if (mSnapshot.anyDirty({leftBorderWidth, topBorderHeight, rightBorderWidth, bottomBorderHeight})) {
@@ -6607,7 +7124,7 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(mIsLoggingTimestamps)) {
             pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
         }
-        // The button that picks it has no value of its own, only the text it puts here
+        // Set by the folder button, which carries no value of its own
         if (mSnapshot.dirty(lineEdit_logFileFolder)) {
             pHost->mLogDir = mLogDirPath;
         }
@@ -6618,17 +7135,10 @@ void dlgProfilePreferences::applyAll()
             pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
         }
         if (mSnapshot.dirty(checkBox_antiAlias)) {
-            pHost->mNoAntiAlias = !checkBox_antiAlias->isChecked();
+            pHost->setFontsAntiAlias(checkBox_antiAlias->isChecked());
         }
         if (mSnapshot.dirty(mAlertOnNewData)) {
             pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
-        }
-
-        if (mSnapshot.dirty(telnetHandlerEnabled)) {
-            QSettings* settings = mudlet::getQSettings();
-            if (settings->value("telnetHandlerEnabled", false).toBool() != telnetHandlerEnabled->isChecked()) {
-                settings->setValue("telnetHandlerEnabled", telnetHandlerEnabled->isChecked());
-            }
         }
 
         if (mSnapshot.dirty(groupBox_proxy)) {
@@ -6650,6 +7160,14 @@ void dlgProfilePreferences::applyAll()
         //tab security
         if (mSnapshot.dirty(groupBox_ssl)) {
             pHost->mSslTsl = groupBox_ssl->isChecked();
+            // The connection dialog seeds its Secure checkbox from this file, and hands that back
+            // to the profile on connect
+            if (const auto [written, error] = pHost->writeProfileData(qsl("ssl_tsl"), QString::number(groupBox_ssl->isChecked() ? Qt::Checked : Qt::Unchecked)); !written) {
+                //: %1 is the reason the file could not be written, from the operating system
+                pHost->postMessage(tr("[ WARN ]  - Could not save the secure connection setting for the Connect dialog: %1. "
+                                      "Connecting from that dialog may change the setting back.")
+                                           .arg(error));
+            }
         }
         if (mSnapshot.dirty(checkBox_expired)) {
             pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
@@ -6699,7 +7217,7 @@ void dlgProfilePreferences::applyAll()
             pHost->setEnableBlinkText(checkBox_enableBlinkText->isChecked());
         }
         if (mSnapshot.dirty(code_editor_theme_selection_combobox)) {
-            if (pMudlet->inDarkMode()) {
+            if (MudletApp::darkMode()) {
                 pHost->mEditorThemeDark = code_editor_theme_selection_combobox->currentText();
                 pHost->mEditorThemeFileDark = code_editor_theme_selection_combobox->currentData().toString();
             } else {
@@ -6716,13 +7234,29 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(checkBox_showIdNumbers)) {
             pHost->setShowIdsInEditor(checkBox_showIdNumbers->isChecked());
         }
-        // Re-theming an open script editor is a full edbee reconfiguration, so it
-        // waits for one of the settings it carries to actually move
-        if (pHost->mpEditorDialog
-            && mSnapshot.anyDirty({code_editor_theme_selection_combobox, checkBox_showSpacesAndTabs, checkBox_showLineFeedsAndParagraphs, checkBox_autocompleteLuaCode, checkBox_showBidi})) {
-            // The write above settled the choice into the Host, so the name comes
-            // from there rather than a box a script may have moved on from
-            pHost->mpEditorDialog->setThemeAndOtherSettings(pMudlet->inDarkMode() ? pHost->mEditorThemeDark : pHost->mEditorTheme);
+        if (mSnapshot.dirty(checkBox_folderView)) {
+            pHost->setFolderViewInEditor(checkBox_folderView->isChecked());
+        }
+        // Ahead of the switch: a family or size picked straight after unticking it is the font the editor
+        // leaves the display font for, and switching first would put the Host's own back into the controls
+        if (!checkBox_editorFontFollowsDisplay->isChecked() && mSnapshot.anyDirty({fontComboBox_editorFont, spinBox_editorFontSize})) {
+            const QFont base = pHost->editorFontBase();
+            const QString family = mSnapshot.dirty(fontComboBox_editorFont) ? fontComboBox_editorFont->currentFont().family() : base.family();
+            const int size = mSnapshot.dirty(spinBox_editorFontSize) ? spinBox_editorFontSize->value() : base.pointSize();
+            const QFont font = pHost->createFontWithSettings(family, size);
+            if (QFontMetrics(font).averageCharWidth() > 0) {
+                pHost->setEditorFont(font);
+            }
+        }
+        if (mSnapshot.dirty(checkBox_editorFontFollowsDisplay)) {
+            pHost->setEditorFontFollowsDisplay(checkBox_editorFontFollowsDisplay->isChecked());
+        }
+        // Re-theming an open script editor fully reconfigures edbee, so only when one of these changed
+        auto* pDialogs = HostDialogs::find(pHost);
+        if (auto* pEditor = pDialogs ? pDialogs->mpEditorDialog.data() : nullptr;
+            pEditor && mSnapshot.anyDirty({code_editor_theme_selection_combobox, checkBox_showSpacesAndTabs, checkBox_showLineFeedsAndParagraphs, checkBox_autocompleteLuaCode, checkBox_showBidi})) {
+            // From the Host, which the write above updated, not a box a script may have moved on from
+            pEditor->setThemeAndOtherSettings(MudletApp::darkMode() ? pHost->mEditorThemeDark : pHost->mEditorTheme);
         }
 
         if (mSnapshot.dirty(script_preview_combobox)) {
@@ -6749,8 +7283,7 @@ void dlgProfilePreferences::applyAll()
                                 checkBox_discordServerAccessToState,
                                 checkBox_discordServerAccessToPartyInfo,
                                 checkBox_discordServerAccessToTimerInfo})) {
-            // Six controls, one flags word: only the bits whose own control was
-            // edited move, so the rest keep what a script has set them to
+            // Six controls, one flags word: only bits whose control was edited change, keeping what a script set
             Host::DiscordOptionFlags discordFlags = pHost->mDiscordAccessFlags;
 
             // A privacy combo box carries two bits: "show it" is its first two
@@ -6794,8 +7327,8 @@ void dlgProfilePreferences::applyAll()
 
         if (mSnapshot.dirty(lineEdit_discordUserName)) {
             const QString newDiscordUserName = lineEdit_discordUserName->text().trimmed().toLower();
-            if (pHost->mRequiredDiscordUserName != newDiscordUserName) {
-                pHost->mRequiredDiscordUserName = newDiscordUserName;
+            if (pHost->getRequiredDiscordUserName() != newDiscordUserName) {
+                pHost->setRequiredDiscordUserName(newDiscordUserName);
                 Discord::self()->UpdatePresence();
             }
         }
@@ -6805,32 +7338,29 @@ void dlgProfilePreferences::applyAll()
             pHost->setMMCPChatName(lineEdit_mmcpChatName->text().trimmed());
         }
         if (mSnapshot.dirty(lineEdit_mmcpChatMessagePrefix)) {
-            pHost->mMMCPChatPrefix = lineEdit_mmcpChatMessagePrefix->text().trimmed();
+            pHost->setMMCPChatPrefix(lineEdit_mmcpChatMessagePrefix->text().trimmed());
         }
         if (mSnapshot.dirty(lineEdit_mmcpPort)) {
             bool ok;
             const quint16 port = lineEdit_mmcpPort->text().toUShort(&ok);
-            pHost->mMMCPChatPort = ok ? port : csDefaultMMCPHostPort;
+            pHost->setMMCPPort(ok ? port : csDefaultMMCPHostPort);
         }
 
-        /* Possible inclusion in 4.21
-        pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
-        pHost->mMMCPAutoAcceptCalls = checkBox_mmcpAutoAcceptCalls->isChecked();
-        pHost->mMMCPAllowPeekRequests = checkBox_mmcpAllowPeekReq->isChecked();
+        // These MMCP options' check boxes are commented out of profile_preferences.ui, so there is nothing to read
+        /* restore these along with the check boxes, and give Host the setters:
+        pHost->setMMCPAutoStartServer(checkBox_mmcpAutostartServer->isChecked());
+        pHost->setMMCPAutoAcceptCalls(checkBox_mmcpAutoAcceptCalls->isChecked());
+        pHost->setMMCPAllowPeekRequests(checkBox_mmcpAllowPeekReq->isChecked());
         */
-        // remove these when the above is restored
-        pHost->mMMCPAutostartServer = false;
-        pHost->mMMCPAutoAcceptCalls = false;
-        pHost->mMMCPAllowPeekRequests = false;
 
         if (mSnapshot.dirty(checkBox_mmcpPrefixEmotes)) {
-            pHost->mMMCPPrefixEmotes = checkBox_mmcpPrefixEmotes->isChecked();
+            pHost->setMMCPPrefixEmotes(checkBox_mmcpPrefixEmotes->isChecked());
         }
         if (mSnapshot.dirty(checkBox_mmcpAddChatMessageNewline)) {
-            pHost->mMMCPAddChatMessageNewline = checkBox_mmcpAddChatMessageNewline->isChecked();
+            pHost->setMMCPAddChatMessageNewline(checkBox_mmcpAddChatMessageNewline->isChecked());
         }
         if (mSnapshot.dirty(checkBox_mmcpSnoopInMainConsole)) {
-            pHost->mMMCPShowSnoopInMainConsole = checkBox_mmcpSnoopInMainConsole->isChecked();
+            pHost->setMMCPShowSnoopInMainConsole(checkBox_mmcpSnoopInMainConsole->isChecked());
         }
         if (mSnapshot.dirty(checkBox_enableOSC8Hyperlinks)) {
             pHost->mEnableOSC8Hyperlinks = checkBox_enableOSC8Hyperlinks->isChecked();
@@ -6845,8 +7375,19 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(checkBox_debugShowAllCodepointProblems)) {
             pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
         }
+        if (mSnapshot.dirty(checkBox_lazyCaptureGlobals)) {
+            pHost->setLazyCaptureGlobals(checkBox_lazyCaptureGlobals->isChecked());
+        }
+        for (const auto& [key, pCheckBox] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+            if (pCheckBox && mSnapshot.dirty(pCheckBox)) {
+                pHost->setExperimentEnabled(key, pCheckBox->isChecked());
+            }
+        }
         if (mSnapshot.dirty(comboBox_caretModeKey)) {
             pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
+        }
+        if (mSnapshot.dirty(comboBox_mapStyle) && comboBox_mapStyle->currentIndex() >= 0) {
+            pHost->setMapStyle(comboBox_mapStyle->currentData().toString());
         }
         if (groupBox_playerRoomStyle->isEnabled() && mSnapshot.anyDirty({comboBox_playerRoomStyle, spinBox_playerRoomOuterDiameter, spinBox_playerRoomInnerDiameter})) {
             // Although the controls have been interactively modifying the
@@ -6876,8 +7417,7 @@ void dlgProfilePreferences::applyAll()
             auto iterator = pMudlet->mpShortcutsManager->iterator();
             while (iterator.hasNext()) {
                 auto key = iterator.next();
-                // Per key for the same reason the value snapshot is per control:
-                // the others show what this dialog was populated with
+                // Per key, like the value snapshot: the others show what the dialog was populated with
                 if (!mSnapshot.shortcutDirty(key)) {
                     continue;
                 }
@@ -6897,13 +7437,16 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(checkBox_advertiseScreenReader)) {
             pHost->setAdvertiseScreenReader(checkBox_advertiseScreenReader->isChecked());
         }
+        if (mSnapshot.dirty(checkBox_accessibleLabels)) {
+            pHost->setAccessibleLabels(checkBox_accessibleLabels->isChecked());
+        }
         if (mSnapshot.dirty(checkBox_enableClosedCaption)) {
             pHost->setEnableClosedCaption(checkBox_enableClosedCaption->isChecked());
         }
     }
 
 #if defined(INCLUDE_UPDATER)
-    if (mSnapshot.dirty(checkbox_noAutomaticUpdates) && (pMudlet->releaseVersion || pMudlet->publicTestVersion || qEnvironmentVariableIsSet("DEV_UPDATER"))) {
+    if (mSnapshot.dirty(checkbox_noAutomaticUpdates) && (MudletApp::release() || MudletApp::publicTest() || qEnvironmentVariableIsSet("DEV_UPDATER"))) {
         pMudlet->pUpdater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
     }
 #endif
@@ -6921,6 +7464,27 @@ void dlgProfilePreferences::applyAll()
         pMudlet->setToolBarVisibility(visibilityFromComboIndex(comboBox_toolBarVisibility->currentIndex()));
     }
 
+#ifdef INCLUDE_MCPSERVER
+    if (mSnapshot.anyDirty({checkBox_enableMCPServer, spinBox_mcpServerPort})) {
+        QString mcpError;
+        const auto requestedMcpPort = static_cast<quint16>(spinBox_mcpServerPort->value());
+        if (pMudlet->setMCPEnabled(checkBox_enableMCPServer->isChecked(), requestedMcpPort, mcpError)) {
+            if (!mMCPServerStateMessage.isEmpty() && label_mcpConnectResult->text() == mMCPServerStateMessage) {
+                // The buttons' own outcomes share this line and are not ours to take back
+                setMCPConnectResult(QString());
+            }
+            mMCPServerStateMessage.clear();
+        } else {
+            mMCPServerStateMessage = mcpError;
+            setMCPConnectResult(mcpError);
+        }
+        // refreshFromSettings() is the usual way back to the widgets, but it stands down
+        // while the search is open or the port box is still being typed into - both of
+        // which are exactly when this runs.
+        slot_updateMCPServerEndpoint();
+    }
+#endif
+
     if (mSnapshot.anyDirty({checkBox_showSpacesAndTabs, checkBox_showLineFeedsAndParagraphs})) {
         const QTextOption::Flags liveOptions = pMudlet->mEditorTextOptions;
         pMudlet->setEditorTextoptions(mSnapshot.dirty(checkBox_showSpacesAndTabs) ? checkBox_showSpacesAndTabs->isChecked() : liveOptions.testFlag(QTextOption::ShowTabsAndSpaces),
@@ -6936,17 +7500,25 @@ void dlgProfilePreferences::applyAll()
     if (mSnapshot.dirty(comboBox_appearance)) {
         pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
     }
+    if (mSnapshot.dirty(comboBox_menuBarAltKeyNavigation)) {
+        MudletProxyStyle::setAltKeyNavigation(static_cast<enums::MenuBarAltKeyNavigation>(comboBox_menuBarAltKeyNavigation->currentIndex()));
+    }
+    if (mSnapshot.dirty(telnetHandlerEnabled)) {
+        QSettings* settings = MudletApp::getQSettings();
+        if (settings->value("telnetHandlerEnabled", false).toBool() != telnetHandlerEnabled->isChecked()) {
+            settings->setValue("telnetHandlerEnabled", telnetHandlerEnabled->isChecked());
+        }
+    }
+    applyTriggerMatchPoolSettings();
 
     Discord::self()->UpdatePresence();
 
     emit signal_preferencesSaved();
 
-    // Only what changes after this point is the user's next edit
     mSnapshot.take();
 
-    // ...and with nothing of the user's outstanding, the other moment the dialog
-    // can re-read: a write can be refused (a font with no metrics, a value the
-    // Host clamps) or answered by a script, so what lands is not what was sent
+    // With nothing outstanding, re-read: a write can be refused (a font with no metrics, a value the Host
+    // clamps) or answered by a script, so what lands may differ from what was sent
     refreshFromSettings();
 }
 
@@ -6956,14 +7528,17 @@ void dlgProfilePreferences::slot_scheduleApply()
     if (mPopulating || !mpTimer_apply) {
         return;
     }
-    // Restarting, so a burst of changes costs one apply rather than one each
     mpTimer_apply->start();
 }
 
 void dlgProfilePreferences::slot_lineEditFinished()
 {
     // Clearing the modified flag marks this edit finished - see beingTypedInto()
-    if (auto* pLineEdit = qobject_cast<QLineEdit*>(sender()); pLineEdit) {
+    QObject* pEditor = sender();
+    if (auto* pSpinBox = qobject_cast<QAbstractSpinBox*>(pEditor)) {
+        pEditor = pSpinBox->findChild<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly);
+    }
+    if (auto* pLineEdit = qobject_cast<QLineEdit*>(pEditor); pLineEdit) {
         pLineEdit->setModified(false);
     }
     slot_scheduleApply();
@@ -7193,7 +7768,7 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
 {
     Host* pHost = mpHost;
     if (!pHost) {
-        // Nothing to refresh against yet, so let a later visit try again:
+        // No Host yet, so let a later visit try again
         mEditorThemesChecked = false;
         return;
     }
@@ -7205,7 +7780,7 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
         return;
     }
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     const QString themesURL = settings.value("colorSublimeThemesURL", qsl("https://github.com/Colorsublime/Colorsublime-Themes/archive/master.zip")).toString();
     // a default update period is 24h
     // it would be nice to use C++14's numeric separator but Qt Creator still
@@ -7216,10 +7791,9 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
     settings.setValue("colorSublimeThemesURL", themesURL);
     settings.setValue("themesUpdatePeriod", themesUpdatePeriod);
 
-    auto themesAge = QFileInfo(mudlet::getMudletPath(enums::editorWidgetThemeJsonFile)).lastModified().toUTC();
+    auto themesAge = QFileInfo(MudletApp::getMudletPath(enums::editorWidgetThemeJsonFile)).lastModified().toUTC();
 
-    // A test visiting the Editor category is otherwise one file modification
-    // time away from a live fetch that fails slowly rather than red
+    // Otherwise a test visiting the Editor category may make a live fetch that fails slowly rather than red
     const bool downloadSuppressed = qEnvironmentVariableIsSet("MUDLET_TEST_NO_THEME_DOWNLOAD");
     // if the cache file exists and is younger than the specified age (24h by default), don't refresh it
     if (downloadSuppressed || (themesAge.isValid() && themesAge.msecsTo(QDateTime::currentDateTimeUtc()) / (themesUpdatePeriod) < 1)) {
@@ -7237,7 +7811,7 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
 
     const QUrl url(themesURL);
     QNetworkRequest request(url);
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, MudletApp::buildSuffix()).toUtf8().constData()));
     // github uses redirects
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     // load from cache if possible
@@ -7245,12 +7819,18 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
     pHost->updateProxySettings(manager);
     QNetworkReply* getReply = manager->get(request);
 
+    auto failThemeUpdate = [this](const QString& reason, const QString& loggedReason = QString()) {
+        qWarning() << "dlgProfilePreferences: could not update the editor themes:" << (loggedReason.isEmpty() ? reason : loggedReason);
+        //: Shown under the editor theme list in the preferences; %1 is why the update failed: a network or file system error from the system, or "the downloaded themes could not be unpacked"
+        theme_download_label->setText(tr("Could not update themes: %1").arg(reason));
+        // A profile closed mid-fetch has greyed this page out and put the label away
+        if (mpHost) {
+            theme_download_label->show();
+        }
+    };
+
     connect(getReply, &QNetworkReply::errorOccurred, this, [=, this](QNetworkReply::NetworkError) {
-        theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
-        QTimer::singleShot(5s, theme_download_label, [label = theme_download_label] {
-            label->hide();
-            label->setText(tr("Updating themes from colorsublime.github.io..."));
-        });
+        failThemeUpdate(getReply->errorString());
         getReply->deleteLater();
     });
 
@@ -7265,35 +7845,61 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
                         }
 
                         const QByteArray downloadedArchive = reply->readAll();
+                        const QUrl fetchedUrl = reply->url();
+                        reply->deleteLater();
 
                         tempThemesArchive = new QTemporaryFile(this);
                         if (!tempThemesArchive->open()) {
+                            failThemeUpdate(tempThemesArchive->errorString());
+                            tempThemesArchive->deleteLater();
                             return;
                         }
-                        tempThemesArchive->write(downloadedArchive);
+                        // Qt sets no error when only part of a write reaches the disk - in write() for a large one,
+                        // in flush() for a small one it buffered - so the rest is tried again to get the reason.
+                        // close() cannot report a failure at all.
+                        qint64 written = 0;
+                        while (written < downloadedArchive.size()) {
+                            const qint64 count = tempThemesArchive->write(downloadedArchive.constData() + written, downloadedArchive.size() - written);
+                            if (count <= 0) {
+                                break;
+                            }
+                            written += count;
+                        }
+                        if (written != downloadedArchive.size() || !(tempThemesArchive->flush() || tempThemesArchive->flush())) {
+                            failThemeUpdate(tempThemesArchive->errorString());
+                            tempThemesArchive->deleteLater();
+                            return;
+                        }
                         tempThemesArchive->close();
 
                         const QTemporaryDir temporaryDir;
                         if (!temporaryDir.isValid()) {
+                            failThemeUpdate(temporaryDir.errorString());
+                            tempThemesArchive->deleteLater();
                             return;
                         }
 
                         // perform unzipping in a worker thread so as not to freeze the UI
-                        auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(enums::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
+                        auto future = QtConcurrent::run(utils::unzip, tempThemesArchive->fileName(), MudletApp::getMudletPath(enums::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
                         auto watcher = new QFutureWatcher<bool>(this);
                         connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
                             if (future.result()) {
                                 populateThemesList();
+                                theme_download_label->hide();
 
                                 emit signal_themeUpdateCompleted();
+                            } else {
+                                // PreferCache would otherwise hand the same unusable download to every later dialog
+                                diskCache->remove(fetchedUrl);
+                                //: Shown after "Could not update themes: " when the downloaded editor themes could not be unpacked
+                                const char* const unpackFailure = QT_TR_NOOP("the downloaded themes could not be unpacked");
+                                failThemeUpdate(tr(unpackFailure), QString::fromLatin1(unpackFailure));
                             }
 
-                            theme_download_label->hide();
                             tempThemesArchive->deleteLater();
                             watcher->deleteLater();
                         });
                         watcher->setFuture(future);
-                        reply->deleteLater();
                     },
                     getReply));
 }
@@ -7302,7 +7908,7 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
 // selection combobox with them
 void dlgProfilePreferences::populateThemesList()
 {
-    QFile themesFile(mudlet::getMudletPath(enums::editorWidgetThemeJsonFile));
+    QFile themesFile(MudletApp::getMudletPath(enums::editorWidgetThemeJsonFile));
     QList<std::pair<QString, QString>> sortedThemes;
     QJsonArray unsortedThemes;
 
@@ -7346,10 +7952,8 @@ void dlgProfilePreferences::populateThemesList()
     code_editor_theme_selection_combobox->setCurrentIndex(code_editor_theme_selection_combobox->findText(currentSelection));
     code_editor_theme_selection_combobox->setUpdatesEnabled(true);
     code_editor_theme_selection_combobox->blockSignals(false);
-    // The list is rebuilt long after the dialog was populated, which is the list
-    // changing rather than the user picking anything: one that no longer offers
-    // the profile's theme leaves the box on no item, and writing that back
-    // would wipe the theme the profile had.
+    // Rebuilt long after population, which is not a user choice: a list lacking the profile's theme leaves the
+    // box on no item, and writing that back would wipe the profile's theme.
     mSnapshot.take(code_editor_theme_selection_combobox);
 }
 
@@ -7500,7 +8104,7 @@ void dlgProfilePreferences::slot_handleHostAddition(Host* pHost, const quint8 co
         // AND a real Host instance has just been created
         // AND there is only one Host instance around.
 
-        // The profile brings controls of its own with it:
+        // The profile brings its own controls
         invalidateSearch();
 
         mpHost = pHost;
@@ -7508,13 +8112,13 @@ void dlgProfilePreferences::slot_handleHostAddition(Host* pHost, const quint8 co
         mPopulating = true;
         initWithHost(pHost);
         mPopulating = false;
-        // ...and the controls that only exist once there is a profile
+        // Covers the controls that only exist once there is a profile
         connectApplyTriggers();
         mSnapshot.take();
         guardScrollWheel();
-        // ...including the palette fix-ups, for controls built since
+        // Palette fix-ups for the controls just built
         applyShellStyle();
-        // ...and after it, so the caps measure cards as the stylesheet leaves them
+        // After the stylesheet, so the caps measure styled cards
         updateColumnWidthCaps();
         rebuildTabOrder();
     }
@@ -7539,7 +8143,7 @@ void dlgProfilePreferences::slot_handleHostDeletion(Host* pHost)
         // AND a real Host instance is being destroyed
         // AND we are working on the Host instance concerned.
 
-        // Before the profile's controls are cleared and greyed out:
+        // Before the profile's controls are cleared and greyed out
         invalidateSearch();
 
         // Forget about the host:
@@ -7553,10 +8157,9 @@ void dlgProfilePreferences::slot_handleHostDeletion(Host* pHost)
         // and we can then use the following to disable the Host specific controls:
         disableHostDetails();
         mPopulating = false;
-        // The wildcard disconnects above took instant apply's connections off
-        // with the rest, and Qt::UniqueConnection makes remaking them safe
+        // The wildcard disconnects above removed instant apply's connections too
         connectApplyTriggers();
-        // Nothing of what the controls now hold is worth writing back:
+        // Nothing the controls now hold should be written back
         mpTimer_apply->stop();
         mSnapshot.take();
 
@@ -7625,6 +8228,9 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         QStringList codePointsString;
         for (uint i = 0, total = pCodePoints.size(); i < total; ++i) {
             codePointsString << qsl("U+%1").arg(pCodePoints.at(i), 4, 16, QChar('0')).toUpper();
+            if (!RoomAppearance::symbolCodePointNeedsGlyph(pCodePoints.at(i))) {
+                continue;
+            }
             if (!SymbolAnyFontMetrics.inFontUcs4(pCodePoints.at(i))) {
                 isAllFontUsable = false;
                 // By definition if all the fonts together cannot render the
@@ -7861,6 +8467,22 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont& font)
     pHost->mpMap->setSymbolFont(font);
 }
 
+// A style set while the dialog is open, such as by a script, replaces any pick
+// not yet applied, so that Save does not write the older pick back over it
+void dlgProfilePreferences::followMapStyle()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    const int index = comboBox_mapStyle->findData(pHost->mapStyle());
+    if (index != comboBox_mapStyle->currentIndex()) {
+        const QSignalBlocker blocker(comboBox_mapStyle);
+        comboBox_mapStyle->setCurrentIndex(index);
+    }
+    mSnapshot.take(comboBox_mapStyle);
+}
+
 // Keeps the controls (and the glyph usage dialog, when open) in step with the
 // map's symbol settings however they were changed - including from Lua:
 void dlgProfilePreferences::slot_mapSymbolFontChanged()
@@ -8091,6 +8713,244 @@ void dlgProfilePreferences::slot_changeShowMapAuditErrors(const bool state)
     }
 }
 
+#ifdef INCLUDE_MCPSERVER
+QString dlgProfilePreferences::mcpServerNotReadyHint() const
+{
+    if (!checkBox_enableMCPServer->isChecked()) {
+        //: Shown beneath the AI assistant settings, next to the restart notice, after Mudlet was added to an AI app while the server checkbox above is not on yet.
+        return tr("Also tick the checkbox above, or it will find nobody to talk to.");
+    }
+    if (mudlet::self()->mcpEndpoint().isEmpty()) {
+        //: Shown beneath the AI assistant settings, next to the restart notice, after Mudlet was added to an AI app while the server is switched on but could not start. "Advanced" is the label of the button that reveals the port.
+        return tr("Mudlet is not serving yet though, so check the port under Advanced.");
+    }
+    return {};
+}
+
+void dlgProfilePreferences::slot_updateMCPServerEndpoint()
+{
+    updateMcpSummary();
+    mudlet* pMudlet = mudlet::self();
+    const quint16 port = static_cast<quint16>(spinBox_mcpServerPort->value());
+    // The address carries the access token, which only exists once the server is up, so it
+    // is shown verbatim rather than rebuilt from the port box.
+    const QString liveEndpoint = pMudlet->mcpEndpoint();
+
+    lineEdit_mcpServerAddress->setText(liveEndpoint);
+    pushButton_copyMCPServerAddress->setEnabled(!liveEndpoint.isEmpty());
+    pushButton_mcpConnectManually->setEnabled(!liveEndpoint.isEmpty());
+    if (liveEndpoint.isEmpty()) {
+        const QSignalBlocker blocker(pushButton_mcpConnectManually);
+        pushButton_mcpConnectManually->setChecked(false);
+        widget_mcpManualConnect->hide();
+    }
+
+    if (!liveEndpoint.isEmpty()) {
+        // The port it answers on, not the one in the box: a failed move leaves the two
+        // disagreeing, and the box is the request while this line is the outcome.
+        //: Shown beneath the AI assistant settings while the MCP server is running. %1 is a TCP port number.
+        label_mcpServerEndpoint->setText(tr("Listening on port %1.").arg(pMudlet->mcpServerPort()));
+        return;
+    }
+
+    if (!checkBox_enableMCPServer->isChecked()) {
+        //: Shown beneath the AI assistant settings while the MCP server is switched off.
+        label_mcpServerEndpoint->setText(tr("The server is off, so nothing can reach Mudlet."));
+        return;
+    }
+
+    if (!pMudlet->mcpLastError().isEmpty()) {
+        // Every reason the server can refuse to start is answered by the port box, so fold
+        // it out - the message telling the user to change it would otherwise point at
+        // something they cannot see. Never folded back in: that is theirs to close.
+        pushButton_mcpAdvanced->setChecked(true);
+        // The reason is on the result line below the buttons, which this must not contradict
+        //: Shown beneath the AI assistant settings when the MCP server could not open its port. The reason appears below the buttons.
+        label_mcpServerEndpoint->setText(tr("The server is not running."));
+        return;
+    }
+
+    // The moment between the box being ticked and the change being applied
+    //: Shown beneath the AI assistant settings in the moment between the server being switched on and it answering. %1 is a TCP port number.
+    label_mcpServerEndpoint->setText(tr("Starting on port %1...").arg(port));
+}
+
+// An empty line would still hold its row open beneath the buttons
+void dlgProfilePreferences::setMCPConnectResult(const QString& message)
+{
+    label_mcpConnectResult->setText(message);
+    label_mcpConnectResult->setVisible(!message.isEmpty());
+}
+
+void dlgProfilePreferences::slot_connectClaudeDesktop()
+{
+    switch (TMCPBridge::connectClaudeDesktop()) {
+    case TMCPBridge::ConnectOutcome::Written: {
+        mMCPRestartClaudeDesktop = true;
+        updateMCPRestartNotice();
+        refreshMCPAppButtons();
+        mMCPServerStateMessage = mcpServerNotReadyHint();
+        setMCPConnectResult(mMCPServerStateMessage);
+        break;
+    }
+    case TMCPBridge::ConnectOutcome::NoClientApp: {
+        const QString dir = TMCPBridge::claudeDesktopConfigDir();
+        if (dir.isEmpty()) {
+            //: Shown beneath the AI assistant settings when the location Claude Desktop keeps its settings in could not be worked out at all. Claude Desktop is a product name, leave it as-is.
+            setMCPConnectResult(tr("Could not work out where Claude Desktop keeps its settings on this system."));
+            break;
+        }
+        //: Shown beneath the AI assistant settings when the Claude Desktop application's settings folder does not exist. %1 is the folder Mudlet looked for, claude.com/download is a URL - leave it as-is.
+        setMCPConnectResult(tr("Claude Desktop does not look installed - there is no %1. Install it from claude.com/download and open it once, then try again.").arg(dir));
+        break;
+    }
+    case TMCPBridge::ConnectOutcome::NoBinaryPath:
+        //: Shown beneath the AI assistant settings when Mudlet could not work out its own location on disk. Claude Desktop is a product name, leave it as-is.
+        setMCPConnectResult(tr("Could not work out where this Mudlet is installed, so Claude Desktop was not told how to launch it."));
+        break;
+    case TMCPBridge::ConnectOutcome::ConfigUnreadable:
+        //: Shown beneath the AI assistant settings when the Claude Desktop application's settings file could not be read or understood. %1 is the file's location.
+        setMCPConnectResult(tr("Claude Desktop's settings file could not be read or understood, so it was left untouched. Check %1 for problems - a stray comma is enough - and try again.")
+                                    .arg(TMCPBridge::claudeDesktopConfigFilePath()));
+        break;
+    case TMCPBridge::ConnectOutcome::WriteFailed:
+        //: Shown beneath the AI assistant settings when an AI app's settings file could not be written. %1 is the file's location.
+        setMCPConnectResult(tr("Could not write to %1 - check its file permissions.").arg(TMCPBridge::claudeDesktopConfigFilePath()));
+        break;
+    }
+}
+
+void dlgProfilePreferences::slot_connectChatGpt()
+{
+    switch (TMCPBridge::connectCodex()) {
+    case TMCPBridge::ConnectOutcome::Written: {
+        mMCPRestartChatGpt = true;
+        updateMCPRestartNotice();
+        refreshMCPAppButtons();
+        mMCPServerStateMessage = mcpServerNotReadyHint();
+        setMCPConnectResult(mMCPServerStateMessage);
+        break;
+    }
+    case TMCPBridge::ConnectOutcome::NoClientApp:
+        //: Shown beneath the AI assistant settings when the folder the ChatGPT desktop app and Codex keep their settings in does not exist. %1 is the folder Mudlet looked for, ChatGPT and Codex are product names - leave them as-is.
+        setMCPConnectResult(tr("ChatGPT does not look installed - there is no %1. Install the ChatGPT desktop app or Codex and use it once, then try again.").arg(TMCPBridge::codexConfigDir()));
+        break;
+    case TMCPBridge::ConnectOutcome::NoBinaryPath:
+        //: Shown beneath the AI assistant settings when Mudlet could not work out its own location on disk. ChatGPT is a product name, leave it as-is.
+        setMCPConnectResult(tr("Could not work out where this Mudlet is installed, so ChatGPT was not told how to launch it."));
+        break;
+    case TMCPBridge::ConnectOutcome::ConfigUnreadable:
+        //: Shown beneath the AI assistant settings when the settings file shared by the ChatGPT desktop app and Codex could not be read or understood. %1 is the file's location.
+        setMCPConnectResult(tr("ChatGPT's settings file could not be read or understood, so it was left untouched. Check %1 for problems and try again.").arg(TMCPBridge::codexConfigFilePath()));
+        break;
+    case TMCPBridge::ConnectOutcome::WriteFailed:
+        //: Shown beneath the AI assistant settings when an AI app's settings file could not be written. %1 is the file's location.
+        setMCPConnectResult(tr("Could not write to %1 - check its file permissions.").arg(TMCPBridge::codexConfigFilePath()));
+        break;
+    }
+}
+
+// Empty when Mudlet was taken out, which needs no line of its own beside the restart notice
+static QString mcpRemoveMessage(const TMCPBridge::RemoveOutcome outcome, const QString& appName, const QString& configFilePath)
+{
+    switch (outcome) {
+    case TMCPBridge::RemoveOutcome::Removed:
+        return {};
+    case TMCPBridge::RemoveOutcome::NotRegistered:
+        //: Shown beneath the AI assistant settings when Mudlet was asked to remove itself from an AI app's settings but was no longer there. %1 is the app's name.
+        return dlgProfilePreferences::tr("Mudlet was no longer in %1's settings, so there was nothing to remove.").arg(appName);
+    case TMCPBridge::RemoveOutcome::ConfigUnreadable:
+        //: Shown beneath the AI assistant settings when an AI app's settings file could not be read or understood while removing Mudlet from it. %1 is the app's name, %2 the file's location.
+        return dlgProfilePreferences::tr("%1's settings file could not be read or understood, so it was left untouched. Check %2 for problems and try again.").arg(appName, configFilePath);
+    case TMCPBridge::RemoveOutcome::WriteFailed:
+        //: Shown beneath the AI assistant settings when an AI app's settings file could not be written. %1 is the file's location.
+        return dlgProfilePreferences::tr("Could not write to %1 - check its file permissions.").arg(configFilePath);
+    }
+    return {};
+}
+
+void dlgProfilePreferences::slot_removeClaudeDesktop()
+{
+    const TMCPBridge::RemoveOutcome outcome = TMCPBridge::removeClaudeDesktop();
+    mMCPRestartClaudeDesktop |= outcome == TMCPBridge::RemoveOutcome::Removed;
+    //: Name of the Claude Desktop application, used in messages about removing Mudlet from its settings. Claude Desktop is a product name, leave it as-is.
+    setMCPConnectResult(mcpRemoveMessage(outcome, tr("Claude Desktop"), TMCPBridge::claudeDesktopConfigFilePath()));
+    updateMCPRestartNotice();
+    refreshMCPAppButtons();
+}
+
+void dlgProfilePreferences::slot_removeChatGpt()
+{
+    const TMCPBridge::RemoveOutcome outcome = TMCPBridge::removeCodex();
+    mMCPRestartChatGpt |= outcome == TMCPBridge::RemoveOutcome::Removed;
+    //: Name of the ChatGPT desktop app, used in messages about removing Mudlet from its settings. ChatGPT is a product name, leave it as-is.
+    setMCPConnectResult(mcpRemoveMessage(outcome, tr("ChatGPT"), TMCPBridge::codexConfigFilePath()));
+    updateMCPRestartNotice();
+    refreshMCPAppButtons();
+}
+
+void dlgProfilePreferences::refreshMCPAppButtons()
+{
+    const auto present = [](QPushButton* pButton, QMenu* pMenu, const bool registered, const QString& removeText, const QString& registeredDescription) {
+        pMenu->actions().constFirst()->setText(removeText);
+        pButton->setMenu(registered ? pMenu : nullptr);
+        pButton->setIcon(registered ? QIcon(qsl(":/icons/dialog-ok-apply.png")) : QIcon());
+        // The .ui texts describe adding; kept to put back once Mudlet is removed again
+        if (!pButton->property("mcpAddToolTip").isValid()) {
+            pButton->setProperty("mcpAddToolTip", pButton->toolTip());
+            pButton->setProperty("mcpAddDescription", pButton->accessibleDescription());
+        }
+        pButton->setToolTip(registered ? qsl("<p>%1</p>").arg(registeredDescription.toHtmlEscaped()) : pButton->property("mcpAddToolTip").toString());
+        pButton->setAccessibleDescription(registered ? registeredDescription : pButton->property("mcpAddDescription").toString());
+    };
+    //: Menu entry on the Claude Desktop button once Mudlet is in that app's settings. Claude Desktop is a product name, leave it as-is.
+    present(pushButton_connectClaudeDesktop,
+            findChild<QMenu*>(qsl("menu_claudeDesktop")),
+            TMCPBridge::claudeDesktopRegistered(),
+            tr("Remove from Claude Desktop"),
+            //: Tooltip and screen reader description of the Claude Desktop button once Mudlet is in that app's settings. Claude Desktop is a product name, leave it as-is.
+            tr("Mudlet is added to Claude Desktop. Opens a menu to remove it again."));
+    //: Menu entry on the ChatGPT button once Mudlet is in the settings shared by the ChatGPT desktop app and Codex. ChatGPT is a product name, leave it as-is.
+    present(pushButton_connectChatGpt,
+            findChild<QMenu*>(qsl("menu_chatGpt")),
+            TMCPBridge::codexRegistered(),
+            tr("Remove from ChatGPT"),
+            //: Tooltip and screen reader description of the ChatGPT button once Mudlet is in the settings shared by the ChatGPT desktop app and Codex. ChatGPT and Codex are product names, leave them as-is.
+            tr("Mudlet is added to ChatGPT and Codex. Opens a menu to remove it again."));
+}
+
+void dlgProfilePreferences::updateMCPRestartNotice()
+{
+    QString notice;
+    if (mMCPRestartClaudeDesktop && mMCPRestartChatGpt) {
+        //: Shown beneath the AI assistant settings after Mudlet was added to or removed from both AI apps' settings. Claude Desktop and ChatGPT are product names, leave them as-is.
+        notice = tr("Please restart Claude Desktop and ChatGPT for the change to take effect");
+    } else if (mMCPRestartClaudeDesktop) {
+        //: Shown beneath the AI assistant settings after Mudlet was added to or removed from the Claude Desktop application's settings. Claude Desktop is a product name, leave it as-is.
+        notice = tr("Please restart Claude Desktop for the change to take effect");
+    } else if (mMCPRestartChatGpt) {
+        //: Shown beneath the AI assistant settings after Mudlet was added to or removed from the settings shared by the ChatGPT desktop app and Codex. ChatGPT and Codex are product names, leave them as-is.
+        notice = tr("Please restart ChatGPT (or Codex) for the change to take effect");
+    }
+    need_restart_for_ai_assistant->setText(notice);
+    need_restart_for_ai_assistant->setVisible(!notice.isEmpty());
+}
+
+void dlgProfilePreferences::slot_copyMCPServerAddress()
+{
+    const QString endpoint = mudlet::self()->mcpEndpoint();
+    if (endpoint.isEmpty()) {
+        // The button disables itself while the server is down, but a stop can race the click.
+        //: Shown beneath the AI assistant settings when the Copy address button is pressed while the server is not running.
+        setMCPConnectResult(tr("There is no address to copy while the server is off."));
+        return;
+    }
+    QGuiApplication::clipboard()->setText(endpoint);
+    //: Shown beneath the AI assistant settings after the Copy address button is pressed.
+    setMCPConnectResult(tr("Address copied - paste it into your AI assistant."));
+}
+#endif
+
 // We do not use the QSpinBox::valueChanged() signal and it is only emitted if
 // the new value is different - so there is no need to worry about if we are or
 // are not changing the value in the next two methods:
@@ -8181,13 +9041,13 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
 // muted amber in dark mode
 QString dlgProfilePreferences::certificateWarningCheckBoxStyle() const
 {
-    const bool darkMode = mudlet::self()->inDarkMode();
+    const bool darkMode = MudletApp::darkMode();
     return qsl("font-weight: bold; color: %1; background: %2").arg(darkMode ? qsl("rgb(230, 230, 230)") : qsl("black"), darkMode ? qsl("rgb(64, 60, 40)") : qsl("rgb(255, 254, 215)"));
 }
 
 QString dlgProfilePreferences::certificateWarningLabelStyle() const
 {
-    const bool darkMode = mudlet::self()->inDarkMode();
+    const bool darkMode = MudletApp::darkMode();
     return qsl("font-weight: bold; color: %1; background: %2").arg(darkMode ? qsl("lightsalmon") : qsl("red"), darkMode ? qsl("rgb(64, 60, 40)") : qsl("rgb(255, 254, 215)"));
 }
 
@@ -8211,15 +9071,15 @@ void dlgProfilePreferences::slot_setAppearance(const enums::Appearance state)
         comboBox_appearance->setCurrentIndex(state);
     }
 
-    const bool wasDarkMode = mudlet::self()->inDarkMode();
+    const bool wasDarkMode = MudletApp::darkMode();
     mudlet::self()->setAppearance(state);
-    const bool isDarkMode = mudlet::self()->inDarkMode();
+    const bool isDarkMode = MudletApp::darkMode();
 
     if (wasDarkMode == isDarkMode) {
         return;
     }
 
-    // The shell's colours come from the palette, which has just been swapped:
+    // The shell's colours come from the palette, which has just been swapped
     applyShellStyle();
     restyleCertificateWarnings();
 
@@ -8275,16 +9135,22 @@ void dlgProfilePreferences::slot_guiLanguageChanged(const QString& language)
     // the language" is shown in the newly selected language - on the basis that
     // it is the one the user understands rather than the currently used one.
     retranslateUi(this);
-    // ...which has just put the .ui file's own group box titles back:
+    // retranslateUi() restored the .ui file's group box titles, and does not reach the shell
     retitleCards();
-    // ...and which never reached the shell at all:
     retranslateShell();
-    // Every text the search index was built from has just been replaced:
+#ifdef INCLUDE_MCPSERVER
+    // retranslateUi() put back the adding texts, now in the new language
+    for (auto* pButton : {pushButton_connectClaudeDesktop, pushButton_connectChatGpt}) {
+        pButton->setProperty("mcpAddToolTip", QVariant());
+        pButton->setProperty("mcpAddDescription", QVariant());
+    }
+    refreshMCPAppButtons();
+    updateMCPRestartNotice();
+#endif
+    // Every text the search index and column widths were measured from has been replaced, including
+    // checkboxes fitted to the old language, which can also change the width the sidebar needs
     invalidateSearch();
-    // ...and so has every text the column widths were measured from, including
-    // the checkboxes that fit the reading width in the language just left
     updateColumnWidthCaps();
-    // ...which can move the width the sidebar needs to stand beside them
     updateSidebarMode();
 
     // Re identify which Profile we are showing the settings for (otherwise if
@@ -8342,13 +9208,13 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
     setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor, true);
     setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
     pHost->mpMap->mPlayerRoomStyle = static_cast<quint8>(style);
-    pHost->mPlayerRoomStyle = static_cast<quint8>(style);
-    if (!pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
+    pHost->setPlayerRoomStyle(static_cast<quint8>(style));
+    if (!pHost->mpMap->mapper() || !pHost->mpMap->mapper()->mp2dMap) {
         return;
     }
-    pHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(style);
+    pHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(style);
     // And update the displayed map:
-    pHost->mpMap->mpMapper->mp2dMap->update();
+    pHost->mpMap->mapper()->repaintMaps();
 }
 
 void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
@@ -8359,16 +9225,16 @@ void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
     }
 
     setPlayerRoomColor(pushButton_playerRoomPrimaryColor, mpHost->mpMap->mPlayerRoomOuterColor);
-    pHost->mPlayerRoomOuterColor = mpHost->mpMap->mPlayerRoomOuterColor;
+    pHost->setPlayerRoomOuterColor(mpHost->mpMap->mPlayerRoomOuterColor);
     if (comboBox_playerRoomStyle->currentIndex() != 3) {
         return;
     }
 
-    if (mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+    if (mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
         // The current setting IS for the custom color - so use it straight away:
-        mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(3);
+        mpHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(3);
         // And update the displayed map:
-        mpHost->mpMap->mpMapper->mp2dMap->update();
+        mpHost->mpMap->mapper()->repaintMaps();
     }
 }
 
@@ -8380,16 +9246,16 @@ void dlgProfilePreferences::slot_setPlayerRoomSecondaryColor()
     }
 
     setPlayerRoomColor(pushButton_playerRoomSecondaryColor, mpHost->mpMap->mPlayerRoomInnerColor);
-    pHost->mPlayerRoomInnerColor = mpHost->mpMap->mPlayerRoomInnerColor;
+    pHost->setPlayerRoomInnerColor(mpHost->mpMap->mPlayerRoomInnerColor);
     if (comboBox_playerRoomStyle->currentIndex() != 3) {
         return;
     }
 
-    if (mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+    if (mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
         // The current setting IS for the custom color - so use it straight away:
-        mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(3);
+        mpHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(3);
         // And update the displayed map:
-        mpHost->mpMap->mpMapper->mp2dMap->update();
+        mpHost->mpMap->mapper()->repaintMaps();
     }
 }
 
@@ -8402,10 +9268,10 @@ void dlgProfilePreferences::slot_setPlayerRoomOuterDiameter(const int value)
 
     if (value < 256 && pHost->mpMap->mPlayerRoomOuterDiameterPercentage != value) {
         pHost->mpMap->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
-        pHost->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
-        if (pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
+        pHost->setPlayerRoomOuterDiameter(static_cast<quint8>(value));
+        if (pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
             // And update the displayed map:
-            pHost->mpMap->mpMapper->mp2dMap->update();
+            pHost->mpMap->mapper()->repaintMaps();
         }
     }
 }
@@ -8419,12 +9285,12 @@ void dlgProfilePreferences::slot_setPlayerRoomInnerDiameter(const int value)
 
     if (value < 256 && pHost->mpMap->mPlayerRoomInnerDiameterPercentage != value) {
         pHost->mpMap->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
-        pHost->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
-        if (pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
+        pHost->setPlayerRoomInnerDiameter(static_cast<quint8>(value));
+        if (pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
             // Redefine the QGradientStops
-            pHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(qBound(0, comboBox_playerRoomStyle->currentIndex(), 3));
+            pHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(qBound(0, comboBox_playerRoomStyle->currentIndex(), 3));
             // And update the displayed map:
-            pHost->mpMap->mpMapper->mp2dMap->update();
+            pHost->mpMap->mapper()->repaintMaps();
         }
     }
 }
@@ -8475,6 +9341,13 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
     }
 }
 
+void dlgProfilePreferences::slot_toggleAccessibleLabels(const bool state)
+{
+    if (mpHost) {
+        mpHost->setAccessibleLabels(state);
+    }
+}
+
 void dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks(const bool state)
 {
     Host* pHost = mpHost;
@@ -8515,16 +9388,16 @@ void dlgProfilePreferences::slot_toggleUseMaxBufferSize(bool checked)
     }
 
     if (checked) {
-        // When max is enabled, set spinbox to max value and disable it
-        if (pHost->mpConsole) {
-            const int maxBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
+        // A size typed into the box may not have been applied yet
+        mBufferSizeBeforeMax = console_buffer_size_spinBox->value();
+        if (pHost->mainConsoleView()) {
+            const int maxBufferSize = pHost->mainConsoleView()->buffer.getMaxBufferSize();
             console_buffer_size_spinBox->setValue(maxBufferSize);
         }
         console_buffer_size_spinBox->setEnabled(false);
     } else {
-        // When max is disabled, enable the spinbox and set to stored value
         console_buffer_size_spinBox->setEnabled(true);
-        console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
+        console_buffer_size_spinBox->setValue(mBufferSizeBeforeMax);
     }
 }
 
@@ -8593,18 +9466,14 @@ void dlgProfilePreferences::slot_changeMapperShowRoomBorders(const bool state)
     }
 
     pHost->mMapperShowRoomBorders = state;
-    if (pHost->mpMap && pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
-        pHost->mpMap->mpMapper->mp2dMap->update();
+    if (pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
+        pHost->mpMap->mapper()->repaintMaps();
     }
 }
 
 void dlgProfilePreferences::slot_changeDrawUpperLowerLevels(const bool state)
 {
-    mudlet::self()->mDrawUpperLowerLevels = state;
-    Host* pHost = mpHost;
-    if (pHost && pHost->mpMap && pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
-        pHost->mpMap->mpMapper->mp2dMap->update();
-    }
+    mudlet::self()->setDrawUpperLowerLevels(state);
 }
 
 void dlgProfilePreferences::slot_changeMapperUseAntiAlias(const bool state)
@@ -8615,16 +9484,14 @@ void dlgProfilePreferences::slot_changeMapperUseAntiAlias(const bool state)
     }
 
     pHost->mMapperUseAntiAlias = state;
-    if (pHost->mpMap && pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
-        pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = state;
-        pHost->mpMap->mpMapper->mp2dMap->update();
+    if (pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
+        pHost->mpMap->mapper()->mp2dMap->mMapperUseAntiAlias = state;
+        pHost->mpMap->mapper()->mp2dMap->update();
     }
 }
 
-// Progressive disclosure for screen-reader users: surface the hyperlink
-// navigation/activation/menu shortcuts at the moment the user picks a
-// pane-switching key, so they don't have to consult the wiki to discover them.
-// Picking Tab additionally warns about the shared binding.
+// Tells screen-reader users the hyperlink shortcuts when they pick a pane-switching key, so they need not
+// look them up in the wiki
 void dlgProfilePreferences::slot_caretModeKeyChanged(const int index)
 {
     if (index < 0 || !QAccessible::isActive()) {
@@ -8650,9 +9517,22 @@ void dlgProfilePreferences::slot_caretModeKeyChanged(const int index)
     app->announce(announcement, QString(), true);
 }
 
+// Under the display font's picker and the editor font's: false when Mudlet cannot draw in the font at all
+static bool showFontWarnings(const QFont& font, QLabel* pInvalidLabel, QLabel* pVariableWidthLabel)
+{
+    const QFontMetrics metrics(font);
+    if (metrics.averageCharWidth() == 0) {
+        pInvalidLabel->show();
+        return false;
+    }
+    pInvalidLabel->hide();
+    pVariableWidthLabel->setVisible(!QFontInfo(font).fixedPitch());
+    return true;
+}
+
 bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange change)
 {
-    if (mpHost.isNull() || (mpHost.data()->mpConsole.isNull())) {
+    if (mpHost.isNull() || !mpHost->mainConsoleView()) {
         return false;
     }
 
@@ -8663,21 +9543,17 @@ bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange chan
                                                              : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality));
 
     if (TFontAttributes(mpHost->getDisplayFont()) == TFontAttributes(displayFont)) {
-        // No change!
+        // Nothing changes on screen, but a pick still has to reach the Host: re-picking
+        // the family standing in for a missing font settles for it. Every pick of a new
+        // family lands here as well, as activated follows currentFontChanged
+        if (change == Host::DisplayFontChange::UserChoice) {
+            mpHost->setDisplayFont(displayFont, change);
+        }
         return false;
     }
 
-    const QFontMetrics metrics(displayFont);
-    if (metrics.averageCharWidth() == 0) {
-        label_invalidFontError->show();
+    if (!showFontWarnings(displayFont, label_invalidFontError, label_variableWidthFontWarning)) {
         return false;
-    }
-    label_invalidFontError->hide();
-
-    if (!QFontInfo(displayFont).fixedPitch()) {
-        label_variableWidthFontWarning->show();
-    } else {
-        label_variableWidthFontWarning->hide();
     }
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
@@ -8692,11 +9568,6 @@ bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange chan
     // update the display properly when font or size or antiAliasing selections
     // change.
     mpHost->setDisplayFont(displayFont, change);
-
-    auto config = edbeePreviewWidget->config();
-    config->beginChanges();
-    config->setFont(displayFont);
-    config->endChanges();
 
     return true;
 }
@@ -8717,11 +9588,45 @@ void dlgProfilePreferences::cancelShortcutCaptures()
     }
 }
 
+// A missing dictionary picked again, once installed, is no change of entry for the apply to see,
+// so this is what retries it
+void dlgProfilePreferences::slot_dictionaryPicked(const int index)
+{
+    if (!mpHost) {
+        return;
+    }
+    const QString dictionary = comboBox_dictionary->itemData(index).toString();
+    mpHost->setSpellDic(dictionary);
+    if (TSpellChecker::systemDictionaryFound(dictionary)) {
+        comboBox_dictionary->setItemText(index, dictionaryDisplayName(dictionary));
+    }
+}
+
+QString dlgProfilePreferences::dictionaryDisplayName(const QString& dictionary)
+{
+    auto key = dictionary.toLower();
+    key.replace(QLatin1String("-"), QLatin1String("_"));
+    return mudlet::self()->mDictionaryLanguageCodeMap.value(key, tr("%1 - not recognised").arg(dictionary));
+}
+
+void dlgProfilePreferences::rememberDisplayFontFamilyShown()
+{
+    const QString family = fontComboBox_displayFont->currentFont().family();
+    mDisplayFontFamilyShown = (mpHost && mpHost->resolveFontFamily(family).available) ? family : QString();
+}
+
 void dlgProfilePreferences::slot_displayFontChanged()
 {
-    // Only fires from QFontComboBox::currentFontChanged, so the family really is
-    // one the user just picked out of the list
-    if (!mpHost.isNull() && updateDisplayFont(Host::DisplayFontChange::UserChoice)) {
+    // QFontComboBox moves off a family by itself when its package is uninstalled: no choice of the
+    // user's, and the profile's own check is about to put the stand-in up and say so
+    const QString shownBefore = mDisplayFontFamilyShown;
+    rememberDisplayFontFamilyShown();
+    if (mpHost.isNull() || (!shownBefore.isEmpty() && !mpHost->resolveFontFamily(shownBefore).available)) {
+        return;
+    }
+    // Past that, only a pick out of the list gets here (currentFontChanged and activated both land
+    // here, so a second run for the same font must change nothing), so the family really is the user's choice
+    if (updateDisplayFont(Host::DisplayFontChange::UserChoice)) {
         mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
     }
 }
@@ -8733,9 +9638,97 @@ void dlgProfilePreferences::slot_displayFontSizeChanged()
     }
 }
 
+// The font can change behind the dialog, from a script or as a package brings a missing family
+// back, and the next edit here builds the whole font from these controls
+void dlgProfilePreferences::slot_hostDisplayFontChanged(const QFont& font)
+{
+    // The connection outlives slot_handleHostDeletion(), which has cleared these controls
+    if (mpHost.isNull()) {
+        return;
+    }
+    {
+        const QSignalBlocker comboBlocker(fontComboBox_displayFont);
+        const QSignalBlocker sizeBlocker(spinBox_displayFontSize);
+        const QSignalBlocker antiAliasBlocker(checkBox_antiAlias);
+        fontComboBox_displayFont->setCurrentFont(font);
+        spinBox_displayFontSize->setMaximum(std::max(font.pointSize(), spinBox_displayFontSize->maximum()));
+        spinBox_displayFontSize->setValue(std::max(1, font.pointSize()));
+        // Not fontsAntiAlias(): applyAll() writes that from this box only once the apply timer fires
+        checkBox_antiAlias->setChecked(!(font.styleStrategy() & QFont::NoAntialias));
+    }
+    rememberDisplayFontFamilyShown();
+    // Not the user's edits, so they must not keep refreshFromSettings() from re-reading the rest - nor
+    // the line edits inside the list and the spin box, which the snapshot holds as well. The anti-alias
+    // box stays dirty, as this runs for the dialog's own toggle too and applyAll() must still store it
+    for (QWidget* pControl : {static_cast<QWidget*>(fontComboBox_displayFont), static_cast<QWidget*>(spinBox_displayFontSize)}) {
+        mSnapshot.take(pControl);
+        for (const auto* pPart : pControl->findChildren<QWidget*>()) {
+            if (SettingsSnapshot::carriesValue(pPart)) {
+                mSnapshot.take(pPart);
+            }
+        }
+    }
+}
+
 void dlgProfilePreferences::slot_displayFontAliasingChanged()
 {
     updateDisplayFont(Host::DisplayFontChange::Adjustment);
+}
+
+// Writes the controls only, so the caller decides whether the snapshot is to follow
+void dlgProfilePreferences::showEditorFont(const QFont& font)
+{
+    {
+        const QSignalBlocker comboBlocker(fontComboBox_editorFont);
+        const QSignalBlocker sizeBlocker(spinBox_editorFontSize);
+        fontComboBox_editorFont->setCurrentFont(font);
+        spinBox_editorFontSize->setMaximum(std::max(font.pointSize(), 40));
+        spinBox_editorFontSize->setValue(std::max(1, font.pointSize()));
+    }
+    reflectEditorFontControls();
+}
+
+void dlgProfilePreferences::reflectEditorFontControls()
+{
+    // Disabled rather than hidden while following, so what following gives is on show
+    const bool ownFont = !checkBox_editorFontFollowsDisplay->isChecked();
+    fontComboBox_editorFont->setEnabled(ownFont);
+    spinBox_editorFontSize->setEnabled(ownFont);
+    // ...and the display font's own card says whatever there is to say about that one
+    if (!ownFont) {
+        label_editorFontInvalid->hide();
+        label_editorFontVariableWidth->hide();
+        return;
+    }
+    QFont font = fontComboBox_editorFont->currentFont();
+    font.setPointSize(spinBox_editorFontSize->value());
+    showFontWarnings(font, label_editorFontInvalid, label_editorFontVariableWidth);
+}
+
+// A script, or the display font moving while the editor follows it
+void dlgProfilePreferences::slot_hostEditorFontChanged(const QFont& font)
+{
+    if (mpHost.isNull()) {
+        return;
+    }
+    {
+        const QSignalBlocker followBlocker(checkBox_editorFontFollowsDisplay);
+        checkBox_editorFontFollowsDisplay->setChecked(mpHost->editorFontFollowsDisplay());
+    }
+    showEditorFont(font);
+    auto config = edbeePreviewWidget->config();
+    config->beginChanges();
+    config->setFont(font);
+    config->endChanges();
+    // As in slot_hostDisplayFontChanged(): not the user's edits
+    for (QWidget* pControl : {static_cast<QWidget*>(checkBox_editorFontFollowsDisplay), static_cast<QWidget*>(fontComboBox_editorFont), static_cast<QWidget*>(spinBox_editorFontSize)}) {
+        mSnapshot.take(pControl);
+        for (const auto* pPart : pControl->findChildren<QWidget*>()) {
+            if (SettingsSnapshot::carriesValue(pPart)) {
+                mSnapshot.take(pPart);
+            }
+        }
+    }
 }
 
 void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
@@ -8748,10 +9741,10 @@ void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
 void dlgProfilePreferences::slot_roomSizeChanged(int size)
 {
     if (mpHost) {
-        mpHost->mRoomSize = static_cast<float>(size) / 10.0f;
-        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-            mpHost->mpMap->mpMapper->mp2dMap->setRoomSize(static_cast<float>(size) / 10.0f);
-            mpHost->mpMap->mpMapper->mp2dMap->update();
+        mpHost->mRoomSize = size / 10.0;
+        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
+            mpHost->mpMap->mapper()->mp2dMap->setRoomSize(mpHost->mRoomSize);
+            mpHost->mpMap->mapper()->mp2dMap->update();
         }
     }
 }
@@ -8767,8 +9760,8 @@ void dlgProfilePreferences::slot_exitSizeChanged(int size)
     if (mpHost) {
         const double internalSize = 50.0 / size;
         mpHost->mLineSize = internalSize;
-        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-            mpHost->mpMap->mpMapper->mp2dMap->setExitSize(internalSize);
+        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
+            mpHost->mpMap->mapper()->mp2dMap->setExitSize(internalSize);
         }
     }
 }
@@ -8778,8 +9771,9 @@ void dlgProfilePreferences::slot_borderSizeChanged(int size)
     if (mpHost) {
         const double internalSize = 50.0 / size;
         mpHost->mRoomBorderSize = internalSize;
-        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-            mpHost->mpMap->mpMapper->mp2dMap->setBorderSize(internalSize);
+        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
+            mpHost->mpMap->mapper()->mp2dMap->setBorderSize(internalSize);
+            mpHost->mpMap->mapper()->update3DView();
         }
     }
 }
@@ -8788,29 +9782,27 @@ void dlgProfilePreferences::slot_gridSizeChanged(double size)
 {
     if (mpHost) {
         mpHost->mMapGridLineSize = size;
-        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-            mpHost->mpMap->mpMapper->mp2dMap->update();
+        if (mpHost->mpMap) {
+            mpHost->mpMap->requestMapRepaint();
         }
     }
 }
 
 void dlgProfilePreferences::reject()
 {
-    // Esc goes up a level before it goes out of the dialog, and search results
-    // are a level of their own. Clearing the query is what leaves them: it hands
-    // the borrowed cards back and returns to the page the search interrupted.
+    // Esc goes up a level before leaving the dialog, and search results are a level; clearing the query
+    // leaves them
     if (!mClosing && mSearchActive) {
         mpLineEdit_search->clear();
         return;
     }
-    // ...and on a subpage it means the same as the back chevron
+    // On a subpage Esc acts as the back chevron
     if (!mClosing && !mCurrentSubpage.isEmpty()) {
         leaveSubpage();
         return;
     }
-    // QDialog::reject() hides the dialog without ever sending a close event, so
-    // Esc is routed through close() - which arrives back here from
-    // QDialog::closeEvent() with nothing left to do but the base class
+    // QDialog::reject() hides without a close event, so Esc goes through close(), which comes back here from
+    // QDialog::closeEvent() with only the base class left to run
     if (!mClosing) {
         close();
         return;
@@ -8820,8 +9812,7 @@ void dlgProfilePreferences::reject()
 
 void dlgProfilePreferences::closeEvent(QCloseEvent* event)
 {
-    // Raised here so it covers the whole close: the apply below ends by
-    // re-reading the settings, which a dialog on its way out has no use for
+    // First, as the apply below ends by re-reading the settings
     mClosing = true;
     cancelShortcutCaptures();
 
@@ -8830,20 +9821,23 @@ void dlgProfilePreferences::closeEvent(QCloseEvent* event)
         mpDialogMapGlyphUsage = nullptr;
     }
 
-    // Closing is not a discard, and the debounce will not outlive the dialog.
-    // Clearing the focus makes a field being typed into report as finished.
+    // Closing is not a discard, and the debounce will not outlive the dialog. Clearing the focus makes a
+    // field being typed into report as finished.
     if (QWidget* pFocus = focusWidget(); pFocus) {
         pFocus->clearFocus();
     }
     mpTimer_apply->stop();
     applyAll();
 
-    // The profile XML is written once per close rather than on every apply:
+    // The profile XML is written once per close rather than on every apply
     if (Host* pHost = mpHost; pHost && pHost->mFORCE_SAVE_ON_EXIT) {
-        pHost->saveProfile();
+        pHost->saveProfileReportingFailure();
     }
 
-    mudlet::getQSettings()->setValue(qsl("profilePreferencesGeometry"), saveGeometry());
+    MudletApp::getQSettings()->setValue(qsl("profilePreferencesGeometry"), saveGeometry());
+    // Most application-wide settings reach Mudlet.ini only at quit, so an
+    // unclean exit would lose the ones changed here
+    mudlet::self()->writeSettings();
 
     if (mpHost) {
         emit preferencesClosing(mpHost->getName());

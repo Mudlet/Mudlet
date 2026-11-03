@@ -26,6 +26,7 @@
 
 #include <QString>
 
+#include <algorithm>
 #include <iostream>
 #include <list>
 
@@ -86,9 +87,8 @@ public:
     }
 
     T* mpParent;
-    // Tree<T>* and not T*: a node adds itself to its parent's list from Tree's
-    // own constructor, where its T subobject does not exist yet, so casting
-    // down to T* there is undefined behaviour.
+    // Not T*: a node adds itself to its parent's list from Tree's constructor, before its T
+    // subobject exists, so downcasting there is undefined behaviour.
     std::list<Tree<T>*>* mpMyChildrenList;
     int mID;
     QString mPackageName;
@@ -96,6 +96,10 @@ public:
 
 protected:
     inline virtual bool canBeActivated() const;
+    // Every T destructor calls this once it has unregistered itself. Left to ~Tree(), a child would
+    // be torn down after its parent's T part has been destroyed, yet it still reaches that parent
+    // through T* (getParent(), popChild()), which is undefined behaviour.
+    void deleteChildren();
 
     bool mOK_init;
     bool mOK_code;
@@ -144,18 +148,25 @@ Tree<T>::Tree(T* pParent)
 template <class T>
 Tree<T>::~Tree()
 {
-    while (!mpMyChildrenList->empty()) {
-        auto it = mpMyChildrenList->begin();
-        Tree<T>* pChild = *it;
-        delete pChild;
-    }
+    // Each T destructor has already emptied it, so this is only a safety net
+    Q_ASSERT(mpMyChildrenList->empty());
+    deleteChildren();
     delete mpMyChildrenList;
     mpMyChildrenList = nullptr;
     if (mpParent) {
-        mpParent->popChild(this); // tell parent about my death
+        mpParent->popChild(this);
         if (std::uncaught_exceptions()) {
             std::cout << "ERROR: Hook destructed during stack rewind because of an uncaught exception." << std::endl;
         }
+    }
+}
+
+template <class T>
+void Tree<T>::deleteChildren()
+{
+    // Each child's destructor pops it from this list
+    while (!mpMyChildrenList->empty()) {
+        delete mpMyChildrenList->front();
     }
 }
 
@@ -303,11 +314,10 @@ void Tree<T>::setParent(T* pParent)
 template <class T>
 bool Tree<T>::popChild(Tree<T>* pChild)
 {
-    for (auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++) {
-        if (*it == pChild) {
-            mpMyChildrenList->remove(pChild);
-            return true;
-        }
+    // erase(), not remove(): remove() rescans the whole list, and a folder pops every child as it is torn down
+    if (const auto it = std::find(mpMyChildrenList->begin(), mpMyChildrenList->end(), pChild); it != mpMyChildrenList->end()) {
+        mpMyChildrenList->erase(it);
+        return true;
     }
     return false;
 }

@@ -23,7 +23,9 @@
 
 #include "dlgPackageManager.h"
 
+#include "MudletApp.h"
 #include "mudlet.h"
+#include "TMainConsole.h"
 
 #include <QCloseEvent>
 #include <QFileDialog>
@@ -34,6 +36,7 @@
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QProgressDialog>
+#include <QSaveFile>
 #include <QSettings>
 #include <QTimer>
 #include <QVersionNumber>
@@ -46,8 +49,9 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
 , mpHost(pHost)
 {
     setupUi(this);
+    label_packageName->installEventFilter(this); // re-elides the package name on resize
     connect(lineEdit_searchBar, &QLineEdit::textChanged, this, &dlgPackageManager::slot_searchTextChanged);
-    connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgPackageManager::close);
+    connect(mpHost->mainConsoleView(), &QWidget::destroyed, this, &dlgPackageManager::close);
     connect(packageList, &QListWidget::currentItemChanged, this, &dlgPackageManager::slot_itemChanged);
     connect(packageList, &QListWidget::itemSelectionChanged, this, &dlgPackageManager::slot_toggleInstallRepoButton);
     connect(packageList, &QListWidget::itemSelectionChanged, this, &dlgPackageManager::slot_toggleRemoveButton);
@@ -82,6 +86,9 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     mCurrentView = NavigationView::Installed;
     slot_setPackageList();
 
+    // Connected last: resetPackageList() dereferences mpNavigationGroup, made by setupNavigationButtons()
+    connect(mpHost, &Host::signal_packageListChanged, this, &dlgPackageManager::resetPackageList);
+
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
@@ -111,7 +118,9 @@ void dlgPackageManager::clearPackageDetails()
 {
     label_icon->clear();
     packageDescription->clear();
+    mPackageName.clear();
     label_packageName->clear();
+    label_packageName->setToolTip(QString());
     label_title->clear();
     label_author->clear();
     label_version->clear();
@@ -147,55 +156,73 @@ void dlgPackageManager::downloadIcon(const QString& packageName)
 
 void dlgPackageManager::downloadRepositoryIndex()
 {
-    const QString outputPath = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json"));
+    const QString outputPath = MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json"));
     QNetworkAccessManager* manager = new QNetworkAccessManager(this);
     QNetworkRequest request(QUrl(qsl("https://raw.githubusercontent.com/Mudlet/mudlet-package-repository/refs/heads/main/packages/mpkg.packages.json")));
     request.setTransferTimeout(20000);
     QNetworkReply* reply = manager->get(request);
-    // Parented so that closing the dialog before the download has finished takes
-    // it with it: the handler below is the only other thing that deletes it, and
-    // the reply that would call it is a grandchild of this dialog.
-    QFile* file = new QFile(outputPath, this);
 
-    if (!file->open(QIODevice::WriteOnly)) {
-        file->deleteLater();
-        reply->deleteLater();
-        manager->deleteLater();
-        return;
-    }
-
-    QObject::connect(reply, &QNetworkReply::readyRead, [file, reply]() {
-        const QByteArray data = reply->readAll();
-        if (file->write(data) != data.size()) {
-            qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - failed to write downloaded data:" << file->errorString();
-            reply->abort();
-        }
-    });
-
-    QObject::connect(reply, &QNetworkReply::finished, [reply, file, manager, this]() {
+    QObject::connect(reply, &QNetworkReply::finished, [reply, outputPath, manager, this]() {
         if (reply->error() != QNetworkReply::NoError) {
             qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - network request failed:" << reply->errorString();
         } else {
             const QByteArray data = reply->readAll();
-            if (!data.isEmpty() && file->write(data) != data.size()) {
-                qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - failed to write final data:" << file->errorString();
+            // A captive portal or proxy can answer with a page of its own and a success status
+            const QJsonDocument doc = QJsonDocument::fromJson(data);
+            if (!doc.isObject() || !doc.object().value(qsl("packages")).isArray()) {
+                qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - the download is not a package index, discarding it";
+            } else {
+                // Opened only once a whole index is in hand, so a failed, refused or abandoned download never
+                // touches the previous one. On Unix, a profile directory that cannot take the temporary file
+                // falls back to rewriting the index in place, which a write failing partway leaves truncated.
+                QSaveFile file(outputPath);
+                file.setDirectWriteFallback(true);
+                if (!file.open(QIODevice::WriteOnly) || file.write(data) != data.size() || !file.commit()) {
+                    qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - failed to save the repository index:" << file.errorString();
+                }
             }
         }
-        file->close();
         reply->deleteLater();
-        file->deleteLater();
         manager->deleteLater();
-        readPackageRepositoryFile();
-        populatePackagesWithUpdates();
-        updateUpdatesBadge();
+        // A successful read refreshes the updates list and badge itself
+        if (!readPackageRepositoryFile()) {
+            populatePackagesWithUpdates();
+            updateUpdatesBadge();
+        } else if (mCurrentView != NavigationView::Installed) {
+            // Explore and Updates are listed from the index, so what is on show predates this one
+            slot_setPackageList();
+        }
     });
+}
+
+// The name is elided to fit, but the details are first filled before layout gives the label its
+// width, so the full name is kept and re-elided whenever the label's width or font changes.
+void dlgPackageManager::elidePackageName()
+{
+    const int available = label_packageName->contentsRect().width();
+    if (available <= 0) {
+        // elidedText() returns nothing below an ellipsis's width; a blank heading reads as "no package selected"
+        return;
+    }
+
+    const QFontMetrics metrics(label_packageName->font());
+    const QString elidedName = metrics.elidedText(mPackageName, Qt::ElideRight, available);
+    label_packageName->setText(elidedName);
+    label_packageName->setToolTip(elidedName == mPackageName ? QString() : mPackageName);
+}
+
+bool dlgPackageManager::eventFilter(QObject* pWatched, QEvent* pEvent)
+{
+    if (pWatched == label_packageName && (pEvent->type() == QEvent::Resize || pEvent->type() == QEvent::FontChange)) {
+        elidePackageName();
+    }
+    return QDialog::eventFilter(pWatched, pEvent);
 }
 
 void dlgPackageManager::fillPackageDetails(const QString& name, const QString& title, const QString& author, const QString& version)
 {
-    const QFontMetrics metrics(label_packageName->font());
-    const QString elidedText = metrics.elidedText(name, Qt::ElideRight, label_packageName->width());
-    label_packageName->setText(elidedText);
+    mPackageName = name;
+    elidePackageName();
     label_title->setText(title);
     label_author->setText(author);
     //: Package manager - label showing package version
@@ -214,7 +241,7 @@ void dlgPackageManager::populatePackagesWithUpdates()
     mPackagesWithUpdates.clear();
 
     for (const QString& packageName : std::as_const(mpHost->mInstalledPackages)) {
-        if (!packageLookup.contains(packageName)) {
+        if (!matchesRepositoryPackage(packageName)) {
             continue;
         }
 
@@ -231,7 +258,7 @@ void dlgPackageManager::populatePackagesWithUpdates()
 
 bool dlgPackageManager::readPackageRepositoryFile()
 {
-    QFile file(mudlet::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json")));
+    QFile file(MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName() + QDir::separator() + qsl("mpkg.packages.json")));
     if (!file.open(QIODevice::ReadOnly)) {
         return false;
     }
@@ -289,7 +316,7 @@ void dlgPackageManager::resetPackageList()
         }
         const auto iconName = packageInfo.value(qsl("icon"));
         if (!iconName.isEmpty()) {
-            const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
+            const auto iconDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
             item->setIcon(QIcon(iconDir));
         } else {
             QPixmap emptyPixmap(16, 16);
@@ -318,7 +345,7 @@ void dlgPackageManager::setupNavigationButtons()
 
 void dlgPackageManager::slot_installPackageFromFile()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value(qsl("lastFileDialogLocation"), QDir::homePath()).toString();
 
     //: Package manager - import packages from file dialog (multi-select enabled)
@@ -353,7 +380,12 @@ void dlgPackageManager::slot_installPackageFromFile()
 
 void dlgPackageManager::slot_installPackageFromRepository()
 {
-    const QList<QListWidgetItem*> selected = packageList->selectedItems();
+    // Names, not items: a warning below runs an event loop, in which a package
+    // installed or removed by a script rebuilds the list and frees its items
+    QStringList selected;
+    for (const QListWidgetItem* item : packageList->selectedItems()) {
+        selected << item->text();
+    }
     if (selected.isEmpty()) {
         return;
     }
@@ -372,13 +404,9 @@ void dlgPackageManager::slot_installPackageFromRepository()
     auto cancelled = std::make_shared<bool>(false);
     bool repoError = false;
 
-    // Installs whatever was downloaded and puts the batch away. It tears down the
-    // progress dialog and the network manager, so it has to run exactly once: from
-    // the reply that takes the outstanding count to zero, or from after the loop
-    // when the count is already zero by the time it ends. The guard is what keeps
-    // that true if the refusals below are ever rearranged to count themselves
-    // before their message box rather than after it, since the box runs an event
-    // loop of its own in which a download can finish
+    // Tears down the progress dialog and network manager, so must run exactly once: from the reply
+    // that takes the count to zero, or after the loop if it is already zero. The guard keeps that true
+    // if a refusal below ever counts itself before its message box, whose event loop can finish a download
     auto batchFinished = std::make_shared<bool>(false);
     auto finishBatch = [this, pendingDownloads, manager, progress, batchFinished]() {
         if (*batchFinished) {
@@ -393,18 +421,14 @@ void dlgPackageManager::slot_installPackageFromRepository()
             const QString& filePath = it.value();
 
             if (mpHost) {
-                // Ahead of both calls below, because the previous pass's install
-                // leaves a save in flight: during a save an uninstall is refused
-                // outright, and an install is put off until the save finishes - long
-                // after the archive is deleted below.
+                // Before both calls: during a save an uninstall is refused and an install waits for
+                // the save to finish - long after the archive below is deleted.
                 mpHost->waitForProfileSave();
                 bool readyToInstall = true;
                 if (mpHost->mInstalledPackages.contains(packageName)) {
                     readyToInstall = mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
                     if (!readyToInstall) {
-                        // installing over a package still listed as installed
-                        // fails as "already installed", so the update would go
-                        // missing without ever being named as a failure
+                        // Installing over a still-listed package fails as "already installed", so the update would vanish unreported
                         failedPackages << packageName;
                         qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - could not remove the installed" << packageName << "to update it";
                     }
@@ -418,10 +442,8 @@ void dlgPackageManager::slot_installPackageFromRepository()
         }
 
         progress->reset();
-        // QProgressDialog::closeEvent emits canceled(), so this runs the cancel
-        // handler below on the way out of every batch. Harmless only because it
-        // comes after the loop above: by now there is nothing left for that
-        // handler to abort, and the files it removes are already gone
+        // QProgressDialog::closeEvent emits canceled(), running the cancel handler below. Harmless only
+        // because it is after the loop: nothing is left to abort, and its files are already gone
         progress->close();
         progress->deleteLater();
         manager->deleteLater();
@@ -449,9 +471,7 @@ void dlgPackageManager::slot_installPackageFromRepository()
         progress->deleteLater();
     });
 
-    for (QListWidgetItem* item : selected) {
-        const QString packageName = item->text();
-
+    for (const QString& packageName : std::as_const(selected)) {
         QJsonObject foundObj;
         if (packageLookup.contains(packageName)) {
             foundObj = packageLookup.value(packageName);
@@ -476,17 +496,14 @@ void dlgPackageManager::slot_installPackageFromRepository()
         }
 
         const QByteArray encoded = QUrl::toPercentEncoding(remoteFileName);
-        const QString outDir = mudlet::getMudletPath(enums::profileHomePath, mpHost->getName());
+        const QString outDir = MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName());
         const QString outPath = outDir + QDir::separator() + remoteFileName;
         QNetworkRequest request(QUrl(qsl("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/packages/%1").arg(QString::fromUtf8(encoded))));
         request.setTransferTimeout(30000);
         QNetworkReply* reply = manager->get(request);
 
-        // Parented, so closing the package manager mid-download takes the file, and
-        // the handle it is holding on the half-written package, with it. Once a
-        // download is under way nothing else would: the reply handler below is the
-        // only other thing that disposes of it, and it has this dialog for its
-        // context object, so it never runs once the dialog is gone
+        // Parented so closing the dialog mid-download frees the file and its handle on the half-written
+        // package: the reply handler below never runs once the dialog, its context object, is gone
         QFile* file = new QFile(outPath, this);
         if (!file->open(QIODevice::WriteOnly)) {
             qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - could not open" << outPath << "for writing:" << file->errorString();
@@ -498,9 +515,8 @@ void dlgPackageManager::slot_installPackageFromRepository()
             continue;
         }
 
-        // Tracked only once the file it writes into is open. The failure above
-        // deletes the reply, and this list holds raw pointers that a cancel calls
-        // abort() on, so a deleted reply must never reach it
+        // Track only once the file is open: the failure above deletes the reply, and a cancel calls
+        // abort() on these raw pointers
         activeReplies->append(reply);
 
         QObject::connect(reply, &QNetworkReply::readyRead, [file, reply]() {
@@ -535,21 +551,17 @@ void dlgPackageManager::slot_installPackageFromRepository()
                 pendingDownloads->remove(packageName);
             }
 
-            // Every download that gets past the cancel check above has to reach
-            // this exactly once. Zero is the only count that ends the batch, so a
-            // second decrement steps over it and leaves the progress dialog up for
-            // the rest of the session
+            // Exactly once per download past the cancel check: only zero ends the batch, so a second
+            // decrement steps over it and leaves the progress dialog up for the rest of the session
             if (--(*remainingDownloads.get()) == 0) {
                 finishBatch();
             }
         });
     }
 
-    // The count can already be zero here: a selection refused above never had a
-    // download, and a reply can finish inside the modal message box those refusals
-    // put up, before the loop that started it has run out. The reply handler is the
-    // only other place the count is checked, so without this the batch is never
-    // installed and the progress dialog never closes
+    // Can already be zero: refused selections never download, and replies can finish inside a
+    // refusal's modal box before the loop ends. Only the reply handler checks otherwise, so without
+    // this the batch is never installed and the progress dialog never closes
     if (*remainingDownloads.get() == 0) {
         finishBatch();
     }
@@ -572,25 +584,29 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
     if (mCurrentView == NavigationView::Installed) {
         auto packageInfo{mpHost->mPackageInfo.value(packageName)};
         if (packageInfo.isEmpty()) {
-            packageDescription->clear();
+            mPackageName = packageName;
+            elidePackageName();
+            label_icon->setPixmap(QPixmap(qsl(":/icons/package-manager.png")).scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            //: Package manager - shown in the details pane for an installed package that came with no details, such as a plain .xml package. %1 is the package name
+            packageDescription->setPlainText(tr("'%1' was installed without any details to show: it has no title, author, version or description.").arg(packageName));
             return;
         }
 
-        if (packageLookup.contains(packageName)) {
+        if (matchesRepositoryPackage(packageName)) {
             pushButton_website->show();
             pushButton_report->show();
         }
 
         QString description = packageInfo.value(qsl("description"));
         if (!description.isEmpty()) {
-            QString packageDir = mudlet::self()->getMudletPath(enums::profileDataItemPath, mpHost->getName(), packageName);
+            QString packageDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), packageName);
             description.replace(QLatin1String("$packagePath"), packageDir);
             packageDescription->setMarkdown(description);
         }
 
         auto iconName = packageInfo.value(qsl("icon"));
         if (!iconName.isEmpty()) {
-            const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
+            const auto iconDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
             label_icon->setPixmap(QPixmap(iconDir).scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
         } else {
             QPixmap pixmap(":/icons/package-manager.png");
@@ -600,22 +616,24 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
         fillPackageDetails(packageName, packageInfo.value(qsl("title")), packageInfo.value(qsl("author")), packageInfo.value(qsl("version")));
 
     } else if (mCurrentView == NavigationView::Explore) {
-        pushButton_website->show();
-        pushButton_report->show();
-        downloadIcon(packageName);
-
         if (packageLookup.contains(packageName)) {
+            pushButton_website->show();
+            pushButton_report->show();
+            downloadIcon(packageName);
+
             QJsonObject packageObj = packageLookup.value(packageName);
             fillPackageDetails(
                     packageObj.value(qsl("mpackage")).toString(), packageObj.value(qsl("title")).toString(), packageObj.value(qsl("author")).toString(), packageObj.value(qsl("version")).toString());
             packageDescription->setMarkdown(packageObj.value(qsl("description")).toString());
+        } else {
+            showMissingFromIndex(packageName);
         }
     } else if (mCurrentView == NavigationView::Updates) {
-        pushButton_website->show();
-        pushButton_report->show();
-        downloadIcon(packageName);
-
         if (packageLookup.contains(packageName)) {
+            pushButton_website->show();
+            pushButton_report->show();
+            downloadIcon(packageName);
+
             QJsonObject packageObj = packageLookup.value(packageName);
             const auto packageInfo = mpHost->mPackageInfo.value(packageName);
             const QString installedVersion = packageInfo.value(qsl("version"));
@@ -627,6 +645,8 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
             label_version->setText(tr("Version %1 → %2").arg(installedVersion, repoVersion));
 
             packageDescription->setMarkdown(packageObj.value(qsl("description")).toString());
+        } else {
+            showMissingFromIndex(packageName);
         }
     }
 }
@@ -676,12 +696,25 @@ void dlgPackageManager::slot_openBugWebsite()
     mudlet::self()->openWebPage(qsl("https://github.com/Mudlet/mudlet-package-repository/issues/new?template=package-bug-or-issue.md&title=[Package%20Bug]%20") + currentItem->text());
 }
 
+// The index is keyed by name alone and anyone can make a package of the same name. The author is
+// copied into the index from the package's config.lua and rarely changes between versions
+bool dlgPackageManager::matchesRepositoryPackage(const QString& packageName) const
+{
+    const auto repositoryPackage = packageLookup.constFind(packageName);
+    if (repositoryPackage == packageLookup.cend() || !mpHost->mPackageInfo.contains(packageName)) {
+        return false;
+    }
+    return mpHost->mPackageInfo.value(packageName).value(qsl("author")) == repositoryPackage->value(qsl("author")).toString();
+}
+
 QString dlgPackageManager::packageHelpUrl(const QString& packageName) const
 {
     // a help URL set by the package's author takes precedence over the generic repository website
-    const QString url = mpHost->mPackageInfo.value(packageName).value(qsl("helpURL"));
-    if (!url.isEmpty()) {
-        return url;
+    if (matchesRepositoryPackage(packageName)) {
+        const QString url = mpHost->mPackageInfo.value(packageName).value(qsl("helpURL"));
+        if (!url.isEmpty()) {
+            return url;
+        }
     }
     return packageLookup.value(packageName).value(qsl("helpURL")).toString();
 }
@@ -702,9 +735,8 @@ void dlgPackageManager::slot_openPackageWebsite()
     mudlet::self()->openWebPage(qsl("https://packages.mudlet.org/packages#pkg-") + currentItem->text());
 }
 
-// Returns what to tell the user about the removals that did not happen, empty
-// when they all did. Separate from the slot so the wording can be tested: the
-// dialog has no Lua entry point and the box below blocks.
+// Returns what to tell the user about refused removals, empty if none. Split from the slot so the
+// wording can be tested: the dialog has no Lua entry point and the box below blocks.
 QString dlgPackageManager::removePackages(const QStringList& packageNames)
 {
     QStringList refusedWhileSaving;
@@ -713,11 +745,8 @@ QString dlgPackageManager::removePackages(const QStringList& packageNames)
         if (mpHost->uninstallPackage(package, enums::PackageModuleType::Package)) {
             continue;
         }
-        // A save in progress is the refusal the user can do something about. The
-        // other one is a package that has gone since the row was drawn - a
-        // sibling in this very selection can take it away from its sysUninstall
-        // handler - and the listing rebuild uninstallPackage() does clears that
-        // up, rather than blaming a save that is not running.
+        // Otherwise the package went after the row was drawn (a sibling in this selection can remove it
+        // from its sysUninstall handler), so do not blame a save that is not running.
         if (mpHost->currentlySavingProfile()) {
             refusedWhileSaving << package;
         } else {
@@ -775,7 +804,7 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
                 }
                 const auto iconName = value.value(qsl("icon"));
                 if (!iconName.isEmpty()) {
-                    const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(name, iconName));
+                    const auto iconDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(name, iconName));
                     item->setIcon(QIcon(iconDir));
                 } else {
                     QPixmap emptyPixmap(16, 16);
@@ -821,7 +850,7 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
                 }
                 const auto iconName = packageInfo.value(qsl("icon"));
                 if (!iconName.isEmpty()) {
-                    const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
+                    const auto iconDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
                     item->setIcon(QIcon(iconDir));
                 } else {
                     QPixmap emptyPixmap(16, 16);
@@ -841,6 +870,7 @@ void dlgPackageManager::slot_setPackageList()
     }
 
     if (!lineEdit_searchBar->text().isEmpty()) {
+        clearPackageDetails();
         slot_searchTextChanged(lineEdit_searchBar->text());
         return;
     }
@@ -859,7 +889,7 @@ void dlgPackageManager::slot_setPackageList()
                 item->setData(Qt::UserRole, title);
             }
             if (!iconName.isEmpty()) {
-                const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
+                const auto iconDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
                 item->setIcon(QIcon(iconDir));
             } else {
                 QPixmap emptyPixmap(16, 16);
@@ -870,6 +900,9 @@ void dlgPackageManager::slot_setPackageList()
         }
     } else if (mCurrentView == NavigationView::Explore) {
         if (!readPackageRepositoryFile()) {
+            //: Package manager - shown in the details pane of the Explore view when the list of packages in the repository has not been downloaded or cannot be read
+            packageDescription->setPlainText(tr(
+                    "The list of packages in the repository is not available: it is still downloading, or the download failed. If it does not appear here, reopen the package manager to try again."));
             return;
         }
         for (const QJsonValue& packageVal : std::as_const(repositoryPackages)) {
@@ -901,7 +934,7 @@ void dlgPackageManager::slot_setPackageList()
                 item->setData(Qt::UserRole, title);
             }
             if (!iconName.isEmpty()) {
-                const auto iconDir = mudlet::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
+                const auto iconDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
                 item->setIcon(QIcon(iconDir));
             } else {
                 QPixmap emptyPixmap(16, 16);
@@ -978,6 +1011,17 @@ void dlgPackageManager::showImportStatus(const QString& message)
     label_importStatus->setStyleSheet(qsl("QLabel { padding: 8px; }"));
     label_importStatus->show();
     QTimer::singleShot(4s, label_importStatus, &QWidget::hide);
+}
+
+// Every index read relists Explore and Updates, so no row should get here; a blank pane would read as a broken dialog
+void dlgPackageManager::showMissingFromIndex(const QString& packageName)
+{
+    qWarning() << "dlgPackageManager::showMissingFromIndex() WARNING - package not found in the repository index:" << packageName;
+    mPackageName = packageName;
+    elidePackageName();
+    label_icon->setPixmap(QPixmap(qsl(":/icons/package-manager.png")).scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    //: Package manager - shown in the details pane when the selected package is not in the downloaded package index. %1 is the package name
+    packageDescription->setPlainText(tr("The details of '%1' could not be found in the package index. It may have been renamed or removed; try reopening the package manager.").arg(packageName));
 }
 
 void dlgPackageManager::updateUpdatesBadge()

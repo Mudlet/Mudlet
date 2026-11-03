@@ -109,6 +109,21 @@ void TKeySequenceEdit::keyPressEvent(QKeyEvent* pEvent)
         pEvent->accept();
         return;
     }
+    // Keypad Delete arrives with KeypadModifier, which must not stop it clearing the binding
+    if ((pEvent->modifiers() & ~Qt::KeypadModifier) == Qt::NoModifier) {
+        if (key == Qt::Key_Escape) {
+            // Left for the dialog, which closes on it: captured, it would
+            // replace the binding just set rather than close anything
+            pEvent->ignore();
+            return;
+        }
+        if (key == Qt::Key_Backspace || key == Qt::Key_Delete) {
+            clear();
+            emit editingFinished();
+            pEvent->accept();
+            return;
+        }
+    }
     QKeySequenceEdit::keyPressEvent(pEvent);
 }
 

@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-reloadrenamed]]
+author = [[Mudlet test suite]]
+title = [[Fixture module that renames itself and then reloads itself as it installs]]
+version = [[1.0]]
+description = [[The archive is called mudlet-spec-reloadrenamer and installs under the name in this file, so the name its install-time script asks to reload is one the checks that ran on the file name never saw.]]

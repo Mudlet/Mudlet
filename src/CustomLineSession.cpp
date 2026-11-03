@@ -24,6 +24,7 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 
+#include <algorithm>
 #include <cmath>
 
 CustomLineSession::CustomLineSession(T2DMap& mapWidget)
@@ -257,19 +258,41 @@ void CustomLineSession::restoreOriginalLineIfNeeded()
         return;
     }
 
-    if (*points == mOriginalLine->points) {
-        mOriginalLine.reset();
+    // Revert only points snapping moved and that are still where it put them; later edits are the user's.
+    // Pair by position, not index, as adding/removing a point shifts the rest. Points snapping left alone
+    // claim their originals first, so a point it moved onto one of them is not mistaken for it.
+    QList<QPointF> unclaimed = mOriginalLine->points;
+    QList<qsizetype> moved;
+    for (qsizetype index = 0; index < points->size(); ++index) {
+        if (!unclaimed.removeOne(points->at(index))) {
+            moved.append(index);
+        }
+    }
+
+    bool changed = false;
+    for (const qsizetype index : moved) {
+        QPointF& point = (*points)[index];
+        auto original = std::find_if(unclaimed.begin(), unclaimed.end(), [&](const QPointF& candidate) {
+            return snapPointToGrid(candidate) == point;
+        });
+        if (original == unclaimed.end()) {
+            continue;
+        }
+        point = *original;
+        unclaimed.erase(original);
+        changed = true;
+    }
+
+    mOriginalLine.reset();
+    if (!changed) {
         return;
     }
 
-    *points = mOriginalLine->points;
     room->calcRoomDimensions();
     mMapWidget.repaint();
     if (mMapWidget.mpMap) {
         mMapWidget.mpMap->setUnsaved(__func__);
     }
-
-    mOriginalLine.reset();
 }
 
 std::optional<int> CustomLineSession::resolveCustomLineTargetRoomId(const TRoom& room, const QString& exitKey) const

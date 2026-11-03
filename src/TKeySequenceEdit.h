@@ -33,6 +33,8 @@ class QLineEdit;
 //   clears itself on the first key press of a capture - even a bare Shift)
 // - Shift+Tab/Backtab combinations finish the capture and move focus instead
 //   of being recorded as a binding
+// - a bare Esc is left to the dialog instead of being recorded, and a bare
+//   Backspace or Delete clears the binding
 class TKeySequenceEdit : public QKeySequenceEdit
 {
     Q_OBJECT

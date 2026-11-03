@@ -34,16 +34,29 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QContextMenuEvent>
+#include <QDialog>
+#include <QElapsedTimer>
 #include <QFileInfo>
+#include <QFontMetrics>
+#include <QImage>
+#include <QLabel>
+#include <QLine>
 #include <QLineEdit>
+#include <QListWidget>
+#include <QMenu>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QSpinBox>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QtTest/QtTest>
 
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletApp.h"
+#include "T2DMap.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -53,6 +66,7 @@
 #include "GroupedTest.h"
 
 #include <algorithm>
+#include <cstdlib>
 
 // What the dialog shows in place of a value the selection does not agree on.
 // dlgRoomProperties keeps it as a private tr() string, and no translator is
@@ -93,6 +107,7 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
     Host* mpHost = nullptr;
+    T2DMap* mp2dMap = nullptr;
     const QString mProfileName = qsl("RoomPropertiesDialog-Test");
     int mAreaId = 0;
     QPointer<dlgRoomProperties> mpDialog;
@@ -113,7 +128,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -144,14 +159,14 @@ private:
         QHash<int, int> usedWeights;
         QHash<bool, int> usedLockStatus;
         int hiddenRoomCount = 0;
-        QSet<TRoom*> rooms;
+        QSet<int> rooms;
 
         for (const int roomId : roomIds) {
             TRoom* pRoom = room(roomId);
             if (!pRoom) {
                 continue;
             }
-            rooms.insert(pRoom);
+            rooms.insert(roomId);
             if (!pRoom->name.isEmpty()) {
                 ++usedNames[pRoom->name];
             }
@@ -188,12 +203,9 @@ private:
                        QColor newBorderColor,
                        bool changeBorderThickness,
                        int newBorderThickness,
-                       QSet<TRoom*> rooms) {
+                       QSet<int> roomIds) {
                     ++mEmitted.emitCount;
-                    mEmitted.roomIds.clear();
-                    for (const TRoom* pRoom : rooms) {
-                        mEmitted.roomIds.append(pRoom->getId());
-                    }
+                    mEmitted.roomIds = QList<int>(roomIds.cbegin(), roomIds.cend());
                     std::sort(mEmitted.roomIds.begin(), mEmitted.roomIds.end());
                     mEmitted.changeName = changeName;
                     mEmitted.newName = newName;
@@ -219,6 +231,110 @@ private:
         return pDlg;
     }
 
+    struct ColorSelectorOutcome
+    {
+        bool sawSelector = false;
+        bool clickLandedOnAColor = false;
+        bool sawMenu = false;
+        int colorsLeftInList = -1;
+    };
+    ColorSelectorOutcome mColorSelectorOutcome;
+
+    // The colour selector and its context menu each run their own event loop,
+    // so the right-click is made, and "Delete room color" picked, from timers
+    // inside them. A clickedRow of -1 right-clicks the empty space past the colours.
+    void rightClickInTheRoomColorSelector(dlgRoomProperties* pDlg, const int currentRow, const int clickedRow)
+    {
+        using namespace std::chrono_literals;
+        mColorSelectorOutcome = ColorSelectorOutcome();
+        auto* menuAnswerer = new QTimer(this);
+        menuAnswerer->setInterval(20ms);
+        connect(menuAnswerer, &QTimer::timeout, this, [this, menuAnswerer]() {
+            auto* menu = qobject_cast<QMenu*>(QApplication::activePopupWidget());
+            if (!menu) {
+                return;
+            }
+            menuAnswerer->stop();
+            mColorSelectorOutcome.sawMenu = true;
+            // Its only action, so a translation cannot hide it
+            const auto actions = menu->actions();
+            if (actions.size() == 1) {
+                actions.constFirst()->trigger();
+            }
+            menu->close();
+        });
+        auto* selectorDriver = new QTimer(this);
+        selectorDriver->setInterval(20ms);
+        QElapsedTimer waited;
+        waited.start();
+        connect(selectorDriver, &QTimer::timeout, this, [this, selectorDriver, menuAnswerer, currentRow, clickedRow, &waited]() {
+            auto* selector = qobject_cast<QDialog*>(QApplication::activeModalWidget());
+            auto* list = selector ? selector->findChild<QListWidget*>() : nullptr;
+            if (!list) {
+                // Something else is modal, and the button click would wait on it for ever
+                if (waited.hasExpired(10000)) {
+                    selectorDriver->stop();
+                    if (selector) {
+                        selector->reject();
+                    }
+                }
+                return;
+            }
+            selectorDriver->stop();
+            mColorSelectorOutcome.sawSelector = true;
+            list->setCurrentRow(currentRow);
+            QWidget* viewport = list->viewport();
+            const QPoint pos = clickedRow >= 0 ? list->visualItemRect(list->item(clickedRow)).center() : QPoint(viewport->width() - 2, viewport->height() - 2);
+            mColorSelectorOutcome.clickLandedOnAColor = list->itemAt(pos);
+            menuAnswerer->start();
+            QTest::mouseClick(viewport, Qt::RightButton, Qt::NoModifier, pos);
+            QContextMenuEvent event(QContextMenuEvent::Mouse, pos, viewport->mapToGlobal(pos));
+            QApplication::sendEvent(viewport, &event);
+            menuAnswerer->stop();
+            mColorSelectorOutcome.colorsLeftInList = list->count();
+            selector->reject();
+        });
+        selectorDriver->start();
+        pDlg->pushButton_setRoomColor->click();
+        selectorDriver->stop();
+        delete selectorDriver;
+        delete menuAnswerer;
+    }
+
+    // In the grabbed image's pixels, which outnumber the label's on a high-DPI screen
+    struct PreviewInk
+    {
+        QRect contents;
+        // Where the symbol was drawn, invalid when nothing of it was
+        QRect ink;
+    };
+
+    // insideCircle counts only what is inside the circle a round room fills,
+    // as outside it a round preview shows the dialog's background
+    static PreviewInk symbolInk(QLabel* preview, const bool insideCircle = false)
+    {
+        const QImage shown = preview->grab().toImage();
+        const qreal ratio = shown.devicePixelRatio();
+        const QRect logical = preview->contentsRect();
+        PreviewInk result;
+        result.contents = QRect(qRound(logical.x() * ratio), qRound(logical.y() * ratio), qRound(logical.width() * ratio), qRound(logical.height() * ratio));
+        const QPointF center = QRectF(result.contents).center();
+        const qreal radius = result.contents.width() / 2.0 - 2 * ratio;
+        const QColor background = shown.pixelColor(qRound(center.x()), result.contents.top() + qRound(2 * ratio));
+        for (int y = result.contents.top(); y <= result.contents.bottom(); ++y) {
+            for (int x = result.contents.left(); x <= result.contents.right(); ++x) {
+                if (insideCircle && QLineF(center, QPointF(x + 0.5, y + 0.5)).length() > radius) {
+                    continue;
+                }
+                const QColor pixel = shown.pixelColor(x, y);
+                if (std::abs(pixel.red() - background.red()) + std::abs(pixel.green() - background.green()) + std::abs(pixel.blue() - background.blue()) > 48) {
+                    result.ink |= QRect(x, y, 1, 1);
+                }
+            }
+        }
+        return result;
+    }
+
 private slots:
     void initTestCase()
     {
@@ -233,17 +349,23 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory();
 
-        auto& hostManager = mudlet::self()->getHostManager();
-        QVERIFY2(hostManager.addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the Host");
-        mpHost = hostManager.getHost(mProfileName);
+        auto* hostManager = HostManager::self();
+        QVERIFY2(hostManager->addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the Host");
+        mpHost = hostManager->getHost(mProfileName);
         QVERIFY(mpHost);
         QVERIFY(map());
+
+        // The other end of signal_save_symbol, where the OK lands; these are the
+        // two things dlgMapper's constructor sets that the slot needs
+        mp2dMap = new T2DMap();
+        mp2dMap->mpMap = map();
+        mp2dMap->mpHost = mpHost;
     }
 
     // Runs after every case, a case QTest cut short at a failed QVERIFY
@@ -259,6 +381,8 @@ private slots:
 
     void cleanupTestCase()
     {
+        delete mp2dMap;
+        mp2dMap = nullptr;
         if (mudlet::self()) {
             deleteProfileDirectory();
         }
@@ -486,7 +610,7 @@ private slots:
         buildMap();
         auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom, scmThirdRoom});
         int previewCount = 0;
-        connect(pDlg, &dlgRoomProperties::signal_preview_border, this, [&previewCount](QSet<TRoom*>) {
+        connect(pDlg, &dlgRoomProperties::signal_preview_border, this, [&previewCount](QSet<int>) {
             ++previewCount;
         });
 
@@ -529,6 +653,285 @@ private slots:
 
         QVERIFY(mEmitted.changeSymbolColor);
         QVERIFY2(!mEmitted.newSymbolColor.isValid(), "a reset symbol colour has to be an invalid QColor so the default is used");
+    }
+
+    // The symbol and its colour are two decisions, and a selection that
+    // disagrees about the symbol leaves only the first of them undecided: the
+    // colour still has to reach every room, and the placeholder standing in for
+    // the symbols must not be written over them (#8394)
+    void aSymbolColourDecidedForRoomsWithDifferentSymbolsLeavesTheSymbolsAlone()
+    {
+        buildMap();
+        mp2dMap->mAreaID = mAreaId;
+        room(scmFirstRoom)->mSymbol = qsl("!");
+        room(scmSecondRoom)->mSymbol = qsl("?");
+        room(scmFirstRoom)->mSymbolColor = QColor(Qt::red);
+        room(scmSecondRoom)->mSymbolColor = QColor(Qt::red);
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        connect(pDlg, &dlgRoomProperties::signal_save_symbol, mp2dMap, &T2DMap::slot_setRoomProperties);
+        QCOMPARE(pDlg->comboBox_roomSymbol->currentText(), scmMultipleValues);
+        pDlg->pushButton_resetSymbolColor->click();
+        pDlg->accept();
+
+        QVERIFY2(!mEmitted.changeSymbol, "the symbols disagree, so the dialog has no symbol to report");
+        QVERIFY2(mEmitted.changeSymbolColor, "the colour was reset, which is a decision about the colour alone");
+        QCOMPARE(room(scmFirstRoom)->mSymbol, qsl("!"));
+        QCOMPARE(room(scmSecondRoom)->mSymbol, qsl("?"));
+        QVERIFY(!room(scmFirstRoom)->mSymbolColor.isValid());
+        QVERIFY(!room(scmSecondRoom)->mSymbolColor.isValid());
+    }
+
+    // The dialog is not modal, so a script can delete a room in the selection
+    // while it is open; Cancel must only put back the rooms that are still there
+    void cancelAfterARoomIsDeletedRestoresOnlyTheRoomsLeft()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        pDlg->spinBox_borderThickness->setValue(5);
+        QCOMPARE(room(scmSecondRoom)->mBorderThickness, 5);
+
+        QVERIFY(roomDB()->removeRoom(scmFirstRoom));
+        pDlg->reject();
+
+        QVERIFY(!room(scmFirstRoom));
+        QCOMPARE(room(scmSecondRoom)->mBorderThickness, 0);
+    }
+
+    void okAfterARoomIsDeletedAppliesOnlyToTheRoomsLeft()
+    {
+        buildMap();
+        mp2dMap->mAreaID = mAreaId;
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        connect(pDlg, &dlgRoomProperties::signal_save_symbol, mp2dMap, &T2DMap::slot_setRoomProperties);
+        pDlg->lineEdit_name->setText(qsl("Renamed"));
+        pDlg->spinBox_borderThickness->setValue(3);
+
+        QVERIFY(roomDB()->removeRoom(scmFirstRoom));
+        pDlg->accept();
+
+        QVERIFY(!room(scmFirstRoom));
+        QCOMPARE(room(scmSecondRoom)->name, qsl("Renamed"));
+        QCOMPARE(room(scmSecondRoom)->mBorderThickness, 3);
+    }
+
+    // deleteMap() and loading another map free every room the dialog was opened on
+    void closingTheDialogAfterTheMapIsClearedTouchesNoRoom()
+    {
+        buildMap();
+        mp2dMap->mAreaID = mAreaId;
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        connect(pDlg, &dlgRoomProperties::signal_save_symbol, mp2dMap, &T2DMap::slot_setRoomProperties);
+        pDlg->lineEdit_name->setText(qsl("Renamed"));
+        pDlg->spinBox_borderThickness->setValue(3);
+
+        map()->mapClear();
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.emitCount, 1);
+        QVERIFY(!room(scmFirstRoom));
+        QVERIFY(!room(scmSecondRoom));
+
+        buildMap();
+        auto* pSecondDlg = openDialogOn({scmFirstRoom});
+        pSecondDlg->spinBox_borderThickness->setValue(4);
+        map()->mapClear();
+        pSecondDlg->reject();
+
+        QVERIFY(!room(scmFirstRoom));
+    }
+
+    void previewAndCancelAfterARoomIdIsReusedLeaveTheNewRoomAlone()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+
+        QVERIFY(roomDB()->removeRoom(scmFirstRoom));
+        QVERIFY(map()->addRoom(scmFirstRoom));
+        QVERIFY(map()->setRoomArea(scmFirstRoom, mAreaId));
+        room(scmFirstRoom)->mBorderThickness = 7;
+
+        pDlg->spinBox_borderThickness->setValue(5);
+        QCOMPARE(room(scmSecondRoom)->mBorderThickness, 5);
+        QVERIFY2(room(scmFirstRoom)->mBorderThickness == 7, "the preview reached a new room that reused the id");
+
+        pDlg->reject();
+        QCOMPARE(room(scmSecondRoom)->mBorderThickness, 0);
+        QVERIFY2(room(scmFirstRoom)->mBorderThickness == 7, "Cancel restored the old room's border onto a new room that reused the id");
+    }
+
+    void okAfterARoomIdIsReusedLeavesTheNewRoomAlone()
+    {
+        buildMap();
+        mp2dMap->mAreaID = mAreaId;
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        connect(pDlg, &dlgRoomProperties::signal_save_symbol, mp2dMap, &T2DMap::slot_setRoomProperties);
+        pDlg->lineEdit_name->setText(qsl("Renamed"));
+
+        QVERIFY(roomDB()->removeRoom(scmFirstRoom));
+        QVERIFY(map()->addRoom(scmFirstRoom));
+        QVERIFY(map()->setRoomArea(scmFirstRoom, mAreaId));
+        pDlg->accept();
+
+        QCOMPARE(room(scmSecondRoom)->name, qsl("Renamed"));
+        QVERIFY2(room(scmFirstRoom)->name.isEmpty(), "OK renamed a new room that reused the id");
+        QCOMPARE(mEmitted.roomIds, QList<int>{scmSecondRoom});
+    }
+
+    void rightClickingPastTheColorsOfAnEmptyColorListOffersNothing()
+    {
+        buildMap();
+        map()->mCustomEnvColors.clear();
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        rightClickInTheRoomColorSelector(pDlg, -1, -1);
+
+        QVERIFY(mColorSelectorOutcome.sawSelector);
+        QVERIFY2(!mColorSelectorOutcome.sawMenu, "there is no color under the cursor to delete");
+    }
+
+    void rightClickingPastTheColorsLeavesTheCurrentOneAlone()
+    {
+        buildMap();
+        map()->mCustomEnvColors = {{257, QColor(Qt::red)}, {258, QColor(Qt::blue)}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        rightClickInTheRoomColorSelector(pDlg, 0, -1);
+
+        QVERIFY(mColorSelectorOutcome.sawSelector);
+        QVERIFY2(!mColorSelectorOutcome.clickLandedOnAColor, "the selector is too small to have empty space past its colors");
+        QVERIFY2(!mColorSelectorOutcome.sawMenu, "there is no color under the cursor to delete");
+        QCOMPARE(mColorSelectorOutcome.colorsLeftInList, 2);
+        QCOMPARE(map()->mCustomEnvColors.size(), 2);
+    }
+
+    void deletingARoomColorRemovesTheOneRightClicked()
+    {
+        buildMap();
+        map()->mCustomEnvColors = {{257, QColor(Qt::red)}, {258, QColor(Qt::blue)}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        rightClickInTheRoomColorSelector(pDlg, 0, 1);
+
+        QVERIFY(mColorSelectorOutcome.sawSelector);
+        QVERIFY(mColorSelectorOutcome.clickLandedOnAColor);
+        QVERIFY(mColorSelectorOutcome.sawMenu);
+        QCOMPARE(mColorSelectorOutcome.colorsLeftInList, 1);
+        QVERIFY(map()->mCustomEnvColors.contains(257));
+        QVERIFY2(!map()->mCustomEnvColors.contains(258), "the right-clicked color was not deleted");
+    }
+
+    // The preview is a sample of the room as the map draws it, where a symbol
+    // of several characters is shrunk to fit the room rather than cut off
+    void aSymbolOfSeveralCharactersFitsInsideThePreview()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->lineEdit_roomSymbol->setText(qsl("ABCDE"));
+
+        const auto [contents, ink] = symbolInk(pDlg->label_preview);
+        QVERIFY2(ink.isValid(), "nothing of the symbol was drawn");
+        QVERIFY2(ink.left() > contents.left() && ink.right() < contents.right(),
+                 qPrintable(qsl("the symbol, drawn across x %1 to %2, is cut off by the preview's edges at %3 and %4").arg(ink.left()).arg(ink.right()).arg(contents.left()).arg(contents.right())));
+    }
+
+    // Round rooms draw their symbol in the square inside the circle, smaller
+    // than in a square room of the same size
+    void aSymbolInARoundRoomIsDrawnSmallerThanInASquareOne()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->lineEdit_roomSymbol->setText(qsl("ABCDE"));
+        // Measured over the same circle as the round room, so only the size differs
+        const QRect squareInk = symbolInk(pDlg->label_preview, true).ink;
+
+        mpHost->mBubbleMode = true;
+        auto restoreSquareRooms = qScopeGuard([this]() {
+            mpHost->mBubbleMode = false;
+        });
+        pDlg->lineEdit_roomSymbol->clear();
+        pDlg->lineEdit_roomSymbol->setText(qsl("ABCDE"));
+        const QRect roundInk = symbolInk(pDlg->label_preview, true).ink;
+
+        QVERIFY2(squareInk.isValid() && roundInk.isValid(), "nothing of the symbol was drawn");
+        QVERIFY2(roundInk.width() < squareInk.width(), qPrintable(qsl("the symbol is %1 pixels wide in a round room and %2 in a square one").arg(roundInk.width()).arg(squareInk.width())));
+    }
+
+    // The map fits a symbol to the room whatever point size the symbol font
+    // was given, so the preview must not follow that size either
+    void theSymbolFontPointSizeDoesNotChangeThePreview()
+    {
+        buildMap();
+        const QFont originalFont = map()->mMapSymbolFont;
+        auto restoreFont = qScopeGuard([this, originalFont]() {
+            map()->mMapSymbolFont = originalFont;
+        });
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->lineEdit_roomSymbol->setText(qsl("W"));
+        const QImage atOriginalSize = pDlg->label_preview->grab().toImage();
+        QVERIFY2(symbolInk(pDlg->label_preview).ink.isValid(), "nothing of the symbol was drawn");
+
+        for (const int pointSize : {6, 40}) {
+            map()->mMapSymbolFont.setPointSize(pointSize);
+            pDlg->lineEdit_roomSymbol->clear();
+            pDlg->lineEdit_roomSymbol->setText(qsl("W"));
+            QVERIFY2(pDlg->label_preview->grab().toImage() == atOriginalSize, qPrintable(qsl("the preview changed when the symbol font was set to %1pt").arg(pointSize)));
+        }
+    }
+
+    // Removing the symbol must not leave the last one showing, as OK would then
+    // save a room without the symbol the preview shows
+    void clearingTheSymbolClearsThePreview()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->lineEdit_roomSymbol->setText(qsl("ABCDE"));
+        QVERIFY2(symbolInk(pDlg->label_preview).ink.isValid(), "nothing of the symbol was drawn");
+
+        pDlg->lineEdit_roomSymbol->clear();
+
+        QVERIFY2(!symbolInk(pDlg->label_preview).ink.isValid(), "the preview still shows the removed symbol");
+        QVERIFY(pDlg->label_preview->pixmap().isNull());
+    }
+
+    // The "(Multiple values...)" entry decides no symbol, so it shows none
+    void pickingTheMultipleValuesEntryClearsThePreview()
+    {
+        buildMap();
+        room(scmFirstRoom)->mSymbol = qsl("!");
+        room(scmSecondRoom)->mSymbol = qsl("?");
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        QCOMPARE(pDlg->comboBox_roomSymbol->itemText(0), scmMultipleValues);
+        pDlg->comboBox_roomSymbol->setCurrentIndex(1);
+        QVERIFY2(symbolInk(pDlg->label_preview).ink.isValid(), "nothing of the picked symbol was drawn");
+
+        pDlg->comboBox_roomSymbol->setCurrentIndex(0);
+
+        QVERIFY2(!symbolInk(pDlg->label_preview).ink.isValid(), "the preview still shows the previously picked symbol");
+        QVERIFY(pDlg->label_preview->pixmap().isNull());
+    }
+
+    // With only the symbol font allowed, the map draws a character that font
+    // cannot show as the replacement character, and the preview has to too
+    void aCharacterTheFontLacksIsPreviewedAsTheReplacementCharacter()
+    {
+        buildMap();
+        map()->setOnlySymbolFontUsed(true);
+        auto restoreFontMerging = qScopeGuard([this]() {
+            map()->setOnlySymbolFontUsed(false);
+        });
+        // Unassigned in Unicode, so the symbol font has no glyph for it
+        const QChar unassigned(0x0378);
+        QVERIFY(!QFontMetrics(map()->mMapSymbolFont).inFontUcs4(unassigned.unicode()));
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->lineEdit_roomSymbol->setText(QString(QChar::ReplacementCharacter));
+        const QImage replacement = pDlg->label_preview->grab().toImage();
+        pDlg->lineEdit_roomSymbol->setText(QString(unassigned));
+        const QImage missing = pDlg->label_preview->grab().toImage();
+
+        QVERIFY2(symbolInk(pDlg->label_preview).ink.isValid(), "nothing was drawn for the missing character");
+        QVERIFY2(missing == replacement, "the missing character was not previewed as the replacement character");
     }
 };
 

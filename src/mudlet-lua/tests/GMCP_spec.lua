@@ -298,6 +298,27 @@ describe("Tests the functionality of __gmcp_merge_gmcp_sub_tables", function()
     assert.has_error(function() __gmcp_merge_gmcp_sub_tables({Char = {}}, "Char") end)
   end)
 
+  it("Should replace the sub table with a payload that is not an object", function()
+    for _, v in ipairs({"x", 7, true, yajl.null}) do
+      local a = {Char = {hp = 1}, __needMerge = v}
+      __gmcp_merge_gmcp_sub_tables(a, "Char")
+      assert.are.equal(v, a.Char)
+      assert.is_nil(a.__needMerge)
+    end
+  end)
+
+  it("Should leave no staging key behind when a merge key arrives as a scalar", function()
+    gmcp.MergeSpec = nil
+    finally(function() gmcp.MergeSpec = nil end)
+    setMergeTables("MergeSpec.Status")
+    feedTelnet('<T_IAC><T_SB><O_GMCP>MergeSpec.Status {"hp":1}<T_IAC><T_SE>')
+    feedTelnet('<T_IAC><T_SB><O_GMCP>MergeSpec.Status "dead"<T_IAC><T_SE>')
+    assert.is_nil(gmcp.MergeSpec.__needMerge)
+    assert.are.equal("dead", gmcp.MergeSpec.Status)
+    feedTelnet('<T_IAC><T_SB><O_GMCP>MergeSpec.Status {"hp":2}<T_IAC><T_SE>')
+    assert.are.same({hp = 2}, gmcp.MergeSpec.Status)
+  end)
+
   it("Should merge nested tables by replacing them wholesale", function()
     local a = {Char = {Vitals = {hp = 1}}, __needMerge = {Vitals = {mp = 2}}}
     __gmcp_merge_gmcp_sub_tables(a, "Char")

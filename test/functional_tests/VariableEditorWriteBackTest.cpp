@@ -33,12 +33,16 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
+#include "TTreeWidget.h"
+#include "TVar.h"
 #include "VarUnit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -50,8 +54,11 @@
 #include "mudlet.h"
 
 #include <QDropEvent>
+#include <QHeaderView>
 #include <QMimeData>
 #include <QTreeWidget>
+
+using namespace std::chrono_literals;
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -106,7 +113,7 @@ private slots:
         QVERIFY2(mpServer->serverPort() != 0, "TelnetServerStub failed to bind a loopback port");
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -127,8 +134,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mHostname);
             delete mudlet::self();
@@ -196,7 +202,7 @@ private slots:
         selectVariable(pMember);
         mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("edited member value"));
         mpEditor->slot_showTriggers();
-        QTest::qWait(20);
+        QTest::qWait(20ms);
 
         QCOMPARE(luaMemberCount(qsl("viewSwitchTable")), 1);
         QVERIFY2(luaHolds(qsl("viewSwitchTable[1/3]"), qsl("fraction member value")), "the edit reached a variable it was not meant to reach");
@@ -507,8 +513,656 @@ private slots:
         mpEditor->repopulateVars();
     }
 
+    // The view walks the globals table with lua_next() rather than reading a
+    // name out of it, and Mudlet leaves "line" and "multimatches" out of that
+    // table until a script reads them. So the walk has to ask for what is still
+    // owed before it starts, or the first thing anyone debugging a trigger
+    // looks for is not on the list.
+    void test_variablesViewShowsTheCaptureGlobalsNoScriptHasRead()
+    {
+        QVERIFY2(showEditorOnVariablesView(), "the script editor could not be opened on the Variables view");
+        // The generic mapper reads "line" on every line, which would leave
+        // nothing owed to ask for. It is not in this profile, but say so rather
+        // than depend on that.
+        execLua(qsl("disableTrigger('onNewLine Trigger')"));
+        execLua(qsl("local id = tempRegexTrigger([[^VariablesViewLine (\\w+)$]], function() end) "
+                    "feedTriggers('\\nVariablesViewLine word\\n') killTrigger(id) "
+                    // rawget() would put an owed name in place, so walk the table instead
+                    "local owed = {line = true, multimatches = true} "
+                    "for key in next, _G do owed[key] = nil end "
+                    "variablesViewOwed = tostring(owed.line == true and owed.multimatches == true)"));
+        QVERIFY2(luaHolds(qsl("variablesViewOwed"), qsl("true")), "nothing was left owed, so this cannot tell whether the walk asks for it");
+
+        mpEditor->repopulateVars();
+
+        QVERIFY2(findVariableItem({qsl("line")}), "the Variables view did not show the line the deferral was holding");
+        QVERIFY2(findVariableItem({qsl("multimatches")}), "the Variables view did not show the multimatches the deferral was holding");
+        QVERIFY2(luaHolds(qsl("line"), qsl("VariablesViewLine word")), "the walk put something other than the line that was owed into the globals table");
+
+        execLua(qsl("variablesViewOwed = nil enableTrigger('onNewLine Trigger')"));
+        mpEditor->repopulateVars();
+    }
+
+    // The type a typed value is written back as was decided with toInt(), which
+    // reads "2.71" as no number at all, so editing a decimal turned it into a
+    // string (#9422).
+    void test_editingADecimalValueKeepsItANumber()
+    {
+        execLua(qsl("decimalGlobal = 3.14 decimalDecoy = 'decoy value'"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pGlobal = findVariableItem({qsl("decimalGlobal")});
+        QVERIFY2(pGlobal, "the Variables view did not show the global");
+        QTreeWidgetItem* pDecoy = findVariableItem({qsl("decimalDecoy")});
+        QVERIFY2(pDecoy, "the Variables view did not show the variable to click away to");
+
+        selectVariable(pGlobal);
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("2.71"));
+        selectVariable(pDecoy);
+
+        // neither of these catches the bug alone: the seed was already a number,
+        // and luaHolds() reads a number as happily as the string it turned into
+        QCOMPARE(luaTypeOf(qsl("decimalGlobal")), qsl("number"));
+        QVERIFY2(luaHolds(qsl("decimalGlobal"), qsl("2.71")), "the edited value did not reach Lua as the number that was typed");
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("decimalGlobal = nil decimalDecoy = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    // Asking for a boolean value gets one: the combobox entry used to carry the
+    // number type, which no "true" agrees with, so the value fell through to a
+    // string (#1591).
+    void test_choosingTheBooleanValueTypeStoresABoolean()
+    {
+        execLua(qsl("booleanTypeGlobal = 'not a boolean yet' booleanTypeDecoy = 'decoy value'"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pGlobal = findVariableItem({qsl("booleanTypeGlobal")});
+        QVERIFY2(pGlobal, "the Variables view did not show the global");
+        QTreeWidgetItem* pDecoy = findVariableItem({qsl("booleanTypeDecoy")});
+        QVERIFY2(pDecoy, "the Variables view did not show the variable to click away to");
+
+        selectVariable(pGlobal);
+        auto* pValueType = mpEditor->mpVarsMainArea->comboBox_variable_value_type;
+        const int booleanRow = pValueType->findText(dlgVarsMainArea::tr("boolean"));
+        QVERIFY2(booleanRow >= 0, "the value type combobox does not offer a boolean");
+        // if the entry ever went back to Auto-Type, a typed "true" would still
+        // land as a boolean and the check below would not notice
+        QCOMPARE(pValueType->itemData(booleanRow).toInt(), LUA_TBOOLEAN);
+        pValueType->setCurrentIndex(booleanRow);
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("true"));
+        selectVariable(pDecoy);
+
+        QCOMPARE(luaTypeOf(qsl("booleanTypeGlobal")), qsl("boolean"));
+        QVERIFY2(luaHolds(qsl("tostring(booleanTypeGlobal)"), qsl("true")), "the boolean that reached Lua is not the one that was typed");
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("booleanTypeGlobal = nil booleanTypeDecoy = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    // A variable added while a table is selected belongs to that table in the
+    // tree the profile writer walks, or it is saved beside the table instead of
+    // inside it (#9285).
+    void test_aVariableAddedInsideATableHangsOffThatTable()
+    {
+        execLua(qsl("nestingHolder = {existing = 'existing value'}"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("nestingHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table to add into");
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        TVar* pHolderVar = mpEditor->treeWidget_variables->variableForRow(pVarUnit, pHolder);
+        QVERIFY2(pHolderVar, "the Variables view has no variable behind the table's row");
+
+        selectVariable(pHolder);
+        mpEditor->addVar(false);
+
+        const QString addedName = dlgTriggerEditor::tr("variable_name");
+        QVERIFY2(childNames(pHolderVar).contains(addedName), "the new variable was not attached to the table it was added into");
+        QVERIFY2(!childNames(pVarUnit->getBase()).contains(addedName), "the new variable was attached to the root of the variable tree as well");
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("nestingHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    // A variable added but not yet saved belongs to no table, so its row is all
+    // that owns it. These only fail under LeakSanitizer, which the ASan CI build
+    // runs this test with (#10579).
+    void test_anUnsavedNewVariableIsFreedWhenTheViewIsRebuilt()
+    {
+        mpEditor->repopulateVars();
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        auto* pItem = new QTreeWidgetItem(mpEditor->mpVarBaseItem, QStringList{qsl("unsavedNewVariable")});
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, std::make_unique<TVar>(pVarUnit->getBase()));
+        QVERIFY(mpEditor->treeWidget_variables->newVariableForRow(pVarUnit, pItem));
+
+        mpEditor->repopulateVars();
+    }
+
+    void test_anUnsavedNewVariableInADeletedTableIsFreed()
+    {
+        execLua(qsl("unsavedNewVariableHolder = {existing = 'existing value'}"));
+        mpEditor->repopulateVars();
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("unsavedNewVariableHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table to add into");
+        TVar* pHolderVar = mpEditor->treeWidget_variables->variableForRow(pVarUnit, pHolder);
+        QVERIFY2(pHolderVar, "the Variables view has no variable behind the table's row");
+        auto* pChild = new QTreeWidgetItem(pHolder, QStringList{qsl("unsavedNewMember")});
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pChild, std::make_unique<TVar>(pHolderVar));
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        mpVariablesTree->clearSelection();
+        pHolder->setSelected(true);
+        mpEditor->delete_variable();
+        QCOMPARE(luaTypeOf(qsl("unsavedNewVariableHolder")), qsl("nil"));
+
+        mpEditor->repopulateVars();
+    }
+
+    void test_aReplacedUnsavedNewVariableIsFreed()
+    {
+        mpEditor->repopulateVars();
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        auto* pItem = new QTreeWidgetItem(mpEditor->mpVarBaseItem, QStringList{qsl("replacedNewVariable")});
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, std::make_unique<TVar>(pVarUnit->getBase()));
+        auto replacement = std::make_unique<TVar>(pVarUnit->getBase());
+        TVar* pReplacement = replacement.get();
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, std::move(replacement));
+        QCOMPARE(mpEditor->treeWidget_variables->newVariableForRow(pVarUnit, pItem), pReplacement);
+
+        mpEditor->repopulateVars();
+    }
+
+    // The Lua that saving a new variable runs can rebuild the variable tree, and
+    // the rows' pending variables go with the old tree. Parentless, so it hangs
+    // off the rebuilt base rather than off the one the rebuild freed.
+    void test_aNewVariableIsKeptWhenItsSaveRebuildsTheTree()
+    {
+        mpEditor->repopulateVars();
+        QTreeWidgetItem* pItem = addPendingVariableRow(qsl("rebuiltDuringSave"));
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        const quint64 generationBefore = pVarUnit->treeGeneration();
+        pauseWhenLuaSets(qsl("rebuiltDuringSave"));
+        QTimer::singleShot(50ms, mpHost, [this]() {
+            mpHost->getLuaInterface()->getVars(false);
+        });
+
+        mpEditor->saveVar();
+
+        execLua(qsl("setmetatable(_G, nil)"));
+        QVERIFY2(pVarUnit->treeGeneration() != generationBefore, "the variable tree was not rebuilt while the save ran");
+        QCOMPARE(luaTypeOf(qsl("rebuiltDuringSave")), qsl("string"));
+        TVar* pSaved = mpEditor->treeWidget_variables->variableForRow(pVarUnit, pItem);
+        QVERIFY2(pSaved, "the saved variable's row stands for nothing");
+        QCOMPARE(pSaved->getName(), qsl("rebuiltDuringSave"));
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("rebuiltDuringSave = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    void test_aNewVariableIsKeptWhenAnotherIsAddedDuringItsSave()
+    {
+        mpEditor->repopulateVars();
+        QTreeWidgetItem* pItem = addPendingVariableRow(qsl("savedBesideAnAdd"));
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        const quint64 generationBefore = pVarUnit->treeGeneration();
+        const int rowsBefore = mpEditor->mpVarBaseItem->childCount();
+        pauseWhenLuaSets(qsl("savedBesideAnAdd"));
+        QTimer::singleShot(50ms, mpHost, [this]() {
+            mpHost->getLuaInterface()->getVars(false);
+        });
+        QTimer::singleShot(100ms, mpEditor, [this]() {
+            mpEditor->addVar(false);
+        });
+
+        mpEditor->saveVar();
+
+        execLua(qsl("setmetatable(_G, nil)"));
+        QVERIFY2(pVarUnit->treeGeneration() != generationBefore, "the variable tree was not rebuilt while the save ran");
+        QCOMPARE(mpEditor->mpVarBaseItem->childCount(), rowsBefore + 1);
+        QCOMPARE(luaTypeOf(qsl("savedBesideAnAdd")), qsl("string"));
+        TVar* pSaved = mpEditor->treeWidget_variables->variableForRow(pVarUnit, pItem);
+        QVERIFY2(pSaved, "the saved variable's row stands for nothing");
+        QCOMPARE(pSaved->getName(), qsl("savedBesideAnAdd"));
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("savedBesideAnAdd = nil variable_name = nil"));
+    }
+
+    // A full rebuild sorts the rows by name, so naming a new row has to put it
+    // where that rebuild would, not leave it where it was added
+    void test_aNewVariableIsSortedIntoPlaceOnceNamed()
+    {
+        execLua(qsl("sortedHolder = {alpha = 'a', gamma = 'g'}"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("sortedHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table to add into");
+        selectVariable(pHolder);
+        pHolder->setExpanded(true);
+        mpEditor->addVar(false);
+        QTreeWidgetItem* pAdded = mpEditor->treeWidget_variables->currentItem();
+        QVERIFY2(pAdded && pAdded->parent() == pHolder, "the new variable was not added inside the selected table");
+
+        mpEditor->mpVarsMainArea->lineEdit_var_name->setText(qsl("beta"));
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("b"));
+        QTreeWidgetItem* pAlpha = findVariableItem({qsl("sortedHolder"), qsl("alpha")});
+        QVERIFY(pAlpha);
+        selectVariable(pAlpha);
+
+        QStringList shown;
+        for (int i = 0; i < pHolder->childCount(); ++i) {
+            shown << pHolder->child(i)->text(0);
+        }
+        QCOMPARE(shown, QStringList({qsl("alpha"), qsl("beta"), qsl("gamma")}));
+        QVERIFY2(luaHolds(qsl("sortedHolder.beta"), qsl("b")), "the new variable did not reach Lua");
+        QCOMPARE(mpEditor->treeWidget_variables->currentItem(), pAlpha);
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("sortedHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    // Save Variable saves the row that is still current, so moving it must
+    // leave it current and showing in the form
+    void test_savingANewVariableKeepsItCurrentInItsSortedPlace()
+    {
+        execLua(qsl("savedHolder = {alpha = 'a', gamma = 'g'}"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("savedHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table to add into");
+        selectVariable(pHolder);
+        pHolder->setExpanded(true);
+        mpEditor->addVar(false);
+        QTreeWidgetItem* pAdded = mpEditor->treeWidget_variables->currentItem();
+        QVERIFY2(pAdded && pAdded->parent() == pHolder, "the new variable was not added inside the selected table");
+
+        mpEditor->mpVarsMainArea->lineEdit_var_name->setText(qsl("beta"));
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("b"));
+        mpEditor->saveVar();
+
+        QCOMPARE(rowNames(pHolder), QStringList({qsl("alpha"), qsl("beta"), qsl("gamma")}));
+        QCOMPARE(mpEditor->treeWidget_variables->currentItem(), pAdded);
+        QCOMPARE(mpEditor->mpVarsMainArea->lineEdit_var_name->text(), qsl("beta"));
+        QVERIFY2(luaHolds(qsl("savedHolder.beta"), qsl("b")), "the new variable did not reach Lua");
+        QVERIFY2(luaHolds(qsl("savedHolder.alpha"), qsl("a")) && luaHolds(qsl("savedHolder.gamma"), qsl("g")), "saving the moved row changed one of its siblings");
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("savedHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    // A renamed row that sorts further down lands before the first sibling
+    // that sorts after it, not past it
+    void test_aRenamedVariableMovesDownIntoPlace()
+    {
+        execLua(qsl("renamedHolder = {alpha = 'a', delta = 'd', gamma = 'g'}"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("renamedHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table holding the row to rename");
+        pHolder->setExpanded(true);
+        QTreeWidgetItem* pAlpha = findVariableItem({qsl("renamedHolder"), qsl("alpha")});
+        QVERIFY(pAlpha);
+        selectVariable(pAlpha);
+        mpEditor->mpVarsMainArea->lineEdit_var_name->setText(qsl("epsilon"));
+        mpEditor->saveVar();
+
+        QCOMPARE(rowNames(pHolder), QStringList({qsl("delta"), qsl("epsilon"), qsl("gamma")}));
+        QVERIFY2(luaHolds(qsl("renamedHolder.epsilon"), qsl("a")), "the renamed variable did not reach Lua under its new name");
+        QVERIFY2(luaHolds(qsl("tostring(renamedHolder.alpha)"), qsl("nil")), "the renamed variable is still in Lua under its old name");
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("renamedHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    // Moving a row takes its whole subtree out of the view and back, and the
+    // view forgets what it had expanded in there
+    void test_aMovedTableKeepsItsRowsExpanded()
+    {
+        execLua(qsl("expandHolder = {alpha = {inner = {deepest = 'x'}}, mid = 'm'}"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("expandHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table holding the table to rename");
+        pHolder->setExpanded(true);
+        QTreeWidgetItem* pAlpha = findVariableItem({qsl("expandHolder"), qsl("alpha")});
+        QVERIFY(pAlpha);
+        pAlpha->setExpanded(true);
+        QTreeWidgetItem* pInner = findVariableItem({qsl("expandHolder"), qsl("alpha"), qsl("inner")});
+        QVERIFY(pInner);
+        pInner->setExpanded(true);
+
+        selectVariable(pAlpha);
+        mpEditor->mpVarsMainArea->lineEdit_var_name->setText(qsl("zeta"));
+        mpEditor->saveVar();
+
+        QCOMPARE(rowNames(pHolder), QStringList({qsl("mid"), qsl("zeta")}));
+        QVERIFY2(pAlpha->isExpanded(), "the renamed table was collapsed by its move");
+        QVERIFY2(pInner->isExpanded(), "the table inside the renamed one was collapsed by its move");
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("expandHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    // Clicking a row inside a renamed table saves the table first, which moves
+    // it along with the row just clicked
+    void test_clickingIntoARenamedTableKeepsTheClickedRowCurrent()
+    {
+        execLua(qsl("clickHolder = {alpha = {inner = 'i'}, mid = 'm'}"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("clickHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table holding the table to rename");
+        pHolder->setExpanded(true);
+        QTreeWidgetItem* pAlpha = findVariableItem({qsl("clickHolder"), qsl("alpha")});
+        QVERIFY(pAlpha);
+        pAlpha->setExpanded(true);
+        QTreeWidgetItem* pInner = findVariableItem({qsl("clickHolder"), qsl("alpha"), qsl("inner")});
+        QVERIFY(pInner);
+
+        selectVariable(pAlpha);
+        mpEditor->mpVarsMainArea->lineEdit_var_name->setText(qsl("zeta"));
+        selectVariable(pInner);
+
+        QCOMPARE(rowNames(pHolder), QStringList({qsl("mid"), qsl("zeta")}));
+        QCOMPARE(mpEditor->treeWidget_variables->currentItem(), pInner);
+        QCOMPARE(mpEditor->mpVarsMainArea->lineEdit_var_name->text(), qsl("inner"));
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("clickHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    // Ctrl+clicking a second row saves a renamed table, whose move takes it
+    // and its rows out of the view's selection
+    void test_ctrlClickingPastARenamedTableKeepsItsRowsSelected()
+    {
+        execLua(qsl("multiHolder = {alpha = {inner = 'i'}, mid = 'm'}"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("multiHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table holding the table to rename");
+        pHolder->setExpanded(true);
+        QTreeWidgetItem* pAlpha = findVariableItem({qsl("multiHolder"), qsl("alpha")});
+        QVERIFY(pAlpha);
+        pAlpha->setExpanded(true);
+        QTreeWidgetItem* pInner = findVariableItem({qsl("multiHolder"), qsl("alpha"), qsl("inner")});
+        QVERIFY(pInner);
+        QTreeWidgetItem* pMid = findVariableItem({qsl("multiHolder"), qsl("mid")});
+        QVERIFY(pMid);
+
+        selectVariable(pAlpha);
+        pInner->setSelected(true);
+        // Named after the selection, which fills the form in again as it changes
+        mpEditor->mpVarsMainArea->lineEdit_var_name->setText(qsl("zeta"));
+        mpVariablesTree->setCurrentItem(pMid, 0, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        mpEditor->slot_variableSelected(pMid);
+
+        QCOMPARE(rowNames(pHolder), QStringList({qsl("mid"), qsl("zeta")}));
+        QCOMPARE(mpVariablesTree->currentItem(), pMid);
+        QVERIFY2(pAlpha->isSelected(), "the renamed table dropped out of the selection when it moved");
+        QVERIFY2(pInner->isSelected(), "the row inside the renamed table dropped out of the selection when it moved");
+        QVERIFY2(pMid->isSelected(), "the row ctrl+clicked to is not selected");
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("multiHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    // Names such as "1" and "01" sort alike, so a row saved on the way past one
+    // of them is already in its place beside the other
+    void test_clickingPastRowsThatSortAlikeLeavesThemInPlace()
+    {
+        execLua(qsl("alikeHolder = {['01'] = 'x', ['1'] = 'y', b = 'b'}"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("alikeHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table holding the rows to click through");
+        pHolder->setExpanded(true);
+        const QStringList shown = rowNames(pHolder);
+        QCOMPARE(shown.size(), 3);
+
+        selectVariable(pHolder->child(0));
+        selectVariable(pHolder->child(1));
+        QCOMPARE(rowNames(pHolder), shown);
+        selectVariable(pHolder->child(2));
+        QCOMPARE(rowNames(pHolder), shown);
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("alikeHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    // A press that selected the row being ticked would save the row left, and
+    // that one's move into place slides a different row under the cursor
+    void test_tickingARowWhileARenameIsPendingTicksThatRow()
+    {
+        // the view ignores presses while it animates an expansion
+        const bool wasAnimated = mpVariablesTree->isAnimated();
+        mpVariablesTree->setAnimated(false);
+        execLua(qsl("tickHolder = {b = 'b', c = 'c', d = 'd'}"));
+        mpEditor->repopulateVars();
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        pVarUnit->savedVars.clear();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("tickHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table holding the row to tick");
+        pHolder->setExpanded(true);
+        QTreeWidgetItem* pB = findVariableItem({qsl("tickHolder"), qsl("b")});
+        QTreeWidgetItem* pC = findVariableItem({qsl("tickHolder"), qsl("c")});
+        QTreeWidgetItem* pD = findVariableItem({qsl("tickHolder"), qsl("d")});
+        QVERIFY(pB && pC && pD);
+        selectVariable(pD);
+        mpEditor->mpVarsMainArea->lineEdit_var_name->setText(qsl("a0"));
+
+        const QPoint corner = saveBoxCorner(pC);
+        QCOMPARE(mpVariablesTree->itemAt(corner), pC);
+        QTest::mousePress(mpVariablesTree->viewport(), Qt::LeftButton, {}, corner);
+        QTest::mouseRelease(mpVariablesTree->viewport(), Qt::LeftButton, {}, corner);
+
+        QCOMPARE(pC->checkState(0), Qt::Checked);
+        QCOMPARE(pB->checkState(0), Qt::Unchecked);
+        QVERIFY2(pVarUnit->savedVars.contains(qsl("tickHolder.c")), "the row ticked was not enrolled for saving");
+
+        mpVariablesTree->setAnimated(wasAnimated);
+        mpEditor->mpCurrentVarItem = nullptr;
+        pVarUnit->savedVars.clear();
+        execLua(qsl("tickHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    void test_movingThePointerOnARowsSaveBoxLeavesTheSelectionAlone()
+    {
+        const bool wasAnimated = mpVariablesTree->isAnimated();
+        mpVariablesTree->setAnimated(false);
+        execLua(qsl("dragHolder = {b = 'b', c = 'c', d = 'd'}"));
+        mpEditor->repopulateVars();
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        pVarUnit->savedVars.clear();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("dragHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table holding the rows");
+        pHolder->setExpanded(true);
+        QTreeWidgetItem* pC = findVariableItem({qsl("dragHolder"), qsl("c")});
+        QTreeWidgetItem* pD = findVariableItem({qsl("dragHolder"), qsl("d")});
+        QVERIFY(pC && pD);
+        // a real click, so the view remembers a press on d that a later drag could start from
+        mpVariablesTree->scrollToItem(pD);
+        QTest::qWait(50ms);
+        QTest::mouseClick(mpVariablesTree->viewport(), Qt::LeftButton, {}, mpVariablesTree->visualItemRect(pD).center());
+        QTest::qWait(QApplication::doubleClickInterval() + 50);
+        QCOMPARE(mpVariablesTree->currentItem(), pD);
+        mpEditor->mpVarsMainArea->lineEdit_var_name->setText(qsl("a0"));
+
+        const QPoint corner = saveBoxCorner(pC);
+        QTest::mousePress(mpVariablesTree->viewport(), Qt::LeftButton, {}, corner);
+        QTest::mouseMove(mpVariablesTree->viewport(), corner + QPoint(1, 1));
+        QTest::mouseRelease(mpVariablesTree->viewport(), Qt::LeftButton, {}, corner + QPoint(1, 1));
+
+        QCOMPARE(pC->checkState(0), Qt::Checked);
+        QCOMPARE(mpVariablesTree->selectedItems(), QList<QTreeWidgetItem*>{pD});
+        QCOMPARE(mpEditor->mpVarsMainArea->lineEdit_var_name->text(), qsl("a0"));
+        QCOMPARE(rowNames(pHolder), (QStringList{qsl("b"), qsl("c"), qsl("d")}));
+
+        QSignalSpy clickSpy(mpVariablesTree, &QTreeWidget::itemClicked);
+        QTest::qWait(QApplication::doubleClickInterval() + 50);
+        QTest::mousePress(mpVariablesTree->viewport(), Qt::LeftButton, {}, corner);
+        const QPoint cText(mpVariablesTree->visualItemRect(pC).center().x(), corner.y());
+        QTest::mouseMove(mpVariablesTree->viewport(), cText);
+        QTest::mouseRelease(mpVariablesTree->viewport(), Qt::LeftButton, {}, cText);
+
+        QCOMPARE(pC->checkState(0), Qt::Checked);
+        QCOMPARE(clickSpy.count(), 0);
+        QCOMPARE(mpVariablesTree->selectedItems(), QList<QTreeWidgetItem*>{pD});
+        QCOMPARE(mpVariablesTree->currentItem(), pD);
+        QCOMPARE(mpEditor->mpVarsMainArea->lineEdit_var_name->text(), qsl("a0"));
+
+        mpVariablesTree->setAnimated(wasAnimated);
+        mpEditor->mpCurrentVarItem = nullptr;
+        pVarUnit->savedVars.clear();
+        execLua(qsl("dragHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    void test_rightClickingARowsSaveBoxSelectsThatRow()
+    {
+        const bool wasAnimated = mpVariablesTree->isAnimated();
+        mpVariablesTree->setAnimated(false);
+        execLua(qsl("rightHolder = {b = 'b', c = 'c', d = 'd'}"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("rightHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table holding the rows");
+        pHolder->setExpanded(true);
+        QTreeWidgetItem* pC = findVariableItem({qsl("rightHolder"), qsl("c")});
+        QTreeWidgetItem* pD = findVariableItem({qsl("rightHolder"), qsl("d")});
+        QVERIFY(pC && pD);
+        selectVariable(pD);
+
+        const QPoint corner = saveBoxCorner(pC);
+        QTest::mousePress(mpVariablesTree->viewport(), Qt::RightButton, {}, corner);
+        QTest::mouseRelease(mpVariablesTree->viewport(), Qt::RightButton, {}, corner);
+        QCOMPARE(mpVariablesTree->selectedItems(), QList<QTreeWidgetItem*>{pC});
+
+        // what the context menu's Delete runs on
+        QVERIFY(mpVariablesTree->actions().contains(mpEditor->mDeleteItem));
+        mpEditor->mDeleteItem->trigger();
+        QCOMPARE(luaTypeOf(qsl("rightHolder.c")), qsl("nil"));
+        QCOMPARE(luaTypeOf(qsl("rightHolder.d")), qsl("string"));
+
+        mpVariablesTree->setAnimated(wasAnimated);
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("rightHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    void test_clickingTheSaveBoxOfARowThatCannotBeSavedSelectsIt()
+    {
+        const bool wasAnimated = mpVariablesTree->isAnimated();
+        mpVariablesTree->setAnimated(false);
+        execLua(qsl("unsavableHolder = {a = 'a', f = function() end, g = 'g'}"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("unsavableHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table holding the rows");
+        pHolder->setExpanded(true);
+        QTreeWidgetItem* pA = findVariableItem({qsl("unsavableHolder"), qsl("a")});
+        QTreeWidgetItem* pF = findVariableItem({qsl("unsavableHolder"), qsl("f")});
+        QVERIFY(pA && pF);
+        QVERIFY2(!(pF->flags() & Qt::ItemIsUserCheckable), "a function value was offered for saving, so this row does not show an unsavable one");
+        QVERIFY(pHolder->indexOfChild(pF) != 0);
+        selectVariable(pA);
+
+        QTest::mouseClick(mpVariablesTree->viewport(), Qt::LeftButton, {}, saveBoxCorner(pF));
+        QCOMPARE(mpVariablesTree->currentItem(), pF);
+        QCOMPARE(mpEditor->mpVarsMainArea->lineEdit_var_name->text(), qsl("f"));
+
+        mpVariablesTree->setAnimated(wasAnimated);
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("unsavableHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
 private:
+    // A selected, named row holding a new variable not yet saved, as addVar() leaves one
+    QTreeWidgetItem* addPendingVariableRow(const QString& name)
+    {
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        auto* pItem = new QTreeWidgetItem(mpEditor->mpVarBaseItem, QStringList{name});
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, std::make_unique<TVar>());
+        mpEditor->mpCurrentVarItem = pItem;
+        mpVariablesTree->setCurrentItem(pItem);
+        mpEditor->mpVarsMainArea->lineEdit_var_name->setText(name);
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("saved value"));
+        return pItem;
+    }
+
+    // Runs the event loop from inside Lua's write of the global, as a script's
+    // __newindex can, so that timers fire while the editor is mid-save
+    void pauseWhenLuaSets(const QString& name)
+    {
+        execLua(qsl("setmetatable(_G, {__newindex = function(t, k, v) rawset(t, k, v) if k == '%1' then waitForEvent('neverRaised', 300) end end})").arg(name));
+    }
+
+    // A corner of the area the tree ticks on, not the middle of the box,
+    // where the item delegate takes the press before the view selects
+    QPoint saveBoxCorner(QTreeWidgetItem* pItem)
+    {
+        mpVariablesTree->scrollToItem(pItem);
+        auto* pView = static_cast<QTreeView*>(mpVariablesTree);
+        const QRect rowRect = pView->visualRect(mpVariablesTree->indexFromItem(pItem));
+        const int indentation = rowRect.x() - pView->visualRect(pView->rootIndex()).x();
+        const QRect tickArea(pView->header()->sectionViewportPosition(0) + indentation, rowRect.y(), pView->style()->pixelMetric(QStyle::PM_IndicatorWidth), rowRect.height());
+        const QPoint corner(tickArea.left() + 1, tickArea.top() + 2);
+        if (mpVariablesTree->itemAt(corner) != pItem) {
+            qWarning() << "saveBoxCorner(): the point found is not on the row asked for";
+        }
+        return corner;
+    }
+
+    static QStringList rowNames(const QTreeWidgetItem* pParent)
+    {
+        QStringList names;
+        for (int i = 0; i < pParent->childCount(); ++i) {
+            names << pParent->child(i)->text(0);
+        }
+        return names;
+    }
+
     QString keyTypeShown() const { return mpEditor->mpVarsMainArea->comboBox_variable_key_type->currentText(); }
+
+    QStringList childNames(TVar* pVar) const
+    {
+        QStringList names;
+        const QList<TVar*> children = pVar->getChildren(false);
+        for (TVar* pChild : children) {
+            names << pChild->getName();
+        }
+        return names;
+    }
+
+    QString luaTypeOf(const QString& expression)
+    {
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        const QString code = qsl("return type(%1)").arg(expression);
+        if (luaL_dostring(L, code.toUtf8().constData()) != 0) {
+            qWarning().noquote().nospace() << "luaTypeOf() could not run \"" << code << "\": " << lua_tostring(L, -1);
+            lua_pop(L, 1);
+            return QString();
+        }
+        const QString type = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        return type;
+    }
 
     void execLua(const QString& code)
     {
@@ -586,14 +1240,14 @@ private:
     {
         if (!mpEditor) {
             mudlet::self()->slot_showScriptDialog();
-            QTest::qWait(100);
-            mpEditor = mpHost->mpEditorDialog;
+            QTest::qWait(100ms);
+            mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
             if (!mpEditor) {
                 return false;
             }
         }
         mpEditor->slot_showVariables();
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         return true;
     }
 
@@ -605,14 +1259,14 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(1000)) {
+        if (!spy2.wait(1s)) {
             QFAIL("Could not connect with the host.");
         }
     }
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
 
         if (!dir.exists()) {

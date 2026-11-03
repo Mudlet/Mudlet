@@ -38,15 +38,9 @@
 
 #include <algorithm>
 
-class EAction;
 class Host;
 class mudlet;
-class TEasyButtonBar;
-class TFlipButton;
 class TLuaInterpreter;
-class TToolBar;
-
-class QMenu;
 
 
 class TAction : public Tree<TAction>, public QObject
@@ -108,10 +102,11 @@ public:
     int getSizeY() const { return mSizeY; }
     QSize getSize() const { return {mSizeX, mSizeY}; }
 
-    void fillMenu(TEasyButtonBar* pT, QMenu* menu);
     void compile();
     bool compileScript();
     void execute();
+    // execute() without sending the button's command, for restoring a push-down button's state
+    void runScript();
     QString getIcon() const { return mIcon; }
     void setIcon(const QString& icon) {
         if (icon != mIcon) {
@@ -150,10 +145,6 @@ public:
     }
 
     bool registerAction();
-    void insertActions(TToolBar* pT, QMenu* menu);
-    void expandToolbar(TToolBar* pT);
-    void insertActions(TEasyButtonBar* pT, QMenu* menu);
-    void expandToolbar(TEasyButtonBar* pT);
     void setDataSaved() {
         if (mpParent) {
             mpParent->setDataSaved();
@@ -170,11 +161,6 @@ public:
     QString packageName(TAction* pAction) const;
     QString moduleName(TAction* pAction) const;
 
-
-    QPointer<TToolBar> mpToolBar;
-    QPointer<TEasyButtonBar> mpEasyButtonBar;
-    QPointer<EAction> mpEAction;
-    QPointer<TFlipButton> mpFButton;
     /* The following was an int but there was confusion over:
      * EITHER: "1" = released/unclicked/up & "2" = pressed/clicked/down,
      * OR:     "1" = pressed/clicked/down  & "0" = released/unclicked/up.

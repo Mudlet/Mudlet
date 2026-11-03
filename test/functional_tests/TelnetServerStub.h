@@ -33,10 +33,12 @@ class TelnetServerStub : public QTcpServer
     Q_OBJECT
 
     QString mpWelcomeMessage = "";
+    bool mSendsWelcome = true;
     QPointer<QTcpSocket> mpClient;
     QByteArray mPendingData;
     bool mHadClient = false;
     QByteArray mReceived;
+    QByteArray mReceivedSoFar;
     QVector<QSize> mNawsUpdates;
 
 public:
@@ -48,10 +50,22 @@ public:
     // actual bound port back via serverPort() (inherited from QTcpServer) once start() has succeeded.
     void start(const QString& host, quint16 port = 0);
     void setWelcomeMessage(const QString& message) { mpWelcomeMessage = message; }
+    // Off for a game that sends nothing at all, not even the bare line feed an
+    // empty welcome message still is:
+    void setSendsWelcome(const bool sendsWelcome) { mSendsWelcome = sendsWelcome; }
     // Sends bytes verbatim to the connected client - allows telnet control
     // bytes like IAC GA to be included:
     void sendRaw(const QByteArray& data);
     bool clientConnected() const { return !mpClient.isNull(); }
+    // Everything the clients have sent, across connections
+    const QByteArray& receivedSoFar() const { return mReceivedSoFar; }
+    // Closes the connection gracefully, once everything sent has gone out
+    void closeClient()
+    {
+        if (mpClient) {
+            mpClient->disconnectFromHost();
+        }
+    }
 
     // Every NAWS subnegotiation the client has sent since the last
     // clearNawsUpdates(), in the order they arrived. Tests that care about what

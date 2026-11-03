@@ -1,0 +1,171 @@
+-- clearWindow() finds its console by name: none, an empty name or "main" is
+-- the main console, and any other is a mini console, user window or buffer.
+-- It answers nothing when it found one, so that clearing the main console from
+-- the command line does not print a result onto it.
+describe("Tests that clearWindow() finds its console by name", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local unknown = "specClearByNameNoSuchWindow" .. suffix
+  local sibling = "specClearByName sibling" .. suffix
+
+  local function fill(window, count)
+    for i = 1, count do
+      echo(window, ("clear line %d\n"):format(i))
+    end
+  end
+
+  local function assertCleared(window)
+    assert.are.equal(0, getLastLineNumber(window))
+    assert.are.same({""}, getLines(window, 0, 1))
+  end
+
+  setup(function()
+    assert.is_true(createMiniConsole(sibling, 0, 0, 300, 100))
+  end)
+
+  teardown(function()
+    deleteMiniConsole(sibling)
+  end)
+
+  before_each(function()
+    fill(sibling, 3)
+  end)
+
+  it("checks its argument before it looks for the console", function()
+    assert.has_error(function() clearWindow({}) end,
+      "clearUserWindow: bad argument #1 type (window name as string is optional, got table!)")
+    assert.has_error(function() clearWindow(true) end)
+  end)
+
+  it("refuses and clears nothing for a name that is no window at all", function()
+    local mainLast = getLastLineNumber("main")
+    local siblingLast = getLastLineNumber(sibling)
+    assert.are.same({nil, ('window "%s" not found'):format(unknown)}, {clearWindow(unknown)})
+    assert.are.equal(mainLast, getLastLineNumber("main"))
+    assert.are.equal(siblingLast, getLastLineNumber(sibling))
+  end)
+
+  describe("with the name of another kind of window", function()
+    local otherName = "specClearByNameOtherWindow" .. suffix
+
+    after_each(function()
+      deleteLabel(otherName)
+      deleteScrollBox(otherName)
+      deleteTextEdit(otherName)
+      deleteCommandLine(otherName)
+    end)
+
+    local kinds = {
+      {"label", function() return createLabel(otherName, 0, 0, 50, 20, 1) end, "label"},
+      {"scroll box", function() return createScrollBox(otherName, 0, 0, 50, 20) end, "scrollbox"},
+      {"text edit", function() return createTextEdit("main", otherName, 0, 0, 50, 20) end, "textedit"},
+      {"command line", function() return createCommandLine(otherName, 0, 0, 50, 20) end, "commandline"},
+    }
+
+    for _, kind in ipairs(kinds) do
+      it("refuses and clears nothing for a " .. kind[1], function()
+        assert.is_true(kind[2]())
+        local mainLast = getLastLineNumber("main")
+        local siblingLast = getLastLineNumber(sibling)
+        local refusal = ('window "%s" is of type "%s", which this function cannot use'):format(otherName, kind[3])
+        assert.are.same({nil, refusal}, {clearWindow(otherName)})
+        assert.are.equal(mainLast, getLastLineNumber("main"))
+        assert.are.equal(siblingLast, getLastLineNumber(sibling))
+      end)
+    end
+
+    it("leaves a label's text alone", function()
+      assert.is_true(createLabel(otherName, 0, 0, 50, 20, 1))
+      echo(otherName, "label text")
+      clearWindow(otherName)
+      assert.are.equal("label text", getLabelText(otherName))
+    end)
+  end)
+
+  describe("with a sub-console's name", function()
+    local kinds = {
+      {"mini console", function(name) return createMiniConsole(name, 0, 0, 300, 100) end, deleteMiniConsole},
+      -- floated at a fixed size, as a docked user window opened after another
+      -- was deleted comes up with no height and never scrolls
+      {"user window", function(name)
+        local opened = openUserWindow(name, false)
+        resizeWindow(name, 300, 400)
+        return opened
+      end, closeUserWindow},
+      -- a buffer cannot be deleted, so it is left behind under its unique name
+      {"buffer", function(name) createBuffer(name) return true end, function() end},
+    }
+
+    for _, kind in ipairs(kinds) do
+      local window = "specClearByName " .. kind[1] .. suffix
+      local isBuffer = kind[1] == "buffer"
+
+      describe("of a " .. kind[1], function()
+        setup(function()
+          assert.is_true(kind[2](window))
+        end)
+
+        teardown(function()
+          kind[3](window)
+        end)
+
+        it("clears that console down to one empty line and answers nothing", function()
+          fill(window, 5)
+          local mainLast = getLastLineNumber("main")
+          assert.are.equal(0, select("#", clearWindow(window)))
+          assertCleared(window)
+          assert.are.equal(mainLast, getLastLineNumber("main"))
+          assert.are.same({"clear line 3"}, getLines(sibling, getLastLineNumber(sibling) - 1, getLastLineNumber(sibling)))
+        end)
+
+        it("puts the user cursor on the line left and keeps the selection, no longer valid", function()
+          clearWindow(window)
+          fill(window, 3)
+          moveCursor(window, 0, 2)
+          assert.are.equal(2, selectString(window, "ear", 1))
+          clearWindow(window)
+          assert.are.equal(0, getLineNumber(window))
+          assert.are.same({nil, "the selection is no longer valid"}, {getSelection(window)})
+          echo(window, "after")
+          assert.are.same({"after"}, getLines(window, 0, 1))
+          assert.are.equal("after", getCurrentLine(window))
+          assert.are.equal(1, selectString(window, "fter", 1))
+        end)
+
+        if not isBuffer then
+          it("follows new text again after being scrolled back", function()
+            assert.is_true(getRowCount(window) > 0, kind[1] .. " came up with no visible rows")
+            clearWindow(window)
+            fill(window, 200)
+            scrollTo(window, 150)
+            assert.are.equal(150, getScroll(window))
+            clearWindow(window)
+            fill(window, 200)
+            assert.are.equal(getLastLineNumber(window), getScroll(window))
+          end)
+        end
+      end)
+    end
+  end)
+
+  describe("with the main console", function()
+    for _, entry in ipairs({{"no name", function() return clearWindow() end}, {"an empty name", function() return clearWindow("") end}, {"\"main\"", function() return clearWindow("main") end}}) do
+      it("clears the main console for " .. entry[1] .. " and answers nothing", function()
+        fill("main", 5)
+        local siblingLast = getLastLineNumber(sibling)
+        assert.are.equal(0, select("#", entry[2]()))
+        assertCleared("main")
+        assert.are.equal(siblingLast, getLastLineNumber(sibling))
+      end)
+    end
+
+    it("follows new text again after being scrolled back", function()
+      clearWindow()
+      fill("main", 200)
+      scrollTo("main", 150)
+      assert.are.equal(150, getScroll("main"))
+      clearWindow()
+      fill("main", 200)
+      assert.are.equal(getLastLineNumber("main"), getScroll("main"))
+    end)
+  end)
+end)

@@ -189,7 +189,13 @@ class MMCPPeer:
             self.record({"type": "send_failed", "reason": "no connection"})
             return False
         try:
-            self.connection.sendall(data)
+            # the connection is non-blocking for the selector, where sendall
+            # gives up part way through anything the socket buffer cannot hold
+            self.connection.settimeout(30)
+            try:
+                self.connection.sendall(data)
+            finally:
+                self.connection.setblocking(False)
         except OSError as error:
             self.record({"type": "send_failed", "reason": str(error)})
             return False

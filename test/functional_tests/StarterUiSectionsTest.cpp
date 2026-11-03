@@ -34,6 +34,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -48,6 +49,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class StarterUiSectionsTest : public QObject
 {
@@ -90,7 +93,7 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -101,8 +104,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mHostname);
     }
 
     // The bands the dock hands out are what a player sees before they touch
@@ -392,8 +395,8 @@ private slots:
         // of the dock where the section is
         QVERIFY(runLua(host, qsl("addRoom(1)\nBaseUI.checkMapData()")));
         QVERIFY2(luaTrue(host, qsl("BaseUI.map ~= nil and BaseUI.map.container == BaseUI.sections.map.Inside")), "the mapper was not created inside the floating map section");
-        QVERIFY(host->mpConsole);
-        QVERIFY2(host->mpConsole->mpMapper, "no mapper widget was created at all");
+        QVERIFY(host->mainConsoleView());
+        QVERIFY2(host->mainConsoleView()->mpMapper, "no mapper widget was created at all");
         QVERIFY(runLua(host,
                        qsl("__ui.mapperX = math.abs(BaseUI.map:get_x() - BaseUI.sections.map:get_x())\n"
                            "__ui.mapperY = math.abs(BaseUI.map:get_y() - (BaseUI.sections.map:get_y() + 20))")));
@@ -410,13 +413,13 @@ private slots:
         // Geyser.Mapper re-runs createMapper() on every reposition, so the widget
         // has to still be there after the section has been moved about
         QVERIFY(runLua(host, qsl("BaseUI.sections.map:move('30%', '30%')")));
-        QVERIFY2(host->mpConsole->mpMapper, "moving the floating map section destroyed the mapper widget");
-        QVERIFY2(host->mpConsole->mpMapper->width() > 0 && host->mpConsole->mpMapper->height() > 0, "moving the floating map section shrank the mapper widget to nothing");
+        QVERIFY2(host->mainConsoleView()->mpMapper, "moving the floating map section destroyed the mapper widget");
+        QVERIFY2(host->mainConsoleView()->mpMapper->width() > 0 && host->mainConsoleView()->mpMapper->height() > 0, "moving the floating map section shrank the mapper widget to nothing");
 
         QVERIFY(runLua(host, qsl("BaseUI.alias('dock')")));
         QVERIFY2(luaTrue(host, qsl("not BaseUI.sectionFloating('map')")), "the map section did not go back into the dock");
-        QVERIFY2(host->mpConsole->mpMapper, "putting the map section back destroyed the mapper widget");
-        QVERIFY2(host->mpConsole->mpMapper->width() > 0 && host->mpConsole->mpMapper->height() > 0, "the mapper widget shrank to nothing when the map section came back to the dock");
+        QVERIFY2(host->mainConsoleView()->mpMapper, "putting the map section back destroyed the mapper widget");
+        QVERIFY2(host->mainConsoleView()->mpMapper->width() > 0 && host->mainConsoleView()->mpMapper->height() > 0, "the mapper widget shrank to nothing when the map section came back to the dock");
         QVERIFY(runLua(host,
                        qsl("__ui.backX = math.abs(BaseUI.map:get_x() - BaseUI.container.Inside:get_x())\n"
                            "__ui.backY = math.abs(BaseUI.map:get_y() - (BaseUI.container.Inside:get_y() + 20))\n"
@@ -449,8 +452,8 @@ private slots:
                  "\"baseui show\" did not bring the floating sections back");
         QVERIFY2(luaTrue(host, qsl("BaseUI.sectionFloating('map') and BaseUI.sectionFloating('chat') and BaseUI.sectionFloating('vitals')")),
                  "showing the interface again put the floating sections back in the dock");
-        QVERIFY(host->mpConsole->mpMapper);
-        QVERIFY2(host->mpConsole->mpMapper->width() > 0 && host->mpConsole->mpMapper->height() > 0, "hiding and showing the interface left the mapper widget with no size");
+        QVERIFY(host->mainConsoleView()->mpMapper);
+        QVERIFY2(host->mainConsoleView()->mpMapper->width() > 0 && host->mainConsoleView()->mpMapper->height() > 0, "hiding and showing the interface left the mapper widget with no size");
 
         QVERIFY(runLua(host, qsl("BaseUI.standAside(nil, 'some-game-gui')")));
         QVERIFY2(luaTrue(host, qsl("BaseUI.sections.map.hidden and BaseUI.sections.chat.hidden and BaseUI.sections.vitals.hidden")),
@@ -499,13 +502,21 @@ private slots:
         QVERIFY(runLua(host, qsl("BaseUI.standAside(nil, 'some-game-gui')")));
         QVERIFY2(luaTrue(host, qsl("BaseUI.container.hidden and BaseUI.sections.map.hidden")), "standing aside did not hide the dock and its floating section");
 
-        QVERIFY(runLua(host, qsl("BaseUI.serverGuiRemoved(nil, 'some-game-gui')")));
-        // it deliberately waits before looking, so that a version upgrade which
-        // uninstalls only to reinstall a moment later is not taken for a removal
+        // It deliberately waits before looking, so that a version upgrade which
+        // uninstalls only to reinstall a moment later is not taken for a removal.
+        // What comes back is what this case is about, not how long that wait is,
+        // so the timer it sets is shortened rather than waited out.
+        QVERIFY(runLua(host,
+                       qsl("local realTempTimer = tempTimer\n"
+                           "tempTimer = function(seconds, ...) __settleDelay = seconds return realTempTimer(0, ...) end\n"
+                           "local ok, err = pcall(BaseUI.serverGuiRemoved, nil, 'some-game-gui')\n"
+                           "tempTimer = realTempTimer\n"
+                           "assert(ok, err)")));
+        QVERIFY2(luaTrue(host, qsl("type(__settleDelay) == 'number' and __settleDelay > 0")), "the starter UI no longer waits before deciding the game's interface is gone");
         QElapsedTimer waited;
         waited.start();
-        while (waited.elapsed() < 30000 && !luaQuiet(host, qsl("not BaseUI.settings.standingAside"))) {
-            QTest::qWait(250);
+        while (waited.durationElapsed() < 30s && !luaQuiet(host, qsl("not BaseUI.settings.standingAside"))) {
+            QTest::qWait(250ms);
         }
         QVERIFY2(luaTrue(host, qsl("not BaseUI.settings.standingAside")), "the starter UI did not come back on duty at all");
         QVERIFY2(luaTrue(host, qsl("not BaseUI.container.hidden")), "the dock stayed hidden while its sections came back over the game's text");
@@ -822,7 +833,7 @@ private:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             QFAIL("Could not connect to the stub.");
         }
     }
@@ -867,10 +878,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

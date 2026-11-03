@@ -40,6 +40,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -51,6 +52,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class CommandLineScrollRangeTest : public QObject
 {
@@ -108,12 +111,12 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         QDir(path).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
@@ -122,7 +125,7 @@ private slots:
         }
 
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connectedSpy.wait(500)) {
+        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !connectedSpy.wait(8s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -132,10 +135,9 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+            const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
             QDir(path).removeRecursively();
             delete mudlet::self();
         }
@@ -147,13 +149,13 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
-        QVERIFY(mpHost->mpConsole->mpCommandLine);
+        QVERIFY(mpHost->mainConsoleView());
+        QVERIFY(mpHost->mainConsoleView()->mpCommandLine);
         mpHost->commandLineMinimumHeight = 30;
-        mpHost->mpConsole->setFontSize(12);
+        mpHost->mainConsoleView()->setFontSize(12);
     }
 
-    void cleanup() { fill(mpHost->mpConsole->mpCommandLine, QString()); }
+    void cleanup() { fill(mpHost->mainConsoleView()->mpCommandLine, QString()); }
 
     // Only the families Mudlet bundles, so the sweep is the same everywhere it runs.
     // Row counts are exhaustive, font sizes are a sample; the combinations that were
@@ -161,12 +163,12 @@ private slots:
     // commandLineMinimumHeight floor covers the shortfall on its own.
     void test_noScrollRangeWhileTheTextFits()
     {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
         QStringList scrollable;
 
         for (const QString& family : {qsl("Bitstream Vera Sans Mono"), qsl("Bitstream Vera Sans"), qsl("Ubuntu Mono"), qsl("Ubuntu")}) {
             for (const int fontSize : {8, 12, 14, 24, 30}) {
-                mpHost->mpConsole->setFont(QFont(family, fontSize), true);
+                mpHost->mainConsoleView()->setFont(QFont(family, fontSize), true);
                 for (int rows = 1; rows <= 10; ++rows) {
                     fill(pCommandLine, rowsOfText(rows));
                     if (pCommandLine->verticalScrollBar()->maximum() != 0) {
@@ -189,7 +191,7 @@ private slots:
     // above are being made against a widget that really was laid out.
     void test_scrollRangeOnceThereAreMoreRowsThanFit()
     {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
 
         fill(pCommandLine, rowsOfText(11));
 
@@ -201,8 +203,8 @@ private slots:
     // spanning several rows is the only thing that divides the row height out.
     void test_noScrollRangeWhenOneCommandWrapsOverSeveralRows()
     {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
-        mpHost->mpConsole->setFontSize(24);
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        mpHost->mainConsoleView()->setFontSize(24);
 
         QString command;
         do {
@@ -219,8 +221,8 @@ private slots:
     // setting may bring the range back.
     void test_noScrollRangeAtEitherEndOfTheMinimumHeightPreference()
     {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
-        mpHost->mpConsole->setFontSize(24);
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        mpHost->mainConsoleView()->setFontSize(24);
 
         for (const int minimumHeight : {10, 30, 200}) {
             mpHost->commandLineMinimumHeight = minimumHeight;
@@ -233,7 +235,7 @@ private slots:
     // into view again - text left sitting out of position is the damage being fixed.
     void test_shrinkingBackFromAScrolledStateShowsTheFirstRowAgain()
     {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
 
         fill(pCommandLine, rowsOfText(15));
         pCommandLine->verticalScrollBar()->triggerAction(QAbstractSlider::SliderToMaximum);
@@ -251,22 +253,58 @@ private slots:
     // QStyleSheetStyle, so its frameWidth() need not match the main one's.
     void test_noScrollRangeOnAConsoleCommandLine()
     {
-        TMainConsole* pConsole = mpHost->mpConsole;
+        TMainConsole* pConsole = mpHost->mainConsoleView();
         const QString name = qsl("scrollRangeMiniConsole");
 
         TConsole* pMiniConsole = pConsole->createMiniConsole(QString(), name, 0, 0, 300, 100);
         QVERIFY2(pMiniConsole, "could not create the miniconsole");
         pMiniConsole->setCmdVisible(true); // what Lua enableCommandLine(name) does
         QVERIFY(pMiniConsole->mpCommandLine);
-        QCOMPARE(pMiniConsole->mpCommandLine->getType(), TCommandLine::ConsoleCommandLine);
+        QCOMPARE(pMiniConsole->mpCommandLine->getType(), enums::ConsoleCommandLine);
 
         pMiniConsole->setFontSize(24);
         fill(pMiniConsole->mpCommandLine, rowsOfText(2));
 
         QCOMPARE(pMiniConsole->mpCommandLine->verticalScrollBar()->maximum(), 0);
 
-        auto [deleted, deleteMsg] = pConsole->deleteMiniConsole(name);
+        auto [deleted, deleteMsg] = mpHost->deleteMiniConsole(name);
         QVERIFY2(deleted, qPrintable(deleteMsg));
+    }
+
+    // Padding one side of the command line, the way the manual moves its text over,
+    // must cost that side its padding and nothing more: not twice over, nor any height.
+    void test_sidePaddingCostsOnlyThePaddingItself()
+    {
+        TMainConsole* pConsole = mpHost->mainConsoleView();
+        TCommandLine* pCommandLine = pConsole->mpCommandLine;
+        const QString savedStyleSheet = pCommandLine->styleSheet();
+
+        fill(pCommandLine, rowsOfText(1));
+        const QSize unpaddedHint = pCommandLine->minimumSizeHint();
+        const int unpaddedHeight = pCommandLine->height();
+
+        auto [applied, message] = pConsole->setCmdLineStyleSheet(qsl("main"), qsl("QPlainTextEdit {padding-left: 1000px;}"));
+        QVERIFY2(applied, qPrintable(message));
+        fill(pCommandLine, rowsOfText(1));
+        const QSize paddedHint = pCommandLine->minimumSizeHint();
+        const int paddedLayerHint = pConsole->layerCommandLine->minimumSizeHint().width();
+        const int paddedHeight = pCommandLine->height();
+
+        pConsole->setCmdLineStyleSheet(qsl("main"), savedStyleSheet);
+        fill(pCommandLine, QString());
+
+        // A style sheet swaps the native frame for its own border, so allow a few pixels either way
+        const auto report = qsl("minimum %1x%2 unpadded, %3x%4 padded; height %5 unpadded, %6 padded")
+                                    .arg(unpaddedHint.width())
+                                    .arg(unpaddedHint.height())
+                                    .arg(paddedHint.width())
+                                    .arg(paddedHint.height())
+                                    .arg(unpaddedHeight)
+                                    .arg(paddedHeight);
+        QVERIFY2(qAbs(paddedHint.width() - unpaddedHint.width() - 1000) <= 4, qPrintable(report));
+        QVERIFY2(qAbs(paddedHint.height() - unpaddedHint.height()) <= 4, qPrintable(report));
+        QVERIFY2(qAbs(paddedHeight - unpaddedHeight) <= 4, qPrintable(report));
+        QCOMPARE(paddedLayerHint, paddedHint.width());
     }
 };
 

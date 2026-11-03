@@ -2,13 +2,133 @@
 -- @author guy
 -- @module Geyser.SetConstraints
 
-function Geyser.calc_constraints (window, cons, container)
+local function return_zero()
+  return 0
+end
+
+-- What each window's getters were last compiled from, so that laying the same
+-- constraints out again - which a resize does for every window in a box that
+-- holds a fixed size child, several times over - can keep the getters it has
+-- instead of parsing the constraints again. Weak keys, so a window that is
+-- gone takes its entry with it; and weak values inside each entry, because the
+-- getters there refer to the window, and Lua 5.1 would otherwise keep the
+-- window alive through its own entry. Anything collected from an entry only
+-- makes it stop matching.
+local compiled = setmetatable({}, {__mode = "k"})
+local weakValues = {__mode = "v"}
+
+-- Internal function: whether the getters on a window are still the ones that
+-- were compiled from these very constraints, against this very container
+local function unchanged(window, cons, container)
+  local last = compiled[window]
+  -- a getter collected from the entry reads as nil, which must not pass for a
+  -- window whose own getter has been taken away
+  return last ~= nil and last.container == container
+    and last.x == cons.x and last.y == cons.y and last.width == cons.width and last.height == cons.height
+    and last.get_x ~= nil and last.get_y ~= nil and last.get_width ~= nil and last.get_height ~= nil
+    and window.get_x == last.get_x and window.get_y == last.get_y
+    and window.get_width == last.get_width and window.get_height == last.get_height
+end
+
+-- how both parseable() and the parser read a percentage
+local percentPattern = "([%+%-%d%p]+)%%%s*([%+%-%d%p]*)"
+
+-- Internal function: the number in a pixel or character constraint
+local function absolute(value)
+  return tonumber((string.gsub(value, "%a", "")))
+end
+
+-- Internal function: whether the parser below can read a constraint; tonumber()
+-- follows the numeric locale, so this must run under the "C" one
+local function parseable(value)
+  local kind = type(value)
+  if kind == "number" then
+    -- widget geometry is a 32-bit int, which createLabel() holds to; also refuses NaN
+    return math.abs(value) <= 2147483647
+  end
+  if kind == "function" then
+    return true
+  end
+  if kind ~= "string" then
+    return false
+  end
+  if string.find(value, "%%") then
+    return tonumber((string.match(value, percentPattern))) ~= nil
+  end
+  return absolute(value) ~= nil
+end
+
+-- Internal function: how an error shows a constraint: text quoted, a number by
+-- its value, and anything else by its type, so that true is not mistaken for "true"
+local function shown(value)
+  if type(value) == "string" then
+    return string.format("%q", value)
+  elseif type(value) == "number" then
+    return tostring(value)
+  end
+  return "(" .. type(value) .. ")"
+end
+
+-- Internal function: why a window cannot take these constraints, or nil if it
+-- can, and the font size it read to tell; runs under the "C" numeric locale
+local function refusal(window, cons)
+  local fontChecked = false
+  local charWidth, charHeight
+  for _, v in ipairs { "x", "y", "width", "height" } do
+    local value = cons[v]
+    if not parseable(value) then
+      return string.format("has an invalid %s constraint %s", v, shown(value))
+    end
+    if type(value) == "string" and not string.find(value, "%%") and string.find(value, "c") and not fontChecked then
+      fontChecked = true
+      local fontSize = window.fontSize
+      local kind = type(fontSize)
+      -- calcFontSize() sizes any number and reads text or nil as a window name; it raises
+      -- on a table and takes a boolean for its average-width flag, so neither is a size
+      if kind == "string" or kind == "nil" then
+        charWidth, charHeight = calcFontSize(fontSize)
+      end
+      if not charWidth and kind ~= "number" then
+        return string.format("has a character %s constraint, but no font size could be read from fontSize %s", v, shown(fontSize))
+      end
+    end
+  end
+  return nil, charWidth, charHeight
+end
+
+--- Raises an error naming the window if it cannot take these constraints, and
+-- changes nothing either way.
+-- @param window The window the constraints are for.
+-- @param cons A table that holds the constraints.
+function Geyser.check_constraints (window, cons)
   local oldlocale = os.setlocale(nil, "numeric")
   os.setlocale("C", "numeric")
+  local problem = refusal(window, cons)
+  os.setlocale(oldlocale, "numeric")
+  if problem then
+    error(string.format("Geyser: element '%s' %s", tostring(window.name), problem), 0)
+  end
+end
+
+function Geyser.calc_constraints (window, cons, container)
   -- If container is nil then by default it is the dimensions of the main window
   container = container or Geyser
-  container["return_zero"] = function() return 0 end
-  window["return_zero"] = function() return 0 end
+  container["return_zero"] = return_zero
+  window["return_zero"] = return_zero
+  if unchanged(window, cons, container) then
+    return
+  end
+  local oldlocale = os.setlocale(nil, "numeric")
+  os.setlocale("C", "numeric")
+  -- a character constraint reads the font size as it is parsed, so its getters
+  -- are not kept for next time
+  local readsFontSize = false
+  -- all four are checked before any getter is replaced, so a refused set leaves the window as it was
+  local problem, charWidth, charHeight = refusal(window, cons)
+  if problem then
+    os.setlocale(oldlocale, "numeric")
+    error(string.format("Geyser: element '%s' %s", tostring(window.name), problem), 0)
+  end
   
   -- GENERATE CONSTRAINT AWARE POSITIONING FUNCTIONS
   -- Parse the position constraints to generate functions that will get
@@ -39,7 +159,7 @@ function Geyser.calc_constraints (window, cons, container)
       
       -- scale is a value between 0 and 1
       -- offset is always in pixel
-      local scale, offset = string.match(num,"([%+%-%d%p]+)%%%s*([%+%-%d%p]*)")
+      local scale, offset = string.match(num, percentPattern)
       local negative = string.find(scale, "-") or false -- detect "negative" 0
       scale = tonumber(scale) / 100.0
       offset = tonumber(offset) or 0
@@ -66,10 +186,30 @@ function Geyser.calc_constraints (window, cons, container)
       --        scale will be "0,5" instead of "0.5"-> syntax error
       --        Need to find out if there's more such cases in Geyser
       
-      -- compile the getter
-      window[getter] = function(self, my_container)
-        my_container = container
-        return my_container[min]() + scale * my_container[max]() + offset
+      -- compile the getter, leaving out the terms that are always zero: a getter
+      -- calls its container's, all the way up, on every resize and gauge update
+      -- an offset of -0 ("0%-0") keeps the full sum, whose zero terms give 0, not -0
+      local scaled = scale ~= 0
+      if 1 / offset == -math.huge then
+        window[getter] = function()
+          return container[min]() + scale * container[max]() + offset
+        end
+      elseif min == "return_zero" and not scaled then
+        window[getter] = function()
+          return offset
+        end
+      elseif min == "return_zero" then
+        window[getter] = function()
+          return scale * container[max]() + offset
+        end
+      elseif not scaled then
+        window[getter] = function()
+          return container[min]() + offset
+        end
+      else
+        window[getter] = function()
+          return container[min]() + scale * container[max]() + offset
+        end
       end
       
       
@@ -85,14 +225,18 @@ function Geyser.calc_constraints (window, cons, container)
       
       -- As is, font size is considered a constraint
       if string.find(num, "c") then
-        x_mult, y_mult = calcFontSize(window.fontSize)
+        if not charWidth then
+          charWidth, charHeight = calcFontSize(window.fontSize)
+        end
+        x_mult, y_mult = charWidth, charHeight
+        readsFontSize = true
       end
       
       local pos_func = "return_zero"
       local max = "return_zero"
       local min = "return_zero"
-      local func = function() return 0 end
-      local pos = tonumber((string.gsub(num, "%a", "")))
+      local func = return_zero
+      local pos = absolute(num)
       
       -- give func the function value if a function is given
       if type(cons[v]) == "function" then
@@ -130,11 +274,33 @@ function Geyser.calc_constraints (window, cons, container)
         end
       end
       
-      -- compile the getter
-      window[getter] = function(self, my_container)
-        my_container = container
-        self = window
-        return my_container[max]() + my_container[min]() + pos + func() - self[pos_func]()
+      -- compile the getter, leaving out the terms that are always zero
+      -- a function constraint is parsed as "0", so it is never negative; the
+      -- 0 + keeps the arithmetic that coerces what the function returns
+      if func ~= return_zero and min == "return_zero" then
+        window[getter] = function()
+          return 0 + func()
+        end
+      elseif func ~= return_zero then
+        window[getter] = function()
+          return container[min]() + func()
+        end
+      elseif not negative and min == "return_zero" then
+        window[getter] = function()
+          return pos
+        end
+      elseif not negative then
+        window[getter] = function()
+          return container[min]() + pos
+        end
+      elseif pos_func == "return_zero" then
+        window[getter] = function()
+          return container[max]() + container[min]() + pos
+        end
+      else
+        window[getter] = function()
+          return container[max]() + container[min]() + pos - window[pos_func]()
+        end
       end
     end
     
@@ -143,6 +309,15 @@ function Geyser.calc_constraints (window, cons, container)
     --window[v] = window[getter]()
   end -- END for that generates POSITION FUNCTIONS
   os.setlocale(oldlocale, "numeric")
+  if not readsFontSize then
+    compiled[window] = setmetatable({
+      container = container,
+      x = cons.x, y = cons.y, width = cons.width, height = cons.height,
+      get_x = window.get_x, get_y = window.get_y, get_width = window.get_width, get_height = window.get_height,
+    }, weakValues)
+  else
+    compiled[window] = nil
+  end
 end
 
 --- This function sets the constraints of a window.

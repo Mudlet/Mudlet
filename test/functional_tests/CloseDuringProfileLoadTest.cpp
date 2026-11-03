@@ -26,6 +26,7 @@
 
 #include "Host.h"
 #include "HostManager.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "mudlet.h"
@@ -36,6 +37,8 @@
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QtTest/QtTest>
+
+using namespace std::chrono_literals;
 
 class CloseDuringProfileLoadTest : public QObject
 {
@@ -52,8 +55,8 @@ private:
 
     static bool provisionProfileOnDisk(const QString& name)
     {
-        return QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, name)) && mudlet::self()->writeProfileData(name, qsl("url"), qsl("localhost")).first
-               && mudlet::self()->writeProfileData(name, qsl("port"), qsl("23")).first;
+        return QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, name)) && MudletApp::writeProfileData(name, qsl("url"), qsl("localhost")).first
+               && MudletApp::writeProfileData(name, qsl("port"), qsl("23")).first;
     }
 
     // Fires from the first event-loop pump inside a load, as the window's
@@ -62,7 +65,7 @@ private:
     {
         mCloseAskedFor = false;
         mCloseRefused = false;
-        QTimer::singleShot(0, mWindow, [this]() {
+        QTimer::singleShot(0ms, mWindow, [this]() {
             mCloseAskedFor = true;
             // close() reports false only when its QCloseEvent was ignored
             mCloseRefused = !mWindow->close();
@@ -74,12 +77,12 @@ private:
         QVERIFY2(mCloseAskedFor, "the load never pumped the event loop, so this test asked for nothing");
         QVERIFY2(mWindow, "the main window was deleted underneath the profile load");
         QVERIFY2(mCloseRefused, "the close was accepted in the middle of the profile load");
-        QPointer<Host> host = mWindow->getHostManager().getHost(mProfileName);
+        QPointer<Host> host = HostManager::self()->getHost(mProfileName);
         QVERIFY2(host, "the profile was closed in the middle of its own load");
 
         // The held close happens on its own once the load returns; the window
         // is WA_DeleteOnClose, so it goes on a deferred delete once accepted
-        QTRY_VERIFY2_WITH_TIMEOUT(mWindow.isNull(), "the close asked for during the load never happened", 30000);
+        QTRY_VERIFY2_WITH_TIMEOUT(mWindow.isNull(), "the close asked for during the load never happened", 30s);
         QVERIFY2(host.isNull(), "the window closed but left the profile loaded");
     }
 
@@ -103,12 +106,12 @@ private slots:
     {
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         // A settings file that already holds something is how
         // mudletUsedBefore() recognises an existing player, which keeps the
         // first-run UI tour and the starter UI package out of this test
-        mudlet::getQSettings()->setValue(qsl("uiTourShown"), true);
-        mudlet::getQSettings()->sync();
+        MudletApp::getQSettings()->setValue(qsl("uiTourShown"), true);
+        MudletApp::getQSettings()->sync();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -128,7 +131,7 @@ private slots:
         mWindow->startAutoLogin({mProfileName, mSecondProfileName}, true);
 
         QVERIFY2(mWindow, "the main window was deleted underneath the profile load");
-        QVERIFY2(mWindow->getHostManager().getHost(mSecondProfileName), "the close cut the auto-login batch short");
+        QVERIFY2(HostManager::self()->getHost(mSecondProfileName), "the close cut the auto-login batch short");
         verifyTheCloseWasHeldAndThenHappened();
     }
 

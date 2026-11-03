@@ -212,9 +212,13 @@ bool TMxpProcessor::setMode(int modeCode)
     case MXP_MODE_CODE_RESET: //  reset (MXP 0.4 or later) - close all open tags.  Set mode to Open.  Set text color and properties to default.
         mMxpTagBuilder.reset();
         mpMxpClient->resetTextProperties();
-        mMXP_MODE = mMXP_DEFAULT;
+        // Open, not the default: a secure default would let this line use secure tags
+        mMXP_MODE = MXP_MODE_OPEN;
         break;
     case MXP_MODE_CODE_TEMP_SECURE: // temp secure mode (MXP 0.4 or later) - set secure mode for the next tag only.  Must be immediately followed by a < character to start a tag.  Remember to set secure mode when closing the tag also.
+        if (mMXP_MODE != MXP_MODE_TEMP_SECURE) {
+            mModeBeforeTempSecure = mMXP_MODE;
+        }
         mMXP_MODE = MXP_MODE_TEMP_SECURE;
         break;
     case MXP_MODE_CODE_LOCK_OPEN: // lock open mode (MXP 0.4 or later) - set open mode.  Mode remains in effect until changed.  OPEN mode becomes the new default mode.
@@ -292,8 +296,11 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     }
 
     // Keep the tag builder in sync with the session encoding so attribute
-    // bytes are decoded correctly on non-UTF-8 sessions.
-    mMxpTagBuilder.setEncoding(mpMxpClient->getEncoding());
+    // bytes are decoded correctly on non-UTF-8 sessions. Only a tag being read
+    // decodes with it, and copying it for every byte of text adds up:
+    if (ch == '<' || mMxpTagBuilder.isInsideTag()) {
+        mMxpTagBuilder.setEncoding(mpMxpClient->getEncoding());
+    }
 
     // Newline while inside a tag: MXP tags cannot span lines
     // Reject the partial tag as literal text, then let the newline trigger line commit
@@ -362,8 +369,9 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
 
         TMxpTagHandlerResult const result = mMxpTagProcessor.handleTag(mMxpTagProcessor, *mpMxpClient, tag.get());
 
+        // The line's mode, not the default: an open line under a secure default would stay secure
         if (mMXP_MODE == MXP_MODE_TEMP_SECURE) {
-            mMXP_MODE = mMXP_DEFAULT;
+            mMXP_MODE = mModeBeforeTempSecure;
         }
 
         // If tag was not handled (not valid MXP and not a custom element), display it as-is
@@ -454,4 +462,9 @@ TMxpProcessingResult TMxpProcessor::rejectCurrentTag()
 void TMxpProcessor::processRawInput(char ch)
 {
     mMxpTagProcessor.handleContent(ch);
+}
+
+void TMxpProcessor::processRawInput(QByteArrayView bytes)
+{
+    mMxpTagProcessor.handleContentBytes(bytes);
 }

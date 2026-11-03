@@ -25,9 +25,11 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
 #include "TTrigger.h"
@@ -41,6 +43,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class StarterUiTriggerCostTest : public QObject
 {
     Q_OBJECT
@@ -53,8 +57,9 @@ private:
     const QString mLocalhost = qsl("localhost");
     quint16 mPort = 0;
 
-    // A full default-package profile measures 3: the starter UI's chat capture
-    // tree and its vitals prefilter, plus one folder from another package.
+    // A full default-package profile measures 4: the starter UI's chat capture
+    // tree, its vitals prefilter and its enemy condition trigger, plus one
+    // folder from another package.
     // Nesting hides growth from this count, so kMaxGatePatterns is what tracks
     // the per-line cost.
     static constexpr int kMaxRootTriggers = 5;
@@ -93,7 +98,7 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -104,8 +109,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mHostname);
     }
 
     void test_captureLayersArmAHandfulOfTriggersNotOnePerShape()
@@ -121,6 +126,7 @@ private slots:
                                     .arg(rootTriggers)));
 
         QVERIFY(luaTrue(host, qsl("#BaseUI.vitalsTriggerIds == 1")));
+        QVERIFY(luaTrue(host, qsl("BaseUI.conditionTriggerId ~= nil")));
         QVERIFY2(luaTrue(host, qsl("BaseUI.chatTriggersArmed()")), "the chat capture tree's gates did not come up armed");
     }
 
@@ -530,7 +536,7 @@ private:
     // same XML export/import as a package, so this covers both.
     QTreeWidget* triggerTreeWidget(Host* host)
     {
-        dlgTriggerEditor* editor = host->mpEditorDialog;
+        dlgTriggerEditor* editor = HostDialogs::of(host).mpEditorDialog;
         if (!editor) {
             return nullptr;
         }
@@ -835,7 +841,7 @@ __starterUi.shapeCount = BaseUI.vitalsShapeCount()
             QFAIL("No active host available for the test.");
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             QFAIL("Could not connect to the stub.");
         }
     }
@@ -864,10 +870,7 @@ __starterUi.shapeCount = BaseUI.vitalsShapeCount()
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

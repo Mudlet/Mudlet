@@ -20,6 +20,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -33,6 +34,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 /*
  * Dropping a variable whose structure markers do not balance is only worth
@@ -176,7 +179,7 @@ private:
             return nullptr;
         }
         QSignalSpy spy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy.wait(2000)) {
+        if (!spy.wait(2s)) {
             QTest::qFail("Could not connect with the host.", __FILE__, __LINE__);
             return nullptr;
         }
@@ -184,14 +187,14 @@ private:
         host->mEchoLuaErrors = true;
         // wider than any message asserted below, so none of them wrap: a wrapped one
         // arrives as several lineBuffer entries and a phrase can straddle two of them
-        host->mpConsole->setWrapAt(1000);
+        host->mainConsoleView()->setWrapAt(1000);
         return host;
     }
 
     // Everything the main console gained while the payload was parsed.
     QString feedAndReadDiagnostic(Host* host, const QByteArray& payload)
     {
-        TBuffer& buffer = host->mpConsole->buffer;
+        TBuffer& buffer = host->mainConsoleView()->buffer;
         const int before = buffer.lineBuffer.size();
         host->getLuaInterpreter()->msdp2Lua(payload.constData());
         qApp->processEvents();
@@ -202,7 +205,7 @@ private:
         return gained.join(QChar('\n'));
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(mudlet::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletApp::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {
@@ -216,7 +219,7 @@ private:
 private slots:
     void cleanup()
     {
-        const QString profilePath = mudlet::getMudletPath(enums::profileHomePath, mpHostname);
+        const QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, mpHostname);
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;

@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-unreadablexml]]
+author = [[Mudlet test suite]]
+title = [[Fixture whose package XML is not XML at all, for Package_spec.lua]]
+version = [[1.0]]
+description = [[A valid archive whose package file holds plain text, so nothing can be read out of it while the archive itself unpacks cleanly.]]

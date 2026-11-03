@@ -94,6 +94,7 @@ private:
     int columnForOffset(int offset) const;
     int offsetForPosition(int line, int column) const;
     bool lineIsVisible(int line) const;
+    bool thaiRunReaches(int firstLine, int lastLine) const;
     QString textAroundOffset(TextOp operation, int offset, QAccessible::TextBoundaryType boundaryType,
                              int* startOffset, int* endOffset) const;
 };

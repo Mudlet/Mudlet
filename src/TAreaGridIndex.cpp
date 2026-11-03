@@ -21,17 +21,15 @@
 
 const TAreaGridIndex::RoomIds TAreaGridIndex::csmEmptyCell;
 
-// There are two ways to reach the cells of a Y range: probe the range's keys
-// one at a time, or walk the keys the column holds and drop the ones outside
-// it. A zoomed-in viewport covers a handful of the rows a level occupies and a
-// zoomed-out one covers more rows than exist, so neither wins outright - the
-// smaller key count is the one to get through.
+// Probe each key in the range or walk the column's keys, whichever is fewer: zoomed in the range is
+// a few rows, zoomed out it spans more rows than exist.
+// qint64 counters: an int at INT_MAX wraps to INT_MIN instead of passing a bound of INT_MAX.
 static void appendRoomsInYRange(const QHash<int, TAreaGridIndex::RoomIds>& yMap, int minY, int maxY, QList<int>& result)
 {
     const qint64 wantedRows = static_cast<qint64>(maxY) - minY + 1;
     if (wantedRows > 0 && wantedRows < yMap.size()) {
-        for (int y = minY; y <= maxY; ++y) {
-            const auto yIt = yMap.constFind(y);
+        for (qint64 y = minY; y <= maxY; ++y) {
+            const auto yIt = yMap.constFind(static_cast<int>(y));
             if (yIt == yMap.constEnd()) {
                 continue;
             }
@@ -55,8 +53,8 @@ static void appendRoomsInYRangeWithCollisions(const QHash<int, TAreaGridIndex::R
 {
     const qint64 wantedRows = static_cast<qint64>(maxY) - minY + 1;
     if (wantedRows > 0 && wantedRows < yMap.size()) {
-        for (int y = minY; y <= maxY; ++y) {
-            const auto yIt = yMap.constFind(y);
+        for (qint64 y = minY; y <= maxY; ++y) {
+            const auto yIt = yMap.constFind(static_cast<int>(y));
             if (yIt == yMap.constEnd()) {
                 continue;
             }
@@ -190,8 +188,8 @@ QList<int> TAreaGridIndex::roomsInViewport(int z, int minX, int maxX, int minY, 
     const auto& xyMap = *zIt;
     const qint64 wantedColumns = static_cast<qint64>(maxX) - minX + 1;
     if (wantedColumns > 0 && wantedColumns < xyMap.size()) {
-        for (int x = minX; x <= maxX; ++x) {
-            const auto xIt = xyMap.constFind(x);
+        for (qint64 x = minX; x <= maxX; ++x) {
+            const auto xIt = xyMap.constFind(static_cast<int>(x));
             if (xIt == xyMap.constEnd()) {
                 continue;
             }
@@ -218,8 +216,8 @@ QList<QPair<int, bool>> TAreaGridIndex::roomsInViewportWithCollisions(int z, int
     const auto& xyMap = *zIt;
     const qint64 wantedColumns = static_cast<qint64>(maxX) - minX + 1;
     if (wantedColumns > 0 && wantedColumns < xyMap.size()) {
-        for (int x = minX; x <= maxX; ++x) {
-            const auto xIt = xyMap.constFind(x);
+        for (qint64 x = minX; x <= maxX; ++x) {
+            const auto xIt = xyMap.constFind(static_cast<int>(x));
             if (xIt == xyMap.constEnd()) {
                 continue;
             }

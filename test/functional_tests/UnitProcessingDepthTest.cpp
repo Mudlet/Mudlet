@@ -59,9 +59,6 @@ private:
     QByteArray mSavedXdg;
     Host* mpHost = nullptr;
 
-    // Reads back Lua state through the return value rather than getLuaString(),
-    // which reports an absolute stack slot and so only answers correctly for the
-    // first call in a process.
     bool luaHolds(const QString& condition) { return mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("assert(%1)").arg(condition)); }
 
 private slots:
@@ -84,8 +81,8 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        QVERIFY2(mudlet::self()->getHostManager().addHost(mProfileName, QString(), QString(), QString()), "failed to create the Host");
-        mpHost = mudlet::self()->getHostManager().getHost(mProfileName);
+        QVERIFY2(HostManager::self()->addHost(mProfileName, QString(), QString(), QString()), "failed to create the Host");
+        mpHost = HostManager::self()->getHost(mProfileName);
         QVERIFY(mpHost);
         // A bare Host blocks script compilation until the full profile boot
         // would normally clear this; the items below need to compile:

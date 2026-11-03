@@ -31,6 +31,7 @@
 #include <QColor>
 #include <QLabel>
 #include <QMovie>
+#include <QPixmap>
 #include <QPointer>
 #include <QSet>
 #include <QString>
@@ -39,14 +40,16 @@
 #include <memory>
 
 class Host;
+class QContextMenuEvent;
 class QMouseEvent;
+class QSvgRenderer;
+class TMainConsole;
 
 class TLabel : public QLabel
 {
     Q_OBJECT
 
-    // Declared ahead of every other member: the references below are initialised
-    // from it, so it has to be constructed first.
+    // Declared first: the references below are initialised from it.
     std::unique_ptr<TLabelModel> mpModel;
 
 public:
@@ -55,6 +58,17 @@ public:
     ~TLabel();
 
     void setText(const QString& text);
+    // A screen reader's or the keyboard's activation, delivered as the left click a mouse would make
+    void press();
+    // Whether what it shows is an image - a raster, or an SVG with no text over it - which a screen reader
+    // is told is a graphic unless the label is a button
+    bool showsImage() const;
+    // After its image or movie changes, which can make it a graphic, an animation or text
+    void imageMayHaveChanged();
+    // Whether the player can press it from the keyboard: a button, with the profile's accessibleLabels on
+    bool keyboardOperable() const;
+    // Whether Tab stops on it with accessibleLabels on: a button, or a label with links to step through
+    bool keyboardReachable() const;
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
@@ -63,18 +77,34 @@ public:
     void leaveEvent(QEvent*) override;
     void enterEvent(TEnterEvent*) override;
     void resizeEvent(QResizeEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
+    bool focusNextPrevChild(bool next) override;
+    void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
     void changeEvent(QEvent* event) override;
+    bool event(QEvent* event) override;
+    QSize sizeHint() const override;
+    void contextMenuEvent(QContextMenuEvent*) override;
     void setClickThrough(bool clickthrough);
+    void endLinkHover();
     void setBackgroundColor(const QColor& color);
+    bool restyle(const QString& sheet);
     void setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline = true);
     void resetLinkStyle();
     void clearVisitedLinks();
+    bool setBackgroundImage(const QString& path);
+    void resetBackgroundImage();
+    bool setSvgImage(const QString& path);
+    void clearSvgImage();
+    void setSvgTint(const QColor& color);
+    void clearSvgTint();
+    void setSvgRotation(double angle);
+    void setSvgShear(double shearX, double shearY);
+    void resetSvgTransform();
     TLabelModel& model() { return *mpModel; }
 
-    // The members below are references aliasing the model above. They stand for
-    // the label's identity, callback registry indexes, link colouring and
-    // background colour, which live in the core TLabelModel this label owns and
-    // the profile's TWindowRegistry indexes by name.
+    // References aliasing the model above.
     QPointer<Host>& mpHost;
     QString& mName;
     int& mClickFunction;
@@ -85,6 +115,11 @@ public:
     int& mEnterFunction;
     int& mLeaveFunction;
     QMovie* mpMovie = nullptr;
+    QSvgRenderer* mpSvgRenderer = nullptr;
+    QColor& mSvgTintColor;
+    double& mSvgRotation;
+    double& mSvgShearX;
+    double& mSvgShearY;
     QVideoWidget* mpVideoWidget = nullptr;
     QString& mLinkColor;
     QString& mLinkVisitedColor;
@@ -92,9 +127,39 @@ public:
     QSet<QString>& mVisitedLinks;
 
 private:
+    QPixmap renderSvgPixmap(const QSize& size) const;
+    void refreshSvg();
+    void stopMovie();
+    // No selection flags: they would take the press the click callback needs. The keyboard flag puts
+    // links in reach of Tab and Return via the focus policy QLabel derives from these flags.
+    static constexpr Qt::TextInteractionFlags scmLinkInteraction = Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard;
+
+    void accessibilityChanged(TLabelModel::AccessibilityChange change);
+    // After QLabel::setText(), which has told a screen reader of the new text already
+    void syncTextAnnouncedByQt();
+    bool mTextAnnouncedByQt = false;
+    // A screen reader's press is the label's, not one of a link that happens to sit under its centre
+    bool mScreenReaderPress = false;
+    // Whether QLabel has a link to step to past the focused one, or with none focused any link
+    bool linkBeyondFocused(bool next) const;
+    // Null for a label in a floating user window, which is a window of its own
+    TMainConsole* mainWindowConsole() const;
+    bool carriesLink() const;
+    bool forwardRightClickToConsole(QMouseEvent* event);
     void applyBackgroundColor();
+    void showLinkStyledText(const QString& text);
+    void reapplyLinkStyle();
+    // After every setTextInteractionFlags(), which resets the focus policy
+    void updateKeyboardAccess();
+    bool announcesTextChanges() const;
+    void announceTextChange(const QString& spokenBefore);
 
     QColor& mBackgroundColor;
+    QPixmap mSvgPixmapCache;
+    // set when the link styling replaces the palette the stylesheet gave the label
+    bool mPaletteSetSinceStyled = false;
+    // set once a stylesheet has been applied over an earlier one, see restyle()
+    bool mRepolished = false;
 
 private slots:
     void slot_linkActivated(const QString& link);

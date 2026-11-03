@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: "weekly"
       day: "friday"
+    ignore:
+      # v3's Pipeline Connector rejects our requests with "User has no access to the requested GitHub resource"
+      # https://github.com/signpath/github-action-submit-signing-request/issues/18
+      - dependency-name: "signpath/github-action-submit-signing-request"
+        versions: [">= 3"]
     commit-message:
       prefix: "Infrastructure:"
   - package-ecosystem: "gitsubmodule"

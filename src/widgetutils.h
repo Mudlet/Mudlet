@@ -86,9 +86,8 @@ public:
             QPoint dialogCenter = dialog->mapToGlobal(dialog->rect().center());
             const QScreen* dialogScreen = QApplication::screenAt(dialogCenter);
 
-            // A hidden dialog reports no screen of its own, so this recentres one that is
-            // merely closed even when it holds a position worth keeping - not for windows
-            // whose position is remembered
+            // A hidden dialog reports no screen, so this recentres even a merely closed one;
+            // not for windows whose position is remembered.
             if (!dialog->isVisible() || !dialogScreen || dialogScreen != parentScreen) {
                 centerDialogOnScreen(dialog, parentScreen);
             }
@@ -110,9 +109,7 @@ public:
         }
     }
 
-    // Centre a dialog on the parent's screen, discarding wherever it currently sits.
-    // Only for dialogs whose position is not persisted: a window that restores a
-    // remembered position lands back in the middle of the screen on every re-show
+    // Only for dialogs whose position is not persisted, or it would be lost on every re-show.
     static void forceRepositionDialogOnParentScreen(QWidget* dialog, QWidget* parent)
     {
         if (!dialog || !parent) {
@@ -132,10 +129,8 @@ public:
         }
     }
 
-    // Centre a dialog whose remembered position has since gone out of reach -
-    // the monitor it was left on can have been disconnected. What has to be on a
-    // screen is a piece of title bar big enough to grab and drag with, not the
-    // window: a couple of stray pixels at an edge are no way back
+    // Centre a dialog whose remembered position is off-screen (e.g. its monitor was disconnected).
+    // Enough title bar to grab must be on a screen; a few stray pixels at an edge are no way back.
     static void keepDialogOnAScreen(QWidget* dialog, QWidget* parent)
     {
         if (!dialog) {
@@ -184,6 +179,14 @@ public:
 
         dialog->move(constrainedPos);
     }
+
+    // Qt reports a widget's tooltip as its accessible description when it has
+    // none, markup included, so screen readers read the HTML tags of a rich
+    // tooltip aloud. After this call every rich tooltip, whenever it is set,
+    // also becomes the widget's description as plain text. A plain tooltip is
+    // left to Qt, and so is a description that other code set. Needs the
+    // QApplication to exist, and only affects tooltips set after it is called.
+    static void syncAccessibleDescriptionsWithToolTips();
 };
 
 #endif // MUDLET_WIDGETUTILS_H

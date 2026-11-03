@@ -26,7 +26,9 @@
 #include "LuaInterface.h"
 #include "TTimer.h"
 #include "TTrigger.h"
+#include "TVar.h"
 #include "VarUnit.h"
+#include "utils.h"
 
 #include <QtEvents>
 #include <QHeaderView>
@@ -81,6 +83,7 @@ void TTreeWidget::getAllChildren(QTreeWidgetItem* pItem, QList<QTreeWidgetItem*>
 
 void TTreeWidget::mouseReleaseEvent(QMouseEvent* event)
 {
+    const bool pressHeldFromView = event->button() == Qt::LeftButton && std::exchange(mTickPressHeldFromView, false);
     QModelIndex indexClicked = indexAt(event->pos());
     if (mTreeType == TreeType::Var && indexClicked.isValid() && indexClicked.row() != 0 && mClickedItem == indexClicked) {
         QRect vrect = visualRect(indexClicked);
@@ -104,7 +107,7 @@ void TTreeWidget::mouseReleaseEvent(QMouseEvent* event)
                 VarUnit* vu = lI->getVarUnit();
                 while (it.hasNext()) {
                     QTreeWidgetItem* item = it.next();
-                    if (!vu->shouldSave(item)) {
+                    if (!rowCanBeSaved(vu, item)) {
                         item->setCheckState(0, Qt::Unchecked);
                     }
                 }
@@ -114,7 +117,22 @@ void TTreeWidget::mouseReleaseEvent(QMouseEvent* event)
             return;
         }
     }
+    // The view still holds an earlier press, which it would take this release as ending
+    if (pressHeldFromView) {
+        return;
+    }
     QTreeWidget::mouseReleaseEvent(event);
+}
+
+void TTreeWidget::mouseMoveEvent(QMouseEvent* event)
+{
+    if (mTickPressHeldFromView) {
+        if (event->buttons() & Qt::LeftButton) {
+            return;
+        }
+        mTickPressHeldFromView = false;
+    }
+    QTreeWidget::mouseMoveEvent(event);
 }
 
 void TTreeWidget::mousePressEvent(QMouseEvent* event)
@@ -126,6 +144,13 @@ void TTreeWidget::mousePressEvent(QMouseEvent* event)
         QRect rect = QRect(header()->sectionViewportPosition(0) + itemIndentation, vrect.y(), style()->pixelMetric(QStyle::PM_IndicatorWidth), vrect.height());
         if (rect.contains(event->pos())) {
             mClickedItem = indexClicked;
+            // Not passed on when the release will tick: the view would select the row, and saving the one
+            // left can move it into sorted place, sliding another row under the cursor before the release
+            const QTreeWidgetItem* pressed = itemFromIndex(indexClicked);
+            if (event->button() == Qt::LeftButton && indexClicked.row() != 0 && pressed && (pressed->flags() & Qt::ItemIsUserCheckable)) {
+                mTickPressHeldFromView = true;
+                return;
+            }
             QTreeWidget::mousePressEvent(event);
             return;
         }
@@ -320,7 +345,7 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
                             if (pTChild->ancestorsActive()) {
                                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                             } else {
-                                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_grey.png")), QIcon::Normal, QIcon::Off);
+                                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
                             }
                         }
                     }
@@ -401,7 +426,7 @@ void TTreeWidget::dropEvent(QDropEvent* event)
 
     if (mTreeType == TreeType::Var) {
         LuaInterface* lI = mpHost->getLuaInterface();
-        auto [isValid, errorMsg] = lI->validMove(pItem);
+        auto [isValid, errorMsg] = lI->validMove(variableForRow(lI->getVarUnit(), pItem));
         if (!isValid) {
             event->setDropAction(Qt::IgnoreAction);
             event->ignore();
@@ -458,6 +483,148 @@ QTreeWidgetItem* TTreeWidget::findItemByTriggerID(QTreeWidgetItem* pParent, int 
         }
     }
     return nullptr;
+}
+
+// Shared by every row of one walk: a table of tens of thousands of members
+// would otherwise load its icons from the resources that many times
+struct TTreeWidget::VariableRowLook
+{
+    QIcon tableIcon{QPixmap(qsl(":/icons/table.png"))};
+    QIcon functionIcon{QPixmap(qsl(":/icons/function.png"))};
+    QIcon variableIcon{QPixmap(qsl(":/icons/variable.png"))};
+    QBrush unsaveableBrush{QColor("grey")};
+    QString saveToolTip;
+};
+
+void TTreeWidget::buildVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden)
+{
+    // Old rows stand for variables this walk replaces, so drop them rather than re-validate by stamp
+    clearVariableRows();
+    mVariablesGeneration = pVarUnit->treeGeneration();
+    //: Tooltip on a row in the editor's Variables view, offering to keep that variable between sessions
+    const VariableRowLook look{.saveToolTip = utils::richText(tr("Checked variables will be saved and loaded with your profile."))};
+    addVariableRows(pVarUnit, pParent, pVariable, showHidden, look);
+}
+
+void TTreeWidget::addVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden, const VariableRowLook& look)
+{
+    QList<QTreeWidgetItem*> cList;
+    for (TVar* child : pVariable->getChildren(true)) {
+        if (!showHidden && pVarUnit->isHidden(child)) {
+            continue;
+        }
+        auto pItem = new QTreeWidgetItem(QStringList() << child->getName());
+        pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
+        pItem->setToolTip(0, look.saveToolTip);
+        pItem->setCheckState(0, Qt::Unchecked);
+        if (pVarUnit->isSaved(child)) {
+            pItem->setCheckState(0, Qt::Checked);
+        }
+        if (!pVarUnit->shouldSave(child)) {
+            pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
+            pItem->setForeground(0, look.unsaveableBrush);
+            const QString reason = pVarUnit->getUnsaveableReason(child);
+            pItem->setToolTip(0, reason.isEmpty() ? QString() : utils::richText(reason));
+        }
+        pItem->setData(0, Qt::UserRole, child->getValueType());
+        switch (child->getValueType()) {
+        case LUA_TTABLE:
+            pItem->setIcon(0, look.tableIcon);
+            break;
+        case LUA_TFUNCTION:
+            pItem->setIcon(0, look.functionIcon);
+            break;
+        default:
+            pItem->setIcon(0, look.variableIcon);
+            break;
+        }
+        mVariableForRow.insert(pItem, child);
+        cList.append(pItem);
+        if (child->getValueType() == LUA_TTABLE) {
+            addVariableRows(pVarUnit, pItem, child, showHidden, look);
+        }
+    }
+    pParent->addChildren(cList);
+}
+
+TTreeWidget::~TTreeWidget() = default;
+
+void TTreeWidget::clearVariableRows()
+{
+    mVariableForRow.clear();
+    mNewVariableForRow.clear();
+}
+
+// Rows outlive their variables: a profile reset frees every TVar without telling the editor,
+// so rows only answer while the tree they were built from is current.
+bool TTreeWidget::rowsStandForCurrentVariables(VarUnit* pVarUnit) const
+{
+    return pVarUnit->treeGeneration() == mVariablesGeneration;
+}
+
+void TTreeWidget::adoptVariableTree(VarUnit* pVarUnit)
+{
+    if (rowsStandForCurrentVariables(pVarUnit)) {
+        return;
+    }
+    mVariableForRow.clear();
+    mNewVariableForRow.clear();
+    mVariablesGeneration = pVarUnit->treeGeneration();
+}
+
+TVar* TTreeWidget::variableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const
+{
+    return rowsStandForCurrentVariables(pVarUnit) ? mVariableForRow.value(pItem) : nullptr;
+}
+
+TVar* TTreeWidget::newVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const
+{
+    if (!rowsStandForCurrentVariables(pVarUnit)) {
+        return nullptr;
+    }
+    const auto it = mNewVariableForRow.find(pItem);
+    return it == mNewVariableForRow.end() ? nullptr : it->second.get();
+}
+
+void TTreeWidget::setVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable)
+{
+    adoptVariableTree(pVarUnit);
+    mVariableForRow.insert(pItem, pVariable);
+}
+
+void TTreeWidget::setNewVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, std::unique_ptr<TVar> pVariable)
+{
+    adoptVariableTree(pVarUnit);
+    mNewVariableForRow.insert_or_assign(pItem, std::move(pVariable));
+}
+
+void TTreeWidget::forgetRow(QTreeWidgetItem* pItem)
+{
+    mVariableForRow.remove(pItem);
+    mNewVariableForRow.erase(pItem);
+}
+
+void TTreeWidget::forgetNewVariableForRow(QTreeWidgetItem* pItem)
+{
+    const auto it = mNewVariableForRow.find(pItem);
+    if (it == mNewVariableForRow.end()) {
+        return;
+    }
+    static_cast<void>(it->second.release());
+    mNewVariableForRow.erase(it);
+}
+
+// The same question VarUnit::shouldSave() answers for a variable, asked of the
+// row standing for it - so it has to give the same answer. It used to leave out
+// the size limit, and Qt's tristate cascade ticks a child whose
+// ItemIsUserCheckable flag buildVariableRows() stripped, so a table over the
+// limit reached by ticking its parent stayed ticked, went into savedVars and was
+// written into the profile (#9957).
+bool TTreeWidget::rowCanBeSaved(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const
+{
+    TVar* var = variableForRow(pVarUnit, pItem);
+
+    return var && pVarUnit->shouldSave(var);
 }
 
 // Update a single trigger item's icon based on its current state

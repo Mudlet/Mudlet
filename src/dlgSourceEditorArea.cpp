@@ -24,6 +24,8 @@
 
 #include "utils.h"
 
+#include "EditorAutoCompleteFocusHandler.h"
+
 #include "edbee/edbee.h"
 #include "edbee/models/textdocument.h"
 #include "edbee/models/texteditorconfig.h"
@@ -57,4 +59,8 @@ dlgSourceEditorArea::dlgSourceEditorArea(QWidget* pParentWidget)
 
     // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
     edbeeEditorWidget->textScrollArea()->enableShadowWidget(false);
+
+    // keep the keyboard focus with the editor while the autocomplete popup is
+    // shown, rather than letting the popup take it (see #5310)
+    new EditorAutoCompleteFocusHandler(edbeeEditorWidget, this);
 }

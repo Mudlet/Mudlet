@@ -42,6 +42,9 @@
  * wrote is lost - an emptied folder would also stop gating its children and
  * start handing them every line.
  *
+ * setRegexCodeList() is also where a pattern that cannot compile at all is
+ * refused, so what it records for the editor's banner is pinned here too.
+ *
  * Run with: ctest -R CorruptTriggerPatternsTest -V
  */
 
@@ -49,6 +52,7 @@
 
 #include <QTemporaryDir>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -237,7 +241,7 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt marker present - config dir cannot be redirected for this test");
         }
-        QVERIFY2(mudlet::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
+        QVERIFY2(MudletApp::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "test config dir redirection did not take effect");
     }
 
     void cleanupTestCase()
@@ -248,7 +252,7 @@ private slots:
 
     void test_aTriggerWithMismatchedPatternListsDoesNotCrashTheLoad()
     {
-        const QString folder = mudlet::getMudletPath(enums::profileXmlFilesPath, mProfileName);
+        const QString folder = MudletApp::getMudletPath(enums::profileXmlFilesPath, mProfileName);
         QVERIFY(QDir().mkpath(folder));
         {
             QFile xmlFile(qsl("%1/2020-01-01#00-00-00.xml").arg(folder));
@@ -315,10 +319,8 @@ private slots:
         // that fell out of step with the pattern list - or was indexed by
         // anything other than the pattern's own index - reaches the wrong entry
         // here rather than the one this pattern owns.
-        QVERIFY2(matches(pMissingKinds, qsl("before ^the pattern without one$ after")),
-                 "the substring pattern the repair defaulted, at index 1 of a mixed-kind trigger, stopped matching");
-        QVERIFY2(!matches(pMissingKinds, qsl("nothing either pattern of this trigger asks for")),
-                 "a mixed-kind trigger matched a line holding neither of its patterns");
+        QVERIFY2(matches(pMissingKinds, qsl("before ^the pattern without one$ after")), "the substring pattern the repair defaulted, at index 1 of a mixed-kind trigger, stopped matching");
+        QVERIFY2(!matches(pMissingKinds, qsl("nothing either pattern of this trigger asks for")), "a mixed-kind trigger matched a line holding neither of its patterns");
 
         // The undamaged neighbour is a perl pattern at index 0, so it pins that
         // the substring path above did not simply match everything.
@@ -351,34 +353,60 @@ private slots:
         QVERIFY2(!matches(pHealthy, qsl("survivor with more after it")), "the perl pattern's anchors stopped being honoured");
     }
 
+    // The editor drops this text into a banner the theme colours, so the message
+    // must carry no colour of its own - the blue it used to be wrapped in was
+    // unreadable in dark mode (#9606)
+    void test_aPatternThatCannotCompileRecordsAnUncolouredError()
+    {
+        Host* pHost = HostManager::self()->getHost(mProfileName);
+        QVERIFY2(pHost, "the profile the earlier case loaded is gone, so there is no host to build a trigger on");
+
+        // Both pattern kinds that report a compile failure of their own, since the
+        // colour was stripped from each of their messages separately
+        const QList<QPair<QString, int>> uncompilable{{qsl("this is not lua +"), REGEX_LUA_CODE}, {qsl("(unclosed group"), REGEX_PERL}};
+        for (const auto& [pattern, kind] : uncompilable) {
+            auto* pTrigger = new TTrigger(nullptr, pHost);
+            pTrigger->setName(qsl("pattern of kind %1 that cannot compile").arg(kind));
+            QVERIFY(pTrigger->registerTrigger());
+            QVERIFY2(!pTrigger->setRegexCodeList({pattern}, {kind}), qPrintable(qsl("a pattern of kind %1 that cannot compile was accepted").arg(kind)));
+
+            // The pattern is spliced in after the message is translated, so it is
+            // the one part of the error that names the failure in any language
+            const QString error = pTrigger->getError();
+            QVERIFY2(error.contains(pattern), qPrintable(qsl("the error does not name the pattern that failed: %1").arg(error)));
+            QVERIFY2(!error.contains(qsl("color"), Qt::CaseInsensitive), qPrintable(qsl("the error carries a colour of its own: %1").arg(error)));
+        }
+    }
+
 private:
     // TTrigger::match() takes the line as both UTF-8 bytes and a QString, the
     // way TriggerUnit::processDataStream() hands it over.
     static bool matches(TTrigger* pTrigger, const QString& line)
     {
         const QByteArray utf8 = line.toUtf8();
-        return pTrigger->match(utf8.constData(), utf8.size(), line, -1);
+        const TUtf8Subject subject(utf8.constData(), utf8.size());
+        return pTrigger->match(subject, line, -1);
     }
 
-    // match_substring() indexes mSubstringPatterns by pattern number and
-    // dereferences the entry without a bounds or null check, so it relies on one
-    // entry per pattern, holding a matcher for exactly the substring kinds.
+    // match_substring() indexes mPatternLiterals by pattern number and
+    // dereferences the entry's matcher without a bounds or null check, so it
+    // relies on one entry per pattern, holding a matcher for every
+    // REGEX_SUBSTRING pattern; only a perl pattern's required text is searched
+    // for besides.
     // Answers rather than asserting: a QVERIFY here would return from this
     // helper and let the slot run on, burying the failure.
     static QString matcherInvariantViolation(TTrigger* pTrigger)
     {
         const QStringList patterns = pTrigger->getPatternsList();
         const QList<int> kinds = pTrigger->getRegexCodePropertyList();
-        if (static_cast<int>(pTrigger->mSubstringPatterns.size()) != patterns.size()) {
-            return qsl("trigger '%1' holds %2 pattern(s) but %3 matcher slot(s)")
-                    .arg(pTrigger->getName(), QString::number(patterns.size()), QString::number(pTrigger->mSubstringPatterns.size()));
+        if (static_cast<int>(pTrigger->mPatternLiterals.size()) != patterns.size()) {
+            return qsl("trigger '%1' holds %2 pattern(s) but %3 literal slot(s)").arg(pTrigger->getName(), QString::number(patterns.size()), QString::number(pTrigger->mPatternLiterals.size()));
         }
         for (int i = 0; i < patterns.size(); ++i) {
-            const bool wantMatcher = kinds.at(i) == REGEX_SUBSTRING;
-            const bool haveMatcher = pTrigger->mSubstringPatterns[i].matcher != nullptr;
+            const bool haveMatcher = pTrigger->mPatternLiterals[i].matcher != nullptr;
+            const bool wantMatcher = kinds.at(i) == REGEX_SUBSTRING || (kinds.at(i) == REGEX_PERL && pTrigger->mPatternLiterals[i].gram != 0);
             if (haveMatcher != wantMatcher) {
-                return qsl("trigger '%1' pattern %2 is kind %3 but %4 a matcher")
-                        .arg(pTrigger->getName(), QString::number(i), QString::number(kinds.at(i)), haveMatcher ? qsl("has") : qsl("lacks"));
+                return qsl("trigger '%1' pattern %2 is kind %3 but %4 a matcher").arg(pTrigger->getName(), QString::number(i), QString::number(kinds.at(i)), haveMatcher ? qsl("has") : qsl("lacks"));
             }
         }
         return {};

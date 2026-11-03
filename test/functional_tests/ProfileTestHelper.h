@@ -28,6 +28,8 @@
 #include <QtTest/QtTest>
 
 #include "Host.h"
+#include "MudletApp.h"
+#include "TUiTour.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
@@ -95,6 +97,13 @@ inline Host* create(const QString& profileName,
                     const QString& port,
                     const std::chrono::milliseconds timeout = std::chrono::seconds(15))
 {
+    if (!MudletApp::getQSettings()) {
+        qWarning() << "TestProfile::create() - called before mudlet::setupConfig(), so there are no settings to open a profile with";
+        return nullptr;
+    }
+    // A fresh config dir reads as a first run, whose tour opens a second after the profile loads and takes the
+    // keyboard. This stops only the tour: the rest of the first-run guidance needs a setting written before init().
+    TUiTour::rememberShown();
     mudlet::self()->startAutoLogin({});
 
     // Until the zero-timer in slot_showConnectionDialog() has shown and activated
@@ -147,7 +156,11 @@ inline Host* create(const QString& profileName,
                     return button != nullptr && button->isEnabled();
                 },
                 timeout)) {
-        qWarning() << "TestProfile::create() - the Connect button never became enabled";
+        // Every check validateProfile() fails adds its reason to the notification
+        // area, so that text says why Connect stayed disabled
+        const dlgConnectionProfiles* current = mudlet::self()->mpConnectionDialog;
+        qWarning() << "TestProfile::create() - the Connect button never became enabled. The dialog says:" << current->notificationAreaMessageBox->text().trimmed()
+                   << "- name:" << current->profile_name_entry->text() << "address:" << current->host_name_entry->text() << "port:" << current->port_entry->text();
         return nullptr;
     }
 
@@ -165,6 +178,19 @@ inline Host* create(const QString& profileName,
     }
 
     return mudlet::self()->getActiveHost();
+}
+
+// A test that creates the same profile in every test function must have the
+// last one's directory gone first, or create() finds the name "already in use"
+// and times out. Windows will not delete a file that is still open - a Host
+// keeps log/errors.txt open for as long as it lives - and a file only just
+// closed can stay locked for a moment while it is scanned, so a single
+// removeRecursively() can leave the directory behind. Keep trying until it
+// goes; removeRecursively() is true for a directory that is not there.
+inline bool removeProfileDirectory(const QString& profileName, const std::chrono::milliseconds timeout = std::chrono::seconds(5))
+{
+    QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
+    return QTest::qWaitFor([&dir]() { return dir.removeRecursively(); }, timeout);
 }
 
 } // namespace TestProfile

@@ -37,8 +37,6 @@
 class Host;
 class mudlet;
 class TAction;
-class TEasyButtonBar;
-class TToolBar;
 
 class ActionUnit
 {
@@ -68,24 +66,20 @@ public:
     void beginProcessing() { ++mProcessingDepth; }
     // Only decrements the depth - deliberately no doCleanup() here: that would
     // delete `this` (and other deferred actions) while a caller of
-    // TAction::execute() may still hold the pointer. Deferred deletes are
-    // flushed once no button script is executing - by the dispatchers right
-    // after execute() returns and by Host's catch-all doCleanup() calls.
+    // TAction::runScript() may still hold the pointer. Deferred deletes are
+    // flushed once no button script is executing - by the bar dispatchers after
+    // execute() returns and by Host's catch-all doCleanup() calls, which are all
+    // that flush after a load-time restore's runScript().
     void endProcessing();
     int processingDepth() const { return mProcessingDepth; }
     void updateAllToolbars();
-    std::list<QPointer<TToolBar>> getToolBarList() { return mToolBarList; }
-    TAction* getHeadAction(TToolBar*);
-    TAction* getHeadAction(TEasyButtonBar*);
-    void regenerateToolBars();
-    void regenerateEasyButtonBars();
-    void constructToolbar(TAction*, TToolBar* pToolBar);
-    void constructToolbar(TAction*, TEasyButtonBar* pTB);
     std::pair<bool, QString> showToolBar(const QString&);
     std::pair<bool, QString> hideToolBar(const QString&);
 
     QList<TAction*> uninstallList;
     bool hasPendingDeletes() const { return !uninstallList.isEmpty(); }
+    // Uninstalled, itself or through an ancestor, but kept until doCleanup()
+    bool pendingDeletion(TAction* pItem) const;
 
 private:
     ActionUnit() = default;
@@ -102,12 +96,11 @@ private:
     QMap<int, TAction*> mActionMap;
     std::list<TAction*> mActionRootNodeList;
     int mMaxID = 0;
-    // > 0 whilst a TAction::execute() is on the call stack; uninstall() and
-    // doCleanup() must not delete actions then - see ActionUnit::uninstall():
+    // > 0 whilst a TAction::runScript() or a bar dispatcher is on the call
+    // stack; uninstall() and doCleanup() must not delete actions then - see
+    // ActionUnit::uninstall():
     int mProcessingDepth = 0;
     bool mModuleMember = false;
-    std::list<QPointer<TToolBar>> mToolBarList;
-    std::list<QPointer<TEasyButtonBar>> mEasyButtonBarList;
 };
 
 #endif // MUDLET_ACTIONUNIT_H

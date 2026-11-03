@@ -1,53 +1,31 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet-win.yml
-# Changes here likely need to be mirrored there as well, apart from the ccache
-# handling: caches here are scoped to their own pull request ref and keyed per
-# commit, so there is never a key to delete before saving one. The generations
-# an earlier push left behind are retired by cleanup-caches.yml instead, which
-# runs in the base repository and so has a writable token even for a fork.
+# Changes here likely need to be mirrored there as well, apart from the
+# ccache handling: only builds of development write this
+# shared cache, so there are no save steps here at all - a pull request
+# never owns an entry of its own.
 name: 🔨 Build Mudlet - PR (windows)
 on:
   pull_request:
+    # Kept in step with docs-only-pr.yml, which reports this workflow's checks
+    # for the pull requests these paths leave it out of.
+    paths-ignore:
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '**.md'
 
-# Permissions required for SignPath trusted build verification
+# An explicit block sets every unlisted scope to none, so every consumer here has
+# to be listed. actions: read is SignPath's - its action reads job details and
+# downloads the artifact it signs.
 permissions:
   id-token: write
   contents: read
   actions: read
-  pull-requests: read
 
 jobs:
-  changes:
-    name: detect buildable changes
-    runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'Mudlet' }}
-    outputs:
-      build: ${{steps.filter.outputs.build}}
-    steps:
-    - name: Check whether anything affecting the build changed
-      id: filter
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # Only genuinely inert paths are listed - CI, CMake and packaging scripts
-        # all affect the build. Anything unexpected falls through to building.
-        files=$(gh api --paginate \
-          "/repos/${{github.repository}}/pulls/${{github.event.pull_request.number}}/files" \
-          -q '.[].filename')
-        echo "Changed files:"
-        printf '%s\n' "$files"
-
-        if printf '%s\n' "$files" | grep -qvE '(^docs/|^\.github/ISSUE_TEMPLATE/|\.md$)'; then
-          echo "build=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "build=false" >> "$GITHUB_OUTPUT"
-          echo "::notice::Documentation-only change - skipping the build matrix"
-        fi
-
   compile-mudlet:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
-    needs: changes
-    if: ${{ github.repository_owner == 'Mudlet' && needs.changes.outputs.build == 'true' }}
+    if: ${{ github.repository_owner == 'Mudlet' }}
     concurrency:
       group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -55,19 +33,21 @@ jobs:
       BUILD_TASK: 'PR'
       SIGNPATH_SIGNING_ENABLED: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
       SIGNPATH_POLICY_SLUG: ${{ startsWith(github.ref, 'refs/tags/') && 'release-signing' || 'test-signing' }}
+      CCACHE_MAXSIZE: 2G
+      CCACHE_COMPRESSLEVEL: 1
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-2022
             buildname: 'windows64'
+            ccache_id: windows64
 
     steps:
     - name: Checkout Mudlet source code
       uses: actions/checkout@v7
       with:
         submodules: recursive
-        fetch-depth: 0
 
     - name: (Windows) Setup MSYS2
       if: matrix.buildname == 'windows64'
@@ -85,33 +65,22 @@ jobs:
         $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
         $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
 
+    # Saves are keyed per commit, so the primary key deliberately matches no entry
+    # and every restore prefix-matches the newest.
     - name: Restore ccache
-      id: restore-ccache
       uses: actions/cache/restore@v6
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{matrix.buildname}}-clang-${{ github.sha }}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}-clang
+        key: ccache-${{matrix.ccache_id}}-sha-
+        restore-keys: ccache-${{matrix.ccache_id}}-sha-
 
     - name: check ccache stats prior to build
       shell: msys2 {0}
       env:
         CCACHE_DIR: ${{runner.workspace}}/ccache
-      run: ccache --zero-stats --show-stats
-
-    - name: Get sentry-native commit hash
-      shell: msys2 {0}
-      id: sentry-hash
-      run: echo "SENTRY_HASH=$(git -C 3rdparty/sentry-native rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-    - name: Cache sentry-native
-      id: cache-sentry
-      uses: actions/cache@v6
-      with:
-        path: |
-          3rdparty/sentry-native/install_without_transport
-          3rdparty/sentry-native/install_with_transport
-        key: sentry-${{ runner.os }}-${{ runner.arch }}-${{ steps.sentry-hash.outputs.SENTRY_HASH }}
+      run: |
+        ccache --zero-stats --show-stats -v
+        ccache --show-compression
 
     - name: (Windows) Build
       shell: msys2 {0}
@@ -125,13 +94,16 @@ jobs:
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         WITH_SENTRY: "ON"
+        WITH_MCPSERVER: "ON"
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
 
     - name: check ccache stats post build
       shell: msys2 {0}
       env:
         CCACHE_DIR: ${{runner.workspace}}/ccache
-      run: ccache --show-stats
+      run: |
+        ccache --show-stats -v
+        ccache --show-compression
 
     - name: (Windows) Run QTest
       shell: msys2 {0}
@@ -141,7 +113,8 @@ jobs:
         LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath)
         export LUA_CPATH
 
-        ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure -j $(nproc)
+        # Twice the cores: most of these tests wait on timers and sockets (#12196: 339s at -j4, 233s at -j8)
+        ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure -j $(( 2 * $(nproc) ))
       env:
         # This runner has Qt's FFmpeg backend and can decode, so TMediaLoopTest must
         # demonstrate every media behaviour rather than skip any of them. Without a floor
@@ -150,12 +123,16 @@ jobs:
         MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK: 1
 
     - name: (Windows) Run Lua tests
-      # ~94s measured here, and a slow runner can take half again as long - kept in
-      # step with the other platforms
-      timeout-minutes: 6
+      # 270-315s measured here, and a slow runner has taken 354s - kept in step
+      # with the other platforms
+      timeout-minutes: 12
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        # Off by default; the flood specs pend without it
+        MUDLET_MATCH_THREADS: 2
+        # Its statistics sample would take lines the flood specs compare off the pool
+        MUDLET_MATCH_SAMPLE_EVERY: 0
         MUDLET_TEST_MODE: 1
         MUDLET_TEST_REQUIRE_TTS_MOCK: 1
         MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
@@ -214,13 +191,6 @@ jobs:
           exit 1
         fi
 
-    - name: Save ccache
-      if: always() && steps.restore-ccache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v6
-      with:
-        path: ${{runner.workspace}}/ccache
-        key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
-
     - name: (Windows) Package
       shell: msys2 {0}
       run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
@@ -236,8 +206,7 @@ jobs:
       run: |
         set -o pipefail
         PACKAGE_DIR="${GITHUB_WORKSPACE}/package-${MSYSTEM}-release"
-        # Staged a level deep: SignPath only documents ** as matching
-        # subdirectories, so a pattern cannot be relied on to reach the ZIP root
+        # Staged a level deep: SignPath doesn't document ** as matching the ZIP root
         STAGING_DIR="${GITHUB_WORKSPACE}/signing-binaries/app"
         rm -rf "${GITHUB_WORKSPACE}/signing-binaries"
         mkdir -p "${STAGING_DIR}"
@@ -288,8 +257,7 @@ jobs:
         echo "Replaced $(find . -type f \( -iname '*.exe' -o -iname '*.dll' \) | wc -l) binaries with signed versions."
 
     - name: (Windows) Verify binaries are signed
-      # Deliberately not gated on the signing steps: a release build that
-      # skipped them must fail here rather than ship unsigned binaries
+      # Not gated on the signing steps, so a release that skipped them fails here instead of shipping unsigned
       if: |
         startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true'
       shell: pwsh
@@ -302,14 +270,23 @@ jobs:
           exit 1
         }
         $signatures = $binaries | ForEach-Object { Get-AuthenticodeSignature $_.FullName }
-        $signatures | Group-Object Status | ForEach-Object { Write-Output "$($_.Count) $($_.Name)" }
-        $bad = $signatures | Where-Object { $_.Status -ne 'Valid' }
+        $signatures | Group-Object Status, StatusMessage, { $_.SignerCertificate.Subject } |
+          ForEach-Object { Write-Output "$($_.Count) $($_.Name)" }
+        # Binaries signed under test-signing report UnknownError, not Valid
+        $accepted = if ($env:SIGNPATH_POLICY_SLUG -eq 'test-signing') { @('Valid', 'UnknownError') } else { @('Valid') }
+        $bad = $signatures | Where-Object { $_.Status -notin $accepted -or -not $_.SignerCertificate }
         if ($bad) {
-          Write-Output "::error::$($bad.Count) of $($binaries.Count) binaries do not have a valid signature"
+          Write-Output "::error::$($bad.Count) of $($binaries.Count) binaries are not signed under $env:SIGNPATH_POLICY_SLUG"
           $bad | ForEach-Object { Write-Output "  $($_.Status) $($_.Path)" }
           exit 1
         }
-        Write-Output "All $($binaries.Count) binaries in the package have a valid signature."
+        $untrustedSigners = @($signatures | Where-Object Status -eq 'UnknownError' |
+          ForEach-Object { $_.SignerCertificate.Thumbprint } | Sort-Object -Unique)
+        if ($untrustedSigners.Count -gt 1) {
+          Write-Output "::error::Binaries reporting UnknownError are signed by $($untrustedSigners.Count) different certificates"
+          exit 1
+        }
+        Write-Output "All $($binaries.Count) binaries in the package are signed under $env:SIGNPATH_POLICY_SLUG."
 
     - name: (Windows) Create portable ZIP
       # Runs after signing so the portable ships the same signed binaries as the installer
@@ -319,8 +296,6 @@ jobs:
     - name: (Windows) Deploy
       shell: msys2 {0}
       env:
-        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
-        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
         X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
         DEPLOY_SSH_KEY: ${{secrets.UPLOAD_PRIVATEKEY}}
@@ -410,10 +385,3 @@ jobs:
       # job re-run) as a 4xx with the reason in the body, which plain curl would exit 0 on
       run: curl --fail-with-body --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.ARTIFACT_NAME}}&unzip=${{env.ARTIFACT_UNZIP}}"
 
-    - name: Register PTB Release
-      shell: msys2 {0}
-      if: ${{ (github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && env.VERSION_STRING != '' }}
-      env:
-        VERSION_STRING: ${{env.VERSION_STRING}}
-        BUILD_COMMIT: ${{env.BUILD_COMMIT}}
-      run: $GITHUB_WORKSPACE/CI/register-windows-release.sh

@@ -28,12 +28,14 @@
  * Each case here asserts both directions: a call that repeats the current state
  * leaves the two flags alone, and a call that really changes it still sets both.
  * The second half is what stops the fix from being "never do the work".
+ * setRoomIDbyHash() is held to the same rule for the unsaved flag.
  */
 
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -47,6 +49,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 namespace {
 const int scmFirstRoomId = 1;
@@ -89,7 +93,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -101,7 +105,7 @@ private slots:
         }
 
         QSignalSpy connectionSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connectionSpy.wait(2000)) {
+        if (!connectionSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -115,8 +119,8 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        deleteProfileDirectory();
         delete mudlet::self();
+        deleteProfileDirectory();
     }
 
     void test_lockRoomOnlyDirtiesTheMapWhenTheLockChanges()
@@ -209,6 +213,33 @@ private slots:
         verifyMapUntouched(qsl("lockSpecialExit() naming an exit that does not exist"));
     }
 
+    // No Lua function reads the unsaved flag, so a spec cannot tell whether the
+    // autosave will ever write a hash change
+    void test_setRoomIDbyHashOnlyDirtiesTheMapWhenTheBindingChanges()
+    {
+        const QString bind = qsl("assert(setRoomIDbyHash(%1, \"lock-noop-hash\"))").arg(scmFirstRoomId);
+
+        markMapClean();
+        QVERIFY(runLua(bind));
+        QVERIFY2(mpHost->mpMap->isUnsaved(), "setRoomIDbyHash() bound a new hash but left the map marked as saved");
+
+        markMapClean();
+        QVERIFY(runLua(bind));
+        QVERIFY2(!mpHost->mpMap->isUnsaved(), "setRoomIDbyHash() repeating the room's own hash marked the map unsaved");
+
+        markMapClean();
+        QVERIFY(runLua(qsl("assert(setRoomIDbyHash(%1, \"lock-noop-hash\"))").arg(scmSecondRoomId)));
+        QVERIFY2(mpHost->mpMap->isUnsaved(), "setRoomIDbyHash() moved a hash to another room but left the map marked as saved");
+
+        markMapClean();
+        QVERIFY(runLua(qsl("assert(setRoomIDbyHash(%1, \"\"))").arg(scmSecondRoomId)));
+        QVERIFY2(mpHost->mpMap->isUnsaved(), "setRoomIDbyHash() cleared a room's hash but left the map marked as saved");
+
+        markMapClean();
+        QVERIFY(runLua(qsl("assert(setRoomIDbyHash(999999, \"lock-noop-hash\") == nil)")));
+        QVERIFY2(!mpHost->mpMap->isUnsaved(), "setRoomIDbyHash() refused a room that does not exist yet marked the map unsaved");
+    }
+
 private:
     TRoom* room(const int id) const { return mpHost->mpMap->mpRoomDB->getRoom(id); }
 
@@ -253,10 +284,7 @@ private:
 
     void deleteProfileDirectory()
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, mHostname));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(mHostname);
     }
 };
 

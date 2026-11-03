@@ -296,10 +296,11 @@ describe("Tests functionality of Geyser.Mapper", function()
 
   pending("Geyser.Mapper:raise/lower stack the map against the other windows - Mudlet exposes no z-order readback")
 
-  -- An embedded mapper and the dockable map widget are mutually exclusive for
-  -- the life of a profile (TMainConsole::createMapper and Host::openMapWidget
-  -- each refuse when the other one exists), and neither can be destroyed once
-  -- made. Creating an embedded mapper here would take the map widget away from
+  -- An embedded mapper and the dockable map widget are mutually exclusive:
+  -- TMainConsole::createMapper refuses while a map widget is on screen, and
+  -- Host::openMapWidget refuses while anything at all holds TMap::mpMapper. Only
+  -- the map widget can be given up - creating an embedded mapper takes a closed
+  -- one away for good - so doing it here would take the map widget away from
   -- Mapper_spec for the rest of the run.
   pending("Geyser.Mapper embedded in the main console - an embedded mapper cannot be undone, so it cannot be created inside this suite")
 

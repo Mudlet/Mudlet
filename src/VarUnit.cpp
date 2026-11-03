@@ -27,7 +27,9 @@
 
 #include <QDebug>
 #include <QLocale>
-#include <QTreeWidgetItem>
+#include <QVarLengthArray>
+
+#include <limits>
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -88,7 +90,7 @@ bool VarUnit::isHidden(TVar* var)
         // of the user's. Forget the identity so it is not asked about again.
         forgetHiddenTableAddress(var->pValue);
     }
-    const QString fullName = shortVarName(var).join(qsl("."));
+    const QString fullName = shortVarPath(var);
     if (hidden.contains(fullName) && !rootNameReadsAsAMemberPath(var)) {
         return true;
     }
@@ -258,17 +260,9 @@ void VarUnit::clearPointers()
     mPointers.clear();
 }
 
-// The same question as the TVar overload below, asked of the row in the
-// Variables view standing for that variable - so it has to give the same answer.
-// It used to leave out the size limit, and Qt's tristate cascade ticks a child
-// whose ItemIsUserCheckable flag buildVarTree() stripped, so a table over the
-// limit reached by ticking its parent stayed ticked, went into savedVars and was
-// written into the profile (#9957).
-bool VarUnit::shouldSave(QTreeWidgetItem* pWidgetItem)
+bool VarUnit::pointerSeen(const void* pointer) const
 {
-    TVar* var = getWVar(pWidgetItem);
-
-    return var && shouldSave(var);
+    return pointer && mPointers.contains(pointer);
 }
 
 bool VarUnit::shouldSave(TVar* var)
@@ -283,8 +277,7 @@ bool VarUnit::shouldSave(TVar* var)
 
     // Check if table is too large (max 10,000 items)
     if (var->getValueType() == LUA_TTABLE) {
-        const int itemCount = countTableItems(var);
-        if (itemCount > 10000) {
+        if (countTableItems(var, 10000) > 10000) {
             return false;
         }
     }
@@ -292,16 +285,25 @@ bool VarUnit::shouldSave(TVar* var)
     return true;
 }
 
-int VarUnit::countTableItems(TVar* var)
+// Stops once past limit, as every row of the Variables view asks this of its
+// whole subtree
+int VarUnit::countTableItems(TVar* var, const int limit)
 {
     int count = 0;
     const QList<TVar*> children = var->getChildren(false);
 
     for (TVar* child : children) {
+        // copies are capped on their own, and counting them here would drop the
+        // branch they sit in, original and all
+        if (child->aliasCopy) {
+            continue;
+        }
         count++;
-        // Recursively count items in nested tables
         if (child->getValueType() == LUA_TTABLE) {
-            count += countTableItems(child);
+            count += countTableItems(child, limit - count);
+        }
+        if (count > limit) {
+            break;
         }
     }
 
@@ -327,7 +329,7 @@ QString VarUnit::getUnsaveableReason(TVar* var)
     }
 
     if (var->getValueType() == LUA_TTABLE) {
-        const int itemCount = countTableItems(var);
+        const int itemCount = countTableItems(var, std::numeric_limits<int>::max());
         if (itemCount > 10000) {
             //: Tooltip explaining why a large table cannot be saved, recommending alternative methods
             return tr("This table has %1 items, exceeding the 10,000 item limit for saved variables. "
@@ -337,109 +339,6 @@ QString VarUnit::getUnsaveableReason(TVar* var)
     }
 
     return QString();
-}
-
-void VarUnit::buildVarTree(QTreeWidgetItem* p, TVar* var, bool showHidden)
-{
-    QList<QTreeWidgetItem*> cList;
-    QListIterator<TVar*> it(var->getChildren(true));
-    while (it.hasNext()) {
-        TVar* child = it.next();
-        if (showHidden || !isHidden(child)) {
-            QStringList s1;
-            s1 << child->getName();
-            auto pItem = new QTreeWidgetItem(s1);
-            pItem->setText(0, child->getName());
-            pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
-            pItem->setToolTip(0, utils::richText(tr("Checked variables will be saved and loaded with your profile.")));
-            pItem->setCheckState(0, Qt::Unchecked);
-            if (isSaved(child)) {
-                pItem->setCheckState(0, Qt::Checked);
-            }
-            if (!shouldSave(child)) {
-                pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
-                pItem->setForeground(0, QBrush(QColor("grey")));
-                const QString reason = getUnsaveableReason(child);
-                pItem->setToolTip(0, reason.isEmpty() ? QString() : utils::richText(reason));
-            }
-            pItem->setData(0, Qt::UserRole, child->getValueType());
-            QIcon icon;
-            switch (child->getValueType()) {
-            case 5:
-                icon.addPixmap(QPixmap(qsl(":/icons/table.png")), QIcon::Normal, QIcon::Off);
-                break;
-            case 6:
-                icon.addPixmap(QPixmap(qsl(":/icons/function.png")), QIcon::Normal, QIcon::Off);
-                break;
-            default:
-                icon.addPixmap(QPixmap(qsl(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
-                break;
-            }
-            pItem->setIcon(0, icon);
-            wVars.insert(pItem, child);
-            cList.append(pItem);
-            if (child->getValueType() == 5) {
-                buildVarTree(pItem, child, showHidden);
-            }
-        }
-    }
-    p->addChildren(cList);
-}
-
-void VarUnit::addTreeItem(QTreeWidgetItem* p, TVar* var)
-{
-    wVars.insert(p, var);
-}
-
-void VarUnit::removeTreeItem(QTreeWidgetItem* p)
-{
-    wVars.remove(p);
-    tVars.remove(p);
-}
-
-void VarUnit::addTempVar(QTreeWidgetItem* p, TVar* var)
-{
-    tVars.insert(p, var);
-}
-
-void VarUnit::removeTempVar(QTreeWidgetItem* p)
-{
-    tVars.remove(p);
-}
-
-TVar* VarUnit::getTVar(QTreeWidgetItem* p)
-{
-    if (tVars.contains(p)) {
-        return tVars[p];
-    }
-    return nullptr;
-}
-
-TVar* VarUnit::getWVar(QTreeWidgetItem* p)
-{
-    if (wVars.contains(p)) {
-        return wVars[p];
-    }
-    return nullptr;
-}
-
-QStringList VarUnit::varName(TVar* var)
-{
-    QStringList names;
-    names << "_G";
-    if (var == base.get() || !var) {
-        return names;
-    }
-    names << var->getName();
-    TVar* p = var->getParent();
-    while (p && p != base.get()) {
-        names.insert(1, p->getName());
-        if (p == base.get()) {
-            break;
-        }
-        p = p->getParent();
-    }
-    return names;
 }
 
 QStringList VarUnit::shortVarName(TVar* var)
@@ -458,11 +357,31 @@ QStringList VarUnit::shortVarName(TVar* var)
     return names;
 }
 
+// shortVarName() joined with dots, built without the list: the Variables view
+// asks this of every row twice
+QString VarUnit::shortVarPath(TVar* var)
+{
+    QVarLengthArray<TVar*, 16> chain;
+    qsizetype length = 0;
+    for (TVar* pVar = var; pVar && pVar->getName() != qsl("_G"); pVar = pVar->getParent()) {
+        chain.append(pVar);
+        length += pVar->getName().size() + 1;
+    }
+    QString path;
+    path.reserve(length);
+    for (qsizetype i = chain.size() - 1; i >= 0; --i) {
+        path.append(chain.at(i)->getName());
+        if (i) {
+            path.append(QLatin1Char('.'));
+        }
+    }
+    return path;
+}
+
 void VarUnit::addVariable(TVar* var)
 {
-    variableSet.insert(varName(var).join(qsl(".")));
     if (var->hidden) {
-        const QString shortName = shortVarName(var).join(qsl("."));
+        const QString shortName = shortVarPath(var);
         hidden.insert(shortName);
         rememberHiddenTable(var, shortName);
     }
@@ -471,7 +390,7 @@ void VarUnit::addVariable(TVar* var)
 void VarUnit::addHidden(TVar* var, int user)
 {
     var->hidden = true;
-    const QString shortName = shortVarName(var).join(qsl("."));
+    const QString shortName = shortVarPath(var);
     if (user) {
         hiddenByUser.insert(shortName);
     } else {
@@ -487,7 +406,7 @@ void VarUnit::addHidden(const QString& var)
 
 void VarUnit::removeHidden(TVar* var)
 {
-    const QString fullName = shortVarName(var).join(qsl("."));
+    const QString fullName = shortVarPath(var);
     hidden.remove(fullName);
     hiddenByUser.remove(fullName);
     forgetHiddenTable(fullName);
@@ -563,7 +482,7 @@ void VarUnit::addSavedVar(TVar* var)
         // the Variables view never offers this in the first place.
         return;
     }
-    const QString fullName = shortVarName(var).join(qsl("."));
+    const QString fullName = shortVarPath(var);
     var->saved = true;
     savedVars.insert(fullName);
 }
@@ -576,7 +495,7 @@ void VarUnit::removeSavedVar(TVar* var)
         // clicking such a root's row in the Variables view used to do
         return;
     }
-    savedVars.remove(shortVarName(var).join(qsl(".")));
+    savedVars.remove(shortVarPath(var));
 }
 
 bool VarUnit::isSaved(TVar* var)
@@ -586,13 +505,8 @@ bool VarUnit::isSaved(TVar* var)
         // the member path, and addSavedVar() will not put such a root there
         return false;
     }
-    const QString fullName = shortVarName(var).join(qsl("."));
+    const QString fullName = shortVarPath(var);
     return (savedVars.contains(fullName) || var->saved);
-}
-
-void VarUnit::removeVariable(TVar* var)
-{
-    variableSet.remove(varName(var).join(qsl(".")));
 }
 
 bool VarUnit::varExists(TVar* var)
@@ -610,11 +524,15 @@ void VarUnit::setBase(TVar* pVariable)
     base.reset(pVariable);
 }
 
+quint64 VarUnit::nextTreeGeneration()
+{
+    static quint64 counter = 0;
+    return ++counter;
+}
+
 void VarUnit::clear()
 {
+    mTreeGeneration = nextTreeGeneration();
     base.reset();
-    tVars.clear();
-    wVars.clear();
-    variableSet.clear();
     mPointers.clear();
 }

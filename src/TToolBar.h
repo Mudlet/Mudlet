@@ -28,7 +28,9 @@
 class Host;
 class TAction;
 class TFlipButton;
+
 class QGridLayout;
+class QMenu;
 
 
 class TToolBar : public QDockWidget
@@ -39,6 +41,7 @@ public:
     Q_DISABLE_COPY(TToolBar)
     TToolBar(Host*, TAction*, const QString&, QWidget* pW = nullptr);
     void addButton(TFlipButton* pW);
+    void addActionButtons(TAction* pAction);
     void resetItemCount(const int initialOffset) { mItemCount = initialOffset; }
     void resizeEvent(QResizeEvent* e) override;
     void moveEvent(QMoveEvent* e) override;
@@ -50,10 +53,13 @@ public:
     void recordMove() { mRecordMove = true; }
     QString getName() const { return mName; }
     void setName(const QString&);
+    Host* getHost() const;
 
     TAction* mpTAction;
 
 private:
+    void addActionToMenu(TAction* pAction, QMenu* pMenu);
+
     bool mVerticalOrientation = false;
     QWidget* mpWidget;
     QPointer<Host> mpHost;

@@ -17,12 +17,15 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <QtTest/QtTest>
 
 #include <QElapsedTimer>
 #include <QTimer>
 
 #include "EventLoopPump.h"
+
+using namespace std::chrono_literals;
 
 /*
  * The macOS CI legs are what make pumpingFromInsideATimerCallback() worth
@@ -70,7 +73,7 @@ void EventLoopPumpTest::makesOnePassForAZeroTimeout()
 void EventLoopPumpTest::stopsAsSoonAsTheConditionHolds()
 {
     bool done = false;
-    QTimer::singleShot(50, this, [&done]() {
+    QTimer::singleShot(50ms, this, [&done]() {
         done = true;
     });
 
@@ -106,7 +109,7 @@ void EventLoopPumpTest::stopsWithoutPumpingWhenTheConditionAlreadyHolds()
 void EventLoopPumpTest::deliversATimerThatComesDueWhilePumping()
 {
     bool fired = false;
-    QTimer::singleShot(40, this, [&fired]() {
+    QTimer::singleShot(40ms, this, [&fired]() {
         fired = true;
     });
 
@@ -122,8 +125,8 @@ void EventLoopPumpTest::pumpingFromInsideATimerCallback()
     bool firedDuringPump = false;
     bool outerDone = false;
 
-    QTimer::singleShot(0, this, [&]() {
-        QTimer::singleShot(40, this, [&innerFired]() {
+    QTimer::singleShot(0ms, this, [&]() {
+        QTimer::singleShot(40ms, this, [&innerFired]() {
             innerFired = true;
         });
         QVERIFY(!EventLoopPump::pumpFor(300));
@@ -137,5 +140,5 @@ void EventLoopPumpTest::pumpingFromInsideATimerCallback()
     QVERIFY2(firedDuringPump, "a timer did not fire while pumping from inside a timer callback");
 }
 
-QTEST_MAIN(EventLoopPumpTest)
+MUDLET_GROUPED_TEST_MAIN(EventLoopPumpTest)
 #include "EventLoopPumpTest.moc"

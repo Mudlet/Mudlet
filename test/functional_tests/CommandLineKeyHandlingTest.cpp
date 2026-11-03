@@ -32,20 +32,29 @@
 // history list is private and has no reset, so a shared command line would
 // make each test's history depend on the ones that ran before it.
 
+#include <QClipboard>
 #include <QFileInfo>
+#include <QLineEdit>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTextBlock>
+#include <QTextLayout>
 #include <QtTest/QtTest>
 
 #include <chrono>
 
 #include "Host.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "ProfileTestHelper.h"
 #include "RecordingTelnetServer.h"
+#include "KeyUnit.h"
 #include "TCommandLine.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
+#include "TTextEdit.h"
+#include "TUiTour.h"
 #include "ctelnet.h"
 #include "mudlet.h"
 #include "utils.h"
@@ -67,6 +76,7 @@ private:
     const QString mLocalhost = qsl("localhost");
     int mLineCounter = 0;
     QString mLineName;
+    QStringList mPermKeyNames;
 
     // setupConfig() consults portable.txt before the XDG logic
     static bool portableMarkerPresent()
@@ -80,12 +90,12 @@ private:
     TCommandLine* freshCommandLine()
     {
         mLineName = qsl("keyHandlingLine%1").arg(++mLineCounter);
-        auto [created, message] = mpHost->mpConsole->createCommandLine(QString(), mLineName, 0, 0, 300, 30);
+        auto [created, message] = mpHost->mainConsoleView()->createCommandLine(QString(), mLineName, 0, 0, 300, 30);
         if (!created) {
             qWarning() << "CommandLineKeyHandlingTest - could not create a command line:" << message;
             return nullptr;
         }
-        TCommandLine* pCommandLine = mpHost->mpConsole->subCommandLineWidget(mLineName);
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->subCommandLineWidget(mLineName);
         if (pCommandLine) {
             pCommandLine->mSaveCommands = false;
         }
@@ -158,13 +168,18 @@ private:
         return value;
     }
 
+    // A permanent key cannot be deleted from Lua, only switched off, and one
+    // left active on a plain letter would eat that letter in every test that
+    // runs after it.
+    void switchOffAfterwards(const QStringList& names) { mPermKeyNames << names; }
+
     bool waitForServerToReceive(const QByteArray& text) const
     {
         return QTest::qWaitFor(
                 [this, &text]() {
                     return mpServer->received().contains(text);
                 },
-                5000);
+                5s);
     }
 
 private slots:
@@ -190,11 +205,21 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        // A config dir of this test's own reads as a brand new installation, so
+        // the first-run interface tour would open a second after the profile
+        // loads and its application-wide event filter would swallow every key
+        // aimed at the main window - silently, for as many slots as the tour
+        // stays up. Written before init(), which is what stamps an untouched
+        // config as a first launch: a settings file that already holds
+        // something is how mudletUsedBefore() recognises an existing player,
+        // which keeps the rest of the first-run interface away as well.
+        TUiTour::rememberShown();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        QDir(mudlet::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QVERIFY2(mudlet::self()->experiencedMudletPlayer(), "the first-run UI would open over these tests and eat their key presses");
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "Could not create the test profile - see the warning above for the step that timed out.");
@@ -210,10 +235,9 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            QDir(mudlet::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
@@ -235,6 +259,10 @@ private slots:
             mpHost->resetCmdLineAction(mLineName);
             mLineName.clear();
         }
+        for (const QString& name : mPermKeyNames) {
+            mpHost->getKeyUnit()->disableKey(name);
+        }
+        mPermKeyNames.clear();
     }
 
     // The floor the rest of the file stands on: without this, a command line
@@ -456,9 +484,40 @@ private slots:
         QCOMPARE(selection(pCommandLine), qsl("lo world"));
     }
 
-    // A password typed at a game's login prompt arrives with remote echo on, and
-    // must not be left in a history the next player at the keyboard can page
-    // through.
+    // Each further Up moves on to the next older entry that starts with what was
+    // typed, passing over the rest, and once none is left the typed text stays
+    // with the caret at its end.
+    void test_upStepsOnlyThroughEntriesThatStartWithTheTypedText()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        for (const QString& command : {qsl("look"), qsl("north"), qsl("look at sign"), qsl("say look")}) {
+            type(pCommandLine, command);
+            press(pCommandLine, Qt::Key_Return);
+        }
+        type(pCommandLine, qsl("lo"));
+        QVERIFY(selection(pCommandLine).isEmpty());
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+        QCOMPARE(selection(pCommandLine), qsl("ok at sign"));
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look"));
+        QCOMPARE(selection(pCommandLine), qsl("ok"));
+
+        press(pCommandLine, Qt::Key_Escape);
+        type(pCommandLine, qsl("xyz"));
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("xyz"));
+        QVERIFY(selection(pCommandLine).isEmpty());
+        QCOMPARE(pCommandLine->textCursor().position(), 3);
+    }
+
+    // A password typed at a game's login prompt arrives with remote echo on -
+    // past the hidden-input box, after an Esc - and must not be left in a
+    // history the next player at the keyboard can page through.
     void test_aPasswordIsNotKeptInTheHistory()
     {
         TCommandLine* pCommandLine = freshCommandLine();
@@ -479,7 +538,7 @@ private slots:
     // and pressing it again cycles on to the next match.
     void test_tabCompletesAWordFromTheConsoleBuffer()
     {
-        mpHost->mpConsole->print(qsl("qzxalpha qzxbravo\n"));
+        mpHost->mainConsoleView()->print(qsl("qzxalpha qzxbravo\n"));
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
 
@@ -502,7 +561,7 @@ private slots:
     // are already what the player meant.
     void test_tabCompletesOnlyTheWordBeingTyped()
     {
-        mpHost->mpConsole->print(qsl("a qzxquinquagenarian appears\n"));
+        mpHost->mainConsoleView()->print(qsl("a qzxquinquagenarian appears\n"));
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
 
@@ -512,11 +571,33 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("greet qzxquinquagenarian"));
     }
 
+    // The word boundaries the completion works out, both in the game's output and
+    // in what has been typed, have to be the Unicode ones, or a player of a game
+    // that is not in English gets no completion past the first accented letter
+    // (#1954)
+    void test_tabCompletesPastANonAsciiLetter()
+    {
+        mpHost->mainConsoleView()->print(qsl("qzvbjörnsson waves\n"));
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        type(pCommandLine, qsl("qzvbj"));
+        // QTest's key helpers assert on anything outside ASCII, so the letter this
+        // test is about has to be sent as the event a real keyboard produces
+        QKeyEvent accentedLetter(QEvent::KeyPress, Qt::Key_Odiaeresis, Qt::NoModifier, qsl("ö"));
+        QApplication::sendEvent(pCommandLine, &accentedLetter);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzvbjö"));
+
+        press(pCommandLine, Qt::Key_Tab);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzvbjörnsson"));
+    }
+
     // There is no part-word to complete after a space, and guessing one from the
     // word before it would overwrite what was already accepted.
     void test_tabDoesNothingAfterASpace()
     {
-        mpHost->mpConsole->print(qsl("the qzxbrachiosaurus lumbers past\n"));
+        mpHost->mainConsoleView()->print(qsl("the qzxbrachiosaurus lumbers past\n"));
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
 
@@ -534,7 +615,7 @@ private slots:
     // test takes whichever Tab offered.
     void test_aSpaceAcceptsTheCompletionSoTabNoLongerCyclesIt()
     {
-        mpHost->mpConsole->print(qsl("qzxobstreperous qzxobfuscatory\n"));
+        mpHost->mainConsoleView()->print(qsl("qzxobstreperous qzxobfuscatory\n"));
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
 
@@ -554,7 +635,7 @@ private slots:
     // from wherever the last one was.
     void test_aNewPartWordStartsTheCompletionOver()
     {
-        mpHost->mpConsole->print(qsl("qzxobstreperous qzxobfuscatory\n"));
+        mpHost->mainConsoleView()->print(qsl("qzxobstreperous qzxobfuscatory\n"));
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
 
@@ -596,7 +677,7 @@ private slots:
     // in the game's output, and taking it off the blacklist puts it back.
     void test_blacklistedWordsAreNeverOffered()
     {
-        mpHost->mpConsole->print(qsl("qzxkeepme qzxdropme\n"));
+        mpHost->mainConsoleView()->print(qsl("qzxkeepme qzxdropme\n"));
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
         pCommandLine->addBlacklist(qsl("qzxdropme"));
@@ -622,6 +703,135 @@ private slots:
         type(pCommandLine, qsl("qzxdrop"));
         press(pCommandLine, Qt::Key_Tab);
         QCOMPARE(pCommandLine->toPlainText(), qsl("qzxdropme"));
+    }
+
+    // The whole cycle, in order: each word once, the most recent first and the
+    // registered suggestions ahead of the buffer. Case tells words apart, but the
+    // blacklist ignores it, and a match has to start at the beginning of a word.
+    void test_tabCyclesEachMatchOnceMostRecentFirst()
+    {
+        mpHost->mainConsoleView()->print(qsl("qzyalpha qzybravo qzyalpha\n"));
+        mpHost->mainConsoleView()->print(qsl("QZYALPHA x-qzycharlie zqzydelta qzyecho_x qzyecho, qzyalpha.\n"));
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        pCommandLine->addSuggestion(qsl("qzysuggested"));
+        pCommandLine->addBlacklist(qsl("QZYBRAVO"));
+
+        type(pCommandLine, qsl("say qzy"));
+        QStringList offered;
+        for (int press_ = 0; press_ < 7; ++press_) {
+            press(pCommandLine, Qt::Key_Tab);
+            offered << pCommandLine->toPlainText();
+        }
+
+        const QStringList expected{qsl("say qzysuggested"), qsl("say qzyalpha"), qsl("say qzyecho"), qsl("say qzyecho_x"), qsl("say qzycharlie"), qsl("say QZYALPHA"), qsl("say QZYALPHA")};
+        QCOMPARE(offered, expected);
+    }
+
+    // The completion pool and the blacklist cannot be read back from Lua, so
+    // only a Tab shows that the Lua functions filling them reached the command
+    // line they named.
+    void test_luaSuggestionsAndBlacklistReachTheNamedCommandLine()
+    {
+        mpHost->mainConsoleView()->print(qsl("qzxluadropme\n"));
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        const auto completes = [pCommandLine](const QString& typed) {
+            pCommandLine->clear();
+            type(pCommandLine, typed);
+            press(pCommandLine, Qt::Key_Tab);
+            return pCommandLine->toPlainText();
+        };
+
+        QVERIFY(runLua(qsl("addCmdLineSuggestion('%1', 'qzxluasuggested')").arg(mLineName)));
+        QCOMPARE(completes(qsl("qzxluasug")), qsl("qzxluasuggested"));
+        QVERIFY(runLua(qsl("removeCmdLineSuggestion('%1', 'qzxluasuggested')").arg(mLineName)));
+        QCOMPARE(completes(qsl("qzxluasug")), qsl("qzxluasug"));
+        QVERIFY(runLua(qsl("addCmdLineSuggestion('%1', 'qzxluasuggested')").arg(mLineName)));
+        QVERIFY(runLua(qsl("clearCmdLineSuggestions('%1')").arg(mLineName)));
+        QCOMPARE(completes(qsl("qzxluasug")), qsl("qzxluasug"));
+
+        QCOMPARE(completes(qsl("qzxluadrop")), qsl("qzxluadropme"));
+        QVERIFY(runLua(qsl("addCmdLineBlacklist('%1', 'qzxluadropme')").arg(mLineName)));
+        QCOMPARE(completes(qsl("qzxluadrop")), qsl("qzxluadrop"));
+        QVERIFY(runLua(qsl("removeCmdLineBlacklist('%1', 'qzxluadropme')").arg(mLineName)));
+        QCOMPARE(completes(qsl("qzxluadrop")), qsl("qzxluadropme"));
+        QVERIFY(runLua(qsl("addCmdLineBlacklist('%1', 'qzxluadropme')").arg(mLineName)));
+        QVERIFY(runLua(qsl("clearCmdLineBlacklist('%1')").arg(mLineName)));
+        QCOMPARE(completes(qsl("qzxluadrop")), qsl("qzxluadropme"));
+
+        QVERIFY(runLua(qsl("addCommandLineMenuEvent('%1', 'qzxMenuLabel', 'qzxMenuEvent')").arg(mLineName)));
+        QCOMPARE(pCommandLine->contextMenuItems.value(qsl("qzxMenuLabel")), qsl("qzxMenuEvent"));
+    }
+
+    // Text put into a command line from Lua is left the way typing would leave
+    // it, so the next key typed carries on from the end; selecting it from Lua
+    // is what Escape does.
+    void test_luaTextLeavesTheCaretAtTheEndOfTheNamedCommandLine()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        type(pCommandLine, qsl("typed"));
+        pCommandLine->selectAll();
+        QVERIFY(runLua(qsl("printCmdLine('%1', 'printed')").arg(mLineName)));
+        QVERIFY(selection(pCommandLine).isEmpty());
+        type(pCommandLine, qsl("X"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("printedX"));
+
+        pCommandLine->selectAll();
+        QVERIFY(runLua(qsl("appendCmdLine('%1', ' appended')").arg(mLineName)));
+        QVERIFY(selection(pCommandLine).isEmpty());
+        type(pCommandLine, qsl("Y"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("printedX appendedY"));
+
+        QVERIFY(runLua(qsl("selectCmdLineText('%1')").arg(mLineName)));
+        QCOMPARE(selection(pCommandLine), qsl("printedX appendedY"));
+
+        QVERIFY(runLua(qsl("printCmdLine('%1', 'row one\\nrow two')").arg(mLineName)));
+        type(pCommandLine, qsl("X"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("row one\nrow twoX"));
+
+        QVERIFY(runLua(qsl("appendCmdLine('%1', '\\nrow three')").arg(mLineName)));
+        type(pCommandLine, qsl("Y"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("row one\nrow twoX\nrow threeY"));
+
+        // A row that only wraps on screen ends its first row the same way
+        const QString wrapping = qsl("word ").repeated(200).trimmed();
+        QVERIFY(runLua(qsl("printCmdLine('%1', '%2')").arg(mLineName, wrapping)));
+        QVERIFY2(pCommandLine->document()->firstBlock().layout()->lineCount() > 1, "the long text did not wrap, so this case would prove nothing");
+        type(pCommandLine, qsl("Z"));
+        QCOMPARE(pCommandLine->toPlainText(), wrapping + qsl("Z"));
+    }
+
+    // The main command line grows to show every row of what Lua puts into it,
+    // and shrinks again when Lua clears it.
+    void test_luaTextResizesTheMainCommandLine()
+    {
+        QVERIFY(mpHost->mainConsoleView()->mpCommandLine);
+        QWidget* pLayer = mpHost->mainConsoleView()->layerCommandLine;
+        QVERIFY(pLayer);
+        const auto clearMain = qScopeGuard([this]() {
+            runLua(qsl("clearCmdLine()"));
+        });
+
+        QVERIFY(runLua(qsl("printCmdLine('one row')")));
+        qApp->processEvents();
+        const int oneRow = pLayer->maximumHeight();
+
+        QVERIFY(runLua(qsl("printCmdLine('row one\\nrow two')")));
+        qApp->processEvents();
+        const int twoRows = pLayer->maximumHeight();
+        QVERIFY2(twoRows > oneRow, qPrintable(qsl("two printed rows left the command line %1 high, one row %2").arg(twoRows).arg(oneRow)));
+
+        QVERIFY(runLua(qsl("appendCmdLine('\\nrow three')")));
+        qApp->processEvents();
+        const int threeRows = pLayer->maximumHeight();
+        QVERIFY2(threeRows > twoRows, qPrintable(qsl("a third appended row left the command line %1 high, two rows %2").arg(threeRows).arg(twoRows)));
+
+        QVERIFY(runLua(qsl("clearCmdLine()")));
+        qApp->processEvents();
+        QCOMPARE(pLayer->maximumHeight(), oneRow);
     }
 
     // Escape leaves completion mode, and selects the line so the next thing
@@ -656,6 +866,30 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("b"));
     }
 
+    // A key the switch names but no binding matches has to fall through to
+    // QPlainTextEdit rather than be swallowed as handled, or the editing shortcuts
+    // the editor brings with it - Ctrl+Delete among them - stop working (#2755)
+    void test_ctrlDeleteStillDeletesTheWordAhead()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        // which modifier deletes a word is the platform's to say, and macOS has no
+        // binding for it at all, so ask rather than assume
+        const QList<QKeySequence> deleteWordBindings = QKeySequence::keyBindings(QKeySequence::DeleteEndOfWord);
+        if (deleteWordBindings.isEmpty()) {
+            QSKIP("this platform binds no key to delete-end-of-word, so there is nothing to fall through to");
+        }
+        const QKeyCombination deleteWord = deleteWordBindings.first()[0];
+
+        type(pCommandLine, qsl("keep this"));
+        pCommandLine->moveCursor(QTextCursor::Start);
+
+        press(pCommandLine, static_cast<Qt::Key>(deleteWord.key()), deleteWord.keyboardModifiers());
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("this"));
+    }
+
     // Ctrl+Up and Ctrl+Down move the caret inside a multi-line command instead
     // of walking the history away from under it.
     void test_ctrlUpAndDownMoveTheCaretRatherThanTheHistory()
@@ -678,6 +912,354 @@ private slots:
 
         press(pCommandLine, Qt::Key_Down, Qt::ControlModifier);
         QCOMPARE(pCommandLine->textCursor().blockNumber(), 1);
+    }
+
+    // Ctrl+C copies what is selected in the game window rather than what is on
+    // the line, and the split-screen scrollback pane is as much the game window
+    // as the pane above it - selecting there and pressing Ctrl+C used to copy
+    // the command line instead (#8551)
+    void test_copyTakesTheScrollbackPanesSelectionOverTheLine()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        TMainConsole* pConsole = mpHost->mainConsoleView();
+        const QString sentinel = qsl("qzxscrollbackline");
+        for (int line = 0; line < 60; ++line) {
+            pConsole->print(qsl("%1 %2\n").arg(sentinel, QString::number(line)));
+        }
+
+        QClipboard* pClipboard = QApplication::clipboard();
+        QVERIFY(pClipboard);
+        pClipboard->setText(qsl("nothing has been copied yet"));
+        // Selecting in the command line drops the console's selection, so the
+        // contest has to be set up in this order to exist at all.
+        type(pCommandLine, qsl("a command in the way"));
+        pCommandLine->selectAll();
+
+        // Scrolling back is what opens the lower pane; without it there is no
+        // second pane to select in. A selection in a pane of no height cannot be
+        // worked out, and the panes are only laid out once the window they are in
+        // is up, so it has to be shown and sized first.
+        const QSize windowSize = mudlet::self()->size();
+        mudlet::self()->resize(1200, 800);
+        mudlet::self()->show();
+        const auto restoreTheWindow = qScopeGuard([pConsole, windowSize]() {
+            pConsole->scrollDown(100);
+            // scrolling back down hides the lower pane but leaves it selected, for
+            // the next test that presses Ctrl+C to copy; blanking mSelectedRegion
+            // is not enough, the buffer cells stay flagged until unHighlight()
+            pConsole->clearSelection();
+            mudlet::self()->hide();
+            mudlet::self()->resize(windowSize);
+        });
+        QVERIFY2(QTest::qWaitForWindowExposed(mudlet::self()), "the main window never came up");
+        pConsole->scrollUp(30);
+        // the upper pane's half of the scroll runs on a 0ms timer, and the lower
+        // pane only gets a height once the layout has run, so neither is true yet
+        QTRY_VERIFY2(!pConsole->mUpperPane->mIsTailMode, "the console never actually scrolled back");
+        QTRY_VERIFY2(pConsole->mLowerPane->isVisible() && pConsole->mLowerPane->height() > 0, "scrolling back did not open the split-screen scrollback");
+
+        pConsole->mLowerPane->slot_selectAll();
+        // the upper pane is asked first, so it has to be out of the running for
+        // this to be about the lower one at all
+        QVERIFY2(pConsole->mUpperPane->mSelectedRegion.isEmpty(), "the upper pane holds a selection, so a copy from it would prove nothing about the lower one");
+        QVERIFY2(!pConsole->mLowerPane->mSelectedRegion.isEmpty(), "select-all put no selection on the scrollback pane");
+        QVERIFY2(pCommandLine->textCursor().hasSelection(), "the command line lost the selection it is meant to lose the contest with");
+
+        press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
+
+        QVERIFY2(pClipboard->text().contains(sentinel), qPrintable(qsl("Ctrl+C copied '%1' rather than the scrollback pane's selection").arg(pClipboard->text().left(60))));
+    }
+
+    // #10764: a key put in a group made by permGroup(name, "key") reported
+    // itself active and still never fired, because the group above it was
+    // created switched off and KeyUnit never descends into an inactive folder.
+    // Only a real key press shows that, which is why this lives here and not in
+    // KeyBinds_spec.lua - Lua can read a key's state but cannot press one.
+    //
+    // permGroup() itself is mudlet-lua, which a functional test profile does not
+    // load, so the group is made the way permGroup(name, "key") makes it: the
+    // keycode of -1 that permKey() passes on for a folder. Other_spec.lua pins
+    // that permGroup still dispatches to permKey(name, parent, -1, "").
+    void test_aKeyInAFreshPermGroupFires()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("keyGroupFired = ''")));
+        QString group = qsl("keyGroupSpecGroup");
+        QString key = qsl("keyGroupSpecKey");
+        QString noParent;
+        QString noScript;
+        QString keyScript = qsl("keyGroupFired = 'yes'");
+        int folderKeycode = -1;
+        int noModifier = Qt::NoModifier;
+        int letterJ = Qt::Key_J;
+
+        auto [groupId, groupMessage] = mpHost->mLuaInterpreter.startPermKey(group, noParent, folderKeycode, noModifier, noScript);
+        QVERIFY2(groupId > 0, qPrintable(groupMessage));
+        auto [keyId, keyMessage] = mpHost->mLuaInterpreter.startPermKey(key, group, letterJ, noModifier, keyScript);
+        QVERIFY2(keyId > 0, qPrintable(keyMessage));
+        switchOffAfterwards({key, group});
+
+        press(pCommandLine, Qt::Key_J);
+
+        QCOMPARE(luaGlobal("keyGroupFired"), qsl("yes"));
+        // and the press belongs to the binding now: TCommandLine::event() takes
+        // a match as handled, so the character it was typed with never reaches
+        // the document - a binding on a plain letter costs the user that letter
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+    }
+
+    // The control for the test above: a key that fired whatever state the group
+    // above it was in would pass that one just as well.
+    void test_aKeyInASwitchedOffPermGroupDoesNotFire()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        QVERIFY(runLua(qsl("keyGroupFired = ''")));
+        QString group = qsl("keyGroupSpecOffGroup");
+        QString key = qsl("keyGroupSpecOffKey");
+        QString noParent;
+        QString noScript;
+        QString keyScript = qsl("keyGroupFired = 'yes'");
+        int folderKeycode = -1;
+        int noModifier = Qt::NoModifier;
+        int letterK = Qt::Key_K;
+
+        auto [groupId, groupMessage] = mpHost->mLuaInterpreter.startPermKey(group, noParent, folderKeycode, noModifier, noScript);
+        QVERIFY2(groupId > 0, qPrintable(groupMessage));
+        auto [keyId, keyMessage] = mpHost->mLuaInterpreter.startPermKey(key, group, letterK, noModifier, keyScript);
+        QVERIFY2(keyId > 0, qPrintable(keyMessage));
+        switchOffAfterwards({key, group});
+        QVERIFY(mpHost->getKeyUnit()->disableKey(group));
+
+        press(pCommandLine, Qt::Key_K);
+
+        QCOMPARE(luaGlobal("keyGroupFired"), QString());
+        // nothing claimed the press, so it is the command line's again
+        QCOMPARE(pCommandLine->toPlainText(), qsl("k"));
+    }
+
+    // Ctrl+F opens the console's search bar, but a player who had already bound
+    // it themselves keeps their binding - it is asked first (#6694)
+    void test_aCtrlFBindingRunsInsteadOfOpeningTheSearchBar()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("ctrlFKeyFired = ''")));
+        QString key = qsl("ctrlFSpecKey");
+        QString noParent;
+        QString keyScript = qsl("ctrlFKeyFired = 'yes'");
+        int letterF = Qt::Key_F;
+        int controlModifier = Qt::ControlModifier;
+
+        auto [keyId, keyMessage] = mpHost->mLuaInterpreter.startPermKey(key, noParent, letterF, controlModifier, keyScript);
+        QVERIFY2(keyId > 0, qPrintable(keyMessage));
+        switchOffAfterwards({key});
+
+        // opening the search bar selects whatever is in it, so a search bar that
+        // was left deselected and comes back selected is one that opened
+        QLineEdit* pSearchBox = mpHost->mainConsoleView()->mpBufferSearchBox;
+        QVERIFY(pSearchBox);
+        pSearchBox->setText(qsl("a search that was already there"));
+        pSearchBox->deselect();
+
+        press(pCommandLine, Qt::Key_F, Qt::ControlModifier);
+
+        QCOMPARE(luaGlobal("ctrlFKeyFired"), qsl("yes"));
+        QVERIFY2(!pSearchBox->hasSelectedText(), "the search bar opened as well as the binding running");
+    }
+
+    // The control for the test above, and what Ctrl+F is for: with no binding
+    // of the player's own it opens the search bar, bringing back an input line
+    // that had been hidden with Alt+L on the way
+    void test_ctrlFOpensTheSearchBarWhenNothingIsBoundToIt()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QLineEdit* pSearchBox = mpHost->mainConsoleView()->mpBufferSearchBox;
+        QVERIFY(pSearchBox);
+        pSearchBox->setText(qsl("a search that was already there"));
+        pSearchBox->deselect();
+        mudlet::self()->dactionInputLine->setChecked(true);
+        mpHost->setCompactInputLine(true);
+        const auto restoreTheInputLine = qScopeGuard([this]() {
+            mudlet::self()->dactionInputLine->setChecked(false);
+            mpHost->setCompactInputLine(false);
+        });
+
+        press(pCommandLine, Qt::Key_F, Qt::ControlModifier);
+
+        QVERIFY2(pSearchBox->hasSelectedText(), "Ctrl+F did not open the search bar");
+        QVERIFY2(!mudlet::self()->dactionInputLine->isChecked(), "the input line was left hidden behind the search bar");
+        QVERIFY2(!mpHost->getCompactInputLine(), "the profile still has its compact input line");
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+    }
+
+    // Keypad keys are how a lot of players walk, so a binding on one is asked
+    // before anything else looks at the press - including the digit it would
+    // otherwise type
+    void test_aKeypadBindingFiresInsteadOfTypingTheDigit()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("keypadKeyFired = ''")));
+        QString key = qsl("keypadEightSpecKey");
+        QString noParent;
+        QString keyScript = qsl("keypadKeyFired = 'yes'");
+        int digitEight = Qt::Key_8;
+        int keypadModifier = Qt::KeypadModifier;
+
+        auto [keyId, keyMessage] = mpHost->mLuaInterpreter.startPermKey(key, noParent, digitEight, keypadModifier, keyScript);
+        QVERIFY2(keyId > 0, qPrintable(keyMessage));
+        switchOffAfterwards({key});
+
+        // the same digit off the top row is not the keypad one
+        press(pCommandLine, Qt::Key_8);
+        QCOMPARE(luaGlobal("keypadKeyFired"), QString());
+        QCOMPARE(pCommandLine->toPlainText(), qsl("8"));
+
+        press(pCommandLine, Qt::Key_8, Qt::KeypadModifier);
+        QCOMPARE(luaGlobal("keypadKeyFired"), qsl("yes"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("8"));
+    }
+
+    // Every digit has its own case in TCommandLine::event() for the Ctrl+digit
+    // tab switching, so each has to hand an unmodified press back for typing
+    void test_everyDigitTypesIntoTheLine()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        const QList<Qt::Key> digits{Qt::Key_1, Qt::Key_2, Qt::Key_3, Qt::Key_4, Qt::Key_5, Qt::Key_6, Qt::Key_7, Qt::Key_8, Qt::Key_9, Qt::Key_0};
+
+        for (const Qt::Key digit : digits) {
+            press(pCommandLine, digit);
+        }
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("1234567890"));
+    }
+
+    // Alt+digit is not the tab switching Ctrl+digit is, so a binding on it is
+    // just a binding
+    void test_anAltDigitBindingFires()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("altDigitKeyFired = ''")));
+        QString key = qsl("altOneSpecKey");
+        QString noParent;
+        QString keyScript = qsl("altDigitKeyFired = 'yes'");
+        int digitOne = Qt::Key_1;
+        int altModifier = Qt::AltModifier;
+
+        auto [keyId, keyMessage] = mpHost->mLuaInterpreter.startPermKey(key, noParent, digitOne, altModifier, keyScript);
+        QVERIFY2(keyId > 0, qPrintable(keyMessage));
+        switchOffAfterwards({key});
+
+        press(pCommandLine, Qt::Key_1, Qt::AltModifier);
+
+        QCOMPARE(luaGlobal("altDigitKeyFired"), qsl("yes"));
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+    }
+
+    // A plain or shifted space resets the completion state and types a space;
+    // with any other modifier it is offered to the bindings first
+    void test_aCtrlSpaceBindingFiresInsteadOfTypingASpace()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("ctrlSpaceKeyFired = ''")));
+        QString key = qsl("ctrlSpaceSpecKey");
+        QString noParent;
+        QString keyScript = qsl("ctrlSpaceKeyFired = 'yes'");
+        int space = Qt::Key_Space;
+        int controlModifier = Qt::ControlModifier;
+
+        auto [keyId, keyMessage] = mpHost->mLuaInterpreter.startPermKey(key, noParent, space, controlModifier, keyScript);
+        QVERIFY2(keyId > 0, qPrintable(keyMessage));
+        switchOffAfterwards({key});
+        type(pCommandLine, qsl("look"));
+
+        press(pCommandLine, Qt::Key_Space, Qt::ControlModifier);
+
+        QCOMPARE(luaGlobal("ctrlSpaceKeyFired"), qsl("yes"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look"));
+    }
+
+    // Page Up and Page Down page through the scrollback without the player
+    // having to leave the command line
+    void test_pageUpAndPageDownScrollTheScrollback()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        TMainConsole* pConsole = mpHost->mainConsoleView();
+        for (int line = 0; line < 200; ++line) {
+            pConsole->print(qsl("paging line %1\n").arg(line));
+        }
+
+        // a pane that was never laid out is zero lines high, and paging by
+        // zero lines goes nowhere
+        const QSize windowSize = mudlet::self()->size();
+        mudlet::self()->resize(1200, 800);
+        mudlet::self()->show();
+        const auto restoreTheWindow = qScopeGuard([pConsole, windowSize]() {
+            pConsole->scrollDown(1000);
+            mudlet::self()->hide();
+            mudlet::self()->resize(windowSize);
+        });
+        QVERIFY2(QTest::qWaitForWindowExposed(mudlet::self()), "the main window never came up");
+        QTRY_VERIFY2(pConsole->mUpperPane->getScreenHeight() > 0, "the console never got a height to page by");
+        QVERIFY2(pConsole->mUpperPane->mIsTailMode, "the console was already scrolled back");
+
+        press(pCommandLine, Qt::Key_PageUp);
+
+        // the upper pane's half of the scroll runs on a 0ms timer
+        QTRY_VERIFY2(!pConsole->mUpperPane->mIsTailMode, "Page Up did not scroll the console back");
+        QTRY_VERIFY2(pConsole->mLowerPane->isVisible(), "Page Up did not open the split-screen scrollback");
+
+        press(pCommandLine, Qt::Key_PageDown);
+
+        QTRY_VERIFY2(pConsole->mUpperPane->mIsTailMode, "Page Down did not bring the console back to the newest line");
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+    }
+
+    // The accessibility preference picks which key turns caret mode on, and
+    // it works from the command line - where Tab would otherwise complete
+    void test_theChosenCaretKeyTurnsCaretModeOn_data()
+    {
+        QTest::addColumn<Host::CaretShortcut>("shortcut");
+        QTest::addColumn<Qt::Key>("key");
+        QTest::newRow("F6") << Host::CaretShortcut::F6 << Qt::Key_F6;
+        QTest::newRow("Tab") << Host::CaretShortcut::Tab << Qt::Key_Tab;
+    }
+
+    void test_theChosenCaretKeyTurnsCaretModeOn()
+    {
+        QFETCH(Host::CaretShortcut, shortcut);
+        QFETCH(Qt::Key, key);
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(!mpHost->caretEnabled());
+
+        // with no caret key chosen the press is the command line's own
+        press(pCommandLine, key);
+        QVERIFY2(!mpHost->caretEnabled(), "caret mode came on with no caret key chosen");
+
+        mpHost->mCaretShortcut = shortcut;
+        const auto restoreCaretMode = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            if (mpHost->caretEnabled()) {
+                mpHost->setCaretEnabled(false);
+            }
+            // the keyboard is released on a 0ms timer
+            QTest::qWait(80ms);
+        });
+
+        press(pCommandLine, key);
+
+        QVERIFY2(mpHost->caretEnabled(), "the chosen caret key did not turn caret mode on");
     }
 };
 

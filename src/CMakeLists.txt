@@ -39,47 +39,15 @@ if(USE_FONTS)
   endif()
 endif()
 
-# Add every .cpp source file here, kept in alphabetical order (case-insensitive).
+# Add every .cpp source file that does not need Qt Widgets here, for mudlet_core, kept
+# in alphabetical order (case-insensitive).
 set(mudlet_SRCS
     ActionUnit.cpp
     AliasUnit.cpp
-    AltFocusMenuBarDisable.cpp
     CredentialManager.cpp
     ctelnet.cpp
-    CustomLineDrawContextMenuHandler.cpp
-    CustomLineDrawHandler.cpp
-    CustomLineEditContextMenuHandler.cpp
-    CustomLineEditHandler.cpp
-    CustomLineSession.cpp
-    DarkTheme.cpp
+    DioramaLayout.cpp
     discord.cpp
-    dlgAboutDialog.cpp
-    dlgActionMainArea.cpp
-    dlgAliasMainArea.cpp
-    dlgColorTrigger.cpp
-    dlgComposer.cpp
-    dlgConnectionProfiles.cpp
-    dlgIRC.cpp
-    dlgKeysMainArea.cpp
-    dlgMapLabel.cpp
-    dlgMapper.cpp
-    dlgModuleManager.cpp
-    dlgNotepad.cpp
-    dlgPackageExporter.cpp
-    dlgPackageManager.cpp
-    dlgProfilePreferences.cpp
-    dlgRoomExits.cpp
-    dlgRoomProperties.cpp
-    dlgScriptsMainArea.cpp
-    dlgSourceEditorArea.cpp
-    dlgSourceEditorFindArea.cpp
-    dlgSystemMessageArea.cpp
-    dlgTimersMainArea.cpp
-    dlgTriggerEditor.cpp
-    dlgTriggerPatternEdit.cpp
-    dlgTriggersMainArea.cpp
-    dlgVarsMainArea.cpp
-    EAction.cpp
     EditorAddItemCommand.cpp
     EditorDeleteItemCommand.cpp
     EditorItemXMLHelpers.cpp
@@ -87,9 +55,9 @@ set(mudlet_SRCS
     EditorMoveItemCommand.cpp
     EditorToggleActiveCommand.cpp
     EditorUndoStack.cpp
+    EnvironmentKit.cpp
     EventLoopPump.cpp
-    exitstreewidget.cpp
-    FileOpenHandler.cpp
+    ExitAppearance.cpp
     FontManager.cpp
     GifTracker.cpp
     GMCPAuthenticator.cpp
@@ -97,63 +65,52 @@ set(mudlet_SRCS
     HostManager.cpp
     ircmessageformatter.cpp
     KeyUnit.cpp
-    LabelInteractionHandler.cpp
     LuaInterface.cpp
     LuaLiteral.cpp
-    main.cpp
     mapInfoContributorManager.cpp
-    MiddleMousePanHandler.cpp
+    MapDecals.cpp
+    MapStyle.cpp
     MMCPClient.cpp
     MMCPServer.cpp
-    mudlet.cpp
-    MudletInstanceCoordinator.cpp
+    MudletApp.cpp
+    MudletMedia.cpp
+    MudletReplay.cpp
     MxpTag.cpp
     OAuthClientFlow.cpp
-    PackageItemDelegate.cpp
-    PanInteractionHandler.cpp
-    RoomContextMenuHandler.cpp
-    RoomMoveActivationHandler.cpp
-    RoomMoveDragHandler.cpp
+    RoomAppearance.cpp
     ScriptUnit.cpp
     SecureStringUtils.cpp
-    SelectionRectangleHandler.cpp
     SentryWrapper.cpp
+    SherpaRecognizer.cpp
     ShortcutsManager.cpp
-    SingleLineTextEdit.cpp
+    SignInStoreReconciler.cpp
     SpeechAudioCapture.cpp
     SpeechRecognizerFactory.cpp
-    T2DMap.cpp
-    TAccessibleTextEdit.cpp
     TAction.cpp
     TAlias.cpp
     TArea.cpp
+    TAreaGraph.cpp
     TAreaGridIndex.cpp
     TAreaLodExitIndex.cpp
     TAreaSpanIndex.cpp
     TAreaZLevelIndex.cpp
+    TAudioMixer.cpp
     TBuffer.cpp
-    TCommandLine.cpp
-    TConsole.cpp
+    TCommandHistory.cpp
     TConsoleModel.cpp
     TDebug.cpp
-    TDebugFilterBar.cpp
-    TDetachedWindow.cpp
-    TDockWidget.cpp
-    TEasyButtonBar.cpp
     TEncodingHelper.cpp
     TEncodingTable.cpp
     TEntityHandler.cpp
     TEntityResolver.cpp
-    TFeatureCallout.cpp
-    TFlipButton.cpp
-    TForkedProcess.cpp
+    TGlyphCache.cpp
     THyperlinkCompactManager.cpp
     THyperlinkSelectionManager.cpp
     THyperlinkVisibilityManager.cpp
     TimerUnit.cpp
+    TIngestPipeline.cpp
+    TIrcClient.cpp
     TKey.cpp
-    TKeySequenceEdit.cpp
-    TLabel.cpp
     TLabelModel.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
@@ -166,12 +123,10 @@ set(mudlet_SRCS
     TLuaInterpreterTextToSpeech.cpp
     TLuaInterpreterSpeechToText.cpp
     TLuaInterpreterUI.cpp
-    TMainConsole.cpp
     TMap.cpp
     TMapLabel.cpp
-    TMapView.cpp
-    TMapViewManager.cpp
     TMedia.cpp
+    TMediaVoice.cpp
     TMediaPlaylist.cpp
     TMxpBRTagHandler.cpp
     TMxpColorTagHandler.cpp
@@ -201,38 +156,121 @@ set(mudlet_SRCS
     TMxpTagProcessor.cpp
     TMxpVarTagHandler.cpp
     TMxpVersionTagHandler.cpp
-    TrailingWhitespaceMarker.cpp
-    TriggerHighlighter.cpp
+    TNullAppFrontend.cpp
+    TNullConsoleFrontend.cpp
+    TNullMapView.cpp
+    TNullMapViews.cpp
+    TriggerMatchPool.cpp
     TriggerUnit.cpp
+    TTriggerPrescan.cpp
     TRoom.cpp
     TRoomDB.cpp
     TScript.cpp
+    TSpeechBridge.cpp
+    TSpellChecker.cpp
+    TStringUtils.cpp
+    TTextCodec.cpp
+    TTimer.cpp
+    TTrigger.cpp
+    TVar.cpp
+    UntrustedText.cpp
+    utils.cpp
+    VarUnit.cpp
+    VoskRecognizer.cpp
+    XMLexport.cpp
+    XMLimport.cpp
+    XmlImportReader.cpp)
+
+# Every .cpp source file that needs Qt Widgets, or that only the desktop app uses, goes
+# here instead, in mudlet_app, kept in alphabetical order (case-insensitive).
+set(mudlet_app_SRCS
+    ../3rdparty/qt-tags-widget/src/qtagedit.cpp
+    CustomLineDrawContextMenuHandler.cpp
+    CustomLineDrawHandler.cpp
+    CustomLineEditContextMenuHandler.cpp
+    CustomLineEditHandler.cpp
+    CustomLineSession.cpp
+    DarkTheme.cpp
+    dlgAboutDialog.cpp
+    dlgActionMainArea.cpp
+    dlgAliasMainArea.cpp
+    dlgColorTrigger.cpp
+    dlgComposer.cpp
+    dlgConnectionProfiles.cpp
+    dlgIRC.cpp
+    dlgKeysMainArea.cpp
+    dlgMapLabel.cpp
+    dlgMapper.cpp
+    dlgModuleManager.cpp
+    dlgNotepad.cpp
+    dlgPackageExporter.cpp
+    dlgPackageManager.cpp
+    dlgProfilePreferences.cpp
+    dlgRoomExits.cpp
+    dlgRoomProperties.cpp
+    dlgScriptsMainArea.cpp
+    dlgSourceEditorArea.cpp
+    dlgSourceEditorFindArea.cpp
+    dlgSystemMessageArea.cpp
+    dlgTimersMainArea.cpp
+    dlgTriggerEditor.cpp
+    dlgTriggerPatternEdit.cpp
+    dlgTriggersMainArea.cpp
+    dlgVarsMainArea.cpp
+    EAction.cpp
+    EditorAutoCompleteFocusHandler.cpp
+    exitstreewidget.cpp
+    FileOpenHandler.cpp
+    HostDialogs.cpp
+    LabelInteractionHandler.cpp
+    MiddleMousePanHandler.cpp
+    mudlet.cpp
+    MudletInstanceCoordinator.cpp
+    MudletProxyStyle.cpp
+    PackageItemDelegate.cpp
+    PanInteractionHandler.cpp
+    RoomContextMenuHandler.cpp
+    RoomMoveActivationHandler.cpp
+    RoomMoveDragHandler.cpp
+    SelectionRectangleHandler.cpp
+    SingleLineTextEdit.cpp
+    T2DMap.cpp
+    TAccessibleLabel.cpp
+    TAccessibleTextEdit.cpp
+    TCommandLine.cpp
+    TPasswordEntry.cpp
+    TConsole.cpp
+    TDebugFilterBar.cpp
+    TDetachedWindow.cpp
+    TDockWidget.cpp
+    TEasyButtonBar.cpp
+    TFeatureCallout.cpp
+    TFlipButton.cpp
+    TKeySequenceEdit.cpp
+    TLabel.cpp
+    TMainConsole.cpp
+    TMapView.cpp
+    TMapViewManager.cpp
+    TMxpFrameWidgets.cpp
+    TrailingWhitespaceMarker.cpp
+    TriggerHighlighter.cpp
     TScrollBox.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
-    TStringUtils.cpp
     TTabBar.cpp
     TTextBox.cpp
-    TTextCodec.cpp
     TTextEdit.cpp
-    TTimer.cpp
     TToolBar.cpp
     TTreeWidget.cpp
-    TTrigger.cpp
     TUiTour.cpp
-    TVar.cpp
-    UntrustedText.cpp
-    VarUnit.cpp
-    VoskRecognizer.cpp
     WideComboBox.cpp
-    XMLexport.cpp
-    XMLimport.cpp)
+    widgetutils.cpp)
 
 if(APPLE)
   # Sparkle updater for macOS
   if(USE_UPDATER)
-    list(APPEND mudlet_SRCS sparkleupdater.mm)
-    list(APPEND mudlet_HDRS sparkleupdater.h)
+    list(APPEND mudlet_app_SRCS sparkleupdater.mm)
+    list(APPEND mudlet_app_HDRS sparkleupdater.h)
     set_source_files_properties(
       src/sparkleupdater.mm
       src/sparkleupdater.h
@@ -249,6 +287,20 @@ if(APPLE)
   list(APPEND mudlet_SRCS MacMicrophonePermission.mm)
   set_source_files_properties(
     MacMicrophonePermission.mm
+    PROPERTIES
+    LANGUAGE OBJCXX
+    COMPILE_OPTIONS "-fobjc-arc"
+  )
+
+  # The macOS speech recognition backend. Unlike MacMicrophonePermission its
+  # class declares Q_OBJECT, so AUTOMOC must see the header - but only where
+  # the .mm that defines the class is also built. Leaving it in the
+  # unconditional mudlet_HDRS set moc'd it on every platform and left Linux and
+  # Windows linking against a vtable nothing defined. The header is appended
+  # after that set() instead, since this block runs before it.
+  list(APPEND mudlet_SRCS AppleSpeechRecognizer.mm)
+  set_source_files_properties(
+    AppleSpeechRecognizer.mm
     PROPERTIES
     LANGUAGE OBJCXX
     COMPILE_OPTIONS "-fobjc-arc"
@@ -286,23 +338,178 @@ set(mudlet_UIS
     ui/triggers_main_area.ui
     ui/vars_main_area.ui)
 
-# Add every .h header file here, kept in alphabetical order (case-insensitive).
+# Add every .h header file that does not need Qt Widgets here, for mudlet_core, kept
+# in alphabetical order (case-insensitive).
 set(mudlet_HDRS
     ../3rdparty/discord/rpc/include/discord_register.h
     ../3rdparty/discord/rpc/include/discord_rpc.h
     ../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h
     ActionUnit.h
     AliasUnit.h
-    AltFocusMenuBarDisable.h
     CredentialManager.h
     ctelnet.h
+    DioramaLayout.h
+    discord.h
+    EditorAddItemCommand.h
+    EditorCommand.h
+    EditorDeleteItemCommand.h
+    EditorItemXMLHelpers.h
+    EditorModifyPropertyCommand.h
+    EditorMoveItemCommand.h
+    EditorToggleActiveCommand.h
+    EditorUndoStack.h
+    EnvironmentKit.h
+    enums.h
+    EventLoopPump.h
+    ExitAppearance.h
+    FontManager.h
+    GifTracker.h
+    GMCPAuthenticator.h
+    Host.h
+    HostManager.h
+    ircmessageformatter.h
+    KeyUnit.h
+    LuaInterface.h
+    LuaLiteral.h
+    MacMicrophonePermission.h
+    mapInfoContributorManager.h
+    MapDecals.h
+    MapStyle.h
+    MMCP.h
+    MMCPClient.h
+    MMCPServer.h
+    MudletApp.h
+    MudletMedia.h
+    MudletReplay.h
+    MxpTag.h
+    OAuthClientFlow.h
+    RoomAppearance.h
+    ScriptUnit.h
+    SecureStringUtils.h
+    SentryWrapper.h
+    SherpaRecognizer.h
+    ShortcutsManager.h
+    SignInStoreReconciler.h
+    SpeechAudioCapture.h
+    SpeechRecognizer.h
+    SpeechRecognizerFactory.h
+    TAction.h
+    TAlias.h
+    TAppFrontend.h
+    TArea.h
+    TAreaGraph.h
+    TAreaGridIndex.h
+    TAreaLodExitIndex.h
+    TAreaSpanIndex.h
+    TAreaZLevelIndex.h
+    TAstar.h
+    TAudioMixer.h
+    TBuffer.h
+    TCommandHistory.h
+    TConsoleFrontend.h
+    TConsoleModel.h
+    TConsoleModelNotifier.h
+    TDebug.h
+    TEncodingHelper.h
+    TEncodingTable.h
+    TEntityHandler.h
+    TEntityResolver.h
+    TEvent.h
+    TGameDetails.h
+    TGlyphCache.h
+    THyperlinkCompactManager.h
+    THyperlinkSelectionManager.h
+    THyperlinkStyling.h
+    THyperlinkVisibilityManager.h
+    TimerUnit.h
+    TIngestPipeline.h
+    TIrcClient.h
+    TKey.h
+    TLabelModel.h
+    TLinkStore.h
+    TLuaInterpreter.h
+    TMap.h
+    TMapLabel.h
+    TMapViewFrontend.h
+    TMapViewsFrontend.h
+    TMatchState.h
+    TMedia.h
+    TMediaVoice.h
+    TMediaData.h
+    TMediaPlaylist.h
+    TMxpBRTagHandler.h
+    TMxpClient.h
+    TMxpColorTagHandler.h
+    TMxpContext.h
+    TMxpCustomElementTagHandler.h
+    TMxpDestTagHandler.h
+    TMxpElementDefinitionHandler.h
+    TMxpElementRegistry.h
+    TMxpEntityTagHandler.h
+    TMxpEvent.h
+    TMxpExpireTagHandler.h
+    TMxpFontTagHandler.h
+    TMxpFormattingTagsHandler.h
+    TMxpFrameFrontend.h
+    TMxpFrameManager.h
+    TMxpFrameTagHandler.h
+    TMxpHRTagHandler.h
+    TMxpImageTagHandler.h
+    TMxpLinkTagHandler.h
+    TMxpMudlet.h
+    TMxpMusicTagHandler.h
+    TMxpNodeBuilder.h
+    TMxpProcessor.h
+    TMxpSendTagHandler.h
+    TMxpSoundTagHandler.h
+    TMxpStatTagHandler.h
+    TMxpSupportTagHandler.h
+    TMxpTagHandler.h
+    TMxpTagHandlerResult.h
+    TMxpTagParser.h
+    TMxpTagProcessor.h
+    TMxpVarTagHandler.h
+    TMxpVersionTagHandler.h
+    TNullAppFrontend.h
+    TNullConsoleFrontend.h
+    TNullMapView.h
+    TNullMapViews.h
+    TPrintSink.h
+    Tree.h
+    TriggerMatchPool.h
+    TriggerUnit.h
+    TTriggerPrescan.h
+    TRoom.h
+    TRoomDB.h
+    TScript.h
+    TSpeechBridge.h
+    TSpellChecker.h
+    TStringUtils.h
+    TTextCodec.h
+    TTextProperties.h
+    TTimer.h
+    TTrigger.h
+    TVar.h
+    TWindowRegistry.h
+    UntrustedText.h
+    utils.h
+    VarUnit.h
+    VoskRecognizer.h
+    widechar_width.h
+    XMLexport.h
+    XMLimport.h
+    XmlImportReader.h)
+
+# Every .h header file that needs Qt Widgets, or that only the desktop app uses, goes
+# here instead, in mudlet_app, kept in alphabetical order (case-insensitive).
+set(mudlet_app_HDRS
+    ../3rdparty/qt-tags-widget/include/QTagEdit/qtagedit.hpp
     CustomLineDrawContextMenuHandler.h
     CustomLineDrawHandler.h
     CustomLineEditContextMenuHandler.h
     CustomLineEditHandler.h
     CustomLineSession.h
     DarkTheme.h
-    discord.h
     dlgAboutDialog.h
     dlgActionMainArea.h
     dlgAliasMainArea.h
@@ -330,204 +537,129 @@ set(mudlet_HDRS
     dlgTriggersMainArea.h
     dlgVarsMainArea.h
     EAction.h
-    EditorAddItemCommand.h
-    EditorCommand.h
-    EditorDeleteItemCommand.h
-    EditorItemXMLHelpers.h
-    EditorModifyPropertyCommand.h
-    EditorMoveItemCommand.h
-    EditorToggleActiveCommand.h
-    EditorUndoStack.h
-    enums.h
-    EventLoopPump.h
+    EditorAutoCompleteFocusHandler.h
     exitstreewidget.h
     FileOpenHandler.h
-    FontManager.h
-    GifTracker.h
-    GMCPAuthenticator.h
-    Host.h
-    HostManager.h
-    ircmessageformatter.h
-    KeyUnit.h
+    HostDialogs.h
     LabelInteractionHandler.h
-    LuaInterface.h
-    LuaLiteral.h
-    MacMicrophonePermission.h
-    mapInfoContributorManager.h
     MiddleMousePanHandler.h
-    MMCP.h
-    MMCPClient.h
-    MMCPServer.h
     mudlet.h
     MudletInstanceCoordinator.h
-    MxpTag.h
-    OAuthClientFlow.h
+    MudletProxyStyle.h
     PackageItemDelegate.h
     PanInteractionHandler.h
     RoomContextMenuHandler.h
     RoomMoveActivationHandler.h
     RoomMoveDragHandler.h
-    ScriptUnit.h
-    SecureStringUtils.h
     SelectionRectangleHandler.h
-    SentryWrapper.h
-    ShortcutsManager.h
     SingleLineTextEdit.h
-    SpeechAudioCapture.h
-    SpeechRecognizer.h
-    SpeechRecognizerFactory.h
     T2DMap.h
     TAccessibleConsole.h
+    TAccessibleLabel.h
     TAccessibleTextEdit.h
-    TAction.h
-    TAlias.h
-    TArea.h
-    TAreaGridIndex.h
-    TAreaLodExitIndex.h
-    TAreaSpanIndex.h
-    TAreaZLevelIndex.h
-    TAstar.h
-    TBuffer.h
     TCommandLine.h
+    TPasswordEntry.h
     TConsole.h
-    TConsoleModel.h
-    TDebug.h
     TDebugFilterBar.h
     TDetachedWindow.h
     TDockWidget.h
     TEasyButtonBar.h
-    TEncodingHelper.h
-    TEncodingTable.h
-    TEntityHandler.h
-    TEntityResolver.h
-    TEvent.h
     TFeatureCallout.h
     TFlipButton.h
-    TForkedProcess.h
-    TGameDetails.h
-    THyperlinkCompactManager.h
-    THyperlinkSelectionManager.h
-    THyperlinkStyling.h
-    THyperlinkVisibilityManager.h
-    TimerUnit.h
-    TKey.h
     TKeySequenceEdit.h
     TLabel.h
-    TLabelModel.h
-    TLinkStore.h
-    TLuaInterpreter.h
     TMainConsole.h
-    TMap.h
-    TMapLabel.h
     TMapView.h
     TMapViewManager.h
-    TMatchState.h
-    TMedia.h
-    TMediaData.h
-    TMediaPlaylist.h
-    TMxpBRTagHandler.h
-    TMxpClient.h
-    TMxpColorTagHandler.h
-    TMxpContext.h
-    TMxpCustomElementTagHandler.h
-    TMxpDestTagHandler.h
-    TMxpElementDefinitionHandler.h
-    TMxpElementRegistry.h
-    TMxpEntityTagHandler.h
-    TMxpEvent.h
-    TMxpExpireTagHandler.h
-    TMxpFontTagHandler.h
-    TMxpFormattingTagsHandler.h
-    TMxpFrameManager.h
-    TMxpFrameTagHandler.h
-    TMxpHRTagHandler.h
-    TMxpImageTagHandler.h
-    TMxpLinkTagHandler.h
-    TMxpMudlet.h
-    TMxpMusicTagHandler.h
-    TMxpNodeBuilder.h
-    TMxpProcessor.h
-    TMxpSendTagHandler.h
-    TMxpSoundTagHandler.h
-    TMxpStatTagHandler.h
-    TMxpSupportTagHandler.h
-    TMxpTagHandler.h
-    TMxpTagHandlerResult.h
-    TMxpTagParser.h
-    TMxpTagProcessor.h
-    TMxpVarTagHandler.h
-    TMxpVersionTagHandler.h
-    TPrintSink.h
+    TMxpFrameWidgets.h
     TrailingWhitespaceMarker.h
-    Tree.h
     TriggerHighlighter.h
-    TriggerUnit.h
-    TRoom.h
-    TRoomDB.h
-    TScript.h
     TScrollBox.h
     TSplitter.h
     TSplitterHandle.h
-    TStringUtils.h
     TTabBar.h
     TTextBox.h
-    TTextCodec.h
     TTextEdit.h
-    TTextProperties.h
-    TTimer.h
     TToolBar.h
     TTreeWidget.h
-    TTrigger.h
     TUiTour.h
-    TVar.h
-    TWindowRegistry.h
-    UntrustedText.h
-    utils.h
-    VarUnit.h
-    VoskRecognizer.h
-    widechar_width.h
     WideComboBox.h
-    widgetutils.h
-    XMLexport.h
-    XMLimport.h)
+    widgetutils.h)
+
+if(APPLE)
+  # Appended rather than listed above: AUTOMOC generates a moc file for every
+  # Q_OBJECT header it is given, and AppleSpeechRecognizer is only compiled on
+  # Apple.
+  list(APPEND mudlet_HDRS AppleSpeechRecognizer.h)
+endif()
 
 
 if(USE_UPDATER)
-  list(APPEND mudlet_SRCS updater.cpp)
-  list(APPEND mudlet_HDRS updater.h)
+  list(APPEND mudlet_app_SRCS updater.cpp)
+  list(APPEND mudlet_app_HDRS updater.h)
   list(APPEND mudlet_SRCS updater/Feed.cpp)
   list(APPEND mudlet_HDRS updater/Feed.h)
   list(APPEND mudlet_SRCS updater/Release.cpp)
   list(APPEND mudlet_HDRS updater/Release.h)
   list(APPEND mudlet_SRCS updater/SemVer.cpp)
   list(APPEND mudlet_HDRS updater/SemVer.h)
-  list(APPEND mudlet_SRCS updater/UpdateDialog.cpp)
-  list(APPEND mudlet_HDRS updater/UpdateDialog.h)
+  list(APPEND mudlet_app_SRCS updater/UpdateDialog.cpp)
+  list(APPEND mudlet_app_HDRS updater/UpdateDialog.h)
   list(APPEND mudlet_UIS updater/update_dialog.ui)
 endif(USE_UPDATER)
 
 if(USE_3DMAPPER)
-  list(APPEND mudlet_SRCS glwidget.cpp)
-  list(APPEND mudlet_HDRS glwidget.h)
-  list(APPEND mudlet_SRCS modern_glwidget.cpp)
-  list(APPEND mudlet_HDRS modern_glwidget.h)
+  list(APPEND mudlet_app_SRCS glwidget.cpp)
+  list(APPEND mudlet_app_HDRS glwidget.h)
+  list(APPEND mudlet_app_SRCS modern_glwidget.cpp)
+  list(APPEND mudlet_app_HDRS modern_glwidget.h)
+  list(APPEND mudlet_app_SRCS MapSearchPanel.cpp)
+  list(APPEND mudlet_app_HDRS MapSearchPanel.h)
+  list(APPEND mudlet_SRCS BloomPass.cpp)
+  list(APPEND mudlet_HDRS BloomPass.h)
   list(APPEND mudlet_SRCS CameraController.cpp)
   list(APPEND mudlet_HDRS CameraController.h)
+  list(APPEND mudlet_SRCS ExitScene.cpp)
+  list(APPEND mudlet_HDRS ExitScene.h)
   list(APPEND mudlet_SRCS GeometryManager.cpp)
   list(APPEND mudlet_HDRS GeometryManager.h)
   list(APPEND mudlet_SRCS LabelTextureCache.cpp)
   list(APPEND mudlet_HDRS LabelTextureCache.h)
+  list(APPEND mudlet_SRCS MapAtlas.cpp)
+  list(APPEND mudlet_HDRS MapAtlas.h)
+  list(APPEND mudlet_SRCS MapRoute.cpp)
+  list(APPEND mudlet_HDRS MapRoute.h)
+  list(APPEND mudlet_SRCS MapSearch.cpp)
+  list(APPEND mudlet_HDRS MapSearch.h)
+  list(APPEND mudlet_SRCS MapStitch.cpp)
+  list(APPEND mudlet_HDRS MapStitch.h)
   list(APPEND mudlet_SRCS RenderCommand.cpp)
   list(APPEND mudlet_HDRS RenderCommand.h)
   list(APPEND mudlet_SRCS RenderCommandQueue.cpp)
   list(APPEND mudlet_HDRS RenderCommandQueue.h)
   list(APPEND mudlet_SRCS ResourceManager.cpp)
   list(APPEND mudlet_HDRS ResourceManager.h)
+  list(APPEND mudlet_SRCS RetainedMapScene.cpp)
+  list(APPEND mudlet_HDRS RetainedMapScene.h)
   list(APPEND mudlet_SRCS ShaderManager.cpp)
   list(APPEND mudlet_HDRS ShaderManager.h)
-  list(APPEND mudlet_HDRS glwidget_integration.h)
-  list(APPEND mudlet_SRCS glwidget_integration.cpp)
+  list(APPEND mudlet_app_HDRS glwidget_integration.h)
+  list(APPEND mudlet_app_SRCS glwidget_integration.cpp)
 endif(USE_3DMAPPER)
+
+if(USE_SPAWN)
+  list(APPEND mudlet_SRCS TForkedProcess.cpp)
+  list(APPEND mudlet_HDRS TForkedProcess.h)
+endif()
+
+if(USE_MCPSERVER)
+  list(APPEND mudlet_SRCS TMCPBridge.cpp)
+  list(APPEND mudlet_SRCS TMCPServer.cpp)
+  list(APPEND mudlet_SRCS TMCPLuaBridge.cpp)
+  list(APPEND mudlet_HDRS TMCPBridge.h)
+  list(APPEND mudlet_HDRS TMCPServer.h)
+  list(APPEND mudlet_HDRS TMCPLuaBridge.h)
+endif(USE_MCPSERVER)
 
 if(NOT WIN32)
   include(cmake/EnableSanitizers.cmake)
@@ -538,13 +670,20 @@ endif()
 find_package(Qt6 6.8.2 REQUIRED
     COMPONENTS Core
                Core5Compat
+               Gui
                Multimedia
                MultimediaWidgets
                Network
                OpenGL
+               OpenGLWidgets
+               Svg
                UiTools
                Widgets
                Concurrent)
+
+if(USE_MCPSERVER)
+  find_package(Qt6 COMPONENTS HttpServer REQUIRED)
+endif()
 
 find_package(Qt6 COMPONENTS TextToSpeech QUIET)
 
@@ -554,23 +693,38 @@ set(QT_MAJOR_VERSION 6)
 set(QT_LIBS Qt6::Concurrent
               Qt6::Core
               Qt6::Core5Compat
+              Qt6::Gui
               Qt6::Network
               Qt6::Multimedia
-              Qt6::MultimediaWidgets
               Qt6::OpenGL
-              Qt6::UiTools
-              Qt6::Widgets
+              Qt6::Svg
               qt6keychain)
+set(QT_APP_LIBS Qt6::MultimediaWidgets
+                Qt6::OpenGLWidgets
+                Qt6::UiTools
+                Qt6::Widgets)
+
+if(USE_MCPSERVER)
+  list(APPEND QT_LIBS Qt6::HttpServer)
+endif()
 
 if(Qt6TextToSpeech_FOUND)
   list(APPEND QT_LIBS Qt6::TextToSpeech)
   message(STATUS "Using TextToSpeech module")
 endif()
 
+# MudletProxyStyle reads the AT-SPI screen reader status over D-Bus
+if(UNIX AND NOT APPLE)
+  find_package(Qt6 COMPONENTS DBus REQUIRED)
+  list(APPEND QT_APP_LIBS Qt6::DBus)
+endif()
+
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
 find_package(ZIP REQUIRED)
-find_package(Lua51 REQUIRED)
+if(NOT USE_BUNDLED_LUA)
+  find_package(Lua51 REQUIRED)
+endif()
 find_package(ZLIB REQUIRED)
 # 10.36 is the floor for PCRE2_MATCH_INVALID_UTF: it arrived in 10.34, and 10.36
 # fixed it mis-optimising the start of a match in 8-bit mode with PCRE2_CASELESS
@@ -609,8 +763,21 @@ add_library(${LIB_MUDLET_TARGET} STATIC
     ${mudlet_SRCS}
     ${mudlet_RCCS}
     ${mudlet_HDRS}
-    ${mudlet_UIS}
 )
+
+mudlet_precompile_headers(${LIB_MUDLET_TARGET})
+# Objective-C++ would need a precompiled header of its own for three files
+set_source_files_properties(AppleSpeechRecognizer.mm MacMicrophonePermission.mm sparkleupdater.mm
+  PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+if(USE_UPDATER)
+  # Its own target, so it keeps plain ccache: the precompiled-header launcher
+  # tells ccache to ignore __DATE__ and __TIME__, which this file embeds to order
+  # test builds
+  add_library(mudlet_build_time OBJECT updater/ReleaseBuildTime.cpp)
+  set_target_properties(mudlet_build_time PROPERTIES AUTOMOC OFF)
+  target_link_libraries(mudlet_build_time PRIVATE Qt6::Gui)
+  target_sources(${LIB_MUDLET_TARGET} PRIVATE $<TARGET_OBJECTS:mudlet_build_time>)
+endif()
 
 ########################### Debugging code inclusions ##########################
 # Controls the include/selection of extra code to aide developers debug various
@@ -696,7 +863,6 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 target_sources(${LIB_MUDLET_TARGET} PUBLIC "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
 set_target_properties(${LIB_MUDLET_TARGET} PROPERTIES
-  AUTOUIC ON AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
   AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
   AUTOGEN_ORIGIN_DEPENDS OFF)
 
@@ -722,15 +888,21 @@ if(UNIX)
   set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
 endif(UNIX)
 
+# APP_VERSION is PUBLIC because the functional tests link ${LIB_MUDLET_TARGET}
+# and check the version identity it reports.
+target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC APP_VERSION="${APP_VERSION}")
+
 # Define a preprocessor symbol with the default fallback location from which to
 # load installed mudlet lua files. Set LUA_DEFAULT_DIR to a platform-specific
 # value. If LUA_DEFAULT_DIR is unset, the root directory will be used.
 target_compile_definitions(${LIB_MUDLET_TARGET}
   PRIVATE
-    APP_VERSION="${APP_VERSION}"
     APP_TARGET="${APP_TARGET}"
-    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
-    LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
+    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
+# Only on the file that reads it: ccache's base_dir cannot rewrite a path in a
+# definition, so on every file it would stop worktrees sharing any cache hits.
+set_property(SOURCE TLuaInterpreter.cpp APPEND PROPERTY
+  COMPILE_DEFINITIONS LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
 
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
@@ -757,7 +929,7 @@ endif()
 # Surface the linked qtkeychain version for diagnostics - the QTKEYCHAIN_VERSION macro in
 # qtkeychain's own header is stale (hardcoded to 0x000100), so the CMake package version is
 # the only reliable signal. Relevant since qtkeychain 0.17.0 changed the Windows credential
-# naming scheme (see CredentialManager::attemptCompatNamingMigration).
+# naming scheme (see the "pre-0.17 qtkeychain naming" stage in CredentialManager::retrievePassword).
 if(USE_OWN_QTKEYCHAIN)
   get_directory_property(QTKEYCHAIN_LINKED_VERSION
     DIRECTORY ${CMAKE_SOURCE_DIR}/3rdparty/qtkeychain
@@ -793,8 +965,6 @@ target_compile_definitions(communi PUBLIC IRC_STATIC)
 target_link_libraries(
         ${LIB_MUDLET_TARGET}
         communi
-        edbee-lib
-        QTagEdit
         Boost::boost
         HUNSPELL::HUNSPELL
         LUA51::LUA51
@@ -850,6 +1020,21 @@ if(USE_3DMAPPER)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_3DMAPPER)
 endif()
 
+if(USE_MCPSERVER)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_MCPSERVER)
+endif()
+
+if(USE_SPAWN)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_SPAWN)
+endif()
+
+if(USE_DISCORD_RPC)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_DISCORD_RPC)
+endif()
+
+if(USE_SPEECH_ENGINES)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_SPEECH_ENGINES)
+endif()
 
 if(USE_VARIABLE_SPLASH_SCREEN)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_VARIABLE_SPLASH_SCREEN)
@@ -857,14 +1042,54 @@ endif()
 
 target_compile_options(${LIB_MUDLET_TARGET} PUBLIC -Wno-deprecated)
 
-add_executable(${EXE_MUDLET_TARGET} emptyFile.cpp)
+# The widgets: main window, dialogs, consoles, map views and editors.
+# ${LIB_MUDLET_TARGET} must not depend on anything here, nor link Qt Widgets.
+add_library(${LIB_MUDLET_APP_TARGET} STATIC
+    ${mudlet_app_SRCS}
+    ${mudlet_app_HDRS}
+    ${mudlet_UIS}
+)
+mudlet_precompile_headers(${LIB_MUDLET_APP_TARGET} ${MUDLET_PRECOMPILED_WIDGET_HEADERS})
+set_target_properties(${LIB_MUDLET_APP_TARGET} PROPERTIES
+  AUTOUIC ON AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
+  AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
+  AUTOGEN_ORIGIN_DEPENDS OFF)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_APP_TARGET}_autogen/mocs_compilation.cpp"
+               APPEND PROPERTY COMPILE_OPTIONS -Wno-sfinae-incomplete)
+endif()
+# The ui_*.h headers, for the tests that reach into a dialog's widgets
+target_include_directories(${LIB_MUDLET_APP_TARGET} INTERFACE
+    ${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_APP_TARGET}_autogen/include
+)
+# Qt Widgets ahead of ${LIB_MUDLET_TARGET}, so the linker records Qt's own
+# libraries before a distribution's qt6keychain: that one needs Qt6DBus, which
+# would otherwise be found in the system Qt rather than beside Qt6Gui.
+target_link_libraries(${LIB_MUDLET_APP_TARGET} PUBLIC
+    edbee-lib
+    ${QT_APP_LIBS}
+    ${LIB_MUDLET_TARGET})
+
+# qt-tags-widget is listed in mudlet_app_SRCS/HDRS, not add_subdirectory()'d, as its own
+# project has install() rules; a file upstream adds or renames has to be listed there too.
+set_property(SOURCE ../3rdparty/qt-tags-widget/src/qtagedit.cpp APPEND PROPERTY
+  INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/qt-tags-widget/include/QTagEdit)
+
+# main() stays out of the libraries: a test that links them brings its own, and
+# the linker can pull main.cpp's object in for any inline function it defines.
+add_executable(${EXE_MUDLET_TARGET} main.cpp)
+target_compile_definitions(${EXE_MUDLET_TARGET} PRIVATE APP_TARGET="${APP_TARGET}")
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_NAME})
-target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
+target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_APP_TARGET} mudlet_lsan_hooks)
 
 # Enable symbol exports from the main executable so that dynamically loaded Lua modules
 # can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
 # will fail to load with "undefined symbol" errors.
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES ENABLE_EXPORTS ON)
+
+if(USE_HEADLESS)
+  add_subdirectory(headless)
+endif()
 
 if (WITH_SENTRY)
   include(cmake/WithSentry.cmake)
@@ -874,6 +1099,18 @@ endif()
 if(WIN32)
   target_link_libraries(${EXE_MUDLET_TARGET} ws2_32)
   set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES WIN32_EXECUTABLE ON)
+  if(MINGW)
+    # Qt's entry point renames main() to qMain(), but its WinMain library drops off the link line
+    # because Qt6::Core sits in Sentry's LINK_GROUP; MinGW's own startup code calls main() fine
+    set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES qt_no_entrypoint ON)
+  endif()
+  # Windows reserves only 1 MiB of stack by default, and Qt recurses once per overlapping sibling widget
+  # when repainting, so a few thousand labels overflowed it; 8 MiB matches the Linux and macOS main thread
+  if(MSVC)
+    target_link_options(${EXE_MUDLET_TARGET} PRIVATE "/STACK:8388608")
+  else()
+    target_link_options(${EXE_MUDLET_TARGET} PRIVATE "LINKER:--stack,8388608")
+  endif()
   # The UNICODE and _UNICODE definitions are needed to make
   # (QString) mudlet::getShortPathName(const QString& name) work in Windows:
   target_compile_definitions(${EXE_MUDLET_TARGET} PRIVATE UNICODE _UNICODE)
@@ -899,17 +1136,22 @@ endif()
 if(APPLE)
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AppKit")
   target_link_libraries(${EXE_MUDLET_TARGET} "-framework AVFoundation")
+  # A normal link, not a weak one: Speech.framework has shipped with every
+  # macOS Mudlet supports
+  target_link_libraries(${EXE_MUDLET_TARGET} "-framework Speech")
 
-  # Microphone permission sources are already added via mudlet_SRCS/mudlet_HDRS
+  # Microphone permission and speech recognition sources are already added via
+  # mudlet_SRCS/mudlet_HDRS
   target_link_libraries(${LIB_MUDLET_TARGET} "-framework AVFoundation")
+  target_link_libraries(${LIB_MUDLET_TARGET} "-framework Speech")
 
   if(USE_UPDATER)
     # need to specifically call out Objective-C sources so that automoc builds them.
-    target_sources(${LIB_MUDLET_TARGET} PRIVATE
+    target_sources(${LIB_MUDLET_APP_TARGET} PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.mm")
     find_package(Sparkle)
-    target_link_libraries(${LIB_MUDLET_TARGET} "-framework AppKit" Sparkle::Sparkle)
+    target_link_libraries(${LIB_MUDLET_APP_TARGET} PUBLIC "-framework AppKit" Sparkle::Sparkle)
   endif(USE_UPDATER)
 
   set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES
@@ -989,6 +1231,11 @@ if(UNIX AND NOT APPLE)
   # CMAKE_INSTALL_PREFIX is automagically set on Unix to DESTDIR environment
   # variable and is prefixed onto relative DESTINATION values
   install(
+	DIRECTORY "../translations/lua/"
+	DESTINATION "share/mudlet/lua/translations"
+	FILES_MATCHING PATTERN "*.json"
+	PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+  install(
     DIRECTORY "mudlet-lua/lua"
     DESTINATION "share/mudlet"
     FILES_MATCHING
@@ -1003,15 +1250,35 @@ if(UNIX AND NOT APPLE)
                                      WORLD_READ
     PATTERN "*.xml" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     PATTERN "*.txt" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-    # the map fixture the pathfinding specs need. It stays zipped rather than
-    # joining the *.xml above because unpacked it is 5.5MiB rather than 633KiB,
-    # and every package built from this tree would carry the difference
-    PATTERN "*.zip" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+    # the pathfinding specs' map fixture, zipped because unpacked it adds ~5MiB to every package
+    PATTERN "*.zip" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    # binary map fixtures
+    PATTERN "*.dat" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
   install(
     DIRECTORY "../3rdparty/lcf"
     DESTINATION "share/mudlet/lua"
-    PATTERN ".git" EXCLUDE PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
-                                       WORLD_READ)
+    FILES_MATCHING
+    PATTERN "*.lua" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    PATTERN "LICENSE*" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    PATTERN "COPYING*" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    PATTERN ".*" EXCLUDE)
+  # FILES_MATCHING still creates every directory it walks, so a directory holding no Lua would ship
+  # empty; EXCLUDE_EMPTY_DIRECTORIES would do this but needs CMake 3.31
+  install(
+    CODE [[
+    file(GLOB_RECURSE lcfEntries LIST_DIRECTORIES true
+         "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/lcf/*")
+    # deepest first, so a parent left empty by removing its children goes too
+    list(SORT lcfEntries ORDER DESCENDING)
+    foreach(lcfEntry IN LISTS lcfEntries)
+      if(IS_DIRECTORY "${lcfEntry}")
+        file(GLOB lcfChildren "${lcfEntry}/*")
+        if(NOT lcfChildren)
+          file(REMOVE_RECURSE "${lcfEntry}")
+        endif()
+      endif()
+    endforeach()
+  ]])
 
   install(
     FILES "../mudlet.desktop"
@@ -1038,4 +1305,42 @@ if(UNIX AND NOT APPLE)
         GROUP_EXECUTE
         WORLD_READ
         WORLD_EXECUTE)
+endif()
+
+# `cmake --build <dir> --target run-mudlet` - build if needed, then launch.
+#
+# On macOS this goes through the bundle rather than the binary inside it. macOS
+# attributes a permission request to the responsible process, which for a binary
+# started from a shell is the application owning the terminal, not Mudlet: the
+# built-in speech backend then asks for speech recognition, the terminal's
+# application is required to carry the usage description, and TCC kills Mudlet
+# when it does not. See AppleSpeechRecognizer::doStartListening().
+#
+# `open` detaches, so qDebug() and qWarning() would go nowhere - hence the two
+# flags, which put both streams in a file beside the build.
+#
+# A sanitizer build is the exception, and runs the binary directly: ASAN_OPTIONS
+# and its siblings are read from the environment of the process, and `open`
+# hands the request to launchd rather than passing this shell's environment on,
+# so a sanitized run launched that way would silently ignore every option set
+# for it - and report to a terminal nothing is reading. That backend declines to
+# ask for permission rather than dying when it finds itself started this way, so
+# the trade is a message instead of a crash.
+if(APPLE AND NOT USE_SANITIZER)
+  add_custom_target(run-mudlet
+    # -n so a rebuild is actually what starts, rather than the running copy
+    # being brought to the front
+    COMMAND open -n "$<TARGET_BUNDLE_DIR:${EXE_MUDLET_TARGET}>"
+            --stdout "${CMAKE_BINARY_DIR}/mudlet-run.log"
+            --stderr "${CMAKE_BINARY_DIR}/mudlet-run.log"
+    COMMAND ${CMAKE_COMMAND} -E echo "Mudlet started; its output is in ${CMAKE_BINARY_DIR}/mudlet-run.log"
+    DEPENDS ${EXE_MUDLET_TARGET}
+    USES_TERMINAL
+    COMMENT "Launching Mudlet as an application")
+else()
+  add_custom_target(run-mudlet
+    COMMAND "$<TARGET_FILE:${EXE_MUDLET_TARGET}>"
+    DEPENDS ${EXE_MUDLET_TARGET}
+    USES_TERMINAL
+    COMMENT "Launching Mudlet")
 endif()

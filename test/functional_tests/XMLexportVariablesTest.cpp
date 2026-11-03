@@ -40,12 +40,15 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
+#include "TTreeWidget.h"
 #include "VarUnit.h"
 #include "XMLexport.h"
 #include "XMLimport.h"
@@ -56,6 +59,8 @@
 
 #include <QRegularExpression>
 #include <QTreeWidget>
+
+using namespace std::chrono_literals;
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -109,7 +114,7 @@ private slots:
         QVERIFY2(mpServer->serverPort() != 0, "TelnetServerStub failed to bind a loopback port");
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -126,8 +131,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mHostname);
             delete mudlet::self();
@@ -594,36 +598,70 @@ private slots:
         QCOMPARE(luaL_dostring(L, "innerSavedTable, holderSavedTable = nil"), 0);
     }
 
-    // Design pin. Two members of one saved table that are the same Lua table
-    // are not both exported: the profile XML has no way to say "these two names
-    // are one table", so the export would have to write the subtree once per
-    // name. On a profile whose saved table holds a UI object that multiplies
-    // out - measured at 5.5x the file, and big enough for the 10,000-item limit
-    // to then drop whole branches - so the walk keeps one copy per saved name
-    // and no more. Members the user ticks individually are exported in full.
-    void test_twoMembersOfASavedTableSharingATableExportOnce()
+    // Two members of one saved table that are the same plain table both export,
+    // as the profile XML can only hold a second name as a second copy (#10721).
+    // Shared objects (tables with a metatable) export once: a save cannot bring
+    // an object back anyway, and the UI objects packages keep in saved tables
+    // share so many that copying them multiplied the file 5.5x (#9762).
+    void test_twoMembersOfASavedTableSharingATableBothExport()
     {
         LuaInterface* lI = mpHost->getLuaInterface();
         VarUnit* vu = lI->getVarUnit();
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
-        QCOMPARE(luaL_dostring(L, "memberShareTable = {} memberShareTable.first = {member = 'member share value'} memberShareTable.second = memberShareTable.first"), 0);
+        QCOMPARE(luaL_dostring(L,
+                               "memberShareTable = {} memberShareTable.first = {member = 'member share value'} memberShareTable.second = memberShareTable.first "
+                               "memberShareTable.objA = setmetatable({member = 'object share value'}, {}) memberShareTable.objB = memberShareTable.objA"),
+                 0);
         vu->savedVars.insert(qsl("memberShareTable"));
 
-        QString xml = exportProfileXml();
+        const QString xml = exportProfileXml();
         QVERIFY(!xml.isEmpty());
-        QCOMPARE(xml.count(qsl("member share value")), 1);
-
-        // ticking a member in the Variables view (which is what savedVars holds)
-        // is what asks for it to be written under its own name as well
-        vu->savedVars.insert(qsl("memberShareTable.first"));
-        vu->savedVars.insert(qsl("memberShareTable.second"));
-        xml = exportProfileXml();
         QCOMPARE(xml.count(qsl("member share value")), 2);
+        QCOMPARE(xml.count(qsl("object share value")), 1);
 
-        for (const auto& name : {qsl("memberShareTable"), qsl("memberShareTable.first"), qsl("memberShareTable.second")}) {
-            vu->savedVars.remove(name);
-        }
+        vu->savedVars.remove(qsl("memberShareTable"));
         QCOMPARE(luaL_dostring(L, "memberShareTable = nil"), 0);
+    }
+
+    // Plain tables shared at every level double with each level when each name
+    // is written as a copy, so the copying has to stop somewhere short of that.
+    void test_savedTableSharingTablesAtEveryLevelExportsInBoundedSize()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L, "local t = {leaf = 'shared leaf value'} for i = 1, 40 do t = {a = t, b = t} end aliasDoublingTable = t"), 0);
+        vu->savedVars.insert(qsl("aliasDoublingTable"));
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QVERIFY2(xml.count(qsl("<name>a</name>")) < 50000, "copies of shared tables must not grow without bound");
+
+        vu->savedVars.remove(qsl("aliasDoublingTable"));
+        QCOMPARE(luaL_dostring(L, "aliasDoublingTable = nil"), 0);
+    }
+
+    // The 10,000-item limit on a table inside a saved one counts each table
+    // once, so copies of a second name cannot push a branch that fitted
+    // before over it and drop the branch whole.
+    void test_aliasCopiesDoNotPushABranchOverTheItemLimit()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L,
+                               "local s = {marker = 'alias limit value'} for i = 1, 6000 do s[i] = i end "
+                               "aliasLimitTable = {holder = {tag = 'alias limit holder', a = s, b = s}}"),
+                 0);
+        vu->savedVars.insert(qsl("aliasLimitTable"));
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QCOMPARE(xml.count(qsl("alias limit holder")), 1);
+        QCOMPARE(xml.count(qsl("alias limit value")), 2);
+
+        vu->savedVars.remove(qsl("aliasLimitTable"));
+        QCOMPARE(luaL_dostring(L, "aliasLimitTable = nil"), 0);
     }
 
     // A table that holds itself must not send the walk round for ever.
@@ -970,11 +1008,11 @@ private slots:
         // then has no node in it to be written from
         QVERIFY2(!xml.contains(qsl("seed member value")), "a member a script removed while the Variables view was open must not be saved back");
 
-        auto* pVariablesTree = mpEditor->findChild<QTreeWidget*>(qsl("treeWidget_variables"));
+        auto* pVariablesTree = mpEditor->findChild<TTreeWidget*>(qsl("treeWidget_variables"));
         QVERIFY2(pVariablesTree, "the editor has no variables tree widget");
         QTreeWidgetItem* pBaseItem = pVariablesTree->topLevelItem(0);
         QVERIFY2(pBaseItem && pBaseItem->childCount() > 0, "the Variables view did not populate");
-        QVERIFY2(vu->getWVar(pBaseItem->child(0)), "a save taken with the Variables view on screen must leave its items resolving to their variables");
+        QVERIFY2(pVariablesTree->variableForRow(vu, pBaseItem->child(0)), "a save taken with the Variables view on screen must leave its items resolving to their variables");
 
         vu->savedVars.remove(qsl("varsViewTable"));
         vu->savedVars.remove(qsl("varsViewTable.seedMember"));
@@ -1003,27 +1041,27 @@ private slots:
     }
 
     // The other side: a save must not pull the tree out from under the editor.
-    // Its tree widget and search results resolve items through VarUnit's
-    // item -> TVar map, which rebuilding the shared tree empties.
+    // Its tree widget and search results resolve items through the tree
+    // widget's own row -> TVar map.
     void test_variablesEditorItemMappingSurvivesExport()
     {
         QVERIFY2(showEditorOnVariablesView(), "the script editor could not be opened on the Variables view");
         mpEditor->repopulateVars();
 
         VarUnit* vu = mpHost->getLuaInterface()->getVarUnit();
-        auto* pVariablesTree = mpEditor->findChild<QTreeWidget*>(qsl("treeWidget_variables"));
+        auto* pVariablesTree = mpEditor->findChild<TTreeWidget*>(qsl("treeWidget_variables"));
         QVERIFY2(pVariablesTree, "the editor has no variables tree widget");
         QTreeWidgetItem* pBaseItem = pVariablesTree->topLevelItem(0);
         QVERIFY2(pBaseItem && pBaseItem->childCount() > 0, "the Variables view did not populate");
         QTreeWidgetItem* pVariableItem = pBaseItem->child(0);
-        TVar* pMappedBefore = vu->getWVar(pVariableItem);
+        TVar* pMappedBefore = pVariablesTree->variableForRow(vu, pVariableItem);
         QVERIFY2(pMappedBefore, "the Variables view's items should resolve to a variable");
 
         // any save does it: the Save Profile button, the autosave, a package change
         mpEditor->slot_showTriggers();
         QVERIFY(!exportProfileXml().isEmpty());
 
-        QVERIFY2(vu->getWVar(pVariableItem) == pMappedBefore, "a profile save must leave the Variables editor's items resolving to their variables");
+        QVERIFY2(pVariablesTree->variableForRow(vu, pVariableItem) == pMappedBefore, "a profile save must leave the Variables editor's items resolving to their variables");
     }
 
     // What the user actually cares about: the data is there again next session.
@@ -1046,7 +1084,7 @@ private slots:
             vu->savedVars.insert(name);
         }
 
-        const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/reload-test.xml");
+        const QString xmlPath = MudletApp::getMudletPath(enums::profileHomePath, mHostname) + qsl("/reload-test.xml");
         auto writer = std::make_shared<XMLexport>(mpHost);
         QVERIFY2(writer->exportPackage(xmlPath, true, false), "the profile could not be exported");
 
@@ -1070,6 +1108,43 @@ private slots:
         QCOMPARE(luaL_dostring(L, "reloadSavedTable = nil"), 0);
     }
 
+    // Two names inside one saved table for the same table both come back from a
+    // save, and the names that lead back up the walk do not stop it (#10721).
+    void test_aliasedMembersOfASavedTableSurviveAReload()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L,
+                               "aliasReloadTable = {profiles = {default = {colour = 'alias reload value'}}} "
+                               "aliasReloadTable.current = aliasReloadTable.profiles.default "
+                               "local cyc = {tag = 'cyc reload value'} cyc.self = cyc aliasReloadTable.cyc = cyc "
+                               "aliasReloadTable.rootRef = aliasReloadTable"),
+                 0);
+        vu->savedVars.insert(qsl("aliasReloadTable"));
+
+        const QString xmlPath = MudletApp::getMudletPath(enums::profileHomePath, mHostname) + qsl("/alias-reload-test.xml");
+        auto writer = std::make_shared<XMLexport>(mpHost);
+        QVERIFY2(writer->exportPackage(xmlPath, true, false), "the profile could not be exported");
+
+        QCOMPARE(luaL_dostring(L, "aliasReloadTable = nil"), 0);
+
+        QFile file(xmlPath);
+        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
+        XMLimport importer(mpHost);
+        auto [imported, importError] = importer.importPackage(&file);
+        file.close();
+        QFile::remove(xmlPath);
+        QVERIFY2(imported, qPrintable(importError));
+
+        QVERIFY2(luaL_dostring(L, "assert(aliasReloadTable.profiles.default.colour == 'alias reload value')") == 0, "the first name for a shared table did not come back");
+        QVERIFY2(luaL_dostring(L, "assert(aliasReloadTable.current.colour == 'alias reload value')") == 0, "the second name for a shared table did not come back");
+        QVERIFY2(luaL_dostring(L, "assert(aliasReloadTable.cyc.tag == 'cyc reload value')") == 0, "a table holding itself did not come back with its other members");
+
+        vu->savedVars.remove(qsl("aliasReloadTable"));
+        QCOMPARE(luaL_dostring(L, "aliasReloadTable = nil"), 0);
+    }
+
     // The session after the one test_savedTableReachedByAnotherGlobalSurvivesAReload
     // covers. Profile load hides everything in _G once the variables are back in
     // it, so the user's own tables go through the hiding as well, and the save
@@ -1084,7 +1159,7 @@ private slots:
         QCOMPARE(luaL_dostring(L, "secondSessionTable = {member = 'second session value', nest = {deep = 'second session deep value'}}"), 0);
         vu->savedVars.insert(qsl("secondSessionTable"));
 
-        const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/second-session-test.xml");
+        const QString xmlPath = MudletApp::getMudletPath(enums::profileHomePath, mHostname) + qsl("/second-session-test.xml");
         auto writer = std::make_shared<XMLexport>(mpHost);
         QVERIFY2(writer->exportPackage(xmlPath, true, false), "the profile could not be exported");
         QCOMPARE(luaL_dostring(L, "secondSessionTable = nil"), 0);
@@ -1135,7 +1210,7 @@ private slots:
                  0);
         vu->savedVars.insert(qsl("bracketReload"));
 
-        const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/bracket-reload-test.xml");
+        const QString xmlPath = MudletApp::getMudletPath(enums::profileHomePath, mHostname) + qsl("/bracket-reload-test.xml");
         auto writer = std::make_shared<XMLexport>(mpHost);
         QVERIFY2(writer->exportPackage(xmlPath, true, false), "the profile could not be exported");
         QCOMPARE(luaL_dostring(L, "bracketReload = nil"), 0);
@@ -1161,6 +1236,47 @@ private slots:
         QCOMPARE(luaL_dostring(L, "bracketReload = nil"), 0);
     }
 
+    // A save whose number text cannot be read still loads, as 0, but has to say
+    // so, since a 0 key also takes the place of whatever else was saved under 0.
+    void test_unreadableSavedNumberTextIsReported()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        const QString xmlPath = MudletApp::getMudletPath(enums::profileHomePath, mHostname) + qsl("/unreadable-number-test.xml");
+        QFile out(xmlPath);
+        QVERIFY2(out.open(QFile::WriteOnly | QFile::Text), qPrintable(out.errorString()));
+        out.write(R"(<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+<VariablePackage>
+<VariableGroup><name>unreadableNumbers</name><keyType>4</keyType><value></value><valueType>5</valueType>
+<Variable><name>badValue</name><keyType>4</keyType><value>12,5</value><valueType>3</valueType></Variable>
+<Variable><name>1e5x</name><keyType>3</keyType><value>bad key</value><valueType>4</valueType></Variable>
+</VariableGroup>
+</VariablePackage>
+</MudletPackage>
+)");
+        out.close();
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl(R"("12,5" is not a number, so "badValue" is being set to 0)")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl(R"(the key "1e5x" is not a number, so it is being written as the key 0)")));
+        QFile file(xmlPath);
+        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
+        XMLimport importer(mpHost);
+        auto [imported, importError] = importer.importPackage(&file);
+        file.close();
+        QFile::remove(xmlPath);
+        QVERIFY2(imported, qPrintable(importError));
+
+        QVERIFY2(luaL_dostring(L, "assert(unreadableNumbers.badValue == 0 and unreadableNumbers[0] == 'bad key')") == 0, "the unreadable number text was not loaded as 0");
+
+        for (const auto& name : {qsl("unreadableNumbers"), qsl("unreadableNumbers.badValue"), qsl("unreadableNumbers.1e5x")}) {
+            vu->savedVars.remove(name);
+        }
+        QCOMPARE(luaL_dostring(L, "unreadableNumbers = nil"), 0);
+    }
+
 private:
     // Returns false rather than asserting: a QVERIFY here would only return from
     // this helper, leaving the caller to dereference a null editor.
@@ -1168,20 +1284,20 @@ private:
     {
         if (!mpEditor) {
             mudlet::self()->slot_showScriptDialog();
-            QTest::qWait(100);
-            mpEditor = mpHost->mpEditorDialog;
+            QTest::qWait(100ms);
+            mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
             if (!mpEditor) {
                 return false;
             }
         }
         mpEditor->slot_showVariables();
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         return true;
     }
 
     QString exportProfileXml()
     {
-        const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/xmlexport-test.xml");
+        const QString xmlPath = MudletApp::getMudletPath(enums::profileHomePath, mHostname) + qsl("/xmlexport-test.xml");
         auto writer = std::make_shared<XMLexport>(mpHost);
         if (!writer->exportPackage(xmlPath, true, false)) {
             return {};
@@ -1204,14 +1320,14 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(1000)) {
+        if (!spy2.wait(1s)) {
             QFAIL("Could not connect with the host.");
         }
     }
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
 
         if (!dir.exists()) {

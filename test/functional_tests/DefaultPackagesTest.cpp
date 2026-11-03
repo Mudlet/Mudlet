@@ -22,7 +22,7 @@
  * src/packages and are compiled in through mudlet.qrc.
  *
  * Nothing else notices when one of these breaks: a path in
- * setupPreInstallPackages() that no longer names a compiled-in resource, or an
+ * HostManager::defaultPackages() that no longer names a compiled-in resource, or an
  * archive rebuilt without config.lua, just means the profile quietly comes up
  * without the package. The build stays green either way, so this test walks
  * both the preinstall table and every archive in the resource tree.
@@ -37,11 +37,13 @@
 #include <QTemporaryFile>
 #include <QXmlStreamReader>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "mudlet.h"
+#include "utils.h"
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -71,10 +73,10 @@ private:
     QByteArray mSavedXdg;
     Host* mpHost = nullptr;
 
-    QStringList preinstallsFor(const QString& gameUrl, const QString& profileName = qsl("test"))
+    QStringList preinstallsFor(const QString& gameUrl, const QString& profileName = qsl("test"), const bool serverGuiAccepted = true)
     {
         mudlet::self()->mPackagesToInstallList.clear();
-        mudlet::self()->setupPreInstallPackages(gameUrl, profileName);
+        mudlet::self()->setupPreInstallPackages(gameUrl, profileName, serverGuiAccepted);
         return mudlet::self()->mPackagesToInstallList;
     }
 
@@ -102,14 +104,14 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
-        QVERIFY2(mudlet::getQSettings()->allKeys().isEmpty(), "a fresh config dir must start out with an empty Mudlet.ini - something wrote settings before init()");
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QVERIFY2(MudletApp::getQSettings()->allKeys().isEmpty(), "a fresh config dir must start out with an empty Mudlet.ini - something wrote settings before init()");
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        QVERIFY2(mudlet::self()->getHostManager().addHost(mProfileName, QString(), QString(), QString()), "failed to create the Host");
-        mpHost = mudlet::self()->getHostManager().getHost(mProfileName);
+        QVERIFY2(HostManager::self()->addHost(mProfileName, QString(), QString(), QString()), "failed to create the Host");
+        mpHost = HostManager::self()->getHost(mProfileName);
         QVERIFY(mpHost);
     }
 
@@ -153,8 +155,8 @@ private slots:
         QVERIFY(!preinstallsFor(qsl("localhost"), qsl("some other profile")).contains(qsl(":/packages/mudlet-tutorial/mudlet-tutorial.mpackage")));
     }
 
-    // Games that install an interface of their own get a loader instead of the
-    // starter UI, which would otherwise fight it for the same screen space.
+    // Games that install an interface of their own, by a loader or by Client.GUI,
+    // skip the starter UI, which would otherwise fight it for the same screen space.
     void test_gamesWithTheirOwnUiSkipTheStarterUi()
     {
         QVERIFY(preinstallsFor(qsl("example.com")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
@@ -163,10 +165,22 @@ private slots:
         QVERIFY(!preinstallsFor(qsl("mg.mud.de")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
         QVERIFY(preinstallsFor(qsl("mg.mud.de")).contains(qsl(":/packages/mg-loader/mg-loader.mpackage")));
         QVERIFY(!preinstallsFor(qsl("icesus.org")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
+        // StickMUD has no loader - its Client.GUI only arrives after login, too
+        // late for the starter UI to stand aside before building itself
+        QVERIFY(!preinstallsFor(qsl("stickmud.com")).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
     }
 
-    // Why mpkg cannot be in a test profile: see setupPreInstallPackages() in
-    // src/mudlet.cpp. Both directions are asserted, so removing the skip and leaving it
+    // A profile copied with its settings can refuse server GUIs or GMCP before the
+    // preinstall runs; a Client.GUI game's interface then never arrives, while a
+    // bundled loader fetches its own regardless.
+    void test_refusedServerGuiKeepsTheStarterUi()
+    {
+        QVERIFY(preinstallsFor(qsl("stickmud.com"), qsl("test"), false).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
+        QVERIFY(!preinstallsFor(qsl("icesus.org"), qsl("test"), false).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
+    }
+
+    // Why mpkg cannot be in a test profile: see HostManager::defaultPackages() in
+    // src/HostManager.cpp. Both directions are asserted, so removing the skip and leaving it
     // permanently on both fail, and the players' half pins the resource path the skip
     // matches on - rename it in the table alone and the first check goes red.
     void test_testModeLeavesOutTheSelfUpdatingPackage()
@@ -247,10 +261,10 @@ private slots:
 
             QTemporaryDir unpacked;
             QVERIFY(unpacked.isValid());
-            // mudlet::unzip() joins the destination and the entry name as-is,
+            // utils::unzip() joins the destination and the entry name as-is,
             // so the trailing slash is what keeps the files inside the folder:
             const QString destination = qsl("%1/").arg(unpacked.path());
-            QVERIFY2(mudlet::unzip(onDisk.fileName(), destination, QDir(unpacked.path())), qPrintable(qsl("%1 could not be unzipped").arg(archive)));
+            QVERIFY2(utils::unzip(onDisk.fileName(), destination, QDir(unpacked.path())), qPrintable(qsl("%1 could not be unzipped").arg(archive)));
 
             const QDir contents(unpacked.path());
             QVERIFY2(contents.exists(qsl("config.lua")), qPrintable(qsl("%1 carries no config.lua, so it would install without any metadata").arg(archive)));
@@ -292,7 +306,7 @@ private slots:
             QTemporaryDir unpacked;
             QVERIFY(unpacked.isValid());
             const QString destination = qsl("%1/").arg(unpacked.path());
-            QVERIFY(mudlet::unzip(onDisk.fileName(), destination, QDir(unpacked.path())));
+            QVERIFY(utils::unzip(onDisk.fileName(), destination, QDir(unpacked.path())));
 
             // the installer imports every *.xml and *.trigger it finds in an
             // archive, so compile the scripts in all of them rather than assuming

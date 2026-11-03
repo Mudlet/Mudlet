@@ -1,0 +1,692 @@
+-- Edge cases of the console and window APIs that other specs do not reach:
+-- edits made from inside a trigger, and the refusals for bad or clashing names.
+describe("Console edges", function()
+  local function name(base)
+    return "ce" .. base
+  end
+
+  describe("editing the line a trigger matched keeps later capture groups aligned", function()
+    -- Group 1 is the whole match, so "beta" is group 3. Each edit shifts where
+    -- "beta" sits in the line; unless the capture positions shift with it,
+    -- selectCaptureGroup(3) selects the wrong characters afterwards. A failed
+    -- selection leaves the previous one in place, hence the check on what
+    -- selectCaptureGroup() returned.
+    local function inTrigger(edit)
+      local result = {}
+      local id = tempRegexTrigger("^ceTrig (\\w+) (\\w+)$", function()
+        result.before = getCurrentLine()
+        edit(result)
+        result.selected3 = selectCaptureGroup(3)
+        result.group3 = getSelection()
+        deselect()
+        result.selected1 = selectCaptureGroup(1)
+        result.group1 = getSelection()
+        deselect()
+        result.after = getCurrentLine()
+      end, 1)
+      finally(function() killTrigger(id) end)
+      feedTriggers("\nceTrig alpha beta\n")
+      return result
+    end
+
+    it("after replace() shortens an earlier group", function()
+      local result = inTrigger(function()
+        selectCaptureGroup(2)
+        replace("x")
+      end)
+      assert.are.equal("ceTrig alpha beta", result.before)
+      assert.are.equal("ceTrig x beta", result.after)
+      assert.are.equal(1, result.selected3)
+      -- where "beta" was before the edit no longer holds it
+      assert.are_not.equal("beta", result.after:sub(14, 17))
+      assert.are.equal("beta", result.group3)
+    end)
+
+    it("after replace() lengthens an earlier group", function()
+      local result = inTrigger(function()
+        selectCaptureGroup(2)
+        replace("alphabetical")
+      end)
+      assert.are.equal("ceTrig alphabetical beta", result.after)
+      assert.are.equal(1, result.selected3)
+      assert.are_not.equal("beta", result.after:sub(14, 17))
+      assert.are.equal("beta", result.group3)
+    end)
+
+    it("after insertLink() puts a link in front of it", function()
+      local result = inTrigger(function()
+        moveCursor(0, getLineNumber())
+        insertLink("[L]", "", "a hint")
+      end)
+      assert.are.equal("[L]ceTrig alpha beta", result.after)
+      assert.are_not.equal("beta", result.after:sub(14, 17))
+      assert.are.equal(1, result.selected3)
+      assert.are.equal("beta", result.group3)
+      -- the whole match starts exactly where the link went in, so it moves too
+      assert.are.equal(1, result.selected1)
+      assert.are.equal("ceTrig alpha beta", result.group1)
+    end)
+
+    it("after insertText() puts text in front of it", function()
+      local result = inTrigger(function()
+        moveCursor(0, getLineNumber())
+        insertText("[T]")
+      end)
+      assert.are.equal("[T]ceTrig alpha beta", result.after)
+      assert.are_not.equal("beta", result.after:sub(14, 17))
+      assert.are.equal(1, result.selected3)
+      assert.are.equal("beta", result.group3)
+      assert.are.equal(1, result.selected1)
+      assert.are.equal("ceTrig alpha beta", result.group1)
+    end)
+
+    it("after replace() shortens an earlier named group", function()
+      local selected, selection, line
+      local id = tempRegexTrigger("^ceNamed (?<a>\\w+) (?<b>\\w+)$", function()
+        selectCaptureGroup("a")
+        replace("x")
+        selected = selectCaptureGroup("b")
+        selection = getSelection()
+        line = getCurrentLine()
+        deselect()
+      end, 1)
+      finally(function() killTrigger(id) end)
+      feedTriggers("\nceNamed alpha beta\n")
+      assert.are.equal("ceNamed x beta", line)
+      assert.are_not.equal("beta", line:sub(15, 18))
+      assert.are.equal(1, selected)
+      assert.are.equal("beta", selection)
+    end)
+  end)
+
+  describe("insertLink() inside a trigger", function()
+    local function linkColour(useCurrentFormat)
+      local fg
+      local id = tempRegexTrigger("^ceLinkFormat$", function()
+        setFgColor(10, 20, 30)
+        moveCursor(0, getLineNumber())
+        if useCurrentFormat then
+          insertLink("LINK", "", "a hint", true)
+        else
+          insertLink("LINK", "", "a hint")
+        end
+        selectSection(0, 4)
+        fg = {getFgColor()}
+        deselect()
+        resetFormat()
+      end, 1)
+      finally(function() killTrigger(id) end)
+      feedTriggers("\nceLinkFormat\n")
+      return fg
+    end
+
+    it("takes the current format only when asked to", function()
+      assert.are.same({10, 20, 30}, linkColour(true))
+      assert.are_not.same({10, 20, 30}, linkColour(false))
+    end)
+  end)
+
+  describe("editing a game line sent in one colour", function()
+    -- The buffer keeps such a line as one format shared by every character
+    local function colourAt(column)
+      selectSection(column, 1)
+      local colour = {getFgColor()}
+      deselect()
+      return colour
+    end
+
+    local function inTrigger(edit)
+      local result = {}
+      local id = tempRegexTrigger("^ceUniform ", function()
+        result.original = colourAt(0)
+        edit()
+        result.line = getCurrentLine()
+        result.colours = {}
+        for column = 0, #result.line - 1 do
+          result.colours[column] = colourAt(column)
+        end
+      end, 1)
+      finally(function()
+        killTrigger(id)
+        resetFormat()
+      end)
+      feedTriggers("\n\27[32mceUniform alpha beta gamma\27[0m\n")
+      return result
+    end
+
+    it("restyles only the selected word", function()
+      local result = inTrigger(function()
+        selectString("beta", 1)
+        setFgColor(1, 2, 3)
+        deselect()
+      end)
+      assert.are.equal("ceUniform alpha beta gamma", result.line)
+      for column = 0, #result.line - 1 do
+        local inBeta = column >= 16 and column < 20
+        assert.are.same(inBeta and {1, 2, 3} or result.original, result.colours[column], "column " .. column)
+      end
+    end)
+
+    it("keeps the colour of text inserted into it", function()
+      local result = inTrigger(function()
+        deselect()
+        setFgColor(1, 2, 3)
+        moveCursor(10, getLineNumber())
+        insertText("XX")
+        resetFormat()
+      end)
+      assert.are.equal("ceUniform XXalpha beta gamma", result.line)
+      for column = 0, #result.line - 1 do
+        local inserted = column == 10 or column == 11
+        assert.are.same(inserted and {1, 2, 3} or result.original, result.colours[column], "column " .. column)
+      end
+    end)
+  end)
+
+  describe("setTextFormat() on the main window", function()
+    it("sets the format the main console echoes with", function()
+      finally(function()
+        resetFormat()
+        moveCursorEnd()
+      end)
+      local function echoedColours()
+        local marker = name("Format")
+        echo("\n" .. marker .. "\n")
+        moveCursor("main", 0, getLastLineNumber("main") - 1)
+        assert.are.equal(marker, getCurrentLine())
+        selectString(marker, 1)
+        local fg, bg = {getFgColor()}, {getBgColor()}
+        deselect()
+        return fg, bg
+      end
+
+      local fgBefore = echoedColours()
+      assert.are_not.same({40, 50, 60}, fgBefore)
+
+      assert.is_true(setTextFormat("main", 1, 2, 3, 40, 50, 60, true, true, true))
+      local fg, bg = echoedColours()
+      assert.are.same({40, 50, 60}, fg)
+      assert.are.same({1, 2, 3}, bg)
+      selectString(getCurrentLine(), 1)
+      local format = getTextFormat()
+      deselect()
+      assert.is_true(format.bold)
+      assert.is_true(format.underline)
+      assert.is_true(format.italic)
+    end)
+
+    it("reports a window it cannot find", function()
+      local ok, err = setTextFormat("ceNoSuchWindow", 1, 2, 3, 40, 50, 60, false, false, false)
+      assert.is_false(ok)
+      assert.are.equal("window 'ceNoSuchWindow' does not exist", err)
+    end)
+  end)
+
+  describe("setLabelCustomCursor()", function()
+    local label = name("CursorLabel")
+
+    setup(function()
+      createLabel(label, 0, 0, 10, 10, 1)
+    end)
+
+    teardown(function()
+      deleteLabel(label)
+    end)
+
+    it("sets a cursor image it can load", function()
+      assert.is_true(setLabelCustomCursor(label, ":/icons/mudlet.png"))
+    end)
+
+    it("reports an empty label name", function()
+      local ok, err = setLabelCustomCursor("", "/some/cursor.png")
+      assert.is_nil(ok)
+      assert.are.equal("a label cannot have an empty string as its name", err)
+    end)
+
+    it("reports an empty cursor location", function()
+      local ok, err = setLabelCustomCursor(label, "")
+      assert.is_nil(ok)
+      assert.are.equal("custom cursor location cannot be an empty string", err)
+    end)
+
+    it("reports a cursor image it cannot load", function()
+      local ok, err = setLabelCustomCursor(label, "/no/such/cursor.png")
+      assert.is_nil(ok)
+      assert.are.equal('couldn\'t find custom cursor, is the location "/no/such/cursor.png" correct?', err)
+    end)
+
+    it("reports a label it cannot find", function()
+      local unknown = name("NoSuchLabel")
+      local ok, err = setLabelCustomCursor(unknown, "/no/such/cursor.png")
+      assert.is_nil(ok)
+      assert.are.equal(("label name '%s' not found"):format(unknown), err)
+    end)
+  end)
+
+  describe("setUserWindowTitle()", function()
+    it("refuses an empty window name", function()
+      local ok, err = setUserWindowTitle("", "a title")
+      assert.is_nil(ok)
+      assert.are.equal("a user window cannot have an empty string as its name", err)
+    end)
+
+    it("refuses a miniconsole, which has no title bar", function()
+      local mini = name("TitleMini")
+      createMiniConsole(mini, 0, 0, 100, 100)
+      finally(function() deleteMiniConsole(mini) end)
+      local ok, err = setUserWindowTitle(mini, "a title")
+      assert.is_nil(ok)
+      assert.are.equal(('"%s" is not a user window'):format(mini), err)
+    end)
+  end)
+
+  describe("elements other than labels", function()
+    local scrollBox = name("ScrollBox")
+    local target = name("TargetBox")
+    local cmdLine = name("CmdLine")
+    local textEdit = name("TextEdit")
+    local mini = name("Mini")
+
+    setup(function()
+      createScrollBox(scrollBox, 0, 0, 100, 100)
+      createScrollBox(target, 0, 0, 200, 200)
+      createCommandLine(cmdLine, 0, 0, 100, 20)
+      createTextEdit(textEdit, 0, 30, 100, 20)
+      createMiniConsole(mini, 0, 60, 100, 100)
+    end)
+
+    teardown(function()
+      deleteCommandLine(cmdLine)
+      deleteTextEdit(textEdit)
+      deleteMiniConsole(mini)
+      deleteScrollBox(scrollBox)
+      deleteScrollBox(target)
+    end)
+
+    -- Lua has no getter for stacking order or parent, so what these pin is that
+    -- each kind of element is found by name
+    it("are found by name by raiseWindow() and lowerWindow()", function()
+      assert.is_false(raiseWindow(name("NoSuchElement")))
+      assert.is_false(lowerWindow(name("NoSuchElement")))
+      for _, element in ipairs({scrollBox, cmdLine, textEdit, mini}) do
+        assert.is_true(raiseWindow(element), element)
+        assert.is_true(lowerWindow(element), element)
+      end
+    end)
+
+    it("are found by name by setWindow()", function()
+      local unknown = name("NoSuchElement")
+      local ok, err = setWindow(target, unknown, 5, 5, true)
+      assert.is_nil(ok)
+      assert.are.equal(("element '%s' not found"):format(unknown), err)
+      for _, element in ipairs({scrollBox, cmdLine, textEdit}) do
+        assert.is_true(setWindow(target, element, 5, 5, true), element)
+      end
+    end)
+  end)
+
+  describe("refuses names it cannot use", function()
+    it("an empty name for a command line or a text edit", function()
+      local ok, err = createCommandLine("", 0, 0, 100, 20)
+      assert.is_false(ok)
+      assert.are.equal("a commandLine cannot have an empty string as its name", err)
+
+      ok, err = createTextEdit("", 0, 0, 100, 20)
+      assert.is_false(ok)
+      assert.are.equal("a text edit cannot have an empty string as its name", err)
+    end)
+
+    it("a command line or a text edit that already exists", function()
+      local cmdLine = name("DupCmdLine")
+      local textEdit = name("DupTextEdit")
+      finally(function()
+        deleteCommandLine(cmdLine)
+        deleteTextEdit(textEdit)
+      end)
+      assert.is_true(createCommandLine(cmdLine, 0, 0, 100, 20))
+      assert.is_true(createTextEdit(textEdit, 0, 30, 100, 20))
+
+      local ok, err = createCommandLine(cmdLine, 0, 0, 100, 20)
+      assert.is_false(ok)
+      assert.are.equal("couldn't create commandLine", err)
+
+      ok, err = createTextEdit(textEdit, 0, 0, 100, 20)
+      assert.is_false(ok)
+      assert.are.equal("couldn't create text edit", err)
+    end)
+
+    it("a name a label already has", function()
+      local label = name("LabelTaken")
+      finally(function()
+        deleteMiniConsole(label)
+        deleteScrollBox(label)
+        deleteCommandLine(label)
+        deleteTextEdit(label)
+        deleteLabel(label)
+      end)
+      assert.is_true(createLabel(label, 0, 0, 100, 20, 1))
+      local taken = ("label with the name '%s' already exists"):format(label)
+      assert.are.same({false, taken}, {createMiniConsole(label, 0, 30, 100, 50)})
+      assert.are.same({false, taken}, {createScrollBox(label, 0, 30, 100, 50)})
+      assert.are.same({false, taken}, {createCommandLine(label, 0, 30, 100, 20)})
+      assert.are.same({false, taken}, {createTextEdit(label, 0, 30, 100, 20)})
+      assert.are.equal("label", windowType(label))
+    end)
+
+    it("a label over a name a scroll box, command line or text edit already has", function()
+      local scrollBox, commandLine, textEdit = name("ScrollBoxTaken"), name("CommandLineTaken"), name("TextEditTaken")
+      finally(function()
+        deleteScrollBox(scrollBox)
+        deleteCommandLine(commandLine)
+        deleteTextEdit(textEdit)
+      end)
+      assert.is_true(createScrollBox(scrollBox, 0, 0, 100, 50))
+      assert.is_true(createCommandLine(commandLine, 0, 60, 100, 20))
+      assert.is_true(createTextEdit(textEdit, 0, 90, 100, 20))
+      for _, entry in ipairs({{scrollBox, "scrollbox"}, {commandLine, "commandline"}, {textEdit, "textedit"}}) do
+        local taken = ("a scroll box, command line or text edit with the name '%s' already exists"):format(entry[1])
+        assert.are.same({false, taken}, {createLabel(entry[1], 0, 0, 10, 10, 1)})
+        assert.are.equal(entry[2], windowType(entry[1]))
+      end
+    end)
+
+    it("a name a label already has, from Geyser or createConsole", function()
+      local label = name("LabelTakenGeyser")
+      local printErrorSpy = spy.on(_G, "printError")
+      local console
+      finally(function()
+        _G.printError:revert()
+        if console then
+          Geyser:remove(console)
+        end
+        deleteLabel(label)
+      end)
+      assert.is_true(createLabel(label, 0, 0, 100, 20, 1))
+      local taken = ("label with the name '%s' already exists"):format(label)
+      local err
+      console, err = Geyser.MiniConsole:new({name = label, x = 0, y = 30, width = 100, height = 50})
+      assert.is_nil(console)
+      assert.are.equal(taken, err)
+      assert.is_nil(Geyser.windowList[label])
+      assert.spy(printErrorSpy).was.called(1)
+      assert.are.same({false, taken}, {createConsole(label, 8, 20, 5, 0, 0)})
+      assert.spy(printErrorSpy).was.called(2)
+    end)
+
+    -- the holders start hidden and elsewhere, so a refused element that moved, resized or showed
+    -- them on its way into its container would show here
+    it("a Geyser element refused a name leaves the element that holds it alone", function()
+      local textEdit, console, label = name("TextEditTakenGeyser"), name("ConsoleTakenGeyser"), name("LabelHeldGeyser")
+      local printErrorSpy = spy.on(_G, "printError")
+      local made = {}
+      finally(function()
+        _G.printError:revert()
+        for _, element in ipairs(made) do
+          Geyser:remove(element)
+        end
+        deleteTextEdit(textEdit)
+        deleteMiniConsole(console)
+        deleteLabel(textEdit)
+        deleteLabel(console)
+        deleteMiniConsole(label)
+        deleteLabel(label)
+      end)
+      assert.is_true(createTextEdit(textEdit, 0, 0, 100, 20))
+      assert.is_true(createMiniConsole(console, 0, 30, 100, 50))
+      assert.is_true(createLabel(label, 0, 90, 100, 20, 1))
+      for _, entry in ipairs({
+        {textEdit, Geyser.Label, "a scroll box, command line or text edit with the name '%s' already exists"},
+        {console, Geyser.Label, "a miniconsole/userwindow with the name '%s' already exists"},
+        {label, Geyser.MiniConsole, "label with the name '%s' already exists"},
+      }) do
+        hideWindow(entry[1])
+        local geometry = {getWindowGeometry(entry[1])}
+        local element, err = entry[2]:new({name = entry[1], x = 300, y = 300, width = 40, height = 15, message = "from the label"})
+        if element then
+          made[#made + 1] = element
+        end
+        assert.is_nil(element)
+        assert.are.equal(entry[3]:format(entry[1]), err)
+        assert.is_nil(Geyser.windowList[entry[1]])
+        assert.is_false(windowVisible(entry[1]))
+        assert.are.same(geometry, {getWindowGeometry(entry[1])})
+      end
+      assert.are.equal("textedit", windowType(textEdit))
+      assert.are.equal("", getCurrentLine(console))
+      assert.spy(printErrorSpy).was.called(3)
+    end)
+
+    it("a Geyser element refused a name leaves the Geyser element that holds it in Geyser", function()
+      local held = name("HeldByGeyser")
+      spy.on(_G, "printError")
+      local label, console
+      finally(function()
+        _G.printError:revert()
+        if console then
+          Geyser:remove(console)
+        end
+        if label then
+          label:hide()
+          Geyser:remove(label)
+        end
+        deleteLabel(held)
+      end)
+      label = Geyser.Label:new({name = held, x = 0, y = 0, width = 50, height = 20})
+      console = Geyser.MiniConsole:new({name = held, x = 0, y = 30, width = 50, height = 20})
+      assert.is_nil(console)
+      assert.are.equal(label, Geyser.windowList[held])
+      assert.is_truthy(table.contains(Geyser.windows, held))
+    end)
+
+    it("a name a label already has, from the other Geyser elements", function()
+      local scrollBox, commandLine, textEdit = name("LabelForScrollBox"), name("LabelForCommandLine"), name("LabelForTextEdit")
+      local printErrorSpy = spy.on(_G, "printError")
+      finally(function()
+        _G.printError:revert()
+        deleteLabel(scrollBox)
+        deleteLabel(commandLine)
+        deleteLabel(textEdit)
+      end)
+      for _, entry in ipairs({{scrollBox, Geyser.ScrollBox}, {commandLine, Geyser.CommandLine}, {textEdit, Geyser.TextEdit}}) do
+        assert.is_true(createLabel(entry[1], 0, 0, 10, 10, 1))
+        hideWindow(entry[1])
+        local geometry = {getWindowGeometry(entry[1])}
+        local element, err = entry[2]:new({name = entry[1], x = 300, y = 300, width = 40, height = 15})
+        assert.is_nil(element)
+        assert.are.equal(("label with the name '%s' already exists"):format(entry[1]), err)
+        assert.is_nil(Geyser.windowList[entry[1]])
+        assert.is_nil((Geyser.parentWindows or {})[entry[1]])
+        assert.are.equal("label", windowType(entry[1]))
+        assert.is_false(windowVisible(entry[1]))
+        assert.are.same(geometry, {getWindowGeometry(entry[1])})
+      end
+      assert.spy(printErrorSpy).was.called(3)
+    end)
+
+    it("a name another kind holds, from new2() and the elements made of labels", function()
+      local console = name("ConsoleForLabels")
+      spy.on(_G, "printError")
+      local parent
+      finally(function()
+        _G.printError:revert()
+        if parent then
+          parent:hide()
+          Geyser:remove(parent)
+          deleteLabel(parent.name)
+        end
+        for _, suffix in ipairs({"", "_text", "adjLabel"}) do
+          deleteMiniConsole(console .. suffix)
+        end
+      end)
+      local taken = "a miniconsole/userwindow with the name '%s' already exists"
+      for _, suffix in ipairs({"", "_text", "adjLabel"}) do
+        assert.is_true(createMiniConsole(console .. suffix, 0, 0, 10, 10))
+      end
+      assert.are.same({nil, taken:format(console)}, {Geyser.Label:new2({name = console})})
+      assert.are.same({nil, taken:format(console)}, {Geyser.Button:new({name = console})})
+      assert.are.same({nil, taken:format(console .. "_text")}, {Geyser.Gauge:new({name = console, x = 0, y = 0, width = 100, height = 20})})
+      assert.is_nil(Geyser.windowList[console])
+      assert.are.same({nil, taken:format(console .. "adjLabel")},
+        {Adjustable.Container:new({name = console, x = 0, y = 0, width = 100, height = 100, autoLoad = false, autoSave = false})})
+      assert.is_nil(Geyser.windowList[console])
+      parent = Geyser.Label:new({name = name("ParentOfChild"), x = 0, y = 0, width = 50, height = 20})
+      assert.are.same({nil, taken:format(console)}, {parent:addChild({name = console, width = 50, height = 20})})
+    end)
+
+    it("a name another kind holds, in a parent window that does not exist", function()
+      local console, label, missing = name("ConsoleInMissingParent"), name("LabelInMissingParent"), name("MissingParent")
+      local printErrorSpy = spy.on(_G, "printError")
+      finally(function()
+        _G.printError:revert()
+        deleteMiniConsole(console)
+        deleteLabel(label)
+      end)
+      assert.is_true(createMiniConsole(console, 0, 0, 10, 10))
+      assert.is_true(createLabel(label, 0, 0, 10, 10, 1))
+      local notFound = ("window '%s' not found"):format(missing)
+      assert.are.same({false, notFound}, {createLabel(missing, console, 0, 0, 10, 10, 1)})
+      assert.are.same({nil, notFound}, {Geyser.Label:new({name = console, windowname = missing})})
+      assert.are.same({false, notFound}, {createMiniConsole(missing, label, 0, 0, 10, 10)})
+      assert.are.same({nil, notFound}, {Geyser.MiniConsole:new({name = label, windowname = missing})})
+      assert.spy(printErrorSpy).was.called(2)
+    end)
+
+    it("a right-click menu item over a name another kind holds", function()
+      local owner = name("MenuOwner")
+      local item = owner .. "rightClickMenu" .. "taken"
+      local printErrorSpy = spy.on(_G, "printError")
+      local label
+      finally(function()
+        _G.printError:revert()
+        if label then
+          label:hide()
+          Geyser:remove(label)
+        end
+        deleteLabel(owner)
+        deleteLabel(owner .. "rightClickMenu")
+        deleteLabel(owner .. "rightClickMenu" .. "free")
+        deleteMiniConsole(item)
+      end)
+      assert.is_true(createMiniConsole(item, 0, 0, 10, 10))
+      label = Geyser.Label:new({name = owner, x = 0, y = 0, width = 50, height = 20})
+      label:createRightClickMenu({MenuItems = {"taken", "free"}})
+      assert.is_nil(label.rightClickMenu.MenuLabels.taken)
+      assert.is_truthy(label.rightClickMenu.MenuLabels.free)
+      assert.are.equal(1, label.rightClickMenu.MenuLabels.free.index)
+      assert.are.equal("miniconsole", windowType(item))
+      assert.spy(printErrorSpy).was.called(1)
+    end)
+
+    it("a buffer over a name a label already has", function()
+      local label = name("LabelForBuffer")
+      finally(function()
+        deleteMiniConsole(label)
+        deleteLabel(label)
+      end)
+      assert.is_true(createLabel(label, 0, 0, 100, 20, 1))
+      assert.are.same({false, ("label with the name '%s' already exists"):format(label)}, {createBuffer(label)})
+      assert.are.equal("label", windowType(label))
+      echo(label, "for the buffer")
+      assert.are_not.equal("for the buffer", getCurrentLine(label))
+    end)
+
+    -- the deleted mini console's widgets go only once control is back in the event loop
+    it("a label over the name of a mini console deleted with its command line", function()
+      local console = name("ConsoleWithCommandLine")
+      finally(function()
+        deleteLabel(console)
+        deleteMiniConsole(console)
+      end)
+      assert.is_true(createMiniConsole(console, 0, 0, 100, 100))
+      enableCommandLine(console, true)
+      assert.is_true(deleteMiniConsole(console))
+      assert.is_nil(windowType(console))
+      assert.is_true(createLabel(console, 0, 0, 100, 20, 1))
+      assert.are.equal("label", windowType(console))
+    end)
+
+    it("an empty name to delete a miniconsole or a label", function()
+      local ok, err = deleteMiniConsole("")
+      assert.is_false(ok)
+      assert.are.equal("a miniconsole cannot have an empty string as its name", err)
+
+      ok, err = deleteLabel("")
+      assert.is_false(ok)
+      assert.are.equal("a label cannot have an empty string as its name", err)
+    end)
+
+    it("a missing name to delete, and raises an event for each it deletes", function()
+      local label, mini, window = name("DeletedLabel"), name("DeletedMini"), name("DeletedWindow")
+      local deleted = {}
+      local handlers = {
+        registerAnonymousEventHandler("sysLabelDeleted", function(_, which) deleted[#deleted + 1] = which end),
+        registerAnonymousEventHandler("sysMiniConsoleDeleted", function(_, which) deleted[#deleted + 1] = which end),
+      }
+      finally(function()
+        for _, id in ipairs(handlers) do
+          killAnonymousEventHandler(id)
+        end
+        deleteLabel(label)
+        deleteMiniConsole(mini)
+        deleteMiniConsole(window)
+      end)
+
+      assert.is_true(createLabel(label, 0, 0, 10, 10, 1))
+      assert.is_true(createMiniConsole(mini, 0, 0, 10, 10))
+      assert.is_true(openUserWindow(window, false))
+      assert.is_true(deleteLabel(label))
+      assert.is_true(deleteMiniConsole(mini))
+      assert.is_true(deleteMiniConsole(window))
+      assert.are.same({label, mini, window}, deleted)
+
+      local ok, err = deleteLabel(label)
+      assert.is_false(ok)
+      assert.are.equal(string.format("label name '%s' not found", label), err)
+      ok, err = deleteMiniConsole(mini)
+      assert.is_false(ok)
+      assert.are.equal(string.format("miniconsole name '%s' not found", mini), err)
+      assert.are.same({label, mini, window}, deleted)
+    end)
+  end)
+
+  -- A range spanning most of the int range must not build a table entry per
+  -- line number it covers, or it runs out of memory
+  describe("getLines() with a range reaching outside the buffer", function()
+    local window = name("GetLines")
+
+    setup(function()
+      createMiniConsole(window, 0, 0, 400, 300)
+      clearWindow(window)
+      -- clearWindow() leaves one empty line, which would otherwise be line 0
+      moveCursor(window, 0, 0)
+      deleteLine(window)
+      echo(window, "one\ntwo\nthree")
+    end)
+
+    teardown(function()
+      deleteMiniConsole(window)
+    end)
+
+    it("returns only the lines that exist", function()
+      assert.are.same({"one", "two", "three"}, getLines(window, 0, 3))
+      assert.are.same({"one", "two"}, getLines(window, -2, 2))
+      assert.are.same({"two", "three"}, getLines(window, 1, 100))
+      assert.are.same({}, getLines(window, 10, 20))
+    end)
+
+    it("copes with the extremes of the int range", function()
+      assert.are.same({"one", "two"}, getLines(window, -2147483648, 2))
+      assert.are.same({"one", "two", "three"}, getLines(window, 0, 2147483647))
+      assert.are.same({"three", "two", "one"}, getLines(window, 2147483647, -2147483648))
+    end)
+
+    it("reads a reversed range downward from its first line", function()
+      assert.are.same({"three"}, getLines(window, 2, 1))
+      assert.are.same({"three", "two"}, getLines(window, 2, 0))
+      assert.are.same({"three", "two", "one"}, getLines(window, 2, -5))
+      assert.are.same({"three"}, getLines(window, 100, 1))
+      assert.are.same({}, getLines(window, 20, 10))
+      assert.are.same({}, getLines(window, -1, -5))
+    end)
+  end)
+end)

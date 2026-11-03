@@ -18,10 +18,11 @@
  ***************************************************************************/
 
 #include "SentryWrapper.h"
+
 #include "utils.h"
 
 #ifdef WITH_SENTRY
-#include <QFile>
+#include "MudletApp.h"
 #include <QStandardPaths>
 #include "sentry.h"
 #endif
@@ -50,11 +51,9 @@
 void initSentry()
 {
 #ifdef WITH_SENTRY
-    // Never arm crashpad for a test run. The Lua suite drives this very binary with
-    // MUDLET_TEST_MODE set, and an armed crashpad answers a crash there by launching
-    // MudletCrashReporter, which blocks on a modal dialog unless "autoSendCrashReports" is already
-    // AlwaysSend. No CI runner has that setting, so a crash would hang the job to its timeout
-    // rather than fail it - and the report would go out as if a player had hit it.
+    // Never arm crashpad for a test run: the Lua suite runs this binary with MUDLET_TEST_MODE, and a crash
+    // would open MudletCrashReporter's modal dialog (unless "autoSendCrashReports" is AlwaysSend, which no
+    // CI runner has), hanging the job until timeout and sending the report as if a player hit it.
     if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
         return;
     }
@@ -67,12 +66,7 @@ void initSentry()
         return;
     }
 
-    QString appBuild;
-    QFile gitShaFile(qsl(":/app-build.txt"));
-    if (gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
-    }
-    const std::string release = qsl("mudlet@%1%2").arg(APP_VERSION, appBuild).toStdString();
+    const std::string release = qsl("mudlet@%1%2").arg(APP_VERSION, MudletApp::buildSuffix()).toStdString();
 
     sentry_options_set_database_path(options, path.toUtf8().constData());
     sentry_options_set_release(options, release.c_str());

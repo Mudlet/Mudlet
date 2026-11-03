@@ -10,7 +10,7 @@
 -- buffer and for a one-line one alike. Asking for line 0 is what tells them
 -- apart, and every case here depends on the buffer really being empty.
 local function assertEmpty(window)
-  assert.equals("ERROR: invalid line number", getLines(window, 0, 1)[1])
+  assert.are.same({}, getLines(window, 0, 1))
 end
 
 local function linesContain(window, needle)
@@ -34,12 +34,10 @@ describe("Console operations on a buffer emptied by deleteLine()", function()
     deleteMiniConsole(win)
   end)
 
-  -- clearWindow() leaves exactly one empty line, and deleteLine() removes the
-  -- line under the user cursor - which clearWindow() does not reset, so the
-  -- cursor has to be put back on that line for the buffer to end up empty.
+  -- clearWindow() leaves exactly one empty line, with the user cursor on it for
+  -- deleteLine() to remove.
   local function empty()
     clearWindow(win)
-    moveCursor(win, 0, 0)
     deleteLine(win)
   end
 
@@ -94,7 +92,7 @@ describe("Console operations on a buffer emptied by deleteLine()", function()
   end)
 
   describe("inserting", function()
-    -- with no line to insert into, TConsole::insertText() and insertLink()
+    -- with no line to insert into, TConsoleModel::insertText() and insertLink()
     -- both fall through to appending
     it("insertText appends instead", function()
       insertText(win, "spliced")
@@ -230,6 +228,59 @@ describe("Console operations on a buffer emptied by deleteLine()", function()
   end)
 end)
 
+describe("A scrolled console emptied by deleteLine()", function()
+  local win = "emptyBufferOpsScrolledTest"
+
+  setup(function()
+    createMiniConsole(win, 0, 0, 400, 300)
+  end)
+
+  teardown(function()
+    deleteMiniConsole(win)
+  end)
+
+  -- with more lines than fit, the view's last line sits far below the top, and
+  -- deleteLine() leaves it there, so the repaint looks for a line that is gone
+  it("repaints", function()
+    for i = 1, 100 do
+      echo(win, "scrolled line " .. i .. "\n")
+    end
+    pumpEvents(100)
+    for _ = 0, getLineCount(win) do
+      moveCursor(win, 0, 0)
+      deleteLine(win)
+    end
+    assertEmpty(win)
+    pumpEvents(100)
+    resizeWindow(win, 410, 310)
+    pumpEvents(100)
+    echo(win, "after the repaint\n")
+    assert.is_true(linesContain(win, "after the repaint"))
+  end)
+
+  -- scrolling up opens the split-screen lower pane, which keeps its own copy
+  -- of the last line's position that deleteLine() leaves just as stale
+  it("repaints with the split-screen pane open", function()
+    for i = 1, 200 do
+      echo(win, "split line " .. i .. "\n")
+    end
+    pumpEvents(100)
+    scrollTo(win, 50)
+    pumpEvents(100)
+    for _ = 0, getLineCount(win) do
+      moveCursor(win, 0, 0)
+      deleteLine(win)
+    end
+    assertEmpty(win)
+    pumpEvents(100)
+    resizeWindow(win, 420, 320)
+    pumpEvents(100)
+    scrollTo(win)
+    echo(win, "after the split repaint\n")
+    assert.is_true(linesContain(win, "after the split repaint"))
+  end)
+end)
+
 describe("The main console after deleteLine() empties its buffer", function()
   -- Game text arriving at an emptied main console reaches a different last-line
   -- read to the one echo() takes: TBuffer::commitLineData().
@@ -280,7 +331,7 @@ describe("The main console after deleteLine() empties its buffer", function()
   end)
 
   it("survives an echo from inside the trigger that emptied the buffer", function()
-    -- TConsole::echo() takes its own branch while a trigger is running, not
+    -- TConsoleModel::echo() takes its own branch while a trigger is running, not
     -- the one a top-level echo() reaches
     withTrigger("emptyingEcho", function()
       emptyMain()

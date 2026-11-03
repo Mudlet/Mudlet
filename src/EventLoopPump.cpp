@@ -25,6 +25,8 @@
 #include <QEventLoop>
 #include <QThread>
 
+using namespace std::chrono_literals;
+
 // A nested QEventLoop::exec() cannot be used here. exec() sets
 // QEventLoop::EventLoopExec, which QCocoaEventDispatcher answers by re-entering
 // -[NSApplication run] and leaving Qt's timers to the platform run loop; nested
@@ -55,6 +57,6 @@ bool EventLoopPump::pumpFor(const int timeoutMs, const std::function<bool()>& st
         }
         // A pass returns as soon as nothing is pending, so without this the loop
         // spins a core flat for the whole timeout.
-        QThread::msleep(1);
+        QThread::sleep(1ms);
     }
 }

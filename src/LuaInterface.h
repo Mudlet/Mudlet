@@ -43,8 +43,6 @@ class Host;
 class TLuaInterpreter;
 class VarUnit;
 
-class QTreeWidgetItem;
-
 
 class LuaInterface
 {
@@ -54,7 +52,7 @@ public:
     // do not get saved
     static constexpr int scmMaxTableDepth = 99;
 
-    explicit LuaInterface(lua_State*);
+    explicit LuaInterface(lua_State*, TLuaInterpreter* = nullptr);
     ~LuaInterface();
     void iterateTable(lua_State*, int, TVar*, bool);
     void getVars(bool);
@@ -72,7 +70,6 @@ public:
     // walk reaching them at all - they are in no profile save taken from that
     // tree, which is the caller's to tell the user about
     QStringList unreadableSavedRoots() const { return mUnreadableSavedRoots; }
-    QStringList varName(TVar* var);
     QList<TVar*> varOrder(TVar* var);
     // leaves the Lua stack as it found it, whatever the outcome
     QString getValue(TVar*);
@@ -92,11 +89,7 @@ public:
     // Anything that builds a variable tree and throws it away owes this call:
     // ~LuaInterface cannot make it, see there.
     void releaseVariableReferences();
-    bool loadVar(TVar* var);
-    bool reparentCVariable(TVar* from, TVar* to, TVar* curVar);
-    bool reparentVariable(QTreeWidgetItem*, QTreeWidgetItem*, QTreeWidgetItem*);
-    std::pair<bool, QString> validMove(QTreeWidgetItem*);
-    void getAllChildren(TVar* var, QList<TVar*>* list);
+    std::pair<bool, QString> validMove(TVar* pNewParent) const;
     lua_State* getState() const;
     static int onPanic(lua_State*);
 
@@ -107,9 +100,14 @@ private:
     bool pushKey(TVar*, const QString& name, const int keyType);
     bool pushOwningTable(const QList<TVar*>&);
     bool newNameIsFree(TVar*);
+    bool savedWalkCanCopyAlias(lua_State*, const void* pKey, const void* pValue, const int valueType);
+
+    static constexpr int scmMaxAliasCopyNodes = 10000;
 
     int depth = 0;
     lua_State* mL;
+    // Reading or writing a variable can run a script's metamethod
+    TLuaInterpreter* mpInterpreter = nullptr;
     QSet<TVar> hiddenVars;
     QScopedPointer<VarUnit> varUnit;
     QList<int> lrefs;
@@ -128,6 +126,12 @@ private:
     // ...and the ones missing from the tree it ended up with
     QStringList mUnreadableSavedRoots;
     QStringList mTruncatedSavedTables;
+    // the tables a saved-variables walk is inside, outermost first
+    QList<const void*> mSavedWalkPath;
+    // how many second copies of a table the walk is inside...
+    int mAliasCopyDepth = 0;
+    // ...and how many variables such copies have added to the current saved global
+    int mAliasCopyNodes = 0;
 };
 
 #endif // MUDLET_LUAINTERFACE_H

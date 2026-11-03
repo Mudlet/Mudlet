@@ -37,6 +37,8 @@ TMxpTagHandlerResult TMxpVarTagHandler::handleStartTag(TMxpContext& ctx, TMxpCli
     Q_UNUSED(client)
     mCurrentStartTag = *tag;
     mCurrentVarContent.clear();
+    // <VAR name/> never gets an end tag, so must not start collecting
+    mInsideTag = !tag->isEmpty();
     return MXP_TAG_HANDLED;
 }
 
@@ -46,17 +48,19 @@ TMxpTagHandlerResult TMxpVarTagHandler::handleEndTag(TMxpContext& ctx, TMxpClien
 {
     Q_UNUSED(ctx)
     Q_UNUSED(tag)
-    const QString& name = mCurrentStartTag.getAttrName(0);
-    const QString& value = mCurrentVarContent;
-
-    if (mCurrentStartTag.hasAttribute("PUBLISH") || !mCurrentStartTag.hasAttribute("DELETE")) {
-        client.setVariable(name, value);
+    // A stray </VAR>, or a <VAR> with no name, has nothing to set
+    if (mInsideTag && mCurrentStartTag.getAttributesCount() > 0 && (mCurrentStartTag.hasAttribute("PUBLISH") || !mCurrentStartTag.hasAttribute("DELETE"))) {
+        client.setVariable(mCurrentStartTag.getAttrName(0), mCurrentVarContent);
     }
+    mInsideTag = false;
+    mCurrentVarContent.clear();
 
     return MXP_TAG_HANDLED;
 }
 
-void TMxpVarTagHandler::handleContent(char ch)
+void TMxpVarTagHandler::handleContentBytes(QByteArrayView bytes)
 {
-    mCurrentVarContent.append(ch);
+    if (mInsideTag) {
+        mCurrentVarContent.append(QLatin1StringView(bytes));
+    }
 }

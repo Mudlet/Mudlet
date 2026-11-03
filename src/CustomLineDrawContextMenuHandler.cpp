@@ -76,7 +76,7 @@ bool CustomLineDrawContextMenuHandler::handle(T2DMap::MapInteractionContext& con
     mMapWidget.registerContextMenu(popup);
 
     //: 2D Mapper context menu (drawing custom exit line) item
-    auto customLineUndoLastPoint = new QAction(T2DMap::tr("Undo"), &mMapWidget);
+    auto customLineUndoLastPoint = new QAction(T2DMap::tr("Undo"), popup);
     //: 2D Mapper context menu (drawing custom exit line) item tooltip
     customLineUndoLastPoint->setToolTip(T2DMap::tr("Undo last point"));
     if (room->customLines.value(context.customLinesRoomExit).count() > 1) {
@@ -86,7 +86,7 @@ bool CustomLineDrawContextMenuHandler::handle(T2DMap::MapInteractionContext& con
     }
 
     //: 2D Mapper context menu (drawing custom exit line) item
-    auto snapToGrid = new QAction(T2DMap::tr("Snap points to grid"), &mMapWidget);
+    auto snapToGrid = new QAction(T2DMap::tr("Snap points to grid"), popup);
     snapToGrid->setCheckable(true);
     snapToGrid->setChecked(mMapWidget.isSnapCustomLinePointsToGridEnabled());
     QObject::connect(snapToGrid, &QAction::toggled, &mMapWidget, &T2DMap::slot_setSnapCustomLinePointsToGrid);
@@ -94,7 +94,7 @@ bool CustomLineDrawContextMenuHandler::handle(T2DMap::MapInteractionContext& con
     snapToGrid->setToolTip(utils::richText(T2DMap::tr("Snap current points and keep custom line edits aligned to the map grid")));
 
     //: 2D Mapper context menu (drawing custom exit line) item
-    auto moveLastPoint = new QAction(T2DMap::tr("Move last point to target room"), &mMapWidget);
+    auto moveLastPoint = new QAction(T2DMap::tr("Move last point to target room"), popup);
     if (mMapWidget.canMoveCustomLineLastPointToTargetRoom(*room, context.customLinesRoomExit)) {
         QObject::connect(moveLastPoint, &QAction::triggered, &mMapWidget, &T2DMap::slot_moveCustomLineLastPointToTargetRoom);
         //: 2D Mapper context menu (drawing custom exit line) item tooltip (enabled state)
@@ -106,7 +106,7 @@ bool CustomLineDrawContextMenuHandler::handle(T2DMap::MapInteractionContext& con
     }
 
     //: 2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)
-    auto customLineProperties = new QAction(T2DMap::tr("Properties"), &mMapWidget);
+    auto customLineProperties = new QAction(T2DMap::tr("Properties"), popup);
     //: 2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)
     customLineProperties->setText(T2DMap::tr("properties..."));
     //: 2D Mapper context menu (drawing custom exit line) item tooltip
@@ -114,7 +114,7 @@ bool CustomLineDrawContextMenuHandler::handle(T2DMap::MapInteractionContext& con
     QObject::connect(customLineProperties, &QAction::triggered, &mMapWidget, &T2DMap::slot_customLineProperties);
 
     //: 2D Mapper context menu (drawing custom exit line) item
-    auto customLineFinish = new QAction(T2DMap::tr("Finish"), &mMapWidget);
+    auto customLineFinish = new QAction(T2DMap::tr("Finish"), popup);
     //: 2D Mapper context menu (drawing custom exit line) item tooltip
     customLineFinish->setToolTip(utils::richText(T2DMap::tr("Finish drawing this line")));
     QObject::connect(customLineFinish, &QAction::triggered, &mMapWidget, &T2DMap::slot_doneCustomLine);

@@ -31,9 +31,11 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -64,7 +66,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists() && !dir.removeRecursively()) {
             qWarning() << "deleteProfileDirectory: could not remove" << path << "- later failures may stem from this stale state";
@@ -88,7 +90,7 @@ private:
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -122,8 +124,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mProfileName);
             delete mudlet::self();
@@ -136,7 +137,7 @@ private slots:
         bootMudlet();
         // in the slot rather than in bootMudlet(), where a failing compare would
         // return before init() and leave the edbee singleton below unprimed
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         delete mudlet::self();
 
         bootMudlet();
@@ -156,7 +157,7 @@ private slots:
 
         mudlet::self()->slot_showScriptDialog();
         QTest::qWait(100ms);
-        QVERIFY2(mpHost->mpEditorDialog, "Script editor did not open on the reconstructed mudlet instance");
+        QVERIFY2(HostDialogs::of(mpHost).mpEditorDialog, "Script editor did not open on the reconstructed mudlet instance");
     }
 };
 

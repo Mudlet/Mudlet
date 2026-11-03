@@ -30,34 +30,18 @@
 
 #include "TLuaInterpreter.h"
 
-#include "EAction.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "TAlias.h"
 #include "TArea.h"
-#include "TCommandLine.h"
-#include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TFlipButton.h"
-#include "TForkedProcess.h"
-#include "TLabel.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
-#include "TTabBar.h"
-#include "TTextEdit.h"
 #include "TTimer.h"
-#include "dlgComposer.h"
-#include "dlgIRC.h"
-#include "dlgMapper.h"
-#include "dlgModuleManager.h"
-#include "dlgTriggerEditor.h"
 #include "mapInfoContributorManager.h"
-#include "mudlet.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget_integration.h"
-#endif
 
 #include <chrono>
 #include <limits>
@@ -65,7 +49,6 @@
 
 #include <QCollator>
 #include <QCoreApplication>
-#include <QDesktopServices>
 #include <QFileInfo>
 #include <QMovie>
 #include <QTimer>
@@ -106,7 +89,7 @@ static void raiseSpeechStartedEvent(const QString& text)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(text);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mudlet::self()->getHostManager().postInterHostEvent(nullptr, event, true);
+    HostManager::self()->postInterHostEvent(nullptr, event, true);
 }
 
 // No documentation available in wiki - internal function
@@ -153,6 +136,13 @@ int TLuaInterpreter::ttsSkip(lua_State* L)
 // No documentation available in wiki - internal function
 void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 {
+    // The engine has no parent and outlives the main window, so it can still
+    // report the end of an utterance after the profiles are gone at quit.
+    // There is nobody left to tell, and nothing more should be said.
+    if (!HostManager::self()) {
+        return;
+    }
+
     // ttsSpeak() announces an utterance itself when the engine was already
     // speaking, because there is then no state edge to announce it. An engine
     // that gets round to reporting the interruption afterwards ends up here
@@ -199,7 +189,7 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         }
 
         if (!alreadyAnnounced) {
-            mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+            HostManager::self()->postInterHostEvent(NULL, event, true);
         }
     }
 
@@ -217,7 +207,7 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         // is never coming waits forever. Look again once the engine has had its
         // chance to start speaking - if it is still idle, that Ready did mean
         // idle and the queue is free to go.
-        QTimer::singleShot(scmInterruptedSpeechGrace, qApp, []() {
+        QTimer::singleShot(scmInterruptedSpeechGrace, QCoreApplication::instance(), []() {
             if (!speechUnit.isNull() && speechUnit->state() == QTextToSpeech::State::Ready && !speechQueue.isEmpty()) {
                 TLuaInterpreter::ttsStateChanged(QTextToSpeech::State::Ready);
             }
@@ -443,7 +433,8 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(inputText);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(index));
+    // 1-based, as ttsGetQueue() and ttsClearQueue() take it
+    event.mArgumentList.append(QString::number(index + 1));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     host.raiseEvent(event);
 
@@ -515,6 +506,9 @@ int TLuaInterpreter::ttsSetPitch(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
     double pitch = getVerifiedDouble(L, __func__, 1, "pitch");
+    if (qIsNaN(pitch)) {
+        return warnArgumentValue(L, __func__, "pitch as a number from -1 to 1 expected, got nan");
+    }
 
     if (pitch > 1.0) {
         pitch = 1.0;
@@ -531,9 +525,10 @@ int TLuaInterpreter::ttsSetPitch(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(pitch));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+    HostManager::self()->postInterHostEvent(NULL, event, true);
 
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetRate
@@ -541,6 +536,9 @@ int TLuaInterpreter::ttsSetRate(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
     double rate = getVerifiedDouble(L, __func__, 1, "rate");
+    if (qIsNaN(rate)) {
+        return warnArgumentValue(L, __func__, "rate as a number from -1 to 1 expected, got nan");
+    }
 
     if (rate > 1.0) {
         rate = 1.0;
@@ -557,9 +555,10 @@ int TLuaInterpreter::ttsSetRate(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(rate));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+    HostManager::self()->postInterHostEvent(NULL, event, true);
 
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetVolume
@@ -567,6 +566,9 @@ int TLuaInterpreter::ttsSetVolume(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
     double volume = getVerifiedDouble(L, __func__, 1, "volume");
+    if (qIsNaN(volume)) {
+        return warnArgumentValue(L, __func__, "volume as a number from 0 to 1 expected, got nan");
+    }
 
     if (volume > 1.0) {
         volume = 1.0;
@@ -583,9 +585,10 @@ int TLuaInterpreter::ttsSetVolume(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(volume));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+    HostManager::self()->postInterHostEvent(NULL, event, true);
 
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetVoiceByIndex
@@ -608,7 +611,7 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(speechVoices[index].name());
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+    HostManager::self()->postInterHostEvent(NULL, event, true);
 
     lua_pushboolean(L, true);
     return 1;
@@ -630,7 +633,7 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             event.mArgumentList.append(voice.name());
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+            HostManager::self()->postInterHostEvent(NULL, event, true);
 
             lua_pushboolean(L, true);
             return 1;

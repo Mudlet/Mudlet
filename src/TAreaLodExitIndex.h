@@ -27,44 +27,27 @@
 #include <limits>
 
 /*
- * Index of the rooms whose exits can still produce pixels in the 2D
- * renderer's reduced-detail tier, bucketed by how far their longest exit
- * reaches. At the furthest zooms nearly every exit on a large level is
- * shorter than a room blob and is dropped without being gathered, so the
- * renderer wants the handful of rooms that beat that cut handed over
- * without visiting all the others to ask.
+ * Rooms whose exits can still produce pixels in the 2D renderer's reduced-detail tier, so at far
+ * zooms (where most exits are shorter than a room blob) it need not visit every room.
  *
- * Each room is stored under its "span": the largest per-axis (Chebyshev)
- * distance in room units from the room to any same-area destination of its
- * 2D-plane exits. Rooms with something that draws at any zoom - an exit
- * into another area (fixed-size marker) or a 2D-plane exit stub - go in the
- * cAlwaysVisibleSpan bucket instead. A span below cMinStoredSpan can never
- * beat a threshold the renderer is allowed to ask about, so those rooms are
- * not stored at all, which is what keeps the index near-empty on
- * lattice-like maps.
+ * Bucketed by "span": the largest Chebyshev distance, in room units, to any same-area destination
+ * of the room's 2D-plane exits. Rooms with an other-area exit or a 2D exit stub draw at any zoom and
+ * go in cAlwaysVisibleSpan. Spans below cMinStoredSpan are not stored, keeping the index near-empty
+ * on lattice-like maps.
  *
- * Entries may be a superset of the rooms that will actually draw - a stored
- * room can still contribute nothing (hidden or dangling destination, room
- * outside the viewport), which costs the renderer its usual per-room tests.
- * A missing room would lose pixels, so every caller has to keep staleness
- * on the too-many side. Note that this covers only what paintRoomExits
- * draws as plain lines from the room's own position: custom exit lines
- * start anywhere and are found through the area's separate custom-line
- * index, which the renderer has to consult as well.
+ * Entries may be a superset of what draws but never a subset (that loses pixels), so callers must
+ * keep staleness on the too-many side. Custom exit lines are not covered: the renderer must also
+ * consult the area's custom-line index.
  *
- * Rebuilding is O(rooms in the area) with a destination lookup per exit, so
- * TArea keeps entries current one room at a time as exits and rooms change
- * and only rebuilds wholesale when a whole area is recomputed. Bucket
- * contents stay sorted by room id so that the order the renderer paints in
- * does not depend on how the entries got there.
+ * A rebuild is O(rooms in the area), so TArea updates one room at a time and rebuilds only when a
+ * whole area is recomputed. Buckets stay sorted by room id so paint order doesn't depend on history.
  */
 class TAreaLodExitIndex
 {
 public:
-    // Rooms that draw something at any zoom, so no threshold may skip them.
+    // Rooms drawn at any zoom; no threshold may skip them.
     static constexpr int cAlwaysVisibleSpan = std::numeric_limits<int>::max();
-    // The renderer must pass a threshold of at least 1 and only asks for
-    // rooms strictly beyond it, so nothing below this can ever be returned.
+    // Thresholds are >= 1 and queries return spans strictly beyond, so lower spans are never returned.
     static constexpr int cMinStoredSpan = 2;
 
     void markDirty()
@@ -74,31 +57,24 @@ public:
         mEntries.clear();
     }
     bool needsRebuild() const { return mDirty; }
-    // Wholesale rebuilds so far. Only of interest to the tests, which use it
-    // to prove that an ordinary map edit re-files the one room it touched
-    // rather than paying for the whole area again.
+    // For tests.
     quint32 rebuildCount() const { return mRebuildCount; }
 
-    // Wholesale rebuild. insertRoom() takes ids in any order; endRebuild()
-    // puts the buckets back in order.
+    // insertRoom() takes ids in any order; endRebuild() sorts the buckets.
     void beginRebuild();
     void insertRoom(int id, int z, int span);
     void endRebuild();
 
-    // Re-file one room under a freshly computed span, or drop it if the span
-    // no longer qualifies. Costs a lookup plus an insertion into one bucket.
+    // Drops the room if the span no longer qualifies.
     void updateRoom(int id, int z, int span);
     void removeRoom(int id);
 
-    // Rooms on the given Z level with a span beyond the given one. The count
-    // lets the renderer compare against a viewport query's size without
-    // materialising the list.
+    // The count lets the renderer compare against a viewport query's size without building the list.
     qsizetype roomCountSpanningBeyond(int z, int span) const;
     void appendRoomsSpanningBeyond(int z, int span, QList<int>& out) const;
 
 private:
-    // Where one stored room currently sits, so updateRoom() and removeRoom()
-    // can find its bucket without searching every one of them.
+    // Locates a room's bucket for updateRoom() and removeRoom().
     struct Entry
     {
         int z = 0;
@@ -108,8 +84,7 @@ private:
     static bool worthStoring(const int span) { return span >= cMinStoredSpan; }
     void eraseEntry(int id, const Entry&);
 
-    // Outer key: Z level; inner key: span - ordered so a query can start at
-    // the first bucket beyond its threshold.
+    // Z -> span -> room ids; a QMap so a query can start at the first bucket beyond its threshold.
     QHash<int, QMap<int, QList<int>>> mIndex;
     QHash<int, Entry> mEntries;
     quint32 mRebuildCount = 0;

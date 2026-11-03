@@ -41,6 +41,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -103,8 +104,8 @@ private:
     QString joinedBuffer() const
     {
         QStringList lines;
-        for (int i = 0; i <= mpHost->mpConsole->buffer.getLastLineNumber(); ++i) {
-            lines << mpHost->mpConsole->buffer.line(i);
+        for (int i = 0; i <= mpHost->mainConsoleView()->buffer.getLastLineNumber(); ++i) {
+            lines << mpHost->mainConsoleView()->buffer.line(i);
         }
         return lines.join(QChar::LineFeed);
     }
@@ -140,11 +141,11 @@ private:
                 [this]() {
                     return mpHost->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
                 },
-                5000);
-        mpHost->mpConsole->buffer.clear();
+                5s);
+        mpHost->mainConsoleView()->buffer.clear();
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
         mpHost->mTelnet.connectIt(mLocalhost, mPort.toInt());
-        const bool reconnected = connectedSpy.wait(5000);
+        const bool reconnected = connectedSpy.wait(5s);
         const bool arrived = waitForBufferText(welcomeMessage);
         mpServer->setWelcomeMessage(QString());
         return wentOffline && reconnected && arrived;
@@ -152,8 +153,8 @@ private:
 
     bool bufferHasLine(const QString& text) const
     {
-        for (int i = 0; i <= mpHost->mpConsole->buffer.getLastLineNumber(); ++i) {
-            if (mpHost->mpConsole->buffer.line(i) == text) {
+        for (int i = 0; i <= mpHost->mainConsoleView()->buffer.getLastLineNumber(); ++i) {
+            if (mpHost->mainConsoleView()->buffer.line(i) == text) {
                 return true;
             }
         }
@@ -185,12 +186,12 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         QDir(path).removeRecursively();
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
@@ -199,7 +200,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -209,9 +210,9 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
-        mpHost->mpConsole->buffer.clear();
-        mpHost->mpConsole->buffer.resetSequenceParserState();
+        QVERIFY(mpHost->mainConsoleView());
+        mpHost->mainConsoleView()->buffer.clear();
+        mpHost->mainConsoleView()->buffer.resetSequenceParserState();
     }
 
     // A BEL ends the sequence: the payload is consumed and the text around it
@@ -291,7 +292,7 @@ private slots:
         // No line ending, so the parser is legitimately still inside the
         // sequence when the display is cleared:
         sendFromServerAndSettle(QByteArrayLiteral("BEFORE-CLEAR") + introducer + csPayload);
-        mpHost->mpConsole->buffer.clear();
+        mpHost->mainConsoleView()->buffer.clear();
 
         // clear() deliberately leaves the parser alone, so the sequence runs
         // on to the next line ending the game sends - which costs the first of
@@ -396,14 +397,21 @@ private slots:
     // Bounding the sequence at the end of a line must not break a well-formed
     // one that arrives in several packets - including one that pauses for
     // longer than cTelnet's 300ms idle flush, which puts a carriage return
-    // through the parser part way through the payload.
+    // through the parser part way through the payload. That flush commits the
+    // text ahead of the sequence, as it does ahead of a split CSI.
     void wellFormedSequenceSplitAcrossReads()
     {
-        sendFromServerAndSettle(QByteArrayLiteral("PRE-SPLIT") + QByteArrayLiteral("\x1b") + QByteArrayLiteral("P") + QByteArrayLiteral("SEQ"));
+        sendFromServer(QByteArrayLiteral("PRE-SPLIT") + QByteArrayLiteral("\x1b") + QByteArrayLiteral("P") + QByteArrayLiteral("SEQ"));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return bufferHasLine(qsl("PRE-SPLIT"));
+                         },
+                         5s),
+                 qPrintable(qsl("The idle flush did not commit the text ahead of the sequence it landed in: '%1'").arg(joinedBuffer())));
 
         sendFromServer(QByteArrayLiteral("PAYLOAD") + csStringTerminator + QByteArrayLiteral("POST-SPLIT") + csCrLf);
 
-        QVERIFY2(waitForBufferText(qsl("PRE-SPLITPOST-SPLIT")), qPrintable(qsl("A sequence split across two reads lost the text around it: '%1'").arg(joinedBuffer())));
+        QVERIFY2(waitForBufferText(qsl("PRE-SPLIT\nPOST-SPLIT")), qPrintable(qsl("A sequence split across two reads lost the text after it: '%1'").arg(joinedBuffer())));
         QVERIFY2(!joinedBuffer().contains(qsl("SEQ")), qPrintable(qsl("Payload of the split sequence was displayed: '%1'").arg(joinedBuffer())));
     }
 
@@ -458,13 +466,13 @@ private slots:
     void unterminatedSequenceInALocalFeedIsBounded()
     {
         std::string stuck{"BEFORE-LOCAL\x1bP0;SEQPAYLOAD"};
-        mpHost->mpConsole->printOnDisplay(stuck, false);
+        mpHost->printOnDisplay(stuck, false);
         // As on the Game Server channel, the line ending of this one is what
         // ends the sequence, so this feed is the one that is lost:
         std::string eaten{"EATEN-LOCAL\n"};
-        mpHost->mpConsole->printOnDisplay(eaten, false);
+        mpHost->printOnDisplay(eaten, false);
         std::string resumed{"VISIBLE-LOCAL\n"};
-        mpHost->mpConsole->printOnDisplay(resumed, false);
+        mpHost->printOnDisplay(resumed, false);
 
         QVERIFY2(waitForBufferText(qsl("VISIBLE-LOCAL")), qPrintable(qsl("Locally fed text stayed dark after an unterminated sequence: '%1'").arg(joinedBuffer())));
         QVERIFY2(!joinedBuffer().contains(qsl("SEQPAYLOAD")), qPrintable(qsl("Sequence payload was displayed: '%1'").arg(joinedBuffer())));
@@ -508,15 +516,15 @@ private slots:
         mpHost->mLogFileNameFormat.clear();
         mpHost->mLogFileName = qsl("string-sequence-recovery-test");
         mpHost->mIsNextLogFileInHtmlFormat = false;
-        mpHost->mpConsole->toggleLogging(false);
-        QVERIFY(mpHost->mpConsole->mLogToLogFile);
-        const QString logFileName = mpHost->mpConsole->mLogFileName;
+        mpHost->mainConsoleView()->toggleLogging(false);
+        QVERIFY(mpHost->mainConsoleView()->mLogToLogFile);
+        const QString logFileName = mpHost->mainConsoleView()->mLogFileName;
 
         sendFromServer(QByteArrayLiteral("PRE-LOG") + QByteArrayLiteral("\x1b") + QByteArrayLiteral("P") + csPayload + csCrLf + QByteArrayLiteral("LOGGED-AFTER-BLACKOUT") + csCrLf
                        + QByteArrayLiteral("LOGGED-LAST-LINE") + csCrLf);
         QVERIFY2(waitForBufferText(qsl("LOGGED-LAST-LINE")), qPrintable(qsl("Output stayed dark, buffer holds: '%1'").arg(joinedBuffer())));
 
-        mpHost->mpConsole->toggleLogging(false);
+        mpHost->mainConsoleView()->toggleLogging(false);
         QFile logFile(logFileName);
         QVERIFY2(logFile.open(QIODevice::ReadOnly | QIODevice::Text), qPrintable(qsl("Could not read back the log at %1").arg(logFileName)));
         const QString log = QString::fromUtf8(logFile.readAll());
@@ -534,10 +542,9 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+            const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
             QDir(path).removeRecursively();
             delete mudlet::self();
         }

@@ -28,11 +28,14 @@ describe("Tests undoing the game's own line wrapping", function()
 
   -- a line held back for a continuation is committed by a flush timer
   -- csmServerWrapFlushDelayMs (300ms) after the game goes quiet, so pump until
-  -- that has fallen due and the buffer has stopped growing rather than for a
-  -- fixed time a loaded machine could outrun
-  local function settle()
+  -- that has fallen due and the buffer has stopped growing, or until `done` says
+  -- nothing is left held, rather than for a fixed time a loaded machine could outrun
+  local function settle(done)
     local previous, waited = -1, 0
     while waited < 3000 do
+      if done and done() then
+        return
+      end
       assert.is_true(pumpEvents(100), "pumpEvents needs MUDLET_TEST_MODE set, see the tests README")
       waited = waited + 100
       local lastLine = getLastLineNumber("main")
@@ -43,9 +46,31 @@ describe("Tests undoing the game's own line wrapping", function()
     end
   end
 
+  -- Only one line is ever held, and always the newest, so once the last line fed
+  -- has reached the buffer there is nothing left for the flush timer to commit.
+  local function lastLineFedIsCommitted(data, lastLineBefore)
+    local lastLine = getLastLineNumber("main")
+    if lastLine <= lastLineBefore then
+      return false
+    end
+    local fed = data:gsub("<T_%u+>", ""):gsub("[\r\n]+$", "")
+    fed = (fed:match("[^\n]*$") or ""):match("^%s*(.-)%s*$")
+    if fed == "" then
+      return false
+    end
+    for lineNumber = lastLine, lastLineBefore, -1 do
+      local committed = (getLines("main", lineNumber, lineNumber + 1)[1] or ""):match("^(.-)%s*$")
+      if committed ~= "" then
+        return committed:sub(-#fed) == fed
+      end
+    end
+    return false
+  end
+
   local function feedAndSettle(data)
+    local lastLineBefore = getLastLineNumber("main")
     feed(data)
-    settle()
+    settle(function() return lastLineFedIsCommitted(data, lastLineBefore) end)
   end
 
   -- whole buffer lines, compared exactly: a segment that was joined onto its
@@ -157,6 +182,57 @@ describe("Tests undoing the game's own line wrapping", function()
     assert.is_true(bufferHasLine(segment1 .. " " .. segment2), "wrapped segment and its continuation were not joined into one logical line")
   end)
 
+  describe("keeps the colours of the segments it joins", function()
+    local function joinedLineColours()
+      local joined = segment1 .. " " .. segment2
+      local last = getLastLineNumber("main")
+      for offset, line in ipairs(getLines("main", mark, last + 1)) do
+        if line == joined then
+          moveCursor("main", 0, mark + offset - 1)
+          local colours = {}
+          for column = 0, #joined - 1 do
+            selectSection("main", column, 1)
+            colours[#colours + 1] = table.concat({getFgColor("main")}, ",")
+          end
+          deselect("main")
+          moveCursorEnd("main")
+          return colours
+        end
+      end
+      error("wrapped segment and its continuation were not joined into one logical line")
+    end
+
+    local function expectedColours(runs)
+      local colours = {}
+      for _, run in ipairs(runs) do
+        for _ = 1, run[1] do
+          colours[#colours + 1] = run[2]
+        end
+      end
+      return colours
+    end
+
+    local red, green, blue = "200,10,10", "10,200,10", "10,10,200"
+
+    it("when they differ", function()
+      feedAndSettle("\27[38;2;200;10;10m" .. segment1 .. "\r\n\27[38;2;10;200;10m" .. segment2 .. "\27[0m\r\n")
+
+      assert.are.same(expectedColours({{#segment1 + 1, red}, {#segment2, green}}), joinedLineColours())
+    end)
+
+    it("when they match", function()
+      feedAndSettle("\27[38;2;200;10;10m" .. segment1 .. "\r\n" .. segment2 .. "\27[0m\r\n")
+
+      assert.are.same(expectedColours({{#segment1 + 1 + #segment2, red}}), joinedLineColours())
+    end)
+
+    it("when the held segment has more than one", function()
+      feedAndSettle("\27[38;2;10;10;200m" .. segment1:sub(1, 10) .. "\27[38;2;200;10;10m" .. segment1:sub(11) .. "\r\n\27[38;2;10;200;10m" .. segment2 .. "\27[0m\r\n")
+
+      assert.are.same(expectedColours({{10, blue}, {#segment1 - 10 + 1, red}, {#segment2, green}}), joinedLineColours())
+    end)
+  end)
+
   it("does not swallow a prompt into the full-width line above it", function()
     -- the prompt is terminated by IAC GA rather than a newline
     feedAndSettle(segment1 .. "\r\nHP:100> <T_IAC><T_GA>")
@@ -172,6 +248,25 @@ describe("Tests undoing the game's own line wrapping", function()
 
     settle()
     assert.is_true(bufferHasLine(segment1), "held full-width line was not flushed after the game went quiet")
+  end)
+
+  it("runs the flushed line's triggers in trigger context, and only them", function()
+    -- only in trigger context does insertText() shift the capture groups
+    local selected
+    local id = tempRegexTrigger("^(x+) (alpha)$", function()
+      insertText("<<")
+      selectCaptureGroup(3)
+      selected = getSelection()
+      deselect()
+    end)
+    feed(segment1 .. "\r\n")
+    settle()
+    killTrigger(id)
+    assert.are.equal("alpha", selected, "insertText() in a trigger on the flushed line did not move the capture groups along")
+
+    -- only outside it does an echo's newline start a line
+    echo("after\nthe flush\n")
+    assert.is_true(bufferHasLine("the flush"), "an echo outside any trigger was still written as if into a trigger's line")
   end)
 
   it("ends a paragraph at a blank line", function()

@@ -31,15 +31,23 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <QApplication>
 #include <QCheckBox>
+#include <QColorDialog>
 #include <QComboBox>
+#include <QFontComboBox>
+#include <QFontDatabase>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPointer>
 #include <QPushButton>
+#include <QSettings>
 #include <QSignalSpy>
 #include <QSpinBox>
 #include <QStandardItemModel>
 #include <QTimeEdit>
+#include <QThread>
+#include <QTimer>
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -47,14 +55,20 @@
 #include "Host.h"
 #include "MMCP.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletApp.h"
 #include "TConsole.h"
 #include "TLuaInterpreter.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TelnetServerStub.h"
+#include "TriggerMatchPool.h"
+#include "XMLimport.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class SettingsRoundTripTest : public QObject
 {
@@ -72,6 +86,11 @@ private:
     // One Host serves the whole class, so anything a case moves is put back by
     // cleanup() - which runs whether or not the case reached its own end
     QList<std::function<void()>> mRestorers;
+    QPointer<QTimer> mpColorDialogTimer;
+#ifdef INCLUDE_FONTS
+    // Bundled, so on every machine, and not the display font a new profile starts with
+    const QString mEditorOwnFamily = qsl("Ubuntu Mono");
+#endif
 
     void restoreLater(std::function<void()> restorer) { mRestorers.append(std::move(restorer)); }
 
@@ -97,17 +116,40 @@ private:
         mpPreferences = nullptr;
     }
 
-    // The chat port has no setter on the Host, so the only way to put one back
-    // is the field that moved it
-    void writeChatPortThroughADialog(const quint16 port)
+    // QColorDialog::getColor() runs an event loop of its own until it is
+    // answered, so the answer comes from a timer armed before the button is
+    // clicked. cleanup() stops a timer whose dialog never came.
+    void pickInTheNextColorDialog(const QColor& color)
     {
-        openPreferences();
-        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
-        mpPreferences->lineEdit_mmcpPort->setText(QString::number(port));
-        emit mpPreferences->lineEdit_mmcpPort->editingFinished();
-        applyAndWait(applySpy);
-        closePreferences();
+        auto* pTimer = new QTimer(this);
+        mpColorDialogTimer = pTimer;
+        connect(pTimer, &QTimer::timeout, this, [pTimer, color]() {
+            auto* pDialog = qobject_cast<QColorDialog*>(QApplication::activeModalWidget());
+            if (!pDialog) {
+                return;
+            }
+            pTimer->stop();
+            pTimer->deleteLater();
+            pDialog->setCurrentColor(color);
+            pDialog->accept();
+        });
+        pTimer->start(20ms);
     }
+
+#ifdef INCLUDE_FONTS
+    QList<int> mApplicationFontIds;
+
+    // A test binary never copies the bundled fonts out of the resources the way main.cpp does, so
+    // without this the editor font cases would pick from families that are not there
+    void registerBundledFonts()
+    {
+        for (const QString& resourcePath : {qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"), qsl(":/fonts/ubuntu-font-family-0.83/UbuntuMono-R.ttf")}) {
+            const int id = QFontDatabase::addApplicationFont(resourcePath);
+            QVERIFY2(id != -1, qPrintable(qsl("could not register the bundled font \"%1\"").arg(resourcePath)));
+            mApplicationFontIds.append(id);
+        }
+    }
+#endif
 
     bool runLua(const QString& code) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(code); }
 
@@ -147,6 +189,9 @@ private slots:
             QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
         }
 
+#ifdef INCLUDE_FONTS
+        registerBundledFonts();
+#endif
         QVERIFY(mConfigDir.isValid());
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
@@ -157,7 +202,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -172,17 +217,22 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             TestSettings::deleteProfileDirectory(mProfileName);
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+#ifdef INCLUDE_FONTS
+        for (const int id : std::as_const(mApplicationFontIds)) {
+            QFontDatabase::removeApplicationFont(id);
+        }
+#endif
     }
 
     void cleanup()
     {
+        delete mpColorDialogTimer;
         closePreferences();
         // Reverse order, so a case that moved one setting twice ends on the
         // value it started with
@@ -240,6 +290,7 @@ private slots:
         const bool priorUnixEol = mpHost->mUSE_UNIX_EOL;
         const bool priorEchoLuaErrors = mpHost->mEchoLuaErrors;
         const bool priorTimestamps = mpHost->mIsLoggingTimestamps;
+        const bool priorAntiAlias = mpHost->fontsAntiAlias();
         restoreLater([=, this]() {
             mpHost->mWrapAt = priorWrapAt;
             mpHost->mWrapIndentCount = priorWrapIndent;
@@ -257,6 +308,7 @@ private slots:
             mpHost->mUSE_UNIX_EOL = priorUnixEol;
             mpHost->mEchoLuaErrors = priorEchoLuaErrors;
             mpHost->mIsLoggingTimestamps = priorTimestamps;
+            mpHost->setFontsAntiAlias(priorAntiAlias);
         });
 
         mpHost->mWrapAt = wrapAt;
@@ -275,6 +327,7 @@ private slots:
         mpHost->mUSE_UNIX_EOL = !priorUnixEol;
         mpHost->mEchoLuaErrors = !priorEchoLuaErrors;
         mpHost->mIsLoggingTimestamps = !priorTimestamps;
+        mpHost->setFontsAntiAlias(!priorAntiAlias);
 
         openPreferences();
 
@@ -293,6 +346,7 @@ private slots:
         QCOMPARE(mpPreferences->USE_UNIX_EOL->isChecked(), !priorUnixEol);
         QCOMPARE(mpPreferences->checkBox_echoLuaErrors->isChecked(), !priorEchoLuaErrors);
         QCOMPARE(mpPreferences->mIsLoggingTimestamps->isChecked(), !priorTimestamps);
+        QCOMPARE(mpPreferences->checkBox_antiAlias->isChecked(), !priorAntiAlias);
     }
 
     // ...and the other direction: what the user leaves in a control is what the
@@ -312,6 +366,9 @@ private slots:
         const QTime debugInterval(0, 0, 3, 500);
         const auto echoMode = Host::CommandEchoMode::Never;
         const auto blankLines = Host::BlankLineBehaviour::ReplaceWithSpace;
+        // Stored trimmed, and the username lowercased as Discord compares it
+        const QString discordUserName = qsl("round_trip_user");
+        const QString chatPrefix = qsl("[rt]");
 
         const int priorWrapAt = mpHost->mWrapAt;
         const int priorWrapIndent = mpHost->mWrapIndentCount;
@@ -329,10 +386,17 @@ private slots:
         const bool priorEchoLuaErrors = mpHost->mEchoLuaErrors;
         const bool priorForceLf = mpHost->mUSE_FORCE_LF_AFTER_PROMPT;
         const bool priorIreBugfix = mpHost->mUSE_IRE_DRIVER_BUGFIX;
+        const bool priorColorSpaceId = mpHost->getHaveColorSpaceId();
         const bool priorAutoClear = mpHost->mAutoClearCommandLineAfterSend;
-        const bool priorPasswordMasking = mpHost->mDisablePasswordMasking;
+        const bool priorPasswordMasking = mpHost->disablePasswordMasking();
         const bool priorRunAllKeys = mpHost->getKeyUnit()->mRunAllKeyMatches;
         const bool priorTimestamps = mpHost->mIsLoggingTimestamps;
+        const bool priorAntiAlias = mpHost->fontsAntiAlias();
+        const QString priorDiscordUserName = mpHost->getRequiredDiscordUserName();
+        const QString priorChatPrefix = mpHost->getMMCPChatPrefix();
+        const bool priorPrefixEmotes = mpHost->getMMCPPrefixEmotes();
+        const bool priorChatNewline = mpHost->getMMCPAddChatMessageNewline();
+        const bool priorSnoopInMain = mpHost->getMMCPShowSnoopInMainConsole();
         restoreLater([=, this]() {
             mpHost->mWrapAt = priorWrapAt;
             mpHost->mWrapIndentCount = priorWrapIndent;
@@ -350,10 +414,17 @@ private slots:
             mpHost->mEchoLuaErrors = priorEchoLuaErrors;
             mpHost->mUSE_FORCE_LF_AFTER_PROMPT = priorForceLf;
             mpHost->set_USE_IRE_DRIVER_BUGFIX(priorIreBugfix);
+            mpHost->setHaveColorSpaceId(priorColorSpaceId);
             mpHost->mAutoClearCommandLineAfterSend = priorAutoClear;
-            mpHost->mDisablePasswordMasking = priorPasswordMasking;
+            mpHost->setDisablePasswordMasking(priorPasswordMasking);
             mpHost->getKeyUnit()->mRunAllKeyMatches = priorRunAllKeys;
             mpHost->mIsLoggingTimestamps = priorTimestamps;
+            mpHost->setFontsAntiAlias(priorAntiAlias);
+            mpHost->setRequiredDiscordUserName(priorDiscordUserName);
+            mpHost->setMMCPChatPrefix(priorChatPrefix);
+            mpHost->setMMCPPrefixEmotes(priorPrefixEmotes);
+            mpHost->setMMCPAddChatMessageNewline(priorChatNewline);
+            mpHost->setMMCPShowSnoopInMainConsole(priorSnoopInMain);
         });
 
         QVERIFY(priorWrapAt != wrapAt);
@@ -364,6 +435,8 @@ private slots:
         QVERIFY(priorDebugInterval != debugInterval);
         QVERIFY(priorEchoMode != echoMode);
         QVERIFY(priorBlankLines != blankLines);
+        QVERIFY(priorDiscordUserName != discordUserName);
+        QVERIFY(priorChatPrefix != chatPrefix);
 
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
 
@@ -371,6 +444,8 @@ private slots:
         // typed into is deliberately left alone by an apply somebody else started
         mpPreferences->lineEdit_logFileName->setText(logFileName);
         mpPreferences->doubleclick_ignore_lineedit->setText(doubleClickIgnore);
+        mpPreferences->lineEdit_discordUserName->setText(qsl("  Round_Trip_User "));
+        mpPreferences->lineEdit_mmcpChatMessagePrefix->setText(qsl(" %1 ").arg(chatPrefix));
 
         mpPreferences->wrap_at_spinBox->setValue(wrapAt);
         mpPreferences->indent_wrapped_spinBox->setValue(wrapIndent);
@@ -387,10 +462,15 @@ private slots:
         mpPreferences->checkBox_echoLuaErrors->setChecked(!priorEchoLuaErrors);
         mpPreferences->checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(!priorForceLf);
         mpPreferences->checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(!priorIreBugfix);
+        mpPreferences->checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(!priorColorSpaceId);
         mpPreferences->auto_clear_input_line_checkbox->setChecked(!priorAutoClear);
         mpPreferences->disable_password_masking_checkbox->setChecked(!priorPasswordMasking);
         mpPreferences->checkBox_runAllKeyBindings->setChecked(!priorRunAllKeys);
         mpPreferences->mIsLoggingTimestamps->setChecked(!priorTimestamps);
+        mpPreferences->checkBox_antiAlias->setChecked(!priorAntiAlias);
+        mpPreferences->checkBox_mmcpPrefixEmotes->setChecked(!priorPrefixEmotes);
+        mpPreferences->checkBox_mmcpAddChatMessageNewline->setChecked(!priorChatNewline);
+        mpPreferences->checkBox_mmcpSnoopInMainConsole->setChecked(!priorSnoopInMain);
 
         // Nothing has reached the Host yet: these controls are written by the
         // apply rather than by a slot of their own
@@ -415,10 +495,17 @@ private slots:
         QCOMPARE(mpHost->mEchoLuaErrors, !priorEchoLuaErrors);
         QCOMPARE(mpHost->mUSE_FORCE_LF_AFTER_PROMPT, !priorForceLf);
         QCOMPARE(mpHost->mUSE_IRE_DRIVER_BUGFIX, !priorIreBugfix);
+        QCOMPARE(mpHost->getHaveColorSpaceId(), !priorColorSpaceId);
         QCOMPARE(mpHost->mAutoClearCommandLineAfterSend, !priorAutoClear);
-        QCOMPARE(mpHost->mDisablePasswordMasking, !priorPasswordMasking);
+        QCOMPARE(mpHost->disablePasswordMasking(), !priorPasswordMasking);
         QCOMPARE(mpHost->getKeyUnit()->mRunAllKeyMatches, !priorRunAllKeys);
         QCOMPARE(mpHost->mIsLoggingTimestamps, !priorTimestamps);
+        QCOMPARE(mpHost->fontsAntiAlias(), !priorAntiAlias);
+        QCOMPARE(mpHost->getRequiredDiscordUserName(), discordUserName);
+        QCOMPARE(mpHost->getMMCPChatPrefix(), chatPrefix);
+        QCOMPARE(mpHost->getMMCPPrefixEmotes(), !priorPrefixEmotes);
+        QCOMPARE(mpHost->getMMCPAddChatMessageNewline(), !priorChatNewline);
+        QCOMPARE(mpHost->getMMCPShowSnoopInMainConsole(), !priorSnoopInMain);
 
         // The one field that is not stored as it is typed: each character
         // becomes a member of the set of characters a double click stops at
@@ -433,7 +520,7 @@ private slots:
     // can hold, and the spin box says which by being usable or not
     void test_theMaximumBufferSizeTakesOverTheBufferSizeSpinBox()
     {
-        QVERIFY2(mpHost->mpConsole, "the profile has no console, so it has no maximum buffer size to offer");
+        QVERIFY2(mpHost->mainConsoleView(), "the profile has no console, so it has no maximum buffer size to offer");
         const int priorBufferSize = mpHost->getConsoleBufferSize();
         const bool priorUseMax = mpHost->getUseMaxConsoleBufferSize();
         restoreLater([=, this]() {
@@ -446,7 +533,7 @@ private slots:
         mpHost->setConsoleBufferSize(chosenSize);
 
         openPreferences();
-        const int maximumSize = mpHost->mpConsole->buffer.getMaxBufferSize();
+        const int maximumSize = mpHost->mainConsoleView()->buffer.getMaxBufferSize();
         QVERIFY2(maximumSize != chosenSize, "the machine's maximum buffer size happens to be the size this case picked, so the two cannot be told apart");
         QCOMPARE(mpPreferences->console_buffer_size_spinBox->value(), chosenSize);
         QVERIFY(mpPreferences->console_buffer_size_spinBox->isEnabled());
@@ -462,6 +549,94 @@ private slots:
         mpPreferences->checkBox_useMaxBufferSize->click();
         QVERIFY2(mpPreferences->console_buffer_size_spinBox->isEnabled(), "the buffer size stayed uneditable after the maximum stopped being in charge of it");
         QCOMPARE(mpPreferences->console_buffer_size_spinBox->value(), chosenSize);
+    }
+
+    // Ticking the maximum is applied straight away, and the size the user chose
+    // has to outlive that for unticking it, then or on a later visit, to put it back
+    void test_untickingAnAppliedMaximumBufferSizeBringsBackTheChosenSize()
+    {
+        QVERIFY2(mpHost->mainConsoleView(), "the profile has no console, so it has no maximum buffer size to offer");
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
+        const int priorBufferSize = mpHost->getConsoleBufferSize();
+        const bool priorUseMax = mpHost->getUseMaxConsoleBufferSize();
+        const int priorLinesLimit = buffer.mLinesLimit;
+        const int priorBatchDeleteSize = buffer.mBatchDeleteSize;
+        restoreLater([=, this, &buffer]() {
+            mpHost->setConsoleBufferSize(priorBufferSize);
+            mpHost->setUseMaxConsoleBufferSize(priorUseMax);
+            buffer.setBufferSize(priorLinesLimit, priorBatchDeleteSize);
+        });
+
+        const int chosenSize = 12345;
+        mpHost->setMainConsoleBufferSize(chosenSize, 1000, false);
+        const int maximumSize = buffer.getMaxBufferSize();
+        QVERIFY2(maximumSize != chosenSize, "the machine's maximum buffer size happens to be the size this case picked, so the two cannot be told apart");
+
+        // As setConsoleBufferSize("main", ..., true) does
+        mpHost->setMainConsoleBufferSize(999, 1000, true);
+        QCOMPARE(buffer.mLinesLimit, maximumSize);
+        QCOMPARE(mpHost->getConsoleBufferSize(), chosenSize);
+        mpHost->setMainConsoleBufferSize(chosenSize, 1000, false);
+
+        openPreferences();
+        QSignalSpy tickSpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_useMaxBufferSize->click();
+        QVERIFY2(applyAndWait(tickSpy), "ticking the maximum was never applied");
+        QCOMPARE(buffer.mLinesLimit, maximumSize);
+
+        QSignalSpy untickSpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_useMaxBufferSize->click();
+        QCOMPARE(mpPreferences->console_buffer_size_spinBox->value(), chosenSize);
+        QVERIFY2(applyAndWait(untickSpy), "unticking the maximum was never applied");
+        QCOMPARE(buffer.mLinesLimit, chosenSize);
+
+        QSignalSpy retickSpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_useMaxBufferSize->click();
+        QVERIFY2(applyAndWait(retickSpy), "ticking the maximum again was never applied");
+        closePreferences();
+
+        openPreferences();
+        QCOMPARE(mpPreferences->console_buffer_size_spinBox->value(), maximumSize);
+        QSignalSpy laterUntickSpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_useMaxBufferSize->click();
+        QCOMPARE(mpPreferences->console_buffer_size_spinBox->value(), chosenSize);
+        QVERIFY2(applyAndWait(laterUntickSpy), "unticking the maximum on a later visit was never applied");
+        QCOMPARE(buffer.mLinesLimit, chosenSize);
+        QCOMPARE(mpHost->getConsoleBufferSize(), chosenSize);
+    }
+
+    // Applying is debounced, so a size typed just before ticking the maximum has
+    // not reached the profile yet when the tick overwrites the box with the maximum
+    void test_aSizeEditedJustBeforeTickingTheMaximumIsKept()
+    {
+        QVERIFY2(mpHost->mainConsoleView(), "the profile has no console, so it has no maximum buffer size to offer");
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
+        const int priorBufferSize = mpHost->getConsoleBufferSize();
+        const bool priorUseMax = mpHost->getUseMaxConsoleBufferSize();
+        const int priorLinesLimit = buffer.mLinesLimit;
+        const int priorBatchDeleteSize = buffer.mBatchDeleteSize;
+        restoreLater([=, this, &buffer]() {
+            mpHost->setConsoleBufferSize(priorBufferSize);
+            mpHost->setUseMaxConsoleBufferSize(priorUseMax);
+            buffer.setBufferSize(priorLinesLimit, priorBatchDeleteSize);
+        });
+
+        mpHost->setMainConsoleBufferSize(12345, 1000, false);
+        const int editedSize = 23456;
+        QVERIFY2(buffer.getMaxBufferSize() != editedSize, "the machine's maximum buffer size happens to be the size this case picked, so the two cannot be told apart");
+
+        openPreferences();
+        QSignalSpy tickSpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->console_buffer_size_spinBox->setValue(editedSize);
+        mpPreferences->checkBox_useMaxBufferSize->click();
+        QVERIFY2(applyAndWait(tickSpy), "ticking the maximum was never applied");
+        QCOMPARE(mpHost->getConsoleBufferSize(), editedSize);
+
+        QSignalSpy untickSpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_useMaxBufferSize->click();
+        QCOMPARE(mpPreferences->console_buffer_size_spinBox->value(), editedSize);
+        QVERIFY2(applyAndWait(untickSpy), "unticking the maximum was never applied");
+        QCOMPARE(buffer.mLinesLimit, editedSize);
     }
 
     // The width to undo a server's wrapping at is only a setting while the
@@ -613,9 +788,7 @@ private slots:
     {
         const quint16 priorPort = mpHost->getMMCPPort();
         restoreLater([=, this]() {
-            if (mpHost->getMMCPPort() != priorPort) {
-                writeChatPortThroughADialog(priorPort);
-            }
+            mpHost->setMMCPPort(priorPort);
         });
 
         const quint16 chosenPort = 4711;
@@ -740,6 +913,53 @@ private slots:
         QCOMPARE(hostInner, static_cast<quint8>(inner));
     }
 
+    // A picked colour goes to the map for drawing and to the Host for saving,
+    // each button to its own end of the ring
+    void test_aPickedPlayerRoomColourReachesTheMapAndTheHostTogether()
+    {
+        QVERIFY2(mpHost->mpMap, "the profile has no map, so the player room controls are never enabled");
+        const QColor priorMapOuterColor = mpHost->mpMap->mPlayerRoomOuterColor;
+        const QColor priorMapInnerColor = mpHost->mpMap->mPlayerRoomInnerColor;
+        const quint8 priorMapStyle = mpHost->mpMap->mPlayerRoomStyle;
+        quint8 priorStyle = 0;
+        quint8 priorOuter = 0;
+        quint8 priorInner = 0;
+        QColor priorOuterColor;
+        QColor priorInnerColor;
+        mpHost->getPlayerRoomStyleDetails(priorStyle, priorOuter, priorInner, priorOuterColor, priorInnerColor);
+        restoreLater([=, this]() {
+            mpHost->mpMap->mPlayerRoomOuterColor = priorMapOuterColor;
+            mpHost->mpMap->mPlayerRoomInnerColor = priorMapInnerColor;
+            mpHost->mpMap->mPlayerRoomStyle = priorMapStyle;
+            mpHost->setPlayerRoomStyleDetails(priorStyle, priorOuter, priorInner, priorOuterColor, priorInnerColor);
+        });
+
+        openPreferences();
+        // Style 3 is the only one that offers the colour buttons
+        mpPreferences->comboBox_playerRoomStyle->setCurrentIndex(3);
+        QVERIFY(mpPreferences->pushButton_playerRoomPrimaryColor->isEnabled());
+
+        const QColor outerColor(12, 34, 56);
+        const QColor innerColor(65, 43, 21);
+        QVERIFY(priorOuterColor != outerColor && priorInnerColor != innerColor);
+
+        pickInTheNextColorDialog(outerColor);
+        mpPreferences->pushButton_playerRoomPrimaryColor->click();
+        pickInTheNextColorDialog(innerColor);
+        mpPreferences->pushButton_playerRoomSecondaryColor->click();
+
+        QCOMPARE(mpHost->mpMap->mPlayerRoomOuterColor, outerColor);
+        QCOMPARE(mpHost->mpMap->mPlayerRoomInnerColor, innerColor);
+        quint8 hostStyle = 0;
+        quint8 hostOuter = 0;
+        quint8 hostInner = 0;
+        QColor hostOuterColor;
+        QColor hostInnerColor;
+        mpHost->getPlayerRoomStyleDetails(hostStyle, hostOuter, hostInner, hostOuterColor, hostInnerColor);
+        QCOMPARE(hostOuterColor, outerColor);
+        QCOMPARE(hostInnerColor, innerColor);
+    }
+
     // Resetting the colours puts back every one of the sixteen ANSI colours and
     // the six the console is drawn with, not just the ones the buttons show
     void test_resettingTheColoursPutsBackEveryOneOfThem()
@@ -846,6 +1066,256 @@ private slots:
         QCOMPARE(settingChangedValue("announceIncomingText"), priorAnnounce ? qsl("boolean:false") : qsl("boolean:true"));
         QVERIFY2(settingChangedCount("enableClosedCaption") == 1, "the apply raised enableClosedCaption again for a value the live slot had already stored");
         QVERIFY2(settingChangedCount("advertiseScreenReader") == 1, "the apply raised advertiseScreenReader again for a value the live slot had already stored");
+    }
+
+    // App-wide rather than the profile's: read from and written to Mudlet.ini, and the running pool is
+    // reconfigured at once rather than at the next start
+    void test_theTriggerMatchPoolSettingsAreReadFromMudletIniAndAppliedAtOnce()
+    {
+        if (QThread::idealThreadCount() < 2) {
+            QSKIP("the pool needs a second core before it starts a helper");
+        }
+        for (const char* name : {"MUDLET_MATCH_THREADS", "MUDLET_MATCH_THRESHOLD", "MUDLET_MATCH_MISSES_PER_MATCH", "MUDLET_MATCH_FLOOD_LINES", "MUDLET_MATCH_SPIN_US"}) {
+            if (qEnvironmentVariableIsSet(name)) {
+                QSKIP("a MUDLET_MATCH_* environment variable overrides the setting under test");
+            }
+        }
+        QSettings* settings = MudletApp::getQSettings();
+        QVERIFY(settings);
+        const QStringList keys{qsl("triggerMatchThreads"), qsl("triggerMatchThreshold"), qsl("triggerMatchMissesPerMatch"), qsl("triggerMatchFloodLines"), qsl("triggerMatchSpinMicroseconds")};
+        QMap<QString, QVariant> prior;
+        for (const auto& key : keys) {
+            prior.insert(key, settings->value(key));
+        }
+        restoreLater([settings, prior]() {
+            qunsetenv("MUDLET_MATCH_THRESHOLD");
+            for (auto it = prior.cbegin(); it != prior.cend(); ++it) {
+                it.value().isValid() ? settings->setValue(it.key(), it.value()) : settings->remove(it.key());
+            }
+            TriggerMatchPool::instance().configure(TriggerMatchPool::settingsFromConfig());
+        });
+        TriggerMatchPool& pool = TriggerMatchPool::instance();
+        for (const auto& key : keys) {
+            settings->remove(key);
+        }
+        pool.configure(TriggerMatchPool::settingsFromConfig());
+        QVERIFY2(pool.workerCount() == 0, "the pool should be off until the player switches it on");
+
+        settings->setValue(qsl("triggerMatchThreshold"), 77);
+        // Below its minimum, so the pool uses the default and the dialog has to show that
+        settings->setValue(qsl("triggerMatchFloodLines"), 0);
+        openPreferences();
+        auto* pEnable = mpPreferences->findChild<QCheckBox*>(qsl("checkBox_triggerMatchPool"));
+        auto* pThreads = mpPreferences->findChild<QSpinBox*>(qsl("spinBox_triggerMatchThreads"));
+        auto* pThreshold = mpPreferences->findChild<QSpinBox*>(qsl("spinBox_triggerMatchThreshold"));
+        auto* pMissesPerMatch = mpPreferences->findChild<QSpinBox*>(qsl("spinBox_triggerMatchMissesPerMatch"));
+        auto* pFloodLines = mpPreferences->findChild<QSpinBox*>(qsl("spinBox_triggerMatchFloodLines"));
+        auto* pSpin = mpPreferences->findChild<QSpinBox*>(qsl("spinBox_triggerMatchSpinMicroseconds"));
+        QVERIFY(pEnable && pThreads && pThreshold && pMissesPerMatch && pFloodLines && pSpin);
+        QVERIFY(!pEnable->isChecked());
+        QVERIFY2(!pThreshold->isEnabled(), "tuning a pool that is off should not be offered");
+        QCOMPARE(pThreshold->value(), 77);
+        QCOMPARE(pThreads->value(), TriggerMatchPool::automaticThreads() - 1);
+        const TriggerMatchPool::Settings defaults;
+        QCOMPARE(pMissesPerMatch->value(), defaults.missesPerMatch);
+        QCOMPARE(pFloodLines->value(), defaults.floodChunkLines);
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pEnable->setChecked(true);
+        QVERIFY(pThreshold->isEnabled());
+        QVERIFY(applyAndWait(applySpy));
+        QCOMPARE(settings->value(qsl("triggerMatchThreads")).toInt(), TriggerMatchPool::automaticThreads());
+        QCOMPARE(pool.workerCount(), TriggerMatchPool::automaticThreads());
+        QCOMPARE(pool.threshold(), 77);
+        for (const auto& key : {qsl("triggerMatchMissesPerMatch"), qsl("triggerMatchSpinMicroseconds")}) {
+            QVERIFY2(!settings->contains(key), qPrintable(qsl("%1 was written although the player never changed it").arg(key)));
+        }
+        QCOMPARE(settings->value(qsl("triggerMatchFloodLines")).toInt(), 0);
+        QCOMPARE(pool.floodChunkLines(), defaults.floodChunkLines);
+
+        // The field counts the helpers; the setting counts the main thread too. The default can sit at
+        // either end of the range, depending on the machine's cores.
+        if (pThreads->maximum() > pThreads->minimum()) {
+            const int helpers = pThreads->value() == pThreads->minimum() ? pThreads->maximum() : pThreads->minimum();
+            applySpy.clear();
+            pThreads->setValue(helpers);
+            QVERIFY(applyAndWait(applySpy));
+            QCOMPARE(settings->value(qsl("triggerMatchThreads")).toInt(), helpers + 1);
+            QCOMPARE(pool.workerCount(), helpers + 1);
+        }
+
+        applySpy.clear();
+        pThreshold->setValue(64);
+        pMissesPerMatch->setValue(5);
+        pFloodLines->setValue(9);
+        pSpin->setValue(33);
+        QVERIFY(applyAndWait(applySpy));
+        QCOMPARE(settings->value(qsl("triggerMatchThreshold")).toInt(), 64);
+        QCOMPARE(settings->value(qsl("triggerMatchMissesPerMatch")).toInt(), 5);
+        QCOMPARE(settings->value(qsl("triggerMatchFloodLines")).toInt(), 9);
+        QCOMPARE(settings->value(qsl("triggerMatchSpinMicroseconds")).toInt(), 33);
+        QCOMPARE(pool.threshold(), 64);
+        QCOMPARE(pool.missesPerMatch(), 5);
+        QCOMPARE(pool.floodChunkLines(), 9);
+        QCOMPARE(pool.settings().spinMicroseconds, 33);
+
+        // An environment variable still beats what the dialog wrote
+        qputenv("MUDLET_MATCH_THRESHOLD", "200");
+        applySpy.clear();
+        pThreshold->setValue(65);
+        QVERIFY(applyAndWait(applySpy));
+        QCOMPARE(settings->value(qsl("triggerMatchThreshold")).toInt(), 65);
+        QCOMPARE(pool.threshold(), 200);
+        qunsetenv("MUDLET_MATCH_THRESHOLD");
+
+        applySpy.clear();
+        pEnable->setChecked(false);
+        QVERIFY(applyAndWait(applySpy));
+        QCOMPARE(settings->value(qsl("triggerMatchThreads")).toInt(), 0);
+        QCOMPARE(pool.workerCount(), 0);
+    }
+
+    // The box is tri-state, and what the apply has to write is the box's own
+    // state rather than the profile's. While the setting was reachable only
+    // from setConfig() the apply read the profile and wrote it straight back,
+    // so a box put back on the dialog over that apply would be inert (#8148).
+    void test_theAmbiguousEastAsianWidthBoxReachesTheProfile()
+    {
+        const Qt::CheckState prior = mpHost->getWideAmbiguousEAsianGlyphsControlState();
+        restoreLater([this, prior]() {
+            mpHost->setWideAmbiguousEAsianGlyphs(prior);
+        });
+
+        openPreferences();
+        QCheckBox* pBox = mpPreferences->checkBox_useWideAmbiguousEastAsianGlyphs;
+        QCOMPARE(pBox->checkState(), prior);
+        const Qt::CheckState wanted = (prior == Qt::Checked) ? Qt::Unchecked : Qt::Checked;
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pBox->setCheckState(wanted);
+        QVERIFY2(applyAndWait(applySpy), "the debounce never wrote the settings back");
+
+        QCOMPARE(mpHost->getWideAmbiguousEAsianGlyphsControlState(), wanted);
+        QCOMPARE(mpHost->wideAmbiguousEAsianGlyphs(), wanted == Qt::Checked);
+
+        // The third state is the one the box is tri-state for - it says "decide
+        // from the encoding" rather than yes or no - and it has to reach the
+        // profile as itself rather than as whichever of the two it looks like.
+        QSignalSpy backSpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pBox->setCheckState(Qt::PartiallyChecked);
+        QVERIFY2(applyAndWait(backSpy), "the debounce never wrote the settings back");
+        QCOMPARE(mpHost->getWideAmbiguousEAsianGlyphsControlState(), Qt::PartiallyChecked);
+    }
+
+    // The script editor reads code in the display font until the box is unticked; the two controls
+    // under it show what following gives, greyed out, and pick the editor's own font once it is
+    void test_theEditorFontIsTheDisplayFontUntilTheBoxIsUnticked()
+    {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so the bundled \"Ubuntu Mono\" this gives the editor as a font of its own is not in the resources");
+#else
+        QVERIFY(mpHost->editorFontFollowsDisplay());
+        restoreLater([this]() {
+            mpHost->setEditorFontFollowsDisplay(true);
+        });
+        const QFont display = mpHost->getDisplayFont();
+        QVERIFY(display.family() != mEditorOwnFamily);
+
+        openPreferences();
+        QCheckBox* pFollow = mpPreferences->checkBox_editorFontFollowsDisplay;
+        QFontComboBox* pFamily = mpPreferences->fontComboBox_editorFont;
+        QSpinBox* pSize = mpPreferences->spinBox_editorFontSize;
+        QVERIFY(pFollow->isChecked());
+        QVERIFY2(!pFamily->isEnabled() && !pSize->isEnabled(), "the editor font can be picked while it follows the display font");
+        QCOMPARE(pFamily->currentFont().family(), display.family());
+        QCOMPARE(pSize->value(), display.pointSize());
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pFollow->click();
+        QVERIFY2(pFamily->isEnabled() && pSize->isEnabled(), "unticking the box left the editor font greyed out");
+        QVERIFY2(applyAndWait(applySpy), "the debounce never wrote the settings back");
+        QVERIFY(!mpHost->editorFontFollowsDisplay());
+        // ...starting from what it showed
+        QCOMPARE(mpHost->getEditorFont().family(), display.family());
+        QCOMPARE(mpHost->getEditorFont().pointSize(), display.pointSize());
+
+        applySpy.clear();
+        pFamily->setCurrentFont(QFont(mEditorOwnFamily));
+        QVERIFY2(applyAndWait(applySpy), "picking a family never wrote the settings back");
+        QCOMPARE(mpHost->getEditorFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), display.pointSize());
+
+        applySpy.clear();
+        pSize->stepBy(1);
+        QVERIFY2(applyAndWait(applySpy), "stepping the size never wrote the settings back");
+        QCOMPARE(mpHost->getEditorFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), display.pointSize() + 1);
+        QVERIFY2(TFontAttributes(mpHost->getDisplayFont()) == TFontAttributes(display), "the editor's own font reached the display font");
+
+        applySpy.clear();
+        pFollow->click();
+        QVERIFY2(applyAndWait(applySpy), "ticking the box never wrote the settings back");
+        QVERIFY(mpHost->editorFontFollowsDisplay());
+        QCOMPARE(mpHost->getEditorFont().family(), display.family());
+        QVERIFY2(!pFamily->isEnabled() && !pSize->isEnabled(), "ticking the box again left the editor font open to picking");
+        QCOMPARE(pFamily->currentFont().family(), display.family());
+        QCOMPARE(pSize->value(), display.pointSize());
+#endif
+    }
+
+    // Both are the profile's, so they outlast the session
+    void test_theEditorFontIsSavedWithTheProfileAndReadBack()
+    {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so the bundled \"Ubuntu Mono\" this gives the editor as a font of its own is not in the resources");
+#else
+        restoreLater([this]() {
+            mpHost->setEditorFontFollowsDisplay(true);
+        });
+        const int ownSize = 17;
+        QVERIFY(mpHost->getDisplayFont().pointSize() != ownSize);
+
+        openPreferences();
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_editorFontFollowsDisplay->click();
+        mpPreferences->fontComboBox_editorFont->setCurrentFont(QFont(mEditorOwnFamily));
+        mpPreferences->spinBox_editorFontSize->setValue(ownSize);
+        QVERIFY2(applyAndWait(applySpy), "the debounce never wrote the settings back");
+        QVERIFY(!mpHost->editorFontFollowsDisplay());
+        QCOMPARE(mpHost->getEditorFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), ownSize);
+
+        QTemporaryDir saveDir;
+        QVERIFY(saveDir.isValid());
+        mpHost->waitForProfileSave();
+        const auto [saved, xmlPath, saveError] = mpHost->saveProfile(saveDir.path(), qsl("editorFont"));
+        QVERIFY2(saved, qPrintable(saveError));
+        mpHost->waitForProfileSave();
+
+        QFile file(xmlPath);
+        QVERIFY(file.open(QFile::ReadOnly | QFile::Text));
+        const QString xml = QString::fromUtf8(file.readAll());
+        QVERIFY2(xml.contains(qsl("<mEditorFont>%1,%2,").arg(mEditorOwnFamily).arg(ownSize)), "the editor's own font is not in the profile's save");
+        QVERIFY2(xml.contains(qsl("<mEditorFontFollowsDisplay>no</mEditorFontFollowsDisplay>")), "the save says the editor follows the display font");
+
+        // Moved off both, or reading the save back would prove nothing
+        mpHost->setEditorFont(QFont(Host::scmDefaultFontFamily, ownSize + 4));
+        mpHost->setEditorFontFollowsDisplay(true);
+        QVERIFY2(mpPreferences->checkBox_editorFontFollowsDisplay->isChecked() && mpPreferences->spinBox_editorFontSize->value() != ownSize, "the dialog did not hear the editor font move behind it");
+        file.seek(0);
+        XMLimport importer(mpHost);
+        const auto [imported, importMessage] = importer.importPackage(&file);
+        QVERIFY2(imported, qPrintable(importMessage));
+        QVERIFY2(!mpHost->editorFontFollowsDisplay(), "reading the save back left the editor following the display font");
+        QCOMPARE(mpHost->getEditorFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), ownSize);
+
+        // ...and the dialog, still open, shows what was read
+        QVERIFY(!mpPreferences->checkBox_editorFontFollowsDisplay->isChecked());
+        QVERIFY(mpPreferences->fontComboBox_editorFont->isEnabled());
+        QCOMPARE(mpPreferences->fontComboBox_editorFont->currentFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpPreferences->spinBox_editorFontSize->value(), ownSize);
+#endif
     }
 };
 

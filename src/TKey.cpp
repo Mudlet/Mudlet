@@ -54,25 +54,25 @@ TKey::TKey(QString name, Host* pHost)
 
 TKey::~TKey()
 {
-    if (!mpHost) {
-        return;
-    }
-    mpHost->getKeyUnit()->unregisterKey(this);
+    if (mpHost) {
+        mpHost->getKeyUnit()->unregisterKey(this);
 
-    if (isTemporary()) {
-        if (mScript.isEmpty()) {
-            mpHost->mLuaInterpreter.delete_luafunction(this);
-        } else {
-            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+        if (isTemporary()) {
+            if (mScript.isEmpty()) {
+                mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
+            } else {
+                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+            }
         }
     }
+
+    deleteChildren();
 }
 
 void TKey::setName(const QString& name)
 {
-    if (!isTemporary()) {
-        mpHost->getKeyUnit()->mLookupTable.remove(mName, this);
-    }
+    // killKey() trusts this table to hold only current names of live keys
+    mpHost->getKeyUnit()->mLookupTable.remove(mName, this);
     mName = name;
     mpHost->getKeyUnit()->mLookupTable.insert(name, this);
 }
@@ -115,25 +115,50 @@ bool TKey::match(const Qt::Key key, const Qt::KeyboardModifiers modifier, const 
 }
 
 
-bool TKey::wouldMatch(const Qt::Key key, const Qt::KeyboardModifiers modifier) const
+const TKey* TKey::firstMatch(const Qt::Key key, const Qt::KeyboardModifiers modifier) const
 {
     // Also covers the dereference below - isActive() is false once mpMyChildrenList is gone
     if (!isActive()) {
-        return false;
+        return nullptr;
     }
 
     if (!isFolder() && (mKeyCode == key) && (mKeyModifier == modifier)) {
-        return true;
+        return this;
     }
 
     for (auto* childKeyNode : *mpMyChildrenList) {
         auto* childKey = static_cast<TKey*>(childKeyNode);
-        if (childKey->wouldMatch(key, modifier)) {
-            return true;
+        if (const TKey* match = childKey->firstMatch(key, modifier)) {
+            return match;
         }
     }
 
-    return false;
+    return nullptr;
+}
+
+const TKey* TKey::firstBinding(const Qt::Key key, const Qt::KeyboardModifiers modifier) const
+{
+    if (!mpMyChildrenList) {
+        return nullptr;
+    }
+
+    if (!isFolder() && (mKeyCode == key) && (mKeyModifier == modifier)) {
+        return this;
+    }
+
+    for (auto* childKeyNode : *mpMyChildrenList) {
+        auto* childKey = static_cast<TKey*>(childKeyNode);
+        if (const TKey* match = childKey->firstBinding(key, modifier)) {
+            return match;
+        }
+    }
+
+    return nullptr;
+}
+
+bool TKey::wouldMatch(const Qt::Key key, const Qt::KeyboardModifiers modifier) const
+{
+    return firstMatch(key, modifier) != nullptr;
 }
 
 
@@ -209,7 +234,7 @@ bool TKey::setScript(const QString& script)
     // destructor would take its mScript-based branch and delete the compiled function.
     if (mRegisteredAnonymousLuaFunction) {
         if (mpHost) {
-            mpHost->mLuaInterpreter.delete_luafunction(this);
+            mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
         }
         mRegisteredAnonymousLuaFunction = false;
     }
@@ -257,7 +282,7 @@ void TKey::execute()
     }
 
     if (mRegisteredAnonymousLuaFunction) {
-        mpHost->mLuaInterpreter.call_luafunction(this, mName);
+        mpHost->mLuaInterpreter.call_luafunction(mLuaFunctionRef, mName);
         return;
     }
 

@@ -29,7 +29,7 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 
-#include <algorithm>
+#include <QSet>
 
 EditorDeleteItemCommand::EditorDeleteItemCommand(EditorViewType viewType, const QList<DeletedItemInfo>& deletedItems, Host* host)
 : EditorCommand(generateText(viewType, deletedItems.size(), deletedItems.isEmpty() ? QString() : deletedItems.first().itemName), host)
@@ -43,551 +43,156 @@ void EditorDeleteItemCommand::undo()
 #if defined(DEBUG_UNDO_REDO)
     qDebug() << "EditorDeleteItemCommand::undo() - Restoring" << mDeletedItems.size() << "deleted items";
 #endif
-    // Clear ID changes from any previous undo
     mIDChanges.clear();
-
-    // Track if any items are valid (not invalidated by Lua API changes)
     mLastOperationWasValid = false;
 
-    // Restore all deleted items from their XML snapshots
-    // Use topological sort to ensure parents are ALWAYS restored before children (any depth)
-    QList<DeletedItemInfo> sortedItems;
-    QSet<int> processedIDs; // Track which items have been added to sortedItems
-    QList<DeletedItemInfo> remainingItems = mDeletedItems;
-
-    // Keep processing until all items are sorted
-    while (!remainingItems.isEmpty()) {
-        bool madeProgress = false;
-
-        // Process items from end to allow safe removal during iteration
-        for (int i = remainingItems.size() - 1; i >= 0; --i) {
-            const auto& item = remainingItems[i];
-
-            // Determine if this item can be restored now
-            bool canRestore = false;
-            if (item.parentID == -1) {
-                // Root item (no parent) - can always restore
-                canRestore = true;
-            } else {
-                // Check if parent was also deleted
-                bool parentWasDeleted = std::any_of(mDeletedItems.begin(), mDeletedItems.end(), [&item](const DeletedItemInfo& info) {
-                    return info.itemID == item.parentID;
-                });
-                if (parentWasDeleted) {
-                    // Parent was deleted - check if it's already been processed
-                    if (processedIDs.contains(item.parentID)) {
-                        canRestore = true;
-                    }
-                } else {
-                    // Parent wasn't deleted, so it still exists in the tree - can restore
-                    canRestore = true;
-                }
-            }
-
-            if (canRestore) {
-                sortedItems.append(item);
-                processedIDs.insert(item.itemID);
-                remainingItems.removeAt(i);
-                madeProgress = true;
-            }
-        }
-
-        // Safety check for circular dependencies or broken references
-        if (!madeProgress && !remainingItems.isEmpty()) {
-#if defined(DEBUG_UNDO_REDO)
-            qWarning() << "EditorDeleteItemCommand::undo() - Could not resolve parent-child dependencies for" << remainingItems.size() << "items, adding them anyway";
-#endif
-            sortedItems.append(remainingItems);
-            break;
+    QSet<int> deletedIDs;
+    deletedIDs.reserve(mDeletedItems.size());
+    QHash<int, QList<int>> childEntries;
+    for (int i = 0; i < mDeletedItems.size(); ++i) {
+        deletedIDs.insert(mDeletedItems.at(i).itemID);
+        childEntries[mDeletedItems.at(i).parentID].append(i);
+    }
+    // Chosen up front as restoring rewrites parent IDs; the rest come back inside their parent's snapshot
+    QList<int> topmost;
+    for (int i = 0; i < mDeletedItems.size(); ++i) {
+        const int parentID = mDeletedItems.at(i).parentID;
+        if (parentID == -1 || !deletedIDs.contains(parentID)) {
+            topmost.append(i);
         }
     }
 
-    // Build a set of original deleted item IDs for fast skipRestore lookup
-    // Also store original parent IDs since sortedItems will be modified during iteration
-    QSet<int> originalDeletedIDs;
-    QMap<int, int> originalParentIDs; // itemID -> original parentID
-    for (const auto& item : sortedItems) {
-        originalDeletedIDs.insert(item.itemID);
-        originalParentIDs[item.itemID] = item.parentID;
+    for (auto it = topmost.crbegin(); it != topmost.crend(); ++it) {
+        auto& info = mDeletedItems[*it];
+        const int newID = restoreItem(info);
+        if (newID == -1) {
+#if defined(DEBUG_UNDO_REDO)
+            qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore" << info.itemName;
+#endif
+            continue;
+        }
+        mLastOperationWasValid = true;
+        const int oldID = info.itemID;
+        info.itemID = newID;
+        if (newID != oldID) {
+            mIDChanges.append(qMakePair(oldID, newID));
+        }
+        adoptRestoredChildren(oldID, newID, childEntries);
+    }
+}
+
+// Returns the restored item's ID, or -1 if it could not be restored
+int EditorDeleteItemCommand::restoreItem(const DeletedItemInfo& info)
+{
+    const bool hasParent = info.parentID != -1;
+    switch (mViewType) {
+    case EditorViewType::cmTriggerView: {
+        TTrigger* pParent = hasParent ? mpHost->getTriggerUnit()->getTrigger(info.parentID) : nullptr;
+        TTrigger* pRestored = importTriggerFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
+        return pRestored ? pRestored->getID() : -1;
+    }
+    case EditorViewType::cmAliasView: {
+        TAlias* pParent = hasParent ? mpHost->getAliasUnit()->getAlias(info.parentID) : nullptr;
+        TAlias* pRestored = importAliasFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
+        return pRestored ? pRestored->getID() : -1;
+    }
+    case EditorViewType::cmTimerView: {
+        TTimer* pParent = hasParent ? mpHost->getTimerUnit()->getTimer(info.parentID) : nullptr;
+        TTimer* pRestored = importTimerFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
+        return pRestored ? pRestored->getID() : -1;
+    }
+    case EditorViewType::cmScriptView: {
+        TScript* pParent = hasParent ? mpHost->getScriptUnit()->getScript(info.parentID) : nullptr;
+        TScript* pRestored = importScriptFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
+        return pRestored ? pRestored->getID() : -1;
+    }
+    case EditorViewType::cmKeysView: {
+        TKey* pParent = hasParent ? mpHost->getKeyUnit()->getKey(info.parentID) : nullptr;
+        TKey* pRestored = importKeyFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
+        return pRestored ? pRestored->getID() : -1;
+    }
+    case EditorViewType::cmActionView: {
+        TAction* pParent = hasParent ? mpHost->getActionUnit()->getAction(info.parentID) : nullptr;
+        TAction* pRestored = importActionFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
+        return pRestored ? pRestored->getID() : -1;
+    }
+    default:
+        return -1;
+    }
+}
+
+QList<QPair<QString, int>> EditorDeleteItemCommand::restoredChildren(int itemID) const
+{
+    QList<QPair<QString, int>> children;
+    switch (mViewType) {
+    case EditorViewType::cmTriggerView:
+        if (TTrigger* pItem = mpHost->getTriggerUnit()->getTrigger(itemID)) {
+            for (auto* pChild : *pItem->getChildrenList()) {
+                children.append(qMakePair(static_cast<TTrigger*>(pChild)->getName(), pChild->getID()));
+            }
+        }
+        break;
+    case EditorViewType::cmAliasView:
+        if (TAlias* pItem = mpHost->getAliasUnit()->getAlias(itemID)) {
+            for (auto* pChild : *pItem->getChildrenList()) {
+                children.append(qMakePair(static_cast<TAlias*>(pChild)->getName(), pChild->getID()));
+            }
+        }
+        break;
+    case EditorViewType::cmTimerView:
+        if (TTimer* pItem = mpHost->getTimerUnit()->getTimer(itemID)) {
+            for (auto* pChild : *pItem->getChildrenList()) {
+                children.append(qMakePair(static_cast<TTimer*>(pChild)->getName(), pChild->getID()));
+            }
+        }
+        break;
+    case EditorViewType::cmScriptView:
+        if (TScript* pItem = mpHost->getScriptUnit()->getScript(itemID)) {
+            for (auto* pChild : *pItem->getChildrenList()) {
+                children.append(qMakePair(static_cast<TScript*>(pChild)->getName(), pChild->getID()));
+            }
+        }
+        break;
+    case EditorViewType::cmKeysView:
+        if (TKey* pItem = mpHost->getKeyUnit()->getKey(itemID)) {
+            for (auto* pChild : *pItem->getChildrenList()) {
+                children.append(qMakePair(static_cast<TKey*>(pChild)->getName(), pChild->getID()));
+            }
+        }
+        break;
+    case EditorViewType::cmActionView:
+        if (TAction* pItem = mpHost->getActionUnit()->getAction(itemID)) {
+            for (auto* pChild : *pItem->getChildrenList()) {
+                children.append(qMakePair(static_cast<TAction*>(pChild)->getName(), pChild->getID()));
+            }
+        }
+        break;
+    default:
+        break;
+    }
+    return children;
+}
+
+// A snapshot holds every child in order, so each restored child sits at its entry's recorded position
+void EditorDeleteItemCommand::adoptRestoredChildren(int oldParentID, int newParentID, QHash<int, QList<int>>& childEntries)
+{
+    // Taken, as some views record an item more than once and its children need adopting only once
+    const QList<int> entries = childEntries.take(oldParentID);
+    if (entries.isEmpty()) {
+        return;
     }
 
-    for (int i = 0; i < sortedItems.size(); ++i) {
-        auto& info = sortedItems[i];
-
-        // Skip items whose parent was also deleted - they'll be restored from parent's XML
-        // Use the ORIGINAL parentID (before any updates during iteration)
-        bool skipRestore = false;
-        int origParentID = originalParentIDs[info.itemID];
-        if (origParentID != -1) {
-            bool parentWasDeleted = originalDeletedIDs.contains(origParentID);
-            if (parentWasDeleted) {
-                skipRestore = true;
-#if defined(DEBUG_UNDO_REDO)
-                qDebug() << "EditorDeleteItemCommand::undo() - Skipping" << info.itemName << "(ID:" << info.itemID << ") - parent (ID:" << info.parentID
-                         << ") was also deleted, will be restored from parent's XML";
-#endif
-            }
-        }
-
-        if (skipRestore) {
-            // Item was restored from parent's XML - no need to restore individually
+    const QList<QPair<QString, int>> children = restoredChildren(newParentID);
+    for (const int entry : entries) {
+        auto& info = mDeletedItems[entry];
+        info.parentID = newParentID;
+        const int position = info.positionInParent;
+        if (position < 0 || position >= children.size() || children.at(position).first != info.itemName) {
             continue;
         }
-
-        // Find the corresponding item in mDeletedItems to update the ID
-        auto it = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [&info](const DeletedItemInfo& item) {
-            return item.itemName == info.itemName && item.parentID == info.parentID;
-        });
-        if (it == mDeletedItems.end()) {
-#if defined(DEBUG_UNDO_REDO)
-            qWarning() << "EditorDeleteItemCommand::undo() - Could not find item in original list:" << info.itemName << "with parentID=" << info.parentID;
-#endif
-            continue;
-        }
-        auto& originalInfo = *it;
-
-#if defined(DEBUG_UNDO_REDO)
-        qDebug() << "EditorDeleteItemCommand::undo() - Restoring" << info.itemName << "(ID:" << info.itemID << ", parentID:" << info.parentID << ") individually";
-#endif
-
-        switch (mViewType) {
-        case EditorViewType::cmTriggerView: {
-            // Get parent trigger
-            TTrigger* pParent = nullptr;
-            if (info.parentID != -1) {
-                pParent = mpHost->getTriggerUnit()->getTrigger(info.parentID);
-#if defined(DEBUG_UNDO_REDO)
-                if (!pParent) {
-                    qWarning() << "EditorDeleteItemCommand::undo() - Parent trigger not found for" << info.itemName << "parentID=" << info.parentID;
-                }
-#endif
-            }
-
-            // Restore the trigger from XML snapshot at its original position
-            TTrigger* pRestoredTrigger = importTriggerFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
-            if (!pRestoredTrigger) {
-#if defined(DEBUG_UNDO_REDO)
-                qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore trigger" << info.itemName;
-#endif
-            } else {
-                mLastOperationWasValid = true;
-                int newID = pRestoredTrigger->getID();
-                int oldID = info.itemID;
-
-                // Update the stored ID in original list so redo can find it
-                originalInfo.itemID = newID;
-
-                // Track ID change for stack remapping
-                if (newID != oldID) {
-                    mIDChanges.append(qMakePair(oldID, newID));
-                }
-
-                // If ID changed, update all remaining items that reference this as their parent
-                if (newID != oldID) {
-                    for (int j = i + 1; j < sortedItems.size(); ++j) {
-                        if (sortedItems[j].parentID == oldID) {
-                            sortedItems[j].parentID = newID;
-
-                            // Also update in mDeletedItems so we can find it later
-                            auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [&sortedItems, j, oldID](const DeletedItemInfo& item) {
-                                return item.itemName == sortedItems[j].itemName && item.parentID == oldID;
-                            });
-                            if (childIt != mDeletedItems.end()) {
-                                childIt->parentID = newID;
-                            }
-                        }
-                    }
-                }
-
-                // Walk the restored trigger's children and update their IDs in mDeletedItems
-                // (children were restored from XML, not individually)
-                std::function<void(TTrigger*, int)> updateChildIDs = [&](TTrigger* pT, int parentID) {
-                    if (!pT || !pT->mpMyChildrenList) {
-                        return;
-                    }
-                    for (auto* pChildNode : *pT->mpMyChildrenList) {
-                        auto* pChild = static_cast<TTrigger*>(pChildNode);
-                        // Find this child in mDeletedItems by name and parent ID
-                        auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [pChild, parentID](const DeletedItemInfo& item) {
-                            return item.itemName == pChild->getName() && item.parentID == parentID;
-                        });
-                        if (childIt != mDeletedItems.end()) {
-                            int childOldID = childIt->itemID;
-                            int childNewID = pChild->getID();
-                            if (childOldID != childNewID) {
-                                childIt->itemID = childNewID;
-                                // Update grandchildren's parentID references in mDeletedItems
-                                for (auto& item : mDeletedItems) {
-                                    if (item.parentID == childOldID) {
-                                        item.parentID = childNewID;
-                                    }
-                                }
-                                // Recursively update grandchildren
-                                updateChildIDs(pChild, childNewID);
-                            }
-                        }
-                    }
-                };
-                updateChildIDs(pRestoredTrigger, newID);
-            }
-            break;
-        }
-        case EditorViewType::cmAliasView: {
-            TAlias* pParent = nullptr;
-            if (info.parentID != -1) {
-                pParent = mpHost->getAliasUnit()->getAlias(info.parentID);
-            }
-
-            TAlias* pRestoredAlias = importAliasFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
-            if (!pRestoredAlias) {
-#if defined(DEBUG_UNDO_REDO)
-                qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore alias" << info.itemName;
-#endif
-            } else {
-                mLastOperationWasValid = true;
-                int newID = pRestoredAlias->getID();
-                int oldID = info.itemID;
-
-                originalInfo.itemID = newID;
-
-                // Track ID change for stack remapping
-                if (newID != oldID) {
-                    mIDChanges.append(qMakePair(oldID, newID));
-                }
-
-                // If ID changed, update all remaining items that reference this as their parent
-                if (newID != oldID) {
-                    for (int j = i + 1; j < sortedItems.size(); ++j) {
-                        if (sortedItems[j].parentID == oldID) {
-                            sortedItems[j].parentID = newID;
-
-                            // Also update in mDeletedItems so we can find it later
-                            auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [&sortedItems, j, oldID](const DeletedItemInfo& item) {
-                                return item.itemName == sortedItems[j].itemName && item.parentID == oldID;
-                            });
-                            if (childIt != mDeletedItems.end()) {
-                                childIt->parentID = newID;
-                            }
-                        }
-                    }
-                }
-
-                // Walk the restored alias's children and update their IDs in mDeletedItems
-                std::function<void(TAlias*, int)> updateChildIDs = [&](TAlias* pA, int parentID) {
-                    if (!pA || !pA->mpMyChildrenList) {
-                        return;
-                    }
-                    for (auto* pChildNode : *pA->mpMyChildrenList) {
-                        auto* pChild = static_cast<TAlias*>(pChildNode);
-                        auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [pChild, parentID](const DeletedItemInfo& item) {
-                            return item.itemName == pChild->getName() && item.parentID == parentID;
-                        });
-                        if (childIt != mDeletedItems.end()) {
-                            int childOldID = childIt->itemID;
-                            int childNewID = pChild->getID();
-                            if (childOldID != childNewID) {
-                                childIt->itemID = childNewID;
-                                // Update grandchildren's parentID references in mDeletedItems
-                                for (auto& item : mDeletedItems) {
-                                    if (item.parentID == childOldID) {
-                                        item.parentID = childNewID;
-                                    }
-                                }
-                                updateChildIDs(pChild, childNewID);
-                            }
-                        }
-                    }
-                };
-                updateChildIDs(pRestoredAlias, newID);
-            }
-            break;
-        }
-        case EditorViewType::cmTimerView: {
-            TTimer* pParent = nullptr;
-            if (info.parentID != -1) {
-                pParent = mpHost->getTimerUnit()->getTimer(info.parentID);
-            }
-
-            TTimer* pRestoredTimer = importTimerFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
-            if (!pRestoredTimer) {
-#if defined(DEBUG_UNDO_REDO)
-                qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore timer" << info.itemName;
-#endif
-            } else {
-                mLastOperationWasValid = true;
-                int newID = pRestoredTimer->getID();
-                int oldID = info.itemID;
-
-                originalInfo.itemID = newID;
-
-                // Track ID change for stack remapping
-                if (newID != oldID) {
-                    mIDChanges.append(qMakePair(oldID, newID));
-                }
-
-                // If ID changed, update all remaining items that reference this as their parent
-                if (newID != oldID) {
-                    for (int j = i + 1; j < sortedItems.size(); ++j) {
-                        if (sortedItems[j].parentID == oldID) {
-                            sortedItems[j].parentID = newID;
-
-                            // Also update in mDeletedItems so we can find it later
-                            auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [&sortedItems, j, oldID](const DeletedItemInfo& item) {
-                                return item.itemName == sortedItems[j].itemName && item.parentID == oldID;
-                            });
-                            if (childIt != mDeletedItems.end()) {
-                                childIt->parentID = newID;
-                            }
-                        }
-                    }
-                }
-
-                // Walk the restored timer's children and update their IDs in mDeletedItems
-                std::function<void(TTimer*, int)> updateChildIDs = [&](TTimer* pT, int parentID) {
-                    if (!pT || !pT->mpMyChildrenList) {
-                        return;
-                    }
-                    for (auto* pChildNode : *pT->mpMyChildrenList) {
-                        auto* pChild = static_cast<TTimer*>(pChildNode);
-                        auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [pChild, parentID](const DeletedItemInfo& item) {
-                            return item.itemName == pChild->getName() && item.parentID == parentID;
-                        });
-                        if (childIt != mDeletedItems.end()) {
-                            int childOldID = childIt->itemID;
-                            int childNewID = pChild->getID();
-                            if (childOldID != childNewID) {
-                                childIt->itemID = childNewID;
-                                // Update grandchildren's parentID references in mDeletedItems
-                                for (auto& item : mDeletedItems) {
-                                    if (item.parentID == childOldID) {
-                                        item.parentID = childNewID;
-                                    }
-                                }
-                                updateChildIDs(pChild, childNewID);
-                            }
-                        }
-                    }
-                };
-                updateChildIDs(pRestoredTimer, newID);
-            }
-            break;
-        }
-        case EditorViewType::cmScriptView: {
-            TScript* pParent = nullptr;
-            if (info.parentID != -1) {
-                pParent = mpHost->getScriptUnit()->getScript(info.parentID);
-            }
-
-            TScript* pRestoredScript = importScriptFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
-            if (!pRestoredScript) {
-#if defined(DEBUG_UNDO_REDO)
-                qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore script" << info.itemName;
-#endif
-            } else {
-                mLastOperationWasValid = true;
-                int newID = pRestoredScript->getID();
-                int oldID = info.itemID;
-
-                originalInfo.itemID = newID;
-
-                // Track ID change for stack remapping
-                if (newID != oldID) {
-                    mIDChanges.append(qMakePair(oldID, newID));
-                }
-
-                // If ID changed, update all remaining items that reference this as their parent
-                if (newID != oldID) {
-                    for (int j = i + 1; j < sortedItems.size(); ++j) {
-                        if (sortedItems[j].parentID == oldID) {
-                            sortedItems[j].parentID = newID;
-
-                            // Also update in mDeletedItems so we can find it later
-                            auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [&sortedItems, j, oldID](const DeletedItemInfo& item) {
-                                return item.itemName == sortedItems[j].itemName && item.parentID == oldID;
-                            });
-                            if (childIt != mDeletedItems.end()) {
-                                childIt->parentID = newID;
-                            }
-                        }
-                    }
-                }
-
-                // Walk the restored script's children and update their IDs in mDeletedItems
-                std::function<void(TScript*, int)> updateChildIDs = [&](TScript* pS, int parentID) {
-                    if (!pS || !pS->mpMyChildrenList) {
-                        return;
-                    }
-                    for (auto* pChildNode : *pS->mpMyChildrenList) {
-                        auto* pChild = static_cast<TScript*>(pChildNode);
-                        auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [pChild, parentID](const DeletedItemInfo& item) {
-                            return item.itemName == pChild->getName() && item.parentID == parentID;
-                        });
-                        if (childIt != mDeletedItems.end()) {
-                            int childOldID = childIt->itemID;
-                            int childNewID = pChild->getID();
-                            if (childOldID != childNewID) {
-                                childIt->itemID = childNewID;
-                                // Update grandchildren's parentID references in mDeletedItems
-                                for (auto& item : mDeletedItems) {
-                                    if (item.parentID == childOldID) {
-                                        item.parentID = childNewID;
-                                    }
-                                }
-                                updateChildIDs(pChild, childNewID);
-                            }
-                        }
-                    }
-                };
-                updateChildIDs(pRestoredScript, newID);
-            }
-            break;
-        }
-        case EditorViewType::cmKeysView: {
-            TKey* pParent = nullptr;
-            if (info.parentID != -1) {
-                pParent = mpHost->getKeyUnit()->getKey(info.parentID);
-            }
-
-            TKey* pRestoredKey = importKeyFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
-            if (!pRestoredKey) {
-#if defined(DEBUG_UNDO_REDO)
-                qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore key" << info.itemName;
-#endif
-            } else {
-                mLastOperationWasValid = true;
-                int newID = pRestoredKey->getID();
-                int oldID = info.itemID;
-
-                originalInfo.itemID = newID;
-
-                // Track ID change for stack remapping
-                if (newID != oldID) {
-                    mIDChanges.append(qMakePair(oldID, newID));
-                }
-
-                // If ID changed, update all remaining items that reference this as their parent
-                if (newID != oldID) {
-                    for (int j = i + 1; j < sortedItems.size(); ++j) {
-                        if (sortedItems[j].parentID == oldID) {
-                            sortedItems[j].parentID = newID;
-
-                            // Also update in mDeletedItems so we can find it later
-                            auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [&sortedItems, j, oldID](const DeletedItemInfo& item) {
-                                return item.itemName == sortedItems[j].itemName && item.parentID == oldID;
-                            });
-                            if (childIt != mDeletedItems.end()) {
-                                childIt->parentID = newID;
-                            }
-                        }
-                    }
-                }
-
-                // Walk the restored key's children and update their IDs in mDeletedItems
-                std::function<void(TKey*, int)> updateChildIDs = [&](TKey* pK, int parentID) {
-                    if (!pK || !pK->mpMyChildrenList) {
-                        return;
-                    }
-                    for (auto* pChildNode : *pK->mpMyChildrenList) {
-                        auto* pChild = static_cast<TKey*>(pChildNode);
-                        auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [pChild, parentID](const DeletedItemInfo& item) {
-                            return item.itemName == pChild->getName() && item.parentID == parentID;
-                        });
-                        if (childIt != mDeletedItems.end()) {
-                            int childOldID = childIt->itemID;
-                            int childNewID = pChild->getID();
-                            if (childOldID != childNewID) {
-                                childIt->itemID = childNewID;
-                                // Update grandchildren's parentID references in mDeletedItems
-                                for (auto& item : mDeletedItems) {
-                                    if (item.parentID == childOldID) {
-                                        item.parentID = childNewID;
-                                    }
-                                }
-                                updateChildIDs(pChild, childNewID);
-                            }
-                        }
-                    }
-                };
-                updateChildIDs(pRestoredKey, newID);
-            }
-            break;
-        }
-        case EditorViewType::cmActionView: {
-            TAction* pParent = nullptr;
-            if (info.parentID != -1) {
-                pParent = mpHost->getActionUnit()->getAction(info.parentID);
-            }
-
-            TAction* pRestoredAction = importActionFromXML(info.xmlSnapshot, pParent, mpHost, info.positionInParent);
-            if (!pRestoredAction) {
-#if defined(DEBUG_UNDO_REDO)
-                qWarning() << "EditorDeleteItemCommand::undo() - Failed to restore action" << info.itemName;
-#endif
-            } else {
-                mLastOperationWasValid = true;
-                int newID = pRestoredAction->getID();
-                int oldID = info.itemID;
-
-                originalInfo.itemID = newID;
-
-                // Track ID change for stack remapping
-                if (newID != oldID) {
-                    mIDChanges.append(qMakePair(oldID, newID));
-                }
-
-                // If ID changed, update all remaining items that reference this as their parent
-                if (newID != oldID) {
-                    for (int j = i + 1; j < sortedItems.size(); ++j) {
-                        if (sortedItems[j].parentID == oldID) {
-                            sortedItems[j].parentID = newID;
-
-                            // Also update in mDeletedItems so we can find it later
-                            auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [&sortedItems, j, oldID](const DeletedItemInfo& item) {
-                                return item.itemName == sortedItems[j].itemName && item.parentID == oldID;
-                            });
-                            if (childIt != mDeletedItems.end()) {
-                                childIt->parentID = newID;
-                            }
-                        }
-                    }
-                }
-
-                // Walk the restored action's children and update their IDs in mDeletedItems
-                std::function<void(TAction*, int)> updateChildIDs = [&](TAction* pA, int parentID) {
-                    if (!pA || !pA->mpMyChildrenList) {
-                        return;
-                    }
-                    for (auto* pChildNode : *pA->mpMyChildrenList) {
-                        auto* pChild = static_cast<TAction*>(pChildNode);
-                        auto childIt = std::find_if(mDeletedItems.begin(), mDeletedItems.end(), [pChild, parentID](const DeletedItemInfo& item) {
-                            return item.itemName == pChild->getName() && item.parentID == parentID;
-                        });
-                        if (childIt != mDeletedItems.end()) {
-                            int childOldID = childIt->itemID;
-                            int childNewID = pChild->getID();
-                            if (childOldID != childNewID) {
-                                childIt->itemID = childNewID;
-                                // Update grandchildren's parentID references in mDeletedItems
-                                for (auto& item : mDeletedItems) {
-                                    if (item.parentID == childOldID) {
-                                        item.parentID = childNewID;
-                                    }
-                                }
-                                updateChildIDs(pChild, childNewID);
-                            }
-                        }
-                    }
-                };
-                updateChildIDs(pRestoredAction, newID);
-            }
-            break;
-        }
-        default:
-#if defined(DEBUG_UNDO_REDO)
-            qWarning() << "EditorDeleteItemCommand::undo() - Unknown item type";
-#endif
-            break;
-        }
+        const int oldChildID = info.itemID;
+        info.itemID = children.at(position).second;
+        adoptRestoredChildren(oldChildID, info.itemID, childEntries);
     }
 }
 
@@ -731,16 +336,16 @@ void EditorDeleteItemCommand::redo()
     // trying to unregister. Only delete items whose parent is not also being deleted
     // (parent deletion handles children), and only if they still match the recorded
     // name to avoid deleting unrelated items.
+    QSet<int> deletedIDs;
+    deletedIDs.reserve(mDeletedItems.size());
+    for (const auto& info : std::as_const(mDeletedItems)) {
+        deletedIDs.insert(info.itemID);
+    }
     for (const auto& info : std::as_const(mDeletedItems)) {
         // Skip items whose parent is also in the deletion list
         // (they will be automatically deleted when the parent is deleted)
-        if (info.parentID != -1) {
-            bool parentBeingDeleted = std::any_of(mDeletedItems.begin(), mDeletedItems.end(), [&info](const DeletedItemInfo& item) {
-                return item.itemID == info.parentID;
-            });
-            if (parentBeingDeleted) {
-                continue; // Skip this item - it will be deleted by its parent
-            }
+        if (info.parentID != -1 && deletedIDs.contains(info.parentID)) {
+            continue;
         }
 
         switch (mViewType) {

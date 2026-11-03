@@ -32,6 +32,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // The Package Manager removes every package the user selected in one go, and
 // an uninstall can be refused for two quite different reasons: a profile save
 // is running, or the package is not installed any more. Only the first is
@@ -84,14 +86,14 @@ private slots:
     {
         if (auto* self = mudlet::self()) {
             if (auto* host = self->getActiveHost()) {
-                QTest::qWait(50);
+                QTest::qWait(50ms);
                 host->waitForProfileSave();
             }
         }
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mpHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mpHostname);
     }
 
     // The one a sibling's sysUninstall handler took away first. It is gone,
@@ -145,7 +147,36 @@ private slots:
         host->waitForProfileSave();
     }
 
+    // A package taken away by a script leaves the listing with it: the dialog
+    // hears Host::signal_packageListChanged itself, so no row stays behind to
+    // offer a removal that can only be refused.
+    void test_aPackageUninstalledElsewhereLeavesTheListing()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+
+        host->mInstalledPackages << qsl("listing-a") << qsl("listing-b") << qsl("listing-c");
+        auto* manager = new dlgPackageManager(nullptr, host);
+        QCOMPARE(rowNames(manager).filter(qsl("listing-")), QStringList({qsl("listing-a"), qsl("listing-b"), qsl("listing-c")}));
+
+        QVERIFY2(host->uninstallPackage(qsl("listing-b"), enums::PackageModuleType::Package), "The seeded package could not be uninstalled");
+        QVERIFY2(!host->mInstalledPackages.contains(qsl("listing-b")), "The package was answered yes but is still listed by the profile");
+
+        QCOMPARE(rowNames(manager).filter(qsl("listing-")), QStringList({qsl("listing-a"), qsl("listing-c")}));
+        delete manager;
+        host->waitForProfileSave();
+    }
+
 private:
+    QStringList rowNames(dlgPackageManager* manager) const
+    {
+        QStringList names;
+        for (int row = 0; row < manager->packageList->count(); ++row) {
+            names << manager->packageList->item(row)->text();
+        }
+        return names;
+    }
+
     Host* startProfile()
     {
         auto host = TestProfile::create(mpHostname, mpLocalhost, mpPort);
@@ -153,7 +184,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(2000)) {
+        if (!connected.wait(2s)) {
             return nullptr;
         }
         return mudlet::self()->getActiveHost();
@@ -161,10 +192,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

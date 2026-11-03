@@ -37,6 +37,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -53,6 +54,8 @@
 #include <QXmlStreamReader>
 
 #include <optional>
+
+using namespace std::chrono_literals;
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -177,7 +180,7 @@ private slots:
         QVERIFY2(mpServer->serverPort() != 0, "TelnetServerStub failed to bind a loopback port");
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -198,8 +201,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mHostname);
             delete mudlet::self();
@@ -316,7 +318,7 @@ private slots:
 
     // Where the fence stops. A member the export drops for any reason other than
     // its value type still rides along, and its siblings with it: the 10,000-item
-    // cap and the one-copy-per-saved-name rule are deliberate size limits, not
+    // cap and the one-copy-per-shared-object rule are deliberate size limits, not
     // "this cannot be saved at all", and turning them into whole-variable
     // fallbacks would lose more data than they save. XMLexportVariablesTest pins
     // the drops themselves.
@@ -325,7 +327,7 @@ private slots:
         QVERIFY2(!mHasImported, "a test that imports a profile was declared before the ones that must run without it");
         VarUnit* vu = mpHost->getLuaInterface()->getVarUnit();
         QCOMPARE(runLua(qsl("qaReferenceKey = {a = 1} qaReferenceKey[{}] = 'reference member value' "
-                            "qaSharedMember = {first = {b = 2}} qaSharedMember.second = qaSharedMember.first")),
+                            "qaSharedMember = {first = setmetatable({b = 2}, {})} qaSharedMember.second = qaSharedMember.first")),
                  QString());
         vu->savedVars.insert(qsl("qaReferenceKey"));
         vu->savedVars.insert(qsl("qaSharedMember"));
@@ -333,7 +335,7 @@ private slots:
         const QString xml = exportProfileXml();
         QVERIFY(!xml.isEmpty());
         QCOMPARE(exportedMemberNames(xml, qsl("qaReferenceKey")), QStringList{qsl("a")});
-        // whichever of the two names for that one table pairs() reaches first is
+        // whichever of the two names for that one object pairs() reaches first is
         // the one written, so only its count is deterministic
         QCOMPARE(exportedMemberNames(xml, qsl("qaSharedMember")).size(), 1);
     }
@@ -352,7 +354,7 @@ private slots:
             vu->savedVars.insert(shape.globalName);
         }
 
-        const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/saved-variable-fence-test.xml");
+        const QString xmlPath = MudletApp::getMudletPath(enums::profileHomePath, mHostname) + qsl("/saved-variable-fence-test.xml");
         QVERIFY2(exportProfileTo(xmlPath), "the profile could not be exported");
 
         // nothing of the seeding may survive into the checks below, or they would
@@ -450,7 +452,7 @@ private:
 
     QString exportProfileXml()
     {
-        const QString xmlPath = mudlet::getMudletPath(enums::profileHomePath, mHostname) + qsl("/saved-variable-fence-export.xml");
+        const QString xmlPath = MudletApp::getMudletPath(enums::profileHomePath, mHostname) + qsl("/saved-variable-fence-export.xml");
         if (!exportProfileTo(xmlPath)) {
             return {};
         }
@@ -472,14 +474,14 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(1000)) {
+        if (!spy2.wait(1s)) {
             QFAIL("Could not connect with the host.");
         }
     }
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
 
         if (!dir.exists()) {

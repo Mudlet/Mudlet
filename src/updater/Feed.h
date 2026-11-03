@@ -74,6 +74,7 @@ public:
 
     QList<Release> getReleases() const;
     QString getDownloadFilePath() const;
+    Release getCurrentDownload() const { return mCurrentDownload; }
     bool isReady() const;
     bool isDownloading() const;
 

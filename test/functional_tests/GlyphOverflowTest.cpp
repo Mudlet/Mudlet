@@ -24,6 +24,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -37,6 +38,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 // TTextEdit lays text out in cells of QFontMetrics::height(), which is a
 // typographic measure rather than the glyph ink box. At a good number of font
@@ -146,7 +149,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -160,7 +163,7 @@ private slots:
     {
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY2(pane, "No upper pane available");
 
         int sizesWithOverflow = 0;
@@ -205,7 +208,7 @@ private slots:
     {
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY2(pane, "No upper pane available");
         waitForQuietConsole(host);
 
@@ -265,7 +268,7 @@ private slots:
     {
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY2(pane, "No upper pane available");
 
         int checkedSizes = 0;
@@ -294,7 +297,7 @@ private slots:
             const int row = pane->getScreenHeight() / 2;
             const QRect damaged(0, row * cellHeight, pane->width(), cellHeight * 2);
             QPainter eraser(&rendered);
-            eraser.fillRect(damaged, host->mpConsole->getConsoleBgColor());
+            eraser.fillRect(damaged, host->mainConsoleView()->getConsoleBgColor());
             eraser.end();
             pane->render(&rendered, damaged.topLeft(), QRegion(damaged), QWidget::DrawChildren);
 
@@ -311,14 +314,14 @@ private slots:
         }
     }
 
-    // Scrolling reuses the cached screen by blitting it a whole number of cells
-    // up or down, which lands a complete line of text in the strip below the
+    // Scrolling reuses the cached screen shifted a whole number of cells up or
+    // down, which can leave a complete line of text in the strip below the
     // last one. Only the bottom line's own overflow belongs there.
     void test_scrollingLeavesNoGhostLineBelowTheBottomOne()
     {
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY2(pane, "No upper pane available");
 
         int checkedSizes = 0;
@@ -340,7 +343,7 @@ private slots:
             runLua(host, qsl("cecho('<white>' .. string.rep('%1\\n', %2))").arg(line).arg(pane->getScreenHeight() * 4));
             pane->forceUpdate();
             QApplication::processEvents();
-            // primes the cached screen the scroll below is blitted from
+            // primes the cached screen the scroll below reuses
             renderPane(host);
 
             // drawForeground() ignores the cache entirely below ten scrolled-off
@@ -382,7 +385,7 @@ private slots:
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
         runLua(host, qsl("createMiniConsole('overflowMini', 0, 0, 800, 400)"));
-        auto* mini = host->mpConsole->subConsoleWidget(qsl("overflowMini"));
+        auto* mini = host->mainConsoleView()->subConsoleWidget(qsl("overflowMini"));
         QVERIFY2(mini, "The miniconsole was not created");
         TTextEdit* pane = mini->mUpperPane;
         QVERIFY2(pane, "The miniconsole has no pane");
@@ -431,7 +434,7 @@ private slots:
     {
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY2(pane, "No upper pane available");
 
         int checkedSizes = 0;
@@ -478,7 +481,7 @@ private slots:
     {
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
-        QVERIFY2(host->mpConsole->mUpperPane, "No upper pane available");
+        QVERIFY2(host->mainConsoleView()->mUpperPane, "No upper pane available");
         applyFont(host, kTestFamilies.first(), kDecorationSize);
         const QString spaces(kSpaceRunCount, QLatin1Char(' '));
 
@@ -502,7 +505,7 @@ private slots:
     {
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
-        QVERIFY2(host->mpConsole->mUpperPane, "No upper pane available");
+        QVERIFY2(host->mainConsoleView()->mUpperPane, "No upper pane available");
         applyFont(host, kTestFamilies.first(), kDecorationSize);
         const QString spaces(kSpaceRunCount, QLatin1Char(' '));
 
@@ -512,9 +515,40 @@ private slots:
         QVERIFY2(ink > 0, "a linked, underlined run of spaces rendered no ink, so its underline was lost");
     }
 
+    // A line's glyphs are queued and drawn together, so a decorated cell has to
+    // have its glyph drawn before its decoration or the glyph covers it. A link
+    // can give its strike-out a color of its own, which makes the order visible.
+    void test_linkDecorationsStayAboveTheirGlyphs()
+    {
+        Host* host = startOfflineProfile();
+        QVERIFY2(host, "Could not start an offline profile");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
+        QVERIFY2(pane, "No upper pane available");
+        applyFont(host, kTestFamilies.first(), kDecorationSize);
+        const QColor glyph(90, 160, 230);
+        const QColor strikeOut(230, 40, 90);
+
+        runLua(host,
+               qsl(R"(clearWindow() feedTriggers('ab\27]8;;send:x?config={"style":{"color":"%1","strikethrough":true,"text-decoration-color":"%2"}}\27\\███\27]8;;\27\\cd\n'))")
+                       .arg(glyph.name(), strikeOut.name()));
+        const int line = findLine(host, qsl("ab███cd"));
+        QVERIFY2(line >= 0, "could not find the linked line in the buffer");
+        pane->forceUpdate();
+        QApplication::processEvents();
+
+        const QImage rendered = renderPane(host);
+        const int cellWidth = cellWidthOf(pane);
+        const int cellHeight = cellHeightOf(pane);
+        const int top = (line - pane->imageTopLine()) * cellHeight;
+        const int x = 3 * cellWidth + cellWidth / 2;
+        QVERIFY2(rendered.pixelColor(x, top + cellHeight / 4) == glyph, "the block glyph does not fill its cell, so nothing shows which was drawn last");
+        QVERIFY2(rendered.pixelColor(x, top + cellHeight / 2) == strikeOut,
+                 qPrintable(qsl("the strike-out is %1 rather than %2, so the glyph was drawn over it").arg(rendered.pixelColor(x, top + cellHeight / 2).name(), strikeOut.name())));
+    }
+
     void cleanup()
     {
-        const QString profilePath = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        const QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;
@@ -529,9 +563,9 @@ private:
     // the default palette colour where no cell was filled.
     static QImage renderPane(Host* host)
     {
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QImage image(pane->size(), QImage::Format_ARGB32_Premultiplied);
-        image.fill(host->mpConsole->getConsoleBgColor());
+        image.fill(host->mainConsoleView()->getConsoleBgColor());
         pane->render(&image, QPoint(), QRegion(), QWidget::DrawChildren);
         return image;
     }
@@ -556,7 +590,7 @@ private:
         return {top - cellTop, bottom - cellTop};
     }
 
-    static QRgb consoleBackground(Host* host) { return host->mpConsole->getConsoleBgColor().rgb(); }
+    static QRgb consoleBackground(Host* host) { return host->mainConsoleView()->getConsoleBgColor().rgb(); }
 
     static int cellHeightOf(const TTextEdit* pane) { return QFontMetrics(pane->font()).height(); }
     static int cellWidthOf(const TTextEdit* pane) { return QFontMetrics(pane->font()).averageCharWidth(); }
@@ -594,7 +628,7 @@ private:
     // given underlay, repaints, and returns the ink of the underscore line.
     QVector<QPoint> renderAndCollectInk(Host* host, const Underlay& underlay)
     {
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         runLua(host, qsl("clearWindow()"));
         runLua(host, qsl("cecho('<white>%1\\n')").arg(QString(kUnderscoreCount, QLatin1Char('_'))));
         runLua(host, qsl("cecho('%1%2\\n')").arg(underlay.colourTag, QString(kFillerCount, QLatin1Char(' '))));
@@ -604,11 +638,11 @@ private:
             return {};
         }
         if (underlay.selected) {
-            if (underscoreLine + 1 >= static_cast<int>(host->mpConsole->buffer.buffer.size())) {
+            if (underscoreLine + 1 >= static_cast<int>(host->mainConsoleView()->buffer.buffer.size())) {
                 return {};
             }
-            auto& below = host->mpConsole->buffer.buffer.at(underscoreLine + 1);
-            for (TChar& character : below) {
+            auto& below = host->mainConsoleView()->buffer.buffer.at(underscoreLine + 1);
+            for (TChar& character : below.expand()) {
                 character.select();
             }
         }
@@ -625,7 +659,7 @@ private:
     // is not in the buffer or has scrolled out of view.
     int inkOnLine(Host* host, const QString& lineText)
     {
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         const int line = findLine(host, lineText);
         if (line < 0) {
             return -1;
@@ -639,7 +673,7 @@ private:
         if (top < 0) {
             return -1;
         }
-        const QRgb background = host->mpConsole->getConsoleBgColor().rgb();
+        const QRgb background = host->mainConsoleView()->getConsoleBgColor().rgb();
         const int lastY = qMin(top + cellHeight, rendered.height()) - 1;
         const int lastX = qMin(lineText.size() * cellWidthOf(pane), rendered.width()) - 1;
         int ink = 0;
@@ -662,20 +696,20 @@ private:
         int previousLastLine = -1;
         int pollsUnchanged = 0;
         while (pollsUnchanged < 3) {
-            const int lastLine = host->mpConsole->buffer.getLastLineNumber();
+            const int lastLine = host->mainConsoleView()->buffer.getLastLineNumber();
             if (lastLine == previousLastLine) {
                 ++pollsUnchanged;
             } else {
                 pollsUnchanged = 0;
                 previousLastLine = lastLine;
             }
-            QTest::qWait(50);
+            QTest::qWait(50ms);
         }
     }
 
     static int findLine(Host* host, const QString& text)
     {
-        TBuffer& buffer = host->mpConsole->buffer;
+        TBuffer& buffer = host->mainConsoleView()->buffer;
         for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
             if (buffer.line(i) == text) {
                 return i;
@@ -762,7 +796,7 @@ private:
                     [host]() {
                         return host->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
                     },
-                    5000)) {
+                    5s)) {
             qWarning() << "Profile did not go offline in time; stub traffic may interleave with the printed lines";
         }
         return host;
@@ -776,7 +810,7 @@ private:
         }
 
         QSignalSpy spy2(&(mudlet::self()->getActiveHost()->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -796,7 +830,7 @@ private:
         QApplication::processEvents();
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(mudlet::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletApp::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {

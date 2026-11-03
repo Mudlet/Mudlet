@@ -171,6 +171,148 @@ describe("Tests keybind-related functions", function()
 
   end)
 
+  describe("permGroup key groups", function()
+
+    -- Lua cannot delete a permanent item, and what these specs pin is the state
+    -- a group is *created* in, so reusing one an earlier run left behind would
+    -- quietly test that run's item instead of a new one. Hand out the first
+    -- names no run has taken yet rather than random ones: math.random is
+    -- unseeded in Lua 5.1, so every process deals the same sequence, and two
+    -- runs sharing a profile within the same second would agree on their
+    -- "unique" name and stack a second group under it.
+    --
+    -- Every run of a shared profile takes one more set of names, so the search
+    -- has to go as far as it needs to: a run that gave up and skipped its
+    -- checks would leave these specs green while testing nothing. The bound is
+    -- only there so a broken exists() cannot spin forever, and reaching it
+    -- raises rather than skips.
+    local searchLimit = 100000
+
+    local function freshNames(stem, ...)
+      local suffixes = {...}
+      for index = 1, searchLimit do
+        local names, free = {}, true
+        for _, suffix in ipairs(suffixes) do
+          local name = ("%s%s%d"):format(stem, suffix, index)
+          if exists(name, "keybind") ~= 0 then
+            free = false
+            break
+          end
+          names[#names + 1] = name
+        end
+        if free then
+          return unpack(names)
+        end
+      end
+      error(("no free \"%s\" name in this profile after %d tries"):format(stem, searchLimit))
+    end
+
+    it("creates the group active", function()
+      local groupName = freshNames("SpecPermKeyGroup", "")
+      -- switching it off again is the only cleanup Lua has for a permanent item
+      finally(function() disableKey(groupName) end)
+
+      assert.is_true(permGroup(groupName, "key"), "could not create the key group")
+      assert.are.equal(1, exists(groupName, "keybind"), "exactly one group should have been created")
+      assert.are.equal(1, isActive(groupName, "keybind"),
+        "a freshly created key group should be active, like a trigger or alias one")
+    end)
+
+    -- #10764: permGroup(name, "key") calls permKey(name, parent, -1, ""), and the
+    -- -1 that marks the item as a folder also marked it inactive, so every key
+    -- put in the group reported itself active but could never fire
+    it("creates a group whose keys are not held back by it", function()
+      local groupName, childName = freshNames("SpecPermKeyGroupParent", "", "Key")
+      finally(function()
+        disableKey(childName)
+        disableKey(groupName)
+      end)
+
+      assert.is_true(permGroup(groupName, "key"), "could not create the key group")
+      local childId = permKey(childName, groupName, mudlet.keymodifier.None, mudlet.key.F9, [[echo("x")]])
+      assert.is_true(childId > 0, "could not create the key inside the group")
+      assert.are.equal(1, isActive(childId, "keybind"), "the key itself should be active")
+      assert.is_true(isAncestorsActive(childId, "keybind"),
+        "the group above a fresh key must not be the thing stopping it from firing")
+
+      -- the control the assertion above needs: were a key group active whatever
+      -- was done to it, both of these specs would pass over a fix that only
+      -- looked right, so a group that is switched off has to be seen holding
+      -- its keys back
+      assert.is_true(disableKey(groupName))
+      assert.is_false(isAncestorsActive(childId, "keybind"),
+        "a disabled group should hold back the key inside it")
+      assert.are.equal(1, isActive(childId, "keybind"),
+        "disabling the group should not have touched the key's own state - it is the group that stops it")
+    end)
+
+    it("creates a group inside a group active at every level", function()
+      local outerName, innerName, childName = freshNames("SpecPermKeyNested", "Outer", "Inner", "Key")
+      finally(function()
+        disableKey(childName)
+        disableKey(innerName)
+        disableKey(outerName)
+      end)
+
+      assert.is_true(permGroup(outerName, "key"), "could not create the outer key group")
+      assert.is_true(permGroup(innerName, "key", outerName), "could not create a key group inside another")
+      local childId = permKey(childName, innerName, mudlet.keymodifier.None, mudlet.key.F10, [[echo("x")]])
+      assert.is_true(childId > 0, "could not create the key inside the nested group")
+
+      assert.are.equal(1, isActive(innerName, "keybind"), "a group nested in another should be created active too")
+      assert.is_true(isAncestorsActive(childId, "keybind"),
+        "neither group above a fresh key should be holding it back")
+
+      -- isAncestorsActive() walks every ancestor rather than just the parent, so
+      -- the group that is not the key's own parent has to be able to stop it too
+      assert.is_true(disableKey(outerName))
+      assert.is_false(isAncestorsActive(childId, "keybind"),
+        "the outer group should hold back a key two levels below it")
+      assert.are.equal(1, isActive(innerName, "keybind"),
+        "disabling the outer group should not have touched the group inside it")
+    end)
+
+    it("gives a group the unknown key code rather than an out-of-range one", function()
+      local groupName = freshNames("SpecPermKeyGroupCode", "")
+      finally(function() disableKey(groupName) end)
+
+      assert.is_true(permGroup(groupName, "key"), "could not create the key group")
+      local keyCode = getKeyCode(groupName)
+      assert.are.equal(mudlet.key.unknown, keyCode)
+    end)
+
+    it("refuses a key code outside Qt's key range", function()
+      for _, keyCode in ipairs({-2, mudlet.key.unknown + 1, 0x7fffffff}) do
+        local id, message = tempKey(mudlet.keymodifier.None, keyCode, [[echo("x")]])
+        assert.is_nil(id, "tempKey took key code " .. keyCode)
+        assert.is_string(message, "tempKey gave no reason for refusing key code " .. keyCode)
+
+        local keyName = freshNames("SpecPermKeyBadCode", "")
+        local ok, permMessage = pcall(permKey, keyName, "", mudlet.keymodifier.None, keyCode, "")
+        assert.is_false(ok, "permKey took key code " .. keyCode)
+        assert.truthy(tostring(permMessage):find("is not a key code", 1, true), "permKey raised the wrong error for key code " .. keyCode .. ": " .. tostring(permMessage))
+        assert.are.equal(0, exists(keyName, "keybind"), "permKey made a key for key code " .. keyCode)
+      end
+    end)
+
+    it("keeps a key code at either end of Qt's key range", function()
+      -- busted keeps only the last finally(), so one callback kills every key
+      local ids = {}
+      finally(function()
+        for _, id in ipairs(ids) do
+          killKey(id)
+        end
+      end)
+      for _, keyCode in ipairs({0, mudlet.key.A, mudlet.key.unknown}) do
+        local id = tempKey(mudlet.keymodifier.None, keyCode, [[echo("x")]])
+        assert.is_number(id, "tempKey refused key code " .. keyCode)
+        ids[#ids + 1] = id
+        assert.are.equal(keyCode, (getKeyCode(id)), "key code " .. keyCode .. " did not read back unchanged")
+      end
+    end)
+
+  end)
+
   describe("enable, disable, kill, isActive and exists for keys", function()
 
     after_each(function()
@@ -187,11 +329,14 @@ describe("Tests keybind-related functions", function()
     end)
 
     it("killKey returns false the second time, as the key is already dead", function()
+      -- earlier specs' killed items would be freed by the flush below too, so free them first
+      feedTriggers("\nspec_key_kill_settle\n")
       local id = tempKey(mudlet.key.F11, [[echo("x")]])
       assert.is_true(killKey(id), "killing a live temporary key should report success")
-      -- the key is still present here: only the deferred cleanup frees it, so the
-      -- second kill really is being told about a corpse it can find
-      assert.are.equal(1, exists(id, "keybind"), "the killed key is still present until cleanup runs")
+      -- only the deferred cleanup frees it, so the second kill is told about a
+      -- corpse it can still find: exists() does not count it, but the profile still holds it
+      local held = getProfileStats().keys.temp
+      assert.are.equal(0, exists(id, "keybind"), "a killed key waiting for cleanup should not be counted")
       assert.are.equal(0, isActive(id, "keybind"), "a killed key is no longer active")
       assert.is_false(killKey(id),
         "killing an already killed key achieves nothing and has to say so")
@@ -200,8 +345,18 @@ describe("Tests keybind-related functions", function()
       -- synthesised headlessly, so there is no in-callback double kill to pin here -
       -- KeyUnit's depth and cleanup machinery matches AliasUnit's, whose spec has one
       feedTriggers("\nspec_key_kill_flush\n")
+      assert.are.equal(held - 1, getProfileStats().keys.temp, "the cleanup should have freed the killed key")
       assert.are.equal(0, exists(id, "keybind"), "the key should be gone after kill and cleanup")
       assert.is_false(killKey(id), "a freed key cannot be killed either")
+    end)
+
+    it("getKeyCode does not report a killed key waiting to be freed", function()
+      local id = tempKey(mudlet.key.F10, [[ ]])
+      assert.is_not_nil(getKeyCode(id))
+      assert.is_true(killKey(id))
+      local code, err = getKeyCode(id)
+      assert.is_nil(code, "a killed key has no key code to report")
+      assert.is_string(err)
     end)
 
     it("killKey returns false for a permanent key (they cannot be killed)", function()
@@ -274,9 +429,8 @@ describe("Tests keybind-related functions", function()
     end)
 
     it("killKey finds a temporary key behind a same-named permanent one", function()
-      -- killKey walks the root node list in creation order, so a permanent key
-      -- restored from the profile sits in front of this session's temporaries: it
-      -- must be scanned past, not reported as a failure
+      -- a permanent key can share a temporary's name (its id), and must be
+      -- passed over rather than reported as a failure
       local seed = tempKey(mudlet.key.F9, [[echo("x")]])
       killKey(seed)
       -- permKey itself takes seed + 1, so the next temporary takes seed + 2
@@ -289,6 +443,107 @@ describe("Tests keybind-related functions", function()
       assert.is_true(killKey(tempId), "killKey must scan past the permanent key")
     end)
 
+  end)
+
+end)
+
+-- A profile or package written by hand, or by an older Mudlet, can hold any
+-- number as a key code, and readKey() takes it straight from the XML
+describe("key codes read from a package", function()
+  local packageName = "mudlet-spec-keycodes"
+  local packageFile = getMudletHomeDir() .. "/" .. packageName .. ".xml"
+
+  local function waitUntil(condition, timeoutMilliseconds)
+    local waited = 0
+    while waited < timeoutMilliseconds do
+      if condition() then
+        return true
+      end
+      pumpEvents(50)
+      waited = waited + 50
+    end
+    return condition() and true or false
+  end
+
+  local function packageIsInstalled()
+    return table.contains(getPackages(), packageName)
+  end
+
+  -- installPackage() postpones even the empty path while a profile save runs
+  local function waitForProfileSaveToPass()
+    return waitUntil(function() return installPackage("") == nil end, 5000)
+  end
+
+  setup(function()
+    local handle = assert(io.open(packageFile, "wb"))
+    handle:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+  <KeyPackage>
+    <KeyGroup isActive="yes" isFolder="yes">
+      <name>SpecPackageKeyGroup</name><packageName></packageName><script></script><command></command>
+      <keyCode>-1</keyCode><keyModifier>0</keyModifier>
+      <Key isActive="yes" isFolder="no">
+        <name>SpecPackageKeyInGroup</name><packageName></packageName><script></script><command></command>
+        <keyCode>16777274</keyCode><keyModifier>0</keyModifier>
+      </Key>
+    </KeyGroup>
+    <Key isActive="yes" isFolder="no">
+      <name>SpecPackageKeyTooBig</name><packageName></packageName><script></script><command></command>
+      <keyCode>99999999</keyCode><keyModifier>0</keyModifier>
+    </Key>
+  </KeyPackage>
+</MudletPackage>
+]])
+    handle:close()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was already running, so this install would be postponed")
+    assert.is_true(installPackage(packageFile), "could not install " .. packageFile)
+    assert.is_true(waitUntil(packageIsInstalled, 5000), packageName .. " did not turn up in getPackages()")
+  end)
+
+  teardown(function()
+    if packageIsInstalled() then
+      assert.is_true(waitUntil(function() return uninstallPackage(packageName) == true end, 5000),
+        packageName .. " could not be uninstalled")
+    end
+    -- the save the uninstall queues must finish before Mudlet shuts down
+    pumpEvents(300)
+    assert.is_true(waitForProfileSaveToPass(), "the profile save the uninstall queued never finished")
+    os.remove(packageFile)
+  end)
+
+  it("reads a group's -1 as the unknown key code", function()
+    assert.are.equal(mudlet.key.unknown, (getKeyCode("SpecPackageKeyGroup")))
+  end)
+
+  it("reads a key code above Qt's key range as the unknown key code", function()
+    assert.are.equal(mudlet.key.unknown, (getKeyCode("SpecPackageKeyTooBig")))
+  end)
+
+  it("keeps a key code inside Qt's key range", function()
+    assert.are.equal(mudlet.key.F11, (getKeyCode("SpecPackageKeyInGroup")))
+  end)
+
+end)
+
+-- A binding on one of Mudlet's own keys never fires. It is warned about in the
+-- editor, not on the main console, where a script making its bindings at
+-- profile load would repeat the warning at every startup. AddonControlsTest
+-- covers the editor warning, which Lua cannot open.
+describe("a key binding on a key Mudlet itself uses", function()
+
+  it("is still made, and says nothing on the main console", function()
+    local mark = getLastLineNumber("main")
+
+    -- Ctrl+Alt+T is Mudlet's "Toggle Time Stamps" on every platform
+    local key = tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.T, [[echo("mine")]])
+    local text = table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "")
+    killKey(key)
+
+    assert.is_number(key, "the binding should still be made")
+    assert.is_nil(text:find("WARN", 1, true), "the clash was posted to the main console: " .. text)
+    -- the console wraps long lines, so the action's name is looked for without spaces
+    assert.is_nil(text:gsub("%s", ""):find("ToggleTimeStamps", 1, true), "the clash was posted to the main console: " .. text)
   end)
 
 end)

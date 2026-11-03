@@ -49,6 +49,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletApp.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -56,6 +57,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 // ExitsTreeWidget keeps its column numbers in an enumeration only dlgRoomExits
 // and its delegate are friends of, so mirror them here; the columnCount() check
@@ -109,7 +112,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -206,15 +209,15 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory();
 
-        auto& hostManager = mudlet::self()->getHostManager();
-        QVERIFY2(hostManager.addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the Host");
-        mpHost = hostManager.getHost(mProfileName);
+        auto* hostManager = HostManager::self();
+        QVERIFY2(hostManager->addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the Host");
+        mpHost = hostManager->getHost(mProfileName);
         QVERIFY(mpHost);
         QVERIFY(map());
     }
@@ -379,14 +382,6 @@ private slots:
         QVERIFY(pDlg->doortype_none_s->isChecked());
     }
 
-    /*
-     * Known defect, kept as an expected failure so that fixing it is noticed:
-     * slot_stub_nw_stateChanged() hands normalStubExitChanged() the north row's
-     * doortype_locked_n where the northwest row's doortype_locked_nw was meant,
-     * so ticking the northwest stub leaves its own "locked door" choice greyed
-     * out and unticking it greys out north's instead. Correcting that one
-     * argument turns both QVERIFYs below green.
-     */
     void theNorthwestStubReachesIntoTheNorthRow()
     {
         buildMap();
@@ -395,13 +390,9 @@ private slots:
         QVERIFY(!pDlg->doortype_locked_nw->isEnabled());
 
         pDlg->stub_nw->setChecked(true);
-
-        QEXPECT_FAIL("", "issue #10421: the northwest stub enables north's locked-door choice instead of its own", Continue);
         QVERIFY(pDlg->doortype_locked_nw->isEnabled());
 
         pDlg->stub_nw->setChecked(false);
-
-        QEXPECT_FAIL("", "issue #10421: clearing the northwest stub disables north's locked-door choice", Continue);
         QVERIFY(pDlg->doortype_locked_n->isEnabled());
     }
 
@@ -453,17 +444,9 @@ private slots:
         QVERIFY2(!subject()->hasExitWeight(qsl("n")), "the weight of the deleted exit outlived it");
     }
 
-    /*
-     * Known defect, kept as an expected failure so that fixing it is noticed:
-     * normalExitEdited() greys the "no route" box out when the roomID is
-     * emptied but, unlike the equivalent branch of normalStubExitChanged(),
-     * leaves it ticked, and save() writes every one of those boxes through
-     * unconditionally. The room is left claiming a speedwalk lock on a
-     * direction it has no exit in, which Lua's hasExitLock() reports and which
-     * silently applies to whatever exit is put there next by setExit().
-     * Clearing the box alongside disabling it turns the QVERIFY below green.
-     */
-    void deletingAnExitLeavesItsSpeedwalkLockBehind()
+    // A lock left on a direction with no exit would silently apply to
+    // whatever exit setExit() puts there next.
+    void deletingAnExitClearsItsSpeedwalkLock()
     {
         buildMap();
         auto* pDlg = openDialogOn(scmSubjectRoom);
@@ -471,11 +454,128 @@ private slots:
 
         clearByTyping(pDlg->n);
         QVERIFY(!pDlg->noroute_n->isEnabled());
+        QVERIFY2(pDlg->noroute_n->isChecked(), "the box has to reach Save still ticked for save() to be what drops the lock");
+        QVERIFY(pDlg->button_save->isEnabled());
         pDlg->button_save->click();
 
         QCOMPARE(subject()->getExit(DIR_NORTH), -1);
-        QEXPECT_FAIL("", "issue #10422: the lock control is only greyed out, not cleared, so save() stores it on a direction with no exit", Continue);
         QVERIFY(!subject()->hasExitLock(DIR_NORTH));
+    }
+
+    void namingNoRoomDeletesTheExitAndItsSpeedwalkLock()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        QVERIFY(pDlg->noroute_n->isChecked());
+
+        clearByTyping(pDlg->n);
+        QTest::keyClicks(pDlg->n, QString::number(scmNoSuchRoom));
+        QVERIFY2(pDlg->noroute_n->isChecked(), "the box has to reach Save still ticked for save() to be what drops the lock");
+        QVERIFY(pDlg->button_save->isEnabled());
+        pDlg->button_save->click();
+
+        QCOMPARE(subject()->getExit(DIR_NORTH), -1);
+        QVERIFY(!subject()->hasExitLock(DIR_NORTH));
+    }
+
+    void lockingAStubKeepsTheLock()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        QVERIFY(pDlg->stub_e->isChecked());
+        QVERIFY(pDlg->noroute_e->isEnabled());
+        QVERIFY(!pDlg->noroute_e->isChecked());
+
+        pDlg->noroute_e->click();
+        QVERIFY(pDlg->button_save->isEnabled());
+        pDlg->button_save->click();
+
+        QVERIFY(subject()->hasExitStub(DIR_EAST));
+        QVERIFY2(subject()->hasExitLock(DIR_EAST), "the lock ticked on a stub was not saved");
+    }
+
+    void aStoredStubLockSurvivesAnUnrelatedSave()
+    {
+        buildMap();
+        subject()->setExitLock(DIR_EAST, true);
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        QVERIFY(pDlg->noroute_e->isChecked());
+
+        pDlg->noroute_n->click();
+        QVERIFY(pDlg->button_save->isEnabled());
+        pDlg->button_save->click();
+
+        QVERIFY(subject()->hasExitStub(DIR_EAST));
+        QVERIFY2(subject()->hasExitLock(DIR_EAST), "saving another direction dropped the stub's lock");
+    }
+
+    // Each direction's box is wired to its lock by hand, twelve times over
+    void eachNoRouteBoxLocksOnlyItsOwnDirection()
+    {
+        const QList<QPair<int, QString>> directions{{DIR_NORTHWEST, qsl("nw")},
+                                                    {DIR_NORTH, qsl("n")},
+                                                    {DIR_NORTHEAST, qsl("ne")},
+                                                    {DIR_UP, qsl("up")},
+                                                    {DIR_WEST, qsl("w")},
+                                                    {DIR_EAST, qsl("e")},
+                                                    {DIR_DOWN, qsl("down")},
+                                                    {DIR_SOUTHWEST, qsl("sw")},
+                                                    {DIR_SOUTH, qsl("s")},
+                                                    {DIR_SOUTHEAST, qsl("se")},
+                                                    {DIR_IN, qsl("in")},
+                                                    {DIR_OUT, qsl("out")}};
+        for (const auto& [direction, name] : directions) {
+            buildMap();
+            subject()->setExitLock(DIR_NORTH, false);
+            subject()->setExitStub(DIR_EAST, false);
+            QVERIFY(subject()->setExit(scmSpareRoom, direction));
+            delete mpDialog.data();
+            auto* pDlg = openDialogOn(scmSubjectRoom);
+            auto* pNoRoute = pDlg->findChild<QCheckBox*>(qsl("noroute_%1").arg(name));
+            QVERIFY2(pNoRoute, qPrintable(name));
+            QVERIFY2(pNoRoute->isEnabled() && !pNoRoute->isChecked(), qPrintable(name));
+
+            pNoRoute->click();
+            QVERIFY2(pDlg->button_save->isEnabled(), qPrintable(name));
+            pDlg->button_save->click();
+
+            for (const auto& [other, otherName] : directions) {
+                QVERIFY2(subject()->hasExitLock(other) == (other == direction),
+                         qPrintable(qsl("ticked %1, %2 locked: %3").arg(name, otherName, subject()->hasExitLock(other) ? qsl("yes") : qsl("no"))));
+            }
+        }
+    }
+
+    void aDownDoorTypeArmsSave()
+    {
+        buildMap();
+        QVERIFY(subject()->setExit(scmSpareRoom, DIR_DOWN));
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        QVERIFY(!pDlg->button_save->isEnabled());
+
+        pDlg->doortype_locked_down->click();
+        QVERIFY2(pDlg->button_save->isEnabled(), "choosing a door type for the down exit did not arm Save");
+        pDlg->button_save->click();
+
+        QCOMPARE(subject()->getDoor(qsl("down")), 3);
+    }
+
+    // Guards against clearing the box when it greys out: the roomID is checked
+    // on every keystroke, so retyping it passes through text that names no room
+    // on the way to the new one.
+    void retypingALockedExitKeepsItsSpeedwalkLock()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        QVERIFY(pDlg->noroute_n->isChecked());
+
+        clearByTyping(pDlg->n);
+        QTest::keyClicks(pDlg->n, QString::number(scmSpareRoom));
+        QVERIFY(pDlg->button_save->isEnabled());
+        pDlg->button_save->click();
+
+        QCOMPARE(subject()->getExit(DIR_NORTH), scmSpareRoom);
+        QVERIFY2(subject()->hasExitLock(DIR_NORTH), "retyping the roomID dropped the exit's speedwalk lock");
     }
 
     void aStoredSpecialExitFillsItsRow()
@@ -655,6 +755,56 @@ private slots:
         QVERIFY2(subject()->getExit(DIR_NORTH) == scmNearRoom, "save() on a dialog with no room wrote over another room's exits");
     }
 
+    // The dialog is not modal, so a script can delete its room while it is open
+    void savingAfterTheRoomIsDeletedClosesWithoutWriting()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        pDlg->show();
+        pDlg->weight_n->setValue(13);
+
+        QVERIFY(roomDB()->removeRoom(scmSubjectRoom));
+        pDlg->save();
+
+        QVERIFY(!subject());
+        QVERIFY2(!pDlg->isVisible(), "the dialog stayed open on a room that no longer exists");
+    }
+
+    // deleteMap() and loading another map free the room the dialog was opened on
+    void savingAfterTheMapIsClearedClosesWithoutWriting()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        pDlg->show();
+        pDlg->weight_n->setValue(13);
+
+        map()->mapClear();
+        pDlg->save();
+
+        QVERIFY(!subject());
+        QVERIFY2(!pDlg->isVisible(), "the dialog stayed open on a room that no longer exists");
+    }
+
+    void savingAfterTheRoomIdIsReusedLeavesTheNewRoomAlone()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        pDlg->show();
+        pDlg->weight_n->setValue(13);
+
+        QVERIFY(roomDB()->removeRoom(scmSubjectRoom));
+        QVERIFY(map()->addRoom(scmSubjectRoom));
+        QVERIFY(map()->setRoomArea(scmSubjectRoom, mAreaId));
+        pDlg->save();
+
+        QVERIFY(subject());
+        for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
+            QVERIFY2(!subject()->hasExit(direction), "the old dialog wrote its exits onto a new room that reused the id");
+        }
+        QVERIFY2(subject()->getSpecialExits().isEmpty(), "the old dialog wrote its special exits onto a new room that reused the id");
+        QVERIFY2(!pDlg->isVisible(), "the dialog stayed open on a room that no longer exists");
+    }
+
     // Regression test for issue #10423: dlgRoomExits' constructor used to hand
     // specialExits two parentless delegates through setItemDelegateForColumn(),
     // which does not take ownership, so both outlived the dialog with nothing
@@ -703,7 +853,7 @@ private slots:
         QVERIFY2(map()->isUnsaved(), "editing exits did not mark the map unsaved");
         // updateArea() queues a throttled repaint that emits signal_areaChanged
         // for the subject's area - drain the queued call and check it arrived.
-        QVERIFY2(areaChangedSpy.wait(1000), "updateArea() did not repaint the map (signal_areaChanged never fired)");
+        QVERIFY2(areaChangedSpy.wait(1s), "updateArea() did not repaint the map (signal_areaChanged never fired)");
         QCOMPARE(areaChangedSpy.count(), 1);
         QCOMPARE(areaChangedSpy.takeFirst().at(0).toInt(), subject()->getArea());
     }

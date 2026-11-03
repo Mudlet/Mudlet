@@ -71,6 +71,8 @@
 #include "XMLimport.h"
 #include "mudlet.h"
 
+using namespace std::chrono_literals;
+
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
 #include <lua5.1/lauxlib.h>
@@ -145,8 +147,8 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        QVERIFY2(mudlet::self()->getHostManager().addHost(mProfileName, QString(), QString(), QString()), "failed to create the Host");
-        mpHost = mudlet::self()->getHostManager().getHost(mProfileName);
+        QVERIFY2(HostManager::self()->addHost(mProfileName, QString(), QString(), QString()), "failed to create the Host");
+        mpHost = HostManager::self()->getHost(mProfileName);
         QVERIFY(mpHost);
         // A bare Host blocks script compilation until the full profile boot
         // would normally clear this; the test's scripts need to compile:
@@ -302,12 +304,12 @@ private slots:
         pTimer->enableTimer();
 
         // Let the timer fire and take its package (and itself) down:
-        QTRY_VERIFY_WITH_TIMEOUT(!mpHost->mInstalledPackages.contains(packageName), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(!mpHost->mInstalledPackages.contains(packageName), 5s);
 
         // Allow any queued activity (the declined deferred save, further timer
         // ticks) to surface problems:
-        QTest::qWait(500);
-        // mudlet::slot_timerFires() flushes the deferred delete as soon as the
+        QTest::qWait(500ms);
+        // TimerUnit::timerFired() flushes the deferred delete as soon as the
         // uninstalling timer's execute() has finished, so by now the timer must
         // be properly gone - not lingering deactivated where the next profile
         // save would serialize it back in:

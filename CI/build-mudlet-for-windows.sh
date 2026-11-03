@@ -19,7 +19,9 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 3.2.0    Configure from the ci-windows CMake preset
+# Version: 3.4.0    Build profile-guided when MUDLET_PGO_BUILD is set
+#          3.3.0    Fail the script when CMake configuration or build fails
+#          3.2.0    Configure from the ci-windows CMake preset
 #          3.1.0    Switch from MINGW64 to CLANG64
 #          3.0.0    Switch from qmake to CMake with Release builds
 #          2.1.0    Remove MINGW32 since upstream no longer supports it
@@ -43,6 +45,8 @@
 # 1 - Failure to change to a directory
 # 2 - Unsupported MSYS2 shell type
 # 3 - Unsupported build type
+# 4 - CMake configuration failed
+# 5 - CMake build failed
 
 if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from a CLANG64 type bash terminal as the MSYS one"
@@ -136,9 +140,41 @@ else
   export WITH_UPDATER=YES
 fi
 
+if [ -n "${NUMBER_OF_PROCESSORS}" ] && [ "${NUMBER_OF_PROCESSORS}" -gt 1 ]; then
+  PARALLEL=(--parallel "${NUMBER_OF_PROCESSORS}")
+else
+  PARALLEL=()
+fi
+
+# A profile-guided build (releases and PTBs) builds twice: first the instrumented benchmarks
+# CI/pgo-train.sh runs to record the profile, then Mudlet built against it.
+# Only the benchmarks in the first pass, as building mudlet would send the
+# instrumented binary's debug files to Sentry.
+if [ "${MUDLET_PGO_BUILD}" = "true" ]; then
+  echo "Building the instrumented pass of a profile-guided build ..."
+  if ! cmake --preset ci-windows -DMUDLET_PGO=GENERATE; then
+    echo "=== ERROR: CMake configuration of the instrumented pass failed ==="
+    exit 4
+  fi
+  if ! cmake --build --preset ci-windows "${PARALLEL[@]}" --target PipelineBenchmark MapRenderBenchmark PathfindBenchmark; then
+    echo "=== ERROR: the instrumented pass failed to build ==="
+    exit 5
+  fi
+  if ! "${GITHUB_WORKSPACE}/CI/pgo-train.sh" "${GITHUB_WORKSPACE}/build-${MSYSTEM}"; then
+    echo "=== ERROR: the profile-guided training run failed ==="
+    exit 6
+  fi
+  PGO_ARGS=(-DMUDLET_PGO=USE)
+else
+  PGO_ARGS=()
+fi
+
 # The flags live in CMakePresets.json, and the preset picks WITH_SENTRY,
 # SENTRY_DSN and SENTRY_SEND_DEBUG up out of the environment the workflow set
-cmake --preset ci-windows
+if ! cmake --preset ci-windows "${PGO_ARGS[@]}"; then
+  echo "=== ERROR: CMake configuration failed ==="
+  exit 4
+fi
 
 echo " ... CMake configuration done."
 echo ""
@@ -146,11 +182,11 @@ echo ""
 echo "Running CMake build ..."
 echo ""
 
-# Build using CMake with parallel jobs
-if [ -n "${NUMBER_OF_PROCESSORS}" ] && [ "${NUMBER_OF_PROCESSORS}" -gt 1 ]; then
-  cmake --build --preset ci-windows --parallel "${NUMBER_OF_PROCESSORS}"
-else
-  cmake --build --preset ci-windows
+cmake --build --preset ci-windows "${PARALLEL[@]}"
+BUILD_STATUS=$?
+if [ "${BUILD_STATUS}" -ne 0 ]; then
+  echo "=== ERROR: CMake build failed with exit code ${BUILD_STATUS} ==="
+  exit 5
 fi
 
 echo " ... CMake build finished"

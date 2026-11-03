@@ -1,8 +1,8 @@
 -- What the selection API does when the selection does not fit the line it is
--- pointed at: an empty line, a negative start, a selection left behind on a
--- line shorter than the one it was made on, and an attribute applied to part of
--- a line rather than all of it. Plus the overflow event that a console which
--- cannot scroll raises once its text no longer fits the pane.
+-- pointed at: an empty line, a negative start, a selection whose line the cursor
+-- has since left, and an attribute applied to part of a line rather than all of
+-- it. Plus the overflow event that a console which cannot scroll raises once
+-- its text no longer fits the pane.
 
 -- Distinct lengths and words on every line, so an off-by-one or a swapped
 -- axis produces a different answer rather than the right one by luck.
@@ -65,6 +65,13 @@ describe("Tests selection against lines it does not fit", function()
       assert.equals(0, length)
     end)
 
+    it("returns -1 at once on an empty line however many matches are asked for", function()
+      moveCursor(window, 0, 1)
+      local started = os.clock()
+      assert.equals(-1, selectString(window, "bravo", 2000000000))
+      assert.is_true(os.clock() - started < 1)
+    end)
+
     it("returns -1 and clears the selection when the text is absent", function()
       moveCursor(window, 0, 3)
       assert.equals(8, selectString(window, "golf", 1))
@@ -115,28 +122,43 @@ describe("Tests selection against lines it does not fit", function()
   end)
 
   describe("Tests getSelection after the cursor moves", function()
-    it("reports the selection stale when the new line is too short for it", function()
+    it("keeps reading the selected line when the cursor moves to a shorter one", function()
       moveCursor(window, 0, 3)
       assert.is_true(selectSection(window, 19, 5))
       assert.equals("india", (getSelection(window)))
 
-      -- the selection is still 19 characters in, which line 2 does not reach
+      -- line 2 does not reach column 19, so reading the cursor's line would fail
       moveCursor(window, 0, 2)
-      local text, message = getSelection(window)
-      assert.is_nil(text)
-      assert.is_string(message)
+      assert.are.same({"india", 19, 5}, {getSelection(window)})
     end)
 
-    it("reads the same columns off a line that is long enough", function()
+    it("keeps reading the selected line when the cursor moves to a long enough one", function()
       moveCursor(window, 0, 3)
       assert.is_true(selectSection(window, 6, 5))
       assert.equals("t gol", (getSelection(window)))
 
+      -- line 0 holds "bravo" at the same columns
       moveCursor(window, 0, 0)
-      local text, start, length = getSelection(window)
-      assert.equals("bravo", text)
-      assert.equals(6, start)
-      assert.equals(5, length)
+      assert.are.same({"t gol", 6, 5}, {getSelection(window)})
+    end)
+
+    it("keeps reading the selected text when a line above it is deleted", function()
+      moveCursor(window, 0, 3)
+      assert.is_true(selectSection(window, 6, 5))
+
+      moveCursor(window, 0, 0)
+      deleteLine(window)
+      assert.are.same({"t gol", 6, 5}, {getSelection(window)})
+    end)
+
+    it("drops the selection when its line is deleted", function()
+      moveCursor(window, 0, 2)
+      assert.is_true(selectSection(window, 0, 4))
+      assert.equals("echo", (getSelection(window)))
+
+      -- line 3 moves up into line 2, and has text at columns 0 to 4 as well
+      deleteLine(window)
+      assert.are.same({"", 0, 0}, {getSelection(window)})
     end)
   end)
 

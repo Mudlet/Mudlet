@@ -72,6 +72,9 @@ public:
     //   }
     const QUndoCommand* getLastExecutedCommand() const;
 
+    // Called after every save, including one that pushed nothing because nothing changed
+    void finishAddingItem(EditorViewTypes::EditorViewType viewType, int itemID);
+
 signals:
     // Emitted when items are modified by undo/redo (allows targeted UI updates instead of full refresh)
     void itemsChanged(EditorViewTypes::EditorViewType viewType, QList<int> affectedItemIDs);
@@ -93,6 +96,9 @@ private:
     bool mInPushOperation = false;                                  // Track if we're currently pushing a command
     bool mInMacroPush = false;                                      // Track if we're in a macro push operation (beginMacro -> endMacro)
     LastOperationType mLastOperationType = LastOperationType::None; // Track last operation type for wasLastCommandValid()
+    // Copied while the undone delete command is still alive: an itemsChanged handler can push
+    // a command, and that push frees everything above the index, the undone command included
+    QList<QPair<int, int>> mUndoneDeleteIDChanges;
 };
 
 #endif // MUDLET_MUDLETUNDOSTACK_H

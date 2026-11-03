@@ -33,6 +33,7 @@
  * Run with: ctest -R MapSymbolFontTest -V
  */
 
+#include <QDataStream>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -41,15 +42,25 @@
 #include <QtTest/QtTest>
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QFontComboBox>
+#include <QIcon>
+#include <QImage>
+#include <QPixmap>
 #include <QPushButton>
 #include <QScopeGuard>
 #include <QTableWidget>
 
+#include <utility>
+
+#include "FontManager.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
+#include "MapStyle.h"
 #include "MudletInstanceCoordinator.h"
 #include "T2DMap.h"
 #include "TelnetServerStub.h"
@@ -62,6 +73,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class MapSymbolFontTest : public QObject
 {
@@ -94,7 +107,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -112,11 +125,11 @@ private:
         mudlet::self()->showOptionsDialog(qsl("tab_mapper"), mpHost);
         QVERIFY2(QTest::qWaitFor(
                          [this]() {
-                             return !mpHost->mpDlgProfilePreferences.isNull();
+                             return !HostDialogs::of(mpHost).mpDlgProfilePreferences.isNull();
                          },
-                         5000),
+                         5s),
                  "Preferences dialog was not created");
-        mpPreferences = mpHost->mpDlgProfilePreferences.data();
+        mpPreferences = HostDialogs::of(mpHost).mpDlgProfilePreferences.data();
         QVERIFY2(scalingSpinBox(), "The symbol scaling spin-box was not found in the Symbols group box");
     }
 
@@ -128,9 +141,9 @@ private:
         mpPreferences->close();
         QVERIFY2(QTest::qWaitFor(
                          [this]() {
-                             return mpHost->mpDlgProfilePreferences.isNull();
+                             return HostDialogs::of(mpHost).mpDlgProfilePreferences.isNull();
                          },
-                         5000),
+                         5s),
                  "Preferences dialog should have been destroyed by closing it");
         mpPreferences = nullptr;
     }
@@ -140,7 +153,7 @@ private:
     QString anotherFontFamily() const
     {
         const QString inUse = map()->getSymbolFont().family();
-        QStringList families = mudlet::self()->getAvailableFonts();
+        QStringList families = FontManager::availableFonts();
         families.sort();
         for (const QString& family : families) {
             if (family.compare(inUse, Qt::CaseInsensitive)) {
@@ -209,7 +222,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(mudlet::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -225,8 +238,7 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        // Null when initTestCase skipped or failed ahead of mudlet::start(), and
-        // getMudletPath() dereferences the instance rather than checking it
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
             deleteProfileDirectory(mProfileName);
             delete mudlet::self();
@@ -245,13 +257,14 @@ private slots:
     {
         // The whole class shares one profile, so a case that leaves the dialog
         // open or a setting changed would be writing the next one's fixture
-        if (!mpHost->mpDlgProfilePreferences.isNull()) {
-            delete mpHost->mpDlgProfilePreferences.data();
+        if (!HostDialogs::of(mpHost).mpDlgProfilePreferences.isNull()) {
+            delete HostDialogs::of(mpHost).mpDlgProfilePreferences.data();
         }
         mpPreferences = nullptr;
         map()->setSymbolFont(mFontBefore);
         map()->setOnlySymbolFontUsed(mOnlyUseSelectedBefore);
         map()->setSymbolFontFudgeFactor(mScalingBefore);
+        mpHost->setMapStyle(MapStyle::defaultId());
     }
 
     // The invariant the whole of TMap::setSymbolFont() exists for: the style
@@ -476,7 +489,7 @@ private slots:
                          [this]() {
                              return glyphUsageTable() != nullptr;
                          },
-                         5000),
+                         5s),
                  "the glyph usage dialog did not appear");
 
         QTableWidget* pTable = glyphUsageTable();
@@ -641,6 +654,109 @@ private slots:
         closePreferences();
         QCOMPARE(map()->getSymbolFontFudgeFactor(), scalingInFile);
         QVERIFY(map()->getOnlySymbolFontUsed());
+    }
+
+    // The style list in the preferences shows each style's picture, at a size
+    // its rooms show at.
+    void test_theStyleListInPreferencesShowsAPictureOfEachStyle()
+    {
+        openPreferences();
+        QComboBox* pStyles = mpPreferences->comboBox_mapStyle;
+        QCOMPARE(pStyles->count(), MapStyle::all().size());
+        QVERIFY2(pStyles->iconSize().height() >= 32, qPrintable(qsl("the pictures are %1 pixels high").arg(pStyles->iconSize().height())));
+        for (int i = 0; i < pStyles->count(); ++i) {
+            QVERIFY2(!pStyles->itemIcon(i).isNull(), qPrintable(qsl("%1 has no picture").arg(pStyles->itemText(i))));
+        }
+    }
+
+    // A style a script sets shows in the open dialog, so picking the one it had
+    // before is a change that Save keeps
+    void test_theStyleListFollowsAStyleAScriptSets()
+    {
+        mpHost->setMapStyle(qsl("tiles"));
+        openPreferences();
+        QComboBox* pStyles = mpPreferences->comboBox_mapStyle;
+
+        QVERIFY(mpHost->setMapStyle(qsl("transit")));
+        QCOMPARE(pStyles->currentData().toString(), qsl("transit"));
+
+        // Nor does it count as an edit of the user's that holds back the rest
+        // of the dialog from following the settings when they come back to it
+        const int wrapBefore = mpHost->mWrapAt;
+        const auto restoreWrap = qScopeGuard([this, wrapBefore]() {
+            mpHost->mWrapAt = wrapBefore;
+        });
+        mpHost->mWrapAt = wrapBefore + 23;
+        QEvent activation(QEvent::WindowActivate);
+        QCoreApplication::sendEvent(mpPreferences, &activation);
+        QCOMPARE(mpPreferences->wrap_at_spinBox->value(), wrapBefore + 23);
+
+        pStyles->setCurrentIndex(pStyles->findData(qsl("tiles")));
+        closePreferences();
+
+        QCOMPARE(mpHost->mapStyle(), qsl("tiles"));
+    }
+
+    // A pick in the dialog that a script's later one replaced is not written
+    // back over it on Save
+    void test_savingPreferencesKeepsAStyleAScriptSetAfterTheListWasChanged()
+    {
+        mpHost->setMapStyle(qsl("tiles"));
+        openPreferences();
+        QComboBox* pStyles = mpPreferences->comboBox_mapStyle;
+
+        pStyles->setCurrentIndex(pStyles->findData(qsl("inkwash")));
+        QVERIFY(mpHost->setMapStyle(qsl("blueprint")));
+        closePreferences();
+
+        QCOMPARE(mpHost->mapStyle(), qsl("blueprint"));
+    }
+
+    void test_aStylePreviewIsSharpAtTheScreensRatioAndEveryStyleLooksDifferent()
+    {
+        QList<QImage> previews;
+        for (const MapStyle& style : MapStyle::all()) {
+            const QPixmap preview = style.previewPixmap(QSize(32, 32), 2.0);
+            QCOMPARE(preview.size(), QSize(64, 64));
+            QCOMPARE(preview.devicePixelRatio(), 2.0);
+            const QImage image = preview.toImage();
+            for (int i = 0; i < previews.size(); ++i) {
+                const QImage& other = previews.at(i);
+                int differing = 0;
+                for (int y = 0; y < image.height(); ++y) {
+                    for (int x = 0; x < image.width(); ++x) {
+                        differing += image.pixel(x, y) != other.pixel(x, y);
+                    }
+                }
+                // Each pair differs over nine tenths of the picture, so a quarter is a long way from two that look alike
+                QVERIFY2(differing > image.width() * image.height() / 4,
+                         qPrintable(qsl("%1 looks like %2: only %3 pixels differ").arg(style.displayName(), MapStyle::all().at(i).displayName()).arg(differing)));
+            }
+            previews << image;
+        }
+        // An empty size steps across a grid by nothing at a time unless it is turned away
+        for (const MapStyle& style : MapStyle::all()) {
+            for (const auto& [size, ratio] : {std::pair{QSize(32, 0), 1.0}, std::pair{QSize(0, 32), 1.0}, std::pair{QSize(32, 32), 0.0}, std::pair{QSize(32, 32), -1.0}}) {
+                QVERIFY2(style.previewPixmap(size, ratio).isNull(), qPrintable(qsl("%1 drew a %2x%3 preview at ratio %4").arg(style.displayName()).arg(size.width()).arg(size.height()).arg(ratio)));
+            }
+            // Small enough that the narrowest an exit may be is wider than the widest
+            QVERIFY2(!style.previewPixmap(QSize(8, 8), 1.0).isNull(), qPrintable(qsl("%1 drew no preview at 8x8").arg(style.displayName())));
+        }
+    }
+
+    // The icon holds a picture for each ratio, so a menu on a high density
+    // screen is not handed one scaled up from a single picture
+    void test_aStylesIconHasASharpPictureAtEachRatio()
+    {
+        for (const MapStyle& style : MapStyle::all()) {
+            const QIcon icon = style.previewIcon(QSize(32, 32));
+            for (const qreal ratio : {1.0, 2.0}) {
+                const QPixmap pixmap = icon.pixmap(QSize(32, 32), ratio);
+                QCOMPARE(pixmap.size(), QSize(32, 32) * ratio);
+                QCOMPARE(pixmap.devicePixelRatio(), ratio);
+                QCOMPARE(pixmap.toImage(), style.previewPixmap(QSize(32, 32), ratio).toImage());
+            }
+        }
     }
 };
 

@@ -25,7 +25,10 @@
  */
 
 #include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QIcon>
 #include <QMimeData>
+#include <QPixmap>
 #include <QTemporaryDir>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
@@ -33,7 +36,9 @@
 
 #include "AliasUnit.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TAlias.h"
@@ -66,7 +71,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -108,6 +113,28 @@ private:
         tree->dragLeaveEvent(&leaveEvent);
     }
 
+    // QIcon::pixmap() answers an invalid size with a null pixmap, and two null
+    // images compare equal, so both of those are refused before comparing
+    QString iconMismatch(TTreeWidget* tree, QTreeWidgetItem* item, const QString& expectedResource) const
+    {
+        const QSize iconSize = tree->iconSize();
+        if (iconSize.isEmpty()) {
+            return qsl("the tree has no icon size, so no comparison would mean anything");
+        }
+        const QImage expected = QIcon(expectedResource).pixmap(iconSize).toImage();
+        if (expected.isNull()) {
+            return qsl("%1 is not in the resources").arg(expectedResource);
+        }
+        const QImage painted = item->icon(0).pixmap(iconSize).toImage();
+        if (painted.isNull()) {
+            return qsl("the row was left with no icon, not %1").arg(expectedResource);
+        }
+        if (painted != expected) {
+            return qsl("the row was painted with some icon other than %1").arg(expectedResource);
+        }
+        return QString();
+    }
+
     void populateProfile()
     {
         auto* pTriggerFolder = new TTrigger(nullptr, mpHost);
@@ -134,6 +161,17 @@ private:
 
         auto* pTimer = new TTimer(qsl("qaMoveTimer"), QTime(0, 0, 30), mpHost);
         QVERIFY(mpHost->getTimerUnit()->registerTimer(pTimer));
+
+        auto* pInactiveTimerFolder = new TTimer(qsl("qaMoveInactiveTimerFolder"), QTime(0, 0, 1), mpHost);
+        pInactiveTimerFolder->setIsFolder(true);
+        QVERIFY(mpHost->getTimerUnit()->registerTimer(pInactiveTimerFolder));
+
+        auto* pInactiveTimer = new TTimer(qsl("qaMoveInactiveTimer"), QTime(0, 0, 30), mpHost);
+        QVERIFY(mpHost->getTimerUnit()->registerTimer(pInactiveTimer));
+
+        auto* pTimerSubFolder = new TTimer(qsl("qaMoveTimerSubFolder"), QTime(0, 0, 1), mpHost);
+        pTimerSubFolder->setIsFolder(true);
+        QVERIFY(mpHost->getTimerUnit()->registerTimer(pTimerSubFolder));
     }
 
 private slots:
@@ -161,11 +199,11 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "No active host available for the test.");
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connectedSpy.wait(1000), "Could not connect with the host.");
+        QVERIFY2(connectedSpy.wait(1s), "Could not connect with the host.");
 
         mudlet::self()->slot_showScriptDialog();
         QTest::qWait(100ms);
-        mpEditor = mpHost->mpEditorDialog;
+        mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor, "the editor dialog was not created");
 
         populateProfile();
@@ -179,8 +217,8 @@ private slots:
     void cleanupTestCase()
     {
         if (mpHost) {
-            if (auto* pEditor = mpHost->mpEditorDialog.data()) {
-                mpHost->mpEditorDialog = nullptr;
+            if (auto* pEditor = HostDialogs::of(mpHost).mpEditorDialog.data()) {
+                HostDialogs::of(mpHost).mpEditorDialog = nullptr;
                 delete pEditor;
             }
         }
@@ -255,17 +293,48 @@ private slots:
         TTimer* pTimer = mpHost->getTimerUnit()->getTimer(timerItem->data(0, Qt::UserRole).toInt());
         QVERIFY(pFolder && pTimer);
         QVERIFY2(!pTimer->getParent(), "the timer was already inside something before the move");
-        // Only the active-timer icons are exercised here: the inactive one is
-        // painted from an icon path that does not exist (#10401)
-        pFolder->setShouldBeActive(true);
+        // registerTimer() clears both the user state and isActive(), and
+        // rowsInserted() goes by ancestorsActive(), which reads isActive()
+        pFolder->setIsActive(true);
         pTimer->setShouldBeActive(true);
+        QVERIFY2(pFolder->isActive(), "the folder being dropped into is inactive, so the icon asserted below is not the one that would be painted");
+        QVERIFY2(pTimer->shouldBeActive(), "the timer being dropped is not set to be active, so the icon asserted below is not the one that would be painted");
+        timerItem->setIcon(0, QIcon());
 
         QSignalSpy movedSpy(tree, &TTreeWidget::itemMoved);
         moveOntoFolder(tree, timerItem, folderItem);
 
         QCOMPARE(pTimer->getParent(), pFolder);
         QCOMPARE(movedSpy.count(), 1);
-        QVERIFY2(!folderItem->child(0)->icon(0).isNull(), "the moved timer was left with no icon");
+        QVERIFY2(pTimer->ancestorsActive(), "the moved timer's folder is inactive, so the icon asserted below is not the one that would be painted");
+        const QString mismatch = iconMismatch(tree, timerItem, qsl(":/icons/tag_checkbox_checked.png"));
+        QVERIFY2(mismatch.isEmpty(), qPrintable(mismatch));
+    }
+
+    void test_droppingAnInactiveTimerOnAnInactiveFolderRepaintsIt()
+    {
+        mpEditor->slot_showTimers();
+        auto* tree = mpEditor->treeWidget_timers;
+        QTreeWidgetItem* folderItem = itemNamed(tree, qsl("qaMoveInactiveTimerFolder"));
+        QTreeWidgetItem* timerItem = itemNamed(tree, qsl("qaMoveInactiveTimer"));
+        QVERIFY(folderItem && timerItem);
+
+        TTimer* pFolder = mpHost->getTimerUnit()->getTimer(folderItem->data(0, Qt::UserRole).toInt());
+        TTimer* pTimer = mpHost->getTimerUnit()->getTimer(timerItem->data(0, Qt::UserRole).toInt());
+        QVERIFY(pFolder && pTimer);
+        QVERIFY2(!pTimer->getParent(), "the timer was already inside something before the move");
+        pFolder->setIsActive(false);
+        pTimer->setShouldBeActive(false);
+        QVERIFY2(!pFolder->isActive(), "the folder being dropped into is active, so the icon asserted below is not the one that would be painted");
+        QVERIFY2(!pTimer->shouldBeActive(), "the timer being dropped is set to be active, so the icon asserted below is not the one that would be painted");
+        timerItem->setIcon(0, QIcon());
+
+        moveOntoFolder(tree, timerItem, folderItem);
+
+        QCOMPARE(pTimer->getParent(), pFolder);
+        QVERIFY2(!pTimer->ancestorsActive(), "the moved timer's folder is active, so the icon asserted below is not the one that would be painted");
+        const QString mismatch = iconMismatch(tree, timerItem, qsl(":/icons/tag_checkbox-grey.png"));
+        QVERIFY2(mismatch.isEmpty(), qPrintable(mismatch));
     }
 
     // Outside a drag the tree is a plain view, so rearranging it must not write
@@ -316,6 +385,85 @@ private slots:
         QVERIFY2(collected.contains(deepItem), "a nested item was missed");
 
         delete folderItem->takeChild(folderItem->indexOfChild(deepItem));
+    }
+
+    // A timer folder dragged into another folder is still a folder, and used to
+    // be repainted with a plain timer's icon on the way there (#8802)
+    void test_droppingATimerFolderKeepsTheFolderIcon()
+    {
+        mpEditor->slot_showTimers();
+        auto* tree = mpEditor->treeWidget_timers;
+        QTreeWidgetItem* folderItem = itemNamed(tree, qsl("qaMoveTimerFolder"));
+        QTreeWidgetItem* movedItem = itemNamed(tree, qsl("qaMoveTimerSubFolder"));
+        QVERIFY2(folderItem && movedItem, "the timers tree is missing the folder or the folder being dropped into it");
+
+        TTimer* pFolder = mpHost->getTimerUnit()->getTimer(folderItem->data(0, Qt::UserRole).toInt());
+        TTimer* pMoved = mpHost->getTimerUnit()->getTimer(movedItem->data(0, Qt::UserRole).toInt());
+        QVERIFY2(pFolder && pMoved, "a row of the timers tree has no timer behind it");
+        QVERIFY2(pMoved->isFolder(), "the timer being dropped is not a folder, so this case cannot tell a folder icon from a timer's");
+        // rowsInserted() paints the plain folder icon only when the moved folder
+        // wants to be active and every ancestor of it is active
+        pFolder->setIsActive(true);
+        pMoved->setShouldBeActive(true);
+        QVERIFY2(pFolder->isActive(), "the folder being dropped into is inactive, so the icon asserted below is not the one that would be painted");
+        QVERIFY2(pMoved->shouldBeActive(), "the folder being dropped is not set to be active, so the icon asserted below is not the one that would be painted");
+
+        // Clear what the tree painted when it built the row, so the comparison
+        // below sees only what the drop itself painted
+        movedItem->setIcon(0, QIcon());
+
+        moveOntoFolder(tree, movedItem, folderItem);
+
+        QCOMPARE(pMoved->getParent(), pFolder);
+        QIcon folderIcon;
+        folderIcon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
+        QVERIFY2(!folderIcon.isNull(), "the folder icon this compares against is not in the resources");
+        const QSize iconSize = tree->iconSize();
+        // QIcon::pixmap() answers an invalid size with a null pixmap, and two null images compare equal
+        QVERIFY2(!iconSize.isEmpty(), "the tree has no icon size, so the comparison below would hold against any icon");
+
+        const QImage painted = movedItem->icon(0).pixmap(iconSize).toImage();
+        QIcon plainTimerIcon;
+        plainTimerIcon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+        QString whatWasPainted = qsl("some other icon");
+        if (painted.isNull()) {
+            whatWasPainted = qsl("nothing at all");
+        } else if (painted == plainTimerIcon.pixmap(iconSize).toImage()) {
+            whatWasPainted = qsl("a plain timer's icon");
+        }
+        QVERIFY2(painted == folderIcon.pixmap(iconSize).toImage(), qPrintable(qsl("the dropped timer folder was repainted with %1, not a folder icon").arg(whatWasPainted)));
+    }
+
+    // A drop landing on the tree's top row used to be refused only when the drop
+    // indicator sat above or below it; on the row itself it went through and left
+    // the item a level too far to the left (#8010)
+    void test_droppingOnTheTopRowIsRefused()
+    {
+        mpEditor->slot_showTriggers();
+        auto* tree = mpEditor->treeWidget_triggers;
+        QTreeWidgetItem* topItem = tree->topLevelItem(0);
+        QVERIFY2(topItem, "the triggers tree has no top row");
+        QTreeWidgetItem* childItem = itemNamed(tree, qsl("qaMoveTrigger"));
+        QVERIFY2(childItem, "the row the control below drops on is missing from the tree");
+
+        // A QDropEvent starts out ignored, so each drop is accepted first -
+        // otherwise a refusal would be the state it arrived in rather than the guard's doing
+        auto dropAccepted = [tree](QTreeWidgetItem* onItem) {
+            QMimeData mimeData;
+            QDropEvent dropEvent(QPointF(tree->visualItemRect(onItem).center()), Qt::MoveAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+            dropEvent.setAccepted(true);
+            tree->dropEvent(&dropEvent);
+            return dropEvent.isAccepted() && dropEvent.dropAction() != Qt::IgnoreAction;
+        };
+
+        QVERIFY2(tree->itemAt(tree->visualItemRect(topItem).center()) == topItem, "the point dropped on is not over the tree's top row");
+        const int childrenBefore = topItem->childCount();
+        QVERIFY2(!dropAccepted(topItem), "a drop on the tree's top row was accepted");
+        QCOMPARE(topItem->childCount(), childrenBefore);
+
+        // a guard that refused every drop would satisfy the case above, so pin
+        // that what it refuses is the top row rather than the tree
+        QVERIFY2(dropAccepted(childItem), "no drop reaches this tree at all, so the refusal above says nothing about the top row");
     }
 };
 

@@ -158,6 +158,8 @@ public:
     int tabIndex(const QString& tabName) const;
     void removeTab(const QString& tabName);
     void removeTab(int);
+    void markActivity(const QString& tabName, bool isLowerPriorityChange);
+    void clearActivity(int index);
     QStringList tabNames() const;
     void refreshAfterApplicationStyleChange();
 
@@ -166,12 +168,16 @@ signals:
     void tabReattachRequested(const QString& tabName, int index);
 
 private:
+    void relayoutTab(int index);
+
     // This instance of TStyle needs a pointer to a QTabBar on instantiation:
     TStyle mStyle;
 
     // Drag and drop functionality
     QPoint mDragStartPos;
-    int mDragIndex = -1;
+    // The profile, not its index: Qt reorders the bar while the tab is dragged,
+    // and a profile can open or close before the drag ends
+    QString mDragTabName;
     bool mDetachEnabled = true;
     static const int DETACH_DISTANCE_THRESHOLD = 80;
     qint64 mDragStartTime = 0;
@@ -183,6 +189,7 @@ private slots:
 protected:
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dragMoveEvent(QDragMoveEvent* event) override;
     void dropEvent(QDropEvent* event) override;

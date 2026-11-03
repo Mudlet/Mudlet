@@ -30,11 +30,14 @@
 #include <QTextEdit>
 #include <zip.h>
 
+#include <atomic>
 #include <memory>
 
 class Host;
 class QCloseEvent;
 class QGroupBox;
+template <typename T>
+class QFutureWatcher;
 class TAction;
 class TAlias;
 class TKey;
@@ -42,7 +45,7 @@ class TScript;
 class TTimer;
 class TTrigger;
 
-#if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && ((LIBZIP_VERSION_MAJOR  > 1) || (LIBZIP_VERSION_MAJOR == 1) && (LIBZIP_VERSION_MINOR >= 7))
+#if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && ((LIBZIP_VERSION_MAJOR > 1) || (LIBZIP_VERSION_MAJOR == 1) && (LIBZIP_VERSION_MINOR >= 7))
 // libzip 1.7.0 supports cancelling archiving in progress
 #define LIBZIP_SUPPORTS_CANCELLING TRUE
 #endif
@@ -86,19 +89,26 @@ public:
     void recurseActions(TAction*, QTreeWidgetItem*);
     void listTimers();
     void recurseTimers(TTimer*, QTreeWidgetItem*);
-    static void copy_directory(const QString &fromDir, const QString &toDir, bool overwrite);
-    QMap<QTreeWidgetItem*, TTrigger*> triggerMap;
-    QMap<QTreeWidgetItem*, TTrigger*> modTriggerMap;
-    QMap<QTreeWidgetItem*, TAlias*> aliasMap;
-    QMap<QTreeWidgetItem*, TAlias*> modAliasMap;
-    QMap<QTreeWidgetItem*, TScript*> scriptMap;
-    QMap<QTreeWidgetItem*, TScript*> modScriptMap;
-    QMap<QTreeWidgetItem*, TKey*> keyMap;
-    QMap<QTreeWidgetItem*, TKey*> modKeyMap;
-    QMap<QTreeWidgetItem*, TAction*> actionMap;
-    QMap<QTreeWidgetItem*, TAction*> modActionMap;
-    QMap<QTreeWidgetItem*, TTimer*> timerMap;
-    QMap<QTreeWidgetItem*, TTimer*> modTimerMap;
+    TTrigger* triggerOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
+    TTimer* timerOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
+    TAlias* aliasOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
+    TAction* actionOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
+    TScript* scriptOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
+    TKey* keyOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
+    static void copy_directory(const QString& fromDir, const QString& toDir, bool overwrite);
+    void showRenderedDescription();
+    QMap<QTreeWidgetItem*, int> triggerMap;
+    QMap<QTreeWidgetItem*, int> modTriggerMap;
+    QMap<QTreeWidgetItem*, int> aliasMap;
+    QMap<QTreeWidgetItem*, int> modAliasMap;
+    QMap<QTreeWidgetItem*, int> scriptMap;
+    QMap<QTreeWidgetItem*, int> modScriptMap;
+    QMap<QTreeWidgetItem*, int> keyMap;
+    QMap<QTreeWidgetItem*, int> modKeyMap;
+    QMap<QTreeWidgetItem*, int> actionMap;
+    QMap<QTreeWidgetItem*, int> modActionMap;
+    QMap<QTreeWidgetItem*, int> timerMap;
+    QMap<QTreeWidgetItem*, int> modTimerMap;
     // This will hold the absolute pathFileName for the XML file that will
     // contain the Mudlet items to go into the package:
     QString mXmlPathFileName;
@@ -120,8 +130,8 @@ private slots:
     void slot_openPackageLocation();
     void slot_packageChanged(int);
     void slot_updateLocationPlaceholder();
-    void slot_recountItems(QTreeWidgetItem *item);
-    void slot_rightClickOnItems(const QPoint &point);
+    void slot_recountItems(QTreeWidgetItem* item);
+    void slot_rightClickOnItems(const QPoint& point);
     void slot_cancelExport();
 
 protected:
@@ -138,9 +148,15 @@ private:
     QString getActualPath() const;
     static const int isTopFolder = 1;
     static std::pair<bool, QString> writeFileToZip(const QString& archiveFileName, const QString& fileSystemFileName, zip* archive);
-    static std::pair<bool, QString> zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageComment);
+    static std::pair<bool, QString> zipPackage(const QString& stagingDirName,
+                                               const QString& packagePathFileName,
+                                               const QString& xmlPathFileName,
+                                               const QString& packageName,
+                                               const QString& packageComment,
+                                               std::shared_ptr<std::atomic<bool>> cancelled);
     static std::pair<bool, QString> copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath);
     QFileInfo copyIconToTmp(const QString& tempPath) const;
+    void copyPackageDataToTmp(const QString& tempPath) const;
     QString normalizedHelpUrl() const;
     void writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile, const QString& packageDescription);
     void exportXml(bool& isOk,
@@ -178,10 +194,21 @@ private:
     QString mPackagePath;
     QString mPackagePathFileName;
     QString mPackageIconPath;
+    // The .mudlet folder of the installed package being re-exported, if any
+    QString mPackageDataPath;
     QString mPackageConfig;
     QString mPackageComment;
     bool mCheckChildren = true;
+    // Shared by every exporter, so that only one export runs at a time; held until the zip ends, even after a Cancel
     inline static bool mExportingPackage = false;
+    static void releaseExportLock();
+    static void recheckEveryExportButton();
+    // This dialog's export has put the busy cursor up and not yet taken it down
+    bool mExportRunning = false;
+    QFutureWatcher<std::pair<bool, QString>>* mpZipWatcher = nullptr;
+    // Read on the zip's worker thread by libzip's cancel callback
+    std::shared_ptr<std::atomic<bool>> mpZipCancelled;
+    bool mRecountPending = false;
 
 signals:
     void signal_exportLocationChanged(const QString& location);
@@ -198,6 +225,16 @@ public:
     ~dlgPackageExporterDescription();
     bool canInsertFromMimeData(const QMimeData* source) const override;
     void insertFromMimeData(const QMimeData* source) override;
+
+protected:
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dragLeaveEvent(QDragLeaveEvent* event) override;
+    void dropEvent(QDropEvent* event) override;
+
+private:
+    void restoreRenderedDescription();
+
+    bool mShowingSourceForDrop = false;
 };
 
 #endif // MUDLET_DLGPACKAGEEXPORTER_H

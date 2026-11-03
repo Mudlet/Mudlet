@@ -25,6 +25,7 @@
  * Run with: ctest -R ConnectionDialogFocusTest -V
  */
 
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
@@ -72,7 +73,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QVERIFY(mudlet::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
+        QVERIFY(MudletApp::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -84,7 +85,7 @@ private slots:
                 []() {
                     return mudlet::self()->mpConnectionDialog && mudlet::self()->mpConnectionDialog->isVisible();
                 },
-                5000));
+                5s));
     }
 
     void cleanupTestCase()
@@ -105,7 +106,7 @@ private slots:
                 [dialog]() {
                     return QApplication::focusWidget() == dialog->listWidget_profiles;
                 },
-                5000);
+                5s);
 
         QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->listWidget_profiles));
     }
