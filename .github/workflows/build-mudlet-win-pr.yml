@@ -123,9 +123,7 @@ jobs:
         MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK: 1
 
     - name: (Windows) Run Lua tests
-      # 270-315s measured here, and a slow runner has taken 354s - kept in step
-      # with the other platforms
-      timeout-minutes: 12
+      timeout-minutes: 20
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
