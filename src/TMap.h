@@ -57,6 +57,7 @@
 class dlgMapper;
 class TMapViewFrontend;
 class TMapViewsFrontend;
+class TNullMapViews;
 class Host;
 #if defined(INCLUDE_3DMAPPER)
 class QOpenGLWidget;
@@ -158,8 +159,8 @@ public:
     bool setRoomCoordinates(int id, int x, int y, int z);
     // After a change to the map: also counts its revision up
     void updateArea(int areaId);
-    // For when only the player's room changed, which views read afresh anyway: unlike updateArea(), not taken
-    // as a change to how the area looks, so a view need not remake what it keeps of it
+    // For when only what views read afresh on every paint changed, such as the player's room: unlike updateArea(),
+    // not taken as a change to how the area looks, so a view need not remake what it keeps of it
     void updatePlayerArea(int areaId);
     // For updateMap() and a new speedwalk: what a view keeps of the area's look is remade, but the map's revision
     // stays, as the rooms and exits themselves did not change
@@ -302,6 +303,11 @@ public:
     static constexpr qreal scmMinXYZoom = 3.0;
     // Why a script's 2D zoom can't be used, or empty when it can
     static QString zoomError(qreal zoom);
+    // What an image export to the file is written as, from its suffix
+    static QString exportImageFormat(const QString& filePath);
+    // Why an image export of the area would be refused before it is drawn, or empty when it would not;
+    // for every z level, levelExports takes each level and the file it is written to
+    QString areaExportProblem(int areaId, const QString& filePath, qreal zoom, bool exportAllZLevels, QList<std::pair<int, QString>>& levelExports) const;
     // Which of the symbols in use would be drawn as the replacement character
     // if the given font were the symbol font:
     QStringList symbolsNotInFont(const QFont&);
@@ -326,8 +332,10 @@ public:
     // underlying flag (and by setting a breakpoint on setUnsave() we can
     // determine which bit of code is responsible for changing the flag!)
     void setUnsaved(const char*);
+    // For a change no cache is made from, so nothing is rebuilt for it; a view that may show it still needs asking to repaint
+    void setUnsavedKeepingRevisions(const char*);
     void resetUnsaved() { mUnsavedMap = false; }
-    // Counts up on every change to the map's contents or to the colors it is drawn in, so that a view can tell
+    // Counts up on every change to the map's contents (bar setUnsavedKeepingRevisions() ones) or to the colors it is drawn in, so that a view can tell
     // whether what it worked out from them last frame still holds
     quint64 revision() const { return mRevision; }
     bool isUnsaved() const { return mUnsavedMap; }
@@ -356,8 +364,8 @@ public:
     TMapViewManager* getViewManager() { return mpViewManager; }
     // Defined in TMapViewManager.cpp, which can see that TMapViewManager is a TMapViewsFrontend.
     void setViewManager(TMapViewManager* pViewManager);
-    // mpViewManager as core code drives it. Never null: with no manager, as in a profile with no
-    // console view, a frontend that has no views and can make none.
+    // mpViewManager as core code drives it. Never null: with no manager, mpNullViews, or in the GUI a
+    // frontend that has no views and can make none.
     TMapViewsFrontend* mapViewsFrontend() const;
 
     // Was a single int mRoomId but that breaks things when maps are
@@ -413,12 +421,17 @@ public:
     QMap<QString, QStringList> mUserActions;
     // unique name, List:parent name ("" if null), display name
     QMap<QString, QStringList> mUserMenus;
+    // setMapMenuPriority() values by unique name, shared by a menu and an event of the same name; session-only
+    // like the above, and kept when the entry is removed so that re-adding it puts it back in place.
+    QHash<QString, int> mUserMenuPriorities;
     // Built-in context menu items hidden with hideMapMenuItem(); session-only like the above.
     QSet<QString> mHiddenMenuItems;
     static const QStringList& builtInMenuItemNames();
     bool menuItemShown(const QString& itemName) const;
+    // The area of the player's room, which a map view opened on no area shows
+    std::optional<int> playerAreaId() const;
 
-    typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
+    typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
     typedef boost::property_map<mygraph_t, boost::edge_weight_t>::type WeightMap;
     typedef mygraph_t::vertex_descriptor vertex;
     typedef mygraph_t::edge_descriptor edge_descriptor;
@@ -526,6 +539,8 @@ private:
 
     // The same object as mpViewManager, set with it by setViewManager().
     TMapViewsFrontend* mpViewsFrontend = nullptr;
+    // The secondary views of a profile made with no main window, else null. A child, so Qt deletes it.
+    TNullMapViews* mpNullViews = nullptr;
     QPointer<dlgMapper> mpMapper;
     // The same object as mpMapper, set with it by setMapper(); read only while mpMapViewObject is set.
     TMapViewFrontend* mpMapViewFrontend = nullptr;

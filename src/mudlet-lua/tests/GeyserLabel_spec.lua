@@ -1,3 +1,24 @@
+-- deleteLabel() leaves the widget to a deferred delete that cannot run until the
+-- whole suite is over, so its callbacks, and the labels they hold, are let go here.
+-- The setters are taken before any spec spies on them.
+local realDeleteLabel
+setup(function()
+  local globals = package.loaded._G
+  realDeleteLabel = globals.deleteLabel
+  local clearers = {globals.setLabelClickCallback, globals.setLabelDoubleClickCallback, globals.setLabelReleaseCallback,
+                    globals.setLabelMoveCallback, globals.setLabelWheelCallback, globals.setLabelOnEnter, globals.setLabelOnLeave}
+  globals.deleteLabel = function(name, ...)
+    for _, clear in ipairs(clearers) do
+      pcall(clear, name, nil)
+    end
+    return realDeleteLabel(name, ...)
+  end
+end)
+
+teardown(function()
+  package.loaded._G.deleteLabel = realDeleteLabel
+end)
+
 describe("Tests functionality of Geyser.Label", function()
   describe('Tests that decho/hecho/cecho preserve font size', function()
     local label
@@ -22,6 +43,12 @@ describe("Tests functionality of Geyser.Label", function()
       _G.echo:revert()
       if label then
         label:hide()
+      end
+    end)
+
+    teardown(function()
+      if label then
+        label:delete()
       end
     end)
 
@@ -357,7 +384,7 @@ describe("Tests functionality of Geyser.Label", function()
       end)
 
       teardown(function()
-        label:hide()
+        label:delete()
       end)
 
       -- Geyser.Label:new always echoes an empty rich-text div, so the hint has to
@@ -3186,6 +3213,74 @@ describe("Tests Geyser.Label right click menus", function()
       assert.are.equal("R", menuItem("First").flyDir)
     end)
 
+    describe("with a submenu", function()
+      local mainWidth
+
+      before_each(function()
+        mainWidth = getMainWindowSize()
+        -- wide enough for the first level beside the click, but not the second as well
+        label = Geyser.Label:new({name = "glmSubHost", x = mainWidth - 200, y = 10, width = 190, height = 30})
+        label:createRightClickMenu({MenuWidth = 140, MenuItems = {"First", {"Sub1", "Sub2"}, "Second"}})
+      end)
+
+      local function openSubmenu()
+        doNestEnter(menuItem("First"))
+        return menuItem("First.Sub1"), menuItem("First.Sub2")
+      end
+
+      it("flies out to the left when only the first level fits on the right", function()
+        label:onRightClick(mouseEvent("RightButton", 1, 1))
+        assert.are.equal("R", menuItem("First").flyDir)
+        local sub1, sub2 = openSubmenu()
+        assert.is_true(windowVisible(sub1.name))
+        assert.are.equal("L", sub1.flyDir)
+        assert.are.equal("L", sub2.flyDir)
+        assert.are.equal(menuItem("First"):get_x() - sub1:get_width(), sub1:get_x())
+        assert.is_true(sub1:get_x() >= 0)
+      end)
+
+      it("flies back out to the right once there is room for it", function()
+        label:onRightClick(mouseEvent("RightButton", 1, 1))
+        openSubmenu()
+        label:move(10, 10)
+        label:onRightClick(mouseEvent("RightButton", 1, 1))
+        local sub1 = openSubmenu()
+        assert.are.equal("R", sub1.flyDir)
+        assert.are.equal(menuItem("First"):get_x() + menuItem("First"):get_width(), sub1:get_x())
+      end)
+
+      it("follows the first level out to the left", function()
+        label:move(mainWidth - 20, 10)
+        label:onRightClick(mouseEvent("RightButton", 1, 1))
+        assert.are.equal("L", menuItem("First").flyDir)
+        assert.are.equal("L", openSubmenu().flyDir)
+      end)
+
+      it("takes the scroll buttons of a submenu too tall to show along with its rows", function()
+        local _, mainHeight = getMainWindowSize()
+        local subItems = {}
+        for i = 1, math.floor(mainHeight / 25) + 3 do
+          subItems[i] = "Sub" .. i
+        end
+        label = Geyser.Label:new({name = "glmTallSubHost", x = 10, y = 10, width = 190, height = 30})
+        label:createRightClickMenu({MenuWidth = 140, MenuItems = {"First", subItems}})
+        label:onRightClick(mouseEvent("RightButton", 1, 1))
+        openSubmenu()
+        local scrolls = Geyser.Label.scrollV[menuItem("First")]
+        assert.is_not_nil(scrolls, "the submenu fitted, so it has no scroll buttons")
+        assert.are.equal("R", scrolls[1].flyDir)
+
+        label:move(mainWidth - 200, 10)
+        label:onRightClick(mouseEvent("RightButton", 1, 1))
+        local sub1 = openSubmenu()
+        assert.are.equal("L", sub1.flyDir)
+        for _, scroll in ipairs(scrolls) do
+          assert.are.equal("L", scroll.flyDir)
+          assert.are.equal(sub1:get_x(), scroll:get_x())
+        end
+      end)
+    end)
+
     -- unlike clicking a nestable label, which puts its nest away again, a
     -- second right click moves the menu to where the second click was: it
     -- closes every level before opening, so the nest it then opens was shut
@@ -3260,7 +3355,12 @@ end)
 describe("Tests a Geyser.Label right click menu in a user window deleted behind Geyser's back", function()
   it("does not ask getUserWindowSize about the window that is gone", function()
     local userWindow = Geyser.UserWindow:new({name = "glGoneUW", x = 10, y = 20, width = 200, height = 150})
+    local sizeSpy
+    -- one finally() only: a second one replaces the first
     finally(function()
+      if sizeSpy then
+        sizeSpy:revert()
+      end
       if Geyser.Label.closeAllTimer then
         killTimer(Geyser.Label.closeAllTimer)
         Geyser.Label.closeAllTimer = nil
@@ -3270,8 +3370,7 @@ describe("Tests a Geyser.Label right click menu in a user window deleted behind 
     local label = Geyser.Label:new({name = "glGoneUWLabel", x = 0, y = 0, width = 50, height = 20}, userWindow)
     label:createRightClickMenu({MenuItems = {"First"}})
     deleteMiniConsole("glGoneUW")
-    local sizeSpy = spy.on(_G, "getUserWindowSize")
-    finally(function() sizeSpy:revert() end)
+    sizeSpy = spy.on(_G, "getUserWindowSize")
     label:onRightClick({button = "RightButton", buttons = {"RightButton"}, x = 1, y = 1, globalX = 1, globalY = 1})
     assert.spy(sizeSpy).was_not_called()
   end)

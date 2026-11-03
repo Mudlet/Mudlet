@@ -232,6 +232,13 @@ local function waitForProfileSaveToPass()
   return not contains(err, "still in progress")
 end
 
+-- The save an uninstall queues starts from a zero-timer, so a moment's pumping
+-- starts it and waitForProfileSaveToPass() then sees it through.
+local function runTheQueuedProfileSave()
+  pumpEvents(10)
+  return waitForProfileSaveToPass()
+end
+
 -- Hands back what the install answered, for the specs that are about the
 -- answer itself: true, and - when the package has something to own up to - the
 -- reason with it. An install that was already there has no answer of its own to
@@ -277,7 +284,7 @@ local function removeFixturePackage(name)
                    "could not uninstall the fixture package " .. name)
     -- let the profile save that uninstallPackage() queues run now, rather than
     -- during Mudlet's shutdown
-    pumpEvents(200)
+    runTheQueuedProfileSave()
   end
   assert.is_false(packageInstalled(name), "the fixture package " .. name .. " reinstalled itself")
 end
@@ -300,7 +307,7 @@ local function removeFixtureModule(name, archiveName)
     assert.is_true(waitForProfileSaveToPass(), "a profile save never finished, so this uninstall would be refused")
     assert.is_true(waitUntil(function() return uninstallModule(name) == true end, 5000),
                    "could not uninstall the fixture module " .. name)
-    pumpEvents(200)
+    runTheQueuedProfileSave()
   end
   assert.is_false(moduleInstalled(name), "the fixture module " .. name .. " reinstalled itself")
   os.remove(scratchDirectory .. "/" .. (archiveName or name) .. ".mpackage")
@@ -4901,6 +4908,12 @@ describe("Tests installing an archive named after one of the profile's own folde
       pending("builds its archive with the zip command")
       return
     end
+    -- getMousePosition() has no answer only when there is no main window, which puts up no dialog;
+    -- the other install would then start in whichever spec runs next
+    if not getMousePosition() then
+      pending("there is no main window to put up an unpacking dialog")
+      return
+    end
     local renamed = "mudlet-spec-reentrant"
     local big = scratchDirectory .. "/big"
     local small = scratchDirectory .. "/small"
@@ -6747,6 +6760,30 @@ describe("Tests uninstalling the gui-drop package", function()
     return timers
   end
 
+  -- the starter UI builds its sections hidden and shows them once their contents are in
+  it("leaves a container shown that was shown again right after something was added to it while hidden", function()
+    if not packageInstalled(name) then
+      pending("gui-drop is not installed in this profile")
+      return
+    end
+    local container = Adjustable.Container:new({name = "packageSpecShownAgain", x = 0, y = 0, width = 50, height = 50, autoLoad = false, autoSave = false})
+    defer(function()
+      container:delete()
+      Adjustable.Container.all[container.name] = nil
+      local index = table.index_of(Adjustable.Container.all_windows, container.name)
+      if index then
+        table.remove(Adjustable.Container.all_windows, index)
+      end
+    end)
+    container:hide()
+    Geyser.Label:new({name = "packageSpecShownAgainChild", x = 0, y = 0, width = 10, height = 10}, container)
+    container:show()
+
+    pumpEvents(100)
+
+    assert.is_false(container.hidden)
+  end)
+
   it("stops taking dropped images but keeps the ones already dropped working", function()
     if not packageInstalled(name) then
       pending("gui-drop is not installed in this profile")
@@ -7616,13 +7653,15 @@ describe("Tests the game loader packages", function()
   end
 
   -- Raises sysDownloadDone for the file, and answers a check for whether the
-  -- installs the loader deferred from it have run, and how many it deferred
+  -- installs the loader deferred from it have run, and how many it deferred.
+  -- The loaders defer their install by a second or two; these specs care that it
+  -- is deferred, not for how long, so it is cut to 0.1s here.
   local function downloadDone(path)
     local pending = 0
     local realTempTimer = _G.tempTimer
     _G.tempTimer = function(delay, code, ...)
       pending = pending + 1
-      return realTempTimer(delay, function()
+      return realTempTimer(math.min(delay, 0.1), function()
         local ok, err = pcall(type(code) == "string" and assert(loadstring(code)) or code)
         pending = pending - 1
         assert(ok, err)
@@ -7902,7 +7941,7 @@ describe("Tests the game loader packages", function()
       copyFile(fixtureDirectory .. "/mudlet-spec-notazip.mpackage", path)
 
       local mark = getLastLineNumber("main")
-      raiseEvent("sysDownloadDone", path)
+      downloadDone(path)
       assert.is_true(waitUntil(function() return containsWrapped(textFrom(mark), loader.installFailed) end, 10000),
                      "the failed install was not reported: " .. textFrom(mark))
 
@@ -7942,6 +7981,6 @@ describe("The package specs clean up after themselves", function()
 
     -- Let the profile save that the last uninstall queued run while the profile
     -- is still up, rather than leaving it to be stopped by the profile close.
-    pumpEvents(1500)
+    runTheQueuedProfileSave()
   end)
 end)

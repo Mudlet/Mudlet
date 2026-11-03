@@ -126,6 +126,63 @@ describe("Console edges", function()
     end)
   end)
 
+  describe("editing a game line sent in one colour", function()
+    -- The buffer keeps such a line as one format shared by every character
+    local function colourAt(column)
+      selectSection(column, 1)
+      local colour = {getFgColor()}
+      deselect()
+      return colour
+    end
+
+    local function inTrigger(edit)
+      local result = {}
+      local id = tempRegexTrigger("^ceUniform ", function()
+        result.original = colourAt(0)
+        edit()
+        result.line = getCurrentLine()
+        result.colours = {}
+        for column = 0, #result.line - 1 do
+          result.colours[column] = colourAt(column)
+        end
+      end, 1)
+      finally(function()
+        killTrigger(id)
+        resetFormat()
+      end)
+      feedTriggers("\n\27[32mceUniform alpha beta gamma\27[0m\n")
+      return result
+    end
+
+    it("restyles only the selected word", function()
+      local result = inTrigger(function()
+        selectString("beta", 1)
+        setFgColor(1, 2, 3)
+        deselect()
+      end)
+      assert.are.equal("ceUniform alpha beta gamma", result.line)
+      for column = 0, #result.line - 1 do
+        local inBeta = column >= 16 and column < 20
+        assert.are.same(inBeta and {1, 2, 3} or result.original, result.colours[column], "column " .. column)
+      end
+    end)
+
+    it("keeps the colour of text inserted into it", function()
+      local result = inTrigger(function()
+        deselect()
+        setFgColor(1, 2, 3)
+        moveCursor(10, getLineNumber())
+        insertText("XX")
+        resetFormat()
+      end)
+      assert.are.equal("ceUniform XXalpha beta gamma", result.line)
+      for column = 0, #result.line - 1 do
+        local inserted = column == 10 or column == 11
+        assert.are.same(inserted and {1, 2, 3} or result.original, result.colours[column], "column " .. column)
+      end
+    end)
+  end)
+
   describe("setTextFormat() on the main window", function()
     it("sets the format the main console echoes with", function()
       finally(function()

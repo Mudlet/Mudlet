@@ -47,6 +47,7 @@
 #include "MudletApp.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
 #include "TDetachedWindow.h"
@@ -345,6 +346,13 @@ private slots:
                          2000ms),
                  "the detached window never became the active window, so its window shortcuts could not be reached");
 
+        // As a click into its input line does: closing the profile the main
+        // window's menus act on is what has to hand them to the one left there
+        Host* pSecondHost = HostManager::self()->getHost(mSecondHostname);
+        QVERIFY(pSecondHost);
+        mudlet::self()->activateProfile(pSecondHost);
+        QVERIFY2(mudlet::self()->getActiveHost() == pSecondHost, "the detached profile did not become the active one");
+
         sAmbiguityWarningSeen = false;
         sPreviousMessageHandler = qInstallMessageHandler(ambiguityWatchingMessageHandler);
         QTest::keyClick(mpDetachedWindow.data(), combination.key(), combination.keyboardModifiers());
@@ -359,6 +367,17 @@ private slots:
                          },
                          2000ms),
                  qPrintable(qsl("%1 left the detached profile open").arg(pSequence->toString())));
+
+        // The window goes before the profile, which a zero-timer closes after it
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !HostManager::self()->getHost(mSecondHostname);
+                         },
+                         2000ms),
+                 "the detached profile's window closed but the profile itself never did");
+        Host* pActiveHost = mudlet::self()->getActiveHost();
+        QVERIFY2(pActiveHost && pActiveHost->getName() == mFirstHostname, "the profile left in the main window did not become the active one");
+        QVERIFY2(mudlet::self()->dactionScriptEditor->isEnabled(), "the main window's profile menu items stayed disabled for the profile left in it");
     }
 
 private:

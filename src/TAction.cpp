@@ -64,12 +64,8 @@ TAction::~TAction()
     if (mpHost) {
         mpHost->getActionUnit()->unregisterAction(this);
 
-        if (isTemporary()) {
-            if (mScript.isEmpty()) {
-                mpHost->mLuaInterpreter.delete_luafunction(this);
-            } else {
-                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
-            }
+        if (isTemporary() && !mScript.isEmpty()) {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
         }
     }
 

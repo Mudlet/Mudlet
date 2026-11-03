@@ -199,6 +199,28 @@ describe("Mudlet object API edges", function()
       end
     end)
 
+    it("tempComplexRegexTrigger can be killed by the ID it returned", function()
+      local code = [[_G.ObjSpec.count = _G.ObjSpec.count + 1]]
+      tempComplexRegexTrigger("objSpecComplexKillById", "^objSpecComplexKillById one$", code, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+      local id = tempComplexRegexTrigger("objSpecComplexKillById", "^objSpecComplexKillById two$", code, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+      finally(function() killTrigger("objSpecComplexKillById") end)
+
+      assert.is_true(killTrigger(id))
+      assert.is_false(killTrigger(id), "a second kill should find nothing left to kill")
+      feedTriggers("\nobjSpecComplexKillById one\n")
+      feedTriggers("\nobjSpecComplexKillById two\n")
+      assert.equals(0, _G.ObjSpec.count)
+    end)
+
+    it("killTrigger leaves a permanent trigger alone when given its ID", function()
+      local id = permRegexTrigger("objSpecPermKillById", "", {"^objSpecPermKillById$"}, [[_G.ObjSpec.count = _G.ObjSpec.count + 1]])
+      finally(function() disableTrigger("objSpecPermKillById") end)
+
+      assert.is_false(killTrigger(id))
+      feedTriggers("\nobjSpecPermKillById\n")
+      assert.equals(1, _G.ObjSpec.count)
+    end)
+
     -- tempColorTrigger's legacy 1-16 numbering runs light/dark pairs from
     -- black upwards; each is checked here against the SGR background code of
     -- the ANSI colour it stands for, and against its pair, which must not match.
@@ -233,6 +255,62 @@ describe("Mudlet object API edges", function()
       assert.equals(0, _G.ObjSpec.count)
       feedTriggers("\n\27[0mobjSpecFgDefault\n")
       assert.equals(1, _G.ObjSpec.count)
+    end)
+  end)
+
+  describe("temporary items made with a function", function()
+    -- whether a function, handed to make and its item killed, is still held anywhere
+    local function keptAfter(make)
+      local weak = setmetatable({}, {__mode = "k"})
+      local function handOver()
+        local fn = function() end
+        weak[fn] = true
+        make(fn)
+      end
+      handOver()
+      -- killed items are only destroyed by the next line's cleanup
+      feedTriggers("\n")
+      collectgarbage("collect")
+      collectgarbage("collect")
+      return next(weak) ~= nil
+    end
+
+    -- luaL_unref()'d registry slots form a list headed at index 0; a slot
+    -- released twice is linked in again, so two later functions would share it
+    local function assertFreeListWhole()
+      local registry = debug.getregistry()
+      local seen = {}
+      local ref = registry[0]
+      while type(ref) == "number" and ref ~= 0 do
+        assert.is_nil(seen[ref], ("registry slot %d is on the free list twice"):format(ref))
+        seen[ref] = true
+        ref = registry[ref]
+      end
+    end
+
+    -- not tempTimer: specs run inside a timer, and killed timers are freed only once no timer script runs
+    it("let go of their function once killed", function()
+      local makers = {
+        tempTrigger = function(fn) killTrigger(tempTrigger("objSpecNeverSeen", fn)) end,
+        tempComplexRegexTrigger = function(fn)
+          tempComplexRegexTrigger("objSpecComplex", "^objSpecNeverSeen$", fn, 0, 0, 0, 0, 0, "blue", "transparent", 0, 0, 0)
+          killTrigger("objSpecComplex")
+        end,
+        tempAlias = function(fn) killAlias(tempAlias("^objSpecNeverTyped$", fn)) end,
+        tempKey = function(fn) killKey(tempKey(mudlet.keymodifier.Control, mudlet.key.F11, fn)) end,
+      }
+      for name, make in pairs(makers) do
+        assert.is_false(keptAfter(make), name .. " kept its function")
+      end
+      assertFreeListWhole()
+    end)
+
+    it("let go of their function once a trigger expires", function()
+      assert.is_false(keptAfter(function(fn)
+        tempTrigger("objSpecExpiring", fn, 1)
+        feedTriggers("objSpecExpiring\n")
+      end))
+      assertFreeListWhole()
     end)
   end)
 

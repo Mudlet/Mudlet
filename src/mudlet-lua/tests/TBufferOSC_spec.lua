@@ -193,6 +193,34 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("OSCLINK1(click me)OSCLINK1", findRecentLine("OSCLINK1"))
     end)
 
+    -- A link written concealed shows which text joined it. Only a link start over
+    -- the length cap ends the open link: a preset: opens none, and the rest are not OSC 8.
+    describe("an OSC sequence too long to decode inside an open link", function()
+      local concealed = "\027]8;;send:look?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\"
+      local long = string.rep("z", 5000)
+      after_each(function() feedTriggers("\027]8;;\027\\\n") end)
+
+      it("should end the open link when it starts a link", function()
+        assert.is_true(feedTriggers("OSCLONG1(" .. concealed .. "A\027]8;;send:big?x=" .. long .. "\027\\more\027]8;;\027\\)OSCLONG1\n"))
+        assert.equals("OSCLONG1( more)OSCLONG1", findRecentLine("OSCLONG1"))
+      end)
+
+      it("should end the open link when its parameters run past the cap", function()
+        assert.is_true(feedTriggers("OSCLONG4(" .. concealed .. "A\027]8;id=" .. long .. ";send:big\027\\more\027]8;;\027\\)OSCLONG4\n"))
+        assert.equals("OSCLONG4( more)OSCLONG4", findRecentLine("OSCLONG4"))
+      end)
+
+      it("should leave the open link alone when it is a preset", function()
+        assert.is_true(feedTriggers("OSCLONG2(" .. concealed .. "A\027]8;;preset:big?x=" .. long .. "\027\\more\027]8;;\027\\)OSCLONG2\n"))
+        assert.equals("OSCLONG2(     )OSCLONG2", findRecentLine("OSCLONG2"))
+      end)
+
+      it("should leave the open link alone when it is not OSC 8", function()
+        assert.is_true(feedTriggers("OSCLONG3(" .. concealed .. "A\027]2;" .. long .. "\027\\more\027]8;;\027\\)OSCLONG3\n"))
+        assert.equals("OSCLONG3(     )OSCLONG3", findRecentLine("OSCLONG3"))
+      end)
+    end)
+
     it("should still consume OSC color sequences", function()
       assert.is_true(feedTriggers("OSCCOLOR1(\027]P1ff0000\027\\)OSCCOLOR1\n"))
       assert.equals("OSCCOLOR1()OSCCOLOR1", findRecentLine("OSCCOLOR1"))
@@ -651,7 +679,7 @@ describe("Tests TBuffer OSC sequence handling", function()
   -- to. Paths that do not reach appendLine() print the phrase as ordinary text:
   -- anything the game sends, and an echo from inside a trigger. The injection
   -- is debounced to a second of wall clock and the timestamp it keeps lives on
-  -- the main buffer, so each spec here waits that window out before it starts.
+  -- the main buffer, so a spec that can follow another's injection waits it out.
   -- The phrase is built rather than written out below, and kept out of the
   -- describe and it names, so busted's own report cannot set it off.
   describe("Tests the OSC 8 documentation helper phrase", function()
@@ -704,10 +732,16 @@ describe("Tests TBuffer OSC sequence handling", function()
         pending("waiting out the injection debounce needs MUDLET_TEST_MODE")
         return
       end
-      pumpEvents(1100)
       echo("OSCDOCSMARKA\n")
       echo("OSCDOCS1 " .. phrase .. " OSCDOCS2")
       local injected = mainSinceMarker("OSCDOCSMARKA")
+      if injected and not someLineHolds(injected, "OSC 8 Hyperlink Examples") then
+        -- an earlier spec's injection is still inside the debounce window
+        pumpEvents(1100)
+        echo("OSCDOCSMARKA\n")
+        echo("OSCDOCS1 " .. phrase .. " OSCDOCS2")
+        injected = mainSinceMarker("OSCDOCSMARKA")
+      end
       assert.is_truthy(injected, "the marker line the examples follow is gone")
       assert.is_true(#injected > 10, "only " .. #injected .. " lines were injected")
       assert.is_true(someLineHolds(injected, "OSC 8 Hyperlink Examples"), table.concat(injected, "\n"))
@@ -769,6 +803,15 @@ describe("Tests TBuffer OSC sequence handling", function()
       return nil
     end
 
+    local function waitForLine(lineNumber, expected)
+      for _ = 1, 60 do
+        if getLines("main", lineNumber, lineNumber + 1)[1] == expected then
+          return
+        end
+        pumpEvents(50)
+      end
+    end
+
     -- the buffer size is global state, so restore it even when the body throws or
     -- a failure here fails an unrelated spec later in the run
     local function withSmallBuffer(body)
@@ -792,7 +835,7 @@ describe("Tests TBuffer OSC sequence handling", function()
       -- concealment keeps the character count identical so buffer indices stay
       -- valid, which is why the text is replaced space for space
       assert.equals("OSCREVEAL1(          )OSCREVEAL1", concealed)
-      pumpEvents(700)
+      waitForLine(lineNumber, "OSCREVEAL1(HIDDENWORD)OSCREVEAL1")
       assert.equals("OSCREVEAL1(HIDDENWORD)OSCREVEAL1", getLines("main", lineNumber, lineNumber + 1)[1])
     end)
 
@@ -812,7 +855,7 @@ describe("Tests TBuffer OSC sequence handling", function()
         assert.is_truthy(moved, "the link's line scrolled out entirely, so this test proves nothing")
         assert.is_not.equal(before, moved, "the buffer never trimmed, so this test proves nothing")
 
-        pumpEvents(700)
+        waitForLine(moved, "OSCTRIM1(HIDDENWORD)OSCTRIM1")
         assert.equals("OSCTRIM1(HIDDENWORD)OSCTRIM1", getLines("main", moved, moved + 1)[1])
       end)
     end)
@@ -828,7 +871,7 @@ describe("Tests TBuffer OSC sequence handling", function()
         -- where performReveal() no-ops instead of corrupting
         clearWindow()
         for i = 1, 3 do echo("oscgoneseed " .. i .. "\n") end
-        local link = "\027]8;;send:osc8gone?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\HIDDENWORD\027]8;;\027\\"
+        local link = "\027]8;;send:osc8gone?config={\"visibility\":{\"action\":\"reveal\",\"delay\":250}}\027\\HIDDENWORD\027]8;;\027\\"
         assert.is_true(feedTriggers("OSCGONE1(" .. link .. ")OSCGONE1\n"))
         local registeredAt = findLine("OSCGONE1")
         assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
@@ -844,7 +887,7 @@ describe("Tests TBuffer OSC sequence handling", function()
           snapshot[lineNumber] = getLines("main", lineNumber, lineNumber + 1)[1]
         end
 
-        pumpEvents(3500)
+        pumpEvents(700)
         for lineNumber = 0, lastLine do
           assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
             "revealing a link whose line was trimmed away rewrote line " .. lineNumber)
@@ -863,7 +906,7 @@ describe("Tests TBuffer OSC sequence handling", function()
       withSmallBuffer(function()
         clearWindow()
         for i = 1, 3 do echo("oscdelseed " .. i .. "\n") end
-        local link = "\027]8;;send:osc8del?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\HIDDENWORD\027]8;;\027\\"
+        local link = "\027]8;;send:osc8del?config={\"visibility\":{\"action\":\"reveal\",\"delay\":250}}\027\\HIDDENWORD\027]8;;\027\\"
         assert.is_true(feedTriggers("OSCDEL1(" .. link .. ")OSCDEL1\n"))
         local registeredAt, concealed = findLine("OSCDEL1")
         assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
@@ -886,7 +929,8 @@ describe("Tests TBuffer OSC sequence handling", function()
           snapshot[lineNumber] = getLines("main", lineNumber, lineNumber + 1)[1]
         end
 
-        pumpEvents(3500)
+        assert.equals("OSCDEL1(          )OSCDEL1", snapshot[movedTo], "the link revealed before its line had moved")
+        waitForLine(movedTo, "OSCDEL1(HIDDENWORD)OSCDEL1")
         -- the link's own line is the one that should change: it reveals where the
         -- text actually sits now, and every other line is left alone
         assert.equals("OSCDEL1(HIDDENWORD)OSCDEL1", getLines("main", movedTo, movedTo + 1)[1],
@@ -911,7 +955,7 @@ describe("Tests TBuffer OSC sequence handling", function()
       withSmallBuffer(function()
         clearWindow()
         for i = 1, 3 do echo("oscclrseed " .. i .. "\n") end
-        local link = "\027]8;;send:osc8clr?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\HIDDENWORD\027]8;;\027\\"
+        local link = "\027]8;;send:osc8clr?config={\"visibility\":{\"action\":\"reveal\",\"delay\":250}}\027\\HIDDENWORD\027]8;;\027\\"
         assert.is_true(feedTriggers("OSCCLR1(" .. link .. ")OSCCLR1\n"))
         local registeredAt, concealed = findLine("OSCCLR1")
         assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
@@ -932,7 +976,7 @@ describe("Tests TBuffer OSC sequence handling", function()
           snapshot[lineNumber] = getLines("main", lineNumber, lineNumber + 1)[1]
         end
 
-        pumpEvents(3500)
+        pumpEvents(700)
         for lineNumber = 0, lastLine do
           assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
             "a link tracked across clearWindow() rewrote line " .. lineNumber)

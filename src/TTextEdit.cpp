@@ -132,6 +132,14 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     mpPaintPacer = new QTimer(this);
     mpPaintPacer->setSingleShot(true);
     connect(mpPaintPacer, &QTimer::timeout, this, [this]() {
+        // Armed at the normal pace by the line that began a flood, so stretched to the flood pace -
+        // once and by no more than the paces differ, as a paint under an overlay restarts mSincePaint.
+        const qint64 sincePaint = mSincePaint.isValid() ? mSincePaint.elapsed() : csmFloodPaintPaceMs;
+        if (!mPaintPacerStretched && !mPendingPaintRegion.isEmpty() && sincePaint < csmFloodPaintPaceMs && paintPaceMs() == csmFloodPaintPaceMs) {
+            mPaintPacerStretched = true;
+            mpPaintPacer->start(std::min(csmFloodPaintPaceMs - csmPaintPaceMs, csmFloodPaintPaceMs - static_cast<int>(sincePaint)));
+            return;
+        }
         applyPendingScrollBarUpdate();
         if (!mPendingPaintRegion.isEmpty()) {
             update(mPendingPaintRegion);
@@ -176,10 +184,12 @@ void TTextEdit::scheduleUpdate(const QRect& rect)
     }
     const QRect area = rect.isValid() ? rect : QWidget::rect();
     mPendingPaintRegion += area;
+    const int pace = paintPaceMs();
+    const qint64 sincePaint = mSincePaint.isValid() ? mSincePaint.elapsed() : pace;
 
     // Nothing painted recently, so this frame's window is open: Qt still merges
     // whatever else arrives before the event loop gets around to painting.
-    if (!mSincePaint.isValid() || mSincePaint.elapsed() >= csmPaintPaceMs) {
+    if (sincePaint >= pace) {
         applyPendingScrollBarUpdate();
         update(mPendingPaintRegion);
         mWholePaneRequested = area.contains(QWidget::rect());
@@ -188,8 +198,16 @@ void TTextEdit::scheduleUpdate(const QRect& rect)
     }
 
     if (!mpPaintPacer->isActive()) {
-        mpPaintPacer->start(csmPaintPaceMs - static_cast<int>(mSincePaint.elapsed()));
+        mPaintPacerStretched = pace == csmFloodPaintPaceMs;
+        mpPaintPacer->start(pace - static_cast<int>(sincePaint));
     }
+}
+
+// Nobody reads lines that scroll past between two frames, and a frame costs as much as
+// taking in hundreds of them, so a flood gets fewer frames and finishes sooner.
+int TTextEdit::paintPaceMs() const
+{
+    return mpBuffer->linesAddedTotal() - mLinesAddedAtPaint > mScreenHeight ? csmFloodPaintPaceMs : csmPaintPaceMs;
 }
 
 void TTextEdit::markLinesDirty(const int firstLine, const int lastLine)
@@ -197,6 +215,7 @@ void TTextEdit::markLinesDirty(const int firstLine, const int lastLine)
     if (firstLine < 0 || lastLine < firstLine) {
         return;
     }
+    followTrimsWithDirtyLines();
     mDirtyFirstLine = (mDirtyFirstLine < 0) ? firstLine : std::min(mDirtyFirstLine, firstLine);
     mDirtyLastLine = (mDirtyLastLine < 0) ? lastLine : std::max(mDirtyLastLine, lastLine);
 
@@ -216,6 +235,24 @@ void TTextEdit::markLinesDirty(const int firstLine, const int lastLine)
         return;
     }
     scheduleUpdate(QRect(0, top * mFontHeight, width(), (bottom - top + 1) * mFontHeight));
+}
+
+// A trim renumbers the lines still pending a repaint along with all the rest
+void TTextEdit::followTrimsWithDirtyLines()
+{
+    const qint64 linesTrimmed = mpBuffer->linesTrimmedTotal();
+    const qint64 trimmedSince = linesTrimmed - mDirtyLinesTrimmedAt;
+    mDirtyLinesTrimmedAt = linesTrimmed;
+    if (trimmedSince <= 0 || mDirtyFirstLine < 0) {
+        return;
+    }
+    if (mDirtyLastLine < trimmedSince) {
+        mDirtyFirstLine = -1;
+        mDirtyLastLine = -1;
+        return;
+    }
+    mDirtyFirstLine = static_cast<int>(std::max<qint64>(0, mDirtyFirstLine - trimmedSince));
+    mDirtyLastLine = static_cast<int>(mDirtyLastLine - trimmedSince);
 }
 
 void TTextEdit::needUpdate(int y1, int y2)
@@ -248,12 +285,13 @@ void TTextEdit::focusInEvent(QFocusEvent* event)
 
 void TTextEdit::focusOutEvent(QFocusEvent* event)
 {
-    // Safety check: during destruction, mpHost might be null
     // Avoid disabling caret mode when the window is merely deactivated
     // (e.g., user Alt+Tabs away). This preserves focus for screen reader
     // users like NVDA so returning to Mudlet restores the original widget
     // rather than forcing focus to the command line.
-    if (mpHost && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
+    // The central debug console shares its Host's caret mode without driving it.
+    const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
+    if (!centralDebug && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
         mpHost->setCaretEnabled(false);
     }
 
@@ -322,8 +360,7 @@ void TTextEdit::calculateHMaxRange()
         return;
     }
 
-    int columnCount = getColumnCount();
-    mMaxHRange = mScreenOffset - columnCount;
+    mMaxHRange = mScreenOffset - drawnColumnCount();
 
     if (mMaxHRange < 1) {
         mCursorX = 0;
@@ -341,8 +378,6 @@ void TTextEdit::updateHorizontalScrollBar()
         return;
     }
 
-    int columnCount = getColumnCount();
-
     if (mMaxHRange < 1 && mpConsole->mpHScrollBar->isVisible()) {
         mpConsole->mpHScrollBar->hide();
     }
@@ -354,15 +389,15 @@ void TTextEdit::updateHorizontalScrollBar()
     disconnect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
     mpConsole->mpHScrollBar->setRange(0, mMaxHRange);
     mpConsole->mpHScrollBar->setSingleStep(1);
-    mpConsole->mpHScrollBar->setPageStep(columnCount);
+    mpConsole->mpHScrollBar->setPageStep(drawnColumnCount());
     mpConsole->mpHScrollBar->setValue(mCursorX);
     connect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
 }
 
 void TTextEdit::updateScreenView()
 {
-    // Safety check: during destruction, mpHost or mpConsole might be null
-    if (!mpHost || !mpConsole) {
+    // Safety check: during destruction, mpConsole might be null
+    if (!mpConsole) {
         return;
     }
 
@@ -454,7 +489,7 @@ void TTextEdit::showNewLines()
     scheduleUpdate();
 
 
-    if (mpHost && QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole && mpHost->mAnnounceIncomingText && mudlet::self()->getActiveHost() == mpHost) {
+    if (QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole && mpHost->mAnnounceIncomingText && mudlet::self()->getActiveHost() == mpHost) {
         QString newLines;
 
         // content has been deleted
@@ -612,7 +647,7 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
     }
 
     // If caret mode is enabled and the line is empty, still draw the caret.
-    if (mpHost && mpHost->caretEnabled() && mCaretLine == lineNumber && lineText.isEmpty()) {
+    if (mpHost->caretEnabled() && mCaretLine == lineNumber && lineText.isEmpty()) {
         GraphemeRun caretRun;
         caretRun.textRect = QRect(0, mFontHeight * lineOfScreen, mFontWidth, mFontHeight);
         caretRun.bgColor = mCaretColor;
@@ -982,7 +1017,7 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, QStringV
     if (charWidth > 0) {
         run.textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
     }
-    const bool caretIsHere = mpHost && mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
+    const bool caretIsHere = mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
     resolveRunColors(run, charStyle, caretIsHere);
     if (Q_UNLIKELY(charStyle.hasSplitFormat()) && charWidth == 2) {
         run.halfRect = QRect(run.textRect.x(), run.textRect.y(), mFontWidth, mFontHeight);
@@ -1397,11 +1432,16 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 
     int lineOffset = imageTopLine();
     int from = 0;
+    // A trim renumbers every line, so a full buffer taking in exactly as many
+    // lines as it dropped keeps the same offset while its text moves up.
+    const qint64 linesTrimmed = mpBuffer->linesTrimmedTotal();
+    const qint64 lastRenderedOffset = mLastRenderedOffset - (linesTrimmed - mLinesTrimmedAtRender);
+    followTrimsWithDirtyLines();
 
     // A scroll moves every row, and a retired cache has no row worth keeping, so
     // the region handed to us is then a floor and not a ceiling: taken as a
     // ceiling it redraws only the rows named in it and leaves the rest stale.
-    const bool scrolledSinceLastPaint = (lineOffset != mLastRenderedOffset);
+    const bool scrolledSinceLastPaint = (lineOffset != lastRenderedOffset);
     if (scrolledSinceLastPaint || cacheRetired) {
         y_bottom = mScreenHeight;
     }
@@ -1410,7 +1450,8 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         mScrollVector = 0;
     } else {
         if (mLastRenderedOffset) {
-            mScrollVector = lineOffset - mLastRenderedOffset;
+            // A pane left hidden can fall more trims behind than an int holds
+            mScrollVector = static_cast<int>(std::min<qint64>(lineOffset - lastRenderedOffset, std::numeric_limits<int>::max()));
         } else {
             mScrollVector = y_bottom + lineOffset;
         }
@@ -1567,6 +1608,12 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         layoutLine(drawFrom - 1 + lineOffset, drawFrom - 1, timeStampStyle, mOverflowLineLayout);
     }
 
+    // A top line drawn only as the neighbour of dirty ones has not changed, and
+    // the cached rows above already hold its ink: drawing that again thickens it.
+    const bool topLineUnchanged = !scrollShift && !mMouseTracking && mDirtyFirstLine >= 0 && drawFrom + lineOffset < mDirtyFirstLine;
+    if (topLineUnchanged && drawFrom > 0) {
+        p.setClipRect(QRect(0, deleteRect.top(), mScreenWidth * mFontWidth, pixmapHeight - deleteRect.top()));
+    }
     // Each line's backgrounds go down before the previous line's glyphs, so that
     // no background fill can wipe out ink which overflowed out of its cell.
     mPreviousLineLayout.clear();
@@ -1596,6 +1643,13 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     // overflow, so clip it away rather than compositing the same ink twice.
     const QRect bandRect(0, drawFrom * mFontHeight, mScreenWidth * mFontWidth, (drawTo + 1 - drawFrom) * mFontHeight);
     paintForegrounds(p, *mpGlyphCache, mPreviousLineLayout, bottomRowIsRepainted ? QRect() : bandRect);
+    p.setClipping(false);
+    // Likewise the line below the band loses whatever ink it reached up into it,
+    // in the row past the dirty ones that only the cached screen keeps
+    if (reusedCachedScreenContent && !noCopy && !bottomRowIsRepainted && hasBufferLine(drawTo + 1 + lineOffset)) {
+        layoutLine(drawTo + 1 + lineOffset, drawTo + 1, timeStampStyle, mOverflowLineLayout);
+        paintForegrounds(p, *mpGlyphCache, mOverflowLineLayout, bandRect);
+    }
 
     if (!spareRowRect.isNull() && hasBufferLine(lastRow + lineOffset)) {
         layoutLine(lastRow + lineOffset, lastRow, timeStampStyle, mOverflowLineLayout);
@@ -1631,6 +1685,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     }
     mScrollVector = 0;
     mLastRenderedOffset = lineOffset;
+    mLinesTrimmedAtRender = linesTrimmed;
     mForceUpdate = false;
     if (!noCopy) {
         // noCopy left the cache untouched, so the change has not been preserved
@@ -1692,6 +1747,7 @@ void TTextEdit::paintNothing(const QRect& r)
 void TTextEdit::paintEvent(QPaintEvent* e)
 {
     mSincePaint.restart();
+    mLinesAddedAtPaint = mpBuffer->linesAddedTotal();
     mWholePaneRequested = false;
     if (!mPendingPaintRegion.isEmpty()) {
         // Whatever this paint covers is current now, so a deferred repaint of it
@@ -1795,7 +1851,7 @@ void TTextEdit::highlightSelection()
              x < endX;
              ++x) {
 
-            mpBuffer->buffer.at(y).at(x).select();
+            mpBuffer->buffer.at(y).expand().at(x).select();
         }
     }
     // clang-format on
@@ -1828,7 +1884,7 @@ void TTextEdit::unHighlight()
         auto& bufferLine = mpBuffer->buffer.at(yIndex);
         for (int xIndex = 0; xIndex < static_cast<int>(bufferLine.size()); ++xIndex) {
             if (bufferLine.at(xIndex).isSelected()) {
-                bufferLine[xIndex].deselect();
+                bufferLine.expand()[xIndex].deselect();
             }
         }
     }
@@ -1977,7 +2033,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         auto& bufferLine = mpBuffer->buffer.at(yIndex);
         for (int xIndex = 0; xIndex < static_cast<int>(bufferLine.size()); ++xIndex) {
             if (bufferLine.at(xIndex).isSelected()) {
-                bufferLine[xIndex].deselect();
+                bufferLine.expand()[xIndex].deselect();
             }
         }
     }
@@ -2215,7 +2271,7 @@ void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
 void TTextEdit::slot_popupMenu()
 {
     auto* pA = qobject_cast<QAction*>(sender());
-    if (!pA || !mpHost) {
+    if (!pA) {
         return;
     }
     // index is set to be greater than zero for every possible sender():
@@ -2498,7 +2554,7 @@ void TTextEdit::slot_copySelectionToClipboard()
 
 void TTextEdit::slot_copySelectionToClipboardHTML()
 {
-    if (!establishSelectedText() || !mpHost) {
+    if (!establishSelectedText()) {
         return;
     }
 
@@ -2851,7 +2907,7 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
 
 void TTextEdit::searchSelectionOnline()
 {
-    if (!establishSelectedText() || !mpHost) {
+    if (!establishSelectedText()) {
         return;
     }
 
@@ -3110,9 +3166,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
     // the editor Error console so those will avoid the focus being changed to
     // this profile now:
     QTimer::singleShot(0ms, this, [this]() {
-        if (mpHost) {
-            mudlet::self()->activateProfile(mpHost);
-        }
+        mudlet::self()->activateProfile(mpHost);
     });
 }
 
@@ -3227,21 +3281,19 @@ void TTextEdit::showContextMenu(const QPoint& globalPosition)
         popup->addAction(clearErrorConsole);
     }
 
-    if (mpHost) {
-        QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
+    QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
 
-        while (it.hasNext()) {
-            it.next();
-            QStringList actionInfo = it.value();
-            const QString& uniqueName = it.key();
-            const QString& actionName = actionInfo.at(1);
-            QAction* mouseAction = new QAction(actionName, popup);
-            mouseAction->setToolTip(actionInfo.at(2));
-            popup->addAction(mouseAction);
-            connect(mouseAction, &QAction::triggered, this, [this, uniqueName] {
-                slot_mouseAction(uniqueName);
-            });
-        }
+    while (it.hasNext()) {
+        it.next();
+        QStringList actionInfo = it.value();
+        const QString& uniqueName = it.key();
+        const QString& actionName = actionInfo.at(1);
+        QAction* mouseAction = new QAction(actionName, popup);
+        mouseAction->setToolTip(actionInfo.at(2));
+        popup->addAction(mouseAction);
+        connect(mouseAction, &QAction::triggered, this, [this, uniqueName] {
+            slot_mouseAction(uniqueName);
+        });
     }
 
     popup->popup(globalPosition, action);
@@ -3260,8 +3312,8 @@ void TTextEdit::resizeEvent(QResizeEvent* event)
     updateScreenView();
     reportGridSize();
 
-    // Safety check: during destruction, mpHost or mpConsole might be null
-    if (mpHost && mpConsole) {
+    // Safety check: during destruction, mpConsole might be null
+    if (mpConsole) {
         if (!mIsLowerPane && mpConsole->getType() == TConsole::MainConsole) {
             mpHost->updateDisplayDimensions();
         }
@@ -3382,6 +3434,13 @@ int TTextEdit::bufferScrollDown(int lines)
 int TTextEdit::getColumnCount() const
 {
     return qRound(width() / QFontMetricsF(font()).averageCharWidth());
+}
+
+// Cells are whole pixels wide, so getColumnCount()'s fractional width can
+// differ from it by several columns across a wide console
+int TTextEdit::drawnColumnCount() const
+{
+    return mFontWidth > 0 ? width() / mFontWidth : 0;
 }
 
 int TTextEdit::getRowCount() const
@@ -4015,11 +4074,91 @@ void TTextEdit::slot_changeEnableBlinkText(const bool enable)
     }
 }
 
+// Up to six marks on one base stayed within the row above in every font tried,
+// so three leaves room to spare.
+bool TTextEdit::hasStackedMarks(const QString& text)
+{
+    if (lineBreakInfo::printableAscii(text)) {
+        return false;
+    }
+    int marksInARow = 0;
+    for (qsizetype i = 0, total = text.size(); i < total; ++i) {
+        char32_t codePoint = text.at(i).unicode();
+        if (QChar::isHighSurrogate(codePoint) && i + 1 < total && text.at(i + 1).isLowSurrogate()) {
+            codePoint = QChar::surrogateToUcs4(text.at(i), text.at(i + 1));
+            ++i;
+        }
+        // Spacing marks (Mc) sit beside their base rather than on it
+        const QChar::Category category = QChar::category(codePoint);
+        marksInARow = (category == QChar::Mark_NonSpacing || category == QChar::Mark_Enclosing) ? marksInARow + 1 : 0;
+        if (marksInARow >= 3) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool TTextEdit::lineShowsBlinkingText(const int lineNumber) const
+{
+    static constexpr TChar::AttributeFlags blinkFlags = TChar::Blink | TChar::FastBlink;
+    const TLineFormat& chars = mpBuffer->buffer.at(lineNumber);
+    const bool anyBlinkFlag = std::any_of(chars.cbegin(), chars.cend(), [](const TChar& c) {
+        return (c.allDisplayAttributes() & blinkFlags) || (c.hasSplitFormat() && (c.rightHalf().allDisplayAttributes() & blinkFlags));
+    });
+    if (!anyBlinkFlag) {
+        return false;
+    }
+    // A flag only blinks if a glyph is drawn with it: a grapheme takes the style
+    // of its first character, and a split format shows only on a wide one.
+    const size_t timeStampsBefore = mLaidOutTimeStamps.size();
+    // Outlives the layout, whose timestamp runs point at it
+    const TChar timeStampStyle = timeStampCharStyle();
+    LineLayout layout;
+    layoutLine(lineNumber, 0, timeStampStyle, layout);
+    const bool blinks = std::any_of(layout.cbegin(), layout.cend(), [](const GraphemeRun& run) {
+        return run.style && ((run.rightHalf ? run.style->rightHalf() : *run.style).allDisplayAttributes() & blinkFlags);
+    });
+    mLaidOutTimeStamps.resize(timeStampsBefore);
+    return blinks;
+}
+
 void TTextEdit::slot_blinkStateChanged()
 {
-    if (mIsBlinkClientRegistered) {
-        forceUpdate();
+    // A hidden pane is redrawn in full when it is shown again
+    if (!mIsBlinkClientRegistered || !isVisible()) {
+        return;
     }
+    // A tick changes only the blinking glyphs' opacity, so only the rows holding
+    // them need drawing again.
+    const int lineOffset = imageTopLine();
+    const int endLine = std::min({lineOffset + mScreenHeight, static_cast<int>(mpBuffer->buffer.size()), static_cast<int>(mpBuffer->lineBuffer.size())});
+    int firstBlinkingLine = -1;
+    int lastBlinkingLine = -1;
+    for (int line = lineOffset; line < endLine; ++line) {
+        if (hasStackedMarks(mpBuffer->lineBuffer.at(line))) {
+            // Their ink can reach rows past a neighbour, which only a whole repaint redraws exactly
+            forceUpdate();
+            return;
+        }
+        if (lineShowsBlinkingText(line)) {
+            if (firstBlinkingLine < 0) {
+                firstBlinkingLine = line;
+            }
+            lastBlinkingLine = line;
+        }
+    }
+    if (firstBlinkingLine < 0) {
+        // Only a whole repaint lets drawForeground() find nothing blinking and stop the timer
+        forceUpdate();
+        return;
+    }
+    markLinesDirty(firstBlinkingLine, lastBlinkingLine);
+    // The rows either side show the ink the blinking glyphs spill into them
+    const int topRow = std::max(0, firstBlinkingLine - 1 - lineOffset);
+    const int bottomRow = std::min(mScreenHeight - 1, lastBlinkingLine + 1 - lineOffset);
+    // The bottom row's overflow shows in the part-row below it, down to the edge
+    const int bandBottom = bottomRow == mScreenHeight - 1 ? height() : (bottomRow + 1) * mFontHeight;
+    scheduleUpdate(QRect(0, topRow * mFontHeight, width(), bandBottom - topRow * mFontHeight));
 }
 
 void TTextEdit::slot_scrollStoppedTimeout()
@@ -4038,10 +4177,6 @@ void TTextEdit::slot_changeDebugShowAllProblemCodepoints(const bool state)
 
 void TTextEdit::slot_mouseAction(const QString& uniqueName)
 {
-    if (!mpHost) {
-        return;
-    }
-
     // The menu is non-modal, so a script can removeMouseEvent() while it is still open
     const QStringList mouseEvent = mpHost->mConsoleActions.value(uniqueName);
     if (mouseEvent.isEmpty()) {
@@ -4131,7 +4266,7 @@ void TTextEdit::setCaretPosition(int line, int column)
     mCaretLine = line;
     mCaretColumn = column;
 
-    if (!mpHost || !mpHost->caretEnabled() || !mpBuffer) {
+    if (!mpHost->caretEnabled() || !mpBuffer) {
         return;
     }
 
@@ -4270,8 +4405,9 @@ void TTextEdit::applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, c
     // A menu link's commands are built from its menu items and the base URI's
     // command is discarded, so baseCommand matches none of what can actually be
     // run here. Callers pass the item the user picked; rebuilding from the base
-    // would send something they did not choose.
-    if (mpBuffer->mLinkStore.getLinksConst(linkIndex).size() <= 1) {
+    // would send something they did not choose. A one-item menu has a single
+    // command too, but its hints carry the tooltip ahead of the item's label.
+    if (mpBuffer->mLinkStore.getLinksConst(linkIndex).size() <= 1 && mpBuffer->mLinkStore.getHintsConst(linkIndex).size() <= 1) {
         const Mudlet::HyperlinkStyling styling = mpBuffer->mLinkStore.getStyling(linkIndex);
         const QString rebuiltUri = mgr->modifyUriForSelection(styling.actionScheme, styling.baseCommand, group, value);
         if (!rebuiltUri.isEmpty()) {
@@ -4306,7 +4442,7 @@ void TTextEdit::applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, c
 
 void TTextEdit::showLinkContextMenu()
 {
-    if (!mpBuffer || !mpHost) {
+    if (!mpBuffer) {
         return;
     }
 
@@ -4433,7 +4569,7 @@ bool TTextEdit::focusNextPrevChild(bool next)
     Q_UNUSED(next)
     // In caret mode, prevent Qt from intercepting Tab/Backtab for focus
     // traversal so they reach keyPressEvent for link navigation
-    if (mpHost && mpHost->caretEnabled()) {
+    if (mpHost->caretEnabled()) {
         return false;
     }
     return QWidget::focusNextPrevChild(next);
@@ -4448,7 +4584,7 @@ bool TTextEdit::event(QEvent* event)
         // use Ctrl+Tab by default and all of them can be remapped onto these
         // keys - so claim it here to make it arrive as a KeyPress for the
         // caret-toggling code in keyPressEvent():
-        if (mpHost && mpHost->caretEnabled() && mpHost->caretShortcutMatches(ke)) {
+        if (mpHost->caretEnabled() && mpHost->caretShortcutMatches(ke)) {
             ke->accept();
             return true;
         }
@@ -4458,7 +4594,7 @@ bool TTextEdit::event(QEvent* event)
 
 void TTextEdit::keyPressEvent(QKeyEvent* event)
 {
-    if (!mpHost || !mpHost->caretEnabled()) {
+    if (!mpHost->caretEnabled()) {
         QWidget::keyPressEvent(event);
         return;
     }
@@ -4472,7 +4608,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     const bool activatesFocusedLink = event->key() == Qt::Key_Space && focusedLinkIndex > 0 && mpBuffer->getLinkIndexAt(mCaretLine, mCaretColumn) == focusedLinkIndex
                                       && !mpBuffer->mLinkStore.getLinksConst(focusedLinkIndex).isEmpty();
     if (!activatesFocusedLink && !(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) && !event->text().isEmpty() && event->text().front().isPrint()) {
-        if (mpHost && mpConsole && mpConsole->mpCommandLine) {
+        if (mpConsole && mpConsole->mpCommandLine) {
             mpHost->setCaretEnabled(false);
             mpHost->setFocusOnHostActiveCommandLine();
             QKeyEvent newEvent(event->type(), event->key(), event->modifiers(), event->text(), event->isAutoRepeat(), event->count());

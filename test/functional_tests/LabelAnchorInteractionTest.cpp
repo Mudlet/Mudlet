@@ -86,9 +86,6 @@ private:
 
     TLabel* label() const { return mpHost->mainConsoleView()->labelWidget(mLabelName); }
 
-    // Read back through the return value rather than getLuaString(), which reports
-    // an absolute stack slot and so only answers correctly for the first call in a
-    // process.
     bool luaHolds(const QString& condition) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(%1)").arg(condition)); }
 
     // Where the label's only word of text sits, so a synthesised click or move lands

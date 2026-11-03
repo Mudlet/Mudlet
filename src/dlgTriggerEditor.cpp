@@ -733,6 +733,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpErrorConsole->slot_toggleTimeStamps(true);
     mpErrorConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
     mpErrorConsole->setMinimumHeight(100);
+    mpErrorConsole->setFont(mpHost->getEditorFont());
     mpErrorConsole->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Minimum);
     splitter_right->addWidget(mpErrorConsole);
 
@@ -981,6 +982,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     frame_left->addAction(mAddGroup);
     connect(mAddGroup, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewGroup);
 
+    // A grab leaves focus on its button, outside frame_left, and the next key is often added straight after
+    mpKeysMainArea->pushButton_key_grabKey->addAction(mAddItem);
+    mpKeysMainArea->pushButton_key_grabKey->addAction(mAddGroup);
+
     // 'Save Item' does not see to be translated as it is only ever used programmatically and not visible to the player
     // PLACEMARKER 1/3 save button texts need to be kept in sync
     mSaveItem = new QAction(QIcon(qsl(":/icons/document-save-as.png")), qsl("Save Item"), this);
@@ -1102,8 +1107,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QShortcut* previousSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Tab), this);
     connect(previousSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_previousSection);
 
-    QShortcut* activateMainWindowAction = new QShortcut(QKeySequence((Qt::ALT | Qt::Key_E)), this);
-    connect(activateMainWindowAction, &QShortcut::activated, this, &dlgTriggerEditor::slot_activateMainWindow);
+    mpShortcutActivateMainWindow = new QShortcut(this);
+    connect(mpShortcutActivateMainWindow, &QShortcut::activated, this, &dlgTriggerEditor::slot_activateMainWindow);
+    slot_updateActivateMainWindowShortcut();
+    connect(mudlet::self(), &mudlet::signal_shortcutsChanged, this, &dlgTriggerEditor::slot_updateActivateMainWindowShortcut);
 
     toolBar = new QToolBar();
     toolBar2 = new QToolBar();
@@ -1207,7 +1214,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     auto config = mpSourceEditorEdbee->config();
     config->beginChanges();
     config->setThemeName(mpHost->getEditorTheme());
-    config->setFont(mpHost->getDisplayFont());
+    config->setFont(mpHost->getEditorFont());
     config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces) ? edbee::TextEditorConfig::ShowWhitespaces : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
@@ -1503,7 +1510,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpHost, &Host::signal_editorThemeChanged, this, &dlgTriggerEditor::slot_editorThemeChanged);
     connect(mpHost, &Host::signal_editorCleanResetRequested, this, &dlgTriggerEditor::doCleanReset);
     connect(mpHost, &Host::signal_profileStyleSheetChanged, this, &dlgTriggerEditor::setStyleSheet);
-    connect(mpHost, &Host::signal_consoleFontChanged, this, &dlgTriggerEditor::setDisplayFont);
+    connect(mpHost, &Host::signal_editorFontChanged, this, &dlgTriggerEditor::setEditorFont);
     connect(mpHost, &Host::signal_editorSearchOptionsChanged, this, &dlgTriggerEditor::setSearchOptions);
     connect(mpHost, &Host::signal_editorShowBidiChanged, this, &dlgTriggerEditor::setEditorShowBidi);
     connect(mpHost, &Host::signal_showIdsInEditorChanged, this, &dlgTriggerEditor::showIDLabels);
@@ -1773,7 +1780,7 @@ void dlgTriggerEditor::applyPatternWidgetStyle(dlgTriggerPatternEdit* patternWid
     patternWidget->singleLineTextEdit_pattern->setTheme(mpHost->getEditorTheme());
     if (!hasReference) {
         referencePalette = patternWidget->singleLineTextEdit_pattern->palette();
-        referenceFont = mpHost->getDisplayFont();
+        referenceFont = mpHost->getEditorFont();
     }
     patternWidget->applyThemePalette(referencePalette);
     patternWidget->singleLineTextEdit_pattern->setFont(referenceFont);
@@ -9241,6 +9248,7 @@ void dlgTriggerEditor::fillout_form()
     mpCurrentVarItem = nullptr;
 
     mNeedUpdateData = false;
+    mCleanResetDeferred = false;
     // The trees are painted afresh below, which covers every toggle still queued
     mPendingTriggerIconRefresh.clear();
     mPendingAliasIconRefresh.clear();
@@ -9312,6 +9320,9 @@ void dlgTriggerEditor::populateKeys()
         auto pItem = new QTreeWidgetItem(mpKeyBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(key->getID()));
         mpKeyBaseItem->addChild(pItem);
+        if (key->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QIcon icon;
         QString itemDescription;
         const bool itemActive = key->isActive();
@@ -9481,6 +9492,9 @@ void dlgTriggerEditor::populateActions()
         auto pItem = new QTreeWidgetItem(mpActionBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(action->getID()));
         mpActionBaseItem->addChild(pItem);
+        if (action->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QIcon icon;
         QString itemDescription;
         if (action->hasChildren()) {
@@ -9564,6 +9578,9 @@ void dlgTriggerEditor::populateAliases()
         auto pItem = new QTreeWidgetItem(mpAliasBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(alias->getID()));
         mpAliasBaseItem->addChild(pItem);
+        if (alias->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QIcon icon;
         QString itemDescription;
         const bool itemActive = alias->shownActive(mpHost->mEmergencyStop);
@@ -9640,6 +9657,9 @@ void dlgTriggerEditor::populateScripts()
         auto pItem = new QTreeWidgetItem(mpScriptsBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(script->getID()));
         mpScriptsBaseItem->addChild(pItem);
+        if (script->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QIcon icon;
         QString itemDescription;
         const bool itemActive = script->isActive();
@@ -9805,6 +9825,9 @@ void dlgTriggerEditor::populateTimers()
         auto pItem = new QTreeWidgetItem(mpTimerBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(timer->getID()));
         mpTimerBaseItem->addChild(pItem);
+        if (timer->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QIcon icon;
         QString itemDescription;
         const bool itemActive = timer->isActive();
@@ -9986,6 +10009,9 @@ void dlgTriggerEditor::populateTriggers()
         auto pItem = new QTreeWidgetItem(mpTriggerBaseItem, sList);
         pItem->setData(0, Qt::UserRole, QVariant(trigger->getID()));
         mpTriggerBaseItem->addChild(pItem);
+        if (trigger->mModuleMasterFolder) {
+            pItem->setFlags(pItem->flags() & ~Qt::ItemIsDragEnabled);
+        }
         QIcon icon;
         QString itemDescription;
         const bool itemActive = trigger->isActive();
@@ -10728,7 +10754,11 @@ void dlgTriggerEditor::rebuildStaleTrees()
     treeWidget_actions->clear();
     treeWidget_keys->clear();
     treeWidget_variables->clear();
-    fillout_form();
+    if (mCleanResetDeferred) {
+        buildDeferredTrees(false);
+    } else {
+        fillout_form();
+    }
     mNeedUpdateData = false;
     if (folderViewType != EditorViewType::cmUnknownView) {
         mCurrentView = folderViewType;
@@ -10796,6 +10826,10 @@ void dlgTriggerEditor::showEvent(QShowEvent* event)
 
     mHasBeenShown = true;
     widgetutils::keepDialogOnAScreen(this, mpHost->mainConsoleView());
+
+    if (mCleanResetDeferred) {
+        buildDeferredTrees(true);
+    }
 
     // Lua toggles that arrived while this editor was hidden are queued, but
     // nothing flushes them until now.
@@ -11045,6 +11079,11 @@ void dlgTriggerEditor::slot_showTimers()
 
 void dlgTriggerEditor::showCurrentTriggerItem()
 {
+    // The full reset leaves the editor on the triggers view, so there is nothing more to show
+    if (mCleanResetDeferred) {
+        buildDeferredTrees(true);
+        return;
+    }
     if (mCurrentView != EditorViewType::cmUnknownView) {
         return;
     }
@@ -11640,7 +11679,18 @@ void dlgTriggerEditor::slot_sourceFindTextChanges()
 
 void dlgTriggerEditor::slot_deleteItemOrGroup()
 {
-    switch (resolveCurrentView()) {
+    const EditorViewType view = resolveCurrentView();
+    if (QTreeWidget* pTree = treeForView(view)) {
+        for (const QTreeWidgetItem* pItem : pTree->selectedItems()) {
+            const QString moduleName = moduleOfMasterFolder(view, pItem->data(0, Qt::UserRole).toInt());
+            if (!moduleName.isEmpty()) {
+                offerToUninstallModule(moduleName);
+                return;
+            }
+        }
+    }
+
+    switch (view) {
     case EditorViewType::cmTriggerView:
         delete_trigger();
         break;
@@ -11784,11 +11834,18 @@ void dlgTriggerEditor::slot_toggleCentralDebugConsole()
     TDebug::smDebugMode = !TDebug::smDebugMode;
     mudlet::smpDebugArea->setWindowTitle(tr("Central Debug Console"));
     if (TDebug::smDebugMode) {
-        // If this is the first time the window is shown we want any previously
-        // enqueued messages to be painted onto the central debug console:
-        TDebug::flushMessageQueue();
-        // Every time, not just the first: the filters may have been narrowed since it was last closed:
-        TDebug::announceFilters();
+        // Posted to run after the console's own deferred fit of its wrap to the window that showing it
+        // queued: printed now, a first opening's lines wrap at the initial 100 columns and are cut off
+        QTimer::singleShot(0ms, this, []() {
+            if (!TDebug::smDebugMode) {
+                return;
+            }
+            // If this is the first time the window is shown we want any previously
+            // enqueued messages to be painted onto the central debug console:
+            TDebug::flushMessageQueue();
+            // Every time, not just the first: the filters may have been narrowed since it was last closed:
+            TDebug::announceFilters();
+        });
     }
     mudlet::self()->refreshTabBar();
 }
@@ -12056,6 +12113,24 @@ void dlgTriggerEditor::slot_previousSection()
     case EditorViewType::cmUnknownView:
         return;
     }
+}
+
+// The same key that opens the editor brings the main window back from it
+void dlgTriggerEditor::slot_updateActivateMainWindowShortcut()
+{
+    const QString key = qsl("Script editor");
+    QKeySequence sequence;
+    if (!mpHost) {
+        return;
+    }
+    if (auto it = mpHost->profileShortcuts.find(key); it != mpHost->profileShortcuts.end()) {
+        sequence = *it->second;
+    } else if (auto* pManager = mudlet::self()->shortcutsManager()) {
+        if (auto* pSequence = pManager->getSequence(key)) {
+            sequence = *pSequence;
+        }
+    }
+    mpShortcutActivateMainWindow->setKey(sequence);
 }
 
 void dlgTriggerEditor::slot_activateMainWindow()
@@ -13426,6 +13501,21 @@ void dlgTriggerEditor::runScheduledCleanReset()
         return;
     }
 
+    // Every profile builds an editor on load that may never be opened, and populating it costs as much as
+    // the profile has items; changeView(), focus and enter events rebuild on mNeedUpdateData, showEvent() on the flag
+    if (!mHasBeenShown) {
+        mCleanResetDeferred = true;
+        mNeedUpdateData = true;
+        // What the build would have done to notices posted so far
+        clearEditorNotification();
+        return;
+    }
+
+    resetTrees();
+}
+
+void dlgTriggerEditor::resetTrees()
+{
     // Clear all current item pointers BEFORE attempting to save or clear tree widgets
     // to prevent heap-use-after-free when the tree widgets are cleared
     mpCurrentTriggerItem = nullptr;
@@ -13471,6 +13561,41 @@ void dlgTriggerEditor::runScheduledCleanReset()
     treeWidget_scripts->clear();
     fillout_form();
     slot_showTriggers();
+}
+
+// A notice posted since the build was put off has to outlive it, as populating a tree clears the message
+// area for every item it adds
+void dlgTriggerEditor::buildDeferredTrees(const bool asAtLoad)
+{
+    const bool keepNotice = !mpSystemMessageArea->isHidden();
+    const bool info = !mpSystemMessageArea->notificationAreaIconLabelInformation->isHidden();
+    const bool error = !mpSystemMessageArea->notificationAreaIconLabelError->isHidden();
+    const bool warning = !mpSystemMessageArea->notificationAreaIconLabelWarning->isHidden();
+    const QString text = mpSystemMessageArea->notificationAreaMessageBox->text();
+    const QString bannerKey = mCurrentBannerKey;
+
+    if (asAtLoad) {
+        resetTrees();
+    } else {
+        fillout_form();
+    }
+
+    if (!keepNotice) {
+        return;
+    }
+    mpSystemMessageArea->notificationAreaIconLabelInformation->setVisible(info);
+    mpSystemMessageArea->notificationAreaIconLabelError->setVisible(error);
+    mpSystemMessageArea->notificationAreaIconLabelWarning->setVisible(warning);
+    mpSystemMessageArea->notificationAreaMessageBox->setText(text);
+    mpSystemMessageArea->show();
+    mCurrentBannerKey = bannerKey;
+    if (bannerKey.isEmpty()) {
+        disconnect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_bannerDismissClicked);
+        connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea, Qt::UniqueConnection);
+    } else {
+        disconnect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
+        connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_bannerDismissClicked, Qt::UniqueConnection);
+    }
 }
 
 void dlgTriggerEditor::slot_profileSaveAction()
@@ -13630,6 +13755,7 @@ void dlgTriggerEditor::setShortcuts(const bool active)
 {
     setShortcuts(toolBar->actions(), active);
     setShortcuts(toolBar2->actions(), active);
+    mpShortcutActivateMainWindow->setEnabled(active);
 }
 
 void dlgTriggerEditor::setShortcuts(QList<QAction*> actionList, const bool active)
@@ -13637,7 +13763,14 @@ void dlgTriggerEditor::setShortcuts(QList<QAction*> actionList, const bool activ
     QString buttonLabel;
     for (auto& action : actionList) {
         if (!active) {
+            if (!mSuspendedShortcuts.contains(action)) {
+                mSuspendedShortcuts.insert(action, action->shortcuts());
+            }
             action->setShortcut(QString());
+            continue;
+        }
+        if (mSuspendedShortcuts.contains(action)) {
+            action->setShortcuts(mSuspendedShortcuts.take(action));
             continue;
         }
         buttonLabel = action->text();
@@ -14007,7 +14140,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* pEditorWidget, con
     auto config = mpSourceEditorEdbee->config();
     config->beginChanges();
     config->setThemeName(mpHost->getEditorTheme());
-    config->setFont(mpHost->getDisplayFont());
+    config->setFont(mpHost->getEditorFont());
     config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces) ? edbee::TextEditorConfig::ShowWhitespaces : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setSmartTab(true);
@@ -14119,7 +14252,7 @@ void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
     localConfig->beginChanges();
     localConfig->setThemeName(theme);
     mpHost->editorThemeChanged();
-    localConfig->setFont(mpHost->getDisplayFont());
+    localConfig->setFont(mpHost->getEditorFont());
     localConfig->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces) ? edbee::TextEditorConfig::ShowWhitespaces : edbee::TextEditorConfig::HideWhitespaces);
     localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     localConfig->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
@@ -14806,7 +14939,7 @@ void dlgTriggerEditor::checkForMoreThanOneTriggerItem()
     mpTriggersMainArea->groupBox_multiLineTrigger->setEnabled(activeItems > 1);
 }
 
-void dlgTriggerEditor::setDisplayFont(const QFont& newFont)
+void dlgTriggerEditor::setEditorFont(const QFont& newFont)
 {
     if (mpErrorConsole) {
         mpErrorConsole->setFont(newFont);
@@ -16595,6 +16728,78 @@ bool dlgTriggerEditor::folderItem(const EditorViewType view, const int id)
         break;
     }
     return false;
+}
+
+// A module's folder is rebuilt from the module file on every load and is not written back to it
+QString dlgTriggerEditor::moduleOfMasterFolder(const EditorViewType view, const int id) const
+{
+    switch (view) {
+    case EditorViewType::cmTriggerView:
+        if (auto* pTrigger = mpHost->getTriggerUnit()->getTrigger(id); pTrigger && pTrigger->mModuleMasterFolder) {
+            return pTrigger->mPackageName;
+        }
+        break;
+    case EditorViewType::cmAliasView:
+        if (auto* pAlias = mpHost->getAliasUnit()->getAlias(id); pAlias && pAlias->mModuleMasterFolder) {
+            return pAlias->mPackageName;
+        }
+        break;
+    case EditorViewType::cmScriptView:
+        if (auto* pScript = mpHost->getScriptUnit()->getScript(id); pScript && pScript->mModuleMasterFolder) {
+            return pScript->mPackageName;
+        }
+        break;
+    case EditorViewType::cmTimerView:
+        if (auto* pTimer = mpHost->getTimerUnit()->getTimer(id); pTimer && pTimer->mModuleMasterFolder) {
+            return pTimer->mPackageName;
+        }
+        break;
+    case EditorViewType::cmKeysView:
+        if (auto* pKey = mpHost->getKeyUnit()->getKey(id); pKey && pKey->mModuleMasterFolder) {
+            return pKey->mPackageName;
+        }
+        break;
+    case EditorViewType::cmActionView:
+        if (auto* pAction = mpHost->getActionUnit()->getAction(id); pAction && pAction->mModuleMasterFolder) {
+            return pAction->mPackageName;
+        }
+        break;
+    case EditorViewType::cmVarsView:
+    case EditorViewType::cmUnknownView:
+        break;
+    }
+    return {};
+}
+
+void dlgTriggerEditor::offerToUninstallModule(const QString& moduleName)
+{
+    QMessageBox box(this);
+    box.setIcon(QMessageBox::Question);
+    //: Title of the dialog shown when the user tries to delete the folder that holds a module's items
+    box.setWindowTitle(tr("Delete module folder"));
+    //: %1 is the name of the module whose folder the user tried to delete
+    box.setText(tr("This folder belongs to the module \"%1\" and can't be deleted on its own. Would you like to uninstall the module?").arg(moduleName));
+    //: Button that removes the module whose folder the user tried to delete, along with all its items
+    QPushButton* pUninstallButton = box.addButton(tr("Uninstall"), QMessageBox::AcceptRole);
+    box.addButton(QMessageBox::Cancel);
+    box.setDefaultButton(QMessageBox::Cancel);
+    box.exec();
+    if (box.clickedButton() != pUninstallButton) {
+        return;
+    }
+
+    if (!mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromUI)) {
+        QString message;
+        if (mpHost->currentlySavingProfile()) {
+            //: %1 is the name of the module the user asked to remove
+            message = tr("\"%1\" could not be removed while the profile is being saved. Please try again in a moment.").arg(moduleName);
+        } else {
+            //: %1 is the name of the module the user asked to remove, which turned out not to be installed any more
+            message = tr("\"%1\" is no longer installed, so there was nothing to remove.").arg(moduleName);
+        }
+        //: Title of the dialog that says why a module the user asked to remove was not removed
+        QMessageBox::warning(this, tr("Removal failed"), message);
+    }
 }
 
 QTreeWidgetItem* dlgTriggerEditor::findItemById(QTreeWidget* pTree, const int id)

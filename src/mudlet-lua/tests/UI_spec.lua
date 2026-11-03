@@ -2774,16 +2774,47 @@ describe("Tests UI functions", function()
       assert.are.same({ current = 30, max = 60 }, applied[1].mv)
     end)
 
-    -- GMCP package and message names are case-insensitive
+    -- fed rather than raised: an unknown spelling is picked up from the namespace event
     it("should read a vitals node sent in any casing", function()
       for _, spelling in ipairs({ { "char", "MaxStats" }, { "Char", "maxStats" }, { "CHAR", "MAXSTATS" }, { "Char", "vitals" } }) do
         applied = {}
         local namespace, message = spelling[1], spelling[2]
-        _G.gmcp = { [namespace] = { [message] = { hp = 50, maxhp = 100 } } }
-        raiseEvent("gmcp." .. namespace .. "." .. message)
+        _G.gmcp = {}
+        feedTelnet("<T_IAC><T_SB><O_GMCP>" .. namespace .. "." .. message .. ' {"hp":50,"maxhp":100}<T_IAC><T_SE>')
         assert.are.equal(1, #applied, namespace .. "." .. message)
         assert.are.same({ current = 50, max = 100 }, applied[1].hp, namespace .. "." .. message)
+        raiseEvent("gmcp." .. namespace .. "." .. message)
+        assert.are.equal(2, #applied, namespace .. "." .. message .. " raised again")
       end
+    end)
+
+    it("should update after a handler registered earlier for a spelling no game is known to send", function()
+      _G.gmcp = {}
+      local seen
+      local id = registerAnonymousEventHandler("gmcp.cHaR.vItAlS", function()
+        seen = #applied
+      end)
+      feedTelnet('<T_IAC><T_SB><O_GMCP>cHaR.vItAlS {"hp":50,"maxhp":100}<T_IAC><T_SE>')
+      killAnonymousEventHandler(id)
+      assert.are.equal(0, seen)
+      assert.are.equal(1, #applied)
+    end)
+
+    it("should not be called for events that cannot announce vitals", function()
+      local routed, route = 0, BaseUI.routeGmcpVitals
+      BaseUI.routeGmcpVitals = function(...)
+        routed = routed + 1
+        return route(...)
+      end
+      finally(function() BaseUI.routeGmcpVitals = route end)
+      _G.gmcp = { Room = { Info = { num = 1 } } }
+      raiseEvent("sysUIspecUnrelatedEvent")
+      raiseEvent("gmcp.Room", "gmcp.Room.Info")
+      raiseEvent("gmcp.Room.Info", "gmcp.Room.Info")
+      assert.are.equal(0, routed)
+      raiseEvent("gmcp.Char", "gmcp.Char.Items.List")
+      assert.are.equal(1, routed)
+      assert.are.equal(0, #applied)
     end)
 
     it("should read the capitalised spelling first when a node is present in two casings", function()
@@ -2808,6 +2839,7 @@ describe("Tests UI functions", function()
     it("should only update for a vitals message", function()
       _G.gmcp = { Char = { Vitals = { hp = 50, maxhp = 100 }, Items = { List = {} } } }
       raiseEvent("gmcp.Char")
+      raiseEvent("gmcp.CHAR", "gmcp.CHAR.Items.List")
       raiseEvent("gmcp.Char.Items.List")
       raiseEvent("Char.Vitals")
       assert.are.equal(0, #applied)
@@ -3051,6 +3083,39 @@ describe("Tests UI functions", function()
     end)
   end)
 
+  describe("Test the starter UI's introduction", function()
+    if not (type(BaseUI) == "table" and type(BaseUI.announce) == "function") then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.announce is unavailable in this profile")
+      end)
+      return
+    end
+
+    local savedSettings
+
+    before_each(function()
+      savedSettings = table.deepcopy(BaseUI.settings)
+      BaseUI.settings.hidden, BaseUI.settings.standingAside, BaseUI.settings.announced = nil, nil, nil
+    end)
+
+    after_each(function()
+      BaseUI.settings = savedSettings
+      BaseUI.saveSettings()
+    end)
+
+    -- the main console wraps at the profile's wrap width, which can be wider than the console
+    it("should fit every line of the introduction into the main console", function()
+      local columns = getColumnCount("main")
+      local mark = getLastLineNumber("main")
+      BaseUI.announce()
+      local lines = getLines("main", mark, getLastLineNumber("main") + 1)
+      assert.is_true(#lines >= 3, "the introduction was not printed")
+      for _, line in ipairs(lines) do
+        assert.is_true(utf8.len(line) < columns, string.format("%d columns: %s", columns, line))
+      end
+    end)
+  end)
+
   describe("Test the starter UI's background picture", function()
     if not (type(BaseUI) == "table" and type(BaseUI.setBackground) == "function") then
       it("needs the base UI package installed", function()
@@ -3276,6 +3341,223 @@ describe("Tests UI functions", function()
       expandAlias("baseui Background off", false)
       expandAlias("baseui dock", false)
       assert.are.same({ { "background", "/some where/picture.png" }, { "Background", "off" }, { "dock" } }, calls)
+    end)
+  end)
+
+  describe("Test the starter UI's dock", function()
+    if not (type(BaseUI) == "table" and type(BaseUI.build) == "function") then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.build is unavailable in this profile")
+      end)
+      return
+    end
+
+    local testMode = os.getenv("MUDLET_TEST_MODE") ~= nil
+    local resizeRequired = os.getenv("MUDLET_TEST_REQUIRE_WINDOW_RESIZE") ~= nil
+    local savedSettings, savedTheme, savedMain, savedWidth, savedX, savedY, savedFitted, dockWasShowing, originalBorders
+    local originalWidth, originalHeight
+
+    -- runs the click callback as Mudlet would, minus the mouse event it adds
+    local function clickClose()
+      local label = BaseUI.container.exitLabel
+      local callback = label.clickCallback
+      if type(callback) == "string" then
+        callback = loadstring("return " .. callback)()
+      end
+      callback(unpack(label.clickArgs))
+    end
+
+    -- setMainWindowSize sizes the whole window and getMainWindowSize reports the console
+    -- area inside it, so ask again by however much the console came back short
+    local function sizeConsole(width, height)
+      local askWidth, askHeight = width, height
+      for _ = 1, 4 do
+        setMainWindowSize(askWidth, askHeight)
+        pumpEvents(100)
+        local gotWidth, gotHeight = getMainWindowSize()
+        if gotWidth == width and gotHeight == height then
+          return true
+        end
+        askWidth, askHeight = askWidth + width - gotWidth, askHeight + height - gotHeight
+      end
+      return false
+    end
+
+    local function windowSizedTo(width)
+      if not testMode then
+        pending("resizing the window needs pumpEvents(), which needs test mode")
+        return false
+      end
+      -- so the dock is fitted by a resize, not by whatever it was before
+      if getMainWindowSize() == width then
+        sizeConsole(width - 50, originalHeight)
+      end
+      if sizeConsole(width, originalHeight) then
+        pumpEvents(100)
+        return true
+      end
+      assert.is_false(resizeRequired,
+        "MUDLET_TEST_REQUIRE_WINDOW_RESIZE is set, but this display did not honour a resize request")
+      pending("this display does not honour a resize request")
+      return false
+    end
+
+    -- the console width the dock leaves room for, worked out as the package does
+    local function roomFor80Columns()
+      return 80 * (calcFontSize("main") + 0.5) + 32 + BaseUI.container.attachedMargin + getBorderLeft()
+    end
+
+    local function assertOnRightBorder()
+      local dock = BaseUI.container
+      assert.are.equal("right", dock.attached)
+      assert.is_true(math.abs(getMainWindowSize() - dock:get_x() - dock:get_width()) <= 1, "not flush with the right edge")
+      assert.are.equal(math.floor(dock:get_width() + 0.5) + dock.attachedMargin, getBorderRight())
+    end
+
+    setup(function()
+      originalWidth, originalHeight = getMainWindowSize()
+    end)
+
+    before_each(function()
+      savedSettings = table.deepcopy(BaseUI.settings)
+      savedTheme = BaseUI.themeName
+      savedMain = { getBackgroundColor("main") }
+      dockWasShowing = BaseUI.container ~= nil and not BaseUI.container.hidden
+      originalBorders = getBorderSizes()
+      BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
+      BaseUI.build()
+      if BaseUI.container.hidden then
+        BaseUI.container:show()
+        BaseUI.layoutDock()
+      end
+      savedWidth, savedX, savedY = BaseUI.container.width, BaseUI.container.x, BaseUI.container.y
+      savedFitted = BaseUI.fittedWidth
+      -- what the earlier specs left is not a width the player chose
+      BaseUI.fittedWidth = nil
+      BaseUI.fitDock()
+    end)
+
+    after_each(function()
+      BaseUI.container:move(savedX, savedY)
+      BaseUI.container:resize(savedWidth)
+      if not BaseUI.container.attached and not BaseUI.container.hidden then
+        BaseUI.container:attachToBorder("right")
+      end
+      BaseUI.fittedWidth = savedFitted
+      if testMode then
+        assert.is_true(sizeConsole(originalWidth, originalHeight), "the window was not put back to its size")
+      end
+      setBackgroundColor("main", unpack(savedMain))
+      BaseUI.settings = savedSettings
+      BaseUI.setTheme(savedTheme or "midnight", true)
+      BaseUI.saveSettings()
+      BaseUI.armChatTriggers()
+      BaseUI.createVitalsTriggers()
+      BaseUI.createConditionTrigger()
+      if dockWasShowing and BaseUI.container.hidden then
+        BaseUI.container:show()
+      elseif not dockWasShowing and not BaseUI.container.hidden then
+        BaseUI.container:hide()
+        BaseUI.container:adjustBorder()
+      end
+      BaseUI.layoutDock()
+      assert.are.same(originalBorders, getBorderSizes())
+    end)
+
+    it("should stay hidden in the next session once the x in its title bar is clicked", function()
+      local mark = getLastLineNumber("main")
+      clickClose()
+      assert.is_true(BaseUI.container.hidden)
+      assert.is_true(BaseUI.settings.hidden)
+      local told = table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n")
+      assert.truthy(told:find("baseui show", 1, true), told)
+      BaseUI.loadSettings()
+      assert.is_true(BaseUI.settings.hidden)
+    end)
+
+    it("should come back with baseui show once the x in its title bar is clicked", function()
+      clickClose()
+      expandAlias("baseui show", false)
+      assert.is_false(BaseUI.container.hidden)
+      assertOnRightBorder()
+      assert.is_false(BaseUI.dormant())
+    end)
+
+    it("should take a quarter of a wide window", function()
+      if not windowSizedTo(1600) then
+        return
+      end
+      assert.is_true(math.abs(BaseUI.container:get_width() - 400) <= 1, BaseUI.container:get_width())
+      assertOnRightBorder()
+    end)
+
+    it("should give way to leave the main console 80 columns", function()
+      -- midway between the window that fits a 200px dock beside 80 columns and the one
+      -- where a dock a quarter of the window wide would not leave 80
+      local console = roomFor80Columns()
+      local width = math.floor((console + 200 + console / 0.75) / 2)
+      if not windowSizedTo(width) then
+        return
+      end
+      assert.is_true(BaseUI.container:get_width() < width / 4, BaseUI.container:get_width())
+      assert.is_true(getColumnCount("main") >= 80, getColumnCount("main"))
+      assertOnRightBorder()
+    end)
+
+    it("should not shrink below the width its chat tabs read at", function()
+      -- between the window where a quarter is 200px and the one that fits 200px beside 80 columns
+      local widest = roomFor80Columns() + 200
+      if widest <= 801 then
+        pending("this font fits 80 columns beside the dock wherever a quarter of the window is more than 200px")
+        return
+      end
+      if not windowSizedTo(math.floor((800 + widest) / 2)) then
+        return
+      end
+      assert.are.equal(200, BaseUI.container:get_width())
+      assertOnRightBorder()
+    end)
+
+    it("should stay on the right border when the window halves", function()
+      if not windowSizedTo(1600) or not windowSizedTo(800) then
+        return
+      end
+      assertOnRightBorder()
+    end)
+
+    it("should fit the window it comes back to after being hidden", function()
+      clickClose()
+      local console = roomFor80Columns()
+      local width = math.floor((console + 200 + console / 0.75) / 2)
+      if not windowSizedTo(width) then
+        return
+      end
+      expandAlias("baseui show", false)
+      pumpEvents(100)
+      assert.is_true(getColumnCount("main") >= 80, getColumnCount("main"))
+      assertOnRightBorder()
+    end)
+
+    it("should keep a width the player gave it", function()
+      BaseUI.container:resize("30%")
+      BaseUI.container:move("70%")
+      if not windowSizedTo(1600) then
+        return
+      end
+      assert.are.equal("30%", BaseUI.container.width)
+      assert.are.equal(480, BaseUI.container:get_width())
+    end)
+
+    it("should leave a dock the player took off the border where they put it", function()
+      BaseUI.container:detach()
+      BaseUI.container:move("10%", "10%")
+      local width = BaseUI.container.width
+      if not windowSizedTo(1600) then
+        return
+      end
+      assert.is_falsy(BaseUI.container.attached)
+      assert.are.equal("10%", BaseUI.container.x)
+      assert.are.equal(width, BaseUI.container.width)
     end)
   end)
 
@@ -5721,6 +6003,13 @@ describe("Window and label state", function()
     end)
 
     it("getProfileTabNumber returns the one-based tab position", function()
+      -- getMousePosition() has no answer only when there is no main window, which has no tabs
+      if not getMousePosition() then
+        local number, err = getProfileTabNumber()
+        assert.is_nil(number)
+        assert.are.equal("could not retrieve the tab number", err)
+        return
+      end
       assert.is_true(getProfileTabNumber() >= 1)
     end)
 
@@ -7708,12 +7997,9 @@ describe("Console buffer size", function()
     assert.is_true(named > 0, ("%d trims were announced, none of them naming %s"):format(#seen, console))
   end)
 
-  -- The count the event carries is the amount every surviving index moved by.
-  -- The cursor moveCursor() sets is not moved with them: it keeps the index it
-  -- was given rather than following the line it was parked on. The engine's own
-  -- cursor is left behind too, but no Lua call reads that one back. That is the
-  -- known limitation the event exists to work around, so a script that ignores
-  -- it is left pointing at whatever text has since moved under its index.
+  -- The count the event carries is the amount every surviving index moved by, so a
+  -- script moves the indexes it saved by it. The cursor moveCursor() sets is not one
+  -- of those: it follows the line it was parked on.
   it("shifts the lines under a saved index down by the count the event reports", function()
     clearWindow(console)
     assert.is_true(setConsoleBufferSize(console, 100, 10))
@@ -7738,9 +8024,7 @@ describe("Console buffer size", function()
     assert.is_true(trimmed > 0, "the buffer never trimmed, so nothing moved")
     assert.are_not.equal(savedText, getLines(console, savedIndex, savedIndex + 1)[1])
     assert.are.equal(savedText, getLines(console, savedIndex - trimmed, savedIndex - trimmed + 1)[1])
-    -- the cursor stayed on the index it was given, not on the line it was on
-    assert.are.equal(savedIndex, getLineNumber(console))
-    moveCursor(console, 0, savedIndex - trimmed)
+    assert.are.equal(savedIndex - trimmed, getLineNumber(console))
     selectCurrentLine(console)
     assert.are.equal(savedText, getSelection(console))
   end)
@@ -7939,14 +8223,23 @@ describe("Main window size and saved layout", function()
     assert.is_truthy(tostring(err):find("setMainWindowSize: bad argument #2 type", 1, true))
   end)
 
+  it("setMainWindowSize says so when there is no main window to size", function()
+    -- getMousePosition() has no answer only when there is no main window
+    if getMousePosition() then
+      pending("there is a main window")
+    end
+    local ok, err = setMainWindowSize(800, 600)
+    assert.is_nil(ok)
+    assert.are.equal("the profile has no main window", err)
+  end)
+
   it("a bigger main window is reported as bigger", function()
     if not resizableWindowAvailable() then
       return
     end
     finally(restoreMainWindowSize)
     local smallWidth, smallHeight = 700, 500
-    -- and it answers nothing at all while it is at it
-    assert.are.equal(0, select("#", setMainWindowSize(smallWidth, smallHeight)))
+    assert.is_true(setMainWindowSize(smallWidth, smallHeight))
     pumpEvents(200)
     local narrowWidth, shortHeight = getMainWindowSize()
 
@@ -8111,9 +8404,12 @@ describe("Main window size and saved layout", function()
     -- files back the way they found them
     local configurationDirectory = getMudletHomeDir():match("^(.*)/profiles/[^/]*$")
     assert(configurationDirectory, "could not work out the configuration directory from " .. getMudletHomeDir())
+    -- getMousePosition() has no answer only when there is no main window, whose layout goes in a file of its own
+    local savedLayoutFile = configurationDirectory .. (getMousePosition() and "/windowLayout.dat" or "/windowLayoutHeadless.dat")
     local layoutFiles = {
       configurationDirectory .. "/windowLayout.dat",
       configurationDirectory .. "/windowLayoutGeometry.dat",
+      configurationDirectory .. "/windowLayoutHeadless.dat",
     }
     local contentsBefore = {}
 
@@ -8141,7 +8437,7 @@ describe("Main window size and saved layout", function()
     end)
 
     it("saveWindowLayout returns true and writes the layout file", function()
-      local layoutFile = layoutFiles[1]
+      local layoutFile = savedLayoutFile
       -- taking the file away first is what makes this about the call rather
       -- than about a file an earlier session left behind
       os.remove(layoutFile)
@@ -8159,7 +8455,7 @@ describe("Main window size and saved layout", function()
     end)
 
     it("saveWindowLayout returns false when the layout file cannot be opened, and saves again once it can", function()
-      local layoutFile = layoutFiles[1]
+      local layoutFile = savedLayoutFile
       os.remove(layoutFile)
       -- a directory in its place makes the open fail even for root, which a
       -- read-only directory does not
@@ -8180,6 +8476,108 @@ describe("Main window size and saved layout", function()
       assert.is_true(loadWindowLayout())
       -- loading twice is not refused the way saving twice would be
       assert.is_true(loadWindowLayout())
+    end)
+
+    it("saveWindowLayout is refused from a handler the load runs, so the load still places every window", function()
+      local first, second = "layoutSaveInLoadA", "layoutSaveInLoadB"
+      local handler
+      finally(function()
+        if handler then
+          killAnonymousEventHandler(handler)
+        end
+        deleteMiniConsole(first)
+        deleteMiniConsole(second)
+      end)
+      openUserWindow(first, false, false, "f")
+      openUserWindow(second, false, false, "f")
+      moveWindow(first, 100, 100)
+      resizeWindow(first, 300, 200)
+      moveWindow(second, 500, 100)
+      resizeWindow(second, 250, 150)
+      pumpEvents(300)
+      local savedSecond = {getWindowGeometry(second)}
+      assert.is_true(saveWindowLayout())
+      moveWindow(first, 150, 150)
+      resizeWindow(first, 320, 220)
+      moveWindow(second, 550, 150)
+      resizeWindow(second, 270, 170)
+      pumpEvents(300)
+      local loading, saved, saveError = false, "not run", nil
+      handler = registerAnonymousEventHandler("sysUserWindowResizeEvent", function(_, _, _, name)
+        if loading and saved == "not run" and (name == first or name == second) then
+          saved, saveError = saveWindowLayout()
+        end
+      end)
+      loading = true
+      assert.is_true(loadWindowLayout())
+      loading = false
+      pumpEvents(300)
+      assert.is_nil(saved)
+      assert.equals("cannot save the window layout while it is being loaded", saveError)
+      -- a save from there wrote this one where it was before the load, and kept the load from moving it; a restored
+      -- floating dock's position can drift under a real window server, its size does not
+      local _, _, savedWidth, savedHeight = unpack(savedSecond)
+      local _, _, width, height = getWindowGeometry(second)
+      assert.are.same({savedWidth, savedHeight}, {width, height})
+    end)
+
+    it("openUserWindow refuses a window a handler deletes or replaces as it is made or as the layout loads", function()
+      local other, deleted, replaced, replacedInLoad = "layoutFontOther", "layoutFontDeleted", "layoutFontReplaced", "layoutLoadReplaced"
+      local target, replace, trigger
+      local function replaceTarget(window)
+        deleteMiniConsole(window)
+        if replace then
+          openUserWindow(window, false, false, "f")
+          hideWindow(window)
+        end
+      end
+      local fontHandler = registerAnonymousEventHandler("sysFontChangeEvent", function(_, window)
+        if window == target then
+          target = nil
+          replaceTarget(window)
+        end
+      end)
+      -- the load resizes the other window, and its handler replaces the one being opened
+      local resizeHandler = registerAnonymousEventHandler("sysUserWindowResizeEvent", function(_, _, _, window)
+        if trigger and window == trigger.resized then
+          local opening = trigger.window
+          trigger = nil
+          replaceTarget(opening)
+        end
+      end)
+      finally(function()
+        killAnonymousEventHandler(fontHandler)
+        killAnonymousEventHandler(resizeHandler)
+        for _, name in ipairs({other, deleted, replaced, replacedInLoad}) do
+          deleteMiniConsole(name)
+        end
+      end)
+      openUserWindow(other, false, false, "f")
+      resizeWindow(other, 300, 200)
+      pumpEvents(300)
+      assert.is_true(saveWindowLayout())
+      -- the layout has the other one at 300x200, so only a load puts it back
+      for _, case in ipairs({{deleted, false, false, {400, 330}}, {replaced, true, false, {400, 330}}, {replacedInLoad, true, true, {300, 200}}}) do
+        resizeWindow(other, 400, 330)
+        pumpEvents(300)
+        replace = case[2]
+        if case[3] then
+          trigger = {resized = other, window = case[1]}
+        else
+          target = case[1]
+        end
+        local opened, openError = openUserWindow(case[1], true, false, "f")
+        pumpEvents(300)
+        assert.is_nil(opened)
+        assert.equals(("userwindow '%s' was deleted while it was being opened"):format(case[1]), openError)
+        local _, _, width, height = getWindowGeometry(other)
+        assert.are.same(case[4], {width, height})
+      end
+      assert.is_nil(windowType(deleted))
+      for _, name in ipairs({replaced, replacedInLoad}) do
+        assert.equals("userwindow", windowType(name))
+        assert.is_false(windowVisible(name))
+      end
     end)
 
     it("verifying the restored dock geometry", function()
@@ -8219,6 +8617,9 @@ describe("Application and profile style sheets", function()
     end)
 
     it("raises the event with an empty tag when none is given", function()
+      -- Swapping one sheet for another repolishes every live widget, seconds once the
+      -- suite has built many; from no sheet Qt installs a fresh style instead
+      setAppStyleSheet("")
       local events = collectStyleSheetEvents()
       assert.is_true(setAppStyleSheet("QLabel { color: rgb(4,5,6); }"))
       assert.are.equal(1, #events)

@@ -649,9 +649,22 @@ describe("Tests announce and showNotification", function()
   -- other functions whose effect needs a desktop; only the accepted argument
   -- counts are left to cover
   it("takes a title on its own, a message with it, and an expiry with both", function()
+    -- getMousePosition() has no answer only when there is no main window
+    if not getMousePosition() then
+      pending("there is no main window to show a notification from")
+    end
     assert.is_true(showNotification("Mudlet spec notification"))
     assert.is_true(showNotification("Mudlet spec notification", "with a body"))
     assert.is_true(showNotification("Mudlet spec notification", "with a body", 1))
+  end)
+
+  it("says so when there is no main window to show a notification from", function()
+    if getMousePosition() then
+      pending("there is a main window")
+    end
+    local shown, err = showNotification("Mudlet spec notification")
+    assert.is_nil(shown)
+    assert.are.equal("the profile has no main window", err)
   end)
 end)
 

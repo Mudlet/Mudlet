@@ -84,6 +84,7 @@ public:
     const QMultiHash<int, int>& getEntranceHash() const { return entranceMap; }
     void deleteValuesFromEntranceMap(int);
     void deleteValuesFromEntranceMap(QSet<int>&);
+    void reserveEntrances(qsizetype roomCount);
 
     void buildAreas();
     void clearMapDB();

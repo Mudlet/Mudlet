@@ -1369,7 +1369,7 @@ void GMCPAuthenticator::scheduleSignInAttempt()
 #endif
         return;
     }
-    if (!mLastSignInAttempt.isValid() || mLastSignInAttempt.durationElapsed() >= scmSignInAttemptInterval) {
+    if (!mLastSignInAttempt.isValid() || mLastSignInAttempt.durationElapsed() >= mSignInAttemptInterval) {
         mLastSignInAttempt.start();
         attemptReconnect();
         return;
@@ -1379,7 +1379,7 @@ void GMCPAuthenticator::scheduleSignInAttempt()
     // capabilities the last frame left behind, and drop it if that connection has gone by then.
     mSignInAttemptPending = true;
     const auto scheduleGeneration = mSignInScheduleGeneration;
-    QTimer::singleShot(scmSignInAttemptInterval - mLastSignInAttempt.durationElapsed(), mpHost, [this, scheduleGeneration]() {
+    QTimer::singleShot(mSignInAttemptInterval - mLastSignInAttempt.durationElapsed(), mpHost, [this, scheduleGeneration]() {
         if (scheduleGeneration != mSignInScheduleGeneration) {
             return;
         }

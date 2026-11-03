@@ -145,8 +145,8 @@ Q_DECLARE_METATYPE(ControlCharacterMode)
 // pipeline run with no view at all, which is the point of the Widgets-free
 // core (#8681).
 //
-// The main console's model is co-owned by Host (see Host::sharedMainConsoleModel)
-// so the pipeline outlives the view; sub-consoles own their own model. Every
+// The main console's model is owned by Host (see Host::mainConsoleModel()) so
+// the pipeline outlives the view; sub-consoles own their own model. Every
 // TConsole reaches its model through TConsole::model(); the widget keeps the
 // former members (buffer, mFgColor, ...) as references that alias the model, so
 // the existing accesses across the codebase are preserved unchanged.
@@ -242,10 +242,19 @@ struct TConsoleModel
     CommandEcho printCommand(QString& msg);
 
     // For --mirror: copies text to stdout prefixed with the profile and console names. Text may be a
-    // line fragment, so what follows the last line feed is held until one arrives.
+    // line fragment, so what follows the last line feed is held until one arrives. Also tells
+    // mNotifier's textPrinted.
     void mirrorToStdOut(const QString& text);
     // mirrorToStdOut() without first writing out what triggers wrote and is still held
     void writeMirrorFragments(const QString& text);
+    // Where printed text landed: a line already there (the one triggers are running on, one a command was
+    // echoed into, or wherever the cursor was moved), or the end.
+    enum class PrintedInto { committedLine, end };
+    // Tells mNotifier's textPrinted of text, keeping the lines the view shows: a piece left open in one
+    // line is ended before text lands anywhere else.
+    void notifyPrinted(const QString& text, PrintedInto into, bool startsLine = false);
+    // A line was committed or the buffer cleared, so no later text continues the open piece.
+    void endPrintedLine() { mPrintedLineEnded = true; }
     // For a complete line: TBuffer::commitLineData() passes it as sent, before triggers can gag or rewrite it.
     void mirrorLineToStdOut(const QString& line);
     // For text written while triggers run: it lands in a line already mirrored as sent, so it is held
@@ -296,10 +305,6 @@ struct TConsoleModel
 
     // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.
     TBuffer buffer;
-    // A QPointer because Host and view are torn down in either order: quitting
-    // destroys every Host before the consoles' deferred deletes run, while
-    // closing one profile deletes its console first. The view co-owns the
-    // model, so it can be left holding one whose Host has gone.
     QPointer<Host> mpHost;
     // On the main console model, the profile's colours, kept there by
     // Host::refreshMainConsoleColors(); colour triggers set to "default" match
@@ -401,6 +406,10 @@ struct TConsoleModel
     bool mMirrorTriggerWriteEndedLine = false;
     // Lines mirrored as committed, so a write that committed some (the OSC 8 documentation) is known
     int mMirrorLinesCommitted = 0;
+    // Where notifyPrinted() last wrote, and whether it left that line open
+    PrintedInto mPrintedInto = PrintedInto::end;
+    bool mPrintedMidLine = false;
+    bool mPrintedLineEnded = false;
     bool mScriptAddressable = false;
     // The line on which the current search result has been found, or the next
     // one is to start (currently only for the main console). An index into the

@@ -2163,6 +2163,29 @@ private slots:
         QTRY_COMPARE(pModern->mCameraController.getTarget(), playerRoom);
     }
 
+    void test_deletingTheAreaTheViewWasTakenToGoesBackToThePlayer()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        constexpr int doomedRoomId = 40;
+        const int doomedAreaId = map()->mpRoomDB->addArea(qsl("Doomed Area"));
+        QVERIFY(doomedAreaId > 0);
+        QVERIFY(addRoomAt(doomedRoomId, doomedAreaId, 5, 5));
+        pModern->setViewCenter(doomedAreaId, 5, 5, 0);
+        QCOMPARE(pModern->shownAreaId(), doomedAreaId);
+        QVERIFY(!pModern->followingPlayer());
+
+        QCOMPARE(runLua(qsl("deleteArea('Doomed Area')")), QString());
+        QVERIFY2(pModern->followingPlayer(), "the view stays on the deleted area");
+        QCOMPARE(pModern->areaShownNext(), mPlayerAreaId);
+        // The rest is checked by painting, and grabbing a view that has no context leaks its QOpenGLContext
+        if (QOpenGLContext probe; !probe.create()) {
+            QSKIP("no OpenGL context on this platform, so the 3D view does not paint");
+        }
+        pModern->grabFramebuffer();
+        QCOMPARE(pModern->shownAreaId(), mPlayerAreaId);
+    }
+
     // Closing the profile frees the Host and its TMap before the floating dock holding the view is
     // deleted, and that dock's teardown hides the view; must run last as it closes the profile
     void test_zzClosingTheProfileWithTheViewShownLeavesTheFreedMapAlone()

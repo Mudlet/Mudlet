@@ -157,6 +157,12 @@ private:
     // hands back how long the save took to finish
     qint64 saveReachingBackWith(const QString& install, const QString& path)
     {
+        // The reload the previous test gave the other profile owes it a save of its own. While that is still
+        // being written the reload is put off until it is done, so it would run after this save, not within it
+        if (!settle(mpOtherHost) || !settle(mpSavingHost)) {
+            qWarning().noquote() << "a profile was still saving before the save that syncs modules";
+            return -1;
+        }
         const QString registered = runLua(mpSavingHost,
                                           qsl(R"(
 mudletTestNestedInstall = nil
