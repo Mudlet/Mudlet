@@ -15,8 +15,9 @@ cmake --build build --target mudlet_headless_executable
 ```
 
 The executable is `build/src/mudlet-headless`. The `linux-core-minimal` preset builds only it, with
-what a mobile build has to leave out turned off; see "Leaving out what a mobile build cannot use"
-in `platform-builds.md`.
+what a mobile build has to leave out turned off and Qt Widgets out of reach, so that CI fails if
+`mudlet_core` needs either again; see "Leaving out what a mobile build cannot use" in
+`platform-builds.md`.
 
 With `-DUSE_GUI=OFF` (or `WITH_GUI=NO` in the environment) a build tree has no desktop GUI at all:
 Qt Widgets need not be installed, and neither the `edbee-lib` nor the `qt-tags-widget` submodule
