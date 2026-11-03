@@ -130,20 +130,6 @@ modules:
     cleanup:
       - /bin/sqlite3
 
-  - name: pcre8
-    config-opts:
-      - "--enable-utf"
-      - "--enable-unicode-properties"
-      - "--prefix=/app"
-    sources:
-      - type: archive
-        url: 'https://sourceforge.net/projects/pcre/files/pcre/8.45/pcre-8.45.tar.bz2'
-        sha256: 4dae6fdcd2bb0bb6c37b5f97c33c2be954da743985369cddac3546e3218bffb8
-    cleanup:
-    - /bin/pcre-config
-    - /bin/pcregrep
-    - /bin/pcretest
-
   - name: boost
     buildsystem: simple
     build-commands:
@@ -198,26 +184,27 @@ modules:
         url: 'https://luarocks.org/manifests/brimworks/lua-zip-0.2-0.src.rock'
         sha256: 106cbef9aaac1742824bead6d2373adfe1f829a536eb0d3435d53ecf9af5b253
 
+  # db:create fails on luasql-sqlite3 2.7 and newer, so every Mudlet build pins it
   - name: luasql-sqlite3
     buildsystem: simple
     build-commands:
-      - luarocks make --tree="/app" luasql-sqlite3-2.7.0-1.rockspec SQLITE_INCDIR="/app/include"
+      - luarocks make --tree="/app" luasql-sqlite3-2.6.1-3.rockspec SQLITE_INCDIR="/app/include"
     sources:
       - type: archive
-        url: 'https://github.com/lunarmodules/luasql/archive/refs/tags/2.7.0.tar.gz'
-        sha256: 15de59f0ea1a2ab205a11e0115d760f8e0c3fee0d3fcc37f52e326a53236e0c7
+        url: 'https://github.com/lunarmodules/luasql/archive/refs/tags/2.6.0.tar.gz'
+        sha256: 8ec445c58fa6148be759080c08f37baea5c3fa84f766197db9bf9c8edb6f8e60
       - type: file
-        url: 'https://luarocks.org/manifests/tomasguisasola/luasql-sqlite3-2.7.0-1.rockspec'
-        sha256: 8f7b5a86030e19135df9df65a47545a7003e84ad359f380ff07b3607431e5d3b
+        url: 'https://luarocks.org/manifests/tomasguisasola/luasql-sqlite3-2.6.1-3.rockspec'
+        sha256: cb4f274bb9062becefa4a2e5c63159d09bad5b71bae959cce5cfeaca4867c8e1
 
-  - name: lrexlib-pcre
+  - name: lrexlib-pcre2
     buildsystem: simple
     build-commands:
-      - luarocks install --tree="/app" lrexlib-pcre-2.9.2-1.src.rock PCRE_INCDIR="/app/include" PCRE_LIBDIR="/app/lib"
+      - luarocks install --tree="/app" lrexlib-pcre2-2.9.4-1.src.rock PCRE2_INCDIR="$(pkg-config --variable=includedir libpcre2-8)" PCRE2_LIBDIR="$(pkg-config --variable=libdir libpcre2-8)"
     sources:
       - type: file
-        url: 'https://luarocks.org/manifests/rrt/lrexlib-pcre-2.9.2-1.src.rock'
-        sha256: 55e01bc9eee32995eaf29cb8c12748b824ae1ff2be70dcd28f5579ce797db9e9
+        url: 'https://luarocks.org/manifests/rrt/lrexlib-pcre2-2.9.4-1.src.rock'
+        sha256: d41d736a309b14fed859ed4d3a49de89ef8f6565a7143570ed0cf1ccdbaebf29
 
   - name: glu
     config-opts:
@@ -248,6 +235,10 @@ modules:
     buildsystem: cmake-ninja
     config-opts:
       - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      - -DUSE_SANITIZER=
+      - -DBUILD_TESTING=OFF
+      # Flatpak updates the app, so the built-in updater must not
+      - -DUSE_UPDATER=OFF
       - -DUSE_3DMAPPER=OFF
       # The rocks are in /app, where only the Lua built above looks
       - -DUSE_BUNDLED_LUA=OFF
