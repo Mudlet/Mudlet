@@ -20,6 +20,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QColor>
+#include <QFlags>
+#include <QList>
 #include <QObject>
 #include <QPointer>
 #include <QString>
@@ -62,6 +65,40 @@ public:
         // stored for them, in place of the GUI's folder and the system's keychain. Settled once a process, so a
         // later start() may name it again, but no other, nor leave it out for the GUI's. Never the GUI's folder.
         QString configDir;
+    };
+
+    // How the game asked for a run of a line to be shown. Reverse is not applied to the colours: the GUI
+    // swaps them as it paints.
+    enum class TextStyle {
+        // With a colour too, whose foreground may then be the bright form the GUI paints in place of bold
+        Bold = 0x1,
+        Italic = 0x2,
+        // Any of the underline styles, OSC 8 links' wavy, dotted and dashed ones included
+        Underline = 0x4,
+        Overline = 0x8,
+        StrikeOut = 0x10,
+        Reverse = 0x20,
+        Blink = 0x40,
+        // Set in place of Blink when the game asks for both
+        FastBlink = 0x80,
+        Concealed = 0x100
+    };
+    Q_DECLARE_FLAGS(TextStyles, TextStyle)
+
+    // The characters [start, start + length) of a line, counted as QString counts them, shown alike
+    struct TextRun
+    {
+        int start = 0;
+        int length = 0;
+        QColor foreground;
+        QColor background;
+        // The profile's own colours, which the game's text has when it asks for none or resets them; a terminal
+        // may show its own in their place. A colour the game asks for that is the same is not told apart.
+        bool defaultForeground = false;
+        bool defaultBackground = false;
+        TextStyles styles;
+
+        bool operator==(const TextRun&) const = default;
     };
 
     // invalidName, invalidConnectionDetails: a profile was to be made under a name, or given a host, port or
@@ -137,8 +174,10 @@ signals:
     // A line committed to the main console as the game's (what the game sends, feedTriggers(), Mudlet's own
     // OSC 8 examples), before triggers run on it; not what echo(), print() and Mudlet's messages add. A
     // handler must not run the event loop, as a modal dialog does: the profile's own timers may commit
-    // another line or close the profile there, in the middle of this line's commit.
-    void outputLine(const QString& profile, const QString& text, bool isPrompt);
+    // another line or close the profile there, in the middle of this line's commit. runs covers text from its
+    // start to its end, in order, with no empty run, and is empty for an empty line; a handler that takes
+    // only the first three arguments may be connected.
+    void outputLine(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs);
     // What the GUI shows only on the profile's own screen, in pieces that need not end a line: text
     // written to the main console that the game did not send (echo(), print(), commands, Mudlet's
     // messages), and the error console. Sent as written, so a handler may neither call the session nor
@@ -172,5 +211,7 @@ private:
     unsigned int mRun = 0;
     std::unique_ptr<HostManager> mpPool;
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(THeadlessSession::TextStyles)
 
 #endif // MUDLET_THEADLESSSESSION_H
