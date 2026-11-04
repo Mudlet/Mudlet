@@ -1931,6 +1931,78 @@ announce("queued", "all")
 #endif
     }
 
+    void test_aGamesPackageDownloadIsFollowedAndCancelled()
+    {
+        // Sends part of what it promises, a little at a time, as Qt reports progress at most every 100ms
+        QTcpServer packageServer;
+        QVERIFY(packageServer.listen(QHostAddress::LocalHost));
+        QPointer<QTcpSocket> packageClient;
+        QTimer drip;
+        drip.setInterval(150);
+        connect(&packageServer, &QTcpServer::newConnection, &packageServer, [&]() {
+            packageClient = packageServer.nextPendingConnection();
+            connect(packageClient, &QTcpSocket::readyRead, packageClient, [&]() {
+                if (!packageClient->readAll().isEmpty() && !drip.isActive()) {
+                    packageClient->write("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: 1000000\r\n\r\n");
+                    drip.start();
+                }
+            });
+        });
+        connect(&drip, &QTimer::timeout, &drip, [&]() {
+            if (packageClient) {
+                packageClient->write(QByteArray(1000, 'x'));
+            }
+        });
+
+        const QString name = qsl("Headless Package Download");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QStringList events;
+        connect(&session, &THeadlessSession::packageDownloadStarted, &session, [&events](const QString&, const QString&) {
+            events.append(qsl("started"));
+        });
+        connect(&session, &THeadlessSession::packageDownloadProgress, &session, [&events](const QString&, qint64 got) {
+            if (got > 0 && (events.isEmpty() || events.last() != qsl("progress"))) {
+                events.append(qsl("progress"));
+            }
+        });
+        connect(&session, &THeadlessSession::packageDownloadFinished, &session, [&events](const QString&) {
+            events.append(qsl("finished"));
+        });
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        // Where the download has ended but the frontend has not yet been told
+        std::optional<bool> cancelledOnceEnded;
+        connect(&session.host()->mTelnet, &cTelnet::signal_packageDownloadFinished, &session, [&]() {
+            cancelledOnceEnded = session.cancelPackageDownload();
+        });
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QVERIFY(!session.cancelPackageDownload());
+        // The save writeProfile() makes leaves out the attributes, which load as false
+        session.host()->mEnableGMCP = true;
+        session.host()->mAcceptServerGUI = true;
+
+        // IAC WILL GMCP, then IAC SB GMCP Client.GUI {...} IAC SE
+        game->write(QByteArray("\xff\xfb\xc9"));
+        QByteArray fromClient;
+        QTRY_VERIFY_WITH_TIMEOUT((fromClient += game->readAll()).contains(QByteArray("\xff\xfd\xc9")), 10000);
+        const QString url = qsl("http://127.0.0.1:%1/headless-game-ui.mpackage").arg(packageServer.serverPort());
+        game->write(QByteArray("\xff\xfa\xc9") + qsl("Client.GUI {\"version\": \"1\", \"url\": \"%1\"}").arg(url).toUtf8() + QByteArray("\xff\xf0"));
+
+        QTRY_COMPARE_WITH_TIMEOUT(events, (QStringList{qsl("started"), qsl("progress")}), 10000);
+        QVERIFY(session.cancelPackageDownload());
+        QTRY_COMPARE_WITH_TIMEOUT(events, (QStringList{qsl("started"), qsl("progress"), qsl("finished")}), 10000);
+        QCOMPARE(cancelledOnceEnded, std::optional<bool>(false));
+        QVERIFY(!session.cancelPackageDownload());
+        drip.stop();
+        QVERIFY(session.shutdown(false));
+    }
+
     // A prompt the game ends with GA, and commands as the command line sends them, a trailing line feed
     // making an empty one as there
     void test_promptsAndCommandsReachTheGame()

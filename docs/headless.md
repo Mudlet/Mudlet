@@ -195,6 +195,9 @@ the player to answer with `answerSecureConnectionOffer()`. The offer lapses when
 until then, or an answer, the profile offers nothing more. A yes stores the secure port with TLS on, as
 the GUI does, so an app that passes its own port to a later `start()` passes `tls` with it.
 
+`packageDownloadStarted`, `packageDownloadProgress` and `packageDownloadFinished` follow a GUI package
+the game sends, as the GUI's progress dialog does, and `cancelPackageDownload()` is its Cancel.
+
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.
 
