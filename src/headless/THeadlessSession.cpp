@@ -29,6 +29,7 @@
 #include "TEvent.h"
 #include "TGameDetails.h"
 #include "TLuaInterpreter.h"
+#include "TMap.h"
 #include "TNullConsoleFrontend.h"
 
 #include <QCoreApplication>
@@ -279,6 +280,10 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
         mErrorString = tr("The profiles closed earlier are still closing; try again once they have.");
         return StartResult::poolClosing;
     }
+    // Before the pool is made, as a handler of that end may call shutdown() or start()
+    if (!mpPool && !finishOpenProgress()) {
+        return StartResult::notOpened;
+    }
     // One pool a process: profiles and Lua reach it through HostManager::self()
     if (mpPool || HostManager::self()) {
         //: Error from a frontend with no window that was asked to open a second set of profiles
@@ -449,6 +454,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                         this,
                         [this, run](const QString& title) {
                             if (run == mRun) {
+                                mPackageDownloadFor = mProfileName;
                                 const QString profile = mProfileName;
                                 emit packageDownloadStarted(profile, title);
                             }
@@ -470,9 +476,76 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                         &cTelnet::signal_packageDownloadFinished,
                         this,
                         [this, run]() {
+                            if (const auto profile = std::exchange(mPackageDownloadFor, std::nullopt); run == mRun && profile) {
+                                emit packageDownloadFinished(*profile);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                // Queued, as the export or import that sends it is under way
+                TMap* pMap = pNewHost->mpMap.data();
+                connect(
+                        pMap,
+                        &TMap::signal_mapTransferProgressStart,
+                        this,
+                        [this, run](const QString& title, const QString& label) {
                             if (run == mRun) {
+                                startMapProgress(title, label, 0);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                connect(
+                        pMap,
+                        &TMap::signal_mapJsonProgressStart,
+                        this,
+                        [this, run](const QString& title, const QString& label, const QString&, const int maximum) {
+                            if (run == mRun) {
+                                startMapProgress(title, label, maximum);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                connect(
+                        pMap,
+                        &TMap::signal_mapProgressSetLabel,
+                        this,
+                        [this, run](const QString& label) {
+                            if (run == mRun) {
+                                mMapProgressLabel = label;
                                 const QString profile = mProfileName;
-                                emit packageDownloadFinished(profile);
+                                emit mapProgressChanged(profile, mMapProgressLabel, mMapProgressValue, mMapProgressMaximum);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                connect(
+                        pMap,
+                        &TMap::signal_mapProgressSetRange,
+                        this,
+                        [this, run](const int, const int maximum) {
+                            if (run == mRun) {
+                                mMapProgressMaximum = maximum;
+                                const QString profile = mProfileName;
+                                emit mapProgressChanged(profile, mMapProgressLabel, mMapProgressValue, mMapProgressMaximum);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                connect(
+                        pMap,
+                        &TMap::signal_mapProgressSetValue,
+                        this,
+                        [this, run](const int value) {
+                            if (run == mRun) {
+                                mMapProgressValue = value;
+                                const QString profile = mProfileName;
+                                emit mapProgressChanged(profile, mMapProgressLabel, mMapProgressValue, mMapProgressMaximum);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                connect(
+                        pMap,
+                        &TMap::signal_mapProgressClose,
+                        this,
+                        [this, run]() {
+                            if (const auto profile = std::exchange(mMapProgressFor, std::nullopt); run == mRun && profile) {
+                                emit mapProgressFinished(*profile);
                             }
                         },
                         Qt::QueuedConnection);
@@ -505,7 +578,8 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                         &QObject::destroyed,
                         this,
                         [this, run]() {
-                            if (run == mRun) {
+                            // A handler of that end may have shut the profile down and started another
+                            if (run == mRun && finishOpenProgress() && run == mRun) {
                                 emit quitRequested();
                             }
                         },
@@ -855,6 +929,10 @@ bool THeadlessSession::shutdown(const bool save)
     if (mpHost) {
         ++mRun;
     }
+    // Also for a profile that has gone while its own end waits in the event loop
+    if (!finishOpenProgress()) {
+        return !save;
+    }
     if (save) {
         // Closed unsaved, keeping its last good save and map; any other profile its scripts opened saves as usual
         if (mLoadFailed && mpHost && mpPool->getHost(mpHost->getName()) == mpHost.data()) {
@@ -974,7 +1052,35 @@ void THeadlessSession::detachFromHost()
         mpHost->setNotificationHandler(nullptr);
         disconnect(&mpHost->mainConsoleModel().mNotifier, nullptr, this, nullptr);
         disconnect(&mpHost->mTelnet, nullptr, this, nullptr);
+        disconnect(mpHost->mpMap.data(), nullptr, this, nullptr);
     }
+}
+
+void THeadlessSession::startMapProgress(const QString& title, const QString& label, const int maximum)
+{
+    mMapProgressLabel = label;
+    mMapProgressValue = 0;
+    mMapProgressMaximum = maximum;
+    mMapProgressFor = mProfileName;
+    const QString profile = mProfileName;
+    emit mapProgressStarted(profile, title, label, maximum);
+}
+
+// The end of a map operation or package download whose own is dropped as stale, or never comes as its Host has
+// gone; false if a handler deleted the session
+bool THeadlessSession::finishOpenProgress()
+{
+    const QPointer<THeadlessSession> self(this);
+    if (const auto profile = std::exchange(mMapProgressFor, std::nullopt)) {
+        emit mapProgressFinished(*profile);
+    }
+    if (!self) {
+        return false;
+    }
+    if (const auto profile = std::exchange(mPackageDownloadFor, std::nullopt)) {
+        emit packageDownloadFinished(*profile);
+    }
+    return self;
 }
 
 namespace {

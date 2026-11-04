@@ -198,6 +198,17 @@ the GUI does, so an app that passes its own port to a later `start()` passes `tl
 `packageDownloadStarted`, `packageDownloadProgress` and `packageDownloadFinished` follow a GUI package
 the game sends, as the GUI's progress dialog does, and `cancelPackageDownload()` is its Cancel.
 
+`mapProgressStarted`, `mapProgressChanged` and `mapProgressFinished` follow a map export, import or
+download, as the GUI's progress dialog does, each change carrying the whole label, the rooms done and the
+rooms to go through. They are sent from the event loop. An export or import runs it as it goes, so its
+start and changes can arrive while the script that began it, or the `start()` that loads a JSON map,
+still runs, but its end arrives only once that has returned. A map download, which only an app can begin,
+through `host()`, carries on after its script returns.
+
+A map operation or package download still open when its profile closes, or when `shutdown()` or a later
+`start()` lets the profile go, gets its end there, so every start an app is sent is followed by one end.
+A session that is deleted sends none.
+
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.
 

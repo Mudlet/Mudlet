@@ -2003,6 +2003,214 @@ announce("queued", "all")
         QVERIFY(session.shutdown(false));
     }
 
+    // Its end, sent from the event loop, would come once the profile it belongs to has gone
+    void test_aShutdownEndsAGamesPackageDownload()
+    {
+        QTcpServer packageServer;
+        QVERIFY(packageServer.listen(QHostAddress::LocalHost));
+        QPointer<QTcpSocket> packageClient;
+        connect(&packageServer, &QTcpServer::newConnection, &packageServer, [&]() {
+            packageClient = packageServer.nextPendingConnection();
+            connect(packageClient, &QTcpSocket::readyRead, packageClient, [&]() {
+                if (!packageClient->readAll().isEmpty()) {
+                    packageClient->write("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: 1000000\r\n\r\n");
+                    packageClient->write(QByteArray(1000, 'x'));
+                }
+            });
+        });
+
+        const QString name = qsl("Headless Package Download Shutdown");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QStringList events;
+        connect(&session, &THeadlessSession::packageDownloadStarted, &session, [&events](const QString&, const QString&) {
+            events.append(qsl("started"));
+        });
+        connect(&session, &THeadlessSession::packageDownloadFinished, &session, [&events, name](const QString& profile) {
+            QCOMPARE(profile, name);
+            events.append(qsl("finished"));
+        });
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        session.host()->mEnableGMCP = true;
+        session.host()->mAcceptServerGUI = true;
+        game->write(QByteArray("\xff\xfb\xc9"));
+        QByteArray fromClient;
+        QTRY_VERIFY_WITH_TIMEOUT((fromClient += game->readAll()).contains(QByteArray("\xff\xfd\xc9")), 10000);
+        const QString url = qsl("http://127.0.0.1:%1/headless-game-ui.mpackage").arg(packageServer.serverPort());
+        game->write(QByteArray("\xff\xfa\xc9") + qsl("Client.GUI {\"version\": \"1\", \"url\": \"%1\"}").arg(url).toUtf8() + QByteArray("\xff\xf0"));
+        QTRY_COMPARE_WITH_TIMEOUT(events, QStringList{qsl("started")}, 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(session.host()->mTelnet.packageDownloadRunning(), 10000);
+
+        QVERIFY(session.shutdown(false));
+        QCOMPARE(events, (QStringList{qsl("started"), qsl("finished")}));
+    }
+
+    // Records started, each run of changes as one, and finished, with every maximum given
+    static void followMapProgress(THeadlessSession& session, const QString& name, QStringList& events, QList<int>& maximums)
+    {
+        connect(&session, &THeadlessSession::mapProgressStarted, &session, [&events, &maximums, name](const QString& profile, const QString&, const QString&, const int maximum) {
+            QCOMPARE(profile, name);
+            events.append(qsl("started"));
+            maximums.append(maximum);
+        });
+        connect(&session, &THeadlessSession::mapProgressChanged, &session, [&events, &maximums](const QString&, const QString& label, const int, const int maximum) {
+            QVERIFY(!label.isEmpty());
+            maximums.append(maximum);
+            if (events.isEmpty() || events.last() != qsl("changed")) {
+                events.append(qsl("changed"));
+            }
+        });
+        connect(&session, &THeadlessSession::mapProgressFinished, &session, [&events, name](const QString& profile) {
+            QCOMPARE(profile, name);
+            events.append(qsl("finished"));
+        });
+    }
+
+    static QString threeRoomsSavedTo(const QString& path)
+    {
+        // The map's Lua takes an open map
+        return qsl(R"lua(
+openMapWidget()
+local area = addAreaName("Headless Progress")
+for id = 1, 3 do
+  addRoom(id)
+  setRoomArea(id, area)
+end
+headlessMapSaved, headlessMapError = saveJsonMap([[%1]])
+)lua")
+                .arg(path);
+    }
+
+    void test_aMapExportAndImportAreFollowed()
+    {
+        const QString name = qsl("Headless Map Progress");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QStringList events;
+        QList<int> maximums;
+        followMapProgress(session, name, events, maximums);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        const QString path = mConfigDir.filePath(qsl("headless-map-progress.json"));
+        QVERIFY(session.runLua(threeRoomsSavedTo(path)));
+        QVERIFY2(session.runLua(qsl("assert(headlessMapSaved == true, tostring(headlessMapError))")), qPrintable(session.errorString()));
+        QTRY_COMPARE_WITH_TIMEOUT(events, (QStringList{qsl("started"), qsl("changed"), qsl("finished")}), 10000);
+        QVERIFY(std::all_of(maximums.cbegin(), maximums.cend(), [](const int maximum) {
+            return maximum == 3;
+        }));
+
+        events.clear();
+        maximums.clear();
+        QVERIFY(session.runLua(qsl("headlessMapLoaded = loadJsonMap([[%1]])").arg(path)));
+        QVERIFY(session.runLua(qsl("assert(headlessMapLoaded == true)")));
+        QTRY_COMPARE_WITH_TIMEOUT(events, (QStringList{qsl("started"), qsl("changed"), qsl("finished")}), 10000);
+        QVERIFY(std::all_of(maximums.cbegin(), maximums.cend(), [](const int maximum) {
+            return maximum == 3;
+        }));
+
+        // Its end is sent from the event loop once the script has returned, which a shutdown() at once must not lose
+        events.clear();
+        QVERIFY(session.runLua(qsl("saveJsonMap([[%1]])").arg(path)));
+        QCOMPARE(events, (QStringList{qsl("started"), qsl("changed")}));
+        QVERIFY(session.shutdown(false));
+        QCOMPARE(events, (QStringList{qsl("started"), qsl("changed"), qsl("finished")}));
+
+        // As for a JSON map that start() loads
+        const QString mapsFolder = MudletApp::getMudletPath(enums::profileMapsPath, name);
+        QVERIFY(QDir().mkpath(mapsFolder));
+        QVERIFY(QFile::copy(path, qsl("%1/headless-map-progress.json").arg(mapsFolder)));
+        events.clear();
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.shutdown(false));
+        QCOMPARE(events, (QStringList{qsl("started"), qsl("changed"), qsl("finished")}));
+    }
+
+    void test_aFailedMapExportEnds()
+    {
+        const QString name = qsl("Headless Map Export Fails");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QStringList events;
+        QList<int> maximums;
+        followMapProgress(session, name, events, maximums);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(threeRoomsSavedTo(mConfigDir.filePath(qsl("no such folder/headless-map-progress.json")))));
+        QVERIFY2(session.runLua(qsl("assert(headlessMapSaved == nil and headlessMapError:find('could not open save file', 1, true), tostring(headlessMapError))")), qPrintable(session.errorString()));
+        QTRY_COMPARE_WITH_TIMEOUT(events, (QStringList{qsl("started"), qsl("changed"), qsl("finished")}), 10000);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // The end a closed profile is owed comes before quitRequested, whose handler would otherwise close what the
+    // end's own handler opened next
+    void test_aHandlerOfAClosedProfilesEndMayStartAnother()
+    {
+        QTcpServer stalled;
+        QVERIFY(stalled.listen(QHostAddress::LocalHost));
+        std::vector<std::unique_ptr<QTcpSocket>> held;
+        connect(&stalled, &QTcpServer::newConnection, &stalled, [&]() {
+            held.emplace_back(stalled.nextPendingConnection());
+        });
+        const QString name = qsl("Headless Map Download Closed");
+        const QString next = qsl("Headless Map Download Next");
+        QVERIFY(writeProfile(name, QString()));
+        QVERIFY(writeProfile(next, QString()));
+        THeadlessSession session;
+        QSignalSpy started(&session, &THeadlessSession::mapProgressStarted);
+        QSignalSpy quit(&session, &THeadlessSession::quitRequested);
+        std::optional<THeadlessSession::StartResult> restarted;
+        connect(&session, &THeadlessSession::mapProgressFinished, &session, [&](const QString& profile) {
+            QCOMPARE(profile, name);
+            QVERIFY(session.shutdown(false));
+            restarted = session.start({.profile = next, .connect = false});
+        });
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        session.host()->mpMap->downloadMap(qsl("http://127.0.0.1:%1/map.xml").arg(stalled.serverPort()), mConfigDir.filePath(qsl("headless-map-closed.xml")));
+        QTRY_COMPARE_WITH_TIMEOUT(started.count(), 1, 10000);
+
+        QVERIFY(session.runLua(qsl("closeProfile()")));
+        QTRY_VERIFY_WITH_TIMEOUT(restarted.has_value(), 10000);
+        QCOMPARE(*restarted, THeadlessSession::StartResult::started);
+        QTest::qWait(100);
+        QCOMPARE(quit.count(), 0);
+        QVERIFY(session.host());
+        QCOMPARE(session.host()->getName(), next);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A transfer is started knowing nothing of how many rooms it goes through
+    void test_anXmlMapImportIsFollowed()
+    {
+        const QString name = qsl("Headless Xml Map Progress");
+        QVERIFY(writeProfile(name, QString()));
+        const QString path = mConfigDir.filePath(qsl("headless-map-progress.xml"));
+        QVERIFY(writeFile(path, R"(<?xml version="1.0" encoding="UTF-8"?>
+<map>
+  <areas><area id="5001" name="Headless Xml Area"/></areas>
+  <rooms>
+    <room id="5001" area="5001" title="One"><coord x="0" y="0" z="0"/></room>
+    <room id="5002" area="5001" title="Two"><coord x="1" y="0" z="0"/></room>
+  </rooms>
+</map>
+)"));
+        THeadlessSession session;
+        QStringList events;
+        QList<int> maximums;
+        followMapProgress(session, name, events, maximums);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("openMapWidget(); headlessMapLoaded = loadMap([[%1]])").arg(path)));
+        QVERIFY(session.runLua(qsl("assert(headlessMapLoaded == true)")));
+        QTRY_COMPARE_WITH_TIMEOUT(events, (QStringList{qsl("started"), qsl("changed"), qsl("finished")}), 10000);
+        QCOMPARE(maximums.constFirst(), 0);
+        QVERIFY(maximums.constLast() > 0);
+        QVERIFY(session.shutdown(false));
+    }
+
     // A prompt the game ends with GA, and commands as the command line sends them, a trailing line feed
     // making an empty one as there
     void test_promptsAndCommandsReachTheGame()
