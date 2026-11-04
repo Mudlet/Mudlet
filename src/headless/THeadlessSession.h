@@ -236,6 +236,11 @@ signals:
     // The map operation can no longer be aborted, as the GUI's dialog then drops its Abort: at once for an XML
     // import, and for an export writing its file or a download that has arrived
     void mapProgressCancelDisabled(const QString& profile);
+    // The map opened with no mapping script installed, where the GUI suggests one: the first time it opens
+    // once the profile has loaded, as the GUI asks. The profile marks it asked then, whether or not anything
+    // listens, and a save keeps that, so it never comes again for that profile. From the event loop, even once
+    // shutdown() or a later start() has let the profile go, so long as the session is not deleted before then.
+    void mappingScriptMissing(const QString& profile);
     // The connection was made; from the event loop
     void connected(const QString& profile);
     // The connection ended, or could not be made; from the event loop

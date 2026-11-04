@@ -2370,6 +2370,43 @@ headlessMapBefore = headlessMapNow()
         QVERIFY(session.shutdown(false));
     }
 
+    void test_aMapOpenedWithNoMappingScriptIsReported()
+    {
+        const QString name = qsl("Headless No Mapping Script");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy missing(&session, &THeadlessSession::mappingScriptMissing);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        // A shutdown() before the event loop runs saves that it was asked, so must not lose it
+        QVERIFY(session.runLua(qsl("openMapWidget()")));
+        QVERIFY(session.shutdown(true));
+        QTRY_COMPARE_WITH_TIMEOUT(missing.count(), 1, 10000);
+        QCOMPARE(missing.at(0).at(0).toString(), name);
+
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("openMapWidget()")));
+        QTest::qWait(100);
+        QCOMPARE(missing.count(), 1);
+        QVERIFY(session.shutdown(false));
+
+        const QString scripted = qsl("Headless Mapping Script");
+        QVERIFY(writeProfile(scripted, qsl("mudlet = mudlet or {}; mudlet.mapper_script = true")));
+        QCOMPARE(session.start({.profile = scripted, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("openMapWidget()")));
+        QTest::qWait(100);
+        QCOMPARE(missing.count(), 1);
+        QVERIFY(session.shutdown(false));
+
+        // So the two above are kept quiet by what they say, not by a session that no longer relays it
+        const QString another = qsl("Headless No Mapping Script Either");
+        QVERIFY(writeProfile(another, QString()));
+        QCOMPARE(session.start({.profile = another, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("openMapWidget()")));
+        QTRY_COMPARE_WITH_TIMEOUT(missing.count(), 2, 10000);
+        QCOMPARE(missing.at(1).at(0).toString(), another);
+        QVERIFY(session.shutdown(false));
+    }
+
     // A prompt the game ends with GA, and commands as the command line sends them, a trailing line feed
     // making an empty one as there
     void test_promptsAndCommandsReachTheGame()

@@ -217,6 +217,14 @@ which to stop, and completes. `mapProgressCancelDisabled` says when the dialog w
 once for an XML import, and for an export writing its file or a download that has arrived. After it,
 or with nothing running, the call answers `false`.
 
+`mappingScriptMissing` says the map opened with no mapping script installed, where the GUI suggests the
+player finds one, for an app that offers its own. As in the GUI, it comes only the first time the map
+opens once the profile has loaded, so an app that connects it later may have missed it. The profile
+marks it asked at that moment, whether or not anything listens, the reference runner included, and a
+save keeps that, so it never comes again for that profile, in the GUI either. When `shutdown()` or a
+later `start()` follows the map opening at once, it is still delivered once the event loop runs, as
+long as the session has not been deleted by then.
+
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.
 
