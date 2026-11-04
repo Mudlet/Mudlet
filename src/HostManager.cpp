@@ -200,7 +200,7 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
         qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") ERROR: an unnamed Host is not permitted, aborting and returning false!";
         return false;
     }
-    if (mGoingDown) {
+    if (mGoingDown || mDeletionPending) {
         qWarning() << "HostManager::addHost() - not adding" << hostname << "as the pool is being destroyed";
         return false;
     }
@@ -438,6 +438,14 @@ void HostManager::closeAllProfiles()
         } else {
             deleteHost(pHost->getName());
         }
+    }
+}
+
+void HostManager::markDeletionPending()
+{
+    mDeletionPending = true;
+    for (const auto& pHost : hostList()) {
+        pHost->markDeletionPending();
     }
 }
 

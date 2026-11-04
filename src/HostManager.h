@@ -102,6 +102,9 @@ public:
     void deleteHost(const QString&);
     // For a frontend closing every profile as it goes, ahead of the pool's own destruction
     void refuseNewProfiles() { mGoingDown = true; }
+    // For a pool whose deletion is decided but may wait: it opens no more profiles, and its own do not reach the
+    // game meanwhile. Not refuseNewProfiles(), after which closeAllProfiles() would close nothing.
+    void markDeletionPending();
     void postIrcMessage(const QString&, const QString&, const QString&);
     void postInterHostEvent(const Host*, const TEvent&, const bool = false);
     void changeAllHostColour(const Host*);
@@ -150,6 +153,7 @@ private:
     // From refuseNewProfiles() or the destructor on: a profile opened then would never get its sysExitEvent,
     // nor have its windows closed before it
     bool mGoingDown = false;
+    bool mDeletionPending = false;
     int mProfileLoadsInProgress = 0;
     std::function<void(Host*)> mProfileOpenedHook;
     // Expires with the pool, for timers tied to a profile that may outlive it

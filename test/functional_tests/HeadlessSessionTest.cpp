@@ -1103,8 +1103,8 @@ version = "1.2")"},
     }
 
     // Some of a save can load before the part that does not, and a sysLoadEvent handler there can run the
-    // event loop until the connection is made: the GUI keeps it, but here it is dropped, as is that of a
-    // profile whose session has gone
+    // event loop until the connection is made: the GUI keeps it, but here it is dropped. A profile whose
+    // session has gone is not connected at all.
     void test_anUnwantedConnectIsCalledOff()
     {
         QFETCH(const bool, partlyLoaded);
@@ -1151,7 +1151,7 @@ end))lua");
         // A deleted session's pool goes from a timer, so its profile is still here
         const QPointer<Host> pHost(HostManager::self()->getHost(name));
         QVERIFY(pHost);
-        QCOMPARE(luaGlobalString(pHost, "headlessConnected"), qsl("yes"));
+        QCOMPARE(luaGlobalString(pHost, "headlessConnected"), deleteSession ? QString() : qsl("yes"));
         QVERIFY2(!std::get<2>(pHost->mTelnet.getConnectionInfo()), "An unwanted connection was left up.");
         if (deleteSession) {
             QTRY_VERIFY_WITH_TIMEOUT(!HostManager::self(), 10000);
@@ -1351,6 +1351,313 @@ headlessNoWindow = table.concat({
         const QString refused = qsl("nil|the profile has no main window");
         QCOMPARE(luaGlobalString(session.host(), "headlessNoWindow"), QStringList({refused, refused, refused, qsl("true|nil")}).join(qsl(";")));
         QVERIFY(session.shutdown(false));
+    }
+
+    // As GMCPAuthenticator reconnects after a rejected sign-in: from a timer, with no Lua running. The socket is
+    // still connected, so connectIt() aborts it and runs the event loop, where the close closeMudlet() posted runs.
+    void test_aProfileClosedWhileItReconnectsOutlivesTheReconnect()
+    {
+        const QString name = qsl("Headless Close During Reconnect");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("localhost")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QTRY_COMPARE_WITH_TIMEOUT(session.host()->mTelnet.getConnectionState(), QAbstractSocket::ConnectedState, 10000);
+
+        int dialled = 0;
+        connect(&server, &QTcpServer::newConnection, &server, [&server, &dialled]() {
+            while (std::unique_ptr<QTcpSocket> socket{server.nextPendingConnection()}) {
+                ++dialled;
+            }
+        });
+        QPointer<Host> profile(session.host());
+        std::optional<bool> outlivedReconnect;
+        bool closedInReconnect = false;
+        bool lookingUpOnceClosed = false;
+        QTimer::singleShot(0, profile, [&]() {
+            profile->mTelnet.reconnect();
+            outlivedReconnect = !profile.isNull();
+            if (profile) {
+                closedInReconnect = profile->closeStarted();
+                lookingUpOnceClosed = profile->mTelnet.getConnectionState() == QAbstractSocket::HostLookupState;
+            }
+        });
+        QVERIFY(session.runLua(qsl("closeMudlet()")));
+        QTRY_VERIFY_WITH_TIMEOUT(outlivedReconnect.has_value(), 10000);
+        QVERIFY(*outlivedReconnect);
+        QVERIFY2(closedInReconnect, "SETUP: the close did not run inside the reconnect");
+        QVERIFY2(!lookingUpOnceClosed, "the reconnect went on to look the game up for a profile that had closed");
+        QTRY_VERIFY_WITH_TIMEOUT(profile.isNull(), 10000);
+        QTest::qWait(300);
+        QCOMPARE(dialled, 0);
+        // Takes the quit closeMudlet() asked for, which would otherwise end a later test's event loop
+        QTimer watchdog;
+        watchdog.setSingleShot(true);
+        connect(&watchdog, &QTimer::timeout, &watchdog, []() {
+            QCoreApplication::exit(2);
+        });
+        watchdog.start(std::chrono::seconds(10));
+        QCOMPARE(QCoreApplication::exec(), 0);
+    }
+
+    // shutdown() from a handler the reconnect's event loop runs would close the profile under it; a save deletes
+    // nothing, so it goes ahead
+    void test_aSessionWaitsForAReconnectToReturn()
+    {
+        const QString name = qsl("Headless Shutdown During Reconnect");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("localhost")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QTRY_COMPARE_WITH_TIMEOUT(session.host()->mTelnet.getConnectionState(), QAbstractSocket::ConnectedState, 10000);
+
+        std::optional<bool> saved;
+        std::optional<bool> shutDown;
+        QString saveError;
+        QString shutdownError;
+        connect(&session, &THeadlessSession::disconnected, &session, [&]() {
+            if (!shutDown.has_value()) {
+                saved = session.save();
+                saveError = session.errorString();
+                shutDown = session.shutdown(false);
+                shutdownError = session.errorString();
+            }
+        });
+        QPointer<Host> profile(session.host());
+        std::optional<bool> handledInReconnect;
+        QTimer::singleShot(0, profile, [&]() {
+            profile->mTelnet.reconnect();
+            handledInReconnect = shutDown.has_value();
+        });
+        QTRY_VERIFY_WITH_TIMEOUT(handledInReconnect.has_value(), 10000);
+        QVERIFY2(*handledInReconnect, "SETUP: the disconnection was not handled inside the reconnect");
+        QVERIFY2(saved == std::optional<bool>(true), qPrintable(saveError));
+        QCOMPARE(shutDown, std::optional<bool>(false));
+        QVERIFY2(shutdownError.contains(qsl("reconnecting")), qPrintable(shutdownError));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // The deleted session's pool waits for the reconnect, which must not then dial the game it is about to drop
+    void test_aSessionDeletedWhileItReconnectsDialsNoMore()
+    {
+        const QString name = qsl("Headless Delete During Reconnect");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("localhost")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        QObject owner;
+        auto* pSession = new THeadlessSession(&owner);
+        const QPointer<THeadlessSession> session(pSession);
+        QCOMPARE(pSession->start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QTRY_COMPARE_WITH_TIMEOUT(pSession->host()->mTelnet.getConnectionState(), QAbstractSocket::ConnectedState, 10000);
+
+        int dialled = 0;
+        connect(&server, &QTcpServer::newConnection, &server, [&server, &dialled]() {
+            while (std::unique_ptr<QTcpSocket> socket{server.nextPendingConnection()}) {
+                ++dialled;
+            }
+        });
+        connect(pSession, &THeadlessSession::disconnected, pSession, [pSession]() {
+            delete pSession;
+        });
+        QPointer<Host> profile(pSession->host());
+        std::optional<bool> outlivedReconnect;
+        bool deletedInReconnect = false;
+        bool connectingOnceDeleted = false;
+        QTimer::singleShot(0, profile, [&]() {
+            profile->mTelnet.reconnect();
+            outlivedReconnect = !profile.isNull();
+            deletedInReconnect = session.isNull();
+            if (profile) {
+                connectingOnceDeleted = profile->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState;
+            }
+        });
+        QTRY_VERIFY_WITH_TIMEOUT(outlivedReconnect.has_value(), 10000);
+        QVERIFY(*outlivedReconnect);
+        QVERIFY2(deletedInReconnect, "SETUP: the session was not deleted inside the reconnect");
+        QVERIFY2(!connectingOnceDeleted, "the reconnect went on to connect a profile whose session had been deleted");
+        QTRY_VERIFY_WITH_TIMEOUT(profile.isNull(), 10000);
+        QTest::qWait(300);
+        QCOMPARE(dialled, 0);
+    }
+
+    // With the game already gone, a script's reconnect only looks it up, and the pool, deleted from a handler the
+    // same script set off, waits for the script: a lookup begun before is called off, and one asked for after
+    // is never begun
+    void test_aSessionDeletedWhileItLooksTheGameUpDialsNoMore_data()
+    {
+        QTest::addColumn<QString>("script");
+        QTest::newRow("reconnect, then deleted") << qsl("reconnect(); echo('x')");
+        QTest::newRow("deleted, then reconnect") << qsl("echo('x'); reconnect()");
+    }
+
+    void test_aSessionDeletedWhileItLooksTheGameUpDialsNoMore()
+    {
+        QFETCH(QString, script);
+        const QString name = qsl("Headless Delete During Lookup");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("localhost")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        QObject owner;
+        auto* pSession = new THeadlessSession(&owner);
+        const QPointer<THeadlessSession> session(pSession);
+        QCOMPARE(pSession->start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QPointer<Host> profile(pSession->host());
+        QTRY_COMPARE_WITH_TIMEOUT(profile->mTelnet.getConnectionState(), QAbstractSocket::ConnectedState, 10000);
+        game.reset();
+        QTRY_COMPARE_WITH_TIMEOUT(profile->mTelnet.getConnectionState(), QAbstractSocket::UnconnectedState, 10000);
+
+        int dialled = 0;
+        connect(&server, &QTcpServer::newConnection, &server, [&server, &dialled]() {
+            while (std::unique_ptr<QTcpSocket> socket{server.nextPendingConnection()}) {
+                ++dialled;
+            }
+        });
+        connect(pSession, &THeadlessSession::localText, pSession, [pSession]() {
+            delete pSession;
+        });
+        pSession->runLua(script);
+        QVERIFY2(session.isNull(), "SETUP: the script's echo did not delete the session");
+        QVERIFY2(profile, "SETUP: the pool did not wait for the script");
+        QCOMPARE(profile->mTelnet.getConnectionState(), QAbstractSocket::UnconnectedState);
+        QTRY_VERIFY_WITH_TIMEOUT(profile.isNull(), 10000);
+        QTest::qWait(300);
+        QCOMPARE(dialled, 0);
+    }
+
+    // A profile opened once its pool is to go would only dial the game for the pool to drop it
+    void test_aPoolToBeDeletedOpensNoProfile()
+    {
+        const QString name = qsl("Headless Delete Then Open");
+        const QString other = qsl("Headless Opened Too Late");
+        QVERIFY(writeProfile(name, QString()));
+        QVERIFY(writeProfile(other, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(other, qsl("url"), qsl("localhost")).first);
+        QVERIFY(MudletApp::writeProfileData(other, qsl("port"), QString::number(server.serverPort())).first);
+        int dialled = 0;
+        connect(&server, &QTcpServer::newConnection, &server, [&server, &dialled]() {
+            while (std::unique_ptr<QTcpSocket> socket{server.nextPendingConnection()}) {
+                ++dialled;
+            }
+        });
+
+        QObject owner;
+        auto* pSession = new THeadlessSession(&owner);
+        const QPointer<THeadlessSession> session(pSession);
+        QCOMPARE(pSession->start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        connect(pSession, &THeadlessSession::localText, pSession, [pSession]() {
+            delete pSession;
+        });
+        QPointer<Host> profile(pSession->host());
+        pSession->runLua(qsl("echo('x'); openedTooLate = tostring(loadProfile('%1', false))").arg(other));
+        QVERIFY2(session.isNull(), "SETUP: the script's echo did not delete the session");
+        QVERIFY2(profile, "SETUP: the pool did not wait for the script");
+        const QString openedTooLate = luaGlobalString(profile, "openedTooLate");
+        QTRY_VERIFY_WITH_TIMEOUT(!HostManager::self(), 10000);
+        QTest::qWait(300);
+        QCOMPARE(dialled, 0);
+        QCOMPARE(openedTooLate, qsl("nil"));
+    }
+
+    // shutdown() runs the event loop, here for a reset asked for first, where a dial already under way would connect,
+    // run the profile's onConnect and sysConnectionEvent and start its login, just before the pool drops it. The
+    // dial goes through a SOCKS5 proxy that holds it until its reply is sent: loopback's own handshake is over
+    // before the test could step in on some platforms.
+    void test_aShutdownCallsOffADialUnderWay()
+    {
+        const QString name = qsl("Headless Shutdown During Dial");
+        QVERIFY(writeProfile(name, QString()));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("localhost")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), qsl("4000")).first);
+        QTcpServer proxy;
+        QVERIFY(proxy.listen(QHostAddress::LocalHost));
+        QList<QPointer<QTcpSocket>> held;
+        connect(&proxy, &QTcpServer::newConnection, &proxy, [&proxy, &held]() {
+            while (QTcpSocket* client = proxy.nextPendingConnection()) {
+                connect(client, &QIODevice::readyRead, client, [client, &held]() {
+                    QByteArray in = client->property("in").toByteArray() + client->readAll();
+                    if (!client->property("greeted").toBool()) {
+                        if (in.size() < 2 || in.size() < 2 + static_cast<quint8>(in.at(1))) {
+                            client->setProperty("in", in);
+                            return;
+                        }
+                        in.remove(0, 2 + static_cast<quint8>(in.at(1)));
+                        client->write(QByteArray::fromHex("0500"));
+                        client->setProperty("greeted", true);
+                    }
+                    // A CONNECT to an IPv4, a name or an IPv6 address, then the port
+                    if (in.size() < 5) {
+                        client->setProperty("in", in);
+                        return;
+                    }
+                    const quint8 type = static_cast<quint8>(in.at(3));
+                    const int length = 4 + (type == 0x01 ? 4 : type == 0x04 ? 16 : 1 + static_cast<quint8>(in.at(4))) + 2;
+                    if (in.size() < length) {
+                        client->setProperty("in", in);
+                        return;
+                    }
+                    client->setProperty("in", QByteArray());
+                    held.append(client);
+                });
+            }
+        });
+
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QPointer<Host> profile(session.host());
+        profile->mUseProxy = true;
+        profile->mProxyAddress = qsl("127.0.0.1");
+        profile->mProxyPort = proxy.serverPort();
+        int connections = 0;
+        connect(&profile->mTelnet, &cTelnet::signal_connected, &proxy, [&connections]() {
+            ++connections;
+        });
+        profile->mTelnet.reconnect();
+        QTRY_VERIFY_WITH_TIMEOUT(!held.isEmpty(), 10000);
+        QCOMPARE(profile->mTelnet.getConnectionState(), QAbstractSocket::ConnectingState);
+
+        // Read into the proxy engine here, which then queues its notice of the connection, so that it is delivered
+        // with the reset in shutdown()'s first pass of the event loop, rather than in passes it may not run
+        for (const QPointer<QTcpSocket>& client : std::as_const(held)) {
+            QVERIFY(client);
+            client->write(QByteArray::fromHex("05000001000000000000"));
+            QVERIFY(client->waitForBytesWritten(5000));
+            const QList<QTcpSocket*> sockets = profile->mTelnet.mSocket_ipV4.findChildren<QTcpSocket*>() + profile->mTelnet.mSocket_ipV6.findChildren<QTcpSocket*>();
+            const auto control = std::find_if(sockets.cbegin(), sockets.cend(), [&client](const QTcpSocket* socket) {
+                return socket->localPort() == client->peerPort() && socket->peerPort() == client->localPort();
+            });
+            QVERIFY2(control != sockets.cend(), "SETUP: the proxy engine's own socket was not found");
+            QVERIFY((*control)->waitForReadyRead(5000));
+        }
+        QCOMPARE(profile->mTelnet.getConnectionState(), QAbstractSocket::ConnectingState);
+        QCOMPARE(connections, 0);
+        QVERIFY(session.runLua(qsl("resetProfile()")));
+        QVERIFY(session.shutdown(true));
+        QVERIFY(profile.isNull());
+        QCOMPARE(connections, 0);
     }
 
     // A prompt the game ends with GA, and commands as the command line sends them, a trailing line feed
