@@ -172,18 +172,13 @@ private:
         return connected.wait(15s) && (accepted.count() || accepted.wait(15s));
     }
 
-    // The game's last words: a compressed burst, as much again uncompressed and
-    // a goodbye, with the connection closed as soon as they are sent. Compressed
-    // first, so that the close can also find input inflated past the drain's
-    // depth still waiting ahead of what is unread on the socket; the start
-    // sequence opens the send so no read splits it.
-    bool sendLastWordsAndClose()
+    // Agreed ahead of the burst, as a game does at login: an answer reaching
+    // the socket once the game has closed it is met with a reset, which
+    // throws away whatever of the burst the client has yet to receive. The
+    // LINEMODE refusal answers the request sent last, so once it is in, so
+    // is everything the client had still to send.
+    bool agreeProtocolsAheadOfTheLastWords()
     {
-        // Agreed ahead of the burst, as a game does at login: an answer reaching
-        // the socket once the game has closed it is met with a reset, which
-        // throws away whatever of the burst the client has yet to receive. The
-        // LINEMODE refusal answers the request sent last, so once it is in, so
-        // is everything the client had still to send.
         const QByteArray lineModeRefused("\xFF\xFC\x22", 3);
         const qsizetype refusalsBefore = mpServer->receivedSoFar().count(lineModeRefused);
         mpServer->sendRaw(QByteArray("\xFF\xFB\x56\xFF\xFD\x22", 6));
@@ -195,10 +190,34 @@ private:
             }
             QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
         }
+        return true;
+    }
 
+    // The game's last words: a compressed burst, as much again uncompressed and
+    // a goodbye, with the connection closed as soon as they are sent. Compressed
+    // first, so that the close can also find input inflated past the drain's
+    // depth still waiting ahead of what is unread on the socket; the start
+    // sequence opens the send so no read splits it.
+    bool sendLastWordsAndClose()
+    {
+        if (!agreeProtocolsAheadOfTheLastWords()) {
+            return false;
+        }
         // qCompress() prefixes the zlib stream with the source length
         const QByteArray compressed = qCompress(burstOf(scmCompressedLastWords), 9).mid(4);
         mpServer->sendRaw(QByteArray("\xFF\xFA\x56\xFF\xF0", 5) + compressed + burstOf(scmPlainLastWords, scmCompressedLastWords) + "GOODBYE FROM THE GAME\r\n");
+        mpServer->closeClient();
+        return true;
+    }
+
+    // Plain text only: one read of it is a known number of lines, where a read
+    // of a compressed stream can inflate to eight reads' worth
+    bool sendPlainLastWordsAndClose()
+    {
+        if (!agreeProtocolsAheadOfTheLastWords()) {
+            return false;
+        }
+        mpServer->sendRaw(burstOf(scmLastWordsLineCount) + "GOODBYE FROM THE GAME\r\n");
         mpServer->closeClient();
         return true;
     }
@@ -450,7 +469,7 @@ private slots:
         // All of it in the socket at once, so the close is there to notice while most of it is unread;
         // fed out by this thread's event loop, the reads can catch up with the close and leave nothing to test
         mpServer->setSendBufferSize(4 * 1024 * 1024);
-        QVERIFY2(sendLastWordsAndClose(), "the client never answered the negotiation");
+        QVERIFY2(sendPlainLastWordsAndClose(), "the client never answered the negotiation");
         QVERIFY2(disconnected.wait(15s), "the game closing the connection was never noticed");
         QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
         QVERIFY(lua->compileAndExecuteScript(qsl("killTrigger(lastWordsTrigger)")));
