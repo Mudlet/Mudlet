@@ -212,11 +212,21 @@ signals:
     // once. It lapses when its connection ends; until then, or an answer, the profile offers nothing more.
     void secureConnectionOffered(const QString& profile, const QString& text, const QString& informativeText);
     // A game's GUI package downloading, as the GUI's progress dialog shows it: its title, then bytes got of
-    // total, total -1 while unknown, then the end, whether it arrived, failed or was cancelled. From the
-    // event loop, so a handler may cancel it at once.
+    // total, total -1 while unknown, then the end, whether it arrived, failed or was cancelled, or its profile was
+    // let go, as for the map's progress below. From the event loop, so a handler may cancel it at once.
     void packageDownloadStarted(const QString& profile, const QString& title);
     void packageDownloadProgress(const QString& profile, qint64 got, qint64 total);
     void packageDownloadFinished(const QString& profile);
+    // A map export, import or download, as the GUI's progress dialog shows it: its title, its first label and the
+    // rooms it goes through, 0 until known; then its label, rooms done and rooms to go through as they change;
+    // then the end, whether it was done, failed or aborted. From the event loop, which an export or import runs
+    // as it goes, so the start and changes can come while the script, or the start() loading a JSON map, still
+    // runs; the end comes once that has returned. A download, which only an app can begin, through host(), runs
+    // on after its script. One still open when its profile closes, or when shutdown() or a later start() lets the
+    // profile go, is ended there; a session being deleted sends no end.
+    void mapProgressStarted(const QString& profile, const QString& title, const QString& label, int maximum);
+    void mapProgressChanged(const QString& profile, const QString& label, int value, int maximum);
+    void mapProgressFinished(const QString& profile);
     // The connection was made; from the event loop
     void connected(const QString& profile);
     // The connection ended, or could not be made; from the event loop
@@ -228,6 +238,8 @@ private:
     bool storeConnectionDetails(const Options&, std::optional<bool> tls);
     void detachFromHost();
     void withdrawSecureConnectionOffer();
+    void startMapProgress(const QString& title, const QString& label, int maximum);
+    bool finishOpenProgress();
     void lineCommitted(int lineIndex);
     bool refused();
     bool usable();
@@ -242,6 +254,13 @@ private:
     bool mSecureConnectionOffered = false;
     // Bumped by each offer, to drop one still queued for the frontend once a later one is made
     unsigned int mSecureConnectionOffer = 0;
+    // What the map's progress last said, as each of its signals carries only one part
+    QString mMapProgressLabel;
+    int mMapProgressValue = 0;
+    int mMapProgressMaximum = 0;
+    // The profile a map operation or package download was reported started for, until its end is
+    std::optional<QString> mMapProgressFor;
+    std::optional<QString> mPackageDownloadFor;
     QStringList mUnsavedProfiles;
     // Bumped by each start(), and by a shutdown() that closes the profile, to drop a queued quitRequested
     // owed to the one before
