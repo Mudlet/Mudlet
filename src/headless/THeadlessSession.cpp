@@ -423,6 +423,16 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     emit announcementRequested(profile, text, assertive);
                     --gSignalsBeingHandedOut;
                 });
+                // Queued, as the GUI's suggestion does not hold up the map opening; never dropped as stale, as the
+                // profile has marked it asked, which its save keeps
+                connect(
+                        pNewHost,
+                        &Host::signal_showMapperScriptReminder,
+                        this,
+                        [this, profile = mProfileName]() {
+                            emit mappingScriptMissing(profile);
+                        },
+                        Qt::QueuedConnection);
                 // For as long as the main window asks for it
                 connect(&pNewHost->mTelnet, &cTelnet::signal_bell, this, [this]() {
                     const QString profile = mProfileName;
