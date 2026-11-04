@@ -49,12 +49,15 @@ using namespace std::chrono_literals;
 
 namespace {
 
+// Answers to a secure port offer under way: cTelnet may reconnect and run the event loop while on the stack
+int gConnectionsBeingChanged = 0;
+
 // TNullAppFrontend's close waits only for a load, a nested event loop and a save wait, and leaves a running
 // script or map operation to deletionMustWait(); deleting the whole pool cannot wait that way, so all count here.
 // A save deletes nothing, so a reconnect's event loop holds up only a deletion.
 bool poolBusy(const HostManager& pool, const bool forDeletion)
 {
-    if (pool.loadingProfile()) {
+    if (pool.loadingProfile() || gConnectionsBeingChanged) {
         return true;
     }
     for (const auto& pHost : pool.hostList()) {
@@ -375,6 +378,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
             options.connect,
             [this, run, &password](Host* pNewHost) {
                 mpHost = pNewHost;
+                mSecureConnectionOffered = false;
                 pNewHost->givePass(password);
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineCommitted, this, &THeadlessSession::lineCommitted);
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::textPrinted, this, [this](const QString& text) {
@@ -420,6 +424,24 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     emit attentionRequested(profile, 3000);
                     --gSignalsBeingHandedOut;
                 });
+#if !defined(QT_NO_SSL)
+                // Sent on from the event loop, as the GUI's question is, so an answer cannot change the connection
+                // while it is read; held from now, so that it lapses with its connection even before it is sent
+                connect(&pNewHost->mTelnet, &cTelnet::signal_promptTlsAvailable, this, [this](const QString& text, const QString& informativeText) {
+                    mSecureConnectionOffered = true;
+                    const unsigned int offer = ++mSecureConnectionOffer;
+                    QMetaObject::invokeMethod(
+                            this,
+                            [this, offer, text, informativeText]() {
+                                if (mSecureConnectionOffered && offer == mSecureConnectionOffer) {
+                                    const QString profile = mProfileName;
+                                    emit secureConnectionOffered(profile, text, informativeText);
+                                }
+                            },
+                            Qt::QueuedConnection);
+                });
+                connect(&pNewHost->mTelnet, &cTelnet::signal_disconnected, this, &THeadlessSession::withdrawSecureConnectionOffer);
+#endif
                 connect(
                         &pNewHost->mTelnet,
                         &cTelnet::signal_connected,
@@ -707,6 +729,37 @@ bool THeadlessSession::setScreenSize(const int columns, const int rows)
     return true;
 }
 
+bool THeadlessSession::answerSecureConnectionOffer(const bool accept)
+{
+    if (!usable()) {
+        return false;
+    }
+#if !defined(QT_NO_SSL)
+    if (mSecureConnectionOffered) {
+        mSecureConnectionOffered = false;
+        cTelnet& telnet = mpHost->mTelnet;
+        // What slot_tlsUpgradeResponse() checks before it acts on an answer, which it otherwise only logs
+        const bool taken = telnet.getConnectionState() == QAbstractSocket::ConnectedState && !telnet.currentlySecure() && (!accept || mpHost->mMSSPTlsPort > 0);
+        if (!taken) {
+            //: Error from a frontend with no window whose answer to the game's offer of a secure, encrypted port came after the game took the offer back
+            mErrorString = tr("The game has taken back its offer of a secure port, so the answer was not used.");
+        }
+        ++gConnectionsBeingChanged;
+        const auto answered = qScopeGuard([]() {
+            --gConnectionsBeingChanged;
+        });
+        // Lets the next offer be made even when the answer is not used
+        telnet.slot_tlsUpgradeResponse(accept);
+        return taken;
+    }
+#else
+    Q_UNUSED(accept)
+#endif
+    //: Error from a frontend with no window that was asked to answer the game's offer of a secure, encrypted port when the game has made no such offer
+    mErrorString = tr("The game has offered no secure port to answer.");
+    return false;
+}
+
 void THeadlessSession::noteAlreadyInstalled(const QString& path, const QString& name)
 {
     const QString version = mpHost->mPackageInfo.value(name).value(qsl("version"));
@@ -848,9 +901,25 @@ bool THeadlessSession::save()
     return true;
 }
 
+// cTelnet makes no other offer until one is answered, and would apply a late answer to whichever connection is
+// up by then. With this one gone, the answer only frees it to make the next.
+void THeadlessSession::withdrawSecureConnectionOffer()
+{
+#if !defined(QT_NO_SSL)
+    if (mSecureConnectionOffered && mpHost) {
+        mSecureConnectionOffered = false;
+        // A no while connected would close the connection and stop the asking
+        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
+            mpHost->mTelnet.slot_tlsUpgradeResponse(false);
+        }
+    }
+#endif
+}
+
 // So nothing the profile still sends reaches a session that has let it go
 void THeadlessSession::detachFromHost()
 {
+    mSecureConnectionOffered = false;
     if (mpHost) {
         disconnect(mpHost, nullptr, this, nullptr);
         mpHost->setNotificationHandler(nullptr);

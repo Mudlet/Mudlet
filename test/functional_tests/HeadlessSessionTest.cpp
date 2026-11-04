@@ -259,6 +259,9 @@ end))lua")
         return qsl("feedTriggers([==[(%1)\n]==])").arg(link);
     }
 
+    // IAC SB MSSP MSSP_VAR "TLS" MSSP_VAL <port> IAC SE
+    static QByteArray msspTlsPort(const QByteArray& port) { return QByteArray("\xff\xfa\x46\x01TLS\x02") + port + QByteArray("\xff\xf0"); }
+
     static QStringList outputTexts(const QSignalSpy& spy)
     {
         QStringList texts;
@@ -1809,6 +1812,123 @@ announce("queued", "all")
         QTRY_COMPARE_WITH_TIMEOUT(announcements.count(), 2, 10000);
         QCOMPARE(announcements.at(1).at(1).toString(), qsl("Link hidden"));
         QVERIFY(session.shutdown(false));
+    }
+
+    void test_theGamesSecurePortIsOfferedAndAnswered()
+    {
+#if defined(QT_NO_SSL)
+        QSKIP("Built without SSL support, so no secure port is offered");
+#else
+        const QString name = qsl("Headless Secure Port");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        // A name: a certificate seldom carries an address, so an address is never offered a secure port
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("localhost")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy offers(&session, &THeadlessSession::secureConnectionOffered);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QVERIFY(!session.answerSecureConnectionOffer(false));
+        // The save writeProfile() makes leaves out the attribute, which loads as false
+        session.host()->mAskTlsAvailable = true;
+
+        game->write(msspTlsPort("4433"));
+        QTRY_COMPARE_WITH_TIMEOUT(offers.count(), 1, 10000);
+        QCOMPARE(offers.at(0).at(0).toString(), name);
+        QVERIFY2(offers.at(0).at(2).toString().contains(qsl("4433")), qPrintable(offers.at(0).at(2).toString()));
+
+        QVERIFY(session.answerSecureConnectionOffer(false));
+        QVERIFY(!session.host()->mAskTlsAvailable);
+        QVERIFY(!session.answerSecureConnectionOffer(false));
+        // Declining reconnects where it was, which has to have happened before the game goes
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        QVERIFY(session.shutdown(false));
+#endif
+    }
+
+    // Not left for the next connection, which the player was not asked about and which may offer its own
+    void test_aSecurePortOfferLapsesWithItsConnection()
+    {
+#if defined(QT_NO_SSL)
+        QSKIP("Built without SSL support, so no secure port is offered");
+#else
+        const QString name = qsl("Headless Secure Port Lapses");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("localhost")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy offers(&session, &THeadlessSession::secureConnectionOffered);
+        QSignalSpy disconnections(&session, &THeadlessSession::disconnected);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        session.host()->mAskTlsAvailable = true;
+        game->write(msspTlsPort("4433"));
+        QTRY_COMPARE_WITH_TIMEOUT(offers.count(), 1, 10000);
+
+        game->disconnectFromHost();
+        QTRY_COMPARE_WITH_TIMEOUT(disconnections.count(), 1, 10000);
+        QVERIFY(session.runLua(qsl("reconnect()")));
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        game.reset(server.nextPendingConnection());
+        QTRY_COMPARE_WITH_TIMEOUT(session.host()->mTelnet.getConnectionState(), QAbstractSocket::ConnectedState, 10000);
+        QVERIFY(!session.answerSecureConnectionOffer(false));
+        QVERIFY(session.host()->mAskTlsAvailable);
+        QCOMPARE(disconnections.count(), 1);
+
+        game->write(msspTlsPort("4433"));
+        QTRY_COMPARE_WITH_TIMEOUT(offers.count(), 2, 10000);
+        // Taken back before the player says yes
+        game->write(msspTlsPort("-1"));
+        QTRY_COMPARE_WITH_TIMEOUT(session.host()->mMSSPTlsPort, 0, 10000);
+        QVERIFY(!session.answerSecureConnectionOffer(true));
+        QVERIFY(!session.errorString().isEmpty());
+        QCOMPARE(session.host()->getPort(), server.serverPort());
+        QVERIFY(session.shutdown(false));
+#endif
+    }
+
+    // The answer reconnects, which runs the event loop while the profile's connection is still on the stack
+    void test_aSecurePortAnswerKeepsTheProfileOpenUntilItReturns()
+    {
+#if defined(QT_NO_SSL)
+        QSKIP("Built without SSL support, so no secure port is offered");
+#else
+        const QString name = qsl("Headless Secure Port Answer Busy");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("localhost")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy offers(&session, &THeadlessSession::secureConnectionOffered);
+        std::optional<bool> shutDownFromHandler;
+        connect(&session, &THeadlessSession::disconnected, &session, [&]() {
+            if (!shutDownFromHandler.has_value()) {
+                shutDownFromHandler = session.shutdown(false);
+            }
+        });
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        session.host()->mAskTlsAvailable = true;
+        game->write(msspTlsPort("4433"));
+        QTRY_COMPARE_WITH_TIMEOUT(offers.count(), 1, 10000);
+
+        // Not yet written out, so the connection is still closing when the answer reconnects
+        QVERIFY(session.submit(qsl("look")));
+        QVERIFY(session.answerSecureConnectionOffer(false));
+        QCOMPARE(shutDownFromHandler, std::optional<bool>(false));
+        QVERIFY(session.shutdown(false));
+#endif
     }
 
     // A prompt the game ends with GA, and commands as the command line sends them, a trailing line feed
