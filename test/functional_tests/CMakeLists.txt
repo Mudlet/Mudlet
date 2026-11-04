@@ -490,7 +490,8 @@ add_test(NAME HeadlessHostSmokeTestWithDiscordLibrary
         test_aSecondPoolLeavesNoDiscordDataBehind
         test_aSecondPoolForgetsDiscordDataAfterEveryExitEvent
         test_deleteHostForgetsDiscordDataOfAProfileReopenedUnderItsExitHandler
-        test_aSecondPoolForgetsDiscordDataOfAProfileReopenedUnderItsExitHandler)
+        test_aSecondPoolForgetsDiscordDataOfAProfileReopenedUnderItsExitHandler
+        test_aProfileBroughtForwardStartsItsDiscordPresenceWithNoMainWindow)
 list(APPEND allFunctionalTestNames HeadlessHostSmokeTestWithDiscordLibrary)
 # HeadlessHostSmokeTest runs with no Mudlet.ini, so its tests see the defaults. Its Mudlet.ini case runs
 # again in a process of its own, where one is written before anything reads it: the trigger match pool

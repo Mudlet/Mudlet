@@ -15,8 +15,14 @@ cmake --build build --target mudlet_headless_executable
 ```
 
 The executable is `build/src/mudlet-headless`. The `linux-core-minimal` preset builds only it, with
-what a mobile build has to leave out turned off; see "Leaving out what a mobile build cannot use"
-in `platform-builds.md`.
+what a mobile build has to leave out turned off and Qt Widgets out of reach, so that CI fails if
+`mudlet_core` needs either again; see "Leaving out what a mobile build cannot use" in
+`platform-builds.md`.
+
+With `-DUSE_GUI=OFF` (or `WITH_GUI=NO` in the environment) a build tree has no desktop GUI at all:
+Qt Widgets need not be installed, and neither the `edbee-lib` nor the `qt-tags-widget` submodule
+needs checking out. Only `mudlet_core`, `mudlet_headless` and `mudlet-headless` are built, with no
+tests, as every test binary links the GUI; `WITH_SENTRY` needs the GUI too.
 
 It needs no display. With `QT_QPA_PLATFORM` unset it uses Qt's `offscreen` platform, and does not
 pass that on to the programs a script starts. Set `QT_QPA_PLATFORM` yourself to use another one.
@@ -40,10 +46,19 @@ profile at once, as each saves over what the other saved. `Mudlet.ini` is shared
 so its save also writes the application-wide settings below as this run has them, over a change the
 GUI made meanwhile.
 
+`--config-dir <folder>` keeps the profiles, `Mudlet.ini` and the passwords stored for them in that
+folder instead, made if need be, so a run there shares no profiles, settings or passwords with the
+GUI, and takes its interface language from that `Mudlet.ini`; a relative path is taken from where the
+runner is started. A folder that cannot be used is a command line error.
+
 ### Input and output
 
 - **Standard output** gets each line the game sends, and each a script feeds with `feedTriggers()`,
-  as it reaches the main console and before the profile's triggers run on it.
+  as it reaches the main console and before the profile's triggers run on it. On a terminal, other
+  than on Windows, it is in the colours and styles the game asked for, unless `NO_COLOR` is set or
+  `TERM` is `dumb`; `--color always` or `--color never` says otherwise, and pipes and files get
+  plain text by default. The profile's own colours are left to the terminal's theme, and 24-bit
+  colour is used when `COLORTERM` is `truecolor` or `24bit`, else the nearest of 256.
 - **Standard error** gets what the GUI shows only on the profile's own screen: `echo()`, `print()`,
   the commands sent, Mudlet's own messages, and the error console.
 - **Standard input** is read one line at a time, each as if typed on the command line, so the
@@ -114,8 +129,9 @@ QCoreApplication::setOrganizationName(qsl("Mudlet"));
 QCoreApplication::setApplicationName(qsl("Mudlet"));
 
 auto session = std::make_unique<THeadlessSession>();
-QObject::connect(session.get(), &THeadlessSession::outputLine, [](const QString& profile, const QString& text, bool isPrompt) {
-    // A line from the game, to show
+QObject::connect(session.get(), &THeadlessSession::outputLine,
+                 [](const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs) {
+    // A line from the game, to show; runs give its colours, bold, underline and so on, piece by piece
 });
 QObject::connect(session.get(), &THeadlessSession::localText, [](const QString& profile, const QString& text) {
     // echo(), print(), the commands sent and Mudlet's messages; does not always end a line
@@ -138,6 +154,23 @@ session->save();                     // before the system may stop the app, as a
 session->shutdown(true);             // sysExitEvent, then the save
 ```
 
+`options.configDir` names the folder to keep the profiles and `Mudlet.ini` in, in place of the GUI's
+config folder, such as an app's own data folder; it is made if need be. The passwords stored for its
+profiles are kept in it too, under `credentials/`, not in the system's keychain or the GUI's own
+password files, so a profile there shares none with a GUI profile of the same name. It is the folder
+until the process ends, so a later `start()` may name it again, but no other, nor leave it out for the
+GUI's. Nor may it be any folder the GUI could keep its profiles in, whose passwords are kept elsewhere:
+`$XDG_CONFIG_HOME/mudlet`, `~/.config/mudlet`, the Flatpak's `~/.var/app/org.mudlet.mudlet/config/mudlet`
+and the folder a `portable.txt` beside the app's executable or in `~/.config/mudlet` names, by any
+path that leads to one, even before it is made. Not caught: a portable install whose `portable.txt` is
+beside another executable, and a GUI run under another HOME. Naming one of their folders shares its
+profiles and `Mudlet.ini` with that GUI (not its passwords), so `start()` warns when a folder it accepts already holds profiles.
+
+Each of `outputLine`'s runs covers part of the line, in order, with the colours and styles the game
+asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, strike-out, reverse, blink,
+fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap
+for its own theme's. Links in the line, and what `echo()` and the like print, come as plain text for now.
+
 The signals' handlers are called while a line is being written, so they must not call the session
 back or run the event loop; queue the work for later instead. `host()` reaches what the session
 does not cover, such as settings and the map, and goes null once the profile closes, so hold it in a
@@ -145,6 +178,12 @@ does not cover, such as settings and the map, and goes null once the profile clo
 
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.
+
+A script's `loadProfile()` opens more profiles in the same run. With no window, none of them is in
+front, as a tab is in the GUI, until a script names one with `setActiveProfile()`. As a tab change
+does, that raises `sysProfileFocusChangeEvent` with `false` in the profile it leaves and `true` in the
+one it brings forward, and shows that profile's Discord presence. A profile whose close has started is
+refused with `false` and a message, and the front stays where it was.
 
 ## What still needs a window
 

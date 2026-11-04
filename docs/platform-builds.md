@@ -125,9 +125,9 @@ when started by hand, and on pull requests and pushes to `development` that chan
 the `src/TNull*` views, the list, its checker or the workflow itself. It is not part of every pull
 request, as it would double the time the spec run takes there. Many specs still need a main
 window, so the run passes only when exactly the failures listed in
-`CI/headless-lua-known-failures.txt` fail and the run passes and pends as many tests as the list
-records. It fails on any other failure, on a listed one that now passes, on a spec file that does
-not load, and on a run that does not finish or exits with an error. To reproduce it:
+`CI/headless-lua-known-failures.txt` fail. It fails on any other failure, on a listed one that now
+passes, on a spec file that does not load, and on a run that does not finish or exits with an
+error. To reproduce it:
 
 ```bash
 set -o pipefail

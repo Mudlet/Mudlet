@@ -76,7 +76,8 @@ public:
     virtual std::optional<QSize> getImageSize(const QString& imageLocation) = 0;
     // -1 for a profile with no tab
     virtual int profileTabIndex(const QString& profileName) const = 0;
-    virtual void setActiveProfileTab(const QString& profileName) = 0;
+    // With no main window, false for a profile not in the pool or whose close has started, leaving the front as it was
+    virtual bool setActiveProfileTab(const QString& profileName) = 0;
     virtual void setAppStyleSheet(const QString& styleSheet) = 0;
     // false when there is no window to resize
     virtual bool resizeMainWindow(int width, int height) = 0;
