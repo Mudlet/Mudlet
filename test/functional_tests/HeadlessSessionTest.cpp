@@ -2491,6 +2491,91 @@ tempTrigger("Third", [[echo(" <third>")]]))lua")));
         QVERIFY2(!shown.contains(qsl("secret")), qPrintable(shown));
     }
 
+    void test_theGameHidingWhatIsTypedReachesTheSession_data()
+    {
+        QTest::addColumn<bool>("passwordsShown");
+        QTest::addColumn<QString>("endedBy");
+        QTest::newRow("masked, game hangs up") << false << qsl("game");
+        QTest::newRow("shown as typed") << true << qsl("game");
+        QTest::newRow("masked, shut down") << false << qsl("shutdown");
+        QTest::newRow("masked, script closes the profile") << false << qsl("script");
+        // Read while the shutdown's close runs the event loop, as a save it waits for does
+        QTest::newRow("masked, game stops hiding as it shuts down") << false << qsl("released while closing");
+        QTest::newRow("masked, game hides again as it shuts down") << false << qsl("hidden while closing");
+    }
+
+    // Where the GUI opens and closes its hidden-input box, which a disconnect or the profile closing closes too
+    void test_theGameHidingWhatIsTypedReachesTheSession()
+    {
+        QFETCH(const bool, passwordsShown);
+        QFETCH(const QString, endedBy);
+        const QString name = qsl("Headless Hidden Input");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy hidden(&session, &THeadlessSession::hiddenInputWanted);
+        QSignalSpy disconnected(&session, &THeadlessSession::disconnected);
+        QSignalSpy quit(&session, &THeadlessSession::quitRequested);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        session.host()->setDisablePasswordMasking(passwordsShown);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QVERIFY(hidden.isEmpty());
+
+        game->write("\xff\xfb\x01Password:\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Password:")), 10000);
+        game->write("\xff\xfc\x01Welcome\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Welcome")), 10000);
+        game->write("\xff\xfb\x01Password again:\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Password again:")), 10000);
+        if (endedBy == qsl("game")) {
+            game->close();
+            QTRY_VERIFY_WITH_TIMEOUT(!disconnected.isEmpty(), 10000);
+        } else if (endedBy.endsWith(qsl("while closing"))) {
+            const auto restore = inTestMode();
+            QSignalSpy errors(&session, &THeadlessSession::errorConsoleText);
+            QVERIFY(session.runLua(qsl("registerAnonymousEventHandler('sysExitEvent', function() local ok, err = pumpEvents(200) if not ok then error(err) end end)")));
+            if (endedBy == qsl("hidden while closing")) {
+                game->write("\xff\xfc\x01Welcome back\r\n");
+                QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Welcome back")), 10000);
+                QCOMPARE(hidden.size(), 4);
+                game->write("\xff\xfb\x01Read while closing\r\n");
+            } else {
+                game->write("\xff\xfc\x01Read while closing\r\n");
+            }
+            game->flush();
+            QVERIFY(!outputTexts(output).contains(qsl("Read while closing")));
+            QVERIFY(session.shutdown(true));
+            QString errorText;
+            for (const QList<QVariant>& error : errors) {
+                errorText += error.at(1).toString();
+            }
+            QCOMPARE(errorText, QString());
+            QVERIFY(outputTexts(output).contains(qsl("Read while closing")));
+        } else if (endedBy == qsl("shutdown")) {
+            QVERIFY(session.shutdown(false));
+        } else {
+            QVERIFY(session.runLua(qsl("closeProfile()")));
+            QTRY_COMPARE_WITH_TIMEOUT(quit.count(), 1, 10000);
+        }
+
+        QList<bool> wanted;
+        for (const QList<QVariant>& emitted : hidden) {
+            QCOMPARE(emitted.at(0).toString(), name);
+            wanted << emitted.at(1).toBool();
+        }
+        QCOMPARE(wanted, passwordsShown ? QList<bool>() : (QList<bool>{true, false, true, false}));
+        if (session.host()) {
+            QVERIFY(session.shutdown(false));
+        }
+        QCOMPARE(hidden.count(), wanted.size());
+    }
+
     // In the file the GUI's main command line reads, newest first behind the line being typed, and as there
     // without what was typed while the game hid it
     void test_submittedCommandsAreKeptInTheCommandHistory()
@@ -2885,6 +2970,60 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         QTRY_COMPARE_WITH_TIMEOUT(quit.count(), 1, 10000);
         QVERIFY(!session.host());
         QVERIFY(!session.submit(qsl("look")));
+    }
+
+    // The app shut the session down before the close's own end came out of the event loop
+    void test_aShutdownAfterAScriptClosedTheProfileSendsNoQuit()
+    {
+        QVERIFY(writeProfile(qsl("Headless Closed Then Shut Down"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Closed Then Shut Down"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy quit(&session, &THeadlessSession::quitRequested);
+        std::optional<bool> hostWhenShutDown;
+        QVERIFY(session.runLua(qsl("closeProfile()")));
+        QMetaObject::invokeMethod(
+                &session,
+                [&]() {
+                    hostWhenShutDown = static_cast<bool>(session.host());
+                    QVERIFY(session.shutdown(false));
+                },
+                Qt::QueuedConnection);
+        QTRY_VERIFY_WITH_TIMEOUT(hostWhenShutDown.has_value(), 10000);
+        QVERIFY(!*hostWhenShutDown);
+        QTest::qWait(200);
+        QCOMPARE(quit.count(), 0);
+    }
+
+    // The shutdown's wait for another profile's reset runs the event loop, which delivers the close's end
+    void test_aShutdownWaitingOnAResetSendsNoQuitForAProfileAScriptClosed()
+    {
+        const QString name = qsl("Headless Closed While Another Resets");
+        const QString other = qsl("Headless Resetting Elsewhere");
+        QVERIFY(writeProfile(name, QString()));
+        QVERIFY(writeProfile(other, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("loadProfile('%1', true)").arg(other)));
+        Host* pOther = HostManager::self()->getHost(other);
+        QVERIFY(pOther);
+        QSignalSpy quit(&session, &THeadlessSession::quitRequested);
+        QVERIFY(session.runLua(qsl("closeProfile()")));
+        std::optional<bool> shutDown;
+        // Behind the close, ahead of its end
+        QMetaObject::invokeMethod(
+                &session,
+                [&]() {
+                    QVERIFY(!session.host());
+                    QVERIFY(pOther->getLuaInterpreter()->compileAndExecuteScript(qsl("resetProfile()")));
+                    QVERIFY(pOther->profileResetInProgress());
+                    shutDown = session.shutdown(false);
+                    QCOMPARE(quit.count(), 0);
+                },
+                Qt::QueuedConnection);
+        QTRY_VERIFY_WITH_TIMEOUT(shutDown.has_value(), 10000);
+        QVERIFY(*shutDown);
+        QTest::qWait(200);
+        QCOMPARE(quit.count(), 0);
     }
 
     void test_shutdownSavesOnlyWhenAsked_data()
@@ -3946,7 +4085,7 @@ end))lua")
         QVERIFY(!ranLua);
         QVERIFY(!submitted);
         QVERIFY(!saved);
-        QCOMPARE(refusal, qsl("Refused from a handler of outputLine, localText, errorConsoleText or a ...Requested signal; queue the call instead."));
+        QCOMPARE(refusal, qsl("Refused from a handler of outputLine, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal; queue the call instead."));
         QVERIFY(unstartedShutDown);
         QVERIFY(HostManager::self());
         QCOMPARE(outputTexts(output), (QStringList{qsl("outer line"), qsl("after")}));

@@ -98,7 +98,8 @@ error, and does not change the exit status; a history file that cannot be read i
 
 A command typed on standard input goes into the main command line's history file, just as the GUI
 keeps it: one entry for each line or paste, not for one typed while the game hides input (a
-password prompt), so the GUI's up arrow finds it next time.
+password prompt, which an app embedding the session hears of through `hiddenInputWanted`, below), so
+the GUI's up arrow finds it next time.
 
 ### Exit status
 
@@ -224,6 +225,13 @@ marks it asked at that moment, whether or not anything listens, the reference ru
 save keeps that, so it never comes again for that profile, in the GUI either. When `shutdown()` or a
 later `start()` follows the map opening at once, it is still delivered once the event loop runs, as
 long as the session has not been deleted by then.
+
+`hiddenInputWanted` says when the game starts hiding what the player types, as for a password, and when
+it stops, where the GUI opens and closes its hidden-input box, so an app can mask its own input line
+meanwhile. A disconnect ends it too, as does the profile closing or being let go by `shutdown()` or a
+later `start()`, though not the session being deleted. It never comes while the profile's "Show passwords as you type them"
+setting is on, as the GUI then opens no box. It is sent while the game's data is read, so, like
+`outputLine`, its handler must not call the session back.
 
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.
