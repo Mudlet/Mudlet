@@ -58,6 +58,7 @@
 #include "MudletMedia.h"
 #include "PortableModeTestHelper.h"
 #include "TAppFrontend.h"
+#include "TConsoleModel.h"
 #include "TGameDetails.h"
 #include "THeadlessSession.h"
 #include "TLuaInterpreter.h"
@@ -247,6 +248,15 @@ end))lua")
         const QString value = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
         lua_pop(L, 1);
         return value;
+    }
+
+    // Lua that feeds an OSC 8 link the game asks to show 0.2s later. Not a raw string: moc drops the class
+    // over one holding these escapes.
+    static QString feedDelayedLink(const QString& text)
+    {
+        const QString esc = QChar(0x1b);
+        const QString link = qsl("%1]8;;send:look?config={\"visibility\":{\"action\":\"reveal\",\"delay\":200}}%1\\%2%1]8;;%1\\").arg(esc, text);
+        return qsl("feedTriggers([==[(%1)\n]==])").arg(link);
     }
 
     static QStringList outputTexts(const QSignalSpy& spy)
@@ -1775,6 +1785,29 @@ announce("queued", "all")
         QCOMPARE(announcements.at(2).at(1).toString(), qsl("calm"));
         QCOMPARE(announcements.at(2).at(2).toBool(), false);
         QCOMPARE(announcements.at(3).at(2).toBool(), false);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // The GUI tells the screen reader only while one is running, which it never is offscreen
+    void test_hiddenAndRevealedLinksAreAnnounced()
+    {
+        const QString name = qsl("Headless Link Announcements");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy announcements(&session, &THeadlessSession::announcementRequested);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(feedDelayedLink(qsl("SECRETWORD"))));
+        QTRY_COMPARE_WITH_TIMEOUT(announcements.count(), 1, 10000);
+        QCOMPARE(announcements.at(0).at(0).toString(), name);
+        QCOMPARE(announcements.at(0).at(1).toString(), qsl("Link revealed: SECRETWORD"));
+        QCOMPARE(announcements.at(0).at(2).toBool(), false);
+
+        // As a click on the link would; there is nothing to click here
+        THyperlinkVisibilityManager& links = session.host()->mainConsoleModel().mHyperlinkVisibilityManager;
+        QCOMPARE(links.trackedLinkIds().size(), 1);
+        links.concealLink(*links.trackedLinkIds().cbegin());
+        QTRY_COMPARE_WITH_TIMEOUT(announcements.count(), 2, 10000);
+        QCOMPARE(announcements.at(1).at(1).toString(), qsl("Link hidden"));
         QVERIFY(session.shutdown(false));
     }
 
