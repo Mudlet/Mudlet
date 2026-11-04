@@ -265,6 +265,18 @@ signals:
     // listens, and a save keeps that, so it never comes again for that profile. From the event loop, even once
     // shutdown() or a later start() has let the profile go, so long as the session is not deleted before then.
     void mappingScriptMissing(const QString& profile);
+    // A replay of this profile, as the GUI's replay toolbar follows it: its start, from a script's loadReplay() or
+    // through host(), at 1 times its speed, as every replay starts; each change of its speed, from 1 to 1024 times,
+    // which may repeat the speed where a change is clamped; and its end, however it ends, the end of the file included,
+    // which a script's replay otherwise ends with nothing said, and one cut short as its file changes or becomes
+    // unreadable while it plays, with the reason only in localText. A corrupt file, which loadReplay() reads through
+    // before it plays anything, sends neither, and an empty one, which loadReplay() accepts, sends its start and then
+    // its end. From the event loop, so the start can arrive after the script that began it has returned. One replay
+    // plays at a time over every profile, and only this profile's are sent. One still playing when its profile closes,
+    // or when shutdown() or a later start() lets the profile go, is ended there, as for the map's progress.
+    void replayStarted(const QString& profile);
+    void replaySpeedChanged(const QString& profile, int speed);
+    void replayFinished(const QString& profile);
     // The connection was made; from the event loop
     void connected(const QString& profile);
     // The connection ended, or could not be made; from the event loop
@@ -300,10 +312,12 @@ private:
     QString mMapProgressLabel;
     int mMapProgressValue = 0;
     int mMapProgressMaximum = 0;
-    // The profile hidden input, a map operation or a package download was reported started for, until its end is
+    // The profile hidden input, a map operation, a package download or a replay was reported started for, until
+    // its end is
     std::optional<QString> mHiddenInputFor;
     std::optional<QString> mMapProgressFor;
     std::optional<QString> mPackageDownloadFor;
+    std::optional<QString> mReplayFor;
     bool mMapOperationCancelable = false;
     QStringList mUnsavedProfiles;
     // Bumped by each start() and shutdown(), to drop a queued quitRequested or other relay owed to the profile

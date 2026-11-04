@@ -242,6 +242,20 @@ When `submitHiddenInput()` refuses a line, as the box has closed, the profile is
 game's encoding cannot carry it, an app drops that line, as the GUI drops what was typed into a box that
 closes; resending it with `submit()` would echo it, keep it in the history and hand it to aliases.
 
+`replayStarted`, `replaySpeedChanged` and `replayFinished` follow a replay of the session's profile, as
+the GUI's replay toolbar does, whether a script's `loadReplay()` began it or the app did through
+`host()`. A script's replay says nothing when it reaches the end of its file, so `replayFinished` is how
+an app knows its output is over. A replay cut short, as by its file changing or becoming unreadable while
+it plays, gets the same end, with the reason only in `localText`. A corrupt file, which `loadReplay()`
+reads through before it plays anything, sends neither, and an empty one, which `loadReplay()` accepts,
+sends its start and then its end. Every
+replay starts at 1 times its speed, and a change clamped at 1 or 1024 times sends the same speed again.
+They come from the event loop, so the start can arrive after the
+script that began it has returned. One replay plays at a time over all profiles, and only those of the
+session's own profile are sent. As for the map's progress, one still playing when its profile closes, or
+when `shutdown()` or a later `start()` lets the profile go, gets its end there. The replay's elapsed time,
+pausing and its speed go through `host()` and `MudletReplay::self()` for now.
+
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.
 

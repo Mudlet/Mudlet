@@ -23,6 +23,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
+#include "MudletReplay.h"
 #include "SecureStringUtils.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
@@ -609,6 +610,48 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                             }
                         },
                         Qt::QueuedConnection);
+                // Only one of this profile, as the GUI's toolbar drives the profile that plays it; queued, as a
+                // script's loadReplay() starts it
+                if (MudletReplay* pReplay = MudletReplay::self()) {
+                    connect(pReplay, &MudletReplay::signal_replayStarted, this, [this, run, pReplay]() {
+                        if (!mpHost || pReplay->host() != mpHost.data()) {
+                            return;
+                        }
+                        QMetaObject::invokeMethod(
+                                this,
+                                [this, run]() {
+                                    // Not by whether a replay plays now: one with nothing in it has ended already, and
+                                    // the over relay queued behind this pairs with it
+                                    if (run == mRun && mpHost) {
+                                        mReplayFor = mProfileName;
+                                        const QString profile = mProfileName;
+                                        emit replayStarted(profile);
+                                    }
+                                },
+                                Qt::QueuedConnection);
+                    });
+                    connect(
+                            pReplay,
+                            &MudletReplay::signal_replaySpeedChanged,
+                            this,
+                            [this, run](const int speed) {
+                                if (run == mRun && mReplayFor) {
+                                    const QString profile = *mReplayFor;
+                                    emit replaySpeedChanged(profile, speed);
+                                }
+                            },
+                            Qt::QueuedConnection);
+                    connect(
+                            pReplay,
+                            &MudletReplay::signal_replayOver,
+                            this,
+                            [this, run]() {
+                                if (const auto profile = std::exchange(mReplayFor, std::nullopt); run == mRun && profile) {
+                                    emit replayFinished(*profile);
+                                }
+                            },
+                            Qt::QueuedConnection);
+                }
                 connect(
                         &pNewHost->mTelnet,
                         &cTelnet::signal_connected,
@@ -1088,6 +1131,10 @@ bool THeadlessSession::shutdown(const bool save)
         return !save;
     }
     ++mRun;
+    // Its end is sent here, and the close below runs the event loop, where it would go on printing
+    if (mpHost && mpHost->mTelnet.isReplaying()) {
+        mpHost->mTelnet.endReplay(QString());
+    }
     // Also for a profile that has gone while its own end waits in the event loop, which the bump drops
     if (!finishOpenProgress()) {
         return !save;
@@ -1214,6 +1261,9 @@ void THeadlessSession::detachFromHost()
         disconnect(&mpHost->mTelnet, nullptr, this, nullptr);
         disconnect(mpHost->mpMap.data(), nullptr, this, nullptr);
     }
+    if (MudletReplay* pReplay = MudletReplay::self()) {
+        disconnect(pReplay, nullptr, this, nullptr);
+    }
 }
 
 void THeadlessSession::startMapProgress(const QString& title, const QString& label, const int maximum)
@@ -1226,8 +1276,8 @@ void THeadlessSession::startMapProgress(const QString& title, const QString& lab
     emit mapProgressStarted(profile, title, label, maximum);
 }
 
-// The end of hidden input, a map operation or package download whose own is dropped as stale, or never comes as
-// its Host has gone; false if a handler deleted the session
+// The end of hidden input, a map operation, package download or replay whose own is dropped as stale, or never
+// comes as its Host has gone; false if a handler deleted the session
 bool THeadlessSession::finishOpenProgress()
 {
     const QPointer<THeadlessSession> self(this);
@@ -1248,6 +1298,12 @@ bool THeadlessSession::finishOpenProgress()
     }
     if (const auto profile = std::exchange(mPackageDownloadFor, std::nullopt)) {
         emit packageDownloadFinished(*profile);
+    }
+    if (!self) {
+        return false;
+    }
+    if (const auto profile = std::exchange(mReplayFor, std::nullopt)) {
+        emit replayFinished(*profile);
     }
     return self;
 }

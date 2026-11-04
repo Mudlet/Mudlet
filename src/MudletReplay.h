@@ -50,6 +50,9 @@ public:
     // Claims the replay for pHost, at normal speed and from the start; false
     // while another replay holds it
     bool start(Host*);
+    // Sends the start of the claimed replay, once its file has been found
+    // playable, so that one whose file is corrupt from the start is never shown
+    void announce();
     // Releases the replay, however it ended
     void over();
     bool running() const { return mRunning; }

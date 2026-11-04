@@ -5864,6 +5864,7 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
             auto [ok, modifiedFormat] = testReadReplayFile();
             if (Q_LIKELY(ok)) {
                 mReplayHasFaultyFormat = modifiedFormat;
+                replay->announce();
                 // This initiates the replay chunk reading/processing cycle:
                 loadReplayChunk();
             } else {
