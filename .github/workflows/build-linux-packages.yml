@@ -42,6 +42,8 @@ jobs:
           - format: deb
             base: debian:13
           - format: rpm
+            base: fedora:45
+          - format: rpm
             base: fedora:44
           - format: rpm
             base: fedora:43
@@ -256,4 +258,4 @@ jobs:
         run: |
           docker run --rm -e BASE_URL ubuntu:26.04 sh -euc \
             'apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && curl -fsSL "$BASE_URL/install.sh" -o install.sh && sh install.sh'
-          docker run --rm -e BASE_URL fedora:44 sh -euc 'curl -fsSL "$BASE_URL/install.sh" -o install.sh && sh install.sh'
+          docker run --rm -e BASE_URL fedora:45 sh -euc 'curl -fsSL "$BASE_URL/install.sh" -o install.sh && sh install.sh'
