@@ -384,6 +384,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
             [this, run, &password](Host* pNewHost) {
                 mpHost = pNewHost;
                 mSecureConnectionOffered = false;
+                mMapOperationCancelable = false;
                 pNewHost->givePass(password);
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineCommitted, this, &THeadlessSession::lineCommitted);
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::textPrinted, this, [this](const QString& text) {
@@ -481,8 +482,21 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                             }
                         },
                         Qt::QueuedConnection);
-                // Queued, as the export or import that sends it is under way
                 TMap* pMap = pNewHost->mpMap.data();
+                // Direct, as cancelMapOperation() goes by what the map is doing now
+                connect(pMap, &TMap::signal_mapTransferProgressStart, this, [this](const QString&, const QString&, const QString& cancelText) {
+                    mMapOperationCancelable = !cancelText.isEmpty();
+                });
+                connect(pMap, &TMap::signal_mapJsonProgressStart, this, [this](const QString&, const QString&, const QString& cancelText) {
+                    mMapOperationCancelable = !cancelText.isEmpty();
+                });
+                connect(pMap, &TMap::signal_mapProgressDisableCancel, this, [this]() {
+                    mMapOperationCancelable = false;
+                });
+                connect(pMap, &TMap::signal_mapProgressClose, this, [this]() {
+                    mMapOperationCancelable = false;
+                });
+                // Queued, as the export or import that sends it is under way
                 connect(
                         pMap,
                         &TMap::signal_mapTransferProgressStart,
@@ -546,6 +560,29 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                         [this, run]() {
                             if (const auto profile = std::exchange(mMapProgressFor, std::nullopt); run == mRun && profile) {
                                 emit mapProgressFinished(*profile);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                // After the start's own relay, so it follows mapProgressStarted
+                connect(
+                        pMap,
+                        &TMap::signal_mapTransferProgressStart,
+                        this,
+                        [this, run](const QString&, const QString&, const QString& cancelText) {
+                            if (run == mRun && mMapProgressFor && cancelText.isEmpty()) {
+                                const QString profile = *mMapProgressFor;
+                                emit mapProgressCancelDisabled(profile);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                connect(
+                        pMap,
+                        &TMap::signal_mapProgressDisableCancel,
+                        this,
+                        [this, run]() {
+                            if (run == mRun && mMapProgressFor) {
+                                const QString profile = *mMapProgressFor;
+                                emit mapProgressCancelDisabled(profile);
                             }
                         },
                         Qt::QueuedConnection);
@@ -883,6 +920,22 @@ bool THeadlessSession::cancelPackageDownload()
     return true;
 }
 
+bool THeadlessSession::cancelMapOperation()
+{
+    // Taken while a profile loads too, as the JSON map that load reads can be aborted, which TMap::restore()
+    // allows for, and this only flags the map or aborts its download
+    if (!usable(true)) {
+        return false;
+    }
+    if (!mMapOperationCancelable) {
+        //: Error from a frontend with no window that was asked to abort a map export, import or download when none is running that can still be aborted
+        mErrorString = tr("No map export, import or download is running that can be aborted.");
+        return false;
+    }
+    mpHost->mpMap->slot_mapProgressDialogCancelled();
+    return true;
+}
+
 void THeadlessSession::noteAlreadyInstalled(const QString& path, const QString& name)
 {
     const QString version = mpHost->mPackageInfo.value(name).value(qsl("version"));
@@ -1047,6 +1100,7 @@ void THeadlessSession::withdrawSecureConnectionOffer()
 void THeadlessSession::detachFromHost()
 {
     mSecureConnectionOffered = false;
+    mMapOperationCancelable = false;
     if (mpHost) {
         disconnect(mpHost, nullptr, this, nullptr);
         mpHost->setNotificationHandler(nullptr);
@@ -1150,7 +1204,7 @@ void THeadlessSession::lineCommitted(const int lineIndex)
 
 // A handler of outputLine, localText, errorConsoleText or a ...Requested signal runs in the middle of a write,
 // which a line it fed would cut into, and a load that runs the event loop has yet to start the profile's scripts
-bool THeadlessSession::refused()
+bool THeadlessSession::refused(const bool duringLoad)
 {
     if (mShuttingDown) {
         qWarning() << "THeadlessSession: called while shutdown() closes the profiles, which is refused";
@@ -1164,7 +1218,7 @@ bool THeadlessSession::refused()
         mErrorString = tr("Refused from a handler of outputLine, localText, errorConsoleText or a ...Requested signal; queue the call instead.");
         return true;
     }
-    if (mRemovingStalePasswords || (mpPool && mpPool->loadingProfile())) {
+    if (mRemovingStalePasswords || (!duringLoad && mpPool && mpPool->loadingProfile())) {
         qWarning() << "THeadlessSession: called while a profile loads, which is refused; call it once that has returned";
         //: Error from a frontend with no window that was called while a profile was still loading
         mErrorString = tr("Refused while a profile loads; call it once that has returned.");
@@ -1173,14 +1227,14 @@ bool THeadlessSession::refused()
     return false;
 }
 
-bool THeadlessSession::usable()
+bool THeadlessSession::usable(const bool duringLoad)
 {
     if (!mpHost) {
         //: Error from a frontend with no window that has no open profile to send to
         mErrorString = tr("No profile is open.");
         return false;
     }
-    if (refused()) {
+    if (refused(duringLoad)) {
         return false;
     }
     if (mLoadFailed) {

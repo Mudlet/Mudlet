@@ -160,6 +160,12 @@ public:
     // As the Cancel of the GUI's progress dialog: packageDownloadFinished follows. False with no download
     // running, and where submit() is refused.
     bool cancelPackageDownload();
+    // As the Abort of the GUI's map progress dialog: the export, import or download is asked to stop at its next
+    // step, and mapProgressFinished follows. True says the request was made: a JSON import with no areas to read
+    // has no step left and completes. False with none running that can still be aborted, after
+    // mapProgressCancelDisabled, and where submit() is refused, save that a JSON map that start() loads can be
+    // aborted from a handler of its mapProgressStarted.
+    bool cancelMapOperation();
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -227,6 +233,9 @@ signals:
     void mapProgressStarted(const QString& profile, const QString& title, const QString& label, int maximum);
     void mapProgressChanged(const QString& profile, const QString& label, int value, int maximum);
     void mapProgressFinished(const QString& profile);
+    // The map operation can no longer be aborted, as the GUI's dialog then drops its Abort: at once for an XML
+    // import, and for an export writing its file or a download that has arrived
+    void mapProgressCancelDisabled(const QString& profile);
     // The connection was made; from the event loop
     void connected(const QString& profile);
     // The connection ended, or could not be made; from the event loop
@@ -241,8 +250,9 @@ private:
     void startMapProgress(const QString& title, const QString& label, int maximum);
     bool finishOpenProgress();
     void lineCommitted(int lineIndex);
-    bool refused();
-    bool usable();
+    // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
+    bool refused(bool duringLoad = false);
+    bool usable(bool duringLoad = false);
     void noteAlreadyInstalled(const QString& path, const QString& name);
 
     QPointer<Host> mpHost;
@@ -261,6 +271,7 @@ private:
     // The profile a map operation or package download was reported started for, until its end is
     std::optional<QString> mMapProgressFor;
     std::optional<QString> mPackageDownloadFor;
+    bool mMapOperationCancelable = false;
     QStringList mUnsavedProfiles;
     // Bumped by each start(), and by a shutdown() that closes the profile, to drop a queued quitRequested
     // owed to the one before

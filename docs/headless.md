@@ -209,6 +209,14 @@ A map operation or package download still open when its profile closes, or when 
 `start()` lets the profile go, gets its end there, so every start an app is sent is followed by one end.
 A session that is deleted sends none.
 
+`cancelMapOperation()` is the dialog's Abort: a JSON export or import then gives its script `nil` and
+"aborted by user", and a download stops. It works on the JSON map `start()` loads too, called from a
+handler of its `mapProgressStarted`, and the profile then starts with no map, as in the GUI. `true` means
+the request was made, not that the operation stopped: a JSON import with no areas has no step left at
+which to stop, and completes. `mapProgressCancelDisabled` says when the dialog would drop its Abort: at
+once for an XML import, and for an export writing its file or a download that has arrived. After it,
+or with nothing running, the call answers `false`.
+
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.
 

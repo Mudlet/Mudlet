@@ -2211,6 +2211,165 @@ headlessMapSaved, headlessMapError = saveJsonMap([[%1]])
         QVERIFY(session.shutdown(false));
     }
 
+    void test_aMapExportIsCancelledButAnXmlImportIsNot()
+    {
+        const QString name = qsl("Headless Map Cancel");
+        QVERIFY(writeProfile(name, QString()));
+        const QString xmlPath = mConfigDir.filePath(qsl("headless-map-cancel.xml"));
+        QVERIFY(writeFile(xmlPath, R"(<?xml version="1.0" encoding="UTF-8"?>
+<map>
+  <areas><area id="5001" name="Headless Cancel Area"/></areas>
+  <rooms><room id="5001" area="5001" title="Room"><coord x="0" y="0" z="0"/></room></rooms>
+</map>
+)"));
+        THeadlessSession session;
+        bool armed = true;
+        std::optional<bool> cancelled;
+        connect(&session, &THeadlessSession::mapProgressStarted, &session, [&]() {
+            if (std::exchange(armed, false)) {
+                cancelled = session.cancelMapOperation();
+            }
+        });
+        QSignalSpy finished(&session, &THeadlessSession::mapProgressFinished);
+        QSignalSpy cancelDisabled(&session, &THeadlessSession::mapProgressCancelDisabled);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(!session.cancelMapOperation());
+
+        const QString path = mConfigDir.filePath(qsl("headless-map-cancel.json"));
+        QVERIFY(session.runLua(threeRoomsSavedTo(path)));
+        QCOMPARE(cancelled, std::optional<bool>(true));
+        QVERIFY2(session.runLua(qsl("assert(headlessMapSaved == nil and headlessMapError == 'aborted by user', tostring(headlessMapError))")), qPrintable(session.errorString()));
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 10000);
+        QCOMPARE(cancelDisabled.count(), 0);
+        QVERIFY(!QFile::exists(path));
+        QVERIFY(!session.cancelMapOperation());
+
+        // Writing its file, it can no longer be aborted
+        QVERIFY(session.runLua(qsl("headlessMapSaved = saveJsonMap([[%1]])").arg(path)));
+        QVERIFY(session.runLua(qsl("assert(headlessMapSaved == true)")));
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 2, 10000);
+        QCOMPARE(cancelDisabled.count(), 1);
+
+        armed = true;
+        cancelled.reset();
+        QVERIFY(session.runLua(qsl("headlessMapLoaded = loadMap([[%1]])").arg(xmlPath)));
+        QVERIFY(session.runLua(qsl("assert(headlessMapLoaded == true)")));
+        QCOMPARE(cancelled, std::optional<bool>(false));
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 3, 10000);
+        QCOMPARE(cancelDisabled.count(), 2);
+        QCoreApplication::processEvents();
+        QCOMPARE(finished.count(), 3);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aJsonMapImportIsCancelled()
+    {
+        const QString name = qsl("Headless Map Import Cancel");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        bool armed = false;
+        std::optional<bool> cancelled;
+        connect(&session, &THeadlessSession::mapProgressStarted, &session, [&]() {
+            if (std::exchange(armed, false)) {
+                cancelled = session.cancelMapOperation();
+            }
+        });
+        QSignalSpy finished(&session, &THeadlessSession::mapProgressFinished);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        const QString path = mConfigDir.filePath(qsl("headless-map-import-cancel.json"));
+        QVERIFY(session.runLua(threeRoomsSavedTo(path)));
+        QVERIFY2(session.runLua(qsl("assert(headlessMapSaved == true, tostring(headlessMapError))")), qPrintable(session.errorString()));
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 10000);
+
+        QVERIFY(session.runLua(qsl(R"lua(
+function headlessMapNow()
+  local names, rooms = {}, {}
+  for areaName, id in pairs(getAreaTable()) do
+    names[#names + 1] = areaName .. "=" .. id
+  end
+  for id in pairs(getRooms()) do
+    rooms[#rooms + 1] = id
+  end
+  table.sort(names)
+  table.sort(rooms)
+  return table.concat(names, ",") .. ";" .. table.concat(rooms, ",") .. ";" .. getRoomAreaName(-1)
+end
+addRoom(4)
+setRoomArea(4, addAreaName("Headless Added Later"))
+headlessMapBefore = headlessMapNow()
+)lua")));
+        armed = true;
+        QVERIFY(session.runLua(qsl("headlessMapLoaded, headlessMapError = loadJsonMap([[%1]])").arg(path)));
+        QCOMPARE(cancelled, std::optional<bool>(true));
+        QVERIFY2(session.runLua(qsl("assert(headlessMapLoaded == nil and headlessMapError == 'aborted by user', tostring(headlessMapError))")), qPrintable(session.errorString()));
+        QVERIFY2(session.runLua(qsl("assert(headlessMapNow() == headlessMapBefore, headlessMapNow())")), qPrintable(session.errorString()));
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 2, 10000);
+        QCoreApplication::processEvents();
+        QCOMPARE(finished.count(), 2);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // From a handler of its start, while start() is still loading the profile
+    void test_aJsonMapThatStartLoadsIsCancelled()
+    {
+        const QString name = qsl("Headless Map Load Cancel");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        const QString path = mConfigDir.filePath(qsl("headless-map-load-cancel.json"));
+        QVERIFY(session.runLua(threeRoomsSavedTo(path)));
+        QVERIFY2(session.runLua(qsl("assert(headlessMapSaved == true, tostring(headlessMapError))")), qPrintable(session.errorString()));
+        QVERIFY(session.shutdown(false));
+        const QString mapsFolder = MudletApp::getMudletPath(enums::profileMapsPath, name);
+        QVERIFY(QDir().mkpath(mapsFolder));
+        QVERIFY(QFile::copy(path, qsl("%1/headless-map-load-cancel.json").arg(mapsFolder)));
+
+        std::optional<bool> cancelled;
+        QString refusal;
+        connect(&session, &THeadlessSession::mapProgressStarted, &session, [&]() {
+            if (!cancelled) {
+                cancelled = session.cancelMapOperation();
+                refusal = session.errorString();
+            }
+        });
+        QSignalSpy finished(&session, &THeadlessSession::mapProgressFinished);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY2(cancelled == std::optional<bool>(true), qPrintable(refusal));
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 10000);
+        QVERIFY2(session.runLua(qsl("assert(next(getRooms()) == nil)")), qPrintable(session.errorString()));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // Once its request is sent, so from the frontend's own event loop rather than a script's
+    void test_aMapDownloadIsCancelled()
+    {
+        QTcpServer stalled;
+        QVERIFY(stalled.listen(QHostAddress::LocalHost));
+        std::vector<std::unique_ptr<QTcpSocket>> held;
+        connect(&stalled, &QTcpServer::newConnection, &stalled, [&]() {
+            held.emplace_back(stalled.nextPendingConnection());
+        });
+
+        const QString name = qsl("Headless Map Download Cancel");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy started(&session, &THeadlessSession::mapProgressStarted);
+        QSignalSpy finished(&session, &THeadlessSession::mapProgressFinished);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        const QString localFile = mConfigDir.filePath(qsl("headless-map-download.xml"));
+        session.host()->mpMap->downloadMap(qsl("http://127.0.0.1:%1/map.xml").arg(stalled.serverPort()), localFile);
+        QTRY_COMPARE_WITH_TIMEOUT(started.count(), 1, 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(!held.empty(), 10000);
+
+        QVERIFY2(session.cancelMapOperation(), qPrintable(session.errorString()));
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 10000);
+        QVERIFY(!session.cancelMapOperation());
+        QCoreApplication::processEvents();
+        QCOMPARE(finished.count(), 1);
+        QVERIFY(!QFile::exists(localFile));
+        QVERIFY(session.shutdown(false));
+    }
+
     // A prompt the game ends with GA, and commands as the command line sends them, a trailing line feed
     // making an empty one as there
     void test_promptsAndCommandsReachTheGame()
