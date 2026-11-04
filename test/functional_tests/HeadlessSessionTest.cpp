@@ -1754,6 +1754,30 @@ end))lua")
         QCOMPARE(heard, 0);
     }
 
+    void test_announcementsReachTheSession()
+    {
+        const QString name = qsl("Headless Announcements");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy announcements(&session, &THeadlessSession::announcementRequested);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+announce("urgent", "importantall")
+announce("latest", "importantmostrecent")
+announce("calm")
+announce("queued", "all")
+)lua")));
+        QCOMPARE(announcements.count(), 4);
+        QCOMPARE(announcements.at(0).at(0).toString(), name);
+        QCOMPARE(announcements.at(0).at(1).toString(), qsl("urgent"));
+        QCOMPARE(announcements.at(0).at(2).toBool(), true);
+        QCOMPARE(announcements.at(1).at(2).toBool(), true);
+        QCOMPARE(announcements.at(2).at(1).toString(), qsl("calm"));
+        QCOMPARE(announcements.at(2).at(2).toBool(), false);
+        QCOMPARE(announcements.at(3).at(2).toBool(), false);
+        QVERIFY(session.shutdown(false));
+    }
+
     // A prompt the game ends with GA, and commands as the command line sends them, a trailing line feed
     // making an empty one as there
     void test_promptsAndCommandsReachTheGame()

@@ -1434,6 +1434,8 @@ signals:
     void signal_moduleSyncChangedByScript(const QString& module, bool sync);
     // A script's alert(), for an app that embeds Mudlet: for how long, 0 until the player comes back to it
     void signal_attentionRequested(int milliseconds);
+    // Plain text for screen readers, with announce()'s processing style, for an app that embeds Mudlet
+    void signal_announcementRequested(const QString& text, const QString& processing);
 
 public slots:
     void slot_timerFires();
