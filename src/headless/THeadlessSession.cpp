@@ -26,6 +26,7 @@
 #include "SecureStringUtils.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
+#include "TEncodingHelper.h"
 #include "TEvent.h"
 #include "TGameDetails.h"
 #include "TLuaInterpreter.h"
@@ -760,6 +761,90 @@ bool THeadlessSession::submit(const QString& line)
         }
     }
     return true;
+}
+
+bool THeadlessSession::submitHiddenInput(const QString& line)
+{
+    // A copy of its own, which the send clears, and which nothing kept shares with the caller's
+    QString text(line.constData(), line.size());
+    const auto clearText = qScopeGuard([&text]() {
+        SecureStringUtils::secureStringClear(text);
+    });
+    if (!usable() || !inputHidden(true)) {
+        return false;
+    }
+    // As the box: a pasted line break must not make a second line
+    text.remove(QChar::CarriageReturn);
+    text.remove(QChar::LineFeed);
+    // The game would get a mangled password while the send reports success
+    const QByteArray& encoding = mpHost->mTelnet.getEncoding();
+    // As cTelnet::sendData() sends with no codec
+    bool encodable = std::all_of(text.cbegin(), text.cend(), [](const QChar c) {
+        return c.unicode() < 128;
+    });
+    if (!encoding.isEmpty() && TEncodingHelper::isEncodingAvailable(encoding)) {
+        encodable = TEncodingHelper::canEncode(text, encoding);
+    }
+    if (!encodable) {
+        //: Error from a frontend with no window whose hidden input, such as a password, has characters the game's encoding, %1, cannot carry; the input itself is never shown
+        mErrorString = tr("The hidden input was not sent: it has characters the game's encoding, %1, cannot carry.").arg(encoding.isEmpty() ? qsl("ASCII") : QString::fromLatin1(encoding));
+        return false;
+    }
+    if (!mpHost->sendPasswordEntry(std::move(text))) {
+        //: Error from a frontend with no window whose hidden input, such as a password, could not be sent because Mudlet is not connected to the game
+        mErrorString = tr("The hidden input was not sent: Mudlet is not connected to the game.");
+        return false;
+    }
+    return true;
+}
+
+bool THeadlessSession::hiddenInputEdited()
+{
+    if (!usable() || !inputHidden(false)) {
+        return false;
+    }
+    mpHost->passwordEntryEdited();
+    return true;
+}
+
+bool THeadlessSession::dismissHiddenInput()
+{
+    if (!usable() || !inputHidden(false)) {
+        return false;
+    }
+    mpHost->dismissPasswordEntry();
+    return true;
+}
+
+bool THeadlessSession::inputHidden(const bool sending)
+{
+    if (mpHost->passwordEntryWanted()) {
+        return true;
+    }
+    if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
+        if (sending) {
+            //: Error from a frontend with no window whose hidden input, such as a password, could not be sent because Mudlet is not connected to the game
+            mErrorString = tr("The hidden input was not sent: Mudlet is not connected to the game.");
+        } else {
+            //: Error from a frontend with no window asked about hidden input, such as a password, while Mudlet is not connected to the game
+            mErrorString = tr("Hidden input is not open: Mudlet is not connected to the game.");
+        }
+    } else if (mpHost->isRemoteEchoingActive()) {
+        if (sending) {
+            //: Error from a frontend with no window whose hidden input, such as a password, was not sent because, though the game hides what is typed, the hidden input was dismissed, waits on the automatic login, or is turned off by the profile's setting to show passwords as they are typed
+            mErrorString = tr("The hidden input was not sent: the game hides what is typed, but hidden input was dismissed, waits on the automatic login, or is off as passwords are shown as typed.");
+        } else {
+            //: Error from a frontend with no window asked about hidden input, such as a password, which, though the game hides what is typed, was dismissed, waits on the automatic login, or is turned off by the profile's setting to show passwords as they are typed
+            mErrorString = tr("Hidden input is not open: the game hides what is typed, but hidden input was dismissed, waits on the automatic login, or is off as passwords are shown as typed.");
+        }
+    } else if (sending) {
+        //: Error from a frontend with no window whose hidden input, such as a password, was not sent because the game is not hiding what the player types
+        mErrorString = tr("The hidden input was not sent: the game is not hiding what is typed.");
+    } else {
+        //: Error from a frontend with no window asked about hidden input, such as a password, while the game is not hiding what the player types
+        mErrorString = tr("Hidden input is not open: the game is not hiding what is typed.");
+    }
+    return false;
 }
 
 bool THeadlessSession::runLua(const QString& code)

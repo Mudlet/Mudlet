@@ -231,7 +231,16 @@ it stops, where the GUI opens and closes its hidden-input box, so an app can mas
 meanwhile. A disconnect ends it too, as does the profile closing or being let go by `shutdown()` or a
 later `start()`, though not the session being deleted. It never comes while the profile's "Show passwords as you type them"
 setting is on, as the GUI then opens no box. It is sent while the game's data is read, so, like
-`outputLine`, its handler must not call the session back.
+`outputLine`, its handler must not call the session back. Meanwhile `submitHiddenInput()` sends a line
+as the box does, straight to the game with no aliases, `sysDataSendRequest`, echo or history, while
+`submit()` still runs aliases on it as it always has; `hiddenInputEdited()` is the player's first edit of
+the masked line, which stops a saved password that arrives late from the keychain being sent for them, as
+typing in the box does, so an app that moves text the player had typed ahead into its masked line calls
+it then, as the GUI does when it moves such text into its box; and `dismissHiddenInput()` is the box's Esc,
+which hands input back to `submit()`.
+When `submitHiddenInput()` refuses a line, as the box has closed, the profile is not connected or the
+game's encoding cannot carry it, an app drops that line, as the GUI drops what was typed into a box that
+closes; resending it with `submit()` would echo it, keep it in the history and hand it to aliases.
 
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.

@@ -2576,6 +2576,115 @@ tempTrigger("Third", [[echo(" <third>")]]))lua")));
         QCOMPARE(hidden.count(), wanted.size());
     }
 
+    // As the GUI's hidden-input box sends it, and as its Esc on an empty box closes it
+    void test_hiddenInputGoesStraightToTheGame()
+    {
+        const QString name = qsl("Headless Hidden Send");
+        QVERIFY(writeProfile(name, QString()));
+        const QString historyFile = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("command_history_main"));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy hidden(&session, &THeadlessSession::hiddenInputWanted);
+        QSignalSpy disconnected(&session, &THeadlessSession::disconnected);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(tempAlias("^typed", [[send("alias ran")]])
+registerAnonymousEventHandler("sysDataSendRequest", function(_, command) hiddenSendSeen = command end))lua")));
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QSignalSpy local(&session, &THeadlessSession::localText);
+
+        QVERIFY(!session.submitHiddenInput(qsl("too soon")));
+        QCOMPARE(session.errorString(), qsl("The hidden input was not sent: the game is not hiding what is typed."));
+        QVERIFY(!session.dismissHiddenInput());
+        QCOMPARE(session.errorString(), qsl("Hidden input is not open: the game is not hiding what is typed."));
+        QVERIFY(!session.hiddenInputEdited());
+
+        game->write("\xff\xfb\x01Password:\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Password:")), 10000);
+        QVERIFY2(session.submitHiddenInput(qsl("typed sec\r\nret")), qPrintable(session.errorString()));
+        QByteArray received;
+        QTRY_VERIFY_WITH_TIMEOUT((received += game->readAll()).contains("typed secret\r\n"), 10000);
+        QTest::qWait(100);
+        received += game->readAll();
+        QVERIFY2(!received.contains("alias ran") && !received.contains("too soon"), received.constData());
+        QVERIFY(luaGlobalString(session.host(), "hiddenSendSeen").isEmpty());
+        const QString shown = outputTexts(local).join(QString());
+        QVERIFY2(!shown.contains(qsl("secret")), qPrintable(shown));
+
+        QVERIFY(session.host()->mTelnet.setEncoding("ISO 8859-1", false).first);
+        QVERIFY(!session.submitHiddenInput(qsl("caf\u00e9 \u20ac")));
+        QCOMPARE(session.errorString(), qsl("The hidden input was not sent: it has characters the game's encoding, ISO 8859-1, cannot carry."));
+        QVERIFY2(session.submitHiddenInput(qsl("caf\u00e9")), qPrintable(session.errorString()));
+        QTRY_VERIFY_WITH_TIMEOUT((received += game->readAll()).contains("caf\xe9\r\n"), 10000);
+        QVERIFY2(!received.contains(" ?"), received.constData());
+
+        QCOMPARE(hidden.size(), 1);
+        QVERIFY(session.dismissHiddenInput());
+        QCOMPARE(hidden.size(), 2);
+        QCOMPARE(hidden.at(1).at(0).toString(), name);
+        QCOMPARE(hidden.at(1).at(1).toBool(), false);
+        QVERIFY(!session.dismissHiddenInput());
+        QVERIFY(!session.submitHiddenInput(qsl("typed again")));
+        QCOMPARE(session.errorString(),
+                 qsl("The hidden input was not sent: the game hides what is typed, but hidden input was dismissed, waits on the automatic login, or is off as passwords are shown as typed."));
+        // After Esc the player's next command goes the command line's way
+        QVERIFY(session.submit(qsl("typed a command")));
+        QTRY_VERIFY_WITH_TIMEOUT((received += game->readAll()).contains("alias ran"), 10000);
+        QCOMPARE(luaGlobalString(session.host(), "hiddenSendSeen"), qsl("alias ran"));
+        QVERIFY2(!received.contains("typed again"), received.constData());
+
+        game->close();
+        QTRY_VERIFY_WITH_TIMEOUT(!disconnected.isEmpty(), 10000);
+        QVERIFY(!session.submitHiddenInput(qsl("too late")));
+        QCOMPARE(session.errorString(), qsl("The hidden input was not sent: Mudlet is not connected to the game."));
+
+        QVERIFY2(session.shutdown(true), qPrintable(session.errorString()));
+        QVERIFY2(!readFile(historyFile).contains(qsl("secret")), qPrintable(readFile(historyFile)));
+    }
+
+    // As typing in the box does: a saved password the keychain gives up only now must not follow the player's own
+    void test_editingHiddenInputStopsALateSavedPassword()
+    {
+        const QString name = qsl("Headless Hidden Edit");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy hidden(&session, &THeadlessSession::hiddenInputWanted);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        // Before the auto-login's first step, with the keychain still to answer
+        session.host()->setLogin(qsl("player"));
+        session.host()->setPass(QString());
+        session.host()->securedPasswordAnswered(false, QString(), qsl("Operation timed out"), true);
+        QByteArray received;
+        QTRY_VERIFY_WITH_TIMEOUT((received += game->readAll()).contains("player\r\n"), 10000);
+
+        game->write("Password:\r\n\xff\xfb\x01");
+        QTRY_COMPARE_WITH_TIMEOUT(hidden.size(), 1, 10000);
+        QVERIFY(hidden.at(0).at(1).toBool());
+        QVERIFY2(session.hiddenInputEdited(), qPrintable(session.errorString()));
+        session.host()->securedPasswordAnswered(true, qsl("stored"), QString(), false);
+        QTest::qWait(100);
+        received += game->readAll();
+        QVERIFY2(!received.contains("stored"), received.constData());
+        QVERIFY2(session.submitHiddenInput(qsl("typed")), qPrintable(session.errorString()));
+        QTRY_VERIFY_WITH_TIMEOUT((received += game->readAll()).contains("typed\r\n"), 10000);
+        QTest::qWait(100);
+        received += game->readAll();
+        QVERIFY2(!received.contains("stored"), received.constData());
+        QVERIFY(session.shutdown(false));
+    }
+
     // In the file the GUI's main command line reads, newest first behind the line being typed, and as there
     // without what was typed while the game hid it
     void test_submittedCommandsAreKeptInTheCommandHistory()
