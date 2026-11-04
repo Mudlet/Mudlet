@@ -30,7 +30,6 @@
 #include "TAppFrontend.h"
 #include <QCryptographicHash>
 #include <QDebug>
-#include <QDesktopServices>
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
@@ -880,7 +879,7 @@ void GMCPAuthenticator::offerOrOpenSignInUrl(const QUrl& url, const QString& pro
 
 bool GMCPAuthenticator::openSignInUrl(const QUrl& url, const QString& provider)
 {
-    if (!QDesktopServices::openUrl(url)) {
+    if (!TAppFrontend::instance()->openWebPage(url.toString(QUrl::FullyEncoded))) {
         //: %1 is the sign-in web address the user should open manually in their browser.
         mpHost->postMessage(tr("[ WARN ]  - Could not open your browser. Open this link manually to sign in: %1").arg(UntrustedText::forTarget(url.toString())));
         return false;

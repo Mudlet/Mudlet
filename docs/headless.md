@@ -176,6 +176,10 @@ back or run the event loop; queue the work for later instead. `host()` reaches w
 does not cover, such as settings and the map, and goes null once the profile closes, so hold it in a
 `QPointer`.
 
+A web page a script opens with `openWebPage()` or `openUrl()`, and a game's sign-in page, go to
+`QDesktopServices::openUrl()` as in the GUI, so the system's browser opens them unless the app takes
+their scheme first with `QDesktopServices::setUrlHandler()`, as a phone app might to show them itself.
+
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.
 
