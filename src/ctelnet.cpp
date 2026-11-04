@@ -699,6 +699,21 @@ void cTelnet::abandonHostLookup()
     }
 }
 
+void cTelnet::abandonConnectionAttempt()
+{
+    abandonHostLookup();
+    mLookingUpHost = false;
+    mTimerFailedConnectionRetry->stop();
+    cancelLoginTimers();
+    // Until the connection is made, and under TLS until it is encrypted, mpSocket is not yet the dialling socket
+    if (mpSocket != &mSocket_ipV4 && mSocket_ipV4.state() != QAbstractSocket::UnconnectedState) {
+        abortLosingSocket(&mSocket_ipV4);
+    }
+    if (mpSocket != &mSocket_ipV6 && mSocket_ipV6.state() != QAbstractSocket::UnconnectedState) {
+        abortLosingSocket(&mSocket_ipV6);
+    }
+}
+
 // cTelnet keeps its own copies of these two Host flags. connectIt() refreshes
 // them per connection, so a profile opened offline - which never gets there -
 // has to take them when it loads, or it parses telnet on the defaults rather
@@ -715,6 +730,11 @@ void cTelnet::cacheHostSettings()
 
 void cTelnet::connectIt(const QString& address, int port)
 {
+    // Every route to a dial comes here or to slot_socketHostFound(): the game would see a connection, perhaps a
+    // login, that the pool's deletion then drops
+    if (mpHost && mpHost->deletionPending()) {
+        return;
+    }
     if (mDisconnectionPending) {
         if (mDecompressionRecursionDepth > 0) {
             // A trigger on the last words of the connection that ended: tearing
@@ -781,8 +801,15 @@ void cTelnet::connectIt(const QString& address, int port)
             mSocket_ipV6.abort();
         }
         // Since at least one of them was not ready lets give them a chance to
-        // sort themselves out:
+        // sort themselves out. Held so the profile outlives this: a close posted
+        // earlier, as by closeMudlet(), may run in it.
+        ++mConnectEventLoops;
         QCoreApplication::processEvents();
+        --mConnectEventLoops;
+        if (!mpHost || mpHost->closeStarted() || mpHost->deletionPending()) {
+            mLookingUpHost = false;
+            return;
+        }
 
         // This looks less than ideal - recursively calling ourselves?
         connectIt(address, port);
@@ -1523,7 +1550,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
     }
     mHostLookupId = -1;
     mLookingUpHost = false;
-    if (!mpHost || mpHost->isClosingDown()) {
+    if (!mpHost || mpHost->isClosingDown() || mpHost->deletionPending()) {
         return;
     }
     QStringList addressList_ipV4;

@@ -220,6 +220,10 @@ std::pair<int, QString> TNullMapViews::createView(const int initialAreaId)
     // Before the view is listed, as the sysMapAreaChanged this can raise comes before TMapViewManager lists it
     if (initialAreaId > 0) {
         pView->switchArea(initialAreaId);
+    } else if (initialAreaId == 0) {
+        if (const auto playerAreaId = mpMap->playerAreaId()) {
+            pView->switchArea(*playerAreaId);
+        }
     }
     mViews.insert(viewId, pView);
     // The dock showing paints the view

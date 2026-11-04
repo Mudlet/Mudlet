@@ -82,7 +82,7 @@ bool HostManager::releasingProfile()
     return sReleasesPending > 0;
 }
 
-HostManager::HostManager(const ConfigRoot configRoot)
+HostManager::HostManager(const ConfigRoot configRoot, const QString& configDir)
 : mpMedia(std::make_unique<MudletMedia>())
 , mpFonts(std::make_unique<FontManager>())
 , mpReplay(std::make_unique<MudletReplay>())
@@ -91,7 +91,11 @@ HostManager::HostManager(const ConfigRoot configRoot)
 {
     // Settling again would delete the settings store under whoever holds it
     if (configRoot == ConfigRoot::settledHere && !MudletApp::configRootSettled()) {
-        MudletApp::settleConfigRoot();
+        if (configDir.isEmpty()) {
+            MudletApp::settleConfigRoot();
+        } else {
+            MudletApp::chooseConfigRoot(configDir);
+        }
         // Once per process: where the main window settles the root, its readEarlySettings() and readLateSettings()
         // read them instead
         const QSettings& settings = *MudletApp::getQSettings();
@@ -196,7 +200,7 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
         qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") ERROR: an unnamed Host is not permitted, aborting and returning false!";
         return false;
     }
-    if (mGoingDown) {
+    if (mGoingDown || mDeletionPending) {
         qWarning() << "HostManager::addHost() - not adding" << hostname << "as the pool is being destroyed";
         return false;
     }
@@ -434,6 +438,14 @@ void HostManager::closeAllProfiles()
         } else {
             deleteHost(pHost->getName());
         }
+    }
+}
+
+void HostManager::markDeletionPending()
+{
+    mDeletionPending = true;
+    for (const auto& pHost : hostList()) {
+        pHost->markDeletionPending();
     }
 }
 

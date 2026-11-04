@@ -672,7 +672,18 @@ bool Host::deletionMustWait()
     return deletionWouldWait();
 }
 
+void Host::markDeletionPending()
+{
+    mDeletionPending = true;
+    mTelnet.abandonConnectionAttempt();
+}
+
 bool Host::deletionWouldWait() const
+{
+    return busyRunning() || mTelnet.connectRunningEventLoop();
+}
+
+bool Host::busyRunning() const
 {
     return (mpMap && mpMap->mapOperationInProgress()) || mLuaInterpreter.pumpingEvents() || mLuaInterpreter.luaOnStack() || waitingForProfileSave();
 }

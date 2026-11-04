@@ -2262,6 +2262,42 @@ function BaseUI.checkMapData(event)
   BaseUI.createMapper()
 end
 
+-- Games lay their text out for 80 columns and the main console cuts off the rest, so
+-- the dock gives way to keep that many - down to the width its chat tabs still read at
+local consoleColumns = 80
+local narrowestDock = 200
+-- the console's scroll bar and margins, which Lua cannot measure
+local consoleChrome = 32
+
+-- calcFontSize() rounds the width getColumnCount() divides by to a whole pixel, so
+-- each column is allowed the half pixel that rounding can lose
+local function dockWidth(windowWidth, margin)
+  local console = consoleColumns * (calcFontSize("main") + 0.5) + consoleChrome
+  local room = windowWidth - getBorderLeft() - margin - console
+  return math.floor(math.min(windowWidth / 4, math.max(narrowestDock, room)))
+end
+
+-- A width the player gave the dock by dragging its edge is left alone for the session
+function BaseUI.fitDock()
+  local dock = BaseUI.container
+  local windowWidth = getMainWindowSize()
+  if not dock or windowWidth &lt;= 0 or (dock.attached or dock.hiddenAttached) ~= "right"
+    or (BaseUI.fittedWidth and dock.width ~= BaseUI.fittedWidth) then
+    return
+  end
+  local constraint = dockWidth(windowWidth, dock.attachedMargin) .. "px"
+  BaseUI.fittedWidth = constraint
+  if dock.width == constraint then
+    return
+  end
+  -- both edges at once: moved one at a time, a dock that shrank can sit too far
+  -- from the border for Adjustable to keep it attached
+  dock.x, dock.width = "-" .. constraint, constraint
+  dock:set_constraints(dock)
+  -- Mudlet 5.0 does not move the border on set_constraints()
+  dock:adjustBorder()
+end
+
 function BaseUI.build()
   if BaseUI.container then
     return
@@ -2281,6 +2317,11 @@ function BaseUI.build()
     autoLoad = false,
     autoSave = false,
   })
+  -- Adjustable's own close hides the dock for this session only; the next one
+  -- would build it again
+  BaseUI.container.exitLabel:setClickCallback("BaseUI.hide")
+  -- before the chat panes print anything: printed lines keep the wrap they had
+  BaseUI.fitDock()
   -- Sits in the dock's title bar beside the minimize and close buttons Adjustable
   -- puts there, one slot further in - 3.8 continues its own 1.4/2.6 spacing, so this
   -- tracks whatever it does. Like those two it has to be a direct child rather than
@@ -3279,7 +3320,7 @@ function BaseUI.alias(input, argument)
       state = "waiting for game data"
     end
     cecho("\n&lt;cyan&gt;[ Mudlet UI ] A starter interface built from your game's data (currently " .. state .. ").\n")
-    cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui hide&lt;cyan&gt; - hide it (remembered between sessions)\n")
+    cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui hide&lt;cyan&gt; - hide it, as the &lt;yellow&gt;x&lt;cyan&gt; in its title bar does (remembered between sessions)\n")
     cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui show&lt;cyan&gt; - bring it back\n")
     cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui dock&lt;cyan&gt; - put every section back in the dock, if you dragged any out\n")
     cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui background (file)&lt;cyan&gt; - put a picture behind the whole window, or click the &lt;yellow&gt;" .. pictureGlyph .. "&lt;cyan&gt; in its title bar\n")
@@ -3337,6 +3378,7 @@ onEvent("sysProtocolEnabled", "BaseUI.enableMsdpVitals")
 onEvent("sysDisconnectionEvent", "BaseUI.handleDisconnect")
 onEvent("sysDataSendRequest", "BaseUI.noteCommandSent")
 onEvent("AdjustableContainerRepositionFinish", "BaseUI.sectionDropped")
+onEvent("sysWindowResizeEvent", "BaseUI.fitDock")
 onEvent("sysServerGuiInstalled", "BaseUI.standAside")
 onEvent("sysUninstallPackage", "BaseUI.packageRemoved")
 for _, stat in ipairs(msdpStats) do

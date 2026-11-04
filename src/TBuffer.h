@@ -148,7 +148,11 @@ public:
         // Replaces TCHAR_ECHO 16
         Echo = 0x200000,              // 0000 0000 0010 0000 0000 0000 0000 0000
         // In the showing console's selection. Not a display attribute (outside TestMask); dropped by the copy constructor:
-        Selected = 0x2000000          // 0000 0010 0000 0000 0000 0000 0000 0000
+        Selected = 0x2000000,         // 0000 0010 0000 0000 0000 0000 0000 0000
+        // Bold as SGR 1, MXP or a link's style asked for it, whatever the colour. Bold is how it is painted:
+        // not on a colour, which is brightened instead, and also after a 256-colour index from 8 to 15.
+        // Outside TestMask, so only an app embedding Mudlet reads it:
+        BoldAsked = 0x4000000         // 0000 0100 0000 0000 0000 0000 0000 0000
     };
     // clang-format on
     Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
@@ -253,6 +257,7 @@ public:
     bool isStruckOut() const { return mFlags & StrikeOut; }
     bool isReversed() const { return mFlags & Reverse; }
     bool isConcealed() const { return mFlags & Concealed; }
+    bool isBoldAsked() const { return mFlags & BoldAsked; }
     bool isFound() const { return mFlags & Found; }
     // Extended underline style accessors for enhanced OSC 8 hyperlink support
     bool isUnderlineWavy() const { return mFlags & UnderlineWavy; }
@@ -564,6 +569,7 @@ public:
         bool gotString = false;
         bool isDefaultColor = true;
         bool bold = false;
+        bool boldAsked = false;
         bool italics = false;
         bool overline = false;
         bool reverse = false;
@@ -879,7 +885,7 @@ private:
     // Helper function for parsing JSON selection config to SelectionSettings
     void parseJsonSelectionConfig(const QJsonObject& selectionObj, Mudlet::HyperlinkStyling::SelectionSettings& settings);
     // Helper function for JSON menu array conversion
-    QString jsonMenuArrayToString(const QJsonArray& menuArray);
+    QStringList jsonMenuArrayToList(const QJsonArray& menuArray);
     // Helper function for parsing visibility JSON object into VisibilitySettings
     bool parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::HyperlinkStyling::VisibilitySettings& settings);
     // Helper function for appending query parameters to URIs (handles existing params)
@@ -950,6 +956,8 @@ private:
     QPointer<Host> mpHost;
 
     bool mBold = false;
+    // By SGR 1 alone: mBold is also how 256-colour indexes 8 to 15 ask for their bright colour
+    bool mBoldAsked = false;
     bool mItalics = false;
     bool mOverline = false;
     bool mReverse = false;
@@ -1072,6 +1080,8 @@ private:
     QStringList mCurrentHyperlinkHint;
     int mCurrentHyperlinkLinkId = 0;
     bool mHyperlinkActive = false;
+    // The MXP link this OSC 8 hyperlink opened inside, which it overrides until it closes; 0 if none
+    int mHyperlinkEnclosingMxpLinkId = 0;
     // Track hyperlink start position for visibility manager registration
     int mCurrentHyperlinkStartLine = 0;
     int mCurrentHyperlinkStartColumn = 0;
@@ -1108,7 +1118,7 @@ private:
 
     // Enhanced OSC 8 hyperlink styling and menu support
     Mudlet::HyperlinkStyling mCurrentHyperlinkStyling;
-    QStringList mCurrentHyperlinkMenu; // Format: "Label|Command|Label|Command..."
+    QStringList mCurrentHyperlinkMenu; // Label, command, label, command...
 
     // Link state tracking for interactive pseudo-classes
     QMap<int, Mudlet::HyperlinkStyling::LinkState> mLinkStates; // Track current state per linkIndex
@@ -1302,6 +1312,9 @@ inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes
     }
     if (attributes & TChar::Selected) {
         presentAttributes << QLatin1String("Selected (0x2000000)");
+    }
+    if (attributes & TChar::BoldAsked) {
+        presentAttributes << QLatin1String("BoldAsked (0x4000000)");
     }
     if (presentAttributes.isEmpty()) {
         result.append(QLatin1String("None (0x0))"));
