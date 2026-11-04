@@ -416,6 +416,18 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     emit attentionRequested(profile, milliseconds);
                     --gSignalsBeingHandedOut;
                 });
+                // Direct, as the GUI opens and closes its box inside the emit
+                connect(pNewHost, &Host::signal_passwordEntryWantedChanged, this, [this, run](const bool wanted) {
+                    // The close of a profile being let go reads the game's data still, but its false has been sent
+                    if (run != mRun || wanted == mHiddenInputFor.has_value()) {
+                        return;
+                    }
+                    const QString profile = mProfileName;
+                    mHiddenInputFor = wanted ? std::optional<QString>(profile) : std::nullopt;
+                    ++gSignalsBeingHandedOut;
+                    emit hiddenInputWanted(profile, wanted);
+                    --gSignalsBeingHandedOut;
+                });
                 connect(pNewHost, &Host::signal_announcementRequested, this, [this](const QString& text, const QString& processing) {
                     const QString profile = mProfileName;
                     const bool assertive = processing == QLatin1String("importantall") || processing == QLatin1String("importantmostrecent");
@@ -625,8 +637,9 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                         &QObject::destroyed,
                         this,
                         [this, run]() {
-                            // A handler of that end may have shut the profile down and started another
-                            if (run == mRun && finishOpenProgress() && run == mRun) {
+                            // Not from the event loop a shutdown() runs before it drops this run, as it waits on a reset;
+                            // a handler of that end may have shut the profile down and started another
+                            if (!mShuttingDown && run == mRun && finishOpenProgress() && run == mRun) {
                                 emit quitRequested();
                             }
                         },
@@ -989,10 +1002,8 @@ bool THeadlessSession::shutdown(const bool save)
     if (!self) {
         return !save;
     }
-    if (mpHost) {
-        ++mRun;
-    }
-    // Also for a profile that has gone while its own end waits in the event loop
+    ++mRun;
+    // Also for a profile that has gone while its own end waits in the event loop, which the bump drops
     if (!finishOpenProgress()) {
         return !save;
     }
@@ -1130,11 +1141,20 @@ void THeadlessSession::startMapProgress(const QString& title, const QString& lab
     emit mapProgressStarted(profile, title, label, maximum);
 }
 
-// The end of a map operation or package download whose own is dropped as stale, or never comes as its Host has
-// gone; false if a handler deleted the session
+// The end of hidden input, a map operation or package download whose own is dropped as stale, or never comes as
+// its Host has gone; false if a handler deleted the session
 bool THeadlessSession::finishOpenProgress()
 {
     const QPointer<THeadlessSession> self(this);
+    // A closing profile's connection ends without resetting the game's echo, so its Host never sends this
+    if (const auto profile = std::exchange(mHiddenInputFor, std::nullopt)) {
+        ++gSignalsBeingHandedOut;
+        emit hiddenInputWanted(*profile, false);
+        --gSignalsBeingHandedOut;
+        if (!self) {
+            return false;
+        }
+    }
     if (const auto profile = std::exchange(mMapProgressFor, std::nullopt)) {
         emit mapProgressFinished(*profile);
     }
@@ -1212,7 +1232,7 @@ void THeadlessSession::lineCommitted(const int lineIndex)
     --gSignalsBeingHandedOut;
 }
 
-// A handler of outputLine, localText, errorConsoleText or a ...Requested signal runs in the middle of a write,
+// A handler of outputLine, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal runs in the middle of a write,
 // which a line it fed would cut into, and a load that runs the event loop has yet to start the profile's scripts
 bool THeadlessSession::refused(const bool duringLoad)
 {
@@ -1223,9 +1243,9 @@ bool THeadlessSession::refused(const bool duringLoad)
         return true;
     }
     if (mpPool && gSignalsBeingHandedOut) {
-        qWarning() << "THeadlessSession: called from an outputLine, localText, errorConsoleText or ...Requested handler, which is refused; queue the call instead";
-        //: Error from a frontend with no window that called it back from a handler of the game's lines, of the text the profile printed, of its error console, or of a request a script made, such as a notification. "...Requested" stands for the names of those signals, which all end in Requested, and is not translated.
-        mErrorString = tr("Refused from a handler of outputLine, localText, errorConsoleText or a ...Requested signal; queue the call instead.");
+        qWarning() << "THeadlessSession: called from an outputLine, localText, errorConsoleText, hiddenInputWanted or ...Requested handler, which is refused; queue the call instead";
+        //: Error from a frontend with no window that called it back from a handler of the game's lines, of the text the profile printed, of its error console, of the game hiding what the player types, or of a request a script made, such as a notification. "...Requested" stands for the names of those signals, which all end in Requested, and is not translated.
+        mErrorString = tr("Refused from a handler of outputLine, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal; queue the call instead.");
         return true;
     }
     if (mRemovingStalePasswords || (!duringLoad && mpPool && mpPool->loadingProfile())) {

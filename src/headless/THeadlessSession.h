@@ -125,15 +125,15 @@ public:
     // Why the last call that failed did
     QString errorString() const { return mErrorString; }
     // For what the session does not cover, such as settings and the map. Null once the profile closes, so
-    // hold it in a QPointer. Not from a handler of outputLine, localText, errorConsoleText or a ...Requested
-    // signal: a line it fed would be committed in the middle of a write, which TBuffer does not allow.
+    // hold it in a QPointer. Not from a handler of outputLine, localText, errorConsoleText, hiddenInputWanted or a
+    // ...Requested signal: a line it fed would be committed in the middle of a write, which TBuffer does not allow.
     Host* host() const;
 
     // As typed on the command line: its aliases run, and what is sent while not connected is echoed and dropped
     // with nothing said, as in the GUI, so a frontend that types ahead waits for connected(). These, and
     // installPackage(), are refused while a profile loads or shutdown() runs, and from a handler of
-    // outputLine, localText, errorConsoleText or a ...Requested signal, which run mid-write, and fail once a
-    // close of the profile has begun; submit() checks each line of a paste as a call.
+    // outputLine, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal, which run mid-write, and
+    // fail once a close of the profile has begun; submit() checks each line of a paste as a call.
     bool submit(const QString& line);
     bool runLua(const QString& code);
     // As the GUI installs a package given on its command line, but quietly: a refusal is errorString()'s alone
@@ -213,6 +213,12 @@ signals:
     // for the "importantall" and "importantmostrecent" styles, as the GUI makes them, polite otherwise. Sent
     // as asked, so a handler may neither call the session nor run the event loop.
     void announcementRequested(const QString& profile, const QString& text, bool assertive);
+    // The game hides what the player types, as for a password, or has stopped, where the GUI opens and closes its
+    // hidden-input box, for an app to mask its own input line meanwhile. A disconnect ends it too, as does the
+    // profile closing or being let go by shutdown() or a later start(), though not the session being deleted.
+    // Never while the profile's "Show passwords as you type them" setting is on, as the GUI then opens no box.
+    // Sent as the game's data is read, so a handler may neither call the session nor run the event loop.
+    void hiddenInputWanted(const QString& profile, bool wanted);
     // The game offers a secure port while the connection is not encrypted, worded as the GUI asks, the port
     // in informativeText, for answerSecureConnectionOffer(). From the event loop, so a handler may answer at
     // once. It lapses when its connection ends; until then, or an answer, the profile offers nothing more.
@@ -245,7 +251,8 @@ signals:
     void connected(const QString& profile);
     // The connection ended, or could not be made; from the event loop
     void disconnected(const QString& profile);
-    // The session's profile closed; any other profile its scripts opened runs on until shutdown()
+    // The session's profile closed; any other profile its scripts opened runs on until shutdown(). Not sent once
+    // shutdown() has been called, even for a close a script made before it
     void quitRequested();
 
 private:
@@ -273,13 +280,14 @@ private:
     QString mMapProgressLabel;
     int mMapProgressValue = 0;
     int mMapProgressMaximum = 0;
-    // The profile a map operation or package download was reported started for, until its end is
+    // The profile hidden input, a map operation or a package download was reported started for, until its end is
+    std::optional<QString> mHiddenInputFor;
     std::optional<QString> mMapProgressFor;
     std::optional<QString> mPackageDownloadFor;
     bool mMapOperationCancelable = false;
     QStringList mUnsavedProfiles;
-    // Bumped by each start(), and by a shutdown() that closes the profile, to drop a queued quitRequested
-    // owed to the one before
+    // Bumped by each start() and shutdown(), to drop a queued quitRequested or other relay owed to the profile
+    // before, even one a script closed before shutdown() was called
     unsigned int mRun = 0;
     std::unique_ptr<HostManager> mpPool;
 };
