@@ -37,6 +37,7 @@
 #include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
+#include <QMetaMethod>
 #include <QScopeGuard>
 #include <QTimer>
 
@@ -386,6 +387,30 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;
                     emit errorConsoleText(profile, text);
+                    --gSignalsBeingHandedOut;
+                });
+                // Held by the profile, which an exit handler may still be running once the session has gone
+                pNewHost->setNotificationHandler([self = QPointer<THeadlessSession>(this)](const QString& title, const QString& text, std::optional<int> milliseconds) {
+                    if (!self || self->signalsBlocked() || !self->isSignalConnected(QMetaMethod::fromSignal(&THeadlessSession::notificationRequested))) {
+                        return false;
+                    }
+                    const QString profile = self->mProfileName;
+                    ++gSignalsBeingHandedOut;
+                    emit self->notificationRequested(profile, title, text, milliseconds);
+                    --gSignalsBeingHandedOut;
+                    return true;
+                });
+                connect(pNewHost, &Host::signal_attentionRequested, this, [this](const int milliseconds) {
+                    const QString profile = mProfileName;
+                    ++gSignalsBeingHandedOut;
+                    emit attentionRequested(profile, milliseconds);
+                    --gSignalsBeingHandedOut;
+                });
+                // For as long as the main window asks for it
+                connect(&pNewHost->mTelnet, &cTelnet::signal_bell, this, [this]() {
+                    const QString profile = mProfileName;
+                    ++gSignalsBeingHandedOut;
+                    emit attentionRequested(profile, 3000);
                     --gSignalsBeingHandedOut;
                 });
                 connect(
@@ -821,6 +846,7 @@ void THeadlessSession::detachFromHost()
 {
     if (mpHost) {
         disconnect(mpHost, nullptr, this, nullptr);
+        mpHost->setNotificationHandler(nullptr);
         disconnect(&mpHost->mainConsoleModel().mNotifier, nullptr, this, nullptr);
         disconnect(&mpHost->mTelnet, nullptr, this, nullptr);
     }
@@ -891,8 +917,8 @@ void THeadlessSession::lineCommitted(const int lineIndex)
     --gSignalsBeingHandedOut;
 }
 
-// A handler of outputLine, localText or errorConsoleText runs in the middle of a write, which a line it fed
-// would cut into, and a load that runs the event loop has yet to start the profile's scripts
+// A handler of outputLine, localText, errorConsoleText or a ...Requested signal runs in the middle of a write,
+// which a line it fed would cut into, and a load that runs the event loop has yet to start the profile's scripts
 bool THeadlessSession::refused()
 {
     if (mShuttingDown) {
@@ -902,9 +928,9 @@ bool THeadlessSession::refused()
         return true;
     }
     if (mpPool && gSignalsBeingHandedOut) {
-        qWarning() << "THeadlessSession: called from an outputLine, localText or errorConsoleText handler, which is refused; queue the call instead";
-        //: Error from a frontend with no window that called it back from a handler of the game's lines, of the text the profile printed, or of its error console
-        mErrorString = tr("Refused from a handler of outputLine, localText or errorConsoleText; queue the call instead.");
+        qWarning() << "THeadlessSession: called from an outputLine, localText, errorConsoleText or ...Requested handler, which is refused; queue the call instead";
+        //: Error from a frontend with no window that called it back from a handler of the game's lines, of the text the profile printed, of its error console, or of a request a script made, such as a notification. "...Requested" stands for the names of those signals, which all end in Requested, and is not translated.
+        mErrorString = tr("Refused from a handler of outputLine, localText, errorConsoleText or a ...Requested signal; queue the call instead.");
         return true;
     }
     if (mRemovingStalePasswords || (mpPool && mpPool->loadingProfile())) {

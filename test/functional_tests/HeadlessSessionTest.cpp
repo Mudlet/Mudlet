@@ -1660,6 +1660,100 @@ headlessNoWindow = table.concat({
         QCOMPARE(connections, 0);
     }
 
+    void test_requestsForThePlayersAttentionReachTheSession()
+    {
+        const QString name = qsl("Headless Attention");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy notifications(&session, &THeadlessSession::notificationRequested);
+        QSignalSpy attention(&session, &THeadlessSession::attentionRequested);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessShown = tostring(showNotification("title", "body", 2)) .. "," .. tostring(showNotification("only a title"))
+alert(1.5)
+alert()
+)lua")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessShown"), qsl("true,true"));
+        QCOMPARE(notifications.count(), 2);
+        QCOMPARE(notifications.at(0).at(0).toString(), name);
+        QCOMPARE(notifications.at(0).at(1).toString(), qsl("title"));
+        QCOMPARE(notifications.at(0).at(2).toString(), qsl("body"));
+        QCOMPARE(notifications.at(0).at(3).value<std::optional<int>>(), std::optional<int>(2000));
+        QCOMPARE(notifications.at(1).at(2).toString(), qsl("only a title"));
+        QCOMPARE(notifications.at(1).at(3).value<std::optional<int>>(), std::nullopt);
+        QCOMPARE(attention.count(), 2);
+        QCOMPARE(attention.at(0).at(0).toString(), name);
+        QCOMPARE(attention.at(0).at(1).toInt(), 1500);
+        QCOMPARE(attention.at(1).at(1).toInt(), 0);
+
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        game->write("Wake up\a\r\n");
+        QTRY_COMPARE_WITH_TIMEOUT(attention.count(), 3, 10000);
+        QCOMPARE(attention.at(2).at(0).toString(), name);
+        QCOMPARE(attention.at(2).at(1).toInt(), 3000);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // Nobody hears a notification sent while the frontend blocks the session's signals
+    void test_aBlockedSessionShowsNoNotification()
+    {
+        const QString name = qsl("Headless Blocked Notification");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy notifications(&session, &THeadlessSession::notificationRequested);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        {
+            const QSignalBlocker blocker(&session);
+            QVERIFY(session.runLua(qsl(R"lua(local shown, why = showNotification("title", "body") headlessBlocked = tostring(shown) .. "|" .. tostring(why))lua")));
+        }
+        QCOMPARE(luaGlobalString(session.host(), "headlessBlocked"), qsl("nil|the profile has no main window"));
+        QCOMPARE(notifications.count(), 0);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // The exit handlers of a shutdown(false) run as the pool goes, where a frontend's function bound into Lua may delete
+    // the session; a notification asked for after that has nobody to go to
+    void test_aNotificationAfterTheSessionIsDeletedInAnExitHandler()
+    {
+        static THeadlessSession* spSession = nullptr;
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString resultPath = dir.filePath(qsl("exit.txt"));
+        const QString name = qsl("Headless Exit Notification");
+        QVERIFY(writeProfile(name, QString()));
+        QObject owner;
+        auto* pSession = new THeadlessSession(&owner);
+        spSession = pSession;
+        int heard = 0;
+        connect(pSession, &THeadlessSession::notificationRequested, this, [&heard]() {
+            ++heard;
+        });
+        QCOMPARE(pSession->start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        lua_register(pSession->host()->getLuaInterpreter()->getLuaGlobalState(), "deleteSession", [](lua_State*) -> int {
+            delete spSession;
+            return 0;
+        });
+        QVERIFY(pSession->runLua(qsl(R"lua(registerAnonymousEventHandler("sysExitEvent", function()
+  deleteSession()
+  local shown, why = showNotification("bye")
+  local file = io.open([[%1]], "w")
+  file:write(tostring(shown) .. "|" .. tostring(why))
+  file:close()
+end))lua")
+                                         .arg(resultPath)));
+        const QPointer<THeadlessSession> session(pSession);
+        QVERIFY(pSession->shutdown(false));
+        QVERIFY(session.isNull());
+        QCOMPARE(readFile(resultPath), qsl("nil|the profile has no main window"));
+        QCOMPARE(heard, 0);
+    }
+
     // A prompt the game ends with GA, and commands as the command line sends them, a trailing line feed
     // making an empty one as there
     void test_promptsAndCommandsReachTheGame()
@@ -3199,7 +3293,7 @@ end))lua")
         QVERIFY(!ranLua);
         QVERIFY(!submitted);
         QVERIFY(!saved);
-        QCOMPARE(refusal, qsl("Refused from a handler of outputLine, localText or errorConsoleText; queue the call instead."));
+        QCOMPARE(refusal, qsl("Refused from a handler of outputLine, localText, errorConsoleText or a ...Requested signal; queue the call instead."));
         QVERIFY(unstartedShutDown);
         QVERIFY(HostManager::self());
         QCOMPARE(outputTexts(output), (QStringList{qsl("outer line"), qsl("after")}));

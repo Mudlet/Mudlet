@@ -54,7 +54,9 @@
 #include <QTimer>
 
 #include <chrono>
+#include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "TMxpMudlet.h"
@@ -529,6 +531,9 @@ public:
     void readPackageConfig(const QString&, QString&, bool, QString* whyNotRead = nullptr);
     QString getPackageConfig(const QString&, bool isModule = false, QString* whyNotRead = nullptr);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
+    // For an app that embeds Mudlet, as there is no main window to show a notification: answers whether it showed it
+    void setNotificationHandler(std::function<bool(const QString& title, const QString& text, std::optional<int> milliseconds)> handler) { mNotificationHandler = std::move(handler); }
+    bool requestNotification(const QString& title, const QString& text, std::optional<int> milliseconds) { return mNotificationHandler && mNotificationHandler(title, text, milliseconds); }
     void printToMainConsole(const QString& msg);
     void printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor);
     void printSystemMessage(const QString& msg);
@@ -1427,6 +1432,8 @@ signals:
     // uninstalled a module, or turned a module's sync on or off.
     void signal_moduleListChangedByScript();
     void signal_moduleSyncChangedByScript(const QString& module, bool sync);
+    // A script's alert(), for an app that embeds Mudlet: for how long, 0 until the player comes back to it
+    void signal_attentionRequested(int milliseconds);
 
 public slots:
     void slot_timerFires();
@@ -1611,6 +1618,8 @@ private:
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
     QStringList mActiveModules;
+
+    std::function<bool(const QString&, const QString&, std::optional<int>)> mNotificationHandler;
 
     bool mHaveMapperScript = false;
     // This option makes the control on the preferences tristated so the value
