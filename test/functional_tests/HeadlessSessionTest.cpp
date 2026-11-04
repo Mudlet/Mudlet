@@ -56,6 +56,7 @@
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "MudletMedia.h"
+#include "MudletReplay.h"
 #include "PortableModeTestHelper.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
@@ -1318,6 +1319,209 @@ end))lua");
         QCOMPARE(luaGlobalString(session.host(), "headlessReplay"), qsl("true"));
         QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Replayed with no main window.")), 10000);
         QVERIFY(session.shutdown(false));
+    }
+
+    // As the GUI's replay toolbar follows it, for a replay a script starts too, which ends with nothing said
+    void test_aReplayIsFollowed()
+    {
+        const QString name = qsl("Headless Replay Followed");
+        QVERIFY(writeProfile(name, QString()));
+        const QString logDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, name);
+        QVERIFY(QDir().mkpath(logDir));
+        {
+            QFile file(qsl("%1/two.dat").arg(logDir));
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QDataStream stream(&file);
+            stream.setVersion(QDataStream::Qt_5_12);
+            for (const auto& [gap, bytes] : {std::pair{0, QByteArrayLiteral("First replayed line.\r\n")}, std::pair{1000, QByteArrayLiteral("Second replayed line.\r\n")}}) {
+                stream << qint32{gap} << static_cast<qint32>(bytes.size());
+                stream.writeRawData(bytes.constData(), static_cast<int>(bytes.size()));
+            }
+            QCOMPARE(stream.status(), QDataStream::Ok);
+        }
+
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy started(&session, &THeadlessSession::replayStarted);
+        QSignalSpy speed(&session, &THeadlessSession::replaySpeedChanged);
+        QSignalSpy finished(&session, &THeadlessSession::replayFinished);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        // Another profile's is not this one's
+        const QString other = qsl("Headless Replay Elsewhere");
+        QVERIFY(writeProfile(other, QString()));
+        const QString otherLogDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, other);
+        QVERIFY(QDir().mkpath(otherLogDir));
+        QVERIFY(QFile::copy(qsl("%1/two.dat").arg(logDir), qsl("%1/two.dat").arg(otherLogDir)));
+        QVERIFY(session.runLua(qsl("loadProfile('%1', true)").arg(other)));
+        Host* pOther = HostManager::self()->getHost(other);
+        QVERIFY(pOther);
+        QVERIFY(pOther->getLuaInterpreter()->compileAndExecuteScript(qsl("loadReplay('two.dat')")));
+        QVERIFY(MudletReplay::self()->running());
+        MudletReplay::self()->speedUp();
+        QTRY_VERIFY_WITH_TIMEOUT(!MudletReplay::self()->running(), 10000);
+        QTest::qWait(50);
+        QVERIFY(started.isEmpty());
+        QVERIFY(speed.isEmpty());
+        QVERIFY(finished.isEmpty());
+
+        // One that never plays sends neither
+        QVERIFY(writeFile(qsl("%1/corrupt.dat").arg(logDir), QByteArrayLiteral("\0\0\0")));
+        QVERIFY(session.runLua(qsl("corruptReplay = tostring(loadReplay('corrupt.dat'))")));
+        QCOMPARE(luaGlobalString(session.host(), "corruptReplay"), qsl("nil"));
+        QTest::qWait(50);
+        QVERIFY(started.isEmpty());
+        QVERIFY(finished.isEmpty());
+
+        QVERIFY(session.runLua(qsl("headlessReplay = tostring(loadReplay('two.dat'))")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessReplay"), qsl("true"));
+        QTRY_COMPARE(started.size(), 1);
+        QCOMPARE(started.constFirst().at(0).toString(), name);
+        QVERIFY(session.runLua(qsl("secondReplay = tostring(loadReplay('two.dat'))")));
+        QCOMPARE(luaGlobalString(session.host(), "secondReplay"), qsl("nil"));
+        MudletReplay::self()->speedUp();
+        QTRY_COMPARE(speed.size(), 1);
+        QCOMPARE(speed.constFirst().at(0).toString(), name);
+        QCOMPARE(speed.constFirst().at(1).toInt(), 2);
+        QVERIFY(finished.isEmpty());
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Second replayed line.")), 10000);
+        QTRY_COMPARE(finished.size(), 1);
+        QCOMPARE(finished.constFirst().at(0).toString(), name);
+        QCOMPARE(started.size(), 1);
+
+        // Ended by the shutdown that lets the profile go, and not again by the replay's own end
+        QVERIFY(session.runLua(qsl("loadReplay('two.dat')")));
+        QTRY_COMPARE(started.size(), 2);
+        QVERIFY(MudletReplay::self()->running());
+        QVERIFY(session.shutdown(false));
+        QCOMPARE(finished.size(), 2);
+        QTest::qWait(100);
+        QCOMPARE(finished.size(), 2);
+        QCOMPARE(speed.size(), 1);
+    }
+
+    // The corrupt one played nothing, so only the one after it has a start and an end, and that end is its own
+    void test_aReplayLoadedInPlaceOfACorruptOneIsTheOnlyOneFollowed()
+    {
+        const QString name = qsl("Headless Replay Fallback");
+        QVERIFY(writeProfile(name, QString()));
+        const QString logDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, name);
+        QVERIFY(QDir().mkpath(logDir));
+        QVERIFY(writeFile(qsl("%1/corrupt.dat").arg(logDir), QByteArrayLiteral("\0\0\0")));
+        {
+            QFile file(qsl("%1/two.dat").arg(logDir));
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QDataStream stream(&file);
+            stream.setVersion(QDataStream::Qt_5_12);
+            for (const auto& [gap, bytes] : {std::pair{0, QByteArrayLiteral("First fallback line.\r\n")}, std::pair{500, QByteArrayLiteral("Last fallback line.\r\n")}}) {
+                stream << qint32{gap} << static_cast<qint32>(bytes.size());
+                stream.writeRawData(bytes.constData(), static_cast<int>(bytes.size()));
+            }
+            QCOMPARE(stream.status(), QDataStream::Ok);
+        }
+
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QStringList heard;
+        connect(&session, &THeadlessSession::replayStarted, &session, [&]() {
+            heard << qsl("started");
+        });
+        connect(&session, &THeadlessSession::replayFinished, &session, [&]() {
+            heard << (outputTexts(output).contains(qsl("Last fallback line.")) ? qsl("finished after its last line") : qsl("finished early"));
+        });
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("if not loadReplay('corrupt.dat') then fallbackReplay = tostring(loadReplay('two.dat')) end")));
+        QCOMPARE(luaGlobalString(session.host(), "fallbackReplay"), qsl("true"));
+        QTRY_VERIFY_WITH_TIMEOUT(!MudletReplay::self()->running(), 10000);
+        QTest::qWait(50);
+        QCOMPARE(heard, QStringList({qsl("started"), qsl("finished after its last line")}));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // loadReplay() accepts a recording that caught nothing, so an app waiting for its end gets one
+    void test_anEmptyReplayStartsAndEnds()
+    {
+        const QString name = qsl("Headless Replay Empty");
+        QVERIFY(writeProfile(name, QString()));
+        const QString logDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, name);
+        QVERIFY(QDir().mkpath(logDir));
+        QVERIFY(writeFile(qsl("%1/empty.dat").arg(logDir), QByteArray()));
+
+        THeadlessSession session;
+        QStringList heard;
+        connect(&session, &THeadlessSession::replayStarted, &session, [&](const QString& profile) {
+            heard << qsl("started %1").arg(profile);
+        });
+        connect(&session, &THeadlessSession::replayFinished, &session, [&](const QString& profile) {
+            heard << qsl("finished %1").arg(profile);
+        });
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("emptyReplay = tostring(loadReplay('empty.dat'))")));
+        QCOMPARE(luaGlobalString(session.host(), "emptyReplay"), qsl("true"));
+        QVERIFY(!MudletReplay::self()->running());
+        QTRY_COMPARE(heard.size(), 2);
+        QCOMPARE(heard, QStringList({qsl("started %1").arg(name), qsl("finished %1").arg(name)}));
+        QTest::qWait(50);
+        QCOMPARE(heard.size(), 2);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aReplayEndsAsItsProfileCloses_data()
+    {
+        QTest::addColumn<bool>("byScript");
+        QTest::newRow("shut down with a save") << false;
+        QTest::newRow("closed by a script") << true;
+    }
+
+    // Once, and with nothing of it printed after, though the close runs the event loop
+    void test_aReplayEndsAsItsProfileCloses()
+    {
+        QFETCH(const bool, byScript);
+        const QString name = qsl("Headless Replay Closed");
+        QVERIFY(writeProfile(name, QString()));
+        const QString logDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, name);
+        QVERIFY(QDir().mkpath(logDir));
+        {
+            QFile file(qsl("%1/many.dat").arg(logDir));
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QDataStream stream(&file);
+            stream.setVersion(QDataStream::Qt_5_12);
+            for (int i = 0; i < 2000; ++i) {
+                const QByteArray bytes = QByteArrayLiteral("Replayed line ") + QByteArray::number(i) + QByteArrayLiteral(".\r\n");
+                stream << qint32{i ? 2 : 0} << static_cast<qint32>(bytes.size());
+                stream.writeRawData(bytes.constData(), static_cast<int>(bytes.size()));
+            }
+            QCOMPARE(stream.status(), QDataStream::Ok);
+        }
+
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy started(&session, &THeadlessSession::replayStarted);
+        QSignalSpy finished(&session, &THeadlessSession::replayFinished);
+        QSignalSpy quit(&session, &THeadlessSession::quitRequested);
+        std::optional<qsizetype> linesAtTheEnd;
+        connect(&session, &THeadlessSession::replayFinished, &session, [&]() {
+            linesAtTheEnd = output.size();
+            QVERIFY(quit.isEmpty());
+        });
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        // As a save the close waits for runs the event loop
+        QVERIFY(session.runLua(qsl("registerAnonymousEventHandler('sysExitEvent', function() pumpEvents(200) end) loadReplay('many.dat')")));
+        QTRY_COMPARE(started.size(), 1);
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Replayed line 3.")), 10000);
+        QVERIFY(MudletReplay::self()->running());
+
+        if (byScript) {
+            QVERIFY(session.runLua(qsl("closeProfile()")));
+            QTRY_COMPARE_WITH_TIMEOUT(quit.size(), 1, 10000);
+        } else {
+            QVERIFY(session.shutdown(true));
+        }
+        QTest::qWait(200);
+        QCOMPARE(finished.size(), 1);
+        QCOMPARE(finished.constFirst().at(0).toString(), name);
+        QVERIFY(linesAtTheEnd.has_value());
+        QCOMPARE(output.size(), *linesAtTheEnd);
+        QVERIFY(!outputTexts(output).contains(qsl("Replayed line 1999.")));
     }
 
     // What the speech bridge, Discord and the MCP bridge take for the profile in front
