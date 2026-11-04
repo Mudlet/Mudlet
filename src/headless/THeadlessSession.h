@@ -135,6 +135,24 @@ public:
     // outputLine, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal, which run mid-write, and
     // fail once a close of the profile has begun; submit() checks each line of a paste as a call.
     bool submit(const QString& line);
+    // As the GUI's hidden-input box sends what is typed into it while hiddenInputWanted holds: straight to the
+    // game, with its carriage returns and line feeds taken out, and no aliases, command separator,
+    // sysDataSendRequest, echo or history. submit() still runs aliases on such a line, as it always has. False,
+    // with errorString() saying why, while the box would not be open, when the game's encoding cannot carry
+    // the line, when it could not be sent as the profile is not connected, and where submit() is refused; the
+    // app should then drop the line, as the GUI drops what was typed into a box that closes, and never resend
+    // it with submit(), which echoes it, keeps it in the history and hands it to aliases. Its own copy of the
+    // line is cleared once sent, as far as Qt allows.
+    bool submitHiddenInput(const QString& line);
+    // The player's first edit of the app's masked line, as the box's: a saved password still on its way from
+    // the keychain is then not sent for them. False while the box would not be open, and where submit() is
+    // refused.
+    bool hiddenInputEdited();
+    // The box's Esc on an empty box: hiddenInputWanted(false) follows, and submit() is the way to the game
+    // again. As in the GUI, input is hidden again once the game answers the next line submit() sends, and
+    // dismissing it then lasts until the game stops hiding input. False while the box would not be open, and
+    // where submit() is refused.
+    bool dismissHiddenInput();
     bool runLua(const QString& code);
     // As the GUI installs a package given on its command line, but quietly: a refusal is errorString()'s alone
     // to tell. It returns once the install's sysInstall handlers should have run: Qt fires zero timers in the
@@ -265,6 +283,8 @@ private:
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
+    // False, with errorString() saying why, while the GUI's hidden-input box would not be open
+    bool inputHidden(bool sending);
     void noteAlreadyInstalled(const QString& path, const QString& name);
 
     QPointer<Host> mpHost;
