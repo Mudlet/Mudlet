@@ -206,15 +206,18 @@ private:
     static constexpr int scmPlainLastWords = 12000;
     static constexpr int scmLastWordsLineCount = scmCompressedLastWords + scmPlainLastWords;
 
-    inline static bool smPostedEventHandled = false;
-    static int postEvent(lua_State*)
+    inline static int smLinesAfterClose = 0;
+    inline static int smLinesWhenPostedEventHandled = -1;
+    static int countLineAfterClose(lua_State*)
     {
-        QMetaObject::invokeMethod(
-                qApp,
-                []() {
-                    smPostedEventHandled = true;
-                },
-                Qt::QueuedConnection);
+        if (++smLinesAfterClose == 1) {
+            QMetaObject::invokeMethod(
+                    qApp,
+                    []() {
+                        smLinesWhenPostedEventHandled = smLinesAfterClose;
+                    },
+                    Qt::QueuedConnection);
+        }
         return 0;
     }
 
@@ -424,51 +427,45 @@ private slots:
     }
 
     // Every other profile and the display keep going while the last words are
-    // taken in: an event posted by the first of them to come after the close has
-    // to have been handled by the time the disconnect is announced
+    // taken in, a read per event-loop turn: an event posted by the first of them
+    // to come after the close has to be handled ahead of a second read
     void theEventLoopTurnsWhileTheLastWordsAreShown()
     {
         QVERIFY2(connectAgain(), "could not connect to the game again");
         mpHost->mainConsoleView()->buffer.clear();
-        smPostedEventHandled = false;
-        bool handledBeforeDisconnect = false;
-        const auto disconnection = connect(&(mpHost->mTelnet), &cTelnet::signal_disconnected, this, [&handledBeforeDisconnect]() {
-            handledBeforeDisconnect = smPostedEventHandled;
-        });
+        smLinesAfterClose = 0;
+        smLinesWhenPostedEventHandled = -1;
         QSignalSpy disconnected(&(mpHost->mTelnet), &cTelnet::signal_disconnected);
         TLuaInterpreter* lua = mpHost->getLuaInterpreter();
-        lua_register(lua->getLuaGlobalState(), "postEvent", postEvent);
+        lua_register(lua->getLuaGlobalState(), "countLineAfterClose", countLineAfterClose);
         QVERIFY(lua->compileAndExecuteScript(qsl(R"(
-            lastWordsAfterClose = 0
-            local posted = false
             lastWordsTrigger = tempRegexTrigger("^BURSTLINE ", function()
                 local _, _, connected = getConnectionInfo()
                 if not connected then
-                    lastWordsAfterClose = lastWordsAfterClose + 1
-                    if not posted then
-                        posted = true
-                        postEvent()
-                    end
+                    countLineAfterClose()
                 end
             end)
         )")));
 
+        // All of it in the socket at once, so the close is there to notice while most of it is unread;
+        // fed out by this thread's event loop, the reads can catch up with the close and leave nothing to test
+        mpServer->setSendBufferSize(4 * 1024 * 1024);
         QVERIFY2(sendLastWordsAndClose(), "the client never answered the negotiation");
         QVERIFY2(disconnected.wait(15s), "the game closing the connection was never noticed");
         QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
-        disconnect(disconnection);
         QVERIFY(lua->compileAndExecuteScript(qsl("killTrigger(lastWordsTrigger)")));
 
         QVERIFY2(bufferContains(qsl("GOODBYE FROM THE GAME")), "the text sent before the close was cut short");
-        lua_State* L = lua->getLuaGlobalState();
-        lua_getglobal(L, "lastWordsAfterClose");
-        const int afterClose = static_cast<int>(lua_tonumber(L, -1));
-        lua_pop(L, 1);
-        // 100000 bytes, BUFFER_SIZE in ctelnet.cpp, is some 1500 burst lines
-        if (afterClose < 3200) {
-            QSKIP(qPrintable(qsl("only %1 burst lines were left when the close was noticed, too few to need more than one read").arg(afterClose)));
+        // 100000 is BUFFER_SIZE in ctelnet.cpp; the line a read ends part-way through is finished by the next
+        const int linesInOneRead = static_cast<int>(100000 / burstOf(1).size()) + 1;
+        if (smLinesAfterClose <= linesInOneRead) {
+            QSKIP(qPrintable(qsl("only %1 burst lines were left when the close was noticed, too few to need more than one read").arg(smLinesAfterClose)));
         }
-        QVERIFY2(handledBeforeDisconnect, qPrintable(qsl("the event loop stood still while the %1 burst lines left at the close were shown.").arg(afterClose)));
+        QVERIFY2(smLinesWhenPostedEventHandled > 0 && smLinesWhenPostedEventHandled <= linesInOneRead,
+                 qPrintable(qsl("the event loop stood still for %1 of the %2 burst lines left at the close, when one read is at most %3.")
+                                    .arg(smLinesWhenPostedEventHandled)
+                                    .arg(smLinesAfterClose)
+                                    .arg(linesInOneRead)));
     }
 
     // A trigger on the last words that disconnects stops them there, as it
