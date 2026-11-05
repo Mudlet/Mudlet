@@ -1369,9 +1369,9 @@ void cTelnet::finishDisconnection()
             // errors from slot_socketSslError() when mpSocket is null (i.e.
             // when the SSL handshake failed):
             QList<QSslError> sslErrors = getSslErrors();
-            // With no certificate to object to, a failed handshake means the game answered in
-            // something other than TLS
-            const bool secureNotOffered = mSslHandshakeFailed && sslErrors.isEmpty();
+            // With no certificate to object to, the likeliest cause is a port that does not speak
+            // TLS, though a server rejecting our TLS versions or ciphers looks the same
+            const bool handshakeFailedBeforeCertificate = mSslHandshakeFailed && sslErrors.isEmpty();
             mSslHandshakeFailed = false;
             QSslCertificate cert = mpSocket ? mpSocket->peerCertificate() : getPeerCertificate();
             if (mpHost->mSslIgnoreExpired) {
@@ -1388,9 +1388,9 @@ void cTelnet::finishDisconnection()
  one of several to be listed. This text used in two places,
  ensure the same text is used in both.*/
                 reasons.append(tr("User Disconnected"));
-            } else if (secureNotOffered) {
-                //: A reason why a connection to a game server ended.
-                reasons.append(tr("Secure connections not supported by this game on this port; try turning the option off"));
+            } else if (handshakeFailedBeforeCertificate) {
+                //: A reason why a connection to a game server ended: the secure (TLS) handshake failed before the game sent a certificate.
+                reasons.append(tr("Secure handshake failed; this game may not support secure connections on this port, if so try turning the option off"));
             } else if (timeOffset >= 0 && timeOffset < 5000) {
                 /*: A reason why a connection to a game server ended, could be
  one of several to be listed. This text used in two places,

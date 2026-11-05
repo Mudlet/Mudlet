@@ -415,7 +415,7 @@ private slots:
                  "the failed handshake was not reported by the disconnection path");
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
-                             return bufferContains(host, qsl("Secure connections not supported by this game on this port"));
+                             return bufferContains(host, qsl("Secure handshake failed; this game may not support secure connections on this port"));
                          },
                          2s),
                  "a failed handshake was not explained as the game not offering secure connections on that port");
