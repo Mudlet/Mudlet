@@ -2155,7 +2155,7 @@ function hfeedTriggers(text)
   echo("")
 end
 
--- improve replace to have a third argument, keepcolor
+-- lets replace() take keepcolor without a window name, and refuse an empty selection
 do
   local oldreplace = replace
   function replace(arg1, arg2, arg3)
@@ -2177,16 +2177,7 @@ do
     end
     text = text or ""
 
-    if keepcolor then
-      local r, g, b = getBgColor(windowname)
-      if not r and g then
-        return nil, g
-      end
-      setBgColor(windowname, r, g, b)
-      setFgColor(windowname, getFgColor(windowname))
-    end
-
-    return oldreplace(windowname, text)
+    return oldreplace(windowname, text, keepcolor)
   end
 end
 

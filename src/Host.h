@@ -730,8 +730,8 @@ public:
     // Text or a link put into the main console's line while a trigger runs over
     // it, or a replacement there, moves the trigger's captures to follow it.
     bool insertWindowText(const QString& name, const QString& text);
-    // Puts text in place of the console's selection.
-    bool replaceWindowText(const QString& name, const QString& text);
+    // Puts text in place of the console's selection, in the colours of its first character when keepColor is set.
+    bool replaceWindowText(const QString& name, const QString& text, bool keepColor);
     std::pair<bool, QString> openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
     // Whether windowname can hold a new mini console, scroll box, command line, text edit or label:
     // "" or "main" (any case) is the main console, else it must be a registered user window or scroll box.
