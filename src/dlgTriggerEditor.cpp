@@ -98,6 +98,8 @@ static void pushKeyPropertyCommand(EditorUndoStack* undoStack, Host* host, int k
 
 // Forward declaration for the tree item lookup helper (defined later in this file)
 QTreeWidgetItem* findItemByID(QTreeWidgetItem* parent, int itemID);
+QSet<int> collectExpandedItemIDs(QTreeWidgetItem* parent);
+void restoreExpansionState(QTreeWidgetItem* parent, const QSet<int>& expandedIDs);
 
 using namespace std::chrono_literals;
 
@@ -9291,6 +9293,17 @@ void dlgTriggerEditor::fillout_form()
     mpKeyBaseItem->setExpanded(true);
     treeWidget_keys->setCurrentItem(mpKeyBaseItem);
 
+    for (const auto& [pTree, expandedIds] : std::as_const(mExpandedIdsBeforeRefill).asKeyValueRange()) {
+        if (expandedIds.isEmpty()) {
+            continue;
+        }
+        const bool animated = pTree->isAnimated();
+        pTree->setAnimated(false);
+        restoreExpansionState(pTree->topLevelItem(0), expandedIds);
+        pTree->setAnimated(animated);
+    }
+    mExpandedIdsBeforeRefill.clear();
+
     // Clear undo stack after initial profile loading (only on first call)
     // Only user actions after this point should be undo-able
     if (mpUndoStack && !mInitialLoadDone) {
@@ -10737,16 +10750,23 @@ void dlgTriggerEditor::autoSave()
     mpHost->saveProfileReportingFailure(qsl("autosave"));
 }
 
+// A refilled tree starts with every folder closed, so fillout_form() opens again the ones recorded here
+void dlgTriggerEditor::clearTypeTrees()
+{
+    for (QTreeWidget* pTree : {treeWidget_triggers, treeWidget_aliases, treeWidget_timers, treeWidget_scripts, treeWidget_actions, treeWidget_keys}) {
+        // An already empty tree must not wipe what an earlier clear recorded and no refill has used yet
+        if (QTreeWidgetItem* pRoot = pTree->topLevelItem(0)) {
+            mExpandedIdsBeforeRefill.insert(pTree, collectExpandedItemIDs(pRoot));
+        }
+        pTree->clear();
+    }
+}
+
 void dlgTriggerEditor::rebuildStaleTrees()
 {
     // fillout_form() forgets the view, and the Folders view hides every type tree resolveCurrentView() could recover it from
     const EditorViewType folderViewType = mFolderViewActive ? mCurrentView : EditorViewType::cmUnknownView;
-    treeWidget_triggers->clear();
-    treeWidget_aliases->clear();
-    treeWidget_timers->clear();
-    treeWidget_scripts->clear();
-    treeWidget_actions->clear();
-    treeWidget_keys->clear();
+    clearTypeTrees();
     treeWidget_variables->clear();
     if (mCleanResetDeferred) {
         buildDeferredTrees(false);
@@ -13322,9 +13342,8 @@ void dlgTriggerEditor::slot_pasteXml()
 
     switch (importedItemType) {
     case EditorViewType::cmTriggerView: {
-        // the view becomes collapsed as a result of the clear & redo and then
-        // animates back into the unfolding, which doesn't look nice - so turn
-        // off animation temporarily
+        // selecting the pasted item unfolds its ancestors, which would animate
+        // and doesn't look nice - so turn off animation temporarily
         auto animated = treeWidget_triggers->isAnimated();
         treeWidget_triggers->setAnimated(false);
         selectTriggerByID(importedItemID);
@@ -13443,12 +13462,7 @@ void dlgTriggerEditor::slot_import()
         }
     }
 
-    treeWidget_triggers->clear();
-    treeWidget_aliases->clear();
-    treeWidget_actions->clear();
-    treeWidget_timers->clear();
-    treeWidget_keys->clear();
-    treeWidget_scripts->clear();
+    clearTypeTrees();
 
     // Nullify current item pointers before saving to prevent use-after-free
     mpCurrentTriggerItem = nullptr;
@@ -13547,12 +13561,7 @@ void dlgTriggerEditor::resetTrees()
         qWarning().nospace().noquote() << "dlgTriggerEditor::runScheduledCleanReset() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
     }
 
-    treeWidget_triggers->clear();
-    treeWidget_aliases->clear();
-    treeWidget_actions->clear();
-    treeWidget_timers->clear();
-    treeWidget_keys->clear();
-    treeWidget_scripts->clear();
+    clearTypeTrees();
     fillout_form();
     slot_showTriggers();
 }

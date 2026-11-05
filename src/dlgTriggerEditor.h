@@ -426,6 +426,7 @@ private:
     void saveOpenChanges();
     EditorViewType determineViewFromVisibleTree();
     EditorViewType resolveCurrentView();
+    void clearTypeTrees();
     void rebuildStaleTrees();
     void populateFolderTree();
     void addFolderTreeNode(QTreeWidgetItem* pSource, const EditorViewType view, QTreeWidgetItem* pParent, QTreeWidgetItem* pLooseItems, QHash<QString, int>& folderCounts);
@@ -785,6 +786,7 @@ private:
     QTimer* mpFolderTreeRefreshTimer = nullptr;
     // FolderKeyRole of a folder node, or "view:id" of a real item -> its Folders view node
     QHash<QString, QTreeWidgetItem*> mFolderTreeNodes;
+    QHash<QTreeWidget*, QSet<int>> mExpandedIdsBeforeRefill;
     // FolderKeyRole of the current Folders view node when it is not one item - a merged folder or "Not in a folder" - and no form shows
     QString mFolderGroupKey;
     bool mFolderViewActive = false;
