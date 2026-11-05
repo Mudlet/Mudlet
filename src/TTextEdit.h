@@ -125,7 +125,7 @@ public:
     // Onto the first or the last link, where Tab leaving the script buttons lands; nowhere new with no links
     void moveCaretToLink(bool first);
     void updateCaret();
-    void showLinkContextMenu();
+    void showKeyboardContextMenu();
     void announceLinkFocus(int linkIndex);
     void applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, const Mudlet::HyperlinkStyling::SelectionSettings& selection, const char* callerContext);
 
@@ -143,6 +143,7 @@ public:
     // long enough again.
     int mOldCaretColumn = 0;
 
+    friend class AnalyseCharactersTest;
     friend class CopyAsImageTest;
     friend class SplitCharacterFormatTest;
     friend class FramePacingTest;
@@ -207,12 +208,15 @@ protected:
 
 private slots:
     void slot_copySelectionToClipboardImage();
+    void slot_showSelectionAnalysis();
 
 private:
     void applyPendingScrollBarUpdate();
     void followTrimsWithDirtyLines();
     QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false);
     inline static QString htmlCenter(const QString&);
+    QString selectionAnalysisHtml();
+    QPoint caretGlobalPosition();
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
     std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
