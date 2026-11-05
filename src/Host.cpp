@@ -2035,8 +2035,13 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font, const DisplayFo
 
     qDebug().noquote().nospace() << "Host::setDisplayFont(...) INFO - No TMainConsole to set font for - faking it";
 
+    // Not displayFontWithNoView(), which would add the bundled fonts before anything draws in them
+    const TFontAttributes before(mTempDisplayFont.value_or(TFontAttributes(!mNoAntiAlias).makeFont()));
     mTempDisplayFontAttributes = TFontAttributes(font);
     mTempDisplayFont = mTempDisplayFontAttributes.value().makeFont();
+    if (TFontAttributes(mTempDisplayFont.value()) != before) {
+        emit signal_consoleFontChanged(mTempDisplayFont.value());
+    }
 
     return {true, QString()};
 }
@@ -2093,8 +2098,13 @@ void Host::setDisplayFontSize(int size)
         mTempDisplayFontAttributes = TFontAttributes(!mNoAntiAlias);
     }
 
+    // Not displayFontWithNoView(), which would add the bundled fonts before anything draws in them
+    const TFontAttributes before(mTempDisplayFont.value_or(TFontAttributes(!mNoAntiAlias).makeFont()));
     mTempDisplayFontAttributes.value().mPointSize = size;
     mTempDisplayFont = mTempDisplayFontAttributes.value().makeFont();
+    if (TFontAttributes(mTempDisplayFont.value()) != before) {
+        emit signal_consoleFontChanged(mTempDisplayFont.value());
+    }
 }
 
 // Helper function to create a QFont with proper antialiasing settings

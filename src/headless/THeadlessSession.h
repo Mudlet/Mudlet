@@ -22,6 +22,7 @@
 
 #include <QColor>
 #include <QFlags>
+#include <QFont>
 #include <QList>
 #include <QObject>
 #include <QPointer>
@@ -125,6 +126,9 @@ public:
     StartResult start(const Options&);
     // Why the last call that failed did
     QString errorString() const { return mErrorString; }
+    // The font the main console is drawn in, a default QFont with no profile open: read it at profileLoaded, then
+    // follow consoleFontChanged
+    QFont consoleFont() const;
     // For what the session does not cover, such as settings and the map. Null once the profile closes, so
     // hold it in a QPointer. Not from a handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText,
     // hiddenInputWanted or a ...Requested signal: a line it fed would be committed in the middle of a write, which TBuffer
@@ -294,6 +298,12 @@ signals:
     // localText), and once the profile closes, or shutdown() or a later start() lets it go, while it logs, though
     // not for the session being deleted. From the event loop.
     void loggingChanged(const QString& profile, bool logging, const QString& fileName);
+    // The main console's font changed, by whatever changed it: a script's setFont() or setFontSize(), the load of
+    // the profile's save, the bundled default standing in for a family that is missing, or a package bringing that
+    // family or taking it away. The font the GUI would now draw it in, whose character cell setScreenSize() counts
+    // in. From the event loop, with the font as it is then, and only when that differs from the one last sent or
+    // the one consoleFont() gave at profileLoaded, so what the load did never follows it.
+    void consoleFontChanged(const QString& profile, const QFont& font);
     // What the GUI shows outside the profile's screen: a script's showNotification(), which answers true only
     // when this signal is connected and not blocked, with no milliseconds for the system's own time; and a
     // script's alert() or the game's bell, asking for the player's attention for that long, 0 until they come
@@ -425,6 +435,8 @@ private:
         int speed = 0;
     };
     QList<QueuedReplaySignal> mReplaySignals;
+    // What consoleFont() gave at profileLoaded, then each consoleFontChanged; none before the load ends
+    std::optional<QFont> mDeliveredConsoleFont;
     bool mMapOperationCancelable = false;
     QStringList mUnsavedProfiles;
     // Bumped by each start() and shutdown(), to drop a queued quitRequested or other relay owed to the profile

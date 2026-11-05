@@ -31,6 +31,9 @@
 #include <QDirIterator>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QFontDatabase>
+#include <QFontMetrics>
+#include <QRawFont>
 #include <QScopeGuard>
 #include <QSignalSpy>
 #include <QStandardPaths>
@@ -5156,6 +5159,128 @@ echo("headlessMini", "mini\n") clearWindow("headlessMini") feedTriggers("after\n
         QCOMPARE(logging.size(), 1);
         QVERIFY(session.shutdown(false));
         QCOMPARE(logging.size(), 1);
+    }
+
+    // Two families this machine has installed that Mudlet does not bundle, fixed-pitch first, so that a build
+    // with WITH_FONTS=NO changes the font too
+    static QStringList installedFontFamilies()
+    {
+        QSet<QString> bundled{Host::scmDefaultFontFamily};
+        QDirIterator fonts(qsl(":/fonts"), {qsl("*.ttf"), qsl("*.otf")}, QDir::Files, QDirIterator::Subdirectories);
+        while (fonts.hasNext()) {
+            QFile file(fonts.next());
+            if (file.open(QIODevice::ReadOnly)) {
+                bundled.insert(QRawFont(file.readAll(), 12).familyName());
+            }
+        }
+        QStringList fixedPitch;
+        QStringList others;
+        for (const QString& family : QFontDatabase::families()) {
+            if (fixedPitch.size() >= 2) {
+                break;
+            }
+            if (bundled.contains(family) || family.contains(QLatin1Char('[')) || family.contains(qsl("Emoji"), Qt::CaseInsensitive) || QFontDatabase::isPrivateFamily(family)
+                || QFontMetrics(QFont(family)).averageCharWidth() == 0) {
+                continue;
+            }
+            (QFontDatabase::isFixedPitch(family) ? fixedPitch : others) << family;
+        }
+        return (fixedPitch + others).mid(0, 2);
+    }
+
+    void test_aScriptsFontChangeReachesTheSession()
+    {
+        const QString name = qsl("Headless Font");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QList<QFont> fonts;
+        connect(&session, &THeadlessSession::consoleFontChanged, this, [&](const QString& profile, const QFont& font) {
+            QCOMPARE(profile, name);
+            fonts << font;
+        });
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTest::qWait(100);
+        fonts.clear();
+        QCOMPARE(TFontAttributes(session.consoleFont()), TFontAttributes(session.host()->displayFontWithNoView()));
+        const QStringList families = installedFontFamilies();
+        QCOMPARE(families.size(), 2);
+
+        QVERIFY(session.runLua(qsl(R"lua(setFontSize("main", 20))lua")));
+        QTRY_COMPARE_WITH_TIMEOUT(fonts.size(), 1, 10000);
+        QTest::qWait(100);
+        QCOMPARE(fonts.size(), 1);
+        QCOMPARE(fonts.at(0).pointSize(), 20);
+        QCOMPARE(TFontAttributes(fonts.at(0)), TFontAttributes(session.host()->displayFontWithNoView()));
+        QCOMPARE(TFontAttributes(session.consoleFont()), TFontAttributes(fonts.at(0)));
+
+        QVERIFY(session.runLua(qsl(R"lua(setFont("main", [==[%1]==]))lua").arg(families.at(0))));
+        QTRY_COMPARE_WITH_TIMEOUT(fonts.size(), 2, 10000);
+        QTest::qWait(100);
+        QCOMPARE(fonts.size(), 2);
+        QCOMPARE(fonts.at(1).family(), families.at(0));
+        QCOMPARE(fonts.at(1).pointSize(), 20);
+        QCOMPARE(TFontAttributes(fonts.at(1)), TFontAttributes(session.host()->displayFontWithNoView()));
+
+        QVERIFY(session.runLua(qsl(R"lua(setFontSize("main", 20) setFont("main", [==[%1]==]))lua").arg(families.at(0))));
+        QTest::qWait(100);
+        QCOMPARE(fonts.size(), 2);
+
+        // What a package's font coming or going, or a save installed as a package, changes it through
+        QVERIFY(session.host()->setDisplayFont(QFont(families.at(1), 13)).first);
+        QTRY_COMPARE_WITH_TIMEOUT(fonts.size(), 3, 10000);
+        QCOMPARE(fonts.at(2).family(), families.at(1));
+        QCOMPARE(fonts.at(2).pointSize(), 13);
+        QCOMPARE(TFontAttributes(fonts.at(2)), TFontAttributes(session.host()->displayFontWithNoView()));
+        session.host()->setDisplayFontFromString(QFont(families.at(0), 11).toString());
+        QTRY_COMPARE_WITH_TIMEOUT(fonts.size(), 4, 10000);
+        QCOMPARE(fonts.at(3).family(), families.at(0));
+        QCOMPARE(fonts.at(3).pointSize(), 11);
+        session.host()->setDisplayFontSize(11);
+        QTest::qWait(100);
+        QCOMPARE(fonts.size(), 4);
+        QVERIFY(session.shutdown(false));
+        QCOMPARE(session.consoleFont(), QFont());
+    }
+
+    // Read once the profile has loaded; what the load itself changed may follow, as consoleFontChanged
+    void test_theFontAProfileLoadsWithIsKnownAtProfileLoaded()
+    {
+        const QString name = qsl("Headless Saved Font");
+        const QStringList families = installedFontFamilies();
+        QVERIFY(!families.isEmpty());
+        const QString& family = families.constFirst();
+        QVERIFY(writeProfile(name, QString(), qsl("<mDisplayFont>%1</mDisplayFont>").arg(QFont(family, 15).toString())));
+        const QString missing = qsl("Headless Missing Font");
+        QVERIFY(writeProfile(missing, QString(), qsl("<mDisplayFont>%1</mDisplayFont>").arg(QFont(qsl("No Such Headless Family"), 17).toString())));
+        THeadlessSession session;
+        QFont loadedWith;
+        connect(&session, &THeadlessSession::profileLoaded, this, [&]() {
+            loadedWith = session.consoleFont();
+        });
+        QList<QFont> fonts;
+        connect(&session, &THeadlessSession::consoleFontChanged, this, [&](const QString&, const QFont& font) {
+            fonts << font;
+        });
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QCOMPARE(loadedWith.family(), family);
+        QCOMPARE(loadedWith.pointSize(), 15);
+        QTest::qWait(100);
+        QCOMPARE(fonts.size(), 0);
+        QVERIFY(session.shutdown(false));
+
+        // The bundled default stands in for a family that is not installed, and the missing family the load set on
+        // the way there is never sent
+        QCOMPARE(session.start({.profile = missing, .connect = false}), THeadlessSession::StartResult::started);
+        QCOMPARE(loadedWith.family(), Host::scmDefaultFontFamily);
+        QCOMPARE(loadedWith.pointSize(), 17);
+        QCOMPARE(TFontAttributes(session.host()->displayFontWithNoView()), TFontAttributes(loadedWith));
+        QTest::qWait(100);
+        QVERIFY2(fonts.isEmpty(), qPrintable(fonts.isEmpty() ? QString() : fonts.constFirst().family()));
+        QVERIFY(session.runLua(qsl(R"lua(setFontSize("main", 18))lua")));
+        QTRY_COMPARE_WITH_TIMEOUT(fonts.size(), 1, 10000);
+        QCOMPARE(fonts.constFirst().family(), Host::scmDefaultFontFamily);
+        QCOMPARE(fonts.constFirst().pointSize(), 18);
+        QVERIFY(session.shutdown(false));
     }
 
     void test_aPromptATriggerRewritesIsShownAsAPrompt()
