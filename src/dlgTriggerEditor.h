@@ -470,6 +470,7 @@ private:
     void showAliasLoopWarning(QTreeWidgetItem* pItem, const QString& name);
     void applyAliasState(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification = true, bool respectNewState = true);
     bool aliasSubstitutionLoops(const QString& regex, const QString& substitution) const;
+    QString aliasNameForPattern(const TAlias* pT, const QString& typedName, const QString& pattern) const;
     void saveTimer();
     void saveKey();
     void saveScript();

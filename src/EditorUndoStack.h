@@ -74,6 +74,8 @@ public:
 
     // Called after every save, including one that pushed nothing because nothing changed
     void finishAddingItem(EditorViewTypes::EditorViewType viewType, int itemID);
+    // True while the item has not had the first save that finishes adding it
+    bool addingItem(EditorViewTypes::EditorViewType viewType, int itemID) const;
 
 signals:
     // Emitted when items are modified by undo/redo (allows targeted UI updates instead of full refresh)
