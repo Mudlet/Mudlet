@@ -4690,7 +4690,7 @@ describe("FFmpeg's hardware device types", function()
       return
     end
     local decoding = os.getenv("QT_FFMPEG_DECODING_HW_DEVICE_TYPES")
-    local expected = "vaapi,vdpau,qsv,drm,vulkan"
+    local expected = "vaapi,vdpau,qsv,drm"
     local nvidiaDriver = io.open("/proc/driver/nvidia/version")
     if nvidiaDriver then
       nvidiaDriver:close()

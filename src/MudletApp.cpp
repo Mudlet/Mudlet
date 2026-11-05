@@ -1016,12 +1016,13 @@ QTranslator* MudletApp::loadTranslationsForRun(const QString& configRoot)
 void MudletApp::nameHardwareDeviceTypes()
 {
 #if defined(Q_OS_LINUX)
-    // As Qt's own probe does: CUDA decoding crashes without libnvcuvid (QTBUG-122199)
+    // Qt's own check: CUDA decoding without libnvcuvid has crashed FFmpeg (QTBUG-122199)
     QLibrary nvcuvid(qsl("libnvcuvid.so"));
     const bool cuda = QFile::exists(qsl("/proc/driver/nvidia/version")) && nvcuvid.load();
     nvcuvid.unload();
-    // Qt's Linux order; a type that doesn't work here is passed over when a video opens
-    const QByteArray deviceTypes = cuda ? "cuda,vaapi,vdpau,qsv,drm,vulkan" : "vaapi,vdpau,qsv,drm,vulkan";
+    // Qt's Linux order, less Vulkan, which Qt skips where a software Vulkan driver is installed. A type that
+    // doesn't work here is skipped when a video opens
+    const QByteArray deviceTypes = cuda ? "cuda,vaapi,vdpau,qsv,drm" : "vaapi,vdpau,qsv,drm";
     for (const char* variable : {"QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "QT_FFMPEG_ENCODING_HW_DEVICE_TYPES"}) {
         if (!qEnvironmentVariableIsSet(variable)) {
             qputenv(variable, deviceTypes);
