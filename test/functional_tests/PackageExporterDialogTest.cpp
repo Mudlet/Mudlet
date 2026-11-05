@@ -1501,6 +1501,12 @@ private slots:
         QApplication::sendEvent(iconArea, &vanishingEnter);
         QVERIFY(vanishingEnter.isAccepted());
         QVERIFY(QFile::remove(vanishingPath));
+        QVERIFY2(highlighted(), "the icon area was not marked for an image it took");
+        QDragMoveEvent vanishingMove(centre, Qt::CopyAction, &vanishing, Qt::LeftButton, Qt::NoModifier);
+        vanishingMove.setAccepted(true);
+        QApplication::sendEvent(iconArea, &vanishingMove);
+        QVERIFY2(!vanishingMove.isAccepted(), "a move over the icon area with an image that had gone was taken");
+        QVERIFY2(!highlighted(), "the icon area stayed marked after it refused a move");
         QDropEvent vanishingDrop(centre, Qt::CopyAction, &vanishing, Qt::LeftButton, Qt::NoModifier);
         vanishingDrop.setAccepted(true);
         QApplication::sendEvent(iconArea, &vanishingDrop);

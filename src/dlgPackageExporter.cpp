@@ -800,6 +800,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             auto* moveEvent = static_cast<QDragMoveEvent*>(evt);
             if (iconFileFromDrop(moveEvent).isEmpty()) {
                 moveEvent->ignore();
+                setIconDropHighlight(false);
                 return true;
             }
             // A move would tell the source to delete the file it handed over
