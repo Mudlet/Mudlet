@@ -33,6 +33,7 @@ public:
     DarkTheme();
     explicit DarkTheme(QStyle* style);
     void polish(QPalette& palette) override;
+    QIcon standardIcon(StandardPixmap standardIcon, const QStyleOption* option = nullptr, const QWidget* widget = nullptr) const override;
 };
 
 #endif // end MUDLET_DARKTHEME_H
