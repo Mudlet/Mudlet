@@ -2375,6 +2375,11 @@ void cTelnet::slot_setDownloadProgress(qint64 got, qint64 tot)
     emit signal_packageDownloadProgress(got, tot);
 }
 
+bool cTelnet::packageDownloadRunning() const
+{
+    return mpPackageDownloadReply && !mpPackageDownloadReply->isFinished();
+}
+
 void cTelnet::slot_cancelPackageDownload()
 {
     // Closing the progress dialog when the download finishes emits canceled() too,
@@ -5859,6 +5864,7 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
             auto [ok, modifiedFormat] = testReadReplayFile();
             if (Q_LIKELY(ok)) {
                 mReplayHasFaultyFormat = modifiedFormat;
+                replay->announce();
                 // This initiates the replay chunk reading/processing cycle:
                 loadReplayChunk();
             } else {

@@ -287,6 +287,7 @@ public:
     // The wait blocks, so is only for a profile with no window to freeze
     void terminateConnection(bool waitForTheGameToClose);
     bool connectRunningEventLoop() const { return mConnectEventLoops > 0; }
+    bool packageDownloadRunning() const;
     bool currentlySecure() const
     {
 #if defined(QT_NO_SSL)

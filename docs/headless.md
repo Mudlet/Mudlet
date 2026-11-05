@@ -98,7 +98,8 @@ error, and does not change the exit status; a history file that cannot be read i
 
 A command typed on standard input goes into the main command line's history file, just as the GUI
 keeps it: one entry for each line or paste, not for one typed while the game hides input (a
-password prompt), so the GUI's up arrow finds it next time.
+password prompt, which an app embedding the session hears of through `hiddenInputWanted`, below), so
+the GUI's up arrow finds it next time.
 
 ### Exit status
 
@@ -176,6 +177,85 @@ back or run the event loop; queue the work for later instead. `host()` reaches w
 does not cover, such as settings and the map, and goes null once the profile closes, so hold it in a
 `QPointer`.
 
+A web page a script opens with `openWebPage()` or `openUrl()`, and a game's sign-in page, go to
+`QDesktopServices::openUrl()` as in the GUI, so the system's browser opens them unless the app takes
+their scheme first with `QDesktopServices::setUrlHandler()`, as a phone app might to show them itself.
+
+`notificationRequested` carries a script's `showNotification()`, which answers `true` only while
+something is connected to it, so an app that connects it and drops what it gets tells scripts their
+notifications were shown. `attentionRequested` carries a script's `alert()` and the game's bell, with
+how long to ask for the player's attention: 0 until they come back, and 3 seconds for a bell, as the
+GUI asks. That is the GUI's flash of its window, not its beep, which it leaves out for a bell while the
+game's sounds are muted. The session shows, flashes and beeps nothing itself. `announcementRequested`
+carries what a script's `announce()`, Mudlet when it opens a sign-in page, or a game's OSC 8 link being
+hidden or revealed asks screen readers to say, and whether the GUI would make it assertive, for an app to
+hand to the platform's own accessibility service.
+
+`secureConnectionOffered` carries a game's offer of its secure port, worded as the GUI's question, for
+the player to answer with `answerSecureConnectionOffer()`. The offer lapses when its connection ends;
+until then, or an answer, the profile offers nothing more. A yes stores the secure port with TLS on, as
+the GUI does, so an app that passes its own port to a later `start()` passes `tls` with it.
+
+`packageDownloadStarted`, `packageDownloadProgress` and `packageDownloadFinished` follow a GUI package
+the game sends, as the GUI's progress dialog does, and `cancelPackageDownload()` is its Cancel.
+
+`mapProgressStarted`, `mapProgressChanged` and `mapProgressFinished` follow a map export, import or
+download, as the GUI's progress dialog does, each change carrying the whole label, the rooms done and the
+rooms to go through. They are sent from the event loop. An export or import runs it as it goes, so its
+start and changes can arrive while the script that began it, or the `start()` that loads a JSON map,
+still runs, but its end arrives only once that has returned. A map download, which only an app can begin,
+through `host()`, carries on after its script returns.
+
+A map operation or package download still open when its profile closes, or when `shutdown()` or a later
+`start()` lets the profile go, gets its end there, so every start an app is sent is followed by one end.
+A session that is deleted sends none.
+
+`cancelMapOperation()` is the dialog's Abort: a JSON export or import then gives its script `nil` and
+"aborted by user", and a download stops. It works on the JSON map `start()` loads too, called from a
+handler of its `mapProgressStarted`, and the profile then starts with no map, as in the GUI. `true` means
+the request was made, not that the operation stopped: a JSON import with no areas has no step left at
+which to stop, and completes. `mapProgressCancelDisabled` says when the dialog would drop its Abort: at
+once for an XML import, and for an export writing its file or a download that has arrived. After it,
+or with nothing running, the call answers `false`.
+
+`mappingScriptMissing` says the map opened with no mapping script installed, where the GUI suggests the
+player finds one, for an app that offers its own. As in the GUI, it comes only the first time the map
+opens once the profile has loaded, so an app that connects it later may have missed it. The profile
+marks it asked at that moment, whether or not anything listens, the reference runner included, and a
+save keeps that, so it never comes again for that profile, in the GUI either. When `shutdown()` or a
+later `start()` follows the map opening at once, it is still delivered once the event loop runs, as
+long as the session has not been deleted by then.
+
+`hiddenInputWanted` says when the game starts hiding what the player types, as for a password, and when
+it stops, where the GUI opens and closes its hidden-input box, so an app can mask its own input line
+meanwhile. A disconnect ends it too, as does the profile closing or being let go by `shutdown()` or a
+later `start()`, though not the session being deleted. It never comes while the profile's "Show passwords as you type them"
+setting is on, as the GUI then opens no box. It is sent while the game's data is read, so, like
+`outputLine`, its handler must not call the session back. Meanwhile `submitHiddenInput()` sends a line
+as the box does, straight to the game with no aliases, `sysDataSendRequest`, echo or history, while
+`submit()` still runs aliases on it as it always has; `hiddenInputEdited()` is the player's first edit of
+the masked line, which stops a saved password that arrives late from the keychain being sent for them, as
+typing in the box does, so an app that moves text the player had typed ahead into its masked line calls
+it then, as the GUI does when it moves such text into its box; and `dismissHiddenInput()` is the box's Esc,
+which hands input back to `submit()`.
+When `submitHiddenInput()` refuses a line, as the box has closed, the profile is not connected or the
+game's encoding cannot carry it, an app drops that line, as the GUI drops what was typed into a box that
+closes; resending it with `submit()` would echo it, keep it in the history and hand it to aliases.
+
+`replayStarted`, `replaySpeedChanged` and `replayFinished` follow a replay of the session's profile, as
+the GUI's replay toolbar does, whether a script's `loadReplay()` began it or the app did through
+`host()`. A script's replay says nothing when it reaches the end of its file, so `replayFinished` is how
+an app knows its output is over. A replay cut short, as by its file changing or becoming unreadable while
+it plays, gets the same end, with the reason only in `localText`. A corrupt file, which `loadReplay()`
+reads through before it plays anything, sends neither, and an empty one, which `loadReplay()` accepts,
+sends its start and then its end. Every
+replay starts at 1 times its speed, and a change clamped at 1 or 1024 times sends the same speed again.
+They come from the event loop, so the start can arrive after the
+script that began it has returned. One replay plays at a time over all profiles, and only those of the
+session's own profile are sent. As for the map's progress, one still playing when its profile closes, or
+when `shutdown()` or a later `start()` lets the profile go, gets its end there. The replay's elapsed time,
+pausing and its speed go through `host()` and `MudletReplay::self()` for now.
+
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.
 
@@ -192,7 +272,7 @@ or answers as the GUI would with no window open. `CI/headless-lua-known-failures
 Lua specs that fail with no window, so it is the up-to-date list; the main gaps are:
 
 - the 2D and 3D mappers' views, and map symbols drawn with a font's Private Use Area;
-- MXP frames;
+- the space an internal MXP frame takes from the main console;
 - layout that follows the main window, such as `Adjustable.Container` borders, docked user
   windows, and the command line a mini console or user window can show;
 - keyboard shortcuts for addon commands, which the main window's menus hold.

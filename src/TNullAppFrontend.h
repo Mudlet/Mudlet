@@ -57,7 +57,8 @@ public:
     void setCompactInputLineChecked(Host*, bool) override {}
     void armForceClose() override;
     void writeSettings() override;
-    bool openWebPage(const QString&) override { return false; }
+    // As the main window: hands the page to the platform, which an app can take with QDesktopServices::setUrlHandler()
+    bool openWebPage(const QString& path) override;
     bool showNotification(const QString&, const QString&, std::optional<int>) override { return false; }
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
     void setDrawUpperLowerLevels(bool draw) override { mDrawUpperLowerLevels = draw; }

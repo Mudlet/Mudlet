@@ -351,7 +351,9 @@ int TLuaInterpreter::alert(lua_State* L)
         }
     }
 
-    TAppFrontend::instance()->alertUser(qRound(luaAlertDuration * 1000.0));
+    const int milliseconds = qRound(luaAlertDuration * 1000.0);
+    TAppFrontend::instance()->alertUser(milliseconds);
+    emit getHostFromLua(L).signal_attentionRequested(milliseconds);
 
     return 0;
 }
