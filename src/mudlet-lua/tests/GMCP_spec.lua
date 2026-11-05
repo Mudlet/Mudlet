@@ -325,3 +325,16 @@ describe("Tests the functionality of __gmcp_merge_gmcp_sub_tables", function()
     assert.are.same({Vitals = {mp = 2}}, a.Char)
   end)
 end)
+
+describe("Tests how GMCP from the game reaches the gmcp table", function()
+  after_each(function()
+    gmcp.EscSpec = nil
+  end)
+
+  it("Should decode a raw ESC inside a string as the ESC byte", function()
+    -- JSON forbids a raw control character in a string, so Mudlet escapes it before decoding
+    local ok, msg = feedTelnet('<T_IAC><T_SB><O_GMCP>EscSpec.Text {"text":"\27[31mred\27[0m plain"}<T_IAC><T_SE>')
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    assert.are.same({text = "\27[31mred\27[0m plain"}, gmcp.EscSpec.Text)
+  end)
+end)
