@@ -359,6 +359,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     // website_entry atm is only a label
     //connect(website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_updateWebsite(const QString)));
 
+    // Notices come and go as games are picked; letting the games list take back their space would move
+    // it under the pointer between the two clicks of a double-click
+    QSizePolicy notificationAreaPolicy = notificationArea->sizePolicy();
+    notificationAreaPolicy.setRetainSizeWhenHidden(true);
+    notificationArea->setSizePolicy(notificationAreaPolicy);
     clearNotificationArea();
 
 #if !defined(QT_NO_SSL)
