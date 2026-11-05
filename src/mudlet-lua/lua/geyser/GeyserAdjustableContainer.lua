@@ -158,12 +158,11 @@ local function adjust_Info(self, label, event)
     local left, right, top, bottom = event.x <= 10, x >= x2 - 10, event.y <= 3, y >= y2 - 10
     if right and left then left = false end
     if top and bottom then top = false end
-    if self.noResize then
-        left, right, top, bottom = false, false, false, false
-    end
 
     if event.button ~= "LeftButton" and not self.minimized then
-        if (top or bottom) and not (left or right) then
+        if self.noResize then
+            label:setCursor("OpenHand")
+        elseif (top or bottom) and not (left or right) then
             label:setCursor("ResizeVertical")
         elseif (left or right) and not (top or bottom) then
             label:setCursor("ResizeHorizontal")
@@ -226,7 +225,7 @@ function Adjustable.Container:onClick(label, event)
         end
         adjustInfo.name = label.name
         adjustInfo.move = not (adjustInfo.right or adjustInfo.left or adjustInfo.top or adjustInfo.bottom)
-        -- the edges were read on the last hover, which may have been before setResizable(false)
+        -- the edges are kept while not resizable, so setResizable(true) applies without a fresh hover
         if self.minimized or self.noResize then adjustInfo.move = true end
         adjust_Info(self, label, event)
     end
@@ -433,7 +432,7 @@ function Adjustable.Container:onMove (label, event)
             if y1-dy <-5 then self:attachToBorder("top") end
             if winw - w < tx+0.1 then self:attachToBorder("right") end
             if winh - h < ty+0.1 then self:attachToBorder("bottom") end--]]
-        elseif adjustInfo.move == false then
+        elseif adjustInfo.move == false and not self.noResize then
             local w2, h2, x2, y2 = w - dx, h - dy, x1 - dx, y1 - dy
             local tx, ty, tw, th = x1, y1, w, h
             if adjustInfo.top then

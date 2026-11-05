@@ -1237,6 +1237,43 @@ describe("Tests the Adjustable.Container mouse handlers", function()
         assert.is_true(math.abs(container:get_x() - (originalX + 30)) <= 1)
       end)
 
+      it("resizes it when made resizable again while the pointer rested on an edge", function()
+        container:setResizable(false)
+        local originalX = container:get_x()
+        local pointerX = 300
+        _G.getMousePosition = function() return pointerX, 100 end
+
+        container:onMove(container.adjLabel, mouseEvent("NoButton", 5, 50))
+        container:setResizable(true)
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+        pointerX = pointerX + 30
+        container:onMove(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+        container:onRelease(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+
+        assert.is_true(math.abs(container:get_width() - 170) <= 1)
+        assert.is_true(math.abs(container:get_x() - (originalX + 30)) <= 1)
+      end)
+
+      it("stops a resize already under way when made not resizable", function()
+        local pointerX = 300
+        _G.getMousePosition = function() return pointerX, 100 end
+
+        container:onMove(container.adjLabel, mouseEvent("NoButton", 5, 50))
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+        pointerX = pointerX + 10
+        container:onMove(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+        local widthMidDrag, xMidDrag = container:get_width(), container:get_x()
+        assert.is_true(math.abs(widthMidDrag - 190) <= 1)
+
+        container:setResizable(false)
+        pointerX = pointerX + 20
+        container:onMove(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+        container:onRelease(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+
+        assert.is_true(math.abs(container:get_width() - widthMidDrag) <= 1)
+        assert.is_true(math.abs(container:get_x() - xMidDrag) <= 1)
+      end)
+
       -- a connected container is never moved by a drag, so there is nothing left for one to do
       it("leaves one connected to other containers alone", function()
         local follower
