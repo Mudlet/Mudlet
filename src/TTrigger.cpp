@@ -97,16 +97,17 @@ int utf16PositionOf(const char* utf8, const PCRE2_SIZE byteOffset, PCRE2_SIZE& c
 // The longest run of literal text every match of a perl pattern has to
 // contain, or an empty string when none can be told with confidence. Only the
 // syntax that is understood is read - a plain, non-capturing or named group, a
-// character class, an escape, a quantifier - and anything else (alternation,
-// inline options, lookarounds, \Q and \E, backreferences, verbs, escapes that
-// take more characters than their letter, a brace pcre2 versions read
-// differently) gives up on the whole pattern rather than claim a character a
-// match could do without. A quantifier drops the character it applies to, a
-// group that may repeat zero times drops all it holds, a brace that starts no
-// quantifier is the brace itself, and a run never crosses a group boundary, a
-// class or an escape other than escaped punctuation, so nothing joined here can
-// be apart in the subject. The pattern is compiled without PCRE2_CASELESS,
-// which is what lets the text be searched for as it is.
+// character class, an escape, a quantifier, alternation inside a group - and
+// anything else (alternation outside every group, inline options, lookarounds,
+// \Q and \E, backreferences, verbs, escapes that take more characters than
+// their letter, a brace pcre2 versions read differently) gives up on the whole
+// pattern rather than claim a character a match could do without. A quantifier
+// drops the character it applies to, a group that may repeat zero times or has
+// alternatives drops all it holds, a brace that starts no quantifier is the
+// brace itself, and a run never crosses a group boundary, a class or an escape
+// other than escaped punctuation, so nothing joined here can be apart in the
+// subject. The pattern is compiled without PCRE2_CASELESS, which is what lets
+// the text be searched for as it is.
 QString requiredLiteral(const QString& pattern)
 {
     // pcre2 reads the pattern only up to a NUL
@@ -123,8 +124,10 @@ QString requiredLiteral(const QString& pattern)
     const auto isAsciiAlnum = [&](const QChar c) {
         return isAsciiLetter(c) || isAsciiDigit(c);
     };
-    // The longest mandatory run found so far, one entry per open group
+    // The longest mandatory run found so far, and whether alternatives were
+    // met, one entry per open group
     std::vector<QString> best(1);
+    std::vector<bool> alternated(1, false);
     QString run;
     const auto endRun = [&] {
         if (run.size() > best.back().size()) {
@@ -292,6 +295,7 @@ QString requiredLiteral(const QString& pattern)
             }
             endRun();
             best.emplace_back();
+            alternated.push_back(false);
             i = opener;
             break;
         }
@@ -300,8 +304,9 @@ QString requiredLiteral(const QString& pattern)
                 return {};
             }
             endRun();
-            const QString inner = std::move(best.back());
+            const QString inner = alternated.back() ? QString() : std::move(best.back());
             best.pop_back();
+            alternated.pop_back();
             bool mandatory = true;
             if (i + 1 < size) {
                 const QChar q = pattern.at(i + 1);
@@ -330,7 +335,12 @@ QString requiredLiteral(const QString& pattern)
             break;
         }
         case u'|':
-            return {};
+            if (best.size() < 2) {
+                return {};
+            }
+            endRun();
+            alternated.back() = true;
+            break;
         case u'*':
         case u'?':
             dropQuantified();
