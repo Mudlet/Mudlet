@@ -539,6 +539,42 @@ describe("Tests MXP handling", function()
       assert.are.equal(mainColumns, getColumnCount("main"), "the second tag took more of the main window")
     end)
 
+    -- Laying the frames out again lays out only a console still in its frame, and only one whose frame changes size
+    it("leaves a frame's console at the size a script gave it while the frame keeps its own", function()
+      finally(function()
+        closeFrame("mxpSpecKeptLeft")
+        closeFrame("mxpSpecKeptRight")
+      end)
+      openFrame("mxpSpecKeptLeft", 'Align="left" Width="25%" Height="50%"')
+      openFrame("mxpSpecKeptRight", 'Align="right" Width="20%" Height="30%"')
+      resizeWindow("mxpSpecKeptLeft", 200, 100)
+      local before = {getWindowGeometry("mxpSpecKeptLeft")}
+
+      closeFrame("mxpSpecKeptRight")
+
+      assert.are.same(before, {getWindowGeometry("mxpSpecKeptLeft")})
+    end)
+
+    it("leaves a frame's console a script moved out of the frame where the script put it", function()
+      local home = "mxpSpecMovedHome"
+      finally(function()
+        closeFrame("mxpSpecMovedTop")
+        closeFrame("mxpSpecMovedLeft")
+        deleteMiniConsole("mxpSpecMovedTop")
+        deleteMiniConsole(home)
+      end)
+      openFrame("mxpSpecMovedLeft", 'Align="left" Width="25%" Height="50%"')
+      openFrame("mxpSpecMovedTop", 'Align="top" Height="20%"')
+      openUserWindow(home, false)
+      assert.is_true(setWindow(home, "mxpSpecMovedTop", 10, 10, true))
+      local before = {getWindowGeometry("mxpSpecMovedTop")}
+
+      -- the top frame widens into the space the left one gave up
+      closeFrame("mxpSpecMovedLeft")
+
+      assert.are.same(before, {getWindowGeometry("mxpSpecMovedTop")})
+    end)
+
     it("gives an external frame a console without taking main window space", function()
       finally(function() closeFrame("mxpSpecExternalFrame") end)
       local columns, rows = getColumnCount("main"), getRowCount("main")
@@ -636,6 +672,7 @@ describe("Tests MXP handling", function()
 
       assert.are.equal("miniconsole", windowType("mxpSpecNestTab"))
       assert.is_true(windowVisible("mxpSpecNestTab"), "the first tab was left behind the host's empty one")
+      assert.is_false(windowVisible("mxpSpecNestHost"), "the frame did not dock into the host as a tab")
     end)
 
     it("shows the tag as text when the frame it names is not there", function()

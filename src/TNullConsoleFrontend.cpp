@@ -568,25 +568,62 @@ bool TNullMxpFrameFrontend::hasFrameWidget(const QString& name) const
     return it != mView.mFrameHolders.end() && it->second;
 }
 
-void TNullMxpFrameFrontend::createInternalFrame(const QString& name, const QString& hostName, const QString&, const QRect&, bool, bool)
+// TMxpFrameWidgets::createInternalFrame()'s allowance for the tab header
+QSize TNullMxpFrameFrontend::consoleSize(const QString& name, const QSize& frameSize) const
 {
-    mView.addFrameConsole(name, false, hostName);
+    const int header = mHeaders.contains(name) ? 30 : 0;
+    return QSize(frameSize.width(), frameSize.height() - header).expandedTo(QSize(0, 0));
+}
+
+void TNullMxpFrameFrontend::createInternalFrame(const QString& name, const QString& hostName, const QString&, const QRect& geometry, const bool showHeader, bool)
+{
+    if (showHeader) {
+        mHeaders.insert(name);
+    } else {
+        mHeaders.remove(name);
+    }
+    const QSize size = consoleSize(name, geometry.size());
+    mConsoleSizes[name] = size;
+    mView.addFrameConsole(name, size, false, hostName);
 }
 
 std::optional<QSize> TNullMxpFrameFrontend::createExternalFrame(const QString& name, const QString&, const QSize& size, bool)
 {
-    mView.addFrameConsole(name, true);
+    mHeaders.remove(name);
+    mView.addFrameConsole(name, size, true);
     return size;
 }
 
-void TNullMxpFrameFrontend::createTabFrame(const QString& name, const QString&, const QString& parentName, const QSize&, bool, bool)
+void TNullMxpFrameFrontend::createTabFrame(const QString& name, const QString&, const QString& parentName, const QSize& size, bool, bool)
 {
-    mView.addFrameConsole(name, false, parentName);
+    mHeaders.remove(name);
+    mView.addFrameConsole(name, size, false, parentName);
 }
 
 void TNullMxpFrameFrontend::destroyFrame(const QString& name)
 {
+    mHeaders.remove(name);
+    mConsoleSizes.erase(name);
     mView.removeFrameConsole(name);
+}
+
+// Only a container that changes size lays its console out again, so one a script resized keeps that size till then
+void TNullMxpFrameFrontend::setGeometry(const QString& name, const QRect& geometry)
+{
+    const QSize size = consoleSize(name, geometry.size());
+    if (const auto laidOut = mConsoleSizes.find(name); laidOut != mConsoleSizes.end() && laidOut->second == size) {
+        return;
+    }
+    mConsoleSizes[name] = size;
+    mView.sizeFrameConsole(name, size);
+}
+
+// Nothing lays the main console out, so the main window is all of it
+void TNullMxpFrameFrontend::reportSize()
+{
+    Host* pHost = mView.mpHost;
+    const QSize size = pHost->mainWindowSize().value_or(QSize());
+    pHost->mMxpFrameManager.setMainConsoleSize(size, size);
 }
 
 TPrintSink* TNullMxpFrameFrontend::sink(const QString& name) const
@@ -1054,7 +1091,7 @@ void TNullConsoleFrontend::removeSubConsole(const QString& name, const bool keep
     }
 }
 
-void TNullConsoleFrontend::addFrameConsole(const QString& name, const bool external, const QString& hostFrame)
+void TNullConsoleFrontend::addFrameConsole(const QString& name, const QSize& size, const bool external, const QString& hostFrame)
 {
     // TMxpFrameWidgets builds nothing in a frame that has no widget
     const auto host = mFrameHolders.find(hostFrame);
@@ -1070,11 +1107,36 @@ void TNullConsoleFrontend::addFrameConsole(const QString& name, const bool exter
     // TMxpFrameWidgets::createExternalFrame() has no container widget but the console itself
     if (external) {
         mFrameHolders[name] = console.holder;
+    } else {
+        auto pFrame = new QObject(pHost ? pHost : mpMainHolder.get());
+        console.holder->setParent(pFrame);
+        mFrameHolders[name] = pFrame;
+    }
+    mpHost->windowRegistry().setSubConsoleGeometry(name, QRect(QPoint(0, 0), size));
+    // An external frame is a mini console of TMainConsole::createMiniConsole()'s, the others take the main font's size
+    const int fontSize = mpHost->getDisplayFont().pointSize();
+    setWindowFontSize(name, external || fontSize <= 0 ? 12 : fontSize);
+    // A sysFontChangeEvent handler can take the console away
+    if (!frameSink(name)) {
         return;
     }
-    auto pFrame = new QObject(pHost ? pHost : mpMainHolder.get());
-    console.holder->setParent(pFrame);
-    mFrameHolders[name] = pFrame;
+    reportGridSize(name);
+    setSubConsoleShown(name, true);
+}
+
+// As TMxpFrameWidgets lays a frame's console out in its container, which a console a script moved out has left
+void TNullConsoleFrontend::sizeFrameConsole(const QString& name, const QSize& size)
+{
+    const auto frame = mFrameHolders.find(name);
+    if (!frameSink(name) || frame == mFrameHolders.end() || !frame->second) {
+        return;
+    }
+    const QObject* pHolder = mSubConsoles.at(name).holder;
+    if (!pHolder || (pHolder != frame->second && pHolder->parent() != frame->second)) {
+        return;
+    }
+    mpHost->windowRegistry().setSubConsoleGeometry(name, QRect(QPoint(0, 0), size));
+    reportGridSize(name);
 }
 
 // TMxpFrameWidgets::destroyFrame() deletes the frame's widgets at once, but a console a script moved out of a frame
