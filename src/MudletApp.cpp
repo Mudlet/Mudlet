@@ -42,6 +42,7 @@
 #include <QHash>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLibrary>
 #include <QLibraryInfo>
 #include <QLocale>
 #include <QMutex>
@@ -237,6 +238,25 @@ bool syncUnsupported(const int error)
     }
 #endif
     return error == EINVAL || error == EROFS || error == ENOTSUP;
+}
+#endif
+
+#if defined(Q_OS_LINUX)
+// Named, Qt skips its probe: a trial context on every GPU decoder, which froze the first sound ~200 ms
+void nameHardwareDeviceTypes()
+{
+    // Mudlet never encodes media
+    if (!qEnvironmentVariableIsSet("QT_FFMPEG_ENCODING_HW_DEVICE_TYPES")) {
+        qputenv("QT_FFMPEG_ENCODING_HW_DEVICE_TYPES", QByteArray());
+    }
+    if (qEnvironmentVariableIsSet("QT_FFMPEG_DECODING_HW_DEVICE_TYPES")) {
+        return;
+    }
+    // Qt's own precheck, kept because CUDA decoding crashes without libnvcuvid (QTBUG-122199)
+    QLibrary nvcuvid(qsl("libnvcuvid.so"));
+    const bool cuda = QFile::exists(qsl("/proc/driver/nvidia/version")) && nvcuvid.load();
+    nvcuvid.unload();
+    qputenv("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", cuda ? "cuda,vaapi" : "vaapi");
 }
 #endif
 } // namespace
@@ -1012,6 +1032,9 @@ QTranslator* MudletApp::loadTranslationsForRun(const QString& configRoot)
 
 void MudletApp::setDefaultMediaBackend()
 {
+#if defined(Q_OS_LINUX)
+    nameHardwareDeviceTypes();
+#endif
     // FFmpeg plays .ogg/.opus, which the native Windows backend doesn't, and is what Linux gets by Qt's
     // default. macOS uses it too: only FFmpeg feeds the shared output, TAudioMixer, which keeps Bluetooth
     // headphones from being claimed for every sound.

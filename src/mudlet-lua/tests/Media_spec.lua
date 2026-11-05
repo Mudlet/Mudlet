@@ -4682,3 +4682,15 @@ describe("Tests the text-to-speech Lua API", function()
       end)
     end)
   end)
+
+describe("FFmpeg's hardware device types", function()
+  -- Left unnamed, Qt opens a trial context on every GPU decoder when the first sound plays
+  it("are named on Linux before Mudlet loads a profile", function()
+    if getOS() ~= "linux" then
+      pending("only Linux names them")
+      return
+    end
+    assert.is_not_nil(os.getenv("QT_FFMPEG_ENCODING_HW_DEVICE_TYPES"))
+    assert.is_not_nil(os.getenv("QT_FFMPEG_DECODING_HW_DEVICE_TYPES"))
+  end)
+end)
