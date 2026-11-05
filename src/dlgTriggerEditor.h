@@ -537,6 +537,7 @@ private:
 
     void clearDocument(edbee::TextEditorWidget* pEditorWidget, const QString& initialText = QString());
 
+    class SearchResultItem;
     void setAllSearchData(QTreeWidgetItem* pItem,
                           const EditorViewType& type,
                           const QString& name,
@@ -756,6 +757,8 @@ private:
     // Reused for every field a whole-word search looks at, as each new QRegularExpression is JIT-compiled anew
     mutable QString mWholeWordSearchNeedle;
     mutable QRegularExpression mWholeWordSearchRegex;
+    // A search's top-level rows, held back until it ends: each one added to the sorted tree re-sorts it
+    QList<QTreeWidgetItem*> mPendingSearchResults;
     QSplitter* searchSplitter;
 
     // This has a menu which the following QActions are inserted into:

@@ -25,6 +25,7 @@
  */
 
 #include <QComboBox>
+#include <QHeaderView>
 #include <QTemporaryDir>
 #include <QTreeWidget>
 #include <QScopeGuard>
@@ -135,6 +136,78 @@ private:
         return nullptr;
     }
 
+    // One line per row, children indented under their parent: the four columns, the
+    // data a click on the row jumps by, then "+" if the row is shown expanded
+    QStringList describeResults() const
+    {
+        const auto describe = [](const QTreeWidgetItem* item, const QString& indent) {
+            return qsl("%1%2|%3|%4|%5").arg(indent, item->text(0), item->text(1), item->text(2), item->text(3))
+                   + qsl(" name=%1 view=%2 type=%3 line=%4 pos=%5 index=%6%7")
+                             .arg(item->data(0, dlgTriggerEditor::NameRole).toString())
+                             .arg(item->data(0, dlgTriggerEditor::ItemRole).toInt())
+                             .arg(item->data(0, dlgTriggerEditor::TypeRole).toInt())
+                             .arg(item->data(0, dlgTriggerEditor::PatternOrLineRole).toInt())
+                             .arg(item->data(0, dlgTriggerEditor::PositionRole).toInt())
+                             .arg(item->data(0, dlgTriggerEditor::IndexRole).toInt())
+                             .arg(item->isExpanded() ? qsl(" +") : QString());
+        };
+        QStringList rows;
+        auto* results = mpEditor->treeWidget_searchResults;
+        for (int i = 0, total = results->topLevelItemCount(); i < total; ++i) {
+            QTreeWidgetItem* top = results->topLevelItem(i);
+            rows << describe(top, QString());
+            for (int j = 0, children = top->childCount(); j < children; ++j) {
+                rows << describe(top->child(j), qsl("  "));
+            }
+        }
+        return rows;
+    }
+
+    // Each row's id must be that of the item it names, in the unit its view stands for
+    void verifyResultIds() const
+    {
+        auto* results = mpEditor->treeWidget_searchResults;
+        QList<QTreeWidgetItem*> rows;
+        for (int i = 0, total = results->topLevelItemCount(); i < total; ++i) {
+            rows << results->topLevelItem(i);
+            for (int j = 0, children = results->topLevelItem(i)->childCount(); j < children; ++j) {
+                rows << results->topLevelItem(i)->child(j);
+            }
+        }
+        for (const auto* row : std::as_const(rows)) {
+            const QString name = row->data(0, dlgTriggerEditor::NameRole).toString();
+            const QVariant id = row->data(0, dlgTriggerEditor::IdRole);
+            std::vector<int> ids;
+            switch (static_cast<EditorViewType>(row->data(0, dlgTriggerEditor::ItemRole).toInt())) {
+            case EditorViewType::cmTriggerView:
+                ids = mpHost->getTriggerUnit()->findItems(name);
+                break;
+            case EditorViewType::cmAliasView:
+                ids = mpHost->getAliasUnit()->findItems(name, true, true);
+                break;
+            case EditorViewType::cmScriptView:
+                ids = mpHost->getScriptUnit()->findItems(name);
+                break;
+            case EditorViewType::cmActionView:
+                ids = mpHost->getActionUnit()->findItems(name);
+                break;
+            case EditorViewType::cmTimerView:
+                ids = mpHost->getTimerUnit()->findItems(name);
+                break;
+            case EditorViewType::cmKeysView:
+                ids = mpHost->getKeyUnit()->findItems(name, true, true);
+                break;
+            case EditorViewType::cmVarsView:
+                QCOMPARE(id.toStringList(), QStringList({name}));
+                continue;
+            default:
+                QFAIL(qPrintable(qsl("the row for %1 names no item type").arg(name)));
+            }
+            QCOMPARE(ids.size(), size_t{1});
+            QCOMPARE(id.toInt(), ids.front());
+        }
+    }
+
     int totalResultRows() const
     {
         auto* results = mpEditor->treeWidget_searchResults;
@@ -193,6 +266,7 @@ private:
         mpHost->getActionUnit()->registerAction(pAction);
 
         QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaSearchVariable = \"%1 value\"").arg(mNeedle)));
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("%1Variable = \"%1 too\"").arg(mNeedle)));
     }
 
 private slots:
@@ -304,6 +378,75 @@ private slots:
         TAction* pAction = mpHost->getActionUnit()->findAction(qsl("qaSearchButton"));
         QVERIFY(pAction);
         QCOMPARE(result->data(0, dlgTriggerEditor::IdRole).toInt(), pAction->getID());
+    }
+
+    // The rows are only put in the tree, and sorted, once every unit has been walked, so
+    // this is what adding each one to the sorted tree as it was found gave: sorted by
+    // type, descending, with ties in the order the units are walked, and only the rows
+    // with children expanded
+    void test_resultsAreSortedAndExpandedOnceGathered()
+    {
+        mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
+        search(mNeedle);
+
+        QVERIFY(mpEditor->treeWidget_searchResults->isSortingEnabled());
+        QCOMPARE(describeResults(),
+                 QStringList({
+                         qsl("Variable|qaHaystackVariable|Name| name=qaHaystackVariable view=7 type=2 line=0 pos=0 index=0 +"),
+                         qsl("  ||Value|qaHaystack too name=qaHaystackVariable view=7 type=8 line=0 pos=0 index=0"),
+                         qsl("Variable|qaSearchVariable|Value|qaHaystack value name=qaSearchVariable view=7 type=8 line=0 pos=0 index=0"),
+                         qsl("Trigger|qaSearchTrigger|Command| name=qaSearchTrigger view=1 type=4 line=0 pos=0 index=0 +"),
+                         qsl("  ||Pattern {1}|^qaHaystack pattern$ name=qaSearchTrigger view=1 type=3 line=0 pos=1 index=0"),
+                         qsl("  ||Lua code (1:4)|-- qaHaystack in lua name=qaSearchTrigger view=1 type=1 line=0 pos=3 index=0"),
+                         qsl("Trigger|qaNestedTrigger|Pattern {1}|qaHaystack nested name=qaNestedTrigger view=1 type=3 line=0 pos=0 index=0"),
+                         qsl("Timer|qaSearchTimer|Command| name=qaSearchTimer view=2 type=4 line=0 pos=0 index=0"),
+                         qsl("Script|qaSearchScript|Event Handler|qaHaystackEvent name=qaSearchScript view=4 type=7 line=0 pos=0 index=0 +"),
+                         qsl("  ||Lua code (1:4)|-- qaHaystack lives here too name=qaSearchScript view=4 type=1 line=0 pos=3 index=0"),
+                         qsl("Key|qaSearchKey|Command| name=qaSearchKey view=6 type=4 line=0 pos=0 index=0"),
+                         qsl("Button|qaSearchButton|Command {Down}| name=qaSearchButton view=5 type=4 line=0 pos=0 index=0 +"),
+                         qsl("  ||Command {Up}| name=qaSearchButton view=5 type=5 line=0 pos=0 index=0"),
+                         qsl("  ||Stylesheet {L: 2 C: 21}|  border: 1px solid qaHaystack; name=qaSearchButton view=5 type=6 line=1 pos=20 index=0"),
+                         qsl("Alias|qaSearchAlias|Command| name=qaSearchAlias view=3 type=4 line=0 pos=0 index=0 +"),
+                         qsl("  ||Pattern|^qaHaystack alias$ name=qaSearchAlias view=3 type=3 line=0 pos=1 index=0"),
+                 }));
+        verifyResultIds();
+    }
+
+    // Clicking a column header re-sorts the results by it, and the next search keeps to that
+    void test_resultsFollowTheColumnTheyWereSortedBy()
+    {
+        auto* results = mpEditor->treeWidget_searchResults;
+        const int section = results->header()->sortIndicatorSection();
+        const Qt::SortOrder order = results->header()->sortIndicatorOrder();
+        auto restore = qScopeGuard([results, section, order]() {
+            results->sortByColumn(section, order);
+        });
+        results->sortByColumn(1, Qt::AscendingOrder);
+
+        mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
+        search(mNeedle);
+
+        QCOMPARE(results->header()->sortIndicatorSection(), 1);
+        QCOMPARE(results->header()->sortIndicatorOrder(), Qt::AscendingOrder);
+        QCOMPARE(describeResults(),
+                 QStringList({
+                         qsl("Variable|qaHaystackVariable|Name| name=qaHaystackVariable view=7 type=2 line=0 pos=0 index=0 +"),
+                         qsl("  ||Value|qaHaystack too name=qaHaystackVariable view=7 type=8 line=0 pos=0 index=0"),
+                         qsl("Trigger|qaNestedTrigger|Pattern {1}|qaHaystack nested name=qaNestedTrigger view=1 type=3 line=0 pos=0 index=0"),
+                         qsl("Alias|qaSearchAlias|Command| name=qaSearchAlias view=3 type=4 line=0 pos=0 index=0 +"),
+                         qsl("  ||Pattern|^qaHaystack alias$ name=qaSearchAlias view=3 type=3 line=0 pos=1 index=0"),
+                         qsl("Button|qaSearchButton|Command {Down}| name=qaSearchButton view=5 type=4 line=0 pos=0 index=0 +"),
+                         qsl("  ||Command {Up}| name=qaSearchButton view=5 type=5 line=0 pos=0 index=0"),
+                         qsl("  ||Stylesheet {L: 2 C: 21}|  border: 1px solid qaHaystack; name=qaSearchButton view=5 type=6 line=1 pos=20 index=0"),
+                         qsl("Key|qaSearchKey|Command| name=qaSearchKey view=6 type=4 line=0 pos=0 index=0"),
+                         qsl("Script|qaSearchScript|Event Handler|qaHaystackEvent name=qaSearchScript view=4 type=7 line=0 pos=0 index=0 +"),
+                         qsl("  ||Lua code (1:4)|-- qaHaystack lives here too name=qaSearchScript view=4 type=1 line=0 pos=3 index=0"),
+                         qsl("Timer|qaSearchTimer|Command| name=qaSearchTimer view=2 type=4 line=0 pos=0 index=0"),
+                         qsl("Trigger|qaSearchTrigger|Command| name=qaSearchTrigger view=1 type=4 line=0 pos=0 index=0 +"),
+                         qsl("  ||Pattern {1}|^qaHaystack pattern$ name=qaSearchTrigger view=1 type=3 line=0 pos=1 index=0"),
+                         qsl("  ||Lua code (1:4)|-- qaHaystack in lua name=qaSearchTrigger view=1 type=1 line=0 pos=3 index=0"),
+                         qsl("Variable|qaSearchVariable|Value|qaHaystack value name=qaSearchVariable view=7 type=8 line=0 pos=0 index=0"),
+                 }));
     }
 
     void test_caseSensitivityIsOptional()
