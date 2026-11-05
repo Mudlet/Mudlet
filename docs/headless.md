@@ -253,8 +253,8 @@ replay starts at 1 times its speed, and a change clamped at 1 or 1024 times send
 They come from the event loop, so the start can arrive after the
 script that began it has returned. One replay plays at a time over all profiles, and only those of the
 session's own profile are sent. As for the map's progress, one still playing when its profile closes, or
-when `shutdown()` or a later `start()` lets the profile go, gets its end there. The replay's elapsed time,
-pausing and its speed go through `host()` and `MudletReplay::self()` for now.
+when `shutdown()` or a later `start()` lets the profile go, gets its end there. The replay's elapsed time
+and its speed go through `host()` and `MudletReplay::self()` for now.
 
 `pressKey()` is a key pressed on the GUI's input line: it offers the key to the profile's key bindings
 where that line would, and its `KeyResult` says what came of it. The binding's script runs before the
@@ -365,6 +365,21 @@ What it guarantees about hidden input is narrow:
   pending, or the profile has masking turned off, the game may hide what is typed with
   `hiddenInputWanted` false; text set then is taken, and scripts can read it, as they can read the
   GUI's command line then.
+
+`pauseReplay()`, `resumeReplay()` and `stopReplay()` are the GUI's replay toolbar for a replay of the
+session's profile. A paused replay plays nothing more until it is resumed, and then carries on with what
+was left of the wait it was paused in. `replayPaused()` says whether it is held, as the toolbar reads it;
+a replay paused before its `replayStarted` arrives is still held when it does. Pausing one already
+paused, or resuming one that is not, is false with the reason in `errorString()`. `stopReplay()` ends it
+as the toolbar's Stop does, and `localText` says so. Each is false when no replay of the session's
+profile plays, though one a script has just begun counts before its `replayStarted` arrives. Each is
+also false while a script of the profile runs, as an app's timer can fire in a nested event loop in the
+middle of a replayed chunk, which the replay reads on from where it was once the script is done.
+
+`replayStarted` and `replayFinished` come in pairs, in that order, however the replay ends: at the end
+of its file, by `stopReplay()`, or when the profile closes or `shutdown()` runs. A replay stopped before
+its `replayStarted` arrives says so in `localText` first, and both signals still follow; if `shutdown()`
+comes before the event loop runs, it sends both.
 
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.
