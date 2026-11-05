@@ -124,8 +124,7 @@ QString requiredLiteral(const QString& pattern)
     const auto isAsciiAlnum = [&](const QChar c) {
         return isAsciiLetter(c) || isAsciiDigit(c);
     };
-    // The longest mandatory run found so far, and whether alternatives were
-    // met, one entry per open group
+    // Per open group: the longest mandatory run found so far, and whether it holds a |
     std::vector<QString> best(1);
     std::vector<bool> alternated(1, false);
     QString run;
@@ -233,9 +232,8 @@ QString requiredLiteral(const QString& pattern)
             for (; j < size; ++j) {
                 const QChar d = pattern.at(j);
                 if (d == u'\\') {
-                    // \Q can quote the ] that ends the class and \c takes the
-                    // character after it; pcre2 skips an \E, so a ] after one
-                    // can be the class's first member
+                    // \Q can quote the closing ] and \c takes the character after it; pcre2
+                    // skips an \E, so a ] after one can be the class's first member
                     const QChar escaped = j + 1 < size ? pattern.at(j + 1) : QChar();
                     if (escaped == u'Q' || escaped == u'E' || escaped == u'c') {
                         return {};

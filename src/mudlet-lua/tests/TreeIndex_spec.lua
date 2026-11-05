@@ -205,9 +205,8 @@ describe("trigger matching through the whole-tree index", function()
         assert.are.same({alternatives = 2, nested = 3}, fired)
     end)
 
-    -- Generated patterns, each with a group holding alternatives, against lines built to match them
-    -- and lines a character off: every trigger must fire exactly where rex finds its pattern, so a
-    -- literal a match can do without shows as a missed firing
+    -- Every trigger must fire exactly where rex finds its pattern, on lines built to match it and lines
+    -- a character off, so a literal a match can do without shows as a missed firing
     itIndexed("fires generated regexes with alternatives inside groups wherever rex matches them", function()
         local seed = 20261105
         local function random(n)
