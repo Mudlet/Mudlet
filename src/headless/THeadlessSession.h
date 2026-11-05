@@ -235,6 +235,10 @@ public:
     // shows it: at the end of a gap as soon as the gap begins, so held there, ahead of what has been shown, while
     // paused. -1 with none of this profile playing. Read from anywhere, a handler of outputLine included.
     qint64 replayElapsedMSecs() const;
+    // A copy of the main command line's history, newest first, as the GUI's up arrow walks it: each line submit()
+    // sent, once, as its aliases left the line, and what the profile's earlier sessions kept, but nothing sent while
+    // hidden input was wanted. Empty with no profile open too, which host() tells apart. Read from anywhere.
+    QStringList commandHistory() const;
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a

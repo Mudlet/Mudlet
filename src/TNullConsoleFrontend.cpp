@@ -2069,6 +2069,9 @@ TNullConsoleFrontend::HistoryWriter* TNullConsoleFrontend::makeHistoryWriter(QOb
     QString error;
     if (!TCommandHistory::read(MudletApp::getMudletPath(enums::profileDataItemPath, pHost->getName(), fileName), pWriter->history, error)) {
         pWriter->readFailed = true;
+        pWriter->readError = error;
+        // A read that failed part-way holds the lines before the failure, which are not to be offered either
+        pWriter->history.clear();
         qWarning().nospace().noquote() << "TNullConsoleFrontend::makeHistoryWriter() WARNING - unable to read the command history of the command line called: " << name << " reason: " << error;
     }
     QObject::connect(mpHost, &Host::signal_saveCommandLinesHistory, pWriter, [pHost, pWriter, name]() {
@@ -2092,13 +2095,29 @@ TNullConsoleFrontend::HistoryWriter* TNullConsoleFrontend::makeHistoryWriter(QOb
     return pWriter;
 }
 
-void TNullConsoleFrontend::addMainCommandLineHistory(const QString& command)
+void TNullConsoleFrontend::addMainCommandLineHistory(const QString& sent)
 {
+    // The line as it stands, which an alias that clears it leaves nothing of
+    const QString command = mMainCommandLineRewritten ? mpHost->windowRegistry().commandLineText(QString()).value_or(QString()) : sent;
+    mMainCommandLineRewritten = false;
     // As TCommandLine::enterCommand(), past the hidden-input box
     if (command.isEmpty() || !mMainCommandLine.writer || (mpHost->isRemoteEchoingActive() && !mpHost->disablePasswordMasking())) {
         return;
     }
     TCommandHistory::add(mMainCommandLine.writer->history, command);
+}
+
+QStringList TNullConsoleFrontend::mainCommandLineHistory() const
+{
+    return mMainCommandLine.writer ? mMainCommandLine.writer->history : QStringList();
+}
+
+std::optional<QString> TNullConsoleFrontend::mainCommandLineHistoryReadError() const
+{
+    if (!mMainCommandLine.writer || !mMainCommandLine.writer->readFailed) {
+        return std::nullopt;
+    }
+    return mMainCommandLine.writer->readError;
 }
 
 // In the order TMainConsole::plainWindowWidget() takes them after a scroll box
@@ -2169,6 +2188,7 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
         // TMainConsole writes to the hidden-input box over it while the game asks for one
         mMainCommandLineTyped = false;
         mMainCommandLineAllSelected = false;
+        mMainCommandLineRewritten = true;
         const QString plain = plainText(text);
         mpHost->windowRegistry().setMainCommandLineText(plain);
         emit mpHost->signal_commandLineTextRequested(plain);
@@ -2178,6 +2198,7 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
 
 bool TNullConsoleFrontend::holdMainCommandLineForSend(const QString& line)
 {
+    mMainCommandLineRewritten = false;
     // A line typed while the game hides input went through the hidden-input box, past the main line
     if (mpHost->passwordEntryWanted()) {
         return false;
@@ -2243,6 +2264,7 @@ void TNullConsoleFrontend::typeMainCommandLine(const QString& text, const bool p
     } else if (plain != current) {
         mMainCommandLineAllSelected = false;
     }
+    mMainCommandLineRewritten = true;
     registry.setMainCommandLineText(plain);
 }
 

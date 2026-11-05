@@ -725,6 +725,21 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
         mErrorString = tr("The profile \"%1\" could not be opened.").arg(mProfileName);
         return StartResult::notOpened;
     }
+    // Read as the profile was made; told only now, as a handler may delete the session
+    if (auto* pView = dynamic_cast<TNullConsoleFrontend*>(pHost->consoleFrontend())) {
+        if (const auto error = pView->mainCommandLineHistoryReadError()) {
+            //: Error console message when a profile with no window starts. %1 is the reason the file could not be read, from the operating system
+            emit pHost->signal_errorConsolePrint(tr("[ WARN ]  - The command history could not be read (%1), so it is left as it was: "
+                                                    "what it holds is not offered, and this session's commands are not saved to it.")
+                                                         .arg(*error)
+                                                         .append(QChar::LineFeed),
+                                                 QColor(255, 128, 0),
+                                                 QColor(Qt::black));
+            if (!self) {
+                return StartResult::notOpened;
+            }
+        }
+    }
 
     if (!pHost->mLoadedOk) {
         mLoadFailed = true;
@@ -809,13 +824,12 @@ bool THeadlessSession::submit(const QString& line)
             return true;
         }
     }
-    // The whole paste is one entry, as the GUI's command line keeps it once every line is sent
-    if (mpHost) {
+    // The whole paste is one entry, as the GUI's command line keeps it once every line is sent; one sent while
+    // hidden input was wanted went past it, whatever its aliases did to hidden input meanwhile
+    if (mpHost && held) {
         if (auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend())) {
             pView->addMainCommandLineHistory(commands.join(QChar::LineFeed));
-            if (held) {
-                pView->mainCommandLineSent();
-            }
+            pView->mainCommandLineSent();
         }
     }
     return true;
@@ -1348,6 +1362,18 @@ qint64 THeadlessSession::replayElapsedMSecs() const
         return -1;
     }
     return MudletReplay::self()->elapsedMSecs();
+}
+
+QStringList THeadlessSession::commandHistory() const
+{
+    const auto* pView = mpHost ? dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend()) : nullptr;
+    if (!pView) {
+        return {};
+    }
+    QStringList history = pView->mainCommandLineHistory();
+    // The empty first entry is the line being typed, as up arrow from it reaches the newest command
+    history.removeAll(QString());
+    return history;
 }
 
 void THeadlessSession::noteAlreadyInstalled(const QString& path, const QString& name)

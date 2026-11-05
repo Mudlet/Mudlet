@@ -392,6 +392,18 @@ of its file, by `stopReplay()`, or when the profile closes or `shutdown()` runs.
 its `replayStarted` arrives says so in `localText` first, and both signals still follow; if `shutdown()`
 comes before the event loop runs, it sends both.
 
+`commandHistory()` is the main command line's history, newest first, for the app's input line to walk
+with its up arrow as the GUI's does: each command `submit()` sent, once, at its latest place, and those
+kept from the profile's earlier sessions, whether in the GUI or with no window. What was sent while hidden
+input was wanted is not in it, as the GUI keeps none of what it typed in its hidden-input box. As in the
+GUI, what is kept is the line as its aliases left it: one that clears the line with `clearCmdLine()` keeps
+nothing, and one that writes to it with `printCmdLine()` keeps what it wrote. A paste is one entry, with
+its lines joined by a line feed, until the profile is saved; the history file holds a line each, so after
+the profile is loaded again each of its lines is an entry of its own. The list is a copy, which the next
+`submit()` leaves as it is. It is empty both for a profile with no history and when no profile is open;
+`host()` tells the two apart. A history file that cannot be read is left as it is: none of it is offered,
+this session's commands are not saved to it, and `errorConsoleText` says so as the profile starts.
+
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.
 
