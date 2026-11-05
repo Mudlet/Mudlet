@@ -165,9 +165,16 @@ describe("Tests setMapEnvironmentKit, getMapEnvironmentKit, getMapEnvironmentKit
       assert.are.same({60, 120, 200, 255, true}, {getMapEnvColor(blue)})
       setCustomEnvColor(9319, 1, 2, 3, 4)
       assert.are.same({1, 2, 3, 4, true}, {getMapEnvColor(9319)})
-      -- below 256 the custom colour only makes the environment known; the mapper draws the ANSI colour
+      -- from 1 to 16 the custom colour only makes the environment known; the mapper draws the ANSI colour
       setCustomEnvColor(4, 10, 20, 30)
       assert.are.same(listed(ansiBlue, true), {getMapEnvColor(4)})
+      -- from 17 to 255, and at 0 or below, the custom colour wins over the 256-colour palette
+      setCustomEnvColor(196, 5, 6, 7)
+      assert.are.same({5, 6, 7, 255, true}, {getMapEnvColor(196)})
+      setCustomEnvColor(0, 8, 9, 10)
+      assert.are.same({8, 9, 10, 255, true}, {getMapEnvColor(0)})
+      setCustomEnvColor(-5, 11, 12, 13)
+      assert.are.same({11, 12, 13, 255, true}, {getMapEnvColor(-5)})
     end)
 
     it("follows the environments a map file remaps onto other colours", function()
