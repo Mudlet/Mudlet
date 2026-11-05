@@ -5060,6 +5060,104 @@ echo("headlessMini", "mini\n") clearWindow("headlessMini") feedTriggers("after\n
         QVERIFY(session.shutdown(false));
     }
 
+    void test_loggingReachesTheSession()
+    {
+        const QString name = qsl("Headless Logging");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy logging(&session, &THeadlessSession::loggingChanged);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(startLogging(true))lua")));
+        QTRY_COMPARE_WITH_TIMEOUT(logging.size(), 1, 10000);
+        QCOMPARE(logging.at(0).at(0).toString(), name);
+        QCOMPARE(logging.at(0).at(1).toBool(), true);
+        const QString fileName = logging.at(0).at(2).toString();
+        QCOMPARE(QFileInfo(fileName).absolutePath(), QDir(MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, name)).absolutePath());
+        QVERIFY2(QFileInfo::exists(fileName), qPrintable(fileName));
+        QVERIFY(session.runLua(qsl(R"lua(startLogging(false))lua")));
+        QTRY_COMPARE_WITH_TIMEOUT(logging.size(), 2, 10000);
+        QCOMPARE(logging.at(1).at(1).toBool(), false);
+        QVERIFY(logging.at(1).at(2).toString().isEmpty());
+        QVERIFY(session.shutdown(false));
+        QCOMPARE(logging.size(), 2);
+
+        // Left on, as the GUI's autolog resumes it on the next load
+        QVERIFY(writeFile(MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("autolog")), QByteArray()));
+        logging.clear();
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(logging.size(), 1, 10000);
+        QCOMPARE(logging.at(0).at(1).toBool(), true);
+        QVERIFY(QFileInfo::exists(logging.at(0).at(2).toString()));
+        QTest::qWait(100);
+        QCOMPARE(logging.size(), 1);
+        // The profile stops logging only as it goes, after the session has let it go
+        QVERIFY(session.shutdown(false));
+        QCOMPARE(logging.size(), 2);
+        QCOMPARE(logging.at(1).at(0).toString(), name);
+        QCOMPARE(logging.at(1).at(1).toBool(), false);
+        QVERIFY(logging.at(1).at(2).toString().isEmpty());
+        QTest::qWait(100);
+        QCOMPARE(logging.size(), 2);
+
+        // The false still queued is dropped by the shutdown(), which sends its own
+        logging.clear();
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(logging.size(), 1, 10000);
+        QVERIFY(session.runLua(qsl(R"lua(startLogging(false))lua")));
+        QVERIFY(session.shutdown(false));
+        QTest::qWait(100);
+        QCOMPARE(logging.size(), 2);
+        QCOMPARE(logging.at(1).at(1).toBool(), false);
+
+        QVERIFY(writeFile(MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("autolog")), QByteArray()));
+        logging.clear();
+        QSignalSpy quit(&session, &THeadlessSession::quitRequested);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(logging.size(), 1, 10000);
+        QVERIFY(session.runLua(qsl("closeProfile()")));
+        QTRY_COMPARE_WITH_TIMEOUT(quit.size(), 1, 10000);
+        QCOMPARE(logging.size(), 2);
+        QCOMPARE(logging.at(1).at(1).toBool(), false);
+        QVERIFY(session.shutdown(false));
+        QTest::qWait(100);
+        QCOMPARE(logging.size(), 2);
+    }
+
+    void test_aLogThatCannotStartIsReported()
+    {
+        const QString name = qsl("Headless Logging Refused");
+        QVERIFY(writeProfile(name, QString()));
+        // A directory under a file, which cannot be made even by root
+        const QString blocker = mConfigDir.filePath(qsl("headless-log-blocker"));
+        QVERIFY(writeFile(blocker, QByteArray("not a directory")));
+        THeadlessSession session;
+        QSignalSpy logging(&session, &THeadlessSession::loggingChanged);
+        QSignalSpy errors(&session, &THeadlessSession::errorConsoleText);
+        QSignalSpy local(&session, &THeadlessSession::localText);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        session.host()->mLogDir = qsl("%1/logs").arg(blocker);
+        QVERIFY(session.runLua(qsl(R"lua(local ok, message = startLogging(true) failedToLog = message)lua")));
+        QTRY_COMPARE_WITH_TIMEOUT(logging.size(), 1, 10000);
+        QCOMPARE(logging.at(0).at(1).toBool(), false);
+        QVERIFY(logging.at(0).at(2).toString().isEmpty());
+        // Printed on the main console, as the GUI shows it, and not to the error console. The reason is the
+        // OS's own wording, which differs between platforms, so only its presence is checked
+        const QString logDirAndQuote = qsl("\"%1/logs/").arg(blocker);
+        QVERIFY2(std::any_of(local.cbegin(),
+                             local.cend(),
+                             [&logDirAndQuote](const QList<QVariant>& args) {
+                                 const QString text = args.at(1).toString();
+                                 return text.startsWith(qsl("Could not start logging to")) && text.contains(logDirAndQuote) && !text.section(qsl("\": "), 1).trimmed().isEmpty();
+                             }),
+                 qPrintable(qsl("no report naming the log file and the reason in %1 localText message(s)").arg(local.size())));
+        QCOMPARE(errors.size(), 0);
+        QVERIFY(session.runLua(qsl(R"lua(assert(failedToLog:find("could not be logged to file", 1, true)))lua")));
+        QTest::qWait(100);
+        QCOMPARE(logging.size(), 1);
+        QVERIFY(session.shutdown(false));
+        QCOMPARE(logging.size(), 1);
+    }
+
     void test_aPromptATriggerRewritesIsShownAsAPrompt()
     {
         const QString name = qsl("Headless Shown Prompt");

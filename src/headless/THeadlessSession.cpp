@@ -414,6 +414,20 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     emit mainConsoleCleared(profile);
                     --gSignalsBeingHandedOut;
                 });
+                // The file is read as sent, as a later toggle may change it before this is delivered
+                connect(pNewHost, &Host::signal_loggingStateChanged, this, [this, run, pNewHost](const bool logging) {
+                    const QString fileName = logging ? pNewHost->mainConsoleModel().mLogFileName : QString();
+                    QMetaObject::invokeMethod(
+                            this,
+                            [this, run, logging, fileName]() {
+                                if (run == mRun) {
+                                    const QString profile = mProfileName;
+                                    mLoggingFor = logging ? std::optional<QString>(profile) : std::nullopt;
+                                    emit loggingChanged(profile, logging, fileName);
+                                }
+                            },
+                            Qt::QueuedConnection);
+                });
                 connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text) {
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;
@@ -1583,8 +1597,8 @@ void THeadlessSession::startMapProgress(const QString& title, const QString& lab
     emit mapProgressStarted(profile, title, label, maximum);
 }
 
-// The end of hidden input, a map operation, package download or replay whose own is dropped as stale, or never
-// comes as its Host has gone; false if a handler deleted the session
+// The end of hidden input, logging, a map operation, package download or replay whose own is dropped as stale, or
+// never comes as its Host has gone; false if a handler deleted the session
 bool THeadlessSession::finishOpenProgress()
 {
     const QPointer<THeadlessSession> self(this);
@@ -1596,6 +1610,13 @@ bool THeadlessSession::finishOpenProgress()
         if (!self) {
             return false;
         }
+    }
+    // A closing profile stops logging without saying so, and a false still queued is dropped as stale
+    if (const auto profile = std::exchange(mLoggingFor, std::nullopt)) {
+        emit loggingChanged(*profile, false, QString());
+    }
+    if (!self) {
+        return false;
     }
     if (const auto profile = std::exchange(mMapProgressFor, std::nullopt)) {
         emit mapProgressFinished(*profile);
