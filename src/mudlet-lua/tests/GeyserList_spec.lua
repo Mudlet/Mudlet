@@ -223,6 +223,15 @@ describe("Tests functionality of Geyser.List", function()
       assert.are.equal(10, to.content:get_height())
     end)
 
+    it("moves a row's label into the other list's scroll box", function()
+      local from = newList("glFromBox")
+      local to = newList("glToBox", {x = 200, y = 150})
+      local item = row(from, "glBoxTraveller", 10)
+      item:changeContainer(to)
+      assert.are.equal("glToBox.ScrollBox", item.windowname)
+      assert.are.same({x = 0, y = 0, width = item:get_width(), height = 10}, geometry("glBoxTraveller"))
+    end)
+
     it("takes everything with it when deleted", function()
       local list = newList("glDelete")
       row(list, "glDeleteRow")
@@ -540,6 +549,43 @@ describe("Tests functionality of Geyser.List", function()
         {"glSelTell", "b", true},
         {"glSelTell", "b", false},
       }, calls)
+    end)
+
+    it("doesn't select a row that onSelectionChange took away", function()
+      local calls = {}
+      local list
+      list = newList("glSelTaken", {selectionMode = "single", onSelectionChange = function(_, item, on)
+        calls[#calls + 1] = {item and item.name, on}
+        if item and item.name == "a" and not on then
+          list:getItem("b"):delete()
+        end
+      end})
+      local a = row(list, "a")
+      row(list, "b")
+      list:select(a)
+      local ok, err = list:select("b")
+      assert.is_nil(ok)
+      assert.is_string(err)
+      assert.are.same({}, selected(list))
+      assert.are.same({}, list.selected)
+      assert.are.same({{"a", true}, {"a", false}}, calls)
+    end)
+
+    it("keeps single mode to one row when onSelectionChange selects another", function()
+      local list
+      list = newList("glSelSwap", {selectionMode = "single", onSelectionChange = function(_, item, on)
+        if item.name == "a" and not on then
+          list:select("c")
+        end
+      end})
+      local a = row(list, "a")
+      row(list, "b")
+      row(list, "c")
+      list:select(a)
+      local ok, err = list:select("b")
+      assert.is_nil(ok)
+      assert.is_string(err)
+      assert.are.same({"c"}, selected(list))
     end)
 
     it("leaves an item's own click callback alone", function()
