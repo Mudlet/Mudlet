@@ -16,6 +16,9 @@ end
 -- makes it stop matching.
 local compiled = setmetatable({}, {__mode = "k"})
 local weakValues = {__mode = "v"}
+-- which getters each pixel or percentage getter calls, for compiled_reads(); one
+-- table for every calc_constraints() call, as a layout pass makes a lot of them
+local reads = {}
 
 -- Internal function: whether the getters on a window are still the ones that
 -- were compiled from these very constraints, against this very container
@@ -168,8 +171,7 @@ function Geyser.calc_constraints (window, cons, container)
     os.setlocale(oldlocale, "numeric")
     error(string.format("Geyser: element '%s' %s", tostring(window.name), problem), 0)
   end
-  -- which getters each pixel or percentage getter calls, for compiled_reads()
-  local reads = {}
+  reads.x, reads.y, reads.width, reads.height = nil, nil, nil, nil
 
   -- GENERATE CONSTRAINT AWARE POSITIONING FUNCTIONS
   -- Parse the position constraints to generate functions that will get

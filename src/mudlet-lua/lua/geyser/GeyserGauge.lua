@@ -221,7 +221,9 @@ local rootGetX, rootGetY, rootGetWidth, rootGetHeight = Geyser.get_x, Geyser.get
 -- far deeper than any real layout; a container loop would otherwise never end
 local deepestChain = 100
 local weakValues = {__mode = "v"}
-local churnSkips = 32
+local churnSkips, mostSkips = 32, 1024
+-- recording costs a few pixel_geometry() calls, so a layout pays for itself only after this many reuses
+local paysAfter = 3
 
 -- where the fill starts, the back label's inner length along it and the front
 -- label's size across it: all an in-place resize reads besides the value
@@ -330,6 +332,8 @@ local function recordLayout(gauge, fill, front, old)
     chain = chain, length = length, live = live, liveLength = liveLength,
     horizontal = fill.orientation == "horizontal",
     left = fill.left, right = fill.right, top = fill.top, bottom = fill.bottom,
+    -- updates in a row it has served since it was last measured
+    reused = 0,
   }
   if readsMainWindow then
     local width, height = getMainWindowSize()
@@ -382,6 +386,12 @@ local function valuesHold(fill, layout)
   return holds
 end
 
+-- each layout dropped before it paid for itself turns recording off for twice as long as the last
+local function skipRecording(fill)
+  local skips = fill.backoff or churnSkips
+  fill.skips, fill.backoff = skips, math.min(skips * 2, mostSkips)
+end
+
 -- The front label's size for the fill's current value, worked out the way
 -- pixel_geometry() would without calling every getter up to the root again.
 local function inPlaceSize(gauge, fill, front)
@@ -389,22 +399,23 @@ local function inPlaceSize(gauge, fill, front)
   -- off the fill until it is whole again, so a getter that raises cannot leave it half updated
   fill.layout = nil
   if layout and chainHolds(gauge, front, layout) then
+    local reused = layout.reused
     if valuesHold(fill, layout) then
-      layout.reused = true
-    elseif layout.reused ~= "drifting" then
-      layout.reused = "drifting"
-      measure(fill, front, gauge.back, layout)
-    else
+      layout.reused = reused + 1
+      if reused + 1 == paysAfter then
+        fill.backoff = nil
+      end
+    elseif reused == 0 then
       -- what it rests on answers differently every update, so asking it again costs more than pixel_geometry()
-      fill.skips = churnSkips
+      skipRecording(fill)
       layout = nil
+    else
+      layout.reused = 0
+      measure(fill, front, gauge.back, layout)
     end
-  elseif fill.skips then
-    fill.skips = fill.skips > 1 and fill.skips - 1 or nil
-    layout = nil
-  elseif layout and not layout.reused then
-    -- it broke before it was ever reused, so it is probably laid out again every update and recording would not pay
-    fill.skips = churnSkips
+  elseif layout and layout.reused < paysAfter then
+    -- it broke before it paid for itself, so it is probably laid out again too often for recording to pay
+    skipRecording(fill)
     layout = nil
   else
     layout = recordLayout(gauge, fill, front, layout)
@@ -552,6 +563,11 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
     setFrontConstraints(self)
   elseif spaced or (filled and not resizesInPlace(fill, front)) then
     front:reposition()
+  elseif filled and fill.skips then
+    local skips = fill.skips
+    fill.skips = skips > 1 and skips - 1 or nil
+    local _, _, width, height = front:pixel_geometry()
+    resizeWindow(front.name, width, height)
   elseif filled then
     resizeWindow(front.name, inPlaceSize(self, fill, front))
   end
