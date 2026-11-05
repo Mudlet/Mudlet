@@ -534,3 +534,17 @@ then. A recording started in the same second as an earlier one gets a `-2`, `-3`
 time, rather than replace it. One still running at `shutdown()` or as its profile closes is saved with
 nothing said, so an app that wants to know how that went stops it with `setReplayRecording(false)`
 first. `replayRecording()` reads whether one is under way. It is refused where `submit()` is.
+
+`dropOnMainConsole()` is a drop on the main console, as the GUI takes one dragged there from a file
+manager or a browser: each URL in the `QMimeData` that names a local file that exists raises
+`sysDropEvent` with the file's path, its suffix, the position and `"main"`, and then text that reads as a
+valid URL raises `sysDropUrlEvent` with the URL, its scheme, the position and `"main"`, in the GUI's
+order. Where the data has no text of its own, `QMimeData` gives its URLs as the text, so a single file
+dropped alone raises both events, the second with the `file` scheme, as in the GUI. Mudlet's own
+handlers install a package dropped as a file, and one from an `http` or `https` link, as they do in the
+GUI. The GUI installs a dropped file as a module instead while Ctrl is held, which its handler reads
+from the keyboard itself, not from the drop; on the offscreen platform no key is ever held, so there a
+dropped file is always installed as a package, never as a module. The position is the point on the
+app's view of the main console the drop landed at, in its own pixels, which scripts get as `x` and `y`.
+Data with neither URLs nor text is false and raises nothing, as the GUI's console does not take it. It
+is refused where `submit()` is, and while the scripts are stopped its events reach none of them.

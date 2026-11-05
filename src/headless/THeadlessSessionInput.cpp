@@ -25,7 +25,11 @@
 #include "HostManager.h"
 #include "TEvent.h"
 
+#include <QFileInfo>
+#include <QMimeData>
+#include <QPoint>
 #include <QPointer>
+#include <QUrl>
 
 bool THeadlessSession::setScriptsStopped(const bool stopped)
 {
@@ -81,6 +85,45 @@ bool THeadlessSession::setReplayRecording(const bool record)
 bool THeadlessSession::replayRecording() const
 {
     return mpHost && mpHost->mTelnet.recordingReplay();
+}
+
+bool THeadlessSession::dropOnMainConsole(const QMimeData& data, const QPoint& position)
+{
+    if (!usable()) {
+        return false;
+    }
+    const bool hasText = data.hasText();
+    if (!data.hasUrls() && !hasText) {
+        //: Error from a frontend with no window that was given a drop with neither files, links nor text in it
+        mErrorString = tr("The drop holds neither files nor text, which the main console does not take.");
+        return false;
+    }
+    const QList<QUrl> urls = data.urls();
+    const QString text = hasText ? data.text() : QString();
+    // A handler may close the profile or delete the session
+    const QPointer<THeadlessSession> self(this);
+    const QPointer<Host> pHost(mpHost);
+    const auto raise = [&self, &pHost, &position](const QString& name, const QString& item, const QString& kind) {
+        if (!self || !pHost) {
+            return;
+        }
+        TEvent event{};
+        event.mArgumentList << name << item << kind << QString::number(position.x()) << QString::number(position.y()) << qsl("main");
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_NUMBER << ARGUMENT_TYPE_NUMBER << ARGUMENT_TYPE_STRING;
+        pHost->raiseEvent(event);
+    };
+    for (const QUrl& url : urls) {
+        const QString fileName = url.toLocalFile();
+        if (const QFileInfo info(fileName); info.exists()) {
+            raise(qsl("sysDropEvent"), fileName, info.suffix().trimmed());
+        }
+    }
+    if (hasText) {
+        if (const QUrl url(text); url.isValid()) {
+            raise(qsl("sysDropUrlEvent"), url.toString(), url.scheme());
+        }
+    }
+    return true;
 }
 
 bool THeadlessSession::setApplicationActive(const bool active)
