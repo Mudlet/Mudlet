@@ -553,7 +553,8 @@ private slots:
     }
 
     // The box is the main window's timestamp button by another route: the
-    // button lights up with it, and the profile opens with timestamps next time
+    // button lights up with it, the choice is saved for the profile's next load,
+    // and the dialog shows it when opened again
     void test_theTimeStampsBoxTurnsTheMainConsolesTimeStampsOnAndOff()
     {
         TMainConsole* pConsole = mpHost->mainConsoleView();
@@ -581,7 +582,8 @@ private slots:
     }
 
     // ...and the button, pressed while the dialog is in front, shows in the box
-    // at once, without that writing anything back
+    // at once, without that writing anything back or counting as an edit of the
+    // user's that would stop the dialog re-reading the settings
     void test_theTimeStampButtonShowsInTheDialog()
     {
         TMainConsole* pConsole = mpHost->mainConsoleView();
@@ -599,6 +601,13 @@ private slots:
         QCOMPARE(mpHost->mainConsoleShowsTimeStamps(), !before);
         QCOMPARE(mpPreferences->checkBox_showTimeStamps->isChecked(), !before);
         QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "following the button applied the settings");
+
+        const int priorWrapAt = mpHost->mWrapAt;
+        const int wrapFromAScript = priorWrapAt + 17;
+        mpHost->mWrapAt = wrapFromAScript;
+        returnToTheDialog();
+        mpHost->mWrapAt = priorWrapAt;
+        QCOMPARE(mpPreferences->wrap_at_spinBox->value(), wrapFromAScript);
     }
 
     // A tick of the box still waiting out the debounce is older than a press of
