@@ -110,6 +110,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     CloseDuringProfileLoadTest.cpp
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
+    ConnectionDialogEscapeTest.cpp
     ConnectionDialogFocusTest.cpp
     ConnectionDialogInitialSelectionTest.cpp
     ConnectionDialogKeychainWaitTest.cpp
