@@ -350,6 +350,7 @@ set(TEARDOWN_GROUP_TEST_SOURCES
     InstanceForwardTest.cpp
 )
 if(USE_HEADLESS)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionInputTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessRunnerTest.cpp HeadlessSessionTest.cpp)
 endif()
 
@@ -651,6 +652,11 @@ set_tests_properties(AppStartupTeardownTest PROPERTIES TIMEOUT 300)
 set_tests_properties(HeadlessVersionTest PROPERTIES TIMEOUT 300)
 if(TEST HeadlessRunnerTest)
     set_tests_properties(HeadlessRunnerTest PROPERTIES TIMEOUT 300)
+endif()
+
+# HeadlessSessionInputTest starts a fresh headless profile in each of its cases, as HeadlessSessionTest does
+if(TEST HeadlessSessionInputTest)
+    set_tests_properties(HeadlessSessionInputTest PROPERTIES TIMEOUT 300)
 endif()
 
 # HeadlessSessionTest starts a fresh headless profile in nearly every one of its

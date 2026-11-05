@@ -259,6 +259,15 @@ public:
     // sent, once, as its aliases left the line, and what the profile's earlier sessions kept, but nothing sent while
     // hidden input was wanted. Empty with no profile open too, which host() tells apart. Read from anywhere.
     QStringList commandHistory() const;
+    // The main console's emergency stop button: true turns off the profile's triggers, aliases, timers and key
+    // bindings and keeps events from its scripts, which stops scripts that keep setting each other off, such as a
+    // trigger that answers its own output; false turns on again what the stop turned off, leaving off what a script
+    // had turned off, as the GUI's button does. What a script makes, resetProfile() resets or a package installs
+    // while stopped is on, so true again turns that off too; false while not stopped changes nothing. Refused where
+    // submit() is.
+    bool setScriptsStopped(bool stopped);
+    // False with no profile open
+    bool scriptsStopped() const;
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a

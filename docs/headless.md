@@ -497,3 +497,20 @@ Lua specs that fail with no window, so it is the up-to-date list; the main gaps 
 
 `.github/workflows/headless-lua-tests.yml` runs the Lua specs in `mudlet-headless`, and
 "The Lua specs with no main window" in `platform-builds.md` explains how to reproduce it.
+
+## Embedding it: the GUI's buttons and the app's state
+
+Some of what the player does in the GUI is a button on its main window or console toolbar, which Lua
+cannot do in the same way. `THeadlessSession` gives an app these too.
+
+`setScriptsStopped(true)` is the main console's emergency stop: it turns off the profile's triggers,
+aliases, timers and key bindings, and no event reaches its scripts until `setScriptsStopped(false)`,
+which is how an app stops scripts that keep setting each other off, such as a trigger that answers its
+own output. As the GUI's button does, `false` turns on again what the stop turned off; anything a script
+had turned off before the stop, with `disableTrigger()` and the like, stays off. The stop does not hold
+back what comes on while it lasts: a script's new `tempTrigger()`, what `resetProfile()` turns back on
+and a package installed with `installPackage()` all run, as in the GUI. Call `setScriptsStopped(true)`
+again to turn those off too, as each call turns off everything that is on. `false` when nothing is
+stopped changes nothing, and `scriptsStopped()` reads the state. Like `submit()`, it is refused with no
+profile open, while a profile loads or closes, and from a handler of `outputLine` and the other
+signals sent mid-write.
