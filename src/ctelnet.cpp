@@ -5001,7 +5001,7 @@ void cTelnet::setGMCPVariables(QByteArrayView msg)
         return ch == '\n' || ch == '\r';
     });
     // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes;
-    // contains() first, as replace() builds a QByteArrayMatcher every call even when there is no ESC
+    // contains() first, as replace() builds a QByteArrayMatcher even when nothing matches
     if (data.contains('\x1B')) {
         data.replace('\x1B', QByteArrayView("\\u001B"));
     }
