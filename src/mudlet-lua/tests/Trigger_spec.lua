@@ -2693,17 +2693,20 @@ describe("Trigger processing", function()
         --
         -- What is compared is the whole cost of feeding each line with the
         -- trigger armed, not what arming it adds. The console's own per-line
-        -- work is linear, and so is the trigger once the walk is, so eight
-        -- times the line is eight times the total whatever share of it the
-        -- trigger holds: measured at 7.7 to 8.5 with the walk linear (10.5 late
-        -- in a full suite) against 52 to 55 with it quadratic, so sixteen lies
-        -- between the two. Each measurement is the cheapest of five runs,
-        -- because scheduling noise only ever adds, and the two lines take turns
-        -- so a slow patch on the runner cannot cost one line all five of its
-        -- runs.
+        -- work is linear, and so is the trigger once the walk is, so 32 times
+        -- the line is 32 times the total whatever share of it the trigger
+        -- holds: measured at 26 to 29 with the walk linear, against 230 to 260
+        -- with (\w*) rescanning on its empty retries as below and more with the
+        -- walk quadratic. A slow CI runner has put the linear ratio at up to two
+        -- and a half times what it should be, so 128 leaves a factor of nearly
+        -- two either side. The ratio comes from a short line rather than a
+        -- longer long one because a quadratic 128 kB line takes seconds a feed.
+        -- Each measurement is the cheapest of five runs, because scheduling
+        -- noise only ever adds, and the two lines take turns so a slow patch on
+        -- the runner cannot cost one line all five of its runs.
         --
         -- Subtracting an unarmed baseline to leave only what the trigger adds
-        -- is what this did first, and it could not be made to hold. On the
+        -- is what this did first, and it could not be made to hold. On an
         -- 8 kB line that difference is about two milliseconds - the size of
         -- the noise a shared CI runner puts on either measurement on its own -
         -- so it came out anywhere from double to negative, and the long line's
@@ -2721,14 +2724,14 @@ describe("Trigger processing", function()
             {pattern = [[(\S+)]], captures = function(reps) return reps * 2 end},
             {pattern = [[(\w*)]], captures = function(reps) return reps * 4 + 4 end},
         }) do
-            it("costs under sixteen times as much for eight times the line with " .. case.pattern, function()
-                -- "word " is five bytes, so this is an 8 kB line and one eight times longer
-                local shortReps, longReps = 1638, 13104
+            it("costs under 128 times as much for 32 times the line with " .. case.pattern, function()
+                -- "word " is five bytes, so this is a 2 kB line and one 32 times longer
+                local shortReps, longReps = 409, 13104
                 local function costOf(line)
-                    -- os.clock() resolves to about a millisecond on Windows, which
-                    -- is the whole cost of the shorter line there, so a single feed
-                    -- can measure exactly 0 and leave the ratio below nothing to
-                    -- divide by. Feeding until the run is clear of that floor and
+                    -- os.clock() resolves to about a millisecond on Windows, more
+                    -- than the whole cost of the shorter line there, so a single
+                    -- feed can measure exactly 0 and leave the ratio below nothing
+                    -- to divide by. Feeding until the run is clear of that floor and
                     -- dividing by the number of feeds keeps both measurements
                     -- per-feed and comparable.
                     -- It is wall time there too, so a run also carries any 15.6 ms
@@ -2738,17 +2741,18 @@ describe("Trigger processing", function()
                     -- other's skews the ratio by whatever it costs
                     collectgarbage()
                     collectgarbage("stop")
+                    local fed = "\n" .. line .. "\n"
                     local feeds, taken = 0, 0
                     local started = os.clock()
                     repeat
-                        feedTriggers("\n" .. line .. "\n")
+                        feedTriggers(fed)
                         feeds = feeds + 1
                         taken = os.clock() - started
                     -- a clock that never advances would spin here forever and hang
                     -- CI with no diagnostic: 100 feeds that leave it at 0 hand that
-                    -- to the short > 0 assertion below, and 1000 feeds bound any
+                    -- to the short > 0 assertion below, and 4000 feeds bound any
                     -- other run that never reaches the floor.
-                    until taken >= 0.1 or feeds >= 1000 or (taken == 0 and feeds >= 100)
+                    until taken >= 0.1 or feeds >= 4000 or (taken == 0 and feeds >= 100)
                     collectgarbage("restart")
                     return taken / feeds
                 end
@@ -2774,9 +2778,9 @@ describe("Trigger processing", function()
                 -- matching all, and the two costs would agree on measuring nothing
                 assert.are.equal(case.captures(shortReps), shortCaptures, "match-all should collect the whole match and its capture group for every match")
                 assert.are.equal(case.captures(longReps), longCaptures, "match-all should collect the whole match and its capture group for every match")
-                assert.is_true(short > 0, "os.clock() did not resolve the 8 kB line's cost, so the ratio below has nothing to divide by")
-                assert.is_true(long <= short * 16,
-                    string.format("feeding a 64 kB line took %.3fs against %.3fs for an 8 kB one, %.1fx for eight times the line - the match-all loop may cost the square of the line again",
+                assert.is_true(short > 0, "os.clock() did not resolve the 2 kB line's cost, so the ratio below has nothing to divide by")
+                assert.is_true(long <= short * 128,
+                    string.format("feeding a 64 kB line took %.6fs against %.6fs for a 2 kB one, %.1fx for 32 times the line - the match-all loop may cost the square of the line again",
                         long, short, long / short))
             end)
         end
