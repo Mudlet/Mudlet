@@ -41,6 +41,7 @@
 #include <functional>
 #include <optional>
 #include <tuple>
+#include <utility>
 
 class Host;
 
@@ -405,18 +406,24 @@ struct TConsoleModel
     // these setters to keep the two the same.
     void setWrapAt(int pos)
     {
-        mWrapAt = pos;
         buffer.setWrapAt(pos);
+        if (std::exchange(mWrapAt, pos) != pos) {
+            emit mNotifier.wrapChanged();
+        }
     }
     void setIndentCount(int count)
     {
-        mIndentCount = count;
         buffer.setWrapIndent(count);
+        if (std::exchange(mIndentCount, count) != count) {
+            emit mNotifier.wrapChanged();
+        }
     }
     void setHangingIndentCount(int count)
     {
-        mHangingIndentCount = count;
         buffer.setWrapHangingIndent(count);
+        if (std::exchange(mHangingIndentCount, count) != count) {
+            emit mNotifier.wrapChanged();
+        }
     }
     int mWrapAt = 100;
     int mIndentCount = 0;

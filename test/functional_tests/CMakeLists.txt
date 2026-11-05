@@ -351,6 +351,7 @@ set(TEARDOWN_GROUP_TEST_SOURCES
 )
 if(USE_HEADLESS)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessRunnerTest.cpp HeadlessSessionTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionOutputTest.cpp)
 endif()
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
@@ -657,6 +658,9 @@ endif()
 # cases, so it needs a longer timeout than the default 60s
 if(TEST HeadlessSessionTest)
     set_tests_properties(HeadlessSessionTest PROPERTIES TIMEOUT 300)
+endif()
+if(TEST HeadlessSessionOutputTest)
+    set_tests_properties(HeadlessSessionOutputTest PROPERTIES TIMEOUT 300)
 endif()
 
 # Undo/redo tests need a longer timeout due to large batch operations
