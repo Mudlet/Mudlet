@@ -474,10 +474,10 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                         },
                         Qt::QueuedConnection);
                 connectOutputRelays(pNewHost, run);
-                connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text) {
+                connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text, const QColor& foreground, const QColor& background) {
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;
-                    emit errorConsoleText(profile, text);
+                    emit errorConsoleText(profile, text, foreground, background);
                     --gSignalsBeingHandedOut;
                 });
                 // Held by the profile, which an exit handler may still be running once the session has gone

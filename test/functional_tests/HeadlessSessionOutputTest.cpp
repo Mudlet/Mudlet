@@ -224,6 +224,26 @@ setBackgroundColor("headlessColoursMini", 200, 100, 50)
         QCOMPARE(colors.count(), 1);
         QVERIFY(session.shutdown(false));
     }
+
+    void test_theErrorConsolesColoursReachTheSession()
+    {
+        const QString name = qsl("Headless Error Colours");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy errors(&session, &THeadlessSession::errorConsoleText);
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^headless boom$", [[error("headless boom")]]) feedTriggers("headless boom\n"))lua")));
+        QCOMPARE(errors.count(), 3);
+        QCOMPARE(errors.at(0).at(0).toString(), name);
+        QCOMPARE(errors.at(0).at(1).toString(), qsl("[ERROR:]"));
+        QVERIFY2(errors.at(2).at(1).toString().contains(qsl("headless boom")), qPrintable(errors.at(2).at(1).toString()));
+        const QList<QColor> foregrounds{QColor(Qt::blue), QColor(Qt::green), QColor(Qt::red)};
+        for (int piece = 0; piece < 3; ++piece) {
+            QCOMPARE(errors.at(piece).at(2).value<QColor>(), foregrounds.at(piece));
+            QCOMPARE(errors.at(piece).at(3).value<QColor>(), QColor(Qt::black));
+        }
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionOutputTest.moc"

@@ -504,6 +504,11 @@ is drawn in where the game asks for none, and which `TextRun` marks as the profi
 main console, or a package or save loaded into the profile with colours of its own. A mini console's
 background does not send it, nor does the game redefining its palette, which leaves both as they were.
 
+`errorConsoleText` carries what the editor's error console prints, in pieces with the colours it prints
+them in: a Lua error comes as `[ERROR:]` in blue, where it was in green and the message in red, all on
+black. It is sent as written, as `localText` is, so its handler must not call the session back. A
+handler that takes only the profile and the text may still be connected.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,
