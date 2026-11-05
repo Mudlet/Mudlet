@@ -34,7 +34,7 @@ else()
 endif()
 
 # A console program on Windows too, unlike mudlet_executable, so that its standard streams work
-add_executable(mudlet_headless_executable main.cpp)
+add_executable(mudlet_headless_executable main.cpp ../HardwareDeviceTypes.h)
 target_compile_definitions(mudlet_headless_executable PRIVATE APP_TARGET="${HEADLESS_APP_TARGET}")
 target_link_libraries(mudlet_headless_executable mudlet_headless mudlet_lsan_hooks)
 set_target_properties(mudlet_headless_executable PROPERTIES

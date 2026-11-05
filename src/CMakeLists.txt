@@ -1081,7 +1081,7 @@ if(USE_GUI)
 
   # main() stays out of the libraries: a test that links them brings its own, and
   # the linker can pull main.cpp's object in for any inline function it defines.
-  add_executable(${EXE_MUDLET_TARGET} main.cpp)
+  add_executable(${EXE_MUDLET_TARGET} main.cpp HardwareDeviceTypes.h)
   target_compile_definitions(${EXE_MUDLET_TARGET} PRIVATE APP_TARGET="${APP_TARGET}")
   set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_NAME})
   target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_APP_TARGET} mudlet_lsan_hooks)
