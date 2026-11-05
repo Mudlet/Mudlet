@@ -191,14 +191,16 @@ describe("trigger matching through the whole-tree index", function()
         local filedBefore = filedCount()
         assert(permRegexTrigger("treeindex alternatives", packageName,
                                 {[[^treeindex_alt tells the (?:group|formation)\b]]}, 'TreeIndexSpecNote("alternatives")'))
+        -- its longest text is in a branch, and a literal taken from there would miss "up"
         assert(permRegexTrigger("treeindex nested alternatives", packageName,
-                                {[[treeindex_nest (?:(?:north|south)ward|up)$]]}, 'TreeIndexSpecNote("nested")'))
+                                {[[treeindex_nest (?:up|(?:north|south)(?:ward_and_onward_far))$]]}, 'TreeIndexSpecNote("nested")'))
         feed("treeindex warm-up line")
         assert.are.equal(filedBefore + 2, filedCount(), "the text outside the alternatives is in every match, so both are filed")
 
         feed("treeindex_alt tells the group hello", "treeindex_alt tells the formation hi", "treeindex_alt tells the groups",
              "treeindex_alt tells the army", "group formation",
-             "go treeindex_nest southward", "go treeindex_nest up", "go treeindex_nest northward", "treeindex_nest west", "northward")
+             "go treeindex_nest southward_and_onward_far", "go treeindex_nest up", "go treeindex_nest northward_and_onward_far",
+             "treeindex_nest west", "northward_and_onward_far")
 
         assert.are.same({alternatives = 2, nested = 3}, fired)
     end)

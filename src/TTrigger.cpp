@@ -233,8 +233,9 @@ QString requiredLiteral(const QString& pattern)
             for (; j < size; ++j) {
                 const QChar d = pattern.at(j);
                 if (d == u'\\') {
-                    // \Q inside a class can quote the ] that ends it
-                    if (j + 1 < size && pattern.at(j + 1) == u'Q') {
+                    // \Q inside a class can quote the ] that ends it, and pcre2
+                    // skips an \E, so a ] after one can be the class's first member
+                    if (j + 1 < size && (pattern.at(j + 1) == u'Q' || pattern.at(j + 1) == u'E')) {
                         return {};
                     }
                     ++j;
