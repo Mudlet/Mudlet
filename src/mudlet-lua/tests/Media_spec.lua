@@ -4694,8 +4694,10 @@ describe("FFmpeg's hardware device types", function()
     local nvidiaDriver = io.open("/proc/driver/nvidia/version")
     if nvidiaDriver then
       nvidiaDriver:close()
-      if decoding == "cuda," .. expected then
-        expected = decoding
+      -- "init": the library loaded, and only the made-up symbol was missing
+      local _, _, failedAt = package.loadlib("libnvcuvid.so", "noSuchSymbol")
+      if failedAt == "init" then
+        expected = "cuda," .. expected
       end
     end
     assert.equals(expected, decoding)
