@@ -233,9 +233,11 @@ QString requiredLiteral(const QString& pattern)
             for (; j < size; ++j) {
                 const QChar d = pattern.at(j);
                 if (d == u'\\') {
-                    // \Q inside a class can quote the ] that ends it, and pcre2
-                    // skips an \E, so a ] after one can be the class's first member
-                    if (j + 1 < size && (pattern.at(j + 1) == u'Q' || pattern.at(j + 1) == u'E')) {
+                    // \Q can quote the ] that ends the class and \c takes the
+                    // character after it; pcre2 skips an \E, so a ] after one
+                    // can be the class's first member
+                    const QChar escaped = j + 1 < size ? pattern.at(j + 1) : QChar();
+                    if (escaped == u'Q' || escaped == u'E' || escaped == u'c') {
                         return {};
                     }
                     ++j;
