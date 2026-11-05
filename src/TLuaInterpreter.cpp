@@ -58,6 +58,7 @@
 #include "utils.h"
 
 #include <hunspell/hunspell.h>
+#include <yajl/yajl_parse.h>
 
 #include <math.h>
 
@@ -82,7 +83,10 @@
 #include <QFileInfo>
 #include <QVector>
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include <limits>
+#include <string>
 
 using namespace std::chrono_literals;
 
@@ -297,6 +301,147 @@ int dofileThroughBytecodeCache(lua_State* L)
     }
     lua_call(L, argumentCount, LUA_MULTRET);
     return lua_gettop(L) - base;
+}
+
+// Builds what yajl.to_value would, straight from yajl's parser: the same table
+// operations in the same order, so even pairs() walks the result alike. Whatever
+// it does not finish, deeper nesting included, is decoded again by yajl.to_value,
+// whose result or error then stands.
+constexpr int scmJsonMaxDepth = 64;
+
+struct JsonToLua
+{
+    lua_State* L = nullptr;
+    const QByteArray* json = nullptr;
+    yajl_handle handle = nullptr;
+    bool decoded = false;
+    int depth = 0;
+    // 0 for an object, otherwise the index the array's next element takes
+    int nextIndex[scmJsonMaxDepth] = {};
+};
+
+// Lua errors longjmp out of these callbacks, through yajl, so nothing alive
+// across a Lua API call may have a destructor
+int jsonStoreValue(JsonToLua* state)
+{
+    if (state->depth) {
+        int& next = state->nextIndex[state->depth - 1];
+        if (next) {
+            lua_rawseti(state->L, -2, next++);
+        } else {
+            lua_rawset(state->L, -3);
+        }
+    }
+    return 1;
+}
+
+double jsonNumberValue(const char* text, const size_t length)
+{
+    char buffer[64];
+    if (length < sizeof(buffer)) {
+        memcpy(buffer, text, length);
+        buffer[length] = '\0';
+        return strtod(buffer, nullptr);
+    }
+    const std::string copy(text, length);
+    return strtod(copy.c_str(), nullptr);
+}
+
+int jsonNull(void* ctx)
+{
+    auto* state = static_cast<JsonToLua*>(ctx);
+    lua_getfield(state->L, LUA_REGISTRYINDEX, "yajl.null");
+    return jsonStoreValue(state);
+}
+
+int jsonBoolean(void* ctx, int value)
+{
+    auto* state = static_cast<JsonToLua*>(ctx);
+    lua_pushboolean(state->L, value);
+    return jsonStoreValue(state);
+}
+
+int jsonNumber(void* ctx, const char* text, size_t length)
+{
+    auto* state = static_cast<JsonToLua*>(ctx);
+    lua_pushnumber(state->L, jsonNumberValue(text, length));
+    return jsonStoreValue(state);
+}
+
+int jsonString(void* ctx, const unsigned char* text, size_t length)
+{
+    auto* state = static_cast<JsonToLua*>(ctx);
+    lua_pushlstring(state->L, reinterpret_cast<const char*>(text), length);
+    return jsonStoreValue(state);
+}
+
+int jsonMapKey(void* ctx, const unsigned char* text, size_t length)
+{
+    lua_pushlstring(static_cast<JsonToLua*>(ctx)->L, reinterpret_cast<const char*>(text), length);
+    return 1;
+}
+
+int jsonStartContainer(JsonToLua* state, const int firstIndex)
+{
+    // a value, its key and the table to put them in
+    if (state->depth == scmJsonMaxDepth || !lua_checkstack(state->L, 3)) {
+        return 0;
+    }
+    lua_newtable(state->L);
+    state->nextIndex[state->depth++] = firstIndex;
+    return 1;
+}
+
+int jsonStartMap(void* ctx)
+{
+    return jsonStartContainer(static_cast<JsonToLua*>(ctx), 0);
+}
+
+int jsonStartArray(void* ctx)
+{
+    return jsonStartContainer(static_cast<JsonToLua*>(ctx), 1);
+}
+
+int jsonEndContainer(void* ctx)
+{
+    auto* state = static_cast<JsonToLua*>(ctx);
+    --state->depth;
+    return jsonStoreValue(state);
+}
+
+const yajl_callbacks scmJsonToLuaCallbacks = {jsonNull, jsonBoolean, nullptr, nullptr, jsonNumber, jsonString, jsonStartMap, jsonMapKey, jsonEndContainer, jsonStartArray, jsonEndContainer};
+
+int decodeJson(lua_State* L)
+{
+    auto* state = static_cast<JsonToLua*>(lua_touserdata(L, 1));
+    lua_pop(L, 1);
+    state->L = L;
+    yajl_status status = yajl_parse(state->handle, reinterpret_cast<const unsigned char*>(state->json->constData()), static_cast<size_t>(state->json->size()));
+    if (status == yajl_status_ok) {
+        status = yajl_complete_parse(state->handle);
+    }
+    state->decoded = (status == yajl_status_ok);
+    return state->decoded ? 1 : 0;
+}
+
+// Pushes what yajl.to_value would return for json, or nothing and false when it did not finish
+bool pushJsonValue(lua_State* L, const QByteArray& json)
+{
+    JsonToLua state;
+    state.json = &json;
+    state.handle = yajl_alloc(&scmJsonToLuaCallbacks, nullptr, &state);
+    if (!state.handle) {
+        return false;
+    }
+    lua_pushcfunction(L, decodeJson);
+    lua_pushlightuserdata(L, &state);
+    const int error = lua_pcall(L, 1, 1, 0);
+    yajl_free(state.handle);
+    if (error || !state.decoded) {
+        lua_pop(L, 1);
+        return false;
+    }
+    return true;
 }
 
 } // namespace
@@ -4458,8 +4603,14 @@ void TLuaInterpreter::parseJSON(QString& key, const QByteArray& utf8Data, const 
         qDebug() << "CRITICAL ERROR: json_to_value not defined";
         return;
     }
-    lua_pushlstring(L, utf8Data.constData(), utf8Data.length());
-    const int error = lua_pcall(L, 1, 1, 0);
+    int error = 0;
+    // a script that put its own decoder in json_to_value has that called
+    if (mStockJsonToValue && lua_tocfunction(L, -1) == mStockJsonToValue && pushJsonValue(L, utf8Data)) {
+        lua_remove(L, -2);
+    } else {
+        lua_pushlstring(L, utf8Data.constData(), utf8Data.length());
+        error = lua_pcall(L, 1, 1, 0);
+    }
     if (!error) {
         // Top of stack should now contain the lua representation of json.
         lua_rawset(L, -3);
@@ -7935,7 +8086,16 @@ void TLuaInterpreter::initLuaGlobals()
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
 
-    loadLuaModule(modLoadMessageQueue, QLatin1String("yajl"), tr("yajl.* Lua functions won't be available."), QString(), QLatin1String("yajl"));
+    mStockJsonToValue = nullptr;
+    if (loadLuaModule(modLoadMessageQueue, QLatin1String("yajl"), tr("yajl.* Lua functions won't be available."), QString(), QLatin1String("yajl"))) {
+        lua_getglobal(pGlobalLua, "yajl");
+        if (lua_istable(pGlobalLua, -1)) {
+            lua_getfield(pGlobalLua, -1, "to_value");
+            mStockJsonToValue = lua_tocfunction(pGlobalLua, -1);
+            lua_pop(pGlobalLua, 1);
+        }
+        lua_pop(pGlobalLua, 1);
+    }
     while (!modLoadMessageQueue.isEmpty()) {
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }

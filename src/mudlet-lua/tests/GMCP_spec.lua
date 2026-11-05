@@ -325,3 +325,139 @@ describe("Tests the functionality of __gmcp_merge_gmcp_sub_tables", function()
     assert.are.same({Vitals = {mp = 2}}, a.Char)
   end)
 end)
+
+describe("Tests that GMCP data decodes as json_to_value decodes it", function()
+  local stockDecoder = _G.json_to_value
+  local unset = {}
+
+  -- what gmcp.JsonSpec.Doc holds after the game sends payload, or unset when it was rejected
+  local function received(payload)
+    gmcp.JsonSpec = {Doc = unset}
+    local escaped = payload:gsub("[<>\255]", {["<"] = "<<", [">"] = ">>", ["\255"] = "\255\255"})
+    feedTelnet("<T_IAC><T_SB><O_GMCP>JsonSpec.Doc " .. escaped .. "<T_IAC><T_SE>")
+    return gmcp.JsonSpec.Doc
+  end
+
+  -- a wrapper is not the stock decoder, so the data goes through it as a script's own decoder would;
+  -- through _G, as busted gives each spec file globals of its own
+  local function receivedThroughYajl(payload)
+    local calls = 0
+    _G.json_to_value = function(text)
+      calls = calls + 1
+      return stockDecoder(text)
+    end
+    local value = received(payload)
+    _G.json_to_value = stockDecoder
+    assert.are.equal(1, calls)
+    return value
+  end
+
+  -- the same values, the same yajl.null, and tables that pairs() walks in the same order
+  local function sameValue(a, b, path)
+    if type(a) ~= type(b) then
+      return false, path .. ": " .. type(a) .. " vs " .. type(b)
+    end
+    if type(a) == "number" then
+      if a ~= b or (a == 0 and 1 / a ~= 1 / b) then
+        return false, path .. ": " .. string.format("%.17g vs %.17g", a, b)
+      end
+      return true
+    end
+    if type(a) ~= "table" then
+      return rawequal(a, b), path .. ": " .. tostring(a) .. " vs " .. tostring(b)
+    end
+    if getmetatable(a) ~= getmetatable(b) then
+      return false, path .. ": metatables differ"
+    end
+    local keyA, keyB = next(a), next(b)
+    while keyA ~= nil or keyB ~= nil do
+      if keyA ~= keyB then
+        return false, path .. ": walks " .. tostring(keyA) .. " vs " .. tostring(keyB)
+      end
+      local same, why = sameValue(a[keyA], b[keyB], path .. "." .. tostring(keyA))
+      if not same then
+        return false, why
+      end
+      keyA, keyB = next(a, keyA), next(b, keyB)
+    end
+    return true
+  end
+
+  local function nested(depth)
+    return string.rep('{"a":[', depth) .. "1" .. string.rep("]}", depth)
+  end
+
+  local manyKeys = {}
+  for i = 1, 60 do
+    manyKeys[#manyKeys + 1] = string.format('"k%d":%d', (i * 37) % 101, i)
+  end
+
+  local documents = {
+    '{"int":1,"neg":-7,"zero":0,"negzero":-0,"negzerofloat":-0.0,"frac":2.5,"tenth":0.1,"exp":1e3,"Exp":1E-3,"plus":123.456e+2}',
+    '{"big":12345678901234567890,"past53":9007199254740993,"huge":1e400,"neghuge":-1e400,"tiny":5e-324,"under":1e-400}',
+    '[' .. string.rep("1", 80) .. ',0.' .. string.rep("0", 300) .. '1,-' .. string.rep("9", 70) .. 'e-50]',
+    '{"a":1,"a":2,"b":{"x":1},"b":[1],"c":null,"c":3}',
+    '{"nul":"\\u0000","mid":"a\\u0000b","pair":"\\ud83d\\ude00","high":"\\ud800","low":"\\udc00x","e":"\\u00e9","esc":"\\"\\\\\\/\\b\\f\\n\\r\\t"}',
+    '{"raw":"caf\195\169 \240\159\152\128","key\195\169":1,"":"empty key"}',
+    '{"o":{},"a":[],"oa":{"x":{},"y":[]},"aa":[[],[{}],{}]}',
+    '[null,1,null,false,true,"s",null]',
+    '{"n":null,"f":false,"t":true}',
+    '{"1":"one","2":"two","10":"ten"}',
+    '{' .. table.concat(manyKeys, ",") .. '}',
+    -- pairs() walks these in another order if the table is made with room for more keys
+    '{"hp":"3200","maxhp":"3500"}', '{"name":"Vadi","level":80}',
+    '[' .. string.rep("1,", 199) .. '1]',
+    ' \t{ "spaced" : [ 1 , 2 ] , "x" : { } } \t',
+    '5', '-0', '"text"', 'true', 'false', 'null', '[]', '{}',
+    '{"esc":"\27[31mred"}',
+    nested(63), nested(64), nested(65), nested(300), nested(3000),
+    '{"a":}', '{"a":1', '[1,]', "{'a':1}", 'tru', '01', '1.', '.5', '-', '"\\x"', '{} x', '{}{}', '/* c */ {}', 'NaN', '[Infinity]', '"tab\there"', '{"text":"a\tb","n":1}',
+  }
+
+  it("builds the same value as yajl.to_value, or rejects what it rejects", function()
+    for _, document in ipairs(documents) do
+      local fast, slow = received(document), receivedThroughYajl(document)
+      assert.are.equal(rawequal(slow, unset), rawequal(fast, unset), document:sub(1, 60))
+      local same, why = sameValue(fast, slow, document:sub(1, 60))
+      assert.is_true(same, why)
+    end
+  end)
+
+  it("gives null as yajl.null", function()
+    assert.is_true(rawequal(yajl.null, received('{"n":null}').n))
+    assert.is_true(rawequal(yajl.null, received("null")))
+  end)
+
+  it("keeps the previous value when the data is not JSON", function()
+    -- yajl takes a raw tab inside a string for an error, so a whole message with one is dropped
+    for _, broken in ipairs({"{broken", '{"text":"a\tb"}'}) do
+      gmcp.JsonSpec = {Doc = "before"}
+      feedTelnet("<T_IAC><T_SB><O_GMCP>JsonSpec.Doc " .. broken .. "<T_IAC><T_SE>")
+      assert.are.equal("before", gmcp.JsonSpec.Doc, broken)
+    end
+  end)
+
+  it("hands the data to a script's own json_to_value", function()
+    local seen
+    _G.json_to_value = function(text)
+      seen = text
+      return "replaced"
+    end
+    finally(function() _G.json_to_value = stockDecoder end)
+    assert.are.equal("replaced", received('{"a":1}'))
+    assert.are.equal('{"a":1}', seen)
+  end)
+
+  it("does not call yajl.to_value while json_to_value is still it", function()
+    local calls = 0
+    local hook, mask, count = debug.gethook()
+    debug.sethook(function()
+      if debug.getinfo(2, "f").func == stockDecoder then
+        calls = calls + 1
+      end
+    end, "c")
+    received('{"a":[1,2,{"b":null}]}')
+    debug.sethook(hook, mask, count)
+    assert.are.equal(0, calls)
+  end)
+end)
