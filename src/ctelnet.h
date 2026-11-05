@@ -583,7 +583,8 @@ private:
     // Whether mUninflatedInput still holds every byte the stream has taken
     bool mUninflatedInputComplete = true;
     // Re-entry depth of processSocketData() while draining leftover
-    // (de)compressed data; bounds stack use.
+    // (de)compressed data; bounds stack use. A replay chunk counts too, as above
+    // zero is what puts off whatever must not land in a trigger's nested event loop.
     int mDecompressionRecursionDepth = 0;
     // Input left over once a drain reached scmMaxDecompressionRecursion, processed
     // ahead of anything read after it

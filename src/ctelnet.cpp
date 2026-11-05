@@ -739,7 +739,7 @@ void cTelnet::connectIt(const QString& address, int port)
         if (mDecompressionRecursionDepth > 0) {
             // A trigger on the last words of the connection that ended: tearing
             // it down from inside their read would reset the parse it is in
-            QTimer::singleShot(0ms, this, [this, address, port]() {
+            QTimer::singleShot(10ms, this, [this, address, port]() {
                 connectIt(address, port);
             });
             return;
@@ -5605,7 +5605,8 @@ void cTelnet::gotRest(std::string& mud_data)
             mpPostingTimer->start();
             mIsTimerPosting = true;
 
-            mMudData.assign(mud_data, i + 1, std::string::npos);
+            // Appended, as a feedTelnet() from a trigger in that post can have left a partial line ahead of this
+            mMudData.append(mud_data, i + 1, std::string::npos);
             mPartialLineHeldSince.start();
         } else {
             if (mMudData.empty()) {
@@ -5648,9 +5649,10 @@ void cTelnet::slot_timerPosting()
     // flush marker would put that, not the read's last bytes, in the tail the next read is joined to
     mMudData += "\r";
 
-    postData();
-    mMudData = "";
+    // Ahead of the post, with mMudData left alone after it: during a trigger on this line, a read
+    // in its nested event loop or a feedTelnet() can leave a partial line of its own for this timer
     mIsTimerPosting = false;
+    postData();
     if (mpHost) {
         mpHost->finalizeMainConsole();
     }
@@ -6038,6 +6040,9 @@ void cTelnet::endReplay(const QString& message)
 void cTelnet::slot_processReplayChunk()
 {
     mReplayChunkPending = false;
+    // Counted as processSocketData() counts: a read in a trigger's nested event loop
+    // would land ahead of the rest of the chunk
+    ++mDecompressionRecursionDepth;
     int datalen = loadedBytes;
     std::string cleandata = "";
     recvdGA = false;
@@ -6128,6 +6133,7 @@ void cTelnet::slot_processReplayChunk()
     if (mpHost) {
         mpHost->finalizeMainConsole();
     }
+    --mDecompressionRecursionDepth;
     if (loadingReplay) {
         loadReplayChunk();
     }

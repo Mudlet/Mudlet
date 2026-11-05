@@ -32,6 +32,8 @@
  * Run with: ctest -R TelnetLargeBurstTest -V
  */
 
+#include <QAbstractEventDispatcher>
+#include <QDataStream>
 #include <QRandomGenerator>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -365,6 +367,22 @@ private:
         smFloodLinesAtNestedLoopEnd = smFloodLines;
         smFloodEventsAtNestedLoopEnd = smFloodEventsHandled;
         return 0;
+    }
+
+    inline static TelnetServerStub* smpGame = nullptr;
+    // Has the game say something from inside a trigger, ahead of its nested event loop
+    static int gameSends(lua_State* L)
+    {
+        smpGame->sendRaw(QByteArray(lua_tostring(L, 1)));
+        return 0;
+    }
+
+    void registerNestedLoopFunctions()
+    {
+        smpGame = mpServer;
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_register(L, "spinNestedEventLoop", spinNestedEventLoop);
+        lua_register(L, "gameSends", gameSends);
     }
 
 private slots:
@@ -702,6 +720,123 @@ private slots:
         QVERIFY2(fromTheGame > lastLineContaining(qsl("LAST FED LINE")), "what the game sent landed in the middle of the fed text");
     }
 
+    void textDuringANestedEventLoopOnAHeldLineIsKept_data()
+    {
+        QTest::addColumn<QString>("during");
+        QTest::addColumn<QString>("lastText");
+        QTest::newRow("a partial line") << qsl(R"(ONLY A PARTIAL)") << qsl("ONLY A PARTIAL");
+        QTest::newRow("lines and a partial line") << qsl(R"(SECOND LINE\r\nTHIRD PART)") << qsl("THIRD PART");
+    }
+
+    // The posting timer shows a partial line after the game falls quiet, outside any read. What the game sends during
+    // a trigger's nested event loop on it is kept. A loop shorter than that timeout, so the timer shows nothing during it.
+    void textDuringANestedEventLoopOnAHeldLineIsKept()
+    {
+        QFETCH(QString, during);
+        QFETCH(QString, lastText);
+        QVERIFY2(connectAgain(), "could not connect to the game again");
+        // The stub's welcome, 100 ms after it accepts, would complete the partial line
+        QTRY_VERIFY(mpServer->clientConnected());
+        QTest::qWait(200);
+        mpServer->sendRaw("READY\r\n");
+        QElapsedTimer timer;
+        timer.start();
+        while (timer.durationElapsed() < 15s && !bufferContains(qsl("READY"))) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        mpHost->mainConsoleView()->buffer.clear();
+        registerNestedLoopFunctions();
+        TLuaInterpreter* lua = mpHost->getLuaInterpreter();
+        QVERIFY(lua->compileAndExecuteScript(qsl(R"(
+            tempRegexTrigger("^HELD LINE", function()
+                gameSends("%1")
+                spinNestedEventLoop(100)
+            end, 1)
+        )")
+                                                     .arg(during)));
+
+        mpServer->sendRaw("HELD LINE");
+        timer.start();
+        while (timer.durationElapsed() < 15s && !bufferContains(lastText)) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        const int last = lastLineContaining(lastText);
+        mpServer->sendRaw("\r\n");
+        QVERIFY2(last >= 0, qPrintable(qsl("\"%1\" was lost.").arg(lastText)));
+        QVERIFY2(last > lastLineContaining(qsl("HELD LINE")), "the text from the nested event loop came ahead of the line it followed");
+    }
+
+    void aPartialLineFedFromATriggerIsKept_data()
+    {
+        QTest::addColumn<QString>("fed");
+        QTest::newRow("on a line the posting timer shows") << qsl("FED TO THE TRIGGER");
+        QTest::newRow("on a whole line") << qsl(R"(FED TO THE TRIGGER\r\n)");
+        QTest::newRow("on a whole line and a partial line") << qsl(R"(FED TO THE TRIGGER\r\nOUTER PARTIAL)");
+    }
+
+    // Offline, as feedTelnet() is refused on a connection
+    void aPartialLineFedFromATriggerIsKept()
+    {
+        QFETCH(QString, fed);
+        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
+            QSignalSpy disconnected(&(mpHost->mTelnet), &cTelnet::signal_disconnected);
+            mpHost->mTelnet.disconnectIt();
+            QVERIFY2(disconnected.count() || disconnected.wait(15s), "the disconnect never finished");
+        }
+        mpHost->mainConsoleView()->buffer.clear();
+        TLuaInterpreter* lua = mpHost->getLuaInterpreter();
+        QVERIFY(lua->compileAndExecuteScript(qsl(R"(
+            tempRegexTrigger("^FED TO THE TRIGGER", function() feedTelnet("LINE FROM THE TRIGGER\r\nPARTIAL FROM THE TRIGGER") end, 1)
+            feedTelnet("%1")
+        )")
+                                                     .arg(fed)));
+
+        QElapsedTimer timer;
+        timer.start();
+        while (timer.durationElapsed() < 15s && !bufferContains(qsl("PARTIAL FROM THE TRIGGER"))) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        const bool kept = bufferContains(qsl("PARTIAL FROM THE TRIGGER"));
+        QVERIFY(lua->compileAndExecuteScript(qsl(R"(feedTelnet("\r\n"))")));
+        QVERIFY2(kept, "the partial line the trigger fed was lost");
+    }
+
+    // A replay can run on a live connection, sharing the text held back from the game
+    void textFromTheGameDuringANestedEventLoopInAReplayFollowsTheChunk()
+    {
+        QVERIFY2(connectAgain(), "could not connect to the game again");
+        mpHost->mainConsoleView()->buffer.clear();
+        registerNestedLoopFunctions();
+        const QString fileName = mConfigDir.filePath(qsl("nested-loop-replay.dat"));
+        {
+            QFile file(fileName);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QDataStream stream(&file);
+            stream.setVersion(QDataStream::Qt_5_12);
+            const QByteArray chunk("REPLAY FIRST\r\nREPLAY LAST\r\n");
+            stream << static_cast<qint32>(0) << static_cast<qint32>(chunk.size());
+            stream.writeRawData(chunk.constData(), static_cast<int>(chunk.size()));
+        }
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl(R"(
+            tempRegexTrigger("^REPLAY FIRST", function()
+                gameSends("LIVE LINE\r\nLIVE PARTIAL")
+                spinNestedEventLoop(100)
+            end, 1)
+            assert(loadReplay("%1"))
+        )")
+                                                                             .arg(fileName)));
+
+        QElapsedTimer timer;
+        timer.start();
+        while (timer.durationElapsed() < 15s && !bufferContains(qsl("LIVE PARTIAL"))) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        const int partial = lastLineContaining(qsl("LIVE PARTIAL"));
+        mpServer->sendRaw("\r\n");
+        QVERIFY2(partial >= 0, "the partial line the game sent was lost");
+        QVERIFY2(lastLineContaining(qsl("LIVE LINE")) > lastLineContaining(qsl("REPLAY LAST")), "the game's text landed in the middle of the replay's chunk");
+    }
+
     // A trigger on the last words that disconnects stops them there, as it
     // would on a connection still open: the goodbye is reads away
     void aTriggerDisconnectingDuringTheLastWordsEndsThem()
@@ -773,6 +908,52 @@ private slots:
                  qPrintable(qsl("the text sent before the close was cut short, at burst line %1 of %2.").arg(firstBurstLineOutOfPlace(lineCount)).arg(lineCount)));
         const int outOfPlace = firstBurstLineOutOfPlace(lineCount);
         QVERIFY2(outOfPlace < 0, qPrintable(qsl("burst line %1 is missing, repeated or out of order.").arg(outOfPlace)));
+    }
+
+    // A reconnect on the last words waits for a trigger's nested event loop, with no more than
+    // a retry now and then in that time: a dialog can stay open for as long as the player likes
+    void aReconnectWaitingForANestedEventLoopLeavesTheEventLoopIdle()
+    {
+        constexpr int loopMilliseconds = 300;
+        QVERIFY2(connectAgain(), "could not connect to the game again");
+        mpHost->mainConsoleView()->buffer.clear();
+        registerNestedLoopFunctions();
+        TLuaInterpreter* lua = mpHost->getLuaInterpreter();
+        QVERIFY(lua->compileAndExecuteScript(qsl(R"(
+            reconnectAsked = false
+            reconnectingTrigger = tempRegexTrigger("^BURSTLINE ", function()
+                local _, _, connected = getConnectionInfo()
+                if not connected and not reconnectAsked then
+                    reconnectAsked = true
+                    reconnect()
+                    spinNestedEventLoop(%1)
+                end
+            end)
+        )")
+                                                     .arg(loopMilliseconds)));
+        int passes = 0;
+        const auto awake = connect(QAbstractEventDispatcher::instance(), &QAbstractEventDispatcher::awake, this, [&passes]() {
+            if (smInNestedLoop) {
+                ++passes;
+            }
+        });
+        QSignalSpy reconnected(&(mpHost->mTelnet), &cTelnet::signal_connected);
+        QSignalSpy accepted(mpServer, &QTcpServer::newConnection);
+
+        // All of it in the socket at once, so that the close is there to notice while most of it is unread
+        mpServer->setSendBufferSize(4 * 1024 * 1024);
+        const bool sent = sendPlainLastWordsAndClose();
+        // The tests after this send to the stub, which drops what it is given ahead of accepting
+        const bool connectedAgain = sent && reconnected.wait(15s) && (accepted.count() || accepted.wait(15s));
+        disconnect(awake);
+        QVERIFY(lua->compileAndExecuteScript(qsl("killTrigger(reconnectingTrigger)")));
+
+        QVERIFY2(sent, "the client never answered the negotiation");
+        QVERIFY2(connectedAgain, "the reconnect never connected");
+        if (passes == 0) {
+            QSKIP("no burst line was left when the close was noticed, which is what this needs");
+        }
+        QVERIFY2(passes < loopMilliseconds, qPrintable(qsl("the event loop went round %1 times in a nested loop of %2 ms.").arg(passes).arg(loopMilliseconds)));
     }
 
     // Reconnecting aborts the live connection, which empties its socket: there
