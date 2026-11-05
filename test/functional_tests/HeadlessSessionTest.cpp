@@ -1677,6 +1677,255 @@ tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.S, [[hea
         QVERIFY(session.shutdown(false));
     }
 
+    // As the GUI's replay toolbar holds, resumes and stops it, and only for a replay of the session's profile
+    void test_aReplayIsPausedResumedAndStopped()
+    {
+        const QString name = qsl("Headless Replay Paused");
+        QVERIFY(writeProfile(name, QString()));
+        const QString logDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, name);
+        QVERIFY(QDir().mkpath(logDir));
+        {
+            QFile file(qsl("%1/three.dat").arg(logDir));
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QDataStream stream(&file);
+            stream.setVersion(QDataStream::Qt_5_12);
+            for (const auto& [gap, bytes] : {std::pair{0, QByteArrayLiteral("First paused line.\r\n")},
+                                             std::pair{1000, QByteArrayLiteral("Second paused line.\r\n")},
+                                             std::pair{1000, QByteArrayLiteral("Third paused line.\r\n")}}) {
+                stream << qint32{gap} << static_cast<qint32>(bytes.size());
+                stream.writeRawData(bytes.constData(), static_cast<int>(bytes.size()));
+            }
+            QCOMPARE(stream.status(), QDataStream::Ok);
+        }
+
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy local(&session, &THeadlessSession::localText);
+        QSignalSpy started(&session, &THeadlessSession::replayStarted);
+        QSignalSpy finished(&session, &THeadlessSession::replayFinished);
+        QStringList heard;
+        connect(&session, &THeadlessSession::replayStarted, this, [&heard]() {
+            heard << qsl("started");
+        });
+        connect(&session, &THeadlessSession::replayFinished, this, [&heard]() {
+            heard << qsl("finished");
+        });
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(!session.replayPaused());
+        QVERIFY(!session.pauseReplay());
+        QCOMPARE(session.errorString(), qsl("No replay of the profile is playing."));
+        QVERIFY(!session.resumeReplay());
+        QVERIFY(!session.stopReplay());
+
+        const QString other = qsl("Headless Replay Paused Elsewhere");
+        QVERIFY(writeProfile(other, QString()));
+        const QString otherLogDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, other);
+        QVERIFY(QDir().mkpath(otherLogDir));
+        QVERIFY(QFile::copy(qsl("%1/three.dat").arg(logDir), qsl("%1/three.dat").arg(otherLogDir)));
+        QVERIFY(session.runLua(qsl("loadProfile('%1', true)").arg(other)));
+        Host* pOther = HostManager::self()->getHost(other);
+        QVERIFY(pOther);
+        QVERIFY(pOther->getLuaInterpreter()->compileAndExecuteScript(qsl("loadReplay('three.dat')")));
+        QVERIFY(MudletReplay::self()->running());
+        QVERIFY(!session.pauseReplay());
+        QCOMPARE(session.errorString(), qsl("No replay of the profile is playing."));
+        QVERIFY(!pOther->mTelnet.replayPaused());
+        pOther->mTelnet.stopReplay();
+        QTRY_VERIFY_WITH_TIMEOUT(!MudletReplay::self()->running(), 10000);
+
+        // Before replayStarted arrives, and before its first line plays; still held when it does arrive
+        QVERIFY(session.runLua(qsl("loadReplay('three.dat')")));
+        QVERIFY(session.pauseReplay());
+        QVERIFY(session.replayPaused());
+        QVERIFY(!session.pauseReplay());
+        QCOMPARE(session.errorString(), qsl("The replay is already paused."));
+        QTRY_COMPARE(started.size(), 1);
+        QVERIFY(session.replayPaused());
+        QTest::qWait(500);
+        QVERIFY(!outputTexts(output).contains(qsl("First paused line.")));
+        QVERIFY(session.resumeReplay());
+        QVERIFY(!session.replayPaused());
+        QVERIFY(!session.resumeReplay());
+        QCOMPARE(session.errorString(), qsl("The replay is not paused."));
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("First paused line.")), 10000);
+
+        QVERIFY(session.pauseReplay());
+        QTest::qWait(1500);
+        QVERIFY(!outputTexts(output).contains(qsl("Second paused line.")));
+        QVERIFY(session.resumeReplay());
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Second paused line.")), 10000);
+
+        // Stopped while held
+        QVERIFY(session.pauseReplay());
+        QVERIFY(session.stopReplay());
+        QVERIFY(!session.replayPaused());
+        QTRY_COMPARE(finished.size(), 1);
+        QCOMPARE(finished.constFirst().at(0).toString(), name);
+        QCOMPARE(heard, (QStringList{qsl("started"), qsl("finished")}));
+        bool toldOfTheStop = false;
+        for (const auto& arguments : std::as_const(local)) {
+            toldOfTheStop = toldOfTheStop || arguments.at(1).toString().contains(qsl("The replay has been stopped."));
+        }
+        QVERIFY(toldOfTheStop);
+        QVERIFY(!session.stopReplay());
+        QTest::qWait(1500);
+        QVERIFY(!outputTexts(output).contains(qsl("Third paused line.")));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A trigger on a replayed line that runs the event loop is in the middle of that line's chunk, which the
+    // replay reads on from where it was once the trigger is done
+    void test_aReplayIsLeftAloneWhileAScriptRuns()
+    {
+        const auto testMode = inTestMode();
+        const QString name = qsl("Headless Replay Busy");
+        QVERIFY(writeProfile(name, QString()));
+        const QString logDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, name);
+        QVERIFY(QDir().mkpath(logDir));
+        {
+            QFile file(qsl("%1/busy.dat").arg(logDir));
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QDataStream stream(&file);
+            stream.setVersion(QDataStream::Qt_5_12);
+            for (const auto& [gap, bytes] : {std::pair{0, QByteArrayLiteral("First busy line.\r\nSecond busy line.\r\n")}, std::pair{200, QByteArrayLiteral("Third busy line.\r\n")}}) {
+                stream << qint32{gap} << static_cast<qint32>(bytes.size());
+                stream.writeRawData(bytes.constData(), static_cast<int>(bytes.size()));
+            }
+            QCOMPARE(stream.status(), QDataStream::Ok);
+        }
+
+        THeadlessSession session;
+        QStringList heard;
+        connect(&session, &THeadlessSession::outputLine, this, [&heard](const QString&, const QString& text) {
+            heard << text;
+        });
+        connect(&session, &THeadlessSession::replayFinished, this, [&heard]() {
+            heard << qsl("finished");
+        });
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(tempTrigger("First busy line.", [[pumpEvents(300)]]))lua")));
+        std::optional<bool> paused;
+        std::optional<bool> stopped;
+        QString why;
+        QVERIFY(session.runLua(qsl("loadReplay('busy.dat')")));
+        QTimer::singleShot(100, &session, [&]() {
+            paused = session.pauseReplay();
+            stopped = session.stopReplay();
+            why = session.errorString();
+        });
+        QTRY_VERIFY_WITH_TIMEOUT(heard.contains(qsl("finished")), 10000);
+        QTest::qWait(100);
+        QCOMPARE(heard.join(QChar::LineFeed), qsl("First busy line.\nSecond busy line.\nThird busy line.\nfinished"));
+        QCOMPARE(paused, std::optional(false));
+        QCOMPARE(stopped, std::optional(false));
+        QCOMPARE(why, qsl("The profile is running a script, so its replay cannot be changed until that has ended."));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A held replay never reaches its end, so the profile's close is what ends it
+    void test_aPausedReplayEndsWithTheProfile_data()
+    {
+        QTest::addColumn<bool>("byScript");
+        QTest::newRow("shutdown()") << false;
+        QTest::newRow("closeProfile()") << true;
+    }
+
+    void test_aPausedReplayEndsWithTheProfile()
+    {
+        QFETCH(const bool, byScript);
+        const QString name = qsl("Headless Replay Held At Close");
+        QVERIFY(writeProfile(name, QString()));
+        const QString logDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, name);
+        QVERIFY(QDir().mkpath(logDir));
+        {
+            QFile file(qsl("%1/held.dat").arg(logDir));
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QDataStream stream(&file);
+            stream.setVersion(QDataStream::Qt_5_12);
+            for (const auto& [gap, bytes] : {std::pair{0, QByteArrayLiteral("First held line.\r\n")}, std::pair{60000, QByteArrayLiteral("Second held line.\r\n")}}) {
+                stream << qint32{gap} << static_cast<qint32>(bytes.size());
+                stream.writeRawData(bytes.constData(), static_cast<int>(bytes.size()));
+            }
+            QCOMPARE(stream.status(), QDataStream::Ok);
+        }
+
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy started(&session, &THeadlessSession::replayStarted);
+        QSignalSpy finished(&session, &THeadlessSession::replayFinished);
+        QSignalSpy quit(&session, &THeadlessSession::quitRequested);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("loadReplay('held.dat')")));
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("First held line.")), 10000);
+        QCOMPARE(started.size(), 1);
+        QVERIFY(session.pauseReplay());
+        if (byScript) {
+            QVERIFY(session.runLua(qsl("closeProfile()")));
+            QTRY_COMPARE_WITH_TIMEOUT(quit.size(), 1, 10000);
+        } else {
+            QVERIFY(session.shutdown(false));
+        }
+        QTRY_COMPARE(finished.size(), 1);
+        QTest::qWait(200);
+        QCOMPARE(finished.size(), 1);
+        QCOMPARE(finished.constFirst().at(0).toString(), name);
+        QVERIFY(!MudletReplay::self() || !MudletReplay::self()->running());
+        if (byScript) {
+            QVERIFY(session.shutdown(false));
+        }
+    }
+
+    // A replay stopped before its replayStarted arrives still sends both, in that order, even if the session
+    // shuts down before the event loop runs
+    void test_aReplayStoppedBeforeItsStartIsPaired_data()
+    {
+        QTest::addColumn<bool>("shutDown");
+        QTest::newRow("then the event loop") << false;
+        QTest::newRow("then shutdown()") << true;
+    }
+
+    void test_aReplayStoppedBeforeItsStartIsPaired()
+    {
+        QFETCH(const bool, shutDown);
+        const QString name = qsl("Headless Replay Stopped Early");
+        QVERIFY(writeProfile(name, QString()));
+        const QString logDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, name);
+        QVERIFY(QDir().mkpath(logDir));
+        {
+            QFile file(qsl("%1/early.dat").arg(logDir));
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QDataStream stream(&file);
+            stream.setVersion(QDataStream::Qt_5_12);
+            const QByteArray bytes = QByteArrayLiteral("Early line.\r\n");
+            stream << qint32{60000} << static_cast<qint32>(bytes.size());
+            stream.writeRawData(bytes.constData(), static_cast<int>(bytes.size()));
+            QCOMPARE(stream.status(), QDataStream::Ok);
+        }
+
+        THeadlessSession session;
+        QStringList heard;
+        connect(&session, &THeadlessSession::replayStarted, this, [&heard](const QString& profile) {
+            heard << qsl("started %1").arg(profile);
+        });
+        connect(&session, &THeadlessSession::replayFinished, this, [&heard](const QString& profile) {
+            heard << qsl("finished %1").arg(profile);
+        });
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("loadReplay('early.dat')")));
+        QVERIFY(session.stopReplay());
+        if (shutDown) {
+            QVERIFY(session.shutdown(false));
+        }
+        const QStringList paired{qsl("started %1").arg(name), qsl("finished %1").arg(name)};
+        QTRY_COMPARE(heard, paired);
+        QTest::qWait(200);
+        QCOMPARE(heard, paired);
+        QVERIFY(!MudletReplay::self() || !MudletReplay::self()->running());
+        if (!shutDown) {
+            QVERIFY(session.shutdown(false));
+        }
+    }
+
     // What the speech bridge, Discord and the MCP bridge take for the profile in front
     void test_setActiveProfileNamesTheActiveHost()
     {

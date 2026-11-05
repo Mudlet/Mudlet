@@ -622,47 +622,28 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                             }
                         },
                         Qt::QueuedConnection);
-                // Only one of this profile, as the GUI's toolbar drives the profile that plays it; queued, as a
-                // script's loadReplay() starts it
+                // Only one of this profile, as the GUI's toolbar drives the profile that plays it; sent from the
+                // event loop, as a script's loadReplay() starts it
                 if (MudletReplay* pReplay = MudletReplay::self()) {
                     connect(pReplay, &MudletReplay::signal_replayStarted, this, [this, run, pReplay]() {
-                        if (!mpHost || pReplay->host() != mpHost.data()) {
+                        if (run != mRun || !mpHost || pReplay->host() != mpHost.data()) {
                             return;
                         }
-                        QMetaObject::invokeMethod(
-                                this,
-                                [this, run]() {
-                                    // Not by whether a replay plays now: one with nothing in it has ended already, and
-                                    // the over relay queued behind this pairs with it
-                                    if (run == mRun && mpHost) {
-                                        mReplayFor = mProfileName;
-                                        const QString profile = mProfileName;
-                                        emit replayStarted(profile);
-                                    }
-                                },
-                                Qt::QueuedConnection);
+                        mReplayFor = mProfileName;
+                        queueReplaySignal(ReplaySignal::started);
                     });
-                    connect(
-                            pReplay,
-                            &MudletReplay::signal_replaySpeedChanged,
-                            this,
-                            [this, run](const int speed) {
-                                if (run == mRun && mReplayFor) {
-                                    const QString profile = *mReplayFor;
-                                    emit replaySpeedChanged(profile, speed);
-                                }
-                            },
-                            Qt::QueuedConnection);
-                    connect(
-                            pReplay,
-                            &MudletReplay::signal_replayOver,
-                            this,
-                            [this, run]() {
-                                if (const auto profile = std::exchange(mReplayFor, std::nullopt); run == mRun && profile) {
-                                    emit replayFinished(*profile);
-                                }
-                            },
-                            Qt::QueuedConnection);
+                    connect(pReplay, &MudletReplay::signal_replaySpeedChanged, this, [this, run](const int speed) {
+                        if (run == mRun && mReplayFor) {
+                            queueReplaySignal(ReplaySignal::speedChanged, speed);
+                        }
+                    });
+                    // Whichever ended is this profile's while mReplayFor is held, as only one replay plays at a time
+                    connect(pReplay, &MudletReplay::signal_replayOver, this, [this, run]() {
+                        if (run == mRun && mReplayFor) {
+                            queueReplaySignal(ReplaySignal::finished);
+                            mReplayFor.reset();
+                        }
+                    });
                 }
                 // Direct, so it keeps its place among the game's lines and hiddenInputWanted; an exit handler's
                 // text is for a line the app no longer shows, and a script's close raises it before quitRequested
@@ -1280,6 +1261,69 @@ bool THeadlessSession::setCommandLineText(const QString& text, const CommandLine
     return true;
 }
 
+namespace {
+
+// By the profile's own replay, not replayStarted's relay, which is queued. Not while a script runs: one that runs
+// the event loop may be in the middle of a chunk, which cTelnet reads on from where it was once the script is done.
+bool replayPlaysIn(Host* pHost, QString& errorString)
+{
+    if (pHost->busyRunning()) {
+        //: Error from a frontend with no window that was asked to pause, resume, stop or change the speed of a replay while a script of its profile is running, maybe in the middle of a replayed line
+        errorString = QCoreApplication::translate("THeadlessSession", "The profile is running a script, so its replay cannot be changed until that has ended.");
+        return false;
+    }
+    if (pHost->mTelnet.isReplaying()) {
+        return true;
+    }
+    //: Error from a frontend with no window that was asked to pause, resume, stop or change the speed of a replay when its profile plays none
+    errorString = QCoreApplication::translate("THeadlessSession", "No replay of the profile is playing.");
+    return false;
+}
+
+} // namespace
+
+bool THeadlessSession::pauseReplay()
+{
+    if (!usable() || !replayPlaysIn(mpHost, mErrorString)) {
+        return false;
+    }
+    if (mpHost->mTelnet.replayPaused()) {
+        //: Error from a frontend with no window that was asked to pause a replay that is already paused
+        mErrorString = tr("The replay is already paused.");
+        return false;
+    }
+    mpHost->mTelnet.pauseReplay();
+    return true;
+}
+
+bool THeadlessSession::resumeReplay()
+{
+    if (!usable() || !replayPlaysIn(mpHost, mErrorString)) {
+        return false;
+    }
+    if (!mpHost->mTelnet.replayPaused()) {
+        //: Error from a frontend with no window that was asked to resume a replay that is not paused
+        mErrorString = tr("The replay is not paused.");
+        return false;
+    }
+    mpHost->mTelnet.resumeReplay();
+    return true;
+}
+
+bool THeadlessSession::stopReplay()
+{
+    if (!usable() || !replayPlaysIn(mpHost, mErrorString)) {
+        return false;
+    }
+    mpHost->mTelnet.stopReplay();
+    return true;
+}
+
+bool THeadlessSession::replayPaused() const
+{
+    return mpHost && mpHost->mTelnet.isReplaying() && mpHost->mTelnet.replayPaused();
+}
+
 void THeadlessSession::noteAlreadyInstalled(const QString& path, const QString& name)
 {
     const QString version = mpHost->mPackageInfo.value(name).value(qsl("version"));
@@ -1495,10 +1539,47 @@ bool THeadlessSession::finishOpenProgress()
     if (!self) {
         return false;
     }
-    if (const auto profile = std::exchange(mReplayFor, std::nullopt)) {
-        emit replayFinished(*profile);
+    if (mReplayFor) {
+        queueReplaySignal(ReplaySignal::finished);
+        mReplayFor.reset();
     }
-    return self;
+    return sendReplaySignals();
+}
+
+void THeadlessSession::queueReplaySignal(const ReplaySignal signal, const int speed)
+{
+    mReplaySignals.append({signal, *mReplayFor, speed});
+    QMetaObject::invokeMethod(
+            this,
+            [this, run = mRun]() {
+                if (run == mRun) {
+                    sendReplaySignals();
+                }
+            },
+            Qt::QueuedConnection);
+}
+
+bool THeadlessSession::sendReplaySignals()
+{
+    const QPointer<THeadlessSession> self(this);
+    while (!mReplaySignals.isEmpty()) {
+        const QueuedReplaySignal next = mReplaySignals.takeFirst();
+        switch (next.signal) {
+        case ReplaySignal::started:
+            emit replayStarted(next.profile);
+            break;
+        case ReplaySignal::speedChanged:
+            emit replaySpeedChanged(next.profile, next.speed);
+            break;
+        case ReplaySignal::finished:
+            emit replayFinished(next.profile);
+            break;
+        }
+        if (!self) {
+            return false;
+        }
+    }
+    return true;
 }
 
 namespace {

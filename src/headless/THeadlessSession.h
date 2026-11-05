@@ -214,6 +214,17 @@ public:
     // input; a line ended by a go-ahead ahead of the request, even in the same read, has its triggers run on the
     // line as it was, in the GUI too. Refused where submit() is.
     bool setCommandLineText(const QString& text, CommandLineEdit edit = CommandLineEdit::typed);
+    // The GUI's replay toolbar, for a replay of the session's profile: pauseReplay() holds it where it is and
+    // resumeReplay() lets it carry on, each false unless it is playing or held as it needs; stopReplay() ends it
+    // as the toolbar's Stop does, saying so in localText. False with no replay of this profile playing, though one
+    // a script began counts before replayStarted arrives, while a script of the profile runs, as from a nested
+    // event loop in the middle of a replayed chunk, and where submit() is refused.
+    bool pauseReplay();
+    bool resumeReplay();
+    bool stopReplay();
+    // Whether the replay of the session's profile is held, as the toolbar reads it; one paused before its
+    // replayStarted arrives is still held when it does
+    bool replayPaused() const;
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -331,6 +342,11 @@ private:
     void withdrawSecureConnectionOffer();
     void startMapProgress(const QString& title, const QString& label, int maximum);
     bool finishOpenProgress();
+    // Told as they happen and sent from the event loop in that order, or by finishOpenProgress() if it comes
+    // first; MudletReplay forgets its host before it says it is over, so whose replay it was is known only then
+    enum class ReplaySignal { started, speedChanged, finished };
+    void queueReplaySignal(ReplaySignal, int speed = 0);
+    bool sendReplaySignals();
     void lineCommitted(int lineIndex);
     // text is null when the app did not give it
     KeyResult offerKey(Qt::Key, Qt::KeyboardModifiers, const QString* text);
@@ -360,6 +376,13 @@ private:
     std::optional<QString> mMapProgressFor;
     std::optional<QString> mPackageDownloadFor;
     std::optional<QString> mReplayFor;
+    struct QueuedReplaySignal
+    {
+        ReplaySignal signal;
+        QString profile;
+        int speed = 0;
+    };
+    QList<QueuedReplaySignal> mReplaySignals;
     bool mMapOperationCancelable = false;
     QStringList mUnsavedProfiles;
     // Bumped by each start() and shutdown(), to drop a queued quitRequested or other relay owed to the profile
