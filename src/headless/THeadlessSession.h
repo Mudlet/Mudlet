@@ -202,6 +202,18 @@ public:
     // With what the key typed, as QKeyEvent::text(), even if empty, by which the hidden-input box judges it as
     // the GUI's does
     KeyResult pressKey(Qt::Key key, Qt::KeyboardModifiers modifiers, const QString& text);
+    // typed: the player typed it. notTyped: the app set it itself, as the GUI's line does for a history recall
+    // or Tab completion, or put back text from a script that it set aside while hidden input was wanted.
+    enum class CommandLineEdit { typed, notTyped };
+    // What the player has typed so far on the app's input line, which a script's getCmdLine() then reads, as it
+    // reads the GUI's command line. Set again as the line changes; after a submit() the line is as the profile
+    // leaves it, and commandLineTextRequested says when Mudlet empties it. No commandLineTextRequested follows
+    // this. While hidden input is wanted only an empty line is taken. A line the player typed ahead of the game's
+    // request to hide input leaves Mudlet's copy before a trigger runs on any line that reaches Mudlet after that
+    // request, and typedLineMoveRequested ahead of hiddenInputWanted tells the app to move it into its hidden
+    // input; a line ended by a go-ahead ahead of the request, even in the same read, has its triggers run on the
+    // line as it was, in the GUI too. Refused where submit() is.
+    bool setCommandLineText(const QString& text, CommandLineEdit edit = CommandLineEdit::typed);
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -300,6 +312,11 @@ signals:
     // hidden input is wanted is lost, as the GUI writes it into its hidden-input box instead. Sent as it is set, so
     // a handler may neither call the session nor run the event loop.
     void commandLineTextRequested(const QString& profile, const QString& text);
+    // What the player typed ahead of the game's request to hide input has left Mudlet's copy of the line, as the
+    // GUI's hidden-input box takes it from its command line: the app moves its input line's text into its hidden
+    // input and empties the line. Just before hiddenInputWanted turns on; a handler may neither call the session
+    // nor run the event loop.
+    void typedLineMoveRequested(const QString& profile);
     // The connection was made; from the event loop
     void connected(const QString& profile);
     // The connection ended, or could not be made; from the event loop

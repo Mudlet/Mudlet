@@ -420,13 +420,24 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     --gSignalsBeingHandedOut;
                 });
                 // Direct, as the GUI opens and closes its box inside the emit
-                connect(pNewHost, &Host::signal_passwordEntryWantedChanged, this, [this, run](const bool wanted) {
+                connect(pNewHost, &Host::signal_passwordEntryWantedChanged, this, [this, run, pNewHost](const bool wanted) {
                     // The close of a profile being let go reads the game's data still, but its false has been sent
                     if (run != mRun || wanted == mHiddenInputFor.has_value()) {
                         return;
                     }
+                    auto* pView = dynamic_cast<TNullConsoleFrontend*>(pNewHost->consoleFrontend());
+                    const bool moved = wanted && pView && pView->hiddenInputOpened();
                     const QString profile = mProfileName;
                     mHiddenInputFor = wanted ? std::optional<QString>(profile) : std::nullopt;
+                    if (moved) {
+                        const QPointer<THeadlessSession> self(this);
+                        ++gSignalsBeingHandedOut;
+                        emit typedLineMoveRequested(profile);
+                        --gSignalsBeingHandedOut;
+                        if (!self) {
+                            return;
+                        }
+                    }
                     ++gSignalsBeingHandedOut;
                     emit hiddenInputWanted(profile, wanted);
                     --gSignalsBeingHandedOut;
@@ -1235,6 +1246,10 @@ THeadlessSession::KeyResult THeadlessSession::offerKey(const Qt::Key key, const 
             return KeyResult::bindingRan;
         }
         if (commandLineKeepsKey(*mpHost, event)) {
+            // TCommandLine selects its whole line on Escape, so what the player types next replaces it
+            if (auto* pFrontend = mpHost->consoleFrontend(); key == Qt::Key_Escape && pFrontend) {
+                pFrontend->selectCommandLineText(QString());
+            }
             //: Error from a frontend with no window that was given a key press, such as Return or Up, which the GUI's command line acts on itself rather than offering it to any key binding
             mErrorString = tr("The GUI's command line keeps that key for itself, offering it to no key binding; the app handles it.");
             return KeyResult::keyKept;
@@ -1247,6 +1262,22 @@ THeadlessSession::KeyResult THeadlessSession::offerKey(const Qt::Key key, const 
     //: Error from a frontend with no window that was given a key press which none of the profile's key bindings takes
     mErrorString = tr("No key binding of the profile takes that key.");
     return KeyResult::noBinding;
+}
+
+bool THeadlessSession::setCommandLineText(const QString& text, const CommandLineEdit edit)
+{
+    if (!usable()) {
+        return false;
+    }
+    if (mpHost->passwordEntryWanted() && !text.isEmpty()) {
+        //: Error from a frontend with no window that was given the text of its input line while the game hides what the player types, as for a password, which scripts must not read
+        mErrorString = tr("The command line takes no text while the game hides what is typed; send it with submitHiddenInput().");
+        return false;
+    }
+    if (auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend())) {
+        pView->typeMainCommandLine(text, edit == CommandLineEdit::typed);
+    }
+    return true;
 }
 
 void THeadlessSession::noteAlreadyInstalled(const QString& path, const QString& name)
