@@ -113,6 +113,60 @@ be in these areas...</numerusform>
 (ID) ==&gt; &quot;name&quot;</numerusform>
         </translation>
     </message>
+    <message numerus="yes">
+        <location filename="../../src/TRoomDB.cpp" line="1156"/>
+        <source>[ INFO ]  - In area with id: %1 there were %n room(s) missing from those it
+should be recording as possessing, they were:
+%2
+they have been added.</source>
+        <extracomment>%1 is the area id, %n how many rooms were missing and %2 the list of their ids</extracomment>
+        <translation>
+            <numerusform>[ INFO ]  - In area with id: %1 there was %n room missing from those it
+should be recording as possessing, it was:
+%2
+it has been added.</numerusform>
+            <numerusform>[ INFO ]  - In area with id: %1 there were %n rooms missing from those it
+should be recording as possessing, they were:
+%2
+they have been added.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/TRoomDB.cpp" line="1166"/>
+        <source>[ INFO ]  - In this area there were %n room(s) missing from those it should be recorded as possessing.  They are: %1.  They have been added.</source>
+        <extracomment>%n is how many rooms were missing and %1 the list of their ids</extracomment>
+        <translation>
+            <numerusform>[ INFO ]  - In this area there was %n room missing from those it should be recorded as possessing.  It is: %1.  It has been added.</numerusform>
+            <numerusform>[ INFO ]  - In this area there were %n rooms missing from those it should be recorded as possessing.  They are: %1.  They have been added.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/TRoomDB.cpp" line="1195"/>
+        <source>[ INFO ]  - In area with id: %1 there were %n extra room(s) compared to those it
+should be recording as possessing, they were:
+%2
+they have been removed.</source>
+        <extracomment>%1 is the area id, %n how many extra rooms there were and %2 the list of their ids</extracomment>
+        <translation>
+            <numerusform>[ INFO ]  - In area with id: %1 there was %n extra room compared to those it
+should be recording as possessing, it was:
+%2
+it has been removed.</numerusform>
+            <numerusform>[ INFO ]  - In area with id: %1 there were %n extra rooms compared to those it
+should be recording as possessing, they were:
+%2
+they have been removed.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/TRoomDB.cpp" line="1205"/>
+        <source>[ INFO ]  - In this area there were %n extra room(s) that it should not be recorded as possessing.  They were: %1.  They have been removed.</source>
+        <extracomment>%n is how many extra rooms there were and %1 the list of their ids</extracomment>
+        <translation>
+            <numerusform>[ INFO ]  - In this area there was %n extra room that it should not be recorded as possessing.  It was: %1.  It has been removed.</numerusform>
+            <numerusform>[ INFO ]  - In this area there were %n extra rooms that it should not be recorded as possessing.  They were: %1.  They have been removed.</numerusform>
+        </translation>
+    </message>
 </context>
 <context>
     <name>TTrigger</name>
