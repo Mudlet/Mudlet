@@ -23,6 +23,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
+#include "MudletMedia.h"
 #include "MudletReplay.h"
 #include "SecureStringUtils.h"
 #include "TAppFrontend.h"
@@ -722,6 +723,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                         }
                     });
                 }
+                connectInputRelays(run);
                 // Direct, so it keeps its place among the game's lines and hiddenInputWanted; an exit handler's
                 // text is for a line the app no longer shows, and a script's close raises it before quitRequested
                 connect(pNewHost, &Host::signal_commandLineTextRequested, this, [this, run, pNewHost](const QString& text) {
@@ -1698,6 +1700,9 @@ void THeadlessSession::detachFromHost()
     }
     if (MudletReplay* pReplay = MudletReplay::self()) {
         disconnect(pReplay, nullptr, this, nullptr);
+    }
+    if (MudletMedia* pMedia = MudletMedia::self()) {
+        disconnect(pMedia, nullptr, this, nullptr);
     }
 }
 

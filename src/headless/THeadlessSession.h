@@ -292,6 +292,15 @@ public:
     // console it was dropped at, in the app's own pixels. False, raising nothing, for data with neither URLs nor text,
     // which the GUI's console does not take. Refused where submit() is.
     bool dropOnMainConsole(const QMimeData& data, const QPoint& position);
+    // The main window's mute buttons: sounds that scripts play, and sounds the game sends over GMCP or MSP. Muting
+    // is for every profile, as in the GUI: the session's own and those its scripts opened, and a change raises
+    // sysSettingChanged with muteMediaAPI or muteMediaGame in each. toggleAllSoundsMuted() is the button for
+    // both: it unmutes both when both are muted, and otherwise mutes both. Refused where submit() is.
+    enum class SoundSource { scripts, game };
+    bool setSoundsMuted(SoundSource source, bool muted);
+    bool toggleAllSoundsMuted();
+    // False with no profile open
+    bool soundsMuted(SoundSource source) const;
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -424,6 +433,11 @@ signals:
     // input and empties the line. Just before hiddenInputWanted turns on; a handler may neither call the session
     // nor run the event loop.
     void typedLineMoveRequested(const QString& profile);
+    // Either kind of sound was muted or unmuted, by the session or by a script's setConfig() in any of its profiles,
+    // for the app's mute buttons to show; sent for a call that left it as it was too, as the GUI's buttons hear it.
+    // Not for a profile, as muting is for all of them, but no longer sent once the session's own profile has closed.
+    // From the event loop.
+    void soundsMutedChanged(THeadlessSession::SoundSource source, bool muted);
     // The connection was made; from the event loop
     void connected(const QString& profile);
     // The connection ended, or could not be made; from the event loop
@@ -435,6 +449,7 @@ signals:
 private:
     bool storeConnectionDetails(const Options&, std::optional<bool> tls);
     void detachFromHost();
+    void connectInputRelays(unsigned int run);
     void withdrawSecureConnectionOffer();
     void startMapProgress(const QString& title, const QString& label, int maximum);
     bool finishOpenProgress();
