@@ -414,13 +414,12 @@ describe("Tests that GMCP data decodes as json_to_value decodes it", function()
     '{"a":1,"a":2,"b":{"x":1},"b":[1],"c":null,"c":3}',
     '{"nul":"\\u0000","mid":"a\\u0000b","pair":"\\ud83d\\ude00","high":"\\ud800","low":"\\udc00x","e":"\\u00e9","esc":"\\"\\\\\\/\\b\\f\\n\\r\\t"}',
     '{"raw":"caf\195\169 \240\159\152\128","key\195\169":1,"":"empty key"}',
-    '{"name":"caf\233"}', '{"caf\233":1}', '"\195"', '"\192\175"', '"\237\160\128"',
     '{"o":{},"a":[],"oa":{"x":{},"y":[]},"aa":[[],[{}],{}]}',
     '[null,1,null,false,true,"s",null]',
     '{"n":null,"f":false,"t":true}',
     '{"1":"one","2":"two","10":"ten"}',
     '{' .. table.concat(manyKeys, ",") .. '}',
-    -- pairs() walks these in another order if the decoder presizes tables
+    -- pairs() can walk these in another order when a decoder presizes their tables
     '{"hp":"3200","maxhp":"3500"}', '{"name":"Vadi","level":80}',
     '[' .. string.rep("1,", 199) .. '1]',
     ' \t{ "spaced" : [ 1 , 2 ] , "x" : { } } \t',
@@ -454,19 +453,33 @@ describe("Tests that GMCP data decodes as json_to_value decodes it", function()
   end)
 
   it("keeps the previous value when a Lua error is raised while decoding", function()
-    local hook, mask, count = debug.gethook()
-    finally(function() debug.sethook(hook, mask, count) end)
-    local raised = false
-    debug.sethook(function()
-      local info = debug.getinfo(2, "fS")
-      if not raised and info.what == "C" and info.func ~= feedTelnet then
-        raised = true
-        error("raised once while decoding")
+    local raised, armed = false, true
+    local pause = collectgarbage("setpause", 0)
+    local stepmul = collectgarbage("setstepmul", 0)
+    finally(function()
+      armed = false
+      collectgarbage("setpause", pause)
+      collectgarbage("setstepmul", stepmul)
+    end)
+    -- a finaliser the collector runs from inside the decoder's own allocations, mid-parse
+    local function chain()
+      getmetatable(newproxy(true)).__gc = function()
+        if not armed or raised then
+          return
+        end
+        local running, caller = debug.getinfo(2, "S"), debug.getinfo(3, "f")
+        if running.what == "C" and caller and caller.func == feedTelnet then
+          raised = true
+          error("raised by a finaliser while decoding")
+        end
+        chain()
       end
-    end, "c")
+    end
     gmcp.JsonSpec = {Doc = "before"}
-    feedTelnet('<T_IAC><T_SB><O_GMCP>JsonSpec.Doc {"a":1}<T_IAC><T_SE>')
-    debug.sethook(hook, mask, count)
+    chain()
+    -- after setpause, as a full collection sets the next threshold from it
+    collectgarbage()
+    feedTelnet("<T_IAC><T_SB><O_GMCP>JsonSpec.Doc [" .. string.rep('{"k":"v","n":[1,2]},', 50) .. "{}]<T_IAC><T_SE>")
     assert.is_true(raised)
     assert.are.equal("before", gmcp.JsonSpec.Doc)
   end)

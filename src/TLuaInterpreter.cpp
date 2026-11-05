@@ -304,8 +304,8 @@ int dofileThroughBytecodeCache(lua_State* L)
 
 constexpr int scmJsonMaxDepth = 64;
 
-// yajl.to_value's table operations in its order, with no presizing, or pairs() walks the result
-// differently. Whatever this does not finish, nesting past scmJsonMaxDepth included, is left to it.
+// Repeats yajl.to_value's table operations in its order, unpresized, or pairs() would walk the result
+// differently. What yajl rejects or this gives up on, nesting past scmJsonMaxDepth included, is left to it.
 struct JsonToLua
 {
     lua_State* L = nullptr;
@@ -332,6 +332,7 @@ int jsonStoreValue(JsonToLua* state)
     return 1;
 }
 
+// strtod as yajl.to_value uses, so the values match
 double jsonNumberValue(lua_State* L, const char* text, const size_t length)
 {
     char buffer[64];
@@ -423,7 +424,7 @@ int decodeJson(lua_State* L)
 }
 
 // Pushes what yajl.to_value would return for json, or the message of a Lua error raised meanwhile
-// with error set; returns false with nothing pushed when it did not finish
+// with error set; returns false with nothing pushed when yajl rejected or this gave up on the parse
 bool pushJsonValue(lua_State* L, const QByteArray& json, int& error)
 {
     JsonToLua state;
