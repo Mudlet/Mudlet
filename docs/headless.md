@@ -498,6 +498,12 @@ the profile's save, set them. As in the GUI, an indent of the wrap width or more
 more than half of it is half. `consoleWrapChanged` carries each change; a mini console's wrap does not
 send it.
 
+`consoleForeground()` and `consoleBackground()` are the profile's own colours, which the main console
+is drawn in where the game asks for none, and which `TextRun` marks as the profile's own.
+`consoleColorsChanged` carries both when either changes: from a script's `setBackgroundColor()` on the
+main console, or a package or save loaded into the profile with colours of its own. A mini console's
+background does not send it, nor does the game redefining its palette, which leaves both as they were.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,

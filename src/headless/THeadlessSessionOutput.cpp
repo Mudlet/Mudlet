@@ -31,9 +31,20 @@ THeadlessSession::ConsoleWrap THeadlessSession::consoleWrap() const
     return {model.mWrapAt, model.mIndentCount, model.mHangingIndentCount};
 }
 
+QColor THeadlessSession::consoleForeground() const
+{
+    return mpHost ? mpHost->mainConsoleModel().mFgColor : QColor();
+}
+
+QColor THeadlessSession::consoleBackground() const
+{
+    return mpHost ? mpHost->mainConsoleModel().mBgColor : QColor();
+}
+
 void THeadlessSession::connectOutputRelays(Host* pHost, const unsigned int run)
 {
     mDeliveredConsoleWrap.reset();
+    mDeliveredConsoleColors.reset();
     // Read at delivery, not as sent: the load sets each of the three in turn, and consoleWrap() gave the last already
     connect(
             &pHost->mainConsoleModel().mNotifier,
@@ -52,9 +63,28 @@ void THeadlessSession::connectOutputRelays(Host* pHost, const unsigned int run)
                 emit consoleWrapChanged(profile, wrap.wrapAt, wrap.indent, wrap.hangingIndent);
             },
             Qt::QueuedConnection);
+    // A change of the game's palette sends this too, and leaves both colours as they were
+    connect(
+            &pHost->mainConsoleModel().mNotifier,
+            &TConsoleModelNotifier::colorsChanged,
+            this,
+            [this, run]() {
+                if (run != mRun || !mpHost || !mDeliveredConsoleColors) {
+                    return;
+                }
+                const std::pair colors{consoleForeground(), consoleBackground()};
+                if (colors == *mDeliveredConsoleColors) {
+                    return;
+                }
+                mDeliveredConsoleColors = colors;
+                const QString profile = mProfileName;
+                emit consoleColorsChanged(profile, colors.first, colors.second);
+            },
+            Qt::QueuedConnection);
 }
 
 void THeadlessSession::noteOutputStateAtLoad()
 {
     mDeliveredConsoleWrap = consoleWrap();
+    mDeliveredConsoleColors = {consoleForeground(), consoleBackground()};
 }
