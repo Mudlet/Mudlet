@@ -307,8 +307,9 @@ the main line holds what `submit()` sends while its aliases run, so `getCmdLine(
 if the profile clears the line after a send, an empty line follows the send. It is sent as it is set, so
 it keeps its place among the game's lines and `hiddenInputWanted`, and a handler may neither call the
 session nor run the event loop. Only the main command line is sent: a line from
-`createCommandLine()` or Geyser is not. Mudlet does not know what the app's user has typed, so
-`getCmdLine()` reads what a script or `submit()` last set. Nothing is sent:
+`createCommandLine()` or Geyser is not. Mudlet does not know what the app's user has typed until the
+app says with `setCommandLineText()`; until then `getCmdLine()` reads what a script or `submit()` last
+set. Nothing is sent:
 
 - while hidden input is wanted: the GUI writes such text into its hidden-input box instead, so it is
   lost, neither kept for `getCmdLine()` nor sent;
@@ -318,12 +319,52 @@ session nor run the event loop. Only the main command line is sent: a line from
 When `hiddenInputWanted` turns on, the app sets aside the text its input line holds from a script, as
 `commandLineTextRequested` last gave it, keeps it out of its masked line, and shows it again when hidden
 input ends, as the GUI's command line stays behind its hidden-input box; only what the player typed
-ahead may move into the masked line.
+ahead moves into the masked line, when Mudlet says so (see `setCommandLineText()` below).
 
 `submit()` stands for the app's input line being sent, so it holds the line and then empties or keeps it
 as the profile says, as the GUI's line does. A command sent from anywhere else, such as a button or a
 menu, goes through `runLua()` calling `expandAlias()` with the command as a quoted Lua string: that runs
 its aliases and sends it as a script would, and leaves the line and the command history alone.
+
+`setCommandLineText()` is the other way: what the player has typed so far on the app's input line,
+which a script's `getCmdLine()` then reads, as it reads the GUI's command line, so a key binding or
+package that acts on the line being typed sees it. It is stored as plain text, as the GUI's line gives
+it back. The app calls it as the line changes. It need not empty the line after `submit()`: the line is
+then as the profile leaves it, and `commandLineTextRequested` says so when Mudlet empties it. It sends
+no `commandLineTextRequested`, so an app that hands that signal's text back, once the signal is over,
+starts no loop. Text the app sets on the line itself, rather than the player typing it, goes with
+`CommandLineEdit::notTyped`: a history recall, a Tab completion, and text from a script it set aside
+while hidden input was wanted and puts back. The GUI's line does not count such text as typed either,
+though it does count what it puts back from its hidden-input box, which the app hands back as typed.
+
+What it guarantees about hidden input is narrow:
+
+- While `hiddenInputWanted` is true, only an empty line is taken; other text is refused.
+- When the game asks to hide input and the line holds what the player typed, not what a script set,
+  Mudlet overwrites and empties its copy before a trigger runs on any line that reaches Mudlet after
+  that request, as the GUI's hidden-input box takes such text from its command line. A line ended by a
+  go-ahead ahead of the request, even in the same read, has its triggers run on the line as it was, in
+  the GUI too.
+- A line counts as the player's when it was typed on an empty line, or typed into a line the GUI would
+  have selected: one a `submit()` kept as the profile does not clear it, one a script set with
+  `sendCmdLine()` or selected with `selectCmdLineText()`, one Escape selected (`pressKey()` says
+  `keyKept`), or one set as `notTyped`. Mudlet does not see the app's caret or selection, so any change
+  to such a line counts as typed, and so does any change that leaves a line no longer starting with what
+  it held, as when the player selects it in the app and types over it, or deletes some of it. A change
+  that still starts with a script's line keeps it the script's: typing on at its end, as in the GUI, but
+  also a whole-line replace in one step that happens to start with it, such as pasting `bobby123` over a
+  selected `bob`, unless Mudlet marked the line selected. Both rules err towards moving the line into
+  hidden input.
+- Mudlet then sends `typedLineMoveRequested`, just before `hiddenInputWanted`; only then does the app
+  move its line's text into its hidden-input field and empty its line. An empty
+  `commandLineTextRequested` is a script's `clearCmdLine()` or a send, never this. If the game ends
+  hidden input before the player has edited or sent that text, and the app's line is still empty, the
+  app puts the text back in its line and hands it back with `setCommandLineText()`, as the GUI puts it
+  back in its command line. A disconnect does not put it back, in the GUI either.
+- Nothing else is guarded. While the player has dismissed the hidden-input box, an auto-login is still
+  pending, or the profile has masking turned off, the game may hide what is typed with
+  `hiddenInputWanted` false; text set then is taken, and scripts can read it, as they can read the
+  GUI's command line then.
 
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.

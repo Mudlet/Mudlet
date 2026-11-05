@@ -2167,6 +2167,8 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
         mpHost->windowRegistry().setCommandLineText(name, plainText(text));
     } else if (!mpHost->passwordEntryWanted()) {
         // TMainConsole writes to the hidden-input box over it while the game asks for one
+        mMainCommandLineTyped = false;
+        mMainCommandLineAllSelected = false;
         const QString plain = plainText(text);
         mpHost->windowRegistry().setMainCommandLineText(plain);
         emit mpHost->signal_commandLineTextRequested(plain);
@@ -2180,20 +2182,92 @@ bool TNullConsoleFrontend::holdMainCommandLineForSend(const QString& line)
     if (mpHost->passwordEntryWanted()) {
         return false;
     }
+    mMainCommandLineTyped = false;
+    mMainCommandLineAllSelected = false;
     mpHost->windowRegistry().setMainCommandLineText(plainText(line));
     return true;
 }
 
 void TNullConsoleFrontend::mainCommandLineSent()
 {
+    // TCommandLine::enterCommand() selects a line it keeps
     if (!mpHost->mAutoClearCommandLineAfterSend) {
+        mMainCommandLineAllSelected = true;
         return;
     }
     if (mpHost->passwordEntryWanted()) {
+        mMainCommandLineTyped = false;
         mpHost->windowRegistry().setMainCommandLineText(QString());
     } else {
         replaceCommandLineText(QString(), QString());
     }
+}
+
+void TNullConsoleFrontend::setCommandLineText(const QString& text)
+{
+    replaceCommandLineText(QString(), text);
+    // As TMainConsole::setCommandLineText()
+    if (!mpHost->passwordEntryWanted()) {
+        mMainCommandLineAllSelected = true;
+    }
+}
+
+bool TNullConsoleFrontend::selectCommandLineText(const QString& name)
+{
+    if (!ownsCommandLine(name)) {
+        return false;
+    }
+    if (mainCommandLine(name) && !mpHost->passwordEntryWanted()) {
+        mMainCommandLineAllSelected = true;
+    }
+    return true;
+}
+
+void TNullConsoleFrontend::typeMainCommandLine(const QString& text, const bool playerTyped)
+{
+    TWindowRegistry& registry = mpHost->windowRegistry();
+    const QString plain = plainText(text);
+    const QString current = registry.commandLineText(QString()).value_or(QString());
+    // As TCommandLine::slot_contentsChange(): typing on into a line a script set leaves it the script's, but typing
+    // over it replaces it with a line of the player's. Mudlet does not see the app's caret or selection, so any
+    // change to a line the GUI would have selected counts, as does one that no longer starts with the line, erring
+    // towards moving it into hidden input.
+    if (plain.isEmpty() || !playerTyped) {
+        mMainCommandLineTyped = false;
+    } else if (current.isEmpty() || !plain.startsWith(current) || (mMainCommandLineAllSelected && plain != current)) {
+        mMainCommandLineTyped = true;
+    }
+    // So typing into it counts, erring towards secrecy as for a line the GUI would have selected
+    if (!playerTyped) {
+        mMainCommandLineAllSelected = true;
+    } else if (plain != current) {
+        mMainCommandLineAllSelected = false;
+    }
+    registry.setMainCommandLineText(plain);
+}
+
+bool TNullConsoleFrontend::hiddenInputOpened()
+{
+    // Only true inside the recompute that a WILL ECHO makes, which emits the change this runs from
+    if (!mpHost->passwordEntryOpensWithThePrompt() || !mMainCommandLineTyped) {
+        return false;
+    }
+    TWindowRegistry& registry = mpHost->windowRegistry();
+    bool typedAhead = false;
+    for (const QChar character : registry.commandLineText(QString()).value_or(QString())) {
+        if (character != QChar::CarriageReturn && character != QChar::LineFeed) {
+            typedAhead = true;
+            break;
+        }
+    }
+    if (!typedAhead) {
+        return false;
+    }
+    mMainCommandLineTyped = false;
+    mMainCommandLineAllSelected = false;
+    registry.wipeMainCommandLineText();
+    mpHost->passwordEntryEdited();
+    return true;
 }
 
 bool TNullConsoleFrontend::appendCommandLineText(const QString& name, const QString& text)
