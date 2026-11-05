@@ -5683,8 +5683,12 @@ void cTelnet::postData(const bool endsWithPromptMarker)
     }
 
     // All data goes through main console's printOnDisplay which calls
-    // translateToPlainText - MXP DEST routing happens inside that process
+    // translateToPlainText - MXP DEST routing happens inside that process.
+    // What a trigger feedTelnet()s from in here is not this stream's text, so it must not part this
+    // stream's EOR from the GA that follows it
+    const char promptEndedBy = std::exchange(mPromptEndedBy, 0);
     mpHost->printOnDisplay(data, true);
+    mPromptEndedBy = promptEndedBy;
     if (mpHost->mMMCPServer && !mpHost->mIsRemoteEchoingActive) {
         mpHost->mMMCPServer->receiveFromPlayer(snooped ? original : data, endsWithPromptMarker);
     }
