@@ -400,6 +400,9 @@ struct TConsoleModel
     // leaves the gutter out of the width it reports, so this has to be readable
     // with no view.
     bool mShowTimeStamps = false;
+    // How long the last pass of incoming text took to process, in seconds, as the GUI's latency box shows it;
+    // only the null view keeps it.
+    double mIncomingTextSeconds = 0.0;
 
     // The width and indents wrapLine() rewraps a line to. The buffer keeps its
     // own copy, which wraps text as it arrives, so always set them through

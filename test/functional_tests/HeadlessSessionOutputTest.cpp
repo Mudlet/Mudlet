@@ -31,12 +31,16 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <optional>
+#include <utility>
+
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "TConsoleModel.h"
 #include "THeadlessSession.h"
+#include "TelnetServerStub.h"
 
 #include "GroupedTest.h"
 
@@ -243,6 +247,63 @@ setBackgroundColor("headlessColoursMini", 200, 100, 50)
             QCOMPARE(errors.at(piece).at(3).value<QColor>(), QColor(Qt::black));
         }
         QVERIFY(session.shutdown(false));
+    }
+
+    void test_theLagTheLatencyBoxShowsReachesTheSession()
+    {
+        const QString name = qsl("Headless Latency");
+        QVERIFY(writeProfile(name, QString()));
+        TelnetServerStub server;
+        server.setWelcomeMessage(qsl("Welcome to the latency test."));
+        server.start(qsl("127.0.0.1"));
+        QVERIFY(server.isListening());
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QList<std::pair<std::optional<double>, double>> lags;
+        connect(&session, &THeadlessSession::latencyChanged, this, [&](const QString& profile, const std::optional<double> network, const double processing) {
+            QCOMPARE(profile, name);
+            lags.append({network, processing});
+        });
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(!lags.isEmpty(), 10000);
+        for (const auto& [network, processing] : lags) {
+            QVERIFY(!network);
+            QVERIFY(processing >= 0);
+        }
+
+        server.sendRaw("hp 10> \xff\xf9");
+        QTRY_VERIFY_WITH_TIMEOUT(lags.constLast().first.has_value(), 10000);
+        QVERIFY(lags.constLast().second >= 0);
+
+        QVERIFY(session.submit(qsl("look")));
+        QTRY_VERIFY_WITH_TIMEOUT(server.receivedSoFar().contains("look"), 10000);
+        QTest::qWait(300);
+        server.sendRaw("You see a room.\nhp 10> \xff\xf9");
+        QTRY_VERIFY_WITH_TIMEOUT(lags.constLast().first.value_or(0) >= 0.25, 10000);
+        QVERIFY2(*lags.constLast().first < 5, qPrintable(QString::number(*lags.constLast().first)));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_noLagIsSentWithNoTextOrForAProfileLetGo()
+    {
+        const QString name = qsl("Headless Latency Let Go");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy lags(&session, &THeadlessSession::latencyChanged);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTest::qWait(100);
+        QCOMPARE(lags.count(), 0);
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("headless lag\n"))lua")));
+        QTRY_COMPARE_WITH_TIMEOUT(lags.count(), 1, 10000);
+        QVERIFY(session.shutdown(false));
+
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("headless lag\n"))lua")));
+        QVERIFY(session.shutdown(false));
+        QTest::qWait(100);
+        QCOMPARE(lags.count(), 1);
     }
 };
 

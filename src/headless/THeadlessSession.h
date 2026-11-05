@@ -37,6 +37,7 @@
 
 class Host;
 class HostManager;
+class QTimer;
 class TBuffer;
 
 // One profile run with no window, for a frontend of its own (a terminal, a phone app) to feed input and
@@ -352,6 +353,11 @@ signals:
     // or a package or save loaded into the profile with colours of its own. From the event loop, as
     // consoleWrapChanged, with both colours as they are then.
     void consoleColorsChanged(const QString& profile, const QColor& foreground, const QColor& background);
+    // The lag the GUI's latency box shows, paced as it is to once every 16ms, and only when the box's text, to the
+    // millisecond, would change: the network's, from a command sent to the game's reply, while the game marks its
+    // prompts with GA or EOR, otherwise none, where the box shows "<no GA>"; and how long the game's last text took
+    // to process, its triggers included. From the event loop.
+    void latencyChanged(const QString& profile, std::optional<double> networkSeconds, double processingSeconds);
     // What the GUI shows outside the profile's screen: a script's showNotification(), which answers true only
     // when this signal is connected and not blocked, with no milliseconds for the system's own time; and a
     // script's alert() or the game's bell, asking for the player's attention for that long, 0 until they come
@@ -453,6 +459,7 @@ private:
     // The relays of how the main console is drawn, in THeadlessSessionOutput.cpp
     void connectOutputRelays(Host*, unsigned int run);
     void noteOutputStateAtLoad();
+    void sendLatency();
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
@@ -511,6 +518,11 @@ private:
     std::optional<ConsoleWrap> mDeliveredConsoleWrap;
     // The same for consoleForeground() and consoleBackground()
     std::optional<std::pair<QColor, QColor>> mDeliveredConsoleColors;
+    // Paces latencyChanged, for the run it was started in
+    QTimer* mpLatencyPacer = nullptr;
+    unsigned int mLatencyPaceRun = 0;
+    // The latency box's text as last sent
+    QString mDeliveredLatency;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(THeadlessSession::TextStyles)

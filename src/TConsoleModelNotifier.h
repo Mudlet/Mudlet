@@ -65,6 +65,8 @@ signals:
     void wrapChanged();
     // Host::refreshMainConsoleColors() ran, which may have changed mFgColor or mBgColor.
     void colorsChanged();
+    // The null view timed a pass of incoming text, in mIncomingTextSeconds.
+    void incomingTextProcessed();
     // The buffer was emptied, so view state indexing its old lines is stale.
     void bufferCleared();
     void spoilerRevealed();

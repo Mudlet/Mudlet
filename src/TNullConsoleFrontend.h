@@ -28,6 +28,7 @@
 #include "utils.h"
 
 #include <QColor>
+#include <QElapsedTimer>
 #include <QObject>
 #include <QPoint>
 #include <QPointer>
@@ -334,9 +335,9 @@ public:
     void discardToolBarLayoutChanges() override {}
     void setDockLayoutChanged(const QString&) override {}
     bool clearDockLayoutChanged(const QString&) override { return false; }
-    bool startIncomingText() override { return false; }
+    bool startIncomingText() override;
     void alertNewData() override {}
-    void finishIncomingText(bool) override {}
+    void finishIncomingText(bool) override;
     void finalize() override {}
     void showNewLines() override {}
     void showCommandEcho(const TConsoleModel::CommandEcho&) override {}
@@ -580,6 +581,7 @@ private:
     QString mEmbeddedMapperWindow;
     std::shared_ptr<ScrollBox> mpEmbeddedMapperBox;
     bool mEmbeddedMapperShown = false;
+    QElapsedTimer mIncomingTextTimer;
 };
 
 #endif // MUDLET_TNULLCONSOLEFRONTEND_H

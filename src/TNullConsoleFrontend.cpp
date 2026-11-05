@@ -3359,3 +3359,17 @@ bool TNullConsoleFrontend::setWindowFontSize(const QString& name, const int size
     }
     return true;
 }
+
+// No window to alert, but timed as TMainConsole times a pass for its latency box
+bool TNullConsoleFrontend::startIncomingText()
+{
+    mIncomingTextTimer.restart();
+    return false;
+}
+
+void TNullConsoleFrontend::finishIncomingText(bool)
+{
+    TConsoleModel& model = mpHost->mainConsoleModel();
+    model.mIncomingTextSeconds = mIncomingTextTimer.elapsed() / 1000.0;
+    emit model.mNotifier.incomingTextProcessed();
+}
