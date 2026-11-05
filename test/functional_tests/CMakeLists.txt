@@ -100,6 +100,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     ConsoleSearchBarTest.cpp
     WrapLineRewrapTest.cpp
     ScrollLostOnPartialRepaintTest.cpp
+    ScrollUpShortBufferTest.cpp
     ScrollBarContrastTest.cpp
     ScriptFileDialogTest.cpp
     OpaqueConsolePaintTest.cpp
