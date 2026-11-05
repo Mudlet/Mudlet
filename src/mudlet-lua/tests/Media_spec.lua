@@ -4684,25 +4684,40 @@ describe("Tests the text-to-speech Lua API", function()
   end)
 
 describe("FFmpeg's hardware device types", function()
-  it("are named on Linux only, so Qt does not try each one when the first sound plays", function()
-    local decoding = os.getenv("QT_FFMPEG_DECODING_HW_DEVICE_TYPES")
+  local variables = {"QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "QT_FFMPEG_ENCODING_HW_DEVICE_TYPES"}
+
+  it("are named on Linux only, unless already set, so Qt does not try each one when the first sound plays", function()
+    local named = "vaapi,vdpau,qsv,drm"
     if getOS() ~= "linux" then
       -- Qt's own list there holds the platform's decoders, such as D3D11 and VideoToolbox
-      assert.is_nil(decoding)
-      assert.is_nil(os.getenv("QT_FFMPEG_ENCODING_HW_DEVICE_TYPES"))
+      for _, variable in ipairs(variables) do
+        assert.are_not.equals(named, os.getenv(variable))
+        assert.are_not.equals("cuda," .. named, os.getenv(variable))
+      end
       return
     end
-    local expected = "vaapi,vdpau,qsv,drm"
     local nvidiaDriver = io.open("/proc/driver/nvidia/version")
     if nvidiaDriver then
       nvidiaDriver:close()
       -- "init": the library loaded, and only the made-up symbol was missing
       local _, _, failedAt = package.loadlib("libnvcuvid.so", "noSuchSymbol")
       if failedAt == "init" then
-        expected = "cuda," .. expected
+        named = "cuda," .. named
       end
     end
-    assert.equals(expected, decoding)
-    assert.equals(decoding, os.getenv("QT_FFMPEG_ENCODING_HW_DEVICE_TYPES"))
+    -- The environment Mudlet was started with, which setenv() leaves alone
+    local environ = io.open("/proc/self/environ", "rb")
+    local inherited = "\0" .. environ:read("*a")
+    environ:close()
+    for _, variable in ipairs(variables) do
+      local key = "\0" .. variable .. "="
+      local at = inherited:find(key, 1, true)
+      local expected = named
+      if at then
+        local valueStart = at + #key
+        expected = inherited:sub(valueStart, (inherited:find("\0", valueStart, true) or #inherited + 1) - 1)
+      end
+      assert.equals(expected, os.getenv(variable))
+    end
   end)
 end)
