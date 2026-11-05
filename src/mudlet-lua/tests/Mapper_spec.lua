@@ -2904,6 +2904,29 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
     end)
 
+    it("leads nowhere through exits into a locked room", function()
+      -- the graph build finds an exit's target among the rooms it indexed, which leave out locked
+      -- ones, so a lookup falling back to the first index would wire both exits to an unrelated room
+      local area = addAreaName("MapperSpecLockedTargetArea")
+      local from = createRoomID(); addRoom(from); setRoomArea(from, area)
+      local locked = createRoomID(); addRoom(locked); setRoomArea(locked, area)
+      finally(function()
+        deleteRoom(from); deleteRoom(locked)
+        deleteArea(area)
+      end)
+      assert.is_true(setExit(from, locked, "east"))
+      assert.is_true(addSpecialExit(from, locked, "climb the wall"))
+      assert.is_true(lockRoom(locked, true))
+
+      local reached = {}
+      for id in pairs(getRooms()) do
+        if id ~= from and getPath(from, id) then
+          reached[#reached + 1] = id
+        end
+      end
+      assert.are.same({}, reached)
+    end)
+
     it("reroutes around a locked exit", function()
       lockExit(rA1, "east", true)
       local ok = getPath(rA1, rA3)
