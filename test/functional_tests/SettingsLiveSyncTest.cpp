@@ -580,8 +580,8 @@ private slots:
         QCOMPARE(mpPreferences->checkBox_showTimeStamps->isChecked(), !before);
     }
 
-    // ...and pressing the button while the dialog is open shows in the box when
-    // the user comes back to it, without that writing anything back
+    // ...and the button, pressed while the dialog is in front, shows in the box
+    // at once, without that writing anything back
     void test_theTimeStampButtonShowsInTheDialog()
     {
         TMainConsole* pConsole = mpHost->mainConsoleView();
@@ -595,13 +595,35 @@ private slots:
 
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
         pConsole->timeStampButton->click();
+
         QCOMPARE(mpHost->mainConsoleShowsTimeStamps(), !before);
-
-        returnToTheDialog();
-
         QCOMPARE(mpPreferences->checkBox_showTimeStamps->isChecked(), !before);
-        QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "re-reading the settings applied them");
-        QCOMPARE(mpHost->mainConsoleShowsTimeStamps(), !before);
+        QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "following the button applied the settings");
+    }
+
+    // A tick of the box still waiting out the debounce is older than a press of
+    // the button after it, so the apply must not put the box's value back
+    void test_theTimeStampButtonWinsOverATickNotYetApplied()
+    {
+        TMainConsole* pConsole = mpHost->mainConsoleView();
+        QVERIFY(pConsole);
+        const bool before = mpHost->mainConsoleShowsTimeStamps();
+        const auto restore = qScopeGuard([this, before]() {
+            mpHost->setWindowTimeStamps(qsl("main"), before);
+        });
+        openPreferences();
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_showTimeStamps->click();
+        QCOMPARE(mpHost->mainConsoleShowsTimeStamps(), before);
+        pConsole->timeStampButton->click();
+        pConsole->timeStampButton->click();
+        QCOMPARE(mpHost->mainConsoleShowsTimeStamps(), before);
+        QCOMPARE(mpPreferences->checkBox_showTimeStamps->isChecked(), before);
+
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
+        QCOMPARE(mpHost->mainConsoleShowsTimeStamps(), before);
+        QCOMPARE(pConsole->timeStampButton->isChecked(), before);
     }
 };
 
