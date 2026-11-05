@@ -513,12 +513,13 @@ void TDetachedWindow::createMenus()
     connect(videoAction, &QAction::triggered, pMudlet, &mudlet::slot_showHelpDialogVideo);
     helpMenu->addAction(videoAction);
 
-    //: This is an item in the "Help" menu in the menubar of a detached Mudlet window.
-    auto discordAction = new QAction(tr("&Discord"), this);
-    //: This explains the "Discord" item in the "Help" menu in the menubar of a detached Mudlet window.
-    discordAction->setStatusTip(tr("Open a link to Discord."));
-    connect(discordAction, &QAction::triggered, this, &TDetachedWindow::slot_profileDiscord);
-    helpMenu->addAction(discordAction);
+    // Its text follows the profile's game, so updateDiscordNamedIcon() sets it
+    mpHelpMenuDiscordAction = new QAction(this);
+    mpHelpMenuDiscordAction->setObjectName(qsl("helpMenuDiscord"));
+    // Its text carries the game's name, which macOS could otherwise take for About, Preferences or Quit
+    mpHelpMenuDiscordAction->setMenuRole(QAction::NoRole);
+    connect(mpHelpMenuDiscordAction, &QAction::triggered, this, &TDetachedWindow::slot_profileDiscord);
+    helpMenu->addAction(mpHelpMenuDiscordAction);
 
     //: This is an item in the "Help" menu in the menubar of a detached Mudlet window.
     auto mudletDiscordAction = new QAction(tr("Discord &help channel"), this);
@@ -1358,21 +1359,30 @@ void TDetachedWindow::updateDiscordNamedIcon()
         pHost = pHostManager->getHost(mCurrentProfileName);
     }
 
-    if (!pHost) {
-        // No active host - reset Discord icon to default state
+    const QString gameName = pHost ? pHost->getDiscordGameName() : QString();
+    const bool hasCustom = pHost && !pHost->getDiscordInviteURL().isEmpty();
+
+    if (hasCustom) {
+        mpActionDiscord->setIconText(mudlet::gameDiscordLabel(QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90)));
+        mpActionDiscord->setToolTip(utils::richText(mudlet::gameDiscordToolTip(gameName).toHtmlEscaped()));
+    } else {
+        // Without an invite of the game's own these open Mudlet's server
         mpActionDiscord->setIconText(qsl("Discord"));
-
-        // Hide Mudlet Discord action as there's no game with custom invite
-        if (mpActionMudletDiscord->isVisible()) {
-            mpActionMudletDiscord->setVisible(false);
-        }
-        return;
+        // An empty tooltip falls back to the action's own text
+        mpActionDiscord->setToolTip(QString());
     }
-
-    const QString gameName = pHost->getDiscordGameName();
-    const bool hasCustom = !pHost->getDiscordInviteURL().isEmpty();
-
-    mpActionDiscord->setIconText(gameName.isEmpty() ? qsl("Discord") : QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90));
+    // Null when createMenus() found no mudlet to build the menus against
+    if (mpHelpMenuDiscordAction) {
+        if (hasCustom) {
+            mpHelpMenuDiscordAction->setText(mudlet::gameDiscordLabel(gameName));
+            mpHelpMenuDiscordAction->setStatusTip(mudlet::gameDiscordToolTip(gameName));
+        } else {
+            //: This is an item in the "Help" menu in the menubar of a detached Mudlet window.
+            mpHelpMenuDiscordAction->setText(tr("&Discord"));
+            //: This explains the "Discord" item in the "Help" menu in the menubar of a detached Mudlet window.
+            mpHelpMenuDiscordAction->setStatusTip(tr("Open a link to Discord."));
+        }
+    }
 
     // Show/hide Mudlet Discord action based on whether game has custom invite
     if (mpActionMudletDiscord->isVisible() != hasCustom) {

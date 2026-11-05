@@ -1634,6 +1634,8 @@ void mudlet::init()
     mpActionMudletDiscord->setObjectName(qsl("mudlet_discord"));
     mpMainToolBar->widgetForAction(mpActionMudletDiscord)->setObjectName(mpActionMudletDiscord->objectName());
     mpActionMudletDiscord->setVisible(false); // Mudlet Discord becomes visible if game has custom invite
+    // Its text carries the game's name, which macOS could otherwise take for About, Preferences or Quit
+    dactionDiscord->setMenuRole(QAction::NoRole);
 
 
     mpButtonDiscord->addAction(mpActionDiscord);
@@ -6373,26 +6375,21 @@ void mudlet::updateDiscordNamedIcon()
     }
 
     Host* pHost = getActiveHost();
+    const QString gameName = pHost ? pHost->getDiscordGameName() : QString();
+    const bool hasCustom = pHost && !pHost->getDiscordInviteURL().isEmpty();
 
-    if (!pHost) {
-        // No active host - reset Discord icon to default state (hidden)
+    if (hasCustom) {
+        const QString toolTip = utils::richText(gameDiscordToolTip(gameName).toHtmlEscaped());
+        mpActionDiscord->setIconText(gameDiscordLabel(QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90)));
+        mpActionDiscord->setToolTip(toolTip);
+        dactionDiscord->setText(gameDiscordLabel(gameName));
+        dactionDiscord->setToolTip(toolTip);
+    } else {
+        // Without an invite of the game's own the button opens Mudlet's server
         mpActionDiscord->setIconText(qsl("Discord"));
-
-        // Hide Mudlet Discord action as there's no game with custom invite
-        if (mpActionMudletDiscord->isVisible()) {
-            mpActionMudletDiscord->setVisible(false);
-        }
-        if (dactionDiscord->isVisible()) {
-            dactionDiscord->setVisible(false);
-        }
-        return;
+        // An empty tooltip falls back to the action's own text
+        mpActionDiscord->setToolTip(QString());
     }
-
-    const QString gameName = pHost->getDiscordGameName();
-
-    const bool hasCustom = !pHost->getDiscordInviteURL().isEmpty();
-
-    mpActionDiscord->setIconText(gameName.isEmpty() ? qsl("Discord") : QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90));
 
     if (mpActionMudletDiscord->isVisible() != hasCustom) {
         mpActionMudletDiscord->setVisible(hasCustom);
@@ -6400,6 +6397,26 @@ void mudlet::updateDiscordNamedIcon()
     if (dactionDiscord->isVisible() != hasCustom) {
         dactionDiscord->setVisible(hasCustom);
     }
+}
+
+QString mudlet::gameDiscordLabel(const QString& gameName)
+{
+    if (gameName.isEmpty()) {
+        //: Label of the Discord button and Help menu entry that open the Discord server of a game which has not given its name
+        return tr("Game Discord");
+    }
+    //: Label of the Discord button and Help menu entry that open the game's own Discord server; %1 is the game's name
+    return tr("%1 Discord").arg(addonLabel(gameName));
+}
+
+QString mudlet::gameDiscordToolTip(const QString& gameName)
+{
+    if (gameName.isEmpty()) {
+        //: Tooltip of the Discord button and Help menu entry that open the Discord server of a game which has not given its name
+        return tr("Open a link to the game's server on Discord");
+    }
+    //: Tooltip of the Discord button and Help menu entry that open the game's own Discord server; %1 is the game's name
+    return tr("Open a link to the %1 server on Discord").arg(gameName);
 }
 
 void mudlet::slot_reconnect()

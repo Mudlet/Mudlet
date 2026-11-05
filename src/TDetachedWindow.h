@@ -247,6 +247,7 @@ private:
     // Discord actions
     QAction* mpActionDiscord{nullptr};
     QAction* mpActionMudletDiscord{nullptr};
+    QAction* mpHelpMenuDiscordAction{nullptr};
 
     // Menu actions with shortcuts
     QAction* mpMenuConnectAction{nullptr};
