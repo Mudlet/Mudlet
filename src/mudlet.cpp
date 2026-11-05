@@ -8614,8 +8614,10 @@ void mudlet::slot_tabReattachRequested(const QString& tabName, int insertIndex)
 
 void mudlet::slot_detachedWindowClosed(const QString& profileName)
 {
-    // Clean up when detached window is closed
-    if (mDetachedWindows.contains(profileName)) {
+    // A window can still hold a tab for a profile closed some other way, and that name may since
+    // belong to a profile reopened in another window, which this must not close
+    auto pClosedWindow = qobject_cast<TDetachedWindow*>(sender());
+    if (pClosedWindow && mDetachedWindows.value(profileName) == pClosedWindow) {
         mDetachedWindows.remove(profileName);
 
         // Update tab bar auto-hide behavior since detached windows changed

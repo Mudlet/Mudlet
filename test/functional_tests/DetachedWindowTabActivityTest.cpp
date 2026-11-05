@@ -565,6 +565,47 @@ private slots:
                  "the window outlived the last profile in it");
     }
 
+    // A profile closed from outside its window leaves its tab behind there. Reopened and detached
+    // again under the same name, it must survive the old window being closed.
+    void test_closingAWindowWithAStaleTabLeavesAReopenedProfileAlone()
+    {
+        deleteProfileDirectory(mClosingHostname);
+        Host* pOldHost = startProfile(mClosingHostname);
+        QVERIFY(pOldHost);
+        const QPointer<Host> oldGuard(pOldHost);
+        mudlet::self()->slot_tabDetachRequested(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), QPoint(200, 200));
+        const QPointer<TDetachedWindow> pOldWindow = mudlet::self()->getDetachedWindows().value(mClosingHostname);
+        QVERIFY(pOldWindow);
+        const QPointer<TTabBar> pOldTabBar = tabBarOf(pOldWindow);
+        QVERIFY(pOldTabBar);
+
+        pOldHost->mFORCE_SAVE_ON_EXIT = true;
+        mudlet::self()->slot_closeProfileByName(mClosingHostname);
+        QTRY_VERIFY(oldGuard.isNull());
+        QVERIFY(!mudlet::self()->getDetachedWindows().contains(mClosingHostname));
+        if (!pOldWindow || !pOldTabBar || pOldTabBar->tabIndex(mClosingHostname) == -1) {
+            QSKIP("closing the profile elsewhere took its tab out of the window, so no stale tab is left to test");
+        }
+
+        deleteProfileDirectory(mClosingHostname);
+        Host* pNewHost = startProfile(mClosingHostname);
+        QVERIFY(pNewHost);
+        const QPointer<Host> newGuard(pNewHost);
+        mudlet::self()->slot_tabDetachRequested(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), QPoint(300, 300));
+        const QPointer<TDetachedWindow> pNewWindow = mudlet::self()->getDetachedWindows().value(mClosingHostname);
+        QVERIFY(pNewWindow);
+        QVERIFY(pNewWindow != pOldWindow);
+
+        pNewHost->mFORCE_SAVE_ON_EXIT = true;
+        pOldWindow->close();
+        QTest::qWait(300);
+
+        QVERIFY2(newGuard, "closing the old window closed the profile reopened under the same name");
+        QVERIFY2(pNewWindow, "closing the old window closed the reopened profile's window");
+        QCOMPARE(mudlet::self()->getDetachedWindows().value(mClosingHostname), pNewWindow);
+        QVERIFY(mudlet::self()->getOrphanedProfiles().isEmpty());
+    }
+
 private:
     // Leaves the first profile in the main window and puts the other two in one
     // detached window. That window ends up showing the third, since a profile
