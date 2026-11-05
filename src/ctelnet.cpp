@@ -51,7 +51,10 @@
 
 #include <QCoreApplication>
 #include <QDataStream>
+#include <QDateTime>
 #include <QDeadlineTimer>
+#include <QDir>
+#include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -319,8 +322,8 @@ void cTelnet::reset()
 cTelnet::~cTelnet()
 {
     // Otherwise ~QSaveFile() calls cancelWriting(), deleting the recording without producing the .dat.
-    if (mRecordReplay) {
-        stopReplayRecording();
+    if (mRecordReplay && !stopReplayRecording()) {
+        qWarning() << "cTelnet::~cTelnet() WARNING - the replay recording could not be saved:" << replayRecordingErrorString();
     }
 
     // Stop all timers immediately
@@ -5838,6 +5841,41 @@ QString cTelnet::replayRecordingFileName() const
 QString cTelnet::replayRecordingErrorString() const
 {
     return mpReplayFile ? mpReplayFile->errorString() : QString();
+}
+
+// Kept in TConsole's context, where the translations already are
+bool cTelnet::toggleReplayRecording()
+{
+    if (!recordingReplay()) {
+        const QString directoryLogFile = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, mpHost->getName());
+        const QString startTime = QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss"));
+        QString mLogFileName = qsl("%1/%2.dat").arg(directoryLogFile, startTime);
+        // The commit would replace an earlier recording started in the same second
+        for (int copy = 2; QFileInfo::exists(mLogFileName); ++copy) {
+            mLogFileName = qsl("%1/%2-%3.dat").arg(directoryLogFile, startTime, QString::number(copy));
+        }
+        const QDir dirLogFile;
+        if (!dirLogFile.exists(directoryLogFile)) {
+            dirLogFile.mkpath(directoryLogFile);
+        }
+        if (!startReplayRecording(mLogFileName)) {
+            qWarning() << "TConsole: failed to open replay file for writing:" << replayRecordingErrorString();
+            //: Informational message displayed when replay recording file could not be opened. %1 is the reason
+            mpHost->printSystemMessage(QCoreApplication::translate("TConsole", "Failed to open replay recording file for writing: %1").arg(replayRecordingErrorString()) % QChar::LineFeed);
+            return false;
+        }
+        mpHost->printSystemMessage(QCoreApplication::translate("TConsole", "Replay recording has started. File: %1").arg(replayRecordingFileName()) % QChar::LineFeed);
+        return true;
+    }
+    if (!stopReplayRecording()) {
+        qWarning() << "TConsole::slot_toggleReplayRecording: error saving replay: " << replayRecordingErrorString();
+        //: Informational message displayed when replay recording is stopped but could not be saved. %1 is the reason
+        mpHost->printSystemMessage(QCoreApplication::translate("TConsole", "Replay recording has been stopped, but couldn't be saved: %1").arg(replayRecordingErrorString()) % QChar::LineFeed);
+        return false;
+    }
+    //: Informational message displayed when replay recording is stopped
+    mpHost->printSystemMessage(QCoreApplication::translate("TConsole", "Replay recording has been stopped. File: %1").arg(replayRecordingFileName()) % QChar::LineFeed);
+    return true;
 }
 
 bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)

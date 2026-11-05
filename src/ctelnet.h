@@ -211,6 +211,9 @@ public:
     bool stopReplayRecording();
     QString replayRecordingFileName() const;
     QString replayRecordingErrorString() const;
+    // The main console's replay recording button: starts a recording in the profile's log folder, or stops the one
+    // under way, saying how it went in the main console. False if it could not start, or could not be saved.
+    bool toggleReplayRecording();
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
     void loadReplayChunk();
     bool isReplaying() { return loadingReplay; }
