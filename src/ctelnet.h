@@ -344,6 +344,8 @@ signals:
     void signal_connecting(Host*);
     void signal_connected(Host*);
     void signal_disconnected(Host*);
+    // A connect called off while its address was being looked up: neither of the two above follows its signal_connecting
+    void signal_connectingCalledOff(Host*);
     // Signal when GA (Go Ahead) or EOR (End of Record) telnet codes are received
     // Used by hyperlink visibility manager to trigger expire actions
     void signal_promptReceived();

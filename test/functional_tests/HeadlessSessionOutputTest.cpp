@@ -28,6 +28,7 @@
 #include <QDir>
 #include <QFile>
 #include <QSignalSpy>
+#include <QTcpServer>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -84,6 +85,19 @@ private:
     }
 
     static QVariantList wrap(const int wrapAt, const int indent, const int hangingIndent) { return {wrapAt, indent, hangingIndent}; }
+
+    static void followTheConnection(THeadlessSession& session, QStringList& events)
+    {
+        connect(&session, &THeadlessSession::connecting, &session, [&events]() {
+            events << qsl("connecting");
+        });
+        connect(&session, &THeadlessSession::connected, &session, [&events]() {
+            events << qsl("connected");
+        });
+        connect(&session, &THeadlessSession::disconnected, &session, [&events]() {
+            events << qsl("disconnected");
+        });
+    }
 
 private slots:
     void initTestCase()
@@ -304,6 +318,111 @@ setBackgroundColor("headlessColoursMini", 200, 100, 50)
         QVERIFY(session.shutdown(false));
         QTest::qWait(100);
         QCOMPARE(lags.count(), 1);
+    }
+
+    void test_connectingComesBeforeTheConnectionIsMade()
+    {
+        const QString name = qsl("Headless Connecting");
+        QVERIFY(writeProfile(name, QString()));
+        TelnetServerStub server;
+        server.start(qsl("127.0.0.1"));
+        QVERIFY(server.isListening());
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy connecting(&session, &THeadlessSession::connecting);
+        QStringList events;
+        followTheConnection(session, events);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(events.contains(qsl("connected")), 10000);
+        QCOMPARE(events, (QStringList{qsl("connecting"), qsl("connected")}));
+        QCOMPARE(connecting.constFirst().at(0).toString(), name);
+
+        events.clear();
+        QVERIFY(session.runLua(qsl("reconnect()")));
+        QTRY_VERIFY_WITH_TIMEOUT(events.contains(qsl("connected")), 10000);
+        QCOMPARE(events.mid(events.indexOf(qsl("connecting"))), (QStringList{qsl("connecting"), qsl("connected")}));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_connectingComesBeforeAConnectionThatCannotBeMade()
+    {
+        const QString name = qsl("Headless Connecting Refused");
+        QVERIFY(writeProfile(name, QString()));
+        quint16 port = 0;
+        {
+            QTcpServer closed;
+            QVERIFY(closed.listen(QHostAddress::LocalHost));
+            port = closed.serverPort();
+        }
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(port)).first);
+
+        THeadlessSession session;
+        QStringList events;
+        followTheConnection(session, events);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(events.contains(qsl("disconnected")), 10000);
+        QCOMPARE(events, (QStringList{qsl("connecting"), qsl("disconnected")}));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aConnectCalledOffForASaveThatDidNotLoadEndsInDisconnected()
+    {
+        const QString name = qsl("Headless Connecting Corrupt");
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, name);
+        QVERIFY(QDir().mkpath(saveFolder));
+        QFile saveFile(qsl("%1/2020-01-01#00-00-00.xml").arg(saveFolder));
+        QVERIFY(saveFile.open(QIODevice::WriteOnly));
+        saveFile.write("<?xml version=\"1.0\"?><MudletPackage version=\"1.001\"><HostPackage><Host");
+        saveFile.close();
+        TelnetServerStub server;
+        server.start(qsl("127.0.0.1"));
+        QVERIFY(server.isListening());
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QStringList events;
+        followTheConnection(session, events);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::loadFailed);
+        QTRY_VERIFY_WITH_TIMEOUT(events.contains(qsl("disconnected")), 10000);
+        QTest::qWait(500);
+        QCOMPARE(events, (QStringList{qsl("connecting"), qsl("disconnected")}));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aConnectCalledOffDuringTheAddressLookupEndsInDisconnected()
+    {
+        const QString name = qsl("Headless Connecting Called Off");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QStringList events;
+        followTheConnection(session, events);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(connectToServer("nonexistent.invalid", 23) disconnect())lua")));
+        QTRY_VERIFY_WITH_TIMEOUT(events.contains(qsl("disconnected")), 10000);
+        QTest::qWait(500);
+        QCOMPARE(events, (QStringList{qsl("connecting"), qsl("disconnected")}));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_noConnectingIsSentForAProfileLetGo()
+    {
+        const QString name = qsl("Headless Connecting Let Go");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy connecting(&session, &THeadlessSession::connecting);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QVERIFY(session.shutdown(false));
+        QTest::qWait(100);
+        QCOMPARE(connecting.count(), 0);
     }
 };
 

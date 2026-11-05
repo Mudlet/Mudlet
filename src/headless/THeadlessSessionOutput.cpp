@@ -101,6 +101,28 @@ void THeadlessSession::connectOutputRelays(Host* pHost, const unsigned int run)
             mpLatencyPacer->start();
         }
     });
+    connect(
+            &pHost->mTelnet,
+            &cTelnet::signal_connecting,
+            this,
+            [this, run]() {
+                if (run == mRun) {
+                    const QString profile = mProfileName;
+                    emit connecting(profile);
+                }
+            },
+            Qt::QueuedConnection);
+    connect(
+            &pHost->mTelnet,
+            &cTelnet::signal_connectingCalledOff,
+            this,
+            [this, run]() {
+                if (run == mRun) {
+                    const QString profile = mProfileName;
+                    emit disconnected(profile);
+                }
+            },
+            Qt::QueuedConnection);
 }
 
 void THeadlessSession::sendLatency()

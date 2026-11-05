@@ -358,6 +358,9 @@ signals:
     // prompts with GA or EOR, otherwise none, where the box shows "<no GA>"; and how long the game's last text took
     // to process, its triggers included. From the event loop.
     void latencyChanged(const QString& profile, std::optional<double> networkSeconds, double processingSeconds);
+    // The profile began connecting to the game, as it starts or reconnects, where the GUI marks its tab as
+    // connecting; connected or disconnected follows, or the profile closes. From the event loop
+    void connecting(const QString& profile);
     // What the GUI shows outside the profile's screen: a script's showNotification(), which answers true only
     // when this signal is connected and not blocked, with no milliseconds for the system's own time; and a
     // script's alert() or the game's bell, asking for the player's attention for that long, 0 until they come
@@ -427,7 +430,7 @@ signals:
     void typedLineMoveRequested(const QString& profile);
     // The connection was made; from the event loop
     void connected(const QString& profile);
-    // The connection ended, or could not be made; from the event loop
+    // The connection ended, or could not be made, or was called off while connecting; from the event loop
     void disconnected(const QString& profile);
     // The session's profile closed; any other profile its scripts opened runs on until shutdown(). Not sent once
     // shutdown() has been called, even for a close a script made before it
