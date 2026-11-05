@@ -253,8 +253,7 @@ replay starts at 1 times its speed, and a change clamped at 1 or 1024 times send
 They come from the event loop, so the start can arrive after the
 script that began it has returned. One replay plays at a time over all profiles, and only those of the
 session's own profile are sent. As for the map's progress, one still playing when its profile closes, or
-when `shutdown()` or a later `start()` lets the profile go, gets its end there. The replay's elapsed time
-and its speed go through `host()` and `MudletReplay::self()` for now.
+when `shutdown()` or a later `start()` lets the profile go, gets its end there.
 
 `pressKey()` is a key pressed on the GUI's input line: it offers the key to the profile's key bindings
 where that line would, and its `KeyResult` says what came of it. The binding's script runs before the
@@ -375,6 +374,18 @@ as the toolbar's Stop does, and `localText` says so. Each is false when no repla
 profile plays, though one a script has just begun counts before its `replayStarted` arrives. Each is
 also false while a script of the profile runs, as an app's timer can fire in a nested event loop in the
 middle of a replayed chunk, which the replay reads on from where it was once the script is done.
+`changeReplaySpeed()` is the toolbar's faster or slower button, which doubles or halves the speed within
+1 and 1024 times; `replaySpeedChanged` follows. As the toolbar's button does, it is true at either end
+too, where the speed stays as it is and `replaySpeedChanged` sends it again, so `replaySpeed()` is the
+way to tell whether there is further to go. It is allowed while paused, and the rest of the wait plays at
+the new speed once resumed. `replaySpeed()` is the speed, or -1 when no replay of the session's profile
+plays.
+
+`replayElapsedMSecs()` is the time the toolbar shows, by the recording's own timestamps, or -1 when no
+replay of the session's profile plays. It is the time of the line the replay is waiting to play, not of
+the last one shown: it moves to the end of a gap as soon as that gap begins, so a paused replay reads the
+time of a line it has not shown yet, and holds it until resumed. Unlike the toolbar's clock it counts on
+past a day. A speed change leaves it alone.
 
 `replayStarted` and `replayFinished` come in pairs, in that order, however the replay ends: at the end
 of its file, by `stopReplay()`, or when the profile closes or `shutdown()` runs. A replay stopped before

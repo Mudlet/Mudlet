@@ -225,6 +225,16 @@ public:
     // Whether the replay of the session's profile is held, as the toolbar reads it; one paused before its
     // replayStarted arrives is still held when it does
     bool replayPaused() const;
+    // The toolbar's faster and slower buttons: doubles or halves the speed of the profile's replay, within 1 and
+    // 1024 times. Even at either end it is true and replaySpeedChanged follows with the speed it stays at, as the
+    // toolbar's buttons do. Refused as pauseReplay() is.
+    bool changeReplaySpeed(bool faster);
+    // How many times its recorded pace the profile's replay plays at; -1 with none of this profile playing
+    int replaySpeed() const;
+    // The recording's own timestamp of the line the profile's replay is waiting to play, as the toolbar's time
+    // shows it: at the end of a gap as soon as the gap begins, so held there, ahead of what has been shown, while
+    // paused. -1 with none of this profile playing. Read from anywhere, a handler of outputLine included.
+    qint64 replayElapsedMSecs() const;
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a

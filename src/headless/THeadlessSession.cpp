@@ -1324,6 +1324,32 @@ bool THeadlessSession::replayPaused() const
     return mpHost && mpHost->mTelnet.isReplaying() && mpHost->mTelnet.replayPaused();
 }
 
+bool THeadlessSession::changeReplaySpeed(const bool faster)
+{
+    if (!usable() || !replayPlaysIn(mpHost, mErrorString)) {
+        return false;
+    }
+    if (faster) {
+        MudletReplay::self()->speedUp();
+    } else {
+        MudletReplay::self()->speedDown();
+    }
+    return true;
+}
+
+int THeadlessSession::replaySpeed() const
+{
+    return mpHost && mpHost->mTelnet.isReplaying() ? MudletReplay::self()->speed() : -1;
+}
+
+qint64 THeadlessSession::replayElapsedMSecs() const
+{
+    if (!mpHost || !mpHost->mTelnet.isReplaying()) {
+        return -1;
+    }
+    return MudletReplay::self()->elapsedMSecs();
+}
+
 void THeadlessSession::noteAlreadyInstalled(const QString& path, const QString& name)
 {
     const QString version = mpHost->mPackageInfo.value(name).value(qsl("version"));
