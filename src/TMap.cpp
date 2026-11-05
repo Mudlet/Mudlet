@@ -886,8 +886,14 @@ bool TMap::gotoRoom(int r1, int r2)
     return findPath(r1, r2);
 }
 
-void TMap::addDirectionalRoute(
-        std::vector<std::pair<int, route>>& bestRoutes, const QMap<QString, int>& exitWeights, unsigned int source, TRoom* pSourceR, int target, quint8 direction, const QString& exitKey)
+void TMap::addDirectionalRoute(std::vector<std::pair<int, route>>& bestRoutes,
+                               const QMap<QString, int>& exitWeights,
+                               bool recheckTargetLocks,
+                               unsigned int source,
+                               TRoom* pSourceR,
+                               int target,
+                               quint8 direction,
+                               const QString& exitKey)
 {
     if (target <= 0 || static_cast<int>(source) == target) {
         return;
@@ -913,15 +919,13 @@ void TMap::addDirectionalRoute(
         return;
     }
     TRoom* pTargetR = locations[targetIndex].pR;
-    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
-    const bool filterActive = interpreter && interpreter->hasExitWeightFilter();
-    // The filter can lock rooms after they were indexed.
-    if (filterActive && pTargetR->isLocked) {
+    if (recheckTargetLocks && pTargetR->isLocked) {
         return;
     }
 
     int cost = exitWeights.value(exitKey, pTargetR->getWeight());
-    if (filterActive) {
+    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
+    if (interpreter && interpreter->hasExitWeightFilter()) {
         const TLuaInterpreter::ExitWeightFilterResult filterResult = interpreter->applyExitWeightFilter(static_cast<int>(source), exitKey);
         if (filterResult.blocked) {
             return;
@@ -1024,6 +1028,10 @@ void TMap::initGraph()
     // Now identify the routes between rooms, and pick out the best edges of parallel ones.
     // A room has a handful of exits, so a reused list beats a hash table built per room.
     std::vector<std::pair<int, route>> bestRoutes;
+    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
+    // The filter is the only script that runs mid-build, and it can lock rooms after they were indexed,
+    // then clear itself.
+    const bool recheckTargetLocks = interpreter && interpreter->hasExitWeightFilter();
     cost mostChebyshevPerCost = 0;
     cost mostEuclideanPerCost = 0;
     bool freeDistance = false;
@@ -1034,24 +1042,24 @@ void TMap::initGraph()
         bestRoutes.clear();
         QMap<QString, int> const exitWeights = pSourceR->getExitWeights();
 
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getNorth(), DIR_NORTH, qsl("n"));
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getEast(), DIR_EAST, qsl("e"));
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getSouth(), DIR_SOUTH, qsl("s"));
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getWest(), DIR_WEST, qsl("w"));
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getUp(), DIR_UP, qsl("up"));
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getDown(), DIR_DOWN, qsl("down"));
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getNortheast(), DIR_NORTHEAST, qsl("ne"));
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getSoutheast(), DIR_SOUTHEAST, qsl("se"));
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getSouthwest(), DIR_SOUTHWEST, qsl("sw"));
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getNorthwest(), DIR_NORTHWEST, qsl("nw"));
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getIn(), DIR_IN, qsl("in"));
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getOut(), DIR_OUT, qsl("out"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getNorth(), DIR_NORTH, qsl("n"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getEast(), DIR_EAST, qsl("e"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getSouth(), DIR_SOUTH, qsl("s"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getWest(), DIR_WEST, qsl("w"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getUp(), DIR_UP, qsl("up"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getDown(), DIR_DOWN, qsl("down"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getNortheast(), DIR_NORTHEAST, qsl("ne"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getSoutheast(), DIR_SOUTHEAST, qsl("se"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getSouthwest(), DIR_SOUTHWEST, qsl("sw"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getNorthwest(), DIR_NORTHWEST, qsl("nw"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getIn(), DIR_IN, qsl("in"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getOut(), DIR_OUT, qsl("out"));
 
         QMapIterator<QString, int> itSpecialExit(pSourceR->getSpecialExits());
         while (itSpecialExit.hasNext()) {
             itSpecialExit.next();
 
-            addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, itSpecialExit.value(), DIR_OTHER, itSpecialExit.key());
+            addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, itSpecialExit.value(), DIR_OTHER, itSpecialExit.key());
         } // End of while(itSpecialExit.hasNext())
 
         // Now we have eliminated possible duplicate and useless edges we can create and

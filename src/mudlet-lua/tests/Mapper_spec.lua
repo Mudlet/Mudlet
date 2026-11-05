@@ -2932,30 +2932,37 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.same({}, reached)
     end)
 
-    it("leads nowhere through an exit into a room the exit weight filter locks", function()
-      -- the filter runs during the graph build, after the rooms were indexed
-      local area = addAreaName("MapperSpecFilterLockArea")
-      local from = createRoomID(); addRoom(from); setRoomArea(from, area)
-      local north = createRoomID(); addRoom(north); setRoomArea(north, area)
-      local east = createRoomID(); addRoom(east); setRoomArea(east, area)
-      finally(function()
-        setExitWeightFilter(nil)
-        deleteRoom(from); deleteRoom(north); deleteRoom(east)
-        deleteArea(area)
-      end)
-      assert.is_true(setExit(from, north, "north"))
-      assert.is_true(setExit(from, east, "east"))
-      -- the build offers a room's north exit before its east one
-      setExitWeightFilter(function(roomId, exitCommand)
-        if roomId == from and exitCommand == "n" then
-          lockRoom(east, true)
-        end
-      end)
+    for _, clearsItself in ipairs({false, true}) do
+      local name = "leads nowhere through an exit into a room the exit weight filter locks"
+      it(clearsItself and name .. ", then clears itself" or name, function()
+        -- the filter runs during the graph build, after the rooms were indexed
+        local area = addAreaName("MapperSpecFilterLockArea")
+        local from = createRoomID(); addRoom(from); setRoomArea(from, area)
+        local north = createRoomID(); addRoom(north); setRoomArea(north, area)
+        local east = createRoomID(); addRoom(east); setRoomArea(east, area)
+        finally(function()
+          setExitWeightFilter(nil)
+          deleteRoom(from); deleteRoom(north); deleteRoom(east)
+          deleteArea(area)
+        end)
+        assert.is_true(setExit(from, north, "north"))
+        assert.is_true(setExit(from, east, "east"))
+        -- the build offers a room's north exit before its east one
+        setExitWeightFilter(function(roomId, exitCommand)
+          if roomId == from and exitCommand == "n" then
+            lockRoom(east, true)
+            if clearsItself then
+              setExitWeightFilter(nil)
+            end
+          end
+        end)
 
-      assert.is_true(getPath(from, north))
-      assert.is_true(roomLocked(east))
-      assert.is_false(getPath(from, east))
-    end)
+        -- the search that builds the graph, so the lock lands mid-build
+        assert.is_false(getPath(from, east))
+        assert.is_true(roomLocked(east))
+        assert.is_true(getPath(from, north))
+      end)
+    end
 
     it("reroutes around a locked exit", function()
       lockExit(rA1, "east", true)
