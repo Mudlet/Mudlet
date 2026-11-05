@@ -226,6 +226,17 @@ describe("Tests functionality of Geyser.Gauge", function()
       assert.are.equal(1, repositioned)
     end)
 
+    it("sizes the fill by a pixel_geometry a script put on the front label", function()
+      gauge:setValue(30)
+      gauge:setValue(40)
+      gauge.front.pixel_geometry = function(self)
+        local x, y, width, height = Geyser.Container.pixel_geometry(self)
+        return x, y, width + 3, height - 2
+      end
+      gauge:setValue(50)
+      assert.are.same({x = 0, y = 0, width = 103, height = 38}, geometry("ggsValue_front"))
+    end)
+
     it("still redraws a fill that asks to be redrawn", function()
       gauge:setValue(50)
       local redrawn = 0
@@ -385,6 +396,123 @@ describe("Tests functionality of Geyser.Gauge", function()
       box:resize(800, 100)
       assert.are.same({x = 3, y = 3, width = 129, height = 94}, geometry("ggsPct_front"))
     end)
+  end)
+
+  -- An update that only resizes the fill reuses what it worked out about the
+  -- gauge's surroundings the time before, so each case changes something about
+  -- them between updates and the fill must still come out the size that
+  -- pixel_geometry() gives
+  describe("Geyser.Gauge:setValue after its surroundings change", function()
+    local function nested(parts)
+      parts.outer = track(Geyser.Container:new({name = "ggsStaleOuter", x = 31, y = 17, width = 401, height = 203}))
+      parts.inner = track(Geyser.Container:new({name = "ggsStaleInner", x = "10%", y = "25%", width = "75%", height = "50%"}, parts.outer))
+      return parts.inner
+    end
+
+    local cases = {
+      {"its container is resized", disturb = function(parts) parts.inner:resize("61%", "70%") end},
+      {"its container is moved to a fraction of a pixel", disturb = function(parts) parts.inner:move("33.3%", "11.1%") end},
+      {"an outer container is resized", disturb = function(parts) parts.outer:resize(333, 177) end},
+      {"an outer container is resized while hidden", disturb = function(parts)
+        parts.outer:hide()
+        parts.outer:resize(222, 111)
+        parts.outer:show()
+      end},
+      {"it is moved into another container", disturb = function(parts)
+        track(Geyser.Container:new({name = "ggsStaleOther", x = 5, y = 5, width = 157, height = 93})):add(parts.gauge)
+      end},
+      {"a function constraint on its container gives another size", setup = function(parts)
+        parts.size = 250.5
+        parts.inner:resize(function() return parts.size end, nil)
+      end, disturb = function(parts) parts.size = 171 end},
+      {"a getter on its container is replaced", disturb = function(parts)
+        parts.inner.get_width = function() return 99.5 end
+      end},
+      {"the main window changes size", setup = function(parts)
+        parts.outer:resize("40%", "30%")
+      end, disturb = function(parts)
+        local width, height = getMainWindowSize()
+        parts.mainWindowSize = getMainWindowSize
+        _G.getMainWindowSize = function() return width + 37, height + 23 end
+      end, cleanup = function(parts)
+        if parts.mainWindowSize then
+          _G.getMainWindowSize = parts.mainWindowSize
+        end
+      end},
+      {"its container is sized in characters and gets another font size", setup = function(parts)
+        parts.inner:resize("30c", "4c")
+      end, disturb = function(parts) parts.inner:setFontSize(13) end},
+      {"its container is sized in characters and its own container is resized", setup = function(parts)
+        parts.inner:resize("30c", nil)
+      end, disturb = function(parts) parts.outer:resize(355, 189) end},
+      {"its front label is swapped for one elsewhere", disturb = function(parts)
+        local elsewhere = track(Geyser.Container:new({name = "ggsStaleElsewhere", x = "50%", y = "50%", width = 77, height = 33}, parts.outer))
+        parts.gauge.front = track(Geyser.Label:new({name = "ggsStaleFront", x = 0, y = 0, width = 10, height = 10}, elsewhere))
+      end},
+      {"its back label is swapped for one of another size", disturb = function(parts)
+        parts.gauge.back = track(Geyser.Label:new({name = "ggsStaleBack", x = 0, y = 0, width = "50.5%", height = "70%"}, parts.gauge))
+      end},
+      {"its front label is moved into a container that then moves", disturb = function(parts)
+        local holder = track(Geyser.Container:new({name = "ggsStaleFrontHolder", x = 3, y = 4, width = 120, height = 60}, parts.outer))
+        holder:add(parts.gauge.front)
+        parts.gauge:setValue(20)
+        parts.gauge:setValue(25)
+        holder:move("50%", "50%")
+      end},
+      {"its back label is moved into another container and the gauge then moves", disturb = function(parts)
+        local holder = track(Geyser.Container:new({name = "ggsStaleBackHolder", x = 3, y = 4, width = 120, height = 60}, parts.outer))
+        holder:add(parts.gauge.back)
+        parts.gauge:setValue(20)
+        parts.gauge:setValue(25)
+        parts.gauge:move("7.12%", "13.3%")
+      end},
+      {"its back label gets padding", disturb = function(parts)
+        parts.gauge:setStyleSheet("padding: 3px;", "padding: 3px;")
+      end},
+      {"it is turned the other way", disturb = function(parts)
+        parts.gauge.orientation = parts.gauge.orientation == "horizontal" and "batty" or "horizontal"
+      end},
+      {"it sits in a user window that is resized", build = function(parts)
+        parts.window = track(Geyser.UserWindow:new({name = "ggsStaleWindow", x = 10, y = 20, width = 300, height = 200}))
+        return parts.window
+      end, disturb = function(parts) parts.window:resize(347, 231) end},
+      {"it sits in an adjustable container that is resized", build = function(parts)
+        parts.adjustable = track(Adjustable.Container:new({name = "ggsStaleAdjustable", x = 20, y = 30, width = 300, height = 200, autoLoad = false, autoSave = false}))
+        return parts.adjustable.Inside or parts.adjustable
+      end, disturb = function(parts) parts.adjustable:resize(377, 151) end},
+      {"it sits in a scroll box that is resized", build = function(parts)
+        parts.box = track(Geyser.ScrollBox:new({name = "ggsStaleScroll", x = 15, y = 25, width = 301, height = 157}))
+        return parts.box
+      end, disturb = function(parts) parts.box:resize(203, 99) end},
+    }
+
+    local function assertFollows(gauge)
+      for _, value in ipairs({37, 61.5, 88, 12.25}) do
+        gauge:setValue(value)
+        local _, _, width, height = Geyser.Container.pixel_geometry(gauge.front)
+        local actual = geometry(gauge.front.name)
+        assert.are.same({value = value, width = width, height = height}, {value = value, width = actual.width, height = actual.height})
+      end
+    end
+
+    for _, orientation in ipairs({"horizontal", "batty"}) do
+      for _, case in ipairs(cases) do
+        it("keeps a " .. orientation .. " fill the right size when " .. case[1], function()
+          local parts = {}
+          if case.cleanup then
+            finally(function() case.cleanup(parts) end)
+          end
+          local parent = (case.build or nested)(parts)
+          parts.gauge = track(Geyser.Gauge:new({name = "ggsStale", x = "5%", y = "10%", width = "90%", height = "60%", orientation = orientation}, parent))
+          if case.setup then
+            case.setup(parts)
+          end
+          assertFollows(parts.gauge)
+          case.disturb(parts)
+          assertFollows(parts.gauge)
+        end)
+      end
+    end
   end)
 
   describe("Geyser.Gauge orientations", function()

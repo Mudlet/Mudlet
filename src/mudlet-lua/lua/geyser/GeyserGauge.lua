@@ -209,6 +209,134 @@ local function resizesInPlace(fill, front)
     and next(front.windowList) == nil
 end
 
+local stockPixelGeometry = Geyser.Container.pixel_geometry
+
+-- Geyser.Container:pixel_geometry's rounding, which an in-place size has to match to the bit
+local function roundEdge(value)
+  return math.floor(value + 0.5 + 1e-6)
+end
+
+local dimensions = {"x", "y", "width", "height"}
+
+-- the root's getters as loaded, which put it at 0, 0 and the size of the main window
+local rootGetX, rootGetY, rootGetWidth, rootGetHeight = Geyser.get_x, Geyser.get_y, Geyser.get_width, Geyser.get_height
+
+-- Takes down what an in-place resize reads besides the value - where the fill
+-- starts, the back label's inner length along it and the front label's size
+-- across it - with every getter from the front label up to the root that those
+-- come through. A getter compiled from a constraint that is not a function
+-- answers from its container's getters alone, so it only has to stay in place;
+-- any other getter can answer differently at any moment, so what it said is
+-- kept to ask it again.
+-- @return the layout, or nil if the front label's getters are not the ones
+--         setFrontConstraints compiled
+local function recordLayout(gauge, fill, front)
+  local back = gauge.back
+  if back.container ~= gauge or front.pixel_geometry ~= stockPixelGeometry then
+    return nil
+  end
+  for _, dimension in ipairs(dimensions) do
+    local constraint, container = Geyser.compiled_from(front, dimension)
+    if constraint ~= fill[dimension] or container ~= gauge then
+      return nil
+    end
+  end
+
+  local layout = fill.layout or {live = {}}
+  local live = layout.live
+  local length, liveLength = 0, 0
+  layout.mainWidth, layout.mainHeight = nil, nil
+  local window = front
+  while window do
+    layout[length + 1], layout[length + 2], layout[length + 3], layout[length + 4], layout[length + 5] =
+      window, window.get_x, window.get_y, window.get_width, window.get_height
+    length = length + 5
+    if window == Geyser and window.get_x == rootGetX and window.get_y == rootGetY
+       and window.get_width == rootGetWidth and window.get_height == rootGetHeight then
+      layout.mainWidth, layout.mainHeight = getMainWindowSize()
+    elseif window ~= front then
+      for _, dimension in ipairs(dimensions) do
+        local constraint, container = Geyser.compiled_from(window, dimension)
+        if type(constraint) ~= "string" or container ~= window.container then
+          local getter = window["get_" .. dimension]
+          live[liveLength + 1], live[liveLength + 2] = getter, getter()
+          liveLength = liveLength + 2
+        end
+      end
+    end
+    window = window == front and back or window.container
+  end
+  -- so a window left out of the chain since is not kept alive by it
+  for i = length + 1, layout.length or 0 do
+    layout[i] = nil
+  end
+  for i = liveLength + 1, layout.liveLength or 0 do
+    live[i] = nil
+  end
+  layout.length, layout.liveLength = length, liveLength
+
+  local x, y = front.get_x(), front.get_y()
+  layout.horizontal = fill.orientation == "horizontal"
+  if layout.horizontal then
+    layout.start, layout.inner = x, back.get_width() - fill.left - fill.right
+    layout.across = roundEdge(y + front.get_height()) - roundEdge(y)
+  else
+    layout.start, layout.inner = y, back.get_height() - fill.top - fill.bottom
+    layout.across = roundEdge(x + front.get_width()) - roundEdge(x)
+  end
+  layout.startEdge = roundEdge(layout.start)
+  layout.back = back
+  layout.left, layout.right, layout.top, layout.bottom = fill.left, fill.right, fill.top, fill.bottom
+  return layout
+end
+
+-- whether nothing a layout was taken from has changed since
+local function layoutHolds(gauge, fill, front, layout)
+  if layout[1] ~= front or gauge.back ~= layout.back or front.pixel_geometry ~= stockPixelGeometry
+     or fill.left ~= layout.left or fill.right ~= layout.right or fill.top ~= layout.top or fill.bottom ~= layout.bottom then
+    return false
+  end
+  for i = 1, layout.length, 5 do
+    local window = layout[i]
+    if window.get_x ~= layout[i + 1] or window.get_y ~= layout[i + 2]
+       or window.get_width ~= layout[i + 3] or window.get_height ~= layout[i + 4] then
+      return false
+    end
+  end
+  if layout.mainWidth then
+    local width, height = getMainWindowSize()
+    if width ~= layout.mainWidth or height ~= layout.mainHeight then
+      return false
+    end
+  end
+  local live = layout.live
+  for i = 1, layout.liveLength, 2 do
+    if live[i]() ~= live[i + 1] then
+      return false
+    end
+  end
+  return true
+end
+
+-- The front label's size for the fill's current value, worked out the way
+-- pixel_geometry() would without walking every getter up to the root again.
+local function inPlaceSize(gauge, fill, front)
+  local layout = fill.layout
+  if not (layout and layoutHolds(gauge, fill, front, layout)) then
+    layout = recordLayout(gauge, fill, front)
+    fill.layout = layout
+    if not layout then
+      local _, _, width, height = front:pixel_geometry()
+      return width, height
+    end
+  end
+  local along = roundEdge(layout.start + layout.inner * (fill.value / 100)) - layout.startEdge
+  if layout.horizontal then
+    return along, layout.across
+  end
+  return layout.across, along
+end
+
 -- Gives the front label the constraints for one orientation. They are functions
 -- rather than "<n>px" because a negative pixel constraint is measured from the
 -- opposite edge, which is not what a negative margin asks for, and they read the
@@ -341,8 +469,7 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
   elseif spaced or (filled and not resizesInPlace(fill, front)) then
     front:reposition()
   elseif filled then
-    local _, _, width, height = front:pixel_geometry()
-    resizeWindow(front.name, width, height)
+    resizeWindow(front.name, inPlaceSize(self, fill, front))
   end
 
   if text then

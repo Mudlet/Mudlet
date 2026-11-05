@@ -30,6 +30,21 @@ local function unchanged(window, cons, container)
     and window.get_width == last.get_width and window.get_height == last.get_height
 end
 
+--- Internal function: what one of a window's getters was compiled from, for a
+-- caller that keeps a value the getter gave and needs to know what it rests on.
+-- @param window The window the getter belongs to.
+-- @param dimension "x", "y", "width" or "height".
+-- @return the constraint and the container the getter reads, or nil if the
+--         getter is not one calc_constraints compiled and kept track of
+function Geyser.compiled_from(window, dimension)
+  local last = compiled[window]
+  local getter = last and last["get_" .. dimension]
+  if getter == nil or window["get_" .. dimension] ~= getter then
+    return nil
+  end
+  return last[dimension], last.container
+end
+
 -- how both parseable() and the parser read a percentage
 local percentPattern = "([%+%-%d%p]+)%%%s*([%+%-%d%p]*)"
 
