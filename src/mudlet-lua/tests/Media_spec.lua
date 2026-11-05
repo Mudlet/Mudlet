@@ -4684,12 +4684,14 @@ describe("Tests the text-to-speech Lua API", function()
   end)
 
 describe("FFmpeg's hardware device types", function()
-  it("are named on Linux, so Qt does not try each one when the first sound plays", function()
+  it("are named on Linux only, so Qt does not try each one when the first sound plays", function()
+    local decoding = os.getenv("QT_FFMPEG_DECODING_HW_DEVICE_TYPES")
     if getOS() ~= "linux" then
-      pending("only Linux names them")
+      -- Qt's own list there holds the platform's decoders, such as D3D11 and VideoToolbox
+      assert.is_nil(decoding)
+      assert.is_nil(os.getenv("QT_FFMPEG_ENCODING_HW_DEVICE_TYPES"))
       return
     end
-    local decoding = os.getenv("QT_FFMPEG_DECODING_HW_DEVICE_TYPES")
     local expected = "vaapi,vdpau,qsv,drm"
     local nvidiaDriver = io.open("/proc/driver/nvidia/version")
     if nvidiaDriver then

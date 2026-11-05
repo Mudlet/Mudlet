@@ -569,11 +569,11 @@ int main(int argc, char* argv[])
     // is deliberately ordered against static destruction.
     std::unique_ptr<QCoreApplication> consoleApp;
     QApplication* app = nullptr;
-    // Setting the environment is a data race once the application's threads are reading it
-    MudletApp::nameHardwareDeviceTypes();
     if (printAndExitOption) {
         consoleApp = std::make_unique<QCoreApplication>(argc, argv);
     } else {
+        // Setting the environment is a data race once the application's threads are reading it
+        MudletApp::nameHardwareDeviceTypes();
         app = new QApplication(argc, argv);
     }
 

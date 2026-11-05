@@ -196,8 +196,8 @@ public:
     // FFmpeg on Windows and AVFoundation on macOS over Qt Multimedia's own default, unless QT_MEDIA_BACKEND
     // names one; before the first media object is made
     static void setDefaultMediaBackend();
-    // On Linux, the hardware device types FFmpeg may use, unless already set: named, Qt Multimedia skips trying
-    // each one, which froze the first sound of a session
+    // On Linux, names FFmpeg's hardware device types unless already set; otherwise Qt Multimedia opens a device of
+    // each type as the first sound plays, blocking the main thread
     static void nameHardwareDeviceTypes();
 
     // Whether the config root in force actually came from a portable.txt. False
