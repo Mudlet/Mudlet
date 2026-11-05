@@ -272,6 +272,22 @@ end))lua")
         return texts;
     }
 
+    // A replay file of chunks, each with the gap before it in milliseconds
+    static bool writeReplay(const QString& path, const QList<std::pair<qint32, QByteArray>>& chunks)
+    {
+        QFile file(path);
+        if (!file.open(QIODevice::WriteOnly)) {
+            return false;
+        }
+        QDataStream stream(&file);
+        stream.setVersion(QDataStream::Qt_5_12);
+        for (const auto& [gap, bytes] : chunks) {
+            stream << gap << static_cast<qint32>(bytes.size());
+            stream.writeRawData(bytes.constData(), static_cast<int>(bytes.size()));
+        }
+        return stream.status() == QDataStream::Ok;
+    }
+
     // Stands in for the keychain of every credential store made until the guard it returns goes, answering
     // from the event loop: reads with readError and removals with removeError. The count is of the jobs seen.
     static auto answerTheKeychain(const QKeychain::Error readError, const QKeychain::Error removeError, const QString& message, std::shared_ptr<int> jobs)
@@ -1924,6 +1940,123 @@ tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.S, [[hea
         if (!shutDown) {
             QVERIFY(session.shutdown(false));
         }
+    }
+
+    // As the GUI's replay toolbar shows how far it has played and changes its speed
+    void test_aReplaysSpeedIsChangedAndItsTimeRead()
+    {
+        const QString name = qsl("Headless Replay Speed");
+        QVERIFY(writeProfile(name, QString()));
+        const QString logDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, name);
+        QVERIFY(QDir().mkpath(logDir));
+        // Gaps a speed change has to shorten for the replay to end within the test's wait
+        QVERIFY(writeReplay(qsl("%1/three.dat").arg(logDir),
+                            {{0, QByteArrayLiteral("First timed line.\r\n")}, {60000, QByteArrayLiteral("Second timed line.\r\n")}, {120000, QByteArrayLiteral("Third timed line.\r\n")}}));
+
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy started(&session, &THeadlessSession::replayStarted);
+        QSignalSpy speed(&session, &THeadlessSession::replaySpeedChanged);
+        QSignalSpy finished(&session, &THeadlessSession::replayFinished);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(!session.changeReplaySpeed(true));
+        QCOMPARE(session.errorString(), qsl("No replay of the profile is playing."));
+        QCOMPARE(session.replayElapsedMSecs(), qint64{-1});
+        QCOMPARE(session.replaySpeed(), -1);
+
+        const QString other = qsl("Headless Replay Speed Elsewhere");
+        QVERIFY(writeProfile(other, QString()));
+        const QString otherLogDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, other);
+        QVERIFY(QDir().mkpath(otherLogDir));
+        QVERIFY(QFile::copy(qsl("%1/three.dat").arg(logDir), qsl("%1/three.dat").arg(otherLogDir)));
+        QVERIFY(session.runLua(qsl("loadProfile('%1', true)").arg(other)));
+        Host* pOther = HostManager::self()->getHost(other);
+        QVERIFY(pOther);
+        QVERIFY(pOther->getLuaInterpreter()->compileAndExecuteScript(qsl("loadReplay('three.dat')")));
+        QVERIFY(MudletReplay::self()->running());
+        QVERIFY(!session.changeReplaySpeed(true));
+        QCOMPARE(MudletReplay::self()->speed(), 1);
+        QCOMPARE(session.replayElapsedMSecs(), qint64{-1});
+        QCOMPARE(session.replaySpeed(), -1);
+        pOther->mTelnet.stopReplay();
+        QTRY_VERIFY_WITH_TIMEOUT(!MudletReplay::self()->running(), 10000);
+
+        qint64 elapsedAtThirdLine = -1;
+        connect(&session, &THeadlessSession::outputLine, this, [&session, &elapsedAtThirdLine](const QString&, const QString& text) {
+            if (text == qsl("Third timed line.")) {
+                elapsedAtThirdLine = session.replayElapsedMSecs();
+            }
+        });
+
+        // The time is that of the line waiting to be played, as the toolbar's is, so it is at the end of a gap
+        // as soon as the gap begins and holds there, ahead of what has been shown, while paused
+        QVERIFY(session.runLua(qsl("loadReplay('three.dat')")));
+        QCOMPARE(session.replayElapsedMSecs(), qint64{0});
+        QCOMPARE(session.replaySpeed(), 1);
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("First timed line.")), 10000);
+        QTRY_COMPARE(session.replayElapsedMSecs(), qint64{60000});
+        QVERIFY(session.pauseReplay());
+        QTest::qWait(1000);
+        QCOMPARE(session.replayElapsedMSecs(), qint64{60000});
+        QVERIFY(!outputTexts(output).contains(qsl("Second timed line.")));
+
+        QTRY_COMPARE(started.size(), 1);
+        QVERIFY(session.changeReplaySpeed(true));
+        QCOMPARE(session.replaySpeed(), 2);
+        QVERIFY(session.resumeReplay());
+        for (int i = 0; i < 9; ++i) {
+            QVERIFY(session.changeReplaySpeed(true));
+        }
+        QCOMPARE(session.replaySpeed(), 1024);
+        // At the fastest it stays there and its speed is sent again, as the toolbar's button does
+        QVERIFY(session.changeReplaySpeed(true));
+        QCOMPARE(session.replaySpeed(), 1024);
+        QVERIFY(session.changeReplaySpeed(false));
+        QCOMPARE(session.replaySpeed(), 512);
+        QCOMPARE(session.replayElapsedMSecs(), qint64{60000});
+        QTRY_COMPARE(speed.size(), 12);
+        QList<int> speeds;
+        for (const auto& arguments : std::as_const(speed)) {
+            QCOMPARE(arguments.at(0).toString(), name);
+            speeds << arguments.at(1).toInt();
+        }
+        QCOMPARE(speeds, QList<int>({2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 1024, 512}));
+
+        // Three minutes of recording were left, which only the faster speed fits into the wait
+        QTRY_COMPARE_WITH_TIMEOUT(finished.size(), 1, 5000);
+        QVERIFY(outputTexts(output).contains(qsl("Third timed line.")));
+        QCOMPARE(elapsedAtThirdLine, qint64{180000});
+        QCOMPARE(session.replayElapsedMSecs(), qint64{-1});
+        QCOMPARE(session.replaySpeed(), -1);
+        QVERIFY(!session.changeReplaySpeed(false));
+        QVERIFY(session.shutdown(false));
+        QCOMPARE(session.replayElapsedMSecs(), qint64{-1});
+    }
+
+    // A recording's own time is counted past a day, where a clock face would go round
+    void test_aReplaysTimeIsReadPastADay()
+    {
+        const QString name = qsl("Headless Replay Day");
+        QVERIFY(writeProfile(name, QString()));
+        const QString logDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, name);
+        QVERIFY(QDir().mkpath(logDir));
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy finished(&session, &THeadlessSession::replayFinished);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        // A millisecond short of a day wraps to just before the clock's start, which read as no replay at all
+        int replays = 0;
+        for (const qint32 gap : {86'399'999, 90'000'000}) {
+            QVERIFY(writeReplay(qsl("%1/day.dat").arg(logDir), {{0, QByteArrayLiteral("Before the gap.\r\n")}, {gap, QByteArrayLiteral("After the gap.\r\n")}}));
+            output.clear();
+            QVERIFY(session.runLua(qsl("loadReplay('day.dat')")));
+            QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Before the gap.")), 10000);
+            QTRY_COMPARE(session.replayElapsedMSecs(), qint64{gap});
+            QVERIFY(session.stopReplay());
+            ++replays;
+            QTRY_COMPARE(finished.size(), replays);
+        }
+        QVERIFY(session.shutdown(false));
     }
 
     // What the speech bridge, Discord and the MCP bridge take for the profile in front
