@@ -1524,6 +1524,159 @@ end))lua");
         QVERIFY(!outputTexts(output).contains(qsl("Replayed line 1999.")));
     }
 
+    // As the GUI's command line hands the profile's key bindings its key events
+    void test_aKeyPressedRunsItsKeyBinding()
+    {
+        using KeyResult = THeadlessSession::KeyResult;
+        const QString name = qsl("Headless Keys");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession unstarted;
+        QCOMPARE(unstarted.pressKey(Qt::Key_F1, Qt::ControlModifier), KeyResult::refused);
+
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessKeys = ""
+tempKey(mudlet.keymodifier.Control, mudlet.key.F1, [[headlessKeys = headlessKeys .. "Ctrl+F1 "]])
+tempKey(mudlet.keymodifier.Keypad, mudlet.key["8"], [[headlessKeys = headlessKeys .. "Keypad 8 "]]))lua")));
+        QCOMPARE(session.pressKey(Qt::Key_F1, Qt::ControlModifier), KeyResult::bindingRan);
+        QCOMPARE(luaGlobalString(session.host(), "headlessKeys"), qsl("Ctrl+F1 "));
+        QCOMPARE(session.pressKey(Qt::Key_F1), KeyResult::noBinding);
+        QCOMPARE(session.errorString(), qsl("No key binding of the profile takes that key."));
+        QCOMPARE(session.pressKey(Qt::Key_8), KeyResult::noBinding);
+        QCOMPARE(session.pressKey(Qt::Key_8, Qt::KeypadModifier), KeyResult::bindingRan);
+        QCOMPARE(luaGlobalString(session.host(), "headlessKeys"), qsl("Ctrl+F1 Keypad 8 "));
+
+        std::optional<KeyResult> pressedMidWrite;
+        connect(&session, &THeadlessSession::outputLine, this, [&session, &pressedMidWrite](const QString&, const QString& text, bool) {
+            if (text == qsl("headless key line")) {
+                pressedMidWrite = session.pressKey(Qt::Key_F1, Qt::ControlModifier);
+            }
+        });
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("refused")));
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("headless key line\n"))lua")));
+        QCOMPARE(pressedMidWrite, std::optional(KeyResult::refused));
+        QCOMPARE(luaGlobalString(session.host(), "headlessKeys"), qsl("Ctrl+F1 Keypad 8 "));
+
+        QVERIFY(session.shutdown(false));
+        QCOMPARE(session.pressKey(Qt::Key_F1, Qt::ControlModifier), KeyResult::refused);
+        QCOMPARE(session.errorString(), qsl("No profile is open."));
+    }
+
+    // Bindings on them never fire in the GUI, as its command line acts on them first; on the keypad they do
+    void test_keysTheCommandLineKeepsRunNoBinding()
+    {
+        using KeyResult = THeadlessSession::KeyResult;
+        const QString name = qsl("Headless Kept Keys");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessKeys = ""
+local function bind(modifier, key, label)
+  tempKey(modifier, key, function() headlessKeys = headlessKeys .. label .. " " end)
+end
+bind(mudlet.keymodifier.None, mudlet.key.Up, "Up")
+bind(mudlet.keymodifier.Control, mudlet.key.Up, "Ctrl+Up")
+bind(mudlet.keymodifier.Alt, mudlet.key.Up, "Alt+Up")
+bind(mudlet.keymodifier.Keypad, mudlet.key.Up, "Keypad+Up")
+bind(mudlet.keymodifier.None, mudlet.key.Return, "Return")
+bind(mudlet.keymodifier.Alt, mudlet.key.Return, "Alt+Return")
+bind(mudlet.keymodifier.None, mudlet.key.Escape, "Esc")
+bind(mudlet.keymodifier.None, mudlet.key.Tab, "Tab")
+bind(mudlet.keymodifier.Shift, mudlet.key.Space, "Shift+Space")
+bind(mudlet.keymodifier.Control, mudlet.key.Space, "Ctrl+Space"))lua")));
+
+        QCOMPARE(session.pressKey(Qt::Key_Return), KeyResult::keyKept);
+        QCOMPARE(session.errorString(), qsl("The GUI's command line keeps that key for itself, offering it to no key binding; the app handles it."));
+        QCOMPARE(session.pressKey(Qt::Key_Escape), KeyResult::keyKept);
+        QCOMPARE(session.pressKey(Qt::Key_Tab), KeyResult::keyKept);
+        QCOMPARE(session.pressKey(Qt::Key_Space, Qt::ShiftModifier), KeyResult::keyKept);
+#if defined(Q_OS_MACOS)
+        // The arrows carry the keypad flag there, so the line's own Up is Keypad+Up, which meets the bindings first
+        QCOMPARE(session.pressKey(Qt::Key_Up), KeyResult::bindingRan);
+        QCOMPARE(session.pressKey(Qt::Key_Up, Qt::ControlModifier), KeyResult::bindingRan);
+        QCOMPARE(luaGlobalString(session.host(), "headlessKeys"), qsl("Up Ctrl+Up "));
+        QVERIFY(session.runLua(qsl("headlessKeys = ''")));
+#else
+        QCOMPARE(session.pressKey(Qt::Key_Up), KeyResult::keyKept);
+        QCOMPARE(session.pressKey(Qt::Key_Up, Qt::ControlModifier), KeyResult::keyKept);
+#endif
+        QCOMPARE(luaGlobalString(session.host(), "headlessKeys"), QString());
+
+        QCOMPARE(session.pressKey(Qt::Key_Up, Qt::AltModifier), KeyResult::bindingRan);
+        QCOMPARE(session.pressKey(Qt::Key_Up, Qt::KeypadModifier), KeyResult::bindingRan);
+        QCOMPARE(session.pressKey(Qt::Key_Return, Qt::AltModifier), KeyResult::bindingRan);
+        QCOMPARE(session.pressKey(Qt::Key_Space, Qt::ControlModifier), KeyResult::bindingRan);
+        QCOMPARE(luaGlobalString(session.host(), "headlessKeys"), qsl("Alt+Up Keypad+Up Alt+Return Ctrl+Space "));
+
+        // A keypad key no binding takes goes on to the line, which sends with Enter, as a real Enter always is
+        QVERIFY(session.runLua(qsl("headlessKeys = ''")));
+        QCOMPARE(session.pressKey(Qt::Key_Enter, Qt::KeypadModifier), KeyResult::keyKept);
+        QCOMPARE(session.pressKey(Qt::Key_Enter, Qt::ControlModifier | Qt::KeypadModifier), KeyResult::noBinding);
+#if defined(Q_OS_MACOS)
+        QCOMPARE(session.pressKey(Qt::Key_Down, Qt::KeypadModifier), KeyResult::keyKept);
+        QCOMPARE(session.pressKey(Qt::Key_Down, Qt::ControlModifier | Qt::KeypadModifier), KeyResult::keyKept);
+#else
+        QCOMPARE(session.pressKey(Qt::Key_Down, Qt::KeypadModifier), KeyResult::noBinding);
+        QCOMPARE(session.pressKey(Qt::Key_Down, Qt::ControlModifier | Qt::KeypadModifier), KeyResult::noBinding);
+#endif
+        QVERIFY(session.runLua(qsl(R"lua(tempKey(mudlet.keymodifier.Keypad, mudlet.key.Enter, function() headlessKeys = headlessKeys .. "Keypad+Enter " end))lua")));
+        QCOMPARE(session.pressKey(Qt::Key_Enter, Qt::KeypadModifier), KeyResult::bindingRan);
+        QCOMPARE(luaGlobalString(session.host(), "headlessKeys"), qsl("Keypad+Enter "));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // As the GUI's hidden-input box types a printable key into the password before any binding may take it
+    void test_aKeyTypedIntoHiddenInputRunsNoBinding()
+    {
+        using KeyResult = THeadlessSession::KeyResult;
+        const QString name = qsl("Headless Hidden Keys");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy hidden(&session, &THeadlessSession::hiddenInputWanted);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessKeys = ""
+tempKey(mudlet.keymodifier.Keypad, mudlet.key["8"], [[send("north") headlessKeys = headlessKeys .. "Keypad 8 "]])
+tempKey(mudlet.keymodifier.Shift, mudlet.key.A, [[headlessKeys = headlessKeys .. "Shift+A "]])
+tempKey(mudlet.keymodifier.Control, mudlet.key.F1, [[headlessKeys = headlessKeys .. "Ctrl+F1 "]])
+tempKey(mudlet.keymodifier.None, mudlet.key.Escape, [[headlessKeys = headlessKeys .. "Esc "]])
+tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.S, [[headlessKeys = headlessKeys .. "Ctrl+Alt+S "]]))lua")));
+
+        game->write("\xff\xfb\x01Password:\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Password:")), 10000);
+        QCOMPARE(hidden.size(), 1);
+        QCOMPARE(session.pressKey(Qt::Key_8, Qt::KeypadModifier), KeyResult::keyKept);
+        QCOMPARE(session.errorString(), qsl("While the game hides what is typed, its hidden-input box keeps that key, typing it if printable; the app types it into its hidden input."));
+        QCOMPARE(session.pressKey(Qt::Key_A, Qt::ShiftModifier), KeyResult::keyKept);
+        QCOMPARE(session.pressKey(Qt::Key_Escape), KeyResult::keyKept);
+        QCOMPARE(luaGlobalString(session.host(), "headlessKeys"), QString());
+        QCOMPARE(session.pressKey(Qt::Key_F1, Qt::ControlModifier), KeyResult::bindingRan);
+        QCOMPARE(luaGlobalString(session.host(), "headlessKeys"), qsl("Ctrl+F1 "));
+
+        // The box goes by what the key typed: Ctrl+Alt is AltGr only where the layout made a character of it
+        QCOMPARE(session.pressKey(Qt::Key_S, Qt::ControlModifier | Qt::AltModifier, qsl("ś")), KeyResult::keyKept);
+        QCOMPARE(session.pressKey(Qt::Key_S, Qt::ControlModifier | Qt::AltModifier, QString(QChar(0x13))), KeyResult::bindingRan);
+        QCOMPARE(session.pressKey(Qt::Key_S, Qt::ControlModifier | Qt::AltModifier, qsl("")), KeyResult::bindingRan);
+        QCOMPARE(luaGlobalString(session.host(), "headlessKeys"), qsl("Ctrl+F1 Ctrl+Alt+S Ctrl+Alt+S "));
+        // Without the text, any printable key with Ctrl+Alt counts as AltGr
+        QCOMPARE(session.pressKey(Qt::Key_S, Qt::ControlModifier | Qt::AltModifier), KeyResult::keyKept);
+        QCOMPARE(session.pressKey(Qt::Key_8, Qt::KeypadModifier, qsl("8")), KeyResult::keyKept);
+        QCOMPARE(luaGlobalString(session.host(), "headlessKeys"), qsl("Ctrl+F1 Ctrl+Alt+S Ctrl+Alt+S "));
+        QTest::qWait(100);
+        QVERIFY(!game->readAll().contains("north"));
+        QVERIFY(session.shutdown(false));
+    }
+
     // What the speech bridge, Discord and the MCP bridge take for the profile in front
     void test_setActiveProfileNamesTheActiveHost()
     {

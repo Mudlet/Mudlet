@@ -184,6 +184,21 @@ public:
     // mapProgressCancelDisabled, and where submit() is refused, save that a JSON map that start() loads can be
     // aborted from a handler of its mapProgressStarted.
     bool cancelMapOperation();
+    // A key pressed as on the GUI's input line, which offers it to the profile's key bindings where that line
+    // would: the first that matches runs, or each one when the profile runs them all. The key and modifiers are
+    // those of Qt's key event, which a binding must match exactly, so a key on the keypad carries
+    // Qt::KeypadModifier. The binding's script runs before this returns, as an alias does for submit(), and what
+    // it sends goes then. bindingRan: a binding took it. noBinding: none did, and the app does what the GUI's
+    // line does then, as type it. keyKept: the GUI's line keeps the key for itself, as Return, Up or a keypad
+    // Enter no binding took, or while hidden input is wanted its box does, typing a printable key into the
+    // password; the app handles it. refused: where submit() is. errorString() says which.
+    enum class KeyResult { bindingRan, noBinding, keyKept, refused };
+    // Without the key's text, a printable key with Ctrl+Alt (or Option on macOS) counts as AltGr typing while
+    // hidden input is wanted, so no binding is offered it
+    KeyResult pressKey(Qt::Key key, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    // With what the key typed, as QKeyEvent::text(), even if empty, by which the hidden-input box judges it as
+    // the GUI's does
+    KeyResult pressKey(Qt::Key key, Qt::KeyboardModifiers modifiers, const QString& text);
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -292,6 +307,8 @@ private:
     void startMapProgress(const QString& title, const QString& label, int maximum);
     bool finishOpenProgress();
     void lineCommitted(int lineIndex);
+    // text is null when the app did not give it
+    KeyResult offerKey(Qt::Key, Qt::KeyboardModifiers, const QString* text);
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);

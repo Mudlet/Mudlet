@@ -40,6 +40,7 @@
 #include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
+#include <QKeyEvent>
 #include <QMetaMethod>
 #include <QScopeGuard>
 #include <QTimer>
@@ -1085,6 +1086,145 @@ bool THeadlessSession::cancelMapOperation()
     }
     mpHost->mpMap->slot_mapProgressDialogCancelled();
     return true;
+}
+
+namespace {
+
+// The combinations TCommandLine::event() acts on without offering them to a binding, or for a keypad key, once
+// none has taken it
+bool commandLineKeepsKey(const Host& host, const QKeyEvent& event)
+{
+    const Qt::KeyboardModifiers modifiers = event.modifiers();
+    if (modifiers & Qt::KeypadModifier) {
+        switch (event.key()) {
+        case Qt::Key_Enter:
+            return modifiers == Qt::KeypadModifier;
+#if defined(Q_OS_MACOS)
+        // The arrows carry the flag there
+        case Qt::Key_Up:
+        case Qt::Key_Down:
+            return modifiers == Qt::KeypadModifier || modifiers == (Qt::ControlModifier | Qt::KeypadModifier);
+#endif
+        default:
+            return false;
+        }
+    }
+    switch (event.key()) {
+    case Qt::Key_Space:
+    case Qt::Key_Backtab:
+        return (modifiers & ~Qt::ShiftModifier) == Qt::NoModifier;
+    case Qt::Key_Tab:
+        return host.caretShortcutMatches(&event) || modifiers == Qt::NoModifier;
+    case Qt::Key_F6:
+        return host.caretShortcutMatches(&event);
+    case Qt::Key_Backspace:
+        return (modifiers & ~(Qt::ControlModifier | Qt::ShiftModifier)) == Qt::NoModifier;
+    case Qt::Key_Return:
+        return modifiers == Qt::NoModifier || modifiers == Qt::ControlModifier || modifiers == Qt::ShiftModifier;
+    case Qt::Key_Enter:
+    case Qt::Key_Delete:
+    case Qt::Key_Escape:
+    case Qt::Key_PageUp:
+    case Qt::Key_PageDown:
+        return modifiers == Qt::NoModifier;
+#if !defined(Q_OS_MACOS)
+    case Qt::Key_Up:
+    case Qt::Key_Down:
+        return modifiers == Qt::NoModifier || modifiers == Qt::ControlModifier;
+#endif
+    default:
+        return false;
+    }
+}
+
+// As TPasswordEntry::handleKeyPress(), which judges a printable key by its text; without the text, by its code
+bool hiddenInputKeepsKey(const Host& host, const QKeyEvent& event, const QString* text)
+{
+    const Qt::KeyboardModifiers modifiers = event.modifiers() & ~Qt::KeypadModifier;
+    if (host.caretShortcutMatches(&event)) {
+        return true;
+    }
+    switch (event.key()) {
+    case Qt::Key_Return:
+    case Qt::Key_Enter:
+    case Qt::Key_Escape:
+    case Qt::Key_Tab:
+    case Qt::Key_Up:
+    case Qt::Key_Down:
+    case Qt::Key_PageUp:
+    case Qt::Key_PageDown:
+        if (modifiers == Qt::NoModifier) {
+            return true;
+        }
+        break;
+    case Qt::Key_Backtab:
+        if (modifiers == Qt::NoModifier || modifiers == Qt::ShiftModifier) {
+            return true;
+        }
+        break;
+    default:
+        break;
+    }
+    if (event.matches(QKeySequence::Copy) || event.matches(QKeySequence::Cut) || event.matches(QKeySequence::Undo) || event.matches(QKeySequence::Redo)) {
+        return true;
+    }
+    // Qt gives a key that types a character that character's code, below its first special key, but not every
+    // Ctrl+Alt with one is AltGr typing it
+    const bool printable = text ? !text->isEmpty() && text->front().isPrint() : event.key() >= Qt::Key_Space && event.key() < Qt::Key_Escape;
+    const Qt::KeyboardModifiers modifierKeys = modifiers & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier);
+    const bool altGr = (modifierKeys & Qt::ControlModifier) && (modifierKeys & Qt::AltModifier);
+#if defined(Q_OS_MACOS)
+    const bool layoutModifier = altGr || modifierKeys == Qt::AltModifier;
+#else
+    const bool layoutModifier = altGr;
+#endif
+    return printable && (modifierKeys == Qt::NoModifier || layoutModifier);
+}
+
+} // namespace
+
+THeadlessSession::KeyResult THeadlessSession::pressKey(const Qt::Key key, const Qt::KeyboardModifiers modifiers)
+{
+    return offerKey(key, modifiers, nullptr);
+}
+
+THeadlessSession::KeyResult THeadlessSession::pressKey(const Qt::Key key, const Qt::KeyboardModifiers modifiers, const QString& text)
+{
+    return offerKey(key, modifiers, &text);
+}
+
+THeadlessSession::KeyResult THeadlessSession::offerKey(const Qt::Key key, const Qt::KeyboardModifiers modifiers, const QString* text)
+{
+    if (!usable()) {
+        return KeyResult::refused;
+    }
+    const QKeyEvent event(QEvent::KeyPress, key, modifiers, text ? *text : QString());
+    const bool keypad = modifiers & Qt::KeypadModifier;
+    const bool hiddenInput = mpHost->passwordEntryWanted();
+    if (hiddenInput) {
+        if (hiddenInputKeepsKey(*mpHost, event, text)) {
+            //: Error from a frontend with no window that was given a key press while the game hides what the player types, as for a password, which the GUI's hidden-input box would take rather than any key binding
+            mErrorString = tr("While the game hides what is typed, its hidden-input box keeps that key, typing it if printable; the app types it into its hidden input.");
+            return KeyResult::keyKept;
+        }
+    } else {
+        // TCommandLine::event() offers a keypad key to the bindings ahead of its own keys, and any other after them
+        if (keypad && mpHost->getKeyUnit()->processDataStream(key, modifiers)) {
+            return KeyResult::bindingRan;
+        }
+        if (commandLineKeepsKey(*mpHost, event)) {
+            //: Error from a frontend with no window that was given a key press, such as Return or Up, which the GUI's command line acts on itself rather than offering it to any key binding
+            mErrorString = tr("The GUI's command line keeps that key for itself, offering it to no key binding; the app handles it.");
+            return KeyResult::keyKept;
+        }
+    }
+    // A keypad key the line did not keep has met the bindings already
+    if ((hiddenInput || !keypad) && mpHost->getKeyUnit()->processDataStream(key, modifiers)) {
+        return KeyResult::bindingRan;
+    }
+    //: Error from a frontend with no window that was given a key press which none of the profile's key bindings takes
+    mErrorString = tr("No key binding of the profile takes that key.");
+    return KeyResult::noBinding;
 }
 
 void THeadlessSession::noteAlreadyInstalled(const QString& path, const QString& name)

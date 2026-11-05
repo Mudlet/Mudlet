@@ -256,6 +256,50 @@ session's own profile are sent. As for the map's progress, one still playing whe
 when `shutdown()` or a later `start()` lets the profile go, gets its end there. The replay's elapsed time,
 pausing and its speed go through `host()` and `MudletReplay::self()` for now.
 
+`pressKey()` is a key pressed on the GUI's input line: it offers the key to the profile's key bindings
+where that line would, and its `KeyResult` says what came of it. The binding's script runs before the
+call returns, as an alias does for `submit()`, so the session's signals may be sent meanwhile.
+
+- `bindingRan`: a binding took the key, and the app does nothing more with it.
+- `noBinding`: no binding took it, so the app does what the GUI's line does then. That is to type the
+  character, a keypad digit included. Ctrl+1 to Ctrl+9 and Ctrl+0 switch to that profile tab, which
+  the app can do with `setActiveProfile()`, and Ctrl+F opens the search of the main console.
+- `keyKept`: the GUI's line acts on the key itself, so the app handles the key. A binding on it does
+  not fire in the GUI either, save for a key on the keypad, which is offered to the bindings first and
+  kept only once none takes it. On the command line these keys are:
+  - Return, alone or with Ctrl or Shift;
+  - Enter, alone; a real Enter is on the keypad, so it is kept when no binding on Keypad+Enter takes it;
+  - Tab, and Shift+Tab (Qt's `Key_Backtab`, with or without Shift);
+  - Space, alone or with Shift;
+  - Backspace, alone or with Ctrl, Shift or both;
+  - Delete, Escape, Page Up and Page Down;
+  - Up and Down, alone or with Ctrl (on macOS these carry the keypad flag, so they too are offered to
+    the bindings first);
+  - the key the accessibility settings set to toggle caret mode.
+
+  While hidden input is wanted, the GUI's hidden-input box takes the place of the line. It keeps
+  Return, Enter, Escape, Tab, Up, Down, Page Up and Page Down, each alone, as well as Shift+Tab, copy,
+  cut, undo and redo. It also keeps every key that types a printable character, alone or with Shift or
+  AltGr (Option, too, on macOS), and types it into the password, so a keypad digit bound to a direction
+  still goes into the password. The app types those into its own hidden input. The box judges a key by
+  the text it typed, which the app gives as `pressKey()`'s third argument, as Qt's `QKeyEvent::text()`
+  has it, empty when the key typed nothing. Without it, any key with a character's code counts as
+  printable, and Ctrl+Alt with one as AltGr, so a binding on Ctrl+Alt+S, say, is not offered the key
+  while hidden input is wanted, though the GUI offers it on a layout where that types nothing.
+- `refused`: the call was refused, as `submit()` is. Use `errorString()` to see why; the app should not
+  type the key.
+
+A binding matches its key and modifiers exactly, as Qt's key event gives them, which a frontend that is
+not built on Qt has to copy:
+
+- A key on the keypad carries `Qt::KeypadModifier`, as a binding that walks the map with the number pad
+  expects. On macOS the arrow keys carry it too.
+- A shifted symbol is its own key with `Qt::ShiftModifier`: on a US layout, Shift+1 is `Qt::Key_Exclam`
+  with Shift, not `Qt::Key_1`.
+- A letter is its capital key code whether or not Shift is held, so a capital A is `Qt::Key_A` with
+  `Qt::ShiftModifier`.
+- AltGr arrives as Ctrl+Alt on Windows, and on X11 it can carry `Qt::GroupSwitchModifier`.
+
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.
 
