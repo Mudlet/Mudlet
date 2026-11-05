@@ -195,6 +195,7 @@ private:
     void calcCustomLineBounds();
     void setPlanarExit(int&, const int);
     void refreshLodExitIndex();
+    bool removeSpecialExitExtras(const QString&);
 
     bool readJsonExits(const QJsonObject&);
     void readJsonExitStubs(const QJsonObject&);
