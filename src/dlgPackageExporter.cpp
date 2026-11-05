@@ -45,6 +45,7 @@
 #include <QMimeData>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QTextDocumentFragment>
 #include <QTimer>
 #include <QUrl>
 #include <chrono>
@@ -2128,6 +2129,11 @@ void dlgPackageExporter::listTimers()
 void dlgPackageExporter::displayResultMessage(const QString& html, const bool isSuccessMessage)
 {
     if (!isSuccessMessage) {
+        if (mDeleteWhenExportEnds) {
+            // Closed mid-export, so this hidden dialog goes without anyone seeing its label
+            qWarning().noquote().nospace() << "dlgPackageExporter WARNING - exporting \"" << mPackageName
+                                           << "\" failed after its dialog was closed: " << QTextDocumentFragment::fromHtml(html).toPlainText();
+        }
         // Light coral red error message - #FF6B6B has good contrast on both light and dark backgrounds
         ui->infoLabel->setText(qsl("<p><font color='#FF6B6B'><b><big>%1</big><b></font></p>").arg(html));
         return;

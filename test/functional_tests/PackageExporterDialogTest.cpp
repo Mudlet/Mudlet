@@ -634,6 +634,30 @@ private slots:
         QVERIFY2(mpHost->mInstalledModules.contains(moduleName), "the module made by an exporter closed mid-export was not installed");
     }
 
+    // Its hidden label is gone with it, so the failure has to be logged
+    void test_anExportThatFailsAfterItsExporterClosedIsLogged_6545()
+    {
+        const QString packageName = packageNamed(qsl("exporter-fails-after-closing"));
+        makeTrigger(qsl("exporter fails after closing trigger"), nullptr);
+        mudlet::self()->slot_packageExporter();
+        const QPointer<dlgPackageExporter> exporter = mudlet::self()->findChild<dlgPackageExporter*>();
+        QVERIFY2(exporter, "the menu never opened an exporter");
+        mpExporter = exporter;
+        QVERIFY(checkItem(triggersTop(), qsl("exporter fails after closing trigger")));
+        nameField()->setText(packageName);
+        // a folder where the package file goes makes the zip fail; permissions would not stop root
+        QVERIFY(QDir().mkpath(packagePath(packageName)));
+        answerNextMessageBox(QMessageBox::Yes);
+
+        mpExporter->slot_exportPackage();
+        QVERIFY2(infoLabel()->text().contains(qsl("Exporting package...")), qPrintable(qsl("The zip was never started; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        mpExporter = nullptr;
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("exporting \"%1\" failed after its dialog was closed").arg(packageName)));
+        QVERIFY(exporter->close());
+
+        QTRY_VERIFY2_WITH_TIMEOUT(!exporter, "the exporter was kept alive after its export ended", 30000);
+    }
+
     // Checking a folder takes everything under it, and the count in the group
     // box title is of every checked item at any depth - the folder included.
     void test_checkingAFolderChecksItsChildrenAndCountsThem()
