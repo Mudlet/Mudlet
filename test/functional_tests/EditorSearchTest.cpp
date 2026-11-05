@@ -137,8 +137,7 @@ private:
         return nullptr;
     }
 
-    // One line per row, children indented under their parent: the four columns, the
-    // data a click on the row jumps by, then "+" if the row is shown expanded
+    // One line per row, children indented: the columns, the jump data bar the id (see verifyResultIds()), " +" if expanded
     QStringList describeResults() const
     {
         const auto describe = [](const QTreeWidgetItem* item, const QString& indent) {
@@ -164,7 +163,6 @@ private:
         return rows;
     }
 
-    // Each row's id must be that of the item it names, in the unit its view stands for
     void verifyResultIds() const
     {
         auto* results = mpEditor->treeWidget_searchResults;
@@ -446,6 +444,7 @@ private slots:
         QSignalSpy inserts(model, &QAbstractItemModel::rowsInserted);
         QSignalSpy changes(model, &QAbstractItemModel::dataChanged);
 
+        mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
         search(mNeedle);
 
         QCOMPARE(inserts.count(), 1);
