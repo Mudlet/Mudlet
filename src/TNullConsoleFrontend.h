@@ -79,7 +79,7 @@ public:
     void createTabFrame(const QString& name, const QString&, const QString& parentName, const QSize& size, bool scrolling, bool select) override;
     bool removeFromParentTabs(const QString& name, const QString& parentName) override;
     void destroyFrame(const QString& name) override;
-    void showFrame(const QString&) override {}
+    void showFrame(const QString& name) override;
     void focusFrame(const QString&) override {}
     void setGeometry(const QString& name, const QRect& geometry) override;
     void reportSize() override;
@@ -491,6 +491,8 @@ private:
     void sizeFrameConsole(const QString& name, const QSize& size);
     // False for a frame's console a script has moved out of the frame
     bool inOwnFrame(const QString& name) const;
+    // TMxpFrameWidgets::createExternalFrame() gives such a frame no container, only its console
+    bool externalFrame(const QString& name) const;
     void removeFrameConsole(const QString& name);
     TConsoleModelSink* frameSink(const QString& name) const;
     void removeLabel(const QString& name);

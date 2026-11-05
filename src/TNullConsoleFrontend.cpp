@@ -735,6 +735,14 @@ void TNullMxpFrameFrontend::setGeometry(const QString& name, const QRect& geomet
     reportTabArea(name, size);
 }
 
+// TMxpFrameWidgets shows the frame's widget, which a script can hide only where it is the console itself
+void TNullMxpFrameFrontend::showFrame(const QString& name)
+{
+    if (mView.externalFrame(name)) {
+        mView.setSubConsoleShown(name, true);
+    }
+}
+
 // A view that attaches drops every frame console and makes its own frames
 void TNullMxpFrameFrontend::clear()
 {
@@ -1269,6 +1277,13 @@ bool TNullConsoleFrontend::inOwnFrame(const QString& name) const
     }
     const QObject* pHolder = mSubConsoles.at(name).holder;
     return pHolder && (pHolder == frame->second || pHolder->parent() == frame->second);
+}
+
+bool TNullConsoleFrontend::externalFrame(const QString& name) const
+{
+    const auto frame = mFrameHolders.find(name);
+    const auto console = mSubConsoles.find(name);
+    return frame != mFrameHolders.end() && frame->second && console != mSubConsoles.end() && frame->second == console->second.holder;
 }
 
 // TMxpFrameWidgets::destroyFrame() deletes the frame's widgets at once, but a console a script moved out of a frame
@@ -2904,8 +2919,8 @@ bool TNullConsoleFrontend::resizeSubConsole(const QString& name, const int width
     registry.setSubConsoleGeometry(name, geometry);
     registry.setUserWindowSize(name, geometry.size());
     reportGridSize(name);
-    // An external frame is its own console, which TMxpFrameWidgets::createExternalFrame() reports the resizes of
-    if (const auto frame = mFrameHolders.find(name); frame != mFrameHolders.end() && frame->second && frame->second == mSubConsoles.at(name).holder) {
+    // TMxpFrameWidgets::createExternalFrame() reports the resizes of an external frame's console
+    if (externalFrame(name)) {
         mpHost->mMxpFrameManager.setWindowSize(name, geometry.size());
     }
     // A hidden dock's console takes the size as it next shows
