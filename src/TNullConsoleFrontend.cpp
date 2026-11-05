@@ -2167,9 +2167,33 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
         mpHost->windowRegistry().setCommandLineText(name, plainText(text));
     } else if (!mpHost->passwordEntryWanted()) {
         // TMainConsole writes to the hidden-input box over it while the game asks for one
-        mpHost->windowRegistry().setMainCommandLineText(plainText(text));
+        const QString plain = plainText(text);
+        mpHost->windowRegistry().setMainCommandLineText(plain);
+        emit mpHost->signal_commandLineTextRequested(plain);
     }
     return true;
+}
+
+bool TNullConsoleFrontend::holdMainCommandLineForSend(const QString& line)
+{
+    // A line typed while the game hides input went through the hidden-input box, past the main line
+    if (mpHost->passwordEntryWanted()) {
+        return false;
+    }
+    mpHost->windowRegistry().setMainCommandLineText(plainText(line));
+    return true;
+}
+
+void TNullConsoleFrontend::mainCommandLineSent()
+{
+    if (!mpHost->mAutoClearCommandLineAfterSend) {
+        return;
+    }
+    if (mpHost->passwordEntryWanted()) {
+        mpHost->windowRegistry().setMainCommandLineText(QString());
+    } else {
+        replaceCommandLineText(QString(), QString());
+    }
 }
 
 bool TNullConsoleFrontend::appendCommandLineText(const QString& name, const QString& text)

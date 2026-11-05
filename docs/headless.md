@@ -300,6 +300,31 @@ not built on Qt has to copy:
   `Qt::ShiftModifier`.
 - AltGr arrives as Ctrl+Alt on Windows, and on X11 it can carry `Qt::GroupSwitchModifier`.
 
+`commandLineTextRequested` carries the whole of the main command line each time a script's
+`printCmdLine()`, `appendCmdLine()`, `clearCmdLine()` or `sendCmdLine()` sets it, for the app's input
+line to show as the GUI's command line does; `clearCmdLine()` sends an empty line. As the GUI's line does,
+the main line holds what `submit()` sends while its aliases run, so `getCmdLine()` there reads it, and
+if the profile clears the line after a send, an empty line follows the send. It is sent as it is set, so
+it keeps its place among the game's lines and `hiddenInputWanted`, and a handler may neither call the
+session nor run the event loop. Only the main command line is sent: a line from
+`createCommandLine()` or Geyser is not. Mudlet does not know what the app's user has typed, so
+`getCmdLine()` reads what a script or `submit()` last set. Nothing is sent:
+
+- while hidden input is wanted: the GUI writes such text into its hidden-input box instead, so it is
+  lost, neither kept for `getCmdLine()` nor sent;
+- for the select-all of `sendCmdLine()` or `selectCmdLineText()`, which the app may leave out;
+- once `shutdown()` starts or the profile closes, when the line is the app's to clear.
+
+When `hiddenInputWanted` turns on, the app sets aside the text its input line holds from a script, as
+`commandLineTextRequested` last gave it, keeps it out of its masked line, and shows it again when hidden
+input ends, as the GUI's command line stays behind its hidden-input box; only what the player typed
+ahead may move into the masked line.
+
+`submit()` stands for the app's input line being sent, so it holds the line and then empties or keeps it
+as the profile says, as the GUI's line does. A command sent from anywhere else, such as a button or a
+menu, goes through `runLua()` calling `expandAlias()` with the command as a quoted Lua string: that runs
+its aliases and sends it as a script would, and leaves the line and the command history alone.
+
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.
 
