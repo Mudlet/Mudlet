@@ -26,7 +26,8 @@ local function creatorLocation()
       return nil
     end
     if (info.what == "Lua" or info.what == "main") and info.source:sub(1, #geyserSource) ~= geyserSource then
-      return info.short_src .. ":" .. info.currentline
+      -- short_src is cut to fit LUA_IDSIZE, so scripts with long names can share it
+      return info.short_src .. ":" .. info.currentline, info.source .. ":" .. info.currentline
     end
     level = level + 1
   end
@@ -39,12 +40,12 @@ end
 -- @param nameType the type passed on to Geyser.nameGen
 function Geyser.anonymousName(kind, nameType)
   local name = Geyser.nameGen(nameType)
-  local location = creatorLocation()
-  if location then
-    if warnedLocations[location] then
+  local location, key = creatorLocation()
+  if key then
+    if warnedLocations[key] then
       return name
     end
-    warnedLocations[location] = true
+    warnedLocations[key] = true
   end
   debugc(string.format("Geyser: a '%s' element was created without a name%s, so it was called '%s'. Each time that code runs again it makes another one instead of reusing this one, so duplicates pile up - give it a name to avoid that.",
     kind, location and (" at " .. location) or "", name))

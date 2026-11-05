@@ -1486,6 +1486,15 @@ describe("Tests functionality of Geyser.Container", function()
       assert.are.equal(1, #warnings)
     end)
 
+    it("tells apart scripts whose names differ only past where Lua cuts them short", function()
+      local shared = "Script: " .. string.rep("a long script name both share ", 3)
+      for _, suffix in ipairs({"one", "two"}) do
+        local chunk = assert(loadstring("local label = Geyser.Label:new({x = 0, y = 0, width = 10, height = 10}) return label", shared .. suffix))
+        track(chunk())
+      end
+      assert.are.equal(2, #warnings)
+    end)
+
     it("warns once for each kind of element, whatever its constructor chain", function()
       track(Geyser.Container:new({x = 0, y = 0, width = 10, height = 10}))
       track(Geyser.Gauge:new({x = 0, y = 0, width = 10, height = 10}))
