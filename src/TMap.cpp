@@ -913,10 +913,15 @@ void TMap::addDirectionalRoute(
         return;
     }
     TRoom* pTargetR = locations[targetIndex].pR;
+    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
+    const bool filterActive = interpreter && interpreter->hasExitWeightFilter();
+    // The filter can lock rooms after they were indexed.
+    if (filterActive && pTargetR->isLocked) {
+        return;
+    }
 
     int cost = exitWeights.value(exitKey, pTargetR->getWeight());
-    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
-    if (interpreter && interpreter->hasExitWeightFilter()) {
+    if (filterActive) {
         const TLuaInterpreter::ExitWeightFilterResult filterResult = interpreter->applyExitWeightFilter(static_cast<int>(source), exitKey);
         if (filterResult.blocked) {
             return;
@@ -955,6 +960,7 @@ void TMap::initGraph()
     unsigned int roomCount = 0;
     unsigned int edgeCount = 0;
     int unusableRoomCount = 0;
+    qsizetype exitCount = 0;
     QHashIterator<int, TRoom*> itRoom = mpRoomDB->getRoomMap();
     while (itRoom.hasNext()) {
         itRoom.next();
@@ -963,6 +969,21 @@ void TMap::initGraph()
             ++unusableRoomCount;
             continue;
         }
+        for (const int target : {pR->getNorth(),
+                                 pR->getNortheast(),
+                                 pR->getEast(),
+                                 pR->getSoutheast(),
+                                 pR->getSouth(),
+                                 pR->getSouthwest(),
+                                 pR->getWest(),
+                                 pR->getNorthwest(),
+                                 pR->getUp(),
+                                 pR->getDown(),
+                                 pR->getIn(),
+                                 pR->getOut()}) {
+            exitCount += target > 0;
+        }
+        exitCount += pR->getSpecialExits().size();
 
         location l;
         l.pR = pR;
@@ -995,9 +1016,10 @@ void TMap::initGraph()
     // would make the next search write out of bounds.
     resetSearchState(roomCount);
 
-    // Sized up front, as each growth rehashes every edge so far. Not cleared: overwriting the last build's
-    // entries costs less than freeing and reallocating them, and edges that are gone are never looked up.
-    edgeHash.reserve(static_cast<qsizetype>(roomCount) * 4);
+    // Sized from the exits, which bound the edges, as each growth rehashes every edge so far. Not cleared:
+    // overwriting the last build's entries costs less than freeing and reallocating them, and edges that
+    // are gone are never looked up.
+    edgeHash.reserve(exitCount);
 
     // Now identify the routes between rooms, and pick out the best edges of parallel ones.
     // A room has a handful of exits, so a reused list beats a hash table built per room.
@@ -1055,7 +1077,7 @@ void TMap::initGraph()
             // The key is made from the QPair<edgeSourceRoomId, edgeTargetRoomId>...
             edgeCount++;
         }
-    } // End of foreach(location l, locations)
+    }
 
     mHeuristicScale = heuristicScale();
     if (!freeDistance) {
