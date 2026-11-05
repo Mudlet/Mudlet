@@ -195,6 +195,25 @@ describe("Tests the generic mapper's map window", function()
       assert.are.same({{true, true}}, showMapCalls)
     end)
 
+    it("applies window settings changed while the map window was hidden when it is next shown", function()
+      map.showMap = realShowMap
+      Geyser.windowList.my_mapper = stubMapper({embedded = false})
+      closeMapWidget = function() return true end
+      map.configs.map_window.embedded = false
+      map.configs.map_window.dock = "floating"
+      map.configs.map_window.shown = false
+      expandAlias("map window dock left", false)
+      assert.are.equal(0, #made)
+      map.showMap()
+      assert.are.equal(1, #made)
+      assert.are.equal("left", made[1].cons.dockPosition)
+      assert.are.same({"show"}, made[1].calls)
+      Geyser.windowList.my_mapper = made[1]
+      map.showMap()
+      map.showMap()
+      assert.are.equal(1, #made)
+    end)
+
     it("sets the dock position", function()
       expandAlias("map window dock Right", false)
       assert.are.equal("right", map.configs.map_window.dock)

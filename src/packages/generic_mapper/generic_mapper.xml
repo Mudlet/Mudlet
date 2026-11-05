@@ -2603,6 +2603,9 @@ local function config(window_changed)
     -- its title bar, unless its own settings are what changed
     if map.configs.map_window.shown and (window_changed or not mapper or mapper.embedded) then
         map.showMap(true, window_changed)
+    elseif window_changed and mapper and not mapper.embedded then
+        -- a hidden map window takes them when it is next shown, rather than being opened now
+        mapper.pending_settings = true
     end
 end
 
@@ -4526,7 +4529,7 @@ function map.showMap(shown, replace)
     end
     -- a new mapper would put an open map window back where the settings say,
     -- undoing wherever the player has since moved it
-    if previous and not embedded and not replace then
+    if previous and not embedded and not replace and not (shown and previous.pending_settings) then
         if shown then
             previous:show()
         elseif closeMapWidget() then
