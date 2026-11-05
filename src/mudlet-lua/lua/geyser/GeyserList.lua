@@ -233,6 +233,19 @@ function Geyser.List:new(cons, container)
     me:restripe()
   end
 
+  -- Every way into the list comes through these, changeContainer included.
+  function content:add(window, cons)
+    window.v_policy = Geyser.Fixed
+    Geyser.VBox.add(self, window, cons)
+    rowAdded(me, window)
+  end
+
+  function content:add2(window, cons, passAdd2, exclude)
+    window.v_policy = Geyser.Fixed
+    Geyser.VBox.add2(self, window, cons, passAdd2, exclude)
+    rowAdded(me, window)
+  end
+
   -- Every way out of the list comes through here: delete, changeContainer, and
   -- adding the item to another container.
   function content:remove(window)
@@ -248,6 +261,7 @@ function Geyser.List:new(cons, container)
   end
 
   me.content = content
+  me.childContainer = content
 
   return me
 end
@@ -279,9 +293,7 @@ function Geyser.List:add(window, cons)
     return Geyser.add(self, window, cons)
   end
 
-  window.v_policy = Geyser.Fixed
   self.content:add(window, cons)
-  rowAdded(self, window)
 end
 
 --- Adds a window to the list as a row, by way of `Geyser:add2`. See `add`.
@@ -294,9 +306,7 @@ function Geyser.List:add2(window, cons, passAdd2, exclude)
     return Geyser.add2(self, window, cons, passAdd2, exclude)
   end
 
-  window.v_policy = Geyser.Fixed
   self.content:add2(window, cons, passAdd2, exclude)
-  rowAdded(self, window)
 end
 
 --- Creates a Geyser.ListItem in the list.
@@ -615,6 +625,17 @@ function Geyser.List:select(item)
     for _, other in ipairs(self:getSelected()) do
       if other.name ~= name then
         setSelected(self, other.name, false)
+      end
+    end
+
+    -- Those calls can take the row away, or select another, which then stands.
+    if not self:indexOf(name) then
+      return nil, "that isn't in this list"
+    end
+
+    for other in pairs(self.selected) do
+      if other ~= name then
+        return nil, "onSelectionChange selected another row"
       end
     end
   end

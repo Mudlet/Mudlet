@@ -39,6 +39,7 @@ function Geyser.ListItem:new(cons, container)
   end
 
   setmetatable(me, self)
+  self.__index = self
 
   me.ownStyleSheet = me.stylesheet
 
@@ -46,6 +47,11 @@ function Geyser.ListItem:new(cons, container)
   if list then
     list:connectItem(me)
     list:restripe()
+
+    -- The list measured the row before the label had its text and size.
+    if me.autoHeight then
+      list:fit()
+    end
   end
 
   if me.onInsert then
