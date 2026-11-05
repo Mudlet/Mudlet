@@ -609,6 +609,30 @@ describe("Tests MXP handling", function()
       })
     end)
 
+    it("lays the frames nested in an external frame out again when a script resizes it", function()
+      finally(function()
+        closeFrame("mxpSpecGrowInner")
+        closeFrame("mxpSpecGrowOuter")
+      end)
+      openFrame("mxpSpecGrowOuter", 'EXTERNAL Width="300" Height="200"')
+      feedTriggers('<DEST mxpSpecGrowOuter><FRAME Name="mxpSpecGrowInner" Align="top" Height="50%"></DEST>' .. "\n")
+      assert.are.equal("miniconsole", windowType("mxpSpecGrowInner"), "the frame was not nested in the external one")
+      local _, _, _, height = getWindowGeometry("mxpSpecGrowInner")
+
+      resizeWindow("mxpSpecGrowOuter", 300, 400)
+
+      -- A real window resizes once the window system says so
+      local _, _, _, grown = getWindowGeometry("mxpSpecGrowInner")
+      for _ = 1, 40 do
+        if grown > height then
+          break
+        end
+        pumpEvents(50)
+        _, _, _, grown = getWindowGeometry("mxpSpecGrowInner")
+      end
+      assert.is_true(grown > height * 1.5, ("the nested frame stayed %d high, not about %d"):format(grown, height * 2))
+    end)
+
     -- DOCK names the frame to dock into and ALIGN=CLIENT makes it a tab of that
     -- frame rather than a window of its own, so it costs the main window nothing
     it("docks a frame into another as a tab and closes it with its parent", function()

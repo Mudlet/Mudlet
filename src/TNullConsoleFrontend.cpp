@@ -2904,6 +2904,10 @@ bool TNullConsoleFrontend::resizeSubConsole(const QString& name, const int width
     registry.setSubConsoleGeometry(name, geometry);
     registry.setUserWindowSize(name, geometry.size());
     reportGridSize(name);
+    // An external frame is its own console, which TMxpFrameWidgets::createExternalFrame() reports the resizes of
+    if (const auto frame = mFrameHolders.find(name); frame != mFrameHolders.end() && frame->second && frame->second == mSubConsoles.at(name).holder) {
+        mpHost->mMxpFrameManager.setWindowSize(name, geometry.size());
+    }
     // A hidden dock's console takes the size as it next shows
     const auto it = mSubConsoles.find(name);
     if (it == mSubConsoles.end() || !it->second.shown || it->second.consoleSize == geometry.size() || registry.subConsoleKind(name) != TWindowRegistry::SubConsoleKind::UserWindow) {
