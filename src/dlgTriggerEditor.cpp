@@ -2535,7 +2535,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
 }
 
 // QTreeWidgetItem::setData() reallocates the item's role list for each role it adds, and
-// setAllSearchData() adds seven to every row, of which a broad search makes hundreds of thousands
+// setAllSearchData() adds seven to each of the many rows a broad search makes
 class dlgTriggerEditor::SearchResultItem : public QTreeWidgetItem
 {
 public:
@@ -2587,13 +2587,13 @@ void dlgTriggerEditor::slot_searchMudletItems(const int index)
         searchVariables(s);
     }
 
-    // With sorting on, addTopLevelItems() inserts the rows one at a time
+    // With sorting on, addTopLevelItems() inserts the rows one at a time, each in front of the last
     const bool sortingEnabled = treeWidget_searchResults->isSortingEnabled();
     treeWidget_searchResults->setSortingEnabled(false);
     treeWidget_searchResults->addTopLevelItems(std::exchange(mPendingSearchResults, {}));
     treeWidget_searchResults->setSortingEnabled(sortingEnabled);
     // Expansion is held by the view, so it can only be set once a row is in the tree. By row
-    // rather than by item, as finding an item's row scans the tree for it
+    // rather than by item, as finding an item's row is a linear search of the top-level rows
     const QAbstractItemModel* model = treeWidget_searchResults->model();
     for (int row = 0, total = treeWidget_searchResults->topLevelItemCount(); row < total; ++row) {
         if (treeWidget_searchResults->topLevelItem(row)->childCount()) {

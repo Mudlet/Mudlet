@@ -757,7 +757,7 @@ private:
     // Reused for every field a whole-word search looks at, as each new QRegularExpression is JIT-compiled anew
     mutable QString mWholeWordSearchNeedle;
     mutable QRegularExpression mWholeWordSearchRegex;
-    // A search's top-level rows, held back until it ends: each one added to the sorted tree re-sorts it
+    // A search's top-level rows, kept out of the tree until it ends: every row added to the tree, and every role set on one there, emits a model signal
     QList<QTreeWidgetItem*> mPendingSearchResults;
     QSplitter* searchSplitter;
 

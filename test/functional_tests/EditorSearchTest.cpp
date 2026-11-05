@@ -78,6 +78,7 @@ private:
     const QString mLocalhost = qsl("localhost");
     // Deliberately a nonsense word, so every hit found is one this test planted
     const QString mNeedle = qsl("qaHaystack");
+    const QString mLoneNeedle = qsl("qaSolitary");
 
     void deleteProfileDirectory(const QString& profileName)
     {
@@ -265,6 +266,20 @@ private:
         pAction->css = qsl("QPushButton {\n  border: 1px solid %1;\n}").arg(mNeedle);
         mpHost->getActionUnit()->registerAction(pAction);
 
+        // Each matches mLoneNeedle in one field only, one that is not searched first
+        auto* pUpButton = new TAction(qsl("qaUpOnlyButton"), mpHost);
+        pUpButton->setIsPushDownButton(true);
+        pUpButton->setCommandButtonUp(qsl("%1 up").arg(mLoneNeedle));
+        mpHost->getActionUnit()->registerAction(pUpButton);
+
+        auto* pCssButton = new TAction(qsl("qaCssOnlyButton"), mpHost);
+        pCssButton->css = qsl("color: %1;").arg(mLoneNeedle);
+        mpHost->getActionUnit()->registerAction(pCssButton);
+
+        auto* pPatternAlias = new TAlias(qsl("qaPatternOnlyAlias"), mpHost);
+        pPatternAlias->setRegexCode(qsl("^%1$").arg(mLoneNeedle));
+        mpHost->getAliasUnit()->registerAlias(pPatternAlias);
+
         QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaSearchVariable = \"%1 value\"").arg(mNeedle)));
         QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("%1Variable = \"%1 too\"").arg(mNeedle)));
     }
@@ -380,11 +395,8 @@ private slots:
         QCOMPARE(result->data(0, dlgTriggerEditor::IdRole).toInt(), pAction->getID());
     }
 
-    // The rows are only put in the tree, and sorted, once every unit has been walked, so
-    // this is what adding each one to the sorted tree as it was found gave: sorted by
-    // type, descending, with ties in the order the units are walked, and only the rows
-    // with children expanded
-    void test_resultsAreSortedAndExpandedOnceGathered()
+    // Sorted by type, descending, ties in the order the units are walked; only rows with children expanded
+    void test_resultsAreSortedAndParentsExpanded()
     {
         mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
         search(mNeedle);
@@ -410,6 +422,34 @@ private slots:
                          qsl("  ||Pattern|^qaHaystack alias$ name=qaSearchAlias view=3 type=3 line=0 pos=1 index=0"),
                  }));
         verifyResultIds();
+    }
+
+    // Whichever field of an item matches first starts its row
+    void test_aRowCanStartFromALaterField()
+    {
+        search(mLoneNeedle);
+
+        QCOMPARE(describeResults(),
+                 QStringList({
+                         qsl("Button|qaUpOnlyButton|Command {Up}| name=qaUpOnlyButton view=5 type=5 line=0 pos=0 index=0"),
+                         qsl("Button|qaCssOnlyButton|Stylesheet {L: 1 C: 8}|color: qaSolitary; name=qaCssOnlyButton view=5 type=6 line=0 pos=7 index=0"),
+                         qsl("Alias|qaPatternOnlyAlias|Pattern|^qaSolitary$ name=qaPatternOnlyAlias view=3 type=3 line=0 pos=1 index=0"),
+                 }));
+        verifyResultIds();
+    }
+
+    // Added one at a time, each row costs a model signal and each role set on a child already
+    // in the tree another, millions of them over a broad search
+    void test_resultsJoinTheTreeInOneInsert()
+    {
+        auto* model = mpEditor->treeWidget_searchResults->model();
+        QSignalSpy inserts(model, &QAbstractItemModel::rowsInserted);
+        QSignalSpy changes(model, &QAbstractItemModel::dataChanged);
+
+        search(mNeedle);
+
+        QCOMPARE(inserts.count(), 1);
+        QCOMPARE(changes.count(), 0);
     }
 
     // Clicking a column header re-sorts the results by it, and the next search keeps to that
