@@ -586,6 +586,29 @@ describe("Tests MXP handling", function()
       assert.are.equal(rows, getRowCount("main"))
     end)
 
+    it("opens a frame of each kind that does not scroll when the tag says SCROLLING=NO", function()
+      finally(function()
+        closeFrame("mxpSpecStillTab")
+        closeFrame("mxpSpecStillHost")
+        closeFrame("mxpSpecStillExternal")
+        closeFrame("mxpSpecStillInternal")
+        closeFrame("mxpSpecScrolling")
+      end)
+      openFrame("mxpSpecScrolling", 'Align="left" Width="20%" Height="50%"')
+      openFrame("mxpSpecStillInternal", 'Align="bottom" Height="20%" SCROLLING="NO"')
+      openFrame("mxpSpecStillExternal", 'EXTERNAL Width="30%" Height="30%" SCROLLING="NO"')
+      openFrame("mxpSpecStillHost", 'Align="right" Width="30%" Height="50%" TITLE="Host"')
+      openFrame("mxpSpecStillTab", 'DOCK="mxpSpecStillHost" Align="client" TITLE="Tab" SCROLLING="NO"')
+      assert.are.equal("miniconsole", windowType("mxpSpecStillTab"))
+
+      assert.are.same({true, false, false, false}, {
+        scrollingActive("mxpSpecScrolling"),
+        scrollingActive("mxpSpecStillInternal"),
+        scrollingActive("mxpSpecStillExternal"),
+        scrollingActive("mxpSpecStillTab"),
+      })
+    end)
+
     -- DOCK names the frame to dock into and ALIGN=CLIENT makes it a tab of that
     -- frame rather than a window of its own, so it costs the main window nothing
     it("docks a frame into another as a tab and closes it with its parent", function()

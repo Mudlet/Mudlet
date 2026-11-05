@@ -589,7 +589,7 @@ void TNullMxpFrameFrontend::reportTabArea(const QString& name, const QSize& size
     });
 }
 
-void TNullMxpFrameFrontend::createInternalFrame(const QString& name, const QString& hostName, const QString&, const QRect& geometry, const bool showHeader, bool)
+void TNullMxpFrameFrontend::createInternalFrame(const QString& name, const QString& hostName, const QString&, const QRect& geometry, const bool showHeader, const bool scrolling)
 {
     mHeaders.erase(name);
     if (showHeader) {
@@ -601,7 +601,7 @@ void TNullMxpFrameFrontend::createInternalFrame(const QString& name, const QStri
         mHeaders[name].area = size;
     }
     mConsoleSizes[name] = size;
-    mView.addFrameConsole(name, size, false, hostName);
+    mView.addFrameConsole(name, size, false, hostName, scrolling);
     if (!showHeader) {
         return;
     }
@@ -613,15 +613,15 @@ void TNullMxpFrameFrontend::createInternalFrame(const QString& name, const QStri
     reportTabArea(name, size);
 }
 
-std::optional<QSize> TNullMxpFrameFrontend::createExternalFrame(const QString& name, const QString&, const QSize& size, bool)
+std::optional<QSize> TNullMxpFrameFrontend::createExternalFrame(const QString& name, const QString&, const QSize& size, const bool scrolling)
 {
     mHeaders.erase(name);
     mHosts[name] = QString();
-    mView.addFrameConsole(name, size, true);
+    mView.addFrameConsole(name, size, true, QString(), scrolling);
     return size;
 }
 
-void TNullMxpFrameFrontend::createTabFrame(const QString& name, const QString&, const QString& parentName, const QSize& size, bool, const bool select)
+void TNullMxpFrameFrontend::createTabFrame(const QString& name, const QString&, const QString& parentName, const QSize& size, const bool scrolling, const bool select)
 {
     const auto header = mHeaders.find(parentName);
     if (header == mHeaders.end()) {
@@ -634,7 +634,7 @@ void TNullMxpFrameFrontend::createTabFrame(const QString& name, const QString&, 
     // A page is in its header's container, wherever that is
     const auto parentHost = mHosts.find(parentName);
     mHosts[name] = parentHost != mHosts.end() ? parentHost->second : QString();
-    mView.addFrameConsole(name, select ? header->second.area : size, false, parentName);
+    mView.addFrameConsole(name, select ? header->second.area : size, false, parentName, scrolling);
     reportPages();
 }
 
@@ -1217,7 +1217,7 @@ void TNullConsoleFrontend::removeSubConsole(const QString& name, const bool keep
     }
 }
 
-void TNullConsoleFrontend::addFrameConsole(const QString& name, const QSize& size, const bool external, const QString& hostFrame)
+void TNullConsoleFrontend::addFrameConsole(const QString& name, const QSize& size, const bool external, const QString& hostFrame, const bool scrolling)
 {
     // TMxpFrameWidgets builds nothing in a frame that has no widget
     const auto host = mFrameHolders.find(hostFrame);
@@ -1230,6 +1230,7 @@ void TNullConsoleFrontend::addFrameConsole(const QString& name, const QSize& siz
     TConsoleModel& model = addSubConsole(name, TWindowRegistry::SubConsoleKind::MiniConsole, QString());
     SubConsole& console = mSubConsoles[name];
     console.pFrameSink = std::make_unique<TConsoleModelSink>(model);
+    model.mScrollingEnabled = scrolling;
     // TMxpFrameWidgets::createExternalFrame() has no container widget but the console itself
     if (external) {
         mFrameHolders[name] = console.holder;
