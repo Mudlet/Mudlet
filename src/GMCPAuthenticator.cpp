@@ -30,7 +30,6 @@
 #include "TAppFrontend.h"
 #include <QCryptographicHash>
 #include <QDebug>
-#include <QDesktopServices>
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
@@ -880,7 +879,7 @@ void GMCPAuthenticator::offerOrOpenSignInUrl(const QUrl& url, const QString& pro
 
 bool GMCPAuthenticator::openSignInUrl(const QUrl& url, const QString& provider)
 {
-    if (!QDesktopServices::openUrl(url)) {
+    if (!TAppFrontend::instance()->openWebPage(url.toString(QUrl::FullyEncoded))) {
         //: %1 is the sign-in web address the user should open manually in their browser.
         mpHost->postMessage(tr("[ WARN ]  - Could not open your browser. Open this link manually to sign in: %1").arg(UntrustedText::forTarget(url.toString())));
         return false;
@@ -900,6 +899,7 @@ void GMCPAuthenticator::announceBrowserHandoff(const QString& provider)
     // The browser handoff happens with no focused control to announce it, so push an explicit
     // announcement to assistive technology (VoiceOver/NVDA/Orca) instead of relying on the console.
     TAppFrontend::instance()->announce(message, QString(), true);
+    emit mpHost->signal_announcementRequested(message, QString());
 }
 
 void GMCPAuthenticator::startClientDrivenOAuth()

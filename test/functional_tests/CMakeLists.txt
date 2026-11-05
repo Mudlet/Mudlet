@@ -653,6 +653,12 @@ if(TEST HeadlessRunnerTest)
     set_tests_properties(HeadlessRunnerTest PROPERTIES TIMEOUT 300)
 endif()
 
+# HeadlessSessionTest starts a fresh headless profile in nearly every one of its
+# cases, so it needs a longer timeout than the default 60s
+if(TEST HeadlessSessionTest)
+    set_tests_properties(HeadlessSessionTest PROPERTIES TIMEOUT 300)
+endif()
+
 # Undo/redo tests need a longer timeout due to large batch operations
 set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)
 

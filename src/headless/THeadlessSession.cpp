@@ -23,12 +23,15 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
+#include "MudletReplay.h"
 #include "SecureStringUtils.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
+#include "TEncodingHelper.h"
 #include "TEvent.h"
 #include "TGameDetails.h"
 #include "TLuaInterpreter.h"
+#include "TMap.h"
 #include "TNullConsoleFrontend.h"
 
 #include <QCoreApplication>
@@ -37,6 +40,7 @@
 #include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
+#include <QMetaMethod>
 #include <QScopeGuard>
 #include <QTimer>
 
@@ -48,12 +52,15 @@ using namespace std::chrono_literals;
 
 namespace {
 
+// Answers to a secure port offer under way: cTelnet may reconnect and run the event loop while on the stack
+int gConnectionsBeingChanged = 0;
+
 // TNullAppFrontend's close waits only for a load, a nested event loop and a save wait, and leaves a running
 // script or map operation to deletionMustWait(); deleting the whole pool cannot wait that way, so all count here.
 // A save deletes nothing, so a reconnect's event loop holds up only a deletion.
 bool poolBusy(const HostManager& pool, const bool forDeletion)
 {
-    if (pool.loadingProfile()) {
+    if (pool.loadingProfile() || gConnectionsBeingChanged) {
         return true;
     }
     for (const auto& pHost : pool.hostList()) {
@@ -275,6 +282,10 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
         mErrorString = tr("The profiles closed earlier are still closing; try again once they have.");
         return StartResult::poolClosing;
     }
+    // Before the pool is made, as a handler of that end may call shutdown() or start()
+    if (!mpPool && !finishOpenProgress()) {
+        return StartResult::notOpened;
+    }
     // One pool a process: profiles and Lua reach it through HostManager::self()
     if (mpPool || HostManager::self()) {
         //: Error from a frontend with no window that was asked to open a second set of profiles
@@ -374,6 +385,8 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
             options.connect,
             [this, run, &password](Host* pNewHost) {
                 mpHost = pNewHost;
+                mSecureConnectionOffered = false;
+                mMapOperationCancelable = false;
                 pNewHost->givePass(password);
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineCommitted, this, &THeadlessSession::lineCommitted);
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::textPrinted, this, [this](const QString& text) {
@@ -388,6 +401,257 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     emit errorConsoleText(profile, text);
                     --gSignalsBeingHandedOut;
                 });
+                // Held by the profile, which an exit handler may still be running once the session has gone
+                pNewHost->setNotificationHandler([self = QPointer<THeadlessSession>(this)](const QString& title, const QString& text, std::optional<int> milliseconds) {
+                    if (!self || self->signalsBlocked() || !self->isSignalConnected(QMetaMethod::fromSignal(&THeadlessSession::notificationRequested))) {
+                        return false;
+                    }
+                    const QString profile = self->mProfileName;
+                    ++gSignalsBeingHandedOut;
+                    emit self->notificationRequested(profile, title, text, milliseconds);
+                    --gSignalsBeingHandedOut;
+                    return true;
+                });
+                connect(pNewHost, &Host::signal_attentionRequested, this, [this](const int milliseconds) {
+                    const QString profile = mProfileName;
+                    ++gSignalsBeingHandedOut;
+                    emit attentionRequested(profile, milliseconds);
+                    --gSignalsBeingHandedOut;
+                });
+                // Direct, as the GUI opens and closes its box inside the emit
+                connect(pNewHost, &Host::signal_passwordEntryWantedChanged, this, [this, run](const bool wanted) {
+                    // The close of a profile being let go reads the game's data still, but its false has been sent
+                    if (run != mRun || wanted == mHiddenInputFor.has_value()) {
+                        return;
+                    }
+                    const QString profile = mProfileName;
+                    mHiddenInputFor = wanted ? std::optional<QString>(profile) : std::nullopt;
+                    ++gSignalsBeingHandedOut;
+                    emit hiddenInputWanted(profile, wanted);
+                    --gSignalsBeingHandedOut;
+                });
+                connect(pNewHost, &Host::signal_announcementRequested, this, [this](const QString& text, const QString& processing) {
+                    const QString profile = mProfileName;
+                    const bool assertive = processing == QLatin1String("importantall") || processing == QLatin1String("importantmostrecent");
+                    ++gSignalsBeingHandedOut;
+                    emit announcementRequested(profile, text, assertive);
+                    --gSignalsBeingHandedOut;
+                });
+                // Queued, as the GUI's suggestion does not hold up the map opening; never dropped as stale, as the
+                // profile has marked it asked, which its save keeps
+                connect(
+                        pNewHost,
+                        &Host::signal_showMapperScriptReminder,
+                        this,
+                        [this, profile = mProfileName]() {
+                            emit mappingScriptMissing(profile);
+                        },
+                        Qt::QueuedConnection);
+                // For as long as the main window asks for it
+                connect(&pNewHost->mTelnet, &cTelnet::signal_bell, this, [this]() {
+                    const QString profile = mProfileName;
+                    ++gSignalsBeingHandedOut;
+                    emit attentionRequested(profile, 3000);
+                    --gSignalsBeingHandedOut;
+                });
+#if !defined(QT_NO_SSL)
+                // Sent on from the event loop, as the GUI's question is, so an answer cannot change the connection
+                // while it is read; held from now, so that it lapses with its connection even before it is sent
+                connect(&pNewHost->mTelnet, &cTelnet::signal_promptTlsAvailable, this, [this](const QString& text, const QString& informativeText) {
+                    mSecureConnectionOffered = true;
+                    const unsigned int offer = ++mSecureConnectionOffer;
+                    QMetaObject::invokeMethod(
+                            this,
+                            [this, offer, text, informativeText]() {
+                                if (mSecureConnectionOffered && offer == mSecureConnectionOffer) {
+                                    const QString profile = mProfileName;
+                                    emit secureConnectionOffered(profile, text, informativeText);
+                                }
+                            },
+                            Qt::QueuedConnection);
+                });
+                connect(&pNewHost->mTelnet, &cTelnet::signal_disconnected, this, &THeadlessSession::withdrawSecureConnectionOffer);
+#endif
+                // Queued, as the start is sent while the game's message that asked for it is being read
+                connect(
+                        &pNewHost->mTelnet,
+                        &cTelnet::signal_packageDownloadStarted,
+                        this,
+                        [this, run](const QString& title) {
+                            if (run == mRun) {
+                                mPackageDownloadFor = mProfileName;
+                                const QString profile = mProfileName;
+                                emit packageDownloadStarted(profile, title);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                connect(
+                        &pNewHost->mTelnet,
+                        &cTelnet::signal_packageDownloadProgress,
+                        this,
+                        [this, run](const qint64 got, const qint64 total) {
+                            if (run == mRun) {
+                                const QString profile = mProfileName;
+                                emit packageDownloadProgress(profile, got, total);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                connect(
+                        &pNewHost->mTelnet,
+                        &cTelnet::signal_packageDownloadFinished,
+                        this,
+                        [this, run]() {
+                            if (const auto profile = std::exchange(mPackageDownloadFor, std::nullopt); run == mRun && profile) {
+                                emit packageDownloadFinished(*profile);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                TMap* pMap = pNewHost->mpMap.data();
+                // Direct, as cancelMapOperation() goes by what the map is doing now
+                connect(pMap, &TMap::signal_mapTransferProgressStart, this, [this](const QString&, const QString&, const QString& cancelText) {
+                    mMapOperationCancelable = !cancelText.isEmpty();
+                });
+                connect(pMap, &TMap::signal_mapJsonProgressStart, this, [this](const QString&, const QString&, const QString& cancelText) {
+                    mMapOperationCancelable = !cancelText.isEmpty();
+                });
+                connect(pMap, &TMap::signal_mapProgressDisableCancel, this, [this]() {
+                    mMapOperationCancelable = false;
+                });
+                connect(pMap, &TMap::signal_mapProgressClose, this, [this]() {
+                    mMapOperationCancelable = false;
+                });
+                // Queued, as the export or import that sends it is under way
+                connect(
+                        pMap,
+                        &TMap::signal_mapTransferProgressStart,
+                        this,
+                        [this, run](const QString& title, const QString& label) {
+                            if (run == mRun) {
+                                startMapProgress(title, label, 0);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                connect(
+                        pMap,
+                        &TMap::signal_mapJsonProgressStart,
+                        this,
+                        [this, run](const QString& title, const QString& label, const QString&, const int maximum) {
+                            if (run == mRun) {
+                                startMapProgress(title, label, maximum);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                connect(
+                        pMap,
+                        &TMap::signal_mapProgressSetLabel,
+                        this,
+                        [this, run](const QString& label) {
+                            if (run == mRun) {
+                                mMapProgressLabel = label;
+                                const QString profile = mProfileName;
+                                emit mapProgressChanged(profile, mMapProgressLabel, mMapProgressValue, mMapProgressMaximum);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                connect(
+                        pMap,
+                        &TMap::signal_mapProgressSetRange,
+                        this,
+                        [this, run](const int, const int maximum) {
+                            if (run == mRun) {
+                                mMapProgressMaximum = maximum;
+                                const QString profile = mProfileName;
+                                emit mapProgressChanged(profile, mMapProgressLabel, mMapProgressValue, mMapProgressMaximum);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                connect(
+                        pMap,
+                        &TMap::signal_mapProgressSetValue,
+                        this,
+                        [this, run](const int value) {
+                            if (run == mRun) {
+                                mMapProgressValue = value;
+                                const QString profile = mProfileName;
+                                emit mapProgressChanged(profile, mMapProgressLabel, mMapProgressValue, mMapProgressMaximum);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                connect(
+                        pMap,
+                        &TMap::signal_mapProgressClose,
+                        this,
+                        [this, run]() {
+                            if (const auto profile = std::exchange(mMapProgressFor, std::nullopt); run == mRun && profile) {
+                                emit mapProgressFinished(*profile);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                // After the start's own relay, so it follows mapProgressStarted
+                connect(
+                        pMap,
+                        &TMap::signal_mapTransferProgressStart,
+                        this,
+                        [this, run](const QString&, const QString&, const QString& cancelText) {
+                            if (run == mRun && mMapProgressFor && cancelText.isEmpty()) {
+                                const QString profile = *mMapProgressFor;
+                                emit mapProgressCancelDisabled(profile);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                connect(
+                        pMap,
+                        &TMap::signal_mapProgressDisableCancel,
+                        this,
+                        [this, run]() {
+                            if (run == mRun && mMapProgressFor) {
+                                const QString profile = *mMapProgressFor;
+                                emit mapProgressCancelDisabled(profile);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                // Only one of this profile, as the GUI's toolbar drives the profile that plays it; queued, as a
+                // script's loadReplay() starts it
+                if (MudletReplay* pReplay = MudletReplay::self()) {
+                    connect(pReplay, &MudletReplay::signal_replayStarted, this, [this, run, pReplay]() {
+                        if (!mpHost || pReplay->host() != mpHost.data()) {
+                            return;
+                        }
+                        QMetaObject::invokeMethod(
+                                this,
+                                [this, run]() {
+                                    // Not by whether a replay plays now: one with nothing in it has ended already, and
+                                    // the over relay queued behind this pairs with it
+                                    if (run == mRun && mpHost) {
+                                        mReplayFor = mProfileName;
+                                        const QString profile = mProfileName;
+                                        emit replayStarted(profile);
+                                    }
+                                },
+                                Qt::QueuedConnection);
+                    });
+                    connect(
+                            pReplay,
+                            &MudletReplay::signal_replaySpeedChanged,
+                            this,
+                            [this, run](const int speed) {
+                                if (run == mRun && mReplayFor) {
+                                    const QString profile = *mReplayFor;
+                                    emit replaySpeedChanged(profile, speed);
+                                }
+                            },
+                            Qt::QueuedConnection);
+                    connect(
+                            pReplay,
+                            &MudletReplay::signal_replayOver,
+                            this,
+                            [this, run]() {
+                                if (const auto profile = std::exchange(mReplayFor, std::nullopt); run == mRun && profile) {
+                                    emit replayFinished(*profile);
+                                }
+                            },
+                            Qt::QueuedConnection);
+                }
                 connect(
                         &pNewHost->mTelnet,
                         &cTelnet::signal_connected,
@@ -417,7 +681,9 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                         &QObject::destroyed,
                         this,
                         [this, run]() {
-                            if (run == mRun) {
+                            // Not from the event loop a shutdown() runs before it drops this run, as it waits on a reset;
+                            // a handler of that end may have shut the profile down and started another
+                            if (!mShuttingDown && run == mRun && finishOpenProgress() && run == mRun) {
                                 emit quitRequested();
                             }
                         },
@@ -538,6 +804,90 @@ bool THeadlessSession::submit(const QString& line)
         }
     }
     return true;
+}
+
+bool THeadlessSession::submitHiddenInput(const QString& line)
+{
+    // A copy of its own, which the send clears, and which nothing kept shares with the caller's
+    QString text(line.constData(), line.size());
+    const auto clearText = qScopeGuard([&text]() {
+        SecureStringUtils::secureStringClear(text);
+    });
+    if (!usable() || !inputHidden(true)) {
+        return false;
+    }
+    // As the box: a pasted line break must not make a second line
+    text.remove(QChar::CarriageReturn);
+    text.remove(QChar::LineFeed);
+    // The game would get a mangled password while the send reports success
+    const QByteArray& encoding = mpHost->mTelnet.getEncoding();
+    // As cTelnet::sendData() sends with no codec
+    bool encodable = std::all_of(text.cbegin(), text.cend(), [](const QChar c) {
+        return c.unicode() < 128;
+    });
+    if (!encoding.isEmpty() && TEncodingHelper::isEncodingAvailable(encoding)) {
+        encodable = TEncodingHelper::canEncode(text, encoding);
+    }
+    if (!encodable) {
+        //: Error from a frontend with no window whose hidden input, such as a password, has characters the game's encoding, %1, cannot carry; the input itself is never shown
+        mErrorString = tr("The hidden input was not sent: it has characters the game's encoding, %1, cannot carry.").arg(encoding.isEmpty() ? qsl("ASCII") : QString::fromLatin1(encoding));
+        return false;
+    }
+    if (!mpHost->sendPasswordEntry(std::move(text))) {
+        //: Error from a frontend with no window whose hidden input, such as a password, could not be sent because Mudlet is not connected to the game
+        mErrorString = tr("The hidden input was not sent: Mudlet is not connected to the game.");
+        return false;
+    }
+    return true;
+}
+
+bool THeadlessSession::hiddenInputEdited()
+{
+    if (!usable() || !inputHidden(false)) {
+        return false;
+    }
+    mpHost->passwordEntryEdited();
+    return true;
+}
+
+bool THeadlessSession::dismissHiddenInput()
+{
+    if (!usable() || !inputHidden(false)) {
+        return false;
+    }
+    mpHost->dismissPasswordEntry();
+    return true;
+}
+
+bool THeadlessSession::inputHidden(const bool sending)
+{
+    if (mpHost->passwordEntryWanted()) {
+        return true;
+    }
+    if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
+        if (sending) {
+            //: Error from a frontend with no window whose hidden input, such as a password, could not be sent because Mudlet is not connected to the game
+            mErrorString = tr("The hidden input was not sent: Mudlet is not connected to the game.");
+        } else {
+            //: Error from a frontend with no window asked about hidden input, such as a password, while Mudlet is not connected to the game
+            mErrorString = tr("Hidden input is not open: Mudlet is not connected to the game.");
+        }
+    } else if (mpHost->isRemoteEchoingActive()) {
+        if (sending) {
+            //: Error from a frontend with no window whose hidden input, such as a password, was not sent because, though the game hides what is typed, the hidden input was dismissed, waits on the automatic login, or is turned off by the profile's setting to show passwords as they are typed
+            mErrorString = tr("The hidden input was not sent: the game hides what is typed, but hidden input was dismissed, waits on the automatic login, or is off as passwords are shown as typed.");
+        } else {
+            //: Error from a frontend with no window asked about hidden input, such as a password, which, though the game hides what is typed, was dismissed, waits on the automatic login, or is turned off by the profile's setting to show passwords as they are typed
+            mErrorString = tr("Hidden input is not open: the game hides what is typed, but hidden input was dismissed, waits on the automatic login, or is off as passwords are shown as typed.");
+        }
+    } else if (sending) {
+        //: Error from a frontend with no window whose hidden input, such as a password, was not sent because the game is not hiding what the player types
+        mErrorString = tr("The hidden input was not sent: the game is not hiding what is typed.");
+    } else {
+        //: Error from a frontend with no window asked about hidden input, such as a password, while the game is not hiding what the player types
+        mErrorString = tr("Hidden input is not open: the game is not hiding what is typed.");
+    }
+    return false;
 }
 
 bool THeadlessSession::runLua(const QString& code)
@@ -675,6 +1025,68 @@ bool THeadlessSession::setScreenSize(const int columns, const int rows)
     return true;
 }
 
+bool THeadlessSession::answerSecureConnectionOffer(const bool accept)
+{
+    if (!usable()) {
+        return false;
+    }
+#if !defined(QT_NO_SSL)
+    if (mSecureConnectionOffered) {
+        mSecureConnectionOffered = false;
+        cTelnet& telnet = mpHost->mTelnet;
+        // What slot_tlsUpgradeResponse() checks before it acts on an answer, which it otherwise only logs
+        const bool taken = telnet.getConnectionState() == QAbstractSocket::ConnectedState && !telnet.currentlySecure() && (!accept || mpHost->mMSSPTlsPort > 0);
+        if (!taken) {
+            //: Error from a frontend with no window whose answer to the game's offer of a secure, encrypted port came after the game took the offer back
+            mErrorString = tr("The game has taken back its offer of a secure port, so the answer was not used.");
+        }
+        ++gConnectionsBeingChanged;
+        const auto answered = qScopeGuard([]() {
+            --gConnectionsBeingChanged;
+        });
+        // Lets the next offer be made even when the answer is not used
+        telnet.slot_tlsUpgradeResponse(accept);
+        return taken;
+    }
+#else
+    Q_UNUSED(accept)
+#endif
+    //: Error from a frontend with no window that was asked to answer the game's offer of a secure, encrypted port when the game has made no such offer
+    mErrorString = tr("The game has offered no secure port to answer.");
+    return false;
+}
+
+bool THeadlessSession::cancelPackageDownload()
+{
+    if (!usable()) {
+        return false;
+    }
+    // Not from the signals, which reach the frontend queued, so after the download has started or ended
+    if (!mpHost->mTelnet.packageDownloadRunning()) {
+        //: Error from a frontend with no window that was asked to cancel the download of a game's GUI package when none is downloading
+        mErrorString = tr("No package is downloading.");
+        return false;
+    }
+    mpHost->mTelnet.slot_cancelPackageDownload();
+    return true;
+}
+
+bool THeadlessSession::cancelMapOperation()
+{
+    // Taken while a profile loads too, as the JSON map that load reads can be aborted, which TMap::restore()
+    // allows for, and this only flags the map or aborts its download
+    if (!usable(true)) {
+        return false;
+    }
+    if (!mMapOperationCancelable) {
+        //: Error from a frontend with no window that was asked to abort a map export, import or download when none is running that can still be aborted
+        mErrorString = tr("No map export, import or download is running that can be aborted.");
+        return false;
+    }
+    mpHost->mpMap->slot_mapProgressDialogCancelled();
+    return true;
+}
+
 void THeadlessSession::noteAlreadyInstalled(const QString& path, const QString& name)
 {
     const QString version = mpHost->mPackageInfo.value(name).value(qsl("version"));
@@ -718,8 +1130,14 @@ bool THeadlessSession::shutdown(const bool save)
     if (!self) {
         return !save;
     }
-    if (mpHost) {
-        ++mRun;
+    ++mRun;
+    // Its end is sent here, and the close below runs the event loop, where it would go on printing
+    if (mpHost && mpHost->mTelnet.isReplaying()) {
+        mpHost->mTelnet.endReplay(QString());
+    }
+    // Also for a profile that has gone while its own end waits in the event loop, which the bump drops
+    if (!finishOpenProgress()) {
+        return !save;
     }
     if (save) {
         // Closed unsaved, keeping its last good save and map; any other profile its scripts opened saves as usual
@@ -816,14 +1234,78 @@ bool THeadlessSession::save()
     return true;
 }
 
+// cTelnet makes no other offer until one is answered, and would apply a late answer to whichever connection is
+// up by then. With this one gone, the answer only frees it to make the next.
+void THeadlessSession::withdrawSecureConnectionOffer()
+{
+#if !defined(QT_NO_SSL)
+    if (mSecureConnectionOffered && mpHost) {
+        mSecureConnectionOffered = false;
+        // A no while connected would close the connection and stop the asking
+        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
+            mpHost->mTelnet.slot_tlsUpgradeResponse(false);
+        }
+    }
+#endif
+}
+
 // So nothing the profile still sends reaches a session that has let it go
 void THeadlessSession::detachFromHost()
 {
+    mSecureConnectionOffered = false;
+    mMapOperationCancelable = false;
     if (mpHost) {
         disconnect(mpHost, nullptr, this, nullptr);
+        mpHost->setNotificationHandler(nullptr);
         disconnect(&mpHost->mainConsoleModel().mNotifier, nullptr, this, nullptr);
         disconnect(&mpHost->mTelnet, nullptr, this, nullptr);
+        disconnect(mpHost->mpMap.data(), nullptr, this, nullptr);
     }
+    if (MudletReplay* pReplay = MudletReplay::self()) {
+        disconnect(pReplay, nullptr, this, nullptr);
+    }
+}
+
+void THeadlessSession::startMapProgress(const QString& title, const QString& label, const int maximum)
+{
+    mMapProgressLabel = label;
+    mMapProgressValue = 0;
+    mMapProgressMaximum = maximum;
+    mMapProgressFor = mProfileName;
+    const QString profile = mProfileName;
+    emit mapProgressStarted(profile, title, label, maximum);
+}
+
+// The end of hidden input, a map operation, package download or replay whose own is dropped as stale, or never
+// comes as its Host has gone; false if a handler deleted the session
+bool THeadlessSession::finishOpenProgress()
+{
+    const QPointer<THeadlessSession> self(this);
+    // A closing profile's connection ends without resetting the game's echo, so its Host never sends this
+    if (const auto profile = std::exchange(mHiddenInputFor, std::nullopt)) {
+        ++gSignalsBeingHandedOut;
+        emit hiddenInputWanted(*profile, false);
+        --gSignalsBeingHandedOut;
+        if (!self) {
+            return false;
+        }
+    }
+    if (const auto profile = std::exchange(mMapProgressFor, std::nullopt)) {
+        emit mapProgressFinished(*profile);
+    }
+    if (!self) {
+        return false;
+    }
+    if (const auto profile = std::exchange(mPackageDownloadFor, std::nullopt)) {
+        emit packageDownloadFinished(*profile);
+    }
+    if (!self) {
+        return false;
+    }
+    if (const auto profile = std::exchange(mReplayFor, std::nullopt)) {
+        emit replayFinished(*profile);
+    }
+    return self;
 }
 
 namespace {
@@ -891,9 +1373,9 @@ void THeadlessSession::lineCommitted(const int lineIndex)
     --gSignalsBeingHandedOut;
 }
 
-// A handler of outputLine, localText or errorConsoleText runs in the middle of a write, which a line it fed
-// would cut into, and a load that runs the event loop has yet to start the profile's scripts
-bool THeadlessSession::refused()
+// A handler of outputLine, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal runs in the middle of a write,
+// which a line it fed would cut into, and a load that runs the event loop has yet to start the profile's scripts
+bool THeadlessSession::refused(const bool duringLoad)
 {
     if (mShuttingDown) {
         qWarning() << "THeadlessSession: called while shutdown() closes the profiles, which is refused";
@@ -902,12 +1384,12 @@ bool THeadlessSession::refused()
         return true;
     }
     if (mpPool && gSignalsBeingHandedOut) {
-        qWarning() << "THeadlessSession: called from an outputLine, localText or errorConsoleText handler, which is refused; queue the call instead";
-        //: Error from a frontend with no window that called it back from a handler of the game's lines, of the text the profile printed, or of its error console
-        mErrorString = tr("Refused from a handler of outputLine, localText or errorConsoleText; queue the call instead.");
+        qWarning() << "THeadlessSession: called from an outputLine, localText, errorConsoleText, hiddenInputWanted or ...Requested handler, which is refused; queue the call instead";
+        //: Error from a frontend with no window that called it back from a handler of the game's lines, of the text the profile printed, of its error console, of the game hiding what the player types, or of a request a script made, such as a notification. "...Requested" stands for the names of those signals, which all end in Requested, and is not translated.
+        mErrorString = tr("Refused from a handler of outputLine, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal; queue the call instead.");
         return true;
     }
-    if (mRemovingStalePasswords || (mpPool && mpPool->loadingProfile())) {
+    if (mRemovingStalePasswords || (!duringLoad && mpPool && mpPool->loadingProfile())) {
         qWarning() << "THeadlessSession: called while a profile loads, which is refused; call it once that has returned";
         //: Error from a frontend with no window that was called while a profile was still loading
         mErrorString = tr("Refused while a profile loads; call it once that has returned.");
@@ -916,14 +1398,14 @@ bool THeadlessSession::refused()
     return false;
 }
 
-bool THeadlessSession::usable()
+bool THeadlessSession::usable(const bool duringLoad)
 {
     if (!mpHost) {
         //: Error from a frontend with no window that has no open profile to send to
         mErrorString = tr("No profile is open.");
         return false;
     }
-    if (refused()) {
+    if (refused(duringLoad)) {
         return false;
     }
     if (mLoadFailed) {

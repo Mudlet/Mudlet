@@ -28,6 +28,7 @@
 
 #include "Host.h"
 #include "TAlias.h"
+#include "TAppFrontend.h"
 #include "TArea.h"
 #include "TDebug.h"
 #include "TEvent.h"
@@ -46,7 +47,6 @@
 
 #include <QCollator>
 #include <QCoreApplication>
-#include <QDesktopServices>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -274,8 +274,8 @@ int TLuaInterpreter::getNetworkLatency(lua_State* L)
 int TLuaInterpreter::openUrl(lua_State* L)
 {
     const QString url = getVerifiedString(L, __func__, 1, "url");
-    QDesktopServices::openUrl(url);
-    return 0;
+    lua_pushboolean(L, TAppFrontend::instance()->openWebPage(url));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#reconnect

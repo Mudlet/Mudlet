@@ -81,6 +81,7 @@ private slots:
     void test_speedingUpAReplayStopsAtTheCap()
     {
         QVERIFY2(MudletReplay::self()->start(nullptr), "the replay toolbar would not start, so there is no Faster button to press");
+        MudletReplay::self()->announce();
         QCOMPARE(MudletReplay::self()->speed(), 1);
         QAction* pFaster = mudlet::self()->findChild<QAction*>(qsl("replay_speed_up_action"));
         QVERIFY2(pFaster, "the replay toolbar carries no Faster button");
