@@ -30,36 +30,42 @@ local function unchanged(window, cons, container)
     and window.get_width == last.get_width and window.get_height == last.get_height
 end
 
---- Internal function: what one of a window's getters was compiled from, for a
--- caller that keeps a value the getter gave and needs to know what it rests on.
+local getterOf = {x = "get_x", y = "get_y", width = "get_width", height = "get_height"}
+
+--- Internal function: what one of a window's getters was compiled from.
 -- @param window The window the getter belongs to.
 -- @param dimension "x", "y", "width" or "height".
 -- @return the constraint and the container it was compiled against, or nil if
---         the getter is not one calc_constraints compiled and kept track of.
---         For a text constraint, also which getters it may call along its
---         axis: the container's for the near edge (get_x or get_y), the
---         container's for the length (get_width or get_height), and the
---         window's own for the near edge.
+--         the getter is not one calc_constraints compiled and kept track of
 function Geyser.compiled_from(window, dimension)
   local last = compiled[window]
-  local getter = last and last["get_" .. dimension]
-  if getter == nil or window["get_" .. dimension] ~= getter then
+  local name = getterOf[dimension]
+  local getter = last and last[name]
+  if getter == nil or window[name] ~= getter then
     return nil
   end
-  local constraint = last[dimension]
-  if type(constraint) ~= "string" then
-    return constraint, last.container
+  return last[dimension], last.container
+end
+
+--- Internal function: which getters a window's getters call, for a caller that
+-- keeps a value they gave and needs to know what it rests on.
+-- @param window The window the getters belong to.
+-- @return the container they were compiled against, then for each of x, y,
+--         width and height: nil unless the getter in place is one compiled from
+--         a text constraint, or else the sum of 1 if it calls the container's
+--         near edge (get_x or get_y), 2 if it calls the container's length
+--         (get_width or get_height) and 4 if it calls the window's own near edge
+function Geyser.compiled_reads(window)
+  local last = compiled[window]
+  if last == nil then
+    return nil
   end
-  -- the two tests calc_constraints tells the kinds of constraint apart by
-  local percentage = string.find(constraint, "%%") ~= nil
-  local fromFarEdge = string.find(constraint, "-") ~= nil
-  if dimension == "x" or dimension == "y" then
-    return constraint, last.container, true, percentage or fromFarEdge, false
-  end
-  if percentage then
-    return constraint, last.container, false, true, false
-  end
-  return constraint, last.container, fromFarEdge, fromFarEdge, fromFarEdge
+  local x, y, width, height = last.get_x, last.get_y, last.get_width, last.get_height
+  return last.container,
+    x ~= nil and window.get_x == x and last.readsX or nil,
+    y ~= nil and window.get_y == y and last.readsY or nil,
+    width ~= nil and window.get_width == width and last.readsWidth or nil,
+    height ~= nil and window.get_height == height and last.readsHeight or nil
 end
 
 -- how both parseable() and the parser read a percentage
@@ -161,7 +167,9 @@ function Geyser.calc_constraints (window, cons, container)
     os.setlocale(oldlocale, "numeric")
     error(string.format("Geyser: element '%s' %s", tostring(window.name), problem), 0)
   end
-  
+  -- which getters each text constraint's getter calls, for compiled_reads()
+  local reads = {}
+
   -- GENERATE CONSTRAINT AWARE POSITIONING FUNCTIONS
   -- Parse the position constraints to generate functions that will get
   -- window dimensions according to those constraints. Also, update position
@@ -226,22 +234,27 @@ function Geyser.calc_constraints (window, cons, container)
         window[getter] = function()
           return container[min]() + scale * container[max]() + offset
         end
+        reads[v] = min == "return_zero" and 2 or 3
       elseif min == "return_zero" and not scaled then
         window[getter] = function()
           return offset
         end
+        reads[v] = 0
       elseif min == "return_zero" then
         window[getter] = function()
           return scale * container[max]() + offset
         end
+        reads[v] = 2
       elseif not scaled then
         window[getter] = function()
           return container[min]() + offset
         end
+        reads[v] = 1
       else
         window[getter] = function()
           return container[min]() + scale * container[max]() + offset
         end
+        reads[v] = 3
       end
       
       
@@ -321,18 +334,22 @@ function Geyser.calc_constraints (window, cons, container)
         window[getter] = function()
           return pos
         end
+        reads[v] = 0
       elseif not negative then
         window[getter] = function()
           return container[min]() + pos
         end
+        reads[v] = 1
       elseif pos_func == "return_zero" then
         window[getter] = function()
           return container[max]() + container[min]() + pos
         end
+        reads[v] = 3
       else
         window[getter] = function()
           return container[max]() + container[min]() + pos - window[pos_func]()
         end
+        reads[v] = 7
       end
     end
     
@@ -346,6 +363,7 @@ function Geyser.calc_constraints (window, cons, container)
       container = container,
       x = cons.x, y = cons.y, width = cons.width, height = cons.height,
       get_x = window.get_x, get_y = window.get_y, get_width = window.get_width, get_height = window.get_height,
+      readsX = reads.x, readsY = reads.y, readsWidth = reads.width, readsHeight = reads.height,
     }, weakValues)
   else
     compiled[window] = nil

@@ -216,15 +216,13 @@ local function roundEdge(value)
   return math.floor(value + 0.5 + 1e-6)
 end
 
-local getterOf = {x = "get_x", y = "get_y", width = "get_width", height = "get_height"}
-local edgeOf = {x = "x", width = "x", y = "y", height = "y"}
-local lengthOf = {x = "width", width = "width", y = "height", height = "height"}
--- lengths first, as one measured from the far edge also reads the window's own near edge
-local lengthsFirst = {"width", "height", "x", "y"}
-local rootGetters = {x = Geyser.get_x, y = Geyser.get_y, width = Geyser.get_width, height = Geyser.get_height}
+local dimensions = {"x", "y", "width", "height"}
+local rootGetX, rootGetY, rootGetWidth, rootGetHeight = Geyser.get_x, Geyser.get_y, Geyser.get_width, Geyser.get_height
 -- far deeper than any real layout; a container loop would otherwise never end
 local deepestChain = 100
 local weakValues = {__mode = "v"}
+-- in-place updates that skip the layout cache once a layout was replaced before it was ever reused
+local churnSkips = 32
 
 -- where the fill starts, the back label's inner length along it and the front
 -- label's size across it: all an in-place resize reads besides the value
@@ -240,16 +238,22 @@ local function measure(fill, front, back, layout)
   layout.startEdge = roundEdge(layout.start)
 end
 
+local function askAgain(live, length, getter)
+  live[length + 1], live[length + 2] = getter, getter()
+  return length + 2
+end
+
 -- Takes down the getters measure() goes through, from the front label up: one
--- compiled from a text constraint only has to stay in place, any other is asked again.
--- @return the layout, or nil if the front label's getters are not the ones
---         setFrontConstraints compiled, or a getter raised
-local function recordLayout(gauge, fill, front)
+-- compiled from a text constraint only has to stay in place, any other, or the
+-- main window's size behind the root, is asked again.
+-- @param old a layout of this gauge's that no longer holds, whose tables are reused
+-- @return the layout, or nil when the resize has to fall back to pixel_geometry()
+local function recordLayout(gauge, fill, front, old)
   local back = gauge.back
   if back.container ~= gauge or front.pixel_geometry ~= stockPixelGeometry then
     return nil
   end
-  for dimension in pairs(getterOf) do
+  for _, dimension in ipairs(dimensions) do
     local constraint, container = Geyser.compiled_from(front, dimension)
     if constraint ~= fill[dimension] or container ~= gauge then
       return nil
@@ -257,44 +261,69 @@ local function recordLayout(gauge, fill, front)
   end
 
   -- weak, so that a window the gauge has left is not kept alive by it
-  local chain = setmetatable({front, front.get_x, front.get_y, front.get_width, front.get_height}, weakValues)
-  local live = setmetatable({}, weakValues)
+  local chain = old and old.chain or setmetatable({}, weakValues)
+  local live = old and old.live or setmetatable({}, weakValues)
+  chain[1], chain[2], chain[3], chain[4], chain[5] = front, front.get_x, front.get_y, front.get_width, front.get_height
   local length, liveLength, readsMainWindow = 5, 0, false
-  -- the front label's getters read the gauge's x and y and the back label's lengths
-  local window, needs, above = back, {width = true, height = true}, {x = true, y = true}
+  -- the front label's getters read the back label's lengths, and the gauge's x and y above it
+  local window, needX, needY, needWidth, needHeight = back, false, false, true, true
+  local upX, upY, upWidth, upHeight = true, true, false, false
   while window do
     if length >= deepestChain * 5 then
       return nil
     end
+    local getX, getY, getWidth, getHeight = window.get_x, window.get_y, window.get_width, window.get_height
     chain[length + 1], chain[length + 2], chain[length + 3], chain[length + 4], chain[length + 5] =
-      window, window.get_x, window.get_y, window.get_width, window.get_height
+      window, getX, getY, getWidth, getHeight
     length = length + 5
     local container = window.container
-    for _, dimension in ipairs(lengthsFirst) do
-      local getter = window[getterOf[dimension]]
-      if needs[dimension] then
-        local constraint, against, edge, along, ownEdge = Geyser.compiled_from(window, dimension)
-        if window == Geyser and getter == rootGetters[dimension] then
-          readsMainWindow = readsMainWindow or dimension == "width" or dimension == "height"
-        elseif type(constraint) == "string" and against == container then
-          local edgeName, lengthName = edgeOf[dimension], lengthOf[dimension]
-          above[edgeName] = above[edgeName] or edge
-          above[lengthName] = above[lengthName] or along
-          needs[edgeName] = needs[edgeName] or ownEdge
-        else
-          local ok, value = pcall(getter)
-          if not ok then
-            return nil
-          end
-          live[liveLength + 1], live[liveLength + 2] = getter, value
-          liveLength = liveLength + 2
-        end
+    local against, readsX, readsY, readsWidth, readsHeight
+    if window == Geyser then
+      readsX = getX == rootGetX and 0 or nil
+      readsY = getY == rootGetY and 0 or nil
+      readsWidth = getWidth == rootGetWidth and 0 or nil
+      readsHeight = getHeight == rootGetHeight and 0 or nil
+      readsMainWindow = (needWidth and readsWidth ~= nil) or (needHeight and readsHeight ~= nil)
+    else
+      against, readsX, readsY, readsWidth, readsHeight = Geyser.compiled_reads(window)
+      if against ~= container then
+        readsX, readsY, readsWidth, readsHeight = nil, nil, nil, nil
       end
     end
-    if not (above.x or above.y or above.width or above.height) then
+    -- lengths first, as one measured from the far edge also reads the window's own near edge
+    if needWidth then
+      if readsWidth then
+        upX, upWidth, needX = upX or readsWidth % 2 == 1, upWidth or readsWidth % 4 >= 2, needX or readsWidth >= 4
+      else
+        liveLength = askAgain(live, liveLength, getWidth)
+      end
+    end
+    if needHeight then
+      if readsHeight then
+        upY, upHeight, needY = upY or readsHeight % 2 == 1, upHeight or readsHeight % 4 >= 2, needY or readsHeight >= 4
+      else
+        liveLength = askAgain(live, liveLength, getHeight)
+      end
+    end
+    if needX then
+      if readsX then
+        upX, upWidth = upX or readsX % 2 == 1, upWidth or readsX % 4 >= 2
+      else
+        liveLength = askAgain(live, liveLength, getX)
+      end
+    end
+    if needY then
+      if readsY then
+        upY, upHeight = upY or readsY % 2 == 1, upHeight or readsY % 4 >= 2
+      else
+        liveLength = askAgain(live, liveLength, getY)
+      end
+    end
+    if not (upX or upY or upWidth or upHeight) then
       break
     end
-    window, needs, above = container, above, {}
+    window, needX, needY, needWidth, needHeight = container, upX, upY, upWidth, upHeight
+    upX, upY, upWidth, upHeight = false, false, false, false
   end
 
   local layout = {
@@ -325,8 +354,7 @@ local function chainHolds(gauge, front, layout)
 end
 
 -- Whether what the layout's measure() read still reads the same, taking down
--- what reads differently now.
--- @return true or false, or nil if a getter raised
+-- what reads differently now
 local function valuesHold(fill, layout)
   local holds = true
   if fill.left ~= layout.left or fill.right ~= layout.right or fill.top ~= layout.top or fill.bottom ~= layout.bottom then
@@ -342,10 +370,7 @@ local function valuesHold(fill, layout)
   end
   local live = layout.live
   for i = 1, layout.liveLength, 2 do
-    local ok, value = pcall(live[i])
-    if not ok then
-      return nil
-    end
+    local value = live[i]()
     if value ~= live[i + 1] then
       live[i + 1] = value
       holds = false
@@ -361,14 +386,19 @@ local function inPlaceSize(gauge, fill, front)
   -- off the fill until it is whole again, so a getter that raises cannot leave it half updated
   fill.layout = nil
   if layout and chainHolds(gauge, front, layout) then
-    local holds = valuesHold(fill, layout)
-    if holds == nil then
-      layout = nil
-    elseif not holds then
+    layout.reused = true
+    if not valuesHold(fill, layout) then
       measure(fill, front, gauge.back, layout)
     end
+  elseif fill.skips then
+    fill.skips = fill.skips > 1 and fill.skips - 1 or nil
+    layout = nil
+  elseif layout and not layout.reused then
+    -- something lays it out again on every update, so a new layout would not pay for itself
+    fill.skips = churnSkips
+    layout = nil
   else
-    layout = recordLayout(gauge, fill, front)
+    layout = recordLayout(gauge, fill, front, layout)
   end
   if not layout then
     local _, _, width, height = front:pixel_geometry()

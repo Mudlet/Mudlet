@@ -261,8 +261,38 @@ describe("Tests functionality of Geyser.Gauge", function()
       assert.is_true(asked <= 1, "asked " .. asked .. " times")
     end)
 
+    it("does not ask the main window its size when nothing it sits on is measured against it", function()
+      local stock = getMainWindowSize
+      local asked = 0
+      _G.getMainWindowSize = function()
+        asked = asked + 1
+        return stock()
+      end
+      finally(function() _G.getMainWindowSize = stock end)
+      local cornered = track(Geyser.Gauge:new({name = "ggsCornered", x = "0%", y = "0%", width = 200, height = 20}))
+      asked = 0
+      cornered:setValue(10)
+      cornered:setValue(20)
+      cornered:setValue(30)
+      assert.are.equal(0, asked)
+    end)
+
+    it("keeps the fill right while it is resized before every update", function()
+      local box = track(Geyser.Container:new({name = "ggsChurnBox", x = 20, y = 20, width = 301, height = 157}))
+      local churned = track(Geyser.Gauge:new({name = "ggsChurned", x = "5%", y = "5%", width = "90%", height = "20%"}, box))
+      for i = 1, 80 do
+        if i % 40 < 30 then
+          churned:resize(i % 2 == 0 and "90%" or "77.7%", nil)
+        end
+        churned:setValue(i % 2 == 0 and 37 or 61.5)
+        local _, _, width = Geyser.Container.pixel_geometry(churned.front)
+        assert.are.same({i, width}, {i, geometry("ggsChurned_front").width})
+      end
+    end)
+
     it("does not keep a container it has left alive", function()
-      local left = Geyser.Container:new({name = "ggsLeft", x = 10, y = 10, width = "50%", height = "50%"})
+      -- sized in characters, so that what the gauge reads of it is asked again rather than followed
+      local left = Geyser.Container:new({name = "ggsLeft", x = 10, y = 10, width = "-30c", height = "50%"})
       local leaver = track(Geyser.Gauge:new({name = "ggsLeaver", x = "5%", y = "5%", width = "90%", height = "20%"}, left))
       leaver:setValue(10)
       leaver:setValue(20)
@@ -275,12 +305,29 @@ describe("Tests functionality of Geyser.Gauge", function()
       assert.is_nil(held[1])
     end)
 
+    it("raises when a getter it rests on raises, even if it would answer when asked again", function()
+      local raises = 0
+      local box = track(Geyser.Container:new({name = "ggsFlaky", x = 10, y = 10, height = 100, width = function()
+        if raises > 0 then
+          raises = raises - 1
+          error("raised on purpose")
+        end
+        return 300
+      end}))
+      local flaky = track(Geyser.Gauge:new({name = "ggsFlakyGauge", x = "5%", y = "5%", width = "90%", height = "50%"}, box))
+      flaky:setValue(10)
+      flaky:setValue(20)
+      raises = 1
+      assert.has_error(function() flaky:setValue(30) end, "raised on purpose")
+    end)
+
     it("raises rather than hangs when its containers go round in a loop", function()
       local outer = track(Geyser.Container:new({name = "ggsLoopOuter", x = 0, y = 0, width = 300, height = 100}))
       local inner = track(Geyser.Container:new({name = "ggsLoopInner", x = "10%", y = "10%", width = "80%", height = "80%"}, outer))
       local looped = track(Geyser.Gauge:new({name = "ggsLooped", x = "5%", y = "5%", width = "90%", height = "90%"}, inner))
       looped:setValue(10)
       looped:setValue(20)
+      looped:setValue(15)
       finally(function()
         debug.sethook()
         outer.container = Geyser
@@ -507,15 +554,53 @@ describe("Tests functionality of Geyser.Gauge", function()
           width = function() return parts.size end, height = function() return parts.size / 2 end}))
         return track(Geyser.Container:new({name = "ggsStaleInner", x = 10, y = 10, width = "-40px", height = "-30px"}, parts.outer))
       end, disturb = function(parts) parts.size = 171.3 end},
-      {"its position getters are replaced and its container's far-edge size rests on a position a function gives", build = function(parts)
-        parts.edge = 20.5
+      {"its position getters are replaced and its container's far-edge width rests on an x a function gives", build = function(parts)
+        parts.left, parts.top = 20.5, 20.5
         parts.outer = track(Geyser.Container:new({name = "ggsStaleOuter", x = 31, y = 17, width = 401, height = 203}))
-        return track(Geyser.Container:new({name = "ggsStaleInner", x = function() return parts.edge end, y = function() return parts.edge end,
+        return track(Geyser.Container:new({name = "ggsStaleInner", x = function() return parts.left end, y = function() return parts.top end,
           width = "-20px", height = "-30px"}, parts.outer))
       end, setup = function(parts)
         parts.gauge.get_x = function() return 3 end
         parts.gauge.get_y = function() return 4 end
-      end, disturb = function(parts) parts.edge = 57.3 end},
+      end, disturb = function(parts) parts.left = 57.3 end},
+      {"its position getters are replaced and its container's far-edge height rests on a y a function gives", build = function(parts)
+        parts.left, parts.top = 20.5, 20.5
+        parts.outer = track(Geyser.Container:new({name = "ggsStaleOuter", x = 31, y = 17, width = 401, height = 203}))
+        return track(Geyser.Container:new({name = "ggsStaleInner", x = function() return parts.left end, y = function() return parts.top end,
+          width = "-20px", height = "-30px"}, parts.outer))
+      end, setup = function(parts)
+        parts.gauge.get_x = function() return 3 end
+        parts.gauge.get_y = function() return 4 end
+      end, disturb = function(parts) parts.top = 57.3 end},
+      {"its container's x getter is replaced and its far-edge width rests on where a function places the one it is in", build = function(parts)
+        parts.left = 31.5
+        parts.outer = track(Geyser.Container:new({name = "ggsStaleOuter", x = function() return parts.left end, y = 17, width = 401, height = 203}))
+        parts.inner = track(Geyser.Container:new({name = "ggsStaleInner", x = 20, y = 20, width = "-20px", height = "-30px"}, parts.outer))
+        parts.inner.get_x = function() return 60.5 end
+        return parts.inner
+      end, disturb = function(parts) parts.left = 57.3 end},
+      {"its container's y getter is replaced and its far-edge height rests on where a function places the one it is in", build = function(parts)
+        parts.top = 17.5
+        parts.outer = track(Geyser.Container:new({name = "ggsStaleOuter", x = 31, y = function() return parts.top end, width = 401, height = 203}))
+        parts.inner = track(Geyser.Container:new({name = "ggsStaleInner", x = 20, y = 20, width = "-20px", height = "-30px"}, parts.outer))
+        parts.inner.get_y = function() return 50.5 end
+        return parts.inner
+      end, disturb = function(parts) parts.top = 33.9 end},
+      {"its container is placed at 0% of one a function places", build = function(parts)
+        parts.left = 31.5
+        parts.outer = track(Geyser.Container:new({name = "ggsStaleOuter", x = function() return parts.left end, y = 17, width = 401, height = 203}))
+        return track(Geyser.Container:new({name = "ggsStaleInner", x = "0%", y = "-80px", width = 120, height = 60}, parts.outer))
+      end, disturb = function(parts) parts.left = 57.3 end},
+      {"its container is placed from the far edge of one a function places", build = function(parts)
+        parts.left = 31.5
+        parts.outer = track(Geyser.Container:new({name = "ggsStaleOuter", x = function() return parts.left end, y = 17, width = 401, height = 203}))
+        return track(Geyser.Container:new({name = "ggsStaleInner", x = "-150px", y = 50, width = 120, height = 60}, parts.outer))
+      end, disturb = function(parts) parts.left = 57.3 end},
+      {"its container is placed at 0%-0 of one a function places", build = function(parts)
+        parts.top = 17.5
+        parts.outer = track(Geyser.Container:new({name = "ggsStaleOuter", x = 31, y = function() return parts.top end, width = 401, height = 203}))
+        return track(Geyser.Container:new({name = "ggsStaleInner", x = 40, y = "0%-0", width = 120, height = 60}, parts.outer))
+      end, disturb = function(parts) parts.top = 57.3 end},
       {"its container is placed at 0% of one whose width getter starts to raise", build = function(parts)
         parts.outer = track(Geyser.Container:new({name = "ggsStaleOuter", x = 31, y = 17, width = 401, height = 203}))
         parts.outer.get_width = function()
@@ -592,14 +677,52 @@ describe("Tests functionality of Geyser.Gauge", function()
       {"its back label gets padding on the bottom", disturb = function(parts)
         parts.gauge:setStyleSheet("", "padding-bottom: 7px;")
       end},
-      {"the function giving its container's size changes and it is sized in pixels", gauge = {x = "50%", y = "50%", width = 40, height = 30}, setup = function(parts)
-        parts.size = 250.5
-        parts.inner:resize(function() return parts.size end, function() return parts.size / 2 end)
-      end, disturb = function(parts) parts.size = 171 end},
+      {"the function giving its container's width changes and it is sized in pixels", gauge = {x = "50%", y = "50%", width = 40, height = 30}, setup = function(parts)
+        parts.wide, parts.tall = 250.5, 125.5
+        parts.inner:resize(function() return parts.wide end, function() return parts.tall end)
+      end, disturb = function(parts) parts.wide = 171 end},
+      {"the function giving its container's height changes and it is sized in pixels", gauge = {x = "50%", y = "50%", width = 40, height = 30}, setup = function(parts)
+        parts.wide, parts.tall = 250.5, 125.5
+        parts.inner:resize(function() return parts.wide end, function() return parts.tall end)
+      end, disturb = function(parts) parts.tall = 86.25 end},
+      {"its front label's width getter is replaced", disturb = function(parts)
+        parts.gauge.front.get_width = function() return 33 end
+      end},
       {"its container is laid out against a container it is not in", setup = function(parts)
         parts.other = track(Geyser.Container:new({name = "ggsStaleOffChain", x = 3, y = 7, width = 251, height = 133}))
         Geyser.set_constraints(parts.inner, parts.inner, parts.other)
       end, disturb = function(parts) parts.other:resize(199, 101) end},
+      {"the main window gets taller and nothing else", gauge = {x = 10, y = "20%", width = 200, height = "10.3%"}, build = function() end,
+        disturb = function(parts)
+          local width, height = getMainWindowSize()
+          parts.mainWindowSize = getMainWindowSize
+          _G.getMainWindowSize = function() return width, height + 37 end
+        end, cleanup = function(parts)
+          if parts.mainWindowSize then
+            _G.getMainWindowSize = parts.mainWindowSize
+          end
+        end},
+      {"the main window gets wider and nothing else", gauge = {x = "20%", y = 10, width = "10.3%", height = 20}, build = function() end,
+        disturb = function(parts)
+          local width, height = getMainWindowSize()
+          parts.mainWindowSize = getMainWindowSize
+          _G.getMainWindowSize = function() return width + 37, height end
+        end, cleanup = function(parts)
+          if parts.mainWindowSize then
+            _G.getMainWindowSize = parts.mainWindowSize
+          end
+        end},
+      {"only its x rests on its container, which moves across", gauge = {x = 5, y = function() return 7 end, width = 100, height = 20},
+        disturb = function(parts) parts.inner:move("33.3%", nil) end},
+      {"only its y rests on its container, which moves down", gauge = {x = function() return 7 end, y = 5, width = 100, height = 20},
+        disturb = function(parts) parts.inner:move(nil, "11.3%") end},
+      {"only its width rests on its container, which gets wider", gauge = {x = function() return 7 end, y = function() return 5 end, width = "50.5%", height = 20},
+        disturb = function(parts) parts.inner:resize("61.3%", nil) end},
+      {"only its height rests on its container, which gets taller", gauge = {x = function() return 7 end, y = function() return 5 end, width = 100, height = "50.5%"},
+        disturb = function(parts) parts.inner:resize(nil, "70.3%") end},
+      {"its front label is laid out again from other constraints", disturb = function(parts)
+        Geyser.calc_constraints(parts.gauge.front, {x = 3, y = 4, width = 50, height = 10}, parts.gauge)
+      end},
       {"the root's width getter answers differently", setup = function(parts)
         parts.outer:resize("40%", "30%")
         parts.rootWidth, parts.rootGetWidth = 900, Geyser.get_width
@@ -607,6 +730,23 @@ describe("Tests functionality of Geyser.Gauge", function()
       end, disturb = function(parts) parts.rootWidth = 777 end, cleanup = function(parts)
         if parts.rootGetWidth then
           Geyser.get_width = parts.rootGetWidth
+        end
+      end},
+      {"the root's height getter answers differently", setup = function(parts)
+        parts.outer:resize("40%", "30%")
+        parts.rootHeight, parts.rootGetHeight = 500, Geyser.get_height
+        Geyser.get_height = function() return parts.rootHeight end
+      end, disturb = function(parts) parts.rootHeight = 433 end, cleanup = function(parts)
+        if parts.rootGetHeight then
+          Geyser.get_height = parts.rootGetHeight
+        end
+      end},
+      {"the root's x getter answers differently", setup = function(parts)
+        parts.rootX, parts.rootGetX = 0, Geyser.get_x
+        Geyser.get_x = function() return parts.rootX end
+      end, disturb = function(parts) parts.rootX = 0.4 end, cleanup = function(parts)
+        if parts.rootGetX then
+          Geyser.get_x = parts.rootGetX
         end
       end},
       {"an outer container gets a getter nothing reads that raises", build = function(parts)
