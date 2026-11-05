@@ -1477,6 +1477,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_downloadMapOptions, tr("download map, fetch map, map from the game")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for links in the game's text being clickable.
     synonyms.append({checkBox_enableOSC8Hyperlinks, tr("hyperlink, link, clickable URL, OSC8")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for showing the time each line arrived in the main window.
+    synonyms.append({checkBox_showTimeStamps, tr("timestamps, time stamps, time, clock")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for showing script errors in the game window.
     synonyms.append({checkBox_echoLuaErrors, tr("echo, error messages, script errors, Lua errors")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the character encoding used to talk to the game.
@@ -2401,6 +2403,7 @@ void dlgProfilePreferences::reflowDisplayOptionsCard()
 {
     const QList<QWidget*> displayOptions{checkBox_useWideAmbiguousEastAsianGlyphs,
                                          checkBox_enableTextAnalyzer,
+                                         checkBox_showTimeStamps,
                                          checkBox_enableOSC8Hyperlinks,
                                          label_controlCharacterHandling,
                                          comboBox_controlCharacterHandling,
@@ -2409,12 +2412,13 @@ void dlgProfilePreferences::reflowDisplayOptionsCard()
     takeOutOfLayout(gridLayout_groupBox_displayOptions, displayOptions);
     gridLayout_groupBox_displayOptions->addWidget(checkBox_useWideAmbiguousEastAsianGlyphs, 0, 0);
     gridLayout_groupBox_displayOptions->addWidget(checkBox_enableTextAnalyzer, 0, 1);
-    gridLayout_groupBox_displayOptions->addWidget(checkBox_enableOSC8Hyperlinks, 1, 0, 1, 2);
-    gridLayout_groupBox_displayOptions->addWidget(label_controlCharacterHandling, 2, 0);
-    gridLayout_groupBox_displayOptions->addWidget(comboBox_controlCharacterHandling, 2, 1);
+    gridLayout_groupBox_displayOptions->addWidget(checkBox_showTimeStamps, 1, 0, 1, 2);
+    gridLayout_groupBox_displayOptions->addWidget(checkBox_enableOSC8Hyperlinks, 2, 0, 1, 2);
+    gridLayout_groupBox_displayOptions->addWidget(label_controlCharacterHandling, 3, 0);
+    gridLayout_groupBox_displayOptions->addWidget(comboBox_controlCharacterHandling, 3, 1);
     // Label beside its field rather than above, saving a row and lining up with the combo box above
-    gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_label, 3, 0);
-    gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_lineedit, 3, 1);
+    gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_label, 4, 0);
+    gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_lineedit, 4, 1);
 }
 
 // The .ui ends this card with the reconnect notice, but the workarounds moved here land after it,
@@ -3895,6 +3899,7 @@ void dlgProfilePreferences::disableHostDetails()
     // ----- groupBox_displayOptions -----
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
     checkBox_enableTextAnalyzer->setEnabled(false);
+    checkBox_showTimeStamps->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
     label_controlCharacterHandling->setEnabled(false);
@@ -4031,6 +4036,7 @@ void dlgProfilePreferences::enableHostDetails()
     // ----- groupBox_displayOptions -----
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
     checkBox_enableTextAnalyzer->setEnabled(true);
+    checkBox_showTimeStamps->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
     label_controlCharacterHandling->setEnabled(true);
@@ -4436,6 +4442,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     command_separator_lineedit->setText(pHost->mCommandSeparator);
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
     checkBox_enableTextAnalyzer->setChecked(pHost->mEnableTextAnalyzer);
+    checkBox_showTimeStamps->setChecked(pHost->mainConsoleShowsTimeStamps());
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
 
@@ -4872,7 +4879,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
@@ -5379,6 +5386,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(false);
     checkBox_enableTextAnalyzer->setChecked(false);
+    checkBox_showTimeStamps->setChecked(false);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(false);
     USE_UNIX_EOL->setChecked(false);
     topBorderHeight->clear();
@@ -7014,6 +7022,9 @@ void dlgProfilePreferences::applyAll()
         }
         if (mSnapshot.dirty(checkBox_enableTextAnalyzer)) {
             pHost->mEnableTextAnalyzer = checkBox_enableTextAnalyzer->isChecked();
+        }
+        if (mSnapshot.dirty(checkBox_showTimeStamps)) {
+            pHost->setWindowTimeStamps(qsl("main"), checkBox_showTimeStamps->isChecked());
         }
         if (mSnapshot.dirty(checkBox_mUSE_FORCE_LF_AFTER_PROMPT)) {
             pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();

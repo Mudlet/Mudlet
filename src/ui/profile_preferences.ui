@@ -1648,6 +1648,19 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="4" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_showTimeStamps">
+            <property name="toolTip">
+             <string>&lt;p&gt;Shows the time each line arrived at the start of every line in the main window. This is the same setting as the timestamp button at the bottom right of the main window.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>Shows the time each line arrived at the start of every line in the main window. This is the same setting as the timestamp button at the bottom right of the main window.</string>
+            </property>
+            <property name="text">
+             <string>Show timestamps</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -5750,6 +5763,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
   <tabstop>checkBox_showTabConnectionIndicators</tabstop>
   <tabstop>checkBox_enableTextAnalyzer</tabstop>
+  <tabstop>checkBox_showTimeStamps</tabstop>
   <tabstop>checkBox_echoLuaErrors</tabstop>
   <tabstop>comboBox_controlCharacterHandling</tabstop>
   <tabstop>code_editor_theme_selection_combobox</tabstop>

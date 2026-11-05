@@ -54,6 +54,7 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
+#include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
@@ -549,6 +550,58 @@ private slots:
         QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
 
         QCOMPARE(removals.count(), 0);
+    }
+
+    // The box is the main window's timestamp button by another route: the
+    // button lights up with it, and the profile opens with timestamps next time
+    void test_theTimeStampsBoxTurnsTheMainConsolesTimeStampsOnAndOff()
+    {
+        TMainConsole* pConsole = mpHost->mainConsoleView();
+        QVERIFY(pConsole);
+        const bool before = mpHost->mainConsoleShowsTimeStamps();
+        const auto restore = qScopeGuard([this, before]() {
+            mpHost->setWindowTimeStamps(qsl("main"), before);
+        });
+        const QString sentinel = MudletApp::getMudletPath(enums::profileDataItemPath, mProfileName, qsl("autotimestamp"));
+        openPreferences();
+        QCOMPARE(mpPreferences->checkBox_showTimeStamps->isChecked(), before);
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_showTimeStamps->click();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
+
+        QCOMPARE(mpHost->mainConsoleShowsTimeStamps(), !before);
+        QCOMPARE(pConsole->timeStampButton->isChecked(), !before);
+        QCOMPARE(QFile::exists(sentinel), !before);
+
+        delete mpPreferences;
+        mpPreferences = nullptr;
+        openPreferences();
+        QCOMPARE(mpPreferences->checkBox_showTimeStamps->isChecked(), !before);
+    }
+
+    // ...and pressing the button while the dialog is open shows in the box when
+    // the user comes back to it, without that writing anything back
+    void test_theTimeStampButtonShowsInTheDialog()
+    {
+        TMainConsole* pConsole = mpHost->mainConsoleView();
+        QVERIFY(pConsole);
+        const bool before = mpHost->mainConsoleShowsTimeStamps();
+        const auto restore = qScopeGuard([this, before]() {
+            mpHost->setWindowTimeStamps(qsl("main"), before);
+        });
+        openPreferences();
+        QCOMPARE(mpPreferences->checkBox_showTimeStamps->isChecked(), before);
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pConsole->timeStampButton->click();
+        QCOMPARE(mpHost->mainConsoleShowsTimeStamps(), !before);
+
+        returnToTheDialog();
+
+        QCOMPARE(mpPreferences->checkBox_showTimeStamps->isChecked(), !before);
+        QVERIFY2(!applySpy.wait(TestSettings::scmQuietWindow), "re-reading the settings applied them");
+        QCOMPARE(mpHost->mainConsoleShowsTimeStamps(), !before);
     }
 };
 
