@@ -7423,6 +7423,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "roomLocked", TLuaInterpreter::roomLocked);
     lua_register(pGlobalLua, "setCustomEnvColor", TLuaInterpreter::setCustomEnvColor);
     lua_register(pGlobalLua, "getCustomEnvColorTable", TLuaInterpreter::getCustomEnvColorTable);
+    lua_register(pGlobalLua, "getMapEnvColor", TLuaInterpreter::getMapEnvColor);
     lua_register(pGlobalLua, "setRoomEnv", TLuaInterpreter::setRoomEnv);
     lua_register(pGlobalLua, "setRoomName", TLuaInterpreter::setRoomName);
     lua_register(pGlobalLua, "getRoomName", TLuaInterpreter::getRoomName);
