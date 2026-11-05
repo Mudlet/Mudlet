@@ -85,6 +85,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpKey->mModuleMasterFolder = true;
             mpKey->mModuleMember = true;
+            mpKey->mLoadedFromModule = mPackageName;
         }
         mpKey->mPackageName = mPackageName;
         mpKey->setIsActive(true);
@@ -95,6 +96,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpTrigger->mModuleMasterFolder = true;
             mpTrigger->mModuleMember = true;
+            mpTrigger->mLoadedFromModule = mPackageName;
         }
         mpTrigger->mPackageName = mPackageName;
         mpTrigger->setIsActive(true);
@@ -105,6 +107,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpTimer->mModuleMasterFolder = true;
             mpTimer->mModuleMember = true;
+            mpTimer->mLoadedFromModule = mPackageName;
         }
         mpTimer->mPackageName = mPackageName;
         mpTimer->setIsActive(true);
@@ -115,6 +118,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpAlias->mModuleMasterFolder = true;
             mpAlias->mModuleMember = true;
+            mpAlias->mLoadedFromModule = mPackageName;
         }
         mpAlias->mPackageName = mPackageName;
         mpAlias->setIsActive(true);
@@ -127,6 +131,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpAction->mModuleMasterFolder = true;
             mpAction->mModuleMember = true;
+            mpAction->mLoadedFromModule = mPackageName;
         }
         mpAction->mPackageName = mPackageName;
         mpAction->setIsActive(true);
@@ -137,6 +142,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpScript->mModuleMasterFolder = true;
             mpScript->mModuleMember = true;
+            mpScript->mLoadedFromModule = mPackageName;
         }
         mpScript->mPackageName = mPackageName;
         mpScript->setIsActive(true);
@@ -1444,6 +1450,7 @@ int XMLimport::readTrigger(TTrigger* pParent)
 
     if (module) {
         pT->mModuleMember = true;
+        pT->mLoadedFromModule = mPackageName;
     }
 
     mpHost->getTriggerUnit()->registerTrigger(pT);
@@ -1582,6 +1589,7 @@ int XMLimport::readTimer(TTimer* pParent)
 
     if (module) {
         pT->mModuleMember = true;
+        pT->mLoadedFromModule = mPackageName;
     }
 
     const QString what = name().toString();
@@ -1653,6 +1661,7 @@ int XMLimport::readAlias(TAlias* pParent)
     pT->setIsFolder(attributes().value(qsl("isFolder")) == YES);
     if (module) {
         pT->mModuleMember = true;
+        pT->mLoadedFromModule = mPackageName;
     }
 
     QStringList itemErrors;
@@ -1732,6 +1741,7 @@ int XMLimport::readAction(TAction* pParent)
 
     if (module) {
         pT->mModuleMember = true;
+        pT->mLoadedFromModule = mPackageName;
     }
 
     const QString what = name().toString();
@@ -1829,6 +1839,7 @@ int XMLimport::readScript(TScript* pParent)
 
     if (module) {
         script->mModuleMember = true;
+        script->mLoadedFromModule = mPackageName;
     }
 
     const QString what = name().toString();
@@ -1894,6 +1905,7 @@ int XMLimport::readKey(TKey* pParent)
     pT->setIsFolder(attributes().value(qsl("isFolder")) == YES);
     if (module) {
         pT->mModuleMember = true;
+        pT->mLoadedFromModule = mPackageName;
     }
 
     const QString what = name().toString();

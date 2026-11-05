@@ -113,9 +113,11 @@ public:
     // 0 when no function is held; luaL_ref() never returns 0
     int mLuaFunctionRef = 0;
     bool exportItem = true;
-    // Once moved from under pOldParent: joins the synced module it is now in, or leaves the one it was in
-    void updateModuleMembership(const TTimer* pOldParent);
+    // After a move: a member under a module's folder, and at the top level only while its module's file still holds it
+    void updateModuleMembership();
     bool mModuleMasterFolder = false;
+    // The module whose file this was loaded from
+    QString mLoadedFromModule;
 
     static const char* scmProperty_TTimerId;
 

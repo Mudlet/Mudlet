@@ -352,6 +352,8 @@ private slots:
         QVERIFY(pTrigger);
         TTrigger* pFolder = pTrigger->getParent();
         QVERIFY(pFolder && pFolder->mModuleMasterFolder);
+        // An earlier test took it out of a synced module, which hands it to the profile
+        pTrigger->mLoadedFromModule = mModuleName;
         const int itemID = pTrigger->getID();
         const int folderID = pFolder->getID();
         auto putBack = qScopeGuard([=] {
@@ -399,7 +401,7 @@ private slots:
 
         // An unsynced module's file is never rewritten, so an item put in and taken out again stays the profile's
         pUnit->reParentTrigger(itemID, 0, folderID, TreeItemInsertMode::Append);
-        QVERIFY(!pTrigger->moduleMember());
+        QVERIFY(pTrigger->moduleMember());
         pUnit->reParentTrigger(itemID, folderID, 0, TreeItemInsertMode::Append);
         QVERIFY(!pTrigger->moduleMember());
         QVERIFY(exportedProfileXml().contains(nameTag));
@@ -416,6 +418,58 @@ private slots:
         QVERIFY(!pTrigger->moduleMember());
         QVERIFY(exportedProfileXml().contains(nameTag));
         QVERIFY(!exportedModuleXml().contains(nameTag));
+
+        // Its file was never written with the item, so turning sync off before taking it out must not strand it
+        pUnit->reParentTrigger(itemID, 0, folderID, TreeItemInsertMode::Append);
+        QVERIFY(pTrigger->moduleMember());
+        QVERIFY(mpHost->changeModuleSync(mModuleName, QLatin1String("0")).first);
+        pUnit->reParentTrigger(itemID, folderID, 0, TreeItemInsertMode::Append);
+        QVERIFY2(!pTrigger->moduleMember(), "a profile item taken out of a module whose sync was turned off is still a module member");
+        QVERIFY2(exportedProfileXml().contains(nameTag), "the profile save leaves out a profile item taken out of a module whose sync was turned off");
+    }
+
+    void test_anItemOfAnUnsyncedModulePassingThroughASyncedOneStaysOutOfTheProfile()
+    {
+        TriggerUnit* pUnit = mpHost->getTriggerUnit();
+        const std::vector<int> ids = pUnit->findItems(mModuleTriggerName, true, true);
+        QCOMPARE(ids.size(), 1);
+        TTrigger* pTrigger = pUnit->getTrigger(ids.front());
+        QVERIFY(pTrigger);
+        TTrigger* pFolder = pTrigger->getParent();
+        QVERIFY(pFolder && pFolder->mModuleMasterFolder);
+        // An earlier test took it out of a synced module, which hands it to the profile
+        pTrigger->mLoadedFromModule = mModuleName;
+        const int itemID = pTrigger->getID();
+        const int folderID = pFolder->getID();
+
+        // A second, synced module, set up as installing one would leave it
+        const QString otherModule = qsl("qaSyncedModule");
+        auto* pOtherFolder = new TTrigger(nullptr, mpHost);
+        pOtherFolder->setName(otherModule);
+        pOtherFolder->setIsFolder(true);
+        pOtherFolder->mPackageName = otherModule;
+        pOtherFolder->mModuleMasterFolder = true;
+        pOtherFolder->mLoadedFromModule = otherModule;
+        QVERIFY(pUnit->registerTrigger(pOtherFolder));
+        mpHost->mInstalledModules[otherModule] = QStringList{qsl("%1/%2.xml").arg(mModuleDir.path(), otherModule), qsl("1"), qsl("0")};
+        mpHost->mModulesLoadedOk.insert(otherModule);
+        auto cleanUp = qScopeGuard([=, this] {
+            if (pTrigger->getParent() != pFolder) {
+                pUnit->reParentTrigger(itemID, 0, folderID, TreeItemInsertMode::Append);
+            }
+            mpHost->mInstalledModules.remove(otherModule);
+            mpHost->mModulesLoadedOk.remove(otherModule);
+            delete pOtherFolder;
+        });
+        QVERIFY(mpHost->moduleSavesBack(otherModule));
+        const QString nameTag = qsl("<name>%1</name>").arg(mModuleTriggerName);
+
+        pUnit->reParentTrigger(itemID, folderID, pOtherFolder->getID(), TreeItemInsertMode::Append);
+        QVERIFY(pTrigger->moduleMember());
+        pUnit->reParentTrigger(itemID, pOtherFolder->getID(), 0, TreeItemInsertMode::Append);
+        QVERIFY(!pTrigger->getParent());
+        QVERIFY2(pTrigger->moduleMember(), "an item of an unsynced module, which that module's file still holds, stopped being a member on leaving another module");
+        QVERIFY2(!exportedProfileXml().contains(nameTag), "the profile save holds an item its unsynced module's file also holds, so it would load twice");
     }
 
     void test_deletingTheModuleFolderCanUninstallTheModule()

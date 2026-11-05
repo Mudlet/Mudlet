@@ -571,9 +571,11 @@ public:
     int mRootSnapshotPosition = scmNeverSnapshotted;
     bool exportItem = true;
     bool moduleMember() const { return mModuleMember; }
-    // Once moved from under pOldParent: joins the synced module it is now in, or leaves the one it was in
-    void updateModuleMembership(const TTrigger* pOldParent);
+    // After a move: a member under a module's folder, and at the top level only while its module's file still holds it
+    void updateModuleMembership();
     bool mModuleMasterFolder = false;
+    // The module whose file this was loaded from
+    QString mLoadedFromModule;
     // specifies whenever the payload is Lua code as a string
     // or a function
     bool mRegisteredAnonymousLuaFunction = false;

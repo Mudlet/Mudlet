@@ -179,7 +179,7 @@ void AliasUnit::reParentAlias(int childID, int oldParentID, int newParentID, int
 
     // The profile save skips a top-level module member and the module save only walks its own
     // folder, so an item moved out of a module that kept the mark would be saved nowhere
-    pChild->updateModuleMembership(pOldParent);
+    pChild->updateModuleMembership();
 }
 
 void AliasUnit::reParentAlias(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
