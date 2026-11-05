@@ -117,6 +117,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class EditorEmptySelectionTest;
     friend class EditorFolderViewTest;
     friend class EditorFontTest;
+    friend class EditorKeyboardMoveTest;
     friend class EditorModuleFolderTest;
     friend class EditorReshowTest;
     friend class EditorSearchTest;
@@ -424,6 +425,10 @@ private:
     void populateActions();
     void populateKeys();
     void saveOpenChanges();
+    enum class KeyboardMove { Up, Down, OutOfGroup, IntoGroupAbove };
+    void moveCurrentItem(const KeyboardMove move);
+    QList<int> unitChildIDs(const EditorViewType view, const int parentID) const;
+    void reParentInUnit(const EditorViewType view, const int itemID, const int oldParentID, const int newParentID, const int position);
     EditorViewType determineViewFromVisibleTree();
     EditorViewType resolveCurrentView();
     void rebuildStaleTrees();

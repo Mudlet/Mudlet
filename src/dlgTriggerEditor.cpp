@@ -1053,6 +1053,28 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         widget->addAction(separator2);
     }
 
+    // Drag and drop is the only other way to rearrange the trees, and a screen reader user cannot drag
+    auto addMoveAction = [this](const QString& text, const QKeySequence& shortcut, const KeyboardMove move) {
+        auto* pAction = new QAction(text, this);
+        pAction->setShortcut(shortcut);
+        // Scoped to the tree, so Alt+arrows still reach the text being edited
+        pAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+        for (QTreeWidget* pTree : {treeWidget_triggers, treeWidget_aliases, treeWidget_timers, treeWidget_scripts, treeWidget_actions, treeWidget_keys}) {
+            pTree->addAction(pAction);
+        }
+        connect(pAction, &QAction::triggered, this, [this, move]() {
+            moveCurrentItem(move);
+        });
+    };
+    //: Context menu entry in the editor's item tree, moving the selected item one place up within its group
+    addMoveAction(tr("Move Up"), QKeySequence(Qt::ALT | Qt::Key_Up), KeyboardMove::Up);
+    //: Context menu entry in the editor's item tree, moving the selected item one place down within its group
+    addMoveAction(tr("Move Down"), QKeySequence(Qt::ALT | Qt::Key_Down), KeyboardMove::Down);
+    //: Context menu entry in the editor's item tree, moving the selected item out of its group to sit just after it
+    addMoveAction(tr("Move Out of Group"), QKeySequence(Qt::ALT | Qt::Key_Left), KeyboardMove::OutOfGroup);
+    //: Context menu entry in the editor's item tree, moving the selected item to the end of the group just above it
+    addMoveAction(tr("Move Into Group Above"), QKeySequence(Qt::ALT | Qt::Key_Right), KeyboardMove::IntoGroupAbove);
+
     if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
         copyAction->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
         pasteAction->setIcon(QIcon::fromTheme(qsl("edit-paste"), QIcon(qsl(":/icons/edit-paste.png"))));
@@ -4364,6 +4386,219 @@ void dlgTriggerEditor::slot_batchMoveEnded()
     }
 
     mpUndoStack->endMacro();
+}
+
+void dlgTriggerEditor::moveCurrentItem(const KeyboardMove move)
+{
+    const EditorViewType view = resolveCurrentView();
+    if (view == EditorViewType::cmVarsView || view == EditorViewType::cmUnknownView) {
+        return;
+    }
+
+    QTreeWidget* pTree = treeForView(view);
+    QTreeWidgetItem* pItem = pTree ? pTree->currentItem() : nullptr;
+    QTreeWidgetItem* pParentItem = pItem ? pItem->parent() : nullptr;
+    if (!pItem) {
+        return;
+    }
+    // A row with no parent is the tree's heading; a module's own folder is pinned in place, as it is for drag and drop
+    if (!pParentItem || !(pItem->flags() & Qt::ItemIsDragEnabled)) {
+        //: Screen reader announcement when an editor move shortcut is used on the tree's heading or on a module's own folder; %1 is the row's name
+        mudlet::self()->announce(tr("%1 cannot be moved").arg(pItem->text(0)), QString(), true);
+        return;
+    }
+
+    const int itemID = pItem->data(0, Qt::UserRole).toInt();
+    const int oldParentID = pParentItem->data(0, Qt::UserRole).toInt();
+    const int indexInTree = pParentItem->indexOfChild(pItem);
+    // Positions are counted in the unit, which also holds temporary items the tree never shows
+    const QList<int> siblingIDs = unitChildIDs(view, oldParentID);
+    const int oldPosition = siblingIDs.indexOf(itemID);
+    QTreeWidgetItem* pAbove = pParentItem->child(indexInTree - 1);
+    QTreeWidgetItem* pBelow = pParentItem->child(indexInTree + 1);
+    // The item named in the announcement: the one it passes, or the group it leaves or joins
+    QTreeWidgetItem* pLandmark = nullptr;
+    int newParentID = oldParentID;
+    int newPosition = -1;
+    // Filled in once saving has settled both names
+    QString outcome;
+
+    switch (move) {
+    case KeyboardMove::Up:
+        if (!pAbove) {
+            //: Screen reader announcement when the editor's Move Up shortcut is used on an item already first in its group; %1 is the item's name
+            mudlet::self()->announce(tr("%1 is already at the top of its group").arg(pItem->text(0)), QString(), true);
+            return;
+        }
+        pLandmark = pAbove;
+        newPosition = siblingIDs.indexOf(pAbove->data(0, Qt::UserRole).toInt());
+        //: Screen reader announcement after an item in the editor's tree is moved up; %1 is its name, %2 the item it now sits above
+        outcome = tr("Moved %1 above %2");
+        break;
+    case KeyboardMove::Down:
+        if (!pBelow) {
+            //: Screen reader announcement when the editor's Move Down shortcut is used on an item already last in its group; %1 is the item's name
+            mudlet::self()->announce(tr("%1 is already at the bottom of its group").arg(pItem->text(0)), QString(), true);
+            return;
+        }
+        pLandmark = pBelow;
+        // Taking the item out shifts the one below up a place, so its old position is the one just after it
+        newPosition = siblingIDs.indexOf(pBelow->data(0, Qt::UserRole).toInt());
+        //: Screen reader announcement after an item in the editor's tree is moved down; %1 is its name, %2 the item it now sits below
+        outcome = tr("Moved %1 below %2");
+        break;
+    case KeyboardMove::OutOfGroup: {
+        QTreeWidgetItem* pGrandParentItem = pParentItem->parent();
+        if (!pGrandParentItem) {
+            //: Screen reader announcement when the editor's Move Out of Group shortcut is used on an item in no group; %1 is the item's name
+            mudlet::self()->announce(tr("%1 is not in a group").arg(pItem->text(0)), QString(), true);
+            return;
+        }
+        pLandmark = pParentItem;
+        newParentID = pGrandParentItem->data(0, Qt::UserRole).toInt();
+        const int groupPosition = unitChildIDs(view, newParentID).indexOf(oldParentID);
+        newPosition = groupPosition < 0 ? -1 : groupPosition + 1;
+        //: Screen reader announcement after an item in the editor's tree is moved out of a group; %1 is its name, %2 the group it left
+        outcome = tr("Moved %1 out of %2");
+        break;
+    }
+    case KeyboardMove::IntoGroupAbove:
+        // A trigger already holding others is a filter chain, a group as much as a folder is; elsewhere
+        // nesting under a plain item changes what the item does, such as making a timer an offset timer
+        if (!pAbove || !(folderItem(view, pAbove->data(0, Qt::UserRole).toInt()) || (view == EditorViewType::cmTriggerView && pAbove->childCount() > 0))) {
+            //: Screen reader announcement when the editor's Move Into Group Above shortcut is used on an item with no group just above it; %1 is the item's name
+            mudlet::self()->announce(tr("There is no group just above %1").arg(pItem->text(0)), QString(), true);
+            return;
+        }
+        pLandmark = pAbove;
+        newParentID = pAbove->data(0, Qt::UserRole).toInt();
+        newPosition = unitChildIDs(view, newParentID).size();
+        //: Screen reader announcement after an item in the editor's tree is moved into a group; %1 is its name, %2 the group it is now in
+        outcome = tr("Moved %1 into %2");
+        break;
+    }
+
+    if (oldPosition < 0 || newPosition < 0) {
+        return;
+    }
+
+    // The form is reloaded from the unit once the tree is rebuilt, which would drop unsaved edits
+    saveOpenChanges();
+    // Read after saving, which may have renamed either row
+    const QString itemName = pItem->text(0);
+    outcome = outcome.arg(itemName, pLandmark->text(0));
+
+    reParentInUnit(view, itemID, oldParentID, newParentID, newPosition);
+    if (mpUndoStack) {
+        mpUndoStack->pushCommand(new EditorMoveItemCommand(view, itemID, oldParentID, newParentID, oldPosition, newPosition, itemName, mpHost));
+    }
+    slot_itemsChanged(view, {itemID});
+    mudlet::self()->announce(outcome, QString(), true);
+}
+
+QList<int> dlgTriggerEditor::unitChildIDs(const EditorViewType view, const int parentID) const
+{
+    QList<int> ids;
+    switch (view) {
+    case EditorViewType::cmTriggerView:
+        if (!parentID) {
+            for (const TTrigger* pNode : mpHost->getTriggerUnit()->getTriggerRootNodeList()) {
+                ids.append(pNode->getID());
+            }
+        } else if (const TTrigger* pParent = mpHost->getTriggerUnit()->getTrigger(parentID)) {
+            for (const Tree<TTrigger>* pNode : *pParent->getChildrenList()) {
+                ids.append(pNode->getID());
+            }
+        }
+        break;
+    case EditorViewType::cmAliasView:
+        if (!parentID) {
+            for (const TAlias* pNode : mpHost->getAliasUnit()->getAliasRootNodeList()) {
+                ids.append(pNode->getID());
+            }
+        } else if (const TAlias* pParent = mpHost->getAliasUnit()->getAlias(parentID)) {
+            for (const Tree<TAlias>* pNode : *pParent->getChildrenList()) {
+                ids.append(pNode->getID());
+            }
+        }
+        break;
+    case EditorViewType::cmTimerView:
+        if (!parentID) {
+            for (const TTimer* pNode : mpHost->getTimerUnit()->getTimerRootNodeList()) {
+                ids.append(pNode->getID());
+            }
+        } else if (const TTimer* pParent = mpHost->getTimerUnit()->getTimer(parentID)) {
+            for (const Tree<TTimer>* pNode : *pParent->getChildrenList()) {
+                ids.append(pNode->getID());
+            }
+        }
+        break;
+    case EditorViewType::cmScriptView:
+        if (!parentID) {
+            for (const TScript* pNode : mpHost->getScriptUnit()->getScriptRootNodeList()) {
+                ids.append(pNode->getID());
+            }
+        } else if (const TScript* pParent = mpHost->getScriptUnit()->getScript(parentID)) {
+            for (const Tree<TScript>* pNode : *pParent->getChildrenList()) {
+                ids.append(pNode->getID());
+            }
+        }
+        break;
+    case EditorViewType::cmKeysView:
+        if (!parentID) {
+            for (const TKey* pNode : mpHost->getKeyUnit()->getKeyRootNodeList()) {
+                ids.append(pNode->getID());
+            }
+        } else if (const TKey* pParent = mpHost->getKeyUnit()->getKey(parentID)) {
+            for (const Tree<TKey>* pNode : *pParent->getChildrenList()) {
+                ids.append(pNode->getID());
+            }
+        }
+        break;
+    case EditorViewType::cmActionView:
+        if (!parentID) {
+            for (const TAction* pNode : mpHost->getActionUnit()->getActionRootNodeList()) {
+                ids.append(pNode->getID());
+            }
+        } else if (const TAction* pParent = mpHost->getActionUnit()->getAction(parentID)) {
+            for (const Tree<TAction>* pNode : *pParent->getChildrenList()) {
+                ids.append(pNode->getID());
+            }
+        }
+        break;
+    case EditorViewType::cmVarsView:
+    case EditorViewType::cmUnknownView:
+        break;
+    }
+    return ids;
+}
+
+void dlgTriggerEditor::reParentInUnit(const EditorViewType view, const int itemID, const int oldParentID, const int newParentID, const int position)
+{
+    switch (view) {
+    case EditorViewType::cmTriggerView:
+        mpHost->getTriggerUnit()->reParentTrigger(itemID, oldParentID, newParentID, TreeItemInsertMode::AtPosition, position);
+        break;
+    case EditorViewType::cmAliasView:
+        mpHost->getAliasUnit()->reParentAlias(itemID, oldParentID, newParentID, TreeItemInsertMode::AtPosition, position);
+        break;
+    case EditorViewType::cmTimerView:
+        mpHost->getTimerUnit()->reParentTimer(itemID, oldParentID, newParentID, TreeItemInsertMode::AtPosition, position);
+        break;
+    case EditorViewType::cmScriptView:
+        mpHost->getScriptUnit()->reParentScript(itemID, oldParentID, newParentID, TreeItemInsertMode::AtPosition, position);
+        break;
+    case EditorViewType::cmKeysView:
+        mpHost->getKeyUnit()->reParentKey(itemID, oldParentID, newParentID, TreeItemInsertMode::AtPosition, position);
+        break;
+    case EditorViewType::cmActionView:
+        mpHost->getActionUnit()->reParentAction(itemID, oldParentID, newParentID, TreeItemInsertMode::AtPosition, position);
+        mpHost->getActionUnit()->updateAllToolbars();
+        break;
+    case EditorViewType::cmVarsView:
+    case EditorViewType::cmUnknownView:
+        break;
+    }
 }
 
 void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent, bool touchNotification)
@@ -15520,6 +15755,11 @@ void dlgTriggerEditor::slot_itemsChanged(EditorViewType viewType, QList<int> aff
     }
     default:
         break;
+    }
+
+    // The new row was made current with the selection model's signals blocked, so the view never told a screen reader
+    if (auto* pTree = qobject_cast<TTreeWidget*>(treeForView(viewType))) {
+        pTree->reportCurrentRow();
     }
 }
 
