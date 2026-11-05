@@ -65,9 +65,6 @@
 #include <cerrno>
 #include <unistd.h>
 #endif
-#if defined(Q_OS_LINUX)
-#include <QLibrary>
-#endif
 
 namespace {
 // Mudlet itself only resolves on the main thread; the locks are for engine
@@ -1011,25 +1008,6 @@ QTranslator* MudletApp::loadTranslationsForRun(const QString& configRoot)
     }
     QCoreApplication::installTranslator(pMudletTranslator);
     return pMudletTranslator;
-}
-
-void MudletApp::nameHardwareDeviceTypes()
-{
-#if defined(Q_OS_LINUX)
-    // Named types skip Qt's driver prechecks, so this repeats its CUDA one: FFmpeg can crash without libnvcuvid
-    // (QTBUG-122199)
-    QLibrary nvcuvid(qsl("libnvcuvid.so"));
-    const bool cuda = QFile::exists(qsl("/proc/driver/nvidia/version")) && nvcuvid.load();
-    nvcuvid.unload();
-    // Qt's Linux order, less Vulkan, which can be a software driver that decodes nothing. A type that doesn't
-    // work here is skipped when a video opens
-    const QByteArray deviceTypes = cuda ? "cuda,vaapi,vdpau,qsv,drm" : "vaapi,vdpau,qsv,drm";
-    for (const char* variable : {"QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "QT_FFMPEG_ENCODING_HW_DEVICE_TYPES"}) {
-        if (!qEnvironmentVariableIsSet(variable)) {
-            qputenv(variable, deviceTypes);
-        }
-    }
-#endif
 }
 
 void MudletApp::setDefaultMediaBackend()
