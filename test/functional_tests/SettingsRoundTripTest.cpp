@@ -33,7 +33,6 @@
 
 #include <QApplication>
 #include <QCheckBox>
-#include <QColorDialog>
 #include <QComboBox>
 #include <QFontComboBox>
 #include <QFontDatabase>
@@ -67,8 +66,6 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class SettingsRoundTripTest : public QObject
 {
@@ -114,26 +111,6 @@ private:
     {
         delete mpPreferences;
         mpPreferences = nullptr;
-    }
-
-    // QColorDialog::getColor() runs an event loop of its own until it is
-    // answered, so the answer comes from a timer armed before the button is
-    // clicked. cleanup() stops a timer whose dialog never came.
-    void pickInTheNextColorDialog(const QColor& color)
-    {
-        auto* pTimer = new QTimer(this);
-        mpColorDialogTimer = pTimer;
-        connect(pTimer, &QTimer::timeout, this, [pTimer, color]() {
-            auto* pDialog = qobject_cast<QColorDialog*>(QApplication::activeModalWidget());
-            if (!pDialog) {
-                return;
-            }
-            pTimer->stop();
-            pTimer->deleteLater();
-            pDialog->setCurrentColor(color);
-            pDialog->accept();
-        });
-        pTimer->start(20ms);
     }
 
 #ifdef INCLUDE_FONTS
@@ -943,9 +920,9 @@ private slots:
         const QColor innerColor(65, 43, 21);
         QVERIFY(priorOuterColor != outerColor && priorInnerColor != innerColor);
 
-        pickInTheNextColorDialog(outerColor);
+        mpColorDialogTimer = TestSettings::pickInTheNextColorDialog(this, outerColor);
         mpPreferences->pushButton_playerRoomPrimaryColor->click();
-        pickInTheNextColorDialog(innerColor);
+        mpColorDialogTimer = TestSettings::pickInTheNextColorDialog(this, innerColor);
         mpPreferences->pushButton_playerRoomSecondaryColor->click();
 
         QCOMPARE(mpHost->mpMap->mPlayerRoomOuterColor, outerColor);
