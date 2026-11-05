@@ -452,3 +452,35 @@ QString TTimer::packageName(TTimer* pTimer)
 
     return QString();
 }
+
+void TTimer::updateModuleMembership(const TTimer* pOldParent)
+{
+    if (!mpHost) {
+        return;
+    }
+    // An unsynced module's file is never rewritten, so it keeps what it was loaded with whatever is moved
+    auto inSavedModule = [this](const TTimer* pItem) {
+        const TTimer* pRoot = pItem ? pItem->getRoot() : nullptr;
+        return pRoot && pRoot->mModuleMasterFolder && mpHost->moduleSavesBack(pRoot->mPackageName);
+    };
+    if (inSavedModule(getParent())) {
+        setModuleMembership(true);
+    } else if (inSavedModule(pOldParent)) {
+        setModuleMembership(false);
+    }
+}
+
+void TTimer::setModuleMembership(const bool member)
+{
+    if (mModuleMasterFolder) {
+        return;
+    }
+    mModuleMember = member;
+    // Uninstalling or reloading a module removes every top-level item with its name as package name
+    if (!member && mpHost && mpHost->mInstalledModules.contains(mPackageName)) {
+        mPackageName.clear();
+    }
+    for (auto* pChild : *mpMyChildrenList) {
+        static_cast<TTimer*>(pChild)->setModuleMembership(member);
+    }
+}

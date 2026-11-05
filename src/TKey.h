@@ -79,6 +79,8 @@ public:
     void validateKeyBinding();
 
     bool exportItem = true;
+    // Once moved from under pOldParent: joins the synced module it is now in, or leaves the one it was in
+    void updateModuleMembership(const TKey* pOldParent);
     bool mModuleMasterFolder = false;
     bool mRegisteredAnonymousLuaFunction = false;
     // 0 when no function is held; luaL_ref() never returns 0
@@ -86,6 +88,7 @@ public:
     QPointer<Host> mpHost;
 
 private:
+    void setModuleMembership(bool);
     TKey() = default;
 
     QString mName;

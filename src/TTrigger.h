@@ -570,6 +570,9 @@ public:
     QStringList mPatterns;
     int mRootSnapshotPosition = scmNeverSnapshotted;
     bool exportItem = true;
+    bool moduleMember() const { return mModuleMember; }
+    // Once moved from under pOldParent: joins the synced module it is now in, or leaves the one it was in
+    void updateModuleMembership(const TTrigger* pOldParent);
     bool mModuleMasterFolder = false;
     // specifies whenever the payload is Lua code as a string
     // or a function
@@ -597,6 +600,7 @@ public:
 
 
 private:
+    void setModuleMembership(bool);
     pcre2_match_data* matchDataFor(int patternNumber);
     int search(int patternNumber, const char* subject, int subjectLength, pcre2_match_data* matchData) const;
     TTrigger() = default;

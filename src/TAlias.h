@@ -84,6 +84,8 @@ public:
     QString mScript;
     QPointer<Host> mpHost;
     bool mModuleMember = false;
+    // Once moved from under pOldParent: joins the synced module it is now in, or leaves the one it was in
+    void updateModuleMembership(const TAlias* pOldParent);
     bool mModuleMasterFolder = false;
     QString mFuncName;
     bool exportItem = true;
@@ -94,6 +96,7 @@ public:
     bool mIsNew = true;
 
 private:
+    void setModuleMembership(bool);
     bool mNeedsToBeCompiled = true;
 };
 

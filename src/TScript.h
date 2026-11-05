@@ -73,10 +73,13 @@ public:
     void unmarkAsNew();
 
     bool exportItem = true;
+    // Once moved from under pOldParent: joins the synced module it is now in, or leaves the one it was in
+    void updateModuleMembership(const TScript* pOldParent);
     bool mModuleMasterFolder = false;
     bool mIsNew = true;
 
 private:
+    void setModuleMembership(bool);
     TScript() = default;
     QString mName;
     QString mScript;

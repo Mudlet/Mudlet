@@ -194,11 +194,14 @@ public:
     QString css;
     QPointer<Host> mpHost;
     bool exportItem = true;
+    // Once moved from under pOldParent: joins the synced module it is now in, or leaves the one it was in
+    void updateModuleMembership(const TAction* pOldParent);
     bool mModuleMasterFolder = false;
     Qt::DockWidgetArea mToolbarLastDockArea = Qt::LeftDockWidgetArea;
     bool mToolbarLastFloatingState = true;
 
 private:
+    void setModuleMembership(bool);
     TAction() = default;
 
     QString mName;
