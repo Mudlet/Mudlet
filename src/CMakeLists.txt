@@ -733,7 +733,7 @@ find_package(ZLIB REQUIRED)
 # fixed it mis-optimising the start of a match in 8-bit mode with PCRE2_CASELESS
 find_package(PCRE2 10.36 REQUIRED)
 find_package(PUGIXML REQUIRED)
-# lua-yajl needs it already; parseJSON() drives its parser directly
+# lua-yajl already needs libyajl at runtime; parseJSON() drives its parser directly
 find_package(YAJL REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44 CONFIG REQUIRED)

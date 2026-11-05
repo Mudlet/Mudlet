@@ -429,7 +429,7 @@ bool pushJsonValue(lua_State* L, const QByteArray& json, int& error)
 {
     JsonToLua state;
     state.json = &json;
-    // pushed first, as an out of memory error raised there would leak the handle
+    // pushed first, as an error raised there (out of memory, or a finaliser's) would leak the handle
     lua_pushcfunction(L, decodeJson);
     lua_pushlightuserdata(L, &state);
     state.handle = yajl_alloc(&scmJsonToLuaCallbacks, nullptr, &state);
