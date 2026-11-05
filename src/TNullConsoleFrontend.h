@@ -85,8 +85,10 @@ public:
     void reportSize() override;
     TPrintSink* sink(const QString& name) const override;
     bool hasFrameWidget(const QString& name) const override;
-    // False for a frame on a tab page behind another, or inside a frame on one
+    // False for a frame on a tab page behind another, or inside a frame on one or in an external frame that is hidden
     bool pageShown(const QString& name) const;
+    // As an external frame's console reports what it holds when it is hidden or shown
+    void reportFramesWithin(const QString& name);
     void clear();
 
 private:

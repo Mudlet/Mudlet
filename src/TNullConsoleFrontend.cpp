@@ -682,9 +682,14 @@ void TNullMxpFrameFrontend::reportPages()
 
 bool TNullMxpFrameFrontend::pageShown(const QString& name) const
 {
+    const TWindowRegistry& registry = mView.mpHost->windowRegistry();
     QString frame = name;
     // Bounded, so that a host recorded for a name that was since reused cannot loop
     for (size_t depth = 0; !frame.isEmpty() && depth <= mHosts.size(); ++depth) {
+        // An external frame's console is the widget the frames in it are built inside
+        if (frame != name && mView.externalFrame(frame) && !registry.subConsoleVisible(frame).value_or(true)) {
+            return false;
+        }
         for (const auto& [headerName, header] : mHeaders) {
             const auto page = std::find(header.pages.cbegin(), header.pages.cend(), frame);
             if (page != header.pages.cend() && static_cast<size_t>(page - header.pages.cbegin()) != header.current) {
@@ -695,6 +700,25 @@ bool TNullMxpFrameFrontend::pageShown(const QString& name) const
         frame = host != mHosts.end() ? host->second : QString();
     }
     return true;
+}
+
+void TNullMxpFrameFrontend::reportFramesWithin(const QString& name)
+{
+    QStringList within;
+    for (const auto& [frame, frameHost] : mHosts) {
+        QString host = frameHost;
+        for (size_t depth = 0; !host.isEmpty() && depth <= mHosts.size(); ++depth) {
+            if (host == name) {
+                within << frame;
+                break;
+            }
+            const auto next = mHosts.find(host);
+            host = next != mHosts.end() ? next->second : QString();
+        }
+    }
+    for (const QString& frame : within) {
+        mView.reportWindowVisibility(frame);
+    }
 }
 
 void TNullMxpFrameFrontend::destroyFrame(const QString& name)
@@ -1697,6 +1721,10 @@ void TNullConsoleFrontend::reportWindowVisibility(const QString& name)
         registry.setPlainWindowVisible(name, it->second->shown && shownWithin(it->second->userWindow, it->second->box.get()));
     } else if (const PlainWindow* window = plainWindow(name)) {
         registry.setPlainWindowVisible(name, window->shown && window->layerShown && window->consoleShown && shownWithin(window->userWindow, window->box.get()));
+    }
+    // After its own, which the frames in it read
+    if (externalFrame(name)) {
+        mMxpFrames.reportFramesWithin(name);
     }
 }
 
