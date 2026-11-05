@@ -328,6 +328,7 @@ end)
 
 describe("Tests that GMCP data decodes as json_to_value decodes it", function()
   local stockDecoder = _G.json_to_value
+  local stockDecoderIsC = debug.getinfo(stockDecoder, "S").what == "C"
   local unset = {}
 
   teardown(function()
@@ -453,6 +454,10 @@ describe("Tests that GMCP data decodes as json_to_value decodes it", function()
   end)
 
   it("keeps the previous value when a Lua error is raised while decoding", function()
+    if not stockDecoderIsC then
+      pending("the finaliser below raises only inside a decoder written in C")
+      return
+    end
     local raised, armed = false, true
     local pause = collectgarbage("setpause", 0)
     local stepmul = collectgarbage("setstepmul", 0)
@@ -498,6 +503,10 @@ describe("Tests that GMCP data decodes as json_to_value decodes it", function()
   end)
 
   it("calls yajl.to_value only for what it rejects or what nests past 64 levels", function()
+    if not stockDecoderIsC then
+      pending("parseJSON() only stands in for lua-yajl's yajl.to_value, a C function")
+      return
+    end
     local hook, mask, count = debug.gethook()
     finally(function() debug.sethook(hook, mask, count) end)
     local calls
