@@ -653,6 +653,17 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                             },
                             Qt::QueuedConnection);
                 }
+                // Direct, so it keeps its place among the game's lines and hiddenInputWanted; an exit handler's
+                // text is for a line the app no longer shows, and a script's close raises it before quitRequested
+                connect(pNewHost, &Host::signal_commandLineTextRequested, this, [this, run, pNewHost](const QString& text) {
+                    if (run != mRun || mShuttingDown || pNewHost->closeStarted()) {
+                        return;
+                    }
+                    const QString profile = mProfileName;
+                    ++gSignalsBeingHandedOut;
+                    emit commandLineTextRequested(profile, text);
+                    --gSignalsBeingHandedOut;
+                });
                 connect(
                         &pNewHost->mTelnet,
                         &cTelnet::signal_connected,
@@ -781,6 +792,14 @@ bool THeadlessSession::submit(const QString& line)
     // As the GUI's command line, each line of a paste is a command of its own; unlike there, it is checked as a
     // call, so one that a close in an earlier line's alias leaves nowhere to go ends the paste with the reason
     QStringList commands = line.split(QChar::LineFeed);
+    if (!usable()) {
+        return false;
+    }
+    // Once, as the GUI's line is held or not as the paste is sent, whatever its aliases do to hidden input meanwhile
+    bool held = false;
+    if (auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend())) {
+        held = pView->holdMainCommandLineForSend(line);
+    }
     for (QString& command : commands) {
         if (!usable()) {
             return false;
@@ -802,6 +821,9 @@ bool THeadlessSession::submit(const QString& line)
     if (mpHost) {
         if (auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend())) {
             pView->addMainCommandLineHistory(commands.join(QChar::LineFeed));
+            if (held) {
+                pView->mainCommandLineSent();
+            }
         }
     }
     return true;

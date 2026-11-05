@@ -3042,6 +3042,222 @@ registerAnonymousEventHandler("sysDataSendRequest", function(_, command) hiddenS
         QVERIFY(session.shutdown(false));
     }
 
+    // What the GUI's main command line shows of a script's text
+    void test_whatAScriptPutsInTheCommandLineReachesTheSession()
+    {
+        const QString name = qsl("Headless Command Line Text");
+        QVERIFY(writeProfile(name, qsl(R"lua(registerAnonymousEventHandler("sysExitEvent", function() printCmdLine("on the way out") end))lua")));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy hidden(&session, &THeadlessSession::hiddenInputWanted);
+        QSignalSpy requested(&session, &THeadlessSession::commandLineTextRequested);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        const auto texts = [&requested]() {
+            QStringList result;
+            for (const auto& arguments : std::as_const(requested)) {
+                result << arguments.at(1).toString();
+            }
+            return result;
+        };
+
+        // A non-breaking space as the GUI's line gives it back, as a space
+        QVERIFY(session.runLua(qsl(R"lua(printCmdLine("look") appendCmdLine(" north") clearCmdLine() sendCmdLine("say hi") printCmdLine("main", "a\194\160b"))lua")));
+        QCOMPARE(texts(), (QStringList{qsl("look"), qsl("look north"), QString(), qsl("say hi"), qsl("a b")}));
+        for (const auto& arguments : std::as_const(requested)) {
+            QCOMPARE(arguments.at(0).toString(), name);
+        }
+
+        // Another command line is not the app's input line
+        QVERIFY(session.runLua(qsl(R"lua(createCommandLine("headlessAux", 0, 0, 100, 20) printCmdLine("headlessAux", "x") appendCmdLine("headlessAux", "y") clearCmdLine("headlessAux"))lua")));
+        QCOMPARE(requested.size(), 5);
+
+        // Sent as it is set, so a handler is refused as those of the other ...Requested signals are
+        std::optional<bool> submittedFromHandler;
+        const auto connection = connect(&session, &THeadlessSession::commandLineTextRequested, this, [&session, &submittedFromHandler]() {
+            submittedFromHandler = session.submit(qsl("from a handler"));
+        });
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("refused")));
+        QVERIFY(session.runLua(qsl(R"lua(printCmdLine("handled"))lua")));
+        disconnect(connection);
+        QCOMPARE(submittedFromHandler, std::optional(false));
+        QCOMPARE(requested.size(), 6);
+
+        game->write("\xff\xfb\x01Password:\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Password:")), 10000);
+        QCOMPARE(hidden.size(), 1);
+        QVERIFY(session.runLua(qsl(R"lua(printCmdLine("into the box") appendCmdLine(" too"))lua")));
+        QTest::qWait(100);
+        QCOMPARE(requested.size(), 6);
+        game->write("\xff\xfc\x01Welcome.\r\n");
+        QTRY_COMPARE_WITH_TIMEOUT(hidden.size(), 2, 10000);
+
+        // Nor what an exit handler sets as the profile closes
+        QVERIFY(session.shutdown(false));
+        QCOMPARE(requested.size(), 6);
+    }
+
+    // Set by a trigger on a line a go-ahead ends, which the game hides input after in the same read, it comes first
+    void test_commandLineTextFromTheLineBeforeHiddenInputComesFirst()
+    {
+        const QString name = qsl("Headless Command Line Before Hidden");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QStringList heard;
+        connect(&session, &THeadlessSession::commandLineTextRequested, this, [&heard](const QString&, const QString& text) {
+            heard << qsl("text %1").arg(text);
+        });
+        connect(&session, &THeadlessSession::hiddenInputWanted, this, [&heard](const QString&, bool wanted) {
+            heard << qsl("hidden %1").arg(wanted ? qsl("on") : qsl("off"));
+        });
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QVERIFY(session.runLua(qsl(R"lua(tempTrigger("Welcome back.", [[printCmdLine("connect ")]]))lua")));
+        game->write("Welcome back.\r\n\xff\xf9\xff\xfb\x01Password: ");
+        QTRY_VERIFY_WITH_TIMEOUT(heard.contains(qsl("hidden on")), 10000);
+        QTest::qWait(100);
+        QCOMPARE(heard, (QStringList{qsl("text connect "), qsl("hidden on")}));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // closeProfile() raises sysExitEvent before the session hears of the close
+    void test_aScriptsCloseSendsNoCommandLineTextFromTheExitHandler()
+    {
+        const QString name = qsl("Headless Command Line Script Close");
+        QVERIFY(writeProfile(name, qsl(R"lua(registerAnonymousEventHandler("sysExitEvent", function() printCmdLine("on the way out") end))lua")));
+        THeadlessSession session;
+        QSignalSpy requested(&session, &THeadlessSession::commandLineTextRequested);
+        QSignalSpy quit(&session, &THeadlessSession::quitRequested);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("closeProfile()")));
+        QTRY_COMPARE_WITH_TIMEOUT(quit.count(), 1, 10000);
+        QCOMPARE(requested.size(), 0);
+    }
+
+    // The GUI sends what is typed while the game hides input from its hidden-input box, leaving the main line be
+    void test_aLineSubmittedWhileInputIsHiddenIsNotKeptAsTheCommandLine()
+    {
+        const QString name = qsl("Headless Command Line Hidden Submit");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy hidden(&session, &THeadlessSession::hiddenInputWanted);
+        QSignalSpy requested(&session, &THeadlessSession::commandLineTextRequested);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        session.host()->mAutoClearCommandLineAfterSend = false;
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        game->write("\xff\xfb\x01Password:\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Password:")), 10000);
+        QCOMPARE(hidden.size(), 1);
+        QVERIFY(session.submit(qsl("secret")));
+        QByteArray received;
+        QTRY_VERIFY_WITH_TIMEOUT((received += game->readAll()).contains("secret"), 10000);
+        game->write("\xff\xfc\x01Welcome.\r\n");
+        QTRY_COMPARE_WITH_TIMEOUT(hidden.size(), 2, 10000);
+
+        QVERIFY(session.runLua(qsl(R"lua(headlessLine = "[" .. getCmdLine() .. "]" appendCmdLine("x"))lua")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessLine"), qsl("[]"));
+        QCOMPARE(requested.size(), 1);
+        QCOMPARE(requested.at(0).at(1).toString(), qsl("x"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A paste sent while hidden input is wanted is no line of the GUI's command line, even once an alias of one of its
+    // lines ends hidden input
+    void test_aPasteSubmittedWhileInputIsHiddenIsNotKeptWhenAnAliasUnmasksIt()
+    {
+        const QString name = qsl("Headless Command Line Hidden Paste");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy hidden(&session, &THeadlessSession::hiddenInputWanted);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        session.host()->mAutoClearCommandLineAfterSend = false;
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        // As the profile's setting to show passwords as they are typed, which no script can reach
+        static QPointer<Host> unmaskedHost;
+        unmaskedHost = session.host();
+        lua_register(session.host()->getLuaInterpreter()->getLuaGlobalState(), "headlessUnmask", [](lua_State*) -> int {
+            if (unmaskedHost) {
+                unmaskedHost->setDisablePasswordMasking(true);
+            }
+            return 0;
+        });
+        QVERIFY(session.runLua(qsl(R"lua(tempAlias("^unmask$", [[headlessUnmask()]]))lua")));
+        game->write("\xff\xfb\x01Password:\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Password:")), 10000);
+        QCOMPARE(hidden.size(), 1);
+        QVERIFY(session.submit(qsl("unmask\nlook")));
+        QVERIFY(!session.host()->passwordEntryWanted());
+        QVERIFY(session.runLua(qsl(R"lua(headlessLine = "[" .. getCmdLine() .. "]")lua")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessLine"), qsl("[]"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // As the GUI's command line holds what it sends while its aliases run, then empties if the profile says so
+    void test_aSubmittedLineIsClearedAsTheProfileSays_data()
+    {
+        QTest::addColumn<bool>("autoClear");
+        QTest::newRow("cleared after a send") << true;
+        QTest::newRow("kept after a send") << false;
+    }
+
+    void test_aSubmittedLineIsClearedAsTheProfileSays()
+    {
+        QFETCH(const bool, autoClear);
+        const QString name = qsl("Headless Command Line Cleared");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy requested(&session, &THeadlessSession::commandLineTextRequested);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        session.host()->mAutoClearCommandLineAfterSend = autoClear;
+        const auto texts = [&requested]() {
+            QStringList result;
+            for (const auto& arguments : std::as_const(requested)) {
+                result << arguments.at(1).toString();
+            }
+            return result;
+        };
+        QVERIFY(session.runLua(qsl(R"lua(tempAlias("^headless alias$", [[headlessHeld = getCmdLine() printCmdLine("set by the alias")]]) printCmdLine("a"))lua")));
+        QVERIFY(session.submit(qsl("x")));
+        QVERIFY(session.runLua(qsl(R"lua(appendCmdLine("b"))lua")));
+        QVERIFY(session.submit(qsl("headless alias")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessHeld"), qsl("headless alias"));
+        QVERIFY(session.runLua(qsl("headlessAfter = '[' .. getCmdLine() .. ']'")));
+        if (autoClear) {
+            QCOMPARE(texts(), (QStringList{qsl("a"), QString(), qsl("b"), qsl("set by the alias"), QString()}));
+            QCOMPARE(luaGlobalString(session.host(), "headlessAfter"), qsl("[]"));
+        } else {
+            QCOMPARE(texts(), (QStringList{qsl("a"), qsl("xb"), qsl("set by the alias")}));
+            QCOMPARE(luaGlobalString(session.host(), "headlessAfter"), qsl("[set by the alias]"));
+        }
+        QVERIFY(session.shutdown(false));
+    }
+
     // In the file the GUI's main command line reads, newest first behind the line being typed, and as there
     // without what was typed while the game hid it
     void test_submittedCommandsAreKeptInTheCommandHistory()

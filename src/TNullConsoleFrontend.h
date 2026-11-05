@@ -149,6 +149,10 @@ public:
     // As the main command line takes a command once it is sent, which a line typed while the game hides what is
     // typed is not
     void addMainCommandLineHistory(const QString& command);
+    // As TCommandLine::enterCommand(): the line holds what is sent while its aliases run, and is emptied after
+    // if the profile clears it after a send
+    bool holdMainCommandLineForSend(const QString& line);
+    void mainCommandLineSent();
     bool ownsContainer(const QString& windowname) const;
     bool subConsoleShown(const QString& name) const;
     void reportUserWindowVisibility();

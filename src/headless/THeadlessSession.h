@@ -133,7 +133,10 @@ public:
     // with nothing said, as in the GUI, so a frontend that types ahead waits for connected(). These, and
     // installPackage(), are refused while a profile loads or shutdown() runs, and from a handler of
     // outputLine, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal, which run mid-write, and
-    // fail once a close of the profile has begun; submit() checks each line of a paste as a call.
+    // fail once a close of the profile has begun; submit() checks each line of a paste as a call. It is the app's
+    // input line being sent: the main command line holds the line while its aliases run, then is emptied or kept
+    // as the profile says. A command from elsewhere, such as a button, goes through runLua() and expandAlias(),
+    // which leave the line alone.
     bool submit(const QString& line);
     // As the GUI's hidden-input box sends what is typed into it while hiddenInputWanted holds: straight to the
     // game, with its carriage returns and line feeds taken out, and no aliases, command separator,
@@ -292,6 +295,11 @@ signals:
     void replayStarted(const QString& profile);
     void replaySpeedChanged(const QString& profile, int speed);
     void replayFinished(const QString& profile);
+    // The whole of the main command line once a script's printCmdLine(), appendCmdLine(), clearCmdLine() or
+    // sendCmdLine() sets it, or submit() empties it, for the app's input line to show. What a script sets while
+    // hidden input is wanted is lost, as the GUI writes it into its hidden-input box instead. Sent as it is set, so
+    // a handler may neither call the session nor run the event loop.
+    void commandLineTextRequested(const QString& profile, const QString& text);
     // The connection was made; from the event loop
     void connected(const QString& profile);
     // The connection ended, or could not be made; from the event loop
