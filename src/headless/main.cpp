@@ -847,6 +847,8 @@ int main(int argc, char* argv[])
     if (platformChosenHere) {
         qputenv("QT_QPA_PLATFORM", "offscreen");
     }
+    // Setting the environment is a data race once the application's threads are reading it
+    MudletApp::nameHardwareDeviceTypes();
     // Deleted before main() returns, as the GUI's src/main.cpp does its own, so Qt's cleanup runs ahead of static
     // destruction
     auto* app = new QGuiApplication(argc, argv);

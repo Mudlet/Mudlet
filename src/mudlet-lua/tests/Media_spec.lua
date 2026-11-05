@@ -4684,13 +4684,21 @@ describe("Tests the text-to-speech Lua API", function()
   end)
 
 describe("FFmpeg's hardware device types", function()
-  -- Left unnamed, Qt opens a trial context on every GPU decoder when the first sound plays
-  it("are named on Linux before Mudlet loads a profile", function()
+  it("are named on Linux, so Qt does not try each one when the first sound plays", function()
     if getOS() ~= "linux" then
       pending("only Linux names them")
       return
     end
-    assert.is_not_nil(os.getenv("QT_FFMPEG_ENCODING_HW_DEVICE_TYPES"))
-    assert.is_not_nil(os.getenv("QT_FFMPEG_DECODING_HW_DEVICE_TYPES"))
+    local decoding = os.getenv("QT_FFMPEG_DECODING_HW_DEVICE_TYPES")
+    local expected = "vaapi,vdpau,qsv,drm,vulkan"
+    local nvidiaDriver = io.open("/proc/driver/nvidia/version")
+    if nvidiaDriver then
+      nvidiaDriver:close()
+      if decoding == "cuda," .. expected then
+        expected = decoding
+      end
+    end
+    assert.equals(expected, decoding)
+    assert.equals(decoding, os.getenv("QT_FFMPEG_ENCODING_HW_DEVICE_TYPES"))
   end)
 end)
