@@ -146,9 +146,12 @@ public:
     // its parent. Once the view goes, these make it again, so the view's last setting is still saved.
     void followView(QObject* view);
     void resumeMainCommandLine();
-    // As the main command line takes a command once it is sent, which a line typed while the game hides what is
-    // typed is not
-    void addMainCommandLineHistory(const QString& command);
+    // As the main command line keeps a sent line, as its aliases left it, unless the game hid what was typed; a
+    // line nothing wrote to since holdMainCommandLineForSend() is kept as sent
+    void addMainCommandLineHistory(const QString& sent);
+    QStringList mainCommandLineHistory() const;
+    // Why the main command line's history file could not be read, if it could not
+    std::optional<QString> mainCommandLineHistoryReadError() const;
     // As TCommandLine::enterCommand(): the line holds what is sent while its aliases run, and is emptied after
     // if the profile clears it after a send
     bool holdMainCommandLineForSend(const QString& line);
@@ -367,6 +370,7 @@ private:
         QStringList history;
         // So a file that could not be read is not written over with what little was
         bool readFailed = false;
+        QString readError;
     };
 
     // QWidget's minimumSize() and maximumSize(), which QStyleSheetStyle::setGeometry() sets from a sheet
@@ -563,6 +567,8 @@ private:
     bool mMainCommandLineTyped = false;
     // As the GUI's line once selectAll() has run, so what the player types next replaces it
     bool mMainCommandLineAllSelected = false;
+    // Whether the line held for a send was written to while it was sent
+    bool mMainCommandLineRewritten = false;
     // The main window, which holds what a script makes in it
     std::unique_ptr<QObject> mpMainHolder = std::make_unique<QObject>();
     // TMxpFrameWidgets' container widget of each frame, which holds the frame's console until a script moves it

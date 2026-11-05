@@ -3597,6 +3597,7 @@ registerAnonymousEventHandler("sysDataSendRequest", function(_, command) hiddenS
         QVERIFY(!session.host()->passwordEntryWanted());
         QVERIFY(session.runLua(qsl(R"lua(headlessLine = "[" .. getCmdLine() .. "]")lua")));
         QCOMPARE(luaGlobalString(session.host(), "headlessLine"), qsl("[]"));
+        QVERIFY(session.commandHistory().isEmpty());
         QVERIFY(session.shutdown(false));
     }
 
@@ -3907,30 +3908,152 @@ registerAnonymousEventHandler("sysDataSendRequest", function(_, command) hiddenS
         QCOMPARE(readFile(historyFile), qsl("\noldest from the GUI\nlook\nnewest from the GUI"));
     }
 
-    // Writing it would lose the history it holds. Write-only, as the save refuses a file it cannot write
-    void test_aCommandHistoryThatCannotBeReadIsNotWrittenOver()
+    // For the app's input line to walk with its up arrow, as the GUI's command line walks the same history
+    void test_theCommandHistoryIsReadBack()
     {
-        const QString name = qsl("Headless Unreadable History");
+        const QString name = qsl("Headless History Read");
         QVERIFY(writeProfile(name, QString()));
         const QString historyFile = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("command_history_main"));
         QVERIFY(writeFile(historyFile, "\nfrom the GUI"));
-        QVERIFY(QFile::setPermissions(historyFile, QFileDevice::WriteOwner));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession unstarted;
+        QVERIFY(unstarted.commandHistory().isEmpty());
+        {
+            THeadlessSession session;
+            QSignalSpy output(&session, &THeadlessSession::outputLine);
+            QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+            QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+            std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+            QCOMPARE(session.commandHistory(), QStringList{qsl("from the GUI")});
+            QVERIFY(session.submit(qsl("a")));
+            QVERIFY(session.submit(qsl("b")));
+            QVERIFY(session.submit(qsl("a")));
+            QCOMPARE(session.commandHistory(), (QStringList{qsl("a"), qsl("b"), qsl("from the GUI")}));
+
+            game->write("\xff\xfb\x01Password:\r\n");
+            QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Password:")), 10000);
+            QVERIFY(session.submit(qsl("typed secret")));
+            QByteArray received;
+            QTRY_VERIFY_WITH_TIMEOUT((received += game->readAll()).contains("typed secret"), 10000);
+            QCOMPARE(session.commandHistory(), (QStringList{qsl("a"), qsl("b"), qsl("from the GUI")}));
+            QVERIFY2(session.shutdown(true), qPrintable(session.errorString()));
+            QVERIFY(session.commandHistory().isEmpty());
+        }
+
+        THeadlessSession again;
+        QCOMPARE(again.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QCOMPARE(again.commandHistory(), (QStringList{qsl("a"), qsl("b"), qsl("from the GUI")}));
+        QVERIFY(again.shutdown(false));
+    }
+
+    // TCommandLine::enterCommand() keeps the line as the aliases left it, and a paste is one entry that the
+    // history file keeps a line at a time
+    void test_theCommandHistoryKeepsTheLineAsTheAliasesLeftIt()
+    {
+        const QString name = qsl("Headless History Aliases");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession unstarted;
+        QVERIFY(unstarted.commandHistory().isEmpty());
+        QVERIFY(!unstarted.host());
+        {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            QVERIFY(session.commandHistory().isEmpty());
+            QVERIFY(session.host());
+            QVERIFY(session.runLua(qsl(R"lua(tempAlias("^go$", [[clearCmdLine()]]) tempAlias("^t ([a-z]+) (.*)$", [[printCmdLine("t " .. matches[2] .. " ")]]))lua")));
+            QVERIFY(session.submit(qsl("look")));
+            QVERIFY(session.submit(qsl("go")));
+            QVERIFY(session.submit(qsl("t bob hi there")));
+            QCOMPARE(session.commandHistory(), (QStringList{qsl("t bob "), qsl("look")}));
+            QVERIFY(session.submit(qsl("x\ny")));
+            QCOMPARE(session.commandHistory(), (QStringList{qsl("x\ny"), qsl("t bob "), qsl("look")}));
+            QVERIFY2(session.shutdown(true), qPrintable(session.errorString()));
+        }
+        THeadlessSession again;
+        QCOMPARE(again.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QCOMPARE(again.commandHistory(), (QStringList{qsl("x"), qsl("y"), qsl("t bob "), qsl("look")}));
+        QVERIFY(again.shutdown(false));
+    }
+
+    void test_aCommandHistoryThatCannotBeReadIsNotWrittenOver_data()
+    {
+        QTest::addColumn<bool>("directory");
+        QTest::newRow("a write-only file") << false;
+        // As one with the right to read any file cannot be kept from reading a file
+        QTest::newRow("a directory") << true;
+    }
+
+    // Writing it would lose the history it holds, and the app is told. Write-only, as the save refuses a file it
+    // cannot write
+    void test_aCommandHistoryThatCannotBeReadIsNotWrittenOver()
+    {
+        QFETCH(bool, directory);
+        const QString name = directory ? qsl("Headless History Directory") : qsl("Headless Unreadable History");
+        QVERIFY(writeProfile(name, QString()));
+        const QString historyFile = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("command_history_main"));
         const auto restoreRights = [historyFile]() {
             QFile::setPermissions(historyFile, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
         };
         const auto restore = qScopeGuard(restoreRights);
-        if (QFile probe(historyFile); probe.open(QIODevice::ReadOnly)) {
-            QSKIP("Running with the right to read any file, so the history cannot be made unreadable");
+        if (directory) {
+            QVERIFY(QDir().mkpath(historyFile));
+        } else {
+            QVERIFY(writeFile(historyFile, "\nfrom the GUI"));
+            QVERIFY(QFile::setPermissions(historyFile, QFileDevice::WriteOwner));
+            if (QFile probe(historyFile); probe.open(QIODevice::ReadOnly)) {
+                QSKIP("Running with the right to read any file, so the history cannot be made unreadable");
+            }
         }
 
         {
             THeadlessSession session;
+            QSignalSpy errors(&session, &THeadlessSession::errorConsoleText);
             QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            QCOMPARE(errors.size(), 1);
+            QCOMPARE(errors.at(0).at(0).toString(), name);
+            QVERIFY2(errors.at(0).at(1).toString().contains(qsl("command history")), qPrintable(errors.at(0).at(1).toString()));
+            QVERIFY(session.commandHistory().isEmpty());
             QVERIFY(session.submit(qsl("look")));
+            QCOMPARE(session.commandHistory(), QStringList{qsl("look")});
             QVERIFY2(session.shutdown(true), qPrintable(session.errorString()));
+        }
+        if (directory) {
+            QVERIFY(QFileInfo(historyFile).isDir());
+            QVERIFY(QDir(historyFile).removeRecursively());
+            return;
         }
         restoreRights();
         QCOMPARE(readFile(historyFile), qsl("\nfrom the GUI"));
+    }
+
+    // The warning comes from inside start(), where an app that takes any error as fatal may delete the session
+    void test_theSessionDeletedOnTheCommandHistoryWarning()
+    {
+        const QString name = qsl("Headless History Warning Delete");
+        QVERIFY(writeProfile(name, QString()));
+        const QString historyFile = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("command_history_main"));
+        QVERIFY(QDir().mkpath(historyFile));
+        const auto removeDirectory = qScopeGuard([historyFile]() {
+            QDir(historyFile).removeRecursively();
+        });
+        QObject owner;
+        auto* pSession = new THeadlessSession(&owner);
+        const QPointer<THeadlessSession> session(pSession);
+        QPointer<Host> profile;
+        connect(pSession, &THeadlessSession::errorConsoleText, pSession, [pSession, &profile, name](const QString&, const QString& text) {
+            if (text.contains(qsl("command history"))) {
+                profile = HostManager::self()->getHost(name);
+                delete pSession;
+            }
+        });
+        QCOMPARE(pSession->start({.profile = name, .connect = false}), THeadlessSession::StartResult::notOpened);
+        QVERIFY(session.isNull());
+        QVERIFY2(profile, "SETUP: the warning did not reach the handler while the profile was open");
+        QTRY_VERIFY_WITH_TIMEOUT(profile.isNull(), 10000);
     }
 
     // What a profile sends on its way out, as from sysExitEvent, reaches the game before the connection goes
