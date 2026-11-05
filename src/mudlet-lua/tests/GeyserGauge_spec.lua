@@ -235,10 +235,64 @@ describe("Tests functionality of Geyser.Gauge", function()
           local x, y, width, height = Geyser.Container.pixel_geometry(self)
           return x, y, width + 3, height - 2
         end
-        gauge:setValue(50)
-        assert.are.same({x = 0, y = 0, width = 103, height = 38}, geometry("ggsValue_front"))
+        for _, value in ipairs({50, 60, 70}) do
+          gauge:setValue(value)
+          local actual = geometry("ggsValue_front")
+          actual.value = value
+          assert.are.same({value = value, x = 0, y = 0, width = 2 * value + 3, height = 38}, actual)
+        end
       end)
     end
+
+    describe("after it stops recording its layout", function()
+      -- a layout broken before it is reused turns recording off for a while
+      before_each(function()
+        for i = 1, 3 do
+          gauge:resize(i % 2 == 0 and 201 or 200, nil)
+          gauge:setValue(10 + i)
+        end
+        gauge:resize(200, nil)
+      end)
+
+      it("lays the front label out once per update and not at all for a repeat", function()
+        gauge:setValue(50)
+        local move = spy.on(_G, "moveWindow")
+        local resize = spy.on(_G, "resizeWindow")
+        finally(function() move:revert() resize:revert() end)
+        gauge:setValue(60)
+        gauge:setValue(60)
+        gauge:setValue(60)
+        assert.spy(move).was_not.called()
+        assert.spy(resize).was.called(1)
+        assert.are.equal(120, geometry("ggsValue_front").width)
+      end)
+
+      it("lays out what a script put inside the fill along with it", function()
+        track(Geyser.Label:new({name = "ggsFillMarker", x = "50%", y = 0, width = "50%", height = "100%"}, gauge.front))
+        gauge:setValue(80)
+        assert.are.same({x = 80, y = 0, width = 80, height = 40}, geometry("ggsFillMarker"))
+      end)
+
+      it("moves a fill that starts from the far edge as well as resizing it", function()
+        gauge.orientation = "vertical"
+        gauge:setValue(50)
+        gauge:setValue(25)
+        assert.are.same({x = 0, y = 30, width = 200, height = 10}, geometry("ggsValue_front"))
+      end)
+
+      it("sizes the fill by a pixel_geometry a script put on the front label", function()
+        gauge.front.pixel_geometry = function(self)
+          local x, y, width, height = Geyser.Container.pixel_geometry(self)
+          return x, y, width + 3, height - 2
+        end
+        for _, value in ipairs({50, 60, 70}) do
+          gauge:setValue(value)
+          local actual = geometry("ggsValue_front")
+          actual.value = value
+          assert.are.same({value = value, x = 0, y = 0, width = 2 * value + 3, height = 38}, actual)
+        end
+      end)
+    end)
 
     it("follows a front label a script laid out against a container it is not in", function()
       local left = 3.3
@@ -340,11 +394,11 @@ describe("Tests functionality of Geyser.Gauge", function()
         settled:setValue(i % 2 == 0 and 33 or 66)
       end
       asksOnce("once it stops being laid out again before every update")
-      for i = 1, 200 do
+      for i = 1, 2200 do
         mid:resize(i % 2 == 0 and "90%" or "91%", nil)
         settled:setValue(i % 2 == 0 and 33 or 66)
       end
-      for i = 1, 300 do
+      for i = 1, 1100 do
         settled:setValue(i % 2 == 0 and 33 or 66)
       end
       asksOnce("once it settles after being laid out again before every update for a long time")
