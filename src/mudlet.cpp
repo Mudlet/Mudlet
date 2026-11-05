@@ -1523,6 +1523,7 @@ void mudlet::init()
     mpActionConnect->setObjectName(qsl("connect"));
 
     mpActionDisconnect = new QAction(tr("Disconnect"), this);
+    mpActionDisconnect->setIcon(QIcon(qsl(":/icons/network-disconnect.png")));
     mpActionDisconnect->setObjectName(qsl("disconnect"));
 
     mpActionCloseProfile = new QAction(tr("Close profile"), this);

@@ -926,6 +926,7 @@ void TDetachedWindow::createToolBar()
 
     //: This is a sub-item of the "Connect" item in the toolbar of a detached Mudlet window.
     mpActionDisconnect = new QAction(tr("Disconnect"), this);
+    mpActionDisconnect->setIcon(QIcon(qsl(":/icons/network-disconnect.png")));
     mpActionDisconnect->setObjectName(qsl("disconnect"));
 
     //: This is a sub-item of the "Connect" item in the toolbar of a detached Mudlet window.
