@@ -63,11 +63,14 @@
 #include "PortableModeTestHelper.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
+#include "TDebug.h"
 #include "TGameDetails.h"
 #include "THeadlessSession.h"
 #include "TLuaInterpreter.h"
 #include "TMap.h"
+#include "TTrigger.h"
 #include "TelnetServerStub.h"
+#include "TriggerUnit.h"
 
 #include "GroupedTest.h"
 
@@ -5283,6 +5286,241 @@ echo("headlessMini", "mini\n") clearWindow("headlessMini") feedTriggers("after\n
         QVERIFY(session.shutdown(false));
     }
 
+    static QStringList debugTexts(const QSignalSpy& debug)
+    {
+        QStringList texts;
+        for (const auto& arguments : debug) {
+            texts << arguments.at(0).toString();
+        }
+        return texts;
+    }
+
+    static qsizetype indexContaining(const QStringList& texts, const QString& part)
+    {
+        for (qsizetype i = 0; i < texts.size(); ++i) {
+            if (texts.at(i).contains(part)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    void test_theCentralDebugConsoleCanBeShown()
+    {
+        QVERIFY(writeProfile(qsl("Headless Debug"), QString()));
+        auto session = std::make_unique<THeadlessSession>();
+        QSignalSpy debug(session.get(), &THeadlessSession::debugText);
+        QCOMPARE(session->start({.profile = qsl("Headless Debug"), .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session->runLua(qsl(R"lua(tempTrigger("headlessDebugged", [[]]))lua")));
+        const auto matches = [&debug]() {
+            return debugTexts(debug).filter(qsl("matched.")).size();
+        };
+        QVERIFY(session->runLua(qsl(R"lua(feedTriggers("headlessDebugged\n"))lua")));
+        const qint64 shownAt = QDateTime::currentMSecsSinceEpoch();
+        QTest::qWait(20);
+
+        QVERIFY(session->setDebugConsoleShown(true));
+        QVERIFY(session->debugConsoleShown());
+        QVERIFY(TDebug::smDebugMode);
+        // What the profile's start wrote is kept for the console, and comes before what the console says as it opens
+        const qsizetype started = indexContaining(debugTexts(debug), qsl("Profile 'Headless Debug' started."));
+        const qsizetype hidden = indexContaining(debugTexts(debug), qsl("kind(s) of message are hidden"));
+        QVERIFY2(started >= 0, qPrintable(debugTexts(debug).join(QString())));
+        QVERIFY(hidden > started);
+        QVERIFY(debug.at(started).at(3).toLongLong() < shownAt);
+        QVERIFY(debug.at(hidden).at(3).toLongLong() >= shownAt);
+        QCOMPARE(indexContaining(debugTexts(debug), qsl("controls below")), -1);
+        QVERIFY(session->runLua(qsl(R"lua(feedTriggers("headlessDebugged\n"))lua")));
+        QCOMPARE(matches(), 1);
+        QVERIFY(debug.constLast().at(1).value<QColor>().isValid());
+        QVERIFY(debug.constLast().at(3).toLongLong() >= shownAt);
+        // Shown already, so nothing is said again
+        const qsizetype sizeBefore = debug.size();
+        QVERIFY(session->setDebugConsoleShown(true));
+        QCOMPARE(debug.size(), sizeBefore);
+
+        QVERIFY(session->setDebugConsoleShown(false));
+        QVERIFY(!session->debugConsoleShown());
+        QVERIFY(!TDebug::smDebugMode);
+        QVERIFY(session->runLua(qsl(R"lua(feedTriggers("headlessDebugged\n"))lua")));
+        QCOMPARE(matches(), 1);
+
+        // One for the process, owned by whichever showed it last
+        QVERIFY(session->setDebugConsoleShown(true));
+        THeadlessSession other;
+        QVERIFY(other.setDebugConsoleShown(true));
+        QVERIFY(!session->debugConsoleShown());
+        QVERIFY(other.debugConsoleShown());
+        QVERIFY(!session->setDebugConsoleShown(false));
+        QVERIFY(session->errorString().contains(qsl("Another session")));
+        QVERIFY(other.debugConsoleShown());
+        QVERIFY(TDebug::smDebugMode);
+        {
+            THeadlessSession third;
+            QVERIFY(third.setDebugConsoleShown(true));
+            QVERIFY(other.setDebugConsoleShown(true));
+        }
+        QVERIFY(other.debugConsoleShown());
+        QVERIFY(TDebug::smDebugMode);
+        QVERIFY(session->setDebugConsoleShown(true));
+        QVERIFY(!other.debugConsoleShown());
+
+        // The Sink's destructor clears the pointer by itself, so debug mode is what shows the close
+        session.reset();
+        QVERIFY(!TDebug::sink());
+        QVERIFY(!TDebug::smDebugMode);
+    }
+
+    // With no profile open: before a start() that fails, and with a session that never had one
+    void test_theDebugConsoleClosesWithASessionThatHasNoProfile()
+    {
+        THeadlessSession session;
+        QVERIFY(session.setDebugConsoleShown(true));
+        QCOMPARE(session.start({.profile = qsl("Headless No Such Debug Profile"), .connect = false}), THeadlessSession::StartResult::noSuchProfile);
+        QVERIFY(session.debugConsoleShown());
+        QVERIFY(session.shutdown(false));
+        QVERIFY(!session.debugConsoleShown());
+        QVERIFY(!TDebug::sink());
+        QVERIFY(!TDebug::smDebugMode);
+
+        {
+            THeadlessSession unstarted;
+            QVERIFY(unstarted.setDebugConsoleShown(true));
+            QVERIFY(TDebug::smDebugMode);
+        }
+        QVERIFY(!TDebug::sink());
+        QVERIFY(!TDebug::smDebugMode);
+    }
+
+    void test_debugCategoriesPickWhatTheConsolePrints()
+    {
+        const TDebug::Categories before = TDebug::enabledCategories();
+        const auto restore = qScopeGuard([before]() {
+            TDebug::setEnabledCategories(before);
+        });
+        QVERIFY(writeProfile(qsl("Headless Debug Categories"), QString()));
+        THeadlessSession session;
+        QSignalSpy debug(&session, &THeadlessSession::debugText);
+        QCOMPARE(session.start({.profile = qsl("Headless Debug Categories"), .connect = false}), THeadlessSession::StartResult::started);
+        QCOMPARE(session.debugCategories(), TDebug::csmAllCategories & ~TDebug::csmNoisyCategories);
+        QVERIFY(session.setDebugConsoleShown(true));
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("headlessUnseenLine\n"))lua")));
+        QCOMPARE(indexContaining(debugTexts(debug), qsl("headlessUnseenLine")), -1);
+
+        session.setDebugCategories(session.debugCategories() | TDebug::Category::GameLine);
+        QVERIFY(session.debugCategories().testFlag(TDebug::Category::GameLine));
+        debug.clear();
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("headlessSeenLine\n"))lua")));
+        // A message in pieces, each to append to the last: the head ends no line
+        const QStringList texts = debugTexts(debug);
+        const qsizetype head = indexContaining(texts, qsl("new line arrived:"));
+        QVERIFY2(head >= 0, qPrintable(texts.join(QString())));
+        QVERIFY(!texts.at(head).endsWith(QLatin1Char('\n')));
+        QVERIFY(head + 1 < texts.size());
+        QVERIFY(texts.at(head + 1).endsWith(qsl("headlessSeenLine\n")));
+        QVERIFY(debug.at(head).at(1).value<QColor>() != debug.at(head + 1).at(1).value<QColor>());
+
+        session.setDebugCategories(session.debugCategories() & ~TDebug::Categories(TDebug::Category::GameLine));
+        debug.clear();
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("headlessUnseenAgain\n"))lua")));
+        QCOMPARE(indexContaining(debugTexts(debug), qsl("headlessUnseenAgain")), -1);
+
+        // Closed by the shutdown(), once the profile has said it ended, and not left to the destructor
+        QVERIFY(session.shutdown(false));
+        QVERIFY(!session.debugConsoleShown());
+        QVERIFY(!TDebug::sink());
+        QVERIFY(!TDebug::smDebugMode);
+        QVERIFY2(indexContaining(debugTexts(debug), qsl("Profile 'Headless Debug Categories' ended.")) >= 0, qPrintable(debugTexts(debug).join(QString())));
+    }
+
+    // Shown before start(), so the profile's load is seen as it runs
+    void test_theDebugConsoleShowsAProfileLoading()
+    {
+        QVERIFY(writeProfile(qsl("Headless Debug Load"), qsl(R"lua(tempTrigger("headlessLoadMatch", [[]]) feedTriggers("headlessLoadMatch\n"))lua")));
+        THeadlessSession session;
+        QSignalSpy debug(&session, &THeadlessSession::debugText);
+        QVERIFY(session.setDebugConsoleShown(true));
+        const qint64 shownAt = QDateTime::currentMSecsSinceEpoch();
+        QCOMPARE(session.start({.profile = qsl("Headless Debug Load"), .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.debugConsoleShown());
+        QTRY_VERIFY_WITH_TIMEOUT(indexContaining(debugTexts(debug), qsl("Profile 'Headless Debug Load' started.")) >= 0, 10000);
+        const qsizetype started = indexContaining(debugTexts(debug), qsl("Profile 'Headless Debug Load' started."));
+        QVERIFY(debug.at(started).at(3).toLongLong() >= shownAt);
+        QVERIFY2(!debugTexts(debug).filter(qsl("matched.")).isEmpty(), qPrintable(debugTexts(debug).join(QString())));
+        QVERIFY(session.shutdown(false));
+        QVERIFY(!TDebug::smDebugMode);
+    }
+
+    // A regex that does not compile: why, then the pattern, in two pieces of different colours
+    void test_aTriggerErrorReachesTheDebugConsoleInPieces()
+    {
+        QVERIFY(writeProfile(qsl("Headless Debug Error"), QString()));
+        THeadlessSession session;
+        QSignalSpy debug(&session, &THeadlessSession::debugText);
+        QCOMPARE(session.start({.profile = qsl("Headless Debug Error"), .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(headlessBrokenTrigger = tempRegexTrigger("^headlessBroken$", [[]]))lua")));
+        lua_State* L = session.host()->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "headlessBrokenTrigger");
+        const int triggerId = static_cast<int>(lua_tointeger(L, -1));
+        lua_pop(L, 1);
+        TTrigger* trigger = session.host()->getTriggerUnit()->getTrigger(triggerId);
+        QVERIFY(trigger);
+        QVERIFY(session.setDebugConsoleShown(true));
+        debug.clear();
+        QVERIFY(!trigger->setRegexCodeList({qsl("^headlessBroken[$")}, {REGEX_PERL}));
+        const QStringList texts = debugTexts(debug);
+        const qsizetype head = indexContaining(texts, qsl("REGEX ERROR: failed to compile, reason:\n"));
+        QVERIFY2(head >= 0, qPrintable(texts.join(QString())));
+        QVERIFY(head + 1 < texts.size());
+        QVERIFY2(texts.at(head + 1).startsWith(qsl("in: \"^headlessBroken[$\"")), qPrintable(texts.at(head + 1)));
+        QVERIFY(debug.at(head).at(1).value<QColor>() != debug.at(head + 1).at(1).value<QColor>());
+        QVERIFY(session.setDebugConsoleShown(false));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // The console is shown before start(), so the profile's own construction sends debugText, before the load has begun
+    void test_aSessionDeletedByDebugTextAsItsProfileStartsLetsItGo()
+    {
+        const QString name = qsl("Headless Debug Deleted");
+        QVERIFY(writeProfile(name, QString()));
+        QObject owner;
+        auto* pSession = new THeadlessSession(&owner);
+        const QPointer<THeadlessSession> pAlive(pSession);
+        QVERIFY(pSession->setDebugConsoleShown(true));
+        connect(pSession, &THeadlessSession::debugText, this, [pAlive, name](const QString& text) {
+            if (pAlive && text.contains(qsl("Profile '%1' started.").arg(name))) {
+                delete pAlive.data();
+            }
+        });
+        QCOMPARE(pSession->start({.profile = name, .connect = false}), THeadlessSession::StartResult::notOpened);
+        QVERIFY(!pAlive);
+        QVERIFY(!TDebug::sink());
+        QVERIFY(!TDebug::smDebugMode);
+        QTRY_VERIFY_WITH_TIMEOUT(!HostManager::self(), 10000);
+    }
+
+    // Sent mid-write, as outputLine is
+    void test_aDebugTextHandlerIsRefusedACallBack()
+    {
+        QVERIFY(writeProfile(qsl("Headless Debug Refused"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Debug Refused"), .connect = false}), THeadlessSession::StartResult::started);
+        std::optional<bool> ran;
+        QString error;
+        connect(&session, &THeadlessSession::debugText, this, [&]() {
+            if (!ran) {
+                ran = session.runLua(qsl("headlessFromDebugText = true"));
+                error = session.errorString();
+            }
+        });
+        QVERIFY(session.setDebugConsoleShown(true));
+        QVERIFY(ran.has_value());
+        QVERIFY(!*ran);
+        QVERIFY2(error.contains(qsl("debugText")), qPrintable(error));
+        QVERIFY(session.setDebugConsoleShown(false));
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_aPromptATriggerRewritesIsShownAsAPrompt()
     {
         const QString name = qsl("Headless Shown Prompt");
@@ -6493,7 +6731,9 @@ end))lua")
         QVERIFY(!ranLua);
         QVERIFY(!submitted);
         QVERIFY(!saved);
-        QCOMPARE(refusal, qsl("Refused from a handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal; queue the call instead."));
+        QCOMPARE(refusal,
+                 qsl("Refused from a handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, debugText, hiddenInputWanted or a ...Requested signal; queue the call "
+                     "instead."));
         QVERIFY(unstartedShutDown);
         QVERIFY(HostManager::self());
         QCOMPARE(outputTexts(output), (QStringList{qsl("outer line"), qsl("after")}));

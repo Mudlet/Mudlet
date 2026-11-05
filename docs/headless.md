@@ -228,6 +228,20 @@ a font that is not installed, or a package bringing that font or taking it away.
 gives is in that font's characters. It comes from the event loop, with the font as it is then, and only
 when that differs from the one the app last had, so none follows `profileLoaded` for what the load did.
 
+`setDebugConsoleShown(true)` shows the Central Debug Console, as the editor's button does, before
+`start()` too, to see a profile load: `debugText` then carries what it prints, with its colours and when
+it was written, what was kept from before it was shown first, and the profiles write what they write only
+in debug mode, such as each trigger that matches. Append the text as given, as the console does: a line
+ends at its own newline, and one line can come in several pieces of different colours, as `ERROR:` and
+then why. `setDebugCategories()` picks which kinds of message it prints, for the whole process; until then
+it hides `GameLine` (each line from the game), `TriggerDetail` (capture groups and multiline match state),
+`LuaSuccess` and `Selection`, as the GUI's console does before a player changes it, and the GUI's saved
+choice is not read. There is one console for the whole process, as in the GUI, owned by the session that
+showed it last: showing it takes it from any other, whose `debugConsoleShown()` then answers false and
+whose `setDebugConsoleShown(false)` is refused. It closes with the owner's `setDebugConsoleShown(false)`,
+`shutdown()` or deletion. Its text is sent as written, from inside whatever wrote it, so the handler must
+not call the session back.
+
 The signals' handlers are called while a line is being written, so they must not call the session
 back or run the event loop; queue the work for later instead. `host()` reaches what the session
 does not cover, such as settings and the map, and goes null once the profile closes, so hold it in a
