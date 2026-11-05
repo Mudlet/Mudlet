@@ -121,6 +121,7 @@ public:
 public slots:
     void slot_addFiles();
     void slot_exportPackage();
+    void done(int result) override;
 
 private slots:
     void slot_addDependency();
@@ -203,8 +204,11 @@ private:
     inline static bool mExportingPackage = false;
     static void releaseExportLock();
     static void recheckEveryExportButton();
+    void endExportRun();
     // This dialog's export has put the busy cursor up and not yet taken it down
     bool mExportRunning = false;
+    // Closed while its export ran, so it goes once that ends
+    bool mDeleteWhenExportEnds = false;
     QFutureWatcher<std::pair<bool, QString>>* mpZipWatcher = nullptr;
     // Read on the zip's worker thread by libzip's cancel callback
     std::shared_ptr<std::atomic<bool>> mpZipCancelled;

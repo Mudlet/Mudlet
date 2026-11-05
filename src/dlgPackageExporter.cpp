@@ -1037,8 +1037,7 @@ void dlgPackageExporter::slot_exportPackage()
                              false);
         assetsFuture.cancel();
         releaseExportLock();
-        mExportRunning = false;
-        QApplication::restoreOverrideCursor();
+        endExportRun();
         return;
     }
     checkWriteability.close();
@@ -1076,7 +1075,8 @@ void dlgPackageExporter::slot_exportPackage()
                     displayResultMessage(errorMsg, false);
                 } else {
                     // If in module creation mode, automatically install the module
-                    if (mIsModuleCreationMode) {
+                    // - unless its profile has closed meanwhile
+                    if (mIsModuleCreationMode && mpHost) {
                         // If a module of this name is already installed, the user
                         // confirmed overwriting it before the export began (see the
                         // overwrite prompt in slot_exportPackage), so remove the old
@@ -1094,8 +1094,7 @@ void dlgPackageExporter::slot_exportPackage()
                                 displayResultMessage(tr("Module \"%1\" exported but failed to uninstall existing version").arg(mPackageName.toHtmlEscaped()), false);
                                 mCancelButton->setVisible(false);
                                 mCloseButton->setVisible(true);
-                                mExportRunning = false;
-                                QApplication::restoreOverrideCursor();
+                                endExportRun();
                                 mpZipWatcher = nullptr;
                                 watcher->deleteLater();
                                 return;
@@ -1125,8 +1124,7 @@ void dlgPackageExporter::slot_exportPackage()
                 }
                 mCancelButton->setVisible(false);
                 mCloseButton->setVisible(true);
-                mExportRunning = false;
-                QApplication::restoreOverrideCursor();
+                endExportRun();
 
                 // Clean up the watcher
                 mpZipWatcher = nullptr;
@@ -1142,8 +1140,7 @@ void dlgPackageExporter::slot_exportPackage()
         releaseExportLock();
         mCancelButton->setVisible(false);
         mCloseButton->setVisible(true);
-        mExportRunning = false;
-        QApplication::restoreOverrideCursor();
+        endExportRun();
     }
 
     // save settings for future reuse
@@ -2278,6 +2275,28 @@ void dlgPackageExporterDescription::restoreRenderedDescription()
     if (!hasFocus()) {
         static_cast<dlgPackageExporter*>(topLevelWidget())->showRenderedDescription();
     }
+}
+
+void dlgPackageExporter::endExportRun()
+{
+    mExportRunning = false;
+    QApplication::restoreOverrideCursor();
+    if (mDeleteWhenExportEnds) {
+        deleteLater();
+    }
+}
+
+// Close, Escape and the window's own close button all come through here
+void dlgPackageExporter::done(int result)
+{
+    // The export reports, and installs a module, through this dialog, so it outlives the closing until the export ends
+    if (mExportRunning && mpHost && testAttribute(Qt::WA_DeleteOnClose)) {
+        setAttribute(Qt::WA_DeleteOnClose, false);
+        mDeleteWhenExportEnds = true;
+        // Heard directly, as whether close() reaches a hidden window's closeEvent() depends on its platform window
+        connect(mpHost, &QObject::destroyed, this, &QObject::deleteLater);
+    }
+    QDialog::done(result);
 }
 
 void dlgPackageExporter::closeEvent(QCloseEvent* event)

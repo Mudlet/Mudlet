@@ -12656,6 +12656,7 @@ void dlgTriggerEditor::slot_createModule()
 
     // Open the package exporter dialog with module creation mode
     auto* packageExporter = new dlgPackageExporter(this, mpHost);
+    packageExporter->setAttribute(Qt::WA_DeleteOnClose);
 
     // Pre-select the current item for export
     switch (currentView) {
