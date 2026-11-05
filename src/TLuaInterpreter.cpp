@@ -86,7 +86,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
-#include <string>
 
 using namespace std::chrono_literals;
 
@@ -303,12 +302,10 @@ int dofileThroughBytecodeCache(lua_State* L)
     return lua_gettop(L) - base;
 }
 
-// Builds what yajl.to_value would, straight from yajl's parser: the same table
-// operations in the same order, so even pairs() walks the result alike. Whatever
-// it does not finish, deeper nesting included, is decoded again by yajl.to_value,
-// whose result or error then stands.
 constexpr int scmJsonMaxDepth = 64;
 
+// yajl.to_value's table operations in its order, with no presizing, or pairs() walks the result
+// differently. Whatever this does not finish, nesting past scmJsonMaxDepth included, is left to it.
 struct JsonToLua
 {
     lua_State* L = nullptr;
@@ -335,16 +332,17 @@ int jsonStoreValue(JsonToLua* state)
     return 1;
 }
 
-double jsonNumberValue(const char* text, const size_t length)
+double jsonNumberValue(lua_State* L, const char* text, const size_t length)
 {
     char buffer[64];
-    if (length < sizeof(buffer)) {
-        memcpy(buffer, text, length);
-        buffer[length] = '\0';
-        return strtod(buffer, nullptr);
+    char* copy = length < sizeof(buffer) ? buffer : static_cast<char*>(lua_newuserdata(L, length + 1));
+    memcpy(copy, text, length);
+    copy[length] = '\0';
+    const double value = strtod(copy, nullptr);
+    if (copy != buffer) {
+        lua_pop(L, 1);
     }
-    const std::string copy(text, length);
-    return strtod(copy.c_str(), nullptr);
+    return value;
 }
 
 int jsonNull(void* ctx)
@@ -364,7 +362,7 @@ int jsonBoolean(void* ctx, int value)
 int jsonNumber(void* ctx, const char* text, size_t length)
 {
     auto* state = static_cast<JsonToLua*>(ctx);
-    lua_pushnumber(state->L, jsonNumberValue(text, length));
+    lua_pushnumber(state->L, jsonNumberValue(state->L, text, length));
     return jsonStoreValue(state);
 }
 
@@ -424,20 +422,23 @@ int decodeJson(lua_State* L)
     return state->decoded ? 1 : 0;
 }
 
-// Pushes what yajl.to_value would return for json, or nothing and false when it did not finish
-bool pushJsonValue(lua_State* L, const QByteArray& json)
+// Pushes what yajl.to_value would return for json, or the message of a Lua error raised meanwhile
+// with error set; returns false with nothing pushed when it did not finish
+bool pushJsonValue(lua_State* L, const QByteArray& json, int& error)
 {
     JsonToLua state;
     state.json = &json;
-    state.handle = yajl_alloc(&scmJsonToLuaCallbacks, nullptr, &state);
-    if (!state.handle) {
-        return false;
-    }
+    // pushed first, as an out of memory error raised there would leak the handle
     lua_pushcfunction(L, decodeJson);
     lua_pushlightuserdata(L, &state);
-    const int error = lua_pcall(L, 1, 1, 0);
+    state.handle = yajl_alloc(&scmJsonToLuaCallbacks, nullptr, &state);
+    if (!state.handle) {
+        lua_pop(L, 2);
+        return false;
+    }
+    error = lua_pcall(L, 1, 1, 0);
     yajl_free(state.handle);
-    if (error || !state.decoded) {
+    if (!error && !state.decoded) {
         lua_pop(L, 1);
         return false;
     }
@@ -4605,7 +4606,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QByteArray& utf8Data, const 
     }
     int error = 0;
     // a script that put its own decoder in json_to_value has that called
-    if (mStockJsonToValue && lua_tocfunction(L, -1) == mStockJsonToValue && pushJsonValue(L, utf8Data)) {
+    if (mStockJsonToValue && lua_tocfunction(L, -1) == mStockJsonToValue && pushJsonValue(L, utf8Data, error)) {
         lua_remove(L, -2);
     } else {
         lua_pushlstring(L, utf8Data.constData(), utf8Data.length());

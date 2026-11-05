@@ -330,9 +330,14 @@ describe("Tests that GMCP data decodes as json_to_value decodes it", function()
   local stockDecoder = _G.json_to_value
   local unset = {}
 
+  teardown(function()
+    gmcp.JsonSpec = nil
+  end)
+
   -- what gmcp.JsonSpec.Doc holds after the game sends payload, or unset when it was rejected
   local function received(payload)
     gmcp.JsonSpec = {Doc = unset}
+    -- feedTelnet() reads <..> as codes, and IAC must be doubled inside SB
     local escaped = payload:gsub("[<>\255]", {["<"] = "<<", [">"] = ">>", ["\255"] = "\255\255"})
     feedTelnet("<T_IAC><T_SB><O_GMCP>JsonSpec.Doc " .. escaped .. "<T_IAC><T_SE>")
     return gmcp.JsonSpec.Doc
@@ -346,8 +351,9 @@ describe("Tests that GMCP data decodes as json_to_value decodes it", function()
       calls = calls + 1
       return stockDecoder(text)
     end
-    local value = received(payload)
+    local ok, value = pcall(received, payload)
     _G.json_to_value = stockDecoder
+    assert(ok, value)
     assert.are.equal(1, calls)
     return value
   end
@@ -383,8 +389,14 @@ describe("Tests that GMCP data decodes as json_to_value decodes it", function()
     return true
   end
 
-  local function nested(depth)
-    return string.rep('{"a":[', depth) .. "1" .. string.rep("]}", depth)
+  -- levels containers deep, objects and arrays in turn
+  local function nested(levels)
+    local opening, closing = {}, {}
+    for level = 1, levels do
+      opening[level] = level % 2 == 1 and '{"a":' or "["
+      closing[levels - level + 1] = level % 2 == 1 and "}" or "]"
+    end
+    return table.concat(opening) .. "1" .. table.concat(closing)
   end
 
   local manyKeys = {}
@@ -392,25 +404,29 @@ describe("Tests that GMCP data decodes as json_to_value decodes it", function()
     manyKeys[#manyKeys + 1] = string.format('"k%d":%d', (i * 37) % 101, i)
   end
 
+  local tooDeep = {[nested(65)] = true, [nested(300)] = true, [nested(1000)] = true, [nested(6000)] = true}
+
   local documents = {
     '{"int":1,"neg":-7,"zero":0,"negzero":-0,"negzerofloat":-0.0,"frac":2.5,"tenth":0.1,"exp":1e3,"Exp":1E-3,"plus":123.456e+2}',
     '{"big":12345678901234567890,"past53":9007199254740993,"huge":1e400,"neghuge":-1e400,"tiny":5e-324,"under":1e-400}',
     '[' .. string.rep("1", 80) .. ',0.' .. string.rep("0", 300) .. '1,-' .. string.rep("9", 70) .. 'e-50]',
+    '[' .. string.rep("1", 63) .. ',' .. string.rep("2", 64) .. ',1.' .. string.rep("5", 61) .. ',1.' .. string.rep("5", 62) .. ']',
     '{"a":1,"a":2,"b":{"x":1},"b":[1],"c":null,"c":3}',
     '{"nul":"\\u0000","mid":"a\\u0000b","pair":"\\ud83d\\ude00","high":"\\ud800","low":"\\udc00x","e":"\\u00e9","esc":"\\"\\\\\\/\\b\\f\\n\\r\\t"}',
     '{"raw":"caf\195\169 \240\159\152\128","key\195\169":1,"":"empty key"}',
+    '{"name":"caf\233"}', '{"caf\233":1}', '"\195"', '"\192\175"', '"\237\160\128"',
     '{"o":{},"a":[],"oa":{"x":{},"y":[]},"aa":[[],[{}],{}]}',
     '[null,1,null,false,true,"s",null]',
     '{"n":null,"f":false,"t":true}',
     '{"1":"one","2":"two","10":"ten"}',
     '{' .. table.concat(manyKeys, ",") .. '}',
-    -- pairs() walks these in another order if the table is made with room for more keys
+    -- pairs() walks these in another order if the decoder presizes tables
     '{"hp":"3200","maxhp":"3500"}', '{"name":"Vadi","level":80}',
     '[' .. string.rep("1,", 199) .. '1]',
     ' \t{ "spaced" : [ 1 , 2 ] , "x" : { } } \t',
     '5', '-0', '"text"', 'true', 'false', 'null', '[]', '{}',
     '{"esc":"\27[31mred"}',
-    nested(63), nested(64), nested(65), nested(300), nested(3000),
+    nested(63), nested(64), nested(65), nested(300), nested(1000), nested(6000),
     '{"a":}', '{"a":1', '[1,]', "{'a':1}", 'tru', '01', '1.', '.5', '-', '"\\x"', '{} x', '{}{}', '/* c */ {}', 'NaN', '[Infinity]', '"tab\there"', '{"text":"a\tb","n":1}',
   }
 
@@ -437,27 +453,51 @@ describe("Tests that GMCP data decodes as json_to_value decodes it", function()
     end
   end)
 
+  it("keeps the previous value when a Lua error is raised while decoding", function()
+    local hook, mask, count = debug.gethook()
+    finally(function() debug.sethook(hook, mask, count) end)
+    local raised = false
+    debug.sethook(function()
+      local info = debug.getinfo(2, "fS")
+      if not raised and info.what == "C" and info.func ~= feedTelnet then
+        raised = true
+        error("raised once while decoding")
+      end
+    end, "c")
+    gmcp.JsonSpec = {Doc = "before"}
+    feedTelnet('<T_IAC><T_SB><O_GMCP>JsonSpec.Doc {"a":1}<T_IAC><T_SE>')
+    debug.sethook(hook, mask, count)
+    assert.is_true(raised)
+    assert.are.equal("before", gmcp.JsonSpec.Doc)
+  end)
+
   it("hands the data to a script's own json_to_value", function()
+    finally(function() _G.json_to_value = stockDecoder end)
     local seen
     _G.json_to_value = function(text)
       seen = text
       return "replaced"
     end
-    finally(function() _G.json_to_value = stockDecoder end)
     assert.are.equal("replaced", received('{"a":1}'))
     assert.are.equal('{"a":1}', seen)
+    _G.json_to_value = string.reverse
+    assert.are.equal('}1:"a"{', received('{"a":1}'))
   end)
 
-  it("does not call yajl.to_value while json_to_value is still it", function()
-    local calls = 0
+  it("calls yajl.to_value only for what it rejects or what nests past 64 levels", function()
     local hook, mask, count = debug.gethook()
+    finally(function() debug.sethook(hook, mask, count) end)
+    local calls
     debug.sethook(function()
       if debug.getinfo(2, "f").func == stockDecoder then
         calls = calls + 1
       end
     end, "c")
-    received('{"a":[1,2,{"b":null}]}')
-    debug.sethook(hook, mask, count)
-    assert.are.equal(0, calls)
+    for _, document in ipairs(documents) do
+      calls = 0
+      local value = received(document)
+      local expected = (rawequal(value, unset) or tooDeep[document]) and 1 or 0
+      assert.are.equal(expected, calls, document:sub(1, 60))
+    end
   end)
 end)
