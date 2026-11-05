@@ -658,6 +658,10 @@ public:
     const TLineFormat& detachedTriggerPassLine() const { return mPreTriggerPassLine; }
     const QString& detachedTriggerPassLineText() const { return mDetachedTriggerPassLineText; }
     static constexpr int csmDetachedTriggerPassLine = -2;
+    // Whether a trigger pass, the current one or one a feedTriggers() paused, is running over the line,
+    // or over one a wrap split it off
+    bool triggerPassRunningOn(int lineNumber) const;
+    bool triggerPassUnderWay() const { return !mEnclosingTriggerPasses.isEmpty(); }
     int find(int line, const QString& what, int pos);
     QStringList split(int line, const QString& splitter);
     QStringList split(int line, const QRegularExpression& splitter);
@@ -797,6 +801,7 @@ private:
     void materialisePreTriggerPassLine(int y);
     void noteTriggerPassLineEdit(int y, int x, int removed, int inserted);
     void triggerPassLinesRemoved(int from, int to);
+    void triggerPassSegmentTaken(int lineNumber);
     int remapLinkId(const TLinkStore& sourceLinkStore, int sourceLinkId, QHash<int, int>& remappedLinkIds, int line = -1);
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
@@ -979,6 +984,11 @@ private:
     // Parked between lines so the trigger-pass snapshot reuses its allocation:
     TLineFormat mSpareTriggerPassLine;
     int mPreTriggerPassLineNumber = -1;
+    // The last of the lines a wrap split the pass line into, or the pass line itself
+    int mTriggerPassLineLastSegment = -1;
+    // Where the rest of a split pass line starts once its first part is deleted, which the console still shows
+    int mTriggerPassLineTailFrom = -1;
+    static int triggerPassSpanFirst(int passLine, int tailFrom) { return passLine >= 0 ? passLine : tailFrom; }
     // The index the current trigger pass was handed, which mPreTriggerPassLineNumber moves on from
     int mTriggerPassLineAsCommitted = -1;
     QString mDetachedTriggerPassLineText;
@@ -996,6 +1006,8 @@ private:
         int lineNumber = -1;
         QString detachedText;
         std::vector<TriggerPassLineEdit> edits;
+        int lastSegment = -1;
+        int tailFrom = -1;
     };
     // The passes a trigger calling feedTriggers() has paused. A member, not saved in
     // commitLineData()'s frame, as their lines move with deleted, rewrapped and
@@ -1004,6 +1016,9 @@ private:
     // Meaningful only inside a trigger pass: false until something overwrites
     // the committed line, while the game's colors are still readable from it:
     bool mPreTriggerPassSnapshotTaken = true;
+    // A line fed from inside the pass filled the pass's line, which it had left empty, so lineShown
+    // sends the fed line and not the pass's as well
+    bool mTriggerPassLineTaken = false;
     enum class PassLineUniformity { Unknown, Uniform, Mixed };
     // Worked out on demand, so a profile with no color triggers never pays for it:
     PassLineUniformity mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
