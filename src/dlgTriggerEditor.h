@@ -424,7 +424,8 @@ private:
     void populateAliases();
     void populateActions();
     void populateKeys();
-    void saveOpenChanges();
+    // False when the open item refused its edits, which are then only in the form
+    bool saveOpenChanges();
     enum class KeyboardMove { Up, Down, OutOfGroup, IntoGroupAbove };
     void moveCurrentItem(const KeyboardMove move);
     QList<int> unitChildIDs(const EditorViewType view, const int parentID) const;
@@ -458,7 +459,7 @@ private:
     static QString folderTreeItemKey(const EditorViewType view, const int id);
     static QString folderTreeTypeName(const EditorViewType view, const bool plural);
     void saveTrigger();
-    void saveAlias();
+    bool saveAlias();
     void computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDescription) const;
     void computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& itemDescription) const;
     void computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDescription) const;

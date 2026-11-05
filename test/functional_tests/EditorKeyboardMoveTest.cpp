@@ -45,6 +45,7 @@
 #include "TriggerUnit.h"
 #include "XMLexport.h"
 #include "ctelnet.h"
+#include "dlgAliasMainArea.h"
 #include "dlgTriggerEditor.h"
 #include "dlgTriggersMainArea.h"
 #include "mudlet.h"
@@ -375,6 +376,45 @@ private slots:
         }
         QCOMPARE(aliasNames, QStringList({qsl("kbAliasTwo"), qsl("kbAliasOne")}));
         QVERIFY2(smHeard.contains(qsl("Moved kbAliasOne below kbAliasTwo")), qPrintable(qsl("the screen reader heard: %1").arg(smHeard.join(qsl(" | ")))));
+        mpEditor->slot_showTriggers();
+    }
+
+    // Rebuilding the tree reloads the form from the unit, so a move must not follow a save the alias refused
+    void test_altDownKeepsAnAliasEditThatCannotBeSaved()
+    {
+        mpEditor->slot_showAliases();
+        auto* pTree = mpEditor->treeWidget_aliases;
+        const QList<QTreeWidgetItem*> found = pTree->findItems(qsl("kbAliasTwo"), Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive, 0);
+        QVERIFY2(!found.isEmpty(), "the alias tree has no row for the alias this test planted");
+        pTree->setCurrentItem(found.first());
+        mpEditor->slot_aliasSelected(found.first());
+        pTree->setFocus(Qt::OtherFocusReason);
+        QTRY_VERIFY2(pTree->hasFocus(), "the alias tree never took the keyboard focus");
+
+        auto aliasNames = [this]() {
+            QStringList names;
+            for (const TAlias* pAlias : mpHost->getAliasUnit()->getAliasRootNodeList()) {
+                if (pAlias->getName().startsWith(qsl("kb"))) {
+                    names << pAlias->getName();
+                }
+            }
+            return names;
+        };
+        const QStringList before = aliasNames();
+        QCOMPARE(before.first(), qsl("kbAliasTwo"));
+        // Matches the alias's own pattern, so saving refuses it as a loop
+        auto* pCommandField = mpEditor->mpAliasMainArea->lineEdit_alias_command;
+        pCommandField->setText(qsl("kbAliasTwo"));
+        mpEditor->mpAliasMainArea->lineEdit_alias_name->setText(qsl("kbAliasTwoRenamed"));
+
+        QTest::keyClick(pTree, Qt::Key_Down, Qt::AltModifier);
+
+        QCOMPARE(aliasNames(), before);
+        QCOMPARE(pCommandField->text(), qsl("kbAliasTwo"));
+        QCOMPARE(mpEditor->mpAliasMainArea->lineEdit_alias_name->text(), qsl("kbAliasTwoRenamed"));
+
+        pCommandField->clear();
+        mpEditor->mpAliasMainArea->lineEdit_alias_name->setText(qsl("kbAliasTwo"));
         mpEditor->slot_showTriggers();
     }
 };

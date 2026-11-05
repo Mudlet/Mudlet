@@ -4482,8 +4482,12 @@ void dlgTriggerEditor::moveCurrentItem(const KeyboardMove move)
         return;
     }
 
-    // The form is reloaded from the unit once the tree is rebuilt, which would drop unsaved edits
-    saveOpenChanges();
+    // The form is reloaded from the unit once the tree is rebuilt, which would drop edits the item refused
+    if (!saveOpenChanges()) {
+        //: Screen reader announcement when an editor move shortcut is refused because the item's changes could not be saved; %1 is the item's name
+        mudlet::self()->announce(tr("%1 was not moved, as its changes could not be saved").arg(pItem->text(0)), QString(), true);
+        return;
+    }
     // Read after saving, which may have renamed either row
     const QString itemName = pItem->text(0);
     outcome = outcome.arg(itemName, pLandmark->text(0));
@@ -6705,16 +6709,16 @@ void dlgTriggerEditor::saveTimer()
     }
 }
 
-void dlgTriggerEditor::saveAlias()
+bool dlgTriggerEditor::saveAlias()
 {
     QTreeWidgetItem* pItem = mpCurrentAliasItem;
     if (!pItem) {
-        return;
+        return true;
     }
 
     // Ensure the item is still part of the tree widget
     if (pItem->treeWidget() != treeWidget_aliases) {
-        return;
+        return true;
     }
 
     mpAliasMainArea->trimName();
@@ -6731,7 +6735,7 @@ void dlgTriggerEditor::saveAlias()
     if (aliasSubstitutionLoops(regex, substitution)) {
         //we have a loop
         showAliasLoopWarning(pItem, name);
-        return;
+        return false;
     }
 
     const QString script = mpSourceEditorEdbeeDocument->text();
@@ -6819,6 +6823,7 @@ void dlgTriggerEditor::saveAlias()
         }
         mpUndoStack->finishAddingItem(EditorViewType::cmAliasView, triggerID);
     }
+    return true;
 }
 
 // Returns true when the substitution would match its own pattern, which makes
@@ -10867,11 +10872,11 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
     }
 }
 
-void dlgTriggerEditor::saveOpenChanges()
+bool dlgTriggerEditor::saveOpenChanges()
 {
     // The item behind a merged folder was saved when the folder was chosen, and its errors must stay hidden
     if (!mFolderGroupKey.isEmpty()) {
-        return;
+        return true;
     }
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
@@ -10890,8 +10895,7 @@ void dlgTriggerEditor::saveOpenChanges()
         if (mpCurrentAliasItem) {
             saveEditorState(EditorViewType::cmAliasView, mpCurrentAliasItem->data(0, Qt::UserRole).toInt());
         }
-        saveAlias();
-        break;
+        return saveAlias();
     case EditorViewType::cmScriptView:
         if (mpCurrentScriptItem) {
             saveEditorState(EditorViewType::cmScriptView, mpCurrentScriptItem->data(0, Qt::UserRole).toInt());
@@ -10914,8 +10918,9 @@ void dlgTriggerEditor::saveOpenChanges()
         saveVar();
         break;
     case EditorViewType::cmUnknownView:
-        return;
+        break;
     }
+    return true;
 }
 
 // Helper function to determine the current view from which tree widget is visible with selection.
