@@ -1295,11 +1295,16 @@ void TCommandLine::handleTabCompletion(bool direction)
 void TCommandLine::handleAutoCompletion()
 {
     QString neu = toPlainText();
-    neu.chop(textCursor().selectedText().size());
-    setPlainText(neu);
+    // Only the tail the previous completion filled in may be cut; any other selection is the player's own text
+    const QTextCursor playerCursor = textCursor();
+    const bool cutCompletionTail = neu == mLastCompletion && playerCursor.selectionStart() == mTabCompletionOld.size() && playerCursor.selectionEnd() == neu.size();
+    if (cutCompletionTail) {
+        neu.truncate(playerCursor.selectionStart());
+        setPlainText(neu);
+    }
     mudlet::self()->announce(neu);
     mTabCompletionOld = neu;
-    const int oldLength = toPlainText().size();
+    const int oldLength = neu.size();
     if (mAutoCompletionCount >= mHistoryList.size()) {
         mAutoCompletionCount = mHistoryList.size() - 1;
     }
@@ -1309,18 +1314,23 @@ void TCommandLine::handleAutoCompletion()
     for (int i = mAutoCompletionCount; i < mHistoryList.size(); i++) {
         if (mHistoryList[i].startsWith(neu)) {
             mAutoCompletionCount = i;
-            mLastCompletion = mHistoryList[i];
             setPlainText(mHistoryList[i]);
+            // As the document gives it back, which turns a no-break space into a plain one
+            mLastCompletion = toPlainText();
             mudlet::self()->announce(mHistoryList[i]);
-            moveCursor(QTextCursor::Start);
-            for (int k = 0; k < oldLength; k++) {
-                moveCursor(QTextCursor::Right, QTextCursor::MoveAnchor);
-            }
-            moveCursor(QTextCursor::End, QTextCursor::KeepAnchor);
+            // By position, not by moving Right: that steps whole graphemes, which an emoji or accent spans several of
+            QTextCursor completion = textCursor();
+            completion.setPosition(oldLength);
+            completion.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
+            setTextCursor(completion);
             return;
         }
     }
-    moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
+    if (cutCompletionTail) {
+        moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
+    } else {
+        setTextCursor(playerCursor);
+    }
     mAutoCompletionCount = -1;
 }
 

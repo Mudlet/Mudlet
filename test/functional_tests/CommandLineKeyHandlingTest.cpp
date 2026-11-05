@@ -120,6 +120,14 @@ private:
 
     static QString selection(const TCommandLine* pCommandLine) { return pCommandLine->textCursor().selectedText(); }
 
+    static void select(TCommandLine* pCommandLine, const int from, const int to)
+    {
+        QTextCursor cursor = pCommandLine->textCursor();
+        cursor.setPosition(from);
+        cursor.setPosition(to, QTextCursor::KeepAnchor);
+        pCommandLine->setTextCursor(cursor);
+    }
+
     // Puts text into the command line without going through the keys, for the
     // cases whose subject is what a key does to text that is already there - a
     // pasted line feed is not something QTest::keyClicks can type.
@@ -513,6 +521,86 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("xyz"));
         QVERIFY(selection(pCommandLine).isEmpty());
         QCOMPARE(pCommandLine->textCursor().position(), 3);
+    }
+
+    // A selection in the middle of the line is the player's own text, not a completion tail.
+    void test_upWithAMidLineSelectionKeepsTheTypedText()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("north"));
+
+        const QString typed = qsl("say abcdefghij KLMNOPQRST");
+        setText(pCommandLine, typed);
+        select(pCommandLine, 4, 9);
+        QCOMPARE(selection(pCommandLine), qsl("abcde"));
+
+        press(pCommandLine, Qt::Key_Up);
+
+        QCOMPARE(pCommandLine->toPlainText(), typed);
+        QCOMPARE(selection(pCommandLine), qsl("abcde"));
+    }
+
+    // The completed tail starts where the typed prefix ends in UTF-16 units, so
+    // a second Up can cut it again and step on to the next older entry.
+    void test_upKeepsCyclingWhenThePrefixHoldsAnEmoji()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        // QTest cannot type an emoji, so these are put in place before Return
+        for (const QString& command : {qsl("say \U0001F600 ho"), qsl("say \U0001F600 hi")}) {
+            setText(pCommandLine, command);
+            press(pCommandLine, Qt::Key_Return);
+            press(pCommandLine, Qt::Key_Escape);
+        }
+
+        const QString prefix = qsl("say \U0001F600");
+        setText(pCommandLine, prefix);
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("say \U0001F600 hi"));
+        QCOMPARE(selection(pCommandLine), qsl(" hi"));
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("say \U0001F600 ho"));
+        QCOMPARE(selection(pCommandLine), qsl(" ho"));
+    }
+
+    // Shift+End or a double-clicked last word ends where a completion tail does,
+    // but was never filled in by Up, so it is not cut off either.
+    void test_upWithASelectionThePlayerMadeAtTheEndKeepsTheTypedText()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("north"));
+
+        const QString typed = qsl("say hello world");
+        setText(pCommandLine, typed);
+        select(pCommandLine, 10, typed.size());
+        QCOMPARE(selection(pCommandLine), qsl("world"));
+
+        press(pCommandLine, Qt::Key_Up);
+
+        QCOMPARE(pCommandLine->toPlainText(), typed);
+        QCOMPARE(selection(pCommandLine), qsl("world"));
+    }
+
+    // With a selection that is not a completion tail, the whole line is what
+    // the history entries have to start with.
+    void test_upWithAMidLineSelectionCompletesTheWholeLine()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("say hi there friend"));
+        sendCommand(pCommandLine, qsl("say hello"));
+
+        setText(pCommandLine, qsl("say hi there"));
+        select(pCommandLine, 4, 6);
+
+        press(pCommandLine, Qt::Key_Up);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("say hi there friend"));
+        QCOMPARE(selection(pCommandLine), qsl(" friend"));
     }
 
     // A password typed at a game's login prompt arrives with remote echo on -
