@@ -261,6 +261,79 @@ describe("Tests functionality of Geyser.Gauge", function()
       assert.is_true(asked <= 1, "asked " .. asked .. " times")
     end)
 
+    it("goes back to asking the main window its size once an update after what it sits on changes", function()
+      local outer = track(Geyser.Container:new({name = "ggsSettleOuter", x = "2%", y = "2%", width = "90%", height = "90%"}))
+      local mid = track(Geyser.Container:new({name = "ggsSettleMid", x = "5%", y = "5%", width = "90%", height = "90%"}, outer))
+      local settled = track(Geyser.Gauge:new({name = "ggsSettled", x = "5%", y = "5%", width = "40%", height = "5%"}, mid))
+      local stock = getMainWindowSize
+      local taller, asked = 0, 0
+      _G.getMainWindowSize = function()
+        asked = asked + 1
+        local width, height = stock()
+        return width, height + taller
+      end
+      finally(function() _G.getMainWindowSize = stock end)
+      local function asksOnce(why)
+        settled:setValue(37)
+        asked = 0
+        settled:setValue(61.5)
+        assert.are.equal(1, asked, why)
+      end
+      settled:setValue(10)
+      asksOnce("two containers down")
+      mid:resize("91%", nil)
+      asksOnce("after its container is resized")
+      taller = 37
+      asksOnce("after the main window gets taller")
+      for i = 1, 4 do
+        mid:resize(i % 2 == 0 and "90%" or "91%", nil)
+        settled:setValue(i * 10)
+      end
+      for i = 1, 40 do
+        settled:setValue(i % 2 == 0 and 33 or 66)
+      end
+      asksOnce("once it stops being laid out again before every update")
+    end)
+
+    it("asks a function it rests on once an update after its answer changes", function()
+      local wide, asked = 250.5, 0
+      local box = track(Geyser.Container:new({name = "ggsLiveBox", x = 10, y = 10, height = 100, width = function()
+        asked = asked + 1
+        return wide
+      end}))
+      local live = track(Geyser.Gauge:new({name = "ggsLive", x = "5%", y = "5%", width = "90%", height = "50%"}, box))
+      live:setValue(10)
+      live:setValue(20)
+      wide = 171
+      live:setValue(30)
+      asked = 0
+      live:setValue(40)
+      assert.are.equal(1, asked)
+    end)
+
+    it("asks no more than pixel_geometry would of a function that answers differently every update", function()
+      local wide, asked = 300, 0
+      local box = track(Geyser.Container:new({name = "ggsDriftBox", x = 10, y = 10, height = 100, width = function()
+        asked = asked + 1
+        return wide
+      end}))
+      local drifting = track(Geyser.Gauge:new({name = "ggsDrifting", x = "5%", y = "5%", width = "90%", height = "50%"}, box))
+      drifting:setValue(10)
+      drifting:setValue(20)
+      asked = 0
+      Geyser.Container.pixel_geometry(drifting.front)
+      local perLayout = asked
+      asked = 0
+      for i = 1, 40 do
+        wide = 300 + i
+        drifting:setValue(i % 2 == 0 and 37 or 61.5)
+      end
+      -- a few updates a cycle record the layout and find it drifting again
+      assert.is_true(asked <= 48 * perLayout, string.format("asked %d times, pixel_geometry asks %d", asked, perLayout))
+      local _, _, width = Geyser.Container.pixel_geometry(drifting.front)
+      assert.are.equal(width, geometry("ggsDrifting_front").width)
+    end)
+
     it("does not ask the main window its size when nothing it sits on is measured against it", function()
       local stock = getMainWindowSize
       local asked = 0
@@ -288,6 +361,23 @@ describe("Tests functionality of Geyser.Gauge", function()
         local _, _, width = Geyser.Container.pixel_geometry(churned.front)
         assert.are.same({i, width}, {i, geometry("ggsChurned_front").width})
       end
+    end)
+
+    it("stops recording its layout while it is laid out again before every update", function()
+      local box = track(Geyser.Container:new({name = "ggsRecordBox", x = 20, y = 20, width = 301, height = 157}))
+      local churned = track(Geyser.Gauge:new({name = "ggsRecorded", x = "5%", y = "5%", width = "90%", height = "20%"}, box))
+      local stock = Geyser.compiled_from
+      local asked = 0
+      Geyser.compiled_from = function(...)
+        asked = asked + 1
+        return stock(...)
+      end
+      finally(function() Geyser.compiled_from = stock end)
+      for i = 1, 20 do
+        churned:resize(i % 2 == 0 and "90%" or "77.7%", nil)
+        churned:setValue(i % 2 == 0 and 37 or 61.5)
+      end
+      assert.is_true(asked <= 8, "asked " .. asked .. " times")
     end)
 
     it("does not keep a container it has left alive", function()
@@ -528,9 +618,6 @@ describe("Tests functionality of Geyser.Gauge", function()
         parts.size = 250.5
         parts.inner:resize(function() return parts.size end, nil)
       end, disturb = function(parts) parts.size = 171 end},
-      {"a getter on its container is replaced", disturb = function(parts)
-        parts.inner.get_width = function() return 99.5 end
-      end},
       {"the main window changes size", setup = function(parts)
         parts.outer:resize("40%", "30%")
       end, disturb = function(parts)
@@ -685,9 +772,6 @@ describe("Tests functionality of Geyser.Gauge", function()
         parts.wide, parts.tall = 250.5, 125.5
         parts.inner:resize(function() return parts.wide end, function() return parts.tall end)
       end, disturb = function(parts) parts.tall = 86.25 end},
-      {"its front label's width getter is replaced", disturb = function(parts)
-        parts.gauge.front.get_width = function() return 33 end
-      end},
       {"its container is laid out against a container it is not in", setup = function(parts)
         parts.other = track(Geyser.Container:new({name = "ggsStaleOffChain", x = 3, y = 7, width = 251, height = 133}))
         Geyser.set_constraints(parts.inner, parts.inner, parts.other)
@@ -749,6 +833,24 @@ describe("Tests functionality of Geyser.Gauge", function()
           Geyser.get_x = parts.rootGetX
         end
       end},
+      {"the root's y getter answers differently", setup = function(parts)
+        parts.rootY, parts.rootGetY = 0, Geyser.get_y
+        Geyser.get_y = function() return parts.rootY end
+      end, disturb = function(parts) parts.rootY = 0.6 end, cleanup = function(parts)
+        if parts.rootGetY then
+          Geyser.get_y = parts.rootGetY
+        end
+      end},
+      {"the main window gets taller while its width cannot be read", gauge = {x = 10, y = "20%", width = 200, height = "10.3%"}, build = function() end,
+        setup = function(parts)
+          local _, height = getMainWindowSize()
+          parts.mainWindowSize, parts.mainHeight = getMainWindowSize, height
+          _G.getMainWindowSize = function() return nil, parts.mainHeight end
+        end, disturb = function(parts) parts.mainHeight = parts.mainHeight + 37 end, cleanup = function(parts)
+          if parts.mainWindowSize then
+            _G.getMainWindowSize = parts.mainWindowSize
+          end
+        end},
       {"an outer container gets a getter nothing reads that raises", build = function(parts)
         parts.outer = track(Geyser.Container:new({name = "ggsStaleOuter", x = 31, y = 17, width = 401, height = 203}))
         return track(Geyser.Container:new({name = "ggsStaleInner", x = 40, y = 50, width = 301, height = 121}, parts.outer))
@@ -801,6 +903,27 @@ describe("Tests functionality of Geyser.Gauge", function()
         return parts.box
       end, disturb = function(parts) parts.box:resize(203, 99) end},
     }
+    for _, dimension in ipairs({"x", "y", "width", "height"}) do
+      local getter = "get_" .. dimension
+      cases[#cases + 1] = {"its container's " .. dimension .. " getter is replaced", disturb = function(parts)
+        parts.inner[getter] = function() return 43.6 end
+      end}
+      cases[#cases + 1] = {"its container's " .. dimension .. " getter is one a script put there, whose answer changes", setup = function(parts)
+        parts.answer = 40.2
+        parts.inner[getter] = function() return parts.answer end
+      end, disturb = function(parts) parts.answer = 57.7 end}
+      cases[#cases + 1] = {"its front label's " .. dimension .. " getter is replaced", disturb = function(parts)
+        parts.gauge.front[getter] = function() return 33.3 end
+      end}
+      -- put there after the first update, which lays the front label out again from its constraints
+      cases[#cases + 1] = {"its front label's " .. dimension .. " getter is one a script put there, whose answer changes", disturb = function(parts)
+        parts.answer = 40.2
+        parts.gauge.front[getter] = function() return parts.answer end
+        parts.gauge:setValue(50)
+        parts.gauge:setValue(60)
+        parts.answer = 57.7
+      end}
+    end
 
     local function assertFollows(gauge)
       for _, value in ipairs({37, 61.5, 88, 12.25}) do

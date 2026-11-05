@@ -52,9 +52,10 @@ end
 -- @param window The window the getters belong to.
 -- @return the container they were compiled against, then for each of x, y,
 --         width and height: nil unless the getter in place is one compiled from
---         a text constraint, or else the sum of 1 if it calls the container's
---         near edge (get_x or get_y), 2 if it calls the container's length
---         (get_width or get_height) and 4 if it calls the window's own near edge
+--         a pixel or percentage constraint, or else the sum of 1 if it calls
+--         the container's near edge (get_x or get_y), 2 if it calls the
+--         container's length (get_width or get_height) and 4 if it calls the
+--         window's own near edge
 function Geyser.compiled_reads(window)
   local last = compiled[window]
   if last == nil then
@@ -167,7 +168,7 @@ function Geyser.calc_constraints (window, cons, container)
     os.setlocale(oldlocale, "numeric")
     error(string.format("Geyser: element '%s' %s", tostring(window.name), problem), 0)
   end
-  -- which getters each text constraint's getter calls, for compiled_reads()
+  -- which getters each pixel or percentage getter calls, for compiled_reads()
   local reads = {}
 
   -- GENERATE CONSTRAINT AWARE POSITIONING FUNCTIONS

@@ -211,7 +211,7 @@ end
 
 local stockPixelGeometry = Geyser.Container.pixel_geometry
 
--- Geyser.Container:pixel_geometry's rounding, which an in-place size has to match to the bit
+-- must match roundEdge in GeyserContainer.lua bit for bit, or an in-place size drifts from pixel_geometry()
 local function roundEdge(value)
   return math.floor(value + 0.5 + 1e-6)
 end
@@ -221,7 +221,6 @@ local rootGetX, rootGetY, rootGetWidth, rootGetHeight = Geyser.get_x, Geyser.get
 -- far deeper than any real layout; a container loop would otherwise never end
 local deepestChain = 100
 local weakValues = {__mode = "v"}
--- in-place updates that skip the layout cache once a layout was replaced before it was ever reused
 local churnSkips = 32
 
 -- where the fill starts, the back label's inner length along it and the front
@@ -243,9 +242,10 @@ local function askAgain(live, length, getter)
   return length + 2
 end
 
--- Takes down the getters measure() goes through, from the front label up: one
--- compiled from a text constraint only has to stay in place, any other, or the
--- main window's size behind the root, is asked again.
+-- Records the getters measure() goes through, from the front label up. The front
+-- label's own, and any compiled from a pixel or percentage constraint, only have
+-- to stay in place; any other, and the main window's size behind the root, is
+-- asked again.
 -- @param old a layout of this gauge's that no longer holds, whose tables are reused
 -- @return the layout, or nil when the resize has to fall back to pixel_geometry()
 local function recordLayout(gauge, fill, front, old)
@@ -332,7 +332,9 @@ local function recordLayout(gauge, fill, front, old)
     left = fill.left, right = fill.right, top = fill.top, bottom = fill.bottom,
   }
   if readsMainWindow then
-    layout.mainWidth, layout.mainHeight = getMainWindowSize()
+    local width, height = getMainWindowSize()
+    -- false, as a nil width would read as a layout the main window's size does not matter to
+    layout.mainWidth, layout.mainHeight = width or false, height
   end
   measure(fill, front, back, layout)
   return layout
@@ -353,7 +355,7 @@ local function chainHolds(gauge, front, layout)
   return true
 end
 
--- Whether what the layout's measure() read still reads the same, taking down
+-- Whether what the layout's measure() read still reads the same, recording
 -- what reads differently now
 local function valuesHold(fill, layout)
   local holds = true
@@ -361,8 +363,9 @@ local function valuesHold(fill, layout)
     layout.left, layout.right, layout.top, layout.bottom = fill.left, fill.right, fill.top, fill.bottom
     holds = false
   end
-  if layout.mainWidth then
+  if layout.mainWidth ~= nil then
     local width, height = getMainWindowSize()
+    width = width or false
     if width ~= layout.mainWidth or height ~= layout.mainHeight then
       layout.mainWidth, layout.mainHeight = width, height
       holds = false
@@ -386,15 +389,21 @@ local function inPlaceSize(gauge, fill, front)
   -- off the fill until it is whole again, so a getter that raises cannot leave it half updated
   fill.layout = nil
   if layout and chainHolds(gauge, front, layout) then
-    layout.reused = true
-    if not valuesHold(fill, layout) then
+    if valuesHold(fill, layout) then
+      layout.reused = true
+    elseif layout.reused ~= "drifting" then
+      layout.reused = "drifting"
       measure(fill, front, gauge.back, layout)
+    else
+      -- what it rests on answers differently every update, so asking it again costs more than pixel_geometry()
+      fill.skips = churnSkips
+      layout = nil
     end
   elseif fill.skips then
     fill.skips = fill.skips > 1 and fill.skips - 1 or nil
     layout = nil
   elseif layout and not layout.reused then
-    -- something lays it out again on every update, so a new layout would not pay for itself
+    -- it broke before it was ever reused, so it is probably laid out again every update and recording would not pay
     fill.skips = churnSkips
     layout = nil
   else
