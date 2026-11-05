@@ -769,6 +769,7 @@ void cTelnet::connectIt(const QString& address, int port)
 #if !defined(QT_NO_SSL)
         mSslErrors.clear();
         mPeerCertificate = QSslCertificate();
+        mSslHandshakeFailed = false;
 #endif
 
         if (mpHost->mUseProxy && !mpHost->mProxyAddress.isEmpty() && mpHost->mProxyPort != 0) {
@@ -815,6 +816,10 @@ void cTelnet::connectIt(const QString& address, int port)
         connectIt(address, port);
         return;
     }
+
+    // After the aborts above, which report the connection they end: an attempt that never
+    // connects must not be timed from one that did, which could set off an automatic reconnect
+    mConnectionTimer.invalidate();
 
     // mpHost is a QPointer and can in principle be cleared if the Host is
     // destroyed mid-connect; slot authors must null-check before dereferencing.
@@ -950,6 +955,11 @@ void cTelnet::slot_socketError()
     }
 
     auto* pSocket = qobject_cast<QAbstractSocket*>(sender());
+#if !defined(QT_NO_SSL)
+    if (pSocket && !mpSocket && pSocket->error() == QAbstractSocket::SslHandshakeFailedError) {
+        mSslHandshakeFailed = true;
+    }
+#endif
     if (!pSocket || mpSocket) {
         // A connection that was made and then lost: slot_socketDisconnected() reports that one
         return;
@@ -1175,6 +1185,10 @@ void cTelnet::slot_socketConnected()
     // reconnect after this connection ends and blame that ending on the user.
     mDontReconnect = false;
     mDisconnectRequested = false;
+#if !defined(QT_NO_SSL)
+    // The other address family's attempt may have failed its handshake first
+    mSslHandshakeFailed = false;
+#endif
 
     // Which socket is this? Once we know, set mpSocket to point at it and
     // disable the other one from doing anything more
@@ -1355,6 +1369,10 @@ void cTelnet::finishDisconnection()
             // errors from slot_socketSslError() when mpSocket is null (i.e.
             // when the SSL handshake failed):
             QList<QSslError> sslErrors = getSslErrors();
+            // With no certificate to object to, a failed handshake means the game answered in
+            // something other than TLS
+            const bool secureNotOffered = mSslHandshakeFailed && sslErrors.isEmpty();
+            mSslHandshakeFailed = false;
             QSslCertificate cert = mpSocket ? mpSocket->peerCertificate() : getPeerCertificate();
             if (mpHost->mSslIgnoreExpired) {
                 sslErrors.removeAll(QSslError(QSslError::CertificateExpired, cert));
@@ -1370,6 +1388,9 @@ void cTelnet::finishDisconnection()
  one of several to be listed. This text used in two places,
  ensure the same text is used in both.*/
                 reasons.append(tr("User Disconnected"));
+            } else if (secureNotOffered) {
+                //: A reason why a connection to a game server ended.
+                reasons.append(tr("Secure connections not supported by this game on this port; try turning the option off"));
             } else if (timeOffset >= 0 && timeOffset < 5000) {
                 /*: A reason why a connection to a game server ended, could be
  one of several to be listed. This text used in two places,
@@ -1681,6 +1702,10 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
      */
     mCurrent_sslTsl = mpHost->mSslTsl;
     if (mCurrent_sslTsl) {
+        // Left wired by an earlier open connection, the TCP connect would count as the secure
+        // connection being made, well before its handshake has had the chance to fail
+        disconnect(&mSocket_ipV4, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected);
+        disconnect(&mSocket_ipV6, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected);
         if (hasIPv4_address && hasIPv6_address) {
             /* Got both types of IP address so do the happy eyeballs stuff.
              * Use Qt::UniqueConnection so that duplicate ones are not made
