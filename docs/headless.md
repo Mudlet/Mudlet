@@ -514,3 +514,12 @@ again to turn those off too, as each call turns off everything that is on. `fals
 stopped changes nothing, and `scriptsStopped()` reads the state. Like `submit()`, it is refused with no
 profile open, while a profile loads or closes, and from a handler of `outputLine` and the other
 signals sent mid-write.
+
+`setApplicationActive()` tells the profiles the app has come to the front or left it, as the GUI hears
+it from the system: a change raises `sysApplicationFocusChangeEvent` with `true` or `false` in every
+profile that loaded and has not begun to close, the session's own and those its scripts opened, so a
+package can quiet its sounds or notifications while the player is away. The state it is in already
+raises nothing, as the GUI tells scripts only of a change. It starts as active, and before `start()` it
+is only kept, for the next change to be told against; a profile opened later hears nothing until the
+next change, as in the GUI. `applicationActive()` reads it. It is refused while a profile loads, during
+`shutdown()`, and from a handler of `outputLine` and the other signals sent mid-write.

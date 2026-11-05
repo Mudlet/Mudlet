@@ -268,6 +268,13 @@ public:
     bool setScriptsStopped(bool stopped);
     // False with no profile open
     bool scriptsStopped() const;
+    // The app coming to the front or leaving it, as the GUI hears it from the system: a change raises
+    // sysApplicationFocusChangeEvent with true or false in every profile that loaded and has not begun to close, and
+    // the state it is in already raises nothing. It starts true, and before start() it is only kept. Refused while a
+    // profile loads, during shutdown(), and from a handler of outputLine, localText, errorConsoleText,
+    // hiddenInputWanted or a ...Requested signal.
+    bool setApplicationActive(bool active);
+    bool applicationActive() const { return mApplicationActive; }
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -467,6 +474,9 @@ private:
     QList<QueuedReplaySignal> mReplaySignals;
     // What consoleFont() gave at profileLoaded, then each consoleFontChanged; none before the load ends
     std::optional<QFont> mDeliveredConsoleFont;
+    bool mApplicationActive = true;
+    // Counted, as a handler that changed it and changed it back leaves it as it was
+    unsigned int mApplicationActiveChanges = 0;
     bool mMapOperationCancelable = false;
     QStringList mUnsavedProfiles;
     // Bumped by each start() and shutdown(), to drop a queued quitRequested or other relay owed to the profile
