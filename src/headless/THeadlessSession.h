@@ -126,18 +126,19 @@ public:
     // Why the last call that failed did
     QString errorString() const { return mErrorString; }
     // For what the session does not cover, such as settings and the map. Null once the profile closes, so
-    // hold it in a QPointer. Not from a handler of outputLine, lineShown, localText, errorConsoleText, hiddenInputWanted
-    // or a ...Requested signal: a line it fed would be committed in the middle of a write, which TBuffer does not allow.
+    // hold it in a QPointer. Not from a handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText,
+    // hiddenInputWanted or a ...Requested signal: a line it fed would be committed in the middle of a write, which TBuffer
+    // does not allow.
     Host* host() const;
 
     // As typed on the command line: its aliases run, and what is sent while not connected is echoed and dropped
     // with nothing said, as in the GUI, so a frontend that types ahead waits for connected(). These, and
     // installPackage(), are refused while a profile loads or shutdown() runs, and from a handler of outputLine,
-    // lineShown, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal, which run mid-write, and
-    // fail once a close of the profile has begun; submit() checks each line of a paste as a call. It is the app's
-    // input line being sent: the main command line holds the line while its aliases run, then is emptied or kept
-    // as the profile says. A command from elsewhere, such as a button, goes through runLua() and expandAlias(),
-    // which leave the line alone.
+    // lineShown, mainConsoleCleared, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal, which
+    // run mid-write, and fail once a close of the profile has begun; submit() checks each line of a paste as a call.
+    // It is the app's input line being sent: the main command line holds the line while its aliases run, then is
+    // emptied or kept as the profile says. A command from elsewhere, such as a button, goes through runLua() and
+    // expandAlias(), which leave the line alone.
     bool submit(const QString& line);
     // As the GUI's hidden-input box sends what is typed into it while hiddenInputWanted holds: straight to the
     // game, with its carriage returns and line feeds taken out, and no aliases, command separator,
@@ -283,6 +284,10 @@ signals:
     // Sent whole, before the console wraps it or after a trigger's wrapLine() split it, and not again for a later
     // change to it. Sent mid-write, as outputLine is, with the same arguments.
     void lineShown(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs);
+    // A script emptied the main console, as clearWindow() does; lines from before it that lineShown has yet to
+    // send are dropped. Sent mid-write, as outputLine is, so a handler may neither call the session nor run the
+    // event loop.
+    void mainConsoleCleared(const QString& profile);
     // What the GUI shows outside the profile's screen: a script's showNotification(), which answers true only
     // when this signal is connected and not blocked, with no milliseconds for the system's own time; and a
     // script's alert() or the game's bell, asking for the player's attention for that long, 0 until they come

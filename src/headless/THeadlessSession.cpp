@@ -401,6 +401,19 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     emit localText(profile, text);
                     --gSignalsBeingHandedOut;
                 });
+                connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::bufferCleared, this, [this, model = &pNewHost->mainConsoleModel()]() {
+                    for (QList<ShownLine>& lines : mShownLinesOfPasses) {
+                        lines.clear();
+                    }
+                    // An app that hears the clear empties the open line, but the CLI's terminal keeps it
+                    if (isSignalConnected(QMetaMethod::fromSignal(&THeadlessSession::mainConsoleCleared))) {
+                        model->forgetPrintedLine();
+                    }
+                    const QString profile = mProfileName;
+                    ++gSignalsBeingHandedOut;
+                    emit mainConsoleCleared(profile);
+                    --gSignalsBeingHandedOut;
+                });
                 connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text) {
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;
@@ -1808,7 +1821,7 @@ bool THeadlessSession::sendShownLines(const QList<ShownLine>& lines)
     return true;
 }
 
-// A handler of outputLine, lineShown, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal runs in the middle of a write,
+// A handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal runs in the middle of a write,
 // which a line it fed would cut into, and a load that runs the event loop has yet to start the profile's scripts
 bool THeadlessSession::refused(const bool duringLoad)
 {
@@ -1819,9 +1832,10 @@ bool THeadlessSession::refused(const bool duringLoad)
         return true;
     }
     if (mpPool && gSignalsBeingHandedOut) {
-        qWarning() << "THeadlessSession: called from an outputLine, lineShown, localText, errorConsoleText, hiddenInputWanted or ...Requested handler, which is refused; queue the call instead";
-        //: Error from a frontend with no window that called it back from a handler of the game's lines, as sent or as shown, of the text the profile printed, of its error console, of the game hiding what the player types, or of a request a script made, such as a notification. "...Requested" stands for the names of those signals, which all end in Requested, and is not translated.
-        mErrorString = tr("Refused from a handler of outputLine, lineShown, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal; queue the call instead.");
+        qWarning() << "THeadlessSession: called from an outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, hiddenInputWanted or ...Requested handler, which is refused; queue the "
+                      "call instead";
+        //: Error from a frontend with no window that called it back from a handler of the game's lines, as sent or as shown, of the main console being cleared, of the text the profile printed, of its error console, of the game hiding what the player types, or of a request a script made, such as a notification. "...Requested" stands for the names of those signals, which all end in Requested, and is not translated.
+        mErrorString = tr("Refused from a handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal; queue the call instead.");
         return true;
     }
     if (mRemovingStalePasswords || (!duringLoad && mpPool && mpPool->loadingProfile())) {
