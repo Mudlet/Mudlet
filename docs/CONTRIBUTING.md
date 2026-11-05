@@ -6,6 +6,8 @@ the free [Github for Desktop](https://desktop.github.com) app to contribute code
 
 Have a look at the [UI design philosophy](../UI-design-philosophy.md) when improving Mudlet's interface.
 
+A control with no visible label beside it - one that has only placeholder text, or nothing at all - must have a translatable accessible name saying what it is, as a placeholder is never announced as one. It also needs an accessible description saying what it is for; a line edit's placeholder serves as that when the line edit has none of its own. Set them in the `.ui` file where you can (the `accessibleName` and `accessibleDescription` properties, with an `extracomment` for translators), otherwise with `setAccessibleName()` and `setAccessibleDescription()`. A control that already has a visible label needs neither.
+
 # Coding guidelines
 
 ## Code style
