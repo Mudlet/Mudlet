@@ -72,6 +72,22 @@ describe("Tests functionality of Geyser.ListItem", function()
       assert.are.equal(item, seen)
       assert.are.equal("hi", text)
     end)
+
+    it("builds rows from an item used as a prototype", function()
+      local seen = {}
+      local proto = Geyser.ListItem:new({name = "gliProto"}, list)
+      proto:setOnInsert(function(i) seen[#seen + 1] = i.name end)
+      local item = proto:new({name = "gliFromProto"}, list)
+      assert.are.equal("label", windowType("gliFromProto"))
+      assert.are.equal(list, item:getList())
+      assert.are.same({"gliFromProto"}, seen)
+    end)
+
+    it("fits the list to a row that sizes itself", function()
+      local item = list:addItem({name = "gliAuto", autoHeight = true, message = "one<br>two<br>three"})
+      assert.is_true(item:get_height() > 10)
+      assert.are.equal(item:get_height(), list.content:get_height())
+    end)
   end)
 
   describe("dismiss", function()
