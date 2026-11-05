@@ -34,15 +34,32 @@ end
 -- caller that keeps a value the getter gave and needs to know what it rests on.
 -- @param window The window the getter belongs to.
 -- @param dimension "x", "y", "width" or "height".
--- @return the constraint and the container the getter reads, or nil if the
---         getter is not one calc_constraints compiled and kept track of
+-- @return the constraint and the container it was compiled against, or nil if
+--         the getter is not one calc_constraints compiled and kept track of.
+--         For a text constraint, also which getters it may call along its
+--         axis: the container's for the near edge (get_x or get_y), the
+--         container's for the length (get_width or get_height), and the
+--         window's own for the near edge.
 function Geyser.compiled_from(window, dimension)
   local last = compiled[window]
   local getter = last and last["get_" .. dimension]
   if getter == nil or window["get_" .. dimension] ~= getter then
     return nil
   end
-  return last[dimension], last.container
+  local constraint = last[dimension]
+  if type(constraint) ~= "string" then
+    return constraint, last.container
+  end
+  -- the two tests calc_constraints tells the kinds of constraint apart by
+  local percentage = string.find(constraint, "%%") ~= nil
+  local fromFarEdge = string.find(constraint, "-") ~= nil
+  if dimension == "x" or dimension == "y" then
+    return constraint, last.container, true, percentage or fromFarEdge, false
+  end
+  if percentage then
+    return constraint, last.container, false, true, false
+  end
+  return constraint, last.container, fromFarEdge, fromFarEdge, fromFarEdge
 end
 
 -- how both parseable() and the parser read a percentage
