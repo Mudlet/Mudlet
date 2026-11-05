@@ -132,4 +132,53 @@ describe("Tests setMapEnvironmentKit, getMapEnvironmentKit and getMapEnvironment
     assert.are.equal("not json", getMapUserData(userDataKey))
     assert.are.same({}, getMapEnvironmentKits())
   end)
+
+  describe("unsetCustomEnvColor", function()
+    it("removes a custom environment colour, and it stays removed through saving and loading the map", function()
+      assert.is_not_nil(getCustomEnvColorTable()[blue])
+      assert.is_true(unsetCustomEnvColor(blue))
+      assert.is_nil(getCustomEnvColorTable()[blue])
+      assert.is_not_nil(getCustomEnvColorTable()[green])
+
+      assert.is_true(saveMap(savePath))
+      assert.is_true(loadMap(savePath))
+      assert.is_nil(getCustomEnvColorTable()[blue])
+      assert.is_not_nil(getCustomEnvColorTable()[green])
+    end)
+
+    it("refuses an environment that has no custom colour", function()
+      local ok, message = unsetCustomEnvColor(9399)
+      assert.is_nil(ok)
+      assert.truthy(message:find("9399", 1, true))
+    end)
+
+    it("refuses the 16 default colours", function()
+      for environment = 257, 272 do
+        local ok, message = unsetCustomEnvColor(environment)
+        assert.is_nil(ok, "environment " .. environment)
+        assert.truthy(message:find(tostring(environment), 1, true))
+        assert.is_not_nil(getCustomEnvColorTable()[environment])
+      end
+    end)
+
+    it("refuses a colour a room still uses, until the room stops using it", function()
+      local roomId = createRoomID()
+      assert.is_true(addRoom(roomId))
+      assert.is_true(setRoomEnv(roomId, grey))
+
+      local ok, message = unsetCustomEnvColor(grey)
+      assert.is_nil(ok)
+      assert.truthy(message:find("room ID " .. roomId, 1, true), message)
+      assert.is_not_nil(getCustomEnvColorTable()[grey])
+
+      assert.is_true(setRoomEnv(roomId, tan))
+      assert.is_true(unsetCustomEnvColor(grey))
+      assert.is_nil(getCustomEnvColorTable()[grey])
+    end)
+
+    it("rejects an environment ID that is not a number", function()
+      assert.has_error(function() unsetCustomEnvColor("grey") end)
+      assert.has_error(function() unsetCustomEnvColor() end)
+    end)
+  end)
 end)
