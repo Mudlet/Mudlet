@@ -1651,13 +1651,13 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="4" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_showTimeStamps">
             <property name="toolTip">
-             <string>&lt;p&gt;Shows the time each line arrived at the start of every line in the main window. This is the same setting as the main window's &quot;Toggle time stamps&quot; button.&lt;/p&gt;</string>
+             <string extracomment="Tooltip of the profile preference that shows the time each line arrived at the start of every line in the main window. &quot;Toggle time stamps&quot; must match the translation of that button's tooltip">&lt;p&gt;Shows the time each line arrived at the start of every line in the main window. This is the same setting as the main window's &quot;Toggle time stamps&quot; button.&lt;/p&gt;</string>
             </property>
             <property name="accessibleDescription">
-             <string>Shows the time each line arrived at the start of every line in the main window. This is the same setting as the main window's &quot;Toggle time stamps&quot; button.</string>
+             <string extracomment="Accessibility-friendly description of the profile preference that shows the time each line arrived at the start of every line in the main window. &quot;Toggle time stamps&quot; must match the translation of that button's tooltip">Shows the time each line arrived at the start of every line in the main window. This is the same setting as the main window's &quot;Toggle time stamps&quot; button.</string>
             </property>
             <property name="text">
-             <string>Show timestamps</string>
+             <string extracomment="Label of the profile preference that shows the time each line arrived at the start of every line in the main window">Show timestamps</string>
             </property>
            </widget>
           </item>

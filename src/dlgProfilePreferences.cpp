@@ -4445,9 +4445,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_enableTextAnalyzer->setChecked(pHost->mEnableTextAnalyzer);
     checkBox_showTimeStamps->setChecked(pHost->mainConsoleShowsTimeStamps());
     disconnect(mTimeStampsConnection);
-    if (auto* pModel = pHost->mainConsoleModelOrNull()) {
-        mTimeStampsConnection = connect(&pModel->mNotifier, &TConsoleModelNotifier::timeStampsToggled, this, &dlgProfilePreferences::followMainConsoleTimeStamps);
-    }
+    mTimeStampsConnection = connect(&pHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::timeStampsToggled, this, &dlgProfilePreferences::followMainConsoleTimeStamps);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
 
