@@ -225,6 +225,7 @@ public:
     ~dlgPackageExporterDescription();
     bool canInsertFromMimeData(const QMimeData* source) const override;
     void insertFromMimeData(const QMimeData* source) override;
+    QSize minimumSizeHint() const override;
 
 protected:
     void dragEnterEvent(QDragEnterEvent* event) override;
