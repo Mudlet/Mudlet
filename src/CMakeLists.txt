@@ -278,6 +278,7 @@ set(mudlet_app_SRCS
     TTabBar.cpp
     TTextBox.cpp
     TTextEdit.cpp
+    ToolBarOverflow.cpp
     TToolBar.cpp
     TTreeWidget.cpp
     TUiTour.cpp
@@ -618,6 +619,7 @@ set(mudlet_app_HDRS
     TTabBar.h
     TTextBox.h
     TTextEdit.h
+    ToolBarOverflow.h
     TToolBar.h
     TTreeWidget.h
     TUiTour.h

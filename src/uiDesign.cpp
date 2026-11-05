@@ -1206,6 +1206,7 @@ QString toolBarStyleSheet(const QString& toolBarSelector, const ToolBarSeam seam
     const QString gripAcross = gripGlyphFile(tokens.mutedText, false);
     const QString gripAlong = gripGlyphFile(tokens.mutedText, true);
     const QString seamEdge = seam == ToolBarSeam::Bottom ? qsl("bottom") : qsl("top");
+    const qreal buttonPointSize = QApplication::font("QToolButton").pointSizeF();
 
     return toolBarSelector + qsl(" { background-color: %1; border: none; border-%2: 1px solid %3; spacing: 2px; padding: 4px 6px; }").arg(tokens.page.name(), seamEdge, tokens.border.name())
            + toolBarSelector
@@ -1226,7 +1227,14 @@ QString toolBarStyleSheet(const QString& toolBarSelector, const ToolBarSeam seam
            + qsl(" QToolButton:pressed { background-color: %1; }").arg(tokens.accentSoft)
            // accentText, to light with the glyph's QIcon::On ink
            + toolBarSelector + qsl(" QToolButton:checked { color: %1; background-color: %2; }").arg(tokens.accentText.name(), tokens.accentSoft) + toolBarSelector
-           + qsl(" QToolButton:disabled { color: %1; }").arg(tokens.disabledBarText.name());
+           + qsl(" QToolButton:disabled { color: %1; }").arg(tokens.disabledBarText.name())
+           // Qt hides at most one more button to make room for the overflow button and tightens every gap in the row if that
+           // leaves too little, so this one is kept about as narrow as the bar's own
+           + toolBarSelector
+           + qsl(" QToolBarExtension { padding-left: 0px; padding-right: 0px; }")
+           // macOS gives the bar's own buttons a smaller font than the overflow button, and setFont() does not hold under a
+           // sheet. By class, not object name: this specificity lets a profile's "QToolButton" font rule, written later, win
+           + (buttonPointSize > 0 ? toolBarSelector + qsl(" QToolBarExtension { font-size: %1pt; }").arg(buttonPointSize) : QString());
 }
 
 QString disclosureButtonStyleSheet(const QString& buttonSelector, const ThemeTokens& tokens)

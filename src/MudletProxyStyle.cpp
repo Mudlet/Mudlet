@@ -20,8 +20,11 @@
 
 #include "MudletProxyStyle.h"
 
+#include "ToolBarOverflow.h"
+
 #include <QScopedValueRollback>
 #include <QStyleFactory>
+#include <QWidget>
 
 #if defined(Q_OS_WIN)
 #include <QCoreApplication>
@@ -137,6 +140,17 @@ void MudletProxyStyle::slot_a11yStatusChanged(const QString& interfaceName, cons
     }
 }
 #endif
+
+int MudletProxyStyle::pixelMetric(PixelMetric metric, const QStyleOption* option, const QWidget* widget) const
+{
+    // QToolBarLayout has no other way to be told how much room the overflow button's word needs
+    if (metric == QStyle::PM_ToolBarExtensionExtent && widget) {
+        if (const int extent = widget->property(uiDesign::scmProp_toolBarOverflowExtent).toInt(); extent > 0) {
+            return extent;
+        }
+    }
+    return QProxyStyle::pixelMetric(metric, option, widget);
+}
 
 int MudletProxyStyle::styleHint(StyleHint styleHint, const QStyleOption* opt, const QWidget* widget, QStyleHintReturn* returnData) const
 {

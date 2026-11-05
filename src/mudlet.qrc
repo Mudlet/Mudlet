@@ -246,6 +246,10 @@
         <file>icons/system-users.png</file>
         <file>icons/toolbar-about.svg</file>
         <file>icons/toolbar-about-update.svg</file>
+        <file>icons/toolbar-more-down.svg</file>
+        <file>icons/toolbar-more-left.svg</file>
+        <file>icons/toolbar-more-right.svg</file>
+        <file>icons/toolbar-more-up.svg</file>
         <file>icons/toolbar-connect.svg</file>
         <file>icons/toolbar-discord.png</file>
         <file>icons/toolbar-export.svg</file>

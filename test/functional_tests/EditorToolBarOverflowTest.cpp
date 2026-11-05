@@ -24,14 +24,17 @@
  */
 
 #include <QLayout>
+#include <QMainWindow>
 #include <QToolBar>
 #include <QToolButton>
+#include <QScopeGuard>
 #include <QtTest/QtTest>
 #include <chrono>
 
 #include "Host.h"
 #include "HostDialogs.h"
 #include "ProfileSessionTestHelper.h"
+#include "ToolBarOverflow.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 #include "uiDesign.h"
@@ -420,7 +423,65 @@ private slots:
         setPreference(scmDefaultPreference);
     }
 
-    void test_theFoldsOwnButtonIsTheDesignsChevron()
+    // The bar's width comes down to its pictures here, and the extent only holds the length of the button
+    void test_aBarDownTheWindowsEdgeKeepsTheWholeWord()
+    {
+        auto* pExtension = qobject_cast<QToolButton*>(extensionButton());
+        QVERIFY2(pExtension != nullptr, "The bar has no overflow button to read");
+        const QSize was = mpEditor->size();
+        const auto restore = qScopeGuard([this, was]() {
+            static_cast<QMainWindow*>(mpEditor)->addToolBar(Qt::TopToolBarArea, mpEditor->toolBar);
+            mpEditor->resize(was);
+            QTest::qWait(50ms);
+        });
+        static_cast<QMainWindow*>(mpEditor)->addToolBar(Qt::LeftToolBarArea, mpEditor->toolBar);
+        mpEditor->resize(scmSweepWidest, mpEditor->minimumHeight());
+        QTest::qWait(150ms);
+        QVERIFY2(pExtension->isVisible(), "Nothing folded in the shortest window, so the width below proves nothing");
+
+        QCOMPARE(pExtension->toolButtonStyle(), Qt::ToolButtonTextUnderIcon);
+        const QSize wanted = pExtension->QToolButton::sizeHint();
+        QVERIFY2(pExtension->width() >= wanted.width() && pExtension->height() >= wanted.height(),
+                 qPrintable(qsl("%1x%2 is too small for \"%3\", which needs %4x%5")
+                                    .arg(QString::number(pExtension->width()),
+                                         QString::number(pExtension->height()),
+                                         pExtension->text(),
+                                         QString::number(wanted.width()),
+                                         QString::number(wanted.height()))));
+    }
+
+    void test_theFoldsOwnButtonShowsHowManyAreHidden()
+    {
+        auto* pExtension = qobject_cast<QToolButton*>(extensionButton());
+        QVERIFY2(pExtension != nullptr, "The bar has no overflow button to read");
+        const auto restore = qScopeGuard([this]() {
+            resizeTo(scmSweepWidest);
+        });
+        int width = pictureBarLength() - 2 * scmSweepStep;
+        resizeTo(width);
+        for (; !pExtension->isVisible() && width > narrowestWindowWidth(); width -= scmSweepStep) {
+            resizeTo(width);
+        }
+        QVERIFY2(pExtension->isVisible(), "Nothing folded at the narrowest window, so the count below proves nothing");
+
+        // In one step, as a window snapped narrow does: the bar folds and names go in the same layout pass
+        resizeTo(scmSweepWidest);
+        resizeTo(narrowestWindowWidth());
+        QTest::qWait(50ms);
+
+        int hidden = 0;
+        for (QAction* pAction : mpEditor->toolBar->actions()) {
+            const QWidget* pWidget = mpEditor->toolBar->widgetForAction(pAction);
+            if (pWidget && pAction->isVisible() && !pAction->isSeparator() && pWidget->metaObject() != &QWidget::staticMetaObject && pWidget->isHidden()) {
+                ++hidden;
+            }
+        }
+        QVERIFY2(hidden > 0, "The overflow button shows with no button hidden");
+        QCOMPARE(pExtension->text(), uiDesign::ToolBarOverflow::word(hidden));
+        QCOMPARE(pExtension->width(), mpEditor->toolBar->property(uiDesign::scmProp_toolBarOverflowExtent).toInt());
+    }
+
+    void test_theFoldsOwnButtonIsTheDesignsChevronAndCount()
     {
         auto* pExtension = qobject_cast<QToolButton*>(extensionButton());
         QVERIFY2(pExtension != nullptr, "The bar has no overflow button to draw");
@@ -440,10 +501,12 @@ private slots:
                 }
             }
         }
-        const QColor lit = uiDesign::themeTokens().accentText;
-        qInfo().noquote() << qsl("  the chevron's strongest pixel is %1 at alpha %2, against the lit tone %3").arg(strongest.name(), QString::number(strongestAlpha), lit.name());
+        const QColor lit = uiDesign::themeTokens().mutedText;
+        qInfo().noquote() << qsl("  the chevron's strongest pixel is %1 at alpha %2, against the chrome tone %3").arg(strongest.name(), QString::number(strongestAlpha), lit.name());
         QVERIFY2(strongestAlpha > 200, qPrintable(qsl("The chevron is barely drawn - its strongest pixel is alpha %1").arg(QString::number(strongestAlpha))));
-        QVERIFY2(strongest.rgb() == lit.rgb(), qPrintable(qsl("The chevron is inked %1 rather than the lit tone %2").arg(strongest.name(), lit.name())));
+        // Tinting goes through premultiplied alpha, which can land a level off
+        const bool sameInk = std::abs(strongest.red() - lit.red()) <= 2 && std::abs(strongest.green() - lit.green()) <= 2 && std::abs(strongest.blue() - lit.blue()) <= 2;
+        QVERIFY2(sameInk, qPrintable(qsl("The chevron is inked %1 rather than the chrome tone %2").arg(strongest.name(), lit.name())));
     }
 };
 

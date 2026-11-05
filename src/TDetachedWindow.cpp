@@ -33,6 +33,7 @@
 #include "dlgMapper.h"
 #include "TRoomDB.h"
 #include "TMap.h"
+#include "ToolBarOverflow.h"
 #include "dlgProfilePreferences.h"
 #include "dlgNotepad.h"
 #include "dlgPackageManager.h"
@@ -3272,6 +3273,7 @@ void TDetachedWindow::slot_muteGame()
 void TDetachedWindow::restyleToolBarIcons()
 {
     uiDesign::restyleToolBarGlyphs(mToolBarGlyphs, uiDesign::themeTokens());
+    uiDesign::ToolBarOverflow::restyle(mpToolBar, uiDesign::themeTokens());
 
     if (mpToolBar) {
         // Unlike the main bar, no profile stylesheet is assigned here to compose after

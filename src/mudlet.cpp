@@ -62,6 +62,7 @@
 #include "TSpellChecker.h"
 #include "TTabBar.h"
 #include "TToolBar.h"
+#include "ToolBarOverflow.h"
 #include "TUiTour.h"
 
 #include "dlgAboutDialog.h"
@@ -4997,6 +4998,8 @@ void mudlet::restyleToolBarIcons()
     if (mpButtonAbout) {
         mpButtonAbout->setIcon(aboutUpdateIcon(tokens));
     }
+    uiDesign::ToolBarOverflow::restyle(mpMainToolBar, tokens);
+    uiDesign::ToolBarOverflow::restyle(mpToolBarReplay, tokens);
     restyleMainToolBar();
 }
 
@@ -5005,9 +5008,6 @@ QString mudlet::toolBarShellStyleSheet(const QString& barSelector)
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
 
     return uiDesign::toolBarStyleSheet(barSelector, uiDesign::ToolBarSeam::Bottom, tokens)
-           // qt_toolbar_ext_button is Qt's own overflow button
-           + barSelector + qsl(" QToolButton#qt_toolbar_ext_button { border: 1px solid %1; background-color: %2; padding: 1px 3px; }").arg(tokens.border.name(), tokens.card.name()) + barSelector
-           + qsl(" QToolButton#qt_toolbar_ext_button:hover { border-color: %1; background-color: %2; }").arg(tokens.accentText.name(), tokens.hoverSoft)
            // By popup mode, not name: a detached window builds copies and an addon command can be one
            + splitToolBarButtonRules(barSelector, tokens);
 }

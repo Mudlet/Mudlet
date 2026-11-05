@@ -32,6 +32,7 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 #include "TimerUnit.h"
+#include "ToolBarOverflow.h"
 #include "TriggerUnit.h"
 #include "mudlet.h"
 
@@ -180,6 +181,7 @@ void TDebugFilterBar::restyleIcons()
 {
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
     uiDesign::restyleActionGlyphs(mActionGlyphs, tokens);
+    uiDesign::ToolBarOverflow::restyle(this, tokens);
     // A widget, not an action, so restyleActionGlyphs() does not reach it
     mpCategoryButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/editor-filter.svg"), tokens));
 }

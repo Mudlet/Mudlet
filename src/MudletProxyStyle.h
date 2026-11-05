@@ -52,6 +52,7 @@ public:
     explicit MudletProxyStyle(const QString& style);
     static enums::MenuBarAltKeyNavigation altKeyNavigation() { return smAltKeyNavigation; }
     static void setAltKeyNavigation(const enums::MenuBarAltKeyNavigation mode) { smAltKeyNavigation = mode; }
+    int pixelMetric(PixelMetric metric, const QStyleOption* option = nullptr, const QWidget* widget = nullptr) const override;
     int styleHint(StyleHint styleHint, const QStyleOption* opt, const QWidget* widget, QStyleHintReturn* returnData) const override;
     void drawControl(ControlElement element, const QStyleOption* option, QPainter* painter, const QWidget* widget = nullptr) const override;
     QIcon standardIcon(StandardPixmap standardIcon, const QStyleOption* option = nullptr, const QWidget* widget = nullptr) const override;

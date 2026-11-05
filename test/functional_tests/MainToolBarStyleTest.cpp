@@ -28,15 +28,21 @@
 #include <QAction>
 #include <QApplication>
 #include <QHoverEvent>
+#include <QHBoxLayout>
+#include <QHash>
 #include <QImage>
+#include <QLabel>
+#include <QMainWindow>
 #include <QToolBar>
 #include <QToolButton>
+#include <QScopeGuard>
 #include <QtTest/QtTest>
 
 #include "Host.h"
 #include "PixelTestHelper.h"
 #include "ProfileSessionTestHelper.h"
 #include "TDetachedWindow.h"
+#include "ToolBarOverflow.h"
 #include "mudlet.h"
 #include "uiDesign.h"
 
@@ -57,7 +63,79 @@ private:
     static constexpr int scmWindowWidth = 1600;
     static constexpr int scmWindowHeight = 600;
 
+    // Wide enough to hide nothing, and narrow enough to fold the bar's tail
+    static constexpr int scmFoldingWidth = 760;
+
     static QToolBar* theBar() { return mudlet::self()->findChild<QToolBar*>(qsl("mpMainToolBar")); }
+
+    static QToolButton* overflowButton(QToolBar* pBar) { return pBar->findChild<QToolButton*>(qsl("qt_toolbar_ext_button"), Qt::FindDirectChildrenOnly); }
+
+    static int hiddenButtons(QToolBar* pBar)
+    {
+        int hidden = 0;
+        for (QAction* pAction : pBar->actions()) {
+            const QWidget* pWidget = pBar->widgetForAction(pAction);
+            if (pWidget && pAction->isVisible() && !pAction->isSeparator() && pWidget->isHidden()) {
+                ++hidden;
+            }
+        }
+        return hidden;
+    }
+
+    static void windowWidth(const int width)
+    {
+        mudlet::self()->resize(width, scmWindowHeight);
+        QTest::qWait(50);
+    }
+
+    // Tinting goes through premultiplied alpha, which can land a level off
+    static bool sameInk(const QColor& first, const QColor& second)
+    {
+        return std::abs(first.red() - second.red()) <= scmInkTolerance && std::abs(first.green() - second.green()) <= scmInkTolerance && std::abs(first.blue() - second.blue()) <= scmInkTolerance;
+    }
+
+    // A down chevron is widest across the top of its ink, where its two arms start, and an up one across the bottom
+    static bool pointsDown(const QIcon& icon, const QSize& size, const QIcon::State state)
+    {
+        const QImage image = icon.pixmap(size, QIcon::Normal, state).toImage().convertToFormat(QImage::Format_ARGB32);
+        const auto spanOfRow = [&image](const int y) {
+            int first = -1;
+            int last = -1;
+            for (int x = 0; x < image.width(); ++x) {
+                if (image.pixelColor(x, y).alpha() > 64) {
+                    first = first < 0 ? x : first;
+                    last = x;
+                }
+            }
+            return first < 0 ? -1 : last - first;
+        };
+        int top = 0;
+        while (top < image.height() - 1 && spanOfRow(top) < 0) {
+            ++top;
+        }
+        int bottom = image.height() - 1;
+        while (bottom > 0 && spanOfRow(bottom) < 0) {
+            --bottom;
+        }
+        return spanOfRow(top) > spanOfRow(bottom);
+    }
+
+    // The strongest pixel of the glyph, whose antialiased edge is lighter than its ink
+    static QColor inkOf(const QIcon& icon, const QSize& size, const QIcon::State state)
+    {
+        const QImage image = icon.pixmap(size, QIcon::Normal, state).toImage().convertToFormat(QImage::Format_ARGB32);
+        QColor strongest;
+        int strongestAlpha = 0;
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                if (const QColor pixel = image.pixelColor(x, y); pixel.alpha() > strongestAlpha) {
+                    strongestAlpha = pixel.alpha();
+                    strongest = pixel;
+                }
+            }
+        }
+        return strongest;
+    }
 
     static QToolButton* buttonNamed(const QString& objectName) { return theBar() ? theBar()->findChild<QToolButton*>(objectName) : nullptr; }
 
@@ -251,6 +329,221 @@ private slots:
         TestPixels::setAppearanceAndWait(enums::Appearance::systemSetting);
     }
 
+    void test_aNarrowWindowShowsHowManyButtonsAreHidden()
+    {
+        QToolBar* pBar = theBar();
+        QToolButton* pMore = overflowButton(pBar);
+        QVERIFY2(pMore, "the bar has no overflow button");
+        const auto restore = qScopeGuard([]() {
+            windowWidth(scmWindowWidth);
+        });
+
+        windowWidth(scmWindowWidth);
+        QVERIFY2(!pMore->isVisible(), "the overflow button is on show on a window every button fits in");
+
+        for (const enums::Appearance appearance : {enums::Appearance::dark, enums::Appearance::light}) {
+            TestPixels::setAppearanceAndWait(appearance);
+            const QString said = appearanceSaidAs(appearance);
+            windowWidth(scmFoldingWidth);
+            QVERIFY2(pMore->isVisible(), qPrintable(qsl("nothing folded at %1px in %2").arg(QString::number(scmFoldingWidth), said)));
+
+            const int hidden = hiddenButtons(pBar);
+            QVERIFY2(hidden > 0, "the overflow button shows with no button hidden");
+            QCOMPARE(pMore->text(), uiDesign::ToolBarOverflow::word(hidden));
+            QCOMPARE(pMore->toolButtonStyle(), pBar->toolButtonStyle());
+            QCOMPARE(pMore->iconSize(), pBar->iconSize());
+
+            // Through the proxy style and the layout, or the word would be cut off
+            QCOMPARE(pMore->width(), pBar->property(uiDesign::scmProp_toolBarOverflowExtent).toInt());
+            QVERIFY2(pMore->width() >= pMore->QToolButton::sizeHint().width(), qPrintable(qsl("%1px is too narrow for \"%2\" in %3").arg(QString::number(pMore->width()), pMore->text(), said)));
+
+            const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+            const QColor closedInk = inkOf(pMore->icon(), pMore->iconSize(), QIcon::Off);
+            const QColor openInk = inkOf(pMore->icon(), pMore->iconSize(), QIcon::On);
+            QVERIFY2(sameInk(closedInk, tokens.mutedText), qPrintable(qsl("the closed chevron is %1 where the chrome is %2 in %3").arg(closedInk.name(), tokens.mutedText.name(), said)));
+            QVERIFY2(sameInk(openInk, tokens.accentText), qPrintable(qsl("the open chevron is %1 where the accent ink is %2 in %3").arg(openInk.name(), tokens.accentText.name(), said)));
+            QVERIFY2(pointsDown(pMore->icon(), pMore->iconSize(), QIcon::Off), "the closed chevron does not point down");
+            QVERIFY2(!pointsDown(pMore->icon(), pMore->iconSize(), QIcon::On), "the open chevron does not point up");
+
+            windowWidth(scmFoldingWidth - 200);
+            QVERIFY2(hiddenButtons(pBar) > hidden, "a narrower window hid no more buttons, so the count below proves nothing");
+            QCOMPARE(pMore->text(), uiDesign::ToolBarOverflow::word(hiddenButtons(pBar)));
+        }
+        TestPixels::setAppearanceAndWait(enums::Appearance::systemSetting);
+
+        windowWidth(scmWindowWidth);
+        QVERIFY2(!pMore->isVisible(), "the overflow button stayed after the window grew back");
+    }
+
+    // Only macOS gives QToolButton a font of its own, so this makes one for the other platforms
+    void test_theWordIsTheSizeOfTheBarsOwnButtons()
+    {
+        QToolBar* pBar = theBar();
+        QToolButton* pMore = overflowButton(pBar);
+        QVERIFY2(pMore, "the bar has no overflow button");
+        const QFont buttonFont = QApplication::font("QToolButton");
+        const auto restore = qScopeGuard([&buttonFont]() {
+            QApplication::setFont(buttonFont, "QToolButton");
+            mudlet::self()->restyleMainToolBar();
+            windowWidth(scmWindowWidth);
+        });
+
+        QFont smaller = buttonFont;
+        smaller.setPointSizeF(buttonFont.pointSizeF() - 3);
+        QApplication::setFont(smaller, "QToolButton");
+        mudlet::self()->restyleMainToolBar();
+        windowWidth(scmFoldingWidth);
+        QVERIFY2(pMore->isVisible(), "nothing folded, so the size below proves nothing");
+
+        QTRY_COMPARE(buttonNamed(qsl("triggers_action"))->font().pointSizeF(), smaller.pointSizeF());
+        QTRY_COMPARE(pMore->font().pointSizeF(), smaller.pointSizeF());
+        QVERIFY2(pMore->width() >= pMore->QToolButton::sizeHint().width(), "the bar did not fit the word to its smaller size");
+    }
+
+    // Qt leaves the row too long when the button it hid to make room is narrower than the overflow button, and which
+    // ones those are depends on the platform's font, so those widths prove nothing here. The sheet's rule keeps them few.
+    void test_foldingLeavesTheGapsBetweenTheButtonsAlone()
+    {
+        QToolBar* pBar = theBar();
+        QLayout* pLayout = pBar->layout();
+        const auto restore = qScopeGuard([]() {
+            windowWidth(scmWindowWidth);
+        });
+        windowWidth(scmWindowWidth);
+        QVERIFY2(pBar->styleSheet().contains(qsl("QToolBarExtension { padding-left: 0px; padding-right: 0px; }")), "the overflow button has its side padding back");
+
+        QHash<const QWidget*, int> fullWidths;
+        for (int i = 0; i < pLayout->count(); ++i) {
+            // A button whose action is switched off is hidden on every width
+            if (const QWidget* pItem = pLayout->itemAt(i)->widget(); pItem && pItem->isVisible()) {
+                fullWidths.insert(pItem, pItem->width());
+            }
+        }
+
+        int foldedWidths = 0;
+        for (int width = scmWindowWidth; width > 0; width -= 2) {
+            mudlet::self()->resize(width, scmWindowHeight);
+            QTest::qWait(10);
+            if (mudlet::self()->width() != width) {
+                break;
+            }
+            QWidget* pPrevious = nullptr;
+            QStringList gaps;
+            bool hiddenNarrower = false;
+            for (int i = 0; i < pLayout->count(); ++i) {
+                QWidget* pItem = pLayout->itemAt(i)->widget();
+                if (!fullWidths.contains(pItem)) {
+                    continue;
+                }
+                if (pItem->isHidden()) {
+                    hiddenNarrower = fullWidths.value(pItem) < pBar->property(uiDesign::scmProp_toolBarOverflowExtent).toInt() + pLayout->spacing();
+                    break;
+                }
+                if (pPrevious) {
+                    if (const int gap = pItem->x() - pPrevious->geometry().right() - 1; gap != pLayout->spacing()) {
+                        gaps << qsl("%1px after \"%2\"").arg(QString::number(gap), pPrevious->objectName());
+                    }
+                }
+                pPrevious = pItem;
+            }
+            if (hiddenNarrower) {
+                continue;
+            }
+            QVERIFY2(gaps.isEmpty(), qPrintable(qsl("%1 on a %2px window, not %3px").arg(gaps.join(qsl(", ")), QString::number(width), QString::number(pLayout->spacing()))));
+            foldedWidths += overflowButton(pBar)->isVisible() ? 1 : 0;
+        }
+        QVERIFY2(foldedWidths > 0, "no width folded the bar on a button wider than the overflow button, so the gaps above prove nothing");
+    }
+
+    // The notepad's note is a bare QWidget with two labels in it, the same class as a spacer
+    void test_theCountLeavesOutASpacerAndKeepsAGroupOfWidgets()
+    {
+        QMainWindow window;
+        auto* pBar = new QToolBar(&window);
+        window.addToolBar(pBar);
+        pBar->addAction(qsl("first"));
+        pBar->addAction(qsl("second"));
+        auto* pSpacer = new QWidget(pBar);
+        pSpacer->setFixedWidth(40);
+        pBar->addWidget(pSpacer);
+        auto* pGroup = new QWidget(pBar);
+        auto* pGroupLayout = new QHBoxLayout(pGroup);
+        pGroupLayout->addWidget(new QLabel(qsl("a note that takes up some room"), pGroup));
+        pBar->addWidget(pGroup);
+
+        uiDesign::ToolBarOverflow::restyle(pBar, uiDesign::themeTokens());
+        window.resize(pBar->sizeHint().width() + 200, 200);
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+
+        window.resize(1, 200);
+        QTest::qWait(50);
+        QVERIFY2(pGroup->isHidden() && pSpacer->isHidden(), "the narrowest window left the tail of the bar on show, so the count below proves nothing");
+        int hiddenTools = 0;
+        for (QToolButton* pButton : pBar->findChildren<QToolButton*>(QString(), Qt::FindDirectChildrenOnly)) {
+            hiddenTools += pButton != overflowButton(pBar) && pButton->isHidden() ? 1 : 0;
+        }
+        QCOMPARE(overflowButton(pBar)->text(), uiDesign::ToolBarOverflow::word(hiddenTools + 1));
+    }
+
+    void test_theFoldedButtonsOpenInARowAndTheCountHolds()
+    {
+        QToolBar* pBar = theBar();
+        QToolButton* pMore = overflowButton(pBar);
+        const auto restore = qScopeGuard([pMore]() {
+            if (pMore->isChecked()) {
+                pMore->click();
+            }
+            windowWidth(scmWindowWidth);
+        });
+        windowWidth(scmFoldingWidth);
+        QVERIFY2(pMore->popupMode() != QToolButton::InstantPopup, "this window's height left Qt offering a menu rather than a row");
+        const QString closedWord = pMore->text();
+        const QString closedTip = pMore->toolTip();
+        const int hidden = hiddenButtons(pBar);
+        QVERIFY(hidden > 0);
+
+        pMore->click();
+
+        QVERIFY2(pMore->isChecked(), "the button did not stay lit while the row is open");
+        // QMainWindow animates the bar open, and lays the row out as that ends
+        QTRY_COMPARE(hiddenButtons(pBar), 0);
+        QTest::qWait(50);
+        QCOMPARE(pMore->text(), closedWord);
+        QVERIFY2(pMore->toolTip() != closedTip, "the tooltip still offers to show buttons that are on show");
+
+        pMore->click();
+        QVERIFY(!pMore->isChecked());
+        QTRY_COMPARE(hiddenButtons(pBar), hidden);
+        QTest::qWait(50);
+        QCOMPARE(pMore->text(), closedWord);
+        QCOMPARE(pMore->toolTip(), closedTip);
+    }
+
+    void test_theWordFollowsTheToolbarIconSize()
+    {
+        QToolBar* pBar = theBar();
+        QToolButton* pMore = overflowButton(pBar);
+        const int was = mudlet::self()->mToolbarIconSize;
+        const auto restore = qScopeGuard([was]() {
+            mudlet::self()->setToolBarIconSize(was);
+            windowWidth(scmWindowWidth);
+        });
+        windowWidth(scmFoldingWidth);
+
+        mudlet::self()->setToolBarIconSize(2);
+        QTest::qWait(50);
+        QCOMPARE(pMore->toolButtonStyle(), Qt::ToolButtonIconOnly);
+        QCOMPARE(pMore->iconSize(), pBar->iconSize());
+        const int iconOnlyWidth = pBar->property(uiDesign::scmProp_toolBarOverflowExtent).toInt();
+
+        mudlet::self()->setToolBarIconSize(3);
+        QTest::qWait(50);
+        QCOMPARE(pMore->toolButtonStyle(), Qt::ToolButtonTextUnderIcon);
+        QCOMPARE(pMore->iconSize(), pBar->iconSize());
+        QVERIFY2(pBar->property(uiDesign::scmProp_toolBarOverflowExtent).toInt() > iconOnlyWidth, "the button left no more room for a word than for a glyph alone");
+    }
+
     void test_aDetachedWindowsBarCarriesTheRecipe()
     {
         QVERIFY2(mudlet::self()->getDetachedWindows().isEmpty(), "a detached window was left over from an earlier test");
@@ -260,11 +553,14 @@ private slots:
 
         QToolBar* pDetachedBar = pDetachedWindow->findChild<QToolBar*>(qsl("detachedMainToolBar"));
         const QString sheet = pDetachedBar ? pDetachedBar->styleSheet() : QString();
+        QTest::qWait(20);
+        const int overflowExtent = pDetachedBar ? pDetachedBar->property(uiDesign::scmProp_toolBarOverflowExtent).toInt() : 0;
         mudlet::self()->slot_tabReattachRequested(mSecondHostname);
 
         QVERIFY2(pDetachedBar, "the detached window has no toolbar named detachedMainToolBar");
         QVERIFY2(sheet.contains(qsl("QToolBar#detachedMainToolBar {")), qPrintable(qsl("a detached window's bar is left for the platform style to draw: %1").arg(sheet.left(200))));
         QVERIFY2(sheet.contains(qsl("QToolButton:checked")), "a detached window's bar says nothing about a button that is switched on, so its Sound button is drawn by the platform style");
+        QVERIFY2(overflowExtent > 0, "a detached window's overflow button was not given the room for its word");
     }
 };
 

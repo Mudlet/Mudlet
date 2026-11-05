@@ -64,6 +64,7 @@
 #include "SearchResultDelegate.h"
 #include "VariableTreeDelegate.h"
 #include "mudlet.h"
+#include "ToolBarOverflow.h"
 #include "uiDesign.h"
 #include "utils.h"
 #include "widgetutils.h"
@@ -123,7 +124,6 @@
 
 static void setToolBarButtonLabelsShown(QToolBar* pToolBar, const QList<QAction*>& actions, const bool shown);
 static void holdToolBarButtonWidth(QToolButton* pButton);
-static void inkEditorOverflowChevron(QToolBar* pToolBar, const QColor& ink);
 
 // Forward declaration for per-property undo helper (defined later in this file)
 static void pushKeyPropertyCommand(EditorUndoStack* undoStack, Host* host, int keyID, const QString& keyName, const QString& propertyName, const QString& oldStateXML, const QString& newStateXML);
@@ -166,10 +166,6 @@ static constexpr int scmEditorSidebarSeparatorInset = uiDesign::scmSidebarSepara
 static constexpr int scmEditorSidebarRowHeight = uiDesign::scmSidebarRowHeight;
 // "Icon size toolbars" is a step from 1 to 4 and defaults to 3, which this makes the 18px glyph size
 static constexpr int scmEditorIconSizeStep = 6;
-// Drawn here because the style's own overflow arrowheads are too faint to see
-static constexpr int scmEditorOverflowChevronExtent = 12;
-static constexpr qreal scmEditorOverflowChevronArm = 3.0;
-static constexpr qreal scmEditorOverflowChevronPenWidth = 1.5;
 
 // Hysteresis: without it a drag across the breakpoint both fits and does not fit, and the bar flickers
 static constexpr int scmEditorToolBarRestoreMargin = 16;
@@ -1452,10 +1448,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mEditorToolBarGroups.append(EditorToolBarGroup{{mAddItem, mAddGroup, mSaveItem, mpAction_toggleActive, mDeleteItem}, true});
     // The fit runs on the bar's own resize, the one event that reports its room changing
     toolBar->installEventFilter(this);
-    // Re-orienting the bar puts the style's own arrow back on its overflow button
-    connect(toolBar, &QToolBar::orientationChanged, this, [this]() {
-        inkEditorOverflowChevron(toolBar, uiDesign::themeTokens().accentText);
-    });
 
     applyEditorToolbarButtonStyles();
 
@@ -16336,8 +16328,7 @@ void dlgTriggerEditor::restyleEditorIcons()
         glyph.first->setIcon(icon);
     }
 
-    // Qt's own overflow button is drawn by the style, not from a glyph
-    inkEditorOverflowChevron(toolBar, accentText);
+    uiDesign::ToolBarOverflow::restyle(toolBar, uiDesign::themeTokens());
 
     restyleEditorSidebarIcons(quietColor, accentText);
 
@@ -16656,45 +16647,6 @@ static void holdToolBarButtonWidth(QToolButton* pButton)
     pButton->setMinimumWidth(pButton->sizeHint().width() - metrics.size(Qt::TextShowMnemonic, pButton->text()).width() + widest);
 }
 
-// Qt's overflow button stays: a scrolling host of our own would be a second way of hiding the same buttons. The
-// chevron is inked here because the style hands the button its own picture, which a stylesheet cannot recolour.
-static void inkEditorOverflowChevron(QToolBar* pToolBar, const QColor& ink)
-{
-    auto* pExtension = pToolBar->findChild<QToolButton*>(qsl("qt_toolbar_ext_button"));
-    if (!pExtension) {
-        return;
-    }
-    const qreal glyphRatio = pExtension->devicePixelRatioF();
-    QPixmap chevron(QSize(scmEditorOverflowChevronExtent, scmEditorOverflowChevronExtent) * glyphRatio);
-    chevron.setDevicePixelRatio(glyphRatio);
-    chevron.fill(Qt::transparent);
-
-    QPainter painter(&chevron);
-    painter.setRenderHint(QPainter::Antialiasing);
-    QPen pen(ink);
-    pen.setWidthF(scmEditorOverflowChevronPenWidth);
-    pen.setCapStyle(Qt::RoundCap);
-    pen.setJoinStyle(Qt::RoundJoin);
-    painter.setPen(pen);
-
-    const QPointF centre(scmEditorOverflowChevronExtent / 2.0, scmEditorOverflowChevronExtent / 2.0);
-    // Shortened across the point, as the sidebar's is, so the mark stays inside its square either way round
-    const qreal reach = scmEditorOverflowChevronArm / 1.6;
-    QPolygonF stroke;
-    if (pToolBar->orientation() == Qt::Horizontal) {
-        stroke << QPointF(centre.x() - reach, centre.y() - scmEditorOverflowChevronArm) << QPointF(centre.x() + reach, centre.y())
-               << QPointF(centre.x() - reach, centre.y() + scmEditorOverflowChevronArm);
-    } else {
-        stroke << QPointF(centre.x() - scmEditorOverflowChevronArm, centre.y() - reach) << QPointF(centre.x(), centre.y() + reach)
-               << QPointF(centre.x() + scmEditorOverflowChevronArm, centre.y() - reach);
-    }
-    painter.drawPolyline(stroke);
-    painter.end();
-
-    pExtension->setIcon(QIcon(chevron));
-    pExtension->setIconSize(QSize(scmEditorOverflowChevronExtent, scmEditorOverflowChevronExtent));
-}
-
 void dlgTriggerEditor::applyEditorToolbarButtonStyles()
 {
     if (!toolBar) {
@@ -16880,7 +16832,6 @@ void dlgTriggerEditor::applyEditorShellStyle()
     }
 
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
-    const QColor cardColor = tokens.card;
     const QColor fieldColor = tokens.field;
     const QColor textColor = tokens.text;
     const QColor accentColor = tokens.accent;
@@ -16932,12 +16883,7 @@ void dlgTriggerEditor::applyEditorShellStyle()
     restyleEditorIcons();
 
     const QString toolBarSelector = qsl("QToolBar#editorActionsToolbar");
-    const QString toolBarRules = uiDesign::toolBarStyleSheet(toolBarSelector, uiDesign::ToolBarSeam::Bottom, tokens)
-                                 + qsl( // Qt's own overflow button, which only a window narrower
-                                           // than a bar of pictures can reach; the chevron is inkEditorOverflowChevron()'s
-                                           "QToolBar#editorActionsToolbar QToolButton#qt_toolbar_ext_button { border: 1px solid %1; background-color: %2; padding: 1px 3px; }"
-                                           "QToolBar#editorActionsToolbar QToolButton#qt_toolbar_ext_button:hover { border-color: %3; background-color: %4; }")
-                                           .arg(borderColor.name(), cardColor.name(), accentText.name(), hoverSoft);
+    const QString toolBarRules = uiDesign::toolBarStyleSheet(toolBarSelector, uiDesign::ToolBarSeam::Bottom, tokens);
 
     // The split button recipe, rounded to the bar's corner since the face under it is the flat one toolBarStyleSheet() drew
     const QString saveProfileSelector = toolBarSelector + qsl(" QToolButton#editorSaveProfileButton");

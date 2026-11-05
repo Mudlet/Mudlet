@@ -27,6 +27,7 @@
 #include "Host.h"
 #include "HostDialogs.h"
 #include "mudlet.h"
+#include "ToolBarOverflow.h"
 #include "uiDesign.h"
 #include "utils.h"
 
@@ -408,6 +409,7 @@ void dlgNotepad::applyNotepadShellStyle()
                                        "#notepadSendingBar::chunk { background-color: %2; border-radius: %3px; }")
                                            .arg(tokens.accentSoft, tokens.accent.name(), QString::number(scmNotepadProgressHeight / 2));
     toolBar->setStyleSheet(toolBarRules);
+    uiDesign::ToolBarOverflow::restyle(toolBar, tokens);
     alignPrefixLeadWord();
 
     mpLabel_sendingDot->setStyleSheet(qsl("#notepadSendingDot { background-color: %1; border-radius: %2px; }").arg(tokens.accent.name(), QString::number(scmNotepadReadingDotDiameter / 2)));

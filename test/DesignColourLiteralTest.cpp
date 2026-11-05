@@ -92,6 +92,8 @@ class DesignColourLiteralTest : public QObject
                           QStringLiteral("AlphaColourWell.h"),
                           QStringLiteral("SidebarToggle.cpp"),
                           QStringLiteral("SidebarToggle.h"),
+                          QStringLiteral("ToolBarOverflow.cpp"),
+                          QStringLiteral("ToolBarOverflow.h"),
                           QStringLiteral("EditorPlaceholderButton.cpp"),
                           QStringLiteral("EditorPlaceholderButton.h"),
                           QStringLiteral("EditorLineMarginDelegate.cpp"),

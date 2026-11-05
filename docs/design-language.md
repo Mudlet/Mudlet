@@ -940,10 +940,8 @@ whose own minimum lets it be dragged down to 279px and below - so between those
 figures Qt does fold, on a window far too narrow to edit anything in. A
 scrolling host of our own would only be a second way of hiding the same buttons,
 so what is done instead is to
-make the button unmistakable: the pill is a `qt_toolbar_ext_button` rule in
-`applyEditorShellStyle()` - card fill, border hairline - and the chevron on it is
-drawn by `inkEditorOverflowChevron()` in `accentText`, because a `QStyle` hands
-that button a picture of its own and a stylesheet cannot recolour one.
+make the button unmistakable, with the same `uiDesign::ToolBarOverflow` every bar
+has - see "The overflow button" under the main window's toolbar.
 `test/functional_tests/EditorToolBarOverflowTest.cpp` sweeps the window width and
 holds all of it, the numbers above included.
 
@@ -959,8 +957,28 @@ into a corner of it.
 
 - `mudlet::toolBarShellStyleSheet(barSelector)` composes what any of those bars
   is drawn with: `uiDesign::toolBarStyleSheet()` seamed along its bottom, then
-  Qt's `qt_toolbar_ext_button` as a card with the hairline - the editor's rule,
-  with this bar's selector - then the split buttons.
+  the split buttons.
+- **The overflow button.** When a bar is too narrow, Qt folds its tail behind
+  `qt_toolbar_ext_button`, which it leaves as an unlabelled sliver: testers took
+  that for a scrollbar and thought the icons were missing. `uiDesign::ToolBarOverflow`
+  makes it a button of the bar on the main toolbar, the replay bar, every detached
+  window, the editor, the notepad and the debug filter bar: the chevron (down while
+  folded, up while the row is open, right and left on a bar docked at a window's
+  edge) and "3 more" in the bar's own button style, so the glyph alone at the 16px
+  size, and the glyph above the word where a bar that sets them side by side is
+  docked at an edge, since the button then only has the bar's width. `toolBarStyleSheet()` carries its two rules and no window's sheet names it:
+  the font size, since macOS gives the bar's own buttons a smaller font, and no side
+  padding. Qt hides at most one more button to make room for this one, and when that
+  button is the narrower of the two it tightens every gap in the row from 2px to 1px,
+  so the width stays near the bar's narrowest buttons. The count is read off the bar's buttons
+  once Qt has laid them out, leaving out separators, spacers and hidden actions, and
+  holds while the row is open, when every button is on show. `QToolBarLayout` takes
+  the room from `PM_ToolBarExtensionExtent` and offers no other way to be told, so
+  the bar carries the width in `scmProp_toolBarOverflowExtent` and `MudletProxyStyle`
+  answers with it; `DarkTheme` wraps that same proxy. It is measured for the longest
+  the word can be, so a count changing cannot move the point where the bar folds.
+  Where a second row would not fit in the window Qt swaps the row for a menu, which
+  takes `menuStyleSheet()`. `MainToolBarStyleTest` holds it.
 - **The split buttons are picked out by their popup mode, not by name.**
   `QToolButton[popupMode="1"]` is `QToolButton::MenuButtonPopup`, which is how
   Qt's own documentation reaches them: Connect, Sound and Packages are three of
