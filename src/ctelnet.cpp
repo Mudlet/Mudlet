@@ -6150,7 +6150,7 @@ void cTelnet::slot_socketReadyToBeRead()
     }
 
     // One read to an event-loop turn however long a flood lasts, or input, timers and painting wait for
-    // them all. The queued read takes it from here; Qt's Windows dispatcher serves this ahead of every timer.
+    // them all. The pending read takes it from here; Qt's Windows dispatcher serves this ahead of every timer.
     if (mReadPending) {
         return;
     }
@@ -6168,8 +6168,15 @@ void cTelnet::readPendingSocketData()
     if (!mpHost || mpHost->isClosingDown() || !mpSocket || mDeferredReconnect || mDisconnectionPending) {
         return;
     }
+    // A trigger is running a nested event loop: a read now would land in the
+    // middle of the one it is part of
+    if (mDecompressionRecursionDepth > 0) {
+        mReadPending = true;
+        QTimer::singleShot(10ms, this, &cTelnet::readPendingSocketData);
+        return;
+    }
 
-    // A trigger's nested event loop can have queued one during that read
+    // A trigger's nested event loop can have postponed one during that read
     if (readSocketDataOnce() && !mReadPending) {
         mReadPending = true;
         QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);

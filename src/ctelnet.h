@@ -707,7 +707,7 @@ private:
     // Set while what the game sent before closing is still being taken in, one
     // read per event-loop turn; the disconnect is finished once it is all in.
     bool mDisconnectionPending = false;
-    // A readPendingSocketData() is queued for the rest of a burst, and does the reading until it is in
+    // A readPendingSocketData() is queued or postponed for the rest of a burst, and does the reading until it is in
     bool mReadPending = false;
     bool mAutoReconnect = false;
     QStringList messageStack;
