@@ -466,6 +466,7 @@ private:
     void sendIsMNESValues(const QByteArray&);
 
     void processTelnetCommand(const std::string& telnetCommand);
+    void forgetPromptEnd() { mPromptEndedBy = 0; }
     void sendTelnetOption(char type, unsigned char option);
     void gotRest(std::string&);
     void gotPrompt(std::string&);
@@ -612,6 +613,8 @@ private:
     // enable our use of the option!
     std::bitset<256> triedToEnable;
     bool recvdGA = false;
+    // The GA or EOR that ended the last prompt, until game text follows it
+    char mPromptEndedBy = 0;
 
     QString termType;
     QByteArray mEncoding;
