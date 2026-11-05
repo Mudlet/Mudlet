@@ -303,7 +303,9 @@ not built on Qt has to copy:
 `printCmdLine()`, `appendCmdLine()`, `clearCmdLine()` or `sendCmdLine()` sets it, for the app's input
 line to show as the GUI's command line does; `clearCmdLine()` sends an empty line. As the GUI's line does,
 the main line holds what `submit()` sends while its aliases run, so `getCmdLine()` there reads it, and
-if the profile clears the line after a send, an empty line follows the send. It is sent as it is set, so
+if the profile clears the line after a send, an empty line follows the send; if the game asked to hide input
+while the send's aliases ran, that empty line follows `hiddenInputWanted` turning off instead, as the GUI's
+line was emptied behind its hidden-input box. It is sent as it is set, so
 it keeps its place among the game's lines and `hiddenInputWanted`, and a handler may neither call the
 session nor run the event loop. Only the main command line is sent: a line from
 `createCommandLine()` or Geyser is not. Mudlet does not know what the app's user has typed until the
