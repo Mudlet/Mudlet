@@ -3888,8 +3888,8 @@ tempTimer(0.5, function() raiseGlobalEvent("mudletSpecEmptyTimerConsole", table.
       end
       local path = getMudletHomeDir() .. "/w2a-zero-timer.xml"
       finally(function()
-        -- uninstallPackage() refuses while the profile save the install
-        -- started is still running
+        -- uninstallPackage() can still refuse a profile save that outlasts
+        -- its wait
         local removed = false
         for _ = 1, 100 do
           if uninstallPackage("w2a-zero-timer") == true then

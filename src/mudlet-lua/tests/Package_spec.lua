@@ -278,8 +278,8 @@ end
 local function removeFixturePackage(name)
   if packageInstalled(name) then
     assert.is_true(waitForProfileSaveToPass(), "a profile save never finished, so this uninstall would be refused")
-    -- uninstallPackage() refuses while a profile save is in progress, and the
-    -- installs here start one, so keep asking until it takes
+    -- uninstallPackage() still refuses while a profile save outlasts its wait,
+    -- so keep asking until it takes
     assert.is_true(waitUntil(function() return uninstallPackage(name) == true end, 5000),
                    "could not uninstall the fixture package " .. name)
     -- let the profile save that uninstallPackage() queues run now, rather than
@@ -1839,8 +1839,8 @@ describe("Tests a package that uninstalls itself", function()
     installFixturePackage("mudlet-spec-selfuninstall")
     assert.equals(1, exists("mudletSpecSelfUninstallHandler", "script"))
 
-    -- the handler's uninstallPackage() declines while the save the install
-    -- started is still running, so raise until the package is really gone
+    -- the handler's uninstallPackage() can be refused by a save that outlasts
+    -- its wait, so raise until the package is really gone
     assert.is_true(waitUntil(function()
       mudletSpecSelfUninstallRan = nil
       mudletSpecSelfUninstallSecondRan = nil
@@ -1920,7 +1920,7 @@ describe("Tests what a package that uninstalls itself mid-pass can still see", f
       _G.mudletSpecMidpassRemoved, _G.mudletSpecMidpassSeen, _G.mudletSpecMidpassCommand = nil, nil, nil
     end)
 
-    -- the uninstall is refused while the install's profile save runs, so fire until it takes
+    -- the uninstall can be refused by a profile save that outlasts its wait, so fire until it takes
     assert.is_true(waitUntil(function()
       assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s")
       feedTriggers("\nmudlet_spec_midpass_fire\n")
@@ -2722,17 +2722,32 @@ describe("Tests uninstalling a package while the profile is being saved", functi
     assert.equals(0, exists(minimalPackage .. " alias", "alias"), "the package's alias outlived its uninstall")
   end)
 
-  it("returns nil and says why for an installed package while a save is running", function()
+  it("waits out a profile save and uninstalls an installed package", function()
     withFixturePackage(minimalPackage)
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     -- the save stays running until the event loop next turns, which nothing below lets it do
     assert.is_true(saveProfile())
 
     local ok, err = uninstallPackage(minimalPackage)
+    -- the cleanup skips this for a package that is already gone, and it must not start inside a later spec
+    runTheQueuedProfileSave()
 
-    assert.is_nil(ok)
-    assert.is_true(contains(err, "profile save is in progress"), tostring(err))
-    assert.is_true(packageInstalled(minimalPackage), "a refused uninstall took the package away")
+    assert.is_true(ok, tostring(err))
+    assert.is_false(packageInstalled(minimalPackage), "the package stayed listed after the uninstall answered")
+    assert.equals(0, exists(minimalPackage .. " alias", "alias"), "the package's alias outlived its uninstall")
+  end)
+
+  it("waits out a profile save and uninstalls an installed module", function()
+    withFixtureModule(moduleName)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    assert.is_true(saveProfile())
+
+    local removed = uninstallModule(moduleName)
+    runTheQueuedProfileSave()
+
+    assert.is_true(removed)
+    assert.is_false(moduleInstalled(moduleName), "the module stayed listed after the uninstall answered")
+    assert.equals(0, exists(moduleName .. " alias", "alias"), "the module's alias outlived its uninstall")
   end)
 
   -- retrying a package that is not installed never works, so a running save must not be given as the reason
@@ -2871,8 +2886,8 @@ end)
 describe("Tests installing an archive whose package XML cannot be read", function()
   it("says the package's contents could not be read", function()
     local name = "mudlet-spec-badxml"
-    -- the install queues a save of its own, and uninstallPackage() is refused
-    -- while one runs, so use the helper that keeps asking
+    -- the install queues a save of its own, so use the helper that sees it
+    -- through before uninstalling
     defer(function() removeFixturePackage(name) end)
 
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
@@ -7710,7 +7725,7 @@ describe("Tests the game loader packages", function()
 
     raiseEvent("sysConnectionEvent")
     assert.are.same({ { path, loader.url } }, downloads, "connecting did not start the download")
-    -- the loader uninstalls itself, which is refused while a profile save runs
+    -- the loader uninstalls itself, which a profile save that outlasts its wait can refuse
     assert.is_true(waitForProfileSaveToPass(), "a profile save never finished")
     return downloads, path
   end

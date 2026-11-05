@@ -3090,7 +3090,7 @@ int TLuaInterpreter::uninstallPackage(lua_State* L)
     if (!host.mInstalledPackages.contains(packageName)) {
         return warnArgumentValue(L, __func__, qsl("package '%1' is not installed").arg(packageName));
     }
-    if (!host.uninstallPackage(packageName, enums::PackageModuleType::Package)) {
+    if (!host.uninstallPackage(packageName, enums::PackageModuleType::Package, true)) {
         // An installed package is only refused while a profile save is running
         return warnArgumentValue(L, __func__, qsl("a profile save is in progress, try again once it has finished"));
     }
@@ -3121,7 +3121,7 @@ int TLuaInterpreter::uninstallModule(lua_State* L)
 {
     const QString module = getVerifiedString(L, __func__, 1, "module name");
     Host& host = getHostFromLua(L);
-    if (!host.uninstallPackage(module, enums::PackageModuleType::ModuleFromScript)) {
+    if (!host.uninstallPackage(module, enums::PackageModuleType::ModuleFromScript, true)) {
         lua_pushboolean(L, false);
         return 1;
     }

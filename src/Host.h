@@ -522,7 +522,8 @@ public:
     // installPackage()'s reason for refusing a package under a name a package already has
     static QString packageAlreadyInstalledReason(const QString& packageName) { return qsl("package %1 is already installed").arg(packageName); }
     void reportScriptsThatFailedToLoad();
-    bool uninstallPackage(const QString&, enums::PackageModuleType thing);
+    // With waitOutASave a running profile save is waited out, as a script's installPackage() does, rather than refused
+    bool uninstallPackage(const QString&, enums::PackageModuleType thing, bool waitOutASave = false);
     // The name a package file is installed under, unless its manifest renames it
     QString sanitizePackageName(const QString packageName) const;
     bool removeDir(const QString&, const QString&);
