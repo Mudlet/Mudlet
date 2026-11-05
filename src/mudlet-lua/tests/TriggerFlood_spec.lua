@@ -318,7 +318,7 @@ describe("trigger matching under a flood", function()
             disableTrigger(id)
         end
         for index = 1, 100 do
-            track(tempRegexTrigger("^(?:flood_hit|flood_also_hit_" .. index .. ") (\\d+) never$", function() note("miss") end))
+            track(tempRegexTrigger("^(?:flood_hit (\\d+) never|flood_also_hit_" .. index .. ")$", function() note("miss") end))
         end
         for index = 1, 40 do
             track(tempRegexTrigger("^(?:flood_hit|flood_more_hit_" .. index .. ") (\\d+)", function() note("hit") end))

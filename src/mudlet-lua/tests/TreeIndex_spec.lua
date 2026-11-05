@@ -225,10 +225,6 @@ describe("trigger matching through the whole-tree index", function()
             end
             return table.concat(text)
         end
-        local function constant(text)
-            return text, function() return text end
-        end
-
         local groupNames = 0
         local sequence
         local function atom(depth, forceAlternatives)
@@ -253,7 +249,8 @@ describe("trigger matching through the whole-tree index", function()
                     return pick(branches)[2]()
                 end, "group"
             elseif roll < 45 then
-                return constant(word())
+                local text = word()
+                return text, function() return text end, "word"
             elseif roll < 55 then
                 local class = pick({{"[abc]", "abc"}, {"[a-e]", "abcde"}, {"[(|)]", "(|)"}, {"[\\]|]", "]|"}, {"[^a]", "bcde ,"}})
                 return class[1], function()
@@ -272,7 +269,8 @@ describe("trigger matching through the whole-tree index", function()
                 return [[\b]], function() return "" end, "zero width"
             end
             local character = pick({" ", ",", "'", "-", ":", [[\.]], [[\(]], [[\)]], [[\|]], [[\[]], [[\*]], [[\?]], "]", "}"})
-            return constant(character)
+            local literal = character:sub(-1)
+            return character, function() return literal end
         end
         local function quantified(depth, forceAlternatives)
             local text, witness, kind = atom(depth, forceAlternatives)
@@ -283,10 +281,17 @@ describe("trigger matching through the whole-tree index", function()
             local quantifier = kind == "group" and pick({{"?", 0, 1}, {"{2}", 2, 2}, {"{0,1}", 0, 1}})
                                or pick({{"?", 0, 1}, {"*", 0, 2}, {"+", 1, 2}, {"{2}", 2, 2}, {"{1,3}", 1, 3}, {"{0,}", 0, 2}})
             local lazy = chance(15) and "?" or ""
+            -- a quantifier after a word repeats only its last letter
+            local head, repeated = "", witness
+            if kind == "word" then
+                head = text:sub(1, -2)
+                local last = text:sub(-1)
+                repeated = function() return last end
+            end
             return text .. quantifier[1] .. lazy, function()
-                local parts = {}
+                local parts = {head}
                 for i = 1, quantifier[2] + random(quantifier[3] - quantifier[2] + 1) do
-                    parts[i] = witness()
+                    parts[i + 1] = repeated()
                 end
                 return table.concat(parts)
             end
@@ -314,21 +319,34 @@ describe("trigger matching through the whole-tree index", function()
             return table.concat(text)
         end
 
+        -- triggers see the line with its newline, as Host::runTriggers() hands it to them
+        local function rexMatches(regex, line)
+            return regex:find(line .. "\n") ~= nil
+        end
+
         local patterns, regexes, lines = {}, {}, {}
+        local matchingOwnLine = 0
         for index = 1, 150 do
             local pattern, witness = sequence(0, true)
-            if chance(20) then
+            local anchored = chance(20)
+            if anchored then
                 pattern = "^" .. pattern
             end
             patterns[index] = pattern
             regexes[index] = rex.new(pattern)
+            local matchedOwnLine = false
             for _ = 1, 3 do
-                local line = noise() .. witness() .. noise() .. "x"
+                local line = (anchored and "" or noise()) .. witness() .. noise() .. "x"
                 lines[#lines + 1] = line
+                matchedOwnLine = matchedOwnLine or rexMatches(regexes[index], line)
                 local cut = random(#line) + 1
                 lines[#lines + 1] = line:sub(1, cut - 1) .. pick({"", "e", "|"}) .. line:sub(cut + 1)
             end
+            if matchedOwnLine then
+                matchingOwnLine = matchingOwnLine + 1
+            end
         end
+        assert.is_true(matchingOwnLine >= #patterns * 0.9, "only " .. matchingOwnLine .. " of the " .. #patterns .. " generated regexes match a line built for them")
 
         local firedOnLine = {}
         _G.TreeIndexSpecGenerated = function(index)
@@ -349,23 +367,17 @@ describe("trigger matching through the whole-tree index", function()
         assert.is_true(filed >= #patterns / 3, "only " .. filed .. " of the " .. #patterns .. " generated regexes were filed, so most found no text outside their alternatives")
 
         local wrong = {}
-        local matchedLines = 0
         for _, line in ipairs(lines) do
             firedOnLine = {}
             feedTriggers(line .. "\n")
             for index, regex in ipairs(regexes) do
-                -- triggers see the line with its newline, as Host::runTriggers() hands it to them
-                local expected = regex:find(line .. "\n") ~= nil
-                if expected then
-                    matchedLines = matchedLines + 1
-                end
+                local expected = rexMatches(regex, line)
                 if expected ~= (firedOnLine[index] == true) then
                     wrong[#wrong + 1] = string.format("%s on [%s]: rex %s, trigger %s", patterns[index], line,
                                                       expected and "matches" or "does not match", firedOnLine[index] and "fired" or "did not fire")
                 end
             end
         end
-        assert.is_true(matchedLines >= #patterns, "the lines built to match matched only " .. matchedLines .. " times")
         assert.are.same({}, {unpack(wrong, 1, 10)}, #wrong .. " firings differ from rex")
     end)
 
