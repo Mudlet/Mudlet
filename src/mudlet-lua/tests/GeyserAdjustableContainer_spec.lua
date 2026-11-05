@@ -1197,6 +1197,136 @@ describe("Tests the Adjustable.Container mouse handlers", function()
       assert.is_true(math.abs(container:get_width() - 200) <= 1)
     end)
 
+    describe("on a container that is not resizable", function()
+      local realMousePosition
+      before_each(function()
+        realMousePosition = getMousePosition
+      end)
+      after_each(function()
+        _G.getMousePosition = realMousePosition
+      end)
+
+      it("moves it rather than resizing it when the drag started on an edge", function()
+        assert.is_true(container:setResizable(false))
+        local originalX = container:get_x()
+        local pointerX = 300
+        _G.getMousePosition = function() return pointerX, 100 end
+
+        container:onMove(container.adjLabel, mouseEvent("NoButton", 5, 50))
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+        pointerX = pointerX + 30
+        container:onMove(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+
+        assert.are.equal("200px", container.width)
+        assert.are.equal("200px", container.height)
+        assert.is_true(math.abs(container:get_x() - (originalX + 30)) <= 1)
+      end)
+
+      it("moves it when made not resizable while the pointer rested on an edge", function()
+        local originalX = container:get_x()
+        local pointerX = 300
+        _G.getMousePosition = function() return pointerX, 100 end
+
+        container:onMove(container.adjLabel, mouseEvent("NoButton", 5, 50))
+        container:setResizable(false)
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+        pointerX = pointerX + 30
+        container:onMove(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+
+        assert.are.equal("200px", container.width)
+        assert.is_true(math.abs(container:get_x() - (originalX + 30)) <= 1)
+      end)
+
+      -- a connected container is never moved by a drag, so there is nothing left for one to do
+      it("leaves one connected to other containers alone", function()
+        local follower
+        local raised = false
+        local handler = registerAnonymousEventHandler("AdjustableContainerRepositionFinish", function() raised = true end)
+        local realTempTimer = tempTimer
+        finally(function()
+          killAnonymousEventHandler(handler)
+          _G.tempTimer = realTempTimer
+          container:setResizable(true)
+          if follower then
+            follower:delete()
+          end
+        end)
+        -- resizeBorder arms a timer that nothing keeps the id of
+        _G.tempTimer = function() return -1 end
+
+        container:move(0, 0)
+        container:attachToBorder("left")
+        follower = Adjustable.Container:new({
+          name = "gahNoResizeFollower",
+          x = 0, y = 200, width = 60, height = 50,
+          autoLoad = false, autoSave = false,
+        })
+        follower:attachToBorder("left")
+        follower:connectToBorder("left")
+        container:setResizable(false)
+
+        local grabX = container.adjLabel:get_width() - 2
+        local pointerX = 300
+        _G.getMousePosition = function() return pointerX, 100 end
+        container:onMove(container.adjLabel, mouseEvent("NoButton", grabX, 100))
+        assert.are.equal(0, container.adjLabel.cursorShape)
+
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", grabX, 100))
+        pointerX = pointerX + 30
+        container:onMove(container.adjLabel, mouseEvent("LeftButton", grabX, 100))
+        container:onRelease(container.adjLabel, mouseEvent("LeftButton", grabX, 100))
+
+        assert.are.equal(0, container:get_x())
+        assert.is_true(math.abs(container:get_width() - 200) <= 1)
+        assert.is_false(raised)
+      end)
+
+      it("shows the open hand rather than a resize cursor over an edge", function()
+        container:onMove(container.adjLabel, mouseEvent("NoButton", 5, 50))
+        assert.are.equal("ResizeHorizontal", container.adjLabel.cursorShape)
+
+        container:setResizable(false)
+        container:onMove(container.adjLabel, mouseEvent("NoButton", 5, 50))
+        assert.are.equal("OpenHand", container.adjLabel.cursorShape)
+      end)
+
+      it("can be made resizable again", function()
+        container:setResizable(false)
+        assert.is_true(container:setResizable(true))
+
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, 5))
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, 5))
+        container:onMove(container.adjLabel, mouseEvent("LeftButton", 5, 5))
+
+        assert.is_truthy(tostring(container.width):find("%%$"))
+      end)
+
+      it("is what the noResize constructor option asks for", function()
+        local other = Adjustable.Container:new({name = "gahNoResize", x = 20, y = 30, width = 200, height = 200,
+                                                noResize = true, autoLoad = false, autoSave = false})
+        finally(function()
+          other:onClick(other.adjLabel, mouseEvent("LeftButton", 100, 100))
+          other:onRelease(other.adjLabel, mouseEvent("LeftButton", 100, 100))
+          other:delete()
+        end)
+
+        other:onClick(other.adjLabel, mouseEvent("LeftButton", 5, 5))
+        other:onClick(other.adjLabel, mouseEvent("LeftButton", 5, 5))
+        other:onMove(other.adjLabel, mouseEvent("LeftButton", 5, 5))
+
+        assert.are.equal("200px", other.width)
+        assert.are.equal("200px", other.height)
+      end)
+
+      it("refuses anything but a boolean", function()
+        container:setResizable(false)
+        local ok, message = container:setResizable("no")
+        assert.is_nil(ok)
+        assert.is_truthy(message:find("boolean expected", 1, true))
+        assert.is_true(container.noResize)
+      end)
+    end)
+
     -- the border an attached container reserves is the container's own size, so
     -- it has to be measured from the geometry the drag applied and not from the
     -- geometry that drag replaced
@@ -1500,6 +1630,23 @@ describe("Tests the Adjustable.Container mouse handlers", function()
       container:onClickLoad()
 
       assert.is_true(container.locked)
+    end)
+
+    -- the script decides it, so a layout autoSave wrote either way does not overrule the script
+    it("leaves whether the container is resizable as the script set it", function()
+      container:setResizable(false)
+      container:onClickSave()
+      container:onClickLoad()
+      assert.is_true(container.noResize)
+
+      container:setResizable(true)
+      container:onClickLoad()
+      assert.is_false(container.noResize)
+
+      container:onClickSave()
+      container:setResizable(false)
+      container:onClickLoad()
+      assert.is_true(container.noResize)
     end)
 
     it("does nothing to a container that has never been saved", function()
