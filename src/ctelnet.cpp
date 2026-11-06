@@ -68,7 +68,6 @@
 #include <array>
 #include <cstring>
 #include <memory>
-#include <string_view>
 #include <utility>
 
 using namespace std::chrono_literals;
@@ -5809,14 +5808,20 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
 }
 
 
-bool cTelnet::mayHoldCompressionStart(const char* data, const int length) const
+// The offset of the first MCCP v1 or v2 start sequence in data, in either of
+// the forms processSocketData() accepts for both versions, or -1
+static int findCompressionStart(const char* data, const int length)
 {
-    if (!mMCCP_version_1 && !mMCCP_version_2) {
-        return false;
+    for (const char* iac = static_cast<const char*>(std::memchr(data, TN_IAC, length)); iac; iac = static_cast<const char*>(std::memchr(iac + 1, TN_IAC, data + length - iac - 1))) {
+        const auto i = static_cast<int>(iac - data);
+        if (i + 4 >= length) {
+            break;
+        }
+        if (data[i + 1] == TN_SB && (data[i + 2] == OPT_COMPRESS || data[i + 2] == OPT_COMPRESS2) && (data[i + 3] == TN_WILL || data[i + 3] == TN_IAC) && data[i + 4] == TN_SE) {
+            return i;
+        }
     }
-    const std::string_view read(data, static_cast<size_t>(length));
-    return (mMCCP_version_1 && read.find(std::string_view("\xFF\xFA\x55", 3)) != std::string_view::npos)
-           || (mMCCP_version_2 && read.find(std::string_view("\xFF\xFA\x56", 3)) != std::string_view::npos);
+    return -1;
 }
 
 void cTelnet::recordReplayChunk(const qint32 interval, const char* data, const qint32 length)
@@ -6332,12 +6337,14 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     // A compressed read can inflate to nothing. Older Mudlets refuse a replay
     // holding an empty chunk, so its wait carries over to the next chunk.
     const bool recordingThisRead = !loopbackTesting && mRecordReplay && datalen > 0;
-    // Replays play back without a decompressor, so a plain read that may switch
-    // compression on part way through is recorded only once it is known where
-    // the plain bytes end and the compressed ones begin.
-    const char* const plainReadToRecord = (recordingThisRead && !mNeedDecompression && mayHoldCompressionStart(buffer, datalen)) ? buffer : nullptr;
-    const qint32 plainReadLength = datalen;
-    bool plainReadRecorded = false;
+    // Replays play back without a decompressor, so what follows an MCCP start
+    // sequence in a plain read is held back until parsing shows whether
+    // compression really starts there. Looked for whatever has been negotiated,
+    // as the game's WILL can come in the same read.
+    const int compressionStartAt = (recordingThisRead && !mNeedDecompression) ? findCompressionStart(buffer, datalen) : -1;
+    const char* const heldBackToRecord = compressionStartAt >= 0 ? buffer + compressionStartAt : nullptr;
+    const qint32 heldBackLength = compressionStartAt >= 0 ? datalen - compressionStartAt : 0;
+    bool heldBackRecorded = false;
     // Until a chunk carries it, this read's wait carries over to the next one.
     // QElapsedTimer::elapsed() returns a qint64, it replaces a
     // previous QTime::elapsed() which returns a int (effectively a
@@ -6352,8 +6359,8 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
             waitRecorded = true;
         }
     };
-    if (recordingThisRead && !plainReadToRecord) {
-        recordPart(buffer, datalen);
+    if (recordingThisRead) {
+        recordPart(buffer, heldBackToRecord ? compressionStartAt : datalen);
     }
 
     recvdGA = false;
@@ -6464,18 +6471,18 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                             gotRest(cleandata);
                             cleandata = "";
                             initStreamDecompressor();
-                            if (plainReadToRecord && !plainReadRecorded) {
+                            if (heldBackToRecord && !heldBackRecorded) {
                                 // The start sequence is left out: playback has no MCCP handling, and
                                 // MCCP1's has no IAC before its SE, so it would swallow what follows
-                                recordPart(plainReadToRecord, i - 2);
-                                plainReadRecorded = true;
+                                recordPart(heldBackToRecord, static_cast<qint32>(buffer + i - 2 - heldBackToRecord));
+                                heldBackRecorded = true;
                             }
                             buffer += i + 3; //bugfix: BenH
                             int restLength = datalen - i - 3;
 
                             if (restLength > 0) {
                                 datalen = decompressBuffer(buffer, restLength, out_buffer.get());
-                                if (plainReadRecorded) {
+                                if (heldBackRecorded) {
                                     recordPart(out_buffer.get(), datalen);
                                 }
                                 // queue input left over past this compressed chunk
@@ -6609,8 +6616,8 @@ Some data loss is likely - please mention this problem to the game admins.)",
     }
     mPromptStartPosted = false;
 
-    if (plainReadToRecord && !plainReadRecorded) {
-        recordPart(plainReadToRecord, plainReadLength);
+    if (heldBackToRecord && !heldBackRecorded) {
+        recordPart(heldBackToRecord, heldBackLength);
     }
 
     // Reprocess data left over after this decompression pass (more compressed

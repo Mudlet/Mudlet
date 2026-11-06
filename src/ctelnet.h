@@ -416,7 +416,6 @@ private:
     // loopbackTesting is for internal testing whilst OFF-LINE using the
     // feedTelnet(...) Lua function.
     void processSocketData(char* data, int size, const bool loopbackTesting = false);
-    bool mayHoldCompressionStart(const char* data, int length) const;
     void recordReplayChunk(qint32 interval, const char* data, qint32 length);
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);

@@ -173,7 +173,7 @@ private:
 
     // Records a replay while the reads arrive off the socket as one MCCP
     // stream, each after a pause, and returns the chunks written to it.
-    enum class StreamStart { Compressed, PlainOfferingMccp1, PlainOfferingMccp2 };
+    enum class StreamStart { Compressed, PlainOfferingMccp1, PlainOfferingMccp2, PlainNotNegotiated };
 
     QList<RecordedChunk> recordCompressedReads(const QList<QByteArray>& reads, const int pauseMs, const StreamStart start = StreamStart::Compressed)
     {
@@ -191,6 +191,8 @@ private:
             }
             telnet.mMCCP_version_1 = false;
             telnet.mMCCP_version_2 = false;
+            telnet.hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
+            telnet.hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
         });
         if (!dir.isValid() || !telnet.startReplayRecording(fileName)) {
             return {};
@@ -211,7 +213,8 @@ private:
             backing.append(scmTerminatorSlot);
             telnet.processSocketData(backing.data(), static_cast<int>(read.size()), false);
         }
-        if (!telnet.stopReplayRecording()) {
+        // a disconnect while the reads were processed has already saved it
+        if (telnet.mRecordReplay && !telnet.stopReplayRecording()) {
             return {};
         }
 
@@ -772,6 +775,24 @@ private slots:
         QCOMPARE(chunks.size(), 1);
         QCOMPARE(chunks.first().bytes, text);
         QVERIFY2(chunks.first().delay > pauseMs * 3 / 2, qPrintable(qsl("the text waited %1 ms, so the pause before the start was lost").arg(chunks.first().delay)));
+    }
+
+    // The game's WILL can arrive in the same read as the start of its stream
+    void readThatNegotiatesAndStartsCompressionIsRecordedInflated()
+    {
+        const QByteArray will = QByteArrayLiteral("\xFF\xFB\x56");
+        const QByteArray before = QByteArrayLiteral("plain line before mccp\r\n");
+        const QByteArray startSequence = QByteArrayLiteral("\xFF\xFA\x56\xFF\xF0");
+        const QByteArray text = QByteArrayLiteral("mccp line after the negotiation\r\n");
+        const QByteArray compressed = qCompress(text, 9).mid(4);
+
+        const QList<RecordedChunk> chunks = recordCompressedReads({will + before + startSequence + compressed}, 0, StreamStart::PlainNotNegotiated);
+
+        QByteArray recorded;
+        for (const RecordedChunk& chunk : chunks) {
+            recorded.append(chunk.bytes);
+        }
+        QCOMPARE(recorded, will + before + text);
     }
 
     // A read holding what looks like the start of a subnegotiation for MCCP,
