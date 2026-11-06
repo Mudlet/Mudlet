@@ -2764,23 +2764,20 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         }
     }
 
-    bool highlight;
-    QColor hlFgColor;
-    if (lua_isnumber(L, 9)) {
-        highlight = false;
-    } else {
-        highlight = true;
+    // A number for either highlight color leaves that side of the text as it is, as "transparent" does
+    const bool highlightFg = !lua_isnumber(L, 9);
+    const bool highlightBg = !lua_isnumber(L, 10);
+    const bool highlight = highlightFg || highlightBg;
+    QColor hlFgColor = QColorConstants::Transparent;
+    QColor hlBgColor = QColorConstants::Transparent;
+    if (highlightFg) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
         hlFgColor.setNamedColor(lua_tostring(L, 9));
 #else
         hlFgColor = QColor::fromString(lua_tostring(L, 9));
 #endif
     }
-    QColor hlBgColor;
-    if (lua_isnumber(L, 10)) {
-        highlight = false;
-    } else {
-        highlight = true;
+    if (highlightBg) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
         hlBgColor.setNamedColor(lua_tostring(L, 10));
 #else
