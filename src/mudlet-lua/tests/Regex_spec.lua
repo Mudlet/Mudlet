@@ -870,15 +870,10 @@ describe("PCRE regex cases with tempRegexTrigger", function()
             assert.are.same({"Ann", "Ben", "Cal"}, seen)
         end)
 
-        -- pcre2 10.43 added (?<* as a lookbehind, whose text up to a > is no group name
+        -- the text of a (?<* lookbehind up to a > is no group name
         it("does not take a non-atomic lookbehind for a named group", function()
             local seen = {}
-            local id = tempRegexTrigger("(?<*ab)(?:cd|ef>ghij)", function() table.insert(seen, matches[1]) end)
-            if not id then
-                pending("this pcre2 predates (?<*")
-                return
-            end
-            table.insert(ids, id)
+            regexTrigger("(?<*ab)(?:cd|ef>ghij)", function() table.insert(seen, matches[1]) end)
             regexTrigger("(?<*[>]xy)z", function() table.insert(seen, matches[1]) end)
 
             feedTriggers("\nabcd\n>xyz\n")
