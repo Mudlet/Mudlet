@@ -256,6 +256,12 @@ struct TConsoleModel
     void notifyPrinted(const QString& text, PrintedInto into, bool startsLine = false);
     // A line was committed or the buffer cleared, so no later text continues the open piece.
     void endPrintedLine() { mPrintedLineEnded = true; }
+    // For a view told of a clear, which emptied its copy of the open piece's line too
+    void forgetPrintedLine()
+    {
+        mPrintedMidLine = false;
+        mPrintedLineEnded = false;
+    }
     // For a complete line: TBuffer::commitLineData() passes it as sent, before triggers can gag or rewrite it.
     void mirrorLineToStdOut(const QString& line);
     // For text written while triggers run: it lands in a line already mirrored as sent, so it is held

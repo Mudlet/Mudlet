@@ -5014,6 +5014,52 @@ feedTriggers("gag and echo\nfeeder\n"))lua")));
         QVERIFY(session.shutdown(false));
     }
 
+    void test_clearingTheMainConsoleReachesTheSession()
+    {
+        QVERIFY(writeProfile(qsl("Headless Cleared"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Cleared"), .connect = false}), THeadlessSession::StartResult::started);
+        QStringList events;
+        connect(&session, &THeadlessSession::lineShown, this, [&events](const QString&, const QString& text) {
+            events << text;
+        });
+        connect(&session, &THeadlessSession::mainConsoleCleared, this, [&events](const QString& profile) {
+            events << qsl("(cleared %1)").arg(profile);
+        });
+        QVERIFY(session.runLua(qsl(R"lua(createMiniConsole("headlessMini", 0, 0, 100, 100)
+tempRegexTrigger("^wipe$", [[feedTriggers("fed then wiped\n") clearWindow()]])
+tempRegexTrigger("^wipe and echo$", [[clearWindow() echo("echoed after the clear")]])
+feedTriggers("before\n") clearWindow() feedTriggers("between\n") clearWindow("main") feedTriggers("wipe\n")
+echo("headlessMini", "mini\n") clearWindow("headlessMini") feedTriggers("after\n") feedTriggers("wipe and echo\n"))lua")));
+        QCOMPARE(events,
+                 (QStringList{qsl("before"),
+                              qsl("(cleared Headless Cleared)"),
+                              qsl("between"),
+                              qsl("(cleared Headless Cleared)"),
+                              qsl("(cleared Headless Cleared)"),
+                              qsl("after"),
+                              qsl("(cleared Headless Cleared)"),
+                              qsl("echoed after the clear")}));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aClearEndsTheLineLocalTextLeftOpen()
+    {
+        QVERIFY(writeProfile(qsl("Headless Cleared Open"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Cleared Open"), .connect = false}), THeadlessSession::StartResult::started);
+        QStringList events;
+        connect(&session, &THeadlessSession::localText, this, [&events](const QString&, const QString& text) {
+            events << text;
+        });
+        connect(&session, &THeadlessSession::mainConsoleCleared, this, [&events](const QString&) {
+            events << qsl("(cleared)");
+        });
+        QVERIFY(session.runLua(qsl(R"lua(echo("abc") clearWindow() echo("def\n"))lua")));
+        QCOMPARE(events, (QStringList{qsl("abc"), qsl("(cleared)"), qsl("def\n")}));
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_aPromptATriggerRewritesIsShownAsAPrompt()
     {
         const QString name = qsl("Headless Shown Prompt");
@@ -6224,7 +6270,7 @@ end))lua")
         QVERIFY(!ranLua);
         QVERIFY(!submitted);
         QVERIFY(!saved);
-        QCOMPARE(refusal, qsl("Refused from a handler of outputLine, lineShown, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal; queue the call instead."));
+        QCOMPARE(refusal, qsl("Refused from a handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal; queue the call instead."));
         QVERIFY(unstartedShutDown);
         QVERIFY(HostManager::self());
         QCOMPARE(outputTexts(output), (QStringList{qsl("outer line"), qsl("after")}));

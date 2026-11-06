@@ -207,6 +207,13 @@ missing or doubled:
 - Blank lines inside what a trigger prints, such as a Lua error of several lines, or the empty command echo
   of a trigger's `send("")`, are not sent.
 
+`mainConsoleCleared` says a script emptied the main console with `clearWindow()` or
+`clearWindow("main")`, so an app empties its own copy of it; a mini console's clear does not send it.
+While it is connected, a clear also ends any line `localText` left open, so the next piece has no line
+feed to drop; without it, as for the CLI, that piece starts with the line feed that ends the open line.
+It is sent between the lines from before and after, so, like `outputLine`, its handler must not call the
+session back.
+
 The signals' handlers are called while a line is being written, so they must not call the session
 back or run the event loop; queue the work for later instead. `host()` reaches what the session
 does not cover, such as settings and the map, and goes null once the profile closes, so hold it in a
