@@ -1889,6 +1889,67 @@ describe("Tests DB.lua functions", function()
     end)
   end)
 
+  describe("Tests db query-expression builders on columns named after SQL keywords", function()
+    local function names(results)
+      assert.is_table(results, "the fetch failed, which db:fetch reports as nil")
+      local t = {}
+      for _, row in ipairs(results) do
+        t[#t + 1] = row.name
+      end
+      table.sort(t)
+      return t
+    end
+
+    before_each(function()
+      mydb = db:create("keywordcolumnstestingonly", {
+        items = {
+          name = "",
+          group = 0,
+          order = "",
+        }
+      })
+      db:add(mydb.items,
+        {name = "Ada",  group = 1, order = "first"},
+        {name = "Bram", group = 2, order = "second"},
+        {name = "Cyra", group = 3, order = "third"})
+    end)
+
+    after_each(function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_keywordcolumnstestingonly.db")
+      mydb = nil
+    end)
+
+    local cases = {
+      { "db:eq", function() return db:eq(mydb.items.group, 2) end, {"Bram"} },
+      { "db:not_eq", function() return db:not_eq(mydb.items.group, 2) end, {"Ada", "Cyra"} },
+      { "db:not_eq with case_insensitive", function() return db:not_eq(mydb.items.order, "SECOND", true) end, {"Ada", "Cyra"} },
+      { "db:lt", function() return db:lt(mydb.items.group, 2) end, {"Ada"} },
+      { "db:lte", function() return db:lte(mydb.items.group, 2) end, {"Ada", "Bram"} },
+      { "db:gt", function() return db:gt(mydb.items.group, 2) end, {"Cyra"} },
+      { "db:gte", function() return db:gte(mydb.items.group, 2) end, {"Bram", "Cyra"} },
+      { "db:is_nil", function() return db:is_nil(mydb.items.order) end, {} },
+      { "db:is_not_nil", function() return db:is_not_nil(mydb.items.order) end, {"Ada", "Bram", "Cyra"} },
+      { "db:like", function() return db:like(mydb.items.order, "s%") end, {"Bram"} },
+      { "db:not_like", function() return db:not_like(mydb.items.order, "s%") end, {"Ada", "Cyra"} },
+      { "db:between", function() return db:between(mydb.items.group, 2, 3) end, {"Bram", "Cyra"} },
+      { "db:not_between", function() return db:not_between(mydb.items.group, 2, 3) end, {"Ada"} },
+      { "db:in_", function() return db:in_(mydb.items.order, {"first", "third"}) end, {"Ada", "Cyra"} },
+      { "db:not_in", function() return db:not_in(mydb.items.order, {"first", "third"}) end, {"Bram"} },
+      { "db:query_by_example", function() return db:query_by_example(mydb.items, {group = "<3"}) end, {"Ada", "Bram"} },
+    }
+
+    for _, case in ipairs(cases) do
+      it(case[1] .. " fetches the rows it selects", function()
+        assert.are.same(case[3], names(db:fetch(mydb.items, case[2]())))
+      end)
+    end
+
+    it("db:aggregate sums the column", function()
+      assert.are.equal(6, db:aggregate(mydb.items.group, "sum"))
+    end)
+  end)
+
   describe("Tests db:delete", function()
     before_each(function()
       mydb = db:create("deletetestingonly", {

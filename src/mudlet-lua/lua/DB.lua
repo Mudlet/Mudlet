@@ -2008,6 +2008,12 @@ end
 
 
 
+-- column names must be quoted: one named after an SQL keyword, such as "group" or
+-- "order", is otherwise a syntax error that db:fetch reports as no rows
+local function quoted_column(field)
+  return '"' .. field.name .. '"'
+end
+
 --- Returns the result of calling the specified aggregate function on the field and its sheet. <br/><br/>
 ---
 --- The supported aggregate functions are:
@@ -2036,7 +2042,7 @@ function db:aggregate(field, fn, query, distinct)
   local conn = db.__conn[db_name]
   if not conn then error(db_no_connection_message("aggregate over", db_name, A_FIELD), 2) end
 
-  local sql_chunks = { "SELECT", fn, "(", distinct and "DISTINCT" or "", field.name, ")", "AS", fn, "FROM", s_name }
+  local sql_chunks = { "SELECT", fn, "(", distinct and "DISTINCT" or "", quoted_column(field), ")", "AS", fn, "FROM", s_name }
 
   if query then
     sql_chunks[#sql_chunks + 1] = "WHERE"
@@ -2489,10 +2495,10 @@ end
 function db:not_eq(field, value, case_insensitive)
   if case_insensitive then
     local v = db:_coerce(field, value):lower()
-    return "lower(" .. field.name .. ") != " .. v
+    return "lower(" .. quoted_column(field) .. ") != " .. v
   else
     local v = db:_coerce(field, value)
-    return field.name .. " != " .. v
+    return quoted_column(field) .. " != " .. v
   end
 end
 
@@ -2503,7 +2509,7 @@ end
 --- @see db:fetch
 function db:lt(field, value)
   local v = db:_coerce(field, value)
-  return field.name .. " < " .. v
+  return quoted_column(field) .. " < " .. v
 end
 
 
@@ -2513,7 +2519,7 @@ end
 --- @see db:fetch
 function db:lte(field, value)
   local v = db:_coerce(field, value)
-  return field.name .. " <= " .. v
+  return quoted_column(field) .. " <= " .. v
 end
 
 
@@ -2523,7 +2529,7 @@ end
 --- @see db:fetch
 function db:gt(field, value)
   local v = db:_coerce(field, value)
-  return field.name .. " > " .. v
+  return quoted_column(field) .. " > " .. v
 end
 
 
@@ -2533,7 +2539,7 @@ end
 --- @see db:fetch
 function db:gte(field, value)
   local v = db:_coerce(field, value)
-  return field.name .. " >= " .. v
+  return quoted_column(field) .. " >= " .. v
 end
 
 
@@ -2542,7 +2548,7 @@ end
 ---
 --- @see db:fetch
 function db:is_nil(field)
-  return field.name .. " IS NULL"
+  return quoted_column(field) .. " IS NULL"
 end
 
 
@@ -2551,7 +2557,7 @@ end
 ---
 --- @see db:fetch
 function db:is_not_nil(field)
-  return field.name .. " IS NOT NULL"
+  return quoted_column(field) .. " IS NOT NULL"
 end
 
 
@@ -2569,7 +2575,7 @@ end
 --- @see db:fetch
 function db:like(field, value)
   local v = db:_coerce(field, value)
-  return field.name .. " LIKE " .. v
+  return quoted_column(field) .. " LIKE " .. v
 end
 
 
@@ -2587,7 +2593,7 @@ end
 --- @see db:fetch
 function db:not_like(field, value)
   local v = db:_coerce(field, value)
-  return field.name .. " NOT LIKE " .. v
+  return quoted_column(field) .. " NOT LIKE " .. v
 end
 
 
@@ -2600,7 +2606,7 @@ end
 function db:between(field, left_bound, right_bound)
   local x = db:_coerce(field, left_bound)
   local y = db:_coerce(field, right_bound)
-  return field.name .. " BETWEEN " .. x .. " AND " .. y
+  return quoted_column(field) .. " BETWEEN " .. x .. " AND " .. y
 end
 
 
@@ -2613,7 +2619,7 @@ end
 function db:not_between(field, left_bound, right_bound)
   local x = db:_coerce(field, left_bound)
   local y = db:_coerce(field, right_bound)
-  return field.name .. " NOT BETWEEN " .. x .. " AND " .. y
+  return quoted_column(field) .. " NOT BETWEEN " .. x .. " AND " .. y
 end
 
 
@@ -2638,7 +2644,7 @@ function db:in_(field, tbl)
     parts[#parts + 1] = db:_coerce(field, v)
   end
 
-  return field.name .. " IN (" .. table.concat(parts, ",") .. ")"
+  return quoted_column(field) .. " IN (" .. table.concat(parts, ",") .. ")"
 end
 
 
@@ -2653,7 +2659,7 @@ function db:not_in(field, tbl)
     parts[#parts + 1] = db:_coerce(field, v)
   end
 
-  return field.name .. " NOT IN (" .. table.concat(parts, ",") .. ")"
+  return quoted_column(field) .. " NOT IN (" .. table.concat(parts, ",") .. ")"
 end
 
 
