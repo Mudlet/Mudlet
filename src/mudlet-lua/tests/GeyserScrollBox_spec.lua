@@ -253,6 +253,16 @@ describe("Tests functionality of Geyser.ScrollBox", function()
       assert.are.same({x = 5, y = 5, width = 50, height = 40}, geometry("gsbRepositionChild"))
     end)
 
+    it("places itself through a pixel_geometry override", function()
+      local scrollBox = track(Geyser.ScrollBox:new({name = "gsbOverridden", x = 30, y = 40, width = 100, height = 80}))
+      scrollBox.pixel_geometry = function(self)
+        local x, y, width, height = Geyser.Container.pixel_geometry(self)
+        return x + 5, y, width - #self.name, height
+      end
+      scrollBox:reposition()
+      assert.are.same({x = 35, y = 40, width = 100 - #"gsbOverridden", height = 80}, geometry("gsbOverridden"))
+    end)
+
     it("puts its own origin back to zero after repositioning", function()
       local scrollBox = track(Geyser.ScrollBox:new({name = "gsbOriginKept", x = 30, y = 40, width = 100, height = 80}))
       scrollBox:reposition()
@@ -408,53 +418,77 @@ describe("Tests functionality of Geyser.ScrollBox", function()
       assert.are.same({x = 10, y = 20, width = mainWidth - 110, height = 50}, geometry("gsbYieldingChild"))
     end)
 
-    it("gives its own origin to a coroutine its constraint resumes", function()
-      local box
-      local seen = {}
-      local function width()
-        if box then
-          seen[#seen + 1] = coroutine.wrap(function() return box:get_x() end)()
-        end
-        return 300
+    -- runs on the main thread, or inside a coroutine of its own
+    local function runOn(where, work)
+      if where == "the main thread" then
+        work()
+      else
+        coroutine.wrap(work)()
       end
-      box = track(Geyser.ScrollBox:new({name = "gsbNestedRead", x = 100, y = 50, width = width, height = 200}))
-      track(Geyser.Label:new({name = "gsbNestedReadChild", x = 0, y = 0, width = "50%", height = 50}, box))
-      box:reposition()
-      assert.is_true(#seen >= 2)
-      for _, x in ipairs(seen) do
-        assert.are.equal(100, x)
-      end
-    end)
+    end
 
-    it("places a child from its own origin inside a coroutine", function()
-      local box = track(Geyser.ScrollBox:new({name = "gsbLaidOutInCoroutine", x = 100, y = 50, width = "-10px", height = 200}))
-      local label = track(Geyser.Label:new({name = "gsbLaidOutInCoroutineChild", x = 0, y = 0, width = "50%", height = 50}, box))
-      box:reposition()
-      label:resize(50, 50)
-      coroutine.wrap(function() label:move(10, 20) end)()
-      assert.are.same({x = 10, y = 20, width = 50, height = 50}, geometry("gsbLaidOutInCoroutineChild"))
-    end)
-
-    for _, where in ipairs({"the main thread", "another coroutine"}) do
-      it("places a child from its own origin on " .. where .. " after a measure raised inside a coroutine", function()
-        local size = 300
-        local box = track(Geyser.ScrollBox:new({name = "gsbRaisedInCoroutine", x = 100, y = 50, width = function() return size end, height = 200}))
-        local label = track(Geyser.Label:new({name = "gsbRaisedInCoroutineChild", x = 0, y = 0, width = 50, height = 50}, box))
-        size = nil
-        local finished = coroutine.resume(coroutine.create(function() label:resize("50%", 50) end))
-        size = 300
-        local function layOut()
-          label:resize(50, 50)
-          label:move(10, 20)
+    for _, where in ipairs({"the main thread", "a coroutine"}) do
+      it("gives its own origin to a coroutine its constraint resumes, laid out on " .. where, function()
+        local box
+        local seen = {}
+        local function width()
+          if box then
+            seen[#seen + 1] = coroutine.wrap(function() return box:get_x() end)()
+          end
+          return 300
         end
-        if where == "the main thread" then
-          layOut()
-        else
-          coroutine.wrap(layOut)()
+        box = track(Geyser.ScrollBox:new({name = "gsbNestedRead", x = 100, y = 50, width = width, height = 200}))
+        runOn(where, function()
+          track(Geyser.Label:new({name = "gsbNestedReadChild", x = 0, y = 0, width = "50%", height = 50}, box))
+          box:reposition()
+        end)
+        assert.is_true(#seen >= 2)
+        for _, x in ipairs(seen) do
+          assert.are.equal(100, x)
         end
-        assert.is_false(finished)
-        assert.are.same({x = 10, y = 20, width = 50, height = 50}, geometry("gsbRaisedInCoroutineChild"))
       end)
+    end
+
+    for _, dimension in ipairs({"width", "height"}) do
+      it("places a child from its own origin inside a coroutine after measuring its " .. dimension, function()
+        local box = track(Geyser.ScrollBox:new({name = "gsbLaidOutInCoroutine", x = 100, y = 50, width = "-10px", height = 200}))
+        local cons = {name = "gsbLaidOutInCoroutineChild", x = 0, y = 0, width = 50, height = 50}
+        cons[dimension] = "50%"
+        local label = track(Geyser.Label:new(cons, box))
+        box:reposition()
+        label:resize(50, 50)
+        coroutine.wrap(function() label:move(10, 20) end)()
+        assert.are.same({x = 10, y = 20, width = 50, height = 50}, geometry("gsbLaidOutInCoroutineChild"))
+      end)
+    end
+
+    local raisers = {
+      {"its width", "width", function(_, label) label:resize("50%", 50) end},
+      {"its height", "height", function(_, label) label:resize(50, "50%") end},
+      {"its own reposition", "height", function(box) box:reposition() end},
+    }
+    for _, raiser in ipairs(raisers) do
+      local what, dimension, raise = raiser[1], raiser[2], raiser[3]
+      for _, where in ipairs({"the main thread", "another coroutine"}) do
+        it("places a child from its own origin on " .. where .. " after " .. what .. " raised inside a coroutine", function()
+          local size = 300
+          local cons = {name = "gsbRaisedInCoroutine", x = 100, y = 50, width = 300, height = 200}
+          cons[dimension] = function() return size end
+          local box = track(Geyser.ScrollBox:new(cons))
+          local label = track(Geyser.Label:new({name = "gsbRaisedInCoroutineChild", x = 0, y = 0, width = 50, height = 50}, box))
+          size = nil
+          local raising = coroutine.create(function() raise(box, label) end)
+          local finished = coroutine.resume(raising)
+          size = 300
+          runOn(where, function()
+            label:resize(50, 50)
+            label:move(10, 20)
+          end)
+          assert.is_false(finished)
+          assert.are.equal("dead", coroutine.status(raising))
+          assert.are.same({x = 10, y = 20, width = 50, height = 50}, geometry("gsbRaisedInCoroutineChild"))
+        end)
+      end
     end
 
     it("does not keep alive a coroutine a measure raised in", function()

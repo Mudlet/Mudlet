@@ -10,6 +10,8 @@ Geyser.ScrollBox = Geyser.Window:new({
 })
 
 local getinfo, runningCoroutine, coroutineStatus = debug.getinfo, coroutine.running, coroutine.status
+-- weak, so a box does not keep alive a coroutine that died or was dropped mid-measure
+local weakValues = {__mode = "v"}
 
 -- Internal function: the thread a flag below is set on; Lua 5.1 gives the main thread no object
 local function thisThread()
@@ -39,12 +41,12 @@ end
 -- The size still follows the box's constraints, which a parent HBox or VBox reads
 -- and rewrites before it repositions the box.
 local function frameChildren(box)
-    local own = {get_x = box.get_x, get_y = box.get_y, get_width = box.get_width, get_height = box.get_height}
+    -- anything but its getters is read from and written to the box, as a pixel_geometry override expects
+    local own = setmetatable({get_x = box.get_x, get_y = box.get_y, get_width = box.get_width, get_height = box.get_height}, {__index = box, __newindex = box})
     local zero = function() return 0 end
     local across = {get_x = own.get_x, get_y = zero, get_width = own.get_width, get_height = zero}
     local down = {get_x = zero, get_y = own.get_y, get_width = zero, get_height = own.get_height}
-    -- weak, so the box does not keep alive a coroutine that died or was dropped mid-measure
-    local flags = setmetatable({measuring = false, placing = false}, {__mode = "v"})
+    local flags = setmetatable({measuring = false, placing = false}, weakValues)
     -- a negative width or height is compiled as the far edge less the box's own
     -- get_x or get_y, so those must give the box's real origin while it measures itself
     local function origin(get)
@@ -90,7 +92,7 @@ function Geyser.ScrollBox:reposition(skipChildren)
     -- with getters that give its real origin to its children
     local own, flags = frameChildren(self)
     flags.placing = thisThread()
-    local x, y, width, height = Geyser.Container.pixel_geometry(own)
+    local x, y, width, height = own:pixel_geometry()
     flags.placing = false
     moveWindow(self.name, x, y)
     resizeWindow(self.name, width, height)
