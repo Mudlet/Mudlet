@@ -358,6 +358,47 @@ private slots:
         QVERIFY2(afterTheEdit != 0 && afterTheEdit != beforeTheEdit, "an edited label was never cached again");
     }
 
+    // A label drawn at another ratio, as when the window moves to another
+    // screen, that no longer fits under the ceiling must not stay in the cache:
+    // nothing counts it, so trimming the cache to the frame evicts a label on
+    // screen in its place, which is then drawn again, on every frame.
+    void aLabelRefusedTheCacheDoesNotLeaveItsOldPixmapThere()
+    {
+        mp2dMap->setTextLabelPixmapBudgetKiB(128);
+        mp2dMap->setTextLabelPixmapCeilingKiB(600);
+        QList<TMapLabel> labels(3);
+        for (TMapLabel& label : labels) {
+            label.pix = QPixmap(4, 4);
+            label.pix.fill(Qt::red);
+        }
+        // 64 and 128 KiB at 1x, 256 and 512 KiB at twice the density
+        const QSize small(128, 128);
+        const QSize big(128, 256);
+        auto drawFrame = [this, &labels, &small, &big](const int ratio) {
+            QPixmap target(QSize(128, 256) * ratio);
+            target.setDevicePixelRatio(ratio);
+            QPainter painter(&target);
+            mp2dMap->startTextLabelFrame();
+            mp2dMap->drawScaledLabel(painter, QPointF(0, 0), labels[1], 1, QRectF(QPointF(0, 0), small));
+            mp2dMap->drawScaledLabel(painter, QPointF(0, 0), labels[2], 2, QRectF(QPointF(0, 0), big));
+            painter.end();
+            // Both asked for in the order drawn, as asking moves a label up the cache's order
+            const qint64 key = mp2dMap->textLabelPixmapCacheKey(1, small);
+            mp2dMap->textLabelPixmapCacheKey(2, big);
+            return key;
+        };
+        mp2dMap->flushTextLabelPixmapCache();
+        drawFrame(1);
+        drawFrame(2);
+        const qint64 firstFrame = drawFrame(2);
+        const qint64 secondFrame = drawFrame(2);
+        mp2dMap->setTextLabelPixmapCeilingKiB(T2DMap::scmTextLabelPixmapCeilingKiB);
+        mp2dMap->setTextLabelPixmapBudgetKiB(T2DMap::scmTextLabelPixmapBudgetKiB);
+
+        QVERIFY(firstFrame != 0);
+        QCOMPARE(secondFrame, firstFrame);
+    }
+
     // A zoomed-out area can have hundreds of labels on screen; if they do not
     // all stay cached, every frame renders every one of them again.
     void manySmallLabelsOnScreenAllStayCached()

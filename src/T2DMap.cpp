@@ -1355,7 +1355,14 @@ void T2DMap::drawScaledLabel(QPainter& painter, const QPointF& position, TMapLab
             // The larger frame rather than both, as the labels still on screen are in each of them.
             const qint64 costKiB = std::max<qint64>(1, qint64(pixelSize.width()) * pixelSize.height() * 4 / 1024);
             const qint64 onScreenKiB = std::max<qint64>(mTextLabelPixmapLastFrameKiB, mTextLabelPixmapFrameKiB);
-            cached = onScreenKiB + costKiB > mTextLabelPixmapCeilingKiB ? nullptr : addTextLabelToCache(key, label, devicePixelRatio);
+            if (onScreenKiB + costKiB > mTextLabelPixmapCeilingKiB) {
+                // An out-of-date one left behind would hold memory no frame counts, so trimming the
+                // cache to the frame would evict a label on screen in its place
+                mTextLabelPixmapCache.remove(key);
+                cached = nullptr;
+            } else {
+                cached = addTextLabelToCache(key, label, devicePixelRatio);
+            }
         }
         if (cached) {
             mTextLabelPixmapFrameKiB += cached->costKiB;
