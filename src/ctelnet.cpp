@@ -5114,28 +5114,26 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
         return;
     }
 
-    QStringList argumentList = transcodedMsg.split(QChar::Space);
+    // The spec separates parameters by "one or more spaces"
+    const QStringList argumentList = transcodedMsg.split(QChar::Space, Qt::SkipEmptyParts);
 
     if (!argumentList.isEmpty()) {
         for (int i = 0; i < argumentList.size(); ++i) {
             if (i < 1) {
                 mediaData.setMediaFileName(argumentList[i]);
             } else {
-                QStringList payloadList = argumentList[i].split('=');
+                // Only the first '=' separates: a U= url may have more in its query
+                const qsizetype separator = argumentList[i].indexOf(QLatin1Char('='));
 
-                if (payloadList.size() != 2) {
+                if (separator < 0) {
                     return; // Invalid MSP.
                 }
 
-                QString mspVAR;
-                QString mspVAL;
+                const QString mspVAR = argumentList[i].left(separator);
+                QString mspVAL = argumentList[i].mid(separator + 1);
 
-                for (int j = 0; j < payloadList.size(); ++j) {
-                    if (j < 1) {
-                        mspVAR = payloadList[j];
-                    } else {
-                        mspVAL = payloadList[j];
-                    }
+                if (mspVAR != QLatin1String("U") && mspVAL.contains(QLatin1Char('='))) {
+                    return; // Invalid MSP.
                 }
 
                 if (mspVAR == "V") {
@@ -5163,6 +5161,10 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
                 } else if (mspVAR == "T") {
                     mediaData.setMediaTag(mspVAL.toLower()); // To provide case insensitivity of MSP spec
                 } else if (mspVAR == "U") {
+                    // The spec lets the url be enclosed in quotes
+                    if (mspVAL.size() >= 2 && mspVAL.startsWith(QLatin1Char('"')) && mspVAL.endsWith(QLatin1Char('"'))) {
+                        mspVAL = mspVAL.mid(1, mspVAL.size() - 2);
+                    }
                     mediaData.setMediaUrl(mspVAL);
                 } else {
                     qDebug() << "MSP: tag" << mspVAR << "isn't one we understand";
