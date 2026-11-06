@@ -531,6 +531,7 @@ public:
     bool setupColorTrigger(int, int);
     bool setupTmpColorTrigger(int ansiFg, int ansiBg);
     std::unique_ptr<TColorTable> createColorPattern(int, int);
+    void refreshColorPatterns();
     static QString createColorPatternText(const int fgColorCode, const int bgColorCode);
     static void decodeColorPatternText(const QString& patternText, int& fgColorCode, int& bgColorCode);
     QString packageName(TTrigger* pTrigger);
@@ -605,6 +606,7 @@ private:
     void enterChildren(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams, bool haystackIsCapture, bool& conditionMet);
     void noteOpen();
     void refile(TriggerRefile change);
+    bool applyPalette(TColorTable& table) const;
     void patternLiteralsChanged();
     inline void filter(std::string_view capture, int posOffset, int lineNumber, bool positionsInCurrentColumns);
     bool selectTextMatch(int lineNumber, int from, std::string_view capture) const;

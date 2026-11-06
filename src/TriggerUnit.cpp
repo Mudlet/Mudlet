@@ -1163,6 +1163,13 @@ TTrigger* TriggerUnit::findTrigger(const QString& name)
     return nullptr;
 }
 
+void TriggerUnit::refreshColorPatterns()
+{
+    for (auto* pT : std::as_const(mTriggerMap)) {
+        pT->refreshColorPatterns();
+    }
+}
+
 std::vector<int> TriggerUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)
 {
     std::vector<int> ids;
