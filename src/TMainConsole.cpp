@@ -592,6 +592,13 @@ TConsole* TMainConsole::deregisterSubConsole(const QString& name)
     return pConsole;
 }
 
+void TMainConsole::forgetSubConsole(TConsole* pConsole)
+{
+    mSubConsoleMap.removeIf([pConsole](const auto& it) {
+        return it.value() == pConsole;
+    });
+}
+
 void TMainConsole::registerDockWidget(const QString& name, TDockWidget* pDockWidget)
 {
     mDockWidgetMap[name] = pDockWidget;
