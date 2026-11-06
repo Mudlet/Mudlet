@@ -176,8 +176,12 @@ local function jsonTokens(data)
             i = j + 1
         elseif c:match("[%-%d]") then
             local s, e = data:find("^%-?%d+%.?%d*[eE]?[%+%-]?%d*", i)
-            insert(numbers, { s, e })
-            i = e + 1
+            if s then
+                insert(numbers, { s, e })
+                i = e + 1
+            else
+                i = i + 1
+            end
         else
             i = i + 1
         end
