@@ -1703,6 +1703,29 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(windowVisible(videoLabel), "a video that never asked to close still took its label off screen when it stopped")
   end)
 
+  it("a video asked to close leaves the miniconsole it played in on screen", function()
+    if videoWidgetUnavailable() or mediaPlaybackUnavailable() then
+      return
+    end
+    -- close = true takes back only a label: the gate on it reads which kind of
+    -- widget the video went to, so it has to be told a miniconsole is not one.
+    local videoWindow = "busted-media-video-window"
+    createMiniConsole(videoWindow, 0, 0, 40, 40)
+    showWindow(videoWindow)
+    onCleanup(function() hideWindow(videoWindow) end)
+    writeSoundFiles()
+
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoWindow, close = true}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(windowVisible(videoWindow))
+
+    assert.is_true(stopVideos())
+    assert.equals(0, #getPlayingVideos())
+
+    pumpEvents(quietMilliseconds)
+    assert.is_true(windowVisible(videoWindow), "a video asked to close took the miniconsole it played in off screen")
+  end)
+
   it("the closing caption of a stop is printed a turn after the call, not inside it", function()
     if mediaPlaybackUnavailable() then
       return

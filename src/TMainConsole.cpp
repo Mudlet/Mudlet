@@ -4100,7 +4100,9 @@ void TMainConsole::setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded)
         return;
     }
 
-    player->mediaData().setMediaWidget(widgetType);
+    TMediaData mediaData = player->mediaData();
+    mediaData.setMediaWidget(widgetType);
+    player->setMediaData(mediaData);
 
     QVideoWidget* myVideoWidget = nullptr;
     if (widgetType == TMediaData::MediaWidgetLabel) {
