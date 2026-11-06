@@ -35,6 +35,7 @@
 #include <QListView>
 #include <QSettings>
 #include <QSignalSpy>
+#include <QWheelEvent>
 
 #include "Host.h"
 #include "MudletApp.h"
@@ -215,6 +216,60 @@ private slots:
         mpPreferences->fontComboBox_displayFont->setCurrentIndex(rowOf(mMonospacedFamily));
         QTRY_COMPARE(mpHost->getDisplayFont().family(), mMonospacedFamily);
         QVERIFY2(!listed(mProportionalFamily), "the font that was in use stayed listed after another was picked");
+    }
+
+    // A closed list steps through its model, not its view, from the keyboard and the wheel
+    void test_stepsWithTheListClosedSkipHiddenFonts()
+    {
+        useDisplayFont(mMonospacedFamily);
+        openPreferences();
+        auto* pCombo = mpPreferences->fontComboBox_displayFont;
+        mpPreferences->checkBox_monospacedFontsOnly->setChecked(true);
+        pCombo->setFocus();
+        QTRY_VERIFY(pCombo->hasFocus());
+
+        const auto checkCurrentIsMonospaced = [this, pCombo](const char* how) {
+            const QString family = pCombo->currentText();
+            QVERIFY2(QFontDatabase::isFixedPitch(family), qPrintable(qsl("%1 went to the proportional font %2").arg(QLatin1String(how), family)));
+            QCOMPARE(mpHost->getDisplayFont().family(), pCombo->currentFont().family());
+            QVERIFY2(QFontDatabase::isFixedPitch(mpHost->getDisplayFont().family()), qPrintable(qsl("%1 gave the profile a proportional font").arg(QLatin1String(how))));
+        };
+
+        QTest::keyClick(pCombo, Qt::Key_Home);
+        checkCurrentIsMonospaced("Home");
+        for (int step = 0; step < 5; ++step) {
+            QTest::keyClick(pCombo, Qt::Key_Down);
+            checkCurrentIsMonospaced("Down");
+        }
+        QTest::keyClick(pCombo, Qt::Key_End);
+        checkCurrentIsMonospaced("End");
+        QTest::keyClick(pCombo, Qt::Key_Up);
+        checkCurrentIsMonospaced("Up");
+        QTest::keyClick(pCombo, Qt::Key_PageUp);
+        checkCurrentIsMonospaced("Page Up");
+
+        QWheelEvent wheel(QPointF(5, 5), pCombo->mapToGlobal(QPointF(5, 5)), QPoint(), QPoint(0, -120), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QCoreApplication::sendEvent(pCombo, &wheel);
+        checkCurrentIsMonospaced("The wheel");
+
+        // Typing the start of a family's name, closed and then open: the hidden "Bitstream Vera Sans"
+        // comes before the listed "Bitstream Vera Sans Mono"
+        const QString typed = qsl("bitstream vera s");
+        QTest::keyClick(pCombo, Qt::Key_Home);
+        QTest::keyClicks(pCombo, typed);
+        QCOMPARE(pCombo->currentText(), mMonospacedFamily);
+        checkCurrentIsMonospaced("Typing a name");
+
+        QTest::keyClick(pCombo, Qt::Key_Home);
+        // Past the interval that joins keys typed in succession into one name
+        QTest::qWait(QApplication::keyboardInputInterval() + 100);
+        pCombo->showPopup();
+        QTRY_VERIFY(pCombo->view()->isVisible());
+        QTest::keyClicks(pCombo->view(), typed);
+        QTest::keyClick(pCombo->view(), Qt::Key_Return);
+        QTRY_VERIFY(!pCombo->view()->isVisible());
+        QCOMPARE(pCombo->currentText(), mMonospacedFamily);
+        checkCurrentIsMonospaced("Typing a name into the open list");
     }
 
     void test_theChoiceIsRemembered()

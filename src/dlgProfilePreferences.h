@@ -29,6 +29,7 @@
 
 #include "ui_profile_preferences.h"
 #include <QDialog>
+#include <QElapsedTimer>
 #include <QHash>
 #include <QList>
 #include <QMap>
@@ -310,6 +311,8 @@ private:
     bool updateDisplayFont(Host::DisplayFontChange change);
     void rememberDisplayFontFamilyShown();
     void filterDisplayFontList();
+    bool stepListedDisplayFont(QObject*, QEvent*);
+    void searchListedDisplayFont(const QString& text, bool listOpen);
     void showEditorFont(const QFont&);
     void reflectEditorFontControls();
     void cancelShortcutCaptures();
@@ -430,6 +433,8 @@ private:
     // The family the display font list was last set to while the font database had it, so that
     // the list moving off it as it leaves the database is not taken for the user's choice
     QString mDisplayFontFamilyShown;
+    QString mDisplayFontSearch;
+    QElapsedTimer mDisplayFontSearchTimer;
     QPointer<QTemporaryFile> tempThemesArchive;
     QMap<QString, QString> mSearchEngineMap;
     QPointer<QMenu> mpMenu;
