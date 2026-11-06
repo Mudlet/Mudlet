@@ -617,36 +617,24 @@ QMenu* TDetachedWindow::createPopupMenu()
 
 void TDetachedWindow::closeEvent(QCloseEvent* event)
 {
-    // Ensure profiles are properly closed when window is closed
-    // This prevents orphaned profiles that remain loaded but invisible
     if (!mIsReattaching) {
-        // Get a copy of profile names before we start closing them
-        QStringList profilesToClose = mProfileConsoleMap.keys();
-
-        // Properly close each profile - this ensures proper cleanup and save prompts
-        auto pMudlet = mudlet::self();
-        for (const QString& profileName : std::as_const(profilesToClose)) {
+        const QStringList profilesToClose = mProfileConsoleMap.keys();
+        for (const QString& profileName : profilesToClose) {
 #if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "TDetachedWindow::closeEvent() - Properly closing profile:" << profileName;
 #endif
-            if (pMudlet) {
-                pMudlet->slot_closeProfileByName(profileName);
-            }
-        }
-
-        // Remove all consoles from the stacked widget and reset their parents
-        for (const auto& console : std::as_const(mProfileConsoleMap)) {
-            if (console) {
-                mpConsoleContainer->removeWidget(console);
+            const QPointer<TMainConsole> console = mProfileConsoleMap.value(profileName);
+            closeProfileByName(profileName);
+            // Left as a child it would be deleted with this window, out from under the Host that is yet to close it
+            if (console && !mProfileConsoleMap.contains(profileName)) {
                 console->setParent(nullptr);
             }
         }
 
-        mProfileConsoleMap.clear();
-
-        // Emit signal to notify main window for any remaining cleanup
-        for (const QString& profileName : std::as_const(profilesToClose)) {
-            emit windowClosed(profileName);
+        // A cancelled save question, or a close that has to wait, keeps that profile here, and so its window open
+        if (!mProfileConsoleMap.isEmpty()) {
+            event->ignore();
+            return;
         }
     }
     event->accept();
