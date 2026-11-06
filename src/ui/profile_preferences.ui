@@ -917,7 +917,20 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="5">
+          <item row="1" column="1" colspan="4">
+           <widget class="QCheckBox" name="checkBox_monospacedFontsOnly">
+            <property name="toolTip">
+             <string>&lt;p&gt;List only fonts whose characters all have the same width, which keeps columns of text from games lined up. The font in use stays in the list either way.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>List only fonts whose characters all have the same width, which keeps columns of text from games lined up. The font in use stays in the list either way.</string>
+            </property>
+            <property name="text">
+             <string>Show only monospaced fonts</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="5">
            <widget class="QLabel" name="label_invalidFontError">
             <property name="font">
              <font>
@@ -929,7 +942,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="5">
+          <item row="3" column="0" colspan="5">
            <widget class="QLabel" name="label_variableWidthFontWarning">
             <property name="font">
              <font>
@@ -5736,6 +5749,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>fontComboBox_displayFont</tabstop>
   <tabstop>spinBox_displayFontSize</tabstop>
   <tabstop>checkBox_antiAlias</tabstop>
+  <tabstop>checkBox_monospacedFontsOnly</tabstop>
   <tabstop>topBorderHeight</tabstop>
   <tabstop>bottomBorderHeight</tabstop>
   <tabstop>leftBorderWidth</tabstop>
