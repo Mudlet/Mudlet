@@ -64,8 +64,8 @@ private:
 };
 
 // Each frame gets a mini console model of the null view's under the frame's name, as a real frame gets a
-// mini console, so <DEST> text lands where scripts can read it. A frame has no tab header here, so one
-// docked into another is opened as a frame of its own.
+// mini console, so <DEST> text lands where scripts can read it. A frame with a header keeps its tabs as
+// TMxpFrameWidgets' QTabWidget does, and only the page in front of each header shows.
 class TNullMxpFrameFrontend final : public TMxpFrameFrontend
 {
 public:
@@ -74,20 +74,44 @@ public:
     {
     }
 
-    void createInternalFrame(const QString& name, const QString&, const QString&, const QRect&, bool, bool) override;
-    std::optional<QSize> createExternalFrame(const QString& name, const QString&, const QSize& size, bool) override;
-    void createTabFrame(const QString& name, const QString&, const QString&, const QSize&, bool, bool) override;
-    bool removeFromParentTabs(const QString&, const QString&) override { return false; }
+    void createInternalFrame(const QString& name, const QString& hostName, const QString&, const QRect& geometry, bool showHeader, bool scrolling) override;
+    std::optional<QSize> createExternalFrame(const QString& name, const QString&, const QSize& size, bool scrolling) override;
+    void createTabFrame(const QString& name, const QString&, const QString& parentName, const QSize& size, bool scrolling, bool select) override;
+    bool removeFromParentTabs(const QString& name, const QString& parentName) override;
     void destroyFrame(const QString& name) override;
-    void showFrame(const QString&) override {}
+    void showFrame(const QString& name) override;
     void focusFrame(const QString&) override {}
-    void setGeometry(const QString&, const QRect&) override {}
-    void reportSize() override {}
+    void setGeometry(const QString& name, const QRect& geometry) override;
+    void reportSize() override;
     TPrintSink* sink(const QString& name) const override;
     bool hasFrameWidget(const QString& name) const override;
+    // False for a frame on a tab page behind another, or inside a frame on one or in an external frame that is hidden
+    bool pageShown(const QString& name) const;
+    // As an external frame's console reports what it holds when it is hidden or shown
+    void reportFramesWithin(const QString& name);
+    void clear();
 
 private:
+    // A QTabWidget's pages by frame name, the first being the header frame's own console
+    struct Header
+    {
+        std::vector<QString> pages;
+        size_t current = 0;
+        // QStackedLayout gives the page in front all of it, and leaves the others at the size they had
+        QSize area;
+    };
+
+    QSize consoleSize(const QString& name, const QSize& frameSize) const;
+    void reportTabArea(const QString& name, const QSize& size);
+    void removePage(Header& header, size_t index);
+    void reportPages();
+
     TNullConsoleFrontend& mView;
+    std::map<QString, Header> mHeaders;
+    // The frame whose widget each frame is built inside, as TMxpFrameWidgets builds it, empty for the main window
+    std::map<QString, QString> mHosts;
+    // The size each frame's container last laid its console out at
+    std::map<QString, QSize> mConsoleSizes;
 };
 
 // The view a Host has while no real one is attached: before its console is made, after that has
@@ -122,9 +146,21 @@ public:
     // its parent. Once the view goes, these make it again, so the view's last setting is still saved.
     void followView(QObject* view);
     void resumeMainCommandLine();
-    // As the main command line takes a command once it is sent, which a line typed while the game hides what is
-    // typed is not
-    void addMainCommandLineHistory(const QString& command);
+    // As the main command line keeps a sent line, as its aliases left it, unless the game hid what was typed; a
+    // line nothing wrote to since holdMainCommandLineForSend() is kept as sent
+    void addMainCommandLineHistory(const QString& sent);
+    QStringList mainCommandLineHistory() const;
+    // Why the main command line's history file could not be read, if it could not
+    std::optional<QString> mainCommandLineHistoryReadError() const;
+    // As TCommandLine::enterCommand(): the line holds what is sent while its aliases run, and is emptied after
+    // if the profile clears it after a send
+    bool holdMainCommandLineForSend(const QString& line);
+    void mainCommandLineSent();
+    // As the GUI's command line as it is typed into, or as it is set by a history recall or Tab completion
+    void typeMainCommandLine(const QString& text, bool playerTyped);
+    // As TMainConsole::openPasswordEntry(): a line typed ahead of the prompt that opens the box goes into it. True
+    // if it took one.
+    bool hiddenInputOpened();
     bool ownsContainer(const QString& windowname) const;
     bool subConsoleShown(const QString& name) const;
     void reportUserWindowVisibility();
@@ -180,7 +216,7 @@ public:
     bool appendCommandLineText(const QString& name, const QString& text) override;
     bool clearCommandLine(const QString& name) override { return replaceCommandLineText(name, QString()); }
     // Only typing and tab completion read what these set, and with no view nothing is typed
-    bool selectCommandLineText(const QString& name) override { return ownsCommandLine(name); }
+    bool selectCommandLineText(const QString& name) override;
     bool addCommandLineSuggestion(const QString& name, const QString&) override { return ownsCommandLine(name); }
     bool removeCommandLineSuggestion(const QString& name, const QString&) override { return ownsCommandLine(name); }
     bool clearCommandLineSuggestions(const QString& name) override { return ownsCommandLine(name); }
@@ -194,7 +230,7 @@ public:
     bool setWindowCommandLineVisible(const QString& name, bool visible) override;
     void setCommandLinePlaceholderText(const QString&) override {}
     void updateCommandLineSpellCheck(bool) override {}
-    void setCommandLineText(const QString& text) override { replaceCommandLineText(QString(), text); }
+    void setCommandLineText(const QString& text) override;
     void focusActiveCommandLine() override {}
     std::pair<bool, QString> createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height) override;
     std::pair<bool, QString> deleteTextBox(const QString& name) override;
@@ -334,6 +370,7 @@ private:
         QStringList history;
         // So a file that could not be read is not written over with what little was
         bool readFailed = false;
+        QString readError;
     };
 
     // QWidget's minimumSize() and maximumSize(), which QStyleSheetStyle::setGeometry() sets from a sheet
@@ -465,7 +502,12 @@ private:
     TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);
     // keepWidget for a console whose widget outlives its place in the registry, with its own command line
     void removeSubConsole(const QString& name, bool keepWidget = false);
-    void addFrameConsole(const QString& name, bool external = false, const QString& hostFrame = QString());
+    void addFrameConsole(const QString& name, const QSize& size, bool external, const QString& hostFrame, bool scrolling);
+    void sizeFrameConsole(const QString& name, const QSize& size);
+    // False for a frame's console a script has moved out of the frame
+    bool inOwnFrame(const QString& name) const;
+    // TMxpFrameWidgets::createExternalFrame() gives such a frame no container, only its console
+    bool externalFrame(const QString& name) const;
     void removeFrameConsole(const QString& name);
     TConsoleModelSink* frameSink(const QString& name) const;
     void removeLabel(const QString& name);
@@ -521,6 +563,12 @@ private:
     // While a hidden user window is removed, the names its deferred deletes are to report
     QStringList* mpDeferredReports = nullptr;
     bool mDroppingWindows = false;
+    // As TCommandLine::playerTypedLine()
+    bool mMainCommandLineTyped = false;
+    // As the GUI's line once selectAll() has run, so what the player types next replaces it
+    bool mMainCommandLineAllSelected = false;
+    // Whether the line held for a send was written to while it was sent
+    bool mMainCommandLineRewritten = false;
     // The main window, which holds what a script makes in it
     std::unique_ptr<QObject> mpMainHolder = std::make_unique<QObject>();
     // TMxpFrameWidgets' container widget of each frame, which holds the frame's console until a script moves it

@@ -19,6 +19,7 @@
  ***************************************************************************/
 
 #include "THyperlinkVisibilityManager.h"
+#include "Host.h"
 #include "TBuffer.h"
 #include "TConsoleModel.h"
 #include "TAppFrontend.h"
@@ -730,19 +731,31 @@ void THyperlinkVisibilityManager::queueHiddenAnnouncement()
 
 void THyperlinkVisibilityManager::slot_announceHiddenLinks()
 {
-    if (mPendingHiddenCount <= 0 || !QAccessible::isActive()) {
+    if (mPendingHiddenCount <= 0) {
         mPendingHiddenCount = 0;
         return;
     }
 
     if (mPendingHiddenCount == 1) {
         //: Screen-reader announcement when an OSC 8 hyperlink is hidden by the visibility manager
-        TAppFrontend::instance()->announce(tr("Link hidden"), QString(), true);
+        announce(tr("Link hidden"));
     } else {
         //: Screen-reader announcement when multiple OSC 8 hyperlinks are hidden at once; %n is the count
-        TAppFrontend::instance()->announce(tr("%n link(s) hidden", nullptr, mPendingHiddenCount), QString(), true);
+        announce(tr("%n link(s) hidden", nullptr, mPendingHiddenCount));
     }
     mPendingHiddenCount = 0;
+}
+
+// An app that embeds Mudlet has no screen reader of ours to wait on, so it hears
+// these whether or not one is running
+void THyperlinkVisibilityManager::announce(const QString& text)
+{
+    if (QAccessible::isActive()) {
+        TAppFrontend::instance()->announce(text, QString(), true);
+    }
+    if (mModel.mpHost) {
+        emit mModel.mpHost->signal_announcementRequested(text, QString());
+    }
 }
 
 void THyperlinkVisibilityManager::performReveal(TrackedHyperlink& link)
@@ -767,10 +780,8 @@ void THyperlinkVisibilityManager::performReveal(TrackedHyperlink& link)
             buffer.restoreLinkIndices(link.lineNumber, link.startColumn, link.length, link.linkId);
             link.isConcealed = false;
 
-            if (QAccessible::isActive()) {
-                //: Screen-reader announcement when a previously hidden OSC 8 link is revealed; %1 is the original link text
-                TAppFrontend::instance()->announce(tr("Link revealed: %1").arg(link.originalText), QString(), true);
-            }
+            //: Screen-reader announcement when a previously hidden OSC 8 link is revealed; %1 is the original link text
+            announce(tr("Link revealed: %1").arg(link.originalText));
         }
     }
 }

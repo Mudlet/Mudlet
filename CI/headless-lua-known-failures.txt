@@ -24,11 +24,6 @@ Failure GeyserAdjustableContainer_spec.lua: Tests functionality of Adjustable.Co
 Failure GeyserAdjustableContainer_spec.lua: Tests the Adjustable.Container mouse handlers Adjustable.Container:onMove raises AdjustableContainerReposition while the drag is in progress
 Failure GeyserUserWindow_spec.lua: Tests functionality of Geyser.UserWindow Geyser.UserWindow:new/new2 gives itself a root container sized to the user window
 Failure HostApi_spec.lua: openUserWindow still refuses the name of a mini console inside a deleted user window
-Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for brings the first tab to the front of a frame that already has one nested in it
-Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for closes one tab of a frame without its sibling or its parent
-Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for docks a frame into another as a tab and closes it with its parent
-Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for makes a width given in characters hold that many columns on a proportional font
-Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for nests a frame opened inside a redirect in the frame it was redirected to
 Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for reads a size given in characters as characters
 Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for takes rows instead when the frame is along the bottom
 Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for takes the columns an internal frame needs from the main window
@@ -59,8 +54,6 @@ Failure UI_spec.lua: sysWindowOverflowEvent names the console and how many lines
 Failure WindowGeometry_spec.lua: getWindowGeometry follows a docked user window as the main window lays its dock area out again
 Failure WindowSize_spec.lua: window sizes getMainWindowSize follows a button bar shown along its top
 Failure WindowSize_spec.lua: window sizes getMainWindowSize follows the command line as it grows with its text
-Failure WindowVisible_spec.lua: windowVisible of a window inside another of an MXP frame follows the tab that is showing
-Failure WindowVisible_spec.lua: windowVisible of a window inside another of an MXP frame is visible once opened
 Failure zz_Mapper3DView_spec.lua: Tests show3dMapView with the mapper hidden reads back the mode the hidden mapper will reopen in
 Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing both are accepted while the modern 3D view shows, and refused for the classic view
 Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing paints rooms with a symbol, a highlight and a border, in and out of grid mode
