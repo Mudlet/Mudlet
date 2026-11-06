@@ -588,6 +588,17 @@ private slots:
         mudlet::self()->slot_profileDetachToWindow(mThirdHostname, mpDetachedWindow);
         QCOMPARE(mudlet::self()->getDetachedWindows().value(mThirdHostname), mpDetachedWindow);
 
+        for (const QString& name : {mSecondHostname, mThirdHostname}) {
+            Host* pHost = HostManager::self()->getHost(name);
+            QVERIFY(pHost);
+            pHost->mFORCE_SAVE_ON_EXIT = false;
+        }
+        auto restoreSecond = qScopeGuard([this] {
+            if (Host* pHost = HostManager::self()->getHost(mSecondHostname)) {
+                pHost->mFORCE_SAVE_ON_EXIT = true;
+            }
+        });
+
         // Asked in name order, so the second profile is asked first
         QStringList asked;
         QTimer answer;
