@@ -844,6 +844,97 @@ tempRegexTrigger("^headless raising$", [[echoLink(" r", function() error("headle
         QCOMPARE(timeOf(shown, qsl("headless written")), gameLine);
         QVERIFY(session.shutdown(false));
     }
+    void test_timeStampsAreShownAsTheButtonShowsThem()
+    {
+        const QString name = qsl("Headless Time Stamps");
+        QVERIFY(writeProfile(name));
+        const QString sentinel = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("autotimestamp"));
+        {
+            THeadlessSession session;
+            QVERIFY(!session.timeStampsShown());
+            QVERIFY(!session.setTimeStampsShown(true));
+            QCOMPARE(session.errorString(), qsl("No profile is open."));
+            QSignalSpy toggled(&session, &THeadlessSession::timeStampsShownChanged);
+            QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            QVERIFY(!session.timeStampsShown());
+
+            QVERIFY(session.setTimeStampsShown(true));
+            QVERIFY(session.timeStampsShown());
+            QVERIFY(toggled.wait());
+            QCOMPARE(toggled.constLast(), (QList<QVariant>{name, true}));
+            QVERIFY(QFile::exists(sentinel));
+            QVERIFY(session.setTimeStampsShown(true));
+            QTest::qWait(50);
+            QCOMPARE(toggled.count(), 1);
+
+            QVERIFY(session.runLua(qsl("disableTimeStamps()")));
+            QVERIFY(toggled.wait());
+            QCOMPARE(toggled.constLast(), (QList<QVariant>{name, false}));
+            QVERIFY(!QFile::exists(sentinel));
+
+            std::optional<bool> setMidWrite;
+            connect(&session, &THeadlessSession::outputLine, this, [&session, &setMidWrite](const QString&, const QString& text) {
+                if (text == qsl("headless stamps")) {
+                    setMidWrite = session.setTimeStampsShown(true);
+                }
+            });
+            QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("refused")));
+            QVERIFY(session.runLua(feed(qsl("headless stamps"))));
+            QCOMPARE(setMidWrite, std::optional(false));
+            QVERIFY(!session.timeStampsShown());
+
+            QVERIFY(session.setTimeStampsShown(true));
+            QVERIFY(toggled.wait());
+            QCOMPARE(toggled.count(), 3);
+            QVERIFY(session.shutdown(false));
+            QVERIFY(!session.timeStampsShown());
+            QVERIFY(!session.setTimeStampsShown(false));
+        }
+        THeadlessSession session;
+        QSignalSpy toggled(&session, &THeadlessSession::timeStampsShownChanged);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.timeStampsShown());
+        QTest::qWait(50);
+        QCOMPARE(toggled.count(), 0);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_timeStampsThatCannotBeSavedAreSaidToBe()
+    {
+        const QString name = qsl("Headless Time Stamps Unsaved");
+        QVERIFY(writeProfile(name));
+        // A directory where the setting's file goes: the profile loads with timestamps shown, and hiding them cannot remove it
+        const QString sentinel = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("autotimestamp"));
+        QVERIFY(QDir().mkpath(qsl("%1/in the way").arg(sentinel)));
+        const auto cleanUp = qScopeGuard([sentinel] {
+            QDir(sentinel).removeRecursively();
+        });
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.timeStampsShown());
+        QVERIFY(!session.setTimeStampsShown(false));
+        QCOMPARE(session.errorString(), qsl("The timestamps were shown or hidden, but that could not be saved for the profile's next load."));
+        QVERIFY(!session.timeStampsShown());
+        QVERIFY(session.setTimeStampsShown(true));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_noOutputStateIsToldOnceShutdownBegins()
+    {
+        const QString name = qsl("Headless Output State Shutdown");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy toggled(&session, &THeadlessSession::timeStampsShownChanged);
+        QSignalSpy wrapped(&session, &THeadlessSession::consoleWrapChanged);
+        // Queued before shutdown(), which runs the event loop until the reset asked for here is over
+        QVERIFY(session.setTimeStampsShown(true));
+        QVERIFY(session.runLua(qsl("setWindowWrap('main', 61) resetProfile()")));
+        QVERIFY(session.shutdown(false));
+        QTest::qWait(50);
+        QCOMPARE(toggled.count(), 0);
+        QCOMPARE(wrapped.count(), 0);
+    }
 };
 
 #include "HeadlessSessionLinksTest.moc"
