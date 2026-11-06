@@ -2698,6 +2698,10 @@ int dlgProfilePreferences::measuredSidebarWidth() const
         return uiDesign::scmSidebarRailWidth;
     }
 
+    // A list takes its platform's item view font when it is polished, a point smaller than the window's on macOS,
+    // and the first measurement comes while the dialog is still being built
+    mpListWidget_categories->ensurePolished();
+
     // What the style in force says each row needs at its own name and glyph,
     // which is a different number in each appearance - see
     // uiDesign::sidebarRowWidth()

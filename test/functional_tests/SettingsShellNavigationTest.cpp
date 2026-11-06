@@ -430,6 +430,38 @@ private slots:
 
     // The tab widget itself survives, holding no pages, so what is checked is
     // that it is out of the layout rather than deleted
+    // Set before the dialog is built, as the platform does: macOS gives a list a smaller font than the window's, and a
+    // width measured before the list took it kept the sidebar wider until the next restyle
+    void test_theSidebarOpensAtTheWidthARestyleKeeps()
+    {
+        const QFont savedListFont = QApplication::font("QAbstractItemView");
+        auto restore = qScopeGuard([&savedListFont]() {
+            QApplication::setFont(savedListFont, "QAbstractItemView");
+        });
+        QFont listFont = QApplication::font();
+        listFont.setPointSizeF(QApplication::font().pointSizeF() + 3);
+        QApplication::setFont(listFont, "QAbstractItemView");
+
+        auto* pDialog = new dlgProfilePreferences(mudlet::self(), mpHost);
+        auto discard = qScopeGuard([pDialog]() {
+            delete pDialog;
+        });
+        pDialog->resize(1060, 760);
+        pDialog->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDialog));
+        // The platform's own list font wins over the one set above where it has one, as on macOS, which has the same effect
+        QVERIFY2(pDialog->mpListWidget_categories->font().pointSizeF() != pDialog->font().pointSizeF(),
+                 "SETUP: the sidebar's list has the window's font, so there is no later font for a measurement to miss");
+        const int opened = pDialog->measuredSidebarWidth();
+
+        pDialog->applyShellStyle();
+        QCoreApplication::processEvents();
+        const int restyled = pDialog->measuredSidebarWidth();
+        QVERIFY2(opened == restyled,
+                 qPrintable(qsl("the sidebar opened %1px wide and a restyle made it %2px, so it was measured before its rows had the font they are drawn in")
+                                    .arg(QString::number(opened), QString::number(restyled))));
+    }
+
     void test_theTabWidgetIsOutOfTheLayout()
     {
         QCOMPARE(mpPreferences->vBoxLayout_main->indexOf(mpPreferences->tabWidget), -1);
