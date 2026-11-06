@@ -138,6 +138,24 @@ private slots:
         pMudlet->setWindowState(Qt::WindowNoState);
         QTRY_COMPARE(pMudlet->size(), normalSize);
     }
+
+    // An older Mudlet sharing this Mudlet.ini writes pos and size but leaves the newer geometry behind
+    void test_aWindowLastPlacedByAnOlderMudletComesBackWhereThatPutIt()
+    {
+        mudlet* pMudlet = mudlet::self();
+        pMudlet->setWindowState(Qt::WindowNoState);
+        pMudlet->resize(640, 480);
+        QTRY_COMPARE(pMudlet->size(), QSize(640, 480));
+        pMudlet->writeSettings();
+
+        QSettings* settings = MudletApp::getQSettings();
+        QVERIFY(settings->contains(qsl("mainWindowGeometry")));
+        const QSize olderSize(500, 400);
+        settings->setValue(qsl("size"), olderSize);
+        settings->setValue(qsl("maximized"), false);
+        pMudlet->readLateSettings(*settings);
+        QTRY_COMPARE(pMudlet->size(), olderSize);
+    }
 };
 
 #include "MudletIniLateSettingsTest.moc"

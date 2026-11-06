@@ -4814,8 +4814,10 @@ void mudlet::readLateSettings(const QSettings& settings)
     mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
 
 
-    // pos and size alone are what a maximized window covers, not where it returns to
-    if (!restoreGeometry(settings.value(qsl("mainWindowGeometry")).toByteArray())) {
+    // While maximized pos and size are what the window covers, not where it returns to. Otherwise they are
+    // preferred: an older Mudlet sharing this file updates them and leaves mainWindowGeometry stale.
+    const bool savedEnlarged = settings.value(qsl("maximized"), false).toBool() || settings.value(qsl("fullScreen"), false).toBool();
+    if (!savedEnlarged || !restoreGeometry(settings.value(qsl("mainWindowGeometry")).toByteArray())) {
         resize(size);
         move(pos);
     }
