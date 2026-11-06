@@ -3176,9 +3176,9 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.same({tostring(rA3)}, speedWalkPath)
     end)
 
-    -- Every case above edits the map first, so each one searches a graph that
-    -- has just been rebuilt. These four do not, which is what puts them on the
-    -- state findPath() carries from one search to the next.
+    -- Every case above edits the map first, so its first search is on a graph
+    -- that has just been rebuilt. These four do not, which is what puts them on
+    -- the state findPath() carries from one search to the next.
 
     it("does not inherit the previous search's state", function()
       local firstOk = getPath(rA1, rA3)
