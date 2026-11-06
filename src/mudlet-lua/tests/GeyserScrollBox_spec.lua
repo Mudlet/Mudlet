@@ -239,6 +239,66 @@ describe("Tests functionality of Geyser.ScrollBox", function()
     end)
   end)
 
+  describe("Geyser.ScrollBox after one of its constraints raised", function()
+    for _, dimension in ipairs({"width", "height"}) do
+      it("places a child from its own origin after measuring its " .. dimension .. " for a child raised", function()
+        local size = 300
+        local cons = {name = "gsbRaised", x = 100, y = 50, width = 300, height = 200}
+        cons[dimension] = function() return size end
+        local box = track(Geyser.ScrollBox:new(cons))
+        local label = track(Geyser.Label:new({name = "gsbRaisedChild", x = 0, y = 0, width = 50, height = 50}, box))
+        size = nil
+        local raised = not pcall(label.resize, label, dimension == "width" and "50%" or 50, dimension == "height" and "50%" or 50)
+        size = 300
+        label:resize(50, 50)
+        label:move(10, 20)
+        assert.is_true(raised)
+        assert.are.same({x = 10, y = 20, width = 50, height = 50}, geometry("gsbRaisedChild"))
+        assert.are.equal(0, box:get_x())
+        assert.are.equal(0, box:get_y())
+      end)
+    end
+
+    it("places a child from its own origin after its own reposition raised", function()
+      local width = 300
+      local box = track(Geyser.ScrollBox:new({name = "gsbRaisedBox", x = 100, y = 50, width = function() return width end, height = 200}))
+      local label = track(Geyser.Label:new({name = "gsbRaisedBoxChild", x = 0, y = 0, width = 50, height = 50}, box))
+      width = nil
+      local raised = not pcall(box.reposition, box)
+      width = 300
+      label:move(10, 20)
+      assert.is_true(raised)
+      assert.are.same({x = 10, y = 20, width = 50, height = 50}, geometry("gsbRaisedBoxChild"))
+    end)
+
+    it("raises exactly what the constraint raised", function()
+      local failure
+      local function size()
+        if failure then
+          error(failure)
+        end
+        return 100
+      end
+      local box = track(Geyser.ScrollBox:new({name = "gsbRaisedError", x = 0, y = 0, width = size, height = size}))
+      local raisers = {
+        function() return box.get_width() end,
+        function() return box.get_height() end,
+        function() box:reposition() end,
+      }
+      for _, raise in ipairs(raisers) do
+        failure = "not ready"
+        local _, expected = pcall(size)
+        local _, message = pcall(raise)
+        local object = {}
+        failure = object
+        local _, raisedObject = pcall(raise)
+        failure = nil
+        assert.are.equal(expected, message)
+        assert.are.equal(object, raisedObject)
+      end
+    end)
+  end)
+
   -- Geyser:add2 runs from inside Geyser.Container:new, so the hide it asks for
   -- lands before createScrollBox has made the widget. Every Geyser widget
   -- constructor therefore hides itself again afterwards

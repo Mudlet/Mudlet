@@ -23,16 +23,24 @@ local function frameChildren(box)
     local measuring = false
     box.get_x = function() return measuring and own.get_x() or 0 end
     box.get_y = function() return measuring and own.get_y() or 0 end
+    -- a constraint that raises must not leave the flag set, or every child placed
+    -- afterwards would be shifted by the box's real origin
     box.get_width = function()
         measuring = true
-        local _, _, width = Geyser.Container.pixel_geometry(across)
+        local ok, failure, _, width = pcall(Geyser.Container.pixel_geometry, across)
         measuring = false
+        if not ok then
+            error(failure, 0)
+        end
         return width
     end
     box.get_height = function()
         measuring = true
-        local _, _, _, height = Geyser.Container.pixel_geometry(down)
+        local ok, failure, _, _, height = pcall(Geyser.Container.pixel_geometry, down)
         measuring = false
+        if not ok then
+            error(failure, 0)
+        end
         return height
     end
 end
@@ -40,7 +48,13 @@ end
 -- Overridden reposition for special coordination handling
 function Geyser.ScrollBox:reposition(skipChildren)
     Geyser.calc_constraints(self, self, self.container)
-    local x, y, width, height = self:pixel_geometry()
+    -- calc_constraints() has just put back getters that give the box's real origin,
+    -- so an error must not skip frameChildren()
+    local ok, x, y, width, height = pcall(self.pixel_geometry, self)
+    if not ok then
+        frameChildren(self)
+        error(x, 0)
+    end
     moveWindow(self.name, x, y)
     resizeWindow(self.name, width, height)
     frameChildren(self)
