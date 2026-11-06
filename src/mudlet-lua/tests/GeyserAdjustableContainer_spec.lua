@@ -213,12 +213,12 @@ describe("Tests functionality of Adjustable.Container", function()
 
       assert.equals(1, loads)
       for _, container in ipairs(created) do
-        assert.is_truthy(container.lockLabel.txt:find("lock$"))
-        assert.is_truthy(container.customItemsLabel.txt:find("custom$"))
+        assert.equals("lock", container.lockLabel.txt:match("</font>(.*)$"))
+        assert.equals("custom", container.customItemsLabel.txt:match("</font>(.*)$"))
         container:addConnectMenu()
         assert.is_not_nil(container.adjLabel:findMenuElement("Connect To: "))
         container:onEnterAtt()
-        assert.is_true(#container.attLabel.nestedLabels > 0)
+        assert.equals("<center>" .. container:validAttachPositions()[1], container.att[1].message)
       end
     end)
   end)
