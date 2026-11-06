@@ -20,7 +20,7 @@
 /*
  * Covers the setConfig("mapperButton", ...) modes that let a UI package claim
  * the built-in map buttons: "scripted" turns a press into a
- * sysMapperButtonAction event and "disabled" swallows it, in both cases
+ * sysMapButtonActivated event and "disabled" swallows it, in both cases
  * without a mapper or map dock being created; "default" restores the built-in
  * behavior. The get/set round-trip itself is spec-tested in Other_spec.lua -
  * this needs C++ because pressing the buttons has no Lua entry point.
@@ -116,13 +116,13 @@ private slots:
     void test_scriptedModeRoutesButtonToEvent()
     {
         QVERIFY(runLua(qsl("buttonEvents = 0\n"
-                           "registerAnonymousEventHandler('sysMapperButtonAction', function() buttonEvents = buttonEvents + 1 end)")));
+                           "registerAnonymousEventHandler('sysMapButtonActivated', function() buttonEvents = buttonEvents + 1 end)")));
         QVERIFY(runLua(qsl("assert(setConfig('mapperButton', 'scripted'))")));
 
         mudlet::self()->slot_mapper();
         mudlet::self()->slot_showMapperDialog();
 
-        QVERIFY2(runLua(qsl("assert(buttonEvents == 2)")), "expected each map button entry point to raise sysMapperButtonAction exactly once");
+        QVERIFY2(runLua(qsl("assert(buttonEvents == 2)")), "expected each map button entry point to raise sysMapButtonActivated exactly once");
         QVERIFY2(!mpHost->mainConsoleView()->mpDockableMapWidget, "scripted mode still created the default map dock");
         QVERIFY2(!mpHost->mpMap->mapper(), "scripted mode still created a mapper");
         QVERIFY2(!mudlet::self()->findChild<QDockWidget*>(qsl("dockMap_%1_main").arg(mHostname)), "scripted mode still created a main window map dock");

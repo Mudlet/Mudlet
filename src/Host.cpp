@@ -7189,7 +7189,7 @@ void Host::setProfileCommandForegroundColor(const QColor& color)
 
 // Returns true when a script has claimed the built-in map buttons for this
 // profile via setConfig("mapperButton", ...): "disabled" swallows the request
-// outright, "scripted" turns it into a sysMapperButtonAction event so the
+// outright, "scripted" turns it into a sysMapButtonActivated event so the
 // profile's UI package can show or hide its own map window instead.
 bool Host::interceptMapperButton()
 {
@@ -7198,7 +7198,7 @@ bool Host::interceptMapperButton()
     }
     if (mMapperButtonMode == MapperButtonMode::Scripted) {
         TEvent event{};
-        event.mArgumentList.append(QLatin1String("sysMapperButtonAction"));
+        event.mArgumentList.append(QLatin1String("sysMapButtonActivated"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         raiseEvent(event);
         return true;
