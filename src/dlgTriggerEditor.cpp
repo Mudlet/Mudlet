@@ -11227,7 +11227,8 @@ static QString themedBannerLinkColor()
 }
 
 // The chunk names here must match the ones TTrigger::compileScript() and its
-// siblings in the other item classes compile their scripts under
+// siblings in the other item classes compile their scripts under. A repaired
+// item keeps its last error message, so that only counts while it is broken.
 bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName, QString& error)
 {
     switch (mCurrentView) {
@@ -11235,7 +11236,7 @@ bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName, QStri
         if (auto* pT = getTriggerFromTreeItem(mpCurrentTriggerItem)) {
             itemId = pT->getID();
             chunkName = qsl("Trigger: %1").arg(pT->getName());
-            error = pT->getError();
+            error = pT->state() ? QString() : pT->getError();
             return true;
         }
         break;
@@ -11243,7 +11244,7 @@ bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName, QStri
         if (auto* pT = getAliasFromTreeItem(mpCurrentAliasItem)) {
             itemId = pT->getID();
             chunkName = qsl("Alias: %1").arg(pT->getName());
-            error = pT->getError();
+            error = pT->state() ? QString() : pT->getError();
             return true;
         }
         break;
@@ -11251,7 +11252,7 @@ bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName, QStri
         if (auto* pT = getTimerFromTreeItem(mpCurrentTimerItem)) {
             itemId = pT->getID();
             chunkName = qsl("Timer: %1").arg(pT->getName());
-            error = pT->getError();
+            error = pT->state() ? QString() : pT->getError();
             return true;
         }
         break;
@@ -11259,7 +11260,7 @@ bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName, QStri
         if (auto* pT = getScriptFromTreeItem(mpCurrentScriptItem)) {
             itemId = pT->getID();
             chunkName = qsl("Script: %1").arg(pT->getName());
-            error = pT->getError();
+            error = pT->state() ? QString() : pT->getError();
             return true;
         }
         break;
@@ -11267,7 +11268,7 @@ bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName, QStri
         if (auto* pT = getActionFromTreeItem(mpCurrentActionItem)) {
             itemId = pT->getID();
             chunkName = qsl("Button: %1").arg(pT->getName());
-            error = pT->getError();
+            error = pT->state() ? QString() : pT->getError();
             return true;
         }
         break;
@@ -11275,7 +11276,7 @@ bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName, QStri
         if (auto* pT = getKeyFromTreeItem(mpCurrentKeyItem)) {
             itemId = pT->getID();
             chunkName = qsl("Key: %1").arg(pT->getName());
-            error = pT->getError();
+            error = pT->state() ? QString() : pT->getError();
             return true;
         }
         break;

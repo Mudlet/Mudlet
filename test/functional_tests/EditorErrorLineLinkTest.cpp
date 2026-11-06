@@ -157,6 +157,22 @@ private:
         pTwinChild->setScript(qsl("local a = 1\nlocal b = = 2\n"));
         QVERIFY(pTwinChild->registerTrigger());
         QVERIFY2(!pTwinChild->getError().isEmpty(), "the broken twin compiled");
+
+        // A folder whose script was broken and is now repaired still holds the old error message,
+        // which a same-named child broken the same way repeats word for word
+        auto* pRepairedFolder = new TTrigger(nullptr, mpHost);
+        pRepairedFolder->setName(qsl("qaRepaired"));
+        pRepairedFolder->setIsFolder(true);
+        pRepairedFolder->setScript(qsl("local a = 1\nlocal b = = 2\n"));
+        QVERIFY(pRepairedFolder->registerTrigger());
+        QVERIFY2(!pRepairedFolder->state(), "the folder's broken script compiled");
+        QVERIFY(pRepairedFolder->setScript(qsl("local a = 1\nlocal b = 2\n")));
+        auto* pRepairedChild = new TTrigger(pRepairedFolder, mpHost);
+        pRepairedChild->setName(qsl("qaRepaired"));
+        pRepairedChild->setRegexCodeList({qsl("qaRepaired")}, {REGEX_SUBSTRING});
+        pRepairedChild->setScript(qsl("local a = 1\nlocal b = = 2\n"));
+        QVERIFY(pRepairedChild->registerTrigger());
+        QCOMPARE(pRepairedChild->getError(), pRepairedFolder->getError());
     }
 
 private slots:
@@ -303,6 +319,22 @@ private slots:
         QVERIFY(pChild);
         mpEditor->showError(pChild->getError());
         QVERIFY2(bannerText().contains(qsl("&quot;Trigger: qaTwin&quot;]:2:")), qPrintable(bannerText()));
+        QVERIFY2(lineLink().isEmpty(), qPrintable(bannerText()));
+    }
+
+    void testRepairedFolderTakesNoLinkFromItsChild()
+    {
+        mpEditor->slot_showTriggers();
+        QTreeWidgetItem* pFolderItem = treeItem(mpEditor->treeWidget_triggers, qsl("qaRepaired"));
+        QVERIFY(pFolderItem);
+        QVERIFY2(pFolderItem->childCount() == 1, "the first qaRepaired found is not the folder");
+        mpEditor->treeWidget_triggers->setCurrentItem(pFolderItem, 0);
+        mpEditor->slot_triggerSelected(pFolderItem);
+        QTest::qWait(20ms);
+        auto* pChild = mpEditor->getTriggerFromTreeItem(pFolderItem->child(0));
+        QVERIFY(pChild);
+        mpEditor->showError(pChild->getError());
+        QVERIFY2(bannerText().contains(qsl("&quot;Trigger: qaRepaired&quot;]:2:")), qPrintable(bannerText()));
         QVERIFY2(lineLink().isEmpty(), qPrintable(bannerText()));
     }
 
