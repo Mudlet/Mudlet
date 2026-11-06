@@ -286,7 +286,7 @@ describe("Tests the MXP line modes a game switches between", function()
 
   it("ignores only the one newline after a NOBR tag", function()
     assert.equals("MXPNOBRONCE MXPNOBRJOINED|MXPNOBROWNLINE",
-      displayed("MXPNOBRONCE<NOBR> MXPNOBRJOINED\r\nMXPNOBROWNLINE\r\n"))
+      displayed("MXPNOBRONCE<NOBR>\r\n MXPNOBRJOINED\r\nMXPNOBROWNLINE\r\n"))
   end)
 
   it("ignores the newline of a NOBR tag that comes in the next packet", function()
@@ -318,9 +318,9 @@ describe("Tests the MXP line modes a game switches between", function()
     feed("MXPNOBRGAME<NOBR>")
     feedTriggers("MXPNOBRLOCAL\n")
     feed("\r\nMXPNOBRGAMENEXT\r\n")
-    local shown = table.concat(getLines("main", mark, getLastLineNumber("main")), "|")
-    assert.is_true(shown:find("MXPNOBRGAMENEXT", 1, true) ~= nil, shown)
-    assert.is_nil(shown:find("|MXPNOBRGAMENEXT", 1, true), shown)
+    -- the local text ends the game's unfinished line, as it does without a NOBR, and the game's
+    -- newline is still ignored rather than left to commit an empty line
+    assert.equals("MXPNOBRGAMEMXPNOBRLOCAL|MXPNOBRGAMENEXT", table.concat(getLines("main", mark, getLastLineNumber("main")), "|"))
   end)
 
   it("drops a NOBR tag when the game resets", function()
