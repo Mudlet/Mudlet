@@ -839,8 +839,8 @@ describe("Tests mapper functions against a shared fixture", function()
           deleteArea(id)
         end
       end)
-      for _, oldName in ipairs({"Default", "Area", "a"}) do
-        assert.is_truthy(defaultName:find(oldName, 1, true), "the default area is no longer named so that '" .. oldName .. "' is part of its name")
+      -- Taken from the name itself, as it is translated
+      for _, oldName in ipairs({defaultName:sub(1, 3), defaultName:sub(-3), defaultName:sub(2, 2)}) do
         local id = addAreaName(oldName)
         assert.is_number(id, oldName)
         made[#made + 1] = id
