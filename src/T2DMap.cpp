@@ -1351,9 +1351,11 @@ void T2DMap::drawScaledLabel(QPainter& painter, const QPointF& position, TMapLab
         const LabelPixmap* cached = mTextLabelPixmapCache.object(key);
         if (!cached || !labelPixmapIsCurrent(*cached, label, devicePixelRatio)) {
             // One that would take the cache past its ceiling would evict a label still on screen, which would in
-            // turn evict another, every frame; on a dense display a label costs the square of its ratio more
+            // turn evict another, every frame; on a dense display a label costs the square of its ratio more.
+            // The larger frame rather than both, as the labels still on screen are in each of them.
             const qint64 costKiB = std::max<qint64>(1, qint64(pixelSize.width()) * pixelSize.height() * 4 / 1024);
-            cached = mTextLabelPixmapLastFrameKiB + mTextLabelPixmapFrameKiB + costKiB > mTextLabelPixmapCeilingKiB ? nullptr : addTextLabelToCache(key, label, devicePixelRatio);
+            const qint64 onScreenKiB = std::max<qint64>(mTextLabelPixmapLastFrameKiB, mTextLabelPixmapFrameKiB);
+            cached = onScreenKiB + costKiB > mTextLabelPixmapCeilingKiB ? nullptr : addTextLabelToCache(key, label, devicePixelRatio);
         }
         if (cached) {
             mTextLabelPixmapFrameKiB += cached->costKiB;

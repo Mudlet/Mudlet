@@ -317,6 +317,47 @@ private slots:
         QCOMPARE(secondFrame, firstFrame);
     }
 
+    // The labels on screen are in both the last frame's total and this one's,
+    // so adding the two would count them twice and refuse, on every frame, a
+    // label that fits: one panned into view, or one edited in place.
+    void aLabelThatFitsUnderTheCeilingIsCachedInTheEnd()
+    {
+        mp2dMap->setTextLabelPixmapBudgetKiB(1024);
+        mp2dMap->setTextLabelPixmapCeilingKiB(1024);
+        QPixmap target(QSize(128, 128) * 2);
+        target.setDevicePixelRatio(2);
+        QPainter painter(&target);
+        QList<TMapLabel> labels(5);
+        for (TMapLabel& label : labels) {
+            label.pix = QPixmap(4, 4);
+            label.pix.fill(Qt::red);
+        }
+        const QSize size(128, 128);
+        // 256 KiB each at twice the density, so the three on screen take 768 KiB
+        auto drawFrames = [this, &painter, &labels, &size](const QList<int>& ids) {
+            for (int frame = 0; frame < 3; ++frame) {
+                mp2dMap->startTextLabelFrame();
+                for (const int id : ids) {
+                    mp2dMap->drawScaledLabel(painter, QPointF(0, 0), labels[id], id, QRectF(QPointF(0, 0), size));
+                }
+            }
+        };
+        mp2dMap->flushTextLabelPixmapCache();
+        drawFrames({1, 2, 3});
+        drawFrames({1, 2, 4});
+        const qint64 pannedIn = mp2dMap->textLabelPixmapCacheKey(4, size);
+        const qint64 beforeTheEdit = mp2dMap->textLabelPixmapCacheKey(2, size);
+        labels[2].pix.fill(Qt::green);
+        drawFrames({1, 2, 4});
+        const qint64 afterTheEdit = mp2dMap->textLabelPixmapCacheKey(2, size);
+        painter.end();
+        mp2dMap->setTextLabelPixmapCeilingKiB(T2DMap::scmTextLabelPixmapCeilingKiB);
+        mp2dMap->setTextLabelPixmapBudgetKiB(T2DMap::scmTextLabelPixmapBudgetKiB);
+
+        QVERIFY2(pannedIn != 0, "a label panned into view was never cached");
+        QVERIFY2(afterTheEdit != 0 && afterTheEdit != beforeTheEdit, "an edited label was never cached again");
+    }
+
     // A zoomed-out area can have hundreds of labels on screen; if they do not
     // all stay cached, every frame renders every one of them again.
     void manySmallLabelsOnScreenAllStayCached()
