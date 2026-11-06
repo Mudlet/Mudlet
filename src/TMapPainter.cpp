@@ -28,6 +28,7 @@
 #include "Host.h"
 #include "RoomAppearance.h"
 #include "TArea.h"
+#include "TEvent.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TRoom.h"
@@ -2317,6 +2318,7 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
     }
     // no rooms at all, let's show an information message instead
     if (!pPlayerRoom) {
+        spendClick();
         if (mSuppressEmptyStateMessage) {
             return;
         }
@@ -2349,6 +2351,7 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
     // have already established that pPlayerRoom is valid so for it to NOT be
     // in a valid area is unlikely:
     if (Q_UNLIKELY(!mpMap->mpRoomDB->getArea(pPlayerRoom->getArea()))) {
+        spendClick();
         return;
     }
 
@@ -2388,13 +2391,16 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
 
     TArea* pDrawnArea = mpMap->mpRoomDB->getArea(mAreaID);
     if (!pDrawnArea) {
+        spendClick();
         return;
     }
 
     phase2Time = phaseTimer.nsecsElapsed() / 1000000.0;
     phaseTimer.restart();
 
-    xyzoom = pDrawnArea->get2DMapZoom();
+    if (!mKeepZoom) {
+        xyzoom = pDrawnArea->get2DMapZoom();
+    }
     if (widgetWidth > widgetHeight) {
         xspan = xyzoom * (widgetWidth / widgetHeight);
         yspan = xyzoom;
@@ -2830,6 +2836,7 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
     painter.restore(); // end of player-room save
 
     resolveAreaExitClick(painter, areaExitsMap, playerRoomId);
+    spendClick();
 
     phase6Time = phaseTimer.nsecsElapsed() / 1000000.0;
     phaseTimer.restart();
@@ -2973,10 +2980,19 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
         // Now draw text centered at bottom, so it does not clash with info window
         painter.setFont(_f2);
     }
-    // Save the current map zoom for this area
-    pDrawnArea->set2DMapZoom(xyzoom);
+    if (!mKeepZoom) {
+        // Save the current map zoom for this area
+        pDrawnArea->set2DMapZoom(xyzoom);
+    }
 }
 
+
+// A click no room or exit took is spent all the same, or a later frame would act on whatever moved under it
+void TMapPainter::spendClick()
+{
+    mPick = false;
+    mStartSpeedWalk = false;
+}
 
 // Markers are gathered from every drawn room, so hit-test once after the room passes rather than
 // from a room loop: below four pixels a room, only the player's room is drawn in full.
@@ -3230,6 +3246,160 @@ int TMapPainter::selectionCentreRoom(TMap* pMap, const QSet<int>& selection)
         }
     }
     return centreRoomId;
+}
+
+QList<int> TMapPainter::roomsAtPoint(const View& view, const TArea& area, const QPoint& position)
+{
+    const float fx = ((view.xspan / 2.0f) - view.mMapCenterX) * view.mRoomWidth;
+    const float fy = ((view.yspan / 2.0f) - view.mMapCenterY) * view.mRoomHeight;
+
+    const int mx = position.x();
+    const int my = position.y();
+    const int mz = view.mMapCenterZ;
+
+    // Build the list of rooms under the cursor.  Grid mode uses the spatial
+    // index for an exact cell lookup (works at all zoom levels including
+    // extreme zoom-out where rooms are sub-pixel sized).  Non-grid mode uses
+    // a pixel-distance test with a minimum 1-pixel radius.
+    QList<int> hitRooms;
+    if (area.gridMode) {
+        const int worldX = qRound(static_cast<double>(mx - fx) / view.mRoomWidth);
+        const int worldY = qRound(static_cast<double>(fy - my) / view.mRoomHeight);
+        for (const int roomId : area.getGridIndex().roomsAt(mz, worldX, worldY)) {
+            hitRooms.append(roomId);
+        }
+    } else {
+        const int halfW = qMax(1, qRound(view.mRoomWidth * view.rSize / 2.0));
+        const int halfH = qMax(1, qRound(view.mRoomHeight * view.rSize / 2.0));
+        QSetIterator<int> roomIterator(area.getRoomsForZ(mz));
+        while (roomIterator.hasNext()) {
+            const int roomId = roomIterator.next();
+            TRoom* room = view.mpMap->mpRoomDB->getRoom(roomId);
+            if (!room) {
+                continue;
+            }
+            const int rx = room->x() * view.mRoomWidth + fx;
+            const int ry = room->y() * -1 * view.mRoomHeight + fy;
+            if (qAbs(mx - rx) < halfW && qAbs(my - ry) < halfH) {
+                hitRooms.append(roomId);
+            }
+        }
+    }
+    return hitRooms;
+}
+
+void TMapPainter::addRoomsToSelection(TMap* pMap, QSet<int>& selection, bool& multiSelection, int& highlightRoomId, const QList<int>& rooms, const Qt::KeyboardModifiers modifiers)
+{
+    const bool hasShift = modifiers.testFlag(Qt::ShiftModifier);
+    const bool hasCtrl = modifiers.testFlag(Qt::ControlModifier);
+    for (const int roomId : rooms) {
+        const bool isAlreadySelected = selection.contains(roomId);
+
+        if (hasCtrl) {
+            if (isAlreadySelected && !hasShift) {
+                selection.remove(roomId);
+            } else {
+                selection.insert(roomId);
+            }
+        } else {
+            selection.insert(roomId);
+        }
+
+        if (!selection.empty()) {
+            multiSelection = false;
+        }
+    }
+
+    const int selectionSize = selection.size();
+    switch (selectionSize) {
+    case 0:
+        highlightRoomId = 0;
+        break;
+    case 1:
+        multiSelection = false;
+        highlightRoomId = *(selection.begin());
+        break;
+    default:
+        multiSelection = false;
+        highlightRoomId = selectionCentreRoom(pMap, selection);
+        break;
+    }
+}
+
+std::optional<bool> TMapPainter::zoomAtPoint(TArea& area,
+                                             qreal& xyzoom,
+                                             qreal& mapCenterX,
+                                             qreal& mapCenterY,
+                                             const QSize& size,
+                                             const QPointF& position,
+                                             const QPoint& angleDelta,
+                                             const Qt::KeyboardModifiers modifiers,
+                                             const bool invertZoom)
+{
+    // Increase rate if control key down - it makes scrolling through
+    // a large number of items in a listwidget's contents easier (that happens
+    // automagically) AND this make it easier to zoom in and out on LARGE area
+    // maps
+    const int yDelta = qRound(angleDelta.y() * (modifiers & Qt::ControlModifier ? 5.0 : 1.0) / (8.0 * 15.0));
+    if (!yDelta) {
+        return std::nullopt;
+    }
+    const qreal oldZoom = xyzoom;
+    // If invert zoom is enabled, use the traditional (inverted) behavior
+    // Otherwise, use modern behavior (non-inverted)
+    const int adjustedYDelta = invertZoom ? yDelta : -yDelta;
+    xyzoom = qMax(TMap::scmMinXYZoom, xyzoom * pow(1.07, adjustedYDelta));
+    area.set2DMapZoom(xyzoom);
+
+    if (qFuzzyCompare(1.0 + oldZoom, 1.0 + xyzoom)) {
+        return false;
+    }
+    const float widgetWidth = size.width();
+    const float widgetHeight = size.height();
+    float xs = 1.0;
+    float ys = 1.0;
+    if (widgetWidth > 10 && widgetHeight > 10) {
+        if (widgetWidth > widgetHeight) {
+            xs = (widgetWidth / widgetHeight);
+        } else {
+            ys = (widgetHeight / widgetWidth);
+        }
+    }
+
+    // Position of the mouse within the map, scaled -1 .. +1
+    // i.e. if the mouse is in the center, nothing changes
+    const float dx = 2.0 * position.x() / widgetWidth - 1.0;
+    const float dy = 2.0 * position.y() / widgetHeight - 1.0;
+
+    // now shift the origin by that, scaled by the difference in
+    // zoom factors. Thus the point under the mouse stays in place.
+    mapCenterX += dx * (oldZoom - xyzoom) / 2.0 * xs;
+    mapCenterY += dy * (oldZoom - xyzoom) / 2.0 * ys;
+    return true;
+}
+
+void TMapPainter::startSpeedWalk(Host* pHost, TMap* pMap, const int fromRoomId, const int toRoomId)
+{
+    if (pMap->mpRoomDB->getRoom(toRoomId)) {
+        pMap->mTargetID = toRoomId;
+
+        if (pHost->checkForCustomSpeedwalk()) {
+            pHost->startSpeedWalk(fromRoomId, toRoomId);
+        } else if (pMap->findPath(fromRoomId, toRoomId)) {
+            pHost->startSpeedWalk();
+        } else {
+            pHost->printSystemMessage(
+                    qsl("%1\n").arg(QCoreApplication::translate("T2DMap", "Mapper: Cannot find a path from %1 to %2 using known exits.").arg(QString::number(fromRoomId), QString::number(toRoomId))));
+        }
+    }
+}
+
+void TMapPainter::raiseMousePressEvent(Host* pHost)
+{
+    TEvent sysMapWindowMousePressEvent{};
+    sysMapWindowMousePressEvent.mArgumentList.append(QLatin1String("sysMapWindowMousePressEvent"));
+    sysMapWindowMousePressEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    pHost->raiseEvent(sysMapWindowMousePressEvent);
 }
 
 std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels, QObject* saveOwner)
