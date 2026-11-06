@@ -522,6 +522,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
 Host::~Host()
 {
+    // So that the profile opened again next loads the newest map
+    mMapAutosaveFuture.waitForFinished();
     Q_ASSERT_X(mpConsole.isNull(), "Host::~Host()", "the main console view would outlive the model it refers to");
     // Mark the host as closing down to prevent keybinding processing during destruction
     mIsClosingDown = true;
@@ -949,10 +951,65 @@ void Host::loadMap()
     }
 }
 
+namespace {
+// QDataStream writes a map a few bytes at a time, and each of those writes costs QSaveFile more than
+// serialising it does, so this hands the file 256 KiB at a time instead
+class ChunkedWriter final : public QIODevice
+{
+public:
+    explicit ChunkedWriter(QIODevice* target)
+    : mpTarget(target)
+    , mBuffer(std::make_unique<char[]>(scmChunkSize))
+    {
+        open(QIODevice::WriteOnly | QIODevice::Unbuffered);
+    }
+    bool isSequential() const override { return true; }
+    bool flushChunk()
+    {
+        const bool ok = mUsed == 0 || mpTarget->write(mBuffer.get(), mUsed) == mUsed;
+        mUsed = 0;
+        return ok;
+    }
+
+protected:
+    qint64 readData(char*, qint64) override { return -1; }
+    qint64 writeData(const char* data, qint64 len) override
+    {
+        if (mUsed + len > scmChunkSize && !flushChunk()) {
+            return -1;
+        }
+        if (len >= scmChunkSize) {
+            return mpTarget->write(data, len);
+        }
+        std::memcpy(mBuffer.get() + mUsed, data, static_cast<size_t>(len));
+        mUsed += len;
+        return len;
+    }
+
+private:
+    static constexpr qint64 scmChunkSize = 256 * 1024;
+    QIODevice* mpTarget;
+    std::unique_ptr<char[]> mBuffer;
+    qint64 mUsed = 0;
+};
+
+// Runs on a pool thread, so it is given everything it needs and must reach nothing else
+bool writeFileAtomically(const QString& path, const QByteArray& bytes)
+{
+    QSaveFile file(path);
+    return file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size() && file.commit();
+}
+
+// Above this the autosave writes on the main thread rather than hold a copy of the whole file
+// (about 190 bytes a room) in memory until a background write finishes
+constexpr int scmBackgroundMapAutosaveMaxRooms = 100'000;
+} // namespace
+
 // The three methods below might be better off on TMap, which is what they all
 // end up talking to.
 bool Host::saveMapFile(const QString& location, int saveVersion)
 {
+    waitForMapAutosave();
     QString filename_map = location;
     if (filename_map.isEmpty()) {
         filename_map = MudletApp::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mHostName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
@@ -977,10 +1034,11 @@ bool Host::saveMapFile(const QString& location, int saveVersion)
         return false;
     }
 
-    QDataStream out(&file_map);
+    ChunkedWriter sink(&file_map);
+    QDataStream out(&sink);
     out.setVersion(QDataStream::Qt_5_12);
 
-    bool saved = mpMap->serialize(out, saveVersion);
+    bool saved = mpMap->serialize(out, saveVersion) && sink.flushChunk();
     if (saved && !file_map.commit()) {
         qDebug() << "Error saving map: " << (file_map.error() == QFile::NoError ? "issue with serializing" : file_map.errorString());
         saved = false;
@@ -1150,7 +1208,10 @@ void Host::autoSaveMap()
 #if defined(DEBUG_MAPAUTOSAVE)
             qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save initiated at:" << nowString << ".";
 #endif
-            if (!saveMapFile(MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")))) {
+            const QString path = MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat"));
+            if (mpMap->mpRoomDB->size() <= scmBackgroundMapAutosaveMaxRooms) {
+                autoSaveMapInBackground(path);
+            } else if (!saveMapFile(path)) {
                 mpMap->setSaveError(true);
             } else {
                 mpMap->setSaveError(false);
@@ -1161,6 +1222,62 @@ void Host::autoSaveMap()
 #endif
         }
     }
+}
+
+// Serialising reads the map, so only the file write and its fsync leave the main thread
+void Host::autoSaveMapInBackground(const QString& path)
+{
+    // Not queued behind it: the map stays unsaved, so the next autosave writes it
+    if (!mMapAutosaveFuture.isFinished()) {
+        return;
+    }
+    waitForMapAutosave();
+
+    const QDir dir_map(MudletApp::getMudletPath(enums::profileMapsPath, mHostName));
+    if (!dir_map.exists() && !dir_map.mkpath(dir_map.path())) {
+        qDebug().noquote() << "Error autosaving map: could not make the profile's map directory" << dir_map.path();
+        mpMap->setSaveError(true);
+        return;
+    }
+
+    QByteArray bytes;
+    {
+        QDataStream out(&bytes, QIODevice::WriteOnly);
+        out.setVersion(QDataStream::Qt_5_12);
+        if (!mpMap->serialize(out, 0)) {
+            mpMap->setSaveError(true);
+            return;
+        }
+    }
+    // Now rather than once written, so that a change made meanwhile is saved by the next autosave
+    mpMap->resetUnsaved();
+
+    mMapAutosaveResultPending = true;
+    mMapAutosaveFuture = QtConcurrent::run(writeFileAtomically, path, std::move(bytes));
+    auto watcher = new QFutureWatcher<bool>(this);
+    connect(watcher, &QFutureWatcher<bool>::finished, this, [this, watcher]() {
+        watcher->deleteLater();
+        // Otherwise a later autosave's write is still running, and its own watcher reports it
+        if (mMapAutosaveFuture.isFinished()) {
+            waitForMapAutosave();
+        }
+    });
+    watcher->setFuture(mMapAutosaveFuture);
+}
+
+void Host::waitForMapAutosave()
+{
+    if (!mMapAutosaveResultPending) {
+        return;
+    }
+    mMapAutosaveFuture.waitForFinished();
+    mMapAutosaveResultPending = false;
+    const bool saved = mMapAutosaveFuture.result();
+    if (!saved) {
+        qDebug().noquote() << "Error autosaving map: could not write" << MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat"));
+        mpMap->setUnsavedKeepingRevisions(__func__);
+    }
+    mpMap->setSaveError(!saved);
 }
 
 void Host::loadPackageInfo()

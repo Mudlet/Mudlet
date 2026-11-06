@@ -1918,6 +1918,7 @@ bool TMap::restore(QString location)
 {
     const MapOperationScope operationScope(this);
     qDebug().noquote().nospace() << "TMap::restore(\"" << location << "\") INFO: restoring map of Profile: \"" << mProfileName << "\" URL: " << mpHost->getUrl();
+    mpHost->waitForMapAutosave();
 
     if (location.isEmpty()) {
         // The newest file is not always one that loads - it can have been cut
@@ -3544,6 +3545,9 @@ void TMap::flushSymbolCaches()
 std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 {
     const MapOperationScope operationScope(this);
+    if (mpHost) {
+        mpHost->waitForMapAutosave();
+    }
     QString destination{dest};
 
     if (destination.isEmpty()) {
