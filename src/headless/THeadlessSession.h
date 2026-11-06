@@ -509,6 +509,10 @@ signals:
     // Not for a profile, as muting is for all of them, but no longer sent once the session's own profile has closed.
     // From the event loop.
     void soundsMutedChanged(THeadlessSession::SoundSource source, bool muted);
+    // A command of the profile was added, removed or changed in what addonCommands() gives, by a script, a package's
+    // removal or the profile's reset, for the app to read them again. One for all the changes made before the event
+    // loop runs, from the event loop.
+    void addonCommandsChanged(const QString& profile);
     // The connection was made; from the event loop
     void connected(const QString& profile);
     // The connection ended, or could not be made, or was called off while connecting; from the event loop
@@ -521,6 +525,8 @@ private:
     bool storeConnectionDetails(const Options&, std::optional<bool> tls);
     void detachFromHost();
     void connectInputRelays(unsigned int run);
+    void connectCommandRelays(unsigned int run);
+    void disconnectCommandRelays();
     void withdrawSecureConnectionOffer();
     void startMapProgress(const QString& title, const QString& label, int maximum);
     bool finishOpenProgress();
@@ -589,6 +595,8 @@ private:
     // Bumped by each start() and shutdown(), to drop a queued quitRequested or other relay owed to the profile
     // before, even one a script closed before shutdown() was called
     unsigned int mRun = 0;
+    // The run an addonCommandsChanged is queued for, so the changes of one turn send one; 0 for none
+    unsigned int mAddonCommandsQueuedRun = 0;
     std::unique_ptr<HostManager> mpPool;
     struct ShownLine
     {

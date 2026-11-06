@@ -189,6 +189,82 @@ setCommandPulse(headlessFlash, true, "red", "#0000ff", 300)
         QCOMPARE(names(session.addonCommands()), QStringList{qsl("Own")});
         QVERIFY(session.shutdown(false));
     }
+    void test_changesAreSentOncePerTurn()
+    {
+        const QString name = qsl("Headless Commands Changes");
+        const QString other = qsl("Headless Commands Changes Other");
+        QVERIFY(writeProfile(name));
+        QVERIFY(writeProfile(other));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy changed(&session, &THeadlessSession::addonCommandsChanged);
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessFirst = addCommand({name = "First"})
+headlessSecond = addCommand({name = "Second"})
+setCommandTooltip(headlessFirst, "Tip")
+)lua")));
+        QCOMPARE(changed.count(), 0);
+        QVERIFY(changed.wait());
+        QTest::qWait(50);
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(changed.at(0).at(0).toString(), name);
+
+        changed.clear();
+        QVERIFY(session.runLua(qsl(R"(setCommandTooltip(headlessFirst, "Tip"))")));
+        QTest::qWait(50);
+        QCOMPARE(changed.count(), 0);
+
+        QVERIFY(session.runLua(qsl("loadProfile([[%1]], true)").arg(other)));
+        Host* pOther = HostManager::self()->getHost(other);
+        QVERIFY(pOther);
+        QTest::qWait(50);
+        changed.clear();
+        QVERIFY(pOther->getLuaInterpreter()->compileAndExecuteScript(qsl("addCommand({name = 'Theirs'})")));
+        QTest::qWait(50);
+        QCOMPARE(changed.count(), 0);
+
+        QVERIFY(session.runLua(qsl("removeCommand(headlessSecond)")));
+        QVERIFY(changed.wait());
+        QCOMPARE(changed.count(), 1);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_removingThePackageSendsAChange()
+    {
+        const QString name = qsl("Headless Commands Uninstall");
+        QVERIFY(writeProfile(name));
+        const QString packagePath = mConfigDir.filePath(qsl("commandsUninstalled.xml"));
+        QVERIFY(writeFile(packagePath, packageXml(R"(addCommand({name = "Packaged"}))")));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy changed(&session, &THeadlessSession::addonCommandsChanged);
+        QVERIFY2(session.installPackage(packagePath) == THeadlessSession::PackageResult::installed, qPrintable(session.errorString()));
+        QTRY_VERIFY(changed.count() > 0);
+        QCOMPARE(session.addonCommands().size(), 1);
+        changed.clear();
+        // Installing saves the profile, and a package is not removed while it is being saved
+        QTRY_VERIFY(!session.host()->currentlySavingProfile());
+        QVERIFY(session.runLua(qsl("uninstallPackage('commandsUninstalled')")));
+        QVERIFY(session.addonCommands().isEmpty());
+        QTRY_VERIFY(changed.count() > 0);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_resettingTheProfileSendsAChange()
+    {
+        const QString name = qsl("Headless Commands Reset");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy changed(&session, &THeadlessSession::addonCommandsChanged);
+        QVERIFY(session.runLua(qsl("addCommand({name = 'Reset away'})")));
+        QVERIFY(changed.wait());
+        changed.clear();
+        QVERIFY(session.runLua(qsl("resetProfile()")));
+        QTRY_VERIFY(changed.count() > 0);
+        QVERIFY(session.addonCommands().isEmpty());
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionCommandsTest.moc"

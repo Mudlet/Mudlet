@@ -471,6 +471,7 @@ set(mudlet_HDRS
     TMxpVarTagHandler.h
     TMxpVersionTagHandler.h
     TNullAppFrontend.h
+    TNullAppFrontendNotifier.h
     TNullConsoleFrontend.h
     TNullMapView.h
     TNullMapViews.h

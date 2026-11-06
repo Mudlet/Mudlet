@@ -731,6 +731,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     });
                 }
                 connectInputRelays(run);
+                connectCommandRelays(run);
                 // Direct, so it keeps its place among the game's lines and hiddenInputWanted; an exit handler's
                 // text is for a line the app no longer shows, and a script's close raises it before quitRequested
                 connect(pNewHost, &Host::signal_commandLineTextRequested, this, [this, run, pNewHost](const QString& text) {
@@ -1715,6 +1716,7 @@ void THeadlessSession::detachFromHost()
     if (MudletMedia* pMedia = MudletMedia::self()) {
         disconnect(pMedia, nullptr, this, nullptr);
     }
+    disconnectCommandRelays();
 }
 
 void THeadlessSession::startMapProgress(const QString& title, const QString& label, const int maximum)
