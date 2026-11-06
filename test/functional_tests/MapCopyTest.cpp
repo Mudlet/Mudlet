@@ -320,7 +320,9 @@ private slots:
     {
         const QString mapDir = MudletApp::getMudletPath(enums::profileMapsPath, mDestinationName);
         QDir(mapDir).removeRecursively();
-        QVERIFY(QFile::link(MudletApp::getMudletPath(enums::profileMapsPath, mSourceName), mapDir));
+        const QString sharedDir = MudletApp::getMudletPath(enums::profileMapsPath, mSourceName);
+        QVERIFY(QDir().mkpath(sharedDir));
+        QVERIFY(QFile::link(sharedDir, mapDir));
         auto unlink = qScopeGuard([&]() {
             QFile::remove(mapDir);
         });
