@@ -43,10 +43,10 @@
 
 #include "Host.h"
 #include "MudletApp.h"
-#include "TMainConsole.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TelnetServerStub.h"
@@ -296,9 +296,7 @@ private slots:
         buildMap(mpSource, qsl("The earlier copy"), 2);
         const QString earlier = MudletApp::getMudletPath(enums::profileMapPathFileName, mSourceName, qsl("earlier.dat"));
         QVERIFY(mpSource->saveMapFile(earlier));
-        // Not the area the next test looks for, so its copy still has to arrive
-        const QString laterArea = qsl("The later copy");
-        buildMap(mpSource, laterArea, scmCopiedRooms);
+        buildMap(mpSource, mCopiedArea, scmCopiedRooms);
         openPreferencesAndTick({mDestinationName});
         if (QTest::currentTestFailed()) {
             return;
@@ -312,7 +310,7 @@ private slots:
         mpPreferences->pushButton_copyMap->click();
 
         QVERIFY2(taken.contains(newestMapFile(mSourceName)), "the save landed outside the taken names");
-        QVERIFY2(areaNames(mpDestination).contains(laterArea), qPrintable(qsl("the destination has %1 open instead of the copy").arg(areaNames(mpDestination).join(qsl(", ")))));
+        QVERIFY2(areaNames(mpDestination).contains(mCopiedArea), qPrintable(qsl("the destination has %1 open instead of the copy").arg(areaNames(mpDestination).join(qsl(", ")))));
         QCOMPARE(mpPreferences->label_mapFileActionResult->text(), qsl("Map copied, now signalling other profiles to reload it."));
     }
 
@@ -326,6 +324,7 @@ private slots:
         auto unlink = qScopeGuard([&]() {
             QFile::remove(mapDir);
         });
+        buildMap(mpDestination, qsl("The destination's own"), 2);
         buildMap(mpSource, mCopiedArea, scmCopiedRooms);
         openPreferencesAndTick({mDestinationName});
         if (QTest::currentTestFailed()) {
@@ -337,6 +336,8 @@ private slots:
 
         const QString saved = newestMapFile(mSourceName);
         QVERIFY2(taken.contains(saved), qPrintable(qsl("the map just saved is gone, leaving %1 newest").arg(saved)));
+        QVERIFY2(areaNames(mpDestination).contains(mCopiedArea), "the destination was not asked to load the map it shares");
+        QCOMPARE(mpPreferences->label_mapFileActionResult->text(), qsl("Map copied, now signalling other profiles to reload it."));
     }
 #endif
 
@@ -345,8 +346,9 @@ private slots:
     {
         const QString home = MudletApp::getMudletPath(enums::profileHomePath, mDeletedName);
         QVERIFY(QDir().mkpath(home));
-        // Clears the names the previous test took
+        // Whatever earlier tests left in the destination
         QVERIFY(QDir(MudletApp::getMudletPath(enums::profileMapsPath, mDestinationName)).removeRecursively());
+        buildMap(mpDestination, qsl("The destination's own"), 2);
         buildMap(mpSource, mCopiedArea, scmCopiedRooms);
         openPreferencesAndTick({mDeletedName, mDestinationName});
         if (QTest::currentTestFailed()) {

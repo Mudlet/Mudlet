@@ -66,6 +66,7 @@
 #endif
 
 #include <chrono>
+#include <filesystem>
 #include <vector>
 #include <QtConcurrentRun>
 #include <QAbstractScrollArea>
@@ -6794,12 +6795,15 @@ void dlgProfilePreferences::slot_copyMap()
     while (itOtherProfile.hasNext()) {
         itOtherProfile.next();
         const QString otherHostName = itOtherProfile.key();
-        // A copy made earlier in the same second may have left a file of this name, which QFile::copy() will not replace,
-        // unless a map folder shared through a link makes it the file just saved here
         const QString destination = MudletApp::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName);
-        if (QFileInfo(destination).canonicalFilePath() != QFileInfo(thisProfileLatestMapFile).canonicalFilePath()) {
-            QFile::remove(destination);
+        // A map folder shared through a link or junction already holds the save just made, which a remove would delete
+        std::error_code notComparable;
+        if (std::filesystem::equivalent(QFileInfo(destination).filesystemFilePath(), QFileInfo(thisProfileLatestMapFile).filesystemFilePath(), notComparable)) {
+            copiedToProfiles.append(otherHostName);
+            continue;
         }
+        // A copy made earlier in the same second may have left a file of this name, which QFile::copy() will not replace
+        QFile::remove(destination);
         // Copy over into the profiles map folder, so it is loaded first when map is open - this covers the offline case
         label_mapFileActionResult->setText(tr("Copying over map to %1 - please wait...").arg(otherHostName));
         qApp->processEvents(); // Copied from "Loading map - please wait..." case
