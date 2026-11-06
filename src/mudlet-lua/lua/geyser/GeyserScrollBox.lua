@@ -43,14 +43,14 @@ local function frameChildren(box)
     local zero = function() return 0 end
     local across = {get_x = own.get_x, get_y = zero, get_width = own.get_width, get_height = zero}
     local down = {get_x = zero, get_y = own.get_y, get_width = zero, get_height = own.get_height}
-    local place
+    -- weak, so the box does not keep alive a coroutine that died or was dropped mid-measure
+    local flags = setmetatable({measuring = false, placing = false}, {__mode = "v"})
     -- a negative width or height is compiled as the far edge less the box's own
     -- get_x or get_y, so those must give the box's real origin while it measures itself
-    local measuring, placing = false, false
     local function origin(get)
         return function()
-            if measuring and underWay(measuring, own.get_x, own.get_y, own.get_width, own.get_height)
-                or placing and underWay(placing, own.get_x, own.get_y, own.get_width, own.get_height) then
+            local flag = flags.measuring or flags.placing
+            if flag and underWay(flag, own.get_x, own.get_y, own.get_width, own.get_height) then
                 return get()
             end
             return 0
@@ -58,40 +58,40 @@ local function frameChildren(box)
     end
     box.get_x = origin(own.get_x)
     box.get_y = origin(own.get_y)
+    -- the box's own constraints read its unframed sizes while it places itself; placing
+    -- never measures it, so a measure under way means placing was left set
     box.get_width = function()
-        if placing and underWay(placing, place) then
+        local flag = not flags.measuring and flags.placing
+        if flag and underWay(flag, own.get_x, own.get_y, own.get_width, own.get_height) then
             return own.get_width()
         end
-        measuring = thisThread()
+        flags.measuring = thisThread()
         local _, _, width = Geyser.Container.pixel_geometry(across)
-        measuring = false
+        flags.measuring = false
         return width
     end
     box.get_height = function()
-        if placing and underWay(placing, place) then
+        local flag = not flags.measuring and flags.placing
+        if flag and underWay(flag, own.get_x, own.get_y, own.get_width, own.get_height) then
             return own.get_height()
         end
-        measuring = thisThread()
+        flags.measuring = thisThread()
         local _, _, _, height = Geyser.Container.pixel_geometry(down)
-        measuring = false
+        flags.measuring = false
         return height
     end
-    -- the box's own constraints read its unframed sizes while it places itself
-    place = function()
-        placing = thisThread()
-        local x, y, width, height = Geyser.Container.pixel_geometry(own)
-        placing = false
-        return x, y, width, height
-    end
-    return place
+    return own, flags
 end
 
 -- Overridden reposition for special coordination handling
 function Geyser.ScrollBox:reposition(skipChildren)
     Geyser.calc_constraints(self, self, self.container)
-    -- framed before it measures itself, so a constraint that raises cannot leave it
+    -- framed before it places itself, so a constraint that raises cannot leave it
     -- with getters that give its real origin to its children
-    local x, y, width, height = frameChildren(self)()
+    local own, flags = frameChildren(self)
+    flags.placing = thisThread()
+    local x, y, width, height = Geyser.Container.pixel_geometry(own)
+    flags.placing = false
     moveWindow(self.name, x, y)
     resizeWindow(self.name, width, height)
       -- deal with all children of this container
