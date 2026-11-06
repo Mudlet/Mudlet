@@ -631,7 +631,7 @@ void TDetachedWindow::closeEvent(QCloseEvent* event)
             }
         }
 
-        // A cancelled save question, or a close that has to wait, keeps that profile here, and so its window open
+        // A cancelled save question, or a close held off for now, keeps that profile here, and so its window open
         if (!mProfileConsoleMap.isEmpty()) {
             event->ignore();
             return;
