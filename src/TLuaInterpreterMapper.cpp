@@ -1312,7 +1312,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
         if (!host.mpMap->mpRoomDB->hasAreaName(name)) {
             return warnArgumentValue(L, __func__, qsl("string '%1' is not a valid area name").arg(name));
         }
-        if (name == host.mpMap->getDefaultAreaName()) {
+        if (host.mpMap->mpRoomDB->getAreaNamesMap().key(name, 0) == -1) {
             return warnArgumentValue(L, __func__, "you can't delete the default area");
         }
     } else {
