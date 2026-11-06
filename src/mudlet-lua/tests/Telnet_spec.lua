@@ -2215,6 +2215,17 @@ describe("Tests CHARSET negotiation", function()
     assert.equals("UTF-8", getServerEncoding())
   end)
 
+  -- RFC 2066 has the version after "[TTABLE]" as a binary octet, not a digit
+  it("reads the character sets after a translate table version", function()
+    setServerEncoding("CP437")
+    feed("<T_IAC><T_SB><O_CHARS><01>[TTABLE]<01>;UTF-8<T_IAC><T_SE>")
+    assert.equals("UTF-8", getServerEncoding())
+
+    -- a version above 1 is the highest one the server has, so it is skipped the same way
+    feed("<T_IAC><T_SB><O_CHARS><01>[TTABLE]<02>;CP437<T_IAC><T_SE>")
+    assert.equals("CP437", getServerEncoding())
+  end)
+
   it("ignores a translate table it cannot use", function()
     setServerEncoding("CP437")
     -- Mudlet has no translate table support and answers TTABLE_REJECTED. The

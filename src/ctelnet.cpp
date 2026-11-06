@@ -4301,8 +4301,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
             // CHARSET support per https://tools.ietf.org/html/rfc2066
             if (telnetCommand[3] == CHARSET_REQUEST) {
-                if (payload.startsWith("[TTABLE]1")) { // No translate table support.  Discard.
-                    payload.remove(0, 9);
+                // No translate table support, so skip "[TTABLE]" and the version octet after it,
+                // which follow the REQUEST byte still at the front of the payload
+                if (payload.sliced(1).startsWith("[TTABLE]")) {
+                    payload.remove(1, 9);
                 }
 
                 // A request is the separator character followed by at least one
