@@ -70,6 +70,8 @@ void EditorTreeDelegate::restyleInks(const ThemeTokens& tokens)
     mErrorMarkInk = errorInk(tokens);
     // Must match the colour the trees' stylesheet writes a chosen row's name in
     mSelectedMarkInk = tokens.accentText;
+    mPackageInk = mColouredMarks ? identityInk(scmIdentity_packages, tokens) : QColor();
+    mPackageFill = mColouredMarks ? identityFill(scmIdentity_packages, tokens) : QColor();
 }
 
 void EditorTreeDelegate::clearGlyphs() const
@@ -273,9 +275,18 @@ QPixmap EditorTreeDelegate::markGlyph(const RowMark mark, const bool selected) c
         return glyph;
     }
 
-    const QColor ink = mark == RowMark::Error ? mErrorMarkInk : (selected ? mSelectedMarkInk : mMarkInk);
     const qreal ratio = mGlyphRatio;
-    glyph = tintedGlyph(uiDesign::glyphPixmap(file), ink).scaled(QSize(scmTreeMarkSize, scmTreeMarkSize) * ratio, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QPixmap source;
+    if (mark == RowMark::Package && mPackageInk.isValid()) {
+        // The colour stays on a chosen row, as it does on the bars
+        source = tintedGlyph(glyphFillPixmap(file), mPackageFill);
+        QPainter painter(&source);
+        painter.drawPixmap(0, 0, tintedGlyph(uiDesign::glyphPixmap(file), mPackageInk));
+        painter.end();
+    } else {
+        source = tintedGlyph(uiDesign::glyphPixmap(file), mark == RowMark::Error ? mErrorMarkInk : (selected ? mSelectedMarkInk : mMarkInk));
+    }
+    glyph = source.scaled(QSize(scmTreeMarkSize, scmTreeMarkSize) * ratio, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     glyph.setDevicePixelRatio(ratio);
     return glyph;
 }

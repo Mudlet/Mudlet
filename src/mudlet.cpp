@@ -1754,28 +1754,28 @@ void mudlet::init()
     mpMainToolBar->addAction(mpActionFullScreenView);
     mpMainToolBar->widgetForAction(mpActionFullScreenView)->setObjectName(mpActionFullScreenView->objectName());
 
-    mToolBarGlyphs = {{mpActionConnect, qsl(":/icons/toolbar-connect.svg"), QString()},
-                      {mpActionTriggers, qsl(":/icons/editor-triggers.svg"), QString()},
+    mToolBarGlyphs = {{mpActionConnect, qsl(":/icons/toolbar-connect.svg"), QString(), uiDesign::scmIdentity_connect},
+                      {mpActionTriggers, qsl(":/icons/editor-triggers.svg"), QString(), uiDesign::scmIdentity_triggers},
                       {mpActionAliases, qsl(":/icons/editor-aliases.svg"), QString()},
                       {mpActionTimers, qsl(":/icons/editor-timers.svg"), QString()},
-                      {mpActionButtons, qsl(":/icons/editor-buttons.svg"), QString()},
+                      {mpActionButtons, qsl(":/icons/editor-buttons.svg"), QString(), uiDesign::scmIdentity_buttons},
                       {mpActionScripts, qsl(":/icons/editor-scripts.svg"), QString()},
                       {mpActionKeys, qsl(":/icons/editor-keys.svg"), QString()},
-                      {mpActionVariables, qsl(":/icons/editor-variables.svg"), QString()},
-                      {mpActionMuteMedia, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg")},
-                      {mpActionMuteAPI, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg")},
-                      {mpActionMuteGame, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg")},
-                      {mpActionDiscord, qsl(":/icons/toolbar-discord.png"), QString()},
-                      {mpActionMudletDiscord, qsl(":/icons/toolbar-discord.png"), QString()},
-                      {mpActionMapper, qsl(":/icons/toolbar-map.svg"), QString()},
-                      {mpActionHelp, qsl(":/icons/toolbar-manual.svg"), QString()},
+                      {mpActionVariables, qsl(":/icons/editor-variables.svg"), QString(), uiDesign::scmIdentity_variables},
+                      {mpActionMuteMedia, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg"), uiDesign::scmIdentity_sound},
+                      {mpActionMuteAPI, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg"), uiDesign::scmIdentity_sound},
+                      {mpActionMuteGame, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg"), uiDesign::scmIdentity_sound},
+                      {mpActionDiscord, qsl(":/icons/toolbar-discord.png"), QString(), uiDesign::scmIdentity_discord},
+                      {mpActionMudletDiscord, qsl(":/icons/toolbar-discord.png"), QString(), uiDesign::scmIdentity_discord},
+                      {mpActionMapper, qsl(":/icons/toolbar-map.svg"), QString(), uiDesign::scmIdentity_map},
+                      {mpActionHelp, qsl(":/icons/toolbar-manual.svg"), QString(), uiDesign::scmIdentity_manual},
                       {mpActionOptions, qsl(":/icons/toolbar-settings.svg"), QString()},
                       {mpActionNotes, qsl(":/icons/toolbar-notepad.svg"), QString()},
-                      {mpActionPackageManager, qsl(":/icons/toolbar-packages.svg"), QString()},
-                      {mpActionModuleManager, qsl(":/icons/editor-module.svg"), QString()},
-                      {mpActionPackageExporter, qsl(":/icons/toolbar-export.svg"), QString()},
+                      {mpActionPackageManager, qsl(":/icons/toolbar-packages.svg"), QString(), uiDesign::scmIdentity_packages},
+                      {mpActionModuleManager, qsl(":/icons/editor-module.svg"), QString(), uiDesign::scmIdentity_packages},
+                      {mpActionPackageExporter, qsl(":/icons/toolbar-export.svg"), QString(), uiDesign::scmIdentity_packages},
                       {mpActionReplay, qsl(":/icons/toolbar-replay.svg"), QString()},
-                      {mpActionReconnect, qsl(":/icons/toolbar-reconnect.svg"), QString()},
+                      {mpActionReconnect, qsl(":/icons/toolbar-reconnect.svg"), QString(), uiDesign::scmIdentity_reconnect},
                       {mpActionMultiView, qsl(":/icons/toolbar-multiview.svg"), QString()},
                       {mpActionAbout, qsl(":/icons/toolbar-about.svg"), QString()},
                       {mpActionFullScreenView, qsl(":/icons/toolbar-fullscreen.svg"), qsl(":/icons/toolbar-fullscreen-exit.svg")}};
@@ -4848,6 +4848,11 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mHostManager.readSettings(settings);
     mInvertMapZoom = settings.value("invertMapZoom", QVariant(false)).toBool(); // Default to false for modern (non-inverted) behavior
+    // The toolbar was inked before the settings were read
+    if (settings.value(qsl("colouredIcons"), false).toBool()) {
+        mColouredIcons = true;
+        restyleToolBarIcons();
+    }
     mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
 
 
@@ -4993,8 +4998,8 @@ static QIcon aboutUpdateIcon(const uiDesign::ThemeTokens& tokens)
 void mudlet::restyleToolBarIcons()
 {
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
-    uiDesign::restyleToolBarGlyphs(mToolBarGlyphs, tokens);
-    // Outside mToolBarGlyphs, which inks every glyph as chrome
+    uiDesign::restyleToolBarGlyphs(mToolBarGlyphs, tokens, mColouredIcons);
+    // Outside mToolBarGlyphs: its own green stays whether or not the bar is coloured
     if (mpButtonAbout) {
         mpButtonAbout->setIcon(aboutUpdateIcon(tokens));
     }
@@ -5274,6 +5279,7 @@ void mudlet::writeSettings()
     settings.setValue("fullScreen", static_cast<bool>(windowState() & Qt::WindowFullScreen));
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("invertMapZoom", mInvertMapZoom);
+    settings.setValue(qsl("colouredIcons"), mColouredIcons);
     settings.setValue("showTabConnectionIndicators", mShowTabConnectionIndicators);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
@@ -7990,6 +7996,15 @@ void mudlet::slot_passwordMigratedToSecureStorage(QKeychain::Job* job)
 
     if (mCharacterPasswordsToMigrate.isEmpty()) {
         emit signal_characterPasswordsMigrated();
+    }
+}
+
+void mudlet::setColouredIcons(const bool state)
+{
+    if (mColouredIcons != state) {
+        mColouredIcons = state;
+        restyleToolBarIcons();
+        emit signal_colouredIconsChanged(state);
     }
 }
 

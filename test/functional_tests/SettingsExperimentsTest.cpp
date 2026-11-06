@@ -32,6 +32,7 @@
 
 #include <QDir>
 #include <QTemporaryDir>
+#include <QScopeGuard>
 #include <QtTest/QtTest>
 
 #include <QCheckBox>
@@ -182,11 +183,7 @@ private slots:
         QVERIFY2(pCard, "there is no Experiments card");
         QScrollArea* pAdvanced = TestSettings::pageOf(mpPreferences, qsl("advanced"));
         QVERIFY2(pAdvanced && pAdvanced->isAncestorOf(pCard), "the Experiments card is not on the Advanced page");
-#if defined(INCLUDE_3DMAPPER)
-        QVERIFY2(!pCard->isHidden(), "the Experiments card is hidden");
-#else
-        QVERIFY2(pCard->isHidden(), "the Experiments card is offered in a build where none of them does anything");
-#endif
+        QVERIFY2(!pCard->isHidden(), "the Experiments card is hidden, and with it the app-wide colored icons switch");
 
         const QStringList keys = mpHost->getValidExperiments();
         QVERIFY(!keys.isEmpty());
@@ -196,8 +193,34 @@ private slots:
             QVERIFY2(pCard->isAncestorOf(pBox), qPrintable(qsl("%1's checkbox is not on the Experiments card").arg(key)));
             QVERIFY2(!pBox->text().isEmpty(), qPrintable(qsl("%1's checkbox has no label").arg(key)));
             QVERIFY2(pBox->isEnabled(), qPrintable(qsl("%1's checkbox is greyed out with a profile loaded").arg(key)));
+#if !defined(INCLUDE_3DMAPPER)
+            QVERIFY2(pBox->isHidden(), qPrintable(qsl("%1 is offered in a build without the 3D map it changes").arg(key)));
+#endif
         }
-        QCOMPARE(pCard->findChildren<QCheckBox*>().size(), keys.size());
+        // The app-wide colored icons switch besides the profile's own
+        QCOMPARE(pCard->findChildren<QCheckBox*>().size(), keys.size() + 1);
+    }
+
+    void test_theColoredIconsSwitchIsTheAppsNotTheProfiles()
+    {
+        openPreferences();
+        auto* pBox = mpPreferences->findChild<QCheckBox*>(qsl("checkBox_colouredIcons"));
+        QVERIFY2(pBox, "there is no colored icons checkbox");
+        auto* pCard = mpPreferences->findChild<QGroupBox*>(qsl("card_experiments"));
+        QVERIFY2(pCard && pCard->isAncestorOf(pBox), "the colored icons checkbox is not on the Experiments card");
+        QVERIFY(!pBox->text().isEmpty());
+        QVERIFY(!pBox->isChecked());
+        auto restore = qScopeGuard([]() {
+            mudlet::self()->setColouredIcons(false);
+        });
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pBox->click();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
+        QVERIFY2(mudlet::self()->colouredIcons(), "ticking the box did not color the toolbar");
+
+        mudlet::self()->setColouredIcons(false);
+        QVERIFY2(!pBox->isChecked(), "the box did not follow the toolbar being switched back from elsewhere");
     }
 
     void test_anExperimentSwitchedByAScriptShowsInTheDialog()

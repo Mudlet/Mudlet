@@ -394,17 +394,64 @@ QPixmap themedGlyphPixmap(const QString& glyphFile, const QColor& color, const i
 QIcon tintedIcon(const QString& glyphOff, const QString& glyphOn, const ThemeTokens& tokens);
 QIcon tintedIcon(const QString& glyph, const ThemeTokens& tokens);
 
+// The main colour of the picture a glyph replaced, measured from the old PNG, for a player who still finds an icon
+// by it. A hue below 0 is no colour: the old picture was grey, or a colour already means something on
+// that button (About's green arch against its update state).
+struct IdentityColour
+{
+    qreal hue = -1.0;
+    qreal saturation = 0.0;
+    qreal lightness = 0.0;
+};
+inline constexpr IdentityColour scmIdentity_connect{0.097, 0.86, 0.56};
+inline constexpr IdentityColour scmIdentity_triggers{0.065, 0.81, 0.53};
+inline constexpr IdentityColour scmIdentity_buttons{0.127, 0.92, 0.54};
+inline constexpr IdentityColour scmIdentity_variables{0.167, 1.00, 0.25};
+inline constexpr IdentityColour scmIdentity_sound{0.574, 0.73, 0.41};
+inline constexpr IdentityColour scmIdentity_discord{0.653, 0.86, 0.65};
+inline constexpr IdentityColour scmIdentity_map{0.586, 0.54, 0.49};
+inline constexpr IdentityColour scmIdentity_manual{0.139, 0.94, 0.60};
+inline constexpr IdentityColour scmIdentity_packages{0.103, 0.38, 0.53};
+inline constexpr IdentityColour scmIdentity_reconnect{0.125, 0.85, 0.50};
+inline constexpr IdentityColour scmIdentity_add{0.333, 0.85, 0.36};
+inline constexpr IdentityColour scmIdentity_addGroup{0.591, 0.46, 0.59};
+inline constexpr IdentityColour scmIdentity_activate{0.129, 0.92, 0.45};
+inline constexpr IdentityColour scmIdentity_delete{0.003, 0.79, 0.43};
+inline constexpr IdentityColour scmIdentity_transfer{0.333, 0.77, 0.34};
+inline constexpr IdentityColour scmIdentity_folder{0.619, 0.89, 0.70};
+inline constexpr IdentityColour scmIdentity_errors{0.004, 0.74, 0.49};
+inline constexpr IdentityColour scmIdentity_statistics{0.333, 0.74, 0.44};
+inline constexpr IdentityColour scmIdentity_debug{0.000, 0.90, 0.39};
+// How much of the colour washes the glyph's own shapes under its line
+inline constexpr qreal scmIdentityFillOnDark = 0.45;
+inline constexpr qreal scmIdentityFillOnLight = 0.40;
+
+// The line, walked to scmQuietMinimumRatio on the bar and on the menus a button opens
+QColor identityInk(const IdentityColour& identity, const ThemeTokens& tokens);
+QColor identityFill(const IdentityColour& identity, const ThemeTokens& tokens);
+
+// The glyph's shapes filled in with no line, for a wash under it. A glyph whose lines leave a shape open beside
+// <name>.svg ships a <name>-fill.svg holding the shape to fill instead. Empty for a raster file.
+QPixmap glyphFillPixmap(const QString& file);
+// The glyph's line in identityInk() over its wash in identityFill()
+QPixmap identityGlyph(const QString& file, const IdentityColour& identity, const ThemeTokens& tokens);
+// The colour in every state but unavailable: it is what the player looks for, and the surface under a hovered,
+// chosen or switched-on button already shows which
+QIcon identityIcon(const QString& glyphOff, const QString& glyphOn, const IdentityColour& identity, const ThemeTokens& tokens, const QColor& disabledInk);
+
 struct ActionGlyph
 {
     QPointer<QAction> pAction;
     QString glyphOff;
     // Left empty where both states are the same picture
     QString glyphOn;
+    IdentityColour identity;
 };
 
 void restyleActionGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens);
-// For actions on a toolbar: unavailable, the glyph takes disabledBarText as the bar's words do
-void restyleToolBarGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens);
+// For actions on a toolbar: unavailable, the glyph takes disabledBarText as the bar's words do. Coloured, a glyph with
+// an identity colour keeps it at rest, under the pointer and switched on.
+void restyleToolBarGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured = false);
 
 struct CardMetrics
 {

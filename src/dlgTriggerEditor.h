@@ -112,6 +112,7 @@ class dlgVarsMainArea;
 class QShortcut;
 
 namespace uiDesign {
+struct ActionGlyph;
 class ChipRow;
 class SidebarToggle;
 class EditorLineMarginDelegate;
@@ -463,6 +464,7 @@ public slots:
     void slot_profileSaveAsAction();
     void slot_setToolBarIconSize(int);
     void slot_setTreeWidgetIconSize(int);
+    void slot_colouredIconsChanged();
     void slot_colorTriggerFg();
     void slot_colorTriggerBg();
     void slot_updateCaretPosition(const QString& statusText); // For the source code editor
@@ -865,7 +867,7 @@ private:
     bool mEditorToolBarFitting = false;
 
     // Each action's glyph resource, kept to re-tint it from the palette
-    QList<QPair<QAction*, QString>> mEditorActionGlyphs;
+    QList<uiDesign::ActionGlyph> mEditorActionGlyphs;
 
     // Kept to hand a theme change on to the state dots they draw
     QList<uiDesign::EditorTreeDelegate*> mEditorTreeDelegates;

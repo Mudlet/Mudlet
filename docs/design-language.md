@@ -1355,6 +1355,43 @@ that is currently doing something reads as lit. Full Screen and the Sound family
 pass a second file for their On state. The split buttons keep Qt's own
 `MenuButtonPopup` arrow and hover frame; nothing is drawn over the glyphs.
 
+### Colored icons (experiment)
+
+"Colored icons" on the Experiments card gives the glyphs on the main toolbar and
+in the script editor the colours of the PNG pictures they replaced, for players
+who still find an icon by its colour. It is app-wide - `mudlet::setColouredIcons()`,
+kept in `Mudlet.ini` as `colouredIcons` - because the toolbar belongs to no one
+profile, so the card shows in every build even where the 3D map experiments
+beside it are hidden.
+
+- Each colour is an `IdentityColour` in `src/uiDesign.h` (`scmIdentity_*`),
+  measured from the old PNG: the strongest hue among its saturated pixels. A
+  picture under 30% coloured counts as grey and gets none (Aliases, Timers,
+  Scripts, Keys, Settings, Notepad, Replay, MultiView, Full Screen). About gets
+  none either: its green is the update state's.
+- The ledger entry carries the colour; `restyleToolBarGlyphs(glyphs, tokens,
+  coloured)` draws it. The line is `identityInk()`, walked with `readableOn()` to
+  `scmQuietMinimumRatio` on the page and the card, since a split button's menu
+  shows the same icon. Under it, `glyphFillPixmap()` washes the glyph's own
+  shapes at `scmIdentityFillOnDark` / `scmIdentityFillOnLight`.
+- The colour stays at rest, under the pointer, switched on and chosen; the wash
+  under the button or row already shows those states. Unavailable, the glyph is
+  `disabledBarText` with no wash. `identityIcon()` builds all of these.
+- In the script editor: the toolbar (Add green, Add Group blue, Activate gold,
+  Delete red, Import and Export green, Create Module and Save Profile As brown),
+  the sidebar and each tree's heading row through `editorViewIdentity()` (Triggers,
+  Buttons, Variables, Folders, Errors, Statistics, Debug), and a package's mark in
+  the trees, which `EditorTreeDelegate::setColouredMarks()` turns the Packages
+  brown. The editor follows the switch through `slot_colouredIconsChanged()`.
+- A glyph whose lines leave its middle open fills in as broken pieces, so it
+  ships `<name>-fill.svg` beside it with the shape to wash instead:
+  `toolbar-reconnect-fill.svg` (the circle the two arrows run round),
+  `editor-activate-fill.svg` (the top of the power circle, open for its line)
+  and `editor-variables-fill.svg` (the space between the braces). These are Mudlet's
+  own and never drawn as a line.
+- `editor-variables.svg` is Lucide's `braces` with three dots in the style of
+  Lucide's `ellipsis` between them, as Lucide has no `{...}`.
+
 Everything else the editor draws as a picture comes from the same family and
 the same tinting. The notice banner's three pictures are `editor-notice-info.svg`
 (info), `editor-notice-warning.svg` (triangle-alert) and

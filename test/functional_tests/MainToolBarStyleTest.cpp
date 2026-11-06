@@ -544,6 +544,90 @@ private slots:
         QVERIFY2(pBar->property(uiDesign::scmProp_toolBarOverflowExtent).toInt() > iconOnlyWidth, "the button left no more room for a word than for a glyph alone");
     }
 
+    void test_coloredIconsTakeTheColorsOfTheOldPictures()
+    {
+        auto restore = qScopeGuard([]() {
+            mudlet::self()->setColouredIcons(false);
+            TestPixels::setAppearanceAndWait(enums::Appearance::systemSetting);
+        });
+        const auto icon = [](const QString& objectName) {
+            const QAction* pAction = mudlet::self()->findChild<QAction*>(objectName);
+            return pAction ? pAction->icon().pixmap(QSize(64, 64), QIcon::Normal, QIcon::Off).toImage().convertToFormat(QImage::Format_ARGB32) : QImage();
+        };
+        // The most saturated of the glyph's solid pixels, and whether any of its pixels is a part-clear wash
+        struct Read
+        {
+            qreal hue = -1.0;
+            qreal saturation = 0.0;
+            bool washed = false;
+        };
+        const auto read = [](const QImage& image) {
+            Read seen;
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    const QColor pixel = image.pixelColor(x, y);
+                    if (pixel.alphaF() > 0.95 && pixel.hslSaturationF() > seen.saturation) {
+                        seen.saturation = pixel.hslSaturationF();
+                        seen.hue = pixel.hslHueF();
+                    }
+                    seen.washed = seen.washed || (pixel.alphaF() > 0.3 && pixel.alphaF() < 0.6);
+                }
+            }
+            return seen;
+        };
+
+        for (const enums::Appearance appearance : {enums::Appearance::dark, enums::Appearance::light}) {
+            TestPixels::setAppearanceAndWait(appearance);
+            const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+            const QString said = appearanceSaidAs(appearance);
+            QVERIFY2(read(icon(qsl("map_action"))).saturation < 0.1, qPrintable(qsl("%1: Map is in color with the switch off").arg(said)));
+
+            mudlet::self()->setColouredIcons(true);
+            const Read map = read(icon(qsl("map_action")));
+            QVERIFY2(map.saturation > 0.3 && std::abs(map.hue - uiDesign::scmIdentity_map.hue) < 0.03,
+                     qPrintable(qsl("%1: Map's line is not the blue of the old globe: hue %2 at saturation %3, wanted hue %4")
+                                        .arg(said, QString::number(map.hue), QString::number(map.saturation), QString::number(uiDesign::scmIdentity_map.hue))));
+            QVERIFY2(map.washed, qPrintable(qsl("%1: Map's shapes carry no wash of its color under the line").arg(said)));
+            for (const QString& grey : {qsl("settings_action"), qsl("about_action")}) {
+                QVERIFY2(read(icon(grey)).saturation < 0.1, qPrintable(qsl("%1: %2 took a color, though its old picture was grey or its green means an update").arg(said, grey)));
+            }
+            for (const uiDesign::IdentityColour& identity : {uiDesign::scmIdentity_connect,
+                                                             uiDesign::scmIdentity_triggers,
+                                                             uiDesign::scmIdentity_buttons,
+                                                             uiDesign::scmIdentity_variables,
+                                                             uiDesign::scmIdentity_sound,
+                                                             uiDesign::scmIdentity_discord,
+                                                             uiDesign::scmIdentity_map,
+                                                             uiDesign::scmIdentity_manual,
+                                                             uiDesign::scmIdentity_packages,
+                                                             uiDesign::scmIdentity_reconnect}) {
+                const QColor ink = uiDesign::identityInk(identity, tokens);
+                QVERIFY2(uiDesign::contrastRatio(ink, tokens.page) >= uiDesign::scmQuietMinimumRatio && uiDesign::contrastRatio(ink, tokens.card) >= uiDesign::scmQuietMinimumRatio,
+                         qPrintable(qsl("%1: the line for hue %2 is %3, under 3:1 on the bar or on a menu").arg(said, QString::number(identity.hue), ink.name())));
+            }
+
+            mudlet::self()->setColouredIcons(false);
+            QVERIFY2(read(icon(qsl("map_action"))).saturation < 0.1, qPrintable(qsl("%1: Map kept its color after the switch went off").arg(said)));
+        }
+    }
+
+    // Their lines leave the middle open, so a fill of the lines alone has a gap across it
+    void test_aGlyphWithAnOpenMiddleIsFilledByItsOwnShape()
+    {
+        const QPixmap reconnect = uiDesign::glyphFillPixmap(qsl(":/icons/toolbar-reconnect.svg"));
+        const QPixmap variables = uiDesign::glyphFillPixmap(qsl(":/icons/editor-variables.svg"));
+        QVERIFY(!reconnect.isNull() && !variables.isNull());
+        const qreal unit = uiDesign::scmGlyphRasterSize / 24.0;
+        const auto alphaAt = [unit](const QPixmap& pixmap, const qreal x, const qreal y) {
+            return pixmap.toImage().pixelColor(qRound(x * unit), qRound(y * unit)).alphaF();
+        };
+        QVERIFY2(alphaAt(reconnect, 12, 12) > 0.9, "Reconnect's wash leaves the middle of its circle open");
+        QVERIFY2(alphaAt(variables, 12, 7) > 0.9, "Variables' wash leaves the space between its braces open");
+        // Above the chord the arc's own ends would close
+        QVERIFY2(alphaAt(uiDesign::glyphFillPixmap(qsl(":/icons/editor-activate.svg")), 12, 5) > 0.9, "Activate's wash leaves the top of its circle open");
+        QVERIFY2(uiDesign::glyphFillPixmap(qsl(":/icons/toolbar-discord.png")).isNull(), "a raster mark, already a filled shape, was given a wash as well");
+    }
+
     void test_aDetachedWindowsBarCarriesTheRecipe()
     {
         QVERIFY2(mudlet::self()->getDetachedWindows().isEmpty(), "a detached window was left over from an earlier test");

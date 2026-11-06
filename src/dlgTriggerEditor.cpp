@@ -1390,6 +1390,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     connect(mudlet::self(), &mudlet::signal_setToolBarIconSize, this, &dlgTriggerEditor::slot_setToolBarIconSize);
     connect(mudlet::self(), &mudlet::signal_setTreeIconSize, this, &dlgTriggerEditor::slot_setTreeWidgetIconSize);
+    connect(mudlet::self(), &mudlet::signal_colouredIconsChanged, this, &dlgTriggerEditor::slot_colouredIconsChanged);
     slot_setToolBarIconSize(mudlet::self()->mToolbarIconSize);
     slot_setTreeWidgetIconSize(mudlet::self()->mEditorTreeWidgetIconSize);
 
@@ -1418,18 +1419,19 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addAction(mpCreateModuleAction);
     toolBar->addAction(mProfileSaveAction);
 
-    mEditorActionGlyphs = {{mAddItem, qsl(":/icons/editor-add.svg")},
-                           {mAddGroup, qsl(":/icons/editor-add-group.svg")},
+    mEditorActionGlyphs = {{mAddItem, qsl(":/icons/editor-add.svg"), QString(), uiDesign::scmIdentity_add},
+                           {mAddGroup, qsl(":/icons/editor-add-group.svg"), QString(), uiDesign::scmIdentity_addGroup},
                            {mSaveItem, qsl(":/icons/editor-save-item.svg")},
-                           {mpAction_toggleActive, qsl(":/icons/editor-activate.svg")},
-                           {mDeleteItem, qsl(":/icons/editor-delete.svg")},
+                           {mpAction_toggleActive, qsl(":/icons/editor-activate.svg"), QString(), uiDesign::scmIdentity_activate},
+                           {mDeleteItem, qsl(":/icons/editor-delete.svg"), QString(), uiDesign::scmIdentity_delete},
                            {mpUndoAction, qsl(":/icons/editor-undo.svg")},
                            {mpRedoAction, qsl(":/icons/editor-redo.svg")},
-                           {importAction, qsl(":/icons/editor-import.svg")},
-                           {mpExportAction, qsl(":/icons/editor-export.svg")},
-                           {mpCreateModuleAction, qsl(":/icons/editor-module.svg")},
+                           {importAction, qsl(":/icons/editor-import.svg"), QString(), uiDesign::scmIdentity_transfer},
+                           {mpExportAction, qsl(":/icons/editor-export.svg"), QString(), uiDesign::scmIdentity_transfer},
+                           {mpCreateModuleAction, qsl(":/icons/editor-module.svg"), QString(), uiDesign::scmIdentity_packages},
                            {mProfileSaveAction, qsl(":/icons/editor-save-profile.svg")},
-                           {mProfileSaveAsAction, qsl(":/icons/editor-save-profile.svg")},
+                           // Its old picture was a brown archive box, Save Profile's a grey disk
+                           {mProfileSaveAsAction, qsl(":/icons/editor-save-profile.svg"), QString(), uiDesign::scmIdentity_packages},
                            // Menu-only, and reached from the trees rather than the toolbar
                            {copyAction, qsl(":/icons/editor-copy.svg")},
                            {pasteAction, qsl(":/icons/editor-paste.svg")}};
@@ -2860,6 +2862,21 @@ void dlgTriggerEditor::slot_setTreeWidgetIconSize(const int s)
     treeWidget_actions->setIconSize(newSize);
     treeWidget_variables->setIconSize(newSize);
     mpFolderTree->setIconSize(newSize);
+}
+
+void dlgTriggerEditor::slot_colouredIconsChanged()
+{
+    restyleEditorIcons();
+    const bool coloured = mudlet::self() && mudlet::self()->colouredIcons();
+    for (uiDesign::EditorTreeDelegate* pDelegate : std::as_const(mEditorTreeDelegates)) {
+        pDelegate->setColouredMarks(coloured);
+        pDelegate->restyle();
+    }
+    for (QTreeWidget* pTree : {treeWidget_triggers, treeWidget_aliases, treeWidget_timers, treeWidget_scripts, treeWidget_actions, treeWidget_keys, treeWidget_variables, mpFolderTree}) {
+        if (pTree) {
+            pTree->viewport()->update();
+        }
+    }
 }
 
 void dlgTriggerEditor::closeEvent(QCloseEvent* event)
@@ -16149,9 +16166,27 @@ void dlgTriggerEditor::addEditorSidebarSeparator()
     mpListWidget_editorSidebar->setItemWidget(pItem, pLine);
 }
 
+// The colour of the old picture of each view, shared by its sidebar row and its tree's heading row
+static uiDesign::IdentityColour editorViewIdentity(const QString& glyphFile)
+{
+    static const QHash<QString, uiDesign::IdentityColour> identities{{qsl(":/icons/editor-triggers.svg"), uiDesign::scmIdentity_triggers},
+                                                                     {qsl(":/icons/editor-buttons.svg"), uiDesign::scmIdentity_buttons},
+                                                                     {qsl(":/icons/editor-variables.svg"), uiDesign::scmIdentity_variables},
+                                                                     {qsl(":/icons/editor-folder.svg"), uiDesign::scmIdentity_folder},
+                                                                     {qsl(":/icons/editor-errors.svg"), uiDesign::scmIdentity_errors},
+                                                                     {qsl(":/icons/editor-statistics.svg"), uiDesign::scmIdentity_statistics},
+                                                                     {qsl(":/icons/editor-debug.svg"), uiDesign::scmIdentity_debug}};
+    return mudlet::self() && mudlet::self()->colouredIcons() ? identities.value(glyphFile) : uiDesign::IdentityColour();
+}
+
 void dlgTriggerEditor::restyleEditorSidebarIcons(const QColor& normal, const QColor& selected)
 {
+    const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
     for (const auto& glyph : std::as_const(mEditorSidebarGlyphs)) {
+        if (const uiDesign::IdentityColour identity = editorViewIdentity(glyph.second); identity.hue >= 0.0) {
+            glyph.first->setIcon(uiDesign::identityIcon(glyph.second, glyph.second, identity, tokens, tokens.disabledText));
+            continue;
+        }
         const QPixmap source = uiDesign::glyphPixmap(glyph.second);
         QIcon icon(uiDesign::tintedGlyph(source, normal));
         // Otherwise the view makes one by washing the icon in the highlight colour
@@ -16174,6 +16209,10 @@ void dlgTriggerEditor::restyleEditorTreeHeadingIcons()
                                                            {mpVarBaseItem, qsl(":/icons/editor-variables.svg")}};
     for (const auto& heading : headings) {
         if (!heading.first) {
+            continue;
+        }
+        if (const uiDesign::IdentityColour identity = editorViewIdentity(heading.second); identity.hue >= 0.0) {
+            heading.first->setIcon(0, uiDesign::identityIcon(heading.second, heading.second, identity, tokens, tokens.disabledText));
             continue;
         }
         const QPixmap source = uiDesign::glyphPixmap(heading.second);
@@ -16314,18 +16353,24 @@ void dlgTriggerEditor::restyleEditorIcons()
     const QColor quietColor = tokens.mutedText;
     const QColor accentText = tokens.accentText;
 
+    const bool coloured = mudlet::self() && mudlet::self()->colouredIcons();
     for (const auto& glyph : std::as_const(mEditorActionGlyphs)) {
-        if (!glyph.first) {
+        if (!glyph.pAction) {
             continue;
         }
-        const QPixmap source = uiDesign::glyphPixmap(glyph.second);
+        const bool onTheBar = toolBar && toolBar->widgetForAction(glyph.pAction);
+        const QColor disabledInk = onTheBar ? tokens.disabledBarText : tokens.disabledText;
+        if (coloured && glyph.identity.hue >= 0.0) {
+            glyph.pAction->setIcon(uiDesign::identityIcon(glyph.glyphOff, glyph.glyphOff, glyph.identity, tokens, disabledInk));
+            continue;
+        }
+        const QPixmap source = uiDesign::glyphPixmap(glyph.glyphOff);
         QIcon icon(uiDesign::tintedGlyph(source, quietColor));
         // Active, not Selected: a tool button asks for Active under the pointer and never for Selected
         icon.addPixmap(uiDesign::tintedGlyph(source, accentText), QIcon::Active);
         // Left to Qt, a grey glyph's generated Disabled picture is all but the Normal one
-        const bool onTheBar = toolBar && toolBar->widgetForAction(glyph.first);
-        icon.addPixmap(uiDesign::tintedGlyph(source, onTheBar ? tokens.disabledBarText : tokens.disabledText), QIcon::Disabled);
-        glyph.first->setIcon(icon);
+        icon.addPixmap(uiDesign::tintedGlyph(source, disabledInk), QIcon::Disabled);
+        glyph.pAction->setIcon(icon);
     }
 
     uiDesign::ToolBarOverflow::restyle(toolBar, uiDesign::themeTokens());
@@ -16943,6 +16988,7 @@ void dlgTriggerEditor::applyEditorShellStyle()
     }
 
     for (uiDesign::EditorTreeDelegate* pDelegate : std::as_const(mEditorTreeDelegates)) {
+        pDelegate->setColouredMarks(mudlet::self() && mudlet::self()->colouredIcons());
         pDelegate->restyle();
     }
 

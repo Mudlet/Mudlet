@@ -29,6 +29,7 @@
 #include <QListWidget>
 #include <QPalette>
 #include <QTreeWidget>
+#include <QScopeGuard>
 #include <QtTest/QtTest>
 #include <chrono>
 
@@ -39,6 +40,7 @@
 #include "ProfileSessionTestHelper.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
+#include "uiDesign.h"
 
 #include "GroupedTest.h"
 
@@ -171,6 +173,51 @@ private slots:
         // two agreeing
         QVERIFY2(before != after, qPrintable(qsl("the theme moved and the heading's picture did not: it is still inked %1").arg(TestPixels::inkOf(after))));
         QVERIFY2(mismatched.isEmpty(), qPrintable(qsl("a theme change reached the sidebar and left a heading behind: %1").arg(mismatched.join(qsl("; ")))));
+    }
+
+    // The switch lives in Settings, so the editor is already open when it is flipped
+    void test_coloredIconsReachTheSidebarTheHeadingsAndTheToolbar()
+    {
+        auto restore = qScopeGuard([]() {
+            mudlet::self()->setColouredIcons(false);
+        });
+        // The hue of the most saturated solid pixel, or -1 for a grey picture
+        const auto hueOf = [](const QIcon& icon) {
+            const QImage image = icon.pixmap(QSize(64, 64)).toImage().convertToFormat(QImage::Format_ARGB32);
+            qreal saturation = 0.1;
+            qreal hue = -1.0;
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    const QColor pixel = image.pixelColor(x, y);
+                    if (pixel.alphaF() > 0.95 && pixel.hslSaturationF() > saturation) {
+                        saturation = pixel.hslSaturationF();
+                        hue = pixel.hslHueF();
+                    }
+                }
+            }
+            return hue;
+        };
+        const auto near = [](const qreal hue, const uiDesign::IdentityColour& identity) {
+            return hue >= 0.0 && std::abs(hue - identity.hue) < 0.03;
+        };
+
+        QCOMPARE(hueOf(mpEditor->mpTriggerBaseItem->icon(0)), -1.0);
+        mudlet::self()->setColouredIcons(true);
+
+        const qreal triggers = hueOf(sidebarRowFor(EditorViewType::cmTriggerView)->icon());
+        QVERIFY2(near(triggers, uiDesign::scmIdentity_triggers), qPrintable(qsl("the Triggers row is not the orange of its old wand: hue %1").arg(triggers)));
+        QVERIFY2(TestPixels::drawnAt(mpEditor->mpTriggerBaseItem->icon(0), scmComparisonSize) == TestPixels::drawnAt(sidebarRowFor(EditorViewType::cmTriggerView)->icon(), scmComparisonSize),
+                 "the Triggers heading and its sidebar row took different pictures");
+        QCOMPARE(hueOf(sidebarRowFor(EditorViewType::cmAliasView)->icon()), -1.0);
+        const qreal add = hueOf(mpEditor->mAddItem->icon());
+        QVERIFY2(near(add, uiDesign::scmIdentity_add), qPrintable(qsl("Add is not the green of its old plus: hue %1").arg(add)));
+        const qreal deleted = hueOf(mpEditor->mDeleteItem->icon());
+        QVERIFY2(near(deleted, uiDesign::scmIdentity_delete), qPrintable(qsl("Delete is not the red of its old cross: hue %1").arg(deleted)));
+        QCOMPARE(hueOf(mpEditor->mSaveItem->icon()), -1.0);
+
+        mudlet::self()->setColouredIcons(false);
+        QCOMPARE(hueOf(sidebarRowFor(EditorViewType::cmTriggerView)->icon()), -1.0);
+        QCOMPARE(hueOf(mpEditor->mAddItem->icon()), -1.0);
     }
 };
 

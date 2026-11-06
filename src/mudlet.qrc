@@ -100,6 +100,7 @@
         <file>icons/edit-select-all.png</file>
         <file>icons/edit-web-search.png</file>
         <file>icons/editor-activate.svg</file>
+        <file>icons/editor-activate-fill.svg</file>
         <file>icons/editor-add-group.svg</file>
         <file>icons/editor-add.svg</file>
         <file>icons/editor-aliases.svg</file>
@@ -139,6 +140,7 @@
         <file>icons/editor-type-string.svg</file>
         <file>icons/editor-undo.svg</file>
         <file>icons/editor-variables.svg</file>
+        <file>icons/editor-variables-fill.svg</file>
         <file>icons/errors.png</file>
         <file>icons/export.png</file>
         <file>icons/face-plain.png</file>
@@ -262,6 +264,7 @@
         <file>icons/toolbar-notepad.svg</file>
         <file>icons/toolbar-packages.svg</file>
         <file>icons/toolbar-reconnect.svg</file>
+        <file>icons/toolbar-reconnect-fill.svg</file>
         <file>icons/toolbar-replay-faster.svg</file>
         <file>icons/toolbar-replay-pause.svg</file>
         <file>icons/toolbar-replay-resume.svg</file>

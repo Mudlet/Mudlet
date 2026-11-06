@@ -529,6 +529,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // included in compilation:
     connect(pMudlet, &mudlet::signal_editorTextOptionsChanged, this, &dlgProfilePreferences::slot_changeEditorTextOptions);
     connect(pMudlet, &mudlet::signal_showMapAuditErrorsChanged, this, &dlgProfilePreferences::slot_changeShowMapAuditErrors);
+    connect(pMudlet, &mudlet::signal_colouredIconsChanged, this, &dlgProfilePreferences::slot_changeColouredIcons);
     connect(pMudlet, &mudlet::signal_setToolBarIconSize, this, &dlgProfilePreferences::slot_setToolBarIconSize);
     connect(pMudlet, &mudlet::signal_setTreeIconSize, this, &dlgProfilePreferences::slot_setTreeWidgetIconSize);
     connect(pMudlet, &mudlet::signal_menuBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeMenuBarVisibility);
@@ -1606,6 +1607,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_debug, tr("special options, advanced, debug, developer")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the unfinished features that can be switched on for a profile.
     synonyms.append({mpCard_experiments.data(), tr("experiment, experimental, beta, preview, unsupported, 3D map, renderer")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for showing the toolbar's and the script editor's icons in color.
+    synonyms.append({mpCheckBox_colouredIcons.data(), tr("colour, color, coloured, colored, icons, toolbar, script editor, old icons")});
     for (const auto& [pControl, words] : synonyms) {
         pControl->setProperty(scmProp_searchKeywords, words);
     }
@@ -1922,7 +1925,7 @@ void dlgProfilePreferences::setCardDescriptions()
     //: Description line under the "Experiments (unsupported)" card title on the Advanced settings page
     setCardDescription(mpCard_experiments,
                        tr("Unfinished features that are still being tried out. They are not supported: they may misbehave, change or be removed in any release. "
-                          "Each one is switched for this profile only."));
+                          "Each one is switched for this profile only, unless marked as applying to every profile."));
 }
 
 void dlgProfilePreferences::buildProtocolsSubpage()
@@ -2003,6 +2006,15 @@ void dlgProfilePreferences::buildExperimentsCard()
     auto* pCardLayout = qobject_cast<QVBoxLayout*>(mpCard_experiments->layout());
     pCardLayout->setSpacing(4);
 
+    mpCheckBox_colouredIcons = new QCheckBox(mpCard_experiments);
+    mpCheckBox_colouredIcons->setObjectName(qsl("checkBox_colouredIcons"));
+    pCardLayout->addWidget(mpCheckBox_colouredIcons);
+    auto* pColouredDescription = new QLabel(mpCard_experiments);
+    pColouredDescription->setObjectName(qsl("checkBox_colouredIcons_description"));
+    pColouredDescription->setProperty("settingsControlDescription", true);
+    pColouredDescription->setWordWrap(true);
+    pCardLayout->addWidget(pColouredDescription);
+
     for (const auto& key : Host::getValidExperiments()) {
         auto* pCheckBox = new QCheckBox(mpCard_experiments);
         pCheckBox->setObjectName(qsl("checkBox_%1").arg(key));
@@ -2015,8 +2027,13 @@ void dlgProfilePreferences::buildExperimentsCard()
         mExperimentCheckBoxes.insert(key, pCheckBox);
     }
 #if !defined(INCLUDE_3DMAPPER)
-    // Every experiment so far only changes the 3D map, which this build leaves out
-    mpCard_experiments->hide();
+    // Every profile experiment so far only changes the 3D map, which this build leaves out
+    for (const auto& pCheckBox : std::as_const(mExperimentCheckBoxes)) {
+        pCheckBox->hide();
+        if (auto* pDescription = mpCard_experiments->findChild<QLabel*>(qsl("%1_description").arg(pCheckBox->objectName())); pDescription) {
+            pDescription->hide();
+        }
+    }
 #endif
 
     // Mirrors Host::setExperimentEnabled(), which switches the rest of a group off, so the
@@ -2041,6 +2058,14 @@ void dlgProfilePreferences::buildExperimentsCard()
 
 void dlgProfilePreferences::retranslateExperiments()
 {
+    //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    mpCheckBox_colouredIcons->setText(tr("Colored icons"));
+    if (auto* pDescription = mpCard_experiments->findChild<QLabel*>(qsl("checkBox_colouredIcons_description")); pDescription) {
+        //: Description under the "Colored icons" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+        pDescription->setText(tr("Gives the icons on Mudlet's toolbar and in the script editor the colors of the pictures they replaced, so a blue map or a red delete is where you remember it. "
+                                 "Applies to every profile."));
+    }
+
     QHash<QString, QString> labels;
     QHash<QString, QString> descriptions;
     //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
@@ -4055,7 +4080,9 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_debugShowAllCodepointProblems->setEnabled(false);
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
     checkBox_lazyCaptureGlobals->setEnabled(false);
-    mpCard_experiments->setEnabled(false);
+    for (const auto& pCheckBox : std::as_const(mExperimentCheckBoxes)) {
+        pCheckBox->setEnabled(false);
+    }
     label_networkPacketTimeout->setEnabled(false);
     doubleSpinBox_networkPacketTimeout->setEnabled(false);
 
@@ -4181,7 +4208,9 @@ void dlgProfilePreferences::enableHostDetails()
     widget_timerDebugOutputMinimumInterval->setEnabled(true);
     checkBox_debugShowAllCodepointProblems->setEnabled(true);
     checkBox_lazyCaptureGlobals->setEnabled(true);
-    mpCard_experiments->setEnabled(true);
+    for (const auto& pCheckBox : std::as_const(mExperimentCheckBoxes)) {
+        pCheckBox->setEnabled(true);
+    }
     label_networkPacketTimeout->setEnabled(true);
     doubleSpinBox_networkPacketTimeout->setEnabled(true);
 
@@ -4205,6 +4234,7 @@ void dlgProfilePreferences::populateApplicationSettings()
 
     checkBox_reportMapIssuesOnScreen->setChecked(TMap::smShowMapAuditErrors);
     checkBox_showIconsOnMenus->setCheckState(pMudlet->mShowIconsOnMenuCheckedState);
+    mpCheckBox_colouredIcons->setChecked(pMudlet->colouredIcons());
 
     MainIconSize->setValue(pMudlet->mToolbarIconSize);
     TEFolderIconSize->setValue(pMudlet->mEditorTreeWidgetIconSize);
@@ -4941,7 +4971,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
@@ -7592,6 +7622,9 @@ void dlgProfilePreferences::applyAll()
     if (mSnapshot.dirty(checkBox_showIconsOnMenus)) {
         pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
     }
+    if (mSnapshot.dirty(mpCheckBox_colouredIcons)) {
+        pMudlet->setColouredIcons(mpCheckBox_colouredIcons->isChecked());
+    }
     if (mSnapshot.dirty(comboBox_appearance)) {
         pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
     }
@@ -8830,6 +8863,13 @@ void dlgProfilePreferences::slot_changeShowMapAuditErrors(const bool state)
 {
     if (checkBox_reportMapIssuesOnScreen->isChecked() != state) {
         checkBox_reportMapIssuesOnScreen->setChecked(state);
+    }
+}
+
+void dlgProfilePreferences::slot_changeColouredIcons(const bool state)
+{
+    if (mpCheckBox_colouredIcons && mpCheckBox_colouredIcons->isChecked() != state) {
+        mpCheckBox_colouredIcons->setChecked(state);
     }
 }
 

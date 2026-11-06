@@ -242,6 +242,7 @@ public:
     void setShowIconsOnMenu(const Qt::CheckState);
     void setShowMapAuditErrors(const bool);
     void setInvertMapZoom(const bool);
+    void setColouredIcons(const bool);
     void setShowTabConnectionIndicators(const bool) override;
     int profileTabIndex(const QString& profileName) const override;
     bool setActiveProfileTab(const QString& profileName) override;
@@ -261,6 +262,7 @@ public:
     void showConnectionDialog() override { slot_showConnectionDialog(); }
     void setCompactInputLineChecked(Host* pHost, bool checked) override;
     bool invertMapZoom() const { return mInvertMapZoom; }
+    bool colouredIcons() const { return mColouredIcons; }
     bool showTabConnectionIndicators() const override { return mShowTabConnectionIndicators; }
     bool showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
@@ -537,6 +539,7 @@ signals:
     void signal_shortcutsChanged();
     void signal_showIconsOnMenusChanged(const Qt::CheckState);
     void signal_showMapAuditErrorsChanged(bool);
+    void signal_colouredIconsChanged(bool);
     void signal_tabChanged(const QString&);
     void signal_toolBarVisibilityChanged(const enums::controlsVisibility);
     void signal_windowStateChanged(const Qt::WindowStates);
@@ -750,6 +753,7 @@ private:
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead
     bool mInvertMapZoom = false; // true = old behavior (inverted), false = modern behavior (non-inverted)
+    bool mColouredIcons = false;
     QSplitter* mpSplitter_profileContainer = nullptr;
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:

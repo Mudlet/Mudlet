@@ -48,6 +48,8 @@ public:
 
     // Must match the accessible description the editor gives an unsaved item's or folder's row
     void setNewDescriptions(const QString& item, const QString& folder);
+    // Takes effect at the next restyle()
+    void setColouredMarks(const bool coloured) { mColouredMarks = coloured; }
 
     void initStyleOption(QStyleOptionViewItem* pOption, const QModelIndex& index) const override;
 
@@ -101,6 +103,10 @@ private:
     QColor mMarkInk;
     QColor mErrorMarkInk;
     QColor mSelectedMarkInk;
+    bool mColouredMarks = false;
+    // Left invalid unless the marks are coloured
+    QColor mPackageInk;
+    QColor mPackageFill;
     QString mNewItemDescription;
     QString mNewFolderDescription;
 

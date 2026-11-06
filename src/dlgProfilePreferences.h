@@ -177,6 +177,7 @@ private slots:
     void slot_changeEditorTextOptions(const QTextOption::Flags);
     void slot_setAppearance(const enums::Appearance);
     void slot_changeShowMapAuditErrors(const bool);
+    void slot_changeColouredIcons(const bool);
 #ifdef INCLUDE_MCPSERVER
     void slot_updateMCPServerEndpoint();
     void slot_connectClaudeDesktop();
@@ -553,6 +554,8 @@ private:
     QPointer<QGroupBox> mpCard_experiments;
     // Keyed by experiment, e.g. "experiment.3dmap.modernmapper"
     QMap<QString, QPointer<QCheckBox>> mExperimentCheckBoxes;
+    // App-wide, unlike the profile's experiments beside it on the card
+    QPointer<QCheckBox> mpCheckBox_colouredIcons;
     QPointer<QGroupBox> mpCard_discord;
     QPointer<QPushButton> mpButton_discordSubpage;
     QPointer<QGroupBox> mpCard_securityStatus;

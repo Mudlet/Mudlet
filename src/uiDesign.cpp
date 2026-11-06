@@ -1557,6 +1557,60 @@ QPixmap glyphPixmap(const QString& file)
     return glyph;
 }
 
+QPixmap glyphFillPixmap(const QString& file)
+{
+    if (!file.endsWith(QLatin1StringView(".svg"), Qt::CaseInsensitive)) {
+        return QPixmap();
+    }
+    const QString key = qsl("uiDesign-glyph-fill-%1").arg(file);
+    QPixmap fill;
+    if (QPixmapCache::find(key, &fill)) {
+        return fill;
+    }
+
+    QString shapeFile = file;
+    shapeFile.insert(shapeFile.size() - 4, qsl("-fill"));
+    QFile source(QFile::exists(shapeFile) ? shapeFile : file);
+    if (!source.open(QIODevice::ReadOnly)) {
+        return fill;
+    }
+    QByteArray svg = source.readAll();
+    // Lucide sets both on the root element and nowhere else, so these two swaps turn every line into its shape
+    svg.replace(QByteArrayLiteral(R"(fill="none")"), QByteArrayLiteral(R"(fill="black")"));
+    svg.replace(QByteArrayLiteral(R"(stroke="currentColor")"), QByteArrayLiteral(R"(stroke="none")"));
+
+    QSvgRenderer renderer(svg);
+    if (!renderer.isValid()) {
+        return fill;
+    }
+    fill = QPixmap(scmGlyphRasterSize, scmGlyphRasterSize);
+    fill.fill(Qt::transparent);
+    QPainter painter(&fill);
+    painter.setRenderHint(QPainter::Antialiasing);
+    renderer.render(&painter);
+    painter.end();
+
+    QPixmapCache::insert(key, fill);
+    return fill;
+}
+
+QColor identityInk(const IdentityColour& identity, const ThemeTokens& tokens)
+{
+    if (identity.hue < 0.0) {
+        return tokens.mutedText;
+    }
+    const QColor wanted = QColor::fromHslF(identity.hue, identity.saturation, identity.lightness);
+    // The card second: a split button's menu is drawn on it, and walking only ever moves away from both
+    return readableOn(tokens.card, readableOn(tokens.page, wanted, tokens.mutedText, scmQuietMinimumRatio), tokens.mutedText, scmQuietMinimumRatio);
+}
+
+QColor identityFill(const IdentityColour& identity, const ThemeTokens& tokens)
+{
+    QColor fill = QColor::fromHslF(identity.hue, identity.saturation, identity.lightness);
+    fill.setAlphaF(tokens.darkPage ? scmIdentityFillOnDark : scmIdentityFillOnLight);
+    return fill;
+}
+
 QPixmap tintedGlyph(const QPixmap& source, const QColor& color)
 {
     QPixmap glyph = source;
@@ -1596,7 +1650,37 @@ void restyleGlyphsDisabledIn(const QList<ActionGlyph>& glyphs, const ThemeTokens
         }
     }
 }
+
 } // namespace
+
+QPixmap identityGlyph(const QString& file, const IdentityColour& identity, const ThemeTokens& tokens)
+{
+    QPixmap glyph = tintedGlyph(glyphPixmap(file), identityInk(identity, tokens));
+    const QPixmap fill = glyphFillPixmap(file);
+    if (fill.isNull()) {
+        return glyph;
+    }
+    QPixmap washed = tintedGlyph(fill, identityFill(identity, tokens));
+    QPainter painter(&washed);
+    painter.drawPixmap(0, 0, glyph);
+    painter.end();
+    return washed;
+}
+
+QIcon identityIcon(const QString& glyphOff, const QString& glyphOn, const IdentityColour& identity, const ThemeTokens& tokens, const QColor& disabledInk)
+{
+    const QPixmap colouredOff = identityGlyph(glyphOff, identity, tokens);
+    const QPixmap colouredOn = glyphOn == glyphOff ? colouredOff : identityGlyph(glyphOn, identity, tokens);
+    QIcon icon;
+    for (const QIcon::Mode mode : {QIcon::Normal, QIcon::Active, QIcon::Selected}) {
+        icon.addPixmap(colouredOff, mode, QIcon::Off);
+        icon.addPixmap(colouredOn, mode, QIcon::On);
+    }
+    const QPixmap disabledOff = tintedGlyph(glyphPixmap(glyphOff), disabledInk);
+    icon.addPixmap(disabledOff, QIcon::Disabled, QIcon::Off);
+    icon.addPixmap(glyphOn == glyphOff ? disabledOff : tintedGlyph(glyphPixmap(glyphOn), disabledInk), QIcon::Disabled, QIcon::On);
+    return icon;
+}
 
 QIcon tintedIcon(const QString& glyphOff, const QString& glyphOn, const ThemeTokens& tokens)
 {
@@ -1613,9 +1697,16 @@ void restyleActionGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& to
     restyleGlyphsDisabledIn(glyphs, tokens, tokens.disabledText);
 }
 
-void restyleToolBarGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens)
+void restyleToolBarGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured)
 {
-    restyleGlyphsDisabledIn(glyphs, tokens, tokens.disabledBarText);
+    for (const ActionGlyph& glyph : glyphs) {
+        if (!glyph.pAction) {
+            continue;
+        }
+        const QString glyphOn = glyph.glyphOn.isEmpty() ? glyph.glyphOff : glyph.glyphOn;
+        glyph.pAction->setIcon(coloured && glyph.identity.hue >= 0.0 ? identityIcon(glyph.glyphOff, glyphOn, glyph.identity, tokens, tokens.disabledBarText)
+                                                                     : tintedIconDisabledIn(glyph.glyphOff, glyphOn, tokens, tokens.disabledBarText));
+    }
 }
 
 QString noticeStyleSheet(const QString& frameSelector, const ThemeTokens& tokens)
