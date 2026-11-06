@@ -544,6 +544,58 @@ private slots:
         QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), expected);
     }
 
+    // The find matches case-insensitively with full Unicode case folding, so
+    // a match it selects must count as one when Replace is pressed
+    void test_scriptReplaceReplacesAMatchThatOnlyFoldsToTheTerm()
+    {
+        const QString script = mpEditor->mpSourceEditorEdbeeDocument->text();
+        auto restore = qScopeGuard([this, script]() {
+            mpEditor->mpSourceEditorEdbeeDocument->setText(script);
+            mpEditor->mpSourceEditorFindArea->lineEdit_findText->clear();
+            mpEditor->mpSourceEditorFindArea->lineEdit_replaceText->clear();
+        });
+
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("-- Strasse\n"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("straße"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_replaceText->setText(qsl("road"));
+        edbee::TextRangeSet* selection = mpEditor->mpSourceEditorEdbee->controller()->textSelection();
+        selection->clear();
+        selection->addRange(0, 0);
+
+        mpEditor->slot_sourceFindNext();
+        QCOMPARE(selection->range(0).min(), size_t{3});
+        QCOMPARE(selection->range(0).max(), size_t{10});
+
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("-- road\n"));
+    }
+
+    // With nothing to put in its place, a match is deleted and the caret is
+    // left with no selection - the next press has to carry on forwards
+    void test_scriptReplaceWithNothingDeletesMatchesInOrder()
+    {
+        const QString script = mpEditor->mpSourceEditorEdbeeDocument->text();
+        auto restore = qScopeGuard([this, script]() {
+            mpEditor->mpSourceEditorEdbeeDocument->setText(script);
+            mpEditor->mpSourceEditorFindArea->lineEdit_findText->clear();
+        });
+
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("x foo y foo z foo\n"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("foo"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_replaceText->clear();
+        edbee::TextRangeSet* selection = mpEditor->mpSourceEditorEdbee->controller()->textSelection();
+        selection->clear();
+        selection->addRange(0, 0);
+
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(selection->range(0).min(), size_t{2});
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("x  y foo z foo\n"));
+        mpEditor->slot_sourceReplace();
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("x  y  z foo\n"));
+    }
+
     // Replace only steps over what is selected, so a selection that is not the
     // term is passed by to the next match, which the following Replace changes
     void test_scriptReplaceMovesPastANonMatchThenReplacesTheMatch()

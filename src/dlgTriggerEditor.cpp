@@ -57,6 +57,7 @@
 #include "widgetutils.h"
 #include "utils.h"
 #include "edbee/models/textdocumentscopes.h"
+#include "edbee/util/regexp.h"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -11617,17 +11618,22 @@ void dlgTriggerEditor::slot_sourceReplace()
     auto controller = mpSourceEditorEdbee->controller();
     const QString findText = mpSourceEditorFindArea->lineEdit_findText->text();
     const QString replaceText = mpSourceEditorFindArea->lineEdit_replaceText->text();
+    // the same matching as the finds below, which fold case the Unicode way (ß matches ss)
+    edbee::RegExp term(findText, false, edbee::RegExp::SyntaxFixedString);
     for (size_t i = 0; i < controller->textSelection()->rangeCount(); i++) {
         auto& range = controller->textSelection()->range(i);
-        if (!range.hasSelection()) {
-            slot_sourceFindPrevious();
-            // finding replaces the whole selection, so `range` and the count are stale
-            return;
-        }
         // anchor() is the end of a selection made right to left, min() is always its start
         const QString selected = mpSourceEditorEdbee->textDocument()->text().mid(range.min(), range.length());
-        // the finds above match case-insensitively, so a selection is a match on the same terms
-        if (selected == replaceText || selected.compare(findText, Qt::CaseInsensitive) != 0) {
+        // finding replaces the whole selection, so `range` and the count are stale after one
+        if (selected == replaceText) {
+            slot_sourceFindNext();
+            return;
+        }
+        if (!range.hasSelection()) {
+            slot_sourceFindPrevious();
+            return;
+        }
+        if (term.indexIn(selected) != 0 || term.len(0) != static_cast<size_t>(selected.length())) {
             slot_sourceFindNext();
             return;
         }
