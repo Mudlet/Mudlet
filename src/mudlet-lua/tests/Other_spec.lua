@@ -1073,12 +1073,13 @@ describe("Tests Other.lua functions", function()
     end)
 
     it("Should set a field of a table named by a dotted path", function()
-      TIMEFRAME_TEST_TABLE = {}
-      finally(function() TIMEFRAME_TEST_TABLE = nil end)
+      -- the assignment timeframe compiles runs in _G, not in this spec's environment
+      _G.TIMEFRAME_TEST_TABLE = {}
+      finally(function() _G.TIMEFRAME_TEST_TABLE = nil end)
 
       timeframe("TIMEFRAME_TEST_TABLE.state", { 0, "it's on" })
 
-      assert.are.equal("it's on", TIMEFRAME_TEST_TABLE.state)
+      assert.are.equal("it's on", _G.TIMEFRAME_TEST_TABLE.state)
       killtimeframe("TIMEFRAME_TEST_TABLE.state")
     end)
   end)
