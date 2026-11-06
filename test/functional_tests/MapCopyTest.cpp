@@ -315,9 +315,61 @@ private slots:
         QVERIFY2(taken.contains(newestMapFile(mSourceName)), "the save landed outside the taken names");
         QVERIFY2(areaNames(mpDestination).contains(mCopiedArea), qPrintable(qsl("the destination has %1 open instead of the copy").arg(areaNames(mpDestination).join(qsl(", ")))));
         QCOMPARE(mpPreferences->label_mapFileActionResult->text(), qsl("Map copied, now signalling other profiles to reload it."));
+        QCOMPARE(QDir(mapDir).entryList(QDir::Files | QDir::NoDotAndDotDot).size(), taken.size());
     }
 
 #if !defined(Q_OS_WIN)
+    // As when the destination's disk has no room for the copy
+    void test_aCopyThatFailsKeepsTheFileItWouldHaveReplaced()
+    {
+        const QString mapDir = MudletApp::getMudletPath(enums::profileMapsPath, mDestinationName);
+        QDir(mapDir).removeRecursively();
+        QVERIFY(QDir().mkpath(mapDir));
+        buildMap(mpDestination, qsl("The destination's own"), 2);
+        buildMap(mpSource, qsl("The earlier copy"), 2);
+        const QString earlier = MudletApp::getMudletPath(enums::profileMapPathFileName, mSourceName, qsl("earlier.dat"));
+        QVERIFY(mpSource->saveMapFile(earlier));
+        buildMap(mpSource, mCopiedArea, scmCopiedRooms);
+        openPreferencesAndTick({mDestinationName});
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const QStringList taken = comingMapNames();
+        for (const auto& name : taken) {
+            QVERIFY(QFile::copy(earlier, qsl("%1/%2").arg(mapDir, name)));
+        }
+        QVERIFY(QFile::remove(earlier));
+
+        // Made unreadable once saved, so the copy fails after the destination's file is out of its way
+        QString unreadable;
+        auto readable = qScopeGuard([&]() {
+            if (!unreadable.isEmpty()) {
+                QFile::setPermissions(unreadable, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+            }
+        });
+        QTimer ticker;
+        ticker.setInterval(0);
+        connect(&ticker, &QTimer::timeout, this, [&]() {
+            if (unreadable.isEmpty() && mpPreferences->label_mapFileActionResult->text().startsWith(qsl("Copying over map to %1").arg(mDestinationName))) {
+                unreadable = MudletApp::getMudletPath(enums::profileMapPathFileName, mSourceName, newestMapFile(mSourceName));
+                QFile::setPermissions(unreadable, QFileDevice::Permissions());
+            }
+        });
+        ticker.start();
+        mpPreferences->pushButton_copyMap->click();
+        ticker.stop();
+
+        QVERIFY2(!unreadable.isEmpty(), "the copy never pumped events before copying");
+        if (QFile probe(unreadable); probe.open(QIODevice::ReadOnly)) {
+            QSKIP("this user can read a file it has no permission to read");
+        }
+        const QString name = QFileInfo(unreadable).fileName();
+        QVERIFY2(taken.contains(name), "the save landed outside the taken names");
+        QVERIFY2(mpPreferences->label_mapFileActionResult->text().startsWith(qsl("Could not copy the map to %1").arg(mDestinationName)), "the copy did not fail");
+        QVERIFY2(QFileInfo::exists(qsl("%1/%2").arg(mapDir, name)), "the failed copy deleted the file the destination held under that name");
+        QCOMPARE(QDir(mapDir).entryList(QDir::Files | QDir::NoDotAndDotDot).size(), taken.size());
+    }
+
     // Players link one profile's map folder into another to share a map
     void test_aSharedMapFolderKeepsTheMapJustSaved()
     {

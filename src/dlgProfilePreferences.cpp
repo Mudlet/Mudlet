@@ -6802,8 +6802,14 @@ void dlgProfilePreferences::slot_copyMap()
             copiedToProfiles.append(otherHostName);
             continue;
         }
-        // A copy made earlier in the same second may have left a file of this name, which QFile::copy() will not replace
-        QFile::remove(destination);
+        // A copy made earlier in the same second may have left a file of this name, which QFile::copy() will not replace;
+        // it is set aside rather than removed, so a copy that fails can put it back
+        const QString setAside = qsl("%1.replaced").arg(destination);
+        bool replacing = false;
+        if (QFileInfo(destination).isFile()) {
+            QFile::remove(setAside);
+            replacing = QFile::rename(destination, setAside);
+        }
         // Copy over into the profiles map folder, so it is loaded first when map is open - this covers the offline case
         label_mapFileActionResult->setText(tr("Copying over map to %1 - please wait...").arg(otherHostName));
         qApp->processEvents(); // Copied from "Loading map - please wait..." case
@@ -6816,9 +6822,15 @@ void dlgProfilePreferences::slot_copyMap()
                                   "reason: %2.")
                                        .arg(otherHostName, thisProfileLatestMapFile.errorString()));
             failedProfiles.append(otherHostName);
+            if (replacing) {
+                QFile::rename(setAside, destination);
+            }
             continue; // Try again with next profile
         }
         copiedToProfiles.append(otherHostName);
+        if (replacing) {
+            QFile::remove(setAside);
+        }
         label_mapFileActionResult->setText(tr("Map copied successfully to other profile %1.").arg(otherHostName));
         qApp->processEvents(); // Copied from "Loading map - please wait..." case
                                // Just in case is needed to make the above message
