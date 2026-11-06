@@ -1194,6 +1194,10 @@ private slots:
         QCOMPARE(console->buffer.getLastLineNumber(), y);
 
         QVERIFY2(console->buffer.buffer.at(y).at(0).isSelected(), "text arriving on a selected line deselected the characters that were already on it");
+
+        pane->unHighlight();
+        QVERIFY2(console->buffer.buffer.at(y).uniform(), "deselecting did not store the line as one TChar");
+        QCOMPARE(highlightedText(), QString());
     }
 
     // Each line held as one TChar per character costs 16 bytes a character, which
