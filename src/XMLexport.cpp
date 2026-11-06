@@ -402,7 +402,8 @@ bool XMLexport::saveXmlDocToFile(const QString& fileName, const pugi::xml_docume
         }
     };
 
-    if (!file.open(QIODevice::WriteOnly)) {
+    // Unbuffered, or a small file cut short fails only at commit(), with "Unknown error" for the reason
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         printErrorMessage(file.errorString(), "open file");
         return false;
     }
@@ -412,7 +413,7 @@ bool XMLexport::saveXmlDocToFile(const QString& fileName, const pugi::xml_docume
 
     // A full disk can cut the write short with no error on the file, and commit() would put the part that landed in place
     if (const qint64 written = file.write(output.data(), size); written != size) {
-        //: The reason a profile or module could not be saved when only part of it fit on the disk; %1 is the bytes written, %2 the size of the file
+        //: The reason a profile or module could not be saved when only part of it fit on the disk; %1 is the number of bytes written, %2 the size the whole file needed
         printErrorMessage(file.error() != QFileDevice::NoError ? file.errorString() : tr("only %1 of %2 bytes could be written, is the disk full?").arg(written).arg(size));
         return false;
     }

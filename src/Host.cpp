@@ -1261,19 +1261,22 @@ bool Host::writeModuleFiles(const QList<ModuleWriteJob>& jobs, QStringList& fail
     // writes can be, and regularly is, destroyed while they are still queued.
     bool allWritten = true;
     for (const auto& job : jobs) {
+        auto fail = [&](const QString& fileName, const QString& reason) {
+            //: %1 is the name of a module, %2 the file it was being saved to, %3 the reason it could not be
+            failures << tr("[ ERROR ] - The module \"%1\" could not be saved to \"%2\": %3").arg(job.moduleName, fileName, reason);
+            allWritten = false;
+        };
         if (!job.backupName.isEmpty()) {
             createModuleBackup(job.filename, job.backupName);
         }
         if (QString reason; !XMLexport::saveXmlDocToFile(job.xmlFilename, *job.document, &reason)) {
             qWarning().noquote().nospace() << "Host::writeModuleFiles() WARNING - failed to write module \"" << job.moduleName << "\" to \"" << job.xmlFilename << "\".";
-            //: %1 is the name of a module, %2 the file it was being saved to, %3 the reason it could not be
-            failures << tr("[ ERROR ] - The module \"%1\" could not be saved to \"%2\": %3").arg(job.moduleName, job.xmlFilename, reason);
-            allWritten = false;
-            // The archive would take the older unpacked copy instead, or lose the module's XML if there is none
+            fail(job.xmlFilename, reason);
+            // The archive would only be rebuilt from the older unpacked copy, on a disk that just refused a write
             continue;
         }
-        if (!updateModuleZip(job)) {
-            allWritten = false;
+        if (QString reason; !updateModuleZip(job, reason)) {
+            fail(job.filename, reason);
         }
     }
     return allWritten;
@@ -1309,7 +1312,7 @@ void Host::reloadModules()
     mModulesToSync.clear();
 }
 
-bool Host::updateModuleZip(const ModuleWriteJob& job)
+bool Host::updateModuleZip(const ModuleWriteJob& job, QString& reason)
 {
     // Static for the same reason writeModuleFiles() is: every path it needs was
     // resolved, and every folder it needs created, on the main thread beforehand.
@@ -1334,6 +1337,7 @@ bool Host::updateModuleZip(const ModuleWriteJob& job)
         */
         qWarning().noquote().nospace() << "Host::updateModuleZip(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to open module to update it, error: \""
                                        << zip_error_strerror(&zipError) << "\"";
+        reason = QString::fromUtf8(zip_error_strerror(&zipError));
         zip_error_fini(&zipError);
         return false;
     }
@@ -1341,12 +1345,16 @@ bool Host::updateModuleZip(const ModuleWriteJob& job)
     zip_delete(zipFile, xmlIndex);
     struct zip_source* s = zip_source_file(zipFile, filename_xml.toUtf8().constData(), 0, -1);
     if (s == nullptr) {
+        reason = QString::fromUtf8(zip_strerror(zipFile));
         // Not TDebug: this runs on a worker thread, which must not touch a profile's console.
         qWarning().noquote().nospace() << "Host::updateModuleZip(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to open xml file \"" << filename_xml
                                        << "\" inside the module to update it, error: \"" << zip_strerror(zipFile) << "\"";
     }
     err = zip_file_add(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), s, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE);
     const bool added = s && err >= 0;
+    if (s && !added) {
+        reason = QString::fromUtf8(zip_strerror(zipFile));
+    }
 
     if (zipFile) {
         // This is the point at which the data is written out to the archive,
@@ -1356,6 +1364,7 @@ bool Host::updateModuleZip(const ModuleWriteJob& job)
 
     if (err == -1) {
         qWarning().noquote().nospace() << "Host::updateModuleZip(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to save the module, error: \"" << zip_strerror(zipFile) << "\"";
+        reason = QString::fromUtf8(zip_strerror(zipFile));
         // Properly dispose of things after failing to zip_close(...) the
         // archive:
         zip_discard(zipFile);
@@ -1712,7 +1721,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     // the write is still queued would leave the watcher with no owner at all.
     auto watcher = new QFutureWatcher<void>(this);
     watcher->setObjectName(scmProfileSaveWatcherName);
-    // Filled on the pool thread before the future finishes, read only after it has
+    // Filled by the task before its future finishes, read only after it has
     auto moduleFailures = std::make_shared<QStringList>();
     // Captures values only, never `this`: no wait for this task is guaranteed, so the
     // Host can be destroyed while it is still queued or running.
@@ -1734,7 +1743,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         for (const auto& failure : std::as_const(*moduleFailures)) {
             postMessage(failure);
         }
-        // Finish on the main thread: the module documents are now on disk. Consume
+        // Finish on the main thread: the module writes are done. Consume
         // mModulesToSync via reloadModules() *before* the xmlSaved() loop below empties
         // `writers` and emits profileSaveFinished(): that signal fires synchronously,
         // and a deferred handler (e.g. a queued package install) could start another

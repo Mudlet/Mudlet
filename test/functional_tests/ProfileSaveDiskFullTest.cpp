@@ -30,7 +30,9 @@
 
 #include <QDir>
 #include <QFile>
+#include <QRandomGenerator>
 #include <QTemporaryDir>
+#include <QTimeZone>
 #include <zip.h>
 
 #include "Host.h"
@@ -53,14 +55,13 @@
 using namespace std::chrono_literals;
 
 namespace {
-// Past QFileDevice's 16 KiB write buffer, as a write that fits in it fails at commit() instead
 constexpr qint64 scmFileSizeLimit = 20 * 1024;
 
-// Well past the limit once saved
-QByteArray packageWithTriggers(const QString& namePrefix)
+// With the default count, well past the limit once saved
+QByteArray packageWithTriggers(const QString& namePrefix, const int count = 100)
 {
     QByteArray xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version=\"1.001\">\n<TriggerPackage>\n";
-    for (int i = 1; i <= 100; ++i) {
+    for (int i = 1; i <= count; ++i) {
         xml += qsl("<Trigger isActive=\"yes\" isFolder=\"no\" isTempTrigger=\"no\" isMultiline=\"no\" isPerlSlashGOption=\"no\" isColorizerTrigger=\"no\" isFilterTrigger=\"no\" "
                    "isSoundTrigger=\"no\" isColorTrigger=\"no\" isColorTriggerFg=\"no\" isColorTriggerBg=\"no\"><name>%1 %2</name><script>echo(\"%1 %2\")</script>"
                    "<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen><mCommand></mCommand><packageName></packageName>"
@@ -75,18 +76,20 @@ QByteArray packageWithTriggers(const QString& namePrefix)
     return xml;
 }
 
-bool writeArchive(const QString& path, const QString& entryName, const QByteArray& contents)
+bool writeArchive(const QString& path, const QMap<QString, QByteArray>& entries)
 {
     int errorCode = 0;
     zip* archive = zip_open(path.toUtf8().constData(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
     if (!archive) {
         return false;
     }
-    zip_source* source = zip_source_buffer(archive, contents.constData(), contents.size(), 0);
-    if (!source || zip_file_add(archive, entryName.toUtf8().constData(), source, ZIP_FL_ENC_UTF_8) < 0) {
-        zip_source_free(source);
-        zip_discard(archive);
-        return false;
+    for (auto [entryName, contents] : entries.asKeyValueRange()) {
+        zip_source* source = zip_source_buffer(archive, contents.constData(), contents.size(), 0);
+        if (!source || zip_file_add(archive, entryName.toUtf8().constData(), source, ZIP_FL_ENC_UTF_8) < 0) {
+            zip_source_free(source);
+            zip_discard(archive);
+            return false;
+        }
     }
     return zip_close(archive) == 0;
 }
@@ -163,14 +166,14 @@ private:
 
 #if defined(Q_OS_UNIX)
     // The save is waited on with the limit in place, so its writes on the pool thread land while it holds
-    bool saveUnderFileSizeLimit(const QString& saveName)
+    bool saveUnderFileSizeLimit(const QString& saveName, const qint64 limit = scmFileSizeLimit)
     {
         rlimit saved{};
         if (::getrlimit(RLIMIT_FSIZE, &saved) != 0) {
             return false;
         }
         rlimit limited = saved;
-        limited.rlim_cur = std::min<rlim_t>(scmFileSizeLimit, saved.rlim_max);
+        limited.rlim_cur = std::min<rlim_t>(limit, saved.rlim_max);
         // Past the limit the kernel also raises SIGXFSZ, whose default action ends the process
         const auto previousHandler = std::signal(SIGXFSZ, SIG_IGN);
         bool finished = false;
@@ -246,7 +249,7 @@ private slots:
 #endif
     }
 
-    // A synced module is saved back to the file it came from, which has no older copy to fall back on
+    // A synced module is saved over the file it is loaded from, where a profile save gets a new file each time
     void test_aSyncedModuleTheDiskCannotHoldKeepsItsFile()
     {
 #if !defined(Q_OS_UNIX)
@@ -273,7 +276,34 @@ private slots:
 #endif
     }
 
-    // The archive is rebuilt from the module's unpacked XML, and what does not fit of that compresses to fit
+    // Small enough for QFileDevice's 16 KiB write buffer, which would hold the write back until commit()
+    void test_aSmallModuleTheDiskCannotHoldSaysWhy()
+    {
+#if !defined(Q_OS_UNIX)
+        QSKIP("needs RLIMIT_FSIZE to cut a write short");
+#else
+        constexpr qint64 limit = 2 * 1024;
+        const QString moduleFile = mModuleDir.filePath(qsl("diskfullsmallmodule.xml"));
+        QFile module(moduleFile);
+        QVERIFY(module.open(QIODevice::WriteOnly));
+        QVERIFY(module.write(packageWithTriggers(qsl("small module trigger"), 10)) > 0);
+        module.close();
+        QVERIFY(lua(qsl("installModule([[%1]])").arg(moduleFile)));
+        QVERIFY(lua(qsl("enableModuleSync('diskfullsmallmodule')")));
+        QVERIFY(saveAndWait(qsl("small-module-written")));
+        const QByteArray written = readFile(moduleFile);
+        QVERIFY2(written.size() > limit && written.size() < 16 * 1024, qPrintable(qsl("the module saves to %1 bytes").arg(written.size())));
+        markConsole();
+
+        QVERIFY2(saveUnderFileSizeLimit(qsl("small-module-cut-short"), limit), "the save never finished");
+
+        QVERIFY2(readFile(moduleFile) == written, qPrintable(qsl("the module's file was replaced, it is now %1 bytes").arg(QFileInfo(moduleFile).size())));
+        const QString reason = qsl("The module \"diskfullsmallmodule\" could not be saved to \"%1\": only %2 of").arg(moduleFile).arg(limit);
+        QVERIFY2(consoleSinceMark().contains(reason), qPrintable(consoleSinceMark()));
+#endif
+    }
+
+    // The unpacked XML is too big for the limit, the archive it is packed into is not
     void test_aSyncedArchiveModuleTheDiskCannotHoldKeepsItsArchive()
     {
 #if !defined(Q_OS_UNIX)
@@ -281,13 +311,17 @@ private slots:
 #else
         const QString archiveFile = mModuleDir.filePath(qsl("diskfullarchive.mpackage"));
         const QString entryName = qsl("diskfullarchive.xml");
-        QVERIFY(writeArchive(archiveFile, entryName, packageWithTriggers(qsl("archive trigger"))));
+        QVERIFY(writeArchive(archiveFile, {{entryName, packageWithTriggers(qsl("archive trigger"))}}));
         QVERIFY(lua(qsl("installModule([[%1]])").arg(archiveFile)));
         QVERIFY(lua(qsl("enableModuleSync('diskfullarchive')")));
         QVERIFY(saveAndWait(qsl("archive-written")));
         const QByteArray written = archiveEntry(archiveFile, entryName);
         QVERIFY2(written.size() > scmFileSizeLimit, "the module saves whole within the limit, so the limit cuts nothing");
         QVERIFY2(QFileInfo(archiveFile).size() < scmFileSizeLimit, "the archive does not fit within the limit, so it cannot be rebuilt from a cut-off XML");
+        const QDateTime archiveTime(QDate(2020, 1, 1), QTime(0, 0), QTimeZone::UTC);
+        QFile archive(archiveFile);
+        QVERIFY(archive.open(QIODevice::ReadWrite) && archive.setFileTime(archiveTime, QFileDevice::FileModificationTime));
+        archive.close();
         markConsole();
 
         QVERIFY2(saveUnderFileSizeLimit(qsl("archive-cut-short")), "the save never finished");
@@ -297,6 +331,36 @@ private slots:
         const QString unpacked = MudletApp::getMudletPath(enums::profilePackagePathFileName, mProfileName, qsl("diskfullarchive"));
         QVERIFY2(readFile(unpacked) == written, qPrintable(qsl("the module's unpacked XML was replaced, it is now %1 bytes").arg(QFileInfo(unpacked).size())));
         QVERIFY2(consoleSinceMark().contains(qsl("The module \"diskfullarchive\" could not be saved to")), qPrintable(consoleSinceMark()));
+        // Not rebuilt either, as the XML this save meant to put in it never landed
+        QVERIFY2(QFileInfo(archiveFile).lastModified(QTimeZone::UTC) == archiveTime, "the module's archive was rebuilt from an XML that was not saved");
+#endif
+    }
+
+    // A full disk is more likely to refuse the archive, a copy of the module's every file, than its XML
+    void test_anArchiveModuleWhoseArchiveTheDiskCannotHoldSaysSo()
+    {
+#if !defined(Q_OS_UNIX)
+        QSKIP("needs RLIMIT_FSIZE to cut a write short");
+#else
+        constexpr qint64 limit = 160 * 1024;
+        const QString archiveFile = mModuleDir.filePath(qsl("diskfullbigarchive.mpackage"));
+        const QString entryName = qsl("diskfullbigarchive.xml");
+        QByteArray noise(256 * 1024, Qt::Uninitialized);
+        QRandomGenerator(12345).fillRange(reinterpret_cast<quint32*>(noise.data()), noise.size() / sizeof(quint32));
+        QVERIFY(writeArchive(archiveFile, {{entryName, packageWithTriggers(qsl("big archive trigger"))}, {qsl("noise.bin"), noise}}));
+        QVERIFY(lua(qsl("installModule([[%1]])").arg(archiveFile)));
+        QVERIFY(lua(qsl("enableModuleSync('diskfullbigarchive')")));
+        QVERIFY(saveAndWait(qsl("big-archive-written")));
+        const QByteArray written = archiveEntry(archiveFile, entryName);
+        QVERIFY2(!written.isEmpty() && written.size() < limit, "the module's XML does not fit within the limit");
+        QVERIFY2(QFileInfo(archiveFile).size() > limit, "the archive fits within the limit, so the limit cuts nothing");
+        markConsole();
+
+        QVERIFY2(saveUnderFileSizeLimit(qsl("big-archive-cut-short"), limit), "the save never finished");
+
+        QVERIFY2(archiveEntry(archiveFile, entryName) == written, "the module's archive lost its XML");
+        const QString reason = qsl("The module \"diskfullbigarchive\" could not be saved to \"%1\":").arg(archiveFile);
+        QVERIFY2(consoleSinceMark().contains(reason), qPrintable(consoleSinceMark()));
 #endif
     }
 };
