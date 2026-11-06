@@ -28,6 +28,7 @@
 #include <QDir>
 #include <QFile>
 #include <QScopeGuard>
+#include <QSet>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -137,6 +138,13 @@ private:
             }
         }
         return links;
+    }
+
+    // The links the latest linksChanged named, in whatever order they went
+    static QSet<int> lastLinksChanged(const QSignalSpy& spy)
+    {
+        const QList<int> links = spy.constLast().at(1).value<QList<int>>();
+        return QSet<int>(links.cbegin(), links.cend());
     }
 
     static QString luaGlobal(THeadlessSession& session, const char* name)
@@ -558,6 +566,236 @@ tempRegexTrigger("^headless raising$", [[echoLink(" r", function() error("headle
         model.runMenuPick(id, store.issueOf(id), 0);
         QCOMPARE(luaGlobal(session, "headlessPicked"), qsl("new"));
         QVERIFY(session.shutdown(false));
+    }
+
+    void test_aLinksChangeIsToldOncePerPass()
+    {
+        const QString name = qsl("Headless Links Changed");
+        QVERIFY(writeProfile(name, qsl(R"lua(tempRegexTrigger("^headless changed$", [[echoLink(" c", "headlessChanged = true", "c")]]))lua")));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy changed(&session, &THeadlessSession::linksChanged);
+        const QString config = qsl("?config={\"selection\":{\"group\":\"size\",\"value\":\"%1\",\"exclusive\":true}}");
+        QVERIFY(session.runLua(
+                feed(qsl("headless changed")) + feed(qsl("spoiler: ") + osc8(qsl("send:look?config={\"spoiler\":true}"), qsl("the butler")))
+                + feed(qsl("group: ") + osc8(qsl("send:small") + config.arg(qsl("small")), qsl("small")) + qsl(" ") + osc8(qsl("send:large") + config.arg(qsl("large")), qsl("large")))));
+        QTest::qWait(50);
+        QCOMPARE(changed.count(), 0);
+
+        const int plain = lastLinkOf(shown, qsl("headless changed c"));
+        QCOMPARE(session.followLink(plain), THeadlessSession::LinkResult::ran);
+        QVERIFY(changed.wait());
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(changed.constLast().at(0).toString(), name);
+        QCOMPARE(changed.constLast().at(1).value<QList<int>>(), QList<int>{plain});
+        QVERIFY(session.link(plain)->visited);
+
+        const QList<int> spoiler = linksOnLineStarting(output, qsl("spoiler: "));
+        QCOMPARE(spoiler.size(), 1);
+        QCOMPARE(session.followLink(spoiler.first()), THeadlessSession::LinkResult::revealedSpoiler);
+        QVERIFY(changed.wait());
+        QCOMPARE(changed.constLast().at(1).value<QList<int>>(), spoiler);
+
+        const QList<int> group = linksOnLineStarting(output, qsl("group: "));
+        QCOMPARE(group.size(), 2);
+        QCOMPARE(session.followLink(group.at(0)), THeadlessSession::LinkResult::ran);
+        QVERIFY(changed.wait());
+        QCOMPARE(changed.constLast().at(1).value<QList<int>>(), QList<int>{group.at(0)});
+        QCOMPARE(session.followLink(group.at(1)), THeadlessSession::LinkResult::ran);
+        QVERIFY(changed.wait());
+        QCOMPARE(changed.constLast().at(1).value<QList<int>>(), (QList<int>{group.at(1), group.at(0)}));
+
+        const qsizetype before = changed.count();
+        QVERIFY(session.runLua(qsl("headlessQuiet = true")));
+        QTest::qWait(50);
+        QCOMPARE(changed.count(), before);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aLinkTheGameExpiresIsTold()
+    {
+        const QString name = qsl("Headless Link Expired");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        session.host()->setForceMXPProcessorOn(true);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy changed(&session, &THeadlessSession::linksChanged);
+        QVERIFY(session.runLua(feed(qsl(R"(mxp: <SEND href="look" expire=gone>look</SEND>)"))));
+        const QList<int> links = linksOnLineStarting(output, qsl("mxp: "));
+        QCOMPARE(links.size(), 1);
+        QVERIFY(session.link(links.first()));
+        QVERIFY(session.runLua(feed(qsl("<EXPIRE gone>"))));
+        QVERIFY(changed.wait());
+        QCOMPARE(changed.constLast().at(1).value<QList<int>>(), links);
+        QVERIFY(!session.link(links.first()));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aLinkConcealedRevealedOrSweptIsTold()
+    {
+        const QString name = qsl("Headless Links Concealed");
+        QVERIFY(writeProfile(name, qsl(R"lua(tempRegexTrigger("^headless swept$", [[echoLink(" s", "", "s")]]))lua")));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QSignalSpy changed(&session, &THeadlessSession::linksChanged);
+        QVERIFY(session.runLua(feed(qsl("hidden: ") + osc8(qsl("send:take?config={\"visibility\":{\"action\":\"conceal\"}}"), qsl("the key")))
+                               + feed(qsl("gone: ") + osc8(qsl("send:drop?config={\"visibility\":{\"action\":\"conceal\",\"wholeline\":true}}"), qsl("the lamp"))) + feed(qsl("headless swept"))));
+        const QList<int> hidden = linksOnLineStarting(output, qsl("hidden: "));
+        const QList<int> gone = linksOnLineStarting(output, qsl("gone: "));
+        const int swept = lastLinkOf(shown, qsl("headless swept s"));
+        QCOMPARE(hidden.size(), 1);
+        QCOMPARE(gone.size(), 1);
+        QVERIFY(swept > 0);
+        TConsoleModel& model = session.host()->mainConsoleModel();
+
+        model.mHyperlinkVisibilityManager.concealLink(hidden.first());
+        QVERIFY(changed.wait());
+        QCOMPARE(changed.constLast().at(1).value<QList<int>>(), hidden);
+        QVERIFY(session.link(hidden.first())->concealed);
+        model.mHyperlinkVisibilityManager.revealLink(hidden.first());
+        QVERIFY(changed.wait());
+        QCOMPARE(changed.constLast().at(1).value<QList<int>>(), hidden);
+        QVERIFY(!session.link(hidden.first())->concealed);
+
+        model.mHyperlinkVisibilityManager.concealLink(gone.first());
+        QVERIFY(changed.wait());
+        QCOMPARE(changed.constLast().at(1).value<QList<int>>(), gone);
+        QVERIFY(!session.link(gone.first()));
+
+        QVERIFY(session.runLua(qsl("clearWindow()")));
+        QVERIFY(changed.wait());
+        QVERIFY(changed.constLast().at(1).value<QList<int>>().contains(swept));
+        QVERIFY(!session.link(swept));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_everyLinkOnADeletedLineIsTold()
+    {
+        const QString name = qsl("Headless Links Line Deleted");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy changed(&session, &THeadlessSession::linksChanged);
+        const QString wholeLine = qsl("?config={\"visibility\":{\"action\":\"conceal\",\"wholeline\":true}}");
+        QVERIFY(session.runLua(
+                feed(qsl("choice: ") + osc8(qsl("send:accept") + wholeLine, qsl("[Accept]")) + qsl(" ") + osc8(qsl("send:decline") + wholeLine, qsl("[Decline]")))
+                + feed(qsl("script: ") + osc8(qsl("send:look"), qsl("look")) + qsl(" ") + osc8(qsl("send:take"), qsl("take")))
+                + feed(qsl("both: ") + osc8(qsl("send:hint?config={\"visibility\":{\"action\":\"conceal\"}}"), qsl("[Hint]")) + qsl(" ") + osc8(qsl("send:leave") + wholeLine, qsl("[Leave]")))));
+        const QList<int> choice = linksOnLineStarting(output, qsl("choice: "));
+        const QList<int> script = linksOnLineStarting(output, qsl("script: "));
+        const QList<int> both = linksOnLineStarting(output, qsl("both: "));
+        QCOMPARE(choice.size(), 2);
+        QCOMPARE(script.size(), 2);
+        QCOMPARE(both.size(), 2);
+
+        QCOMPARE(session.followLink(choice.at(0)), THeadlessSession::LinkResult::ran);
+        QVERIFY(changed.wait());
+        QCOMPARE(lastLinksChanged(changed), QSet<int>(choice.cbegin(), choice.cend()));
+        QVERIFY(!session.link(choice.at(1)));
+        QCOMPARE(session.followLink(choice.at(1)), THeadlessSession::LinkResult::unknown);
+
+        QVERIFY(session.runLua(qsl(R"lua(for y = getLastLineNumber("main"), 0, -1 do moveCursor("main", 0, y) if getCurrentLine():find("^script: ") then deleteLine() break end end)lua")));
+        QVERIFY(changed.wait());
+        QCOMPARE(lastLinksChanged(changed), QSet<int>(script.cbegin(), script.cend()));
+        QVERIFY(!session.link(script.at(1)));
+
+        // A concealed link's characters carry no index, so only its tracking says it was on the line
+        session.host()->mainConsoleModel().mHyperlinkVisibilityManager.concealLink(both.at(0));
+        QVERIFY(changed.wait());
+        QCOMPARE(session.followLink(both.at(1)), THeadlessSession::LinkResult::ran);
+        QVERIFY(changed.wait());
+        QCOMPARE(lastLinksChanged(changed), QSet<int>(both.cbegin(), both.cend()));
+        QVERIFY(!session.link(both.at(0)));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // An app reads link() again for each link named, and for an id still in the store that reads the whole buffer,
+    // so a trim names none of its links; the sweep a quarter of the buffer later names those it removes from the store
+    void test_aTrimNamesNoLinkTheStoreHoldsAndItsSweepNamesThoseItRemoved()
+    {
+        const QString name = qsl("Headless Links Trimmed");
+        QVERIFY(writeProfile(name, qsl("registerAnonymousEventHandler(\"sysBufferShrinkEvent\", function() headlessTrims = (headlessTrims or 0) + 1 end)")));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy changed(&session, &THeadlessSession::linksChanged);
+        // The first trim sweeps; with a batch of half the sweep's quarter of the limit, the second does not and the third does
+        QVERIFY(session.runLua(qsl("setConsoleBufferSize(\"main\", 400, 50)")));
+        // Four links a line, until the given trim has been made
+        const QString denseUntil = qsl("local function link(c) return \"\\27]8;;send:\" .. c .. \"\\27\\\\\" .. c .. \"\\27]8;;\\27\\\\\" end\n"
+                                       "local i = headlessDense or 0\n"
+                                       "repeat\n"
+                                       "  i = i + 1\n"
+                                       "  feedTriggers(\"dense \" .. i .. \": \" .. link(\"a\") .. \" \" .. link(\"b\") .. \" \" .. link(\"c\") .. \" \" .. link(\"d\") .. \"\\n\")\n"
+                                       "until (headlessTrims or 0) >= %1 or i > 5000\n"
+                                       "headlessDense = i\n");
+        const auto namedSince = [&changed]() {
+            QSet<int> named;
+            for (const auto& arguments : std::as_const(changed)) {
+                const QList<int> links = arguments.at(1).value<QList<int>>();
+                named.unite(QSet<int>(links.cbegin(), links.cend()));
+            }
+            return named;
+        };
+        const TLinkStore& store = session.host()->mainConsoleModel().buffer.mLinkStore;
+        QVERIFY2(session.runLua(denseUntil.arg(1)), qPrintable(session.errorString()));
+        QCOMPARE(luaGlobal(session, "headlessTrims"), qsl("1"));
+        QTest::qWait(50);
+        changed.clear();
+
+        QVERIFY2(session.runLua(denseUntil.arg(2)), qPrintable(session.errorString()));
+        QCOMPARE(luaGlobal(session, "headlessTrims"), qsl("2"));
+        QTest::qWait(50);
+        QSet<int> trimmedButStored;
+        for (const auto& arguments : std::as_const(output)) {
+            for (const THeadlessSession::TextRun& run : arguments.at(3).value<QList<THeadlessSession::TextRun>>()) {
+                if (run.link && store.contains(run.link) && !session.link(run.link)) {
+                    trimmedButStored.insert(run.link);
+                }
+            }
+        }
+        QVERIFY2(trimmedButStored.size() >= 100, qPrintable(qsl("%1 links trimmed but still stored").arg(trimmedButStored.size())));
+        for (const int id : namedSince()) {
+            QVERIFY2(!store.contains(id), qPrintable(qsl("link %1 was named while the store still holds it, so link() reads the buffer to answer it").arg(id)));
+        }
+        changed.clear();
+
+        QVERIFY2(session.runLua(denseUntil.arg(3)), qPrintable(session.errorString()));
+        QCOMPARE(luaGlobal(session, "headlessTrims"), qsl("3"));
+        QVERIFY(changed.wait());
+        const QSet<int> named = namedSince();
+        for (const int id : std::as_const(trimmedButStored)) {
+            QVERIFY2(named.contains(id), qPrintable(qsl("link %1, which the sweep removed, was not named").arg(id)));
+        }
+        for (const int id : named) {
+            QVERIFY2(!store.contains(id), qPrintable(qsl("link %1 was named while the store still holds it").arg(id)));
+            QVERIFY(!session.link(id));
+        }
+        const QList<int> kept = linksOnLineStarting(output, qsl("dense %1: ").arg(luaGlobal(session, "headlessDense")));
+        QCOMPARE(kept.size(), 4);
+        QVERIFY(session.link(kept.first()));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_noLinkChangeIsToldAfterShutdown()
+    {
+        const QString name = qsl("Headless Links Changed Shutdown");
+        QVERIFY(writeProfile(name, qsl(R"lua(tempRegexTrigger("^headless closing$", [[echoLink(" c", "headlessClosing = true", "c")]]))lua")));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QSignalSpy changed(&session, &THeadlessSession::linksChanged);
+        QVERIFY(session.runLua(feed(qsl("headless closing"))));
+        QCOMPARE(session.followLink(lastLinkOf(shown, qsl("headless closing c"))), THeadlessSession::LinkResult::ran);
+        QVERIFY(session.shutdown(false));
+        QTest::qWait(50);
+        QCOMPARE(changed.count(), 0);
     }
 };
 

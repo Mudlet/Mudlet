@@ -35,6 +35,7 @@ public:
     // isSignalConnected() is protected. The GUI never connects textPrinted or lineShown, so this spares it the work.
     bool textPrintedConnected() const;
     bool lineShownConnected() const;
+    bool linkChangedConnected() const;
 
 signals:
     // The count is of every line in the buffer, not just the new ones.
@@ -70,6 +71,9 @@ signals:
     // The buffer was emptied, so view state indexing its old lines is stale.
     void bufferCleared();
     void spoilerRevealed();
+    // What a link offers changed: its state, its selection, its spoiler, or it was expired, swept from the store or
+    // a line holding it was deleted. Not for a trim, which leaves the link to the sweep.
+    void linkChanged(int linkIndex);
 };
 
 #endif // MUDLET_TCONSOLEMODELNOTIFIER_H
