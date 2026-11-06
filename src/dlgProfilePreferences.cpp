@@ -6346,7 +6346,7 @@ void dlgProfilePreferences::fillOutMapHistory()
     if (!pHost) {
         return;
     }
-    // On Windows and macOS an autosave still being written would be listed as its temporary file
+    // An autosave still being written would be listed as its temporary file wherever that file has a name
     pHost->waitForMapAutosave();
 
     // Map files change while the dialog is open, so rebuild, resetting the enabled state to an empty list's.
