@@ -1047,7 +1047,11 @@ bool Host::saveMapFile(const QString& location, int saveVersion)
     QDataStream out(&sink);
     out.setVersion(QDataStream::Qt_5_12);
 
-    bool saved = mpMap->serialize(out, saveVersion) && sink.flushChunk();
+    bool saved = mpMap->serialize(out, saveVersion);
+    if (saved && !sink.flushChunk()) {
+        qDebug().noquote() << "Error saving map to" << filename_map << ": a write to it was cut short";
+        saved = false;
+    }
     if (saved && !file_map.commit()) {
         qDebug() << "Error saving map: " << (file_map.error() == QFile::NoError ? "issue with serializing" : file_map.errorString());
         saved = false;

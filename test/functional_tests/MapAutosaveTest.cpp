@@ -339,6 +339,7 @@ private slots:
         QVERIFY(!map()->isUnsaved());
         QCOMPARE(readFile(autosavePath(mProfileName)), serialized(map()));
     }
+
     // A downloaded map is loaded as already saved, so the autosave of the map it replaced must not land after it
     void test_downloadMadeDuringAnAutosaveWriteIsTheNewerFile()
     {
@@ -346,7 +347,7 @@ private slots:
         if (QTest::currentTestFailed()) {
             return;
         }
-        // So that each write takes milliseconds, and the two files' times cannot tie
+        // So that each write takes milliseconds, and the files' times cannot tie
         map()->mUserData.insert(qsl("bigger"), QString(10'000'000, QChar(u'x')));
         renameRoom(map(), qsl("Downloaded"));
         const QString served = qsl("%1/served map.dat").arg(mConfigDir.path());
@@ -361,11 +362,14 @@ private slots:
             QVERIFY(hold.holding());
             mpHost->autoSaveMap();
             map()->downloadMap(QUrl::fromLocalFile(served).toString(), QString());
-            QTRY_COMPARE(map()->mpRoomDB->getRoom(1)->name, qsl("Downloaded"));
+            QTRY_VERIFY(map()->mpRoomDB->getRoom(1) && map()->mpRoomDB->getRoom(1)->name == qsl("Downloaded"));
         }
         mpHost->waitForMapAutosave();
-        QVERIFY(map()->restore(QString()));
-        QCOMPARE(map()->mpRoomDB->getRoom(1)->name, qsl("Downloaded"));
+
+        const QDateTime autosaved = QFileInfo(autosavePath(mProfileName)).lastModified();
+        const QDateTime downloaded = QFileInfo(MudletApp::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"))).lastModified();
+        QVERIFY(autosaved.isValid());
+        QVERIFY2(autosaved <= downloaded, qPrintable(qsl("the autosave (%1) landed after the download (%2)").arg(autosaved.toString(Qt::ISODateWithMs), downloaded.toString(Qt::ISODateWithMs))));
     }
 
     void test_mapCopiedToAProfileDuringItsAutosaveWriteIsTheNewerFile()
@@ -378,6 +382,8 @@ private slots:
         if (QTest::currentTestFailed()) {
             return;
         }
+        // So that saving the map to copy takes milliseconds, and the files' times cannot tie
+        map()->mUserData.insert(qsl("bigger"), QString(10'000'000, QChar(u'x')));
         renameRoom(target->mpMap.data(), qsl("The target's own map"));
         renameRoom(map(), qsl("Copied from the source"));
 
@@ -390,30 +396,48 @@ private slots:
         }
         QVERIFY(pTargetChoice);
         pTargetChoice->setChecked(true);
-        bool autosavedFirst = false;
+        bool copied = false;
         {
             PoolHold hold;
             QVERIFY(hold.holding());
             target->autoSaveMap();
-            QMetaObject::invokeMethod(pPreferences, "slot_copyMap");
-            autosavedFirst = QFileInfo::exists(autosavePath(mCopyTargetProfileName));
+            copied = QMetaObject::invokeMethod(pPreferences, "slot_copyMap");
             QThread::sleep(50ms);
         }
         delete pPreferences;
         target->waitForMapAutosave();
+        const QFileInfoList saves = QDir(MudletApp::getMudletPath(enums::profileMapsPath, mProfileName)).entryInfoList({qsl("*.dat")}, QDir::Files, QDir::Time);
+        const QDateTime autosaved = QFileInfo(autosavePath(mCopyTargetProfileName)).lastModified();
         const bool restored = target->mpMap->restore(QString());
         const TRoom* pRoom = target->mpMap->mpRoomDB->getRoom(1);
         const QString loaded = pRoom ? pRoom->name : QString();
         HostManager::self()->deleteHost(mCopyTargetProfileName);
-        QVERIFY2(autosavedFirst, "the map was copied before the target's autosave had been written");
+
+        QVERIFY(copied);
+        QVERIFY(!saves.isEmpty());
+        QVERIFY(autosaved.isValid());
+        // On Windows and macOS a copy keeps the time of the file it was made from
+        QVERIFY2(autosaved < saves.first().lastModified(),
+                 qPrintable(qsl("the target's autosave (%1) was not older than the map saved to copy (%2)")
+                                    .arg(autosaved.toString(Qt::ISODateWithMs), saves.first().lastModified().toString(Qt::ISODateWithMs))));
         QVERIFY(restored);
         QCOMPARE(loaded, qsl("Copied from the source"));
     }
 
 #if defined(Q_OS_UNIX)
+    void test_writeCutShortIsReported_data()
+    {
+        QTest::addColumn<qint64>("bytesBeforeTheEnd");
+        // Inside the user data value bigger than a chunk, which is written straight through
+        QTest::newRow("in a direct write") << qint64(-1);
+        // Inside the last chunk, after which nothing else is written that could fail
+        QTest::newRow("in the last chunk") << qint64(1024);
+    }
+
     // A full disk cuts a write short without an error that QSaveFile would see, so it would commit what it got
     void test_writeCutShortIsReported()
     {
+        QFETCH(qint64, bytesBeforeTheEnd);
         buildMap(map());
         if (QTest::currentTestFailed()) {
             return;
@@ -428,15 +452,19 @@ private slots:
         rlimit uncapped{};
         QCOMPARE(getrlimit(RLIMIT_FSIZE, &uncapped), 0);
         rlimit capped = uncapped;
-        capped.rlim_cur = 512 * 1024;
+        capped.rlim_cur = bytesBeforeTheEnd < 0 ? 512 * 1024 : serialized(map()).size() - bytesBeforeTheEnd;
         const auto previousHandler = std::signal(SIGXFSZ, SIG_IGN);
-        QCOMPARE(setrlimit(RLIMIT_FSIZE, &capped), 0);
-        const bool saved = mpHost->saveMapFile(path);
-        mpHost->autoSaveMap();
-        mpHost->waitForMapAutosave();
-        setrlimit(RLIMIT_FSIZE, &uncapped);
+        const bool cappedOk = setrlimit(RLIMIT_FSIZE, &capped) == 0;
+        bool saved = true;
+        if (cappedOk) {
+            saved = mpHost->saveMapFile(path);
+            mpHost->autoSaveMap();
+            mpHost->waitForMapAutosave();
+            setrlimit(RLIMIT_FSIZE, &uncapped);
+        }
         std::signal(SIGXFSZ, previousHandler);
 
+        QVERIFY(cappedOk);
         QVERIFY2(!saved, "a save that was cut short reported success");
         QCOMPARE(readFile(path), QByteArray("OLD"));
         QVERIFY(!QFileInfo::exists(autosavePath(mProfileName)));

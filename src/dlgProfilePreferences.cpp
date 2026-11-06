@@ -6754,6 +6754,14 @@ void dlgProfilePreferences::slot_copyMap()
     const int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
+    // On Windows and macOS a copy keeps the time of the map saved here, so that save has to come
+    // after each destination's autosave
+    const QStringList toProfileNames = toProfilesRoomIdMap.keys();
+    for (const QString& otherHostName : toProfileNames) {
+        if (Host* pOtherHost = HostManager::self()->getHost(otherHostName)) {
+            pOtherHost->waitForMapAutosave();
+        }
+    }
     if (!pHost->saveMapFile(QString())) {
         label_mapFileActionResult->setText(tr("Could not backup the map - saving it failed."));
         QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
