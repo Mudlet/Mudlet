@@ -84,14 +84,20 @@ inline int getWidth(uint unicode, bool mWideAmbigousWidthGlyphs)
     return width > maxWidth ? maxWidth : width;
 }
 
-// Fonts draw a symbol followed by VS16 (U+FE0F) as a colour emoji, which takes two columns whatever the symbol's
-// own width. The only ASCII symbols with an emoji form are keycap bases, which need U+20E3 as well to become one.
+// Every base character in Unicode's emoji-variation-sequences.txt lies in one of these ranges or is a keycap base
+// (# * 0-9), which needs U+20E3 as well to become an emoji. A letter such as U+00E9 with VS16 stays a letter.
+inline bool hasEmojiForm(uint base)
+{
+    return base == 0xA9 || base == 0xAE || (base >= 0x2000 && base <= 0x2BFF) || base == 0x3030 || base == 0x303D || base == 0x3297 || base == 0x3299 || base >= 0x1F000;
+}
+
+// Fonts draw a symbol followed by VS16 (U+FE0F) as a colour emoji, which takes two columns whatever the symbol's own width.
 inline int withPresentation(QStringView grapheme, uint base, int baseWidth)
 {
     if (baseWidth != 1 || grapheme.size() < 2 || !grapheme.contains(QChar(0xFE0F))) {
         return baseWidth;
     }
-    return (base >= 0x80 || grapheme.contains(QChar(0x20E3))) ? maxWidth : baseWidth;
+    return (hasEmojiForm(base) || grapheme.contains(QChar(0x20E3))) ? maxWidth : baseWidth;
 }
 
 

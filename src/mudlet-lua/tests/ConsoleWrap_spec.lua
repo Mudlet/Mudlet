@@ -86,6 +86,8 @@ describe("Tests how a console wraps the lines it is given", function()
     it("keeps a one column symbol without VS16 at one column", function()
       assert.are.same({"☠☠☠☠"}, wrapped(4, "☠☠☠☠"))
       assert.are.same({"#️#️#️#️"}, wrapped(4, "#️#️#️#️"))
+      -- U+00E9 has no emoji form, so VS16 leaves it a one column letter
+      assert.are.same({"é️é️é️é️"}, wrapped(4, "é️é️é️é️"))
     end)
 
     it("drops the spaces a break lands inside", function()
