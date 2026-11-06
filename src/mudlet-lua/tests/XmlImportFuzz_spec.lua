@@ -16,9 +16,10 @@
 --   MUDLET_XMLFUZZ_SEED   integer seed                         (default 1)
 --   MUDLET_XMLFUZZ_ITERS  number of mutated files imported     (default 1000)
 --   MUDLET_XMLFUZZ_MODE   "map", "package" or "both"           (default both)
---   MUDLET_XMLFUZZ_DUMP   path; each mutation is logged before it is imported
--- The file being imported is left at <profile>/xmlimportfuzz_map.xml or
--- <profile>/xmlimportfuzzpkg.xml, so after an abort that file IS the crashing input.
+--   MUDLET_XMLFUZZ_DUMP   path; each mutation is logged before it is imported,
+--                         and the file itself is copied to <path>.input, so
+--                         after an abort that copy IS the crashing input (the
+--                         test runner deletes the profile's copy on exit)
 
 -- Gated like the other fuzz specs: busted recurses into the whole tests
 -- directory, and this spec replaces the profile's map and installs packages.
@@ -149,7 +150,7 @@ local VALUES = {
 }
 
 -- Start offset, end offset (inclusive) of every attribute value, every run of
--- text between tags, and every start tag with its name.
+-- text between tags, and every start tag (through its ">") with its name.
 local function scan(data)
     local attrs, texts, tags = {}, {}, {}
     for s, e in data:gmatch('="()[^"]*()"') do
@@ -161,7 +162,7 @@ local function scan(data)
         end
     end
     for s, name, e in data:gmatch("()<([%a_][%w_%-%.]*)[^>]*()>") do
-        insert(tags, { s, e - 1, name })
+        insert(tags, { s, e, name })
     end
     return attrs, texts, tags
 end
@@ -249,6 +250,8 @@ local function mutate(data)
 end
 
 local function exerciseMap()
+    -- paint now, so a report from drawing this map follows this map's dump record
+    pumpEvents(0)
     local ids = {}
     for _, id in pairs(getRooms() or {}) do
         insert(ids, id)
@@ -323,6 +326,9 @@ describe("XML import fuzzer", function()
             local base = pick(corpus)
             local data, ops = mutate(base.data)
             record(("%d %s %s %s"):format(i, base.kind, base.name, ops))
+            if DUMP_PATH then
+                writeFile(DUMP_PATH .. ".input", data)
+            end
             if base.kind == "map" then
                 writeFile(mapPath, data)
                 if loadMap(mapPath) then

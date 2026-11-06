@@ -21,9 +21,13 @@
 --   MUDLET_MAPFUZZ_SEED   integer seed                          (default 1)
 --   MUDLET_MAPFUZZ_ITERS  number of mutated files loaded        (default 2000)
 --   MUDLET_MAPFUZZ_FORMAT "binary", "json" or "both"            (default both)
---   MUDLET_MAPFUZZ_DUMP   path; each mutation is logged before it loads
--- The file being loaded is left at <profile>/map/mapfilefuzz_spec_current.dat
--- (or .json), so after an abort that file IS the crashing input.
+--   MUDLET_MAPFUZZ_DUMP   path; each mutation is logged before it loads, and
+--                         the file itself is copied to <path>.input, so after
+--                         an abort that copy IS the crashing input (the test
+--                         runner deletes the profile's copy on exit)
+-- The base files embed the labels' rendered images, which differ with the
+-- fonts installed, so a seed only replays on the machine that ran it - keep
+-- the .input file rather than the seed.
 
 -- Gated like the other fuzz specs: busted recurses into the whole tests
 -- directory, and this spec replaces the profile's map many times over.
@@ -282,6 +286,8 @@ local function buildMap()
 end
 
 local function exerciseLoadedMap()
+    -- paint now, so a report from drawing this map follows this map's dump record
+    pumpEvents(0)
     local areaTable = getAreaTable() or {}
     local ids = {}
     for _, id in pairs(getRooms() or {}) do
@@ -357,6 +363,9 @@ describe("Map file loader fuzzer", function()
                 data, ops = mutate(base.data)
             end
             record(("%d %s %s"):format(i, base.version, ops))
+            if DUMP_PATH then
+                writeFile(DUMP_PATH .. ".input", data)
+            end
             local path = isJson and currentJsonPath or currentPath
             writeFile(path, data)
             local ok
