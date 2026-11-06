@@ -29,6 +29,7 @@
 
 #include <QDir>
 #include <QFileDialog>
+#include <QLineEdit>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -225,7 +226,8 @@ private slots:
     {
         QTemporaryDir dir;
         QVERIFY(dir.isValid());
-        const QString target = qsl("%1/no-such-folder/exported.json").arg(dir.path());
+        const QString name = qsl("missing&folder/exported.json");
+        const QString target = qsl("%1/%2").arg(dir.path(), name);
         QVERIFY2(openPreferences(), "the settings dialog never appeared");
         auto& console = mpHost->mainConsoleView()->buffer;
         const int mark = std::max(0, console.getLastLineNumber());
@@ -238,7 +240,12 @@ private slots:
                     return pDialog && pDialog->isVisible();
                 },
                 5s));
-        pDialog->selectFile(target);
+        // Typed, as selectFile() given a path into a missing folder keeps only the name
+        auto* pName = pDialog->findChild<QLineEdit*>(qsl("fileNameEdit"));
+        QVERIFY(pName);
+        pDialog->setDirectory(dir.path());
+        pName->setText(name);
+        QCOMPARE(pDialog->selectedFiles().value(0), target);
         static_cast<QDialog*>(pDialog)->accept();
 
         // As one line, since the console wraps long messages
@@ -253,6 +260,7 @@ private slots:
             return shown().contains(qsl("could not open save file"));
         };
         QVERIFY2(QTest::qWaitFor(saysWhy, 5s), qPrintable(qsl("the console does not say why: '%1'").arg(shown())));
+        QVERIFY2(!shown().contains(qsl("&amp;")), qPrintable(qsl("the console shows the path HTML-escaped: '%1'").arg(shown())));
     }
 };
 

@@ -3603,7 +3603,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         qWarning().noquote().nospace() << "TMap::writeJsonMapFile(...) WARNING - Could not open save file \"" << destination << "\".";
         emit signal_mapProgressClose();
         mMapProgressStandalone = false;
-        return {false, qsl("could not open save file \"%1\", reason: %2").arg(destination.toHtmlEscaped(), file.errorString())};
+        return {false, qsl("could not open save file \"%1\", reason: %2").arg(destination, file.errorString())};
     }
 
     QJsonObject mapObj;
