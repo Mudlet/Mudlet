@@ -6332,18 +6332,28 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     // A compressed read can inflate to nothing. Older Mudlets refuse a replay
     // holding an empty chunk, so its wait carries over to the next chunk.
     const bool recordingThisRead = !loopbackTesting && mRecordReplay && datalen > 0;
-    // QElapsedTimer::elapsed() returns a qint64, it replaces a
-    // previous QTime::elapsed() which returns a int (effectively a
-    // qint32):
-    const qint32 recordingChunkInterval = recordingThisRead ? static_cast<qint32>(mRecordingChunkTimer.elapsed()) - mRecordLastChunkMSecTimeOffset : 0;
     // Replays play back without a decompressor, so a plain read that may switch
     // compression on part way through is recorded only once it is known where
     // the plain bytes end and the compressed ones begin.
     const char* const plainReadToRecord = (recordingThisRead && !mNeedDecompression && mayHoldCompressionStart(buffer, datalen)) ? buffer : nullptr;
     const qint32 plainReadLength = datalen;
     bool plainReadRecorded = false;
+    // Until a chunk carries it, this read's wait carries over to the next one.
+    // QElapsedTimer::elapsed() returns a qint64, it replaces a
+    // previous QTime::elapsed() which returns a int (effectively a
+    // qint32):
+    qint32 waitToRecord = recordingThisRead ? static_cast<qint32>(mRecordingChunkTimer.elapsed()) - mRecordLastChunkMSecTimeOffset : 0;
+    bool waitRecorded = false;
+    const auto recordPart = [this, &waitToRecord, &waitRecorded](const char* data, const qint32 length) {
+        // Processing can end the recording, e.g. a script disconnecting
+        if (length > 0 && mRecordReplay) {
+            recordReplayChunk(waitToRecord, data, length);
+            waitToRecord = 0;
+            waitRecorded = true;
+        }
+    };
     if (recordingThisRead && !plainReadToRecord) {
-        recordReplayChunk(recordingChunkInterval, buffer, datalen);
+        recordPart(buffer, datalen);
     }
 
     recvdGA = false;
@@ -6454,8 +6464,10 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                             gotRest(cleandata);
                             cleandata = "";
                             initStreamDecompressor();
-                            if (plainReadToRecord && !plainReadRecorded && mRecordReplay) {
-                                recordReplayChunk(recordingChunkInterval, plainReadToRecord, i + 3);
+                            if (plainReadToRecord && !plainReadRecorded) {
+                                // The start sequence is left out: playback has no MCCP handling, and
+                                // MCCP1's has no IAC before its SE, so it would swallow what follows
+                                recordPart(plainReadToRecord, i - 2);
                                 plainReadRecorded = true;
                             }
                             buffer += i + 3; //bugfix: BenH
@@ -6463,8 +6475,8 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
 
                             if (restLength > 0) {
                                 datalen = decompressBuffer(buffer, restLength, out_buffer.get());
-                                if (plainReadRecorded && datalen > 0) {
-                                    recordReplayChunk(0, out_buffer.get(), datalen);
+                                if (plainReadRecorded) {
+                                    recordPart(out_buffer.get(), datalen);
                                 }
                                 // queue input left over past this compressed chunk
                                 // (decompressBuffer() advanced 'buffer' to it) for
@@ -6597,9 +6609,8 @@ Some data loss is likely - please mention this problem to the game admins.)",
     }
     mPromptStartPosted = false;
 
-    // Processing can end the recording, e.g. a script disconnecting
-    if (plainReadToRecord && !plainReadRecorded && mRecordReplay) {
-        recordReplayChunk(recordingChunkInterval, plainReadToRecord, plainReadLength);
+    if (plainReadToRecord && !plainReadRecorded) {
+        recordPart(plainReadToRecord, plainReadLength);
     }
 
     // Reprocess data left over after this decompression pass (more compressed
@@ -6610,7 +6621,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
     if (remainingData && remainingAmount > 0 && !(mDeferredReconnect && !loopbackTesting)) {
         // the leftover arrived in the same read, so it has no wait of its own;
         // a part deferred below is recorded with the wait for its turn
-        if (recordingThisRead) {
+        if (waitRecorded) {
             mRecordLastChunkMSecTimeOffset = static_cast<qint32>(mRecordingChunkTimer.elapsed());
         }
         if (mDecompressionRecursionDepth < scmMaxDecompressionRecursion) {
@@ -6627,7 +6638,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
         mpHost->finalizeMainConsole();
     }
 
-    if (recordingThisRead) {
+    if (waitRecorded) {
         mRecordLastChunkMSecTimeOffset = static_cast<qint32>(mRecordingChunkTimer.elapsed());
     }
 }
