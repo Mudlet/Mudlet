@@ -6593,7 +6593,14 @@ void dlgProfilePreferences::slot_saveMap()
         if (!fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
             success = pHost->saveMapFile(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt());
         } else {
-            success = pHost->mpMap->writeJsonMapFile(fileName).first;
+            auto [localSuccess, errorMessage] = pHost->mpMap->writeJsonMapFile(fileName);
+            success = localSuccess;
+            if (!localSuccess) {
+                //: %1 is the file the map was being exported to, %2 why it could not be
+                pHost->postMessage(tr("[ ERROR ] - Unable to save JSON map file: %1\n"
+                                      "reason: %2.")
+                                           .arg(fileName, errorMessage));
+            }
         }
 
         if (success) {

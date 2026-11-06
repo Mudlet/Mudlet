@@ -28,6 +28,7 @@
  */
 
 #include <QDir>
+#include <QFileDialog>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -42,6 +43,7 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "T2DMap.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TelnetServerStub.h"
 #include "dlgMapper.h"
@@ -49,6 +51,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class SettingsMapControlsTest : public QObject
 {
@@ -214,6 +218,41 @@ private slots:
         // each has to be pinned to the size asked for rather than to the other.
         QVERIFY2(qAbs(mpHost->mRoomSize - wanted) < 1.0e-6, qPrintable(qsl("the profile was given a room size of %1 rather than %2").arg(mpHost->mRoomSize).arg(wanted)));
         QVERIFY2(qAbs(p2dMap->rSize - wanted) < 1.0e-6, qPrintable(qsl("the map was given a room size of %1 rather than %2").arg(p2dMap->rSize).arg(wanted)));
+    }
+
+    // saveJsonMap() hands a script the reason, so the dialog's own export should not keep it from the player
+    void test_aJsonExportThatFailsSaysWhy()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString target = qsl("%1/no-such-folder/exported.json").arg(dir.path());
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        auto& console = mpHost->mainConsoleView()->buffer;
+        const int mark = std::max(0, console.getLastLineNumber());
+
+        mpPreferences->pushButton_saveMap->click();
+        QFileDialog* pDialog = nullptr;
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    pDialog = mpPreferences->findChild<QFileDialog*>();
+                    return pDialog && pDialog->isVisible();
+                },
+                5s));
+        pDialog->selectFile(target);
+        static_cast<QDialog*>(pDialog)->accept();
+
+        // As one line, since the console wraps long messages
+        const auto shown = [&]() {
+            QStringList lines;
+            for (int line = mark; line <= console.getLastLineNumber(); ++line) {
+                lines << console.line(line);
+            }
+            return lines.join(QChar::Space).simplified();
+        };
+        const auto saysWhy = [&]() {
+            return shown().contains(qsl("could not open save file"));
+        };
+        QVERIFY2(QTest::qWaitFor(saysWhy, 5s), qPrintable(qsl("the console does not say why: '%1'").arg(shown())));
     }
 };
 
