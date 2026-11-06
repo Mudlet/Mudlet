@@ -48,8 +48,7 @@ end
 -- Overridden reposition for special coordination handling
 function Geyser.ScrollBox:reposition(skipChildren)
     Geyser.calc_constraints(self, self, self.container)
-    -- calc_constraints() has just put back getters that give the box's real origin,
-    -- so an error must not skip frameChildren()
+    -- the box's getters give its real origin by now, so an error must not skip frameChildren()
     local ok, x, y, width, height = pcall(self.pixel_geometry, self)
     if not ok then
         frameChildren(self)

@@ -259,13 +259,13 @@ describe("Tests functionality of Geyser.ScrollBox", function()
       end)
     end
 
-    -- a direct reposition finds the box's getters framed, a move has just replaced them
+    -- a direct reposition finds the box's getters framed, a move to a new place has just replaced them
     local relayouts = {
-      {"reposition", function(box) box:reposition() end},
-      {"move", function(box) box:move(100, 50) end},
+      {"reposition", function(box) box:reposition() end, 100},
+      {"move", function(box) box:move(120, 50) end, 120},
     }
     for _, entry in ipairs(relayouts) do
-      local name, relayout = entry[1], entry[2]
+      local name, relayout, boxX = entry[1], entry[2], entry[3]
       it("lays a child out inside it after its own " .. name .. " raised an error", function()
         local mainWidth = getMainWindowSize()
         local height = 200
@@ -278,17 +278,23 @@ describe("Tests functionality of Geyser.ScrollBox", function()
         label:move(10, 20)
         assert.is_true(raised)
         -- the far edge width still needs the box's real x while the box measures itself
-        assert.are.same({x = 10, y = 20, width = mainWidth - 110, height = 50}, geometry("gsbRaisedBoxChild"))
+        assert.are.same({x = 10, y = 20, width = mainWidth - 10 - boxX, height = 50}, geometry("gsbRaisedBoxChild"))
       end)
     end
 
     it("raises exactly what the constraint raised", function()
-      local failure
+      local raising, failure = false, nil
       local function size()
-        if failure then
+        if raising then
           error(failure)
         end
         return 100
+      end
+      local function raisedBy(raise, value)
+        raising, failure = true, value
+        local _, raised = pcall(raise)
+        raising = false
+        return raised
       end
       local box = track(Geyser.ScrollBox:new({name = "gsbRaisedError", x = 0, y = 0, width = size, height = size}))
       local raisers = {
@@ -296,16 +302,11 @@ describe("Tests functionality of Geyser.ScrollBox", function()
         function() return box.get_height() end,
         function() box:reposition() end,
       }
+      local object = {}
       for _, raise in ipairs(raisers) do
-        failure = "not ready"
-        local _, expected = pcall(size)
-        local _, message = pcall(raise)
-        local object = {}
-        failure = object
-        local _, raisedObject = pcall(raise)
-        failure = nil
-        assert.are.equal(expected, message)
-        assert.are.equal(object, raisedObject)
+        assert.are.equal(raisedBy(size, "not ready"), raisedBy(raise, "not ready"))
+        assert.are.equal(object, raisedBy(raise, object))
+        assert.is_nil(raisedBy(raise, nil))
       end
     end)
   end)
