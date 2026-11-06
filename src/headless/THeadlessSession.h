@@ -312,7 +312,9 @@ signals:
     // messages), and the error console. While lineShown is connected, it leaves out what that sends, as
     // docs/headless.md tells. Sent as written, so a handler may neither call the session nor run the event loop.
     void localText(const QString& profile, const QString& text);
-    void errorConsoleText(const QString& profile, const QString& text);
+    // With the colours the editor's error console prints the piece in; a handler that takes only the first two
+    // arguments may be connected
+    void errorConsoleText(const QString& profile, const QString& text, const QColor& foreground, const QColor& background);
     // A line of outputLine's as the main console shows it once its triggers have run: with what they replaced,
     // recoloured or wrote into it, which may hold line feeds, and not at all if they deleted it. Lines a trigger
     // feeds follow the line it ran on, as they are shown, and so does what it wrote anywhere else (an echo()
