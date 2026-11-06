@@ -172,6 +172,76 @@ asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, str
 fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap
 for its own theme's. Links in the line, and what `echo()` and the like print, come as plain text for now.
 
+`outputLine` carries each line as the game sent it, before the profile's triggers run on it, so a line a
+trigger gags still arrives, and one it rewrites arrives unchanged. `lineShown` carries the same lines as
+the main console shows them once their triggers have run, with the same arguments: with the text a
+trigger replaced, the colours it changed and what it `echo()`ed into the line, which may hold line feeds,
+and not at all for a line a trigger deleted. Lines a trigger feeds with `feedTriggers()` come after the
+line it ran on, in the order the console shows them, and so does what it writes anywhere else, each piece
+as a line of its own: an `echo()` after `deleteLine()`, `clearWindow()` or a `feedTriggers()`, and the
+command echo of a `send()`. An app that draws the console as the GUI does draws `lineShown`, wrapping each
+line itself, as for `outputLine`; a line a trigger split with `wrapLine()` comes whole, with the line feeds
+it held, and if a trigger then deletes its first part, what is left of it comes as the line. A change a later
+trigger makes to a line already sent, as by moving the cursor up to it, is not sent again, though what it
+inserts is sent as a line of its own.
+
+`localText` carries the text written to the main console that the game did not send, as it is written,
+in pieces that need not end a line: the `echo()`s of aliases, timers, key bindings and `runLua()`, the
+commands the player sends, and Mudlet's own messages. While `lineShown` is connected, `localText` leaves
+out what `lineShown` sends: all that is written while triggers run on a line, a Lua error the console
+echoes and Mudlet's own messages among it. So an app draws both streams in the order they come, and each
+piece once: a line of `lineShown` goes below a line `localText` left open, and the next piece of
+`localText` then starts with the line feed that ends that open line, which the app drops. While
+`lineShown` is not connected, `localText` carries what triggers write too. Connected or let go in a
+handler, `lineShown` takes effect from the next line the game sends, so the line under way and all its
+triggers write go to one stream or the other, never both.
+
+Drawn that way, the console matches the GUI's but for its layout in these places, where no text is
+missing or doubled:
+
+- The console draws an `echo()` that follows `deleteLine()` on the end of the line above, which was already
+  sent, where `lineShown` sends it as a new line.
+- The console draws a command typed at a prompt on the end of that prompt, as `HP 10> look`, where
+  `lineShown` sends the prompt and `localText` then sends `look` as a piece that the rule above puts on a
+  line of its own. Nothing tells it apart from an alias's `echo()` after a prompt, which the GUI draws below.
+- Blank lines inside what a trigger prints, such as a Lua error of several lines, or the empty command echo
+  of a trigger's `send("")`, are not sent.
+
+`mainConsoleCleared` says a script emptied the main console with `clearWindow()` or
+`clearWindow("main")`, so an app empties its own copy of it; a mini console's clear does not send it.
+While it is connected, a clear also ends any line `localText` left open, so the next piece has no line
+feed to drop; without it, as for the CLI, that piece starts with the line feed that ends the open line.
+It is sent between the lines from before and after, so, like `outputLine`, its handler must not call the
+session back.
+
+`loggingChanged` says when the profile starts or stops logging the game's text to a file, where the GUI's
+logging button changes: from a script's `startLogging()`, or as the profile loads with logging left on,
+with the log file's path while it logs. A start that fails sends `false`, and the reason is printed on the
+main console, so it arrives as `localText`. A profile that closes while it logs, or that `shutdown()` or a
+later `start()` lets go of, sends `false` too, so each `true` is followed by one `false`, unless the
+session is deleted first: a session being deleted sends none. It comes from the event loop.
+
+`consoleFont()` is the font the GUI would draw the main console in, for an app that draws in the profile's
+font: read it at `profileLoaded`, then follow `consoleFontChanged`, which carries each change, whatever
+made it - a script's `setFont()` or `setFontSize()`, the profile's save, the bundled default standing in for
+a font that is not installed, or a package bringing that font or taking it away. The size `setScreenSize()`
+gives is in that font's characters. It comes from the event loop, with the font as it is then, and only
+when that differs from the one the app last had, so none follows `profileLoaded` for what the load did.
+
+`setDebugConsoleShown(true)` shows the Central Debug Console, as the editor's button does, before
+`start()` too, to see a profile load: `debugText` then carries what it prints, with its colours and when
+it was written, what was kept from before it was shown first, and the profiles write what they write only
+in debug mode, such as each trigger that matches. Append the text as given, as the console does: a line
+ends at its own newline, and one line can come in several pieces of different colours, as `ERROR:` and
+then why. `setDebugCategories()` picks which kinds of message it prints, for the whole process; until then
+it hides `GameLine` (each line from the game), `TriggerDetail` (capture groups and multiline match state),
+`LuaSuccess` and `Selection`, as the GUI's console does before a player changes it, and the GUI's saved
+choice is not read. There is one console for the whole process, as in the GUI, owned by the session that
+showed it last: showing it takes it from any other, whose `debugConsoleShown()` then answers false and
+whose `setDebugConsoleShown(false)` is refused. It closes with the owner's `setDebugConsoleShown(false)`,
+`shutdown()` or deletion. Its text is sent as written, from inside whatever wrote it, so the handler must
+not call the session back.
+
 The signals' handlers are called while a line is being written, so they must not call the session
 back or run the event loop; queue the work for later instead. `host()` reaches what the session
 does not cover, such as settings and the map, and goes null once the profile closes, so hold it in a
