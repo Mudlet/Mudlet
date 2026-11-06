@@ -4814,8 +4814,11 @@ void mudlet::readLateSettings(const QSettings& settings)
     mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
 
 
-    resize(size);
-    move(pos);
+    // pos and size alone are what a maximized window covers, not where it returns to
+    if (!restoreGeometry(settings.value(qsl("mainWindowGeometry")).toByteArray())) {
+        resize(size);
+        move(pos);
+    }
 
     // Need to remove the Qt::WindowMaximized, Qt::WindowFullScreen AND
     // Qt::WindowActive from the state and then apply the result of combining
@@ -5150,6 +5153,7 @@ void mudlet::writeSettings()
     QSettings& settings = *MudletApp::getQSettings();
     settings.setValue("pos", pos());
     settings.setValue("size", size());
+    settings.setValue(qsl("mainWindowGeometry"), saveGeometry());
     settings.setValue("mainiconsize", mToolbarIconSize);
     settings.setValue("tefoldericonsize", mEditorTreeWidgetIconSize);
     settings.setValue("scrollbackTutorialsShown", mScrollbackTutorialsShown);
