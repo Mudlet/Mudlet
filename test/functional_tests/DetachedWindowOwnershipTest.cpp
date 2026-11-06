@@ -582,22 +582,28 @@ private slots:
         if (QTest::currentTestFailed()) {
             return;
         }
+        // Still open after a failure, cleanup() closes it and removes it then
         auto removeThird = qScopeGuard([this] {
-            deleteProfileDirectory(mThirdHostname);
+            if (!HostManager::self()->getHost(mThirdHostname)) {
+                deleteProfileDirectory(mThirdHostname);
+            }
         });
         mudlet::self()->slot_profileDetachToWindow(mThirdHostname, mpDetachedWindow);
         QCOMPARE(mudlet::self()->getDetachedWindows().value(mThirdHostname), mpDetachedWindow);
 
+        // Restored on every way out, or a failure leaves a profile whose next close puts up a question nobody answers
+        auto restoreSaveOnExit = qScopeGuard([this] {
+            for (const QString& name : {mSecondHostname, mThirdHostname}) {
+                if (Host* pHost = HostManager::self()->getHost(name)) {
+                    pHost->mFORCE_SAVE_ON_EXIT = true;
+                }
+            }
+        });
         for (const QString& name : {mSecondHostname, mThirdHostname}) {
             Host* pHost = HostManager::self()->getHost(name);
             QVERIFY(pHost);
             pHost->mFORCE_SAVE_ON_EXIT = false;
         }
-        auto restoreSecond = qScopeGuard([this] {
-            if (Host* pHost = HostManager::self()->getHost(mSecondHostname)) {
-                pHost->mFORCE_SAVE_ON_EXIT = true;
-            }
-        });
 
         // Asked in name order, so the second profile is asked first
         QStringList asked;
