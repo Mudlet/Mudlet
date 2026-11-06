@@ -38,8 +38,10 @@
 #include <QTemporaryDir>
 #include <QThread>
 #include <QThreadPool>
+#include <QTimer>
 #include <QUrl>
 #include <QtTest/QtTest>
+#include <memory>
 
 #include "Host.h"
 #include "HostManager.h"
@@ -156,12 +158,56 @@ private:
         pMap->setUnsaved(__func__);
     }
 
+    // So that each write takes milliseconds, and two files written one after the other cannot share a time
+    static void makeSlowToWrite(TMap* pMap) { pMap->mUserData.insert(qsl("bigger"), QString(10'000'000, QChar(u'x'))); }
+
     TMap* map() const { return mpHost->mpMap.data(); }
 
     void renameRoom(TMap* pMap, const QString& name) const
     {
         pMap->mpRoomDB->getRoom(1)->name = name;
         pMap->setUnsaved(__func__);
+    }
+
+    // Copies this profile's map to the target, whose autosave comes due the first time the dialog reports the
+    // given progress. A copy lets events run as it goes, and the autosave runs off a timer.
+    struct CopyRun
+    {
+        bool copied = false;
+        bool autosaveDue = false;
+        bool autosaveWrittenBeforeCopying = false;
+    };
+    void copyMapWithAutosaveDue(Host* pTarget, const QString& progress, CopyRun& run)
+    {
+        const std::unique_ptr<dlgProfilePreferences> pPreferences(new dlgProfilePreferences(mudlet::self(), mpHost));
+        QAction* pTargetChoice = nullptr;
+        for (auto* pAction : pPreferences->pushButton_chooseProfiles->menu()->actions()) {
+            if (pAction->text() == pTarget->getName()) {
+                pTargetChoice = pAction;
+            }
+        }
+        QVERIFY(pTargetChoice);
+        pTargetChoice->setChecked(true);
+        QTimer ticker;
+        bool sawCopying = false;
+        connect(&ticker, &QTimer::timeout, this, [&]() {
+            const QString shown = pPreferences->label_mapFileActionResult->text();
+            if (!sawCopying && shown.startsWith(qsl("Copying over map to"))) {
+                sawCopying = true;
+                run.autosaveWrittenBeforeCopying = QFileInfo::exists(autosavePath(pTarget->getName()));
+            }
+            if (!run.autosaveDue && shown.startsWith(progress)) {
+                run.autosaveDue = true;
+                renameRoom(pTarget->mpMap.data(), qsl("Changed while copying"));
+                pTarget->autoSaveMap();
+            }
+        });
+        ticker.start(0);
+        PoolHold hold;
+        QVERIFY(hold.holding());
+        run.copied = QMetaObject::invokeMethod(pPreferences.get(), "slot_copyMap");
+        ticker.stop();
+        QThread::sleep(50ms);
     }
 
 private slots:
@@ -240,6 +286,7 @@ private slots:
         if (QTest::currentTestFailed()) {
             return;
         }
+        makeSlowToWrite(map());
         QString explicitPath;
         {
             PoolHold hold;
@@ -347,8 +394,7 @@ private slots:
         if (QTest::currentTestFailed()) {
             return;
         }
-        // So that each write takes milliseconds, and the files' times cannot tie
-        map()->mUserData.insert(qsl("bigger"), QString(10'000'000, QChar(u'x')));
+        makeSlowToWrite(map());
         renameRoom(map(), qsl("Downloaded"));
         const QString served = qsl("%1/served map.dat").arg(mConfigDir.path());
         {
@@ -372,8 +418,12 @@ private slots:
         QVERIFY2(autosaved <= downloaded, qPrintable(qsl("the autosave (%1) landed after the download (%2)").arg(autosaved.toString(Qt::ISODateWithMs), downloaded.toString(Qt::ISODateWithMs))));
     }
 
+    // On Windows and macOS a copy keeps the time of the map saved to make it, so that save has to come after the
+    // target's autosave
     void test_mapCopiedToAProfileDuringItsAutosaveWriteIsTheNewerFile()
     {
+        // Map files are named to the second, and a copy would not replace one an earlier test left
+        deleteProfileDirectory(mCopyTargetProfileName);
         QVERIFY(HostManager::self()->addHost(mCopyTargetProfileName, qsl("23"), QString(), QString()));
         QPointer<Host> target = HostManager::self()->getHost(mCopyTargetProfileName);
         QVERIFY(target);
@@ -382,29 +432,11 @@ private slots:
         if (QTest::currentTestFailed()) {
             return;
         }
-        // So that saving the map to copy takes milliseconds, and the files' times cannot tie
-        map()->mUserData.insert(qsl("bigger"), QString(10'000'000, QChar(u'x')));
-        renameRoom(target->mpMap.data(), qsl("The target's own map"));
+        makeSlowToWrite(target->mpMap.data());
+        makeSlowToWrite(map());
         renameRoom(map(), qsl("Copied from the source"));
-
-        auto* pPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
-        QAction* pTargetChoice = nullptr;
-        for (auto* pAction : pPreferences->pushButton_chooseProfiles->menu()->actions()) {
-            if (pAction->text() == mCopyTargetProfileName) {
-                pTargetChoice = pAction;
-            }
-        }
-        QVERIFY(pTargetChoice);
-        pTargetChoice->setChecked(true);
-        bool copied = false;
-        {
-            PoolHold hold;
-            QVERIFY(hold.holding());
-            target->autoSaveMap();
-            copied = QMetaObject::invokeMethod(pPreferences, "slot_copyMap");
-            QThread::sleep(50ms);
-        }
-        delete pPreferences;
+        CopyRun run;
+        copyMapWithAutosaveDue(target, qsl("Backing up current map"), run);
         target->waitForMapAutosave();
         const QFileInfoList saves = QDir(MudletApp::getMudletPath(enums::profileMapsPath, mProfileName)).entryInfoList({qsl("*.dat")}, QDir::Files, QDir::Time);
         const QDateTime autosaved = QFileInfo(autosavePath(mCopyTargetProfileName)).lastModified();
@@ -413,15 +445,172 @@ private slots:
         const QString loaded = pRoom ? pRoom->name : QString();
         HostManager::self()->deleteHost(mCopyTargetProfileName);
 
-        QVERIFY(copied);
+        QVERIFY(run.copied);
+        QVERIFY(run.autosaveDue);
+        QVERIFY2(run.autosaveWrittenBeforeCopying, "the map to copy was saved before the target's autosave had been written");
         QVERIFY(!saves.isEmpty());
         QVERIFY(autosaved.isValid());
-        // On Windows and macOS a copy keeps the time of the file it was made from
-        QVERIFY2(autosaved < saves.first().lastModified(),
+        // Of two files with the same time, the dated one sorts first
+        QVERIFY2(autosaved <= saves.first().lastModified(),
                  qPrintable(qsl("the target's autosave (%1) was not older than the map saved to copy (%2)")
                                     .arg(autosaved.toString(Qt::ISODateWithMs), saves.first().lastModified().toString(Qt::ISODateWithMs))));
         QVERIFY(restored);
         QCOMPARE(loaded, qsl("Copied from the source"));
+    }
+
+#if defined(Q_OS_LINUX)
+    // Elsewhere a copy keeps the time of the file it was made from, so whichever is written last the autosave is newer
+    void test_autosaveStartedWhileAMapIsCopiedToItsProfileIsOlderThanTheCopy()
+    {
+        deleteProfileDirectory(mCopyTargetProfileName);
+        QVERIFY(HostManager::self()->addHost(mCopyTargetProfileName, qsl("23"), QString(), QString()));
+        QPointer<Host> target = HostManager::self()->getHost(mCopyTargetProfileName);
+        QVERIFY(target);
+        buildMap(target->mpMap.data());
+        buildMap(map());
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        makeSlowToWrite(target->mpMap.data());
+        renameRoom(map(), qsl("Copied from the source"));
+        CopyRun run;
+        copyMapWithAutosaveDue(target, qsl("Copying over map to"), run);
+        target->waitForMapAutosave();
+        const bool restored = target->mpMap->restore(QString());
+        const TRoom* pRoom = target->mpMap->mpRoomDB->getRoom(1);
+        const QString loaded = pRoom ? pRoom->name : QString();
+        HostManager::self()->deleteHost(mCopyTargetProfileName);
+
+        QVERIFY(run.copied);
+        QVERIFY(run.autosaveDue);
+        QVERIFY(restored);
+        QCOMPARE(loaded, qsl("Copied from the source"));
+    }
+#endif
+
+    // A map copy reads where the player is in each profile it copies to from that profile's newest map file
+    void test_mapFileStatsReadDuringAnAutosaveWriteAreTheAutosaves()
+    {
+        deleteProfileDirectory(mCopyTargetProfileName);
+        QVERIFY(HostManager::self()->addHost(mCopyTargetProfileName, qsl("23"), QString(), QString()));
+        QPointer<Host> target = HostManager::self()->getHost(mCopyTargetProfileName);
+        QVERIFY(target);
+        buildMap(target->mpMap.data());
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        makeSlowToWrite(target->mpMap.data());
+        target->mpMap->mRoomIdHash[mCopyTargetProfileName] = 1;
+        QVERIFY(target->saveMapFile(QString()));
+        target->mpMap->mRoomIdHash[mCopyTargetProfileName] = 2;
+        target->mpMap->setUnsaved(__func__);
+        QString file;
+        int version = 0;
+        int room = 0;
+        qsizetype areas = 0;
+        qsizetype rooms = 0;
+        bool read = false;
+        {
+            PoolHold hold;
+            QVERIFY(hold.holding());
+            target->autoSaveMap();
+            read = map()->retrieveMapFileStats(mCopyTargetProfileName, &file, &version, &room, &areas, &rooms);
+        }
+        target->waitForMapAutosave();
+        HostManager::self()->deleteHost(mCopyTargetProfileName);
+
+        QVERIFY(read);
+        QCOMPARE(QFileInfo(file).fileName(), qsl("autosave.dat"));
+        QCOMPARE(room, 2);
+    }
+
+    // Until it has been written, an autosave on Windows and macOS is a temporary file in the map folder
+    void test_mapHistoryFilledDuringAnAutosaveWriteListsTheAutosave()
+    {
+        buildMap(map());
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QFile::remove(autosavePath(mProfileName));
+        QStringList listed;
+        {
+            PoolHold hold;
+            QVERIFY(hold.holding());
+            mpHost->autoSaveMap();
+            auto* pPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
+            for (int i = 0; i < pPreferences->comboBox_mapHistory->count(); ++i) {
+                listed << QFileInfo(pPreferences->comboBox_mapHistory->itemData(i).toString()).fileName();
+            }
+            delete pPreferences;
+        }
+        mpHost->waitForMapAutosave();
+
+        QVERIFY2(listed.contains(qsl("autosave.dat")), qPrintable(listed.join(qsl(", "))));
+    }
+
+    // A script's handler can close a profile and open it again while something still holds the closed one
+    void test_profileOpenedAgainWhileTheClosedOneIsHeldLoadsItsAutosave()
+    {
+        QVERIFY(HostManager::self()->addHost(mClosingProfileName, qsl("23"), QString(), QString()));
+        QSharedPointer<Host> held;
+        for (const auto& pHost : HostManager::self()->hostList()) {
+            if (pHost->getName() == mClosingProfileName) {
+                held = pHost;
+            }
+        }
+        QVERIFY(held);
+        buildMap(held->mpMap.data());
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        makeSlowToWrite(held->mpMap.data());
+        QVERIFY(held->saveMapFile(QString()));
+        renameRoom(held->mpMap.data(), qsl("Only in the autosave"));
+        QString loaded;
+        bool restored = false;
+        {
+            PoolHold hold;
+            QVERIFY(hold.holding());
+            held->autoSaveMap();
+            HostManager::self()->deleteHost(mClosingProfileName);
+            QVERIFY(HostManager::self()->addHost(mClosingProfileName, qsl("23"), QString(), QString()));
+            Host* pReopened = HostManager::self()->getHost(mClosingProfileName);
+            QVERIFY(pReopened);
+            restored = pReopened->mpMap->restore(QString());
+            const TRoom* pRoom = pReopened->mpMap->mpRoomDB->getRoom(1);
+            loaded = pRoom ? pRoom->name : QString();
+        }
+        held.reset();
+        HostManager::self()->deleteHost(mClosingProfileName);
+
+        QVERIFY(restored);
+        QCOMPARE(loaded, qsl("Only in the autosave"));
+    }
+
+    void test_jsonExportMadeDuringAnAutosaveWriteIsTheNewerFile()
+    {
+        buildMap(map());
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        makeSlowToWrite(map());
+        std::pair<bool, QString> exported;
+        {
+            PoolHold hold;
+            QVERIFY(hold.holding());
+            mpHost->autoSaveMap();
+            exported = map()->writeJsonMapFile(QString());
+            QThread::sleep(50ms);
+        }
+        mpHost->waitForMapAutosave();
+        const QFileInfoList exports = QDir(MudletApp::getMudletPath(enums::profileMapsPath, mProfileName)).entryInfoList({qsl("*.json")}, QDir::Files, QDir::Time);
+        const QDateTime autosaved = QFileInfo(autosavePath(mProfileName)).lastModified();
+
+        QVERIFY2(exported.first, qPrintable(exported.second));
+        QVERIFY(!exports.isEmpty());
+        QVERIFY(autosaved.isValid());
+        QVERIFY2(autosaved <= exports.first().lastModified(),
+                 qPrintable(qsl("the autosave (%1) landed after the export (%2)").arg(autosaved.toString(Qt::ISODateWithMs), exports.first().lastModified().toString(Qt::ISODateWithMs))));
     }
 
 #if defined(Q_OS_UNIX)

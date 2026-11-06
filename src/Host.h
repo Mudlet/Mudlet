@@ -1650,7 +1650,7 @@ private:
     QHash<QString, std::shared_ptr<XMLexport>> writers;
 
     QFuture<bool> mModuleFuture;
-    QFuture<bool> mMapAutosaveFuture;
+    QFuture<QString> mMapAutosaveFuture;
     bool mMapAutosaveResultPending = false;
 
     // Will be null/empty if is to use Mudlet's default/own presence

@@ -185,6 +185,8 @@ void HostManager::deleteHost(const QString& hostname)
     // The handlers may have deleted this profile, closing it, and opened another under its name
     if (mHostPool.value(hostname) == pHost) {
         TAppFrontend::instance()->profileClosing(pHost.get());
+        // Something may hold the Host past this, and a profile opened again under its name loads the newest map file
+        pHost->waitForMapAutosave();
         // The Host is destroyed as pHost goes out of scope, once it is out of the pool
         mHostPool.remove(hostname);
     }

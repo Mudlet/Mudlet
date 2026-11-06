@@ -1002,11 +1002,18 @@ private:
     bool mFailed = false;
 };
 
-// Runs on a pool thread, so it is given everything it needs and must reach nothing else
-bool writeFileAtomically(const QString& path, const QByteArray& bytes)
+// Runs on a pool thread, so it is given everything it needs and must reach nothing else. Returns why the
+// write failed, or nothing if it did not.
+QString writeFileAtomically(const QString& path, const QByteArray& bytes)
 {
     QSaveFile file(path);
-    return file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size() && file.commit();
+    if (!file.open(QIODevice::WriteOnly)) {
+        return file.errorString();
+    }
+    if (file.write(bytes) != bytes.size()) {
+        return file.error() == QFileDevice::NoError ? qsl("the write was cut short") : file.errorString();
+    }
+    return file.commit() ? QString() : file.errorString();
 }
 
 // Above this the autosave writes on the main thread rather than hold a copy of the whole file
@@ -1049,7 +1056,7 @@ bool Host::saveMapFile(const QString& location, int saveVersion)
 
     bool saved = mpMap->serialize(out, saveVersion);
     if (saved && !sink.flushChunk()) {
-        qDebug().noquote() << "Error saving map to" << filename_map << ": a write to it was cut short";
+        qDebug().noquote() << "Error saving map to" << filename_map << ": a write to it was cut short" << (file_map.error() == QFileDevice::NoError ? QString() : file_map.errorString());
         saved = false;
     }
     if (saved && !file_map.commit()) {
@@ -1267,8 +1274,8 @@ void Host::autoSaveMapInBackground(const QString& path)
 
     mMapAutosaveResultPending = true;
     mMapAutosaveFuture = QtConcurrent::run(writeFileAtomically, path, std::move(bytes));
-    auto watcher = new QFutureWatcher<bool>(this);
-    connect(watcher, &QFutureWatcher<bool>::finished, this, [this, watcher]() {
+    auto watcher = new QFutureWatcher<QString>(this);
+    connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher]() {
         watcher->deleteLater();
         // Otherwise a later autosave's write is still running, and its own watcher reports it
         if (mMapAutosaveFuture.isFinished()) {
@@ -1285,12 +1292,12 @@ void Host::waitForMapAutosave()
     }
     mMapAutosaveFuture.waitForFinished();
     mMapAutosaveResultPending = false;
-    const bool saved = mMapAutosaveFuture.result();
-    if (!saved) {
-        qDebug().noquote() << "Error autosaving map: could not write" << MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat"));
+    const QString failure = mMapAutosaveFuture.result();
+    if (!failure.isEmpty()) {
+        qDebug().noquote() << "Error autosaving map to" << MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")) << ":" << failure;
         mpMap->setUnsavedKeepingRevisions(__func__);
     }
-    mpMap->setSaveError(!saved);
+    mpMap->setSaveError(!failure.isEmpty());
 }
 
 void Host::loadPackageInfo()

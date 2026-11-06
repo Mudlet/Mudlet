@@ -6346,6 +6346,8 @@ void dlgProfilePreferences::fillOutMapHistory()
     if (!pHost) {
         return;
     }
+    // On Windows and macOS an autosave still being written would be listed as its temporary file
+    pHost->waitForMapAutosave();
 
     // Map files change while the dialog is open, so rebuild, resetting the enabled state to an empty list's.
     // The rebuild follows every change, so it keeps an older map that was picked to load; the newest entry

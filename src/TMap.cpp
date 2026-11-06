@@ -24,6 +24,7 @@
 #include "TMap.h"
 
 #include "Host.h"
+#include "HostManager.h"
 #include "MudletApp.h"
 #include "RoomAppearance.h"
 #include "TAppFrontend.h"
@@ -2322,6 +2323,9 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
         return false;
     }
 
+    if (Host* pProfileHost = HostManager::self() ? HostManager::self()->getHost(profile) : nullptr) {
+        pProfileHost->waitForMapAutosave();
+    }
     QString folder;
     QStringList entries;
     folder = MudletApp::getMudletPath(enums::profileMapsPath, profile);
