@@ -1169,6 +1169,54 @@ describe("Tests the package info accessors", function()
       assert.equals("yes", getPackageInfo(minimalPackage, "spec-added"))
     end)
 
+    -- A profile reads a package's details from its config.lua as it loads, so that is what has to hold them
+    local function savedPackageInfo(name)
+      local file = io.open(getMudletHomeDir() .. "/" .. name .. "/config.lua", "r")
+      if not file then
+        return nil
+      end
+      local chunk = assert(loadstring(file:read("*a")))
+      file:close()
+      local globals = {}
+      globals._G = globals
+      setfenv(chunk, globals)
+      chunk()
+      local details = {}
+      for key, value in pairs(globals) do
+        if type(value) == "string" then
+          details[key] = value
+        end
+      end
+      return details
+    end
+
+    it("saves what it sets for a package from an archive to be there after a restart", function()
+      local name = "mudlet-spec-dotted"
+      withFixturePackage(name)
+
+      assert.is_true(setPackageInfo(name, "version", "2.0"))
+      assert.is_true(setPackageInfo(name, "spec-hash", 'a]]b"c\\d\ne\r\1f]'))
+      assert.is_true(setPackageInfo(name, "end", "a Lua keyword"))
+
+      assert.same(getPackageInfo(name), savedPackageInfo(name))
+    end)
+
+    it("saves what it sets for a package from an XML file, which has no config.lua of its own", function()
+      local name = "mudlet-spec-plainxml"
+      local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+      defer(function()
+        removeFixturePackage(name)
+        os.remove(xml)
+      end)
+      writePackageXml(xml, '<ScriptPackage />')
+      installAndConfirm(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+      assert.is_nil(savedPackageInfo(name), "SETUP: a package from an XML file now comes with a config.lua")
+
+      assert.is_true(setPackageInfo(name, "version", "1.2"))
+
+      assert.same({mpackage = name, version = "1.2"}, savedPackageInfo(name))
+    end)
+
     it("returns nil+msg for a package that is not installed", function()
       local ghost = "mudlet-spec-not-installed"
       local ok, err = setPackageInfo(ghost, "title", "I am not here")

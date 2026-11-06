@@ -3528,6 +3528,83 @@ static bool theProfileKeepsItsOwnDataIn(const QString& name)
     return false;
 }
 
+// Quoted rather than the exporter's [[...]], which cannot hold a "]]" or end in a "]"
+static QString luaStringLiteral(const QString& text)
+{
+    QString literal{QLatin1Char('"')};
+    for (const QChar character : text) {
+        const char16_t code = character.unicode();
+        if (code == u'\\' || code == u'"') {
+            literal.append(QLatin1Char('\\')).append(character);
+        } else if (code == u'\n') {
+            literal.append(QLatin1String("\\n"));
+        } else if (code < 0x20 || code == 0x7f) {
+            // Three digits, as Lua reads up to three and a digit could follow
+            literal.append(qsl("\\%1").arg(static_cast<int>(code), 3, 10, QLatin1Char('0')));
+        } else {
+            literal.append(character);
+        }
+    }
+    return literal.append(QLatin1Char('"'));
+}
+
+static bool isLuaName(const QString& text)
+{
+    static const QRegularExpression name(qsl("^[A-Za-z_][A-Za-z0-9_]*$"));
+    static const QStringList keywords{qsl("and"),   qsl("break"), qsl("do"),  qsl("else"), qsl("elseif"), qsl("end"),    qsl("false"), qsl("for"),  qsl("function"), qsl("if"),   qsl("in"),
+                                      qsl("local"), qsl("nil"),   qsl("not"), qsl("or"),   qsl("repeat"), qsl("return"), qsl("then"),  qsl("true"), qsl("until"),    qsl("while")};
+    return name.match(text).hasMatch() && !keywords.contains(text);
+}
+
+QString Host::setPackageInfo(const QString& packageName, const QString& info, const QString& value)
+{
+    QMap<QString, QString>& packageInfo = mPackageInfo[packageName];
+    if (packageInfo.contains(info) && packageInfo.value(info) == value) {
+        return {};
+    }
+    packageInfo[info] = value;
+
+    if (nameIsAStepOutOfTheProfile(packageName) || theProfileKeepsItsOwnDataIn(packageName)) {
+        return qsl("package '%1' has no folder of its own to save its details in").arg(packageName);
+    }
+    const QString folder = MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName);
+    if (!QDir().mkpath(folder)) {
+        return qsl("could not make the folder '%1' to save the details of package '%2' in").arg(folder, packageName);
+    }
+
+    QMap<QString, QString> details = packageInfo;
+    // getPackageConfig() files the details under this name, and ignores a config.lua without one
+    if (!details.contains(qsl("mpackage"))) {
+        details.insert(qsl("mpackage"), packageName);
+    }
+    QString config;
+    // A name that is not a Lua name, such as "my-hash", is set through this; a local, as "_G" can be a detail too
+    bool globalsNeeded = false;
+    for (auto it = details.cbegin(); it != details.cend(); ++it) {
+        if (isLuaName(it.key())) {
+            config.append(qsl("%1 = %2\n").arg(it.key(), luaStringLiteral(it.value())));
+        } else {
+            globalsNeeded = true;
+            config.append(qsl("globals[%1] = %2\n").arg(luaStringLiteral(it.key()), luaStringLiteral(it.value())));
+        }
+    }
+    if (globalsNeeded) {
+        config.prepend(qsl("local globals = _G\n"));
+    }
+
+    QSaveFile configFile(qsl("%1/config.lua").arg(folder));
+    if (!configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        return qsl("could not save the details of package '%1': %2").arg(packageName, configFile.errorString());
+    }
+    QTextStream out(&configFile);
+    out << config;
+    out.flush();
+    if (!configFile.commit()) {
+        return qsl("could not save the details of package '%1': %2").arg(packageName, configFile.errorString());
+    }
+    return {};
+}
+
 // Left in each folder installPackage() unpacks into until the archive is put in place, so that one a crash left
 // behind can be told from a package's own folder and removed
 static const QLatin1String scmUnpackingMarker(".mudlet-unpacking");
