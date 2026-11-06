@@ -259,20 +259,28 @@ describe("Tests functionality of Geyser.ScrollBox", function()
       end)
     end
 
-    it("lays a child out inside it after its own reposition raised an error", function()
-      local mainWidth = getMainWindowSize()
-      local height = 200
-      local box = track(Geyser.ScrollBox:new({name = "gsbRaisedBox", x = 100, y = 50, width = "-10px", height = function() return height end}))
-      local label = track(Geyser.Label:new({name = "gsbRaisedBoxChild", x = 0, y = 0, width = 50, height = 50}, box))
-      height = nil
-      local raised = not pcall(box.reposition, box)
-      height = 200
-      label:resize("100%", 50)
-      label:move(10, 20)
-      assert.is_true(raised)
-      -- the far edge width still needs the box's real x while the box measures itself
-      assert.are.same({x = 10, y = 20, width = mainWidth - 110, height = 50}, geometry("gsbRaisedBoxChild"))
-    end)
+    -- a direct reposition finds the box's getters framed, a move has just replaced them
+    local relayouts = {
+      {"reposition", function(box) box:reposition() end},
+      {"move", function(box) box:move(100, 50) end},
+    }
+    for _, entry in ipairs(relayouts) do
+      local name, relayout = entry[1], entry[2]
+      it("lays a child out inside it after its own " .. name .. " raised an error", function()
+        local mainWidth = getMainWindowSize()
+        local height = 200
+        local box = track(Geyser.ScrollBox:new({name = "gsbRaisedBox", x = 100, y = 50, width = "-10px", height = function() return height end}))
+        local label = track(Geyser.Label:new({name = "gsbRaisedBoxChild", x = 0, y = 0, width = 50, height = 50}, box))
+        height = nil
+        local raised = not pcall(relayout, box)
+        height = 200
+        label:resize("100%", 50)
+        label:move(10, 20)
+        assert.is_true(raised)
+        -- the far edge width still needs the box's real x while the box measures itself
+        assert.are.same({x = 10, y = 20, width = mainWidth - 110, height = 50}, geometry("gsbRaisedBoxChild"))
+      end)
+    end
 
     it("raises exactly what the constraint raised", function()
       local failure
