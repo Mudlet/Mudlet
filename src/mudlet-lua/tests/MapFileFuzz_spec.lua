@@ -270,18 +270,31 @@ local function buildMap()
         setRoomChar(id, i % 2 == 0 and "★" or "a")
         setRoomWeight(id, i)
     end
+    -- setExit()'s numbering, 1 north to 12 out, and each direction's opposite
+    local DIRECTIONS = { "n", "ne", "nw", "e", "w", "s", "se", "sw", "up", "down", "in", "out" }
+    local OPPOSITE = { 6, 8, 7, 5, 4, 1, 3, 2, 10, 9, 12, 11 }
     for i = 1, #rooms - 1 do
-        setExit(rooms[i], rooms[i + 1], (i % 12) + 1)
-        setExit(rooms[i + 1], rooms[i], ((i + 6) % 12) + 1)
-        addSpecialExit(rooms[i], rooms[(i * 7) % #rooms + 1], "go hole " .. i)
+        local dir = ((i - 1) % 12) + 1
+        local name = DIRECTIONS[dir]
+        assert(setExit(rooms[i], rooms[i + 1], dir))
+        assert(setExit(rooms[i + 1], rooms[i], OPPOSITE[dir]))
+        assert(addSpecialExit(rooms[i], rooms[(i * 7) % #rooms + 1], "go hole " .. i))
         if i % 3 == 0 then
-            setDoor(rooms[i], "n", i % 4)
-            setExitWeight(rooms[i], "n", i)
-            lockExit(rooms[i], "e", true)
+            assert(setDoor(rooms[i], name, (i % 3) + 1))
+            assert(setExitWeight(rooms[i], name, i))
+            lockExit(rooms[i], name, true)
+            assert(hasExitLock(rooms[i], name))
         end
         if i % 5 == 0 then
-            addCustomLine(rooms[i], { { i, i, 0 }, { i + 1, i, 0 } }, "n", "dot line", { 255, 0, 0 }, true)
-            setExitStub(rooms[i], "up", true)
+            assert(addCustomLine(rooms[i], { { i, i, 0 }, { i + 1, i, 0 } }, name, "dot line", { 255, 0, 0 }, true))
+            -- a stub needs a direction with no exit: not this one, nor the way back from the previous room
+            local taken = { [dir] = true, [OPPOSITE[((i - 2) % 12) + 1]] = true }
+            local stub = 1
+            while taken[stub] do
+                stub = stub + 1
+            end
+            setExitStub(rooms[i], DIRECTIONS[stub], true)
+            assert(next(getExitStubs1(rooms[i]) or {}), "the exit stub was refused")
             lockRoom(rooms[i], true)
         end
     end
@@ -297,7 +310,7 @@ end
 local function exerciseLoadedMap()
     local areaTable = getAreaTable() or {}
     local ids = {}
-    for _, id in pairs(getRooms() or {}) do
+    for id in pairs(getRooms() or {}) do
         insert(ids, id)
         if #ids >= 40 then break end
     end
@@ -338,6 +351,13 @@ describe("Map file loader fuzzer", function()
         record(("-- seed=%d"):format(SEED))
 
         assert.is_true(saveMap(backupPath))
+        -- busted keeps only the last finally() a test registers, so this is the one
+        finally(function()
+            if dump then
+                dump:close()
+            end
+            loadMap(backupPath)
+        end)
         deleteMap()
         buildMap()
 
@@ -390,10 +410,5 @@ describe("Map file loader fuzzer", function()
         end
         print(("MapFileFuzz: %d of %d mutated files loaded"):format(loaded, ITERS))
         record("-- done")
-        if dump then
-            dump:close()
-        end
-
-        assert.is_true(loadMap(backupPath))
     end)
 end)

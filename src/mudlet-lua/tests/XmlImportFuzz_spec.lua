@@ -260,7 +260,7 @@ end
 
 local function exerciseMap()
     local ids = {}
-    for _, id in pairs(getRooms() or {}) do
+    for id in pairs(getRooms() or {}) do
         insert(ids, id)
         if #ids >= 20 then break end
     end
@@ -327,6 +327,16 @@ describe("XML import fuzzer", function()
         if MODE ~= "package" then
             assert.is_true(saveMap(mapBackupPath))
         end
+        -- busted keeps only the last finally() a test registers, so this is the one
+        finally(function()
+            if dump then
+                dump:close()
+            end
+            if MODE ~= "package" then
+                loadMap(mapBackupPath)
+            end
+            removePackage()
+        end)
 
         local imported = 0
         for i = 1, ITERS do
@@ -357,12 +367,5 @@ describe("XML import fuzzer", function()
         end
         print(("XmlImportFuzz: %d of %d mutated files imported"):format(imported, ITERS))
         record("-- done")
-        if dump then
-            dump:close()
-        end
-
-        if MODE ~= "package" then
-            assert.is_true(loadMap(mapBackupPath))
-        end
     end)
 end)
