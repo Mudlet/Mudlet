@@ -93,6 +93,61 @@ describe("Tests how a console wraps the lines it is given", function()
     end)
   end)
 
+  -- More than half the width in characters, so only counting the columns of
+  -- each one can tell whether the line fits
+  describe("Tests where a line that is not plain ASCII breaks", function()
+    it("leaves an accented line that exactly fills the width alone", function()
+      assert.are.same({"éaaaaaaaaa"}, wrapped(10, "éaaaaaaaaa"))
+    end)
+
+    it("breaks an accented line that is one column too wide", function()
+      assert.are.same({"éaaaaaaaaa", "a"}, wrapped(10, "éaaaaaaaaaa"))
+    end)
+
+    it("counts a letter and the accents combined with it as one column", function()
+      local accented = "e\204\129"
+      assert.are.same({string.rep(accented, 10)}, wrapped(10, string.rep(accented, 10)))
+      assert.are.same({string.rep(accented, 10), accented}, wrapped(10, string.rep(accented, 11)))
+    end)
+
+    it("counts east asian characters among narrow ones as two columns each", function()
+      assert.are.same({"日本語abcd"}, wrapped(10, "日本語abcd"))
+      -- a line may break where the east asian text ends, so the word goes down whole
+      assert.are.same({"日本語", "abcde"}, wrapped(10, "日本語abcde"))
+    end)
+
+    it("counts a character outside the BMP by its width rather than its two halves", function()
+      assert.are.same({"😀😀😀😀😀"}, wrapped(10, "😀😀😀😀😀"))
+      assert.are.same({"😀😀😀😀😀", "😀"}, wrapped(10, "😀😀😀😀😀😀"))
+    end)
+
+    it("wraps each half of an accented line that has a newline in the middle", function()
+      assert.are.same({"é", "aaaaaaaaaa"}, wrapped(10, "é\naaaaaaaaaa"))
+    end)
+
+    describe("with the width of east asian ambiguous characters set", function()
+      local savedSetting
+
+      before_each(function()
+        savedSetting = getConfig("ambiguousEAsianWidthCharacters")
+      end)
+
+      after_each(function()
+        setConfig("ambiguousEAsianWidthCharacters", savedSetting)
+      end)
+
+      it("counts them as one column each when they are narrow", function()
+        setConfig("ambiguousEAsianWidthCharacters", "narrow")
+        assert.are.same({"±±±±±±±±±a"}, wrapped(10, "±±±±±±±±±a"))
+      end)
+
+      it("counts them as two columns each when they are wide", function()
+        setConfig("ambiguousEAsianWidthCharacters", "wide")
+        assert.are.same({"±±±±±", "±±±±a"}, wrapped(10, "±±±±±±±±±a"))
+      end)
+    end)
+  end)
+
   describe("Tests the indents a wrapped line is given", function()
     it("indents the first line of a wrapped line by the wrap indent", function()
       local out = wrapped(20, "the quick brown fox jumps over the lazy dog", 2, 0)
@@ -390,6 +445,26 @@ describe("Tests how a console wraps the lines it is given", function()
       setWindowWrap("main", 20)
       feedTriggers("\naaaaaaaaaaaaaa bbbbbb\n")
       assert.are.same({"aaaaaaaaaaaaaa ", "bbbbbb"}, lastLines(2))
+    end)
+
+    it("leaves an accented line that fits the width but not the width less the indent alone", function()
+      setWindowWrap("main", 20)
+      setWindowWrapIndent("main", 4)
+      feedTriggers("\néééééééééééééé bbbbb\n")
+      assert.are.same({"éééééééééééééé bbbbb"}, lastLines(1))
+    end)
+
+    it("leaves an accented line that fits the width less the indent alone", function()
+      setWindowWrap("main", 20)
+      setWindowWrapIndent("main", 4)
+      feedTriggers("\néééééééééé bbbbb\n")
+      assert.are.same({"éééééééééé bbbbb"}, lastLines(1))
+    end)
+
+    it("wraps an accented line one column wider than the width", function()
+      setWindowWrap("main", 20)
+      feedTriggers("\néééééééééééééé bbbbbb\n")
+      assert.are.same({"éééééééééééééé ", "bbbbbb"}, lastLines(2))
     end)
 
     -- in a trigger echo() adds to the line without wrapping it, so the wrap

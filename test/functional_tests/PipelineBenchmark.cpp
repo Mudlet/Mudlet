@@ -1098,6 +1098,68 @@ private slots:
         emitMetric(qPrintable(qsl("cjk_%1_best_pass_ms").arg(metric)), best * 1000.0);
     }
 
+    void benchUtf8Text_data()
+    {
+        QTest::addColumn<QString>("metric");
+        QTest::addColumn<QStringList>("phrases");
+        QTest::newRow("latin") << qsl("latin")
+                               << QStringList{qsl("Le forgeron lève son marteau — « Revenez demain »"),
+                                              qsl("Ein kühler Wind weht über den Marktplatz"),
+                                              qsl("El niño señala la torre en ruinas"),
+                                              qsl("You see a “café” sign hanging crookedly")};
+        QTest::newRow("cyrillic") << qsl("cyrillic")
+                                  << QStringList{qsl("Свирепый тигр бросается на вас"),
+                                                 qsl("Трактирщик протягивает вам миску горячей лапши"),
+                                                 qsl("На севере тихая тропинка"),
+                                                 qsl("Ваша внутренняя сила немного восстановилась")};
+        QTest::newRow("cjk") << qsl("cjk") << QStringList{qsl("你看到一只凶猛的老虎向你扑来"), qsl("店小二笑眯眯地递给你一碗热腾腾的面条"), qsl("北边是一条幽静的小路"), qsl("你的内力恢复了一些")};
+    }
+
+    // Lines a UTF-8 game sends in languages other than English: past half the
+    // wrap width in QChars, so the column count decides whether they wrap, but
+    // most of them short enough not to.
+    void benchUtf8Text()
+    {
+        QFETCH(QString, metric);
+        QFETCH(QStringList, phrases);
+        std::mt19937 rng(0xC0FFEEu);
+        auto pick = [&rng](int n) {
+            return static_cast<int>(rng() % static_cast<unsigned>(n));
+        };
+        static constexpr int kUtf8Lines = 10000;
+        QByteArray corpus;
+        QString lastLine;
+        for (int i = 0; i < kUtf8Lines; ++i) {
+            // One pick per statement: the order arguments are evaluated in differs between compilers
+            const QString& first = phrases.at(pick(phrases.size()));
+            const QString& second = phrases.at(pick(phrases.size()));
+            const int hp = pick(900) + 100;
+            lastLine = qsl("%1, %2. [HP %3/1000]").arg(first, second).arg(hp);
+            corpus += "\x1b[3";
+            corpus += QByteArray::number(pick(7) + 1);
+            corpus += 'm';
+            corpus += lastLine.toUtf8();
+            corpus += "\x1b[0m\r\n";
+        }
+
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY(noTriggersAreRunningYet(host));
+
+        double best = std::numeric_limits<double>::max();
+        for (int i = 0; i < kFeedPasses; ++i) {
+            QElapsedTimer timer;
+            timer.start();
+            host->mTelnet.loopbackTest(corpus);
+            best = std::min(best, timer.nsecsElapsed() / 1.0e9);
+        }
+        TBuffer& buffer = host->mainConsoleView()->buffer;
+        QVERIFY2(buffer.getLastLineNumber() > kUtf8Lines, "the console buffer did not take the corpus");
+
+        emitMetric(qPrintable(qsl("utf8_%1_lines_per_sec").arg(metric)), kUtf8Lines / best);
+        emitMetric(qPrintable(qsl("utf8_%1_best_pass_ms").arg(metric)), best * 1000.0);
+    }
+
     void benchTriggerEngine()
     {
         Host* host = startProfile();
@@ -1749,10 +1811,7 @@ private:
         return host;
     }
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        TestProfile::removeProfileDirectory(profileName);
-    }
+    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
 };
 
 static void initializeQRCResources()
