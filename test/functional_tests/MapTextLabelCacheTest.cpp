@@ -276,6 +276,47 @@ private slots:
         QVERIFY2(squaresThatDiffer > 0, "the label was drawn at half the screen's density and scaled up to it");
     }
 
+    // A label that does not fit under the ceiling is drawn without the cache:
+    // caching it would evict one still on screen, which would evict another
+    // in turn on every frame. A dense display makes each label cost more.
+    void labelsPastTheCeilingDoNotEvictOnesOnScreen()
+    {
+        mp2dMap->setTextLabelPixmapBudgetKiB(1024);
+        mp2dMap->setTextLabelPixmapCeilingKiB(1024);
+        QPixmap target(QSize(128, 128) * 2);
+        target.setDevicePixelRatio(2);
+        QPainter painter(&target);
+        QList<TMapLabel> labels(6);
+        for (TMapLabel& label : labels) {
+            label.pix = QPixmap(4, 4);
+            label.pix.fill(Qt::red);
+        }
+        const QSize size(128, 128);
+        // 256 KiB each at twice the density, so four fill the ceiling
+        auto drawFrame = [this, &painter, &labels, &size] {
+            mp2dMap->startTextLabelFrame();
+            for (int id = 1; id <= 5; ++id) {
+                mp2dMap->drawScaledLabel(painter, QPointF(0, 0), labels[id], id, QRectF(QPointF(0, 0), size));
+            }
+        };
+        drawFrame();
+        QList<qint64> firstFrame;
+        for (int id = 1; id <= 5; ++id) {
+            firstFrame << mp2dMap->textLabelPixmapCacheKey(id, size);
+        }
+        drawFrame();
+        QList<qint64> secondFrame;
+        for (int id = 1; id <= 5; ++id) {
+            secondFrame << mp2dMap->textLabelPixmapCacheKey(id, size);
+        }
+        painter.end();
+        mp2dMap->setTextLabelPixmapCeilingKiB(T2DMap::scmTextLabelPixmapCeilingKiB);
+        mp2dMap->setTextLabelPixmapBudgetKiB(T2DMap::scmTextLabelPixmapBudgetKiB);
+
+        QCOMPARE(firstFrame.count(0), 1);
+        QCOMPARE(secondFrame, firstFrame);
+    }
+
     // A zoomed-out area can have hundreds of labels on screen; if they do not
     // all stay cached, every frame renders every one of them again.
     void manySmallLabelsOnScreenAllStayCached()

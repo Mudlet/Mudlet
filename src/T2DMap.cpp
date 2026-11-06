@@ -1258,7 +1258,7 @@ const T2DMap::LabelPixmap* T2DMap::addTextLabelToCache(const LabelPixmapKey& key
         made->costKiB = std::max<qint64>(1, qint64(made->pixmap.width()) * made->pixmap.height() * 4 / 1024);
         // Room for what the last frame and this one drew, so a label coming into
         // view never evicts one still on screen
-        if (const qsizetype needed = std::min(mTextLabelPixmapLastFrameKiB + mTextLabelPixmapFrameKiB + made->costKiB, scmTextLabelPixmapCeilingKiB); needed > mTextLabelPixmapCache.maxCost()) {
+        if (const qsizetype needed = std::min(mTextLabelPixmapLastFrameKiB + mTextLabelPixmapFrameKiB + made->costKiB, mTextLabelPixmapCeilingKiB); needed > mTextLabelPixmapCache.maxCost()) {
             mTextLabelPixmapCache.setMaxCost(needed);
         }
         const qsizetype costKiB = made->costKiB;
@@ -1338,18 +1338,22 @@ void T2DMap::startTextLabelFrame()
     mTextLabelPixmapLastFrameKiB = mTextLabelPixmapFrameKiB;
     mTextLabelPixmapFrameKiB = 0;
     // Shrinks back once fewer labels are on screen, e.g. after switching area
-    mTextLabelPixmapCache.setMaxCost(std::max(mTextLabelPixmapBudgetKiB, std::min(mTextLabelPixmapLastFrameKiB, scmTextLabelPixmapCeilingKiB)));
+    mTextLabelPixmapCache.setMaxCost(std::max(mTextLabelPixmapBudgetKiB, std::min(mTextLabelPixmapLastFrameKiB, mTextLabelPixmapCeilingKiB)));
 }
 
 void T2DMap::drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect)
 {
     const QSize targetSize = paintRect.size().toSize();
     const qreal devicePixelRatio = painter.device()->devicePixelRatio();
-    if (fitsScaledLabelLimit((QSizeF(targetSize) * devicePixelRatio).toSize())) {
+    const QSize pixelSize = (QSizeF(targetSize) * devicePixelRatio).toSize();
+    if (fitsScaledLabelLimit(pixelSize)) {
         const LabelPixmapKey key{mAreaID, labelKey, targetSize};
         const LabelPixmap* cached = mTextLabelPixmapCache.object(key);
         if (!cached || !labelPixmapIsCurrent(*cached, label, devicePixelRatio)) {
-            cached = addTextLabelToCache(key, label, devicePixelRatio);
+            // One that would take the cache past its ceiling would evict a label still on screen, which would in
+            // turn evict another, every frame; on a dense display a label costs the square of its ratio more
+            const qint64 costKiB = std::max<qint64>(1, qint64(pixelSize.width()) * pixelSize.height() * 4 / 1024);
+            cached = mTextLabelPixmapLastFrameKiB + mTextLabelPixmapFrameKiB + costKiB > mTextLabelPixmapCeilingKiB ? nullptr : addTextLabelToCache(key, label, devicePixelRatio);
         }
         if (cached) {
             mTextLabelPixmapFrameKiB += cached->costKiB;
