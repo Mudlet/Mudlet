@@ -28,6 +28,7 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QScopeGuard>
+#include <QHash>
 #include <QtTest/QtTest>
 #include <chrono>
 
@@ -69,11 +70,12 @@ private:
     // something is folded into it, so its visibility is the fold itself
     QWidget* extensionButton() const { return mpEditor->toolBar->findChild<QWidget*>(qsl("qt_toolbar_ext_button")); }
 
+    // The fit runs on the resize itself, with no timer behind it
     void resizeTo(const int width)
     {
         mpEditor->resize(width, scmSweepHeight);
         QCoreApplication::sendPostedEvents();
-        QTest::qWait(10ms);
+        QCoreApplication::processEvents();
     }
 
     int narrowestWindowWidth() const { return std::max(mpEditor->minimumWidth(), mpEditor->minimumSizeHint().width()); }
@@ -156,8 +158,15 @@ private:
         int narrowest = 0;
     };
 
+    // Kept per icon size, the one thing the cases change that moves the breakpoints: five cases read the same sweep
+    QHash<int, Sweep> mSweeps;
+
     Sweep sweepNarrowing()
     {
+        const int preference = mudlet::self()->mToolbarIconSize;
+        if (const auto known = mSweeps.constFind(preference); known != mSweeps.constEnd()) {
+            return known.value();
+        }
         Sweep result;
         resizeTo(scmSweepWidest);
         result.narrowest = narrowestWindowWidth();
@@ -186,6 +195,7 @@ private:
                 }
             }
         }
+        mSweeps.insert(preference, result);
         return result;
     }
 

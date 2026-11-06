@@ -134,7 +134,7 @@ private:
             QCoreApplication::sendEvent(pWidget, &styleChange);
             pWidget->updateGeometry();
         }
-        TestPixels::settle();
+        settle();
     }
 
     dlgTriggersMainArea* form() const { return mpEditor->mpTriggersMainArea; }
@@ -148,21 +148,31 @@ private:
     void chooseTrigger(QTreeWidgetItem* pRow)
     {
         mpEditor->slot_showTriggers();
-        TestPixels::settle();
+        settle();
         mpEditor->treeWidget_triggers->setCurrentItem(pRow);
         mpEditor->slot_triggerSelected(pRow);
-        TestPixels::settle();
+        settle();
         mpEditor->hideSystemMessageArea();
-        TestPixels::settle();
+        settle();
     }
 
     // Settled twice: the form's new width arrives on the next event-loop pass and the seam's
     // refit on the one after
+    // The strip lays out on posted events alone, so this skips TestPixels::settle()'s fixed wait, which is there
+    // for the slowest of the tests sharing it
+    static void settle()
+    {
+        QCoreApplication::sendPostedEvents();
+        QCoreApplication::processEvents();
+        QCoreApplication::sendPostedEvents();
+        QCoreApplication::processEvents();
+    }
+
     void resizeTheEditor(const int width, const int height)
     {
         mpEditor->resize(width, height);
-        TestPixels::settle();
-        TestPixels::settle();
+        settle();
+        settle();
     }
 
     // Measured, not named: a hard-coded width for the sidebar and item tree would silently
@@ -306,11 +316,11 @@ private slots:
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(scmWideStrip + 600, scmTallEditor);
-        TestPixels::settle();
+        settle();
 
         mpEditor->slot_showTriggers();
         mpEditor->addTrigger(false);
-        TestPixels::settle();
+        settle();
         mpThreePatternRow = mpEditor->mpCurrentTriggerItem;
         QVERIFY2(mpThreePatternRow != nullptr, "the three-pattern trigger these cases edit could not be made");
         mpEditor->showPatternItems(3);
@@ -318,16 +328,16 @@ private slots:
         mpEditor->mTriggerPatternEdit.at(1)->singleLineTextEdit_pattern->setPlainText(qsl("You'll have to swim to make it through the water in that direction."));
         mpEditor->mTriggerPatternEdit.at(2)->singleLineTextEdit_pattern->setPlainText(qsl("The water is too deep for you to walk that way, you must swim."));
         mpEditor->slot_saveEdits();
-        TestPixels::settle();
+        settle();
 
         mpEditor->addTrigger(false);
-        TestPixels::settle();
+        settle();
         mpOnePatternRow = mpEditor->mpCurrentTriggerItem;
         QVERIFY2(mpOnePatternRow != nullptr, "the one-pattern trigger these cases edit could not be made");
         mpEditor->showPatternItems(1);
         mpEditor->mTriggerPatternEdit.at(0)->singleLineTextEdit_pattern->setPlainText(qsl("You'll have to SWIM"));
         mpEditor->slot_saveEdits();
-        TestPixels::settle();
+        settle();
     }
 
     void cleanupTestCase()
@@ -351,7 +361,7 @@ private slots:
         resizeTheEditor(scmWideStrip + 600, scmTallEditor);
         // The editor opens with the strip closed
         mpEditor->setTriggerOptionsShown(true);
-        TestPixels::settle();
+        settle();
     }
 
     void test_theStripSitsBetweenTheNameAndThePatterns()
@@ -519,15 +529,15 @@ private slots:
         QSpinBox* pWithin = mpEditor->mpSpinBox_matchWithinLines;
 
         pAll->setChecked(true);
-        TestPixels::settle();
+        settle();
         QVERIFY2(!pAny->isChecked(), "both segments are on at once, so they are no longer one exclusive choice");
         QVERIFY2(mpEditor->mpWidget_matchWithinRow->isEnabled(), "the line count is greyed out in the All mode, which is the mode it belongs to");
         pWithin->setValue(4);
-        TestPixels::settle();
+        settle();
         QCOMPARE(form()->spinBox_lineMargin->value(), 4);
 
         pAny->setChecked(true);
-        TestPixels::settle();
+        settle();
         QVERIFY2(!pAll->isChecked(), "choosing Any left All chosen as well");
         QVERIFY2(!mpEditor->mpWidget_matchWithinRow->isEnabled(), "the line count is still available in the Any mode, which carries none");
         QCOMPARE(form()->spinBox_lineMargin->value(), -1);
@@ -564,13 +574,13 @@ private slots:
         form()->checkBox_soundTrigger->setChecked(false);
         form()->checkBox_triggerColorizer->setChecked(false);
         mpEditor->showTriggerSoundFile(QString());
-        TestPixels::settle();
+        settle();
         QVERIFY2(!form()->toolButton_clearSoundFile->isVisible(), "the cross that forgets the sound file is there with no file to forget");
 
         const QString chosen = qsl("/tmp/EditorTriggerOptionsStripTest/water-splash.wav");
         mpEditor->mpUndoStack->clear();
         mpEditor->acceptTriggerSoundFile(chosen);
-        TestPixels::settle();
+        settle();
         QVERIFY2(form()->checkBox_soundTrigger->isChecked(), "choosing a sound file left the sound switched off, so the file is set and silent");
         QCOMPARE(mpEditor->triggerSoundFilePath(), chosen);
         QVERIFY2(form()->lineEdit_soundFile->text().contains(qsl("water-splash")), qPrintable(qsl("the field reads \"%1\" rather than the file's name").arg(form()->lineEdit_soundFile->text())));
@@ -580,13 +590,13 @@ private slots:
         QCOMPARE(mpEditor->mpUndoStack->count(), 2);
 
         mpEditor->slot_clearSoundFile();
-        TestPixels::settle();
+        settle();
         QVERIFY2(!form()->toolButton_clearSoundFile->isVisible(), "the cross is still there after the file it forgets was forgotten");
         QVERIFY2(mpEditor->triggerSoundFilePath().isEmpty(), "the field still stands for a file after being cleared");
 
         mpEditor->mpUndoStack->clear();
         mpEditor->turnTriggerHighlightOn();
-        TestPixels::settle();
+        settle();
         QVERIFY2(form()->checkBox_triggerColorizer->isChecked(), "choosing a colour left the highlight switched off, so the colour is set and unused");
         QCOMPARE(mpEditor->mpUndoStack->count(), 1);
     }
@@ -688,10 +698,10 @@ private slots:
     {
         chooseTrigger(mpThreePatternRow);
         mpEditor->setTriggerOptionsShown(false);
-        TestPixels::settle();
+        settle();
         auto reopenTheStrip = qScopeGuard([this]() {
             mpEditor->setTriggerOptionsShown(true);
-            TestPixels::settle();
+            settle();
         });
 
         const QList<QWidget*> chain = tabChainFromTheCommandField();
@@ -732,7 +742,7 @@ private slots:
         pT->setColorizerFgColor(QColorConstants::Transparent);
         pT->setColorizerBgColor(QColorConstants::Transparent);
         mpEditor->slot_triggerSelected(mpThreePatternRow);
-        TestPixels::settle();
+        settle();
         qInfo().noquote() << qsl("  the wells read \"%1\" and \"%2\", and are described as \"%3\" and \"%4\"")
                                      .arg(form()->pushButtonFgColor->text(),
                                           form()->pushButtonBgColor->text(),
@@ -757,7 +767,7 @@ private slots:
         const QColor accent = uiDesign::themeTokens().accent;
 
         pAny->setChecked(true);
-        TestPixels::settle();
+        settle();
         remeasure({pAny, pAll});
         const int anyWidth = pAny->width();
         const int allWidth = pAll->width();
@@ -771,7 +781,7 @@ private slots:
         const QColor allsFillUnderAny = colourInsideTheEdge(shot, pAll, false, scmFillDepth);
 
         pAll->setChecked(true);
-        TestPixels::settle();
+        settle();
         remeasure({pAny, pAll});
         shot = pPair->grab().toImage();
         const QColor allsSeam = colourInsideTheEdge(shot, pAll, false, 0);
@@ -843,7 +853,7 @@ private slots:
             QCOMPARE(uiDesign::themeTokens().darkPage, appearance.second == enums::Appearance::dark);
 
             pBox->setChecked(false);
-            TestPixels::settle();
+            settle();
             const QImage empty = mpEditor->grab().toImage();
             const QRect box = markBoxIn(pBox, mpEditor, empty);
             QVERIFY2(box.width() > 4 && box.height() > 4, qPrintable(qsl("%1: the mark has no rectangle to sample: %2x%3").arg(appearance.first).arg(box.width()).arg(box.height())));
@@ -855,7 +865,7 @@ private slots:
             const int nothingInIt = markedPixelsIn(empty, box, fill);
 
             pBox->setChecked(true);
-            TestPixels::settle();
+            settle();
             const int aTick = markedPixelsIn(mpEditor->grab().toImage(), box, fill);
 
             qInfo().noquote() << qsl("  %1: the strip's mark is %2px on a fill of %3, outlined at %4:1 against %5, with %6 pixels in it empty and %7 checked")
@@ -893,15 +903,15 @@ private slots:
         // Off the steppers, where the pointer goes to put the chevron back
         const QPoint field(2, pBox->height() / 2);
         QTest::mouseMove(pBox, field);
-        TestPixels::settle();
+        settle();
         const int atRest = nearestToTheAccentIn(pBox->grab().toImage(), upButton, accent);
 
         QTest::mouseMove(pBox, upButton.center());
-        TestPixels::settle();
+        settle();
         const int hovered = nearestToTheAccentIn(pBox->grab().toImage(), upButton, accent);
 
         QTest::mouseMove(pBox, field);
-        TestPixels::settle();
+        settle();
         const int afterwards = nearestToTheAccentIn(pBox->grab().toImage(), upButton, accent);
 
         qInfo().noquote() << qsl("  the up stepper is %1 and its nearest pixel to the accent %2 is %3 away at rest, %4 under the pointer and %5 after it left")
@@ -945,7 +955,7 @@ private slots:
         });
 
         QTest::mouseClick(pBox, Qt::LeftButton, Qt::NoModifier, pBox->rect().center());
-        TestPixels::settle();
+        settle();
         QVERIFY2(pBox->isChecked() != wasChecked, "clicking the option left it where it was, so nothing here says the click landed");
         // focusWidget(), not hasFocus(): hasFocus() is false whenever the window never became active,
         // and would pass whatever the policy said
@@ -953,7 +963,7 @@ private slots:
         QVERIFY2(!pBox->hasFocus(), "a click left the option focused");
 
         pBox->setFocus(Qt::TabFocusReason);
-        TestPixels::settle();
+        settle();
         QVERIFY2(mpEditor->focusWidget() == pBox, "the Tab key cannot reach the option, so a keyboard user has nothing to see the accent on");
     }
 };

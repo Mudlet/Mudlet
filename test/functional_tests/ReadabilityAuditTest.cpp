@@ -40,6 +40,7 @@
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
+#include <functional>
 #include <chrono>
 
 #include "ChipRow.h"
@@ -504,6 +505,197 @@ private:
         return audited;
     }
 
+    // What one case found on both appearances, read in a single pass by auditEverything()
+    struct Case
+    {
+        QString setupFailure;
+        QStringList failures;
+        QStringList counts;
+        QStringList shortfalls;
+    };
+    QHash<QString, Case> mCases;
+    QMap<QString, QColor> mStatusAsked;
+    QMap<QString, QColor> mStatusRead;
+
+    // A walk that silently stopped finding widgets cannot pass as a clean one
+    void expectAtLeast(const QString& caseName, const int read, const int least, const QString& where, const QString& appearance)
+    {
+        Case& found = mCases[caseName];
+        found.counts << qsl("%1 %2: %3").arg(appearance, where, QString::number(read));
+        if (read < least) {
+            found.shortfalls << qsl("only %1 things were read on %2 on the %3 appearance, against the %4 this walk reaches").arg(QString::number(read), where, appearance, QString::number(least));
+        }
+    }
+
+    void auditWithinFor(const QString& caseName, QWidget* pWindow, QWidget* pRoot, const QString& where, const QString& appearance, const int least)
+    {
+        expectAtLeast(caseName, auditWithin(pWindow, pRoot, where, appearance, mCases[caseName].failures), least, where, appearance);
+    }
+
+    void auditWindowFor(const QString& caseName, QWidget* pWindow, const QString& where, const QString& appearance, const int least)
+    {
+        expectAtLeast(caseName, auditWindow(pWindow, where, appearance, mCases[caseName].failures), least, where, appearance);
+    }
+
+    // The editor stays on the trigger form initTestCase() built, with its three pattern rows and the code pane's
+    // compile note, for as long as the windows are walked whole; so both appearances walk them before any form is shown
+    void auditTheWindows(const QString& appearance)
+    {
+        QLabel* pLabel = mpEditor->mpLabel_statusCounts;
+        if (!pLabel) {
+            mCases[qsl("premise")].setupFailure = qsl("the editor's status bar carries no counts label, so there is nothing here the shell sheet colours by name");
+        } else {
+            mStatusAsked.insert(appearance, uiDesign::themeTokens().mutedText);
+            mStatusRead.insert(appearance, pLabel->palette().color(pLabel->foregroundRole()));
+        }
+        auditWindowFor(qsl("windows"), mpEditor, qsl("the editor"), appearance, scmLeastAuditedInTheEditor);
+        auditWindowFor(qsl("windows"), mpPreferences, qsl("the settings dialog"), appearance, scmLeastAuditedInTheSettings);
+        auditWindowFor(qsl("windows"), mpAbout, qsl("the About dialog"), appearance, scmLeastAuditedInTheAbout);
+    }
+
+    // Shown and settled as each case used to do it, then grabbed so its palette settles before it is read
+    bool showForm(const QString& caseName, const std::function<void()>& show, const std::function<bool()>& ready, const QString& notReady)
+    {
+        show();
+        QCoreApplication::processEvents();
+        QTest::qWait(100ms);
+        if (!ready()) {
+            mCases[caseName].setupFailure = notReady;
+            return false;
+        }
+        mpEditor->grab();
+        return true;
+    }
+
+    void auditTheForms(const QString& appearance)
+    {
+        if (showForm(
+                    qsl("scripts"),
+                    [this]() {
+                        mpEditor->slot_showScripts();
+                    },
+                    [this]() {
+                        return mpEditor->mpChipRow_scriptEvents != nullptr && mpEditor->mpChipRow_scriptEvents->count() == 2;
+                    },
+                    qsl("the script this walks is not showing the two events it was given"))) {
+            auditWithinFor(qsl("scripts"), mpEditor, mpEditor->mpScriptsMainArea, qsl("the editor's scripts form"), appearance, scmLeastAuditedOnTheScriptsForm);
+        }
+        if (showForm(
+                    qsl("keys"),
+                    [this]() {
+                        mpEditor->slot_showKeys();
+                        mpEditor->slot_keySelected(mpKeyItem);
+                    },
+                    [this]() {
+                        return mpEditor->mpLabel_keyHint != nullptr && mpEditor->mpLabel_keyHint->isVisible();
+                    },
+                    qsl("the key this walks is not showing the hint beside its keystroke"))) {
+            auditWithinFor(qsl("keys"), mpEditor, mpEditor->mpKeysMainArea, qsl("the editor's keys form"), appearance, scmLeastAuditedOnTheKeysForm);
+        }
+        if (showForm(
+                    qsl("timers"),
+                    [this]() {
+                        mpEditor->slot_showTimers();
+                        mpEditor->slot_timerSelected(mpTimerItem);
+                    },
+                    [this]() {
+                        return mpEditor->mpWidget_timerInterval != nullptr && mpEditor->mpWidget_timerInterval->isVisible();
+                    },
+                    qsl("the timer this walks is not showing its interval"))) {
+            auditWithinFor(qsl("timers"), mpEditor, mpEditor->mpTimersMainArea, qsl("the editor's timers form"), appearance, scmLeastAuditedOnTheTimersForm);
+        }
+        if (showForm(
+                    qsl("variables"),
+                    [this]() {
+                        mpEditor->slot_showVariables();
+                        QCoreApplication::processEvents();
+                        if (QTreeWidgetItem* pRow = auditedVariableRow()) {
+                            mpEditor->treeWidget_variables->setCurrentItem(pRow);
+                            mpEditor->slot_variableSelected(pRow);
+                        }
+                    },
+                    [this]() {
+                        return auditedVariableRow() != nullptr && mpEditor->mpVarsMainArea->comboBox_variable_key_type->isVisible();
+                    },
+                    qsl("the variable this walks is not showing its type pickers"))) {
+            auditWithinFor(qsl("variables"), mpEditor, mpEditor->mpVarsMainArea, qsl("the editor's variables form"), appearance, scmLeastAuditedOnTheVariablesForm);
+        }
+
+        // Only the tabs have adopted the design, and only one is on show at a time, so each is walked with its own tab current
+        if (!mpConnection->tabWidget_connectionInfo->isVisible()) {
+            mCases[qsl("connection")].setupFailure = qsl("the connection dialog is showing the first-launch invitation rather than the tabs this walks");
+        } else {
+            for (const auto& tab : QList<QPair<QWidget*, int>>{{mpConnection->tab_connection_info, scmLeastAuditedOnTheConnectTab}, {mpConnection->tab_options, scmLeastAuditedOnTheOptionsTab}}) {
+                mpConnection->tabWidget_connectionInfo->setCurrentIndex(mpConnection->tabWidget_connectionInfo->indexOf(tab.first));
+                QCoreApplication::processEvents();
+                QTest::qWait(100ms);
+                auditWithinFor(qsl("connection"), mpConnection, tab.first, qsl("the connection dialog's %1 tab").arg(tab.first->objectName()), appearance, tab.second);
+            }
+            // The button sheet is set on these two containers, which the tab pages do not reach
+            for (const auto& row : QList<QPair<QWidget*, int>>{{mpConnection->profileAdminArea, scmLeastAuditedOnTheAdminRow}, {mpConnection->widget_bottom, scmLeastAuditedOnTheButtonRow}}) {
+                auditWithinFor(qsl("connection"), mpConnection, row.first, qsl("the connection dialog's %1").arg(row.first->objectName()), appearance, row.second);
+            }
+        }
+
+        // Walked whole: the design draws all of the notepad
+        auditWindowFor(qsl("notepad"), mpNotepad, qsl("the notepad"), appearance, scmLeastAuditedInTheNotepad);
+
+        // A column at a time: each column carries its own sheet
+        auditWithinFor(qsl("packages"), mpPackages, mpPackages->leftPanel, qsl("the package manager's list column"), appearance, scmLeastAuditedOnThePackageList);
+        auditWithinFor(qsl("packages"), mpPackages, mpPackages->rightPanel, qsl("the package manager's details column"), appearance, scmLeastAuditedOnThePackageDetails);
+
+        // A container at a time: each of the three carries its own sheet
+        QWidget* pSelection = mpExporter->findChild<QWidget*>(qsl("exporterSelectionColumn"));
+        QWidget* pDetails = mpExporter->findChild<QWidget*>(qsl("exporterDetailsColumn"));
+        QWidget* pFoot = mpExporter->findChild<QWidget*>(qsl("exporterFoot"));
+        if (!(pSelection && pDetails && pFoot)) {
+            mCases[qsl("exporter")].setupFailure = qsl("the package exporter's shell is not there to walk");
+        } else {
+            auditWithinFor(qsl("exporter"), mpExporter, pSelection, qsl("the package exporter's selection column"), appearance, scmLeastAuditedOnTheExporterSelection);
+            auditWithinFor(qsl("exporter"), mpExporter, pDetails, qsl("the package exporter's details column"), appearance, scmLeastAuditedOnTheExporterDetails);
+            auditWithinFor(qsl("exporter"), mpExporter, pFoot, qsl("the package exporter's foot"), appearance, scmLeastAuditedOnTheExporterFoot);
+        }
+
+        if (showForm(
+                    qsl("buttons"),
+                    [this]() {
+                        mpEditor->slot_showActions();
+                        mpEditor->slot_actionSelected(mpActionItem);
+                    },
+                    [this]() {
+                        return mpEditor->mpWidget_actionRotationRow != nullptr && mpEditor->mpWidget_actionRotationRow->isVisible();
+                    },
+                    qsl("the button this walks is not showing the row its rotation is set on"))) {
+            auditWithinFor(qsl("buttons"), mpEditor, mpEditor->mpActionsMainArea, qsl("the editor's buttons form"), appearance, scmLeastAuditedOnTheButtonsForm);
+        }
+    }
+
+    // An appearance switch restyles every open window and takes over a second, where reading them takes
+    // milliseconds: three switches for the whole audit rather than two per case
+    void auditEverything()
+    {
+        setAppearance(enums::Appearance::dark);
+        auditTheWindows(qsl("dark"));
+        setAppearance(enums::Appearance::light);
+        auditTheWindows(qsl("light"));
+        auditTheForms(qsl("light"));
+        setAppearance(enums::Appearance::dark);
+        auditTheForms(qsl("dark"));
+    }
+
+    void report(const QString& caseName)
+    {
+        QVERIFY2(mCases.contains(caseName), qPrintable(qsl("nothing was walked for %1").arg(caseName)));
+        const Case& found = mCases.value(caseName);
+        QVERIFY2(found.setupFailure.isEmpty(), qPrintable(found.setupFailure));
+        qInfo().noquote() << qsl("  audited %1").arg(found.counts.join(qsl("; ")));
+        QVERIFY2(found.shortfalls.isEmpty(), qPrintable(found.shortfalls.join(qsl("; "))));
+        for (const QString& failure : found.failures) {
+            qWarning().noquote() << failure;
+        }
+        QVERIFY2(found.failures.isEmpty(), qPrintable(qsl("%1 thing(s) cannot be read against what is painted behind them - listed above").arg(QString::number(found.failures.size()))));
+    }
+
 private slots:
     void initTestCase()
     {
@@ -585,6 +777,8 @@ private slots:
         QTest::qWait(50ms);
         QWidget* pNote = mpEditor->findChild<QWidget*>(qsl("editorCompileNote"));
         QVERIFY2(pNote != nullptr && pNote->isVisible(), "the heading over the code pane carries no compile note, so the audit below does not cover one");
+
+        auditEverything();
     }
 
     void cleanupTestCase()
@@ -611,312 +805,45 @@ private slots:
     // The premise of the audit, which reads palettes rather than sheets; the shell sheet colours this label by name
     void test_aStyleSheetsColourReachesTheWidgetsPalette()
     {
-        QLabel* pLabel = mpEditor->mpLabel_statusCounts;
-        QVERIFY2(pLabel != nullptr, "the editor's status bar carries no counts label, so there is nothing here the shell sheet colours by name");
-
-        QMap<QString, QColor> answered;
-        for (const auto& appearance : QList<QPair<QString, enums::Appearance>>{{qsl("dark"), enums::Appearance::dark}, {qsl("light"), enums::Appearance::light}}) {
-            setAppearance(appearance.second);
-            const QColor asked = uiDesign::themeTokens().mutedText;
-            const QColor read = pLabel->palette().color(pLabel->foregroundRole());
-            qInfo().noquote() << qsl("  %1: the sheet asks for %2, the palette answers %3").arg(appearance.first, asked.name(), read.name());
+        const Case& premise = mCases.value(qsl("premise"));
+        QVERIFY2(premise.setupFailure.isEmpty(), qPrintable(premise.setupFailure));
+        for (const QString& appearance : {qsl("dark"), qsl("light")}) {
+            const QColor asked = mStatusAsked.value(appearance);
+            const QColor read = mStatusRead.value(appearance);
+            qInfo().noquote() << qsl("  %1: the sheet asks for %2, the palette answers %3").arg(appearance, asked.name(), read.name());
             QVERIFY2(read.rgb() == asked.rgb(),
                      qPrintable(qsl("on the %1 appearance the editor's sheet writes the status bar in %2, but the label's palette answers %3 - a sheet's colour is not reaching the palette this "
                                     "whole test reads")
-                                        .arg(appearance.first, asked.name(), read.name())));
-            answered.insert(appearance.first, read);
+                                        .arg(appearance, asked.name(), read.name())));
         }
-
-        QVERIFY2(answered.value(qsl("dark")).rgb() != answered.value(qsl("light")).rgb(),
+        QVERIFY2(mStatusRead.value(qsl("dark")).rgb() != mStatusRead.value(qsl("light")).rgb(),
                  qPrintable(qsl("both appearances read %1 back off the label, so the palette is answering something the appearance does not move and the reading above would hold whatever the "
                                 "sheet said")
-                                    .arg(answered.value(qsl("dark")).name())));
+                                    .arg(mStatusRead.value(qsl("dark")).name())));
     }
 
     // One list at the end: stopping at the first failure would take a run per failure to clear
-    void test_everyWordInBothWindowsIsReadableInBothAppearances()
-    {
-        QStringList failures;
-        QStringList counts;
-        for (const auto& appearance : QList<QPair<QString, enums::Appearance>>{{qsl("dark"), enums::Appearance::dark}, {qsl("light"), enums::Appearance::light}}) {
-            setAppearance(appearance.second);
-            const int inTheEditor = auditWindow(mpEditor, qsl("the editor"), appearance.first, failures);
-            const int inTheSettings = auditWindow(mpPreferences, qsl("the settings dialog"), appearance.first, failures);
-            const int inTheAbout = auditWindow(mpAbout, qsl("the About dialog"), appearance.first, failures);
-            counts << qsl("%1: %2 in the editor, %3 in the settings dialog, %4 in the About dialog")
-                              .arg(appearance.first, QString::number(inTheEditor), QString::number(inTheSettings), QString::number(inTheAbout));
-            QVERIFY2(inTheEditor >= scmLeastAuditedInTheEditor,
-                     qPrintable(qsl("only %1 things were read in the editor on the %2 appearance, against the %3 this walk reaches - it stopped finding widgets rather than finding them all "
-                                    "readable")
-                                        .arg(QString::number(inTheEditor), appearance.first, QString::number(scmLeastAuditedInTheEditor))));
-            QVERIFY2(inTheSettings >= scmLeastAuditedInTheSettings,
-                     qPrintable(qsl("only %1 things were read in the settings dialog on the %2 appearance, against the %3 this walk reaches")
-                                        .arg(QString::number(inTheSettings), appearance.first, QString::number(scmLeastAuditedInTheSettings))));
-            QVERIFY2(inTheAbout >= scmLeastAuditedInTheAbout,
-                     qPrintable(qsl("only %1 things were read in the About dialog on the %2 appearance, against the %3 this walk reaches")
-                                        .arg(QString::number(inTheAbout), appearance.first, QString::number(scmLeastAuditedInTheAbout))));
-        }
+    void test_everyWordInBothWindowsIsReadableInBothAppearances() { report(qsl("windows")); }
 
-        qInfo().noquote() << qsl("  audited %1").arg(counts.join(qsl("; ")));
-        for (const QString& failure : failures) {
-            qWarning().noquote() << failure;
-        }
-        QVERIFY2(failures.isEmpty(), qPrintable(qsl("%1 thing(s) cannot be read against what is painted behind them - listed above").arg(QString::number(failures.size()))));
-    }
-
-    // A case per form: only one is in the column at a time, and the one it replaced
+    // Each form is walked on its own: only one is in the column at a time, and the one it replaced
     // needs a repaint before its fields can be read off the screen again
-    void test_theScriptsFormIsReadableInBothAppearances()
-    {
-        mpEditor->slot_showScripts();
-        QCoreApplication::processEvents();
-        QTest::qWait(100ms);
-        QVERIFY2(mpEditor->mpChipRow_scriptEvents != nullptr && mpEditor->mpChipRow_scriptEvents->count() == 2, "the script this walks is not showing the two events it was given");
+    void test_theScriptsFormIsReadableInBothAppearances() { report(qsl("scripts")); }
 
-        QStringList failures;
-        QStringList counts;
-        for (const auto& appearance : QList<QPair<QString, enums::Appearance>>{{qsl("dark"), enums::Appearance::dark}, {qsl("light"), enums::Appearance::light}}) {
-            setAppearance(appearance.second);
-            const int read = auditWithin(mpEditor, mpEditor->mpScriptsMainArea, qsl("the editor's scripts form"), appearance.first, failures);
-            counts << qsl("%1: %2").arg(appearance.first, QString::number(read));
-            QVERIFY2(read >= scmLeastAuditedOnTheScriptsForm,
-                     qPrintable(qsl("only %1 things were read on the scripts form on the %2 appearance, against the %3 this walk reaches")
-                                        .arg(QString::number(read), appearance.first, QString::number(scmLeastAuditedOnTheScriptsForm))));
-        }
+    void test_theKeysFormIsReadableInBothAppearances() { report(qsl("keys")); }
 
-        qInfo().noquote() << qsl("  audited %1").arg(counts.join(qsl("; ")));
-        for (const QString& failure : failures) {
-            qWarning().noquote() << failure;
-        }
-        QVERIFY2(failures.isEmpty(), qPrintable(qsl("%1 thing(s) cannot be read against what is painted behind them - listed above").arg(QString::number(failures.size()))));
-    }
+    void test_theTimersFormIsReadableInBothAppearances() { report(qsl("timers")); }
 
-    void test_theKeysFormIsReadableInBothAppearances()
-    {
-        mpEditor->slot_showKeys();
-        mpEditor->slot_keySelected(mpKeyItem);
-        QCoreApplication::processEvents();
-        QTest::qWait(100ms);
-        QVERIFY2(mpEditor->mpLabel_keyHint != nullptr && mpEditor->mpLabel_keyHint->isVisible(), "the key this walks is not showing the hint beside its keystroke");
+    void test_theVariablesFormIsReadableInBothAppearances() { report(qsl("variables")); }
 
-        QStringList failures;
-        QStringList counts;
-        for (const auto& appearance : QList<QPair<QString, enums::Appearance>>{{qsl("dark"), enums::Appearance::dark}, {qsl("light"), enums::Appearance::light}}) {
-            setAppearance(appearance.second);
-            const int read = auditWithin(mpEditor, mpEditor->mpKeysMainArea, qsl("the editor's keys form"), appearance.first, failures);
-            counts << qsl("%1: %2").arg(appearance.first, QString::number(read));
-            QVERIFY2(read >= scmLeastAuditedOnTheKeysForm,
-                     qPrintable(qsl("only %1 things were read on the keys form on the %2 appearance, against the %3 this walk reaches")
-                                        .arg(QString::number(read), appearance.first, QString::number(scmLeastAuditedOnTheKeysForm))));
-        }
+    void test_theConnectionDialogsTabsAreReadableInBothAppearances() { report(qsl("connection")); }
 
-        qInfo().noquote() << qsl("  audited %1").arg(counts.join(qsl("; ")));
-        for (const QString& failure : failures) {
-            qWarning().noquote() << failure;
-        }
-        QVERIFY2(failures.isEmpty(), qPrintable(qsl("%1 thing(s) cannot be read against what is painted behind them - listed above").arg(QString::number(failures.size()))));
-    }
+    void test_theNotepadIsReadableInBothAppearances() { report(qsl("notepad")); }
 
-    void test_theTimersFormIsReadableInBothAppearances()
-    {
-        mpEditor->slot_showTimers();
-        mpEditor->slot_timerSelected(mpTimerItem);
-        QCoreApplication::processEvents();
-        QTest::qWait(100ms);
-        QVERIFY2(mpEditor->mpWidget_timerInterval != nullptr && mpEditor->mpWidget_timerInterval->isVisible(), "the timer this walks is not showing its interval");
+    void test_thePackageManagerIsReadableInBothAppearances() { report(qsl("packages")); }
 
-        QStringList failures;
-        QStringList counts;
-        for (const auto& appearance : QList<QPair<QString, enums::Appearance>>{{qsl("dark"), enums::Appearance::dark}, {qsl("light"), enums::Appearance::light}}) {
-            setAppearance(appearance.second);
-            const int read = auditWithin(mpEditor, mpEditor->mpTimersMainArea, qsl("the editor's timers form"), appearance.first, failures);
-            counts << qsl("%1: %2").arg(appearance.first, QString::number(read));
-            QVERIFY2(read >= scmLeastAuditedOnTheTimersForm,
-                     qPrintable(qsl("only %1 things were read on the timers form on the %2 appearance, against the %3 this walk reaches")
-                                        .arg(QString::number(read), appearance.first, QString::number(scmLeastAuditedOnTheTimersForm))));
-        }
+    void test_thePackageExporterIsReadableInBothAppearances() { report(qsl("exporter")); }
 
-        qInfo().noquote() << qsl("  audited %1").arg(counts.join(qsl("; ")));
-        for (const QString& failure : failures) {
-            qWarning().noquote() << failure;
-        }
-        QVERIFY2(failures.isEmpty(), qPrintable(qsl("%1 thing(s) cannot be read against what is painted behind them - listed above").arg(QString::number(failures.size()))));
-    }
-
-    void test_theVariablesFormIsReadableInBothAppearances()
-    {
-        mpEditor->slot_showVariables();
-        QCoreApplication::processEvents();
-        QTreeWidgetItem* pRow = auditedVariableRow();
-        QVERIFY2(pRow != nullptr, "the Variables view did not show the variable this walks");
-        mpEditor->treeWidget_variables->setCurrentItem(pRow);
-        mpEditor->slot_variableSelected(pRow);
-        QCoreApplication::processEvents();
-        QTest::qWait(100ms);
-        QVERIFY2(mpEditor->mpVarsMainArea->comboBox_variable_key_type->isVisible(), "the variable this walks is not showing its type pickers");
-
-        QStringList failures;
-        QStringList counts;
-        for (const auto& appearance : QList<QPair<QString, enums::Appearance>>{{qsl("dark"), enums::Appearance::dark}, {qsl("light"), enums::Appearance::light}}) {
-            setAppearance(appearance.second);
-            const int read = auditWithin(mpEditor, mpEditor->mpVarsMainArea, qsl("the editor's variables form"), appearance.first, failures);
-            counts << qsl("%1: %2").arg(appearance.first, QString::number(read));
-            QVERIFY2(read >= scmLeastAuditedOnTheVariablesForm,
-                     qPrintable(qsl("only %1 things were read on the variables form on the %2 appearance, against the %3 this walk reaches")
-                                        .arg(QString::number(read), appearance.first, QString::number(scmLeastAuditedOnTheVariablesForm))));
-        }
-
-        qInfo().noquote() << qsl("  audited %1").arg(counts.join(qsl("; ")));
-        for (const QString& failure : failures) {
-            qWarning().noquote() << failure;
-        }
-        QVERIFY2(failures.isEmpty(), qPrintable(qsl("%1 thing(s) cannot be read against what is painted behind them - listed above").arg(QString::number(failures.size()))));
-    }
-
-    // Only the tabs have adopted the design, and only one is on show at a time,
-    // so each is walked with its own tab current
-    void test_theConnectionDialogsTabsAreReadableInBothAppearances()
-    {
-        QVERIFY2(mpConnection->tabWidget_connectionInfo->isVisible(), "the connection dialog is showing the first-launch invitation rather than the tabs this walks");
-
-        QStringList failures;
-        QStringList counts;
-        for (const auto& appearance : QList<QPair<QString, enums::Appearance>>{{qsl("dark"), enums::Appearance::dark}, {qsl("light"), enums::Appearance::light}}) {
-            setAppearance(appearance.second);
-            for (const auto& tab : QList<QPair<QWidget*, int>>{{mpConnection->tab_connection_info, scmLeastAuditedOnTheConnectTab}, {mpConnection->tab_options, scmLeastAuditedOnTheOptionsTab}}) {
-                mpConnection->tabWidget_connectionInfo->setCurrentIndex(mpConnection->tabWidget_connectionInfo->indexOf(tab.first));
-                QCoreApplication::processEvents();
-                QTest::qWait(100ms);
-                const int read = auditWithin(mpConnection, tab.first, qsl("the connection dialog's %1 tab").arg(tab.first->objectName()), appearance.first, failures);
-                counts << qsl("%1 %2: %3").arg(appearance.first, tab.first->objectName(), QString::number(read));
-                QVERIFY2(read >= tab.second,
-                         qPrintable(qsl("only %1 things were read on the connection dialog's %2 tab on the %3 appearance, against the %4 this walk reaches")
-                                            .arg(QString::number(read), tab.first->objectName(), appearance.first, QString::number(tab.second))));
-            }
-
-            // The button sheet is set on these two containers, which the tab pages do not reach
-            for (const auto& row : QList<QPair<QWidget*, int>>{{mpConnection->profileAdminArea, scmLeastAuditedOnTheAdminRow}, {mpConnection->widget_bottom, scmLeastAuditedOnTheButtonRow}}) {
-                const int read = auditWithin(mpConnection, row.first, qsl("the connection dialog's %1").arg(row.first->objectName()), appearance.first, failures);
-                counts << qsl("%1 %2: %3").arg(appearance.first, row.first->objectName(), QString::number(read));
-                QVERIFY2(read >= row.second,
-                         qPrintable(qsl("only %1 things were read on the connection dialog's %2 on the %3 appearance, against the %4 this walk reaches")
-                                            .arg(QString::number(read), row.first->objectName(), appearance.first, QString::number(row.second))));
-            }
-        }
-
-        qInfo().noquote() << qsl("  audited %1").arg(counts.join(qsl("; ")));
-        for (const QString& failure : failures) {
-            qWarning().noquote() << failure;
-        }
-        QVERIFY2(failures.isEmpty(), qPrintable(qsl("%1 thing(s) cannot be read against what is painted behind them - listed above").arg(QString::number(failures.size()))));
-    }
-
-    // Walked whole: the design draws all of the notepad
-    void test_theNotepadIsReadableInBothAppearances()
-    {
-        QStringList failures;
-        QStringList counts;
-        for (const auto& appearance : QList<QPair<QString, enums::Appearance>>{{qsl("dark"), enums::Appearance::dark}, {qsl("light"), enums::Appearance::light}}) {
-            setAppearance(appearance.second);
-            const int read = auditWindow(mpNotepad, qsl("the notepad"), appearance.first, failures);
-            counts << qsl("%1: %2").arg(appearance.first, QString::number(read));
-            QVERIFY2(read >= scmLeastAuditedInTheNotepad,
-                     qPrintable(qsl("only %1 things were read in the notepad on the %2 appearance, against the %3 this walk reaches")
-                                        .arg(QString::number(read), appearance.first, QString::number(scmLeastAuditedInTheNotepad))));
-        }
-
-        qInfo().noquote() << qsl("  audited %1").arg(counts.join(qsl("; ")));
-        for (const QString& failure : failures) {
-            qWarning().noquote() << failure;
-        }
-        QVERIFY2(failures.isEmpty(), qPrintable(qsl("%1 thing(s) cannot be read against what is painted behind them - listed above").arg(QString::number(failures.size()))));
-    }
-
-    // Walked a column at a time: each column carries its own sheet
-    void test_thePackageManagerIsReadableInBothAppearances()
-    {
-        QStringList failures;
-        QStringList counts;
-        for (const auto& appearance : QList<QPair<QString, enums::Appearance>>{{qsl("dark"), enums::Appearance::dark}, {qsl("light"), enums::Appearance::light}}) {
-            setAppearance(appearance.second);
-            const int onTheList = auditWithin(mpPackages, mpPackages->leftPanel, qsl("the package manager's list column"), appearance.first, failures);
-            const int onTheDetails = auditWithin(mpPackages, mpPackages->rightPanel, qsl("the package manager's details column"), appearance.first, failures);
-            counts << qsl("%1: %2 on the list column, %3 on the details column").arg(appearance.first, QString::number(onTheList), QString::number(onTheDetails));
-            QVERIFY2(onTheList >= scmLeastAuditedOnThePackageList,
-                     qPrintable(qsl("only %1 things were read on the package manager's list column on the %2 appearance, against the %3 this walk reaches")
-                                        .arg(QString::number(onTheList), appearance.first, QString::number(scmLeastAuditedOnThePackageList))));
-            QVERIFY2(onTheDetails >= scmLeastAuditedOnThePackageDetails,
-                     qPrintable(qsl("only %1 things were read on the package manager's details column on the %2 appearance, against the %3 this walk reaches")
-                                        .arg(QString::number(onTheDetails), appearance.first, QString::number(scmLeastAuditedOnThePackageDetails))));
-        }
-
-        qInfo().noquote() << qsl("  audited %1").arg(counts.join(qsl("; ")));
-        for (const QString& failure : failures) {
-            qWarning().noquote() << failure;
-        }
-        QVERIFY2(failures.isEmpty(), qPrintable(qsl("%1 thing(s) cannot be read against what is painted behind them - listed above").arg(QString::number(failures.size()))));
-    }
-
-    // Walked a container at a time: each of the three carries its own sheet
-    void test_thePackageExporterIsReadableInBothAppearances()
-    {
-        QWidget* pSelection = mpExporter->findChild<QWidget*>(qsl("exporterSelectionColumn"));
-        QWidget* pDetails = mpExporter->findChild<QWidget*>(qsl("exporterDetailsColumn"));
-        QWidget* pFoot = mpExporter->findChild<QWidget*>(qsl("exporterFoot"));
-        QVERIFY2(pSelection && pDetails && pFoot, "the package exporter's shell is not there to walk");
-
-        QStringList failures;
-        QStringList counts;
-        for (const auto& appearance : QList<QPair<QString, enums::Appearance>>{{qsl("dark"), enums::Appearance::dark}, {qsl("light"), enums::Appearance::light}}) {
-            setAppearance(appearance.second);
-            const int onTheTree = auditWithin(mpExporter, pSelection, qsl("the package exporter's selection column"), appearance.first, failures);
-            const int onTheForm = auditWithin(mpExporter, pDetails, qsl("the package exporter's details column"), appearance.first, failures);
-            const int onTheFoot = auditWithin(mpExporter, pFoot, qsl("the package exporter's foot"), appearance.first, failures);
-            counts << qsl("%1: %2 on the selection column, %3 on the details column, %4 on the foot")
-                              .arg(appearance.first, QString::number(onTheTree), QString::number(onTheForm), QString::number(onTheFoot));
-            QVERIFY2(onTheTree >= scmLeastAuditedOnTheExporterSelection,
-                     qPrintable(qsl("only %1 things were read on the package exporter's selection column on the %2 appearance, against the %3 this walk reaches")
-                                        .arg(QString::number(onTheTree), appearance.first, QString::number(scmLeastAuditedOnTheExporterSelection))));
-            QVERIFY2(onTheForm >= scmLeastAuditedOnTheExporterDetails,
-                     qPrintable(qsl("only %1 things were read on the package exporter's details column on the %2 appearance, against the %3 this walk reaches")
-                                        .arg(QString::number(onTheForm), appearance.first, QString::number(scmLeastAuditedOnTheExporterDetails))));
-            QVERIFY2(onTheFoot >= scmLeastAuditedOnTheExporterFoot,
-                     qPrintable(qsl("only %1 things were read on the package exporter's foot on the %2 appearance, against the %3 this walk reaches")
-                                        .arg(QString::number(onTheFoot), appearance.first, QString::number(scmLeastAuditedOnTheExporterFoot))));
-        }
-
-        qInfo().noquote() << qsl("  audited %1").arg(counts.join(qsl("; ")));
-        for (const QString& failure : failures) {
-            qWarning().noquote() << failure;
-        }
-        QVERIFY2(failures.isEmpty(), qPrintable(qsl("%1 thing(s) cannot be read against what is painted behind them - listed above").arg(QString::number(failures.size()))));
-    }
-
-    void test_theButtonsFormIsReadableInBothAppearances()
-    {
-        mpEditor->slot_showActions();
-        mpEditor->slot_actionSelected(mpActionItem);
-        QCoreApplication::processEvents();
-        QTest::qWait(100ms);
-        QVERIFY2(mpEditor->mpWidget_actionRotationRow != nullptr && mpEditor->mpWidget_actionRotationRow->isVisible(), "the button this walks is not showing the row its rotation is set on");
-
-        QStringList failures;
-        QStringList counts;
-        for (const auto& appearance : QList<QPair<QString, enums::Appearance>>{{qsl("dark"), enums::Appearance::dark}, {qsl("light"), enums::Appearance::light}}) {
-            setAppearance(appearance.second);
-            const int read = auditWithin(mpEditor, mpEditor->mpActionsMainArea, qsl("the editor's buttons form"), appearance.first, failures);
-            counts << qsl("%1: %2").arg(appearance.first, QString::number(read));
-            QVERIFY2(read >= scmLeastAuditedOnTheButtonsForm,
-                     qPrintable(qsl("only %1 things were read on the buttons form on the %2 appearance, against the %3 this walk reaches")
-                                        .arg(QString::number(read), appearance.first, QString::number(scmLeastAuditedOnTheButtonsForm))));
-        }
-
-        qInfo().noquote() << qsl("  audited %1").arg(counts.join(qsl("; ")));
-        for (const QString& failure : failures) {
-            qWarning().noquote() << failure;
-        }
-        QVERIFY2(failures.isEmpty(), qPrintable(qsl("%1 thing(s) cannot be read against what is painted behind them - listed above").arg(QString::number(failures.size()))));
-    }
+    void test_theButtonsFormIsReadableInBothAppearances() { report(qsl("buttons")); }
 };
 
 #include "ReadabilityAuditTest.moc"

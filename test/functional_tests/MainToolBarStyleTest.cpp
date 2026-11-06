@@ -423,7 +423,9 @@ private slots:
         int foldedWidths = 0;
         for (int width = scmWindowWidth; width > 0; width -= 2) {
             mudlet::self()->resize(width, scmWindowHeight);
-            QTest::qWait(10);
+            // The bar lays out on the posted resize and layout request; no timer is involved
+            QCoreApplication::sendPostedEvents();
+            QCoreApplication::processEvents();
             if (mudlet::self()->width() != width) {
                 break;
             }
