@@ -1098,6 +1098,38 @@ private slots:
         emitMetric(qPrintable(qsl("cjk_%1_best_pass_ms").arg(metric)), best * 1000.0);
     }
 
+    void benchTriggerScript_data()
+    {
+        QTest::addColumn<QString>("metric");
+        QTest::addColumn<QString>("script");
+        QTest::newRow("none") << qsl("none") << qsl("local _ = line");
+        QTest::newRow("highlight_line") << qsl("highlight_line") << qsl("selectString(line, 1) fg('red') resetFormat()");
+        QTest::newRow("restyle_line") << qsl("restyle_line") << qsl("selectCurrentLine() setFgColor(255, 0, 0) setBgColor(0, 0, 80) setBold(true) resetFormat()");
+        QTest::newRow("highlight_word") << qsl("highlight_word") << qsl("if selectString('you', 1) > -1 then fg('red') end resetFormat()");
+    }
+
+    // One trigger that fires on every line and runs a script styling it, as
+    // highlighting triggers do; "none" is the cost of firing it at all.
+    void benchTriggerScript()
+    {
+        QFETCH(QString, metric);
+        QFETCH(QString, script);
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY(noTriggersAreRunningYet(host));
+        auto* pT = new TTrigger(qsl("bench_script"), {qsl("^")}, {REGEX_PERL}, false, host);
+        pT->setIsFolder(false);
+        pT->setTemporary(false);
+        pT->setIsActive(true);
+        QVERIFY(pT->registerTrigger());
+        QVERIFY(pT->setScript(script));
+        QVERIFY(pT->state());
+        const double seconds = feedCorpusBestPass(host, kFeedPasses);
+        const int bufferedLines = host->mainConsoleView()->buffer.getLastLineNumber();
+        QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
+        emitMetric(qPrintable(qsl("script_%1_best_pass_ms").arg(metric)), seconds * 1000.0);
+    }
+
     void benchTriggerEngine()
     {
         Host* host = startProfile();
@@ -1749,10 +1781,7 @@ private:
         return host;
     }
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        TestProfile::removeProfileDirectory(profileName);
-    }
+    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
 };
 
 static void initializeQRCResources()
