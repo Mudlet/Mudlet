@@ -68,6 +68,7 @@
 #include "THeadlessSession.h"
 #include "TLuaInterpreter.h"
 #include "TMap.h"
+#include "TRoomDB.h"
 #include "TTrigger.h"
 #include "TelnetServerStub.h"
 #include "TriggerUnit.h"
@@ -229,6 +230,25 @@ end))lua")
                        10000)
                        ? *found
                        : qsl("(no answer)");
+    }
+
+    // Read into a profile of a pool of its own, so the pool under test is left as it was
+    static bool newestMapHoldsRooms(const QString& name, const QList<int>& roomIds)
+    {
+        const QDir folder(MudletApp::getMudletPath(enums::profileMapsPath, name));
+        const QStringList saves = folder.entryList(QStringList{qsl("????-??-??#??-??-??map.dat")}, QDir::Files, QDir::Name | QDir::Reversed);
+        HostManager pool;
+        const QString readerName = qsl("Headless Map Reader");
+        if (saves.isEmpty() || !pool.addHost(readerName, QString(), QString(), QString())) {
+            return false;
+        }
+        TMap* map = pool.getHost(readerName)->mpMap.data();
+        if (!map->restore(folder.filePath(saves.first()))) {
+            return false;
+        }
+        return std::all_of(roomIds.cbegin(), roomIds.cend(), [map](const int roomId) {
+            return map->mpRoomDB->getRoom(roomId) != nullptr;
+        });
     }
 
     static qsizetype saveCount(const QString& name) { return QDir(MudletApp::getMudletPath(enums::profileXmlFilesPath, name)).entryList(QStringList{qsl("*.xml")}, QDir::Files).size(); }
@@ -1197,6 +1217,98 @@ version = "1.2")"},
         QVERIFY(session.shutdown(true));
         QCOMPARE(saveCount(name), 1);
         QCOMPARE(saveCount(other), 2);
+    }
+
+    // A profile with room 9 in its last good map, which it closes as it loads by the given script
+    static bool writeProfileClosedAsItLoads(const QString& name, const QString& script, QByteArray& mapBefore)
+    {
+        const QString mapsFolder = MudletApp::getMudletPath(enums::profileMapsPath, name);
+        {
+            THeadlessSession session;
+            if (!writeProfile(name, QString()) || session.start({.profile = name, .connect = false}) != THeadlessSession::StartResult::started || !session.host()->mpMap->addRoom(9)
+                || !session.host()->saveMapFile(qsl("%1/2020-01-01#00-00-00map.dat").arg(mapsFolder)) || !session.shutdown(false)) {
+                return false;
+            }
+        }
+        mapBefore = filesUnder(mapsFolder).value(qsl("2020-01-01#00-00-00map.dat"));
+        return !mapBefore.isEmpty() && writeProfile(name, script);
+    }
+
+    // Its scripts start before its map is loaded, so what it held then would be written over its last good map
+    void test_aProfileClosedBeforeItsMapLoadsKeepsItsSaveAndMap()
+    {
+        const QString name = qsl("Headless Closed While Loading");
+        const QString runner = qsl("Headless Closes While Loading Runner");
+        QByteArray mapBefore;
+        QVERIFY(writeProfileClosedAsItLoads(name, qsl("closeProfile()"), mapBefore));
+        QVERIFY(writeProfile(runner, QString()));
+        const QString mapsFolder = MudletApp::getMudletPath(enums::profileMapsPath, name);
+
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = runner, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY2(session.runLua(qsl("loadProfile([[%1]], true)").arg(name)), qPrintable(session.errorString()));
+        QTRY_VERIFY_WITH_TIMEOUT(!HostManager::self()->getHost(name), 5000);
+        QCOMPARE(saveCount(name), 1);
+        QCOMPARE(QDir(mapsFolder).entryList(QDir::Files), QStringList{qsl("2020-01-01#00-00-00map.dat")});
+        QCOMPARE(filesUnder(mapsFolder).value(qsl("2020-01-01#00-00-00map.dat")), mapBefore);
+        QVERIFY2(!session.saveFailed(), qPrintable(session.unsavedProfiles().join(qsl(", "))));
+        QVERIFY(session.shutdown(true));
+        QVERIFY(!session.saveFailed());
+    }
+
+    // Its sysLoadEvent handlers run with its map loaded but before its load ends, when saveProfile() still refuses
+    // it, so the close waits for the load to end, as closeMudlet()'s does, and then saves
+    void test_aProfileClosedFromItsSysLoadEventIsSavedOnceLoaded()
+    {
+        const QString name = qsl("Headless Closed From Its sysLoadEvent");
+        const QString runner = qsl("Headless Closes From A sysLoadEvent Runner");
+        QByteArray mapBefore;
+        QVERIFY(writeProfileClosedAsItLoads(name, qsl(R"lua(registerAnonymousEventHandler("sysLoadEvent", function() addRoom(12) closeProfile() end))lua"), mapBefore));
+        QVERIFY(writeProfile(runner, QString()));
+        const QString mapsFolder = MudletApp::getMudletPath(enums::profileMapsPath, name);
+
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = runner, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY2(session.runLua(qsl("loadProfile([[%1]], true)").arg(name)), qPrintable(session.errorString()));
+        QTRY_VERIFY_WITH_TIMEOUT(!HostManager::self()->getHost(name), 5000);
+        QCOMPARE(saveCount(name), 2);
+        QCOMPARE(QDir(mapsFolder).entryList(QDir::Files).size(), 2);
+        QCOMPARE(filesUnder(mapsFolder).value(qsl("2020-01-01#00-00-00map.dat")), mapBefore);
+        QVERIFY2(newestMapHoldsRooms(name, {9, 12}), "The close did not save the map the profile loaded, with the room its handler added.");
+        QVERIFY2(!session.saveFailed(), qPrintable(session.unsavedProfiles().join(qsl(", "))));
+        QVERIFY(session.shutdown(true));
+        QVERIFY(!session.saveFailed());
+    }
+
+    // As shutdown(true) and save() leave such a profile: its last good save and map are kept, and that is no failure
+    void test_aScriptOpenedProfileWhoseSaveDidNotLoadClosesUnsaved()
+    {
+        const QString name = qsl("Headless Closes A Corrupt");
+        const QString corrupt = qsl("Headless Corrupt Closed By A Script");
+        QVERIFY(writeProfile(name, QString()));
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, corrupt);
+        QVERIFY(QDir().mkpath(saveFolder));
+        QVERIFY(writeFile(qsl("%1/2020-01-01#00-00-00.xml").arg(saveFolder), "<?xml version=\"1.0\"?><MudletPackage version=\"1.001\"><HostPackage><Host"));
+
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY2(session.runLua(qsl("loadProfile([[%1]], true)").arg(corrupt)), qPrintable(session.errorString()));
+        const QPointer<Host> pCorrupt(HostManager::self()->getHost(corrupt));
+        QVERIFY(pCorrupt);
+        QVERIFY(!pCorrupt->mLoadedOk);
+        pCorrupt->mpMap->addRoom(5);
+        QCoreApplication::processEvents();
+        const QString home = MudletApp::getMudletPath(enums::profileHomePath, corrupt);
+        const QStringList filesBefore = filesUnder(home).keys();
+        QSignalSpy closeSaveFailed(pCorrupt.data(), &Host::closeSaveFailed);
+
+        QVERIFY2(session.runLua(qsl("assert(closeProfile([[%1]]))").arg(corrupt)), qPrintable(session.errorString()));
+        QTRY_VERIFY_WITH_TIMEOUT(!pCorrupt, 5000);
+        QCOMPARE(closeSaveFailed.count(), 0);
+        QCOMPARE(filesUnder(home).keys(), filesBefore);
+        QVERIFY2(!session.saveFailed(), qPrintable(session.unsavedProfiles().join(qsl(", "))));
+        QVERIFY(session.shutdown(true));
+        QVERIFY(!session.saveFailed());
     }
 
     void test_anUnwantedConnectIsCalledOff_data()

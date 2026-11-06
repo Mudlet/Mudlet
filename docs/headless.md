@@ -82,8 +82,7 @@ on Windows.
 
 The profile closes, and is saved, when:
 
-- a script calls `closeMudlet()` or `closeProfile()` (the latter saves only if the profile's
-  "Auto save on exit" setting is on);
+- a script calls `closeMudlet()` or `closeProfile()`;
 - standard input ends, or standard output's reader goes away (as `| head` does);
 - the connection ends, with `--exit-on-disconnect`;
 - the runner gets `SIGINT`, `SIGTERM` or `SIGHUP`. A second `SIGINT` or `SIGTERM` ends the run at
@@ -95,6 +94,21 @@ no window can change, such as the media mutes and `showTabConnectionIndicators`.
 GUI has, such as its window position or toolbar, are left as the GUI last saved them. As in the
 GUI, a command line history or `Mudlet.ini` that cannot be written is only reported on standard
 error, and does not change the exit status; a history file that cannot be read is not written over.
+
+`closeProfile()` saves a profile whose "Auto save on exit" setting is off too: the GUI asks the player
+whether to save it, nobody can answer that here, and the answer taken is the GUI's Yes. A save, map or
+`profile.ini` that cannot be written is named on standard error, and the profile is reported as one
+that could not be saved.
+
+A `closeProfile()` from a `sysLoadEvent` handler, which runs once the profile's map has loaded but
+before its load has ended, closes it once the load has ended, as `closeMudlet()` does, and saves it
+then, with the map it loaded and what the handler changed.
+
+What is not saved, and is not reported as a failed save, is a profile whose save did not load, or one
+closed before its map has loaded, as by a `closeProfile()` at the top level of its own script, which
+closes it at once, as in the GUI: its scripts run before its map is loaded, so its last good save and
+map are kept rather than written over. For an app that embeds Mudlet, nor is a profile let go by
+`shutdown(false)` or by deleting the session.
 
 A command typed on standard input goes into the main command line's history file, just as the GUI
 keeps it: one entry for each line or paste, not for one typed while the game hides input (a

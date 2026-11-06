@@ -649,10 +649,20 @@ bool Host::closeWithNoView()
     // or reset of this profile reached from there meanwhile would delete it under this call
     mLuaInterpreter.enterNestedEventLoop();
     raiseExitEventIfOwed();
-    // profile.ini too, which the Host's deletion would otherwise write with no one to tell
-    if ((mFORCE_SAVE_ON_EXIT || mForcedClose) && !(saveForClose() && syncProfileIni())) {
-        qWarning().nospace().noquote() << "Host::closeWithNoView() WARNING - \"" << getName() << "\" could not be saved.";
-        emit closeSaveFailed();
+    // Not one whose save did not load, nor one still loading, which only a close that does not wait for the load
+    // reaches: either would write what it holds over its last good save and map, and keeping those is no failure
+    if (mLoadedOk && !mIsProfileLoadingSequence) {
+        // Saved even with "Auto save on exit" off: nobody can answer the GUI's "Save profile?" here, and the maintainer chose Yes
+        const bool saved = saveForClose();
+        // profile.ini even when that failed, as the Host's deletion would otherwise write it with no one to tell
+        const bool iniSynced = syncProfileIni();
+        if (!iniSynced) {
+            qWarning().nospace().noquote() << "Host::closeWithNoView() WARNING - the profile.ini of \"" << getName() << "\" could not be written.";
+        }
+        if (!(saved && iniSynced)) {
+            qWarning().nospace().noquote() << "Host::closeWithNoView() WARNING - \"" << getName() << "\" could not be saved.";
+            emit closeSaveFailed();
+        }
     }
     mLuaInterpreter.leaveNestedEventLoop();
     closeChildren();
@@ -688,6 +698,11 @@ bool Host::busyRunning() const
 
 bool Host::saveForClose()
 {
+    // saveProfile() refuses it, and its scripts run before its map is loaded, so until then the map it holds may not be the player's
+    if (mIsProfileLoadingSequence && !mLoadedMap) {
+        qWarning().nospace().noquote() << "Host::saveForClose() WARNING - \"" << getName() << "\" is not saved, as it is still loading.";
+        return false;
+    }
     modulesToWrite.clear();
     // A save still running would turn this one away, and it may predate the session's last changes
     waitForProfileSave();
@@ -707,7 +722,14 @@ bool Host::saveForClose()
         xmlWritten = xmlWritten && write.isFinished() && write.result();
     }
     // Only reached when this save started, so the module write is its own
-    return xmlWritten && moduleWrite.isFinished() && moduleWrite.result() && mapSaved;
+    const bool profileWritten = xmlWritten && moduleWrite.isFinished() && moduleWrite.result();
+    if (!profileWritten) {
+        qWarning().nospace().noquote() << "Host::saveForClose() WARNING - the profile \"" << getName() << "\" or its modules could not be written.";
+    }
+    if (!mapSaved) {
+        qWarning().nospace().noquote() << "Host::saveForClose() WARNING - the map of \"" << getName() << "\" could not be written.";
+    }
+    return profileWritten && mapSaved;
 }
 
 bool Host::loadProfileSave(const QString& saveFileName)
@@ -867,6 +889,7 @@ void Host::loadMapAndConnect(const bool connect)
 
     // Now load the default (latest stored) map file:
     loadMap();
+    mLoadedMap = true;
 
     //NOTE: this is a potential problem if users connect by hand quickly
     //      and one host has a slower response time as the other one, but
