@@ -1031,16 +1031,22 @@ bool THeadlessSession::runLua(const QString& code)
     const bool ran = mpHost->getLuaInterpreter()->compileAndExecuteScript(code);
     disconnect(errorCapture);
     if (!ran && self) {
-        mErrorString = errorText.trimmed();
-        // Lua's own message, out of the console's "<Lua error:...>"
-        if (mErrorString.startsWith(QLatin1Char('<')) && mErrorString.endsWith(QLatin1Char('>'))) {
-            mErrorString = mErrorString.sliced(1).chopped(1);
-        }
-        if (mErrorString.startsWith(qsl("Lua error:"))) {
-            mErrorString = mErrorString.sliced(10);
-        }
+        mErrorString = luaErrorOf(errorText);
     }
     return ran;
+}
+
+QString THeadlessSession::luaErrorOf(const QString& consoleText)
+{
+    QString error = consoleText.trimmed();
+    // Out of the console's "<Lua error:...>"
+    if (error.startsWith(QLatin1Char('<')) && error.endsWith(QLatin1Char('>'))) {
+        error = error.sliced(1).chopped(1);
+    }
+    if (error.startsWith(qsl("Lua error:"))) {
+        error = error.sliced(10);
+    }
+    return error;
 }
 
 THeadlessSession::PackageResult THeadlessSession::installPackage(const QString& path)
