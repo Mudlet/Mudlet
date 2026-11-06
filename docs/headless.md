@@ -221,6 +221,13 @@ main console, so it arrives as `localText`. A profile that closes while it logs,
 later `start()` lets go of, sends `false` too, so each `true` is followed by one `false`, unless the
 session is deleted first: a session being deleted sends none. It comes from the event loop.
 
+`consoleFont()` is the font the GUI would draw the main console in, for an app that draws in the profile's
+font: read it at `profileLoaded`, then follow `consoleFontChanged`, which carries each change, whatever
+made it - a script's `setFont()` or `setFontSize()`, the profile's save, the bundled default standing in for
+a font that is not installed, or a package bringing that font or taking it away. The size `setScreenSize()`
+gives is in that font's characters. It comes from the event loop, with the font as it is then, and only
+when that differs from the one the app last had, so none follows `profileLoaded` for what the load did.
+
 The signals' handlers are called while a line is being written, so they must not call the session
 back or run the event loop; queue the work for later instead. `host()` reaches what the session
 does not cover, such as settings and the map, and goes null once the profile closes, so hold it in a

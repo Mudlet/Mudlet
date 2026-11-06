@@ -379,6 +379,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
     }
 
     const unsigned int run = ++mRun;
+    mDeliveredConsoleFont.reset();
     mUnsavedProfiles.clear();
     mLoadFailed = false;
     Host* pHost = mpPool->openProfile(
@@ -428,6 +429,25 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                             },
                             Qt::QueuedConnection);
                 });
+                connect(
+                        pNewHost,
+                        &Host::signal_consoleFontChanged,
+                        this,
+                        [this, run]() {
+                            // Read now, not as sent: the load queues each step it took, the missing family before
+                            // the bundled default that stands in for it, and consoleFont() gave the last already
+                            if (run != mRun || !mpHost || !mDeliveredConsoleFont) {
+                                return;
+                            }
+                            const QFont font = mpHost->displayFontWithNoView();
+                            if (TFontAttributes(font) == TFontAttributes(*mDeliveredConsoleFont)) {
+                                return;
+                            }
+                            mDeliveredConsoleFont = font;
+                            const QString profile = mProfileName;
+                            emit consoleFontChanged(profile, font);
+                        },
+                        Qt::QueuedConnection);
                 connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text) {
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;
@@ -782,6 +802,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                                : tr("The profile \"%1\" could not be loaded: %2").arg(mProfileName, pHost->mProfileLoadError);
         return StartResult::loadFailed;
     }
+    mDeliveredConsoleFont = consoleFont();
     // A copy, as a handler may delete the session while its argument is in use
     const QString profile = mProfileName;
     emit profileLoaded(profile);
@@ -822,6 +843,11 @@ bool THeadlessSession::storeConnectionDetails(const Options& options, const std:
 Host* THeadlessSession::host() const
 {
     return mpHost.data();
+}
+
+QFont THeadlessSession::consoleFont() const
+{
+    return mpHost ? mpHost->displayFontWithNoView() : QFont();
 }
 
 bool THeadlessSession::submit(const QString& line)
