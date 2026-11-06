@@ -586,7 +586,6 @@ bool TChar::operator==(const TChar& other) const
 }
 
 namespace {
-// A selected run stays per character, as copying the shared TChar back out would deselect it
 bool storableAsOne(const std::vector<TChar>& chars)
 {
     if (chars.empty() || chars.front().isSelected()) {
@@ -644,8 +643,8 @@ void TLineFormat::select(const size_type from, const size_type to)
         return;
     }
     std::vector<TChar>& chars = expand();
-    for (size_type index = from; index < to; ++index) {
-        chars[index].select();
+    for (TChar& character : std::span(chars).subspan(from, to - from)) {
+        character.select();
     }
 }
 

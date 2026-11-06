@@ -491,7 +491,7 @@ public:
     std::vector<TChar> toVector() const;
     // Selects [from, to); a line stored as one TChar stays that way when all of it is selected
     void select(size_type from, size_type to);
-    // Stores the line as one TChar again when deselecting leaves every character alike
+    // Stores the line as one TChar when deselecting leaves every character alike
     void deselect();
     // As std::vector::insert() would, so format is stored deselected
     void insert(size_type index, size_type count, const TChar& format);
