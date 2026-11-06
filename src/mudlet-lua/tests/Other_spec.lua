@@ -3207,8 +3207,10 @@ describe("Tests Other.lua functions", function()
     local function wildcardsFor(text)
       local results
       local id = tempTrigger("getColorWildcardMarker", function() results = { getColorWildcard(red) } end)
-      finally(function() killTrigger(id) end)
       local ok, msg = feedTelnet("\27[0mgetColorWildcardMarker " .. text .. "\27[0m\r\n")
+      -- killed here rather than in finally(): busted keeps only a test's last finally,
+      -- and one test calls this twice
+      killTrigger(id)
       assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
       assert.is_truthy(results, "the trigger did not fire")
       return results[1]
