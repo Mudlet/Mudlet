@@ -133,6 +133,19 @@ describe("Tests functionality of Geyser.ScrollBox", function()
       assert.are.same({x = 0, y = 0, width = mainWidth - 60, height = mainHeight - 60}, geometry("gsbNegativeChild"))
       assert.are.equal(mainWidth - 60, box:get_width())
       assert.are.equal(mainHeight - 60, box:get_height())
+      box:reposition()
+      assert.are.same({x = 50, y = 40, width = mainWidth - 60, height = mainHeight - 60}, geometry("gsbNegative"))
+    end)
+
+    it("is placed by a constraint that reads its own size", function()
+      local mainWidth = getMainWindowSize()
+      local box
+      local function centred()
+        return box and (mainWidth - box:get_width()) / 2 or 0
+      end
+      box = track(Geyser.ScrollBox:new({name = "gsbCentred", x = centred, y = 0, width = 201, height = 100}))
+      box:reposition()
+      assert.are.same({x = math.floor((mainWidth - 201) / 2 + 0.5), y = 0, width = 201, height = 100}, geometry("gsbCentred"))
     end)
 
     it("leaves room for the next child when it is a fixed size child of an HBox", function()
@@ -365,6 +378,37 @@ describe("Tests functionality of Geyser.ScrollBox", function()
       label:resize("100%", 50)
       label:move(10, 20)
       assert.are.same({x = 10, y = 20, width = mainWidth - 110, height = 50}, geometry("gsbYieldingChild"))
+    end)
+
+    it("gives its own origin to a coroutine its constraint resumes", function()
+      local box
+      local seen = {}
+      local function width()
+        if box then
+          seen[#seen + 1] = coroutine.wrap(function() return box:get_x() end)()
+        end
+        return 300
+      end
+      box = track(Geyser.ScrollBox:new({name = "gsbNestedRead", x = 100, y = 50, width = width, height = 200}))
+      track(Geyser.Label:new({name = "gsbNestedReadChild", x = 0, y = 0, width = "50%", height = 50}, box))
+      box:reposition()
+      assert.is_true(#seen >= 2)
+      for _, x in ipairs(seen) do
+        assert.are.equal(100, x)
+      end
+    end)
+
+    it("places a child from its own origin after a measure raised inside a coroutine", function()
+      local size = 300
+      local box = track(Geyser.ScrollBox:new({name = "gsbRaisedInCoroutine", x = 100, y = 50, width = function() return size end, height = 200}))
+      local label = track(Geyser.Label:new({name = "gsbRaisedInCoroutineChild", x = 0, y = 0, width = 50, height = 50}, box))
+      size = nil
+      local finished = coroutine.resume(coroutine.create(function() label:resize("50%", 50) end))
+      size = 300
+      label:resize(50, 50)
+      label:move(10, 20)
+      assert.is_false(finished)
+      assert.are.same({x = 10, y = 20, width = 50, height = 50}, geometry("gsbRaisedInCoroutineChild"))
     end)
   end)
 

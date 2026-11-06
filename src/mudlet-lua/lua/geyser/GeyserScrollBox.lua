@@ -9,65 +9,76 @@ Geyser.ScrollBox = Geyser.Window:new({
     name = "ScrollBoxClass"
 })
 
-local getinfo = debug.getinfo
+local getinfo, runningCoroutine, coroutineStatus = debug.getinfo, coroutine.running, coroutine.status
+
+-- Internal function: the thread a flag below is set on; Lua 5.1 gives the main thread no object
+local function thisThread()
+    return runningCoroutine() or true
+end
+
+-- Internal function: whether the work that set flag is under way, as a constraint that raises
+-- leaves it set and a pcall would stop constraints yielding. Another thread's stack can't be seen.
+local function underWay(flag, a, b, c, d)
+    if flag ~= thisThread() then
+        return type(flag) ~= "thread" or coroutineStatus(flag) ~= "dead"
+    end
+    for level = 3, math.huge do
+        local frame = getinfo(level, "f")
+        if not frame then
+            return false
+        end
+        local func = frame.func
+        if func and (func == a or func == b or func == c or func == d) then
+            return true
+        end
+    end
+end
 
 -- Internal function: children are laid out inside the box's own widget, so from
 -- its origin and at the whole pixel size the widget gets, not its fractional one.
 -- The size still follows the box's constraints, which a parent HBox or VBox reads
--- and rewrites before it repositions the box. Returns the function that places
--- the box itself.
+-- and rewrites before it repositions the box.
 local function frameChildren(box)
     local own = {get_x = box.get_x, get_y = box.get_y, get_width = box.get_width, get_height = box.get_height}
     local zero = function() return 0 end
     local across = {get_x = own.get_x, get_y = zero, get_width = own.get_width, get_height = zero}
     local down = {get_x = zero, get_y = own.get_y, get_width = zero, get_height = own.get_height}
     local place
-    -- a constraint that raises, or yields in a coroutine, leaves these flags set, so
-    -- they only count while what set them is running on this stack; a pcall would do
-    -- instead, but no constraint could yield across it. Looks from the caller of the
-    -- getter that calls this.
-    local function running(a, b, c, d)
-        for level = 3, math.huge do
-            local frame = getinfo(level, "f")
-            if not frame then
-                return false
-            end
-            local func = frame.func
-            if func and (func == a or func == b or func == c or func == d) then
-                return true
-            end
-        end
-    end
     -- a negative width or height is compiled as the far edge less the box's own
     -- get_x or get_y, so those must give the box's real origin while it measures itself
     local measuring, placing = false, false
-    box.get_x = function()
-        return (measuring or placing) and running(own.get_x, own.get_y, own.get_width, own.get_height) and own.get_x() or 0
+    local function origin(get)
+        return function()
+            if measuring and underWay(measuring, own.get_x, own.get_y, own.get_width, own.get_height)
+                or placing and underWay(placing, own.get_x, own.get_y, own.get_width, own.get_height) then
+                return get()
+            end
+            return 0
+        end
     end
-    box.get_y = function()
-        return (measuring or placing) and running(own.get_x, own.get_y, own.get_width, own.get_height) and own.get_y() or 0
-    end
+    box.get_x = origin(own.get_x)
+    box.get_y = origin(own.get_y)
     box.get_width = function()
-        if placing and running(place) then
+        if placing and underWay(placing, place) then
             return own.get_width()
         end
-        measuring = true
+        measuring = thisThread()
         local _, _, width = Geyser.Container.pixel_geometry(across)
         measuring = false
         return width
     end
     box.get_height = function()
-        if placing and running(place) then
+        if placing and underWay(placing, place) then
             return own.get_height()
         end
-        measuring = true
+        measuring = thisThread()
         local _, _, _, height = Geyser.Container.pixel_geometry(down)
         measuring = false
         return height
     end
     -- the box's own constraints read its unframed sizes while it places itself
     place = function()
-        placing = true
+        placing = thisThread()
         local x, y, width, height = Geyser.Container.pixel_geometry(own)
         placing = false
         return x, y, width, height
