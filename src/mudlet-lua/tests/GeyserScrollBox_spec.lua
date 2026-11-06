@@ -292,8 +292,9 @@ describe("Tests functionality of Geyser.ScrollBox", function()
       end
       local function raisedBy(raise, value)
         raising, failure = true, value
-        local _, raised = pcall(raise)
+        local ok, raised = pcall(raise)
         raising = false
+        assert.is_false(ok)
         return raised
       end
       local box = track(Geyser.ScrollBox:new({name = "gsbRaisedError", x = 0, y = 0, width = size, height = size}))
