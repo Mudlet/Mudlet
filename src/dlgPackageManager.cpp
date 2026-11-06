@@ -305,25 +305,8 @@ void dlgPackageManager::resetPackageList()
     mpNavigationGroup->button(static_cast<int>(NavigationView::Installed))->setChecked(true);
     packageList->clear();
 
-    for (int i = 0; i < mpHost->mInstalledPackages.size(); i++) {
-        auto item = new QListWidgetItem();
-        item->setText(mpHost->mInstalledPackages.at(i));
-
-        auto packageInfo{mpHost->mPackageInfo.value(item->text())};
-        const auto title = packageInfo.value(qsl("title"));
-        if (!title.isEmpty()) {
-            item->setData(Qt::UserRole, title);
-        }
-        const auto iconName = packageInfo.value(qsl("icon"));
-        if (!iconName.isEmpty()) {
-            const auto iconDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
-            item->setIcon(QIcon(iconDir));
-        } else {
-            QPixmap emptyPixmap(16, 16);
-            emptyPixmap.fill(Qt::transparent);
-            item->setIcon(QIcon(emptyPixmap));
-        }
-        packageList->addItem(item);
+    for (const QString& packageName : std::as_const(mpHost->mInstalledPackages)) {
+        packageList->addItem(installedPackageItem(packageName));
     }
 
     populatePackagesWithUpdates();
