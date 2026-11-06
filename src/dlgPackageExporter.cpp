@@ -25,6 +25,7 @@
 #include "ui_dlgPackageExporter.h"
 
 #include "Host.h"
+#include "LuaLiteral.h"
 #include "MudletApp.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -441,7 +442,11 @@ void dlgPackageExporter::appendToDetails(const QString& what, const QString& val
     } else {
         mPackageComment.append(qsl("    %1: %2\n").arg(what, value));
     }
-    mPackageConfig.append(qsl("%1 = [[%2]]\n").arg(what, value));
+    // Only a value the plain [[...]] would end early, reopen, or strip a leading newline from gets
+    // the escalated form: the package repository's upload site reads the plain one as text
+    const bool plainLiteralHoldsIt =
+            !value.contains(qsl("]]")) && !value.contains(qsl("[[")) && !value.endsWith(QLatin1Char(']')) && !value.startsWith(QLatin1Char('\n')) && !value.startsWith(QLatin1Char('\r'));
+    mPackageConfig.append(qsl("%1 = %2\n").arg(what, plainLiteralHoldsIt ? qsl("[[%1]]").arg(value) : LuaLiteral::quote(value)));
 }
 
 void dlgPackageExporter::recurseTree(QTreeWidgetItem* pItem, QList<QTreeWidgetItem*>& treeList)
