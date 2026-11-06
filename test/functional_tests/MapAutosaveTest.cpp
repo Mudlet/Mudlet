@@ -29,13 +29,16 @@
  * Run with: ctest -R MapAutosaveTest -V
  */
 
+#include <QAction>
 #include <QDataStream>
 #include <QFileInfo>
+#include <QMenu>
 #include <QPointer>
 #include <QSemaphore>
 #include <QTemporaryDir>
 #include <QThread>
 #include <QThreadPool>
+#include <QUrl>
 #include <QtTest/QtTest>
 
 #include "Host.h"
@@ -45,9 +48,15 @@
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
+#include "dlgProfilePreferences.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+#if defined(Q_OS_UNIX)
+#include <csignal>
+#include <sys/resource.h>
+#endif
 
 using namespace std::chrono_literals;
 
@@ -98,6 +107,7 @@ private:
     Host* mpHost = nullptr;
     const QString mProfileName = qsl("MapAutosave-Test");
     const QString mClosingProfileName = qsl("MapAutosaveClosing-Test");
+    const QString mCopyTargetProfileName = qsl("MapAutosaveCopyTarget-Test");
 
     static bool portableMarkerPresent()
     {
@@ -173,6 +183,7 @@ private slots:
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory(mProfileName);
         deleteProfileDirectory(mClosingProfileName);
+        deleteProfileDirectory(mCopyTargetProfileName);
 
         QVERIFY2(HostManager::self()->addHost(mProfileName, qsl("23"), QString(), QString()), "failed to create the test Host");
         mpHost = HostManager::self()->getHost(mProfileName);
@@ -185,6 +196,7 @@ private slots:
         if (mudlet::self()) {
             deleteProfileDirectory(mProfileName);
             deleteProfileDirectory(mClosingProfileName);
+            deleteProfileDirectory(mCopyTargetProfileName);
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
@@ -236,6 +248,7 @@ private slots:
             renameRoom(map(), qsl("Renamed after the autosave"));
             explicitPath = MudletApp::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("explicit.dat"));
             QVERIFY(mpHost->saveMapFile(explicitPath));
+            QVERIFY2(QFileInfo::exists(autosavePath(mProfileName)), "the map was saved before the autosave had been written");
             QThread::sleep(50ms);
         }
         mpHost->waitForMapAutosave();
@@ -326,6 +339,111 @@ private slots:
         QVERIFY(!map()->isUnsaved());
         QCOMPARE(readFile(autosavePath(mProfileName)), serialized(map()));
     }
+    // A downloaded map is loaded as already saved, so the autosave of the map it replaced must not land after it
+    void test_downloadMadeDuringAnAutosaveWriteIsTheNewerFile()
+    {
+        buildMap(map());
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        // So that each write takes milliseconds, and the two files' times cannot tie
+        map()->mUserData.insert(qsl("bigger"), QString(10'000'000, QChar(u'x')));
+        renameRoom(map(), qsl("Downloaded"));
+        const QString served = qsl("%1/served map.dat").arg(mConfigDir.path());
+        {
+            QFile file(served);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QVERIFY(file.write(serialized(map())) > 0);
+        }
+        renameRoom(map(), qsl("Replaced by the download"));
+        {
+            PoolHold hold;
+            QVERIFY(hold.holding());
+            mpHost->autoSaveMap();
+            map()->downloadMap(QUrl::fromLocalFile(served).toString(), QString());
+            QTRY_COMPARE(map()->mpRoomDB->getRoom(1)->name, qsl("Downloaded"));
+        }
+        mpHost->waitForMapAutosave();
+        QVERIFY(map()->restore(QString()));
+        QCOMPARE(map()->mpRoomDB->getRoom(1)->name, qsl("Downloaded"));
+    }
+
+    void test_mapCopiedToAProfileDuringItsAutosaveWriteIsTheNewerFile()
+    {
+        QVERIFY(HostManager::self()->addHost(mCopyTargetProfileName, qsl("23"), QString(), QString()));
+        QPointer<Host> target = HostManager::self()->getHost(mCopyTargetProfileName);
+        QVERIFY(target);
+        buildMap(target->mpMap.data());
+        buildMap(map());
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        renameRoom(target->mpMap.data(), qsl("The target's own map"));
+        renameRoom(map(), qsl("Copied from the source"));
+
+        auto* pPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
+        QAction* pTargetChoice = nullptr;
+        for (auto* pAction : pPreferences->pushButton_chooseProfiles->menu()->actions()) {
+            if (pAction->text() == mCopyTargetProfileName) {
+                pTargetChoice = pAction;
+            }
+        }
+        QVERIFY(pTargetChoice);
+        pTargetChoice->setChecked(true);
+        bool autosavedFirst = false;
+        {
+            PoolHold hold;
+            QVERIFY(hold.holding());
+            target->autoSaveMap();
+            QMetaObject::invokeMethod(pPreferences, "slot_copyMap");
+            autosavedFirst = QFileInfo::exists(autosavePath(mCopyTargetProfileName));
+            QThread::sleep(50ms);
+        }
+        delete pPreferences;
+        target->waitForMapAutosave();
+        const bool restored = target->mpMap->restore(QString());
+        const TRoom* pRoom = target->mpMap->mpRoomDB->getRoom(1);
+        const QString loaded = pRoom ? pRoom->name : QString();
+        HostManager::self()->deleteHost(mCopyTargetProfileName);
+        QVERIFY2(autosavedFirst, "the map was copied before the target's autosave had been written");
+        QVERIFY(restored);
+        QCOMPARE(loaded, qsl("Copied from the source"));
+    }
+
+#if defined(Q_OS_UNIX)
+    // A full disk cuts a write short without an error that QSaveFile would see, so it would commit what it got
+    void test_writeCutShortIsReported()
+    {
+        buildMap(map());
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const QString path = MudletApp::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("cut short.dat"));
+        QVERIFY(QDir().mkpath(QFileInfo(path).absolutePath()));
+        {
+            QFile old(path);
+            QVERIFY(old.open(QIODevice::WriteOnly));
+            QCOMPARE(old.write("OLD"), 3);
+        }
+        rlimit uncapped{};
+        QCOMPARE(getrlimit(RLIMIT_FSIZE, &uncapped), 0);
+        rlimit capped = uncapped;
+        capped.rlim_cur = 512 * 1024;
+        const auto previousHandler = std::signal(SIGXFSZ, SIG_IGN);
+        QCOMPARE(setrlimit(RLIMIT_FSIZE, &capped), 0);
+        const bool saved = mpHost->saveMapFile(path);
+        mpHost->autoSaveMap();
+        mpHost->waitForMapAutosave();
+        setrlimit(RLIMIT_FSIZE, &uncapped);
+        std::signal(SIGXFSZ, previousHandler);
+
+        QVERIFY2(!saved, "a save that was cut short reported success");
+        QCOMPARE(readFile(path), QByteArray("OLD"));
+        QVERIFY(!QFileInfo::exists(autosavePath(mProfileName)));
+        QVERIFY(map()->hasSaveError());
+        QVERIFY2(map()->isUnsaved(), "a save that was cut short left the map marked as saved");
+    }
+#endif
 };
 
 #include "MapAutosaveTest.moc"

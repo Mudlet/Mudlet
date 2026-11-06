@@ -3165,6 +3165,9 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         cleanup();
         return;
     }
+    if (mpHost) {
+        mpHost->waitForMapAutosave();
+    }
     // Separate the two kinds of files to gain QSaveFile's atomic write behavior
     QSaveFile writeFile(mLocalMapFileName);
     QFile readFile(mLocalMapFileName);

@@ -964,11 +964,15 @@ public:
         open(QIODevice::WriteOnly | QIODevice::Unbuffered);
     }
     bool isSequential() const override { return true; }
+    // False once any write has failed. That has to be remembered here: a full disk cuts a write short
+    // without setting an error on the QSaveFile, which would then commit what it got.
     bool flushChunk()
     {
-        const bool ok = mUsed == 0 || mpTarget->write(mBuffer.get(), mUsed) == mUsed;
+        if (mUsed > 0 && mpTarget->write(mBuffer.get(), mUsed) != mUsed) {
+            mFailed = true;
+        }
         mUsed = 0;
-        return ok;
+        return !mFailed;
     }
 
 protected:
@@ -979,7 +983,11 @@ protected:
             return -1;
         }
         if (len >= scmChunkSize) {
-            return mpTarget->write(data, len);
+            if (mpTarget->write(data, len) != len) {
+                mFailed = true;
+                return -1;
+            }
+            return len;
         }
         std::memcpy(mBuffer.get() + mUsed, data, static_cast<size_t>(len));
         mUsed += len;
@@ -991,6 +999,7 @@ private:
     QIODevice* mpTarget;
     std::unique_ptr<char[]> mBuffer;
     qint64 mUsed = 0;
+    bool mFailed = false;
 };
 
 // Runs on a pool thread, so it is given everything it needs and must reach nothing else

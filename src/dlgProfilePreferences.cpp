@@ -6797,6 +6797,9 @@ void dlgProfilePreferences::slot_copyMap()
                                // Just in case is needed to make the above message
                                // show up when saving big maps
 
+        if (Host* pOtherHost = HostManager::self()->getHost(otherHostName)) {
+            pOtherHost->waitForMapAutosave();
+        }
         if (!thisProfileLatestMapFile.copy(MudletApp::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
             label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
             QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
