@@ -71,7 +71,8 @@ public:
     QList<MenuItem> menuItems(int id) const;
 
     // EXPIRE tag support - manage link expiry by name
-    void expireLinks(const QString& expireName, Host* pH = nullptr);
+    // The ids it removed
+    QList<int> expireLinks(const QString& expireName, Host* pH = nullptr);
     QString getExpireName(int id) const { return mExpireStore.value(id); }
 
     int getCurrentLinkID() const { return mLinkID; }
@@ -84,7 +85,8 @@ public:
 
     QStringList getCurrentLinks() const { return mLinkStore.value(mLinkID); }
 
-    void removeUnreferencedLinks(const QSet<int>& referencedIds, Host* pH = nullptr);
+    // The ids it removed
+    QList<int> removeUnreferencedLinks(const QSet<int>& referencedIds, Host* pH = nullptr);
 
     // OSC 8 hyperlink styling storage and retrieval
     void setStyling(int id, const Mudlet::HyperlinkStyling& styling);
