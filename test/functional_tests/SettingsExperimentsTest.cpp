@@ -37,6 +37,7 @@
 
 #include <QCheckBox>
 #include <QGroupBox>
+#include <QListWidget>
 #include <QScrollArea>
 #include <QSignalSpy>
 
@@ -219,8 +220,33 @@ private slots:
         QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
         QVERIFY2(mudlet::self()->colouredIcons(), "ticking the box did not color the toolbar");
 
+        // The sidebar follows the switch it sits beside, without the dialog being opened again
+        auto* pSidebar = mpPreferences->findChild<QListWidget*>(qsl("settingsCategoryList"));
+        QVERIFY2(pSidebar, "there is no settings sidebar to read");
+        const auto saturationOf = [pSidebar](const QString& page) {
+            for (int row = 0; row < pSidebar->count(); ++row) {
+                if (pSidebar->item(row)->text() == page) {
+                    const QImage image = pSidebar->item(row)->icon().pixmap(QSize(48, 48)).toImage().convertToFormat(QImage::Format_ARGB32);
+                    qreal strongest = 0.0;
+                    for (int y = 0; y < image.height(); ++y) {
+                        for (int x = 0; x < image.width(); ++x) {
+                            if (image.pixelColor(x, y).alphaF() > 0.95) {
+                                strongest = std::max<qreal>(strongest, image.pixelColor(x, y).hslSaturationF());
+                            }
+                        }
+                    }
+                    return strongest;
+                }
+            }
+            return -1.0;
+        };
+        QVERIFY2(saturationOf(qsl("Mapper")) > 0.3, "the Mapper page is not in the map's blue with the switch on");
+        QVERIFY2(saturationOf(qsl("General")) >= 0.0 && saturationOf(qsl("General")) < 0.1, "the General page took a colour; it is the settings themselves");
+        QVERIFY2(saturationOf(qsl("Appearance")) > 0.3, "the Appearance page's palette carries no paint with the switch on");
+
         mudlet::self()->setColouredIcons(false);
         QVERIFY2(!pBox->isChecked(), "the box did not follow the toolbar being switched back from elsewhere");
+        QVERIFY2(saturationOf(qsl("Mapper")) < 0.1, "the Mapper page kept its colour after the switch went off");
     }
 
     void test_anExperimentSwitchedByAScriptShowsInTheDialog()

@@ -16170,6 +16170,7 @@ void dlgTriggerEditor::addEditorSidebarSeparator()
 static uiDesign::IdentityColour editorViewIdentity(const QString& glyphFile)
 {
     static const QHash<QString, uiDesign::IdentityColour> identities{{qsl(":/icons/editor-triggers.svg"), uiDesign::scmIdentity_triggers},
+                                                                     {qsl(":/icons/editor-aliases.svg"), uiDesign::scmIdentity_input},
                                                                      {qsl(":/icons/editor-buttons.svg"), uiDesign::scmIdentity_buttons},
                                                                      {qsl(":/icons/editor-variables.svg"), uiDesign::scmIdentity_variables},
                                                                      {qsl(":/icons/editor-folder.svg"), uiDesign::scmIdentity_folder},

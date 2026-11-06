@@ -60,6 +60,7 @@
 #include <QStyleOptionGroupBox>
 #include <QStyleOptionViewItem>
 #include <QSvgRenderer>
+#include <iterator>
 #include <QTabBar>
 #include <QTimer>
 #include <QToolButton>
@@ -1654,18 +1655,50 @@ void restyleGlyphsDisabledIn(const QList<ActionGlyph>& glyphs, const ThemeTokens
 
 } // namespace
 
+void addPaintDots(QPixmap& glyph, const QString& file, const ThemeTokens& tokens)
+{
+    QString dotsFile = file;
+    dotsFile.insert(dotsFile.size() - 4, qsl("-dots"));
+    QFile source(dotsFile);
+    if (!source.exists() || !source.open(QIODevice::ReadOnly)) {
+        return;
+    }
+    QSvgRenderer renderer(source.readAll());
+    if (!renderer.isValid()) {
+        return;
+    }
+    const qreal scale = static_cast<qreal>(glyph.width()) / renderer.viewBoxF().width();
+    QPainter painter(&glyph);
+    for (int dot = 0; dot < static_cast<int>(std::size(scmIdentityPaintDots)); ++dot) {
+        const QString id = qsl("dot-%1").arg(dot);
+        if (!renderer.elementExists(id)) {
+            continue;
+        }
+        QPixmap shape(glyph.size());
+        shape.fill(Qt::transparent);
+        {
+            QPainter shapePainter(&shape);
+            shapePainter.setRenderHint(QPainter::Antialiasing);
+            const QRectF bounds = renderer.boundsOnElement(id);
+            renderer.render(&shapePainter, id, QRectF(bounds.topLeft() * scale, bounds.size() * scale));
+        }
+        painter.drawPixmap(0, 0, tintedGlyph(shape, identityInk(scmIdentityPaintDots[dot], tokens)));
+    }
+}
+
 QPixmap identityGlyph(const QString& file, const IdentityColour& identity, const ThemeTokens& tokens)
 {
     QPixmap glyph = tintedGlyph(glyphPixmap(file), identityInk(identity, tokens));
     const QPixmap fill = glyphFillPixmap(file);
-    if (fill.isNull()) {
-        return glyph;
+    if (!fill.isNull()) {
+        QPixmap washed = tintedGlyph(fill, identityFill(identity, tokens));
+        QPainter painter(&washed);
+        painter.drawPixmap(0, 0, glyph);
+        painter.end();
+        glyph = washed;
     }
-    QPixmap washed = tintedGlyph(fill, identityFill(identity, tokens));
-    QPainter painter(&washed);
-    painter.drawPixmap(0, 0, glyph);
-    painter.end();
-    return washed;
+    addPaintDots(glyph, file, tokens);
+    return glyph;
 }
 
 QIcon identityIcon(const QString& glyphOff, const QString& glyphOn, const IdentityColour& identity, const ThemeTokens& tokens, const QColor& disabledInk)

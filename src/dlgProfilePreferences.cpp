@@ -3482,8 +3482,21 @@ void dlgProfilePreferences::slot_sidebarItemClicked(QListWidgetItem* pItem)
     }
 }
 
+// With the colored icons on, a page's colour: what a toolbar button also opens takes that button's, and the input
+// line and accessibility have their own. The rest stay grey.
+static uiDesign::IdentityColour settingsPageIdentity(const QString& iconFile)
+{
+    static const QHash<QString, uiDesign::IdentityColour> identities{{qsl("settings-input.svg"), uiDesign::scmIdentity_input},
+                                                                     {qsl("settings-mapper.svg"), uiDesign::scmIdentity_map},
+                                                                     {qsl("settings-chat.svg"), uiDesign::scmIdentity_discord},
+                                                                     {qsl("settings-connection.svg"), uiDesign::scmIdentity_connect},
+                                                                     {qsl("settings-accessibility.svg"), uiDesign::scmIdentity_accessibility},
+                                                                     {qsl("settings-support.svg"), uiDesign::scmIdentity_manual}};
+    return mudlet::self() && mudlet::self()->colouredIcons() ? identities.value(iconFile) : uiDesign::IdentityColour();
+}
+
 // Only called from applyShellStyle(), which supplies the colours and is what an appearance change reruns
-void dlgProfilePreferences::restyleSidebarIcons(const QColor& normal, const QColor& selected)
+void dlgProfilePreferences::restyleSidebarIcons(const uiDesign::ThemeTokens& tokens)
 {
     if (!mpListWidget_categories) {
         return;
@@ -3494,16 +3507,29 @@ void dlgProfilePreferences::restyleSidebarIcons(const QColor& normal, const QCol
         if (!pItem || it.value().iconFile.isEmpty()) {
             continue;
         }
-        const QPixmap source = uiDesign::glyphPixmap(qsl(":/icons/%1").arg(it.value().iconFile));
-        const QPixmap quiet = tintedGlyph(source, normal);
+        const QString file = qsl(":/icons/%1").arg(it.value().iconFile);
+        if (const uiDesign::IdentityColour identity = settingsPageIdentity(it.value().iconFile); identity.hue >= 0.0) {
+            pItem->setIcon(uiDesign::identityIcon(file, file, identity, tokens, tokens.disabledText));
+            mCategoryIconMarkup.insert(it.key(), inlineGlyph(uiDesign::identityGlyph(file, identity, tokens)));
+            continue;
+        }
+        const QPixmap source = uiDesign::glyphPixmap(file);
+        QPixmap quiet = tintedGlyph(source, tokens.mutedText);
+        QPixmap chosen = tintedGlyph(source, tokens.accentText);
+        if (mudlet::self() && mudlet::self()->colouredIcons()) {
+            uiDesign::addPaintDots(quiet, file, tokens);
+            uiDesign::addPaintDots(chosen, file, tokens);
+        }
         QIcon icon(quiet);
         // Otherwise the view makes one by washing the icon in the highlight colour
-        icon.addPixmap(tintedGlyph(source, selected), QIcon::Selected);
+        icon.addPixmap(chosen, QIcon::Selected);
         pItem->setIcon(icon);
         mCategoryIconMarkup.insert(it.key(), inlineGlyph(quiet));
     }
     if (mpItem_support) {
-        mpItem_support->setIcon(QIcon(tintedGlyph(uiDesign::glyphPixmap(qsl(":/icons/settings-support.svg")), normal)));
+        const QString file = qsl(":/icons/settings-support.svg");
+        const uiDesign::IdentityColour identity = settingsPageIdentity(qsl("settings-support.svg"));
+        mpItem_support->setIcon(identity.hue >= 0.0 ? uiDesign::identityIcon(file, file, identity, tokens, tokens.disabledText) : QIcon(tintedGlyph(uiDesign::glyphPixmap(file), tokens.mutedText)));
     }
     // Built headers hold the previous theme's icon; rewording them puts the new one in
     const QStringList builtHeaders = mSearchCategoryHeaders.keys();
@@ -3601,7 +3627,7 @@ void dlgProfilePreferences::applyShellStyle()
     if (mpAction_searchIcon) {
         mpAction_searchIcon->setIcon(QIcon(tintedGlyph(uiDesign::glyphPixmap(qsl(":/icons/settings-search.svg")), mutedText)));
     }
-    restyleSidebarIcons(mutedText, accentText);
+    restyleSidebarIcons(tokens);
 
     // The check indicator a checkable card's title begins with, drawn the one
     // way the editor's cards draw theirs
@@ -8871,6 +8897,8 @@ void dlgProfilePreferences::slot_changeColouredIcons(const bool state)
     if (mpCheckBox_colouredIcons && mpCheckBox_colouredIcons->isChecked() != state) {
         mpCheckBox_colouredIcons->setChecked(state);
     }
+    // The sidebar's icons, and the search headers and page title copied from them
+    applyShellStyle();
 }
 
 #ifdef INCLUDE_MCPSERVER

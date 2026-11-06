@@ -422,6 +422,14 @@ inline constexpr IdentityColour scmIdentity_folder{0.619, 0.89, 0.70};
 inline constexpr IdentityColour scmIdentity_errors{0.004, 0.74, 0.49};
 inline constexpr IdentityColour scmIdentity_statistics{0.333, 0.74, 0.44};
 inline constexpr IdentityColour scmIdentity_debug{0.000, 0.90, 0.39};
+// Settings pages had no coloured pictures, so these two are chosen rather than measured; the others that are
+// coloured open what a toolbar button opens, and take its colour
+// The input line's, and the aliases' typed into it
+inline constexpr IdentityColour scmIdentity_input{0.300, 0.58, 0.45};
+// The access symbol's blue
+inline constexpr IdentityColour scmIdentity_accessibility{0.580, 0.75, 0.50};
+// The paint on the Appearance palette, a dot each, in the order of the ids in settings-appearance-dots.svg
+inline constexpr IdentityColour scmIdentityPaintDots[]{scmIdentity_delete, scmIdentity_buttons, scmIdentity_input, scmIdentity_map};
 // How much of the colour washes the glyph's own shapes under its line
 inline constexpr qreal scmIdentityFillOnDark = 0.45;
 inline constexpr qreal scmIdentityFillOnLight = 0.40;
@@ -433,11 +441,14 @@ QColor identityFill(const IdentityColour& identity, const ThemeTokens& tokens);
 // The glyph's shapes filled in with no line, for a wash under it. A glyph whose lines leave a shape open beside
 // <name>.svg ships a <name>-fill.svg holding the shape to fill instead. Empty for a raster file.
 QPixmap glyphFillPixmap(const QString& file);
-// The glyph's line in identityInk() over its wash in identityFill()
+// The glyph's line in identityInk() over its wash in identityFill(), and its dots of paint
 QPixmap identityGlyph(const QString& file, const IdentityColour& identity, const ThemeTokens& tokens);
 // The colour in every state but unavailable: it is what the player looks for, and the surface under a hovered,
 // chosen or switched-on button already shows which
 QIcon identityIcon(const QString& glyphOff, const QString& glyphOn, const IdentityColour& identity, const ThemeTokens& tokens, const QColor& disabledInk);
+// A glyph with dots of paint ships <name>-dots.svg, whose dot-N elements take scmIdentityPaintDots in turn; a grey
+// glyph keeps them too, as the paint is what makes it a palette
+void addPaintDots(QPixmap& glyph, const QString& file, const ThemeTokens& tokens);
 
 struct ActionGlyph
 {

@@ -630,6 +630,27 @@ private slots:
         QVERIFY2(uiDesign::glyphFillPixmap(qsl(":/icons/toolbar-discord.png")).isNull(), "a raster mark, already a filled shape, was given a wash as well");
     }
 
+    void test_theAppearancePalettesDotsTakeAPaintEach()
+    {
+        const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+        // Grey in the settings sidebar, as Appearance takes no colour of its own
+        QPixmap painted = uiDesign::tintedGlyph(uiDesign::glyphPixmap(qsl(":/icons/settings-appearance.svg")), tokens.mutedText);
+        uiDesign::addPaintDots(painted, qsl(":/icons/settings-appearance.svg"), tokens);
+        const QImage palette = painted.toImage();
+        const qreal unit = palette.width() / 24.0;
+        // The dots' centres in settings-appearance-dots.svg, in the order of their ids
+        const QList<QPointF> centres{{13.5, 6.5}, {17.5, 10.5}, {6.5, 12.5}, {8.5, 7.5}};
+        QStringList read;
+        for (int dot = 0; dot < centres.size(); ++dot) {
+            const QColor pixel = palette.pixelColor((centres.at(dot) * unit).toPoint());
+            const qreal wanted = uiDesign::scmIdentityPaintDots[dot].hue;
+            const qreal distance = std::min(std::abs(pixel.hslHueF() - wanted), 1.0 - std::abs(pixel.hslHueF() - wanted));
+            read << qsl("dot %1 %2").arg(QString::number(dot), pixel.name());
+            QVERIFY2(pixel.alphaF() > 0.95 && distance < 0.04,
+                     qPrintable(qsl("the palette's dot %1 is %2, not the paint it was given: %3").arg(QString::number(dot), pixel.name(), read.join(qsl(", ")))));
+        }
+    }
+
     void test_aDetachedWindowsBarCarriesTheRecipe()
     {
         QVERIFY2(mudlet::self()->getDetachedWindows().isEmpty(), "a detached window was left over from an earlier test");

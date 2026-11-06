@@ -231,6 +231,7 @@
         <file>icons/settings-accessibility.svg</file>
         <file>icons/settings-advanced.svg</file>
         <file>icons/settings-appearance.svg</file>
+        <file>icons/settings-appearance-dots.svg</file>
         <file>icons/settings-chat.svg</file>
         <file>icons/settings-connection.svg</file>
         <file>icons/settings-display.svg</file>

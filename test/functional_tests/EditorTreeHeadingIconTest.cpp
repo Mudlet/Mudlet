@@ -208,7 +208,7 @@ private slots:
         QVERIFY2(near(triggers, uiDesign::scmIdentity_triggers), qPrintable(qsl("the Triggers row is not the orange of its old wand: hue %1").arg(triggers)));
         QVERIFY2(TestPixels::drawnAt(mpEditor->mpTriggerBaseItem->icon(0), scmComparisonSize) == TestPixels::drawnAt(sidebarRowFor(EditorViewType::cmTriggerView)->icon(), scmComparisonSize),
                  "the Triggers heading and its sidebar row took different pictures");
-        QCOMPARE(hueOf(sidebarRowFor(EditorViewType::cmAliasView)->icon()), -1.0);
+        QCOMPARE(hueOf(sidebarRowFor(EditorViewType::cmKeysView)->icon()), -1.0);
         const qreal add = hueOf(mpEditor->mAddItem->icon());
         QVERIFY2(near(add, uiDesign::scmIdentity_add), qPrintable(qsl("Add is not the green of its old plus: hue %1").arg(add)));
         const qreal deleted = hueOf(mpEditor->mDeleteItem->icon());

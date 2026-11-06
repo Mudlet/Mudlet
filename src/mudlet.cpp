@@ -1756,7 +1756,7 @@ void mudlet::init()
 
     mToolBarGlyphs = {{mpActionConnect, qsl(":/icons/toolbar-connect.svg"), QString(), uiDesign::scmIdentity_connect},
                       {mpActionTriggers, qsl(":/icons/editor-triggers.svg"), QString(), uiDesign::scmIdentity_triggers},
-                      {mpActionAliases, qsl(":/icons/editor-aliases.svg"), QString()},
+                      {mpActionAliases, qsl(":/icons/editor-aliases.svg"), QString(), uiDesign::scmIdentity_input},
                       {mpActionTimers, qsl(":/icons/editor-timers.svg"), QString()},
                       {mpActionButtons, qsl(":/icons/editor-buttons.svg"), QString(), uiDesign::scmIdentity_buttons},
                       {mpActionScripts, qsl(":/icons/editor-scripts.svg"), QString()},

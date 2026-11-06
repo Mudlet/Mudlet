@@ -55,6 +55,7 @@ class TTrigger;
 
 namespace uiDesign {
 class SidebarToggle;
+struct ThemeTokens;
 }
 
 
@@ -416,7 +417,7 @@ private:
     // is rebuilt whenever a host is loaded, which may be before or after the
     // style pass, so both call this.
     void styleProfileMapMenu();
-    void restyleSidebarIcons(const QColor& normal, const QColor& selected);
+    void restyleSidebarIcons(const uiDesign::ThemeTokens& tokens);
     // Search indexes the real widget tree and lends matching cards to the results page while the query stands
     void buildSearchResultsPage();
     void buildSearchIndex();

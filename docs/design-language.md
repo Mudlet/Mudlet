@@ -1383,6 +1383,18 @@ beside it are hidden.
   Buttons, Variables, Folders, Errors, Statistics, Debug), and a package's mark in
   the trees, which `EditorTreeDelegate::setColouredMarks()` turns the Packages
   brown. The editor follows the switch through `slot_colouredIconsChanged()`.
+  Aliases takes the Input line page's green (`scmIdentity_input`) wherever it
+  is shown, as its old picture was mostly grey.
+- In Settings, the sidebar through `settingsPageIdentity()`. Those pages had no
+  coloured pictures, so only a few are coloured: a page that opens what a toolbar
+  button opens takes that button's colour (Mapper, Chat and sharing, Connection
+  and Mudlet support), and Input line and Accessibility have colours of their
+  own. The rest stay grey. The dialog follows the switch through
+  `slot_changeColouredIcons()`.
+- A glyph with dots of paint ships `<name>-dots.svg`, whose `dot-0`, `dot-1`, ...
+  elements `addPaintDots()` draws over it in `scmIdentityPaintDots` in turn,
+  whether the glyph itself is coloured or grey: Appearance's palette, grey with
+  red, yellow, green and blue paint.
 - A glyph whose lines leave its middle open fills in as broken pieces, so it
   ships `<name>-fill.svg` beside it with the shape to wash instead:
   `toolbar-reconnect-fill.svg` (the circle the two arrows run round),
