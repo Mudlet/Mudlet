@@ -385,8 +385,10 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
             mMXP_MODE = mModeBeforeTempSecure;
         }
 
-        // Re-read as text, so the space joins the link and the style it falls inside
+        // Re-read as text, so the space joins the link and the style it falls inside. That text is
+        // not handed to the tag handlers again, so hand it over here for a <SEND> to take into its caption
         if (softBreak) {
+            mMxpTagProcessor.handleContent(' ');
             lastEntityValue = qsl(" ");
             return HANDLER_INSERT_ENTITY_LIT;
         }
