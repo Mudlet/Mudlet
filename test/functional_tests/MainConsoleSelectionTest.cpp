@@ -260,6 +260,14 @@ private:
         return lines.join(QChar::LineFeed);
     }
 
+    int linesHeldPerCharacter() const
+    {
+        const TBuffer& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
+        return static_cast<int>(std::count_if(buffer.buffer.cbegin(), buffer.buffer.cend(), [](const TLineFormat& line) {
+            return line.heapData() != nullptr;
+        }));
+    }
+
     // Each copy starts from a marker, so a slot that returns early cannot pass
     // on what an earlier copy left on the clipboard.
     const QString mNothingCopied = qsl("nothing was copied");
@@ -1184,6 +1192,69 @@ private slots:
         QCOMPARE(console->buffer.getLastLineNumber(), y);
 
         QVERIFY2(console->buffer.buffer.at(y).at(0).isSelected(), "text arriving on a selected line deselected the characters that were already on it");
+    }
+
+    // Each line held as one TChar per character costs 16 bytes a character, which
+    // a line in one format otherwise does without
+    void test_selectingAllKeepsLinesInOneFormatStoredAsOne()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+        const TBuffer& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
+        const int y = lineNumberOf(proseLine(scmProseFirstNumber));
+        QVERIFY2(buffer.buffer.at(y).uniform(), "the prose is not stored as one TChar a line, so selecting it has nothing to expand");
+        const int heldBefore = linesHeldPerCharacter();
+
+        pane->slot_selectAll();
+        QVERIFY(highlightedText().contains(proseLine(scmProseLastNumber)));
+        QCOMPARE(linesHeldPerCharacter(), heldBefore);
+
+        pane->unHighlight();
+        QCOMPARE(highlightedText(), QString());
+        QCOMPARE(linesHeldPerCharacter(), heldBefore);
+    }
+
+    void test_deselectingStoresPartlySelectedLinesAsOneAgain()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+        const int heldBefore = linesHeldPerCharacter();
+
+        // down three lines, then back up two, so two lines leave the selection while the button is held
+        const QPointF pressPos = cellInMiddleRow(pane, 5);
+        const QPointF lineDown(0, pane->mFontHeight);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, pressPos);
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, cellInMiddleRow(pane, 10) + 3 * lineDown);
+        moveAndReleaseLeftButton(pane, cellInMiddleRow(pane, 10) + lineDown);
+        QCOMPARE(highlightedText(), lineUnder(pane, pressPos).mid(5) + QChar::LineFeed + lineUnder(pane, pressPos + lineDown).left(11));
+        QCOMPARE(linesHeldPerCharacter(), heldBefore + 2);
+
+        // the next click must not join the drag's press into a double-click
+        QTest::qWait(400ms);
+        const QPointF elsewhere = cellInMiddleRow(pane, 20);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, elsewhere);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, elsewhere);
+        QCOMPARE(highlightedText(), QString());
+        QCOMPARE(linesHeldPerCharacter(), heldBefore);
+    }
+
+    void test_recolouringPartOfAHighlightedLineKeepsAllOfItHighlighted()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+        const TBuffer& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
+        const QString text = proseLine(scmProseFirstNumber);
+        const int y = lineNumberOf(text);
+        QVERIFY2(buffer.buffer.at(y).uniform(), "the prose is not stored as one TChar a line, so recolouring it has nothing to expand");
+
+        pane->slot_selectAll();
+        runLua(qsl("moveCursor('main', 0, %1) selectSection(3, 3) setFgColor(255, 0, 0) deselect()").arg(y));
+        QVERIFY2(!buffer.buffer.at(y).uniform(), "recolouring part of the line left it stored as one TChar");
+        int highlighted = 0;
+        for (const TChar& character : buffer.buffer.at(y)) {
+            highlighted += character.isSelected() ? 1 : 0;
+        }
+        QCOMPARE(highlighted, static_cast<int>(text.size()));
     }
 
     // Selected text takes its background as the pen, and a transparent cell

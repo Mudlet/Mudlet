@@ -1838,23 +1838,15 @@ void TTextEdit::highlightSelection()
 
     mSelectedRegion = mSelectedRegion.subtracted(newRegion);
 
-    // clang-format off
-    for (int y = std::max(0, mPA.y()),
-             endY = std::min((mPB.y() + 1), static_cast<int>(mpBuffer->buffer.size()));
-         y < endY;
-         ++y) {
-
-        for (int x = (y == mPA.y()) ? std::max(0, mPA.x()) : 0,
-                 endX = (y == (mPB.y()))
-                     ? std::min((mPB.x() + 1), static_cast<int>(mpBuffer->buffer.at(y).size()))
-                     : static_cast<int>(mpBuffer->buffer.at(y).size());
-             x < endX;
-             ++x) {
-
-            mpBuffer->buffer.at(y).expand().at(x).select();
+    for (int y = std::max(0, mPA.y()), endY = std::min((mPB.y() + 1), static_cast<int>(mpBuffer->buffer.size())); y < endY; ++y) {
+        TLineFormat& line = mpBuffer->buffer.at(y);
+        const int lineSize = static_cast<int>(line.size());
+        const int startX = (y == mPA.y()) ? std::clamp(mPA.x(), 0, lineSize) : 0;
+        const int endX = (y == mPB.y()) ? std::min(mPB.x() + 1, lineSize) : lineSize;
+        if (startX < endX) {
+            line.select(startX, endX);
         }
     }
-    // clang-format on
 
     update(mSelectedRegion.boundingRect());
     update(newRegion);
@@ -1881,12 +1873,7 @@ void TTextEdit::unHighlight()
             break;
         }
 
-        auto& bufferLine = mpBuffer->buffer.at(yIndex);
-        for (int xIndex = 0; xIndex < static_cast<int>(bufferLine.size()); ++xIndex) {
-            if (bufferLine.at(xIndex).isSelected()) {
-                bufferLine.expand()[xIndex].deselect();
-            }
-        }
+        mpBuffer->buffer.at(yIndex).deselect();
     }
     mPBTakingNewline = QPoint(-1, -1);
     if (QAccessible::isActive()) {
@@ -2030,12 +2017,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
             break;
         }
 
-        auto& bufferLine = mpBuffer->buffer.at(yIndex);
-        for (int xIndex = 0; xIndex < static_cast<int>(bufferLine.size()); ++xIndex) {
-            if (bufferLine.at(xIndex).isSelected()) {
-                bufferLine.expand()[xIndex].deselect();
-            }
-        }
+        mpBuffer->buffer.at(yIndex).deselect();
     }
 
     const bool anchorFirst = mDragStart.y() < cursorLocation.y() || (mDragStart.y() == cursorLocation.y() && mDragStart.x() < cursorLocation.x());
