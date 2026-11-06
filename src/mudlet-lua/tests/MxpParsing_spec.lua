@@ -341,6 +341,10 @@ describe("Tests the MXP line modes a game switches between", function()
     assert.are.same({"send([[\nMXPNOBRNORTHWEST]])"}, mxp.send.actions)
   end)
 
+  it("ignores the newline after a NOBR tag that follows an unfinished entity", function()
+    assert.equals("MXPNOBRAT&TMXPNOBRNEXT|MXPNOBRTHIRD", displayed("MXPNOBRAT&T<NOBR>\r\nMXPNOBRNEXT\r\nMXPNOBRTHIRD\r\n"))
+  end)
+
   it("drops a NOBR tag when the game resets", function()
     assert.equals("MXPNOBRRESET|MXPNOBRAFTERRESET", displayed("MXPNOBRRESET<NOBR>\27[3z\r\nMXPNOBRAFTERRESET\r\n"))
   end)

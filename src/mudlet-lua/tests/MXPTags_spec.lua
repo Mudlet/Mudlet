@@ -195,6 +195,11 @@ describe("Tests the tags MXP handles", function()
       assert.is_true(joined:find("mxpSoftBreakFirst mxpSoftBreakSecond", 1, true) ~= nil, joined)
     end)
 
+    it("keeps an unfinished entity in front of the space an SBR tag gives", function()
+      local joined = table.concat(linesFor("mxpSoftBreakAT&T<SBR>mxpSoftBreakAmp"), "\n")
+      assert.is_true(joined:find("mxpSoftBreakAT&T mxpSoftBreakAmp", 1, true) ~= nil, joined)
+    end)
+
     it("styles the space an SBR tag gives like the text around it", function()
       feed("<B>mxpSoftBreakBold<SBR>mxpSoftBreakAfter</B>")
       -- the format of the space in front of the word

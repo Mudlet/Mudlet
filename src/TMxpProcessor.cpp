@@ -383,18 +383,22 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
             mMXP_MODE = mModeBeforeTempSecure;
         }
 
-        // Re-read as text, so the space joins the link and the style it falls inside. That text is
-        // not handed to the tag handlers again, so hand it over here for a <SEND> to take into its caption
-        if (softBreak) {
-            mMxpTagProcessor.handleContent(' ');
-            lastEntityValue = qsl(" ");
-            return HANDLER_INSERT_ENTITY_LIT;
-        }
-        if (noBreak) {
-            if (!mReadingLocalText) {
+        if (softBreak || noBreak) {
+            // An '&' left unfinished before the tag is text, or it would take in the space or the newline
+            const QString partialEntity = mEntityHandler.takePartialEntity();
+            if (noBreak && !mReadingLocalText) {
                 mIgnoreNextNewline = true;
             }
-            return HANDLER_NEXT_CHAR;
+            if (softBreak) {
+                // Not handed to the tag handlers when it is re-read, so given to a <SEND> for its caption here
+                mMxpTagProcessor.handleContent(' ');
+            }
+            if (!softBreak && partialEntity.isEmpty()) {
+                return HANDLER_NEXT_CHAR;
+            }
+            // Re-read as text, so the space joins the link and the style it falls inside
+            lastEntityValue = softBreak ? partialEntity + qsl(" ") : partialEntity;
+            return HANDLER_INSERT_ENTITY_LIT;
         }
 
         // If tag was not handled (not valid MXP and not a custom element), display it as-is
