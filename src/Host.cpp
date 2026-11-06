@@ -1253,7 +1253,7 @@ QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
     return jobs;
 }
 
-bool Host::writeModuleFiles(const QList<ModuleWriteJob>& jobs)
+bool Host::writeModuleFiles(const QList<ModuleWriteJob>& jobs, QStringList& failures)
 {
     // Pure file I/O over self-contained jobs, usually on a thread pool thread. It is
     // static because a close that answers "No" to "Save profile?", and one that finds
@@ -1264,9 +1264,13 @@ bool Host::writeModuleFiles(const QList<ModuleWriteJob>& jobs)
         if (!job.backupName.isEmpty()) {
             createModuleBackup(job.filename, job.backupName);
         }
-        if (!XMLexport::saveXmlDocToFile(job.xmlFilename, *job.document)) {
+        if (QString reason; !XMLexport::saveXmlDocToFile(job.xmlFilename, *job.document, &reason)) {
             qWarning().noquote().nospace() << "Host::writeModuleFiles() WARNING - failed to write module \"" << job.moduleName << "\" to \"" << job.xmlFilename << "\".";
+            //: %1 is the name of a module, %2 the file it was being saved to, %3 the reason it could not be
+            failures << tr("[ ERROR ] - The module \"%1\" could not be saved to \"%2\": %3").arg(job.moduleName, job.xmlFilename, reason);
             allWritten = false;
+            // The archive would take the older unpacked copy instead, or lose the module's XML if there is none
+            continue;
         }
         if (!updateModuleZip(job)) {
             allWritten = false;
@@ -1708,14 +1712,16 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     // the write is still queued would leave the watcher with no owner at all.
     auto watcher = new QFutureWatcher<void>(this);
     watcher->setObjectName(scmProfileSaveWatcherName);
+    // Filled on the pool thread before the future finishes, read only after it has
+    auto moduleFailures = std::make_shared<QStringList>();
     // Captures values only, never `this`: no wait for this task is guaranteed, so the
     // Host can be destroyed while it is still queued or running.
-    mModuleFuture = QtConcurrent::run([xmlSaveFutures, moduleJobs]() {
+    mModuleFuture = QtConcurrent::run([xmlSaveFutures, moduleJobs, moduleFailures]() {
         // wait for the host xml to be ready before writing the modules out
         for (auto future : xmlSaveFutures) {
             future.waitForFinished();
         }
-        return Host::writeModuleFiles(moduleJobs);
+        return Host::writeModuleFiles(moduleJobs, *moduleFailures);
     });
     // Only the names: holding the whole jobs would keep every module's document in
     // memory until this runs, and all it needs is what to retire from `writers`.
@@ -1724,7 +1730,10 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     for (const auto& job : moduleJobs) {
         savedModuleXmlNames << job.xmlFilename;
     }
-    connect(watcher, &QFutureWatcher<void>::finished, this, [this, savedModuleXmlNames, syncModules]() {
+    connect(watcher, &QFutureWatcher<void>::finished, this, [this, savedModuleXmlNames, syncModules, moduleFailures]() {
+        for (const auto& failure : std::as_const(*moduleFailures)) {
+            postMessage(failure);
+        }
         // Finish on the main thread: the module documents are now on disk. Consume
         // mModulesToSync via reloadModules() *before* the xmlSaved() loop below empties
         // `writers` and emits profileSaveFinished(): that signal fires synchronously,

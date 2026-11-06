@@ -1514,8 +1514,8 @@ private:
     // purpose: it must keep working after the Host that ordered it has been destroyed,
     // so it may not reach for any member. Usually a thread pool task, but a waiter in
     // waitForProfileSave() can steal it onto the main thread, so it must suit either.
-    // False if a module was not written.
-    static bool writeModuleFiles(const QList<ModuleWriteJob>& jobs);
+    // False if a module was not written, with a console line for each in failures.
+    static bool writeModuleFiles(const QList<ModuleWriteJob>& jobs, QStringList& failures);
     static bool updateModuleZip(const ModuleWriteJob& job);
     // Main thread only: snapshot of the still-pending profile-save futures, so a
     // background task never reads `writers`/`saveFutures` while the main thread mutates
