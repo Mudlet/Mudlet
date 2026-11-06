@@ -42,6 +42,7 @@
 
 class Host;
 class QLineF;
+class QObject;
 class QPainter;
 class QPen;
 class QRect;
@@ -229,12 +230,17 @@ public:
     void paintRoomExits(QPainter&, QPen&, QList<ExitToPaint>& exitList, const TArea*, int zLevel, const QRect& roomBounds, const QList<int>& viewportRooms, float exitWidth, QMap<int, QPointF>&);
     void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
 
+    // Draws an area at a size of its own into an image file, written on a pool thread; how that goes is reported to
+    // the profile. The returned pair says whether the export started, or why not.
+    std::pair<bool, QString> exportArea(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels, QObject* saveOwner);
+
     // A double-clicked room's speedwalk runs Lua, which may delete rooms, so it waits until no room is held for drawing
     std::optional<std::pair<int, int>> takePendingSpeedWalk() { return std::exchange(mPendingSpeedWalk, std::nullopt); }
     // Rooms the exit index handed paintRoomExits() last frame, -1 if unused
     int lodExitIndexRoomsHandedOver() const { return mLodExitIndexRoomsHandedOver; }
 
 private:
+    static std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
     int width() const { return mSize.width(); }
     int height() const { return mSize.height(); }
 
