@@ -46,6 +46,43 @@ bool THeadlessSession::scriptsStopped() const
     return mpHost && mpHost->mEmergencyStop;
 }
 
+bool THeadlessSession::setReplayRecording(const bool record)
+{
+    if (!usable()) {
+        return false;
+    }
+    cTelnet& telnet = mpHost->mTelnet;
+    if (record == telnet.recordingReplay()) {
+        if (record) {
+            //: Error from a frontend with no window that was asked to record a replay while it was recording one already
+            mErrorString = tr("A replay is being recorded already.");
+        } else {
+            //: Error from a frontend with no window that was asked to stop recording a replay while it was recording none
+            mErrorString = tr("No replay is being recorded.");
+        }
+        return false;
+    }
+    // localText handlers run as the messages are printed, and may delete the session
+    const QPointer<THeadlessSession> self(this);
+    const bool done = telnet.toggleReplayRecording();
+    if (!self || done) {
+        return done;
+    }
+    if (record) {
+        //: Error from a frontend with no window whose replay recording file could not be opened. %1 is the reason
+        mErrorString = tr("The replay recording file could not be opened: %1").arg(telnet.replayRecordingErrorString());
+    } else {
+        //: Error from a frontend with no window whose replay recording stopped but could not be saved. %1 is the reason
+        mErrorString = tr("The replay recording has stopped, but could not be saved: %1").arg(telnet.replayRecordingErrorString());
+    }
+    return false;
+}
+
+bool THeadlessSession::replayRecording() const
+{
+    return mpHost && mpHost->mTelnet.recordingReplay();
+}
+
 bool THeadlessSession::setApplicationActive(const bool active)
 {
     if (refused()) {

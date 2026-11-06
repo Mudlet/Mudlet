@@ -294,6 +294,14 @@ public:
     // hiddenInputWanted or a ...Requested signal.
     bool setApplicationActive(bool active);
     bool applicationActive() const { return mApplicationActive; }
+    // The main console's replay recording button: true records what the game sends into a new file in the
+    // profile's log folder, false stops and saves it, each saying so in localText as the GUI says it in the main
+    // console. False, with errorString() saying why, if it is recording already, or not, if the file could not be
+    // opened, or if it could not be saved, the recording being over either way. The connection ending saves it too.
+    // Refused where submit() is.
+    bool setReplayRecording(bool record);
+    // False with no profile open
+    bool replayRecording() const;
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a

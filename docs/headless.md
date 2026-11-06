@@ -561,3 +561,14 @@ raises nothing, as the GUI tells scripts only of a change. It starts as active, 
 is only kept, for the next change to be told against; a profile opened later hears nothing until the
 next change, as in the GUI. `applicationActive()` reads it. It is refused while a profile loads, during
 `shutdown()`, and from a handler of `outputLine` and the other signals sent mid-write.
+
+`setReplayRecording(true)` is the main console's replay recording button: what the game sends from then
+on is recorded into a new file in the profile's `log` folder, named for the second it started, which a
+script's `loadReplay()` plays back. `setReplayRecording(false)` stops and saves it, as the connection
+ending does on its own. Each says how it went in `localText`, with the file's path or the reason, as the
+GUI says it in the main console. It is false, with `errorString()` saying why, when it is recording
+already or is not, when the file cannot be opened, and when it cannot be saved, the recording being over
+then. A recording started in the same second as an earlier one gets a `-2`, `-3` and so on after the
+time, rather than replace it. One still running at `shutdown()` or as its profile closes is saved with
+nothing said, so an app that wants to know how that went stops it with `setReplayRecording(false)`
+first. `replayRecording()` reads whether one is under way. It is refused where `submit()` is.
