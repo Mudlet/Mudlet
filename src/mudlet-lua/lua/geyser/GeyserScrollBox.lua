@@ -24,7 +24,8 @@ local function frameChildren(box)
     local place
     -- a constraint that raises, or yields in a coroutine, leaves these flags set, so
     -- they only count while what set them is running on this stack; a pcall would do
-    -- instead, but no constraint could yield across it
+    -- instead, but no constraint could yield across it. Looks from the caller of the
+    -- getter that calls this.
     local function running(a, b, c, d)
         for level = 3, math.huge do
             local frame = getinfo(level, "f")
@@ -37,14 +38,15 @@ local function frameChildren(box)
             end
         end
     end
-    local function measuringNow()
-        return running(own.get_x, own.get_y, own.get_width, own.get_height)
-    end
     -- a negative width or height is compiled as the far edge less the box's own
     -- get_x or get_y, so those must give the box's real origin while it measures itself
     local measuring, placing = false, false
-    box.get_x = function() return (measuring or placing) and measuringNow() and own.get_x() or 0 end
-    box.get_y = function() return (measuring or placing) and measuringNow() and own.get_y() or 0 end
+    box.get_x = function()
+        return (measuring or placing) and running(own.get_x, own.get_y, own.get_width, own.get_height) and own.get_x() or 0
+    end
+    box.get_y = function()
+        return (measuring or placing) and running(own.get_x, own.get_y, own.get_width, own.get_height) and own.get_y() or 0
+    end
     box.get_width = function()
         if placing and running(place) then
             return own.get_width()

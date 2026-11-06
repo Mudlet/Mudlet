@@ -262,23 +262,24 @@ describe("Tests functionality of Geyser.ScrollBox", function()
     -- a direct reposition finds the box's getters framed, a move to a new place has just replaced them
     local relayouts = {
       {"reposition", function(box) box:reposition() end, 100},
-      {"move", function(box) box:move(120, 50) end, 120},
+      {"move", function(box) box:move(120) end, 120},
     }
     for _, entry in ipairs(relayouts) do
       local name, relayout, boxX = entry[1], entry[2], entry[3]
       it("lays a child out inside it after its own " .. name .. " raised an error", function()
         local mainWidth = getMainWindowSize()
-        local height = 200
-        local box = track(Geyser.ScrollBox:new({name = "gsbRaisedBox", x = 100, y = 50, width = "-10px", height = function() return height end}))
+        local height = 200.4
+        local box = track(Geyser.ScrollBox:new({name = "gsbRaisedBox", x = 100, y = "50.3px", width = "-10px", height = function() return height end}))
         local label = track(Geyser.Label:new({name = "gsbRaisedBoxChild", x = 0, y = 0, width = 50, height = 50}, box))
         height = nil
         local raised = not pcall(relayout, box)
-        height = 200
-        label:resize("100%", 50)
+        height = 200.4
+        label:resize("100%", "100%")
         label:move(10, 20)
         assert.is_true(raised)
-        -- the far edge width still needs the box's real x while the box measures itself
-        assert.are.same({x = 10, y = 20, width = mainWidth - 10 - boxX, height = 50}, geometry("gsbRaisedBoxChild"))
+        -- the far edge width still needs the box's real x while the box measures itself,
+        -- and the height is the whole pixels its widget spans, 50 to 251
+        assert.are.same({x = 10, y = 20, width = mainWidth - 10 - boxX, height = 201}, geometry("gsbRaisedBoxChild"))
       end)
     end
 
