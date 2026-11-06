@@ -28,9 +28,12 @@
  */
 
 #include <QComboBox>
+#include <QDir>
 #include <QPixmap>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
+
+#include <memory>
 
 #include "Host.h"
 #include "HostManager.h"
@@ -39,7 +42,6 @@
 #include "PortableModeTestHelper.h"
 #include "T2DMap.h"
 #include "TMap.h"
-#include "TRoomDB.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
 
