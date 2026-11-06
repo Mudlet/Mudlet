@@ -9678,7 +9678,8 @@ bool dlgProfilePreferences::stepListedDisplayFont(QObject* pObject, QEvent* pEve
     int step = 0;
     if (pEvent->type() == QEvent::Wheel && !listOpen) {
         const int delta = static_cast<QWheelEvent*>(pEvent)->angleDelta().y();
-        if (!fontComboBox_displayFont->hasFocus() || delta == 0) {
+        // macOS's style keeps the wheel off combo boxes, so it scrolls the page instead
+        if (!fontComboBox_displayFont->hasFocus() || delta == 0 || !fontComboBox_displayFont->style()->styleHint(QStyle::SH_ComboBox_AllowWheelScrolling, nullptr, fontComboBox_displayFont)) {
             return false;
         }
         step = delta < 0 ? 1 : -1;
@@ -9689,7 +9690,8 @@ bool dlgProfilePreferences::stepListedDisplayFont(QObject* pObject, QEvent* pEve
             return false;
         }
         const QString text = pKeyEvent->text();
-        if (!text.isEmpty() && text.at(0).isPrint()) {
+        // Space opens a closed list, but is part of a name typed into an open one
+        if (!text.isEmpty() && text.at(0).isPrint() && (listOpen || pKeyEvent->key() != Qt::Key_Space)) {
             searchListedDisplayFont(text, listOpen);
             return true;
         }

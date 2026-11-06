@@ -33,6 +33,8 @@
 #include <QFontComboBox>
 #include <QFontDatabase>
 #include <QListView>
+#include <QProxyStyle>
+#include <QScopeGuard>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QWheelEvent>
@@ -48,6 +50,15 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+class NoWheelStyle : public QProxyStyle
+{
+public:
+    int styleHint(StyleHint hint, const QStyleOption* pOption, const QWidget* pWidget, QStyleHintReturn* pReturn) const override
+    {
+        return hint == QStyle::SH_ComboBox_AllowWheelScrolling ? 0 : QProxyStyle::styleHint(hint, pOption, pWidget, pReturn);
+    }
+};
 
 class SettingsMonospacedFontsTest : public QObject
 {
@@ -270,6 +281,41 @@ private slots:
         QTRY_VERIFY(!pCombo->view()->isVisible());
         QCOMPARE(pCombo->currentText(), mMonospacedFamily);
         checkCurrentIsMonospaced("Typing a name into the open list");
+    }
+
+    // Space opens a closed list, as it does with every font listed
+    void test_spaceStillOpensTheList()
+    {
+        useDisplayFont(mMonospacedFamily);
+        openPreferences();
+        auto* pCombo = mpPreferences->fontComboBox_displayFont;
+        mpPreferences->checkBox_monospacedFontsOnly->setChecked(true);
+        pCombo->setFocus();
+        QTRY_VERIFY(pCombo->hasFocus());
+        QTest::keyClick(pCombo, Qt::Key_Space);
+        QTRY_VERIFY2(pCombo->view()->isVisible(), "Space did not open the list");
+        pCombo->hidePopup();
+    }
+
+    // A style that keeps the wheel off combo boxes, as macOS's does, keeps it off this one too
+    void test_theWheelFollowsTheStyle()
+    {
+        useDisplayFont(mMonospacedFamily);
+        openPreferences();
+        auto* pCombo = mpPreferences->fontComboBox_displayFont;
+        NoWheelStyle style;
+        pCombo->setStyle(&style);
+        const auto restoreStyle = qScopeGuard([pCombo] {
+            pCombo->setStyle(nullptr);
+        });
+        mpPreferences->checkBox_monospacedFontsOnly->setChecked(true);
+        pCombo->setFocus();
+        QTRY_VERIFY(pCombo->hasFocus());
+        const QString before = pCombo->currentText();
+        QWheelEvent wheel(QPointF(5, 5), pCombo->mapToGlobal(QPointF(5, 5)), QPoint(), QPoint(0, -120), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QCoreApplication::sendEvent(pCombo, &wheel);
+        QCOMPARE(pCombo->currentText(), before);
+        QCOMPARE(mpHost->getDisplayFont().family(), mMonospacedFamily);
     }
 
     void test_theChoiceIsRemembered()
