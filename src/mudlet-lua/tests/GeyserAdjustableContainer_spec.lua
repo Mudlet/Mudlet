@@ -3065,6 +3065,19 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.is_string(message)
       assert.is_truthy(message:find("Couldn't find file to delete", 1, true))
     end)
+
+    it("load deletes the corrupt file it read, not the one in the default directory", function()
+      local container = make("gapCorruptLoad")
+      container:save()
+      container:save(nil, scratchDir)
+      local corrupt = io.open(scratchDir .. "gapCorruptLoad.lua", "w")
+      corrupt:write("this is not a saved layout {")
+      corrupt:close()
+
+      assert.is_false(container:load(nil, scratchDir))
+      assert.is_false(io.exists(scratchDir .. "gapCorruptLoad.lua"))
+      assert.is_true(io.exists(container.defaultDir .. "gapCorruptLoad.lua"))
+    end)
   end)
 
   -- All three of these walk Adjustable.Container.all, which in a real profile

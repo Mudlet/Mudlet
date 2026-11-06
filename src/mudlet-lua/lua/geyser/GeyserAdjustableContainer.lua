@@ -1291,7 +1291,7 @@ function Adjustable.Container:load(slot, dir)
 
     local ok = pcall(table.load, loadDir, mytable)
     if not ok then
-        self:deleteSaveFile()
+        self:deleteSaveFile(dir)
         debugc(string.format("Adjustable.Container.load: Save file %s got corrupted. It was deleted so everything else can load properly.", loadDir))
         return false
     end
