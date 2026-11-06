@@ -310,6 +310,61 @@ describe("Tests functionality of Geyser.ScrollBox", function()
         assert.is_nil(raisedBy(raise, nil))
       end
     end)
+
+    it("hands a traceback the frame its constraint raised in", function()
+      local failing = false
+      local function width()
+        if failing then
+          error("not ready")
+        end
+        return 300
+      end
+      local box = track(Geyser.ScrollBox:new({name = "gsbTraced", x = 0, y = 0, width = width, height = 200}))
+      local raisers = {
+        function() return box.get_width() end,
+        function() box:reposition() end,
+      }
+      for _, raise in ipairs(raisers) do
+        failing = true
+        local _, traceback = xpcall(raise, debug.traceback)
+        failing = false
+        local origin = traceback:match("^(.-): not ready")
+        assert.is_truthy(traceback:match("stack traceback:(.*)"):find(origin .. ":", 1, true), traceback)
+      end
+    end)
+  end)
+
+  describe("Geyser.ScrollBox measured inside a coroutine", function()
+    it("lets its constraint yield, and lays children out from its own origin afterwards", function()
+      local mainWidth = getMainWindowSize()
+      local pausing = false
+      local function height()
+        if pausing then
+          coroutine.yield()
+        end
+        return 200
+      end
+      local box = track(Geyser.ScrollBox:new({name = "gsbYielding", x = 100, y = 50, width = "-10px", height = height}))
+      local label = track(Geyser.Label:new({name = "gsbYieldingChild", x = 0, y = 0, width = 50, height = 50}, box))
+      local measures = {
+        function() return box.get_height() end,
+        function() box:reposition() end,
+      }
+      for _, measure in ipairs(measures) do
+        pausing = true
+        local co = coroutine.create(measure)
+        local yielded, yieldFailure = coroutine.resume(co)
+        pausing = false
+        assert.is_true(yielded, yieldFailure)
+        assert.are.equal("suspended", coroutine.status(co))
+        local finished, failure = coroutine.resume(co)
+        assert.is_true(finished, failure)
+        assert.are.equal("dead", coroutine.status(co))
+      end
+      label:resize("100%", 50)
+      label:move(10, 20)
+      assert.are.same({x = 10, y = 20, width = mainWidth - 110, height = 50}, geometry("gsbYieldingChild"))
+    end)
   end)
 
   -- Geyser:add2 runs from inside Geyser.Container:new, so the hide it asks for

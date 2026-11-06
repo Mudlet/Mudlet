@@ -9,54 +9,78 @@ Geyser.ScrollBox = Geyser.Window:new({
     name = "ScrollBoxClass"
 })
 
+local getinfo = debug.getinfo
+
 -- Internal function: children are laid out inside the box's own widget, so from
 -- its origin and at the whole pixel size the widget gets, not its fractional one.
 -- The size still follows the box's constraints, which a parent HBox or VBox reads
--- and rewrites before it repositions the box.
+-- and rewrites before it repositions the box. Returns the function that places
+-- the box itself.
 local function frameChildren(box)
     local own = {get_x = box.get_x, get_y = box.get_y, get_width = box.get_width, get_height = box.get_height}
     local zero = function() return 0 end
     local across = {get_x = own.get_x, get_y = zero, get_width = own.get_width, get_height = zero}
     local down = {get_x = zero, get_y = own.get_y, get_width = zero, get_height = own.get_height}
+    local place
+    -- a constraint that raises, or yields in a coroutine, leaves these flags set, so
+    -- they only count while what set them is running on this stack; a pcall would do
+    -- instead, but no constraint could yield across it
+    local function running(a, b, c, d)
+        for level = 3, math.huge do
+            local frame = getinfo(level, "f")
+            if not frame then
+                return false
+            end
+            local func = frame.func
+            if func and (func == a or func == b or func == c or func == d) then
+                return true
+            end
+        end
+    end
+    local function measuringNow()
+        return running(own.get_x, own.get_y, own.get_width, own.get_height)
+    end
     -- a negative width or height is compiled as the far edge less the box's own
     -- get_x or get_y, so those must give the box's real origin while it measures itself
-    local measuring = false
-    box.get_x = function() return measuring and own.get_x() or 0 end
-    box.get_y = function() return measuring and own.get_y() or 0 end
-    -- a constraint that raises must not leave the flag set, or every child placed
-    -- afterwards would be shifted by the box's real origin
+    local measuring, placing = false, false
+    box.get_x = function() return (measuring or placing) and measuringNow() and own.get_x() or 0 end
+    box.get_y = function() return (measuring or placing) and measuringNow() and own.get_y() or 0 end
     box.get_width = function()
-        measuring = true
-        local ok, failure, _, width = pcall(Geyser.Container.pixel_geometry, across)
-        measuring = false
-        if not ok then
-            error(failure, 0)
+        if placing and running(place) then
+            return own.get_width()
         end
+        measuring = true
+        local _, _, width = Geyser.Container.pixel_geometry(across)
+        measuring = false
         return width
     end
     box.get_height = function()
-        measuring = true
-        local ok, failure, _, _, height = pcall(Geyser.Container.pixel_geometry, down)
-        measuring = false
-        if not ok then
-            error(failure, 0)
+        if placing and running(place) then
+            return own.get_height()
         end
+        measuring = true
+        local _, _, _, height = Geyser.Container.pixel_geometry(down)
+        measuring = false
         return height
     end
+    -- the box's own constraints read its unframed sizes while it places itself
+    place = function()
+        placing = true
+        local x, y, width, height = Geyser.Container.pixel_geometry(own)
+        placing = false
+        return x, y, width, height
+    end
+    return place
 end
 
 -- Overridden reposition for special coordination handling
 function Geyser.ScrollBox:reposition(skipChildren)
     Geyser.calc_constraints(self, self, self.container)
-    -- the box's getters give its real origin by now, so an error must not skip frameChildren()
-    local ok, x, y, width, height = pcall(self.pixel_geometry, self)
-    if not ok then
-        frameChildren(self)
-        error(x, 0)
-    end
+    -- framed before it measures itself, so a constraint that raises cannot leave it
+    -- with getters that give its real origin to its children
+    local x, y, width, height = frameChildren(self)()
     moveWindow(self.name, x, y)
     resizeWindow(self.name, width, height)
-    frameChildren(self)
       -- deal with all children of this container
     if not skipChildren then
         for k, v in pairs(self.windowList) do
