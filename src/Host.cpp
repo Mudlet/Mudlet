@@ -3556,52 +3556,71 @@ static bool isLuaName(const QString& text)
     return name.match(text).hasMatch() && !keywords.contains(text);
 }
 
+// An empty string, or why config.lua could not be written, with nothing left behind
+static QString writePackageConfig(const QString& folder, const QMap<QString, QString>& details)
+{
+    const bool folderWasThere = QDir(folder).exists();
+    if (!QDir().mkpath(folder)) {
+        return qsl("could not make the folder '%1'").arg(folder);
+    }
+
+    QString config;
+    for (auto it = details.cbegin(); it != details.cend(); ++it) {
+        // Last, as it replaces the table the lines through _G[...] set the other details in
+        if (it.key() == QLatin1String("_G")) {
+            continue;
+        }
+        if (isLuaName(it.key())) {
+            config.append(qsl("%1 = %2\n").arg(it.key(), luaStringLiteral(it.value())));
+        } else {
+            config.append(qsl("_G[%1] = %2\n").arg(luaStringLiteral(it.key()), luaStringLiteral(it.value())));
+        }
+    }
+    if (details.contains(qsl("_G"))) {
+        config.append(qsl("_G = %1\n").arg(luaStringLiteral(details.value(qsl("_G")))));
+    }
+
+    QSaveFile configFile(QDir(folder).filePath(qsl("config.lua")));
+    QString error;
+    if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream out(&configFile);
+        out << config;
+        out.flush();
+        if (!configFile.commit()) {
+            error = qsl("could not write '%1': %2").arg(configFile.fileName(), configFile.errorString());
+        }
+    } else {
+        error = qsl("could not write '%1': %2").arg(configFile.fileName(), configFile.errorString());
+    }
+    if (!error.isEmpty() && !folderWasThere) {
+        QDir().rmdir(folder);
+    }
+    return error;
+}
+
 QString Host::setPackageInfo(const QString& packageName, const QString& info, const QString& value)
 {
     QMap<QString, QString>& packageInfo = mPackageInfo[packageName];
     if (packageInfo.contains(info) && packageInfo.value(info) == value) {
         return {};
     }
-    packageInfo[info] = value;
-
+    // Only a profile from before installs refused these names can have such a package, and with no folder of
+    // its own to save to, its details stay what they always were: for the session
     if (nameIsAStepOutOfTheProfile(packageName) || theProfileKeepsItsOwnDataIn(packageName)) {
-        return qsl("package '%1' has no folder of its own to save its details in").arg(packageName);
-    }
-    const QString folder = MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName);
-    if (!QDir().mkpath(folder)) {
-        return qsl("could not make the folder '%1' to save the details of package '%2' in").arg(folder, packageName);
+        packageInfo[info] = value;
+        return {};
     }
 
     QMap<QString, QString> details = packageInfo;
+    details[info] = value;
     // getPackageConfig() files the details under this name, and ignores a config.lua without one
     if (!details.contains(qsl("mpackage"))) {
         details.insert(qsl("mpackage"), packageName);
     }
-    QString config;
-    // A name that is not a Lua name, such as "my-hash", is set through this; a local, as "_G" can be a detail too
-    bool globalsNeeded = false;
-    for (auto it = details.cbegin(); it != details.cend(); ++it) {
-        if (isLuaName(it.key())) {
-            config.append(qsl("%1 = %2\n").arg(it.key(), luaStringLiteral(it.value())));
-        } else {
-            globalsNeeded = true;
-            config.append(qsl("globals[%1] = %2\n").arg(luaStringLiteral(it.key()), luaStringLiteral(it.value())));
-        }
+    if (const QString error = writePackageConfig(MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName), details); !error.isEmpty()) {
+        return qsl("could not save the details of package '%1', so nothing was changed: %2").arg(packageName, error);
     }
-    if (globalsNeeded) {
-        config.prepend(qsl("local globals = _G\n"));
-    }
-
-    QSaveFile configFile(qsl("%1/config.lua").arg(folder));
-    if (!configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        return qsl("could not save the details of package '%1': %2").arg(packageName, configFile.errorString());
-    }
-    QTextStream out(&configFile);
-    out << config;
-    out.flush();
-    if (!configFile.commit()) {
-        return qsl("could not save the details of package '%1': %2").arg(packageName, configFile.errorString());
-    }
+    packageInfo = details;
     return {};
 }
 

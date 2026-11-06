@@ -1197,6 +1197,9 @@ describe("Tests the package info accessors", function()
       assert.is_true(setPackageInfo(name, "version", "2.0"))
       assert.is_true(setPackageInfo(name, "spec-hash", 'a]]b"c\\d\ne\r\1f]'))
       assert.is_true(setPackageInfo(name, "end", "a Lua keyword"))
+      -- the names a config.lua could use to reach the table it sets details in
+      assert.is_true(setPackageInfo(name, "globals", "not a table"))
+      assert.is_true(setPackageInfo(name, "_G", "not a table either"))
 
       assert.same(getPackageInfo(name), savedPackageInfo(name))
     end)
@@ -1215,6 +1218,22 @@ describe("Tests the package info accessors", function()
       assert.is_true(setPackageInfo(name, "version", "1.2"))
 
       assert.same({mpackage = name, version = "1.2"}, savedPackageInfo(name))
+      assert.same(savedPackageInfo(name), getPackageInfo(name), "the details differ from what a restart reads back")
+    end)
+
+    it("returns nil+msg and changes nothing when the details cannot be saved, however often it is asked", function()
+      local name = "mudlet-spec-noconfig"
+      withFixturePackage(name)
+      local blocker = getMudletHomeDir() .. "/" .. name .. "/config.lua"
+      assert.is_true(lfs.mkdir(blocker), "SETUP: could not put a folder where config.lua goes")
+      defer(function() lfs.rmdir(blocker) end)
+
+      for attempt = 1, 2 do
+        local ok, err = setPackageInfo(name, "version", "2.0")
+        assert.is_nil(ok, "attempt " .. attempt .. " reported a save that did not happen")
+        assert.is_true(contains(err, "could not save the details of package '" .. name .. "'"), tostring(err))
+        assert.equals("", getPackageInfo(name, "version"), "attempt " .. attempt .. " changed a detail it could not save")
+      end
     end)
 
     it("returns nil+msg for a package that is not installed", function()
