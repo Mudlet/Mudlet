@@ -287,18 +287,43 @@ private slots:
         QVERIFY(pCommandLine);
         QTest::keyClicks(pCommandLine, qsl("qzxfrob"));
         QVERIFY(markedMisspelt(pCommandLine, qsl("qzxfrob")));
-        const int stepsAfterTyping = pCommandLine->document()->availableUndoSteps();
 
-        for (int presses = 0; presses < stepsAfterTyping && !pCommandLine->toPlainText().isEmpty(); ++presses) {
-            QTest::keySequence(pCommandLine, QKeySequence::Undo);
-        }
-        QVERIFY2(pCommandLine->toPlainText().isEmpty(), qPrintable(qsl("Undo left \"%1\" behind").arg(pCommandLine->toPlainText())));
+        // One step for the whole run of typing, as with spell check off
+        QTest::keySequence(pCommandLine, QKeySequence::Undo);
+        QCOMPARE(pCommandLine->toPlainText(), QString());
 
-        while (pCommandLine->document()->isRedoAvailable() && pCommandLine->toPlainText() != qsl("qzxfrob")) {
-            QTest::keySequence(pCommandLine, QKeySequence::Redo);
-        }
+        QTest::keySequence(pCommandLine, QKeySequence::Redo);
         QCOMPARE(pCommandLine->toPlainText(), qsl("qzxfrob"));
         QVERIFY2(markedMisspelt(pCommandLine, qsl("qzxfrob")), "the word Redo brought back lost its mark");
+    }
+
+    // Deleting is undone as typing is
+    void test_undoTakesBackBackspaceWithSpellCheckOn()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("qzxfrob"));
+        QTest::keyClick(pCommandLine, Qt::Key_Backspace);
+        QTest::keyClick(pCommandLine, Qt::Key_Backspace);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxfr"));
+
+        QTest::keySequence(pCommandLine, QKeySequence::Undo);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxfrob"));
+    }
+
+    // The mark is set inside the key's own edit, which must still count as the
+    // player's typing - that is what moves it into a password box that opens
+    void test_typingWithSpellCheckOnIsStillThePlayersOwn()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        QTest::keyClicks(pCommandLine, qsl("qzxfrob"));
+        QVERIFY(pCommandLine->playerTypedLine());
+
+        QTest::keyClick(pCommandLine, Qt::Key_Backspace);
+        QVERIFY(pCommandLine->playerTypedLine());
     }
 
     // Rechecking a word that keeps its mark changes nothing, so moving the caret about

@@ -160,6 +160,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, enums::CommandLineT
 
 TCommandLine::UserEditScope::UserEditScope(TCommandLine& line)
 : mLine(line)
+, mOuterEditInProgress(line.mUserEditInProgress)
 {
     const QTextCursor cursor = mLine.textCursor();
     const QString text = mLine.toPlainText();
@@ -169,7 +170,7 @@ TCommandLine::UserEditScope::UserEditScope(TCommandLine& line)
 
 TCommandLine::UserEditScope::~UserEditScope()
 {
-    mLine.mUserEditInProgress = false;
+    mLine.mUserEditInProgress = mOuterEditInProgress;
 }
 
 void TCommandLine::restorePlayerTypedLine(const QString& text)
@@ -224,18 +225,9 @@ bool TCommandLine::claimsShortcutOverride(const QKeyEvent* ke) const
 void TCommandLine::processNormalKey(QEvent* event)
 {
     const auto* keyEvent = static_cast<QKeyEvent*>(event);
-    // The key and the spell-check mark it leads to are one undo step, so Undo takes
-    // back the key and not just the mark. Closing a block after Undo or Redo would
-    // split the step they land on.
-    const bool groupWithMark = mpHost->getEnableSpellCheck() && !keyEvent->matches(QKeySequence::Undo) && !keyEvent->matches(QKeySequence::Redo);
-    QTextCursor editBlock(document());
-    if (groupWithMark) {
-        editBlock.beginEditBlock();
-    }
-    {
-        const UserEditScope userEdit(*this);
-        QPlainTextEdit::event(event);
-    }
+    const bool typing = !keyEvent->text().isEmpty() && keyEvent->text().at(0).isPrint() && !(keyEvent->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier));
+    editAndSpellCheck(event, typing ? KeyEdit::Typing : KeyEdit::Other);
+    adjustHeight();
 
     mHistoryBuffer = 0;
     if (mTabCompletionOld != toPlainText()) {
@@ -244,12 +236,36 @@ void TCommandLine::processNormalKey(QEvent* event)
     } else {
         mUserKeptOnTyping = false;
     }
+}
 
-    spellCheck();
-    if (groupWithMark) {
-        editBlock.endEditBlock();
+void TCommandLine::editAndSpellCheck(QEvent* event, const KeyEdit kind)
+{
+    const auto* keyEvent = static_cast<QKeyEvent*>(event);
+    // The key and the spell-check mark it leads to are one undo step, or Undo would take
+    // back only the mark, which the check after it puts straight back. Closing a block
+    // after Undo or Redo would split the step they land on.
+    const bool grouped = mpHost->getEnableSpellCheck() && !keyEvent->matches(QKeySequence::Undo) && !keyEvent->matches(QKeySequence::Redo);
+    // Outlives the edit block, as contentsChange waits for the block to close
+    const UserEditScope userEdit(*this);
+    QTextCursor editBlock(document());
+    if (grouped) {
+        // A run of typing stays one step, as Qt makes it with spell check off
+        const QTextCursor caret = textCursor();
+        const bool continuesRun = kind != KeyEdit::Other && kind == mLastKeyEdit && document()->revision() == mLastKeyEditRevision && caret.position() == mLastKeyEditPosition && !caret.hasSelection();
+        if (continuesRun) {
+            editBlock.joinPreviousEditBlock();
+        } else {
+            editBlock.beginEditBlock();
+        }
     }
-    adjustHeight();
+    QPlainTextEdit::event(event);
+    spellCheck();
+    if (grouped) {
+        editBlock.endEditBlock();
+        mLastKeyEdit = kind;
+        mLastKeyEditRevision = document()->revision();
+        mLastKeyEditPosition = textCursor().position();
+    }
 }
 
 bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
@@ -472,21 +488,7 @@ bool TCommandLine::event(QEvent* event)
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
                 mLastCompletion.clear();
-                const bool groupWithMark = mpHost->getEnableSpellCheck();
-                QTextCursor editBlock(document());
-                if (groupWithMark) {
-                    editBlock.beginEditBlock();
-                }
-                {
-                    // This does the actual deletion of the character:
-                    const UserEditScope userEdit(*this);
-                    QPlainTextEdit::event(event);
-                }
-                // Recheck spelling of shortened word:
-                spellCheck();
-                if (groupWithMark) {
-                    editBlock.endEditBlock();
-                }
+                editAndSpellCheck(event, KeyEdit::Backspace);
                 adjustHeight();
                 return true;
             }
@@ -511,21 +513,7 @@ bool TCommandLine::event(QEvent* event)
                 mAutoCompletionCount = -1;
                 mTabCompletionCount = -1;
                 mLastCompletion.clear();
-                const bool groupWithMark = mpHost->getEnableSpellCheck();
-                QTextCursor editBlock(document());
-                if (groupWithMark) {
-                    editBlock.beginEditBlock();
-                }
-                {
-                    // This does the actual deletion of the character:
-                    const UserEditScope userEdit(*this);
-                    QPlainTextEdit::event(event);
-                }
-                // Recheck spelling of shortened word:
-                spellCheck();
-                if (groupWithMark) {
-                    editBlock.endEditBlock();
-                }
+                editAndSpellCheck(event, KeyEdit::Delete);
                 adjustHeight();
                 return true;
             }
