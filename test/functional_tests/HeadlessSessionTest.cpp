@@ -3699,6 +3699,63 @@ registerAnonymousEventHandler("sysDataSendRequest", function(_, command) hiddenS
         QVERIFY(session.shutdown(false));
     }
 
+    // A send whose alias runs the event loop finishes after one an app's timer made meanwhile, once the game hides input
+    void test_anOuterSendKeepsTheClearAnInnerSendLeftForHiddenInput()
+    {
+        const QString name = qsl("Headless Command Line Hidden By A Nested Send");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QStringList heardNow;
+        connect(&session, &THeadlessSession::commandLineTextRequested, this, [&heardNow](const QString&, const QString& text) {
+            heardNow << qsl("text %1").arg(text);
+        });
+        connect(&session, &THeadlessSession::hiddenInputWanted, this, [&heardNow](const QString&, bool wanted) {
+            heardNow << qsl("hidden %1").arg(wanted ? qsl("on") : qsl("off"));
+        });
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        session.host()->mAutoClearCommandLineAfterSend = true;
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        static QPointer<Host> waitingHost;
+        static bool innerSent;
+        waitingHost = session.host();
+        innerSent = false;
+        lua_State* L = session.host()->getLuaInterpreter()->getLuaGlobalState();
+        lua_register(L, "headlessAwaitHiddenInput", [](lua_State*) -> int {
+            QDeadlineTimer deadline(10000);
+            while (waitingHost && !waitingHost->passwordEntryWanted() && !deadline.hasExpired()) {
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+            }
+            return 0;
+        });
+        lua_register(L, "headlessAwaitInnerSend", [](lua_State*) -> int {
+            QDeadlineTimer deadline(10000);
+            while (!innerSent && !deadline.hasExpired()) {
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+            }
+            return 0;
+        });
+        QVERIFY(session.runLua(qsl(R"lua(tempAlias("^outer$", [[headlessAwaitInnerSend()]]) tempAlias("^inner$", [[headlessAwaitHiddenInput()]]))lua")));
+        QTimer::singleShot(0, this, [&session, &game]() {
+            game->write("\xff\xfb\x01Password:\r\n");
+            QVERIFY(session.submit(qsl("inner")));
+            innerSent = true;
+        });
+        QVERIFY(session.submit(qsl("outer")));
+        QVERIFY(innerSent);
+        QVERIFY(session.host()->passwordEntryWanted());
+        game->write("\xff\xfc\x01Welcome.\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(heardNow.contains(qsl("hidden off")), 10000);
+        QTest::qWait(100);
+        QCOMPARE(heardNow, (QStringList{qsl("hidden on"), qsl("hidden off"), qsl("text ")}));
+        QVERIFY(session.shutdown(false));
+    }
+
     // As scripts read the GUI's command line, such as a key binding that acts on the line being typed
     void test_whatThePlayerHasTypedReachesTheScripts()
     {
