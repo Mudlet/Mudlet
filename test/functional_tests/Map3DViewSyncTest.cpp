@@ -48,6 +48,7 @@
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgMapper.h"
+#include "glwidget.h"
 #include "modern_glwidget.h"
 #include "mudlet.h"
 
@@ -835,15 +836,18 @@ private slots:
         pView->show3DView(true);
         ModernGLWidget* pView3D = pView->get3DView();
         QVERIFY(pView3D);
-        QVERIFY2(drawsOpaque(pMain3D) && drawsOpaque(pView3D), "a 3D view over an opaque background does not start out opaque");
+        GLWidget classic3D(map(), mpHost);
+        QVERIFY2(drawsOpaque(pMain3D) && drawsOpaque(pView3D) && drawsOpaque(&classic3D), "a 3D view over an opaque background does not start out opaque");
 
         QCOMPARE(runLua(qsl("setMapBackgroundColor(0, 0, 0, 100)")), QString());
         QVERIFY2(drawsSeeThrough(pMain3D), "the mapper's 3D view still draws as opaque over a translucent background");
         QVERIFY2(drawsSeeThrough(pView3D), "a createMapView() 3D view still draws as opaque over a translucent background");
+        QVERIFY2(drawsSeeThrough(&classic3D), "the classic 3D view still draws as opaque over a translucent background");
 
         QCOMPARE(runLua(qsl("setMapBackgroundColor(0, 0, 0, 255)")), QString());
         QVERIFY2(drawsOpaque(pMain3D), "the mapper's 3D view still draws as see-through over an opaque background");
         QVERIFY2(drawsOpaque(pView3D), "a createMapView() 3D view still draws as see-through over an opaque background");
+        QVERIFY2(drawsOpaque(&classic3D), "the classic 3D view still draws as see-through over an opaque background");
     }
 };
 
