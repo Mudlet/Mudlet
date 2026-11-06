@@ -1350,12 +1350,11 @@ void T2DMap::drawScaledLabel(QPainter& painter, const QPointF& position, TMapLab
         const LabelPixmapKey key{mAreaID, labelKey, targetSize};
         const LabelPixmap* cached = mTextLabelPixmapCache.object(key);
         if (!cached || !labelPixmapIsCurrent(*cached, label, devicePixelRatio)) {
-            // One that would take the cache past its ceiling would evict a label still on screen, which would in
-            // turn evict another, every frame; on a dense display a label costs the square of its ratio more.
-            // The larger frame rather than both, as the labels still on screen are in each of them.
+            // One that would take the labels on screen past the cache's ceiling would evict another, which would
+            // in turn evict the next, every frame; on a dense display a label costs the square of its ratio more.
+            // Only what this frame has drawn is known to be on screen: after a zoom, none of the last frame is.
             const qint64 costKiB = std::max<qint64>(1, qint64(pixelSize.width()) * pixelSize.height() * 4 / 1024);
-            const qint64 onScreenKiB = std::max<qint64>(mTextLabelPixmapLastFrameKiB, mTextLabelPixmapFrameKiB);
-            if (onScreenKiB + costKiB > mTextLabelPixmapCeilingKiB) {
+            if (mTextLabelPixmapFrameKiB + costKiB > mTextLabelPixmapCeilingKiB) {
                 // An out-of-date one left behind would hold memory no frame counts, so trimming the
                 // cache to the frame would evict a label on screen in its place
                 mTextLabelPixmapCache.remove(key);

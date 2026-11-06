@@ -399,6 +399,43 @@ private slots:
         QCOMPARE(secondFrame, firstFrame);
     }
 
+    // Zooming draws every label at a new size, so none of what the last frame
+    // cached is on screen: counted as if it were, a scene that fits would be
+    // refused the cache on every other frame, and drawn blurred on those.
+    void labelsThatFitStayCachedThroughAZoom()
+    {
+        mp2dMap->setTextLabelPixmapBudgetKiB(1024);
+        mp2dMap->setTextLabelPixmapCeilingKiB(1024);
+        QPixmap target(QSize(160, 160) * 2);
+        target.setDevicePixelRatio(2);
+        QPainter painter(&target);
+        QList<TMapLabel> labels(5);
+        for (TMapLabel& label : labels) {
+            label.pix = QPixmap(4, 4);
+            label.pix.fill(Qt::red);
+        }
+        mp2dMap->flushTextLabelPixmapCache();
+        // Four labels growing a step each frame, to 256 KiB each at twice the density
+        QList<int> cachedEachFrame;
+        for (int side = 112; side <= 128; side += 4) {
+            const QSize size(side, side);
+            mp2dMap->startTextLabelFrame();
+            for (int id = 1; id <= 4; ++id) {
+                mp2dMap->drawScaledLabel(painter, QPointF(0, 0), labels[id], id, QRectF(QPointF(0, 0), size));
+            }
+            int cached = 0;
+            for (int id = 1; id <= 4; ++id) {
+                cached += mp2dMap->textLabelPixmapCacheKey(id, size) != 0;
+            }
+            cachedEachFrame << cached;
+        }
+        painter.end();
+        mp2dMap->setTextLabelPixmapCeilingKiB(T2DMap::scmTextLabelPixmapCeilingKiB);
+        mp2dMap->setTextLabelPixmapBudgetKiB(T2DMap::scmTextLabelPixmapBudgetKiB);
+
+        QCOMPARE(cachedEachFrame, QList<int>(cachedEachFrame.size(), 4));
+    }
+
     // A zoomed-out area can have hundreds of labels on screen; if they do not
     // all stay cached, every frame renders every one of them again.
     void manySmallLabelsOnScreenAllStayCached()
