@@ -111,6 +111,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
     ConnectionDialogFocusTest.cpp
+    ConnectionDialogHistorySizeTest.cpp
     ConnectionDialogInitialSelectionTest.cpp
     ConnectionDialogKeychainWaitTest.cpp
     ConnectionDialogNewProfileTest.cpp
