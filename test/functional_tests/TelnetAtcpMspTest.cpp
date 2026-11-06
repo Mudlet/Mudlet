@@ -526,6 +526,46 @@ private slots:
                  "cancelling the composer left its window behind");
     }
 
+    // A profile closing with the composer still up deletes the window rather than
+    // closing it, which is the path ~cTelnet takes
+    void test_theComposerKeepsItsSizeWhenDeletedWhileOpen()
+    {
+        feedAtcp("Client.Compose Note");
+        QCOMPARE(openComposers().size(), 1);
+        QPointer<dlgComposer> first = openComposers().first();
+        QVERIFY(QTest::qWaitForWindowExposed(first));
+        const QSize resized = first->size() + QSize(53, 41);
+        first->resize(resized);
+        QVERIFY2(QTest::qWaitFor(
+                         [first, resized]() {
+                             return first->size() == resized;
+                         },
+                         5s),
+                 "the window system did not take the new size, so this proves nothing");
+
+        first->deleteLater();
+        QVERIFY2(QTest::qWaitFor(
+                         [first]() {
+                             return first.isNull();
+                         },
+                         5s),
+                 "the composer was not deleted");
+
+        feedAtcp("Client.Compose Note");
+        QCOMPARE(openComposers().size(), 1);
+        dlgComposer* second = openComposers().first();
+        QVERIFY(QTest::qWaitForWindowExposed(second));
+        QCOMPARE(second->size(), resized);
+
+        mpHost->mTelnet.atcpComposerCancel();
+        QVERIFY2(QTest::qWaitFor(
+                         []() {
+                             return openComposers().isEmpty();
+                         },
+                         5s),
+                 "cancelling the composer left its window behind");
+    }
+
     // MSP names a file without an extension and leaves the client to pick one
     // per media type, so the file requested is where a sound and a piece of
     // music part company.

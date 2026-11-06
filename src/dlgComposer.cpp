@@ -32,7 +32,6 @@
 
 #include <hunspell/hunspell.h>
 
-#include <QCloseEvent>
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMouseEvent>
@@ -62,10 +61,12 @@ dlgComposer::dlgComposer(Host* pH)
     }
 }
 
-void dlgComposer::closeEvent(QCloseEvent* event)
+// In the destructor rather than closeEvent(): a profile closing with the composer up deletes it without a close
+dlgComposer::~dlgComposer()
 {
-    MudletApp::getQSettings()->setValue(qsl("composerGeometry"), saveGeometry());
-    QMainWindow::closeEvent(event);
+    if (QSettings* settings = MudletApp::getQSettings()) {
+        settings->setValue(qsl("composerGeometry"), saveGeometry());
+    }
 }
 
 void dlgComposer::slot_cancel()

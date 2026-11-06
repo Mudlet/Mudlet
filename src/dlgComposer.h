@@ -28,7 +28,6 @@
 #include <QPoint>
 
 class Host;
-class QCloseEvent;
 class QMenu;
 class QMouseEvent;
 class QTextCursor;
@@ -41,6 +40,7 @@ class dlgComposer : public QMainWindow, public Ui::composer
 public:
     Q_DISABLE_COPY(dlgComposer)
     explicit dlgComposer(Host*);
+    ~dlgComposer() override;
 
     void init(const QString& title, const QString& newText);
 
@@ -57,7 +57,6 @@ private slots:
 
 protected:
     bool eventFilter(QObject* obj, QEvent* event) override;
-    void closeEvent(QCloseEvent* event) override;
 
 private:
     void spellCheckWord(QTextCursor& cursor);
