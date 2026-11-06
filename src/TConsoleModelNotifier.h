@@ -63,6 +63,8 @@ signals:
     void timeStampsToggled();
     // mWrapAt, mIndentCount or mHangingIndentCount changed.
     void wrapChanged();
+    // Host::refreshMainConsoleColors() ran, which may have changed mFgColor or mBgColor.
+    void colorsChanged();
     // The buffer was emptied, so view state indexing its old lines is stale.
     void bufferCleared();
     void spoilerRevealed();

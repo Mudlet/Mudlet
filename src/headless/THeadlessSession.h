@@ -33,6 +33,7 @@
 
 #include <memory>
 #include <optional>
+#include <utility>
 
 class Host;
 class HostManager;
@@ -204,6 +205,10 @@ public:
         bool operator==(const ConsoleWrap&) const = default;
     };
     ConsoleWrap consoleWrap() const;
+    // The colours the main console is drawn in where the game asks for none, which runs mark as the profile's
+    // own, invalid with no profile open: read them at profileLoaded, then follow consoleColorsChanged
+    QColor consoleForeground() const;
+    QColor consoleBackground() const;
     // Answers the game's offer of a secure port, as the GUI's Yes and No do: true stores that port with TLS on,
     // as the connection dialog would, and connects there, so a frontend that passes its own port to a later
     // start() passes tls with it; false reconnects where it was and stops the profile asking again. False, with
@@ -341,6 +346,10 @@ signals:
     // on the main console. From the event loop, with the wrap as it is then, and only when that differs from the
     // one last sent or the one consoleWrap() gave at profileLoaded.
     void consoleWrapChanged(const QString& profile, int wrapAt, int indent, int hangingIndent);
+    // consoleForeground() or consoleBackground() changed, from a script's setBackgroundColor() on the main console,
+    // or a package or save loaded into the profile with colours of its own. From the event loop, as
+    // consoleWrapChanged, with both colours as they are then.
+    void consoleColorsChanged(const QString& profile, const QColor& foreground, const QColor& background);
     // What the GUI shows outside the profile's screen: a script's showNotification(), which answers true only
     // when this signal is connected and not blocked, with no milliseconds for the system's own time; and a
     // script's alert() or the game's bell, asking for the player's attention for that long, 0 until they come
@@ -498,6 +507,8 @@ private:
     std::unique_ptr<DebugSink> mpDebugSink;
     // What consoleWrap() gave at profileLoaded, then each consoleWrapChanged; none before the load ends
     std::optional<ConsoleWrap> mDeliveredConsoleWrap;
+    // The same for consoleForeground() and consoleBackground()
+    std::optional<std::pair<QColor, QColor>> mDeliveredConsoleColors;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(THeadlessSession::TextStyles)

@@ -31,9 +31,11 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
+#include "TConsoleModel.h"
 #include "THeadlessSession.h"
 
 #include "GroupedTest.h"
@@ -158,6 +160,69 @@ setWindowWrap("main", 61) setWindowWrap("main", 60)
         QVERIFY(session.shutdown(false));
         QTest::qWait(100);
         QCOMPARE(wraps.count(), 0);
+    }
+
+    void test_theColoursAProfileLoadsWithAreKnownAtProfileLoaded()
+    {
+        const QString name = qsl("Headless Saved Colours");
+        QVERIFY(writeProfile(name, QString(), qsl(R"(<mFgColor>#a0b0c0</mFgColor><mBgColor alpha="255">#102030</mBgColor>)")));
+        THeadlessSession session;
+        QCOMPARE(session.consoleForeground(), QColor());
+        QCOMPARE(session.consoleBackground(), QColor());
+        QColor loadedForeground;
+        QColor loadedBackground;
+        connect(&session, &THeadlessSession::profileLoaded, this, [&]() {
+            loadedForeground = session.consoleForeground();
+            loadedBackground = session.consoleBackground();
+        });
+        QSignalSpy colors(&session, &THeadlessSession::consoleColorsChanged);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QCOMPARE(loadedForeground, QColor(0xa0, 0xb0, 0xc0));
+        QCOMPARE(loadedBackground, QColor(0x10, 0x20, 0x30));
+        QTest::qWait(100);
+        QCOMPARE(colors.count(), 0);
+        QVERIFY(session.shutdown(false));
+        QCOMPARE(session.consoleForeground(), QColor());
+        QCOMPARE(session.consoleBackground(), QColor());
+    }
+
+    void test_aScriptsBackgroundColourReachesTheSession()
+    {
+        const QString name = qsl("Headless Colours");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy colors(&session, &THeadlessSession::consoleColorsChanged);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        const QColor foreground = session.consoleForeground();
+        QVERIFY(foreground.isValid());
+
+        QVERIFY(session.runLua(qsl(R"lua(setBackgroundColor("main", 10, 20, 30))lua")));
+        QTRY_COMPARE_WITH_TIMEOUT(colors.count(), 1, 10000);
+        QCOMPARE(colors.constFirst().at(0).toString(), name);
+        QCOMPARE(colors.constFirst().at(1).value<QColor>(), foreground);
+        QCOMPARE(colors.constFirst().at(2).value<QColor>(), QColor(10, 20, 30));
+        QCOMPARE(session.consoleBackground(), QColor(10, 20, 30));
+
+        // The same again, and a mini console's
+        QVERIFY(session.runLua(qsl(R"lua(
+setBackgroundColor("main", 10, 20, 30)
+createMiniConsole("headlessColoursMini", 0, 0, 200, 100)
+setBackgroundColor("headlessColoursMini", 200, 100, 50)
+)lua")));
+        QTest::qWait(100);
+        QCOMPARE(colors.count(), 1);
+
+        // The game redefining its palette refreshes the profile's colours, which stay as they were
+        Host* host = session.host();
+        QSignalSpy refreshed(&host->mainConsoleModel().mNotifier, &TConsoleModelNotifier::colorsChanged);
+        host->setMayRedefineColors(true);
+        std::string redefine = "\x1b]P1123456\x07";
+        host->mainConsoleModel().buffer.translateToPlainText(redefine, true);
+        QCOMPARE(host->mRed, QColor(0x12, 0x34, 0x56));
+        QCOMPARE(refreshed.count(), 1);
+        QTest::qWait(100);
+        QCOMPARE(colors.count(), 1);
+        QVERIFY(session.shutdown(false));
     }
 };
 
