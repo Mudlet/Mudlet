@@ -279,6 +279,63 @@ private slots:
         QVERIFY2(markedMisspelt(pCommandLine, qsl("qzxfrob")), "a word no dictionary knows was not marked as misspelt");
     }
 
+    // Marking a word is not an edit, so Undo takes back the typing itself rather
+    // than a mark the key press then puts straight back, and Redo brings it back
+    void test_undoAndRedoTakeBackTypingWithSpellCheckOn()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("qzxfrob"));
+        QVERIFY(markedMisspelt(pCommandLine, qsl("qzxfrob")));
+        const int stepsAfterTyping = pCommandLine->document()->availableUndoSteps();
+
+        for (int presses = 0; presses < stepsAfterTyping && !pCommandLine->toPlainText().isEmpty(); ++presses) {
+            QTest::keySequence(pCommandLine, QKeySequence::Undo);
+        }
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(), qPrintable(qsl("Undo left \"%1\" behind").arg(pCommandLine->toPlainText())));
+
+        while (pCommandLine->document()->isRedoAvailable() && pCommandLine->toPlainText() != qsl("qzxfrob")) {
+            QTest::keySequence(pCommandLine, QKeySequence::Redo);
+        }
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxfrob"));
+        QVERIFY2(markedMisspelt(pCommandLine, qsl("qzxfrob")), "the word Redo brought back lost its mark");
+    }
+
+    // Rechecking a word that keeps its mark changes nothing, so moving the caret about
+    // must not pile up records on an undo stack that only clearing the line empties
+    void test_movingTheCaretAddsNothingToUndo()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("qzxfrob qzxgrok"));
+        const int undoRecords = pCommandLine->document()->availableUndoSteps();
+
+        for (int i = 0; i < 10; ++i) {
+            QTest::keyClick(pCommandLine, Qt::Key_Left);
+        }
+        for (int i = 0; i < 10; ++i) {
+            QTest::keyClick(pCommandLine, Qt::Key_Right);
+        }
+
+        QCOMPARE(pCommandLine->document()->availableUndoSteps(), undoRecords);
+        QVERIFY(markedMisspelt(pCommandLine, qsl("qzxfrob")));
+        QVERIFY(markedMisspelt(pCommandLine, qsl("qzxgrok")));
+    }
+
+    // Grouping a key with its mark is for spell check alone: without it Qt still
+    // merges a run of typing into the one step it always was
+    void test_undoTakesBackAWholeRunOfTypingWithSpellCheckOff()
+    {
+        mpHost->setEnableSpellCheck(false);
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("qzxfrob"));
+
+        QTest::keySequence(pCommandLine, QKeySequence::Undo);
+
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+    }
+
     // The control for the test above
     void test_nothingIsUnderlinedWithSpellCheckOff()
     {

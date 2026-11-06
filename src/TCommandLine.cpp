@@ -68,6 +68,30 @@ QTextCursor cursorAtWordStart(QTextDocument* pDocument, const int position)
     cursor.setPosition(cursor.selectionStart());
     return cursor;
 }
+
+bool formatAlreadyApplied(const QTextCursor& cursor, const QTextCharFormat& format)
+{
+    const int start = cursor.selectionStart();
+    const int end = cursor.selectionEnd();
+    for (QTextBlock block = cursor.document()->findBlock(start); block.isValid() && block.position() < end; block = block.next()) {
+        for (auto it = block.begin(); !it.atEnd(); ++it) {
+            const QTextFragment fragment = it.fragment();
+            if (fragment.position() + fragment.length() > start && fragment.position() < end && fragment.charFormat() != format) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+// Every mark is an undo record, even an unchanged one, and the undo stack never shrinks
+void setSpellCheckFormat(QTextCursor& cursor, const QTextCharFormat& format)
+{
+    if (cursor.hasSelection() && formatAlreadyApplied(cursor, format)) {
+        return;
+    }
+    cursor.setCharFormat(format);
+}
 } // namespace
 
 TCommandLine::TCommandLine(Host* pHost, const QString& name, enums::CommandLineType type, TConsole* pConsole, QWidget* parent)
@@ -199,11 +223,19 @@ bool TCommandLine::claimsShortcutOverride(const QKeyEvent* ke) const
 
 void TCommandLine::processNormalKey(QEvent* event)
 {
+    const auto* keyEvent = static_cast<QKeyEvent*>(event);
+    // The key and the spell-check mark it leads to are one undo step, so Undo takes
+    // back the key and not just the mark. Closing a block after Undo or Redo would
+    // split the step they land on.
+    const bool groupWithMark = mpHost->getEnableSpellCheck() && !keyEvent->matches(QKeySequence::Undo) && !keyEvent->matches(QKeySequence::Redo);
+    QTextCursor editBlock(document());
+    if (groupWithMark) {
+        editBlock.beginEditBlock();
+    }
     {
         const UserEditScope userEdit(*this);
         QPlainTextEdit::event(event);
     }
-    adjustHeight();
 
     mHistoryBuffer = 0;
     if (mTabCompletionOld != toPlainText()) {
@@ -214,6 +246,10 @@ void TCommandLine::processNormalKey(QEvent* event)
     }
 
     spellCheck();
+    if (groupWithMark) {
+        editBlock.endEditBlock();
+    }
+    adjustHeight();
 }
 
 bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
@@ -436,6 +472,11 @@ bool TCommandLine::event(QEvent* event)
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
                 mLastCompletion.clear();
+                const bool groupWithMark = mpHost->getEnableSpellCheck();
+                QTextCursor editBlock(document());
+                if (groupWithMark) {
+                    editBlock.beginEditBlock();
+                }
                 {
                     // This does the actual deletion of the character:
                     const UserEditScope userEdit(*this);
@@ -443,6 +484,9 @@ bool TCommandLine::event(QEvent* event)
                 }
                 // Recheck spelling of shortened word:
                 spellCheck();
+                if (groupWithMark) {
+                    editBlock.endEditBlock();
+                }
                 adjustHeight();
                 return true;
             }
@@ -467,6 +511,11 @@ bool TCommandLine::event(QEvent* event)
                 mAutoCompletionCount = -1;
                 mTabCompletionCount = -1;
                 mLastCompletion.clear();
+                const bool groupWithMark = mpHost->getEnableSpellCheck();
+                QTextCursor editBlock(document());
+                if (groupWithMark) {
+                    editBlock.beginEditBlock();
+                }
                 {
                     // This does the actual deletion of the character:
                     const UserEditScope userEdit(*this);
@@ -474,6 +523,9 @@ bool TCommandLine::event(QEvent* event)
                 }
                 // Recheck spelling of shortened word:
                 spellCheck();
+                if (groupWithMark) {
+                    editBlock.endEditBlock();
+                }
                 adjustHeight();
                 return true;
             }
@@ -854,9 +906,13 @@ void TCommandLine::spellCheck()
     QTextCursor oldCursor = textCursor();
     QTextCursor c = cursorAtWordStart(document(), oldCursor.position());
     spellCheckWord(c);
-    QTextCharFormat f;
-    f.setFontUnderline(false);
-    oldCursor.setCharFormat(f);
+    // Keeps the mark off the next character typed. With a selection it would instead
+    // strip the marks from the selected words, which Undo and Redo leave selected
+    if (!oldCursor.hasSelection()) {
+        QTextCharFormat f;
+        f.setFontUnderline(false);
+        oldCursor.setCharFormat(f);
+    }
     setTextCursor(oldCursor);
 }
 
@@ -1413,7 +1469,7 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
         // We don't check when there is no dictionary or the word is too short,
         // but may need to undo any prior underline, and we need to also reset the flag:
         f.setFontUnderline(false);
-        c.setCharFormat(f);
+        setSpellCheckFormat(c, f);
         setTextCursor(c);
         mSpellChecking = false;
         return;
@@ -1425,7 +1481,7 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     if (codecName.isEmpty()) {
         // If we don't know the encoding, we can't safely spell-check
         f.setFontUnderline(false);
-        c.setCharFormat(f);
+        setSpellCheckFormat(c, f);
         setTextCursor(c);
         mSpellChecking = false;
         return;
@@ -1459,7 +1515,7 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
         // Word is spelt correctly
         f.setFontUnderline(false);
     }
-    c.setCharFormat(f);
+    setSpellCheckFormat(c, f);
     setTextCursor(c);
     mSpellChecking = false;
 }
@@ -1527,10 +1583,10 @@ void TCommandLine::clearMarksOnWholeLine()
     QTextCharFormat f;
     QTextCursor c = textCursor();
     c.select(QTextCursor::Document);
-    c.setCharFormat(f);
+    setSpellCheckFormat(c, f);
     setTextCursor(c);
     f.setFontUnderline(false);
-    oldCursor.setCharFormat(f);
+    setSpellCheckFormat(oldCursor, f);
     setTextCursor(oldCursor);
 }
 
