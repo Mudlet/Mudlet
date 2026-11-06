@@ -191,6 +191,19 @@ public:
     // GameLine, TriggerDetail, LuaSuccess and Selection; the choice saved by the GUI's console is not read.
     void setDebugCategories(TDebug::Categories categories);
     TDebug::Categories debugCategories() const;
+    // Where the main console wraps the game's lines: at wrapAt characters, with indent spaces before a line's
+    // first part and hangingIndent before each part after it. As the GUI wraps them, an indent of the wrap width or
+    // more is taken as none, and one of more than half of it as half. All 0 with no profile open: read it at
+    // profileLoaded, then follow consoleWrapChanged.
+    struct ConsoleWrap
+    {
+        int wrapAt = 0;
+        int indent = 0;
+        int hangingIndent = 0;
+
+        bool operator==(const ConsoleWrap&) const = default;
+    };
+    ConsoleWrap consoleWrap() const;
     // Answers the game's offer of a secure port, as the GUI's Yes and No do: true stores that port with TLS on,
     // as the connection dialog would, and connects there, so a frontend that passes its own port to a later
     // start() passes tls with it; false reconnects where it was and stops the profile asking again. False, with
@@ -324,6 +337,10 @@ signals:
     // when it was written, in milliseconds since the epoch, so earlier than now for what was kept from before the
     // console was shown. Sent as written, so a handler may neither call the session nor run the event loop.
     void debugText(const QString& text, const QColor& foreground, const QColor& background, qint64 arrivalMSecs);
+    // consoleWrap() changed, from a script's setWindowWrap(), setWindowWrapIndent() or setWindowWrapHangingIndent()
+    // on the main console. From the event loop, with the wrap as it is then, and only when that differs from the
+    // one last sent or the one consoleWrap() gave at profileLoaded.
+    void consoleWrapChanged(const QString& profile, int wrapAt, int indent, int hangingIndent);
     // What the GUI shows outside the profile's screen: a script's showNotification(), which answers true only
     // when this signal is connected and not blocked, with no milliseconds for the system's own time; and a
     // script's alert() or the game's bell, asking for the player's attention for that long, 0 until they come
@@ -422,6 +439,9 @@ private:
     // False if a handler deleted the session
     bool sendShownLines(const QList<ShownLine>& lines);
     void closeDebugConsole();
+    // The relays of how the main console is drawn, in THeadlessSessionOutput.cpp
+    void connectOutputRelays(Host*, unsigned int run);
+    void noteOutputStateAtLoad();
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
@@ -476,6 +496,8 @@ private:
     bool mLineShownLatched = false;
     class DebugSink;
     std::unique_ptr<DebugSink> mpDebugSink;
+    // What consoleWrap() gave at profileLoaded, then each consoleWrapChanged; none before the load ends
+    std::optional<ConsoleWrap> mDeliveredConsoleWrap;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(THeadlessSession::TextStyles)

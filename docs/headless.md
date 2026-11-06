@@ -483,6 +483,21 @@ does, that raises `sysProfileFocusChangeEvent` with `false` in the profile it le
 one it brings forward, and shows that profile's Discord presence. A profile whose close has started is
 refused with `false` and a message, and the front stays where it was.
 
+## Embedding it: drawing the main console as the GUI does
+
+`lineShown` sends each line whole, so an app that draws the main console as the GUI does wraps it
+itself, and needs what the GUI draws it with besides the font. Each of these is read at
+`profileLoaded` and then followed by a signal that comes from the event loop, with the value as it is
+then, and only when that differs from the one the app last had. So none follows `profileLoaded` for
+what the load did, and a change a script makes and undoes before the event loop runs sends nothing.
+
+`consoleWrap()` is where the main console wraps the game's lines: at `wrapAt` characters, with `indent`
+spaces before the first part of a line and `hangingIndent` before each part after it, as a script's
+`setWindowWrap()`, `setWindowWrapIndent()` and `setWindowWrapHangingIndent()` on the main console, or
+the profile's save, set them. As in the GUI, an indent of the wrap width or more is none, and one of
+more than half of it is half. `consoleWrapChanged` carries each change; a mini console's wrap does not
+send it.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,

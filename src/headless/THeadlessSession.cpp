@@ -473,6 +473,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                             emit consoleFontChanged(profile, font);
                         },
                         Qt::QueuedConnection);
+                connectOutputRelays(pNewHost, run);
                 connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text) {
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;
@@ -828,6 +829,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
         return StartResult::loadFailed;
     }
     mDeliveredConsoleFont = consoleFont();
+    noteOutputStateAtLoad();
     // A copy, as a handler may delete the session while its argument is in use
     const QString profile = mProfileName;
     emit profileLoaded(profile);
