@@ -64,8 +64,8 @@ private:
     Host* mpHost = nullptr;
     const QString mProfileName = qsl("ErrorLineLink-Test-Profile");
     const QString mLocalhost = qsl("localhost");
-    // Long enough that Lua shortens the "Script: ..." chunk name in its messages
-    const QString mLongScriptName = qsl("qaBrokenScriptWithAVeryLongNameThatLuaHasToShorten");
+    // Past the 63 bytes of a chunk name that Lua keeps in a syntax error
+    const QString mLongScriptName = qsl("qaBrokenScriptWithAVeryLongNameThatLuaHasToShortenBeforeItPutsItInTheMessage");
 
     void deleteProfileDirectory(const QString& profileName)
     {

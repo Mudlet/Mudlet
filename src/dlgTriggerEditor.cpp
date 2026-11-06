@@ -11304,8 +11304,7 @@ QString dlgTriggerEditor::linkErrorLineToScript(const QString& error)
 
     QString label = match.captured(1);
     label.replace(qsl("&quot;"), qsl("\"")).replace(qsl("&lt;"), qsl("<")).replace(qsl("&gt;"), qsl(">")).replace(qsl("&amp;"), qsl("&"));
-    // Lua shortens a long chunk name, or one with a line break, to its first
-    // 45 bytes or its first line and appends "..."
+    // Lua cuts a long chunk name, or one with a line break, short and appends "..."
     bool sameChunk = label == chunkName;
     if (!sameChunk && label.endsWith(qsl("..."))) {
         const QByteArray stem = label.chopped(3).toUtf8();
