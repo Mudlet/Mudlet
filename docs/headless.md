@@ -214,6 +214,13 @@ feed to drop; without it, as for the CLI, that piece starts with the line feed t
 It is sent between the lines from before and after, so, like `outputLine`, its handler must not call the
 session back.
 
+`loggingChanged` says when the profile starts or stops logging the game's text to a file, where the GUI's
+logging button changes: from a script's `startLogging()`, or as the profile loads with logging left on,
+with the log file's path while it logs. A start that fails sends `false`, and the reason is printed on the
+main console, so it arrives as `localText`. A profile that closes while it logs, or that `shutdown()` or a
+later `start()` lets go of, sends `false` too, so each `true` is followed by one `false`, unless the
+session is deleted first: a session being deleted sends none. It comes from the event loop.
+
 The signals' handlers are called while a line is being written, so they must not call the session
 back or run the event loop; queue the work for later instead. `host()` reaches what the session
 does not cover, such as settings and the map, and goes null once the profile closes, so hold it in a

@@ -288,6 +288,12 @@ signals:
     // send are dropped. Sent mid-write, as outputLine is, so a handler may neither call the session nor run the
     // event loop.
     void mainConsoleCleared(const QString& profile);
+    // The profile started or stopped logging the game's text to a file, where the GUI's logging button changes:
+    // from a script's startLogging(), or as it loads with logging left on. fileName is the log being written,
+    // empty once it stops. Also false, with logging still off, when a start fails (the reason is printed, as
+    // localText), and once the profile closes, or shutdown() or a later start() lets it go, while it logs, though
+    // not for the session being deleted. From the event loop.
+    void loggingChanged(const QString& profile, bool logging, const QString& fileName);
     // What the GUI shows outside the profile's screen: a script's showNotification(), which answers true only
     // when this signal is connected and not blocked, with no milliseconds for the system's own time; and a
     // script's alert() or the game's bell, asking for the player's attention for that long, 0 until they come
@@ -405,9 +411,10 @@ private:
     QString mMapProgressLabel;
     int mMapProgressValue = 0;
     int mMapProgressMaximum = 0;
-    // The profile hidden input, a map operation, a package download or a replay was reported started for, until
-    // its end is
+    // The profile hidden input, logging, a map operation, a package download or a replay was reported started for,
+    // until its end is
     std::optional<QString> mHiddenInputFor;
+    std::optional<QString> mLoggingFor;
     std::optional<QString> mMapProgressFor;
     std::optional<QString> mPackageDownloadFor;
     std::optional<QString> mReplayFor;
