@@ -1115,9 +1115,10 @@ private slots:
         QTest::newRow("cjk") << qsl("cjk") << QStringList{qsl("你看到一只凶猛的老虎向你扑来"), qsl("店小二笑眯眯地递给你一碗热腾腾的面条"), qsl("北边是一条幽静的小路"), qsl("你的内力恢复了一些")};
     }
 
-    // Lines a UTF-8 game sends in languages other than English: past half the
-    // wrap width in QChars, so the column count decides whether they wrap, but
-    // most of them short enough not to.
+    // Lines a UTF-8 game sends in languages other than English. The latin and
+    // cyrillic lines are past half the wrap width in QChars, so only their column
+    // count tells whether they wrap; nearly every cjk line is under half, which
+    // its QChar count alone settles.
     void benchUtf8Text()
     {
         QFETCH(QString, metric);
