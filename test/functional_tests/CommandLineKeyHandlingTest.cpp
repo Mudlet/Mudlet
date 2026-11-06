@@ -607,6 +607,29 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("qzxbrachiosaurus "));
     }
 
+    // Punctuation ends a word as a space does, so a Tab after it has no part-word to
+    // complete and must not glue some word from the game's output onto the line
+    void test_tabDoesNothingAfterPunctuation_data()
+    {
+        QTest::addColumn<QString>("typed");
+        QTest::newRow("comma") << qsl("qzxpterodactyl,");
+        QTest::newRow("full stop after a space") << qsl("look .");
+        QTest::newRow("exclamation mark") << qsl("say hello qzxpterodactyl!");
+    }
+
+    void test_tabDoesNothingAfterPunctuation()
+    {
+        QFETCH(QString, typed);
+        mpHost->mainConsoleView()->print(qsl("a qzxpterodactyl circles overhead\n"));
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        type(pCommandLine, typed);
+        press(pCommandLine, Qt::Key_Tab);
+
+        QCOMPARE(pCommandLine->toPlainText(), typed);
+    }
+
     // Typing a space accepts the completion. A Tab straight after it must not
     // carry on cycling through the matches and swap the accepted word for the
     // other one - which is what it would do if the space left the cycle where

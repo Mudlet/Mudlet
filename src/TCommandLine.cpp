@@ -1224,18 +1224,14 @@ void TCommandLine::handleTabCompletion(bool direction)
     } else {
         mTabCompletionCount--;
     }
-    if (mTabCompletionTyped.endsWith(QChar::Space)) {
-        return;
-    }
-    QString lastWord;
     const QRegularExpression reg = QRegularExpression(qsl(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
     const QRegularExpressionMatch match = reg.match(mTabCompletionTyped);
-    const int typePosition = match.capturedStart();
-    if (reg.captureCount() >= 1) {
-        lastWord = match.captured(1);
-    } else {
-        lastWord = QString();
+    // Nothing to complete after a space or punctuation: an empty part-word would match every word in the buffer
+    if (!match.hasMatch()) {
+        return;
     }
+    const int typePosition = match.capturedStart();
+    const QString lastWord = match.captured(1);
 
     // One pass over the buffer collects only the words that can complete lastWord, so
     // deduplicating and the blacklist work on those rather than on every word
