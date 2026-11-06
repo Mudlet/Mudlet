@@ -2703,23 +2703,7 @@ void TDetachedWindow::showScriptEditorDialog(std::function<void(dlgTriggerEditor
             return;
         }
 
-        // Create or get the editor directly, avoiding the main window's focus restoration logic
-        dlgTriggerEditor* pEditor = nullptr;
-        HostDialogs& dialogs = HostDialogs::of(pHost);
-        if (dialogs.mpEditorDialog != nullptr) {
-            pEditor = dialogs.mpEditorDialog;
-        } else {
-            // Create a new editor directly without using the main window's method
-            pEditor = new dlgTriggerEditor(pHost);
-            dialogs.mpEditorDialog = pEditor;
-            connect(pHost, &Host::profileSaveStarted, pEditor, &dlgTriggerEditor::slot_profileSaveStarted);
-            connect(pHost, &Host::profileSaveFinished, pEditor, &dlgTriggerEditor::slot_profileSaveFinished);
-            pEditor->fillout_form();
-        }
-
-        if (!pEditor) {
-            return;
-        }
+        dlgTriggerEditor* pEditor = HostDialogs::editor(pHost);
 
         // Use centralized focus restoration with this detached window as target
         mudlet::setupEditorFocusRestoration(pEditor, originatingProfile, this);

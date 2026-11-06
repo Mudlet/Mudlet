@@ -31,6 +31,7 @@
 
 #include <QPointer>
 #include <QRegularExpression>
+#include <memory>
 #include <unordered_map>
 
 #include "TAction.h"
@@ -100,6 +101,7 @@ class TAction;
 class TKey;
 class TVar;
 class TConsole;
+class TConsoleModel;
 class dlgVarsMainArea;
 class QShortcut;
 
@@ -117,6 +119,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class EditorEmptySelectionTest;
     friend class EditorFolderViewTest;
     friend class EditorFontTest;
+    friend class EditorLazyCreationTest;
     friend class EditorModuleFolderTest;
     friend class EditorReshowTest;
     friend class EditorSearchTest;
@@ -187,8 +190,13 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 
 public:
     Q_DISABLE_COPY(dlgTriggerEditor)
-    dlgTriggerEditor(Host*);
+    // Without an error console model it makes a fresh one
+    dlgTriggerEditor(Host*, std::unique_ptr<TConsoleModel> errorConsoleModel);
     ~dlgTriggerEditor();
+
+    static std::unique_ptr<TConsoleModel> newErrorConsoleModel(Host*);
+    static void ensureLuaAutoCompleteProvider();
+    static QString takenKeyWarning(Host*, const TKey*);
 
     void closeEvent(QCloseEvent* event) override;
     void focusInEvent(QFocusEvent*) override;
@@ -500,7 +508,6 @@ private:
     void clearVarForm();
 
     void updatePackageItemAccessibility(QTreeWidgetItem* pItem, const QString& currentDescription);
-    QString takenKeyWarning(const TKey* pKey) const;
     void showKeyTakenWarning(QTreeWidgetItem* pItem, const QString& warning, bool announce);
     void rewarnAboutCurrentKey();
 
@@ -882,8 +889,8 @@ private:
     // space-driven auto-collapse:
     bool mShowAllTriggerControls = false;
 
-    // Every profile builds an editor on load but all share one saved window position, so one never
-    // opened must not overwrite it:
+    // Every profile's editor shares one saved window position, so one built but never shown must not
+    // overwrite it:
     bool mHasBeenShown = false;
 
     // tracks location of the splitter in the trigger editor for each tab

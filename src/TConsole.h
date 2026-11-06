@@ -82,7 +82,8 @@ public:
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
 
     Q_DISABLE_COPY(TConsole)
-    explicit TConsole(Host*, const QString&, const ConsoleType type = UnknownType, QWidget* parent = nullptr);
+    // A model handed in keeps its own name, and may already hold lines
+    explicit TConsole(Host*, const QString&, const ConsoleType type = UnknownType, QWidget* parent = nullptr, std::unique_ptr<TConsoleModel> handedModel = {});
     ~TConsole() override;
 
     void reset();

@@ -220,6 +220,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorAddItemTest.cpp
     EditorFolderViewTest.cpp
     EditorFontTest.cpp
+    EditorLazyCreationTest.cpp
     EditorModuleFolderTest.cpp
     EditorSearchTest.cpp
     TreeWidgetItemMoveTest.cpp

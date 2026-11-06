@@ -212,11 +212,11 @@ void setCommandLinePalette(TCommandLine* pCommandLine, const QPalette& palette)
 
 // A high-performance text widget with split screen ability for scrolling back
 // Contains two TTextEdits, and is backed by a TBuffer
-TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidget* parent)
+TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidget* parent, std::unique_ptr<TConsoleModel> handedModel)
 : QWidget(parent)
 , mpHost(pH)
 , mDisplayFontDetails(pH->fontsAntiAlias())
-, mpOwnModel(ownConsoleModel(pH, name, type))
+, mpOwnModel(handedModel ? std::move(handedModel) : ownConsoleModel(pH, name, type))
 , mpModel(mpOwnModel ? mpOwnModel.get() : &pH->mainConsoleModel())
 , buffer(mpModel->buffer)
 , emergencyStop(new QToolButton)

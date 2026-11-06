@@ -941,15 +941,11 @@ void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHo
         // for as long as it lasts - on the main screen that is a line the
         // player is told to ignore, which is worse than not saying it. The
         // editor is where a key binding is looked at and where it is changed.
-        // Opening it replaces this notice, so it is read out only if the editor
-        // is open; selecting the binding says it again.
-        if (auto* pDialogs = HostDialogs::find(pOtherHost.data()); auto* pEditor = pDialogs ? pDialogs->mpEditorDialog.data() : nullptr) {
-            //: Warning shown in the editor when an add-on command in another of the player's profiles takes a key one of this profile's key bindings uses. %1 is a key such as "Alt+F9", %2 the name of the command and %3 the name of the profile it was added in.
-            pEditor->showWarning(
-                    tr("%1 is now used by the \"%2\" command in your \"%3\" profile, so this profile's key binding on it will not fire. Put one of the two on a different key to use both.")
-                            .arg(sequence.toString(QKeySequence::NativeText), commandName, pHost ? pHost->getName() : QString()),
-                    pEditor->isVisible());
-        }
+        //: Warning shown in the editor when an add-on command in another of the player's profiles takes a key one of this profile's key bindings uses. %1 is a key such as "Alt+F9", %2 the name of the command and %3 the name of the profile it was added in.
+        HostDialogs::showEditorWarning(
+                pOtherHost.data(),
+                tr("%1 is now used by the \"%2\" command in your \"%3\" profile, so this profile's key binding on it will not fire. Put one of the two on a different key to use both.")
+                        .arg(sequence.toString(QKeySequence::NativeText), commandName, pHost ? pHost->getName() : QString()));
     }
 }
 
@@ -1817,16 +1813,12 @@ void mudlet::init()
             return;
         }
 
-        HostDialogs& dialogs = HostDialogs::of(host);
-        if (!dialogs.mpEditorDialog && !createMudletEditor()) {
-            qWarning() << "Failed to create editor dialog";
-            return;
-        }
-        dialogs.mpEditorDialog->showCurrentTriggerItem();
-        dialogs.mpEditorDialog->raise();
-        showEditorRestoringWindowState(dialogs.mpEditorDialog);
-        dialogs.mpEditorDialog->activateWindow();
-        dialogs.mpEditorDialog->mpErrorConsole->setVisible(true);
+        dlgTriggerEditor* pEditor = HostDialogs::editor(host);
+        pEditor->showCurrentTriggerItem();
+        pEditor->raise();
+        showEditorRestoringWindowState(pEditor);
+        pEditor->activateWindow();
+        pEditor->mpErrorConsole->setVisible(true);
     });
 
 #if defined(INCLUDE_UPDATER)
@@ -3623,6 +3615,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(pH, &Host::signal_showUnpackingProgress, pConsole, &TMainConsole::showUnpackingProgress, Qt::UniqueConnection);
     connect(pH, &Host::signal_hideUnpackingProgress, pConsole, &TMainConsole::closeUnpackingProgress, Qt::UniqueConnection);
     HostDialogs::connectTeardown(pH);
+    // The editor is built when first opened, and until then this keeps what it would show
+    HostDialogs::of(pH);
 
     // Functor connects again, so no Qt::UniqueConnection: see the note above signal_bell's
     connect(pH, &Host::signal_consoleFontChanged, this, [](const QFont& font) {
@@ -3797,13 +3791,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     }
 
     pConsole->show();
-
-    auto pEditor = new dlgTriggerEditor(pH);
-    HostDialogs::of(pH).mpEditorDialog = pEditor;
-    connect(pH, &Host::profileSaveStarted, pEditor, &dlgTriggerEditor::slot_profileSaveStarted);
-    connect(pH, &Host::profileSaveFinished, pEditor, &dlgTriggerEditor::slot_profileSaveFinished);
-    // Item trees are deliberately not populated here: the rebuild ScriptUnit::compileAll() queues is put off
-    // until the editor is first opened (see dlgTriggerEditor::runScheduledCleanReset()).
 
     pH->getActionUnit()->updateAllToolbars();
 
@@ -8547,18 +8534,7 @@ dlgTriggerEditor* mudlet::createMudletEditor()
         return nullptr;
     }
 
-    HostDialogs& dialogs = HostDialogs::of(pHost);
-    if (dialogs.mpEditorDialog != nullptr) {
-        return dialogs.mpEditorDialog;
-    }
-
-    auto* pEditor = new dlgTriggerEditor(pHost);
-    dialogs.mpEditorDialog = pEditor;
-    connect(pHost, &Host::profileSaveStarted, pEditor, &dlgTriggerEditor::slot_profileSaveStarted);
-    connect(pHost, &Host::profileSaveFinished, pEditor, &dlgTriggerEditor::slot_profileSaveFinished);
-    pEditor->fillout_form();
-
-    return pEditor;
+    return HostDialogs::editor(pHost);
 }
 
 // Getting a QWidget to emit a signal that normally comes from a QWindow;
