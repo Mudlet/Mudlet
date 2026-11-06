@@ -1718,6 +1718,9 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(playVideoFile({name = longSoundFile, key = videoWindow, close = true}))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
     assert.is_true(windowVisible(videoWindow))
+    -- Asked again while it plays, the request's own settings replace the player's
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoWindow, close = true}))
+    assert.equals(1, #getPlayingVideos())
 
     assert.is_true(stopVideos())
     assert.equals(0, #getPlayingVideos())
