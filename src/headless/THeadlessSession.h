@@ -320,6 +320,40 @@ public:
     bool toggleAllSoundsMuted();
     // False with no profile open
     bool soundsMuted(SoundSource source) const;
+    // A command a package's addCommand() added, as the main window shows it in its menu, on its toolbar or both
+    struct AddonCommand
+    {
+        // What addCommand() returned, which sysCommandClicked carries
+        int id = 0;
+        // Empty for one no package's code added
+        QString package;
+        QString name;
+        QString icon;
+        QString tooltip;
+        // The submenus it sits in, separated by '/', and its shortcut as the script wrote it, for QKeySequence to
+        // read; both empty unless it is on the menu
+        QString menuPath;
+        QString shortcut;
+        bool onMenu = false;
+        bool onToolbar = false;
+        bool enabled = true;
+        // checked is ticked while checkable, which a script's setCommandChecked() makes it
+        bool checkable = false;
+        bool checked = false;
+        // Pinned, the GUI keeps it on the menu whichever profile is in front; otherwise only while its own is
+        bool pinned = false;
+        // Its toolbar button flashing between the two colours, each held that long; the colours and time are
+        // the last a script set, and only mean something while it flashes
+        bool pulse = false;
+        QColor pulseColor1;
+        QColor pulseColor2;
+        int pulseIntervalMs = 0;
+
+        bool operator==(const AddonCommand&) const = default;
+    };
+    // The session's profile's commands in the order they were added; none with no profile open. Read from
+    // anywhere.
+    QList<AddonCommand> addonCommands() const;
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a

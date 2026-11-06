@@ -619,3 +619,18 @@ change from the event loop, whoever made it, a script's `setConfig()` in any of 
 and also a call that left it as it was, so an app's mute buttons can follow it as the GUI's do. It stops
 once the session's own profile has closed, as the session's other signals do, even while profiles its
 scripts opened live on. They are refused where `submit()` is.
+
+## Embedding it: commands and buttons that scripts add
+
+`addonCommands()` lists the commands the session's profile's scripts added with `addCommand()`, which
+the GUI shows in the main window's menu, on its toolbar or on both, in the order they were added, for
+an app to draw them where its own menus and toolbars are. Each carries the `id` that `addCommand()`
+returned and `sysCommandClicked` names, the package whose code added it (empty when no package's did),
+its name, icon path and tooltip, the `menuPath` of submenus it sits in and its `shortcut` as the script
+wrote them, `onMenu` and `onToolbar` for where it shows, and what the script set since: whether it is
+enabled, checkable and checked, pinned to the menu whichever profile is in front, and flashing on the
+toolbar between `pulseColor1` and `pulseColor2`, each held for `pulseIntervalMs`. Commands the session's
+scripts added in a profile they opened with `loadProfile()` are that profile's, not the session's, so
+they are left out. It reads the commands as they are at the call, from anywhere, and is empty with no
+profile open, so after `shutdown()` too, as removing a package, resetting the profile and closing it
+removes its commands.

@@ -351,6 +351,7 @@ set(TEARDOWN_GROUP_TEST_SOURCES
 )
 if(USE_HEADLESS)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionInputTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionCommandsTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessRunnerTest.cpp HeadlessSessionTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionOutputTest.cpp)
 endif()
@@ -658,6 +659,11 @@ endif()
 # HeadlessSessionInputTest starts a fresh headless profile in each of its cases, as HeadlessSessionTest does
 if(TEST HeadlessSessionInputTest)
     set_tests_properties(HeadlessSessionInputTest PROPERTIES TIMEOUT 300)
+endif()
+
+# HeadlessSessionCommandsTest starts a fresh headless profile in each of its cases too
+if(TEST HeadlessSessionCommandsTest)
+    set_tests_properties(HeadlessSessionCommandsTest PROPERTIES TIMEOUT 300)
 endif()
 
 # HeadlessSessionTest starts a fresh headless profile in nearly every one of its
