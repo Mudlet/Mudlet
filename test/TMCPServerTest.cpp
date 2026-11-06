@@ -526,6 +526,19 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QVERIFY(reply.body.value(qsl("id")).isNull());
     }
 
+    void testANonJsonRpc2MessageDoesNotEchoAnUnusableId()
+    {
+        QJsonObject message;
+        message[qsl("jsonrpc")] = qsl("1.0");
+        message[qsl("id")] = QJsonObject{{qsl("n"), 1}};
+        message[qsl("method")] = qsl("tools/list");
+
+        const MCPReply reply = server->handleMessage(QJsonDocument(message).toJson(QJsonDocument::Compact), headersFor(qsl("tools/list")));
+
+        QCOMPARE(errorOf(reply).value(qsl("code")).toInt(), static_cast<int>(TMCPServer::InvalidRequest));
+        QVERIFY(reply.body.value(qsl("id")).isNull());
+    }
+
     void testNotificationIsAcknowledgedWithoutABody()
     {
         const MCPReply reply = server->handleMessage(bodyFor(qsl("notifications/whatever"), QJsonObject(), QJsonValue()), headersFor(qsl("notifications/whatever")));

@@ -212,6 +212,13 @@ MCPReply TMCPServer::handleMessage(const QByteArray& requestBody, const QHttpHea
     const QJsonObject message = document.object();
     const QJsonValue id = message.value(qsl("id"));
 
+    // MCP allows only a string or a number. Anything else is not echoed back, since no
+    // client could have been waiting on it. An absent or null id is a notification.
+    if (!id.isUndefined() && !id.isNull() && !id.isString() && !id.isDouble()) {
+        //: Sent to an MCP client whose request carried an "id" of the wrong kind. Keep 'id' as-is, it names a protocol field.
+        return error(QJsonValue(), InvalidRequest, tr("The request 'id' must be a string or a number."), QJsonValue(), QHttpServerResponse::StatusCode::BadRequest);
+    }
+
     if (message.value(qsl("jsonrpc")).toString() != qsl("2.0")) {
         //: Sent to an MCP client whose request was not a JSON-RPC 2.0 message.
         return error(id, InvalidRequest, tr("Not a JSON-RPC 2.0 message"), QJsonValue(), QHttpServerResponse::StatusCode::BadRequest);
@@ -223,13 +230,6 @@ MCPReply TMCPServer::handleMessage(const QByteArray& requestBody, const QHttpHea
     // strictly allows, because a client that sends one has no reply to correlate anyway.
     if (id.isUndefined() || id.isNull()) {
         return {QJsonObject(), QHttpServerResponse::StatusCode::Accepted};
-    }
-
-    // MCP allows only a string or a number. Anything else is not echoed back, since no
-    // client could have been waiting on it.
-    if (!id.isString() && !id.isDouble()) {
-        //: Sent to an MCP client whose request carried an "id" of the wrong kind. Keep 'id' as-is, it names a protocol field.
-        return error(QJsonValue(), InvalidRequest, tr("The request 'id' must be a string or a number."), QJsonValue(), QHttpServerResponse::StatusCode::BadRequest);
     }
 
     // toString() would read a missing method as "", which then fails later checks with a
