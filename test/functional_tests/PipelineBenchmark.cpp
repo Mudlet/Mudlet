@@ -1129,17 +1129,15 @@ private slots:
         };
         static constexpr int kUtf8Lines = 10000;
         QByteArray corpus;
-        QString lastLine;
         for (int i = 0; i < kUtf8Lines; ++i) {
             // One pick per statement: the order arguments are evaluated in differs between compilers
             const QString& first = phrases.at(pick(phrases.size()));
             const QString& second = phrases.at(pick(phrases.size()));
             const int hp = pick(900) + 100;
-            lastLine = qsl("%1, %2. [HP %3/1000]").arg(first, second).arg(hp);
             corpus += "\x1b[3";
             corpus += QByteArray::number(pick(7) + 1);
             corpus += 'm';
-            corpus += lastLine.toUtf8();
+            corpus += qsl("%1, %2. [HP %3/1000]").arg(first, second).arg(hp).toUtf8();
             corpus += "\x1b[0m\r\n";
         }
 

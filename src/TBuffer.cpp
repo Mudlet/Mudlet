@@ -227,11 +227,9 @@ int clampedWrapIndent(const int indentSize, const int maxWidth)
     return (indentSize > 0 && indentSize < maxWidth) ? std::min(indentSize, maxWidth / 2) : 0;
 }
 
-// Whether the line has no LineFeed and its code points' widths sum to no more than widthAvailable. A grapheme
-// takes the width of its first code point and no width is negative, so that sum is never less than the
-// columns getWrapInfo() counts. An unpaired surrogate counts as graphemeInfo::maxWidth, as getBaseCharacter()
-// may pair it with the QChar after it.
-// Out of line, so the ASCII checks before it stay cheap to inline into every line's commit
+// Whether the line has no LineFeed and fits widthAvailable by a column count never below getWrapInfo()'s: a
+// grapheme is as wide as its first code point (an unpaired surrogate may pair with the next QChar there) or
+// one column wider for VS16, and no width is negative. Out of line, keeping fitsUnwrapped() cheap to inline.
 Q_NEVER_INLINE bool codePointColumnsFit(const QString& lineText, const qsizetype widthAvailable, const QPointer<Host>& host)
 {
     // getWrapInfo() reads the same setting, and has no host to read it from only when it does not wrap at all
@@ -250,6 +248,9 @@ Q_NEVER_INLINE bool codePointColumnsFit(const QString& lineText, const qsizetype
             ++i;
         } else if (QChar::isSurrogate(unit)) {
             columns += graphemeInfo::maxWidth;
+        } else if (unit == 0xFE0F) {
+            // VS16 may draw a one-column symbol before it as a two-column emoji
+            ++columns;
         } else {
             columns += graphemeInfo::getWidth(unit, wideAmbiguous);
         }
