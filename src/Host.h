@@ -54,7 +54,9 @@
 #include <QTimer>
 
 #include <chrono>
+#include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "TMxpMudlet.h"
@@ -309,6 +311,10 @@ public:
     bool isClosingDown() const { return mIsClosingDown; }
     // Also true while a close with no view runs sysExitEvent and its save, before isClosingDown()
     bool closeStarted() const { return mIsClosingDown || mClosingWithNoView; }
+    // For a profile whose deletion is decided but waits, as a deleted session's pool does, so that it does not
+    // dial the game meanwhile; a dial already under way is called off with it
+    void markDeletionPending();
+    bool deletionPending() const { return mDeletionPending; }
     bool isClosingForced() const { return mForcedClose; }
     bool requestClose();
     // A main console raises sysExitEvent as it closes; a profile that never had one gets it from this.
@@ -321,6 +327,9 @@ public:
     bool deletionMustWait();
     // What deletionMustWait() answers, without asking anything to stop
     bool deletionWouldWait() const;
+    // A script, nested event loop, map operation or profile save: what deletionWouldWait() waits for, bar a
+    // reconnect's event loop, which only a deletion must outwait
+    bool busyRunning() const;
 
     // The profile load, in this order, as the GUI and HostManager::openProfile() run it, the GUI doing its
     // window work between the steps. The first returns true when the profile has no save of its own yet,
@@ -522,6 +531,9 @@ public:
     void readPackageConfig(const QString&, QString&, bool, QString* whyNotRead = nullptr);
     QString getPackageConfig(const QString&, bool isModule = false, QString* whyNotRead = nullptr);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
+    // For an app that embeds Mudlet, as there is no main window to show a notification: answers whether it showed it
+    void setNotificationHandler(std::function<bool(const QString& title, const QString& text, std::optional<int> milliseconds)> handler) { mNotificationHandler = std::move(handler); }
+    bool requestNotification(const QString& title, const QString& text, std::optional<int> milliseconds) { return mNotificationHandler && mNotificationHandler(title, text, milliseconds); }
     void printToMainConsole(const QString& msg);
     void printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor);
     void printSystemMessage(const QString& msg);
@@ -950,6 +962,7 @@ private:
     std::unique_ptr<TNullConsoleFrontend> mpNullConsoleFrontend;
     bool mExitEventOwed = true;
     bool mClosingWithNoView = false;
+    bool mDeletionPending = false;
 
 public:
     cTelnet mTelnet;
@@ -1368,6 +1381,9 @@ signals:
     // The font getEditorFont() answers with may have moved
     void signal_editorFontChanged(const QFont& font);
     void signal_passwordEntryWantedChanged(bool wanted);
+    // The whole of the main command line once a script sets it or a send empties it, from a view with no
+    // widget to show it
+    void signal_commandLineTextRequested(const QString& text);
     void signal_forceMXPProcessorOnChanged(bool enabled);
     // The frontend (TMainConsole) owns the dialogs these drive; the strings are
     // built here so they stay in Host's translation context.
@@ -1419,6 +1435,10 @@ signals:
     // uninstalled a module, or turned a module's sync on or off.
     void signal_moduleListChangedByScript();
     void signal_moduleSyncChangedByScript(const QString& module, bool sync);
+    // A script's alert(), for an app that embeds Mudlet: for how long, 0 until the player comes back to it
+    void signal_attentionRequested(int milliseconds);
+    // Plain text for screen readers, with announce()'s processing style, for an app that embeds Mudlet
+    void signal_announcementRequested(const QString& text, const QString& processing);
 
 public slots:
     void slot_timerFires();
@@ -1603,6 +1623,8 @@ private:
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
     QStringList mActiveModules;
+
+    std::function<bool(const QString&, const QString&, std::optional<int>)> mNotificationHandler;
 
     bool mHaveMapperScript = false;
     // This option makes the control on the preferences tristated so the value

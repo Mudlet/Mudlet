@@ -286,6 +286,8 @@ public:
     void sendOutstandingAutoLoginPassword();
     // The wait blocks, so is only for a profile with no window to freeze
     void terminateConnection(bool waitForTheGameToClose);
+    bool connectRunningEventLoop() const { return mConnectEventLoops > 0; }
+    bool packageDownloadRunning() const;
     bool currentlySecure() const
     {
 #if defined(QT_NO_SSL)
@@ -394,6 +396,9 @@ private:
     friend class TelnetConnectFailureTest;
     friend class TelnetLatencyMeasurementTest;
 
+    // Reads a proxy's reply into the dialling socket's proxy engine without running the event loop
+    friend class HeadlessSessionTest;
+
     // Host calls reset(), not cTelnet's constructor: it clears Host members declared after
     // cTelnet, which don't exist yet while cTelnet is constructed.
     friend class Host;
@@ -405,6 +410,8 @@ private:
 #endif
 
     void abandonHostLookup();
+    // Calls off a lookup, dial or login still to come; a live connection stays, for the exit handlers
+    void abandonConnectionAttempt();
 
     // loopbackTesting is for internal testing whilst OFF-LINE using the
     // feedTelnet(...) Lua function.
@@ -544,6 +551,7 @@ private:
     // True between connectIt() and slot_socketHostFound, so
     // getConnectionState() reports HostLookupState during DNS lookup.
     bool mLookingUpHost = false;
+    int mConnectEventLoops = 0;
     // How many of the connection attempts started for the current connect - one per address
     // family the lookup turned up - have yet to succeed or fail.
     int mPendingConnectionAttempts = 0;
