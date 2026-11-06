@@ -20,6 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TDebug.h"
+
 #include <QColor>
 #include <QFlags>
 #include <QFont>
@@ -130,7 +132,7 @@ public:
     // follow consoleFontChanged
     QFont consoleFont() const;
     // For what the session does not cover, such as settings and the map. Null once the profile closes, so
-    // hold it in a QPointer. Not from a handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText,
+    // hold it in a QPointer. Not from a handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, debugText,
     // hiddenInputWanted or a ...Requested signal: a line it fed would be committed in the middle of a write, which TBuffer
     // does not allow.
     Host* host() const;
@@ -138,11 +140,11 @@ public:
     // As typed on the command line: its aliases run, and what is sent while not connected is echoed and dropped
     // with nothing said, as in the GUI, so a frontend that types ahead waits for connected(). These, and
     // installPackage(), are refused while a profile loads or shutdown() runs, and from a handler of outputLine,
-    // lineShown, mainConsoleCleared, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal, which
-    // run mid-write, and fail once a close of the profile has begun; submit() checks each line of a paste as a call.
-    // It is the app's input line being sent: the main command line holds the line while its aliases run, then is
-    // emptied or kept as the profile says. A command from elsewhere, such as a button, goes through runLua() and
-    // expandAlias(), which leave the line alone.
+    // lineShown, mainConsoleCleared, localText, errorConsoleText, debugText, hiddenInputWanted or a ...Requested
+    // signal, which run mid-write, and fail once a close of the profile has begun; submit() checks each line of a
+    // paste as a call. It is the app's input line being sent: the main command line holds the line while its aliases
+    // run, then is emptied or kept as the profile says. A command from elsewhere, such as a button, goes through
+    // runLua() and expandAlias(), which leave the line alone.
     bool submit(const QString& line);
     // As the GUI's hidden-input box sends what is typed into it while hiddenInputWanted holds: straight to the
     // game, with its carriage returns and line feeds taken out, and no aliases, command separator,
@@ -177,6 +179,18 @@ public:
     // size in pixels. As in the GUI, a width below 40 is taken as 40 and the game is told no more than the
     // profile's wrap width. Refused below 1 or above 65535, which NAWS cannot carry, and where submit() is.
     bool setScreenSize(int columns, int rows);
+    // Shows or closes the Central Debug Console, as the editor's button does: while it is shown, debugText carries
+    // what it prints, what was kept from before first, and the profiles write what they write only in debug mode.
+    // There is one for the whole process, owned by the session that showed it last: showing it here takes it from
+    // another, whose debugConsoleShown() then answers false and whose false is refused. It closes with the owner's
+    // shutdown() or deletion too. Works before start(); refused while a profile loads, during shutdown() and from a
+    // handler.
+    bool setDebugConsoleShown(bool shown);
+    bool debugConsoleShown() const;
+    // Which kinds of message the console prints, for the whole process. Until set, TDebug's defaults, which hide
+    // GameLine, TriggerDetail, LuaSuccess and Selection; the choice saved by the GUI's console is not read.
+    void setDebugCategories(TDebug::Categories categories);
+    TDebug::Categories debugCategories() const;
     // Answers the game's offer of a secure port, as the GUI's Yes and No do: true stores that port with TLS on,
     // as the connection dialog would, and connects there, so a frontend that passes its own port to a later
     // start() passes tls with it; false reconnects where it was and stops the profile asking again. False, with
@@ -304,6 +318,12 @@ signals:
     // in. From the event loop, with the font as it is then, and only when that differs from the one last sent or
     // the one consoleFont() gave at profileLoaded, so what the load did never follows it.
     void consoleFontChanged(const QString& profile, const QFont& font);
+    // What the Central Debug Console prints, from any profile, marked with the profile's tag while more than one
+    // is open, while setDebugConsoleShown() has it shown. Text to append as given, as the console does: a line ends
+    // at its own newline and may come in pieces of different colours, as "ERROR:" and then why. arrivalMSecs is
+    // when it was written, in milliseconds since the epoch, so earlier than now for what was kept from before the
+    // console was shown. Sent as written, so a handler may neither call the session nor run the event loop.
+    void debugText(const QString& text, const QColor& foreground, const QColor& background, qint64 arrivalMSecs);
     // What the GUI shows outside the profile's screen: a script's showNotification(), which answers true only
     // when this signal is connected and not blocked, with no milliseconds for the system's own time; and a
     // script's alert() or the game's bell, asking for the player's attention for that long, 0 until they come
@@ -401,6 +421,7 @@ private:
     QList<ShownLine> takeTriggerWrites(bool taken);
     // False if a handler deleted the session
     bool sendShownLines(const QList<ShownLine>& lines);
+    void closeDebugConsole();
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
@@ -453,6 +474,8 @@ private:
     QList<QList<ShownLine>> mShownLinesOfPasses;
     // Whether lineShown was connected as the line the passes under way began with was committed
     bool mLineShownLatched = false;
+    class DebugSink;
+    std::unique_ptr<DebugSink> mpDebugSink;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(THeadlessSession::TextStyles)

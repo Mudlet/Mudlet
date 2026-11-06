@@ -246,6 +246,25 @@ QString configDirProblem(const QString& dir)
 
 } // namespace
 
+class THeadlessSession::DebugSink final : public TDebug::Sink
+{
+public:
+    explicit DebugSink(THeadlessSession& session)
+    : mSession(session)
+    {
+    }
+
+    void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const qint64 arrivalMSecs) override
+    {
+        ++gSignalsBeingHandedOut;
+        emit mSession.debugText(text, foreground, background, arrivalMSecs);
+        --gSignalsBeingHandedOut;
+    }
+
+private:
+    THeadlessSession& mSession;
+};
+
 THeadlessSession::THeadlessSession(QObject* parent)
 : QObject(parent)
 {
@@ -253,6 +272,7 @@ THeadlessSession::THeadlessSession(QObject* parent)
 
 THeadlessSession::~THeadlessSession()
 {
+    closeDebugConsole();
     if (!mpPool) {
         return;
     }
@@ -382,10 +402,15 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
     mDeliveredConsoleFont.reset();
     mUnsavedProfiles.clear();
     mLoadFailed = false;
+    // A copy, as the profile's start prints to the debug console, whose handler may delete the session
+    const QString profileName = mProfileName;
     Host* pHost = mpPool->openProfile(
-            mProfileName,
+            profileName,
             options.connect,
-            [this, run, &password](Host* pNewHost) {
+            [this, self, run, &password](Host* pNewHost) {
+                if (!self) {
+                    return;
+                }
                 mpHost = pNewHost;
                 mSecureConnectionOffered = false;
                 mMapOperationCancelable = false;
@@ -745,7 +770,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                         },
                         Qt::QueuedConnection);
             },
-            [&options, tls, profile = mProfileName](Host* pNewHost) {
+            [&options, tls, profile = profileName](Host* pNewHost) {
                 // As the dialog: stored details over the game's own, then what was given
                 const QString storedUrl = MudletApp::readProfileData(profile, qsl("url")).trimmed();
                 const QString storedPort = MudletApp::readProfileData(profile, qsl("port")).trimmed();
@@ -1112,6 +1137,65 @@ bool THeadlessSession::setScreenSize(const int columns, const int rows)
     return true;
 }
 
+bool THeadlessSession::setDebugConsoleShown(const bool shown)
+{
+    if (refused()) {
+        return false;
+    }
+    if (!shown) {
+        if (TDebug::sink() && !debugConsoleShown()) {
+            //: Error from a frontend with no window that asked to close the Central Debug Console while another session in the same app had taken it over by showing it
+            mErrorString = tr("Another session has shown the Central Debug Console since, so only that one can close it.");
+            return false;
+        }
+        closeDebugConsole();
+        return true;
+    }
+    if (debugConsoleShown()) {
+        return true;
+    }
+    if (!mpDebugSink) {
+        mpDebugSink = std::make_unique<DebugSink>(*this);
+    }
+    TDebug::setSink(mpDebugSink.get());
+    TDebug::smDebugMode = true;
+    // As the GUI's console does once it is shown; a handler may delete the session meanwhile
+    const QPointer<THeadlessSession> self(this);
+    TDebug::flushMessageQueue();
+    // Not TDebug::announceFilters(), which points at the GUI's filter bar
+    if (const int hidden = TDebug::hiddenCategoryCount(); self && debugConsoleShown() && hidden) {
+        //: Shown in the Central Debug Console of an app with no window when it opens with some kinds of message hidden. %n is how many.
+        const QString text = tr("%n kind(s) of message are hidden.\n", "", hidden);
+        // TDebug's own tag for a message of its own
+        mpDebugSink->printDebugLine(qsl("[\u2731] %1").arg(text), Qt::white, Qt::darkBlue, QDateTime::currentMSecsSinceEpoch());
+    }
+    return true;
+}
+
+void THeadlessSession::setDebugCategories(const TDebug::Categories categories)
+{
+    TDebug::setEnabledCategories(categories & TDebug::csmAllCategories);
+}
+
+TDebug::Categories THeadlessSession::debugCategories() const
+{
+    return TDebug::enabledCategories();
+}
+
+bool THeadlessSession::debugConsoleShown() const
+{
+    return mpDebugSink && TDebug::sink() == mpDebugSink.get();
+}
+
+// As closing the GUI's console does
+void THeadlessSession::closeDebugConsole()
+{
+    if (debugConsoleShown()) {
+        TDebug::setSink(nullptr);
+        TDebug::smDebugMode = false;
+    }
+}
+
 bool THeadlessSession::answerSecureConnectionOffer(const bool accept)
 {
     if (!usable()) {
@@ -1450,6 +1534,9 @@ bool THeadlessSession::shutdown(const bool save)
         return false;
     }
     if (!mpPool) {
+        // Shown before a start() that failed, or after the last shutdown(); with a pool, detachFromHost() closes it
+        // once the profiles have written their last
+        closeDebugConsole();
         return true;
     }
     if (poolReconnecting(*mpPool)) {
@@ -1599,6 +1686,7 @@ void THeadlessSession::withdrawSecureConnectionOffer()
 // So nothing the profile still sends reaches a session that has let it go
 void THeadlessSession::detachFromHost()
 {
+    closeDebugConsole();
     mSecureConnectionOffered = false;
     mMapOperationCancelable = false;
     if (mpHost) {
@@ -1868,7 +1956,7 @@ bool THeadlessSession::sendShownLines(const QList<ShownLine>& lines)
     return true;
 }
 
-// A handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal runs in the middle of a write,
+// A handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, debugText, hiddenInputWanted or a ...Requested signal runs in the middle of a write,
 // which a line it fed would cut into, and a load that runs the event loop has yet to start the profile's scripts
 bool THeadlessSession::refused(const bool duringLoad)
 {
@@ -1879,10 +1967,11 @@ bool THeadlessSession::refused(const bool duringLoad)
         return true;
     }
     if (mpPool && gSignalsBeingHandedOut) {
-        qWarning() << "THeadlessSession: called from an outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, hiddenInputWanted or ...Requested handler, which is refused; queue the "
-                      "call instead";
-        //: Error from a frontend with no window that called it back from a handler of the game's lines, as sent or as shown, of the main console being cleared, of the text the profile printed, of its error console, of the game hiding what the player types, or of a request a script made, such as a notification. "...Requested" stands for the names of those signals, which all end in Requested, and is not translated.
-        mErrorString = tr("Refused from a handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal; queue the call instead.");
+        qWarning() << "THeadlessSession: called from an outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, debugText, hiddenInputWanted or ...Requested handler, which is "
+                      "refused; queue the call instead";
+        //: Error from a frontend with no window that called it back from a handler of the game's lines, as sent or as shown, of the main console being cleared, of the text the profile printed, of its error console, of the Central Debug Console, of the game hiding what the player types, or of a request a script made, such as a notification. "...Requested" stands for the names of those signals, which all end in Requested, and is not translated.
+        mErrorString = tr("Refused from a handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, debugText, hiddenInputWanted or a ...Requested signal; queue the call "
+                          "instead.");
         return true;
     }
     if (mRemovingStalePasswords || (!duringLoad && mpPool && mpPool->loadingProfile())) {
