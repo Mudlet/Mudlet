@@ -150,6 +150,41 @@ local function randomArg()
     end
 end
 
+local function typedArg(kind, argName)
+    if kind == "number" then
+        if chance(40) then return rrange(-5, 120) end
+        return pick(NUMBERS)
+    elseif kind == "string" then
+        if argName and argName:find("name") and chance(70) then return pick(WINDOWS) end
+        return chance(30) and pick(WINDOWS) or pick(STRINGS)
+    elseif kind == "boolean" then
+        return chance(50)
+    elseif kind == "table" then
+        return pick(TABLES)()
+    elseif kind == "function" then
+        return function() end
+    end
+    return randomArg()
+end
+
+-- "bad argument #2 type (x as number expected, got string!)" and its
+-- "is optional" twin name the type the C++ side wanted at that position.
+local KINDS = { "number", "string", "boolean", "table", "function" }
+local function wantedType(msg)
+    if type(msg) ~= "string" then return nil end
+    local pos, argName, want = msg:match("bad argument #(%d+) type %((.-) as (.-) [ei][xs][pt]")
+    if not pos then
+        pos, want = msg:match("bad argument #(%d+) .-%((%a+) expected")
+    end
+    if not pos then return nil end
+    local options = {}
+    for _, k in ipairs(KINDS) do
+        if want:find(k, 1, true) then insert(options, k) end
+    end
+    if #options == 0 then return nil end
+    return tonumber(pos), pick(options), argName
+end
+
 local function show(v)
     local t = type(v)
     if t == "string" then
@@ -222,8 +257,22 @@ describe("Lua API argument fuzzer", function()
                 args[a] = randomArg()
                 shown[a] = show(args[a])
             end
-            record(("%s(%s)"):format(name, concat(shown, ", ")))
-            pcall(_G[name], unpack(args, 1, argc))
+            -- Retry with the argument type each rejection asks for, so calls
+            -- get past the type checks into the code that uses the values.
+            for _ = 1, 8 do
+                record(("%s(%s)"):format(name, concat(shown, ", ")))
+                local ok, r1, r2 = pcall(_G[name], unpack(args, 1, argc))
+                local pos, kind, argName = wantedType(ok and r2 or r1)
+                if not pos or pos > 12 or (args[pos] ~= nil and type(args[pos]) == kind) then
+                    break
+                end
+                for a = argc + 1, pos - 1 do
+                    shown[a] = "nil"
+                end
+                argc = math.max(argc, pos)
+                args[pos] = typedArg(kind, argName)
+                shown[pos] = show(args[pos])
+            end
         end
         record("-- done")
         if dump then
