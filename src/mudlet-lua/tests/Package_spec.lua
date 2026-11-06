@@ -1197,7 +1197,7 @@ describe("Tests the package info accessors", function()
       assert.is_true(setPackageInfo(name, "version", "2.0"))
       assert.is_true(setPackageInfo(name, "spec-hash", 'a]]b"c\\d\ne\r\1f]'))
       assert.is_true(setPackageInfo(name, "end", "a Lua keyword"))
-      -- the names a config.lua could use to reach the table it sets details in
+      -- "_G" names the table a config.lua sets details in, and "globals" once named it too
       assert.is_true(setPackageInfo(name, "globals", "not a table"))
       assert.is_true(setPackageInfo(name, "_G", "not a table either"))
 

@@ -64,6 +64,7 @@
 #include "SecureStringUtils.h"
 #include "ShortcutsManager.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstring>
 #include <limits>
@@ -3504,24 +3505,30 @@ static bool nameIsAStepOutOfTheProfile(const QString& name)
     return name.isEmpty() || name == QLatin1String(".") || name == QLatin1String("..") || name.contains(QLatin1Char('/')) || name.contains(QLatin1Char('\\'));
 }
 
+// Whether the file system takes both names for one folder
+static bool namesShareAFolder(QString first, QString second)
+{
+#if defined(Q_OS_WINDOWS)
+    // Windows drops trailing dots and spaces from a path, so "media." is the "media" folder too
+    for (QString* name : {&first, &second}) {
+        while (name->endsWith(QLatin1Char('.')) || name->endsWith(QLatin1Char(' '))) {
+            name->chop(1);
+        }
+    }
+#endif
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
+    // The file system ignores case, so "Log" is the profile's "log" folder
+    return !first.compare(second, Qt::CaseInsensitive);
+#else
+    return first == second;
+#endif
+}
+
 // Package folders sit beside the profile's own, so a package of one of these names would share that folder.
 static bool theProfileKeepsItsOwnDataIn(const QString& name)
 {
-    QString folder = name;
-#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
-    // The file system ignores case, so "Log" is the profile's "log" folder
-    const Qt::CaseSensitivity caseSensitivity = Qt::CaseInsensitive;
-#else
-    const Qt::CaseSensitivity caseSensitivity = Qt::CaseSensitive;
-#endif
-#if defined(Q_OS_WINDOWS)
-    // Windows drops trailing dots and spaces from a path, so "media." is the "media" folder too
-    while (folder.endsWith(QLatin1Char('.')) || folder.endsWith(QLatin1Char(' '))) {
-        folder.chop(1);
-    }
-#endif
     for (const auto ownFolder : {QLatin1String("map"), QLatin1String("log"), QLatin1String("current"), QLatin1String("media")}) {
-        if (!folder.compare(ownFolder, caseSensitivity)) {
+        if (namesShareAFolder(name, ownFolder)) {
             return true;
         }
     }
@@ -3600,19 +3607,23 @@ static QString writePackageConfig(const QString& folder, const QMap<QString, QSt
 
 QString Host::setPackageInfo(const QString& packageName, const QString& info, const QString& value)
 {
-    QMap<QString, QString>& packageInfo = mPackageInfo[packageName];
-    if (packageInfo.contains(info) && packageInfo.value(info) == value) {
+    QMap<QString, QString> details = mPackageInfo.value(packageName);
+    if (details.contains(info) && details.value(info) == value) {
         return {};
     }
-    // Only a profile from before installs refused these names can have such a package, and with no folder of
-    // its own to save to, its details stay what they always were: for the session
-    if (nameIsAStepOutOfTheProfile(packageName) || theProfileKeepsItsOwnDataIn(packageName)) {
-        packageInfo[info] = value;
+    details[info] = value;
+    // With no folder of its own to save to, such a package's details stay what they always were: for the session.
+    // Only a profile from before installs refused the profile's own folder names can have one of those, but a
+    // package and a module whose names differ only in case share a folder where the file system ignores case.
+    const auto sharesItsFolder = [&packageName](const QString& other) {
+        return other != packageName && namesShareAFolder(other, packageName);
+    };
+    if (nameIsAStepOutOfTheProfile(packageName) || theProfileKeepsItsOwnDataIn(packageName) || std::any_of(mInstalledPackages.cbegin(), mInstalledPackages.cend(), sharesItsFolder)
+        || std::any_of(mInstalledModules.keyBegin(), mInstalledModules.keyEnd(), sharesItsFolder)) {
+        mPackageInfo[packageName] = details;
         return {};
     }
 
-    QMap<QString, QString> details = packageInfo;
-    details[info] = value;
     // getPackageConfig() files the details under this name, and ignores a config.lua without one
     if (!details.contains(qsl("mpackage"))) {
         details.insert(qsl("mpackage"), packageName);
@@ -3620,7 +3631,7 @@ QString Host::setPackageInfo(const QString& packageName, const QString& info, co
     if (const QString error = writePackageConfig(MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName), details); !error.isEmpty()) {
         return qsl("could not save the details of package '%1', so nothing was changed: %2").arg(packageName, error);
     }
-    packageInfo = details;
+    mPackageInfo[packageName] = details;
     return {};
 }
 
