@@ -82,6 +82,15 @@ local function writeFile(path, data)
     file:close()
 end
 
+-- Best effort: a dump directory that does not exist just goes without
+local function keepInput(data)
+    local file = DUMP_PATH and io.open(DUMP_PATH .. ".input", "wb")
+    if file then
+        file:write(data)
+        file:close()
+    end
+end
+
 local dump
 local function record(line)
     if dump then
@@ -286,8 +295,6 @@ local function buildMap()
 end
 
 local function exerciseLoadedMap()
-    -- paint now, so a report from drawing this map follows this map's dump record
-    pumpEvents(0)
     local areaTable = getAreaTable() or {}
     local ids = {}
     for _, id in pairs(getRooms() or {}) do
@@ -363,9 +370,7 @@ describe("Map file loader fuzzer", function()
                 data, ops = mutate(base.data)
             end
             record(("%d %s %s"):format(i, base.version, ops))
-            if DUMP_PATH then
-                writeFile(DUMP_PATH .. ".input", data)
-            end
+            keepInput(data)
             local path = isJson and currentJsonPath or currentPath
             writeFile(path, data)
             local ok
@@ -374,6 +379,8 @@ describe("Map file loader fuzzer", function()
             else
                 ok = loadMap(path)
             end
+            -- paint now, so a report from drawing this map follows its dump record
+            pumpEvents(0)
             if ok then
                 loaded = loaded + 1
                 exerciseLoadedMap()

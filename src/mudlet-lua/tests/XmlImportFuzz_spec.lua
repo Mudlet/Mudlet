@@ -77,6 +77,15 @@ local function writeFile(path, data)
     file:close()
 end
 
+-- Best effort: a dump directory that does not exist just goes without
+local function keepInput(data)
+    local file = DUMP_PATH and io.open(DUMP_PATH .. ".input", "wb")
+    if file then
+        file:write(data)
+        file:close()
+    end
+end
+
 local dump
 local function record(line)
     if dump then
@@ -250,8 +259,6 @@ local function mutate(data)
 end
 
 local function exerciseMap()
-    -- paint now, so a report from drawing this map follows this map's dump record
-    pumpEvents(0)
     local ids = {}
     for _, id in pairs(getRooms() or {}) do
         insert(ids, id)
@@ -326,12 +333,14 @@ describe("XML import fuzzer", function()
             local base = pick(corpus)
             local data, ops = mutate(base.data)
             record(("%d %s %s %s"):format(i, base.kind, base.name, ops))
-            if DUMP_PATH then
-                writeFile(DUMP_PATH .. ".input", data)
-            end
+            keepInput(data)
             if base.kind == "map" then
                 writeFile(mapPath, data)
-                if loadMap(mapPath) then
+                local ok = loadMap(mapPath)
+                -- paint now, so a report from drawing this map follows its dump record;
+                -- a failed XML import leaves what it read so far, so pump either way
+                pumpEvents(0)
+                if ok then
                     imported = imported + 1
                     exerciseMap()
                 end

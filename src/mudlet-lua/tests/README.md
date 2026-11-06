@@ -147,8 +147,8 @@ abort as a finding to reduce and report rather than as a broken harness.
 instead. The first saves a map in each binary format version the save side
 offers and as JSON, then loads mutated copies of those files; the second imports
 mutated copies of the map and package fixtures through `loadMap(".xml")` and
-`installPackage()`. Both put the profile's map back when they finish, and copy
-each file to `<dump path>.input` before loading it, as the runner deletes the
+`installPackage()`. Both put the profile's map back when they finish, and, given a
+dump path, copy each file to `<dump path>.input` before loading it, as the runner deletes the
 profile on exit. The map file fuzzer's base files hold the labels' rendered
 images, which depend on the fonts installed, so keep that copy: its seed only
 replays on the machine that ran it. To run one
