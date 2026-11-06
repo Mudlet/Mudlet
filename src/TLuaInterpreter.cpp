@@ -9549,6 +9549,9 @@ int TLuaInterpreter::setMapBackgroundColor(lua_State* L)
 
     auto& host = getHostFromLua(L);
     host.mBgColor_2 = QColor(r, g, b, a);
+    if (host.mpMap) {
+        host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::BackgroundColor);
+    }
     updateMap(L);
     lua_pushboolean(L, true);
     return 1;

@@ -107,7 +107,7 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
     applyStyle();
     if (mpMap) {
         connect(mpMap, &TMap::signal_mapperSettingChanged, this, [this](const TMap::MapperSetting setting) {
-            if (setting == TMap::MapperSetting::Style) {
+            if (setting == TMap::MapperSetting::Style || setting == TMap::MapperSetting::BackgroundColor) {
                 applyStyle();
             }
         });
