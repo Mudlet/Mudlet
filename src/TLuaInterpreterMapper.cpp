@@ -3749,7 +3749,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         if (!host.mpMap->mpRoomDB->hasAreaName(existingName)) {
             return warnArgumentValue(L, __func__, csmInvalidAreaName.arg(existingName));
         }
-        if (host.mpMap->mpRoomDB->getAreaNamesMap().value(-1).contains(existingName)) {
+        if (id == -1) {
             return warnArgumentValue(L, __func__, qsl("area name '%1' is reserved and protected - it cannot be changed").arg(existingName));
         }
     } else {
