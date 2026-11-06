@@ -119,6 +119,13 @@ describe("Tests functionality of Geyser.HBox", function()
       assert.are.same({x = 0, y = 0, width = 400, height = 100}, geometry("ghbLoneStretchA"))
     end)
 
+    it("fills the box with a lone child whose stretch factor is below one", function()
+      -- stretch factors are shares of the box, so a lone child holds all of them
+      local box = track(Geyser.HBox:new({name = "ghbLoneHalf", x = 0, y = 0, width = 400, height = 100}))
+      track(Geyser.Label:new({name = "ghbLoneHalfA", h_stretch_factor = 0.5}, box))
+      assert.are.same({x = 0, y = 0, width = 400, height = 100}, geometry("ghbLoneHalfA"))
+    end)
+
     it("gives the survivor the whole box when its stretched sibling is removed", function()
       local box = track(Geyser.HBox:new({name = "ghbLoneLeft", x = 0, y = 0, width = 300, height = 50}))
       local plain = track(Geyser.Label:new({name = "ghbLoneLeftA"}, box))
