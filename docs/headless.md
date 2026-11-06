@@ -641,3 +641,10 @@ removed package added, or all of the profile's when it is reset. A call that lea
 such as setting the tooltip it has, sends nothing, and nor does a change to another profile's commands.
 It is sent from the event loop, once for all the changes made before it runs, so a script that adds a
 dozen commands sends it once.
+
+`activateAddonCommand()` is a click on one of them, in the menu or on the toolbar: a checkable command
+is ticked or unticked, which `addonCommandsChanged` follows, and then `sysCommandClicked` is raised with
+its id, as the GUI does. The emergency stop holds the event, as it holds every event, but not the tick,
+which the GUI's menu makes before the event is raised. It is false, with `errorString()` saying why,
+for an id that is not a command of the session's profile, and for a disabled command, which the GUI does
+not let be clicked. It is refused where `submit()` is.

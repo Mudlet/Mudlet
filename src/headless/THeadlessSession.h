@@ -354,6 +354,11 @@ public:
     // The session's profile's commands in the order they were added; none with no profile open. Read from
     // anywhere.
     QList<AddonCommand> addonCommands() const;
+    // A click on the command in the main window's menu or on its toolbar: a checkable command is ticked or unticked,
+    // then sysCommandClicked is raised with its id, which the emergency stop holds as it holds every event. False,
+    // with errorString() saying why, for an id that is not a command of the session's profile and for a disabled
+    // command, which the GUI does not let be clicked.
+    bool activateAddonCommand(int id);
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -509,8 +514,8 @@ signals:
     // Not for a profile, as muting is for all of them, but no longer sent once the session's own profile has closed.
     // From the event loop.
     void soundsMutedChanged(THeadlessSession::SoundSource source, bool muted);
-    // A command of the profile was added, removed or changed in what addonCommands() gives, by a script, a package's
-    // removal or the profile's reset, for the app to read them again. One for all the changes made before the event
+    // A command of the profile was added, removed or changed in what addonCommands() gives, by a script, a click, a
+    // package's removal or the profile's reset, for the app to read them again. One for all the changes made before the event
     // loop runs, from the event loop.
     void addonCommandsChanged(const QString& profile);
     // The connection was made; from the event loop
