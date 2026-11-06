@@ -27,6 +27,7 @@
 #include "TNullAppFrontend.h"
 
 #include <QKeyEvent>
+#include <QScopeGuard>
 
 #include <algorithm>
 #include <optional>
@@ -153,6 +154,13 @@ std::optional<THeadlessSession::ButtonBar> barOf(const TAction& action, const bo
     return bar;
 }
 
+bool listsButton(const QList<THeadlessSession::Button>& buttons, const int id)
+{
+    return std::any_of(buttons.cbegin(), buttons.cend(), [id](const auto& button) {
+        return button.id == id || listsButton(button.children, id);
+    });
+}
+
 } // namespace
 
 QList<THeadlessSession::ButtonBar> THeadlessSession::buttonBars() const
@@ -185,6 +193,31 @@ QList<THeadlessSession::ButtonBar> THeadlessSession::buttonBars() const
         }
     }
     return result;
+}
+
+bool THeadlessSession::pressButton(const int id)
+{
+    if (!usable()) {
+        return false;
+    }
+    const QList<ButtonBar> bars = buttonBars();
+    ActionUnit* pUnit = mpHost->getActionUnit();
+    TAction* pAction = pUnit->getAction(id);
+    if (!pAction || std::none_of(bars.cbegin(), bars.cend(), [id](const auto& bar) {
+            return listsButton(bar.buttons, id);
+        })) {
+        //: Error from a frontend with no window that was asked to press a button its profile does not show, giving the button's id
+        mErrorString = tr("The profile shows no button %1.").arg(id);
+        return false;
+    }
+    // As the GUI's bars hold off ActionUnit::uninstall() while a button's script runs
+    pUnit->beginProcessing();
+    const auto processingGuard = qScopeGuard([pUnit] {
+        pUnit->endProcessing();
+        pUnit->doCleanup();
+    });
+    pAction->press(pAction->isPushDownButton() && !pAction->mButtonState);
+    return true;
 }
 
 bool THeadlessSession::activateAddonCommand(const int id)
