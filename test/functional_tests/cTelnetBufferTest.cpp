@@ -173,7 +173,7 @@ private:
 
     // Records a replay while the reads arrive off the socket as one MCCP
     // stream, each after a pause, and returns the chunks written to it.
-    QList<RecordedChunk> recordCompressedReads(const QList<QByteArray>& reads, const int pauseMs)
+    QList<RecordedChunk> recordCompressedReads(const QList<QByteArray>& reads, const int pauseMs, const bool compressedFromTheStart = true)
     {
         cTelnet& telnet = mpHost->mTelnet;
         QTemporaryDir dir;
@@ -187,14 +187,20 @@ private:
                 telnet.mNeedDecompression = false;
                 telnet.initStreamDecompressor();
             }
+            telnet.mMCCP_version_2 = false;
         });
         if (!dir.isValid() || !telnet.startReplayRecording(fileName)) {
             return {};
         }
         // the end of an earlier test's stream left a decompressor set up
         inflateEnd(&telnet.mZstream);
-        telnet.mNeedDecompression = true;
-        telnet.initStreamDecompressor();
+        if (compressedFromTheStart) {
+            telnet.mNeedDecompression = true;
+            telnet.initStreamDecompressor();
+        } else {
+            // as if the game had been answered DO COMPRESS2
+            telnet.mMCCP_version_2 = true;
+        }
         for (const QByteArray& read : reads) {
             QTest::qSleep(pauseMs);
             QByteArray backing = read;
@@ -703,6 +709,45 @@ private slots:
         QCOMPARE(chunks.first().bytes, text);
         QCOMPARE(chunks.last().bytes, after);
         QVERIFY2(chunks.last().delay >= pauseMs / 2, qPrintable(qsl("the plain text waited %1 ms, so the pause before its read was lost").arg(chunks.last().delay)));
+    }
+
+    // Replays play back without a decompressor, so the read that turns MCCP on
+    // has to be recorded as its plain start sequence followed by what the rest
+    // of it inflates to, not the compressed bytes the game sent - see #4922.
+    void readThatStartsCompressionIsRecordedInflated()
+    {
+        constexpr int pauseMs = 200;
+        const QByteArray before = QByteArrayLiteral("plain line before mccp\r\n");
+        const QByteArray startSequence = QByteArrayLiteral("\xFF\xFA\x56\xFF\xF0");
+        const QByteArray text = QByteArrayLiteral("mccp line after the start\r\n");
+        const QByteArray after = QByteArrayLiteral("plain line after the end\r\n");
+        const QByteArray compressed = qCompress(text, 9).mid(4);
+
+        const QList<RecordedChunk> chunks = recordCompressedReads({before + startSequence + compressed + after}, pauseMs, false);
+
+        QByteArray recorded;
+        for (const RecordedChunk& chunk : chunks) {
+            QVERIFY2(!chunk.bytes.isEmpty(), "an empty chunk was recorded, which older Mudlets refuse to load");
+            recorded.append(chunk.bytes);
+        }
+        QCOMPARE(recorded, before + startSequence + text + after);
+        QVERIFY2(chunks.first().delay >= pauseMs / 2, qPrintable(qsl("the read waited %1 ms, so its pause was lost").arg(chunks.first().delay)));
+        for (qsizetype i = 1; i < chunks.size(); ++i) {
+            QVERIFY2(chunks.at(i).delay < pauseMs / 2, qPrintable(qsl("chunk %1 waited %2 ms, but it came from the same read as the first").arg(i).arg(chunks.at(i).delay)));
+        }
+        QVERIFY(linesContaining(qsl("mccp line after the start")).size() == 1);
+    }
+
+    // A read holding what looks like the start of a subnegotiation for MCCP,
+    // but not the whole start sequence, is recorded as it arrived.
+    void readThatOnlyLooksLikeCompressionStartIsRecordedWhole()
+    {
+        const QByteArray read = QByteArrayLiteral("plain\xFF\xFA\x56\x01\xFF\xF0line\r\n");
+
+        const QList<RecordedChunk> chunks = recordCompressedReads({read}, 0, false);
+
+        QCOMPARE(chunks.size(), 1);
+        QCOMPARE(chunks.first().bytes, read);
     }
 
     // Declared last on purpose: on the unfixed code this trips AddressSanitizer,

@@ -68,6 +68,7 @@
 #include <array>
 #include <cstring>
 #include <memory>
+#include <string_view>
 #include <utility>
 
 using namespace std::chrono_literals;
@@ -5808,6 +5809,30 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
 }
 
 
+bool cTelnet::mayHoldCompressionStart(const char* data, const int length) const
+{
+    if (!mMCCP_version_1 && !mMCCP_version_2) {
+        return false;
+    }
+    const std::string_view read(data, static_cast<size_t>(length));
+    return (mMCCP_version_1 && read.find(std::string_view("\xFF\xFA\x55", 3)) != std::string_view::npos)
+           || (mMCCP_version_2 && read.find(std::string_view("\xFF\xFA\x56", 3)) != std::string_view::npos);
+}
+
+void cTelnet::recordReplayChunk(const qint32 interval, const char* data, const qint32 length)
+{
+    ++mRecordingChunkCount;
+    QDataStream replayStream(mpReplayFile.get());
+    replayStream.setVersion(QDataStream::Qt_5_12);
+    replayStream << interval; // 4 bytes
+    replayStream << length;   // 4 bytes
+    replayStream.writeRawData(data, length);
+#if defined(DEBUG_RECORDING)
+    qDebug().noquote().nospace() << "cTelnet::recordReplayChunk(...) INFO - recording chunk: " << mRecordingChunkCount << " is " << length << " bytes and has an interval of: " << interval
+                                 << " mSecond since the previous chunk.";
+#endif
+}
+
 bool cTelnet::startReplayRecording(const QString& fileName)
 {
     if (mRecordReplay) {
@@ -6307,21 +6332,18 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     // A compressed read can inflate to nothing. Older Mudlets refuse a replay
     // holding an empty chunk, so its wait carries over to the next chunk.
     const bool recordingThisRead = !loopbackTesting && mRecordReplay && datalen > 0;
-    if (recordingThisRead) {
-        ++mRecordingChunkCount;
-        // QElapsedTimer::elapsed() returns a qint64, it replaces a
-        // previous QTime::elapsed() which returns a int (effectively a
-        // qint32):
-        qint32 recordingChunkInterval = static_cast<qint32>(mRecordingChunkTimer.elapsed()) - mRecordLastChunkMSecTimeOffset;
-        QDataStream replayStream(mpReplayFile.get());
-        replayStream.setVersion(QDataStream::Qt_5_12);
-        replayStream << recordingChunkInterval; // 4 bytes
-        replayStream << datalen;                // 4 bytes
-        replayStream.writeRawData(buffer, datalen);
-#if defined(DEBUG_RECORDING)
-        qDebug().noquote().nospace() << "cTelnet::processSocketData(...) INFO - recording chunk: " << mRecordingChunkCount << " is " << datalen
-                                     << " bytes and has an interval of: " << recordingChunkInterval << " mSecond since the previous chunk.";
-#endif
+    // QElapsedTimer::elapsed() returns a qint64, it replaces a
+    // previous QTime::elapsed() which returns a int (effectively a
+    // qint32):
+    const qint32 recordingChunkInterval = recordingThisRead ? static_cast<qint32>(mRecordingChunkTimer.elapsed()) - mRecordLastChunkMSecTimeOffset : 0;
+    // Replays play back without a decompressor, so a plain read that may switch
+    // compression on part way through is recorded only once it is known where
+    // the plain bytes end and the compressed ones begin.
+    const char* const plainReadToRecord = (recordingThisRead && !mNeedDecompression && mayHoldCompressionStart(buffer, datalen)) ? buffer : nullptr;
+    const qint32 plainReadLength = datalen;
+    bool plainReadRecorded = false;
+    if (recordingThisRead && !plainReadToRecord) {
+        recordReplayChunk(recordingChunkInterval, buffer, datalen);
     }
 
     recvdGA = false;
@@ -6432,11 +6454,18 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                             gotRest(cleandata);
                             cleandata = "";
                             initStreamDecompressor();
+                            if (plainReadToRecord && !plainReadRecorded && mRecordReplay) {
+                                recordReplayChunk(recordingChunkInterval, plainReadToRecord, i + 3);
+                                plainReadRecorded = true;
+                            }
                             buffer += i + 3; //bugfix: BenH
                             int restLength = datalen - i - 3;
 
                             if (restLength > 0) {
                                 datalen = decompressBuffer(buffer, restLength, out_buffer.get());
+                                if (plainReadRecorded && datalen > 0) {
+                                    recordReplayChunk(0, out_buffer.get(), datalen);
+                                }
                                 // queue input left over past this compressed chunk
                                 // (decompressBuffer() advanced 'buffer' to it) for
                                 // reprocessing at the end of this pass
@@ -6567,6 +6596,11 @@ Some data loss is likely - please mention this problem to the game admins.)",
         gotRest(cleandata);
     }
     mPromptStartPosted = false;
+
+    // Processing can end the recording, e.g. a script disconnecting
+    if (plainReadToRecord && !plainReadRecorded && mRecordReplay) {
+        recordReplayChunk(recordingChunkInterval, plainReadToRecord, plainReadLength);
+    }
 
     // Reprocess data left over after this decompression pass (more compressed
     // data than fit in one output buffer, or plain data past the end of the
