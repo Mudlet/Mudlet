@@ -526,8 +526,9 @@ signals:
     // handler must not run the event loop, as a modal dialog does: the profile's own timers may commit
     // another line or close the profile there, in the middle of this line's commit. runs covers text from its
     // start to its end, in order, with no empty run, and is empty for an empty line; a handler that takes
-    // only the first three arguments may be connected.
-    void outputLine(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs);
+    // only the first three or four arguments may be connected. arrivalMSecs is when the line arrived, in ms since
+    // the epoch as debugText's is, the time the GUI's timestamps show; -1 where it has none.
+    void outputLine(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs);
     // What the GUI shows only on the profile's own screen, in pieces that need not end a line: text
     // written to the main console that the game did not send (echo(), print(), commands, Mudlet's
     // messages), and the error console. While lineShown is connected, it leaves out what that sends, as
@@ -541,8 +542,9 @@ signals:
     // feeds follow the line it ran on, as they are shown, and so does what it wrote anywhere else (an echo()
     // after deleteLine(), clearWindow() or a feedTriggers(), a send()'s command echo), as lines of their own.
     // Sent whole, before the console wraps it or after a trigger's wrapLine() split it, and not again for a later
-    // change to it. Sent mid-write, as outputLine is, with the same arguments.
-    void lineShown(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs);
+    // change to it. Sent mid-write, as outputLine is, with the same arguments; a line a trigger wrote has the time
+    // of the console line it went into, which is when it was written for a line of its own.
+    void lineShown(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs);
     // A script emptied the main console, as clearWindow() does; lines from before it that lineShown has yet to
     // send are dropped. Sent mid-write, as outputLine is, so a handler may neither call the session nor run the
     // event loop.
@@ -784,6 +786,7 @@ private:
         QString text;
         bool isPrompt = false;
         QList<TextRun> runs;
+        qint64 arrivalMSecs = -1;
     };
     // For each trigger pass under way, outermost first, the lines that passes nested in it have shown
     QList<QList<ShownLine>> mShownLinesOfPasses;
