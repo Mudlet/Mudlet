@@ -16216,7 +16216,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="16777"/>
       <source>Uninstall</source>
       <extracomment>Button that removes the module whose folder the user tried to delete, along with all its items</extracomment>
-      <translation type="unfinished"/>
+      <translation>Deinstallieren</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="16789"/>
