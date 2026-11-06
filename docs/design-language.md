@@ -53,7 +53,7 @@ whole of what says how deep the thing it draws sits. Pick by what the widget
 | --- | --- | --- |
 | `page` | `QPalette::Window` | The window itself and every piece of it: toolbar, status bar, sidebar pane, the column an item is edited in, scroll areas |
 | `card` | `page` lifted towards white (6% on dark, 55% on light) | A panel raised off the page: the options cards, menu surfaces |
-| `field` | `QPalette::Base`, lifted 30% towards `page` on dark | Anything the user types into or picks a value in: line edits, combo boxes, spin boxes, the search field, a check indicator's fill |
+| `field` | `QPalette::Base`, lifted 85% towards `page` on dark, so a check box on a card is no black well | Anything the user types into or picks a value in: line edits, combo boxes, spin boxes, the search field, a check indicator's fill |
 
 The order is fixed - `field` is sunk into `card`, `card` is lifted off `page` -
 and it is what makes the windows read as having depth rather than as flat

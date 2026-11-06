@@ -100,8 +100,9 @@ constexpr qreal scmSeparatorDropOnLight = 0.10;
 // A palette's pure white or black WindowText glares; a light theme gives up less before small type fades
 constexpr qreal scmTextSoftenOnDark = 0.16;
 constexpr qreal scmTextSoftenOnLight = 0.10;
-// A dark theme's near-black Base reads as a hole in the window; lifting a light theme's white Base only muddies it
-constexpr qreal scmFieldLiftOnDark = 0.30;
+// A dark theme's near-black Base reads as a hole in the window, and a check box on a card as a black well in a bright
+// ring; lifting a light theme's white Base only muddies it
+constexpr qreal scmFieldLiftOnDark = 0.85;
 // Only a starting point: on a light theme it lands near 2.3:1, so themeTokens() walks it on to scmQuietMinimumRatio
 constexpr qreal scmDisabledTextWeight = 0.32;
 constexpr qreal scmDisabledBarTextWeight = 0.20;
