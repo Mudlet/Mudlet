@@ -1055,6 +1055,32 @@ describe("Tests Other.lua functions", function()
 
       assert.is_nil(TIMEFRAME_TEST_VARIABLE)
     end)
+
+    it("Should set a string value exactly, whatever characters it holds", function()
+      for _, value in ipairs({ "don't", [[C:\new\table]], "line one\nline two", [[say "hi"]], "]]" }) do
+        timeframe("TIMEFRAME_TEST_VARIABLE", { 0, value })
+
+        assert.are.equal(value, TIMEFRAME_TEST_VARIABLE)
+      end
+    end)
+
+    it("Should set a number value without losing precision", function()
+      for _, value in ipairs({ 1 / 3, math.huge, -math.huge }) do
+        timeframe("TIMEFRAME_TEST_VARIABLE", { 0, value })
+
+        assert.are.equal(value, TIMEFRAME_TEST_VARIABLE)
+      end
+    end)
+
+    it("Should set a field of a table named by a dotted path", function()
+      TIMEFRAME_TEST_TABLE = {}
+      finally(function() TIMEFRAME_TEST_TABLE = nil end)
+
+      timeframe("TIMEFRAME_TEST_TABLE.state", { 0, "it's on" })
+
+      assert.are.equal("it's on", TIMEFRAME_TEST_TABLE.state)
+      killtimeframe("TIMEFRAME_TEST_TABLE.state")
+    end)
   end)
 
   describe("Tests the stopwatch family", function()
