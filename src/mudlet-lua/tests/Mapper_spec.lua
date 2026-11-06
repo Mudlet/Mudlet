@@ -3067,6 +3067,46 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_truthy(inner[2]:find("from inside an exit weight filter", 1, true), tostring(inner[2]))
     end)
 
+    -- An edit the filter makes lands after the build read that part of the map,
+    -- so only the next search can see it.
+    it("routes through a room the exit weight filter unlocked, on the next search", function()
+      lockRoom(rA2, true)
+      local unlocked = false
+      setExitWeightFilter(function()
+        if not unlocked then
+          unlocked = true
+          lockRoom(rA2, false)
+        end
+      end)
+
+      assert.is_true(getPath(rA1, rA3))
+      assert.is_true(unlocked, "the exit weight filter never ran")
+      assert.is_false(roomLocked(rA2))
+
+      local ok, weight = getPath(rA1, rA3)
+      assert.is_true(ok)
+      assert.are.equal(2, weight)
+      assert.are.same({tostring(rA2), tostring(rA3)}, speedWalkPath)
+    end)
+
+    it("uses an exit weight the exit weight filter set, on the next search", function()
+      local weighted = false
+      setExitWeightFilter(function(roomId)
+        if roomId == rA1 and not weighted then
+          weighted = true
+          setExitWeight(rA1, "east", 10)
+        end
+      end)
+
+      assert.is_true(getPath(rA1, rA3))
+      assert.is_true(weighted, "the exit weight filter never saw rA1")
+
+      local ok, weight = getPath(rA1, rA3)
+      assert.is_true(ok)
+      assert.are.equal(3, weight)
+      assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
+    end)
+
     -- Every case above edits the map first, so each one searches a graph that
     -- has just been rebuilt. These four do not, which is what puts them on the
     -- state findPath() carries from one search to the next.

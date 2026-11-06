@@ -5683,11 +5683,12 @@ void ModernGLWidget::scheduleRouteRefresh()
 
 bool ModernGLWidget::findRoute()
 {
-    const bool graphNeedsUpdate = mpMap->mMapGraphNeedsUpdate;
+    // Not the needs-update flag going false: an exit weight filter's edit leaves it set after a build
+    const quint64 graphRevision = mpMap->pathGraphRevision();
     QElapsedTimer finding;
     finding.start();
     const bool changed = mRoute.refresh(*mpMap);
-    if (graphNeedsUpdate && !mpMap->mMapGraphNeedsUpdate) {
+    if (mpMap->pathGraphRevision() != graphRevision) {
         mRouteGraphBuildMs = finding.elapsed();
         mRouteGraphBuilt.start();
     }

@@ -957,6 +957,9 @@ void TMap::initGraph()
     _time.start();
     const ScriptCallbackScope callbackScope(this);
     mGraphBuildInProgress = true;
+    // Cleared before the build, not after: the exit weight filter can edit the map mid-build, and only
+    // the next build can see that edit.
+    mMapGraphNeedsUpdate = false;
     locations.clear();
     locations.reserve(mpRoomDB->getRoomMap().size());
     roomidToIndex.clear();
@@ -1084,7 +1087,6 @@ void TMap::initGraph()
     }
 
     mGraphBuildInProgress = false;
-    mMapGraphNeedsUpdate = false;
     ++mPathGraphRevision;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
              << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6
