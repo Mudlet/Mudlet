@@ -205,7 +205,7 @@ public:
     void showError(const QString&);
     [[nodiscard]] QString linkErrorLineToScript(const QString& error);
     void jumpToErrorLine(int line);
-    bool currentScriptChunk(int& itemId, QString& chunkName);
+    bool currentScriptChunk(int& itemId, QString& chunkName, QString& error);
     void showWarning(const QString&, bool announce = true);
     void showInfo(const QString&);
     // touchNotification: whether an errored descendant may show its error on the

@@ -65,6 +65,7 @@ private:
     const QString mProfileName = qsl("ErrorLineLink-Test-Profile");
     const QString mLocalhost = qsl("localhost");
     // Past the 63 bytes of a chunk name that Lua keeps in a syntax error
+    const QString mCyrillicScriptName = QString(qsl("Скрипт")).repeated(7);
     const QString mLongScriptName = qsl("qaBrokenScriptWithAVeryLongNameThatLuaHasToShortenBeforeItPutsItInTheMessage");
 
     void deleteProfileDirectory(const QString& profileName)
@@ -137,6 +138,25 @@ private:
         mpHost->getScriptUnit()->registerScript(pScript);
         pScript->setScript(qsl("local a = 1\n\nlocal b = = 2\n"));
         QVERIFY2(!pScript->getError().isEmpty(), "the broken script compiled");
+
+        // "Script: " is 8 bytes and each of these letters 2, so Lua's 63 byte cut lands inside one
+        auto* pCyrillic = new TScript(mCyrillicScriptName, mpHost);
+        mpHost->getScriptUnit()->registerScript(pCyrillic);
+        pCyrillic->setScript(qsl("local a = 1\nlocal b = = 2\n"));
+        QVERIFY2(!pCyrillic->getError().isEmpty(), "the broken Cyrillic-named script compiled");
+
+        // A folder and its child of the same name, only the child broken
+        auto* pTwinFolder = new TTrigger(nullptr, mpHost);
+        pTwinFolder->setName(qsl("qaTwin"));
+        pTwinFolder->setIsFolder(true);
+        pTwinFolder->setScript(qsl("local a = 1\nlocal b = 2\nlocal c = 3\nlocal d = 4\n"));
+        QVERIFY(pTwinFolder->registerTrigger());
+        auto* pTwinChild = new TTrigger(pTwinFolder, mpHost);
+        pTwinChild->setName(qsl("qaTwin"));
+        pTwinChild->setRegexCodeList({qsl("qaTwin")}, {REGEX_SUBSTRING});
+        pTwinChild->setScript(qsl("local a = 1\nlocal b = = 2\n"));
+        QVERIFY(pTwinChild->registerTrigger());
+        QVERIFY2(!pTwinChild->getError().isEmpty(), "the broken twin compiled");
     }
 
 private slots:
@@ -252,6 +272,36 @@ private slots:
         mpEditor->showError(pBroken->getError());
         QVERIFY2(bannerText().contains(qsl("]:3:")), qPrintable(bannerText()));
         QVERIFY2(lineLink().isEmpty(), qPrintable(bannerText()));
+    }
+
+    // The chunk name cannot tell a folder from a child of the same name, so
+    // the error has to be the open item's own
+    void testSameNamedItemsErrorGetsNoLink()
+    {
+        mpEditor->slot_showTriggers();
+        QTreeWidgetItem* pFolderItem = treeItem(mpEditor->treeWidget_triggers, qsl("qaTwin"));
+        QVERIFY(pFolderItem);
+        QVERIFY2(pFolderItem->childCount() == 1, "the first qaTwin found is not the folder");
+        mpEditor->treeWidget_triggers->setCurrentItem(pFolderItem, 0);
+        mpEditor->slot_triggerSelected(pFolderItem);
+        QTest::qWait(20ms);
+        auto* pChild = mpEditor->getTriggerFromTreeItem(pFolderItem->child(0));
+        QVERIFY(pChild);
+        mpEditor->showError(pChild->getError());
+        QVERIFY2(bannerText().contains(qsl("&quot;Trigger: qaTwin&quot;]:2:")), qPrintable(bannerText()));
+        QVERIFY2(lineLink().isEmpty(), qPrintable(bannerText()));
+    }
+
+    void testShortenedNonAsciiScriptNameStillLinks()
+    {
+        mpEditor->slot_showScripts();
+        QTreeWidgetItem* pItem = treeItem(mpEditor->treeWidget_scripts, mCyrillicScriptName);
+        QVERIFY(pItem);
+        mpEditor->treeWidget_scripts->setCurrentItem(pItem, 0);
+        mpEditor->slot_scriptsSelected(pItem);
+        QTest::qWait(20ms);
+        QVERIFY2(bannerText().contains(qsl("...&quot;]:2:")), qPrintable(bannerText()));
+        QCOMPARE(lineLink(), qsl("mudlet-error-line:2"));
     }
 
     void testShortenedScriptNameStillLinks()

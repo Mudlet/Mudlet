@@ -11228,13 +11228,14 @@ static QString themedBannerLinkColor()
 
 // The chunk names here must match the ones TTrigger::compileScript() and its
 // siblings in the other item classes compile their scripts under
-bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName)
+bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName, QString& error)
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         if (auto* pT = getTriggerFromTreeItem(mpCurrentTriggerItem)) {
             itemId = pT->getID();
             chunkName = qsl("Trigger: %1").arg(pT->getName());
+            error = pT->getError();
             return true;
         }
         break;
@@ -11242,6 +11243,7 @@ bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName)
         if (auto* pT = getAliasFromTreeItem(mpCurrentAliasItem)) {
             itemId = pT->getID();
             chunkName = qsl("Alias: %1").arg(pT->getName());
+            error = pT->getError();
             return true;
         }
         break;
@@ -11249,6 +11251,7 @@ bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName)
         if (auto* pT = getTimerFromTreeItem(mpCurrentTimerItem)) {
             itemId = pT->getID();
             chunkName = qsl("Timer: %1").arg(pT->getName());
+            error = pT->getError();
             return true;
         }
         break;
@@ -11256,6 +11259,7 @@ bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName)
         if (auto* pT = getScriptFromTreeItem(mpCurrentScriptItem)) {
             itemId = pT->getID();
             chunkName = qsl("Script: %1").arg(pT->getName());
+            error = pT->getError();
             return true;
         }
         break;
@@ -11263,6 +11267,7 @@ bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName)
         if (auto* pT = getActionFromTreeItem(mpCurrentActionItem)) {
             itemId = pT->getID();
             chunkName = qsl("Button: %1").arg(pT->getName());
+            error = pT->getError();
             return true;
         }
         break;
@@ -11270,6 +11275,7 @@ bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName)
         if (auto* pT = getKeyFromTreeItem(mpCurrentKeyItem)) {
             itemId = pT->getID();
             chunkName = qsl("Key: %1").arg(pT->getName());
+            error = pT->getError();
             return true;
         }
         break;
@@ -11282,8 +11288,9 @@ bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName)
 }
 
 // Turns the [string "Trigger: name"]:12: location of a Lua error in the open
-// item's own script into a link that jumps to that line. Errors from any other
-// chunk - a descendant's, or another script a running one called - stay as text.
+// item's own script into a link that jumps to that line. Another item's error -
+// a descendant's, even one of the same name - or a location in another chunk,
+// such as a script a running one called, stays as text.
 QString dlgTriggerEditor::linkErrorLineToScript(const QString& error)
 {
     mErrorLineView = EditorViewType::cmUnknownView;
@@ -11291,7 +11298,8 @@ QString dlgTriggerEditor::linkErrorLineToScript(const QString& error)
 
     int itemId = -1;
     QString chunkName;
-    if (!currentScriptChunk(itemId, chunkName)) {
+    QString ownError;
+    if (!currentScriptChunk(itemId, chunkName, ownError) || error != ownError) {
         return error;
     }
 
@@ -11304,10 +11312,15 @@ QString dlgTriggerEditor::linkErrorLineToScript(const QString& error)
 
     QString label = match.captured(1);
     label.replace(qsl("&quot;"), qsl("\"")).replace(qsl("&lt;"), qsl("<")).replace(qsl("&gt;"), qsl(">")).replace(qsl("&amp;"), qsl("&"));
-    // Lua cuts a long chunk name, or one with a line break, short and appends "..."
+    // Lua cuts a long chunk name, or one with a line break, short and appends "...";
+    // the cut is by bytes, so a split character arrives as a replacement character
     bool sameChunk = label == chunkName;
     if (!sameChunk && label.endsWith(qsl("..."))) {
-        const QByteArray stem = label.chopped(3).toUtf8();
+        QString stemText = label.chopped(3);
+        while (stemText.endsWith(QChar::ReplacementCharacter)) {
+            stemText.chop(1);
+        }
+        const QByteArray stem = stemText.toUtf8();
         sameChunk = !stem.isEmpty() && chunkName.toUtf8().startsWith(stem);
     }
     if (!sameChunk) {
@@ -11327,8 +11340,9 @@ void dlgTriggerEditor::jumpToErrorLine(const int line)
 {
     int itemId = -1;
     QString chunkName;
+    QString ownError;
     // The banner can outlive a switch to another item, whose script the line is not in
-    if (line < 1 || !mpSourceEditorEdbee || !mpSourceEditorEdbeeDocument || mCurrentView != mErrorLineView || !currentScriptChunk(itemId, chunkName) || itemId != mErrorLineItemId) {
+    if (line < 1 || !mpSourceEditorEdbee || !mpSourceEditorEdbeeDocument || mCurrentView != mErrorLineView || !currentScriptChunk(itemId, chunkName, ownError) || itemId != mErrorLineItemId) {
         return;
     }
 
