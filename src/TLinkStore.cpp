@@ -97,6 +97,38 @@ void TLinkStore::removeLinkById(int id, Host* pH)
     mStylingStore.remove(id);
 }
 
+QString TLinkStore::tooltip(const int id) const
+{
+    const QStringList hints = mHintStore.value(id);
+    return hints.size() > mLinkStore.value(id).size() ? hints.constFirst() : hints.join(QChar::LineFeed);
+}
+
+bool TLinkStore::opensMenu(const int id) const
+{
+    const qsizetype commands = mLinkStore.value(id).size();
+    return commands > 1 || mHintStore.value(id).size() > commands;
+}
+
+QList<TLinkStore::MenuItem> TLinkStore::menuItems(const int id) const
+{
+    const QStringList commands = mLinkStore.value(id);
+    const QStringList hints = mHintStore.value(id);
+    const QVector<int> references = mReferenceStore.value(id);
+    const qsizetype hintOffset = hints.size() > commands.size() ? 1 : 0;
+    QList<MenuItem> items;
+    for (qsizetype i = 0; i < commands.size(); ++i) {
+        const bool doesSomething = !commands.at(i).isEmpty() || references.value(i, 0);
+        // Too few hints is allowed for, as a script may have given them
+        const bool hasHint = i + hintOffset < hints.size();
+        MenuItem item;
+        item.label = hasHint ? hints.at(i + hintOffset) : commands.at(i);
+        item.enabled = doesSomething;
+        item.separator = !doesSomething && hasHint && item.label.isEmpty();
+        items.append(item);
+    }
+    return items;
+}
+
 void TLinkStore::expireLinks(const QString& expireName, Host* pH)
 {
     if (expireName.isEmpty()) {
