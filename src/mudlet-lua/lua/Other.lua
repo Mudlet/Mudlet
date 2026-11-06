@@ -1388,6 +1388,23 @@ local function packageFileFromUrl(target)
   end
 end
 
+-- the English texts of mudlet-lua.json's Mudlet strings, standing in for translations
+-- that cannot be found, so they are looked for once rather than on every message
+local untranslatedMessages = {
+  packageInstallSuccess = {message = "Package '%s' installed successfully."},
+  packageInstallPartial = {message = "Package '%s' was installed, but not everything in it is working: %s"},
+  packageInstallFail = {message = "Installing '%s' failed: %s"},
+  moduleInstallSuccess = {message = "Module '%s' installed successfully."},
+  moduleInstallPartial = {message = "Module '%s' was installed, but not everything in it is working: %s"},
+  moduleInstallFail = {message = "Installing '%s' failed: %s"},
+  packageDownloading = {message = "Downloading package from %s."},
+  packageDownloadRefused = {message = "Could not download package from %s: %s"},
+  packageDownloadPending = {message = "Package '%s' is already being downloaded."},
+  prefixOk = {message = "[  OK  ]  - "},
+  prefixWarn = {message = "[ WARN ]  - "},
+  prefixInfo = {message = "[ INFO ]  - "},
+}
+
 function verbosePackageInstall(fileName)
   local ok, reason = installPackage(fileName)
   -- a URL has only started downloading: installPackageFromUrl() reports that, and the install once it is done
@@ -1400,7 +1417,7 @@ function verbosePackageInstall(fileName)
   local profileFolder = getMudletHomeDir() .. "/"
   local packageName = fileName:starts(profileFolder) and fileName:sub(#profileFolder + 1) or fileName
   -- That is all for installing, now to announce the result to the user:
-  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
+  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet") or untranslatedMessages
   if ok and reason and reason ~= "" then
     -- A quiet install keeps a broken item's error off the console, so it is shown here; a file that did not
     -- load in full was already warned of, and is named again as a reason the package is not all working
@@ -1431,7 +1448,7 @@ function verboseModuleInstall(fileName)
   local ok, reason = installModule(fileName)
   local moduleName = fileName
   -- That is all for installing, now to announce the result to the user:
-  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
+  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet") or untranslatedMessages
   if ok and reason and reason ~= "" then
     local partialText = mudlet.Locale.moduleInstallPartial.message
     partialText = string.format(partialText, moduleName, reason)
@@ -1483,7 +1500,7 @@ local packageDownloadsPending = {}
 -- or nil and the reason when the download was not started
 function installPackageFromUrl(file, url)
   local destination = string.format("%s/%s", getMudletHomeDir(), file)
-  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
+  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet") or untranslatedMessages
 
   local function warn(text)
     decho('<0,150,190>' .. mudlet.Locale.prefixWarn.message)
