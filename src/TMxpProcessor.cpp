@@ -391,7 +391,9 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
             return HANDLER_INSERT_ENTITY_LIT;
         }
         if (noBreak) {
-            mIgnoreNextNewline = !mReadingLocalText;
+            if (!mReadingLocalText) {
+                mIgnoreNextNewline = true;
+            }
             return HANDLER_NEXT_CHAR;
         }
 

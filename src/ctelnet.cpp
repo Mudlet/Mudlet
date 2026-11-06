@@ -308,8 +308,6 @@ void cTelnet::reset()
     if (!mpHost->getForceMXPProcessorOn()) {
         mpHost->mMxpProcessor.disable();
     }
-    // A forced processor stays enabled, and the last game's <NOBR> must not join the next game's first line
-    mpHost->mMxpProcessor.clearIgnoredNewline();
 
     // The secure port a game advertised over MSSP. Left standing it is offered for the next game
     // as though that game had advertised it, and accepting writes the port into the profile.

@@ -316,7 +316,7 @@ describe("Tests the MXP line modes a game switches between", function()
   it("does not let locally fed text use up the game's NOBR tag", function()
     local mark = getLastLineNumber("main")
     feed("MXPNOBRGAME<NOBR>")
-    feedTriggers("MXPNOBRLOCAL\n")
+    feedTriggers("MXPNOBRLOCAL<NOBR>\n")
     feed("\r\nMXPNOBRGAMENEXT\r\n")
     -- the local text ends the game's unfinished line, as it does without a NOBR, and the game's
     -- newline is still ignored rather than left to commit an empty line
@@ -502,8 +502,8 @@ describe("Tests the MXP line modes a game switches between", function()
   end)
 end)
 
--- Connecting and disconnecting reset cTelnet, but a forced processor stays on
--- through them, so a NOBR the last game left must be dropped explicitly
+-- A forced processor is switched off and on again with the connection, which
+-- must drop a NOBR the last game left
 describe("Tests a NOBR the game left when the connection ends", function()
   local function feed(data)
     local ok, msg = feedTelnet(data)

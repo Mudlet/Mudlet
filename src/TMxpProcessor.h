@@ -80,7 +80,6 @@ public:
     void resetToDefaultMode(bool closeOpenTags = true);
     // Whether a <NOBR> asked for the next newline from the game to be ignored; taking it clears it
     bool takeIgnoredNewline();
-    void clearIgnoredNewline() { mIgnoreNextNewline = false; }
     // Locally fed text may not join a line of its own onto the game's with a <NOBR>
     bool setReadingLocalText(bool local) { return std::exchange(mReadingLocalText, local); }
 
