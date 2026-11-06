@@ -266,6 +266,8 @@ void TCommandLine::editAndSpellCheck(QEvent* event, const KeyEdit kind)
     QPlainTextEdit::event(event);
     if (!leavesMarksAlone) {
         spellCheck();
+    } else if (!modifierAlone && mpHost->getEnableSpellCheck()) {
+        keepMarkOffNextCharacter();
     }
     if (grouped) {
         editBlock.endEditBlock();
@@ -901,14 +903,23 @@ void TCommandLine::spellCheck()
     QTextCursor oldCursor = textCursor();
     QTextCursor c = cursorAtWordStart(document(), oldCursor.position());
     spellCheckWord(c);
-    // Keeps the mark off the next character typed. With a selection it would instead
-    // strip the marks from the selected words, which Undo and Redo leave selected
-    if (!oldCursor.hasSelection()) {
-        QTextCharFormat f;
-        f.setFontUnderline(false);
-        oldCursor.setCharFormat(f);
-    }
     setTextCursor(oldCursor);
+    keepMarkOffNextCharacter();
+}
+
+void TCommandLine::keepMarkOffNextCharacter()
+{
+    QTextCursor caret = textCursor();
+    // With a selection this would strip the marks from the selected words instead,
+    // which Undo and Redo leave selected
+    if (caret.hasSelection()) {
+        return;
+    }
+    // Sets only what the next character typed gets, which is not an undo record
+    QTextCharFormat f;
+    f.setFontUnderline(false);
+    caret.setCharFormat(f);
+    setTextCursor(caret);
 }
 
 void TCommandLine::slot_popupMenu()

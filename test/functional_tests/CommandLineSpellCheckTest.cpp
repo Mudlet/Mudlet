@@ -312,6 +312,25 @@ private slots:
         QCOMPARE(pCommandLine->textCursor().position(), 8);
     }
 
+    // A word's mark stays on the word: what is typed after it, even straight after
+    // an Undo, starts unmarked
+    void test_aSpaceTypedAfterUndoIsNotMarked()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("qzxfrob"));
+        QTest::keyClick(pCommandLine, Qt::Key_Backspace);
+        QTest::keySequence(pCommandLine, QKeySequence::Undo);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxfrob"));
+
+        QTest::keyClicks(pCommandLine, qsl(" go"));
+
+        QTextCursor space(pCommandLine->document());
+        space.setPosition(8);
+        QCOMPARE(space.charFormat().underlineStyle(), QTextCharFormat::NoUnderline);
+        QVERIFY(markedMisspelt(pCommandLine, qsl("qzxfrob")));
+    }
+
     // Switching spell check on rechecks the whole line outside any key press. Undo
     // must get past that recheck too, with the bare Ctrl a real Ctrl+Z starts with.
     void test_undoGetsPastARecheckOfTheWholeLine()

@@ -110,6 +110,7 @@ private:
     void insertFromMimeData(const QMimeData*) override;
     void slot_contentsChange();
     void spellCheck();
+    void keepMarkOffNextCharacter();
     void fillSpellCheckList(QMouseEvent*, QMenu*);
     void handleTabCompletion(bool);
     void historyMove(MoveDirection);
