@@ -1381,6 +1381,9 @@ signals:
     // The font getEditorFont() answers with may have moved
     void signal_editorFontChanged(const QFont& font);
     void signal_passwordEntryWantedChanged(bool wanted);
+    // The whole of the main command line once a script sets it or a send empties it, from a view with no
+    // widget to show it
+    void signal_commandLineTextRequested(const QString& text);
     void signal_forceMXPProcessorOnChanged(bool enabled);
     // The frontend (TMainConsole) owns the dialogs these drive; the strings are
     // built here so they stay in Host's translation context.
