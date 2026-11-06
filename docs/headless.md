@@ -638,6 +638,18 @@ and from scripts (`echoLink()`, `echoPopup()` and the like, a trigger's included
 while the main console still holds a line with it: the console reuses the ids of links whose lines it
 has let go, so an app that keeps older lines than the console does should not rely on theirs.
 
+`link(id)` says what a link offers, as the GUI shows it: its `tooltip`, as plain text; its `items`,
+one for each thing it can run, each with the label the GUI gives it, and marked as greyed out where it
+has nothing to run or as a separator where it has no label either; and `menu`, where the GUI's right
+click lists the items, under `menuTitle` if that is set. A click follows the first item. It also gives
+the link's state (a `spoiler` and whether it is `revealed`, `disabled`, `concealed` by the game's OSC 8
+visibility settings, which leave blanks in its place in the GUI, `visited`, and `selected` in its group),
+and how the GUI paints the link in that state, which may differ from its runs as they were sent: a
+`foreground`, `background` and `styles` that are empty where the run's own apply, the styles standing in
+for the run's bold, italic, underline, overline and strike-out only. It is `nullopt` for 0, for an id the
+main console no longer holds, as once an MXP `<EXPIRE>` has removed the link or its line has been
+deleted, and with no profile open. It is a getter, so it may be called from any handler, `outputLine`'s included.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,

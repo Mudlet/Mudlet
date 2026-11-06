@@ -30,9 +30,13 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <optional>
+
+#include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
+#include "TConsoleModel.h"
 #include "THeadlessSession.h"
 
 #include "GroupedTest.h"
@@ -97,6 +101,15 @@ private:
         }
         return links;
     }
+
+    // The link of the last run of the line lineShown sent with this text, 0 if none
+    static int lastLinkOf(const QSignalSpy& spy, const QString& text)
+    {
+        const QList<THeadlessSession::TextRun> runs = runsOf(spy, text);
+        return runs.isEmpty() ? 0 : runs.constLast().link;
+    }
+
+    static THeadlessSession::LinkItem item(const QString& label, const bool enabled = true, const bool separator = false) { return {label, enabled, separator}; }
 
 private slots:
     void initTestCase()
@@ -180,6 +193,114 @@ private slots:
         for (const THeadlessSession::TextRun& run : runs) {
             QCOMPARE(run.link, 0);
         }
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aLinksTooltipAndItemIsItsHint()
+    {
+        const QString name = qsl("Headless Link Details");
+        QVERIFY(writeProfile(name, qsl(R"lua(tempRegexTrigger("^headless single$", [[echoLink(" x", "headlessFollowed = true", "the hint")]]))lua")));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QVERIFY(session.runLua(feed(qsl("headless single"))));
+        const int id = lastLinkOf(shown, qsl("headless single x"));
+        QVERIFY(id > 0);
+        const std::optional<THeadlessSession::Link> link = session.link(id);
+        QVERIFY(link);
+        QCOMPARE(link->tooltip, qsl("the hint"));
+        QVERIFY(!link->menu);
+        QCOMPARE(link->items, (QList<THeadlessSession::LinkItem>{item(qsl("the hint"))}));
+        QVERIFY(!link->spoiler);
+        QVERIFY(!link->disabled);
+        QVERIFY(!link->visited);
+        QVERIFY(!link->selected);
+        QVERIFY(!link->foreground);
+        QVERIFY(!link->styles);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aPopupsItemsAreAsItsMenuListsThem()
+    {
+        const QString name = qsl("Headless Popup Details");
+        QVERIFY(writeProfile(name, qsl(R"lua(tempRegexTrigger("^headless popup$", [[echoPopup(" p", {"headlessFollowed = 1", "", ""}, {"the tooltip", "First", "", "Third"})]]))lua")));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QVERIFY(session.runLua(feed(qsl("headless popup"))));
+        const std::optional<THeadlessSession::Link> link = session.link(lastLinkOf(shown, qsl("headless popup p")));
+        QVERIFY(link);
+        QCOMPARE(link->tooltip, qsl("the tooltip"));
+        QVERIFY(link->menu);
+        QVERIFY(link->menuTitle.isEmpty());
+        QCOMPARE(link->items, (QList<THeadlessSession::LinkItem>{item(qsl("First")), item(QString(), false, true), item(qsl("Third"), false)}));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_anOsc8LinksMenuHasItsTitleAndLook()
+    {
+        const QString name = qsl("Headless OSC 8 Details");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        const QString uri = qsl("send:look?config={\"title\":\"Lamb Stew\",\"style\":{\"color\":\"#00ffff\"},\"menu\":[{\"Look\":\"send:look stew\"},{\"Eat\":\"send:eat stew\"}]}");
+        QVERIFY(session.runLua(feed(osc8(uri, qsl("stew")))));
+        const std::optional<THeadlessSession::Link> link = session.link(lastLinkOf(output, qsl("stew")));
+        QVERIFY(link);
+        QVERIFY(link->menu);
+        QCOMPARE(link->menuTitle, qsl("Lamb Stew"));
+        QCOMPARE(link->tooltip, qsl("Right-click for menu"));
+        QCOMPARE(link->items, (QList<THeadlessSession::LinkItem>{item(qsl("Look")), item(qsl("Eat"))}));
+        QVERIFY(link->foreground);
+        QCOMPARE(*link->foreground, QColor(0x00, 0xff, 0xff));
+        QVERIFY(link->styles);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_noLinkIsGivenForAnIdTheConsoleDoesNotHold()
+    {
+        const QString name = qsl("Headless Unknown Link");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QVERIFY(!session.link(1));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QVERIFY(session.runLua(feed(osc8(qsl("send:look"), qsl("look")))));
+        const int id = lastLinkOf(output, qsl("look"));
+        QVERIFY(session.link(id));
+        QVERIFY(!session.link(0));
+        QVERIFY(!session.link(-1));
+        QVERIFY(!session.link(id + 1));
+        QVERIFY(session.shutdown(false));
+        QVERIFY(!session.link(id));
+    }
+
+    void test_aConcealedLinkIsSaidToBeAndOneWhoseLineWentIsNotGiven()
+    {
+        const QString name = qsl("Headless Concealed Link");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QVERIFY(session.runLua(feed(qsl("hidden: ") + osc8(qsl("send:take?config={\"visibility\":{\"action\":\"conceal\"}}"), qsl("the key")))
+                               + feed(qsl("gone: ") + osc8(qsl("send:drop?config={\"visibility\":{\"action\":\"conceal\",\"wholeline\":true}}"), qsl("the lamp")))));
+        const int hidden = lastLinkOf(output, qsl("hidden: the key"));
+        const int gone = lastLinkOf(output, qsl("gone: the lamp"));
+        QVERIFY(hidden > 0);
+        QVERIFY(gone > 0);
+        TConsoleModel& model = session.host()->mainConsoleModel();
+        QVERIFY(!session.link(hidden)->concealed);
+        model.mHyperlinkVisibilityManager.concealLink(hidden);
+        QVERIFY(session.link(hidden)->concealed);
+        model.mHyperlinkVisibilityManager.revealLink(hidden);
+        QVERIFY(!session.link(hidden)->concealed);
+
+        QVERIFY(session.link(gone));
+        model.mHyperlinkVisibilityManager.concealLink(gone);
+        // Its line went with it, though the store keeps the link until a sweep
+        QVERIFY(model.buffer.mLinkStore.contains(gone));
+        QVERIFY(!session.link(gone));
         QVERIFY(session.shutdown(false));
     }
 };

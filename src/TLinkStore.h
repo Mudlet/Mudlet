@@ -32,7 +32,8 @@
 class Host;
 
 // Keep together lists of links and hints associated
-class TLinkStore {
+class TLinkStore
+{
     inline static const int scmMaxLinks = 20000;
 
 public:
@@ -40,7 +41,8 @@ public:
     // if a value is not provided:
     TLinkStore(int maxLinks = scmMaxLinks)
     : mMaxLinks(maxLinks)
-    {}
+    {
+    }
 
     int addLinks(const QStringList& links, const QStringList& hints, Host* pH = nullptr, const QVector<int>& luaReference = QVector<int>(), const QString& expireName = QString());
 
@@ -49,7 +51,25 @@ public:
     QStringList getLinksConst(int id) const { return mLinkStore.value(id); }
     QStringList getHintsConst(int id) const { return mHintStore.value(id); }
     QVector<int> getReference(int id) const { return mReferenceStore.value(id); }
-    
+    // getLinks() makes an empty entry for an id looked up after its link went, as when it expired
+    bool contains(int id) const { return !mLinkStore.value(id).isEmpty(); }
+
+    // What the console offers for a link, shared by the view and a frontend with no window so they cannot drift
+    struct MenuItem
+    {
+        QString label;
+        // Off for an item with neither a command nor a Lua function
+        bool enabled = true;
+        // An item with nothing to run and an empty label
+        bool separator = false;
+    };
+    // The special hint, where one was given ahead of the items' own, otherwise every hint
+    QString tooltip(int id) const;
+    // More than one command, or a special hint: a right click lists menuItems(), where a click runs the first
+    bool opensMenu(int id) const;
+    // One per command
+    QList<MenuItem> menuItems(int id) const;
+
     // EXPIRE tag support - manage link expiry by name
     void expireLinks(const QString& expireName, Host* pH = nullptr);
     QString getExpireName(int id) const { return mExpireStore.value(id); }
@@ -88,7 +108,7 @@ private:
     QMap<int, Mudlet::HyperlinkStyling> mStylingStore;
     QMap<int, QString> mExpireStore;
     QMultiHash<QString, int> mExpireToLinks;
-    
+
     QMultiHash<QPair<QString, QString>, int> mSelectionGroupIndex;
 };
 

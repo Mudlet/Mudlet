@@ -2081,9 +2081,6 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
         int linkIndex = mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex();
 
         setCursor(Qt::PointingHandCursor);
-        QStringList tooltip = mpBuffer->mLinkStore.getHints(linkIndex);
-        QStringList commands = mpBuffer->mLinkStore.getLinks(linkIndex);
-        // If a special tooltip hint was given, use that one.
         // The server chooses this text and QToolTip renders anything
         // Qt::mightBeRichText() accepts as HTML, so escape it and wrap it
         // in an explicit document rather than letting that guess decide
@@ -2091,7 +2088,7 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
         // breaks the plain-text path used to give.
         // An empty string is how QToolTip is told to hide, so it has to
         // stay empty rather than becoming an empty document.
-        const QString tooltipText = tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed);
+        const QString tooltipText = mpBuffer->mLinkStore.tooltip(linkIndex);
         const QString tooltipMarkup = tooltipText.isEmpty() ? QString() : qsl("<html><body style='white-space:pre'>%1</body></html>").arg(tooltipText.toHtmlEscaped());
         QToolTip::showText(event->globalPosition().toPoint(), tooltipMarkup);
 
@@ -3070,17 +3067,8 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                     }
 
                     QStringList command = mpBuffer->mLinkStore.getLinks(linkIndex);
-                    QStringList hint = mpBuffer->mLinkStore.getHints(linkIndex);
                     QVector<int> luaReference = mpBuffer->mLinkStore.getReference(linkIndex);
-                    if (command.size() > 1 || hint.size() > command.size()) {
-                        // This is a popup menu rather than a link as it has
-                        // more than one item, or has menu hints indicating menu items.
-
-                        // Skip a special tooltip hint (at the start of the
-                        // hints), if one was given, i.e. there is (at least)
-                        // an extra one:
-                        int hint_offset = (hint.size() > command.size()) ? 1 : 0;
-
+                    if (mpBuffer->mLinkStore.opensMenu(linkIndex)) {
                         auto popup = new QMenu(this);
                         popup->setAttribute(Qt::WA_DeleteOnClose);
                         popup->setFont(font());
@@ -3123,28 +3111,15 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
 
                         mPopupCommands.clear();
                         mPopupLinkIndex = linkIndex;
-                        for (int i = 0, total = command.size(); i < total; ++i) {
-                            QAction* pA = nullptr;
-                            // Check to see if this item has a command/function
-                            // so we can disable it if not:
-                            const bool doesSomething = !command.at(i).isEmpty() || luaReference.value(i, 0);
-                            // A safety flag in case we have too few hints:
-                            const bool useHintNotCommand = (i + hint_offset) < hint.size();
-                            // If it doesn't have a hint either then make it
-                            // into a separator in the context menu:
-                            const bool makeASeparator = !doesSomething && hint.at(i + hint_offset).isEmpty();
-                            const QString actionText = useHintNotCommand ? hint.at(i + hint_offset) : command.at(i);
-                            if (makeASeparator) {
-                                pA = popup->addSeparator();
-                            } else {
-                                pA = popup->addAction(actionText);
-                            }
+                        const QList<TLinkStore::MenuItem> items = mpBuffer->mLinkStore.menuItems(linkIndex);
+                        for (int i = 0, total = items.size(); i < total; ++i) {
+                            QAction* pA = items.at(i).separator ? popup->addSeparator() : popup->addAction(items.at(i).label);
                             mPopupCommands[i + 1] = {command.at(i), luaReference.value(i, 0)};
                             // We now use this to index into mPopupCommands
                             // when the action is triggered - but we do offset
                             // it by one so that the first one is NOT zero:
                             pA->setData(i + 1);
-                            if (doesSomething) {
+                            if (items.at(i).enabled) {
                                 connect(pA, &QAction::triggered, this, &TTextEdit::slot_popupMenu);
                             } else {
                                 pA->setEnabled(false);
@@ -4467,10 +4442,9 @@ void TTextEdit::showKeyboardContextMenu()
     if (command.isEmpty()) {
         return;
     }
-    QStringList hint = mpBuffer->mLinkStore.getHintsConst(focusedLink);
     QVector<int> luaReference = mpBuffer->mLinkStore.getReference(focusedLink);
 
-    if (command.size() <= 1 && hint.size() <= command.size()) {
+    if (!mpBuffer->mLinkStore.opensMenu(focusedLink)) {
         // No menu needed: one command and no extra hints means direct activation
         if (!command.isEmpty()) {
             if (hyperlinkStyling.selection.hasSelectionSettings) {
@@ -4494,8 +4468,6 @@ void TTextEdit::showKeyboardContextMenu()
     }
 
     // Show popup at caret position (not mouse position) since this is keyboard-driven
-    int hintOffset = (hint.size() > command.size()) ? 1 : 0;
-
     auto popup = new QMenu(this);
     popup->setAttribute(Qt::WA_DeleteOnClose);
     popup->setFont(font());
@@ -4537,20 +4509,12 @@ void TTextEdit::showKeyboardContextMenu()
 
     mPopupCommands.clear();
     mPopupLinkIndex = focusedLink;
-    for (int i = 0, total = command.size(); i < total; ++i) {
-        QAction* pA = nullptr;
-        const bool doesSomething = !command.at(i).isEmpty() || luaReference.value(i, 0);
-        const bool useHintNotCommand = (i + hintOffset) < hint.size();
-        const bool makeASeparator = !doesSomething && useHintNotCommand && hint.at(i + hintOffset).isEmpty();
-        const QString actionText = useHintNotCommand ? hint.at(i + hintOffset) : command.at(i);
-        if (makeASeparator) {
-            pA = popup->addSeparator();
-        } else {
-            pA = popup->addAction(actionText);
-        }
+    const QList<TLinkStore::MenuItem> items = mpBuffer->mLinkStore.menuItems(focusedLink);
+    for (int i = 0, total = items.size(); i < total; ++i) {
+        QAction* pA = items.at(i).separator ? popup->addSeparator() : popup->addAction(items.at(i).label);
         mPopupCommands[i + 1] = {command.at(i), luaReference.value(i, 0)};
         pA->setData(i + 1);
-        if (doesSomething) {
+        if (items.at(i).enabled) {
             connect(pA, &QAction::triggered, this, &TTextEdit::slot_popupMenu);
         } else {
             pA->setEnabled(false);
