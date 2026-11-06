@@ -241,7 +241,7 @@ describe("Tests functionality of Geyser.ScrollBox", function()
 
   describe("Geyser.ScrollBox after one of its constraints raised", function()
     for _, dimension in ipairs({"width", "height"}) do
-      it("places a child from its own origin after measuring its " .. dimension .. " for a child raised", function()
+      it("places a child from its own origin after measuring its " .. dimension .. " for a child raised an error", function()
         local size = 300
         local cons = {name = "gsbRaised", x = 100, y = 50, width = 300, height = 200}
         cons[dimension] = function() return size end
@@ -259,16 +259,19 @@ describe("Tests functionality of Geyser.ScrollBox", function()
       end)
     end
 
-    it("places a child from its own origin after its own reposition raised", function()
-      local width = 300
-      local box = track(Geyser.ScrollBox:new({name = "gsbRaisedBox", x = 100, y = 50, width = function() return width end, height = 200}))
+    it("lays a child out inside it after its own reposition raised an error", function()
+      local mainWidth = getMainWindowSize()
+      local height = 200
+      local box = track(Geyser.ScrollBox:new({name = "gsbRaisedBox", x = 100, y = 50, width = "-10px", height = function() return height end}))
       local label = track(Geyser.Label:new({name = "gsbRaisedBoxChild", x = 0, y = 0, width = 50, height = 50}, box))
-      width = nil
+      height = nil
       local raised = not pcall(box.reposition, box)
-      width = 300
+      height = 200
+      label:resize("100%", 50)
       label:move(10, 20)
       assert.is_true(raised)
-      assert.are.same({x = 10, y = 20, width = 50, height = 50}, geometry("gsbRaisedBoxChild"))
+      -- the far edge width still needs the box's real x while the box measures itself
+      assert.are.same({x = 10, y = 20, width = mainWidth - 110, height = 50}, geometry("gsbRaisedBoxChild"))
     end)
 
     it("raises exactly what the constraint raised", function()
