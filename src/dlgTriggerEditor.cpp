@@ -11226,14 +11226,13 @@ static QString themedBannerLinkColor()
     return MudletApp::darkMode() ? qsl("rgb(230, 230, 230)") : qsl("black");
 }
 
-// The chunk names here must match the ones TTrigger::compileScript() and its
-// siblings in the other item classes compile their scripts under. A repaired
-// item keeps its last error message, so that only counts while it is broken.
+// Chunk names as TTrigger::compileScript() and its siblings build them. A repaired item keeps its last error, so
+// it counts only while broken; a cleared tree's current item is deleted before fillout_form() forgets it.
 bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName, QString& error)
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
-        if (auto* pT = getTriggerFromTreeItem(mpCurrentTriggerItem)) {
+        if (auto* pT = treeWidget_triggers->topLevelItemCount() ? getTriggerFromTreeItem(mpCurrentTriggerItem) : nullptr) {
             itemId = pT->getID();
             chunkName = qsl("Trigger: %1").arg(pT->getName());
             error = pT->state() ? QString() : pT->getError();
@@ -11241,7 +11240,7 @@ bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName, QStri
         }
         break;
     case EditorViewType::cmAliasView:
-        if (auto* pT = getAliasFromTreeItem(mpCurrentAliasItem)) {
+        if (auto* pT = treeWidget_aliases->topLevelItemCount() ? getAliasFromTreeItem(mpCurrentAliasItem) : nullptr) {
             itemId = pT->getID();
             chunkName = qsl("Alias: %1").arg(pT->getName());
             error = pT->state() ? QString() : pT->getError();
@@ -11249,7 +11248,7 @@ bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName, QStri
         }
         break;
     case EditorViewType::cmTimerView:
-        if (auto* pT = getTimerFromTreeItem(mpCurrentTimerItem)) {
+        if (auto* pT = treeWidget_timers->topLevelItemCount() ? getTimerFromTreeItem(mpCurrentTimerItem) : nullptr) {
             itemId = pT->getID();
             chunkName = qsl("Timer: %1").arg(pT->getName());
             error = pT->state() ? QString() : pT->getError();
@@ -11257,7 +11256,7 @@ bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName, QStri
         }
         break;
     case EditorViewType::cmScriptView:
-        if (auto* pT = getScriptFromTreeItem(mpCurrentScriptItem)) {
+        if (auto* pT = treeWidget_scripts->topLevelItemCount() ? getScriptFromTreeItem(mpCurrentScriptItem) : nullptr) {
             itemId = pT->getID();
             chunkName = qsl("Script: %1").arg(pT->getName());
             error = pT->state() ? QString() : pT->getError();
@@ -11265,7 +11264,7 @@ bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName, QStri
         }
         break;
     case EditorViewType::cmActionView:
-        if (auto* pT = getActionFromTreeItem(mpCurrentActionItem)) {
+        if (auto* pT = treeWidget_actions->topLevelItemCount() ? getActionFromTreeItem(mpCurrentActionItem) : nullptr) {
             itemId = pT->getID();
             chunkName = qsl("Button: %1").arg(pT->getName());
             error = pT->state() ? QString() : pT->getError();
@@ -11273,7 +11272,7 @@ bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName, QStri
         }
         break;
     case EditorViewType::cmKeysView:
-        if (auto* pT = getKeyFromTreeItem(mpCurrentKeyItem)) {
+        if (auto* pT = treeWidget_keys->topLevelItemCount() ? getKeyFromTreeItem(mpCurrentKeyItem) : nullptr) {
             itemId = pT->getID();
             chunkName = qsl("Key: %1").arg(pT->getName());
             error = pT->state() ? QString() : pT->getError();
