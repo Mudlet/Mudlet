@@ -373,7 +373,9 @@ not built on Qt has to copy:
 `printCmdLine()`, `appendCmdLine()`, `clearCmdLine()` or `sendCmdLine()` sets it, for the app's input
 line to show as the GUI's command line does; `clearCmdLine()` sends an empty line. As the GUI's line does,
 the main line holds what `submit()` sends while its aliases run, so `getCmdLine()` there reads it, and
-if the profile clears the line after a send, an empty line follows the send. It is sent as it is set, so
+if the profile clears the line after a send, an empty line follows the send. If the game asked to hide
+input while the send's aliases ran, that empty line comes just after `hiddenInputWanted` turns off
+instead, as the GUI's line was emptied behind its hidden-input box. It is sent as it is set, so
 it keeps its place among the game's lines and `hiddenInputWanted`, and a handler may neither call the
 session nor run the event loop. Only the main command line is sent: a line from
 `createCommandLine()` or Geyser is not. Mudlet does not know what the app's user has typed until the
@@ -388,7 +390,9 @@ set. Nothing is sent:
 When `hiddenInputWanted` turns on, the app sets aside the text its input line holds from a script, as
 `commandLineTextRequested` last gave it, keeps it out of its masked line, and shows it again when hidden
 input ends, as the GUI's command line stays behind its hidden-input box; only what the player typed
-ahead moves into the masked line, when Mudlet says so (see `setCommandLineText()` below).
+ahead moves into the masked line, when Mudlet says so (see `setCommandLineText()` below). An empty
+`commandLineTextRequested` may follow `hiddenInputWanted` turning off, for a send whose aliases ran as
+the game hid input, and empties the line the app has just put back.
 
 `submit()` stands for the app's input line being sent, so it holds the line and then empties or keeps it
 as the profile says, as the GUI's line does. A command sent from anywhere else, such as a button or a
@@ -403,8 +407,11 @@ then as the profile leaves it, and `commandLineTextRequested` says so when Mudle
 no `commandLineTextRequested`, so an app that hands that signal's text back, once the signal is over,
 starts no loop. Text the app sets on the line itself, rather than the player typing it, goes with
 `CommandLineEdit::notTyped`: a history recall, a Tab completion, and text from a script it set aside
-while hidden input was wanted and puts back. The GUI's line does not count such text as typed either,
-though it does count what it puts back from its hidden-input box, which the app hands back as typed.
+while hidden input was wanted and puts back. For that last, it hands back what its line holds once the
+signals that end hidden input have been handled, not the text it set aside, as an empty
+`commandLineTextRequested` may have emptied the line meanwhile. The GUI's line does not count such text
+as typed either, though it does count what it puts back from its hidden-input box, which the app hands
+back as typed.
 
 What it guarantees about hidden input is narrow:
 

@@ -162,6 +162,8 @@ public:
     // As TMainConsole::openPasswordEntry(): a line typed ahead of the prompt that opens the box goes into it. True
     // if it took one.
     bool hiddenInputOpened();
+    // As TCommandLine::enterCommand() empties the line behind the box, the empty line a send could not report
+    void hiddenInputClosed();
     bool ownsContainer(const QString& windowname) const;
     bool subConsoleShown(const QString& name) const;
     void reportUserWindowVisibility();
@@ -570,6 +572,8 @@ private:
     bool mMainCommandLineAllSelected = false;
     // Whether the line held for a send was written to while it was sent
     bool mMainCommandLineRewritten = false;
+    // A send emptied the line while hidden input was wanted, which the app has not been told
+    bool mMainCommandLineClearPending = false;
     // The main window, which holds what a script makes in it
     std::unique_ptr<QObject> mpMainHolder = std::make_unique<QObject>();
     // TMxpFrameWidgets' container widget of each frame, which holds the frame's console until a script moves it

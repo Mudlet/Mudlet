@@ -2218,6 +2218,11 @@ void TNullConsoleFrontend::mainCommandLineSent()
     }
     if (mpHost->passwordEntryWanted()) {
         mMainCommandLineTyped = false;
+        // The app's line is set aside until hidden input ends, as the GUI's line is behind its box. Only set here, as
+        // a send that began inside this one's aliases may have emptied the line already.
+        if (!mpHost->windowRegistry().commandLineText(QString()).value_or(QString()).isEmpty()) {
+            mMainCommandLineClearPending = true;
+        }
         mpHost->windowRegistry().setMainCommandLineText(QString());
     } else {
         replaceCommandLineText(QString(), QString());
@@ -2290,6 +2295,14 @@ bool TNullConsoleFrontend::hiddenInputOpened()
     registry.wipeMainCommandLineText();
     mpHost->passwordEntryEdited();
     return true;
+}
+
+void TNullConsoleFrontend::hiddenInputClosed()
+{
+    if (mMainCommandLineClearPending) {
+        mMainCommandLineClearPending = false;
+        emit mpHost->signal_commandLineTextRequested(QString());
+    }
 }
 
 bool TNullConsoleFrontend::appendCommandLineText(const QString& name, const QString& text)

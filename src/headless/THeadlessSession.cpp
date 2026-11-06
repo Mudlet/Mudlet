@@ -508,8 +508,8 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     const bool moved = wanted && pView && pView->hiddenInputOpened();
                     const QString profile = mProfileName;
                     mHiddenInputFor = wanted ? std::optional<QString>(profile) : std::nullopt;
+                    const QPointer<THeadlessSession> self(this);
                     if (moved) {
-                        const QPointer<THeadlessSession> self(this);
                         ++gSignalsBeingHandedOut;
                         emit typedLineMoveRequested(profile);
                         --gSignalsBeingHandedOut;
@@ -520,6 +520,12 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     ++gSignalsBeingHandedOut;
                     emit hiddenInputWanted(profile, wanted);
                     --gSignalsBeingHandedOut;
+                    // After, so it empties the line the app has just put back
+                    if (!wanted && self && run == mRun) {
+                        if (auto* pClosedView = dynamic_cast<TNullConsoleFrontend*>(pNewHost->consoleFrontend())) {
+                            pClosedView->hiddenInputClosed();
+                        }
+                    }
                 });
                 connect(pNewHost, &Host::signal_announcementRequested, this, [this](const QString& text, const QString& processing) {
                     const QString profile = mProfileName;
