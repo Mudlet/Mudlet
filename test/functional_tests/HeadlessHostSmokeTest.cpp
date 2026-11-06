@@ -20,6 +20,7 @@
 #include <QAbstractEventDispatcher>
 #include <QApplication>
 #include <QDataStream>
+#include <QDesktopServices>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
@@ -142,6 +143,18 @@ private:
     bool mFailNextLoad = false;
     // Biasing with no vocabulary of its own, so stt.setVocabulary() makes the base class report a fault
     Capabilities mCapabilities{.biasing = true, .sensitivityTuning = true};
+};
+
+// Stands in for the web browser, as an app that embeds Mudlet would take the pages its scripts open
+class HeadlessUrlCatcher : public QObject
+{
+    Q_OBJECT
+
+public:
+    QList<QUrl> mUrls;
+
+public slots:
+    void slot_openUrl(const QUrl& url) { mUrls.append(url); }
 };
 
 // A profile made without ever starting the main window, so it only has the null
@@ -10876,7 +10889,7 @@ headlessAppResult = 'not run'
 local ok, err = pcall(function()
   local tab, tabMsg = getProfileTabNumber()
   assert(tab == nil and type(tabMsg) == "string", "getProfileTabNumber did not answer nil and a message")
-  assert(openWebPage("about:blank") == false, "openWebPage did not answer false")
+  assert(openWebPage("") == false, "openWebPage did not answer false for an empty address")
   assert(loadWindowLayout() == false, "loadWindowLayout did not answer false")
   local shown, shownMsg = showNotification("headless title", "headless text")
   assert(shown == nil and shownMsg == "the profile has no main window", "showNotification did not answer nil and a message")
@@ -10885,6 +10898,37 @@ headlessAppResult = ok and 'ok' or tostring(err)
 )lua"));
         QVERIFY2(ran, "The Lua chunk did not run.");
         QCOMPARE(luaGlobalString(host, "headlessAppResult"), qsl("ok"));
+    }
+
+    void test_scriptsOpenWebPagesWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        const QString scheme = qsl("mudlet-headless-test");
+        HeadlessUrlCatcher catcher;
+        QDesktopServices::setUrlHandler(scheme, &catcher, "slot_openUrl");
+        const auto unsetHandler = qScopeGuard([&scheme] {
+            QDesktopServices::unsetUrlHandler(scheme);
+        });
+
+        const QString hostname = qsl("Test-Headless-Host-Web-Pages");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessWebPages = 'not run'
+local ok, err = pcall(function()
+  assert(openWebPage("mudlet-headless-test://page/a") == true, "openWebPage did not answer true")
+  assert(openUrl("mudlet-headless-test://page/b") == true, "openUrl did not answer true")
+  assert(openWebPage("") == false, "openWebPage did not answer false for an empty address")
+  assert(openUrl("") == false, "openUrl did not answer false for an empty address")
+end)
+headlessWebPages = ok and 'ok' or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessWebPages"), qsl("ok"));
+        QCOMPARE(catcher.mUrls, (QList<QUrl>{QUrl(qsl("mudlet-headless-test://page/a")), QUrl(qsl("mudlet-headless-test://page/b"))}));
+        HostManager::self()->deleteHost(hostname);
     }
 
     void test_scriptsSeeNoMainWindowAsTheyDidBeforeTheNullAppView()

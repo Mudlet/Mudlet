@@ -32,7 +32,14 @@
 #include <QTcpServer>
 #include <QTemporaryDir>
 
-#if !defined(Q_OS_WIN32)
+#include <filesystem> // NOLINT(build/c++17) - Qt cannot set the time of a directory, see ageDirectory() below
+
+#if defined(Q_OS_WIN32)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#else
 #include <unistd.h>
 #endif
 
@@ -81,6 +88,11 @@ private slots:
 
     void connectWithoutClaudeDir();
     void connectRefusesGarbageConfig();
+    void windowsDirFallsBackToAppData();
+    void windowsDirPrefersPackagedInstall();
+    void windowsDirPicksNewestPackage();
+    void windowsDirSkipsUninstalledPackage();
+    void connectWritesPackagedClaudeDesktopConfig();
     void refreshUntouchedWithoutOptIn();
     void refreshLeavesRepurposedEntry();
     void refreshRepointsStaleEntry();
@@ -127,6 +139,7 @@ private slots:
     void codexRemoveUndoesConnect();
 
     void bridgeAnswersOverPipes();
+    void bridgeWithoutStdioExitsCleanly();
     void bridgeAnswersRequestsStillInFlightWhenStdinCloses();
     void bridgeReportsMudletGone();
     void wrongTokenSurfacesAsError();
@@ -465,14 +478,15 @@ void TMCPBridgeTest::mergeRefusesNonObjectServers()
 
 namespace {
 // Points every path the Claude Desktop config functions resolve through - XDG on
-// Linux, HOME on macOS, APPDATA on Windows - into a temp dir, so no test can touch
-// the real user's Claude Desktop settings.
+// Linux, HOME on macOS, APPDATA and LOCALAPPDATA on Windows - into a temp dir, so no
+// test can touch the real user's Claude Desktop settings.
 struct ScopedClaudeConfigDirRedirect
 {
     QTemporaryDir tempDir;
     QByteArray savedXdg = qgetenv("XDG_CONFIG_HOME");
     QByteArray savedHome = qgetenv("HOME");
     QByteArray savedAppData = qgetenv("APPDATA");
+    QByteArray savedLocalAppData = qgetenv("LOCALAPPDATA");
     QByteArray savedAppImage = qgetenv("APPIMAGE");
 
     ScopedClaudeConfigDirRedirect()
@@ -480,6 +494,7 @@ struct ScopedClaudeConfigDirRedirect
         qputenv("XDG_CONFIG_HOME", tempDir.path().toUtf8());
         qputenv("HOME", tempDir.path().toUtf8());
         qputenv("APPDATA", tempDir.path().toUtf8());
+        qputenv("LOCALAPPDATA", tempDir.path().toUtf8());
         // With it set, mudletBinaryPath would name the AppImage instead of this test
         // binary.
         qunsetenv("APPIMAGE");
@@ -490,6 +505,7 @@ struct ScopedClaudeConfigDirRedirect
         restore("XDG_CONFIG_HOME", savedXdg);
         restore("HOME", savedHome);
         restore("APPDATA", savedAppData);
+        restore("LOCALAPPDATA", savedLocalAppData);
         restore("APPIMAGE", savedAppImage);
     }
 
@@ -521,6 +537,28 @@ struct ScopedClaudeConfigDirRedirect
         return file.readAll();
     }
 };
+
+// Qt can only set the time of a file it has open, and a directory cannot be opened
+bool ageDirectory(const QString& path, const int hours)
+{
+    const std::filesystem::path dir(path.toStdU16String());
+    std::error_code error;
+    const auto written = std::filesystem::last_write_time(dir, error);
+    if (error) {
+        return false;
+    }
+    std::filesystem::last_write_time(dir, written - std::chrono::hours(hours), error);
+    return !error;
+}
+
+QString installPackage(const QString& localAppData, const QString& family)
+{
+    const QString data = qsl("%1/Claude-Data/%2").arg(localAppData, family);
+    if (!QDir().mkpath(data) || !QDir().mkpath(qsl("%1/Packages/%2").arg(localAppData, family))) {
+        return {};
+    }
+    return data;
+}
 
 // Points the Codex config functions into a temp dir via CODEX_HOME, Codex's own
 // override for where its configuration lives, so no test can touch the real user's
@@ -595,6 +633,82 @@ void TMCPBridgeTest::connectRefusesGarbageConfig()
     QVERIFY(redirect.writeConfig("{broken"));
     QCOMPARE(TMCPBridge::connectClaudeDesktop(), TMCPBridge::ConnectOutcome::ConfigUnreadable);
     QCOMPARE(redirect.readConfig(), QByteArray("{broken"));
+}
+
+void TMCPBridgeTest::windowsDirFallsBackToAppData()
+{
+    QTemporaryDir local;
+    QVERIFY(local.isValid());
+    // Not a package folder: a file, and Claude Desktop's own in-progress copy
+    QVERIFY(QDir().mkpath(qsl("%1/Claude-Data/~copying.claude_pzs8sxrjxfjjc").arg(local.path())));
+    QFile notAFolder(qsl("%1/Claude-Data/claude_file").arg(local.path()));
+    QVERIFY(notAFolder.open(QIODevice::WriteOnly));
+    notAFolder.close();
+    QCOMPARE(TMCPBridge::claudeDesktopConfigDirOnWindows(local.path(), qsl("C:/Users/me/AppData/Roaming")), qsl("C:/Users/me/AppData/Roaming/Claude"));
+    QCOMPARE(TMCPBridge::claudeDesktopConfigDirOnWindows(QString(), qsl("C:/Users/me/AppData/Roaming")), qsl("C:/Users/me/AppData/Roaming/Claude"));
+    QVERIFY(TMCPBridge::claudeDesktopConfigDirOnWindows(local.path(), QString()).isEmpty());
+}
+
+void TMCPBridgeTest::windowsDirPrefersPackagedInstall()
+{
+    QTemporaryDir local;
+    QTemporaryDir roaming;
+    QVERIFY(local.isValid() && roaming.isValid());
+    QVERIFY(QDir().mkpath(qsl("%1/Claude").arg(roaming.path())));
+    const QString packaged = installPackage(local.path(), qsl("claude_pzs8sxrjxfjjc"));
+    QVERIFY(!packaged.isEmpty());
+    QVERIFY(ageDirectory(packaged, 24));
+    QCOMPARE(TMCPBridge::claudeDesktopConfigDirOnWindows(local.path(), roaming.path()), packaged);
+}
+
+void TMCPBridgeTest::windowsDirPicksNewestPackage()
+{
+    QTemporaryDir local;
+    QVERIFY(local.isValid());
+    const QString older = installPackage(local.path(), qsl("claude_pzs8sxrjxfjjc"));
+    const QString newer = installPackage(local.path(), qsl("anthropicpbc.claude_fnn82j28hfe8t"));
+    QVERIFY(!older.isEmpty() && !newer.isEmpty());
+    QVERIFY(ageDirectory(older, 2));
+    QVERIFY(ageDirectory(newer, 1));
+    QCOMPARE(TMCPBridge::claudeDesktopConfigDirOnWindows(local.path(), QString()), newer);
+    QVERIFY(ageDirectory(newer, 2));
+    QCOMPARE(TMCPBridge::claudeDesktopConfigDirOnWindows(local.path(), QString()), older);
+}
+
+void TMCPBridgeTest::windowsDirSkipsUninstalledPackage()
+{
+    QTemporaryDir local;
+    QVERIFY(local.isValid());
+    const QString installed = installPackage(local.path(), qsl("claude_pzs8sxrjxfjjc"));
+    QVERIFY(!installed.isEmpty());
+    QVERIFY(ageDirectory(installed, 2));
+    QVERIFY(QDir().mkpath(qsl("%1/Claude-Data/anthropicpbc.claude_fnn82j28hfe8t").arg(local.path())));
+    QCOMPARE(TMCPBridge::claudeDesktopConfigDirOnWindows(local.path(), qsl("C:/Users/me/AppData/Roaming")), installed);
+    QVERIFY(QDir(qsl("%1/Packages/claude_pzs8sxrjxfjjc").arg(local.path())).removeRecursively());
+    QCOMPARE(TMCPBridge::claudeDesktopConfigDirOnWindows(local.path(), qsl("C:/Users/me/AppData/Roaming")), qsl("C:/Users/me/AppData/Roaming/Claude"));
+}
+
+void TMCPBridgeTest::connectWritesPackagedClaudeDesktopConfig()
+{
+#if defined(Q_OS_WIN32)
+    ScopedClaudeConfigDirRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    // Apart, so a lookup that read one variable for the other would fail
+    const QString local = qsl("%1/Local").arg(redirect.tempDir.path());
+    const QString roaming = qsl("%1/Roaming").arg(redirect.tempDir.path());
+    qputenv("LOCALAPPDATA", local.toUtf8());
+    qputenv("APPDATA", roaming.toUtf8());
+    QVERIFY(QDir().mkpath(qsl("%1/Claude").arg(roaming)));
+    const QString packaged = installPackage(local, qsl("claude_pzs8sxrjxfjjc"));
+    QVERIFY(!packaged.isEmpty());
+    QCOMPARE(TMCPBridge::claudeDesktopConfigFilePath(), qsl("%1/claude_desktop_config.json").arg(packaged));
+    QCOMPARE(TMCPBridge::connectClaudeDesktop(), TMCPBridge::ConnectOutcome::Written);
+    const QJsonObject entry = parse(redirect.readConfig()).value(qsl("mcpServers")).toObject().value(qsl("Mudlet")).toObject();
+    QCOMPARE(entry.value(qsl("command")).toString(), TMCPBridge::mudletBinaryPath());
+    QVERIFY(TMCPBridge::claudeDesktopRegistered());
+#else
+    QSKIP("Only Windows looks for a packaged Claude Desktop");
+#endif
 }
 
 void TMCPBridgeTest::refreshUntouchedWithoutOptIn()
@@ -1245,6 +1359,25 @@ void TMCPBridgeTest::bridgeAnswersOverPipes()
     QVERIFY(bridge.process.waitForFinished(10000));
     QCOMPARE(bridge.process.exitStatus(), QProcess::NormalExit);
     QCOMPARE(bridge.process.exitCode(), 0);
+}
+
+void TMCPBridgeTest::bridgeWithoutStdioExitsCleanly()
+{
+#if defined(Q_OS_WIN32)
+    BridgeProcess bridge;
+    // What a GUI-subsystem program started from a shortcut gets
+    bridge.process.setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments* args) {
+        args->startupInfo->hStdInput = nullptr;
+        args->startupInfo->hStdOutput = nullptr;
+        args->startupInfo->hStdError = nullptr;
+    });
+    QVERIFY(bridge.start());
+    QVERIFY(bridge.process.waitForFinished(15000));
+    QCOMPARE(bridge.process.exitStatus(), QProcess::NormalExit);
+    QCOMPARE(bridge.process.exitCode(), 1);
+#else
+    QSKIP("Only Windows starts a program with no standard handles at all");
+#endif
 }
 
 void TMCPBridgeTest::bridgeAnswersRequestsStillInFlightWhenStdinCloses()

@@ -3256,7 +3256,6 @@ void mudlet::closeHost(const QString& name)
         return;
     }
 
-    const bool mapOperationRunning = pH->mpMap && pH->mpMap->mapOperationInProgress();
     // A map import, export or download is on the stack, and it is that
     // operation's own qApp->processEvents() that has delivered whatever asked
     // for this close. Destroying the Host here would free the TMap under its
@@ -3266,17 +3265,11 @@ void mudlet::closeHost(const QString& name)
     // reconnect - after the profile's own script asked for the close: the
     // script is still running, and destroying the Host would lua_close() the
     // state under it. Likewise a Host::waitForProfileSave(), whose pump runs
-    // with the Host it waits on - and its caller - still on the stack. Retried
-    // on a timer rather than immediately: the retry would otherwise land back
-    // in the same pump, spinning until the operation ends instead of letting
-    // it get there.
-    if (mapOperationRunning || pH->getLuaInterpreter()->luaOnStack() || pH->waitingForProfileSave()) {
-        if (mapOperationRunning) {
-            if (!pH->mpMap->mapOperationAbortRequested()) {
-                qDebug().nospace().noquote() << "mudlet::closeHost(\"" << name << "\") INFO - a map operation is still running, so the profile will be closed once it has stopped.";
-            }
-            pH->mpMap->requestMapOperationAbort();
-        }
+    // with the Host it waits on - and its caller - still on the stack, and a
+    // reconnect's pump in cTelnet::connectIt(). Retried on a timer rather than
+    // immediately: the retry would otherwise land back in the same pump,
+    // spinning until the operation ends instead of letting it get there.
+    if (pH->deletionMustWait()) {
         const QPointer<Host> pClosingHost(pH);
         QTimer::singleShot(50ms, this, [this, name, pClosingHost]() {
             if (mHostManager.getHost(name) != pClosingHost) {

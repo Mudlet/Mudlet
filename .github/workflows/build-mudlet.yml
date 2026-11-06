@@ -584,7 +584,8 @@ jobs:
       if: env.UPLOAD_FILENAME
       # --fail-with-body: gha_queue.php reports refusals (e.g. a duplicate artifact name after a
       # job re-run) as a 4xx with the reason in the body, which plain curl would exit 0 on
-      run: curl --fail-with-body --retry 5 -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
+      # --retry-all-errors: curl 7.81 on ubuntu-22.04 never retries under --fail-with-body without it
+      run: curl --fail-with-body --retry 5 --retry-all-errors -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
       shell: bash
 
     - name: Upload release asset for GitHub Release

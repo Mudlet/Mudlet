@@ -29,15 +29,22 @@
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "TLuaInterpreter.h"
+#include "TTabBar.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
 
 #include <QApplication>
 #include <QDialog>
+#include <QMessageBox>
 #include <QPointer>
+#include <QTcpServer>
+#include <QTcpSocket>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
+
+#include <memory>
+#include <optional>
 
 using namespace std::chrono_literals;
 
@@ -50,6 +57,15 @@ private:
     QByteArray mSavedXdg;
     const QStringList mProfileNames{qsl("ForceClose-Test-1"), qsl("ForceClose-Test-2"), qsl("ForceClose-Test-3")};
     QPointer<mudlet> mWindow;
+
+    // What a modal dialog asked: a message box's text, as macOS gives a message box no title
+    static QString question(const QDialog* dialog)
+    {
+        if (const auto* box = qobject_cast<const QMessageBox*>(dialog)) {
+            return box->text();
+        }
+        return dialog->windowTitle();
+    }
 
     static bool provisionProfileOnDisk(const QString& name)
     {
@@ -188,6 +204,132 @@ private slots:
             }
         }
         QVERIFY2(saved, "the close did not save the change made after the running save began");
+    }
+
+    // As GMCPAuthenticator reconnects after a rejected sign-in: from a timer, with no Lua running. The socket is
+    // still connected, so connectIt() aborts it and runs the event loop, where the close closeMudlet() posted runs.
+    void test_aCloseDuringAReconnectWaitsForIt()
+    {
+        const QString name = mProfileNames.first();
+        QVERIFY(provisionProfileOnDisk(name));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+        mWindow->startAutoLogin({name});
+        QPointer<Host> host = HostManager::self()->getHost(name);
+        QVERIFY2(host, "the profile did not load");
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10s);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QTRY_COMPARE_WITH_TIMEOUT(host->mTelnet.getConnectionState(), QAbstractSocket::ConnectedState, 10s);
+
+        std::optional<bool> outlivedReconnect;
+        bool closedInReconnect = false;
+        QTimer::singleShot(0, host, [&host, &outlivedReconnect, &closedInReconnect]() {
+            host->mTelnet.reconnect();
+            outlivedReconnect = !host.isNull();
+            closedInReconnect = host && host->closeStarted();
+        });
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("closeMudlet()")));
+
+        QTRY_VERIFY_WITH_TIMEOUT(outlivedReconnect.has_value(), 30s);
+        QVERIFY2(*outlivedReconnect, "the profile was deleted in the middle of its reconnect");
+        QVERIFY2(closedInReconnect, "SETUP: the close did not run inside the reconnect");
+        QTRY_VERIFY2_WITH_TIMEOUT(mWindow.isNull(), "forceClose() never closed the window", 30s);
+        QVERIFY(host.isNull());
+    }
+
+    // With the window left open, only the close itself, put off until the reconnect returns, deletes the profile
+    void test_aTabClosedDuringAReconnectClosesOnceItReturns()
+    {
+        const QString name = mProfileNames.first();
+        QVERIFY(provisionProfileOnDisk(name));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+        mWindow->startAutoLogin({name});
+        QPointer<Host> host = HostManager::self()->getHost(name);
+        QVERIFY2(host, "the profile did not load");
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10s);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QTRY_COMPARE_WITH_TIMEOUT(host->mTelnet.getConnectionState(), QAbstractSocket::ConnectedState, 10s);
+
+        std::optional<bool> outlivedReconnect;
+        bool closedInReconnect = false;
+        bool connectingOnceClosed = false;
+        QTimer::singleShot(0, host, [&host, &outlivedReconnect, &closedInReconnect, &connectingOnceClosed]() {
+            host->mTelnet.reconnect();
+            outlivedReconnect = !host.isNull();
+            if (host) {
+                closedInReconnect = host->closeStarted();
+                connectingOnceClosed = host->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState;
+            }
+        });
+        QTimer::singleShot(0, mWindow, [this, &name]() {
+            mWindow->slot_closeProfileByName(name);
+            // Delivers the close it posted while the reconnect's event loop, which ran this, still runs
+            QCoreApplication::processEvents();
+        });
+
+        QTRY_VERIFY_WITH_TIMEOUT(outlivedReconnect.has_value(), 30s);
+        QVERIFY2(*outlivedReconnect, "the profile was deleted in the middle of its reconnect");
+        QVERIFY2(closedInReconnect, "SETUP: the close did not run inside the reconnect");
+        QVERIFY2(!connectingOnceClosed, "the reconnect went on to connect a profile that had closed");
+        QTRY_VERIFY2_WITH_TIMEOUT(host.isNull(), "the profile was left loaded once its reconnect had returned", 10s);
+        QVERIFY(mWindow);
+        QCOMPARE(mWindow->mpTabBar->tabIndex(name), -1);
+    }
+
+    // The quit closes the reconnecting profile, whose deletion waits for the reconnect, and is then cancelled at
+    // another profile's save question, leaving the window open: the waiting close alone deletes that profile
+    void test_aQuitCancelledDuringAReconnectStillDeletesTheProfileItClosed()
+    {
+        const QString reconnecting = mProfileNames.first();
+        const QString asking = mProfileNames.at(1);
+        QVERIFY(provisionProfileOnDisk(reconnecting));
+        QVERIFY(provisionProfileOnDisk(asking));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(reconnecting, qsl("port"), QString::number(server.serverPort())).first);
+        mWindow->startAutoLogin({asking}, true);
+        mWindow->startAutoLogin({reconnecting});
+        QPointer<Host> host = HostManager::self()->getHost(reconnecting);
+        const QPointer<Host> other = HostManager::self()->getHost(asking);
+        QVERIFY2(host && other, "the profiles did not load");
+        host->mFORCE_SAVE_ON_EXIT = true;
+        other->mFORCE_SAVE_ON_EXIT = false;
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10s);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QTRY_COMPARE_WITH_TIMEOUT(host->mTelnet.getConnectionState(), QAbstractSocket::ConnectedState, 10s);
+
+        // The save question, then the notice that the quit was called off
+        QStringList asked;
+        QTimer modalWatch;
+        connect(&modalWatch, &QTimer::timeout, this, [&asked]() {
+            if (auto dialog = qobject_cast<QDialog*>(QApplication::activeModalWidget())) {
+                asked.append(question(dialog));
+                dialog->reject();
+            }
+        });
+        modalWatch.start(50);
+        std::optional<bool> outlivedReconnect;
+        bool closedInReconnect = false;
+        QTimer::singleShot(0, host, [&host, &outlivedReconnect, &closedInReconnect]() {
+            host->mTelnet.reconnect();
+            outlivedReconnect = !host.isNull();
+            closedInReconnect = host && host->closeStarted();
+        });
+        QTimer::singleShot(0, mWindow, [this]() {
+            mWindow->close();
+        });
+
+        QTRY_VERIFY_WITH_TIMEOUT(outlivedReconnect.has_value(), 30s);
+        QVERIFY2(*outlivedReconnect, "the profile was deleted in the middle of its reconnect");
+        QVERIFY2(closedInReconnect, "SETUP: the quit did not close the profile inside the reconnect");
+        QVERIFY2(!asked.filter(asking).isEmpty(), qPrintable(qsl("SETUP: the other profile did not ask to be saved, so the quit was not cancelled; asked: \"%1\"").arg(asked.join(qsl("\", \"")))));
+        QTRY_VERIFY2_WITH_TIMEOUT(host.isNull(), "the profile the cancelled quit closed was left loaded", 10s);
+        QVERIFY(mWindow);
+        QVERIFY(other);
+        QCOMPARE(mWindow->mpTabBar->tabIndex(reconnecting), -1);
     }
 };
 

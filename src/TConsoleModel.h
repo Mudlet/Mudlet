@@ -38,6 +38,7 @@
 #include <QStringList>
 #include <QTextStream>
 
+#include <functional>
 #include <optional>
 #include <tuple>
 
@@ -255,24 +256,79 @@ struct TConsoleModel
     void notifyPrinted(const QString& text, PrintedInto into, bool startsLine = false);
     // A line was committed or the buffer cleared, so no later text continues the open piece.
     void endPrintedLine() { mPrintedLineEnded = true; }
+    // For a view told of a clear, which emptied its copy of the open piece's line too
+    void forgetPrintedLine()
+    {
+        mPrintedMidLine = false;
+        mPrintedLineEnded = false;
+    }
     // For a complete line: TBuffer::commitLineData() passes it as sent, before triggers can gag or rewrite it.
     void mirrorLineToStdOut(const QString& line);
     // For text written while triggers run: it lands in a line already mirrored as sent, so it is held
     // and goes out after that line as lines of its own, ahead of any later output. Take a mark just
     // before the write and hand it to holdTriggerWriteForMirror() after; what the write put into the
-    // buffer is read back out of it, so text the console capped or dropped is not copied.
+    // buffer is read back out of it, so text the console capped or dropped is not copied. Also kept
+    // for the notifier's lineShown, when what lands outside the lines the passes run on, which no
+    // commit reports, is held in mTriggerWritesForLineShown.
     struct MirrorMark
     {
         QPoint start{-1, -1};
         // The line's length before a write into it, or -1 for a write appended to the buffer
         int lineLength = -1;
         int linesCommitted = 0;
+        // How many characters from start a replace took out
+        int removed = 0;
     };
     MirrorMark markTriggerWriteForMirror(const QPoint& at) const;
     MirrorMark markTriggerAppendForMirror() const;
     void holdTriggerWriteForMirror(const MirrorMark& mark);
     // Drops what was held for a line a trigger deleted, which the console no longer shows
     void forgetHeldMirrorTextOnLine(int line);
+    struct TriggerWrite
+    {
+        QString text;
+        std::vector<TChar> format;
+        int line = -1;
+        int from = 0;
+        // on lastLine, which is below line once a rewrap has split what was written
+        int to = 0;
+        // Ordered as held, so what a print's own append held is known from what was held before it
+        quint64 serial = 0;
+        int lastLine = -1;
+    };
+    // In the order the lines show them, each as a line of its own: the line feed it may open the line it
+    // was written onto with, or close it with, dropped; read with the formatting the line has now
+    QList<TriggerWrite> takeTriggerWritesForLineShown();
+    void holdTriggerWriteForLineShown(const QPoint& start, const QPoint& end);
+    // An edit of line y at x, of removed characters taken out and inserted put in, that changed held writes:
+    // they are read back as the line now shows them. False if it touched none, so it is held as one of its own.
+    bool editHeldWritesForLineShown(int y, int x, int removed, int inserted);
+    // print()'s writes during a pass, as TBuffer::append() may trim or rewrap lines as it goes
+    struct HeldPrintStart
+    {
+        bool held = false;
+        quint64 firstSerial = 0;
+    };
+    HeldPrintStart printHeldForLineShownFrom();
+    void holdPrintForLineShown(const HeldPrintStart& start);
+    // Called by TBuffer as lines go from, or are rewrapped in, the buffer during a pass, so that what is held
+    // for lineShown, and where a print started, stay on the text they were on
+    bool holdsForLineShown() const { return !mTriggerWritesForLineShown.isEmpty() || !mHeldPrintStarts.isEmpty(); }
+    void heldForLineShownLinesRemoved(int from, int to);
+    // Characters sourceFrom to sourceTo of sourceLine that a rewrap put on line at x
+    struct RewrappedSpan
+    {
+        int sourceLine = 0;
+        int sourceFrom = 0;
+        int sourceTo = 0;
+        int line = 0;
+        int x = 0;
+    };
+    void heldForLineShownRewrapped(int firstLine, const QList<RewrappedSpan>& spans);
+    // Whether lineShown's receiver takes what trigger passes write, which textPrinted then leaves out
+    std::function<bool()> mTriggerTextShownElsewhere;
+    // Nothing is kept for lineShown unless its receiver takes it
+    bool lineShownCapturing() const;
     // At the end of a trigger pass
     void flushMirroredTriggerText();
     // This console's held text and, for a sub-console, the main console's
@@ -404,8 +460,12 @@ struct TConsoleModel
     // Where the last held write ended, so that one carrying straight on from it joins its run
     QPoint mMirrorTriggerWriteEnd{-1, -1};
     bool mMirrorTriggerWriteEndedLine = false;
-    // Lines mirrored as committed, so a write that committed some (the OSC 8 documentation) is known
-    int mMirrorLinesCommitted = 0;
+    // Lines committed, so a write that committed some (the OSC 8 documentation) is known
+    int mLinesCommitted = 0;
+    QList<TriggerWrite> mTriggerWritesForLineShown;
+    quint64 mNextTriggerWriteSerial = 0;
+    // Where each print under way started, innermost last
+    QList<QPoint> mHeldPrintStarts;
     // Where notifyPrinted() last wrote, and whether it left that line open
     PrintedInto mPrintedInto = PrintedInto::end;
     bool mPrintedMidLine = false;

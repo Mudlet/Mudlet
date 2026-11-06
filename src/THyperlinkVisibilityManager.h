@@ -115,6 +115,7 @@ private:
     void performConcealment(TrackedHyperlink& link);
     void performReveal(TrackedHyperlink& link);
     void queueHiddenAnnouncement();
+    void announce(const QString& text);
 
     void processExpireTriggeredLinks(bool input, bool prompt, bool output);
 
