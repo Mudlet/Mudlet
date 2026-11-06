@@ -471,11 +471,13 @@ private slots:
     {
         ModernGLWidget* pModern = viewAtThePlayer();
         QVERIFY(pModern);
-        QCOMPARE(runLua(qsl("mapPresses = 0; selectedOnPress = 0\n"
-                            "pressHandler = registerAnonymousEventHandler('sysMapWindowMousePressEvent', function()\n"
+        QCOMPARE(runLua(qsl("mapPresses = 0; selectedOnPress = 0; pressNames = {}\n"
+                            "pressHandler = registerAnonymousEventHandler('sysMapWindowMousePressEvent', function(event)\n"
                             "  mapPresses = mapPresses + 1\n"
                             "  selectedOnPress = #getMapSelection().rooms\n"
-                            "end)")),
+                            "  pressNames[#pressNames + 1] = event\n"
+                            "end)\n"
+                            "pressedHandler = registerAnonymousEventHandler('sysMapWindowMousePressed', function(event) pressNames[#pressNames + 1] = event end)")),
                  QString());
 
         QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pModern, kPlayerRoomId));
@@ -483,8 +485,12 @@ private slots:
         if (QMenu* menu = openMenu(pModern)) {
             menu->close();
         }
-        QCOMPARE(runLua(qsl("killAnonymousEventHandler(pressHandler)")), QString());
+        QCOMPARE(runLua(qsl("killAnonymousEventHandler(pressHandler); killAnonymousEventHandler(pressedHandler)")), QString());
         QCOMPARE(luaGlobalNumber("mapPresses"), 2);
+        // Each press goes out under the old name and then the new one
+        QCOMPARE(runLua(qsl("assert(table.concat(pressNames, ',') == "
+                            "'sysMapWindowMousePressEvent,sysMapWindowMousePressed,sysMapWindowMousePressEvent,sysMapWindowMousePressed')")),
+                 QString());
         // As on the 2D map, a script handling the press already sees the room clicked on selected
         QCOMPARE(luaGlobalNumber("selectedOnPress"), 1);
     }

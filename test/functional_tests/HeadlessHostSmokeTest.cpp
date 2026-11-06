@@ -7192,10 +7192,18 @@ local ok, err = pcall(function()
   local function count(f, ...)
     return select("#", f(...))
   end
-  mapWidgetOpenEvents = 0
+  mapWidgetOpenEvents, mapWidgetOpenedEvents = 0, 0
   function headlessMapWidgetOpened() mapWidgetOpenEvents = mapWidgetOpenEvents + 1 end
+  function headlessMapWidgetOpenedNewName() mapWidgetOpenedEvents = mapWidgetOpenedEvents + 1 end
   local handler = registerAnonymousEventHandler("mapOpenEvent", "headlessMapWidgetOpened")
-  local function events() return mapWidgetOpenEvents end
+  local newNameHandler = registerAnonymousEventHandler("sysMapWindowOpened", "headlessMapWidgetOpenedNewName")
+  -- Each opening raises both names, so a count that differs is reported in place of the count
+  local function events()
+    if mapWidgetOpenedEvents ~= mapWidgetOpenEvents then
+      return "mapOpenEvent " .. mapWidgetOpenEvents .. ", sysMapWindowOpened " .. mapWidgetOpenedEvents
+    end
+    return mapWidgetOpenEvents
+  end
   local function playerRoom()
     local path = getMudletHomeDir() .. "/player room.json"
     saveJsonMap(path)
@@ -7207,6 +7215,7 @@ local ok, err = pcall(function()
 )lua");
         const QString epilogue = qsl(R"lua(
   killAnonymousEventHandler(handler)
+  killAnonymousEventHandler(newNameHandler)
   headlessMapWidgetAnswers = table.concat(answers, "\n")
 end)
 headlessMapWidget = ok and "ok" or tostring(err)
@@ -11578,6 +11587,11 @@ headlessLabelMain = ok and "ok" or tostring(err)
         });
         host->registerAnonymousEventHandler(qsl("sysMapDownloadEvent"), qsl("onHeadlessMapDownload"));
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessMapDownloads = 0; function onHeadlessMapDownload() headlessMapDownloads = headlessMapDownloads + 1 end")));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("headlessMapDownloadEvents = {}; function onHeadlessMapDownloadEvent(event) headlessMapDownloadEvents[#headlessMapDownloadEvents + 1] = event end")));
+        for (const QString& name : {qsl("sysMapLoaded"), qsl("sysMapDownloadEvent"), qsl("sysMapDownloaded")}) {
+            host->registerAnonymousEventHandler(name, qsl("onHeadlessMapDownloadEvent"));
+        }
 
         map->downloadMap(qsl("http://127.0.0.1:%1/map.xml").arg(server.serverPort()));
         QVERIFY2(map->hasActiveTransferProgress(), "The download did not start.");
@@ -11592,6 +11606,8 @@ headlessLabelMain = ok and "ok" or tostring(err)
         QVERIFY2(map->mpRoomDB->getRoom(7), "The downloaded binary map was not loaded.");
         QVERIFY2(!map->mpRoomDB->getRoom(3), "The binary map was loaded over the XML one rather than in its place.");
         QCOMPARE(luaGlobalString(host, "headlessMapDownloads"), qsl("2"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessMapDownloadSequence = table.concat(headlessMapDownloadEvents, ',')")));
+        QCOMPARE(luaGlobalString(host, "headlessMapDownloadSequence"), qsl("sysMapLoaded,sysMapDownloadEvent,sysMapDownloaded,sysMapLoaded,sysMapDownloadEvent,sysMapDownloaded"));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Downloading a map created a widget.");
     }
 
@@ -11617,6 +11633,11 @@ headlessLabelMain = ok and "ok" or tostring(err)
         binaryFile.close();
         host->registerAnonymousEventHandler(qsl("mapOpenEvent"), qsl("onHeadlessMapLoadOpened"));
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessMapLoadOpens = 0; function onHeadlessMapLoadOpened() headlessMapLoadOpens = headlessMapLoadOpens + 1 end")));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("headlessMapLoadEvents = {}; function onHeadlessMapLoadEvent(event) headlessMapLoadEvents[#headlessMapLoadEvents + 1] = event end")));
+        for (const QString& name : {qsl("mapOpenEvent"), qsl("sysMapWindowOpened"), qsl("sysMapLoaded")}) {
+            host->registerAnonymousEventHandler(name, qsl("onHeadlessMapLoadEvent"));
+        }
 
         const QString script = qsl("headlessMapDir = [[%1]]\n").arg(mapDir.path()) + qsl(R"lua(
 headlessMapLoad = 'not run'
@@ -11639,6 +11660,9 @@ headlessMapLoad = ok and 'ok' or tostring(err)
         QCOMPARE(luaGlobalString(host, "headlessMapLoad"), qsl("ok"));
         // As in the GUI, the first load made the map widget, which the later ones then load into
         QCOMPARE(luaGlobalString(host, "headlessMapLoadOpens"), qsl("1"));
+        // The two loads that worked raised sysMapLoaded, the two of missing files nothing
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessMapLoadSequence = table.concat(headlessMapLoadEvents, ',')")));
+        QCOMPARE(luaGlobalString(host, "headlessMapLoadSequence"), qsl("mapOpenEvent,sysMapWindowOpened,sysMapLoaded,sysMapLoaded"));
         QCOMPARE(host->getMapperTitle(), std::optional<QString>(qsl("Map - %1").arg(hostname)));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Loading a map created a widget.");
         HostManager::self()->deleteHost(hostname);

@@ -6470,7 +6470,9 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
         if (isJson) {
             auto [localSuccess, errorMessage] = pHost->mpMap->importJsonMapFile(fileName);
             success = localSuccess;
-            if (!localSuccess) {
+            if (localSuccess) {
+                pHost->mpMap->raiseMapLoaded();
+            } else {
                 pHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\n"
                                       "reason: %2.")
                                            .arg(fileName, errorMessage));
@@ -9420,8 +9422,7 @@ void dlgProfilePreferences::slot_deleteMap()
     label_mapFileActionResult->show();
     label_mapFileActionResult->setText(tr("Deleting map - please wait..."));
     qApp->processEvents(); // Allow the above message to show up when erasing big maps
-    pHost->mpMap->mapClear();
-    pHost->mpMap->updateArea(-1);
+    pHost->mpMap->deleteMap();
 
     // Reset the button but leave it disabled
     pushButton_deleteMap->setChecked(false);

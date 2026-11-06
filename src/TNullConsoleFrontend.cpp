@@ -1453,11 +1453,13 @@ std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windo
             showEmbeddedMapper();
         });
         copyPlayerRoomStyleToMap();
-        mpHost->loadMapForNewMapper(true);
-        TEvent mapOpenEvent{};
-        mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
-        mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(mapOpenEvent);
+        if (mpHost->loadMapForNewMapper(true) == Host::NewMapperLoad::Loaded) {
+            mpHost->mpMap->raiseMapLoaded();
+        }
+        TEvent mapOpenedEvent{};
+        mapOpenedEvent.mArgumentList.append(QLatin1String("sysMapWindowOpened"));
+        mapOpenedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEventWithOldName(mapOpenedEvent);
     }
     showEmbeddedMapper();
     return {true, QString()};

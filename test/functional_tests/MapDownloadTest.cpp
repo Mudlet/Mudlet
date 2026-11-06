@@ -364,13 +364,23 @@ private:
 
     void watchMapDownloadEvent() const
     {
-        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("mapDownloadsSeen = 0\n"
-                                                                 "registerAnonymousEventHandler('sysMapDownloadEvent', function() mapDownloadsSeen = mapDownloadsSeen + 1 end)"));
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("mapDownloadEventsSeen = {}\n"
+                                                                 "for _, name in ipairs({'sysMapLoaded', 'sysMapDownloadEvent', 'sysMapDownloaded'}) do\n"
+                                                                 "  registerAnonymousEventHandler(name, function(event) mapDownloadEventsSeen[#mapDownloadEventsSeen + 1] = event end)\n"
+                                                                 "end"));
     }
 
-    void forgetMapDownloadEvents() const { mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("mapDownloadsSeen = 0")); }
+    void forgetMapDownloadEvents() const { mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("mapDownloadEventsSeen = {}")); }
 
-    bool mapDownloadEventCountIs(const int expected) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(mapDownloadsSeen == %1)").arg(expected)); }
+    // Each download that loaded raises sysMapLoaded, then the old and the new name of the download event
+    bool mapDownloadEventCountIs(const int expected) const
+    {
+        QStringList events;
+        for (int i = 0; i < expected; ++i) {
+            events << qsl("sysMapLoaded,sysMapDownloadEvent,sysMapDownloaded");
+        }
+        return mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(table.concat(mapDownloadEventsSeen, ',') == '%1')").arg(events.join(QLatin1Char(','))));
+    }
 
     // The parse that follows a download reports its own progress on the same
     // display, so the download's reports are the ones before the cancel button

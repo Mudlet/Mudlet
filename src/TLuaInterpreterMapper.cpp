@@ -1356,9 +1356,7 @@ int TLuaInterpreter::deleteMap(lua_State* L)
         return warnArgumentValue(L, __func__, csmMapInUseByCallback);
     }
 
-    host.mpMap->mapClear();
-
-    host.mpMap->updateArea(-1);
+    host.mpMap->deleteMap();
 
     lua_pushboolean(L, true);
     return 1;
@@ -2932,6 +2930,7 @@ int TLuaInterpreter::loadJsonMap(lua_State* L)
 
     pHost->mpMap->announceMapLoaded(true);
     pHost->mpMap->requestMapperShown();
+    pHost->mpMap->raiseMapLoaded();
 
     lua_pushboolean(L, true);
     return 1;

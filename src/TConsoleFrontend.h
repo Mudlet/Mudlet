@@ -230,7 +230,7 @@ public:
 
     // An embedded mapper, in the user window windowname names, else on this console for an empty name or
     // "main"; any other name fails, as does a map dock on screen, while a hidden one is removed. The first
-    // raises mapOpenEvent, loading the profile's map if none is loaded; later calls move and resize it.
+    // raises sysMapWindowOpened, loading the profile's map if none is loaded; later calls move and resize it.
     virtual std::pair<bool, QString> createMapper(const QString& windowname, int x, int y, int width, int height) = 0;
     // The map dock, for when nothing draws the map: made hidden around a new mapper that then does.
     virtual void createMapperDock(const QString& title, const QString& objectName) = 0;

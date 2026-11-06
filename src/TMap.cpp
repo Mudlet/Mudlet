@@ -292,6 +292,21 @@ void TMap::mapClear()
     emit signal_mapCleared();
 }
 
+void TMap::deleteMap()
+{
+    mapClear();
+    updateArea(-1);
+
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysMapDeleted"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    pHost->raiseEvent(event);
+}
+
 void TMap::clearRoutes()
 {
     mTargetID = 0;
@@ -3221,13 +3236,17 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         // direct importation of a local copy of a map file.
         parsingWasSuccessful = readXmlMapFile(readFile);
         readFile.close();
+        // The binary branch's loadMapFile() raises it itself
+        if (parsingWasSuccessful) {
+            raiseMapLoaded();
+        }
     }
 
     if (parsingWasSuccessful) {
-        TEvent mapDownloadEvent{};
-        mapDownloadEvent.mArgumentList.append(qsl("sysMapDownloadEvent"));
-        mapDownloadEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        pHost->raiseEvent(mapDownloadEvent);
+        TEvent mapDownloadedEvent{};
+        mapDownloadedEvent.mArgumentList.append(qsl("sysMapDownloaded"));
+        mapDownloadedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        pHost->raiseEventWithOldName(mapDownloadedEvent);
     } else {
         // Failure in parse file...
         const QString alertMsg = tr("[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg(parsingFileName);
@@ -4187,6 +4206,18 @@ void TMap::announceMapLoaded(const bool showPlayerArea)
 {
     ++mRevision;
     emit signal_mapLoaded(showPlayerArea);
+}
+
+void TMap::raiseMapLoaded()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysMapLoaded"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    pHost->raiseEvent(event);
 }
 
 void TMap::requestMapperShown()

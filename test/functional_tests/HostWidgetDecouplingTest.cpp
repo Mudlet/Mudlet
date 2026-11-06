@@ -1545,8 +1545,16 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         QVERIFY2(host->saveMapFile(QString()), "The map could not be saved as the profile's latest.");
         host->mpMap->mapClear();
         QVERIFY2(!host->mpMap->mapper(), "SETUP: the profile already has a mapper.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("mapLoadEvents = {}\n"
+                                                                       "for _, name in ipairs({'mapOpenEvent', 'sysMapWindowOpened', 'sysMapLoaded'}) do\n"
+                                                                       "  registerAnonymousEventHandler(name, function(event) mapLoadEvents[#mapLoadEvents + 1] = event end)\n"
+                                                                       "end")));
+        const auto mapLoadEventsAre = [host](const QString& expected) {
+            return host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(table.concat(mapLoadEvents, ',') == '%1')").arg(expected));
+        };
 
         QVERIFY2(host->loadMapFile(mapFileName), "Loading the saved map failed.");
+        QVERIFY2(mapLoadEventsAre(qsl("mapOpenEvent,sysMapWindowOpened,sysMapLoaded")), "The first load did not open the map window and then raise sysMapLoaded once.");
         QVERIFY2(host->mainConsoleView()->mpDockableMapWidget, "Loading a map with no mapper did not make one.");
         dlgMapper* mapper = host->mpMap->mapper();
         QVERIFY2(mapper, "Loading a map left the map with no mapper.");
@@ -1557,6 +1565,7 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         host->mRoomSize = 4.5;
         mapper->hide();
         QVERIFY2(host->loadMapFile(mapFileName), "Loading the saved map again failed.");
+        QVERIFY2(mapLoadEventsAre(qsl("mapOpenEvent,sysMapWindowOpened,sysMapLoaded,sysMapLoaded")), "Loading into the existing mapper did not raise sysMapLoaded alone.");
         QCOMPARE(mapper->comboBox_showArea->currentText(), mPlayerAreaName);
         QCOMPARE(mapper->mp2dMap->rSize, 4.5);
         QVERIFY2(!mapper->isHidden(), "Loading a map left the mapper hidden.");
@@ -1564,6 +1573,7 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         host->mRoomSize = 5.5;
         mapper->hide();
         QVERIFY2(!host->loadMapFile(qsl("noSuchMap.dat")), "Loading a map that does not exist succeeded.");
+        QVERIFY2(mapLoadEventsAre(qsl("mapOpenEvent,sysMapWindowOpened,sysMapLoaded,sysMapLoaded")), "A failed load raised an event.");
         QVERIFY2(!host->mpMap->mpRoomDB->isEmpty(), "A failed load lost the map that was loaded.");
         QCOMPARE(mapper->mp2dMap->rSize, 5.5);
         QVERIFY2(!mapper->isHidden(), "A failed load left the mapper hidden.");
@@ -1575,6 +1585,7 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         host->mpMap->mapClear();
         host->loadMap();
         QVERIFY2(!host->mpMap->mpRoomDB->isEmpty(), "loadMap() did not restore the profile's latest map.");
+        QVERIFY2(mapLoadEventsAre(qsl("mapOpenEvent,sysMapWindowOpened,sysMapLoaded,sysMapLoaded,sysMapLoaded")), "The load a profile runs as it starts did not raise sysMapLoaded once.");
         QCOMPARE(mapper->comboBox_showArea->currentText(), mPlayerAreaName);
         QCOMPARE(mapper->mp2dMap->rSize, 6.5);
         QVERIFY2(!mapper->isHidden(), "loadMap() left the mapper hidden.");

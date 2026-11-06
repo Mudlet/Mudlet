@@ -485,6 +485,9 @@ public:
     void registerAnonymousEventHandler(const QString& name, const QString& fun);
     void unregisterEventHandler(const QString&, TScript*);
     void raiseEvent(const TEvent& event);
+    // For an event with a standard name and an older one that scripts already listen for: raises it under the
+    // older name first, then under the standard one
+    void raiseEventWithOldName(const TEvent& event);
     // This disables all the triggers/timers/keys in preparation to resetting
     // them - and sets a timer to do resetProfile_phase2() when it is safe to do
     // so. We need to do it this way because a lua script containing the call to
@@ -761,9 +764,11 @@ public:
     bool moveWindow(const QString& name, int, int);
     std::pair<bool, QString> setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show);
     std::pair<bool, QString> openMapWidget(const QString& area, int x, int y, int width, int height);
-    // Loads and shows the profile's last saved map for a mapper being made, embedded or the map widget; false, doing
-    // nothing, when a map is loaded or the profile is closing with its view gone.
-    bool loadMapForNewMapper(bool embedded);
+    enum class NewMapperLoad { Skipped, Failed, Loaded };
+    // Loads and shows the profile's last saved map for a mapper being made, embedded or the map widget; Skipped, doing
+    // nothing, when a map is loaded or the profile is closing with its view gone. The caller raises sysMapLoaded for
+    // Loaded once its mapper is on screen.
+    NewMapperLoad loadMapForNewMapper(bool embedded);
     std::pair<bool, QString> closeMapWidget();
     std::optional<QRect> mapWidgetGeometry() const;
     void refreshColours();

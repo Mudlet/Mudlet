@@ -6057,10 +6057,10 @@ void ModernGLWidget::raiseMousePressEvent()
     if (!mpHost) {
         return;
     }
-    TEvent sysMapWindowMousePressEvent{};
-    sysMapWindowMousePressEvent.mArgumentList.append(QLatin1String("sysMapWindowMousePressEvent"));
-    sysMapWindowMousePressEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent(sysMapWindowMousePressEvent);
+    TEvent mousePressedEvent{};
+    mousePressedEvent.mArgumentList.append(QLatin1String("sysMapWindowMousePressed"));
+    mousePressedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEventWithOldName(mousePressedEvent);
 }
 
 void ModernGLWidget::mousePressEvent(QMouseEvent* event)
