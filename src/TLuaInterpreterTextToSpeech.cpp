@@ -290,14 +290,13 @@ int TLuaInterpreter::ttsGetQueue(lua_State* L)
     TLuaInterpreter::ttsBuild();
 
     if (lua_gettop(L) > 0) {
-        int index = getVerifiedInt(L, __func__, 1, "index");
-        index--;
-        if (index < 0 || index >= speechQueue.size()) {
+        const int index = getVerifiedInt(L, __func__, 1, "index");
+        if (index < 1 || index > speechQueue.size()) {
             lua_pushboolean(L, false);
             return 1;
         }
 
-        lua_pushstring(L, speechQueue.at(index).toUtf8().constData());
+        lua_pushstring(L, speechQueue.at(index - 1).toUtf8().constData());
         return 1;
     }
 

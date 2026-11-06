@@ -202,6 +202,15 @@ describe("Tests the room and area database behind the map", function()
       assert.are.equal(missingRoomId, createRoomID(missingRoomId))
     end)
 
+    it("createRoomID refuses a minimum with no free number at or above it", function()
+      local highest = 2147483647
+      assert.is_true(addRoom(highest))
+      finally(function() deleteRoom(highest) end)
+
+      assert.are.same({nil, "no free room ID at or above 2147483647"}, {createRoomID(highest)})
+      assert.are.equal(highest - 1, createRoomID(highest - 1))
+    end)
+
     it("createRoomID still hands back a hole after a call with a minimum above it", function()
       local hole = createRoomID()
       assert.is_true(addRoom(hole))

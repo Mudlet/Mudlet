@@ -1772,9 +1772,8 @@ int TLuaInterpreter::getMainConsoleWidth(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     const QFont font = host.hasConsoleView() ? host.getDisplayFont() : host.displayFontWithNoView();
-    int fw = QFontMetrics(font).averageCharWidth();
-    fw *= host.mWrapAt + 1;
-    lua_pushnumber(L, fw);
+    const qint64 averageCharWidth = QFontMetrics(font).averageCharWidth();
+    lua_pushnumber(L, averageCharWidth * (qint64{host.mWrapAt} + 1));
     return 1;
 }
 
