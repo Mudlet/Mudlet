@@ -234,6 +234,20 @@ private slots:
         QCOMPARE(caretLine(), static_cast<size_t>(2));
     }
 
+    // Toggling a broken item on wraps its own error in an explanation
+    void testActivationFailureStillLinks()
+    {
+        mpEditor->slot_showTriggers();
+        selectTrigger(qsl("qaBrokenTrigger"));
+        mpEditor->activeToggle_trigger();
+        QVERIFY2(bannerText().contains(qsl("qaBrokenTrigger")) && bannerText().contains(qsl("<p>")), qPrintable(bannerText()));
+        QCOMPARE(lineLink(), qsl("mudlet-error-line:3"));
+
+        moveCaretToStart();
+        emit mpEditor->mpSystemMessageArea->notificationAreaMessageBox->linkActivated(lineLink());
+        QCOMPARE(caretLine(), static_cast<size_t>(2));
+    }
+
     // Lua reports an unclosed block on the "end" line that the trigger wraps
     // around its script, one past the script's last line
     void testLinePastTheScriptLandsOnItsLastLine()

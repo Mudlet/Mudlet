@@ -11299,14 +11299,16 @@ QString dlgTriggerEditor::linkErrorLineToScript(const QString& error)
     int itemId = -1;
     QString chunkName;
     QString ownError;
-    if (!currentScriptChunk(itemId, chunkName, ownError) || error != ownError) {
+    // Toggling a broken item on wraps its error in an explanation that names the item first
+    const qsizetype ownErrorStart = currentScriptChunk(itemId, chunkName, ownError) && !ownError.isEmpty() ? error.indexOf(ownError) : -1;
+    if (ownErrorStart < 0) {
         return error;
     }
 
     // TLuaInterpreter::compile() HTML-escapes the message, so the quotes arrive as entities
     static const QRegularExpression location(qsl(R"(\[string &quot;(.*?)&quot;\]:(\d+):)"));
-    const QRegularExpressionMatch match = location.match(error);
-    if (!match.hasMatch()) {
+    const QRegularExpressionMatch match = location.match(error, ownErrorStart);
+    if (!match.hasMatch() || match.capturedEnd() > ownErrorStart + ownError.size()) {
         return error;
     }
 
