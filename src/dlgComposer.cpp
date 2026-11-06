@@ -32,9 +32,11 @@
 
 #include <hunspell/hunspell.h>
 
+#include <QCloseEvent>
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMouseEvent>
+#include <QSettings>
 #include <QTextCursor>
 
 
@@ -53,6 +55,17 @@ dlgComposer::dlgComposer(Host* pH)
     connect(edit, &QWidget::customContextMenuRequested, this, &dlgComposer::slot_contextMenu);
 
     setAttribute(Qt::WA_DeleteOnClose);
+
+    const QByteArray geometry = MudletApp::getQSettings()->value(qsl("composerGeometry")).toByteArray();
+    if (!geometry.isEmpty()) {
+        restoreGeometry(geometry);
+    }
+}
+
+void dlgComposer::closeEvent(QCloseEvent* event)
+{
+    MudletApp::getQSettings()->setValue(qsl("composerGeometry"), saveGeometry());
+    QMainWindow::closeEvent(event);
 }
 
 void dlgComposer::slot_cancel()
