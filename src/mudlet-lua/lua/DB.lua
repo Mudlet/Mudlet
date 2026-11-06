@@ -2008,11 +2008,14 @@ end
 
 
 
--- column names must be quoted: one named after an SQL keyword, such as "group" or
--- "order", is otherwise a syntax error that db:fetch reports as no rows. Backticks,
--- not double quotes: sqlite reads a double-quoted name it has no column for as a string,
--- so a column db:create failed to add would match every row instead of failing
+-- Quoted so a field named like an SQL keyword ("group") works. Backticks, not double quotes:
+-- sqlite reads a double-quoted name it has no column for as a string, so a filter on a column
+-- db:create failed to add would match every row. A table a script built itself keeps its raw
+-- name, which may be an expression such as "a.kills"
 local function quoted_column(field)
+  if getmetatable(field) ~= db.__FieldMT then
+    return field.name
+  end
   return "`" .. field.name .. "`"
 end
 

@@ -1937,6 +1937,8 @@ describe("Tests DB.lua functions", function()
       { "db:in_", function() return db:in_(mydb.items.order, {"first", "third"}) end, {"Ada", "Cyra"} },
       { "db:not_in", function() return db:not_in(mydb.items.order, {"first", "third"}) end, {"Bram"} },
       { "db:query_by_example", function() return db:query_by_example(mydb.items, {group = "<3"}) end, {"Ada", "Bram"} },
+      -- a script's own field table can carry an expression, which quoting would break
+      { "a hand-built field naming an expression", function() return db:gt({name = "items.`group` + 10", type = "number"}, 11) end, {"Bram", "Cyra"} },
     }
 
     for _, case in ipairs(cases) do
