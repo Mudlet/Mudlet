@@ -323,6 +323,12 @@ describe("Tests the MXP line modes a game switches between", function()
     assert.equals("MXPNOBRGAMEMXPNOBRLOCAL|MXPNOBRGAMENEXT", table.concat(getLines("main", mark, getLastLineNumber("main")), "|"))
   end)
 
+  it("keeps the tags of an open line open across the newline a NOBR tag ignores", function()
+    finally(function() feed("</B>\r\n") end)
+    feed("<B>MXPNOBRBOLD<NOBR>\r\nMXPNOBRSTILLBOLD</B>\r\n")
+    assert.is_true(boldAt("MXPNOBRSTILLBOLD"))
+  end)
+
   it("drops a NOBR tag when the game resets", function()
     assert.equals("MXPNOBRRESET|MXPNOBRAFTERRESET", displayed("MXPNOBRRESET<NOBR>\27[3z\r\nMXPNOBRAFTERRESET\r\n"))
   end)
@@ -493,5 +499,59 @@ describe("Tests the MXP line modes a game switches between", function()
     -- secure nor a locked reading of the switch would do
     assert.equals("MXPPARSENONUMBER<SEND href=\"x\">N</SEND>", displayed("\27[z<B>MXPPARSENONUMBER</B><SEND href=\"x\">N</SEND>\r\n"))
     assert.equals("MXPPARSESTILLOPEN<SEND href=\"x\">N</SEND>", displayed("\27[1;2z<B>MXPPARSESTILLOPEN</B><SEND href=\"x\">N</SEND>\r\n"))
+  end)
+end)
+
+-- Connecting and disconnecting reset cTelnet, but a forced processor stays on
+-- through them, so a NOBR the last game left must be dropped explicitly
+describe("Tests a NOBR the game left when the connection ends", function()
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  it("does not join the next connection's first line to it", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waiting for the connection to come and go needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+      return
+    end
+    local telnetDirectory = os.getenv("MUDLET_TEST_TELNET_DIR")
+    local handle = telnetDirectory and io.open(telnetDirectory .. "/port", "r")
+    local port = handle and tonumber((handle:read("*a") or ""):match("%d+") or "")
+    if handle then
+      handle:close()
+    end
+    if not port then
+      local reason = "needs the telnet fixture (run CI/telnet-fixture-server.py with MUDLET_TEST_TELNET_DIR set)"
+      assert.is_nil(os.getenv("MUDLET_TEST_REQUIRE_TELNET_FIXTURE"), "MUDLET_TEST_REQUIRE_TELNET_FIXTURE is set but this " .. reason)
+      pending(reason)
+      return
+    end
+    local function connected()
+      local _, _, isConnected = getConnectionInfo()
+      return isConnected
+    end
+    local function waitFor(predicate)
+      for _ = 1, 100 do
+        if predicate() then
+          return true
+        end
+        pumpEvents(50)
+      end
+      return predicate()
+    end
+
+    setConfig("specialForceMXPProcessorOn", true)
+    finally(function() setConfig("specialForceMXPProcessorOn", false) end)
+    feed("MXPNOBRLASTGAME<NOBR>")
+    connectToServer("127.0.0.1", port)
+    assert.is_true(waitFor(connected), "never connected to the telnet fixture on port " .. port)
+    disconnect()
+    assert.is_true(waitFor(function() return not connected() end), "the telnet fixture connection outlived the disconnect")
+
+    local mark = getLastLineNumber("main")
+    feed("MXPNOBRNEXTGAME\r\nMXPNOBRNEXTGAMETOO\r\n")
+    local shown = table.concat(getLines("main", mark, getLastLineNumber("main")), "|")
+    assert.is_true(shown:find("MXPNOBRNEXTGAME|MXPNOBRNEXTGAMETOO", 1, true) ~= nil, shown)
   end)
 end)

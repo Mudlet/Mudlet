@@ -24,8 +24,6 @@
 #include "TStringUtils.h"
 #include <QDebug>
 
-#include <utility>
-
 // Static sets of MXP tags from the specification
 // See: https://www.zuggsoft.com/zmud/mxp.htm
 
@@ -271,10 +269,10 @@ bool TMxpProcessor::isEnabled() const
     return mMXP;
 }
 
-void TMxpProcessor::resetToDefaultMode()
+void TMxpProcessor::resetToDefaultMode(const bool closeOpenTags)
 {
     // Also, when in OPEN mode, any unclosed OPEN tags are automatically closed when a newline is received from the MUD.
-    if (mMXP_MODE == MXP_MODE_OPEN) {
+    if (closeOpenTags && mMXP_MODE == MXP_MODE_OPEN) {
         mpMxpClient->resetTextProperties();
     }
     mMXP_MODE = mMXP_DEFAULT;
@@ -393,7 +391,7 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
             return HANDLER_INSERT_ENTITY_LIT;
         }
         if (noBreak) {
-            mIgnoreNextNewline = true;
+            mIgnoreNextNewline = !mReadingLocalText;
             return HANDLER_NEXT_CHAR;
         }
 

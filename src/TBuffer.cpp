@@ -1424,11 +1424,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         return;
     }
 
-    // Local text may not join a line of its own onto the game's, nor use up the game's <NOBR>
-    const bool gameIgnoresNextNewline = mpHost && mpHost->mMxpProcessor.takeIgnoredNewline();
-    auto restoreGameNoBreak = qScopeGuard([this, gameIgnoresNextNewline] {
+    const bool enclosingReadingLocalText = mpHost && mpHost->mMxpProcessor.setReadingLocalText(true);
+    auto endLocalText = qScopeGuard([this, enclosingReadingLocalText] {
         if (mpHost) {
-            mpHost->mMxpProcessor.setIgnoreNextNewline(gameIgnoresNextNewline);
+            mpHost->mMxpProcessor.setReadingLocalText(enclosingReadingLocalText);
         }
     });
 
@@ -2322,10 +2321,12 @@ void TBuffer::parseChunk(
                 // after a newline (but not a <br>) return to default mode
                 // BUT only if we're not in the middle of parsing a tag (tags can span lines)
                 if (!mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
-                    mpHost->mMxpProcessor.resetToDefaultMode();
-                    // Any line end but cTelnet's flush marker uses up a <NOBR>; only the game's newline is ignored.
+                    // Any line end the game sends but cTelnet's flush marker uses up a <NOBR>; only a newline is ignored
+                    const bool noBreak = isFromServer && ch != CHAR_CARRIAGE_RETURN && mpHost->mMxpProcessor.takeIgnoredNewline();
+                    const bool ignoreNewline = noBreak && ch == CHAR_NEW_LINE;
                     // The line still ends for the line modes, so a secure line cannot run on into the next one
-                    if (ch != CHAR_CARRIAGE_RETURN && mpHost->mMxpProcessor.takeIgnoredNewline() && ch == CHAR_NEW_LINE && isFromServer) {
+                    mpHost->mMxpProcessor.resetToDefaultMode(!ignoreNewline);
+                    if (ignoreNewline) {
                         localBufferPosition++;
                         continue;
                     }
