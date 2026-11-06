@@ -2313,7 +2313,7 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
         if (written != packageData.size() || !file.commit()) {
             QString reason = file.errorString();
             if (file.error() == QFileDevice::NoError) {
-                //: Why a downloaded package could not be saved; %1 and %2 are numbers of bytes
+                //: The reason in "could not save file, reason: %1" when a package download came up short; %1 is the bytes written, %2 the package size
                 reason = tr("only %1 of %2 bytes could be written, is the disk full?").arg(written).arg(packageData.size());
             }
             //: %1 is the error message

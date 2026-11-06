@@ -35,6 +35,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <algorithm>
 #include <functional>
 
 #include "Host.h"
@@ -50,7 +51,6 @@
 #include "GroupedTest.h"
 
 #if defined(Q_OS_UNIX)
-#include <algorithm>
 #include <csignal>
 #include <sys/resource.h>
 #endif
@@ -71,6 +71,8 @@ private:
     int mConsoleMark = 0;
     const QString mProfileName = qsl("DownloadShortWrite-Test");
     const QString mLocalhost = qsl("localhost");
+    // Raised for a write that came up short, where a failed fetch gives its own reason
+    const QString mShortWriteDetail = qsl("Couldn't write downloaded content into the destination file");
     // Past QFileDevice's 16 KiB write buffer, as a write that fits in it fails at commit() instead
     static constexpr qint64 scmFileSizeLimit = 20 * 1024;
 
@@ -78,6 +80,7 @@ private:
     bool lua(const QString& code) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(code); }
     QString luaString(const QString& name) const { return mpHost->getLuaInterpreter()->getLuaString(name); }
 
+    // As one line, since the console wraps long messages
     QString consoleSinceMark() const
     {
         QStringList lines;
@@ -85,7 +88,7 @@ private:
         for (int line = std::max(0, mConsoleMark); line <= buffer.getLastLineNumber(); ++line) {
             lines << buffer.line(line);
         }
-        return lines.join(QChar::LineFeed);
+        return lines.join(QChar::Space).simplified();
     }
 
 #if defined(Q_OS_UNIX)
@@ -188,7 +191,7 @@ private slots:
                          }),
                  "the download never finished");
 
-        QVERIFY2(luaString(qsl("downloadOutcome")).startsWith(qsl("error")), qPrintable(luaString(qsl("downloadOutcome"))));
+        QCOMPARE(luaString(qsl("downloadOutcome")), qsl("error %1").arg(mShortWriteDetail));
         QVERIFY2(!QFileInfo::exists(target), "the part that landed was put in place");
 #endif
     }
@@ -217,7 +220,7 @@ private slots:
                          }),
                  "the media download never finished");
 
-        QVERIFY2(luaString(qsl("mediaOutcome")).startsWith(qsl("error")), qPrintable(luaString(qsl("mediaOutcome"))));
+        QCOMPARE(luaString(qsl("mediaOutcome")), qsl("error %1").arg(mShortWriteDetail));
         QVERIFY2(!QFileInfo::exists(target), "the part that landed was put in place");
 #endif
     }
@@ -239,10 +242,11 @@ private slots:
                     return mpHost->mTelnet.isGMCPEnabled();
                 },
                 5s));
-        const QString saved = MudletApp::getMudletPath(enums::profileDataItemPath, mProfileName, qsl("echo.mpackage"));
+        // Not a package the profile has, as replacing one saves the profile while the limit holds
+        const QString saved = MudletApp::getMudletPath(enums::profileDataItemPath, mProfileName, qsl("short-write.mpackage"));
         QFile::remove(saved);
         mConsoleMark = mpHost->mainConsoleView()->buffer.getLastLineNumber();
-        const QByteArray offer = qsl("Client.GUI {\"version\": \"7\", \"url\": \"%1\"}").arg(url(qsl("echo.mpackage"))).toUtf8();
+        const QByteArray offer = qsl("Client.GUI {\"version\": \"7\", \"url\": \"%1\"}").arg(url(qsl("short-write.mpackage"))).toUtf8();
 
         QVERIFY2(underFileSizeLimit(
                          [&]() {
@@ -254,7 +258,8 @@ private slots:
                          }),
                  "the package download never finished");
 
-        QVERIFY2(consoleSinceMark().contains(qsl("could not save file")), qPrintable(consoleSinceMark()));
+        const QString reason = qsl("could not save file, reason: only %1 of %2 bytes could be written").arg(scmFileSizeLimit).arg(mServed.size());
+        QVERIFY2(consoleSinceMark().contains(reason), qPrintable(consoleSinceMark()));
         QVERIFY2(mpHost->mServerGUI_Package_version != qsl("7"), "the package was recorded as installed");
         QVERIFY2(!QFileInfo::exists(saved), "the part that landed was put in place");
 #endif
