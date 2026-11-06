@@ -227,16 +227,6 @@ int clampedWrapIndent(const int indentSize, const int maxWidth)
     return (indentSize > 0 && indentSize < maxWidth) ? std::min(indentSize, maxWidth / 2) : 0;
 }
 
-// The columns [from, to) of line y that styling from (x1, y1) to (x2, y2) reaches: on to the end of
-// every line but the last, which stops at x2
-std::pair<int, int> styledColumns(const TLineFormat& line, const int y, const int x1, const int y1, const int x2, const int y2)
-{
-    const int size = static_cast<int>(line.size());
-    const int from = (y == y1) ? x1 : 0;
-    const int to = (y >= y2) ? std::min(x2, size) : size;
-    return {from, std::max(from, to)};
-}
-
 // True only if getWrapInfo() would find no break, decided without its scan, the costliest part of appending
 // a line. No grapheme is wider than graphemeInfo::maxWidth columns or shorter than one QChar, and printable
 // ASCII (which excludes LineFeed and Tab) is one column per QChar.
@@ -8005,6 +7995,16 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
         return true;
     }
     return false;
+}
+
+// The columns [from, to) of line y that styling from (x1, y1) to (x2, y2) reaches: on to the end of
+// every line but the last, which stops at x2
+static std::pair<int, int> styledColumns(const TLineFormat& line, const int y, const int x1, const int y1, const int x2, const int y2)
+{
+    const int size = static_cast<int>(line.size());
+    const int from = (y == y1) ? x1 : 0;
+    const int to = (y >= y2) ? std::min(x2, size) : size;
+    return {from, std::max(from, to)};
 }
 
 // Replaces (bool)TBuffer::applyXxxx(QPoint& P_begin, QPoint& P_end, bool state)
