@@ -75,8 +75,9 @@ public:
     void disable();
     bool isEnabled() const;
     void resetToDefaultMode();
-    // Whether a <NOBR> asked for this newline from the game to be ignored; asking clears it
+    // Whether a <NOBR> asked for the next newline from the game to be ignored; taking it clears it
     bool takeIgnoredNewline();
+    void setIgnoreNextNewline(bool ignore) { mIgnoreNextNewline = ignore; }
 
     TMxpProcessingResult processMxpInput(char& ch, bool resolveCustomEntities);
     void processRawInput(char ch);

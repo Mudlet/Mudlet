@@ -280,6 +280,53 @@ describe("Tests the MXP line modes a game switches between", function()
     feed("<T_IAC><T_DONT><O_MXP>")
   end)
 
+  it("joins the line a NOBR tag ends to the next one", function()
+    assert.equals("MXPNOBRFIRSTMXPNOBRSECOND", displayed("MXPNOBRFIRST<NOBR>\r\nMXPNOBRSECOND\r\n"))
+  end)
+
+  it("ignores only the one newline after a NOBR tag", function()
+    assert.equals("MXPNOBRONCE MXPNOBRJOINED|MXPNOBROWNLINE",
+      displayed("MXPNOBRONCE<NOBR> MXPNOBRJOINED\r\nMXPNOBROWNLINE\r\n"))
+  end)
+
+  it("ignores the newline of a NOBR tag that comes in the next packet", function()
+    local mark = getLastLineNumber("main")
+    feed("MXPNOBRSPLITFIRST<NOBR>")
+    feed("\r\nMXPNOBRSPLITSECOND\r\n")
+    assert.equals("MXPNOBRSPLITFIRSTMXPNOBRSPLITSECOND", table.concat(getLines("main", mark, getLastLineNumber("main")), "|"))
+  end)
+
+  -- a BR is not a newline from the game, so the NOBR still waits for one
+  it("keeps the line a BR tag breaks after a NOBR tag", function()
+    assert.equals("MXPNOBRBEFORE|MXPNOBRAFTERBREAKMXPNOBRJOINEDTOO",
+      displayed("MXPNOBRBEFORE<NOBR><BR>MXPNOBRAFTERBREAK\r\nMXPNOBRJOINEDTOO\r\n"))
+  end)
+
+  it("lets a prompt the game ends with GA use up a NOBR tag", function()
+    feed("MXPNOBRPROMPT<NOBR><T_IAC><T_GA>")
+    assert.equals("MXPNOBRREPLY|MXPNOBRREPLYNEXT", displayed("MXPNOBRREPLY\r\nMXPNOBRREPLYNEXT\r\n"))
+  end)
+
+  it("does not let a NOBR tag carry a secure line on into the next one", function()
+    finally(function() feed("</B>\r\n") end)
+    assert.equals([[MXPNOBRSECURE<SEND href="x">MXPNOBROPEN</SEND>]],
+      displayed("\27[1z<B>MXPNOBRSECURE</B><NOBR>\r\n<SEND href=\"x\">MXPNOBROPEN</SEND>\r\n"))
+  end)
+
+  it("does not let locally fed text use up the game's NOBR tag", function()
+    local mark = getLastLineNumber("main")
+    feed("MXPNOBRGAME<NOBR>")
+    feedTriggers("MXPNOBRLOCAL\n")
+    feed("\r\nMXPNOBRGAMENEXT\r\n")
+    local shown = table.concat(getLines("main", mark, getLastLineNumber("main")), "|")
+    assert.is_true(shown:find("MXPNOBRGAMENEXT", 1, true) ~= nil, shown)
+    assert.is_nil(shown:find("|MXPNOBRGAMENEXT", 1, true), shown)
+  end)
+
+  it("drops a NOBR tag when the game resets", function()
+    assert.equals("MXPNOBRRESET|MXPNOBRAFTERRESET", displayed("MXPNOBRRESET<NOBR>\27[3z\r\nMXPNOBRAFTERRESET\r\n"))
+  end)
+
   it("shows every tag as text on a locked line and parses the next one", function()
     assert.equals("<B>MXPPARSELOCKED</B>", displayed("\27[2z<B>MXPPARSELOCKED</B>\r\n"))
     assert.equals("MXPPARSEAFTERLOCKED", displayed("<B>MXPPARSEAFTERLOCKED</B>\r\n"))

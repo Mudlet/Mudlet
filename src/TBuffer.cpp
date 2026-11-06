@@ -1424,6 +1424,14 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         return;
     }
 
+    // Local text may not join a line of its own onto the game's, nor use up the game's <NOBR>
+    const bool gameIgnoresNextNewline = mpHost && mpHost->mMxpProcessor.takeIgnoredNewline();
+    auto restoreGameNoBreak = qScopeGuard([this, gameIgnoresNextNewline] {
+        if (mpHost) {
+            mpHost->mMxpProcessor.setIgnoreNextNewline(gameIgnoresNextNewline);
+        }
+    });
+
     if (mProcessingLocalFeed) {
         // Text a trigger or an MXP tag feeds while the enclosing feed is still
         // being read is whole too, so it gets a clean state and leaves the
@@ -2315,8 +2323,9 @@ void TBuffer::parseChunk(
                 // BUT only if we're not in the middle of parsing a tag (tags can span lines)
                 if (!mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
                     mpHost->mMxpProcessor.resetToDefaultMode();
+                    // Any line end but cTelnet's flush marker uses up a <NOBR>; only the game's newline is ignored.
                     // The line still ends for the line modes, so a secure line cannot run on into the next one
-                    if (ch == CHAR_NEW_LINE && mpHost->mMxpProcessor.takeIgnoredNewline()) {
+                    if (ch != CHAR_CARRIAGE_RETURN && mpHost->mMxpProcessor.takeIgnoredNewline() && ch == CHAR_NEW_LINE && isFromServer) {
                         localBufferPosition++;
                         continue;
                     }

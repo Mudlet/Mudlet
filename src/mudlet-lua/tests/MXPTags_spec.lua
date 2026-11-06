@@ -205,21 +205,24 @@ describe("Tests the tags MXP handles", function()
       local event = sendEvent("<SEND>mxpSoftBreakLink<SBR>mxpSoftBreakTail</SEND>")
       assert.is_table(event)
       assert.are.equal("mxpSoftBreakLink mxpSoftBreakTail", event.text)
+      assert.are.same({"send([[\nmxpSoftBreakLink mxpSoftBreakTail]])"}, event.actions)
     end)
 
-    it("joins the next line to the one a NOBR tag ends", function()
-      local joined = table.concat(linesFor("mxpNoBreakFirst<NOBR>\nmxpNoBreakSecond"), "\n")
-      assert.is_true(joined:find("mxpNoBreakFirstmxpNoBreakSecond", 1, true) ~= nil, joined)
+    -- the specs that join lines are in MxpParsing_spec.lua, which feeds the
+    -- game's data: only a game's newline is ignored for a NOBR
+    it("does not join a line of locally fed text to the next with a NOBR tag", function()
+      local joined = table.concat(linesFor("mxpNoBreakLocal<NOBR>\nmxpNoBreakLocalNext"), "\n")
+      assert.is_true(joined:find("mxpNoBreakLocal\nmxpNoBreakLocalNext", 1, true) ~= nil, joined)
     end)
 
-    it("ignores only the one newline after a NOBR tag", function()
-      local joined = table.concat(linesFor("mxpNoBreakOnce<NOBR> mxpNoBreakMore\nmxpNoBreakJoined\nmxpNoBreakOwnLine"), "\n")
-      assert.is_true(joined:find("mxpNoBreakOnce mxpNoBreakMoremxpNoBreakJoined\nmxpNoBreakOwnLine", 1, true) ~= nil, joined)
+    it("reads SBR and NOBR in lower case too", function()
+      local joined = table.concat(linesFor("mxpSoftBreakLower<sbr>mxpSoftBreakLowerNext<nobr>"), "\n")
+      assert.is_true(joined:find("mxpSoftBreakLower mxpSoftBreakLowerNext\n", 1, true) ~= nil, joined)
     end)
 
-    it("keeps the line a BR tag breaks after a NOBR tag", function()
-      local joined = table.concat(linesFor("mxpNoBreakBefore<NOBR><BR>mxpNoBreakAfterBreak\nmxpNoBreakJoinedToo"), "\n")
-      assert.is_true(joined:find("mxpNoBreakBefore\nmxpNoBreakAfterBreakmxpNoBreakJoinedToo", 1, true) ~= nil, joined)
+    it("keeps the characters either side of an SBR tag whole", function()
+      local joined = table.concat(linesFor("mxpSoftBreakCafé<SBR>naïve"), "\n")
+      assert.is_true(joined:find("mxpSoftBreakCafé naïve", 1, true) ~= nil, joined)
     end)
   end)
 
