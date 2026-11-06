@@ -917,6 +917,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mCurrentHyperlinkHint(other.mCurrentHyperlinkHint)
 , mCurrentHyperlinkLinkId(other.mCurrentHyperlinkLinkId)
 , mHyperlinkActive(other.mHyperlinkActive)
+, mHyperlinkEnclosingMxpLinkId(other.mHyperlinkEnclosingMxpLinkId)
 , mWatchdogPhase(other.mWatchdogPhase)
 , mTagWatchdog(std::make_unique<QTimer>())
 , mWatchdogTagSnapshot(other.mWatchdogTagSnapshot)
@@ -1028,6 +1029,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mCurrentHyperlinkHint = other.mCurrentHyperlinkHint;
         mCurrentHyperlinkLinkId = other.mCurrentHyperlinkLinkId;
         mHyperlinkActive = other.mHyperlinkActive;
+        mHyperlinkEnclosingMxpLinkId = other.mHyperlinkEnclosingMxpLinkId;
         mWatchdogPhase = other.mWatchdogPhase;
         mWatchdogTagSnapshot = other.mWatchdogTagSnapshot;
         mCurrentHyperlinkStyling = other.mCurrentHyperlinkStyling;
@@ -2939,6 +2941,10 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         }
         // A commit re-entered from a pass (feedTriggers(), MXP) fills the empty last line, which may be
         // the one the enclosing pass is still running over:
+        if (static_cast<int>(buffer.size()) - 1 == mPreTriggerPassLineNumber) {
+            mTriggerPassLineTaken = true;
+        }
+        triggerPassSegmentTaken(static_cast<int>(buffer.size()) - 1);
         materialisePreTriggerPassLine(static_cast<int>(buffer.size()) - 1);
         buffer.back() = std::move(chars);
         timeBuffer.back() = lineArrivalTime();
@@ -2969,6 +2975,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
     const int lineIndex = lineBuffer.size() - 1;
     if (Q_LIKELY(mpModel)) {
         mpModel->endPrintedLine();
+        ++mpModel->mLinesCommitted;
         emit mpModel->mNotifier.lineCommitted(lineIndex);
     }
     mCommitLineIndices.append(lineIndex);
@@ -2982,6 +2989,10 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         mSelectionStylingFromLine = (mSelectionStylingFromLine < 0) ? lineIndex : std::min(mSelectionStylingFromLine, lineIndex);
     }
     int passLineAfterTriggers = lineIndex;
+    int shownFirst = lineIndex;
+    int shownLast = lineIndex;
+    bool passRan = false;
+    bool passLineTaken = false;
     if (!mSkipTriggerProcessing) {
         // Color triggers match the colors as received, so a line recolored earlier in the pass keeps its
         // originals; materialisePreTriggerPassLine() copies them lazily as most lines are never touched.
@@ -2991,14 +3002,18 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         // Save/restore gives each nested pass its own snapshot; the spare member recycles its allocation:
         TLineFormat savedPassLine;
         savedPassLine.swap(mPreTriggerPassLine);
-        mEnclosingTriggerPasses.append({mPreTriggerPassLineNumber, std::exchange(mDetachedTriggerPassLineText, QString()), std::exchange(mTriggerPassLineEdits, {})});
+        mEnclosingTriggerPasses.append(
+                {mPreTriggerPassLineNumber, std::exchange(mDetachedTriggerPassLineText, QString()), std::exchange(mTriggerPassLineEdits, {}), mTriggerPassLineLastSegment, mTriggerPassLineTailFrom});
         const int savedPassLineAsCommitted = mTriggerPassLineAsCommitted;
         const bool savedPassSnapshotTaken = mPreTriggerPassSnapshotTaken;
         const PassLineUniformity savedPassLineUniformity = mPreTriggerPassLineUniformity;
+        const bool savedPassLineTaken = std::exchange(mTriggerPassLineTaken, false);
         mPreTriggerPassLine.swap(mSpareTriggerPassLine);
         mPreTriggerPassLine.clear();
         mPreTriggerPassSnapshotTaken = false;
         mPreTriggerPassLineNumber = lineIndex;
+        mTriggerPassLineLastSegment = lineIndex;
+        mTriggerPassLineTailFrom = -1;
         mTriggerPassLineAsCommitted = lineIndex;
         mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
 #ifndef QT_NO_DEBUG
@@ -3015,6 +3030,10 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         }
 #endif
         passLineAfterTriggers = (mPreTriggerPassLineNumber >= 0) ? mPreTriggerPassLineNumber : lineIndex;
+        // Followed through wraps, which mCommitLineIndices is not
+        passRan = true;
+        shownFirst = triggerPassSpanFirst(mPreTriggerPassLineNumber, mTriggerPassLineTailFrom);
+        shownLast = (shownFirst >= 0) ? std::max(mTriggerPassLineLastSegment, shownFirst) : -1;
         mSpareTriggerPassLine.swap(mPreTriggerPassLine);
         if (mSpareTriggerPassLine.capacity() > csmMaxRetainedLineCapacity) {
             TLineFormat().swap(mSpareTriggerPassLine);
@@ -3022,11 +3041,18 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         mPreTriggerPassLine.swap(savedPassLine);
         EnclosingTriggerPass enclosing = mEnclosingTriggerPasses.takeLast();
         mPreTriggerPassLineNumber = enclosing.lineNumber;
+        mTriggerPassLineLastSegment = enclosing.lastSegment;
+        mTriggerPassLineTailFrom = enclosing.tailFrom;
         mDetachedTriggerPassLineText = std::move(enclosing.detachedText);
         mTriggerPassLineEdits = std::move(enclosing.edits);
         mTriggerPassLineAsCommitted = savedPassLineAsCommitted;
         mPreTriggerPassSnapshotTaken = savedPassSnapshotTaken;
         mPreTriggerPassLineUniformity = savedPassLineUniformity;
+        passLineTaken = std::exchange(mTriggerPassLineTaken, savedPassLineTaken);
+    }
+    if (Q_LIKELY(mpModel) && Q_UNLIKELY(mpModel->mNotifier.lineShownConnected())) {
+        const bool shown = (passRan ? shownFirst >= 0 : mCommitLineIndices.last() >= 0) && !passLineTaken;
+        emit mpModel->mNotifier.lineShown(shown ? shownFirst : -1, shown ? shownLast : -1);
     }
 
     // NOTE: it MAY have been clobbered by the trigger engine!
@@ -3373,6 +3399,27 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
 void TBuffer::triggerPassLinesRemoved(const int from, const int to)
 {
     const int delta = to - from + 1;
+    const auto moveLastSegment = [from, to, delta](int& lastSegment) {
+        if (lastSegment > to) {
+            lastSegment -= delta;
+        } else if (lastSegment >= from) {
+            lastSegment = from - 1;
+        }
+    };
+    // Read before the last segment moves: the rest of the line starts at from once its first part goes
+    const auto moveTail = [from, to, delta](const int passLine, int& tailFrom, const int lastSegment) {
+        if (tailFrom > to) {
+            tailFrom -= delta;
+        } else if (tailFrom >= from || (passLine >= from && passLine <= to)) {
+            tailFrom = (lastSegment > to) ? from : -1;
+        }
+    };
+    moveTail(mPreTriggerPassLineNumber, mTriggerPassLineTailFrom, mTriggerPassLineLastSegment);
+    moveLastSegment(mTriggerPassLineLastSegment);
+    for (EnclosingTriggerPass& enclosing : mEnclosingTriggerPasses) {
+        moveTail(enclosing.lineNumber, enclosing.tailFrom, enclosing.lastSegment);
+        moveLastSegment(enclosing.lastSegment);
+    }
     if (mPreTriggerPassLineNumber > to) {
         mPreTriggerPassLineNumber -= delta;
     } else if (mPreTriggerPassLineNumber >= from) {
@@ -3396,6 +3443,36 @@ void TBuffer::triggerPassLinesRemoved(const int from, const int to)
             enclosing.detachedText = lineBuffer.at(enclosing.lineNumber);
             enclosing.lineNumber = csmDetachedTriggerPassLine;
         }
+    }
+}
+
+bool TBuffer::triggerPassRunningOn(const int lineNumber) const
+{
+    if (lineNumber < 0) {
+        return false;
+    }
+    const auto spans = [lineNumber](const int passLine, const int lastSegment) {
+        return passLine >= 0 && lineNumber >= passLine && lineNumber <= std::max(passLine, lastSegment);
+    };
+    if (spans(triggerPassSpanFirst(mPreTriggerPassLineNumber, mTriggerPassLineTailFrom), mTriggerPassLineLastSegment)) {
+        return true;
+    }
+    return std::any_of(mEnclosingTriggerPasses.cbegin(), mEnclosingTriggerPasses.cend(), [&spans](const EnclosingTriggerPass& enclosing) {
+        return spans(triggerPassSpanFirst(enclosing.lineNumber, enclosing.tailFrom), enclosing.lastSegment);
+    });
+}
+
+// A line fed from inside a pass fills the empty line a wrap left last, which then ends no pass line
+void TBuffer::triggerPassSegmentTaken(const int lineNumber)
+{
+    const auto shorten = [lineNumber](const int passLine, int& lastSegment) {
+        if (passLine >= 0 && lineNumber > passLine && lineNumber <= lastSegment) {
+            lastSegment = lineNumber - 1;
+        }
+    };
+    shorten(triggerPassSpanFirst(mPreTriggerPassLineNumber, mTriggerPassLineTailFrom), mTriggerPassLineLastSegment);
+    for (EnclosingTriggerPass& enclosing : mEnclosingTriggerPasses) {
+        shorten(triggerPassSpanFirst(enclosing.lineNumber, enclosing.tailFrom), enclosing.lastSegment);
     }
 }
 
@@ -5202,6 +5279,7 @@ void TBuffer::decodeOSC(const QString& sequence)
             qDebug().noquote() << "[OSC] Hyperlink activated:" << rawUrl.left(50) + (rawUrl.length() > 50 ? "..." : "");
 #endif
             mHyperlinkActive = true;
+            mHyperlinkEnclosingMxpLinkId = (!mpParseConfig && mpHost->mMxpClient.isInLinkMode()) ? mpHost->mMxpClient.linkId() : 0;
 
             // Record start position for visibility manager registration
             // Use mMudLine.length() since that's where link text will be added
@@ -6970,11 +7048,34 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     if (mPreTriggerPassLineNumber >= firstRewrappedLine) {
         passLines.append({&mPreTriggerPassLineNumber, mPreTriggerPassLineNumber});
     }
+    if (mTriggerPassLineTailFrom >= firstRewrappedLine) {
+        passLines.append({&mTriggerPassLineTailFrom, mTriggerPassLineTailFrom});
+    }
     for (EnclosingTriggerPass& enclosing : mEnclosingTriggerPasses) {
         if (enclosing.lineNumber >= firstRewrappedLine) {
             passLines.append({&enclosing.lineNumber, enclosing.lineNumber});
         }
+        if (enclosing.tailFrom >= firstRewrappedLine) {
+            passLines.append({&enclosing.tailFrom, enclosing.tailFrom});
+        }
     }
+    // and its last segment to where the last part of the line it was lands, so a pass line split here keeps its parts
+    QVarLengthArray<MovingPassLine, 2> lastSegments;
+    if (mTriggerPassLineLastSegment >= firstRewrappedLine) {
+        lastSegments.append({&mTriggerPassLineLastSegment, mTriggerPassLineLastSegment});
+    }
+    for (EnclosingTriggerPass& enclosing : mEnclosingTriggerPasses) {
+        if (enclosing.lastSegment >= firstRewrappedLine) {
+            lastSegments.append({&enclosing.lastSegment, enclosing.lastSegment});
+        }
+    }
+    const auto moveLastSegmentsOf = [&lastSegments, firstRewrappedLine](const int sourceLine, const int rewrappedSoFar) {
+        for (const MovingPassLine& lastSegment : std::as_const(lastSegments)) {
+            if (lastSegment.from == sourceLine) {
+                *lastSegment.pLineNumber = firstRewrappedLine + rewrappedSoFar - 1;
+            }
+        }
+    };
 
     struct RewrappedLine
     {
@@ -6986,9 +7087,17 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     };
     // Most calls rewrap a single incoming line into a few, which fit in this array's own inline storage
     QVarLengthArray<RewrappedLine, 8> rewrapped;
+    const bool movesHeld = mpModel && mpModel->holdsForLineShown();
+    QList<TConsoleModel::RewrappedSpan> heldSpans;
+    const auto keepWholeForHeld = [movesHeld, &heldSpans, &rewrapped, firstRewrappedLine](const int sourceLine) {
+        if (movesHeld) {
+            heldSpans.append({sourceLine, 0, std::numeric_limits<int>::max(), firstRewrappedLine + static_cast<int>(rewrapped.size()), 0});
+        }
+    };
     int lineCount = 0;
     for (int i = firstRewrappedLine; i < total; ++i) {
         lineCount++;
+        moveLastSegmentsOf(i - 1, static_cast<int>(rewrapped.size()));
         for (const MovingPassLine& passLine : std::as_const(passLines)) {
             if (passLine.from == i) {
                 *passLine.pLineNumber = firstRewrappedLine + static_cast<int>(rewrapped.size());
@@ -6999,6 +7108,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         const qint64 time = timeBuffer[i];
         // trivial case
         if (buffer[i].empty()) {
+            keepWholeForHeld(i);
             rewrapped.append({std::move(newBufferLine), newLineText, time, wrapGapBuffer.at(i), false});
             continue;
         }
@@ -7019,6 +7129,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             lineBreaks = getWrapInfo(lineText, isNewline, isNewline && carriesIndent(i), maxWidth, indent, hangingIndent);
         }
         if (lineBreaks.isEmpty()) {
+            keepWholeForHeld(i);
             rewrapped.append({std::move(buffer[i]), lineText, time, wrapGapBuffer.at(i), isPrompt});
             continue;
         }
@@ -7076,12 +7187,16 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             } else if (previousSegmentEnd < 0) {
                 wrapGap = wrapGapBuffer.at(i);
             }
+            if (movesHeld) {
+                heldSpans.append({i, w.firstChar, w.lastChar, firstRewrappedLine + static_cast<int>(rewrapped.size()), addsIndent ? (w.isNewline ? indent : hangingIndent) : 0});
+            }
             rewrapped.append({std::move(newBufferLine), std::move(newLineText), segmentTime, static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())), isPrompt});
             previousSegmentEnd = w.lastChar;
             newBufferLine.clear();
             newLineText = QString();
         }
     }
+    moveLastSegmentsOf(total - 1, static_cast<int>(rewrapped.size()));
     for (int i = 0; i < lineCount; ++i) {
         buffer.pop_back();
         lineBuffer.pop_back();
@@ -7107,6 +7222,10 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             promptBuffer.push_back(line.prompt);
             wrapGapBuffer.append(line.wrapGap);
         }
+    }
+
+    if (movesHeld) {
+        mpModel->heldForLineShownRewrapped(firstRewrappedLine, heldSpans);
     }
 
     // A rewrapped line only ever lands at or below where it was
@@ -7342,6 +7461,7 @@ void TBuffer::finaliseActiveHyperlink()
     mCurrentHyperlinkHint.clear();
     mCurrentHyperlinkLinkId = 0;
     mHyperlinkActive = false;
+    mHyperlinkEnclosingMxpLinkId = 0;
     // Reset enhanced styling
     mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
     mCurrentHyperlinkMenu.clear();
@@ -7471,6 +7591,7 @@ void TBuffer::clear()
     mCurrentHyperlinkHint.clear();
     mCurrentHyperlinkLinkId = 0;
     mHyperlinkActive = false;
+    mHyperlinkEnclosingMxpLinkId = 0;
 
     // every line is about to go, so the tracked links and any announcement queued for them go with it
     if (auto* pHyperlinkManager = hyperlinkVisibilityManagerOrNull()) {
@@ -7651,6 +7772,8 @@ void TBuffer::shrinkBuffer()
     // We need to adjust the search result line as some lines have now gone
     // away:
     if (mpModel) {
+        // Once they have gone, as what is held is read back from the lines left
+        mpModel->heldForLineShownLinesRemoved(0, mBatchDeleteSize - 1);
         mpModel->mCurrentSearchResult = qMax(0, mpModel->mCurrentSearchResult - mBatchDeleteSize);
         // As mCursorY above, which a real view's upper pane takes its line from as it repaints
         if (mpModel->mScrolledBackTo) {
@@ -7766,6 +7889,9 @@ bool TBuffer::deleteLines(int from, int to)
         wrapGapBuffer.remove(from, delta);
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
+        if (mpModel) {
+            mpModel->heldForLineShownLinesRemoved(from, to);
+        }
         if (mLastFoundLine >= from) {
             mLastFoundLine = (mLastFoundLine > to) ? mLastFoundLine - delta : from - 1;
             if (mFirstFoundLine > to) {
@@ -9333,7 +9459,10 @@ void TBuffer::styleForCurrentLink(TChar& c)
     }
 
     if (mpHost->mMxpClient.isInLinkMode()) {
-        c.mLinkIndex = mLinkStore.getCurrentLinkID();
+        // Whichever link opened inside the other is the one the text belongs to
+        if (!mHyperlinkActive || mHyperlinkEnclosingMxpLinkId != mpHost->mMxpClient.linkId()) {
+            c.mLinkIndex = mpHost->mMxpClient.linkId();
+        }
         c.setAttributes(TChar::Underline, true);
     }
 

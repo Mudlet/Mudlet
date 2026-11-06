@@ -539,6 +539,42 @@ describe("Tests MXP handling", function()
       assert.are.equal(mainColumns, getColumnCount("main"), "the second tag took more of the main window")
     end)
 
+    -- Laying the frames out again lays out only a console still in its frame, and only one whose frame changes size
+    it("leaves a frame's console at the size a script gave it while the frame keeps its own", function()
+      finally(function()
+        closeFrame("mxpSpecKeptLeft")
+        closeFrame("mxpSpecKeptRight")
+      end)
+      openFrame("mxpSpecKeptLeft", 'Align="left" Width="25%" Height="50%"')
+      openFrame("mxpSpecKeptRight", 'Align="right" Width="20%" Height="30%"')
+      resizeWindow("mxpSpecKeptLeft", 200, 100)
+      local before = {getWindowGeometry("mxpSpecKeptLeft")}
+
+      closeFrame("mxpSpecKeptRight")
+
+      assert.are.same(before, {getWindowGeometry("mxpSpecKeptLeft")})
+    end)
+
+    it("leaves a frame's console a script moved out of the frame where the script put it", function()
+      local home = "mxpSpecMovedHome"
+      finally(function()
+        closeFrame("mxpSpecMovedTop")
+        closeFrame("mxpSpecMovedLeft")
+        deleteMiniConsole("mxpSpecMovedTop")
+        deleteMiniConsole(home)
+      end)
+      openFrame("mxpSpecMovedLeft", 'Align="left" Width="25%" Height="50%"')
+      openFrame("mxpSpecMovedTop", 'Align="top" Height="20%"')
+      openUserWindow(home, false)
+      assert.is_true(setWindow(home, "mxpSpecMovedTop", 10, 10, true))
+      local before = {getWindowGeometry("mxpSpecMovedTop")}
+
+      -- the top frame widens into the space the left one gave up
+      closeFrame("mxpSpecMovedLeft")
+
+      assert.are.same(before, {getWindowGeometry("mxpSpecMovedTop")})
+    end)
+
     it("gives an external frame a console without taking main window space", function()
       finally(function() closeFrame("mxpSpecExternalFrame") end)
       local columns, rows = getColumnCount("main"), getRowCount("main")
@@ -548,6 +584,53 @@ describe("Tests MXP handling", function()
       assert.are.equal("miniconsole", windowType("mxpSpecExternalFrame"))
       assert.are.equal(columns, getColumnCount("main"))
       assert.are.equal(rows, getRowCount("main"))
+    end)
+
+    it("opens a frame of each kind that does not scroll when the tag says SCROLLING=NO", function()
+      finally(function()
+        closeFrame("mxpSpecStillTab")
+        closeFrame("mxpSpecStillHost")
+        closeFrame("mxpSpecStillExternal")
+        closeFrame("mxpSpecStillInternal")
+        closeFrame("mxpSpecScrolling")
+      end)
+      openFrame("mxpSpecScrolling", 'Align="left" Width="20%" Height="50%"')
+      openFrame("mxpSpecStillInternal", 'Align="bottom" Height="20%" SCROLLING="NO"')
+      openFrame("mxpSpecStillExternal", 'EXTERNAL Width="30%" Height="30%" SCROLLING="NO"')
+      openFrame("mxpSpecStillHost", 'Align="right" Width="30%" Height="50%" TITLE="Host"')
+      openFrame("mxpSpecStillTab", 'DOCK="mxpSpecStillHost" Align="client" TITLE="Tab" SCROLLING="NO"')
+      assert.are.equal("miniconsole", windowType("mxpSpecStillTab"))
+
+      assert.are.same({true, false, false, false}, {
+        scrollingActive("mxpSpecScrolling"),
+        scrollingActive("mxpSpecStillInternal"),
+        scrollingActive("mxpSpecStillExternal"),
+        scrollingActive("mxpSpecStillTab"),
+      })
+    end)
+
+    it("lays the frames nested in an external frame out again when a script resizes it", function()
+      finally(function()
+        closeFrame("mxpSpecGrowInner")
+        closeFrame("mxpSpecGrowOuter")
+      end)
+      openFrame("mxpSpecGrowOuter", 'EXTERNAL Width="300" Height="200"')
+      feedTriggers('<DEST mxpSpecGrowOuter><FRAME Name="mxpSpecGrowInner" Align="top" Height="50%"></DEST>' .. "\n")
+      assert.are.equal("miniconsole", windowType("mxpSpecGrowInner"), "the frame was not nested in the external one")
+      local _, _, _, height = getWindowGeometry("mxpSpecGrowInner")
+
+      resizeWindow("mxpSpecGrowOuter", 300, 400)
+
+      -- A real window resizes once the window system says so
+      local _, _, _, grown = getWindowGeometry("mxpSpecGrowInner")
+      for _ = 1, 40 do
+        if grown > height then
+          break
+        end
+        pumpEvents(50)
+        _, _, _, grown = getWindowGeometry("mxpSpecGrowInner")
+      end
+      assert.is_true(grown > height * 1.5, ("the nested frame stayed %d high, not about %d"):format(grown, height * 2))
     end)
 
     -- DOCK names the frame to dock into and ALIGN=CLIENT makes it a tab of that
@@ -636,6 +719,33 @@ describe("Tests MXP handling", function()
 
       assert.are.equal("miniconsole", windowType("mxpSpecNestTab"))
       assert.is_true(windowVisible("mxpSpecNestTab"), "the first tab was left behind the host's empty one")
+      assert.is_false(windowVisible("mxpSpecNestHost"), "the frame did not dock into the host as a tab")
+    end)
+
+    -- a tab's page lays its console out over all the space under the tabs, whatever size the tag asked for
+    it("gives the tab in front all the space under its frame's tabs as that changes", function()
+      finally(function()
+        closeFrame("mxpSpecAreaSecond")
+        closeFrame("mxpSpecAreaFirst")
+        closeFrame("mxpSpecAreaHost")
+        closeFrame("mxpSpecAreaLeft")
+      end)
+      openFrame("mxpSpecAreaLeft", 'Align="left" Width="20%" Height="50%"')
+      openFrame("mxpSpecAreaHost", 'Align="right" Width="30%" Height="50%" TITLE="Host"')
+      local _, _, areaWidth, areaHeight = getWindowGeometry("mxpSpecAreaHost")
+      openFrame("mxpSpecAreaFirst", 'DOCK="mxpSpecAreaHost" Align="client" TITLE="First"')
+      openFrame("mxpSpecAreaSecond", 'DOCK="mxpSpecAreaHost" Align="client" Width="10%" Height="10%" TITLE="Second"')
+      local _, _, width, height = getWindowGeometry("mxpSpecAreaFirst")
+      assert.are.same({areaWidth, areaHeight}, {width, height}, "the tab in front does not fill the space under the tabs")
+
+      -- the host widens into the space the left frame gave up
+      closeFrame("mxpSpecAreaLeft")
+      local _, _, widerWidth, widerHeight = getWindowGeometry("mxpSpecAreaFirst")
+      assert.is_true(widerWidth > width, "the tab in front did not follow its frame")
+
+      closeFrame("mxpSpecAreaFirst")
+      local _, _, shownWidth, shownHeight = getWindowGeometry("mxpSpecAreaSecond")
+      assert.are.same({widerWidth, widerHeight}, {shownWidth, shownHeight}, "the tab brought to the front does not fill the space")
     end)
 
     it("shows the tag as text when the frame it names is not there", function()

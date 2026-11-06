@@ -36,6 +36,7 @@
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QDebug>
+#include <QDesktopServices>
 #include <QFile>
 #include <QKeySequence>
 #include <QList>
@@ -48,6 +49,7 @@
 #include <QStringList>
 #include <QThread>
 #include <QTimer>
+#include <QUrl>
 
 using namespace std::chrono_literals;
 
@@ -554,6 +556,18 @@ std::optional<QSize> TNullAppFrontend::getImageSize(const QString& imageLocation
 Host* TNullAppFrontend::getActiveHost()
 {
     return mpActiveHost.data();
+}
+
+bool TNullAppFrontend::openWebPage(const QString& path)
+{
+    if (path.isEmpty()) {
+        return false;
+    }
+    const QUrl url(path, QUrl::TolerantMode);
+    if (!url.isValid()) {
+        return false;
+    }
+    return QDesktopServices::openUrl(url);
 }
 
 static void raiseProfileFocusChange(Host* pHost, const bool gained)
