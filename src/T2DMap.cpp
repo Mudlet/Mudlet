@@ -1235,16 +1235,19 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const
     }
 }
 
-bool T2DMap::labelPixmapIsCurrent(const LabelPixmap& cached, const TMapLabel& label)
+bool T2DMap::labelPixmapIsCurrent(const LabelPixmap& cached, const TMapLabel& label, const qreal devicePixelRatio)
 {
-    return cached.sourcePixmapKey == label.pix.cacheKey() && cached.fgColor == label.fgColor.rgba() && cached.bgColor == label.bgColor.rgba() && cached.outlineColor == label.outlineColor.rgba()
-           && cached.text == label.text && cached.font == label.font;
+    return cached.devicePixelRatio == devicePixelRatio && cached.sourcePixmapKey == label.pix.cacheKey() && cached.fgColor == label.fgColor.rgba() && cached.bgColor == label.bgColor.rgba()
+           && cached.outlineColor == label.outlineColor.rgba() && cached.text == label.text && cached.font == label.font;
 }
 
-const T2DMap::LabelPixmap* T2DMap::addTextLabelToCache(const LabelPixmapKey& key, const TMapLabel& label)
+const T2DMap::LabelPixmap* T2DMap::addTextLabelToCache(const LabelPixmapKey& key, const TMapLabel& label, const qreal devicePixelRatio)
 {
     const QSize& targetSize = key.size;
+    // Drawn with every pixel the screen has for the label, or painting it scales it up and blurs its text
+    const QSize pixelSize = (QSizeF(targetSize) * devicePixelRatio).toSize();
     auto entry = std::make_unique<LabelPixmap>();
+    entry->devicePixelRatio = devicePixelRatio;
     entry->text = label.text;
     entry->font = label.font;
     entry->fgColor = label.fgColor.rgba();
@@ -1272,11 +1275,13 @@ const T2DMap::LabelPixmap* T2DMap::addTextLabelToCache(const LabelPixmapKey& key
     if (label.text.isEmpty() || label.font.family().isEmpty() || !sizeFontToFitTextInRect(scaledFont, targetRect, label.text, 5, 4.0)) {
         // An image label, a text label with no font, or a font too small to be
         // legible - smooth-scaled original pixmap
-        entry->pixmap = label.pix.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        entry->pixmap = label.pix.scaled(pixelSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        entry->pixmap.setDevicePixelRatio(devicePixelRatio);
         return insert(std::move(entry));
     }
 
-    entry->pixmap = QPixmap(targetSize);
+    entry->pixmap = QPixmap(pixelSize);
+    entry->pixmap.setDevicePixelRatio(devicePixelRatio);
     entry->pixmap.fill(label.bgColor);
 
     QPainter painter(&entry->pixmap);
@@ -1339,11 +1344,12 @@ void T2DMap::startTextLabelFrame()
 void T2DMap::drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect)
 {
     const QSize targetSize = paintRect.size().toSize();
-    if (fitsScaledLabelLimit(targetSize)) {
+    const qreal devicePixelRatio = painter.device()->devicePixelRatio();
+    if (fitsScaledLabelLimit((QSizeF(targetSize) * devicePixelRatio).toSize())) {
         const LabelPixmapKey key{mAreaID, labelKey, targetSize};
         const LabelPixmap* cached = mTextLabelPixmapCache.object(key);
-        if (!cached || !labelPixmapIsCurrent(*cached, label)) {
-            cached = addTextLabelToCache(key, label);
+        if (!cached || !labelPixmapIsCurrent(*cached, label, devicePixelRatio)) {
+            cached = addTextLabelToCache(key, label, devicePixelRatio);
         }
         if (cached) {
             mTextLabelPixmapFrameKiB += cached->costKiB;

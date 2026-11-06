@@ -591,10 +591,11 @@ private:
         QRgb bgColor = 0;
         QRgb outlineColor = 0;
         qint64 sourcePixmapKey = 0;
+        qreal devicePixelRatio = 1.0;
         qsizetype costKiB = 1;
     };
-    static bool labelPixmapIsCurrent(const LabelPixmap& cached, const TMapLabel& label);
-    const LabelPixmap* addTextLabelToCache(const LabelPixmapKey& key, const TMapLabel& label);
+    static bool labelPixmapIsCurrent(const LabelPixmap& cached, const TMapLabel& label, qreal devicePixelRatio);
+    const LabelPixmap* addTextLabelToCache(const LabelPixmapKey& key, const TMapLabel& label, qreal devicePixelRatio);
     // Costed in KiB, not entries, which thrash once more labels are on screen; grows past
     // the budget to hold those, up to four labels of the largest size it caches.
     static constexpr qsizetype scmTextLabelPixmapCeilingKiB = 256 * 1024;

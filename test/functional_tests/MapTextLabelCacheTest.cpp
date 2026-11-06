@@ -231,6 +231,49 @@ private slots:
         QCOMPARE(target.toImage().pixelColor(0, 0), QColor(Qt::blue));
     }
 
+    // A label drawn without the screen's pixel density is scaled up to it, which
+    // blurs its text (#5992). Upscaling copies each pixel into a whole square of
+    // them, so text drawn at the screen's density is told by squares that differ.
+    // Drawn at 1x first, as on a window moved to another screen afterwards.
+    void aLabelIsRenderedAtThePixelDensityItIsDrawnAt()
+    {
+        TMapLabel label;
+        label.text = qsl("HH");
+        label.font = QFont(qsl("Bitstream Vera Sans"), 10);
+        // Red would mean the text was not rendered at all
+        label.pix = QPixmap(100, 40);
+        label.pix.fill(Qt::red);
+        label.bgColor = Qt::black;
+        label.fgColor = Qt::white;
+        label.outlineColor = Qt::white;
+
+        auto drawAt = [this, &label](const int ratio) {
+            QPixmap target(QSize(100, 40) * ratio);
+            target.setDevicePixelRatio(ratio);
+            target.fill(Qt::blue);
+            QPainter painter(&target);
+            mp2dMap->drawScaledLabel(painter, QPointF(0, 0), label, 5, QRectF(0, 0, 100, 40));
+            painter.end();
+            return target.toImage();
+        };
+        mp2dMap->flushTextLabelPixmapCache();
+        drawAt(1);
+        const QImage image = drawAt(2);
+
+        QCOMPARE(image.size(), QSize(200, 80));
+        QCOMPARE(image.pixelColor(0, 0), QColor(Qt::black));
+        int squaresThatDiffer = 0;
+        for (int y = 0; y < image.height(); y += 2) {
+            for (int x = 0; x < image.width(); x += 2) {
+                const QRgb topLeft = image.pixel(x, y);
+                if (image.pixel(x + 1, y) != topLeft || image.pixel(x, y + 1) != topLeft || image.pixel(x + 1, y + 1) != topLeft) {
+                    ++squaresThatDiffer;
+                }
+            }
+        }
+        QVERIFY2(squaresThatDiffer > 0, "the label was drawn at half the screen's density and scaled up to it");
+    }
+
     // A zoomed-out area can have hundreds of labels on screen; if they do not
     // all stay cached, every frame renders every one of them again.
     void manySmallLabelsOnScreenAllStayCached()
