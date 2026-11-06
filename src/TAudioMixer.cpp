@@ -217,12 +217,21 @@ TAudioMixer::TAudioMixer()
     mpOutput = new Output(this);
     mpOutput->moveToThread(&mThread);
     mThread.start(QThread::TimeCriticalPriority);
+    // Closed here, on the output's own thread: by the time this is deleted with the application's
+    // other children, Qt delivers no more events and has released the media backend it plays through
+    connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [this]() {
+        if (mThread.isRunning()) {
+            setOutputSuspended(true);
+            mThread.quit();
+            mThread.wait();
+        }
+    });
 }
 
 TAudioMixer::~TAudioMixer()
 {
-    // Closed from here once the thread has finished: this goes as the application closes, when Qt
-    // delivers no more events, so a close queued to the thread would never run
+    // For an application that never ran its event loop: Qt delivers no more events by now, so a
+    // close queued to the thread would never run
     mThread.quit();
     mThread.wait();
     mpOutput->close();
