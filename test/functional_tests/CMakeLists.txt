@@ -253,6 +253,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapLevelOfDetailTest.cpp
     MapMouseInteractionTest.cpp
     MapOffscreenCustomLineTest.cpp
+    MapPainterTest.cpp
     MapRoomNameVisibilityTest.cpp
     MapFileStatsTest.cpp
     MapTextLabelCacheTest.cpp

@@ -125,6 +125,7 @@ set(mudlet_SRCS
     TLuaInterpreterUI.cpp
     TMap.cpp
     TMapLabel.cpp
+    TMapPainter.cpp
     TMedia.cpp
     TMediaVoice.cpp
     TMediaPlaylist.cpp
@@ -430,6 +431,7 @@ set(mudlet_HDRS
     TLuaInterpreter.h
     TMap.h
     TMapLabel.h
+    TMapPainter.h
     TMapViewFrontend.h
     TMapViewsFrontend.h
     TMatchState.h
