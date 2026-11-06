@@ -5506,7 +5506,7 @@ QColor Host::getAnsiColor(const int ansiCode, const bool isBackground) const
             return QColor(r == 0 ? 0 : (r - 1) * 40 + 95,
                           g == 0 ? 0 : (g - 1) * 40 + 95,
                           b == 0 ? 0 : (b - 1) * 40 + 95);
-        } else if (ansiCode < 256) {
+        } else if (ansiCode >= 232 && ansiCode < 256) {
             const int k = (ansiCode - 232) * 10 + 8;
             return QColor(k, k, k);
         } else {

@@ -878,6 +878,11 @@ TConsole::~TConsole()
     // widget it was created into, e.g. a scroll box.
     if (mType & (SubConsole | UserWindow | Buffer)) {
         mpHost->windowRegistry().deregisterSubConsole(mConsoleName, mpModel);
+        // Now, not in ~QObject: ~QWidget destroys our command line first, and its destroyed()
+        // handler looks consoles up by name, which would reach this one half destroyed.
+        if (auto pMainConsole = mpHost->mainConsoleView()) {
+            pMainConsole->forgetSubConsole(this);
+        }
     }
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)

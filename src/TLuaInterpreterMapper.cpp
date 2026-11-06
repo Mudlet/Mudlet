@@ -1275,7 +1275,11 @@ int TLuaInterpreter::createRoomID(lua_State* L)
         if (minId < 1) {
             return warnArgumentValue(L, __func__, qsl("minimum roomID %1 is an optional value but if provided it must be greater than zero").arg(minId));
         }
-        lua_pushnumber(L, host.mpMap->createNewRoomID(lua_tointeger(L, 1)));
+        const int roomId = host.mpMap->createNewRoomID(minId);
+        if (!roomId) {
+            return warnArgumentValue(L, __func__, qsl("no free room ID at or above %1").arg(minId));
+        }
+        lua_pushnumber(L, roomId);
     } else {
         lua_pushnumber(L, host.mpMap->createNewRoomID());
     }
