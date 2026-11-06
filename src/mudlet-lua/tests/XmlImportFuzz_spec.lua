@@ -343,6 +343,8 @@ describe("XML import fuzzer", function()
                 if ok then
                     imported = imported + 1
                     exerciseMap()
+                    -- and what reading it queued, before the next record
+                    pumpEvents(0)
                 end
             else
                 writeFile(packagePath, data)

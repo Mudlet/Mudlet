@@ -384,6 +384,8 @@ describe("Map file loader fuzzer", function()
             if ok then
                 loaded = loaded + 1
                 exerciseLoadedMap()
+                -- and what reading it queued, before the next record
+                pumpEvents(0)
             end
         end
         print(("MapFileFuzz: %d of %d mutated files loaded"):format(loaded, ITERS))
