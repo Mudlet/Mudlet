@@ -5530,9 +5530,10 @@ void Host::processDiscordGMCP(const QString& packageMessage, const QString& data
         return;
     }
 
-    if (packageMessage == QLatin1String("External.Discord.Status")) {
+    // GMCP package names are case-insensitive, as cTelnet's routing here already treats them
+    if (!packageMessage.compare(QLatin1String("External.Discord.Status"), Qt::CaseInsensitive)) {
         processGMCPDiscordStatus(json);
-    } else if (packageMessage == QLatin1String("External.Discord.Info")) {
+    } else if (!packageMessage.compare(QLatin1String("External.Discord.Info"), Qt::CaseInsensitive)) {
         processGMCPDiscordInfo(json);
     }
 }
