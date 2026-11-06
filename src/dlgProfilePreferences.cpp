@@ -4872,7 +4872,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -6794,8 +6794,12 @@ void dlgProfilePreferences::slot_copyMap()
     while (itOtherProfile.hasNext()) {
         itOtherProfile.next();
         const QString otherHostName = itOtherProfile.key();
-        // A copy made earlier in the same second left a file of this name, and QFile::copy() will not replace one
-        QFile::remove(MudletApp::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName));
+        // A copy made earlier in the same second may have left a file of this name, which QFile::copy() will not replace,
+        // unless a map folder shared through a link makes it the file just saved here
+        const QString destination = MudletApp::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName);
+        if (QFileInfo(destination).canonicalFilePath() != QFileInfo(thisProfileLatestMapFile).canonicalFilePath()) {
+            QFile::remove(destination);
+        }
         // Copy over into the profiles map folder, so it is loaded first when map is open - this covers the offline case
         label_mapFileActionResult->setText(tr("Copying over map to %1 - please wait...").arg(otherHostName));
         qApp->processEvents(); // Copied from "Loading map - please wait..." case
@@ -6803,7 +6807,7 @@ void dlgProfilePreferences::slot_copyMap()
                                // show up when saving big maps
 
         if (!thisProfileLatestMapFile.copy(MudletApp::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
-            //: %1 is the profile the map could not be copied to, %2 why
+            //: %1 is the profile the map could not be copied to, %2 the system's reason, e.g. "Destination file exists"
             pHost->postMessage(tr("[ ERROR ] - Unable to copy the map to profile \"%1\".\n"
                                   "reason: %2.")
                                        .arg(otherHostName, thisProfileLatestMapFile.errorString()));
@@ -6822,7 +6826,7 @@ void dlgProfilePreferences::slot_copyMap()
     if (failedProfiles.isEmpty()) {
         label_mapFileActionResult->setText(tr("Map copied, now signalling other profiles to reload it."));
     } else {
-        //: %1 is the profiles the map could not be copied to, separated by commas
+        //: %1 is a comma-separated list of the profiles the map could not be copied to
         label_mapFileActionResult->setText(tr("Could not copy the map to %1 - see the main console for why.").arg(failedProfiles.join(qsl(", "))));
     }
     QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
