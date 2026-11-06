@@ -3067,7 +3067,7 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_truthy(inner[2]:find("from inside an exit weight filter", 1, true), tostring(inner[2]))
     end)
 
-    -- Each filter below edits what the build has already read, so only a second build sees it
+    -- Both filters below edit what the build has already read, so only a second build sees it
     it("routes through a room the exit weight filter unlocks mid-build", function()
       lockRoom(rA2, true)
       local unlocked = false
@@ -3101,7 +3101,15 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
     end)
 
-    -- The filter only runs while the graph is built, so its calls count the builds
+    -- The filter only runs during a graph build, once per exit, so its calls tell how many builds ran
+    local function filterCallsPerBuild()
+      local calls = 0
+      setExitWeightFilter(function() calls = calls + 1 end)
+      getPath(rA1, rA3)
+      assert.is_true(calls > 0, "the exit weight filter never ran")
+      return calls
+    end
+
     it("does not rebuild the graph for exit weight filter edits that change nothing", function()
       local from = createRoomID()
       addRoom(from); setRoomArea(from, areaAlpha); setRoomCoordinates(from, 0, -6, 0)
@@ -3111,21 +3119,50 @@ describe("Tests mapper functions against a shared fixture", function()
         setExitWeightFilter(nil)
         deleteRoom(from); deleteRoom(to)
       end)
-      local calls = 0
-      setExitWeightFilter(function()
-        calls = calls + 1
+      local function edit()
         setExit(from, to, "east")
         setExitWeight(from, "east", 5)
         setRoomWeight(to, 3)
         addSpecialExit(from, to, "jump")
+      end
+      edit()
+      assert.is_true(setExit(from, to, "east"))
+      local perBuild = filterCallsPerBuild()
+      local calls = 0
+      setExitWeightFilter(function()
+        calls = calls + 1
+        edit()
       end)
 
       assert.is_true(getPath(from, to))
+      assert.are.equal(perBuild, calls)
+    end)
+
+    it("rebuilds the graph only once more for an exit weight filter that edits on every build", function()
+      local perBuild = filterCallsPerBuild()
+      local calls, weight = 0, 1
+      setExitWeightFilter(function()
+        calls = calls + 1
+        weight = 3 - weight
+        setExitWeight(rA1, "east", weight)
+      end)
+
+      assert.is_true(getPath(rA1, rA3))
+      assert.is_true(calls <= 2 * perBuild, tostring(calls))
       local callsBuilding = calls
-      assert.is_true(callsBuilding > 0, "the exit weight filter never ran")
-      assert.is_true(getPath(from, to))
       assert.is_true(getPath(rA1, rA3))
       assert.are.equal(callsBuilding, calls)
+    end)
+
+    it("routes around a room whose weight went up after the last search", function()
+      assert.is_true(getPath(rA1, rA3))
+      finally(function() setRoomWeight(rA2, 1) end)
+      setRoomWeight(rA2, 10)
+
+      local ok, weight = getPath(rA1, rA3)
+      assert.is_true(ok)
+      assert.are.equal(3, weight)
+      assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
     end)
 
     -- Every case above edits the map first, so each one searches a graph that

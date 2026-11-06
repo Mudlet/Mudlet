@@ -1839,29 +1839,6 @@ private slots:
         QCOMPARE(widget.route().status(), MapRoute::Status::Found);
     }
 
-    void test_aFilterEditingEveryBuildStillWaitsBeforeTheRouteRebuildsThePathGraphWithoutGL()
-    {
-        const ThreeAreas areas = addThreeAreas();
-        TLuaInterpreter* lua = mpHost->getLuaInterpreter();
-        QVERIFY(lua->compileAndExecuteScript(qsl("local w = 1; setExitWeightFilter(function() w = 3 - w; setExitWeight(%1, 'east', w) end)").arg(areas.westFirst)));
-        auto clearFilter = qScopeGuard([lua]() {
-            lua->compileAndExecuteScript(qsl("setExitWeightFilter(nil)"));
-        });
-        ModernGLWidget widget(map(), mpHost);
-        widget.planRouteToRoom(areas.eastFirst + 24);
-        QCOMPARE(widget.route().status(), MapRoute::Status::Found);
-        QVERIFY2(map()->mMapGraphNeedsUpdate, "the filter's edit during the build was lost");
-        QVERIFY2(widget.mRouteGraphBuilt.isValid(), "a build the filter edited the map during was not counted as one");
-
-        widget.mRouteRefreshTimer->stop();
-        map()->setExit(areas.westFirst + 1, areas.westFirst + 7, DIR_NORTHEAST);
-        widget.updateMatrices();
-        widget.mRenderCommandQueue.clear();
-        widget.queueScene();
-        QVERIFY(widget.mRouteRefreshTimer->isActive());
-        QVERIFY2(widget.mRouteRefreshTimer->interval() > 0, "an edit to the exits rebuilt the path graph straight away");
-    }
-
     void test_aRouteIsDroppedWhenAMapIsImportedWithoutGL()
     {
         const ThreeAreas areas = addThreeAreas();

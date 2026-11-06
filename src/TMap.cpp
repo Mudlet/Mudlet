@@ -1192,9 +1192,11 @@ bool TMap::findPath(int from, int to)
 
     if (mMapGraphNeedsUpdate) {
         initGraph();
-        // Once more if the exit weight filter edited the map mid-build, but no more: it can edit on every build
+        // Once more if the exit weight filter edited the map mid-build, then no more: a filter that edits
+        // on every build would otherwise rebuild the graph on every search
         if (mMapGraphNeedsUpdate) {
             initGraph();
+            mMapGraphNeedsUpdate = false;
         }
     }
 
