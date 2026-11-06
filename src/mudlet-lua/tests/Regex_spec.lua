@@ -870,7 +870,7 @@ describe("PCRE regex cases with tempRegexTrigger", function()
             assert.are.same({"Ann", "Ben", "Cal"}, seen)
         end)
 
-        -- the text of a (?<* lookbehind up to a > is no group name
+        -- a (?<* read as a name running to the > would swallow the | or [ before it
         it("does not take a non-atomic lookbehind for a named group", function()
             local seen = {}
             regexTrigger("(?<*ab)(?:cd|ef>ghij)", function() table.insert(seen, matches[1]) end)

@@ -150,8 +150,8 @@ QString requiredLiteral(const QString& pattern)
         }
         return i;
     };
-    // (?< also opens the lookbehinds (?<=, (?<! and (?<*, so only a letter or _,
-    // which may lie outside the basic plane, starts a name
+    // (?< also opens the lookbehinds (?<=, (?<! and (?<*, so a name has to start
+    // with a letter or _; pcre2 refuses one outside the basic plane that is neither
     const auto startsName = [](const QChar c) {
         return c.isLetter() || c == u'_' || c.isHighSurrogate();
     };
