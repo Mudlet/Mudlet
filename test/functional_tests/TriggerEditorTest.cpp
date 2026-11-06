@@ -972,7 +972,7 @@ private slots:
         unnamed << pView->objectName();
       }
     }
-    QVERIFY2(checked == 10, qPrintable(qsl("only %1 item views found in the editor").arg(checked)));
+    QVERIFY2(checked == 10, qPrintable(qsl("found %1 item views in the editor, expected 10").arg(checked)));
     QVERIFY2(unnamed.isEmpty(), qPrintable(qsl("item views without an accessible name: %1").arg(unnamed.join(qsl(", ")))));
   }
 };
