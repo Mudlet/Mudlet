@@ -1414,6 +1414,8 @@ signals:
     void signal_profileResetting();
     // A package or module's items are gone, so whatever its Lua placed in the frontend has to go too.
     void signal_packageRemoved(const QString& packageName);
+    // The buttons or bars a frontend draws, or a push-down button's state, changed; the GUI redraws its own.
+    void signal_buttonsChanged();
     // The frontend owns the editor, notepad and IRC client it opens for a
     // profile. On close it closes them and lets go of them; on destruction it
     // deletes them there and then, while the units the editor references still

@@ -3366,6 +3366,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     }
     // updateAllToolbars() rebuilds every button bar, too slow for scripts that restyle a button on each prompt
     bool rebuild = false;
+    bool restyled = false;
     for (auto actionId : actionIds) {
         auto action = host.getActionUnit()->getAction(actionId);
         if (!action) {
@@ -3373,6 +3374,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
         }
         action->css = css;
         if (host.consoleFrontend()->restyleActionButton(action)) {
+            restyled = true;
             continue;
         }
         // Without this a floating toolbar skips its rebuild
@@ -3381,6 +3383,8 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     }
     if (rebuild) {
         host.getActionUnit()->updateAllToolbars();
+    } else if (restyled) {
+        emit host.signal_buttonsChanged();
     }
     lua_pushboolean(L, 1);
     return 1;

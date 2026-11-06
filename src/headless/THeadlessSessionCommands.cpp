@@ -244,6 +244,26 @@ int THeadlessSession::addonCommandOnKey(const QKeyEvent& event) const
 
 void THeadlessSession::connectCommandRelays(const unsigned int run)
 {
+    if (mpHost) {
+        connect(mpHost.data(), &Host::signal_buttonsChanged, this, [this, run]() {
+            if (run != mRun || !mpHost || mButtonsQueuedRun == run) {
+                return;
+            }
+            mButtonsQueuedRun = run;
+            QMetaObject::invokeMethod(
+                    this,
+                    [this, run]() {
+                        if (mButtonsQueuedRun == run) {
+                            mButtonsQueuedRun = 0;
+                        }
+                        if (run == mRun) {
+                            const QString profile = mProfileName;
+                            emit buttonsChanged(profile);
+                        }
+                    },
+                    Qt::QueuedConnection);
+        });
+    }
     auto* pView = dynamic_cast<TNullAppFrontend*>(TAppFrontend::instance());
     if (!pView) {
         return;
