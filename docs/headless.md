@@ -586,3 +586,15 @@ dropped file is always installed as a package, never as a module. The position i
 app's view of the main console the drop landed at, in its own pixels, which scripts get as `x` and `y`.
 Data with neither URLs nor text is false and raises nothing, as the GUI's console does not take it. It
 is refused where `submit()` is, and while the scripts are stopped its events reach none of them.
+
+`setSoundsMuted()` is the main window's mute buttons, for `SoundSource::scripts`, the sounds scripts
+play, or `SoundSource::game`, those the game sends over GMCP or MSP, and `toggleAllSoundsMuted()` is
+the button for both, which unmutes both when both are muted and otherwise mutes both. As in the GUI,
+muting is for every profile: it reaches the session's own and those its scripts opened, the only ones in
+the process, as a second session's `start()` is refused while a pool exists. A change raises
+`sysSettingChanged` with `muteMediaAPI` or `muteMediaGame` in each profile, as a script's `setConfig()`
+does. `soundsMuted()` reads it, and is false with no profile open. `soundsMutedChanged` follows every
+change from the event loop, whoever made it, a script's `setConfig()` in any of the profiles included,
+and also a call that left it as it was, so an app's mute buttons can follow it as the GUI's do. It stops
+once the session's own profile has closed, as the session's other signals do, even while profiles its
+scripts opened live on. They are refused where `submit()` is.

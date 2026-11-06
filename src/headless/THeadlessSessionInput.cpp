@@ -23,6 +23,7 @@
 
 #include "Host.h"
 #include "HostManager.h"
+#include "MudletMedia.h"
 #include "TEvent.h"
 
 #include <QFileInfo>
@@ -124,6 +125,64 @@ bool THeadlessSession::dropOnMainConsole(const QMimeData& data, const QPoint& po
         }
     }
     return true;
+}
+
+void THeadlessSession::connectInputRelays(const unsigned int run)
+{
+    // Queued, as it is sent in the middle of telling every profile; the profiles its scripts opened outlive
+    // the session's own, which leaves mRun as it was
+    if (MudletMedia* pMedia = MudletMedia::self()) {
+        connect(
+                pMedia,
+                &MudletMedia::signal_muteSet,
+                this,
+                [this, run](const bool apiNotGame, const bool muted) {
+                    if (run == mRun && mpHost) {
+                        emit soundsMutedChanged(apiNotGame ? SoundSource::scripts : SoundSource::game, muted);
+                    }
+                },
+                Qt::QueuedConnection);
+    }
+}
+
+bool THeadlessSession::setSoundsMuted(const SoundSource source, const bool muted)
+{
+    if (!usable()) {
+        return false;
+    }
+    MudletMedia* pMedia = MudletMedia::self();
+    if (!pMedia) {
+        //: Error from a frontend with no window that was asked to mute or unmute sounds while nothing could play them
+        mErrorString = tr("No sounds can be played, so none can be muted.");
+        return false;
+    }
+    if (source == SoundSource::scripts) {
+        pMedia->setApiMuted(muted);
+    } else {
+        pMedia->setGameMuted(muted);
+    }
+    return true;
+}
+
+bool THeadlessSession::toggleAllSoundsMuted()
+{
+    if (!usable()) {
+        return false;
+    }
+    MudletMedia* pMedia = MudletMedia::self();
+    if (!pMedia) {
+        //: Error from a frontend with no window that was asked to mute or unmute sounds while nothing could play them
+        mErrorString = tr("No sounds can be played, so none can be muted.");
+        return false;
+    }
+    pMedia->toggleAllMuted();
+    return true;
+}
+
+bool THeadlessSession::soundsMuted(const SoundSource source) const
+{
+    const MudletMedia* pMedia = mpHost ? MudletMedia::self() : nullptr;
+    return pMedia && (source == SoundSource::scripts ? pMedia->apiMuted() : pMedia->gameMuted());
 }
 
 bool THeadlessSession::setApplicationActive(const bool active)

@@ -542,6 +542,131 @@ end
         QCOMPARE(drops(), QString());
         QVERIFY(session.shutdown(false));
     }
+
+    void test_theMuteButtonsAreForEveryProfile()
+    {
+        using SoundSource = THeadlessSession::SoundSource;
+        const QString name = qsl("Headless Mute");
+        const QString other = qsl("Headless Mute Other");
+        const QString script = qsl(R"lua(
+headlessSettings = ""
+registerAnonymousEventHandler("sysSettingChanged", function(_, setting, value)
+  if setting:find("^muteMedia") then
+    headlessSettings = headlessSettings .. setting .. "=" .. tostring(value) .. " "
+  end
+end)
+)lua");
+        QVERIFY(writeProfile(name, script));
+        QVERIFY(writeProfile(other, script));
+        THeadlessSession session;
+        QStringList heard;
+        connect(&session, &THeadlessSession::soundsMutedChanged, this, [&heard](const SoundSource source, const bool muted) {
+            heard.append(qsl("%1 %2").arg(source == SoundSource::scripts ? qsl("scripts") : qsl("game"), muted ? qsl("muted") : qsl("unmuted")));
+        });
+        QVERIFY(!session.setSoundsMuted(SoundSource::scripts, true));
+        QCOMPARE(session.errorString(), qsl("No profile is open."));
+        QVERIFY(!session.toggleAllSoundsMuted());
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(!session.soundsMuted(SoundSource::scripts));
+        QVERIFY(!session.soundsMuted(SoundSource::game));
+        const auto settings = [&session]() {
+            const QString settings = luaGlobalString(session.host(), "headlessSettings");
+            session.runLua(qsl("headlessSettings = ''"));
+            return settings;
+        };
+
+        QVERIFY(session.setSoundsMuted(SoundSource::scripts, true));
+        QVERIFY(session.soundsMuted(SoundSource::scripts));
+        QVERIFY(!session.soundsMuted(SoundSource::game));
+        QVERIFY(heard.isEmpty());
+        QTRY_COMPARE(heard, (QStringList{qsl("scripts muted")}));
+        QCOMPARE(settings(), qsl("muteMediaAPI=true "));
+        heard.clear();
+        QVERIFY(session.setSoundsMuted(SoundSource::scripts, true));
+        QTRY_COMPARE(heard, (QStringList{qsl("scripts muted")}));
+        QCOMPARE(settings(), QString());
+
+        heard.clear();
+        QVERIFY(session.toggleAllSoundsMuted());
+        QVERIFY(session.soundsMuted(SoundSource::game));
+        QTRY_COMPARE(heard, (QStringList{qsl("game muted")}));
+        QCOMPARE(settings(), qsl("muteMediaGame=true "));
+        heard.clear();
+        QVERIFY(session.toggleAllSoundsMuted());
+        QVERIFY(!session.soundsMuted(SoundSource::scripts));
+        QVERIFY(!session.soundsMuted(SoundSource::game));
+        QTRY_COMPARE(heard, (QStringList{qsl("scripts unmuted"), qsl("game unmuted")}));
+        QCOMPARE(settings(), qsl("muteMediaAPI=false muteMediaGame=false "));
+        heard.clear();
+        QVERIFY(session.toggleAllSoundsMuted());
+        QTRY_COMPARE(heard, (QStringList{qsl("scripts muted"), qsl("game muted")}));
+        QCOMPARE(settings(), qsl("muteMediaAPI=true muteMediaGame=true "));
+
+        heard.clear();
+        QVERIFY(session.runLua(qsl(R"lua(setConfig("muteMediaGame", false))lua")));
+        QVERIFY(!session.soundsMuted(SoundSource::game));
+        QTRY_COMPARE(heard, (QStringList{qsl("game unmuted")}));
+        QCOMPARE(settings(), qsl("muteMediaGame=false "));
+
+        // Only one session's profiles to tell, as there is only one pool a process
+        THeadlessSession second;
+        QCOMPARE(second.start({.profile = name, .connect = false}), THeadlessSession::StartResult::notOpened);
+        QCOMPARE(second.errorString(), qsl("A profile pool already exists in this process."));
+        QVERIFY(!second.setSoundsMuted(SoundSource::scripts, false));
+
+        QVERIFY(session.runLua(qsl("loadProfile([[%1]], true)").arg(other)));
+        Host* pOther = HostManager::self()->getHost(other);
+        QVERIFY(pOther);
+        heard.clear();
+        QVERIFY(session.setSoundsMuted(SoundSource::game, true));
+        QTRY_COMPARE(heard, (QStringList{qsl("game muted")}));
+        QCOMPARE(settings(), qsl("muteMediaGame=true "));
+        QCOMPARE(luaGlobalString(pOther, "headlessSettings"), qsl("muteMediaGame=true "));
+        heard.clear();
+        QVERIFY(pOther->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(setConfig("muteMediaGame", false))lua")));
+        QVERIFY(!session.soundsMuted(SoundSource::game));
+        QTRY_COMPARE(heard, (QStringList{qsl("game unmuted")}));
+        QCOMPARE(settings(), qsl("muteMediaGame=false "));
+
+        QSignalSpy quit(&session, &THeadlessSession::quitRequested);
+        QVERIFY(session.runLua(qsl("closeProfile()")));
+        QTRY_COMPARE_WITH_TIMEOUT(quit.count(), 1, 10000);
+        QVERIFY(!session.host());
+        heard.clear();
+        QVERIFY(pOther->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(setConfig("muteMediaGame", true))lua")));
+        QTest::qWait(100);
+        QCOMPARE(heard, QStringList());
+        QVERIFY(!session.soundsMuted(SoundSource::game));
+
+        QVERIFY(pOther->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(setConfig("muteMediaAPI", false) setConfig("muteMediaGame", false))lua")));
+        QVERIFY(session.shutdown(false));
+        QVERIFY(!session.soundsMuted(SoundSource::scripts));
+    }
+
+    void test_theMuteButtonsAreRefusedMidWrite()
+    {
+        using SoundSource = THeadlessSession::SoundSource;
+        const QString name = qsl("Headless Mute Mid Write");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        std::optional<bool> setMidWrite;
+        std::optional<bool> toggledMidWrite;
+        connect(&session, &THeadlessSession::outputLine, this, [&session, &setMidWrite, &toggledMidWrite](const QString&, const QString& text) {
+            if (text == qsl("quiet now")) {
+                setMidWrite = session.setSoundsMuted(SoundSource::game, true);
+                toggledMidWrite = session.toggleAllSoundsMuted();
+            }
+        });
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("refused")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("refused")));
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("quiet now\n"))lua")));
+        QCOMPARE(setMidWrite, std::optional<bool>(false));
+        QCOMPARE(toggledMidWrite, std::optional<bool>(false));
+        QVERIFY(!session.soundsMuted(SoundSource::game));
+        QVERIFY(!session.soundsMuted(SoundSource::scripts));
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionInputTest.moc"
