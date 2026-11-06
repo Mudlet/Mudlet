@@ -289,6 +289,12 @@ void TMxpProcessor::disable()
     mIgnoreNextNewline = false;
 }
 
+// TBuffer ignores this newline, so it is no part of the text a <SEND> wraps either
+bool TMxpProcessor::newlineIgnored(const char ch) const
+{
+    return ch == '\n' && mIgnoreNextNewline && !mReadingLocalText;
+}
+
 bool TMxpProcessor::takeIgnoredNewline()
 {
     return std::exchange(mIgnoreNextNewline, false);
@@ -412,6 +418,13 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
         return result == MXP_TAG_COMMIT_LINE ? HANDLER_COMMIT_LINE : HANDLER_NEXT_CHAR;
     }
 
+    // Given up on as text here rather than with the newline, which would then be read back as
+    // literal text, past the line end handling that takes up a <NOBR> and resets the line mode
+    if (ch == '\n' && mEntityHandler.readingEntity()) {
+        lastEntityValue = mEntityHandler.takePartialEntity();
+        return HANDLER_INSERT_AND_REPROCESS;
+    }
+
     if (mEntityHandler.handle(ch, resolveCustomEntities)) { // ch is part of an entity
         if (mEntityHandler.isEntityResolved()) {            // entity has been mapped (i.e. ch == ';')
             lastEntityValue = mEntityHandler.getResultAndReset();
@@ -428,8 +441,7 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
         return HANDLER_NEXT_CHAR;
     }
 
-    // TBuffer ignores this newline, so it is no part of the text a <SEND> wraps either
-    if (ch == '\n' && mIgnoreNextNewline && !mReadingLocalText) {
+    if (newlineIgnored(ch)) {
         return HANDLER_FALL_THROUGH;
     }
 
@@ -493,6 +505,9 @@ TMxpProcessingResult TMxpProcessor::rejectCurrentTag()
 
 void TMxpProcessor::processRawInput(char ch)
 {
+    if (newlineIgnored(ch)) {
+        return;
+    }
     mMxpTagProcessor.handleContent(ch);
 }
 

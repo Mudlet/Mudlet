@@ -114,6 +114,7 @@ public:
 
 private:
     TMxpProcessingResult rejectCurrentTag();
+    bool newlineIgnored(char ch) const;
     QString decodeRawBytes(const std::string& raw, const QByteArray& encoding) const;
     bool isValidTagName(const std::string& tagName) const;
 
