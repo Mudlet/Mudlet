@@ -217,18 +217,27 @@ local function record(line)
     end
 end
 
+local function setupCall(name, ...)
+    local shown = {}
+    for a = 1, select("#", ...) do
+        shown[a] = show((select(a, ...)))
+    end
+    record(("%s(%s)"):format(name, concat(shown, ", ")))
+    pcall(_G[name], ...)
+end
+
 local function setupWindows()
-    pcall(createMiniConsole, "fzMini", 0, 0, 200, 100)
-    pcall(createLabel, "fzLabel", 0, 0, 100, 50, 1)
-    pcall(createBuffer, "fzBuf")
-    pcall(openUserWindow, "fzUser")
-    pcall(createCommandLine, "fzCmd", 0, 0, 200, 20)
-    pcall(createTextEdit, "fzEdit", 0, 0, 200, 100)
-    pcall(createScrollBox, "fzScroll", 0, 0, 200, 100)
-    pcall(createStopWatch, "fzStop")
+    setupCall("createMiniConsole", "fzMini", 0, 0, 200, 100)
+    setupCall("createLabel", "fzLabel", 0, 0, 100, 50, 1)
+    setupCall("createBuffer", "fzBuf")
+    setupCall("openUserWindow", "fzUser")
+    setupCall("createCommandLine", "fzCmd", 0, 0, 200, 20)
+    setupCall("createTextEdit", "fzEdit", 0, 0, 200, 100)
+    setupCall("createScrollBox", "fzScroll", 0, 0, 200, 100)
+    setupCall("createStopWatch", "fzStop")
     for _, w in ipairs({ "fzMini", "fzBuf", "fzUser" }) do
         for i = 1, 5 do
-            pcall(echo, w, ("line %d äö€ some text\n"):format(i))
+            setupCall("echo", w, ("line %d äö€ some text\n"):format(i))
         end
     end
 end
