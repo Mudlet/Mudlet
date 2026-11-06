@@ -128,6 +128,7 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.equals(false, ac.locked)
       assert.equals(10, ac.padding)
       assert.equals("standard", ac.lockStyle)
+      assert.is_truthy(ac.lockLabel.txt:find("Lock$"), "the menu texts are not the translated ones")
       -- the title bar is a drag handle, the close button is a button
       assert.equals("text", getLabelAccessibleRole(ac.adjLabel.name))
       assert.equals("button", getLabelAccessibleRole(ac.exitLabel.name))
@@ -207,9 +208,10 @@ describe("Tests functionality of Adjustable.Container", function()
 
       assert.equals(1, loads)
       for _, container in ipairs(created) do
-        assert.is_not_nil(container.Inside)
         assert.is_truthy(container.lockLabel.txt:find("lock$"))
         assert.is_truthy(container.customItemsLabel.txt:find("custom$"))
+        container:addConnectMenu()
+        assert.is_not_nil(container.adjLabel:findMenuElement("Connect To: "))
       end
     end)
   end)
