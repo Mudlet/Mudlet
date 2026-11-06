@@ -693,13 +693,33 @@ line holds any more each time a quarter of its buffer has been trimmed, and `lin
 then, after which `link()` gives `nullopt` for each at once. Until then, `link()` of a link that only
 trimmed lines held gives `nullopt` too, but reads the whole buffer to find that out.
 
+## Embedding it: the 2D map
+
+`renderMap()` draws the profile's 2D map onto a `QPainter` at the size given, as the GUI's mapper
+shows it: the area of the player's room, centred on that room (or, with `mapCenterSmallAreas` on in
+`Mudlet.ini`, on an area that fits), at that area's zoom, with the player's marker, the profile's
+mapper settings and the map info box. A script opens the map first, as with `openMapWidget()`;
+until then it is false with the reason in `errorString()`, as it is for a painter that is not active
+and for a size under 10 by 10 pixels, which the GUI draws nothing in.
+As the GUI's does, a draw that moves to another area raises `sysMapAreaChanged`. The map info box runs
+the profile's Lua, so the call is refused where `submit()` is, from a handler of `outputLine` and the
+other signals sent in the middle of a write.
+
+`mapRepaintRequested` says when the GUI would draw the map again: a script opened the map, showed it
+again or replaced it with an embedded mapper, the player moved or a script centred the map, the map
+loaded or changed, or its zoom, colours, settings or info box did. It comes once a turn
+of the event loop however many changes there were, while a script has opened a map, even one it has
+since closed, and from the event loop, so a handler may call `renderMap()` at once. Only the 2D map is drawn; there is no
+3D view.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,
 or answers as the GUI would with no window open. `CI/headless-lua-known-failures.txt` lists the
 Lua specs that fail with no window, so it is the up-to-date list; the main gaps are:
 
-- the 2D and 3D mappers' views, and map symbols drawn with a font's Private Use Area;
+- the 3D mapper's view, the 2D map but for an app that calls `renderMap()`, and map symbols
+  drawn with a font's Private Use Area;
 - the main window's own command line, button bars and docks, which an app draws outside the area
   it gives (see "Embedding it: the main window's size"), and the command line a mini console or user
   window can show.
