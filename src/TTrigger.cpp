@@ -150,6 +150,15 @@ QString requiredLiteral(const QString& pattern)
         }
         return i;
     };
+    // pcre2 10.43 reads (?<* as a lookbehind, so a group name is told by holding
+    // only word characters up to its delimiter, not by what follows (?<
+    const auto nameEndAt = [&](const qsizetype from, const char16_t delimiter) -> qsizetype {
+        qsizetype j = from;
+        while (j < size && (pattern.at(j).isLetterOrNumber() || pattern.at(j) == u'_')) {
+            ++j;
+        }
+        return j > from && j < size && pattern.at(j) == delimiter ? j : -1;
+    };
     // {n}, {n,} and {n,m} are quantifiers to every pcre2; {,m} and blanks
     // inside the braces are to 10.43 on and not before; any other brace is
     // the character itself
@@ -275,12 +284,12 @@ QString requiredLiteral(const QString& pattern)
                     const QChar kind = pattern.at(i + 2);
                     if (kind == u':') {
                         nameEnd = i + 2;
-                    } else if (kind == u'<' && i + 3 < size && pattern.at(i + 3) != u'=' && pattern.at(i + 3) != u'!') {
-                        nameEnd = pattern.indexOf(u'>', i + 3);
+                    } else if (kind == u'<') {
+                        nameEnd = nameEndAt(i + 3, u'>');
                     } else if (kind == u'P' && i + 3 < size && pattern.at(i + 3) == u'<') {
-                        nameEnd = pattern.indexOf(u'>', i + 4);
+                        nameEnd = nameEndAt(i + 4, u'>');
                     } else if (kind == u'\'') {
-                        nameEnd = pattern.indexOf(u'\'', i + 3);
+                        nameEnd = nameEndAt(i + 3, u'\'');
                     }
                 }
                 if (nameEnd < 0) {
