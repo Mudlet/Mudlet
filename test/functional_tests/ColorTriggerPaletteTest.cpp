@@ -41,6 +41,8 @@
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "TLuaInterpreter.h"
+#include "TTrigger.h"
+#include "TriggerUnit.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -70,15 +72,19 @@ private:
         return value;
     }
 
+    // "31" for red text, "41" for text on red
+    QString mRedSgr = qsl("31");
+
     int redLineFires()
     {
         const int before = luaInteger("paletteFires");
-        runLua(qsl("feedTriggers('\\27[31mpalette red words\\27[0m\\n')"));
+        runLua(qsl("feedTriggers('\\27[%1mpalette red words\\27[0m\\n')").arg(mRedSgr));
         return luaInteger("paletteFires") - before;
     }
 
-    void checkTriggerFollowsThePalette()
+    void checkTriggerFollowsThePalette(const QString& redSgr = qsl("31"))
     {
+        mRedSgr = redSgr;
         const QColor originalRed = mpHost->mRed;
         const QColor redefinedRed(0x12, 0x34, 0x56);
         QVERIFY2(originalRed != redefinedRed, "the profile's red is already the redefined one, so the assertions below cannot fail");
@@ -151,6 +157,8 @@ private slots:
     // A failed check returns early, so this puts the palette and the triggers back for the next case
     void cleanup()
     {
+        // killTrigger() refuses permanent triggers
+        delete mpHost->getTriggerUnit()->findTrigger(qsl("paletteFolder"));
         runLua(qsl("feedTriggers('\\27]R\\27\\\\\\n')"));
         runLua(qsl("if paletteTrigger then killTrigger(paletteTrigger) end\n"
                    "for _, id in ipairs(paletteFillers or {}) do killTrigger(id) end\n"
@@ -177,6 +185,38 @@ private slots:
                                .arg(setup)));
         QVERIFY2(mpHost->getTriggerUnit()->rootPrescanActive(), "the root filter has not engaged, so this tests nothing the case above does not");
         checkTriggerFollowsThePalette();
+    }
+
+    void backgroundColorTriggerFollowsThePalette()
+    {
+        QVERIFY(runLua(qsl("paletteFires = 0\n"
+                           "paletteTrigger = tempAnsiColorTrigger(-1, 1, function() paletteFires = paletteFires + 1 end)")));
+        checkTriggerFollowsThePalette(qsl("41"));
+    }
+
+    // A child is in no root snapshot, so it is only reached through the unit's map of every trigger
+    void childColorTriggerFollowsThePalette()
+    {
+        QVERIFY(runLua(qsl("paletteFires = 0\npermGroup('paletteFolder', 'trigger')")));
+        TTrigger* pFolder = mpHost->getTriggerUnit()->findTrigger(qsl("paletteFolder"));
+        QVERIFY(pFolder);
+        auto* pChild = new TTrigger(pFolder, mpHost);
+        pChild->setName(qsl("paletteChild"));
+        QVERIFY(pChild->setRegexCodeList({TTrigger::createColorPatternText(1, TTrigger::scmIgnored)}, {REGEX_COLOR_PATTERN}));
+        pChild->setScript(qsl("paletteFires = paletteFires + 1"));
+        pChild->setIsActive(true);
+        pChild->registerTrigger();
+        checkTriggerFollowsThePalette();
+    }
+
+    // Servers send the redefinition inline with their text, so it can land between two lines of one chunk
+    void paletteChangeBetweenLinesOfOneChunk()
+    {
+        QVERIFY(runLua(qsl("paletteFires = 0\n"
+                           "paletteTrigger = tempAnsiColorTrigger(1, -1, function() paletteFires = paletteFires + 1 end)\n"
+                           "feedTriggers('\\27[31mbefore\\27[0m\\n\\27]P1123456\\27\\\\\\27[31mafter\\27[0m\\n')")));
+        QCOMPARE(mpHost->mRed, QColor(0x12, 0x34, 0x56));
+        QCOMPARE(luaInteger("paletteFires"), 2);
     }
 };
 
