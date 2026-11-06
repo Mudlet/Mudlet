@@ -2009,9 +2009,11 @@ end
 
 
 -- column names must be quoted: one named after an SQL keyword, such as "group" or
--- "order", is otherwise a syntax error that db:fetch reports as no rows
+-- "order", is otherwise a syntax error that db:fetch reports as no rows. Backticks,
+-- not double quotes: sqlite reads a double-quoted name it has no column for as a string,
+-- so a column db:create failed to add would match every row instead of failing
 local function quoted_column(field)
-  return '"' .. field.name .. '"'
+  return "`" .. field.name .. "`"
 end
 
 --- Returns the result of calling the specified aggregate function on the field and its sheet. <br/><br/>

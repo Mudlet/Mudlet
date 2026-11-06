@@ -1950,6 +1950,26 @@ describe("Tests DB.lua functions", function()
     end)
   end)
 
+  describe("Tests db query-expression builders on a column db:create could not add", function()
+    after_each(function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_missingcolumntestingonly.db")
+      mydb = nil
+    end)
+
+    -- sqlite will not add a column defaulting to CURRENT_TIMESTAMP to a sheet that
+    -- holds rows, yet the schema keeps it, so a field for it can still be had
+    it("db:delete with db:is_not_nil on it raises and deletes nothing", function()
+      mydb = db:create("missingcolumntestingonly", { items = { name = "" } })
+      db:add(mydb.items, {name = "Ada"}, {name = "Bram"})
+      mydb = db:create("missingcolumntestingonly", { items = { name = "", seen = db:Timestamp("CURRENT_TIMESTAMP") } })
+      assert.are.equal("seen", mydb.items.seen.name)
+
+      assert.has_error(function() db:delete(mydb.items, db:is_not_nil(mydb.items.seen)) end)
+      assert.are.equal(2, #db:fetch(mydb.items))
+    end)
+  end)
+
   describe("Tests db:delete", function()
     before_each(function()
       mydb = db:create("deletetestingonly", {
