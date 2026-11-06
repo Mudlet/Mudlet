@@ -3165,6 +3165,17 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
     end)
 
+    it("routes through an exit setExit re-points after the last search", function()
+      assert.is_true(getPath(rA1, rA3))
+      finally(function() setExit(rA1, rA2, "east") end)
+      assert.is_true(setExit(rA1, rA3, "east"))
+
+      local ok, weight = getPath(rA1, rA3)
+      assert.is_true(ok)
+      assert.are.equal(1, weight)
+      assert.are.same({tostring(rA3)}, speedWalkPath)
+    end)
+
     -- Every case above edits the map first, so each one searches a graph that
     -- has just been rebuilt. These four do not, which is what puts them on the
     -- state findPath() carries from one search to the next.
