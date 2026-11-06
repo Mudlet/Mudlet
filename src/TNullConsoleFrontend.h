@@ -146,9 +146,21 @@ public:
     // its parent. Once the view goes, these make it again, so the view's last setting is still saved.
     void followView(QObject* view);
     void resumeMainCommandLine();
-    // As the main command line takes a command once it is sent, which a line typed while the game hides what is
-    // typed is not
-    void addMainCommandLineHistory(const QString& command);
+    // As the main command line keeps a sent line, as its aliases left it, unless the game hid what was typed; a
+    // line nothing wrote to since holdMainCommandLineForSend() is kept as sent
+    void addMainCommandLineHistory(const QString& sent);
+    QStringList mainCommandLineHistory() const;
+    // Why the main command line's history file could not be read, if it could not
+    std::optional<QString> mainCommandLineHistoryReadError() const;
+    // As TCommandLine::enterCommand(): the line holds what is sent while its aliases run, and is emptied after
+    // if the profile clears it after a send
+    bool holdMainCommandLineForSend(const QString& line);
+    void mainCommandLineSent();
+    // As the GUI's command line as it is typed into, or as it is set by a history recall or Tab completion
+    void typeMainCommandLine(const QString& text, bool playerTyped);
+    // As TMainConsole::openPasswordEntry(): a line typed ahead of the prompt that opens the box goes into it. True
+    // if it took one.
+    bool hiddenInputOpened();
     bool ownsContainer(const QString& windowname) const;
     bool subConsoleShown(const QString& name) const;
     void reportUserWindowVisibility();
@@ -204,7 +216,7 @@ public:
     bool appendCommandLineText(const QString& name, const QString& text) override;
     bool clearCommandLine(const QString& name) override { return replaceCommandLineText(name, QString()); }
     // Only typing and tab completion read what these set, and with no view nothing is typed
-    bool selectCommandLineText(const QString& name) override { return ownsCommandLine(name); }
+    bool selectCommandLineText(const QString& name) override;
     bool addCommandLineSuggestion(const QString& name, const QString&) override { return ownsCommandLine(name); }
     bool removeCommandLineSuggestion(const QString& name, const QString&) override { return ownsCommandLine(name); }
     bool clearCommandLineSuggestions(const QString& name) override { return ownsCommandLine(name); }
@@ -218,7 +230,7 @@ public:
     bool setWindowCommandLineVisible(const QString& name, bool visible) override;
     void setCommandLinePlaceholderText(const QString&) override {}
     void updateCommandLineSpellCheck(bool) override {}
-    void setCommandLineText(const QString& text) override { replaceCommandLineText(QString(), text); }
+    void setCommandLineText(const QString& text) override;
     void focusActiveCommandLine() override {}
     std::pair<bool, QString> createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height) override;
     std::pair<bool, QString> deleteTextBox(const QString& name) override;
@@ -358,6 +370,7 @@ private:
         QStringList history;
         // So a file that could not be read is not written over with what little was
         bool readFailed = false;
+        QString readError;
     };
 
     // QWidget's minimumSize() and maximumSize(), which QStyleSheetStyle::setGeometry() sets from a sheet
@@ -550,6 +563,12 @@ private:
     // While a hidden user window is removed, the names its deferred deletes are to report
     QStringList* mpDeferredReports = nullptr;
     bool mDroppingWindows = false;
+    // As TCommandLine::playerTypedLine()
+    bool mMainCommandLineTyped = false;
+    // As the GUI's line once selectAll() has run, so what the player types next replaces it
+    bool mMainCommandLineAllSelected = false;
+    // Whether the line held for a send was written to while it was sent
+    bool mMainCommandLineRewritten = false;
     // The main window, which holds what a script makes in it
     std::unique_ptr<QObject> mpMainHolder = std::make_unique<QObject>();
     // TMxpFrameWidgets' container widget of each frame, which holds the frame's console until a script moves it

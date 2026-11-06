@@ -172,6 +172,76 @@ asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, str
 fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap
 for its own theme's. Links in the line, and what `echo()` and the like print, come as plain text for now.
 
+`outputLine` carries each line as the game sent it, before the profile's triggers run on it, so a line a
+trigger gags still arrives, and one it rewrites arrives unchanged. `lineShown` carries the same lines as
+the main console shows them once their triggers have run, with the same arguments: with the text a
+trigger replaced, the colours it changed and what it `echo()`ed into the line, which may hold line feeds,
+and not at all for a line a trigger deleted. Lines a trigger feeds with `feedTriggers()` come after the
+line it ran on, in the order the console shows them, and so does what it writes anywhere else, each piece
+as a line of its own: an `echo()` after `deleteLine()`, `clearWindow()` or a `feedTriggers()`, and the
+command echo of a `send()`. An app that draws the console as the GUI does draws `lineShown`, wrapping each
+line itself, as for `outputLine`; a line a trigger split with `wrapLine()` comes whole, with the line feeds
+it held, and if a trigger then deletes its first part, what is left of it comes as the line. A change a later
+trigger makes to a line already sent, as by moving the cursor up to it, is not sent again, though what it
+inserts is sent as a line of its own.
+
+`localText` carries the text written to the main console that the game did not send, as it is written,
+in pieces that need not end a line: the `echo()`s of aliases, timers, key bindings and `runLua()`, the
+commands the player sends, and Mudlet's own messages. While `lineShown` is connected, `localText` leaves
+out what `lineShown` sends: all that is written while triggers run on a line, a Lua error the console
+echoes and Mudlet's own messages among it. So an app draws both streams in the order they come, and each
+piece once: a line of `lineShown` goes below a line `localText` left open, and the next piece of
+`localText` then starts with the line feed that ends that open line, which the app drops. While
+`lineShown` is not connected, `localText` carries what triggers write too. Connected or let go in a
+handler, `lineShown` takes effect from the next line the game sends, so the line under way and all its
+triggers write go to one stream or the other, never both.
+
+Drawn that way, the console matches the GUI's but for its layout in these places, where no text is
+missing or doubled:
+
+- The console draws an `echo()` that follows `deleteLine()` on the end of the line above, which was already
+  sent, where `lineShown` sends it as a new line.
+- The console draws a command typed at a prompt on the end of that prompt, as `HP 10> look`, where
+  `lineShown` sends the prompt and `localText` then sends `look` as a piece that the rule above puts on a
+  line of its own. Nothing tells it apart from an alias's `echo()` after a prompt, which the GUI draws below.
+- Blank lines inside what a trigger prints, such as a Lua error of several lines, or the empty command echo
+  of a trigger's `send("")`, are not sent.
+
+`mainConsoleCleared` says a script emptied the main console with `clearWindow()` or
+`clearWindow("main")`, so an app empties its own copy of it; a mini console's clear does not send it.
+While it is connected, a clear also ends any line `localText` left open, so the next piece has no line
+feed to drop; without it, as for the CLI, that piece starts with the line feed that ends the open line.
+It is sent between the lines from before and after, so, like `outputLine`, its handler must not call the
+session back.
+
+`loggingChanged` says when the profile starts or stops logging the game's text to a file, where the GUI's
+logging button changes: from a script's `startLogging()`, or as the profile loads with logging left on,
+with the log file's path while it logs. A start that fails sends `false`, and the reason is printed on the
+main console, so it arrives as `localText`. A profile that closes while it logs, or that `shutdown()` or a
+later `start()` lets go of, sends `false` too, so each `true` is followed by one `false`, unless the
+session is deleted first: a session being deleted sends none. It comes from the event loop.
+
+`consoleFont()` is the font the GUI would draw the main console in, for an app that draws in the profile's
+font: read it at `profileLoaded`, then follow `consoleFontChanged`, which carries each change, whatever
+made it - a script's `setFont()` or `setFontSize()`, the profile's save, the bundled default standing in for
+a font that is not installed, or a package bringing that font or taking it away. The size `setScreenSize()`
+gives is in that font's characters. It comes from the event loop, with the font as it is then, and only
+when that differs from the one the app last had, so none follows `profileLoaded` for what the load did.
+
+`setDebugConsoleShown(true)` shows the Central Debug Console, as the editor's button does, before
+`start()` too, to see a profile load: `debugText` then carries what it prints, with its colours and when
+it was written, what was kept from before it was shown first, and the profiles write what they write only
+in debug mode, such as each trigger that matches. Append the text as given, as the console does: a line
+ends at its own newline, and one line can come in several pieces of different colours, as `ERROR:` and
+then why. `setDebugCategories()` picks which kinds of message it prints, for the whole process; until then
+it hides `GameLine` (each line from the game), `TriggerDetail` (capture groups and multiline match state),
+`LuaSuccess` and `Selection`, as the GUI's console does before a player changes it, and the GUI's saved
+choice is not read. There is one console for the whole process, as in the GUI, owned by the session that
+showed it last: showing it takes it from any other, whose `debugConsoleShown()` then answers false and
+whose `setDebugConsoleShown(false)` is refused. It closes with the owner's `setDebugConsoleShown(false)`,
+`shutdown()` or deletion. Its text is sent as written, from inside whatever wrote it, so the handler must
+not call the session back.
+
 The signals' handlers are called while a line is being written, so they must not call the session
 back or run the event loop; queue the work for later instead. `host()` reaches what the session
 does not cover, such as settings and the map, and goes null once the profile closes, so hold it in a
@@ -253,8 +323,156 @@ replay starts at 1 times its speed, and a change clamped at 1 or 1024 times send
 They come from the event loop, so the start can arrive after the
 script that began it has returned. One replay plays at a time over all profiles, and only those of the
 session's own profile are sent. As for the map's progress, one still playing when its profile closes, or
-when `shutdown()` or a later `start()` lets the profile go, gets its end there. The replay's elapsed time,
-pausing and its speed go through `host()` and `MudletReplay::self()` for now.
+when `shutdown()` or a later `start()` lets the profile go, gets its end there.
+
+`pressKey()` is a key pressed on the GUI's input line: it offers the key to the profile's key bindings
+where that line would, and its `KeyResult` says what came of it. The binding's script runs before the
+call returns, as an alias does for `submit()`, so the session's signals may be sent meanwhile.
+
+- `bindingRan`: a binding took the key, and the app does nothing more with it.
+- `noBinding`: no binding took it, so the app does what the GUI's line does then. That is to type the
+  character, a keypad digit included. Ctrl+1 to Ctrl+9 and Ctrl+0 switch to that profile tab, which
+  the app can do with `setActiveProfile()`, and Ctrl+F opens the search of the main console.
+- `keyKept`: the GUI's line acts on the key itself, so the app handles the key. A binding on it does
+  not fire in the GUI either, save for a key on the keypad, which is offered to the bindings first and
+  kept only once none takes it. On the command line these keys are:
+  - Return, alone or with Ctrl or Shift;
+  - Enter, alone; a real Enter is on the keypad, so it is kept when no binding on Keypad+Enter takes it;
+  - Tab, and Shift+Tab (Qt's `Key_Backtab`, with or without Shift);
+  - Space, alone or with Shift;
+  - Backspace, alone or with Ctrl, Shift or both;
+  - Delete, Escape, Page Up and Page Down;
+  - Up and Down, alone or with Ctrl (on macOS these carry the keypad flag, so they too are offered to
+    the bindings first);
+  - the key the accessibility settings set to toggle caret mode.
+
+  While hidden input is wanted, the GUI's hidden-input box takes the place of the line. It keeps
+  Return, Enter, Escape, Tab, Up, Down, Page Up and Page Down, each alone, as well as Shift+Tab, copy,
+  cut, undo and redo. It also keeps every key that types a printable character, alone or with Shift or
+  AltGr (Option, too, on macOS), and types it into the password, so a keypad digit bound to a direction
+  still goes into the password. The app types those into its own hidden input. The box judges a key by
+  the text it typed, which the app gives as `pressKey()`'s third argument, as Qt's `QKeyEvent::text()`
+  has it, empty when the key typed nothing. Without it, any key with a character's code counts as
+  printable, and Ctrl+Alt with one as AltGr, so a binding on Ctrl+Alt+S, say, is not offered the key
+  while hidden input is wanted, though the GUI offers it on a layout where that types nothing.
+- `refused`: the call was refused, as `submit()` is. Use `errorString()` to see why; the app should not
+  type the key.
+
+A binding matches its key and modifiers exactly, as Qt's key event gives them, which a frontend that is
+not built on Qt has to copy:
+
+- A key on the keypad carries `Qt::KeypadModifier`, as a binding that walks the map with the number pad
+  expects. On macOS the arrow keys carry it too.
+- A shifted symbol is its own key with `Qt::ShiftModifier`: on a US layout, Shift+1 is `Qt::Key_Exclam`
+  with Shift, not `Qt::Key_1`.
+- A letter is its capital key code whether or not Shift is held, so a capital A is `Qt::Key_A` with
+  `Qt::ShiftModifier`.
+- AltGr arrives as Ctrl+Alt on Windows, and on X11 it can carry `Qt::GroupSwitchModifier`.
+
+`commandLineTextRequested` carries the whole of the main command line each time a script's
+`printCmdLine()`, `appendCmdLine()`, `clearCmdLine()` or `sendCmdLine()` sets it, for the app's input
+line to show as the GUI's command line does; `clearCmdLine()` sends an empty line. As the GUI's line does,
+the main line holds what `submit()` sends while its aliases run, so `getCmdLine()` there reads it, and
+if the profile clears the line after a send, an empty line follows the send. It is sent as it is set, so
+it keeps its place among the game's lines and `hiddenInputWanted`, and a handler may neither call the
+session nor run the event loop. Only the main command line is sent: a line from
+`createCommandLine()` or Geyser is not. Mudlet does not know what the app's user has typed until the
+app says with `setCommandLineText()`; until then `getCmdLine()` reads what a script or `submit()` last
+set. Nothing is sent:
+
+- while hidden input is wanted: the GUI writes such text into its hidden-input box instead, so it is
+  lost, neither kept for `getCmdLine()` nor sent;
+- for the select-all of `sendCmdLine()` or `selectCmdLineText()`, which the app may leave out;
+- once `shutdown()` starts or the profile closes, when the line is the app's to clear.
+
+When `hiddenInputWanted` turns on, the app sets aside the text its input line holds from a script, as
+`commandLineTextRequested` last gave it, keeps it out of its masked line, and shows it again when hidden
+input ends, as the GUI's command line stays behind its hidden-input box; only what the player typed
+ahead moves into the masked line, when Mudlet says so (see `setCommandLineText()` below).
+
+`submit()` stands for the app's input line being sent, so it holds the line and then empties or keeps it
+as the profile says, as the GUI's line does. A command sent from anywhere else, such as a button or a
+menu, goes through `runLua()` calling `expandAlias()` with the command as a quoted Lua string: that runs
+its aliases and sends it as a script would, and leaves the line and the command history alone.
+
+`setCommandLineText()` is the other way: what the player has typed so far on the app's input line,
+which a script's `getCmdLine()` then reads, as it reads the GUI's command line, so a key binding or
+package that acts on the line being typed sees it. It is stored as plain text, as the GUI's line gives
+it back. The app calls it as the line changes. It need not empty the line after `submit()`: the line is
+then as the profile leaves it, and `commandLineTextRequested` says so when Mudlet empties it. It sends
+no `commandLineTextRequested`, so an app that hands that signal's text back, once the signal is over,
+starts no loop. Text the app sets on the line itself, rather than the player typing it, goes with
+`CommandLineEdit::notTyped`: a history recall, a Tab completion, and text from a script it set aside
+while hidden input was wanted and puts back. The GUI's line does not count such text as typed either,
+though it does count what it puts back from its hidden-input box, which the app hands back as typed.
+
+What it guarantees about hidden input is narrow:
+
+- While `hiddenInputWanted` is true, only an empty line is taken; other text is refused.
+- When the game asks to hide input and the line holds what the player typed, not what a script set,
+  Mudlet overwrites and empties its copy before a trigger runs on any line that reaches Mudlet after
+  that request, as the GUI's hidden-input box takes such text from its command line. A line ended by a
+  go-ahead ahead of the request, even in the same read, has its triggers run on the line as it was, in
+  the GUI too.
+- A line counts as the player's when it was typed on an empty line, or typed into a line the GUI would
+  have selected: one a `submit()` kept as the profile does not clear it, one a script set with
+  `sendCmdLine()` or selected with `selectCmdLineText()`, one Escape selected (`pressKey()` says
+  `keyKept`), or one set as `notTyped`. Mudlet does not see the app's caret or selection, so any change
+  to such a line counts as typed, and so does any change that leaves a line no longer starting with what
+  it held, as when the player selects it in the app and types over it, or deletes some of it. A change
+  that still starts with a script's line keeps it the script's: typing on at its end, as in the GUI, but
+  also a whole-line replace in one step that happens to start with it, such as pasting `bobby123` over a
+  selected `bob`, unless Mudlet marked the line selected. Both rules err towards moving the line into
+  hidden input.
+- Mudlet then sends `typedLineMoveRequested`, just before `hiddenInputWanted`; only then does the app
+  move its line's text into its hidden-input field and empty its line. An empty
+  `commandLineTextRequested` is a script's `clearCmdLine()` or a send, never this. If the game ends
+  hidden input before the player has edited or sent that text, and the app's line is still empty, the
+  app puts the text back in its line and hands it back with `setCommandLineText()`, as the GUI puts it
+  back in its command line. A disconnect does not put it back, in the GUI either.
+- Nothing else is guarded. While the player has dismissed the hidden-input box, an auto-login is still
+  pending, or the profile has masking turned off, the game may hide what is typed with
+  `hiddenInputWanted` false; text set then is taken, and scripts can read it, as they can read the
+  GUI's command line then.
+
+`pauseReplay()`, `resumeReplay()` and `stopReplay()` are the GUI's replay toolbar for a replay of the
+session's profile. A paused replay plays nothing more until it is resumed, and then carries on with what
+was left of the wait it was paused in. `replayPaused()` says whether it is held, as the toolbar reads it;
+a replay paused before its `replayStarted` arrives is still held when it does. Pausing one already
+paused, or resuming one that is not, is false with the reason in `errorString()`. `stopReplay()` ends it
+as the toolbar's Stop does, and `localText` says so. Each is false when no replay of the session's
+profile plays, though one a script has just begun counts before its `replayStarted` arrives. Each is
+also false while a script of the profile runs, as an app's timer can fire in a nested event loop in the
+middle of a replayed chunk, which the replay reads on from where it was once the script is done.
+`changeReplaySpeed()` is the toolbar's faster or slower button, which doubles or halves the speed within
+1 and 1024 times; `replaySpeedChanged` follows. As the toolbar's button does, it is true at either end
+too, where the speed stays as it is and `replaySpeedChanged` sends it again, so `replaySpeed()` is the
+way to tell whether there is further to go. It is allowed while paused, and the rest of the wait plays at
+the new speed once resumed. `replaySpeed()` is the speed, or -1 when no replay of the session's profile
+plays.
+
+`replayElapsedMSecs()` is the time the toolbar shows, by the recording's own timestamps, or -1 when no
+replay of the session's profile plays. It is the time of the line the replay is waiting to play, not of
+the last one shown: it moves to the end of a gap as soon as that gap begins, so a paused replay reads the
+time of a line it has not shown yet, and holds it until resumed. Unlike the toolbar's clock it counts on
+past a day. A speed change leaves it alone.
+
+`replayStarted` and `replayFinished` come in pairs, in that order, however the replay ends: at the end
+of its file, by `stopReplay()`, or when the profile closes or `shutdown()` runs. A replay stopped before
+its `replayStarted` arrives says so in `localText` first, and both signals still follow; if `shutdown()`
+comes before the event loop runs, it sends both.
+
+`commandHistory()` is the main command line's history, newest first, for the app's input line to walk
+with its up arrow as the GUI's does: each command `submit()` sent, once, at its latest place, and those
+kept from the profile's earlier sessions, whether in the GUI or with no window. What was sent while hidden
+input was wanted is not in it, as the GUI keeps none of what it typed in its hidden-input box. As in the
+GUI, what is kept is the line as its aliases left it: one that clears the line with `clearCmdLine()` keeps
+nothing, and one that writes to it with `printCmdLine()` keeps what it wrote. A paste is one entry, with
+its lines joined by a line feed, until the profile is saved; the history file holds a line each, so after
+the profile is loaded again each of its lines is an entry of its own. The list is a copy, which the next
+`submit()` leaves as it is. It is empty both for a profile with no history and when no profile is open;
+`host()` tells the two apart. A history file that cannot be read is left as it is: none of it is offered,
+this session's commands are not saved to it, and `errorConsoleText` says so as the profile starts.
 
 `src/headless/main.cpp`, the terminal runner, is the reference frontend: it shows how to handle
 signals, a reader that goes away, and input typed before the connection is made.
