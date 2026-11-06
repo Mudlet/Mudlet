@@ -133,10 +133,16 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
+        mudlet::self()->mSkipDefaultPackageInstall = true;
+        MudletApp::getQSettings()->setValue(qsl("autosaveIntervalMinutes"), 0);
+
         auto* hostManager = HostManager::self();
         for (const auto& name : {mProfileA, mProfileB}) {
             deleteProfileDirectory(name);
-            QVERIFY2(hostManager->addHost(name, qsl("23"), QString(), QString()), "failed to create the Host");
+            QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, name)));
+            QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("localhost")).first);
+            QVERIFY(MudletApp::writeProfileData(name, qsl("port"), qsl("23")).first);
+            QVERIFY2(mudlet::self()->openProfile(name, false), "failed to open the profile");
         }
         mpHostA = hostManager->getHost(mProfileA);
         mpHostB = hostManager->getHost(mProfileB);
