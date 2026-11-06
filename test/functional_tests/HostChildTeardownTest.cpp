@@ -588,6 +588,43 @@ private slots:
         QCOMPARE(HostDialogs::of(pSecond).mpEditorDialog.data(), secondEditor.data());
     }
 
+    // ~QWidget destroys a mini console's command line after ~TConsole, and the main console's
+    // destroyed() handler for it looks consoles up by name: the mini console must be gone by then.
+    void test_aMiniConsoleDyingWithItsScrollBoxIsUnlistedBeforeItsCommandLineGoes()
+    {
+        const QString profileName = qsl("HostChildTeardown-ScrollBoxMiniConsole");
+        Host* pHost = startProfile(profileName);
+        QVERIFY2(pHost, "Profile took too long to load");
+        auto cleanUp = qScopeGuard([&]() {
+            if (HostManager::self()->getHost(profileName)) {
+                pHost->forceClose();
+                pHost->requestClose();
+                HostManager::self()->deleteHost(profileName);
+            }
+            deleteProfileDirectory(profileName);
+        });
+
+        const QString consoleName = qsl("teardownMini");
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('%1', 0, 0, 100, 100); createScrollBox('teardownBox', 0, 0, 200, 100); "
+                                                                        "setWindow('teardownBox', '%1'); enableCommandLine('%1')")
+                                                                            .arg(consoleName)));
+        TMainConsole* pMainConsole = pHost->mainConsoleView();
+        const QPointer<TConsole> pMini = pMainConsole->subConsoleWidget(consoleName);
+        QVERIFY2(pMini, "The mini console was not created");
+        auto* pCommandLine = pMini->findChild<TCommandLine*>();
+        QVERIFY2(pCommandLine, "enableCommandLine() gave the mini console no command line");
+
+        bool listedAsItsCommandLineWent = false;
+        connect(pCommandLine, &QObject::destroyed, this, [&]() {
+            listedAsItsCommandLineWent = pMainConsole->subConsoleWidget(consoleName) != nullptr;
+        });
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("deleteScrollBox('teardownBox')")));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QVERIFY2(pMini.isNull(), "Deleting the scroll box did not take the mini console with it");
+        QVERIFY2(!listedAsItsCommandLineWent, "The main console still listed the mini console while its command line was destroyed");
+    }
+
     // cleanupTestCase() is what destroys the main window on top of it.
     void test_leaveAProfileOpenForTheMainWindowToTakeDown()
     {

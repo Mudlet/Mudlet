@@ -330,16 +330,3 @@ describe("Tests that the command line functions find their command line by name"
     assert.are.equal("disabled by profile global preference", err)
   end)
 end)
-
--- The scroll box goes by deleteLater(), so the teardown this exercises runs once the spec has returned:
--- a UBSan build reports a half-destroyed mini console being read there, nothing else sees it.
-describe("Tests deleting a scroll box holding a mini console with a command line of its own", function()
-  it("takes the mini console and its command line down with it", function()
-    local box, console = "specCmdLineDyingBox", "specCmdLineDyingBoxConsole"
-    createMiniConsole(console, 0, 0, 100, 100)
-    createScrollBox(box, 0, 0, 200, 100)
-    assert.is_true(setWindow(box, console))
-    assert.is_true(enableCommandLine(console))
-    assert.is_true(deleteScrollBox(box))
-  end)
-end)
