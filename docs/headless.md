@@ -515,6 +515,12 @@ game's reply, while the game marks its prompts with GA or EOR, and none otherwis
 box, it is paced to once every 16ms, and sent only when its text, to the millisecond, would change. It
 comes from the event loop, and none comes for a profile that `shutdown()` has let go.
 
+`connecting` says the profile has begun connecting to the game, as it starts or reconnects, where the
+GUI marks its tab as connecting, so an app can show that through a slow address lookup or connect.
+`connected` or `disconnected` follows, or the profile closes; `disconnected` comes too when a script's
+`disconnect()` calls the connect off during the address lookup, or `start()` does for a profile whose
+save did not load. It comes from the event loop.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,

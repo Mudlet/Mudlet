@@ -865,6 +865,7 @@ void cTelnet::disconnectIt()
     mLookingUpHost = false;
     mTimerFailedConnectionRetry->stop();
     mFailedConnectionCount = 0;
+    const bool lookingUpHost = mHostLookupId != -1;
     // There is no socket yet while the name lookup is outstanding, so without
     // this a Disconnect during the lookup is followed by the connection being
     // made anyway when the result arrives.
@@ -872,6 +873,9 @@ void cTelnet::disconnectIt()
     if (mpSocket) {
         // This will write out any pending data before it disconnects...
         mpSocket->disconnectFromHost();
+    }
+    if (lookingUpHost) {
+        emit signal_connectingCalledOff(mpHost);
     }
 }
 
