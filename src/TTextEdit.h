@@ -217,7 +217,7 @@ private:
     static QString byteToLuaCodeOrChar(const char*);
     std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
     int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool* isOutOfbounds, bool* isOverTimeStamp = nullptr) const;
-    int getGraphemeWidth(uint unicode) const;
+    int getGraphemeWidth(uint unicode, QStringView grapheme) const;
     void normaliseSelection();
     // Borrows mScreenBuffer's rows, so it must not outlive a reallocation of it.
     QImage cachedScreen();

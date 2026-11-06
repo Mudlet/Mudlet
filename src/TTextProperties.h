@@ -84,6 +84,16 @@ inline int getWidth(uint unicode, bool mWideAmbigousWidthGlyphs)
     return width > maxWidth ? maxWidth : width;
 }
 
+// Fonts draw a symbol followed by VS16 (U+FE0F) as a colour emoji, which takes two columns whatever the symbol's
+// own width. The only ASCII symbols with an emoji form are keycap bases, which need U+20E3 as well to become one.
+inline int withPresentation(QStringView grapheme, uint base, int baseWidth)
+{
+    if (baseWidth != 1 || grapheme.size() < 2 || !grapheme.contains(QChar(0xFE0F))) {
+        return baseWidth;
+    }
+    return (base >= 0x80 || grapheme.contains(QChar(0x20E3))) ? maxWidth : baseWidth;
+}
+
 
 // Extract the base (first) part which will be one or two QChars
 // and if they ARE a surrogate pair convert them back to the single
@@ -113,6 +123,12 @@ inline uint getBaseCharacter(QStringView str)
     }
 
     return first.unicode();
+}
+
+inline int getGraphemeWidth(QStringView grapheme, bool mWideAmbigousWidthGlyphs)
+{
+    const uint base = getBaseCharacter(grapheme);
+    return withPresentation(grapheme, base, getWidth(base, mWideAmbigousWidthGlyphs));
 }
 } // namespace graphemeInfo
 

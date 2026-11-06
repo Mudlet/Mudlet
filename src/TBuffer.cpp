@@ -6753,9 +6753,8 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         int charWidth = 1;
         if (!plainAscii) {
             nextBoundary = graphemeFinder->toNextBoundary();
-            const uint unicode = graphemeInfo::getBaseCharacter(QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar));
             // Safety check: during destruction, mpHost might be null
-            charWidth = graphemeInfo::getWidth(unicode, mpHost ? mpHost->wideAmbiguousEAsianGlyphs() : false);
+            charWidth = graphemeInfo::getGraphemeWidth(QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar), mpHost ? mpHost->wideAmbiguousEAsianGlyphs() : false);
         }
         const int indentationHere = isNewline ? indent : hangingIndent;
         if (xPos + charWidth > maxWidth - (needsIndent ? indentationHere : 0)) {
@@ -6817,7 +6816,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
             const bool wideAmbiguous = mpHost->wideAmbiguousEAsianGlyphs();
             for (int position = 0; position < textEnd && width <= mWrapAt;) {
                 const int next = graphemeFinder->toNextBoundary();
-                width += graphemeInfo::getWidth(graphemeInfo::getBaseCharacter(QStringView(lineText).mid(position, next - position)), wideAmbiguous);
+                width += graphemeInfo::getGraphemeWidth(QStringView(lineText).mid(position, next - position), wideAmbiguous);
                 position = next;
             }
         }
