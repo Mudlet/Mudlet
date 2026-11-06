@@ -424,6 +424,11 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
         return HANDLER_NEXT_CHAR;
     }
 
+    // TBuffer ignores this newline, so it is no part of the text a <SEND> wraps either
+    if (ch == '\n' && mIgnoreNextNewline && !mReadingLocalText) {
+        return HANDLER_FALL_THROUGH;
+    }
+
     mMxpTagProcessor.handleContent(ch);
 
     return HANDLER_FALL_THROUGH;

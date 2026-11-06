@@ -329,6 +329,18 @@ describe("Tests the MXP line modes a game switches between", function()
     assert.is_true(boldAt("MXPNOBRSTILLBOLD"))
   end)
 
+  it("leaves the newline a NOBR tag ignores out of the text a SEND wraps", function()
+    finally(function() feed("\27[5z\r\n") end)
+    feed("\27[6z\r\n")
+    if type(mxp) == "table" then
+      mxp.send = nil
+    end
+    feed("<SEND>MXPNOBRNORTH<NOBR>\r\nWEST</SEND>\r\n")
+    assert.is_table(mxp.send)
+    assert.are.equal("MXPNOBRNORTHWEST", mxp.send.text)
+    assert.are.same({"send([[\nMXPNOBRNORTHWEST]])"}, mxp.send.actions)
+  end)
+
   it("drops a NOBR tag when the game resets", function()
     assert.equals("MXPNOBRRESET|MXPNOBRAFTERRESET", displayed("MXPNOBRRESET<NOBR>\27[3z\r\nMXPNOBRAFTERRESET\r\n"))
   end)
