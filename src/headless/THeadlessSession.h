@@ -39,6 +39,7 @@ class Host;
 class HostManager;
 class QTimer;
 class TBuffer;
+class QKeyEvent;
 class QMimeData;
 class QPoint;
 
@@ -235,8 +236,10 @@ public:
     // it sends goes then. bindingRan: a binding took it. noBinding: none did, and the app does what the GUI's
     // line does then, as type it. keyKept: the GUI's line keeps the key for itself, as Return, Up or a keypad
     // Enter no binding took, or while hidden input is wanted its box does, typing a printable key into the
-    // password; the app handles it. refused: where submit() is. errorString() says which.
-    enum class KeyResult { bindingRan, noBinding, keyKept, refused };
+    // password; the app handles it. refused: where submit() is. commandRan: the key is the shortcut of a command
+    // addonCommands() lists, which the main window's menu runs ahead of the line's bindings, as
+    // activateAddonCommand() does. errorString() says which.
+    enum class KeyResult { bindingRan, noBinding, keyKept, refused, commandRan };
     // Without the key's text, a printable key with Ctrl+Alt (or Option on macOS) counts as AltGr typing while
     // hidden input is wanted, so no binding is offered it
     KeyResult pressKey(Qt::Key key, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
@@ -532,6 +535,8 @@ private:
     void connectInputRelays(unsigned int run);
     void connectCommandRelays(unsigned int run);
     void disconnectCommandRelays();
+    // The profile's command whose shortcut the GUI's menu runs on the key; 0 for none
+    int addonCommandOnKey(const QKeyEvent& event) const;
     void withdrawSecureConnectionOffer();
     void startMapProgress(const QString& title, const QString& label, int maximum);
     bool finishOpenProgress();

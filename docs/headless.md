@@ -371,6 +371,10 @@ call returns, as an alias does for `submit()`, so the session's signals may be s
   while hidden input is wanted, though the GUI offers it on a layout where that types nothing.
 - `refused`: the call was refused, as `submit()` is. Use `errorString()` to see why; the app should not
   type the key.
+- `commandRan`: the key is the shortcut of a command a script added to the menu, which ran as
+  `activateAddonCommand()` runs it, ahead of the line and its bindings; see "Embedding it: commands and
+  buttons that scripts add". It was added after the others, so an app's `switch` over every
+  `KeyResult` needs a case for it.
 
 A binding matches its key and modifiers exactly, as Qt's key event gives them, which a frontend that is
 not built on Qt has to copy:
@@ -551,8 +555,7 @@ Lua specs that fail with no window, so it is the up-to-date list; the main gaps 
 - the 2D and 3D mappers' views, and map symbols drawn with a font's Private Use Area;
 - the space an internal MXP frame takes from the main console;
 - layout that follows the main window, such as `Adjustable.Container` borders, docked user
-  windows, and the command line a mini console or user window can show;
-- keyboard shortcuts for addon commands, which the main window's menus hold.
+  windows, and the command line a mini console or user window can show.
 
 `.github/workflows/headless-lua-tests.yml` runs the Lua specs in `mudlet-headless`, and
 "The Lua specs with no main window" in `platform-builds.md` explains how to reproduce it.
@@ -648,3 +651,17 @@ its id, as the GUI does. The emergency stop holds the event, as it holds every e
 which the GUI's menu makes before the event is raised. It is false, with `errorString()` saying why,
 for an id that is not a command of the session's profile, and for a disabled command, which the GUI does
 not let be clicked. It is refused where `submit()` is.
+
+`pressKey()` runs a command whose shortcut is the key ahead of the line and its bindings, giving
+`commandRan`, as Qt hands the main window's menu a key before the focused widget has it. The line may
+claim the key first, as the GUI's does, and then the command does not run: the command line, a
+`QPlainTextEdit`, claims the key that toggles caret mode and, alone or with Shift or on the keypad,
+printable keys, Return, Enter, Delete, Backspace, Home, End, Tab and the arrows, and with other
+modifiers copy, paste, cut, undo, redo, select all and the moves and selections by word, line and
+document. While hidden input is wanted the hidden-input box, a `QLineEdit`, claims fewer: not Return,
+Enter, Tab, Up or Down, so a command on one of those runs while the game hides what is typed. Only an
+enabled command of the session's profile that is on the menu runs. A command that a profile opened with
+`loadProfile()` pinned is left out, even though the GUI's menu keeps it whichever profile is in front,
+because `addonCommands()` does not list it and `activateAddonCommand()` does not click it. A keypad key
+matches a shortcut written without the keypad, as in Qt, and a shortcut of more than one key never runs
+from `pressKey()`, which takes one key at a time.
