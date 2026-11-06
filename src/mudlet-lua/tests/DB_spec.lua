@@ -1952,6 +1952,28 @@ describe("Tests DB.lua functions", function()
     end)
   end)
 
+  describe("Tests db query-expression builders on a column whose name holds a backtick", function()
+    after_each(function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_backtickcolumntestingonly.db")
+      mydb = nil
+    end)
+
+    it("db:lt and db:delete select only the rows the filter names", function()
+      mydb = db:create("backtickcolumntestingonly", { items = { name = "", ["it`s"] = 0 } })
+      db:add(mydb.items, {name = "Ada", ["it`s"] = 1}, {name = "Bram", ["it`s"] = 5})
+      local rows = db:fetch(mydb.items, db:lt(mydb.items["it`s"], 3))
+      assert.is_table(rows, "the fetch failed, which db:fetch reports as nil")
+      assert.are.equal(1, #rows)
+      assert.are.equal("Ada", rows[1].name)
+
+      db:delete(mydb.items, db:gt(mydb.items["it`s"], 3))
+      rows = db:fetch(mydb.items)
+      assert.are.equal(1, #rows)
+      assert.are.equal("Ada", rows[1].name)
+    end)
+  end)
+
   describe("Tests db query-expression builders on a column db:create could not add", function()
     after_each(function()
       db:close()

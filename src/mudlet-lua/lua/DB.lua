@@ -2016,7 +2016,7 @@ local function quoted_column(field)
   if getmetatable(field) ~= db.__FieldMT then
     return field.name
   end
-  return "`" .. field.name .. "`"
+  return "`" .. (field.name:gsub("`", "``")) .. "`"
 end
 
 --- Returns the result of calling the specified aggregate function on the field and its sheet. <br/><br/>
