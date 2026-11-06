@@ -99,6 +99,12 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "No active host after profile creation");
 
+        // With no repository index on disk the dialog downloads one each time it opens
+        QFile index(MudletApp::getMudletPath(enums::profileHomePath, mProfileName + QDir::separator() + qsl("mpkg.packages.json")));
+        QVERIFY(index.open(QIODevice::WriteOnly));
+        QVERIFY(index.write(R"({"packages": []})") > 0);
+        index.close();
+
         mpHost->mInstalledPackages << mBarePackage << mNamedPackage;
         mpHost->mPackageInfo.insert(mNamedPackage, {{qsl("mpackage"), qsl("%1.mpackage").arg(mNamedPackage)}, {qsl("title"), qsl("A titled package")}});
     }
