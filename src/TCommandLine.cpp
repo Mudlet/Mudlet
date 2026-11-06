@@ -241,13 +241,18 @@ void TCommandLine::processNormalKey(QEvent* event)
 void TCommandLine::editAndSpellCheck(QEvent* event, const KeyEdit kind)
 {
     const auto* keyEvent = static_cast<QKeyEvent*>(event);
-    // The key and the spell-check mark it leads to are one undo step, or Undo would take
-    // back only the mark, which the check after it puts straight back. Closing a block
-    // after Undo or Redo would split the step they land on.
-    const bool grouped = mpHost->getEnableSpellCheck() && !keyEvent->matches(QKeySequence::Undo) && !keyEvent->matches(QKeySequence::Redo);
+    const int key = keyEvent->key();
+    const bool modifierAlone = key == Qt::Key_Shift || key == Qt::Key_Control || key == Qt::Key_Alt || key == Qt::Key_AltGr || key == Qt::Key_Meta;
+    // Marking after these would put back a mark that Undo just took away, even after
+    // the bare Ctrl a Ctrl+Z starts with; closing a block after Undo or Redo would also
+    // split the step they land on
+    const bool leavesMarksAlone = modifierAlone || keyEvent->matches(QKeySequence::Undo) || keyEvent->matches(QKeySequence::Redo);
+    // The key and the mark it leads to are one undo step, or Undo would take back only the mark
+    const bool grouped = mpHost->getEnableSpellCheck() && !leavesMarksAlone;
     // Outlives the edit block, as contentsChange waits for the block to close
     const UserEditScope userEdit(*this);
-    QTextCursor editBlock(document());
+    // Undo returns the caret to where the cursor that opened the block was
+    QTextCursor editBlock = textCursor();
     if (grouped) {
         // A run of typing stays one step, as Qt makes it with spell check off
         const QTextCursor caret = textCursor();
@@ -259,7 +264,9 @@ void TCommandLine::editAndSpellCheck(QEvent* event, const KeyEdit kind)
         }
     }
     QPlainTextEdit::event(event);
-    spellCheck();
+    if (!leavesMarksAlone) {
+        spellCheck();
+    }
     if (grouped) {
         editBlock.endEditBlock();
         mLastKeyEdit = kind;

@@ -297,6 +297,46 @@ private slots:
         QVERIFY2(markedMisspelt(pCommandLine, qsl("qzxfrob")), "the word Redo brought back lost its mark");
     }
 
+    // Undo puts the caret back where the edit was, so typing after it carries on
+    // there rather than at the start of the line
+    void test_undoLeavesTheCaretWhereTheEditWas()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("go north"));
+        QTest::keyClick(pCommandLine, Qt::Key_Backspace);
+
+        QTest::keySequence(pCommandLine, QKeySequence::Undo);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("go north"));
+        QCOMPARE(pCommandLine->textCursor().position(), 8);
+    }
+
+    // Switching spell check on rechecks the whole line outside any key press. Undo
+    // must get past that recheck too, with the bare Ctrl a real Ctrl+Z starts with.
+    void test_undoGetsPastARecheckOfTheWholeLine()
+    {
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pCommandLine);
+        const auto clearTheLine = qScopeGuard([pCommandLine]() {
+            pCommandLine->clear();
+        });
+        pCommandLine->clear();
+        QTest::keyClicks(pCommandLine, qsl("qzxab"));
+        mpHost->setEnableSpellCheck(false);
+        QTest::keyClicks(pCommandLine, qsl("cd"));
+        mpHost->setEnableSpellCheck(true);
+        mpHost->setUserDictionaryOptions(true, false);
+        QTest::keyClicks(pCommandLine, qsl("ef"));
+
+        for (int presses = 0; presses < 10 && !pCommandLine->toPlainText().isEmpty(); ++presses) {
+            QTest::keyClick(pCommandLine, Qt::Key_Control);
+            QTest::keySequence(pCommandLine, QKeySequence::Undo);
+        }
+
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(), qPrintable(qsl("Undo stuck at \"%1\"").arg(pCommandLine->toPlainText())));
+    }
+
     // Deleting is undone as typing is
     void test_undoTakesBackBackspaceWithSpellCheckOn()
     {
