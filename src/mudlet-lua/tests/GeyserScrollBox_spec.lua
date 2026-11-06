@@ -158,6 +158,31 @@ describe("Tests functionality of Geyser.ScrollBox", function()
       assert.are.same({x = edge(x), y = edge(x / 2), width = edge(x + 200) - edge(x), height = edge(x / 2 + 100) - edge(x / 2)}, geometry("gsbCentred"))
     end)
 
+    it("is placed by constraints that read its unrounded size through a helper", function()
+      local mainWidth = getMainWindowSize()
+      local box
+      local function widthOf(window)
+        return window:get_width()
+      end
+      local function heightOf(window)
+        return window:get_height()
+      end
+      local function lowered()
+        return box and heightOf(box) / 100 or 0
+      end
+      local function twiceWidth()
+        return box and widthOf(box) * 2 or 0
+      end
+      box = track(Geyser.ScrollBox:new({name = "gsbProportioned", x = 0, y = lowered, width = "-10.5px", height = twiceWidth}))
+      box:reposition()
+      local width = mainWidth - 10.5
+      local y = width * 2 / 100
+      local function edge(value)
+        return math.floor(value + 0.5)
+      end
+      assert.are.same({x = 0, y = edge(y), width = edge(width), height = edge(y + width * 2) - edge(y)}, geometry("gsbProportioned"))
+    end)
+
     it("leaves room for the next child when it is a fixed size child of an HBox", function()
       local box = track(Geyser.HBox:new({name = "gsbFixedBox", x = 0, y = 0, width = 300, height = 20}))
       Geyser.ScrollBox:new({name = "gsbFixed", width = "30%", h_policy = Geyser.Fixed}, box)
@@ -257,10 +282,12 @@ describe("Tests functionality of Geyser.ScrollBox", function()
       local scrollBox = track(Geyser.ScrollBox:new({name = "gsbOverridden", x = 30, y = 40, width = 100, height = 80}))
       scrollBox.pixel_geometry = function(self)
         local x, y, width, height = Geyser.Container.pixel_geometry(self)
+        self.placedAt = x
         return x + 5, y, width - #self.name, height
       end
       scrollBox:reposition()
       assert.are.same({x = 35, y = 40, width = 100 - #"gsbOverridden", height = 80}, geometry("gsbOverridden"))
+      assert.are.equal(30, scrollBox.placedAt)
     end)
 
     it("puts its own origin back to zero after repositioning", function()
@@ -472,7 +499,7 @@ describe("Tests functionality of Geyser.ScrollBox", function()
       for _, where in ipairs({"the main thread", "another coroutine"}) do
         it("places a child from its own origin on " .. where .. " after " .. what .. " raised inside a coroutine", function()
           local size = 300
-          local cons = {name = "gsbRaisedInCoroutine", x = 100, y = 50, width = 300, height = 200}
+          local cons = {name = "gsbRaisedInCoroutine", x = 100, y = 50, width = "-10px", height = 200}
           cons[dimension] = function() return size end
           local box = track(Geyser.ScrollBox:new(cons))
           local label = track(Geyser.Label:new({name = "gsbRaisedInCoroutineChild", x = 0, y = 0, width = 50, height = 50}, box))
@@ -480,13 +507,20 @@ describe("Tests functionality of Geyser.ScrollBox", function()
           local raising = coroutine.create(function() raise(box, label) end)
           local finished = coroutine.resume(raising)
           size = 300
+          local placed, widened
           runOn(where, function()
             label:resize(50, 50)
             label:move(10, 20)
+            placed = geometry("gsbRaisedInCoroutineChild")
+            label:resize("100%", 50)
+            widened = geometry("gsbRaisedInCoroutineChild")
           end)
           assert.is_false(finished)
           assert.are.equal("dead", coroutine.status(raising))
-          assert.are.same({x = 10, y = 20, width = 50, height = 50}, geometry("gsbRaisedInCoroutineChild"))
+          assert.are.same({x = 10, y = 20, width = 50, height = 50}, placed)
+          -- the far edge width needs the box's real x while it measures itself
+          local width = dimension == "width" and 300 or getMainWindowSize() - 110
+          assert.are.same({x = 10, y = 20, width = width, height = 50}, widened)
         end)
       end
     end
