@@ -31,7 +31,7 @@ static inline quint64 gramStep(const quint64 v, const QChar c)
     return v * 0x100000001b3ULL + c.unicode();
 }
 
-// Both bytes of each code unit go in, so text outside Latin-1 still spreads over the set
+// Both bytes of each code unit go in, so text outside Latin-1 still spreads over mPrefixBits
 static inline quint32 prefixKey(const QChar first, const QChar second)
 {
     const char16_t a = first.unicode();
@@ -77,7 +77,7 @@ static inline double characterScore(const QChar c)
 
 quint32 TTriggerPrescan::gramBit(const quint64 gram)
 {
-    // Fold the length in too, or a short and a long gram that hashed alike would share a bit.
+    // Fold the prefix and length in too, or grams whose low halves hashed alike would share a bit.
     const quint32 folded = static_cast<quint32>(gram ^ (gram >> 32));
     return (folded ^ (folded >> 16)) & scmGramBitsMask;
 }
@@ -260,7 +260,7 @@ void TTriggerPrescan::hits(const QString& line, std::vector<int>& out) const
     const QChar* const data = line.constData();
     const int size = static_cast<int>(line.size());
     // Positions in the outer loop, so one rolling hash serves every length and a position no filed
-    // gram starts at costs one bit test
+    // gram starts at usually costs one bit test
     for (int i = 0; i + scmMinGramLength <= size; ++i) {
         const quint32 prefix = prefixKey(data[i], data[i + 1]);
         if (!(mPrefixBits[prefix >> 6] & (1ULL << (prefix & 63)))) {

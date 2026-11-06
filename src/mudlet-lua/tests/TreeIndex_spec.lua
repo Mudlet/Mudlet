@@ -420,7 +420,7 @@ describe("trigger matching through the whole-tree index", function()
         assert.are.same({root = 2}, fired, "refiling the tree must keep the roots filed alongside it")
     end)
 
-    -- The padding is filed under five-long grams, so these leave length three unused between them
+    -- The padding is filed under five-long grams, so these leave length three unused unless an earlier spec filed one
     itIndexed("fires triggers filed under grams of different lengths, on lines shorter than the longest", function()
         local filedBefore = filedCount()
         assert(permSubstringTrigger("treeindex two", packageName, {"qj"}, 'TreeIndexSpecNote("two")'))
@@ -447,7 +447,7 @@ describe("trigger matching through the whole-tree index", function()
     end)
 
     -- More than everything else filed, so that killing them all leaves more of the index abandoned than
-    -- filed and it compacts what is left
+    -- filed and it compacts what is left; filedCount() leaves out filed roots, which the 2000 covers
     itIndexed("fires the triggers left filed after killing enough root triggers to compact the index", function()
         local ids = {}
         finally(function()

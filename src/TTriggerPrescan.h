@@ -99,7 +99,7 @@ private:
     std::vector<quint64> mGramPool;
     int mFiledGrams = 0;
     std::vector<int> mFreeSlots;
-    // Grams filed per length, so a line is only walked at lengths in use
+    // Grams filed per length, so hits() stops at the longest in use and looks up no gram of an unused one
     std::array<int, scmMaxGramLength + 1> mLengthUse{};
     mutable std::vector<quint32> mSeen;
     mutable quint32 mGeneration = 0;
