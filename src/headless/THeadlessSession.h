@@ -20,8 +20,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TDebug.h"
+
 #include <QColor>
 #include <QFlags>
+#include <QFont>
 #include <QList>
 #include <QObject>
 #include <QPointer>
@@ -33,6 +36,7 @@
 
 class Host;
 class HostManager;
+class TBuffer;
 
 // One profile run with no window, for a frontend of its own (a terminal, a phone app) to feed input and
 // show the main console. It touches no terminal or standard stream itself, and like Host it is used on the
@@ -124,16 +128,23 @@ public:
     StartResult start(const Options&);
     // Why the last call that failed did
     QString errorString() const { return mErrorString; }
+    // The font the main console is drawn in, a default QFont with no profile open: read it at profileLoaded, then
+    // follow consoleFontChanged
+    QFont consoleFont() const;
     // For what the session does not cover, such as settings and the map. Null once the profile closes, so
-    // hold it in a QPointer. Not from a handler of outputLine, localText, errorConsoleText, hiddenInputWanted or a
-    // ...Requested signal: a line it fed would be committed in the middle of a write, which TBuffer does not allow.
+    // hold it in a QPointer. Not from a handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, debugText,
+    // hiddenInputWanted or a ...Requested signal: a line it fed would be committed in the middle of a write, which TBuffer
+    // does not allow.
     Host* host() const;
 
     // As typed on the command line: its aliases run, and what is sent while not connected is echoed and dropped
     // with nothing said, as in the GUI, so a frontend that types ahead waits for connected(). These, and
-    // installPackage(), are refused while a profile loads or shutdown() runs, and from a handler of
-    // outputLine, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal, which run mid-write, and
-    // fail once a close of the profile has begun; submit() checks each line of a paste as a call.
+    // installPackage(), are refused while a profile loads or shutdown() runs, and from a handler of outputLine,
+    // lineShown, mainConsoleCleared, localText, errorConsoleText, debugText, hiddenInputWanted or a ...Requested
+    // signal, which run mid-write, and fail once a close of the profile has begun; submit() checks each line of a
+    // paste as a call. It is the app's input line being sent: the main command line holds the line while its aliases
+    // run, then is emptied or kept as the profile says. A command from elsewhere, such as a button, goes through
+    // runLua() and expandAlias(), which leave the line alone.
     bool submit(const QString& line);
     // As the GUI's hidden-input box sends what is typed into it while hiddenInputWanted holds: straight to the
     // game, with its carriage returns and line feeds taken out, and no aliases, command separator,
@@ -168,6 +179,18 @@ public:
     // size in pixels. As in the GUI, a width below 40 is taken as 40 and the game is told no more than the
     // profile's wrap width. Refused below 1 or above 65535, which NAWS cannot carry, and where submit() is.
     bool setScreenSize(int columns, int rows);
+    // Shows or closes the Central Debug Console, as the editor's button does: while it is shown, debugText carries
+    // what it prints, what was kept from before first, and the profiles write what they write only in debug mode.
+    // There is one for the whole process, owned by the session that showed it last: showing it here takes it from
+    // another, whose debugConsoleShown() then answers false and whose false is refused. It closes with the owner's
+    // shutdown() or deletion too. Works before start(); refused while a profile loads, during shutdown() and from a
+    // handler.
+    bool setDebugConsoleShown(bool shown);
+    bool debugConsoleShown() const;
+    // Which kinds of message the console prints, for the whole process. Until set, TDebug's defaults, which hide
+    // GameLine, TriggerDetail, LuaSuccess and Selection; the choice saved by the GUI's console is not read.
+    void setDebugCategories(TDebug::Categories categories);
+    TDebug::Categories debugCategories() const;
     // Answers the game's offer of a secure port, as the GUI's Yes and No do: true stores that port with TLS on,
     // as the connection dialog would, and connects there, so a frontend that passes its own port to a later
     // start() passes tls with it; false reconnects where it was and stops the profile asking again. False, with
@@ -184,6 +207,58 @@ public:
     // mapProgressCancelDisabled, and where submit() is refused, save that a JSON map that start() loads can be
     // aborted from a handler of its mapProgressStarted.
     bool cancelMapOperation();
+    // A key pressed as on the GUI's input line, which offers it to the profile's key bindings where that line
+    // would: the first that matches runs, or each one when the profile runs them all. The key and modifiers are
+    // those of Qt's key event, which a binding must match exactly, so a key on the keypad carries
+    // Qt::KeypadModifier. The binding's script runs before this returns, as an alias does for submit(), and what
+    // it sends goes then. bindingRan: a binding took it. noBinding: none did, and the app does what the GUI's
+    // line does then, as type it. keyKept: the GUI's line keeps the key for itself, as Return, Up or a keypad
+    // Enter no binding took, or while hidden input is wanted its box does, typing a printable key into the
+    // password; the app handles it. refused: where submit() is. errorString() says which.
+    enum class KeyResult { bindingRan, noBinding, keyKept, refused };
+    // Without the key's text, a printable key with Ctrl+Alt (or Option on macOS) counts as AltGr typing while
+    // hidden input is wanted, so no binding is offered it
+    KeyResult pressKey(Qt::Key key, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    // With what the key typed, as QKeyEvent::text(), even if empty, by which the hidden-input box judges it as
+    // the GUI's does
+    KeyResult pressKey(Qt::Key key, Qt::KeyboardModifiers modifiers, const QString& text);
+    // typed: the player typed it. notTyped: the app set it itself, as the GUI's line does for a history recall
+    // or Tab completion, or put back text from a script that it set aside while hidden input was wanted.
+    enum class CommandLineEdit { typed, notTyped };
+    // What the player has typed so far on the app's input line, which a script's getCmdLine() then reads, as it
+    // reads the GUI's command line. Set again as the line changes; after a submit() the line is as the profile
+    // leaves it, and commandLineTextRequested says when Mudlet empties it. No commandLineTextRequested follows
+    // this. While hidden input is wanted only an empty line is taken. A line the player typed ahead of the game's
+    // request to hide input leaves Mudlet's copy before a trigger runs on any line that reaches Mudlet after that
+    // request, and typedLineMoveRequested ahead of hiddenInputWanted tells the app to move it into its hidden
+    // input; a line ended by a go-ahead ahead of the request, even in the same read, has its triggers run on the
+    // line as it was, in the GUI too. Refused where submit() is.
+    bool setCommandLineText(const QString& text, CommandLineEdit edit = CommandLineEdit::typed);
+    // The GUI's replay toolbar, for a replay of the session's profile: pauseReplay() holds it where it is and
+    // resumeReplay() lets it carry on, each false unless it is playing or held as it needs; stopReplay() ends it
+    // as the toolbar's Stop does, saying so in localText. False with no replay of this profile playing, though one
+    // a script began counts before replayStarted arrives, while a script of the profile runs, as from a nested
+    // event loop in the middle of a replayed chunk, and where submit() is refused.
+    bool pauseReplay();
+    bool resumeReplay();
+    bool stopReplay();
+    // Whether the replay of the session's profile is held, as the toolbar reads it; one paused before its
+    // replayStarted arrives is still held when it does
+    bool replayPaused() const;
+    // The toolbar's faster and slower buttons: doubles or halves the speed of the profile's replay, within 1 and
+    // 1024 times. Even at either end it is true and replaySpeedChanged follows with the speed it stays at, as the
+    // toolbar's buttons do. Refused as pauseReplay() is.
+    bool changeReplaySpeed(bool faster);
+    // How many times its recorded pace the profile's replay plays at; -1 with none of this profile playing
+    int replaySpeed() const;
+    // The recording's own timestamp of the line the profile's replay is waiting to play, as the toolbar's time
+    // shows it: at the end of a gap as soon as the gap begins, so held there, ahead of what has been shown, while
+    // paused. -1 with none of this profile playing. Read from anywhere, a handler of outputLine included.
+    qint64 replayElapsedMSecs() const;
+    // A copy of the main command line's history, newest first, as the GUI's up arrow walks it: each line submit()
+    // sent, once, as its aliases left the line, and what the profile's earlier sessions kept, but nothing sent while
+    // hidden input was wanted. Empty with no profile open too, which host() tells apart. Read from anywhere.
+    QStringList commandHistory() const;
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -216,10 +291,39 @@ signals:
     void outputLine(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs);
     // What the GUI shows only on the profile's own screen, in pieces that need not end a line: text
     // written to the main console that the game did not send (echo(), print(), commands, Mudlet's
-    // messages), and the error console. Sent as written, so a handler may neither call the session nor
-    // run the event loop.
+    // messages), and the error console. While lineShown is connected, it leaves out what that sends, as
+    // docs/headless.md tells. Sent as written, so a handler may neither call the session nor run the event loop.
     void localText(const QString& profile, const QString& text);
     void errorConsoleText(const QString& profile, const QString& text);
+    // A line of outputLine's as the main console shows it once its triggers have run: with what they replaced,
+    // recoloured or wrote into it, which may hold line feeds, and not at all if they deleted it. Lines a trigger
+    // feeds follow the line it ran on, as they are shown, and so does what it wrote anywhere else (an echo()
+    // after deleteLine(), clearWindow() or a feedTriggers(), a send()'s command echo), as lines of their own.
+    // Sent whole, before the console wraps it or after a trigger's wrapLine() split it, and not again for a later
+    // change to it. Sent mid-write, as outputLine is, with the same arguments.
+    void lineShown(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs);
+    // A script emptied the main console, as clearWindow() does; lines from before it that lineShown has yet to
+    // send are dropped. Sent mid-write, as outputLine is, so a handler may neither call the session nor run the
+    // event loop.
+    void mainConsoleCleared(const QString& profile);
+    // The profile started or stopped logging the game's text to a file, where the GUI's logging button changes:
+    // from a script's startLogging(), or as it loads with logging left on. fileName is the log being written,
+    // empty once it stops. Also false, with logging still off, when a start fails (the reason is printed, as
+    // localText), and once the profile closes, or shutdown() or a later start() lets it go, while it logs, though
+    // not for the session being deleted. From the event loop.
+    void loggingChanged(const QString& profile, bool logging, const QString& fileName);
+    // The main console's font changed, by whatever changed it: a script's setFont() or setFontSize(), the load of
+    // the profile's save, the bundled default standing in for a family that is missing, or a package bringing that
+    // family or taking it away. The font the GUI would now draw it in, whose character cell setScreenSize() counts
+    // in. From the event loop, with the font as it is then, and only when that differs from the one last sent or
+    // the one consoleFont() gave at profileLoaded, so what the load did never follows it.
+    void consoleFontChanged(const QString& profile, const QFont& font);
+    // What the Central Debug Console prints, from any profile, marked with the profile's tag while more than one
+    // is open, while setDebugConsoleShown() has it shown. Text to append as given, as the console does: a line ends
+    // at its own newline and may come in pieces of different colours, as "ERROR:" and then why. arrivalMSecs is
+    // when it was written, in milliseconds since the epoch, so earlier than now for what was kept from before the
+    // console was shown. Sent as written, so a handler may neither call the session nor run the event loop.
+    void debugText(const QString& text, const QColor& foreground, const QColor& background, qint64 arrivalMSecs);
     // What the GUI shows outside the profile's screen: a script's showNotification(), which answers true only
     // when this signal is connected and not blocked, with no milliseconds for the system's own time; and a
     // script's alert() or the game's bell, asking for the player's attention for that long, 0 until they come
@@ -277,6 +381,16 @@ signals:
     void replayStarted(const QString& profile);
     void replaySpeedChanged(const QString& profile, int speed);
     void replayFinished(const QString& profile);
+    // The whole of the main command line once a script's printCmdLine(), appendCmdLine(), clearCmdLine() or
+    // sendCmdLine() sets it, or submit() empties it, for the app's input line to show. What a script sets while
+    // hidden input is wanted is lost, as the GUI writes it into its hidden-input box instead. Sent as it is set, so
+    // a handler may neither call the session nor run the event loop.
+    void commandLineTextRequested(const QString& profile, const QString& text);
+    // What the player typed ahead of the game's request to hide input has left Mudlet's copy of the line, as the
+    // GUI's hidden-input box takes it from its command line: the app moves its input line's text into its hidden
+    // input and empties the line. Just before hiddenInputWanted turns on; a handler may neither call the session
+    // nor run the event loop.
+    void typedLineMoveRequested(const QString& profile);
     // The connection was made; from the event loop
     void connected(const QString& profile);
     // The connection ended, or could not be made; from the event loop
@@ -291,7 +405,23 @@ private:
     void withdrawSecureConnectionOffer();
     void startMapProgress(const QString& title, const QString& label, int maximum);
     bool finishOpenProgress();
+    // Told as they happen and sent from the event loop in that order, or by finishOpenProgress() if it comes
+    // first; MudletReplay forgets its host before it says it is over, so whose replay it was is known only then
+    enum class ReplaySignal { started, speedChanged, finished };
+    void queueReplaySignal(ReplaySignal, int speed = 0);
+    bool sendReplaySignals();
     void lineCommitted(int lineIndex);
+    // text is null when the app did not give it
+    KeyResult offerKey(Qt::Key, Qt::KeyboardModifiers, const QString* text);
+    void triggerPassEnded(int lineIndex, int lastSegment);
+    bool lineShownWanted() const;
+    bool lineShownTaken() const;
+    struct ShownLine;
+    ShownLine wholeLine(const TBuffer& buffer, int first, int last) const;
+    QList<ShownLine> takeTriggerWrites(bool taken);
+    // False if a handler deleted the session
+    bool sendShownLines(const QList<ShownLine>& lines);
+    void closeDebugConsole();
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
@@ -312,18 +442,40 @@ private:
     QString mMapProgressLabel;
     int mMapProgressValue = 0;
     int mMapProgressMaximum = 0;
-    // The profile hidden input, a map operation, a package download or a replay was reported started for, until
-    // its end is
+    // The profile hidden input, logging, a map operation, a package download or a replay was reported started for,
+    // until its end is
     std::optional<QString> mHiddenInputFor;
+    std::optional<QString> mLoggingFor;
     std::optional<QString> mMapProgressFor;
     std::optional<QString> mPackageDownloadFor;
     std::optional<QString> mReplayFor;
+    struct QueuedReplaySignal
+    {
+        ReplaySignal signal;
+        QString profile;
+        int speed = 0;
+    };
+    QList<QueuedReplaySignal> mReplaySignals;
+    // What consoleFont() gave at profileLoaded, then each consoleFontChanged; none before the load ends
+    std::optional<QFont> mDeliveredConsoleFont;
     bool mMapOperationCancelable = false;
     QStringList mUnsavedProfiles;
     // Bumped by each start() and shutdown(), to drop a queued quitRequested or other relay owed to the profile
     // before, even one a script closed before shutdown() was called
     unsigned int mRun = 0;
     std::unique_ptr<HostManager> mpPool;
+    struct ShownLine
+    {
+        QString text;
+        bool isPrompt = false;
+        QList<TextRun> runs;
+    };
+    // For each trigger pass under way, outermost first, the lines that passes nested in it have shown
+    QList<QList<ShownLine>> mShownLinesOfPasses;
+    // Whether lineShown was connected as the line the passes under way began with was committed
+    bool mLineShownLatched = false;
+    class DebugSink;
+    std::unique_ptr<DebugSink> mpDebugSink;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(THeadlessSession::TextStyles)
