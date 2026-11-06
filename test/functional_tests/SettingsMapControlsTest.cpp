@@ -233,6 +233,12 @@ private slots:
         auto& console = mpHost->mainConsoleView()->buffer;
         const int mark = std::max(0, console.getLastLineNumber());
 
+        // A native dialog has no file name field to type into
+        const bool priorNative = QCoreApplication::testAttribute(Qt::AA_DontUseNativeDialogs);
+        QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, true);
+        const auto restoreNative = qScopeGuard([priorNative]() {
+            QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, priorNative);
+        });
         mpPreferences->pushButton_saveMap->click();
         QFileDialog* pDialog = nullptr;
         QVERIFY(QTest::qWaitFor(
@@ -261,7 +267,8 @@ private slots:
             return shown().contains(qsl("could not open save file"));
         };
         QVERIFY2(QTest::qWaitFor(saysWhy, 5s), qPrintable(qsl("the console does not say why: '%1'").arg(shown())));
-        QVERIFY2(!shown().contains(qsl("&amp;")), qPrintable(qsl("the console shows the path HTML-escaped: '%1'").arg(shown())));
+        // Spaces dropped, since a wrap can fall inside the path
+        QVERIFY2(shown().remove(QChar::Space).contains(qsl("/%1\"").arg(name)), qPrintable(qsl("the console does not show the path as typed: '%1'").arg(shown())));
     }
 };
 
