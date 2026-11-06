@@ -3148,7 +3148,7 @@ describe("Tests mapper functions against a shared fixture", function()
       end)
 
       assert.is_true(getPath(rA1, rA3))
-      assert.is_true(calls <= 2 * perBuild, tostring(calls))
+      assert.are.equal(2 * perBuild, calls)
       local callsBuilding = calls
       assert.is_true(getPath(rA1, rA3))
       assert.are.equal(callsBuilding, calls)

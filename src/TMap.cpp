@@ -960,8 +960,7 @@ void TMap::initGraph()
     _time.start();
     const ScriptCallbackScope callbackScope(this);
     mGraphBuildInProgress = true;
-    // Before the build, so an edit the exit weight filter makes mid-build, to rooms the build may
-    // already have read, leaves the graph marked stale
+    // Before the build, as the exit weight filter can edit rooms the build has already read
     mMapGraphNeedsUpdate = false;
     locations.clear();
     locations.reserve(mpRoomDB->getRoomMap().size());
