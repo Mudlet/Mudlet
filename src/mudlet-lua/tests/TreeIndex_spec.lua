@@ -420,6 +420,56 @@ describe("trigger matching through the whole-tree index", function()
         assert.are.same({root = 2}, fired, "refiling the tree must keep the roots filed alongside it")
     end)
 
+    -- The padding is filed under five-long grams, so these leave length three unused between them
+    itIndexed("fires triggers filed under grams of different lengths, on lines shorter than the longest", function()
+        local filedBefore = filedCount()
+        assert(permSubstringTrigger("treeindex two", packageName, {"qj"}, 'TreeIndexSpecNote("two")'))
+        assert(permSubstringTrigger("treeindex four", packageName, {"vqxz"}, 'TreeIndexSpecNote("four")'))
+        feed("treeindex warm-up line")
+        assert.are.equal(filedBefore + 2, filedCount(), "both are long enough to be filed")
+
+        feed("qj and vqxz and treeindex_padding_7_bait", "qj", "vqxz", "this ends in qj", "q j and vqx z hold neither")
+
+        assert.are.same({two = 3, four = 2, padding = 1}, fired)
+    end)
+
+    itIndexed("fires a trigger whose text is outside Latin-1", function()
+        local filedBefore = filedCount()
+        assert(permSubstringTrigger("treeindex cjk", packageName, {"龍虎"}, 'TreeIndexSpecNote("cjk")'))
+        assert(permSubstringTrigger("treeindex cyrillic", packageName, {"жщюфы"}, 'TreeIndexSpecNote("cyrillic")'))
+        assert(permSubstringTrigger("treeindex astral", packageName, {"🐉qz"}, 'TreeIndexSpecNote("astral")'))
+        feed("treeindex warm-up line")
+        assert.are.equal(filedBefore + 3, filedCount())
+
+        feed("the 龍虎 banner", "ends in жщюфы", "🐉qz", "龍 虎 and жщю фы and 🐉 qz hold none")
+
+        assert.are.same({cjk = 1, cyrillic = 1, astral = 1}, fired)
+    end)
+
+    -- More than everything else filed, so that killing them all leaves more of the index abandoned than
+    -- filed and it compacts what is left
+    itIndexed("fires the triggers left filed after killing enough root triggers to compact the index", function()
+        local ids = {}
+        finally(function()
+            for _, id in ipairs(ids) do
+                killTrigger(id)
+            end
+        end)
+        for index = 1, 2000 + 2 * filedCount() do
+            ids[#ids + 1] = tempTrigger("treeindex_churn_" .. index .. "_bait", function() end)
+        end
+        feed("treeindex warm-up line")
+        for _, id in ipairs(ids) do
+            killTrigger(id)
+        end
+        ids = {}
+        feed("treeindex warm-up line")
+
+        feed("treeindex_padding_7_bait", "treeindex_sub_bait")
+
+        assert.are.same({padding = 1, substring = 1}, fired)
+    end)
+
     -- Last, as it takes the fixture away: a script's uninstall takes filed
     -- triggers away at the end of the line, which the index's next filing has
     -- to survive - the sanitiser builds are what would catch it not doing so
