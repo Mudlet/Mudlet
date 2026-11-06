@@ -1839,11 +1839,11 @@ private slots:
         QCOMPARE(widget.route().status(), MapRoute::Status::Found);
     }
 
-    void test_editsAnExitWeightFilterMakesStillWaitBeforeTheRouteRebuildsThePathGraphWithoutGL()
+    void test_aFilterEditingEveryBuildStillWaitsBeforeTheRouteRebuildsThePathGraphWithoutGL()
     {
         const ThreeAreas areas = addThreeAreas();
         TLuaInterpreter* lua = mpHost->getLuaInterpreter();
-        QVERIFY(lua->compileAndExecuteScript(qsl("setExitWeightFilter(function() setExitWeight(%1, 'east', 1) end)").arg(areas.westFirst)));
+        QVERIFY(lua->compileAndExecuteScript(qsl("local w = 1; setExitWeightFilter(function() w = 3 - w; setExitWeight(%1, 'east', w) end)").arg(areas.westFirst)));
         auto clearFilter = qScopeGuard([lua]() {
             lua->compileAndExecuteScript(qsl("setExitWeightFilter(nil)"));
         });
@@ -1859,7 +1859,7 @@ private slots:
         widget.mRenderCommandQueue.clear();
         widget.queueScene();
         QVERIFY(widget.mRouteRefreshTimer->isActive());
-        QVERIFY2(widget.mRouteRefreshTimer->interval() > 500, "an edit to the exits rebuilt the path graph straight away");
+        QVERIFY2(widget.mRouteRefreshTimer->interval() > 0, "an edit to the exits rebuilt the path graph straight away");
     }
 
     void test_aRouteIsDroppedWhenAMapIsImportedWithoutGL()

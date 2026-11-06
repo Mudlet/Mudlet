@@ -3992,7 +3992,6 @@ int TLuaInterpreter::setExit(lua_State* L)
 
     const Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpMap->setExit(from, to, dir));
-    host.mpMap->mMapGraphNeedsUpdate = true;
     if (auto* pR = host.mpMap->mpRoomDB->getRoom(from)) {
         host.mpMap->updateArea(pR->getArea());
     }
@@ -4599,10 +4598,11 @@ int TLuaInterpreter::setRoomWeight(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("weight %1 is outside of the usable range of 1 to %2").arg(QString::number(w), QString::number(std::numeric_limits<int>::max())));
     }
 
-    pR->setWeight(w);
-    host.mpMap->setUnsaved(__func__);
-    host.mpMap->updateArea(pR->getArea());
-    host.mpMap->mMapGraphNeedsUpdate = true;
+    if (pR->setWeight(w)) {
+        host.mpMap->setUnsaved(__func__);
+        host.mpMap->updateArea(pR->getArea());
+        host.mpMap->mMapGraphNeedsUpdate = true;
+    }
     lua_pushboolean(L, true);
     return 1;
 }

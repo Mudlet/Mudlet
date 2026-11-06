@@ -661,6 +661,9 @@ bool TMap::setExit(int from, int to, int dir)
     if (to < 1) {
         to = -1;
     }
+    if (to > 0 && pR->getExit(dir) == to && !pR->hasExitStub(dir)) {
+        return mpRoomDB->getArea(pR->getArea()) != nullptr;
+    }
 
     bool ret = true;
 
@@ -957,8 +960,8 @@ void TMap::initGraph()
     _time.start();
     const ScriptCallbackScope callbackScope(this);
     mGraphBuildInProgress = true;
-    // Cleared before the build, not after: the exit weight filter can edit the map mid-build, and only
-    // the next build can see that edit.
+    // Before the build, so an edit the exit weight filter makes mid-build, to rooms the build may
+    // already have read, leaves the graph marked stale
     mMapGraphNeedsUpdate = false;
     locations.clear();
     locations.reserve(mpRoomDB->getRoomMap().size());
@@ -1189,6 +1192,10 @@ bool TMap::findPath(int from, int to)
 
     if (mMapGraphNeedsUpdate) {
         initGraph();
+        // Once more if the exit weight filter edited the map mid-build, but no more: it can edit on every build
+        if (mMapGraphNeedsUpdate) {
+            initGraph();
+        }
     }
 
     QElapsedTimer t;
