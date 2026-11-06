@@ -29,6 +29,8 @@
  * Run with: ctest -R MapCopyTest -V
  */
 
+#include <algorithm>
+
 #include <QDir>
 #include <QMenu>
 #include <QPushButton>
@@ -40,6 +42,7 @@
 
 #include "Host.h"
 #include "MudletApp.h"
+#include "TMainConsole.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -78,6 +81,17 @@ private:
     }
 
     static QStringList areaNames(Host* pHost) { return pHost->mpMap->mpRoomDB->getAreaNamesMap().values(); }
+
+    // The names the source's save can get in the next few seconds
+    static QStringList comingMapNames()
+    {
+        QStringList names;
+        const QDateTime now = QDateTime::currentDateTime();
+        for (int seconds = 0; seconds < 5; ++seconds) {
+            names << qsl("%1map.dat").arg(now.addSecs(seconds).toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+        }
+        return names;
+    }
 
     static void buildMap(Host* pHost, const QString& areaName, const int rooms)
     {
@@ -249,16 +263,51 @@ private slots:
         if (QTest::currentTestFailed()) {
             return;
         }
-        // Taken: the names the source's save can get in the next few seconds, as a copy will not overwrite a file
-        const QDateTime now = QDateTime::currentDateTime();
-        for (int seconds = 0; seconds < 5; ++seconds) {
-            QVERIFY(QFile::copy(own, qsl("%1/%2map.dat").arg(mapDir, now.addSecs(seconds).toString(qsl("yyyy-MM-dd#HH-mm-ss")))));
+        // Taken by folders, which a copy can neither remove nor write over
+        for (const auto& name : comingMapNames()) {
+            QVERIFY(QDir().mkpath(qsl("%1/%2").arg(mapDir, name)));
         }
+        const int mark = std::max(0, mpSource->mainConsoleView()->buffer.getLastLineNumber());
 
         mpPreferences->pushButton_copyMap->click();
 
         QVERIFY2(!areaNames(mpDestination).contains(mCopiedArea), "the copy went through, so the save landed outside the taken names");
         QVERIFY2(mpDestination->mpMap->mpRoomDB->getRoom(100), "the destination dropped the room it had not saved yet");
+        const QString label = mpPreferences->label_mapFileActionResult->text();
+        QVERIFY2(label.startsWith(qsl("Could not copy the map to %1").arg(mDestinationName)), qPrintable(qsl("the copy that failed ended on '%1'").arg(label)));
+        QStringList lines;
+        for (int line = mark; line <= mpSource->mainConsoleView()->buffer.getLastLineNumber(); ++line) {
+            lines << mpSource->mainConsoleView()->buffer.line(line);
+        }
+        // As one line, since the console wraps long messages
+        const QString console = lines.join(QChar::Space).simplified();
+        QVERIFY2(console.contains(qsl("Unable to copy the map to profile \"%1\". reason: Destination file exists").arg(mDestinationName)),
+                 qPrintable(qsl("the console does not say why: '%1'").arg(console)));
+    }
+
+    // As when the button is clicked twice in a row
+    void test_aCopyReplacesOneMadeEarlierInTheSameSecond()
+    {
+        const QString mapDir = MudletApp::getMudletPath(enums::profileMapsPath, mDestinationName);
+        QDir(mapDir).removeRecursively();
+        QVERIFY(QDir().mkpath(mapDir));
+        buildMap(mpSource, qsl("The earlier copy"), 2);
+        const QString earlier = MudletApp::getMudletPath(enums::profileMapPathFileName, mSourceName, qsl("earlier.dat"));
+        QVERIFY(mpSource->saveMapFile(earlier));
+        for (const auto& name : comingMapNames()) {
+            QVERIFY(QFile::copy(earlier, qsl("%1/%2").arg(mapDir, name)));
+        }
+        QVERIFY(QFile::remove(earlier));
+        buildMap(mpSource, mCopiedArea, scmCopiedRooms);
+        openPreferencesAndTick({mDestinationName});
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        mpPreferences->pushButton_copyMap->click();
+
+        QVERIFY2(areaNames(mpDestination).contains(mCopiedArea), qPrintable(qsl("the destination has %1 open instead of the copy").arg(areaNames(mpDestination).join(qsl(", ")))));
+        QCOMPARE(mpPreferences->label_mapFileActionResult->text(), qsl("Map copied, now signalling other profiles to reload it."));
     }
 
     // Deleted in the connection dialog while these preferences were open
