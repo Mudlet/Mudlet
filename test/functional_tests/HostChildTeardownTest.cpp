@@ -595,7 +595,10 @@ private slots:
         const QString profileName = qsl("HostChildTeardown-ScrollBoxMiniConsole");
         Host* pHost = startProfile(profileName);
         QVERIFY2(pHost, "Profile took too long to load");
+        QMetaObject::Connection commandLineGoing;
         auto cleanUp = qScopeGuard([&]() {
+            // A failed check leaves the command line for deleteHost(), past what its handler reaches
+            disconnect(commandLineGoing);
             if (HostManager::self()->getHost(profileName)) {
                 pHost->forceClose();
                 pHost->requestClose();
@@ -615,7 +618,7 @@ private slots:
         QVERIFY2(pCommandLine, "enableCommandLine() gave the mini console no command line");
 
         bool listedAsItsCommandLineWent = false;
-        connect(pCommandLine, &QObject::destroyed, this, [&]() {
+        commandLineGoing = connect(pCommandLine, &QObject::destroyed, this, [&]() {
             listedAsItsCommandLineWent = pMainConsole->subConsoleWidget(consoleName) != nullptr;
         });
         QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("deleteScrollBox('teardownBox')")));
