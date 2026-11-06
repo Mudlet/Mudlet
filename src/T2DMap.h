@@ -464,7 +464,8 @@ private:
     // What drawing the rooms resolved: the click it used up, and how the exits were gathered
     void takePainterResults();
     void startPendingSpeedWalk();
-    void resolveAreaExitClick(QPainter&, const QMap<int, QPointF>& areaExitsMap, const int speedWalkStartRoomId);
+    void applyPaintedView(const TMapPainter::View& before, const TMapPainter::View& after);
+    void applyPaintResult(const TMapPainter::View& before, const TMapPainter::PaintResult&);
     void addClickedRoomsToSelection(const QList<int>& hitRooms, Qt::KeyboardModifiers modifiers);
     void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
 
@@ -496,11 +497,8 @@ private:
     // as we now show room names (if present) as well.
     bool mIsSelectionUsingNames = false;
     TMapPainter mPainter;
-    // The round rooms setting mSymbolPixmapCache was drawn for
-    bool mSymbolCacheBubbleMode = false;
     // Whether the mapper's area box names the area this map shows
     bool mAreaWidgetValid = true;
-    QFont mMapSymbolFont;
     // in the players current area, how many digits does the biggest room number have?
     quint8 mMaxRoomIdDigits = 0;
     // Cache for the above: recomputing it is a scan of every room in the area,
