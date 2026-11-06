@@ -181,6 +181,37 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.equals(200, ac:get_height())
       assert.is_false(windowVisible(ac.exitLabel.name))
     end)
+
+    it("is created with its untranslated menu texts when the translations cannot be found, looking only once", function()
+      local realLocale, realLoadTranslations = Adjustable.Container.Locale, _G.loadTranslations
+      local names = {"testUntranslatedContainer", "testUntranslatedContainer2"}
+      finally(function()
+        Adjustable.Container.Locale, _G.loadTranslations = realLocale, realLoadTranslations
+        for _, name in ipairs(names) do
+          if Geyser.windowList[name] then
+            Geyser.windowList[name]:delete()
+          end
+        end
+      end)
+      local loads = 0
+      Adjustable.Container.Locale = nil
+      _G.loadTranslations = function()
+        loads = loads + 1
+        return nil, "unable to find 'mudlet-lua.json'"
+      end
+
+      local created = {}
+      for _, name in ipairs(names) do
+        created[#created + 1] = Adjustable.Container:new({name = name, autoLoad = false, autoSave = false})
+      end
+
+      assert.equals(1, loads)
+      for _, container in ipairs(created) do
+        assert.is_not_nil(container.Inside)
+        assert.is_truthy(container.lockLabel.txt:find("lock$"))
+        assert.is_truthy(container.customItemsLabel.txt:find("custom$"))
+      end
+    end)
   end)
 
   -- Geometry, visibility and title readback, asserted on the widgets the
