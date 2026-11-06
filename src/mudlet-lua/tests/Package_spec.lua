@@ -1200,6 +1200,7 @@ describe("Tests the package info accessors", function()
       -- "_G" names the table a config.lua sets details in, and "globals" once named it too
       assert.is_true(setPackageInfo(name, "globals", "not a table"))
       assert.is_true(setPackageInfo(name, "_G", "not a table either"))
+      assert.is_true(setPackageInfo(name, "end\n", "a Lua keyword and a newline"))
 
       assert.same(getPackageInfo(name), savedPackageInfo(name))
     end)

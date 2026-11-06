@@ -3557,7 +3557,8 @@ static QString luaStringLiteral(const QString& text)
 
 static bool isLuaName(const QString& text)
 {
-    static const QRegularExpression name(qsl("^[A-Za-z_][A-Za-z0-9_]*$"));
+    // Anchored: "$" would also match before a final newline, letting "end\n" pass for a name
+    static const QRegularExpression name(QRegularExpression::anchoredPattern(qsl("[A-Za-z_][A-Za-z0-9_]*")));
     static const QStringList keywords{qsl("and"),   qsl("break"), qsl("do"),  qsl("else"), qsl("elseif"), qsl("end"),    qsl("false"), qsl("for"),  qsl("function"), qsl("if"),   qsl("in"),
                                       qsl("local"), qsl("nil"),   qsl("not"), qsl("or"),   qsl("repeat"), qsl("return"), qsl("then"),  qsl("true"), qsl("until"),    qsl("while")};
     return name.match(text).hasMatch() && !keywords.contains(text);
@@ -5145,6 +5146,10 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
 
     lua_State* L = luaL_newstate();
     setupSandboxedLuaState(L);
+    // Lua's own version string is no detail of the package, but cleared before the manifest runs
+    // rather than after, so a detail of that name that setPackageInfo() saved is still read back
+    lua_pushnil(L);
+    lua_setglobal(L, "_VERSION");
 
     int error = luaL_loadstring(L, strings.join("\n").toUtf8().constData());
 
@@ -5182,11 +5187,7 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
             return noManifest(qsl("the name \"%1\" its config.lua asks for has nothing left in it once the endings a package file is named by are taken off").arg(theNameItAsksFor));
         }
         if (!packageName.isEmpty()) {
-            //get rid of lua version
             lua_pushvalue(L, LUA_GLOBALSINDEX);
-            lua_pushstring(L, "_VERSION");
-            lua_pushnil(L);
-            lua_rawset(L, -3);
             QMap<QString, QString> packageInfo;
             lua_pushnil(L);
             while (lua_next(L, -2) != 0) {
