@@ -122,13 +122,18 @@ private slots:
                 continue;
             }
             const quint64 reindexesBefore = prescan.reindexCount();
-            const auto kept = filed.begin() + static_cast<std::ptrdiff_t>(filed.size() / 4);
+            // Every fourth kept, as filed is in length order and the rest have to span every length
+            std::vector<Filed> kept;
             std::vector<int> freed;
-            for (auto entry = kept; entry != filed.end(); ++entry) {
-                freed.push_back(entry->mSlot);
+            for (size_t index = 0; index < filed.size(); ++index) {
+                if (index % 4) {
+                    freed.push_back(filed[index].mSlot);
+                } else {
+                    kept.push_back(filed[index]);
+                }
             }
             prescan.removeSlots(freed);
-            filed.erase(kept, filed.end());
+            filed = kept;
             QVERIFY2(prescan.reindexCount() > reindexesBefore, "freeing three quarters of the slots should have refiled the rest");
             const QString missing = missed(prescan, line, filed);
             QVERIFY2(missing.isEmpty(), qPrintable(qsl("missed %1").arg(missing)));
