@@ -22,6 +22,7 @@
 #include "Host.h"
 #include "TEvent.h"
 #include "TMap.h"
+#include "TRoom.h"
 #include "TRoomDB.h"
 
 #include <QTimer>
@@ -106,14 +107,24 @@ std::pair<bool, QString> TNullMapView::show3DView(const bool shown)
     return {true, QString()};
 }
 
-// Refuses what T2DMap refuses before it draws, so a script hears what is wrong with its file name
-std::pair<bool, QString> TNullMapView::exportAreaToImage(const int areaId, const QString& filePath, std::optional<int>, const qreal zoom, const bool exportAllZLevels)
+// Draws with the settings T2DMap takes from the profile, at the level of the room it centres on
+std::pair<bool, QString> TNullMapView::exportAreaToImage(const int areaId, const QString& filePath, std::optional<int> zLevel, const qreal zoom, const bool exportAllZLevels)
 {
-    QList<std::pair<int, QString>> levelExports;
-    if (const QString problem = mpHost->mpMap->areaExportProblem(areaId, filePath, zoom, exportAllZLevels, levelExports); !problem.isEmpty()) {
-        return {false, problem};
+    TMapPainter::View view;
+    view.mpMap = mpHost->mpMap.data();
+    view.mpHost = mpHost;
+    view.mBSize = mpHost->mRoomBorderSize;
+    view.rSize = mpHost->mRoomSize;
+    view.mMapperUseAntiAlias = mpHost->mMapperUseAntiAlias;
+    view.mShowRoomID = mpHost->mShowRoomID;
+    view.mBubbleMode = mpHost->mBubbleMode;
+    view.mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
+    view.mAreaID = mAreaId;
+    if (const TRoom* pCentredRoom = mpHost->mpMap->mpRoomDB->getRoom(mCentredRoomId)) {
+        view.mMapCenterZ = pCentredRoom->z();
     }
-    return {false, qsl("there is no main window to draw the map in")};
+    mPainter.setView(view);
+    return mPainter.exportArea(areaId, filePath, zLevel, zoom, exportAllZLevels, this);
 }
 
 // As dlgMapper::setMapZoom() and T2DMap::setMapZoom()

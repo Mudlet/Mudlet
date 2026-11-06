@@ -23,6 +23,8 @@
 #include "TMapViewFrontend.h"
 #include "utils.h"
 
+#include "TMapPainter.h"
+
 #include <QObject>
 
 class Host;
@@ -52,7 +54,7 @@ public:
     void clearRoomSelection() override {}
     int shownAreaId() const override { return mAreaId; }
     std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) override;
-    std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int>, qreal zoom, bool exportAllZLevels) override;
+    std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override;
     std::pair<bool, QString> show3DView(bool shown) override;
     // As dlgMapper answers while it shows its 2D map, the only one this keeps
     bool showing3DView() const override { return false; }
@@ -72,6 +74,7 @@ private:
     int mLastViewedAreaId = -2;
     int mCentredRoomId = 0;
     bool mCentred = false;
+    TMapPainter mPainter;
 };
 
 #endif // MUDLET_TNULLMAPVIEW_H
