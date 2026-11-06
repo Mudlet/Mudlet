@@ -20,8 +20,10 @@
 #include "THeadlessSession.h"
 
 #include "Host.h"
+#include "MudletApp.h"
 #include "TConsoleModel.h"
 
+#include <QFile>
 #include <QPointer>
 
 #include <utility>
@@ -124,6 +126,25 @@ void THeadlessSession::connectLinkRelays(Host* pHost, const unsigned int run)
     mChangedLinks.clear();
     mChangedLinkIds.clear();
     mLinksChangedPending = false;
+    mDeliveredTimeStampsShown.reset();
+    connect(
+            &pHost->mainConsoleModel().mNotifier,
+            &TConsoleModelNotifier::timeStampsToggled,
+            this,
+            [this, run]() {
+                // A shutdown() runs the event loop as the profiles close
+                if (mShuttingDown || run != mRun || !mpHost || !mDeliveredTimeStampsShown) {
+                    return;
+                }
+                const bool shown = timeStampsShown();
+                if (shown == *mDeliveredTimeStampsShown) {
+                    return;
+                }
+                mDeliveredTimeStampsShown = shown;
+                const QString profile = mProfileName;
+                emit timeStampsShownChanged(profile, shown);
+            },
+            Qt::QueuedConnection);
     connect(&pHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::linkChanged, this, [this, run](const int linkIndex) {
         if (run != mRun) {
             return;
@@ -159,4 +180,25 @@ void THeadlessSession::sendLinksChanged(const unsigned int run)
     }
     const QString profile = mProfileName;
     emit linksChanged(profile, links);
+}
+
+bool THeadlessSession::timeStampsShown() const
+{
+    return mpHost && mpHost->mainConsoleModel().mShowTimeStamps;
+}
+
+bool THeadlessSession::setTimeStampsShown(const bool shown)
+{
+    if (!usable()) {
+        return false;
+    }
+    mpHost->setWindowTimeStamps(qsl("main"), shown);
+    // Host only warns where the choice could not be saved; the next load reads whether this exists
+    const QString saved = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
+    if (QFile::exists(saved) != shown) {
+        //: Error from a frontend with no window that showed or hid the main console's timestamps, as the GUI's timestamp button does, but could not save that for the profile's next load
+        mErrorString = tr("The timestamps were shown or hidden, but that could not be saved for the profile's next load.");
+        return false;
+    }
+    return true;
 }
