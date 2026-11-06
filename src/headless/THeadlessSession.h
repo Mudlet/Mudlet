@@ -33,6 +33,7 @@
 
 class Host;
 class HostManager;
+class TBuffer;
 
 // One profile run with no window, for a frontend of its own (a terminal, a phone app) to feed input and
 // show the main console. It touches no terminal or standard stream itself, and like Host it is used on the
@@ -125,14 +126,14 @@ public:
     // Why the last call that failed did
     QString errorString() const { return mErrorString; }
     // For what the session does not cover, such as settings and the map. Null once the profile closes, so
-    // hold it in a QPointer. Not from a handler of outputLine, localText, errorConsoleText, hiddenInputWanted or a
-    // ...Requested signal: a line it fed would be committed in the middle of a write, which TBuffer does not allow.
+    // hold it in a QPointer. Not from a handler of outputLine, lineShown, localText, errorConsoleText, hiddenInputWanted
+    // or a ...Requested signal: a line it fed would be committed in the middle of a write, which TBuffer does not allow.
     Host* host() const;
 
     // As typed on the command line: its aliases run, and what is sent while not connected is echoed and dropped
     // with nothing said, as in the GUI, so a frontend that types ahead waits for connected(). These, and
-    // installPackage(), are refused while a profile loads or shutdown() runs, and from a handler of
-    // outputLine, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal, which run mid-write, and
+    // installPackage(), are refused while a profile loads or shutdown() runs, and from a handler of outputLine,
+    // lineShown, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal, which run mid-write, and
     // fail once a close of the profile has begun; submit() checks each line of a paste as a call. It is the app's
     // input line being sent: the main command line holds the line while its aliases run, then is emptied or kept
     // as the profile says. A command from elsewhere, such as a button, goes through runLua() and expandAlias(),
@@ -271,10 +272,17 @@ signals:
     void outputLine(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs);
     // What the GUI shows only on the profile's own screen, in pieces that need not end a line: text
     // written to the main console that the game did not send (echo(), print(), commands, Mudlet's
-    // messages), and the error console. Sent as written, so a handler may neither call the session nor
-    // run the event loop.
+    // messages), and the error console. While lineShown is connected, it leaves out what that sends, as
+    // docs/headless.md tells. Sent as written, so a handler may neither call the session nor run the event loop.
     void localText(const QString& profile, const QString& text);
     void errorConsoleText(const QString& profile, const QString& text);
+    // A line of outputLine's as the main console shows it once its triggers have run: with what they replaced,
+    // recoloured or wrote into it, which may hold line feeds, and not at all if they deleted it. Lines a trigger
+    // feeds follow the line it ran on, as they are shown, and so does what it wrote anywhere else (an echo()
+    // after deleteLine(), clearWindow() or a feedTriggers(), a send()'s command echo), as lines of their own.
+    // Sent whole, before the console wraps it or after a trigger's wrapLine() split it, and not again for a later
+    // change to it. Sent mid-write, as outputLine is, with the same arguments.
+    void lineShown(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs);
     // What the GUI shows outside the profile's screen: a script's showNotification(), which answers true only
     // when this signal is connected and not blocked, with no milliseconds for the system's own time; and a
     // script's alert() or the game's bell, asking for the player's attention for that long, 0 until they come
@@ -364,6 +372,14 @@ private:
     void lineCommitted(int lineIndex);
     // text is null when the app did not give it
     KeyResult offerKey(Qt::Key, Qt::KeyboardModifiers, const QString* text);
+    void triggerPassEnded(int lineIndex, int lastSegment);
+    bool lineShownWanted() const;
+    bool lineShownTaken() const;
+    struct ShownLine;
+    ShownLine wholeLine(const TBuffer& buffer, int first, int last) const;
+    QList<ShownLine> takeTriggerWrites(bool taken);
+    // False if a handler deleted the session
+    bool sendShownLines(const QList<ShownLine>& lines);
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
@@ -403,6 +419,16 @@ private:
     // before, even one a script closed before shutdown() was called
     unsigned int mRun = 0;
     std::unique_ptr<HostManager> mpPool;
+    struct ShownLine
+    {
+        QString text;
+        bool isPrompt = false;
+        QList<TextRun> runs;
+    };
+    // For each trigger pass under way, outermost first, the lines that passes nested in it have shown
+    QList<QList<ShownLine>> mShownLinesOfPasses;
+    // Whether lineShown was connected as the line the passes under way began with was committed
+    bool mLineShownLatched = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(THeadlessSession::TextStyles)

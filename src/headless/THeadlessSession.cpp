@@ -389,7 +389,12 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                 mSecureConnectionOffered = false;
                 mMapOperationCancelable = false;
                 pNewHost->givePass(password);
+                mShownLinesOfPasses.clear();
+                pNewHost->mainConsoleModel().mTriggerTextShownElsewhere = [self = QPointer<THeadlessSession>(this)]() {
+                    return self && self->lineShownTaken();
+                };
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineCommitted, this, &THeadlessSession::lineCommitted);
+                connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineShown, this, &THeadlessSession::triggerPassEnded);
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::textPrinted, this, [this](const QString& text) {
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;
@@ -1683,6 +1688,15 @@ QList<THeadlessSession::TextRun> textRuns(const QString& text, const TLineFormat
 
 void THeadlessSession::lineCommitted(const int lineIndex)
 {
+    if (mShownLinesOfPasses.isEmpty()) {
+        mLineShownLatched = lineShownWanted();
+    }
+    // What a pass wrote before feeding this line is shown above it
+    QList<ShownLine> written = takeTriggerWrites(lineShownTaken());
+    if (!written.isEmpty() && !mShownLinesOfPasses.isEmpty()) {
+        mShownLinesOfPasses.last().append(std::move(written));
+    }
+    mShownLinesOfPasses.append(QList<ShownLine>());
     if (!mpHost) {
         return;
     }
@@ -1699,7 +1713,102 @@ void THeadlessSession::lineCommitted(const int lineIndex)
     --gSignalsBeingHandedOut;
 }
 
-// A handler of outputLine, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal runs in the middle of a write,
+void THeadlessSession::triggerPassEnded(const int lineIndex, const int lastSegment)
+{
+    if (mShownLinesOfPasses.isEmpty()) {
+        return;
+    }
+    const bool taken = lineShownTaken();
+    QList<ShownLine> lines = mShownLinesOfPasses.takeLast();
+    lines.append(takeTriggerWrites(taken));
+    if (!mpHost || !taken) {
+        return;
+    }
+    const TBuffer& buffer = mpHost->mainConsoleModel().buffer;
+    if (lineIndex >= 0 && lineIndex < buffer.lineBuffer.size()) {
+        lines.prepend(wholeLine(buffer, lineIndex, std::min(lastSegment, static_cast<int>(buffer.lineBuffer.size()) - 1)));
+    } else if (lineIndex >= 0) {
+        qWarning() << "THeadlessSession: lineShown named line" << lineIndex << "of a main console of" << buffer.lineBuffer.size() << "lines, which is not sent";
+    }
+    // Fed from inside an enclosing pass, so shown below that pass's line, which is not yet sent
+    if (!mShownLinesOfPasses.isEmpty()) {
+        mShownLinesOfPasses.last().append(lines);
+        return;
+    }
+    sendShownLines(lines);
+}
+
+// Puts back what a script's wrapLine() split the line into, as the GUI's copy does
+THeadlessSession::ShownLine THeadlessSession::wholeLine(const TBuffer& buffer, const int first, const int last) const
+{
+    // What a delete left of a split line starts on a wrapped segment, indented by the console
+    const int firstPadding = buffer.wrapsFromPreviousLine(first) ? std::min(buffer.wrapIndentWidth(first), static_cast<int>(buffer.lineBuffer.at(first).size())) : 0;
+    QString text = buffer.lineBuffer.at(first).mid(firstPadding);
+    const TLineFormat& firstFormat = buffer.buffer.at(first);
+    std::vector<TChar> format(firstFormat.begin() + std::min<qsizetype>(firstPadding, firstFormat.size()), firstFormat.end());
+    format.resize(text.size(), format.empty() ? TChar() : format.back());
+    for (int y = first + 1; y <= last; ++y) {
+        const QString& segment = buffer.lineBuffer.at(y);
+        const bool wrapped = buffer.wrapsFromPreviousLine(y);
+        const int padding = wrapped ? buffer.wrapIndentWidth(y) : std::min(buffer.wrapGapBefore(y), buffer.wrapIndentWidth(y));
+        const QString joint = wrapped ? QString(buffer.wrapGapBefore(y), QChar::Space) : QString(QChar::LineFeed);
+        text.append(joint);
+        format.insert(format.end(), joint.size(), format.empty() ? TChar() : format.back());
+        const TLineFormat& segmentFormat = buffer.buffer.at(y);
+        const int from = std::min(padding, static_cast<int>(segment.size()));
+        text.append(QStringView(segment).mid(from));
+        const auto formatFrom = segmentFormat.begin() + std::min<qsizetype>(from, segmentFormat.size());
+        format.insert(format.end(), formatFrom, segmentFormat.end());
+        format.resize(text.size(), format.empty() ? TChar() : format.back());
+    }
+    return {text, buffer.promptBuffer.at(first), textRuns(text, TLineFormat(std::move(format)), mpHost->mFgColor, mpHost->mBgColor)};
+}
+
+bool THeadlessSession::lineShownWanted() const
+{
+    static const QMetaMethod lineShownSignal = QMetaMethod::fromSignal(&THeadlessSession::lineShown);
+    return isSignalConnected(lineShownSignal);
+}
+
+// Fixed for a line and all its triggers do, so a receiver connected or let go in a handler gets none of it twice
+bool THeadlessSession::lineShownTaken() const
+{
+    return mShownLinesOfPasses.isEmpty() ? lineShownWanted() : mLineShownLatched;
+}
+
+// Taken even when nothing is connected, so the console holds none of it
+QList<THeadlessSession::ShownLine> THeadlessSession::takeTriggerWrites(const bool taken)
+{
+    QList<ShownLine> lines;
+    if (!mpHost) {
+        return lines;
+    }
+    const QList<TConsoleModel::TriggerWrite> writes = mpHost->mainConsoleModel().takeTriggerWritesForLineShown();
+    if (writes.isEmpty() || !taken) {
+        return lines;
+    }
+    for (const TConsoleModel::TriggerWrite& write : writes) {
+        lines.append({write.text, false, textRuns(write.text, TLineFormat(write.format), mpHost->mFgColor, mpHost->mBgColor)});
+    }
+    return lines;
+}
+
+bool THeadlessSession::sendShownLines(const QList<ShownLine>& lines)
+{
+    const QPointer<THeadlessSession> self(this);
+    const QString profile = mProfileName;
+    for (const ShownLine& line : lines) {
+        ++gSignalsBeingHandedOut;
+        emit lineShown(profile, line.text, line.isPrompt, line.runs);
+        --gSignalsBeingHandedOut;
+        if (!self) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// A handler of outputLine, lineShown, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal runs in the middle of a write,
 // which a line it fed would cut into, and a load that runs the event loop has yet to start the profile's scripts
 bool THeadlessSession::refused(const bool duringLoad)
 {
@@ -1710,9 +1819,9 @@ bool THeadlessSession::refused(const bool duringLoad)
         return true;
     }
     if (mpPool && gSignalsBeingHandedOut) {
-        qWarning() << "THeadlessSession: called from an outputLine, localText, errorConsoleText, hiddenInputWanted or ...Requested handler, which is refused; queue the call instead";
-        //: Error from a frontend with no window that called it back from a handler of the game's lines, of the text the profile printed, of its error console, of the game hiding what the player types, or of a request a script made, such as a notification. "...Requested" stands for the names of those signals, which all end in Requested, and is not translated.
-        mErrorString = tr("Refused from a handler of outputLine, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal; queue the call instead.");
+        qWarning() << "THeadlessSession: called from an outputLine, lineShown, localText, errorConsoleText, hiddenInputWanted or ...Requested handler, which is refused; queue the call instead";
+        //: Error from a frontend with no window that called it back from a handler of the game's lines, as sent or as shown, of the text the profile printed, of its error console, of the game hiding what the player types, or of a request a script made, such as a notification. "...Requested" stands for the names of those signals, which all end in Requested, and is not translated.
+        mErrorString = tr("Refused from a handler of outputLine, lineShown, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal; queue the call instead.");
         return true;
     }
     if (mRemovingStalePasswords || (!duringLoad && mpPool && mpPool->loadingProfile())) {

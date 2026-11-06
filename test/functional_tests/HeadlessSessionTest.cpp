@@ -288,6 +288,76 @@ end))lua")
         return stream.status() == QDataStream::Ok;
     }
 
+    // Draws lineShown and localText as docs/headless.md tells an app to: a line of lineShown goes below a
+    // line localText left open, and the line feed that starts the next piece then ends that line
+    struct RebuiltConsole
+    {
+        QStringList lines;
+        QStringList localPieces;
+        bool localOpen = false;
+        bool lineFeedOwed = false;
+        bool ruleBroken = false;
+        void shown(const QString& text)
+        {
+            if (localOpen) {
+                localOpen = false;
+                lineFeedOwed = true;
+            }
+            lines << text.split(QChar::LineFeed);
+        }
+        void local(QString text)
+        {
+            localPieces << text;
+            if (std::exchange(lineFeedOwed, false)) {
+                ruleBroken = ruleBroken || !text.startsWith(QChar::LineFeed);
+                text.remove(0, 1);
+            }
+            if (text.isEmpty()) {
+                return;
+            }
+            const QStringList parts = text.split(QChar::LineFeed);
+            for (qsizetype i = 0; i < parts.size(); ++i) {
+                if (i == parts.size() - 1 && parts.at(i).isEmpty()) {
+                    break;
+                }
+                if (i == 0 && localOpen) {
+                    lines.last().append(parts.at(i));
+                } else {
+                    lines << parts.at(i);
+                }
+            }
+            localOpen = !text.endsWith(QChar::LineFeed);
+        }
+    };
+
+    static void rebuildConsole(THeadlessSession& session, RebuiltConsole& console)
+    {
+        QObject::connect(&session, &THeadlessSession::lineShown, &session, [&console](const QString&, const QString& text) {
+            console.shown(text);
+        });
+        QObject::connect(&session, &THeadlessSession::localText, &session, [&console](const QString&, const QString& text) {
+            console.local(text);
+        });
+    }
+
+    // The main console's lines from firstLine on, each wrapped line put back on the one it was split from
+    static QStringList consoleLines(const TBuffer& buffer, const int firstLine)
+    {
+        QStringList lines;
+        for (int y = firstLine; y < buffer.lineBuffer.size(); ++y) {
+            const QString& text = buffer.lineBuffer.at(y);
+            if (buffer.wrapsFromPreviousLine(y) && !lines.isEmpty()) {
+                lines.last().append(QString(buffer.wrapGapBefore(y), QChar::Space) + text.mid(buffer.wrapIndentWidth(y)));
+            } else {
+                lines << text;
+            }
+        }
+        while (!lines.isEmpty() && lines.last().isEmpty()) {
+            lines.removeLast();
+        }
+        return lines;
+    }
+
     // Stands in for the keychain of every credential store made until the guard it returns goes, answering
     // from the event loop: reads with readError and removals with removeError. The count is of the jobs seen.
     static auto answerTheKeychain(const QKeychain::Error readError, const QKeychain::Error removeError, const QString& message, std::shared_ptr<int> jobs)
@@ -4323,6 +4393,653 @@ end))lua")));
         QCOMPARE(outputTexts(output), (QStringList{qsl("first fed"), qsl("second fed"), qsl("third fed")}));
     }
 
+    void test_linesReachLineShownAsTheirTriggersLeftThem()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown"), .connect = false}), THeadlessSession::StartResult::started);
+        Host* pHost = session.host();
+        QVERIFY(pHost);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QSignalSpy triggerErrors(&session, &THeadlessSession::errorConsoleText);
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^gag me$", [[deleteLine()]])
+tempRegexTrigger("^long form$", [[selectString("long form", 1) replace("short")]])
+tempRegexTrigger("^paint me$", [[selectString("paint", 1) fg("red") resetFormat()]])
+tempRegexTrigger("^echo here$", [[echo(" and more\nsecond row")]])
+tempRegexTrigger("^feeder$", [[feedTriggers("fed one\n") feedTriggers("fed two\n")]])
+tempRegexTrigger("^fed one$", [[feedTriggers("fed deeper\n")]])
+tempRegexTrigger("^gagged feeder$", [[deleteLine() feedTriggers("fed under a gag\n")]])
+feedTriggers("plain\ngag me\nlong form\npaint me\necho here\nfeeder\ngagged feeder\nlast\n"))lua")));
+        QCOMPARE(outputTexts(output),
+                 (QStringList{qsl("plain"),
+                              qsl("gag me"),
+                              qsl("long form"),
+                              qsl("paint me"),
+                              qsl("echo here"),
+                              qsl("feeder"),
+                              qsl("fed one"),
+                              qsl("fed deeper"),
+                              qsl("fed two"),
+                              qsl("gagged feeder"),
+                              qsl("fed under a gag"),
+                              qsl("last")}));
+        QCOMPARE(outputTexts(shown),
+                 (QStringList{qsl("plain"),
+                              qsl("short"),
+                              qsl("paint me"),
+                              qsl("echo here and more\nsecond row"),
+                              qsl("feeder"),
+                              qsl("fed one"),
+                              qsl("fed deeper"),
+                              qsl("fed two"),
+                              qsl("fed under a gag"),
+                              qsl("last")}));
+        QCOMPARE(shown.constFirst().at(0).toString(), qsl("Headless Shown"));
+        QCOMPARE(shown.constFirst().at(2).toBool(), false);
+        const auto runs = shown.at(2).at(3).value<QList<THeadlessSession::TextRun>>();
+        QCOMPARE(runs.size(), 2);
+        QCOMPARE(runs.at(0).start, 0);
+        QCOMPARE(runs.at(0).length, 5);
+        QCOMPARE(runs.at(0).foreground, QColor(255, 0, 0));
+        QVERIFY(!runs.at(0).defaultForeground);
+        QCOMPARE(runs.at(1).foreground, pHost->mFgColor);
+        QCOMPARE(output.at(3).at(3).value<QList<THeadlessSession::TextRun>>().size(), 1);
+        QVERIFY2(triggerErrors.isEmpty(), qPrintable(outputTexts(triggerErrors).join(QString())));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_whatTriggersWriteElsewhereReachesLineShown()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Elsewhere"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Elsewhere"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QSignalSpy triggerErrors(&session, &THeadlessSession::errorConsoleText);
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^gag and echo$", [[deleteLine() echo(" echoed") echo(" twice")]])
+tempRegexTrigger("^gag and cecho$", [[deleteLine() cecho("\n<red>OUCH")]])
+tempRegexTrigger("^feed and echo$", [[feedTriggers("fed\n") echo("echoed after the feed")]])
+tempRegexTrigger("^send and feed$", [[send("a command") feedTriggers("fed after the command\n")]])
+tempRegexTrigger("^tag above$", [[local line = getLineNumber() moveCursor(0, line - 1) insertText("tag\n") wrapLine("main", line - 1)]])
+feedTriggers("before\ngag and echo\nbefore cecho\ngag and cecho\nfeed and echo\nsend and feed\nunder tag\ntag above\nlast\n"))lua")));
+        QCOMPARE(outputTexts(shown),
+                 (QStringList{qsl("before"),
+                              qsl(" echoed twice"),
+                              qsl("before cecho"),
+                              qsl("OUCH"),
+                              qsl("feed and echo"),
+                              qsl("fed"),
+                              qsl("echoed after the feed"),
+                              qsl("send and feed"),
+                              qsl("a command"),
+                              qsl("fed after the command"),
+                              qsl("under tag"),
+                              qsl("tag above"),
+                              qsl("tag"),
+                              qsl("last")}));
+        const auto runs = shown.at(3).at(3).value<QList<THeadlessSession::TextRun>>();
+        QCOMPARE(runs.size(), 1);
+        QCOMPARE(runs.at(0).length, 4);
+        QCOMPARE(runs.at(0).foreground, QColor(255, 0, 0));
+        QVERIFY(session.host()->mainConsoleModel().mTriggerWritesForLineShown.isEmpty());
+        QVERIFY2(triggerErrors.isEmpty(), qPrintable(outputTexts(triggerErrors).join(QString())));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A fed line that fills the line its feeder emptied is shown once, in its place
+    void test_aLineFedIntoAnEmptiedLineIsShownOnce()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Emptied"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Emptied"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QSignalSpy triggerErrors(&session, &THeadlessSession::errorConsoleText);
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^empty me$", [[selectCurrentLine() replace("") feedTriggers("into the emptied line\n")]])
+tempRegexTrigger("^$", [[feedTriggers("into the blank line\n")]])
+feedTriggers("empty me\nbetween\n\nlast\n"))lua")));
+        QCOMPARE(outputTexts(shown), (QStringList{qsl("into the emptied line"), qsl("between"), qsl("into the blank line"), qsl("last")}));
+        QVERIFY2(triggerErrors.isEmpty(), qPrintable(outputTexts(triggerErrors).join(QString())));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aLineLongerThanTheWrapIsShownWhole()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Long"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Long"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QSignalSpy triggerErrors(&session, &THeadlessSession::errorConsoleText);
+        const QString feeder = qsl("feeder %1").arg(QStringList(40, qsl("word")).join(QChar::Space));
+        const QString wrapper = qsl("wrapper %1").arg(QStringList(40, qsl("word")).join(QChar::Space));
+        QVERIFY(feeder.size() > session.host()->mWrapAt);
+        const QString inserted = qsl("%1 ").arg(QStringList(40, qsl("inserted")).join(QChar::Space));
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^feeder ", [[feedTriggers("gagged\n")]])
+tempRegexTrigger("^gagged$", [[deleteLine()]])
+tempRegexTrigger("^wrapper ", [[wrapLine("main", getLineNumber())]])
+tempRegexTrigger("^lengthen the line above$", [[local line = getLineNumber() moveCursor(0, line - 1) insertText("%3") wrapLine("main", line - 1)]])
+tempRegexTrigger("^split at a line feed$", [[echo(" and on\n<after the line feed>") wrapLine("main", getLineNumber())]])
+feedTriggers("%1\n%2\nabove\nlengthen the line above\nsplit at a line feed\nlast\n"))lua")
+                                       .arg(feeder, wrapper, inserted)));
+        QCOMPARE(outputTexts(shown), (QStringList{feeder, wrapper, qsl("above"), qsl("lengthen the line above"), inserted, qsl("split at a line feed and on\n<after the line feed>"), qsl("last")}));
+        QVERIFY2(triggerErrors.isEmpty(), qPrintable(outputTexts(triggerErrors).join(QString())));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // localText leaves out what lineShown sends, so the two draw the console with nothing twice or missing,
+    // a gagged line's echoes included
+    void test_lineShownAndLocalTextRebuildTheConsole()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Rebuilt"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Rebuilt"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy triggerErrors(&session, &THeadlessSession::errorConsoleText);
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^Spam$", [[deleteLine()]])
+tempRegexTrigger("^tagged$", [[echo(" <in a trigger>")]])
+tempRegexTrigger("^sender$", [[send("from a trigger")]])
+tempAlias("^look$", [[echo("the alias echoes\n")]]))lua")));
+        const TBuffer& buffer = session.host()->mainConsoleModel().buffer;
+        QVERIFY(buffer.lineBuffer.constLast().isEmpty());
+        const int firstLine = static_cast<int>(buffer.lineBuffer.size()) - 1;
+        RebuiltConsole console;
+        rebuildConsole(session, console);
+        QVERIFY(session.runLua(qsl(R"lua(echo("HP: "))lua")));
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("Spam\n"))lua")));
+        QVERIFY(session.submit(qsl("look")));
+        QVERIFY(session.runLua(qsl(R"lua(echo("open "))lua")));
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("tagged\nsender\n"))lua")));
+        QVERIFY(session.runLua(qsl(R"lua(echo("ok\n"))lua")));
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("Spam\n"))lua")));
+        QVERIFY(session.submit(qsl("look")));
+        QVERIFY2(triggerErrors.isEmpty(), qPrintable(outputTexts(triggerErrors).join(QString())));
+        QVERIFY2(!console.localPieces.join(QString()).contains(qsl("trigger")), qPrintable(console.localPieces.join(QChar::Space)));
+        QCOMPARE(console.localPieces.join(QString()).count(qsl("the alias echoes")), 2);
+        QVERIFY(!console.ruleBroken);
+        QCOMPARE(console.lines, consoleLines(buffer, firstLine));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A Lua error the console echoes while a trigger runs is shown after the trigger's line, and leaves it whole
+    void test_whatATriggerPrintsReachesLineShown()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Printed"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Printed"), .connect = false}), THeadlessSession::StartResult::started);
+        session.host()->mEchoLuaErrors = true;
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^erring$", [[echo(" <before>") error("headless trigger boom")]]))lua")));
+        const TBuffer& buffer = session.host()->mainConsoleModel().buffer;
+        QVERIFY(buffer.lineBuffer.constLast().isEmpty());
+        const int firstLine = static_cast<int>(buffer.lineBuffer.size()) - 1;
+        RebuiltConsole console;
+        rebuildConsole(session, console);
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("erring\nlast\n"))lua")));
+        const QStringList texts = outputTexts(shown);
+        QVERIFY2(texts.size() > 2, qPrintable(texts.join(QChar::LineFeed)));
+        QCOMPARE(texts.constFirst(), qsl("erring <before>"));
+        QVERIFY2(texts.mid(1, texts.size() - 2).join(QChar::LineFeed).contains(qsl("headless trigger boom")), qPrintable(texts.join(QChar::LineFeed)));
+        QCOMPARE(texts.constLast(), qsl("last"));
+        QVERIFY2(!console.localPieces.join(QString()).contains(qsl("headless trigger boom")), qPrintable(console.localPieces.join(QChar::Space)));
+        QVERIFY(!console.ruleBroken);
+        QCOMPARE(console.lines, consoleLines(buffer, firstLine));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // Printed as the GUI prints it, not written past the console's notice of what is printed
+    void test_theNoticeOfLoggingResumedReachesLocalText()
+    {
+        const QString name = qsl("Headless Logging Notice");
+        QVERIFY(writeProfile(name, QString()));
+        QVERIFY(writeFile(MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("autolog")), QByteArray()));
+        THeadlessSession session;
+        QSignalSpy local(&session, &THeadlessSession::localText);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(session.host()->mainConsoleModel().mLogToLogFile, 10000);
+        QVERIFY2(outputTexts(local).join(QString()).contains(qsl("System Message: Logging has started.")), qPrintable(outputTexts(local).join(QString())));
+        QVERIFY(session.runLua(qsl(R"lua(startLogging(false))lua")));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A fed line deleted in its own pass leaves the long line it was fed from to be wrapped there, as it always has
+    // been, so the triggers after the feeder see only its first part; lineShown still sends it whole
+    void test_aLineAFedLineLeftLastIsWrappedForItsLaterTriggers()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Wrapped Mid Pass"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Wrapped Mid Pass"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QSignalSpy triggerErrors(&session, &THeadlessSession::errorConsoleText);
+        const QString feeder = qsl("gagfeeder %1").arg(QStringList(40, qsl("word")).join(QChar::Space));
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^gagfeeder ", [[feedTriggers("gagme\n")]])
+tempRegexTrigger("^gagme$", [[deleteLine()]])
+tempRegexTrigger("^gagfeeder ", [[seenByALaterTrigger = getCurrentLine()]])
+feedTriggers("%1\nlast\n"))lua")
+                                       .arg(feeder)));
+        QVERIFY(session.runLua(qsl(R"lua(assert(#seenByALaterTrigger > 0 and #seenByALaterTrigger < %1, #seenByALaterTrigger))lua").arg(feeder.size())));
+        QVERIFY(session.runLua(qsl(R"lua(assert(("%1"):sub(1, #seenByALaterTrigger) == seenByALaterTrigger))lua").arg(feeder)));
+        QCOMPARE(outputTexts(shown), (QStringList{feeder, qsl("last")}));
+        QVERIFY2(triggerErrors.isEmpty(), qPrintable(outputTexts(triggerErrors).join(QString())));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // The console still shows the rest of a line split in its pass once a trigger deletes its first part
+    void test_whatADeleteLeavesOfASplitLineIsShown()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Split Then Gagged"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Split Then Gagged"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QSignalSpy triggerErrors(&session, &THeadlessSession::errorConsoleText);
+        const QString gagged = qsl("splitgag %1").arg(QStringList(40, qsl("word")).join(QChar::Space));
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^splitgag ", [[wrapLine("main", getLineNumber()) deleteLine()]])
+feedTriggers("before\n%1\nlast\n"))lua")
+                                       .arg(gagged)));
+        const QStringList texts = outputTexts(shown);
+        QCOMPARE(texts.size(), 3);
+        QCOMPARE(texts.at(0), qsl("before"));
+        QVERIFY2(texts.at(1).size() > 100 && gagged.endsWith(texts.at(1)) && !texts.at(1).startsWith(QChar::Space), qPrintable(texts.at(1)));
+        QCOMPARE(texts.at(2), qsl("last"));
+        QVERIFY2(triggerErrors.isEmpty(), qPrintable(outputTexts(triggerErrors).join(QString())));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // Connected from a handler while a line's triggers run, lineShown starts with the next line the game sends, and
+    // localText keeps what that pass writes
+    void test_lineShownConnectedMidPassStartsWithTheNextLine()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Connected Mid Pass"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Connected Mid Pass"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy local(&session, &THeadlessSession::localText);
+        QStringList shownTexts;
+        bool connected = false;
+        connect(&session, &THeadlessSession::outputLine, this, [&](const QString&, const QString& text) {
+            if (text == qsl("inner") && !std::exchange(connected, true)) {
+                connect(&session, &THeadlessSession::lineShown, this, [&shownTexts](const QString&, const QString& shownText) {
+                    shownTexts << shownText;
+                });
+            }
+        });
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^outer$", [[echo(" <early>") feedTriggers("inner\n")]])
+feedTriggers("outer\nafter\n"))lua")));
+        QVERIFY(connected);
+        QCOMPARE(shownTexts, QStringList{qsl("after")});
+        QCOMPARE(outputTexts(local).join(QString()).count(qsl("<early>")), 1);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // Lines trimmed off the top while a pass runs move the line's parts and what a trigger prints with them
+    void test_aPassThatTrimsTheConsoleIsShownWhole()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Trimmed"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Trimmed"), .connect = false}), THeadlessSession::StartResult::started);
+        session.host()->mEchoLuaErrors = true;
+        QSignalSpy triggerErrors(&session, &THeadlessSession::errorConsoleText);
+        const QString trimmer = qsl("trimmer %1").arg(QStringList(40, qsl("word")).join(QChar::Space));
+        QStringList fed;
+        for (int i = 1; i <= 30; ++i) {
+            fed << qsl("fed %1").arg(i);
+        }
+        QStringList printed;
+        for (int i = 1; i <= 15; ++i) {
+            printed << qsl("trimline%1").arg(i, 2, 10, QLatin1Char('0'));
+        }
+        QVERIFY(session.runLua(qsl(R"lua(setConsoleBufferSize("main", 100, 10)
+local filler = {}
+for i = 1, 120 do filler[#filler + 1] = "filler " .. i end
+feedTriggers(table.concat(filler, "\n") .. "\n")
+tempRegexTrigger("^trimmer ", [[wrapLine("main", getLineNumber()) feedTriggers("%1\n") error("%2")]]))lua")
+                                       .arg(fed.join(qsl("\\n")), printed.join(qsl("\\n")))));
+        const TBuffer& buffer = session.host()->mainConsoleModel().buffer;
+        QVERIFY(buffer.lineBuffer.size() >= 90);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("%1\nlast\n"))lua").arg(trimmer)));
+        // Some 50 lines written, so trimmed as they came
+        QVERIFY(buffer.lineBuffer.size() <= 110);
+        const QStringList texts = outputTexts(shown);
+        QVERIFY2(texts.size() > 32, qPrintable(texts.join(QChar::LineFeed)));
+        QCOMPARE(texts.constFirst(), trimmer);
+        QCOMPARE(texts.mid(1, 30), fed);
+        QCOMPARE(texts.constLast(), qsl("last"));
+        const QString printedShown = texts.mid(31, texts.size() - 32).join(QChar::LineFeed);
+        for (const QString& line : std::as_const(printed)) {
+            QVERIFY2(printedShown.count(line) == 1, qPrintable(printedShown));
+        }
+        QVERIFY(outputTexts(triggerErrors).join(QString()).contains(qsl("trimline15")));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // What a trigger wrote away from its own line and then replaced is shown as the console keeps it, once
+    void test_aWriteATriggerReplacesIsShownOnce()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Replaced"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Replaced"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QSignalSpy triggerErrors(&session, &THeadlessSession::errorConsoleText);
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^gag and rewrite$", [[deleteLine() echo(" old") moveCursorEnd() selectString("old", 1) replace("new")]])
+tempRegexTrigger("^gag and widen$", [[deleteLine() echo(" abc") moveCursorEnd() selectString("b", 1) replace("BBB")]])
+tempRegexTrigger("^gag and drop$", [[deleteLine() echo(" gone") moveCursorEnd() selectString(" gone", 1) replace("")]])
+feedTriggers("before\ngag and rewrite\nmiddle\ngag and widen\nthen\ngag and drop\nlast\n"))lua")));
+        QCOMPARE(outputTexts(shown), (QStringList{qsl("before"), qsl(" new"), qsl("middle"), qsl(" aBBBc"), qsl("then"), qsl("last")}));
+        const TBuffer& buffer = session.host()->mainConsoleModel().buffer;
+        QVERIFY(buffer.lineBuffer.contains(qsl("before new")));
+        QVERIFY(buffer.lineBuffer.contains(qsl("middle aBBBc")));
+        QVERIFY(buffer.lineBuffer.contains(qsl("then")));
+        QVERIFY2(triggerErrors.isEmpty(), qPrintable(outputTexts(triggerErrors).join(QString())));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A sysBufferShrinkEvent handler run by the print of a trigger's Lua error echoes below the error, once
+    void test_whatAShrinkHandlerEchoesUnderATriggersErrorIsShownOnce()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Shrink Echo"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Shrink Echo"), .connect = false}), THeadlessSession::StartResult::started);
+        session.host()->mEchoLuaErrors = true;
+        QStringList errorLines;
+        for (int i = 1; i <= 40; ++i) {
+            errorLines << qsl("shrinkerror%1").arg(i, 2, 10, QLatin1Char('0'));
+        }
+        QVERIFY(session.runLua(qsl(R"lua(setConsoleBufferSize("main", 100, 10)
+local filler = {}
+for i = 1, 120 do filler[#filler + 1] = "filler " .. i end
+feedTriggers(table.concat(filler, "\n") .. "\n")
+headlessShrinks = 0
+registerAnonymousEventHandler("sysBufferShrinkEvent", function() headlessShrinks = headlessShrinks + 1 echo("shrunk " .. headlessShrinks .. "!") end)
+tempRegexTrigger("^erring$", [[error("%1")]]))lua")
+                                       .arg(errorLines.join(qsl("\\n")))));
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QSignalSpy local(&session, &THeadlessSession::localText);
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("erring\nlast\n"))lua")));
+        const QStringList texts = outputTexts(shown);
+        const QString shownText = texts.join(QChar::LineFeed);
+        const QString localText = outputTexts(local).join(QString());
+        lua_State* L = session.host()->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "headlessShrinks");
+        const int shrinks = static_cast<int>(lua_tointeger(L, -1));
+        lua_pop(L, 1);
+        QVERIFY(shrinks > 0);
+        bool shownInThePass = false;
+        for (int i = 1; i <= shrinks; ++i) {
+            const QString echoed = qsl("shrunk %1!").arg(i);
+            QVERIFY2(shownText.count(echoed) + localText.count(echoed) == 1, qPrintable(qsl("%1\n---\n%2").arg(shownText, localText)));
+            shownInThePass = shownInThePass || shownText.contains(echoed);
+        }
+        QVERIFY2(shownInThePass, qPrintable(shownText));
+        qsizetype firstError = -1;
+        qsizetype firstEcho = -1;
+        for (qsizetype i = 0; i < texts.size(); ++i) {
+            if (firstError < 0 && texts.at(i).contains(qsl("shrinkerror"))) {
+                firstError = i;
+            }
+            if (firstEcho < 0 && texts.at(i).contains(qsl("shrunk "))) {
+                firstEcho = i;
+            }
+        }
+        QVERIFY2(firstError >= 0 && firstEcho > firstError, qPrintable(shownText));
+        QCOMPARE(texts.constLast(), qsl("last"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A colour a trigger puts on what it wrote itself is shown with that text
+    void test_aColourATriggerPutsOnItsOwnWriteIsShown()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Recoloured"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Recoloured"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QSignalSpy triggerErrors(&session, &THeadlessSession::errorConsoleText);
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^gag and colour$", [[deleteLine() echo(" old") moveCursorEnd() selectString("old", 1) setFgColor(255, 0, 0) deselect() resetFormat()]])
+feedTriggers("before\ngag and colour\nlast\n"))lua")));
+        QCOMPARE(outputTexts(shown), (QStringList{qsl("before"), qsl(" old"), qsl("last")}));
+        const auto runs = shown.at(1).at(3).value<QList<THeadlessSession::TextRun>>();
+        QStringList described;
+        bool red = false;
+        for (const THeadlessSession::TextRun& run : runs) {
+            described << qsl("%1+%2 %3").arg(QString::number(run.start), QString::number(run.length), run.foreground.name());
+            red = red || (run.start == 1 && run.length == 3 && run.foreground == QColor(255, 0, 0));
+        }
+        QVERIFY2(red, qPrintable(described.join(qsl(", "))));
+        QVERIFY2(triggerErrors.isEmpty(), qPrintable(outputTexts(triggerErrors).join(QString())));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // What a trigger puts in beside what it wrote, or on a line above it, is shown where the lines have it
+    void test_textATriggerPutsInBesideItsOwnWriteIsShownInPlace()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown In Place"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown In Place"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QSignalSpy triggerErrors(&session, &THeadlessSession::errorConsoleText);
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^gag and prefix$", [[deleteLine() echo(" (gagged)") moveCursorEnd() prefix("[X] ")]])
+tempRegexTrigger("^stack inserts$", [[deleteLine() echo(" tail") moveCursorEnd() moveCursor(#getCurrentLine() - #" tail", getLineNumber()) insertText("A") insertText("B")]])
+tempRegexTrigger("^mark both$", [[local y = getLineNumber()
+moveCursor(3, y - 2) insertText("1")
+moveCursor(3, y - 1) insertText("2")
+moveCursor(4, y - 2) insertText("3")]])
+feedTriggers("before\ngag and prefix\nthen\nstack inserts\none\ntwo\nmark both\nlast\n"))lua")));
+        QCOMPARE(outputTexts(shown),
+                 (QStringList{qsl("before"), qsl("[X] "), qsl(" (gagged)"), qsl("then"), qsl("BA tail"), qsl("one"), qsl("two"), qsl("mark both"), qsl("13"), qsl("2"), qsl("last")}));
+        const TBuffer& buffer = session.host()->mainConsoleModel().buffer;
+        QVERIFY(buffer.lineBuffer.contains(qsl("[X] before (gagged)")));
+        QVERIFY(buffer.lineBuffer.contains(qsl("thenBA tail")));
+        QVERIFY(buffer.lineBuffer.contains(qsl("one13")));
+        QVERIFY(buffer.lineBuffer.contains(qsl("two2")));
+        QVERIFY2(triggerErrors.isEmpty(), qPrintable(outputTexts(triggerErrors).join(QString())));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // Held text keeps its place when a print in the same pass trims the top of the buffer
+    void test_aWriteATriggerReplacesAfterATrimIsShownOnce()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Trimmed Replace"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Trimmed Replace"), .connect = false}), THeadlessSession::StartResult::started);
+        session.host()->mEchoLuaErrors = true;
+        QStringList errorLines;
+        for (int i = 1; i <= 40; ++i) {
+            errorLines << qsl("trimerror%1").arg(i, 2, 10, QLatin1Char('0'));
+        }
+        QVERIFY(session.runLua(qsl(R"lua(setConsoleBufferSize("main", 100, 10)
+local filler = {}
+for i = 1, 95 do filler[#filler + 1] = "filler " .. i end
+feedTriggers(table.concat(filler, "\n") .. "\n")
+headlessTrimmed = 0
+registerAnonymousEventHandler("sysBufferShrinkEvent", function(_, _, trimmed) headlessTrimmed = headlessTrimmed + trimmed end)
+tempRegexTrigger("^gag and rewrite$", [[deleteLine() echo(" old") moveCursorEnd() headlessOldAt = getLineNumber() headlessTrimmed = 0]])
+tempRegexTrigger("^gag and rewrite$", [[error("%1")]])
+tempRegexTrigger("^gag and rewrite$", [[moveCursor(0, headlessOldAt - headlessTrimmed) selectString("old", 1) replace("new")]]))lua")
+                                       .arg(errorLines.join(qsl("\\n")))));
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("before\ngag and rewrite\nlast\n"))lua")));
+        lua_State* L = session.host()->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "headlessTrimmed");
+        const int trimmed = static_cast<int>(lua_tointeger(L, -1));
+        lua_pop(L, 1);
+        QVERIFY(trimmed > 0);
+        const QStringList texts = outputTexts(shown);
+        const QString shownText = texts.join(QChar::LineFeed);
+        QVERIFY2(texts.count(qsl(" new")) == 1 && !texts.contains(qsl(" old")) && !texts.contains(qsl("new")), qPrintable(shownText));
+        QVERIFY(session.host()->mainConsoleModel().buffer.lineBuffer.contains(qsl("before new")));
+        QCOMPARE(texts.constLast(), qsl("last"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // Held text a script's wrapLine() splits is shown whole, as a wrapped line is, and an edit after the wrap finds it
+    void test_aWriteATriggerWrapsThenEditsIsShownOnce()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Wrapped"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Wrapped"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QSignalSpy triggerErrors(&session, &THeadlessSession::errorConsoleText);
+        QVERIFY(session.runLua(
+                qsl(R"lua(tempRegexTrigger("^gag and wrap$", [[deleteLine() echo(" a\nb") wrapLine("main", getLastLineNumber("main")) moveCursorEnd() selectString("b", 1) replace("B")]])
+feedTriggers("before\ngag and wrap\nlast\n"))lua")));
+        QCOMPARE(outputTexts(shown), (QStringList{qsl("before"), qsl(" a\nB"), qsl("last")}));
+        const TBuffer& buffer = session.host()->mainConsoleModel().buffer;
+        QVERIFY(buffer.lineBuffer.contains(qsl("before a")));
+        QVERIFY(buffer.lineBuffer.contains(qsl("B")));
+        QVERIFY2(triggerErrors.isEmpty(), qPrintable(outputTexts(triggerErrors).join(QString())));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // What is left of held text a wrap split, once a script deletes one of its lines, is what is shown
+    void test_aSplitWriteWithALineDeletedShowsWhatIsLeft()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Split Deleted"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Split Deleted"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QSignalSpy triggerErrors(&session, &THeadlessSession::errorConsoleText);
+        QVERIFY(session.runLua(qsl(R"lua(local split = [[deleteLine() echo(" a\nmid\nend") local y = getLastLineNumber("main") wrapLine("main", y) ]]
+tempRegexTrigger("^split drop first$", split .. [[moveCursor(0, y) deleteLine()]])
+tempRegexTrigger("^split drop middle$", split .. [[moveCursor(0, y + 1) deleteLine()]])
+tempRegexTrigger("^split drop last$", split .. [[moveCursor(0, y + 2) deleteLine() moveCursor(3, y + 1) insertText("!")]])
+feedTriggers("one\nsplit drop first\ntwo\nsplit drop middle\nthree\nsplit drop last\nlast\n"))lua")));
+        QCOMPARE(outputTexts(shown), (QStringList{qsl("one"), qsl("mid\nend"), qsl("two"), qsl(" a\nend"), qsl("three"), qsl(" a\nmid!"), qsl("last")}));
+        const TBuffer& buffer = session.host()->mainConsoleModel().buffer;
+        QVERIFY(buffer.lineBuffer.contains(qsl("mid!")));
+        QVERIFY2(triggerErrors.isEmpty(), qPrintable(outputTexts(triggerErrors).join(QString())));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // What is left of held text a wrap split, once a trim takes its first lines, is what is shown
+    void test_aSplitWriteATrimCutsShowsWhatIsLeft()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Split Trimmed"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Split Trimmed"), .connect = false}), THeadlessSession::StartResult::started);
+        session.host()->mEchoLuaErrors = true;
+        QStringList errorLines;
+        for (int i = 1; i <= 95; ++i) {
+            errorLines << qsl("spliterror%1").arg(i, 2, 10, QLatin1Char('0'));
+        }
+        // The split lands on lines 8 to 10, so the trim of the top 10 the error's print makes cuts it after "mid"
+        QVERIFY(session.runLua(qsl(R"lua(setConsoleBufferSize("main", 100, 10)
+clearWindow("main")
+while getLastLineNumber("main") < 9 do feedTriggers("filler\n") end
+headlessTrimmed = 0
+registerAnonymousEventHandler("sysBufferShrinkEvent", function(_, _, trimmed) headlessTrimmed = headlessTrimmed + trimmed end)
+tempRegexTrigger("^split trim$", [[deleteLine() headlessSplitAt = getLastLineNumber("main") echo(" a\nmid\nend") wrapLine("main", headlessSplitAt) error("%1")]]))lua")
+                                       .arg(errorLines.join(qsl("\\n")))));
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("split trim\nlast\n"))lua")));
+        lua_State* L = session.host()->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "headlessTrimmed");
+        const int trimmed = static_cast<int>(lua_tointeger(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(trimmed, 10);
+        lua_getglobal(L, "headlessSplitAt");
+        const int splitAt = static_cast<int>(lua_tointeger(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(splitAt, 8);
+        const QStringList texts = outputTexts(shown);
+        const QString shownText = texts.join(QChar::LineFeed);
+        const qsizetype end = texts.indexOf(qsl("end"));
+        qsizetype firstError = -1;
+        for (qsizetype i = 0; i < texts.size() && firstError < 0; ++i) {
+            if (texts.at(i).contains(qsl("spliterror"))) {
+                firstError = i;
+            }
+        }
+        QVERIFY2(end >= 0 && firstError > end, qPrintable(shownText));
+        QVERIFY2(!shownText.contains(qsl("mid")) && !shownText.contains(qsl("filler")), qPrintable(shownText));
+        QCOMPARE(texts.constLast(), qsl("last"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A sysBufferShrinkEvent handler that deletes held text before it echoes has its echo shown once
+    void test_whatAShrinkHandlerEchoesAfterDeletingHeldTextIsShownOnce()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Shrink Delete"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Shrink Delete"), .connect = false}), THeadlessSession::StartResult::started);
+        session.host()->mEchoLuaErrors = true;
+        QStringList errorLines;
+        for (int i = 1; i <= 40; ++i) {
+            errorLines << qsl("droperror%1").arg(i, 2, 10, QLatin1Char('0'));
+        }
+        QVERIFY(session.runLua(qsl(R"lua(setConsoleBufferSize("main", 100, 10)
+local filler = {}
+for i = 1, 95 do filler[#filler + 1] = "filler " .. i end
+feedTriggers(table.concat(filler, "\n") .. "\n")
+registerAnonymousEventHandler("sysBufferShrinkEvent", function(_, _, trimmed)
+  if headlessOldAt then
+    moveCursor(0, headlessOldAt - trimmed)
+    deleteLine()
+    headlessOldAt = nil
+    echo("dropped!")
+  end
+end)
+tempRegexTrigger("^gag and erring$", [[deleteLine() echo(" old") moveCursorEnd() headlessOldAt = getLineNumber() error("%1")]]))lua")
+                                       .arg(errorLines.join(qsl("\\n")))));
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QSignalSpy local(&session, &THeadlessSession::localText);
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("before\ngag and erring\nlast\n"))lua")));
+        const QString shownText = outputTexts(shown).join(QChar::LineFeed);
+        const QString localText = outputTexts(local).join(QString());
+        QVERIFY2(shownText.count(qsl("dropped!")) + localText.count(qsl("dropped!")) == 1, qPrintable(qsl("%1\n---\n%2").arg(shownText, localText)));
+        QVERIFY2(!shownText.contains(qsl(" old")), qPrintable(shownText));
+        QCOMPARE(outputTexts(shown).constLast(), qsl("last"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // Until an app connects lineShown, what triggers write is not kept for it
+    void test_lineShownWithNoReceiverHoldsNothing()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Unwatched"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Unwatched"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy triggerErrors(&session, &THeadlessSession::errorConsoleText);
+        // Sent just after the echo is written, while the pass that would take what was held for it still runs
+        qsizetype heldMidPass = 0;
+        const auto heldWatch = connect(&session, &THeadlessSession::localText, this, [&session, &heldMidPass]() {
+            heldMidPass = std::max(heldMidPass, session.host()->mainConsoleModel().mTriggerWritesForLineShown.size());
+        });
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^gag and echo$", [[deleteLine() echo("unwatched echo")]])
+tempRegexTrigger("^feeder$", [[feedTriggers("fed\n") echo("unwatched after the feed")]])
+feedTriggers("gag and echo\nfeeder\n"))lua")));
+        QCOMPARE(outputTexts(output), (QStringList{qsl("gag and echo"), qsl("feeder"), qsl("fed")}));
+        QVERIFY(session.host()->mainConsoleModel().mTriggerWritesForLineShown.isEmpty());
+        disconnect(heldWatch);
+        QCOMPARE(heldMidPass, 0);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("watched\n"))lua")));
+        QCOMPARE(outputTexts(shown), (QStringList{qsl("watched")}));
+        QVERIFY2(triggerErrors.isEmpty(), qPrintable(outputTexts(triggerErrors).join(QString())));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aPromptATriggerRewritesIsShownAsAPrompt()
+    {
+        const QString name = qsl("Headless Shown Prompt");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QSignalSpy triggerErrors(&session, &THeadlessSession::errorConsoleText);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^hp ", [[selectString("hp", 1) replace("HP")]])
+tempRegexTrigger("^Gagged$", [[deleteLine()]]))lua")));
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        game->write("Welcome\r\nGagged\r\nhp 10> \xff\xf9");
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(shown).contains(qsl("HP 10> ")), 10000);
+        QCOMPARE(outputTexts(shown), (QStringList{qsl("Welcome"), qsl("HP 10> ")}));
+        QCOMPARE(shown.at(0).at(2).toBool(), false);
+        QCOMPARE(shown.at(1).at(2).toBool(), true);
+        QVERIFY2(triggerErrors.isEmpty(), qPrintable(outputTexts(triggerErrors).join(QString())));
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_linesFromTheLoadReachOutputLine()
     {
         QVERIFY(writeProfile(qsl("Headless Load Lines"), qsl(R"lua(feedTriggers("fed by the script\n")
@@ -5507,7 +6224,7 @@ end))lua")
         QVERIFY(!ranLua);
         QVERIFY(!submitted);
         QVERIFY(!saved);
-        QCOMPARE(refusal, qsl("Refused from a handler of outputLine, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal; queue the call instead."));
+        QCOMPARE(refusal, qsl("Refused from a handler of outputLine, lineShown, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal; queue the call instead."));
         QVERIFY(unstartedShutDown);
         QVERIFY(HostManager::self());
         QCOMPARE(outputTexts(output), (QStringList{qsl("outer line"), qsl("after")}));

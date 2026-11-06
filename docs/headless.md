@@ -172,6 +172,41 @@ asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, str
 fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap
 for its own theme's. Links in the line, and what `echo()` and the like print, come as plain text for now.
 
+`outputLine` carries each line as the game sent it, before the profile's triggers run on it, so a line a
+trigger gags still arrives, and one it rewrites arrives unchanged. `lineShown` carries the same lines as
+the main console shows them once their triggers have run, with the same arguments: with the text a
+trigger replaced, the colours it changed and what it `echo()`ed into the line, which may hold line feeds,
+and not at all for a line a trigger deleted. Lines a trigger feeds with `feedTriggers()` come after the
+line it ran on, in the order the console shows them, and so does what it writes anywhere else, each piece
+as a line of its own: an `echo()` after `deleteLine()`, `clearWindow()` or a `feedTriggers()`, and the
+command echo of a `send()`. An app that draws the console as the GUI does draws `lineShown`, wrapping each
+line itself, as for `outputLine`; a line a trigger split with `wrapLine()` comes whole, with the line feeds
+it held, and if a trigger then deletes its first part, what is left of it comes as the line. A change a later
+trigger makes to a line already sent, as by moving the cursor up to it, is not sent again, though what it
+inserts is sent as a line of its own.
+
+`localText` carries the text written to the main console that the game did not send, as it is written,
+in pieces that need not end a line: the `echo()`s of aliases, timers, key bindings and `runLua()`, the
+commands the player sends, and Mudlet's own messages. While `lineShown` is connected, `localText` leaves
+out what `lineShown` sends: all that is written while triggers run on a line, a Lua error the console
+echoes and Mudlet's own messages among it. So an app draws both streams in the order they come, and each
+piece once: a line of `lineShown` goes below a line `localText` left open, and the next piece of
+`localText` then starts with the line feed that ends that open line, which the app drops. While
+`lineShown` is not connected, `localText` carries what triggers write too. Connected or let go in a
+handler, `lineShown` takes effect from the next line the game sends, so the line under way and all its
+triggers write go to one stream or the other, never both.
+
+Drawn that way, the console matches the GUI's but for its layout in these places, where no text is
+missing or doubled:
+
+- The console draws an `echo()` that follows `deleteLine()` on the end of the line above, which was already
+  sent, where `lineShown` sends it as a new line.
+- The console draws a command typed at a prompt on the end of that prompt, as `HP 10> look`, where
+  `lineShown` sends the prompt and `localText` then sends `look` as a piece that the rule above puts on a
+  line of its own. Nothing tells it apart from an alias's `echo()` after a prompt, which the GUI draws below.
+- Blank lines inside what a trigger prints, such as a Lua error of several lines, or the empty command echo
+  of a trigger's `send("")`, are not sent.
+
 The signals' handlers are called while a line is being written, so they must not call the session
 back or run the event loop; queue the work for later instead. `host()` reaches what the session
 does not cover, such as settings and the map, and goes null once the profile closes, so hold it in a
