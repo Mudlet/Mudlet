@@ -114,6 +114,34 @@ describe("spawn", function()
       assert.are.same({"spawnBurstA\n", "spawnBurstB\n", "spawnBurstC\n"}, lines)
     end)
 
+    it("should hand the callback a line whole when it holds a NUL byte", function()
+      if getOS() == "windows" then
+        pending("no POSIX shell to write a NUL byte")
+        return
+      end
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the child's output needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
+        return
+      end
+
+      local lines = {}
+      spawn(function(line)
+        table.insert(lines, line)
+      end, "/bin/sh", "-c", "printf 'spawnNulA\\000spawnNulB\\n'")
+      finally(function()
+        pumpEvents(2200)
+      end)
+
+      for _ = 1, 500 do
+        if #lines >= 1 then
+          break
+        end
+        pumpEvents(20)
+      end
+
+      assert.are.same({"spawnNulA\0spawnNulB\n"}, lines)
+    end)
+
   end)
 
   -- Tests that need a profile of their own write one here, load it and take it
