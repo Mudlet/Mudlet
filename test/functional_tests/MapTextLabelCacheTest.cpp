@@ -247,8 +247,9 @@ private slots:
         label.fgColor = Qt::white;
         label.outlineColor = Qt::white;
 
+        // Larger than the label, so a pixmap drawn at the wrong size shows past it
         auto drawAt = [this, &label](const int ratio) {
-            QPixmap target(QSize(100, 40) * ratio);
+            QPixmap target(QSize(120, 50) * ratio);
             target.setDevicePixelRatio(ratio);
             target.fill(Qt::blue);
             QPainter painter(&target);
@@ -260,11 +261,12 @@ private slots:
         drawAt(1);
         const QImage image = drawAt(2);
 
-        QCOMPARE(image.size(), QSize(200, 80));
         QCOMPARE(image.pixelColor(0, 0), QColor(Qt::black));
+        QCOMPARE(image.pixelColor(199, 79), QColor(Qt::black));
+        QCOMPARE(image.pixelColor(200, 80), QColor(Qt::blue));
         int squaresThatDiffer = 0;
-        for (int y = 0; y < image.height(); y += 2) {
-            for (int x = 0; x < image.width(); x += 2) {
+        for (int y = 0; y < 80; y += 2) {
+            for (int x = 0; x < 200; x += 2) {
                 const QRgb topLeft = image.pixel(x, y);
                 if (image.pixel(x + 1, y) != topLeft || image.pixel(x, y + 1) != topLeft || image.pixel(x + 1, y + 1) != topLeft) {
                     ++squaresThatDiffer;

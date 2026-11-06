@@ -1323,7 +1323,7 @@ static bool fitsScaledLabelLimit(const QSize& size)
 static void drawPixmapScaledTo(QPainter& painter, const QRectF& target, const QPixmap& pixmap)
 {
     const QSize targetSize = target.size().toSize();
-    if (fitsScaledLabelLimit(targetSize)) {
+    if (fitsScaledLabelLimit((target.size() * painter.device()->devicePixelRatio()).toSize())) {
         painter.drawPixmap(target.topLeft(), pixmap.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
         return;
     }
