@@ -105,12 +105,9 @@
 #include <QUiLoader>
 #include <QLineEdit>
 #include <QHBoxLayout>
-#include <QListView>
 #include <QListWidget>
 #include <QLocale>
-#include <QKeyEvent>
 #include <QMouseEvent>
-#include <QWheelEvent>
 #include <QResizeEvent>
 #include <QScopedValueRollback>
 #include <QScrollArea>
@@ -274,13 +271,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // them.
     populateApplicationSettings();
 
-    connect(checkBox_monospacedFontsOnly, &QCheckBox::toggled, this, &dlgProfilePreferences::filterDisplayFontList);
-    // The list follows the current font so that the one in use is never hidden, and is rebuilt
-    // by QFontComboBox itself when a font is installed or removed
-    connect(fontComboBox_displayFont, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::filterDisplayFontList);
-    connect(qGuiApp, &QGuiApplication::fontDatabaseChanged, this, &dlgProfilePreferences::filterDisplayFontList);
-    // Typed into while open, so that a name typed there is looked for only among the fonts listed
-    fontComboBox_displayFont->view()->installEventFilter(this);
+    connect(checkBox_monospacedFontsOnly, &QCheckBox::toggled, this, [this]() {
+        showDisplayFont(fontComboBox_displayFont->currentFont());
+    });
 
     connect(checkBox_showTabConnectionIndicators, &QCheckBox::toggled, this, [=](bool checked) {
         mudlet::self()->setShowTabConnectionIndicators(checked);
@@ -2652,9 +2645,6 @@ bool dlgProfilePreferences::eventFilter(QObject* pObject, QEvent* pEvent)
             }
         }
     }
-    if (stepListedDisplayFont(pObject, pEvent)) {
-        return true;
-    }
     if (pEvent->type() == QEvent::Wheel) {
         auto* pControl = qobject_cast<QWidget*>(pObject);
         if (pControl && !pControl->hasFocus()) {
@@ -4204,7 +4194,6 @@ void dlgProfilePreferences::populateApplicationSettings()
         const QSignalBlocker blocker(checkBox_monospacedFontsOnly);
         checkBox_monospacedFontsOnly->setChecked(MudletApp::getQSettings()->value(qsl("showOnlyMonospacedFonts"), false).toBool());
     }
-    filterDisplayFontList();
     populateTriggerMatchPoolSettings();
     {
         // The one setting here that lives in its own QSettings group rather than
@@ -4236,9 +4225,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 {
     loadEditorTab();
 
-    fontComboBox_displayFont->setCurrentFont(pHost->getDisplayFont());
+    showDisplayFont(pHost->getDisplayFont());
     rememberDisplayFontFamilyShown();
-    filterDisplayFontList();
     // Accommodate an initial font size being larger than expected - and ensure
     // it is a positive value:
     spinBox_displayFontSize->setMaximum(std::max(pHost->getDisplayFont().pointSize(), 40));
@@ -9642,119 +9630,14 @@ void dlgProfilePreferences::rememberDisplayFontFamilyShown()
     mDisplayFontFamilyShown = (mpHost && mpHost->resolveFontFamily(family).available) ? family : QString();
 }
 
-// Rows are hidden rather than filtered out with QFontComboBox::setFontFilters(), which moves the
-// list off a proportional font in use and so would change the profile's font
-void dlgProfilePreferences::filterDisplayFontList()
+// QFontComboBox::setFontFilters() moves the list off a family it leaves out, which would put another font
+// on the profile, so proportional fonts are left out only while the font shown is a monospaced one
+void dlgProfilePreferences::showDisplayFont(const QFont& font)
 {
-    auto* pView = qobject_cast<QListView*>(fontComboBox_displayFont->view());
-    if (!pView) {
-        return;
-    }
-    const bool monospacedOnly = checkBox_monospacedFontsOnly->isChecked();
-    const int current = fontComboBox_displayFont->currentIndex();
-    const QAbstractItemModel* pModel = fontComboBox_displayFont->model();
-    for (int row = 0, total = pModel->rowCount(); row < total; ++row) {
-        pView->setRowHidden(row, monospacedOnly && row != current && !QFontDatabase::isFixedPitch(pModel->index(row, 0).data().toString()));
-    }
-}
-
-// QComboBox steps through its model from the keyboard and the wheel while closed, and both it and the
-// open list search the model for what is typed: none of them knows of the rows filterDisplayFontList()
-// hides, so with those hidden the steps and the search are made here instead. Arrow keys in the open
-// list already pass over hidden rows.
-bool dlgProfilePreferences::stepListedDisplayFont(QObject* pObject, QEvent* pEvent)
-{
-    auto* pView = qobject_cast<QListView*>(fontComboBox_displayFont->view());
-    if (!pView || !checkBox_monospacedFontsOnly->isChecked() || (pObject != fontComboBox_displayFont && pObject != pView)) {
-        return false;
-    }
-    const bool listOpen = pView->isVisible();
-    if ((pObject == pView) != listOpen) {
-        return false;
-    }
-
-    const int total = fontComboBox_displayFont->count();
-    int from = fontComboBox_displayFont->currentIndex();
-    int step = 0;
-    if (pEvent->type() == QEvent::Wheel && !listOpen) {
-        const int delta = static_cast<QWheelEvent*>(pEvent)->angleDelta().y();
-        // macOS's style keeps the wheel off combo boxes, so it scrolls the page instead
-        if (!fontComboBox_displayFont->hasFocus() || delta == 0 || !fontComboBox_displayFont->style()->styleHint(QStyle::SH_ComboBox_AllowWheelScrolling, nullptr, fontComboBox_displayFont)) {
-            return false;
-        }
-        step = delta < 0 ? 1 : -1;
-    } else if (pEvent->type() == QEvent::KeyPress) {
-        auto* pKeyEvent = static_cast<QKeyEvent*>(pEvent);
-        // Alt+Down opens the list, and Ctrl+Up or Ctrl+Down step nothing
-        if (pKeyEvent->modifiers() & (Qt::AltModifier | Qt::ControlModifier)) {
-            return false;
-        }
-        const QString text = pKeyEvent->text();
-        // Space opens a closed list, but is part of a name typed into an open one
-        if (!text.isEmpty() && text.at(0).isPrint() && (listOpen || pKeyEvent->key() != Qt::Key_Space)) {
-            searchListedDisplayFont(text, listOpen);
-            return true;
-        }
-        if (listOpen) {
-            return false;
-        }
-        switch (pKeyEvent->key()) {
-        case Qt::Key_Up:
-        case Qt::Key_PageUp:
-            step = -1;
-            break;
-        case Qt::Key_Down:
-        case Qt::Key_PageDown:
-            step = 1;
-            break;
-        case Qt::Key_Home:
-            from = -1;
-            step = 1;
-            break;
-        case Qt::Key_End:
-            from = total;
-            step = -1;
-            break;
-        default:
-            return false;
-        }
-    } else {
-        return false;
-    }
-
-    for (int row = from + step; row >= 0 && row < total; row += step) {
-        if (!pView->isRowHidden(row)) {
-            fontComboBox_displayFont->setCurrentIndex(row);
-            break;
-        }
-    }
-    return true;
-}
-
-// As QAbstractItemView::keyboardSearch(): keys typed in quick succession build up one name, and a fresh
-// one starts after the current row, so typing the same letter again moves on to the next match
-void dlgProfilePreferences::searchListedDisplayFont(const QString& text, const bool listOpen)
-{
-    auto* pView = qobject_cast<QListView*>(fontComboBox_displayFont->view());
-    const bool continuing = mDisplayFontSearchTimer.isValid() && mDisplayFontSearchTimer.elapsed() <= QApplication::keyboardInputInterval();
-    mDisplayFontSearchTimer.start();
-    mDisplayFontSearch = continuing ? mDisplayFontSearch + text : text;
-
-    const int total = fontComboBox_displayFont->count();
-    const int current = listOpen ? pView->currentIndex().row() : fontComboBox_displayFont->currentIndex();
-    const int start = std::max(current, 0) + (continuing ? 0 : 1);
-    for (int offset = 0; offset < total; ++offset) {
-        const int row = (start + offset) % total;
-        if (pView->isRowHidden(row) || !fontComboBox_displayFont->itemText(row).startsWith(mDisplayFontSearch, Qt::CaseInsensitive)) {
-            continue;
-        }
-        if (listOpen) {
-            pView->setCurrentIndex(fontComboBox_displayFont->model()->index(row, 0));
-        } else {
-            fontComboBox_displayFont->setCurrentIndex(row);
-        }
-        return;
-    }
+    const bool monospacedOnly = checkBox_monospacedFontsOnly->isChecked() && QFontDatabase::isFixedPitch(font.family());
+    const QSignalBlocker blocker(fontComboBox_displayFont);
+    fontComboBox_displayFont->setFontFilters(monospacedOnly ? QFontComboBox::MonospacedFonts : QFontComboBox::AllFonts);
+    fontComboBox_displayFont->setCurrentFont(font);
 }
 
 void dlgProfilePreferences::slot_displayFontChanged()
@@ -9792,14 +9675,13 @@ void dlgProfilePreferences::slot_hostDisplayFontChanged(const QFont& font)
         const QSignalBlocker comboBlocker(fontComboBox_displayFont);
         const QSignalBlocker sizeBlocker(spinBox_displayFontSize);
         const QSignalBlocker antiAliasBlocker(checkBox_antiAlias);
-        fontComboBox_displayFont->setCurrentFont(font);
+        showDisplayFont(font);
         spinBox_displayFontSize->setMaximum(std::max(font.pointSize(), spinBox_displayFontSize->maximum()));
         spinBox_displayFontSize->setValue(std::max(1, font.pointSize()));
         // Not fontsAntiAlias(): applyAll() writes that from this box only once the apply timer fires
         checkBox_antiAlias->setChecked(!(font.styleStrategy() & QFont::NoAntialias));
     }
     rememberDisplayFontFamilyShown();
-    filterDisplayFontList();
     // Not the user's edits, so they must not keep refreshFromSettings() from re-reading the rest - nor
     // the line edits inside the list and the spin box, which the snapshot holds as well. The anti-alias
     // box stays dirty, as this runs for the dialog's own toggle too and applyAll() must still store it

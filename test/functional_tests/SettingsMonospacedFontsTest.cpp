@@ -18,9 +18,10 @@
  ***************************************************************************/
 
 /*
- * "Show only monospaced fonts" under the display font list (#6123) hides the
- * proportional families from it, but never the font the profile is using, and
- * ticking it never changes that font. The choice is remembered.
+ * "Show only monospaced fonts" under the display font list (#6123) leaves the
+ * proportional families out of it. Ticking it never changes the profile's font:
+ * while that font is a proportional one, every font stays listed. Keys, the
+ * wheel and typing a name only reach listed fonts. The choice is remembered.
  *
  * Run with: ctest -R SettingsMonospacedFontsTest -V
  */
@@ -210,7 +211,7 @@ private slots:
         QVERIFY2(listed(mProportionalFamily), "unticking did not bring the proportional fonts back");
     }
 
-    // The profile's own font is a proportional one: it stays listed and in use
+    // The profile's own font is a proportional one: it stays in use, and so every font stays listed
     void test_theFontInUseStaysListedAndUnchanged()
     {
         useDisplayFont(mProportionalFamily);
@@ -222,6 +223,7 @@ private slots:
         QCOMPARE(mpPreferences->fontComboBox_displayFont->currentFont().family(), mProportionalFamily);
         QCOMPARE(mpHost->getDisplayFont().family(), mProportionalFamily);
         QVERIFY2(listed(mProportionalFamily), "the font in use was hidden from the list");
+        QVERIFY2(anyProportionalListed(), "proportional fonts other than the one in use were left out while it is in use");
 
         // Once another font is picked, the proportional one goes the way of the others
         mpPreferences->fontComboBox_displayFont->setCurrentIndex(rowOf(mMonospacedFamily));
@@ -316,6 +318,24 @@ private slots:
         QCoreApplication::sendEvent(pCombo, &wheel);
         QCOMPARE(pCombo->currentText(), before);
         QCOMPARE(mpHost->getDisplayFont().family(), mMonospacedFamily);
+    }
+
+    // The open list scrolls to the font in use, also after the profile's font changed under it
+    void test_theOpenListShowsTheFontInUse()
+    {
+        useDisplayFont(mMonospacedFamily);
+        openPreferences();
+        auto* pCombo = mpPreferences->fontComboBox_displayFont;
+        mpPreferences->checkBox_monospacedFontsOnly->setChecked(true);
+        QFont font(mMonospacedFamily, 15);
+        QVERIFY(mpHost->setDisplayFont(font).first);
+        QTRY_COMPARE(pCombo->currentText(), mMonospacedFamily);
+        pCombo->showPopup();
+        QTRY_VERIFY(pCombo->view()->isVisible());
+        const QRect shown = pCombo->view()->visualRect(pCombo->view()->currentIndex());
+        QVERIFY2(pCombo->view()->viewport()->rect().contains(shown), "the font in use is out of sight in the open list");
+        QCOMPARE(pCombo->view()->currentIndex().data().toString(), mMonospacedFamily);
+        pCombo->hidePopup();
     }
 
     void test_theChoiceIsRemembered()
