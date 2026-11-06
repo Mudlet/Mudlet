@@ -269,11 +269,14 @@ private slots:
             QVERIFY(QDir().mkpath(qsl("%1/%2").arg(mapDir, name)));
         }
         const int mark = std::max(0, mpSource->mainConsoleView()->buffer.getLastLineNumber());
+        QSignalSpy reloads(mudlet::self(), &mudlet::signal_profileMapReloadRequested);
 
         mpPreferences->pushButton_copyMap->click();
 
         QVERIFY2(!areaNames(mpDestination).contains(mCopiedArea), "the copy went through, so the save landed outside the taken names");
         QVERIFY2(mpDestination->mpMap->mpRoomDB->getRoom(100), "the destination dropped the room it had not saved yet");
+        // Loading one of the folders would fail and leave the map as it was, so the room alone cannot show this
+        QVERIFY2(reloads.isEmpty() || !reloads.constLast().constFirst().toStringList().contains(mDestinationName), "the destination was asked to load a map that never reached it");
         const QString label = mpPreferences->label_mapFileActionResult->text();
         QVERIFY2(label.startsWith(qsl("Could not copy the map to %1").arg(mDestinationName)), qPrintable(qsl("the copy that failed ended on '%1'").arg(label)));
         QStringList lines;
