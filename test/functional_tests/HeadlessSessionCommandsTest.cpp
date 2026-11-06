@@ -40,6 +40,8 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
+#include "ActionUnit.h"
+#include "TAction.h"
 #include "PortableModeTestHelper.h"
 #include "THeadlessSession.h"
 #include "TLuaInterpreter.h"
@@ -96,6 +98,34 @@ private:
         QStringList result;
         for (const auto& command : commands) {
             result << command.name;
+        }
+        return result;
+    }
+
+    static TAction* makeAction(Host* host, TAction* parent, const QString& name, const bool folder = false, const bool active = true)
+    {
+        auto* action = parent ? new TAction(parent, host) : new TAction(name, host);
+        action->setName(name);
+        action->setIsFolder(folder);
+        action->setIsActive(active);
+        host->getActionUnit()->registerAction(action);
+        return action;
+    }
+
+    static QStringList buttonNames(const QList<THeadlessSession::Button>& buttons)
+    {
+        QStringList result;
+        for (const auto& button : buttons) {
+            result << button.name;
+        }
+        return result;
+    }
+
+    static QStringList barNames(const QList<THeadlessSession::ButtonBar>& bars)
+    {
+        QStringList result;
+        for (const auto& bar : bars) {
+            result << bar.name;
         }
         return result;
     }
@@ -496,6 +526,114 @@ headlessLeft = addCommand({name = "Left", shortcut = "Ctrl+Left"})
         QCOMPARE(session.pressKey(Qt::Key_Up), KeyResult::commandRan);
         QCOMPARE(session.pressKey(Qt::Key_Left, Qt::ControlModifier), KeyResult::noBinding);
         QCOMPARE(luaGlobalString(session.host(), "headlessClicks"), qsl("%1 ").arg(luaGlobalString(session.host(), "headlessUp")));
+        QVERIFY(session.shutdown(false));
+    }
+    void test_theButtonBarsScriptsMakeAreListed()
+    {
+        using Place = THeadlessSession::ButtonBar::Place;
+        const QString name = qsl("Headless Buttons Temp");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QVERIFY(session.buttonBars().isEmpty());
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.buttonBars().isEmpty());
+        QVERIFY(session.runLua(qsl(R"lua(
+tempButtonToolbar("headlessTop", 0, 0)
+tempButton("headlessTop", "first", 0)
+tempButton("headlessTop", "second", 0)
+setButtonStyleSheet("first", "color: red;")
+tempButtonToolbar("headlessSide", 1, 1)
+tempButton("headlessSide", "only", 0)
+)lua")));
+        const QList<THeadlessSession::ButtonBar> bars = session.buttonBars();
+        QCOMPARE(barNames(bars), (QStringList{qsl("headlessTop"), qsl("headlessSide")}));
+        QCOMPARE(bars.at(0).place, Place::top);
+        QCOMPARE(bars.at(0).orientation, Qt::Horizontal);
+        QCOMPARE(buttonNames(bars.at(0).buttons), (QStringList{qsl("first"), qsl("second")}));
+        QCOMPARE(bars.at(0).buttons.at(0).styleSheet, qsl("color: red;"));
+        QVERIFY(!bars.at(0).buttons.at(0).pushDown && !bars.at(0).buttons.at(0).menu);
+        QCOMPARE(bars.at(1).place, Place::left);
+        QCOMPARE(bars.at(1).orientation, Qt::Vertical);
+        QCOMPARE(buttonNames(bars.at(1).buttons), QStringList{qsl("only")});
+        QVERIFY(session.shutdown(false));
+        QVERIFY(session.buttonBars().isEmpty());
+    }
+
+    // Built as the editor builds them, for what no Lua function makes: folders, push-down buttons, inactive items
+    void test_theButtonBarsShowWhatTheGuiDraws()
+    {
+        using Place = THeadlessSession::ButtonBar::Place;
+        const QString name = qsl("Headless Buttons Built");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        Host* host = session.host();
+
+        TAction* bar = makeAction(host, nullptr, qsl("rightBar"), true);
+        bar->mLocation = 3;
+        bar->mOrientation = 1;
+        bar->setButtonColumns(2);
+        bar->setButtonFillerOffset(1);
+        bar->css = qsl("background: blue;");
+        TAction* push = makeAction(host, bar, qsl("push"));
+        push->setIsPushDownButton(true);
+        push->mButtonState = true;
+        push->setIcon(qsl("/push.png"));
+        TAction* folder = makeAction(host, bar, qsl("folder"), true);
+        folder->setIcon(qsl("/folder.png"));
+        makeAction(host, folder, qsl("inner"))->setIcon(qsl("/inner.png"));
+        makeAction(host, folder, qsl("off"), false, false);
+        TAction* sub = makeAction(host, folder, qsl("sub"), true);
+        makeAction(host, sub, qsl("deep"));
+        makeAction(host, bar, qsl("hidden"), false, false);
+
+        TAction* floating = makeAction(host, nullptr, qsl("floatBar"), true);
+        floating->mLocation = 4;
+        TAction* floatingMenu = makeAction(host, floating, qsl("floatMenu"), true);
+        makeAction(host, floatingMenu, qsl("a"));
+        makeAction(host, floatingMenu, qsl("b"), false, false);
+
+        makeAction(host, nullptr, qsl("offBar"), true, false);
+        makeAction(host, nullptr, qsl("nowhereBar"), true)->mLocation = 1;
+
+        TAction* package = makeAction(host, nullptr, qsl("package"), true);
+        package->mPackageName = qsl("package");
+        makeAction(host, package, qsl("packageBar"), true);
+        makeAction(host, package, qsl("packageFloat"), true)->mLocation = 4;
+
+        const QList<THeadlessSession::ButtonBar> bars = session.buttonBars();
+        QCOMPARE(barNames(bars), (QStringList{qsl("rightBar"), qsl("floatBar"), qsl("packageBar")}));
+        const THeadlessSession::ButtonBar& right = bars.at(0);
+        QCOMPARE(right.id, bar->getID());
+        QCOMPARE(right.place, Place::right);
+        QCOMPARE(right.orientation, Qt::Vertical);
+        QCOMPARE(right.columns, 2);
+        QCOMPARE(right.fillerOffset, 1);
+        QCOMPARE(right.styleSheet, qsl("background: blue;"));
+        QCOMPARE(buttonNames(right.buttons), (QStringList{qsl("push"), qsl("folder")}));
+        const THeadlessSession::Button& pushButton = right.buttons.at(0);
+        QCOMPARE(pushButton.id, push->getID());
+        QCOMPARE(pushButton.icon, qsl("/push.png"));
+        QVERIFY(pushButton.pushDown && pushButton.checked && !pushButton.menu);
+        const THeadlessSession::Button& folderButton = right.buttons.at(1);
+        QVERIFY(folderButton.menu);
+        QCOMPARE(buttonNames(folderButton.children), (QStringList{qsl("inner"), qsl("sub")}));
+        // A button bar's menu shows each entry with the icon of the button it hangs from
+        QCOMPARE(folderButton.children.at(0).icon, qsl("/folder.png"));
+        QVERIFY(folderButton.children.at(1).menu);
+        QCOMPARE(buttonNames(folderButton.children.at(1).children), QStringList{qsl("deep")});
+
+        // A floating toolbar's menu holds an entry for the folder itself, then every child under it
+        const THeadlessSession::ButtonBar& floatBar = bars.at(1);
+        QCOMPARE(floatBar.place, Place::floating);
+        QCOMPARE(buttonNames(floatBar.buttons), QStringList{qsl("floatMenu")});
+        QCOMPARE(buttonNames(floatBar.buttons.at(0).children), QStringList{qsl("floatMenu")});
+        QCOMPARE(buttonNames(floatBar.buttons.at(0).children.at(0).children), (QStringList{qsl("a"), qsl("b")}));
+
+        QCOMPARE(bars.at(2).place, Place::top);
+
+        QVERIFY(session.runLua(qsl("setButtonState('push', false)")));
+        QVERIFY(!session.buttonBars().at(0).buttons.at(0).checked);
         QVERIFY(session.shutdown(false));
     }
 };

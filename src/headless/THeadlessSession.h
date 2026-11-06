@@ -362,6 +362,43 @@ public:
     // with errorString() saying why, for an id that is not a command of the session's profile and for a disabled
     // command, which the GUI does not let be clicked.
     bool activateAddonCommand(int id);
+    // A button on one of the profile's button bars or toolbars, or an entry of a button's menu, as the GUI draws it
+    struct Button
+    {
+        // The button's action's id, as getButtonState() and the editor know it
+        int id = 0;
+        QString name;
+        // The icon's path; an entry of a menu on a button bar shows the icon of the button whose menu it is in
+        QString icon;
+        // Its own, which the GUI gives it over its bar's; empty for a menu entry
+        QString styleSheet;
+        // A push-down button stays down, checked, from one press to the next
+        bool pushDown = false;
+        bool checked = false;
+        // A folder, whose press opens a menu of the entries in children
+        bool menu = false;
+        QList<Button> children;
+    };
+    struct ButtonBar
+    {
+        enum class Place { top, left, right, floating };
+        int id = 0;
+        QString name;
+        QString styleSheet;
+        // The strip of the main console it is in, or a toolbar the player docks or floats
+        Place place = Place::top;
+        Qt::Orientation orientation = Qt::Horizontal;
+        // A horizontal bar fills each column top to bottom with this many buttons, then the next to its right; a
+        // vertical bar fills each row left to right with this many, then the next below it
+        int columns = 1;
+        // How many places of that grid, in the order it fills them, the GUI leaves empty before the first button
+        int fillerOffset = 0;
+        QList<Button> buttons;
+    };
+    // The profile's bars, in the order of its actions, each with its active buttons; none with no profile open.
+    // As the GUI draws them once it last redrew its bars, which it does as a script changes them. Read from
+    // anywhere.
+    QList<ButtonBar> buttonBars() const;
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a

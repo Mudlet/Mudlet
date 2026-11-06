@@ -665,3 +665,18 @@ enabled command of the session's profile that is on the menu runs. A command tha
 because `addonCommands()` does not list it and `activateAddonCommand()` does not click it. A keypad key
 matches a shortcut written without the keypad, as in Qt, and a shortcut of more than one key never runs
 from `pressKey()`, which takes one key at a time.
+
+`buttonBars()` lists the profile's button bars and toolbars, the buttons a script makes with
+`tempButtonToolbar()` and `tempButton()` and those a package or the editor adds, as the GUI draws
+them: in the order of the profile's actions, each bar with its place (`top`, `left`, `right` or
+`floating`), orientation, grid and style sheet, and each active button with its icon, style sheet,
+whether it is a push-down button and is down, and, for a folder, the menu it opens. A horizontal bar
+fills each column top to bottom with `columns` buttons, then the next column to its right. A vertical
+bar fills each row left to right with `columns` buttons, then the next row down. Either leaves its
+first `fillerOffset` places empty. As in the GUI, an
+inactive bar or button is left out, and so is a bar placed where the GUI shows none; a package's
+folder lends its place to the bars in it, and a button bar's menu shows only active entries, each with
+the icon of the button it hangs from, while a floating toolbar's menu has an entry for the folder that
+holds every entry, active or not, with its own icon. A push-down button on a floating toolbar's menu
+reads as down when it is, where the GUI ticks it only once `setButtonState()` does. The list is empty
+with no profile open.
