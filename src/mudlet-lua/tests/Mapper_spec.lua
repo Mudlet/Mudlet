@@ -840,7 +840,7 @@ describe("Tests mapper functions against a shared fixture", function()
         end
       end)
       -- Taken from the name itself, as it is translated
-      for _, oldName in ipairs({defaultName:sub(1, 3), defaultName:sub(-3), defaultName:sub(2, 2)}) do
+      for _, oldName in ipairs({utf8.sub(defaultName, 1, 3), utf8.sub(defaultName, -3), utf8.sub(defaultName, 2, 2)}) do
         local id = addAreaName(oldName)
         assert.is_number(id, oldName)
         made[#made + 1] = id
