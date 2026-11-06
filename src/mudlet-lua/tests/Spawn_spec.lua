@@ -397,6 +397,115 @@ end]])
 
   end)
 
+  describe("the handle it returns", function()
+    local function waitUntil(condition)
+      for _ = 1, 150 do
+        if condition() then
+          return true
+        end
+        pumpEvents(20)
+      end
+      return condition()
+    end
+
+    -- A child left waiting on its input would outlive the test, so each one is
+    -- told to stop, then given a purge timer period to be freed in
+    local function spawnDrained(callback, ...)
+      local process = spawn(callback, ...)
+      onCleanup(function()
+        process.close()
+        waitUntil(function() return not process.isRunning() end)
+        pumpEvents(2200)
+      end)
+      return process
+    end
+
+    it("should send text to the child's input", function()
+      if skipped() then
+        return
+      end
+      local lines = {}
+      local process = spawnDrained(function(line) lines[#lines + 1] = line end, "cat")
+
+      process.send("first ")
+      process.send("line\n")
+      process.send(42)
+      process.send("\n")
+
+      assert.is_true(waitUntil(function() return #lines >= 2 end), "the child echoed nothing back")
+      assert.are.same({"first line\n", "42\n"}, lines)
+    end)
+
+    it("should send every byte, a NUL included", function()
+      if skipped() then
+        return
+      end
+      local lines = {}
+      local process = spawnDrained(function(line) lines[#lines + 1] = line end, "wc", "-c")
+
+      process.send("a\0b")
+      -- wc counts only once its input ends, so a close() that did nothing would leave this empty
+      process.close()
+
+      assert.is_true(waitUntil(function() return #lines >= 1 end), "the child never saw its input end")
+      assert.are.equal(3, tonumber(lines[1]:match("%d+")))
+    end)
+
+    it("should let a child reading to the end of its input finish", function()
+      if skipped() then
+        return
+      end
+      local process = spawnDrained(function() end, "cat")
+      assert.is_true(process.isRunning())
+
+      process.close()
+
+      assert.is_true(waitUntil(function() return not process.isRunning() end), "the child is still waiting on its input")
+    end)
+
+    it("should refuse to send something that is not text", function()
+      if skipped() then
+        return
+      end
+      local process = spawnDrained(function() end, "cat")
+
+      local ok, err = pcall(process.send, {})
+
+      assert.is_false(ok)
+      assert.are.equal("Unable to get data to send.", err)
+    end)
+
+    it("should refuse to send to a child that has ended", function()
+      if skipped() then
+        return
+      end
+      local process = spawnDrained(function() end, "/bin/sh", "-c", "exit 0")
+      assert.is_true(waitUntil(function() return not process.isRunning() end), "the child never ended")
+
+      local ok, err = pcall(process.send, "too late\n")
+
+      assert.is_false(ok)
+      assert.are.equal("Unable to send data to process. Process has ended.", err)
+      -- and closing an ended child's input does nothing, rather than raising
+      assert.is_true(pcall(process.close))
+    end)
+
+    -- A regression here hangs the whole suite rather than failing this test
+    it("should refuse to send to a child whose input it has closed", function()
+      if skipped() then
+        return
+      end
+      local process = spawnDrained(function() end, "sleep", "1")
+      process.close()
+      assert.is_true(process.isRunning())
+
+      local ok, err = pcall(process.send, "after close\n")
+
+      assert.is_false(ok)
+      assert.are.equal("Unable to send data to process. Its input has been closed.", err)
+    end)
+  end)
+
   describe("a callback that raises", function()
     -- an error object left behind on the stack by each line would use it up
     it("should leave the stack as it found it", function()
