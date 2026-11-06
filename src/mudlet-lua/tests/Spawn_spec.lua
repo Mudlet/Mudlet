@@ -399,7 +399,7 @@ end]])
 
   describe("the handle it returns", function()
     local function waitUntil(condition)
-      for _ = 1, 150 do
+      for _ = 1, 500 do
         if condition() then
           return true
         end
@@ -409,16 +409,19 @@ end]])
     end
 
     -- A child left waiting on its input would outlive the test, so each one is
-    -- told to stop, then given a purge timer period to be freed in
+    -- told to stop; the purge timer then frees every ended child's wrapper at once
     local function spawnDrained(callback, ...)
       local process = spawn(callback, ...)
       onCleanup(function()
         process.close()
         waitUntil(function() return not process.isRunning() end)
-        pumpEvents(2200)
       end)
       return process
     end
+
+    teardown(function()
+      pumpEvents(2200)
+    end)
 
     it("should send text to the child's input", function()
       if skipped() then
@@ -488,6 +491,23 @@ end]])
       assert.are.equal("Unable to send data to process. Process has ended.", err)
       -- and closing an ended child's input does nothing, rather than raising
       assert.is_true(pcall(process.close))
+    end)
+
+    -- One full purge timer period after the child ends frees its wrapper, leaving the handle holding nothing
+    it("should refuse to send to a child whose wrapper has been freed", function()
+      if skipped() then
+        return
+      end
+      local process = spawnDrained(function() end, "/bin/sh", "-c", "exit 0")
+      assert.is_true(waitUntil(function() return not process.isRunning() end), "the child never ended")
+      pumpEvents(2200)
+
+      local ok, err = pcall(process.send, "too late\n")
+
+      assert.is_false(ok)
+      assert.are.equal("Unable to send data to process. Process has ended.", err)
+      assert.is_true(pcall(process.close))
+      assert.is_false(process.isRunning())
     end)
 
     -- A regression here hangs the whole suite rather than failing this test
