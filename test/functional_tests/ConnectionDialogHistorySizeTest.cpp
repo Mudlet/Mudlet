@@ -103,6 +103,10 @@ private slots:
             const QString text = pDialog->profile_history->itemText(index);
             QVERIFY2(text.endsWith(qsl(" (%1)").arg(sizeText(saves.value(fileName)))), qPrintable(qsl("%1 is listed as \"%2\"").arg(fileName, text)));
         }
+        // the size is added to the date, not put in its place
+        const QString dated = pDialog->profile_history->itemText(pDialog->profile_history->findData(qsl("2020-01-01#00-00-00.xml")));
+        const QString expectedDate = mudlet::self()->getUserLocale().toString(QDate(2020, 1, 1), QLocale::LongFormat);
+        QVERIFY2(dated.startsWith(expectedDate), qPrintable(dated));
         // a custom-named save is still listed by its name
         QVERIFY(pDialog->profile_history->itemText(pDialog->profile_history->findData(qsl("before upgrade.xml"))).startsWith(qsl("before upgrade.xml (")));
         delete pDialog;

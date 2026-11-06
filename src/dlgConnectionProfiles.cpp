@@ -1639,7 +1639,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
             profile_history->addItem(
                     QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png"))), historyLabel(locale.toString(fileInfo.lastModified(), mDateTimeFormat), entry), QVariant(entry));
         } else if (entry.endsWith(QLatin1String(".xml"), Qt::CaseInsensitive)) {
-            profile_history->addItem(historyLabel(entry, entry), QVariant(entry)); // if it has a custom name, use it as it is
+            profile_history->addItem(historyLabel(entry, entry), QVariant(entry)); // a custom-named save is listed by its name
         }
     }
 
