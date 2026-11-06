@@ -189,6 +189,38 @@ describe("Tests the tags MXP handles", function()
       local joined = table.concat(lines, "\n")
       assert.is_true(joined:find("mxpBreakFirst\nmxpBreakSecond", 1, true) ~= nil, joined)
     end)
+
+    it("shows an SBR tag as a space", function()
+      local joined = table.concat(linesFor("mxpSoftBreakFirst<SBR>mxpSoftBreakSecond"), "\n")
+      assert.is_true(joined:find("mxpSoftBreakFirst mxpSoftBreakSecond", 1, true) ~= nil, joined)
+    end)
+
+    it("styles the space an SBR tag gives like the text around it", function()
+      feed("<B>mxpSoftBreakBold<SBR>mxpSoftBreakAfter</B>")
+      -- the format of the space in front of the word
+      assert.is_true(formatOf(" mxpSoftBreakAfter").bold)
+    end)
+
+    it("keeps the space an SBR tag gives in the text a SEND wraps", function()
+      local event = sendEvent("<SEND>mxpSoftBreakLink<SBR>mxpSoftBreakTail</SEND>")
+      assert.is_table(event)
+      assert.are.equal("mxpSoftBreakLink mxpSoftBreakTail", event.text)
+    end)
+
+    it("joins the next line to the one a NOBR tag ends", function()
+      local joined = table.concat(linesFor("mxpNoBreakFirst<NOBR>\nmxpNoBreakSecond"), "\n")
+      assert.is_true(joined:find("mxpNoBreakFirstmxpNoBreakSecond", 1, true) ~= nil, joined)
+    end)
+
+    it("ignores only the one newline after a NOBR tag", function()
+      local joined = table.concat(linesFor("mxpNoBreakOnce<NOBR> mxpNoBreakMore\nmxpNoBreakJoined\nmxpNoBreakOwnLine"), "\n")
+      assert.is_true(joined:find("mxpNoBreakOnce mxpNoBreakMoremxpNoBreakJoined\nmxpNoBreakOwnLine", 1, true) ~= nil, joined)
+    end)
+
+    it("keeps the line a BR tag breaks after a NOBR tag", function()
+      local joined = table.concat(linesFor("mxpNoBreakBefore<NOBR><BR>mxpNoBreakAfterBreak\nmxpNoBreakJoinedToo"), "\n")
+      assert.is_true(joined:find("mxpNoBreakBefore\nmxpNoBreakAfterBreakmxpNoBreakJoinedToo", 1, true) ~= nil, joined)
+    end)
   end)
 
   -- A <SEND> hands Lua the command it would run, the hint it would show and the
@@ -414,7 +446,7 @@ describe("Tests the tags MXP handles", function()
       local sent = replyTo("<SUPPORT>")
       assert.are.equal(1, #sent)
       assert.is_true(sent[1]:find("^\27%[1z<SUPPORTS ") ~= nil, sent[1])
-      for _, element in ipairs({"+send", "+send.href", "+frame", "+color.fore"}) do
+      for _, element in ipairs({"+send", "+send.href", "+frame", "+color.fore", "+sbr", "+nobr"}) do
         assert.is_true(sent[1]:find(element .. " ", 1, true) ~= nil or sent[1]:find(element .. ">", 1, true) ~= nil,
           ("%s missing from %s"):format(element, sent[1]))
       end

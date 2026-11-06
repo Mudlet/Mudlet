@@ -2315,6 +2315,11 @@ void TBuffer::parseChunk(
                 // BUT only if we're not in the middle of parsing a tag (tags can span lines)
                 if (!mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
                     mpHost->mMxpProcessor.resetToDefaultMode();
+                    // The line still ends for the line modes, so a secure line cannot run on into the next one
+                    if (ch == CHAR_NEW_LINE && mpHost->mMxpProcessor.takeIgnoredNewline()) {
+                        localBufferPosition++;
+                        continue;
+                    }
                 }
             }
         }

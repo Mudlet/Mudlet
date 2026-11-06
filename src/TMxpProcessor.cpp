@@ -24,6 +24,8 @@
 #include "TStringUtils.h"
 #include <QDebug>
 
+#include <utility>
+
 // Static sets of MXP tags from the specification
 // See: https://www.zuggsoft.com/zmud/mxp.htm
 
@@ -211,6 +213,7 @@ bool TMxpProcessor::setMode(int modeCode)
         break;
     case MXP_MODE_CODE_RESET: //  reset (MXP 0.4 or later) - close all open tags.  Set mode to Open.  Set text color and properties to default.
         mMxpTagBuilder.reset();
+        mIgnoreNextNewline = false;
         mpMxpClient->resetTextProperties();
         // Open, not the default: a secure default would let this line use secure tags
         mMXP_MODE = MXP_MODE_OPEN;
@@ -285,6 +288,12 @@ void TMxpProcessor::enable()
 void TMxpProcessor::disable()
 {
     mMXP = false;
+    mIgnoreNextNewline = false;
+}
+
+bool TMxpProcessor::takeIgnoredNewline()
+{
+    return std::exchange(mIgnoreNextNewline, false);
 }
 
 TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustomEntities)
@@ -367,11 +376,23 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
             return HANDLER_INSERT_ENTITY_SYS;
         }
 
-        TMxpTagHandlerResult const result = mMxpTagProcessor.handleTag(mMxpTagProcessor, *mpMxpClient, tag.get());
+        const bool softBreak = tag->isStartTag() && tag->isNamed(qsl("SBR"));
+        const bool noBreak = tag->isStartTag() && tag->isNamed(qsl("NOBR"));
+        TMxpTagHandlerResult const result = (softBreak || noBreak) ? MXP_TAG_HANDLED : mMxpTagProcessor.handleTag(mMxpTagProcessor, *mpMxpClient, tag.get());
 
         // The line's mode, not the default: an open line under a secure default would stay secure
         if (mMXP_MODE == MXP_MODE_TEMP_SECURE) {
             mMXP_MODE = mModeBeforeTempSecure;
+        }
+
+        // Re-read as text, so the space joins the link and the style it falls inside
+        if (softBreak) {
+            lastEntityValue = qsl(" ");
+            return HANDLER_INSERT_ENTITY_LIT;
+        }
+        if (noBreak) {
+            mIgnoreNextNewline = true;
+            return HANDLER_NEXT_CHAR;
         }
 
         // If tag was not handled (not valid MXP and not a custom element), display it as-is

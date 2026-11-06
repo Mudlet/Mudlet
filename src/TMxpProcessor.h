@@ -75,6 +75,8 @@ public:
     void disable();
     bool isEnabled() const;
     void resetToDefaultMode();
+    // Whether a <NOBR> asked for this newline from the game to be ignored; asking clears it
+    bool takeIgnoredNewline();
 
     TMxpProcessingResult processMxpInput(char& ch, bool resolveCustomEntities);
     void processRawInput(char ch);
@@ -115,6 +117,7 @@ private:
     TMXPMode mMXP_MODE = MXP_MODE_OPEN;
     TMXPMode mMXP_DEFAULT = MXP_MODE_OPEN;
     TMXPMode mModeBeforeTempSecure = MXP_MODE_OPEN;
+    bool mIgnoreNextNewline = false;
 
     // MXP delegated handlers
     TMxpNodeBuilder mMxpTagBuilder;
