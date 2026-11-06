@@ -260,6 +260,15 @@ public:
     // The link a run names, while the main console holds it; nullopt for 0, an id it does not hold and with no profile
     // open. A getter, so it may be called from any handler.
     std::optional<Link> link(int id) const;
+    // Follows a link as a left click on it does, or given an item, as picking that item from its menu does: a
+    // spoiler not yet revealed is only revealed (revealedSpoiler); a disabled link and a menu's greyed-out item
+    // run nothing (disabled), nor does a link the game's visibility settings have concealed (concealed); and
+    // otherwise its selection group is updated and its command or function runs before this returns, so an
+    // OSC 8 web link opens through QDesktopServices: ran, or failed where that raised a Lua error, which
+    // errorString() gives. noSuchItem: item does not index link()'s items. unknown: an id the main console does
+    // not hold. refused: where submit() is; errorString() says why.
+    enum class LinkResult { ran, revealedSpoiler, disabled, concealed, failed, noSuchItem, unknown, refused };
+    LinkResult followLink(int link, std::optional<int> item = std::nullopt);
     // Answers the game's offer of a secure port, as the GUI's Yes and No do: true stores that port with TLS on,
     // as the connection dialog would, and connects there, so a frontend that passes its own port to a later
     // start() passes tls with it; false reconnects where it was and stops the profile asking again. False, with
@@ -712,6 +721,8 @@ private:
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
+    // Lua's own message, out of what the GUI's error console shows of it
+    static QString luaErrorOf(const QString& consoleText);
     // False, with errorString() saying why, while the GUI's hidden-input box would not be open
     bool inputHidden(bool sending);
     void noteAlreadyInstalled(const QString& path, const QString& name);

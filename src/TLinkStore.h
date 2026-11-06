@@ -75,6 +75,8 @@ public:
     QString getExpireName(int id) const { return mExpireStore.value(id); }
 
     int getCurrentLinkID() const { return mLinkID; }
+    // Tells apart the links one id has named, as ids are reused; 0 for an id the store does not hold
+    qint64 issueOf(int id) const;
     int nextLinkID() const { return mLinkID < mMaxLinks ? mLinkID + 1 : 1; }
 
     // true until a link is created since mLinkID never wraps back to zero
@@ -100,6 +102,8 @@ private:
 
 
     int mLinkID = 0;
+    // How many times mLinkID has wrapped
+    qint64 mLaps = 0;
     int mMaxLinks = scmMaxLinks;
 
     QMap<int, QStringList> mLinkStore;

@@ -216,6 +216,20 @@ struct TConsoleModel
     bool setSelectionDisplayAttributes(TChar::AttributeFlags attributes, bool enabled);
     // Makes the selected run a link, taking over the commands' Lua registry references.
     bool setLink(const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences);
+    // What a click, Enter or a menu pick does to a link, in two halves so a view can do its own part between
+    // them. linkMayRun() reveals a spoiler not yet revealed (revealedSpoiler) or marks a disabled link
+    // (disabled), and gives ran only where runLink() should follow; unknown for no such link. runLink() updates
+    // the link's selection group and runs its command item, as TLinkStore::menuItems() indexes them; fromMenu
+    // names the Lua a menu pick runs "echoPopup", as the GUI does. False where there was no such item or its Lua
+    // raised an error.
+    enum class LinkFollowed { ran, revealedSpoiler, disabled, unknown };
+    LinkFollowed linkMayRun(int linkIndex);
+    bool runLink(int linkIndex, int item, bool fromMenu);
+    // runLink() for a menu's pick, unless its link is no longer the one with the TLinkStore::issueOf() the menu
+    // was built for
+    void runMenuPick(int linkIndex, qint64 issue, int item);
+    // Selects the link in its group, rewriting a single-command link's command for the value chosen
+    void applyLinkSelection(int linkIndex, QString& command, const Mudlet::HyperlinkStyling::SelectionSettings& selection);
 
     // Client output, appended at the end of the buffer and copied to --mirror. The view showing the
     // model brings the new lines into view (TConsole::showNewLines()).
