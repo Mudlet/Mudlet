@@ -366,7 +366,8 @@ void TAudioMixer::setIdleCloseDelay(const std::chrono::milliseconds delay)
 void TAudioMixer::setOutputSuspended(const bool suspended)
 {
     mOutputSuspended = suspended;
-    if (suspended) {
+    // Once the thread has stopped, as the application quits, the output is closed and a blocking call would never return
+    if (suspended && mThread.isRunning()) {
         QMetaObject::invokeMethod(
                 mpOutput,
                 [this]() {

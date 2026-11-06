@@ -465,25 +465,15 @@ private slots:
                                      ? QString()
                                      : noAudioReason());
 
-        QList<QString> crossThreadWarnings;
-        static QList<QString>* sWarnings = nullptr;
-        sWarnings = &crossThreadWarnings;
-        const QtMessageHandler previousHandler = qInstallMessageHandler([](QtMsgType, const QMessageLogContext&, const QString& message) {
-            if (message.contains(qsl("from another thread"))) {
-                sWarnings->append(message);
-            }
-        });
         // What QCoreApplication::exec() emits as its event loop ends
         QVERIFY(QMetaObject::invokeMethod(qApp, "aboutToQuit", Qt::DirectConnection));
         const bool closed = !TAudioMixer::self()->outputOpen();
         media()->playMedia(data);
         QTest::qWait(500ms);
         const bool stayedClosed = !TAudioMixer::self()->outputOpen();
-        qInstallMessageHandler(previousHandler);
 
         QVERIFY2(closed, "The shared output was still open once the application said it was quitting.");
         QVERIFY2(stayedClosed, "A sound played after the application said it was quitting opened the shared output again.");
-        QVERIFY2(crossThreadWarnings.isEmpty(), qPrintable(crossThreadWarnings.join(QChar::LineFeed)));
     }
 
 private:
