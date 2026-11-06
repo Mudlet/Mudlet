@@ -26,6 +26,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QMimeData>
 #include <QSignalSpy>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -481,6 +482,64 @@ end)
         QVERIFY2(session.errorString().startsWith(qsl("The replay recording file could not be opened: ")), qPrintable(session.errorString()));
         const QString failed = texts(local).join(QString());
         QVERIFY2(failed.startsWith(qsl("System Message: Failed to open replay recording file for writing: ")), qPrintable(failed));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aDropOnTheMainConsoleIsToldToScripts()
+    {
+        const QString name = qsl("Headless Drop");
+        QVERIFY(writeProfile(name, qsl(R"lua(
+headlessDrops = ""
+for _, name in ipairs({"sysDropEvent", "sysDropUrlEvent"}) do
+  registerAnonymousEventHandler(name, function(event, item, kind, x, y, console)
+    headlessDrops = headlessDrops .. string.format("%s|%s|%s|%s|%s|%s\n", event, item, kind, tostring(x), tostring(y), console)
+  end)
+end
+)lua")));
+        QTemporaryDir dropped;
+        QVERIFY(dropped.isValid());
+        const QString notes = qsl("%1/notes.txt").arg(dropped.path());
+        {
+            QFile file(notes);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+        }
+        THeadlessSession session;
+        QMimeData empty;
+        QVERIFY(!session.dropOnMainConsole(empty, QPoint()));
+        QCOMPARE(session.errorString(), qsl("No profile is open."));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        const auto drops = [&session]() {
+            const QString drops = luaGlobalString(session.host(), "headlessDrops");
+            session.runLua(qsl("headlessDrops = ''"));
+            return drops;
+        };
+
+        QVERIFY(!session.dropOnMainConsole(empty, QPoint(1, 2)));
+        QCOMPARE(session.errorString(), qsl("The drop holds neither files nor text, which the main console does not take."));
+        QCOMPARE(drops(), QString());
+
+        QMimeData link;
+        // Not http, which Mudlet's own handler would download as a package
+        link.setText(qsl("telnet://example.org:23"));
+        QVERIFY(session.dropOnMainConsole(link, QPoint(12, 34)));
+        QCOMPARE(drops(), qsl("sysDropUrlEvent|telnet://example.org:23|telnet|12|34|main\n"));
+
+        QMimeData files;
+        files.setUrls({QUrl::fromLocalFile(notes)});
+        QVERIFY(session.dropOnMainConsole(files, QPoint(7, 8)));
+        // QMimeData gives a file's URL as its text when it has none of its own, so the GUI raises both
+        QCOMPARE(drops(), qsl("sysDropEvent|%1|txt|7|8|main\nsysDropUrlEvent|%2|file|7|8|main\n").arg(notes, QUrl::fromLocalFile(notes).toString()));
+
+        QMimeData both;
+        both.setUrls({QUrl::fromLocalFile(notes), QUrl::fromLocalFile(qsl("%1/missing.txt").arg(dropped.path()))});
+        both.setText(qsl("telnet://example.org:23"));
+        QVERIFY(session.dropOnMainConsole(both, QPoint(5, 6)));
+        QCOMPARE(drops(), qsl("sysDropEvent|%1|txt|5|6|main\nsysDropUrlEvent|telnet://example.org:23|telnet|5|6|main\n").arg(notes));
+
+        QVERIFY(session.setScriptsStopped(true));
+        QVERIFY(session.dropOnMainConsole(both, QPoint(5, 6)));
+        QVERIFY(session.setScriptsStopped(false));
+        QCOMPARE(drops(), QString());
         QVERIFY(session.shutdown(false));
     }
 };

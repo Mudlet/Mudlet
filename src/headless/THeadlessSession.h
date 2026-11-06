@@ -39,6 +39,8 @@ class Host;
 class HostManager;
 class QTimer;
 class TBuffer;
+class QMimeData;
+class QPoint;
 
 // One profile run with no window, for a frontend of its own (a terminal, a phone app) to feed input and
 // show the main console. It touches no terminal or standard stream itself, and like Host it is used on the
@@ -302,6 +304,13 @@ public:
     bool setReplayRecording(bool record);
     // False with no profile open
     bool replayRecording() const;
+    // A drop of files or a link on the main console, as the GUI takes one: each URL that names an existing local
+    // file raises sysDropEvent with its path, its suffix, the position and "main", then text that reads as a valid URL
+    // raises sysDropUrlEvent with it, its scheme, the position and "main"; QMimeData gives a single URL as the text
+    // when there is none of its own, so a file dropped alone raises both, as in the GUI. The position is the point on the main
+    // console it was dropped at, in the app's own pixels. False, raising nothing, for data with neither URLs nor text,
+    // which the GUI's console does not take. Refused where submit() is.
+    bool dropOnMainConsole(const QMimeData& data, const QPoint& position);
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
