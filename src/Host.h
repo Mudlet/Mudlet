@@ -319,8 +319,8 @@ public:
     bool requestClose();
     // A main console raises sysExitEvent as it closes; a profile that never had one gets it from this.
     void raiseExitEventIfOwed();
-    // The save a close makes without asking: the profile, Mudlet's settings and the map, waited for; false if
-    // either the profile or the map failed
+    // The save a close makes without asking: the profile, Mudlet's settings and the map, waited for; false if the
+    // profile or the map failed, or, writing nothing, if the profile is still loading and its map has not loaded yet
     bool saveForClose();
     // Whether deleting the profile now would pull its Lua state or map from under code still running
     // on them; asks a map operation to stop, so the wait ends.
@@ -905,8 +905,8 @@ public:
     void setFontsAntiAlias(const bool antiAlias) { mNoAntiAlias = !antiAlias; }
 
 private:
-    // A main console's close, for a profile that never had one; with nobody to ask, an unforced close
-    // saves only if save on exit is set. False, doing nothing, for a profile already closing.
+    // A main console's close, for a profile that never had one; it saves, as the GUI's "Yes" does, unless the
+    // profile's save did not load or is still loading. False, doing nothing, for a profile already closing.
     bool closeWithNoView();
     QSettings& profileIni();
 
@@ -1026,6 +1026,8 @@ public:
     // loading even though the buttons start out with themselves NOT being
     // pushed down:
     bool mIsProfileLoadingSequence = false;
+    // Its saved map has been loaded, so what it holds is the player's even while the load sequence runs on
+    bool mLoadedMap = false;
 
 
     QScopedPointer<TMap> mpMap;
