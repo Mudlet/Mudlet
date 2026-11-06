@@ -1689,6 +1689,9 @@ void THeadlessSession::withdrawSecureConnectionOffer()
 void THeadlessSession::detachFromHost()
 {
     closeDebugConsole();
+    if (mpLatencyPacer) {
+        mpLatencyPacer->stop();
+    }
     mSecureConnectionOffered = false;
     mMapOperationCancelable = false;
     if (mpHost) {

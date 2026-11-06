@@ -509,6 +509,12 @@ them in: a Lua error comes as `[ERROR:]` in blue, where it was in green and the 
 black. It is sent as written, as `localText` is, so its handler must not call the session back. A
 handler that takes only the profile and the text may still be connected.
 
+`latencyChanged` carries what the GUI's latency box shows: the network's lag, from a command sent to the
+game's reply, while the game marks its prompts with GA or EOR, and none otherwise, where the box shows
+`<no GA>`; and how long the game's last text took to process, its triggers included, in seconds. As the
+box, it is paced to once every 16ms, and sent only when its text, to the millisecond, would change. It
+comes from the event loop, and none comes for a profile that `shutdown()` has let go.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,

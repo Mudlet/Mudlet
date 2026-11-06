@@ -22,6 +22,13 @@
 #include "Host.h"
 #include "TConsoleModel.h"
 
+#include <QTimer>
+
+namespace {
+// As TMainConsole paces its latency box
+constexpr int csmLatencyBoxPaceMs = 16;
+} // namespace
+
 THeadlessSession::ConsoleWrap THeadlessSession::consoleWrap() const
 {
     if (!mpHost) {
@@ -45,6 +52,7 @@ void THeadlessSession::connectOutputRelays(Host* pHost, const unsigned int run)
 {
     mDeliveredConsoleWrap.reset();
     mDeliveredConsoleColors.reset();
+    mDeliveredLatency.clear();
     // Read at delivery, not as sent: the load sets each of the three in turn, and consoleWrap() gave the last already
     connect(
             &pHost->mainConsoleModel().mNotifier,
@@ -81,6 +89,36 @@ void THeadlessSession::connectOutputRelays(Host* pHost, const unsigned int run)
                 emit consoleColorsChanged(profile, colors.first, colors.second);
             },
             Qt::QueuedConnection);
+    connect(&pHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::incomingTextProcessed, this, [this, run]() {
+        if (!mpLatencyPacer) {
+            mpLatencyPacer = new QTimer(this);
+            mpLatencyPacer->setSingleShot(true);
+            mpLatencyPacer->setInterval(csmLatencyBoxPaceMs);
+            connect(mpLatencyPacer, &QTimer::timeout, this, &THeadlessSession::sendLatency);
+        }
+        if (!mpLatencyPacer->isActive()) {
+            mLatencyPaceRun = run;
+            mpLatencyPacer->start();
+        }
+    });
+}
+
+void THeadlessSession::sendLatency()
+{
+    // A shutdown() runs the event loop as the profiles close
+    if (mShuttingDown || mLatencyPaceRun != mRun || !mpHost) {
+        return;
+    }
+    const cTelnet& telnet = mpHost->mTelnet;
+    const std::optional<double> network = telnet.mGA_Driver ? std::optional<double>(telnet.networkLatencyTime) : std::nullopt;
+    const double processing = mpHost->mainConsoleModel().mIncomingTextSeconds;
+    const QString shown = qsl("%1 %2").arg(network ? QString::number(*network, 'f', 3) : qsl("-"), QString::number(processing, 'f', 3));
+    if (shown == mDeliveredLatency) {
+        return;
+    }
+    mDeliveredLatency = shown;
+    const QString profile = mProfileName;
+    emit latencyChanged(profile, network, processing);
 }
 
 void THeadlessSession::noteOutputStateAtLoad()
