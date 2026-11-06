@@ -263,11 +263,13 @@ void TCommandLine::editAndSpellCheck(QEvent* event, const KeyEdit kind)
             editBlock.beginEditBlock();
         }
     }
+    if (grouped) {
+        // However the caret got here, a mouse click or the menu's Undo included
+        keepMarkOffNextCharacter();
+    }
     QPlainTextEdit::event(event);
     if (!leavesMarksAlone) {
         spellCheck();
-    } else if (!modifierAlone && mpHost->getEnableSpellCheck()) {
-        keepMarkOffNextCharacter();
     }
     if (grouped) {
         editBlock.endEditBlock();
@@ -421,7 +423,10 @@ bool TCommandLine::event(QEvent* event)
                 mTabCompletionTyped.clear();
                 mHistoryBuffer = 0;
                 mLastCompletion.clear();
-                break;
+                // Part of the run of typing, so one Undo takes back several words
+                editAndSpellCheck(event, KeyEdit::Typing);
+                adjustHeight();
+                return true;
             }
 
             if (keybindingMatched(ke)) {

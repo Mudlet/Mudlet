@@ -331,6 +331,36 @@ private slots:
         QVERIFY(markedMisspelt(pCommandLine, qsl("qzxfrob")));
     }
 
+    // The menu's Undo, like a mouse click, puts the caret at the end of a marked
+    // word without a key press, and the space typed there must still start unmarked
+    void test_aSpaceTypedAfterTheMenusUndoIsNotMarked()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("go qzxfrob"));
+        QTest::keyClick(pCommandLine, Qt::Key_Backspace);
+        pCommandLine->undo();
+        QCOMPARE(pCommandLine->toPlainText(), qsl("go qzxfrob"));
+
+        QTest::keyClicks(pCommandLine, qsl(" ab"));
+
+        QTextCursor space(pCommandLine->document());
+        space.setPosition(11);
+        QCOMPARE(space.charFormat().underlineStyle(), QTextCharFormat::NoUnderline);
+    }
+
+    // Spaces belong to the run of typing, as they do with spell check off
+    void test_undoTakesBackSeveralTypedWordsAtOnce()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("qzxa qzxb qzxc"));
+
+        QTest::keySequence(pCommandLine, QKeySequence::Undo);
+
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+    }
+
     // Switching spell check on rechecks the whole line outside any key press. Undo
     // must get past that recheck too, with the bare Ctrl a real Ctrl+Z starts with.
     void test_undoGetsPastARecheckOfTheWholeLine()
