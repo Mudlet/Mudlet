@@ -22,6 +22,10 @@
 #include "THeadlessSession.h"
 
 #include "Host.h"
+#include "HostManager.h"
+#include "TEvent.h"
+
+#include <QPointer>
 
 bool THeadlessSession::setScriptsStopped(const bool stopped)
 {
@@ -40,4 +44,38 @@ bool THeadlessSession::setScriptsStopped(const bool stopped)
 bool THeadlessSession::scriptsStopped() const
 {
     return mpHost && mpHost->mEmergencyStop;
+}
+
+bool THeadlessSession::setApplicationActive(const bool active)
+{
+    if (refused()) {
+        return false;
+    }
+    if (active == mApplicationActive) {
+        return true;
+    }
+    mApplicationActive = active;
+    const unsigned int change = ++mApplicationActiveChanges;
+    if (!mpPool) {
+        return true;
+    }
+    TEvent event{};
+    event.mArgumentList << QLatin1String("sysApplicationFocusChangeEvent") << (active ? QLatin1String("1") : QLatin1String("0"));
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_BOOLEAN;
+    // A handler may open or close a profile, or delete the session
+    QList<QPointer<Host>> profiles;
+    for (const auto& pHost : mpPool->hostList()) {
+        profiles.append(pHost.data());
+    }
+    const QPointer<THeadlessSession> self(this);
+    for (const QPointer<Host>& pHost : std::as_const(profiles)) {
+        // A handler that changed it again has told every profile already
+        if (!self || mApplicationActiveChanges != change) {
+            break;
+        }
+        if (pHost && pHost->mLoadedOk && !pHost->closeStarted()) {
+            pHost->raiseEvent(event);
+        }
+    }
+    return true;
 }

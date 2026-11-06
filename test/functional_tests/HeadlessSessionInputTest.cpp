@@ -28,6 +28,7 @@
 #include <QFile>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QtTest/QtTest>
 
 #include <optional>
@@ -207,6 +208,113 @@ tempTrigger("pong", [[headlessRuns = headlessRuns .. "trigger "]])
         QVERIFY(session.shutdown(false));
         QVERIFY(!session.setScriptsStopped(false));
         QVERIFY(!session.scriptsStopped());
+    }
+
+    void test_theAppComingToTheFrontIsToldToEveryProfile()
+    {
+        const QString script = qsl(R"lua(
+headlessFocus = ""
+registerAnonymousEventHandler("sysApplicationFocusChangeEvent", function(_, active)
+  headlessFocus = headlessFocus .. tostring(active) .. " "
+end)
+)lua");
+        const QString name = qsl("Headless App Active");
+        const QString other = qsl("Headless App Active Other");
+        QVERIFY(writeProfile(name, script));
+        QVERIFY(writeProfile(other, script));
+        THeadlessSession session;
+        QVERIFY(session.applicationActive());
+        // Only kept, with no profile to tell
+        QVERIFY(session.setApplicationActive(false));
+        QVERIFY(!session.applicationActive());
+        QVERIFY(session.setApplicationActive(true));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QCOMPARE(luaGlobalString(session.host(), "headlessFocus"), QString());
+
+        QVERIFY(session.setApplicationActive(false));
+        QVERIFY(!session.applicationActive());
+        QCOMPARE(luaGlobalString(session.host(), "headlessFocus"), qsl("false "));
+        QVERIFY(session.setApplicationActive(false));
+        QCOMPARE(luaGlobalString(session.host(), "headlessFocus"), qsl("false "));
+        QVERIFY(session.setApplicationActive(true));
+        QCOMPARE(luaGlobalString(session.host(), "headlessFocus"), qsl("false true "));
+
+        QVERIFY(session.runLua(qsl("loadProfile([[%1]], true)").arg(other)));
+        Host* pOther = HostManager::self()->getHost(other);
+        QVERIFY(pOther);
+        QVERIFY(session.setApplicationActive(false));
+        QCOMPARE(luaGlobalString(session.host(), "headlessFocus"), qsl("false true false "));
+        QCOMPARE(luaGlobalString(pOther, "headlessFocus"), qsl("false "));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // The handler's saveJsonMap() runs the event loop, where the app comes to the front and leaves it again
+    void test_theAppLeavingAndComingBackUnderAHandlerIsToldOnce()
+    {
+        const QString name = qsl("Headless App Active Nested");
+        const QString other = qsl("Headless App Active Nested Other");
+        const QString script = qsl(R"lua(
+headlessFocus = ""
+assert(openMapWidget())
+registerAnonymousEventHandler("sysApplicationFocusChangeEvent", function(_, active)
+  headlessFocus = headlessFocus .. tostring(active) .. " "
+  if headlessPump then
+    local path = headlessPump
+    headlessPump = nil
+    saveJsonMap(path)
+  end
+end)
+)lua");
+        QVERIFY(writeProfile(name, script));
+        QVERIFY(writeProfile(other, script));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("loadProfile([[%1]], true)").arg(other)));
+        Host* pOther = HostManager::self()->getHost(other);
+        QVERIFY(pOther);
+        for (Host* pHost : {session.host(), pOther}) {
+            const QString path = mConfigDir.filePath(qsl("%1.json").arg(pHost->getName()));
+            QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessPump = [[%1]]").arg(path)));
+        }
+        std::optional<std::pair<bool, bool>> nested;
+        QTimer::singleShot(0, this, [&session, &nested]() {
+            const bool cameBack = session.setApplicationActive(true);
+            nested = {cameBack, session.setApplicationActive(false)};
+        });
+
+        QVERIFY(session.setApplicationActive(false));
+        QCOMPARE(nested, (std::optional<std::pair<bool, bool>>({true, true})));
+        QVERIFY(!session.applicationActive());
+        // The profile told first hears all three; the other only the two the handler's loop sent it
+        QStringList heard{luaGlobalString(session.host(), "headlessFocus"), luaGlobalString(pOther, "headlessFocus")};
+        heard.sort();
+        QCOMPARE(heard, (QStringList{qsl("false true false "), qsl("true false ")}));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_theAppComingToTheFrontIsRefusedMidWrite()
+    {
+        const QString name = qsl("Headless App Active Mid Write");
+        QVERIFY(writeProfile(name, qsl(R"lua(
+headlessFocus = ""
+registerAnonymousEventHandler("sysApplicationFocusChangeEvent", function(_, active)
+  headlessFocus = headlessFocus .. tostring(active) .. " "
+end)
+)lua")));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        std::optional<bool> setMidWrite;
+        connect(&session, &THeadlessSession::outputLine, this, [&session, &setMidWrite](const QString&, const QString& text) {
+            if (text == qsl("leave now")) {
+                setMidWrite = session.setApplicationActive(false);
+            }
+        });
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("refused")));
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("leave now\n"))lua")));
+        QCOMPARE(setMidWrite, std::optional<bool>(false));
+        QVERIFY(session.applicationActive());
+        QCOMPARE(luaGlobalString(session.host(), "headlessFocus"), QString());
+        QVERIFY(session.shutdown(false));
     }
 };
 
