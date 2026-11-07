@@ -185,6 +185,8 @@ class Host : public QObject
     friend class HostManager;
     // Allows the functional test to close a profile with no view, and to hold a save open past a shortened wait:
     friend class HeadlessHostSmokeTest;
+    // Allows the functional test to run a map autosave without waiting minutes for its timer:
+    friend class MapAutosaveTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
@@ -879,6 +881,8 @@ public:
     void setMxpBorders(const QMargins);
     void loadMap();
     bool saveMapFile(const QString& location, int saveVersion = 0);
+    // Call before writing or reading the profile's map files: the newest of them is the one a profile loads
+    void waitForMapAutosave();
     bool loadMapFile(const QString& location);
     bool importMapFile(const QString& location, QString* errMsg = nullptr);
     std::tuple<QString, bool> getCmdLineSettings(const enums::CommandLineType, const QString&);
@@ -1533,6 +1537,7 @@ private:
     void startMapAutosave(const int interval);
     void timerEvent(QTimerEvent* event) override;
     void autoSaveMap();
+    void autoSaveMapInBackground(const QString& path);
     void closeChildren();
     void installModulesList(const QStringList&);
     void setupSandboxedLuaState(lua_State* L);
@@ -1652,6 +1657,8 @@ private:
     QHash<QString, std::shared_ptr<XMLexport>> writers;
 
     QFuture<bool> mModuleFuture;
+    QFuture<QString> mMapAutosaveFuture;
+    bool mMapAutosaveResultPending = false;
 
     // Will be null/empty if is to use Mudlet's default/own presence
     QString mDiscordApplicationID;

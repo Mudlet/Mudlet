@@ -5220,6 +5220,46 @@ describe("Tests saveMap and loadMap", function()
     end)
   end)
 
+  -- saveMap() hands the file 256 KiB at a time, so this map runs over several of
+  -- those, and one string in it is longer than a whole one
+  it("saves a map larger than its write buffer whole", function()
+    local path = mapDirectory .. "/mapper_spec_large.dat"
+    finally(function() os.remove(path) end)
+    local function contents()
+      local file = assert(io.open(path, "rb"))
+      local data = file:read("*a")
+      file:close()
+      return data
+    end
+    deleteMap()
+    local area = addAreaName("MapperSpecLargeArea")
+    local rooms = {}
+    for i = 1, 2000 do
+      local id = createRoomID()
+      addRoom(id)
+      setRoomArea(id, area)
+      setRoomCoordinates(id, i % 50, math.floor(i / 50), 0)
+      setRoomName(id, "room " .. i .. " " .. string.rep("é", 80))
+      rooms[i] = id
+    end
+    local big = string.rep("x", 300000)
+    setMapUserData("mapper spec big", big)
+
+    assert.is_true(saveMap(path))
+    local saved = contents()
+    assert.is_true(#saved > 1024 * 1024)
+    assert.is_true(saveMap(path))
+    assert.is_true(saved == contents(), "saving the same map twice wrote different files")
+
+    deleteMap()
+    assert.is_true(loadMap(path))
+    assert.is_true(big == getMapUserData("mapper spec big"), "the longest string did not survive the round trip")
+    assert.are.equal(#rooms, table.size(getRooms()))
+    for i, id in ipairs(rooms) do
+      assert.are.equal("room " .. i .. " " .. string.rep("é", 80), getRoomName(id))
+    end
+  end)
+
   -- Careful with the order of anything added here: a map document that will
   -- not parse has emptied the map first (TMap::readXmlMapFile clears before it
   -- parses), so it leaves no map behind for the next spec. A file that is not
