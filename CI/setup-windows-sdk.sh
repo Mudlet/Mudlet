@@ -19,7 +19,10 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 2.6.0    Drop the Info-ZIP unzip pin: libarchive 3.8.9-3 opens
+# Version: 2.7.0    Let libzip's zip.h overwrite the copy that MSYS2's zlib
+#                   1.4-1 also ships, and reinstall libzip if its header is
+#                   missing; stop retrying a file conflict
+#          2.6.0    Drop the Info-ZIP unzip pin: libarchive 3.8.9-3 opens
 #                   extracted files with O_BINARY, so bsdunzip no longer
 #                   mangles line endings
 #          2.5.0    Pin luarocks to Info-ZIP unzip, since libarchive now
@@ -99,9 +102,15 @@ echo "    to go and have a cup of tea (other beverages are available) in the mea
 echo ""
 
 echo "=== Installing needed packages ==="
+# MSYS2's zlib 1.4-1 also installs minizip's zip.h as include/zip.h, which is libzip's path;
+# libzip depends on zlib, so it is extracted later and its header wins. A no-op once zlib drops it.
+libzip_header="${MINGW_BASE_DIR}/include/zip.h"
+pacman_log="$(mktemp)"
+trap 'rm -f "${pacman_log}"' EXIT
 pacman_attempts=0
 while true; do
-  if /usr/bin/pacman -Su --needed --noconfirm \
+  # English messages for the "conflicting files" match below; C.UTF-8, not C, so non-ASCII package paths still extract
+  if LANGUAGE='' LC_ALL=C.UTF-8 /usr/bin/pacman -Su --needed --noconfirm --overwrite "${libzip_header}" \
     "${MINGW_PACKAGE_PREFIX}-qt6-base" \
     "${MINGW_PACKAGE_PREFIX}-qt6-multimedia" \
     "${MINGW_PACKAGE_PREFIX}-qt6-multimedia-wmf" \
@@ -143,8 +152,13 @@ while true; do
     "${MINGW_PACKAGE_PREFIX}-python" \
     "${MINGW_PACKAGE_PREFIX}-uasm" \
     "${MINGW_PACKAGE_PREFIX}-cmake" \
-    "${MINGW_PACKAGE_PREFIX}-jq"; then
+    "${MINGW_PACKAGE_PREFIX}-jq" 2>&1 | tee "${pacman_log}"; [ "${PIPESTATUS[0]}" -eq 0 ]; then
       break
+  fi
+
+  if grep -q "conflicting files" "${pacman_log}"; then
+    echo "=== pacman found conflicting files, which retrying will not fix ==="
+    exit 7
   fi
 
   pacman_attempts=$((pacman_attempts +1))
@@ -157,6 +171,30 @@ while true; do
     exit 7
   fi
 done
+
+# _HAD_ZIP_H is libzip's include guard; minizip's is _zip12_H. -Qo would name only one owner.
+libzip_header_problem() {
+  if [ ! -f "${libzip_header}" ]; then
+    echo "missing"
+  elif ! grep -q "_HAD_ZIP_H" "${libzip_header}"; then
+    echo "not libzip's"
+  fi
+}
+zip_h_problem="$(libzip_header_problem)"
+if [ -n "${zip_h_problem}" ]; then
+  echo "=== ${libzip_header} is ${zip_h_problem}, reinstalling ${MINGW_PACKAGE_PREFIX}-libzip ==="
+  LANGUAGE='' LC_ALL=C.UTF-8 /usr/bin/pacman -S --noconfirm --overwrite "${libzip_header}" "${MINGW_PACKAGE_PREFIX}-libzip" || exit 7
+  zip_h_problem="$(libzip_header_problem)"
+  if [ -n "${zip_h_problem}" ]; then
+    echo "=== ${libzip_header} is still ${zip_h_problem} after reinstalling ${MINGW_PACKAGE_PREFIX}-libzip ==="
+    exit 7
+  fi
+fi
+echo "=== ${libzip_header} is libzip's ($(grep -m1 "_HAD_ZIP_H" "${libzip_header}")) ==="
+if zlib_files="$(/usr/bin/pacman -Qql "${MINGW_PACKAGE_PREFIX}-zlib" 2>/dev/null)" \
+  && ! grep -qxF "${libzip_header}" <<< "${zlib_files}"; then
+  echo "=== zlib no longer ships ${libzip_header}; unless another package does, the --overwrite above can go ==="
+fi
 
 echo ""
 echo "    Completed"
