@@ -662,17 +662,22 @@ public:
         QPoint angleDelta;
     };
     // Runs what the GUI's mouse would there: a label's callback for the event, with the event table the GUI gives
-    // it, the pointer passing through a click-through label to the label under it. A label that leaves the event
-    // to what is under it does nothing more. The pointer is over one window at a time: an event at another is
-    // that one's enter, and the last one's leave, first. As Qt's implicit grab, the window that took a press of a
-    // button with no other held, under any click-through label it was passed through, has every move with a button
-    // held, and the release, wherever they are, until a release leaves no button held, a move has none or such a
-    // press comes, and none of them if it hid, moved or went meanwhile, though it keeps them as the window it is in
-    // hides or moves; an enter or leave meanwhile runs nothing, and a wheel enters nothing. A callback's Lua error
-    // goes to the error console, as the GUI's does, and is not this
-    // call's failure. Refused where runLua() is, for a name no window has, for another window than the one a held
-    // button is on or the click-through label the press went through, and, but for a leave or what that grab takes,
-    // for a window that is not shown or a point outside it.
+    // it, the pointer passing through a click-through label to what is under it in the same parent. A press or
+    // release that a label has no callback for, or that lands on a mini console, goes on to the console or user
+    // window it is in, as Qt passes it up the widgets, and raises sysWindowMousePressEvent or
+    // sysWindowMouseReleaseEvent there, but for a right-button release that opens a console's menu. "main", or no
+    // name, is the main console, in the pixels of the main window's area. A wheel scrolls the console it turns
+    // over. The pointer is over one label at a time: an event at another is that one's enter, and the last one's
+    // leave, first. As Qt's implicit grab, the window that took a press of a button with no other held, under any
+    // click-through label it was passed through, has every move with a button held, and the release, wherever they
+    // are, until a release leaves no button held, a move has none or such a press comes, and none of them if a label
+    // hid, moved or went meanwhile, or another window went; a label keeps them as the window it is in hides or
+    // moves, and a mini console, user window or scroll box as it hides or moves itself. An enter or leave meanwhile
+    // runs nothing, and a wheel enters nothing. A callback's
+    // Lua error goes to the error console, as the GUI's does, and is not this call's failure. Refused where runLua()
+    // is, for a name no window has, for another window than the one a held button is on or the click-through label
+    // the press went through, and, but for a leave or what that grab takes, for a window that is not shown or a
+    // point outside it.
     bool pointer(const QString& window, const WindowPointerEvent& event);
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
@@ -926,15 +931,26 @@ private:
     void noteWindowsAtLoad();
     struct WindowsTold;
     WindowsTold windowsNow() const;
+    // pWindow is null for the main console; pressedOnText is the grab's, where one has the event
+    void pointWindow(const QList<ScriptWindow>& windows, const ScriptWindow* pWindow, const WindowPointerEvent& event, std::optional<bool> pressedOnText = std::nullopt);
+    // Whether that point of a window, null for the main console, is a console's text, which has its own menu
+    bool onConsoleText(const ScriptWindow* pWindow, const QPointF& position) const;
     void pointLabel(const QList<ScriptWindow>& windows, const ScriptWindow& label, const WindowPointerEvent& event);
-    // The label a click-through label passes an event at that point to, null for none, and the point in it
+    // The window a click-through label passes an event at that point to, null for the main console, and the point
+    // in it
     std::pair<const ScriptWindow*, QPointF> passedThrough(const QList<ScriptWindow>& windows, const ScriptWindow& label, const QPointF& position) const;
+    // A press or release at that point in a container's area, raised on the console it is in
+    void pointConsole(const QList<ScriptWindow>& windows, const QString& container, const QPointF& position, const WindowPointerEvent& event);
+    // Whether a right-button release on a label with no click or release callback opens the menu of a console's
+    // text under it, as TLabel::forwardRightClickToConsole() does, which takes the release
+    bool opensConsoleMenu(const QList<ScriptWindow>& windows, const ScriptWindow& label, const QPointF& position) const;
+    void scrollConsole(const QString& name, const WindowPointerEvent& event);
     // Which label of the name the null view has, as its record tells one made again under a name apart
     std::optional<qint64> labelMade(const QString& name) const;
     // Whether the window that took the press still has the grab, which Qt drops as a label hides or moves, or as the
     // window goes
     bool grabHolds(const QList<ScriptWindow>& windows) const;
-    // The window that has the grab, null for one gone
+    // The window that has the grab, null for the main console or one gone
     const ScriptWindow* grabbedWindow(const QList<ScriptWindow>& windows) const;
     // The null view's count of the window's last making, or for a label its hiding or move into another window
     std::optional<qint64> deactivated(const ScriptWindow& window) const;
@@ -1035,10 +1051,13 @@ private:
         qint64 made = 0;
     };
     std::optional<HoveredLabel> mHoveredLabel;
-    // The window that took the press while a button is held, as Qt's qt_button_down. through is the click-through
-    // label the app named for the press, if it passed the press to this one.
+    // The window that took the press while a button is held, as Qt's qt_button_down; empty and main for the main
+    // console. through is the click-through label the app named for the press, if it passed the press to this one.
     struct Grab
     {
+        bool main = false;
+        // Whether the press landed on a console's text, whose TTextEdit then has the release
+        bool text = false;
         QString name;
         ScriptWindow::Kind kind = ScriptWindow::Kind::label;
         QString through;
@@ -1048,6 +1067,9 @@ private:
         QPointF throughOrigin;
     };
     std::optional<Grab> mGrab;
+    // As TTextEdit::mMouseWheelRemainder, the part of a turn too small to scroll a line, per console, with the
+    // console's notifier, as one made again under the name starts at none
+    QHash<QString, std::pair<QPointer<const QObject>, int>> mWheelRemainders;
     // The size a script asked for, and Host's count of that request, while mainWindowResizeRequested's handler runs
     std::optional<std::pair<QSize, quint64>> mAnsweringMainWindowRequest;
     bool mWindowMinimized = false;
