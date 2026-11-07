@@ -233,8 +233,18 @@ public:
     // As Tab or Shift+Tab on the GUI's main command line: the line it leaves, set as not typed, or nullopt with nothing
     // to complete
     std::optional<QString> tabCompleteMainCommandLine(bool forward);
+    // As Up on a line typed into the GUI's main command line with "Highlight history" on, the completed tail taken as
+    // still selected: the line it leaves, set as not typed, or nullopt if it is left as it was
+    std::optional<QString> historyCompleteMainCommandLine();
+    // As the GUI's line once Escape, a recall, a kept send or a script has selected all of it, so its Up recalls whole
+    // lines rather than completing what was typed
+    bool mainCommandLineWhollySelected() const { return mMainCommandLineWhollySelected; }
     // As Escape on the GUI's line ends the cycle
-    void resetMainCommandLineCompletion() { mMainCommandLineCompletion.reset(); }
+    void resetMainCommandLineCompletion()
+    {
+        mMainCommandLineCompletion.reset();
+        mMainCommandLineCompletion.restartHistoryWalk();
+    }
     bool addCommandLineMenuItem(const QString& name, const QString& label, const QString& eventName) override;
     std::optional<bool> removeCommandLineMenuItem(const QString& name, const QString& label) override;
     bool setCommandLineSavesHistory(const QString& name, bool savesHistory) override;
@@ -594,10 +604,12 @@ private:
     bool mMainCommandLineTyped = false;
     // As the GUI's line once selectAll() has run, so what the player types next replaces it
     bool mMainCommandLineAllSelected = false;
-    // TCommandLine's own, for Tab
+    // TCommandLine's own, for Tab and Up
     TCommandLineCompletion mMainCommandLineCompletion;
     // The line a completion last left, which the app handing back does not edit, until the cycle ends
     std::optional<QString> mMainCommandLineCompleted;
+    // Unlike mMainCommandLineAllSelected, not set by a completion
+    bool mMainCommandLineWhollySelected = false;
     // Whether the line held for a send was written to while it was sent
     bool mMainCommandLineRewritten = false;
     // A send emptied the line while hidden input was wanted, which the app has not been told

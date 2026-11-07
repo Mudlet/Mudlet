@@ -54,9 +54,30 @@ public:
     // A space, a deletion, Escape or a send ends the cycle
     void reset();
 
+    struct HistoryCompletion
+    {
+        // What the player typed: the line, less the tail the last completion filled in if that is still selected
+        QString typed;
+        // The first line of history from the walk's place on that starts with typed; nullopt with none, and the walk
+        // starts again from the newest
+        std::optional<QString> line;
+        bool tailCut = false;
+    };
+    // Up, or Down for !forward, on a line typed into, with "Highlight history" on: each call goes on to the next older
+    // line of history that starts with what was typed. Once line is shown, setHistoryCompletion() with what the line
+    // then holds.
+    HistoryCompletion historyComplete(const QString& line, bool tailSelected, const QStringList& history, bool forward);
+    void setHistoryCompletion(const QString& line) { mLastCompletion = line; }
+    // An edit: the next Up looks from the newest line again
+    void restartHistoryWalk() { mHistoryCount = -1; }
+    // A space, a deletion or a send also forgets the line the walk last found
+    void resetHistoryWalk();
+
 private:
     // Starts at 0, not -1, as TCommandLine's always has
     int mTabCount = 0;
+    int mHistoryCount = 0;
+    QString mLastCompletion;
     QString mTabTyped;
     bool mUserKeptOnTyping = false;
     QString mShownLine;

@@ -125,6 +125,21 @@ private:
         return texts(output).contains(text);
     }
 
+    // Started against a game, with the lines sent, the newest last
+    static bool startWithHistory(THeadlessSession& session, const QString& name, QTcpServer& server, std::unique_ptr<QTcpSocket>& game, const QStringList& lines)
+    {
+        if (!startWithGameLine(session, name, server, game, "welcome")) {
+            return false;
+        }
+        for (const QString& line : lines) {
+            if (!session.submit(line)) {
+                return false;
+            }
+        }
+        QStringList newestFirst(lines.crbegin(), lines.crend());
+        return session.commandHistory() == newestFirst;
+    }
+
 private slots:
     void initTestCase()
     {
@@ -363,6 +378,8 @@ addCmdLineBlacklist("GOBLIN")
         QTRY_VERIFY_WITH_TIMEOUT(texts(output).contains(qsl("Password:")), 10000);
         QCOMPARE(session.completeCommandLine(), std::nullopt);
         QCOMPARE(session.errorString(), qsl("Nothing is completed while the game hides what is typed."));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::nullopt);
+        QCOMPARE(session.errorString(), qsl("Nothing is completed while the game hides what is typed."));
         game->write("\xff\xfc\x01Welcome\r\n");
         QTRY_VERIFY_WITH_TIMEOUT(texts(output).contains(qsl("Welcome")), 10000);
         QVERIFY(session.setCommandLineText(qsl("gob")));
@@ -391,6 +408,205 @@ addCmdLineBlacklist("GOBLIN")
         QVERIFY2(midWriteError.startsWith(qsl("Refused from a handler")), qPrintable(midWriteError));
         QCOMPARE(scriptsLine(session), qsl("gob"));
         QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("goblin")));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // As Up with "Highlight history" on: the newest line sent that starts with what was typed, then older ones, then
+    // what was typed again
+    void test_upCompletesALineSentBefore()
+    {
+        THeadlessSession unstarted;
+        QCOMPARE(unstarted.completeCommandLineFromHistory(), std::nullopt);
+        QCOMPARE(unstarted.errorString(), qsl("No profile is open."));
+        THeadlessSession session;
+        QTcpServer server;
+        std::unique_ptr<QTcpSocket> game;
+        QVERIFY(startWithGameLine(session, qsl("Headless Up Walk"), server, game, "welcome"));
+        for (const QString& line : {qsl("eat"), qsl("look north"), qsl("look south")}) {
+            QVERIFY(session.submit(line));
+        }
+        QCOMPARE(session.commandHistory(), (QStringList{qsl("look south"), qsl("look north"), qsl("eat")}));
+
+        QVERIFY(session.setCommandLineText(qsl("look")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look south")));
+        QCOMPARE(scriptsLine(session), qsl("look south"));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look north")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look")));
+        QCOMPARE(scriptsLine(session), qsl("look"));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look south")));
+
+        QVERIFY(session.setCommandLineText(qsl("ea")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("eat")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("eat")));
+
+        QVERIFY(session.setCommandLineText(qsl("xyz")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::nullopt);
+        QCOMPARE(session.errorString(), qsl("No line sent before starts with what is typed."));
+        QCOMPARE(scriptsLine(session), qsl("xyz"));
+        QVERIFY(session.setCommandLineText(QString()));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::nullopt);
+        QCOMPARE(session.errorString(), qsl("Nothing is typed to complete; commandHistory() holds the lines to recall."));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_editingTheLineStartsTheHistoryWalkAgain()
+    {
+        THeadlessSession session;
+        QTcpServer server;
+        std::unique_ptr<QTcpSocket> game;
+        QVERIFY(startWithGameLine(session, qsl("Headless Up Reset"), server, game, "welcome"));
+        for (const QString& line : {qsl("eat"), qsl("look north"), qsl("look south")}) {
+            QVERIFY(session.submit(line));
+        }
+
+        QVERIFY(session.setCommandLineText(qsl("look")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look south")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look north")));
+        // The line it left, handed back, is no edit
+        QVERIFY(session.setCommandLineText(qsl("look north")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look")));
+
+        QVERIFY(session.setCommandLineText(qsl("look n")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look north")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look n")));
+
+        QVERIFY(session.shutdown(false));
+    }
+
+    // As Backspace on the GUI's line forgets the line the walk found, so that line is no longer cut back
+    void test_anEditBackToTheCompletedLineStartsTheWalkAgain()
+    {
+        THeadlessSession session;
+        QTcpServer server;
+        std::unique_ptr<QTcpSocket> game;
+        QVERIFY(startWithHistory(session, qsl("Headless Up Edit Back"), server, game, {qsl("eat"), qsl("look north"), qsl("look south")}));
+
+        QVERIFY(session.setCommandLineText(qsl("look")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look south")));
+        QVERIFY(session.setCommandLineText(qsl("look south x")));
+        QVERIFY(session.setCommandLineText(qsl("look south")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look south")));
+        // No older line starts with "look south"
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look south")));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // The line Up leaves is a new line to Tab, as one the app or a script sets
+    void test_tabAfterUpCompletesTheLineUpLeft()
+    {
+        THeadlessSession session;
+        QTcpServer server;
+        std::unique_ptr<QTcpSocket> game;
+        QVERIFY(startWithGameLine(session, qsl("Headless Tab After Up"), server, game, "a goblet and a goblin"));
+        QVERIFY(session.submit(qsl("kill goblin with a gob")));
+
+        QVERIFY(session.setCommandLineText(qsl("kill gob")));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("kill goblin")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("kill goblin with a gob")));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("kill goblin with a goblin")));
+        QCOMPARE(scriptsLine(session), qsl("kill goblin with a goblin"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // Escape and a script's selectCmdLineText() select the GUI's whole line, so its Up recalls whole lines, "eat"
+    // among them, until the line is typed into; a script's printCmdLine() leaves none of it selected
+    void test_upAfterEscapeRecallsWholeLines()
+    {
+        THeadlessSession session;
+        QTcpServer server;
+        std::unique_ptr<QTcpSocket> game;
+        QVERIFY(startWithHistory(session, qsl("Headless Up Escape"), server, game, {qsl("look north"), qsl("eat"), qsl("look south")}));
+        const QString wholeLines = qsl("The whole line is selected, so the up arrow recalls whole lines; commandHistory() holds them.");
+
+        QVERIFY(session.setCommandLineText(qsl("look")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look south")));
+        QCOMPARE(session.pressKey(Qt::Key_Escape), THeadlessSession::KeyResult::keyKept);
+        QCOMPARE(session.completeCommandLineFromHistory(), std::nullopt);
+        QCOMPARE(session.errorString(), wholeLines);
+        QCOMPARE(scriptsLine(session), qsl("look south"));
+
+        QVERIFY(session.setCommandLineText(qsl("look")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look south")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look north")));
+
+        QVERIFY(session.setCommandLineText(qsl("look n")));
+        QVERIFY(session.runLua(qsl("selectCmdLineText()")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::nullopt);
+        QCOMPARE(session.errorString(), wholeLines);
+        QVERIFY(session.runLua(qsl(R"lua(printCmdLine("look"))lua")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look south")));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // As the GUI selects the whole of a line it recalls, which the app's own recall stands for
+    void test_upOnALineSetAsNotTypedRecallsWholeLines()
+    {
+        THeadlessSession session;
+        QTcpServer server;
+        std::unique_ptr<QTcpSocket> game;
+        QVERIFY(startWithHistory(session, qsl("Headless Up Not Typed"), server, game, {qsl("look north"), qsl("eat"), qsl("look south")}));
+
+        QVERIFY(session.setCommandLineText(qsl("look"), THeadlessSession::CommandLineEdit::notTyped));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::nullopt);
+        QCOMPARE(session.errorString(), qsl("The whole line is selected, so the up arrow recalls whole lines; commandHistory() holds them."));
+        QVERIFY(session.setCommandLineText(qsl("look n")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look north")));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // As the GUI selects a line it keeps after a send
+    void test_upAfterAKeptSubmitRecallsWholeLines()
+    {
+        THeadlessSession session;
+        QTcpServer server;
+        std::unique_ptr<QTcpSocket> game;
+        QVERIFY(startWithHistory(session, qsl("Headless Up Kept"), server, game, {qsl("look north"), qsl("eat")}));
+        session.host()->mAutoClearCommandLineAfterSend = false;
+
+        QVERIFY(session.submit(qsl("look south")));
+        QCOMPARE(scriptsLine(session), qsl("look south"));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::nullopt);
+        QCOMPARE(session.errorString(), qsl("The whole line is selected, so the up arrow recalls whole lines; commandHistory() holds them."));
+        QVERIFY(session.setCommandLineText(qsl("look")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("look south")));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_upWithHighlightHistoryOffRecallsWholeLines()
+    {
+        THeadlessSession session;
+        QTcpServer server;
+        std::unique_ptr<QTcpSocket> game;
+        QVERIFY(startWithHistory(session, qsl("Headless Up No Highlight"), server, game, {qsl("look north"), qsl("eat")}));
+        session.host()->mHighlightHistory = false;
+
+        QVERIFY(session.setCommandLineText(qsl("look")));
+        QCOMPARE(session.completeCommandLineFromHistory(), std::nullopt);
+        QCOMPARE(session.errorString(), qsl("\"Highlight history\" is off, so the up arrow recalls whole lines; commandHistory() holds them."));
+        QCOMPARE(scriptsLine(session), qsl("look"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_upIsRefusedMidWrite()
+    {
+        const QString name = qsl("Headless Up Mid Write");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setCommandLineText(qsl("look")));
+        std::optional<std::optional<QString>> midWrite;
+        QString midWriteError;
+        connect(&session, &THeadlessSession::outputLine, this, [&session, &midWrite, &midWriteError](const QString&, const QString& text) {
+            if (text == qsl("you see")) {
+                midWrite = session.completeCommandLineFromHistory();
+                midWriteError = session.errorString();
+            }
+        });
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("refused")));
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("you see\n"))lua")));
+        QCOMPARE(midWrite, std::optional<std::optional<QString>>(std::optional<QString>()));
+        QVERIFY2(midWriteError.startsWith(qsl("Refused from a handler")), qPrintable(midWriteError));
+        QCOMPARE(scriptsLine(session), qsl("look"));
         QVERIFY(session.shutdown(false));
     }
 };

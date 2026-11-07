@@ -790,10 +790,26 @@ the next word, or with `false` the one before, stopping at either end as the GUI
 The cycle ends when the line changes, when the player presses Escape (sent with `pressKey()`) and when
 they submit it; the next call then reads the line afresh. Mudlet sees each new line rather than the key
 that made it, so any change ends the cycle, as Backspace does in the GUI: what the player types, a line the
-app sets itself, such as one it recalls from the history, and a script's `printCmdLine()`. Only the line it
-was given, handed straight back to `setCommandLineText()`, keeps the cycle going. The GUI's line ends the
-cycle on a key alone, so there a recall or a script's `printCmdLine()` between two presses of Tab has the
-second complete the old word over the new line; the session completes the new line instead. On an empty
+app sets itself, such as one it recalls from the history, the line `completeCommandLineFromHistory()`
+leaves, and a script's `printCmdLine()`. Only the line it was given, handed straight back to
+`setCommandLineText()`, keeps the cycle going. The GUI's line ends the cycle on a key alone, so there a
+recall, the up arrow or a script's `printCmdLine()` between two presses of Tab has the second complete the
+old word over the new line; the session completes the new line instead. On an empty
 line nothing is completed, as in the GUI once it has sent a line. When no word completes the line it
 returns nothing, and `errorString()` says so; it does the same while the game hides what is typed, as the
 GUI completes no password, and wherever `submit()` is refused, as from a handler of the session's signals.
+
+`completeCommandLineFromHistory()` is the up arrow on a line the player has typed into, as the GUI's command
+line does with "Highlight history" on in the profile's settings: it completes the line to the newest line of
+`commandHistory()` that starts with what was typed, and returns the whole line for the app to show with the
+part it added selected. Each further call goes on to the next older line that starts with it. Once no older
+one does, it returns just what was typed, and the call after that starts again from the newest, though, as in
+the GUI, calls stay on the oldest line of all if that one matched. Any change to the line starts the walk
+again from the newest line, as it ends Tab's cycle, and so does a submit; handing the returned line straight
+back to `setCommandLineText()` does not. The GUI's up arrow recalls each line of the history whole instead,
+which an app does by walking `commandHistory()` itself, with nothing typed, with "Highlight history" off, and
+while the whole line is selected: after Escape, a script's `selectCmdLineText()` or `sendCmdLine()`, a submit
+that leaves the line in place, and a line the app set itself (`CommandLineEdit::notTyped`), as a recall is,
+until the line is typed into or completed. The call returns nothing for each of these, with `errorString()`
+saying which, as it does when no line sent before starts with what was typed, while the game hides what is
+typed, and wherever `submit()` is refused.
