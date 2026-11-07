@@ -541,12 +541,6 @@ void dlgRoomExits::save()
 
     // Clean up after any deleted specialExits originally present but not now so
     for (const auto& value : originalExitCmds) {
-        pR->customLinesArrow.remove(value);
-        pR->customLinesColor.remove(value);
-        pR->customLinesStyle.remove(value);
-        pR->customLines.remove(value);
-        pR->setDoor(value, 0);
-        pR->setExitWeight(value, 0);
         pR->setSpecialExit(-1, value);
     }
 
