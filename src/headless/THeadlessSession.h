@@ -25,8 +25,10 @@
 #include <QColor>
 #include <QFlags>
 #include <QFont>
+#include <QHash>
 #include <QList>
 #include <QObject>
+#include <QPoint>
 #include <QPointer>
 #include <QRect>
 #include <QSize>
@@ -455,6 +457,43 @@ public:
     QList<ScriptWindow> scriptWindows() const;
     // The first of them with the name, or with the name and kind, as a console's own command line has its name
     std::optional<ScriptWindow> scriptWindow(const QString& name, std::optional<ScriptWindow::Kind> kind = std::nullopt) const;
+    // What a label shows, for the app to draw it as the GUI's QLabel would. Its geometry, background and font are
+    // its ScriptWindow's.
+    struct LabelContent
+    {
+        // The rich text echo() or setLabelText() gave it, its links styled as setLinkStyle() asks; empty while an
+        // image or movie shows in its place
+        QString text;
+        // The file from setBackgroundImage() while it shows: a raster image, which text or a movie takes down, or an
+        // SVG one, drawn under the text in the tint, rotation and shear setLabelSvg*() give it
+        QString image;
+        bool svg = false;
+        QColor svgTint;
+        double svgRotation = 0.0;
+        double svgShearX = 0.0;
+        double svgShearY = 0.0;
+        // The file from setMovie() while it plays or is paused in place of the text
+        QString movie;
+        QString toolTip;
+        // In seconds, as setLabelToolTip() was given it; 0 for the platform's own
+        double toolTipDuration = 0.0;
+        // Unset for the parent's, a shape from setLabelCursor(), or Qt::BitmapCursor for setLabelCustomCursor()'s
+        // file with its hot spot
+        std::optional<Qt::CursorShape> cursor;
+        QString customCursor;
+        QPoint customCursorHotSpot;
+        // The pointer passes through it to what is under it
+        bool clickThrough = false;
+        // What a screen reader says for it, and whether it is told it is a button
+        QString accessibleName;
+        bool accessibleButton = false;
+        // As setLabelStyleSheet() gave it, which Mudlet does not interpret: drawing it is the app's to do or not
+        QString styleSheet;
+
+        bool operator==(const LabelContent&) const = default;
+    };
+    // None for a name that is not a label's
+    std::optional<LabelContent> labelContent(const QString& name) const;
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -631,7 +670,8 @@ signals:
     void mainConsoleAreaChanged(const QString& profile, const QSize& grid, const QRect& textRect);
     // What scriptWindows() gives for these names differs from what it gave at profileLoaded or the last of these:
     // a window made, deleted (and so gone from it), moved, resized, shown, hidden, put in another window, raised,
-    // lowered or given another background or font, and those whose place among their parent's windows moved with it.
+    // lowered or given another background or font, a label whose labelContent() differs, and those whose place among
+    // their parent's windows moved with it.
     // From the event loop, sorted, once however many calls in a turn changed them, and not for calls that changed
     // nothing.
     void scriptWindowsChanged(const QString& profile, const QStringList& names);
@@ -682,6 +722,8 @@ private:
     void noteAreaAtLoad();
     void connectWindowRelays(Host*, unsigned int run);
     void noteWindowsAtLoad();
+    struct WindowsTold;
+    WindowsTold windowsNow() const;
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
@@ -754,8 +796,13 @@ private:
     QString mDeliveredLatency;
     // What mainConsoleGrid() and mainConsoleTextRect() gave at profileLoaded, then each mainConsoleAreaChanged
     std::optional<std::pair<QSize, QRect>> mDeliveredMainConsoleArea;
-    // What scriptWindows() gave at profileLoaded, then as each scriptWindowsChanged was sent
-    std::optional<QList<ScriptWindow>> mDeliveredWindows;
+    // What scriptWindows() and each label's labelContent() gave at profileLoaded, then as each scriptWindowsChanged was sent
+    struct WindowsTold
+    {
+        QList<ScriptWindow> windows;
+        QHash<QString, LabelContent> labels;
+    };
+    std::optional<WindowsTold> mDeliveredWindows;
     // The size a script asked for, and Host's count of that request, while mainWindowResizeRequested's handler runs
     std::optional<std::pair<QSize, quint64>> mAnsweringMainWindowRequest;
 };
