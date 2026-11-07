@@ -564,6 +564,19 @@ for the run's bold, italic, underline, overline and strike-out only. It is `null
 main console no longer holds, as once an MXP `<EXPIRE>` has removed the link or its line has been
 deleted, and with no profile open. It is a getter, so it may be called from any handler, `outputLine`'s included.
 
+`followLink(id)` does what a left click on the link does, which runs its first item whatever that holds,
+and `followLink(id, item)` what picking that item from its `menu` does; `item` indexes `items`. A spoiler
+not yet revealed is only revealed (`revealedSpoiler`), and the next follow runs it; the revealed text is
+not sent, so an app's copy of the line keeps the blanks it was sent with. A `disabled` link, or a menu's
+greyed-out item, runs nothing (`disabled`), nor does a `concealed` one (`concealed`), which the GUI leaves
+no way to click. Otherwise the link is chosen in its selection group, deselecting the rest of an exclusive
+group, and its command or function runs before `followLink()` returns (`ran`); a `send:` link sends, and a
+web link opens through `QDesktopServices::openUrl()`, which an app can route with
+`QDesktopServices::setUrlHandler()`. Where that raises a Lua error the result is `failed`, and
+`errorString()` gives Lua's message. The link is `visited` after either. `noSuchItem` is for an item the
+link does not have, `unknown` for an id the main console does not hold, as once a game's OSC 8 visibility
+settings have deleted its line, and `refused` for where `submit()` is, a handler included.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,

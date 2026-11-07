@@ -22,6 +22,8 @@
 #include "Host.h"
 #include "TConsoleModel.h"
 
+#include <QPointer>
+
 std::optional<THeadlessSession::Link> THeadlessSession::link(const int id) const
 {
     if (!mpHost || id <= 0) {
@@ -64,4 +66,53 @@ std::optional<THeadlessSession::Link> THeadlessSession::link(const int id) const
         link.styles = styles;
     }
     return link;
+}
+
+THeadlessSession::LinkResult THeadlessSession::followLink(const int link, const std::optional<int> item)
+{
+    if (!usable()) {
+        return LinkResult::refused;
+    }
+    TConsoleModel& model = mpHost->mainConsoleModel();
+    const TLinkStore& store = model.buffer.mLinkStore;
+    if (!model.buffer.linkHeld(link)) {
+        return LinkResult::unknown;
+    }
+    const QList<TLinkStore::MenuItem> items = store.menuItems(link);
+    if (item && (*item < 0 || *item >= items.size())) {
+        return LinkResult::noSuchItem;
+    }
+    // Its characters are blanked and carry no link, so no click reaches it
+    if (model.mHyperlinkVisibilityManager.isLinkConcealed(link)) {
+        return LinkResult::concealed;
+    }
+    switch (model.linkMayRun(link)) {
+    case TConsoleModel::LinkFollowed::ran:
+        break;
+    case TConsoleModel::LinkFollowed::revealedSpoiler:
+        return LinkResult::revealedSpoiler;
+    case TConsoleModel::LinkFollowed::disabled:
+        return LinkResult::disabled;
+    case TConsoleModel::LinkFollowed::unknown:
+        return LinkResult::unknown;
+    }
+    // A left click runs the first item whatever it holds; the GUI's menu greys out an item with nothing to run
+    const bool fromMenu = item && store.opensMenu(link);
+    if (fromMenu && !items.at(*item).enabled) {
+        return LinkResult::disabled;
+    }
+    QString errorText;
+    const auto errorCapture = connect(mpHost, &Host::signal_errorConsolePrint, this, [&errorText](const QString& text) {
+        errorText = text;
+    });
+    const QPointer<THeadlessSession> self(this);
+    const bool ran = model.runLink(link, item.value_or(0), fromMenu);
+    disconnect(errorCapture);
+    if (ran) {
+        return LinkResult::ran;
+    }
+    if (self) {
+        mErrorString = luaErrorOf(errorText);
+    }
+    return LinkResult::failed;
 }

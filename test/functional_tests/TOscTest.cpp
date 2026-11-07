@@ -817,8 +817,7 @@ private slots:
     const QStringList commands = console->getLinkStore().getLinksConst(linkId);
     QVERIFY(!commands.isEmpty());
     QString command = commands.first();
-    console->mUpperPane->applyHyperlinkSelectionGroupState(
-        linkId, command, styling.selection, "TOscTest");
+    console->model().applyLinkSelection(linkId, command, styling.selection);
     QCOMPARE(command, expectedCommand);
   }
 
