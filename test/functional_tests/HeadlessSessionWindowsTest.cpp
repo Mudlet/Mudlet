@@ -1169,6 +1169,74 @@ setLabelOnLeave("hover", function() got[#got + 1] = "hover.leave" end)
         QCOMPARE(got(), qsl("press 2 31 42 uw;release 2 1030 42 uw"));
         QVERIFY(session.shutdown(false));
     }
+
+    void test_getMousePositionIsWhereTheAppsPointerLastWas()
+    {
+        const QString name = qsl("Headless Mouse Position");
+        QVERIFY(writeProfile(name));
+        using Type = THeadlessSession::WindowPointerEvent::Type;
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(qsl(R"(createMiniConsole("mc", 10, 20, 200, 100))")));
+        QCOMPARE(luaString(session, qsl("getMousePosition()")), qsl("nil"));
+        QCOMPARE(luaString(session, qsl("select(2, getMousePosition())")), qsl("the profile has no main window"));
+
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::move, .position = QPointF(5, 5)}));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("15,25"));
+        QVERIFY(session.pointer(qsl("main"), {.type = Type::press, .position = QPointF(300, 400), .button = Qt::LeftButton}));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("300,400"));
+        // A leave says the pointer went, not where
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::leave}));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("300,400"));
+        // A drag goes on past the window that took the press
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::press, .position = QPointF(5, 5), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::move, .position = QPointF(250, 5), .buttons = Qt::LeftButton}));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("260,25"));
+        // and on, as the pointer does, after the window has lost the grab
+        QVERIFY(session.runLua(qsl(R"(deleteMiniConsole("mc") createMiniConsole("mc", 10, 20, 200, 100))")));
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::move, .position = QPointF(30, 5), .buttons = Qt::LeftButton}));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("40,25"));
+        // from where the window was at the press, after its own click callback deleted it
+        QVERIFY(session.runLua(qsl(R"(createLabel("item", 100, 50, 80, 40, 1) setLabelClickCallback("item", function() deleteLabel("item") end))")));
+        QVERIFY(session.pointer(qsl("item"), {.type = Type::press, .position = QPointF(5, 5), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("105,55"));
+        QVERIFY(session.pointer(qsl("item"), {.type = Type::move, .position = QPointF(300, 200), .buttons = Qt::LeftButton}));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("400,250"));
+        QVERIFY(session.pointer(qsl("item"), {.type = Type::release, .position = QPointF(310, 210), .button = Qt::LeftButton}));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("410,260"));
+        // or from where the click-through label the press went through was, after the press deleted both
+        QVERIFY(session.runLua(qsl(R"(createLabel("u", 100, 300, 80, 40, 1) createLabel("g", 110, 310, 60, 30, 1) enableClickthrough("g")
+setLabelClickCallback("u", function() deleteLabel("u") deleteLabel("g") end))")));
+        QVERIFY(session.pointer(qsl("g"), {.type = Type::press, .position = QPointF(5, 5), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("115,315"));
+        QVERIFY(session.pointer(qsl("g"), {.type = Type::move, .position = QPointF(50, 50), .buttons = Qt::LeftButton}));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("160,360"));
+        QVERIFY(session.pointer(qsl("u"), {.type = Type::move, .position = QPointF(70, 70), .buttons = Qt::LeftButton}));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("170,370"));
+        QVERIFY(session.pointer(qsl("g"), {.type = Type::release, .position = QPointF(40, 40), .button = Qt::LeftButton}));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("150,350"));
+        // and from there too, after the press deleted only the click-through label, as what took it keeps the grab
+        QVERIFY(session.runLua(qsl(R"(createLabel("u", 100, 300, 80, 40, 1) createLabel("g", 110, 310, 60, 30, 1) enableClickthrough("g")
+setLabelClickCallback("u", function() deleteLabel("g") end))")));
+        QVERIFY(session.pointer(qsl("g"), {.type = Type::press, .position = QPointF(5, 5), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY2(session.pointer(qsl("g"), {.type = Type::move, .position = QPointF(30, 20), .buttons = Qt::LeftButton}), qPrintable(session.errorString()));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("140,330"));
+        // An enter naming it is a point the pointer took, as for any window while the grab holds, and a leave is not
+        QVERIFY(session.runLua(qsl(R"(seen = {} setLabelOnEnter("u", function() seen[#seen + 1] = "u.enter" end)
+setLabelOnLeave("u", function() seen[#seen + 1] = "u.leave" end) setLabelWheelCallback("u", function() seen[#seen + 1] = "u.wheel" end))")));
+        QVERIFY2(session.pointer(qsl("g"), {.type = Type::leave}), qPrintable(session.errorString()));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("140,330"));
+        QVERIFY2(session.pointer(qsl("g"), {.type = Type::enter, .position = QPointF(25, 15)}), qPrintable(session.errorString()));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("135,325"));
+        QVERIFY(!session.pointer(qsl("g"), {.type = Type::wheel, .position = QPointF(20, 20), .buttons = Qt::LeftButton, .angleDelta = QPoint(0, 120)}));
+        QCOMPARE(session.errorString(), qsl("There is no window \"g\"."));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("135,325"));
+        QCOMPARE(luaString(session, qsl("table.concat(seen, ';')")), QString());
+        QVERIFY2(session.pointer(qsl("g"), {.type = Type::release, .position = QPointF(20, 10), .button = Qt::LeftButton}), qPrintable(session.errorString()));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("130,320"));
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionWindowsTest.moc"
