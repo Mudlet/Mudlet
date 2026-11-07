@@ -2773,6 +2773,10 @@ bool TLuaInterpreter::checkHintsTable(lua_State* L, const char* functionName, co
 // No documentation available in wiki - internal function
 void TLuaInterpreter::parseHintsTable(lua_State* lState, const char* functionName, int& index, QStringList& hintList)
 {
+    if (index < 0) {
+        index = lua_gettop(lState) + index + 1;
+    }
+
     if (!lua_istable(lState, index)) {
         // dead while every caller gates on checkHintsTable(), which duplicates
         // this predicate: reaching it would strand the caller's hintList
@@ -2805,6 +2809,10 @@ void TLuaInterpreter::parseHintsTable(lua_State* lState, const char* functionNam
 // No documentation available in wiki - internal function
 void TLuaInterpreter::parseCommandsOrFunctionsTable(lua_State* lState, const char* functionName, int& index, QStringList& commandsList, QVector<int>& luaFunctionNumbers)
 {
+    if (index < 0) {
+        index = lua_gettop(lState) + index + 1;
+    }
+
     if (!lua_istable(lState, index)) {
         // dead while every caller gates on checkCommandsOrFunctionsTable(),
         // which duplicates this predicate: reaching it would strand the
