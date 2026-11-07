@@ -933,6 +933,7 @@ void TNullConsoleFrontend::createLabel(const QString& windowname, const QString&
     pLabel->mFont = consoleFont(userWindow).value_or(displayFont());
     mpHost->windowRegistry().registerLabel(name, pLabel.get());
     mLabels[name] = {std::move(pLabel), userWindow, std::move(box)};
+    mLabels[name].stackOrder = ++mTopOfStack;
     reportWindowVisibility(name);
     // TMainConsole::createLabel()'s colour
     setLabelBackgroundColor(name, QColor(32, 32, 32, 255));
@@ -1150,6 +1151,7 @@ TConsoleModel& TNullConsoleFrontend::addSubConsole(const QString& name, const TW
     auto pHolder = new QObject(holderFor(userWindow, box.get()));
     mSubConsoles[name] = {std::move(pModel), userWindow, std::move(box)};
     mSubConsoles[name].holder = pHolder;
+    mSubConsoles[name].stackOrder = ++mTopOfStack;
     // As ~TConsole takes one that goes with the widget holding it, such as a frame nested in a deleted one, out
     // of the registry; the QPointer may already be cleared
     QObject::connect(pHolder, &QObject::destroyed, mpHost, [this, name, pHolder]() {
@@ -1529,7 +1531,7 @@ void TNullConsoleFrontend::setProfileStyleSheet(const QString& styleSheet)
     }
 }
 
-std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windowname, int, int, int, int)
+std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windowname, const int x, const int y, const int width, const int height)
 {
     // As TMainConsole::createMapper(), which only takes a user window: not a scroll box
     const bool wantsMainConsole = windowname.isEmpty() || !windowname.compare(QLatin1String("main"), Qt::CaseInsensitive);
@@ -1552,6 +1554,7 @@ std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windo
         mpEmbeddedMapper = new TNullMapView(mpHost, holderFor(windowname, nullptr));
         mEmbeddedMapperWindow = userWindowOrMain(windowname);
         mpEmbeddedMapperBox.reset();
+        mEmbeddedMapperStackOrder = ++mTopOfStack;
         // dlgMapper shows itself when a map load asks it to
         QObject::connect(mpHost->mpMap.data(), &TMap::signal_mapperShowRequested, mpEmbeddedMapper, [this]() {
             showEmbeddedMapper();
@@ -1563,6 +1566,8 @@ std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windo
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapOpenEvent);
     }
+    // TMainConsole::createMapper() moves and resizes the one there is, as Geyser.Mapper does by calling it again
+    mEmbeddedMapperGeometry = QRect(QPoint(x, y), widgetSize(width, height));
     showEmbeddedMapper();
     return {true, QString()};
 }
@@ -1890,6 +1895,7 @@ bool TNullConsoleFrontend::createScrollBox(const QString& windowname, const QStr
     auto box = std::make_shared<ScrollBox>();
     std::tie(box->userWindow, box->box) = containerFor(windowname, false);
     box->holder = new QObject(holderFor(box->userWindow, box->box.get()));
+    box->stackOrder = ++mTopOfStack;
     mScrollBoxes[name] = box;
     TWindowRegistry& registry = mpHost->windowRegistry();
     registry.registerScrollBox(name);
@@ -2078,6 +2084,7 @@ std::pair<bool, QString> TNullConsoleFrontend::createCommandLine(const QString& 
     // TMainConsole::parentWidgetFor() takes a scroll box before a user window
     std::tie(commandLine.userWindow, commandLine.box) = containerFor(windowname, true);
     commandLine.geometry = QRect(QPoint(x, y), widgetSize(width, height));
+    commandLine.stackOrder = ++mTopOfStack;
     // TCommandLine's constructor takes the file and the setting a profile save last wrote for the name
     const auto [fileName, savesHistory] = mpHost->getCmdLineSettings(enums::SubCommandLine, name);
     commandLine.writer = makeHistoryWriter(holderFor(commandLine.userWindow, commandLine.box.get()), name, fileName, savesHistory);
@@ -2638,6 +2645,7 @@ bool TNullConsoleFrontend::setWindowCommandLineVisible(const QString& name, cons
     const auto [fileName, savesHistory] = mpHost->getCmdLineSettings(enums::ConsoleCommandLine, name);
     PlainWindow& commandLine = mCommandLines[name];
     commandLine.inConsole = true;
+    commandLine.stackOrder = ++mTopOfStack;
     commandLine.userWindow = console->second.userWindow;
     commandLine.box = console->second.box;
     // A child of the console, as TConsole::setCmdVisible() makes it
@@ -2690,6 +2698,7 @@ std::pair<bool, QString> TNullConsoleFrontend::createTextBox(const QString& wind
     PlainWindow& textBox = mTextBoxes[name];
     std::tie(textBox.userWindow, textBox.box) = containerFor(windowname, true);
     textBox.geometry = QRect(QPoint(x, y), widgetSize(width, height));
+    textBox.stackOrder = ++mTopOfStack;
     registry.registerTextBox(name);
     if (!mScrollBoxes.contains(name) && !mCommandLines.contains(name)) {
         registry.setPlainWindowGeometry(name, textBox.geometry);
@@ -3104,6 +3113,7 @@ bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QStrin
     if (moved) {
         label.userWindow = userWindow;
         label.box = std::move(box);
+        label.stackOrder = ++mTopOfStack;
         inheritLabelFont(label, true);
     }
     label.pModel->mGeometry.moveTo(x, y);
@@ -3144,6 +3154,9 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
         QObject* pParent = holderFor(userWindow, box.get());
         // A frame's console also moves when it leaves the frame for the window the frame is in
         const bool moved = userWindow != it->second.userWindow || box != it->second.box || (it->second.holder && it->second.holder->parent() != pParent);
+        if (moved) {
+            it->second.stackOrder = ++mTopOfStack;
+        }
         it->second.userWindow = userWindow;
         it->second.box = std::move(box);
         it->second.shown = show || (!moved && it->second.shown);
@@ -3164,6 +3177,9 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
         if (PlainWindow* window = plainWindow(name)) {
             // A console's own command line leaves the console's layer for the window it is moved into
             const bool moved = window->inConsole || userWindow != window->userWindow || box != window->box;
+            if (moved) {
+                window->stackOrder = ++mTopOfStack;
+            }
             window->inConsole = false;
             window->layerShown = true;
             window->consoleShown = true;
@@ -3187,6 +3203,9 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
         if (namesEmbeddedMapper(name)) {
             mpEmbeddedMapper->setParent(holderFor(userWindow, box.get()));
             const bool moved = userWindow != mEmbeddedMapperWindow || box != mpEmbeddedMapperBox;
+            if (moved) {
+                mEmbeddedMapperStackOrder = ++mTopOfStack;
+            }
             mEmbeddedMapperShown = show || (!moved && mEmbeddedMapperShown);
             mEmbeddedMapperWindow = userWindow;
             mpEmbeddedMapperBox = std::move(box);
@@ -3199,6 +3218,9 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
         return {false, qsl("element '%1' cannot be moved into itself or into one of its own children").arg(name)};
     }
     const bool moved = userWindow != it->second->userWindow || box != it->second->box;
+    if (moved) {
+        it->second->stackOrder = ++mTopOfStack;
+    }
     it->second->userWindow = userWindow;
     it->second->box = std::move(box);
     it->second->shown = show || (!moved && it->second->shown);
@@ -3665,4 +3687,126 @@ void TNullConsoleFrontend::finishIncomingText(bool)
     TConsoleModel& model = mpHost->mainConsoleModel();
     model.mIncomingTextSeconds = mIncomingTextTimer.elapsed() / 1000.0;
     emit model.mNotifier.incomingTextProcessed();
+}
+
+bool TNullConsoleFrontend::restack(const QString& name, const bool raise)
+{
+    const auto order = [this, raise]() {
+        return raise ? ++mTopOfStack : --mBottomOfStack;
+    };
+    if (const auto it = mSubConsoles.find(name); it != mSubConsoles.end()) {
+        it->second.stackOrder = order();
+        return true;
+    }
+    if (const auto it = mLabels.find(name); it != mLabels.end()) {
+        it->second.stackOrder = order();
+        return true;
+    }
+    if (namesEmbeddedMapper(name)) {
+        mEmbeddedMapperStackOrder = order();
+        return true;
+    }
+    if (const auto it = mScrollBoxes.find(name); it != mScrollBoxes.end()) {
+        it->second->stackOrder = order();
+        return true;
+    }
+    if (const auto it = mCommandLines.find(name); it != mCommandLines.end()) {
+        it->second.stackOrder = order();
+        return true;
+    }
+    if (const auto it = mTextBoxes.find(name); it != mTextBoxes.end()) {
+        it->second.stackOrder = order();
+        return true;
+    }
+    return false;
+}
+
+QString TNullConsoleFrontend::parentName(const QString& userWindow, const ScrollBox* box) const
+{
+    if (!box) {
+        return userWindow;
+    }
+    for (const auto& [name, candidate] : mScrollBoxes) {
+        if (candidate.get() == box) {
+            return name;
+        }
+    }
+    return userWindow;
+}
+
+std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowRecords() const
+{
+    using Kind = WindowRecord::Kind;
+    const TWindowRegistry& registry = mpHost->windowRegistry();
+    std::vector<WindowRecord> records;
+    for (const auto& [name, console] : mSubConsoles) {
+        const auto kind = registry.subConsoleKind(name);
+        if (console.pFrameSink || (kind != TWindowRegistry::SubConsoleKind::MiniConsole && kind != TWindowRegistry::SubConsoleKind::UserWindow)) {
+            continue;
+        }
+        records.push_back({name,
+                           kind == TWindowRegistry::SubConsoleKind::UserWindow ? Kind::userWindow : Kind::miniConsole,
+                           parentName(console.userWindow, console.box.get()),
+                           registry.subConsoleGeometry(name).value_or(QRect()),
+                           console.shown,
+                           console.shown && shownWithin(console.userWindow, console.box.get()),
+                           console.stackOrder,
+                           console.pModel->mBgColor,
+                           console.pModel->mUpperPaneFont,
+                           kind == TWindowRegistry::SubConsoleKind::UserWindow});
+    }
+    for (const auto& [name, label] : mLabels) {
+        records.push_back({name,
+                           Kind::label,
+                           parentName(label.userWindow, label.box.get()),
+                           label.pModel->mGeometry,
+                           label.shown,
+                           label.shown && shownWithin(label.userWindow, label.box.get()),
+                           label.stackOrder,
+                           label.pModel->mBackgroundColor,
+                           label.pModel->mFont});
+    }
+    for (const auto& [name, box] : mScrollBoxes) {
+        records.push_back({name,
+                           Kind::scrollBox,
+                           parentName(box->userWindow, box->box.get()),
+                           registry.plainWindowGeometry(name).value_or(QRect()),
+                           box->shown,
+                           box->shown && shownWithin(box->userWindow, box->box.get()),
+                           box->stackOrder,
+                           QColor(),
+                           QFont()});
+    }
+    for (const auto& [name, line] : mCommandLines) {
+        const auto console = mSubConsoles.find(name);
+        const bool own = line.inConsole && console != mSubConsoles.end() && ownsLine(console->second, line);
+        const bool visible = line.shown && line.layerShown;
+        const bool shown = visible && line.consoleShown && (!own || console->second.shown) && shownWithin(line.userWindow, line.box.get());
+        records.push_back({name, Kind::commandLine, own ? name : parentName(line.userWindow, line.box.get()), line.geometry, visible, shown, line.stackOrder, QColor(), QFont()});
+    }
+    for (const auto& [name, textBox] : mTextBoxes) {
+        records.push_back({name,
+                           Kind::textBox,
+                           parentName(textBox.userWindow, textBox.box.get()),
+                           textBox.geometry,
+                           textBox.shown,
+                           textBox.shown && shownWithin(textBox.userWindow, textBox.box.get()),
+                           textBox.stackOrder,
+                           QColor(),
+                           registry.textBoxFont(name).value_or(QFont())});
+    }
+    if (mpEmbeddedMapper) {
+        records.push_back({qsl("mapper"),
+                           Kind::mapper,
+                           parentName(mEmbeddedMapperWindow, mpEmbeddedMapperBox.get()),
+                           mEmbeddedMapperGeometry,
+                           mEmbeddedMapperShown,
+                           mEmbeddedMapperShown && shownWithin(mEmbeddedMapperWindow, mpEmbeddedMapperBox.get()),
+                           mEmbeddedMapperStackOrder,
+                           QColor(),
+                           QFont()});
+    } else if (mMapWidget) {
+        records.push_back({qsl("mapper"), Kind::mapper, QString(), mMapWidget->geometry, mMapWidget->shown, mMapWidget->shown, 0, QColor(), QFont(), true});
+    }
+    return records;
 }
