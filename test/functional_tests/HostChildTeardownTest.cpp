@@ -128,8 +128,7 @@ private:
     {
         OpenWindows windows;
 
-        // loading the profile opened this one already
-        windows.editor = HostDialogs::of(pHost).mpEditorDialog;
+        windows.editor = HostDialogs::editor(pHost);
 
         mudlet::self()->slot_notes();
         windows.notePad = HostDialogs::of(pHost).mpNotePad;
@@ -567,9 +566,9 @@ private slots:
         QTRY_VERIFY2(HostManager::self()->getHost(secondName), "The second profile did not load");
         Host* pSecond = HostManager::self()->getHost(secondName);
 
-        const QPointer<dlgTriggerEditor> firstEditor = HostDialogs::of(pFirst).mpEditorDialog;
-        const QPointer<dlgTriggerEditor> secondEditor = HostDialogs::of(pSecond).mpEditorDialog;
-        QVERIFY2(firstEditor && secondEditor, "Loading a profile did not open its editor");
+        const QPointer<dlgTriggerEditor> firstEditor = HostDialogs::editor(pFirst);
+        const QPointer<dlgTriggerEditor> secondEditor = HostDialogs::editor(pSecond);
+        QVERIFY2(firstEditor && secondEditor, "A profile built no editor");
         QVERIFY2(firstEditor != secondEditor, "Both profiles hold the same editor");
 
         Host* pActive = mudlet::self()->getActiveHost();
