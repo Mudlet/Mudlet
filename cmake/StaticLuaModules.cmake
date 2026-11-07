@@ -51,3 +51,16 @@ mudlet_static_lua_module(luautf8
   GIT_REPOSITORY https://github.com/starwing/luautf8.git
   GIT_TAG 08b0fc930f5a52eff36348ed1ea39aadfc697fa6 # 0.2.1
   SOURCES lutf8lib.c)
+
+mudlet_static_lua_module(lua_zip
+  GIT_REPOSITORY https://github.com/brimworks/lua-zip.git
+  GIT_TAG e01fac77e7ebf1feceed8f95a5de96aa2758e06f # v0.2.0
+  SOURCES lua_zip.c
+  LIBRARIES ZIP::ZIP)
+
+find_package(YAJL REQUIRED)
+mudlet_static_lua_module(lua_yajl
+  GIT_REPOSITORY https://github.com/brimworks/lua-yajl.git
+  GIT_TAG 167c294046d5bbdc5bc4a791e6397439b6c825df # v2.1
+  SOURCES lua_yajl.c
+  LIBRARIES YAJL::YAJL)
