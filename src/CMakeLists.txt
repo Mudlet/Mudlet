@@ -647,6 +647,10 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_app_SRCS glwidget_integration.cpp)
 endif(USE_3DMAPPER)
 
+if(USE_LIBGHOSTTY)
+  list(APPEND mudlet_SRCS TBufferGhosttySgr.cpp)
+endif()
+
 if(USE_SPAWN)
   list(APPEND mudlet_SRCS TForkedProcess.cpp)
   list(APPEND mudlet_HDRS TForkedProcess.h)
@@ -1029,6 +1033,13 @@ endif()
 
 if(USE_SPAWN)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_SPAWN)
+endif()
+
+if(USE_LIBGHOSTTY)
+  # Point CMAKE_PREFIX_PATH at a libghostty-vt install (zig build --prefix ...)
+  find_package(ghostty-vt 1.0 REQUIRED CONFIG)
+  target_link_libraries(${LIB_MUDLET_TARGET} ghostty-vt::ghostty-vt-static)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_LIBGHOSTTY)
 endif()
 
 if(USE_DISCORD_RPC)

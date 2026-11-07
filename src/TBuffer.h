@@ -611,6 +611,12 @@ public:
     static QString formatTimeStamp(qint64 msecs);
     QString timeStampText(const int line) const { return formatTimeStamp(timeBuffer.at(line)); }
 
+#if defined(INCLUDE_LIBGHOSTTY)
+    // Whether SGR parameters go through libghostty-vt's parser; MUDLET_SGR_ENGINE=native starts with Mudlet's own
+    static bool ghosttySgrEngine();
+    static void setGhosttySgrEngine(bool);
+#endif
+
     explicit TBuffer(Host* pH);
     ~TBuffer();
     TBuffer(const TBuffer& other);
@@ -857,6 +863,11 @@ private:
     // Views into the string decodeSGR() was handed, so none may outlive that call.
     using SgrParameters = QVarLengthArray<QStringView, 12>;
     void decodeSGR(QStringView);
+#if defined(INCLUDE_LIBGHOSTTY)
+    // False when it leaves the sequence to decodeSGR(), having changed nothing
+    bool decodeSGRWithGhostty(QStringView, const QColor& hostForegroundColor, const QColor& hostBackgroundColor);
+    void applyGhosttyUnknownSgr(QStringView sequence, const uint16_t* parameters, size_t count, bool colonGroup);
+#endif
     void decodeSGR38(const SgrParameters&, bool isColonSeparated = true);
     void decodeSGR48(const SgrParameters&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
