@@ -859,27 +859,32 @@ end
 
 
 
---- <b><u>TODO</u></b> getColorWildcard(color)
+--- Returns every run of text on the current trigger line that is shown in the given foreground colour.
+--- @param color the colour as isAnsiFgColor() numbers it
+--- @return a table of the runs, in the order they appear on the line, or false if no text has that colour
+--- @usage Inside a trigger, collect the names a game shows in red:
+---   <pre>
+---   local names = getColorWildcard(4)
+---   </pre>
 function getColorWildcard(color)
   color = tonumber(color)
   local results, startc, endc = {}, nil, nil
-
-  for i = 0, string.len(line) do
-    selectSection(i, 1)
+  -- selectSection() counts UTF-16 units, so the walk keeps that offset alongside
+  -- each character's byte position in line
+  local offset = 0
+  for position, char in line:gmatch("()([%z\1-\127\194-\244][\128-\191]*)") do
+    selectSection(offset, 1)
     if isAnsiFgColor(color) then
-      if not startc then
-        startc = i + 1
-        endc = i + 1
-      else
-        endc = i + 1
-        if i == line:len() then
-          results[#results + 1] = line:sub(startc, endc)
-        end
-      end
+      startc = startc or position
+      endc = position + #char - 1
     elseif startc then
       results[#results + 1] = line:sub(startc, endc)
       startc = nil
     end
+    offset = offset + (char:byte() >= 240 and 2 or 1)
+  end
+  if startc then
+    results[#results + 1] = line:sub(startc, endc)
   end
   return results[1] and results or false
 end
