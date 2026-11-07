@@ -2072,6 +2072,7 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font, const DisplayFo
     mTempDisplayFont = mTempDisplayFontAttributes.value().makeFont();
     if (TFontAttributes(mTempDisplayFont.value()) != before) {
         emit signal_consoleFontChanged(mTempDisplayFont.value());
+        layOutMainAreaWithNoView(MainAreaChange::font);
     }
 
     return {true, QString()};
@@ -2135,6 +2136,7 @@ void Host::setDisplayFontSize(int size)
     mTempDisplayFont = mTempDisplayFontAttributes.value().makeFont();
     if (TFontAttributes(mTempDisplayFont.value()) != before) {
         emit signal_consoleFontChanged(mTempDisplayFont.value());
+        layOutMainAreaWithNoView(MainAreaChange::font);
     }
 }
 
@@ -7519,6 +7521,9 @@ std::optional<QRect> Host::windowGeometry(const QString& name) const
 std::optional<QSize> Host::mainWindowSize() const
 {
     if (!hasConsoleView()) {
+        if (mMainAreaPixels) {
+            return mMainAreaPixels;
+        }
         const QFontMetrics metrics(consoleFrontend()->displayFont());
         const QSize cells = mainAreaCells();
         return {QSize(cells.width() * metrics.averageCharWidth(), cells.height() * metrics.height())};
@@ -7775,11 +7780,11 @@ void Host::setMxpBorders(const QMargins borders)
     setBorders(mUserBorders + mMxpBorders);
 }
 
-// Never negative, as Qt holds the GUI's text widget to no less than nothing however wide the borders are
-QSize Host::mainTextAreaWithNoView() const
+// Never of negative size, as Qt holds the GUI's text widget to no less than nothing however wide the borders are
+QRect Host::mainTextRectWithNoView() const
 {
     const QSize area = mainWindowSize().value_or(QSize());
-    return {std::max(0, area.width() - mBorders.left() - mBorders.right()), std::max(0, area.height() - mBorders.top() - mBorders.bottom())};
+    return {mBorders.left(), mBorders.top(), std::max(0, area.width() - mBorders.left() - mBorders.right()), std::max(0, area.height() - mBorders.top() - mBorders.bottom())};
 }
 
 void Host::layOutMainAreaWithNoView(const MainAreaChange change)
@@ -7789,10 +7794,16 @@ void Host::layOutMainAreaWithNoView(const MainAreaChange change)
     if (mBlockScriptCompile) {
         return;
     }
+    // Till then the area is the grid, which a font change keeps; measuring it would add the bundled fonts before
+    // anything draws in them
+    if (change == MainAreaChange::font && !mMainAreaCells) {
+        emit signal_mainAreaLaidOut();
+        return;
+    }
     if (!mMainAreaCells) {
         mMainAreaCells = QSize(mScreenWidth, mScreenHeight);
     }
-    const QSize textArea = mainTextAreaWithNoView();
+    const QSize textArea = mainTextRectWithNoView().size();
     const QFontMetrics metrics(consoleFrontend()->displayFont());
     // As TTextEdit::updateScreenView() counts it, and NAWS carries no more than 16 bits
     const int columns = std::clamp(textArea.width() / std::max(1, metrics.averageCharWidth()), 40, 65535);
@@ -7801,7 +7812,8 @@ void Host::layOutMainAreaWithNoView(const MainAreaChange change)
         setScreenDimensions(columns, rows);
         updateDisplayDimensions();
     }
-    if (change == MainAreaChange::load) {
+    emit signal_mainAreaLaidOut();
+    if (change == MainAreaChange::font || change == MainAreaChange::load) {
         return;
     }
 
@@ -7813,7 +7825,7 @@ void Host::layOutMainAreaWithNoView(const MainAreaChange change)
         }
     }
     // Measured now, as TConsole::raiseMudletSysWindowResizeEvent() takes off the borders the handler may have set
-    const QSize reported = mainTextAreaWithNoView();
+    const QSize reported = mainTextRectWithNoView().size();
     TEvent event{};
     event.mArgumentList.append(qsl("sysWindowResizeEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
