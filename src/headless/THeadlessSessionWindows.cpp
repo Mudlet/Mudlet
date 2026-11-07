@@ -22,6 +22,7 @@
 #include "THeadlessSession.h"
 
 #include "Host.h"
+#include "TConsoleModel.h"
 #include "TLabelModel.h"
 #include "TNullConsoleFrontend.h"
 #include "TWindowNotifier.h"
@@ -36,6 +37,7 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -172,6 +174,15 @@ TLabelModel::Callback labelCallback(const THeadlessSession::WindowPointerEvent::
     Q_UNREACHABLE();
 }
 
+// A console and its own command line share a name; this is the console
+const THeadlessSession::ScriptWindow* windowNamed(const QList<THeadlessSession::ScriptWindow>& windows, const QString& name)
+{
+    const auto found = std::find_if(windows.cbegin(), windows.cend(), [&name](const THeadlessSession::ScriptWindow& candidate) {
+        return candidate.name == name && candidate.kind != THeadlessSession::ScriptWindow::Kind::commandLine;
+    });
+    return found == windows.cend() ? nullptr : &*found;
+}
+
 } // namespace
 
 QList<THeadlessSession::ScriptWindow> THeadlessSession::scriptWindows() const
@@ -230,6 +241,7 @@ void THeadlessSession::connectWindowRelays(Host* pHost, const unsigned int run)
     mDeliveredWindows.reset();
     mHoveredLabel.reset();
     mGrab.reset();
+    mWheelRemainders.clear();
     auto* pView = dynamic_cast<TNullConsoleFrontend*>(pHost->consoleFrontend());
     if (!pView) {
         return;
@@ -378,7 +390,9 @@ bool THeadlessSession::pointer(const QString& window, const WindowPointerEvent& 
         }
         windows = scriptWindows();
     }
-    const auto target = std::find_if(windows.cbegin(), windows.cend(), [&window](const ScriptWindow& candidate) {
+    // As the Lua window functions take the main console: no name, or "main" in that case
+    const bool main = window.isEmpty() || window == qsl("main");
+    const auto target = main ? windows.cend() : std::find_if(windows.cbegin(), windows.cend(), [&window](const ScriptWindow& candidate) {
         return candidate.name == window;
     });
     const bool pressing = event.type == Type::press || event.type == Type::doubleClick;
@@ -397,15 +411,15 @@ bool THeadlessSession::pointer(const QString& window, const WindowPointerEvent& 
     }
     const bool hovering = event.type == Type::enter || event.type == Type::leave;
     // The click-through label the press went through, which the app may name for what took it, even once it has gone
-    const bool namesThrough = mGrab && !mGrab->through.isEmpty() && window == mGrab->through;
+    const bool namesThrough = mGrab && !main && !mGrab->through.isEmpty() && window == mGrab->through;
     const bool through = held && namesThrough;
-    if (held && !through && window != mGrab->name) {
+    if (held && !through && (main != mGrab->main || (!main && window != mGrab->name))) {
         //: Error from a frontend with no window given what its mouse did over another window than the one that took the press of a button still held; %1 is that one's name
-        mErrorString = tr("A button is held on the window \"%1\", which has the mouse until it is released.").arg(mGrab->name);
+        mErrorString = tr("A button is held on the window \"%1\", which has the mouse until it is released.").arg(mGrab->main ? qsl("main") : mGrab->name);
         return false;
     }
     // An enter or a leave at it is taken as the grab holds, but a wheel there has no window to turn over once it has gone
-    if (!through && !(namesThrough && hovering) && target == windows.cend()) {
+    if (!main && !through && !(namesThrough && hovering) && target == windows.cend()) {
         //: Error from a frontend with no window given what its mouse did over a window the profile's scripts have not made; %1 is its name
         mErrorString = tr("There is no window \"%1\".").arg(window);
         return false;
@@ -414,11 +428,11 @@ bool THeadlessSession::pointer(const QString& window, const WindowPointerEvent& 
     if (mGrab && hovering) {
         return true;
     }
-    const bool outside =
-            target != windows.cend() && (event.position.x() < 0 || event.position.y() < 0 || event.position.x() >= target->geometry.width() || event.position.y() >= target->geometry.height());
+    const std::optional<QSize> size = main ? mpHost->mainWindowSize() : target != windows.cend() ? std::optional(target->geometry.size()) : std::nullopt;
+    const bool outside = size && (event.position.x() < 0 || event.position.y() < 0 || event.position.x() >= size->width() || event.position.y() >= size->height());
     // A leave says the pointer went, as Qt sends one to a widget that hides under it
     if (event.type != Type::leave) {
-        if (!held && !target->shown) {
+        if (!held && !main && !target->shown) {
             //: Error from a frontend with no window given what its mouse did over a window of the profile's that is hidden; %1 is its name
             mErrorString = tr("The window \"%1\" is not shown.").arg(window);
             return false;
@@ -429,32 +443,33 @@ bool THeadlessSession::pointer(const QString& window, const WindowPointerEvent& 
             return false;
         }
     }
-    // QWidget::childAt() passes over a click-through label, so the label under it takes the press, and the grab
-    const ScriptWindow* pNamed = target != windows.cend() ? &*target : nullptr;
+    // QWidget::childAt() passes over a click-through label, so what is under it takes the press, and the grab
+    const ScriptWindow* pNamed = main || target == windows.cend() ? nullptr : &*target;
     const ScriptWindow* pTarget = pNamed;
     WindowPointerEvent passed = event;
     if (through) {
         pTarget = grabbedWindow(windows);
         // From where the click-through label was at the press, if the press's callback deleted it
         const QPointF at = pNamed ? inMainArea(windows, *pNamed, event.position) : mGrab->throughOrigin + event.position;
-        passed.position = at - inMainArea(windows, *pTarget, QPointF());
-    } else if (pressing && !held && target->kind == ScriptWindow::Kind::label) {
-        const auto [pUnder, at] = passedThrough(windows, *target, event.position);
-        if (pUnder) {
-            pTarget = pUnder;
-            passed.position = at;
-        }
+        passed.position = at - (pTarget ? inMainArea(windows, *pTarget, QPointF()) : QPointF());
+    } else if (pressing && !held && pNamed && pNamed->kind == ScriptWindow::Kind::label) {
+        std::tie(pTarget, passed.position) = passedThrough(windows, *pNamed, event.position);
     }
-    const bool label = pTarget->kind == ScriptWindow::Kind::label;
+    const bool label = pTarget && pTarget->kind == ScriptWindow::Kind::label;
     const bool away = label && (passed.position.x() < 0 || passed.position.y() < 0 || passed.position.x() >= pTarget->geometry.width() || passed.position.y() >= pTarget->geometry.height());
+    const std::optional<bool> pressedOnText = held ? std::optional(mGrab->text) : std::nullopt;
     if (ends) {
         mGrab.reset();
     } else if (pressing && !held && event.buttons == event.button) {
-        mGrab = Grab{pTarget->name, pTarget->kind, pTarget != pNamed ? window : QString(), deactivated(*pTarget), pTarget != pNamed ? inMainArea(windows, *pNamed, QPointF()) : QPointF()};
+        mGrab = Grab{!pTarget,
+                     onConsoleText(pTarget, passed.position),
+                     pTarget ? pTarget->name : QString(),
+                     pTarget ? pTarget->kind : ScriptWindow::Kind::miniConsole,
+                     pTarget != pNamed ? window : QString(),
+                     pTarget ? deactivated(*pTarget) : std::nullopt,
+                     pNamed && pTarget != pNamed ? inMainArea(windows, *pNamed, QPointF()) : QPointF()};
     }
-    if (label) {
-        pointLabel(windows, *pTarget, passed);
-    }
+    pointWindow(windows, pTarget, passed, pressedOnText);
     // QApplicationPrivate::sendMouseEvent() leaves the widget that had the grab as a release away from it ends that,
     // which is not a label its release's callback made again under the name
     if (ends && away && self && mpHost && mHoveredLabel && mHoveredLabel->name == pTarget->name && labelMade(pTarget->name) == mHoveredLabel->made) {
@@ -465,6 +480,9 @@ bool THeadlessSession::pointer(const QString& window, const WindowPointerEvent& 
 
 const THeadlessSession::ScriptWindow* THeadlessSession::grabbedWindow(const QList<ScriptWindow>& windows) const
 {
+    if (mGrab->main) {
+        return nullptr;
+    }
     const auto grabbed = std::find_if(windows.cbegin(), windows.cend(), [this](const ScriptWindow& candidate) {
         return candidate.name == mGrab->name && candidate.kind == mGrab->kind;
     });
@@ -473,6 +491,9 @@ const THeadlessSession::ScriptWindow* THeadlessSession::grabbedWindow(const QLis
 
 bool THeadlessSession::grabHolds(const QList<ScriptWindow>& windows) const
 {
+    if (mGrab->main) {
+        return true;
+    }
     // One that lost it between two calls, as a label that hid and showed again, has lost it all the same; one hidden
     // with the window it is in keeps it, as Qt's grab is on the widget itself
     const ScriptWindow* pGrabbed = grabbedWindow(windows);
@@ -526,15 +547,164 @@ std::optional<qint64> THeadlessSession::labelMade(const QString& name) const
     return record ? std::optional(record->made) : std::nullopt;
 }
 
+bool THeadlessSession::onConsoleText(const ScriptWindow* pWindow, const QPointF& position) const
+{
+    if (!pWindow) {
+        return mainConsoleTextRect().contains(position.toPoint());
+    }
+    return pWindow->kind == ScriptWindow::Kind::miniConsole || pWindow->kind == ScriptWindow::Kind::userWindow;
+}
+
+void THeadlessSession::pointWindow(const QList<ScriptWindow>& windows, const ScriptWindow* pWindow, const WindowPointerEvent& event, const std::optional<bool> pressedOnText)
+{
+    using Kind = ScriptWindow::Kind;
+    if (pWindow && pWindow->kind == Kind::label) {
+        pointLabel(windows, *pWindow, event);
+        return;
+    }
+    // QWidgetWindow::handleWheelEvent() sends a wheel to the widget under the pointer, which a held button does not
+    // enter
+    if (mHoveredLabel && !(mGrab && event.type == WindowPointerEvent::Type::wheel)) {
+        const QPointer<THeadlessSession> self(this);
+        leaveHoveredLabel();
+        if (!self || !mpHost) {
+            return;
+        }
+    }
+    // A command line, text box or mapper keeps the mouse for itself
+    if (pWindow && pWindow->kind != Kind::miniConsole && pWindow->kind != Kind::userWindow && pWindow->kind != Kind::scrollBox) {
+        return;
+    }
+    if (event.type == WindowPointerEvent::Type::wheel) {
+        if (!pWindow || pWindow->kind != Kind::scrollBox) {
+            scrollConsole(pWindow ? pWindow->name : qsl("main"), event);
+        }
+        return;
+    }
+    // TTextEdit::mouseReleaseEvent() opens its menu for the right button and raises nothing, wherever the grab its
+    // press gave it has the release
+    if (event.type == WindowPointerEvent::Type::release && event.button == Qt::RightButton && pressedOnText.value_or(onConsoleText(pWindow, event.position))) {
+        return;
+    }
+    // TTextEdit gives a mini console's press to the widget it is in
+    if (pWindow && pWindow->kind != Kind::userWindow) {
+        pointConsole(windows, pWindow->parent, event.position + pWindow->geometry.topLeft(), event);
+    } else {
+        pointConsole(windows, pWindow ? pWindow->name : QString(), event.position, event);
+    }
+}
+
+void THeadlessSession::pointConsole(const QList<ScriptWindow>& windows, const QString& container, const QPointF& position, const WindowPointerEvent& event)
+{
+    if (event.type != WindowPointerEvent::Type::press && event.type != WindowPointerEvent::Type::release && event.type != WindowPointerEvent::Type::doubleClick) {
+        return;
+    }
+    // As Qt passes an event a widget leaves up to its parent, until a console takes it
+    QString console = container;
+    QPointF at = position;
+    while (!console.isEmpty()) {
+        const ScriptWindow* pWindow = windowNamed(windows, console);
+        if (!pWindow) {
+            return;
+        }
+        if (pWindow->kind == ScriptWindow::Kind::miniConsole || pWindow->kind == ScriptWindow::Kind::userWindow) {
+            break;
+        }
+        at += pWindow->geometry.topLeft();
+        console = pWindow->parent;
+    }
+    // QWidget::mouseDoubleClickEvent() presses again
+    const bool press = event.type != WindowPointerEvent::Type::release;
+    const QMouseEvent qtEvent(press ? QEvent::MouseButtonPress : QEvent::MouseButtonRelease, at, at, event.button, event.buttons, event.modifiers);
+    mpHost->raiseWindowMouseEvent(console.isEmpty() ? qsl("main") : console, qtEvent, press);
+}
+
+bool THeadlessSession::opensConsoleMenu(const QList<ScriptWindow>& windows, const ScriptWindow& label, const QPointF& position) const
+{
+    using Kind = ScriptWindow::Kind;
+    const auto bare = [this](const QString& name) {
+        const TLabelModel* pModel = mpHost->windowRegistry().labelModel(name);
+        return pModel && !pModel->mClickFunction && !pModel->mReleaseFunction;
+    };
+    if (!bare(label.name)) {
+        return false;
+    }
+    // QWidget::childAt() in a parent, with the label and each bare one it finds left out
+    const auto hitIn = [&](const QString& parent, const QPoint& point) {
+        const ScriptWindow* pHit = nullptr;
+        for (const ScriptWindow& candidate : windows) {
+            if (candidate.parent != parent || candidate.inDock || !candidate.shown || !candidate.geometry.contains(point) || (pHit && candidate.stackOrder < pHit->stackOrder)) {
+                continue;
+            }
+            if (candidate.kind == Kind::label) {
+                const std::optional<LabelContent> content = labelContent(candidate.name);
+                if ((content && content->clickThrough) || bare(candidate.name)) {
+                    continue;
+                }
+            }
+            pHit = &candidate;
+        }
+        return pHit;
+    };
+    const QPoint inParent = (position + label.geometry.topLeft()).toPoint();
+    const ScriptWindow* pParent = label.parent.isEmpty() ? nullptr : windowNamed(windows, label.parent);
+    // QWidget::childAt() finds nothing outside the widget it is asked of
+    const std::optional<QSize> area = pParent ? std::optional(pParent->geometry.size()) : mpHost->mainWindowSize();
+    if ((!label.parent.isEmpty() && !pParent) || (area && !QRect(QPoint(), *area).contains(inParent))) {
+        return false;
+    }
+    QPoint point = inParent;
+    const ScriptWindow* pHit = hitIn(label.parent, point);
+    // childAt() goes on into what a scroll box or mini console holds there; a scroll box's own widget is not a console's text
+    while (pHit && (pHit->kind == Kind::scrollBox || pHit->kind == Kind::miniConsole)) {
+        point -= pHit->geometry.topLeft();
+        const ScriptWindow* pInner = hitIn(pHit->name, point);
+        if (!pInner) {
+            return pHit->kind == Kind::miniConsole;
+        }
+        pHit = pInner;
+    }
+    if (pHit) {
+        return false;
+    }
+    if (!pParent) {
+        return mainConsoleTextRect().contains(inParent);
+    }
+    return pParent->kind == Kind::miniConsole || pParent->kind == Kind::userWindow;
+}
+
+void THeadlessSession::scrollConsole(const QString& name, const WindowPointerEvent& event)
+{
+    TConsoleModel* pModel = mpHost->consoleModelNamed(name);
+    const std::optional<int> scroll = mpHost->windowScroll(name);
+    if (!pModel || !scroll) {
+        return;
+    }
+    // As TTextEdit::wheelEvent(): three lines a notch, one with Shift, half the console's rows with Control
+    const double speedUp = event.modifiers & Qt::ShiftModifier ? 1.0 : (event.modifiers & Qt::ControlModifier ? qRound(pModel->mGridSize.height() / 2.0) : 3.0);
+    const QObject* pConsole = &pModel->mNotifier;
+    const std::pair<QPointer<const QObject>, int> carried = mWheelRemainders.value(name);
+    const double degrees = event.angleDelta.y() / 8.0 * speedUp + (carried.first == pConsole ? carried.second : 0);
+    const int lines = qRound(degrees / 15.0);
+    mWheelRemainders.insert(name, {pConsole, static_cast<int>(degrees - 15 * lines)});
+    if (!lines) {
+        return;
+    }
+    const int lastLine = pModel->buffer.getLastLineNumber();
+    const int from = mpHost->consoleFrontend()->windowFollowsNewLines(name) ? lastLine : *scroll;
+    const int to = std::clamp(from - lines, 0, lastLine);
+    mpHost->consoleFrontend()->scrollWindowTo(name, to, to >= lastLine);
+}
+
 std::pair<const THeadlessSession::ScriptWindow*, QPointF> THeadlessSession::passedThrough(const QList<ScriptWindow>& windows, const ScriptWindow& label, const QPointF& position) const
 {
     const ScriptWindow* pWindow = &label;
     QPointF at = position;
-    // Qt::WA_TransparentForMouseEvents: the label under it at that point has it instead, through each such label
-    while (true) {
+    // Qt::WA_TransparentForMouseEvents: what is under it at that point has it instead, through each such label
+    while (pWindow && pWindow->kind == ScriptWindow::Kind::label) {
         const std::optional<LabelContent> content = labelContent(pWindow->name);
         if (!content || !content->clickThrough) {
-            return {pWindow, at};
+            break;
         }
         const ScriptWindow& over = *pWindow;
         const QPointF inParent = at + over.geometry.topLeft();
@@ -545,25 +715,25 @@ std::pair<const THeadlessSession::ScriptWindow*, QPointF> THeadlessSession::pass
                 pUnder = &candidate;
             }
         }
-        if (!pUnder || pUnder->kind != ScriptWindow::Kind::label) {
-            return {nullptr, inParent};
-        }
-        at = inParent - pUnder->geometry.topLeft();
-        pWindow = pUnder;
+        at = pUnder ? inParent - pUnder->geometry.topLeft() : inParent;
+        pWindow = pUnder ? pUnder : windowNamed(windows, over.parent);
     }
+    return {pWindow, at};
 }
 
 void THeadlessSession::pointLabel(const QList<ScriptWindow>& windows, const ScriptWindow& label, const WindowPointerEvent& event)
 {
     if (const std::optional<LabelContent> content = labelContent(label.name); content && content->clickThrough) {
+        WindowPointerEvent passed = event;
+        const ScriptWindow* pUnder = nullptr;
         // A leave says the pointer went, not from where, so it leaves whatever the pointer was over through it
         if (event.type == WindowPointerEvent::Type::leave) {
-            leaveHoveredLabel();
-        } else if (const auto [pUnder, at] = passedThrough(windows, label, event.position); pUnder) {
-            WindowPointerEvent passed = event;
-            passed.position = at;
-            pointLabel(windows, *pUnder, passed);
+            passed.position = event.position + label.geometry.topLeft();
+            pUnder = windowNamed(windows, label.parent);
+        } else {
+            std::tie(pUnder, passed.position) = passedThrough(windows, label, event.position);
         }
+        pointWindow(windows, pUnder, passed);
         return;
     }
     const QPointF global = inMainArea(windows, label, event.position);
@@ -609,8 +779,19 @@ void THeadlessSession::pointLabel(const QList<ScriptWindow>& windows, const Scri
         return;
     }
     const std::unique_ptr<QEvent> pQtEvent = qtEvent(event, global);
-    // QWidget::mouseDoubleClickEvent() presses again
-    if (!runOwn(labelCallback(event.type), *pQtEvent) && event.type == WindowPointerEvent::Type::doubleClick) {
-        runOwn(TLabelModel::Callback::click, *pQtEvent);
+    if (runOwn(labelCallback(event.type), *pQtEvent)) {
+        return;
     }
+    // QWidget::mouseDoubleClickEvent() presses again
+    if (event.type == WindowPointerEvent::Type::doubleClick && runOwn(TLabelModel::Callback::click, *pQtEvent)) {
+        return;
+    }
+    if (!self || !mpHost) {
+        return;
+    }
+    // TLabel::mouseReleaseEvent() gives it to the menu
+    if (event.type == WindowPointerEvent::Type::release && event.button == Qt::RightButton && opensConsoleMenu(windows, label, event.position)) {
+        return;
+    }
+    pointConsole(windows, label.parent, event.position + label.geometry.topLeft(), event);
 }
