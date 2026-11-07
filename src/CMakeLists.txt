@@ -521,6 +521,7 @@ set(mudlet_HDRS
     TTimer.h
     TTrigger.h
     TVar.h
+    TWindowNotifier.h
     TWindowRegistry.h
     UntrustedText.h
     utils.h
