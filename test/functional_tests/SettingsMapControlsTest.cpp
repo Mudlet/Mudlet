@@ -31,9 +31,12 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <QImage>
+#include <QPointer>
 #include <QPushButton>
 #include <QScopeGuard>
 #include <QSpinBox>
+#include <QTimer>
 
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -43,6 +46,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "T2DMap.h"
 #include "TMap.h"
+#include "TRoomDB.h"
 #include "TelnetServerStub.h"
 #include "dlgMapper.h"
 #include "dlgProfilePreferences.h"
@@ -60,6 +64,7 @@ private:
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     dlgProfilePreferences* mpPreferences = nullptr;
+    QPointer<QTimer> mpColorDialogTimer;
     const QString mProfileName = qsl("SettingsMapControls-Test");
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
@@ -123,6 +128,7 @@ private slots:
 
     void cleanup()
     {
+        delete mpColorDialogTimer;
         delete mpPreferences;
         mpPreferences = nullptr;
         if (mpHost) {
@@ -187,12 +193,49 @@ private slots:
         QCOMPARE(mpHost->mpMap->mCustomEnvColors.value(257), QColor(QColorConstants::DarkRed));
     }
 
+    // Must run before any case that opens the mapper: it needs a profile whose mapper was never created
+    void test_theMapBackgroundCanBePickedBeforeTheMapIsOpened()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        QVERIFY2(!pMap->mapper(), "the profile already has a mapper, so this cannot pick the colour without one");
+
+        const QColor priorBackground = mpHost->mBgColor_2;
+        const int areaId = pMap->mpRoomDB->addArea(qsl("Map background test"));
+        QVERIFY(areaId > 0);
+        const auto restore = qScopeGuard([this, pMap, areaId, priorBackground]() {
+            mpHost->mBgColor_2 = priorBackground;
+            pMap->mpRoomDB->removeArea(areaId);
+        });
+
+        const QColor picked(12, 34, 56);
+        QVERIFY(mpHost->mBgColor_2 != picked);
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        mpColorDialogTimer = TestSettings::pickInTheNextColorDialog(this, picked);
+        mpPreferences->pushButton_background_color_2->click();
+        QCOMPARE(mpHost->mBgColor_2, picked);
+
+        // With no room to centre on, the 2D map draws a message rather than its background
+        const int roomId = 1;
+        QVERIFY(pMap->addRoom(roomId) && pMap->setRoomArea(roomId, areaId) && pMap->setRoomCoordinates(roomId, 0, 0, 0));
+        mpHost->showHideOrCreateMapper(true);
+        QVERIFY2(pMap->mapper() && pMap->mapper()->mp2dMap, "opening the map left no 2D map to draw the background");
+        T2DMap* p2dMap = pMap->mapper()->mp2dMap;
+        p2dMap->resize(200, 200);
+        QImage frame(p2dMap->size(), QImage::Format_ARGB32);
+        frame.fill(Qt::magenta);
+        p2dMap->render(&frame);
+        QCOMPARE(frame.pixelColor(frame.width() - 5, frame.height() - 5), picked);
+    }
+
     // The spin box counts in tenths of a room, and the profile and the 2D map
     // have to end up holding the same size - the widget was once handed the
     // spin box's own number, so the map drew rooms ten times too big (#8513).
     void test_theRoomSizeControlGivesTheMapTheSameSizeAsTheProfile()
     {
-        mpHost->showHideOrCreateMapper(true);
+        // Only when there is none: on an existing mapper this toggles it hidden
+        if (!mpHost->mpMap->mapper()) {
+            mpHost->showHideOrCreateMapper(true);
+        }
         QVERIFY2(mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap, "the mapper left no 2D map for the room size to reach");
         T2DMap* p2dMap = mpHost->mpMap->mapper()->mp2dMap;
 
