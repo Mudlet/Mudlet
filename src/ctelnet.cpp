@@ -1708,7 +1708,7 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
      * (currently it can be done in the "Profile preferences") it doesn't modify
      * the execution of code in this class until it is safe to do so:
      */
-    mCurrent_sslTsl = mpHost->mSslTsl;
+    mCurrent_sslTsl = mpHost->mSslTsl || mpHost->mUseTlsThisSession;
     if (mCurrent_sslTsl) {
         // Left wired by an earlier open connection, the TCP connect would count as the secure
         // connection being made, well before its handshake has had the chance to fail
