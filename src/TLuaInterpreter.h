@@ -658,6 +658,7 @@ public:
     static int pauseMusic(lua_State*);
     static int pauseVideos(lua_State*);
     static int updateSounds(lua_State*);
+    static int updateMusic(lua_State*);
     static int setMediaListener(lua_State*);
     static int getMediaListener(lua_State*);
     static int purgeMediaCache(lua_State*);
@@ -1001,6 +1002,7 @@ private:
     static std::pair<int, TAction*> getTActionFromIdOrName(lua_State*, const int, const char*);
     static int loadMediaFileAsOrderedArguments(lua_State*, const char*, const TMediaData::MediaType);
     static int loadMediaFileAsTableArgument(lua_State*, const char*, const TMediaData::MediaType);
+    static int updateMediaAsTableArgument(lua_State*, const char*, const TMediaData::MediaType);
     static int playMusicFileAsOrderedArguments(lua_State*, const char*);
     static int playMusicFileAsTableArgument(lua_State*, const char*);
     static int playSoundFileAsOrderedArguments(lua_State*, const char*);
