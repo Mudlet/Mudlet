@@ -49,6 +49,7 @@
 #include <QTextDocumentFragment>
 #include <QTimer>
 #include <QUrl>
+#include <QtMath>
 #include <chrono>
 
 using namespace std::chrono_literals;
@@ -2294,6 +2295,17 @@ dlgPackageExporterDescription::dlgPackageExporterDescription(QWidget* pW)
 }
 
 dlgPackageExporterDescription::~dlgPackageExporterDescription() {}
+
+// In lines of the current font rather than pixels, so a stylesheet or a larger
+// font still leaves room to write
+QSize dlgPackageExporterDescription::minimumSizeHint() const
+{
+    constexpr int minimumLines = 10;
+    const int textHeight = minimumLines * fontMetrics().lineSpacing() + qCeil(2 * document()->documentMargin());
+    // contentsMargins() already holds the frame's width
+    const QMargins margins = viewportMargins() + contentsMargins();
+    return {QTextEdit::minimumSizeHint().width(), textHeight + margins.top() + margins.bottom()};
+}
 
 bool dlgPackageExporterDescription::canInsertFromMimeData(const QMimeData* source) const
 {

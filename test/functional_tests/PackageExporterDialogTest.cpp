@@ -38,6 +38,7 @@
 #include <QThreadPool>
 #include <QTimer>
 #include <QTreeWidget>
+#include <QtMath>
 #include <QtTest/QtTest>
 
 #include <chrono>
@@ -1519,6 +1520,29 @@ private slots:
         QVERIFY2(QFileInfo::exists(qsl("%1/%2/.mudlet/description_images/badge.png").arg(profileHome(), packageName)), "the description image was not inside the package");
         const QString description = mpHost->mPackageInfo.value(packageName).value(qsl("description"));
         QVERIFY2(description.contains(qsl("<$packagePath/.mudlet/description_images/badge.png>")), qPrintable(qsl("The description held: \"%1\"").arg(description)));
+    }
+
+    // Opening the package details has to leave the description, the one field
+    // here meant for more than a line, room to show a decent part of itself.
+    void test_theDescriptionShowsAtLeastTenLinesWhenTheDetailsAreOpened_7051()
+    {
+        openExporter();
+        mpExporter->show();
+        QVERIFY(QTest::qWaitForWindowExposed(mpExporter));
+        auto* description = mpExporter->findChild<QTextEdit*>(qsl("textEdit_description"));
+        QVERIFY(description);
+        auto linesShown = [description]() {
+            const int textHeight = description->viewport()->height() - qCeil(2 * description->document()->documentMargin());
+            return textHeight / description->fontMetrics().lineSpacing();
+        };
+
+        buttonNamed(qsl("pushButton_openInfos"))->click();
+        QVERIFY2(QTest::qWaitFor(
+                         [&linesShown]() {
+                             return linesShown() >= 10;
+                         },
+                         2s),
+                 qPrintable(qsl("the description shows only %1 lines of text").arg(linesShown())));
     }
 
     // The icon of the package being updated is drawn as a pixmap in a label
