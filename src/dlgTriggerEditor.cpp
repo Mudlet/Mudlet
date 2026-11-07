@@ -1802,6 +1802,7 @@ void dlgTriggerEditor::createPatternItem(int index)
     connect(pItem->pushButton_bgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerBg);
     connect(pItem->singleLineTextEdit_pattern, &QPlainTextEdit::textChanged, this, &dlgTriggerEditor::slot_changedPattern);
     connect(pItem->singleLineTextEdit_pattern, &QPlainTextEdit::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
+    connect(pItem->singleLineTextEdit_pattern, &SingleLineTextEdit::signal_pastedExtraLines, this, &dlgTriggerEditor::slot_pastedExtraPatternLines);
     connect(pItem->spinBox_lineSpacer, qOverload<int>(&QSpinBox::valueChanged), this, &dlgTriggerEditor::slot_lineSpacerChanged);
     connect(pItem->spinBox_lineSpacer, qOverload<int>(&QSpinBox::valueChanged), this, &dlgTriggerEditor::slot_itemEdited);
 
@@ -1835,7 +1836,7 @@ void dlgTriggerEditor::createPatternItem(int index)
 
 void dlgTriggerEditor::showPatternItems(int count)
 {
-    count = qBound(0, count, 50);
+    count = qBound(0, count, csmMaxPatternRows);
     while (mTriggerPatternEdit.size() < count) {
         createPatternItem(mTriggerPatternEdit.size());
     }
@@ -7864,7 +7865,7 @@ void dlgTriggerEditor::handlePatternChange(dlgTriggerPatternEdit* patternItem, b
             }
         }
 
-        if (patternItem->mRow == mVisiblePatternCount - 1 && hasContent && mVisiblePatternCount < 50) {
+        if (patternItem->mRow == mVisiblePatternCount - 1 && hasContent && mVisiblePatternCount < csmMaxPatternRows) {
             showPatternItems(mVisiblePatternCount + 1);
         }
     }
@@ -8061,6 +8062,51 @@ void dlgTriggerEditor::slot_changedPattern()
     auto* patternItem = textEdit ? qobject_cast<dlgTriggerPatternEdit*>(textEdit->parentWidget()) : nullptr;
     const bool hasText = textEdit && !textEdit->toPlainText().isEmpty();
     handlePatternChange(patternItem, hasText);
+}
+
+// Fills only empty text rows, so nothing is overwritten; Lua code is one chunk a split would break
+void dlgTriggerEditor::slot_pastedExtraPatternLines(const QStringList& lines)
+{
+    auto* textEdit = qobject_cast<SingleLineTextEdit*>(sender());
+    auto* patternItem = textEdit ? qobject_cast<dlgTriggerPatternEdit*>(textEdit->parentWidget()) : nullptr;
+    if (!patternItem) {
+        return;
+    }
+    const int sourceType = patternItem->comboBox_patternType->currentIndex();
+    if (sourceType == REGEX_LUA_CODE) {
+        return;
+    }
+
+    const int firstUnusedRow = mVisiblePatternCount - 1;
+    int row = patternItem->mRow;
+    for (const QString& line : lines) {
+        if (line.trimmed().isEmpty()) {
+            continue;
+        }
+
+        dlgTriggerPatternEdit* target = nullptr;
+        while (!target && ++row < csmMaxPatternRows) {
+            if (row >= mVisiblePatternCount) {
+                showPatternItems(row + 1);
+            }
+            auto* candidate = mTriggerPatternEdit.value(row, nullptr);
+            if (!candidate || !candidate->singleLineTextEdit_pattern->toPlainText().isEmpty()) {
+                continue;
+            }
+            const int type = candidate->comboBox_patternType->currentIndex();
+            if (type == REGEX_SUBSTRING || type == REGEX_PERL || type == REGEX_BEGIN_OF_LINE_SUBSTRING || type == REGEX_EXACT_MATCH) {
+                target = candidate;
+            }
+        }
+        if (!target) {
+            return;
+        }
+
+        if (row >= firstUnusedRow && target->comboBox_patternType->currentIndex() == REGEX_SUBSTRING) {
+            target->comboBox_patternType->setCurrentIndex(sourceType);
+        }
+        target->singleLineTextEdit_pattern->setPlainText(line);
+    }
 }
 
 void dlgTriggerEditor::slot_lineSpacerChanged(int value)

@@ -351,6 +351,7 @@ private slots:
     void slot_toggleSearchWholeWord(bool);
     void slot_toggleGroupBoxColorizeTrigger(const bool);
     void slot_changedPattern();
+    void slot_pastedExtraPatternLines(const QStringList& lines);
     void slot_lineSpacerChanged(int value);
     void slot_clearSearchResults();
     void slot_clearSoundFile();
@@ -744,6 +745,7 @@ private:
 
     // Pattern rows the list shows in full however the splitter and advanced options are arranged (#2548)
     static constexpr int csmMinimumVisiblePatternRows = 5;
+    static constexpr int csmMaxPatternRows = 50;
 
     // Row height once the list overflows: the tallest control any pattern type puts in a row (see createPatternItem())
     int mPatternRowHeight = 0;
