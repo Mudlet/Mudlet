@@ -481,6 +481,8 @@ public:
     const_iterator cend() const { return end(); }
     // Stored as one shared TChar; a line held per character may still look uniform
     bool uniform() const { return mUniformCount; }
+    // The one TChar every character shares, so writing it restyles them all; null unless uniform()
+    TChar* sharedFormat() { return mUniformCount ? &mUniform : nullptr; }
     // The per-character storage's heap block, null when none is held
     const TChar* heapData() const { return mChars.data(); }
     size_type capacity() const { return mChars.capacity(); }

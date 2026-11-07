@@ -7995,6 +7995,16 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
     return false;
 }
 
+// The columns [from, to) of line y that styling from (x1, y1) to (x2, y2) reaches: on to the end of
+// every line but the last, which stops at x2
+static std::pair<int, int> styledColumns(const TLineFormat& line, const int y, const int x1, const int y1, const int x2, const int y2)
+{
+    const int size = static_cast<int>(line.size());
+    const int from = (y == y1) ? x1 : 0;
+    const int to = (y >= y2) ? std::min(x2, size) : size;
+    return {from, std::max(from, to)};
+}
+
 // Replaces (bool)TBuffer::applyXxxx(QPoint& P_begin, QPoint& P_end, bool state)
 // where Xxxxx is Bold, Italics, Strikeout, Underline
 // Can set multiple attributes to given state
@@ -8025,18 +8035,15 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
         // No materialisePreTriggerPassLine(): color matching reads only foreground()/background(), and
         // snapshotting would copy every line for a script that styles all of them.
         for (int y = y1; y <= y2; ++y) {
-            int x = 0;
-            if (y == y1) {
-                x = x1;
-            }
-            while (x < static_cast<int>(buffer.at(y).size())) {
-                if (y >= y2) {
-                    if (x >= x2) {
-                        return true;
-                    }
+            TLineFormat& line = buffer.at(y);
+            const auto [from, to] = styledColumns(line, y, x1, y1, x2, y2);
+            if (TChar* pShared = (from == 0 && to == static_cast<int>(line.size())) ? line.sharedFormat() : nullptr) {
+                pShared->setAttributes(attributes, state);
+            } else if (from < to) {
+                std::vector<TChar>& chars = line.expand();
+                for (int x = from; x < to; ++x) {
+                    chars[x].setAttributes(attributes, state);
                 }
-                buffer.at(y).expand().at(x).setAttributes(attributes, state);
-                ++x;
             }
         }
         return true;
@@ -8067,18 +8074,15 @@ bool TBuffer::applyFgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
 
         for (int y = y1; y <= y2; ++y) {
             materialisePreTriggerPassLine(y);
-            int x = 0;
-            if (y == y1) {
-                // Override position start column if on first line to given start column
-                x = x1;
-            }
-            while (x < static_cast<int>(buffer.at(y).size())) {
-                if (y >= y2 && x >= x2) {
-                    // Escape if on or past last line and past last character on the last line
-                    return true;
+            TLineFormat& line = buffer.at(y);
+            const auto [from, to] = styledColumns(line, y, x1, y1, x2, y2);
+            if (TChar* pShared = (from == 0 && to == static_cast<int>(line.size())) ? line.sharedFormat() : nullptr) {
+                pShared->setForeground(newColor);
+            } else if (from < to) {
+                std::vector<TChar>& chars = line.expand();
+                for (int x = from; x < to; ++x) {
+                    chars[x].setForeground(newColor);
                 }
-
-                buffer.at(y).expand().at(x++).setForeground(newColor);
             }
         }
         return true;
@@ -8109,18 +8113,15 @@ bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
 
         for (int y = y1; y <= y2; ++y) {
             materialisePreTriggerPassLine(y);
-            int x = 0;
-            if (y == y1) {
-                // Override position start column if on first line to given start column
-                x = x1;
-            }
-            while (x < static_cast<int>(buffer.at(y).size())) {
-                if (y >= y2 && x >= x2) {
-                    // Escape if on or past last line and on or past last character on last line
-                    return true;
+            TLineFormat& line = buffer.at(y);
+            const auto [from, to] = styledColumns(line, y, x1, y1, x2, y2);
+            if (TChar* pShared = (from == 0 && to == static_cast<int>(line.size())) ? line.sharedFormat() : nullptr) {
+                pShared->setBackground(newColor);
+            } else if (from < to) {
+                std::vector<TChar>& chars = line.expand();
+                for (int x = from; x < to; ++x) {
+                    chars[x].setBackground(newColor);
                 }
-
-                buffer.at(y).expand().at(x++).setBackground(newColor);
             }
         }
         return true;
