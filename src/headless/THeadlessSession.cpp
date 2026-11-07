@@ -475,6 +475,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                         },
                         Qt::QueuedConnection);
                 connectOutputRelays(pNewHost, run);
+                connectAreaRelays(pNewHost, run);
                 connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text, const QColor& foreground, const QColor& background) {
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;
@@ -838,6 +839,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
     }
     mDeliveredConsoleFont = consoleFont();
     noteOutputStateAtLoad();
+    noteAreaAtLoad();
     // A copy, as a handler may delete the session while its argument is in use
     const QString profile = mProfileName;
     emit profileLoaded(profile);
@@ -1120,7 +1122,7 @@ bool THeadlessSession::setScreenSize(const int columns, const int rows)
     // The GUI's main console never reports itself narrower
     const QSize area(std::max(40, columns), rows);
     // As TConsole::resizeEvent(), which tells scripts nothing for the size they have
-    if (area == mpHost->mainAreaCells()) {
+    if (!mpHost->mainAreaInPixels() && area == mpHost->mainAreaCells()) {
         return true;
     }
     mpHost->setMainAreaCells(area);

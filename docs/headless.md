@@ -165,6 +165,7 @@ if (session->start(options) != THeadlessSession::StartResult::started) {
 session->submit(qsl("look"));        // as typed on the command line
 session->runLua(qsl("echo('hi')"));  // as a script
 session->setScreenSize(80, 24);      // in characters, as a resize of the main window
+session->setMainWindowSize(QSize(800, 600)); // or in pixels, for an app that draws the main console
 session->save();                     // before the system may stop the app, as a phone does
 session->shutdown(true);             // sysExitEvent, then the save
 ```
@@ -239,7 +240,7 @@ session is deleted first: a session being deleted sends none. It comes from the 
 font: read it at `profileLoaded`, then follow `consoleFontChanged`, which carries each change, whatever
 made it - a script's `setFont()` or `setFontSize()`, the profile's save, the bundled default standing in for
 a font that is not installed, or a package bringing that font or taking it away. The size `setScreenSize()`
-gives is in that font's characters. It comes from the event loop, with the font as it is then, and only
+gives is in that font's characters, counted again in each new one. It comes from the event loop, with the font as it is then, and only
 when that differs from the one the app last had, so none follows `profileLoaded` for what the load did.
 
 `setDebugConsoleShown(true)` shows the Central Debug Console, as the editor's button does, before
@@ -524,6 +525,18 @@ is drawn in where the game asks for none, and which `TextRun` marks as the profi
 `consoleColorsChanged` carries both when either changes: from a script's `setBackgroundColor()` on the
 main console, or a package or save loaded into the profile with colours of its own. A mini console's
 background does not send it, nor does the game redefining its palette, which leaves both as they were.
+
+`setMainWindowSize()` gives the main window's size in pixels, as a resize of the GUI's main window does,
+for an app that draws the main console itself; `setScreenSize()` gives it in the font's characters, as a
+terminal does, and the later of the two holds. The borders a script's `setBorderTop()` and the like, an
+`Adjustable.Container` or an MXP frame set take their room from that area, and the main console's grid is
+as many characters of its font as fit in what they leave, but never fewer than 40 columns, as in the GUI;
+borders wider than the area leave the text a rectangle with no room, never a negative one.
+`mainConsoleGrid()` is that grid, which the game is told and a script's `getColumnCount()` and
+`getRowCount()` read, and `mainConsoleTextRect()` where in the area the text goes.
+`mainConsoleAreaChanged` carries both when either changes: from a border, a font change, which keeps a
+size given in pixels and so regrids, and keeps one given in characters and so does not, or either call.
+A size that holds no character of the font, or more than 65535 of them, is refused.
 
 `errorConsoleText` carries what the editor's error console prints, in pieces with the colours it prints
 them in: a Lua error comes as `[ERROR:]` in blue, where it was in green and the message in red, all on
