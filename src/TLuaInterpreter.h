@@ -1159,6 +1159,8 @@ private:
     // a line, though not one made while a script is running. The fifth slot
     // is rawget(), which puts a name still left out in place before reading.
     lua_CFunction mStockMetatableFunctions[5] = {};
+    // yajl.to_value as loaded, which parseJSON() stands in for while json_to_value is still it
+    lua_CFunction mStockJsonToValue = nullptr;
     bool mGlobalsMetatableTouched = false;
     // Once both handlers are seen in place with no script running, the next
     // lines do not look for them again until a script runs. Lua can also run

@@ -736,6 +736,8 @@ find_package(ZLIB REQUIRED)
 # fixed it mis-optimising the start of a match in 8-bit mode with PCRE2_CASELESS
 find_package(PCRE2 10.36 REQUIRED)
 find_package(PUGIXML REQUIRED)
+# lua-yajl already needs libyajl at runtime; parseJSON() drives its parser directly
+find_package(YAJL REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44 CONFIG REQUIRED)
 message(STATUS "Found Boost: ${Boost_DIR} (found version \"${Boost_VERSION}\")")
@@ -976,6 +978,7 @@ target_link_libraries(
         LUA51::LUA51
         PCRE2::PCRE2
         PUGIXML::PUGIXML
+        YAJL::YAJL
         ZIP::ZIP
         ZLIB::ZLIB
 # PLACEMARKER: sample benchmarking code
