@@ -255,6 +255,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapOffscreenCustomLineTest.cpp
     MapRoomNameVisibilityTest.cpp
     MapFileStatsTest.cpp
+    MapCopyTest.cpp
     MapTextLabelCacheTest.cpp
     MapViewAreaListTest.cpp
     MapViewTeardownTest.cpp

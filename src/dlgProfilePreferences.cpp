@@ -6678,8 +6678,9 @@ void dlgProfilePreferences::slot_copyMap()
 
             // Check for the destination directory for the other profiles
             const QDir toProfileDir;
-            const QString toProfileDirPathString = MudletApp::getMudletPath(enums::profileHomePath, pHost->getName());
-            if (!toProfileDir.exists(toProfileDirPathString)) {
+            const QString toProfileDirPathString = MudletApp::getMudletPath(enums::profileMapsPath, toProfileName);
+            // A profile deleted while this dialog was open is left for its copy to fail, rather than brought back holding only a map
+            if (toProfileDir.exists(MudletApp::getMudletPath(enums::profileHomePath, toProfileName)) && !toProfileDir.exists(toProfileDirPathString)) {
                 if (!toProfileDir.mkpath(toProfileDirPathString)) {
                     const QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map for other profile \"%1\".\n"
                                               "Please check that you have permissions/access to:\n"
@@ -6797,6 +6798,7 @@ void dlgProfilePreferences::slot_copyMap()
         return;
     }
 
+    QList<QString> copiedToProfiles;
     // Make the copies into the destination profiles (for all to profiles whether
     // in use or not):
     itOtherProfile.toFront();
@@ -6814,6 +6816,7 @@ void dlgProfilePreferences::slot_copyMap()
             QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
             continue; // Try again with next profile
         }
+        copiedToProfiles.append(otherHostName);
         label_mapFileActionResult->setText(tr("Map copied successfully to other profile %1.").arg(otherHostName));
         qApp->processEvents(); // Copied from "Loading map - please wait..." case
                                // Just in case is needed to make the above message
@@ -6821,10 +6824,7 @@ void dlgProfilePreferences::slot_copyMap()
     }
 
     // Finally, signal the other profiles to reload their maps:
-    mudlet::self()->requestProfilesToReloadMaps(toProfilesRoomIdMap.keys());
-    // GOTCHA: keys() is a QList<QString>, however, though it IS equivalent to a
-    // QStringList in many ways, the SLOT/SIGNAL system treats them as different
-    // - I thinK - so use QList<QString> throughout the SIGNAL/SLOT links Slysven!
+    mudlet::self()->requestProfilesToReloadMaps(copiedToProfiles, thisProfileLatestMapPathFileName);
     label_mapFileActionResult->setText(tr("Map copied, now signalling other profiles to reload it."));
     QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
 
