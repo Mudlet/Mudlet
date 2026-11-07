@@ -31,6 +31,9 @@
 
 #include "FontManager.h"
 #include "Host.h"
+#if defined(INCLUDE_STATIC_LUA_MODULES)
+#include "LuaStaticModules.h"
+#endif
 #include "MapStyle.h"
 #include "MudletApp.h"
 #include "MudletMedia.h"
@@ -7086,6 +7089,9 @@ void TLuaInterpreter::initLuaGlobals()
     storeHostInLua(pGlobalLua, mpHost);
 
     luaL_openlibs(pGlobalLua);
+#if defined(INCLUDE_STATIC_LUA_MODULES)
+    registerStaticLuaModules(pGlobalLua);
+#endif
 
     lua_pushstring(pGlobalLua, "SESSION");
     lua_pushnumber(pGlobalLua, mHostID);
