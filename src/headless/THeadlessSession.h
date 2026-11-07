@@ -1062,6 +1062,9 @@ private:
         ScriptWindow::Kind kind = ScriptWindow::Kind::label;
         QString through;
         std::optional<qint64> deactivated;
+        // Where the window was in the main window's area at the press, which getMousePosition() follows the held
+        // moves from after it goes, as it does from throughOrigin
+        QPointF origin;
         // Where the click-through label was in the main window's area at the press, which the held events naming it
         // follow from after it goes
         QPointF throughOrigin;

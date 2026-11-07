@@ -1821,15 +1821,13 @@ int TLuaInterpreter::getMouseEvents(lua_State* L)
 int TLuaInterpreter::getMousePosition(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-
-    if (!host.hasConsoleView()) {
+    const std::optional<QPoint> pos = host.consoleFrontend()->mousePosition();
+    if (!pos) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
 
-    const QPoint pos = host.consoleFrontend()->mousePosition();
-
-    lua_pushnumber(L, pos.x());
-    lua_pushnumber(L, pos.y());
+    lua_pushnumber(L, pos->x());
+    lua_pushnumber(L, pos->y());
 
     return 2;
 }
