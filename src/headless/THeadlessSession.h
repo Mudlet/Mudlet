@@ -29,6 +29,7 @@
 #include <QList>
 #include <QObject>
 #include <QPoint>
+#include <QPointF>
 #include <QPointer>
 #include <QRect>
 #include <QSize>
@@ -515,6 +516,34 @@ public:
     bool setUserWindowGeometry(const QString& name, const QRect& geometry, bool floating);
     // The dock's close button: hides the user window, as hideWindow() does. Refused as setUserWindowGeometry() is.
     bool closeUserWindow(const QString& name);
+    // What the app's mouse did over one of the windows
+    struct PointerEvent
+    {
+        enum class Type { press, release, doubleClick, move, enter, leave, wheel };
+        Type type = Type::move;
+        // In the window's pixels, from its top left corner
+        QPointF position;
+        // The button that changed, for a press, release or double-click
+        Qt::MouseButton button = Qt::NoButton;
+        // Those held after it, which for a press or double-click include its own button, given or not
+        Qt::MouseButtons buttons;
+        Qt::KeyboardModifiers modifiers;
+        // A wheel's turn in eighths of a degree, as QWheelEvent::angleDelta() gives it
+        QPoint angleDelta;
+    };
+    // Runs what the GUI's mouse would there: a label's callback for the event, with the event table the GUI gives
+    // it, the pointer passing through a click-through label to the label under it. A label that leaves the event
+    // to what is under it does nothing more. The pointer is over one window at a time: an event at another is
+    // that one's enter, and the last one's leave, first. As Qt's implicit grab, the window that took a press of a
+    // button with no other held, under any click-through label it was passed through, has every move with a button
+    // held, and the release, wherever they are, until a release leaves no button held, a move has none or such a
+    // press comes, and none of them if it hid, moved or went meanwhile, though it keeps them as the window it is in
+    // hides or moves; an enter or leave meanwhile runs nothing, and a wheel enters nothing. A callback's Lua error
+    // goes to the error console, as the GUI's does, and is not this
+    // call's failure. Refused where runLua() is, for a name no window has, for another window than the one a held
+    // button is on or the click-through label the press went through, and, but for a leave or what that grab takes,
+    // for a window that is not shown or a point outside it.
+    bool pointer(const QString& window, const PointerEvent& event);
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -745,6 +774,23 @@ private:
     void noteWindowsAtLoad();
     struct WindowsTold;
     WindowsTold windowsNow() const;
+    void pointLabel(const QList<ScriptWindow>& windows, const ScriptWindow& label, const PointerEvent& event);
+    // The label a click-through label passes an event at that point to, null for none, and the point in it
+    std::pair<const ScriptWindow*, QPointF> passedThrough(const QList<ScriptWindow>& windows, const ScriptWindow& label, const QPointF& position) const;
+    // Which label of the name the null view has, as its record tells one made again under a name apart
+    std::optional<qint64> labelMade(const QString& name) const;
+    // Whether the window that took the press still has the grab, which Qt drops as a label hides or moves, or as the
+    // window goes
+    bool grabHolds(const QList<ScriptWindow>& windows) const;
+    // The window that has the grab, null for one gone
+    const ScriptWindow* grabbedWindow(const QList<ScriptWindow>& windows) const;
+    // The null view's count of the window's last making, or for a label its hiding or move into another window
+    std::optional<qint64> deactivated(const ScriptWindow& window) const;
+    // Forgets a hovered label deleted or made again, and leaves one that hid, as Qt does under the pointer, which
+    // runs Lua and is what it returns
+    bool dropHiddenHover(const QList<ScriptWindow>& windows);
+    // Runs the leave of the label the pointer is over, if any, and forgets it; may run Lua
+    void leaveHoveredLabel();
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
@@ -824,6 +870,26 @@ private:
         QHash<QString, LabelContent> labels;
     };
     std::optional<WindowsTold> mDeliveredWindows;
+    // The label pointer() last had the pointer enter, until it left, and which label of that name it was
+    struct HoveredLabel
+    {
+        QString name;
+        qint64 made = 0;
+    };
+    std::optional<HoveredLabel> mHoveredLabel;
+    // The window that took the press while a button is held, as Qt's qt_button_down. through is the click-through
+    // label the app named for the press, if it passed the press to this one.
+    struct Grab
+    {
+        QString name;
+        ScriptWindow::Kind kind = ScriptWindow::Kind::label;
+        QString through;
+        std::optional<qint64> deactivated;
+        // Where the click-through label was in the main window's area at the press, which the held events naming it
+        // follow from after it goes
+        QPointF throughOrigin;
+    };
+    std::optional<Grab> mGrab;
     // The size a script asked for, and Host's count of that request, while mainWindowResizeRequested's handler runs
     std::optional<std::pair<QSize, quint64>> mAnsweringMainWindowRequest;
 };

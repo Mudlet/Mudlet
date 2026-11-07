@@ -933,6 +933,8 @@ void TNullConsoleFrontend::createLabel(const QString& windowname, const QString&
     mpHost->windowRegistry().registerLabel(name, pLabel.get());
     mLabels[name] = {std::move(pLabel), userWindow, std::move(box)};
     mLabels[name].stackOrder = ++mTopOfStack;
+    mLabels[name].made = ++mLabelsMade;
+    mLabels[name].deactivated = ++mDeactivations;
     reportWindowVisibility(name);
     // TMainConsole::createLabel()'s colour
     setLabelBackgroundColor(name, QColor(32, 32, 32, 255));
@@ -1158,6 +1160,7 @@ TConsoleModel& TNullConsoleFrontend::addSubConsole(const QString& name, const TW
     mSubConsoles[name] = {std::move(pModel), userWindow, std::move(box)};
     mSubConsoles[name].holder = pHolder;
     mSubConsoles[name].stackOrder = ++mTopOfStack;
+    mSubConsoles[name].deactivated = ++mDeactivations;
     // As ~TConsole takes one that goes with the widget holding it, such as a frame nested in a deleted one, out
     // of the registry; the QPointer may already be cleared
     QObject::connect(pHolder, &QObject::destroyed, mpHost, [this, name, pHolder]() {
@@ -1753,6 +1756,9 @@ bool TNullConsoleFrontend::setLabelShown(const QString& name, const bool shown)
     if (it->second.shown == shown) {
         return true;
     }
+    if (!shown) {
+        it->second.deactivated = ++mDeactivations;
+    }
     it->second.shown = shown;
     reportWindowVisibility(name);
     return true;
@@ -1934,6 +1940,7 @@ bool TNullConsoleFrontend::createScrollBox(const QString& windowname, const QStr
     std::tie(box->userWindow, box->box) = containerFor(windowname, false);
     box->holder = new QObject(holderFor(box->userWindow, box->box.get()));
     box->stackOrder = ++mTopOfStack;
+    box->deactivated = ++mDeactivations;
     mScrollBoxes[name] = box;
     TWindowRegistry& registry = mpHost->windowRegistry();
     registry.registerScrollBox(name);
@@ -3059,6 +3066,7 @@ bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QStrin
         label.userWindow = userWindow;
         label.box = std::move(box);
         label.stackOrder = ++mTopOfStack;
+        label.deactivated = ++mDeactivations;
         inheritLabelFont(label, true);
     }
     label.pModel->mGeometry.moveTo(x, y);
@@ -3789,7 +3797,21 @@ std::optional<TNullConsoleFrontend::LabelRecord> TNullConsoleFrontend::labelReco
     record.cursor = label.cursor;
     record.customCursor = label.customCursor;
     record.customCursorHotSpot = label.customCursorHotSpot;
+    record.made = label.made;
     return record;
+}
+
+std::optional<qint64> TNullConsoleFrontend::deactivated(const QString& name, const bool label) const
+{
+    if (label) {
+        const auto it = mLabels.find(name);
+        return it == mLabels.end() ? std::nullopt : std::optional(it->second.deactivated);
+    }
+    if (const auto it = mSubConsoles.find(name); it != mSubConsoles.end()) {
+        return it->second.deactivated;
+    }
+    const auto it = mScrollBoxes.find(name);
+    return it == mScrollBoxes.end() ? std::nullopt : std::optional(it->second->deactivated);
 }
 
 bool TNullConsoleFrontend::userWindow(const QString& name) const
