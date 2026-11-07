@@ -258,81 +258,14 @@ void T2DMap::prepareSingleClickSelection(MapInteractionContext& context)
         return;
     }
 
-    const float fx = ((xspan / 2.0f) - mMapCenterX) * mRoomWidth;
-    const float fy = ((yspan / 2.0f) - mMapCenterY) * mRoomHeight;
-
-    const int mx = context.widgetPosition.x();
-    const int my = context.widgetPosition.y();
-    const int mz = mMapCenterZ;
-
-    // Build the list of rooms under the cursor.  Grid mode uses the spatial
-    // index for an exact cell lookup (works at all zoom levels including
-    // extreme zoom-out where rooms are sub-pixel sized).  Non-grid mode uses
-    // a pixel-distance test with a minimum 1-pixel radius.
-    QList<int> hitRooms;
-    if (area->gridMode) {
-        const int worldX = qRound(static_cast<double>(mx - fx) / mRoomWidth);
-        const int worldY = qRound(static_cast<double>(fy - my) / mRoomHeight);
-        for (const int roomId : area->getGridIndex().roomsAt(mz, worldX, worldY)) {
-            hitRooms.append(roomId);
-        }
-    } else {
-        const int halfW = qMax(1, qRound(mRoomWidth * rSize / 2.0));
-        const int halfH = qMax(1, qRound(mRoomHeight * rSize / 2.0));
-        QSetIterator<int> roomIterator(area->getRoomsForZ(mz));
-        while (roomIterator.hasNext()) {
-            const int roomId = roomIterator.next();
-            TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
-            if (!room) {
-                continue;
-            }
-            const int rx = room->x() * mRoomWidth + fx;
-            const int ry = room->y() * -1 * mRoomHeight + fy;
-            if (qAbs(mx - rx) < halfW && qAbs(my - ry) < halfH) {
-                hitRooms.append(roomId);
-            }
-        }
-    }
+    const QList<int> hitRooms = TMapPainter::roomsAtPoint(painterView(), *area, context.widgetPosition);
 
     addClickedRoomsToSelection(hitRooms, context.modifiers);
 }
 
 void T2DMap::addClickedRoomsToSelection(const QList<int>& hitRooms, const Qt::KeyboardModifiers modifiers)
 {
-    const bool hasShift = modifiers.testFlag(Qt::ShiftModifier);
-    const bool hasCtrl = modifiers.testFlag(Qt::ControlModifier);
-    for (const int roomId : hitRooms) {
-        const bool isAlreadySelected = mMultiSelectionSet.contains(roomId);
-
-        if (hasCtrl) {
-            if (isAlreadySelected && !hasShift) {
-                mMultiSelectionSet.remove(roomId);
-            } else {
-                mMultiSelectionSet.insert(roomId);
-            }
-        } else {
-            mMultiSelectionSet.insert(roomId);
-        }
-
-        if (!mMultiSelectionSet.empty()) {
-            mMultiSelection = false;
-        }
-    }
-
-    const int selectionSize = mMultiSelectionSet.size();
-    switch (selectionSize) {
-    case 0:
-        mMultiSelectionHighlightRoomId = 0;
-        break;
-    case 1:
-        mMultiSelection = false;
-        mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.begin());
-        break;
-    default:
-        mMultiSelection = false;
-        getCenterSelection();
-        break;
-    }
+    TMapPainter::addRoomsToSelection(mpMap, mMultiSelectionSet, mMultiSelection, mMultiSelectionHighlightRoomId, hitRooms, modifiers);
 }
 
 void T2DMap::selectRoomFromOtherView(const int roomId, const Qt::KeyboardModifiers modifiers)
@@ -1099,18 +1032,7 @@ std::pair<bool, QString> T2DMap::centerview(int roomId)
 void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId)
 {
     mTargetRoomId = speedWalkTargetRoomId;
-    if (mpMap->mpRoomDB->getRoom(speedWalkTargetRoomId)) {
-        mpMap->mTargetID = speedWalkTargetRoomId;
-
-        if (mpHost->checkForCustomSpeedwalk()) {
-            mpHost->startSpeedWalk(speedWalkStartRoomId, speedWalkTargetRoomId);
-        } else if (mpMap->findPath(speedWalkStartRoomId, speedWalkTargetRoomId)) {
-            mpHost->startSpeedWalk();
-        } else {
-            mpHost->mainConsoleView()->printSystemMessage(
-                    qsl("%1\n").arg(tr("Mapper: Cannot find a path from %1 to %2 using known exits.").arg(QString::number(speedWalkStartRoomId), QString::number(speedWalkTargetRoomId))));
-        }
-    }
+    TMapPainter::startSpeedWalk(mpHost, mpMap, speedWalkStartRoomId, speedWalkTargetRoomId);
 }
 
 TMapPainter::View T2DMap::painterView() const
@@ -1546,10 +1468,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
     mudlet::self()->activateProfile(mpHost);
     mNewMoveAction = true;
-    TEvent sysMapWindowMousePressEvent{};
-    sysMapWindowMousePressEvent.mArgumentList.append(QLatin1String("sysMapWindowMousePressEvent"));
-    sysMapWindowMousePressEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent(sysMapWindowMousePressEvent);
+    TMapPainter::raiseMousePressEvent(mpHost);
     takeFocusAwayFromTheCommandLine(Qt::MouseFocusReason);
 
     updateSelectionWidget();
@@ -3127,47 +3046,10 @@ void T2DMap::wheelEvent(QWheelEvent* e)
         return;
     }
 
-    // Increase rate if control key down - it makes scrolling through
-    // a large number of items in a listwidget's contents easier (that happens
-    // automagically) AND this make it easier to zoom in and out on LARGE area
-    // maps
-    const QPoint delta{e->angleDelta()};
-    const int yDelta = qRound(delta.y() * (e->modifiers() & Qt::ControlModifier ? 5.0 : 1.0) / (8.0 * 15.0));
-    if (yDelta) {
+    if (const std::optional<bool> zoomed =
+                TMapPainter::zoomAtPoint(*pArea, xyzoom, mMapCenterX, mMapCenterY, size(), e->position(), e->angleDelta(), e->modifiers(), mudlet::self()->invertMapZoom())) {
         mPick = false;
-        const qreal oldZoom = xyzoom;
-        // If invert zoom is enabled, use the traditional (inverted) behavior
-        // Otherwise, use modern behavior (non-inverted)
-        const int adjustedYDelta = mudlet::self()->invertMapZoom() ? yDelta : -yDelta;
-        xyzoom = qMax(TMap::scmMinXYZoom, xyzoom * pow(1.07, adjustedYDelta));
-        pArea->set2DMapZoom(xyzoom);
-
-        if (!qFuzzyCompare(1.0 + oldZoom, 1.0 + xyzoom)) {
-            const float widgetWidth = width();
-            const float widgetHeight = height();
-            float xs = 1.0;
-            float ys = 1.0;
-            if (widgetWidth > 10 && widgetHeight > 10) {
-                if (widgetWidth > widgetHeight) {
-                    xs = (widgetWidth / widgetHeight);
-                } else {
-                    ys = (widgetHeight / widgetWidth);
-                }
-            }
-
-            // mouse pos within the widget
-            const QPointF pos = e->position();
-
-            // Position of the mouse within the map, scaled -1 .. +1
-            // i.e. if the mouse is in the center, nothing changes
-            const float dx = 2.0 * pos.x() / widgetWidth - 1.0;
-            const float dy = 2.0 * pos.y() / widgetHeight - 1.0;
-
-            // now shift the origin by that, scaled by the difference in
-            // zoom factors. Thus the point under the mouse stays in place.
-            mMapCenterX += dx * (oldZoom - xyzoom) / 2.0 * xs;
-            mMapCenterY += dy * (oldZoom - xyzoom) / 2.0 * ys;
-
+        if (*zoomed) {
             flushSymbolPixmapCache();
             flushTextLabelPixmapCache();
             scheduleRender();

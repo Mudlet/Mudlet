@@ -774,6 +774,56 @@ private slots:
         const QImage fresh = paintedView(freshPainter, roundView, result);
         QVERIFY2(round == fresh, qPrintable(saved(round, qsl("round")) + qsl("; ") + saved(fresh, qsl("round-fresh"))));
     }
+
+    // A double-click no room or area exit takes is spent with its frame, or a later one would act on whatever moved
+    // under it
+    void aClickNothingTakesIsSpentWithItsFrame()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        TMapPainter::View view = playerView();
+        view.mPick = true;
+        view.mStartSpeedWalk = true;
+        view.mPHighlight = westCentreInView() - QPoint(80, 0);
+
+        TMapPainter painter;
+        TMapPainter::PaintResult result;
+        paintedView(painter, view, result);
+
+        QVERIFY(!result.view.mPick);
+        QVERIFY(!result.view.mStartSpeedWalk);
+        QVERIFY(!result.pendingSpeedWalk.has_value());
+    }
+
+    // So is one on a frame that draws no area, with or without saying why, or the first frame that has one would
+    // act on it
+    void aClickOnAFrameWithNoAreaIsSpent()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        TMapPainter::View view = playerView();
+        view.mPick = true;
+        view.mStartSpeedWalk = true;
+        view.mPHighlight = eastCentreInView();
+        // A secondary view stays on its own area, which may be gone
+        view.mIsSecondaryView = true;
+        view.mAreaID = mAreaId + 1;
+        QVERIFY(!roomDB()->getArea(view.mAreaID));
+        TMapPainter painter;
+        TMapPainter::PaintResult result;
+        paintedView(painter, view, result);
+        QVERIFY(!result.view.mPick);
+        QVERIFY(!result.view.mStartSpeedWalk);
+
+        view.mIsSecondaryView = false;
+        map()->mapClear();
+        for (const bool suppressed : {false, true}) {
+            view.mSuppressEmptyStateMessage = suppressed;
+            paintedView(painter, view, result);
+            QVERIFY(!result.view.mPick);
+            QVERIFY(!result.view.mStartSpeedWalk);
+        }
+    }
 };
 
 #include "MapPainterTest.moc"

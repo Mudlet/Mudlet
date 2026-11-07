@@ -51,6 +51,50 @@ bool THeadlessSession::renderMap(QPainter& painter, const QSize& size)
     return true;
 }
 
+bool THeadlessSession::mapPointer(const PointerEvent& event)
+{
+    if (!usable()) {
+        return false;
+    }
+    auto* pView = dynamic_cast<TNullMapView*>(mpHost->mapViewFrontend());
+    if (!pView) {
+        //: Error from a frontend with no window that was given a mouse action on the 2D map before a script opened one
+        mErrorString = tr("No map is open; a script opens one, as with openMapWidget().");
+        return false;
+    }
+    if (!pView->rendered()) {
+        //: Error from a frontend with no window that was given a mouse action on the 2D map before it had drawn the map, which the action's position is in
+        mErrorString = tr("The map has not been drawn yet; the position is in what renderMap() drew.");
+        return false;
+    }
+    switch (event.type) {
+    case PointerEvent::Type::press:
+        pView->press(event.position.toPoint(), event.button, event.modifiers);
+        return true;
+    case PointerEvent::Type::doubleClick:
+        if (event.button != Qt::LeftButton) {
+            //: Error from a frontend with no window that was given a double-click on the 2D map with a mouse button other than the left one
+            mErrorString = tr("Only a double-click of the left button acts on the map.");
+            return false;
+        }
+        pView->doubleClick(event.position.toPoint());
+        return true;
+    case PointerEvent::Type::wheel:
+        if (!pView->showsArea()) {
+            //: Error from a frontend with no window that was given a turn of the mouse wheel on the 2D map while the map it last drew showed no area, as for a map with no rooms
+            mErrorString = tr("The map drawn last shows no area to zoom.");
+            return false;
+        }
+        if (!pView->wheel(event.position, event.angleDelta, event.modifiers)) {
+            //: Error from a frontend with no window that was given a turn of the mouse wheel on the 2D map too small to zoom it
+            mErrorString = tr("Less than half a notch of the wheel does not zoom the map.");
+            return false;
+        }
+        return true;
+    }
+    return false;
+}
+
 // Gathered into one a turn, as the GUI's update() calls are into one repaint
 void THeadlessSession::relayMapRepaints(Host* pHost, const unsigned int run)
 {
