@@ -388,6 +388,7 @@ void THyperlinkVisibilityManager::clear()
 {
     mTrackedLinks.clear();
     mHasTimerBasedLinks = false;
+    mHasLinksAwaitingTheirLine = false;
     mLastDataReceivedMs = 0;
     // drop a queued screen-reader announcement rather than name links that have just gone
     if (mpAnnouncementTimer) {
@@ -395,6 +396,47 @@ void THyperlinkVisibilityManager::clear()
     }
     mPendingHiddenCount = 0;
     stopTimerIfNotNeeded();
+}
+
+QList<TrackedHyperlink> THyperlinkVisibilityManager::takeLinks(const QSet<int>& linkIds)
+{
+    QList<TrackedHyperlink> taken;
+    for (const int linkId : linkIds) {
+        if (mTrackedLinks.contains(linkId)) {
+            taken.append(mTrackedLinks.take(linkId));
+        }
+    }
+    return taken;
+}
+
+// Each link keeps its own clock, so a delay still runs from when the link arrived; until its line
+// commits, every action on it misses the buffer's bounds and waits, as on a line not yet ended
+void THyperlinkVisibilityManager::trackAwaitingTheirLine(const QList<TrackedHyperlink>& links)
+{
+    if (links.isEmpty()) {
+        return;
+    }
+    for (TrackedHyperlink link : links) {
+        link.lineNumber = csmLineStillToCome;
+        mTrackedLinks.insert(link.linkId, link);
+    }
+    mHasLinksAwaitingTheirLine = true;
+    mHasTimerBasedLinks = true;
+    startTimerIfNeeded();
+    stopTimerIfNotNeeded();
+}
+
+void THyperlinkVisibilityManager::anchorLinksAwaitingTheirLine(const int lineNumber)
+{
+    if (!mHasLinksAwaitingTheirLine) {
+        return;
+    }
+    for (TrackedHyperlink& link : mTrackedLinks) {
+        if (link.lineNumber == csmLineStillToCome) {
+            link.lineNumber = lineNumber;
+        }
+    }
+    mHasLinksAwaitingTheirLine = false;
 }
 
 void THyperlinkVisibilityManager::slot_checkTimers()
