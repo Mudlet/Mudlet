@@ -60,15 +60,19 @@
 #include <QChar>
 #include <QClipboard>
 #include <QDesktopServices>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QHash>
 #include <QPainter>
 #include <QPainterPath>
 #include <QScrollBar>
 #include <QStringRef>
 #include <QTextBoundaryFinder>
+#include <QTextBrowser>
 #include <QLabel>
 #include <QLineEdit>
 #include <QToolTip>
+#include <QVBoxLayout>
 #include <QWidgetAction>
 #include <QVersionNumber>
 #include <optional>
@@ -2281,7 +2285,7 @@ void TTextEdit::slot_popupMenu()
         const int luaReference = mPopupCommands.value(index).second;
 
         // Apply selection-group state to the chosen popup item, mirroring the
-        // direct-activation paths (mousePressEvent / showLinkContextMenu /
+        // direct-activation paths (mousePressEvent / showKeyboardContextMenu /
         // keyPressEvent). Without this, multi-command links activated via the
         // popup menu would silently skip toggle / exclusive-group propagation.
         if (mPopupLinkIndex > 0 && mpBuffer) {
@@ -3240,7 +3244,7 @@ void TTextEdit::showContextMenu(const QPoint& globalPosition)
     popup->addSeparator();
     popup->addAction(action3);
 
-    if (mDragStart != mDragSelectionEnd && mpHost->mEnableTextAnalyzer) {
+    if (selectionAvailable && mpHost->mEnableTextAnalyzer) {
         mpContextMenuAnalyser = new QAction(tr("Analyse characters"), popup);
         // NOTE: If running inside the Qt Creator IDE using the debugger with
         // the hovered() signal can be *problematic* - as hitting a
@@ -3250,7 +3254,10 @@ void TTextEdit::showContextMenu(const QPoint& globalPosition)
         // killing the gdb debugger instance run by Qt Creator will restore
         // normality.
         connect(mpContextMenuAnalyser, &QAction::hovered, this, &TTextEdit::slot_analyseSelection);
-        mpContextMenuAnalyser->setToolTip(utils::richText(tr("Hover on this item to display the Unicode codepoints in the selection <i>(only the first line!)</i>")));
+        connect(mpContextMenuAnalyser, &QAction::triggered, this, &TTextEdit::slot_showSelectionAnalysis);
+        mpContextMenuAnalyser->setObjectName(qsl("consoleAnalyseCharacters"));
+        //: Tooltip for the console context menu's "Analyse characters" entry, replaced by the analysis itself once the pointer rests on it
+        mpContextMenuAnalyser->setToolTip(utils::richText(tr("Choose this item, or hover on it, to display the Unicode codepoints in the selection <i>(only the first line!)</i>")));
         popup->addSeparator();
         popup->addAction(mpContextMenuAnalyser);
     }
@@ -3699,15 +3706,65 @@ QString TTextEdit::byteToLuaCodeOrChar(const char* byte)
  */
 void TTextEdit::slot_analyseSelection()
 {
-    if (!mpContextMenuAnalyser || mpBuffer->lineBuffer.isEmpty()) {
-        // Menu has gone away or no text on screen
+    if (!mpContextMenuAnalyser) {
         return;
+    }
+    if (const QString analysis = selectionAnalysisHtml(); !analysis.isEmpty()) {
+        mpContextMenuAnalyser->setToolTip(analysis);
+    }
+}
+
+void TTextEdit::slot_showSelectionAnalysis()
+{
+    if (!hasSelectedText()) {
+        return;
+    }
+    QString analysis = selectionAnalysisHtml();
+    if (analysis.isEmpty()) {
+        return;
+    }
+    // In the text rather than a label beside it, so a screen reader reads it with the table
+    if (mPA.y() != mPB.y()) {
+        //: Note above the table in the window opened by the console context menu's "Analyse characters" entry, shown when more than one line was selected
+        analysis.prepend(qsl("<p>%1</p>").arg(tr("Only the first line of the selection is analyzed.")));
+    }
+
+    auto* dialog = new QDialog(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setObjectName(qsl("consoleCharacterAnalysis"));
+    //: Title of the window opened by the console context menu's "Analyse characters" entry
+    dialog->setWindowTitle(tr("Character analysis"));
+
+    auto* browser = new QTextBrowser(dialog);
+    browser->setTextInteractionFlags(browser->textInteractionFlags() | Qt::TextSelectableByKeyboard);
+    //: Accessible name of the text area in the window opened by the console context menu's "Analyse characters" entry
+    browser->setAccessibleName(tr("Unicode codepoints in the selection"));
+    browser->setHtml(analysis);
+
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, dialog);
+    connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
+
+    auto* layout = new QVBoxLayout(dialog);
+    layout->addWidget(browser);
+    layout->addWidget(buttons);
+
+    dialog->resize(800, 400);
+    dialog->show();
+    dialog->raise();
+    dialog->activateWindow();
+    browser->setFocus();
+}
+
+QString TTextEdit::selectionAnalysisHtml()
+{
+    if (mpBuffer->lineBuffer.isEmpty()) {
+        return {};
     }
     // If we get here we must at least have a line 0!
 
     // Get the smallest of the two lines in the range, but clamp it to the first
     // line which is zero and then the maximum line in existence:
-    int line = qMin(qMax(qMin(mPA.y(), mPB.y()), 0), (mpBuffer->lineBuffer.size() - 1));
+    int line = qMin(qMax(qMin(mPA.y(), mPB.y()) - selectionLinesTrimmed(), 0), (mpBuffer->lineBuffer.size() - 1));
 
     int startColumn = -1;
     int endColumn = -1;
@@ -3728,7 +3785,7 @@ void TTextEdit::slot_analyseSelection()
     // (non-ASCII) into a literal string:
     QString luaCodes;
     QString completedRows;
-    quint8 rowItems = 0;
+    int rowItems = 0;
     QChar zero('0');
     // Start the UTF-8 indexing at 1 so that it directly maps to string indexing
     // in Lua.
@@ -3757,9 +3814,39 @@ void TTextEdit::slot_analyseSelection()
     // We do not want more than around 16 code-points per row, but we also do
     // not want orphans (a few odd code-points) on the last row so deduce a
     // number of items to include in a row:
-    quint8 rowsCount = qMax(1, qRound((total + 8.5) / 16.0));
-    quint8 rowLimit = qMax(8, qRound(total * 1.0 / rowsCount));
-    bool isFirstRow = true;
+    const int rowsCount = qMax(1, qRound((total + 8.5) / 16.0));
+    const int rowLimit = qMax(8, qRound(total * 1.0 / rowsCount));
+
+    //: 1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text
+    const QString utf16IndexHeading = tr("Index (UTF-16)");
+    //: 2nd Row heading for Text analyser output, table item is the unicode code point (will be between 000001 and 10FFFF in hexadecimal)
+    const QString codePointHeading = tr("U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i>");
+    /*:
+    3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a '{'...'}' wrapped letter
+    code if the character is whitespace or otherwise unshowable
+    */
+    const QString visualHeading = tr("Visual");
+    //: 4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses
+    const QString utf8IndexHeading = tr("Index (UTF-8)");
+    //: 5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses
+    const QString byteHeading = tr("Byte");
+    /*:
+    6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about
+    this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte
+    */
+    const QString luaCodeHeading = tr("Lua character or code");
+    // Every table carries the headings so a screen reader can say what each row of numbers is
+    const auto table = [&]() {
+        return qsl("<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
+                   "<tr><th>%1</th>%2</tr>"
+                   "<tr><th>%3</th>%4</tr>"
+                   "<tr><th>%5</th>%6</tr>"
+                   "<tr><th>%7</th>%8</tr>"
+                   "<tr><th>%9</th>%10</tr>"
+                   "<tr><th>%11</th>%12</tr>"
+                   "</table></small>")
+                .arg(utf16IndexHeading, utf16indexes, codePointHeading, utf16Vals, visualHeading, graphemes, utf8IndexHeading, utf8Indexes, byteHeading, utf8Vals, luaCodeHeading, luaCodes);
+    };
 
     for (int index = 0; index < lineLength; ++index) {
         bool includeThisCodePoint = false;
@@ -3782,7 +3869,7 @@ void TTextEdit::slot_analyseSelection()
                 // The static casts are only needed since Qt 6.9.0 but they
                 // shouldn't do any harm prior to that:
                 utf16Vals.append(
-                        qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
+                        qsl("<td colspan=\"%1\" style=\"white-space:nowrap; vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
                                 .arg(QString::number(columnsToUse),
                                      qsl("%1")
                                              .arg(static_cast<uint32_t>(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1))), 4, 16, zero)
@@ -3798,7 +3885,7 @@ void TTextEdit::slot_analyseSelection()
             switch (utf8Width) {
             case 4:
                 if (includeThisCodePoint) {
-                    utf8Indexes.append(qsl("<th><center>%1</center></th><td><center>%2</center></td><td><center>%3</center></td><td><center>%4</center></td></b>")
+                    utf8Indexes.append(qsl("<th><center>%1</center></th><td><center>%2</center></td><td><center>%3</center></td><td><center>%4</center></td>")
                                                .arg(QString::number(utf8Index), QString::number(utf8Index + 1), QString::number(utf8Index + 2), QString::number(utf8Index + 3)));
                     utf8Vals.append(qsl("<td><center>0x%1</center></td><td><center>0x%2</center></td><td><center>0x%3</center></td><td><center>0x%4</center></td>")
                                             .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
@@ -3857,7 +3944,7 @@ void TTextEdit::slot_analyseSelection()
             if (includeThisCodePoint) {
                 utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2</center></th>").arg(QString::number(columnsToUse), QString::number(index + 1)));
 
-                utf16Vals.append(qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center></td>")
+                utf16Vals.append(qsl("<td colspan=\"%1\" style=\"white-space:nowrap; vertical-align:top\"><center>%2</center></td>")
                                          .arg(QString::number(columnsToUse))
 #if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
                                          .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index).unicode()), 4, 16, QChar('0'))
@@ -3933,56 +4020,7 @@ void TTextEdit::slot_analyseSelection()
         }
 
         if (rowItems > rowLimit) {
-            if (isFirstRow) {
-                completedRows = qsl("<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
-                                    "<tr><th>%1</th>%2</tr>"
-                                    "<tr><th>%3</th>%4</tr>"
-                                    "<tr><th>%5</th>%6</tr>"
-                                    "<tr><th>%7</th>%8</tr>"
-                                    "<tr><th>%9</th>%10</tr>"
-                                    "<tr><th>%11</th>%12</tr>"
-                                    "</table></small><br>")
-                                        //: 1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}
-                                        .arg(tr("Index (UTF-16)"), utf16indexes)
-                                        /*:
-                                2nd Row heading for Text analyser output, table item is the unicode code point (will be
-                                between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}
-                                */
-                                        .arg(tr("U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i>"), utf16Vals)
-                                        /*:
-                                3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a '{'...'}' wrapped
-                                letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}
-                                */
-                                        .arg(tr("Visual"), graphemes)
-                                        /*:
-                                4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system
-                                uses {this translation used 2 times}
-                                */
-                                        .arg(tr("Index (UTF-8)"), utf8Indexes)
-                                        /*:
-                                5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua
-                                system uses {this translation used 2 times}
-                                */
-                                        .arg(tr("Byte"), utf8Vals)
-                                        /*:
-                                6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about
-                                this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used
-                                2 times}"
-                                */
-                                        .arg(tr("Lua character or code"), luaCodes);
-                isFirstRow = false;
-            } else {
-                completedRows.append(
-                        qsl("<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
-                            "<tr>%1</tr>"
-                            "<tr>%2</tr>"
-                            "<tr>%3</tr>"
-                            "<tr>%4</tr>"
-                            "<tr>%5</tr>"
-                            "<tr>%6</tr>"
-                            "</table></small><br>")
-                                .arg(utf16indexes, utf16Vals, graphemes, utf8Indexes, utf8Vals, luaCodes));
-            }
+            completedRows.append(table() + qsl("<br>"));
             rowItems = 0;
             utf16indexes.clear();
             utf16Vals.clear();
@@ -3993,63 +4031,7 @@ void TTextEdit::slot_analyseSelection()
         }
     }
 
-    if (mpContextMenuAnalyser) {
-        if (isFirstRow) {
-            // if this is still true then we only have a short, single line of
-            // less than 16 codepoints
-            mpContextMenuAnalyser->setToolTip(
-                    qsl("%1"
-                        "<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
-                        "<tr><th>%2</th>%3</tr>"
-                        "<tr><th>%4</th>%5</tr>"
-                        "<tr><th>%6</th>%7</tr>"
-                        "<tr><th>%8</th>%9</tr>"
-                        "<tr><th>%10</th>%11</tr>"
-                        "<tr><th>%12</th>%13</tr>"
-                        "</table></small>")
-                            .arg(completedRows)
-                            //: 1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}
-                            .arg(tr("Index (UTF-16)"), utf16indexes)
-                            /*:
-                        2nd Row heading for Text analyser output, table item is the unicode code point (will be between
-                        000001 and 10FFFF in hexadecimal) {this translation used 2 times}
-                        */
-                            .arg(tr("U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i>"), utf16Vals)
-                            /*:
-                        3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a '{'...'}' wrapped letter
-                        code if the character is whitespace or otherwise unshowable {this translation used 2 times}
-                        */
-                            .arg(tr("Visual"), graphemes)
-                            /*:
-                        4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system
-                        uses {this translation used 2 times}
-                        */
-                            .arg(tr("Index (UTF-8)"), utf8Indexes)
-                            /*:
-                        5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua
-                        system uses {this translation used 2 times}
-                        */
-                            .arg(tr("Byte"), utf8Vals)
-                            /*:
-                        6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about
-                        this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2
-                        times}
-                        */
-                            .arg(tr("Lua character or code"), luaCodes));
-        } else {
-            mpContextMenuAnalyser->setToolTip(
-                    qsl("%1"
-                        "<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
-                        "<tr>%2</tr>"
-                        "<tr>%3</tr>"
-                        "<tr>%4</tr>"
-                        "<tr>%5</tr>"
-                        "<tr>%6</tr>"
-                        "<tr>%7</tr>"
-                        "</table></small>")
-                            .arg(completedRows, utf16indexes, utf16Vals, graphemes, utf8Indexes, utf8Vals, luaCodes));
-        }
-    }
+    return completedRows + table();
 }
 
 void TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide(const bool state)
@@ -4440,7 +4422,7 @@ void TTextEdit::applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, c
     }
 }
 
-void TTextEdit::showLinkContextMenu()
+void TTextEdit::showKeyboardContextMenu()
 {
     if (!mpBuffer) {
         return;
@@ -4448,6 +4430,10 @@ void TTextEdit::showLinkContextMenu()
 
     int focusedLink = mpBuffer->getFocusedLink();
     if (focusedLink <= 0) {
+        // The central debug console builds its own menu in contextMenuEvent()
+        if (!(mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole)) {
+            showContextMenu(caretGlobalPosition());
+        }
         return;
     }
 
@@ -4475,13 +4461,13 @@ void TTextEdit::showLinkContextMenu()
         // No menu needed: one command and no extra hints means direct activation
         if (!command.isEmpty()) {
             if (hyperlinkStyling.selection.hasSelectionSettings) {
-                applyHyperlinkSelectionGroupState(focusedLink, command[0], hyperlinkStyling.selection, "TTextEdit::showLinkContextMenu");
+                applyHyperlinkSelectionGroupState(focusedLink, command[0], hyperlinkStyling.selection, "TTextEdit::showKeyboardContextMenu");
             }
 
             if (mpConsole) {
                 mpConsole->getHyperlinkVisibilityManager().onLinkClicked(focusedLink);
             } else {
-                qWarning() << "TTextEdit::showLinkContextMenu() - mpConsole is null, skipping visibility manager notification for link" << focusedLink;
+                qWarning() << "TTextEdit::showKeyboardContextMenu() - mpConsole is null, skipping visibility manager notification for link" << focusedLink;
             }
             const int ref = luaReference.value(0, 0);
             if (ref) {
@@ -4558,10 +4544,14 @@ void TTextEdit::showLinkContextMenu()
         }
     }
 
-    int lineOffset = imageTopLine();
-    int visibleLine = qBound(lineOffset, mCaretLine, lineOffset + mScreenHeight - 1);
-    QPoint caretScreenPos = mapToGlobal(QPoint(mCaretColumn * mFontWidth, (visibleLine - lineOffset + 1) * mFontHeight));
-    popup->popup(caretScreenPos);
+    popup->popup(caretGlobalPosition());
+}
+
+QPoint TTextEdit::caretGlobalPosition()
+{
+    const int lineOffset = imageTopLine();
+    const int visibleLine = qBound(lineOffset, mCaretLine, lineOffset + mScreenHeight - 1);
+    return mapToGlobal(QPoint(mCaretColumn * mFontWidth, (visibleLine - lineOffset + 1) * mFontHeight));
 }
 
 bool TTextEdit::focusNextPrevChild(bool next)
@@ -4977,14 +4967,14 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         break;
     }
     case Qt::Key_Menu: {
-        showLinkContextMenu();
+        showKeyboardContextMenu();
         return;
     }
 
     case Qt::Key_F10: {
         // Shift+F10 opens context menu on focused link (standard accessibility shortcut)
         if (event->modifiers() & Qt::ShiftModifier) {
-            showLinkContextMenu();
+            showKeyboardContextMenu();
             return;
         }
         break;

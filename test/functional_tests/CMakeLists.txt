@@ -36,6 +36,7 @@ endif()
 set(WINDOW_GROUP_TEST_SOURCES
     AccessibleToolTipTest.cpp
     AddonControlsTest.cpp
+    AnalyseCharactersTest.cpp
     AsciiLineBreakTest.cpp
     BlinkRowRepaintTest.cpp
     ConsoleModelExtractionTest.cpp
