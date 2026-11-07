@@ -1139,6 +1139,9 @@ int main(int argc, char* argv[])
                     followTerminal();
                 });
             }
+            // A script's setMainWindowSize() cannot resize the terminal, so the game is told the terminal's size again;
+            // given from the handler, so the session takes it as its answer and a script asking again settles
+            QObject::connect(session.get(), &THeadlessSession::mainWindowResizeRequested, app, followTerminal);
             followTerminal();
         }
 #endif

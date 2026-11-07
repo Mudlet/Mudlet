@@ -2282,14 +2282,13 @@ local function answer(f, ...)
   return tostring(ok) .. "|" .. tostring(err)
 end
 headlessNoWindow = table.concat({
-  answer(setMainWindowSize, 800, 600),
   answer(showNotification, "headless title", "headless text"),
   answer(playVideoFile, {name = "headless-absent.mp4"}),
   answer(loadVideoFile, {name = "headless-absent.mp4"}),
 }, ";")
 )lua")));
         const QString refused = qsl("nil|the profile has no main window");
-        QCOMPARE(luaGlobalString(session.host(), "headlessNoWindow"), QStringList({refused, refused, refused, qsl("true|nil")}).join(qsl(";")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessNoWindow"), QStringList({refused, refused, qsl("true|nil")}).join(qsl(";")));
         QVERIFY(session.shutdown(false));
     }
 

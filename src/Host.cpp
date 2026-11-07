@@ -7983,6 +7983,56 @@ void Host::layOutMainAreaWithNoView(const MainAreaChange change)
     raiseEvent(event);
 }
 
+std::pair<bool, QString> Host::resizeMainWindowWithNoView(const QSize& pixels)
+{
+    const QFontMetrics metrics(consoleFrontend()->displayFont());
+    const qint64 columns = pixels.width() / std::max(1, metrics.averageCharWidth());
+    const qint64 rows = pixels.height() / std::max(1, metrics.height());
+    if (columns < 1 || columns > 65535 || rows < 1 || rows > 65535) {
+        return {false,
+                qsl("a main window of %1 by %2 pixels holds %3 columns by %4 rows of the main console's font, and each must be from 1 to 65535")
+                        .arg(pixels.width())
+                        .arg(pixels.height())
+                        .arg(columns)
+                        .arg(rows)};
+    }
+    if (mAnsweredMainWindowRequest == pixels) {
+        return {true, QString()};
+    }
+    // An answer to what was asked before must not stand for this
+    mAnsweredMainWindowRequest.reset();
+    mUnansweredMainWindowRequest = pixels;
+    emit signal_mainWindowResizeRequested(pixels, ++mMainWindowRequests);
+    // As a resize of the GUI's main window, which tells nothing for the size the window has
+    if (mMainAreaPixels == pixels) {
+        return {true, QString()};
+    }
+    mMainAreaPixels = pixels;
+    layOutMainAreaWithNoView(MainAreaChange::area);
+    return {true, QString()};
+}
+
+bool Host::noteMainAreaGiven(const std::optional<std::pair<QSize, quint64>>& answering)
+{
+    if (!answering) {
+        mAnsweredMainWindowRequest = std::exchange(mUnansweredMainWindowRequest, std::nullopt);
+        return true;
+    }
+    if (answering->second != mMainWindowRequests) {
+        return false;
+    }
+    mAnsweredMainWindowRequest = answering->first;
+    mUnansweredMainWindowRequest.reset();
+    return true;
+}
+
+void Host::noteMainWindowRequestUnheard(const quint64 request)
+{
+    if (request == mMainWindowRequests) {
+        mUnansweredMainWindowRequest.reset();
+    }
+}
+
 void Host::setCommandLineHistorySaveSize(const int lines)
 {
     if (lines >= 0 && lines <= scmMaxCommandLineHistorySaveSize) {
