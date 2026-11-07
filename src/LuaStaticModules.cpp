@@ -32,6 +32,8 @@ extern "C" {
 
 int luaopen_lfs(lua_State*);
 int luaopen_lpeg(lua_State*);
+int luaopen_rex_pcre2(lua_State*);
+int luaopen_utf8(lua_State*);
 }
 
 void registerStaticLuaModules(lua_State* L)
@@ -40,6 +42,8 @@ void registerStaticLuaModules(lua_State* L)
     static constexpr luaL_Reg modules[] = {
             {"lfs", luaopen_lfs},
             {"lpeg", luaopen_lpeg},
+            {"rex_pcre2", luaopen_rex_pcre2},
+            {"lua-utf8", luaopen_utf8},
     };
 
     lua_getglobal(L, LUA_LOADLIBNAME);
