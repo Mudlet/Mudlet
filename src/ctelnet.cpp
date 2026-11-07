@@ -2341,12 +2341,17 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
             return;
         }
 
-        file.write(packageData);
-
-        if (!file.commit()) {
+        const qint64 written = file.write(packageData);
+        // A full disk can cut the write short with no error on the file, and commit() would put the part that landed in place
+        if (written != packageData.size() || !file.commit()) {
+            QString reason = file.errorString();
+            if (file.error() == QFileDevice::NoError) {
+                //: The reason in "could not save file, reason: %1" when a package download came up short; %1 is the bytes written, %2 the package size
+                reason = tr("only %1 of %2 bytes could be written, is the disk full?").arg(written).arg(packageData.size());
+            }
             //: %1 is the error message
-            postMessage(tr("[ WARN ]  - Package download failed: could not save file, reason: %1").arg(file.errorString()));
-            qDebug() << "cTelnet::slot_replyFinished: error downloading package: " << file.errorString();
+            postMessage(tr("[ WARN ]  - Package download failed: could not save file, reason: %1").arg(reason));
+            qDebug() << "cTelnet::slot_replyFinished: error downloading package: " << reason;
             reply->deleteLater();
             mpPackageDownloadReply = nullptr;
             return;
