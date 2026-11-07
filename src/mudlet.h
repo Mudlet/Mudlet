@@ -244,10 +244,10 @@ public:
     void setShowTabConnectionIndicators(const bool) override;
     int profileTabIndex(const QString& profileName) const override;
     bool setActiveProfileTab(const QString& profileName) override;
-    bool resizeMainWindow(int width, int height) override
+    std::pair<bool, QString> resizeMainWindow(Host*, int width, int height) override
     {
         resize(width, height);
-        return true;
+        return {true, QString()};
     }
     void setupPreInstallPackages(const QString&, const QString&, const bool);
     void setToolBarIconSize(int);

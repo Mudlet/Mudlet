@@ -75,8 +75,13 @@ When standard output is a terminal, the runner gives its size to the profile as 
 size, as the GUI gives the main window's: the game is told it if the profile has NAWS on and the
 game asks, no wider than the profile's wrap width, and scripts see it as the main window's size.
 A resize (`SIGWINCH`) is passed on as a resize of the main window is, with a
-`sysWindowResizeEvent`. Output to a file or a pipe keeps the default of 90 by 25. This is not done
-on Windows.
+`sysWindowResizeEvent`. A script's `setMainWindowSize()` answers `true` but cannot resize the
+terminal, so the runner then gives the terminal's size again, with another `sysWindowResizeEvent`,
+and the game is told no other. A script that asks again from that event, to keep to its size, is
+answered `true` and nothing changes, as in the GUI when the window manager holds the window, until
+the terminal is resized or a script asks for another size. Output to a file or a pipe has no size
+to give, so it starts at the default of 90 by 25 and a script's `setMainWindowSize()` sets the size,
+which the game is told, as in the GUI. Every run on Windows is like that.
 
 ### Stopping it and what is saved
 
@@ -537,6 +542,23 @@ borders wider than the area leave the text a rectangle with no room, never a neg
 `mainConsoleAreaChanged` carries both when either changes: from a border, a font change, which keeps a
 size given in pixels and so regrids, and keeps one given in characters and so does not, or either call.
 A size that holds no character of the font, or more than 65535 of them, is refused.
+
+A script's `setMainWindowSize()` sets its own profile's size, as `setMainWindowSize()` from the app would,
+and answers `true`, or `nil` and a message for a size the app's call refuses. `mainWindowResizeRequested`
+tells the app what it asked for, from the event loop, so an app that can resize its window does so, and
+one that cannot gives its own size again, as the runner does for its terminal. The app answers each
+request by giving the size its window has once it has resized, or would not, even when that is the size
+asked for, from the signal's handler or later, once its window system has answered. The session takes the
+next size the app gives after a request as its answer, and a script that asks again for the same size, as
+a `sysWindowResizeEvent` handler that keeps to a size does, is answered `true` and nothing changes, as in
+the GUI when the window manager holds the window, until the app gives a size with nothing asked for, or a
+script asks for another. A size given from the handler of a request that a newer one has replaced is not
+laid out: the newer request's answer decides. An app that connects nothing to `mainWindowResizeRequested`
+is not waited for, so a script's size holds until the app gives another, as in the GUI. An app that is
+connected but does not answer a request has the next size it gives, such as the player's resize, taken as
+the answer: until the app gives another size after that, a script asking again for the size of that
+request is answered `true`, the app is not asked, and the area keeps the size the app gave. The size of
+every other profile in the run stays as it was.
 
 `errorConsoleText` carries what the editor's error console prints, in pieces with the colours it prints
 them in: a Lua error comes as `[ERROR:]` in blue, where it was in green and the message in red, all on

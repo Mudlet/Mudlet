@@ -4074,8 +4074,8 @@ int TLuaInterpreter::setMainWindowSize(lua_State* L)
 {
     const int x1 = getVerifiedInt(L, __func__, 1, "mainWidth");
     const int y1 = getVerifiedInt(L, __func__, 2, "mainHeight");
-    if (!TAppFrontend::instance()->resizeMainWindow(x1, y1)) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
+    if (const auto [resized, problem] = TAppFrontend::instance()->resizeMainWindow(&getHostFromLua(L), x1, y1); !resized) {
+        return problem.isEmpty() ? warnArgumentValue(L, __func__, no_main_window_value) : warnArgumentValue(L, __func__, problem);
     }
     lua_pushboolean(L, true);
     return 1;

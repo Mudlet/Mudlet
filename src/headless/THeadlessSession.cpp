@@ -1119,6 +1119,9 @@ bool THeadlessSession::setScreenSize(const int columns, const int rows)
         mErrorString = tr("A screen of %1 columns by %2 rows cannot be sent to the game: each must be from 1 to 65535.").arg(columns).arg(rows);
         return false;
     }
+    if (!mpHost->noteMainAreaGiven(mAnsweringMainWindowRequest)) {
+        return true;
+    }
     // The GUI's main console never reports itself narrower
     const QSize area(std::max(40, columns), rows);
     // As TConsole::resizeEvent(), which tells scripts nothing for the size they have
