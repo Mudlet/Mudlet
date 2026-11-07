@@ -884,6 +884,35 @@ describe("Tests the functionality of installPackage", function()
     assert.is_false(containsWrapped(textFrom(mark), "Package install failed"), textFrom(mark))
   end)
 
+  it("reports a failed install in English when Mudlet's translations cannot be found, looking for them once", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local realLocale, realLoadTranslations = mudlet.Locale, _G.loadTranslations
+    defer(function() mudlet.Locale, _G.loadTranslations = realLocale, realLoadTranslations end)
+    local english = realLoadTranslations("Mudlet", nil, "en_US")
+    local loads = 0
+    mudlet.Locale = nil
+    _G.loadTranslations = function()
+      loads = loads + 1
+      return nil, "unable to find 'mudlet-lua.json'"
+    end
+    local package = fixtureDirectory .. "/mudlet-spec-notazip.mpackage"
+    local module = fixtureDirectory .. "/mudlet-spec-there-is-no-such-module.mpackage"
+    local mark = getLastLineNumber("main")
+
+    verbosePackageInstall(package)
+    verboseModuleInstall(module)
+
+    assert.equals(1, loads)
+    local text = textFrom(mark)
+    local packageFailed = english.prefixWarn.message .. string.format(english.packageInstallFail.message, package, "could not unzip package")
+    local moduleFailed = english.prefixWarn.message .. string.format(english.moduleInstallFail.message, module, "could not open file")
+    assert.is_true(containsWrapped(text, packageFailed), text)
+    assert.is_true(containsWrapped(text, moduleFailed), text)
+    for key, entry in pairs(english) do
+      assert.equals(entry.message, mudlet.Locale[key] and mudlet.Locale[key].message, key)
+    end
+  end)
+
   it("runs nothing else in the middle of the script that is waiting out a profile save", function()
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local seen = {}

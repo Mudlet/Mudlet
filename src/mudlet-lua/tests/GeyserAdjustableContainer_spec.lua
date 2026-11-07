@@ -128,6 +128,8 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.equals(false, ac.locked)
       assert.equals(10, ac.padding)
       assert.equals("standard", ac.lockStyle)
+      local lockText = loadTranslations("AdjustableContainer").lock.message
+      assert.equals(lockText, ac.lockLabel.txt:sub(-#lockText), "the menu texts are not the translated ones")
       -- the title bar is a drag handle, the close button is a button
       assert.equals("text", getLabelAccessibleRole(ac.adjLabel.name))
       assert.equals("button", getLabelAccessibleRole(ac.exitLabel.name))
@@ -180,6 +182,44 @@ describe("Tests functionality of Adjustable.Container", function()
       ac:restore()
       assert.equals(200, ac:get_height())
       assert.is_false(windowVisible(ac.exitLabel.name))
+    end)
+
+    it("is created with its untranslated menu texts when the translations cannot be found, looking only once", function()
+      local realLocale, realLoadTranslations = Adjustable.Container.Locale, _G.loadTranslations
+      local names = {"testUntranslatedContainer", "testUntranslatedContainer2"}
+      finally(function()
+        Adjustable.Container.Locale, _G.loadTranslations = realLocale, realLoadTranslations
+        if Geyser.Label.closeAllTimer then
+          killTimer(Geyser.Label.closeAllTimer)
+          Geyser.Label.closeAllTimer = nil
+        end
+        for _, name in ipairs(names) do
+          if Geyser.windowList[name] then
+            Geyser.windowList[name]:delete()
+          end
+        end
+      end)
+      local loads = 0
+      Adjustable.Container.Locale = nil
+      _G.loadTranslations = function()
+        loads = loads + 1
+        return nil, "unable to find 'mudlet-lua.json'"
+      end
+
+      local created = {}
+      for _, name in ipairs(names) do
+        created[#created + 1] = Adjustable.Container:new({name = name, x = 0, y = 0, width = 200, height = 200, autoLoad = false, autoSave = false})
+      end
+
+      assert.equals(1, loads)
+      for _, container in ipairs(created) do
+        assert.equals("lock", container.lockLabel.txt:match("</font>(.*)$"))
+        assert.equals("custom", container.customItemsLabel.txt:match("</font>(.*)$"))
+        container:addConnectMenu()
+        assert.is_not_nil(container.adjLabel:findMenuElement("Connect To: "))
+        container:onEnterAtt()
+        assert.equals("<center>" .. container:validAttachPositions()[1], container.att[1].message)
+      end
     end)
   end)
 
