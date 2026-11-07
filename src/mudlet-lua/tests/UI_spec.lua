@@ -8786,8 +8786,8 @@ describe("Toolbar buttons", function()
     -- arrived: a setup that failed after the install would otherwise leave it in
     -- the reused profile, and nothing else would ever take it out again
     if packageIsInstalled() then
-      -- uninstalling is refused while the save the install started is still
-      -- draining, and that only finishes when the event loop runs
+      -- uninstalling can be refused by a save that outlasts its wait, so keep
+      -- asking
       assert.is_true(waitUntil(function() return uninstallPackage(packageName) == true end, 5000),
         packageName .. " could not be uninstalled")
       assert.is_true(waitUntil(function() return not packageIsInstalled() end, 5000),

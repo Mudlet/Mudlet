@@ -4719,21 +4719,18 @@ void Host::removePackageInfo(const QString& packageName, const bool isModule)
 // This may be called by installPackage(...) in that case however it will have
 // module == 2 and in THAT situation it will NOT RE-invoke installPackage(...)
 // again - Slysven
-bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType thing)
+bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType thing, const bool waitOutASave)
 {
     //     As with the installPackage, the module codes are:
     //     0=package, 1=uninstall from dialog, 2=uninstall due to module syncing,
     //     3=uninstall from a script
 
     bool isModule = thing != enums::PackageModuleType::Package;
-    if (isModule) {
-        if (!mInstalledModules.contains(packageName)) {
-            return false;
-        }
-    } else {
-        if (!mInstalledPackages.contains(packageName)) {
-            return false;
-        }
+    const auto installed = [&] {
+        return isModule ? mInstalledModules.contains(packageName) : mInstalledPackages.contains(packageName);
+    };
+    if (!installed()) {
+        return false;
     }
 
     // The user's own items carry no package name, so the units below would remove every one of them. Only a
@@ -4776,7 +4773,19 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     // Don't remove items from under a running profile save
     if (currentlySavingProfile()) {
-        return false;
+        // Not from the save's own module sync, which cannot finish until this returns, nor from a close,
+        // whose final save would then keep what this removes from disk
+        if (!waitOutASave || syncingModulesAfterSave() || closeStarted()) {
+            return false;
+        }
+        waitForProfileSave(true);
+        // As the save ends, another profile's module reload can raise an event whose handler removes it first
+        if (!installed()) {
+            return true;
+        }
+        if (currentlySavingProfile()) {
+            return false;
+        }
     }
 
     //PackageModuleType::ModuleSync seems to be only used for reloading/syncing
@@ -4820,7 +4829,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     // waitForProfileSave() pumps the event loop, so a handler may have removed it already. That's success:
     // a refusal would make callers replacing the package skip the replacement.
-    if (!(isModule ? mInstalledModules.contains(packageName) : mInstalledPackages.contains(packageName))) {
+    if (!installed()) {
         return true;
     }
 
