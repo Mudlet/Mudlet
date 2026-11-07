@@ -539,6 +539,12 @@ signals:
     // differ from what was last sent or what they gave at profileLoaded, so a turn that changes them more than once
     // sends them once.
     void mainConsoleAreaChanged(const QString& profile, const QSize& grid, const QRect& textRect);
+    // What scriptWindows() gives for these names differs from what it gave at profileLoaded or the last of these:
+    // a window made, deleted (and so gone from it), moved, resized, shown, hidden, put in another window, raised,
+    // lowered or given another background or font, and those whose place among their parent's windows moved with it.
+    // From the event loop, sorted, once however many calls in a turn changed them, and not for calls that changed
+    // nothing.
+    void scriptWindowsChanged(const QString& profile, const QStringList& names);
     // A script's setMainWindowSize() asked for the main window to be this size, for an app that can resize its
     // window to do so. The profile has taken it as setMainWindowSize() would have, so mainConsoleAreaChanged
     // follows if that changed the grid or where the text goes. From the event loop. Its handler may call the
@@ -580,6 +586,8 @@ private:
     // The relays of the main window's area, in THeadlessSessionArea.cpp
     void connectAreaRelays(Host*, unsigned int run);
     void noteAreaAtLoad();
+    void connectWindowRelays(Host*, unsigned int run);
+    void noteWindowsAtLoad();
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
@@ -648,6 +656,8 @@ private:
     QString mDeliveredLatency;
     // What mainConsoleGrid() and mainConsoleTextRect() gave at profileLoaded, then each mainConsoleAreaChanged
     std::optional<std::pair<QSize, QRect>> mDeliveredMainConsoleArea;
+    // What scriptWindows() gave at profileLoaded, then as each scriptWindowsChanged was sent
+    std::optional<QList<ScriptWindow>> mDeliveredWindows;
     // The size a script asked for, and Host's count of that request, while mainWindowResizeRequested's handler runs
     std::optional<std::pair<QSize, quint64>> mAnsweringMainWindowRequest;
 };

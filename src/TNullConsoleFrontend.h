@@ -24,6 +24,7 @@
 #include "TMxpFrameFrontend.h"
 #include "TNullMapView.h"
 #include "TPrintSink.h"
+#include "TWindowNotifier.h"
 #include "TWindowRegistry.h"
 #include "utils.h"
 
@@ -380,6 +381,7 @@ public:
     const TMxpFrameFrontend& mxpFrames() const override { return mMxpFrames; }
     // Every window a script made, in no order; not buffers, which are never shown, nor MXP frames, which are the game's
     std::vector<WindowRecord> windowRecords() const;
+    TWindowNotifier& windowNotifier() { return mWindowNotifier; }
 
 private:
     friend class TNullMxpFrameFrontend;
@@ -630,6 +632,7 @@ private:
     // As a QWidget made or reparented goes on top of its siblings, and a lowered one below them
     qint64 mTopOfStack = 0;
     qint64 mBottomOfStack = 0;
+    TWindowNotifier mWindowNotifier;
     QElapsedTimer mIncomingTextTimer;
 };
 

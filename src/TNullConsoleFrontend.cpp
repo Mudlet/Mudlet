@@ -866,6 +866,7 @@ void TNullConsoleFrontend::resetMainConsole()
 
 void TNullConsoleFrontend::dropModels()
 {
+    mWindowNotifier.note();
     // Copies, as each call erases the node that holds the name
     while (!mSubConsoles.empty()) {
         const QString name = mSubConsoles.begin()->first;
@@ -915,6 +916,7 @@ std::pair<QString, std::shared_ptr<TNullConsoleFrontend::ScrollBox>> TNullConsol
 
 void TNullConsoleFrontend::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool, bool clickThrough)
 {
+    mWindowNotifier.note();
     auto pLabel = std::make_unique<TLabelModel>(mpHost, name);
     pLabel->setClickThrough(clickThrough);
     pLabel->mGeometry = QRect(QPoint(x, y), widgetSize(width, height));
@@ -946,6 +948,7 @@ void TNullConsoleFrontend::deleteLabel(const QString& name)
 
 void TNullConsoleFrontend::removeLabel(const QString& name)
 {
+    mWindowNotifier.note();
     const auto it = mLabels.find(name);
     if (it == mLabels.end()) {
         return;
@@ -1060,6 +1063,7 @@ QFont TNullConsoleFrontend::naturalLabelFont(const Label& label) const
 // QWidget::setFont(), which under a sheet also saves the font for each restyle to start from
 void TNullConsoleFrontend::setLabelWidgetFont(Label& label, const QFont& font, const bool applySheet)
 {
+    mWindowNotifier.note();
     if (label.styled) {
         label.savedFont = font;
     }
@@ -1087,6 +1091,7 @@ void TNullConsoleFrontend::polishLabel(Label& label)
 // TLabel::restyle()
 void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
 {
+    mWindowNotifier.note();
     TLabelModel& model = *label.pModel;
     if (sheet == model.mStyleSheet && label.repolished && !label.restyleDue && !sheet.contains(qsl("url("), Qt::CaseInsensitive)) {
         return;
@@ -1129,6 +1134,7 @@ void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
 
 TConsoleModel& TNullConsoleFrontend::addSubConsole(const QString& name, const TWindowRegistry::SubConsoleKind kind, const QString& windowname)
 {
+    mWindowNotifier.note();
     // As ownConsoleModel() and the TConsole constructor set up a sub-console's model
     auto pModel = std::make_unique<TConsoleModel>(mpHost);
     pModel->mConsoleName = name;
@@ -1240,6 +1246,7 @@ void TNullConsoleFrontend::reportConsoleSize(const QString& name)
 
 void TNullConsoleFrontend::removeSubConsole(const QString& name, const bool keepWidget)
 {
+    mWindowNotifier.note();
     const auto it = mSubConsoles.find(name);
     if (it == mSubConsoles.end()) {
         return;
@@ -1460,6 +1467,7 @@ void TNullConsoleFrontend::closeSubConsole(const QString& name)
 
 bool TNullConsoleFrontend::openUserWindow(const QString& name, const bool loadLayout, bool, const QString&)
 {
+    mWindowNotifier.note();
     TWindowRegistry& registry = mpHost->windowRegistry();
     const bool make = !mSubConsoles.count(name);
     if (make) {
@@ -1515,6 +1523,7 @@ void TNullConsoleFrontend::setProfileStyleSheet(const QString& styleSheet)
 
 std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windowname, const int x, const int y, const int width, const int height)
 {
+    mWindowNotifier.note();
     // As TMainConsole::createMapper(), which only takes a user window: not a scroll box
     const bool wantsMainConsole = windowname.isEmpty() || !windowname.compare(QLatin1String("main"), Qt::CaseInsensitive);
     if (!wantsMainConsole && !mpHost->windowRegistry().hasDockWidget(windowname)) {
@@ -1556,6 +1565,7 @@ std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windo
 
 void TNullConsoleFrontend::createMapperDock(const QString& title, const QString&)
 {
+    mWindowNotifier.note();
     mMapWidget = MapWidget{title, QRect(), false, std::make_unique<TNullMapView>(mpHost)};
     copyPlayerRoomStyleToMap();
 }
@@ -1563,6 +1573,7 @@ void TNullConsoleFrontend::createMapperDock(const QString& title, const QString&
 // As a map load or a script shows the dlgMapper, which leaves a hidden window holding it hidden
 void TNullConsoleFrontend::showEmbeddedMapper()
 {
+    mWindowNotifier.note();
     mEmbeddedMapperShown = true;
     reportEmbeddedMapperVisibility();
 }
@@ -1586,6 +1597,7 @@ void TNullConsoleFrontend::copyPlayerRoomStyleToMap()
 // places the map widget leaves it where it put it
 void TNullConsoleFrontend::showNewMapperDock()
 {
+    mWindowNotifier.note();
     if (mMapWidget) {
         mMapWidget->geometry = QRect(QPoint(0, 0), mpHost->mainWindowSize().value_or(QSize()));
     }
@@ -1595,6 +1607,7 @@ void TNullConsoleFrontend::showNewMapperDock()
 
 std::pair<bool, QString> TNullConsoleFrontend::placeMapWidget(const QString& area, const int x, const int y, const int width, const int height)
 {
+    mWindowNotifier.note();
     if (!mMapWidget) {
         return {false, qsl("cannot create map widget. Do you already use an embedded mapper?")};
     }
@@ -1658,6 +1671,7 @@ std::optional<TNullConsoleFrontend::Placement> TNullConsoleFrontend::mapWidgetPl
 
 void TNullConsoleFrontend::restoreMapWidgetPlacement(const Placement& placement)
 {
+    mWindowNotifier.note();
     if (!mMapWidget) {
         return;
     }
@@ -1668,6 +1682,7 @@ void TNullConsoleFrontend::restoreMapWidgetPlacement(const Placement& placement)
 
 bool TNullConsoleFrontend::hideMapWidget()
 {
+    mWindowNotifier.note();
     if (!mMapWidget || !mMapWidget->shown) {
         return false;
     }
@@ -1690,6 +1705,7 @@ TConsoleModel* TNullConsoleFrontend::subConsoleModel(const QString& name) const
 
 bool TNullConsoleFrontend::setLabelShown(const QString& name, const bool shown)
 {
+    mWindowNotifier.note();
     const auto it = mLabels.find(name);
     if (it == mLabels.end()) {
         return false;
@@ -1723,6 +1739,7 @@ void TNullConsoleFrontend::reportUserWindowVisibility()
 
 bool TNullConsoleFrontend::setSubConsoleShown(const QString& name, const bool shown)
 {
+    mWindowNotifier.note();
     const auto it = mSubConsoles.find(name);
     if (it == mSubConsoles.end()) {
         return false;
@@ -1871,6 +1888,7 @@ void TNullConsoleFrontend::reportVisibility(const QString& changedWindow, const 
 
 bool TNullConsoleFrontend::createScrollBox(const QString& windowname, const QString& name, const int x, const int y, const int width, const int height)
 {
+    mWindowNotifier.note();
     if (mScrollBoxes.contains(name)) {
         return false;
     }
@@ -1889,6 +1907,7 @@ bool TNullConsoleFrontend::createScrollBox(const QString& windowname, const QStr
 
 std::pair<bool, QString> TNullConsoleFrontend::deleteScrollBox(const QString& name)
 {
+    mWindowNotifier.note();
     if (name.isEmpty()) {
         return {false, qsl("a scrollbox cannot have an empty string as its name")};
     }
@@ -1989,6 +2008,7 @@ void TNullConsoleFrontend::removeScrollBoxContents(const ScrollBox* box)
 
 bool TNullConsoleFrontend::setPlainWindowShown(const QString& name, const bool shown)
 {
+    mWindowNotifier.note();
     // As for a label
     if (const auto it = mScrollBoxes.find(name); it != mScrollBoxes.end()) {
         if (it->second->shown != shown) {
@@ -2010,6 +2030,7 @@ bool TNullConsoleFrontend::setPlainWindowShown(const QString& name, const bool s
 
 bool TNullConsoleFrontend::resizePlainWindow(const QString& name, const int width, const int height)
 {
+    mWindowNotifier.note();
     const bool box = mScrollBoxes.contains(name);
     PlainWindow* window = box ? nullptr : plainWindow(name);
     if (!box && !window) {
@@ -2029,6 +2050,7 @@ bool TNullConsoleFrontend::resizePlainWindow(const QString& name, const int widt
 
 bool TNullConsoleFrontend::movePlainWindow(const QString& name, const int x, const int y)
 {
+    mWindowNotifier.note();
     const bool box = mScrollBoxes.contains(name);
     PlainWindow* window = box ? nullptr : plainWindow(name);
     if (!box && !window) {
@@ -2046,6 +2068,7 @@ bool TNullConsoleFrontend::movePlainWindow(const QString& name, const int x, con
 
 std::pair<bool, QString> TNullConsoleFrontend::createCommandLine(const QString& windowname, const QString& name, const int x, const int y, const int width, const int height)
 {
+    mWindowNotifier.note();
     if (name.isEmpty()) {
         return {false, qsl("a commandLine cannot have an empty string as its name")};
     }
@@ -2083,6 +2106,7 @@ std::pair<bool, QString> TNullConsoleFrontend::createCommandLine(const QString& 
 
 std::pair<bool, QString> TNullConsoleFrontend::deleteCommandLine(const QString& name)
 {
+    mWindowNotifier.note();
     if (name.isEmpty()) {
         return {false, qsl("a command line cannot have an empty string as its name")};
     }
@@ -2237,6 +2261,7 @@ TNullConsoleFrontend::PlainWindow* TNullConsoleFrontend::plainWindow(const QStri
 // then finds another window for, and as TMainConsole::reportWindowState() reports the name to whatever has it
 void TNullConsoleFrontend::republishPlainWindow(const QString& name)
 {
+    mWindowNotifier.note();
     if (!mScrollBoxes.contains(name)) {
         if (const PlainWindow* window = plainWindow(name)) {
             mpHost->windowRegistry().setPlainWindowGeometry(name, window->geometry);
@@ -2471,6 +2496,7 @@ std::pair<bool, QString> TNullConsoleFrontend::setCmdLineStyleSheet(const QStrin
 // TMainConsole::registerSubCommandLine() puts it in place of any other command line of the name
 bool TNullConsoleFrontend::setWindowCommandLineVisible(const QString& name, const bool visible)
 {
+    mWindowNotifier.note();
     const auto console = mSubConsoles.find(name);
     if (console == mSubConsoles.end()) {
         return false;
@@ -2520,6 +2546,7 @@ bool TNullConsoleFrontend::setWindowCommandLineVisible(const QString& name, cons
 // Unlike showWindow(), this finds the command line when a scroll box has the same name
 bool TNullConsoleFrontend::setCommandLineVisible(const QString& name, const bool visible)
 {
+    mWindowNotifier.note();
     const auto it = mCommandLines.find(name);
     if (it == mCommandLines.end()) {
         return false;
@@ -2534,6 +2561,7 @@ bool TNullConsoleFrontend::setCommandLineVisible(const QString& name, const bool
 
 std::pair<bool, QString> TNullConsoleFrontend::createTextBox(const QString& windowname, const QString& name, const int x, const int y, const int width, const int height)
 {
+    mWindowNotifier.note();
     if (name.isEmpty()) {
         return {false, qsl("a text edit cannot have an empty string as its name")};
     }
@@ -2564,6 +2592,7 @@ std::pair<bool, QString> TNullConsoleFrontend::createTextBox(const QString& wind
 
 std::pair<bool, QString> TNullConsoleFrontend::deleteTextBox(const QString& name)
 {
+    mWindowNotifier.note();
     if (name.isEmpty()) {
         return {false, qsl("a text edit cannot have an empty string as its name")};
     }
@@ -2599,6 +2628,7 @@ bool TNullConsoleFrontend::setTextBoxText(const QString& name, const QString& te
 
 bool TNullConsoleFrontend::setTextBoxFont(const QString& name, const QFont& font)
 {
+    mWindowNotifier.note();
     if (!mTextBoxes.contains(name)) {
         return false;
     }
@@ -2631,6 +2661,7 @@ bool TNullConsoleFrontend::setTextBoxStyleSheet(const QString& name, const QStri
 // whether a text edit is read-only, which a command line never is
 void TNullConsoleFrontend::restylePlainWindow(const QString& name, PlainWindow& window, const bool commandLine)
 {
+    mWindowNotifier.note();
     static const QStringList textBoxClasses{qsl("TTextBox"), qsl("QPlainTextEdit"), qsl("QAbstractScrollArea"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")};
     static const QStringList commandLineClasses{qsl("TCommandLine"), qsl("QPlainTextEdit"), qsl("QAbstractScrollArea"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")};
     const QString objectName = (commandLine ? qsl("commandLine_%1_%2") : qsl("textEdit_%1_%2")).arg(mpHost->getName(), name);
@@ -2749,6 +2780,7 @@ bool TNullConsoleFrontend::resizeLabel(const QString& name, const int width, con
 
 void TNullConsoleFrontend::setLabelSize(Label& label, const QSize& size)
 {
+    mWindowNotifier.note();
     if (size == label.pModel->mGeometry.size()) {
         return;
     }
@@ -2943,6 +2975,7 @@ bool TNullConsoleFrontend::scaleLabelMovie(const QString& name, const bool follo
 
 bool TNullConsoleFrontend::moveLabel(const QString& name, const int x, const int y)
 {
+    mWindowNotifier.note();
     TLabelModel* pLabel = labelModel(name);
     if (!pLabel) {
         return false;
@@ -2956,6 +2989,7 @@ bool TNullConsoleFrontend::moveLabel(const QString& name, const int x, const int
 // as created, as one is once any window it is in has been shown.
 bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QString& name, const int x, const int y, const bool show)
 {
+    mWindowNotifier.note();
     const auto it = mLabels.find(name);
     if (it == mLabels.end() || !ownsContainer(windowname)) {
         return false;
@@ -2996,6 +3030,7 @@ void TNullConsoleFrontend::inheritLabelFont(Label& label, const bool restyle)
 
 std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& windowname, const QString& name, const int x, const int y, const bool show)
 {
+    mWindowNotifier.note();
     if (!ownsContainer(windowname)) {
         return noView();
     }
@@ -3124,6 +3159,7 @@ void TNullConsoleFrontend::moveScrollBoxContents(const ScrollBox* box)
 
 bool TNullConsoleFrontend::setLabelBackgroundColor(const QString& name, const QColor& color)
 {
+    mWindowNotifier.note();
     const auto it = mLabels.find(name);
     if (it == mLabels.end()) {
         return false;
@@ -3193,6 +3229,7 @@ bool TNullConsoleFrontend::setLabelFont(const QString& name, const QFont& font)
 // A user window has no frame here, so its console is its dock's size
 bool TNullConsoleFrontend::resizeSubConsole(const QString& name, const int width, const int height)
 {
+    mWindowNotifier.note();
     if (!mSubConsoles.count(name)) {
         return false;
     }
@@ -3230,6 +3267,7 @@ bool TNullConsoleFrontend::resizeSubConsole(const QString& name, const int width
 
 bool TNullConsoleFrontend::moveSubConsole(const QString& name, const int x, const int y)
 {
+    mWindowNotifier.note();
     if (!mSubConsoles.count(name)) {
         return false;
     }
@@ -3284,6 +3322,7 @@ void TNullConsoleFrontend::applyBorders()
 // As TConsole::setConsoleBgColor() leaves a sub-console's model
 bool TNullConsoleFrontend::setSubConsoleBackgroundColor(const QString& name, const QColor& color)
 {
+    mWindowNotifier.note();
     TConsoleModel* pModel = subConsoleModel(name);
     if (!pModel) {
         return false;
@@ -3427,6 +3466,7 @@ std::optional<int> TNullConsoleFrontend::consoleColumnWidth(const QString& name)
 // As TConsole::setFont() changes a sub-console's, and tells scripts of it
 void TNullConsoleFrontend::setSubConsoleFont(const QString& name, const QFont& font)
 {
+    mWindowNotifier.note();
     TConsoleModel* pModel = subConsoleModel(name);
     if (!pModel) {
         return;
@@ -3528,6 +3568,7 @@ void TNullConsoleFrontend::finishIncomingText(bool)
 
 bool TNullConsoleFrontend::restack(const QString& name, const bool raise)
 {
+    mWindowNotifier.note();
     const auto order = [this, raise]() {
         return raise ? ++mTopOfStack : --mBottomOfStack;
     };
