@@ -36,6 +36,7 @@ int luaopen_rex_pcre2(lua_State*);
 int luaopen_utf8(lua_State*);
 int luaopen_brimworks_zip(lua_State*);
 int luaopen_yajl(lua_State*);
+int luaopen_luasql_sqlite3(lua_State*);
 }
 
 void registerStaticLuaModules(lua_State* L)
@@ -48,6 +49,7 @@ void registerStaticLuaModules(lua_State* L)
             {"lua-utf8", luaopen_utf8},
             {"brimworks.zip", luaopen_brimworks_zip},
             {"yajl", luaopen_yajl},
+            {"luasql.sqlite3", luaopen_luasql_sqlite3},
     };
 
     lua_getglobal(L, LUA_LOADLIBNAME);
