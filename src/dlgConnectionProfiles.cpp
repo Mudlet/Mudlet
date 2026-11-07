@@ -402,7 +402,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mSearchTextTimer.setInterval(1s);
     mSearchTextTimer.setSingleShot(true);
     QCoreApplication::instance()->installEventFilter(this);
-    connect(&mSearchTextTimer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_reenableAllProfileItems);
+    connect(&mSearchTextTimer, &QTimer::timeout, this, &dlgConnectionProfiles::clearProfileSearch);
 
     profile_history->view()->setTextElideMode(Qt::ElideNone);
 }
@@ -2968,8 +2968,10 @@ void dlgConnectionProfiles::clearNotificationArea()
     notificationAreaMessageBox->clear();
 }
 
-void dlgConnectionProfiles::slot_reenableAllProfileItems()
+void dlgConnectionProfiles::clearProfileSearch()
 {
+    mSearchTextTimer.stop();
+    mSearchText.clear();
     for (int i = 0, total = listWidget_profiles->count(); i < total; ++i) {
         listWidget_profiles->item(i)->setFlags(listWidget_profiles->item(i)->flags() | Qt::ItemIsEnabled);
     }
@@ -2987,9 +2989,15 @@ bool dlgConnectionProfiles::eventFilter(QObject* obj, QEvent* event)
             return QObject::eventFilter(obj, event);
 
         case Qt::Key_Escape:
-            // Clear the search:
-            mSearchText.clear();
-            slot_reenableAllProfileItems();
+            if (mSearchText.isEmpty()) {
+                // A held Escape must not close the dialog once it has cleared a
+                // search, nor carry on into it from a window it has just closed
+                if (keyEvent->isAutoRepeat()) {
+                    return true;
+                }
+                return QObject::eventFilter(obj, event);
+            }
+            clearProfileSearch();
             // Eat (filter) this event so it goes no further:
             return true;
 
@@ -3043,11 +3051,6 @@ bool dlgConnectionProfiles::eventFilter(QObject* obj, QEvent* event)
                 return QObject::eventFilter(obj, event);
             }
 
-            if (!mSearchTextTimer.isActive()) {
-                // Too long since the last keypress so forget any previously
-                // entered keypresses:
-                mSearchText.clear();
-            }
             mSearchTextTimer.stop();
             addLetterToProfileSearch(keyEvent->key());
             // Restart the timeout for another keypress:
@@ -3076,8 +3079,7 @@ void dlgConnectionProfiles::addLetterToProfileSearch(const int key)
     if (indexes.isEmpty()) {
         // No matches at all so clearing search term and reset all profiles to
         // be enabled:
-        mSearchText.clear();
-        slot_reenableAllProfileItems();
+        clearProfileSearch();
         return;
     }
 
