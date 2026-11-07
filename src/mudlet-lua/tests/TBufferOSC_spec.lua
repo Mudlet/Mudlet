@@ -179,6 +179,30 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.are.same(foregroundOf("OSCSPLIT2", "OSCSPLIT2"), foregroundOf("OSCSPLIT2", "rest"))
     end)
 
+    -- A link carried past a line break has no text in any line yet, so the trim
+    -- and link sweep that line's commit sets off must leave it be. Its colour
+    -- comes from the link store, so a swept link loses it.
+    it("should keep an OSC 8 link whose line ended before its text, when that line trims the buffer", function()
+      local savedLimit, savedBatch = getConsoleBufferSize("main")
+      finally(function()
+        feedTriggers("\027]8;;\027\\\027[0m\n")
+        setConsoleBufferSize("main", savedLimit, savedBatch)
+      end)
+      -- every trim at this size sweeps, and each commit adds one line
+      setConsoleBufferSize("main", 100, 50)
+      for _ = 1, 300 do
+        if getLastLineNumber("main") == 99 then
+          break
+        end
+        feedTriggers("OSCSWEEP filler\n")
+      end
+      assert.equals(99, getLastLineNumber("main"))
+      assert.is_true(feedTriggers("\027[0mOSCSWEEP1(\027]8;;send:north?config={\"style\":{\"link\":{\"color\":\"#00ff00\"}}}\027\\\n"))
+      assert.is_true(getLastLineNumber("main") < 99, "the line did not trim the buffer, so this test proves nothing")
+      assert.is_true(feedTriggers("north\027]8;;\027\\)OSCSWEEP1\n"))
+      assert.are.same({ 0, 255, 0 }, foregroundOf("OSCSWEEP1", "north"))
+    end)
+
     it("should not read the rest of a feed, or a later one, inside a sequence a nested feed left open", function()
       local id = tempExactMatchTrigger("OSCNEST1", [[feedTriggers("\027]0;title")]])
       finally(function() killTrigger(id) end)

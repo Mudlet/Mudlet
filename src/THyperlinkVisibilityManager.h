@@ -81,6 +81,9 @@ class THyperlinkVisibilityManager : public QObject
     friend class HyperlinkModelSplitTest;
 
 public:
+    // The line number of a link kept across a clear whose line the game has not ended yet
+    static constexpr int csmLineStillToCome = -1;
+
     explicit THyperlinkVisibilityManager(TConsoleModel& model);
     ~THyperlinkVisibilityManager() override;
 
@@ -100,6 +103,9 @@ public:
     void removeLinksOnLine(int lineNumber);
     QList<int> adjustLineNumbers(int deletedLineStart, int deletedLineCount);
     void clear();
+    QList<TrackedHyperlink> takeLinks(const QSet<int>& linkIds);
+    void trackAwaitingTheirLine(const QList<TrackedHyperlink>& links);
+    void anchorLinksAwaitingTheirLine(int lineNumber);
 
 signals:
     void visibilityChanged();
@@ -126,6 +132,7 @@ private:
     QTimer* mpAnnouncementTimer = nullptr;
     int mPendingHiddenCount = 0;
     bool mHasTimerBasedLinks = false;
+    bool mHasLinksAwaitingTheirLine = false;
     qint64 mLastDataReceivedMs = 0;
 };
 

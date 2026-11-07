@@ -2926,6 +2926,9 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         }
     }
     const int lineIndex = lineBuffer.size() - 1;
+    if (auto* pHyperlinkManager = hyperlinkVisibilityManagerOrNull()) {
+        pHyperlinkManager->anchorLinksAwaitingTheirLine(lineIndex);
+    }
     if (Q_LIKELY(mpModel)) {
         mpModel->endPrintedLine();
         ++mpModel->mLinesCommitted;
@@ -3282,6 +3285,7 @@ void TBuffer::joinPendingServerWrapOntoCurrent()
         maskSpoilerText(mHeldSpoilerLinkId, mMudLine, mMudBuffer, mHeldSpoilerStartColumn, heldLength - mHeldSpoilerStartColumn + mHeldSpoilerContinuationLength);
         mHeldSpoilerLinkId = 0;
     }
+    mHeldLinkEndedByClear = 0;
     for (const HeldVisibility& held : std::exchange(mHeldVisibilities, {})) {
         if (held.startsAfterHeldText) {
             registerLinkVisibility(held.linkId, held.startColumn + heldLength, held.continuationLength - held.startColumn, held.styling);
@@ -3298,13 +3302,25 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
     if (mServerWrapPendingLine.isEmpty()) {
         return;
     }
+    const int linkEndingWithHeldText = endsHyperlink ? mHeldLinkEndedByClear : 0;
+    mHeldLinkEndedByClear = 0;
     if (mHeldSpoilerLinkId) {
         maskSpoilerText(mHeldSpoilerLinkId, mServerWrapPendingLine, mServerWrapPendingBuffer, mHeldSpoilerStartColumn, mServerWrapPendingLine.size() - mHeldSpoilerStartColumn);
-        maskSpoilerText(mHeldSpoilerLinkId, mMudLine, mMudBuffer, 0, mHeldSpoilerContinuationLength);
+        if (mHeldSpoilerLinkId != linkEndingWithHeldText) {
+            maskSpoilerText(mHeldSpoilerLinkId, mMudLine, mMudBuffer, 0, mHeldSpoilerContinuationLength);
+        }
         mHeldSpoilerLinkId = 0;
     }
+    if (linkEndingWithHeldText) {
+        for (auto& c : mMudBuffer.expand()) {
+            if (c.mLinkIndex == linkEndingWithHeldText) {
+                c.mLinkIndex = 0;
+            }
+        }
+    }
     // A link closed after the held text sits whole on the line after it, at the columns it recorded;
-    // one that began in the held text now spans two lines, which visibility does not cover.
+    // one that began in the held text now spans two lines, which visibility does not cover, unless
+    // clear() ended it, which leaves it on the held line alone.
     const QList<HeldVisibility> heldVisibilities = std::exchange(mHeldVisibilities, {});
     const bool linkStartsAfterHeldText = mHyperlinkActive && mCurrentHyperlinkStartsAfterHeldText;
     if (mHyperlinkActive && !linkStartsAfterHeldText) {
@@ -3329,6 +3345,17 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
             }
         } else {
             carryActiveHyperlinkPastFlush(mServerWrapPendingLine, mServerWrapPendingBuffer);
+        }
+    }
+    for (const HeldVisibility& held : heldVisibilities) {
+        if (held.linkId == linkEndingWithHeldText && !held.startsAfterHeldText) {
+            mMudLine.swap(mServerWrapPendingLine);
+            registerLinkVisibility(held.linkId, held.startColumn, static_cast<int>(mMudLine.size()) - held.startColumn, held.styling);
+            mMudLine.swap(mServerWrapPendingLine);
+            // A script's echo() since the clear may sit on the last line, so let the commit place it
+            if (auto* pHyperlinkManager = hyperlinkVisibilityManagerOrNull()) {
+                pHyperlinkManager->trackAwaitingTheirLine(pHyperlinkManager->takeLinks({held.linkId}));
+            }
         }
     }
     QString line;
@@ -7505,6 +7532,37 @@ void TBuffer::carryActiveHyperlinkPastFlush(QString& line, const TLineFormat& fo
     mCurrentHyperlinkStartColumn = 0;
 }
 
+// revealSpoilerLink() hands out a spoiler's set-aside text a character at a time
+// in buffer order, so the text of its characters on the lines comes first
+void TBuffer::forgetSpoilerTextOnTheLines(const QSet<int>& linkIds)
+{
+    QHash<int, qsizetype> onTheLines;
+    for (const int linkId : linkIds) {
+        if (mLinkOriginalText.contains(linkId)) {
+            onTheLines.insert(linkId, 0);
+        }
+    }
+    if (onTheLines.isEmpty()) {
+        return;
+    }
+    for (const TLineFormat& line : buffer) {
+        for (const TChar& c : line) {
+            if (const int id = c.linkIndex()) {
+                if (const auto it = onTheLines.find(id); it != onTheLines.end()) {
+                    ++it.value();
+                }
+            }
+        }
+    }
+    for (auto it = onTheLines.cbegin(); it != onTheLines.cend(); ++it) {
+        QString& originalText = mLinkOriginalText[it.key()];
+        originalText.remove(0, it.value());
+        if (originalText.isEmpty()) {
+            mLinkOriginalText.remove(it.key());
+        }
+    }
+}
+
 // Sets a spoiler's text aside and masks it space for space. One spread over
 // several lines is set aside a piece at a time, in the order
 // revealSpoilerLink() restores it. Text not stamped with the spoiler's id, such
@@ -7574,14 +7632,30 @@ void TBuffer::clear()
         lastloggedToLine = -1;
     }
 
+    // A spoiler outliving the lines about to go would otherwise reveal their text over what is left of it
+    QSet<int> outlivingLinkIds = linkIdsOnTheLinesStillToCome();
+    if (mHyperlinkActive) {
+        outlivingLinkIds.insert(mCurrentHyperlinkLinkId);
+    }
+    forgetSpoilerTextOnTheLines(outlivingLinkIds);
+    // The open link ends here, as its close would have ended it
+    if (mHyperlinkActive) {
+        mHeldLinkEndedByClear = !mServerWrapPendingLine.isEmpty() && !mCurrentHyperlinkStartsAfterHeldText ? mCurrentHyperlinkLinkId : 0;
+        finaliseActiveHyperlink();
+    }
     mCurrentHyperlinkCommand.clear();
     mCurrentHyperlinkHint.clear();
     mCurrentHyperlinkLinkId = 0;
     mHyperlinkActive = false;
     mHyperlinkEnclosingMxpLinkId = 0;
 
-    // every line is about to go, so the tracked links and any announcement queued for them go with it
-    if (auto* pHyperlinkManager = hyperlinkVisibilityManagerOrNull()) {
+    // every line is about to go, so the tracked links and any announcement queued for them go with it,
+    // but for those on the line still to come, which lands where it lands only once the game ends it:
+    // a script may print first
+    auto* pHyperlinkManager = hyperlinkVisibilityManagerOrNull();
+    QList<TrackedHyperlink> linksStillToCome;
+    if (pHyperlinkManager) {
+        linksStillToCome = pHyperlinkManager->takeLinks(linkIdsOnTheLinesStillToCome());
         pHyperlinkManager->clear();
     }
 
@@ -7590,9 +7664,12 @@ void TBuffer::clear()
             break;
         }
     }
+    if (pHyperlinkManager) {
+        pHyperlinkManager->trackAwaitingTheirLine(linksStillToCome);
+    }
 
-    // After deleting all lines, clear all links (none are referenced)
-    clearLinkState();
+    // The game's unended or held line, and an open MXP link, carry their ids on past the clear
+    clearLinkState(liveLinkIdsOutsideTheLines());
 
     buffer.emplace_back();
     lineBuffer << QString();
@@ -7700,6 +7777,43 @@ QSet<int> TBuffer::collectLiveLinkIdsResettingIssueLines()
         }
     }
     return liveLinkIds;
+}
+
+// A concealed link's characters carry no index, and a link the game is still
+// writing has none in a line yet, so a sweep has to be told of both
+QSet<int> TBuffer::liveLinkIdsOutsideTheLines()
+{
+    QSet<int> ids = mpModel ? mpModel->mHyperlinkVisibilityManager.trackedLinkIds() : QSet<int>();
+    if (mHyperlinkActive && mCurrentHyperlinkLinkId) {
+        ids.insert(mCurrentHyperlinkLinkId);
+    }
+    if (mHyperlinkEnclosingMxpLinkId) {
+        ids.insert(mHyperlinkEnclosingMxpLinkId);
+    }
+    // The MXP client issues its ids from the main console's store, not this buffer's
+    TConsoleModel* pMainModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
+    if (pMainModel && this == &pMainModel->buffer && mpHost->mMxpClient.isInLinkMode() && mpHost->mMxpClient.linkId()) {
+        ids.insert(mpHost->mMxpClient.linkId());
+    }
+    ids |= linkIdsOnTheLinesStillToCome();
+    return ids;
+}
+
+// The line the game is still sending, and the one held for a server wrap
+QSet<int> TBuffer::linkIdsOnTheLinesStillToCome() const
+{
+    QSet<int> ids;
+    for (const TLineFormat* pPending : {&mMudBuffer, &mServerWrapPendingBuffer}) {
+        int previousId = 0;
+        for (const TChar& c : *pPending) {
+            const int id = c.linkIndex();
+            if (id && id != previousId) {
+                ids.insert(id);
+                previousId = id;
+            }
+        }
+    }
+    return ids;
 }
 
 void TBuffer::clearLastLine()
@@ -7823,8 +7937,7 @@ void TBuffer::shrinkBuffer()
 
     if (sweepLinks) {
         mLinesUntilLinkSweep = mLinesLimit / 4;
-        // A concealed link's characters carry no index, so it has to be named to survive the sweep
-        clearLinkState(mpModel ? mpModel->mHyperlinkVisibilityManager.trackedLinkIds() : QSet<int>());
+        clearLinkState(liveLinkIdsOutsideTheLines());
     }
     mLinesUntilLinkSweep -= mBatchDeleteSize;
 
