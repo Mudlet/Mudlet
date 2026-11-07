@@ -27,6 +27,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QImage>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -348,6 +349,147 @@ deleteLabel("old")
         QVERIFY(toldOnce({qsl("mapper")}));
 
         QVERIFY(session.shutdown(false));
+    }
+
+    void test_eachLabelReadsBackWhatItShows()
+    {
+        const QString name = qsl("Headless Label Content");
+        QVERIFY(writeProfile(name));
+        QTemporaryDir imageDir;
+        const QString image = imageDir.filePath(qsl("red.png"));
+        QImage red(4, 4, QImage::Format_ARGB32);
+        red.fill(Qt::red);
+        QVERIFY(red.save(image));
+        THeadlessSession session;
+        QVERIFY(!session.labelContent(qsl("lbl")));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QSignalSpy changes(&session, &THeadlessSession::scriptWindowsChanged);
+        QVERIFY(session.runLua(qsl(R"lua(
+createLabel("lbl", 0, 0, 100, 20, 1)
+createMiniConsole("mc", 0, 100, 100, 100)
+hpGauge = Geyser.Gauge:new({name = "hp", x = 0, y = 300, width = 200, height = 20})
+hpGauge:setValue(25, 100)
+)lua")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        QVERIFY(!session.labelContent(qsl("mc")));
+        QVERIFY(!session.labelContent(qsl("nonesuch")));
+        std::optional<THeadlessSession::LabelContent> content = session.labelContent(qsl("lbl"));
+        QVERIFY(content);
+        QCOMPARE(content->text, QString());
+
+        QVERIFY(session.runLua(qsl(R"(echo("lbl", "<b>hp</b>"))")));
+        QVERIFY(changes.wait(1000));
+        QCOMPARE(changes.takeFirst().at(1).toStringList(), QStringList{qsl("lbl")});
+        content = session.labelContent(qsl("lbl"));
+        QVERIFY(content);
+        QVERIFY(content->text.contains(qsl("<b>hp</b>")));
+
+        QVERIFY(session.runLua(qsl(R"(setBackgroundImage("lbl", [[%1]]))").arg(image)));
+        content = session.labelContent(qsl("lbl"));
+        QVERIFY(content);
+        QCOMPARE(content->image, image);
+        QVERIFY(!content->svg);
+        // A raster image takes the text down, as QLabel::setPixmap() does
+        QCOMPARE(content->text, QString());
+
+        QVERIFY(session.runLua(qsl(R"lua(
+setLabelToolTip("lbl", "your health", 3)
+setLabelCursor("lbl", 2)
+setLabelStyleSheet("lbl", "color: red;")
+)lua")));
+        QVERIFY(changes.wait(1000));
+        content = session.labelContent(qsl("lbl"));
+        QVERIFY(content);
+        QCOMPARE(content->toolTip, qsl("your health"));
+        QCOMPARE(content->toolTipDuration, 3.0);
+        QCOMPARE(content->cursor, std::optional(Qt::CrossCursor));
+        QCOMPARE(content->styleSheet, qsl("color: red;"));
+        QCOMPARE(content->accessibleName, qsl("your health"));
+        QVERIFY(!content->accessibleButton);
+        QVERIFY(!content->clickThrough);
+        changes.clear();
+        QVERIFY(session.runLua(qsl(R"(setLabelAccessibleName("lbl", "health"))")));
+        QVERIFY(changes.wait(1000));
+        content = session.labelContent(qsl("lbl"));
+        QVERIFY(content);
+        QCOMPARE(content->accessibleName, qsl("health"));
+
+        // A movie's playback is told as scripts change it
+        const QString movie = imageDir.filePath(qsl("two.gif"));
+        QFile gif(movie);
+        QVERIFY(gif.open(QIODevice::WriteOnly));
+        // Two frames of one pixel, as GeyserLabel_spec.lua writes them
+        gif.write(QByteArray::fromHex("47494638396101000100800000000000ffffff21ff0b4e45545343415045322e30030100000021f9"
+                                      "04000a0000002c000000000100010000020244010021f904000a0000002c00000000010001000002024c01003b"));
+        gif.close();
+        QVERIFY(session.runLua(qsl(R"(setMovie("lbl", [[%1]]))").arg(movie)));
+        content = session.labelContent(qsl("lbl"));
+        QVERIFY(content);
+        QCOMPARE(content->movie, movie);
+        QVERIFY(!content->moviePaused);
+        QCOMPARE(content->movieFrame, -1);
+        QCOMPARE(content->movieSpeed, 100);
+        QVERIFY(!content->movieSize.isValid());
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        // Each call is told on its own; the frame to jump to is the one the pause did not stop on
+        const auto told = [&](const QString& call) {
+            if (!session.runLua(call) || !changes.wait(1000)) {
+                return false;
+            }
+            const bool named = changes.takeFirst().at(1).toStringList() == QStringList{qsl("lbl")};
+            changes.clear();
+            return named;
+        };
+        QVERIFY(told(qsl("pauseMovie('lbl')")));
+        content = session.labelContent(qsl("lbl"));
+        QVERIFY(content);
+        QVERIFY(content->moviePaused);
+        const int other = 1 - content->movieFrame;
+        QVERIFY(told(qsl("setMovieFrame('lbl', %1)").arg(other)));
+        QVERIFY(told(qsl("setMovieSpeed('lbl', 50)")));
+        QVERIFY(told(qsl("scaleMovie('lbl')")));
+        content = session.labelContent(qsl("lbl"));
+        QVERIFY(content);
+        QVERIFY(content->moviePaused);
+        QCOMPARE(content->movieFrame, other);
+        QCOMPARE(content->movieSpeed, 50);
+        QCOMPARE(content->movieSize, QSize(100, 20));
+        QVERIFY(session.runLua(qsl("startMovie('lbl')")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        QVERIFY(!session.labelContent(qsl("lbl"))->moviePaused);
+        QCOMPARE(session.labelContent(qsl("lbl"))->movieFrame, -1);
+
+        // One that does not loop stops by itself on its last frame, and that is told too
+        const QString once = imageDir.filePath(qsl("once.gif"));
+        QFile onceGif(once);
+        QVERIFY(onceGif.open(QIODevice::WriteOnly));
+        onceGif.write(QByteArray::fromHex("47494638396101000100800000000000ffffff21f904000a0000002c000000000100010000020244010021f904000a0000002c"
+                                          "00000000010001000002024c01003b"));
+        onceGif.close();
+        QVERIFY(session.runLua(qsl(R"(createLabel("onceLabel", 0, 400, 10, 10, 1) setMovie("onceLabel", [[%1]]))").arg(once)));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        QTRY_VERIFY_WITH_TIMEOUT(changes.count() > 0, 3000);
+        QCOMPARE(changes.takeFirst().at(1).toStringList(), QStringList{qsl("onceLabel")});
+        content = session.labelContent(qsl("onceLabel"));
+        QVERIFY(content);
+        QVERIFY(content->moviePaused);
+        QCOMPARE(content->movieFrame, 1);
+
+        // A gauge's value is its front label's width
+        const std::optional<THeadlessSession::ScriptWindow> back = session.scriptWindow(qsl("hp_back"));
+        const std::optional<THeadlessSession::ScriptWindow> front = session.scriptWindow(qsl("hp_front"));
+        QVERIFY(back && front);
+        QCOMPARE(back->geometry.width(), 200);
+        QCOMPARE(front->geometry.width(), 50);
+        QVERIFY(session.labelContent(qsl("hp_front")));
+
+        QVERIFY(session.shutdown(false));
+        QVERIFY(!session.labelContent(qsl("lbl")));
     }
 };
 
