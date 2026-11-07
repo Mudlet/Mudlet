@@ -199,21 +199,56 @@ describe("Tests that the cursor and line functions find their console by name", 
     describe("of a mini console with its split screen open", function()
       local window = "specCursorByName split" .. suffix
 
+      local function fill(name)
+        enableScrolling(name)
+        for i = 1, 300 do
+          echo(name, "split line " .. i .. "\n")
+        end
+      end
+
+      local function rows(fullRows, splitRows)
+        return ("%d rows split, %d without"):format(splitRows, fullRows)
+      end
+
       setup(function()
         assert.is_true(createMiniConsole(window, 0, 0, 300, 400))
-        enableScrolling(window)
-        for i = 1, 300 do
-          echo(window, "split line " .. i .. "\n")
-        end
+      end)
+
+      before_each(function()
+        fill(window)
       end)
 
       teardown(function()
         deleteMiniConsole(window)
       end)
 
-      -- the lower pane takes a quarter of the height, so counting it instead
-      -- of the upper one would answer well under half the rows
+      -- the upper pane keeps 6 of every 8 pixels the 3px handle leaves, rounded
+      -- half up, as the GUI measures it; in the default font the shorter heights
+      -- lose a row if that is truncated instead
       it("counts the rows above the split", function()
+        for _, case in ipairs({{40}, {65}, {140}, {400}, {171, true}}) do
+          local height, commandLine = case[1], case[2]
+          local split = ("specCursorByName split %d"):format(height) .. suffix
+          local unsplit = ("specCursorByName unsplit %d"):format(height) .. suffix
+          local paneHeight = math.max(0, height - (commandLine and 31 or 0) - 3)
+          assert.is_true(createMiniConsole(split, 0, 0, 300, height))
+          assert.is_true(createMiniConsole(unsplit, 0, 0, 300, math.floor(paneHeight * 0.75 + 0.5)))
+          if commandLine then
+            enableCommandLine(split)
+          end
+          fill(split)
+          pumpEvents(100)
+          scrollTo(split, 10)
+          pumpEvents(100)
+          local splitRows, unsplitRows = getRowCount(split), getRowCount(unsplit)
+          deleteMiniConsole(split)
+          deleteMiniConsole(unsplit)
+
+          assert.are.equal(unsplitRows, splitRows, ("%dpx tall%s"):format(height, commandLine and " with a command line" or ""))
+        end
+      end)
+
+      it("counts every row again once it scrolls to the end", function()
         pumpEvents(100)
         local fullRows = getRowCount(window)
         scrollTo(window, 10)
@@ -222,9 +257,68 @@ describe("Tests that the cursor and line functions find their console by name", 
         scrollTo(window)
         pumpEvents(100)
 
-        assert.is_true(splitRows < fullRows, ("%d rows split, %d without"):format(splitRows, fullRows))
-        assert.is_true(splitRows > fullRows / 2, ("%d rows split, %d without"):format(splitRows, fullRows))
+        assert.is_true(splitRows < fullRows, rows(fullRows, splitRows))
         assert.are.equal(fullRows, getRowCount(window))
+      end)
+
+      it("counts every row again once the window is cleared", function()
+        pumpEvents(100)
+        local fullRows = getRowCount(window)
+        scrollTo(window, 10)
+        pumpEvents(100)
+        local splitRows = getRowCount(window)
+        clearWindow(window)
+        pumpEvents(100)
+
+        assert.is_true(splitRows < fullRows, rows(fullRows, splitRows))
+        assert.are.equal(fullRows, getRowCount(window))
+      end)
+
+      it("counts every row again once scrolling is disabled", function()
+        pumpEvents(100)
+        local fullRows = getRowCount(window)
+        scrollTo(window, 10)
+        pumpEvents(100)
+        local splitRows = getRowCount(window)
+        disableScrolling(window)
+        pumpEvents(100)
+
+        assert.is_true(splitRows < fullRows, rows(fullRows, splitRows))
+        assert.are.equal(fullRows, getRowCount(window))
+      end)
+
+      -- moving within the split resizes nothing, so only opening and closing it
+      -- reports a size
+      it("reports its size each time the split opens or closes", function()
+        pumpEvents(100)
+        local columns, fullRows = getColumnCount(window), getRowCount(window)
+        local sizes = {}
+        local id = registerAnonymousEventHandler("sysConsoleSizeChanged", function(_, name, width, height)
+          if name == window then
+            sizes[#sizes + 1] = ("%dx%d"):format(width, height)
+          end
+        end)
+        scrollTo(window, 10)
+        pumpEvents(100)
+        local splitRows = getRowCount(window)
+        scrollTo(window, 20)
+        pumpEvents(100)
+        scrollTo(window)
+        pumpEvents(100)
+        scrollTo(window, 10)
+        pumpEvents(100)
+        disableScrolling(window)
+        pumpEvents(100)
+        enableScrolling(window)
+        scrollTo(window, 10)
+        pumpEvents(100)
+        clearWindow(window)
+        pumpEvents(100)
+        killAnonymousEventHandler(id)
+
+        local split, full = ("%dx%d"):format(columns, splitRows), ("%dx%d"):format(columns, fullRows)
+        assert.is_true(splitRows < fullRows, rows(fullRows, splitRows))
+        assert.are.same({split, full, split, full, split, full}, sizes)
       end)
     end)
   end)
