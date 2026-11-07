@@ -8089,10 +8089,7 @@ describe("Console buffer size", function()
   end)
 
   it("useMaximum raises the main console to the buffer maximum", function()
-    -- the main console has to be named for this one: with three arguments the
-    -- first is read as a window name, so the four argument form only lines up
-    -- when it is actually given one. The lines limit is then discarded and the
-    -- machine's maximum used instead
+    -- the lines limit is discarded and the machine's maximum used instead
     local before = getConsoleBufferSize()
     assert.is_true(setConsoleBufferSize("main", 1000, 100, true))
     local maximum = getConsoleBufferSize()
@@ -8101,11 +8098,23 @@ describe("Console buffer size", function()
     assert.are.equal(before, getConsoleBufferSize())
   end)
 
-  it("the useMaximum flag needs the window to be named", function()
-    -- without a name the flag lands in the batch deletion size's place
-    local ok, err = pcall(setConsoleBufferSize, 1000, 100, true)
-    assert.is_false(ok)
-    assert.is_truthy(tostring(err):find("setConsoleBufferSize: bad argument #3 type", 1, true))
+  it("the useMaximum flag works without naming the main console", function()
+    local before = getConsoleBufferSize()
+    assert.are.same({true}, {setConsoleBufferSize(1000, 100, true)})
+    local maximum, batch = getConsoleBufferSize()
+    assert.is_true(maximum > 1000, "maximum was " .. maximum)
+    assert.are.equal(100, batch)
+    assert.are.same({true}, {setConsoleBufferSize(2500, 250, false)})
+    assert.are.same({2500, 250}, {getConsoleBufferSize()})
+    assert.is_true(setConsoleBufferSize(before, mainBatchSize))
+    assert.are.equal(before, getConsoleBufferSize())
+  end)
+
+  it("three arguments not ending in a boolean still start with the window name", function()
+    assert.is_true(setConsoleBufferSize(console, 3000, 300))
+    assert.are.same({3000, 300}, {getConsoleBufferSize(console)})
+    local unknown = "bufferSizeNoSuchWindow" .. suffix
+    assert.are.same({nil, ('window "%s" not found'):format(unknown)}, {setConsoleBufferSize(unknown, 3000, 300)})
   end)
 
   it("useMaximum is refused for anything but the main console", function()

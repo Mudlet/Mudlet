@@ -2013,7 +2013,8 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
     int s = 1;
     const int n = lua_gettop(L);
     const char* windowName = "";
-    if (n > 2) {
+    // three arguments ending in a boolean are the limits and useMaximum, with no name
+    if (n > 3 || (n == 3 && !lua_isboolean(L, 3))) {
         windowName = WINDOW_NAME(L, s++);
     }
 
