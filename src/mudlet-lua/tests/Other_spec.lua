@@ -3196,16 +3196,87 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
+  describe("Tests the functionality of translateTable", function()
+    local language = "xx_TRANSLATETABLE"
+
+    before_each(function()
+      mudlet.translations[language] = { north = "nord", south = "sud" }
+    end)
+
+    after_each(function()
+      mudlet.translations[language] = nil
+    end)
+
+    it("should translate each entry into the language asked for, in order", function()
+      assert.are.same({ "sud", "nord" }, translateTable({ "south", "north" }, language))
+    end)
+
+    it("should keep an entry the language has no translation for", function()
+      assert.are.same({ "nord", "up" }, translateTable({ "north", "up" }, language))
+    end)
+
+    it("should return nil and a message for a language with no translations", function()
+      local result, msg = translateTable({ "north" }, "xx_NOSUCHLANGUAGE")
+      assert.is_nil(result)
+      assert.are.equal("xx_NOSUCHLANGUAGE doesn't have any translations for it", msg)
+    end)
+
+    it("should refuse data that is not a table", function()
+      assert.has_error(function() translateTable("north", language) end,
+        "translateTable: bad argument #1 type (input as table expected, got string!)")
+    end)
+  end)
+
+  describe("Tests the functionality of getColorWildcard", function()
+    -- 31 is the SGR code for red, which isAnsiFgColor() numbers 4
+    local red = 4
+
+    local function wildcardsFor(text)
+      local results
+      local id = tempTrigger("getColorWildcardMarker", function() results = { getColorWildcard(red) } end)
+      local ok, msg = feedTelnet("\27[0mgetColorWildcardMarker " .. text .. "\27[0m\r\n")
+      -- killed here rather than in finally(): busted keeps only a test's last finally,
+      -- and one test calls this twice
+      killTrigger(id)
+      assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+      assert.is_truthy(results, "the trigger did not fire")
+      return results[1]
+    end
+
+    it("should return each run of the colour in the order they appear", function()
+      assert.are.same({ "RED", "X" }, wildcardsFor("plain \27[31mRED\27[0m mid \27[31mX\27[0m end"))
+    end)
+
+    it("should return a run that reaches the end of the line", function()
+      assert.are.same({ "tail" }, wildcardsFor("abc \27[31mtail"))
+      assert.are.same({ "T" }, wildcardsFor("abc \27[31mT"))
+    end)
+
+    it("should split runs that another colour separates", function()
+      assert.are.same({ "A", "C" }, wildcardsFor("xx \27[31mA\27[0m\27[32mB\27[31mC\27[0m"))
+    end)
+
+    it("should return false when no text has the colour", function()
+      assert.is_false(wildcardsFor("nothing red here"))
+    end)
+
+    it("should return whole characters from a line with non-ASCII text", function()
+      assert.are.same({ "ÖÄ" }, wildcardsFor("ä \27[31mÖÄ\27[0m z"))
+    end)
+
+    it("should keep its place after a character outside the Basic Multilingual Plane", function()
+      assert.are.same({ "😀x", "€" }, wildcardsFor("😀 \27[31m😀x\27[0m 😀\27[31m€\27[0m"))
+    end)
+  end)
+
     --[[
     TODO:
-      getColorWildcard()
       lockExit()
       hasExitLock()
       registerAnonymousEventHandler()
       killAnonymousEventHandler()
       dispatchEventToFunctions()
       killtimeframe()
-      translateTable()
   ]]
 end)
 
