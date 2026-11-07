@@ -1648,6 +1648,19 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="4" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_showTimeStamps">
+            <property name="toolTip">
+             <string extracomment="Tooltip of the profile preference that shows the time each line arrived at the start of every line in the main window. &quot;Toggle time stamps&quot; must match the translation of that button's tooltip">&lt;p&gt;Shows the time each line arrived at the start of every line in the main window. This is the same setting as the main window's &quot;Toggle time stamps&quot; button.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string extracomment="Accessibility-friendly description of the profile preference that shows the time each line arrived at the start of every line in the main window. &quot;Toggle time stamps&quot; must match the translation of that button's tooltip">Shows the time each line arrived at the start of every line in the main window. This is the same setting as the main window's &quot;Toggle time stamps&quot; button.</string>
+            </property>
+            <property name="text">
+             <string extracomment="Label of the profile preference that shows the time each line arrived at the start of every line in the main window">Show timestamps</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -1719,6 +1732,12 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="1" column="0">
            <widget class="QComboBox" name="code_editor_theme_selection_combobox">
+            <property name="accessibleName">
+             <string extracomment="Screen reader name of the editor color theme picker on the Editor page of the settings, which has no visible label of its own">Editor theme</string>
+            </property>
+            <property name="accessibleDescription">
+             <string extracomment="Screen reader description of the editor color theme picker on the Editor page of the settings">Color theme the script editor is drawn in</string>
+            </property>
             <property name="editable">
              <bool>true</bool>
             </property>
@@ -1726,6 +1745,12 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="1" column="1">
            <widget class="QComboBox" name="script_preview_combobox">
+            <property name="accessibleName">
+             <string extracomment="Screen reader name of the picker for the script shown as the theme preview on the Editor page of the settings, which has no visible label of its own">Script to preview</string>
+            </property>
+            <property name="accessibleDescription">
+             <string extracomment="Screen reader description of the picker for the script shown as the theme preview on the Editor page of the settings">One of your scripts to show in the editor theme preview</string>
+            </property>
             <property name="editable">
              <bool>true</bool>
             </property>
@@ -5750,6 +5775,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
   <tabstop>checkBox_showTabConnectionIndicators</tabstop>
   <tabstop>checkBox_enableTextAnalyzer</tabstop>
+  <tabstop>checkBox_showTimeStamps</tabstop>
   <tabstop>checkBox_echoLuaErrors</tabstop>
   <tabstop>comboBox_controlCharacterHandling</tabstop>
   <tabstop>code_editor_theme_selection_combobox</tabstop>

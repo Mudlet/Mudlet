@@ -1256,6 +1256,34 @@ if false then
 
 
 
+  --- An environment's color before the map style recolors its rooms (the default style and most others do), where
+  --- getCustomEnvColorTable() lists the colors setCustomEnvColor() was given. A remap in the map file (as IRE games'
+  --- XML maps have) comes first and sends the environment to another. An environment from 1 to 16 that the map
+  --- knows, by a remap onto it or by setCustomEnvColor(), is in the profile's mapper ANSI color, whatever
+  --- setCustomEnvColor() gave it. Any other environment setCustomEnvColor() gave a color is in that color, at any ID,
+  --- 17 to 255 and 0 or below included. One from 17 to 255 the map knows only by a remap is in the 256-color palette.
+  --- Any other is red.
+  ---
+  --- @param environmentID the environment, as setRoomEnv() takes it
+  --- @return red, green, blue and alpha, each 0 to 255, then true when the map gives the environment a color
+  ---   or false when the red is the mapper's fallback
+  ---
+  --- @usage Echo the color of the room the player is in
+  ---   <pre>
+  ---   local room = getPlayerRoom()
+  ---   local environment = room and getRoomEnv(room)
+  ---   if environment then
+  ---     local r, g, b = getMapEnvColor(environment)
+  ---     echo(string.format("#%02x%02x%02x\n", r, g, b))
+  ---   end
+  ---   </pre>
+  ---
+  --- @see setCustomEnvColor, getCustomEnvColorTable
+  function getMapEnvColor(environmentID)
+  end
+
+
+
   --- Wrap line lineNumber of mini console (window) windowName. This function will interpret \n characters,
   --- apply word wrap and display the new lines on the screen. This function may be necessary if you use
   --- deleteLine() and thus erase the entire current line in the buffer, but you want to do some further

@@ -649,10 +649,20 @@ bool Host::closeWithNoView()
     // or reset of this profile reached from there meanwhile would delete it under this call
     mLuaInterpreter.enterNestedEventLoop();
     raiseExitEventIfOwed();
-    // profile.ini too, which the Host's deletion would otherwise write with no one to tell
-    if ((mFORCE_SAVE_ON_EXIT || mForcedClose) && !(saveForClose() && syncProfileIni())) {
-        qWarning().nospace().noquote() << "Host::closeWithNoView() WARNING - \"" << getName() << "\" could not be saved.";
-        emit closeSaveFailed();
+    // Not one whose save did not load, nor one still loading, which only a close that does not wait for the load
+    // reaches: either would write what it holds over its last good save and map, and keeping those is no failure
+    if (mLoadedOk && !mIsProfileLoadingSequence) {
+        // Saved even with "Auto save on exit" off: nobody can answer the GUI's "Save profile?" here, and the maintainer chose Yes
+        const bool saved = saveForClose();
+        // profile.ini even when that failed, as the Host's deletion would otherwise write it with no one to tell
+        const bool iniSynced = syncProfileIni();
+        if (!iniSynced) {
+            qWarning().nospace().noquote() << "Host::closeWithNoView() WARNING - the profile.ini of \"" << getName() << "\" could not be written.";
+        }
+        if (!(saved && iniSynced)) {
+            qWarning().nospace().noquote() << "Host::closeWithNoView() WARNING - \"" << getName() << "\" could not be saved.";
+            emit closeSaveFailed();
+        }
     }
     mLuaInterpreter.leaveNestedEventLoop();
     closeChildren();
@@ -688,6 +698,11 @@ bool Host::busyRunning() const
 
 bool Host::saveForClose()
 {
+    // saveProfile() refuses it, and its scripts run before its map is loaded, so until then the map it holds may not be the player's
+    if (mIsProfileLoadingSequence && !mLoadedMap) {
+        qWarning().nospace().noquote() << "Host::saveForClose() WARNING - \"" << getName() << "\" is not saved, as it is still loading.";
+        return false;
+    }
     modulesToWrite.clear();
     // A save still running would turn this one away, and it may predate the session's last changes
     waitForProfileSave();
@@ -707,7 +722,14 @@ bool Host::saveForClose()
         xmlWritten = xmlWritten && write.isFinished() && write.result();
     }
     // Only reached when this save started, so the module write is its own
-    return xmlWritten && moduleWrite.isFinished() && moduleWrite.result() && mapSaved;
+    const bool profileWritten = xmlWritten && moduleWrite.isFinished() && moduleWrite.result();
+    if (!profileWritten) {
+        qWarning().nospace().noquote() << "Host::saveForClose() WARNING - the profile \"" << getName() << "\" or its modules could not be written.";
+    }
+    if (!mapSaved) {
+        qWarning().nospace().noquote() << "Host::saveForClose() WARNING - the map of \"" << getName() << "\" could not be written.";
+    }
+    return profileWritten && mapSaved;
 }
 
 bool Host::loadProfileSave(const QString& saveFileName)
@@ -867,6 +889,7 @@ void Host::loadMapAndConnect(const bool connect)
 
     // Now load the default (latest stored) map file:
     loadMap();
+    mLoadedMap = true;
 
     //NOTE: this is a potential problem if users connect by hand quickly
     //      and one host has a slower response time as the other one, but
@@ -1474,6 +1497,11 @@ std::pair<bool, QString> Host::getModuleSync(const QString& moduleName)
     return {false, qsl("module name '%1' not found").arg(moduleName)};
 }
 
+bool Host::moduleSavesBack(const QString& moduleName) const
+{
+    return mInstalledModules.value(moduleName).value(1).toInt() && mModulesLoadedOk.contains(moduleName);
+}
+
 bool Host::resetProfile_phase1()
 {
     if (mResetProfile) {
@@ -2035,8 +2063,13 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font, const DisplayFo
 
     qDebug().noquote().nospace() << "Host::setDisplayFont(...) INFO - No TMainConsole to set font for - faking it";
 
+    // Not displayFontWithNoView(), which would add the bundled fonts before anything draws in them
+    const TFontAttributes before(mTempDisplayFont.value_or(TFontAttributes(!mNoAntiAlias).makeFont()));
     mTempDisplayFontAttributes = TFontAttributes(font);
     mTempDisplayFont = mTempDisplayFontAttributes.value().makeFont();
+    if (TFontAttributes(mTempDisplayFont.value()) != before) {
+        emit signal_consoleFontChanged(mTempDisplayFont.value());
+    }
 
     return {true, QString()};
 }
@@ -2093,8 +2126,13 @@ void Host::setDisplayFontSize(int size)
         mTempDisplayFontAttributes = TFontAttributes(!mNoAntiAlias);
     }
 
+    // Not displayFontWithNoView(), which would add the bundled fonts before anything draws in them
+    const TFontAttributes before(mTempDisplayFont.value_or(TFontAttributes(!mNoAntiAlias).makeFont()));
     mTempDisplayFontAttributes.value().mPointSize = size;
     mTempDisplayFont = mTempDisplayFontAttributes.value().makeFont();
+    if (TFontAttributes(mTempDisplayFont.value()) != before) {
+        emit signal_consoleFontChanged(mTempDisplayFont.value());
+    }
 }
 
 // Helper function to create a QFont with proper antialiasing settings
@@ -3030,6 +3068,7 @@ void Host::refreshMainConsoleColors()
     mpMainConsoleModel->mCommandBgColor = mCommandBgColor;
     mpMainConsoleModel->mFormatCurrent.setColors(mFgColor, mBgColor);
     mpMainConsoleModel->buffer.updateColors();
+    emit mpMainConsoleModel->mNotifier.colorsChanged();
 }
 
 void Host::applyMainConsoleColors()
@@ -3130,10 +3169,8 @@ QString Host::loggingAnnouncementText(const bool isLogging, const QString& logFi
 void Host::raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName)
 {
     if (!hasConsoleView()) {
-        // Written where TMainConsole::slot_loggingAnnouncement() would print it,
-        // so that a view built later shows it
-        const QString text = QCoreApplication::translate("TConsole", "System Message: %1").arg(qsl("%1\n").arg(loggingAnnouncementText(isLogging, logFileName)));
-        mpMainConsoleModel->buffer.append(text, 0, text.size(), QColorConstants::Red, QColorConstants::Transparent);
+        // As TMainConsole::slot_loggingAnnouncement() prints it, so that a view built later, and an app, shows it
+        mpMainConsoleModel->printSystemMessage(qsl("%1\n").arg(loggingAnnouncementText(isLogging, logFileName)));
     }
     emit signal_loggingAnnouncement(isLogging, logFileName);
 }
@@ -4687,21 +4724,18 @@ void Host::removePackageInfo(const QString& packageName, const bool isModule)
 // This may be called by installPackage(...) in that case however it will have
 // module == 2 and in THAT situation it will NOT RE-invoke installPackage(...)
 // again - Slysven
-bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType thing)
+bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType thing, const bool waitOutASave)
 {
     //     As with the installPackage, the module codes are:
     //     0=package, 1=uninstall from dialog, 2=uninstall due to module syncing,
     //     3=uninstall from a script
 
     bool isModule = thing != enums::PackageModuleType::Package;
-    if (isModule) {
-        if (!mInstalledModules.contains(packageName)) {
-            return false;
-        }
-    } else {
-        if (!mInstalledPackages.contains(packageName)) {
-            return false;
-        }
+    const auto installed = [&] {
+        return isModule ? mInstalledModules.contains(packageName) : mInstalledPackages.contains(packageName);
+    };
+    if (!installed()) {
+        return false;
     }
 
     // The user's own items carry no package name, so the units below would remove every one of them. Only a
@@ -4744,7 +4778,19 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     // Don't remove items from under a running profile save
     if (currentlySavingProfile()) {
-        return false;
+        // Not from the save's own module sync, which cannot finish until this returns, nor from a close,
+        // whose final save would then keep what this removes from disk
+        if (!waitOutASave || syncingModulesAfterSave() || closeStarted()) {
+            return false;
+        }
+        waitForProfileSave(true);
+        // As the save ends, another profile's module reload can raise an event whose handler removes it first
+        if (!installed()) {
+            return true;
+        }
+        if (currentlySavingProfile()) {
+            return false;
+        }
     }
 
     //PackageModuleType::ModuleSync seems to be only used for reloading/syncing
@@ -4788,7 +4834,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     // waitForProfileSave() pumps the event loop, so a handler may have removed it already. That's success:
     // a refusal would make callers replacing the package skip the replacement.
-    if (!(isModule ? mInstalledModules.contains(packageName) : mInstalledPackages.contains(packageName))) {
+    if (!installed()) {
         return true;
     }
 
@@ -5498,7 +5544,7 @@ QColor Host::getAnsiColor(const int ansiCode, const bool isBackground) const
             return QColor(r == 0 ? 0 : (r - 1) * 40 + 95,
                           g == 0 ? 0 : (g - 1) * 40 + 95,
                           b == 0 ? 0 : (b - 1) * 40 + 95);
-        } else if (ansiCode < 256) {
+        } else if (ansiCode >= 232 && ansiCode < 256) {
             const int k = (ansiCode - 232) * 10 + 8;
             return QColor(k, k, k);
         } else {
@@ -6406,13 +6452,13 @@ bool Host::insertWindowText(const QString& name, const QString& text)
     return true;
 }
 
-bool Host::replaceWindowText(const QString& name, const QString& text)
+bool Host::replaceWindowText(const QString& name, const QString& text, const bool keepColor)
 {
     auto pModel = consoleModelNamed(name);
     if (!pModel) {
         return false;
     }
-    pModel->replace(text);
+    pModel->replace(text, keepColor);
     markSelectionDirty(*pModel);
     return true;
 }

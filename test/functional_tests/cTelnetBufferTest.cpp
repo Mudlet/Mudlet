@@ -85,6 +85,8 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
+    // The first GA a test feeds switches the profile to GA-driven posting, which later tests must not inherit
+    bool mSavedGaDriver = false;
     Host* mpHost = nullptr;
     const QString mHostname = qsl("BufferTest-Host");
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
@@ -143,6 +145,20 @@ private:
         TMainConsole* console = mpHost->mainConsoleView();
         for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
             if (console->buffer.line(i).contains(text)) {
+                lines << console->buffer.line(i);
+            }
+        }
+        return lines;
+    }
+
+    // The main console's lines from the first one carrying the given text to
+    // the end, so a blank line slipped in after it shows up as an empty entry.
+    QStringList linesFrom(const QString& text) const
+    {
+        QStringList lines;
+        TMainConsole* console = mpHost->mainConsoleView();
+        for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
+            if (!lines.isEmpty() || console->buffer.line(i).contains(text)) {
                 lines << console->buffer.line(i);
             }
         }
@@ -275,6 +291,7 @@ private slots:
         QVERIFY(mpHost);
         QVERIFY(mpHost->mainConsoleView());
         mpHost->mainConsoleView()->buffer.clear();
+        mSavedGaDriver = mpHost->mTelnet.mGA_Driver;
         // A leaked recursion level is permanent for the profile and eventually
         // turns processSocketData() into a silent no-op, which would make the
         // "nothing was written" assertions below pass for the wrong reason.
@@ -283,6 +300,7 @@ private slots:
 
     void cleanup()
     {
+        mpHost->mTelnet.mGA_Driver = mSavedGaDriver;
         QCOMPARE(mpHost->mTelnet.mDecompressionRecursionDepth, 0);
         QVERIFY(!mpHost->mTelnet.mNeedDecompression);
     }
@@ -358,6 +376,157 @@ private slots:
         QVERIFY2(bufferContains(trailing),
                  "the text following a GA was split up - recvdGA was not cleared in the "
                  "mFORCE_GA_OFF branch, so every byte after the GA got its own newline");
+    }
+
+    // Some games end every prompt with both IAC EOR and IAC GA. The second one
+    // ends no new text, so it must neither add a blank line nor count as a
+    // second prompt.
+    void eorThenGaEndOnePrompt()
+    {
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        QByteArray data("\r\nPROMPT_A> ");
+        data += TN_IAC;
+        data += TN_EOR;
+        data += TN_IAC;
+        data += TN_GA;
+        data += "AFTER_A\r\n";
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        QCOMPARE(linesFrom(qsl("PROMPT_A")), (QStringList{qsl("PROMPT_A> "), qsl("AFTER_A"), QString()}));
+        QCOMPARE(prompts.count(), 1);
+    }
+
+    void eorAndGaInSeparateReadsEndOnePrompt()
+    {
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        QByteArray first("\r\nPROMPT_B> ");
+        first += TN_IAC;
+        first += TN_EOR;
+        QByteArray second;
+        second += TN_IAC;
+        second += TN_GA;
+        second += "AFTER_B\r\n";
+
+        mpHost->mTelnet.processSocketData(first.data(), first.size(), true);
+        mpHost->mTelnet.processSocketData(second.data(), second.size(), true);
+
+        QCOMPARE(linesFrom(qsl("PROMPT_B")), (QStringList{qsl("PROMPT_B> "), qsl("AFTER_B"), QString()}));
+        QCOMPARE(prompts.count(), 1);
+    }
+
+    void gaAloneEndsEachPrompt()
+    {
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        QByteArray data("\r\nPROMPT_C> ");
+        data += TN_IAC;
+        data += TN_GA;
+        data += "PROMPT_D> ";
+        data += TN_IAC;
+        data += TN_GA;
+        data += "AFTER_D\r\n";
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        QCOMPARE(linesFrom(qsl("PROMPT_C")), (QStringList{qsl("PROMPT_C> "), qsl("PROMPT_D> "), qsl("AFTER_D"), QString()}));
+        QCOMPARE(prompts.count(), 2);
+    }
+
+    // A game sending only GA ends a prompt with each one, even an empty one
+    void gaRepeatedEndsAPromptEachTime()
+    {
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        QByteArray data("\r\nPROMPT_E> ");
+        data += TN_IAC;
+        data += TN_GA;
+        data += TN_IAC;
+        data += TN_GA;
+        data += "AFTER_E\r\n";
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        QCOMPARE(linesFrom(qsl("PROMPT_E")), (QStringList{qsl("PROMPT_E> "), QString(), qsl("AFTER_E"), QString()}));
+        QCOMPARE(prompts.count(), 2);
+    }
+
+    // A pair with nothing before it is an empty prompt of its own
+    void eorThenGaAfterAPromptEndAnEmptyPrompt()
+    {
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        QByteArray data("\r\nPROMPT_I> ");
+        for (int i = 0; i < 2; ++i) {
+            data += TN_IAC;
+            data += TN_EOR;
+            data += TN_IAC;
+            data += TN_GA;
+        }
+        data += "AFTER_I\r\n";
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        QCOMPARE(linesFrom(qsl("PROMPT_I")), (QStringList{qsl("PROMPT_I> "), QString(), qsl("AFTER_I"), QString()}));
+        QCOMPARE(prompts.count(), 2);
+    }
+
+    void textBetweenEorAndGaEndsTwoPrompts()
+    {
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        QByteArray data("\r\nPROMPT_J> ");
+        data += TN_IAC;
+        data += TN_EOR;
+        data += "PROMPT_K> ";
+        data += TN_IAC;
+        data += TN_GA;
+        data += "AFTER_K\r\n";
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        QCOMPARE(linesFrom(qsl("PROMPT_J")), (QStringList{qsl("PROMPT_J> "), qsl("PROMPT_K> "), qsl("AFTER_K"), QString()}));
+        QCOMPARE(prompts.count(), 2);
+    }
+
+    void eorThenGaEndOnePromptWithGaForcedOff()
+    {
+        const bool savedForceGaOff = mpHost->mTelnet.mFORCE_GA_OFF;
+        auto restoreFlag = qScopeGuard([this, savedForceGaOff]() {
+            mpHost->mTelnet.mFORCE_GA_OFF = savedForceGaOff;
+        });
+        mpHost->mTelnet.mFORCE_GA_OFF = true;
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        QByteArray data("\r\nPROMPT_G> ");
+        data += TN_IAC;
+        data += TN_EOR;
+        data += TN_IAC;
+        data += TN_GA;
+        data += "AFTER_G\r\nPROMPT_H> ";
+        data += TN_IAC;
+        data += TN_EOR;
+        QByteArray next;
+        next += TN_IAC;
+        next += TN_GA;
+        next += "AFTER_H\r\n";
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+        mpHost->mTelnet.processSocketData(next.data(), next.size(), true);
+
+        QCOMPARE(linesFrom(qsl("PROMPT_G")), (QStringList{qsl("PROMPT_G> "), qsl("AFTER_G"), qsl("PROMPT_H> "), qsl("AFTER_H"), QString()}));
+        QCOMPARE(prompts.count(), 2);
+    }
+
+    void replayedEorThenGaEndOnePrompt()
+    {
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        QByteArray chunk("\r\nPROMPT_F> ");
+        chunk += TN_IAC;
+        chunk += TN_EOR;
+        chunk += TN_IAC;
+        chunk += TN_GA;
+        chunk += "AFTER_F\r\n";
+
+        feedReplayChunk(chunk);
+
+        QCOMPARE(linesFrom(qsl("PROMPT_F")), (QStringList{qsl("PROMPT_F> "), qsl("AFTER_F"), QString()}));
+        QCOMPARE(prompts.count(), 1);
     }
 
     // The production route from Lua: feedTelnet() -> loopbackTest() ->

@@ -21,7 +21,9 @@
 # a process of its own, so that a phone app can link it as the terminal runner below does.
 add_library(mudlet_headless STATIC
     THeadlessSession.cpp
+    THeadlessSessionInput.cpp
     THeadlessSession.h
+    THeadlessSessionOutput.cpp
 )
 set_target_properties(mudlet_headless PROPERTIES AUTOMOC ON POSITION_INDEPENDENT_CODE ON)
 target_include_directories(mudlet_headless INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})

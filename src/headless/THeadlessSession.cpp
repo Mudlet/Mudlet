@@ -23,6 +23,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
+#include "MudletMedia.h"
 #include "MudletReplay.h"
 #include "SecureStringUtils.h"
 #include "TAppFrontend.h"
@@ -246,6 +247,25 @@ QString configDirProblem(const QString& dir)
 
 } // namespace
 
+class THeadlessSession::DebugSink final : public TDebug::Sink
+{
+public:
+    explicit DebugSink(THeadlessSession& session)
+    : mSession(session)
+    {
+    }
+
+    void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const qint64 arrivalMSecs) override
+    {
+        ++gSignalsBeingHandedOut;
+        emit mSession.debugText(text, foreground, background, arrivalMSecs);
+        --gSignalsBeingHandedOut;
+    }
+
+private:
+    THeadlessSession& mSession;
+};
+
 THeadlessSession::THeadlessSession(QObject* parent)
 : QObject(parent)
 {
@@ -253,6 +273,7 @@ THeadlessSession::THeadlessSession(QObject* parent)
 
 THeadlessSession::~THeadlessSession()
 {
+    closeDebugConsole();
     if (!mpPool) {
         return;
     }
@@ -379,27 +400,85 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
     }
 
     const unsigned int run = ++mRun;
+    mDeliveredConsoleFont.reset();
     mUnsavedProfiles.clear();
     mLoadFailed = false;
+    // A copy, as the profile's start prints to the debug console, whose handler may delete the session
+    const QString profileName = mProfileName;
     Host* pHost = mpPool->openProfile(
-            mProfileName,
+            profileName,
             options.connect,
-            [this, run, &password](Host* pNewHost) {
+            [this, self, run, &password](Host* pNewHost) {
+                if (!self) {
+                    return;
+                }
                 mpHost = pNewHost;
                 mSecureConnectionOffered = false;
                 mMapOperationCancelable = false;
                 pNewHost->givePass(password);
+                mShownLinesOfPasses.clear();
+                pNewHost->mainConsoleModel().mTriggerTextShownElsewhere = [self = QPointer<THeadlessSession>(this)]() {
+                    return self && self->lineShownTaken();
+                };
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineCommitted, this, &THeadlessSession::lineCommitted);
+                connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineShown, this, &THeadlessSession::triggerPassEnded);
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::textPrinted, this, [this](const QString& text) {
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;
                     emit localText(profile, text);
                     --gSignalsBeingHandedOut;
                 });
-                connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text) {
+                connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::bufferCleared, this, [this, model = &pNewHost->mainConsoleModel()]() {
+                    for (QList<ShownLine>& lines : mShownLinesOfPasses) {
+                        lines.clear();
+                    }
+                    // An app that hears the clear empties the open line, but the CLI's terminal keeps it
+                    if (isSignalConnected(QMetaMethod::fromSignal(&THeadlessSession::mainConsoleCleared))) {
+                        model->forgetPrintedLine();
+                    }
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;
-                    emit errorConsoleText(profile, text);
+                    emit mainConsoleCleared(profile);
+                    --gSignalsBeingHandedOut;
+                });
+                // The file is read as sent, as a later toggle may change it before this is delivered
+                connect(pNewHost, &Host::signal_loggingStateChanged, this, [this, run, pNewHost](const bool logging) {
+                    const QString fileName = logging ? pNewHost->mainConsoleModel().mLogFileName : QString();
+                    QMetaObject::invokeMethod(
+                            this,
+                            [this, run, logging, fileName]() {
+                                if (run == mRun) {
+                                    const QString profile = mProfileName;
+                                    mLoggingFor = logging ? std::optional<QString>(profile) : std::nullopt;
+                                    emit loggingChanged(profile, logging, fileName);
+                                }
+                            },
+                            Qt::QueuedConnection);
+                });
+                connect(
+                        pNewHost,
+                        &Host::signal_consoleFontChanged,
+                        this,
+                        [this, run]() {
+                            // Read now, not as sent: the load queues each step it took, the missing family before
+                            // the bundled default that stands in for it, and consoleFont() gave the last already
+                            if (run != mRun || !mpHost || !mDeliveredConsoleFont) {
+                                return;
+                            }
+                            const QFont font = mpHost->displayFontWithNoView();
+                            if (TFontAttributes(font) == TFontAttributes(*mDeliveredConsoleFont)) {
+                                return;
+                            }
+                            mDeliveredConsoleFont = font;
+                            const QString profile = mProfileName;
+                            emit consoleFontChanged(profile, font);
+                        },
+                        Qt::QueuedConnection);
+                connectOutputRelays(pNewHost, run);
+                connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text, const QColor& foreground, const QColor& background) {
+                    const QString profile = mProfileName;
+                    ++gSignalsBeingHandedOut;
+                    emit errorConsoleText(profile, text, foreground, background);
                     --gSignalsBeingHandedOut;
                 });
                 // Held by the profile, which an exit handler may still be running once the session has gone
@@ -429,8 +508,8 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     const bool moved = wanted && pView && pView->hiddenInputOpened();
                     const QString profile = mProfileName;
                     mHiddenInputFor = wanted ? std::optional<QString>(profile) : std::nullopt;
+                    const QPointer<THeadlessSession> self(this);
                     if (moved) {
-                        const QPointer<THeadlessSession> self(this);
                         ++gSignalsBeingHandedOut;
                         emit typedLineMoveRequested(profile);
                         --gSignalsBeingHandedOut;
@@ -441,6 +520,12 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     ++gSignalsBeingHandedOut;
                     emit hiddenInputWanted(profile, wanted);
                     --gSignalsBeingHandedOut;
+                    // After, so it empties the line the app has just put back
+                    if (!wanted && self && run == mRun) {
+                        if (auto* pClosedView = dynamic_cast<TNullConsoleFrontend*>(pNewHost->consoleFrontend())) {
+                            pClosedView->hiddenInputClosed();
+                        }
+                    }
                 });
                 connect(pNewHost, &Host::signal_announcementRequested, this, [this](const QString& text, const QString& processing) {
                     const QString profile = mProfileName;
@@ -645,6 +730,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                         }
                     });
                 }
+                connectInputRelays(run);
                 // Direct, so it keeps its place among the game's lines and hiddenInputWanted; an exit handler's
                 // text is for a line the app no longer shows, and a script's close raises it before quitRequested
                 connect(pNewHost, &Host::signal_commandLineTextRequested, this, [this, run, pNewHost](const QString& text) {
@@ -693,7 +779,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                         },
                         Qt::QueuedConnection);
             },
-            [&options, tls, profile = mProfileName](Host* pNewHost) {
+            [&options, tls, profile = profileName](Host* pNewHost) {
                 // As the dialog: stored details over the game's own, then what was given
                 const QString storedUrl = MudletApp::readProfileData(profile, qsl("url")).trimmed();
                 const QString storedPort = MudletApp::readProfileData(profile, qsl("port")).trimmed();
@@ -750,6 +836,8 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                                : tr("The profile \"%1\" could not be loaded: %2").arg(mProfileName, pHost->mProfileLoadError);
         return StartResult::loadFailed;
     }
+    mDeliveredConsoleFont = consoleFont();
+    noteOutputStateAtLoad();
     // A copy, as a handler may delete the session while its argument is in use
     const QString profile = mProfileName;
     emit profileLoaded(profile);
@@ -790,6 +878,11 @@ bool THeadlessSession::storeConnectionDetails(const Options& options, const std:
 Host* THeadlessSession::host() const
 {
     return mpHost.data();
+}
+
+QFont THeadlessSession::consoleFont() const
+{
+    return mpHost ? mpHost->displayFontWithNoView() : QFont();
 }
 
 bool THeadlessSession::submit(const QString& line)
@@ -1052,6 +1145,65 @@ bool THeadlessSession::setScreenSize(const int columns, const int rows)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
     return true;
+}
+
+bool THeadlessSession::setDebugConsoleShown(const bool shown)
+{
+    if (refused()) {
+        return false;
+    }
+    if (!shown) {
+        if (TDebug::sink() && !debugConsoleShown()) {
+            //: Error from a frontend with no window that asked to close the Central Debug Console while another session in the same app had taken it over by showing it
+            mErrorString = tr("Another session has shown the Central Debug Console since, so only that one can close it.");
+            return false;
+        }
+        closeDebugConsole();
+        return true;
+    }
+    if (debugConsoleShown()) {
+        return true;
+    }
+    if (!mpDebugSink) {
+        mpDebugSink = std::make_unique<DebugSink>(*this);
+    }
+    TDebug::setSink(mpDebugSink.get());
+    TDebug::smDebugMode = true;
+    // As the GUI's console does once it is shown; a handler may delete the session meanwhile
+    const QPointer<THeadlessSession> self(this);
+    TDebug::flushMessageQueue();
+    // Not TDebug::announceFilters(), which points at the GUI's filter bar
+    if (const int hidden = TDebug::hiddenCategoryCount(); self && debugConsoleShown() && hidden) {
+        //: Shown in the Central Debug Console of an app with no window when it opens with some kinds of message hidden. %n is how many.
+        const QString text = tr("%n kind(s) of message are hidden.\n", "", hidden);
+        // TDebug's own tag for a message of its own
+        mpDebugSink->printDebugLine(qsl("[\u2731] %1").arg(text), Qt::white, Qt::darkBlue, QDateTime::currentMSecsSinceEpoch());
+    }
+    return true;
+}
+
+void THeadlessSession::setDebugCategories(const TDebug::Categories categories)
+{
+    TDebug::setEnabledCategories(categories & TDebug::csmAllCategories);
+}
+
+TDebug::Categories THeadlessSession::debugCategories() const
+{
+    return TDebug::enabledCategories();
+}
+
+bool THeadlessSession::debugConsoleShown() const
+{
+    return mpDebugSink && TDebug::sink() == mpDebugSink.get();
+}
+
+// As closing the GUI's console does
+void THeadlessSession::closeDebugConsole()
+{
+    if (debugConsoleShown()) {
+        TDebug::setSink(nullptr);
+        TDebug::smDebugMode = false;
+    }
 }
 
 bool THeadlessSession::answerSecureConnectionOffer(const bool accept)
@@ -1392,6 +1544,9 @@ bool THeadlessSession::shutdown(const bool save)
         return false;
     }
     if (!mpPool) {
+        // Shown before a start() that failed, or after the last shutdown(); with a pool, detachFromHost() closes it
+        // once the profiles have written their last
+        closeDebugConsole();
         return true;
     }
     if (poolReconnecting(*mpPool)) {
@@ -1541,6 +1696,10 @@ void THeadlessSession::withdrawSecureConnectionOffer()
 // So nothing the profile still sends reaches a session that has let it go
 void THeadlessSession::detachFromHost()
 {
+    closeDebugConsole();
+    if (mpLatencyPacer) {
+        mpLatencyPacer->stop();
+    }
     mSecureConnectionOffered = false;
     mMapOperationCancelable = false;
     if (mpHost) {
@@ -1552,6 +1711,9 @@ void THeadlessSession::detachFromHost()
     }
     if (MudletReplay* pReplay = MudletReplay::self()) {
         disconnect(pReplay, nullptr, this, nullptr);
+    }
+    if (MudletMedia* pMedia = MudletMedia::self()) {
+        disconnect(pMedia, nullptr, this, nullptr);
     }
 }
 
@@ -1565,8 +1727,8 @@ void THeadlessSession::startMapProgress(const QString& title, const QString& lab
     emit mapProgressStarted(profile, title, label, maximum);
 }
 
-// The end of hidden input, a map operation, package download or replay whose own is dropped as stale, or never
-// comes as its Host has gone; false if a handler deleted the session
+// The end of hidden input, logging, a map operation, package download or replay whose own is dropped as stale, or
+// never comes as its Host has gone; false if a handler deleted the session
 bool THeadlessSession::finishOpenProgress()
 {
     const QPointer<THeadlessSession> self(this);
@@ -1578,6 +1740,13 @@ bool THeadlessSession::finishOpenProgress()
         if (!self) {
             return false;
         }
+    }
+    // A closing profile stops logging without saying so, and a false still queued is dropped as stale
+    if (const auto profile = std::exchange(mLoggingFor, std::nullopt)) {
+        emit loggingChanged(*profile, false, QString());
+    }
+    if (!self) {
+        return false;
     }
     if (const auto profile = std::exchange(mMapProgressFor, std::nullopt)) {
         emit mapProgressFinished(*profile);
@@ -1683,6 +1852,15 @@ QList<THeadlessSession::TextRun> textRuns(const QString& text, const TLineFormat
 
 void THeadlessSession::lineCommitted(const int lineIndex)
 {
+    if (mShownLinesOfPasses.isEmpty()) {
+        mLineShownLatched = lineShownWanted();
+    }
+    // What a pass wrote before feeding this line is shown above it
+    QList<ShownLine> written = takeTriggerWrites(lineShownTaken());
+    if (!written.isEmpty() && !mShownLinesOfPasses.isEmpty()) {
+        mShownLinesOfPasses.last().append(std::move(written));
+    }
+    mShownLinesOfPasses.append(QList<ShownLine>());
     if (!mpHost) {
         return;
     }
@@ -1699,7 +1877,102 @@ void THeadlessSession::lineCommitted(const int lineIndex)
     --gSignalsBeingHandedOut;
 }
 
-// A handler of outputLine, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal runs in the middle of a write,
+void THeadlessSession::triggerPassEnded(const int lineIndex, const int lastSegment)
+{
+    if (mShownLinesOfPasses.isEmpty()) {
+        return;
+    }
+    const bool taken = lineShownTaken();
+    QList<ShownLine> lines = mShownLinesOfPasses.takeLast();
+    lines.append(takeTriggerWrites(taken));
+    if (!mpHost || !taken) {
+        return;
+    }
+    const TBuffer& buffer = mpHost->mainConsoleModel().buffer;
+    if (lineIndex >= 0 && lineIndex < buffer.lineBuffer.size()) {
+        lines.prepend(wholeLine(buffer, lineIndex, std::min(lastSegment, static_cast<int>(buffer.lineBuffer.size()) - 1)));
+    } else if (lineIndex >= 0) {
+        qWarning() << "THeadlessSession: lineShown named line" << lineIndex << "of a main console of" << buffer.lineBuffer.size() << "lines, which is not sent";
+    }
+    // Fed from inside an enclosing pass, so shown below that pass's line, which is not yet sent
+    if (!mShownLinesOfPasses.isEmpty()) {
+        mShownLinesOfPasses.last().append(lines);
+        return;
+    }
+    sendShownLines(lines);
+}
+
+// Puts back what a script's wrapLine() split the line into, as the GUI's copy does
+THeadlessSession::ShownLine THeadlessSession::wholeLine(const TBuffer& buffer, const int first, const int last) const
+{
+    // What a delete left of a split line starts on a wrapped segment, indented by the console
+    const int firstPadding = buffer.wrapsFromPreviousLine(first) ? std::min(buffer.wrapIndentWidth(first), static_cast<int>(buffer.lineBuffer.at(first).size())) : 0;
+    QString text = buffer.lineBuffer.at(first).mid(firstPadding);
+    const TLineFormat& firstFormat = buffer.buffer.at(first);
+    std::vector<TChar> format(firstFormat.begin() + std::min<qsizetype>(firstPadding, firstFormat.size()), firstFormat.end());
+    format.resize(text.size(), format.empty() ? TChar() : format.back());
+    for (int y = first + 1; y <= last; ++y) {
+        const QString& segment = buffer.lineBuffer.at(y);
+        const bool wrapped = buffer.wrapsFromPreviousLine(y);
+        const int padding = wrapped ? buffer.wrapIndentWidth(y) : std::min(buffer.wrapGapBefore(y), buffer.wrapIndentWidth(y));
+        const QString joint = wrapped ? QString(buffer.wrapGapBefore(y), QChar::Space) : QString(QChar::LineFeed);
+        text.append(joint);
+        format.insert(format.end(), joint.size(), format.empty() ? TChar() : format.back());
+        const TLineFormat& segmentFormat = buffer.buffer.at(y);
+        const int from = std::min(padding, static_cast<int>(segment.size()));
+        text.append(QStringView(segment).mid(from));
+        const auto formatFrom = segmentFormat.begin() + std::min<qsizetype>(from, segmentFormat.size());
+        format.insert(format.end(), formatFrom, segmentFormat.end());
+        format.resize(text.size(), format.empty() ? TChar() : format.back());
+    }
+    return {text, buffer.promptBuffer.at(first), textRuns(text, TLineFormat(std::move(format)), mpHost->mFgColor, mpHost->mBgColor)};
+}
+
+bool THeadlessSession::lineShownWanted() const
+{
+    static const QMetaMethod lineShownSignal = QMetaMethod::fromSignal(&THeadlessSession::lineShown);
+    return isSignalConnected(lineShownSignal);
+}
+
+// Fixed for a line and all its triggers do, so a receiver connected or let go in a handler gets none of it twice
+bool THeadlessSession::lineShownTaken() const
+{
+    return mShownLinesOfPasses.isEmpty() ? lineShownWanted() : mLineShownLatched;
+}
+
+// Taken even when nothing is connected, so the console holds none of it
+QList<THeadlessSession::ShownLine> THeadlessSession::takeTriggerWrites(const bool taken)
+{
+    QList<ShownLine> lines;
+    if (!mpHost) {
+        return lines;
+    }
+    const QList<TConsoleModel::TriggerWrite> writes = mpHost->mainConsoleModel().takeTriggerWritesForLineShown();
+    if (writes.isEmpty() || !taken) {
+        return lines;
+    }
+    for (const TConsoleModel::TriggerWrite& write : writes) {
+        lines.append({write.text, false, textRuns(write.text, TLineFormat(write.format), mpHost->mFgColor, mpHost->mBgColor)});
+    }
+    return lines;
+}
+
+bool THeadlessSession::sendShownLines(const QList<ShownLine>& lines)
+{
+    const QPointer<THeadlessSession> self(this);
+    const QString profile = mProfileName;
+    for (const ShownLine& line : lines) {
+        ++gSignalsBeingHandedOut;
+        emit lineShown(profile, line.text, line.isPrompt, line.runs);
+        --gSignalsBeingHandedOut;
+        if (!self) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// A handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, debugText, hiddenInputWanted or a ...Requested signal runs in the middle of a write,
 // which a line it fed would cut into, and a load that runs the event loop has yet to start the profile's scripts
 bool THeadlessSession::refused(const bool duringLoad)
 {
@@ -1710,9 +1983,11 @@ bool THeadlessSession::refused(const bool duringLoad)
         return true;
     }
     if (mpPool && gSignalsBeingHandedOut) {
-        qWarning() << "THeadlessSession: called from an outputLine, localText, errorConsoleText, hiddenInputWanted or ...Requested handler, which is refused; queue the call instead";
-        //: Error from a frontend with no window that called it back from a handler of the game's lines, of the text the profile printed, of its error console, of the game hiding what the player types, or of a request a script made, such as a notification. "...Requested" stands for the names of those signals, which all end in Requested, and is not translated.
-        mErrorString = tr("Refused from a handler of outputLine, localText, errorConsoleText, hiddenInputWanted or a ...Requested signal; queue the call instead.");
+        qWarning() << "THeadlessSession: called from an outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, debugText, hiddenInputWanted or ...Requested handler, which is "
+                      "refused; queue the call instead";
+        //: Error from a frontend with no window that called it back from a handler of the game's lines, as sent or as shown, of the main console being cleared, of the text the profile printed, of its error console, of the Central Debug Console, of the game hiding what the player types, or of a request a script made, such as a notification. "...Requested" stands for the names of those signals, which all end in Requested, and is not translated.
+        mErrorString = tr("Refused from a handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, debugText, hiddenInputWanted or a ...Requested signal; queue the call "
+                          "instead.");
         return true;
     }
     if (mRemovingStalePasswords || (!duringLoad && mpPool && mpPool->loadingProfile())) {
