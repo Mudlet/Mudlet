@@ -107,7 +107,7 @@ private:
     bool event(QEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
-    void handleAutoCompletion();
+    void handleAutoCompletion(bool forward);
     void insertFromMimeData(const QMimeData*) override;
     void slot_contentsChange();
     void spellCheck();
@@ -128,9 +128,7 @@ private:
     enums::CommandLineType mType = enums::UnknownCommandLine;
     KeyUnit* mpKeyUnit = nullptr;
     QPointer<TConsole> mpConsole;
-    QString mLastCompletion;
     TCommandLineCompletion mCompletion;
-    int mAutoCompletionCount = 0;
     int mHistoryBuffer = 0;
     QStringList mHistoryList;
     QString mSelectedText;

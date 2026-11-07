@@ -328,10 +328,21 @@ public:
     // Tab, or Shift+Tab for !forward, on the app's input line, as the GUI's command line completes the word at the end
     // of what setCommandLineText() last set: the whole line it leaves, which is Mudlet's copy of it now, as if set with
     // CommandLineEdit::notTyped, for the app to show with its cursor at the end. Further calls go on through the
-    // words, until the line changes, typed or not or by a script, other than to the line handed back, Escape is
-    // pressed or a line is submitted. Nullopt, with errorString() saying why, when no word completes it, as on an
+    // words, until the line changes, typed or not, by a script or by completeCommandLineFromHistory(), other than to
+    // the line handed back, Escape is pressed or a line is submitted. Nullopt, with errorString() saying why, when no word completes it, as on an
     // empty line, while hidden input is wanted, and where submit() is refused.
     std::optional<QString> completeCommandLine(bool forward = true);
+    // Up on the app's input line, as the GUI's command line with "Highlight history" on completes what was typed:
+    // the newest line of commandHistory() that starts with what setCommandLineText() last set, which it leaves as
+    // Mudlet's copy of the line, as if set with CommandLineEdit::notTyped, for the app to show with the part it added
+    // selected. Further calls go on to older lines that start with it; once none is older they return what was typed
+    // and start again from the newest, though as in the GUI they stay on the oldest line of all if that matched. Any
+    // change to the line, other than to the line handed back, or a submit starts again from the newest. Nullopt, with
+    // errorString() saying why, when no line starts with it, while hidden input is wanted, where submit() is refused,
+    // and where the GUI's up arrow recalls whole lines, which commandHistory() holds: with nothing typed, "Highlight
+    // history" off, or the whole line selected, as after Escape, a kept submit or a line set as notTyped, until it is
+    // typed into or completed.
+    std::optional<QString> completeCommandLineFromHistory();
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a

@@ -129,3 +129,37 @@ void TCommandLineCompletion::reset()
     mTabTyped.clear();
     mUserKeptOnTyping = false;
 }
+
+TCommandLineCompletion::HistoryCompletion TCommandLineCompletion::historyComplete(const QString& line, const bool tailSelected, const QStringList& history, const bool forward)
+{
+    mHistoryCount += forward ? 1 : -1;
+    HistoryCompletion result;
+    result.typed = line;
+    // Only the tail the previous completion filled in may be cut; any other selection is the player's own text
+    result.tailCut = line == mLastCompletion && tailSelected;
+    if (result.tailCut) {
+        result.typed.truncate(mShownLine.size());
+    }
+    mShownLine = result.typed;
+    if (mHistoryCount >= history.size()) {
+        mHistoryCount = history.size() - 1;
+    }
+    if (mHistoryCount < 0) {
+        mHistoryCount = 0;
+    }
+    for (int i = mHistoryCount; i < history.size(); i++) {
+        if (history[i].startsWith(result.typed)) {
+            mHistoryCount = i;
+            result.line = history[i];
+            return result;
+        }
+    }
+    mHistoryCount = -1;
+    return result;
+}
+
+void TCommandLineCompletion::resetHistoryWalk()
+{
+    mHistoryCount = -1;
+    mLastCompletion.clear();
+}
