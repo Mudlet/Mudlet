@@ -21,9 +21,10 @@
  * Compares the libghostty-vt SGR decoder (USE_LIBGHOSTTY) with Mudlet's own:
  * every row feeds one SGR sequence through TBuffer::translateToPlainText()
  * once with each and compares the style of the character that follows it.
- * Rows in sameStyle_data() must match; rows in changedStyle_data() are the
- * known behaviour changes adopting libghostty brings, and must still differ,
- * so that list stays true. The bench* slots are report-only METRIC lines.
+ * Rows in sameStyle_data() and random mixes of codes changedStyle_data() does
+ * not list must match; rows in changedStyle_data() are the known behaviour
+ * changes adopting libghostty brings, and must still differ, so that list
+ * stays true. fuzzMixedAgreement() and the bench* slots only report METRICs.
  *
  * Run with: ctest -R LibghosttySgrTest -V
  */
@@ -106,8 +107,8 @@ private:
         return {};
     }
 
-    // knownChange: whether it used a code changedStyle_data() lists, whose differences are expected
-    static QByteArray randomSgr(QRandomGenerator& random, bool& knownChange)
+    // knownChange: whether it used a code changedStyle_data() lists; strict leaves those codes out
+    static QByteArray randomSgr(QRandomGenerator& random, bool& knownChange, const bool strict)
     {
         static const QByteArrayList changed{"6", "21", "58;5;196", "38;5", "38;3;1;2;3", "38;2;300;20;30"};
         static const QByteArrayList tokens{"0",
@@ -171,7 +172,10 @@ private:
             if (i) {
                 sequence += ';';
             }
-            const QByteArray& token = tokens.at(random.bounded(tokens.size()));
+            QByteArray token = tokens.at(random.bounded(tokens.size()));
+            while (strict && changed.contains(token)) {
+                token = tokens.at(random.bounded(tokens.size()));
+            }
             knownChange |= changed.contains(token);
             sequence += token;
         }
@@ -416,32 +420,44 @@ private slots:
         qInfo().noquote() << "CHANGED" << sgr << "native:" << describe(native) << "libghostty:" << describe(ghostty);
     }
 
-    // Random mixes of the codes above: any difference has to come from a code changedStyle_data() lists
-    void fuzzAgreement()
+    // Random mixes of the codes changedStyle_data() does not list must decode the same, every time
+    void fuzzStrictAgreement()
     {
         QRandomGenerator random(20261107);
         constexpr int rounds = 5000;
-        int same = 0;
-        int explained = 0;
-        QStringList unexplained;
+        QStringList differ;
         for (int i = 0; i < rounds; ++i) {
             bool knownChange = false;
-            const QByteArray sgr = randomSgr(random, knownChange);
+            const QByteArray sgr = randomSgr(random, knownChange, true);
             const Style native = styleAfter(sgr, false);
             const Style ghostty = styleAfter(sgr, true);
-            if (native == ghostty) {
-                ++same;
-            } else if (knownChange) {
-                ++explained;
-            } else {
-                unexplained << qsl("%1 (native %2, libghostty %3)").arg(QString::fromLatin1(sgr), describe(native), describe(ghostty));
+            if (!(native == ghostty)) {
+                differ << qsl("%1 (native %2, libghostty %3)").arg(QString::fromLatin1(sgr), describe(native), describe(ghostty));
             }
         }
-        emitMetric("sgr_fuzz_rounds", rounds);
-        emitMetric("sgr_fuzz_same_percent", 100.0 * same / rounds);
-        emitMetric("sgr_fuzz_known_change_percent", 100.0 * explained / rounds);
-        emitMetric("sgr_fuzz_unexplained", unexplained.size());
-        QVERIFY2(unexplained.isEmpty(), qPrintable(unexplained.mid(0, 10).join(qsl("\n"))));
+        emitMetric("sgr_fuzz_strict_rounds", rounds);
+        emitMetric("sgr_fuzz_strict_differences", differ.size());
+        QVERIFY2(differ.isEmpty(), qPrintable(differ.mid(0, 10).join(qsl("\n"))));
+    }
+
+    // Report only: how often mixes that may include the listed codes decode the same
+    void fuzzMixedAgreement()
+    {
+        QRandomGenerator random(20261108);
+        constexpr int rounds = 5000;
+        int same = 0;
+        int involvesKnownChange = 0;
+        for (int i = 0; i < rounds; ++i) {
+            bool knownChange = false;
+            const QByteArray sgr = randomSgr(random, knownChange, false);
+            if (styleAfter(sgr, false) == styleAfter(sgr, true)) {
+                ++same;
+            }
+            involvesKnownChange += knownChange ? 1 : 0;
+        }
+        emitMetric("sgr_fuzz_mixed_rounds", rounds);
+        emitMetric("sgr_fuzz_mixed_same_percent", 100.0 * same / rounds);
+        emitMetric("sgr_fuzz_mixed_with_listed_code_percent", 100.0 * involvesKnownChange / rounds);
     }
 
     void benchSgrDecode()
