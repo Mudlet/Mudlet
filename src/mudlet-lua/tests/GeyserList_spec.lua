@@ -352,6 +352,47 @@ describe("Tests functionality of Geyser.List", function()
       list:end_update()
       assert.are.equal(1, list.content:get_height())
     end)
+    it("places the rows once for each row added", function()
+      local list = newList("glOnePass")
+      local first = row(list, "a", 10)
+      row(list, "b", 10)
+      local placed = 0
+      local set = first.set_constraints
+      first.set_constraints = function(...)
+        placed = placed + 1
+        return set(...)
+      end
+      row(list, "c", 10)
+      assert.are.equal(1, placed)
+      assert.are.equal(20, geometry("c").y)
+    end)
+
+    it("dismissAll lays the list out once, after the rows are gone", function()
+      local list = newList("glDismissOnce")
+      for i = 1, 5 do
+        row(list, "glDismissOnce" .. i, 10)
+      end
+      local organized = 0
+      local organize = list.content.organize
+      list.content.organize = function(...)
+        organized = organized + 1
+        return organize(...)
+      end
+      list:dismissAll()
+      assert.are.equal(0, list:getItemCount())
+      assert.are.equal(1, list.content:get_height())
+      assert.are.equal(1, organized)
+    end)
+
+    it("dismissAll doesn't end an update it didn't start", function()
+      local list = newList("glDismissDefer")
+      row(list, "a", 10)
+      list:begin_update()
+      list:dismissAll()
+      assert.are.equal(10, list.content:get_height())
+      list:end_update()
+      assert.are.equal(1, list.content:get_height())
+    end)
   end)
 
   describe("the scrollbar's room", function()
@@ -472,6 +513,20 @@ describe("Tests functionality of Geyser.List", function()
       assert.are.equal("color: white;", a.stylesheet)
       row(list, "b")
       assert.are.equal("", list:getItem("b").stylesheet or "")
+    end)
+
+    it("go in a rule of their own when the item's stylesheet has rules", function()
+      local list = newList("glStripeRules", {stripes = {A}})
+      local own = "QLabel{color: white;} QLabel:hover{color: green;}"
+      row(list, "glStripeRulesRow", 10, {stylesheet = own})
+      assert.are.equal("QLabel{ " .. A .. " } " .. own, getLabelStyleSheet("glStripeRulesRow"))
+    end)
+
+    it("put the item's own in a rule when they have rules", function()
+      local stripe = "QLabel{background-color: red;}"
+      local list = newList("glStripeRuled", {stripes = {stripe}})
+      row(list, "glStripeRuledRow", 10, {stylesheet = "color: white;"})
+      assert.are.equal(stripe .. " QLabel{ color: white; }", getLabelStyleSheet("glStripeRuledRow"))
     end)
 
     it("stay behind when a row moves to a list without them", function()
