@@ -210,6 +210,20 @@ public:
         mTextLabelPixmapBudgetKiB = budgetKiB;
         flushTextLabelPixmapCache();
     }
+    // Costed in KiB, not entries, which thrash once more labels are on screen; grows past
+    // the budget to hold those, up to four labels of the largest size it caches.
+    static constexpr qsizetype scmTextLabelPixmapCeilingKiB = 256 * 1024;
+    void setTextLabelPixmapCeilingKiB(qsizetype ceilingKiB)
+    {
+        mTextLabelPixmapCeilingKiB = ceilingKiB;
+        flushTextLabelPixmapCache();
+    }
+    // Which pixmap the cache holds for a label of this area drawn at this size, 0 for none
+    qint64 textLabelPixmapCacheKey(int labelId, const QSize& size) const
+    {
+        const LabelPixmap* cached = mTextLabelPixmapCache.object(LabelPixmapKey{mAreaID, labelId, size});
+        return cached ? cached->pixmap.cacheKey() : 0;
+    }
     void drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect);
     void setPlayerRoomStyle(const int style);
     void switchArea(const QString& newAreaName);
@@ -595,14 +609,13 @@ private:
         QRgb bgColor = 0;
         QRgb outlineColor = 0;
         qint64 sourcePixmapKey = 0;
+        qreal devicePixelRatio = 1.0;
         qsizetype costKiB = 1;
     };
-    static bool labelPixmapIsCurrent(const LabelPixmap& cached, const TMapLabel& label);
-    const LabelPixmap* addTextLabelToCache(const LabelPixmapKey& key, const TMapLabel& label);
-    // Costed in KiB, not entries, which thrash once more labels are on screen; grows past
-    // the budget to hold those, up to four labels of the largest size it caches.
-    static constexpr qsizetype scmTextLabelPixmapCeilingKiB = 256 * 1024;
+    static bool labelPixmapIsCurrent(const LabelPixmap& cached, const TMapLabel& label, qreal devicePixelRatio);
+    const LabelPixmap* addTextLabelToCache(const LabelPixmapKey& key, const TMapLabel& label, qreal devicePixelRatio);
     qsizetype mTextLabelPixmapBudgetKiB = scmTextLabelPixmapBudgetKiB;
+    qsizetype mTextLabelPixmapCeilingKiB = scmTextLabelPixmapCeilingKiB;
     QCache<LabelPixmapKey, LabelPixmap> mTextLabelPixmapCache{scmTextLabelPixmapBudgetKiB};
     qsizetype mTextLabelPixmapFrameKiB = 0;
     qsizetype mTextLabelPixmapLastFrameKiB = 0;
