@@ -313,6 +313,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     PackageManagerHeadingTest.cpp
     PackageManagerRemovalTest.cpp
     PackageManagerRepositoryLinksTest.cpp
+    PackageManagerSearchTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     PackageRepositoryDownloadTest.cpp
     PackageSelfRemovalTest.cpp
