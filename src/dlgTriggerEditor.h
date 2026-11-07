@@ -31,6 +31,7 @@
 
 #include <QPointer>
 #include <QRegularExpression>
+#include <memory>
 #include <unordered_map>
 
 #include "TAction.h"
@@ -100,6 +101,7 @@ class TAction;
 class TKey;
 class TVar;
 class TConsole;
+class TConsoleModel;
 class dlgVarsMainArea;
 class QShortcut;
 
@@ -113,10 +115,14 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class dlgTriggerEditorUndoRedoTest;
     friend class EditorAddItemTest;
     friend class EditorBannerViewSwitchTest;
+    friend class EditorErrorLineLinkTest;
     friend class EditorClipboardXmlTest;
+    friend class EditorEmergencyStopTest;
     friend class EditorEmptySelectionTest;
     friend class EditorFolderViewTest;
     friend class EditorFontTest;
+    friend class EditorKeyboardMoveTest;
+    friend class EditorLazyCreationTest;
     friend class EditorModuleFolderTest;
     friend class EditorReshowTest;
     friend class EditorSearchTest;
@@ -187,8 +193,13 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 
 public:
     Q_DISABLE_COPY(dlgTriggerEditor)
-    dlgTriggerEditor(Host*);
+    // Without an error console model it makes a fresh one
+    dlgTriggerEditor(Host*, std::unique_ptr<TConsoleModel> errorConsoleModel);
     ~dlgTriggerEditor();
+
+    static std::unique_ptr<TConsoleModel> newErrorConsoleModel(Host*);
+    static void ensureLuaAutoCompleteProvider();
+    static QString takenKeyWarning(Host*, const TKey*);
 
     void closeEvent(QCloseEvent* event) override;
     void focusInEvent(QFocusEvent*) override;
@@ -202,6 +213,9 @@ public:
     void updateExtraControlsToggleIcon();
     void fillout_form();
     void showError(const QString&);
+    [[nodiscard]] QString linkErrorLineToScript(const QString& error);
+    void jumpToErrorLine(int line);
+    bool currentScriptChunk(int& itemId, QString& chunkName, QString& error);
     void showWarning(const QString&, bool announce = true);
     void showInfo(const QString&);
     // touchNotification: whether an errored descendant may show its error on the
@@ -351,6 +365,7 @@ private slots:
     void slot_toggleSearchWholeWord(bool);
     void slot_toggleGroupBoxColorizeTrigger(const bool);
     void slot_changedPattern();
+    void slot_pastedExtraPatternLines(const QStringList& lines);
     void slot_lineSpacerChanged(int value);
     void slot_clearSearchResults();
     void slot_clearSoundFile();
@@ -423,9 +438,15 @@ private:
     void populateAliases();
     void populateActions();
     void populateKeys();
-    void saveOpenChanges();
+    // False when the open item refused its edits, which are then only in the form
+    bool saveOpenChanges();
+    enum class KeyboardMove { Up, Down, OutOfGroup, IntoGroupAbove };
+    void moveCurrentItem(const KeyboardMove move);
+    QList<int> unitChildIDs(const EditorViewType view, const int parentID) const;
+    void reParentInUnit(const EditorViewType view, const int itemID, const int oldParentID, const int newParentID, const int position);
     EditorViewType determineViewFromVisibleTree();
     EditorViewType resolveCurrentView();
+    void clearTypeTrees();
     void rebuildStaleTrees();
     void populateFolderTree();
     void addFolderTreeNode(QTreeWidgetItem* pSource, const EditorViewType view, QTreeWidgetItem* pParent, QTreeWidgetItem* pLooseItems, QHash<QString, int>& folderCounts);
@@ -453,7 +474,7 @@ private:
     static QString folderTreeItemKey(const EditorViewType view, const int id);
     static QString folderTreeTypeName(const EditorViewType view, const bool plural);
     void saveTrigger();
-    void saveAlias();
+    bool saveAlias();
     void computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDescription) const;
     void computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& itemDescription) const;
     void computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDescription) const;
@@ -470,6 +491,7 @@ private:
     void showAliasLoopWarning(QTreeWidgetItem* pItem, const QString& name);
     void applyAliasState(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification = true, bool respectNewState = true);
     bool aliasSubstitutionLoops(const QString& regex, const QString& substitution) const;
+    QString aliasNameForPattern(const TAlias* pT, const QString& typedName, const QString& pattern) const;
     void saveTimer();
     void saveKey();
     void saveScript();
@@ -500,7 +522,6 @@ private:
     void clearVarForm();
 
     void updatePackageItemAccessibility(QTreeWidgetItem* pItem, const QString& currentDescription);
-    QString takenKeyWarning(const TKey* pKey) const;
     void showKeyTakenWarning(QTreeWidgetItem* pItem, const QString& warning, bool announce);
     void rewarnAboutCurrentKey();
 
@@ -537,6 +558,7 @@ private:
 
     void clearDocument(edbee::TextEditorWidget* pEditorWidget, const QString& initialText = QString());
 
+    class SearchResultItem;
     void setAllSearchData(QTreeWidgetItem* pItem,
                           const EditorViewType& type,
                           const QString& name,
@@ -743,6 +765,7 @@ private:
 
     // Pattern rows the list shows in full however the splitter and advanced options are arranged (#2548)
     static constexpr int csmMinimumVisiblePatternRows = 5;
+    static constexpr int csmMaxPatternRows = 50;
 
     // Row height once the list overflows: the tallest control any pattern type puts in a row (see createPatternItem())
     int mPatternRowHeight = 0;
@@ -756,6 +779,8 @@ private:
     // Reused for every field a whole-word search looks at, as each new QRegularExpression is JIT-compiled anew
     mutable QString mWholeWordSearchNeedle;
     mutable QRegularExpression mWholeWordSearchRegex;
+    // A search's top-level rows, kept out of the tree until it ends: every row added to the tree, and every role set on one there, emits a model signal
+    QList<QTreeWidgetItem*> mPendingSearchResults;
     QSplitter* searchSplitter;
 
     // This has a menu which the following QActions are inserted into:
@@ -785,6 +810,7 @@ private:
     QTimer* mpFolderTreeRefreshTimer = nullptr;
     // FolderKeyRole of a folder node, or "view:id" of a real item -> its Folders view node
     QHash<QString, QTreeWidgetItem*> mFolderTreeNodes;
+    QHash<QTreeWidget*, QSet<int>> mExpandedIdsBeforeRefill;
     // FolderKeyRole of the current Folders view node when it is not one item - a merged folder or "Not in a folder" - and no form shows
     QString mFolderGroupKey;
     bool mFolderViewActive = false;
@@ -882,8 +908,8 @@ private:
     // space-driven auto-collapse:
     bool mShowAllTriggerControls = false;
 
-    // Every profile builds an editor on load but all share one saved window position, so one never
-    // opened must not overwrite it:
+    // Every profile's editor shares one saved window position, so one built but never shown must not
+    // overwrite it:
     bool mHasBeenShown = false;
 
     // tracks location of the splitter in the trigger editor for each tab
@@ -939,6 +965,10 @@ private:
     EditorViewType mLastDismissedBannerView = EditorViewType::cmUnknownView;
     QString mLastDismissedBannerContent;
     QString mCurrentBannerKey;
+
+    // The item whose script the error banner's line link points into
+    EditorViewType mErrorLineView = EditorViewType::cmUnknownView;
+    int mErrorLineItemId = -1;
     QString mLastDismissedBannerKey;
     QSet<QString> mTemporarilyHiddenBanners;
 

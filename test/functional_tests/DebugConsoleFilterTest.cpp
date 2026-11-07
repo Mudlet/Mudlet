@@ -971,6 +971,19 @@ private slots:
         QVERIFY2(host->caretEnabled(), "leaving the debug pane turned off the profile's caret mode");
     }
 
+    // Windows and Linux only: nothing grabs the keyboard for caret mode elsewhere
+    void test_aDebugPaneMenuClosingLeavesTheKeyboardGrabAlone()
+    {
+        auto* host = startDebuggingProfile();
+        auto* pane = mudlet::smpDebugConsole->mUpperPane;
+        host->setCaretEnabled(true);
+
+        QFocusEvent menuClosed(QEvent::FocusIn, Qt::PopupFocusReason);
+        QApplication::sendEvent(pane, &menuClosed);
+
+        QVERIFY2(QWidget::keyboardGrabber() != pane, "closing a debug pane's menu took the keyboard from the profile's console");
+    }
+
     void cleanup()
     {
         TDebug::setPaused(false);

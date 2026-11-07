@@ -305,25 +305,8 @@ void dlgPackageManager::resetPackageList()
     mpNavigationGroup->button(static_cast<int>(NavigationView::Installed))->setChecked(true);
     packageList->clear();
 
-    for (int i = 0; i < mpHost->mInstalledPackages.size(); i++) {
-        auto item = new QListWidgetItem();
-        item->setText(mpHost->mInstalledPackages.at(i));
-
-        auto packageInfo{mpHost->mPackageInfo.value(item->text())};
-        const auto title = packageInfo.value(qsl("title"));
-        if (!title.isEmpty()) {
-            item->setData(Qt::UserRole, title);
-        }
-        const auto iconName = packageInfo.value(qsl("icon"));
-        if (!iconName.isEmpty()) {
-            const auto iconDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
-            item->setIcon(QIcon(iconDir));
-        } else {
-            QPixmap emptyPixmap(16, 16);
-            emptyPixmap.fill(Qt::transparent);
-            item->setIcon(QIcon(emptyPixmap));
-        }
-        packageList->addItem(item);
+    for (const QString& packageName : std::as_const(mpHost->mInstalledPackages)) {
+        packageList->addItem(installedPackageItem(packageName));
     }
 
     populatePackagesWithUpdates();
@@ -785,33 +768,39 @@ void dlgPackageManager::slot_removePackages()
     updateUpdatesBadge();
 }
 
+QListWidgetItem* dlgPackageManager::installedPackageItem(const QString& packageName) const
+{
+    auto* item = new QListWidgetItem(packageName);
+    const auto packageInfo = mpHost->mPackageInfo.value(packageName);
+    if (const QString title = packageInfo.value(qsl("title")); !title.isEmpty()) {
+        item->setData(Qt::UserRole, title);
+    }
+    if (const QString iconName = packageInfo.value(qsl("icon")); !iconName.isEmpty()) {
+        item->setIcon(QIcon(MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName))));
+    } else {
+        QPixmap emptyPixmap(16, 16);
+        emptyPixmap.fill(Qt::transparent);
+        item->setIcon(QIcon(emptyPixmap));
+    }
+    return item;
+}
+
+bool dlgPackageManager::installedPackageMatches(const QString& packageName, const QString& searchText) const
+{
+    const auto packageInfo = mpHost->mPackageInfo.value(packageName);
+    return packageName.contains(searchText, Qt::CaseInsensitive) || packageInfo.value(qsl("title")).contains(searchText, Qt::CaseInsensitive)
+           || packageInfo.value(qsl("description")).contains(searchText, Qt::CaseInsensitive) || packageInfo.value(qsl("author")).contains(searchText, Qt::CaseInsensitive);
+}
+
 void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
 {
     packageList->clear();
 
     if (mCurrentView == NavigationView::Installed) {
-        for (const auto& value : std::as_const(mpHost->mPackageInfo)) {
-            const QString name = value.value(qsl("mpackage"));
-            const QString title = value.value(qsl("title"));
-            const QString description = value.value(qsl("description"));
-            const QString author = value.value(qsl("author"));
-
-            if (name.contains(searchText, Qt::CaseInsensitive) || title.contains(searchText, Qt::CaseInsensitive) || description.contains(searchText, Qt::CaseInsensitive)
-                || author.contains(searchText, Qt::CaseInsensitive)) {
-                QListWidgetItem* item = new QListWidgetItem(name);
-                if (!title.isEmpty()) {
-                    item->setData(Qt::UserRole, title);
-                }
-                const auto iconName = value.value(qsl("icon"));
-                if (!iconName.isEmpty()) {
-                    const auto iconDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(name, iconName));
-                    item->setIcon(QIcon(iconDir));
-                } else {
-                    QPixmap emptyPixmap(16, 16);
-                    emptyPixmap.fill(Qt::transparent);
-                    item->setIcon(QIcon(emptyPixmap));
-                }
-                packageList->addItem(item);
+        // The list it filters is mInstalledPackages: a package installed without a config.lua has no details, but is listed
+        for (const QString& packageName : std::as_const(mpHost->mInstalledPackages)) {
+            if (installedPackageMatches(packageName, searchText)) {
+                packageList->addItem(installedPackageItem(packageName));
             }
         }
     } else if (mCurrentView == NavigationView::Explore) {
@@ -837,27 +826,8 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
         }
     } else if (mCurrentView == NavigationView::Updates) {
         for (const QString& packageName : std::as_const(mPackagesWithUpdates)) {
-            const auto packageInfo = mpHost->mPackageInfo.value(packageName);
-            const QString title = packageInfo.value(qsl("title"));
-            const QString description = packageInfo.value(qsl("description"));
-            const QString author = packageInfo.value(qsl("author"));
-
-            if (packageName.contains(searchText, Qt::CaseInsensitive) || title.contains(searchText, Qt::CaseInsensitive) || description.contains(searchText, Qt::CaseInsensitive)
-                || author.contains(searchText, Qt::CaseInsensitive)) {
-                QListWidgetItem* item = new QListWidgetItem(packageName);
-                if (!title.isEmpty()) {
-                    item->setData(Qt::UserRole, title);
-                }
-                const auto iconName = packageInfo.value(qsl("icon"));
-                if (!iconName.isEmpty()) {
-                    const auto iconDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
-                    item->setIcon(QIcon(iconDir));
-                } else {
-                    QPixmap emptyPixmap(16, 16);
-                    emptyPixmap.fill(Qt::transparent);
-                    item->setIcon(QIcon(emptyPixmap));
-                }
-                packageList->addItem(item);
+            if (installedPackageMatches(packageName, searchText)) {
+                packageList->addItem(installedPackageItem(packageName));
             }
         }
     }
@@ -879,24 +849,8 @@ void dlgPackageManager::slot_setPackageList()
     clearPackageDetails();
 
     if (mCurrentView == NavigationView::Installed) {
-        for (int i = 0; i < mpHost->mInstalledPackages.size(); i++) {
-            auto item = new QListWidgetItem();
-            item->setText(mpHost->mInstalledPackages.at(i));
-            const auto packageInfo{mpHost->mPackageInfo.value(item->text())};
-            const auto iconName = packageInfo.value(qsl("icon"));
-            const auto title = packageInfo.value(qsl("title"));
-            if (!title.isEmpty()) {
-                item->setData(Qt::UserRole, title);
-            }
-            if (!iconName.isEmpty()) {
-                const auto iconDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
-                item->setIcon(QIcon(iconDir));
-            } else {
-                QPixmap emptyPixmap(16, 16);
-                emptyPixmap.fill(Qt::transparent);
-                item->setIcon(QIcon(emptyPixmap));
-            }
-            packageList->addItem(item);
+        for (const QString& packageName : std::as_const(mpHost->mInstalledPackages)) {
+            packageList->addItem(installedPackageItem(packageName));
         }
     } else if (mCurrentView == NavigationView::Explore) {
         if (!readPackageRepositoryFile()) {
@@ -925,23 +879,7 @@ void dlgPackageManager::slot_setPackageList()
         }
 
         for (const QString& packageName : std::as_const(mPackagesWithUpdates)) {
-            auto item = new QListWidgetItem();
-            item->setText(packageName);
-            const auto packageInfo{mpHost->mPackageInfo.value(packageName)};
-            const auto iconName = packageInfo.value(qsl("icon"));
-            const auto title = packageInfo.value(qsl("title"));
-            if (!title.isEmpty()) {
-                item->setData(Qt::UserRole, title);
-            }
-            if (!iconName.isEmpty()) {
-                const auto iconDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
-                item->setIcon(QIcon(iconDir));
-            } else {
-                QPixmap emptyPixmap(16, 16);
-                emptyPixmap.fill(Qt::transparent);
-                item->setIcon(QIcon(emptyPixmap));
-            }
-            packageList->addItem(item);
+            packageList->addItem(installedPackageItem(packageName));
         }
     }
 

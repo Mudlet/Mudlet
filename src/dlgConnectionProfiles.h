@@ -43,6 +43,7 @@ class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 {
     Q_OBJECT
 
+    friend class ConnectionDialogEscapeTest;
     friend class ConnectionDialogKeychainWaitTest;
     friend class ConnectionDialogOfflineProfileTest;
     friend class SelfTestProfileIconTest;
@@ -113,6 +114,7 @@ protected:
 
 private:
     static bool copyFolder(const QString& sourceFolder, const QString& destFolder);
+    void clearProfileSearch();
     void dismissTutorialInvitation();
     QString getDescription(const QString& profile_name) const;
     bool validateConnect();
@@ -184,6 +186,7 @@ private:
     void abandonPendingProfileLoad();
     // What a keychain read answers with
     void passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage);
+    void schedulePasswordLoad(const QString& profile_name);
     // What a read that had timed out answers with afterwards, while the dialog is still open - a
     // load that ran closed it - so all it may do is fill a password field the user has not typed in.
     void passwordArrivedLate(const QString& profileName, bool success, const QString& password, const QString& errorMessage);
@@ -238,6 +241,8 @@ private:
     bool mPendingConnect = false;      // Whether to connect (true) or just load (false)
     QString mKeychainOperationProfile; // Whose password a keychain read is fetching, if any
     bool mKeychainWaitShown = false;   // Whether the dialog is showing the keychain wait
+    // Whose password load arrived while that read was in flight, to run once it answers
+    QString mDeferredPasswordLoadProfile;
     // The profile and item a shown notice says could not be saved, so saving that one later clears it
     QPair<QString, QString> mUnsavedChange;
 
@@ -250,7 +255,6 @@ private slots:
     void slot_setCustomColor();
     void slot_resetCustomIcon();
     void slot_togglePasswordVisibility(const bool);
-    void slot_reenableAllProfileItems();
     void slot_loadPasswordAsync();
     void slot_passwordTextChanged();
 };

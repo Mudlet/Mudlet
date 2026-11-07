@@ -79,10 +79,13 @@ private slots:
         QCOMPARE(pMudlet->dactionUpdate->text(), mudlet::tr("Review %n update(s)...", nullptr, 2));
     }
 
-#if !defined(Q_OS_MACOS)
     // The feed keeps listing an installed update until Mudlet restarts into it
     void test_laterCheckKeepsRestartPrompt()
     {
+        // Checked inside the slot: with some Qt installs moc does not see Q_OS_MACOS, so a guard around it leaves moc calling a slot the compiler never declares
+#if defined(Q_OS_MACOS)
+        QSKIP("Sparkle installs and relaunches updates itself on macOS, so the menu has no restart prompt");
+#else
         auto* pMudlet = mudlet::self();
         emit pMudlet->pUpdater->signal_updateInstalled();
         QCOMPARE(pMudlet->dactionUpdate->text(), qsl("Update installed - restart to apply"));
@@ -90,8 +93,8 @@ private slots:
         emit pMudlet->pUpdater->signal_updateAvailable(1);
 
         QCOMPARE(pMudlet->dactionUpdate->text(), qsl("Update installed - restart to apply"));
-    }
 #endif
+    }
 #endif
 };
 

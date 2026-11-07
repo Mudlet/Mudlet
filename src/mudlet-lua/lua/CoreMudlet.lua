@@ -637,9 +637,15 @@ if false then
 
 
 
-  --- The <i>matches table</i> contains captured group. This available only within trigger context.
+  --- The <i>matches table</i> contains captured group. This available only within trigger and alias context.
   --- First item of matches table (matches[1]) holds current line, all other contains capture groups
   --- defined by regular expression trigger.
+  ---
+  --- A capture group that took no part in the match holds "" when a later group did match, but is left out
+  --- (nil, and #matches is shorter) when no later group matched, so an optional trailing group can be tested
+  --- with <code>if matches[n] then</code>. A named group that took no part is nil under its name.
+  --- This holds for a single match only: aliases and match-all triggers append each further match's groups
+  --- to the same list, so a later match can fill the index an unset trailing group left out.
   ---
   --- @usage Let say that you defined following trigger to detect and get dropped items.
   ---   <pre>
@@ -1252,6 +1258,34 @@ if false then
   ---
   --- @see setMapEnvironmentKit, getMapEnvironmentKit
   function getMapEnvironmentKits()
+  end
+
+
+
+  --- An environment's color before the map style recolors its rooms (the default style and most others do), where
+  --- getCustomEnvColorTable() lists the colors setCustomEnvColor() was given. A remap in the map file (as IRE games'
+  --- XML maps have) comes first and sends the environment to another. An environment from 1 to 16 that the map
+  --- knows, by a remap onto it or by setCustomEnvColor(), is in the profile's mapper ANSI color, whatever
+  --- setCustomEnvColor() gave it. Any other environment setCustomEnvColor() gave a color is in that color, at any ID,
+  --- 17 to 255 and 0 or below included. One from 17 to 255 the map knows only by a remap is in the 256-color palette.
+  --- Any other is red.
+  ---
+  --- @param environmentID the environment, as setRoomEnv() takes it
+  --- @return red, green, blue and alpha, each 0 to 255, then true when the map gives the environment a color
+  ---   or false when the red is the mapper's fallback
+  ---
+  --- @usage Echo the color of the room the player is in
+  ---   <pre>
+  ---   local room = getPlayerRoom()
+  ---   local environment = room and getRoomEnv(room)
+  ---   if environment then
+  ---     local r, g, b = getMapEnvColor(environment)
+  ---     echo(string.format("#%02x%02x%02x\n", r, g, b))
+  ---   end
+  ---   </pre>
+  ---
+  --- @see setCustomEnvColor, getCustomEnvColorTable
+  function getMapEnvColor(environmentID)
   end
 
 

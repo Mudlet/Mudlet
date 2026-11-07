@@ -210,6 +210,20 @@ public:
         mTextLabelPixmapBudgetKiB = budgetKiB;
         flushTextLabelPixmapCache();
     }
+    // Costed in KiB, not entries, which thrash once more labels are on screen; grows past
+    // the budget to hold those, up to four labels of the largest size it caches.
+    static constexpr qsizetype scmTextLabelPixmapCeilingKiB = 256 * 1024;
+    void setTextLabelPixmapCeilingKiB(qsizetype ceilingKiB)
+    {
+        mTextLabelPixmapCeilingKiB = ceilingKiB;
+        flushTextLabelPixmapCache();
+    }
+    // Which pixmap the cache holds for a label of this area drawn at this size, 0 for none
+    qint64 textLabelPixmapCacheKey(int labelId, const QSize& size) const
+    {
+        const LabelPixmap* cached = mTextLabelPixmapCache.object(LabelPixmapKey{mAreaID, labelId, size});
+        return cached ? cached->pixmap.cacheKey() : 0;
+    }
     void drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect);
     void setPlayerRoomStyle(const int style);
     void switchArea(const QString& newAreaName);
@@ -523,6 +537,10 @@ private:
                                  QString* profileOutput = nullptr);
     QColor environmentColor(int environmentId) const;
     QSize lodRoomBlobSize() const;
+    // Whether drawRoom() strokes a border around the room's fill outside grid mode, bar a collision's
+    bool roomBorderShown(const TRoom&) const;
+    // Width in pixels of the border drawRoom() strokes around a room's fill
+    int roomBorderWidth(const TRoom&) const;
     // Carries the room to save the drawing pass a second room-database probe per exit.
     // Valid only within the paintRoomExits() room iteration that gathered it.
     struct ExitToPaint
@@ -591,18 +609,21 @@ private:
         QRgb bgColor = 0;
         QRgb outlineColor = 0;
         qint64 sourcePixmapKey = 0;
+        qreal devicePixelRatio = 1.0;
         qsizetype costKiB = 1;
     };
-    static bool labelPixmapIsCurrent(const LabelPixmap& cached, const TMapLabel& label);
-    const LabelPixmap* addTextLabelToCache(const LabelPixmapKey& key, const TMapLabel& label);
-    // Costed in KiB, not entries, which thrash once more labels are on screen; grows past
-    // the budget to hold those, up to four labels of the largest size it caches.
-    static constexpr qsizetype scmTextLabelPixmapCeilingKiB = 256 * 1024;
+    static bool labelPixmapIsCurrent(const LabelPixmap& cached, const TMapLabel& label, qreal devicePixelRatio);
+    const LabelPixmap* addTextLabelToCache(const LabelPixmapKey& key, const TMapLabel& label, qreal devicePixelRatio);
     qsizetype mTextLabelPixmapBudgetKiB = scmTextLabelPixmapBudgetKiB;
+    qsizetype mTextLabelPixmapCeilingKiB = scmTextLabelPixmapCeilingKiB;
     QCache<LabelPixmapKey, LabelPixmap> mTextLabelPixmapCache{scmTextLabelPixmapBudgetKiB};
     qsizetype mTextLabelPixmapFrameKiB = 0;
     qsizetype mTextLabelPixmapLastFrameKiB = 0;
     ushort mSymbolFontSize = 1;
+    // The round rooms setting mSymbolPixmapCache was drawn for
+    bool mSymbolCacheBubbleMode = false;
+    // Whether the mapper's area box names the area this map shows
+    bool mAreaWidgetValid = true;
     QFont mMapSymbolFont;
     // in the players current area, how many digits does the biggest room number have?
     quint8 mMaxRoomIdDigits = 0;

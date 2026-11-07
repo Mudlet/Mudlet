@@ -113,6 +113,27 @@ describe("Tests functionality of Geyser.HBox", function()
       assert.are.same({x = 300, y = 0, width = 100, height = 100}, geometry("ghbStretchB"))
     end)
 
+    it("keeps a lone child with a stretch factor inside the box", function()
+      local box = track(Geyser.HBox:new({name = "ghbLoneStretch", x = 0, y = 0, width = 400, height = 100}))
+      track(Geyser.Label:new({name = "ghbLoneStretchA", h_stretch_factor = 3}, box))
+      assert.are.same({x = 0, y = 0, width = 400, height = 100}, geometry("ghbLoneStretchA"))
+    end)
+
+    it("fills the box with a lone child whose stretch factor is below one", function()
+      -- stretch factors are shares of the box, so a lone child holds all of them
+      local box = track(Geyser.HBox:new({name = "ghbLoneHalf", x = 0, y = 0, width = 400, height = 100}))
+      track(Geyser.Label:new({name = "ghbLoneHalfA", h_stretch_factor = 0.5}, box))
+      assert.are.same({x = 0, y = 0, width = 400, height = 100}, geometry("ghbLoneHalfA"))
+    end)
+
+    it("gives the survivor the whole box when its stretched sibling is removed", function()
+      local box = track(Geyser.HBox:new({name = "ghbLoneLeft", x = 0, y = 0, width = 300, height = 50}))
+      local plain = track(Geyser.Label:new({name = "ghbLoneLeftA"}, box))
+      track(Geyser.Label:new({name = "ghbLoneLeftB", h_stretch_factor = 2}, box))
+      plain:delete()
+      assert.are.same({x = 0, y = 0, width = 300, height = 50}, geometry("ghbLoneLeftB"))
+    end)
+
     it("tiles children edge to edge when the box does not divide into whole pixels", function()
       local box = track(Geyser.HBox:new({name = "ghbTile", x = 20, y = 20, width = 100, height = 100}))
       for index = 1, 3 do

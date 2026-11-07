@@ -20,6 +20,7 @@
 // mudlet-headless: one profile with no window, its main console on standard output. It links mudlet_core
 // alone, so it is also the check that the core runs without Qt Widgets.
 
+#include "HardwareDeviceTypes.h"
 #include "Host.h"
 #include "MudletApp.h"
 #include "SecureStringUtils.h"
@@ -692,8 +693,11 @@ QString helpText()
                                        "they send the game may be lost; send it from a sysConnectionEvent handler\n"
                                        "instead.\n"
                                        "\n"
-                                       "The profile is saved as it closes; when closeProfile() closes it, only if its\n"
-                                       "\"Auto save on exit\" setting is on. Exit status:\n"
+                                       "The profile is saved as it closes, closeProfile() included, unless its save did\n"
+                                       "not load or it is closed before its map loads, as at the top level of its own\n"
+                                       "script, so that its last good save is not written over; that is not a failed\n"
+                                       "save. A closeProfile() from a sysLoadEvent handler closes it, and saves it, once\n"
+                                       "its load has ended. Exit status:\n"
                                        "  0      the profile closed, as closeMudlet() or closeProfile() do, standard\n"
                                        "         input ended, or standard output's reader went away.\n"
                                        "  1      the profile could not be opened, it, or a profile one of its scripts\n"
@@ -847,6 +851,8 @@ int main(int argc, char* argv[])
     if (platformChosenHere) {
         qputenv("QT_QPA_PLATFORM", "offscreen");
     }
+    // Setting the environment is a data race once the application's threads are reading it
+    nameHardwareDeviceTypes();
     // Deleted before main() returns, as the GUI's src/main.cpp does its own, so Qt's cleanup runs ahead of static
     // destruction
     auto* app = new QGuiApplication(argc, argv);

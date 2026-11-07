@@ -309,6 +309,7 @@ private:
     void fillOutMapHistory();
     bool updateDisplayFont(Host::DisplayFontChange change);
     void rememberDisplayFontFamilyShown();
+    void showDisplayFont(const QFont&);
     void showEditorFont(const QFont&);
     void reflectEditorFontControls();
     void cancelShortcutCaptures();
@@ -439,6 +440,8 @@ private:
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     // Kept so that initWithHost(), which runs again for each profile, can replace it rather than stack another
     QMetaObject::Connection mMapStyleConnection;
+    QMetaObject::Connection mTimeStampsConnection;
+    void followMainConsoleTimeStamps();
     void followMapStyle();
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
     QMap<QString, QKeySequence> currentShortcuts;

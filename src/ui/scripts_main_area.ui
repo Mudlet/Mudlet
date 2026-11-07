@@ -99,6 +99,9 @@
    </item>
    <item row="1" column="1" colspan="2">
     <widget class="QListWidget" name="listWidget_script_registered_event_handlers">
+     <property name="accessibleName">
+      <string extracomment="Accessible name of the list of events a script is registered to handle, which screen readers announce when it gets the focus">Registered events</string>
+     </property>
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
        <horstretch>0</horstretch>

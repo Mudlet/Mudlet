@@ -211,6 +211,9 @@ public:
     bool stopReplayRecording();
     QString replayRecordingFileName() const;
     QString replayRecordingErrorString() const;
+    // The main console's replay recording button: starts a recording in the profile's log folder, or stops the one
+    // under way, saying how it went in the main console. False if it could not start, or could not be saved.
+    bool toggleReplayRecording();
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
     void loadReplayChunk();
     bool isReplaying() { return loadingReplay; }
@@ -344,6 +347,8 @@ signals:
     void signal_connecting(Host*);
     void signal_connected(Host*);
     void signal_disconnected(Host*);
+    // A connect called off while its address was being looked up: neither of the two above follows its signal_connecting
+    void signal_connectingCalledOff(Host*);
     // Signal when GA (Go Ahead) or EOR (End of Record) telnet codes are received
     // Used by hyperlink visibility manager to trigger expire actions
     void signal_promptReceived();
@@ -416,6 +421,7 @@ private:
     // loopbackTesting is for internal testing whilst OFF-LINE using the
     // feedTelnet(...) Lua function.
     void processSocketData(char* data, int size, const bool loopbackTesting = false);
+    void recordReplayChunk(qint32 interval, const char* data, qint32 length);
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     // Sends DONT for the running MCCP stream and stops decompressing it, for a
@@ -466,6 +472,7 @@ private:
     void sendIsMNESValues(const QByteArray&);
 
     void processTelnetCommand(const std::string& telnetCommand);
+    void forgetPromptEnd() { mPromptEndedBy = 0; }
     void sendTelnetOption(char type, unsigned char option);
     void gotRest(std::string&);
     void gotPrompt(std::string&);
@@ -536,6 +543,9 @@ private:
     // Stores the peer certificate from slot_socketSslError() so it can be
     // used by getPeerCertificate() when mpSocket is null:
     QSslCertificate mPeerCertificate;
+    // Set by slot_socketError(), as a handshake that fails leaves mpSocket null
+    // and so no socket for finishDisconnection() to ask about it
+    bool mSslHandshakeFailed = false;
     // Latched true while a TLS-upgrade question is pending or open in the
     // frontend. The dialog is delivered via a queued connection and so outlives
     // the emit; this stops a hostile server stacking further prompts by
@@ -612,6 +622,8 @@ private:
     // enable our use of the option!
     std::bitset<256> triedToEnable;
     bool recvdGA = false;
+    // The GA or EOR that ended the last prompt, until game text follows it
+    char mPromptEndedBy = 0;
 
     QString termType;
     QByteArray mEncoding;

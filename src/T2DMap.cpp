@@ -101,6 +101,7 @@
 
 #include <climits>
 #include <cmath>
+#include <numbers>
 
 #include <algorithm>
 #include <utility>
@@ -1235,16 +1236,19 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const
     }
 }
 
-bool T2DMap::labelPixmapIsCurrent(const LabelPixmap& cached, const TMapLabel& label)
+bool T2DMap::labelPixmapIsCurrent(const LabelPixmap& cached, const TMapLabel& label, const qreal devicePixelRatio)
 {
-    return cached.sourcePixmapKey == label.pix.cacheKey() && cached.fgColor == label.fgColor.rgba() && cached.bgColor == label.bgColor.rgba() && cached.outlineColor == label.outlineColor.rgba()
-           && cached.text == label.text && cached.font == label.font;
+    return cached.devicePixelRatio == devicePixelRatio && cached.sourcePixmapKey == label.pix.cacheKey() && cached.fgColor == label.fgColor.rgba() && cached.bgColor == label.bgColor.rgba()
+           && cached.outlineColor == label.outlineColor.rgba() && cached.text == label.text && cached.font == label.font;
 }
 
-const T2DMap::LabelPixmap* T2DMap::addTextLabelToCache(const LabelPixmapKey& key, const TMapLabel& label)
+const T2DMap::LabelPixmap* T2DMap::addTextLabelToCache(const LabelPixmapKey& key, const TMapLabel& label, const qreal devicePixelRatio)
 {
     const QSize& targetSize = key.size;
+    // Drawn with every pixel the screen has for the label, or painting it scales it up and blurs its text
+    const QSize pixelSize = (QSizeF(targetSize) * devicePixelRatio).toSize();
     auto entry = std::make_unique<LabelPixmap>();
+    entry->devicePixelRatio = devicePixelRatio;
     entry->text = label.text;
     entry->font = label.font;
     entry->fgColor = label.fgColor.rgba();
@@ -1255,7 +1259,7 @@ const T2DMap::LabelPixmap* T2DMap::addTextLabelToCache(const LabelPixmapKey& key
         made->costKiB = std::max<qint64>(1, qint64(made->pixmap.width()) * made->pixmap.height() * 4 / 1024);
         // Room for what the last frame and this one drew, so a label coming into
         // view never evicts one still on screen
-        if (const qsizetype needed = std::min(mTextLabelPixmapLastFrameKiB + mTextLabelPixmapFrameKiB + made->costKiB, scmTextLabelPixmapCeilingKiB); needed > mTextLabelPixmapCache.maxCost()) {
+        if (const qsizetype needed = std::min(mTextLabelPixmapLastFrameKiB + mTextLabelPixmapFrameKiB + made->costKiB, mTextLabelPixmapCeilingKiB); needed > mTextLabelPixmapCache.maxCost()) {
             mTextLabelPixmapCache.setMaxCost(needed);
         }
         const qsizetype costKiB = made->costKiB;
@@ -1272,11 +1276,13 @@ const T2DMap::LabelPixmap* T2DMap::addTextLabelToCache(const LabelPixmapKey& key
     if (label.text.isEmpty() || label.font.family().isEmpty() || !sizeFontToFitTextInRect(scaledFont, targetRect, label.text, 5, 4.0)) {
         // An image label, a text label with no font, or a font too small to be
         // legible - smooth-scaled original pixmap
-        entry->pixmap = label.pix.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        entry->pixmap = label.pix.scaled(pixelSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        entry->pixmap.setDevicePixelRatio(devicePixelRatio);
         return insert(std::move(entry));
     }
 
-    entry->pixmap = QPixmap(targetSize);
+    entry->pixmap = QPixmap(pixelSize);
+    entry->pixmap.setDevicePixelRatio(devicePixelRatio);
     entry->pixmap.fill(label.bgColor);
 
     QPainter painter(&entry->pixmap);
@@ -1318,7 +1324,7 @@ static bool fitsScaledLabelLimit(const QSize& size)
 static void drawPixmapScaledTo(QPainter& painter, const QRectF& target, const QPixmap& pixmap)
 {
     const QSize targetSize = target.size().toSize();
-    if (fitsScaledLabelLimit(targetSize)) {
+    if (fitsScaledLabelLimit((target.size() * painter.device()->devicePixelRatio()).toSize())) {
         painter.drawPixmap(target.topLeft(), pixmap.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
         return;
     }
@@ -1333,17 +1339,30 @@ void T2DMap::startTextLabelFrame()
     mTextLabelPixmapLastFrameKiB = mTextLabelPixmapFrameKiB;
     mTextLabelPixmapFrameKiB = 0;
     // Shrinks back once fewer labels are on screen, e.g. after switching area
-    mTextLabelPixmapCache.setMaxCost(std::max(mTextLabelPixmapBudgetKiB, std::min(mTextLabelPixmapLastFrameKiB, scmTextLabelPixmapCeilingKiB)));
+    mTextLabelPixmapCache.setMaxCost(std::max(mTextLabelPixmapBudgetKiB, std::min(mTextLabelPixmapLastFrameKiB, mTextLabelPixmapCeilingKiB)));
 }
 
 void T2DMap::drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect)
 {
     const QSize targetSize = paintRect.size().toSize();
-    if (fitsScaledLabelLimit(targetSize)) {
+    const qreal devicePixelRatio = painter.device()->devicePixelRatio();
+    const QSize pixelSize = (QSizeF(targetSize) * devicePixelRatio).toSize();
+    if (fitsScaledLabelLimit(pixelSize)) {
         const LabelPixmapKey key{mAreaID, labelKey, targetSize};
         const LabelPixmap* cached = mTextLabelPixmapCache.object(key);
-        if (!cached || !labelPixmapIsCurrent(*cached, label)) {
-            cached = addTextLabelToCache(key, label);
+        if (!cached || !labelPixmapIsCurrent(*cached, label, devicePixelRatio)) {
+            // One that would take the labels on screen past the cache's ceiling would evict another, which would
+            // in turn evict the next, every frame; on a dense display a label costs the square of its ratio more.
+            // Only what this frame has drawn is known to be on screen: after a zoom, none of the last frame is.
+            const qint64 costKiB = std::max<qint64>(1, qint64(pixelSize.width()) * pixelSize.height() * 4 / 1024);
+            if (mTextLabelPixmapFrameKiB + costKiB > mTextLabelPixmapCeilingKiB) {
+                // An out-of-date one left behind would hold memory no frame counts, so trimming the
+                // cache to the frame would evict a label on screen in its place
+                mTextLabelPixmapCache.remove(key);
+                cached = nullptr;
+            } else {
+                cached = addTextLabelToCache(key, label, devicePixelRatio);
+            }
         }
         if (cached) {
             mTextLabelPixmapFrameKiB += cached->costKiB;
@@ -1468,13 +1487,8 @@ void T2DMap::drawRoom(QPainter& painter,
     QRectF roomRectangle;
     QRectF roomNameRectangle;
     double realHeight;
-    int borderWidth;
-    if (pRoom->mBorderThickness > 0) {
-        borderWidth = qMax(1, static_cast<int>(pRoom->mBorderThickness / mBSize * mRoomWidth * rSize));
-    } else {
-        borderWidth = qMax(1, static_cast<int>(1 / mBSize * mRoomWidth * rSize));
-    }
-    const bool shouldDrawBorder = (mpHost->mMapperShowRoomBorders || pRoom->mBorderColor.isValid() || pRoom->mBorderThickness > 0) && !isGridMode;
+    const int borderWidth = roomBorderWidth(*pRoom);
+    const bool shouldDrawBorder = roomBorderShown(*pRoom) && !isGridMode;
     const bool showThisRoomName = showRoomName && RoomAppearance::nameShown(*pRoom);
     if (isGridMode) {
         realHeight = mRoomHeight;
@@ -1706,6 +1720,17 @@ void T2DMap::drawRoom(QPainter& painter,
     ExitAppearance::paintExitMarkers(painter, pen, *pRoom, rx, ry, mRoomWidth * rSize, mRoomHeight * rSize, roomColor, mMapperUseAntiAlias);
 }
 
+bool T2DMap::roomBorderShown(const TRoom& room) const
+{
+    return mpHost->mMapperShowRoomBorders || room.mBorderColor.isValid() || room.mBorderThickness > 0;
+}
+
+int T2DMap::roomBorderWidth(const TRoom& room) const
+{
+    const double thickness = room.mBorderThickness > 0 ? room.mBorderThickness : 1.0;
+    return qMax(1, static_cast<int>(thickness / mBSize * mRoomWidth * rSize));
+}
+
 void T2DMap::drawRoomHighlightsAndLabels(QPainter& painter,
                                          QFont& roomVNumFont,
                                          QFont& mapNameFont,
@@ -1842,6 +1867,8 @@ QColor T2DMap::environmentColor(int env) const
 // symbol, name and vertical-exit markers: still visible, but far too costly there (see the note on
 // QPainterPath::addRect() in drawGridModeRooms()).
 static constexpr float cLodPixelThreshold = 4.0f;
+// Of the dot on the end of an exit stub, as a fraction of a room's spacing
+static constexpr qreal cStubDotRadius = 0.1;
 
 // Also decides which exits that tier drops: rooms are painted over exits, so one whose ends are within
 // a blob on both axes is hidden (bar its door tick, so this simplifies rather than matches).
@@ -2625,12 +2652,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
         return;
     }
 
-    static bool oldBubbleMode = false;
-    if (oldBubbleMode != mBubbleMode) {
+    if (mSymbolCacheBubbleMode != mBubbleMode) {
         // If the round/square room selection has changed this will invalidate
         // all the previously generated pixmaps:
         flushSymbolPixmapCache();
-        oldBubbleMode = mBubbleMode;
+        mSymbolCacheBubbleMode = mBubbleMode;
     }
 
     mSymbolFontSize = 1;
@@ -3322,13 +3348,12 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     // The area combobox belongs to the main mapper, which a secondary view may exist without
     if (!mIsSecondaryView && mpMap->mapper()) {
-        static bool isAreaWidgetValid = true; // Remember between uses
         QFont _f = mpMap->mapper()->comboBox_showArea->font();
-        if (isAreaWidgetValid) {
+        if (mAreaWidgetValid) {
             if (mAreaID == -1                       // the map being shown is the "default" area
                 && !mpMap->getDefaultAreaShown()) { // the area widget is not showing the "default" area
 
-                isAreaWidgetValid = false; // So the widget CANNOT indicate the correct area
+                mAreaWidgetValid = false; // So the widget CANNOT indicate the correct area
                 // Set the area widget to indicate the area widget is NOT
                 // showing valid text - so make it italic and crossed out
                 _f.setItalic(true);
@@ -3338,7 +3363,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             }
         } else {
             if (!(mAreaID == -1 && !mpMap->getDefaultAreaShown())) {
-                isAreaWidgetValid = true; // So the widget CAN now indicate the correct area
+                mAreaWidgetValid = true; // So the widget CAN now indicate the correct area
                 // Reset to normal
                 _f.setItalic(false);
                 _f.setUnderline(false);
@@ -3797,7 +3822,22 @@ void T2DMap::paintRoomExits(QPainter& painter,
                 // Stubs on non-XY plane exits are handled differently and we
                 // do not support special exit stubs (yet?)
                 const QVector3D uDirection = mpMap->scmUnitVectors.value(direction);
-                const QLineF stubLine(rx, ry, rx + uDirection.x() * 0.5 * mRoomWidth, ry + uDirection.y() * 0.5 * mRoomHeight);
+                const bool diagonal = uDirection.x() != 0.0f && uDirection.y() != 0.0f;
+                const int borderWidth = !lodTier && roomBorderShown(*room) ? roomBorderWidth(*room) : 0;
+                // The room and its border are painted over the stub later, so past its half cell it reaches
+                // only far enough for the dot to clear them: any further puts the dot under a room next door
+                const auto stubReach = [&](const qreal cellSize) {
+                    const qreal roomEdge = rSize * cellSize / 2.0 + borderWidth;
+                    const qreal dotRadius = cStubDotRadius * cellSize;
+                    if (!diagonal) {
+                        return qMax(0.5 * cellSize, roomEdge + dotRadius);
+                    }
+                    if (mBubbleMode) {
+                        return qMax(0.5 * cellSize, (roomEdge + dotRadius) / std::numbers::sqrt2);
+                    }
+                    return qMax(0.5 * cellSize, roomEdge + dotRadius / std::numbers::sqrt2);
+                };
+                const QLineF stubLine(rx, ry, rx + uDirection.x() * stubReach(mRoomWidth), ry + uDirection.y() * stubReach(mRoomHeight));
                 const QString doorKey{TRoom::dirCodeToShortString(direction)};
                 // Draw the door lines before we draw the stub or the filled
                 // circle on the end - so that the latter overlays the doors
@@ -3812,7 +3852,8 @@ void T2DMap::paintRoomExits(QPainter& painter,
                 // And turn off drawing the border (outline):
                 painter.setPen(Qt::NoPen);
                 QPainterPath stubMarkingCirclePath;
-                const QRectF surroundingRectF(stubLine.p2().x() - 0.1 * mRoomWidth, stubLine.p2().y() - 0.1 * mRoomHeight, 0.2 * mRoomWidth, 0.2 * mRoomHeight);
+                const QRectF surroundingRectF(
+                        stubLine.p2().x() - cStubDotRadius * mRoomWidth, stubLine.p2().y() - cStubDotRadius * mRoomHeight, 2.0 * cStubDotRadius * mRoomWidth, 2.0 * cStubDotRadius * mRoomHeight);
                 stubMarkingCirclePath.arcTo(surroundingRectF, 0.0, 360.0);
                 // So this should draw a solid filled circle whose diameter
                 // is fixed and not dependent on the exit line thickness:

@@ -48,7 +48,6 @@
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
 #include <QApplication>
-#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QFrame>
@@ -212,11 +211,11 @@ void setCommandLinePalette(TCommandLine* pCommandLine, const QPalette& palette)
 
 // A high-performance text widget with split screen ability for scrolling back
 // Contains two TTextEdits, and is backed by a TBuffer
-TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidget* parent)
+TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidget* parent, std::unique_ptr<TConsoleModel> handedModel)
 : QWidget(parent)
 , mpHost(pH)
 , mDisplayFontDetails(pH->fontsAntiAlias())
-, mpOwnModel(ownConsoleModel(pH, name, type))
+, mpOwnModel(handedModel ? std::move(handedModel) : ownConsoleModel(pH, name, type))
 , mpModel(mpOwnModel ? mpOwnModel.get() : &pH->mainConsoleModel())
 , buffer(mpModel->buffer)
 , emergencyStop(new QToolButton)
@@ -878,6 +877,11 @@ TConsole::~TConsole()
     // widget it was created into, e.g. a scroll box.
     if (mType & (SubConsole | UserWindow | Buffer)) {
         mpHost->windowRegistry().deregisterSubConsole(mConsoleName, mpModel);
+        // Now, not in ~QObject: ~QWidget destroys our command line first, and its destroyed()
+        // handler looks consoles up by name, which would reach this one half destroyed.
+        if (auto pMainConsole = mpHost->mainConsoleView()) {
+            pMainConsole->forgetSubConsole(this);
+        }
     }
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
@@ -1226,36 +1230,16 @@ void TConsole::slot_toggleReplayRecording()
         return;
     }
     cTelnet& telnet = mpHost->mTelnet;
-    if (!telnet.recordingReplay()) {
-        const QString directoryLogFile = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, mProfileName);
-        const QString mLogFileName = qsl("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
-        const QDir dirLogFile;
-        if (!dirLogFile.exists(directoryLogFile)) {
-            dirLogFile.mkpath(directoryLogFile);
-        }
-        if (!telnet.startReplayRecording(mLogFileName)) {
-            // clicked() fires after the button has toggled itself on:
-            replayButton->setChecked(false);
-            qWarning() << "TConsole: failed to open replay file for writing:" << telnet.replayRecordingErrorString();
-            //: Informational message displayed when replay recording file could not be opened. %1 is the reason
-            printSystemMessage(tr("Failed to open replay recording file for writing: %1").arg(telnet.replayRecordingErrorString()) % QChar::LineFeed);
-            return;
-        }
-        printSystemMessage(tr("Replay recording has started. File: %1").arg(telnet.replayRecordingFileName()) % QChar::LineFeed);
+    telnet.toggleReplayRecording();
+    if (telnet.recordingReplay()) {
         //: Button tooltip for the replay recording toggle button
         replayButton->setToolTip(utils::richText(tr("Stop recording of replay")));
-    } else {
-        if (!telnet.stopReplayRecording()) {
-            qWarning() << "TConsole::slot_toggleReplayRecording: error saving replay: " << telnet.replayRecordingErrorString();
-            //: Informational message displayed when replay recording is stopped but could not be saved. %1 is the reason
-            printSystemMessage(tr("Replay recording has been stopped, but couldn't be saved: %1").arg(telnet.replayRecordingErrorString()) % QChar::LineFeed);
-        } else {
-            //: Informational message displayed when replay recording is stopped
-            printSystemMessage(tr("Replay recording has been stopped. File: %1").arg(telnet.replayRecordingFileName()) % QChar::LineFeed);
-        }
-        //: Button tooltip for the replay recording toggle button
-        replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
+        return;
     }
+    // clicked() fires after the button has toggled itself on, so one that could not start is turned off again
+    replayButton->setChecked(false);
+    //: Button tooltip for the replay recording toggle button
+    replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
 }
 
 QString getColorCode(QColor color)
@@ -1454,6 +1438,11 @@ void TConsole::scrollDown(int lines)
 void TConsole::scrollUp(int lines)
 {
     if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
+        return;
+    }
+
+    // With every line already on screen there is nothing to scroll back to, and a split would only show them twice
+    if (mLowerPane->isHidden() && mUpperPane->imageTopLine() == 0) {
         return;
     }
 

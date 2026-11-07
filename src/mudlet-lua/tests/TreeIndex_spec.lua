@@ -187,6 +187,201 @@ describe("trigger matching through the whole-tree index", function()
         assert.are.equal(filedBefore, filedCount(), "a regex with no literal every match needs cannot be filed")
     end)
 
+    itIndexed("files a regex by the text outside its alternatives and fires it on either branch", function()
+        local filedBefore = filedCount()
+        assert(permRegexTrigger("treeindex alternatives", packageName,
+                                {[[^treeindex_alt tells the (?:group|formation)\b]]}, 'TreeIndexSpecNote("alternatives")'))
+        -- its longest text is in a branch, and a literal taken from there would miss "up"
+        assert(permRegexTrigger("treeindex nested alternatives", packageName,
+                                {[[treeindex_nest (?:up|(?:north|south)(?:ward_and_onward_far))$]]}, 'TreeIndexSpecNote("nested")'))
+        feed("treeindex warm-up line")
+        assert.are.equal(filedBefore + 2, filedCount(), "the text outside the alternatives is in every match, so both are filed")
+
+        feed("treeindex_alt tells the group hello", "treeindex_alt tells the formation hi", "treeindex_alt tells the groups",
+             "treeindex_alt tells the army", "group formation",
+             "go treeindex_nest southward_and_onward_far", "go treeindex_nest up", "go treeindex_nest northward_and_onward_far",
+             "treeindex_nest west", "northward_and_onward_far")
+
+        assert.are.same({alternatives = 2, nested = 3}, fired)
+    end)
+
+    -- Every trigger must fire exactly where rex finds its pattern, on lines built to match it and lines
+    -- a character off, so a literal a match can do without shows as a missed firing
+    itIndexed("fires generated regexes with alternatives inside groups wherever rex matches them", function()
+        local seed = 20261105
+        local function random(n)
+            seed = (16807 * seed) % 2147483647
+            return seed % n
+        end
+        local function chance(percent)
+            return random(100) < percent
+        end
+        local function pick(list)
+            return list[random(#list) + 1]
+        end
+        local function word()
+            local text = {}
+            for i = 1, 2 + random(4) do
+                text[i] = pick({"a", "b", "c", "d", "e"})
+            end
+            return table.concat(text)
+        end
+        local groupNames = 0
+        local sequence
+        local function atom(depth, forceAlternatives)
+            local roll = random(100)
+            if forceAlternatives or (depth < 3 and roll < 25) then
+                local branches = {}
+                local count = (forceAlternatives or chance(60)) and 2 + random(2) or 1
+                for i = 1, count do
+                    if chance(10) then
+                        branches[i] = {"", function() return "" end}
+                    else
+                        branches[i] = {sequence(depth + 1)}
+                    end
+                end
+                groupNames = groupNames + 1
+                local opener = pick({"(", "(?:", "(?:", "(?<g" .. groupNames .. ">", "(?P<g" .. groupNames .. ">", "(?'g" .. groupNames .. "'"})
+                local texts = {}
+                for i, branch in ipairs(branches) do
+                    texts[i] = branch[1]
+                end
+                return opener .. table.concat(texts, "|") .. ")", function()
+                    return pick(branches)[2]()
+                end, "group"
+            elseif roll < 45 then
+                local text = word()
+                return text, function() return text end, "word"
+            elseif roll < 55 then
+                local class = pick({{"[abc]", "abc"}, {"[a-e]", "abcde"}, {"[(|)]", "(|)"}, {"[\\]|]", "]|"}, {"[^a]", "bcde ,"}})
+                return class[1], function()
+                    local at = random(#class[2]) + 1
+                    return class[2]:sub(at, at)
+                end
+            elseif roll < 65 then
+                local escape = pick({{[[\d]], "0123456789"}, {[[\w]], "abcXY_1"}, {[[\s]], " "}})
+                return escape[1], function()
+                    local at = random(#escape[2]) + 1
+                    return escape[2]:sub(at, at)
+                end
+            elseif roll < 70 then
+                return ".", function() return pick({"a", " ", ",", "|"}) end
+            elseif roll < 73 then
+                return [[\b]], function() return "" end, "zero width"
+            end
+            local character = pick({" ", ",", "'", "-", ":", [[\.]], [[\(]], [[\)]], [[\|]], [[\[]], [[\*]], [[\?]], "]", "}"})
+            local literal = character:sub(-1)
+            return character, function() return literal end
+        end
+        local function quantified(depth, forceAlternatives)
+            local text, witness, kind = atom(depth, forceAlternatives)
+            if kind == "zero width" or not chance(30) then
+                return text, witness
+            end
+            -- a group repeated without bound can take rex past its match limit
+            local quantifier = kind == "group" and pick({{"?", 0, 1}, {"{2}", 2, 2}, {"{0,1}", 0, 1}})
+                               or pick({{"?", 0, 1}, {"*", 0, 2}, {"+", 1, 2}, {"{2}", 2, 2}, {"{1,3}", 1, 3}, {"{0,}", 0, 2}})
+            local lazy = chance(15) and "?" or ""
+            -- a quantifier after a word repeats only its last letter
+            local head, repeated = "", witness
+            if kind == "word" then
+                head = text:sub(1, -2)
+                local last = text:sub(-1)
+                repeated = function() return last end
+            end
+            return text .. quantifier[1] .. lazy, function()
+                local parts = {head}
+                for i = 1, quantifier[2] + random(quantifier[3] - quantifier[2] + 1) do
+                    parts[i + 1] = repeated()
+                end
+                return table.concat(parts)
+            end
+        end
+        sequence = function(depth, forced)
+            local texts, witnesses = {}, {}
+            local count = depth == 0 and 2 + random(4) or 1 + random(3)
+            local forcedAt = forced and random(count) + 1
+            for i = 1, count do
+                texts[i], witnesses[i] = quantified(depth, i == forcedAt)
+            end
+            return table.concat(texts), function()
+                local parts = {}
+                for i, witness in ipairs(witnesses) do
+                    parts[i] = witness()
+                end
+                return table.concat(parts)
+            end
+        end
+        local function noise()
+            local text = {}
+            for i = 1, random(4) do
+                text[i] = pick({"a", "c", "e", " ", ",", "|", "(", "]"})
+            end
+            return table.concat(text)
+        end
+
+        -- triggers see the line with its newline, as Host::runTriggers() hands it to them
+        local function rexMatches(regex, line)
+            return regex:find(line .. "\n") ~= nil
+        end
+
+        local patterns, regexes, lines = {}, {}, {}
+        local matchingOwnLine = 0
+        for index = 1, 150 do
+            local pattern, witness = sequence(0, true)
+            local anchored = chance(20)
+            if anchored then
+                pattern = "^" .. pattern
+            end
+            patterns[index] = pattern
+            regexes[index] = rex.new(pattern)
+            local matchedOwnLine = false
+            for _ = 1, 3 do
+                local line = (anchored and "" or noise()) .. witness() .. noise() .. "x"
+                lines[#lines + 1] = line
+                matchedOwnLine = matchedOwnLine or rexMatches(regexes[index], line)
+                local cut = random(#line) + 1
+                lines[#lines + 1] = line:sub(1, cut - 1) .. pick({"", "e", "|"}) .. line:sub(cut + 1)
+            end
+            if matchedOwnLine then
+                matchingOwnLine = matchingOwnLine + 1
+            end
+        end
+        assert.is_true(matchingOwnLine >= #patterns * 0.9, "only " .. matchingOwnLine .. " of the " .. #patterns .. " generated regexes match a line built for them")
+
+        local firedOnLine = {}
+        _G.TreeIndexSpecGenerated = function(index)
+            firedOnLine[index] = true
+        end
+        local generatedFolder = "treeindex generated"
+        assert(permGroup(generatedFolder, "trigger", packageName))
+        finally(function()
+            disableTrigger(generatedFolder)
+            _G.TreeIndexSpecGenerated = nil
+        end)
+        local filedBefore = filedCount()
+        for index, pattern in ipairs(patterns) do
+            assert(permRegexTrigger("treeindex generated " .. index, generatedFolder, {pattern}, "TreeIndexSpecGenerated(" .. index .. ")"))
+        end
+        feed("treeindex warm-up line")
+        local filed = filedCount() - filedBefore
+        assert.is_true(filed >= #patterns / 3, "only " .. filed .. " of the " .. #patterns .. " generated regexes were filed, so most found no text outside their alternatives")
+
+        local wrong = {}
+        for _, line in ipairs(lines) do
+            firedOnLine = {}
+            feedTriggers(line .. "\n")
+            for index, regex in ipairs(regexes) do
+                local expected = rexMatches(regex, line)
+                if expected ~= (firedOnLine[index] == true) then
+                    wrong[#wrong + 1] = string.format("%s on [%s]: rex %s, trigger %s", patterns[index], line,
+                                                      expected and "matches" or "does not match", firedOnLine[index] and "fired" or "did not fire")
+                end
+            end
+        end
+        assert.are.same({}, {unpack(wrong, 1, 10)}, #wrong .. " firings differ from rex")
+    end)
+
     itIndexed("completes a multiline trigger on a line that holds only its later pattern", function()
         feed("treeindex_ml_open", "the curtain falls")
 
@@ -418,6 +613,56 @@ describe("trigger matching through the whole-tree index", function()
         feed("treeindex_root_7_bait", "treeindex_root_80_bait")
 
         assert.are.same({root = 2}, fired, "refiling the tree must keep the roots filed alongside it")
+    end)
+
+    -- The padding is filed under five-long grams, so these leave length three unused unless an earlier spec filed one
+    itIndexed("fires triggers filed under grams of different lengths, on lines shorter than the longest", function()
+        local filedBefore = filedCount()
+        assert(permSubstringTrigger("treeindex two", packageName, {"qj"}, 'TreeIndexSpecNote("two")'))
+        assert(permSubstringTrigger("treeindex four", packageName, {"vqxz"}, 'TreeIndexSpecNote("four")'))
+        feed("treeindex warm-up line")
+        assert.are.equal(filedBefore + 2, filedCount(), "both are long enough to be filed")
+
+        feed("qj and vqxz and treeindex_padding_7_bait", "qj", "vqxz", "this ends in qj", "q j and vqx z hold neither")
+
+        assert.are.same({two = 3, four = 2, padding = 1}, fired)
+    end)
+
+    itIndexed("fires a trigger whose text is outside Latin-1", function()
+        local filedBefore = filedCount()
+        assert(permSubstringTrigger("treeindex cjk", packageName, {"龍虎"}, 'TreeIndexSpecNote("cjk")'))
+        assert(permSubstringTrigger("treeindex cyrillic", packageName, {"жщюфы"}, 'TreeIndexSpecNote("cyrillic")'))
+        assert(permSubstringTrigger("treeindex astral", packageName, {"🐉qz"}, 'TreeIndexSpecNote("astral")'))
+        feed("treeindex warm-up line")
+        assert.are.equal(filedBefore + 3, filedCount())
+
+        feed("the 龍虎 banner", "ends in жщюфы", "🐉qz", "龍 虎 and жщю фы and 🐉 qz hold none")
+
+        assert.are.same({cjk = 1, cyrillic = 1, astral = 1}, fired)
+    end)
+
+    -- More than everything else filed, so that killing them all leaves more of the index abandoned than
+    -- filed and it compacts what is left; filedCount() leaves out filed roots, which the 2000 covers
+    itIndexed("fires the triggers left filed after killing enough root triggers to compact the index", function()
+        local ids = {}
+        finally(function()
+            for _, id in ipairs(ids) do
+                killTrigger(id)
+            end
+        end)
+        for index = 1, 2000 + 2 * filedCount() do
+            ids[#ids + 1] = tempTrigger("treeindex_churn_" .. index .. "_bait", function() end)
+        end
+        feed("treeindex warm-up line")
+        for _, id in ipairs(ids) do
+            killTrigger(id)
+        end
+        ids = {}
+        feed("treeindex warm-up line")
+
+        feed("treeindex_padding_7_bait", "treeindex_sub_bait")
+
+        assert.are.same({padding = 1, substring = 1}, fired)
     end)
 
     -- Last, as it takes the fixture away: a script's uninstall takes filed

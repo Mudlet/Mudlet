@@ -20,13 +20,13 @@
 
 #include "TMxpLinkTagHandler.h"
 #include "LuaLiteral.h"
+#include "MailtoUri.h"
 #include "TMxpClient.h"
 #include "UntrustedText.h"
 
 #include <QCoreApplication>
 #include <QDebug>
 #include <QUrl>
-#include <QUrlQuery>
 
 namespace {
 // Shown in place of the address, so the tooltip and a screen reader say the click will do nothing
@@ -119,20 +119,7 @@ QString TMxpLinkTagHandler::openableAddress(const QString& href)
         qWarning().noquote().nospace() << "TMxpLinkTagHandler::openableAddress(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\" in link to: \"" << href.left(80) << "\"";
         return QString();
     }
-    if (scheme != qsl("mailto")) {
-        return href;
-    }
-
-    // Mail clients and the desktop portal attach local files named by "attach" or "attachment"
-    QUrlQuery kept;
-    for (const auto& [name, value] : QUrlQuery(url).queryItems(QUrl::FullyEncoded)) {
-        const QString field = QUrl::fromPercentEncoding(name.toUtf8()).toLower();
-        if (field == qsl("subject") || field == qsl("body")) {
-            kept.addQueryItem(name, value);
-        }
-    }
-    const QString recipients = qsl("mailto:%1").arg(url.path(QUrl::FullyEncoded));
-    return kept.isEmpty() ? recipients : qsl("%1?%2").arg(recipients, kept.query(QUrl::FullyEncoded));
+    return MailtoUri::withOnlyMessageFields(href);
 }
 
 QString TMxpLinkTagHandler::actionFor(const QString& address)

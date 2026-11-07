@@ -80,6 +80,7 @@
 #include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFontDatabase>
 #include <QFontDialog>
 #include <QFutureWatcher>
 #include <QIcon>
@@ -185,6 +186,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // (see #5310). Done here rather than in loadEditorTab() so it holds even
     // when that returns early for want of a profile.
     new EditorAutoCompleteFocusHandler(edbeePreviewWidget, this);
+    // The preview completes Lua like the editor, which may not have been built yet
+    dlgTriggerEditor::ensureLuaAutoCompleteProvider();
 
     mpTimer_apply = new QTimer(this);
     mpTimer_apply->setSingleShot(true);
@@ -269,6 +272,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // have to respond to changes in the settings when *another* profile saves
     // them.
     populateApplicationSettings();
+
+    connect(checkBox_monospacedFontsOnly, &QCheckBox::toggled, this, [this]() {
+        showDisplayFont(fontComboBox_displayFont->currentFont());
+    });
 
     connect(checkBox_showTabConnectionIndicators, &QCheckBox::toggled, this, [=](bool checked) {
         mudlet::self()->setShowTabConnectionIndicators(checked);
@@ -1477,6 +1484,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_downloadMapOptions, tr("download map, fetch map, map from the game")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for links in the game's text being clickable.
     synonyms.append({checkBox_enableOSC8Hyperlinks, tr("hyperlink, link, clickable URL, OSC8")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for showing the time each line arrived in the main window.
+    synonyms.append({checkBox_showTimeStamps, tr("timestamps, time stamps, clock, when lines arrived")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for showing script errors in the game window.
     synonyms.append({checkBox_echoLuaErrors, tr("echo, error messages, script errors, Lua errors")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the character encoding used to talk to the game.
@@ -2396,25 +2405,28 @@ void dlgProfilePreferences::reflowWideCards()
 }
 
 // Other pages took three of this card's checkboxes and the double-click controls joined it, leaving the .ui
-// grid with half-empty rows; re-laid as a checkbox pair, then one row per label-and-control.
+// grid with half-empty rows; re-laid as a checkbox pair, a row for each long-labelled checkbox, then one row per
+// label-and-control.
 void dlgProfilePreferences::reflowDisplayOptionsCard()
 {
-    const QList<QWidget*> displayOptions{checkBox_useWideAmbiguousEastAsianGlyphs,
+    const QList<QWidget*> displayOptions{checkBox_showTimeStamps,
                                          checkBox_enableTextAnalyzer,
+                                         checkBox_useWideAmbiguousEastAsianGlyphs,
                                          checkBox_enableOSC8Hyperlinks,
                                          label_controlCharacterHandling,
                                          comboBox_controlCharacterHandling,
                                          doubleclick_ignore_label,
                                          doubleclick_ignore_lineedit};
     takeOutOfLayout(gridLayout_groupBox_displayOptions, displayOptions);
-    gridLayout_groupBox_displayOptions->addWidget(checkBox_useWideAmbiguousEastAsianGlyphs, 0, 0);
+    gridLayout_groupBox_displayOptions->addWidget(checkBox_showTimeStamps, 0, 0);
     gridLayout_groupBox_displayOptions->addWidget(checkBox_enableTextAnalyzer, 0, 1);
-    gridLayout_groupBox_displayOptions->addWidget(checkBox_enableOSC8Hyperlinks, 1, 0, 1, 2);
-    gridLayout_groupBox_displayOptions->addWidget(label_controlCharacterHandling, 2, 0);
-    gridLayout_groupBox_displayOptions->addWidget(comboBox_controlCharacterHandling, 2, 1);
+    gridLayout_groupBox_displayOptions->addWidget(checkBox_useWideAmbiguousEastAsianGlyphs, 1, 0, 1, 2);
+    gridLayout_groupBox_displayOptions->addWidget(checkBox_enableOSC8Hyperlinks, 2, 0, 1, 2);
+    gridLayout_groupBox_displayOptions->addWidget(label_controlCharacterHandling, 3, 0);
+    gridLayout_groupBox_displayOptions->addWidget(comboBox_controlCharacterHandling, 3, 1);
     // Label beside its field rather than above, saving a row and lining up with the combo box above
-    gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_label, 3, 0);
-    gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_lineedit, 3, 1);
+    gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_label, 4, 0);
+    gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_lineedit, 4, 1);
 }
 
 // The .ui ends this card with the reconnect notice, but the workarounds moved here land after it,
@@ -3895,6 +3907,7 @@ void dlgProfilePreferences::disableHostDetails()
     // ----- groupBox_displayOptions -----
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
     checkBox_enableTextAnalyzer->setEnabled(false);
+    checkBox_showTimeStamps->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
     label_controlCharacterHandling->setEnabled(false);
@@ -4031,6 +4044,7 @@ void dlgProfilePreferences::enableHostDetails()
     // ----- groupBox_displayOptions -----
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
     checkBox_enableTextAnalyzer->setEnabled(true);
+    checkBox_showTimeStamps->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
     label_controlCharacterHandling->setEnabled(true);
@@ -4185,6 +4199,10 @@ void dlgProfilePreferences::populateApplicationSettings()
         const QSignalBlocker blocker(telnetHandlerEnabled);
         telnetHandlerEnabled->setChecked(MudletApp::getQSettings()->value("telnetHandlerEnabled", false).toBool());
     }
+    {
+        const QSignalBlocker blocker(checkBox_monospacedFontsOnly);
+        checkBox_monospacedFontsOnly->setChecked(MudletApp::getQSettings()->value(qsl("showOnlyMonospacedFonts"), false).toBool());
+    }
     populateTriggerMatchPoolSettings();
     {
         // The one setting here that lives in its own QSettings group rather than
@@ -4216,7 +4234,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 {
     loadEditorTab();
 
-    fontComboBox_displayFont->setCurrentFont(pHost->getDisplayFont());
+    showDisplayFont(pHost->getDisplayFont());
     rememberDisplayFontFamilyShown();
     // Accommodate an initial font size being larger than expected - and ensure
     // it is a positive value:
@@ -4436,6 +4454,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     command_separator_lineedit->setText(pHost->mCommandSeparator);
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
     checkBox_enableTextAnalyzer->setChecked(pHost->mEnableTextAnalyzer);
+    checkBox_showTimeStamps->setChecked(pHost->mainConsoleShowsTimeStamps());
+    disconnect(mTimeStampsConnection);
+    mTimeStampsConnection = connect(&pHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::timeStampsToggled, this, &dlgProfilePreferences::followMainConsoleTimeStamps);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
 
@@ -5379,6 +5400,8 @@ void dlgProfilePreferences::clearHostDetails()
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(false);
     checkBox_enableTextAnalyzer->setChecked(false);
+    disconnect(mTimeStampsConnection);
+    checkBox_showTimeStamps->setChecked(false);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(false);
     USE_UNIX_EOL->setChecked(false);
     topBorderHeight->clear();
@@ -6334,6 +6357,8 @@ void dlgProfilePreferences::fillOutMapHistory()
     if (!pHost) {
         return;
     }
+    // An autosave still being written would be listed as its temporary file wherever that file has a name
+    pHost->waitForMapAutosave();
 
     // Map files change while the dialog is open, so rebuild, resetting the enabled state to an empty list's.
     // The rebuild follows every change, so it keeps an older map that was picked to load; the newest entry
@@ -6581,7 +6606,14 @@ void dlgProfilePreferences::slot_saveMap()
         if (!fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
             success = pHost->saveMapFile(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt());
         } else {
-            success = pHost->mpMap->writeJsonMapFile(fileName).first;
+            auto [localSuccess, errorMessage] = pHost->mpMap->writeJsonMapFile(fileName);
+            success = localSuccess;
+            if (!localSuccess) {
+                //: %1 is the file the map was being exported to, %2 why it could not be
+                pHost->postMessage(tr("[ ERROR ] - Unable to save JSON map file: %1\n"
+                                      "reason: %2.")
+                                           .arg(fileName, errorMessage));
+            }
         }
 
         if (success) {
@@ -6742,6 +6774,14 @@ void dlgProfilePreferences::slot_copyMap()
     const int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
+    // On Windows and macOS a copy keeps the time of the map saved here, so that save has to come
+    // after each destination's autosave
+    const QStringList toProfileNames = toProfilesRoomIdMap.keys();
+    for (const QString& otherHostName : toProfileNames) {
+        if (Host* pOtherHost = HostManager::self()->getHost(otherHostName)) {
+            pOtherHost->waitForMapAutosave();
+        }
+    }
     if (!pHost->saveMapFile(QString())) {
         label_mapFileActionResult->setText(tr("Could not backup the map - saving it failed."));
         QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
@@ -6785,6 +6825,9 @@ void dlgProfilePreferences::slot_copyMap()
                                // Just in case is needed to make the above message
                                // show up when saving big maps
 
+        if (Host* pOtherHost = HostManager::self()->getHost(otherHostName)) {
+            pOtherHost->waitForMapAutosave();
+        }
         if (!thisProfileLatestMapFile.copy(MudletApp::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
             label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
             QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
@@ -7002,6 +7045,9 @@ void dlgProfilePreferences::applyAll()
         }
         if (mSnapshot.dirty(checkBox_enableTextAnalyzer)) {
             pHost->mEnableTextAnalyzer = checkBox_enableTextAnalyzer->isChecked();
+        }
+        if (mSnapshot.dirty(checkBox_showTimeStamps)) {
+            pHost->setWindowTimeStamps(qsl("main"), checkBox_showTimeStamps->isChecked());
         }
         if (mSnapshot.dirty(checkBox_mUSE_FORCE_LF_AFTER_PROMPT)) {
             pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
@@ -7495,6 +7541,12 @@ void dlgProfilePreferences::applyAll()
         QSettings* settings = MudletApp::getQSettings();
         if (settings->value("telnetHandlerEnabled", false).toBool() != telnetHandlerEnabled->isChecked()) {
             settings->setValue("telnetHandlerEnabled", telnetHandlerEnabled->isChecked());
+        }
+    }
+    if (mSnapshot.dirty(checkBox_monospacedFontsOnly)) {
+        QSettings* settings = MudletApp::getQSettings();
+        if (settings->value(qsl("showOnlyMonospacedFonts"), false).toBool() != checkBox_monospacedFontsOnly->isChecked()) {
+            settings->setValue(qsl("showOnlyMonospacedFonts"), checkBox_monospacedFontsOnly->isChecked());
         }
     }
     applyTriggerMatchPoolSettings();
@@ -9603,6 +9655,16 @@ void dlgProfilePreferences::rememberDisplayFontFamilyShown()
     mDisplayFontFamilyShown = (mpHost && mpHost->resolveFontFamily(family).available) ? family : QString();
 }
 
+// QFontComboBox::setFontFilters() moves the list off a family it leaves out, which would put another font
+// on the profile, so proportional fonts are left out only while the font shown is a monospaced one
+void dlgProfilePreferences::showDisplayFont(const QFont& font)
+{
+    const bool monospacedOnly = checkBox_monospacedFontsOnly->isChecked() && QFontDatabase::isFixedPitch(font.family());
+    const QSignalBlocker blocker(fontComboBox_displayFont);
+    fontComboBox_displayFont->setFontFilters(monospacedOnly ? QFontComboBox::MonospacedFonts : QFontComboBox::AllFonts);
+    fontComboBox_displayFont->setCurrentFont(font);
+}
+
 void dlgProfilePreferences::slot_displayFontChanged()
 {
     // QFontComboBox moves off a family by itself when its package is uninstalled: no choice of the
@@ -9638,7 +9700,7 @@ void dlgProfilePreferences::slot_hostDisplayFontChanged(const QFont& font)
         const QSignalBlocker comboBlocker(fontComboBox_displayFont);
         const QSignalBlocker sizeBlocker(spinBox_displayFontSize);
         const QSignalBlocker antiAliasBlocker(checkBox_antiAlias);
-        fontComboBox_displayFont->setCurrentFont(font);
+        showDisplayFont(font);
         spinBox_displayFontSize->setMaximum(std::max(font.pointSize(), spinBox_displayFontSize->maximum()));
         spinBox_displayFontSize->setValue(std::max(1, font.pointSize()));
         // Not fontsAntiAlias(): applyAll() writes that from this box only once the apply timer fires
@@ -9717,6 +9779,18 @@ void dlgProfilePreferences::slot_hostEditorFontChanged(const QFont& font)
             }
         }
     }
+}
+
+// The timestamp button and scripts move this setting while the dialog is in front, and the newer choice
+// has to win over a tick of the box still waiting out the apply debounce
+void dlgProfilePreferences::followMainConsoleTimeStamps()
+{
+    if (!mpHost) {
+        return;
+    }
+    const QSignalBlocker blocker(checkBox_showTimeStamps);
+    checkBox_showTimeStamps->setChecked(mpHost->mainConsoleShowsTimeStamps());
+    mSnapshot.take(checkBox_showTimeStamps);
 }
 
 void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)

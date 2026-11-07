@@ -22,16 +22,20 @@
 
 #include <QObject>
 #include <QPointer>
+#include <QString>
+#include <memory>
 
 class Host;
+class TConsoleModel;
 class dlgModuleManager;
 class dlgNotepad;
 class dlgPackageManager;
 class dlgProfilePreferences;
 class dlgTriggerEditor;
 
-// The dialogs the frontend has opened for one profile, at most one of each. It
-// is a child of the profile's Host, so it goes when the Host does.
+// The dialogs the frontend has opened for one profile, at most one of each, and
+// what the editor is to show once built. A child of the profile's Host, so it
+// goes when the Host does.
 class HostDialogs : public QObject
 {
     Q_OBJECT
@@ -40,11 +44,16 @@ public:
     Q_DISABLE_COPY(HostDialogs)
     // Makes the profile's set on first use
     static HostDialogs& of(Host*);
-    // Only looks: nullptr when the frontend has opened nothing for the profile yet
+    // Only looks: nullptr for a profile the frontend has not taken on
     static HostDialogs* find(const Host*);
     // Makes the frontend answer the profile's requests to close or destroy the
     // dialogs it opened for it. Call once per Host.
     static void connectTeardown(Host*);
+    // Built on first use, with what it would have shown had it been built at profile load
+    static dlgTriggerEditor* editor(Host*);
+    // Held until the editor is built, only the latest as the editor shows one, and dropped by a
+    // clean reset. Dropped too for a profile the frontend has not taken on.
+    static void showEditorWarning(Host*, const QString&);
 
     QPointer<dlgTriggerEditor> mpEditorDialog;
     QPointer<dlgNotepad> mpNotePad;
@@ -54,6 +63,12 @@ public:
 
 private:
     explicit HostDialogs(Host*);
+    ~HostDialogs() override;
+
+    // Handed to the editor when it is built
+    std::unique_ptr<TConsoleModel> mpErrorConsoleModel;
+    QString mPendingEditorWarning;
+    bool mEditorResetQueued = false;
 };
 
 #endif // MUDLET_HOSTDIALOGS_H

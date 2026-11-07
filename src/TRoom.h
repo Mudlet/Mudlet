@@ -50,7 +50,7 @@ public:
     bool setExit(const int to, const int direction);
     int getExit(const int) const;
     bool hasExit(const int) const;
-    void setWeight(int);
+    bool setWeight(int);
     bool setExitLock(const int, const bool);
     void removeExitExtras(const int);
     bool setSpecialExitLock(const QString&, const bool);
@@ -195,6 +195,7 @@ private:
     void calcCustomLineBounds();
     void setPlanarExit(int&, const int);
     void refreshLodExitIndex();
+    bool removeSpecialExitExtras(const QString&);
 
     bool readJsonExits(const QJsonObject&);
     void readJsonExitStubs(const QJsonObject&);

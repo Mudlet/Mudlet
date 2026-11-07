@@ -941,15 +941,11 @@ void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHo
         // for as long as it lasts - on the main screen that is a line the
         // player is told to ignore, which is worse than not saying it. The
         // editor is where a key binding is looked at and where it is changed.
-        // Opening it replaces this notice, so it is read out only if the editor
-        // is open; selecting the binding says it again.
-        if (auto* pDialogs = HostDialogs::find(pOtherHost.data()); auto* pEditor = pDialogs ? pDialogs->mpEditorDialog.data() : nullptr) {
-            //: Warning shown in the editor when an add-on command in another of the player's profiles takes a key one of this profile's key bindings uses. %1 is a key such as "Alt+F9", %2 the name of the command and %3 the name of the profile it was added in.
-            pEditor->showWarning(
-                    tr("%1 is now used by the \"%2\" command in your \"%3\" profile, so this profile's key binding on it will not fire. Put one of the two on a different key to use both.")
-                            .arg(sequence.toString(QKeySequence::NativeText), commandName, pHost ? pHost->getName() : QString()),
-                    pEditor->isVisible());
-        }
+        //: Warning shown in the editor when an add-on command in another of the player's profiles takes a key one of this profile's key bindings uses. %1 is a key such as "Alt+F9", %2 the name of the command and %3 the name of the profile it was added in.
+        HostDialogs::showEditorWarning(
+                pOtherHost.data(),
+                tr("%1 is now used by the \"%2\" command in your \"%3\" profile, so this profile's key binding on it will not fire. Put one of the two on a different key to use both.")
+                        .arg(sequence.toString(QKeySequence::NativeText), commandName, pHost ? pHost->getName() : QString()));
     }
 }
 
@@ -1523,6 +1519,7 @@ void mudlet::init()
     mpActionConnect->setObjectName(qsl("connect"));
 
     mpActionDisconnect = new QAction(tr("Disconnect"), this);
+    mpActionDisconnect->setIcon(QIcon(qsl(":/icons/network-disconnect.png")));
     mpActionDisconnect->setObjectName(qsl("disconnect"));
 
     mpActionCloseProfile = new QAction(tr("Close profile"), this);
@@ -1634,6 +1631,8 @@ void mudlet::init()
     mpActionMudletDiscord->setObjectName(qsl("mudlet_discord"));
     mpMainToolBar->widgetForAction(mpActionMudletDiscord)->setObjectName(mpActionMudletDiscord->objectName());
     mpActionMudletDiscord->setVisible(false); // Mudlet Discord becomes visible if game has custom invite
+    // Its text carries the game's name, which macOS could otherwise take for About, Preferences or Quit
+    dactionDiscord->setMenuRole(QAction::NoRole);
 
 
     mpButtonDiscord->addAction(mpActionDiscord);
@@ -1817,16 +1816,12 @@ void mudlet::init()
             return;
         }
 
-        HostDialogs& dialogs = HostDialogs::of(host);
-        if (!dialogs.mpEditorDialog && !createMudletEditor()) {
-            qWarning() << "Failed to create editor dialog";
-            return;
-        }
-        dialogs.mpEditorDialog->showCurrentTriggerItem();
-        dialogs.mpEditorDialog->raise();
-        showEditorRestoringWindowState(dialogs.mpEditorDialog);
-        dialogs.mpEditorDialog->activateWindow();
-        dialogs.mpEditorDialog->mpErrorConsole->setVisible(true);
+        dlgTriggerEditor* pEditor = HostDialogs::editor(host);
+        pEditor->showCurrentTriggerItem();
+        pEditor->raise();
+        showEditorRestoringWindowState(pEditor);
+        pEditor->activateWindow();
+        pEditor->mpErrorConsole->setVisible(true);
     });
 
 #if defined(INCLUDE_UPDATER)
@@ -2840,6 +2835,7 @@ void mudlet::slot_packageExporter()
         return;
     }
     auto d = new dlgPackageExporter(this, pH);
+    d->setAttribute(Qt::WA_DeleteOnClose);
 
     // Set up focus restoration for when this package exporter is closed
     setupPackageExporterFocusRestoration(d);
@@ -3623,6 +3619,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(pH, &Host::signal_showUnpackingProgress, pConsole, &TMainConsole::showUnpackingProgress, Qt::UniqueConnection);
     connect(pH, &Host::signal_hideUnpackingProgress, pConsole, &TMainConsole::closeUnpackingProgress, Qt::UniqueConnection);
     HostDialogs::connectTeardown(pH);
+    // The editor is built when first opened, and until then this keeps what it would show
+    HostDialogs::of(pH);
 
     // Functor connects again, so no Qt::UniqueConnection: see the note above signal_bell's
     connect(pH, &Host::signal_consoleFontChanged, this, [](const QFont& font) {
@@ -3797,13 +3795,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     }
 
     pConsole->show();
-
-    auto pEditor = new dlgTriggerEditor(pH);
-    HostDialogs::of(pH).mpEditorDialog = pEditor;
-    connect(pH, &Host::profileSaveStarted, pEditor, &dlgTriggerEditor::slot_profileSaveStarted);
-    connect(pH, &Host::profileSaveFinished, pEditor, &dlgTriggerEditor::slot_profileSaveFinished);
-    // Item trees are deliberately not populated here: the rebuild ScriptUnit::compileAll() queues is put off
-    // until the editor is first opened (see dlgTriggerEditor::runScheduledCleanReset()).
 
     pH->getActionUnit()->updateAllToolbars();
 
@@ -4814,8 +4805,13 @@ void mudlet::readLateSettings(const QSettings& settings)
     mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
 
 
-    resize(size);
-    move(pos);
+    // While maximized pos and size are what the window covers, not where it returns to. Otherwise they are
+    // preferred: an older Mudlet sharing this file updates them and leaves mainWindowGeometry stale.
+    const bool savedEnlarged = settings.value(qsl("maximized"), false).toBool() || settings.value(qsl("fullScreen"), false).toBool();
+    if (!savedEnlarged || !restoreGeometry(settings.value(qsl("mainWindowGeometry")).toByteArray())) {
+        resize(size);
+        move(pos);
+    }
 
     // Need to remove the Qt::WindowMaximized, Qt::WindowFullScreen AND
     // Qt::WindowActive from the state and then apply the result of combining
@@ -5150,6 +5146,7 @@ void mudlet::writeSettings()
     QSettings& settings = *MudletApp::getQSettings();
     settings.setValue("pos", pos());
     settings.setValue("size", size());
+    settings.setValue(qsl("mainWindowGeometry"), saveGeometry());
     settings.setValue("mainiconsize", mToolbarIconSize);
     settings.setValue("tefoldericonsize", mEditorTreeWidgetIconSize);
     settings.setValue("scrollbackTutorialsShown", mScrollbackTutorialsShown);
@@ -6373,26 +6370,21 @@ void mudlet::updateDiscordNamedIcon()
     }
 
     Host* pHost = getActiveHost();
+    const QString gameName = pHost ? pHost->getDiscordGameName() : QString();
+    const bool hasCustom = pHost && !pHost->getDiscordInviteURL().isEmpty();
 
-    if (!pHost) {
-        // No active host - reset Discord icon to default state (hidden)
+    if (hasCustom) {
+        const QString toolTip = utils::richText(gameDiscordToolTip(gameName).toHtmlEscaped());
+        mpActionDiscord->setIconText(gameDiscordLabel(QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90)));
+        mpActionDiscord->setToolTip(toolTip);
+        dactionDiscord->setText(gameDiscordLabel(gameName));
+        dactionDiscord->setToolTip(toolTip);
+    } else {
+        // Without an invite of the game's own the button opens Mudlet's server
         mpActionDiscord->setIconText(qsl("Discord"));
-
-        // Hide Mudlet Discord action as there's no game with custom invite
-        if (mpActionMudletDiscord->isVisible()) {
-            mpActionMudletDiscord->setVisible(false);
-        }
-        if (dactionDiscord->isVisible()) {
-            dactionDiscord->setVisible(false);
-        }
-        return;
+        // An empty tooltip falls back to the action's own text
+        mpActionDiscord->setToolTip(QString());
     }
-
-    const QString gameName = pHost->getDiscordGameName();
-
-    const bool hasCustom = !pHost->getDiscordInviteURL().isEmpty();
-
-    mpActionDiscord->setIconText(gameName.isEmpty() ? qsl("Discord") : QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90));
 
     if (mpActionMudletDiscord->isVisible() != hasCustom) {
         mpActionMudletDiscord->setVisible(hasCustom);
@@ -6400,6 +6392,26 @@ void mudlet::updateDiscordNamedIcon()
     if (dactionDiscord->isVisible() != hasCustom) {
         dactionDiscord->setVisible(hasCustom);
     }
+}
+
+QString mudlet::gameDiscordLabel(const QString& gameName)
+{
+    if (gameName.isEmpty()) {
+        //: Label of the Discord button and Help menu entry that open the Discord server of a game which has not given its name
+        return tr("Game Discord");
+    }
+    //: Label of the Discord button and Help menu entry that open the game's own Discord server; %1 is the game's name
+    return tr("%1 Discord").arg(addonLabel(gameName));
+}
+
+QString mudlet::gameDiscordToolTip(const QString& gameName)
+{
+    if (gameName.isEmpty()) {
+        //: Tooltip of the Discord button and Help menu entry that open the Discord server of a game which has not given its name
+        return tr("Open a link to the game's server on Discord");
+    }
+    //: Tooltip of the Discord button and Help menu entry that open the game's own Discord server; %1 is the game's name
+    return tr("Open a link to the %1 server on Discord").arg(gameName);
 }
 
 void mudlet::slot_reconnect()
@@ -8547,18 +8559,7 @@ dlgTriggerEditor* mudlet::createMudletEditor()
         return nullptr;
     }
 
-    HostDialogs& dialogs = HostDialogs::of(pHost);
-    if (dialogs.mpEditorDialog != nullptr) {
-        return dialogs.mpEditorDialog;
-    }
-
-    auto* pEditor = new dlgTriggerEditor(pHost);
-    dialogs.mpEditorDialog = pEditor;
-    connect(pHost, &Host::profileSaveStarted, pEditor, &dlgTriggerEditor::slot_profileSaveStarted);
-    connect(pHost, &Host::profileSaveFinished, pEditor, &dlgTriggerEditor::slot_profileSaveFinished);
-    pEditor->fillout_form();
-
-    return pEditor;
+    return HostDialogs::editor(pHost);
 }
 
 // Getting a QWidget to emit a signal that normally comes from a QWindow;
@@ -8614,8 +8615,10 @@ void mudlet::slot_tabReattachRequested(const QString& tabName, int insertIndex)
 
 void mudlet::slot_detachedWindowClosed(const QString& profileName)
 {
-    // Clean up when detached window is closed
-    if (mDetachedWindows.contains(profileName)) {
+    // A window can still hold a tab for a profile closed some other way, and that name may since
+    // belong to a profile reopened in another window, which this must not close
+    auto pClosedWindow = qobject_cast<TDetachedWindow*>(sender());
+    if (pClosedWindow && mDetachedWindows.value(profileName) == pClosedWindow) {
         mDetachedWindows.remove(profileName);
 
         // Update tab bar auto-hide behavior since detached windows changed

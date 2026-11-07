@@ -30,6 +30,7 @@
 #undef nil
 #endif
 
+#include "HardwareDeviceTypes.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "mudlet.h"
@@ -572,6 +573,8 @@ int main(int argc, char* argv[])
     if (printAndExitOption) {
         consoleApp = std::make_unique<QCoreApplication>(argc, argv);
     } else {
+        // Setting the environment is a data race once the application's threads are reading it
+        nameHardwareDeviceTypes();
         app = new QApplication(argc, argv);
     }
 

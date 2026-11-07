@@ -444,6 +444,67 @@ private slots:
         }
     }
 
+    void test_emojiWithVariationSelectorTakesTwoCells_data()
+    {
+        QTest::addColumn<int>("mode");
+        QTest::newRow("as is") << static_cast<int>(ControlCharacterMode::AsIs);
+        QTest::newRow("picture") << static_cast<int>(ControlCharacterMode::Picture);
+        QTest::newRow("oem") << static_cast<int>(ControlCharacterMode::OEM);
+    }
+
+    // #6613: VS16 turns a one cell symbol into a colour emoji two cells wide, and a click
+    // has to land on the character drawn under it
+    void test_emojiWithVariationSelectorTakesTwoCells()
+    {
+        QFETCH(int, mode);
+
+        TTextEdit* pane = preparePane();
+        QVERIFY2(pane, "Could not prepare a console");
+        Host* host = mudlet::self()->getActiveHost();
+        TMainConsole* console = host->mainConsoleView();
+        QVERIFY(!console->showTimeStamps());
+        auto restoreMode = qScopeGuard([host] {
+            host->setControlCharacterMode(ControlCharacterMode::AsIs);
+        });
+        host->setControlCharacterMode(static_cast<ControlCharacterMode>(mode));
+
+        const QString text = QString::fromUtf16(u"\u2620\uFE0Fa#\uFE0F\u20E3b#\uFE0Fc");
+        struct Expected
+        {
+            QString grapheme;
+            int index;
+            int cell;
+            int cells;
+        };
+        const std::vector<Expected> expected{{QString::fromUtf16(u"\u2620\uFE0F"), 0, 0, 2},
+                                             {qsl("a"), 2, 2, 1},
+                                             {QString::fromUtf16(u"#\uFE0F\u20E3"), 3, 3, 2},
+                                             {qsl("b"), 6, 5, 1},
+                                             {QString::fromUtf16(u"#\uFE0F"), 7, 6, 1},
+                                             {qsl("c"), 9, 7, 1}};
+        console->print(text + QChar::LineFeed);
+        const int line = console->buffer.getLastLineNumber() - 1;
+        QCOMPARE(console->buffer.line(line), text);
+
+        std::vector<TTextEdit::GraphemeRun> layout;
+        pane->layoutLine(line, 0, pane->timeStampCharStyle(), layout);
+        QCOMPARE(static_cast<int>(layout.size()), static_cast<int>(expected.size()));
+        for (size_t i = 0; i < expected.size(); ++i) {
+            const auto& [grapheme, index, cell, cells] = expected.at(i);
+            const QRect& rect = layout.at(i).textRect;
+            QCOMPARE(layout.at(i).grapheme.toString(), grapheme);
+            QVERIFY2(rect.left() == cell * pane->mFontWidth && rect.width() == cells * pane->mFontWidth,
+                     qPrintable(qsl("grapheme %1 was laid out at x=%2, %3px wide, rather than in cell %4, %5 cells wide").arg(i).arg(rect.left()).arg(rect.width()).arg(cell).arg(cells)));
+
+            for (int c = cell; c < cell + cells; ++c) {
+                bool outOfBounds = false;
+                const int mouseX = c * pane->mFontWidth + pane->mFontWidth / 2;
+                QCOMPARE(pane->convertMouseXToBufferX(mouseX, line, &outOfBounds), index);
+                QVERIFY(!outOfBounds);
+            }
+        }
+    }
+
     void test_repeatedCopyKeepsWorking()
     {
         TTextEdit* pane = prepareSelectedPane(QPointF(60, 60));

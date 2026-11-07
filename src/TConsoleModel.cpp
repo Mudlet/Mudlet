@@ -1105,8 +1105,15 @@ TConsoleModel::WriteResult TConsoleModel::insertText(const QString& text)
     return {false, line, line + down};
 }
 
-void TConsoleModel::replace(const QString& text)
+void TConsoleModel::replace(const QString& text, const bool keepColor)
 {
+    // A copy, so the kept colours do not stay on for whatever is written next
+    TChar format = mFormatCurrent;
+    if (keepColor) {
+        if (const TChar* pChar = selectionStartChar()) {
+            format.setColors(pChar->foreground(), pChar->background());
+        }
+    }
     MirrorMark mirrorMark;
     if (mTriggerEngineMode) {
         if (P_begin == P_end) {
@@ -1121,7 +1128,7 @@ void TConsoleModel::replace(const QString& text)
             mirrorMark.lineLength -= mirrorMark.removed;
         }
     }
-    if (buffer.replaceInLine(P_begin, P_end, text, mFormatCurrent)) {
+    if (buffer.replaceInLine(P_begin, P_end, text, format)) {
         holdTriggerWriteForMirror(mirrorMark);
     }
 }

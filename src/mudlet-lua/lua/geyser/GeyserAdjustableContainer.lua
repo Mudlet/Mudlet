@@ -160,7 +160,9 @@ local function adjust_Info(self, label, event)
     if top and bottom then top = false end
 
     if event.button ~= "LeftButton" and not self.minimized then
-        if (top or bottom) and not (left or right) then
+        if self.noResize then
+            label:setCursor("OpenHand")
+        elseif (top or bottom) and not (left or right) then
             label:setCursor("ResizeVertical")
         elseif (left or right) and not (top or bottom) then
             label:setCursor("ResizeHorizontal")
@@ -174,6 +176,15 @@ local function adjust_Info(self, label, event)
     end
 
     adjustInfo = {name = adjustInfo.name, top = top, bottom = bottom, left = left, right = right, x = x, y = y, move = adjustInfo.move, grabX = event.x, grabY = event.y}
+end
+
+-- Internal function: whether a left button drag on the container may do nothing at all.
+-- A container connected to others is only ever resized by one, never moved
+local function dragHeld(self)
+    if self.connectedContainers then
+        return self.noResize
+    end
+    return self.locked
 end
 
 --- function to give your adjustable container a new title
@@ -208,13 +219,14 @@ function Adjustable.Container:onClick(label, event)
     if label.cursorShape == "OpenHand" then
         label:setCursor("ClosedHand")
     end
-    if event.button == "LeftButton" and not(self.locked and not self.connectedContainers) then
+    if event.button == "LeftButton" and not dragHeld(self) then
         if self.raiseOnClick then
             self:raiseAll()
         end
         adjustInfo.name = label.name
         adjustInfo.move = not (adjustInfo.right or adjustInfo.left or adjustInfo.top or adjustInfo.bottom)
-        if self.minimized then adjustInfo.move = true end
+        -- the edges are kept while not resizable, so setResizable(true) applies without a fresh hover
+        if self.minimized or self.noResize then adjustInfo.move = true end
         adjust_Info(self, label, event)
     end
     if event.button == "RightButton" then
@@ -361,7 +373,7 @@ local settlingBorders = 0
 -- @param label the main Adjustable.Container Label
 -- @param event the onMove event and its information
 function Adjustable.Container:onMove (label, event)
-    if self.locked and not self.connectedContainers then
+    if dragHeld(self) then
         if label.cursorShape ~= 0 then
             label:resetCursor()
         end
@@ -420,7 +432,7 @@ function Adjustable.Container:onMove (label, event)
             if y1-dy <-5 then self:attachToBorder("top") end
             if winw - w < tx+0.1 then self:attachToBorder("right") end
             if winh - h < ty+0.1 then self:attachToBorder("bottom") end--]]
-        elseif adjustInfo.move == false then
+        elseif adjustInfo.move == false and not self.noResize then
             local w2, h2, x2, y2 = w - dx, h - dy, x1 - dx, y1 - dy
             local tx, ty, tw, th = x1, y1, w, h
             if adjustInfo.top then
@@ -1291,7 +1303,7 @@ function Adjustable.Container:load(slot, dir)
 
     local ok = pcall(table.load, loadDir, mytable)
     if not ok then
-        self:deleteSaveFile()
+        self:deleteSaveFile(dir)
         debugc(string.format("Adjustable.Container.load: Save file %s got corrupted. It was deleted so everything else can load properly.", loadDir))
         return false
     end
@@ -1547,6 +1559,21 @@ function Adjustable.Container:setAbsolute(size_as_absolute, position_as_absolute
     self:set_constraints(self)
 end
 
+--- lets the container be resized with the mouse or not; one that is not can still be moved by any part of it,
+-- unless it is connected to other containers, which are never moved by the mouse, as then dragging it does nothing.
+-- It still follows a connected container that is resized, as they share the border.
+-- This is not part of the saved layout, so save() and load() leave it as it is
+-- @param resizable bool false to stop the container being resized by dragging its edges, true to allow it again
+-- @return true, or nil and an error message if resizable is not a boolean
+-- @see Adjustable.Container:new for the noResize option, which sets this at creation
+function Adjustable.Container:setResizable(resizable)
+    if type(resizable) ~= "boolean" then
+        return nil, "setResizable: bad argument #1 type (resizable as boolean expected, got "..type(resizable)..")"
+    end
+    self.noResize = not resizable
+    return true
+end
+
 --- changes the values of your container to be percentage values
 -- only needed if values where set to absolute before
 -- @param size_as_percent bool true to have the size as percentage values
@@ -1663,6 +1690,9 @@ function Adjustable.Container:disableAutoSave()
     end
 end
 
+-- stands in for translations that cannot be found, showing each text's key, so they are looked for once rather than on every new()
+local untranslated = setmetatable({}, {__index = function(_, key) return {message = key} end})
+
 --- constructor for the Adjustable Container
 ---@param cons besides standard Geyser.Container parameters there are also:
 ---@param container
@@ -1693,13 +1723,14 @@ end
 --@param cons.titleFormat  a format list to use. 'c' - center, 'l' - left, 'r' - right,  'b' - bold, 'i' - italics, 'u' - underline, 's' - strikethrough,  '##' - font size.
 --@param[opt="standard"] cons.lockStyle  choose lockstyle at creation. possible integrated lockstyle are: "standard", "border", "light" and "full"
 --@param[opt=false] cons.noLimit  there is a minimum size limit if this constraint is set to false.
+--@param[opt=false] cons.noResize  stops the container being resized by dragging its edges, so a drag anywhere on it moves it; see setResizable
 --@param[opt=true] cons.raiseOnClick  raise your container if you click on it with your left mouse button
 --@param[opt=true] cons.autoSave  saves your container settings on exit (sysExitEvent). If set to false it won't autoSave
 --@param[opt=true] cons.autoLoad  loads the container settings (if there are some to load) at creation of the container. If set to false it won't load the settings at creation
 --@param[opt=false] cons.dragOut  lets a container nested in another container be dragged out of it, into the window it is in. A nested container is otherwise held inside its parent. There is no dragging back in, use changeContainer for that
 
 function Adjustable.Container:new(cons,container)
-    Adjustable.Container.Locale = Adjustable.Container.Locale or loadTranslations("AdjustableContainer")
+    Adjustable.Container.Locale = Adjustable.Container.Locale or loadTranslations("AdjustableContainer") or untranslated
     cons = cons or {}
     cons.type = cons.type or "adjustablecontainer"
     -- its labels are made only once it is in its container, too late to stop there
@@ -1777,6 +1808,7 @@ function Adjustable.Container:new(cons,container)
     me:setTitle()
     me.lockStyle = me.lockStyle or "standard"
     me.noLimit = me.noLimit or false
+    me.noResize = me.noResize or false
     me.dragOut = me.dragOut or false
     if not(me.raiseOnClick == false) then
         me.raiseOnClick = true

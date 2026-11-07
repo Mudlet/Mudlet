@@ -86,6 +86,12 @@
 
 #include <chrono>
 
+#if defined(Q_OS_UNIX)
+#include <algorithm>
+#include <csignal>
+#include <sys/resource.h>
+#endif
+
 using namespace std::chrono_literals;
 
 namespace {
@@ -975,6 +981,58 @@ private slots:
         QVERIFY2(!QFileInfo::exists(unwritable), "the destination file was written after all");
         QVERIFY(!pMap->hasActiveTransferProgress());
         QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download after an unwritable destination was refused, so the import flag was left set");
+    }
+
+    // A full disk cuts the write short without an error on the file, so a commit would put the part that landed
+    // in place of the map file already there, and the reader would swap the loaded map for the rooms in it
+    void test_aDownloadThatCannotBeWrittenWholeKeepsTheMapAndItsFile()
+    {
+#if !defined(Q_OS_UNIX)
+        QSKIP("needs RLIMIT_FSIZE to cut a write short");
+#else
+        TMap* pMap = mpHost->mpMap.data();
+        const QString stored = MudletApp::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+        QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download that gives this test a map to keep never finished");
+        QCOMPARE(pMap->mpRoomDB->getRoomMap().size(), 2);
+        QByteArray manyRooms = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<map>\n <areas>\n  <area id=\"1\" name=\"Many Rooms\"/>\n </areas>\n <rooms>\n";
+        for (int id = 1; id <= 3000; ++id) {
+            manyRooms += "  <room id=\"" + QByteArray::number(id) + "\" area=\"1\" title=\"Room\" environment=\"2\">\n   <coord x=\"" + QByteArray::number(id) + "\" y=\"0\" z=\"0\"/>\n  </room>\n";
+        }
+        manyRooms += " </rooms>\n</map>\n";
+        mpMapServer->serve(qsl("/many-rooms.xml"), manyRooms);
+        forgetMapDownloadEvents();
+        mConsoleMark = mpHost->mainConsoleView()->buffer.getLastLineNumber();
+
+        rlimit saved{};
+        QCOMPARE(::getrlimit(RLIMIT_FSIZE, &saved), 0);
+        rlimit limited = saved;
+        limited.rlim_cur = std::min<rlim_t>(64 * 1024, saved.rlim_max);
+        QVERIFY(manyRooms.size() > static_cast<qsizetype>(limited.rlim_cur));
+        // Past the limit the kernel also raises SIGXFSZ, whose default action ends the process
+        const auto previousHandler = std::signal(SIGXFSZ, SIG_IGN);
+        const bool applied = ::setrlimit(RLIMIT_FSIZE, &limited) == 0;
+        bool finished = false;
+        if (applied) {
+            finished = runDownload(mpMapServer->url(qsl("/many-rooms.xml")));
+        }
+        const bool restored = ::setrlimit(RLIMIT_FSIZE, &saved) == 0;
+        std::signal(SIGXFSZ, previousHandler);
+        QVERIFY2(applied, "the file size limit could not be set");
+        QVERIFY2(restored, "the file size limit could not be put back");
+        QVERIFY2(finished, "the map download never finished");
+
+        QVERIFY2(consoleShows(qsl("unable to write destination file")), qPrintable(consoleTextSinceMark()));
+        QVERIFY2(!consoleShows(qsl("map downloaded and stored")), qPrintable(consoleTextSinceMark()));
+        QFile file(stored);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(file.readAll(), scmMapXml);
+        const QFileInfo storedInfo(stored);
+        QCOMPARE(QDir(storedInfo.absolutePath()).entryList({qsl("%1*").arg(storedInfo.fileName())}, QDir::Files | QDir::Hidden), QStringList{storedInfo.fileName()});
+        QCOMPARE(pMap->mpRoomDB->getRoomMap().size(), 2);
+        QCOMPARE(pMap->mpRoomDB->getAreaNamesMap().value(1), qsl("Downloaded Area"));
+        QVERIFY2(mapDownloadEventCountIs(0), "a download that could not be written raised sysMapDownloadEvent");
+        QVERIFY(!pMap->hasActiveTransferProgress());
+#endif
     }
 
     // What the mapper's "Download from game" does: no URL, so the location the
