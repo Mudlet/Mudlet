@@ -612,6 +612,50 @@ its own gives the area without them, and gives a smaller one as they grow; the s
 their room from it, so what a script reads of the main window's size changes with them only when the app
 gives a new one.
 
+## Embedding it: the windows scripts make
+
+An app has a UI of its own, so it draws the windows a profile's scripts make as well as the main
+console: mini consoles, user windows, labels, command lines, text edits, scroll boxes and the mapper's
+place. Mudlet draws none of them. The session gives the app what it needs to draw them as the GUI would,
+and the app draws what that says, as it draws the main console from `lineShown`.
+
+`scriptWindows()` lists them as `ScriptWindow`s, each with:
+
+- its `name` and `kind`;
+- its `parent`: the user window or scroll box it is in, or, for a console's own command line from
+  `enableCommandLine()`, that console, whose name it shares; empty for the main window's area, which is
+  what an app gives with `setMainWindowSize()` (see "Embedding it: the main window's size"), and for a
+  dock;
+- `inDock`, set for a dock: a user window, or the map `openMapWidget()` opened. In the GUI these are
+  docks beside the main window's area, docked or floating, not windows in it, so nothing in the area is
+  under or over them;
+- its `geometry` in its parent's pixels, and a dock's in the main window's. With no dock layout to put
+  it in, a user window is at the main window's top left, at the size the main window had as the user
+  window opened, or, if the app had given no size by then, at the one made up from the main console's
+  grid, and it stays so as the main window changes size. A console's own command line has none, as the
+  console lays it out along its bottom;
+- `visible`, its own flag, as `hideWindow()` and `showWindow()` set it, and `shown`, whether it shows:
+  visible, and so is each window it is in. Hiding a user window leaves the labels in it visible, but not
+  shown;
+- `stackOrder`, from 0 among the windows of one parent, a higher one drawn over a lower one. One made
+  later, raised with `raiseWindow()` or moved into the parent with `setWindow()` is higher; one lowered
+  with `lowerWindow()` goes below the rest. The docks count from 0 among themselves, apart from the
+  windows of the main window's area;
+- the `background` colour of a console, or of a label from `setBackgroundColor()`, and the `font` a
+  console, label or text edit draws its text in. The other kinds have an invalid colour and a default
+  font.
+
+The list has parents before the windows they hold, and each parent's windows from the lowest up, the
+main window's area's before the docks, so an app that draws it in order draws each window over what it
+should cover. `scriptWindow(name)` reads one,
+the first of that name, and `scriptWindow(name, kind)` the one of that kind, as a console's own command
+line has its console's name. Neither lists buffers, which are never shown, nor the windows of a game's MXP
+frames. Both are empty with no profile open, and may be read from anywhere, a handler of the session's
+signals included.
+
+A Geyser gauge, button, or container is not a window of its own: it is the labels and windows it is made
+of, so a gauge is its `_back`, `_front` and `_text` labels, which the list has as any other.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,
