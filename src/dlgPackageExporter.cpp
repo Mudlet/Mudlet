@@ -214,6 +214,10 @@ void dlgPackageExporter::setModuleCreationMode(bool isModule)
 
         // Update UI elements for module creation
         ui->lineEdit_packageName->setPlaceholderText(tr("Enter module name"));
+        //: Screen reader name of the field the module to create is named in, which has no visible label of its own
+        ui->lineEdit_packageName->setAccessibleName(tr("Module name"));
+        //: Screen reader description of the field the module to create is named in
+        ui->lineEdit_packageName->setAccessibleDescription(tr("Name to create the module under"));
 
         // Update button text to be module-specific
         mExportButton->setText(tr("Create Module"));
@@ -234,6 +238,8 @@ void dlgPackageExporter::setModuleCreationMode(bool isModule)
 
         // Update the export location widget to be more descriptive
         ui->lineEdit_filePath->setPlaceholderText(tr("Module location"));
+        //: Screen reader name of the read-only field showing where the module will be saved, which has no visible label of its own
+        ui->lineEdit_filePath->setAccessibleName(tr("Module save location"));
 
         // Update info label if visible
         ui->infoLabel->setText(QString());

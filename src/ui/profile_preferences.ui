@@ -1719,6 +1719,12 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="1" column="0">
            <widget class="QComboBox" name="code_editor_theme_selection_combobox">
+            <property name="accessibleName">
+             <string extracomment="Screen reader name of the editor color theme picker on the Editor page of the settings, which has no visible label of its own">Editor theme</string>
+            </property>
+            <property name="accessibleDescription">
+             <string extracomment="Screen reader description of the editor color theme picker on the Editor page of the settings">Color theme the script editor is drawn in</string>
+            </property>
             <property name="editable">
              <bool>true</bool>
             </property>
@@ -1726,6 +1732,12 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="1" column="1">
            <widget class="QComboBox" name="script_preview_combobox">
+            <property name="accessibleName">
+             <string extracomment="Screen reader name of the picker for the script shown as the theme preview on the Editor page of the settings, which has no visible label of its own">Script to preview</string>
+            </property>
+            <property name="accessibleDescription">
+             <string extracomment="Screen reader description of the picker for the script shown as the theme preview on the Editor page of the settings">One of your scripts to show in the editor theme preview</string>
+            </property>
             <property name="editable">
              <bool>true</bool>
             </property>

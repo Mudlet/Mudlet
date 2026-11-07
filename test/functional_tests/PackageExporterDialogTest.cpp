@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QAccessible>
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QDragEnterEvent>
@@ -800,6 +801,31 @@ private slots:
 
         nameField()->setText(qsl("exporter-now-named"));
         QVERIFY2(exportButton()->isEnabled(), "the Export button stayed disabled after the package was named");
+    }
+
+    // Names come off the property, as an unnamed combo box is announced by its current
+    // item; descriptions off the accessible interface, where a placeholder stands in
+    void test_theUnlabelledFieldsAreNamedForAScreenReader_8227()
+    {
+        const auto description = [](QWidget* pField) {
+            return QAccessible::queryAccessibleInterface(pField)->text(QAccessible::Description);
+        };
+        openExporter();
+        QWidget* pPackageList = comboNamed(qsl("packageList"));
+        QWidget* pLocation = lineEditNamed(qsl("lineEdit_filePath"));
+        for (QWidget* pField : {static_cast<QWidget*>(nameField()), pPackageList, pLocation}) {
+            QVERIFY2(!pField->accessibleName().isEmpty(), qPrintable(qsl("%1 has nothing for a screen reader to announce it as").arg(pField->objectName())));
+            QVERIFY2(!description(pField).isEmpty(), qPrintable(qsl("%1 has no accessible description").arg(pField->objectName())));
+        }
+        QVERIFY(nameField()->accessibleName() != pPackageList->accessibleName());
+        const QString packageName = nameField()->accessibleName();
+        const QString packageNameDescription = nameField()->accessibleDescription();
+        const QString packageLocation = pLocation->accessibleName();
+
+        mpExporter->setModuleCreationMode(true);
+        QVERIFY2(nameField()->accessibleName() != packageName, "the module name field is still announced as the package name");
+        QVERIFY2(pLocation->accessibleName() != packageLocation, "the module location field is still announced as the package's");
+        QVERIFY2(nameField()->accessibleDescription() != packageNameDescription, "the module name field is still described as the package name");
     }
 
     // An empty package would install as nothing at all, so the export stops
