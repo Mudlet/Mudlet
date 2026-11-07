@@ -708,8 +708,8 @@ private slots:
     QCOMPARE(console->buffer.getLinkTooltip(linkId), expectedTooltip);
   }
 
-  // Items without send: or prompt: that are not web links go to the game
-  // verbatim, since games may use bare commands that parse as URIs.
+  // Items without send: or prompt: that are not web or mail links go to the
+  // game verbatim, since games may use bare commands that parse as URIs.
   void test_Osc8MenuItemCommand_data() {
     QTest::addColumn<QString>("item");
     QTest::addColumn<QString>("expectedCommand");
@@ -721,6 +721,9 @@ private slots:
       return qsl("send(%1, false)").arg(LuaLiteral::quote(command));
     };
 
+    QTest::newRow("a mailto with a field hidden in its address")
+        << qsl("mailto:x%253Fattachment=/etc/hostname%2526@b.com")
+        << sends(qsl("mailto:x%3Fattachment=/etc/hostname%26@b.com"));
     QTest::newRow("https") << qsl("https://wiki.mudlet.org/w/Main_Page")
                            << opens(qsl("https://wiki.mudlet.org/w/Main_Page"));
     QTest::newRow("http") << qsl("http://example.com/")
@@ -736,9 +739,14 @@ private slots:
     QTest::newRow("bare command") << qsl("flee") << sends(qsl("flee"));
     QTest::newRow("file is not opened")
         << qsl("file:///etc/passwd") << sends(qsl("file:///etc/passwd"));
+    QTest::newRow("mailto")
+        << qsl("mailto:someone@example.com?subject=Hello")
+        << opens(qsl("mailto:someone@example.com?subject=Hello"));
+    QTest::newRow("mailto keeps only its message fields")
+        << qsl("mailto:someone@example.com?subject=Hello&attach=/etc/hostname")
+        << opens(qsl("mailto:someone@example.com?subject=Hello"));
     QTest::newRow("other scheme sent verbatim")
-        << qsl("mailto:someone@example.com")
-        << sends(qsl("mailto:someone@example.com"));
+        << qsl("steam://run/1") << sends(qsl("steam://run/1"));
   }
 
   void test_Osc8MenuItemCommand() {
@@ -988,6 +996,99 @@ private slots:
     QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
     QApplication::sendEvent(console->mUpperPane, &activate);
     QCOMPARE(console->buffer.isLinkSelected(linkId), !expectedDisabled);
+  }
+
+  // A mailto: link keeps its own query, whatever case its scheme is in, losing
+  // only Mudlet's config; its default tooltip says it writes an email
+  void test_Osc8MailtoLink_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("expectedUrl");
+    QTest::addColumn<QString>("expectedTooltip");
+
+    QTest::newRow("with a config")
+        << qsl("mailto:admin@example.com?subject=Hello&config={\"tooltip\":\"Write to us\"}")
+        << qsl("mailto:admin@example.com?subject=Hello") << qsl("Write to us");
+    QTest::newRow("scheme in capitals")
+        << qsl("MAILTO:admin@example.com?subject=Hello")
+        << qsl("mailto:admin@example.com?subject=Hello")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hello");
+    QTest::newRow("scheme in capitals with a body and a config")
+        << qsl("MAILTO:admin@example.com?subject=Hello&body=Hi&config={\"tooltip\":\"Write to us\"}")
+        << qsl("mailto:admin@example.com?subject=Hello&body=Hi") << qsl("Write to us");
+    QTest::newRow("default tooltip")
+        << qsl("mailto:admin@example.com?subject=Hello")
+        << qsl("mailto:admin@example.com?subject=Hello")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hello");
+    QTest::newRow("only the recipients and message fields survive")
+        << qsl("mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text&attach=/etc/hostname&attachment=/etc/passwd&X-Other=1")
+        << qsl("mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text")
+        << qsl("Write an email to: mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text");
+    QTest::newRow("recipients only in the query")
+        << qsl("mailto:?to=c@example.com")
+        << qsl("mailto:?to=c@example.com")
+        << qsl("Write an email to: mailto:?to=c@example.com");
+    QTest::newRow("field names in capitals")
+        << qsl("MAILTO:admin@example.com?SUBJECT=Hi&ATTACH=/etc/hostname")
+        << qsl("mailto:admin@example.com?SUBJECT=Hi")
+        << qsl("Write an email to: mailto:admin@example.com?SUBJECT=Hi");
+    QTest::newRow("an encoded field name")
+        << qsl("mailto:admin@example.com?subject=Hi&%61ttach=/etc/hostname")
+        << qsl("mailto:admin@example.com?subject=Hi")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hi");
+    QTest::newRow("a field hidden behind another separator")
+        << qsl("mailto:admin@example.com?subject=Hi;attach=/etc/hostname")
+        << qsl("mailto:admin@example.com?subject=Hi%3Battach=/etc/hostname")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hi%3Battach=/etc/hostname");
+    QTest::newRow("nothing left of the query")
+        << qsl("mailto:admin@example.com?attach=/etc/hostname")
+        << qsl("mailto:admin@example.com")
+        << qsl("Write an email to: mailto:admin@example.com");
+    QTest::newRow("a fragment")
+        << qsl("mailto:admin@example.com?subject=Hi#&attach=/etc/hostname")
+        << qsl("mailto:admin@example.com?subject=Hi")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hi");
+  }
+
+  void test_Osc8MailtoLink() {
+    QFETCH(QString, uri);
+    QFETCH(QString, expectedUrl);
+    QFETCH(QString, expectedTooltip);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Email\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    QCOMPARE(console->getLinkStore().getLinksConst(linkId),
+             QStringList(qsl("openUrl(%1)").arg(LuaLiteral::quote(expectedUrl))));
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), expectedTooltip);
+  }
+
+  void test_Osc8MailtoWithAFieldHiddenInARecipientIsRefused_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::newRow("in the address") << qsl("mailto:x%3Fattachment=/etc/hostname%26@b.com");
+    QTest::newRow("a fragment in the address") << qsl("mailto:x%23y@b.com");
+    QTest::newRow("in a to field") << qsl("mailto:?to=x%3Fattachment=/etc/hostname%26@b.com");
+    QTest::newRow("in a bcc field") << qsl("mailto:a@b.com?bcc=x%26attachment=/etc/hostname@b.com");
+  }
+
+  void test_Osc8MailtoWithAFieldHiddenInARecipientIsRefused() {
+    QFETCH(QString, uri);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Email\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int line = console->buffer.getLastLineNumber();
+    while (line >= 0 && !console->buffer.lineBuffer.at(line).contains(qsl("Email"))) {
+      --line;
+    }
+    QVERIFY2(line >= 0, "the link's text was not printed");
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 0), 0);
   }
 
   // A "config" parameter carrying something that is not an object is not a
