@@ -619,3 +619,17 @@ change from the event loop, whoever made it, a script's `setConfig()` in any of 
 and also a call that left it as it was, so an app's mute buttons can follow it as the GUI's do. It stops
 once the session's own profile has closed, as the session's other signals do, even while profiles its
 scripts opened live on. They are refused where `submit()` is.
+
+## Embedding it: completing the command line
+
+The GUI's command line completes the word being typed when the player presses Tab, from the main
+console's recent text and from words scripts give it. `THeadlessSession` gives an app the same.
+
+`commandLineSuggestions()` is the words scripts gave the main command line with
+`addCmdLineSuggestion()`, and `commandLineBlacklist()` those they gave with `addCmdLineBlacklist()`,
+which Tab is never to complete to. Each word is there once, however often it was added, and the lists
+are sorted. As in the GUI, `removeCmdLineSuggestion()` and `removeCmdLineBlacklist()` take one word out,
+and `clearCmdLineSuggestions()` and `clearCmdLineBlacklist()` empty them. Words a script gives a line
+from `createCommandLine()` or a mini console's own command line are that line's, not the main line's.
+Both lists are empty with no profile open, and may be read from anywhere, a handler included. No signal
+says they changed: an app reads them when it needs them, as when the player presses Tab.
