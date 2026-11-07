@@ -3739,15 +3739,24 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     emit signal_mapProgressSetValue(0);
     // Hide the cancel button as we can't stop now:
     emit signal_mapProgressDisableCancel();
-    file.write(QJsonDocument(mapObj).toJson(QJsonDocument::Indented));
-    if (!file.commit()) {
-        qDebug() << "TMap::writeJsonMapFile: error saving JSON map: " << file.errorString();
+    const QByteArray json = QJsonDocument(mapObj).toJson(QJsonDocument::Indented);
+    QString failure;
+    // A full disk can cut the write short with no error on the file, and commit() would put the part that landed in place
+    if (const qint64 written = file.write(json); written != json.size()) {
+        failure = (written < 0 || file.error() != QFileDevice::NoError) ? file.errorString() : qsl("only %1 of %2 bytes could be written, is the disk full?").arg(written).arg(json.size());
+        file.cancelWriting();
+    } else if (!file.commit()) {
+        failure = file.errorString();
     }
 
     emit signal_mapProgressClose();
     mMapProgressStandalone = false;
 
-    return {file.error() == QFileDevice::NoError, ((file.error() == QFileDevice::NoError) ? QString() : qsl("could not export file, reason: %1").arg(file.errorString()))};
+    if (!failure.isEmpty()) {
+        qDebug().noquote() << "TMap::writeJsonMapFile: error saving JSON map to" << destination << ":" << failure;
+        return {false, qsl("could not export file, reason: %1").arg(failure)};
+    }
+    return {true, QString()};
 }
 
 // readJsonMapFile() is also how restore() loads a JSON file, whose caller files
