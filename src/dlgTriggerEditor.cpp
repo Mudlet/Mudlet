@@ -6490,10 +6490,9 @@ void dlgTriggerEditor::saveAlias()
     QString regex = mpAliasMainArea->lineEdit_alias_pattern->text();
     unmarkQString(&regex);
 
-
-    if (!regex.isEmpty() && ((name.isEmpty()) || (name == tr("New alias")))) {
-        name = regex;
-    }
+    const int triggerID = pItem->data(0, Qt::UserRole).toInt();
+    TAlias* pT = mpHost->getAliasUnit()->getAlias(triggerID);
+    name = aliasNameForPattern(pT, name, regex);
     const QString substitution = mpAliasMainArea->lineEdit_alias_command->text();
     //check if sub will trigger regex, ignore if there's nothing in regex - could be an alias group
     if (aliasSubstitutionLoops(regex, substitution)) {
@@ -6504,14 +6503,14 @@ void dlgTriggerEditor::saveAlias()
 
     const QString script = mpSourceEditorEdbeeDocument->text();
 
-
-    const int triggerID = pItem->data(0, Qt::UserRole).toInt();
-    TAlias* pT = mpHost->getAliasUnit()->getAlias(triggerID);
     if (pT) {
         // Capture OLD state before modifications (for undo)
         QString oldStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
 
         pT->setName(name);
+        if (mpAliasMainArea->lineEdit_alias_name->text() != name) {
+            mpAliasMainArea->lineEdit_alias_name->setText(name);
+        }
         pT->setCommand(substitution);
         pT->setRegexCode(regex); // This could generate an error state if regex does not compile
         pT->setScript(script);
@@ -6587,6 +6586,21 @@ void dlgTriggerEditor::saveAlias()
         }
         mpUndoStack->finishAddingItem(EditorViewType::cmAliasView, triggerID);
     }
+}
+
+// An unnamed alias, or one still being added whose name is its old pattern, is
+// named after its pattern; otherwise it keeps the typed name
+QString dlgTriggerEditor::aliasNameForPattern(const TAlias* pT, const QString& typedName, const QString& pattern) const
+{
+    const QString trimmedPattern = pattern.trimmed();
+    const bool nameIsOldPattern = pT && typedName == pT->getRegexCode().trimmed() && mpUndoStack->addingItem(EditorViewType::cmAliasView, pT->getID());
+    if (nameIsOldPattern && trimmedPattern.isEmpty()) {
+        return pT->isFolder() ? tr("New alias group") : tr("New alias");
+    }
+    if (!trimmedPattern.isEmpty() && (typedName.isEmpty() || typedName == tr("New alias") || nameIsOldPattern)) {
+        return trimmedPattern;
+    }
+    return typedName;
 }
 
 // Returns true when the substitution would match its own pattern, which makes
@@ -7655,9 +7669,13 @@ void dlgTriggerEditor::saveKey()
         // Capture OLD state before modifications (for undo)
         QString oldStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
 
-        const QString old_name = pT->getName();
+        // A grab can already have named a new key after its binding
+        const bool firstSave = pT->getName() == tr("New key") || (!pT->isFolder() && mpUndoStack->addingItem(EditorViewType::cmKeysView, triggerID));
         pItem->setText(0, name);
         pT->setName(name);
+        if (mpKeysMainArea->lineEdit_key_name->text() != name) {
+            mpKeysMainArea->lineEdit_key_name->setText(name);
+        }
         pT->setCommand(command);
         pT->setScript(script);
 
@@ -7715,7 +7733,7 @@ void dlgTriggerEditor::saveKey()
 
         if (pT->state()) {
             clearEditorNotification();
-            if (old_name == tr("New key")) {
+            if (firstSave) {
                 if (pT->isFolder()) {
                     if (pT->shouldBeActive()) {
                         itemDescription = descActiveFolder;
@@ -13837,6 +13855,7 @@ void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModi
         return;
     }
     const QString keyName = pKeyUnit->getKeyName(key, modifier);
+    const QString oldKeyName = mpKeysMainArea->lineEdit_key_binding->text();
     mpKeysMainArea->lineEdit_key_binding->setText(keyName);
     QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
     if (pItem) {
@@ -13848,8 +13867,16 @@ void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModi
             }
 
             QString oldStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
+            const QString typedName = mpKeysMainArea->lineEdit_key_name->text().trimmed();
+            // A saved key's scripts may find it by a name that happens to match its binding
+            const bool nameIsOldBinding = typedName == oldKeyName && (pT->getKeyCode() == Qt::Key_unknown || mpUndoStack->addingItem(EditorViewType::cmKeysView, keyID));
             pT->setKeyCode(key);
             pT->setKeyModifiers(modifier);
+            if (pItem == mpCurrentKeyItem && !pT->isFolder() && (typedName.isEmpty() || typedName == tr("New key") || nameIsOldBinding)) {
+                pT->setName(keyName);
+                pItem->setText(0, keyName);
+                mpKeysMainArea->lineEdit_key_name->setText(keyName);
+            }
             QString newStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
 
             showKeyTakenWarning(pItem, takenKeyWarning(pT), true);
@@ -16120,7 +16147,14 @@ void dlgTriggerEditor::slot_saveProperty_AliasPattern()
     }
 
     QString oldStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
+    const QString typedName = mpAliasMainArea->lineEdit_alias_name->text().trimmed();
+    const QString name = aliasNameForPattern(pT, typedName, newPattern);
     pT->setRegexCode(newPattern);
+    if (name != typedName) {
+        pT->setName(name);
+        mpCurrentAliasItem->setText(0, name);
+        mpAliasMainArea->lineEdit_alias_name->setText(name);
+    }
     QString newStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
 
     pushAliasPropertyCommand(mpUndoStack, mpHost, aliasID, pT->getName(), qsl("pattern"), oldStateXML, newStateXML);
