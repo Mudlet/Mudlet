@@ -39,7 +39,9 @@
 #include <QFileInfo>
 #include <QFontDatabase>
 #include <QFontInfo>
+#include <QLineEdit>
 #include <QMenu>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -131,6 +133,29 @@ private:
         }
         TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(name);
         return pMini && pMini->mpCommandLine ? pMini : nullptr;
+    }
+
+    static bool activateMainWindow()
+    {
+        mudlet::self()->activateWindow();
+        return QTest::qWaitForWindowActive(mudlet::self());
+    }
+
+    // Through the window, as a real key press arrives: QTest::keyClick() on a
+    // widget hands the event straight to it, past any keyboard grab
+    static QString typeInto(QWidget& window)
+    {
+        auto pEdit = new QLineEdit(&window);
+        window.show();
+        window.activateWindow();
+        if (!QTest::qWaitForWindowActive(&window)) {
+            return qsl("(the window never became active)");
+        }
+        pEdit->setFocus();
+        for (const char key : {'a', 'b', 'c'}) {
+            QTest::keyClick(window.windowHandle(), key);
+        }
+        return pEdit->text();
     }
 
     QString luaGlobal(const char* name) const
@@ -492,6 +517,56 @@ private slots:
         QCOMPARE(pane()->mCaretColumn, 3);
     }
 
+    // The key that leaves caret mode hands the keyboard to the command line,
+    // not to whatever follows the console in Qt's focus chain - with the
+    // main toolbar shown, that is one of its buttons.
+    void test_theCaretShortcutReturnsTheKeyboardToTheCommandLine_data()
+    {
+        QTest::addColumn<QString>("shortcut");
+        QTest::addColumn<int>("key");
+        QTest::addColumn<int>("modifiers");
+        QTest::addColumn<bool>("inMiniConsole");
+        QTest::newRow("tab") << qsl("tab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(Qt::NoModifier) << false;
+        QTest::newRow("ctrltab") << qsl("ctrltab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(Qt::ControlModifier) << false;
+        QTest::newRow("f6") << qsl("f6") << static_cast<int>(Qt::Key_F6) << static_cast<int>(Qt::NoModifier) << false;
+        QTest::newRow("tab in a mini console") << qsl("tab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(Qt::NoModifier) << true;
+    }
+
+    void test_theCaretShortcutReturnsTheKeyboardToTheCommandLine()
+    {
+        QFETCH(QString, shortcut);
+        QFETCH(int, key);
+        QFETCH(int, modifiers);
+        QFETCH(bool, inMiniConsole);
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pCommandLine);
+        // Restored however this case ends, or Tab would leave caret mode in every later one
+        const auto savedToolBarVisibility = mudlet::self()->toolBarVisibility();
+        const auto savedShortcut = mpHost->mCaretShortcut;
+        const auto restore = qScopeGuard([this, savedToolBarVisibility, savedShortcut]() {
+            mpHost->mCaretShortcut = savedShortcut;
+            mudlet::self()->setToolBarVisibility(savedToolBarVisibility);
+        });
+        mudlet::self()->setToolBarVisibility(enums::visibleAlways);
+        QVERIFY(runLua(qsl("setConfig('caretShortcut', '%1')").arg(shortcut)));
+        TTextEdit* pPane = pane();
+        if (inMiniConsole) {
+            TConsole* pMini = miniConsoleWithCommandLine(qsl("caretShortcutMini"));
+            QVERIFY(pMini);
+            pPane = pMini->mUpperPane;
+        }
+        QVERIFY(mpHost->caretEnabled());
+
+        press(pPane, static_cast<Qt::Key>(key), static_cast<Qt::KeyboardModifiers>(modifiers));
+        drainDeferredFocusChange();
+
+        QVERIFY2(!mpHost->caretEnabled(), "the caret-mode shortcut did not turn caret mode off");
+        QWidget* const pFocused = QApplication::focusWidget();
+        // The hand-off is to the profile's active command line, which a mini console's need not be
+        const bool onACommandLine = inMiniConsole ? qobject_cast<TCommandLine*>(pFocused) != nullptr : pFocused == pCommandLine;
+        QVERIFY2(onACommandLine, qPrintable(qsl("the keyboard went to %1 rather than the command line").arg(pFocused ? QString::fromLatin1(pFocused->metaObject()->className()) : qsl("nothing"))));
+    }
+
     // Tab and Shift+Tab are how a screen-reader user finds the links in a page
     // of output without a mouse.
     void test_tabAndBacktabStepBetweenTheLinksInTheBuffer()
@@ -766,6 +841,52 @@ private slots:
         press(pane(), Qt::Key_Return);
 
         QVERIFY2(consoleBuffer().isLinkVisited(linkIndex), "the activated link was not marked as visited");
+    }
+
+    // Caret mode's keyboard grab on Linux and Windows outranks the active window,
+    // so the script editor this stands in for would get none of these keys.
+    void test_anotherWindowGetsTheKeysWhileCaretModeIsOn()
+    {
+#if !defined(Q_OS_WINDOWS) && !defined(Q_OS_LINUX)
+        QSKIP("only Linux and Windows hold the keyboard in caret mode");
+#endif
+        QVERIFY(activateMainWindow());
+        pane()->setFocus();
+        QVERIFY(mpHost->caretEnabled());
+        QCOMPARE(QWidget::keyboardGrabber(), pane());
+
+        QWidget other;
+        QCOMPARE(typeInto(other), qsl("abc"));
+        QVERIFY2(QWidget::keyboardGrabber() != pane(), "the console still holds the keyboard while another window is active");
+        QVERIFY2(mpHost->caretEnabled(), "switching windows is not leaving the text, so caret mode should stay on");
+
+        QVERIFY(activateMainWindow());
+
+        QCOMPARE(QWidget::keyboardGrabber(), pane());
+        QVERIFY(mpHost->caretEnabled());
+    }
+
+    // A command line in a floating user window turns caret mode on too, and the
+    // grab is taken without the main window ever being the active one.
+    void test_caretModeTurnedOnFromAnotherWindowLetsAThirdHaveTheKeys()
+    {
+#if !defined(Q_OS_WINDOWS) && !defined(Q_OS_LINUX)
+        QSKIP("only Linux and Windows hold the keyboard in caret mode");
+#endif
+        mpHost->setCaretEnabled(false);
+        drainDeferredFocusChange();
+        QWidget floating;
+        floating.show();
+        floating.activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(&floating));
+        mpHost->setCaretEnabled(true);
+        QCOMPARE(QWidget::keyboardGrabber(), pane());
+
+        QWidget other;
+        QCOMPARE(typeInto(other), qsl("abc"));
+        QVERIFY2(QWidget::keyboardGrabber() != pane(), "the console still holds the keyboard while another window is active");
+
+        QVERIFY(activateMainWindow());
     }
 
     // deleteLine() can take a console's last line, leaving no line at all, and

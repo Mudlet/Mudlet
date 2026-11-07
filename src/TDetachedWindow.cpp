@@ -513,12 +513,13 @@ void TDetachedWindow::createMenus()
     connect(videoAction, &QAction::triggered, pMudlet, &mudlet::slot_showHelpDialogVideo);
     helpMenu->addAction(videoAction);
 
-    //: This is an item in the "Help" menu in the menubar of a detached Mudlet window.
-    auto discordAction = new QAction(tr("&Discord"), this);
-    //: This explains the "Discord" item in the "Help" menu in the menubar of a detached Mudlet window.
-    discordAction->setStatusTip(tr("Open a link to Discord."));
-    connect(discordAction, &QAction::triggered, this, &TDetachedWindow::slot_profileDiscord);
-    helpMenu->addAction(discordAction);
+    // Its text follows the profile's game, so updateDiscordNamedIcon() sets it
+    mpHelpMenuDiscordAction = new QAction(this);
+    mpHelpMenuDiscordAction->setObjectName(qsl("helpMenuDiscord"));
+    // Its text carries the game's name, which macOS could otherwise take for About, Preferences or Quit
+    mpHelpMenuDiscordAction->setMenuRole(QAction::NoRole);
+    connect(mpHelpMenuDiscordAction, &QAction::triggered, this, &TDetachedWindow::slot_profileDiscord);
+    helpMenu->addAction(mpHelpMenuDiscordAction);
 
     //: This is an item in the "Help" menu in the menubar of a detached Mudlet window.
     auto mudletDiscordAction = new QAction(tr("Discord &help channel"), this);
@@ -617,21 +618,24 @@ QMenu* TDetachedWindow::createPopupMenu()
 
 void TDetachedWindow::closeEvent(QCloseEvent* event)
 {
+    // Ensure profiles are properly closed when window is closed
+    // This prevents orphaned profiles that remain loaded but invisible
     if (!mIsReattaching) {
+        // Get a copy of profile names before we start closing them
         const QStringList profilesToClose = mProfileConsoleMap.keys();
         for (const QString& profileName : profilesToClose) {
+            // An earlier profile's save question runs the event loop, and this one may have been moved out meanwhile
+            if (!mProfileConsoleMap.contains(profileName)) {
+                continue;
+            }
 #if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "TDetachedWindow::closeEvent() - Properly closing profile:" << profileName;
 #endif
-            const QPointer<TMainConsole> console = mProfileConsoleMap.value(profileName);
-            closeProfileByName(profileName);
-            // Left as a child it would be deleted with this window, out from under the Host that is yet to close it
-            if (console && !mProfileConsoleMap.contains(profileName)) {
-                console->setParent(nullptr);
+            if (closeProfileHere(profileName)) {
+                emit windowClosed(profileName);
             }
         }
 
-        // A cancelled save question, or a close held off for now, keeps that profile here, and so its window open
         if (!mProfileConsoleMap.isEmpty()) {
             event->ignore();
             return;
@@ -914,6 +918,7 @@ void TDetachedWindow::createToolBar()
 
     //: This is a sub-item of the "Connect" item in the toolbar of a detached Mudlet window.
     mpActionDisconnect = new QAction(tr("Disconnect"), this);
+    mpActionDisconnect->setIcon(QIcon(qsl(":/icons/network-disconnect.png")));
     mpActionDisconnect->setObjectName(qsl("disconnect"));
 
     //: This is a sub-item of the "Connect" item in the toolbar of a detached Mudlet window.
@@ -1346,21 +1351,30 @@ void TDetachedWindow::updateDiscordNamedIcon()
         pHost = pHostManager->getHost(mCurrentProfileName);
     }
 
-    if (!pHost) {
-        // No active host - reset Discord icon to default state
+    const QString gameName = pHost ? pHost->getDiscordGameName() : QString();
+    const bool hasCustom = pHost && !pHost->getDiscordInviteURL().isEmpty();
+
+    if (hasCustom) {
+        mpActionDiscord->setIconText(mudlet::gameDiscordLabel(QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90)));
+        mpActionDiscord->setToolTip(utils::richText(mudlet::gameDiscordToolTip(gameName).toHtmlEscaped()));
+    } else {
+        // Without an invite of the game's own these open Mudlet's server
         mpActionDiscord->setIconText(qsl("Discord"));
-
-        // Hide Mudlet Discord action as there's no game with custom invite
-        if (mpActionMudletDiscord->isVisible()) {
-            mpActionMudletDiscord->setVisible(false);
-        }
-        return;
+        // An empty tooltip falls back to the action's own text
+        mpActionDiscord->setToolTip(QString());
     }
-
-    const QString gameName = pHost->getDiscordGameName();
-    const bool hasCustom = !pHost->getDiscordInviteURL().isEmpty();
-
-    mpActionDiscord->setIconText(gameName.isEmpty() ? qsl("Discord") : QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90));
+    // Null when createMenus() found no mudlet to build the menus against
+    if (mpHelpMenuDiscordAction) {
+        if (hasCustom) {
+            mpHelpMenuDiscordAction->setText(mudlet::gameDiscordLabel(gameName));
+            mpHelpMenuDiscordAction->setStatusTip(mudlet::gameDiscordToolTip(gameName));
+        } else {
+            //: This is an item in the "Help" menu in the menubar of a detached Mudlet window.
+            mpHelpMenuDiscordAction->setText(tr("&Discord"));
+            //: This explains the "Discord" item in the "Help" menu in the menubar of a detached Mudlet window.
+            mpHelpMenuDiscordAction->setStatusTip(tr("Open a link to Discord."));
+        }
+    }
 
     // Show/hide Mudlet Discord action based on whether game has custom invite
     if (mpActionMudletDiscord->isVisible() != hasCustom) {
@@ -2489,29 +2503,9 @@ void TDetachedWindow::closeProfileByIndex(int index)
 
 void TDetachedWindow::closeProfileByName(const QString& profileName)
 {
-    // The save question runs the event loop, so the Host may be gone by the time it is answered
-    const QPointer<Host> pHost = HostManager::self() ? HostManager::self()->getHost(profileName) : nullptr;
-    // Waited out here, not in mudlet::slot_closeProfileByName(): its retry closes the profile without this window
-    // being told, which would leave a tab with no console behind
-    if (pHost && pHost->waitingForProfileSave()) {
-        QTimer::singleShot(50ms, this, [this, profileName, pHost]() {
-            if (pHost && mProfileConsoleMap.contains(profileName)) {
-                closeProfileByName(profileName);
-            }
-        });
+    if (!closeProfileHere(profileName)) {
         return;
     }
-
-    if (auto pMudlet = mudlet::self()) {
-        pMudlet->slot_closeProfileByName(profileName);
-    }
-
-    // Held off by a nested event loop, or the user cancelled the save question: the profile stays open, and here
-    if (pHost && !pHost->isClosingDown()) {
-        return;
-    }
-
-    removeProfile(profileName);
 
     // If this was the last profile, close the detached window
     if (mProfileConsoleMap.isEmpty()) {
@@ -2524,6 +2518,42 @@ void TDetachedWindow::closeProfileByName(const QString& profileName)
             close();
         });
     }
+}
+
+// Whether the profile left this window. One held off by a nested event loop, or whose save question was cancelled, stays.
+bool TDetachedWindow::closeProfileHere(const QString& profileName)
+{
+    const QPointer<TMainConsole> console = mProfileConsoleMap.value(profileName);
+    Host* pNamedHost = HostManager::self() ? HostManager::self()->getHost(profileName) : nullptr;
+    // Matched by console as well as name: a tab left by a profile closed some other way must not close one loaded
+    // under its name since. A QPointer, as the save question runs the event loop and the Host may be gone after it.
+    const QPointer<Host> pHost = (pNamedHost && pNamedHost->mainConsoleView() == console.data()) ? pNamedHost : nullptr;
+    // Waited out here, not in mudlet::slot_closeProfileByName(): its retry closes the profile without this window
+    // being told, which would leave a tab with no console behind
+    if (pHost && pHost->waitingForProfileSave()) {
+        QTimer::singleShot(50ms, this, [this, profileName]() {
+            if (mProfileConsoleMap.contains(profileName)) {
+                closeProfileByName(profileName);
+            }
+        });
+        return false;
+    }
+
+    if (pHost) {
+        if (auto pMudlet = mudlet::self()) {
+            pMudlet->slot_closeProfileByName(profileName);
+        }
+        if (pHost && !pHost->isClosingDown()) {
+            return false;
+        }
+    }
+
+    removeProfile(profileName);
+    // Or deleting this window could delete the console ahead of the closeHost() that owns it
+    if (console) {
+        console->setParent(nullptr);
+    }
+    return true;
 }
 
 void TDetachedWindow::checkForWindowMergeOpportunity()
@@ -3296,23 +3326,7 @@ void TDetachedWindow::refreshAfterApplicationStyleChange()
 
 void TDetachedWindow::slot_closeAllProfiles()
 {
-    // Properly close all profiles before closing the window
-    // This ensures save prompts and proper cleanup
-    QStringList profilesToClose = mProfileConsoleMap.keys();
-
-    qDebug() << "TDetachedWindow::slot_closeAllProfiles() - Closing" << profilesToClose.size() << "profiles";
-
-    auto pMudlet = mudlet::self();
-    for (const QString& profileName : std::as_const(profilesToClose)) {
-        qDebug() << "TDetachedWindow::slot_closeAllProfiles() - Closing profile:" << profileName;
-        if (pMudlet) {
-            pMudlet->slot_closeProfileByName(profileName);
-        }
-    }
-
-    // After all profiles are closed, close the window
-    // The profiles should already be removed from mProfileConsoleMap by now,
-    // but closeEvent() will handle any remaining cleanup
+    // closeEvent() closes each profile, with its save question
     close();
 }
 

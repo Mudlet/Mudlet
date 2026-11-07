@@ -36,6 +36,7 @@ endif()
 set(WINDOW_GROUP_TEST_SOURCES
     AccessibleToolTipTest.cpp
     AddonControlsTest.cpp
+    AnalyseCharactersTest.cpp
     AsciiLineBreakTest.cpp
     BlinkRowRepaintTest.cpp
     ConsoleModelExtractionTest.cpp
@@ -73,6 +74,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowOwnershipTest.cpp
     SpeechAcrossProfilesTest.cpp
     MudletProxyStyleTest.cpp
+    DarkThemeItemCheckTest.cpp
     MxpFramePlacementTest.cpp
     MxpDestFrameClearTest.cpp
     LabelBackgroundPaintTest.cpp
@@ -100,9 +102,11 @@ set(WINDOW_GROUP_TEST_SOURCES
     ConsoleSearchBarTest.cpp
     WrapLineRewrapTest.cpp
     ScrollLostOnPartialRepaintTest.cpp
+    ScrollUpShortBufferTest.cpp
     ScrollBarContrastTest.cpp
     ScriptFileDialogTest.cpp
     OpaqueConsolePaintTest.cpp
+    ConnectButtonIconsTest.cpp
 )
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them
@@ -110,10 +114,12 @@ set(PROFILE_GROUP_TEST_SOURCES
     CloseDuringProfileLoadTest.cpp
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
+    ConnectionDialogEscapeTest.cpp
     ConnectionDialogFocusTest.cpp
     ConnectionDialogInitialSelectionTest.cpp
     ConnectionDialogKeychainWaitTest.cpp
     ConnectionDialogNewProfileTest.cpp
+    ConnectionDialogNoticeLayoutTest.cpp
     ConnectionDialogOfflineProfileTest.cpp
     ConnectionDialogOpenProfileTest.cpp
     ConnectionDialogSecureSettingTest.cpp
@@ -220,6 +226,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorAddItemTest.cpp
     EditorFolderViewTest.cpp
     EditorFontTest.cpp
+    EditorKeyboardMoveTest.cpp
     EditorModuleFolderTest.cpp
     EditorSearchTest.cpp
     TreeWidgetItemMoveTest.cpp
@@ -350,7 +357,9 @@ set(TEARDOWN_GROUP_TEST_SOURCES
     InstanceForwardTest.cpp
 )
 if(USE_HEADLESS)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionInputTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessRunnerTest.cpp HeadlessSessionTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionOutputTest.cpp)
 endif()
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
@@ -653,10 +662,18 @@ if(TEST HeadlessRunnerTest)
     set_tests_properties(HeadlessRunnerTest PROPERTIES TIMEOUT 300)
 endif()
 
+# HeadlessSessionInputTest starts a fresh headless profile in each of its cases, as HeadlessSessionTest does
+if(TEST HeadlessSessionInputTest)
+    set_tests_properties(HeadlessSessionInputTest PROPERTIES TIMEOUT 300)
+endif()
+
 # HeadlessSessionTest starts a fresh headless profile in nearly every one of its
 # cases, so it needs a longer timeout than the default 60s
 if(TEST HeadlessSessionTest)
     set_tests_properties(HeadlessSessionTest PROPERTIES TIMEOUT 300)
+endif()
+if(TEST HeadlessSessionOutputTest)
+    set_tests_properties(HeadlessSessionOutputTest PROPERTIES TIMEOUT 300)
 endif()
 
 # Undo/redo tests need a longer timeout due to large batch operations
