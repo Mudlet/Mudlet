@@ -3467,7 +3467,9 @@ int TLuaInterpreter::setPackageInfo(lua_State* L)
     if (info == qsl("mpackage") && value != packageName) {
         return warnArgumentValue(L, __func__, qsl("'mpackage' is the name package '%1' is installed under and cannot be changed").arg(packageName));
     }
-    host.mPackageInfo[packageName][info] = value;
+    if (const QString error = host.setPackageInfo(packageName, info, value); !error.isEmpty()) {
+        return warnArgumentValue(L, __func__, error);
+    }
     lua_pushboolean(L, true);
     return 1;
 }

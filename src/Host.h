@@ -535,6 +535,9 @@ public:
     // config.lua that would not run apart from one that simply names no package
     void readPackageConfig(const QString&, QString&, bool, QString* whyNotRead = nullptr);
     QString getPackageConfig(const QString&, bool isModule = false, QString* whyNotRead = nullptr);
+    // Saves the change to the package's config.lua, which loadPackageInfo() reads it back from; an empty
+    // string is success, otherwise why it could not be saved, and nothing is changed
+    QString setPackageInfo(const QString& packageName, const QString& info, const QString& value);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     // For an app that embeds Mudlet, as there is no main window to show a notification: answers whether it showed it
     void setNotificationHandler(std::function<bool(const QString& title, const QString& text, std::optional<int> milliseconds)> handler) { mNotificationHandler = std::move(handler); }
