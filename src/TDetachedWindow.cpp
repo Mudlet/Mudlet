@@ -621,32 +621,23 @@ void TDetachedWindow::closeEvent(QCloseEvent* event)
     // This prevents orphaned profiles that remain loaded but invisible
     if (!mIsReattaching) {
         // Get a copy of profile names before we start closing them
-        QStringList profilesToClose = mProfileConsoleMap.keys();
-
-        // Properly close each profile - this ensures proper cleanup and save prompts
-        auto pMudlet = mudlet::self();
-        for (const QString& profileName : std::as_const(profilesToClose)) {
+        const QStringList profilesToClose = mProfileConsoleMap.keys();
+        for (const QString& profileName : profilesToClose) {
+            // An earlier profile's save question runs the event loop, and this one may have been moved out meanwhile
+            if (!mProfileConsoleMap.contains(profileName)) {
+                continue;
+            }
 #if defined(DEBUG_WINDOW_HANDLING)
             qDebug() << "TDetachedWindow::closeEvent() - Properly closing profile:" << profileName;
 #endif
-            if (pMudlet) {
-                pMudlet->slot_closeProfileByName(profileName);
+            if (closeProfileHere(profileName)) {
+                emit windowClosed(profileName);
             }
         }
 
-        // Remove all consoles from the stacked widget and reset their parents
-        for (const auto& console : std::as_const(mProfileConsoleMap)) {
-            if (console) {
-                mpConsoleContainer->removeWidget(console);
-                console->setParent(nullptr);
-            }
-        }
-
-        mProfileConsoleMap.clear();
-
-        // Emit signal to notify main window for any remaining cleanup
-        for (const QString& profileName : std::as_const(profilesToClose)) {
-            emit windowClosed(profileName);
+        if (!mProfileConsoleMap.isEmpty()) {
+            event->ignore();
+            return;
         }
     }
     event->accept();
@@ -2501,29 +2492,9 @@ void TDetachedWindow::closeProfileByIndex(int index)
 
 void TDetachedWindow::closeProfileByName(const QString& profileName)
 {
-    // The save question runs the event loop, so the Host may be gone by the time it is answered
-    const QPointer<Host> pHost = HostManager::self() ? HostManager::self()->getHost(profileName) : nullptr;
-    // Waited out here, not in mudlet::slot_closeProfileByName(): its retry closes the profile without this window
-    // being told, which would leave a tab with no console behind
-    if (pHost && pHost->waitingForProfileSave()) {
-        QTimer::singleShot(50ms, this, [this, profileName, pHost]() {
-            if (pHost && mProfileConsoleMap.contains(profileName)) {
-                closeProfileByName(profileName);
-            }
-        });
+    if (!closeProfileHere(profileName)) {
         return;
     }
-
-    if (auto pMudlet = mudlet::self()) {
-        pMudlet->slot_closeProfileByName(profileName);
-    }
-
-    // Held off by a nested event loop, or the user cancelled the save question: the profile stays open, and here
-    if (pHost && !pHost->isClosingDown()) {
-        return;
-    }
-
-    removeProfile(profileName);
 
     // If this was the last profile, close the detached window
     if (mProfileConsoleMap.isEmpty()) {
@@ -2536,6 +2507,42 @@ void TDetachedWindow::closeProfileByName(const QString& profileName)
             close();
         });
     }
+}
+
+// Whether the profile left this window. One held off by a nested event loop, or whose save question was cancelled, stays.
+bool TDetachedWindow::closeProfileHere(const QString& profileName)
+{
+    const QPointer<TMainConsole> console = mProfileConsoleMap.value(profileName);
+    Host* pNamedHost = HostManager::self() ? HostManager::self()->getHost(profileName) : nullptr;
+    // Matched by console as well as name: a tab left by a profile closed some other way must not close one loaded
+    // under its name since. A QPointer, as the save question runs the event loop and the Host may be gone after it.
+    const QPointer<Host> pHost = (pNamedHost && pNamedHost->mainConsoleView() == console.data()) ? pNamedHost : nullptr;
+    // Waited out here, not in mudlet::slot_closeProfileByName(): its retry closes the profile without this window
+    // being told, which would leave a tab with no console behind
+    if (pHost && pHost->waitingForProfileSave()) {
+        QTimer::singleShot(50ms, this, [this, profileName]() {
+            if (mProfileConsoleMap.contains(profileName)) {
+                closeProfileByName(profileName);
+            }
+        });
+        return false;
+    }
+
+    if (pHost) {
+        if (auto pMudlet = mudlet::self()) {
+            pMudlet->slot_closeProfileByName(profileName);
+        }
+        if (pHost && !pHost->isClosingDown()) {
+            return false;
+        }
+    }
+
+    removeProfile(profileName);
+    // Or deleting this window could delete the console ahead of the closeHost() that owns it
+    if (console) {
+        console->setParent(nullptr);
+    }
+    return true;
 }
 
 void TDetachedWindow::checkForWindowMergeOpportunity()
@@ -3308,23 +3315,7 @@ void TDetachedWindow::refreshAfterApplicationStyleChange()
 
 void TDetachedWindow::slot_closeAllProfiles()
 {
-    // Properly close all profiles before closing the window
-    // This ensures save prompts and proper cleanup
-    QStringList profilesToClose = mProfileConsoleMap.keys();
-
-    qDebug() << "TDetachedWindow::slot_closeAllProfiles() - Closing" << profilesToClose.size() << "profiles";
-
-    auto pMudlet = mudlet::self();
-    for (const QString& profileName : std::as_const(profilesToClose)) {
-        qDebug() << "TDetachedWindow::slot_closeAllProfiles() - Closing profile:" << profileName;
-        if (pMudlet) {
-            pMudlet->slot_closeProfileByName(profileName);
-        }
-    }
-
-    // After all profiles are closed, close the window
-    // The profiles should already be removed from mProfileConsoleMap by now,
-    // but closeEvent() will handle any remaining cleanup
+    // closeEvent() closes each profile, with its save question
     close();
 }
 
