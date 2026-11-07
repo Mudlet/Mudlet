@@ -834,6 +834,81 @@ whether or not a window ran anything for it, as for the moves of a grab Qt has d
 window was at the press if it has gone since, and with nil and
 "the profile has no main window" until the first.
 
+## Embedding it: calls that do not wait
+
+`start()`, `installPackage()`, `save()` and `shutdown()` return only once they are done, and run the
+event loop while they wait: for the credential store when a new profile is made, for a profile save
+under way, and for the saves a shutdown writes. A nested event loop runs the app's timers, the game's
+data and the profiles' scripts while the call is still on the stack, and an app that cannot block at
+all, such as one in a browser, has no way to wait. Each has a form that returns at once and answers
+by signal, from the event loop, never during the call, with what the blocking form would have
+returned and `errorString()` as the call ended (empty when it succeeded):
+
+| Call | Answers with |
+| --- | --- |
+| `startAsync(options)` | `startFinished(StartResult, error)` |
+| `installPackageAsync(path)` | `packageInstallFinished(path, PackageResult, error)` |
+| `saveAsync()` | `saveFinished(bool, error)` |
+| `shutdownAsync(save)` | `shutdownFinished(bool, error)` |
+
+```cpp
+QObject::connect(session.get(), &THeadlessSession::startFinished,
+                 [](THeadlessSession::StartResult result, const QString& error) {
+    if (result != THeadlessSession::StartResult::started) {
+        qWarning() << error;
+    }
+});
+session->startAsync(options);
+// Later
+session->saveAsync();                // saveFinished once the profiles are on disk
+session->shutdownAsync(true);        // sysExitEvent runs now; shutdownFinished once the saves are written
+```
+
+What a call refuses it refuses as the blocking form does, answered the same way. While an install
+waits for a save, another install, a `save()` and a `shutdown()` are refused, and while a save is
+under way another save and a `shutdown()` are, as they are while the blocking forms wait. The
+profile's load still runs inside `startAsync()`, as its scripts run then; only the credential store
+is waited for from the event loop. A session deleted meanwhile answers nothing.
+
+The blocking forms are thin wrappers over these, so `mudlet-headless` and an app that is happy to
+wait see no change.
+
+A save is written on Qt's thread pool and its end reaches the application's thread by signal; a
+close with no main window, as from a script's `closeProfile()`, `closeMudlet()` or `shutdown()`,
+runs `sysExitEvent`, starts its save and takes the profile apart in the call, and the profile is
+deleted once the save is written. `HostManager::closeAllProfiles()` takes a callback for that
+moment. Where there are no threads, as in a single-threaded browser build, or with
+`TBackgroundTask::setRunInline(true)`, the writes, and `unzipAsync()`'s extraction, run in the call
+that asks for them, and their ends still arrive by signal.
+
+`TAppFrontend` has `getOpenFileNameAsync()`, `getExistingDirectoryAsync()` and
+`clipboardTextAsync()`, which answer a callback from the event loop, and `setClipboardText()`,
+beside the blocking file pickers. The answer is a `std::optional<QString>`: an empty string is a
+cancel, and none means no picker could be shown, or the clipboard could not be read, as when a
+browser refuses. Nothing in Mudlet calls them yet, and no Lua function changes: `invokeFileDialog()`
+and `getClipboardText()` still answer at once. With no window the pickers answer none, and the
+clipboard is the system's while there is a `QGuiApplication`, else text the frontend keeps.
+
+### Waits that remain
+
+These still block the application's thread or run a nested event loop:
+
+- the desktop GUI's own close: `TMainConsole`'s close and quit wait for the save with
+  `Host::saveForClose()` and `Host::waitForProfileSave()`, which run the event loop, so the profile is
+  still saved before Mudlet quits; so do the Package Manager, Module Manager and editor while they
+  wait for a save. All of these are the desktop app's, not `mudlet_core`'s callers;
+- Lua's `installPackage()` and `uninstallPackage()`, and `Host::uninstallPackage()` once its
+  `sysUninstall` handlers have started a save, wait out a save so the script gets the real answer. They
+  deliver only that save's own ends, so no timer, game data or other script runs meanwhile, and with
+  the writes run inline they never wait at all;
+- the blocking `THeadlessSession` calls above, which run the event loop until their async form
+  answers;
+- `waitForEvent()`, `pumpEvents()` and `EventLoopPump`, which only the test profile's Lua uses;
+- the connection's bounded waits in `ctelnet.cpp`: one event loop pass while a reconnect lets the old
+  sockets abort, and, as a profile disconnects, up to a second waiting for the game to close its end;
+- the map's long operations (loading, importing, exporting and auditing a map), which run the event
+  loop to keep their progress display alive.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,
