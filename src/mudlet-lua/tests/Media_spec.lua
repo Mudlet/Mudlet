@@ -2776,6 +2776,32 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(1, #errors, "an MSP sound naming the folder kept for scripts' copies reached the download")
   end)
 
+  -- The MSP spec separates parameters by "one or more spaces" and lets the url be quoted. An ftp
+  -- url raises sysDownloadError carrying the url it was asked for, so each message that is parsed
+  -- rather than dropped shows up as one error naming that url.
+  it("an MSP sound is played whatever the spacing, and with a quoted url or one that has a query", function()
+    local errors = {}
+    collect("sysDownloadError", errors)
+    feedTelnet("<T_IAC><T_DO><O_MSP>")
+    onCleanup(function()
+      receiveMSP("!!SOUND(Off U=ftp://example.invalid/)")
+      feedTelnet("<T_IAC><T_DONT><O_MSP>")
+    end)
+
+    local messages = {
+      {"!!SOUND(busted-msp-spaced.wav  V=50   U=ftp://example.invalid/spaced/)", "ftp://example.invalid/spaced/busted-msp-spaced.wav"},
+      {'!!SOUND(busted-msp-quoted.wav U="ftp://example.invalid/quoted/")', "ftp://example.invalid/quoted/busted-msp-quoted.wav"},
+      {"!!SOUND(busted-msp-query.wav U=ftp://example.invalid/query?set=1&v=2/)", "ftp://example.invalid/query?set=1&v=2/busted-msp-query.wav"},
+    }
+    for _, message in ipairs(messages) do
+      local before = #errors
+      assert.is_true(receiveMSP(message[1]))
+      pumpEvents(250)
+      assert.equals(before + 1, #errors, "this MSP message was dropped rather than played: " .. message[1])
+      assert.is_truthy(tostring(errors[#errors].file):find('"' .. message[2] .. '"', 1, true), tostring(errors[#errors].file))
+    end
+  end)
+
   it("a Client.Media.Play message that names a type is played as that type", function()
     if mediaPlaybackUnavailable() then
       return
