@@ -554,6 +554,8 @@ void TConsoleModelSink::printFormatted(const QString& text, const std::vector<TC
 void TConsoleModelSink::discardAll()
 {
     mModel.clear();
+    // As TConsole::discardAll() clears through bufferCleared(), which closes its split
+    emit mModel.mNotifier.bufferCleared();
 }
 
 void TConsoleModelSink::discardLastLine()
@@ -1157,6 +1159,14 @@ TConsoleModel& TNullConsoleFrontend::addSubConsole(const QString& name, const TW
             // A hidden pane keeps the size it had until the resize it is owed reaches it
             if (const auto it = mSubConsoles.find(name); it != mSubConsoles.end() && (!it->second.paneResizePending || paneShown(it->second))) {
                 reportConsoleSize(name);
+            }
+        });
+        // As TConsole::bufferCleared() closes the split, which TConsoleModel::clear() has already forgotten
+        QObject::connect(&model.mNotifier, &TConsoleModelNotifier::bufferCleared, &model.mNotifier, [this, name, &model]() {
+            const QSize before = model.mGridSize;
+            reportGridSize(name);
+            if (model.mGridSize != before) {
+                resizePane(name);
             }
         });
     }
@@ -3312,8 +3322,10 @@ bool TNullConsoleFrontend::setWindowScrolling(const QString& name, const bool en
     const auto kind = mpHost->windowRegistry().subConsoleKind(name);
     if (kind == TWindowRegistry::SubConsoleKind::MiniConsole || kind == TWindowRegistry::SubConsoleKind::UserWindow) {
         pModel->mScrollingEnabled = enabled;
-        if (!enabled) {
+        if (!enabled && pModel->mScrolledBackTo) {
             pModel->mScrolledBackTo.reset();
+            reportGridSize(name);
+            resizePane(name);
         }
     }
     return true;
@@ -3325,16 +3337,19 @@ bool TNullConsoleFrontend::scrollWindowTo(const QString& name, const int line, c
     if (!pModel) {
         return false;
     }
+    const bool wasSplit = pModel->mScrolledBackTo.has_value();
     const int lastLine = pModel->buffer.getLastLineNumber();
+    // A buffer is never painted, so a real one never shows itself scrolled back
     if (toEnd || line >= lastLine) {
         pModel->mScrolledBackTo.reset();
-        return true;
+    } else if (pModel->mScrollingEnabled && mpHost->windowRegistry().subConsoleKind(name) != TWindowRegistry::SubConsoleKind::Buffer) {
+        pModel->mScrolledBackTo = line < 0 ? std::max(lastLine + line, 0) : line;
     }
-    // A buffer is never painted, so a real one never shows itself scrolled back
-    if (!pModel->mScrollingEnabled || mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::Buffer) {
-        return true;
+    // As TConsole's lower pane showing or hiding resizes the upper one
+    if (pModel->mScrolledBackTo.has_value() != wasSplit) {
+        reportGridSize(name);
+        resizePane(name);
     }
-    pModel->mScrolledBackTo = line < 0 ? std::max(lastLine + line, 0) : line;
     return true;
 }
 
@@ -3357,6 +3372,13 @@ void TNullConsoleFrontend::reportGridSize(const QString& name)
     const auto commandLine = mCommandLines.find(name);
     if (console != mSubConsoles.end() && commandLine != mCommandLines.end() && ownsLine(console->second, commandLine->second) && commandLine->second.shown) {
         size.setHeight(std::max(0, size.height() - 31));
+    }
+    // TConsole's splitter gives a scrolled-back console's upper pane 6 of every 8 pixels its 3px handle leaves,
+    // rounded half up: measured in the GUI, as its constructor's 6:1 stretch factors suggest otherwise. A change to
+    // that split must change this too
+    const auto kind = mpHost->windowRegistry().subConsoleKind(name);
+    if (pModel->mScrolledBackTo && (kind == TWindowRegistry::SubConsoleKind::MiniConsole || kind == TWindowRegistry::SubConsoleKind::UserWindow)) {
+        size.setHeight((std::max(0, size.height() - 3) * 6 + 4) / 8);
     }
     const QFontMetricsF metrics(pModel->mUpperPaneFont);
     pModel->mGridSize = QSize(qRound(size.width() / metrics.averageCharWidth()), qRound(size.height() / metrics.lineSpacing()));
