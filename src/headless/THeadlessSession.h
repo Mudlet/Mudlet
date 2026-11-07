@@ -265,6 +265,13 @@ public:
     // not hold. refused: where submit() is; errorString() says why.
     enum class LinkResult { ran, revealedSpoiler, disabled, concealed, failed, noSuchItem, unknown, refused };
     LinkResult followLink(int link, std::optional<int> item = std::nullopt);
+    // Whether the main console shows each line's time beside it, as the GUI's timestamp button says; false with
+    // no profile open. A getter, so it may be called from any handler.
+    bool timeStampsShown() const;
+    // As a press of the GUI's timestamp button: saved for the profile's next load as the button saves it, and
+    // timeStampsShownChanged follows where it changed. Refused where submit() is, and false where the change was
+    // made but could not be saved; errorString() says why.
+    bool setTimeStampsShown(bool shown);
     // Answers the game's offer of a secure port, as the GUI's Yes and No do: true stores that port with TLS on,
     // as the connection dialog would, and connects there, so a frontend that passes its own port to a later
     // start() passes tls with it; false reconnects where it was and stops the profile asking again. False, with
@@ -465,6 +472,10 @@ signals:
     // more after trims; link() gives nullopt once no line holds it.
     // Each id once, in the order they changed. Hover is not sent, the pointer being the app's own. From the event loop.
     void linksChanged(const QString& profile, const QList<int>& links);
+    // timeStampsShown() changed, by setTimeStampsShown() or a script's enableTimeStamps() or disableTimeStamps() on
+    // the main console. From the event loop, with the state as it is then, and only when that differs from the
+    // one last sent or the one timeStampsShown() gave at profileLoaded.
+    void timeStampsShownChanged(const QString& profile, bool shown);
     // What the GUI shows outside the profile's screen: a script's showNotification(), which answers true only
     // when this signal is connected and not blocked, with no milliseconds for the system's own time; and a
     // script's alert() or the game's bell, asking for the player's attention for that long, 0 until they come
@@ -649,6 +660,8 @@ private:
     // The same, to look up: a sweep or clearWindow() removes thousands at once
     QSet<int> mChangedLinkIds;
     bool mLinksChangedPending = false;
+    // What timeStampsShown() gave at profileLoaded, then each timeStampsShownChanged; none before the load ends
+    std::optional<bool> mDeliveredTimeStampsShown;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(THeadlessSession::TextStyles)
