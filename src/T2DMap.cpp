@@ -2634,12 +2634,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
         return;
     }
 
-    static bool oldBubbleMode = false;
-    if (oldBubbleMode != mBubbleMode) {
+    if (mSymbolCacheBubbleMode != mBubbleMode) {
         // If the round/square room selection has changed this will invalidate
         // all the previously generated pixmaps:
         flushSymbolPixmapCache();
-        oldBubbleMode = mBubbleMode;
+        mSymbolCacheBubbleMode = mBubbleMode;
     }
 
     mSymbolFontSize = 1;
@@ -3331,13 +3330,12 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     // The area combobox belongs to the main mapper, which a secondary view may exist without
     if (!mIsSecondaryView && mpMap->mapper()) {
-        static bool isAreaWidgetValid = true; // Remember between uses
         QFont _f = mpMap->mapper()->comboBox_showArea->font();
-        if (isAreaWidgetValid) {
+        if (mAreaWidgetValid) {
             if (mAreaID == -1                       // the map being shown is the "default" area
                 && !mpMap->getDefaultAreaShown()) { // the area widget is not showing the "default" area
 
-                isAreaWidgetValid = false; // So the widget CANNOT indicate the correct area
+                mAreaWidgetValid = false; // So the widget CANNOT indicate the correct area
                 // Set the area widget to indicate the area widget is NOT
                 // showing valid text - so make it italic and crossed out
                 _f.setItalic(true);
@@ -3347,7 +3345,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             }
         } else {
             if (!(mAreaID == -1 && !mpMap->getDefaultAreaShown())) {
-                isAreaWidgetValid = true; // So the widget CAN now indicate the correct area
+                mAreaWidgetValid = true; // So the widget CAN now indicate the correct area
                 // Reset to normal
                 _f.setItalic(false);
                 _f.setUnderline(false);

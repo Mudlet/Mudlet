@@ -607,6 +607,10 @@ private:
     qsizetype mTextLabelPixmapFrameKiB = 0;
     qsizetype mTextLabelPixmapLastFrameKiB = 0;
     ushort mSymbolFontSize = 1;
+    // The round rooms setting mSymbolPixmapCache was drawn for
+    bool mSymbolCacheBubbleMode = false;
+    // Whether the mapper's area box names the area this map shows
+    bool mAreaWidgetValid = true;
     QFont mMapSymbolFont;
     // in the players current area, how many digits does the biggest room number have?
     quint8 mMaxRoomIdDigits = 0;
