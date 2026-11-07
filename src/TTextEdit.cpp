@@ -4421,8 +4421,12 @@ void TTextEdit::applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, c
         }
     }
 
-    // A link the caret is on keeps showing focus, which outranks being selected
+    // The pointer, a pressed button and focus outrank being selected, so a link in one of those states keeps it
     const auto stateFor = [this](int link, bool selected) {
+        const auto current = mpBuffer->getLinkState(link);
+        if (current == Mudlet::HyperlinkStyling::StateDisabled || current == Mudlet::HyperlinkStyling::StateActive || current == Mudlet::HyperlinkStyling::StateHover) {
+            return current;
+        }
         if (mpBuffer->showsFocus(link)) {
             return Mudlet::HyperlinkStyling::StateFocusVisible;
         }

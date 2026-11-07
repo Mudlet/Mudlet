@@ -10115,7 +10115,8 @@ void TBuffer::setHoveredLink(int linkIndex)
         auto currentState = getLinkState(linkIndex);
         // Don't override active or disabled states with hover
         // Disabled links should stay disabled and show their disabled styling
-        if (currentState != Mudlet::HyperlinkStyling::StateActive && currentState != Mudlet::HyperlinkStyling::StateDisabled) {
+        // Without a hover style, hovering would draw the link as if it had no other state, hiding focus or selection
+        if (currentState != Mudlet::HyperlinkStyling::StateActive && currentState != Mudlet::HyperlinkStyling::StateDisabled && mLinkStore.getStyling(linkIndex).hoverStyle.hasCustomStyling) {
             setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateHover);
             updateLinkCharacters(linkIndex); // Update displayed characters
         }
@@ -10138,7 +10139,7 @@ void TBuffer::setActiveLink(int linkIndex)
         Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousActiveLink);
         if (linkStyling.selection.disabled) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateDisabled);
-        } else if (previousActiveLink == mCurrentHoveredLinkIndex) {
+        } else if (previousActiveLink == mCurrentHoveredLinkIndex && linkStyling.hoverStyle.hasCustomStyling) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateHover);
         } else if (showsFocus(previousActiveLink)) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateFocusVisible);
@@ -10153,8 +10154,8 @@ void TBuffer::setActiveLink(int linkIndex)
         updateLinkCharacters(previousActiveLink); // Update displayed characters
     }
 
-    // Set new link to active state
-    if (linkIndex > 0) {
+    // Set new link to active state, if it has a style to show it with
+    if (linkIndex > 0 && mLinkStore.getStyling(linkIndex).activeStyle.hasCustomStyling) {
         setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateActive);
         updateLinkCharacters(linkIndex); // Update displayed characters
     }
@@ -10180,7 +10181,8 @@ void TBuffer::setFocusedLink(int linkIndex)
     // Set new link to focus state
     // Disabled links stay disabled, and a screen reader is told so from this state. The pointer and a
     // pressed button outrank focus.
-    if (showsFocus(linkIndex) && getLinkState(linkIndex) != Mudlet::HyperlinkStyling::StateDisabled && linkIndex != mCurrentHoveredLinkIndex && linkIndex != mCurrentActiveLinkIndex) {
+    const auto state = getLinkState(linkIndex);
+    if (showsFocus(linkIndex) && state != Mudlet::HyperlinkStyling::StateDisabled && state != Mudlet::HyperlinkStyling::StateHover && state != Mudlet::HyperlinkStyling::StateActive) {
         // Only the caret focuses a link, never a pointer click, so it always matches :focus-visible
         setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateFocusVisible);
         updateLinkCharacters(linkIndex);
@@ -10528,6 +10530,11 @@ void TBuffer::updateLinkCharacters(int linkIndex, int fromLine)
 
     // Get the effective styling for this link's current state
     Mudlet::HyperlinkStyling effectiveStyling = getEffectiveHyperlinkStyling(linkIndex);
+    // A state that colored the text leaves nothing to draw over it once it ends, so the color the game sent comes back
+    const Mudlet::HyperlinkStyling storedStyling = mLinkStore.getStyling(linkIndex);
+    const bool aStateColorsTheText = storedStyling.linkStyle.hasForegroundColor || storedStyling.visitedStyle.hasForegroundColor || storedStyling.hoverStyle.hasForegroundColor
+                                     || storedStyling.activeStyle.hasForegroundColor || storedStyling.focusStyle.hasForegroundColor || storedStyling.focusVisibleStyle.hasForegroundColor
+                                     || storedStyling.anyLinkStyle.hasForegroundColor || storedStyling.selectedStyle.hasForegroundColor || storedStyling.disabledStyle.hasForegroundColor;
 
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC] Link" << linkIndex << "effective styling:" << "hasFg:" << effectiveStyling.hasForegroundColor
@@ -10624,6 +10631,8 @@ void TBuffer::updateLinkCharacters(int linkIndex, int fromLine)
                         qDebug() << "[OSC] Applied FG color to link" << linkIndex << "- New FgColor:" << tchar.foreground().name();
                     }
 #endif
+                } else if (aStateColorsTheText && mLinkOriginalCharacters.contains(linkIndex)) {
+                    tchar.setForeground(mLinkOriginalCharacters.value(linkIndex).foreground());
                 }
 
                 // Update background color - restore original if not specified in styling
