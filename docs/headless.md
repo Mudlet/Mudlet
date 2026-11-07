@@ -747,8 +747,9 @@ and the app draws what that says, as it draws the main console from `lineShown`.
 - its `geometry` in its parent's pixels, and a dock's in the main window's. With no dock layout to put
   it in, a user window is at the main window's top left, at the size the main window had as the user
   window opened, or, if the app had given no size by then, at the one made up from the main console's
-  grid, and it stays so as the main window changes size. A console's own command line has none, as the
-  console lays it out along its bottom;
+  grid, and it stays so as the main window changes size, until the app places it with
+  `setUserWindowGeometry()`. A console's own command line has none, as the console lays it out along its
+  bottom;
 - `visible`, its own flag, as `hideWindow()` and `showWindow()` set it, and `shown`, whether it shows:
   visible, and so is each window it is in. Hiding a user window leaves the labels in it visible, but not
   shown;
@@ -759,6 +760,10 @@ and the app draws what that says, as it draws the main console from `lineShown`.
 - the `background` colour of a console, or of a label from `setBackgroundColor()`, and the `font` a
   console, label or text edit draws its text in. The other kinds have an invalid colour and a default
   font.
+- for a user window, its `dock`: whether the player may dock it (`autoDock`), the `area`
+  `openUserWindow()` asked for, whether it is `floating`, and its `title`, as `openUserWindow()` and
+  `setUserWindowTitle()` gave them. Where the app docks it is the app's: `setUserWindowGeometry()` takes
+  no area, so `area` stays what the script asked for. The other kinds have none.
 
 The list has parents before the windows they hold, and each parent's windows from the lowest up, the
 main window's area's before the docks, so an app that draws it in order draws each window over what it
@@ -801,6 +806,15 @@ such as a `moveWindow()` to where the window is, sends none.
 
 A change to any of these names the label in `scriptWindowsChanged`. It is empty for a name that is not a
 label's.
+
+The app places user windows, as the GUI's dock layout and the player do. `setUserWindowGeometry(name,
+geometry, floating)` says where it put one, in the main window's pixels, and whether it floats. A new
+size raises `sysUserWindowResizeEvent` and `handleWindowResizeEvent`, as the GUI's dock does, at once
+while the window shows or as it next shows, and is what `getUserWindowSize()` and `getWindowGeometry()`
+then give; a move alone raises nothing. If a handler of that event takes the window away, or opens
+another of its name in its place, which the app has not placed, it returns false. `closeUserWindow(name)`
+is the dock's close button: the window is hidden, as `hideWindow()` does, until a script shows it again.
+Both are refused where `runLua()` is, and for a name that is not a user window's.
 
 ## What still needs a window
 

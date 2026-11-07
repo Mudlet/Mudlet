@@ -33,6 +33,7 @@
 #include <QFontMetricsF>
 #include <QGuiApplication>
 #include <QImage>
+#include <QMap>
 #include <QMovie>
 #include <QObject>
 #include <QScopedValueRollback>
@@ -1490,7 +1491,7 @@ void TNullConsoleFrontend::closeSubConsole(const QString& name)
     }
 }
 
-bool TNullConsoleFrontend::openUserWindow(const QString& name, const bool loadLayout, bool, const QString&)
+bool TNullConsoleFrontend::openUserWindow(const QString& name, const bool loadLayout, const bool autoDock, const QString& area)
 {
     mWindowNotifier.note();
     TWindowRegistry& registry = mpHost->windowRegistry();
@@ -1533,7 +1534,27 @@ bool TNullConsoleFrontend::openUserWindow(const QString& name, const bool loadLa
         }
     }
     setSubConsoleShown(name, true);
-    return !gone();
+    if (gone()) {
+        return false;
+    }
+    // As TMainConsole::placeUserWindow(), after the show
+    SubConsole& dock = mSubConsoles.at(name);
+    dock.autoDock = autoDock;
+    static const QMap<QString, Qt::DockWidgetArea> dockAreas{{qsl("r"), Qt::RightDockWidgetArea},
+                                                             {qsl("right"), Qt::RightDockWidgetArea},
+                                                             {qsl("l"), Qt::LeftDockWidgetArea},
+                                                             {qsl("left"), Qt::LeftDockWidgetArea},
+                                                             {qsl("t"), Qt::TopDockWidgetArea},
+                                                             {qsl("top"), Qt::TopDockWidgetArea},
+                                                             {qsl("b"), Qt::BottomDockWidgetArea},
+                                                             {qsl("bottom"), Qt::BottomDockWidgetArea}};
+    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
+        dock.floating = true;
+    } else if (const auto docked = dockAreas.constFind(area); docked != dockAreas.cend()) {
+        dock.floating = false;
+        dock.dockArea = *docked;
+    }
+    return true;
 }
 
 void TNullConsoleFrontend::setProfileStyleSheet(const QString& styleSheet)
@@ -3488,6 +3509,7 @@ std::pair<bool, QString> TNullConsoleFrontend::setUserWindowStyleSheet(const QSt
 
 std::pair<bool, QString> TNullConsoleFrontend::setUserWindowTitle(const QString& name, const QString& text)
 {
+    mWindowNotifier.note();
     if (name.isEmpty()) {
         return {false, qsl("a user window cannot have an empty string as its name")};
     }
@@ -3856,6 +3878,13 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
                            console.pModel->mUpperPaneFont,
                            kind == TWindowRegistry::SubConsoleKind::UserWindow});
         records.back().parentKind = kindOfParent(console.box.get());
+        if (kind == TWindowRegistry::SubConsoleKind::UserWindow) {
+            WindowRecord& record = records.back();
+            record.autoDock = console.autoDock;
+            record.dockArea = console.dockArea;
+            record.floating = console.floating;
+            record.title = registry.userWindowTitle(name).value_or(QString());
+        }
     }
     for (const auto& [name, label] : mLabels) {
         records.push_back({name,
@@ -3945,4 +3974,27 @@ std::optional<TNullConsoleFrontend::LabelRecord> TNullConsoleFrontend::labelReco
     record.customCursor = label.customCursor;
     record.customCursorHotSpot = label.customCursorHotSpot;
     return record;
+}
+
+bool TNullConsoleFrontend::userWindow(const QString& name) const
+{
+    return mSubConsoles.count(name) && mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::UserWindow;
+}
+
+bool TNullConsoleFrontend::placeUserWindow(const QString& name, const QRect& geometry, const bool floating)
+{
+    mWindowNotifier.note();
+    if (!userWindow(name)) {
+        return false;
+    }
+    mSubConsoles.at(name).floating = floating;
+    const QPointer<const QObject> window = &mSubConsoles.at(name).pModel->mNotifier;
+    TWindowRegistry& registry = mpHost->windowRegistry();
+    QRect moved = registry.subConsoleGeometry(name).value_or(QRect());
+    moved.moveTo(geometry.topLeft());
+    registry.setSubConsoleGeometry(name, moved);
+    // Its handlers can delete the window, or open another of its name, which this did not place, in its place
+    const bool resized = resizeSubConsole(name, geometry.width(), geometry.height());
+    const auto it = mSubConsoles.find(name);
+    return resized && window && userWindow(name) && &it->second.pModel->mNotifier == window;
 }
