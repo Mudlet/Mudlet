@@ -233,16 +233,32 @@ function Geyser.List:new(cons, container)
     me:restripe()
   end
 
-  -- Every way into the list comes through these, changeContainer included.
+  -- A fit that is waiting lays the rows out itself, right after this.
+  function content:reposition(skipChildren)
+    if me.pendingFit then
+      return Geyser.Container.reposition(self, skipChildren)
+    end
+
+    Geyser.VBox.reposition(self, skipChildren)
+  end
+
+  -- Every way into the list comes through these, changeContainer included. They
+  -- skip the VBox's own layout, as rowAdded() lays the rows out anyway.
   function content:add(window, cons)
     window.v_policy = Geyser.Fixed
-    Geyser.VBox.add(self, window, cons)
+
+    if self.useAdd2 then
+      Geyser.add2(self, window, cons)
+    else
+      Geyser.add(self, window, cons)
+    end
+
     rowAdded(me, window)
   end
 
   function content:add2(window, cons, passAdd2, exclude)
     window.v_policy = Geyser.Fixed
-    Geyser.VBox.add2(self, window, cons, passAdd2, exclude)
+    Geyser.add2(self, window, cons, passAdd2, exclude)
     rowAdded(me, window)
   end
 
@@ -256,7 +272,7 @@ function Geyser.List:new(cons, container)
       window:setStripe(nil)
     end
 
-    Geyser.VBox.remove(self, window)
+    Geyser.remove(self, window)
     me:fit()
   end
 
@@ -415,12 +431,21 @@ end
 --- Dismisses every row: `dismiss()` for those that have it, so that an `onDismiss`
 -- gets its say, and `delete()` for those that don't.
 function Geyser.List:dismissAll()
+  -- rawget: what it inherits from Geyser is Geyser's to end.
+  local wasDeferring = rawget(self, "defer_updates")
+
+  self:begin_update()
+
   for _, item in ipairs(self:getItems()) do
     if item.dismiss then
       item:dismiss()
     else
       item:delete()
     end
+  end
+
+  if not wasDeferring then
+    self:end_update()
   end
 end
 
@@ -463,7 +488,14 @@ function Geyser.List:fit()
     height = height + box.windowList[name]:get_height()
   end
 
-  box:resize(nil, math.max(height, 1))
+  height = math.max(height, 1)
+
+  -- Not resize(), which places every row only for organize() to place them again.
+  if height ~= box:get_height() then
+    box.height = height
+    Geyser.calc_constraints(box, box, box.container)
+  end
+
   settleWidth(self)
   box:organize()
 end
@@ -554,7 +586,8 @@ end
 -- label exists; other windows have to do their own clicking.
 -- @param item The item.
 function Geyser.List:connectItem(item)
-  if self.selectionMode == "none" or item.clickCallback then return end
+  -- rawget: one an item built from another inherits is that other's.
+  if self.selectionMode == "none" or rawget(item, "clickCallback") then return end
 
   item:setClickCallback(function()
     -- A Geyser.ListItem can have moved to another list since.

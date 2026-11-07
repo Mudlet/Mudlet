@@ -50,6 +50,9 @@ void TScrollBoxWidget::childEvent(QChildEvent* event)
     }
     if (event->removed()) {
         child->removeEventFilter(this);
+        // A deleted or reparented child sends none of the events below, and
+        // would otherwise leave its scroll range behind
+        adjustSize();
     }
 }
 
