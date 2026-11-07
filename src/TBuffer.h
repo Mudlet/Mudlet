@@ -850,6 +850,8 @@ private:
     void clearSequenceLatches();
     void endLocalFeedSequences();
     void appendReplacementCharacter(TChar);
+    void appendMxpText(const QString&);
+    void appendLinkedText(const QString&, TChar);
     static QStringDecoder multibyteDecoderFor(Decoder, const QByteArray&);
     bool decodeMultibyteSequence(QByteArrayView, QStringView&);
     // Views into the string decodeSGR() was handed, so none may outlive that call.
@@ -875,6 +877,8 @@ private:
     bool continuationRepeatsSegmentOpening() const;
     void joinPendingServerWrapOntoCurrent();
     void processMxpWatchdogCallback();
+    void watchMxpTag(bool tagWrittenOut);
+    void stopTagWatchdog();
     TChar::AttributeFlags computeCurrentAttributeFlags() const;
 
     // Helper function for parsing URI query parameters in OSC 8 hyperlinks
