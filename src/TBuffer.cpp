@@ -628,7 +628,6 @@ bool TChar::operator==(const TChar& other) const
 }
 
 namespace {
-// A selected run stays per character, as copying the shared TChar back out would deselect it
 bool storableAsOne(const std::vector<TChar>& chars)
 {
     if (chars.empty() || chars.front().isSelected()) {
@@ -664,9 +663,52 @@ TLineFormat::TLineFormat(const std::vector<TChar>& chars)
 std::vector<TChar>& TLineFormat::expand()
 {
     if (mUniformCount) {
+        // assign() copies, and a copied TChar is deselected
+        const bool selected = mUniform.isSelected();
         mChars.assign(std::exchange(mUniformCount, 0), mUniform);
+        if (selected) {
+            for (TChar& character : mChars) {
+                character.select();
+            }
+        }
     }
     return mChars;
+}
+
+void TLineFormat::select(const size_type from, const size_type to)
+{
+    if (from >= to) {
+        return;
+    }
+    if (mUniformCount && from == 0 && to == mUniformCount) {
+        mUniform.select();
+        return;
+    }
+    std::vector<TChar>& chars = expand();
+    for (TChar& character : std::span(chars).subspan(from, to - from)) {
+        character.select();
+    }
+}
+
+void TLineFormat::deselect()
+{
+    if (mUniformCount) {
+        mUniform.deselect();
+        return;
+    }
+    bool wasSelected = false;
+    for (TChar& character : mChars) {
+        if (character.isSelected()) {
+            character.deselect();
+            wasSelected = true;
+        }
+    }
+    if (wasSelected && storableAsOne(mChars)) {
+        mUniform = mChars.front();
+        mUniformCount = mChars.size();
+        // clear() would keep the heap block
+        std::vector<TChar>().swap(mChars);
+    }
 }
 
 void TLineFormat::insert(const size_type index, const size_type count, const TChar& format)
