@@ -37,8 +37,9 @@ jobs:
     name: ubuntu / gcc / lua tests with no main window
     runs-on: ubuntu-22.04
     if: ${{ github.repository_owner == 'Mudlet' }}
+    # Per run outside pull requests: a group shared by every push cancels each queued push's job
     concurrency:
-      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
       LUA_VERSION: '5.1.5'
