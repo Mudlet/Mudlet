@@ -53,7 +53,13 @@ download_sentry_cli() {
     fi
 
     echo "Downloading $url ..."
-    curl -L -o "$file" "$url"
+    # Without --fail a GitHub 504 page is saved as the binary and exits 0. curl
+    # --retry covers 5xx gateway errors; --retry-all-errors adds dropped connections.
+    if ! curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors --connect-timeout 30 -o "$file" "$url"; then
+        rm -f "$file"
+        echo "::error::could not download sentry-cli from $url"
+        return 1
+    fi
 
     if [[ "$os" != "MINGW"* && "$os" != "MSYS"* && "$os" != "CYGWIN"* ]]; then
         chmod +x "$file"
