@@ -37,6 +37,7 @@
 #include <QString>
 
 #include <array>
+#include <functional>
 #include <map>
 #include <memory>
 #include <vector>
@@ -312,6 +313,8 @@ public:
     // A map widget or an embedded mapper, either of which a real view would draw the map in
     bool hasMapper() const { return mapView() != nullptr; }
     TMapViewFrontend* mapView() const { return mpEmbeddedMapper ? mpEmbeddedMapper.data() : mMapWidget ? mMapWidget->pView.get() : nullptr; }
+    // Called by the map view where the GUI asks T2DMap for an update(), for an app that draws the map
+    std::function<void()> mMapRepaintRequested;
     void restoreOwnMapper() override {}
     // TMainConsole shows the dlgMapper drawing the map after a load; a closed map widget's dock keeps it hidden
     void showLoadedMap() override { showEmbeddedMapper(); }

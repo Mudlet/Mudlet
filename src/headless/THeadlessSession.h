@@ -37,6 +37,8 @@
 
 class Host;
 class HostManager;
+class QPainter;
+class QSize;
 class QTimer;
 class TBuffer;
 class QMimeData;
@@ -320,6 +322,12 @@ public:
     bool toggleAllSoundsMuted();
     // False with no profile open
     bool soundsMuted(SoundSource source) const;
+    // Draws the profile's 2D map onto the painter at that size, as the GUI's mapper shows it: the area of the
+    // player's room centred on it at that area's zoom, the player's marker and the map info box. As the GUI's does,
+    // a draw that moves to another area raises sysMapAreaChanged. A script opens the map first, as with
+    // openMapWidget(). The map info box runs the profile's Lua, so this is refused where submit() is. False, with
+    // errorString() saying why, with no map open, a painter that is not active or a size under 10 by 10 pixels.
+    bool renderMap(QPainter& painter, const QSize& size);
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -448,6 +456,11 @@ signals:
     // listens, and a save keeps that, so it never comes again for that profile. From the event loop, even once
     // shutdown() or a later start() has let the profile go, so long as the session is not deleted before then.
     void mappingScriptMissing(const QString& profile);
+    // The 2D map would be drawn again where the GUI asks its mapper to repaint: the player moved or a script centred
+    // the map, the map loaded or changed, or its zoom, colours, settings or info box did, and as a script opens the
+    // map, shows it again or replaces it with an embedded mapper. While a map is open, and once a turn of the event
+    // loop however many were asked for; from the event loop, so a handler may call renderMap().
+    void mapRepaintRequested(const QString& profile);
     // A replay of this profile, as the GUI's replay toolbar follows it: its start, from a script's loadReplay() or
     // through host(), at 1 times its speed, as every replay starts; each change of its speed, from 1 to 1024 times,
     // which may repeat the speed where a change is clamped; and its end, however it ends, the end of the file included,
@@ -517,6 +530,7 @@ private:
     // False, with errorString() saying why, while the GUI's hidden-input box would not be open
     bool inputHidden(bool sending);
     void noteAlreadyInstalled(const QString& path, const QString& name);
+    void relayMapRepaints(Host*, unsigned int run);
 
     QPointer<Host> mpHost;
     QString mProfileName;
@@ -551,6 +565,8 @@ private:
     // Counted, as a handler that changed it and changed it back leaves it as it was
     unsigned int mApplicationActiveChanges = 0;
     bool mMapOperationCancelable = false;
+    // The run whose mapRepaintRequested is queued, 0 for none
+    unsigned int mMapRepaintQueuedRun = 0;
     QStringList mUnsavedProfiles;
     // Bumped by each start() and shutdown(), to drop a queued quitRequested or other relay owed to the profile
     // before, even one a script closed before shutdown() was called

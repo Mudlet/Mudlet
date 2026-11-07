@@ -1528,6 +1528,11 @@ std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windo
     if (mMapWidget) {
         // As TMainConsole::createMapper() deleting the hidden map dock leaves QMainWindow its placeholder
         TAppFrontend::instance()->mapWidgetRemoved(mpHost);
+        // Deferred, as the GUI's dock is: a map info contributor or a mouse press handler drawing this view may be
+        // the caller
+        TNullMapView* pOldView = mMapWidget->pView.release();
+        pOldView->setParent(mpMainHolder.get());
+        pOldView->deleteLater();
         mMapWidget.reset();
     }
     if (!mpEmbeddedMapper) {

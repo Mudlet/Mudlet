@@ -492,6 +492,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     --gSignalsBeingHandedOut;
                     return true;
                 });
+                relayMapRepaints(pNewHost, run);
                 connect(pNewHost, &Host::signal_attentionRequested, this, [this](const int milliseconds) {
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;

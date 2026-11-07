@@ -20,10 +20,14 @@
 #include "TNullMapView.h"
 
 #include "Host.h"
+#include "RoomAppearance.h"
+#include "TAppFrontend.h"
 #include "TEvent.h"
 #include "TMap.h"
+#include "TNullConsoleFrontend.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
+#include "mapInfoContributorManager.h"
 
 #include <QTimer>
 
@@ -31,9 +35,42 @@ TNullMapView::TNullMapView(Host* pHost, QObject* parent)
 : QObject(parent)
 , mpHost(pHost)
 {
+    TMap* pMap = pHost->mpMap.data();
+    // The symbol pixmaps are kept by colour and symbol alone; a loaded map's font arrives through this too
+    connect(pMap, &TMap::signal_symbolCachesStale, this, [this]() {
+        mPainter.flushSymbolPixmapCache();
+    });
     // What makes the GUI's dlgMapper repaint its 2D map
-    connect(pHost->mpMap.data(), &TMap::signal_areaChanged, this, &TNullMapView::schedulePaint);
-    connect(pHost->mpMap.data(), &TMap::signal_mapLoaded, this, &TNullMapView::schedulePaint);
+    connect(pMap, &TMap::signal_areaChanged, this, &TNullMapView::schedulePaint);
+    connect(pMap, &TMap::signal_mapLoaded, this, &TNullMapView::schedulePaint);
+    // What has dlgMapper ask T2DMap for an update(), or change what its next frame draws
+    connect(pMap, &TMap::signal_areaChanged, this, &TNullMapView::requestRepaint);
+    connect(pMap, &TMap::signal_mapLoaded, this, &TNullMapView::requestRepaint);
+    connect(pMap, &TMap::signal_mapperColoursChanged, this, &TNullMapView::requestRepaint);
+    connect(pMap, &TMap::signal_mapLabelsChanged, this, &TNullMapView::requestRepaint);
+    connect(pMap, &TMap::signal_symbolCachesStale, this, &TNullMapView::requestRepaint);
+    connect(pMap, &TMap::signal_playerRoomStyleChanged, this, &TNullMapView::requestRepaint);
+    connect(pMap, &TMap::signal_playerAreaShowRequested, this, &TNullMapView::requestRepaint);
+    connect(pMap, &TMap::signal_defaultAreaVisibilitySet, this, &TNullMapView::requestRepaint);
+    connect(pMap, &TMap::signal_mapInfoContributorsChanged, this, &TNullMapView::requestRepaint);
+    connect(pMap, &TMap::signal_mapRepaintRequested, this, &TNullMapView::requestRepaint);
+    connect(pMap, &TMap::signal_mapperSettingChanged, this, [this](const TMap::MapperSetting setting) {
+        if (setting == TMap::MapperSetting::RoomSize) {
+            mPainter.flushSymbolPixmapCache();
+        }
+        // The style is the 3D view's alone
+        if (setting != TMap::MapperSetting::Style) {
+            requestRepaint();
+        }
+    });
+    connect(pMap->mMapInfoContributorManager, &MapInfoContributorManager::signal_contributorsUpdated, this, &TNullMapView::requestRepaint);
+}
+
+void TNullMapView::requestRepaint()
+{
+    if (auto* pFrontend = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend()); pFrontend && pFrontend->mMapRepaintRequested) {
+        pFrontend->mMapRepaintRequested();
+    }
 }
 
 void TNullMapView::setShown(const bool shown)
@@ -43,6 +80,10 @@ void TNullMapView::setShown(const bool shown)
     }
     mShown = shown;
     schedulePaint();
+    // The GUI paints a widget as it is shown
+    if (shown) {
+        requestRepaint();
+    }
 }
 
 void TNullMapView::schedulePaint()
@@ -76,25 +117,68 @@ void TNullMapView::paint()
     if (!pPlayerRoom) {
         return;
     }
-    if (mCentred && mCentredRoomId == playerRoomId && !pMap->mNewMove) {
+    if (mView.mShiftMode && mView.mRoomID == playerRoomId && !pMap->mNewMove) {
         return;
     }
-    mCentred = true;
+    mView.mShiftMode = true;
+    mRecentre = true;
     pMap->mNewMove = false;
-    mCentredRoomId = playerRoomId;
-    mAreaId = pPlayerRoom->getArea();
-    if (mLastViewedAreaId == mAreaId) {
+    mView.mRoomID = playerRoomId;
+    mView.mAreaID = pPlayerRoom->getArea();
+    mView.mMapCenterX = pPlayerRoom->x();
+    mView.mMapCenterY = pPlayerRoom->y() * -1;
+    mView.mMapCenterZ = pPlayerRoom->z();
+    if (mView.mLastViewedAreaID == mView.mAreaID) {
         return;
     }
+    const int lastViewedAreaId = mView.mLastViewedAreaID;
+    mView.mLastViewedAreaID = mView.mAreaID;
+    raiseAreaChanged(mView.mAreaID, lastViewedAreaId);
+}
+
+void TNullMapView::raiseAreaChanged(const int areaId, const int lastViewedAreaId)
+{
     TEvent areaViewedChangedEvent{};
     areaViewedChangedEvent.mArgumentList.append(qsl("sysMapAreaChanged"));
     areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    areaViewedChangedEvent.mArgumentList.append(QString::number(mAreaId));
+    areaViewedChangedEvent.mArgumentList.append(QString::number(areaId));
     areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    areaViewedChangedEvent.mArgumentList.append(QString::number(mLastViewedAreaId));
+    areaViewedChangedEvent.mArgumentList.append(QString::number(lastViewedAreaId));
     areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mLastViewedAreaId = mAreaId;
     mpHost->raiseEvent(areaViewedChangedEvent);
+}
+
+// With the settings T2DMap::init() and dlgMapper take from the profile and the main window
+void TNullMapView::render(QPainter& painter, const QSize& size)
+{
+    TMap* pMap = mpHost->mpMap.data();
+    TMapPainter::View view = mView;
+    view.mpMap = pMap;
+    view.mpHost = mpHost;
+    view.mSize = size;
+    view.eSize = mpHost->mLineSize;
+    view.mBSize = mpHost->mRoomBorderSize;
+    view.rSize = mpHost->mRoomSize;
+    view.mMapperUseAntiAlias = mpHost->mMapperUseAntiAlias;
+    view.mShowGrid = mpHost->mMapperShowGrid;
+    view.mShowRoomID = mpHost->mShowRoomID;
+    view.mBubbleMode = mpHost->mBubbleMode;
+    view.mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
+    view.mDrawUpperLowerLevels = TAppFrontend::instance()->drawUpperLowerLevels();
+    view.mPlayerRoomColorGradientStops = RoomAppearance::playerRoomStops(pMap->mPlayerRoomStyle, pMap->mPlayerRoomInnerDiameterPercentage, pMap->mPlayerRoomInnerColor, pMap->mPlayerRoomOuterColor);
+    if (mRecentre) {
+        view.mShiftMode = false;
+        mRecentre = false;
+    }
+    TMapPainter::PaintResult result;
+    // A map info contributor's Lua reads the area shown, as getMapZoom() does, so finds the one this frame shows
+    mPainter.paintView(painter, view, result, [this](const TMapPainter::View& frame) {
+        mView = frame;
+    });
+    mView = result.view;
+    if (result.areaChanged) {
+        raiseAreaChanged(result.areaChanged->first, result.areaChanged->second);
+    }
 }
 
 std::pair<bool, QString> TNullMapView::show3DView(const bool shown)
@@ -119,12 +203,16 @@ std::pair<bool, QString> TNullMapView::exportAreaToImage(const int areaId, const
     view.mShowRoomID = mpHost->mShowRoomID;
     view.mBubbleMode = mpHost->mBubbleMode;
     view.mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
-    view.mAreaID = mAreaId;
-    if (const TRoom* pCentredRoom = mpHost->mpMap->mpRoomDB->getRoom(mCentredRoomId)) {
+    view.mAreaID = mView.mAreaID;
+    if (const TRoom* pCentredRoom = mpHost->mpMap->mpRoomDB->getRoom(mView.mRoomID)) {
         view.mMapCenterZ = pCentredRoom->z();
     }
+    // A map info contributor's Lua can export while a frame is being drawn, which goes on with its own view
+    const TMapPainter::View frame = mPainter.view();
     mPainter.setView(view);
-    return mPainter.exportArea(areaId, filePath, zLevel, zoom, exportAllZLevels, this);
+    auto result = mPainter.exportArea(areaId, filePath, zLevel, zoom, exportAllZLevels, this);
+    mPainter.setView(frame);
+    return result;
 }
 
 // As dlgMapper::setMapZoom() and T2DMap::setMapZoom()
@@ -133,7 +221,7 @@ std::pair<bool, QString> TNullMapView::setMapZoom(const qreal zoom, const int ar
     if (const QString error = TMap::zoomError(zoom); !error.isEmpty()) {
         return {false, error};
     }
-    const int zoomedAreaId = areaId ? areaId : mAreaId;
+    const int zoomedAreaId = areaId ? areaId : mView.mAreaID;
     if (!mpHost->mpMap->mpRoomDB->set2DMapZoom(zoomedAreaId, zoom)) {
 #if defined(INCLUDE_3DMAPPER)
         // dlgMapper hands T2DMap the shown area in place of 0, so the refusal names it
@@ -142,5 +230,6 @@ std::pair<bool, QString> TNullMapView::setMapZoom(const qreal zoom, const int ar
         return {false, qsl("number %1 is not a valid areaID").arg(QString::number(areaId))};
 #endif
     }
+    requestRepaint();
     return {true, QString()};
 }
