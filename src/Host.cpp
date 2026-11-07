@@ -818,6 +818,9 @@ void Host::startProfileScripts()
 {
     // enable script compilation (which is off by default)
     mBlockScriptCompile = false;
+    if (!hasConsoleView() && !mBorders.isNull()) {
+        layOutMainAreaWithNoView(MainAreaChange::load);
+    }
     // This uses the external LuaGlobal.lua file to load all the other external
     // lua files, including the condenseMapLoad() function needed by the
     // TMap::audit() method:
@@ -7516,9 +7519,9 @@ std::optional<QRect> Host::windowGeometry(const QString& name) const
 std::optional<QSize> Host::mainWindowSize() const
 {
     if (!hasConsoleView()) {
-        // Nothing lays the main console out, so it is the character grid NAWS reports
         const QFontMetrics metrics(consoleFrontend()->displayFont());
-        return {QSize(mScreenWidth * metrics.averageCharWidth(), mScreenHeight * metrics.height())};
+        const QSize cells = mainAreaCells();
+        return {QSize(cells.width() * metrics.averageCharWidth(), cells.height() * metrics.height())};
     }
     return {mWindowRegistry.mainWindowSize()};
 }
@@ -7770,6 +7773,57 @@ void Host::setMxpBorders(const QMargins borders)
 {
     mMxpBorders = borders;
     setBorders(mUserBorders + mMxpBorders);
+}
+
+// Never negative, as Qt holds the GUI's text widget to no less than nothing however wide the borders are
+QSize Host::mainTextAreaWithNoView() const
+{
+    const QSize area = mainWindowSize().value_or(QSize());
+    return {std::max(0, area.width() - mBorders.left() - mBorders.right()), std::max(0, area.height() - mBorders.top() - mBorders.bottom())};
+}
+
+void Host::layOutMainAreaWithNoView(const MainAreaChange change)
+{
+    // Till then the save is loading: the GUI makes its main console only after that, and the load may still change
+    // the font, so startProfileScripts() lays out what the save left
+    if (mBlockScriptCompile) {
+        return;
+    }
+    if (!mMainAreaCells) {
+        mMainAreaCells = QSize(mScreenWidth, mScreenHeight);
+    }
+    const QSize textArea = mainTextAreaWithNoView();
+    const QFontMetrics metrics(consoleFrontend()->displayFont());
+    // As TTextEdit::updateScreenView() counts it, and NAWS carries no more than 16 bits
+    const int columns = std::clamp(textArea.width() / std::max(1, metrics.averageCharWidth()), 40, 65535);
+    const int rows = std::clamp(textArea.height() / std::max(1, metrics.height()), 1, 65535);
+    if (columns != mScreenWidth || rows != mScreenHeight) {
+        setScreenDimensions(columns, rows);
+        updateDisplayDimensions();
+    }
+    if (change == MainAreaChange::load) {
+        return;
+    }
+
+    // As TConsole::resizeEvent() and TMainConsole::applyBorders() tell scripts, with no command line to take off
+    if (change == MainAreaChange::area) {
+        mLuaInterpreter.call(qsl("handleWindowResizeEvent"), qsl("WindowResizeEvent"));
+        if (closeStarted()) {
+            return;
+        }
+    }
+    // Measured now, as TConsole::raiseMudletSysWindowResizeEvent() takes off the borders the handler may have set
+    const QSize reported = mainTextAreaWithNoView();
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysWindowResizeEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(reported.width()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(reported.height()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(qsl("main"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(event);
 }
 
 void Host::setCommandLineHistorySaveSize(const int lines)

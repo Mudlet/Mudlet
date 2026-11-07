@@ -176,12 +176,14 @@ public:
     // One whose name, or whose config.lua's, is already installed is left as it is; errorString() says so.
     enum class PackageResult { installed, installedWithErrors, alreadyInstalled, failed };
     PackageResult installPackage(const QString& path);
-    // The main console's size in characters, as a resize of the GUI's main window sets it. If the profile has
-    // NAWS on and the game asks for it, the game is told from the event loop once the size has not changed for
-    // 0.3s, and only if what it is told has changed, or when it next asks; until then it is told 90 by 25. The
-    // profile's scripts read it as the main window's size, and a change raises sysWindowResizeEvent with that
-    // size in pixels. As in the GUI, a width below 40 is taken as 40 and the game is told no more than the
-    // profile's wrap width. Refused below 1 or above 65535, which NAWS cannot carry, and where submit() is.
+    // The main window's size in characters, as a resize of the GUI's main window sets it. As there, the borders a
+    // script or MXP sets take their room from it, and what they leave is the main console's grid. If the profile
+    // has NAWS on and the game asks for it, the game is told the grid from the event loop once it has not changed
+    // for 0.3s, and only if what it is told has changed, or when it next asks; until then it is told 90 by 25.
+    // The profile's scripts read the size as the main window's, and a change raises sysWindowResizeEvent with
+    // what the borders leave of it, in pixels. As in the GUI, a width below 40 is taken as 40 and the game is told
+    // no more than the profile's wrap width. Refused below 1 or above 65535, which NAWS cannot carry, and where
+    // submit() is.
     bool setScreenSize(int columns, int rows);
     // Shows or closes the Central Debug Console, as the editor's button does: while it is shown, debugText carries
     // what it prints, what was kept from before first, and the profiles write what they write only in debug mode.
