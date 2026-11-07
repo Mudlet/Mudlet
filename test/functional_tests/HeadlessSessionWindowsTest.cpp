@@ -27,6 +27,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QImage>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -284,6 +285,83 @@ deleteLabel("old")
         QVERIFY(!changes.wait(200));
 
         QVERIFY(session.shutdown(false));
+    }
+
+    void test_eachLabelReadsBackWhatItShows()
+    {
+        const QString name = qsl("Headless Label Content");
+        QVERIFY(writeProfile(name));
+        QTemporaryDir imageDir;
+        const QString image = imageDir.filePath(qsl("red.png"));
+        QImage red(4, 4, QImage::Format_ARGB32);
+        red.fill(Qt::red);
+        QVERIFY(red.save(image));
+        THeadlessSession session;
+        QVERIFY(!session.labelContent(qsl("lbl")));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QSignalSpy changes(&session, &THeadlessSession::scriptWindowsChanged);
+        QVERIFY(session.runLua(qsl(R"lua(
+createLabel("lbl", 0, 0, 100, 20, 1)
+createMiniConsole("mc", 0, 100, 100, 100)
+hpGauge = Geyser.Gauge:new({name = "hp", x = 0, y = 300, width = 200, height = 20})
+hpGauge:setValue(25, 100)
+)lua")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        QVERIFY(!session.labelContent(qsl("mc")));
+        QVERIFY(!session.labelContent(qsl("nonesuch")));
+        std::optional<THeadlessSession::LabelContent> content = session.labelContent(qsl("lbl"));
+        QVERIFY(content);
+        QCOMPARE(content->text, QString());
+
+        QVERIFY(session.runLua(qsl(R"(echo("lbl", "<b>hp</b>"))")));
+        QVERIFY(changes.wait(1000));
+        QCOMPARE(changes.takeFirst().at(1).toStringList(), QStringList{qsl("lbl")});
+        content = session.labelContent(qsl("lbl"));
+        QVERIFY(content);
+        QVERIFY(content->text.contains(qsl("<b>hp</b>")));
+
+        QVERIFY(session.runLua(qsl(R"(setBackgroundImage("lbl", [[%1]]))").arg(image)));
+        content = session.labelContent(qsl("lbl"));
+        QVERIFY(content);
+        QCOMPARE(content->image, image);
+        QVERIFY(!content->svg);
+        // A raster image takes the text down, as QLabel::setPixmap() does
+        QCOMPARE(content->text, QString());
+
+        QVERIFY(session.runLua(qsl(R"lua(
+setLabelToolTip("lbl", "your health", 3)
+setLabelCursor("lbl", 2)
+setLabelStyleSheet("lbl", "color: red;")
+)lua")));
+        QVERIFY(changes.wait(1000));
+        content = session.labelContent(qsl("lbl"));
+        QVERIFY(content);
+        QCOMPARE(content->toolTip, qsl("your health"));
+        QCOMPARE(content->toolTipDuration, 3.0);
+        QCOMPARE(content->cursor, std::optional(Qt::CrossCursor));
+        QCOMPARE(content->styleSheet, qsl("color: red;"));
+        QCOMPARE(content->accessibleName, qsl("your health"));
+        QVERIFY(!content->accessibleButton);
+        QVERIFY(!content->clickThrough);
+        changes.clear();
+        QVERIFY(session.runLua(qsl(R"(setLabelAccessibleName("lbl", "health"))")));
+        QVERIFY(changes.wait(1000));
+        content = session.labelContent(qsl("lbl"));
+        QVERIFY(content);
+        QCOMPARE(content->accessibleName, qsl("health"));
+
+        // A gauge's value is its front label's width
+        const std::optional<THeadlessSession::ScriptWindow> back = session.scriptWindow(qsl("hp_back"));
+        const std::optional<THeadlessSession::ScriptWindow> front = session.scriptWindow(qsl("hp_front"));
+        QVERIFY(back && front);
+        QCOMPARE(back->geometry.width(), 200);
+        QCOMPARE(front->geometry.width(), 50);
+        QVERIFY(session.labelContent(qsl("hp_front")));
+
+        QVERIFY(session.shutdown(false));
+        QVERIFY(!session.labelContent(qsl("lbl")));
     }
 };
 

@@ -928,6 +928,10 @@ void TNullConsoleFrontend::createLabel(const QString& windowname, const QString&
 {
     mWindowNotifier.note();
     auto pLabel = std::make_unique<TLabelModel>(mpHost, name);
+    // A script names a label for screen readers through Host, which tells only the model
+    pLabel->mAccessibilityChanged = [this](TLabelModel::AccessibilityChange) {
+        mWindowNotifier.note();
+    };
     pLabel->setClickThrough(clickThrough);
     pLabel->mGeometry = QRect(QPoint(x, y), widgetSize(width, height));
     auto [userWindow, box] = containerFor(windowname, false);
@@ -943,6 +947,7 @@ void TNullConsoleFrontend::createLabel(const QString& windowname, const QString&
 
 bool TNullConsoleFrontend::setLabelClickThrough(const QString& name, const bool clickThrough)
 {
+    mWindowNotifier.note();
     TLabelModel* pLabel = labelModel(name);
     if (!pLabel) {
         return false;
@@ -1005,6 +1010,7 @@ bool TNullConsoleFrontend::setLabelText(const QString& name, const QString& text
 
 void TNullConsoleFrontend::showLabelText(Label& label, const QString& shown)
 {
+    mWindowNotifier.note();
     // TLabel::setText() stops the movie even when QLabel::setText() keeps it for being given the same text
     if (label.showsMovie) {
         label.movie->stop();
@@ -1032,6 +1038,7 @@ void TNullConsoleFrontend::updateShownContent(Label& label)
 // TLabel::reapplyLinkStyle()
 void TNullConsoleFrontend::reapplyLabelLinkStyle(Label& label)
 {
+    mWindowNotifier.note();
     if (!label.pModel->mText.isEmpty() && TLabelModel::containsAnchorTag(label.pModel->mText)) {
         showLabelText(label, label.pModel->restyledText());
     }
@@ -2834,8 +2841,9 @@ std::pair<bool, QString> TNullConsoleFrontend::setLabelStyleSheet(const QString&
     return {true, QString()};
 }
 
-std::pair<bool, QString> TNullConsoleFrontend::setLabelToolTip(const QString& name, const QString& text, double)
+std::pair<bool, QString> TNullConsoleFrontend::setLabelToolTip(const QString& name, const QString& text, const double duration)
 {
+    mWindowNotifier.note();
     if (name.isEmpty()) {
         return {false, qsl("a label cannot have an empty string as its name")};
     }
@@ -2844,11 +2852,13 @@ std::pair<bool, QString> TNullConsoleFrontend::setLabelToolTip(const QString& na
         return {false, qsl("label name '%1' not found").arg(name)};
     }
     pLabel->setToolTip(text);
+    mLabels.at(name).toolTipDuration = duration;
     return {true, QString()};
 }
 
 std::pair<bool, QString> TNullConsoleFrontend::setLabelCursor(const QString& name, const int shape)
 {
+    mWindowNotifier.note();
     if (name.isEmpty()) {
         return {false, qsl("a label cannot have an empty string as its name")};
     }
@@ -2859,11 +2869,16 @@ std::pair<bool, QString> TNullConsoleFrontend::setLabelCursor(const QString& nam
     if (shape < -1 || shape > 21) {
         return {false, qsl("cursor shape '%1' not found. see https://doc.qt.io/qt-5/qt.html#CursorShape-enum").arg(shape)};
     }
+    Label& label = mLabels.at(name);
+    label.cursor = shape == -1 ? std::nullopt : std::optional(static_cast<Qt::CursorShape>(shape));
+    label.customCursor.clear();
+    label.customCursorHotSpot = QPoint();
     return {true, QString()};
 }
 
-std::pair<bool, QString> TNullConsoleFrontend::setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int, int)
+std::pair<bool, QString> TNullConsoleFrontend::setLabelCustomCursor(const QString& name, const QString& pixMapLocation, const int hotX, const int hotY)
 {
+    mWindowNotifier.note();
     if (name.isEmpty()) {
         return {false, qsl("a label cannot have an empty string as its name")};
     }
@@ -2877,6 +2892,10 @@ std::pair<bool, QString> TNullConsoleFrontend::setLabelCustomCursor(const QStrin
     if (QImage(pixMapLocation).isNull()) {
         return {false, qsl("couldn't find custom cursor, is the location \"%1\" correct?").arg(pixMapLocation)};
     }
+    Label& label = mLabels.at(name);
+    label.cursor = Qt::BitmapCursor;
+    label.customCursor = pixMapLocation;
+    label.customCursorHotSpot = QPoint(hotX, hotY);
     return {true, QString()};
 }
 
@@ -2951,6 +2970,7 @@ void TNullConsoleFrontend::setLabelVisible(Label& label, const bool visible)
 
 std::pair<bool, QString> TNullConsoleFrontend::setLabelMovie(const QString& name, const QString& moviePath)
 {
+    mWindowNotifier.note();
     const auto it = mLabels.find(name);
     // Host::setMovie() found the name registered, so the label belongs to a detached view
     if (it == mLabels.end()) {
@@ -2981,6 +3001,7 @@ std::pair<bool, QString> TNullConsoleFrontend::setLabelMovie(const QString& name
 // QLabel::clear()
 void TNullConsoleFrontend::clearLabelContents(Label& label)
 {
+    mWindowNotifier.note();
     label.pixmapSize.reset();
     label.showsMovie = false;
     label.textLabel = false;
@@ -2990,6 +3011,7 @@ void TNullConsoleFrontend::clearLabelContents(Label& label)
 
 bool TNullConsoleFrontend::setLabelBackgroundImage(const QString& name, const QString& path)
 {
+    mWindowNotifier.note();
     const auto it = mLabels.find(name);
     if (it == mLabels.end()) {
         return false;
@@ -2999,6 +3021,7 @@ bool TNullConsoleFrontend::setLabelBackgroundImage(const QString& name, const QS
         QSvgRenderer renderer;
         if (TLabelModel::loadSvg(renderer, path)) {
             label.svgSize = renderer.defaultSize();
+            label.svgPath = path;
             // TLabel::setSvgImage() takes down a raster background but leaves text and movies
             if (label.pixmapSize) {
                 clearLabelContents(label);
@@ -3019,6 +3042,7 @@ bool TNullConsoleFrontend::setLabelBackgroundImage(const QString& name, const QS
     clearLabelContents(label);
     if (!raster.isNull()) {
         label.pixmapSize = raster.deviceIndependentSize().toSize();
+        label.pixmapPath = path;
     }
     updateShownContent(label);
     return true;
@@ -3026,6 +3050,7 @@ bool TNullConsoleFrontend::setLabelBackgroundImage(const QString& name, const QS
 
 bool TNullConsoleFrontend::resetLabelBackgroundImage(const QString& name)
 {
+    mWindowNotifier.note();
     const auto it = mLabels.find(name);
     if (it == mLabels.end()) {
         return false;
@@ -3327,6 +3352,7 @@ std::optional<QColor> TNullConsoleFrontend::getLabelBackgroundColor(const QStrin
 
 bool TNullConsoleFrontend::setLabelSvgTint(const QString& name, const QColor& color)
 {
+    mWindowNotifier.note();
     TLabelModel* pLabel = labelModel(name);
     if (!pLabel) {
         return false;
@@ -3337,6 +3363,7 @@ bool TNullConsoleFrontend::setLabelSvgTint(const QString& name, const QColor& co
 
 bool TNullConsoleFrontend::setLabelSvgRotation(const QString& name, const double angle)
 {
+    mWindowNotifier.note();
     TLabelModel* pLabel = labelModel(name);
     if (!pLabel) {
         return false;
@@ -3347,6 +3374,7 @@ bool TNullConsoleFrontend::setLabelSvgRotation(const QString& name, const double
 
 bool TNullConsoleFrontend::setLabelSvgShear(const QString& name, const double shearX, const double shearY)
 {
+    mWindowNotifier.note();
     TLabelModel* pLabel = labelModel(name);
     if (!pLabel) {
         return false;
@@ -3850,4 +3878,28 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
         records.push_back({qsl("mapper"), Kind::mapper, QString(), mMapWidget->geometry, mMapWidget->shown, mMapWidget->shown, 0, QColor(), QFont(), true});
     }
     return records;
+}
+
+std::optional<TNullConsoleFrontend::LabelRecord> TNullConsoleFrontend::labelRecord(const QString& name) const
+{
+    const auto it = mLabels.find(name);
+    if (it == mLabels.end()) {
+        return std::nullopt;
+    }
+    const Label& label = it->second;
+    LabelRecord record;
+    if (label.pixmapSize) {
+        record.image = label.pixmapPath;
+    } else if (label.svgSize) {
+        record.image = label.svgPath;
+        record.svg = true;
+    }
+    if (label.showsMovie && label.movie) {
+        record.movie = label.movie->fileName();
+    }
+    record.toolTipDuration = label.toolTipDuration;
+    record.cursor = label.cursor;
+    record.customCursor = label.customCursor;
+    record.customCursorHotSpot = label.customCursorHotSpot;
+    return record;
 }
