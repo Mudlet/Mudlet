@@ -2840,6 +2840,7 @@ void mudlet::slot_packageExporter()
         return;
     }
     auto d = new dlgPackageExporter(this, pH);
+    d->setAttribute(Qt::WA_DeleteOnClose);
 
     // Set up focus restoration for when this package exporter is closed
     setupPackageExporterFocusRestoration(d);

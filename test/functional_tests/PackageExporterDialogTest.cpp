@@ -573,6 +573,91 @@ private slots:
         QCOMPARE(closing.at(0).at(0).toString(), mProfileName);
     }
 
+    // Each menu pick makes a new exporter, so a closed one has to go rather than
+    // linger hidden, where Windows still offers it in the task switcher
+    void test_anExporterOpenedFromTheMenuIsFreedWhenClosed_6545()
+    {
+        mudlet::self()->slot_packageExporter();
+        const QPointer<dlgPackageExporter> exporter = mudlet::self()->findChild<dlgPackageExporter*>();
+        QVERIFY2(exporter, "the menu never opened an exporter");
+        QVERIFY(QTest::qWaitForWindowExposed(exporter));
+
+        exporter->findChild<QDialogButtonBox*>(qsl("buttonBox"))->button(QDialogButtonBox::Close)->click();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(!exporter, "the closed exporter was kept alive");
+    }
+
+    void test_anExporterClosedMidExportFinishesItBeforeItIsFreed_6545_data()
+    {
+        QTest::addColumn<int>("closeHow");
+        QTest::newRow("window closed") << 0;
+        QTest::newRow("Escape pressed") << 1;
+        QTest::newRow("closed while the export gets ready") << 2;
+    }
+
+    // A module is installed by the dialog once its zip ends, so one closed
+    // mid-export stays, hidden, until it has done that
+    void test_anExporterClosedMidExportFinishesItBeforeItIsFreed_6545()
+    {
+        QFETCH(int, closeHow);
+        const QString moduleName = packageNamed(qsl("exporter-module-closed-mid-export"));
+        makeTrigger(qsl("exporter closed mid-export module trigger"), nullptr);
+        mudlet::self()->slot_packageExporter();
+        const QPointer<dlgPackageExporter> exporter = mudlet::self()->findChild<dlgPackageExporter*>();
+        QVERIFY2(exporter, "the menu never opened an exporter");
+        mpExporter = exporter;
+        mpExporter->setModuleCreationMode(true);
+        QVERIFY(checkItem(triggersTop(), qsl("exporter closed mid-export module trigger")));
+        settleSaves();
+        nameField()->setText(moduleName);
+
+        if (closeHow == 2) {
+            // the export runs the event loop once before it starts the zip
+            QMetaObject::invokeMethod(exporter, &QWidget::close, Qt::QueuedConnection);
+        }
+        mpExporter->slot_exportPackage();
+        // cleanup() deletes mpExporter, so it must not be left dangling if the export freed it
+        mpExporter = exporter;
+        QVERIFY2(exporter, "closing the exporter as the export got ready freed it before its zip started");
+        QVERIFY2(infoLabel()->text().contains(qsl("Exporting package...")), qPrintable(qsl("The zip was never started; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        mpExporter = nullptr;
+        if (closeHow == 0) {
+            QVERIFY(exporter->close());
+        } else if (closeHow == 1) {
+            QTest::keyClick(exporter, Qt::Key_Escape);
+        }
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(exporter, "the exporter was freed before its zip ended, so the module it was making is never installed");
+        QVERIFY2(exporter->isHidden(), "closing the exporter mid-export left it on screen");
+
+        QTRY_VERIFY2_WITH_TIMEOUT(!exporter, "the exporter was kept alive after its export ended", 30000);
+        QVERIFY2(mpHost->mInstalledModules.contains(moduleName), "the module made by an exporter closed mid-export was not installed");
+    }
+
+    // Its hidden label is gone with it, so the failure has to be logged
+    void test_anExportThatFailsAfterItsExporterClosedIsLogged_6545()
+    {
+        const QString packageName = packageNamed(qsl("exporter-fails-after-closing"));
+        makeTrigger(qsl("exporter fails after closing trigger"), nullptr);
+        mudlet::self()->slot_packageExporter();
+        const QPointer<dlgPackageExporter> exporter = mudlet::self()->findChild<dlgPackageExporter*>();
+        QVERIFY2(exporter, "the menu never opened an exporter");
+        mpExporter = exporter;
+        QVERIFY(checkItem(triggersTop(), qsl("exporter fails after closing trigger")));
+        nameField()->setText(packageName);
+        // a folder where the package file goes makes the zip fail; permissions would not stop root
+        QVERIFY(QDir().mkpath(packagePath(packageName)));
+        answerNextMessageBox(QMessageBox::Yes);
+
+        mpExporter->slot_exportPackage();
+        QVERIFY2(infoLabel()->text().contains(qsl("Exporting package...")), qPrintable(qsl("The zip was never started; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        mpExporter = nullptr;
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("exporting \"%1\" failed after its dialog was closed").arg(packageName)));
+        QVERIFY(exporter->close());
+
+        QTRY_VERIFY2_WITH_TIMEOUT(!exporter, "the exporter was kept alive after its export ended", 30000);
+    }
+
     // Checking a folder takes everything under it, and the count in the group
     // box title is of every checked item at any depth - the folder included.
     void test_checkingAFolderChecksItsChildrenAndCountsThem()
