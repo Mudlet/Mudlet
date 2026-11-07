@@ -39,6 +39,7 @@
 #include "TAction.h"
 #include "TAlias.h"
 #include "TAppFrontend.h"
+#include "TBackgroundTask.h"
 #include "TConsoleFrontend.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
@@ -68,13 +69,13 @@
 #include <chrono>
 #include <cstring>
 #include <limits>
-#include <QtConcurrentRun>
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QDirIterator>
 #include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFileInfo>
+#include <QFutureWatcher>
 #include <QFontInfo>
 #include <QFontMetrics>
 #include <QJsonDocument>
@@ -1291,7 +1292,9 @@ void Host::autoSaveMapInBackground(const QString& path)
     mpMap->resetUnsaved();
 
     mMapAutosaveResultPending = true;
-    mMapAutosaveFuture = QtConcurrent::run(writeFileAtomically, path, std::move(bytes));
+    mMapAutosaveFuture = TBackgroundTask::runForReason([path, bytes = std::move(bytes)]() {
+        return writeFileAtomically(path, bytes);
+    });
     auto watcher = new QFutureWatcher<QString>(this);
     connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher]() {
         watcher->deleteLater();
@@ -1888,11 +1891,8 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     auto moduleFailures = std::make_shared<QStringList>();
     // Captures values only, never `this`: no wait for this task is guaranteed, so the
     // Host can be destroyed while it is still queued or running.
-    mModuleFuture = QtConcurrent::run([xmlSaveFutures, moduleJobs, moduleFailures]() {
-        // wait for the host xml to be ready before writing the modules out
-        for (auto future : xmlSaveFutures) {
-            future.waitForFinished();
-        }
+    // After the host xml is written
+    mModuleFuture = TBackgroundTask::runAfter(xmlSaveFutures, [moduleJobs, moduleFailures]() {
         return Host::writeModuleFiles(moduleJobs, *moduleFailures);
     });
     // Only the names: holding the whole jobs would keep every module's document in
