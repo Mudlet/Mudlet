@@ -1772,9 +1772,8 @@ int TLuaInterpreter::getMainConsoleWidth(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     const QFont font = host.hasConsoleView() ? host.getDisplayFont() : host.displayFontWithNoView();
-    int fw = QFontMetrics(font).averageCharWidth();
-    fw *= host.mWrapAt + 1;
-    lua_pushnumber(L, fw);
+    const qint64 averageCharWidth = QFontMetrics(font).averageCharWidth();
+    lua_pushnumber(L, averageCharWidth * (qint64{host.mWrapAt} + 1));
     return 1;
 }
 
@@ -2696,10 +2695,12 @@ int TLuaInterpreter::replace(lua_State* L)
     if (n > 1) {
         windowName = WINDOW_NAME(L, s++);
     }
-    const QString text = getVerifiedString(L, __func__, s, "with");
+    const QString text = getVerifiedString(L, __func__, s++, "with");
+    // Not getVerifiedBool(): replace(window, text, keepColor) has always taken any truthy keepColor
+    const bool keepColor = n > 2 && lua_toboolean(L, s);
     const QString consoleName{windowName};
     Host& host = getHostFromLua(L);
-    if (!host.replaceWindowText(consoleName, text)) {
+    if (!host.replaceWindowText(consoleName, text, keepColor)) {
         return windowNotFoundOrUnsupported(L, host, consoleName);
     }
     lua_pushboolean(L, true);
@@ -3367,6 +3368,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     }
     // updateAllToolbars() rebuilds every button bar, too slow for scripts that restyle a button on each prompt
     bool rebuild = false;
+    bool restyled = false;
     for (auto actionId : actionIds) {
         auto action = host.getActionUnit()->getAction(actionId);
         if (!action) {
@@ -3374,6 +3376,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
         }
         action->css = css;
         if (host.consoleFrontend()->restyleActionButton(action)) {
+            restyled = true;
             continue;
         }
         // Without this a floating toolbar skips its rebuild
@@ -3382,6 +3385,8 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     }
     if (rebuild) {
         host.getActionUnit()->updateAllToolbars();
+    } else if (restyled) {
+        emit host.signal_buttonsChanged();
     }
     lua_pushboolean(L, 1);
     return 1;

@@ -84,6 +84,21 @@ private slots:
     void slot_specialRoomExitIdEdited(const QString&) const;
 };
 
+class CommandLineEditDelegate : public QStyledItemDelegate
+{
+    Q_OBJECT
+
+public:
+    explicit CommandLineEditDelegate(const QString& placeholder, QObject* parent = nullptr);
+
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override;
+    void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override;
+
+private:
+    const QString mPlaceholder;
+};
+
 class TExit
 {
 public:

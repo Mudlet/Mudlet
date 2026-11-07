@@ -12,7 +12,7 @@
 --             use internally for primitive types like labels and
 --             miniconsoles.  If not specified in the constraints table during
 --             creation, an anonymous name unique to this session will be
---             made up.
+--             made up, with a warning through debugc().
 -- @field x The x-coordinate relative to this window's container, not absolute
 --          from the Mudlet main window. This is not a number, but a
 --          constraint specification. To find out the numeric x-coordinate in
@@ -361,7 +361,7 @@ function Geyser.Container:new(cons, container)
 
   -- enforce a default type, name and parent
   me.type = me.type or "container"
-  me.name = me.name or Geyser.nameGen()
+  me.name = me.name or Geyser.anonymousName(me.type)
   me.windowList = {}
   me.windows = {}
   -- add2() reads these flags itself, while add() shows whatever it adds and

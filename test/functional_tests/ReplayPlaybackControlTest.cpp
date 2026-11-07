@@ -420,6 +420,22 @@ private slots:
 
     // Stop ends the replay there and then - the rest of the file is not played,
     // and the toolbar it was driving goes away.
+    // A replayed prompt counts as a live one does: the first ends the link's own output, the next hides it
+    void replayedPromptsExpireAnOsc8Link()
+    {
+        const QByteArray ga("\xff\xf9", 2);
+        const QByteArray link("\x1b]8;;send:look?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"prompt\":true}}}\x1b\\Hint\x1b]8;;\x1b\\\r\n");
+        const QString file = writeReplay(qsl("prompts.dat"), {{20, QByteArrayLiteral("REPLAY_ONE\r\n") + link + ga}, {scmChunkGapMsec, QByteArrayLiteral("REPLAY_TWO") + ga}});
+        QVERIFY(!file.isEmpty());
+        QVERIFY(MudletReplay::self()->load(mpHost, file));
+
+        QTRY_VERIFY(bufferContains(qsl("REPLAY_ONE")));
+        QVERIFY2(bufferContains(qsl("Hint")), "the prompt ending the link's own output hid it");
+
+        QTRY_VERIFY(bufferContains(qsl("REPLAY_TWO")));
+        QTRY_VERIFY_WITH_TIMEOUT(!bufferContains(qsl("Hint")), 200);
+    }
+
     void stopEndsTheReplayAndTakesTheToolbarDown()
     {
         const QString file = writeThreeChunkReplay(qsl("stop.dat"));

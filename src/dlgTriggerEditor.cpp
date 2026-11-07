@@ -98,6 +98,8 @@ static void pushKeyPropertyCommand(EditorUndoStack* undoStack, Host* host, int k
 
 // Forward declaration for the tree item lookup helper (defined later in this file)
 QTreeWidgetItem* findItemByID(QTreeWidgetItem* parent, int itemID);
+QSet<int> collectExpandedItemIDs(QTreeWidgetItem* parent);
+void restoreExpansionState(QTreeWidgetItem* parent, const QSet<int>& expandedIDs);
 
 using namespace std::chrono_literals;
 
@@ -861,6 +863,28 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
         // Copy, Paste, Delete are already added above
         widget->addAction(separator2);
     }
+
+    // Drag and drop is the only other way to rearrange the trees, and a screen reader user cannot drag
+    auto addMoveAction = [this](const QString& text, const QKeySequence& shortcut, const KeyboardMove move) {
+        auto* pAction = new QAction(text, this);
+        pAction->setShortcut(shortcut);
+        // Scoped to the tree, so Alt+arrows still reach the text being edited
+        pAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+        for (QTreeWidget* pTree : {treeWidget_triggers, treeWidget_aliases, treeWidget_timers, treeWidget_scripts, treeWidget_actions, treeWidget_keys}) {
+            pTree->addAction(pAction);
+        }
+        connect(pAction, &QAction::triggered, this, [this, move]() {
+            moveCurrentItem(move);
+        });
+    };
+    //: Context menu entry in the editor's item tree, moving the selected item one place up within its group
+    addMoveAction(tr("Move Up"), QKeySequence(Qt::ALT | Qt::Key_Up), KeyboardMove::Up);
+    //: Context menu entry in the editor's item tree, moving the selected item one place down within its group
+    addMoveAction(tr("Move Down"), QKeySequence(Qt::ALT | Qt::Key_Down), KeyboardMove::Down);
+    //: Context menu entry in the editor's item tree, moving the selected item out of its group to sit just after it
+    addMoveAction(tr("Move Out of Group"), QKeySequence(Qt::ALT | Qt::Key_Left), KeyboardMove::OutOfGroup);
+    //: Context menu entry in the editor's item tree, moving the selected item to the end of the group just above it
+    addMoveAction(tr("Move Into Group Above"), QKeySequence(Qt::ALT | Qt::Key_Right), KeyboardMove::IntoGroupAbove);
 
     if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
         copyAction->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
@@ -1806,6 +1830,7 @@ void dlgTriggerEditor::createPatternItem(int index)
     connect(pItem->pushButton_bgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerBg);
     connect(pItem->singleLineTextEdit_pattern, &QPlainTextEdit::textChanged, this, &dlgTriggerEditor::slot_changedPattern);
     connect(pItem->singleLineTextEdit_pattern, &QPlainTextEdit::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
+    connect(pItem->singleLineTextEdit_pattern, &SingleLineTextEdit::signal_pastedExtraLines, this, &dlgTriggerEditor::slot_pastedExtraPatternLines);
     connect(pItem->spinBox_lineSpacer, qOverload<int>(&QSpinBox::valueChanged), this, &dlgTriggerEditor::slot_lineSpacerChanged);
     connect(pItem->spinBox_lineSpacer, qOverload<int>(&QSpinBox::valueChanged), this, &dlgTriggerEditor::slot_itemEdited);
 
@@ -1839,7 +1864,7 @@ void dlgTriggerEditor::createPatternItem(int index)
 
 void dlgTriggerEditor::showPatternItems(int count)
 {
-    count = qBound(0, count, 50);
+    count = qBound(0, count, csmMaxPatternRows);
     while (mTriggerPatternEdit.size() < count) {
         createPatternItem(mTriggerPatternEdit.size());
     }
@@ -4372,6 +4397,223 @@ void dlgTriggerEditor::slot_batchMoveEnded()
     mpUndoStack->endMacro();
 }
 
+void dlgTriggerEditor::moveCurrentItem(const KeyboardMove move)
+{
+    const EditorViewType view = resolveCurrentView();
+    if (view == EditorViewType::cmVarsView || view == EditorViewType::cmUnknownView) {
+        return;
+    }
+
+    QTreeWidget* pTree = treeForView(view);
+    QTreeWidgetItem* pItem = pTree ? pTree->currentItem() : nullptr;
+    QTreeWidgetItem* pParentItem = pItem ? pItem->parent() : nullptr;
+    if (!pItem) {
+        return;
+    }
+    // A row with no parent is the tree's heading; a module's own folder is pinned in place, as it is for drag and drop
+    if (!pParentItem || !(pItem->flags() & Qt::ItemIsDragEnabled)) {
+        //: Screen reader announcement when an editor move shortcut is used on the tree's heading or on a module's own folder; %1 is the row's name
+        mudlet::self()->announce(tr("%1 cannot be moved").arg(pItem->text(0)), QString(), true);
+        return;
+    }
+
+    const int itemID = pItem->data(0, Qt::UserRole).toInt();
+    const int oldParentID = pParentItem->data(0, Qt::UserRole).toInt();
+    const int indexInTree = pParentItem->indexOfChild(pItem);
+    // Positions are counted in the unit, which also holds temporary items the tree never shows
+    const QList<int> siblingIDs = unitChildIDs(view, oldParentID);
+    const int oldPosition = siblingIDs.indexOf(itemID);
+    QTreeWidgetItem* pAbove = pParentItem->child(indexInTree - 1);
+    QTreeWidgetItem* pBelow = pParentItem->child(indexInTree + 1);
+    // The item named in the announcement: the one it passes, or the group it leaves or joins
+    QTreeWidgetItem* pLandmark = nullptr;
+    int newParentID = oldParentID;
+    int newPosition = -1;
+    // Filled in once saving has settled both names
+    QString outcome;
+
+    switch (move) {
+    case KeyboardMove::Up:
+        if (!pAbove) {
+            //: Screen reader announcement when the editor's Move Up shortcut is used on an item already first in its group; %1 is the item's name
+            mudlet::self()->announce(tr("%1 is already at the top of its group").arg(pItem->text(0)), QString(), true);
+            return;
+        }
+        pLandmark = pAbove;
+        newPosition = siblingIDs.indexOf(pAbove->data(0, Qt::UserRole).toInt());
+        //: Screen reader announcement after an item in the editor's tree is moved up; %1 is its name, %2 the item it now sits above
+        outcome = tr("Moved %1 above %2");
+        break;
+    case KeyboardMove::Down:
+        if (!pBelow) {
+            //: Screen reader announcement when the editor's Move Down shortcut is used on an item already last in its group; %1 is the item's name
+            mudlet::self()->announce(tr("%1 is already at the bottom of its group").arg(pItem->text(0)), QString(), true);
+            return;
+        }
+        pLandmark = pBelow;
+        // Taking the item out shifts the one below up a place, so its old position is the one just after it
+        newPosition = siblingIDs.indexOf(pBelow->data(0, Qt::UserRole).toInt());
+        //: Screen reader announcement after an item in the editor's tree is moved down; %1 is its name, %2 the item it now sits below
+        outcome = tr("Moved %1 below %2");
+        break;
+    case KeyboardMove::OutOfGroup: {
+        QTreeWidgetItem* pGrandParentItem = pParentItem->parent();
+        if (!pGrandParentItem) {
+            //: Screen reader announcement when the editor's Move Out of Group shortcut is used on an item in no group; %1 is the item's name
+            mudlet::self()->announce(tr("%1 is not in a group").arg(pItem->text(0)), QString(), true);
+            return;
+        }
+        pLandmark = pParentItem;
+        newParentID = pGrandParentItem->data(0, Qt::UserRole).toInt();
+        const int groupPosition = unitChildIDs(view, newParentID).indexOf(oldParentID);
+        newPosition = groupPosition < 0 ? -1 : groupPosition + 1;
+        //: Screen reader announcement after an item in the editor's tree is moved out of a group; %1 is its name, %2 the group it left
+        outcome = tr("Moved %1 out of %2");
+        break;
+    }
+    case KeyboardMove::IntoGroupAbove:
+        // A trigger already holding others is a filter chain, a group as much as a folder is; elsewhere
+        // nesting under a plain item changes what the item does, such as making a timer an offset timer
+        if (!pAbove || !(folderItem(view, pAbove->data(0, Qt::UserRole).toInt()) || (view == EditorViewType::cmTriggerView && pAbove->childCount() > 0))) {
+            //: Screen reader announcement when the editor's Move Into Group Above shortcut is used on an item with no group just above it; %1 is the item's name
+            mudlet::self()->announce(tr("There is no group just above %1").arg(pItem->text(0)), QString(), true);
+            return;
+        }
+        pLandmark = pAbove;
+        newParentID = pAbove->data(0, Qt::UserRole).toInt();
+        newPosition = unitChildIDs(view, newParentID).size();
+        //: Screen reader announcement after an item in the editor's tree is moved into a group; %1 is its name, %2 the group it is now in
+        outcome = tr("Moved %1 into %2");
+        break;
+    }
+
+    if (oldPosition < 0 || newPosition < 0) {
+        return;
+    }
+
+    // The form is reloaded from the unit once the tree is rebuilt, which would drop edits the item refused
+    if (!saveOpenChanges()) {
+        //: Screen reader announcement when an editor move shortcut is refused because the item's changes could not be saved; %1 is the item's name
+        mudlet::self()->announce(tr("%1 was not moved, as its changes could not be saved").arg(pItem->text(0)), QString(), true);
+        return;
+    }
+    // Read after saving, which may have renamed either row
+    const QString itemName = pItem->text(0);
+    outcome = outcome.arg(itemName, pLandmark->text(0));
+
+    reParentInUnit(view, itemID, oldParentID, newParentID, newPosition);
+    if (mpUndoStack) {
+        mpUndoStack->pushCommand(new EditorMoveItemCommand(view, itemID, oldParentID, newParentID, oldPosition, newPosition, itemName, mpHost));
+    }
+    slot_itemsChanged(view, {itemID});
+    mudlet::self()->announce(outcome, QString(), true);
+}
+
+QList<int> dlgTriggerEditor::unitChildIDs(const EditorViewType view, const int parentID) const
+{
+    QList<int> ids;
+    switch (view) {
+    case EditorViewType::cmTriggerView:
+        if (!parentID) {
+            for (const TTrigger* pNode : mpHost->getTriggerUnit()->getTriggerRootNodeList()) {
+                ids.append(pNode->getID());
+            }
+        } else if (const TTrigger* pParent = mpHost->getTriggerUnit()->getTrigger(parentID)) {
+            for (const Tree<TTrigger>* pNode : *pParent->getChildrenList()) {
+                ids.append(pNode->getID());
+            }
+        }
+        break;
+    case EditorViewType::cmAliasView:
+        if (!parentID) {
+            for (const TAlias* pNode : mpHost->getAliasUnit()->getAliasRootNodeList()) {
+                ids.append(pNode->getID());
+            }
+        } else if (const TAlias* pParent = mpHost->getAliasUnit()->getAlias(parentID)) {
+            for (const Tree<TAlias>* pNode : *pParent->getChildrenList()) {
+                ids.append(pNode->getID());
+            }
+        }
+        break;
+    case EditorViewType::cmTimerView:
+        if (!parentID) {
+            for (const TTimer* pNode : mpHost->getTimerUnit()->getTimerRootNodeList()) {
+                ids.append(pNode->getID());
+            }
+        } else if (const TTimer* pParent = mpHost->getTimerUnit()->getTimer(parentID)) {
+            for (const Tree<TTimer>* pNode : *pParent->getChildrenList()) {
+                ids.append(pNode->getID());
+            }
+        }
+        break;
+    case EditorViewType::cmScriptView:
+        if (!parentID) {
+            for (const TScript* pNode : mpHost->getScriptUnit()->getScriptRootNodeList()) {
+                ids.append(pNode->getID());
+            }
+        } else if (const TScript* pParent = mpHost->getScriptUnit()->getScript(parentID)) {
+            for (const Tree<TScript>* pNode : *pParent->getChildrenList()) {
+                ids.append(pNode->getID());
+            }
+        }
+        break;
+    case EditorViewType::cmKeysView:
+        if (!parentID) {
+            for (const TKey* pNode : mpHost->getKeyUnit()->getKeyRootNodeList()) {
+                ids.append(pNode->getID());
+            }
+        } else if (const TKey* pParent = mpHost->getKeyUnit()->getKey(parentID)) {
+            for (const Tree<TKey>* pNode : *pParent->getChildrenList()) {
+                ids.append(pNode->getID());
+            }
+        }
+        break;
+    case EditorViewType::cmActionView:
+        if (!parentID) {
+            for (const TAction* pNode : mpHost->getActionUnit()->getActionRootNodeList()) {
+                ids.append(pNode->getID());
+            }
+        } else if (const TAction* pParent = mpHost->getActionUnit()->getAction(parentID)) {
+            for (const Tree<TAction>* pNode : *pParent->getChildrenList()) {
+                ids.append(pNode->getID());
+            }
+        }
+        break;
+    case EditorViewType::cmVarsView:
+    case EditorViewType::cmUnknownView:
+        break;
+    }
+    return ids;
+}
+
+void dlgTriggerEditor::reParentInUnit(const EditorViewType view, const int itemID, const int oldParentID, const int newParentID, const int position)
+{
+    switch (view) {
+    case EditorViewType::cmTriggerView:
+        mpHost->getTriggerUnit()->reParentTrigger(itemID, oldParentID, newParentID, TreeItemInsertMode::AtPosition, position);
+        break;
+    case EditorViewType::cmAliasView:
+        mpHost->getAliasUnit()->reParentAlias(itemID, oldParentID, newParentID, TreeItemInsertMode::AtPosition, position);
+        break;
+    case EditorViewType::cmTimerView:
+        mpHost->getTimerUnit()->reParentTimer(itemID, oldParentID, newParentID, TreeItemInsertMode::AtPosition, position);
+        break;
+    case EditorViewType::cmScriptView:
+        mpHost->getScriptUnit()->reParentScript(itemID, oldParentID, newParentID, TreeItemInsertMode::AtPosition, position);
+        break;
+    case EditorViewType::cmKeysView:
+        mpHost->getKeyUnit()->reParentKey(itemID, oldParentID, newParentID, TreeItemInsertMode::AtPosition, position);
+        break;
+    case EditorViewType::cmActionView:
+        mpHost->getActionUnit()->reParentAction(itemID, oldParentID, newParentID, TreeItemInsertMode::AtPosition, position);
+        mpHost->getActionUnit()->updateAllToolbars();
+        break;
+    case EditorViewType::cmVarsView:
+    case EditorViewType::cmUnknownView:
+        break;
+    }
+}
+
 void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent, bool touchNotification)
 {
     for (int i = 0; i < pWidgetItemParent->childCount(); i++) {
@@ -6476,16 +6718,16 @@ void dlgTriggerEditor::saveTimer()
     }
 }
 
-void dlgTriggerEditor::saveAlias()
+bool dlgTriggerEditor::saveAlias()
 {
     QTreeWidgetItem* pItem = mpCurrentAliasItem;
     if (!pItem) {
-        return;
+        return true;
     }
 
     // Ensure the item is still part of the tree widget
     if (pItem->treeWidget() != treeWidget_aliases) {
-        return;
+        return true;
     }
 
     mpAliasMainArea->trimName();
@@ -6493,28 +6735,27 @@ void dlgTriggerEditor::saveAlias()
     QString regex = mpAliasMainArea->lineEdit_alias_pattern->text();
     unmarkQString(&regex);
 
-
-    if (!regex.isEmpty() && ((name.isEmpty()) || (name == tr("New alias")))) {
-        name = regex;
-    }
+    const int triggerID = pItem->data(0, Qt::UserRole).toInt();
+    TAlias* pT = mpHost->getAliasUnit()->getAlias(triggerID);
+    name = aliasNameForPattern(pT, name, regex);
     const QString substitution = mpAliasMainArea->lineEdit_alias_command->text();
     //check if sub will trigger regex, ignore if there's nothing in regex - could be an alias group
     if (aliasSubstitutionLoops(regex, substitution)) {
         //we have a loop
         showAliasLoopWarning(pItem, name);
-        return;
+        return false;
     }
 
     const QString script = mpSourceEditorEdbeeDocument->text();
 
-
-    const int triggerID = pItem->data(0, Qt::UserRole).toInt();
-    TAlias* pT = mpHost->getAliasUnit()->getAlias(triggerID);
     if (pT) {
         // Capture OLD state before modifications (for undo)
         QString oldStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
 
         pT->setName(name);
+        if (mpAliasMainArea->lineEdit_alias_name->text() != name) {
+            mpAliasMainArea->lineEdit_alias_name->setText(name);
+        }
         pT->setCommand(substitution);
         pT->setRegexCode(regex); // This could generate an error state if regex does not compile
         pT->setScript(script);
@@ -6590,6 +6831,22 @@ void dlgTriggerEditor::saveAlias()
         }
         mpUndoStack->finishAddingItem(EditorViewType::cmAliasView, triggerID);
     }
+    return true;
+}
+
+// An unnamed alias, or one still being added whose name is its old pattern, is
+// named after its pattern; otherwise it keeps the typed name
+QString dlgTriggerEditor::aliasNameForPattern(const TAlias* pT, const QString& typedName, const QString& pattern) const
+{
+    const QString trimmedPattern = pattern.trimmed();
+    const bool nameIsOldPattern = pT && typedName == pT->getRegexCode().trimmed() && mpUndoStack->addingItem(EditorViewType::cmAliasView, pT->getID());
+    if (nameIsOldPattern && trimmedPattern.isEmpty()) {
+        return pT->isFolder() ? tr("New alias group") : tr("New alias");
+    }
+    if (!trimmedPattern.isEmpty() && (typedName.isEmpty() || typedName == tr("New alias") || nameIsOldPattern)) {
+        return trimmedPattern;
+    }
+    return typedName;
 }
 
 // Returns true when the substitution would match its own pattern, which makes
@@ -7658,9 +7915,13 @@ void dlgTriggerEditor::saveKey()
         // Capture OLD state before modifications (for undo)
         QString oldStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
 
-        const QString old_name = pT->getName();
+        // A grab can already have named a new key after its binding
+        const bool firstSave = pT->getName() == tr("New key") || (!pT->isFolder() && mpUndoStack->addingItem(EditorViewType::cmKeysView, triggerID));
         pItem->setText(0, name);
         pT->setName(name);
+        if (mpKeysMainArea->lineEdit_key_name->text() != name) {
+            mpKeysMainArea->lineEdit_key_name->setText(name);
+        }
         pT->setCommand(command);
         pT->setScript(script);
 
@@ -7718,7 +7979,7 @@ void dlgTriggerEditor::saveKey()
 
         if (pT->state()) {
             clearEditorNotification();
-            if (old_name == tr("New key")) {
+            if (firstSave) {
                 if (pT->isFolder()) {
                     if (pT->shouldBeActive()) {
                         itemDescription = descActiveFolder;
@@ -7868,7 +8129,7 @@ void dlgTriggerEditor::handlePatternChange(dlgTriggerPatternEdit* patternItem, b
             }
         }
 
-        if (patternItem->mRow == mVisiblePatternCount - 1 && hasContent && mVisiblePatternCount < 50) {
+        if (patternItem->mRow == mVisiblePatternCount - 1 && hasContent && mVisiblePatternCount < csmMaxPatternRows) {
             showPatternItems(mVisiblePatternCount + 1);
         }
     }
@@ -8065,6 +8326,51 @@ void dlgTriggerEditor::slot_changedPattern()
     auto* patternItem = textEdit ? qobject_cast<dlgTriggerPatternEdit*>(textEdit->parentWidget()) : nullptr;
     const bool hasText = textEdit && !textEdit->toPlainText().isEmpty();
     handlePatternChange(patternItem, hasText);
+}
+
+// Fills only empty text rows, so nothing is overwritten; Lua code is one chunk a split would break
+void dlgTriggerEditor::slot_pastedExtraPatternLines(const QStringList& lines)
+{
+    auto* textEdit = qobject_cast<SingleLineTextEdit*>(sender());
+    auto* patternItem = textEdit ? qobject_cast<dlgTriggerPatternEdit*>(textEdit->parentWidget()) : nullptr;
+    if (!patternItem) {
+        return;
+    }
+    const int sourceType = patternItem->comboBox_patternType->currentIndex();
+    if (sourceType == REGEX_LUA_CODE) {
+        return;
+    }
+
+    const int firstUnusedRow = mVisiblePatternCount - 1;
+    int row = patternItem->mRow;
+    for (const QString& line : lines) {
+        if (line.trimmed().isEmpty()) {
+            continue;
+        }
+
+        dlgTriggerPatternEdit* target = nullptr;
+        while (!target && ++row < csmMaxPatternRows) {
+            if (row >= mVisiblePatternCount) {
+                showPatternItems(row + 1);
+            }
+            auto* candidate = mTriggerPatternEdit.value(row, nullptr);
+            if (!candidate || !candidate->singleLineTextEdit_pattern->toPlainText().isEmpty()) {
+                continue;
+            }
+            const int type = candidate->comboBox_patternType->currentIndex();
+            if (type == REGEX_SUBSTRING || type == REGEX_PERL || type == REGEX_BEGIN_OF_LINE_SUBSTRING || type == REGEX_EXACT_MATCH) {
+                target = candidate;
+            }
+        }
+        if (!target) {
+            return;
+        }
+
+        if (row >= firstUnusedRow && target->comboBox_patternType->currentIndex() == REGEX_SUBSTRING) {
+            target->comboBox_patternType->setCurrentIndex(sourceType);
+        }
+        target->singleLineTextEdit_pattern->setPlainText(line);
+    }
 }
 
 void dlgTriggerEditor::slot_lineSpacerChanged(int value)
@@ -9296,6 +9602,17 @@ void dlgTriggerEditor::fillout_form()
     populateKeys();
     mpKeyBaseItem->setExpanded(true);
     treeWidget_keys->setCurrentItem(mpKeyBaseItem);
+
+    for (const auto& [pTree, expandedIds] : std::as_const(mExpandedIdsBeforeRefill).asKeyValueRange()) {
+        if (expandedIds.isEmpty()) {
+            continue;
+        }
+        const bool animated = pTree->isAnimated();
+        pTree->setAnimated(false);
+        restoreExpansionState(pTree->topLevelItem(0), expandedIds);
+        pTree->setAnimated(animated);
+    }
+    mExpandedIdsBeforeRefill.clear();
 
     // Clear undo stack after initial profile loading (only on first call)
     // Only user actions after this point should be undo-able
@@ -10638,11 +10955,11 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
     }
 }
 
-void dlgTriggerEditor::saveOpenChanges()
+bool dlgTriggerEditor::saveOpenChanges()
 {
     // The item behind a merged folder was saved when the folder was chosen, and its errors must stay hidden
     if (!mFolderGroupKey.isEmpty()) {
-        return;
+        return true;
     }
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
@@ -10661,8 +10978,7 @@ void dlgTriggerEditor::saveOpenChanges()
         if (mpCurrentAliasItem) {
             saveEditorState(EditorViewType::cmAliasView, mpCurrentAliasItem->data(0, Qt::UserRole).toInt());
         }
-        saveAlias();
-        break;
+        return saveAlias();
     case EditorViewType::cmScriptView:
         if (mpCurrentScriptItem) {
             saveEditorState(EditorViewType::cmScriptView, mpCurrentScriptItem->data(0, Qt::UserRole).toInt());
@@ -10685,8 +11001,9 @@ void dlgTriggerEditor::saveOpenChanges()
         saveVar();
         break;
     case EditorViewType::cmUnknownView:
-        return;
+        break;
     }
+    return true;
 }
 
 // Helper function to determine the current view from which tree widget is visible with selection.
@@ -10743,16 +11060,23 @@ void dlgTriggerEditor::autoSave()
     mpHost->saveProfileReportingFailure(qsl("autosave"));
 }
 
+// A refilled tree starts with every folder closed, so fillout_form() opens again the ones recorded here
+void dlgTriggerEditor::clearTypeTrees()
+{
+    for (QTreeWidget* pTree : {treeWidget_triggers, treeWidget_aliases, treeWidget_timers, treeWidget_scripts, treeWidget_actions, treeWidget_keys}) {
+        // An already empty tree must not wipe what an earlier clear recorded and no refill has used yet
+        if (QTreeWidgetItem* pRoot = pTree->topLevelItem(0)) {
+            mExpandedIdsBeforeRefill.insert(pTree, collectExpandedItemIDs(pRoot));
+        }
+        pTree->clear();
+    }
+}
+
 void dlgTriggerEditor::rebuildStaleTrees()
 {
     // fillout_form() forgets the view, and the Folders view hides every type tree resolveCurrentView() could recover it from
     const EditorViewType folderViewType = mFolderViewActive ? mCurrentView : EditorViewType::cmUnknownView;
-    treeWidget_triggers->clear();
-    treeWidget_aliases->clear();
-    treeWidget_timers->clear();
-    treeWidget_scripts->clear();
-    treeWidget_actions->clear();
-    treeWidget_keys->clear();
+    clearTypeTrees();
     treeWidget_variables->clear();
     if (mCleanResetDeferred) {
         buildDeferredTrees(false);
@@ -12662,6 +12986,7 @@ void dlgTriggerEditor::slot_createModule()
 
     // Open the package exporter dialog with module creation mode
     auto* packageExporter = new dlgPackageExporter(this, mpHost);
+    packageExporter->setAttribute(Qt::WA_DeleteOnClose);
 
     // Pre-select the current item for export
     switch (currentView) {
@@ -13328,9 +13653,8 @@ void dlgTriggerEditor::slot_pasteXml()
 
     switch (importedItemType) {
     case EditorViewType::cmTriggerView: {
-        // the view becomes collapsed as a result of the clear & redo and then
-        // animates back into the unfolding, which doesn't look nice - so turn
-        // off animation temporarily
+        // selecting the pasted item unfolds its ancestors, which would animate
+        // and doesn't look nice - so turn off animation temporarily
         auto animated = treeWidget_triggers->isAnimated();
         treeWidget_triggers->setAnimated(false);
         selectTriggerByID(importedItemID);
@@ -13449,12 +13773,7 @@ void dlgTriggerEditor::slot_import()
         }
     }
 
-    treeWidget_triggers->clear();
-    treeWidget_aliases->clear();
-    treeWidget_actions->clear();
-    treeWidget_timers->clear();
-    treeWidget_keys->clear();
-    treeWidget_scripts->clear();
+    clearTypeTrees();
 
     // Nullify current item pointers before saving to prevent use-after-free
     mpCurrentTriggerItem = nullptr;
@@ -13553,12 +13872,7 @@ void dlgTriggerEditor::resetTrees()
         qWarning().nospace().noquote() << "dlgTriggerEditor::runScheduledCleanReset() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
     }
 
-    treeWidget_triggers->clear();
-    treeWidget_aliases->clear();
-    treeWidget_actions->clear();
-    treeWidget_timers->clear();
-    treeWidget_keys->clear();
-    treeWidget_scripts->clear();
+    clearTypeTrees();
     fillout_form();
     slot_showTriggers();
 }
@@ -13787,6 +14101,7 @@ void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModi
         return;
     }
     const QString keyName = pKeyUnit->getKeyName(key, modifier);
+    const QString oldKeyName = mpKeysMainArea->lineEdit_key_binding->text();
     mpKeysMainArea->lineEdit_key_binding->setText(keyName);
     QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
     if (pItem) {
@@ -13798,8 +14113,16 @@ void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModi
             }
 
             QString oldStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
+            const QString typedName = mpKeysMainArea->lineEdit_key_name->text().trimmed();
+            // A saved key's scripts may find it by a name that happens to match its binding
+            const bool nameIsOldBinding = typedName == oldKeyName && (pT->getKeyCode() == Qt::Key_unknown || mpUndoStack->addingItem(EditorViewType::cmKeysView, keyID));
             pT->setKeyCode(key);
             pT->setKeyModifiers(modifier);
+            if (pItem == mpCurrentKeyItem && !pT->isFolder() && (typedName.isEmpty() || typedName == tr("New key") || nameIsOldBinding)) {
+                pT->setName(keyName);
+                pItem->setText(0, keyName);
+                mpKeysMainArea->lineEdit_key_name->setText(keyName);
+            }
             QString newStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
 
             showKeyTakenWarning(pItem, takenKeyWarning(mpHost, pT), true);
@@ -15527,6 +15850,11 @@ void dlgTriggerEditor::slot_itemsChanged(EditorViewType viewType, QList<int> aff
     default:
         break;
     }
+
+    // The new row was made current with the selection model's signals blocked, so the view never told a screen reader
+    if (auto* pTree = qobject_cast<TTreeWidget*>(treeForView(viewType))) {
+        pTree->reportCurrentRow();
+    }
 }
 
 void dlgTriggerEditor::handleBannerDismiss()
@@ -16070,7 +16398,14 @@ void dlgTriggerEditor::slot_saveProperty_AliasPattern()
     }
 
     QString oldStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
+    const QString typedName = mpAliasMainArea->lineEdit_alias_name->text().trimmed();
+    const QString name = aliasNameForPattern(pT, typedName, newPattern);
     pT->setRegexCode(newPattern);
+    if (name != typedName) {
+        pT->setName(name);
+        mpCurrentAliasItem->setText(0, name);
+        mpAliasMainArea->lineEdit_alias_name->setText(name);
+    }
     QString newStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
 
     pushAliasPropertyCommand(mpUndoStack, mpHost, aliasID, pT->getName(), qsl("pattern"), oldStateXML, newStateXML);

@@ -81,6 +81,13 @@ void TTreeWidget::getAllChildren(QTreeWidgetItem* pItem, QList<QTreeWidgetItem*>
     }
 }
 
+void TTreeWidget::reportCurrentRow()
+{
+    if (currentIndex().isValid()) {
+        QTreeWidget::currentChanged(currentIndex(), QModelIndex());
+    }
+}
+
 void TTreeWidget::mouseReleaseEvent(QMouseEvent* event)
 {
     const bool pressHeldFromView = event->button() == Qt::LeftButton && std::exchange(mTickPressHeldFromView, false);

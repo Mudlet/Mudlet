@@ -287,17 +287,10 @@ void TEasyButtonBar::slot_pressed(const bool isChecked)
     // entries...
     pB->showMenu();
 
-    if (pA->isPushDownButton()) {
-        // DO NOT MANIPULATE THE BUTTON STATE OURSELF NOW
-        pA->mButtonState = isChecked;
-        pA->mpHost->mainConsoleView()->mButtonState = (pA->mButtonState ? 2 : 1);
-    } else {
-        pA->mButtonState = false;                        // Forces a fixup if not correct
-        pB->setChecked(false);                           // This does NOT invoke the clicked() signal!
-        pA->mpHost->mainConsoleView()->mButtonState = 1; // Was effectively 0 but that is wrong
+    if (!pA->isPushDownButton()) {
+        pB->setChecked(false); // This does NOT invoke the clicked() signal!
     }
-
-    pA->execute();
+    pA->press(isChecked);
 }
 
 void TEasyButtonBar::clear()

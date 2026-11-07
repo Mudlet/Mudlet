@@ -25,6 +25,7 @@
 
 #include "Host.h"
 #include "LuaLiteral.h"
+#include "MailtoUri.h"
 #include "MudletApp.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
@@ -558,7 +559,7 @@ QList<RawQueryParameter> splitOscQueryParameters(const QString& query)
 bool systemMayOpenUrl(const QUrl& url)
 {
     const QString scheme = url.scheme().toLower();
-    return scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp");
+    return scheme == qsl("http") || scheme == qsl("https") || scheme == qsl("ftp") || scheme == qsl("mailto");
 }
 
 } // anonymous namespace
@@ -1724,18 +1725,8 @@ void TBuffer::parseChunk(
                 // because ANSI escape sequences cannot be part of MXP tags.
                 // Output the partial tag as literal text before processing ESC.
                 if (mxpProcessorEnabled() && mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
-                    TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
-                    attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
-                    TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
-
-                    const QString literalText = mpHost->mMxpProcessor.abortCurrentTag();
-                    mMudLine.append(literalText);
-                    for (int i = 0; i < literalText.length(); ++i) {
-                        mMudBuffer.append(1, c);
-                    }
-
-                    mTagWatchdog->stop();
-                    mWatchdogPhase = WatchdogPhase::None;
+                    appendMxpText(mpHost->mMxpProcessor.abortCurrentTag());
+                    stopTagWatchdog();
                 }
 
                 mGotESC = true;
@@ -2168,10 +2159,7 @@ void TBuffer::parseChunk(
                     // The comparison signals to the processor, if custom entities may be resolved
                     // (countermeasure against infinite recursion)
                     TMxpProcessingResult const result = mpHost->mMxpProcessor.processMxpInput(ch, localBufferPosition >= endOfMXPEntity);
-                    if (!mTagWatchdog->isActive() && mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag() && !mpHost->mMxpProcessor.getMxpTagBuilder().getRawTagContent().empty()) {
-                        mWatchdogPhase = WatchdogPhase::Phase1_Snapshot;
-                        mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
-                    }
+                    watchMxpTag(result == HANDLER_INSERT_ENTITY_SYS || result == HANDLER_INSERT_AND_REPROCESS);
 
                     switch (result) {
                     case HANDLER_NEXT_CHAR:
@@ -2229,17 +2217,7 @@ void TBuffer::parseChunk(
                     case HANDLER_INSERT_ENTITY_SYS: {
                         // System entities are literal QString / UTF values which we just 'print'
                         // There is no further MXP or Codeset evaluation
-
-                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
-                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
-                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
-
-                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
-                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
-                        // We also need to set the color attributes for the special character
-                        while (valueLength--) {
-                            mMudBuffer.append(1, c);
-                        }
+                        appendMxpText(mpHost->mMxpProcessor.getEntityValue());
                         // We already handled the input, go to the next character
                         localBufferPosition++;
                         continue;
@@ -2249,16 +2227,7 @@ void TBuffer::parseChunk(
                         // Used for error recovery: output the rejected/incomplete tag as literal
                         // text, then reprocess the current character (which may be a newline,
                         // an ANSI escape, or the character after an unrecognized tag name)
-
-                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
-                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
-                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
-
-                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
-                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
-                        while (valueLength--) {
-                            mMudBuffer.append(1, c);
-                        }
+                        appendMxpText(mpHost->mMxpProcessor.getEntityValue());
                         // Do NOT increment position - the current character needs to be reprocessed
                         continue;
                     }
@@ -2270,6 +2239,7 @@ void TBuffer::parseChunk(
                     // Mode is LOCKED but we're inside a tag that started in a different mode.
                     // We need to continue feeding characters to the tag builder to complete the tag.
                     TMxpProcessingResult const result = mpHost->mMxpProcessor.processMxpInput(ch, localBufferPosition >= endOfMXPEntity);
+                    watchMxpTag(result == HANDLER_INSERT_ENTITY_SYS || result == HANDLER_INSERT_AND_REPROCESS);
 
                     switch (result) {
                     case HANDLER_NEXT_CHAR:
@@ -2277,28 +2247,12 @@ void TBuffer::parseChunk(
                         continue;
                     case HANDLER_INSERT_ENTITY_SYS: {
                         // Tag was not handled, output as text
-                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
-                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
-                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
-
-                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
-                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
-                        while (valueLength--) {
-                            mMudBuffer.append(1, c);
-                        }
+                        appendMxpText(mpHost->mMxpProcessor.getEntityValue());
                         localBufferPosition++;
                         continue;
                     }
                     case HANDLER_INSERT_AND_REPROCESS: {
-                        TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
-                        attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
-                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
-
-                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
-                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
-                        while (valueLength--) {
-                            mMudBuffer.append(1, c);
-                        }
+                        appendMxpText(mpHost->mMxpProcessor.getEntityValue());
                         continue;
                     }
                     default:
@@ -3632,15 +3586,20 @@ const TChar* TBuffer::preTriggerPassLineUniformColors(int lineNumber)
 void TBuffer::processMxpWatchdogCallback()
 {
     if (!mpHost) {
-        mWatchdogPhase = WatchdogPhase::None;
+        stopTagWatchdog();
         return;
     }
 
     TMxpNodeBuilder& tagBuilder = mpHost->mMxpProcessor.getMxpTagBuilder();
     std::string currentTagContent = tagBuilder.getRawTagContent();
-    bool isMxpParserFrozen = !currentTagContent.empty() && currentTagContent.starts_with(mWatchdogTagSnapshot) && tagBuilder.isInsideTag();
+    // An empty snapshot would match whatever tag is open by the second phase
+    bool isMxpParserFrozen = !mWatchdogTagSnapshot.empty() && currentTagContent.starts_with(mWatchdogTagSnapshot) && tagBuilder.isInsideTag();
 
     if (mWatchdogPhase == WatchdogPhase::Phase1_Snapshot) {
+        if (!tagBuilder.isInsideTag() || currentTagContent.empty()) {
+            stopTagWatchdog();
+            return;
+        }
         mWatchdogTagSnapshot = currentTagContent;
         mWatchdogPhase = WatchdogPhase::Phase2_Unfreeze;
         mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
@@ -3650,7 +3609,6 @@ void TBuffer::processMxpWatchdogCallback()
         // unless there is no main window to have made one:
         if (isMxpParserFrozen && (mpHost->hasConsoleView() || !TAppFrontend::hasView()) && mpModel == &mpHost->mainConsoleModel()) {
             mpHost->mMxpProcessor.setLastEntityValue(QString::fromStdString('<' + currentTagContent));
-            const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
             QPointer<Host> hostGuard = mpHost;
             // The continuation writes into this buffer through the captured
             // 'this', so what has to cancel it is this buffer going away - not
@@ -3658,31 +3616,61 @@ void TBuffer::processMxpWatchdogCallback()
             // watchdog timer is owned by the buffer, so naming it as the context
             // object ties the two together: destroying the buffer destroys the
             // timer, and that drops any continuation still queued against it.
-            QTimer::singleShot(0ms, mTagWatchdog.get(), [this, style, hostGuard]() {
+            QTimer::singleShot(0ms, mTagWatchdog.get(), [this, currentTagContent, hostGuard]() {
                 // commitLine() and finalize() below both reach the main console
                 // through the host, and that pointer empties on its own when the
                 // profile's console goes:
                 if (!hostGuard || (!hostGuard->hasConsoleView() && TAppFrontend::hasView())) {
                     return;
                 }
-                QString lastEntityValue = hostGuard->mMxpProcessor.getEntityValue();
+                // Game text read before this ran may have finished the tag, or moved it on
+                const TMxpNodeBuilder& tagBuilder = hostGuard->mMxpProcessor.getMxpTagBuilder();
+                if (!tagBuilder.isInsideTag()) {
+                    return;
+                }
+                if (tagBuilder.getRawTagContent() != currentTagContent) {
+                    mWatchdogPhase = WatchdogPhase::Phase1_Snapshot;
+                    mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
+                    return;
+                }
                 size_t unusedBufferPosition = 0;
 
-                mMudLine.append(lastEntityValue);
-                for (qsizetype i = 0; i < lastEntityValue.size(); ++i) {
-                    mMudBuffer.append(1, style);
-                }
+                // Closed before the commit, as triggers on the line may feed more text through the parser
+                appendMxpText(hostGuard->mMxpProcessor.abortCurrentTag());
                 // In trigger context, as for every other line the game sends
                 const bool wasInTriggerEngineMode = mpModel->mTriggerEngineMode;
                 mpModel->mTriggerEngineMode = true;
                 commitLine('\r', unusedBufferPosition);
                 mpModel->mTriggerEngineMode = wasInTriggerEngineMode;
-                hostGuard->mMxpProcessor.getMxpTagBuilder().reset();
                 hostGuard->finalizeMainConsole();
             });
         }
         mWatchdogPhase = WatchdogPhase::None;
+        mWatchdogTagSnapshot.clear();
     }
+}
+
+// Stops the tag watchdog once its tag is closed or written out - left armed, it
+// would fire on whichever tag is open when it runs out - and arms it for the next.
+void TBuffer::watchMxpTag(const bool tagWrittenOut)
+{
+    const TMxpNodeBuilder& tagBuilder = mpHost->mMxpProcessor.getMxpTagBuilder();
+    const bool insideTag = tagBuilder.isInsideTag();
+    // A nested '<' writes the tag out and opens a new one in the same step
+    if (mWatchdogPhase != WatchdogPhase::None && (!insideTag || tagWrittenOut)) {
+        stopTagWatchdog();
+    }
+    if (insideTag && !mTagWatchdog->isActive() && !tagBuilder.getRawTagContent().empty()) {
+        mWatchdogPhase = WatchdogPhase::Phase1_Snapshot;
+        mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
+    }
+}
+
+void TBuffer::stopTagWatchdog()
+{
+    mTagWatchdog->stop();
+    mWatchdogPhase = WatchdogPhase::None;
+    mWatchdogTagSnapshot.clear();
 }
 
 TChar::AttributeFlags TBuffer::computeCurrentAttributeFlags() const
@@ -5103,7 +5091,7 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             QString baseUrl = rawUrl;
 
-            if (rawUrl.startsWith(qsl("http://")) || rawUrl.startsWith(qsl("https://")) || rawUrl.startsWith(qsl("ftp://"))) {
+            if (systemMayOpenUrl(QUrl(rawUrl))) {
                 int queryStart = baseUrl.indexOf('?');
                 if (queryStart != -1) {
                     // Strip reserved parameters when corresponding OSC 8 features are enabled
@@ -5157,10 +5145,20 @@ void TBuffer::decodeOSC(const QString& sequence)
                 QString scheme = qurl.scheme().toLower();
 
                 if (systemMayOpenUrl(qurl)) {
+                    baseUrl = MailtoUri::withOnlyMessageFields(baseUrl);
+                    if (baseUrl.isEmpty()) {
+                        qWarning().noquote() << "TBuffer::decodeOSC(...) - Ignored a mailto link with a field hidden in a recipient";
+                        return;
+                    }
                     mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionOpenUrl;
                     mCurrentHyperlinkStyling.baseCommand = baseUrl;
                     command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
-                    hint = {qsl("%1: %2").arg(QObject::tr("Open browser to"), UntrustedText::forTarget(baseUrl))};
+                    QString action = QObject::tr("Open browser to");
+                    if (scheme == qsl("mailto")) {
+                        //: Start of the tooltip on a game's link that opens the mail app, followed by a colon and the link's mailto: address
+                        action = QObject::tr("Write an email to");
+                    }
+                    hint = {qsl("%1: %2").arg(action, UntrustedText::forTarget(baseUrl))};
                 } else {
                     qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
                     return;
@@ -5204,8 +5202,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                         // Special case: "-" creates a menu separator
                         menuCommands.append(QString());
                         menuHints.append(QString());
-                    } else if (systemMayOpenUrl(QUrl(menuCommand))) {
-                        menuCommands.append(qsl("openUrl(%1)").arg(LuaLiteral::quote(menuCommand)));
+                    } else if (const QString address = MailtoUri::withOnlyMessageFields(menuCommand); systemMayOpenUrl(QUrl(address))) {
+                        menuCommands.append(qsl("openUrl(%1)").arg(LuaLiteral::quote(address)));
                         menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     } else {
                         // Treat as direct command
@@ -9482,16 +9480,32 @@ void TBuffer::flushPendingLead()
     appendReplacementCharacter(mPendingLeadFormat);
 }
 
+void TBuffer::appendMxpText(const QString& text)
+{
+    if (text.isEmpty()) {
+        return;
+    }
+    TChar::AttributeFlags attributeFlags = computeCurrentAttributeFlags();
+    attributeFlags &= ~(TChar::FastBlink | TChar::Concealed | TChar::AltFontMask);
+    appendLinkedText(text, TChar((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags));
+}
+
 void TBuffer::appendReplacementCharacter(TChar c)
 {
-    mMudLine.append(QChar::ReplacementCharacter);
+    appendLinkedText(QString(QChar::ReplacementCharacter), c);
+}
+
+// Text added whole rather than decoded a character at a time, as part of any link open around it
+void TBuffer::appendLinkedText(const QString& text, TChar c)
+{
     styleForCurrentLink(c);
-    mMudBuffer.append(1, c);
+    if (mHyperlinkActive && mCurrentHyperlinkText.isEmpty()) {
+        mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size());
+    }
+    mMudLine.append(text);
+    mMudBuffer.append(static_cast<TLineFormat::size_type>(text.size()), c);
     if (mHyperlinkActive) {
-        if (mCurrentHyperlinkText.isEmpty()) {
-            mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 1;
-        }
-        mCurrentHyperlinkText += QChar::ReplacementCharacter;
+        mCurrentHyperlinkText += text;
     }
 }
 

@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <chrono>
 
+#include "AliasUnit.h"
 #include "EditorItemXMLHelpers.h"
 #include "Host.h"
 #include "HostDialogs.h"
@@ -41,6 +42,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "ScriptUnit.h"
+#include "TAlias.h"
 #include "TKey.h"
 #include "TScript.h"
 #include "TTrigger.h"
@@ -385,6 +387,160 @@ private slots:
 
         QVERIFY2(pKey->isActive(), "saving a newly made key did not switch it on");
         QCOMPARE(pItem->data(0, Qt::AccessibleDescriptionRole).toString(), mpEditor->descActive);
+    }
+
+    // A new key takes its binding's name as soon as the binding is grabbed, in
+    // the name box as well as the tree, and a name taken that way follows a new
+    // binding
+    void test_grabbingABindingNamesANewKey()
+    {
+        mpEditor->slot_showKeys();
+        mpEditor->treeWidget_keys->setCurrentItem(mpEditor->mpKeyBaseItem);
+        mpEditor->slot_addNewItem();
+        QTreeWidgetItem* pItem = mpEditor->treeWidget_keys->currentItem();
+        QVERIFY2(pItem, "adding a key left nothing selected");
+        TKey* pKey = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
+        QVERIFY(pKey);
+
+        mpEditor->keyGrabCallback(Qt::Key_F7, Qt::NoModifier);
+        QCOMPARE(mpEditor->mpKeysMainArea->lineEdit_key_name->text(), qsl("F7"));
+        QCOMPARE(pItem->text(0), qsl("F7"));
+        QCOMPARE(pKey->getName(), qsl("F7"));
+
+        mpEditor->keyGrabCallback(Qt::Key_F8, Qt::NoModifier);
+        QCOMPARE(pKey->getName(), qsl("F8"));
+        QCOMPARE(pItem->text(0), qsl("F8"));
+
+        mpEditor->mpKeysMainArea->lineEdit_key_name->clear();
+        mpEditor->slot_saveEdits();
+        QCOMPARE(pKey->getName(), qsl("F8"));
+        QCOMPARE(mpEditor->mpKeysMainArea->lineEdit_key_name->text(), qsl("F8"));
+        QVERIFY2(pKey->isActive(), "a key named by its grab was not switched on by its first save");
+    }
+
+    void test_oneUndoTakesBackAGrabAndTheNameItGave()
+    {
+        mpEditor->slot_showKeys();
+        mpEditor->treeWidget_keys->setCurrentItem(mpEditor->mpKeyBaseItem);
+        mpEditor->slot_addNewItem();
+        QTreeWidgetItem* pItem = mpEditor->treeWidget_keys->currentItem();
+        QVERIFY2(pItem, "adding a key left nothing selected");
+        const int keyID = pItem->data(0, Qt::UserRole).toInt();
+        mpEditor->mpKeysMainArea->lineEdit_key_name->clear();
+        mpEditor->slot_saveEdits();
+        // saved unbound, a key is named after the binding box's "no key chosen" text
+        const QString savedName = mpHost->getKeyUnit()->getKey(keyID)->getName();
+        QCOMPARE(savedName, mpEditor->mpKeysMainArea->lineEdit_key_binding->text());
+        const Qt::Key codeBefore = mpHost->getKeyUnit()->getKey(keyID)->getKeyCode();
+
+        mpEditor->keyGrabCallback(Qt::Key_F4, Qt::NoModifier);
+        QCOMPARE(mpHost->getKeyUnit()->getKey(keyID)->getName(), qsl("F4"));
+        mpEditor->mpUndoStack->undo();
+        TKey* pKey = mpHost->getKeyUnit()->getKey(keyID);
+        QVERIFY2(pKey, "undoing the grab took away the key");
+        QVERIFY2(pKey->getName() == savedName, "undoing the grab kept the name it gave");
+        QCOMPARE(pKey->getKeyCode(), codeBefore);
+    }
+
+    void test_grabbingABindingKeepsANameTypedButNotYetSaved()
+    {
+        mpEditor->slot_showKeys();
+        mpEditor->treeWidget_keys->setCurrentItem(mpEditor->mpKeyBaseItem);
+        mpEditor->slot_addNewItem();
+        QTreeWidgetItem* pItem = mpEditor->treeWidget_keys->currentItem();
+        QVERIFY2(pItem, "adding a key left nothing selected");
+        TKey* pKey = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
+        QVERIFY(pKey);
+        const QString newKey = dlgTriggerEditor::tr("New key");
+
+        mpEditor->mpKeysMainArea->lineEdit_key_name->setText(qsl("qaTypedKeyName"));
+        mpEditor->keyGrabCallback(Qt::Key_F6, Qt::NoModifier);
+        QCOMPARE(mpEditor->mpKeysMainArea->lineEdit_key_name->text(), qsl("qaTypedKeyName"));
+        QCOMPARE(pKey->getName(), newKey);
+        QCOMPARE(pItem->text(0), newKey);
+    }
+
+    // Scripts can find a key by its name, so a saved one keeps a name that
+    // matches its binding when it is bound to another key
+    void test_rebindingASavedKeyKeepsItsName()
+    {
+        mpEditor->slot_showKeys();
+        mpEditor->treeWidget_keys->setCurrentItem(mpEditor->mpKeyBaseItem);
+        mpEditor->slot_addNewItem();
+        QTreeWidgetItem* pItem = mpEditor->treeWidget_keys->currentItem();
+        QVERIFY2(pItem, "adding a key left nothing selected");
+        TKey* pKey = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
+        QVERIFY(pKey);
+        mpEditor->keyGrabCallback(Qt::Key_F3, Qt::NoModifier);
+        mpEditor->slot_saveEdits();
+        QCOMPARE(pKey->getName(), qsl("F3"));
+
+        mpEditor->keyGrabCallback(Qt::Key_F2, Qt::NoModifier);
+        QCOMPARE(pKey->getName(), qsl("F3"));
+        QCOMPARE(mpEditor->mpKeysMainArea->lineEdit_key_name->text(), qsl("F3"));
+    }
+
+    void test_grabbingABindingDoesNotRenameAKeyGroup()
+    {
+        const QString newGroup = dlgTriggerEditor::tr("New key group");
+        mpEditor->slot_showKeys();
+        mpEditor->treeWidget_keys->setCurrentItem(mpEditor->mpKeyBaseItem);
+        mpEditor->slot_addNewGroup();
+        QTreeWidgetItem* pItem = mpEditor->treeWidget_keys->currentItem();
+        QVERIFY2(pItem, "adding a key group left nothing selected");
+        TKey* pGroup = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
+        QVERIFY(pGroup && pGroup->isFolder());
+        // a group can be called "New key" too, if the player typed that in
+        mpEditor->mpKeysMainArea->lineEdit_key_name->setText(dlgTriggerEditor::tr("New key"));
+
+        mpEditor->keyGrabCallback(Qt::Key_F5, Qt::NoModifier);
+        QCOMPARE(pGroup->getName(), newGroup);
+        QCOMPARE(pItem->text(0), newGroup);
+        QCOMPARE(mpEditor->mpKeysMainArea->lineEdit_key_name->text(), dlgTriggerEditor::tr("New key"));
+    }
+
+    void test_aNewAliasShowsItsPatternAsItsNameOnceSaved()
+    {
+        const QString pattern = qsl("^qaAliasPattern$");
+        mpEditor->slot_showAliases();
+        mpEditor->treeWidget_aliases->setCurrentItem(mpEditor->mpAliasBaseItem);
+        mpEditor->slot_addNewItem();
+        QTreeWidgetItem* pItem = mpEditor->treeWidget_aliases->currentItem();
+        QVERIFY2(pItem, "adding an alias left nothing selected");
+        mpEditor->mpAliasMainArea->lineEdit_alias_pattern->setText(qsl("^qaAliasPatternFirst"));
+        mpEditor->slot_saveProperty_AliasPattern();
+
+        mpEditor->mpAliasMainArea->lineEdit_alias_pattern->setText(pattern);
+        mpEditor->slot_saveEdits();
+        QCOMPARE(pItem->text(0), pattern);
+        QCOMPARE(mpEditor->mpAliasMainArea->lineEdit_alias_name->text(), pattern);
+    }
+
+    void test_aNewAliasIsNamedAsSoonAsItsPatternIsEntered()
+    {
+        const QString pattern = qsl("^qaAliasPatternEntered$");
+        mpEditor->slot_showAliases();
+        mpEditor->treeWidget_aliases->setCurrentItem(mpEditor->mpAliasBaseItem);
+        mpEditor->slot_addNewItem();
+        QTreeWidgetItem* pItem = mpEditor->treeWidget_aliases->currentItem();
+        QVERIFY2(pItem, "adding an alias left nothing selected");
+        TAlias* pAlias = mpHost->getAliasUnit()->getAlias(pItem->data(0, Qt::UserRole).toInt());
+        QVERIFY(pAlias);
+
+        mpEditor->mpAliasMainArea->lineEdit_alias_pattern->setText(qsl("^qaAliasPat"));
+        mpEditor->slot_saveProperty_AliasPattern();
+        QCOMPARE(pAlias->getName(), qsl("^qaAliasPat"));
+
+        mpEditor->mpAliasMainArea->lineEdit_alias_pattern->clear();
+        mpEditor->slot_saveProperty_AliasPattern();
+        QCOMPARE(pAlias->getName(), dlgTriggerEditor::tr("New alias"));
+
+        // a name the pattern gave follows the pattern until the alias is saved
+        mpEditor->mpAliasMainArea->lineEdit_alias_pattern->setText(pattern);
+        mpEditor->slot_saveProperty_AliasPattern();
+        QCOMPARE(pAlias->getName(), pattern);
+        QCOMPARE(pItem->text(0), pattern);
+        QCOMPARE(mpEditor->mpAliasMainArea->lineEdit_alias_name->text(), pattern);
     }
 
     // Grabbing a key switches the toolbars' shortcuts off so the grab sees the

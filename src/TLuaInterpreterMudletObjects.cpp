@@ -1995,7 +1995,9 @@ int TLuaInterpreter::setButtonState(lua_State* L)
 
     if (pItem->mButtonState != checked) {
         pItem->mButtonState = checked;
-        getHostFromLua(L).consoleFrontend()->setActionButtonChecked(pItem, checked);
+        Host& host = getHostFromLua(L);
+        host.consoleFrontend()->setActionButtonChecked(pItem, checked);
+        emit host.signal_buttonsChanged();
         lua_pushboolean(L, true);
         return 1;
     }
@@ -2552,7 +2554,7 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
 
     const QString name{lua_tostring(L, 1)};
 
-    if (location > 0) {
+    if (location > 0 && location < std::numeric_limits<int>::max()) {
         location++;
     }
     Host& host = getHostFromLua(L);

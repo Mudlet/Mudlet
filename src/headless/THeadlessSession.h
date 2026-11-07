@@ -33,10 +33,15 @@
 
 #include <memory>
 #include <optional>
+#include <utility>
 
 class Host;
 class HostManager;
+class QTimer;
 class TBuffer;
+class QKeyEvent;
+class QMimeData;
+class QPoint;
 
 // One profile run with no window, for a frontend of its own (a terminal, a phone app) to feed input and
 // show the main console. It touches no terminal or standard stream itself, and like Host it is used on the
@@ -191,6 +196,23 @@ public:
     // GameLine, TriggerDetail, LuaSuccess and Selection; the choice saved by the GUI's console is not read.
     void setDebugCategories(TDebug::Categories categories);
     TDebug::Categories debugCategories() const;
+    // Where the main console wraps the game's lines: at wrapAt characters, with indent spaces before a line's
+    // first part and hangingIndent before each part after it. As the GUI wraps them, an indent of the wrap width or
+    // more is taken as none, and one of more than half of it as half. All 0 with no profile open: read it at
+    // profileLoaded, then follow consoleWrapChanged.
+    struct ConsoleWrap
+    {
+        int wrapAt = 0;
+        int indent = 0;
+        int hangingIndent = 0;
+
+        bool operator==(const ConsoleWrap&) const = default;
+    };
+    ConsoleWrap consoleWrap() const;
+    // The colours the main console is drawn in where the game asks for none, which runs mark as the profile's
+    // own, invalid with no profile open: read them at profileLoaded, then follow consoleColorsChanged
+    QColor consoleForeground() const;
+    QColor consoleBackground() const;
     // Answers the game's offer of a secure port, as the GUI's Yes and No do: true stores that port with TLS on,
     // as the connection dialog would, and connects there, so a frontend that passes its own port to a later
     // start() passes tls with it; false reconnects where it was and stops the profile asking again. False, with
@@ -214,8 +236,10 @@ public:
     // it sends goes then. bindingRan: a binding took it. noBinding: none did, and the app does what the GUI's
     // line does then, as type it. keyKept: the GUI's line keeps the key for itself, as Return, Up or a keypad
     // Enter no binding took, or while hidden input is wanted its box does, typing a printable key into the
-    // password; the app handles it. refused: where submit() is. errorString() says which.
-    enum class KeyResult { bindingRan, noBinding, keyKept, refused };
+    // password; the app handles it. refused: where submit() is. commandRan: the key is the shortcut of a command
+    // addonCommands() lists, which the main window's menu runs ahead of the line's bindings, as
+    // activateAddonCommand() does. errorString() says which.
+    enum class KeyResult { bindingRan, noBinding, keyKept, refused, commandRan };
     // Without the key's text, a printable key with Ctrl+Alt (or Option on macOS) counts as AltGr typing while
     // hidden input is wanted, so no binding is offered it
     KeyResult pressKey(Qt::Key key, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
@@ -259,6 +283,126 @@ public:
     // sent, once, as its aliases left the line, and what the profile's earlier sessions kept, but nothing sent while
     // hidden input was wanted. Empty with no profile open too, which host() tells apart. Read from anywhere.
     QStringList commandHistory() const;
+    // The main console's emergency stop button: true turns off the profile's triggers, aliases, timers and key
+    // bindings and keeps events from its scripts, which stops scripts that keep setting each other off, such as a
+    // trigger that answers its own output; false turns on again what the stop turned off, leaving off what a script
+    // had turned off, as the GUI's button does. What a script makes, resetProfile() resets or a package installs
+    // while stopped is on, so true again turns that off too; false while not stopped changes nothing. Refused where
+    // submit() is.
+    bool setScriptsStopped(bool stopped);
+    // False with no profile open
+    bool scriptsStopped() const;
+    // The app coming to the front or leaving it, as the GUI hears it from the system: a change raises
+    // sysApplicationFocusChangeEvent with true or false in every profile that loaded and has not begun to close, and
+    // the state it is in already raises nothing. It starts true, and before start() it is only kept. Refused while a
+    // profile loads, during shutdown(), and from a handler of outputLine, localText, errorConsoleText,
+    // hiddenInputWanted or a ...Requested signal.
+    bool setApplicationActive(bool active);
+    bool applicationActive() const { return mApplicationActive; }
+    // The main console's replay recording button: true records what the game sends into a new file in the
+    // profile's log folder, false stops and saves it, each saying so in localText as the GUI says it in the main
+    // console. False, with errorString() saying why, if it is recording already, or not, if the file could not be
+    // opened, or if it could not be saved, the recording being over either way. The connection ending saves it too.
+    // Refused where submit() is.
+    bool setReplayRecording(bool record);
+    // False with no profile open
+    bool replayRecording() const;
+    // A drop of files or a link on the main console, as the GUI takes one: each URL that names an existing local
+    // file raises sysDropEvent with its path, its suffix, the position and "main", then text that reads as a valid URL
+    // raises sysDropUrlEvent with it, its scheme, the position and "main"; QMimeData gives a single URL as the text
+    // when there is none of its own, so a file dropped alone raises both, as in the GUI. The position is the point on the main
+    // console it was dropped at, in the app's own pixels. False, raising nothing, for data with neither URLs nor text,
+    // which the GUI's console does not take. Refused where submit() is.
+    bool dropOnMainConsole(const QMimeData& data, const QPoint& position);
+    // The main window's mute buttons: sounds that scripts play, and sounds the game sends over GMCP or MSP. Muting
+    // is for every profile, as in the GUI: the session's own and those its scripts opened, and a change raises
+    // sysSettingChanged with muteMediaAPI or muteMediaGame in each. toggleAllSoundsMuted() is the button for
+    // both: it unmutes both when both are muted, and otherwise mutes both. Refused where submit() is.
+    enum class SoundSource { scripts, game };
+    bool setSoundsMuted(SoundSource source, bool muted);
+    bool toggleAllSoundsMuted();
+    // False with no profile open
+    bool soundsMuted(SoundSource source) const;
+    // A command a package's addCommand() added, as the main window shows it in its menu, on its toolbar or both
+    struct AddonCommand
+    {
+        // What addCommand() returned, which sysCommandClicked carries
+        int id = 0;
+        // Empty for one no package's code added
+        QString package;
+        QString name;
+        QString icon;
+        QString tooltip;
+        // The submenus it sits in, separated by '/', and its shortcut as the script wrote it, for QKeySequence to
+        // read; both empty unless it is on the menu
+        QString menuPath;
+        QString shortcut;
+        bool onMenu = false;
+        bool onToolbar = false;
+        bool enabled = true;
+        // checked is ticked while checkable, which a script's setCommandChecked() makes it
+        bool checkable = false;
+        bool checked = false;
+        // Pinned, the GUI keeps it on the menu whichever profile is in front; otherwise only while its own is
+        bool pinned = false;
+        // Its toolbar button flashing between the two colours, each held that long; the colours and time are
+        // the last a script set, and only mean something while it flashes
+        bool pulse = false;
+        QColor pulseColor1;
+        QColor pulseColor2;
+        int pulseIntervalMs = 0;
+
+        bool operator==(const AddonCommand&) const = default;
+    };
+    // The session's profile's commands in the order they were added; none with no profile open. Read from
+    // anywhere.
+    QList<AddonCommand> addonCommands() const;
+    // A click on the command in the main window's menu or on its toolbar: a checkable command is ticked or unticked,
+    // then sysCommandClicked is raised with its id, which the emergency stop holds as it holds every event. False,
+    // with errorString() saying why, for an id that is not a command of the session's profile and for a disabled
+    // command, which the GUI does not let be clicked.
+    bool activateAddonCommand(int id);
+    // A button on one of the profile's button bars or toolbars, or an entry of a button's menu, as the GUI draws it
+    struct Button
+    {
+        // The button's action's id, as getButtonState() and the editor know it
+        int id = 0;
+        QString name;
+        // The icon's path; an entry of a menu on a button bar shows the icon of the button whose menu it is in
+        QString icon;
+        // Its own, which the GUI gives it over its bar's; empty for a menu entry
+        QString styleSheet;
+        // A push-down button stays down, checked, from one press to the next
+        bool pushDown = false;
+        bool checked = false;
+        // A folder, whose press opens a menu of the entries in children
+        bool menu = false;
+        QList<Button> children;
+    };
+    struct ButtonBar
+    {
+        enum class Place { top, left, right, floating };
+        int id = 0;
+        QString name;
+        QString styleSheet;
+        // The strip of the main console it is in, or a toolbar the player docks or floats
+        Place place = Place::top;
+        Qt::Orientation orientation = Qt::Horizontal;
+        // A horizontal bar fills each column top to bottom with this many buttons, then the next to its right; a
+        // vertical bar fills each row left to right with this many, then the next below it
+        int columns = 1;
+        // How many places of that grid, in the order it fills them, the GUI leaves empty before the first button
+        int fillerOffset = 0;
+        QList<Button> buttons;
+    };
+    // The profile's bars, in the order of its actions, each with its active buttons; none with no profile open.
+    // As the GUI draws them once it last redrew its bars, which it does as a script changes them. Read from
+    // anywhere.
+    QList<ButtonBar> buttonBars() const;
+    // A click on a button or menu entry buttonBars() lists, as the GUI's: it sends the button's command and runs its
+    // script, and a push-down button goes down or up. False, with errorString() saying why, for an id it does not
+    // list; refused where submit() is.
+    bool pressButton(int id);
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -294,7 +438,9 @@ signals:
     // messages), and the error console. While lineShown is connected, it leaves out what that sends, as
     // docs/headless.md tells. Sent as written, so a handler may neither call the session nor run the event loop.
     void localText(const QString& profile, const QString& text);
-    void errorConsoleText(const QString& profile, const QString& text);
+    // With the colours the editor's error console prints the piece in; a handler that takes only the first two
+    // arguments may be connected
+    void errorConsoleText(const QString& profile, const QString& text, const QColor& foreground, const QColor& background);
     // A line of outputLine's as the main console shows it once its triggers have run: with what they replaced,
     // recoloured or wrote into it, which may hold line feeds, and not at all if they deleted it. Lines a trigger
     // feeds follow the line it ran on, as they are shown, and so does what it wrote anywhere else (an echo()
@@ -324,6 +470,22 @@ signals:
     // when it was written, in milliseconds since the epoch, so earlier than now for what was kept from before the
     // console was shown. Sent as written, so a handler may neither call the session nor run the event loop.
     void debugText(const QString& text, const QColor& foreground, const QColor& background, qint64 arrivalMSecs);
+    // consoleWrap() changed, from a script's setWindowWrap(), setWindowWrapIndent() or setWindowWrapHangingIndent()
+    // on the main console. From the event loop, with the wrap as it is then, and only when that differs from the
+    // one last sent or the one consoleWrap() gave at profileLoaded.
+    void consoleWrapChanged(const QString& profile, int wrapAt, int indent, int hangingIndent);
+    // consoleForeground() or consoleBackground() changed, from a script's setBackgroundColor() on the main console,
+    // or a package or save loaded into the profile with colours of its own. From the event loop, as
+    // consoleWrapChanged, with both colours as they are then.
+    void consoleColorsChanged(const QString& profile, const QColor& foreground, const QColor& background);
+    // The lag the GUI's latency box shows, paced as it is to once every 16ms, and only when the box's text, to the
+    // millisecond, would change: the network's, from a command sent to the game's reply, while the game marks its
+    // prompts with GA or EOR, otherwise none, where the box shows "<no GA>"; and how long the game's last text took
+    // to process, its triggers included. From the event loop.
+    void latencyChanged(const QString& profile, std::optional<double> networkSeconds, double processingSeconds);
+    // The profile began connecting to the game, as it starts or reconnects, where the GUI marks its tab as
+    // connecting; connected or disconnected follows, or the profile closes. From the event loop
+    void connecting(const QString& profile);
     // What the GUI shows outside the profile's screen: a script's showNotification(), which answers true only
     // when this signal is connected and not blocked, with no milliseconds for the system's own time; and a
     // script's alert() or the game's bell, asking for the player's attention for that long, 0 until they come
@@ -391,9 +553,21 @@ signals:
     // input and empties the line. Just before hiddenInputWanted turns on; a handler may neither call the session
     // nor run the event loop.
     void typedLineMoveRequested(const QString& profile);
+    // Either kind of sound was muted or unmuted, by the session or by a script's setConfig() in any of its profiles,
+    // for the app's mute buttons to show; sent for a call that left it as it was too, as the GUI's buttons hear it.
+    // Not for a profile, as muting is for all of them, but no longer sent once the session's own profile has closed.
+    // From the event loop.
+    void soundsMutedChanged(THeadlessSession::SoundSource source, bool muted);
+    // A command of the profile was added, removed or changed in what addonCommands() gives, by a script, a click, a
+    // package's removal or the profile's reset, for the app to read them again. One for all the changes made before the event
+    // loop runs, from the event loop.
+    void addonCommandsChanged(const QString& profile);
+    // What buttonBars() gives changed, by a script, a package or the profile's reset, for the app to read the bars
+    // again. One for all the changes made before the event loop runs, from the event loop.
+    void buttonsChanged(const QString& profile);
     // The connection was made; from the event loop
     void connected(const QString& profile);
-    // The connection ended, or could not be made; from the event loop
+    // The connection ended, or could not be made, or was called off while connecting; from the event loop
     void disconnected(const QString& profile);
     // The session's profile closed; any other profile its scripts opened runs on until shutdown(). Not sent once
     // shutdown() has been called, even for a close a script made before it
@@ -402,6 +576,11 @@ signals:
 private:
     bool storeConnectionDetails(const Options&, std::optional<bool> tls);
     void detachFromHost();
+    void connectInputRelays(unsigned int run);
+    void connectCommandRelays(unsigned int run);
+    void disconnectCommandRelays();
+    // The profile's command whose shortcut the GUI's menu runs on the key; 0 for none
+    int addonCommandOnKey(const QKeyEvent& event) const;
     void withdrawSecureConnectionOffer();
     void startMapProgress(const QString& title, const QString& label, int maximum);
     bool finishOpenProgress();
@@ -422,6 +601,10 @@ private:
     // False if a handler deleted the session
     bool sendShownLines(const QList<ShownLine>& lines);
     void closeDebugConsole();
+    // The relays of how the main console is drawn, in THeadlessSessionOutput.cpp
+    void connectOutputRelays(Host*, unsigned int run);
+    void noteOutputStateAtLoad();
+    void sendLatency();
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
@@ -458,11 +641,18 @@ private:
     QList<QueuedReplaySignal> mReplaySignals;
     // What consoleFont() gave at profileLoaded, then each consoleFontChanged; none before the load ends
     std::optional<QFont> mDeliveredConsoleFont;
+    bool mApplicationActive = true;
+    // Counted, as a handler that changed it and changed it back leaves it as it was
+    unsigned int mApplicationActiveChanges = 0;
     bool mMapOperationCancelable = false;
     QStringList mUnsavedProfiles;
     // Bumped by each start() and shutdown(), to drop a queued quitRequested or other relay owed to the profile
     // before, even one a script closed before shutdown() was called
     unsigned int mRun = 0;
+    // The run an addonCommandsChanged is queued for, so the changes of one turn send one; 0 for none
+    unsigned int mAddonCommandsQueuedRun = 0;
+    // The same for buttonsChanged
+    unsigned int mButtonsQueuedRun = 0;
     std::unique_ptr<HostManager> mpPool;
     struct ShownLine
     {
@@ -476,6 +666,15 @@ private:
     bool mLineShownLatched = false;
     class DebugSink;
     std::unique_ptr<DebugSink> mpDebugSink;
+    // What consoleWrap() gave at profileLoaded, then each consoleWrapChanged; none before the load ends
+    std::optional<ConsoleWrap> mDeliveredConsoleWrap;
+    // The same for consoleForeground() and consoleBackground()
+    std::optional<std::pair<QColor, QColor>> mDeliveredConsoleColors;
+    // Paces latencyChanged, for the run it was started in
+    QTimer* mpLatencyPacer = nullptr;
+    unsigned int mLatencyPaceRun = 0;
+    // The latency box's text as last sent
+    QString mDeliveredLatency;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(THeadlessSession::TextStyles)

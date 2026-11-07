@@ -300,6 +300,10 @@ public:
     void setStorePasswordsSecurely(bool storeSecurely);
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
+    // Shared with TDetachedWindow so both windows' Discord buttons read, and are translated, the same
+    static QString gameDiscordLabel(const QString& gameName);
+    // Plain text, for a status tip as it is; escape it before putting it in a rich text tooltip
+    static QString gameDiscordToolTip(const QString& gameName);
     void updateMultiViewControls();
     void writeSettings() override;
 #ifdef INCLUDE_MCPSERVER

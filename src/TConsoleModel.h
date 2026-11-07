@@ -41,6 +41,7 @@
 #include <functional>
 #include <optional>
 #include <tuple>
+#include <utility>
 
 class Host;
 
@@ -354,8 +355,8 @@ struct TConsoleModel
     // triggers run over this console's line it goes onto that line, which is shown once they are
     // done; otherwise it is appended, and this answers true for the view to show the new lines.
     bool echo(QString& text);
-    // Puts text in place of the selected run.
-    void replace(const QString& text);
+    // Puts text in place of the selected run, in the colours of its first character when keepColor is set.
+    void replace(const QString& text, bool keepColor);
     // The WCAG contrast ratio, which link colours here and TConsole's scroll bar are both chosen by.
     static double contrastRatio(const QColor& first, const QColor& second);
 
@@ -399,24 +400,33 @@ struct TConsoleModel
     // leaves the gutter out of the width it reports, so this has to be readable
     // with no view.
     bool mShowTimeStamps = false;
+    // How long the last pass of incoming text took to process, in seconds, as the GUI's latency box shows it;
+    // only the null view keeps it.
+    double mIncomingTextSeconds = 0.0;
 
     // The width and indents wrapLine() rewraps a line to. The buffer keeps its
     // own copy, which wraps text as it arrives, so always set them through
     // these setters to keep the two the same.
     void setWrapAt(int pos)
     {
-        mWrapAt = pos;
         buffer.setWrapAt(pos);
+        if (std::exchange(mWrapAt, pos) != pos) {
+            emit mNotifier.wrapChanged();
+        }
     }
     void setIndentCount(int count)
     {
-        mIndentCount = count;
         buffer.setWrapIndent(count);
+        if (std::exchange(mIndentCount, count) != count) {
+            emit mNotifier.wrapChanged();
+        }
     }
     void setHangingIndentCount(int count)
     {
-        mHangingIndentCount = count;
         buffer.setWrapHangingIndent(count);
+        if (std::exchange(mHangingIndentCount, count) != count) {
+            emit mNotifier.wrapChanged();
+        }
     }
     int mWrapAt = 100;
     int mIndentCount = 0;

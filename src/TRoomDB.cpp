@@ -32,6 +32,8 @@
 #include <QRegularExpression>
 #include <QVarLengthArray>
 
+#include <limits>
+
 const QString ROOM_UI_SHOWNAME = qsl("room.ui_showName");
 const QString ROOM_UI_NAMEPOS = qsl("room.ui_nameOffset");
 const QString ROOM_UI_NAMEFONT = qsl("room.ui_nameFont");
@@ -595,6 +597,9 @@ int TRoomDB::lowestFreeRoomId(int minimumId)
     const bool searchFromHint = minimumId <= mLowestFreeRoomIdHint;
     int id = searchFromHint ? mLowestFreeRoomIdHint : minimumId;
     while (rooms.contains(id)) {
+        if (id == std::numeric_limits<int>::max()) {
+            return 0;
+        }
         ++id;
     }
     if (searchFromHint) {
@@ -1152,18 +1157,22 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                                               true);
                 }
                 if (TMap::smShowMapAuditErrors) {
-                    const QString infoMsg = tr("[ INFO ]  - In area with id: %1 there were %2 rooms missing from those it\n"
-                                               "should be recording as possessing, they were:\n%3\nthey have been added.")
+                    //: %1 is the area id, %n how many rooms were missing and %2 the list of their ids
+                    const QString infoMsg = tr("[ INFO ]  - In area with id: %1 there were %n room(s) missing from those it\n"
+                                               "should be recording as possessing, they were:\n%2\nthey have been added.",
+                                               nullptr,
+                                               missingRooms.count())
                                                     .arg(itArea.key())
-                                                    .arg(missingRooms.count())
                                                     .arg(roomList.join(qsl(", ")));
                     mpMap->postMessage(infoMsg);
                 }
                 mpMap->appendAreaErrorMsg(itArea.key(),
-                                          tr("[ INFO ]  - In this area there were %1 rooms missing from those it should be recorded as possessing."
-                                             "  They are: %2."
-                                             "  They have been added.")
-                                                  .arg(missingRooms.count())
+                                          //: %n is how many rooms were missing and %1 the list of their ids
+                                          tr("[ INFO ]  - In this area there were %n room(s) missing from those it should be recorded as possessing."
+                                             "  They are: %1."
+                                             "  They have been added.",
+                                             nullptr,
+                                             missingRooms.count())
                                                   .arg(roomList.join(qsl(", "))),
                                           true);
 
@@ -1187,18 +1196,22 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                                               true);
                 }
                 if (TMap::smShowMapAuditErrors) {
-                    const QString infoMsg = tr("[ INFO ]  - In area with id: %1 there were %2 extra rooms compared to those it\n"
-                                               "should be recording as possessing, they were:\n%3\nthey have been removed.")
+                    //: %1 is the area id, %n how many extra rooms there were and %2 the list of their ids
+                    const QString infoMsg = tr("[ INFO ]  - In area with id: %1 there were %n extra room(s) compared to those it\n"
+                                               "should be recording as possessing, they were:\n%2\nthey have been removed.",
+                                               nullptr,
+                                               extraRooms.count())
                                                     .arg(itArea.key())
-                                                    .arg(extraRooms.count())
                                                     .arg(roomList.join(qsl(", ")));
                     mpMap->postMessage(infoMsg);
                 }
                 mpMap->appendAreaErrorMsg(itArea.key(),
-                                          tr("[ INFO ]  - In this area there were %1 extra rooms that it should not be recorded as possessing."
-                                             "  They were: %2."
-                                             "  They have been removed.")
-                                                  .arg(extraRooms.count())
+                                          //: %n is how many extra rooms there were and %1 the list of their ids
+                                          tr("[ INFO ]  - In this area there were %n extra room(s) that it should not be recorded as possessing."
+                                             "  They were: %1."
+                                             "  They have been removed.",
+                                             nullptr,
+                                             extraRooms.count())
                                                   .arg(roomList.join(qsl(", "))),
                                           true);
                 pA->mIsDirty = true;
