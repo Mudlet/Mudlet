@@ -1635,7 +1635,9 @@ void dlgTriggerEditor::slot_searchSplitterMoved(const int pos, const int index)
 
 void dlgTriggerEditor::slot_clickedMessageBox(const QString& URL)
 {
-    if (URL.startsWith("http")) {
+    if (URL.startsWith(qsl("mudlet-error-line:"))) {
+        jumpToErrorLine(URL.mid(qsl("mudlet-error-line:").size()).toInt());
+    } else if (URL.startsWith("http")) {
         QDesktopServices::openUrl(URL);
     } else { // internal links used by expanding info text navigation
         showIntro(URL);
@@ -11603,6 +11605,142 @@ void dlgTriggerEditor::slot_showAliases()
     focusItemTree(treeWidget_aliases);
 }
 
+// Qt's rich text does not understand 'color: inherit' and renders it as
+// black, so the theme's text colour has to be spelled out explicitly
+static QString themedBannerLinkColor()
+{
+    return MudletApp::darkMode() ? qsl("rgb(230, 230, 230)") : qsl("black");
+}
+
+// Chunk names as TTrigger::compileScript() and its siblings build them. A repaired item keeps its last error, so
+// it counts only while broken; a cleared tree's current item is deleted before fillout_form() forgets it.
+bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName, QString& error)
+{
+    switch (mCurrentView) {
+    case EditorViewType::cmTriggerView:
+        if (auto* pT = treeWidget_triggers->topLevelItemCount() ? getTriggerFromTreeItem(mpCurrentTriggerItem) : nullptr) {
+            itemId = pT->getID();
+            chunkName = qsl("Trigger: %1").arg(pT->getName());
+            error = pT->state() ? QString() : pT->getError();
+            return true;
+        }
+        break;
+    case EditorViewType::cmAliasView:
+        if (auto* pT = treeWidget_aliases->topLevelItemCount() ? getAliasFromTreeItem(mpCurrentAliasItem) : nullptr) {
+            itemId = pT->getID();
+            chunkName = qsl("Alias: %1").arg(pT->getName());
+            error = pT->state() ? QString() : pT->getError();
+            return true;
+        }
+        break;
+    case EditorViewType::cmTimerView:
+        if (auto* pT = treeWidget_timers->topLevelItemCount() ? getTimerFromTreeItem(mpCurrentTimerItem) : nullptr) {
+            itemId = pT->getID();
+            chunkName = qsl("Timer: %1").arg(pT->getName());
+            error = pT->state() ? QString() : pT->getError();
+            return true;
+        }
+        break;
+    case EditorViewType::cmScriptView:
+        if (auto* pT = treeWidget_scripts->topLevelItemCount() ? getScriptFromTreeItem(mpCurrentScriptItem) : nullptr) {
+            itemId = pT->getID();
+            chunkName = qsl("Script: %1").arg(pT->getName());
+            error = pT->state() ? QString() : pT->getError();
+            return true;
+        }
+        break;
+    case EditorViewType::cmActionView:
+        if (auto* pT = treeWidget_actions->topLevelItemCount() ? getActionFromTreeItem(mpCurrentActionItem) : nullptr) {
+            itemId = pT->getID();
+            chunkName = qsl("Button: %1").arg(pT->getName());
+            error = pT->state() ? QString() : pT->getError();
+            return true;
+        }
+        break;
+    case EditorViewType::cmKeysView:
+        if (auto* pT = treeWidget_keys->topLevelItemCount() ? getKeyFromTreeItem(mpCurrentKeyItem) : nullptr) {
+            itemId = pT->getID();
+            chunkName = qsl("Key: %1").arg(pT->getName());
+            error = pT->state() ? QString() : pT->getError();
+            return true;
+        }
+        break;
+    case EditorViewType::cmUnknownView:
+        [[fallthrough]];
+    case EditorViewType::cmVarsView:
+        break;
+    }
+    return false;
+}
+
+// Turns the [string "Trigger: name"]:12: location of a Lua error in the open
+// item's own script into a link that jumps to that line. Another item's error -
+// a descendant's, even one of the same name - or a location in another chunk,
+// such as a script a running one called, stays as text.
+QString dlgTriggerEditor::linkErrorLineToScript(const QString& error)
+{
+    mErrorLineView = EditorViewType::cmUnknownView;
+    mErrorLineItemId = -1;
+
+    int itemId = -1;
+    QString chunkName;
+    QString ownError;
+    // Toggling a broken item on wraps its error in an explanation that names the item first
+    const qsizetype ownErrorStart = currentScriptChunk(itemId, chunkName, ownError) && !ownError.isEmpty() ? error.indexOf(ownError) : -1;
+    if (ownErrorStart < 0) {
+        return error;
+    }
+
+    // TLuaInterpreter::compile() HTML-escapes the message, so the quotes arrive as entities
+    static const QRegularExpression location(qsl(R"(\[string &quot;(.*?)&quot;\]:(\d+):)"));
+    const QRegularExpressionMatch match = location.match(error, ownErrorStart);
+    if (!match.hasMatch() || match.capturedEnd() > ownErrorStart + ownError.size()) {
+        return error;
+    }
+
+    QString label = match.captured(1);
+    label.replace(qsl("&quot;"), qsl("\"")).replace(qsl("&lt;"), qsl("<")).replace(qsl("&gt;"), qsl(">")).replace(qsl("&amp;"), qsl("&"));
+    // Lua cuts a long chunk name, or one with a line break, short and appends "...";
+    // the cut is by bytes, so a split character arrives as a replacement character
+    bool sameChunk = label == chunkName;
+    if (!sameChunk && label.endsWith(qsl("..."))) {
+        QString stemText = label.chopped(3);
+        while (stemText.endsWith(QChar::ReplacementCharacter)) {
+            stemText.chop(1);
+        }
+        const QByteArray stem = stemText.toUtf8();
+        sameChunk = !stem.isEmpty() && chunkName.toUtf8().startsWith(stem);
+    }
+    if (!sameChunk) {
+        return error;
+    }
+
+    mErrorLineView = mCurrentView;
+    mErrorLineItemId = itemId;
+    QString linked = error;
+    linked.replace(match.capturedStart(),
+                   match.capturedLength(),
+                   qsl("<a href='mudlet-error-line:%1' style='color: %2; text-decoration: underline;'>%3</a>").arg(match.captured(2), themedBannerLinkColor(), match.captured(0)));
+    return linked;
+}
+
+void dlgTriggerEditor::jumpToErrorLine(const int line)
+{
+    int itemId = -1;
+    QString chunkName;
+    QString ownError;
+    // The banner can outlive a switch to another item, whose script the line is not in
+    if (line < 1 || !mpSourceEditorEdbee || !mpSourceEditorEdbeeDocument || mCurrentView != mErrorLineView || !currentScriptChunk(itemId, chunkName, ownError) || itemId != mErrorLineItemId) {
+        return;
+    }
+
+    // An unclosed block is reported on the "end" line the item classes append after the script
+    const auto lineCount = static_cast<int>(mpSourceEditorEdbeeDocument->lineCount());
+    const int targetLine = std::min(line, std::max(lineCount, 1)) - 1;
+    mpSourceEditorEdbee->setFocus();
+    mpSourceEditorEdbee->controller()->moveCaretTo(static_cast<size_t>(targetLine), static_cast<size_t>(0), false);
+}
+
 void dlgTriggerEditor::showError(const QString& text)
 {
     // A still-running undo-toast expiry timer would hide this message when it
@@ -11611,7 +11749,7 @@ void dlgTriggerEditor::showError(const QString& text)
     mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
     mpSystemMessageArea->notificationAreaIconLabelError->show();
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
-    mpSystemMessageArea->notificationAreaMessageBox->setText(text);
+    mpSystemMessageArea->notificationAreaMessageBox->setText(linkErrorLineToScript(text));
     mpSystemMessageArea->show();
     mCurrentBannerKey.clear();
 
@@ -11656,13 +11794,6 @@ void dlgTriggerEditor::showInfo(const QString& text)
     if (!mpHost->mIsProfileLoadingSequence) {
         mudlet::self()->announce(text);
     }
-}
-
-// Qt's rich text does not understand 'color: inherit' and renders it as
-// black, so the theme's text colour has to be spelled out explicitly
-static QString themedBannerLinkColor()
-{
-    return MudletApp::darkMode() ? qsl("rgb(230, 230, 230)") : qsl("black");
 }
 
 void dlgTriggerEditor::showIntro(const QString& desiredOption)

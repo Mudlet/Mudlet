@@ -220,6 +220,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorClipboardXmlTest.cpp
     EditorEmergencyStopTest.cpp
     EditorBannerViewSwitchTest.cpp
+    EditorErrorLineLinkTest.cpp
     EditorEmptySelectionTest.cpp
     EditorItemXMLHelpersTest.cpp
     ColorTriggerDialogTest.cpp
