@@ -211,6 +211,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mpOwnModel(handedModel ? std::move(handedModel) : ownConsoleModel(pH, name, type))
 , mpModel(mpOwnModel ? mpOwnModel.get() : &pH->mainConsoleModel())
 , buffer(mpModel->buffer)
+, mpGlyphCache(std::make_unique<TGlyphCache>())
 , emergencyStop(new QToolButton)
 , mBgColor(mpModel->mBgColor)
 , mFgColor(mpModel->mFgColor)

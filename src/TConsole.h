@@ -30,6 +30,7 @@
 #include "TBuffer.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
+#include "TGlyphCache.h"
 #include "TPrintSink.h"
 #include "enums.h"
 
@@ -223,6 +224,7 @@ public:
     std::unique_ptr<TConsoleModel> mpOwnModel;
     TConsoleModel* mpModel = nullptr;
     TBuffer& buffer;
+    std::unique_ptr<TGlyphCache> mpGlyphCache;
     TTextEdit* mUpperPane = nullptr;
     TTextEdit* mLowerPane = nullptr;
 
