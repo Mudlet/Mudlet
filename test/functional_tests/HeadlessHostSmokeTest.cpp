@@ -12894,6 +12894,48 @@ headlessRecord("finished")
         HostManager::self()->deleteHost(hostname);
     }
 
+    // With nobody to choose, the pickers answer with no answer, told apart from a cancel, and every answer comes from
+    // the event loop, never to an asker that has gone
+    void test_theNullFrontendAnswersPickersAndTheClipboardFromTheEventLoop()
+    {
+        // Stands in for none in what the callbacks are told
+        static const QString scmNoAnswer = qsl("<no answer>");
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        TAppFrontend* pFrontend = TAppFrontend::instance();
+        std::optional<QString> file;
+        std::optional<QString> folder;
+        std::optional<QString> clipboard;
+        pFrontend->getOpenFileNameAsync(qsl("Pick a file"), QDir::tempPath(), this, [&file](const std::optional<QString>& path) {
+            file = path.value_or(scmNoAnswer);
+        });
+        pFrontend->getExistingDirectoryAsync(qsl("Pick a folder"), QDir::tempPath(), this, [&folder](const std::optional<QString>& path) {
+            folder = path.value_or(scmNoAnswer);
+        });
+        pFrontend->setClipboardText(qsl("headless clipboard"));
+        pFrontend->clipboardTextAsync(this, [&clipboard](const std::optional<QString>& text) {
+            clipboard = text.value_or(scmNoAnswer);
+        });
+        QVERIFY2(!file && !folder && !clipboard, "An answer came during the call.");
+        QTRY_VERIFY(file && folder && clipboard);
+        // Not a cancel: nobody could be asked
+        QCOMPARE(*file, scmNoAnswer);
+        QCOMPARE(*folder, scmNoAnswer);
+        QCOMPARE(*clipboard, qsl("headless clipboard"));
+
+        bool told = false;
+        {
+            QObject asker;
+            pFrontend->getOpenFileNameAsync(qsl("Pick a file"), QDir::tempPath(), &asker, [&told](const std::optional<QString>&) {
+                told = true;
+            });
+            pFrontend->clipboardTextAsync(&asker, [&told](const std::optional<QString>&) {
+                told = true;
+            });
+        }
+        QTest::qWait(50);
+        QVERIFY2(!told, "An asker that had gone was told.");
+    }
+
     // A wait for the module write skips one that reads as neither running nor finished, so one still queued behind
     // the profile's write must read as running
     void test_aWriteWaitingForAnEarlierOneReadsAsRunning()
