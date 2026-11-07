@@ -1242,6 +1242,9 @@ function timeframe(vname, true_time, nil_time, ...)
   timeframetable[vname] = {}
 
   local vtype = type(vname)
+  -- the value goes in as an argument, not pasted into the source, so a quote or
+  -- backslash in a string and the full precision of a number both survive
+  local assign
 
   -- loop through timerlist and create tempTimers
   local maxtime = 0
@@ -1261,7 +1264,10 @@ function timeframe(vname, true_time, nil_time, ...)
       end
     else
       assert(type(value) == "string" or type(value) == "number" or type(value) == "boolean" or type(value) == "nil", format("timeframe: bad argument #%d type (timerlist data argument #2 expects a string, number or boolean value; got %s!", step, type(value)))
-      fun = assert(loadstring(format("%s = %s", vname, type(value) == "string" and ("'" .. value .. "'") or tostring(value))))
+      assign = assign or assert(loadstring(vname .. " = ..."))
+      fun = function()
+        assign(value)
+      end
     end
 
     if time <= 0 then
