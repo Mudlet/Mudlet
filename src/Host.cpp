@@ -1497,6 +1497,11 @@ std::pair<bool, QString> Host::getModuleSync(const QString& moduleName)
     return {false, qsl("module name '%1' not found").arg(moduleName)};
 }
 
+bool Host::moduleSavesBack(const QString& moduleName) const
+{
+    return mInstalledModules.value(moduleName).value(1).toInt() && mModulesLoadedOk.contains(moduleName);
+}
+
 bool Host::resetProfile_phase1()
 {
     if (mResetProfile) {

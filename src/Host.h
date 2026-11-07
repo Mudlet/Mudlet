@@ -478,6 +478,8 @@ public:
     std::pair<bool, QString> reloadModule(const QString& reloadModuleName, const QString& syncingFromHost = QString());
     std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String& value);
     std::pair<bool, QString> getModuleSync(const QString& moduleName);
+    // Whether a profile save rewrites the module's file, and so drops an item moved out of it
+    bool moduleSavesBack(const QString& moduleName) const;
     bool blockScripts() { return mBlockScriptCompile; }
     void refreshPackageFonts();
 

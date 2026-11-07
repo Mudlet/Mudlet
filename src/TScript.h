@@ -73,10 +73,15 @@ public:
     void unmarkAsNew();
 
     bool exportItem = true;
+    // After a move: a member under a module's folder, and at the top level only while its module's file still holds it
+    void updateModuleMembership();
     bool mModuleMasterFolder = false;
+    // The module whose file this was loaded from
+    QString mLoadedFromModule;
     bool mIsNew = true;
 
 private:
+    void setModuleMembership(bool);
     TScript() = default;
     QString mName;
     QString mScript;
