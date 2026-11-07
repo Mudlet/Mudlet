@@ -24,9 +24,12 @@
  * action rather than merely one of its actions. Without that the button falls
  * back to its own bare "Discord" text with no icon and swallows clicks.
  *
- * The last three cases cover the other half: each detached window owns its own copy
+ * The later cases cover the other half: each detached window owns its own copy
  * of the Discord actions, so an update that only refreshes the main window's pair
  * leaves the detached button showing the name the game had at detach time.
+ *
+ * While the button opens the game's own invite it reads "<Game> Discord", or
+ * "Game Discord" when the game has not given its name, as does the Help menu entry.
  *
  * Run with: ctest -R DetachedWindowDiscordButtonTest -V
  */
@@ -161,6 +164,12 @@ private slots:
         if (mudlet::self()->getDetachedWindows().contains(mSecondHostname)) {
             mudlet::self()->slot_tabReattachRequested(mSecondHostname);
         }
+        // Restored here rather than in the test, so a failed check cannot leave it behind for the next one
+        if (Host* pFirstHost = HostManager::self()->getHost(mFirstHostname)) {
+            pFirstHost->setDiscordInviteURL(QString());
+            pFirstHost->setDiscordGameName(QString());
+            mudlet::self()->updateDiscordNamedIcon();
+        }
     }
 
     void test_theDiscordButtonShowsTheGamesNameAndIcon()
@@ -170,7 +179,7 @@ private slots:
 
         QVERIFY2(pButton->defaultAction(), "the Discord button has no default action, so it shows neither the game's name nor an icon and ignores clicks");
         QCOMPARE(pButton->defaultAction()->objectName(), qsl("openDiscord"));
-        QCOMPARE(pButton->text(), mGameName);
+        QCOMPARE(pButton->text(), qsl("%1 Discord").arg(mGameName));
         QVERIFY2(!pButton->icon().isNull(), "the Discord button has no icon");
 
         QAction* pMudletChat = mudletChatAction();
@@ -193,6 +202,7 @@ private slots:
         QAction* pMudletChat = mudletChatAction();
         QVERIFY(pMudletChat);
         QVERIFY2(!pMudletChat->isVisible(), "with no invite of its own there is nothing for the separate Mudlet chat button to add");
+        QVERIFY2(pButton->text() == qsl("Discord"), "the button opens Mudlet's own Discord, so it must not be labelled as the game's");
 
         pButton->click();
 
@@ -222,7 +232,57 @@ private slots:
         pHost->processDiscordGMCP(qsl("External.Discord.Status"), qsl(R"({"game":"Avalon"})"));
 
         QCOMPARE(pHost->getDiscordGameName(), qsl("Avalon"));
-        QCOMPARE(pButton->text(), qsl("Avalon"));
+        QCOMPARE(pButton->text(), qsl("Avalon Discord"));
+    }
+
+    void test_withNoGameNameTheButtonAndMenuSayGameDiscord()
+    {
+        QToolButton* pButton = discordButton();
+        QVERIFY(pButton);
+        QAction* pMenuAction = helpMenuDiscordAction();
+        QVERIFY(pMenuAction);
+
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
+        QVERIFY(pHost);
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setDiscordGameUrl('%1')").arg(mInviteUrl)));
+
+        QCOMPARE(pButton->text(), qsl("Game Discord"));
+        QCOMPARE(pMenuAction->text(), qsl("Game Discord"));
+
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setDiscordGameUrl('%1', 'Foo')").arg(mInviteUrl)));
+
+        QCOMPARE(pButton->text(), qsl("Foo Discord"));
+        QCOMPARE(pMenuAction->text(), qsl("Foo Discord"));
+        QVERIFY2(pButton->toolTip().contains(qsl("Foo")), qPrintable(qsl("the button's tooltip does not name the game: %1").arg(pButton->toolTip())));
+
+        // Doubled, or the '&' is taken as a shortcut marker rather than shown
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setDiscordGameUrl('%1', 'A&B')").arg(mInviteUrl)));
+        QCOMPARE(pButton->text(), qsl("A&&B Discord"));
+        QCOMPARE(pMenuAction->text(), qsl("A&&B Discord"));
+    }
+
+    // The main window's Help menu entry, which only shows while the game has an invite
+    void test_theMainWindowMenuEntryNamesTheGame()
+    {
+        Host* pHost = HostManager::self()->getHost(mFirstHostname);
+        QVERIFY(pHost);
+        QCOMPARE(mudlet::self()->getActiveHost(), pHost);
+        QAction* pMenuAction = mudlet::self()->findChild<QAction*>(qsl("dactionDiscord"));
+        QVERIFY(pMenuAction);
+        QToolButton* pMainButton = mudlet::self()->findChild<QToolButton*>(qsl("discord"));
+        QVERIFY(pMainButton);
+
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setDiscordGameUrl('%1')").arg(mInviteUrl)));
+        QCOMPARE(pMenuAction->text(), qsl("Game Discord"));
+        QCOMPARE(pMainButton->text(), qsl("Game Discord"));
+
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setDiscordGameUrl('%1', 'Foo')").arg(mInviteUrl)));
+        QCOMPARE(pMenuAction->text(), qsl("Foo Discord"));
+        QCOMPARE(pMainButton->text(), qsl("Foo Discord"));
+        QVERIFY2(pMenuAction->toolTip().contains(qsl("Foo")), qPrintable(qsl("the menu entry's tooltip does not name the game: %1").arg(pMenuAction->toolTip())));
+
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setDiscordGameUrl()")));
+        QCOMPARE(pMainButton->text(), qsl("Discord"));
     }
 
     // The invite a game announces later takes the same path: with one of its own
@@ -255,12 +315,12 @@ private slots:
         QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setDiscordGameUrl('https://discord.gg/lusternia', 'Lusternia')")));
 
         QCOMPARE(pHost->getDiscordGameName(), qsl("Lusternia"));
-        QCOMPARE(pButton->text(), qsl("Lusternia"));
+        QCOMPARE(pButton->text(), qsl("Lusternia Discord"));
 
         // Detached windows are parentless, so this can only reach the main one
         QToolButton* pMainButton = mudlet::self()->findChild<QToolButton*>(qsl("discord"));
         QVERIFY(pMainButton);
-        QVERIFY2(pMainButton->text() != qsl("Lusternia"), "a detached profile's game name was painted onto the main window's button");
+        QVERIFY2(pMainButton->text() != qsl("Lusternia Discord"), "a detached profile's game name was painted onto the main window's button");
 
         QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setDiscordGameUrl()")));
 
@@ -269,6 +329,19 @@ private slots:
     }
 
 private:
+    QAction* helpMenuDiscordAction() const
+    {
+        if (!mpDetachedWindow) {
+            QTest::qFail("no detached window to look for a Help menu Discord entry in", __FILE__, __LINE__);
+            return nullptr;
+        }
+        QAction* pAction = mpDetachedWindow->findChild<QAction*>(qsl("helpMenuDiscord"));
+        if (!pAction) {
+            QTest::qFail("the detached window's Help menu has no Discord entry", __FILE__, __LINE__);
+        }
+        return pAction;
+    }
+
     // The action rather than the toolbar widget it produced: QToolBarLayout only
     // syncs that widget's visibility while laying out, which the offscreen
     // platform does not do, so the widget reads hidden even when the action is not

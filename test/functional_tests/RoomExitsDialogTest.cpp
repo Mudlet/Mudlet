@@ -87,6 +87,7 @@ private:
     QPointer<dlgRoomExits> mpDialog;
     QPointer<QAbstractItemDelegate> mpRoomIdDelegate;
     QPointer<QAbstractItemDelegate> mpWeightDelegate;
+    QPointer<QAbstractItemDelegate> mpCommandDelegate;
     const QString mProfileName = qsl("RoomExitsDialog-Test");
     const QString mOtherAreaName = qsl("Far side");
     int mAreaId = 0;
@@ -162,9 +163,10 @@ private:
         mpDialog = new dlgRoomExits(mpHost, roomId);
         verifySpecialExitColumnCount(mpDialog);
         // Tracked via QPointer so specialExitDelegatesAreDestroyedWithTheDialog
-        // can confirm deleting the dialog takes both of these with it.
+        // can confirm deleting the dialog takes all of these with it.
         mpRoomIdDelegate = mpDialog->specialExits->itemDelegateForColumn(colIndex_exitRoomId);
         mpWeightDelegate = mpDialog->specialExits->itemDelegateForColumn(colIndex_exitWeight);
+        mpCommandDelegate = mpDialog->specialExits->itemDelegateForColumn(colIndex_command);
         return mpDialog;
     }
 
@@ -230,6 +232,7 @@ private slots:
         delete mpDialog.data();
         delete mpRoomIdDelegate.data();
         delete mpWeightDelegate.data();
+        delete mpCommandDelegate.data();
     }
 
     void cleanupTestCase()
@@ -711,6 +714,38 @@ private slots:
         QVERIFY(!pDlg->button_endEditing->isEnabled());
     }
 
+    // save() skips a row by its placeholder, so an editor left empty must hand that back
+    void editingANewSpecialExitCommandShowsThePromptAsAPlaceholder()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        pDlg->button_addSpecialExit->click();
+        QCOMPARE(pDlg->specialExits->topLevelItemCount(), 2);
+        QTreeWidgetItem* pItem = pDlg->specialExits->topLevelItem(1);
+        QVERIFY(pItem);
+
+        pDlg->slot_editSpecialExit(pItem, colIndex_command);
+        auto* pEditor = qobject_cast<QLineEdit*>(pDlg->specialExits->itemWidget(pItem, colIndex_command));
+        QVERIFY2(pEditor, "no line edit was opened on the command column");
+        QVERIFY2(pEditor->text().isEmpty(), "the command prompt was put in the editor as text the player has to delete");
+        QCOMPARE(pEditor->placeholderText(), pDlg->mSpecialExitCommandPlaceholder);
+
+        QAbstractItemDelegate* pDelegate = pDlg->specialExits->itemDelegateForIndex(pDlg->specialExits->model()->index(1, colIndex_command));
+        emit pDelegate->commitData(pEditor);
+        QCOMPARE(pItem->text(colIndex_command), pDlg->mSpecialExitCommandPlaceholder);
+
+        QTest::keyClicks(pEditor, qsl("   "));
+        emit pDelegate->commitData(pEditor);
+        QCOMPARE(pItem->text(colIndex_command), pDlg->mSpecialExitCommandPlaceholder);
+
+        pEditor->clear();
+        QTest::keyClicks(pEditor, qsl("climb tree"));
+        emit pDelegate->commitData(pEditor);
+        QCOMPARE(pItem->text(colIndex_command), qsl("climb tree"));
+        pDlg->slot_endEditSpecialExits();
+        QCOMPARE(pItem->text(colIndex_command), qsl("climb tree"));
+    }
+
     void saveOnlyLightsUpOnceSomethingReallyDiffers()
     {
         buildMap();
@@ -818,11 +853,13 @@ private slots:
         auto* pDlg = openDialogOn(scmSubjectRoom);
         QVERIFY(mpRoomIdDelegate);
         QVERIFY(mpWeightDelegate);
+        QVERIFY(mpCommandDelegate);
 
         delete pDlg;
 
         QVERIFY(mpRoomIdDelegate.isNull());
         QVERIFY(mpWeightDelegate.isNull());
+        QVERIFY(mpCommandDelegate.isNull());
     }
 
     // Changing an exit (here flipping a door to locked) and closing the dialog

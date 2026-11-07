@@ -397,6 +397,7 @@ public:
     static int setGridMode(lua_State*);
     static int getGridMode(lua_State*);
     static int getCustomEnvColorTable(lua_State*);
+    static int getMapEnvColor(lua_State*);
     static int setRoomName(lua_State*);
     static int getRoomName(lua_State*);
     static int setRoomEnv(lua_State*);

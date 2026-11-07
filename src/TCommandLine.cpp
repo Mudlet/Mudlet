@@ -879,10 +879,8 @@ void TCommandLine::slot_popupMenu()
     c.clearSelection();
 
     // Recheck the replacement, which the caret need not be on
-    const QTextCursor oldCursor = textCursor();
     QTextCursor replacement = cursorAtWordStart(document(), c.position());
     spellCheckWord(replacement);
-    setTextCursor(oldCursor);
 }
 
 void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
@@ -1295,11 +1293,16 @@ void TCommandLine::handleTabCompletion(bool direction)
 void TCommandLine::handleAutoCompletion()
 {
     QString neu = toPlainText();
-    neu.chop(textCursor().selectedText().size());
-    setPlainText(neu);
+    // Only the tail the previous completion filled in may be cut; any other selection is the player's own text
+    const QTextCursor playerCursor = textCursor();
+    const bool cutCompletionTail = neu == mLastCompletion && playerCursor.selectionStart() == mTabCompletionOld.size() && playerCursor.selectionEnd() == neu.size();
+    if (cutCompletionTail) {
+        neu.truncate(playerCursor.selectionStart());
+        setPlainText(neu);
+    }
     mudlet::self()->announce(neu);
     mTabCompletionOld = neu;
-    const int oldLength = toPlainText().size();
+    const int oldLength = neu.size();
     if (mAutoCompletionCount >= mHistoryList.size()) {
         mAutoCompletionCount = mHistoryList.size() - 1;
     }
@@ -1309,18 +1312,23 @@ void TCommandLine::handleAutoCompletion()
     for (int i = mAutoCompletionCount; i < mHistoryList.size(); i++) {
         if (mHistoryList[i].startsWith(neu)) {
             mAutoCompletionCount = i;
-            mLastCompletion = mHistoryList[i];
             setPlainText(mHistoryList[i]);
+            // As the document gives it back, which turns a no-break space into a plain one
+            mLastCompletion = toPlainText();
             mudlet::self()->announce(mHistoryList[i]);
-            moveCursor(QTextCursor::Start);
-            for (int k = 0; k < oldLength; k++) {
-                moveCursor(QTextCursor::Right, QTextCursor::MoveAnchor);
-            }
-            moveCursor(QTextCursor::End, QTextCursor::KeepAnchor);
+            // By position, not by moving Right: that steps whole graphemes, which an emoji or accent spans several of
+            QTextCursor completion = textCursor();
+            completion.setPosition(oldLength);
+            completion.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
+            setTextCursor(completion);
             return;
         }
     }
-    moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
+    if (cutCompletionTail) {
+        moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
+    } else {
+        setTextCursor(playerCursor);
+    }
     mAutoCompletionCount = -1;
 }
 
@@ -1367,7 +1375,7 @@ void TCommandLine::historyMove(MoveDirection direction)
 
 void TCommandLine::slot_clearSelection(bool yes)
 {
-    if (yes && !mSpellChecking) {
+    if (yes) {
         mpConsole->clearSelection();
     }
 }
@@ -1405,17 +1413,14 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     Hunhandle* systemDictionaryHandle = mpHost->spellChecker().systemHandle();
 
     QTextCharFormat f;
-    mSpellChecking = true;
     c.select(QTextCursor::WordUnderCursor);
     const QString spellCheckedWord = c.selectedText();
     const bool wantSpellCheck = systemDictionaryHandle && TBuffer::lengthInGraphemes(spellCheckedWord) >= mudlet::self()->mMinLengthForSpellCheck;
     if (!wantSpellCheck) {
         // We don't check when there is no dictionary or the word is too short,
-        // but may need to undo any prior underline, and we need to also reset the flag:
+        // but may need to undo any prior underline:
         f.setFontUnderline(false);
         c.setCharFormat(f);
-        setTextCursor(c);
-        mSpellChecking = false;
         return;
     }
 
@@ -1426,8 +1431,6 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
         // If we don't know the encoding, we can't safely spell-check
         f.setFontUnderline(false);
         c.setCharFormat(f);
-        setTextCursor(c);
-        mSpellChecking = false;
         return;
     }
 
@@ -1460,8 +1463,6 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
         f.setFontUnderline(false);
     }
     c.setCharFormat(f);
-    setTextCursor(c);
-    mSpellChecking = false;
 }
 
 bool TCommandLine::handleCtrlTabChange(QKeyEvent* ke, int tabNumber)
@@ -1499,9 +1500,6 @@ void TCommandLine::recheckWholeLine()
         return;
     }
 
-    // Save the current position
-    const QTextCursor oldCursor = textCursor();
-
     QTextCursor c(document());
     const int length = document()->characterCount() - 1;
     int position = 0;
@@ -1517,18 +1515,15 @@ void TCommandLine::recheckWholeLine()
         spellCheckWord(word);
         position = std::max(wordEnd, position + 1);
     }
-    // Jump back to where we started
-    setTextCursor(oldCursor);
 }
 
 void TCommandLine::clearMarksOnWholeLine()
 {
     QTextCursor oldCursor = textCursor();
     QTextCharFormat f;
-    QTextCursor c = textCursor();
+    QTextCursor c(document());
     c.select(QTextCursor::Document);
     c.setCharFormat(f);
-    setTextCursor(c);
     f.setFontUnderline(false);
     oldCursor.setCharFormat(f);
     setTextCursor(oldCursor);
