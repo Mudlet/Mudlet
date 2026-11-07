@@ -341,7 +341,9 @@ needs git and network access; to build one from a local copy instead, point
 `package.path` and `package.cpath` emptied. It pends in a build without the option, unless
 `MUDLET_EXPECT_STATIC_LUA_MODULES=1` is set, which makes it fail there instead. The
 `linux-core-minimal` preset turns the option on, and `.github/workflows/core-mobile-build.yml`
-runs the spec in the `mudlet-headless` it builds, with that variable set.
+runs the spec and `DB_spec.lua` in the `mudlet-headless` it builds, with that variable set and
+no Lua C module on `package.cpath` but busted's own, failing if any module Mudlet requires at
+startup cannot be found.
 
 ## Debugging options
 
