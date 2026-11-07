@@ -1235,16 +1235,19 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const
     }
 }
 
-bool T2DMap::labelPixmapIsCurrent(const LabelPixmap& cached, const TMapLabel& label)
+bool T2DMap::labelPixmapIsCurrent(const LabelPixmap& cached, const TMapLabel& label, const qreal devicePixelRatio)
 {
-    return cached.sourcePixmapKey == label.pix.cacheKey() && cached.fgColor == label.fgColor.rgba() && cached.bgColor == label.bgColor.rgba() && cached.outlineColor == label.outlineColor.rgba()
-           && cached.text == label.text && cached.font == label.font;
+    return cached.devicePixelRatio == devicePixelRatio && cached.sourcePixmapKey == label.pix.cacheKey() && cached.fgColor == label.fgColor.rgba() && cached.bgColor == label.bgColor.rgba()
+           && cached.outlineColor == label.outlineColor.rgba() && cached.text == label.text && cached.font == label.font;
 }
 
-const T2DMap::LabelPixmap* T2DMap::addTextLabelToCache(const LabelPixmapKey& key, const TMapLabel& label)
+const T2DMap::LabelPixmap* T2DMap::addTextLabelToCache(const LabelPixmapKey& key, const TMapLabel& label, const qreal devicePixelRatio)
 {
     const QSize& targetSize = key.size;
+    // Drawn with every pixel the screen has for the label, or painting it scales it up and blurs its text
+    const QSize pixelSize = (QSizeF(targetSize) * devicePixelRatio).toSize();
     auto entry = std::make_unique<LabelPixmap>();
+    entry->devicePixelRatio = devicePixelRatio;
     entry->text = label.text;
     entry->font = label.font;
     entry->fgColor = label.fgColor.rgba();
@@ -1255,7 +1258,7 @@ const T2DMap::LabelPixmap* T2DMap::addTextLabelToCache(const LabelPixmapKey& key
         made->costKiB = std::max<qint64>(1, qint64(made->pixmap.width()) * made->pixmap.height() * 4 / 1024);
         // Room for what the last frame and this one drew, so a label coming into
         // view never evicts one still on screen
-        if (const qsizetype needed = std::min(mTextLabelPixmapLastFrameKiB + mTextLabelPixmapFrameKiB + made->costKiB, scmTextLabelPixmapCeilingKiB); needed > mTextLabelPixmapCache.maxCost()) {
+        if (const qsizetype needed = std::min(mTextLabelPixmapLastFrameKiB + mTextLabelPixmapFrameKiB + made->costKiB, mTextLabelPixmapCeilingKiB); needed > mTextLabelPixmapCache.maxCost()) {
             mTextLabelPixmapCache.setMaxCost(needed);
         }
         const qsizetype costKiB = made->costKiB;
@@ -1272,11 +1275,13 @@ const T2DMap::LabelPixmap* T2DMap::addTextLabelToCache(const LabelPixmapKey& key
     if (label.text.isEmpty() || label.font.family().isEmpty() || !sizeFontToFitTextInRect(scaledFont, targetRect, label.text, 5, 4.0)) {
         // An image label, a text label with no font, or a font too small to be
         // legible - smooth-scaled original pixmap
-        entry->pixmap = label.pix.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        entry->pixmap = label.pix.scaled(pixelSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        entry->pixmap.setDevicePixelRatio(devicePixelRatio);
         return insert(std::move(entry));
     }
 
-    entry->pixmap = QPixmap(targetSize);
+    entry->pixmap = QPixmap(pixelSize);
+    entry->pixmap.setDevicePixelRatio(devicePixelRatio);
     entry->pixmap.fill(label.bgColor);
 
     QPainter painter(&entry->pixmap);
@@ -1318,7 +1323,7 @@ static bool fitsScaledLabelLimit(const QSize& size)
 static void drawPixmapScaledTo(QPainter& painter, const QRectF& target, const QPixmap& pixmap)
 {
     const QSize targetSize = target.size().toSize();
-    if (fitsScaledLabelLimit(targetSize)) {
+    if (fitsScaledLabelLimit((target.size() * painter.device()->devicePixelRatio()).toSize())) {
         painter.drawPixmap(target.topLeft(), pixmap.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
         return;
     }
@@ -1333,17 +1338,30 @@ void T2DMap::startTextLabelFrame()
     mTextLabelPixmapLastFrameKiB = mTextLabelPixmapFrameKiB;
     mTextLabelPixmapFrameKiB = 0;
     // Shrinks back once fewer labels are on screen, e.g. after switching area
-    mTextLabelPixmapCache.setMaxCost(std::max(mTextLabelPixmapBudgetKiB, std::min(mTextLabelPixmapLastFrameKiB, scmTextLabelPixmapCeilingKiB)));
+    mTextLabelPixmapCache.setMaxCost(std::max(mTextLabelPixmapBudgetKiB, std::min(mTextLabelPixmapLastFrameKiB, mTextLabelPixmapCeilingKiB)));
 }
 
 void T2DMap::drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect)
 {
     const QSize targetSize = paintRect.size().toSize();
-    if (fitsScaledLabelLimit(targetSize)) {
+    const qreal devicePixelRatio = painter.device()->devicePixelRatio();
+    const QSize pixelSize = (QSizeF(targetSize) * devicePixelRatio).toSize();
+    if (fitsScaledLabelLimit(pixelSize)) {
         const LabelPixmapKey key{mAreaID, labelKey, targetSize};
         const LabelPixmap* cached = mTextLabelPixmapCache.object(key);
-        if (!cached || !labelPixmapIsCurrent(*cached, label)) {
-            cached = addTextLabelToCache(key, label);
+        if (!cached || !labelPixmapIsCurrent(*cached, label, devicePixelRatio)) {
+            // One that would take the labels on screen past the cache's ceiling would evict another, which would
+            // in turn evict the next, every frame; on a dense display a label costs the square of its ratio more.
+            // Only what this frame has drawn is known to be on screen: after a zoom, none of the last frame is.
+            const qint64 costKiB = std::max<qint64>(1, qint64(pixelSize.width()) * pixelSize.height() * 4 / 1024);
+            if (mTextLabelPixmapFrameKiB + costKiB > mTextLabelPixmapCeilingKiB) {
+                // An out-of-date one left behind would hold memory no frame counts, so trimming the
+                // cache to the frame would evict a label on screen in its place
+                mTextLabelPixmapCache.remove(key);
+                cached = nullptr;
+            } else {
+                cached = addTextLabelToCache(key, label, devicePixelRatio);
+            }
         }
         if (cached) {
             mTextLabelPixmapFrameKiB += cached->costKiB;
