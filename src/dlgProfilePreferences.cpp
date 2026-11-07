@@ -80,6 +80,7 @@
 #include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFontDatabase>
 #include <QFontDialog>
 #include <QFutureWatcher>
 #include <QIcon>
@@ -271,6 +272,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // have to respond to changes in the settings when *another* profile saves
     // them.
     populateApplicationSettings();
+
+    connect(checkBox_monospacedFontsOnly, &QCheckBox::toggled, this, [this]() {
+        showDisplayFont(fontComboBox_displayFont->currentFont());
+    });
 
     connect(checkBox_showTabConnectionIndicators, &QCheckBox::toggled, this, [=](bool checked) {
         mudlet::self()->setShowTabConnectionIndicators(checked);
@@ -4194,6 +4199,10 @@ void dlgProfilePreferences::populateApplicationSettings()
         const QSignalBlocker blocker(telnetHandlerEnabled);
         telnetHandlerEnabled->setChecked(MudletApp::getQSettings()->value("telnetHandlerEnabled", false).toBool());
     }
+    {
+        const QSignalBlocker blocker(checkBox_monospacedFontsOnly);
+        checkBox_monospacedFontsOnly->setChecked(MudletApp::getQSettings()->value(qsl("showOnlyMonospacedFonts"), false).toBool());
+    }
     populateTriggerMatchPoolSettings();
     {
         // The one setting here that lives in its own QSettings group rather than
@@ -4225,7 +4234,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 {
     loadEditorTab();
 
-    fontComboBox_displayFont->setCurrentFont(pHost->getDisplayFont());
+    showDisplayFont(pHost->getDisplayFont());
     rememberDisplayFontFamilyShown();
     // Accommodate an initial font size being larger than expected - and ensure
     // it is a positive value:
@@ -7547,6 +7556,12 @@ void dlgProfilePreferences::applyAll()
             settings->setValue("telnetHandlerEnabled", telnetHandlerEnabled->isChecked());
         }
     }
+    if (mSnapshot.dirty(checkBox_monospacedFontsOnly)) {
+        QSettings* settings = MudletApp::getQSettings();
+        if (settings->value(qsl("showOnlyMonospacedFonts"), false).toBool() != checkBox_monospacedFontsOnly->isChecked()) {
+            settings->setValue(qsl("showOnlyMonospacedFonts"), checkBox_monospacedFontsOnly->isChecked());
+        }
+    }
     applyTriggerMatchPoolSettings();
 
     Discord::self()->UpdatePresence();
@@ -9653,6 +9668,16 @@ void dlgProfilePreferences::rememberDisplayFontFamilyShown()
     mDisplayFontFamilyShown = (mpHost && mpHost->resolveFontFamily(family).available) ? family : QString();
 }
 
+// QFontComboBox::setFontFilters() moves the list off a family it leaves out, which would put another font
+// on the profile, so proportional fonts are left out only while the font shown is a monospaced one
+void dlgProfilePreferences::showDisplayFont(const QFont& font)
+{
+    const bool monospacedOnly = checkBox_monospacedFontsOnly->isChecked() && QFontDatabase::isFixedPitch(font.family());
+    const QSignalBlocker blocker(fontComboBox_displayFont);
+    fontComboBox_displayFont->setFontFilters(monospacedOnly ? QFontComboBox::MonospacedFonts : QFontComboBox::AllFonts);
+    fontComboBox_displayFont->setCurrentFont(font);
+}
+
 void dlgProfilePreferences::slot_displayFontChanged()
 {
     // QFontComboBox moves off a family by itself when its package is uninstalled: no choice of the
@@ -9688,7 +9713,7 @@ void dlgProfilePreferences::slot_hostDisplayFontChanged(const QFont& font)
         const QSignalBlocker comboBlocker(fontComboBox_displayFont);
         const QSignalBlocker sizeBlocker(spinBox_displayFontSize);
         const QSignalBlocker antiAliasBlocker(checkBox_antiAlias);
-        fontComboBox_displayFont->setCurrentFont(font);
+        showDisplayFont(font);
         spinBox_displayFontSize->setMaximum(std::max(font.pointSize(), spinBox_displayFontSize->maximum()));
         spinBox_displayFontSize->setValue(std::max(1, font.pointSize()));
         // Not fontsAntiAlias(): applyAll() writes that from this box only once the apply timer fires

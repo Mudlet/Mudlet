@@ -346,6 +346,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsInstantApplyTest.cpp
     SettingsLiveSyncTest.cpp
     SettingsMapControlsTest.cpp
+    SettingsMonospacedFontsTest.cpp
     SettingsMmcpFlagsTest.cpp
     SettingsRoundTripTest.cpp
     SettingsSearchTest.cpp
