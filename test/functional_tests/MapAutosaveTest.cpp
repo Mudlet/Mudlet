@@ -387,6 +387,24 @@ private slots:
         QCOMPARE(readFile(autosavePath(mProfileName)), serialized(map()));
     }
 
+    // Each autosave is reported once, so a save made since must survive the next wait
+    void test_autosaveFailureIsNotReportedAgainAfterASave()
+    {
+        buildMap(map());
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY(QDir().mkpath(autosavePath(mProfileName)));
+        mpHost->autoSaveMap();
+        mpHost->waitForMapAutosave();
+        QVERIFY(map()->hasSaveError());
+
+        QVERIFY(mpHost->saveMapFile(MudletApp::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("explicit.dat"))));
+        mpHost->waitForMapAutosave();
+        QVERIFY(!map()->hasSaveError());
+        QVERIFY(!map()->isUnsaved());
+    }
+
     // A downloaded map is loaded as already saved, so the autosave of the map it replaced must not land after it
     void test_downloadMadeDuringAnAutosaveWriteIsTheNewerFile()
     {
@@ -585,6 +603,32 @@ private slots:
 
         QVERIFY(restored);
         QCOMPARE(loaded, qsl("Only in the autosave"));
+    }
+
+    // Something can hold a closed profile long enough for its autosave timer to fire again
+    void test_heldClosedProfileFinishesItsAutosaveWhenReleased()
+    {
+        QVERIFY(HostManager::self()->addHost(mClosingProfileName, qsl("23"), QString(), QString()));
+        QSharedPointer<Host> held;
+        for (const auto& pHost : HostManager::self()->hostList()) {
+            if (pHost->getName() == mClosingProfileName) {
+                held = pHost;
+            }
+        }
+        QVERIFY(held);
+        buildMap(held->mpMap.data());
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        HostManager::self()->deleteHost(mClosingProfileName);
+        renameRoom(held->mpMap.data(), qsl("Changed after closing"));
+        const QByteArray expected = serialized(held->mpMap.data());
+
+        PoolHold hold;
+        QVERIFY(hold.holding());
+        held->autoSaveMap();
+        held.reset();
+        QCOMPARE(readFile(autosavePath(mClosingProfileName)), expected);
     }
 
     void test_jsonExportMadeDuringAnAutosaveWriteIsTheNewerFile()
