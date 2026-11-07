@@ -107,6 +107,7 @@ jobs:
           libxcb-image0-dev \
           libyajl-dev \
           libzip-dev \
+          libzstd-dev \
           qtkeychain-qt6-dev \
           pcre2-utils \
           pkg-config \

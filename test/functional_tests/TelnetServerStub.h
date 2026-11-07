@@ -37,6 +37,8 @@ class TelnetServerStub : public QTcpServer
     QPointer<QTcpSocket> mpClient;
     QByteArray mPendingData;
     bool mHadClient = false;
+    // mReceived is the NAWS scanner's working buffer and is trimmed as frames are
+    // recognised, so the verbatim transcript tests assert on is kept separately.
     QByteArray mReceived;
     QByteArray mReceivedSoFar;
     QVector<QSize> mNawsUpdates;
@@ -59,6 +61,7 @@ public:
     bool clientConnected() const { return !mpClient.isNull(); }
     // Everything the clients have sent, across connections
     const QByteArray& receivedSoFar() const { return mReceivedSoFar; }
+    void clearReceivedSoFar() { mReceivedSoFar.clear(); }
     // Closes the connection gracefully, once everything sent has gone out
     void closeClient()
     {
