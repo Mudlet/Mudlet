@@ -700,31 +700,45 @@ Both are refused where `runLua()` is, and for a name that is not a user window's
 The app's mouse reaches the windows through `pointer(window, event)`, with a `PointerEvent` in that
 window's pixels: its `type` (`press`, `release`, `doubleClick`, `move`, `enter`, `leave` or `wheel`),
 `position`, the `button` that changed, the `buttons` held, the `modifiers` and, for a wheel, the
-`angleDelta` in eighths of a degree. On a label it runs the callback `setLabelClickCallback()` and its
+`angleDelta` in eighths of a degree. `"main"`, or no name, is the main console, as the Lua window
+functions take it, and its `position` is in the pixels of the main window's area, where its labels are
+placed, not of `mainConsoleTextRect()`. On a label it runs the callback `setLabelClickCallback()` and its
 siblings gave for that type, with the event table the GUI's gives, and a double-click with no callback of
 its own runs the click one. As the GUI's mouse does, an event at a label the pointer was not over first
 leaves the one it was over and enters this one, a `leave` goes only to the label the pointer is over, and
-a label `enableClickthrough()` set passes the event to the label under it in the same parent; a dock is
-never under a window of the main window's area. A label deleted and made again under its name is a new
-one, which the pointer has not entered. As Qt's implicit grab, a press of a button with no other held
-gives the label that took it, which for a click-through label is the label under it, every move with a
-button held and the release, wherever the pointer is, until a release leaves no button held, a move comes
-with none held or another such press comes: the `position` may be outside the label, and the app may name
-the click-through label the press went through instead. Meanwhile an `enter` or a `leave` is taken and
-runs nothing, and a `wheel` goes to the window it turns over without entering or leaving a label, as Qt
-sends them. A release that ends the grab away from a label leaves it, as Qt does. If the label hid, even
-to show again, moved into another window, or went or was made again meanwhile, as its own click callback
-may do, Qt has dropped the grab, so the moves and the release the button held are taken and run nothing,
-whichever window the app names. A release with no grab held is still taken, where Qt sends it nowhere, so
-an app that missed a press is not refused for it. A label that hides under the pointer has its leave with
-the next `pointer()` call, even one that is refused, where Qt sends it as the label hides, and what was
-under it is entered as the app next names it. A `leave` at a click-through label leaves the label the
-pointer was over through it, whatever its `position`. A callback's Lua error goes to the error console,
-as the GUI's does, and `pointer()` still returns true. It is refused where `runLua()` is, for a name no
-window has, for another window than the one a held button is on or the click-through label its press went
-through, and, but for a `leave` or what that grab takes, for a window that is not `shown` or a `position`
-outside it, which the GUI's mouse could not reach; a `leave` is taken for a hidden window, as Qt sends
-one to a widget that hides under the pointer.
+a label `enableClickthrough()` set passes the event to what is under it in the same parent, or to the
+console or user window that parent is; a dock is never under a window of the main window's area. A label
+deleted and made again under its name is a new one, which the pointer has not entered. A press or release
+raises `sysWindowMousePressEvent` or `sysWindowMouseReleaseEvent`, with the button's number, the point
+and the window's name, where the GUI's does: on a user window or the main console itself, and from a mini
+console, or a label with no callback for it, on the console or user window it is in, at the point in that
+one. A right-button release on a label with neither a click nor a release callback raises nothing where
+it is over a console's text, as the GUI opens that console's menu instead. A double-click raises a press,
+and a wheel scrolls the console it turns over, three lines a notch, one with Shift and half the console
+with Control, and does nothing over a scroll box's own area. As Qt's implicit grab, a press of a button
+with no other held gives the window that took it, which for a click-through label is what is under it,
+every move with a button held and the release, wherever the pointer is, until a release leaves no button
+held, a move comes with none held or another such press comes: the `position` may be outside the window,
+and the app may name the click-through label the press went through instead. Meanwhile an `enter` or a
+`leave` is taken and runs nothing, and a `wheel` goes to the window it turns over without entering or
+leaving a label, as Qt sends them. A release that ends the grab away from a label leaves it, as Qt does.
+If the window hid, even to show again, moved into another window, or went or was made again meanwhile, as
+a label's own click callback may do, Qt has dropped the grab, so the moves and the release the button
+held are taken and run nothing, whichever window the app names. A release with no grab held is still
+taken, where Qt sends it nowhere, so an app that missed a press is not refused for it. A label that hides
+under the pointer has its leave with the next `pointer()` call, even one that is refused, where Qt sends
+it as the label hides, and what was under it is entered as the app next names it. A `leave` at a
+click-through label leaves the label the pointer was over through it, whatever its `position`. Three
+things differ from the GUI: a press of a button other than the left, right or middle one on a mini
+console is raised once, on the console it is in, where the GUI's raises it there and on the mini console
+too; a point in a scroll box is taken as if the box were not scrolled and had no frame; and a
+right-button release over a mini console's or user window's own command line, or over the main console's
+scroll bar, is taken as over its text, where the GUI's opens no menu and raises the release. A callback's
+Lua error goes to the error console, as the GUI's does, and `pointer()` still returns true. It is refused
+where `runLua()` is, for a name no window has, for another window than the one a held button is on or the
+click-through label its press went through, and, but for a `leave` or what that grab takes, for a window
+that is not `shown` or a `position` outside it, which the GUI's mouse could not reach; a `leave` is taken
+for a hidden window, as Qt sends one to a widget that hides under the pointer.
 
 ## What still needs a window
 

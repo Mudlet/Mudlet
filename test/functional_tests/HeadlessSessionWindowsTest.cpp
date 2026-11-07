@@ -750,6 +750,215 @@ end)
         QCOMPARE(got(), qsl("btn.leave"));
         QVERIFY(session.shutdown(false));
     }
+
+    void test_consolesRaiseTheGuisMouseEvents()
+    {
+        const QString name = qsl("Headless Console Pointer");
+        QVERIFY(writeProfile(name));
+        using Type = THeadlessSession::PointerEvent::Type;
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        const QString making = qsl(R"lua(
+got = {}
+local function note(event, button, x, y, window)
+  got[#got + 1] = string.format("%s %d %d %d %s", event == "sysWindowMousePressEvent" and "press" or "release", button, x, y, window)
+end
+registerAnonymousEventHandler("sysWindowMousePressEvent", note)
+registerAnonymousEventHandler("sysWindowMouseReleaseEvent", note)
+createMiniConsole("mc", 10, 20, 200, 100)
+for i = 1, 50 do
+  echo("mc", "line " .. i .. "\n")
+end
+openUserWindow("uw")
+createLabel("bare", 400, 300, 50, 50, 1)
+createLabel("uw", "inUw", 30, 40, 50, 50, 1)
+openMapWidget()
+createLabel("glass", 600, 400, 50, 50, 1)
+enableClickthrough("glass")
+createLabel("clicky", 300, 300, 50, 50, 1)
+setLabelClickCallback("clicky", function() end)
+createLabel("cover", 300, 300, 50, 50, 1)
+createScrollBox("sb", 100, 300, 100, 100)
+createMiniConsole("sb", "sbmc", 0, 0, 100, 100)
+createLabel("overSb", 100, 300, 50, 50, 1)
+)lua");
+        QVERIFY2(session.runLua(making), qPrintable(session.errorString()));
+        const auto got = [&session]() {
+            const QString all = luaString(session, qsl("table.concat(got, ';')"));
+            session.runLua(qsl("got = {}"));
+            return all;
+        };
+
+        // TTextEdit gives a mini console's press to the console it is in
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::press, .position = QPointF(12, 30), .button = Qt::RightButton, .buttons = Qt::RightButton}));
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::release, .position = QPointF(12, 30), .button = Qt::RightButton}));
+        QCOMPARE(got(), qsl("press 2 22 50 main;release 2 22 50 main"));
+        QVERIFY(session.pointer(qsl("uw"), {.type = Type::press, .position = QPointF(5, 6), .button = Qt::ExtraButton24, .buttons = Qt::ExtraButton24}));
+        QVERIFY(session.pointer(qsl("main"), {.type = Type::doubleClick, .position = QPointF(7, 8), .button = Qt::MiddleButton, .buttons = Qt::MiddleButton}));
+        QCOMPARE(got(), qsl("press 27 5 6 uw;press 3 7 8 main"));
+        // A label with no callback for it leaves the press to the console under it
+        QVERIFY(session.pointer(qsl("bare"), {.type = Type::press, .position = QPointF(1, 2), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("bare"), {.type = Type::release, .position = QPointF(1, 2), .button = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("inUw"), {.type = Type::press, .position = QPointF(1, 2), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("inUw"), {.type = Type::release, .position = QPointF(1, 2), .button = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::move, .position = QPointF(1, 2)}));
+        QCOMPARE(got(), qsl("press 1 401 302 main;release 1 401 302 main;press 1 31 42 uw;release 1 31 42 uw"));
+        // The console that took the press has the release wherever it is, as Qt's implicit grab gives it
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::press, .position = QPointF(12, 30), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::release, .position = QPointF(250, 30), .button = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("main"), {.type = Type::press, .position = QPointF(7, 8), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("main"), {.type = Type::release, .position = QPointF(900, 10), .button = Qt::LeftButton}));
+        QCOMPARE(got(), qsl("press 1 22 50 main;release 1 260 50 main;press 1 7 8 main;release 1 900 10 main"));
+        // A click-through label with nothing under it in the main window's area leaves the press to the main
+        // console, not to a dock
+        QVERIFY(session.pointer(qsl("glass"), {.type = Type::press, .position = QPointF(1, 2), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QCOMPARE(got(), qsl("press 1 601 402 main"));
+        // A right-button release opens the menu of the console's text the bare label covers, and is not raised
+        QVERIFY(session.pointer(qsl("bare"), {.type = Type::press, .position = QPointF(1, 2), .button = Qt::RightButton, .buttons = Qt::RightButton}));
+        QVERIFY(session.pointer(qsl("bare"), {.type = Type::release, .position = QPointF(1, 2), .button = Qt::RightButton}));
+        QVERIFY(session.pointer(qsl("inUw"), {.type = Type::release, .position = QPointF(1, 2), .button = Qt::RightButton}));
+        QCOMPARE(got(), qsl("press 2 401 302 main"));
+        // but where a label with a click callback is what it covers there, the release goes on
+        QVERIFY(session.pointer(qsl("cover"), {.type = Type::release, .position = QPointF(1, 2), .button = Qt::RightButton}));
+        QCOMPARE(got(), qsl("release 2 301 302 main"));
+        // A release the grab took away from the label is tested where it is: over a label with a click callback
+        // that a bare one covers it goes on, and over the main console's text the menu opens
+        QVERIFY(session.pointer(qsl("bare"), {.type = Type::press, .position = QPointF(1, 2), .button = Qt::RightButton, .buttons = Qt::RightButton}));
+        QVERIFY(session.pointer(qsl("bare"), {.type = Type::release, .position = QPointF(-99, 2), .button = Qt::RightButton}));
+        QVERIFY(session.pointer(qsl("bare"), {.type = Type::press, .position = QPointF(1, 2), .button = Qt::RightButton, .buttons = Qt::RightButton}));
+        QVERIFY(session.pointer(qsl("bare"), {.type = Type::release, .position = QPointF(-30, 2), .button = Qt::RightButton}));
+        QCOMPARE(got(), qsl("press 2 401 302 main;release 2 301 302 main;press 2 401 302 main"));
+        // A scroll box's mini console under a bare label opens its menu
+        QVERIFY(session.pointer(qsl("overSb"), {.type = Type::press, .position = QPointF(10, 10), .button = Qt::RightButton, .buttons = Qt::RightButton}));
+        QVERIFY(session.pointer(qsl("overSb"), {.type = Type::release, .position = QPointF(10, 10), .button = Qt::RightButton}));
+        QCOMPARE(got(), qsl("press 2 110 310 main"));
+
+        // As the Lua window functions, no name is the main console too, and the name is as it is spelt
+        QVERIFY(session.pointer(QString(), {.type = Type::press, .position = QPointF(7, 8), .button = Qt::MiddleButton, .buttons = Qt::MiddleButton}));
+        QCOMPARE(got(), qsl("press 3 7 8 main"));
+        QVERIFY(!session.pointer(qsl("Main"), {.type = Type::press, .position = QPointF(7, 8), .button = Qt::MiddleButton}));
+        QVERIFY(session.errorString().contains(qsl("Main")));
+        QVERIFY(!session.pointer(qsl("main"), {.type = Type::press, .position = QPointF(800, 8), .button = Qt::MiddleButton}));
+        QCOMPARE(got(), QString());
+
+        const int end = luaString(session, qsl("getScroll('mc')")).toInt();
+        QVERIFY(end > 3);
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::wheel, .position = QPointF(1, 2), .angleDelta = QPoint(0, 120)}));
+        QCOMPARE(luaString(session, qsl("getScroll('mc')")).toInt(), end - 3);
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::wheel, .position = QPointF(1, 2), .modifiers = Qt::ShiftModifier, .angleDelta = QPoint(0, 120)}));
+        QCOMPARE(luaString(session, qsl("getScroll('mc')")).toInt(), end - 4);
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::wheel, .position = QPointF(1, 2), .angleDelta = QPoint(0, -240)}));
+        QCOMPARE(luaString(session, qsl("getScroll('mc')")).toInt(), end);
+        QCOMPARE(got(), QString());
+        // Too little to scroll a line, which a console made again under the name does not inherit
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::wheel, .position = QPointF(1, 2), .angleDelta = QPoint(0, 16)}));
+        QCOMPARE(luaString(session, qsl("getScroll('mc')")).toInt(), end);
+        QVERIFY(session.runLua(qsl(R"(deleteMiniConsole("mc") createMiniConsole("mc", 10, 20, 200, 100) for i = 1, 50 do echo("mc", "line " .. i .. "\n") end)")));
+        const int remade = luaString(session, qsl("getScroll('mc')")).toInt();
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::wheel, .position = QPointF(1, 2), .angleDelta = QPoint(0, 8)}));
+        QCOMPARE(luaString(session, qsl("getScroll('mc')")).toInt(), remade);
+        QVERIFY(session.shutdown(false));
+
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY2(session.runLua(making), qPrintable(session.errorString()));
+        const int again = luaString(session, qsl("getScroll('mc')")).toInt();
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::wheel, .position = QPointF(1, 2), .angleDelta = QPoint(0, 8)}));
+        QCOMPARE(luaString(session, qsl("getScroll('mc')")).toInt(), again);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_consolesKeepAndLoseTheGrabAsQtsDo()
+    {
+        const QString name = qsl("Headless Console Grab");
+        QVERIFY(writeProfile(name));
+        using Type = THeadlessSession::PointerEvent::Type;
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY2(session.runLua(qsl(R"lua(
+got = {}
+local function note(event, button, x, y, window)
+  got[#got + 1] = string.format("%s %d %d %d %s", event == "sysWindowMousePressEvent" and "press" or "release", button, x, y, window)
+end
+registerAnonymousEventHandler("sysWindowMousePressEvent", note)
+registerAnonymousEventHandler("sysWindowMouseReleaseEvent", note)
+openUserWindow("uw")
+createLabel("uw", "inUw", 30, 40, 50, 50, 1)
+createLabel("throughClicky", 500, 100, 50, 50, 1)
+setLabelClickCallback("throughClicky", function() end)
+enableClickthrough("throughClicky")
+createLabel("overThrough", 500, 100, 50, 50, 1)
+createLabel("hiddenClicky", 600, 100, 50, 50, 1)
+setLabelClickCallback("hiddenClicky", function() end)
+hideWindow("hiddenClicky")
+createLabel("overHidden", 600, 100, 50, 50, 1)
+createMiniConsole("mc", 10, 20, 200, 100)
+createMiniConsole("mc2", 10, 400, 200, 100)
+createMiniConsole("mc3", 250, 400, 100, 50)
+createMiniConsole("mc4", 400, 400, 100, 50)
+createScrollBox("sb", 550, 400, 100, 100)
+createScrollBox("sb2", 700, 400, 100, 100)
+createScrollBox("sb3", 850, 400, 100, 100)
+-- What the next press raised does to the window it came from
+remake = nil
+registerAnonymousEventHandler("sysWindowMousePressEvent", function()
+  local what = remake
+  remake = nil
+  if what == "mc2" then
+    deleteMiniConsole("mc2")
+    createMiniConsole("mc2", 10, 400, 200, 100)
+  elseif what == "sb2" then
+    deleteScrollBox("sb2")
+    createScrollBox("sb2", 700, 400, 100, 100)
+  elseif what == "mc4" or what == "sb3" then
+    setWindow("uw", what, 0, 0, true)
+  elseif what then
+    hideWindow(what)
+    showWindow(what)
+  end
+end)
+createLabel("hover", 300, 300, 50, 50, 1)
+setLabelClickCallback("hover", function() end)
+setLabelReleaseCallback("hover", function() end)
+setLabelOnEnter("hover", function() got[#got + 1] = "hover.enter" end)
+setLabelOnLeave("hover", function() got[#got + 1] = "hover.leave" end)
+)lua")),
+                 qPrintable(session.errorString()));
+        const auto got = [&session]() {
+            const QString all = luaString(session, qsl("table.concat(got, ';')"));
+            session.runLua(qsl("got = {}"));
+            return all;
+        };
+
+        // A window made again, hidden and shown again or moved in what its press raised has lost the grab, so its
+        // release goes nowhere
+        for (const QString& window : {qsl("mc2"), qsl("mc3"), qsl("mc4"), qsl("sb"), qsl("sb2"), qsl("sb3")}) {
+            QVERIFY(session.runLua(qsl("remake = '%1'").arg(window)));
+            QVERIFY(session.pointer(window, {.type = Type::press, .position = QPointF(5, 5), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+            QVERIFY(session.pointer(window, {.type = Type::release, .position = QPointF(300, 5), .button = Qt::LeftButton}));
+        }
+        QCOMPARE(got(), qsl("press 1 15 405 main;press 1 255 405 main;press 1 405 405 main;press 1 555 405 main;press 1 705 405 main;press 1 855 405 main"));
+
+        // A wheel over a console while a label has the grab does not leave that label
+        QVERIFY(session.pointer(qsl("hover"), {.type = Type::press, .position = QPointF(1, 1), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::wheel, .position = QPointF(1, 2), .buttons = Qt::LeftButton, .angleDelta = QPoint(0, 120)}));
+        QVERIFY(session.pointer(qsl("hover"), {.type = Type::release, .position = QPointF(1, 1), .button = Qt::LeftButton}));
+        QCOMPARE(got(), qsl("hover.enter"));
+
+        // The menu's hit test passes over a click-through label and a hidden one, as QWidget::childAt() does
+        QVERIFY(session.pointer(qsl("overThrough"), {.type = Type::press, .position = QPointF(1, 2), .button = Qt::RightButton, .buttons = Qt::RightButton}));
+        QVERIFY(session.pointer(qsl("overThrough"), {.type = Type::release, .position = QPointF(1, 2), .button = Qt::RightButton}));
+        QVERIFY(session.pointer(qsl("overHidden"), {.type = Type::press, .position = QPointF(1, 2), .button = Qt::RightButton, .buttons = Qt::RightButton}));
+        QVERIFY(session.pointer(qsl("overHidden"), {.type = Type::release, .position = QPointF(1, 2), .button = Qt::RightButton}));
+        QCOMPARE(got(), qsl("hover.leave;press 2 501 102 main;press 2 601 102 main"));
+        // and finds nothing outside the window the label is in, so a release the grab took there goes on
+        QVERIFY(session.pointer(qsl("inUw"), {.type = Type::press, .position = QPointF(1, 2), .button = Qt::RightButton, .buttons = Qt::RightButton}));
+        QVERIFY(session.pointer(qsl("inUw"), {.type = Type::release, .position = QPointF(1000, 2), .button = Qt::RightButton}));
+        QCOMPARE(got(), qsl("press 2 31 42 uw;release 2 1030 42 uw"));
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionWindowsTest.moc"

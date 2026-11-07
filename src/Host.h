@@ -69,6 +69,7 @@ class xml_document;
 
 class QJsonObject;
 class QKeyEvent;
+class QMouseEvent;
 class QSettings;
 
 class TEvent;
@@ -487,6 +488,8 @@ public:
     void registerAnonymousEventHandler(const QString& name, const QString& fun);
     void unregisterEventHandler(const QString&, TScript*);
     void raiseEvent(const TEvent& event);
+    // sysWindowMousePressEvent or sysWindowMouseReleaseEvent, for a press or release at a point in that window
+    void raiseWindowMouseEvent(const QString& window, const QMouseEvent& event, bool press);
     // This disables all the triggers/timers/keys in preparation to resetting
     // them - and sets a timer to do resetProfile_phase2() when it is safe to do
     // so. We need to do it this way because a lua script containing the call to

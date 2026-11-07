@@ -80,6 +80,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QKeyEvent>
+#include <QMouseEvent>
 #include <QNetworkProxy>
 #include <QRandomGenerator>
 #include <QRegularExpression>
@@ -93,6 +94,7 @@
 #include <QTimer>
 #include <QUuid>
 #include <zip.h>
+#include <bit>
 #include <memory>
 #include <ranges>
 
@@ -3371,6 +3373,24 @@ void Host::unregisterEventHandler(const QString& name, TScript* pScript)
     if (mEventHandlerMap.contains(name)) {
         mEventHandlerMap[name].removeAll(pScript);
     }
+}
+
+void Host::raiseWindowMouseEvent(const QString& window, const QMouseEvent& event, const bool press)
+{
+    TEvent mudletEvent{};
+    mudletEvent.mArgumentList.append(press ? qsl("sysWindowMousePressEvent") : qsl("sysWindowMouseReleaseEvent"));
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    // Qt gives each button a bit, from Qt::LeftButton up, and scripts number them 1 (left) to 27 (Qt::ExtraButton24)
+    const auto button = static_cast<quint32>(event.button());
+    const int number = button && button <= Qt::MaxMouseButton ? std::countr_zero(button) + 1 : 0;
+    const QPoint position = event.position().toPoint();
+    for (const int value : {number, position.x(), position.y()}) {
+        mudletEvent.mArgumentList.append(QString::number(value));
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    }
+    mudletEvent.mArgumentList.append(window);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(mudletEvent);
 }
 
 // Handlers run on this profile's shared lua_State, but each unwinds it back to
