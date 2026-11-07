@@ -246,6 +246,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
     MapCoordinateLimitTest.cpp
+    MapCrossProfileStateTest.cpp
     MapContextMenuLifetimeTest.cpp
     MapDownloadTest.cpp
     MapSmallAreaCenteringTest.cpp
