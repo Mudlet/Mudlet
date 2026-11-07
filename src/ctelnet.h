@@ -404,6 +404,9 @@ private:
     // Reads a proxy's reply into the dialling socket's proxy engine without running the event loop
     friend class HeadlessSessionTest;
 
+    // Reads how much text Qt holds of a flood
+    friend class TelnetLargeBurstTest;
+
     // Host calls reset(), not cTelnet's constructor: it clears Host members declared after
     // cTelnet, which don't exist yet while cTelnet is constructed.
     friend class Host;
@@ -715,7 +718,7 @@ private:
     // Set while what the game sent before closing is still being taken in, one
     // read per event-loop turn; the disconnect is finished once it is all in.
     bool mDisconnectionPending = false;
-    // A readPendingSocketData() is queued for the rest of a burst; only Windows acts on it
+    // A readPendingSocketData() is queued for the rest of a burst, and does the reading until it is in
     bool mReadPending = false;
     bool mAutoReconnect = false;
     QStringList messageStack;
