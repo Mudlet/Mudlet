@@ -87,6 +87,7 @@
 #include <QtUiTools/quiloader.h>
 #include <QDesktopServices>
 #include <QFile>
+#include <QClipboard>
 #include <QFileDialog>
 #include <QJsonDocument>
 #include <QImage>
@@ -4486,6 +4487,51 @@ QString mudlet::getOpenFileName(const QString& title, const QString& location)
 QString mudlet::getExistingDirectory(const QString& title, const QString& location)
 {
     return QFileDialog::getExistingDirectory(nullptr, title, location);
+}
+
+namespace {
+// open(), not exec(): the dialog answers through finished from the event loop rather than one of its own. Parented,
+// so it goes with the main window rather than keep the application running on its own, and with its asker too.
+void openFileDialog(QWidget* pParent, const QString& title, const QString& location, const QFileDialog::FileMode mode, QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    auto* pDialog = new QFileDialog(pParent, title, location);
+    pDialog->setAttribute(Qt::WA_DeleteOnClose);
+    pDialog->setFileMode(mode);
+    if (mode == QFileDialog::Directory) {
+        pDialog->setOption(QFileDialog::ShowDirsOnly);
+    }
+    const auto answer = QObject::connect(pDialog, &QFileDialog::finished, context, [pDialog, done = std::move(done)](const int result) {
+        done(result == QDialog::Accepted ? pDialog->selectedFiles().value(0) : QString());
+    });
+    // destroyed comes before the asker's connections go, so the close's finished would still reach it
+    QObject::connect(context, &QObject::destroyed, pDialog, [pDialog, answer]() {
+        QObject::disconnect(answer);
+        pDialog->close();
+    });
+    pDialog->open();
+}
+} // namespace
+
+void mudlet::getOpenFileNameAsync(const QString& title, const QString& location, QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    openFileDialog(this, title, location, QFileDialog::ExistingFile, context, std::move(done));
+}
+
+void mudlet::getExistingDirectoryAsync(const QString& title, const QString& location, QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    openFileDialog(this, title, location, QFileDialog::Directory, context, std::move(done));
+}
+
+void mudlet::clipboardTextAsync(QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    QTimer::singleShot(0ms, context, [done = std::move(done)]() {
+        done(QGuiApplication::clipboard()->text());
+    });
+}
+
+void mudlet::setClipboardText(const QString& text)
+{
+    QGuiApplication::clipboard()->setText(text);
 }
 
 std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)

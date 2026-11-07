@@ -36,8 +36,10 @@
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QDebug>
+#include <QClipboard>
 #include <QDesktopServices>
 #include <QFile>
+#include <QGuiApplication>
 #include <QKeySequence>
 #include <QList>
 #include <QMap>
@@ -176,6 +178,36 @@ QPointer<const QObject> windowIdentity(const Host* pHost, const QString& name)
     return pModel ? &pModel->mNotifier : nullptr;
 }
 } // namespace
+
+void TNullAppFrontend::getOpenFileNameAsync(const QString&, const QString&, QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    QTimer::singleShot(0ms, context, [done = std::move(done)]() {
+        done(std::nullopt);
+    });
+}
+
+void TNullAppFrontend::getExistingDirectoryAsync(const QString&, const QString&, QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    QTimer::singleShot(0ms, context, [done = std::move(done)]() {
+        done(std::nullopt);
+    });
+}
+
+void TNullAppFrontend::clipboardTextAsync(QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    QTimer::singleShot(0ms, context, [this, done = std::move(done)]() {
+        done(qobject_cast<QGuiApplication*>(QCoreApplication::instance()) ? QGuiApplication::clipboard()->text() : mClipboardText);
+    });
+}
+
+void TNullAppFrontend::setClipboardText(const QString& text)
+{
+    if (qobject_cast<QGuiApplication*>(QCoreApplication::instance())) {
+        QGuiApplication::clipboard()->setText(text);
+        return;
+    }
+    mClipboardText = text;
+}
 
 TAppFrontend* TAppFrontend::nullView()
 {

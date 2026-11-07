@@ -87,6 +87,12 @@ public:
     void closeComposer(QObject*) override {}
     QString getOpenFileName(const QString&, const QString&) override { return QString(); }
     QString getExistingDirectory(const QString&, const QString&) override { return QString(); }
+    // None, there being nobody to choose
+    void getOpenFileNameAsync(const QString&, const QString&, QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    void getExistingDirectoryAsync(const QString&, const QString&, QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    // The system's clipboard while there is a QGuiApplication, else text kept here
+    void clipboardTextAsync(QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    void setClipboardText(const QString& text) override;
     // Refuses what the main window refuses whatever its bars show, bar clashes with the main window's own shortcuts, and
     // keeps each command for a frontend to show and activate
     int addAddonCommand(const CommandRequest& request, Host* pHost, const QString& package, QString& error) override;
@@ -143,6 +149,7 @@ private:
     // Held, unlike the rest, as getConfig() reads these back. Each starts at the main window's default
     // with no saved settings, until a pool with no main window reads Mudlet.ini's.
     bool mDrawUpperLowerLevels = true;
+    QString mClipboardText;
     bool mShowTabConnectionIndicators = false;
     // A pointer, as the main window keeps it, so a profile opened again under the name is not in front
     QPointer<Host> mpActiveHost;
