@@ -22,6 +22,7 @@
 add_library(mudlet_headless STATIC
     THeadlessSession.cpp
     THeadlessSessionInput.cpp
+    THeadlessSessionCommands.cpp
     THeadlessSession.h
     THeadlessSessionOutput.cpp
 )
