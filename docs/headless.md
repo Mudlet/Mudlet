@@ -634,3 +634,10 @@ scripts added in a profile they opened with `loadProfile()` are that profile's, 
 they are left out. It reads the commands as they are at the call, from anywhere, and is empty with no
 profile open, so after `shutdown()` too, as removing a package, resetting the profile and closing it
 removes its commands.
+
+`addonCommandsChanged` says one or more of them changed, for the app to read them again: a command
+added or removed, or a change a script made to one that `addonCommands()` gives, and the commands a
+removed package added, or all of the profile's when it is reset. A call that leaves a command as it was,
+such as setting the tooltip it has, sends nothing, and nor does a change to another profile's commands.
+It is sent from the event loop, once for all the changes made before it runs, so a script that adds a
+dozen commands sends it once.

@@ -59,3 +59,36 @@ QList<THeadlessSession::AddonCommand> THeadlessSession::addonCommands() const
     }
     return result;
 }
+
+void THeadlessSession::connectCommandRelays(const unsigned int run)
+{
+    auto* pView = dynamic_cast<TNullAppFrontend*>(TAppFrontend::instance());
+    if (!pView) {
+        return;
+    }
+    connect(&pView->mNotifier, &TNullAppFrontendNotifier::addonCommandsChanged, this, [this, run](const Host* pHost) {
+        if (run != mRun || !mpHost || pHost != mpHost.data() || mAddonCommandsQueuedRun == run) {
+            return;
+        }
+        mAddonCommandsQueuedRun = run;
+        QMetaObject::invokeMethod(
+                this,
+                [this, run]() {
+                    if (mAddonCommandsQueuedRun == run) {
+                        mAddonCommandsQueuedRun = 0;
+                    }
+                    if (run == mRun) {
+                        const QString profile = mProfileName;
+                        emit addonCommandsChanged(profile);
+                    }
+                },
+                Qt::QueuedConnection);
+    });
+}
+
+void THeadlessSession::disconnectCommandRelays()
+{
+    if (auto* pView = dynamic_cast<TNullAppFrontend*>(TAppFrontend::instance())) {
+        disconnect(&pView->mNotifier, nullptr, this, nullptr);
+    }
+}
