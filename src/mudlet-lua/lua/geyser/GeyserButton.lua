@@ -48,7 +48,7 @@ function Geyser.Button:new(cons, container)
   if consType ~= "table" then
     printError(f"bad argument #1 type (cons as table expects, got {consType})", true, true)
   end
-  cons.name = cons.name or Geyser.nameGen("button")
+  cons.name = cons.name or Geyser.anonymousName(cons.type or "button", "button")
   local me, taken = self.parent:new(cons, container)
   if not me then
     return nil, taken
