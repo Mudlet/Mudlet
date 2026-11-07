@@ -1995,7 +1995,9 @@ int TLuaInterpreter::setButtonState(lua_State* L)
 
     if (pItem->mButtonState != checked) {
         pItem->mButtonState = checked;
-        getHostFromLua(L).consoleFrontend()->setActionButtonChecked(pItem, checked);
+        Host& host = getHostFromLua(L);
+        host.consoleFrontend()->setActionButtonChecked(pItem, checked);
+        emit host.signal_buttonsChanged();
         lua_pushboolean(L, true);
         return 1;
     }

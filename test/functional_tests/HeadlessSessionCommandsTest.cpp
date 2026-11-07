@@ -636,6 +636,67 @@ tempButton("headlessSide", "only", 0)
         QVERIFY(!session.buttonBars().at(0).buttons.at(0).checked);
         QVERIFY(session.shutdown(false));
     }
+    void test_buttonChangesAreSent()
+    {
+        const QString name = qsl("Headless Buttons Changes");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy changed(&session, &THeadlessSession::buttonsChanged);
+        QVERIFY(session.runLua(qsl(R"lua(
+tempButtonToolbar("headlessChanges", 0, 0)
+tempButton("headlessChanges", "pushed", 0)
+tempButton("headlessChanges", "plain", 0)
+)lua")));
+        QCOMPARE(changed.count(), 0);
+        QVERIFY(changed.wait());
+        QTest::qWait(50);
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(changed.at(0).at(0).toString(), name);
+
+        // No Lua function makes a push-down button; the editor does
+        session.host()->getActionUnit()->findAction(qsl("pushed"))->setIsPushDownButton(true);
+        changed.clear();
+        QVERIFY(session.runLua(qsl("setButtonState('pushed', true)")));
+        QVERIFY(changed.wait());
+        QVERIFY(session.buttonBars().at(0).buttons.at(0).checked);
+
+        changed.clear();
+        QVERIFY(session.runLua(qsl("setButtonState('pushed', true)")));
+        QTest::qWait(50);
+        QCOMPARE(changed.count(), 0);
+
+        QVERIFY(session.runLua(qsl("setButtonStyleSheet('plain', 'color: green;')")));
+        QVERIFY(changed.wait());
+        QCOMPARE(session.buttonBars().at(0).buttons.at(1).styleSheet, qsl("color: green;"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_installingAPackageWithAToolbarSendsAChange()
+    {
+        const QString name = qsl("Headless Buttons Package");
+        QVERIFY(writeProfile(name));
+        const QString packagePath = mConfigDir.filePath(qsl("buttonsPackaged.xml"));
+        QVERIFY(writeFile(packagePath, R"(<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+<ActionPackage><ActionGroup isActive="yes" isFolder="yes" isPushButton="no" isFlatButton="no" useCustomLayout="no">
+<name>packagedBar</name><packageName></packageName><script></script><css></css><location>0</location>
+<Action isActive="yes" isFolder="no" isPushButton="no" isFlatButton="no" useCustomLayout="no">
+<name>packagedButton</name><packageName></packageName><script></script><css></css></Action>
+</ActionGroup></ActionPackage>
+</MudletPackage>
+)"));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy changed(&session, &THeadlessSession::buttonsChanged);
+        QVERIFY2(session.installPackage(packagePath) == THeadlessSession::PackageResult::installed, qPrintable(session.errorString()));
+        QTRY_VERIFY(changed.count() > 0);
+        const QList<THeadlessSession::ButtonBar> bars = session.buttonBars();
+        QCOMPARE(barNames(bars), QStringList{qsl("packagedBar")});
+        QCOMPARE(buttonNames(bars.at(0).buttons), QStringList{qsl("packagedButton")});
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionCommandsTest.moc"

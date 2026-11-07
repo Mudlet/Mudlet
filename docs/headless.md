@@ -680,3 +680,9 @@ the icon of the button it hangs from, while a floating toolbar's menu has an ent
 holds every entry, active or not, with its own icon. A push-down button on a floating toolbar's menu
 reads as down when it is, where the GUI ticks it only once `setButtonState()` does. The list is empty
 with no profile open.
+
+`buttonsChanged` says the bars have changed, for the app to read `buttonBars()` again: a script's
+`tempButtonToolbar()`, `tempButton()`, `setButtonStyleSheet()` or `showToolBar()`, a package installed or
+removed, and `setButtonState()` when it moves a button up or down, but not when it leaves it as it
+was. As with `addonCommandsChanged`, the changes made before the event loop runs send one, from the
+event loop.

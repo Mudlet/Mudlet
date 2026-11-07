@@ -558,6 +558,9 @@ signals:
     // package's removal or the profile's reset, for the app to read them again. One for all the changes made before the event
     // loop runs, from the event loop.
     void addonCommandsChanged(const QString& profile);
+    // What buttonBars() gives changed, by a script, a package or the profile's reset, for the app to read the bars
+    // again. One for all the changes made before the event loop runs, from the event loop.
+    void buttonsChanged(const QString& profile);
     // The connection was made; from the event loop
     void connected(const QString& profile);
     // The connection ended, or could not be made, or was called off while connecting; from the event loop
@@ -644,6 +647,8 @@ private:
     unsigned int mRun = 0;
     // The run an addonCommandsChanged is queued for, so the changes of one turn send one; 0 for none
     unsigned int mAddonCommandsQueuedRun = 0;
+    // The same for buttonsChanged
+    unsigned int mButtonsQueuedRun = 0;
     std::unique_ptr<HostManager> mpPool;
     struct ShownLine
     {
