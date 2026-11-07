@@ -3254,6 +3254,11 @@ void TNullConsoleFrontend::setBorderColor(const QColor& color)
     mpHost->mainConsoleModel().mBorderColor = color;
 }
 
+void TNullConsoleFrontend::applyBorders()
+{
+    mpHost->layOutMainAreaWithNoView(Host::MainAreaChange::borders);
+}
+
 // As TConsole::setConsoleBgColor() leaves a sub-console's model
 bool TNullConsoleFrontend::setSubConsoleBackgroundColor(const QString& name, const QColor& color)
 {
