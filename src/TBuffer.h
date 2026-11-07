@@ -788,8 +788,8 @@ private:
     bool linkHoldsState(const int id) const;
     QSet<int> collectLiveLinkIdsResettingIssueLines();
     void dropStateOfRemovedLinks();
-    void noteRemovedLinkId(int id, qint64 lastLine);
-    void noteRemovedLinks(const TLineFormat& line, qint64 lineNumber, int from = 0, int to = -1);
+    void noteRemovedLinkId(int id, qint64 lastLine, bool tell = true);
+    void noteRemovedLinks(const TLineFormat& line, qint64 lineNumber, int from = 0, int to = -1, bool tell = true);
     THyperlinkVisibilityManager* hyperlinkVisibilityManagerOrNull();
     TChar currentFormat() const;
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, bool startsIndented, const int maxWidth, const int indent, const int hangingIndent);
@@ -1251,6 +1251,7 @@ public:
     void restoreLinkIndices(int lineNumber, int startColumn, int count, int linkIndex); // Restore link indices in a range
 
 private:
+    void noteLinkChanged(int linkIndex);
 };
 
 #ifndef QT_NO_DEBUG_STREAM

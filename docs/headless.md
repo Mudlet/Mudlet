@@ -577,6 +577,23 @@ web link opens through `QDesktopServices::openUrl()`, which an app can route wit
 link does not have, `unknown` for an id the main console does not hold, as once a game's OSC 8 visibility
 settings have deleted its line, and `refused` for where `submit()` is, a handler included.
 
+`linksChanged(profile, links)` names the links whose `link()` may have changed, once per pass of the
+event loop, each id once: one followed (by `followLink()` or a script) and now `visited`, chosen or
+deselected in its group, a spoiler revealed, one a game's OSC 8 visibility settings concealed or revealed,
+one a game's MXP `<EXPIRE>` removed, and every link on a line that went. A line goes by a script's
+`deleteLine()` or `clearWindow()`, or by an OSC 8 concealment that deletes the whole line, which names the
+line's other links as well as the one followed. `link()` gives `nullopt` once no line holds the link, so
+one that runs on over a line still held is named and still given. The app reads `link()` again for
+each; an id may be one it was never sent, as where a trigger deletes the line the link arrived on. Hover
+is not sent, the pointer being the app's own.
+
+The trimming of the main console's oldest lines, as its buffer fills, is not told: no signal names the
+lines it lets go, and the app has each of them, with its links, from `outputLine` and `lineShown`, to
+keep for as long as it likes. Nor does it name their links. The console lets go of the links that no
+line holds any more each time a quarter of its buffer has been trimmed, and `linksChanged` names those
+then, after which `link()` gives `nullopt` for each at once. Until then, `link()` of a link that only
+trimmed lines held gives `nullopt` too, but reads the whole buffer to find that out.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,

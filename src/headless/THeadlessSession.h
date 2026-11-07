@@ -28,6 +28,7 @@
 #include <QList>
 #include <QObject>
 #include <QPointer>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 
@@ -455,6 +456,13 @@ signals:
     // The profile began connecting to the game, as it starts or reconnects, where the GUI marks its tab as
     // connecting; connected or disconnected follows, or the profile closes. From the event loop
     void connecting(const QString& profile);
+    // What link() gives for these main console links may have changed, gathered from one pass of the event loop:
+    // a click or followLink() leaving one visited, chosen or deselected in its group, a spoiler revealed, the game's
+    // OSC 8 visibility settings concealing or revealing one, an MXP <EXPIRE>, a line holding it deleted, as by
+    // deleteLine(), clearWindow() or a whole-line concealment, or the console letting go of one no line holds any
+    // more after trims; link() gives nullopt once no line holds it.
+    // Each id once, in the order they changed. Hover is not sent, the pointer being the app's own. From the event loop.
+    void linksChanged(const QString& profile, const QList<int>& links);
     // What the GUI shows outside the profile's screen: a script's showNotification(), which answers true only
     // when this signal is connected and not blocked, with no milliseconds for the system's own time; and a
     // script's alert() or the game's bell, asking for the player's attention for that long, 0 until they come
@@ -563,6 +571,8 @@ private:
     void connectOutputRelays(Host*, unsigned int run);
     void noteOutputStateAtLoad();
     void sendLatency();
+    void connectLinkRelays(Host*, unsigned int run);
+    void sendLinksChanged(unsigned int run);
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
@@ -631,6 +641,11 @@ private:
     unsigned int mLatencyPaceRun = 0;
     // The latency box's text as last sent
     QString mDeliveredLatency;
+    // The links changed since linksChanged was last sent, for the run they changed in
+    QList<int> mChangedLinks;
+    // The same, to look up: a sweep or clearWindow() removes thousands at once
+    QSet<int> mChangedLinkIds;
+    bool mLinksChangedPending = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(THeadlessSession::TextStyles)
