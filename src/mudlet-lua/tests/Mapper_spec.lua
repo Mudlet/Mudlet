@@ -831,6 +831,27 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_truthy(err:find("reserved and protected", 1, true), err)
     end)
 
+    it("setAreaName renames an area by a name that is only part of the default area's name", function()
+      local defaultName = getRoomAreaName(-1)
+      local made = {}
+      finally(function()
+        for _, id in ipairs(made) do
+          deleteArea(id)
+        end
+      end)
+      -- Taken from the name itself, as it is translated
+      for _, oldName in ipairs({utf8.sub(defaultName, 1, 3), utf8.sub(defaultName, -3), utf8.sub(defaultName, 2, 2)}) do
+        local id = addAreaName(oldName)
+        assert.is_number(id, oldName)
+        made[#made + 1] = id
+
+        assert.is_true(setAreaName(oldName, "MapperSpecRenamed " .. oldName))
+        assert.are.equal(id, getAreaTable()["MapperSpecRenamed " .. oldName])
+        assert.is_nil(getAreaTable()[oldName])
+      end
+      assert.are.equal(defaultName, getRoomAreaName(-1))
+    end)
+
     it("setAreaName rejects an areaID below one", function()
       local ok, err = setAreaName(0, "MapperSpecRenameTarget")
       assert.is_nil(ok)
