@@ -159,6 +159,11 @@ public:
         QFont font;
         // One of the main window's QDockWidgets rather than a widget in its area
         bool inDock = false;
+        // A user window's dock: where openUserWindow() put it, whether the player may dock it, and its title
+        bool autoDock = true;
+        Qt::DockWidgetArea dockArea = Qt::RightDockWidgetArea;
+        bool floating = false;
+        QString title;
     };
 
     explicit TNullConsoleFrontend(Host* pHost);
@@ -396,6 +401,9 @@ public:
     };
     std::optional<LabelRecord> labelRecord(const QString& name) const;
     TWindowNotifier& windowNotifier() { return mWindowNotifier; }
+    // Where an app put a user window's dock, as the GUI's dock is moved and resized by its layout or the player
+    bool placeUserWindow(const QString& name, const QRect& geometry, bool floating);
+    bool userWindow(const QString& name) const;
 
 private:
     friend class TNullMxpFrameFrontend;
@@ -491,6 +499,10 @@ private:
         QSize reportedGrid;
         bool paneResizePending = true;
         qint64 stackOrder = 0;
+        // QDockWidget::allowedAreas() being all of them, the area it was last docked in, and isFloating()
+        bool autoDock = true;
+        Qt::DockWidgetArea dockArea = Qt::RightDockWidgetArea;
+        bool floating = false;
     };
     // As TConsole::mpCommandLine tells a console's own command line from another of its name
     static bool ownsLine(const SubConsole& console, const PlainWindow& commandLine) { return commandLine.writer && commandLine.writer == console.ownLine; }
