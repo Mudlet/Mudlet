@@ -98,6 +98,7 @@ set(mudlet_SRCS
     TAudioMixer.cpp
     TBuffer.cpp
     TCommandHistory.cpp
+    TCommandLineCompletion.cpp
     TConsoleModel.cpp
     TDebug.cpp
     TEncodingHelper.cpp
@@ -408,6 +409,7 @@ set(mudlet_HDRS
     TAudioMixer.h
     TBuffer.h
     TCommandHistory.h
+    TCommandLineCompletion.h
     TConsoleFrontend.h
     TConsoleModel.h
     TConsoleModelNotifier.h

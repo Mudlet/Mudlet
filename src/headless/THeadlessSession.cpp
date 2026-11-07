@@ -1492,9 +1492,12 @@ THeadlessSession::KeyResult THeadlessSession::offerKey(const Qt::Key key, const 
             return KeyResult::bindingRan;
         }
         if (commandLineKeepsKey(*mpHost, event)) {
-            // TCommandLine selects its whole line on Escape, so what the player types next replaces it
+            // TCommandLine selects its whole line on Escape, so what the player types next replaces it, and ends Tab's cycle
             if (auto* pFrontend = mpHost->consoleFrontend(); key == Qt::Key_Escape && pFrontend) {
                 pFrontend->selectCommandLineText(QString());
+                if (auto* pView = dynamic_cast<TNullConsoleFrontend*>(pFrontend)) {
+                    pView->resetMainCommandLineCompletion();
+                }
             }
             //: Error from a frontend with no window that was given a key press, such as Return or Up, which the GUI's command line acts on itself rather than offering it to any key binding
             mErrorString = tr("The GUI's command line keeps that key for itself, offering it to no key binding; the app handles it.");

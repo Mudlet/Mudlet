@@ -780,3 +780,20 @@ and `clearCmdLineSuggestions()` and `clearCmdLineBlacklist()` empty them. Words 
 from `createCommandLine()` or a mini console's own command line are that line's, not the main line's.
 Both lists are empty with no profile open, and may be read from anywhere, a handler included. No signal
 says they changed: an app reads them when it needs them, as when the player presses Tab.
+
+`completeCommandLine()` is the Tab key itself, and `completeCommandLine(false)` Shift+Tab. It completes
+the word at the end of the line `setCommandLineText()` last set, from the same words the GUI would offer,
+the most recently seen first: words of the last 500 lines of the main console, then the suggestions, none
+that is blacklisted, matched without regard to case. It returns the whole line it leaves, which scripts'
+`getCmdLine()` reads from then on, for the app to show with its cursor at the end. Each further call takes
+the next word, or with `false` the one before, stopping at either end as the GUI does rather than wrapping.
+The cycle ends when the line changes, when the player presses Escape (sent with `pressKey()`) and when
+they submit it; the next call then reads the line afresh. Mudlet sees each new line rather than the key
+that made it, so any change ends the cycle, as Backspace does in the GUI: what the player types, a line the
+app sets itself, such as one it recalls from the history, and a script's `printCmdLine()`. Only the line it
+was given, handed straight back to `setCommandLineText()`, keeps the cycle going. The GUI's line ends the
+cycle on a key alone, so there a recall or a script's `printCmdLine()` between two presses of Tab has the
+second complete the old word over the new line; the session completes the new line instead. On an empty
+line nothing is completed, as in the GUI once it has sent a line. When no word completes the line it
+returns nothing, and `errorString()` says so; it does the same while the game hides what is typed, as the
+GUI completes no password, and wherever `submit()` is refused, as from a handler of the session's signals.
