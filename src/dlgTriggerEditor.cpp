@@ -543,6 +543,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
     descActiveOffsetTimer = tr("activated offset timer");
     //: A timer that starts after another timer is currently turned off
     descInactiveOffsetTimer = tr("deactivated offset timer");
+    //: Said after an item that is switched on while the emergency stop keeps everything from running. %1 is how the item is described otherwise, such as "activated" or "activated folder"
+    descHeldByStop = tr("%1, held by the emergency stop");
     //: Accessible description for a newly created folder, shown after the folder name
     descNewFolder = tr("new folder");
     //: Accessible description for a newly created item, shown after the item name
@@ -1744,6 +1746,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
     connect(mpHost, &Host::signal_scriptCodeChanged, this, &dlgTriggerEditor::writeScript);
     connect(mpHost, &Host::signal_itemsChangedByScript, this, [this]() {
         mNeedUpdateData = true;
+    });
+    // The dots read the stop as they paint; what a screen reader is told is written into the rows, so those are rebuilt
+    connect(mpHost, &Host::signal_emergencyStopChanged, this, [this]() {
+        mNeedUpdateData = true;
+        for (QTreeWidget* pTree : {treeWidget_triggers, treeWidget_aliases, treeWidget_timers, treeWidget_keys, mpFolderTree}) {
+            pTree->viewport()->update();
+        }
     });
     connect(mpHost, &Host::signal_errorConsolePrint, this, [this](const QString& text, const QColor& fgColor, const QColor& bgColor) {
         mpErrorConsole->print(text, fgColor, bgColor);
@@ -5289,13 +5298,11 @@ void dlgTriggerEditor::activeToggle_trigger()
 
     if (!pT->state()) {
         pT->setIsActive(false);
-        showError(tr(R"(<p>Unable to activate "<tt>%1</tt>": %2</p>
-                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)")
-                          .arg(pT->getName().toHtmlEscaped(), pT->getError()));
+        showActivationFailure(pT->getName(), pT->getError());
         itemDescription = descError;
     }
     pItem->setText(0, pT->getName());
-    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+    pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
 
     if (pItem->childCount() > 0) {
         children_icon_triggers(pItem);
@@ -5674,7 +5681,7 @@ void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent
         } else {
             itemDescription = descError;
         }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
     }
 }
 
@@ -5752,13 +5759,11 @@ void dlgTriggerEditor::activeToggle_timer()
 
     if (!pT->state()) {
         pT->setIsActive(false);
-        showError(tr(R"(<p><b>Unable to activate "<tt>%1</tt>": %2.</b></p>
-                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)")
-                          .arg(pT->getName().toHtmlEscaped(), pT->getError()));
+        showActivationFailure(pT->getName(), pT->getError());
         itemDescription = descError;
     }
     pItem->setText(0, pT->getName());
-    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+    pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
 
     if (pItem->childCount() > 0) {
         children_icon_timer(pItem);
@@ -5818,7 +5823,7 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent)
         } else {
             itemDescription = descError;
         }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
     }
 }
 
@@ -5860,13 +5865,11 @@ void dlgTriggerEditor::activeToggle_alias()
 
     if (!pT->state()) {
         pT->setIsActive(false);
-        showError(tr(R"(<p><b>Unable to activate "<tt>%1</tt>"; %2.</b></p>
-                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)")
-                          .arg(pT->getName().toHtmlEscaped(), pT->getError()));
+        showActivationFailure(pT->getName(), pT->getError());
         itemDescription = descError;
     }
     pItem->setText(0, pT->getName());
-    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+    pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
 
     if (pItem->childCount() > 0) {
         children_icon_alias(pItem);
@@ -5915,7 +5918,7 @@ void dlgTriggerEditor::children_icon_alias(QTreeWidgetItem* pWidgetItemParent)
         } else {
             itemDescription = descError;
         }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
     }
 }
 
@@ -5958,9 +5961,7 @@ void dlgTriggerEditor::activeToggle_script()
 
     if (!pT->state()) {
         pT->setIsActive(false);
-        showError(tr(R"(<p><b>Unable to activate "<tt>%1</tt>"; %2.</b></p>
-                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)")
-                          .arg(pT->getName().toHtmlEscaped(), pT->getError()));
+        showActivationFailure(pT->getName(), pT->getError());
         itemDescription = descError;
     }
     pItem->setText(0, pT->getName());
@@ -6059,9 +6060,7 @@ void dlgTriggerEditor::activeToggle_action()
 
     if (!pT->state()) {
         pT->setIsActive(false);
-        showError(tr(R"(<p><b>Unable to activate "<tt>%1</tt>"; %2.</b></p>
-                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)")
-                          .arg(pT->getName().toHtmlEscaped(), pT->getError()));
+        showActivationFailure(pT->getName(), pT->getError());
         itemDescription = descError;
     }
     pItem->setText(0, pT->getName());
@@ -6162,13 +6161,11 @@ void dlgTriggerEditor::activeToggle_key()
     } else {
         itemDescription = descError;
     }
-    pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+    pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
 
     if (!pT->state()) {
         pT->setIsActive(false);
-        showError(tr(R"(<p><b>Unable to activate "<tt>%1</tt>"; %2.</b></p>
-                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)")
-                          .arg(pT->getName().toHtmlEscaped(), pT->getError()));
+        showActivationFailure(pT->getName(), pT->getError());
         itemDescription = descError;
     }
 
@@ -6219,7 +6216,7 @@ void dlgTriggerEditor::children_icon_key(QTreeWidgetItem* pWidgetItemParent)
         } else {
             itemDescription = descError;
         }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
     }
 }
 
@@ -7225,7 +7222,7 @@ void dlgTriggerEditor::saveTrigger()
             pT->setIsActive(false);
             reportCompileError(pT->getError());
         }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
 
         // Capture NEW state after modifications (for redo)
         QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
@@ -7339,7 +7336,7 @@ void dlgTriggerEditor::saveTimer()
             pItem->setText(0, name);
             reportCompileError(pT->getError());
         }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
 
         // Capture NEW state after modifications (for redo)
         QString newStateXML = exportTimerToXML(pT, SnapshotScope::ItemOnly);
@@ -7441,7 +7438,7 @@ bool dlgTriggerEditor::saveAlias()
             pItem->setText(0, name);
             reportCompileError(pT->getError());
         }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
 
         // Capture NEW state after modifications (for redo)
         QString newStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
@@ -8479,7 +8476,7 @@ void dlgTriggerEditor::saveKey()
             pItem->setText(0, name);
             reportCompileError(pT->getError());
         }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
 
         // Capture NEW state after modifications (for redo)
         QString newStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
@@ -9997,7 +9994,7 @@ void dlgTriggerEditor::populateKeys()
         } else {
             itemDescription = descError;
         }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
     }
 }
 
@@ -10188,7 +10185,7 @@ void dlgTriggerEditor::populateAliases()
         } else {
             itemDescription = descError;
         }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
     }
 }
 
@@ -10345,7 +10342,7 @@ void dlgTriggerEditor::populateTimers()
         } else {
             itemDescription = descError;
         }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
     }
 }
 
@@ -10482,7 +10479,7 @@ void dlgTriggerEditor::populateTriggers()
         } else {
             itemDescription = descError;
         }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
     }
 }
 
@@ -10725,7 +10722,7 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
         } else {
             itemDescription = descError;
         }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
     }
 }
 
@@ -10770,7 +10767,7 @@ void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* p
         } else {
             itemDescription = descError;
         }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
     }
 }
 
@@ -10861,7 +10858,7 @@ void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetIte
         } else {
             itemDescription = descError;
         }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
     }
 }
 
@@ -10967,7 +10964,7 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
         } else {
             itemDescription = descError;
         }
-        pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
+        pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
     }
 }
 
@@ -11921,6 +11918,44 @@ QString dlgTriggerEditor::linkErrorLineToScript(const QString& error)
     linked.replace(
             match.capturedStart(), match.capturedLength(), qsl("<a href='mudlet-error-line:%1' style='color: inherit; text-decoration: underline;'>%2</a>").arg(match.captured(2), match.captured(0)));
     return linked;
+}
+
+// The code heading already shows a script error itself, so the banner says what to do about it and links its line
+void dlgTriggerEditor::showActivationFailure(const QString& name, const QString& error)
+{
+    const QRegularExpressionMatch match = csmCompileErrorLineRegex.match(QTextDocumentFragment::fromHtml(error).toPlainText().simplified());
+    if (!match.hasMatch()) {
+        //: Editor banner when an item could not be switched on. %1 is the item's name, %2 the reason the item gave, such as a pattern that is not valid.
+        showError(tr("<p>\"%1\" could not be switched on: %2</p><p>Fix that, then switch it on again.</p>").arg(name.toHtmlEscaped(), error));
+        return;
+    }
+
+    const int line = match.captured(1).toInt();
+    //: Link in the editor banner that jumps to the script line with the error. %1 is the line number.
+    const QString lineLink = qsl("<a href='mudlet-error-line:%1' style='color: inherit; text-decoration: underline;'>%2</a>").arg(QString::number(line), tr("line %1").arg(line));
+    //: Editor banner when an item whose script has an error was switched on. %1 is a link reading "line 12", %2 the item's name.
+    showError(tr("<p>Fix the error on %1, then switch \"%2\" on again.</p>").arg(lineLink, name.toHtmlEscaped()));
+    // showError() forgets the item any earlier link was for; this one is for the open item's own script
+    int itemId = -1;
+    QString chunkName;
+    QString ownError;
+    if (currentScriptChunk(itemId, chunkName, ownError)) {
+        mErrorLineView = mCurrentView;
+        mErrorLineItemId = itemId;
+    }
+}
+
+// The tree's dot shows an item the emergency stop holds back as not running; this says the same to a screen reader.
+// Only an item that would run without the stop is held: one in a switched-off group already says so.
+QString dlgTriggerEditor::spokenRunState(const QString& description) const
+{
+    if (!mpHost || !mpHost->mEmergencyStop) {
+        return description;
+    }
+    if (description == descActive || description == descActiveFolder || description == descActiveFilterChain || description == descActiveOffsetTimer) {
+        return descHeldByStop.arg(description);
+    }
+    return description;
 }
 
 void dlgTriggerEditor::jumpToErrorLine(const int line)

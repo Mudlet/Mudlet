@@ -54,7 +54,6 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QMimeData>
-#include <QPainter>
 #include <QResizeEvent>
 #include <QSettings>
 #include <QShowEvent>
@@ -75,6 +74,8 @@ static constexpr int scmExporterColumnInset = uiDesign::scmTabPaneInset;
 // Matches PackageItemDelegate::cRowGutter, so the two windows' rows line up
 static constexpr int scmExporterRowGutter = uiDesign::scmAccentBarWidth + 5;
 static constexpr int scmExporterIconSize = 48;
+// Set on the icon box while an image it would take is dragged over it
+static constexpr char scmProp_iconDropTarget[] = "exporterIconDropTarget";
 static constexpr int scmExporterIconGlyphSize = 24;
 static constexpr int scmExporterButtonGlyphSize = 16;
 // No version string anybody writes needs more room than this
@@ -501,9 +502,12 @@ void dlgPackageExporter::buildIconRow()
 
     // A disabled label is announced as unavailable; the caption tone quietens it instead
     ui->label->setEnabled(true);
-    //: Package exporter - note beside the icon box saying what size of picture to hand it
-    ui->label->setText(tr("512 x 512 works best"));
+    //: Package exporter - note beside the icon box saying what size of picture to hand it, and that an image file can be dropped on the box. Keep the line break: the note stands beside a box two lines tall
+    ui->label->setText(tr("512 x 512 works best\nor drop an image here"));
 
+    // The .ui pads the row for a drop outline drawn around it; the box itself shows the drop now, and the padding
+    // set the row two pixels off the help page field beside it
+    ui->horizontalLayout_2->setContentsMargins(0, 0, 0, 0);
     uiDesign::removeFromLayoutTree(ui->horizontalLayout_2, ui->Icon);
     ui->horizontalLayout_2->insertWidget(0, ui->Icon);
     ui->horizontalLayout_2->addStretch(1);
@@ -929,8 +933,9 @@ void dlgPackageExporter::applyPackageExporterShellStyle()
             + uiDesign::buttonStyleSheet(tokens, qsl("#exporterDetailsColumn")) + uiDesign::choiceStyleSheet(tokens, qsl("#exporterDetailsColumn")) + captionLabels.join(qsl(", "))
             + qsl(" { color: %1; background: transparent; font-size: %2pt; }").arg(tokens.mutedText.name(), captionSize)
             + qsl("#exporterDetailsHeading { color: %1; background: transparent; }").arg(tokens.mutedText.name())
-            + qsl("#Icon { background-color: %1; border: %2px solid %3; border-radius: %4px; }").arg(tokens.card.name(), hairline, tokens.border.name(), QString::number(uiDesign::scmRadiusInput))
             // Dashed, not the input recipe's solid hairline: the dashed edge says it takes a drop
+            + qsl("#Icon { background-color: %1; border: %2px dashed %3; border-radius: %4px; }").arg(tokens.card.name(), hairline, tokens.border.name(), QString::number(uiDesign::scmRadiusInput))
+            + qsl("#Icon[%1=\"true\"] { background-color: %2; border-color: %3; }").arg(QLatin1String(scmProp_iconDropTarget), tokens.accentSoft, tokens.accent.name())
             + qsl("#exporterDetailsColumn QListWidget#listWidget_addedFiles { background-color: %1; color: %2; border: %3px dashed %4; border-radius: %5px; }")
                       .arg(tokens.field.name(), tokens.text.name(), hairline, tokens.border.name(), QString::number(uiDesign::scmRadiusInput))
             // A label, not a placeholder, so held to the text contrast floor
@@ -1689,11 +1694,16 @@ QString dlgPackageExporter::iconFileFromDrop(const QDropEvent* event)
     return info.absoluteFilePath();
 }
 
+// Shown on the icon box, where the picture lands, in the accent the files drop zone's dashed edge stands for
 void dlgPackageExporter::setIconDropHighlight(const bool highlight)
 {
     if (mIconDropHighlight != highlight) {
         mIconDropHighlight = highlight;
-        ui->widget_icon->update();
+        ui->Icon->setProperty(scmProp_iconDropTarget, highlight);
+        // A property selector is matched when the sheet is applied, not when the property changes
+        ui->Icon->style()->unpolish(ui->Icon);
+        ui->Icon->style()->polish(ui->Icon);
+        ui->Icon->update();
     }
 }
 
@@ -1794,13 +1804,6 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             useIcon(fileName);
             return true;
         }
-        case QEvent::Paint:
-            if (mIconDropHighlight) {
-                QPainter painter(ui->widget_icon);
-                painter.setPen(QPen(palette().highlight().color(), 2, Qt::DashLine));
-                painter.drawRect(QRectF(ui->widget_icon->rect()).adjusted(1, 1, -1, -1));
-            }
-            return false;
         default:
             break;
         }

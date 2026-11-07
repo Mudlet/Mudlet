@@ -232,11 +232,23 @@ private:
         return {};
     }
 
+    // During a stop a screen reader also hears that the stop holds a switched-on item back; the setting under that is
+    // what has to be kept
+    QString settingOf(const QString& description) const
+    {
+        for (const QString& active : {mpEditor->descActive, mpEditor->descActiveFolder, mpEditor->descActiveFilterChain, mpEditor->descActiveOffsetTimer}) {
+            if (description == mpEditor->descHeldByStop.arg(active)) {
+                return active;
+            }
+        }
+        return description;
+    }
+
     QString changedLook(const QList<QTreeWidgetItem*>& items, const QList<Look>& before) const
     {
         for (int i = 0; i < items.count(); ++i) {
             const Look now = lookOf(items.at(i));
-            if (now.description != before.at(i).description || now.iconKey != before.at(i).iconKey) {
+            if (settingOf(now.description) != before.at(i).description || now.iconKey != before.at(i).iconKey) {
                 return qsl("\"%1\" changed from \"%2\" to \"%3\"").arg(items.at(i)->text(0), before.at(i).description, now.description);
             }
         }
@@ -570,9 +582,40 @@ private slots:
         QCOMPARE(pMoving->parent(), pFolder);
         // Only a trigger's move repaints the folder it lands in
         if (kind == qsl("trigger")) {
-            QVERIFY2(lookOf(pFolder).description == folderBefore && markOf(pTree, pFolder) == folderMarkBefore, "the folder moved into looks different");
+            QVERIFY2(settingOf(lookOf(pFolder).description) == folderBefore && markOf(pTree, pFolder) == folderMarkBefore, "the folder moved into looks different");
         }
-        QVERIFY2(lookOf(pMoving).description == movingBefore && markOf(pTree, pMoving) == movingMarkBefore, "the moved item looks different");
+        QVERIFY2(settingOf(lookOf(pMoving).description) == movingBefore && markOf(pTree, pMoving) == movingMarkBefore, "the moved item looks different");
+    }
+
+    void test_aScreenReaderHearsWhatTheStopHoldsBack_data() { addKinds(); }
+
+    // The dot shows a switched-on item as not running during a stop; the description has to say the same
+    void test_aScreenReaderHearsWhatTheStopHoldsBack()
+    {
+        QFETCH(QString, kind);
+        QFETCH(QString, prefix);
+        mpEditor->rebuildStaleTrees();
+        mpEditor->mNeedUpdateData = false;
+
+        mpHost->stopAllTriggers();
+        QVERIFY2(mpEditor->mNeedUpdateData, "the stop did not mark the trees for rebuilding");
+        mpEditor->rebuildStaleTrees();
+        QTreeWidget* pTree = showView(kind);
+        QList<QTreeWidgetItem*> items = itemsOf(pTree, prefix);
+        QVERIFY2(!items.contains(nullptr), "the items made for this test are not each in the tree once");
+        const QStringList looks = expectedLooks(prefix);
+        const QStringList active{mpEditor->descActive, mpEditor->descActiveFolder, mpEditor->descActiveFilterChain, mpEditor->descActiveOffsetTimer};
+        for (int i = 0; i < items.count(); ++i) {
+            const QString expected = active.contains(looks.at(i)) ? mpEditor->descHeldByStop.arg(looks.at(i)) : looks.at(i);
+            QCOMPARE(lookOf(items.at(i)).description, expected);
+        }
+
+        mpHost->reenableAllTriggers();
+        QVERIFY2(mpEditor->mNeedUpdateData, "ending the stop did not mark the trees for rebuilding");
+        mpEditor->rebuildStaleTrees();
+        items = itemsOf(showView(kind), prefix);
+        const QString unexpected = unexpectedLook(prefix, items);
+        QVERIFY2(unexpected.isEmpty(), qPrintable(qsl("after the stop ended: %1").arg(unexpected)));
     }
 
     void test_aScriptThatDoesNotCompileStillShowsAsBrokenDuringAStop_data() { addKinds(); }

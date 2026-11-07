@@ -924,18 +924,15 @@ void TDetachedWindow::createToolBar()
 
     //: This is a sub-item of the "Connect" item in the toolbar of a detached Mudlet window.
     mpActionDisconnect = new QAction(tr("Disconnect"), this);
-    mpActionDisconnect->setIcon(QIcon(qsl(":/icons/network-disconnect.png")));
     mpActionDisconnect->setObjectName(qsl("disconnect"));
 
     //: This is a sub-item of the "Connect" item in the toolbar of a detached Mudlet window.
     mpActionCloseProfile = new QAction(tr("Close profile"), this);
-    mpActionCloseProfile->setIcon(QIcon(qsl(":/icons/profile-close.png")));
     mpActionCloseProfile->setIconText(tr("Close profile"));
     mpActionCloseProfile->setObjectName(qsl("close_profile"));
 
     //: This is a sub-item of the "Connect" item in the toolbar of a detached Mudlet window.
     mpActionCloseApplication = new QAction(tr("Close Mudlet"), this);
-    mpActionCloseApplication->setIcon(QIcon::fromTheme(qsl("application-exit"), QIcon(qsl(":/icons/application-exit.png"))));
     mpActionCloseApplication->setIconText(tr("Close Mudlet"));
     mpActionCloseApplication->setObjectName(qsl("close_application"));
 
@@ -1105,6 +1102,9 @@ void TDetachedWindow::createToolBar()
     mpToolBar->addAction(mpActionFullScreenView);
 
     mToolBarGlyphs = {{mpActionConnect, qsl(":/icons/toolbar-connect.svg"), QString()},
+                      {mpActionDisconnect, qsl(":/icons/toolbar-disconnect.svg"), QString()},
+                      {mpActionCloseProfile, qsl(":/icons/toolbar-close-profile.svg"), QString()},
+                      {mpActionCloseApplication, qsl(":/icons/toolbar-quit.svg"), QString()},
                       {mpActionTriggers, qsl(":/icons/editor-triggers.svg"), QString()},
                       {mpActionAliases, qsl(":/icons/editor-aliases.svg"), QString()},
                       {mpActionTimers, qsl(":/icons/editor-timers.svg"), QString()},

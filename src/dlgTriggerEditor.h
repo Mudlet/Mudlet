@@ -354,6 +354,8 @@ public:
     void showError(const QString&);
     [[nodiscard]] QString linkErrorLineToScript(const QString& error);
     void jumpToErrorLine(int line);
+    void showActivationFailure(const QString& name, const QString& error);
+    [[nodiscard]] QString spokenRunState(const QString& description) const;
     bool currentScriptChunk(int& itemId, QString& chunkName, QString& error);
     void showWarning(const QString&, bool announce = true);
     // The one place the package banner is raised from
@@ -1269,6 +1271,7 @@ private:
     QString descActiveFilterChain;
     QString descInactiveFilterChain;
     QString descActiveOffsetTimer;
+    QString descHeldByStop;
     QString descInactiveOffsetTimer;
     QString descNewFolder;
     QString descNewItem;

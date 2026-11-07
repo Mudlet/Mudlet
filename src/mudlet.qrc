@@ -255,7 +255,9 @@
         <file>icons/toolbar-more-left.svg</file>
         <file>icons/toolbar-more-right.svg</file>
         <file>icons/toolbar-more-up.svg</file>
+        <file>icons/toolbar-close-profile.svg</file>
         <file>icons/toolbar-connect.svg</file>
+        <file>icons/toolbar-disconnect.svg</file>
         <file>icons/toolbar-discord.png</file>
         <file>icons/toolbar-export.svg</file>
         <file>icons/toolbar-fullscreen-exit.svg</file>
@@ -265,6 +267,7 @@
         <file>icons/toolbar-multiview.svg</file>
         <file>icons/toolbar-notepad.svg</file>
         <file>icons/toolbar-packages.svg</file>
+        <file>icons/toolbar-quit.svg</file>
         <file>icons/toolbar-reconnect.svg</file>
         <file>icons/toolbar-reconnect-fill.svg</file>
         <file>icons/toolbar-replay-faster.svg</file>

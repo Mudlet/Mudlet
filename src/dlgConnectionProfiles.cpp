@@ -246,6 +246,10 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     for (QLabel* pLabel : {notificationAreaIconLabelWarning, notificationAreaIconLabelError, notificationAreaIconLabelInformation, notificationAreaMessageBox}) {
         pLabel->setAutoFillBackground(false);
     }
+    // Under the details the notices mostly explain, where one coming or going only shortens the Information box.
+    // Under the games list it moved the game under the pointer between the two clicks of a double-click.
+    uiDesign::removeFromLayoutTree(verticalLayout_3, notificationArea);
+    verticalLayout->addWidget(notificationArea);
 
     // selection mode is important. if this is not set the selection behaviour is
     // undefined. this is an undocumented qt bug, as it only shows on certain OS
@@ -495,11 +499,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     // website_entry atm is only a label
     //connect(website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_updateWebsite(const QString)));
 
-    // Notices come and go as games are picked; letting the games list take back their space would move
-    // it under the pointer between the two clicks of a double-click
-    QSizePolicy notificationAreaPolicy = notificationArea->sizePolicy();
-    notificationAreaPolicy.setRetainSizeWhenHidden(true);
-    notificationArea->setSizePolicy(notificationAreaPolicy);
     clearNotificationArea();
 
 #if !defined(QT_NO_SSL)
@@ -3014,6 +3013,8 @@ bool dlgConnectionProfiles::validateProfile()
             }
             return true;
         }
+        // Each problem above is added between line breaks, which leaves blank lines over and under the words
+        notificationAreaMessageBox->setText(notificationAreaMessageBox->text().trimmed());
         if (!notificationAreaMessageBox->text().isEmpty()) {
             notificationArea->show();
             notificationAreaMessageBox->show();

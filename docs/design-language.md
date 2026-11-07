@@ -1274,6 +1274,18 @@ to the heading over the code pane, which speaks for that item and takes its note
 away when the item goes. `showError()` is the banner; `reportCompileError()` is
 the heading.
 
+An activation the engine refused because the script does not compile is the one
+script error the notice still shows, and it leaves the error itself to the
+heading: `showActivationFailure()` says what to do, "Fix the error on line 2,
+then switch "Loot" on again", with "line 2" a link to it. Refused for anything
+else, such as a pattern that does not compile, it gives the reason the item
+gave.
+
+The connection dialog's notice sits under the Information box in the details
+column, not under the games list: notices differ in height, and under the list
+one coming or going moved the game under the pointer between the two clicks of
+a double-click, which connects.
+
 `dlgSystemMessageArea` is as tall as its words are at the width it is given and
 no taller: both its hints come from its own layout's height-for-width at its
 current width, and it is `(Ignored, Maximum)` in the column - ignored across so
@@ -1377,6 +1389,10 @@ beside it are hidden.
 - The colour stays at rest, under the pointer, switched on and chosen; the wash
   under the button or row already shows those states. Unavailable, the glyph is
   `disabledBarText` with no wash. `identityIcon()` builds all of these.
+- The Connect button's menu takes Lucide glyphs too, so its four entries match:
+  Disconnect (`unplug`) is grey, its picture being under 30% coloured, Close
+  profile (`log-out`) takes Connect's orange and Close Mudlet (`circle-x`) the
+  red of Delete, after the pictures they replaced.
 - In the script editor: the toolbar (Add green, Add Group blue, Activate gold,
   Delete red, Import and Export green, Create Module and Save Profile As brown),
   the sidebar and each tree's heading row through `editorViewIdentity()` (Triggers,
@@ -1459,7 +1475,12 @@ is running. `Ring`, a `scmTreeHollowPenWidth` hairline in `mutedText`, is
 switched off. `RingWithCentre` is that same ring with a
 `scmTreeDotCentreDiameter` point in the middle of it, in that same `mutedText`:
 switched on, but inside a group that is not, so the user's switch says yes and
-nothing is running. The ok hue is a blue rather than a green
+nothing is running. The emergency stop reads the same way: every trigger, alias,
+timer and key the user left on shows the centred ring until the stop ends, and
+the ones left off keep the plain ring. A screen reader hears it too:
+`spokenRunState()` adds "held by the emergency stop" to the description of a row
+that would otherwise run, and `Host::signal_emergencyStopChanged` has the trees
+rebuilt so the words follow the stop as the dots do. The ok hue is a blue rather than a green
 (`scmStateHue_ok` 0.58) for the same reason: it is read beside the error red all
 over the editor and the package manager, and a red-green colour-blind reader
 cannot tell a green from that red.

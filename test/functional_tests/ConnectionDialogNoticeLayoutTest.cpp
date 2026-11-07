@@ -57,6 +57,8 @@ private:
     static constexpr int scmProfileCount = 40;
     // sorts last, so it is on screen with the list scrolled to the bottom
     const QString mLoadedProfile = qsl("Z-ConnDialogNoticeLoaded");
+    // no server address, so picking it raises a three-line warning
+    const QString mUnaddressedProfile = qsl("A-ConnDialogNoticeUnaddressed");
     static constexpr int scmMyGamesTab = 0;
 
     dlgConnectionProfiles* dialog() const { return mudlet::self()->mpConnectionDialog.data(); }
@@ -151,6 +153,7 @@ private slots:
             profiles << qsl("ConnDialogNotice-%1").arg(i, 2, 10, QLatin1Char('0'));
         }
         // a profile with no server address shows a warning of its own
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles/%2").arg(mXdgDir.path(), mUnaddressedProfile)));
         for (const auto& profile : profiles) {
             QVERIFY(MudletApp::writeProfileData(profile, qsl("url"), qsl("127.0.0.1")).first);
             QVERIFY(MudletApp::writeProfileData(profile, qsl("port"), qsl("4000")).first);
@@ -185,8 +188,8 @@ private slots:
         QVERIFY(pLoadedItem);
         select(pLoadedItem);
         QVERIFY2(dialog()->notificationArea->isVisible(), "The loaded-profile notice never showed, so there was nothing to make the list move");
-        QVERIFY2(dialog()->notificationArea->height() <= dialog()->notificationArea->minimumHeight(),
-                 "The loaded-profile notice wraps taller than the space kept for an empty one with this platform's fonts");
+        // Notices differ in height, so in the games list's column any of them would resize the list
+        QVERIFY2(!dialog()->widget_topLeft->isAncestorOf(dialog()->notificationArea), "The notice shares the games list's column");
 
         scrollToTheBottom();
         QVERIFY2(dialog()->listWidget_profiles->verticalScrollBar()->value() > 0, "The games list does not scroll, so a shift in its contents could not show");
@@ -194,6 +197,23 @@ private slots:
         auto* pOtherItem = visibleOrdinaryItem();
         QVERIFY(pOtherItem);
         selectEachWithoutShift({{pOtherItem, false}, {pLoadedItem, true}});
+    }
+
+    // The checks that fill the notice add each problem between line breaks, which left blank lines over and under the words
+    void test_aNoticeIsAsTallAsItsWords()
+    {
+        auto* pItem = itemFor(mUnaddressedProfile);
+        QVERIFY(pItem);
+        select(pItem);
+        QFrame* pNotice = dialog()->notificationArea;
+        QVERIFY2(pNotice->isVisible(), "a game with no server address raised no notice");
+        QLabel* pText = dialog()->notificationAreaMessageBox;
+        const QFontMetrics metrics = pText->fontMetrics();
+        const int wordsHeight = metrics.boundingRect(QRect(0, 0, pText->contentsRect().width(), QWIDGETSIZE_MAX), Qt::TextWordWrap, pText->text().trimmed()).height();
+        const QMargins margins = pNotice->layout()->contentsMargins();
+        // Within half a line: the label lays its words out by its own rules, not the font metrics'
+        QTRY_VERIFY2(pNotice->height() <= margins.top() + wordsHeight + margins.bottom() + metrics.lineSpacing() / 2,
+                     qPrintable(qsl("the notice is %1px tall for %2px of words").arg(QString::number(pNotice->height()), QString::number(wordsHeight))));
     }
 };
 

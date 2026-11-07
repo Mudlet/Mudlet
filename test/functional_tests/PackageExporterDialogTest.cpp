@@ -65,6 +65,7 @@
 #include "ctelnet.h"
 #include "dlgPackageExporter.h"
 #include "mudlet.h"
+#include "uiDesign.h"
 
 #include "GroupedTest.h"
 
@@ -1614,11 +1615,14 @@ private slots:
         // The icon box shows a placeholder until an icon is chosen, and only a chosen icon can be removed
         QVERIFY2(buttonNamed(qsl("pushButton_removeIcon"))->isHidden(), "the package already had an icon before anything was dropped");
         const QPoint centre = iconArea->rect().center();
-        const QColor highlight = iconArea->palette().highlight().color();
+        // The icon box, where the picture lands, takes the accent while an image it would take is over the area
+        const QColor highlight = uiDesign::themeTokens().accent;
         auto highlighted = [&]() {
-            const QImage image = iconArea->grab().toImage();
+            const QImage image = iconLabel->grab().toImage();
+            // The dashed edge is drawn antialiased, so its pixels are the accent at part strength
             for (int x = 0; x < image.width(); ++x) {
-                if (image.pixelColor(x, 0) == highlight) {
+                const QColor pixel = image.pixelColor(x, 0);
+                if (pixel.alpha() > 128 && qAbs(pixel.red() - highlight.red()) <= 3 && qAbs(pixel.green() - highlight.green()) <= 3 && qAbs(pixel.blue() - highlight.blue()) <= 3) {
                     return true;
                 }
             }

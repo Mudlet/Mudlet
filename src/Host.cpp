@@ -2544,6 +2544,10 @@ void Host::stopAllTriggers()
     mAliasUnit.stopAllTriggers();
     mTimerUnit.stopAllTriggers();
     mKeyUnit.stopAllTriggers();
+    // Closing stops everything too, as the windows that would show it are being let go
+    if (!mIsClosingDown) {
+        emit signal_emergencyStopChanged(true);
+    }
 }
 
 void Host::reenableAllTriggers()
@@ -2553,6 +2557,7 @@ void Host::reenableAllTriggers()
     mAliasUnit.reenableAllTriggers();
     mTimerUnit.reenableAllTriggers();
     mKeyUnit.reenableAllTriggers();
+    emit signal_emergencyStopChanged(false);
 }
 
 QPair<QString, QString> Host::getSearchEngine()

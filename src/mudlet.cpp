@@ -1527,16 +1527,13 @@ void mudlet::init()
     mpActionConnect->setObjectName(qsl("connect"));
 
     mpActionDisconnect = new QAction(tr("Disconnect"), this);
-    mpActionDisconnect->setIcon(QIcon(qsl(":/icons/network-disconnect.png")));
     mpActionDisconnect->setObjectName(qsl("disconnect"));
 
     mpActionCloseProfile = new QAction(tr("Close profile"), this);
-    mpActionCloseProfile->setIcon(QIcon(qsl(":/icons/profile-close.png")));
     mpActionCloseProfile->setIconText(tr("Close profile"));
     mpActionCloseProfile->setObjectName(qsl("close_profile"));
 
     mpActionCloseApplication = new QAction(tr("Close Mudlet"), this);
-    mpActionCloseApplication->setIcon(QIcon::fromTheme(qsl("application-exit"), QIcon(qsl(":/icons/application-exit.png"))));
     mpActionCloseApplication->setIconText(tr("Close Mudlet"));
     mpActionCloseApplication->setObjectName(qsl("close_application"));
 
@@ -1754,6 +1751,9 @@ void mudlet::init()
     mpMainToolBar->widgetForAction(mpActionFullScreenView)->setObjectName(mpActionFullScreenView->objectName());
 
     mToolBarGlyphs = {{mpActionConnect, qsl(":/icons/toolbar-connect.svg"), QString(), uiDesign::scmIdentity_connect},
+                      {mpActionDisconnect, qsl(":/icons/toolbar-disconnect.svg"), QString()},
+                      {mpActionCloseProfile, qsl(":/icons/toolbar-close-profile.svg"), QString(), uiDesign::scmIdentity_connect},
+                      {mpActionCloseApplication, qsl(":/icons/toolbar-quit.svg"), QString(), uiDesign::scmIdentity_delete},
                       {mpActionTriggers, qsl(":/icons/editor-triggers.svg"), QString(), uiDesign::scmIdentity_triggers},
                       {mpActionAliases, qsl(":/icons/editor-aliases.svg"), QString(), uiDesign::scmIdentity_input},
                       {mpActionTimers, qsl(":/icons/editor-timers.svg"), QString()},
