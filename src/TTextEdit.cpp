@@ -4599,6 +4599,18 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         return;
     }
 
+    if (mpHost->caretShortcutMatches(event)) {
+        mpHost->setCaretEnabled(false);
+        // Not passed to QWidget, which would ignore it and send a Tab up the
+        // parents' focus chain - onto the main toolbar when it is shown
+        if (mpConsole && mpConsole->mpCommandLine) {
+            mpHost->setFocusOnHostActiveCommandLine();
+            return;
+        }
+        QWidget::keyPressEvent(event);
+        return;
+    }
+
     // #7933 Auto-reditect focus to command line from output window when press alpha-numeric characters
     // skips ctrl,alt, etc. This improves experiencie and makes fast switch to screenreader users focusing on output
     // Space on a focused link is an activation, handled with Return below. The focus is only
@@ -4929,11 +4941,6 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         }
         break;
     case Qt::Key_Tab: {
-        if (mpHost->caretShortcutMatches(event)) {
-            mpHost->setCaretEnabled(false);
-            break;
-        }
-
         if (!(event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier))) {
             if (navigateToLink(true)) {
                 event->accept();
@@ -4974,12 +4981,6 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         return;
     }
 
-    case Qt::Key_F6: {
-        if (mpHost->caretShortcutMatches(event)) {
-            mpHost->setCaretEnabled(false);
-        }
-        break;
-    }
     case Qt::Key_F10: {
         // Shift+F10 opens context menu on focused link (standard accessibility shortcut)
         if (event->modifiers() & Qt::ShiftModifier) {

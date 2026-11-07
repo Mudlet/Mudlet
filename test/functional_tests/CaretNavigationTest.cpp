@@ -40,6 +40,7 @@
 #include <QFontDatabase>
 #include <QFontInfo>
 #include <QMenu>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -490,6 +491,56 @@ private slots:
         QVERIFY2(mpHost->caretEnabled(), "an arrow key turned caret mode off");
         QCOMPARE(pCommandLine->toPlainText(), QString());
         QCOMPARE(pane()->mCaretColumn, 3);
+    }
+
+    // The key that leaves caret mode hands the keyboard to the command line,
+    // not to whatever follows the console in Qt's focus chain - with the
+    // main toolbar shown, that is one of its buttons.
+    void test_theCaretShortcutReturnsTheKeyboardToTheCommandLine_data()
+    {
+        QTest::addColumn<QString>("shortcut");
+        QTest::addColumn<int>("key");
+        QTest::addColumn<int>("modifiers");
+        QTest::addColumn<bool>("inMiniConsole");
+        QTest::newRow("tab") << qsl("tab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(Qt::NoModifier) << false;
+        QTest::newRow("ctrltab") << qsl("ctrltab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(Qt::ControlModifier) << false;
+        QTest::newRow("f6") << qsl("f6") << static_cast<int>(Qt::Key_F6) << static_cast<int>(Qt::NoModifier) << false;
+        QTest::newRow("tab in a mini console") << qsl("tab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(Qt::NoModifier) << true;
+    }
+
+    void test_theCaretShortcutReturnsTheKeyboardToTheCommandLine()
+    {
+        QFETCH(QString, shortcut);
+        QFETCH(int, key);
+        QFETCH(int, modifiers);
+        QFETCH(bool, inMiniConsole);
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pCommandLine);
+        // Restored however this case ends, or Tab would leave caret mode in every later one
+        const auto savedToolBarVisibility = mudlet::self()->toolBarVisibility();
+        const auto savedShortcut = mpHost->mCaretShortcut;
+        const auto restore = qScopeGuard([this, savedToolBarVisibility, savedShortcut]() {
+            mpHost->mCaretShortcut = savedShortcut;
+            mudlet::self()->setToolBarVisibility(savedToolBarVisibility);
+        });
+        mudlet::self()->setToolBarVisibility(enums::visibleAlways);
+        QVERIFY(runLua(qsl("setConfig('caretShortcut', '%1')").arg(shortcut)));
+        TTextEdit* pPane = pane();
+        if (inMiniConsole) {
+            TConsole* pMini = miniConsoleWithCommandLine(qsl("caretShortcutMini"));
+            QVERIFY(pMini);
+            pPane = pMini->mUpperPane;
+        }
+        QVERIFY(mpHost->caretEnabled());
+
+        press(pPane, static_cast<Qt::Key>(key), static_cast<Qt::KeyboardModifiers>(modifiers));
+        drainDeferredFocusChange();
+
+        QVERIFY2(!mpHost->caretEnabled(), "the caret-mode shortcut did not turn caret mode off");
+        QWidget* const pFocused = QApplication::focusWidget();
+        // The hand-off is to the profile's active command line, which a mini console's need not be
+        const bool onACommandLine = inMiniConsole ? qobject_cast<TCommandLine*>(pFocused) != nullptr : pFocused == pCommandLine;
+        QVERIFY2(onACommandLine, qPrintable(qsl("the keyboard went to %1 rather than the command line").arg(pFocused ? QString::fromLatin1(pFocused->metaObject()->className()) : qsl("nothing"))));
     }
 
     // Tab and Shift+Tab are how a screen-reader user finds the links in a page
