@@ -43,6 +43,7 @@ class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 {
     Q_OBJECT
 
+    friend class ConnectionDialogEscapeTest;
     friend class ConnectionDialogKeychainWaitTest;
     friend class ConnectionDialogOfflineProfileTest;
     friend class SelfTestProfileIconTest;
@@ -113,6 +114,7 @@ protected:
 
 private:
     static bool copyFolder(const QString& sourceFolder, const QString& destFolder);
+    void clearProfileSearch();
     void dismissTutorialInvitation();
     QString getDescription(const QString& profile_name) const;
     bool validateConnect();
@@ -250,7 +252,6 @@ private slots:
     void slot_setCustomColor();
     void slot_resetCustomIcon();
     void slot_togglePasswordVisibility(const bool);
-    void slot_reenableAllProfileItems();
     void slot_loadPasswordAsync();
     void slot_passwordTextChanged();
 };

@@ -231,3 +231,36 @@ QString TAction::moduleName(TAction* pTAction) const
 
     return QString();
 }
+
+void TAction::updateModuleMembership()
+{
+    if (!mpHost || mModuleMasterFolder) {
+        return;
+    }
+    const TAction* pRoot = getRoot();
+    if (pRoot != this) {
+        setModuleMembership(pRoot->mModuleMasterFolder);
+        return;
+    }
+    // An unsynced module's file is never rewritten, so it still holds what was loaded from it
+    const bool heldByItsModule = !mLoadedFromModule.isEmpty() && mpHost->mInstalledModules.contains(mLoadedFromModule) && !mpHost->moduleSavesBack(mLoadedFromModule);
+    setModuleMembership(heldByItsModule);
+}
+
+void TAction::setModuleMembership(const bool member)
+{
+    if (mModuleMasterFolder) {
+        return;
+    }
+    mModuleMember = member;
+    // Uninstalling or reloading a module removes every top-level item with its name as package name
+    if (!member && mpHost && mpHost->mInstalledModules.contains(mPackageName)) {
+        mPackageName.clear();
+    }
+    if (!member) {
+        mLoadedFromModule.clear();
+    }
+    for (auto* pChild : *mpMyChildrenList) {
+        static_cast<TAction*>(pChild)->setModuleMembership(member);
+    }
+}
