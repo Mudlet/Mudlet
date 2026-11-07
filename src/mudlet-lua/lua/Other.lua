@@ -1124,9 +1124,13 @@ do
       -- wrap the original function to remove itself from the event handler list.
       local origFunc = func
       func = function(...)
-        local keepEvaluating = origFunc(...)
-        if not keepEvaluating then
+        -- a handler that errors never asked to stay, so it goes like one that returned nothing
+        local ok, keepEvaluating = pcall(origFunc, ...)
+        if not (ok and keepEvaluating) then
           killAnonymousEventHandler(eventHandlerId)
+        end
+        if not ok then
+          error(keepEvaluating, 0)
         end
       end
     end
