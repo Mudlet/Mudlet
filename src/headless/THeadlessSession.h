@@ -325,6 +325,13 @@ public:
     // Read from anywhere.
     QStringList commandLineSuggestions() const;
     QStringList commandLineBlacklist() const;
+    // Tab, or Shift+Tab for !forward, on the app's input line, as the GUI's command line completes the word at the end
+    // of what setCommandLineText() last set: the whole line it leaves, which is Mudlet's copy of it now, as if set with
+    // CommandLineEdit::notTyped, for the app to show with its cursor at the end. Further calls go on through the
+    // words, until the line changes, typed or not or by a script, other than to the line handed back, Escape is
+    // pressed or a line is submitted. Nullopt, with errorString() saying why, when no word completes it, as on an
+    // empty line, while hidden input is wanted, and where submit() is refused.
+    std::optional<QString> completeCommandLine(bool forward = true);
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a

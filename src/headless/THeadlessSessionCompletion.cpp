@@ -51,3 +51,22 @@ QStringList THeadlessSession::commandLineBlacklist() const
     const TNullConsoleFrontend* pView = nullView(mpHost);
     return pView ? sorted(pView->mainCommandLineBlacklist()) : QStringList();
 }
+
+std::optional<QString> THeadlessSession::completeCommandLine(const bool forward)
+{
+    if (!usable()) {
+        return std::nullopt;
+    }
+    if (mpHost->passwordEntryWanted()) {
+        //: Error from a frontend with no window that was asked to complete the word on its input line while the game hides what the player types, as for a password
+        mErrorString = tr("Nothing is completed while the game hides what is typed.");
+        return std::nullopt;
+    }
+    auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend());
+    std::optional<QString> line = pView ? pView->tabCompleteMainCommandLine(forward) : std::nullopt;
+    if (!line) {
+        //: Error from a frontend with no window that was asked to complete the word on its input line, as Tab does, when no word the game sent recently or a script suggested completes it
+        mErrorString = tr("No word completes what is typed.");
+    }
+    return line;
+}
